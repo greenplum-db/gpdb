@@ -116,7 +116,7 @@
 gpexpand.status_detail WHERE fq_name = 'public.sales';
   status   |     expansion_started      | source_bytes
 -----------+----------------------------+--------------
- COMPLETED | 2009-02-20 10:54:10.043869 |   4929748992
+ COMPLETED | 2017-02-20 10:54:10.043869 |   4929748992
 (1 row)</codeblock>
         </p>
       </body>

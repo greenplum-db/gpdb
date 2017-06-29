@@ -76,6 +76,8 @@ ERROR_REMOVE = 1
 ERROR_RESYNC = 2
 ERROR_NOREPAIR = 3
 
+FIRST_NORMAL_OID = 16384
+PG_CATALOG_OID = 11
 
 def setError(level):
     '''
@@ -2028,7 +2030,6 @@ def drop_leaked_schemas(leaked_schema_dropper, dbname):
     finally:
         db_connection.close()
 
-
 def checkDepend():
     # Check for dependencies on non-existent objects
     logger.info('-----------------------------------')
@@ -2037,18 +2038,20 @@ def checkDepend():
     db = connect2(GV.cfg[1], utilityMode=False)
 
     # Catalogs that link up to pg_depend/pg_shdepend
-    qry = "select relname from pg_class where relnamespace=11 and relhasoids"
+    qry = "select relname from pg_class where relnamespace=%d and relhasoids" % PG_CATALOG_OID
     curs = db.query(qry)
     catalogs = []
     for row in curs.getresult():
         catalogs.append(row[0])
 
-    # For each catalog construct the subquery for that catalog
-    #
-    # It would be desireable to switch these queries to a gp_dist_random
-    # type query rather than issueing it in utility mode on every segment,
-    # however because there are numerous issues remaining with oid
-    # inconsistencies (see crossDBCheck()) that doesn't work out well.
+    checkDependJoinCatalog(catalogs)
+    checkCatalogJoinDepend(catalogs)
+
+def checkDependJoinCatalog(catalogs):
+    # Construct subquery that will verify that all (classid, objid)
+    # and (refclassid, refobjid) pairs existing in pg_depend actually
+    # exist in that catalog table (classid::regclass or
+    # refclassid::regclass)
     deps = []
     for cat in catalogs:
         qry = """
@@ -2080,22 +2083,86 @@ def checkDepend():
     FROM (%s
     ) q
     """ % "UNION ALL".join(deps)
+
     try:
         err = connect2run(qry)
         if not err:
-            logger.info('[OK] basic object dependencies')
+            logger.info('[OK] extra object dependencies')
         else:
             GV.checkStatus = False
             setError(ERROR_NOREPAIR)
-            logger.info('[FAIL] basic object dependencies')
+            logger.info('[FAIL] extra object dependencies')
             logger.error('  found %d dependencies on dropped objects' % len(err))
+            for config, column, row in err:
+                gpObj = getGPObject(row['objid'], row['catalog'])
+                issue = CatDependencyIssue(row['catalog'], row['objid'], config['content'])
+                gpObj.addDependencyIssue(issue)
 
     except Exception, e:
         setError(ERROR_NOREPAIR)
-        myprint("[ERROR] executing test: basic object dependencies")
+        myprint("[ERROR] executing test: extra object dependencies")
         myprint("  Execution error: " + str(e))
         myprint(qry)
 
+def checkCatalogJoinDepend(catalogs):
+    # Construct subqueries to aggregate all OIDs from catalog tables
+    # not in the DEPENDENCY_EXCLUSION
+    deps = []
+    for cat in catalogs:
+        if cat not in DEPENDENCY_EXCLUSION:
+            qry = """
+            SELECT '{catalog}' AS catalog, oid FROM {catalog} WHERE oid >= {oid}
+            """.format(catalog=cat, oid=FIRST_NORMAL_OID)
+
+            # Exclude pg_proc entries in pg_catalog namespace. This is
+            # mainly to avoid flagging language handler functions that
+            # linger after the language is dropped. Extensions (which
+            # do drop their proclang handler functions) will be
+            # replacing language so this exclusion should be fine.
+            if cat == 'pg_proc':
+                qry += """
+                AND pronamespace != {oid}
+                """.format(oid=PG_CATALOG_OID)
+
+            deps.append(qry)
+
+    # Construct query that will check that each OID in our aggregated
+    # catalog OIDs list has a reference in pg_depend under objid or
+    # refobjid column
+    qry = """
+    SELECT distinct catalog, c.oid as objid
+    FROM (
+        {subquery}
+    ) c
+    LEFT OUTER JOIN
+    (
+        SELECT objid AS oid FROM pg_depend WHERE objid >= {oid}
+        UNION
+        SELECT refobjid AS oid FROM pg_depend WHERE refobjid >= {oid}
+    ) d
+    ON (c.oid = d.oid)
+    WHERE d.oid IS NULL;
+    """.format(subquery="UNION ALL".join(deps), oid=FIRST_NORMAL_OID)
+
+    try:
+        err = connect2run(qry)
+        if not err:
+            logger.info('[OK] missing object dependencies')
+        else:
+            GV.checkStatus = False
+            setError(ERROR_NOREPAIR)
+            logger.info('[FAIL] missing object dependencies')
+            logger.error('  found %d existing objects without dependencies' % len(err))
+            for config, column, row in err:
+                gpObj = getGPObject(row['objid'], row['catalog'])
+                issue = CatDependencyIssue(row['catalog'], row['objid'], config['content'])
+                gpObj.addDependencyIssue(issue)
+
+    except Exception, e:
+        setError(ERROR_NOREPAIR)
+        myprint("[ERROR] executing test: missing object dependencies")
+        myprint("  Execution error: " + str(e))
+        myprint(qry)
 
 def fixupowners(nspname, relname, oldrole, newrole):
     # Must first alter the table to the wrong owner, then back to the right
@@ -2874,7 +2941,6 @@ def _checkAllTablesForMissingEntries():
     return catalog_issues
 # -------------------------------------------------------------------------------
 
-
 def checkTableMissingEntry(cat):
     catname = cat.getTableName()
     pkey = cat.getPrimaryKey()
@@ -2960,6 +3026,12 @@ def checkMirroringMatching():
         myprint('  Execution error: ' + str(ex))
 
 # -------------------------------------------------------------------------------
+
+# Exclude these tuples from the catalog table scan
+# pg_depend: classid 2603 (pg_amproc) is excluded because their OIDs can be
+#            nonsynchronous (catalog.c:RelationNeedsSynchronizedOIDs())
+MISSING_ENTRY_EXCLUDE = {'pg_depend': 'WHERE classid != 2603'}
+
 def missingEntryQuery(max_content, catname, pkey, castedPkey):
     # =================
     #  Missing / Extra
@@ -2974,12 +3046,13 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
     #     If the nulls are <= 1/2 the result report those segments as "missing"
     #     If the non-nulls are <= 1/2 the result report those segments as "extra"
 
+    catalog_exclude = MISSING_ENTRY_EXCLUDE.get(catname, "")
     qry = """
           SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
           -- distribute catalog table from master, so that we can avoid to gather
           CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
-              SELECT gp_segment_id segid, {primary_key} FROM {catalog};
+              SELECT gp_segment_id segid, {primary_key} FROM {catalog} {catalog_exclude};
           SELECT {oidcasted_pk}, exists, array_agg(segid order by segid) as segids
           FROM
           (
@@ -2996,7 +3069,7 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
                LEFT OUTER JOIN
                ( SELECT segid, {primary_key} FROM _tmp_master
                  UNION ALL
-                 SELECT gp_segment_id as segid, {primary_key} FROM gp_dist_random('{catalog}')
+                 SELECT gp_segment_id as segid, {primary_key} FROM gp_dist_random('{catalog}') {catalog_exclude}
                ) actual USING (segid, {primary_key})
           ) missing_extra
           WHERE subcount <= ({max_content}+2)/2.0
@@ -3004,6 +3077,7 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
           """.format(oidcasted_pk=','.join(castedPkey),
                      primary_key=','.join(pkey),
                      catalog=catname,
+                     catalog_exclude=catalog_exclude,
                      max_content=max_content)
 
     return qry
@@ -3181,6 +3255,9 @@ def checkDuplicateEntry():
     tables = GV.catalog.getCatalogTables()
 
     for cat in sorted(tables):
+        ## pg_depend does not care about duplicates at the moment
+        if cat == 'pg_depend':
+            continue
         checkTableDuplicateEntry(cat)
 
 
@@ -3798,6 +3875,7 @@ TableMainColumn['pg_attribute'] = ['attrelid', 'pg_class']
 TableMainColumn['pg_attribute_encoding'] = ['attrelid', 'pg_class']
 TableMainColumn['pg_auth_member'] = ['roleid', 'pg_authid']
 TableMainColumn['pg_autovacuum'] = ['vacrelid', 'pg_class']
+TableMainColumn['pg_depend'] = ['objid', 'pg_class']
 TableMainColumn['pg_exttable'] = ['reloid', 'pg_class']
 TableMainColumn['pg_foreign_table'] = ['reloid', 'pg_class']
 TableMainColumn['pg_index'] = ['indexrelid', 'pg_class']
@@ -4281,6 +4359,18 @@ class CatUniqueIndexViolationIssue:
             % (self.catname, self.index_name)
         )
 
+class CatDependencyIssue:
+    def __init__(self, table_name, oid, content):
+        self.catname = table_name
+        self.oid = oid
+        self.content = content
+
+    def report(self):
+        myprint(
+            '    Table %s has a dependency issue on oid %s at content %s'
+            % (self.catname, self.oid, self.content)
+        )
+
 # -------------------------------------------------------------------------------
 class GPObject:
     def __init__(self, oid, catname):
@@ -4291,6 +4381,13 @@ class GPObject:
         self.duplicateIssues = {}  # key=issue.catname, value=list of catDuplicateIssue
         self.aclIssues = {}  # key=issue.catname, value=list of catACLIssue
         self.foreignkeyIssues = {}  # key=issue.catname, value=list of catForeignKeyIssue
+        self.dependencyIssues = {} # key=issue.catname, value=list of catDependencyIssue
+
+    def addDependencyIssue(self, issue):
+        if issue.catname in self.dependencyIssues:
+            self.dependencyIssues[issue.catname].append(issue)
+        else:
+            self.dependencyIssues[issue.catname] = [issue]
 
     def addMissingIssue(self, issue):
         if issue.catname in self.missingIssues:
@@ -4347,6 +4444,14 @@ class GPObject:
             myprint('----------------------------------------------------')
             myprint('Object oid: %s' % (self.oid))
             myprint('Table name: %s' % (self.catname))
+            myprint('')
+
+        # Report dependency issues
+        if len(self.dependencyIssues):
+            for catname, issues in self.dependencyIssues.iteritems():
+                myprint('    Name of test which found this issue: dependency_%s' % catname)
+                for each in issues:
+                    each.report()
             myprint('')
 
         # Report inconsistent issues
@@ -4453,20 +4558,25 @@ class RelationObject(GPObject):
         self.paroid = None
 
     def reportAllIssues(self):
+        oid = 'N/A' if self.oid is None else self.oid
+        nspname = 'N/A' if self.nspname is None else self.nspname
+        relname = 'N/A' if self.relname is None else self.relname
+
         if self.isTopLevel():
             myprint('')
             myprint('----------------------------------------------------')
-            if self.relkind == 'c':
-                myprint('Type oid: %d' % (self.oid))
-                myprint('Type name: %s.%s' % (self.nspname, self.relname))
-            else:
-                myprint('Relation oid: %d' % (self.oid))
-                myprint('Relation name: %s.%s' % (self.nspname, self.relname))
+
+            objname = 'Type' if self.relkind == 'c' else 'Relation'
+            myprint('%s oid: %d' % (objname, oid))
+            myprint('%s schema: %s' % (objname, nspname))
+            myprint('%s name: %s' % (objname, relname))
+
         else:
             myprint('    Sub-object: ')
             myprint('    ----------------------------------------------------')
-            myprint('    Relation oid: %d' % (self.oid))
-            myprint('    Relation name: %s.%s' % (self.nspname, self.relname))
+            myprint('    Relation oid: %d' % oid)
+            myprint('    Relation schema: %s' % nspname)
+            myprint('    Relation name: %s' % relname)
         myprint('')
         GPObject.reportAllIssues(self)
 
@@ -4495,7 +4605,7 @@ def getRelInfo(objects):
     if objects == {}: return
 
     oids = [oid for (oid, catname) in objects if catname == 'pg_class']
-    if oids == []: return
+    if oids == [] or None in oids: return
 
     qry = """
           SELECT oid, relname, nspname, relkind, paroid
@@ -4762,8 +4872,8 @@ def main():
 
         # Reset global variables
         GV.reset_stmt_queues()
-        GPObjects = {}
-        GPObjectGraph = {}
+        GPObjects.clear()
+        GPObjectGraph.clear()
         GV.dbname = dbname
         myprint('')
         myprint("Connected as user \'%s\' to database '%s', port '%d', gpdb version '%s'" \

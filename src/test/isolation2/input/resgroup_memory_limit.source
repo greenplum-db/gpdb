@@ -1,0 +1,145 @@
+-- start_ignore
+DROP ROLE IF EXISTS role1_memory_test;
+DROP RESOURCE GROUP rg1_memory_test;
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS
+'@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc'
+LANGUAGE C READS SQL DATA;
+
+CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$
+    SELECT * FROM resGroupPalloc($2)
+$$ LANGUAGE sql;
+
+--
+-- first create the resgroup with memory_shared_quota == 0.
+-- so each resgroup slot gets a fixed memory quota of 0.5.
+--
+
+CREATE RESOURCE GROUP rg1_memory_test
+    WITH (concurrency=2, cpu_rate_limit=0.1,
+          memory_limit=0.5, memory_shared_quota=0.0);
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+
+-- 1) on QD only with memory_shared_quota == 0
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: BEGIN;
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT hold_memory_by_percent(1,0.45);
+1: SELECT hold_memory_by_percent(1,0.45);
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: BEGIN;
+1: SELECT hold_memory_by_percent(1,0.45);
+1: SELECT hold_memory_by_percent(1,0.45);
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT hold_memory_by_percent(1,0.55);
+1q:
+
+-- 2) on QEs with memory_shared_quota == 0
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.45)=0;
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.55)=0;
+1q:
+
+--
+-- now recreate the resgroup with memory_shared_quota > 0.
+-- so each resgroup slot gets a fixed memory quota of 0.3,
+-- there is also a shared memory pool of 0.4, so the actual
+-- memory usage in each slot can be 0.3~0.7.
+--
+
+DROP ROLE role1_memory_test;
+DROP RESOURCE GROUP rg1_memory_test;
+CREATE RESOURCE GROUP rg1_memory_test
+    WITH (concurrency=2, cpu_rate_limit=0.1,
+          memory_limit=0.1, memory_shared_quota=0.4);
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+
+-- 3) on QD with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT hold_memory_by_percent(1,0.65);
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT hold_memory_by_percent(1,0.75);
+1q:
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1: SELECT hold_memory_by_percent(1,0.2);
+1q:
+
+-- 4) on QEs with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1q:
+
+-- 5) QD: concurrent transactions in same group with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+1: BEGIN;
+1: SELECT hold_memory_by_percent(1,0.6);
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT hold_memory_by_percent(1,0.3);
+2q:
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT hold_memory_by_percent(1,0.2);
+2: SELECT hold_memory_by_percent(1,0.2);
+2q:
+1q:
+
+-- 6) QE: concurrent transactions in same group with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+1: BEGIN;
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
+2q:
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+2q:
+1q:
+
+
+-- cleanup
+DROP ROLE role1_memory_test;
+DROP RESOURCE GROUP rg1_memory_test;

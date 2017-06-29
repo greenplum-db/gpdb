@@ -77,6 +77,10 @@ SELECT count(*) FROM EXT_NATION_MATCH;
 SELECT * FROM EXT_REGION;
 SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONKEY;
 
+-- test: http request header needed for gpfdist
+\! wget http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 || echo "Execute error";
+\! wget --header='X-GP-PROTO:0' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
+
 -- start_ignore
 select * from exttab1_gpfdist_stop;
 -- end_ignore

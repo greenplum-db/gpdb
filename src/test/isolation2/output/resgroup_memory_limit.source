@@ -1,0 +1,303 @@
+-- start_ignore
+DROP ROLE IF EXISTS role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+ERROR:  resource group "rg1_memory_test" does not exist
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc' LANGUAGE C READS SQL DATA;
+CREATE
+
+CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($2) $$ LANGUAGE sql;
+CREATE
+
+--
+-- first create the resgroup with memory_shared_quota == 0.
+-- so each resgroup slot gets a fixed memory quota of 0.5.
+--
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=0.1, memory_limit=0.5, memory_shared_quota=0.0);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+
+-- 1) on QD only with memory_shared_quota == 0
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1,0.45);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.45);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,0.45);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.45);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1,0.55);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+-- 2) on QEs with memory_shared_quota == 0
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+3    
+(1 row)
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+3    
+(1 row)
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382432)
+DETAIL:  
+Resource group memory limit reached
+SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.45)=0;
+count
+-----
+3    
+(1 row)
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.55)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382450)
+DETAIL:  
+Resource group memory limit reached
+SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+--
+-- now recreate the resgroup with memory_shared_quota > 0.
+-- so each resgroup slot gets a fixed memory quota of 0.3,
+-- there is also a shared memory pool of 0.4, so the actual
+-- memory usage in each slot can be 0.3~0.7.
+--
+
+DROP ROLE role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=0.1, memory_limit=0.1, memory_shared_quota=0.4);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+
+-- 3) on QD with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1,0.65);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1,0.75);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+1: SELECT hold_memory_by_percent(1,0.2);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+-- 4) on QEs with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+3    
+(1 row)
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+3    
+(1 row)
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+3    
+(1 row)
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382486)
+DETAIL:  
+Resource group memory limit reached
+SQL function "hold_memory_by_percent" statement 1
+1q: ... <quitting>
+
+-- 5) QD: concurrent transactions in same group with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,0.6);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT hold_memory_by_percent(1,0.3);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+2q: ... <quitting>
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT hold_memory_by_percent(1,0.2);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+2: SELECT hold_memory_by_percent(1,0.2);
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+CONTEXT:  SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+1q: ... <quitting>
+
+-- 6) QE: concurrent transactions in same group with memory_shared_quota > 0
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
+count
+-----
+3    
+(1 row)
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
+count
+-----
+3    
+(1 row)
+2q: ... <quitting>
+2: SET ROLE TO role1_memory_test;
+SET
+2: BEGIN;
+BEGIN
+2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+count
+-----
+3    
+(1 row)
+2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382540)
+DETAIL:  
+Resource group memory limit reached
+SQL function "hold_memory_by_percent" statement 1
+2q: ... <quitting>
+1q: ... <quitting>
+
+
+-- cleanup
+DROP ROLE role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP

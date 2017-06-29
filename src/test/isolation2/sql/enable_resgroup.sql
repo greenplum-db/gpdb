@@ -17,3 +17,7 @@ SHOW gp_resource_manager;
 SELECT * FROM pg_resqueue_status;
 SELECT * FROM gp_toolkit.gp_resqueue_status;
 SELECT * FROM gp_toolkit.gp_resq_priority_backend;
+
+-- by default admin_group has concurrency set to -1 which leads to
+-- very small memory quota for each resgroup slot, correct it.
+ALTER RESOURCE GROUP admin_group SET concurrency 2;

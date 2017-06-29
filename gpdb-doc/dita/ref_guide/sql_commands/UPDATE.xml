@@ -160,11 +160,11 @@
         table <codeph>weather</codeph>: </p>
       <codeblock>UPDATE weather SET temp_lo = temp_lo+1, temp_hi = 
 temp_lo+15, prcp = DEFAULT
-WHERE city = 'San Francisco' AND date = '2006-07-03';</codeblock>
+WHERE city = 'San Francisco' AND date = '2016-07-03';</codeblock>
       <p>Use the alternative column-list syntax to do the same update:</p>
       <codeblock>UPDATE weather SET (temp_lo, temp_hi, prcp) = (temp_lo+1, 
 temp_lo+15, DEFAULT)
-WHERE city = 'San Francisco' AND date = '2006-07-03';</codeblock>
+WHERE city = 'San Francisco' AND date = '2016-07-03';</codeblock>
       <p>Increment the sales count of the salesperson who manages the account for Acme Corporation,
         using the <codeph>FROM</codeph> clause syntax (assuming both tables being joined are
         distributed in Greenplum Database on the <codeph>id</codeph> column):</p>

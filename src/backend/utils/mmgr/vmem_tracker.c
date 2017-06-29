@@ -200,12 +200,17 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 	int32 total = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
 	Assert(total > (int32) 0);
 
-	ResGroupUpdateMemoryUsage(numChunksToReserve);
 
 	/* We don't support vmem usage from non-owner thread */
 	Assert(MemoryProtection_IsOwnerThread());
 
 	bool waiverUsed = false;
+
+	if (!ResGroupReserveMemory(numChunksToReserve, waivedChunks, &waiverUsed))
+	{
+		pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
+		return MemoryFailure_ResourceGroupMemoryExhausted;
+	}
 
 	/*
 	 * Query vmem quota exhausted, so rollback the reservation and return error.
@@ -219,7 +224,8 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 		{
 			/* Revert the reserved space, but don't revert the prev_alloc as we have already set the firstTime to false */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
-			ResGroupUpdateMemoryUsage(-numChunksToReserve);
+			/* Revert resgroup memory reservation */
+			ResGroupReleaseMemory(numChunksToReserve);
 			return MemoryFailure_QueryMemoryExhausted;
 		}
 		waiverUsed = true;
@@ -240,9 +246,10 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 		{
 			/* Revert query memory reservation */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
-			ResGroupUpdateMemoryUsage(-numChunksToReserve);
 			/* Revert vmem reservation */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)segmentVmemChunks, numChunksToReserve);
+			/* Revert resgroup memory reservation */
+			ResGroupReleaseMemory(numChunksToReserve);
 
 			return MemoryFailure_VmemExhausted;
 		}
@@ -281,7 +288,7 @@ VmemTracker_ReleaseVmemChunks(int reduction)
 	Assert(*segmentVmemChunks >= 0);
 	Assert(NULL != MySessionState);
 	pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, reduction);
-	ResGroupUpdateMemoryUsage(-reduction);
+	ResGroupReleaseMemory(reduction);
 	Assert(0 <= MySessionState->sessionVmem);
 	trackedVmemChunks -= reduction;
 }
@@ -400,6 +407,15 @@ int32
 VmemTracker_GetVmemLimitChunks(void)
 {
 	return vmemChunksQuota;
+}
+
+/*
+ * Return the chunk size in bits.
+ */
+int32
+VmemTracker_GetChunkSizeInBits(void)
+{
+	return chunkSizeInBits;
 }
 
 /*
@@ -616,6 +632,15 @@ VmemTracker_RequestWaiver(int64 waiver_bytes)
 	}
 
 	waivedChunks = Max(chunks, waivedChunks);
+}
+
+/*
+ * Reset requested waiver to zero.
+ */
+void
+VmemTracker_ResetWaiver(void)
+{
+	waivedChunks = 0;
 }
 
 /*

@@ -201,10 +201,10 @@
     <section id="section5">
       <title>Examples</title>
       <p>Restore a Greenplum database using backup files created by <codeph>gp_dump</codeph>:</p>
-      <codeblock>gp_restore --gp-k=2005103112453 -d gpdb</codeblock>
+      <codeblock>gp_restore --gp-k=2016103112453 -d gpdb</codeblock>
       <p>Restore a single segment instance only (by noting the <varname>dbid</varname> of the
         segment instance):</p>
-      <codeblock>gp_restore --gp-k=2005103112453 -d gpdb --gp-s=5</codeblock>
+      <codeblock>gp_restore --gp-k=2016103112453 -d gpdb --gp-s=5</codeblock>
     </section>
     <section id="section6">
       <title>See Also</title>

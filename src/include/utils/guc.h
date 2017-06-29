@@ -210,7 +210,6 @@ extern bool Debug_persistent_bootstrap_print;
 extern bool persistent_integrity_checks;
 extern bool debug_persistent_ptcat_verification;
 extern bool debug_print_persistent_checks;
-extern bool Debug_bulk_load_bypass_wal;
 extern bool Debug_persistent_appendonly_commit_count_print;
 extern bool Debug_cancel_print;
 extern bool Debug_datumstream_write_print_small_varlena_info;

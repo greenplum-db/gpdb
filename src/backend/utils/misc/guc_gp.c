@@ -198,7 +198,6 @@ bool		Debug_persistent_bootstrap_print = false;
 bool		persistent_integrity_checks = true;
 bool		debug_persistent_ptcat_verification = false;
 bool		debug_print_persistent_checks = false;
-bool		Debug_bulk_load_bypass_wal = true;
 bool		Debug_persistent_appendonly_commit_count_print = false;
 bool		Debug_cancel_print = false;
 bool		Debug_datumstream_write_print_small_varlena_info = false;
@@ -360,7 +359,10 @@ int			gp_resqueue_priority_grouping_timeout;
 double		gp_resqueue_priority_cpucores_per_segment;
 char	   *gp_resqueue_priority_default_value;
 bool		gp_debug_resqueue_priority = false;
+
+/* Resource group GUCs */
 double		gp_resource_group_cpu_limit;
+double		gp_resource_group_memory_limit;
 
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
@@ -1672,16 +1674,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&debug_print_persistent_checks,
 		false, NULL, NULL
-	},
-
-	{
-		{"Debug_bulk_load_bypass_wal", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("Use new bulk load bypass WAL logic."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&Debug_bulk_load_bypass_wal,
-		true, NULL, NULL
 	},
 
 	{
@@ -4806,6 +4798,15 @@ struct config_real ConfigureNamesReal_gp[] =
 			NULL
 		},
 		&gp_resource_group_cpu_limit,
+		0.9, 0.1, 1.0, NULL, NULL
+	},
+
+	{
+		{"gp_resource_group_memory_limit", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Maximum percentage of memory resources assigned to a cluster."),
+			NULL
+		},
+		&gp_resource_group_memory_limit,
 		0.9, 0.1, 1.0, NULL, NULL
 	},
 

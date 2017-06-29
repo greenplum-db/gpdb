@@ -51,7 +51,7 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
             <p>Create a new table <codeph>films_recent</codeph> consisting of only recent entries
                 from the table <codeph>films</codeph>: </p>
             <codeblock>SELECT * INTO films_recent FROM films WHERE date_prod &gt;= 
-'2006-01-01';</codeblock>
+'2016-01-01';</codeblock>
         </section>
         <section id="section6">
             <title>Compatibility</title>

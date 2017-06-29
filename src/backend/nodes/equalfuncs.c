@@ -1972,6 +1972,14 @@ _equalDropResourceGroupStmt(DropResourceGroupStmt *a, DropResourceGroupStmt *b)
 	return true;
 }
 
+static bool
+_equalAlterResourceGroupStmt(AlterResourceGroupStmt *a, AlterResourceGroupStmt *b)
+{
+	COMPARE_STRING_FIELD(name);
+	COMPARE_NODE_FIELD(options);
+	return true;
+}
+
 /*
  * stuff from parsenodes.h
  */
@@ -3022,6 +3030,9 @@ equal(void *a, void *b)
 			break;
 		case T_DropResourceGroupStmt:
 			retval = _equalDropResourceGroupStmt(a, b);
+			break;
+		case T_AlterResourceGroupStmt:
+			retval = _equalAlterResourceGroupStmt(a, b);
 			break;
 
 		case T_A_Expr:

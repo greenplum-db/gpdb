@@ -425,8 +425,6 @@ gistindex_keytest(IndexTuple tuple,
 	giststate = so->giststate;
 	p = BufferGetPage(so->curbuf);
 
-	IncrIndexProcessed();
-
 	/*
 	 * Tuple doesn't restore after crash recovery because of incomplete insert
 	 */

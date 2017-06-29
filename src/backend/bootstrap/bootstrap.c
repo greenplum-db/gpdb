@@ -34,6 +34,7 @@
 #include "postmaster/bgwriter.h"
 #include "postmaster/walwriter.h"
 #include "replication/walreceiver.h"
+#include "storage/bufpage.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
@@ -46,6 +47,8 @@
 
 extern int	optind;
 extern char *optarg;
+
+uint32 bootstrap_data_checksum_version = 0;  /* No checksum */
 
 extern void FileRepResetPeer_Main(void);
 
@@ -255,7 +258,7 @@ AuxiliaryProcessMain(int argc, char *argv[])
 
 	MyAuxProcType = CheckerProcess;
 
-	while ((flag = getopt(argc, argv, "B:c:d:D:Fr:x:y:-:")) != -1)
+	while ((flag = getopt(argc, argv, "B:c:d:D:Fkr:x:y:-:")) != -1)
 	{
 		switch (flag)
 		{
@@ -281,6 +284,9 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			case 'F':
 				SetConfigOption("fsync", "false", PGC_POSTMASTER, PGC_S_ARGV);
 				break;
+ 			case 'k':
+				bootstrap_data_checksum_version = PG_DATA_CHECKSUM_VERSION;
+ 				break;
 			case 'r':
 				strlcpy(OutputFileName, optarg, MAXPGPATH);
 				break;

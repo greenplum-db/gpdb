@@ -12,8 +12,9 @@
 #include "postgres.h"
 
 #include "cdb/cdbvars.h"
-#include "postmaster/backoff.h"
+#include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
+#include "utils/vmem_tracker.h"
 
 #ifndef __linux__
 #error  cgroup is only available on linux
@@ -23,6 +24,7 @@
 #include <sched.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h>
 
 /*
  * Interfaces for OS dependent operations.
@@ -39,17 +41,21 @@
 	elog(ERROR, CGROUP_ERROR_PREFIX __VA_ARGS__); \
 } while (false)
 
+#define MAX_INT_STRING_LEN 20
+
 static char * buildPath(Oid group, const char *comp, const char *prop, char *path, size_t pathsize);
 static int lockDir(const char *path, bool block);
 static void unassignGroup(Oid group, const char *comp, int fddir);
 static bool createDir(Oid group, const char *comp);
 static bool removeDir(Oid group, const char *comp, bool unassign);
 static int getCpuCores(void);
-static size_t readData(Oid group, const char *comp, const char *prop, char *data, size_t datasize);
-static void writeData(Oid group, const char *comp, const char *prop, char *data, size_t datasize);
+static size_t readData(const char *path, char *data, size_t datasize);
+static void writeData(const char *path, char *data, size_t datasize);
 static int64 readInt64(Oid group, const char *comp, const char *prop);
 static void writeInt64(Oid group, const char *comp, const char *prop, int64 x);
 static bool checkPermission(Oid group, bool report);
+static void getMemoryInfo(unsigned long *ram, unsigned long *swap);
+static int getOvercommitRatio(void);
 
 static int cpucores = 0;
 
@@ -358,19 +364,14 @@ getCpuCores(void)
 }
 
 /*
- * Read at most datasize bytes from a cgroup interface file.
+ * Read at most datasize bytes from a file.
  */
 static size_t
-readData(Oid group, const char *comp, const char *prop, char *data, size_t datasize)
+readData(const char *path, char *data, size_t datasize)
 {
-	char path[128];
-	size_t pathsize = sizeof(path);
-
-	buildPath(group, comp, prop, path, pathsize);
-
 	int fd = open(path, O_RDONLY);
 	if (fd < 0)
-		CGROUP_ERROR("can't open file '%s': %s", path, strerror(errno));
+		elog(ERROR, "can't open file '%s': %s", path, strerror(errno));
 
 	ssize_t ret = read(fd, data, datasize);
 
@@ -379,25 +380,20 @@ readData(Oid group, const char *comp, const char *prop, char *data, size_t datas
 	close(fd);
 
 	if (ret < 0)
-		CGROUP_ERROR("can't read data from file '%s': %s", path, strerror(err));
+		elog(ERROR, "can't read data from file '%s': %s", path, strerror(err));
 
 	return ret;
 }
 
 /*
- * Write datasize bytes to a cgroup interface file.
+ * Write datasize bytes to a file.
  */
 static void
-writeData(Oid group, const char *comp, const char *prop, char *data, size_t datasize)
+writeData(const char *path, char *data, size_t datasize)
 {
-	char path[128];
-	size_t pathsize = sizeof(path);
-
-	buildPath(group, comp, prop, path, pathsize);
-
 	int fd = open(path, O_WRONLY);
 	if (fd < 0)
-		CGROUP_ERROR("can't open file '%s': %s", path, strerror(errno));
+		elog(ERROR, "can't open file '%s': %s", path, strerror(errno));
 
 	ssize_t ret = write(fd, data, datasize);
 
@@ -406,9 +402,9 @@ writeData(Oid group, const char *comp, const char *prop, char *data, size_t data
 	close(fd);
 
 	if (ret < 0)
-		CGROUP_ERROR("can't write data to file '%s': %s", path, strerror(err));
+		elog(ERROR, "can't write data to file '%s': %s", path, strerror(err));
 	if (ret != datasize)
-		CGROUP_ERROR("can't write all data to file '%s'", path);
+		elog(ERROR, "can't write all data to file '%s'", path);
 }
 
 /*
@@ -418,10 +414,14 @@ static int64
 readInt64(Oid group, const char *comp, const char *prop)
 {
 	int64 x;
-	char data[64];
+	char data[MAX_INT_STRING_LEN];
 	size_t datasize = sizeof(data);
+	char path[128];
+	size_t pathsize = sizeof(path);
 
-	readData(group, comp, prop, data, datasize);
+	buildPath(group, comp, prop, path, pathsize);
+
+	readData(path, data, datasize);
 
 	if (sscanf(data, "%lld", (long long *) &x) != 1)
 		CGROUP_ERROR("invalid number '%s'", data);
@@ -435,12 +435,15 @@ readInt64(Oid group, const char *comp, const char *prop)
 static void
 writeInt64(Oid group, const char *comp, const char *prop, int64 x)
 {
-	char data[64];
+	char data[MAX_INT_STRING_LEN];
 	size_t datasize = sizeof(data);
+	char path[128];
+	size_t pathsize = sizeof(path);
 
+	buildPath(group, comp, prop, path, pathsize);
 	snprintf(data, datasize, "%lld", (long long) x);
 
-	writeData(group, comp, prop, data, strlen(data));
+	writeData(path, data, strlen(data));
 }
 
 /*
@@ -494,6 +497,34 @@ checkPermission(Oid group, bool report)
 #undef __CHECK
 
 	return true;
+}
+
+/* get total ram and total swap (in Byte) from sysinfo */
+static void
+getMemoryInfo(unsigned long *ram, unsigned long *swap)
+{
+	struct sysinfo info;
+	if (sysinfo(&info) < 0)
+		elog(ERROR, "can't get memory infomation: %s", strerror(errno));
+	*ram = info.totalram;
+	*swap = info.totalswap;
+}
+
+/* get vm.overcommit_ratio */
+static int
+getOvercommitRatio(void)
+{
+	int ratio;
+	char data[MAX_INT_STRING_LEN];
+	size_t datasize = sizeof(data);
+	const char *path = "/proc/sys/vm/overcommit_ratio";
+
+	readData(path, data, datasize);
+
+	if (sscanf(data, "%d", &ratio) != 1)
+		elog(ERROR, "invalid number '%s' in '%s'", data, path);
+
+	return ratio;
 }
 
 /* Return the name for the OS group implementation */
@@ -608,6 +639,39 @@ ResGroupOps_AssignGroup(Oid group, int pid)
 }
 
 /*
+ * Lock the OS group. While the group is locked it won't be removed by other
+ * processes.
+ *
+ * This function would block if block is true, otherwise it return with -1
+ * immediately.
+ *
+ * On success it return a fd to the OS group, pass it to
+ * ResGroupOps_UnLockGroup() to unblock it.
+ */
+int
+ResGroupOps_LockGroup(Oid group, bool block)
+{
+	char path[MAXPGPATH];
+	size_t pathsize = sizeof(path);
+
+	buildPath(group, "cpu", "", path, pathsize);
+
+	return lockDir(path, block);
+}
+
+/*
+ * Unblock a OS group.
+ *
+ * fd is the value returned by ResGroupOps_LockGroup().
+ */
+void
+ResGroupOps_UnLockGroup(Oid group, int fd)
+{
+	if (fd >= 0)
+		close(fd);
+}
+
+/*
  * Set the cpu rate limit for the OS group.
  *
  * cpu_rate_limit should be within (0.0, 1.0].
@@ -642,4 +706,20 @@ int
 ResGroupOps_GetCpuCores(void)
 {
 	return getCpuCores();
+}
+
+/*
+ * Get the total memory on the system.
+ * (total RAM * overcommit_ratio + total Swap)
+ */
+int
+ResGroupOps_GetTotalMemory(void)
+{
+	unsigned long ram, swap, total;
+	int overcommitRatio;
+
+	overcommitRatio = getOvercommitRatio();
+	getMemoryInfo(&ram, &swap);
+	total = swap + ram * overcommitRatio / 100;
+	return total >> VmemTracker_GetChunkSizeInBits();
 }

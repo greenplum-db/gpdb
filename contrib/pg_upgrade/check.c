@@ -20,6 +20,7 @@ static void check_for_isn_and_int8_passing_mismatch(migratorContext *ctx,
 static void check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster);
 static void check_external_partition(migratorContext *ctx);
 static void check_fts_fault_strategy(migratorContext *ctx);
+static void check_covering_aoindex(migratorContext *ctx);
 
 
 /*
@@ -103,6 +104,7 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	check_for_isn_and_int8_passing_mismatch(ctx, CLUSTER_OLD);
 	check_external_partition(ctx);
 	check_fts_fault_strategy(ctx);
+	check_covering_aoindex(ctx);
 
 	/* old = PG 8.3 checks? */
 	/*
@@ -156,6 +158,9 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	 */
 	if (!ctx->check)
 	{
+		if (ctx->dispatcher_mode)
+			get_old_oids(ctx);
+
 		report_progress(ctx, CLUSTER_OLD, SCHEMA_DUMP, "Creating catalog dump");
 		generate_old_dump(ctx);
 		split_old_dump(ctx);
@@ -927,6 +932,123 @@ check_fts_fault_strategy(migratorContext *ctx)
 			   "| configuration.  A list of database to reconfigure manually\n"
 			   "| before restarting upgrade is in the file:\n"
 			   "| \t%s\n\n", output_path);
+	}
+	else
+	{
+		check_ok(ctx);
+	}
+}
+
+/*
+ *	check_covering_aoindex
+ *
+ *	A partitioned AO table which had an index created on the parent relation,
+ *	and an AO partition exchanged into the hierarchy without any indexes will
+ *	break upgrades due to the way pg_dump generates DDL.
+ *
+ *	create table t (a integer, b text, c integer)
+ *		with (appendonly=true)
+ *		distributed by (a)
+ *		partition by range(c) (start(1) end(3) every(1));
+ *	create index t_idx on t (b);
+ *
+ *	At this point, the t_idx index has created AO blockdir relations for all
+ *	partitions. We now exchange a new table into the hierarchy which has no
+ *	index defined:
+ *
+ *	create table t_exch (a integer, b text, c integer)
+ *		with (appendonly=true)
+ *		distributed by (a);
+ *	alter table t exchange partition for (rank(1)) with table t_exch;
+ *
+ *	The partition which was swapped into the hierarchy with EXCHANGE does not
+ *	have any indexes and thus no AO blockdir relation. This is in itself not
+ *	a problem, but when pg_dump generates DDL for the above situation it will
+ *	create the index in such a way that it covers the entire hierarchy, as in
+ *	its original state. The below snippet illustrates the dumped DDL:
+ *
+ *	create table t ( ... )
+ *		...
+ *		partition by (... );
+ *	create index t_idx on t ( ... );
+ *
+ *	This creates a problem for the Oid synchronization in pg_upgrade since it
+ *	expects to find a preassigned Oid for the AO blockdir relations for each
+ *	partition. A longer term solution would be to generate DDL in pg_dump which
+ *	creates the current state, but for the time being we disallow upgrades on
+ *	cluster which exhibits this.
+ */
+static void
+check_covering_aoindex(migratorContext *ctx)
+{
+	ClusterInfo	   *old_cluster = &ctx->old;
+	char			query[QUERY_ALLOC];
+	char			output_path[MAXPGPATH];
+	FILE		   *script = NULL;
+	bool			found = false;
+	int				dbnum;
+
+	prep_status(ctx, "Checking for non-covering indexes on partitioned AO tables");
+
+	snprintf(output_path, sizeof(output_path), "%s/mismatched_aopartition_indexes.txt",
+			 ctx->cwd);
+
+	snprintf(query, sizeof(query),
+			 "SELECT DISTINCT ao.relid, inh.inhrelid "
+			 "FROM   pg_catalog.pg_appendonly ao "
+			 "       JOIN pg_catalog.pg_inherits inh "
+			 "         ON (inh.inhparent = ao.relid) "
+			 "       JOIN pg_catalog.pg_appendonly aop "
+			 "         ON (inh.inhrelid = aop.relid AND aop.blkdirrelid = 0) "
+			 "       JOIN pg_catalog.pg_index i "
+			 "         ON (i.indrelid = ao.relid) "
+			 "WHERE  ao.blkdirrelid <> 0;");
+
+	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		PGconn	   *conn;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
+
+		conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
+		res = executeQueryOrDie(ctx, conn, query);
+
+		ntups = PQntuples(res);
+
+		if (ntups > 0)
+		{
+			found = true;
+
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
+					   output_path);
+
+			for (rowno = 0; rowno < ntups; rowno++)
+			{
+				fprintf(script, "Mismatched index on partition %s in relation %s\n",
+						PQgetvalue(res, rowno, PQfnumber(res, "inhrelid")),
+						PQgetvalue(res, rowno, PQfnumber(res, "relid")));
+			}
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(ctx, PG_REPORT, "fatal\n");
+		pg_log(ctx, PG_FATAL,
+			   "| Your installation contains partitioned append-only tables\n"
+			   "| with an index defined on the partition parent which isn't\n"
+			   "| present on all partition members.  These indexes must be\n"
+			   "| dropped before the upgrade.  A list of relations, and the\n"
+			   "| partitions in question is in the file:\n"
+			   "| \t%s\n\n", output_path);
+
 	}
 	else
 	{

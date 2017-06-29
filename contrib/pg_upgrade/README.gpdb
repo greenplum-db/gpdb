@@ -37,15 +37,8 @@ is supported in pg_dump.
   object entry in CreateKeyFromCatalogTuple() in the oid dispatcher code
   (src/backend/catalog/oid_dispatch.c).
 
-* Implement a dump function for the new dumpable object in the binary upgrade
-  code in src/bin/pg_dump/binary_upgrade.c. This function should result in a
-  SQL call to the previously created function added as an ArchiveEntry. See the
-  already existing dump functions for examples on what to do. If additional
-  information on top of what already exist in the Info object is required, SQL
-  calls to the running server can be performed via libpq here.
-
-* In src/bin/pg_dump/pg_dump.c, add the dumpable object type to the list in
-  dumpBinaryUpgrade() with a call to the dump function.
+* Ensure that the Oid dumping in contrib/pg_upgrade/oid_dump.c is covering the
+  new object, and extend it if not.
 
 * In case any special handling is required during the upgrade, or any special
   checks are warranted, add these to the appropriate places in pg_upgrade.
@@ -85,3 +78,20 @@ synchronization.
   is not allowed in utility mode. All external partitions must be either moved
   out of the partition hierarchy with ALTER TABLE EXCHANGE, or dropped, prior
   to the upgrade.
+
+
+Testing Greenplum pg_upgrade
+----------------------------
+
+There is a testrunner script in contrib/pg_upgrade which runs a full upgrade of
+the gpdemo cluster and it's current contents. The idea is that it can be used
+to test upgrades by running as the final step of ICW. The test can be invoked
+by "make installcheck" in the contrib/pg_upgrade directory.
+
+The testscript also has a "smoketest" option which only tests upgrading a
+single node.  This is *not* a test of an actual Greenplum cluster upgrade,
+but a test of the Oid synchronization required to handle a node upgrade. The
+intention is for this to be a quick test that all objects are handled by
+pg_upgrade; upgrade testing still requires the full run across all
+segments/mirrors. The smoketest can be invoked by "make check" in the
+contrib/pg_upgrade directory.

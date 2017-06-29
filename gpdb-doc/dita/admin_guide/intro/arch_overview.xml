@@ -13,22 +13,46 @@
       to distribute the load of multi-terabyte data warehouses, and can use all of a system's
       resources in parallel to process a query.</p>
     <p>Greenplum Database is based on PostgreSQL open-source technology. It is essentially several
-      PostgreSQL database instances acting together as one cohesive database management system
-      (DBMS). It is based on PostgreSQL 8.3.23, and in most cases is very similar to PostgreSQL with
-      regard to SQL support, features, configuration options, and end-user functionality. Database
-      users interact with Greenplum Database as they would with a regular PostgreSQL DBMS. </p>
+      PostgreSQL disk-oriented database instances acting together as one cohesive database
+      management system (DBMS). It is based on PostgreSQL 8.3.23, and in most cases is very similar
+      to PostgreSQL with regard to SQL support, features, configuration options, and end-user
+      functionality. Database users interact with Greenplum Database as they would a regular
+      PostgreSQL DBMS. </p>
+    <p>Greenplum Database can use the append-optimized (AO) storage format for bulk loading and
+      reading of data, and provides performance advantages over HEAP tables. Append-optimized
+      storage provides checksums for data protection, compression and row/column orientation. Both
+      row-oriented or column-oriented append-optimized tables can be compressed. </p>
+    <p>The main differences between Greenplum Database and PostgreSQL are as follows:<ul
+        id="ul_tnk_ymb_c1b">
+        <li>GPORCA is leveraged for query planning, in addition to the legacy query planner, which
+          is based on the Postgres query planner.</li>
+        <li>Greenplum Database can use append-optimized storage.</li>
+        <li>Greenplum Database has the option to use column storage, data that is logically
+          organized as a table, using rows and columns that are physically stored in a
+          column-oriented format, rather than as rows. Column storage can only be used with
+          append-optimized tables. Column storage is compressible. It also can provide performance
+          improvements as you only need to return the columns of interest to you. All compression
+          algorithms can be used with either row or column-oriented tables, but Run-Length Encoded
+          (RLE) compression can only be used with column-oriented tables. Greenplum Database
+          provides compression on all Append-Optimized tables that use column storage.</li>
+      </ul></p>
     <p>The internals of PostgreSQL have been modified or supplemented to support the parallel
       structure of Greenplum Database. For example, the system catalog, optimizer, query executor,
       and transaction manager components have been modified and enhanced to be able to execute
       queries simultaneously across all of the parallel PostgreSQL database instances. The Greenplum
         <i>interconnect</i> (the networking layer) enables communication between the distinct
-      PostgreSQL instances and allows the system to behave as one logical database.</p>
+      PostgreSQL instances and allows the system to behave as one logical database. </p>
+    <p>Greenplum Database also can use declarative partitions and sub-partitions to implicitly
+      generate partition constraints.</p>
     <p>Greenplum Database also includes features designed to optimize PostgreSQL for business
       intelligence (BI) workloads. For example, Greenplum has added parallel data loading (external
       tables), resource management, query optimizations, and storage enhancements, which are not
       found in standard PostgreSQL. Many features and optimizations developed by Greenplum make
       their way into the PostgreSQL community. For example, table partitioning is a feature first
       developed by Greenplum, and it is now in standard PostgreSQL.</p>
+    <p>Greenplum Database queries use a Volcano-style query engine model, where the execution engine
+      takes an execution plan and uses it to generate a tree of physical operators, evaluates tables
+      through physical operators, and delivers results in a query response.</p>
     <p>Greenplum Database stores and processes large amounts of data by distributing the data and
       processing workload across several servers or <i>hosts</i>. Greenplum Database is an
         <i>array</i> of individual databases based upon PostgreSQL 8.3 working together to present a
@@ -64,6 +88,11 @@
         master authenticates client connections, processes incoming SQL commands, distributes
         workloads among segments, coordinates the results returned by each segment, and presents the
         final results to the client program.</p>
+      <p>Greenplum Database uses Write-Ahead Logging (WAL) for master/standby master mirroring. In
+        WAL-based logging, all modifications are written to the log before being applied, to ensure
+        data integrity for any in-process operations.<note>WAL logging is not yet available for
+          segment mirroring.</note>
+      </p>
     </body>
   </topic>
   <topic id="arch_segments" xml:lang="en">

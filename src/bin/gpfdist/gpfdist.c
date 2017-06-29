@@ -106,9 +106,9 @@ static void flush_ssl_buffer(int fd, short event, void* arg);
  X-GP-XID   - transaction ID
  X-GP-CID   - command ID
  X-GP-SN    - session ID
- X-GP-PROTO - protocol number
+ X-GP-PROTO - protocol number, report error if not provided:
 
- X-GP-PROTO = 0 or not provided:
+ X-GP-PROTO = 0
  return the content of the file without any kind of meta info
 
  X-GP-PROTO = 1
@@ -3218,7 +3218,7 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 	const char* xid = 0;
 	const char* cid = 0;
 	const char* sn = 0;
-	const char* gp_proto = "0";
+	const char* gp_proto = NULL; /* default to invalid, so that report error if not specified*/
 	int 		i;
 
 	r->csvopt = "";
@@ -3284,13 +3284,26 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 			return -1;
 		}
 	}
-	r->gp_proto = strtol(gp_proto, 0, 0);
-
-	if (r->gp_proto != 0 && r->gp_proto != 1)
+	if (gp_proto!=NULL)
 	{
-		gwarning(r, "reject invalid request from %s [%s %s] - X-GP-PROTO invalid '%s'",
+		r->gp_proto = strtol(gp_proto, 0, 0);
+	}
+
+	if (gp_proto == NULL || (r->gp_proto != 0 && r->gp_proto != 1))
+	{
+		if (gp_proto == NULL)
+		{
+			gwarning(r, "reject invalid request from %s [%s %s] - no X-GP-PROTO",
+				r->peer, r->in.req->argv[0], r->in.req->argv[1]);
+			http_error(r, FDIST_BAD_REQUEST, "invalid request (no gp-proto)");
+		}
+		else
+		{
+			gwarning(r, "reject invalid request from %s [%s %s] - X-GP-PROTO invalid '%s'",
 				r->peer, r->in.req->argv[0], r->in.req->argv[1], gp_proto);
-		http_error(r, FDIST_BAD_REQUEST, "invalid request (invalid gp-proto)");
+			http_error(r, FDIST_BAD_REQUEST, "invalid request (invalid gp-proto)");
+		}
+
 		request_end(r, 1, 0);
 		return -1;
 	}

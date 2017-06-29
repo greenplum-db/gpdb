@@ -29,6 +29,10 @@
         <codeblock>DROP VIEW topten;
 </codeblock>
       </p>
+      <p>The <codeph>DROP VIEW ... CASCADE</codeph> command also removes all dependent objects. As
+      example, if another view depends on the view which is about to be dropped, the other view
+      will be dropped as well. Without the <codeph>CASCADE</codeph> option, the
+      <codeph>DROP VIEW</codeph> command will fail.</p>
     </body>
   </topic>
 </topic>

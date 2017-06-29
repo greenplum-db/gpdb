@@ -32,6 +32,8 @@ to the segments, and collects the results.
 
 ## Building Greenplum Database with GPORCA
 
+For macOS X developers, follow [these steps](README.macOS.md) for getting your system ready for GPDB 
+
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
 system and tries to build with ORCA by default.  For your convenience, here are
 the steps of how to build the optimizer. For the most up-to-date way of
@@ -51,6 +53,7 @@ building, see the README at the following repositories:
     cd gp-xerces/build
     ../configure
     make install
+    cd ../..
     ```
 
 1. ORCA requires [CMake](https://cmake.org) and
@@ -65,6 +68,7 @@ building, see the README at the following repositories:
     cd gporca/build
     cmake -GNinja ..
     ninja install
+    cd ../..
     ```
     **Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
     ```
@@ -85,9 +89,6 @@ building, see the README at the following repositories:
     
 ### Build the database
 ```
-# Clean environment
-make distclean
-
 # Configure build environment to install at /usr/local/gpdb
 ./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
 
@@ -133,6 +134,11 @@ select gp_opt_version();
 To turn ORCA off and use legacy planner for query optimization:
 ```
 set optimizer=off;
+```
+
+If you want to clean all generated files
+```
+make distclean
 ```
 
 ## Running tests

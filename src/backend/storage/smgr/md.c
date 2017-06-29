@@ -2221,7 +2221,7 @@ register_dirty_segment(SMgrRelation reln, MdMirVec *seg)
  * As with register_dirty_segment, this could involve either a local or
  * a remote pending-ops table.
  */
-static void
+static void pg_attribute_unused()
 register_unlink(RelFileNode rnode)
 {
 	if (pendingOpsTable)

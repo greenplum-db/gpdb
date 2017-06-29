@@ -86,8 +86,6 @@ typedef struct SessionState
 	/* If we modify the sessionId in ProcMppSessionId, this field is turned on */
 	bool isModifiedSessionId;
 #endif
-
-	Oid resGroupId;
 } SessionState;
 
 /*

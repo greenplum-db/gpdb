@@ -112,10 +112,11 @@
             configuration file location in the <codeph>LOCATION</codeph> clause of the
                <codeph>CREATE EXTERNAL TABLE</codeph> command. This is the syntax:</p>
          <codeblock>'s3://<varname>S3_endpoint</varname>[:<varname>port</varname>]/<varname>bucket_name</varname>/[<varname>S3_prefix</varname>] [region=<varname>S3_region</varname>] [config=<varname>config_file_location</varname>]'</codeblock>
-         <p>For the <codeph>s3</codeph> protocol you must specify the S3 endpoint and S3 bucket
+         <p>The <codeph>s3</codeph> protocol requires that you specify the S3 endpoint and S3 bucket
             name. Each Greenplum Database segment instance must have access to the S3 location. The
             optional <varname>S3_prefix</varname> value is used to select files for read-only S3
             tables, or as a filename prefix to use when uploading files for S3 writable tables.</p>
+         <note>The Greenplum Database <codeph>s3</codeph> protocol URL must include the S3 endpoint hostname.</note>
          <p>To specify an ECS endpoint (an Amazon S3 compatible service) in the
                <codeph>LOCATION</codeph> clause, you must set the <codeph>s3</codeph> configuration
             file parameter <codeph>version</codeph> to 2. The <codeph>version</codeph> parameter
@@ -137,32 +138,32 @@
             result of inserting data to the table. See <xref href="#amazon-emr/section_c2f_zvs_3x"
                format="dita"/>.</p>
          <p>For read-only S3 tables, the S3 file prefix is optional. If you specify an
-               <varname>S3_prefix</varname>, then <codeph>s3</codeph> protocol selects all files
+               <varname>S3_prefix</varname>, then the <codeph>s3</codeph> protocol selects all files
             that start with the specified prefix as data files for the external table. The
-               <codeph>s3</codeph> protocol does not use the slash character (<codeph>/</codeph>) as
-            delimiter, so a slash character follows a prefix is treated as part of the prefix
-            itself. </p>
-         <p>For example, consider the following 5 files that each have <codeph>domain</codeph> as
-            the <varname>S3_endpoint</varname>, and <codeph>test1</codeph> as the
-               <varname>bucket_name</varname>:</p>
-         <codeblock>s3://domain/test1/abc
-s3://domain/test1/abc/
-s3://domain/test1/abc/xx
-s3://domain/test1/abcdef
-s3://domain/test1/abcdefff</codeblock>
+               <codeph>s3</codeph> protocol does not use the slash character (<codeph>/</codeph>)
+            as a delimiter, so a slash character following a prefix is treated as part of the
+            prefix itself. </p>
+         <p>For example, consider the following 5 files that each have the <varname>S3_endpoint</varname>
+            named <codeph>s3-us-west-2.amazonaws.com</codeph>
+            and the <varname>bucket_name</varname> <codeph>test1</codeph>:</p>
+         <codeblock>s3://s3-us-west-2.amazonaws.com/test1/abc
+s3://s3-us-west-2.amazonaws.com/test1/abc/
+s3://s3-us-west-2.amazonaws.com/test1/abc/xx
+s3://s3-us-west-2.amazonaws.com/test1/abcdef
+s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
          <ul id="ul_yll_xjm_qv">
-            <li>If the S3 URL is provided as <codeph>s3://domain/test1/abc</codeph>, then the
+            <li>If the S3 URL is provided as <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc</codeph>, then the
                   <codeph>abc</codeph> prefix selects all 5 files.</li>
-            <li>If the S3 URL is provided as <codeph>s3://domain/test1/abc/</codeph>, then the
+            <li>If the S3 URL is provided as <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/</codeph>, then the
                   <codeph>abc/</codeph> prefix selects the files
-                  <codeph>s3://domain/test1/abc/</codeph> and
-                  <codeph>s3://domain/test1/abc/xx</codeph>.</li>
-            <li>If the S3 URL is provided as <codeph>s3://domain/test1/abcd</codeph>, then the
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/</codeph> and
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/xx</codeph>.</li>
+            <li>If the S3 URL is provided as <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcd</codeph>, then the
                   <codeph>abcd</codeph> prefix selects the files
-                  <codeph>s3://domain/test1/abcdef</codeph> and
-                  <codeph>s3://domain/test1/abcdefff</codeph></li>
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcdef</codeph> and
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeph></li>
          </ul>
-         <p>Wildcard characters are not supported in a <varname>S3_prefix</varname>; however, the S3
+         <p>Wildcard characters are not supported in an <varname>S3_prefix</varname>; however, the S3
             prefix functions as if a wildcard character immediately followed the prefix itself.</p>
          <p>All of the files selected by the S3 URL
                (<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/<varname>S3_prefix</varname>)
@@ -286,7 +287,7 @@ server_side_encryption = sse-s3
             absolute path to the location with the <codeph>config</codeph> parameter in the
                <codeph>s3</codeph> protocol <codeph>LOCATION</codeph> clause. This example specifies
             a location in the <codeph>gpadmin</codeph> home directory. </p>
-         <codeblock>LOCATION ('s3://s3.amazonaws.com/test/my_data config=/home/gpadmin/s3.conf')</codeblock>
+         <codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/test/my_data config=/home/gpadmin/s3.conf')</codeblock>
          <p>All segment instances on the hosts use the file
             <codeph>/home/gpadmin/s3.conf</codeph>.</p>
       </section>
@@ -513,9 +514,9 @@ chunksize = 67108864</codeblock></p>
             capture the output and create an <codeph>s3</codeph> configuration file to connect to
             Amazon S3. </p><p>The utility is installed in the Greenplum Database
                <codeph>$GPHOME/bin</codeph> directory.</p><b>Syntax</b>
-         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config==<varname>path_to_config_file</varname>]"
+         <codeblock>gpcheckcloud {<b>-c</b> | <b>-d</b>} "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
 
-gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config==<varname>path_to_config_file</varname>]"
+gpcheckcloud <b>-u</b> &lt;file_to_upload> "<b>s3://</b><varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>] [config=<varname>path_to_config_file</varname>]"
 gpcheckcloud <b>-t</b>
 
 gpcheckcloud <b>-h</b></codeblock>
@@ -561,13 +562,13 @@ gpcheckcloud <b>-h</b></codeblock>
             current directory.<codeblock>gpcheckcloud -t > ./mytest_s3.config</codeblock></p><p>This
             example attempts to upload a local file, <filepath>test-data.csv</filepath> to an S3
             bucket location using the <codeph>s3</codeph> configuration file
-               <codeph>s3.mytestconf</codeph>:<codeblock>gpcheckcloud -u ./test-data.csv "s3://domain/test1/abc config=s3.mytestconf"</codeblock></p><p>A
+               <codeph>s3.mytestconf</codeph>:<codeblock>gpcheckcloud -u ./test-data.csv "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p><p>A
             successful upload results in one or more files placed in the S3 bucket using the
             filename format <codeph> abc&lt;segment_id>&lt;random>.data[.gz]</codeph>. See <xref
                href="#amazon-emr/section_c2f_zvs_3x" format="dita"/>.</p><p>This example attempts to
             connect to an S3 bucket location with the <codeph>s3</codeph> configuration file
-               <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://domain/test1/abc config=s3.mytestconf"</codeblock></p><p>Download
+               <codeph>s3.mytestconf</codeph>.<codeblock>gpcheckcloud -c "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p><p>Download
             all files from the S3 bucket location and send the output to <codeph>STDOUT</codeph>.
-            <codeblock>gpcheckcloud -d "s3://domain/test1/abc config=s3.mytestconf"</codeblock></p></section>
+            <codeblock>gpcheckcloud -d "s3://s3-us-west-2.amazonaws.com/test1/abc config=s3.mytestconf"</codeblock></p></section>
    </body>
 </topic>

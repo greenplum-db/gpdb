@@ -4442,6 +4442,17 @@ _copyDropResourceGroupStmt(DropResourceGroupStmt *from)
 	return newnode;
 }
 
+static AlterResourceGroupStmt *
+_copyAlterResourceGroupStmt(AlterResourceGroupStmt *from)
+{
+	AlterResourceGroupStmt *newnode = makeNode(AlterResourceGroupStmt);
+
+	COPY_STRING_FIELD(name);
+	COPY_NODE_FIELD(options);
+
+	return newnode;
+}
+
 static TableValueExpr *
 _copyTableValueExpr(TableValueExpr *from)
 {
@@ -5234,6 +5245,9 @@ copyObject(void *from)
 			break;
 		case T_DropResourceGroupStmt:
 			retval = _copyDropResourceGroupStmt(from);
+			break;
+		case T_AlterResourceGroupStmt:
+			retval = _copyAlterResourceGroupStmt(from);
 			break;
 
 		case T_A_Expr:

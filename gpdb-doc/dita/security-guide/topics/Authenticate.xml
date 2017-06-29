@@ -1,0 +1,607 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_n5w_gtd_jr">
+  <title>Configuring Client Authentication</title>
+  <body>
+    <p>When a Greenplum Database system is first initialized, the system contains one predefined
+      superuser role. This role will have the same name as the operating system user who initialized
+      the Greenplum Database system. This role is referred to as gpadmin. By default, the system is
+      configured to only allow local connections to the database from the gpadmin role. If you want
+      to allow any other roles to connect, or if you want to allow connections from remote hosts,
+      you have to configure Greenplum Database to allow such connections. This section explains how
+      to configure client connections and authentication to Greenplum Database.<ul
+        id="ul_kpg_sgq_kr">
+        <li><xref href="#topic_ln1_ptd_jr" format="dita"/></li>
+        <li><xref href="#topic_xwr_rvd_jr" format="dita"/></li>
+        <li><xref href="#topic_nyh_gwd_jr" format="dita"/></li>
+        <li><xref href="#topic_hwn_bk2_jr" format="dita"/></li>
+        <li><xref href="#topic_ibc_nl2_jr" format="dita"/></li>
+      </ul></p>
+  </body>
+  <topic id="topic_ln1_ptd_jr">
+    <title>Allowing Connections to Greenplum Database</title>
+    <body>
+      <p>Client access and authentication is controlled by a configuration file named
+          <codeph>pg_hba.conf</codeph> (the standard PostgreSQL host-based authentication file). For
+        detailed information about this file, see <xref
+          href="http://www.postgresql.org/docs/9.0/interactive/auth-pg-hba-conf.html" format="html"
+          scope="external">The pg_hba.conf File</xref> in the PostgreSQL documentation. </p>
+      <p>In Greenplum Database, the <codeph>pg_hba.conf</codeph> file of the master instance
+        controls client access and authentication to your Greenplum system. The segments also have
+          <codeph>pg_hba.conf</codeph> files, but these are already correctly configured to only
+        allow client connections from the master host. The segments never accept outside client
+        connections, so there is no need to alter the <codeph>pg_hba.conf</codeph> file on segments. </p>
+      <p>The general format of the <codeph>pg_hba.conf</codeph> file is a set of records, one per
+        line. Blank lines are ignored, as is any text after a # comment character. A record is made
+        up of a number of fields which are separated by spaces and/or tabs. Fields can contain white
+        space if the field value is quoted. Records cannot be continued across lines. Each remote
+        client access record is in this format:
+        <codeblock>host   database   role   CIDR-address   authentication-method
+</codeblock></p>
+      <p>Each UNIX-domain socket access record is in this format:
+        <codeblock>local   database   role   authentication-method
+</codeblock></p>
+      <p>The meaning of the <codeph>pg_hba_conf</codeph> fields is as follows: <parml>
+          <plentry>
+            <pt>local</pt>
+            <pd> Matches connection attempts using UNIX-domain sockets. Without a record of this
+              type, UNIX-domain socket connections are disallowed. </pd>
+          </plentry>
+          <plentry>
+            <pt>host</pt>
+            <pd> Matches connection attempts made using TCP/IP. Remote TCP/IP connections will not
+              be possible unless the server is started with an appropriate value for the
+              listen_addresses server configuration parameter. </pd>
+          </plentry>
+          <plentry>
+            <pt>hostssl</pt>
+            <pd> Matches connection attempts made using TCP/IP, but only when the connection is made
+              with SSL encryption. SSL must be enabled at server start time by setting the
+                <codeph>ssl</codeph> configuration parameter. Requires SSL authentication be
+              configured in <codeph>postgresql.conf</codeph>. See <xref
+                href="#topic_fzv_wb2_jr/ssl_postgresql" format="dita"/>. </pd>
+          </plentry>
+          <plentry>
+            <pt>hostnossl</pt>
+            <pd> Matches connection attempts made over TCP/IP that do not use SSL. Requires SSL
+              authentication be configured in <codeph>postgresql.conf</codeph>. See <xref
+                href="#topic_fzv_wb2_jr/ssl_postgresql" format="dita"/>.</pd>
+          </plentry>
+          <plentry>
+            <pt>database</pt>
+            <pd>Specifies which database names this record matches. The value <codeph>all</codeph>
+              specifies that it matches all databases. Multiple database names can be supplied by
+              separating them with commas. A separate file containing database names can be
+              specified by preceding the file name with <codeph>@</codeph>. </pd>
+          </plentry>
+          <plentry>
+            <pt> role </pt>
+            <pd>Specifies which database role names this record matches. The value all specifies
+              that it matches all roles. If the specified role is a group and you want all members
+              of that group to be included, precede the role name with a +. Multiple role names can
+              be supplied by separating them with commas. A separate file containing role names can
+              be specified by preceding the file name with @. </pd>
+          </plentry>
+          <plentry>
+            <pt> CIDR-address </pt>
+            <pd> Specifies the client machine IP address range that this record matches. It contains
+              an IP address in standard dotted decimal notation and a CIDR mask length. IP addresses
+              can only be specified numerically, not as domain or host names. The mask length
+              indicates the number of high-order bits of the client IP address that must match. Bits
+              to the right of this must be zero in the given IP address. There must not be any white
+              space between the IP address, the /, and the CIDR mask length. <p>Typical examples of
+                a CIDR-address are 172.20.143.89/32 for a single host, or 172.20.143.0/24 for a
+                small network, or 10.6.0.0/16 for a larger one. To specify a single host, use a CIDR
+                mask of 32 for IPv4 or 128 for IPv6. In a network address, do not omit trailing
+                zeroes.</p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>IP-address</pt>
+            <pt>IP-mask </pt>
+            <pd> These fields can be used as an alternative to the CIDR-address notation. Instead of
+              specifying the mask length, the actual mask is specified in a separate column. For
+              example, 255.0.0.0 represents an IPv4 CIDR mask length of 8, and 255.255.255.255
+              represents a CIDR mask length of 32. These fields only apply to host, hostssl, and
+              hostnossl records. </pd>
+          </plentry>
+          <plentry>
+            <pt> authentication-method </pt>
+            <pd> Specifies the authentication method to use when connecting. See <xref
+                href="#topic_nyh_gwd_jr" format="dita"/> for more details. </pd>
+          </plentry>
+        </parml></p>
+    </body>
+  </topic>
+  <topic id="topic_xwr_rvd_jr">
+    <title>Editing the pg_hba.conf File</title>
+    <body>
+      <p>This example shows how to edit the <codeph>pg_hba.conf</codeph> file of the master to allow
+        remote client access to all databases from all roles using encrypted password
+        authentication. </p>
+      <note>For a more secure system, consider removing all connections that use trust
+        authentication from your master <codeph>pg_hba.conf</codeph>. Trust authentication means the
+        role is granted access without any authentication, therefore bypassing all security. Replace
+        trust entries with ident authentication if your system has an ident service available. </note>
+      <p>To edit <codeph>pg_hba.conf</codeph>:<ol id="ol_krz_zvd_jr">
+          <li>Open the file <codeph>$MASTER_DATA_DIRECTORY/pg_hba.conf</codeph> in a text
+            editor.</li>
+          <li>Add a line to the file for each type of connection you want to allow. Records are read
+            sequentially, so the order of the records is significant. Typically, earlier records
+            will have tight connection match parameters and weaker authentication methods, while
+            later records will have looser match parameters and stronger authentication methods. For
+            example:<codeblock># allow the gpadmin user local access to all databases
+# using ident authentication
+local   all   gpadmin   ident         sameuser
+host    all   gpadmin   127.0.0.1/32  ident
+host    all   gpadmin   ::1/128       ident
+# allow the 'dba' role access to any database from any
+# host with IP address 192.168.x.x and use md5 encrypted
+# passwords to authenticate the user
+# Note that to use SHA-256 encryption, replace md5 with
+# password in the line below
+host    all   dba   192.168.0.0/32  md5
+</codeblock></li>
+        </ol></p>
+    </body>
+  </topic>
+  <topic id="topic_nyh_gwd_jr">
+    <title>Authentication Methods</title>
+    <body>
+      <ul id="ul_qgp_1jq_kr">
+        <li>
+          <xref href="#topic_nyh_gwd_jr/basic_auth" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_nyh_gwd_jr/kerberos_auth" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_nyh_gwd_jr/ldap_auth" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_fzv_wb2_jr" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_yxp_5h2_jr" format="dita"/>
+        </li>
+        <li>
+          <xref href="#topic_ed4_d32_jr" format="dita"/>
+        </li>
+      </ul>
+      <section id="basic_auth">
+        <title>Basic Authentication</title>
+        <p>The following basic authentication methods are supported: <parml id="ul_zsk_kwd_jr">
+            <plentry>
+              <pt>Password or MD5</pt>
+              <pd>Requires clients to provide a password, one of either: <ul id="ul_m21_nwd_jr">
+                  <li>Md5 &#8211; password transmitted as an MD5 hash.</li>
+                  <li>Password &#8211; A password transmitted in clear text. Always use SSL
+                    connections to prevent password sniffing during transit. This is configurable,
+                    see "Encrypting Passwords" in the <i>Greenplum Database Administrator Guide</i>
+                    for more information.</li>
+                </ul></pd>
+            </plentry>
+            <plentry>
+              <pt>Reject</pt>
+              <pd>Reject the connections with the matching parameters. You should typically use this
+                to restrict access from specific hosts or insecure connections.</pd>
+            </plentry>
+            <plentry>
+              <pt>Ident</pt>
+              <pd>Authenticates based on the client's operating system user name. You should only
+                use this for local connections.</pd>
+            </plentry>
+          </parml></p>
+        <p>Following are some sample <codeph>pg_hba.conf</codeph> basic authentication
+          entries:<codeblock>hostnossl    all   all        0.0.0.0   reject
+hostssl      all   testuser   0.0.0.0/0 md5
+local        all   gpuser               ident
+</codeblock></p>
+      </section>
+      <section id="kerberos_auth">
+        <title>Kerberos Authentication</title>
+        <p>You can authenticate against a Kerberos server (RFC 2743, 1964).</p>
+        <p>The format for Kerberos authentication in the <codeph>pg_hba.conf</codeph> file
+          is:<codeblock>servicename/hostname@realm</codeblock></p>
+        <p>The following options may be added to the entry:<parml>
+            <plentry>
+              <pt>Map</pt>
+              <pd>Map system and database users.</pd>
+            </plentry>
+            <plentry>
+              <pt>Include_realm</pt>
+              <pd>Option to specify realm name included in the system-user name in the ident map
+                file.</pd>
+            </plentry>
+            <plentry>
+              <pt>Krb_realm</pt>
+              <pd>Specify the realm name for matching the principals.</pd>
+            </plentry>
+            <plentry>
+              <pt>Krb_server_hostname</pt>
+              <pd>The hostname of the service principal.</pd>
+            </plentry>
+          </parml></p>
+        <p>Following is an example <codeph>pg_hba.conf</codeph> entry for
+          Kerberos:<codeblock>host    all all 0.0.0.0/0   krb5
+hostssl all all 0.0.0.0/0   krb5 map=krbmap
+</codeblock></p>
+        <p>The following Kerberos server settings are specified in <codeph>postgresql.conf</codeph>: <parml>
+            <plentry>
+              <pt><codeph>krb_server_key <i>file</i></codeph></pt>
+              <pd>Sets the location of the Kerberos server key file.</pd>
+            </plentry>
+            <plentry>
+              <pt>
+                <codeph>krb_srvname <i>string</i></codeph></pt>
+              <pd>Kerberos service name.</pd>
+            </plentry>
+            <plentry>
+              <pt><codeph>krb_caseins_users <i>boolean</i></codeph></pt>
+              <pd>Case-sensitivity. The default is off. </pd>
+            </plentry>
+          </parml></p>
+        <p>The following client setting is specified as a connection parameter: <parml>
+            <plentry>
+              <pt>
+                <codeph>Krbsrvname</codeph></pt>
+              <pd>The Kerberos service name to use for authentication.</pd>
+            </plentry>
+          </parml>
+        </p>
+      </section>
+      <section id="ldap_auth">
+        <title>LDAP Authentication</title>
+        <p>You can authenticate against an LDAP directory.</p>
+        <ul>
+          <li>LDAPS and LDAP over TLS options encrypt the connection to the LDAP server.</li>
+          <li>The connection from the client to the server is not encrypted unless SSL is enabled.
+            Configure client connections to use SSL to encrypt connections from the client.</li>
+          <li>To configure or customize LDAP settings, set the <codeph>LDAPCONF</codeph> environment
+            variable with the path to the <codeph>ldap.conf</codeph> file and add this to the
+              <codeph>greenplum_path.sh</codeph> script.</li>
+        </ul>
+        <p>Following are the recommended steps for configuring your system for LDAP authentication: <ol>
+            <li> Set up the LDAP server with the database users/roles to be authenticated via
+              LDAP.</li>
+            <li>On the database:<ol>
+                <li>Verify that the database users to be authenticated via LDAP exist on the
+                  database. LDAP is only used for verifying username/password pairs, so the roles
+                  should exist in the database.</li>
+                <li>Update the <codeph>pg_hba.conf</codeph> file in the
+                    <codeph>$MASTER_DATA_DIRECTORY</codeph> to use LDAP as the authentication method
+                  for the respective users. Note that the first entry to match the user/role in the
+                    <codeph>pg_hba.conf</codeph> file will be used as the authentication mechanism,
+                  so the position of the entry in the file is important.</li>
+                <li>Reload the server for the <codeph>pg_hba.conf</codeph> configuration settings to
+                  take effect (<codeph>gpstop -u</codeph>).</li>
+              </ol>
+            </li>
+          </ol></p>
+        <p>Specify the following parameter <codeph>auth-options</codeph>. <parml>
+            <plentry>
+              <pt>ldapserver</pt>
+              <pd>Names or IP addresses of LDAP servers to connect to. Multiple servers may be
+                specified, separated by spaces.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapprefix</pt>
+              <pd>String to prepend to the user name when forming the DN to bind as, when doing
+                simple bind authentication.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapsuffix</pt>
+              <pd>String to append to the user name when forming the DN to bind as, when doing
+                simple bind authentication.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapport</pt>
+              <pd>Port number on LDAP server to connect to. If no port is specified, the LDAP
+                library's default port setting will be used.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldaptls</pt>
+              <pd>Set to 1 to make the connection between PostgreSQL and the LDAP server use TLS
+                encryption. Note that this only encrypts the traffic to the LDAP server — the
+                connection to the client will still be unencrypted unless SSL is used.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapbasedn</pt>
+              <pd>Root DN to begin the search for the user in, when doing search+bind
+                authentication.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapbinddn</pt>
+              <pd>DN of user to bind to the directory with to perform the search when doing
+                search+bind authentication.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapbindpasswd</pt>
+              <pd>Password for user to bind to the directory with to perform the search when doing
+                search+bind authentication.</pd>
+            </plentry>
+            <plentry>
+              <pt>ldapsearchattribute</pt>
+              <pd>Attribute to match against the user name in the search when doing search+bind
+                authentication.</pd>
+            </plentry>
+          </parml>
+        </p>
+        <p>Example:
+          <codeblock>ldapserver=ldap.greenplum.com prefix="cn=" suffix=", dc=greenplum, dc=com"</codeblock></p>
+        <p>Following are sample <codeph>pg_hba.conf</codeph> file entries for LDAP authentication:
+          <codeblock>host all testuser 0.0.0.0/0 ldap ldap
+ldapserver=ldapserver.greenplum.com ldapport=389 ldapprefix="cn=" ldapsuffix=",ou=people,dc=greenplum,dc=com"
+hostssl   all   ldaprole   0.0.0.0/0   ldap
+ldapserver=ldapserver.greenplum.com ldaptls=1 ldapprefix="cn=" ldapsuffix=",ou=people,dc=greenplum,dc=com"          
+        </codeblock></p>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_fzv_wb2_jr">
+    <title>SSL Client Authentication</title>
+    <body>
+      <p>SSL authentication compares the Common Name (cn) attribute of an SSL certificate provided
+        by the connecting client during the SSL handshake to the requested database user name. The
+        database user should exist in the database. A map file can be used for mapping between
+        system and database user names. </p>
+      <section>
+        <title>SSL Authentication Parameters</title>
+        <p>Authentication method:<ul id="ul_fr4_fc2_jr">
+            <li>Cert<p>Authentication options:<parml>
+                  <plentry>
+                    <pt>Hostssl</pt>
+                    <pd>Connection type must be hostssl.</pd>
+                  </plentry>
+                  <plentry>
+                    <pt>map=<varname>mapping</varname></pt>
+                    <pd>mapping. </pd>
+                    <pd>This is specified in the <codeph>pg_ident.conf</codeph>, or in the file
+                      specified in the <codeph>ident_file</codeph> server setting.</pd>
+                  </plentry>
+                </parml></p><p>Following are sample <codeph>pg_hba.conf</codeph> entries for SSL
+                client
+                authentication:<codeblock>Hostssl testdb certuser 192.168.0.0/16 cert
+Hostssl testdb all 192.168.0.0/16 cert map=gpuser
+</codeblock></p></li>
+          </ul></p>
+      </section>
+      <section id="openssl_config">
+        <title>OpenSSL Configuration</title>
+        <p>Greenplum Database reads the OpenSSL configuration file specified in
+            <codeph>$GP_HOME/etc/openssl.cnf</codeph> by default. You can make changes to the
+          default configuration for OpenSSL by modifying or updating this file and restarting the
+          server.</p>
+      </section>
+      <section id="create_a_cert">
+        <title>Creating a Self-Signed Certificate</title>
+        <p>A self-signed certificate can be used for testing, but a certificate signed by a
+          certificate authority (CA) (either one of the global CAs or a local one) should be used in
+          production so that clients can verify the server's identity. If all the clients are local
+          to the organization, using a local CA is recommended. </p>
+        <p>To create a self-signed certificate for the server:<ol id="ol_qpr_p4x_kr">
+            <li>Enter the following <codeph>openssl</codeph>
+              command:<codeblock>openssl req -new -text -out server.req</codeblock></li>
+            <li>Enter the requested information at the prompts. <p>Make sure you enter the local
+                host name for the Common Name. The challenge password can be left blank. </p></li>
+            <li>The program generates a key that is passphrase-protected; it does not accept a
+              passphrase that is less than four characters long. To remove the passphrase (and you
+              must if you want automatic start-up of the server), run the following
+              command:<codeblock>openssl rsa -in privkey.pem -out server.key rm privkey.pem</codeblock></li>
+            <li>Enter the old passphrase to unlock the existing key. Then run the following
+                command:<codeblock>openssl req -x509 -in server.req -text -key server.key -out server.crt</codeblock><p>This
+                turns the certificate into a self-signed certificate and copies the key and
+                certificate to where the server will look for them. </p></li>
+            <li>Finally, run the following
+              command:<codeblock>chmod og-rwx server.key</codeblock></li>
+          </ol></p>
+        <p>For more details on how to create your server private key and certificate, refer to the
+          OpenSSL documentation. </p>
+      </section>
+      <section id="ssl_postgresql">
+        <title>Configuring postgresql.conf for SSL Authentication</title>
+        <p>The following Server settings need to be specified in the
+            <codeph>postgresql.conf</codeph> configuration file: <ul id="ul_bzs_b22_jr">
+            <li><codeph>ssl</codeph>
+              <i>boolean</i>. Enables SSL connections.</li>
+            <li><codeph>ssl_renegotiation_limit</codeph>
+              <i>integer</i>. Specifies the data limit before key renegotiation.</li>
+            <li><codeph>ssl_ciphers</codeph>
+              <i>string</i>. Lists SSL ciphers that are allowed.</li>
+          </ul></p>
+        <p>The following SSL server files can be found in the Master Data Directory: <ul
+            id="ul_gzs_b22_jr">
+            <li><codeph>server.crt</codeph>. Server certificate.</li>
+            <li><codeph>server.key</codeph>. Server private key.</li>
+            <li><codeph>root.crt</codeph>. Trusted certificate authorities.</li>
+            <li><codeph>root.crl</codeph>. Certificates revoked by certificate authorities.</li>
+          </ul></p>
+      </section>
+      <section id="config_ssl_client_conn">
+        <title>Configuring the SSL Client Connection</title>
+      </section>
+      <p>SSL options:<parml>
+          <plentry>
+            <pt>
+              <codeph>require</codeph>
+            </pt>
+            <pd>Only use SSL connection. If a root CA file is present, verify the certificate in the
+              same way as if <codeph>verify-ca</codeph> was specified.</pd>
+          </plentry>
+          <plentry>
+            <pt>
+              <codeph>verify-ca</codeph>
+            </pt>
+            <pd>Only use an SSL connection. Verify that the server certificate is issued by a
+              trusted CA.</pd>
+          </plentry>
+          <plentry>
+            <pt>
+              <codeph>verify-full</codeph>
+            </pt>
+            <pd>Only use an SSL connection. Verify that the server certificate is issued by a
+              trusted CA and that the server host name matches that in the certificate.</pd>
+          </plentry>
+          <plentry>
+            <pt>sslcert</pt>
+            <pd>The file name of the client SSL certificate. The default is
+                <codeph>~/.postgresql/postgresql.crt</codeph>. </pd>
+          </plentry>
+          <plentry>
+            <pt>sslkey</pt>
+            <pd>The secret key used for the client certificate. The default is
+                <codeph>~/.postgresql/postgresql.key</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt>sslrootcert</pt>
+            <pd>The name of a file containing SSL Certificate Authority certificate(s). The default
+              is <codeph>~/.postgresql/root.crt</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt>sslcrl</pt>
+            <pd>The name of the SSL certificate revocation list. The default is
+                <codeph>~/.postgresql/root.crl</codeph>.</pd>
+          </plentry>
+        </parml></p>
+      <p>The client connection parameters can be set using the following environment variables:<ul
+          id="ul_yph_5g2_jr">
+          <li><codeph>sslmode</codeph> – <codeph>PGSSLMODE</codeph></li>
+          <li><codeph>sslkey</codeph> – <codeph>PGSSLKEY</codeph></li>
+          <li><codeph>sslrootcert</codeph> – <codeph>PGSSLROOTCERT</codeph></li>
+          <li><codeph>sslcert</codeph> – <codeph>PGSSLCERT</codeph></li>
+          <li><codeph>sslcrl</codeph> – <codeph>PGSSLCRL</codeph> </li>
+        </ul></p>
+    </body>
+  </topic>
+  <topic id="topic_yxp_5h2_jr">
+    <title>PAM Based Authentication</title>
+    <body>
+      <p>"PAM" (Pluggable Authentication Modules) is used to validate username/password pairs,
+        similar to basic authentication. PAM authentication only works if the users already exist in
+        the database. </p>
+      <section>
+        <title>Parameters</title>
+        <p>
+          <parml>
+            <plentry>
+              <pt>
+                <codeph>pamservice</codeph>
+              </pt>
+              <pd>The default PAM service is <codeph>postgresql</codeph>. Note that if PAM is set up
+                to read <codeph>/etc/shadow</codeph>, authentication will fail because the
+                PostgreSQL server is started by a non-root user.</pd>
+            </plentry>
+          </parml>
+        </p>
+        <p>Following are sample <codeph>pg_hba.conf</codeph> entries for PAM client
+          authentication:<codeblock>local    all gpuser am pamservice=postgresql</codeblock></p>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_ed4_d32_jr">
+    <title>Radius Authentication</title>
+    <body>
+      <p>RADIUS (Remote Authentication Dial In User Service) authentication works by sending an
+        Access Request message of type 'Authenticate Only' to a configured RADIUS server. It
+        includes parameters for user name, password (encrypted), and the Network Access Server (NAS)
+        Identifier. The request is encrypted using the shared secret specified in the
+          <codeph>radiussecret</codeph> option. The RADIUS server responds with either
+          <codeph>Access Accept</codeph> or <codeph>Access Reject</codeph>. </p>
+      <note>RADIUS accounting is not supported.</note>
+      <p> RADIUS authentication only works if the users already exist in the database.</p>
+      <p>The RADIUS encryption vector requires SSL to be enabled in order to be cryptographically
+        strong.</p>
+      <section>
+        <title>RADIUS Authentication Options</title>
+        <parml>
+          <plentry>
+            <pt>radiusserver</pt>
+            <pd>The name of the RADIUS server.</pd>
+          </plentry>
+          <plentry>
+            <pt>radiussecret</pt>
+            <pd>The RADIUS shared secret.</pd>
+          </plentry>
+          <plentry>
+            <pt>radiusport</pt>
+            <pd>The port to connect to on the RADIUS server.</pd>
+          </plentry>
+          <plentry>
+            <pt>radiusidentifier</pt>
+            <pd>NAS identifier in RADIUS requests.</pd>
+          </plentry>
+        </parml>
+      </section>
+      <p>Following are sample <codeph>pg_hba.conf</codeph> entries for RADIUS client
+        authentication:<codeblock>hostssl  all all 0.0.0.0/0 radius radiusserver=servername radiussecret=<varname>sharedsecret</varname></codeblock></p>
+    </body>
+  </topic>
+  <topic id="topic_hwn_bk2_jr">
+    <title>Limiting Concurrent Connections</title>
+    <body>
+      <p>To limit the number of active concurrent sessions to your Greenplum Database system, you
+        can configure the <codeph>max_connections</codeph> server configuration parameter. This is a
+        local parameter, meaning that you must set it in the <codeph>postgresql.conf</codeph> file
+        of the master, the standby master, and each segment instance (primary and mirror). The value
+        of <codeph>max_connections</codeph> on segments must be 5-10 times the value on the master. </p>
+      <p>When you set <codeph>max_connections</codeph>, you must also set the dependent parameter
+          <codeph>max_prepared_transactions</codeph>. This value must be at least as large as the
+        value of <codeph>max_connections</codeph> on the master, and segment instances should be set
+        to the same value as the master. </p>
+      <p>In <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph> (including standby
+        master):<codeblock>max_connections=100
+max_prepared_transactions=100</codeblock></p>
+      <p>In <codeph>SEGMENT_DATA_DIRECTORY/postgresql.conf</codeph> for all segment
+        instances:<codeblock>max_connections=500
+max_prepared_transactions=100</codeblock></p>
+      <note>Note: Raising the values of these parameters may cause Greenplum Database to request
+        more shared memory. To mitigate this effect, consider decreasing other memory-related
+        parameters such as <codeph>gp_cached_segworkers_threshold</codeph>.</note>
+      <p>To change the number of allowed connections:<ol id="ol_etb_rk2_jr">
+          <li>Stop your Greenplum Database system:<codeblock>$ gpstop</codeblock></li>
+          <li>On the master host, edit <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph> and
+            change the following two parameters:<ul id="ul_e5k_vk2_jr">
+              <li><codeph>max_connections</codeph> – the number of active user sessions you want to
+                allow plus the number of <codeph>superuser_reserved_connections</codeph>.</li>
+              <li><codeph>max_prepared_transactions</codeph> – must be greater than or equal to
+                  <codeph>max_connections</codeph>.</li>
+            </ul></li>
+          <li>On each segment instance, edit <codeph>SEGMENT_DATA_DIRECTORY/postgresql.conf</codeph>
+            and change the following two parameters:<ul id="ul_iwf_1l2_jr">
+              <li><codeph>max_connections</codeph> – must be 5-10 times the value on the
+                master.</li>
+              <li><codeph>max_prepared_transactions</codeph> – must be equal to the value on the
+                master.</li>
+            </ul></li>
+          <li>Restart your Greenplum Database system:<codeblock>$ gpstart</codeblock></li>
+        </ol></p>
+    </body>
+  </topic>
+  <topic id="topic_ibc_nl2_jr">
+    <title>Encrypting Client/Server Connections</title>
+    <body>
+      <p>Greenplum Database has native support for SSL connections between the client and the master
+        server. SSL connections prevent third parties from snooping on the packets, and also prevent
+        man-in-the-middle attacks. SSL should be used whenever the client connection goes through an
+        insecure link, and must be used whenever client certificate authentication is used. </p>
+      <note>For information about encrypting data between the <codeph>gpfdist</codeph> server and
+        Greenplum Database segment hosts, see <xref href="Encryption.xml#gpfdist_connections"/>. </note>
+      <p>To enable SSL requires that OpenSSL be installed on both the client and the master server
+        systems. Greenplum can be started with SSL enabled by setting the server configuration
+        parameter <codeph>ssl=on</codeph> in the master <codeph>postgresql.conf</codeph>. When
+        starting in SSL mode, the server will look for the files <codeph>server.key</codeph> (server
+        private key) and <codeph>server.crt</codeph> (server certificate) in the master data
+        directory. These files must be set up correctly before an SSL-enabled Greenplum system can
+        start.</p>
+      <note type="important">Do not protect the private key with a passphrase. The server does not
+        prompt for a passphrase for the private key, and the database startup fails with an error if
+        one is required.</note>
+      <p>A self-signed certificate can be used for testing, but a certificate signed by a
+        certificate authority (CA) should be used in production, so the client can verify the
+        identity of the server. Either a global or local CA can be used. If all the clients are
+        local to the organization, a local CA is recommended. See <xref
+          href="#topic_fzv_wb2_jr/create_a_cert" format="dita"/> for steps to create a self-signed
+        certificate.</p>
+    </body>
+  </topic>
+</topic>

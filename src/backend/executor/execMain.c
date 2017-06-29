@@ -3047,7 +3047,6 @@ ExecSelect(TupleTableSlot *slot,
 		   EState *estate)
 {
 	(*dest->receiveSlot) (slot, dest);
-	IncrRetrieved();
 	(estate->es_processed)++;
 }
 
@@ -3277,7 +3276,6 @@ ExecInsert(TupleTableSlot *slot,
 							true, true, GetCurrentTransactionId());
 	}
 
-	IncrAppended();
 	(estate->es_processed)++;
 	(resultRelInfo->ri_aoprocessed)++;
 	estate->es_lastoid = newId;
@@ -3528,7 +3526,6 @@ ldelete:;
 
 	if (!isUpdate)
 	{
-		IncrDeleted();
 		(estate->es_processed)++;
 		/*
 		 * To notify master if tuples deleted or not, to update mod_count.
@@ -3970,7 +3967,6 @@ lreplace:;
 		heap_freetuple(persistentTuple);
 	}
 
-	IncrReplaced();
 	(estate->es_processed)++;
 	(resultRelInfo->ri_aoprocessed)++;
 
@@ -5110,8 +5106,6 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 	}
 
 	/* We know this is a newly created relation, so there are no indexes */
-
-	IncrAppended();
 }
 
 /*

@@ -1,0 +1,386 @@
+---
+title: Setting Up Secure Two-Way Authentication for Greenplum Command Center
+---
+
+<html class="list-style-none"></html>
+
+This topic helps you to set up Greenplum Command Center to authenticate users with digital certificates and to encrypt connections between users' web browsers and the Command Center web server.
+
+Greenplum Command Center is a browser-based application that, by default, uses basic authentication to allow connections. When the user browses to the Greenplum Command Center web server, the server prompts for a user name and password. The user enters their Greenplum Database role name and password and the server uses it to log in to the *gpperfmon* database. The password is md5-encoded, but the data transferred over the network is otherwise unencrypted.
+
+To encrypt data over the connection requires a secure, two-way authenticated connection between the user's browser and the Greenplum Command Center web server. The Command Center web server and users' browsers are configured with X.509 certificates. The client uses the server's certificate to verify they have connected to the correct server and the server uses the client's certificate to verify the user's identity and to look up the user's Greenplum Database role name. Once the certificates are installed in the server and users' browsers, connections are established automatically when users browse to the Command Center URL.
+
+Certificate-based authentication requires that both the server and client certificates are digitally signed by a trusted Certificate Authority (CA). Any web server accessible on the Internet should have a certificate signed by a well-known commercial CA, such as Symantec, to prevent man-in-the-middle attacks and other malicious attacks.
+
+If your users and servers are confined to an intranet, you can set up a public key infrastructure (PKI) that allows you to act as the CA for your organization, or even for just the Greenplum Command Center. You create a public/private key pair for your CA, use it to generate a certificate signing request (CSR), and then sign it with your own certificate, resulting in a *self-signed certificate*. This certificate can then be used to sign CSRs for the Command Center web server and for GPCC users. The CA public key must be installed into users' web browsers, along with their own signed user certificates.
+
+A user's certificate contains an attribute, Common Name (CN), which Command Center uses to look up the user's Greenplum Database role. The CN attribute is mapped to the database role in the *user\_cert\_mapping* table in the *gpperfmon* database. When the user connects to the Command Center web server, the Command Center web application logs in to the *gpperfmon* database with the `gpmon` role and looks up the CN in the *user\_cert\_mapping* table to find the user's Greenplum Database role.
+
+**Note:**  
+When SSL is enabled for a Greenplum Command Center installation, all web browsers connecting to Greenplum Command Center must be configured with a client SSL certificate. In a multi-cluster configuration, all hosts must have the same SSL configuration. SSL must be enabled or disabled for all hosts. For information about multi-cluster configuration, see [Enabling Multi-Cluster Support](setup-multi-cluster.html#topic_c1z_kbv_yp).
+
+These tasks enable certificate-based authentication and encryption of Command Center sessions:
+
+-   [Setting Up an OpenSSL PKI](#topic_fwy_k1n_jq)
+-   [Configuring the Command Center Web Server](#topic_blr_4zm_jq)
+-   [Creating a Client SSL Certificate](#topic_lhr_11n_jq)
+-   [Configuring the GPCC Database (gpperfmon)](#topic_yyd_fps_jq)
+-   [Configuring a Web Browser](#topic_bv3_lzm_jq)
+
+This process sets up a simple PKI using OpenSSL. The OpenSSL `openssl` command-line utility is included with GPCC and is added to your path when you source the `gpcc_path.env` file. See the OpenSSL documentation for information about OpenSSL and the commands that are used.
+
+## <a id="topic_fwy_k1n_jq"></a>Setting Up an OpenSSL PKI
+
+The instructions in this section set up an OpenSSL public key infrastructure (PKI) that enables you to generate and sign Greenplum Command Center user certificates.
+
+1.  Log in to the server where you installed Greenplum Command Center and source the Greenplum environment files.
+
+    ``` pre
+    $ source /usr/local/greenplum-db/greenplum_path.sh
+    $ source /usr/local/greenplum-cc-web/gpcc_path.sh
+    ```
+
+2.  Change to the `$GPPERFMONHOME/etc` directory, where the `openssl.cnf` is located.
+
+    ``` pre
+    $ cd $GPPERFMONHOME/etc
+    ```
+
+3.  *(Optional)* The `openssl.cnf` file contains default settings for a Certificate Authority named `demoCA`. You can edit the file, or a copy of the file, and change the settings to suit your own organization. Refer to the [OpenSSL documentation](https://www.openssl.org/docs/apps/config.html) for help. Note that the `[Default_CA]` section defines directory and file names that are used in the following steps. If you change them, be sure to use the new values in the following commands.
+4.  Create a directory named `demoCA` at the location where the `openssl.cnf` file is located.
+
+    ``` pre
+    $ mkdir demoCA
+    ```
+
+5.  Create the PKI directory structure in the `demoCA` directory.
+
+    ``` pre
+    $ mkdir demoCA/certs
+    $ mkdir demoCA/newcerts
+    $ mkdir demoCA/private
+    ```
+
+6.  Create `serial`, `crlnumber` and `index.txt` files in the `demoCA` directory.
+
+    ``` pre
+    $ echo "00" >> demoCA/serial
+    $ echo "00" >> demoCA/crlnumber
+    $ touch demoCA/index.txt
+    ```
+
+7.  Generate a private RSA key for the CA. This command generates an RSA 2048 bit private key for the CA:
+
+    ``` pre
+    $ openssl genrsa -out demoCA/cakey.key 2048
+    ```
+
+8. Use the generated private key to sign itself. You are prompted to enter the information about the CA you are establishing:  
+   - **Country Name:**The two-letter code for the country, with no punctuation.
+   - **State or Province:** Spell out the state name completely.
+   - **Locality or City:** The city or town name.
+   - **Company:** The name of the company. If the company or department has an &, @, or any other symbol using the shift key in its name, spell out the symbol or omit it.
+   - **Organizational Unit:** *(Optional)* Can be used to help identify certificates registered to an organization.
+   - **Common Name:** The name of this CA.
+   - **Email Address:** *(Optional)* The email address of the owner of this certificate.
+
+    The following example creates a new self-signed X.509 certificate that is valid for ten years for the keypair in the `certAut.key` file. This key will be used to sign certificates generated for the web server and client Command Center users.
+
+    ``` pre
+    $ openssl req -new -x509 -days 3650 -key demoCA/cakey.key -out demoCA/cacert.crt -config openssl.cnf
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [AU]:US
+    State or Province Name (full name) [Some-State]:California
+    Locality Name (eg, city) []:Palo Alto
+    Organization Name (eg, company) [Internet Widgits Pty Ltd]:Pivotal Software, Inc.
+    Organizational Unit Name (eg, section) []:
+    Common Name (e.g. server FQDN or YOUR name) []:GPCC CA
+    Email Address []:
+    ```
+
+9.  Move the CA key and certificate files into place in the `demoCA` directory. The names and locations of the files are specified in the `openssl.cnf` file.
+
+    ``` pre
+    $ mv demoCA/cakey.key demoCA/private/cakey.pem
+    $ mv demoCA/cacert.crt demoCA/cacert.pem
+    ```
+
+## <a id="topic_blr_4zm_jq"></a>Configuring the Command Center Web Server
+
+1. Generate a private key for the Command Center web server.
+
+   ``` pre
+   $ openssl genrsa -out demoCA/private/wskey.key 2048
+   ```
+
+2. Create a CSR for the web server's private key. You are prompted to enter information about the server where the certificate will be installed. Set the Common Name to the name of the host were the Command Center web server is running.
+   - **Country Name:**The two-letter code for the country, with no punctuation.
+   - **State or Province:** Spell out the state name completely.
+   - **Locality or City:** The city or town name.
+   - **Company:** The name of the company. If the company or department has an &, @, or any other symbol using the shift key in its name, spell out the symbol or omit it.
+   - **Organizational Unit:** *(Optional)* Can be used to help identify certificates registered to an organization.
+   - **Common Name:** The exact name of the web server.
+   - **Email Address:** *(Optional)* The email address of the owner of this certificate.
+
+    ``` pre
+    openssl req -new -key demoCA/private/wskey.key -out wskey.csr -config openssl.cnf
+    Enter pass phrase for demoCA/private/wskey.key:
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [AU]:US
+    State or Province Name (full name) [Some-State]:California
+    Locality Name (eg, city) []:Palo Alto
+    Organization Name (eg, company) [Internet Widgits Pty Ltd]:Pivotal Software, Inc.
+    Organizational Unit Name (eg, section) []:
+    Common Name (e.g. server FQDN or YOUR name) []:mdw.pivotal.lan
+    Email Address []:
+
+    Please enter the following 'extra' attributes
+    to be sent with your certificate request
+    A challenge password []:many_secret
+    An optional company name []:
+    ```
+
+3.  Sign the web server's private key using your CA certificate:
+
+    ``` pre
+    $ openssl ca -in wskey.csr -out demoCA/certs/wscert.crt -config openssl.cnf
+    Using configuration from openssl.cnf
+    Check that the request matches the signature
+    Signature ok
+    Certificate Details:
+            Serial Number: 0 (0x0)
+            Validity
+                Not Before: Jun  5 23:16:30 2015 GMT
+                Not After : Jun  4 23:16:30 2016 GMT
+            Subject:
+                countryName               = US
+                stateOrProvinceName       = California
+                organizationName          = Pivotal Software, Inc.
+                commonName                = mdw.pivotal.lan
+            X509v3 extensions:
+                X509v3 Basic Constraints: 
+                    CA:FALSE
+                Netscape Comment: 
+                    OpenSSL Generated Certificate
+                X509v3 Subject Key Identifier: 
+                    09:20:A4:74:43:12:72:24:C3:F3:14:34:7E:A8:3A:BD:42:CA:3B:0E
+                X509v3 Authority Key Identifier: 
+                    keyid:4D:4A:F1:FA:50:B8:EA:19:D4:1F:6F:18:34:E6:B8:CD:26:61:71:96
+
+    Certificate is to be certified until Jun  4 23:16:30 2016 GMT (365 days)
+    Sign the certificate? [y/n]:y
+
+
+    1 out of 1 certificate requests certified, commit? [y/n]y
+    Write out database with 1 new entries
+    Data Base Updated
+    ```
+
+4.  Create a PEM file containing the web server's private key and certificate. The web server requires this file.
+
+    ``` pre
+    $ cat demoCA/private/wskey.key demoCA/certs/wscert.crt > wscert.pem
+    ```
+
+5.  Edit the configuration file `app.conf` for the instance configured for Greenplum Command Center. The configuration file is located in `$GPPERFMONHOME/instances/instance/conf`, where *instance* is the value you specified when you created the instance.
+
+    Add the following parameters to enable SSL-based client authentication:
+
+    ``` pre
+    ssl.engine = "enable"
+    ssl.ca-file = "/usr/local/greenplum-cc-web/etc/demoCA/cacert.pem"
+    ssl.pemfile = "/usr/local/greenplum-cc-web/etc/wscert.pem"
+    ssl.verifyclient.activate = "enable"
+    ssl.verifyclient.enforce = "enable"
+    ssl.verifyclient.username = "SSL_CLIENT_S_DN_CN"
+    ```
+
+**Note:**  
+ For the `ssl.ca-file` and `ssl.pemfile` parameters, you must specify the fully qualified paths to the `cacert.pem` and `wscert.pem` files, respectively.
+
+Enter `gpcmdr --restart instance_name` to restart the web server after updating the configuration file.
+
+## <a id="topic_lhr_11n_jq"></a>Creating a Client SSL Certificate
+
+Follow these steps for each GPCC user to create a signed certificate to install in the user's web browsers.
+
+1.  Open a command line terminal and source the Greenplum environment files.
+
+    ``` pre
+    $ source /usr/local/greenplum-db/greenplum_path.sh 
+    $ source /usr/local/greenplum-cc-web/gpcc_path.sh
+    ```
+
+2.  Change to the `$GPPERFMONHOME/etc` directory. -pp
+
+    ``` pre
+    $ cd $GPPERFMONHOME/etc
+    ```
+
+3.  Generate a client private key by executing the following command. Replace *client* in this and following commands with a string such as the user's login name or database role name.
+
+    ``` pre
+    $ openssl genrsa -out demoCA/private/client.key 2048
+    ```
+
+4.  Generate a certificate signing request for the user's private key. The value you enter for the Common Name field must be unique for each user; it is used to map the user to their Greenplum Database role.
+
+    ``` pre
+    $ openssl req -new -key demoCA/private/client.key -out client.csr -config openssl.cnf
+    You are about to be asked to enter information that will be incorporated
+    into your certificate request.
+    What you are about to enter is what is called a Distinguished Name or a DN.
+    There are quite a few fields but you can leave some blank
+    For some fields there will be a default value,
+    If you enter '.', the field will be left blank.
+    -----
+    Country Name (2 letter code) [AU]:US
+    State or Province Name (full name) [Some-State]:California
+    Locality Name (eg, city) []:Palo Alto
+    Organization Name (eg, company) [Internet Widgits Pty Ltd]:Pivotal Software, Inc.
+    Organizational Unit Name (eg, section) []:
+    Common Name (e.g. server FQDN or YOUR name) []:gpcc_user_1
+    Email Address []:
+
+    Please enter the following 'extra' attributes
+    to be sent with your certificate request
+    A challenge password []:many_secret
+    An optional company name []:
+    ```
+
+5.  Sign the client certificate with the CA certificate:
+
+    ``` pre
+    $ openssl ca -in client.csr -out demoCA/certs/client.crt -config openssl.cnf -policy policy_anything
+    Using configuration from openssl.cnf
+    Check that the request matches the signature
+    Signature ok
+    Certificate Details:
+            Serial Number: 1 (0x1)
+            Validity
+                Not Before: Jun  5 23:46:39 2015 GMT
+                Not After : Jun  4 23:46:39 2016 GMT
+            Subject:
+                countryName               = US
+                stateOrProvinceName       = California
+                localityName              = Palo Alto
+                organizationName          = Pivotal Software, Inc.
+                commonName                = gpcc_user_1
+            X509v3 extensions:
+                X509v3 Basic Constraints: 
+                    CA:FALSE
+                Netscape Comment: 
+                    OpenSSL Generated Certificate
+                X509v3 Subject Key Identifier: 
+                    C9:1D:18:66:FB:0F:7E:FA:40:FB:EA:DF:94:B5:FD:3E:FC:FC:46:41
+                X509v3 Authority Key Identifier: 
+                    keyid:4D:4A:F1:FA:50:B8:EA:19:D4:1F:6F:18:34:E6:B8:CD:26:61:71:96
+
+    Certificate is to be certified until Jun  4 23:46:39 2016 GMT (365 days)
+    Sign the certificate? [y/n]:y
+
+
+    1 out of 1 certificate requests certified, commit? [y/n]y
+    Write out database with 1 new entries
+    Data Base Updated
+    ```
+
+    **Note:** The value for the `-days` option must be less than or equal to the value specified for the CA certificate.
+
+6.  Create a `.pem` file containing the client's private key and certificate.
+
+    ``` pre
+    $ cat demoCA/private/client.key demoCA/certs/client.crt > client.pem
+    ```
+
+7.  Convert the signed client certificate to PKCS\#12 format. The PKCS \#12 format is an archive file format for storing many cryptographic objects as a single file. It is commonly used to bundle a private key with its X.509 certificate.
+
+    ``` pre
+    $ openssl pkcs12 -export -in demoCA/certs/client.crt -inkey demoCA/private/client.key -certfile demoCA/cacert.pem -out client.p12 
+    Enter Export Password:
+    Verifying - Enter Export Password:
+    ```
+
+    **Important:** The export password is required when the client certificate is imported into a client web browser. See [Configuring a Web Browser](#topic_bv3_lzm_jq).
+
+8.  Send the `client.pem` file and the `client.p12` file to the GPCC user. Securely communicate the export password for the `.p12` file to the user.
+
+## <a id="topic_yyd_fps_jq"></a>Configuring the GPCC Database (gpperfmon)
+
+When the GPCC web server is configured to use SSL based client authentication, the GPCC web server queries the *user\_cert\_mapping* table in the *gpperfmon* database as part of the authentication process. The *user\_cert\_mapping* table maps the client certificate user ID (the common name in the client certificate) with the *gpperfmon* user role.
+
+You must create the *user\_cert\_mapping* table and populate it with the proper user information.
+
+1.  Create the *user\_cert\_mapping* table in the *gpperfmon* database.
+
+    ``` sql
+    =# psql gpperfmon
+    =# CREATE TABLE public.user_cert_mapping(mapping text primary key, username text);
+    ```
+
+2.  For each Greenplum Command Center user who accesses the *gpperfmon* database, a row must exist in the *user\_cert\_mapping* table. The *mapping* column contains the common name that you specified when creating the client certificate. The corresponding *username* column contains the *gpperfmon* user role.
+
+    The format of the common name in the *mapping* column is `'common_name, common_name'`. The common name listed twice, separated by a comma and space. For this example, the common name is `gpcc_user1`, and the *gpperfmon* user role is `perfmon_user1`:
+
+    ``` sql
+    =# INSERT INTO public.user_cert_mapping VALUES ('gpcc_user1, gpcc_user1', 'perfmon_user1');
+    ```
+
+## <a id="topic_bv3_lzm_jq"></a>Configuring a Web Browser
+
+When Greenplum Command Center is configured to use SSL, web browsers connecting to Greenplum Command Center must have a client certificate and CA certificate. You import the created client certificate and CA certificate to your browser so that it can forward the certificates to Greenplum Command Center when connecting to a Greenplum database from Greenplum Command Center.
+
+Follow these steps to import the certificates into Firefox and Chrome browsers, or into the Mac OS X Keychain Access utility.
+
+### Mozilla Firefox
+
+1.  From the menu, select **Preferences**.
+2.  Click **Advanced** and then click the **Certificates** tab.
+3.  Click **View Certificates**.
+4.  In the **Certificate Manager** dialog, open the **Authorities** tab, and click **Import**. Select your CA certificate (for example, `cacrt.crt`).
+    -   In the **Downloading Certificate** dialog, check **Trust this CA to identify websites.**
+
+5.  In the **Your Certificates** tab, click **Import** and select your client certificate (for example `client.p12`).
+
+    The import process prompts for a password for the client certificate. Enter the export password that you entered when you converted the client certificate to PKCS\#12. See [Creating a Client SSL Certificate](#topic_lhr_11n_jq).
+
+6.  Click **OK** to apply the configuration changes.
+
+### Google Chrome
+
+1.  From the customization menu, select **Settings** and then select **Show Advanced Settings**.
+2.  In the section **HTTPS/SSL**, click **Manage certificates...**.
+3.  In the **Manage Certificates** dialog, open the **Trusted Root Certification Authorities** tab . Click **Import** and select your CA certificate (for example, `certAut.crt`).
+4.  Open the **Personal** tab. Click **Import** and select the client certificate (for example, `client.p12`).
+
+    The import process prompts for a password the client certificate. Enter the export password that you entered when you converted the client certificate to PKCS\#12. See [Creating a Client SSL Certificate](#topic_lhr_11n_jq).
+
+5.  Click **Ok** to apply configuration changes.
+6.  Browse to the Greenplum Command Center URL, for example `https://mdw:28080`. A **User Identification Request** window will appear. Choose the client certificate you imported and click **OK**.
+
+### Mac OS X
+
+Mac OS X has a built-in certificate manager, Keychain Access. Google Chrome, Safari, and Mozilla Firefox use Keychain Access for certificate management. You will be asked to authenticate as an admin user on your Mac several times while following these steps.
+
+To begin, the user needs the `cacert.pem` CA certificate and the `.pem` file containing the user's private key and certificate.
+
+1.  Open **Keychain Access** (**Applications &gt; Utilities &gt; Keychain Access**.
+2.  Choose **File &gt;** **Import** , select the CA `.pem` file for the CA you setup (`cacert.pem`), and click **Open**.
+3.  On the dialog window that displays, click **Always Trust**.
+4.  Choose **File &gt; Import**, select the `.pem` file for the GPCC user you setup (`client.pem`), and click **Open**.
+5.  In a web browser, browse to the GPCC Command Center (`https://gpcc_host:28080`).
+6.  Choose the GPCC client certificate in the **Select a certificate** dialog and click **OK**.
+
+

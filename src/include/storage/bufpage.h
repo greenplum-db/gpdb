@@ -165,13 +165,16 @@ typedef PageHeaderData *PageHeader;
  *		added the pd_flags field (by stealing some bits from pd_tli),
  *		as well as adding the pd_prune_xid field (which enlarges the header).
  *
+ * As of Release 9.3, the checksum version must also be considered when
+ * handling pages.
+ *
  * GPDB 4 uses 4. However, it didn't have the pd_prune_xid field
  * GPDB 5.0 uses 14. The layout is the same as PostgreSQL 8.3's, but
  *		we couldn't use the same version number, because we had already
  *		used 4 for the previous format.
  */
 #define PG_PAGE_LAYOUT_VERSION		14
-
+#define PG_DATA_CHECKSUM_VERSION	1
 
 /* ----------------------------------------------------------------
  *						page support macros

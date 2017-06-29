@@ -73,81 +73,7 @@
 #include "storage/ipc.h"
 #include "cdb/cdbllize.h"
 
-/* ----------------------------------------------------------------
- *		global counters for number of tuples processed, retrieved,
- *		appended, replaced, deleted.
- * ----------------------------------------------------------------
- */
-int			NTupleProcessed;
-int			NTupleRetrieved;
-int			NTupleReplaced;
-int			NTupleAppended;
-int			NTupleDeleted;
-int			NIndexTupleInserted;
-int			NIndexTupleProcessed;
-
 static void ShutdownExprContext(ExprContext *econtext);
-
-
-/* ----------------------------------------------------------------
- *						statistic functions
- * ----------------------------------------------------------------
- */
-
-/* ----------------------------------------------------------------
- *		ResetTupleCount
- * ----------------------------------------------------------------
- */
-#ifdef NOT_USED
-void
-ResetTupleCount(void)
-{
-	NTupleProcessed = 0;
-	NTupleRetrieved = 0;
-	NTupleAppended = 0;
-	NTupleDeleted = 0;
-	NTupleReplaced = 0;
-	NIndexTupleProcessed = 0;
-}
-#endif
-
-/* ----------------------------------------------------------------
- *		PrintTupleCount
- * ----------------------------------------------------------------
- */
-#ifdef NOT_USED
-void
-DisplayTupleCount(FILE *statfp)
-{
-	if (NTupleProcessed > 0)
-		fprintf(statfp, "!\t%d tuple%s processed, ", NTupleProcessed,
-				(NTupleProcessed == 1) ? "" : "s");
-	else
-	{
-		fprintf(statfp, "!\tno tuples processed.\n");
-		return;
-	}
-	if (NIndexTupleProcessed > 0)
-		fprintf(statfp, "%d indextuple%s processed, ", NIndexTupleProcessed,
-				(NIndexTupleProcessed == 1) ? "" : "s");
-	if (NIndexTupleInserted > 0)
-		fprintf(statfp, "%d indextuple%s inserted, ", NIndexTupleInserted,
-				(NIndexTupleInserted == 1) ? "" : "s");
-	if (NTupleRetrieved > 0)
-		fprintf(statfp, "%d tuple%s retrieved. ", NTupleRetrieved,
-				(NTupleRetrieved == 1) ? "" : "s");
-	if (NTupleAppended > 0)
-		fprintf(statfp, "%d tuple%s appended. ", NTupleAppended,
-				(NTupleAppended == 1) ? "" : "s");
-	if (NTupleDeleted > 0)
-		fprintf(statfp, "%d tuple%s deleted. ", NTupleDeleted,
-				(NTupleDeleted == 1) ? "" : "s");
-	if (NTupleReplaced > 0)
-		fprintf(statfp, "%d tuple%s replaced. ", NTupleReplaced,
-				(NTupleReplaced == 1) ? "" : "s");
-	fprintf(statfp, "\n");
-}
-#endif
 
 
 /* ----------------------------------------------------------------
@@ -1227,10 +1153,6 @@ ExecInsertIndexTuples(TupleTableSlot *slot,
 					 heapRelation,
 					 relationDescs[i]->rd_index->indisunique && !is_vacuum);
 
-		/*
-		 * keep track of index inserts for debugging
-		 */
-		IncrIndexInserted();
 	}
 }
 

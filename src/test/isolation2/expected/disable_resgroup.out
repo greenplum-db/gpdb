@@ -10,3 +10,7 @@ gp_resource_manager
 -------------------
 queue              
 (1 row)
+
+-- reset admin_group concurrency setting
+ALTER RESOURCE GROUP admin_group SET concurrency -1;
+ALTER

@@ -146,6 +146,11 @@ SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONK
            4 | MIDDLE EAST               | uickly special accounts cajole carefully blithely close requests. carefully final asymptotes haggle furiousl        |           4 | EGYPT                     |           4 | y above the carefully unusual theodolites. final dugouts are quickly across the furiously regular d
 (25 rows)
 
+-- test: http request header needed for gpfdist
+\! wget http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 || echo "Execute error";
+Execute error
+\! wget --header='X-GP-PROTO:0' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
+Execute successully
 -- start_ignore
 -- end_ignore
 -- drop tables

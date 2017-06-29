@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_rz1_cyj_gr">
-  <title>Introduction</title>
+  <title>Best Practices</title>
   <body>
     <p><cite>Greenplum Database Best Practices Guide</cite> describes best practices for Greenplum
       Database. A best practice is a method or technique that has consistently shown results

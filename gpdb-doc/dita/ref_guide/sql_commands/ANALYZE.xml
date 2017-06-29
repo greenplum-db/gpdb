@@ -112,10 +112,10 @@
         <li id="bd138204">When you run <codeph>ANALYZE</codeph> on a leaf child table, statistics
           are collected only for that leaf child table. When you run <codeph>ANALYZE</codeph> on a
           child table that is not a leaf child table, statistics are not collected. <p>For example,
-            you can create a partitioned table with partitions for the years 2000 to 2010 and
+            you can create a partitioned table with partitions for the years 2006 to 2016 and
             subpartitions for each month in each year. If you run <codeph>ANALYZE</codeph> on the
-            child table for the year 2005 no statistics are collected. If you run
-              <codeph>ANALYZE</codeph> on the leaf child table for March of 2005, statistics are
+            child table for the year 2013 no statistics are collected. If you run
+              <codeph>ANALYZE</codeph> on the leaf child table for March of 2013, statistics are
             collected only for that leaf child table.</p><note>When you create a partitioned table
             with the <codeph>CREATE TABLE</codeph> command, Greenplum Database creates the table
             that you specify (the root partition or parent table), and also creates a hierarchy of

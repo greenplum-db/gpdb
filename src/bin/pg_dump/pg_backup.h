@@ -48,6 +48,7 @@ typedef enum _archiveFormat
 {
 	archUnknown = 0,
 	archCustom = 1,
+	archFiles = 2,
 	archTar = 3,
 	archNull = 4
 } ArchiveFormat;

@@ -220,6 +220,9 @@ typedef enum FaultInjectorIdentifier_e {
 	BgBufferSyncDefaultLogic,
 
 	FinishPreparedAfterRecordCommitPrepared,
+
+	GangCreated,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

@@ -53,7 +53,13 @@
  */
 int qe_gang_id = 0;
 
+/*
+ * number of primary segments on this host
+ */
+int host_segments = 0;
+
 MemoryContext GangContext = NULL;
+Gang *CurrentGangCreating = NULL;
 
 CreateGangFunc pCreateGangFunc = NULL;
 
@@ -659,7 +665,7 @@ makeOptions(void)
  */
 void
 build_gpqeid_param(char *buf, int bufsz, int segIndex,
-				   bool is_writer, int gangId)
+				   bool is_writer, int gangId, int hostSegs)
 {
 #ifdef HAVE_INT64_TIMESTAMP
 #define TIMESTAMP_FORMAT INT64_FORMAT
@@ -671,9 +677,9 @@ build_gpqeid_param(char *buf, int bufsz, int segIndex,
 #endif
 #endif
 
-	snprintf(buf, bufsz, "%d;%d;" TIMESTAMP_FORMAT ";%s;%d",
+	snprintf(buf, bufsz, "%d;%d;" TIMESTAMP_FORMAT ";%s;%d;%d",
 			 gp_session_id, segIndex, PgStartTime,
-			 (is_writer ? "true" : "false"), gangId);
+			 (is_writer ? "true" : "false"), gangId, hostSegs);
 }
 
 static bool gpqeid_next_param(char **cpp, char **npp)
@@ -740,11 +746,16 @@ cdbgang_parse_gpqeid_params(struct Port * port __attribute__((unused)),
 		qe_gang_id = (int) strtol(cp, NULL, 10);
 	}
 
+	if (gpqeid_next_param(&cp, &np))
+	{
+		host_segments = (int) strtol(cp, NULL, 10);
+	}
+
 	/* Too few items, or too many? */
 	if (!cp || np)
 		goto bad;
 
-	if (gp_session_id <= 0 || PgStartTime <= 0 || qe_gang_id <=0)
+	if (gp_session_id <= 0 || PgStartTime <= 0 || qe_gang_id <= 0 || host_segments <= 0)
 		goto bad;
 
 	pfree(gpqeid);
@@ -1420,6 +1431,19 @@ void freeGangsForPortal(char *portal_name)
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 		return;
+
+	if (CurrentGangCreating != NULL)
+	{
+		GangType type = CurrentGangCreating->type;
+		DisconnectAndDestroyGang(CurrentGangCreating);
+		CurrentGangCreating = NULL;
+
+		if (type == GANGTYPE_PRIMARY_WRITER)
+		{
+			DisconnectAndDestroyAllGangs(true);
+			CheckForResetSession();
+		}
+	}
 
 	/*
 	 * the primary writer gangs "belong" to the unnamed portal --

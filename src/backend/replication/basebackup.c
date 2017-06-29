@@ -1034,13 +1034,11 @@ _tarWriteHeader(const char *filename, const char *linktarget,
 
 /*
  * Collect all information of filespaces to be sent.
- * NB: This only works on master for now, as pg_filespace_entry
- * is a master-only table.
  */
 static List *
 get_filespaces_to_send(basebackup_options *opt)
 {
-	List		   *filespaces;
+	List		   *filespaces = NIL;
 	Oid				txnFilespaceOID;
 	Relation		rel;
 	ScanKeyData		scankey;
@@ -1054,6 +1052,24 @@ get_filespaces_to_send(basebackup_options *opt)
 	 */
 	if (GpIdentity.dbid == -1)
 		elog(ERROR, "basebackup is not supported with dbid -1");
+
+	/*
+	 * There is no pg_filespace_entry table on the segment, so currently we
+	 * just send the default data directory for segments. GPDB_SEGWALREP_TODO:
+	 * enhance to support transaction and user filespaces for segments.
+	 */
+	if (GpIdentity.segindex != MASTER_CONTENT_ID)
+	{
+		filespaceinfo *fi = palloc0(sizeof(filespaceinfo));
+
+		fi->primary_path = NULL;
+		fi->standby_path = NULL;
+		fi->size = -1;
+		fi->xlogdir = true;
+
+		filespaces = lappend(filespaces, fi);
+		return filespaces;
+	}
 
 	txnFilespaceOID = primaryMirrorGetTxnFilespaceOID();
 	/*
@@ -1072,7 +1088,6 @@ get_filespaces_to_send(basebackup_options *opt)
 	sscan = systable_beginscan(rel, InvalidOid, false,
 							   SnapshotNow, 1, &scankey);
 
-	filespaces = NIL;
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		Form_pg_filespace_entry pg_filespace_entry;

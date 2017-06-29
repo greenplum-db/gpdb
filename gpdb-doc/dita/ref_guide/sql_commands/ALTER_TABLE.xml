@@ -511,9 +511,9 @@ ALTER TABLE <varname>name</varname>
                                                 starting range value for the partition. By default,
                                                 start values are <codeph>INCLUSIVE</codeph>. For
                                                 example, if you declared a start date of
-                                                  '<codeph>2008-01-01</codeph>', then the partition
+                                                  '<codeph>2016-01-01</codeph>', then the partition
                                                 would contain all dates greater than or equal to
-                                                  '<codeph>2008-01-01</codeph>'. Typically the data
+                                                  '<codeph>2016-01-01</codeph>'. Typically the data
                                                 type of the <codeph>START</codeph> expression is the
                                                 same type as the partition key column. If that is
                                                 not the case, then you must explicitly cast to the
@@ -522,9 +522,9 @@ ALTER TABLE <varname>name</varname>
                                                 range value for the partition. By default, end
                                                 values are <codeph>EXCLUSIVE</codeph>. For example,
                                                 if you declared an end date of
-                                                  '<codeph>2008-02-01</codeph>', then the partition
+                                                  '<codeph>2016-02-01</codeph>', then the partition
                                                 would contain all dates less than but not equal to
-                                                  '<codeph>2008-02-01</codeph>'. Typically the data
+                                                  '<codeph>2016-02-01</codeph>'. Typically the data
                                                 type of the <codeph>END</codeph> expression is the
                                                 same type as the partition key column. If that is
                                                 not the case, then you must explicitly cast to the
@@ -685,8 +685,8 @@ ALTER TABLE <varname>name</varname>
                                                 monthly partition). If your intent is to operate on
                                                 a subpartition, you must declare so as follows:
                                                   <codeph>ALTER TABLE <varname>name</varname> ALTER
-                                                  PARTITION FOR ('2008-10-01') DROP PARTITION FOR
-                                                  ('2008-10-01');</codeph></pd>
+                                                  PARTITION FOR ('2016-10-01') DROP PARTITION FOR
+                                                  ('2016-10-01');</codeph></pd>
                                 </plentry>
                         </parml>
                 </section>
@@ -793,30 +793,30 @@ ALTER TABLE <varname>name</varname>
                         <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
                         <p>Add a new partition to a partitioned table:</p>
                         <codeblock>ALTER TABLE sales ADD PARTITION 
-            START (date '2009-02-01') INCLUSIVE 
-            END (date '2009-03-01') EXCLUSIVE;</codeblock>
+            START (date '2017-02-01') INCLUSIVE 
+            END (date '2017-03-01') EXCLUSIVE;</codeblock>
                         <p>Add a default partition to an existing partition design:</p>
                         <codeblock>ALTER TABLE sales ADD DEFAULT PARTITION other;</codeblock>
                         <p>Rename a partition:</p>
-                        <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2008-01-01') TO 
+                        <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2016-01-01') TO 
 jan08;</codeblock>
                         <p>Drop the first (oldest) partition in a range sequence:</p>
                         <codeblock>ALTER TABLE sales DROP PARTITION FOR (RANK(1));</codeblock>
                         <p>Exchange a table into your partition design:</p>
-                        <codeblock>ALTER TABLE sales EXCHANGE PARTITION FOR ('2008-01-01') WITH 
+                        <codeblock>ALTER TABLE sales EXCHANGE PARTITION FOR ('2016-01-01') WITH 
 TABLE jan08;</codeblock>
                         <p>Split the default partition (where the existing default partition's name
                                 is <codeph>other</codeph>) to add a new monthly partition for
-                                January 2009:</p>
+                                January 2017:</p>
                         <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION 
-START ('2009-01-01') INCLUSIVE 
-END ('2009-02-01') EXCLUSIVE 
+START ('2017-01-01') INCLUSIVE 
+END ('2017-02-01') EXCLUSIVE 
 INTO (PARTITION jan09, PARTITION other);</codeblock>
                         <p>Split a monthly partition into two with the first partition containing
                                 dates January 1-15 and the second partition containing dates January
                                 16-31:</p>
-                        <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2008-01-01')
-AT ('2008-01-16')
+                        <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2016-01-01')
+AT ('2016-01-16')
 INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                 </section>
                 <section id="section7">

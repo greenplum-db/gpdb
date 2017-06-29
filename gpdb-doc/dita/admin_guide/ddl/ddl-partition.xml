@@ -174,8 +174,8 @@
           <codeblock>CREATE TABLE sales (id int, date date, amt decimal(10,2))
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
-( START (date '2008-01-01') INCLUSIVE
-   END (date '2009-01-01') EXCLUSIVE
+( START (date '2016-01-01') INCLUSIVE
+   END (date '2017-01-01') EXCLUSIVE
    EVERY (INTERVAL '1 day') );
 </codeblock>
         </p>
@@ -184,23 +184,23 @@ PARTITION BY RANGE (date)
           <codeblock>CREATE TABLE sales (id int, date date, amt decimal(10,2))
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (date)
-( PARTITION Jan08 START (date '2008-01-01') INCLUSIVE , 
-  PARTITION Feb08 START (date '2008-02-01') INCLUSIVE ,
-  PARTITION Mar08 START (date '2008-03-01') INCLUSIVE ,
-  PARTITION Apr08 START (date '2008-04-01') INCLUSIVE ,
-  PARTITION May08 START (date '2008-05-01') INCLUSIVE ,
-  PARTITION Jun08 START (date '2008-06-01') INCLUSIVE ,
-  PARTITION Jul08 START (date '2008-07-01') INCLUSIVE ,
-  PARTITION Aug08 START (date '2008-08-01') INCLUSIVE ,
-  PARTITION Sep08 START (date '2008-09-01') INCLUSIVE ,
-  PARTITION Oct08 START (date '2008-10-01') INCLUSIVE ,
-  PARTITION Nov08 START (date '2008-11-01') INCLUSIVE ,
-  PARTITION Dec08 START (date '2008-12-01') INCLUSIVE 
-                  END (date '2009-01-01') EXCLUSIVE );
+( PARTITION Jan16 START (date '2016-01-01') INCLUSIVE , 
+  PARTITION Feb16 START (date '2016-02-01') INCLUSIVE ,
+  PARTITION Mar16 START (date '2016-03-01') INCLUSIVE ,
+  PARTITION Apr16 START (date '2016-04-01') INCLUSIVE ,
+  PARTITION May16 START (date '2016-05-01') INCLUSIVE ,
+  PARTITION Jun16 START (date '2016-06-01') INCLUSIVE ,
+  PARTITION Jul16 START (date '2016-07-01') INCLUSIVE ,
+  PARTITION Aug16 START (date '2016-08-01') INCLUSIVE ,
+  PARTITION Sep16 START (date '2016-09-01') INCLUSIVE ,
+  PARTITION Oct16 START (date '2016-10-01') INCLUSIVE ,
+  PARTITION Nov16 START (date '2016-11-01') INCLUSIVE ,
+  PARTITION Dec16 START (date '2016-12-01') INCLUSIVE 
+                  END (date '2017-01-01') EXCLUSIVE );
 </codeblock>
         </p>
         <p>You do not have to declare an <codeph>END</codeph> value for each partition, only the
-          last one. In this example, <codeph>Jan08</codeph> ends where <codeph>Feb08</codeph>
+          last one. In this example, <codeph>Jan16</codeph> ends where <codeph>Feb16</codeph>
           starts.</p>
       </body>
     </topic>
@@ -214,7 +214,7 @@ PARTITION BY RANGE (date)
 char(1), count int)
 DISTRIBUTED BY (id)
 PARTITION BY RANGE (year)
-( START (2001) END (2008) EVERY (1), 
+( START (2006) END (2016) EVERY (1), 
   DEFAULT PARTITION extra ); 
 </codeblock>
         </p>
@@ -315,8 +315,8 @@ PARTITION BY RANGE (year)
         <p>
           <codeblock>CREATE TABLE sales2 (LIKE sales) 
 PARTITION BY RANGE (date)
-( START (date '2008-01-01') INCLUSIVE
-   END (date '2009-01-01') EXCLUSIVE
+( START (date 2016-01-01') INCLUSIVE
+   END (date '2017-01-01') EXCLUSIVE
    EVERY (INTERVAL '1 month') );
 INSERT INTO sales2 SELECT * FROM sales;
 DROP TABLE sales;
@@ -446,7 +446,7 @@ region='usa';
       <p>
         <codeblock>-&gt;  <codeph>Seq Scan on</codeph><codeph>sales_1_prt_1</codeph> sales (cost=0.00..0.00 <codeph>rows=0</codeph> 
      width=0)
-Filter: "date"=01-07-08::date AND region='USA'::text
+Filter: "date"=01-07-12::date AND region='USA'::text
 -&gt;  <codeph>Seq Scan on</codeph><codeph>sales_1_2_prt_usa</codeph> sales (cost=0.00..9.87 
 <codeph>rows=20</codeph> 
       width=40)
@@ -554,16 +554,16 @@ WHERE tablename='sales';
           that template. For example:</p>
         <p>
           <codeblock>ALTER TABLE sales ADD PARTITION 
-            START (date '2009-02-01') INCLUSIVE 
-            END (date '2009-03-01') EXCLUSIVE;
+            START (date '2017-02-01') INCLUSIVE 
+            END (date '2017-03-01') EXCLUSIVE;
 </codeblock>
         </p>
         <p>If you did not use a subpartition template when you created the table, you define
           subpartitions when adding a partition:</p>
         <p>
           <codeblock>ALTER TABLE sales ADD PARTITION 
-            START (date '2009-02-01') INCLUSIVE 
-            END (date '2009-03-01') EXCLUSIVE
+            START (date '2017-02-01') INCLUSIVE 
+            END (date '2017-03-01') EXCLUSIVE
       ( SUBPARTITION usa VALUES ('usa'), 
         SUBPARTITION asia VALUES ('asia'), 
         SUBPARTITION europe VALUES ('europe') );
@@ -591,7 +591,7 @@ WHERE tablename='sales';
         </p>
         <p>For example:</p>
         <p>
-          <codeblock><i>sales_1_prt_jan08</i></codeblock>
+          <codeblock><i>sales_1_prt_jan16</i></codeblock>
         </p>
         <p>For auto-generated range partitions, where a number is assigned when no name is
           given):</p>
@@ -611,19 +611,19 @@ WHERE tablename='sales';
         </p>
         <p>You can change the name of a partition to make it easier to identify. For example:</p>
         <p>
-          <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2008-01-01') TO jan08;
+          <codeblock>ALTER TABLE sales RENAME PARTITION FOR ('2016-01-01') TO jan16;
 </codeblock>
         </p>
         <p>Changes the associated table name as follows:</p>
         <p>
-          <codeblock><i>sales_1_prt_jan08</i></codeblock>
+          <codeblock><i>sales_1_prt_jan16</i></codeblock>
         </p>
         <p>When altering partitioned tables with the <codeph>ALTER TABLE</codeph> command, always
-          refer to the tables by their partition name (<i>jan08</i>) and not their full table name
-            (<i>sales_1_prt_jan08</i>).</p>
+          refer to the tables by their partition name (<i>jan16</i>) and not their full table name
+            (<i>sales_1_prt_jan16</i>).</p>
         <note type="note">The table name cannot be a partition name in an <codeph>ALTER
             TABLE</codeph> statement. For example, <codeph>ALTER TABLE sales...</codeph> is correct,
-            <codeph>ALTER TABLE sales_1_part_jan08...</codeph> is not allowed.</note>
+            <codeph>ALTER TABLE sales_1_part_jan16...</codeph> is not allowed.</note>
       </body>
     </topic>
     <topic id="topic80" xml:lang="en">
@@ -728,21 +728,21 @@ WITH TABLE jan12;
         <p>For example, to split a monthly partition into two with the first partition containing
           dates January 1-15 and the second partition containing dates January 16-31:</p>
         <p>
-          <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2008-01-01')
-AT ('2008-01-16')
-INTO (PARTITION jan081to15, PARTITION jan0816to31);
+          <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2017-01-01')
+AT ('2017-01-16')
+INTO (PARTITION jan171to15, PARTITION jan1716to31);
 </codeblock>
         </p>
         <p>If your partition design has a default partition, you must split the default partition to
           add a partition.</p>
         <p>When using the <codeph>INTO</codeph> clause, specify the current default partition as the
           second partition name. For example, to split a default range partition to add a new
-          monthly partition for January 2009:</p>
+          monthly partition for January 2017:</p>
         <p>
           <codeblock>ALTER TABLE sales SPLIT DEFAULT PARTITION 
-START ('2009-01-01') INCLUSIVE 
-END ('2009-02-01') EXCLUSIVE 
-INTO (PARTITION jan09, default partition);
+START ('2017-01-01') INCLUSIVE 
+END ('2017-02-01') EXCLUSIVE 
+INTO (PARTITION jan17, default partition);
 </codeblock>
         </p>
       </body>
@@ -822,15 +822,15 @@ INTO (PARTITION jan09, default partition);
         <title>Example Exchanging a Partition with an External Table</title>
         <body>
           <p>This is a simple example that exchanges a leaf child partition of this partitioned
-            table for an external table. The partitioned table contains data for the years 2000
-            through 2003.</p>
+            table for an external table. The partitioned table contains data for the years 2010
+            through 2013.</p>
           <codeblock>CREATE TABLE sales (id int, year int, qtr int, day int, region text)
   DISTRIBUTED BY (id) 
   PARTITION BY RANGE (year) 
-  ( PARTITION yr START (2000) END (2004) EVERY (1) ) ;</codeblock>
+  ( PARTITION yr START (2010) END (2014) EVERY (1) ) ;</codeblock>
           <p>There are four leaf child partitions for the partitioned table. Each leaf child
             partition contains the data for a single year. The leaf child partition table
-              <codeph>sales_1_prt_yr_1</codeph> contains the data for the year 2000. These steps
+              <codeph>sales_1_prt_yr_1</codeph> contains the data for the year 2010. These steps
             exchange the table <codeph>sales_1_prt_yr_1</codeph> with an external table the uses the
               <codeph>gpfdist</codeph> protocol:</p>
           <ol id="ol_uls_2xd_bt">
@@ -842,15 +842,15 @@ INTO (PARTITION jan09, default partition);
                   TABLE</codeph> command creates a writable external table with the same columns as
                 the partitioned
               table.</p><codeblock>CREATE WRITABLE EXTERNAL TABLE my_sales_ext ( LIKE sales_1_prt_yr_1 )
-  LOCATION ( 'gpfdist://gpdb_test/sales_2000' )
+  LOCATION ( 'gpfdist://gpdb_test/sales_2010' )
   FORMAT 'csv' 
   DISTRIBUTED BY (id) ;</codeblock></li>
             <li>Create a readable external table that reads the data from that destination of the
               writable external table created in the previous step.<p>This <codeph>CREATE EXTENAL
                   TABLE</codeph> create a readable external that uses the same external data as the
                 writable external
-              data.</p><codeblock>CREATE EXTERNAL TABLE sales_2000_ext ( LIKE sales_1_prt_yr_1) 
-  LOCATION ( 'gpfdist://gpdb_test/sales_2000' )
+              data.</p><codeblock>CREATE EXTERNAL TABLE sales_2010_ext ( LIKE sales_1_prt_yr_1) 
+  LOCATION ( 'gpfdist://gpdb_test/sales_2010' )
   FORMAT 'csv' ;</codeblock></li>
             <li>Copy the data from the leaf child partition into the writable external table.<p>This
                   <codeph>INSERT</codeph> command copies the data from the child leaf partition
@@ -862,16 +862,16 @@ INTO (PARTITION jan09, default partition);
                 partition.
                 </p><codeblock>ALTER TABLE sales ALTER PARTITION yr_1 
    EXCHANGE PARTITION yr_1 
-   WITH TABLE sales_2000_ext WITHOUT VALIDATION;</codeblock><p>The
+   WITH TABLE sales_2010_ext WITHOUT VALIDATION;</codeblock><p>The
                 external table becomes the leaf child partition with the table name
                   <codeph>sales_1_prt_yr_1</codeph> and the old leaf child partition becomes the
-                table <codeph>sales_2000_ext</codeph>. </p><note type="warning">In order to ensure
+                table <codeph>sales_2010_ext</codeph>. </p><note type="warning">In order to ensure
                 queries against the partitioned table return the correct results, the external table
                 data must be valid against the <codeph>CHECK</codeph> constraints on the leaf child
                 partition. In this case, the data was taken from the child leaf partition table on
                 which the <codeph>CHECK</codeph> constraints were defined.</note></li>
             <li>Drop the table that was rolled out of the partitioned
-              table.<codeblock>DROP TABLE sales_2000_ext ;</codeblock></li>
+              table.<codeblock>DROP TABLE sales_2010_ext ;</codeblock></li>
           </ol>
           <p>You can rename the name of the leaf child partition to indicate that
               <codeph>sales_1_prt_yr_1</codeph> is an external table.</p>

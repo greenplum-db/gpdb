@@ -185,6 +185,9 @@ typedef struct ControlFileData
 	char		lc_collate[LOCALE_NAME_BUFLEN];
 	char		lc_ctype[LOCALE_NAME_BUFLEN];
 
+	/* Are data pages protected by checksums? Zero if no checksum version */
+	uint32		data_checksum_version;
+
 	/* CRC of all above ... MUST BE LAST! */
 	pg_crc32c	crc;
 } ControlFileData;

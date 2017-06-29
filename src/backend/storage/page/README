@@ -1,0 +1,8 @@
+src/backend/storage/page/README
+
+Checksums
+---------
+
+Checksums will soon be supported for heap tables in Greenplum by
+pulling in commits from upstream PostgreSQL 9.3.  Append-optimized
+tables are already protected with checksums.

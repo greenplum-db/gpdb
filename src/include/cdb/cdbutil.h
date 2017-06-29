@@ -59,6 +59,7 @@ typedef struct CdbComponentDatabaseInfo
 	int32		filerep_port;  	/* port that instance filerep is listening on */
 
 	char	   *hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
+	int16		hostSegs;		/* number of primary segments on the same hosts */
 } CdbComponentDatabaseInfo;
 
 #define SEGMENT_ROLE_PRIMARY 'p'

@@ -1,3 +1,7 @@
+-- start_matchignore
+m/^CONTEXT:  SQL function ".+" statement \d+$/
+-- end_matchignore
+
 -- start_matchsubs
 m/^[0-9:]+\sgpconfig:[^:]+:/
 s/^[0-9:]+\sgpconfig:[^:]+:/TIMESTAMP gpconfig:SEGMENT:/
@@ -7,4 +11,7 @@ s/\[\S+:cgroup is not properly configured:/\[SEGMENT:cgroup is not properly conf
 
 m/^ERROR:  Resource group [0-9]+ was concurrently dropped$/
 s/group [0-9]+ was/group OID was/
+
+m/^ERROR:  Out of memory  (seg\d slice\d \d+.\d+.\d+.\d+:\d+ pid=\d+)$/
+s/(seg\d+ slice\d+ \d+.\d+.\d+.\d+:\d+ pid=\d+)/(SEG SLICE ADDR:PORT pid=PID)/
 -- end_matchsubs

@@ -64,6 +64,8 @@ createGang_async(GangType type, int gang_id, int size, int content)
 	if (type == GANGTYPE_PRIMARY_WRITER)
 		Insist(!GangsExist());
 
+	Assert(CurrentGangCreating == NULL);
+
 create_gang_retry:
 	/* If we're in a retry, we may need to reset our initial state, a bit */
 	newGangDefinition = NULL;
@@ -73,6 +75,7 @@ create_gang_retry:
 
 	/* allocate and initialize a gang structure */
 	newGangDefinition = buildGangDefinition(type, gang_id, size, content);
+	CurrentGangCreating = newGangDefinition;
 
 	Assert(newGangDefinition != NULL);
 	Assert(newGangDefinition->size == size);
@@ -107,7 +110,8 @@ create_gang_retry:
 			build_gpqeid_param(gpqeid, sizeof(gpqeid),
 							   segdbDesc->segindex,
 							   type == GANGTYPE_PRIMARY_WRITER,
-							   gang_id);
+							   gang_id,
+							   segdbDesc->segment_database_info->hostSegs);
 
 			options = makeOptions();
 
@@ -263,6 +267,7 @@ create_gang_retry:
 
 			DisconnectAndDestroyGang(newGangDefinition);
 			newGangDefinition = NULL;
+			CurrentGangCreating = NULL;
 			retry = true;
 		}
 	}
@@ -277,6 +282,7 @@ create_gang_retry:
 
 			DisconnectAndDestroyGang(newGangDefinition);
 			newGangDefinition = NULL;
+			CurrentGangCreating = NULL;
 			DisconnectAndDestroyAllGangs(true);
 			CheckForResetSession();
 			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -287,6 +293,7 @@ create_gang_retry:
 
 		DisconnectAndDestroyGang(newGangDefinition);
 		newGangDefinition = NULL;
+		CurrentGangCreating = NULL;
 
 		if (type == GANGTYPE_PRIMARY_WRITER)
 		{
@@ -298,6 +305,8 @@ create_gang_retry:
 	}
 	PG_END_TRY();
 
+	SIMPLE_FAULT_INJECTOR(GangCreated);
+
 	if (retry)
 	{
 		CHECK_FOR_INTERRUPTS();
@@ -308,6 +317,9 @@ create_gang_retry:
 	}
 
 	setLargestGangsize(size);
+
+	CurrentGangCreating = NULL;
+
 	return newGangDefinition;
 }
 

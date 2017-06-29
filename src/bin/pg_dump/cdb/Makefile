@@ -39,7 +39,7 @@ PGDUMP_DIR= $(top_builddir)/src/bin/pg_dump
 override CPPFLAGS := -I$(PGDUMP_SRCDIR) -I$(libpq_srcdir) $(CPPFLAGS) -DBINDIR=\"$(bindir)\"
 override CFLAGS += -I$(top_builddir)/src/include -I$(top_builddir)/src/interfaces/libpq -I$(top_builddir)/gpAux/ext/$(BLD_ARCH)/include
 
-OBJS= pg_backup_db.o pg_backup_custom.o pg_backup_null.o \
+OBJS= pg_backup_db.o pg_backup_custom.o pg_backup_files.o pg_backup_null.o \
 		pg_backup_tar.o dumputils.o 
 
 KEYWRDOBJS= keywords.o kwlookup.o
@@ -47,7 +47,7 @@ KEYWRDOBJS= keywords.o kwlookup.o
 kwlookup.c: % : $(top_srcdir)/src/backend/parser/%
 	rm -f $@ && $(LN_S) $< .
 
-PGDUMP_SRC= pg_backup_db.c pg_backup_custom.c \
+PGDUMP_SRC= pg_backup_db.c pg_backup_custom.c pg_backup_files.c \
 			pg_backup_null.c pg_backup_tar.c dumputils.c common.c \
 			pg_dump_sort.c keywords.c
 

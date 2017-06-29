@@ -61,8 +61,7 @@
             utility to have the standby master take over as the new primary master. You can
             configure a virtual IP address for the master and standby so that client programs do not
             have to switch to a different network address when the current master changes. If the
-            master host fails, the virtual IP address can be swapped to he actual acting master.
-         </p>
+            master host fails, the virtual IP address can be swapped to the actual acting master. </p>
       </section>
       <section id="dual_clusters">
          <title>Dual Clusters</title>

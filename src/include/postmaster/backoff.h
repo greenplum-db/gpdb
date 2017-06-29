@@ -19,7 +19,6 @@ extern int gp_resqueue_priority_inactivity_timeout;
 extern int gp_resqueue_priority_grouping_timeout;
 extern double gp_resqueue_priority_cpucores_per_segment;
 extern char* gp_resqueue_priority_default_value;
-extern double gp_resource_group_cpu_limit;
 
 extern void BackoffBackendEntryInit(int sessionid, int commandcount, int weight);
 extern void BackoffBackendEntryExit(void);

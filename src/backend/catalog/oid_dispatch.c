@@ -221,7 +221,11 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 			{
 				Form_pg_extension extForm = (Form_pg_extension) GETSTRUCT(tuple);
 
-				key.namespaceOid = extForm->extnamespace;
+				/*
+				 * Note that unlike most catalogs with a "namespace" column,
+				 * extnamespace is not meant to imply that the extension
+				 * belongs to that schema.
+				 */
 				key.objname = NameStr(extForm->extname);
 				break;
 			}
@@ -554,9 +558,55 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 			 RelationGetRelationName(catalogrel));
 
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
-		elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
-			 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "",
-			 searchkey.namespaceOid, searchkey.keyOid1, searchkey.keyOid2);
+	{
+		bool		missing_ok = false;
+
+		/*
+		 * When binary-upgrading the QD node, we must preserve the OIDs of types,
+		 * relations from the old cluster, so we should have pre-assigned OIDs for
+		 * them.
+		 *
+		 * When binary-upgrading a QE node, we should have pre-assigned OIDs for
+		 * all objects, to ensure that the same OIDs are used for all objects
+		 * between the QD and the QEs.
+		 */
+		if (IsBinaryUpgrade && !IsBinaryUpgradeQE())
+		{
+			if (RelationGetRelid(catalogrel) == NamespaceRelationId)
+			{
+				/*
+				 * OIDs of schemas must be preserved. (Only because namespace
+				 * OIDs are part of the key of types and relations.)
+				 */
+				missing_ok = false;
+			}
+			else if (RelationGetRelid(catalogrel) == TypeRelationId)
+			{
+				/* No need to preserve the rowtype OIDs of these special relations. */
+				if (searchkey.namespaceOid == PG_BITMAPINDEX_NAMESPACE)
+					missing_ok = true;
+				if (searchkey.namespaceOid == PG_TOAST_NAMESPACE)
+					missing_ok = true;
+				if (searchkey.namespaceOid == PG_AOSEGMENT_NAMESPACE)
+					missing_ok = true;
+			}
+			else if (RelationGetRelid(catalogrel) == RelationRelationId)
+			{
+				/* pg_upgrading indexes is currently not supported, so this is OK */
+				if (searchkey.namespaceOid == PG_BITMAPINDEX_NAMESPACE)
+					missing_ok = true;
+			}
+			else
+			{
+				missing_ok = true;
+			}
+		}
+
+		if (!missing_ok)
+			elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
+				 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "",
+				 searchkey.namespaceOid, searchkey.keyOid1, searchkey.keyOid2);
+	}
 	return oid;
 }
 
@@ -595,7 +645,21 @@ GetPreassignedOidForRelation(Oid namespaceOid, const char *relname)
 	searchkey.objname = (char *) relname;
 
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
+	{
+		/*
+		 * Special handling for binary upgrading the QD node. See
+		 * GetPreassignedOidForTuple().
+		 */
+		if (IsBinaryUpgrade && !IsBinaryUpgradeQE())
+		{
+			if (namespaceOid == PG_BITMAPINDEX_NAMESPACE)
+				return InvalidOid;
+
+			if (namespaceOid == PG_AOSEGMENT_NAMESPACE)
+				return InvalidOid;
+		}
 		elog(ERROR, "no pre-assigned OID for relation \"%s\"", relname);
+	}
 	return oid;
 }
 
@@ -614,12 +678,7 @@ GetPreassignedOidForType(Oid namespaceOid, const char *typname)
 	searchkey.namespaceOid = namespaceOid;
 	searchkey.objname = (char *) typname;
 
-	/*
-	 * We allow InvalidOid during binary upgrades as a way to signal that a new
-	 * oid is to be allocated for a new catalog object not present in the old
-	 * version during an upgrade
-	 */
-	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid && !IsBinaryUpgrade)
+	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
 		elog(ERROR, "no pre-assigned OID for type \"%s\"", typname);
 	return oid;
 }
@@ -808,4 +867,28 @@ AtEOXact_DispatchOids(bool isCommit)
 #endif
 		preassigned_oids = NIL;
 	}
+}
+
+
+/*
+ * Is the given OID reserved for some other object?
+ *
+ * This is mainly of concern during binary upgrade, where we preassign
+ * all the OIDs at the beginning of a restore. During normal operation,
+ * there should be no clashes anyway.
+ */
+bool
+IsOidAcceptable(Oid oid)
+{
+	ListCell *lc;
+
+	foreach(lc, preassigned_oids)
+	{
+		OidAssignment *p = (OidAssignment *) lfirst(lc);
+
+		if (p->oid == oid)
+			return false;
+	}
+
+	return true;
 }

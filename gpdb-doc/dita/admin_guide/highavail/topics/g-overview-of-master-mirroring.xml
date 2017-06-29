@@ -17,8 +17,10 @@
             up to date by the <codeph>walsender</codeph> and <codeph>walreceiver</codeph>
             replication processes. The <codeph>walreceiver</codeph> is a standby master process. The
                 <codeph>walsender</codeph> process is a primary master process. The two processes
-            use WAL-based streaming replication to keep the primary and standby masters
-            synchronized.</p>
+            use Write-Ahead Logging (WAL)-based streaming replication to keep the primary and
+            standby masters synchronized. In WAL logging, all modifications are written to the log
+            before being applied, to ensure data integrity for any in-process operations.<note>WAL
+                logging is not yet available for segment mirroring.</note></p>
         <p>Since the master does not house user data, only system catalog tables are synchronized
             between the primary and standby masters. When these tables are updated, changes are
             automatically copied to the standby master to keep it current with the primary.</p>

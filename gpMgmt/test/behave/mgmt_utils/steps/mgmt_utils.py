@@ -3511,6 +3511,7 @@ def impl(context, partitionnum, tablename, dbname):
 
 @when('table "{tablename}" is dropped in "{dbname}"')
 @then('table "{tablename}" is dropped in "{dbname}"')
+@given('table "{tablename}" is dropped in "{dbname}"')
 def impl(context, tablename, dbname):
     drop_table_if_exists(context, table_name=tablename, dbname=dbname)
 
@@ -4534,8 +4535,8 @@ def impl(context, user_table, catalog_table, primary_key, db_name):
             conn.commit()
 
 
-@when(
-    'the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}" on the first primary segment')
+@when('the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}" on the first primary segment')
+@given('the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}" on the first primary segment')
 def impl(context, user_table, catalog_table, primary_key, db_name):
     host, port = get_primary_segment_host_port()
     delete_qry = "delete from %s where %s='%s'::regclass::oid;" % (catalog_table, primary_key, user_table)
@@ -4851,32 +4852,38 @@ def impl(context):
 def impl(context):
     target_line = 'qamode = 1'
     gpperfmon_config_file = "%s/gpperfmon/conf/gpperfmon.conf" % os.getenv("MASTER_DATA_DIRECTORY")
-    if not check_db_exists("gpperfmon", "localhost") or \
-            not is_process_running("gpsmon") or \
-            not file_contains_line(gpperfmon_config_file, target_line):
+    if not check_db_exists("gpperfmon", "localhost"):
         context.execute_steps(u'''
-            When the user runs "gpperfmon_install --port 15432 --enable --password foo"
-            Then gpperfmon_install should return a return code of 0
-            When the user runs command "echo 'qamode = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'verbose = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'min_query_time = 0' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'quantum = 10' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the user runs command "echo 'harvest_interval = 5' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
-            Then echo should return a return code of 0
-            When the database is not running
-            Then wait until the process "postgres" goes down
-            When the user runs "gpstart -a"
-            Then gpstart should return a return code of 0
-            And verify that a role "gpmon" exists in database "gpperfmon"
-            And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
-            And verify that there is a "heap" table "database_history" in "gpperfmon"
-            Then wait until the process "gpmmon" is up
-            And wait until the process "gpsmon" is up
-        ''')
+                              When the user runs "gpperfmon_install --port 15432 --enable --password foo"
+                              Then gpperfmon_install should return a return code of 0
+                              ''')
+
+    if not file_contains_line(gpperfmon_config_file, target_line):
+        context.execute_steps(u'''
+                              When the user runs command "echo 'qamode = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'verbose = 1' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'min_query_time = 0' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'quantum = 10' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              When the user runs command "echo 'harvest_interval = 5' >> $MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf"
+                              Then echo should return a return code of 0
+                              ''')
+
+    if not is_process_running("gpsmon"):
+        context.execute_steps(u'''
+                              When the database is not running
+                              Then wait until the process "postgres" goes down
+                              When the user runs "gpstart -a"
+                              Then gpstart should return a return code of 0
+                              And verify that a role "gpmon" exists in database "gpperfmon"
+                              And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
+                              And verify that there is a "heap" table "database_history" in "gpperfmon"
+                              Then wait until the process "gpmmon" is up
+                              And wait until the process "gpsmon" is up
+                              ''')
 
 @given('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 @when('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')

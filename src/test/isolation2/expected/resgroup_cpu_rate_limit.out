@@ -71,9 +71,9 @@ True
 
 
 -- create two resource groups
-CREATE RESOURCE GROUP g1 WITH (cpu_rate_limit=0.1, memory_limit=0.1);
+CREATE RESOURCE GROUP g1 WITH (concurrency=5, cpu_rate_limit=0.1, memory_limit=0.2);
 CREATE
-CREATE RESOURCE GROUP g2 WITH (cpu_rate_limit=0.2, memory_limit=0.2);
+CREATE RESOURCE GROUP g2 WITH (concurrency=5, cpu_rate_limit=0.2, memory_limit=0.2);
 CREATE
 
 -- check g1 configuration

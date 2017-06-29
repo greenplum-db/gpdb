@@ -420,7 +420,7 @@ SELECT xmlelement(name foo, xmlattributes(current_date as bar), 'cont', 'ent');
 
              xmlelement
 -------------------------------------
- &lt;foo bar="2007-01-26">content&lt;/foo></codeblock></p>
+ &lt;foo bar="2017-01-26">content&lt;/foo></codeblock></p>
       <p>Element and attribute names that are not valid XML names are escaped by replacing the
         offending characters by the sequence <codeph>_x<varname>HHHH</varname>_</codeph>, where
           <varname>HHHH</varname> is the character's Unicode codepoint in hexadecimal notation. For

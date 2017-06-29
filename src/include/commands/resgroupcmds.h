@@ -25,6 +25,8 @@ extern char *GetResGroupNameForId(Oid oid, LOCKMODE lockmode);
 extern void GetConcurrencyForResGroup(int groupId, int *value, int *proposed);
 extern float GetCpuRateLimitForResGroup(int groupId);
 extern Oid GetResGroupIdForRole(Oid roleid);
+extern void GetMemoryCapabilitiesForResGroup(int groupId, float *memoryLimit,
+											 float *sharedQuota, float *spillRatio);
 extern void AtEOXact_ResGroup(bool isCommit);
 
 #endif   /* RESGROUPCMDS_H */

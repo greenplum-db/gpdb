@@ -15,7 +15,7 @@ include $(top_builddir)/src/Makefile.global
 OBJS = resgroup.o
 
 ifeq ($(PORTNAME),linux)
-OBJS += resgroup-ops-cgroup.o
+OBJS += resgroup-ops-linux.o
 else
 OBJS += resgroup-ops-dummy.o
 endif

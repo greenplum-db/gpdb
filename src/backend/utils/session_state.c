@@ -108,8 +108,6 @@ SessionState_Acquire(int sessionId)
 		acquired->isModifiedSessionId = false;
 #endif
 
-		acquired->resGroupId = InvalidOid;
-
 		/*
 		 * Make sure that the lock is reset to released. Note: this doesn't
 		 * have a matching SpinLockAcquire. We are just resetting the lock
@@ -166,7 +164,6 @@ SessionState_Release(SessionState *acquired)
 
 		acquired->sessionId = INVALID_SESSION_ID;
 
-		Assert(0 == acquired->sessionVmem);
 		Assert(acquired->runawayStatus == RunawayStatus_NotRunaway);
 		Assert(CLEANUP_COUNTDOWN_BEFORE_RUNAWAY == acquired->cleanupCountdown);
 		Assert(0 == acquired->activeProcessCount);

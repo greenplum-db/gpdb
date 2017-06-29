@@ -304,7 +304,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				TableFuncElementList opt_type_modifiers
 				prep_type_clause
 				execute_param_clause using_clause returning_clause
-				enum_val_list
+				opt_enum_val_list enum_val_list
 				table_func_column_list scatter_clause dostmt_opt_list
 				columnListUnique
 
@@ -496,7 +496,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	CHARACTER CHARACTERISTICS CHECK CHECKPOINT CLASS CLOSE
 	CLUSTER COALESCE COLLATE COLUMN COMMENT COMMIT
 	COMMITTED CONCURRENCY CONCURRENTLY CONFIGURATION CONNECTION CONSTRAINT CONSTRAINTS
-	CONTENT_P CONVERSION_P COPY COST CREATE CREATEDB
+	CONTENT_P CONVERSION_P COPY COST CPU_RATE_LIMIT CREATE CREATEDB
 	CREATEROLE CREATEUSER CROSS CSV CURRENT_P CURRENT_DATE CURRENT_ROLE
 	CURRENT_TIME CURRENT_TIMESTAMP CURRENT_USER CURSOR CYCLE
 
@@ -700,6 +700,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc CONVERSION_P
 			%nonassoc COPY
 			%nonassoc COST
+			%nonassoc CPU_RATE_LIMIT
 			%nonassoc CREATEDB
 			%nonassoc CREATEEXTTABLE
 			%nonassoc CREATEROLE
@@ -1325,6 +1326,10 @@ OptResourceGroupElem:
 				{
 					/* was "concurrency" */
 					$$ = makeDefElem("concurrency", (Node *)$2);
+				}
+			| CPU_RATE_LIMIT FloatOnly
+				{
+					$$ = makeDefElem("cpu_rate_limit", (Node *)$2);
 				}
 		;
 
@@ -5851,7 +5856,7 @@ DefineStmt:
 					n->ordered = false;
 					$$ = (Node *)n;
 				}
-			| CREATE TYPE_P any_name AS ENUM_P '(' enum_val_list ')'
+			| CREATE TYPE_P any_name AS ENUM_P '(' opt_enum_val_list ')'
 				{
 					CreateEnumStmt *n = makeNode(CreateEnumStmt);
 					n->typeName = $3;
@@ -5954,6 +5959,11 @@ old_aggr_elem:  IDENT '=' def_arg
 				{
 					$$ = makeDefElem($1, (Node *)$3);
 				}
+		;
+
+opt_enum_val_list:
+		enum_val_list							{ $$ = $1; }
+		| /*EMPTY*/								{ $$ = NIL; }
 		;
 
 enum_val_list:	Sconst
@@ -13017,6 +13027,7 @@ unreserved_keyword:
 			| CONVERSION_P
 			| COPY
 			| COST
+			| CPU_RATE_LIMIT
 			| CREATEDB
 			| CREATEEXTTABLE
 			| CREATEROLE
@@ -13327,6 +13338,7 @@ PartitionIdentKeyword: ABORT_P
 			| CONVERSION_P
 			| COPY
 			| COST
+			| CPU_RATE_LIMIT
 			| CREATEDB
 			| CREATEEXTTABLE
 			| CREATEROLE

@@ -2,28 +2,26 @@
 ABOUT GP DEMO
 ******************************************************************
 
-The GP demo program will setup a virtual Greenplum Database system on a 
-single host. It creates and starts a GP master instance and three 
-segment instances within the same directory. Running GP demo is a good 
-way to test your initial installation before deploying the Greenplum Database 
-software on a multi-host array. It is also a good way to become familiar 
-with the system without investing the time involved in a multi-host setup.
+The GP demo program will setup a virtual Greenplum Database system
+on a single host. It creates and starts a GP master instance and
+three segment instances (three primary and three mirror segments)
+within the same directory. Running GP demo is a good way to test
+your initial installation before deploying the Greenplum Database
+software on a multi-host array. It is also a good way to become
+familiar with the system without investing the time involved in a
+multi-host setup.
 
 ******************************************************************
 BEFORE YOU BEGIN
 ******************************************************************
 
-Before running GP demo, you must at least 110 MB of free disk space, 
-and have ports 18501, 18506, 18507, and 18508 free.
-
-PREREQUISITES FOR SOLARIS USERS
-
-* Make sure that make, tar, and a C compiler (gcc recommended) 
-  is in your $PATH. 
+Before running GP demo, you must at least have 700 MB of free disk
+space, and have the TCP ports 15432 and 25432 -  25443 free.
 
 * Verify that your $USER environment variable is set. 
 
-* Greenplum recommends using the bash shell to run the GP demo programs.
+* Greenplum Database recommends using the bash shell to run the
+  GP demo programs.
 
 ******************************************************************
 RUNNING GP DEMO
@@ -33,33 +31,35 @@ RUNNING GP DEMO
 
 	su - gpadmin
 
-2. Go to the directory where you wish to unpack and run the Greenplum demo 
-   program. This directory should have at least 110 MB of free space.
+2. Go into the gpdemo directory:
 
-3. Unzip and untar gpdemo:
+	cd gpAux/gpdemo
 
-	tar -xvzf $GPHOME/gpMgmt/demo/gpdemo.tar.gz
+3. Source greenplum_path.sh
 
-4. Go into the gpdemo directory you just untarred:
+	. /usr/local/greenplum-db/greenplum_path.sh
 
-	cd gpdemo
+   Note: There is a space between the dot and the slash.
 
-5. Run make:
+   The "." will source the greenplum_path.sh into the current
+   shell, instead of starting a subprocess.
 
-	make
+4. Create the cluster:
 
-6. If setup completes correctly, you will have a virtual Greenplum Database 
-   system running on the local host. You can connect to it using the 
-   psql client program as follows:
+	make cluster
 
-	psql template1 -p 18501
+5. If setup completes correctly, you will have a virtual Greenplum
+   Database system running on the local host. You can connect to
+   it using the psql client program as follows:
+
+	psql -p 15432 postgres
 
 7. To exit the psql client program:
 
 	\q
 
-8. See the Greenplum Database User Guide for more information on using 
-   your Greenplum Database system.
+8. See the Greenplum Database User Guide for more information on
+   using your Greenplum Database system.
 
 
 ******************************************************************
@@ -70,6 +70,48 @@ REMOVING GP DEMO
 
 	make clean
 
-2. This will stop all Greenplum Database demo server processes and remove all 
-   files and directories created by the GP demo program.
+2. This will stop all Greenplum Database demo server processes
+   and remove all files and directories created by the GP demo
+   program.
 
+
+******************************************************************
+MODIFYING GP DEMO SETTINGS
+******************************************************************
+
+Certain parameters of the demo cluster are adjustable by setting
+environment variables before initializing the cluster:
+
+* Master TCP port:
+
+	export MASTER_PORT=<new TCP port number>
+
+* Base port for segments:
+
+	export PORT_BASE=<new lowest TCP port number>
+
+  The cluster will use the ports following the base port.
+
+* Number of segments:
+
+	export NUM_PRIMARY_MIRROR_PAIRS=<number segments>
+
+  It is recommended to specify an odd number of segments, in order
+  to catch problems with data distribution.
+
+* Data directory:
+
+	export DATADIRS=<path to directory>
+
+  The data directories for the master and the segments will be
+  created under the specified directory path.
+
+* Turn fsync off:
+
+	export BLDWRAP_POSTGRES_CONF_ADDONS="fsync=off"
+
+  A temporary cluster might not need all the ACID data protection,
+  therefore fsync can be turned off to speed up the disk I/O.
+
+  Note: NEVER turn off fsync if you intend to run the cluster
+        in production!

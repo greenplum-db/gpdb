@@ -263,6 +263,7 @@ extern XLogRecPtr GetFlushRecPtr(void);
 
 extern void UpdateControlFile(void);
 extern uint64 GetSystemIdentifier(void);
+extern bool DataChecksumsEnabled(void);
 extern Size XLOGShmemSize(void);
 extern void XLOGShmemInit(void);
 extern void XLogStartupInit(void);

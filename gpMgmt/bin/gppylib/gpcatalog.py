@@ -57,10 +57,30 @@ PERSISTENT_TABLES = [
 # Hard coded tables that have different values on every segment
 SEGMENT_LOCAL_TABLES = [
     'gp_id',
-    'pg_depend',  # (not if we fix oid inconsistencies)
     'pg_shdepend', # (not if we fix oid inconsistencies)
     'gp_fastsequence', # AO segment row id allocations
     'pg_statistic',
+    ]
+
+# These catalog tables either do not use pg_depend or does not create an
+# entry in pg_depend immediately when an entry is created in that
+# catalog table
+DEPENDENCY_EXCLUSION = [
+    'pg_authid',
+    'pg_compression',
+    'pg_conversion',
+    'pg_database',
+    'pg_enum',
+    'pg_filespace',
+    'pg_namespace',
+    'pg_partition',
+    'pg_partition_rule',
+    'pg_resgroup',
+    'pg_resgroupcapability',
+    'pg_resourcetype',
+    'pg_resqueue',
+    'pg_resqueuecapability',
+    'pg_tablespace'
     ]
 
 # ============================================================================
@@ -232,6 +252,9 @@ class GPCatalog():
             "schemaversion productversion")
         self._tables['pg_constraint']._setPrimaryKey(
             "conname connamespace conrelid contypid")
+        self._tables['pg_depend']._setPrimaryKey(
+            "classid objid objsubid refclassid refobjid refobjsubid deptype")
+
         if self._version >= "4.0":
             self._tables['pg_resqueuecapability']._setPrimaryKey(
                 "resqueueid restypid")

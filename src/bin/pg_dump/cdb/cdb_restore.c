@@ -715,6 +715,11 @@ fillInputOptions(int argc, char **argv, InputOptions * pInputOpts)
 				opts->format = archCustom;
 				break;
 
+			case 'f':
+			case 'F':
+				opts->format = archFiles;
+				break;
+
 			case 't':
 			case 'T':
 				opts->format = archTar;

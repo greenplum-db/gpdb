@@ -2530,6 +2530,17 @@ _readDropResourceGroupStmt(void)
 	READ_DONE();
 }
 
+static AlterResourceGroupStmt *
+_readAlterResourceGroupStmt(void)
+{
+	READ_LOCALS(AlterResourceGroupStmt);
+
+	READ_STRING_FIELD(name);
+	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
 static CommentStmt *
 _readCommentStmt(void)
 {
@@ -3448,6 +3459,9 @@ readNodeBinary(void)
 				break;
 			case T_DropResourceGroupStmt:
 				return_value = _readDropResourceGroupStmt();
+				break;
+			case T_AlterResourceGroupStmt:
+				return_value = _readAlterResourceGroupStmt();
 				break;
 
 			case T_CommentStmt:

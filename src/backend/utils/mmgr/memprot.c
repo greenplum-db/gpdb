@@ -263,6 +263,10 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 		 */
 		write_stderr("Logging memory usage for reaching system memory limit");
 	}
+	else if (ec == MemoryFailure_ResourceGroupMemoryExhausted)
+	{
+		elog(LOG, "Logging memory usage for reaching resource group limit");
+	}
 	else
 	{
 		Assert(!"Unknown memory failure error code");
@@ -308,6 +312,12 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 						sz, VmemTracker_GetAvailableVmemMB()
 				)
 		));
+	}
+	else if (ec == MemoryFailure_ResourceGroupMemoryExhausted)
+	{
+		ereport(ERROR, (errcode(ERRCODE_GP_MEMPROT_KILL),
+				errmsg("Out of memory"),
+				errdetail("Resource group memory limit reached")));
 	}
 	else
 	{

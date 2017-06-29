@@ -5,3 +5,6 @@
 -- end_ignore
 
 SHOW gp_resource_manager;
+
+-- reset admin_group concurrency setting
+ALTER RESOURCE GROUP admin_group SET concurrency -1;

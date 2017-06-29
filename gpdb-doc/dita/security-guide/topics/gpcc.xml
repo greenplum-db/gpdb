@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_zyt_rxp_f5">
+  <title>Greenplum Command Center Security</title>
+  <body>
+    <p>Greenplum Command Center (GPCC) is a web-based application for monitoring and managing
+      Greenplum clusters. GPCC works with data collected by agents running on the segment hosts and
+      saved to the gpperfmon database. The gpperfmon database is created by running the
+        <codeph>gpperfmon_install</codeph> utility, which also creates the <codeph>gpmon</codeph>
+      database role that GPCC uses to access the gpperfmon database. </p>
+    <section>
+      <title>The gpmon User</title>
+      <p>The <codeph>gpperfmon_install</codeph> utility creates the <codeph>gpmon</codeph> database
+        role and adds the role to the <codeph>pg_hba.conf</codeph> file with the following
+        entries:<codeblock>local    gpperfmon   gpmon         md5
+host     all         gpmon         127.0.0.1/28    md5
+host     all         gpmon         ::1/128         md5</codeblock>These
+        entries allow <codeph>gpmon</codeph> to establish a local socket connection to the gpperfmon
+        database and a TCP/IP connection to any database. </p>
+      <p>The <codeph>gpmon</codeph> database role is a superuser. In a secure or production
+        environment, it may be desirable to restrict the <codeph>gpmon</codeph> user to just the
+        gpperfmon database. Do this by editing the <codeph>gpmon</codeph> host entry in the
+          <codeph>pg_hba.conf</codeph> file and changing <codeph>all</codeph> in the database field
+        to
+        <codeph>gpperfmon</codeph>:<codeblock>local   gpperfmon   gpmon                        md5
+host    gpperfmon   gpmon    127.0.0.1/28        md5
+host    gpperfmon   gpmon    ::1/128             md5</codeblock></p>
+      <p>The password used to authenticate the <codeph>gpmon</codeph> user is set by the
+          <codeph>gpperfmon_install</codeph> utility and is stored in the <codeph>gpadmin</codeph>
+        home directory in the <codeph>~/.pgpass</codeph> file. The <codeph>~/.pgpass</codeph> file
+        must be owned by the <codeph>gpadmin</codeph> user and be RW-accessible only by the
+          <codeph>gpadmin</codeph> user. To change the <codeph>gpmon</codeph> password, use the
+          <codeph>ALTER ROLE</codeph> command to change the password in the database, change the
+        password in the <codeph>~/.pgpass</codeph> file, and then restart GPCC with the
+          <codeph>gpcmdr --restart <varname>instance_name</varname></codeph> command. </p>
+      <note>The GPCC web server can be configured to encrypt connections with SSL. Two-way
+        authentication with public keys can also be enabled for GPCC users. However, the
+          <codeph>gpmon</codeph> user always uses md5 authentication with the password saved in the
+          <codeph>~/.pgpass</codeph> file.</note>
+      <p>GPCC does not allow logins from any role configured with trust authentication, including
+        the <codeph>gpadmin</codeph> user. </p>
+      <p>The <codeph>gpmon</codeph> user can log in to the Command Center Console and has access to
+        all of the application's features. You can allow other database roles access to GPCC so that
+        you can secure the <codeph>gpmon</codeph> user and restrict other users' access to GPCC
+        features. Setting up other GPCC users is described in the next section. </p>
+    </section>
+    <section>
+      <title>Greenplum Command Center Users</title>
+      <p>GPCC has the following types of users:<ul id="ul_tdv_qnt_g5">
+          <li><i>Self Only</i> users can view metrics and view and cancel their own queries. Any
+            Greenplum Database user successfully authenticated through the Greenplum Database
+            authentication system can access Greenplum Command Center with Self Only permission.
+            Higher permission levels are required to view and cancel other’s queries and to access
+            the System and Admin Control Center features.</li>
+          <li><i>Basic</i> users can view metrics, view all queries, and cancel their own queries.
+            Users with Basic permission are members of the Greenplum Database
+              <codeph>gpcc_basic</codeph> group. </li>
+          <li><i>Operator Basic</i> users can view metrics, view their own and others’ queries,
+            cancel their own queries, and view the System and Admin screens. Users with Operator
+            Basic permission are members of the Greenplum Database
+              <codeph>gpcc_operator_basic</codeph> group.</li>
+          <li><i>Operator</i> users can view their own and others’ queries, cancel their own and
+            other’s queries, and view the System and Admin screens. Users with Operator permission
+            are members of the Greenplum Database <codeph>gpcc_operator</codeph> group.</li>
+          <li><i>Admin</i> users can access all views and capabilities in the Command Center.
+            Greenplum Database users with the <codeph>SUPERUSER</codeph> privilege have Admin
+            permissions in Command Center.</li>
+        </ul></p>
+      <p>To log in to the GPCC web application, a user must be allowed access to the gpperfmon
+        database in <codeph>pg_hba.conf</codeph>. For example, to make <codeph>user1</codeph> a
+        regular GPCC user, edit the <codeph>pg_hba.conf</codeph> file and either add or edit a line
+        for the user so that the gpperfmon database is included in the database field. For
+        example:</p>
+      <codeblock>host     gpperfmon,accounts   user1     127.0.0.1/28    md5</codeblock>
+      <p>To designate a user as an operator, grant the <codeph>gpcc_operator</codeph> role to the
+        user:<codeblock>=# GRANT gpcc_operator TO <varname>user</varname>;</codeblock></p>
+      <p>You can also grant <codeph>gpcc_operator</codeph> to a group role to make all members of
+        the group GPCC operators.</p>
+      <p>See the <codeph>gpperfmon_install</codeph> reference in <cite>Greenplum Database Utility
+          Guide</cite> for more information about managing the <codeph>gpperfmon</codeph>
+        database.</p>
+    </section>
+    <section>
+      <title>Enabling SSL for Greenplum Command Center</title>
+      <p>The GPCC web server can be configured to support SSL so that client connections are
+        encrypted. A server certificate can be generated when the Command Center instance is created
+        or you can supply an existing certificate. </p>
+      <p>Two-way authentication with public key encryption can also be enabled for GPCC. See the
+          <cite>Greenplum Command Center Administration Guide</cite> for instructions. </p>
+    </section>
+    <section>
+      <title>Enabling Kerberos Authentication for Greenplum Command Center Users</title>
+      <p>If Kerberos authentication is enabled for Greenplum Database, Command Center users can also
+        authenticate with Kerberos. Command Center supports three Kerberos authentication modes:
+          <i>strict</i>, <i>normal</i>, and <i>gpmon-only</i>. </p>
+      <parml>
+        <plentry>
+          <pt>Strict</pt>
+          <pd>Command Center has a Kerberos keytab file containing the Command Center service
+            principal and a principal for every Command Center user. If the principal in the
+            client’s connection request is in the keytab file, the web server grants the client
+            access and the web server connects to Greenplum Database using the client’s principal
+            name. If the principal is not in the keytab file, the connection request fails.</pd>
+        </plentry>
+        <plentry>
+          <pt>Normal</pt>
+          <pd>The Command Center Kerberos keytab file contains the Command Center principal and may
+            contain principals for Command Center users. If the principal in the client’s connection
+            request is in Command Center’s keytab file, it uses the client’s principal for database
+            connections. Otherwise, Command Center uses the <codeph>gpmon</codeph> user for database
+            connections.</pd>
+        </plentry>
+        <plentry>
+          <pt>gpmon-only</pt>
+          <pd>The Command Center uses the <codeph>gpmon</codeph> database role for all Greenplum
+            Database connections. No client principals are needed in the Command Center’s keytab
+            file.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <p>See the <xref href="http://gptext.docs.pivotal.io" format="html" scope="external">Greenplum
+        Command Center documentation</xref> for instructions to enable Kerberos authentication with
+      Greenplum Command Center</p>
+  </body>
+</topic>

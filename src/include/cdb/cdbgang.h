@@ -12,6 +12,7 @@
 #include "cdb/cdbutil.h"
 #include "executor/execdesc.h"
 #include <pthread.h>
+#include "utils/faultinjector.h"
 
 struct Port;
 struct QueryDesc;
@@ -54,7 +55,10 @@ typedef struct Gang
 
 extern int qe_gang_id;
 
+extern int host_segments;
+
 extern MemoryContext GangContext;
+extern Gang *CurrentGangCreating;
 
 extern Gang *AllocateReaderGang(GangType type, char *portal_name);
 
@@ -86,7 +90,7 @@ extern struct SegmentDatabaseDescriptor *getSegmentDescriptorFromGang(const Gang
 bool isPrimaryWriterGangAlive(void);
 
 Gang *buildGangDefinition(GangType type, int gang_id, int size, int content);
-void build_gpqeid_param(char *buf, int bufsz, int segIndex, bool is_writer, int gangId);
+void build_gpqeid_param(char *buf, int bufsz, int segIndex, bool is_writer, int gangId, int hostSegs);
 char *makeOptions(void);
 bool segment_failure_due_to_recovery(struct PQExpBufferData *segdbDesc);
 

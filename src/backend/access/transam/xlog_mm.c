@@ -34,6 +34,7 @@
 #include "utils/guc.h"
 #include "cdb/cdbpersistentrecovery.h"
 #include "cdb/cdbpersistentfilesysobj.h"
+#include "cdb/cdbmirroredappendonly.h"
 
 static void tblspc_get_filespace_paths(Oid tblspc, int16 master_dbid,
 									   int16 mirror_dbid,
@@ -88,13 +89,14 @@ unlink_obj(char *path, uint8 info)
 	if (info == MMXLOG_REMOVE_DIR)
 	{
 		/* same behaviour as dropdb(), RemoveFileSpace(), RemoveTableSpace() */
-		elog(DEBUG1, "removing directory, as requested %s", path);
+		if (Debug_print_qd_mirroring)
+			elog(LOG, "removing directory, as requested %s", path);
 		rmtree(path, true);
 	}
 	else if (info == MMXLOG_REMOVE_FILE)
 	{
 		if (Debug_print_qd_mirroring)
-			elog(DEBUG1, "unlinking file, as requested %s", path);
+			elog(LOG, "unlinking file, as requested %s", path);
 
 		if (unlink(path) < 0)
 		{
@@ -338,13 +340,14 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		if (Debug_persistent_recovery_print)
 		{
 			elog(PersistentRecovery_DebugPrintLevel(),
-				 "mmxlog_redo: remove file request %d: path \"%s\", filespace %u, %u/%u/%u, primary dbid %u, path \"%s\"; mirror dbid %u, path \"%s\"",
+				 "mmxlog_redo: remove file request %d: path \"%s\", filespace %u, %u/%u/%u, segment file number %d, primary dbid %u, path \"%s\"; mirror dbid %u, path \"%s\"",
 				 info,
 				 path,
 				 xlrec->filespace,
 				 xlrec->tablespace,
 				 xlrec->database,
 				 xlrec->relfilenode,
+				 xlrec->segnum,
 				 xlrec->u.dbid.master,
 				 xlrec->master_path,
 				 xlrec->u.dbid.mirror,
@@ -397,7 +400,34 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 			}
 		}
 
-		smgrdounlink(
+		/*
+		 * segnum greater than 0 definitely means its for AO or CO table,
+		 * hence perform unlink for that specific file. But segnum == 0 can be
+		 * for AO or Heap table but based on current xlog record structure for
+		 * xl_mm_fs_obj, it provides no hint for the same.
+		 *
+		 * GPDB_SEGWALREP_TODO: Handle correctly the AO or CO table segnum ==
+		 * 0 deletion specific case.
+		 */
+		if (xlrec->segnum > 0)
+		{
+			int primaryError;
+			MirroredAppendOnly_Drop(
+				&rnode,
+				xlrec->segnum,
+				NULL,
+				true,
+				&primaryError,
+				&mirrorDataLossOccurred);
+		}
+		else
+		{
+			/*
+			 * smgrdounlink() currently is specifically coded for dropping files
+			 * which are not for AO or CO tables because it finds and then drops
+			 * files in sequence like .1, .2, ...
+			 */
+			smgrdounlink(
 				&rnode,
 				/* isLocalBuf */ false,
 				/* relationName */ NULL,
@@ -405,6 +435,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 				/* isRedo */ true,		// Don't generate Master Mirroring records...
 				/* ignoreNonExistence */ true,
 				&mirrorDataLossOccurred);
+		}
 	}
 	else
 		elog(PANIC, "unknown mmxlog op code %u", info);
@@ -526,107 +557,107 @@ emit_mmxlog_fs_record(mm_fs_obj_type type, Oid filespace,
 					  Oid tablespace, Oid database, Oid relfilenode,
 					  uint32 segnum, uint8 flags, XLogRecPtr *beginLoc)
 {
+	XLogRecData rdata;
+	xl_mm_fs_obj xlrec;
+	char *master_path = NULL;
+	char *mirror_path = NULL;
+	int16 master_dbid;
+	int16 mirror_dbid;
+
 	MemSet(beginLoc, 0, sizeof(XLogRecPtr));
 
 	if (InRecovery)
 		/* no business here */
 		return false;
 
-	/* only interesting on the master */
-	if (GpIdentity.segindex == MASTER_CONTENT_ID)
+#ifndef USE_SEGWALREP
+	/*
+	 * Only interesting on the master, if wal replication not enabled for
+	 * segments.
+	 */
+	if (GpIdentity.segindex != MASTER_CONTENT_ID)
+		return false;
+#endif
+
+	master_dbid = GpIdentity.dbid;
+	mirror_dbid = GetStandbyDbid();
+
+	if (type == MM_OBJ_FILESPACE)
 	{
-		XLogRecData rdata;
-		xl_mm_fs_obj xlrec;
-		char *master_path;
-		char *mirror_path;
-		int16 master_dbid = GpIdentity.dbid;
-		int16 mirror_dbid = GetStandbyDbid();
-
-		Insist(Gp_role == GP_ROLE_DISPATCH ||
-			   Gp_role == GP_ROLE_UTILITY);
-
-		master_path = NULL;
-		mirror_path = NULL;
-
-		if (type == MM_OBJ_FILESPACE)
-		{
-			Insist(OidIsValid(filespace));
-			get_filespace_paths(filespace, &master_path, &mirror_path);
-		}
-		else
-		{
-			Insist(OidIsValid(tablespace));
-
-			tblspc_get_filespace_paths(tablespace, master_dbid, mirror_dbid,
-									   &master_path, &mirror_path);
-
-			filespace = PersistentTablespace_GetFileSpaceOid(tablespace);
-		}
-
-		/*
-		 * Make an XLOG entry showing the file creation.  If we abort, the file
-		 * will be dropped at abort time.
-		 */
-		xlrec.objtype = type;
-		xlrec.filespace = filespace;
-		xlrec.tablespace = tablespace;
-		xlrec.database = database;
-		xlrec.relfilenode = relfilenode;
-		xlrec.segnum = segnum;
-
-		xlrec.u.dbid.master = master_dbid;
-		xlrec.u.dbid.mirror = mirror_dbid;
-
-		Insist(!master_path ||
-			   strlen(master_path) <= MAXPGPATH);
-
-		xlrec.master_path[0] = '\0';
-		if (master_path)
-			strncpy(xlrec.master_path, master_path,
-					sizeof(xlrec.master_path));
-		else
-		{
-			/*
-			 * Allow relative paths if we didn't get anything when we looked up
-			 * the filespace. We must allow this for the default filespace.
-			 */
-			xlrec.master_path[0] = '.';
-			xlrec.master_path[1] = '\0';
-		}
-
-		append_file_parts(type, xlrec.master_path, tablespace, database,
-						  relfilenode, segnum);
-
-		xlrec.mirror_path[0] = '\0';
-		if (mirror_path)
-			strncpy(xlrec.mirror_path, mirror_path,
-					sizeof(xlrec.mirror_path));
-		else
-		{
-			xlrec.mirror_path[0] = '.';
-			xlrec.mirror_path[1] = '\0';
-		}
-
-		append_file_parts(type, xlrec.mirror_path, tablespace, database,
-						  relfilenode, segnum);
-
-		if (Debug_print_qd_mirroring)
-			elog(DEBUG1, "XLOG: type = %i, flags = %i, dbid = (%u, %u), path = (%s, %s)",
-				 type, flags, xlrec.u.dbid.master, xlrec.u.dbid.mirror,
-				 xlrec.master_path, xlrec.mirror_path);
-
-		rdata.data = (char *) &xlrec;
-		rdata.len = sizeof(xlrec);
-		rdata.buffer = InvalidBuffer;
-		rdata.next = NULL;
-
-		XLogInsert(RM_MMXLOG_ID, flags, &rdata);
-		*beginLoc = XLogLastInsertBeginLoc();
-
-		return true;
+		Insist(OidIsValid(filespace));
+		get_filespace_paths(filespace, &master_path, &mirror_path);
 	}
 	else
-		return false;
+	{
+		Insist(OidIsValid(tablespace));
+
+		tblspc_get_filespace_paths(tablespace, master_dbid, mirror_dbid,
+								   &master_path, &mirror_path);
+
+		filespace = PersistentTablespace_GetFileSpaceOid(tablespace);
+	}
+
+	/*
+	 * Make an XLOG entry showing the file creation.  If we abort, the file
+	 * will be dropped at abort time.
+	 */
+	xlrec.objtype = type;
+	xlrec.filespace = filespace;
+	xlrec.tablespace = tablespace;
+	xlrec.database = database;
+	xlrec.relfilenode = relfilenode;
+	xlrec.segnum = segnum;
+
+	xlrec.u.dbid.master = master_dbid;
+	xlrec.u.dbid.mirror = mirror_dbid;
+
+	Insist(!master_path ||
+		   strlen(master_path) <= MAXPGPATH);
+
+	xlrec.master_path[0] = '\0';
+	if (master_path)
+		strncpy(xlrec.master_path, master_path,
+				sizeof(xlrec.master_path));
+	else
+	{
+		/*
+		 * Allow relative paths if we didn't get anything when we looked up
+		 * the filespace. We must allow this for the default filespace.
+		 */
+		xlrec.master_path[0] = '.';
+		xlrec.master_path[1] = '\0';
+	}
+
+	append_file_parts(type, xlrec.master_path, tablespace, database,
+					  relfilenode, segnum);
+
+	xlrec.mirror_path[0] = '\0';
+	if (mirror_path)
+		strncpy(xlrec.mirror_path, mirror_path,
+				sizeof(xlrec.mirror_path));
+	else
+	{
+		xlrec.mirror_path[0] = '.';
+		xlrec.mirror_path[1] = '\0';
+	}
+
+	append_file_parts(type, xlrec.mirror_path, tablespace, database,
+					  relfilenode, segnum);
+
+	if (Debug_print_qd_mirroring)
+		elog(LOG, "XLOG: type = %i, flags = %x, dbid = (%u, %u), path = (%s, %s)",
+			 type, flags, xlrec.u.dbid.master, xlrec.u.dbid.mirror,
+			 xlrec.master_path, xlrec.mirror_path);
+
+	rdata.data = (char *) &xlrec;
+	rdata.len = sizeof(xlrec);
+	rdata.buffer = InvalidBuffer;
+	rdata.next = NULL;
+
+	XLogInsert(RM_MMXLOG_ID, flags, &rdata);
+	*beginLoc = XLogLastInsertBeginLoc();
+
+	return true;
 }
 
 /* External interface to filespace removal logging */
@@ -637,7 +668,7 @@ mmxlog_log_remove_filespace(Oid filespace)
 	XLogRecPtr beginLoc;
 
 	if (Debug_print_qd_mirroring)
-		elog(DEBUG1, "emitting drop filespace record for %u",
+		elog(LOG, "emitting drop filespace record for %u",
 			 filespace);
 	emitted =
 		emit_mmxlog_fs_record(
@@ -673,7 +704,7 @@ mmxlog_log_remove_tablespace(Oid tablespace)
 	XLogRecPtr beginLoc;
 
 	if (Debug_print_qd_mirroring)
-		elog(DEBUG1, "emitting drop tablespace record for %u",
+		elog(LOG, "emitting drop tablespace record for %u",
 			 tablespace);
 	emitted =
 		emit_mmxlog_fs_record(
@@ -709,7 +740,7 @@ mmxlog_log_remove_database(Oid tablespace, Oid database)
 	XLogRecPtr beginLoc;
 
 	if (Debug_print_qd_mirroring)
-		elog(DEBUG1, "emitting drop database record for %u/%u",
+		elog(LOG, "emitting drop database record for %u/%u",
 			 tablespace, database);
 	emitted =
 		emit_mmxlog_fs_record(
@@ -747,7 +778,7 @@ mmxlog_log_remove_relfilenode(Oid tablespace, Oid database, Oid relfilenode,
 	XLogRecPtr beginLoc;
 
 	if (Debug_print_qd_mirroring)
-		elog(DEBUG1, "emitting drop relfilenode record for %u/%u/%u",
+		elog(LOG, "emitting drop relfilenode record for %u/%u/%u",
 			 tablespace, database, relfilenode);
 	emitted =
 		emit_mmxlog_fs_record(

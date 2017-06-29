@@ -36,7 +36,7 @@
           SUBPARTITION usa  VALUES ( 'usa'),
           SUBPARTITION europe  VALUES ( 'europe'),
           SUBPARTITION asia  VALUES ( 'asia'))
-   (  START ( 2000)  END ( 2010) EVERY ( 5));</codeblock>
+   (  START ( 2006)  END ( 2016) EVERY ( 5));</codeblock>
       <p>These are child tables and the partition hierarchy that are created for the table
           <codeph>mlp</codeph>. This hierarchy consists of one subpartition level that contains two
         branches.
@@ -77,12 +77,12 @@ mlp_1_prt_21
  mlp_1_prt_1_2_prt_europe | (region = 'europe'::text)
  mlp_1_prt_1_2_prt_usa    | (region = 'usa'::text)
  mlp_1_prt_2_2_prt_usa    | (region = 'usa'::text)
- mlp_1_prt_1_2_prt_asia   | ((year >= 2000) AND (year &lt; 2005))
- mlp_1_prt_1_2_prt_usa    | ((year >= 2000) AND (year &lt; 2005))
- mlp_1_prt_1_2_prt_europe | ((year >= 2000) AND (year &lt; 2005))
- mlp_1_prt_2_2_prt_usa    | ((year >= 2005) AND (year &lt; 2010))
- mlp_1_prt_2_2_prt_asia   | ((year >= 2005) AND (year &lt; 2010))
- mlp_1_prt_2_2_prt_europe | ((year >= 2005) AND (year &lt; 2010))
+ mlp_1_prt_1_2_prt_asia   | ((year >= 2006) AND (year &lt; 2011))
+ mlp_1_prt_1_2_prt_usa    | ((year >= 2006) AND (year &lt; 2011))
+ mlp_1_prt_1_2_prt_europe | ((year >= 2006) AND (year &lt; 2011))
+ mlp_1_prt_2_2_prt_usa    | ((year >= 2011) AND (year &lt; 2016))
+ mlp_1_prt_2_2_prt_asia   | ((year >= 2011) AND (year &lt; 2016))
+ mlp_1_prt_2_2_prt_europe | ((year >= 2011) AND (year &lt; 2016))
 (12 rows)</codeblock>
       <p>If you add a default partition to the example partitioned table with this
         command:<codeblock>ALTER TABLE mlp ADD DEFAULT PARTITION def</codeblock></p>

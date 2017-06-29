@@ -130,7 +130,7 @@
         For example:</p>
       <p>
         <codeblock>INSERT INTO films SELECT * FROM tmp_films WHERE date_prod &lt; 
-'2004-05-07';
+'2016-05-07';
 </codeblock>
       </p>
       <p>You can insert multiple rows in a single command. For example:</p>

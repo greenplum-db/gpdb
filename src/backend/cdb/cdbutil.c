@@ -51,6 +51,7 @@ static int	CdbComponentDatabaseInfoCompare(const void *p1, const void *p2);
 static void freeCdbComponentDatabaseInfo(CdbComponentDatabaseInfo *cdi);
 
 static void getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel);
+static HTAB* hostSegsHashTableInit(void);
 
 static HTAB *segment_ip_cache_htab = NULL;
 
@@ -58,6 +59,12 @@ struct segment_ip_cache_entry {
 	char key[NAMEDATALEN];
 	char hostinfo[NI_MAXHOST];
 };
+
+typedef struct HostSegsEntry
+{
+	char hostip[INET6_ADDRSTRLEN];
+	int  segmentCount;
+} HostSegsEntry;
 
 /*
  * getCdbComponentDatabases
@@ -70,6 +77,7 @@ CdbComponentDatabases *
 getCdbComponentInfo(bool DNSLookupAsError)
 {
 	CdbComponentDatabaseInfo *pOld = NULL;
+	CdbComponentDatabaseInfo *cdbInfo;
 	CdbComponentDatabases *component_databases = NULL;
 
 	Relation gp_seg_config_rel;
@@ -101,6 +109,10 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	int			i;
 	int			x = 0;
+
+	bool		found;
+	HostSegsEntry *hsEntry;
+	HTAB		*hostSegsHash = hostSegsHashTableInit();
 
 	/*
 	 * Allocate component_databases return structure and
@@ -254,6 +266,16 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		if(pRow->hostaddrs[0] == NULL)
 			elog(ERROR, "Cannot resolve network address for dbid=%d", dbid);
 		pRow->hostip = pstrdup(pRow->hostaddrs[0]);
+		Assert(strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
+
+		if (pRow->role != SEGMENT_ROLE_PRIMARY)
+			continue;
+
+		hsEntry = (HostSegsEntry*)hash_search(hostSegsHash, pRow->hostip, HASH_ENTER, &found);
+		if (found)
+			hsEntry->segmentCount++;
+		else
+			hsEntry->segmentCount = 1;
 	}
 
 	/*
@@ -320,9 +342,9 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	 */
 	for (i = 0; i < component_databases->total_entry_dbs; i++)
 	{
-		CdbComponentDatabaseInfo *pInfo = &component_databases->entry_db_info[i];
+		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (pInfo->dbid == GpIdentity.dbid && pInfo->segindex == Gp_segment)
+		if (cdbInfo->dbid == GpIdentity.dbid && cdbInfo->segindex == Gp_segment)
 		{
 			break;
 		}
@@ -368,6 +390,32 @@ getCdbComponentInfo(bool DNSLookupAsError)
 							GpSegmentConfigRelationName, getgpsegmentCount() - 1)));
 		}
 	}
+
+	for (i = 0; i < component_databases->total_segment_dbs; i++)
+	{
+		cdbInfo = &component_databases->segment_db_info[i];
+
+		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY)
+			continue;
+
+		hsEntry = (HostSegsEntry*)hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
+		Assert(found);
+		cdbInfo->hostSegs = hsEntry->segmentCount;
+	}
+
+	for (i = 0; i < component_databases->total_entry_dbs; i++)
+	{
+		cdbInfo = &component_databases->entry_db_info[i];
+
+		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY)
+			continue;
+
+		hsEntry = (HostSegsEntry*)hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
+		Assert(found);
+		cdbInfo->hostSegs = hsEntry->segmentCount;
+	}
+
+	hash_destroy(hostSegsHash);
 
 	return component_databases;
 }
@@ -960,6 +1008,23 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 	}
 
 	return;
+}
+
+/*
+ * hostSegsHashTableInit()
+ *    Construct a hash table of HostSegsEntry
+ */
+static HTAB*
+hostSegsHashTableInit(void)
+{
+	HASHCTL			info;
+
+	/* Set key and entry sizes. */
+	MemSet(&info, 0, sizeof(info));
+	info.keysize = sizeof(INET6_ADDRSTRLEN);
+	info.entrysize = sizeof(HostSegsEntry);
+
+	return hash_create("HostSegs", 32, &info, HASH_ELEM);
 }
 
 /*

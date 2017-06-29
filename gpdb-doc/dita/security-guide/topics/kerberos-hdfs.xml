@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_lhr_yrf_qr">
+  <title>Enabling gphdfs Authentication with a Kerberos-secured Hadoop Cluster</title>
+  <shortdesc>Using external tables and the <codeph>gphdfs</codeph> protocol, Greenplum Database can
+    read files from and write files to a Hadoop File System (HDFS). Greenplum segments read and
+    write files in parallel from HDFS for fast performance. </shortdesc>
+  <body>
+    <p>When a Hadoop cluster is secured with Kerberos ("Kerberized"), Greenplum Database must be
+      configured to allow the Greenplum Database gpadmin role, which owns external tables in HDFS,
+      to authenticate through Kerberos. This topic provides the steps for configuring Greenplum
+      Database to work with a Kerberized HDFS, including verifying and troubleshooting the
+      configuration.</p>
+    <ul id="ul_i3b_xvm_qr">
+      <li>
+        <xref href="#topic_gbw_rjl_qr" format="dita"/>
+      </li>
+      <li>
+        <xref href="#topic_t11_tjl_qr" format="dita"/>
+      </li>
+      <li>
+        <xref href="#topic_wtt_y1r_zr" format="dita"/>
+      </li>
+      <li>
+        <xref href="#topic_jsb_cll_qr" format="dita"/>
+      </li>
+      <li>
+        <xref href="#topic_dlj_yjv_yr" format="dita"/>
+      </li>
+      <li>
+        <xref href="#topic_mwd_rlm_qr" format="dita"/>
+      </li>
+    </ul>
+  </body>
+  <topic id="topic_gbw_rjl_qr">
+    <title>Prerequisites</title>
+    <body>
+      <p>Make sure the following components are functioning and accessible on the network:</p>
+      <ul id="ul_krv_t5f_qr">
+        <li>Greenplum Database cluster</li>
+        <li>Kerberos-secured Hadoop cluster. See the <i>Greenplum Database Release Notes</i> for
+          supported Hadoop versions.</li>
+        <li>Kerberos Key Distribution Center (KDC) server.</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic_t11_tjl_qr">
+    <title>Configuring the Greenplum Cluster</title>
+    <body>
+      <p>The hosts in the Greenplum Cluster must have a Java JRE, Hadoop client files, and Kerberos
+        clients installed. </p>
+      <p>Follow these steps to prepare the Greenplum Cluster. </p>
+      <ol id="ol_ykk_rwf_qr">
+        <li>Install a Java 1.6 or later JRE on all Greenplum cluster hosts. <p>Match the JRE version
+            the Hadoop cluster is running. You can find the JRE version by running <codeph>java
+              --version</codeph> on a Hadoop node.</p></li>
+        <li><i>(Optional) </i>Confirm that Java Cryptography Extension (JCE) is present.<p>The
+            default location of the JCE libraries is
+              <filepath><varname>JAVA_HOME</varname>/lib/security</filepath>. If a JDK is installed,
+            the directory is <filepath><varname>JAVA_HOME</varname>/jre/lib/security</filepath>. The
+            files <filepath>local_policy.jar</filepath> and
+              <filepath>US_export_policy.jar</filepath> should be present in the JCE
+            directory.</p><p>The Greenplum cluster and the Kerberos server should, preferably, use
+            the same version of the JCE libraries. You can copy the JCE files from the Kerberos
+            server to the Greenplum cluster, if needed.</p></li>
+        <li>Set the <codeph>JAVA_HOME</codeph> environment variable to the location of the JRE in
+          the <filepath>.bashrc</filepath> or <filepath>.bash_profile</filepath> file for the
+            <codeph>gpadmin</codeph> account. For
+          example:<codeblock>export JAVA_HOME=/usr/java/default</codeblock></li>
+        <li>Source the <filepath>.bashrc</filepath> or <filepath>.bash_profile</filepath> file to
+          apply the change to your environment. For
+          example:<codeblock>$ source ~/.bashrc</codeblock></li>
+        <li>Install the Kerberos client utilities on all cluster hosts. Ensure the libraries match
+          the version on the KDC server before you install them. <p>For example, the following
+            command installs the Kerberos client files on Red Hat or CentOS
+            Linux:<codeblock>$ sudo yum install krb5-libs krb5-workstation</codeblock></p><p>Use the
+              <codeph>kinit</codeph> command to confirm the Kerberos client is installed and
+            correctly configured.</p></li>
+        <li>Install Hadoop client files on all hosts in the Greenplum Cluster. Refer to the
+          documentation for your Hadoop distribution for instructions.</li>
+        <li>Set the Greenplum Database server configuration parameters for Hadoop. The
+            <codeph>gp_hadoop_target_version</codeph> parameter specifies the version of the Hadoop
+          cluster. See the <i>Greenplum Database Release Notes</i> for the target version value that
+          corresponds to your Hadoop distribution. The <codeph>gp_hadoop_home</codeph> parameter
+          specifies the Hadoop installation
+            directory.<codeblock>$ gpconfig -c gp_hadoop_target_version -v "hdp2"
+$ gpconfig -c gp_hadoop_home -v "/usr/lib/hadoop"</codeblock><p>See
+            the <i>Greenplum Database Reference Guide</i> for more information.</p></li>
+        <li>Reload the updated <filepath>postgresql.conf</filepath> files for master and
+            segments:<codeblock>gpstop -u</codeblock><p>You can confirm the changes with the
+            following
+            commands:<codeblock>$ gpconfig -s gp_hadoop_target_version
+$ gpconfig -s gp_hadoop_home</codeblock></p></li>
+        <li>Grant Greenplum Database gphdfs protocol privileges to roles that own external tables in
+          HDFS, including <codeph>gpadmin</codeph> and other superuser roles. Grant
+            <codeph>SELECT</codeph> privileges to enable creating readable external tables in HDFS.
+          Grant <codeph>INSERT</codeph> privileges to enable creating writable exeternal tables on
+          HDFS.
+          <codeblock>#= GRANT SELECT ON PROTOCOL gphdfs TO gpadmin;
+#= GRANT INSERT ON PROTOCOL gphdfs TO gpadmin;</codeblock></li>
+        <li>Grant Greenplum Database external table privileges to external table owner
+            roles:<codeblock>ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='readable');
+ALTER ROLE <varname>HDFS_USER</varname> CREATEEXTTABLE (type='writable');</codeblock><note>It
+            is best practice to review database privileges, including gphdfs external table
+            privileges, at least annually. </note></li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic_wtt_y1r_zr">
+    <title>Creating and Installing Keytab Files</title>
+    <body>
+      <ol id="ol_tch_2br_zr">
+        <li>Log in to the KDC server as root.</li>
+        <li>Use the <codeph>kadmin.local</codeph> command to create a new principal for the
+            <codeph>gpadmin</codeph>
+          user:<codeblock># kadmin.local -q "addprinc -randkey gpadmin@<i>LOCAL.DOMAIN</i>"</codeblock></li>
+        <li>Use <codeph>kadmin.local</codeph> to generate a Kerberos service principal for each host
+          in the Greenplum Database cluster. The service principal should be of the form
+            <varname>name</varname>/<varname>role</varname>@<varname>REALM</varname>, where:<ul
+            id="ul_cbd_dcr_zr">
+            <li><i>name</i> is the gphdfs service user name. This example uses
+                <codeph>gphdfs</codeph>.</li>
+            <li><i>role</i> is the DNS-resolvable host name of a Greenplum cluster host (the output
+              of the <codeph>hostname -f</codeph> command).</li>
+            <li><i>REALM</i> is the Kerberos realm, for example <codeph>LOCAL.DOMAIN</codeph>. </li>
+          </ul><p>For example, the following commands add service principals for four Greenplum
+            Database hosts, mdw.example.com, smdw.example.com, sdw1.example.com, and
+            sdw2.example.com:<codeblock># kadmin.local -q "addprinc -randkey gphdfs/mdw.example.com@LOCAL.DOMAIN"
+# kadmin.local -q "addprinc -randkey gphdfs/smdw.example.com@LOCAL.DOMAIN"
+# kadmin.local -q "addprinc -randkey gphdfs/sdw1.example.com@LOCAL.DOMAIN"
+# kadmin.local -q "addprinc -randkey gphdfs/sdw2.example.com@LOCAL.DOMAIN"</codeblock></p><p>Create
+            a principal for each Greenplum cluster host. Use the same principal name and realm,
+            substituting the fully-qualified domain name for each host. </p></li>
+        <li>Generate a keytab file for each principal that you created (<codeph>gpadmin</codeph> and
+          each <codeph>gphdfs</codeph> service principal). You can store the keytab files in any
+          convenient location (this example uses the directory
+            <filepath>/etc/security/keytabs</filepath>). You will deploy the service principal
+          keytab files to their respective Greenplum host machines in a later
+          step:<codeblock># kadmin.local -q “xst -k /etc/security/keytabs/gphdfs.service.keytab gpadmin@LOCAL.DOMAIN”
+# kadmin.local -q “xst -k /etc/security/keytabs/mdw.service.keytab gpadmin/mdw gphdfs/mdw.example.com@LOCAL.DOMAIN”
+# kadmin.local -q “xst -k /etc/security/keytabs/smdw.service.keytab gpadmin/smdw gphdfs/smdw.example.com@LOCAL.DOMAIN”
+# kadmin.local -q “xst -k /etc/security/keytabs/sdw1.service.keytab gpadmin/sdw1 gphdfs/sdw1.example.com@LOCAL.DOMAIN”
+# kadmin.local -q “xst -k /etc/security/keytabs/sdw2.service.keytab gpadmin/sdw2 gphdfs/sdw2.example.com@LOCAL.DOMAIN”
+# kadmin.local -q “listprincs”</codeblock></li>
+        <li>Change the ownership and permissions on <codeph>gphdfs.service.keytab</codeph> as
+          follows:<codeblock># chown gpadmin:gpadmin /etc/security/keytabs/gphdfs.service.keytab
+# chmod 440 /etc/security/keytabs/gphdfs.service.keytab</codeblock></li>
+        <li>Copy the keytab file for <codeph>gpadmin@LOCAL.DOMAIN</codeph> to the Greenplum master
+          host:<codeblock># scp /etc/security/keytabs/gphdfs.service.keytab mdw_fqdn:/home/gpadmin/gphdfs.service.keytab</codeblock></li>
+        <li>Copy the keytab file for each service principal to its respective Greenplum
+          host:<codeblock># scp /etc/security/keytabs/mdw.service.keytab mdw_fqdn:/home/gpadmin/mdw.service.keytab
+# scp /etc/security/keytabs/smdw.service.keytab smdw_fqdn:/home/gpadmin/smdw.service.keytab
+# scp /etc/security/keytabs/sdw1.service.keytab sdw1_fqdn:/home/gpadmin/sdw1.service.keytab
+# scp /etc/security/keytabs/sdw2.service.keytab sdw2_fqdn:/home/gpadmin/sdw2.service.keytab</codeblock></li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic_jsb_cll_qr">
+    <title>Configuring gphdfs for Kerberos</title>
+    <body>
+      <ol id="ol_lnj_f4l_qr">
+        <li>Edit the Hadoop <filepath>core-site.xml</filepath> client configuration file on all
+          Greenplum cluster hosts. Enable service-level authorization for Hadoop by setting the
+            <codeph>hadoop.security.authorization</codeph> property to <codeph>true</codeph>. For
+          example:<codeblock>&lt;property>
+    &lt;name>hadoop.security.authorization&lt;/name>
+    &lt;value>true&lt;/value>
+&lt;/property></codeblock></li>
+        <li>Edit the <filepath>yarn-site.xml</filepath> client configuration file on all cluster
+          hosts. Set the resource manager address and yarn Kerberos service principle. For
+          example:<codeblock>&lt;property>
+    &lt;name>yarn.resourcemanager.address&lt;/name>
+    &lt;value><varname>hostname</varname>:<varname>8032</varname>&lt;/value>
+&lt;/property>
+&lt;property>
+    &lt;name>yarn.resourcemanager.principal&lt;/name>
+    &lt;value>yarn/<varname>hostname</varname>@<varname>DOMAIN</varname>&lt;/value>
+&lt;/property></codeblock></li>
+        <li>Edit the <filepath>hdfs-site.xml</filepath> client configuration file on all cluster
+          hosts. Set properties to identify the NameNode Kerberos principals, the location of the
+          Kerberos keytab file, and the principal it is for:<ul id="ul_t3s_w4l_qr">
+            <li><codeph>dfs.namenode.kerberos.principal</codeph> - the Kerberos principal name the
+              gphdfs protocol will use for the NameNode, for example
+                <codeph>gpadmin@LOCAL.DOMAIN</codeph>.</li>
+            <li><codeph>dfs.namenode.https.principal</codeph> - the Kerberos principal name the
+              gphdfs protocol will use for the NameNode's secure HTTP server, for example
+                <codeph>gpadmin@LOCAL.DOMAIN</codeph>.</li>
+            <li><codeph>com.emc.greenplum.gpdb.hdfsconnector.security.user.keytab.file</codeph> -
+              the path to the keytab file for the Kerberos HDFS service, for example
+                <codeph>/home/gpadmin/mdw.service.keytab</codeph>. . </li>
+            <li><codeph>com.emc.greenplum.gpdb.hdfsconnector.security.user.name</codeph> - the
+              gphdfs service principal for the host, for example
+                <codeph>gphdfs/mdw.example.com@LOCAL.DOMAIN</codeph>.</li>
+          </ul><p>For
+          example:</p><codeblock>&lt;property>
+    &lt;name>dfs.namenode.kerberos.principal&lt;/name>
+    &lt;value>gphdfs/gpadmin@LOCAL.DOMAIN&lt;/value>
+&lt;/property>
+&lt;property>
+    &lt;name>dfs.namenode.https.principal&lt;/name>
+    &lt;value>gphdfs/gpadmin@LOCAL.DOMAIN&lt;/value>
+&lt;/property>
+&lt;property>
+    &lt;name>com.emc.greenplum.gpdb.hdfsconnector.security.user.keytab.file&lt;/name>
+    &lt;value>/home/gpadmin/gpadmin.hdfs.keytab&lt;/value>
+&lt;/property>
+&lt;property>
+    &lt;name>com.emc.greenplum.gpdb.hdfsconnector.security.user.name&lt;/name>
+    &lt;value>gpadmin/@LOCAL.DOMAIN&lt;/value>
+&lt;/property></codeblock></li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic_dlj_yjv_yr">
+    <title>Testing Greenplum Database Access to HDFS</title>
+    <body>
+      <p>Confirm that HDFS is accessible via Kerberos authentication on all hosts in the Greenplum
+        cluster. For example, enter the following command to list an HDFS
+        directory:<codeblock>hdfs dfs -ls hdfs://<varname>namenode</varname>:8020</codeblock></p>
+      <section>
+        <title>Create a Readable External Table in HDFS</title>
+        <p>Follow these steps to verify that you can create a readable external table in a
+          Kerberized Hadoop cluser. </p>
+        <ol id="ol_elf_2ql_qr">
+          <li>Create a comma-delimited text file, <codeph>test1.txt</codeph>, with contents such as
+            the following:<codeblock>25, Bill
+19, Anne
+32, Greg
+27, Gloria</codeblock></li>
+          <li>Persist the sample text file in
+            HDFS:<codeblock>hdfs dfs -put <varname>test1.txt</varname> hdfs://<varname>namenode</varname>:8020/tmp</codeblock></li>
+          <li>Log in to Greenplum Database and create a readable external table that points to the
+              <codeph>test1.txt</codeph> file in
+            Hadoop:<codeblock>CREATE EXTERNAL TABLE test_hdfs (age int, name text) 
+LOCATION('gphdfs://<varname>namenode</varname>:<varname>8020</varname>/tmp/test1.txt') 
+FORMAT 'text' (delimiter ',');</codeblock></li>
+          <li>Read data from the external table:<codeblock>SELECT * FROM test_hdfs;</codeblock></li>
+        </ol>
+      </section>
+      <section>
+        <title>Create a Writable External Table in HDFS</title>
+        <p>Follow these steps to verify that you can create a writable external table in a
+          Kerberized Hadoop cluster. The steps use the <codeph>test_hdfs</codeph> readable external
+          table created previously. </p>
+        <ol id="ol_ht3_kfm_qr">
+          <li>Log in to Greenplum Database and create a writable external table pointing to a text
+            file in
+            HDFS:<codeblock>CREATE WRITABLE EXTERNAL TABLE test_hdfs2 (LIKE test_hdfs) 
+LOCATION ('gphdfs://<varname>namenode</varname>:8020/tmp/test2.txt'
+FORMAT 'text' (DELIMITER ',');</codeblock></li>
+          <li>Load data into the writable external
+            table:<codeblock>INSERT INTO test_hdfs2 
+SELECT * FROM test_hdfs;</codeblock></li>
+          <li>Check that the file exists in
+            HDFS:<codeblock>hdfs dfs -ls hdfs://<varname>namenode</varname>:8020/tmp/test2.txt</codeblock></li>
+          <li>Verify the contents of the external
+            file:<codeblock>hdfs dfs -cat hdfs://<varname>namenode</varname>:8020/tmp/test2.txt</codeblock></li>
+        </ol>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic_mwd_rlm_qr">
+    <title>Troubleshooting HDFS with Kerberos</title>
+    <body>
+      <section>
+        <title>Forcing Classpaths</title>
+        <p>If you encounter "class not found" errors when executing <codeph>SELECT</codeph>
+          statements from <codeph>gphdfs</codeph> external tables, edit the
+            <filepath>$GPHOME/lib/hadoop-env.sh</filepath> file and add the following lines towards
+          the end of the file, before the <codeph>JAVA_LIBRARY_PATH</codeph> is set. Update the
+          script on all of the cluster
+          hosts.<codeblock>if [ -d "/usr/hdp/current" ]; then
+for f in /usr/hdp/current/**/*.jar; do
+    CLASSPATH=${CLASSPATH}:$f;
+done
+fi</codeblock></p>
+      </section>
+      <section>
+        <title>Enabling Kerberos Client Debug Messages</title>
+        <p>To see debug messages from the Kerberos client, edit the
+            <filepath>$GPHOME/lib/hadoop-env.sh</filepath> client shell script on all cluster hosts
+          and set the <codeph>HADOOP_OPTS</codeph> variable as
+          follows:<codeblock>export HADOOP_OPTS="-Djava.net.prefIPv4Stack=true -Dsun.security.krb5.debug=true ${HADOOP_OPTS}"</codeblock></p>
+      </section>
+      <section>
+        <title>Adjusting JVM Process Memory on Segment Hosts</title>
+        <p>Each segment launches a JVM process when reading or writing an external table in HDFS. To
+          change the amount of memory allocated to each JVM process, configure the
+            <codeph>GP_JAVA_OPT</codeph> environment variable. </p>
+        <p>Edit the <filepath>$GPHOME/lib/hadoop-env.sh</filepath> client shell script on all
+          cluster hosts. </p>
+        <p>For example:<codeblock>export GP_JAVA_OPT=-Xmx1000m</codeblock></p>
+      </section>
+      <section>
+        <title>Verify Kerberos Security Settings</title>
+        <p>Review the <filepath>/etc/krb5.conf</filepath> file:</p>
+        <ul id="ul_os5_f4m_qr">
+          <li>If AES256 encryption is not disabled, ensure that all cluster hosts have the JCE
+            Unlimited Strength Jurisdiction Policy Files installed.</li>
+          <li>Ensure all encryption types in the Kerberos keytab file match definitions in the
+              <filepath>krb5.conf</filepath> file.
+            <codeblock>cat /etc/krb5.conf | egrep supported_enctypes</codeblock></li>
+        </ul>
+      </section>
+      <section>
+        <title>Test Connectivity on an Individual Segment Host</title>
+        <p>Follow these steps to test that a single Greenplum Database host can read HDFS data. This
+          test method executes the Greenplum <codeph>HDFSReader</codeph> Java class at the
+          command-line, and can help to troubleshoot connectivity problems outside of the database. </p>
+        <ol id="ol_vm1_m4m_qr">
+          <li>Save a sample data file in HDFS.
+            <codeblock>hdfs dfs -put test1.txt hdfs://<varname>namenode</varname>:8020/tmp</codeblock></li>
+          <li>On the segment host to be tested, create an environment script,
+              <codeph>env.sh</codeph>, like the
+            following:<codeblock>export JAVA_HOME=/usr/java/default
+export HADOOP_HOME=/usr/lib/hadoop
+export GP_HADOOP_CON_VERSION=hdp2
+export GP_HADOOP_CON_JARDIR=/usr/lib/hadoop</codeblock></li>
+          <li>Source all environment
+            scripts:<codeblock>source /usr/local/greenplum-db/greenplum_path.sh
+source env.sh
+source $GPHOME/lib/hadoop-env.sh</codeblock></li>
+          <li>Test the Greenplum Database HDFS
+            reader:<codeblock>java com.emc.greenplum.gpdb.hdfsconnector.HDFSReader 0 32 TEXT hdp2 gphdfs://<varname>namenode</varname>:8020/tmp/test1.txt</codeblock></li>
+        </ol>
+      </section>
+    </body>
+  </topic>
+</topic>

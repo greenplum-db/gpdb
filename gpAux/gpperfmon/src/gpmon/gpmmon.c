@@ -88,7 +88,7 @@ apr_thread_mutex_t *logfile_mutex = NULL;
 /* Default option values */
 int verbose = 0; /* == opt.v */
 int very_verbose = 0; /* == opt.V */
-int quantum = 15; /* == opt.q */
+int quantum = 15; /* == opt.quantum */
 int min_query_time = 60; /* == opt.m */
 
 /* thread handles */
@@ -106,7 +106,7 @@ extern int gpdb_exec_search_for_at_least_one_row(const char* QUERY, PGconn* pers
 
 /* Function defs */
 static int read_conf_file(char *conffile);
-static void gethostlist();
+static void gethostlist(void);
 static void getconfig(void);
 static apr_status_t sendpkt(int sock, const gp_smon_to_mmon_packet_t* pkt);
 static apr_status_t recvpkt(int sock, gp_smon_to_mmon_packet_t* pkt, bool loop_until_all_recv);
@@ -134,7 +134,7 @@ void update_mmonlog_filename()
 /** Gets quantum */
 int gpmmon_quantum(void)
 {
-	return opt.q;
+	return opt.quantum;
 }
 
 /* prints usage and exit */
@@ -881,7 +881,7 @@ static void* message_main(apr_thread_t* thread_, void* arg_)
 time_t compute_next_dump_to_file()
 {
 	time_t current_time = time(NULL);
-	return (current_time - (current_time % opt.q) + opt.q);
+	return (current_time - (current_time % opt.quantum) + opt.quantum);
 }
 
 static void gpmmon_main(void)
@@ -894,8 +894,8 @@ static void gpmmon_main(void)
 	int ticks_since_last_log_check = 0;
 	const unsigned int log_check_interval = 60;
 
-	const int safety_ticks = 2 * opt.q;
-	unsigned int dump_request_time_allowance = opt.q / 2;
+	const int safety_ticks = 2 * opt.quantum;
+	unsigned int dump_request_time_allowance = opt.quantum / 2;
 
 	/* DUMP TO FILE */
 	time_t next_dump_to_file_ts;
@@ -1062,7 +1062,7 @@ static void gpmmon_main(void)
 			}
 
 			send_msg_safety_ticks = safety_ticks;
-			next_send_msg_ts = this_cycle_ts + opt.q;
+			next_send_msg_ts = this_cycle_ts + opt.quantum;
 		}
 
 		/* DUMP TO FILE */
@@ -1135,7 +1135,7 @@ static int read_conf_file(char *conffile)
 	FILE *fp = fopen(conffile, "r");
 	int section = 0, section_found = 0;
 
-	opt.q = quantum;
+	opt.quantum = quantum;
 	opt.min_query_time = min_query_time;
 	opt.harvest_interval = 120;
 	opt.max_log_size = 0;
@@ -1188,7 +1188,7 @@ static int read_conf_file(char *conffile)
 
 			if (apr_strnatcasecmp(pName, "quantum") == 0)
 			{
-				opt.q = atoi(pVal);
+				opt.quantum = atoi(pVal);
 			}
 			else if (apr_strnatcasecmp(pName, "harvest_interval") == 0)
 			{
@@ -1285,19 +1285,19 @@ static int read_conf_file(char *conffile)
 		}
 	}
 
-	smon_terminate_timeout = opt.q * smon_terminate_safe_factor;
-	recv_timeout = opt.q * recv_timeout_factor;
+	smon_terminate_timeout = opt.quantum * smon_terminate_safe_factor;
+	recv_timeout = opt.quantum * recv_timeout_factor;
 
 	/* check for valid entries */
 	if (!section_found)
 		fprintf(stderr, "Performance Monitor - Failed to find [gpmmon] section in the "
 				"configuration file.  Using default values\n");
 
-	if (opt.q != 10 && opt.q != 15 && opt.q != 20 && opt.q != 30 && opt.q != 60)
+	if (opt.quantum != 10 && opt.quantum != 15 && opt.quantum != 20 && opt.quantum != 30 && opt.quantum != 60)
 	{
 		fprintf(stderr, "Performance Monitor - quantum value must be be either 10, 15, 20, 30 or 60.  Using "
 				"default value of 15\n");
-		opt.q = 15;
+		opt.quantum = 15;
 	}
 
 	if (opt.min_query_time < 0)
@@ -1361,7 +1361,7 @@ static int read_conf_file(char *conffile)
 
 	verbose = opt.v;
 	min_query_time = opt.min_query_time;
-	quantum = opt.q;
+	quantum = opt.quantum;
 
 	fclose(fp);
 	return 0;

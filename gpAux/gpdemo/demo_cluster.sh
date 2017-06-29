@@ -4,7 +4,12 @@
 # Data Directories
 # ======================================================================
 
-DATADIRS=${DATADIRS:-`pwd`/datadirs}
+if [ -z "${MASTER_DATADIR}" ]; then
+  DATADIRS=${DATADIRS:-`pwd`/datadirs}
+else
+  DATADIRS="${MASTER_DATADIR}/datadirs"
+fi
+
 QDDIR=$DATADIRS/qddir
 SEG_PREFIX=demoDataDir
 
@@ -273,17 +278,19 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	ENCODING=UNICODE
 EOF
 
-cat >> $CLUSTER_CONFIG <<-EOF
+if [ "${WITH_MIRRORS}" == "true" ]; then
+    cat >> $CLUSTER_CONFIG <<-EOF
 
-	# Array of mirror data locations for each hosts Segment Instances, the number of directories in this array will
-	# set the number of segment instances per host
-	declare -a MIRROR_DATA_DIRECTORY=(${MIRROR_DIRS_LIST})
-	
-	MIRROR_PORT_BASE=`expr $DEMO_PORT_BASE + $NUM_PRIMARY_MIRROR_PAIRS`
+		# Array of mirror data locations for each hosts Segment Instances, the number of directories in this array will
+		# set the number of segment instances per host
+		declare -a MIRROR_DATA_DIRECTORY=(${MIRROR_DIRS_LIST})
 
-	REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 2 \* $NUM_PRIMARY_MIRROR_PAIRS`
-	MIRROR_REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 3 \* $NUM_PRIMARY_MIRROR_PAIRS`
-EOF
+		MIRROR_PORT_BASE=`expr $DEMO_PORT_BASE + $NUM_PRIMARY_MIRROR_PAIRS`
+
+		REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 2 \* $NUM_PRIMARY_MIRROR_PAIRS`
+		MIRROR_REPLICATION_PORT_BASE=`expr $DEMO_PORT_BASE + 3 \* $NUM_PRIMARY_MIRROR_PAIRS`
+	EOF
+fi
 
 cat >> $CLUSTER_CONFIG <<-EOF
 

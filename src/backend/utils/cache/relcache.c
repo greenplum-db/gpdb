@@ -3188,6 +3188,9 @@ RelationBuildLocalRelation(const char *relname,
 	 * as the logical ID (OID). In GPDB, the table's logical OID is allocated
 	 * in the master, and might already be in use as a relfilenode of an
 	 * existing relation in a segment.
+	 *
+	 * In binary upgrade mode, however, use the OID also as the relfilenode.
+	 * pg_upgrade gets confused if they don't match.
 	 */
 	rel->rd_rel->relisshared = shared_relation;
 
@@ -3197,7 +3200,8 @@ RelationBuildLocalRelation(const char *relname,
 		rel->rd_att->attrs[i]->attrelid = relid;
 
 	if (relid < FirstNormalObjectId /* bootstrap only */
-		|| (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE))
+		|| (Gp_role != GP_ROLE_EXECUTE && relkind == RELKIND_SEQUENCE)
+		|| IsBinaryUpgrade)
 		rel->rd_rel->relfilenode = relid;
 	else
 	{

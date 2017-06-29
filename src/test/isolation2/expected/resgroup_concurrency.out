@@ -1,5 +1,5 @@
 -- create a resource group when gp_resource_manager is queue
-0:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+0:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.20, memory_limit=.20);
 CREATE
 0:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 rsgname            |num_running|num_queueing|num_queued|num_executed
@@ -59,7 +59,7 @@ DROP
 -- test2: test alter concurrency
 -- Create a resource group with concurrency=2. Prepare 2 running transactions and 1 queueing transactions.
 -- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' and 'proposed' of pg_resgroupcapability will be set to 3.
-11:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+11:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.20, memory_limit=.20);
 CREATE
 11:CREATE role role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE
@@ -111,7 +111,7 @@ DROP
 
 -- test3: test alter concurrency
 -- Create a resource group with concurrency=3. Prepare 3 running transactions, and 1 queueing transaction.
-21:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_rate_limit=.02, memory_limit=.02);
+21:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_rate_limit=.20, memory_limit=.20);
 CREATE
 21:CREATE role role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE
@@ -202,7 +202,7 @@ DROP
 
 -- test4: concurrently drop resource group
 
-31:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+31:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.20, memory_limit=.20);
 CREATE
 31:CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 CREATE
@@ -289,3 +289,73 @@ rsgname|num_running|num_queueing|num_queued|num_executed
 -------+-----------+------------+----------+------------
 (0 rows)
 
+-- test5: concurrently alter resource group cpu rate limit
+
+-- start_ignore
+DROP RESOURCE GROUP rg1_concurrency_test;
+ERROR:  resource group "rg1_concurrency_test" does not exist
+DROP RESOURCE GROUP rg2_concurrency_test;
+ERROR:  resource group "rg2_concurrency_test" does not exist
+-- end_ignore
+
+CREATE RESOURCE GROUP rg1_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.1, memory_limit=0.2);
+CREATE
+CREATE RESOURCE GROUP rg2_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.2, memory_limit=0.2);
+CREATE
+
+41:BEGIN;
+BEGIN
+41:ALTER RESOURCE GROUP rg1_concurrency_test SET CPU_RATE_LIMIT 0.35;
+ALTER
+42:BEGIN;
+BEGIN
+42&:ALTER RESOURCE GROUP rg2_concurrency_test SET CPU_RATE_LIMIT 0.35;  <waiting ...>
+41:ABORT;
+ABORT
+42<:  <... completed>
+ALTER
+42:COMMIT;
+COMMIT
+SELECT g.rsgname, c.cpu_rate_limit FROM gp_toolkit.gp_resgroup_config c, pg_resgroup g WHERE c.groupid=g.oid ORDER BY g.oid;
+rsgname             |cpu_rate_limit
+--------------------+--------------
+default_group       |0.3           
+admin_group         |0.1           
+rg1_concurrency_test|0.10          
+rg2_concurrency_test|0.35          
+(4 rows)
+
+DROP RESOURCE GROUP rg1_concurrency_test;
+DROP
+DROP RESOURCE GROUP rg2_concurrency_test;
+DROP
+
+CREATE RESOURCE GROUP rg1_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.1, memory_limit=0.2);
+CREATE
+CREATE RESOURCE GROUP rg2_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.2, memory_limit=0.2);
+CREATE
+
+41:BEGIN;
+BEGIN
+41:ALTER RESOURCE GROUP rg1_concurrency_test SET CPU_RATE_LIMIT 0.35;
+ALTER
+42:BEGIN;
+BEGIN
+42&:ALTER RESOURCE GROUP rg2_concurrency_test SET CPU_RATE_LIMIT 0.35;  <waiting ...>
+41:COMMIT;
+COMMIT
+42<:  <... completed>
+ERROR:  total cpu_rate_limit exceeded the limit of 1.0
+SELECT g.rsgname, c.cpu_rate_limit FROM gp_toolkit.gp_resgroup_config c, pg_resgroup g WHERE c.groupid=g.oid ORDER BY g.oid;
+rsgname             |cpu_rate_limit
+--------------------+--------------
+default_group       |0.3           
+admin_group         |0.1           
+rg1_concurrency_test|0.35          
+rg2_concurrency_test|0.20          
+(4 rows)
+
+DROP RESOURCE GROUP rg1_concurrency_test;
+DROP
+DROP RESOURCE GROUP rg2_concurrency_test;
+DROP

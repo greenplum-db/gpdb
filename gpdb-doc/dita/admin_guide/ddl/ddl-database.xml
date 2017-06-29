@@ -45,6 +45,7 @@
       <p>The host name and port must match the host name and port of the installed Greenplum Database system.</p>
       <p>Some objects, such as roles, are shared by all the databases in a Greenplum Database system. Other objects, such as tables that you create, are known
         only in the database in which you create them.</p>
+      <note type="warning">The <codeph>CREATE DATABASE</codeph> command is not transactional.</note>
     </body>
     <topic id="topic5" xml:lang="en">
       <title>Cloning a Database</title>
@@ -104,7 +105,8 @@
       <p>
         <codeblock>$ dropdb -h masterhost -p 5432 mydatabase</codeblock>
       </p>
-      <note type="warning">Dropping a database cannot be undone.</note>
+      <note type="warning">Dropping a database cannot be undone.
+          <p>The <codeph>DROP DATABASE</codeph> command is not transactional.</p></note>
     </body>
   </topic>
 </topic>

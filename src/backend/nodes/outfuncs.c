@@ -4234,6 +4234,17 @@ _outDropResourceGroupStmt(StringInfo str, DropResourceGroupStmt *node)
 	WRITE_STRING_FIELD(name);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
+static void
+_outAlterResourceGroupStmt(StringInfo str, AlterResourceGroupStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERRESOURCEGROUPSTMT");
+
+	WRITE_STRING_FIELD(name);
+	WRITE_NODE_FIELD(options); /* List of DefElem nodes */
+}
+#endif /* COMPILING_BINARY_FUNCS */
+
 
 static void
 _outCommentStmt(StringInfo str, CommentStmt *node)
@@ -5200,6 +5211,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_DropResourceGroupStmt:
 				_outDropResourceGroupStmt(str, obj);
+				break;
+			case T_AlterResourceGroupStmt:
+				_outAlterResourceGroupStmt(str, obj);
 				break;
 
 			case T_CommentStmt:

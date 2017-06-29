@@ -1350,13 +1350,15 @@ class GpCleanupGpfdist(Command):
     Command for terminating a running gpfdist instance and removing its pid file
     """
 
-    def __init__(self, name, pid_file, log_file, ctxt=LOCAL, remoteHost=None):
+    def __init__(self, name, pid_file, log_file, ctxt=LOCAL, remoteHost=None, keep_logs=False):
         """
         name: name of the command
         pid_file: full path of the pid file for the gpfdist instance to
                   terminate
         """
 
+        if keep_logs:
+            log_file = ""
         # We have to kill and then wait for the process to fully exit so we
         # can reuse the port.  Without this delay the next gpfdist instance
         # that tries to start using the same port can fail to bind.
@@ -1373,7 +1375,7 @@ try:
 except:
     pass
 
-if os.path.isfile(sys.argv[2]):
+if len(sys.argv) == 3 and os.path.isfile(sys.argv[2]):
     os.unlink(sys.argv[2])
 
 if pid == -1:
@@ -2201,6 +2203,7 @@ FROM (
         self._pool.empty_completed_items()
         logger.debug('Stopping gpfdist for source table %s...',
                      self._table_pair.source)
+        keep_logs = self._gpfdist_verbosity != ""
         if self._fast_mode:
             for seg in self._source_config.getSegDbList():
                 if seg.isSegmentMirror(True) or seg.isSegmentQD():
@@ -2211,7 +2214,7 @@ FROM (
                                            str(self._table_pair.source), seg.getSegmentContentId())),
                                        os.path.join(self._work_dir, 'gpfdist_read_%s_%d.log' % (
                                            str(self._table_pair.source), seg.getSegmentContentId())),
-                                       REMOTE, address)
+                                       REMOTE, address, keep_logs)
                 self._pool.addCommand(cmd)
         else:
             for host in self._host_map.keys():
@@ -2223,15 +2226,14 @@ FROM (
                                                         'gpfdist_read_%s_%d.pid' % (str(self._table_pair.source), i)),
                                            os.path.join(self._work_dir,
                                                         'gpfdist_read_%s_%d.log' % (str(self._table_pair.source), i)),
-                                           REMOTE, address)
+                                           REMOTE, address, keep_logs)
                     self._pool.addCommand(cmd)
-                    cmd = GpCleanupGpfdist(
-                        'stopping gpfdist on %s' % address,
-                        os.path.join(self._work_dir,
-                                     'gpfdist_write_%s_%d.pid' % (str(self._table_pair.source), i)),
-                        os.path.join(self._work_dir,
-                                     'gpfdist_write_%s_%d.log' % (str(self._table_pair.source), i)),
-                        REMOTE, address)
+                    cmd = GpCleanupGpfdist('stopping gpfdist on %s' % address,
+                                           os.path.join(self._work_dir,
+                                                        'gpfdist_write_%s_%d.pid' % (str(self._table_pair.source), i)),
+                                           os.path.join(self._work_dir,
+                                                        'gpfdist_write_%s_%d.log' % (str(self._table_pair.source), i)),
+                                           REMOTE, address, keep_logs)
                     self._pool.addCommand(cmd)
 
         self._pool.join()
@@ -2783,9 +2785,19 @@ class GpTransfer(object):
         if not self._options.dry_run:
             # Remove base pipe directory on each source address
             logger.info('Removing work directories...')
+
             for host in self._host_map.keys():
                 address = iter(self._host_map[host]).next()
-                cmd = RemoveDirectory('Remove work directory on %s' % address,
+                cmd = RemoveFiles('stopping gpfdist on %s' % address,
+                                os.path.join(self._work_dir, '*.pid' ), REMOTE, address)
+                self._pool.addCommand(cmd)
+            # We join() here so that all pid files are removed before directories,
+            # ensuring that empty directories are removed
+            self._pool.join()
+
+            for host in self._host_map.keys():
+                address = iter(self._host_map[host]).next()
+                cmd = RemoveDirectory('Remove work directory',
                                       self._work_dir, REMOTE, address)
                 self._pool.addCommand(cmd)
 
@@ -2798,6 +2810,10 @@ class GpTransfer(object):
             self._pool.addCommand(cmd)
 
             self._pool.join()
+
+            if self._options.gpfdist_verbose or self._options.gpfdist_very_verbose:
+                logger.warn('gpfdist logs are present in %s on all hosts in the source', self._work_dir)
+                logger.warn('database system. These logs need to be manually cleaned up.')
 
             if self._options.validator:
                 logger.info('Cleaning up validator...')

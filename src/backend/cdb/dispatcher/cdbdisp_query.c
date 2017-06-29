@@ -23,6 +23,7 @@
 #include "utils/memutils.h"
 #include "utils/faultinjector.h"
 #include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 #include "utils/session_state.h"
 #include "miscadmin.h"
 
@@ -981,9 +982,9 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	Oid	sessionUserId = GetSessionUserId();
 	Oid	outerUserId = GetOuterUserId();
 	Oid	currentUserId = GetUserId();
-	Oid	currentResourceGroupId = MySessionState->resGroupId;
 	bool sessionUserIsSuper = superuser_arg(GetSessionUserId());
 	bool outerUserIsSuper = superuser_arg(GetSessionUserId());
+	StringInfoData resgroupInfo;
 
 	int	tmp, len, i;
 	uint32 n32;
@@ -993,13 +994,16 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	char one = 1;
 	char zero = 0;
 
+	initStringInfo(&resgroupInfo);
+	if (IsResGroupEnabled())
+		SerializeResGroupInfo(&resgroupInfo);
+
 	total_query_len = 1 /* 'M' */ +
 		sizeof(len) /* message length */ +
 		sizeof(gp_command_count) +
 		sizeof(sessionUserId) + 1 /* sessionUserIsSuper */	+
 		sizeof(outerUserId) + 1 /* outerUserIsSuper */	+
 		sizeof(currentUserId) +
-		sizeof(currentResourceGroupId) +
 		sizeof(rootIdx) +
 		sizeof(n32) * 2 /* currentStatementStartTimestamp */  +
 		sizeof(command_len) +
@@ -1019,7 +1023,9 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 		sddesc_len +
 		seqServerHostlen +
 		sizeof(numSlices) +
-		sizeof(int) * numSlices;
+		sizeof(int) * numSlices +
+		sizeof(resgroupInfo.len) +
+		resgroupInfo.len;
 
 	if (ds->dispatchStateContext == NULL)
 		ds->dispatchStateContext = AllocSetContextCreate(TopMemoryContext,
@@ -1062,10 +1068,6 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	tmp = htonl(currentUserId);
 	memcpy(pos, &tmp, sizeof(currentUserId));
 	pos += sizeof(currentUserId);
-
-	tmp = htonl(currentResourceGroupId);
-	memcpy(pos, &tmp, sizeof(currentResourceGroupId));
-	pos += sizeof(currentResourceGroupId);
 
 	tmp = htonl(rootIdx);
 	memcpy(pos, &tmp, sizeof(rootIdx));
@@ -1174,6 +1176,16 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 			memcpy(pos, &tmp, sizeof(tmp));
 			pos += sizeof(tmp);
 		}
+	}
+
+	tmp = htonl(resgroupInfo.len);
+	memcpy(pos, &tmp, sizeof(resgroupInfo.len));
+	pos += sizeof(resgroupInfo.len);
+
+	if (resgroupInfo.len > 0)
+	{
+		memcpy(pos, resgroupInfo.data, resgroupInfo.len);
+		pos += resgroupInfo.len;
 	}
 
 	len = pos - shared_query - 1;

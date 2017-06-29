@@ -73,8 +73,8 @@ CREATE VIEW cancel_all AS
 ! python -c "print $(cat /sys/fs/cgroup/cpu/gpdb/$(psql -d isolation2resgrouptest -Aqtc "SELECT oid FROM pg_resgroup WHERE rsgname='admin_group'")/cpu.shares) == int($(cat /sys/fs/cgroup/cpu/gpdb/cpu.shares) * $(psql -d isolation2resgrouptest -Aqtc "SELECT value FROM pg_resgroupcapability c, pg_resgroup g WHERE c.resgroupid=g.oid AND reslimittype=2 AND g.rsgname='admin_group'"))";
 
 -- create two resource groups
-CREATE RESOURCE GROUP g1 WITH (cpu_rate_limit=0.1, memory_limit=0.1);
-CREATE RESOURCE GROUP g2 WITH (cpu_rate_limit=0.2, memory_limit=0.2);
+CREATE RESOURCE GROUP g1 WITH (concurrency=5, cpu_rate_limit=0.1, memory_limit=0.2);
+CREATE RESOURCE GROUP g2 WITH (concurrency=5, cpu_rate_limit=0.2, memory_limit=0.2);
 
 -- check g1 configuration
 ! python -c "print $(cat /sys/fs/cgroup/cpu/gpdb/$(psql -d isolation2resgrouptest -Aqtc "SELECT oid FROM pg_resgroup WHERE rsgname='g1'")/cpu.shares) == int($(cat /sys/fs/cgroup/cpu/gpdb/cpu.shares) * 0.1)";

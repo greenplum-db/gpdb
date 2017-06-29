@@ -28,6 +28,37 @@ generate_old_dump(migratorContext *ctx)
 	check_ok(ctx);
 }
 
+static char *
+get_preassigned_oids_for_db(migratorContext *ctx, char *line)
+{
+	char	   *dbname;
+	int			dbnum;
+
+	// FIXME: parsing the dump like this is madness.
+	// We should use a dump file for each database to
+	// begin with. (like more recent version of PostgreSQL).
+	if (strncmp(line, "\\connect ", strlen("\\connect ")) != 0)
+		return NULL;
+
+	dbname = line + strlen("\\connect ");
+
+	/* strip newline */
+	if (strlen(dbname) <= 1)
+		return NULL;
+	dbname[strlen(dbname) - 1] = '\0';
+
+	for (dbnum = 0; dbnum < ctx->old.dbarr.ndbs; dbnum++)
+	{
+		DbInfo	   *olddb = &ctx->old.dbarr.dbs[dbnum];
+
+		if (strcmp(olddb->db_name, dbname) == 0)
+		{
+			/* Found it! */
+			return olddb->reserved_oids;
+		}
+	}
+	return NULL;
+}
 
 /*
  *	split_old_dump
@@ -46,22 +77,23 @@ split_old_dump(migratorContext *ctx)
 {
 	FILE	   *all_dump,
 			   *globals_dump,
-			   *db_dump,
-			   *array_dump;
+			   *db_dump;
 	FILE	   *current_output;
 	char		line[LINE_ALLOC];
-	char		array_line[LINE_ALLOC];
 	bool		start_of_line = true;
 	char		create_role_str[MAX_STRING];
 	char		create_role_str_quote[MAX_STRING];
 	char		filename[MAXPGPATH];
 	bool		suppressed_username = false;
 
+	/* If this is a QE node, read the pre-assigned OIDs into memory. */
+	if (!ctx->dispatcher_mode)
+		slurp_oid_files(ctx);
+
 	/* 
 	 * Open all files in binary mode to avoid line end translation on Windows,
 	 * both for input and output.
 	 */
-
 	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, ALL_DUMP_FILE);
 	if ((all_dump = fopen(filename, PG_BINARY_R)) == NULL)
 		pg_log(ctx, PG_FATAL, "Cannot open dump file %s\n", filename);
@@ -72,9 +104,6 @@ split_old_dump(migratorContext *ctx)
 	if ((db_dump = fopen(filename, PG_BINARY_W)) == NULL)
 		pg_log(ctx, PG_FATAL, "Cannot write to dump file %s\n", filename);
 	current_output = globals_dump;
-
-	snprintf(filename, sizeof(filename), "%s/%s", ctx->cwd, ARRAY_DUMP_FILE);
-	array_dump = fopen(filename, PG_BINARY_R);
 
 	/* patterns used to prevent our own username from being recreated */
 	snprintf(create_role_str, sizeof(create_role_str),
@@ -90,18 +119,6 @@ split_old_dump(migratorContext *ctx)
 			strncmp(line, "\\connect ", strlen("\\connect ")) == 0)
 		{
 			current_output = db_dump;
-
-			/*
-			 * If we have a previously generated arraytype dump, add it to the
-			 * top of the file
-			 */
-			if (array_dump != NULL)
-			{
-				fputs(line, current_output);
-				while (fgets(array_line, sizeof(array_line), array_dump) != NULL)
-					fputs(array_line, current_output);
-				continue;
-			}
 		}
 
 		/* output unless we are recreating our own username */
@@ -116,11 +133,29 @@ split_old_dump(migratorContext *ctx)
 			start_of_line = true;
 		else
 			start_of_line = false;
+
+		/*
+		 * Inject binary_upgrade.preassign_* calls to the correct locations.
+		 *
+		 * The global OIDs go just after the first \connect. The per-DB OIDs
+		 * go just after each \connect (including the first one).
+		 *
+		 * If we just switched database, dump the preassignments.
+		 */
+		if (start_of_line && strncmp(line, "\\connect ", strlen("\\connect ")) == 0)
+		{
+			char	   *preassigned_oids;
+
+			if (current_output == globals_dump && ctx->old.global_reserved_oids)
+				fputs(ctx->old.global_reserved_oids, current_output);
+
+			preassigned_oids = get_preassigned_oids_for_db(ctx, line);
+			if (preassigned_oids)
+				fputs(preassigned_oids, current_output);
+		}
 	}
 
 	fclose(all_dump);
 	fclose(globals_dump);
 	fclose(db_dump);
-	if (array_dump != NULL)
-		fclose(array_dump);
 }

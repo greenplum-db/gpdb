@@ -382,6 +382,29 @@ Feature: gpcheckcat tests
         And the user runs "dropdb timestamp_db"
         And the path "gpcheckcat.repair.*" is removed from current working directory
 
+    @catalog_dependency
+    Scenario: gpcheckcat missing_extraneous and dependency tests detects pg_depend issues
+        Given database "gpcheckcat_dependency" is dropped and recreated
+        And there is a "heap" table "heap_table1" in "gpcheckcat_dependency" with data
+        And there is a "heap" table "heap_table2" in "gpcheckcat_dependency" with data
+        And there is a "heap" table "heap_table3" in "gpcheckcat_dependency" with data
+        And the entry for the table "heap_table1" is removed from "pg_catalog.pg_depend" with key "objid" in the database "gpcheckcat_dependency" on the first primary segment
+        And the entry for the table "heap_table1" is removed from "pg_catalog.pg_depend" with key "refobjid" in the database "gpcheckcat_dependency" on the first primary segment
+        And the entry for the table "heap_table2" is removed from "pg_catalog.pg_type" with key "typrelid" in the database "gpcheckcat_dependency" on the first primary segment
+        And the entry for the table "heap_table3" is removed from "pg_catalog.pg_depend" with key "refobjid" in the database "gpcheckcat_dependency" on the first primary segment
+        And table "heap_table3" is dropped in "gpcheckcat_dependency"
+        When the user runs "gpcheckcat gpcheckcat_dependency"
+        Then gpcheckcat should return a return code of 3
+        Then gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_type" to stdout
+        Then gpcheckcat should print "Extra type metadata of {.*} on content 0" to stdout
+        Then gpcheckcat should print "Name of test which found this issue: missing_extraneous_pg_depend" to stdout
+        Then gpcheckcat should print "Extra depend metadata of {.*} on content 0" to stdout
+        Then gpcheckcat should print "Missing depend metadata of {.*} on content 0" to stdout
+        Then gpcheckcat should print "Name of test which found this issue: dependency_pg_class" to stdout
+        Then gpcheckcat should print "Table pg_class has a dependency issue on oid .* at content 0" to stdout
+        Then gpcheckcat should print "Name of test which found this issue: dependency_pg_type" to stdout
+        Then gpcheckcat should print "Table pg_type has a dependency issue on oid .* at content 0" to stdout
+        And the user runs "dropdb gpcheckcat_dependency"
 
     @persistent
     Scenario: gpcheckcat should report persistence errors # we need to run this test at the end because it makes the database go into a PANIC state.

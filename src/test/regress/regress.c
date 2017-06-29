@@ -31,7 +31,9 @@
 #include "utils/builtins.h"
 #include "utils/geo_decls.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 #include "utils/resscheduler.h"
+#include "utils/resgroup.h"
 
 #define P_MAXDIG 12
 #define LDELIM			'('
@@ -107,6 +109,9 @@ extern Datum test_atomic_ops(PG_FUNCTION_ARGS);
 
 extern Datum udf_setenv(PG_FUNCTION_ARGS);
 extern Datum udf_unsetenv(PG_FUNCTION_ARGS);
+
+extern Datum repeatPalloc(PG_FUNCTION_ARGS);
+extern Datum resGroupPalloc(PG_FUNCTION_ARGS);
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -2840,4 +2845,40 @@ assign_new_record(PG_FUNCTION_ARGS)
 		/* nothing left */
 		SRF_RETURN_DONE(funcctx);
 	}
+}
+
+PG_FUNCTION_INFO_V1(repeatPalloc);
+Datum
+repeatPalloc(PG_FUNCTION_ARGS)
+{
+	int32 size = PG_GETARG_INT32(0);
+	int32 count = PG_GETARG_INT32(1);
+	int i;
+
+	for (i = 0; i < count; i++)
+		MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
+
+	PG_RETURN_INT32(0);
+}
+
+PG_FUNCTION_INFO_V1(resGroupPalloc);
+Datum
+resGroupPalloc(PG_FUNCTION_ARGS)
+{
+	float ratio = PG_GETARG_FLOAT8(0);
+	int memLimit, slotQuota, sharedQuota;
+	int size;
+	int count;
+	int i;
+
+	ResGroupGetMemInfo(&memLimit, &slotQuota, &sharedQuota);
+	size = ceilf(memLimit * ratio);
+	count = size / 512;
+	for (i = 0; i < count; i++)
+		MemoryContextAlloc(TopMemoryContext, 512 * 1024 * 1024);
+
+	size %= 512;
+	MemoryContextAlloc(TopMemoryContext, size * 1024 * 1024);
+
+	PG_RETURN_INT32(0);
 }

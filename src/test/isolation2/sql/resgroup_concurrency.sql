@@ -1,5 +1,5 @@
 -- create a resource group when gp_resource_manager is queue
-0:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+0:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.20, memory_limit=.20);
 0:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 
 -- test1: test gp_toolkit.gp_resgroup_status and pg_stat_activity
@@ -26,7 +26,7 @@
 -- test2: test alter concurrency
 -- Create a resource group with concurrency=2. Prepare 2 running transactions and 1 queueing transactions.
 -- Alter concurrency 2->3, the queueing transaction will be woken up, the 'value' and 'proposed' of pg_resgroupcapability will be set to 3.
-11:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+11:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.20, memory_limit=.20);
 11:CREATE role role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 12:SET role role_concurrency_test;
 12:BEGIN;
@@ -48,7 +48,7 @@
 
 -- test3: test alter concurrency
 -- Create a resource group with concurrency=3. Prepare 3 running transactions, and 1 queueing transaction.
-21:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_rate_limit=.02, memory_limit=.02);
+21:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=3, cpu_rate_limit=.20, memory_limit=.20);
 21:CREATE role role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 22:SET role role_concurrency_test;
 22:BEGIN;
@@ -87,7 +87,7 @@
 
 -- test4: concurrently drop resource group
 
-31:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.02, memory_limit=.02);
+31:CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=2, cpu_rate_limit=.20, memory_limit=.20);
 31:CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 
 -- DROP should fail if there're running transactions
@@ -126,3 +126,38 @@
 32<:
 33:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 
+-- test5: concurrently alter resource group cpu rate limit
+
+-- start_ignore
+DROP RESOURCE GROUP rg1_concurrency_test;
+DROP RESOURCE GROUP rg2_concurrency_test;
+-- end_ignore
+
+CREATE RESOURCE GROUP rg1_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.1, memory_limit=0.2);
+CREATE RESOURCE GROUP rg2_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.2, memory_limit=0.2);
+
+41:BEGIN;
+41:ALTER RESOURCE GROUP rg1_concurrency_test SET CPU_RATE_LIMIT 0.35;
+42:BEGIN;
+42&:ALTER RESOURCE GROUP rg2_concurrency_test SET CPU_RATE_LIMIT 0.35;
+41:ABORT;
+42<:
+42:COMMIT;
+SELECT g.rsgname, c.cpu_rate_limit FROM gp_toolkit.gp_resgroup_config c, pg_resgroup g WHERE c.groupid=g.oid ORDER BY g.oid;
+
+DROP RESOURCE GROUP rg1_concurrency_test;
+DROP RESOURCE GROUP rg2_concurrency_test;
+
+CREATE RESOURCE GROUP rg1_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.1, memory_limit=0.2);
+CREATE RESOURCE GROUP rg2_concurrency_test WITH (concurrency=2, cpu_rate_limit=0.2, memory_limit=0.2);
+
+41:BEGIN;
+41:ALTER RESOURCE GROUP rg1_concurrency_test SET CPU_RATE_LIMIT 0.35;
+42:BEGIN;
+42&:ALTER RESOURCE GROUP rg2_concurrency_test SET CPU_RATE_LIMIT 0.35;
+41:COMMIT;
+42<:
+SELECT g.rsgname, c.cpu_rate_limit FROM gp_toolkit.gp_resgroup_config c, pg_resgroup g WHERE c.groupid=g.oid ORDER BY g.oid;
+
+DROP RESOURCE GROUP rg1_concurrency_test;
+DROP RESOURCE GROUP rg2_concurrency_test;

@@ -242,10 +242,10 @@
             <codeblock>CREATE ROLE jonathan LOGIN;</codeblock>
             <p>Create a role that belongs to a resource queue:</p>
             <codeblock>CREATE ROLE jonathan LOGIN RESOURCE QUEUE poweruser;</codeblock>
-            <p>Create a role with a password that is valid until the end of 2009 (<codeph>CREATE
+            <p>Create a role with a password that is valid until the end of 2016 (<codeph>CREATE
                     USER</codeph> is the same as <codeph>CREATE ROLE</codeph> except that it implies
                     <codeph>LOGIN</codeph>):</p>
-            <codeblock>CREATE USER joelle WITH PASSWORD 'jw8s0F4' VALID UNTIL '2010-01-01';</codeblock>
+            <codeblock>CREATE USER joelle WITH PASSWORD 'jw8s0F4' VALID UNTIL '2017-01-01';</codeblock>
             <p>Create a role that can create databases and manage other roles:</p>
             <codeblock>CREATE ROLE admin WITH CREATEDB CREATEROLE;</codeblock>
             <p>Create a role that does not allow login access on Sundays:</p>

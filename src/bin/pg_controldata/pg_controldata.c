@@ -230,6 +230,8 @@ main(int argc, char *argv[])
 		   ControlFile.lc_collate);
 	printf(_("LC_CTYPE:                             %s\n"),
 		   ControlFile.lc_ctype);
+	printf(_("Data page checksum version:           %u\n"),
+		   ControlFile.data_checksum_version);
 
 	return 0;
 }
