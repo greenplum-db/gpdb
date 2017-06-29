@@ -72,6 +72,7 @@
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
 #include "tcop/utility.h"
+#include "utils/backend_cancel.h"
 #include "utils/faultinjector.h"
 #include "utils/flatfiles.h"
 #include "utils/lsyscache.h"
@@ -3694,10 +3695,22 @@ ProcessInterrupts(const char* filename, int lineno)
 					 errmsg("terminating autovacuum process due to administrator command"),
 					 errSendAlert(false)));
 		else
-			ereport(FATAL,
-					(errcode(ERRCODE_ADMIN_SHUTDOWN),
-					 errmsg("terminating connection due to administrator command"),
-					 errSendAlert(false)));
+		{
+			if (HasCancelMessage())
+			{
+				char   *buffer = palloc0(MAX_CANCEL_MSG);
+
+				GetCancelMessage(&buffer, MAX_CANCEL_MSG);
+				ereport(FATAL,
+						(errcode(ERRCODE_ADMIN_SHUTDOWN),
+						 errmsg("terminating connection due to administrator command: \"%s\"",
+						 buffer)));
+			}
+			else
+				ereport(FATAL,
+						(errcode(ERRCODE_ADMIN_SHUTDOWN),
+						 errmsg("terminating connection due to administrator command")));
+		}
 	}
 
 	if (ClientConnectionLost)
@@ -3742,6 +3755,16 @@ ProcessInterrupts(const char* filename, int lineno)
 				ereport(ERROR,
 						(errcode(ERRCODE_QUERY_CANCELED),
 						 errmsg("canceling autovacuum task")));
+			else if (HasCancelMessage())
+			{
+				char   *buffer = palloc0(MAX_CANCEL_MSG);
+
+				GetCancelMessage(&buffer, MAX_CANCEL_MSG);
+				ereport(ERROR,
+						(errcode(ERRCODE_QUERY_CANCELED),
+						 errmsg("canceling statement due to user request: \"%s\"",
+								buffer)));
+			}
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_QUERY_CANCELED),

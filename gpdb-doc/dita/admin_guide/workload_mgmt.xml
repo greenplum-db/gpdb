@@ -867,7 +867,8 @@ MEMORY_LIMIT='2000MB');
           slots that are needed by other users. To do this, you must first identify the statement
           you want to clear, determine its process id (pid), and then, use
             <codeph>pg_cancel_backend</codeph> with the process id to end that process, as shown
-          below. </p>
+          below. An optional message to the process can be passed as the second parameter, to
+          indicate to the user why the process was cancelled.</p>
         <p>For example, to see process information about all statements currently active or waiting
           in all resource queues, run the following query:</p>
         <p>

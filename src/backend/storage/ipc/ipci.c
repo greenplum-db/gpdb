@@ -54,6 +54,7 @@
 #include "storage/procsignal.h"
 #include "storage/sinvaladt.h"
 #include "storage/spin.h"
+#include "utils/backend_cancel.h"
 #include "utils/resscheduler.h"
 #include "utils/resgroup.h"
 #include "utils/faultinjector.h"
@@ -217,6 +218,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, BTreeShmemSize());
 		size = add_size(size, SyncScanShmemSize());
 		size = add_size(size, CheckpointerShmemSize());
+		size = add_size(size, CancelBackendMsgShmemSize());
 
 		size = add_size(size, WalSndShmemSize());
 		size = add_size(size, WalRcvShmemSize());
@@ -407,6 +409,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	BTreeShmemInit();
 	SyncScanShmemInit();
 	workfile_mgr_cache_init();
+	BackendCancelShmemInit();
 
 #ifdef EXEC_BACKEND
 

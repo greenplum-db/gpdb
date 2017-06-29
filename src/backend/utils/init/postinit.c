@@ -46,6 +46,7 @@
 #include "storage/sinvaladt.h"
 #include "storage/smgr.h"
 #include "utils/acl.h"
+#include "utils/backend_cancel.h"
 #include "utils/flatfiles.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
@@ -704,6 +705,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		PerformAuthentication(MyProcPort);
 		InitializeSessionUserId(username);
 		am_superuser = superuser();
+		BackendCancelInit(MyBackendId);
 	}
 
 	/*

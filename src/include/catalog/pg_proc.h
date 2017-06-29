@@ -3191,6 +3191,8 @@ DESCR("is schema another session's temp schema?");
 
 DATA(insert OID = 2171 ( pg_cancel_backend		PGNSP PGUID 12 1 0 f f t f v 1 16 "23" _null_ _null_ _null_ pg_cancel_backend - _null_ _null_ ));
 DESCR("cancel a server process' current query");
+DATA(insert OID = 950 ( pg_cancel_backend		PGNSP PGUID 12 1 0 f f t f v 2 16 "23 25" _null_ _null_ _null_ pg_cancel_backend_msg - _null_ _null_ ));
+DESCR("cancel a server process' current query");
 DATA(insert OID = 2172 ( pg_start_backup		PGNSP PGUID 12 1 0 f f t f v 1 25 "25" _null_ _null_ _null_ pg_start_backup - _null_ _null_ ));
 DESCR("prepare for taking an online backup");
 DATA(insert OID = 2173 ( pg_stop_backup			PGNSP PGUID 12 1 0 f f t f v 0 25 "" _null_ _null_ _null_ pg_stop_backup - _null_ _null_ ));

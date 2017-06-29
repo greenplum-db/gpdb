@@ -30,6 +30,7 @@
 #include "storage/fd.h"
 #include "storage/pmsignal.h"
 #include "storage/procarray.h"
+#include "utils/backend_cancel.h"
 #include "utils/builtins.h"
 #include "tcop/tcopprot.h"
 
@@ -70,7 +71,7 @@ current_query(PG_FUNCTION_ARGS)
  * Functions to send signals to other backends.
  */
 static bool
-pg_signal_backend(int pid, int sig)
+pg_signal_backend(int pid, int sig, char *msg)
 {
 	if (!superuser())
 		ereport(ERROR,
@@ -88,6 +89,18 @@ pg_signal_backend(int pid, int sig)
 		return false;
 	}
 
+	/* If the user supplied a message to the signalled backend */
+	if (msg != NULL)
+	{
+		int		r;
+
+		r = SetBackendCancelMessage(pid, msg);
+
+		if (r != -1 && r != strlen(msg))
+			ereport(NOTICE,
+					(errmsg("message is too long and has been truncated")));
+	}
+
 	/* If we have setsid(), signal the backend's whole process group */
 #ifdef HAVE_SETSID
 	if (kill(-pid, sig))
@@ -103,16 +116,50 @@ pg_signal_backend(int pid, int sig)
 	return true;
 }
 
+static bool
+pg_cancel_backend_internal(pid_t pid, char *msg)
+{
+    bool         r = pg_signal_backend(pid, SIGINT, msg);
+
+    return r;
+}
+
 Datum
 pg_cancel_backend(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_BOOL(pg_signal_backend(PG_GETARG_INT32(0), SIGINT));
+	PG_RETURN_BOOL(pg_cancel_backend_internal(PG_GETARG_INT32(0), NULL));
+}
+
+Datum
+pg_cancel_backend_msg(PG_FUNCTION_ARGS)
+{
+	pid_t		pid = PG_GETARG_INT32(0);
+	char 	   *msg = text_to_cstring(PG_GETARG_TEXT_PP(1));
+
+	PG_RETURN_BOOL(pg_cancel_backend_internal(pid, msg));
+}
+
+static bool
+pg_terminate_backend_internal(pid_t pid, char *msg)
+{
+    bool	r = pg_signal_backend(pid, SIGTERM, msg);
+
+    return r;
 }
 
 Datum
 pg_terminate_backend(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_BOOL(pg_signal_backend(PG_GETARG_INT32(0), SIGTERM));
+	PG_RETURN_BOOL(pg_terminate_backend_internal(PG_GETARG_INT32(0), NULL));
+}
+
+Datum
+pg_terminate_backend_msg(PG_FUNCTION_ARGS)
+{
+	pid_t		pid = PG_GETARG_INT32(0);
+	char 	   *msg = text_to_cstring(PG_GETARG_TEXT_PP(1));
+
+	PG_RETURN_BOOL(pg_terminate_backend_internal(pid, msg));
 }
 
 /*
