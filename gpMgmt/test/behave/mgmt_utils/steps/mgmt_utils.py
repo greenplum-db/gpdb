@@ -4913,8 +4913,18 @@ def impl(context):
     #   will be sorted (based on ascii) before numeric timestamps
     #   without colliding with a real timestamp
     dest = re.sub(r"_\d{6}\.csv$", "_-takeme.csv", gpdb_alert_file_path_src)
-    shutil.copy(gpdb_alert_file_path_src, dest)
-    context.fake_timestamp_file = dest
+
+    # Let's wait until there's actually something in the file before actually
+    # doing a copy of the log...
+    for _ in range(60):
+        if os.stat(gpdb_alert_file_path_src).st_size != 0:
+            shutil.copy(gpdb_alert_file_path_src, dest)
+            context.fake_timestamp_file = dest
+            return
+        sleep(1)
+
+    raise Exception("File: %s is empty" % gpdb_alert_file_path_src)
+
 
 
 @then('the file with the fake timestamp no longer exists')
