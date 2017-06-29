@@ -31,3 +31,7 @@ func (reader Reader) GetPortForSegment(segmentDbid int) int {
 
 	return result
 }
+
+func (reader Reader) GetSegmentConfiguration() SegmentConfiguration {
+	return reader.config
+}

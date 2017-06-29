@@ -14,7 +14,8 @@ import (
 
 	"path"
 
-	"golang.org/x/crypto/ssh"
+	"fmt"
+	"strings"
 )
 
 func TestCommands(t *testing.T) {
@@ -24,13 +25,23 @@ func TestCommands(t *testing.T) {
 
 var (
 	commandPath string
-	gConfig     *ssh.ServerConfig
 	sshd        *exec.Cmd
 )
 
 var _ = BeforeEach(func() {
-	path := os.Getenv("GOPATH")
-	sshd = exec.Command(path + "/bin/test/sshd")
+	gopaths := strings.Split(os.Getenv("GOPATH"), ":")
+	binary_path := ""
+	for i := 0; i < len(gopaths); i++ {
+		one_path := path.Join(gopaths[i], "/bin/test/sshd")
+		if _, err := os.Stat(one_path); !os.IsNotExist(err) {
+			if len(binary_path) > 0 {
+				Fail(fmt.Sprintf("More than one path to sshd binary \n%v\n", gopaths))
+			} else {
+				binary_path = one_path
+			}
+		}
+	}
+	sshd = exec.Command(binary_path)
 	_, err := sshd.StdoutPipe()
 	test_utils.Check("cannot get stdout", err)
 	_, err = sshd.StderrPipe()
@@ -53,18 +64,6 @@ var _ = BeforeSuite(func() {
 var _ = SynchronizedAfterSuite(func() {}, func() {
 	CleanupBuildArtifacts()
 })
-
-func setPrivateKeyPermissions() {
-	integrations_path := path.Join(os.Getenv("GOPATH"), "src/gp_upgrade/integrations")
-	priv_keys := []string{
-		"fixtures/registered_private_key.pem",
-		"fixtures/unregistered_private_key.pem",
-		"sshd/private_key.pem",
-	}
-	for _, key_path := range priv_keys {
-		os.Chmod(path.Join(integrations_path, key_path), 0400)
-	}
-}
 
 func runCommand(args ...string) *Session {
 
