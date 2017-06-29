@@ -32,18 +32,38 @@ to the segments, and collects the results.
 
 ## Building Greenplum Database with GPORCA
 
-For macOS X developers, follow [these steps](README.macOS.md) for getting your system ready for GPDB 
+### Installing dependencies
+A. For macOS X developers, follow [these steps](README.macOS.md) for getting your system ready for GPDB
+
+Or
+
+B.1 Install needed python modules
+
+  Add the following Python modules (2.7 & 2.6 are supported)
+
+  * psutil
+  * lockfile (>= 0.9.1)
+  * paramiko
+  * setuptools
+
+  If necessary, upgrade modules using "pip install --upgrade".
+  pip should be at least version 7.x.x.
+
+B.2 Verify that you can ssh to your machine name without a password
+```
+ssh <hostname of your machine>  # e.g., ssh briarwood
+```
+
+<a name="buildOrca"></a>
+### Build the optimizer
 
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
 system and tries to build with ORCA by default.  For your convenience, here are
 the steps of how to build the optimizer. For the most up-to-date way of
 building, see the README at the following repositories:
 
-1. https://github.com/greenplum-db/gp-xerces
-1. https://github.com/greenplum-db/gporca
-
-<a name="buildOrca"></a>
-### Build the optimizer
+* https://github.com/greenplum-db/gp-xerces
+* https://github.com/greenplum-db/gporca
 
 1. Install our patched version of Xerces-C
 
@@ -75,17 +95,7 @@ building, see the README at the following repositories:
     checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
     ```
 
-### Install needed python modules
 
-  Add the following Python modules (2.7 & 2.6 are supported)
-
-  * psutil
-  * lockfile (>= 0.9.1)
-  * paramiko
-  * setuptools
-
-  If necessary, upgrade modules using "pip install --upgrade".
-  pip should be at least version 7.x.x.
     
 ### Build the database
 ```
