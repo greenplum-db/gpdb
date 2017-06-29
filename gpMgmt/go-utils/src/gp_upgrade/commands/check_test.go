@@ -2,7 +2,6 @@ package commands
 
 import (
 	"database/sql/driver"
-	"gp_upgrade/db"
 	"gp_upgrade/test_utils"
 
 	"encoding/json"
@@ -15,6 +14,7 @@ import (
 
 	"gp_upgrade/utils"
 
+	"github.com/jmoiron/sqlx"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
@@ -23,8 +23,6 @@ import (
 var _ = Describe("check tests", func() {
 
 	var (
-		mock          sqlmock.Sqlmock
-		dbConn        *db.DBConn
 		subject       CheckCommand
 		save_home_dir string
 		fixture_path  string
@@ -35,7 +33,6 @@ var _ = Describe("check tests", func() {
 		fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
 
 		save_home_dir = test_utils.ResetTempHomeDir()
-		dbConn, mock = test_utils.CreateMockDBConn("localhost", 5432)
 		subject = CheckCommand{}
 	})
 
@@ -46,11 +43,12 @@ var _ = Describe("check tests", func() {
 	Describe("check", func() {
 		Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 			It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
+				dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
 				setupSegmentConfigInDB(mock)
-				err := subject.execute(dbConn, config.NewWriter())
+				err := subject.execute(dbConnector, config.NewWriter())
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(dbConn.Conn.Stats().OpenConnections).To(Equal(0))
+				Expect(dbConnector.GetConn().Stats().OpenConnections).To(Equal(0))
 				content, err := ioutil.ReadFile(config.GetConfigFilePath())
 				test_utils.Check("cannot read file", err)
 
@@ -66,36 +64,33 @@ var _ = Describe("check tests", func() {
 			Describe("when the query fails on AO table count", func() {
 
 				It("returns an error", func() {
+					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
 
-					err := subject.execute(dbConn, config.NewWriter())
+					err := subject.execute(dbConnector, config.NewWriter())
 
-					Expect(dbConn.Conn.Stats().OpenConnections).To(Equal(0))
+					Expect(dbConnector.GetConn().Stats().OpenConnections).To(Equal(0))
 					Expect(err).To(HaveOccurred())
 				})
 			})
-
 			Describe("when the db dbConn fails", func() {
-				XIt("returns an error", func() {
-					// Pending because it fails if a real Greenplum is not running. Turn back on when DBConn.Connect() is more directly mock-able
-					// This codepath currently calls the public method Execute() but based on team discussion, there's no particular reason for that
-					subject.Database_name = "invalidDBthatnobodywouldeverhave"
-					subject.Master_host = "localhost"
-
-					err := subject.Execute(nil)
+				It("returns an error", func() {
+					failingDbConnector := FailingDbConnector{}
+					err := subject.execute(failingDbConnector, nil)
 
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("pq: database \"invalidDBthatnobodywouldeverhave\" does not exist"))
+					Expect(err.Error()).To(ContainSubstring("Invalid DB Connection"))
 				})
 			})
 			Describe("when the home directory is not writable", func() {
 				It("returns an error", func() {
+					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
 					setupSegmentConfigInDB(mock)
 					err := os.MkdirAll(config.GetConfigDir(), 0500)
 					test_utils.Check("cannot chmod: ", err)
 					subject.Master_host = "localhost"
 
-					err = subject.execute(dbConn, config.NewWriter())
+					err = subject.execute(dbConnector, config.NewWriter())
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("open /tmp/gp_upgrade_test_temp_home_dir/.gp_upgrade/cluster_config.json: permission denied"))
@@ -104,12 +99,15 @@ var _ = Describe("check tests", func() {
 
 			Describe("when db result cannot be parsed", func() {
 				It("returns an error", func() {
+
+					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					setupSegmentConfigInDB(mock)
 					setupSegmentConfigInDB(mock)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
 					subject.Master_host = "localhost"
 
 					fake := FakeWriter{}
-					err := subject.execute(dbConn, fake)
+					err := subject.execute(dbConnector, fake)
 
 					Expect(err).To(HaveOccurred())
 					Expect(err.Error()).To(ContainSubstring("I always fail"))
@@ -118,6 +116,17 @@ var _ = Describe("check tests", func() {
 		})
 	})
 })
+
+type FailingDbConnector struct{}
+
+func (failingdbconn FailingDbConnector) Connect() error {
+	return errors.New("Invalid DB Connection")
+}
+func (failingdbconn FailingDbConnector) Close() {
+}
+func (failingdbconn FailingDbConnector) GetConn() *sqlx.DB {
+	return nil
+}
 
 type FakeWriter struct{}
 

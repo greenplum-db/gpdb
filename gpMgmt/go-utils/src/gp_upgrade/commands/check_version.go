@@ -15,6 +15,7 @@ import (
 	"gp_upgrade/utils"
 
 	"github.com/cppforlife/go-semi-semantic/version"
+	"github.com/jmoiron/sqlx"
 )
 
 type CheckVersionCommand struct {
@@ -32,20 +33,23 @@ func (cmd CheckVersionCommand) Execute([]string) error {
 	return cmd.execute(dbConn, os.Stdout)
 }
 
-func (cmd CheckVersionCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
-	err := dbConn.Connect()
+func (cmd CheckVersionCommand) execute(dbConnector db.DBConnector, outputWriter io.Writer) error {
+
+	err := dbConnector.Connect()
 	if err != nil {
 		return utils.DatabaseConnectionError{Parent: err}
 	}
-	defer dbConn.Close()
+	defer dbConnector.Close()
 
-	re := regexp.MustCompile("Greenplum Database (.*) build")
-
+	var connection *sqlx.DB
+	connection = dbConnector.GetConn()
 	var row string
-	err = dbConn.Conn.QueryRow("SELECT version()").Scan(&row)
+	err = connection.QueryRow("SELECT version()").Scan(&row)
 	if err != nil {
 		return err
 	}
+
+	re := regexp.MustCompile("Greenplum Database (.*) build")
 
 	version_string := re.FindStringSubmatch(row)[1]
 	version_object := version.MustNewVersionFromString(version_string)

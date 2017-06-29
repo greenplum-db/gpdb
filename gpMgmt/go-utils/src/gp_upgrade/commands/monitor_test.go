@@ -53,15 +53,6 @@ var _ = Describe("monitor", func() {
 	})
 
 	Describe("when pg_upgrade is running on the target host", func() {
-		XIt("happy: reports that pg_upgrade is running", func() {
-			fake := &FailingSshConnecter{}
-
-			// todo we need to be able to mock out the ssh client so that a session can return a fake remote shell result
-			err := subject.execute(fake, buffer)
-
-			Expect(err).ToNot(HaveOccurred())
-
-		})
 		It("happy: it uses the default user for ssh connection when the user doesn't supply a ssh user", func() {
 			subject.User = ""
 			fake := &FailingSshConnecter{}

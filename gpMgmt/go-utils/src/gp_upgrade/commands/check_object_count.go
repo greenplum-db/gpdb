@@ -27,21 +27,22 @@ func (cmd ObjectCountCommand) Execute([]string) error {
 	return cmd.execute(dbConn, os.Stdout)
 }
 
-func (cmd ObjectCountCommand) execute(dbConn *db.DBConn, outputWriter io.Writer) error {
-	err := dbConn.Connect()
+func (cmd ObjectCountCommand) execute(dbConnector db.DBConnector, outputWriter io.Writer) error {
+	err := dbConnector.Connect()
 	if err != nil {
 		return utils.DatabaseConnectionError{Parent: err}
 	}
-	defer dbConn.Close()
+	defer dbConnector.Close()
 
 	var count string
-	err = dbConn.Conn.QueryRow(aoCoTableQueryCount).Scan(&count)
+	connection := dbConnector.GetConn()
+	err = connection.QueryRow(aoCoTableQueryCount).Scan(&count)
 	if err != nil {
 		return err
 	}
 	fmt.Fprintf(outputWriter, "Number of AO objects - %v\n", count)
 
-	err = dbConn.Conn.QueryRow(heapTableQueryCount).Scan(&count)
+	err = connection.QueryRow(heapTableQueryCount).Scan(&count)
 	if err != nil {
 		return err
 	}

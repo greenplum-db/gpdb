@@ -17,6 +17,7 @@ var _ = Describe("version command", func() {
 		commandPathWithVersion, err := Build("gp_upgrade", "-ldflags", "-X gp_upgrade/commands.GpdbVersion="+fake_version)
 		Expect(err).NotTo(HaveOccurred())
 
+		// can't use the runCommand() integration helper function because we calculated a separate path
 		cmd := exec.Command(commandPathWithVersion, "version")
 		session, err := Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())

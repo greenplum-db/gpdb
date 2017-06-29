@@ -37,16 +37,16 @@ func (cmd CheckCommand) Execute([]string) error {
 	return cmd.execute(dbConn, config.NewWriter())
 }
 
-func (cmd CheckCommand) execute(dbConn *db.DBConn, writer config.Store) error {
+func (cmd CheckCommand) execute(dbConnector db.DBConnector, writer config.Store) error {
 
-	err := dbConn.Connect()
+	err := dbConnector.Connect()
 	if err != nil {
 		return utils.DatabaseConnectionError{Parent: err}
 	}
 
-	defer dbConn.Close()
+	defer dbConnector.Close()
 
-	rows, err := dbConn.Conn.Query(`select dbid, content, role, preferred_role,
+	rows, err := dbConnector.GetConn().Query(`select dbid, content, role, preferred_role,
 	mode, status, port, hostname, address, replication_port, san_mounts, fsefsoid, fsedbid, fselocation
 	from gp_segment_configuration, pg_filespace_entry
 	where fsedbid = dbid`)
