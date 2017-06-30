@@ -11,10 +11,10 @@
       as EUC (Extended UNIX Code), UTF-8, and Mule internal code. The server-side character set
       is defined during database initialization, usually UTF-8 is used. Clients can use all supported
       character sets transparently, but a few are not supported for use within the server as a
-      server-side encoding. When loading or inserting data into Greenplum Database, the DBMS will
-      transparently transform the data from the specified client encoding into the server encoding.
-      When sending data back to the client, the data is transformed again from the server character
-      set into the specified client encoding.</p>
+      server-side encoding. When loading or inserting data into Greenplum Database, Greenplum
+      transparently converts the data from the specified client encoding into the server encoding.
+      When sending data back to the client, Greenplum converts the data from the server
+      character encoding into the specified client encoding.</p>
     <p>Data files must be in a character encoding recognized by Greenplum Database.
         <ph>See the <i>Greenplum Database Reference Guide</i> for the supported
         character sets. </ph>Data files that contain invalid or unsupported encoding sequences
@@ -23,14 +23,13 @@
         <codeph>dos2unix</codeph> system command to remove any Windows-only characters before
       loading into Greenplum Database.</note>
   </body>
-  <topic xml:lang="en">
-    <title>Changing the client-side character encoding</title>
+  <topic id="topic103" xml:lang="en">
+    <title>Changing the Client-Side Character Encoding</title>
     <body>
-      <p>The client-side character encoding can be changed on the fly:</p>
-      <p>
-        <codeblock>SET client_encoding TO 'latin1';
+      <p>The client-side character encoding can be changed for a session by setting the
+      server configuration paramter <codeph>client_encoding</codeph></p>
+      <codeblock>SET client_encoding TO 'latin1';
 </codeblock>
-      </p>
     </body>
   </topic>
 </topic>
