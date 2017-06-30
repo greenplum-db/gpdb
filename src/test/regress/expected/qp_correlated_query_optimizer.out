@@ -527,7 +527,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C
                                                            Filter: qp_correlated_query.c.j = $0
                                                            ->  Materialize  (cost=0.00..862.00 rows=6 width=4)
                                                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..862.00 rows=6 width=4)
-                                                                       ->  Hash EXISTS Join  (cost=0.00..862.00 rows=2 width=4)
+                                                                       ->  Hash Semi Join  (cost=0.00..862.00 rows=2 width=4)
                                                                              Hash Cond: qp_correlated_query.c.i = qp_correlated_query.b.i AND qp_correlated_query.c.i = qp_correlated_query.b.i
                                                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=8)
                                                                              ->  Hash  (cost=431.00..431.00 rows=2 width=4)
@@ -561,7 +561,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
          ->  Limit  (cost=0.00..1358457987.42 rows=4 width=12)
                ->  Sort  (cost=0.00..1358457987.42 rows=90 width=12)
                      Sort Key: qp_correlated_query.a.i, b.i, qp_correlated_query.c.j
-                     ->  Hash EXISTS Join  (cost=0.00..1358457987.38 rows=90 width=12)
+                     ->  Hash Semi Join  (cost=0.00..1358457987.38 rows=90 width=12)
                            Hash Cond: qp_correlated_query.a.j = qp_correlated_query.c.j
                            ->  Nested Loop  (cost=0.00..1356692610.50 rows=90 width=16)
                                  Join Filter: true
@@ -576,7 +576,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C wh
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                            ->  Hash  (cost=1765376.85..1765376.85 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1765376.85 rows=9 width=4)
-                                       ->  Nested Loop Left Anti Semi Join  (cost=0.00..1765376.85 rows=3 width=4)
+                                       ->  Nested Loop Anti Join  (cost=0.00..1765376.85 rows=3 width=4)
                                              Join Filter: true
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                                              ->  Materialize  (cost=0.00..862.00 rows=2 width=1)
@@ -792,7 +792,7 @@ explain select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C wh
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                            ->  Materialize  (cost=0.00..1765376.85 rows=9 width=4)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1765376.85 rows=9 width=4)
-                                       ->  Nested Loop Left Anti Semi Join  (cost=0.00..1765376.85 rows=3 width=4)
+                                       ->  Nested Loop Anti Join  (cost=0.00..1765376.85 rows=3 width=4)
                                              Join Filter: true
                                              ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
                                              ->  Materialize  (cost=0.00..862.00 rows=2 width=1)
@@ -1123,7 +1123,7 @@ explain select C.j from C where not exists (select max(B.i) from B  where C.i = 
    Merge Key: c.j
    ->  Sort  (cost=0.00..862.00 rows=2 width=4)
          Sort Key: c.j
-         ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=2 width=4)
+         ->  Hash Anti Join  (cost=0.00..862.00 rows=2 width=4)
                Hash Cond: c.i = b.i
                ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=8)
                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
@@ -1183,6 +1183,7 @@ select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offs
  889
 (9 rows)
 
+-- GPDB_90_MERGE_FIXME: Pull up nested sublinks.
 explain select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
                                                        QUERY PLAN                                                       
 ------------------------------------------------------------------------------------------------------------------------
@@ -1190,7 +1191,7 @@ explain select C.j from C where not exists (select rank() over (order by B.i) fr
    Merge Key: c.j
    ->  Sort  (cost=0.00..862.00 rows=2 width=4)
          Sort Key: c.j
-         ->  Hash Left Anti Semi Join  (cost=0.00..862.00 rows=2 width=4)
+         ->  Hash Anti Join  (cost=0.00..862.00 rows=2 width=4)
                Hash Cond: c.i = b.i
                ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=8)
                ->  Hash  (cost=431.00..431.00 rows=6 width=4)

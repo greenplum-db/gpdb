@@ -214,6 +214,7 @@ explain select C.j from C where not exists (select max(B.i) from B  where C.i = 
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
+-- GPDB_90_MERGE_FIXME: Pull up nested sublinks.
 explain select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
 select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
 

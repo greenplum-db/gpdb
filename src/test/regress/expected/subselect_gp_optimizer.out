@@ -1392,7 +1392,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
          Merge Key: subselect_gp.subselect_tbl.f1
          ->  Sort  (cost=0.00..862.00 rows=1 width=4)
                Sort Key: subselect_gp.subselect_tbl.f1
-               ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=4)
+               ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=4)
                      Hash Cond: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2
                      ->  Table Scan on subselect_tbl  (cost=0.00..431.00 rows=1 width=4)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
@@ -1421,7 +1421,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Uncorrelated Field" FROM SUBSELECT_TBL
                                  Group By: subselect_gp.subselect_tbl.f2
                                  ->  Sort  (cost=0.00..862.00 rows=3 width=4)
                                        Sort Key: subselect_gp.subselect_tbl.f2
-                                       ->  Hash EXISTS Join  (cost=0.00..862.00 rows=3 width=4)
+                                       ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=4)
                                              Hash Cond: subselect_gp.subselect_tbl.f2 = subselect_gp.subselect_tbl.f1
                                              ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
                                                    Hash Key: subselect_gp.subselect_tbl.f2
@@ -1465,7 +1465,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
          Merge Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f2
          ->  Sort  (cost=0.00..862.00 rows=1 width=8)
                Sort Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f2
-               ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=8)
+               ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=8)
                      Hash Cond: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f1 AND subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2
                      ->  Table Scan on subselect_tbl  (cost=0.00..431.00 rows=1 width=8)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=8)
@@ -1485,7 +1485,7 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
          Merge Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f3
          ->  Sort  (cost=0.00..862.00 rows=1 width=12)
                Sort Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f3
-               ->  Hash EXISTS Join  (cost=0.00..862.00 rows=1 width=12)
+               ->  Hash Semi Join  (cost=0.00..862.00 rows=3 width=12)
                      Hash Cond: subselect_gp.subselect_tbl.f2::double precision = subselect_gp.subselect_tbl.f3 AND subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2
                      ->  Table Scan on subselect_tbl  (cost=0.00..431.00 rows=1 width=16)
                      ->  Hash  (cost=431.00..431.00 rows=1 width=12)
@@ -1506,12 +1506,12 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
    Merge Key: upper.f1, upper.f3
    ->  Sort  (cost=2.18..2.19 rows=2 width=12)
          Sort Key: upper.f1, upper.f3
-         ->  Nested Loop EXISTS Join  (cost=1.06..2.15 rows=2 width=12)
+         ->  Nested Loop Semi Join  (cost=3.16..6.90 rows=2 width=12)
                Join Filter: (upper.f1 + subselect_tbl.f2)::double precision = upper.f3
-               ->  Seq Scan on subselect_tbl upper  (cost=0.00..1.01 rows=1 width=12)
-               ->  Materialize  (cost=1.06..1.09 rows=1 width=12)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.05 rows=1 width=12)
-                           ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
+               ->  Seq Scan on subselect_tbl upper  (cost=0.00..3.08 rows=3 width=12)
+               ->  Materialize  (cost=3.16..3.19 rows=1 width=12)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.16 rows=1 width=12)
+                           ->  Seq Scan on subselect_tbl  (cost=0.00..3.12 rows=1 width=12)
                                  Filter: f2 = f3::integer
  Settings:  optimizer=on
  Optimizer status: legacy query optimizer
@@ -1527,11 +1527,11 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
    Merge Key: subselect_gp.subselect_tbl.f1
    ->  Sort  (cost=2.13..2.14 rows=2 width=4)
          Sort Key: subselect_gp.subselect_tbl.f1
-         ->  Hash EXISTS Join  (cost=1.04..2.10 rows=2 width=4)
+         ->  Hash Semi Join  (cost=3.33..6.49 rows=2 width=4)
                Hash Cond: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2 AND subselect_gp.subselect_tbl.f2 = subselect_gp.subselect_tbl.f3::integer
-               ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=8)
-               ->  Hash  (cost=1.03..1.03 rows=1 width=12)
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=12)
+               ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=8)
+               ->  Hash  (cost=3.22..3.22 rows=3 width=12)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.22 rows=3 width=12)
                            Hash Key: subselect_gp.subselect_tbl.f2
                            ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
                                  Filter: f3 IS NOT NULL
