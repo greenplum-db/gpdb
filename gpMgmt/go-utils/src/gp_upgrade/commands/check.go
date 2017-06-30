@@ -13,22 +13,22 @@ import (
 )
 
 type CheckCommand struct {
-	Object_count ObjectCountCommand  `command:"object-count" alias:"oc" description:"count database objects and numeric objects"`
-	GPDB_version CheckVersionCommand `command:"version" alias:"ver" description:"validate current version is upgradable"`
+	ObjectCount ObjectCountCommand  `command:"object-count" alias:"oc" description:"count database objects and numeric objects"`
+	GPDBVersion CheckVersionCommand `command:"version" alias:"ver" description:"validate current version is upgradable"`
 
-	Master_host string `long:"master-host" required:"no" description:"Domain name or IP of host"`
-	Master_port int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
+	MasterHost string `long:"master-host" required:"no" description:"Domain name or IP of host"`
+	MasterPort int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
 }
 
 func (cmd CheckCommand) Execute([]string) error {
 	// to work around a bug in go-flags, where an attribute is required in both parent and child command,
 	// we make that attribute optional in the command struct used by go-flags
 	// but enforce the requirement in our code here.
-	if cmd.Master_host == "" {
+	if cmd.MasterHost == "" {
 		return errors.New("the required flag '--master-host' was not specified")
 	}
 
-	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, "template1")
+	dbConn := db.NewDBConn(cmd.MasterHost, cmd.MasterPort, "template1")
 	return cmd.execute(dbConn, config.NewWriter())
 }
 

@@ -9,8 +9,6 @@ import (
 	"gp_upgrade/config"
 	"io/ioutil"
 	"os"
-	"path"
-	"runtime"
 
 	"gp_upgrade/utils"
 
@@ -24,21 +22,17 @@ import (
 var _ = Describe("check tests", func() {
 
 	var (
-		subject       CheckCommand
-		save_home_dir string
-		fixture_path  string
+		subject     CheckCommand
+		saveHomeDir string
 	)
 
 	BeforeEach(func() {
-		_, this_file_path, _, _ := runtime.Caller(0)
-		fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
-
-		save_home_dir = test_utils.ResetTempHomeDir()
+		saveHomeDir = test_utils.ResetTempHomeDir()
 		subject = CheckCommand{}
 	})
 
 	AfterEach(func() {
-		os.Setenv("HOME", save_home_dir)
+		os.Setenv("HOME", saveHomeDir)
 	})
 
 	Describe("check", func() {
@@ -62,6 +56,13 @@ var _ = Describe("check tests", func() {
 		})
 
 		Describe("errors", func() {
+			Describe("when the required flag master-host is not specified", func() {
+
+				It("returns an error", func() {
+					err := subject.Execute([]string{})
+					Expect(err).To(HaveOccurred())
+				})
+			})
 			Describe("when the query fails on AO table count", func() {
 
 				It("returns an error", func() {
@@ -89,7 +90,7 @@ var _ = Describe("check tests", func() {
 					setupSegmentConfigInDB(mock)
 					err := os.MkdirAll(config.GetConfigDir(), 0500)
 					test_utils.Check("cannot chmod: ", err)
-					subject.Master_host = "localhost"
+					subject.MasterHost = "localhost"
 
 					err = subject.execute(dbConnector, config.NewWriter())
 
@@ -105,7 +106,7 @@ var _ = Describe("check tests", func() {
 					setupSegmentConfigInDB(mock)
 					setupSegmentConfigInDB(mock)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
-					subject.Master_host = "localhost"
+					subject.MasterHost = "localhost"
 
 					fake := FakeWriter{}
 					err := subject.execute(dbConnector, fake)

@@ -26,9 +26,9 @@ func (cmd MonitorCommand) Execute([]string) error {
 	if err != nil {
 		return err
 	}
-	return cmd.execute(connector, os.Stdout)
+	return cmd.execute(connector, &shell_parsers.RealShellParser{}, os.Stdout)
 }
-func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, writer io.Writer) error {
+func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, shellParser shell_parsers.ShellParser, writer io.Writer) error {
 	targetPort, err := readConfigForSegmentPort(cmd.SegmentId)
 	if err != nil {
 		return err
@@ -45,8 +45,8 @@ func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, writer io.W
 	}
 
 	status := "active"
-	shellParser := shell_parsers.NewShellParser(output)
-	if !shellParser.IsPgUpgradeRunning(targetPort) {
+
+	if !shellParser.IsPgUpgradeRunning(targetPort, output) {
 		status = "inactive"
 	}
 	fmt.Fprintf(writer, `pg_upgrade state - %s {"segment_id":%d,"host":"%s"}`, status, cmd.SegmentId, cmd.Host)

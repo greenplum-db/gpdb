@@ -2,17 +2,16 @@ package commands
 
 import (
 	"os"
-	"path"
-	"runtime"
-
-	. "gp_upgrade/test_utils"
 
 	"gp_upgrade/config"
+	"gp_upgrade/shell_parsers"
 	"io/ioutil"
 
 	"gp_upgrade/ssh_client"
 
 	"fmt"
+
+	"gp_upgrade/test_utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,21 +29,19 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 var _ = Describe("monitor", func() {
 
 	var (
-		save_home_dir    string
-		private_key_path string
-		fixture_path     string
-		subject          MonitorCommand
-		buffer           *gbytes.Buffer
+		save_home_dir string
+		subject       MonitorCommand
+		buffer        *gbytes.Buffer
+		shellParser   *shell_parsers.RealShellParser
 	)
 
 	BeforeEach(func() {
-		_, this_file_path, _, _ := runtime.Caller(0)
-		private_key_path = path.Join(path.Dir(this_file_path), "sshd/private_key.pem")
-		fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
-		save_home_dir = ResetTempHomeDir()
-		WriteSampleConfig()
+		save_home_dir = test_utils.ResetTempHomeDir()
+		test_utils.WriteSampleConfig()
 
 		subject = MonitorCommand{SegmentId: 7}
+
+		shellParser = &shell_parsers.RealShellParser{}
 
 		buffer = gbytes.NewBuffer()
 	})
@@ -57,17 +54,25 @@ var _ = Describe("monitor", func() {
 			subject.User = ""
 			fake := &FailingSshConnecter{}
 
-			subject.execute(fake, buffer)
+			subject.execute(fake, shellParser, buffer)
 
 			Expect(fake.user).ToNot(Equal(""))
 		})
-		It("parses ps output correctly", func() {
+		It("parses 'active' status correctly", func() {
 			fake := &SucceedingSshConnector{}
 
-			err := subject.execute(fake, buffer)
+			err := subject.execute(fake, shellParser, buffer)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(buffer.Contents())).To(ContainSubstring(fmt.Sprintf(`pg_upgrade state - active`)))
+		})
+		It("parses 'inactive' status correctly", func() {
+			fake := &SucceedingSshConnector{}
+			inactiveParser := &InactiveShellParser{}
+
+			err := subject.execute(fake, inactiveParser, buffer)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(buffer.Contents())).To(ContainSubstring("inactive"))
 		})
 
 	})
@@ -77,14 +82,14 @@ var _ = Describe("monitor", func() {
 			fake := &FailingSshConnecter{}
 			os.RemoveAll(config.GetConfigFilePath())
 
-			err := subject.execute(fake, buffer)
+			err := subject.execute(fake, shellParser, buffer)
 
 			Expect(err).To(HaveOccurred())
 		})
 		It("returns an error when the configuration has no entry for the segment-id specified by user", func() {
 			fake := &FailingSshConnecter{}
 			ioutil.WriteFile(config.GetConfigFilePath(), []byte("[]"), 0600)
-			err := subject.execute(fake, buffer)
+			err := subject.execute(fake, shellParser, buffer)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("not known in this cluster configuration"))
@@ -93,7 +98,7 @@ var _ = Describe("monitor", func() {
 			It("returns an error", func() {
 				fake := &FailingSshConnecter{}
 
-				err := subject.execute(fake, buffer)
+				err := subject.execute(fake, shellParser, buffer)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -132,4 +137,11 @@ func (sshConnector SucceedingSshConnector) Connect(Host string, Port int, user s
 }
 func (sshConnector SucceedingSshConnector) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
 	return GREP_PG_UPGRADE, nil
+}
+
+type InactiveShellParser struct{}
+
+func (InactiveShellParser) SetOutput(_ string) {}
+func (InactiveShellParser) IsPgUpgradeRunning(_ int, _ string) bool {
+	return false
 }

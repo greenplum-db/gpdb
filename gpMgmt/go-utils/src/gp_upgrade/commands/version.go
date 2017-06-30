@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// This should have a value set at build time.
+// This global var GpdbVersion should have a value set at build time.
 // see Makefile for -ldflags "-X etc"
 var GpdbVersion = ""
 

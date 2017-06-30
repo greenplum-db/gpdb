@@ -16,8 +16,8 @@ var _ = Describe("Version", func() {
 
 		Context("when global var GpdbVersion is set to something", func() {
 			It("returns what it's set to", func() {
-				GpdbVersion = "SomEthing"
-				Expect(versionString()).To(Equal("gp_upgrade version SomEthing"))
+				GpdbVersion = "Something"
+				Expect(versionString()).To(Equal("gp_upgrade version Something"))
 			})
 		})
 	})

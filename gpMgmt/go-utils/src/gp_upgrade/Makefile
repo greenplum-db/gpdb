@@ -34,6 +34,9 @@ integration: dependencies sshd_build unit
 
 test : format unit sshd_build integration
 
+push : format
+		git pull -r && make test && git push
+
 build : dependencies
 		go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GOPATH)/bin/$(MODULE_NAME)
 

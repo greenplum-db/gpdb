@@ -5,23 +5,21 @@ import (
 	"strconv"
 )
 
-type ShellParser struct {
-	Output string
+type ShellParser interface {
+	IsPgUpgradeRunning(int, string) bool
 }
+
+type RealShellParser struct{}
 
 var segmentPortRegexp = regexp.MustCompile(`--old-port (\d+)`)
 
-func NewShellParser(output string) *ShellParser {
-	return &ShellParser{Output: output}
-}
-
-func (parser ShellParser) IsPgUpgradeRunning(targetPort int) bool {
-	if len(parser.Output) == 0 {
+func (parser RealShellParser) IsPgUpgradeRunning(targetPort int, output string) bool {
+	if len(output) == 0 {
 		return false
 	}
 
 	targetString := strconv.Itoa(targetPort)
-	segmentPorts := segmentPortRegexp.FindStringSubmatch(parser.Output)
+	segmentPorts := segmentPortRegexp.FindStringSubmatch(output)
 
 	var result bool = false
 	for i := 0; i < len(segmentPorts); i++ {

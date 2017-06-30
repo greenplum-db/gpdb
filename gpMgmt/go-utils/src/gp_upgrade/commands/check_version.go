@@ -19,8 +19,8 @@ import (
 )
 
 type CheckVersionCommand struct {
-	Master_host string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
-	Master_port int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
+	MasterHost string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
+	MasterPort int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
 }
 
 const (
@@ -28,7 +28,7 @@ const (
 )
 
 func (cmd CheckVersionCommand) Execute([]string) error {
-	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, "template1")
+	dbConn := db.NewDBConn(cmd.MasterHost, cmd.MasterPort, "template1")
 	return cmd.execute(dbConn, os.Stdout)
 }
 
@@ -50,13 +50,13 @@ func (cmd CheckVersionCommand) execute(dbConnector db.DBConnector, outputWriter 
 
 	re := regexp.MustCompile("Greenplum Database (.*) build")
 
-	version_string := re.FindStringSubmatch(row)[1]
-	version_object := version.MustNewVersionFromString(version_string)
+	versionString := re.FindStringSubmatch(row)[1]
+	versionObject := version.MustNewVersionFromString(versionString)
 
-	if version_object.IsGt(version.MustNewVersionFromString(MINIMUM_VERSION)) {
-		fmt.Fprintf(outputWriter, "gp_upgrade: Version Compatibility Check [OK]\n")
+	if versionObject.IsGt(version.MustNewVersionFromString(MINIMUM_VERSION)) {
+		fmt.Fprint(outputWriter, "gp_upgrade: Version Compatibility Check [OK]\n")
 	} else {
-		fmt.Fprintf(outputWriter, "gp_upgrade: Version Compatibility Check [Failed]\n")
+		fmt.Fprint(outputWriter, "gp_upgrade: Version Compatibility Check [Failed]\n")
 	}
 	return err
 }
