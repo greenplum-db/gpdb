@@ -392,12 +392,6 @@ void process_line_in_hadoop_cluster_info(apr_pool_t* tmp_pool, apr_hash_t* htab,
 		*location = 0; // remove comments from the line
 	}
 
-	if (!line)
-	{
-		gpmon_warningx(FLINE, 0, "Line in devices file is null after removing comments, skipping");
-		return;
-	}
-
 	// we do these in reverse order so inserting null chars does not prevent finding other tokens
 	if (find_token_in_config_string(line, &category, "Categories"))
 	{

@@ -2496,8 +2496,6 @@ cleanup:
 		free(full_path);
 	if (dest_path)
 		free(dest_path);
-	if (fp)
-		fclose(fp);
 	if (dird != DDP_INVALID_DESCRIPTOR)
 	{
 		ddp_close_dir(dird);
