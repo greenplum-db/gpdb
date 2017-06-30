@@ -14,7 +14,8 @@ import (
 
 	"gp_upgrade/utils"
 
-	"github.com/jmoiron/sqlx"
+	"gp_upgrade/db"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
@@ -43,7 +44,7 @@ var _ = Describe("check tests", func() {
 	Describe("check", func() {
 		Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 			It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
-				dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+				dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 				setupSegmentConfigInDB(mock)
 				err := subject.execute(dbConnector, config.NewWriter())
 
@@ -55,7 +56,7 @@ var _ = Describe("check tests", func() {
 				resultData := make([]map[string]interface{}, 0)
 				expectedData := make([]map[string]interface{}, 0)
 				json.Unmarshal(content, resultData)
-				json.Unmarshal([]byte(expected_check_configuration_output), expectedData)
+				json.Unmarshal([]byte(EXPECTED_CHECK_CONFIGURATION_OUTPUT), expectedData)
 				Expect(expectedData).To(Equal(resultData))
 			})
 		})
@@ -64,7 +65,7 @@ var _ = Describe("check tests", func() {
 			Describe("when the query fails on AO table count", func() {
 
 				It("returns an error", func() {
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
 
 					err := subject.execute(dbConnector, config.NewWriter())
@@ -84,7 +85,7 @@ var _ = Describe("check tests", func() {
 			})
 			Describe("when the home directory is not writable", func() {
 				It("returns an error", func() {
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 					setupSegmentConfigInDB(mock)
 					err := os.MkdirAll(config.GetConfigDir(), 0500)
 					test_utils.Check("cannot chmod: ", err)
@@ -100,7 +101,7 @@ var _ = Describe("check tests", func() {
 			Describe("when db result cannot be parsed", func() {
 				It("returns an error", func() {
 
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 					setupSegmentConfigInDB(mock)
 					setupSegmentConfigInDB(mock)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
@@ -117,26 +118,16 @@ var _ = Describe("check tests", func() {
 	})
 })
 
-type FailingDbConnector struct{}
-
-func (failingdbconn FailingDbConnector) Connect() error {
-	return errors.New("Invalid DB Connection")
-}
-func (failingdbconn FailingDbConnector) Close() {
-}
-func (failingdbconn FailingDbConnector) GetConn() *sqlx.DB {
-	return nil
-}
-
 type FakeWriter struct{}
 
-func (writer FakeWriter) Load(rows utils.RowsWrapper) error {
+func (FakeWriter) Load(rows utils.RowsWrapper) error {
 	return errors.New("I always fail")
 }
 
-func (writer FakeWriter) Write() error {
+func (FakeWriter) Write() error {
 	return errors.New("I always fail")
 }
+
 func setupSegmentConfigInDB(mock sqlmock.Sqlmock) {
 	header := []string{"dbid", "content", "role", "preferred_role", "mode", "status", "port",
 		"hostname", "address", "replication_port", "san_mounts",
@@ -151,7 +142,7 @@ func setupSegmentConfigInDB(mock sqlmock.Sqlmock) {
 }
 
 const (
-	expected_check_configuration_output = `[
+	EXPECTED_CHECK_CONFIGURATION_OUTPUT = `[
 	{
 	  "address": "office-5-231.pa.pivotal.io",
 	  "content": -1,

@@ -111,6 +111,8 @@ make integration
 ```
 should only run the integration tests
 
+In order to run the integration tests, the greenplum database must be up and
+running.
 We typically integration test the "happy path" expected behavior of the code
 when writing new features. We allow the unit tests to cover error messaging
 and other edge cases. We are not strict about outside-in (integration-first)

@@ -20,10 +20,10 @@ type DBDriver interface {
 	Connect(driverName string, dataSourceName string) (*sqlx.DB, error)
 }
 
-type GPDBDriver struct {
+type RealGPDBDriver struct {
 }
 
-func (driver GPDBDriver) Connect(driverName string, dataSourceName string) (*sqlx.DB, error) {
+func (driver RealGPDBDriver) Connect(driverName string, dataSourceName string) (*sqlx.DB, error) {
 	return sqlx.Connect(driverName, dataSourceName)
 }
 
@@ -34,18 +34,15 @@ type DBConnector interface {
 }
 
 type GPDBConnector struct {
-	Conn       *sqlx.DB
-	DriverName string // defaults to "postgres"
-	Driver     DBDriver
-	User       string
-	DBName     string
-	Host       string
-	Port       int
-	Tx         *sqlx.Tx
-	DataSource string // optional fully-described source string, particularly good for integration testing
+	conn   *sqlx.DB
+	user   string
+	dbName string
+	host   string
+	port   int
+	driver DBDriver // used for testing
 }
 
-func NewDBConn(masterHost string, masterPort int, dbname string, driverName string, configPath string) DBConnector {
+func NewDBConn(masterHost string, masterPort int, dbname string) DBConnector {
 	currentUser, _, currentHost := utils.GetUserAndHostInfo()
 	username := utils.TryEnv("PGUSER", currentUser)
 	if dbname == "" {
@@ -58,20 +55,13 @@ func NewDBConn(masterHost string, masterPort int, dbname string, driverName stri
 		masterPort, _ = strconv.Atoi(utils.TryEnv("PGPORT", "15432"))
 	}
 
-	if driverName == "" {
-		driverName = "postgres"
-	}
-
 	return &GPDBConnector{
-		Conn:       nil,
-		DriverName: driverName,
-		Driver:     GPDBDriver{},
-		User:       username,
-		DBName:     dbname,
-		Host:       masterHost,
-		Port:       masterPort,
-		Tx:         nil,
-		DataSource: configPath,
+		conn:   nil,
+		driver: RealGPDBDriver{},
+		user:   username,
+		dbName: dbname,
+		host:   masterHost,
+		port:   masterPort,
 	}
 }
 
@@ -83,27 +73,23 @@ func NewDBConn(masterHost string, masterPort int, dbname string, driverName stri
  */
 
 func (dbconn *GPDBConnector) Connect() error {
-	dbname := escapeDBName(dbconn.DBName)
-
-	connStr := dbconn.DataSource
-	if dbconn.DataSource == "" {
-		connStr = fmt.Sprintf(`user=%s dbname='%s' host=%s port=%d sslmode=disable`,
-			dbconn.User, dbname, dbconn.Host, dbconn.Port)
-	}
+	dbname := escapeDBName(dbconn.dbName)
+	connStr := fmt.Sprintf(`user=%s dbname='%s' host=%s port=%d sslmode=disable`,
+		dbconn.user, dbname, dbconn.host, dbconn.port)
 
 	var err error
-	dbconn.Conn, err = dbconn.Driver.Connect(dbconn.DriverName, connStr)
+	dbconn.conn, err = dbconn.driver.Connect("postgres", connStr)
 	return err
 }
 
 func (dbconn *GPDBConnector) Close() {
-	if dbconn.Conn != nil {
-		dbconn.Conn.Close()
+	if dbconn.conn != nil {
+		dbconn.conn.Close()
 	}
 }
 
 func (dbconn *GPDBConnector) GetConn() *sqlx.DB {
-	return dbconn.Conn
+	return dbconn.conn
 }
 
 /*

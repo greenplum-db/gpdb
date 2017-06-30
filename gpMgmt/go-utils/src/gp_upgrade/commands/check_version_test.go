@@ -2,11 +2,11 @@ package commands
 
 import (
 	"database/sql/driver"
-	"gp_upgrade/test_utils"
 
 	"errors"
 
-	"github.com/jmoiron/sqlx"
+	"gp_upgrade/db"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -27,7 +27,7 @@ var _ = Describe("version tests", func() {
 				header := []string{"version"}
 				versionRow := []driver.Value{"PostgreSQL 8.3.23 (Greenplum Database 5.0.0-alpha.4+dev.105.g342415a7dc build dev) on x86_64-apple-darwin16.5.0, compiled by GCC Apple LLVM version 8.1.0 (clang-802.0.42) compiled on Jun  8 2017 17:30:28"}
 
-				dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+				dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 
 				fakeResult := sqlmock.NewRows(header).AddRow(versionRow...)
 				mock.ExpectQuery("SELECT version()").WillReturnRows(fakeResult)
@@ -48,7 +48,7 @@ var _ = Describe("version tests", func() {
 					header := []string{"version"}
 					versionRow := []driver.Value{"PostgreSQL 8.3.23 (Greenplum Database 4.0.0.15 build dev) on x86_64-apple-darwin16.5.0, compiled by GCC Apple LLVM version 8.1.0 (clang-802.0.42) compiled on Jun  8 2017 17:30:28"}
 
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 
 					fakeResult := sqlmock.NewRows(header).AddRow(versionRow...)
 					mock.ExpectQuery("SELECT version()").WillReturnRows(fakeResult)
@@ -64,7 +64,7 @@ var _ = Describe("version tests", func() {
 			Describe("when the query fails", func() {
 
 				It("returns an error", func() {
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 
 					mock.ExpectQuery("SELECT version()").WillReturnError(errors.New("the query has failed"))
 					err := subject.execute(dbConnector, nil)
@@ -75,7 +75,7 @@ var _ = Describe("version tests", func() {
 			})
 			Describe("when the db dbConn fails", func() {
 				It("returns an error", func() {
-					fakeDbConnector := FakeCheckVersionDBConnector{}
+					fakeDbConnector := FailingDbConnector{}
 					err := subject.execute(fakeDbConnector, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -85,14 +85,3 @@ var _ = Describe("version tests", func() {
 		})
 	})
 })
-
-type FakeCheckVersionDBConnector struct{}
-
-func (fakedbconn FakeCheckVersionDBConnector) Connect() error {
-	return errors.New("Invalid DB Connection")
-}
-func (fakedbconn FakeCheckVersionDBConnector) Close() {
-}
-func (fakedbconn FakeCheckVersionDBConnector) GetConn() *sqlx.DB {
-	return nil
-}

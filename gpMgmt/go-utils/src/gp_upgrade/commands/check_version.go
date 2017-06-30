@@ -19,9 +19,8 @@ import (
 )
 
 type CheckVersionCommand struct {
-	Master_host   string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
-	Master_port   int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
-	Database_name string `long:"database-name" default:"template1" hidden:"true"`
+	Master_host string `long:"master-host" required:"yes" description:"Domain name or IP of host"`
+	Master_port int    `long:"master-port" required:"no" default:"15432" description:"Port for master database"`
 }
 
 const (
@@ -29,7 +28,7 @@ const (
 )
 
 func (cmd CheckVersionCommand) Execute([]string) error {
-	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, cmd.Database_name, "", "")
+	dbConn := db.NewDBConn(cmd.Master_host, cmd.Master_port, "template1")
 	return cmd.execute(dbConn, os.Stdout)
 }
 

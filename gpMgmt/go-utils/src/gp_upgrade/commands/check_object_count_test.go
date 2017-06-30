@@ -5,9 +5,8 @@ import (
 
 	"errors"
 
-	"gp_upgrade/test_utils"
+	"gp_upgrade/db"
 
-	"github.com/jmoiron/sqlx"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -26,7 +25,7 @@ var _ = Describe("object count tests", func() {
 				aoObjectCountRow := []driver.Value{5}
 				heapObjectCountRow := []driver.Value{10}
 
-				dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+				dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 
 				heapfakeResult := sqlmock.NewRows(header).AddRow(heapObjectCountRow...)
 				aofakeResult := sqlmock.NewRows(header).AddRow(aoObjectCountRow...)
@@ -50,7 +49,7 @@ var _ = Describe("object count tests", func() {
 
 				It("returns an error", func() {
 
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 
 					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnError(errors.New("the query for AO table count has failed"))
 					err := subject.execute(dbConnector, nil)
@@ -63,7 +62,7 @@ var _ = Describe("object count tests", func() {
 			Describe("when the query fails on heap-only table count", func() {
 
 				It("returns an error", func() {
-					dbConnector, mock := test_utils.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
 					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage NOT IN.*").WillReturnError(errors.New("the query for heap-only table count has failed"))
 					err := subject.execute(dbConnector, nil)
 
@@ -73,7 +72,7 @@ var _ = Describe("object count tests", func() {
 			})
 			Describe("when the db dbConn fails", func() {
 				It("returns an error", func() {
-					fakeDbConnector := FakeDbConnector{}
+					fakeDbConnector := FailingDbConnector{}
 					err := subject.execute(fakeDbConnector, nil)
 
 					Expect(err).To(HaveOccurred())
@@ -83,14 +82,3 @@ var _ = Describe("object count tests", func() {
 		})
 	})
 })
-
-type FakeDbConnector struct{}
-
-func (fakedbconn FakeDbConnector) Connect() error {
-	return errors.New("Invalid DB Connection")
-}
-func (fakedbconn FakeDbConnector) Close() {
-}
-func (fakedbconn FakeDbConnector) GetConn() *sqlx.DB {
-	return nil
-}
