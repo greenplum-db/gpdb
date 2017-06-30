@@ -76,8 +76,8 @@
       </p>
     </body>
   </topic>
-  <topic xml:lang="en">
-    <title>Making a Sequence the default value for a column</title>
+  <topic id="topic91" xml:lang="en">
+    <title>Making a Sequence the Default Value for a Column</title>
     <body>
       <p>A sequence can be used in the <codeph>CREATE TABLE</codeph> command (instead of the
           <codeph>SERIAL</codeph> or <codeph>BIGSERIAL</codeph> type):</p>
