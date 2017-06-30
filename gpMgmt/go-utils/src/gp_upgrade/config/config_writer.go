@@ -87,5 +87,6 @@ func translateColumnsIntoGenericStructure(rows utils.RowsWrapper) ([]map[string]
 		}
 		tableData = append(tableData, entry)
 	}
+
 	return tableData, nil
 }

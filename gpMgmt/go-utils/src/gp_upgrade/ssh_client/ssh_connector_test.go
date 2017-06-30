@@ -131,6 +131,18 @@ var _ = Describe("SshConnector", func() {
 				Expect(result).To(Equal("fake session output"))
 			})
 		})
+		Context("errors", func() {
+			It("returns an error when connect fails", func() {
+				subject.SshDialer = ThrowingDialer{}
+				_, err := subject.ConnectAndExecute("", -1, "", "")
+				Expect(err).To(HaveOccurred())
+			})
+			It("returns an error when Output has erroneous output", func() {
+				subject.SshDialer = GoodDialerBadOutput{}
+				_, err := subject.ConnectAndExecute("", 0, "", "")
+				Expect(err).To(HaveOccurred())
+			})
+		})
 	})
 
 })
@@ -169,6 +181,16 @@ func (fakeSession FakeSession) Output(string) ([]byte, error) {
 	return []byte("fake session output"), nil
 }
 
+type ErrorOutputSession struct{}
+
+func (errorOutputSession ErrorOutputSession) Close() error {
+	return nil
+}
+
+func (errorOutputSession ErrorOutputSession) Output(string) ([]byte, error) {
+	return nil, errors.New("test Output failure")
+}
+
 type FakeDialer struct{}
 
 func (FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
@@ -176,6 +198,18 @@ func (FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_clie
 	param_addr = addr
 	param_config = config
 	return &FakeSshClient{}, nil
+}
+
+type GoodDialerBadOutput struct{}
+
+func (GoodDialerBadOutput) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+	return &GoodClientBadSession{}, nil
+}
+
+type GoodClientBadSession struct{}
+
+func (GoodClientBadSession) NewSession() (ssh_client.SshSession, error) {
+	return &ErrorOutputSession{}, nil
 }
 
 type ThrowingKeyParser struct{}

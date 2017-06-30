@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"encoding/json"
 	"gp_upgrade/test_utils"
 	"os"
 
@@ -12,12 +13,26 @@ import (
 
 var _ = Describe("config reader", func() {
 
+	const (
+		// the output is pretty-printed, so match that format precisely
+		expected_json = `[
+{
+	"some": "json"
+}
+]`
+	)
+
 	var (
 		saved_old_home string
+		subject        config.Reader
+		json_structure []map[string]interface{}
 	)
 
 	BeforeEach(func() {
 		saved_old_home = test_utils.ResetTempHomeDir()
+		err := json.Unmarshal([]byte(expected_json), &json_structure)
+		Expect(err).NotTo(HaveOccurred())
+		subject = config.Reader{}
 	})
 
 	AfterEach(func() {
@@ -25,29 +40,16 @@ var _ = Describe("config reader", func() {
 	})
 
 	Describe("#Read", func() {
-		BeforeEach(func() {
-			test_utils.WriteSampleConfig()
-		})
 		It("reads a configuration", func() {
-			subject := config.Reader{}
+			test_utils.WriteSampleConfig()
 			err := subject.Read()
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(subject.GetPortForSegment(7)).ToNot(BeNil())
 		})
-		//Describe("error cases", func() {
-		//	It("returns an error when home directory is not writable", func() {
-		//		os.Chmod(test_utils.TempHomeDir, 0100)
-		//		subject := config.Writer{
-		//			TableJsonData: json_structure,
-		//			Formatter:     config.NewJsonFormatter(),
-		//			FileWriter:    config.NewRealFileWriter(),
-		//		}
-		//		err := subject.Write()
-		//
-		//		Expect(err).To(HaveOccurred())
-		//		Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("mkdir %v/.gp_upgrade: permission denied", test_utils.TempHomeDir)))
-		//	})
-		//})
+		It("returns an error if config cannot be read", func() {
+			err := subject.Read()
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })

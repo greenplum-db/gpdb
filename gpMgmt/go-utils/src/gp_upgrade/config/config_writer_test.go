@@ -28,18 +28,22 @@ var _ = Describe("configWriter", func() {
 		os.Setenv("HOME", saved_old_home)
 	})
 
-	Describe("#NewWriter", func() {
+	Describe("#Load", func() {
 		It("initializes a configuration", func() {
+			sampleCombinedRows := make([]interface{}, 2)
+			sampleCombinedRows[0] = "value1"
+			sampleCombinedRows[1] = []byte{35}
 			fakeRows := &test_utils.FakeRows{
-				FakeColumns: []string{"colname1"},
-				NumRows:     1,
-				SampleRow:   []string{"value1"},
+				FakeColumns:      []string{"colnameString", "colnameBytes"},
+				NumRows:          1,
+				SampleRowStrings: sampleCombinedRows,
 			}
 			err := subject.Load(fakeRows)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(subject.TableJsonData)).To(Equal(1))
-			Expect(subject.TableJsonData[0]["colname1"]).To(Equal("value1"))
+			Expect(subject.TableJsonData[0]["colnameString"]).To(Equal("value1"))
+			Expect(subject.TableJsonData[0]["colnameBytes"]).To(Equal("#"))
 		})
 		Describe("error cases", func() {
 			It("is returns an error if rows are empty", func() {
@@ -50,10 +54,14 @@ var _ = Describe("configWriter", func() {
 			})
 
 			It("returns an error if the given rows do not parse via Columns()", func() {
+				var sample []interface{}
+				sample = make([]interface{}, 1)
+
+				sample[0] = "value1"
 				fakeRows := &test_utils.FakeRows{
-					FakeColumns: []string{"colname1", "colname2"},
-					NumRows:     1,
-					SampleRow:   []string{"value1"},
+					FakeColumns:      []string{"colname1", "colname2"},
+					NumRows:          1,
+					SampleRowStrings: sample,
 				}
 				subject := config.NewWriter()
 				err := subject.Load(fakeRows)
