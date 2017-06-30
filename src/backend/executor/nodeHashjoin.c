@@ -40,6 +40,42 @@ static bool isNotDistinctJoin(List *qualList);
 static void ReleaseHashTable(HashJoinState *node);
 static bool isHashtableEmpty(HashJoinTable hashtable);
 
+static void
+SpillInMemoryBatch(HashJoinState *node)
+{
+	HashJoinTable hashtable = node->hj_HashTable;
+	HashJoinBatchData *fullbatch = hashtable->batches[hashtable->curbatch];
+	int			oldnbatch = hashtable->nbatch;
+	int			curbatch = hashtable->curbatch;
+	int			nbatch;
+	int			i;
+	long		ninmemory;
+	long		nfreed;
+	Size		spaceFreed = 0;
+
+	Assert(curbatch == 0);
+
+	Assert(hashtable->batches[curbatch]->innerside.workfile == NULL);
+
+	for (i = 0; i < hashtable->nbuckets; i++)
+	{
+		HashJoinTuple tuple;
+		tuple = hashtable->buckets[i];
+
+		while (tuple != NULL)
+		{
+			Size    spaceTuple;
+
+			ExecHashJoinSaveTuple(NULL, HJTUPLE_MINTUPLE(tuple),
+								  tuple->hashvalue,
+								  hashtable,
+								  &hashtable->batches[curbatch]->innerside,
+								  hashtable->bfCxt);
+			tuple = tuple->next;
+		}
+	}
+}
+
 /* ----------------------------------------------------------------
  *		ExecHashJoin
  *
@@ -800,6 +836,76 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 	return NULL;
 }
 
+static bool
+ExecHashJoinReloadHashTable(HashJoinState *hjstate)
+{
+	HashState  *hashState = (HashState *) innerPlanState(hjstate);
+	HashJoinTable hashtable = hjstate->hj_HashTable;
+	uint32		hashvalue;
+	int curbatch = hashtable->curbatch;
+	HashJoinBatchData *batch = hashtable->batches[curbatch];
+
+	/*
+	 * Reload the hash table with the new inner batch (which could be empty)
+	 */
+	ExecHashTableReset(hashState, hashtable);
+
+	if (batch->innerside.workfile != NULL)
+	{
+		/* Rewind batch file */
+		bool		result = ExecWorkFile_Rewind(batch->innerside.workfile);
+
+		if (!result)
+		{
+			ereport(ERROR, (errcode_for_file_access(),
+							errmsg("could not access temporary file")));
+		}
+
+		for (;;)
+		{
+			CHECK_FOR_INTERRUPTS();
+
+			if (QueryFinishPending)
+				return false;
+
+			TupleTableSlot *slot = ExecHashJoinGetSavedTuple(hjstate,
+											 &batch->innerside,
+											 &hashvalue,
+											 hjstate->hj_HashTupleSlot);
+			if (!slot)
+				break;
+
+			/*
+			 * NOTE: some tuples may be sent to future batches.  Also, it is
+			 * possible for hashtable->nbatch to be increased here!
+			 */
+			ExecHashTableInsert(hashState, hashtable, slot, hashvalue);
+			hashtable->totalTuples += 1;
+		}
+
+		/*
+		 * after we build the hash table, the inner batch file is no longer
+		 * needed
+		 */
+		if (hjstate->js.ps.instrument)
+		{
+			Assert(hashtable->stats);
+			hashtable->stats->batchstats[curbatch].innerfilesize =
+				ExecWorkFile_Tell64(hashtable->batches[curbatch]->innerside.workfile);
+		}
+
+		SIMPLE_FAULT_INJECTOR(WorkfileHashJoinFailure);
+
+		if (!hjstate->js.ps.delayEagerFree)
+		{
+			workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
+			batch->innerside.workfile = NULL;
+		}
+	}
+
+	return true;
+}
+
 /*
  * ExecHashJoinNewBatch
  *		switch to a new hashjoin batch
@@ -845,6 +951,14 @@ start_over:
 		batch->outerside.workfile = NULL;
 	}
 
+	/* For first time write, we need to spill batch 0 (in-memory batch) */
+	if (curbatch == 0 && !hjstate->js.ps.delayEagerFree &&
+			hjstate->hj_HashTable->batches != NULL &&
+			hjstate->hj_HashTable->batches[curbatch]->innerside.workfile == NULL)
+	{
+		SpillInMemoryBatch(hjstate);
+	}
+
 	/*
 	 * We can always skip over any batches that are completely empty on both
 	 * sides.  We can sometimes skip over batches that are empty on only one
@@ -881,11 +995,11 @@ start_over:
 			break;				/* must process due to rule 3 */
 		/* We can ignore this batch. */
 		/* Release associated temp files right away. */
-		if (batch->innerside.workfile != NULL)
+		if (batch->innerside.workfile != NULL && !hjstate->js.ps.delayEagerFree)
 		{
 			workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
+			batch->innerside.workfile = NULL;
 		}
-		batch->innerside.workfile = NULL;
 
 		if (batch->outerside.workfile != NULL)
 		{
@@ -905,61 +1019,7 @@ start_over:
 
 	batch = hashtable->batches[curbatch];
 
-	/*
-	 * Reload the hash table with the new inner batch (which could be empty)
-	 */
-	ExecHashTableReset(hashState, hashtable);
-
-	if (batch->innerside.workfile != NULL)
-	{
-		/* Rewind batch file */
-		bool		result = ExecWorkFile_Rewind(batch->innerside.workfile);
-
-		if (!result)
-		{
-			ereport(ERROR, (errcode_for_file_access(),
-							errmsg("could not access temporary file")));
-		}
-
-		for (;;)
-		{
-			CHECK_FOR_INTERRUPTS();
-
-			if (QueryFinishPending)
-				return nbatch;
-
-			slot = ExecHashJoinGetSavedTuple(hjstate,
-											 &batch->innerside,
-											 &hashvalue,
-											 hjstate->hj_HashTupleSlot);
-			if (!slot)
-				break;
-
-			/*
-			 * NOTE: some tuples may be sent to future batches.  Also, it is
-			 * possible for hashtable->nbatch to be increased here!
-			 */
-			ExecHashTableInsert(hashState, hashtable, slot, hashvalue);
-			hashtable->totalTuples += 1;
-		}
-
-		/*
-		 * after we build the hash table, the inner batch file is no longer
-		 * needed
-		 */
-		if (hjstate->js.ps.instrument)
-		{
-			Assert(hashtable->stats);
-			hashtable->stats->batchstats[curbatch].innerfilesize =
-				ExecWorkFile_Tell64(hashtable->batches[curbatch]->innerside.workfile);
-		}
-
-		SIMPLE_FAULT_INJECTOR(WorkfileHashJoinFailure);
-
-		workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
-		batch->innerside.workfile = NULL;
-	}
-
+	ExecHashJoinReloadHashTable(hjstate);
 	/*
 	 * If there's no outer batch file, advance to next batch.
 	 */
@@ -1136,6 +1196,10 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 			/* MPP-1600: reset the batch number */
 			node->hj_HashTable->curbatch = 0;
 		}
+		else if (!node->js.ps.delayEagerFree)
+		{
+			ExecHashJoinReloadHashTable(node);
+		}
 		else
 		{
 			/* must destroy and rebuild hash table */
@@ -1171,8 +1235,8 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-	if (((PlanState *) node)->lefttree->chgParam == NULL)
-		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+//	if (((PlanState *) node)->lefttree->chgParam == NULL)
+//		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
 }
 
 /**

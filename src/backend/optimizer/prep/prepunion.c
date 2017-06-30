@@ -310,8 +310,8 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 	/* TODO: Remove this part when we can rescan spilled hash table in HashJoin */
 	enableHashJoin = root->config->enable_hashjoin;
 	enableNestLoop = root->config->enable_nestloop;
-	root->config->enable_hashjoin = false;
-	root->config->enable_nestloop = true;
+//	root->config->enable_hashjoin = false;
+//	root->config->enable_nestloop = true;
 
 	/* The right plan will want to look at the left one ... */
 	root->non_recursive_plan = lplan;
