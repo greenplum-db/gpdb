@@ -70,7 +70,7 @@ explain update s set b = b + 1 where exists (select 1 from r where s.a = r.b);
    ->  Result  (cost=0.00..862.80 rows=67 width=26)
          ->  Split  (cost=0.00..862.80 rows=67 width=22)
                ->  Result  (cost=0.00..862.80 rows=34 width=22)
-                     ->  Hash EXISTS Join  (cost=0.00..862.80 rows=34 width=18)
+                     ->  Hash Semi Join  (cost=0.00..862.80 rows=34 width=18)
                            Hash Cond: dml_over_joins.s.a = r.b
                            ->  Table Scan on s  (cost=0.00..431.00 rows=34 width=18)
                            ->  Hash  (cost=431.15..431.15 rows=3334 width=4)
@@ -88,7 +88,7 @@ explain delete from s where exists (select 1 from r where s.a = r.b);
 ---------------------------------------------------------------------------------------------------------------------
  Delete  (cost=0.00..866.18 rows=34 width=1)
    ->  Result  (cost=0.00..862.80 rows=34 width=26)
-         ->  Hash EXISTS Join  (cost=0.00..862.80 rows=34 width=18)
+         ->  Hash Semi Join  (cost=0.00..862.80 rows=34 width=18)
                Hash Cond: dml_over_joins.s.a = r.b
                ->  Table Scan on s  (cost=0.00..431.00 rows=34 width=18)
                ->  Hash  (cost=431.15..431.15 rows=3334 width=4)
