@@ -733,6 +733,7 @@ INCLUDES
 enable_segwalrep
 HAVE_CXX11
 enable_gpcloud
+enable_pxf
 enable_mapreduce
 enable_netbackup
 enable_ddboost
@@ -856,6 +857,7 @@ enable_snmp
 enable_ddboost
 enable_netbackup
 enable_mapreduce
+enable_pxf
 enable_gpcloud
 enable_segwalrep
 enable_thread_safety
@@ -1537,6 +1539,7 @@ Optional Features:
   --enable-ddboost        enable DD Boost support
   --enable-netbackup      enable NetBackup support
   --enable-mapreduce      enable Greenplum Mapreduce support
+  --enable-pxf            enable Greenplum PXF support
   --disable-gpcloud       disable gpcloud support
   --enable-segwalrep      enable segment WAL replication
   --disable-thread-safety  Do not make client libraries thread-safe
@@ -6224,6 +6227,39 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&5
 $as_echo "checking whether to build with Greenplum Mapreduce... $enable_mapreduce" >&6; }
+
+
+#
+# --enable-pxf enables Greenplum PXF support
+#
+
+pgac_args="$pgac_args enable_pxf"
+
+# Check whether --enable-pxf was given.
+if test "${enable_pxf+set}" = set; then :
+  enableval=$enable_pxf;
+  case $enableval in
+    yes)
+
+$as_echo "#define USE_PXF 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-pxf option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_pxf=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with Greenplum PXF... $enable_pxf" >&5
+$as_echo "checking whether to build with Greenplum PXF... $enable_pxf" >&6; }
 
 
 #

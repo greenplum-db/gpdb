@@ -2327,3 +2327,18 @@ documentation will at all times remain with copyright holders.
 
 The sample data used in the world database is Copyright Statistics
 Finland, http://www.stat.fi/worldinfigures.
+
+=================================================================
+------------------ PXF ------------------------------------------
+=================================================================
+
+For the  gpAux\extensions\pxf\src\pxfprotocol.c component:
+
+Apache HAWQ (incubating)
+Copyright 2017 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+You may obtain a copy of the License at
+http://www.apache.org/licenses/LICENSE-2.0

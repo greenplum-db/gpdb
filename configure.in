@@ -731,6 +731,15 @@ AC_MSG_RESULT([checking whether to build with Greenplum Mapreduce... $enable_map
 AC_SUBST(enable_mapreduce)
 
 #
+# --enable-pxf enables Greenplum PXF support
+#
+      PGAC_ARG_BOOL(enable, pxf, no, [  --enable-pxf            enable Greenplum PXF support],
+              [AC_DEFINE([USE_PXF], 1,
+			             [Define to 1 to build with PXF capabilities (--enable-pxf)])])
+AC_MSG_RESULT([checking whether to build with Greenplum PXF... $enable_pxf])
+AC_SUBST(enable_pxf)
+
+#
 # gpcloud, enabled by default
 #
 PGAC_ARG_BOOL(enable, gpcloud, yes, [  --disable-gpcloud       disable gpcloud support],

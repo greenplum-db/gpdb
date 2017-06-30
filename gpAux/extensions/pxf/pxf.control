@@ -1,0 +1,7 @@
+directory = 'extension'
+default_version = '1.0'
+comment = 'Extension which allows to access unmanaged data'
+module_pathname = '$libdir/pxf'
+superuser = true
+relocatable = false
+schema = public
