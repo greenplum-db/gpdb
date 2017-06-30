@@ -212,7 +212,7 @@ CHK_PARAMS () {
 		    fi
 		    
 		    # Make sure old CLUSTER_CONFIG settings are not hanging around.
-		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE
+		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM
 
 		    # Make sure it is not a dos file with CTRL M at end of each line
 		    $CAT $CLUSTER_CONFIG|$SED -e 's/$//g' > $TMP_FILE
@@ -262,6 +262,12 @@ CHK_PARAMS () {
 		if [ x"" = x"$DATA_DIRECTORY" ]; then
 			ERROR_EXIT "[FATAL]:-DATA_DIRECTORY not specified in $CLUSTER_CONFIG file, is this the correct instance configuration file." 2
 		fi
+
+		if [ x"" = x"$HEAP_CHECKSUM" ]; then
+			HEAP_CHECKSUM=on
+			LOG_MSG "[INFO]:-Could not find HEAP_CHECKSUM in cluster config, defaulting to on."
+		fi
+
 		if [ x"" == x"$LOCALE_SETTING" ];then
 			LOG_MSG "[INFO]:-Locale has not been set in $CLUSTER_CONFIG, will set to default value" 1
 			LOCALE_SETTING=$DEFAULT_LOCALE_SETTING
@@ -1208,6 +1214,9 @@ CREATE_QD_DB () {
 		cmd="$cmd --max_connections=$MASTER_MAX_CONNECT"
 		cmd="$cmd --shared_buffers=$MASTER_SHARED_BUFFERS"
 		cmd="$cmd --is_filerep_mirrored=no"
+		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
+			cmd="$cmd --data-checksums"
+		fi
 		cmd="$cmd --backend_output=$GP_DIR.initdb"
 
 		LOG_MSG "[INFO]:-Commencing local $cmd"
@@ -1420,7 +1429,7 @@ CREATE_QES_PRIMARY () {
                 HAS_MIRRORS_OPTION=no
             fi
 
-			$GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE \
+			$GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 			PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1480,7 +1489,7 @@ CREATE_QES_MIRROR () {
 		    FLAG="-p $PG_CONF_ADD_FILE"
 		fi
 
-		$GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE \
+		$GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 		PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
