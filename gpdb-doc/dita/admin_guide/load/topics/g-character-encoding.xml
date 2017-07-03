@@ -9,12 +9,12 @@
       and storage. Greenplum Database supports a variety of character sets, including
       single-byte character sets such as the ISO 8859 series and multiple-byte character sets such
       as EUC (Extended UNIX Code), UTF-8, and Mule internal code. The server-side character set
-      is defined during database initialization, usually UTF-8 is used. Clients can use all supported
-      character sets transparently, but a few are not supported for use within the server as a
-      server-side encoding. When loading or inserting data into Greenplum Database, Greenplum
-      transparently converts the data from the specified client encoding into the server encoding.
-      When sending data back to the client, Greenplum converts the data from the server
-      character encoding into the specified client encoding.</p>
+      is defined during database initialization, UTF-8 is the default and can be changed. Clients
+      can use all supported character sets transparently, but a few are not supported for use
+      within the server as a server-side encoding. When loading or inserting data into Greenplum
+      Database, Greenplum transparently converts the data from the specified client encoding into
+      the server encoding. When sending data back to the client, Greenplum converts the data from
+      the server character encoding into the specified client encoding.</p>
     <p>Data files must be in a character encoding recognized by Greenplum Database.
         <ph>See the <i>Greenplum Database Reference Guide</i> for the supported
         character sets. </ph>Data files that contain invalid or unsupported encoding sequences
