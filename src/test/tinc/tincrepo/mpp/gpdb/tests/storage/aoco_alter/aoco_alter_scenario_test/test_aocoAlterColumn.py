@@ -40,7 +40,7 @@ class AOCSAlterColumnTestCase(ScenarioTestCase, MPPTestCase):
         Create tables with multiple varblocks and multiple segfiles upfront. They will be used in the tests .
         '''
         base_dir = os.path.dirname(sys.modules[cls.__module__].__file__)
-        crtable_name = ['create_tabfor_utility_mode','create_multivarblock_table','create_multisegfile_table','create_large_table']
+        crtable_name = ['create_tabfor_utility_mode','create_large_table']
         for sname in crtable_name:
             aoco_alter_sql=''
             aoco_alter_sql= os.path.join(os.path.dirname(sys.modules[cls.__module__].__file__), "sql")+'/'+sname+'.sql'
@@ -86,43 +86,3 @@ class AOCSAlterColumnTestCase(ScenarioTestCase, MPPTestCase):
         tinctest.logger.info("\n Starting Test: test_NegativeAOCOAlter_UtilityMode_06_addcolumn_utilityMode") 
         tinctest.logger.info("\n ===============================================")
         self.aoco_alt_obj.run_test_utility_mode('alter_aoco_tab_utilitymode')
-
-
-
-
-    def test_AOCOAlterColumnCatalogCheck(self):
-        ''' 
-        @product_version gpdb: [4.3.2.0-]
-        
-        These set of tests verify the correctness of catalog after alter table add/drop column
-        involving multi-varblock and multi-segfile Appendonly column oriented table
-        STEPS:
-        1. perform alter table add/drop column to multi-varblock/multi-segfile
-        2. Verify the correctness of the operation
-        3. Use gpcheckcat to validate the correctness of catalog after alter table operation
-
-        @data_provider data_types_provider
-        '''
-        tinctest.logger.info("\n ===============================================")
-        tinctest.logger.info("\n Starting Test: %s%s " % (self.test_data[0][0], self.test_data[0][1] ))
-        action = self.test_data[1][0]
-        storage= self.test_data[1][1]
-        tinctest.logger.info("\n SQL Action   : %s" %(action)) 
-        tinctest.logger.info("\n Storage type : %s" %(storage)) 
-        tinctest.logger.info("\n ===============================================")
-        self.aoco_alt_obj.run_test_CatalogCheck(action,storage)
-        self.aoco_alt_obj.validate_test_CatalogCheck(action,storage)
-
-@tinctest.dataProvider('data_types_provider')
-
-def test_data_provider():
-    data = { 
-             '01_addcol_multisegfiles': ['addcol','multisegfiles']
-             ,'02_dropcol_multisegfiles': ['dropcol','multisegfiles']
-             ,'03_addcol_multivarblock': ['addcol','multivarblock']
-             ,'04_dropcol_multivarblock': ['dropcol','multivarblock']
-            }
-    return data
-
-
-
