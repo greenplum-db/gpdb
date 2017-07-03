@@ -87,7 +87,7 @@
             );
 </codeblock>
       </p>
-      <p>Alternatively a column can be altered and a sequence can be added as default value:</p>
+      <p>Alternatively, a column can be altered and a sequence can be added as default value:</p>
         <codeblock>ALTER TABLE ... ALTER COLUMN id SET DEFAULT nextval('id_seq');
 </codeblock>
     </body>
