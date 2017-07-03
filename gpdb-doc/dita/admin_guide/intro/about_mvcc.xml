@@ -226,13 +226,13 @@ COMMIT;
         reduce the size of the table on disk. The space it recovers is only available through the
         free space map. To prevent disk files from growing, it is important to run
           <codeph>VACUUM</codeph> often enough. The frequency of required <codeph>VACUUM</codeph>
-        runs depends on the frequency of updates and deletes in the table (inserts only add new
-        rows but leave no dead rows behind). Heavily updated tables might require several
-        <codeph>VACUUM</codeph> runs per day, to ensure that the available free space can be found
-        through the free space map. It is also important to run <codeph>VACUUM</codeph> after
-        running a transaction that updates or deletes a large number of rows. </p>
+        runs depends on the frequency of updates and deletes in the table (inserts only ever add
+        new rows). Heavily updated tables might require several <codeph>VACUUM</codeph> runs per
+        day, to ensure that the available free space can be found through the free space map. It
+        is also important to run <codeph>VACUUM</codeph> after running a transaction that updates
+        or deletes a large number of rows. </p>
       <p>The <codeph>VACUUM FULL</codeph> command rewrites the table without expired rows, reducing
-        the table to its minimum size. Every page in the table is checked, and live rows are
+        the table to its minimum size. Every page in the table is checked, and visible rows are
         moved up into pages which are not yet fully packed. Empty pages are discarded. The table
         is locked until <codeph>VACUUM FULL</codeph> completes. This is very expensive
         compared to the regular <codeph>VACUUM</codeph> command, and can be avoided or postponed by
