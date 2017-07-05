@@ -2,7 +2,49 @@
 ## resources
 ## ======================================================================
 
+resource_types:
+- name: terraform
+  type: docker-image
+  source:
+    repository: ljfranklin/terraform-resource
+
 resources:
+- name: ccp_src
+  type: git
+  source:
+    branch: {{ccp-git-branch}}
+    private_key: {{ccp-git-key}}
+    uri: {{ccp-git-remote}}
+    tag_filter: {{ccp-tag-filter}}
+
+- name: terraform
+  type: terraform
+  source:
+    env:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+    storage:
+      access_key_id: {{tf-machine-access-key-id}}
+      secret_access_key: {{tf-machine-secret-access-key}}
+      region_name: {{aws-region}}
+      # This is not parameterized, on purpose. All tfstates will go to this spot,
+      # and different teams will place there clusters' tfstate files under different paths
+      bucket: gpdb5-pipeline-dynamic-terraform
+      ###########################################################
+      # Two conventions are allowed for bucket_path:            #
+      # 1) Cluster are expected to be destroyed automatically   #
+      #    Toolsmiths will reap old and orphaned clusters       #
+      #                                                         #
+      #      bucket_path: prod/[Pipeline Name]/                 #
+      #                                                         #
+      # 2) Long lived clusters for development.                 #
+      #    The team that creates it is responsible for cluster  #
+      #                                                         #
+      #     bucket_path: dev/[Team Name]/                       #
+      #                                                         #
+      ###########################################################
+      bucket_path: {{tf-bucket-path}}
+
 - name: gpdb_src
   type: git
   source:
@@ -645,6 +687,53 @@ jobs:
         BEHAVE_TAGS: gpcheck_as_gpadmin
         GPCHECK_SETUP: true
 
+- name: DPM_backup-restore
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      action: create
+      delete_on_failure: true
+      generate_random_name: true
+      <<: *ccp_options
+  - task: run_tests
+    image: centos-gpdb-dev-6
+    config:
+      platform: linux
+      inputs:
+      - name: terraform
+      - name: bin_gpdb
+      - name: ccp_src
+      - name: gpdb_src
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -ex
+          source ccp_src/aws/generate_env_files.sh
+          ccp_src/aws/setup_ssh_to_cluster.sh
+          ccp_src/aws/preinstall_gpdb.sh
+          ccp_src/aws/install_gpdb.sh bin_gpdb
+          ccp_src/aws/run_inspec.sh
+          ssh centos@mdw "sudo bash -c \"yum install -y valgrind mailx\""
+          gpdb_src/concourse/scripts/run_behave_test.sh --tags=analyzedb,backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
+
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+
 - name: MM_gppkg
   plan:
   - aggregate:
@@ -1041,41 +1130,6 @@ jobs:
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
 
-- name: DPM_backup-restore
-  plan:
-  - aggregate: &post_packaging_gets_trigger_true
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: gpdb_src_behave_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_Harmonize"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_Harmonize"
-
 - name: DPM_backup-restore-ddboost
   plan:
   - get: nightly-trigger
@@ -1118,7 +1172,24 @@ jobs:
 
 - name: MM_gpcheckcat
   plan:
-  - aggregate: *post_packaging_gets_trigger_true
+  - aggregate: &post_packaging_gets_trigger_true
+    - get: gpdb_src
+      params: {submodules: none}
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gpdb_rc_packaging_centos]
+      trigger: true
+    - get: gpdb_src_tinc_tarball
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gpdb_rc_packaging_centos]
+    - get: installer_rhel6_gpdb_rc
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gpdb_rc_packaging_centos]
+    - get: qautils_rhel6_tarball
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gpdb_rc_packaging_centos]
+    - get: gpdb_src_behave_tarball
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gpdb_rc_packaging_centos]
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -1372,3 +1443,32 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
+
+ccp_options_anchor: &ccp_options
+  terraform_source: ccp_src/aws/
+  vars:
+    aws_instance-node-instance_type: t2.medium
+
+ccp_destroy_anchor: &ccp_destroy
+  put: terraform
+  params:
+    action: destroy
+    env_name_file: terraform/name
+    <<: *ccp_options
+  get_params:
+    action: destroy
+
+debug_sleep_anchor: &debug_sleep
+  do:
+  - task: debug_sleep
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+          tag: latest
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 21600'] # 6 hours
+  - *ccp_destroy
