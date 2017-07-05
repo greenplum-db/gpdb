@@ -733,12 +733,6 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 			 *
 			 * pg_aovisimap_<oid> is identical for row and column oriented
 			 * tables.
-			 *
-			 * pg_aoblkdir_<oid>.minipage columns have the same issue. Unfortunately,
-			 * we noticed that too late in the release cycle to fix the datatype,
-			 * so that's still incorrectly using the "bit varying" datatype. Hence,
-			 * function.c will create a corresponding hack function to load the
-			 * invalid varbit values back in.
 			 */
 			if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802 && whichCluster == CLUSTER_OLD)
 			{
@@ -751,7 +745,7 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 					bitmaphack_created = true;
 				}
 				snprintf(aoquery, sizeof(aoquery),
-						 "SELECT segno, first_row_no, pg_temp.bitmaphack_out(visimap) as visimap "
+						 "SELECT segno, first_row_no, pg_temp.bitmaphack_out(visimap::bit varying) as visimap "
 						 "FROM pg_aoseg.%s",
 						 visimaprel);
 			}
@@ -780,14 +774,38 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 
 			/*
 			 * Get contents of pg_aoblkdir_<oid>. If pg_appendonly.blkdirrelid
-			 * is InvalidOid then there is no blkdir table.
+			 * is InvalidOid then there is no blkdir table. Like the visimap
+			 * field in pg_aovisimap_<oid>, the minipage field was of type "bit
+			 * varying" but didn't store a valid "varbi" datum. We use the same
+			 * function to extract the content as a bytea as we did for the
+			 * visimap. The datatype has been changed to bytea in 5.0.
 			 */
 			if (blkdirrel)
 			{
-				snprintf(aoquery, sizeof(aoquery),
-						 "SELECT segno, columngroup_no, first_row_no, minipage::bit(36)::bigint "
-						 "FROM   pg_aoseg.%s",
-						 blkdirrel);
+				if (GET_MAJOR_VERSION(ctx->old.major_version) <= 802 && whichCluster == CLUSTER_OLD)
+				{
+					if (!bitmaphack_created)
+					{
+						PQclear(executeQueryOrDie(ctx, conn,
+												  "create function pg_temp.bitmaphack_out(bit varying) "
+												  " RETURNS cstring "
+												  " LANGUAGE INTERNAL AS 'byteaout'"));
+						bitmaphack_created = true;
+					}
+					snprintf(aoquery, sizeof(aoquery),
+							 "SELECT segno, columngroup_no, first_row_no, "
+							 "       pg_temp.bitmaphack_out(minipage::bit varying) AS minipage "
+							 "FROM   pg_aoseg.%s",
+							 blkdirrel);
+				}
+				else
+				{
+					snprintf(aoquery, sizeof(aoquery),
+							 "SELECT segno, columngroup_no, first_row_no, minipage "
+							 "FROM pg_aoseg.%s",
+							 blkdirrel);
+				}
+
 				aores = executeQueryOrDie(ctx, conn, aoquery);
 
 				curr->naoblkdirs = PQntuples(aores);
@@ -811,11 +829,9 @@ get_rel_infos(migratorContext *ctx, const DbInfo *dbinfo,
 				curr->naoblkdirs = 0;
 			}
 
-
 			pg_free(segrel);
 			pg_free(visimaprel);
 			pg_free(blkdirrel);
-
 		}
 		else
 		{

@@ -57,7 +57,7 @@ AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child)
 					   -1, 0);
 	TupleDescInitEntry(tupdesc, (AttrNumber) 4,
 					   "minipage",
-					   VARBITOID,
+					   BYTEAOID,
 					   -1, 0);
 
 	/*
@@ -66,10 +66,7 @@ AlterTableCreateAoBlkdirTable(Oid relOid, bool is_part_child)
 	tupdesc->attrs[0]->attstorage = 'p';
 	tupdesc->attrs[1]->attstorage = 'p';
 	tupdesc->attrs[2]->attstorage = 'p';
-    /* TODO (dmeister): In the next line, the index should have been 3. 
-     * Therefore the minipage might be toasted.
-     */
-	tupdesc->attrs[2]->attstorage = 'p'; 
+	tupdesc->attrs[3]->attstorage = 'p';
 
 	/*
 	 * Create index on segno, first_row_no.

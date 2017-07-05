@@ -209,11 +209,6 @@ install_system_functions_internal(migratorContext *ctx, char *dbname)
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
 
-	PQclear(executeQueryOrDie(ctx, conn,
-							  "CREATE OR REPLACE FUNCTION binary_upgrade.bitmaphack_in(cstring) "
-							  "RETURNS bit varying "
-							  "LANGUAGE INTERNAL AS 'byteain'"));
-
 	PQfinish(conn);
 }
 

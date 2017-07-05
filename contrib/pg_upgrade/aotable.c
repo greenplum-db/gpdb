@@ -147,7 +147,7 @@ restore_aosegment_table(migratorContext *ctx, PGconn *conn, RelInfo *rel)
 
 		appendPQExpBuffer(query,
 						  "INSERT INTO pg_aoseg.pg_aoblkdir_%u (segno, columngroup_no, first_row_no, minipage) "
-						  " VALUES (%d, %d, " INT64_FORMAT ", binary_upgrade.bitmaphack_in(%s))",
+						  " VALUES (%d, %d, " INT64_FORMAT ", %s)",
 						  rel->reloid,
 						  seg->segno,
 						  seg->columngroup_no,

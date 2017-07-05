@@ -576,9 +576,14 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 			{
 				/*
 				 * OIDs of schemas must be preserved. (Only because namespace
-				 * OIDs are part of the key of types and relations.)
+				 * OIDs are part of the key of types and relations.) The only
+				 * exception is pg_temp which we exempt (by definition).
 				 */
-				missing_ok = false;
+				if (strncmp(searchkey.objname, "pg_temp", strlen("pg_temp")) == 0 ||
+					strncmp(searchkey.objname, "pg_toast_temp", strlen("pg_toast_temp")) == 0)
+					missing_ok = true;
+				else
+					missing_ok = false;
 			}
 			else if (RelationGetRelid(catalogrel) == TypeRelationId)
 			{
