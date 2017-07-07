@@ -407,6 +407,9 @@ GpId		GpIdentity = {UNINITIALIZED_GP_IDENTITY_VALUE, UNINITIALIZED_GP_IDENTITY_V
  */
 int			GpStandbyDbid = InvalidDbid;
 
+/* Partition Selection Log Level variable */
+PartitionSelectionLogLevel partition_selection_log_level = PARTITION_SELECTION_LOG_LEVEL_NONE;
+
 void
 verifyGpIdentityIsSet(void)
 {
@@ -771,6 +774,22 @@ gpvars_verbosity_to_string(GpVars_Verbosity verbosity)
 	}
 }	/* gpvars_verbosity_to_string */
 
+static const char *
+partition_selection_log_level_to_string(PartitionSelectionLogLevel level)
+{
+	switch (level)
+	{
+		case PARTITION_SELECTION_LOG_LEVEL_NONE:
+			return "none";
+		case PARTITION_SELECTION_LOG_LEVEL_TERSE:
+			return "terse";
+		case PARTITION_SELECTION_LOG_LEVEL_VERBOSE:
+			return "verbose";
+		default:
+			return "*undefined*";
+	}
+}
+
 /*
  * gpperfmon_log_alert_level_to_string
  */
@@ -1129,6 +1148,39 @@ gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source
 	}
 
 	return true;
+}
+
+const char *
+gpvars_assign_debug_partition_selection_log_level(const char *newval, bool doit, GucSource source)
+{
+	if (doit)
+	{
+        if (!pg_strcasecmp(newval, "none"))
+        {
+            partition_selection_log_level = PARTITION_SELECTION_LOG_LEVEL_NONE;
+        }
+        else if (!pg_strcasecmp(newval, "terse"))
+		{
+			partition_selection_log_level = PARTITION_SELECTION_LOG_LEVEL_TERSE;
+		}
+		else if (!pg_strcasecmp(newval, "verbose"))
+		{
+			partition_selection_log_level = PARTITION_SELECTION_LOG_LEVEL_VERBOSE;
+		}
+		else
+		{
+			elog(ERROR, "Unknown log alert level '%s'. (current value is \
+				'%s')", newval,
+					partition_selection_log_level_to_string(partition_selection_log_level));
+		}
+	}
+	return newval;
+}
+
+const char *
+gpvars_show_debug_partition_selection_log_level(void)
+{
+	return partition_selection_log_level_to_string(partition_selection_log_level);
 }
 
 const char *

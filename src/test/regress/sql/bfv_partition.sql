@@ -564,7 +564,6 @@ drop index if exists pp_1_prt_1_idx;
 drop index if exists pp_rest_1_idx;
 drop index if exists pp_rest_2_idx;
 set optimizer_segments=2;
-set optimizer_partition_selection_log=on;
 -- end_ignore
 create table pp(a int, b int, c int) partition by range(b) (start(1) end(15) every(5));
 insert into pp values (1,1,2),(2,6,2), (3,11,2);
@@ -586,7 +585,6 @@ drop index if exists pp_1_prt_1_idx;
 drop table if exists pp;
 reset optimizer_enable_dynamictablescan;
 reset optimizer_segments;
-set optimizer_partition_selection_log=off;
 -- end_ignore
 
 
@@ -597,7 +595,6 @@ set optimizer_partition_selection_log=off;
 -- SETUP
 -- start_ignore
 set optimizer_segments=2;
-set optimizer_partition_selection_log=on;
 DROP TABLE IF EXISTS ds_4;
 -- end_ignore
 
@@ -632,7 +629,6 @@ select count_operator('select * from ds_4 a1,ds_4 a2 where a1.month_id = a2.mont
 -- CLEANUP
 -- start_ignore
 DROP TABLE IF EXISTS ds_4;
-set optimizer_partition_selection_log=off;
 reset optimizer_segments;
 
 drop function if exists find_operator(query text, operator_name text);

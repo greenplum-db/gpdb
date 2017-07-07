@@ -14,16 +14,21 @@
 #include "miscadmin.h"
 
 #include "cdb/cdbpartition.h"
+#include "cdb/cdbvars.h"
 #include "cdb/partitionselection.h"
 #include "commands/tablecmds.h"
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "executor/nodePartitionSelector.h"
 #include "nodes/makefuncs.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
 static void 
-partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
+partition_propagation(EState *estate, PartitionSelectorState *psstate, List *partOids, List *scanIds, int32 selectorId);
+
+static void
+log_partition_selection(PartitionSelectorState *psstate, int32 partOid, int32 scanId, int32 selectorId);
 
 /* PartitionSelector Slots */
 #define PARTITIONSELECTOR_NSLOTS 1
@@ -150,7 +155,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	if (ps->staticSelection)
 	{
 		/* propagate the part oids obtained via static partition selection */
-		partition_propagation(estate, ps->staticPartOids, ps->staticScanIds, ps->selectorId);
+		partition_propagation(estate, node, ps->staticPartOids, ps->staticScanIds, ps->selectorId);
 		node->acceptedLeafOid = InvalidOid;
 		return NULL;
 	}
@@ -245,7 +250,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 		/* partition propagation */
 		if (NULL != ps->propagationExpression)
 		{
-			partition_propagation(estate, selparts->partOids, selparts->scanIds, ps->selectorId);
+			partition_propagation(estate, node, selparts->partOids, selparts->scanIds, ps->selectorId);
 		}
 		list_free(selparts->partOids);
 		list_free(selparts->scanIds);
@@ -329,7 +334,7 @@ ExecEndPartitionSelector(PartitionSelectorState *node)
  * ----------------------------------------------------------------
  */
 static void
-partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId)
+partition_propagation(EState *estate, PartitionSelectorState *psstate, List *partOids, List *scanIds, int32 selectorId)
 {
 	Assert (list_length(partOids) == list_length(scanIds));
 
@@ -341,6 +346,34 @@ partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selec
 		int scanId = lfirst_int(lcScanId);
 
 		InsertPidIntoDynamicTableScanInfo(estate, scanId, partOid, selectorId);
+		log_partition_selection(psstate, partOid, scanId, selectorId);
+	}
+}
+
+/* ----------------------------------------------------------------
+ *		log_partition_selection
+ *
+ *		Log selection of a particular partOid for a scanId
+ *
+ * ----------------------------------------------------------------
+ */
+static void
+log_partition_selection(PartitionSelectorState *psstate, int32 partOid, int32 scanId, int32 selectorId)
+{
+	switch (partition_selection_log_level)
+	{
+		case PARTITION_SELECTION_LOG_LEVEL_NONE:
+			break;
+		case PARTITION_SELECTION_LOG_LEVEL_TERSE:
+			if (!bms_is_member(scanId, psstate->seenScans))
+			{
+				psstate->seenScans = bms_add_member(psstate->seenScans, scanId);
+				ereport(LOG, (errmsg_internal("The partition selector: %i producing relation %s for consumer %i", selectorId, get_rel_name(partOid), scanId)));
+			}
+			break;
+		case PARTITION_SELECTION_LOG_LEVEL_VERBOSE:
+			ereport(LOG, (errmsg_internal("The partition selector: %i producing relation %s for consumer %i", selectorId, get_rel_name(partOid), scanId)));
+			break;
 	}
 }
 
