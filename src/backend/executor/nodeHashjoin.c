@@ -1196,9 +1196,20 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 			/* MPP-1600: reset the batch number */
 			node->hj_HashTable->curbatch = 0;
 		}
-		else if (node->js.ps.delayEagerFree)
+		else if (node->js.ps.delayEagerFree && ((PlanState *) node)->righttree->chgParam == NULL)
 		{
 			node->hj_OuterNotEmpty = false;
+			HashState *hashState = innerPlanState(node);
+			HashJoinTable ht = hashState->hashtable;
+			/*
+			 * Check to see if we have some batch files before setting this flag.
+			 * We may hit a rescan call before even building the hash table
+			 */
+			if (ht != NULL && ht->nbatch > 1)
+			{
+				ht->reuse_inner_batches = true;
+			}
+
 			node->hj_HashTable->curbatch = 0;
 			ExecHashJoinReloadHashTable(node);
 		}
@@ -1232,25 +1243,13 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	node->hj_NeedNewOuter = true;
 	node->hj_MatchedOuter = false;
 	node->hj_FirstOuterTupleSlot = NULL;
-	HashState *hashState = innerPlanState(node);
-
-	HashJoinTable ht = hashState->hashtable;
-
-	/*
-	 * Check to see if we have some batch files before setting this flag.
-	 * We may hit a rescan call before even building the hash table
-	 */
-	if (ht->nbatch > 1)
-	{
-		ht->reuse_outer_batches = true;
-	}
 
 	/*
 	 * if chgParam of subnode is not null then plan will be re-scanned by
 	 * first ExecProcNode.
 	 */
-//	if (((PlanState *) node)->lefttree->chgParam == NULL)
-//		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
+	if (((PlanState *) node)->lefttree->chgParam == NULL)
+		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
 }
 
 /**

@@ -190,7 +190,7 @@ typedef struct HashJoinTableData
     bool		eagerlyReleased; /* Has this hash-table been eagerly released? */
 
     HashJoinState * hjstate; /* reference to the enclosing HashJoinState */
-	bool reuse_outer_batches; /* Reuse existing batch files */
+	bool reuse_inner_batches; /* Reuse existing batch files */
 } HashJoinTableData;
 
 #endif   /* HASHJOIN_H */

@@ -799,7 +799,7 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 				/* dump it out */
 				Assert(batchno > curbatch);
 				/* Only insert if it was not inserted before */
-				if (!hashtable->reuse_outer_batches)
+				if (!hashtable->reuse_inner_batches)
 				{
 					ExecHashJoinSaveTuple(NULL, HJTUPLE_MINTUPLE(tuple),
 									  tuple->hashvalue,
@@ -994,7 +994,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 			}
 		}
 	}
-	else if (!hashtable->reuse_outer_batches)
+	else if (!hashtable->reuse_inner_batches)
 	{
 		/*
 		 * put the tuple into a temp file for later batches
