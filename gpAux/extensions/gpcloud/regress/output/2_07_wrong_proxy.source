@@ -1,0 +1,6 @@
+CREATE READABLE EXTERNAL TABLE s3regress_wrong_proxy (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf section=wrong_proxy') FORMAT 'csv';
+SELECT round(sum(open)) FROM s3regress_wrong_proxy;
+ERROR:  Failed to init gpcloud extension
+DETAIL:  External table s3regress_wrong_proxy, file s3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf section=wrong_proxy
+DROP EXTERNAL TABLE s3regress_wrong_proxy;

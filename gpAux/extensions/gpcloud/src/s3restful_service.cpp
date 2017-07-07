@@ -3,6 +3,16 @@
 S3RESTfulService::S3RESTfulService()
     : lowSpeedLimit(0),
       lowSpeedTime(0),
+      proxy(""),
+      debugCurl(false),
+      verifyCert(true),
+      chunkBufferSize(64 * 1024) {
+}
+
+S3RESTfulService::S3RESTfulService(const string &proxy)
+    : lowSpeedLimit(0),
+      lowSpeedTime(0),
+      proxy(proxy),
       debugCurl(false),
       verifyCert(true),
       chunkBufferSize(64 * 1024) {
@@ -19,6 +29,7 @@ S3RESTfulService::S3RESTfulService(const S3Params &params)
     this->debugCurl = params.isDebugCurl();
     this->chunkBufferSize = params.getChunkSize();
     this->verifyCert = params.isVerifyCert();
+    this->proxy = params.getProxy();
 }
 
 S3RESTfulService::~S3RESTfulService() {
@@ -84,7 +95,7 @@ size_t RESTfulServiceReadFuncCallback(char *ptr, size_t size, size_t nmemb, void
 
 struct CURLWrapper {
     CURLWrapper(const string &url, curl_slist *headers, uint64_t lowSpeedLimit,
-                uint64_t lowSpeedTime, bool debugCurl) {
+                uint64_t lowSpeedTime, bool debugCurl, string proxy) {
         curl = curl_easy_init();
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
@@ -95,6 +106,10 @@ struct CURLWrapper {
 
         if (debugCurl) {
             curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+        }
+
+        if (!proxy.empty()) {
+            curl_easy_setopt(curl, CURLOPT_PROXY, proxy.c_str());
         }
     }
     ~CURLWrapper() {
@@ -135,7 +150,7 @@ Response S3RESTfulService::get(const string &url, HTTPHeaders &headers) {
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
-                        this->debugCurl);
+                        this->debugCurl, this->proxy);
     CURL *curl = wrapper.curl;
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
@@ -152,7 +167,7 @@ Response S3RESTfulService::put(const string &url, HTTPHeaders &headers, const S3
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
-                        this->debugCurl);
+                        this->debugCurl, this->proxy);
     CURL *curl = wrapper.curl;
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
@@ -179,7 +194,7 @@ Response S3RESTfulService::post(const string &url, HTTPHeaders &headers,
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
-                        this->debugCurl);
+                        this->debugCurl, this->proxy);
     CURL *curl = wrapper.curl;
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
@@ -208,7 +223,7 @@ ResponseCode S3RESTfulService::head(const string &url, HTTPHeaders &headers) {
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
-                        this->debugCurl);
+                        this->debugCurl, this->proxy);
     CURL *curl = wrapper.curl;
 
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "HEAD");
@@ -225,7 +240,7 @@ Response S3RESTfulService::deleteRequest(const string &url, HTTPHeaders &headers
 
     headers.CreateList();
     CURLWrapper wrapper(url, headers.GetList(), this->lowSpeedLimit, this->lowSpeedTime,
-                        this->debugCurl);
+                        this->debugCurl, this->proxy);
     CURL *curl = wrapper.curl;
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);

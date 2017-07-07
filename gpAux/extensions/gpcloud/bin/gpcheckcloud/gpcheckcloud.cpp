@@ -135,7 +135,8 @@ void printTemplate() {
         "low_speed_limit = 10240\n"
         "low_speed_time = 60\n"
         "encryption = true\n"
-        "autocompress = true\n");
+        "autocompress = true\n"
+        "proxy = \"\"\n");
 }
 
 void printBucketContents(const ListBucketResult &result) {

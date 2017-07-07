@@ -129,6 +129,14 @@ class S3Params {
         this->sseType = sseType;
     }
 
+    const string& getProxy() const {
+        return proxy;
+    }
+
+    void setProxy(string proxy) {
+        this->proxy = proxy;
+    }
+
    private:
     S3Url s3Url;  // original url to read/write.
 
@@ -141,6 +149,8 @@ class S3Params {
 
     uint64_t lowSpeedLimit;  // low speed limit
     uint64_t lowSpeedTime;   // low speed timeout
+
+    string proxy;  // proxy
 
     bool debugCurl;     // debug curl or not
     bool autoCompress;  // whether to compress data before uploading

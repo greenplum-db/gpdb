@@ -1,0 +1,6 @@
+CREATE READABLE EXTERNAL TABLE s3regress_wrong_proxy (date text, time text, open float, high float,
+        low float, volume int) LOCATION('s3://s3-us-east-1.amazonaws.com/us-east-1.@read_prefix@/small17/data0000 config=@config_file@ section=wrong_proxy') FORMAT 'csv';
+
+SELECT round(sum(open)) FROM s3regress_wrong_proxy;
+
+DROP EXTERNAL TABLE s3regress_wrong_proxy;
