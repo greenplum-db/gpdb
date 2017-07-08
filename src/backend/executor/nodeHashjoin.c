@@ -45,31 +45,21 @@ SpillInMemoryBatch(HashJoinState *node)
 {
 	HashJoinTable hashtable = node->hj_HashTable;
 	HashJoinBatchData *fullbatch = hashtable->batches[hashtable->curbatch];
-	int			oldnbatch = hashtable->nbatch;
-	int			curbatch = hashtable->curbatch;
-	int			nbatch;
+	HashJoinTuple tuple;
 	int			i;
-	long		ninmemory;
-	long		nfreed;
-	Size		spaceFreed = 0;
 
-	Assert(curbatch == 0);
-
-	Assert(hashtable->batches[curbatch]->innerside.workfile == NULL);
+	Assert(hashtable->curbatch == 0 && fullbatch->innerside.workfile == NULL);
 
 	for (i = 0; i < hashtable->nbuckets; i++)
 	{
-		HashJoinTuple tuple;
 		tuple = hashtable->buckets[i];
 
 		while (tuple != NULL)
 		{
-			Size    spaceTuple;
-
 			ExecHashJoinSaveTuple(NULL, HJTUPLE_MINTUPLE(tuple),
 								  tuple->hashvalue,
 								  hashtable,
-								  &hashtable->batches[curbatch]->innerside,
+								  &fullbatch->innerside,
 								  hashtable->bfCxt);
 			tuple = tuple->next;
 		}
@@ -841,6 +831,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 {
 	HashState  *hashState = (HashState *) innerPlanState(hjstate);
 	HashJoinTable hashtable = hjstate->hj_HashTable;
+	TupleTableSlot *slot;
 	uint32		hashvalue;
 	int curbatch = hashtable->curbatch;
 	HashJoinBatchData *batch = hashtable->batches[curbatch];
@@ -868,7 +859,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 			if (QueryFinishPending)
 				return false;
 
-			TupleTableSlot *slot = ExecHashJoinGetSavedTuple(hjstate,
+			slot = ExecHashJoinGetSavedTuple(hjstate,
 											 &batch->innerside,
 											 &hashvalue,
 											 hjstate->hj_HashTupleSlot);
@@ -920,8 +911,6 @@ ExecHashJoinNewBatch(HashJoinState *hjstate)
 	HashJoinBatchData *batch;
 	int			nbatch;
 	int			curbatch;
-	TupleTableSlot *slot;
-	uint32		hashvalue;
 
 	SIMPLE_FAULT_INJECTOR(FaultExecHashJoinNewBatch);
 
@@ -952,7 +941,8 @@ start_over:
 	}
 
 	/* For first time write, we need to spill batch 0 (in-memory batch) */
-	if (curbatch == 0 && !hjstate->js.ps.delayEagerFree &&
+	if (curbatch == 0 &&
+			!hjstate->js.ps.delayEagerFree &&
 			hjstate->hj_HashTable->batches != NULL &&
 			hjstate->hj_HashTable->batches[curbatch]->innerside.workfile == NULL)
 	{
@@ -1199,7 +1189,7 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 		else if (node->js.ps.delayEagerFree && ((PlanState *) node)->righttree->chgParam == NULL)
 		{
 			node->hj_OuterNotEmpty = false;
-			HashState *hashState = innerPlanState(node);
+			HashState *hashState = (HashState *) innerPlanState(node);
 			HashJoinTable ht = hashState->hashtable;
 			/*
 			 * Check to see if we have some batch files before setting this flag.
