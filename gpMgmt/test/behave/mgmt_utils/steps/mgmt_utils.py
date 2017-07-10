@@ -5113,3 +5113,43 @@ def impl(context):
     run_gpcommand(context, command)
     if not context.exception:
         raise Exception("Directory for date %s still exists" % context.full_backup_timestamp[0:8])
+
+@then('"{gppkg_name}" gppkg files exist on all segment hosts')
+def impl(context, gppkg_name):
+    remote_gphome = os.environ.get('GPHOME')
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    #We can assume the GPDB is installed at the same location for all hosts
+    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+
+    for hostname in set(hostlist):
+        cmd = Command(name='check if internal rpm gppkg is installed',
+                      cmdStr=rpm_command_list_all,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=True)
+
+        if not gppkg_name in cmd.get_stdout():
+            raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
+
+@then('"{gppkg_name}" gppkg files does not exist on all segment hosts')
+def impl(context, gppkg_name):
+    remote_gphome = os.environ.get('GPHOME')
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    #We can assume the GPDB is installed at the same location for all hosts
+    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+
+    for hostname in set(hostlist):
+        cmd = Command(name='check if internal rpm gppkg is installed',
+                      cmdStr=rpm_command_list_all,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=True)
+
+        if gppkg_name in cmd.get_stdout():
+            raise Exception( '"%s" gppkg is installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))

@@ -56,6 +56,7 @@ Feature: gppkg tests
         Then gppkg should return a return code of 0
         And gppkg should print "This is a sample message shown after successful installation" to stdout
         And gppkg should print "Completed local installation of sample" to stdout
+        And "sample" gppkg files exist on all segment hosts
 
     @gppkg_install_remove
     Scenario: gppkg --install should report failure because the package is already installed
@@ -72,6 +73,7 @@ Feature: gppkg tests
         And gppkg should print "Uninstalling package sample.gppkg" to stdout
         And gppkg should print "Completed local uninstallation of sample.gppkg" to stdout
         And gppkg should print "sample.gppkg successfully uninstalled" to stdout
+        And "sample" gppkg files does not exist on all segment hosts
 
     @gppkg_install_remove
     Scenario: gppkg --remove should report failure when the package is not installed
