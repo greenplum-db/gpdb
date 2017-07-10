@@ -119,6 +119,9 @@ PROCESS_QE () {
     cmd="$cmd --max_connections=$QE_MAX_CONNECT"
     cmd="$cmd --shared_buffers=$QE_SHARED_BUFFERS"
     cmd="$cmd --is_filerep_mirrored=$IS_FILEREP_MIRRORED_OPTION"
+    if [ x"$HEAP_CHECKSUM" == x"on" ]; then
+        cmd="$cmd --data-checksums"
+    fi
     cmd="$cmd --backend_output=$GP_DIR.initdb"
 
     $TRUSTED_SHELL ${GP_HOSTADDRESS} $cmd >> $LOG_FILE 2>&1
@@ -287,6 +290,7 @@ case $TYPE in
 		LOG_FILE=$1;shift		#Central logging file
 		LOG_MSG "[INFO][$INST_COUNT]:-Start Main"
 		LOG_MSG "[INFO][$INST_COUNT]:-Command line options passed to utility = $*"
+		HEAP_CHECKSUM=$1;shift
 		TMP_MASTER_IP_ADDRESS=$1;shift	#List of IP addresses for the master instance
 		MASTER_IP_ADDRESS=(`$ECHO $TMP_MASTER_IP_ADDRESS|$TR '~' ' '`)
 		TMP_STANDBY_IP_ADDRESS=$1;shift #List of IP addresses for standby master

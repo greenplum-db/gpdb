@@ -58,6 +58,7 @@ typedef struct CheckPoint
 #define XLOG_SWITCH						0x40
 #define XLOG_BACKUP_END					0x50
 #define XLOG_NEXTRELFILENODE			0x60
+#define XLOG_HINT						0x70
 
 
 /* System status indicator */

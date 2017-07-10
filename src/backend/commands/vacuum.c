@@ -3332,7 +3332,6 @@ scan_heap(VRelStats *vacrelstats, Relation onerel,
 				recptr = log_heap_freeze(onerel, buf, FreezeLimit,
 										 frozen, nfrozen);
 				PageSetLSN(page, recptr);
-				PageSetTLI(page, ThisTimeLineID);
 			}
 		}
 
@@ -4482,10 +4481,8 @@ move_chain_tuple(Relation rel,
 		if (old_buf != dst_buf)
 		{
 			PageSetLSN(old_page, recptr);
-			PageSetTLI(old_page, ThisTimeLineID);
 		}
 		PageSetLSN(dst_page, recptr);
-		PageSetTLI(dst_page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4590,9 +4587,7 @@ move_plain_tuple(Relation rel,
 										   dst_buf, &newtup);
 
 		PageSetLSN(old_page, recptr);
-		PageSetTLI(old_page, ThisTimeLineID);
 		PageSetLSN(dst_page, recptr);
-		PageSetTLI(dst_page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4698,7 +4693,6 @@ vacuum_page(Relation onerel, Buffer buffer, VacPage vacpage)
 								vacpage->offsets, vacpage->offsets_free,
 								false);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();

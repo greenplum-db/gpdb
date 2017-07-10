@@ -270,7 +270,6 @@ gistRedoPageUpdateRecord(XLogRecPtr lsn, XLogRecord *record, bool isnewroot)
 
 	GistPageGetOpaque(page)->rightlink = InvalidBlockNumber;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -307,7 +306,6 @@ gistRedoPageDeleteRecord(XLogRecPtr lsn, XLogRecord *record)
 	GistPageSetDeleted(page);
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -382,7 +380,6 @@ gistRedoPageSplitRecord(XLogRecPtr lsn, XLogRecord *record)
 		gistfillbuffer(reln, page, newpage->itup, newpage->header->num, FirstOffsetNumber);
 
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
 		MarkBufferDirty(buffer);
 		UnlockReleaseBuffer(buffer);
 		
@@ -422,7 +419,6 @@ gistRedoCreateIndex(XLogRecPtr lsn, XLogRecord *record)
 	GISTInitBuffer(buffer, F_LEAF);
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
@@ -835,7 +831,6 @@ gistContinueInsert(gistIncompleteInsert *insert)
 			for (j = 0; j < numbuffer; j++)
 			{
 				PageSetLSN(pages[j], recptr);
-				PageSetTLI(pages[j], ThisTimeLineID);
 			}
 
 			END_CRIT_SECTION();

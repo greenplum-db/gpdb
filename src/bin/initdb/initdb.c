@@ -107,6 +107,7 @@ static char *backend_output = DEVNULL;
  */
 static bool forMirrorOnly = false;
 static bool show_setting = false;
+static bool data_checksums = false;
 static char *xlog_dir = "";
 
 /**
@@ -1546,8 +1547,10 @@ bootstrap_template1(char *short_version)
 	unsetenv("PGCLIENTENCODING");
 
 	snprintf(cmd, sizeof(cmd),
-			 "\"%s\" --boot -x1 %s -c gp_before_persistence_work=on %s",
-			 backend_exec, boot_options, talkargs);
+			 "\"%s\" --boot -x1 %s %s -c gp_before_persistence_work=on %s",
+			 backend_exec, 
+			 data_checksums ? "-k" : "",
+			 boot_options, talkargs);
 
 	PG_CMD_OPEN;
 
@@ -2814,6 +2817,7 @@ usage(const char *progname)
 	printf(_("\nLess commonly used options:\n"));
 	printf(_("  -d, --debug               generate lots of debugging output\n"));
 	printf(_("  -s, --show                show internal settings\n"));
+	printf(_("  -k, --data-checksums      data page checksums\n"));
 	printf(_("  -L DIRECTORY              where to find the input files\n"));
 	printf(_("  -n, --noclean             do not clean up after errors\n"));
 	printf(_("  -m, --formirror           only create data needed to start the backend in mirror mode\n"));
@@ -2856,6 +2860,7 @@ main(int argc, char *argv[])
 		{"show", no_argument, NULL, 's'},
 		{"noclean", no_argument, NULL, 'n'},
 		{"xlogdir", required_argument, NULL, 'X'},
+		{"data-checksums", no_argument, NULL, 'k'},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2919,7 +2924,7 @@ main(int argc, char *argv[])
 
 	/* process command-line options */
 
-	while ((c = getopt_long(argc, argv, "dD:E:L:mnU:WA:sT:X:", long_options, &option_index)) != -1)
+	while ((c = getopt_long(argc, argv, "dD:E:kL:mnU:WA:sT:X:", long_options, &option_index)) != -1)
 	{
         const char *optname;
         char        shortopt[2];
@@ -2967,6 +2972,9 @@ main(int argc, char *argv[])
 			case 'n':
 				noclean = true;
 				printf(_("Running in noclean mode.  Mistakes will not be cleaned up.\n"));
+				break;
+			case 'k':
+				data_checksums = true;
 				break;
 			case 'L':
 				share_path = xstrdup(optarg);
@@ -3412,6 +3420,11 @@ main(int argc, char *argv[])
 
 	printf(_("The default text search configuration will be set to \"%s\".\n"),
 		   default_text_search_config);
+
+	if (data_checksums)
+ 		printf(_("Data page checksums are enabled.\n"));
+ 	else
+ 		printf(_("Data page checksums are disabled.\n"));	
 
 	printf("\n");
 

@@ -2434,7 +2434,6 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, info, rdata, FrozenTransactionId);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -2837,7 +2836,6 @@ l1:
 		recptr = XLogInsert_OverrideXid(RM_HEAP_ID, XLOG_HEAP_DELETE, rdata, xid);
 
 		PageSetLSN(dp, recptr);
-		PageSetTLI(dp, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -3416,10 +3414,8 @@ l2:
 		if (newbuf != buffer)
 		{
 			PageSetLSN(BufferGetPage(newbuf), recptr);
-			PageSetTLI(BufferGetPage(newbuf), ThisTimeLineID);
 		}
 		PageSetLSN(BufferGetPage(buffer), recptr);
-		PageSetTLI(BufferGetPage(buffer), ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4129,7 +4125,6 @@ l3:
 		recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_LOCK, rdata);
 
 		PageSetLSN(dp, recptr);
-		PageSetTLI(dp, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4240,7 +4235,6 @@ heap_inplace_update_internal(Relation relation, HeapTuple tuple, bool freeze)
 			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, XLOG_HEAP_INPLACE, rdata, FrozenTransactionId);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4617,7 +4611,6 @@ log_heap_newpage(Relation rel,
 
 	recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_NEWPAGE, rdata);
 	PageSetLSN(page, recptr);
-	PageSetTLI(page, ThisTimeLineID);
 
 	END_CRIT_SECTION();
 }
@@ -4927,7 +4920,6 @@ log_newpage_internal(xl_heap_newpage *xlrec, Page page)
 	if (!PageIsNew(page))
 	{
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -5042,7 +5034,6 @@ heap_xlog_clean(XLogRecPtr lsn, XLogRecord *record, bool clean_move)
 	 */
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5113,7 +5104,6 @@ heap_xlog_freeze(XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5149,13 +5139,12 @@ heap_xlog_newpage(XLogRecPtr lsn, XLogRecord *record)
 	memcpy(page, (char *) xlrec + SizeOfHeapNewpage, BLCKSZ);
 
 	/*
-	 * The page may be uninitialized. If so, we can't set the LSN
-	 * and TLI because that would corrupt the page.
+	 * The page may be uninitialized. If so, we can't set the LSN because that
+	 * would corrupt the page.
 	 */
 	if (!PageIsNew(page))
 	{
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	MarkBufferDirty(buffer);
@@ -5249,7 +5238,6 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	/* Make sure there is no forward chain link in t_ctid */
 	htup->t_ctid = xlrec->target.tid;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5361,7 +5349,6 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	if (offnum == InvalidOffsetNumber)
 		elog(PANIC, "heap_insert_redo: failed to add tuple");
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5482,7 +5469,6 @@ heap_xlog_update(XLogRecPtr lsn, XLogRecord *record, bool move, bool hot_update)
 	if (samepage)
 		goto newsame;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 
@@ -5584,7 +5570,6 @@ newsame:;
 	if (offnum == InvalidOffsetNumber)
 		elog(PANIC, "heap_update_redo: failed to add tuple");
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5665,7 +5650,6 @@ heap_xlog_lock(XLogRecPtr lsn, XLogRecord *record)
 	/* Make sure there is no forward chain link in t_ctid */
 	htup->t_ctid = xlrec->target.tid;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5739,7 +5723,6 @@ heap_xlog_inplace(XLogRecPtr lsn, XLogRecord *record)
 		   newlen);
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	

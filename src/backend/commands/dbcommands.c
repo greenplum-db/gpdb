@@ -318,8 +318,7 @@ static void copy_buffer_pool_files(
 			recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_NEWPAGE, rdata);
 		
 			PageSetLSN(buffer, recptr);
-			PageSetTLI(buffer, ThisTimeLineID);
-		
+			PageSetChecksumInplace(buffer, blkno);
 			END_CRIT_SECTION();
 
 		}

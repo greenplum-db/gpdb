@@ -10272,6 +10272,8 @@ copy_buffer_pool_data(Relation rel, SMgrRelation dst,
 
 		smgrread(src, blkno, buf);
 
+		PageSetChecksumInplace(page, blkno);
+
 		/* XLOG stuff */
 		if (useWal)
 		{
