@@ -1454,6 +1454,29 @@ EXPLAIN SELECT '' AS three, f1, f2
  Optimizer status: legacy query optimizer
 (14 rows)
 
+EXPLAIN SELECT * FROM tenk1 a, tenk1 b
+WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=864.30..1660.70 rows=9955 width=488)
+   ->  Hash Join  (cost=864.30..1660.70 rows=3319 width=488)
+         Hash Cond: c.unique1 = a.unique1
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=551.31..1198.39 rows=3319 width=248)
+               Hash Key: c.unique1
+               ->  Hash Join  (cost=551.31..999.29 rows=3319 width=248)
+                     Hash Cond: c.unique2 = b.unique2
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=238.33..536.98 rows=3319 width=8)
+                           ->  HashAggregate  (cost=238.33..337.88 rows=3319 width=8)
+                                 Group By: c.unique1, c.unique2
+                                 ->  Seq Scan on tenk1 c  (cost=0.00..188.55 rows=3319 width=8)
+                     ->  Hash  (cost=188.55..188.55 rows=3319 width=244)
+                           ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=244)
+         ->  Hash  (cost=188.55..188.55 rows=3319 width=244)
+               ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=244)
+ Settings:  optimizer=on
+ Optimizer status: legacy query optimizer
+(17 rows)
+
 -- Correlated subselects
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"
   FROM SUBSELECT_TBL upper
