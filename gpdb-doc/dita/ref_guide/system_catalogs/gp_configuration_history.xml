@@ -10,8 +10,8 @@
         <codeph>gpcheck</codeph>, <codeph>gprecoverseg</codeph>, and <codeph>gpinitsystem</codeph>.
       For example, when you add a new segment and mirror segment to the system, records for these
       events are logged to <codeph>gp_configuration_history</codeph>.</p>
-    <p>The event descriptions stored in this table may be helpful for troubleshooting serious system
-      issues in collaboration with Greenplum support technicians.</p>
+    <p otherprops="pivotal">The event descriptions stored in this table may be helpful for troubleshooting serious system
+      issues in collaboration with Pivotal Support technicians.</p>
     <p>This table is populated only on the master. This table is defined in the
         <codeph>pg_global</codeph> tablespace, meaning it is globally shared across all databases in
       the system.</p>

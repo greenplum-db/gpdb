@@ -9145,8 +9145,7 @@
       <p>If Greenplum Database detects a corruption in the free TID list, the free TID list is
         rebuilt, a warning is logged, and a warning is returned by queries for which the check
         failed. Greenplum Database attempts to execute the queries. </p>
-      <note otherprops="pivotal">If a warning is returned, please contact Pivotal Global Support
-        Services.</note>
+      <note otherprops="pivotal">If a warning is returned, please contact Pivotal Support.</note>
       <table id="table_fkc_4pb_1w">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
