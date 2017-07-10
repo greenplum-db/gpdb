@@ -56,7 +56,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/costsize.c,v 1.192 2008/03/24 21:53:03 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/costsize.c,v 1.201 2008/11/22 22:47:05 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

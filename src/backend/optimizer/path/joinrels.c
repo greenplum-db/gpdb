@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.93 2008/08/14 18:47:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.95 2008/11/22 22:47:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -423,8 +423,48 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			reversed = false;
 		}
 		else if (bms_is_subset(sjinfo->min_lefthand, rel2->relids) &&
-				 bms_is_subset(sjinfo->min_righthand, rel1->relids))
+			bms_is_subset(sjinfo->min_righthand, rel1->relids))
 		{
+			if (match_sjinfo)
+				return false;	/* invalid join path */
+			match_sjinfo = sjinfo;
+			reversed = true;
+		}
+		else if (sjinfo->consider_dedup &&
+			bms_equal(sjinfo->syn_righthand, rel2->relids))
+		{
+			/*----------
+			 * For a semijoin, we can join the RHS to anything else by
+			 * unique-ifying the RHS (if the RHS can be unique-ified).
+			 * We will only get here if we have the full RHS but less
+			 * than min_lefthand on the LHS.
+			 *
+			 * The reason to consider such a join path is exemplified by
+			 *	SELECT ... FROM a,b WHERE (a.x,b.y) IN (SELECT c1,c2 FROM c)
+			 * If we insist on doing this as a semijoin we will first have
+			 * to form the cartesian product of A*B.  But if we unique-ify
+			 * C then the semijoin becomes a plain innerjoin and we can join
+			 * in any order, eg C to A and then to B.  When C is much smaller
+			 * than A and B this can be a huge win.  So we allow C to be
+			 * joined to just A or just B here, and then make_join_rel has
+			 * to handle the case properly.
+			 *
+			 * Note that actually we'll allow unique-ified C to be joined to
+			 * some other relation D here, too.  That is legal, if usually not
+			 * very sane, and this routine is only concerned with legality not
+			 * with whether the join is good strategy.
+			 *----------
+			 */
+
+			if (match_sjinfo)
+				return false;	/* invalid join path */
+			match_sjinfo = sjinfo;
+			reversed = false;
+		}
+		else if (sjinfo->consider_dedup &&
+			bms_equal(sjinfo->syn_righthand, rel1->relids))
+		{
+			/* Reversed semijoin case */
 			if (match_sjinfo)
 				return false;	/* invalid join path */
 			match_sjinfo = sjinfo;
@@ -455,13 +495,23 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 			 * We assume that make_outerjoininfo() set things up correctly
 			 * so that we'll only match to some SJ if the join is valid.
 			 * Set flag here to check at bottom of loop.
+			 *
+			 * For a semijoin, assume it's okay if either side fully contains
+			 * the RHS (per the unique-ification case above).
 			 *----------
 			 */
-			if (bms_overlap(rel1->relids, sjinfo->min_righthand) &&
+			if (!sjinfo->consider_dedup &&
+				bms_overlap(rel1->relids, sjinfo->min_righthand) &&
 				bms_overlap(rel2->relids, sjinfo->min_righthand))
 			{
 				/* seems OK */
 				Assert(!bms_overlap(joinrelids, sjinfo->min_lefthand));
+			}
+			else if (sjinfo->consider_dedup &&
+				(bms_is_subset(sjinfo->syn_righthand, rel1->relids) ||
+				bms_is_subset(sjinfo->syn_righthand, rel2->relids)))
+			{
+				/* seems OK */
 			}
 			else
 				is_valid_inner = false;
