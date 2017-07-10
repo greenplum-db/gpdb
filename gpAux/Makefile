@@ -166,9 +166,9 @@ rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --wit
 rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup --enable-mapreduce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup --enable-mapreduce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-tap-tests --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-tap-tests --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-linux_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
+suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost  --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost  --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)

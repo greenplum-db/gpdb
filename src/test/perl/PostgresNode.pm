@@ -97,6 +97,7 @@ use Scalar::Util qw(blessed);
 
 our @EXPORT = qw(
   get_new_node
+  get_new_demo_node
 );
 
 our ($test_localhost, $test_pghost, $last_port_assigned, @all_nodes);
@@ -118,7 +119,6 @@ INIT
 	$test_localhost = "127.0.0.1";
 	$test_pghost =
 	  $TestLib::windows_os ? $test_localhost : TestLib::tempdir_short;
-	$ENV{PGHOST}     = $test_pghost;
 	$ENV{PGDATABASE} = 'postgres';
 
 	# Tracking of last port value assigned to accelerate free port lookup.
@@ -370,91 +370,18 @@ sub set_replication_conf
 
 =item $node->init(...)
 
-Initialize a new cluster for testing.
+Initialize a new cluster for testing. Assume a running gpdb cluster (gpdemo)
 
-Authentication is set up so that only the current OS user can access the
-cluster. On Unix, we use Unix domain socket connections, with the socket in
-a directory that's only accessible to the current user to ensure that.
-On Windows, we use SSPI authentication to ensure the same (by pg_regress
---config-auth).
-
-WAL archiving can be enabled on this node by passing the keyword parameter
-has_archiving => 1. This is disabled by default.
-
-postgresql.conf can be set up for replication by passing the keyword
-parameter allows_streaming => 'logical' or 'physical' (passing 1 will also
-suffice for physical replication) depending on type of replication that
-should be enabled. This is disabled by default.
-
-The new node is set up in a fast but unsafe configuration where fsync is
-disabled.
 
 =cut
 
 sub init
 {
 	my ($self, %params) = @_;
-	my $port   = $self->port;
-	my $pgdata = $self->data_dir;
-	my $host   = $self->host;
 
-	$params{allows_streaming} = 0 unless defined $params{allows_streaming};
-	$params{has_archiving}    = 0 unless defined $params{has_archiving};
-
-	mkdir $self->backup_dir;
-	mkdir $self->archive_dir;
-
-	TestLib::system_or_bail('initdb', '-D', $pgdata, '-A', 'trust', '-N',
-		@{ $params{extra} });
-	TestLib::system_or_bail($ENV{PG_REGRESS}, '--config-auth', $pgdata);
-
-	open my $conf, '>>', "$pgdata/postgresql.conf";
-	print $conf "\n# Added by PostgresNode.pm\n";
-	print $conf "fsync = off\n";
-	print $conf "restart_after_crash = off\n";
-	print $conf "log_line_prefix = '%m [%p] %q%a '\n";
-	print $conf "log_statement = all\n";
-	print $conf "wal_retrieve_retry_interval = '500ms'\n";
-	print $conf "port = $port\n";
-
-	if ($params{allows_streaming})
-	{
-		if ($params{allows_streaming} eq "logical")
-		{
-			print $conf "wal_level = logical\n";
-		}
-		else
-		{
-			print $conf "wal_level = replica\n";
-		}
-		print $conf "max_wal_senders = 5\n";
-		print $conf "max_replication_slots = 5\n";
-		print $conf "wal_keep_segments = 20\n";
-		print $conf "max_wal_size = 128MB\n";
-		print $conf "shared_buffers = 1MB\n";
-		print $conf "wal_log_hints = on\n";
-		print $conf "hot_standby = on\n";
-		print $conf "max_connections = 10\n";
-	}
-	else
-	{
-		print $conf "wal_level = minimal\n";
-		print $conf "max_wal_senders = 0\n";
-	}
-
-	if ($TestLib::windows_os)
-	{
-		print $conf "listen_addresses = '$host'\n";
-	}
-	else
-	{
-		print $conf "unix_socket_directories = '$host'\n";
-		print $conf "listen_addresses = ''\n";
-	}
-	close $conf;
-
-	$self->set_replication_conf if $params{allows_streaming};
-	$self->enable_archiving     if $params{has_archiving};
+	# Assume a running gpdb cluster (gpdemo)
+	# Set pid to indicate running status.
+	$self->_update_pid(1);
 }
 
 =pod
@@ -652,19 +579,18 @@ Start the node and wait until it is ready to accept connections.
 sub start
 {
 	my ($self) = @_;
-	my $port   = $self->port;
-	my $pgdata = $self->data_dir;
-	my $name   = $self->name;
+	my $name = $self->name;
+
 	BAIL_OUT("node \"$name\" is already running") if defined $self->{_pid};
 	print("### Starting node \"$name\"\n");
-	my $ret = TestLib::system_log('pg_ctl', '-D', $self->data_dir, '-l',
-		$self->logfile, 'start');
+
+	my $ret = TestLib::system_log('gpstart -a');
 
 	if ($ret != 0)
 	{
-		print "# pg_ctl start failed; logfile:\n";
+		print "# gpstart failed; logfile:\n";
 		print TestLib::slurp_file($self->logfile);
-		BAIL_OUT("pg_ctl start failed");
+		BAIL_OUT("gpstart failed");
 	}
 
 	$self->_update_pid(1);
@@ -691,7 +617,8 @@ sub stop
 	$mode = 'fast' unless defined $mode;
 	return unless defined $self->{_pid};
 	print "### Stopping node \"$name\" using mode $mode\n";
-	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-m', $mode, 'stop');
+
+	TestLib::system_or_bail('gpstop -a');
 	$self->_update_pid(0);
 }
 
@@ -710,7 +637,8 @@ sub reload
 	my $pgdata = $self->data_dir;
 	my $name   = $self->name;
 	print "### Reloading node \"$name\"\n";
-	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, 'reload');
+
+	TestLib::system_or_bail('gpstop -u');
 }
 
 =pod
@@ -729,8 +657,27 @@ sub restart
 	my $logfile = $self->logfile;
 	my $name    = $self->name;
 	print "### Restarting node \"$name\"\n";
-	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-l', $logfile,
-		'restart');
+
+	TestLib::system_or_bail('gpstop -arf');
+	$self->_update_pid(1);
+}
+
+=pod
+
+=item $node->restart_qd()
+
+Wrapper for pg_ctl restart_qd
+
+=cut
+
+sub restart_qd
+{
+	my ($self)  = @_;
+	print "### Restarting qd node \n";
+
+	my $datadir = $ENV{'MASTER_DATA_DIRECTORY'};
+
+	TestLib::system_or_bail('pg_ctl restart -w -t 3 -D ' . $datadir);
 	$self->_update_pid(1);
 }
 
@@ -749,9 +696,8 @@ sub promote
 	my $pgdata  = $self->data_dir;
 	my $logfile = $self->logfile;
 	my $name    = $self->name;
-	print "### Promoting node \"$name\"\n";
-	TestLib::system_or_bail('pg_ctl', '-D', $pgdata, '-l', $logfile,
-		'promote');
+
+	BAIL_OUT('PROMOTE disabled for GPDB');
 }
 
 # Internal routine to enable streaming replication on a standby node.
@@ -834,7 +780,7 @@ sub _update_pid
 
 	# If we can open the PID file, read its first line and that's the PID we
 	# want.
-	if (open my $pidfile, '<', $self->data_dir . "/postmaster.pid")
+	if (open my $pidfile, '<', $ENV{'MASTER_DATA_DIRECTORY'} . "/postmaster.pid")
 	{
 		chomp($self->{_pid} = <$pidfile>);
 		print "# Postmaster PID for node \"$name\" is $self->{_pid}\n";
@@ -850,6 +796,47 @@ sub _update_pid
 
 	# Complain if we expected to find a pidfile.
 	BAIL_OUT("postmaster.pid unexpectedly not present") if $is_running;
+}
+
+=pod
+
+=item get_new_demo_node(node_name)
+
+Build gpdb node
+
+=cut
+
+sub get_new_demo_node
+{
+	if (defined $ENV{'PGPORT'} && defined $ENV{'MASTER_DATA_DIRECTORY'})
+	{
+		# Check to see if anything else is listening on this TCP port.
+		# This is *necessary* on Windows, and seems like a good idea
+		# on Unixen as well, even though we don't ask the postmaster
+		# to open a TCP port on Unix.
+		my $iaddr = inet_aton($test_localhost);
+		my $paddr = sockaddr_in($ENV{'PGPORT'}, $iaddr);
+		my $proto = getprotobyname("tcp");
+
+		socket(SOCK, PF_INET, SOCK_STREAM, $proto)
+		  or die "socket failed: $!";
+
+		# As in postmaster, don't use SO_REUSEADDR on Windows
+		setsockopt(SOCK, SOL_SOCKET, SO_REUSEADDR, pack("l", 1))
+		  unless $TestLib::windows_os;
+		if (bind(SOCK, $paddr) && listen(SOCK, SOMAXCONN))
+		{
+		  die "no gpdb listening on port $ENV{'PGPORT'}";
+		}
+		close(SOCK);
+
+		my $node = new PostgresNode($ENV{'MASTER_DATA_DIRECTORY'}, $test_localhost, $ENV{PGPORT});
+		return $node;
+	}
+	else
+	{
+		die "Could not found running GPDB instance, check PGPORT and MASTER_DATA_DIRECTORY env";
+	}
 }
 
 =pod

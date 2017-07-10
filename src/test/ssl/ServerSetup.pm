@@ -49,41 +49,45 @@ sub configure_test_server_for_ssl
 	my $node       = $_[0];
 	my $serverhost = $_[1];
 
-	my $pgdata = $node->data_dir;
+	my $pgdata = $ENV{MASTER_DATA_DIRECTORY};
 
-	# Create test users and databases
-	$node->psql('postgres', "CREATE USER ssltestuser");
-	$node->psql('postgres', "CREATE USER anotheruser");
-	$node->psql('postgres', "CREATE DATABASE trustdb");
-	$node->psql('postgres', "CREATE DATABASE certdb");
+	# Prevent duplicate config lines in postgresql.conf
+	my $exist = `grep sslconfig $pgdata/postgresql.conf`;
 
-	# enable logging etc.
-	open my $conf, '>>', "$pgdata/postgresql.conf";
-	print $conf "fsync=off\n";
-	print $conf "log_connections=on\n";
-	print $conf "log_hostname=on\n";
-	print $conf "listen_addresses='$serverhost'\n";
-	print $conf "log_statement=all\n";
+	if (!$exist)
+	{
+		# Create test users and databases
+		system_or_bail('createuser ssltestuser -s');
+		system_or_bail('createuser anotheruser -s');
+		system_or_bail('createdb trustdb');
+		system_or_bail('createdb certdb');
 
-	# enable SSL and set up server key
-	print $conf "include 'sslconfig.conf'";
+		# enable logging etc.
+		open my $conf, '>>', "$pgdata/postgresql.conf";
 
-	close $conf;
+		# enable SSL and set up server key
+		print $conf "include 'sslconfig.conf'";
 
-	# ssl configuration will be placed here
-	open my $sslconf, '>', "$pgdata/sslconfig.conf";
-	close $sslconf;
+		close $conf;
 
-# Copy all server certificates and keys, and client root cert, to the data dir
-	copy_files("ssl/server-*.crt", $pgdata);
-	copy_files("ssl/server-*.key", $pgdata);
-	chmod(0600, glob "$pgdata/server-*.key") or die $!;
-	copy_files("ssl/root+client_ca.crt", $pgdata);
-	copy_files("ssl/root_ca.crt",        $pgdata);
-	copy_files("ssl/root+client.crl",    $pgdata);
+		# ssl configuration will be placed here
+		open my $sslconf, '>', "$pgdata/sslconfig.conf";
+		print $sslconf "ssl=on\n";
+		close $sslconf;
 
-	# Stop and restart server to load new listen_addresses.
-	$node->restart;
+		# Copy all server certificates and keys, and client root cert, to the data dir
+		copy_files("ssl/server.crt", $pgdata);
+		copy_files("ssl/server.key", $pgdata);
+		copy_files("ssl/server-*.crt", $pgdata);
+		copy_files("ssl/server-*.key", $pgdata);
+		chmod(0600, glob "$pgdata/server*.key") or die $!;
+		copy_files("ssl/root+client_ca.crt", $pgdata);
+		copy_files("ssl/root_ca.crt",        $pgdata);
+		copy_files("ssl/root+client.crl",    $pgdata);
+
+		# Stop and restart server to load ssl configs.
+		$node->restart;
+	}
 
 	# Change pg_hba after restart because hostssl requires ssl=on
 	configure_hba_for_ssl($node, $serverhost);
@@ -96,35 +100,36 @@ sub switch_server_cert
 	my $node     = $_[0];
 	my $certfile = $_[1];
 	my $cafile   = $_[2] || "root+client_ca";
-	my $pgdata   = $node->data_dir;
+	my $pgdata   = $ENV{MASTER_DATA_DIRECTORY};
 
 	note
 	  "reloading server with certfile \"$certfile\" and cafile \"$cafile\"";
 
-	open my $sslconf, '>', "$pgdata/sslconfig.conf";
-	print $sslconf "ssl=on\n";
-	print $sslconf "ssl_ca_file='$cafile.crt'\n";
-	print $sslconf "ssl_cert_file='$certfile.crt'\n";
-	print $sslconf "ssl_key_file='$certfile.key'\n";
-	print $sslconf "ssl_crl_file='root+client.crl'\n";
-	close $sslconf;
+	system_or_bail("cp $pgdata/$certfile.crt $pgdata/server.crt");
+	system_or_bail("cp $pgdata/$certfile.key $pgdata/server.key");
+	system_or_bail("cp $pgdata/$cafile.crt $pgdata/root.crt");
+	system_or_bail("cp $pgdata/root+client.crl $pgdata/root.crl");
+#	print $sslconf "ssl_ca_file='$cafile.crt'\n";
+#	print $sslconf "ssl_cert_file='$certfile.crt'\n";
+#	print $sslconf "ssl_key_file='$certfile.key'\n";
+#	print $sslconf "ssl_crl_file='root+client.crl'\n";
 
-	$node->reload;
+	$node->restart_qd;
 }
 
 sub configure_hba_for_ssl
 {
 	my $node       = $_[0];
 	my $serverhost = $_[1];
-	my $pgdata     = $node->data_dir;
+	my $pgdata   = $ENV{MASTER_DATA_DIRECTORY};
 
   # Only accept SSL connections from localhost. Our tests don't depend on this
   # but seems best to keep it as narrow as possible for security reasons.
   #
   # When connecting to certdb, also check the client certificate.
-	open my $hba, '>', "$pgdata/pg_hba.conf";
-	print $hba
-"# TYPE  DATABASE        USER            ADDRESS                 METHOD\n";
+
+	open my $hba, '>>', "$pgdata/pg_hba.conf";
+
 	print $hba
 "hostssl trustdb         ssltestuser     $serverhost/32            trust\n";
 	print $hba

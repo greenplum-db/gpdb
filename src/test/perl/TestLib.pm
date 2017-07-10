@@ -53,17 +53,6 @@ BEGIN
 	delete $ENV{LC_ALL};
 	$ENV{LC_MESSAGES} = 'C';
 
-	delete $ENV{PGCONNECT_TIMEOUT};
-	delete $ENV{PGDATA};
-	delete $ENV{PGDATABASE};
-	delete $ENV{PGHOSTADDR};
-	delete $ENV{PGREQUIRESSL};
-	delete $ENV{PGSERVICE};
-	delete $ENV{PGSSLMODE};
-	delete $ENV{PGUSER};
-	delete $ENV{PGPORT};
-	delete $ENV{PGHOST};
-
 	$ENV{PGAPPNAME} = $0;
 
 	# Must be set early
@@ -167,8 +156,9 @@ sub system_or_bail
 
 sub run_log
 {
-	print("# Running: " . join(" ", @{ $_[0] }) . "\n");
-	return IPC::Run::run(@_);
+	my $cmd = join(" ", @{ $_[0] });
+	print("# Running: " . $cmd . "\n");
+	return IPC::Run::run($cmd);
 }
 
 # Generate a string made of the given range of ASCII characters
