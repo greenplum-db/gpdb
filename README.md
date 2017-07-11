@@ -32,12 +32,12 @@ to the segments, and collects the results.
 
 ## Building Greenplum Database with GPORCA
 
-### Installing dependencies
-A. For macOS developers, follow [these steps](README.macOS.md) for getting your system ready for GPDB
+### Installing dependencies (for macOS developers)
+Follow [these macOS steps](README.macOS.md) for getting your system ready for GPDB
 
-Or
+### Installing dependencies (for Linux developers)
 
-B.1 Install needed python modules
+1. Install needed python modules
 
   Add the following Python modules (2.7 & 2.6 are supported)
 
@@ -49,7 +49,7 @@ B.1 Install needed python modules
   If necessary, upgrade modules using "pip install --upgrade".
   pip should be at least version 7.x.x.
 
-B.2 Verify that you can ssh to your machine name without a password
+2. Verify that you can ssh to your machine name without a password
 ```
 ssh <hostname of your machine>  # e.g., ssh briarwood
 ```
