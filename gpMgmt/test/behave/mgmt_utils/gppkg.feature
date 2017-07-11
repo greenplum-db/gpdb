@@ -56,7 +56,7 @@ Feature: gppkg tests
         Then gppkg should return a return code of 0
         And gppkg should print "This is a sample message shown after successful installation" to stdout
         And gppkg should print "Completed local installation of sample" to stdout
-        And "sample" gppkg files exist on all segment hosts
+        And "sample" gppkg files exist on all hosts
 
     @gppkg_install_remove
     Scenario: gppkg --install should report failure because the package is already installed
@@ -73,7 +73,7 @@ Feature: gppkg tests
         And gppkg should print "Uninstalling package sample.gppkg" to stdout
         And gppkg should print "Completed local uninstallation of sample.gppkg" to stdout
         And gppkg should print "sample.gppkg successfully uninstalled" to stdout
-        And "sample" gppkg files does not exist on all segment hosts
+        And "sample" gppkg files does not exist on all hosts
 
     @gppkg_install_remove
     Scenario: gppkg --remove should report failure when the package is not installed
@@ -92,3 +92,23 @@ Feature: gppkg tests
         Then gppkg should return a return code of 0
         And gppkg should print "Starting gppkg with args: --query --all" to stdout
         And gppkg should print "sample" to stdout
+
+    @gppkg_multinode_clean
+    Scenario: gppkg --clean should install to the segment host with no gppkg
+        Given the database is running
+        When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
+        And gppkg "sample" is removed from a segment host
+        And the user runs "gppkg --clean"
+        Then gppkg should return a return code of 0
+        And gppkg should print "The following packages will be installed on .*: sample.gppkg" to stdout
+        And "sample" gppkg files exist on all hosts
+
+    @gppkg_multinode_clean
+    Scenario: gppkg --clean should remove on all segment hosts when gppkg does not exist in master
+        Given the database is running
+        When the user runs "gppkg --install test/behave/mgmt_utils/steps/data/sample.gppkg"
+        And gppkg "sample" is removed from master host
+        And the user runs "gppkg --clean"
+        Then gppkg should return a return code of 0
+        And gppkg should print "The following packages will be uninstalled on .*: sample.gppkg" to stdout
+        And "sample" gppkg files does not exist on all hosts

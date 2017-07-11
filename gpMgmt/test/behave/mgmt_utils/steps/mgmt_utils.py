@@ -5114,14 +5114,14 @@ def impl(context):
     if not context.exception:
         raise Exception("Directory for date %s still exists" % context.full_backup_timestamp[0:8])
 
-@then('"{gppkg_name}" gppkg files exist on all segment hosts')
+@then('"{gppkg_name}" gppkg files exist on all hosts')
 def impl(context, gppkg_name):
     remote_gphome = os.environ.get('GPHOME')
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
 
     hostlist = get_all_hostnames_as_list(context, 'template1')
 
-    #We can assume the GPDB is installed at the same location for all hosts
+    # We can assume the GPDB is installed at the same location for all hosts
     rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
 
     for hostname in set(hostlist):
@@ -5134,14 +5134,12 @@ def impl(context, gppkg_name):
         if not gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
-@then('"{gppkg_name}" gppkg files does not exist on all segment hosts')
+@then('"{gppkg_name}" gppkg files does not exist on all hosts')
 def impl(context, gppkg_name):
     remote_gphome = os.environ.get('GPHOME')
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-
     hostlist = get_all_hostnames_as_list(context, 'template1')
 
-    #We can assume the GPDB is installed at the same location for all hosts
+    # We can assume the GPDB is installed at the same location for all hosts
     rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
 
     for hostname in set(hostlist):
@@ -5153,3 +5151,54 @@ def impl(context, gppkg_name):
 
         if gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
+
+def _remove_gppkg_from_host(context, gppkg_name, is_master_host):
+    remote_gphome = os.environ.get('GPHOME')
+
+    if is_master_host:
+        hostname = get_master_hostname()[0][0] # returns a list of list
+    else:
+        hostlist = get_segment_hostlist()
+        if not hostlist:
+            raise Exception("Current GPDB setup is not a multi-host cluster.")
+
+        # Let's just pick whatever is the first host in the list, it shouldn't
+        # matter which one we remove from
+        hostname = hostlist[0]
+
+    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+    cmd = Command(name='get all rpm from the host',
+                  cmdStr=rpm_command_list_all,
+                  ctxt=REMOTE,
+                  remoteHost=hostname)
+    cmd.run(validateAfter=True)
+    installed_gppkgs = cmd.get_stdout_lines()
+    if not installed_gppkgs:
+        raise Exception("Found no packages installed")
+
+    full_gppkg_name = next((gppkg for gppkg in installed_gppkgs if gppkg_name in gppkg), None)
+    if not full_gppkg_name:
+        raise Exception("Found no matches for gppkg '%s'\n"
+                        "gppkgs installed:\n%s" % (gppkg_name, installed_gppkgs))
+
+    rpm_remove_command = 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, remote_gphome)
+    cmd = Command(name='Cleanly remove from the remove host',
+                  cmdStr=rpm_remove_command,
+                  ctxt=REMOTE,
+                  remoteHost=hostname)
+    cmd.run(validateAfter=True)
+
+    remove_archive_gppgk = 'rm -f %s/share/packages/archive/%s.gppkg' % (remote_gphome, gppkg_name)
+    cmd = Command(name='Remove archive gppkg',
+                  cmdStr=remove_archive_gppgk,
+                  ctxt=REMOTE,
+                  remoteHost=hostname)
+    cmd.run(validateAfter=True)
+
+@when('gppkg "{gppkg_name}" is removed from a segment host')
+def impl(context, gppkg_name):
+    _remove_gppkg_from_host(context, gppkg_name, is_master_host=False)
+
+@when('gppkg "{gppkg_name}" is removed from master host')
+def impl(context, gppkg_name):
+    _remove_gppkg_from_host(context, gppkg_name, is_master_host=True)

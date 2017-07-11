@@ -662,7 +662,8 @@ jobs:
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_TAGS: gppkg
+      # Disable multinode tests for concourse.
+      BEHAVE_FLAGS: --tags=gppkg --tags=-gppkg_multinode_clean
 
 - name: MM_pt-rebuild
   plan:
