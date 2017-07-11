@@ -93,18 +93,3 @@ type RealKeyParser struct{}
 func (parser RealKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error) {
 	return ssh.ParsePrivateKey(pemBytes)
 }
-
-type RealClientProxy struct {
-	client *ssh.Client
-}
-
-func (proxy RealClientProxy) NewSession() (SshSession, error) {
-	return proxy.client.NewSession()
-}
-
-type RealDialer struct{}
-
-func (dial RealDialer) Dial(network, addr string, config *ssh.ClientConfig) (SshClient, error) {
-	client, err := ssh.Dial(network, addr, config)
-	return RealClientProxy{client}, err
-}

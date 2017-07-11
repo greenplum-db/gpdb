@@ -51,7 +51,7 @@ func (cmd CheckVersionCommand) execute(dbConnector db.DBConnector, outputWriter 
 	re := regexp.MustCompile("Greenplum Database (.*) build")
 
 	versionString := re.FindStringSubmatch(row)[1]
-	versionObject := version.MustNewVersionFromString(versionString)
+	versionObject := version.MustNewVersionFromString(versionString) // todo unhappy that this panics--is there an alternative that returns an error????????????
 
 	if versionObject.IsGt(version.MustNewVersionFromString(MINIMUM_VERSION)) {
 		fmt.Fprint(outputWriter, "gp_upgrade: Version Compatibility Check [OK]\n")

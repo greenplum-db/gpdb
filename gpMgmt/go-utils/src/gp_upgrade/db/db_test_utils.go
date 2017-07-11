@@ -3,6 +3,8 @@ package db
 import (
 	"github.com/greenplum-db/gpbackup/testutils"
 
+	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	. "github.com/onsi/ginkgo"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
@@ -19,12 +21,13 @@ func CreateMockDB() (*sqlx.DB, sqlmock.Sqlmock) {
 
 func CreateMockDBConn(masterHost string, masterPort int) (DBConnector, sqlmock.Sqlmock) {
 	mockdb, mock := CreateMockDB()
-	gpdbConnector := NewDBConn(masterHost, masterPort, "testdb")
-	gpdbConnStruct := gpdbConnector.(*GPDBConnector)
-	gpdbConnStruct.driver = testutils.TestDriver{DBExists: true, DB: mockdb, DBName: "testdb"}
-	connection := gpdbConnector.GetConn()
-	if connection != nil && connection.Stats().OpenConnections > 0 {
-		Fail("connection before connect is called")
+	connector := NewDBConn("localhost", 0, "testdb")
+	gpdbConnStruct := connector.(*GPDBConnector)
+	driver := testutils.TestDriver{DBExists: true, RoleExists: true, DB: mockdb, DBName: "testdb", User: "testrole"}
+	gpdbConnStruct.driver = driver
+	err := connector.Connect()
+	if err != nil {
+		Fail(fmt.Sprintf("cannot connect to test mock database: %v", err))
 	}
-	return gpdbConnector, mock
+	return connector, mock
 }
