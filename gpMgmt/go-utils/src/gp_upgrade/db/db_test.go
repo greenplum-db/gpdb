@@ -1,11 +1,10 @@
 package db
 
 import (
-	"github.com/greenplum-db/gpbackup/testutils"
-
 	"os"
 
-	"github.com/greenplum-db/gpbackup/utils"
+	"gp_upgrade/utils"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -62,7 +61,7 @@ var _ = Describe("db connector", func() {
 
 				dbConnector := NewDBConn("", 5432, "")
 				connectorStruct := dbConnector.(*GPDBConnector)
-				_, _, currentHost := utils.GetUserAndHostInfo()
+				currentHost, _ := utils.GetHost()
 				Expect(connectorStruct.host).To(Equal(currentHost))
 			})
 		})
@@ -93,7 +92,7 @@ var _ = Describe("db connector", func() {
 		Context("when the database exists", func() {
 			It("connects successfully", func() {
 				var mockDBConn DBConnector
-				mockDBConn, _ = CreateMockDBConn("localhost", 5432)
+				mockDBConn, _ = CreateMockDBConn()
 				err := mockDBConn.Connect()
 				defer mockDBConn.Close()
 				Expect(err).ToNot(HaveOccurred())
@@ -103,7 +102,7 @@ var _ = Describe("db connector", func() {
 			It("fails", func() {
 				mockdb, _ := CreateMockDB()
 				gpdbConnector := &GPDBConnector{
-					driver: testutils.TestDriver{DBExists: false, DB: mockdb, DBName: "testdb"},
+					driver: TestDriver{DBExists: false, DB: mockdb, DBName: "testdb"},
 					dbName: "testdb",
 					host:   "localhost",
 					port:   5432,
@@ -113,4 +112,5 @@ var _ = Describe("db connector", func() {
 			})
 		})
 	})
+
 })

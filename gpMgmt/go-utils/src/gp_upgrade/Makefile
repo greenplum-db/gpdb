@@ -14,8 +14,6 @@ export PATH := $(PATH):$(GO_UTILS_DIR)/bin
 all : build test
 
 dependencies :
-		go get github.com/greenplum-db/gpbackup/utils
-		go get github.com/greenplum-db/gpbackup/testutils
 		go get github.com/cppforlife/go-semi-semantic/version
 		go get github.com/onsi/ginkgo/ginkgo
 		go get golang.org/x/tools/cmd/goimports
@@ -37,7 +35,7 @@ unit : dependencies sshd_build
 sshd_build : dependencies
 		make -C integrations/sshd
 
-integration: dependencies sshd_build unit
+integration: dependencies sshd_build
 		ginkgo -r -randomizeAllSpecs -race integrations
 
 test : format unit sshd_build integration

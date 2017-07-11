@@ -5,7 +5,9 @@
 ### Prerequisites
 
 - Golang. We currently develop against latest stable Golang, which was v1.8.3 as of June 2017
-- Either `direnv`, or manually set your GOPATH. See the
+- For GOPATH, in the Makefile, we set a combination path, with the default ~/go as the first entry, 
+and the path to go-utils/ as the second entry. This allows all dependencies to be download by "go get"
+into the ~/go/ directory, away from the gpdb/ sources. See the
   [overall go-utils README](../../README.md) for more information
 
 You can run `make dependencies`, but most make targets will call it for you

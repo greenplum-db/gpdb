@@ -38,7 +38,7 @@ var _ = Describe("check tests", func() {
 	Describe("check", func() {
 		Describe("happy: the database is running, master-host is provided, and connection is successful", func() {
 			It("writes a file to ~/.gp_upgrade/cluster_config.json with correct json", func() {
-				dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+				dbConnector, mock := db.CreateMockDBConn()
 				setupSegmentConfigInDB(mock)
 				err := subject.execute(dbConnector, config.NewWriter())
 
@@ -66,7 +66,7 @@ var _ = Describe("check tests", func() {
 			Describe("when the query fails on AO table count", func() {
 
 				It("returns an error", func() {
-					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn()
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))
 
 					err := subject.execute(dbConnector, config.NewWriter())
@@ -86,7 +86,7 @@ var _ = Describe("check tests", func() {
 			})
 			Describe("when the home directory is not writable", func() {
 				It("returns an error", func() {
-					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn()
 					setupSegmentConfigInDB(mock)
 					err := os.MkdirAll(config.GetConfigDir(), 0500)
 					test_utils.Check("cannot chmod: ", err)
@@ -102,7 +102,7 @@ var _ = Describe("check tests", func() {
 			Describe("when db result cannot be parsed", func() {
 				It("returns an error", func() {
 
-					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn()
 					setupSegmentConfigInDB(mock)
 					setupSegmentConfigInDB(mock)
 					mock.ExpectQuery(SELECT_SEGMENT_CONFIG_QUERY).WillReturnError(errors.New("the query has failed"))

@@ -32,7 +32,7 @@ var _ = Describe("object count tests", func() {
 	Describe("check object count", func() {
 		Describe("happy", func() {
 			It("prints the number of AO and heap objects in the database", func() {
-				dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+				dbConnector, mock := db.CreateMockDBConn()
 				mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnRows(aofakeResult)
 				mock.ExpectQuery("SELECT COUNT.*AND c.relstorage NOT IN.*").WillReturnRows(heapfakeResult)
 				buffer := gbytes.NewBuffer()
@@ -51,7 +51,7 @@ var _ = Describe("object count tests", func() {
 			Describe("when the query fails on AO table count", func() {
 
 				It("returns an error", func() {
-					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn()
 					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnError(errors.New("the query for AO table count has failed"))
 
 					err := subject.execute(dbConnector, nil)
@@ -63,7 +63,7 @@ var _ = Describe("object count tests", func() {
 			Describe("when the query fails on heap-only table count", func() {
 
 				It("returns an error", func() {
-					dbConnector, mock := db.CreateMockDBConn("localhost", 5432)
+					dbConnector, mock := db.CreateMockDBConn()
 					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnRows(aofakeResult)
 					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage NOT IN.*").WillReturnError(errors.New("the query for heap-only table count has failed"))
 					buffer := gbytes.NewBuffer()

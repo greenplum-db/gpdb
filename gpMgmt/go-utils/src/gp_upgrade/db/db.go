@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/greenplum-db/gpbackup/utils"
+	"gp_upgrade/utils"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -43,13 +43,14 @@ type GPDBConnector struct {
 }
 
 func NewDBConn(masterHost string, masterPort int, dbname string) DBConnector {
-	currentUser, _, currentHost := utils.GetUserAndHostInfo()
+	currentUser, _, _ := utils.GetUser()
 	username := utils.TryEnv("PGUSER", currentUser)
 	if dbname == "" {
 		dbname = utils.TryEnv("PGDATABASE", "")
 	}
+	hostname, _ := utils.GetHost()
 	if masterHost == "" {
-		masterHost = utils.TryEnv("PGHOST", currentHost)
+		masterHost = utils.TryEnv("PGHOST", hostname)
 	}
 	if masterPort == 0 {
 		masterPort, _ = strconv.Atoi(utils.TryEnv("PGPORT", "15432"))

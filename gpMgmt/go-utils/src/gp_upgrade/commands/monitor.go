@@ -10,7 +10,7 @@ import (
 	"gp_upgrade/shell_parsers"
 	"gp_upgrade/ssh_client"
 
-	"github.com/greenplum-db/gpbackup/utils"
+	"gp_upgrade/utils"
 )
 
 type MonitorCommand struct {
@@ -36,7 +36,7 @@ func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, shellParser
 
 	user := cmd.User
 	if user == "" {
-		user, _, _ = utils.GetUserAndHostInfo()
+		user, _, _ = utils.GetUser() // todo last arg is for error--bubble up that error here? with what message?
 	}
 
 	output, err := connector.ConnectAndExecute(cmd.Host, cmd.Port, user, "ps auxx | grep pg_upgrade")
