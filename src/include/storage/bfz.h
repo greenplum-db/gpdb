@@ -74,7 +74,6 @@ extern int	bfz_string_to_compression(const char *string);
 extern bfz_t *bfz_create(const char *filePrefix, bool delOnClose, int compress);
 extern bfz_t *bfz_open(const char *fileName, bool delOnClose, int compress);
 extern int64 bfz_append_end(bfz_t * thiz);
-extern int64 bfz_rewind(bfz_t *thiz);
 extern void bfz_scan_begin(bfz_t * thiz);
 extern void bfz_close(bfz_t *thiz);
 

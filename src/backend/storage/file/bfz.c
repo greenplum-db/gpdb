@@ -413,24 +413,6 @@ bfz_append_end(bfz_t * thiz)
 	return tot_compressed;
 }
 
-/*
- * bfz_rewind
- *
- *  XXX: ???
- */
-int64
-bfz_rewind(bfz_t *thiz)
-{
-	int64		size = -1;
-
-	if (thiz->mode == BFZ_MODE_APPEND)
-		size = bfz_append_end(thiz);
-	else
-		thiz->mode = BFZ_MODE_FREED;
-
-	return size;
-}
-
 void
 bfz_scan_begin(bfz_t * thiz)
 {
