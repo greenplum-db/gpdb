@@ -326,6 +326,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	hashtable->stats = NULL;
 	hashtable->eagerlyReleased = false;
 	hashtable->hjstate = hjstate;
+	hashtable->first_pass = true;
 
 	/*
 	 * Get info about the hash functions to be used for each hash key. Also
@@ -733,6 +734,8 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 	if (oldnbatch > Min(INT_MAX / 2, MaxAllocSize / (sizeof(void *) * 2)))
 		return;
 
+	Assert(hashtable->first_pass);
+
 	nbatch = oldnbatch * 2;
 	Assert(nbatch > 1);
 
@@ -798,16 +801,11 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 
 				/* dump it out */
 				Assert(batchno > curbatch);
-				/* Only insert if it was not inserted before */
-				if (!hashtable->reuse_inner_batches)
-				{
-					ExecHashJoinSaveTuple(NULL, HJTUPLE_MINTUPLE(tuple),
+				ExecHashJoinSaveTuple(NULL, HJTUPLE_MINTUPLE(tuple),
 									  tuple->hashvalue,
 									  hashtable,
 									  &hashtable->batches[batchno]->innerside,
 									  hashtable->bfCxt);
-				}
-
 				/* and remove from hash table */
 				if (prevtuple)
 					prevtuple->next = nexttuple;
@@ -994,7 +992,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 			}
 		}
 	}
-	else if (!hashtable->reuse_inner_batches)
+	else if (hashtable->first_pass)
 	{
 		/*
 		 * put the tuple into a temp file for later batches

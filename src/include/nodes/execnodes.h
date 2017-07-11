@@ -2254,6 +2254,7 @@ typedef struct HashJoinState
 
 	/* set if the operator created workfiles */
 	bool workfiles_created;
+	bool rescannable; /* Do we need to support rescan for this hash join */
 } HashJoinState;
 
 
