@@ -290,6 +290,8 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 	Plan	   *lplan;
 	Plan	   *rplan;
 	List	   *tlist;
+	bool		enableHashJoin;
+	bool		enableNestLoop;
 
 	/* Parser should have rejected other cases */
 	if (setOp->op != SETOP_UNION || !setOp->all)
@@ -304,12 +306,23 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 	lplan = recurse_set_operations(setOp->larg, root, tuple_fraction,
 								   setOp->colTypes, false, -1,
 								   refnames_tlist, sortClauses);
+
+	/* TODO: Remove this part when we can rescan spilled hash table in HashJoin */
+	enableHashJoin = root->config->enable_hashjoin;
+	enableNestLoop = root->config->enable_nestloop;
+	root->config->enable_hashjoin = false;
+	root->config->enable_nestloop = true;
+
 	/* The right plan will want to look at the left one ... */
 	root->non_recursive_plan = lplan;
 	rplan = recurse_set_operations(setOp->rarg, root, tuple_fraction,
 								   setOp->colTypes, false, -1,
 								   refnames_tlist, sortClauses);
 	root->non_recursive_plan = NULL;
+
+	/* Restore the original config */
+	root->config->enable_hashjoin = enableHashJoin;
+	root->config->enable_nestloop = enableNestLoop;
 
 	/*
 	 * Generate tlist for RecursiveUnion plan node --- same as in Append cases

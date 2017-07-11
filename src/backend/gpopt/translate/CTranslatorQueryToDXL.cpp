@@ -4055,6 +4055,11 @@ CTranslatorQueryToDXL::ConstructCTEProducerList
 		CommonTableExpr *pcte = (CommonTableExpr *) lfirst(plc);
 		GPOS_ASSERT(IsA(pcte->ctequery, Query));
 		
+		if (pcte->cterecursive)
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("WITH RECURSIVE"));
+		}
+
 		Query *pqueryCte = CQueryMutators::PqueryNormalize(m_pmp, m_pmda, (Query *) pcte->ctequery, ulCteQueryLevel + 1);
 		
 		// the query representing the cte can only access variables defined in the current level as well as

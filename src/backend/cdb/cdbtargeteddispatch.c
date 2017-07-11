@@ -497,6 +497,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 				break;
 			case T_TidScan:
 			case T_FunctionScan:
+			case T_WorkTableScan:
 				DisableTargetedDispatch(&dispatchInfo);
 				break;
 			case T_ValuesScan:
@@ -534,6 +535,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 			case T_Window:
 			case T_TableFunctionScan:
 			case T_Repeat:
+			case T_RecursiveUnion:
 				/* no change to dispatchInfo --> just iterate children */
 				break;
 			case T_SubPlan:

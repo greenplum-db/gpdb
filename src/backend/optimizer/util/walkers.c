@@ -892,6 +892,11 @@ plan_tree_walker(Node *node,
 				return true;
 			break;
 
+		case T_RecursiveUnion:
+			if (walk_plan_node_fields((Plan *) node, walker, context))
+				return true;
+			break;
+
 		case T_Sequence:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
@@ -927,6 +932,7 @@ plan_tree_walker(Node *node,
 		case T_BitmapTableScan:
 		case T_TableFunctionScan:
 		case T_ValuesScan:
+		case T_WorkTableScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			break;

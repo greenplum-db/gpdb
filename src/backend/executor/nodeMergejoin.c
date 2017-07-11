@@ -748,7 +748,8 @@ ExecMergeJoin(MergeJoinState *node)
 						 * they are not eager free safe. However, when the merge join
 						 * is done, we can free the memory used by the child nodes.
 						 */
-						ExecEagerFreeMergeJoin(node);
+						if (!node->js.ps.delayEagerFree)
+							ExecEagerFreeMergeJoin(node);
 
 						/* Otherwise we're done. */
 						return NULL;
@@ -815,7 +816,8 @@ ExecMergeJoin(MergeJoinState *node)
 						 */
 						ExecSquelchNode(outerPlan);
 
-						ExecEagerFreeMergeJoin(node);
+						if (!node->js.ps.delayEagerFree)
+							ExecEagerFreeMergeJoin(node);
 
 						/* Otherwise we're done. */
 						return NULL;
@@ -980,7 +982,8 @@ ExecMergeJoin(MergeJoinState *node)
 
 						if (((MergeJoin*)node->js.ps.plan)->unique_outer)
 						{
-							ExecEagerFreeMergeJoin(node);
+							if (!node->js.ps.delayEagerFree)
+								ExecEagerFreeMergeJoin(node);
 
 							/* we are done */
 							return NULL;
@@ -1202,7 +1205,8 @@ ExecMergeJoin(MergeJoinState *node)
 							 */
 							ExecSquelchNode(outerPlan);
 
-							ExecEagerFreeMergeJoin(node);
+							if (!node->js.ps.delayEagerFree)
+								ExecEagerFreeMergeJoin(node);
 
 							/* Otherwise we're done. */
 							return NULL;
@@ -1334,7 +1338,8 @@ ExecMergeJoin(MergeJoinState *node)
 						if (!TupIsNull(innerTupleSlot) && node->mj_squelchInner)
 							ExecSquelchNode(innerPlan);
 
-						ExecEagerFreeMergeJoin(node);
+						if (!node->js.ps.delayEagerFree)
+							ExecEagerFreeMergeJoin(node);
 
 						/* Otherwise we're done. */
 						return NULL;
@@ -1450,7 +1455,9 @@ ExecMergeJoin(MergeJoinState *node)
 				if (TupIsNull(innerTupleSlot))
 				{
 					MJ_printf("ExecMergeJoin: end of inner subplan\n");
-					ExecEagerFreeMergeJoin(node);
+
+					if (!node->js.ps.delayEagerFree)
+						ExecEagerFreeMergeJoin(node);
 
 					return NULL;
 				}
@@ -1503,7 +1510,8 @@ ExecMergeJoin(MergeJoinState *node)
 				{
 					MJ_printf("ExecMergeJoin: end of outer subplan\n");
 
-					ExecEagerFreeMergeJoin(node);
+					if (!node->js.ps.delayEagerFree)
+						ExecEagerFreeMergeJoin(node);
 
 					return NULL;
 				}
@@ -1544,6 +1552,7 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	mergestate = makeNode(MergeJoinState);
 	mergestate->js.ps.plan = (Plan *) node;
 	mergestate->js.ps.state = estate;
+	mergestate->js.ps.delayEagerFree = (eflags & EXEC_FLAG_REWIND) != 0;
 
 	/*
 	 * Miscellaneous initialization

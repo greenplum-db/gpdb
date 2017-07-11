@@ -1586,6 +1586,18 @@ _readAppend(void)
 	READ_DONE();
 }
 
+static RecursiveUnion *
+_readRecursiveUnion(void)
+{
+	READ_LOCALS(RecursiveUnion);
+
+	readPlanInfo((Plan *)local_node);
+
+	READ_INT_FIELD(wtParam);
+
+	READ_DONE();
+}
+
 static Sequence *
 _readSequence(void)
 {
@@ -1817,6 +1829,18 @@ _readBitmapTableScan(void)
 	readScanInfo((Scan *)local_node);
 
 	READ_NODE_FIELD(bitmapqualorig);
+
+	READ_DONE();
+}
+
+static WorkTableScan *
+_readWorkTableScan(void)
+{
+	READ_LOCALS(WorkTableScan);
+
+	readScanInfo((Scan *)local_node);
+
+	READ_INT_FIELD(wtParam);
 
 	READ_DONE();
 }
@@ -2778,6 +2802,9 @@ readNodeBinary(void)
 			case T_Append:
 				return_value = _readAppend();
 				break;
+			case T_RecursiveUnion:
+				return_value = _readRecursiveUnion();
+				break;
 			case T_Sequence:
 				return_value = _readSequence();
 				break;
@@ -2825,6 +2852,9 @@ readNodeBinary(void)
 				break;
 			case T_BitmapTableScan:
 				return_value = _readBitmapTableScan();
+				break;
+			case T_WorkTableScan:
+				return_value = _readWorkTableScan();
 				break;
 			case T_TidScan:
 				return_value = _readTidScan();

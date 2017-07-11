@@ -269,6 +269,35 @@ compare_path_costs(Path *path1, Path *path2, CostSelector criterion)
 }
 
 /*
+ * compare_recursive_path_costs
+ *   JoinPath that has WorkTableScan as outer child is always cheaper.
+ *   If both paths are JointPath and only path1 has outer WTS return -1.
+ *   If both paths are JointPath and only path2 has outer WTS return +1.
+ *   Otherwise return 0.
+ */
+static int
+compare_recursive_path_costs(Path *path1, Path *path2)
+{
+	bool	isWTpath1;
+	bool	isWTpath2;
+
+	if (!IsJoinPath(path1) || !IsJoinPath(path2))
+		return 0;
+
+	isWTpath1 = ((JoinPath *) path1)->outerjoinpath->pathtype == T_WorkTableScan;
+	isWTpath2 = ((JoinPath *) path2)->outerjoinpath->pathtype == T_WorkTableScan;
+
+	if (isWTpath1 && isWTpath2)
+		return 0;
+	else if (isWTpath1)
+		return -1;
+	else if (isWTpath2)
+		return +1;
+	else
+		return 0;
+}
+
+/*
  * compare_fuzzy_path_costs
  *	  Return -1, 0, or +1 according as path1 is cheaper, the same cost,
  *	  or more expensive than path2 for the specified criterion.
@@ -281,6 +310,12 @@ compare_path_costs(Path *path1, Path *path2, CostSelector criterion)
 static int
 compare_fuzzy_path_costs(Path *path1, Path *path2, CostSelector criterion)
 {
+	int		cmp;
+
+	cmp = compare_recursive_path_costs(path1, path2);
+	if (cmp != 0)
+		return cmp;
+
 	/*
 	 * We use a fuzz factor of 1% of the smaller cost.
 	 *
@@ -2420,13 +2455,28 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
  *	  returning the pathnode.
  */
 Path *
-create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel)
+create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel, CdbLocusType ctelocus)
 {
 	Path	   *pathnode = makeNode(Path);
+	CdbPathLocus result;
+
+	if (ctelocus == CdbLocusType_Entry)
+		CdbPathLocus_MakeEntry(&result);
+	else if (ctelocus == CdbLocusType_SingleQE)
+		CdbPathLocus_MakeSingleQE(&result);
+	else if (ctelocus == CdbLocusType_General)
+		CdbPathLocus_MakeGeneral(&result);
+	else
+		CdbPathLocus_MakeStrewn(&result);
 
 	pathnode->pathtype = T_WorkTableScan;
 	pathnode->parent = rel;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
+
+	pathnode->locus = result;
+	pathnode->motionHazard = false;
+	pathnode->rescannable = true;
+	pathnode->sameslice_relids = rel->relids;
 
 	/* Cost is the same as for a regular CTE scan */
 	cost_ctescan(pathnode, root, rel);

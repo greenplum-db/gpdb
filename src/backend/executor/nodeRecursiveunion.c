@@ -63,7 +63,12 @@ retry:
 	if (TupIsNull(slot))
 	{
 		if (node->intermediate_empty)
+		{
+			if (!node->ps.delayEagerFree)
+				ExecEagerFreeRecursiveUnion(node);
+
 			return NULL;
+		}
 
 		/* done with old working table ... */
 		tuplestore_end(node->working_table);
@@ -108,6 +113,7 @@ ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags)
 	rustate = makeNode(RecursiveUnionState);
 	rustate->ps.plan = (Plan *) node;
 	rustate->ps.state = estate;
+	rustate->ps.delayEagerFree = (eflags & EXEC_FLAG_REWIND) != 0;
 
 	/* initialize processing state */
 	rustate->recursing = false;
@@ -152,7 +158,7 @@ ExecInitRecursiveUnion(RecursiveUnion *node, EState *estate, int eflags)
 	 * initialize child nodes
 	 */
 	outerPlanState(rustate) = ExecInitNode(outerPlan(node), estate, eflags);
-	innerPlanState(rustate) = ExecInitNode(innerPlan(node), estate, eflags);
+	innerPlanState(rustate) = ExecInitNode(innerPlan(node), estate, eflags | EXEC_FLAG_REWIND);
 
 	return rustate;
 }
@@ -175,8 +181,10 @@ void
 ExecEndRecursiveUnion(RecursiveUnionState *node)
 {
 	/* Release tuplestores */
-	tuplestore_end(node->working_table);
-	tuplestore_end(node->intermediate_table);
+	if (node->working_table != NULL)
+		tuplestore_end(node->working_table);
+	if (node->intermediate_table != NULL)
+		tuplestore_end(node->intermediate_table);
 
 	/*
 	 * clean out the upper tuple table
@@ -222,4 +230,19 @@ ExecRecursiveUnionReScan(RecursiveUnionState *node, ExprContext *exprCtxt)
 	node->intermediate_empty = true;
 	tuplestore_clear(node->working_table);
 	tuplestore_clear(node->intermediate_table);
+}
+
+void
+ExecEagerFreeRecursiveUnion(RecursiveUnionState *node)
+{
+	if (node->working_table != NULL)
+		tuplestore_end(node->working_table);
+
+	if (node->intermediate_table != NULL)
+		tuplestore_end(node->intermediate_table);
+
+	node->working_table = NULL;
+	node->intermediate_table = NULL;
+
+	ExecEagerFreeChildNodes((PlanState *) node, false);
 }

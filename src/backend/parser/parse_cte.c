@@ -106,14 +106,6 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 {
 	ListCell   *lc;
 
-	/* FIXME: Remove this when we support recursive CTE*/
-	if (withClause->recursive)
-	{
-		ereport(ERROR, 
-				(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-				 errmsg("RECURSIVE option in WITH clause is not supported")));
-	}
-
 	/* Only one WITH clause per query level */
 	Assert(pstate->p_ctenamespace == NIL);
 	Assert(pstate->p_future_ctes == NIL);

@@ -758,6 +758,7 @@ typedef struct
         Path           *path;
         bool            ok_to_replicate;
         bool            require_existing_order;
+        bool            has_wts; /* Does the rel have WorkTableScan? */
 } CdbpathMfjRel;
 
 CdbPathLocus
@@ -784,6 +785,21 @@ cdbpath_motion_for_join(PlannerInfo    *root,
     Assert(cdbpathlocus_is_valid(outer.locus) &&
            cdbpathlocus_is_valid(inner.locus));
 
+    outer.has_wts = cdbpath_contains_wts(outer.path);
+    inner.has_wts = cdbpath_contains_wts(inner.path);
+
+    /* For now, inner path should not contain WorkTableScan */
+    Assert(!inner.has_wts);
+
+    /*
+     * If outer rel contains WorkTableScan and inner rel is hash
+     * distributed, unfortunately we have to pretend that inner
+     * is randomly distributed, otherwise we may end up with
+     * redistributing outer rel.
+     */
+    if (outer.has_wts && CdbPathLocus_Degree(inner.locus) != 0)
+		CdbPathLocus_MakeStrewn(&inner.locus);
+
     /* Caller can specify an ordering for each source path that is
      * the same as or weaker than the path's existing ordering.
      * Caller may insist that we do not add motion that would
@@ -796,8 +812,10 @@ cdbpath_motion_for_join(PlannerInfo    *root,
 
     /* Don't consider replicating the preserved rel of an outer join, or
      * the current-query rel of a join between current query and subquery.
+     *
+     * Path that contains WorkTableScan cannot be replicated.
      */
-    outer.ok_to_replicate = true;
+    outer.ok_to_replicate = !outer.has_wts;
     inner.ok_to_replicate = true;
     switch (jointype)
     {
@@ -860,8 +878,8 @@ cdbpath_motion_for_join(PlannerInfo    *root,
     {                                       /* singleQE or entry db */
         CdbpathMfjRel  *single = &outer;
         CdbpathMfjRel  *other = &inner;
-        bool            single_immovable = outer.require_existing_order &&
-                                           !outer_pathkeys;
+        bool            single_immovable = (outer.require_existing_order &&
+                                           !outer_pathkeys) || outer.has_wts;
         bool            other_immovable = inner.require_existing_order &&
                                           !inner_pathkeys;
 
@@ -920,6 +938,10 @@ cdbpath_motion_for_join(PlannerInfo    *root,
          */
         else if (single->ok_to_replicate &&
                  single->bytes < other->bytes)
+            CdbPathLocus_MakeReplicated(&single->move_to);
+
+        /* Broadcast single rel if other rel has WorkTableScan */
+        else if (single->ok_to_replicate && other->has_wts)
             CdbPathLocus_MakeReplicated(&single->move_to);
 
         /* Last resort: Move all partitions of other rel to single QE. */
@@ -1545,3 +1567,36 @@ cdbpath_dedup_fixup(PlannerInfo *root, Path *path)
            !context.need_segment_id &&
            !context.need_subplan_id);
 }                               /* cdbpath_dedup_fixup */
+
+/*
+ * Does the path contain WorkTableScan?
+ */
+bool
+cdbpath_contains_wts(Path *path)
+{
+	JoinPath *joinPath;
+	AppendPath *appendPath;
+	ListCell *lc;
+
+	if (IsJoinPath(path))
+	{
+		joinPath = (JoinPath *) path;
+		if (cdbpath_contains_wts(joinPath->outerjoinpath)
+				|| cdbpath_contains_wts(joinPath->innerjoinpath))
+			return true;
+		else
+			return false;
+	}
+	else if (IsA(path, AppendPath))
+	{
+		appendPath = (AppendPath *) path;
+		foreach(lc, appendPath->subpaths)
+		{
+			if (cdbpath_contains_wts((Path *) lfirst(lc)))
+				return true;
+		}
+		return false;
+	}
+
+	return path->pathtype == T_WorkTableScan;
+}
