@@ -1,4 +1,4 @@
-from commands.base import Command, CommandResult
+from commands.base import Command, CommandResult, REMOTE, GPHOME
 from gp_unittest import *
 
 class CommandTest(GpTestCase):
@@ -42,8 +42,13 @@ class CommandTest(GpTestCase):
 
         self.assertEqual(self.subject.get_stderr(), "my stderr")
 
-    # @patch("gppylib.commands.base.Command.__init__", create=False)
+    def test_create_command_with_default_gphome(self):
+        self.subject = Command("my name", "my command string", ctxt=REMOTE, remoteHost="someHost")
+        self.assertEquals(GPHOME, self.subject.exec_context.gphome)
 
+    def test_create_command_with_custom_gphome(self):
+        self.subject = Command("my name", "my command string", ctxt=REMOTE, remoteHost="someHost", gphome="/new/gphome")
+        self.assertIn("/new/gphome", self.subject.exec_context.gphome)
 
 if __name__ == '__main__':
     run_tests()

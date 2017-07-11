@@ -39,7 +39,6 @@ import paramiko, getpass
 logger=gplog.get_default_logger()
 
 GPHOME=os.environ.get('GPHOME')
-SRC_GPPATH=". %s/greenplum_path.sh;" % GPHOME
 
 # Maximum retries if sshd rejects the connection due to too many
 # unauthenticated connections.
@@ -121,16 +120,14 @@ class WorkerPool(object):
             w.join()
 
     def getCompletedItems(self):
-        completedList=[]
+        completed_list = []
         try:
             while True:
-                item=self.completed_queue.get(False)
+                item=self.completed_queue.get(False)  # will throw Empty
                 if item is not None:
-                    completedList.append(item)
+                    completed_list.append(item)
         except Empty:
-            return completedList
-        return completedList  #just to be sure
-
+            return completed_list
 
     def check_results(self):
         """ goes through all items in the completed_queue and throws an exception at the
@@ -150,11 +147,9 @@ class WorkerPool(object):
         while not self.completed_queue.empty():
             self.completed_queue.get(False)
 
-
     def isDone(self):
         #TODO: not sure that qsize() is safe
         return (self.num_assigned == self.completed_queue.qsize())
-
 
     def haltWork(self):
         self.logger.debug("WorkerPool haltWork()")
@@ -162,6 +157,7 @@ class WorkerPool(object):
         for w in self.workers:
             w.haltWork()
             self.work_queue.put(self.halt_command)
+
 
 class OperationWorkerPool(WorkerPool):
     """ TODO: This is a hack! In reality, the WorkerPool should work with Operations, and
@@ -347,7 +343,7 @@ def setExecutionContextFactory(factory):
     global gExecutionContextFactory
     gExecutionContextFactory = factory
 
-def createExecutionContext(execution_context_id,remoteHost,stdin, nakedExecutionInfo=None):
+def createExecutionContext(execution_context_id,remoteHost,stdin, nakedExecutionInfo=None, gphome=None):
     if gExecutionContextFactory is not None:
         return gExecutionContextFactory.createExecutionContext(execution_context_id, remoteHost, stdin)
     elif execution_context_id == LOCAL:
@@ -355,7 +351,7 @@ def createExecutionContext(execution_context_id,remoteHost,stdin, nakedExecution
     elif execution_context_id == REMOTE:
         if remoteHost is None:
             raise Exception("Programmer Error.  Specified REMOTE execution context but didn't provide a remoteHost")
-        return RemoteExecutionContext(remoteHost,stdin)
+        return RemoteExecutionContext(remoteHost,stdin, gphome)
     elif execution_context_id == RMI:
         return RMIExecutionContext()
     elif execution_context_id == NAKED:
@@ -608,7 +604,6 @@ class NakedExecutionContext(LocalExecutionContext):
         cmd.set_results(CommandResult(1,"","command on host " + self.targetHost + " canceled ", False, False))
 
 
-
 class RemoteExecutionContext(LocalExecutionContext):
 
     trail = set()
@@ -616,12 +611,15 @@ class RemoteExecutionContext(LocalExecutionContext):
     Leaves a trail of hosts to which we've ssh'ed, during the life of a particular interpreter.
     """
 
-    def __init__(self,targetHost,stdin):
+    def __init__(self,targetHost,stdin, gphome=None):
         LocalExecutionContext.__init__(self, stdin)
         self.targetHost=targetHost
-        pass
+        if gphome:
+            self.gphome = gphome
+        else:
+            self.gphome = GPHOME
 
-    def execute(self,cmd):
+    def execute(self, cmd):
         # prepend env. variables from ExcecutionContext.propagate_env_map
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
         for k, v in self.__class__.propagate_env_map.iteritems():
@@ -634,7 +632,7 @@ class RemoteExecutionContext(LocalExecutionContext):
 
         # Escape " for remote execution otherwise it interferes with ssh
         cmd.cmdStr = cmd.cmdStr.replace('"', '\\"')
-        cmd.cmdStr="ssh -o 'StrictHostKeyChecking no' %s \"%s %s\"" % (self.targetHost,SRC_GPPATH,cmd.cmdStr)
+        cmd.cmdStr="ssh -o 'StrictHostKeyChecking no' %s \"%s %s\"" % (self.targetHost, ". %s/greenplum_path.sh;" % self.gphome, cmd.cmdStr)
         LocalExecutionContext.execute(self,cmd)
         if (cmd.get_results().stderr.startswith('ssh_exchange_identification: Connection closed by remote host')):
             self.__retry(cmd)
@@ -664,13 +662,13 @@ class Command:
     cmdStr=None
     results=None
     exec_context=None
-    propagate_env_map={} #  specific environment variables for this command instance
+    propagate_env_map={}  # specific environment variables for this command instance
 
-    def __init__(self,name,cmdStr,ctxt=LOCAL,remoteHost=None,stdin=None,nakedExecutionInfo=None):
-        self.name=name
-        self.cmdStr=cmdStr
-        self.exec_context=createExecutionContext(ctxt,remoteHost,stdin=stdin,nakedExecutionInfo=nakedExecutionInfo)
-        self.remoteHost=remoteHost
+    def __init__(self, name, cmdStr, ctxt=LOCAL, remoteHost=None, stdin=None, nakedExecutionInfo=None, gphome=None):
+        self.name = name
+        self.cmdStr = cmdStr
+        self.exec_context = createExecutionContext(ctxt, remoteHost, stdin=stdin, nakedExecutionInfo=nakedExecutionInfo, gphome=gphome)
+        self.remoteHost = remoteHost
 
     def __str__(self):
         if self.results:

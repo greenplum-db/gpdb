@@ -403,6 +403,19 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
+@given('a user runs "{command}" with gphome "{gphome}"')
+@when('a user runs "{command}" with gphome "{gphome}"')
+@then('a user runs "{command}" with gphome "{gphome}"')
+def impl(context, command, gphome):
+    masterhost = get_master_hostname()[0][0]
+    cmd = Command(name='Remove archive gppkg',
+                  cmdStr=command,
+                  ctxt=REMOTE,
+                  remoteHost=masterhost,
+                  gphome=gphome)
+    cmd.run()
+    context.ret_code = cmd.get_return_code()
+
 @given('the user runs command "{command}"')
 @when('the user runs command "{command}"')
 @then('the user runs command "{command}"')
@@ -5097,6 +5110,8 @@ def impl(context, gppkg_name):
         if not gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
+@given('"{gppkg_name}" gppkg files do not exist on any hosts')
+@when('"{gppkg_name}" gppkg files do not exist on any hosts')
 @then('"{gppkg_name}" gppkg files do not exist on any hosts')
 def impl(context, gppkg_name):
     remote_gphome = os.environ.get('GPHOME')
