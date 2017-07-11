@@ -665,6 +665,10 @@ EXPLAIN SELECT '' AS three, f1, f2
   FROM SUBSELECT_TBL
   WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
                          WHERE f3 IS NOT NULL) ORDER BY 2,3;
+
+EXPLAIN SELECT * FROM tenk1 a, tenk1 b
+WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
+
 -- Correlated subselects
 
 EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f2 AS "Second Field"

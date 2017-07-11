@@ -227,9 +227,7 @@ typedef struct PlannerInfo
 	List	   *full_join_clauses;		/* list of RestrictInfos for
 										 * mergejoinable full join clauses */
 
-	List	   *oj_info_list;	/* list of OuterJoinInfos */
-
-	List	   *in_info_list;	/* list of InClauseInfos */
+	List	   *join_info_list; /* list of SpecialJoinInfos */
 
 	List	   *append_rel_list;	/* list of AppendRelInfos */
 
@@ -248,7 +246,6 @@ typedef struct PlannerInfo
 	double		tuple_fraction; /* tuple_fraction passed to query_planner */
 
 	bool		hasJoinRTEs;	/* true if any RTEs are RTE_JOIN kind */
-	bool		hasOuterJoins;	/* true if any RTEs are outer joins */
 	bool		hasHavingQual;	/* true if havingQual was non-null */
 	bool		hasPseudoConstantQuals; /* true if any RestrictInfo has
 										 * pseudoconstant = true */
@@ -632,7 +629,7 @@ typedef struct CdbRelDedupInfo
                                          * inputs to this rel but won't be
                                          * referenced again downstream (i.e.,
                                          * are not mentioned in reltargetlist).
-                                         * Can use JOIN_IN when inner relids
+                                         * Can use JOIN_SEMI when inner relids
                                          * are a subset of spent_subq_relids.
                                          */
     bool        try_postjoin_dedup;     /* true => this rel includes all inputs
@@ -646,7 +643,7 @@ typedef struct CdbRelDedupInfo
                                          * required for all flattened subqueries
                                          * of the current query level.
                                          */
-    struct InClauseInfo   *join_unique_ininfo;
+    struct SpecialJoinInfo   *join_unique_ininfo;
                                         /* uncorrelated "= ANY" subquery with
                                          * exactly the same relids as this rel.
                                          */
@@ -1450,19 +1447,27 @@ typedef struct InnerIndexscanInfo
 	Path	   *cheapest_total_innerpath;		/* cheapest total cost */
 } InnerIndexscanInfo;
 
+
 /*
- * Outer join info.
+ * "Special join" info.
  *
  * One-sided outer joins constrain the order of joining partially but not
  * completely.	We flatten such joins into the planner's top-level list of
- * relations to join, but record information about each outer join in an
- * OuterJoinInfo struct.  These structs are kept in the PlannerInfo node's
- * oj_info_list.
+ * relations to join, but record information about each outer join in a
+ * SpecialJoinInfo struct.  These structs are kept in the PlannerInfo node's
+ * join_info_list.
+ *
+ * Similarly, semijoins and antijoins created by flattening IN (subselect)
+ * and EXISTS(subselect) clauses create partial constraints on join order.
+ * These are likewise recorded in SpecialJoinInfo structs.
+ *
+ * We make SpecialJoinInfos for FULL JOINs even though there is no flexibility
+ * of planning for them, because this simplifies make_join_rel()'s API.
  *
  * min_lefthand and min_righthand are the sets of base relids that must be
- * available on each side when performing the outer join.  lhs_strict is
- * true if the outer join's condition cannot succeed when the LHS variables
- * are all NULL (this means that the outer join can commute with upper-level
+ * available on each side when performing the special join.  lhs_strict is
+ * true if the special join's condition cannot succeed when the LHS variables
+ * are all NULL (this means that an outer join can commute with upper-level
  * outer joins even if it appears in their RHS).  We don't bother to set
  * lhs_strict for FULL JOINs, however.
  *
@@ -1470,9 +1475,8 @@ typedef struct InnerIndexscanInfo
  * if they were, this would break the logic that enforces join order.
  *
  * syn_lefthand and syn_righthand are the sets of base relids that are
- * syntactically below this outer join.  (These are needed to help compute
- * min_lefthand and min_righthand for higher joins, but are not used
- * thereafter.)
+ * syntactically below this special join.  (These are needed to help compute
+ * min_lefthand and min_righthand for higher joins.)
  *
  * delay_upper_joins is set TRUE if we detect a pushed-down clause that has
  * to be evaluated after this join is formed (because it references the RHS).
@@ -1480,52 +1484,55 @@ typedef struct InnerIndexscanInfo
  * commute with this join, because that would leave noplace to check the
  * pushed-down clause.	(We don't track this for FULL JOINs, either.)
  *
- * Note: OuterJoinInfo directly represents only LEFT JOIN and FULL JOIN;
- * RIGHT JOIN is handled by switching the inputs to make it a LEFT JOIN.
- * We make an OuterJoinInfo for FULL JOINs even though there is no flexibility
- * of planning for them, because this simplifies make_join_rel()'s API.
+ * join_quals is an implicit-AND list of the quals syntactically associated
+ * with the join (they may or may not end up being applied at the join level).
+ * This is just a side list and does not drive actual application of quals.
+ * For JOIN_SEMI joins, this is cleared to NIL in create_unique_path() if
+ * the join is found not to be suitable for a uniqueify-the-RHS plan.
+ *
+ * For a semijoin, we also extract the join operators and their RHS arguments
+ * and set semi_operators and semi_rhs_exprs. This is used for applying pre-join
+ * deduplication used by cdb_make_rel_dedup_info().
+ *
+ * jointype is never JOIN_RIGHT; a RIGHT JOIN is handled by switching
+ * the inputs to make it a LEFT JOIN.  So the allowed values of jointype
+ * in a join_info_list member are only LEFT, FULL, SEMI, or ANTI.
+ *
+ * For purposes of join selectivity estimation, we create transient
+ * SpecialJoinInfo structures for regular inner joins; so it is possible
+ * to have jointype == JOIN_INNER in such a structure, even though this is
+ * not allowed within join_info_list.  We also create transient
+ * SpecialJoinInfos with jointype == JOIN_INNER for outer joins, since for
+ * cost estimation purposes it is sometimes useful to know the join size under
+ * plain innerjoin semantics.  Note that lhs_strict, delay_upper_joins, and
+ * join_quals are not set meaningfully within such structs.
  */
 
-typedef struct OuterJoinInfo
+typedef struct SpecialJoinInfo
 {
 	NodeTag		type;
 	Relids		min_lefthand;	/* base relids in minimum LHS for join */
 	Relids		min_righthand;	/* base relids in minimum RHS for join */
 	Relids		syn_lefthand;	/* base relids syntactically within LHS */
 	Relids		syn_righthand;	/* base relids syntactically within RHS */
-	JoinType	join_type;		/* LEFT, FULL, or ANTI */
+	JoinType	jointype;		/* always INNER, LEFT, FULL, SEMI, or ANTI */
 	bool		lhs_strict;		/* joinclause is strict for some LHS rel */
 	bool		delay_upper_joins;		/* can't commute with upper RHS */
-} OuterJoinInfo;
-
-/*
- * IN clause info.
- *
- * When we convert top-level IN quals into join operations, we must restrict
- * the order of joining and use special join methods at some join points.
- * We record information about each such IN clause in an InClauseInfo struct.
- * These structs are kept in the PlannerInfo node's in_info_list.
- *
- * Note: sub_targetlist is a bit misnamed; it is a list of the expressions
- * on the RHS of the IN's join clauses.  (This normally starts out as a list
- * of Vars referencing the subquery outputs, but can get mutated if the
- * subquery is flattened into the main query.)
- */
-
-typedef struct InClauseInfo
-{
-	NodeTag		type;
-	Relids		lefthand;		/* base relids in lefthand expressions */
-	Relids		righthand;		/* base relids coming from the subselect */
-	List	   *sub_targetlist; /* RHS expressions of the IN's comparisons */
-	List	   *in_operators;	/* OIDs of the IN's equality operators */
-
-    bool        try_join_unique;
-                                /* CDB: true => comparison is equality op and
-                                 *  subquery is not correlated.  Ok to consider
-                                 *  JOIN_UNIQUE method of duplicate suppression.
-                                 */
-} InClauseInfo;
+	List	   *join_quals;		/* join quals, in implicit-AND list format */
+	bool		try_join_unique;
+								/* CDB: true => comparison is equality op and
+								 *  subquery is not correlated.  Ok to consider
+								 *  JOIN_UNIQUE method of duplicate suppression.
+								 */
+	bool		consider_dedup;	/* true => Denotes this SpecialJoinInfo was
+								 * constructed for IN or EXISTS sublink which
+								 * got pulled into JOIN_SEMI. If we choose to
+								 * go ahead with INNER JOIN path for this JOIN_SEMI
+								 * then we MAY need to deduplicate the join result.
+								 */
+	List		*semi_operators; /* OIDs of equality join operators */
+	List		*semi_rhs_exprs; /* righthand-side expressions of these ops */
+} SpecialJoinInfo;
 
 /*
  * Append-relation info.

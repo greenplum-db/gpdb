@@ -2772,11 +2772,11 @@ static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *contex
 	root->parse->jointree = jointree;
 	root->parse->windowClause = NIL;
 	/*
-	 * since we modify the upper level query, the in_info_list is not valid
+	 * since we modify the upper level query, the join_info_list is not valid
 	 * anymore, and needs to be released (MPP-21017)
 	 */
-	list_free(root->in_info_list);
-	root->in_info_list = NIL;
+	list_free(root->join_info_list);
+	root->join_info_list = NIL;
 	
 	/* Plan the join.
 	 */

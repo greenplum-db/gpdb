@@ -569,7 +569,7 @@ typedef enum SubLinkType
 	EXPR_SUBLINK,
 	ARRAY_SUBLINK,
 	CTE_SUBLINK,
-	NOT_EXISTS_SUBLINK
+	NOT_EXISTS_SUBLINK   /* GPDB_90_MERGE_FIXME: Does ORCA really need this? */
 } SubLinkType;
 
 
@@ -1290,7 +1290,7 @@ typedef struct JoinExpr
 	List	   *usingClause;	/* USING clause, if any (list of String) */
 	Node	   *quals;			/* qualifiers on join, if any */
 	Alias	   *alias;			/* user-written alias clause, if any */
-	int			rtindex;		/* RT index assigned for join */
+	int			rtindex;		/* RT index assigned for join, or 0 */
     List       *subqfromlist;   /* CDB: List of join subtrees resulting from
                                  *  flattening of sublinks */
 } JoinExpr;

@@ -217,7 +217,6 @@ extern int	join_collapse_limit;
 
 extern void add_base_rels_to_query(PlannerInfo *root, Node *jtnode);
 extern void build_base_rel_tlists(PlannerInfo *root, List *final_tlist);
-extern void add_IN_vars_to_tlists(PlannerInfo *root);
 extern void add_vars_to_targetlist(PlannerInfo *root, List *vars,
 					   Relids where_needed);
 extern List *deconstruct_jointree(PlannerInfo *root);

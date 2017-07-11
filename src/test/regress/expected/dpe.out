@@ -352,7 +352,7 @@ explain select * from pt where exists (select 1 from t where tid = ptid and t1 =
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.09..20.18 rows=27 width=31)
-   ->  Hash EXISTS Join  (cost=1.09..20.18 rows=9 width=31)
+   ->  Hash Semi Join  (cost=1.09..20.18 rows=9 width=31)
          Hash Cond: dpe_single.pt.ptid = t.tid
          ->  Append  (cost=0.00..18.54 rows=18 width=31)
                ->  Result  (cost=0.00..3.09 rows=3 width=31)

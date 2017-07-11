@@ -1447,20 +1447,22 @@ where i < (select count(*) from smallt where smallt.i = smallt2.i);
 
 explain select smallt2.* from smallt2
 where i < (select count(*) from smallt where smallt.i = smallt2.i);
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
+                                                     QUERY PLAN
+--------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=5.15..8.19 rows=17 width=15)
    ->  Hash Join  (cost=5.15..8.19 rows=6 width=15)
          Hash Cond: smallt2.i = "Expr_SUBQUERY".csq_c0
          Join Filter: smallt2.i < "Expr_SUBQUERY".csq_c1
          ->  Seq Scan on smallt2  (cost=0.00..2.50 rows=17 width=15)
          ->  Hash  (cost=5.02..5.02 rows=4 width=12)
-               ->  HashAggregate  (cost=4.75..4.92 rows=4 width=12)
-                     Filter: smallt.i < count(*)
-                     Group By: smallt.i
-                     ->  Seq Scan on smallt  (cost=0.00..4.00 rows=34 width=4)
- Settings:  enable_hashjoin=on; enable_nestloop=off; gp_enable_agg_distinct=on; optimizer_segments=3
-(11 rows)
+               ->  Subquery Scan "Expr_SUBQUERY"  (cost=4.75..5.02 rows=4 width=12)
+                     ->  HashAggregate  (cost=4.75..4.92 rows=4 width=12)
+                           Filter: smallt.i < count(*)
+                           Group By: smallt.i
+                           ->  Seq Scan on smallt  (cost=0.00..4.00 rows=34 width=4)
+ Settings:  enable_hashjoin=on; enable_nestloop=off; gp_enable_agg_distinct=on; optimizer=off; optimizer_segments=3
+ Optimizer status: legacy query optimizer
+(13 rows)
 
 -- Sort in MergeJoin
 -- start_ignore

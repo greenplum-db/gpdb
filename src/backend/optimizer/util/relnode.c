@@ -307,7 +307,7 @@ find_join_rel(PlannerInfo *root, Relids relids)
  * 'joinrelids' is the Relids set that uniquely identifies the join
  * 'outer_rel' and 'inner_rel' are relation nodes for the relations to be
  *		joined
- * 'jointype': type of join (inner/outer)
+ * 'sjinfo': join context info
  * 'restrictlist_ptr': result variable.  If not NULL, *restrictlist_ptr
  *		receives the list of RestrictInfo nodes that apply to this
  *		particular pair of joinable relations.
@@ -320,7 +320,7 @@ build_join_rel(PlannerInfo *root,
 			   Relids joinrelids,
 			   RelOptInfo *outer_rel,
 			   RelOptInfo *inner_rel,
-			   JoinType jointype,
+			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr)
 {
 	RelOptInfo *joinrel;
@@ -414,7 +414,7 @@ build_join_rel(PlannerInfo *root,
 	/*
 	 * CDB: Attach subquery duplicate suppression info if needed.
 	 */
-	if (root->in_info_list)
+	if (root->join_info_list)
 		joinrel->dedup_info = cdb_make_rel_dedup_info(root, joinrel);
 
 	/*
@@ -427,7 +427,7 @@ build_join_rel(PlannerInfo *root,
 	 * Set estimates of the joinrel's size.
 	 */
 	set_joinrel_size_estimates(root, joinrel, outer_rel, inner_rel,
-							   jointype, restrictlist);
+							   sjinfo, restrictlist);
 
 	/*
 	 * Add the joinrel to the query's joinrel list, and store it into the
@@ -865,7 +865,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     ListCell           *cell;
     Relids              prejoin_dedup_subqrelids;
     Relids              spent_subqrelids;
-    InClauseInfo       *join_unique_ininfo;
+    SpecialJoinInfo     *join_unique_ininfo;
     bool                partial;
     bool                try_postjoin_dedup;
     int                 subqueries_unfinished;
@@ -880,7 +880,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
      *
      * When the columns of the inner rel of a join are not needed by
      * downstream operators, and all tables of the inner rel come from
-     * flattened subqueries, then the JOIN_IN jointype can be used,
+     * flattened subqueries, then the JOIN_SEMI jointype can be used,
      * telling the executor to produce only the first matching inner row
      * for each outer row.
      */
@@ -903,7 +903,7 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
      * this rel.
      *
      * (A subquery can be identified by its set of relids: the righthand relids
-     * in its InClauseInfo.)
+     * in its SpecialJoinInfo.)
      *
      * Post-join duplicate removal can be applied to a rel that contains the
      * sublink's lefthand relids, the subquery's own tables (the sublink's
@@ -915,20 +915,22 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
     join_unique_ininfo = NULL;
     partial = false;
     try_postjoin_dedup = false;
-    subqueries_unfinished = list_length(root->in_info_list);
-    foreach(cell, root->in_info_list)
+    subqueries_unfinished = list_length(root->join_info_list);
+    foreach(cell, root->join_info_list)
     {
-        InClauseInfo   *ininfo = (InClauseInfo *)lfirst(cell);
+        SpecialJoinInfo   *sjinfo = (SpecialJoinInfo *)lfirst(cell);
+        if(!sjinfo->consider_dedup)
+            continue;
 
         /* Got all of the subquery's own tables? */
-        if (bms_is_subset(ininfo->righthand, rel->relids))
+        if (bms_is_subset(sjinfo->syn_righthand, rel->relids))
         {
-            /* Early dedup (JOIN_UNIQUE, JOIN_IN) can be applied to this rel. */
+            /* Early dedup (JOIN_UNIQUE, JOIN_SEMI) can be applied to this rel. */
             prejoin_dedup_subqrelids =
-                bms_add_members(prejoin_dedup_subqrelids, ininfo->righthand);
+                bms_add_members(prejoin_dedup_subqrelids, sjinfo->syn_righthand);
 
             /* Got all the correlating and left-hand relids too? */
-            if (bms_is_subset(ininfo->righthand, spent_subqrelids))
+            if (bms_is_subset(sjinfo->syn_righthand, spent_subqrelids))
             {
                 try_postjoin_dedup = true;
                 subqueries_unfinished--;
@@ -937,11 +939,11 @@ cdb_make_rel_dedup_info(PlannerInfo *root, RelOptInfo *rel)
                 partial = true;
 
             /* Does rel have exactly the relids of uncorrelated "= ANY" subq? */
-            if (ininfo->try_join_unique &&
-                bms_equal(ininfo->righthand, rel->relids))
-                join_unique_ininfo = ininfo;
+            if (sjinfo->try_join_unique &&
+                bms_equal(sjinfo->syn_righthand, rel->relids))
+                join_unique_ininfo = sjinfo;
         }
-        else if (bms_overlap(ininfo->righthand, rel->relids))
+        else if (bms_overlap(sjinfo->syn_righthand, rel->relids))
             partial = true;
     }
 

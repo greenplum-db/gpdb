@@ -136,7 +136,6 @@ expression_tree_walker(Node *node,
 		case T_CurrentOfExpr:
 		case T_SetToDefault:
 		case T_RangeTblRef:
-		case T_OuterJoinInfo:
 		case T_DMLActionExpr:
 		case T_PartOidExpr:
 		case T_PartSelectedExpr:
@@ -414,15 +413,6 @@ expression_tree_walker(Node *node,
 				if (walker(setop->larg, context))
 					return true;
 				if (walker(setop->rarg, context))
-					return true;
-			}
-			break;
-		case T_InClauseInfo:
-			{
-				InClauseInfo *ininfo = (InClauseInfo *) node;
-
-				if (expression_tree_walker((Node *) ininfo->sub_targetlist,
-										   walker, context))
 					return true;
 			}
 			break;
@@ -1181,7 +1171,7 @@ plan_tree_walker(Node *node,
 		case T_FromExpr:
 		case T_JoinExpr:
 		case T_SetOperationStmt:
-		case T_InClauseInfo:
+		case T_SpecialJoinInfo:
 		case T_TableValueExpr:
 		case T_PartOidExpr:
 		case T_PartSelectedExpr:

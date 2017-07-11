@@ -39,9 +39,6 @@ static bool checkExprHasAggs_walker(Node *node,
 static bool locate_agg_of_level_walker(Node *node,
 						   locate_agg_of_level_context *context);
 static bool checkExprHasSubLink_walker(Node *node, void *context);
-static Relids offset_relid_set(Relids relids, int offset);
-static Relids adjust_relid_set(Relids relids, int oldrelid, int newrelid);
-
 
 /*
  * checkExprHasAggs -
@@ -264,17 +261,8 @@ OffsetVarNodes_walker(Node *node, OffsetVarNodes_context *context)
 	{
 		JoinExpr   *j = (JoinExpr *) node;
 
-		if (context->sublevels_up == 0)
+		if (j->rtindex && context->sublevels_up == 0)
 			j->rtindex += context->offset;
-		/* fall through to examine children */
-	}
-	if (IsA(node, InClauseInfo))
-	{
-		InClauseInfo *ininfo = (InClauseInfo *) node;
-
-		if (context->sublevels_up == 0)
-			ininfo->righthand = offset_relid_set(ininfo->righthand,
-												 context->offset);
 		/* fall through to examine children */
 	}
 	if (IsA(node, AppendRelInfo))
@@ -347,20 +335,6 @@ OffsetVarNodes(Node *node, int offset, int sublevels_up)
 		OffsetVarNodes_walker(node, &context);
 }
 
-static Relids
-offset_relid_set(Relids relids, int offset)
-{
-	Relids		result = NULL;
-	Relids		tmprelids;
-	int			rtindex;
-
-	tmprelids = bms_copy(relids);
-	while ((rtindex = bms_first_member(tmprelids)) >= 0)
-		result = bms_add_member(result, rtindex + offset);
-	bms_free(tmprelids);
-	return result;
-}
-
 /*
  * ChangeVarNodes - adjust Var nodes for a specific change of RT index
  *
@@ -424,16 +398,6 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
 		if (context->sublevels_up == 0 &&
 			j->rtindex == context->rt_index)
 			j->rtindex = context->new_index;
-		/* fall through to examine children */
-	}
-	if (IsA(node, InClauseInfo))
-	{
-		InClauseInfo *ininfo = (InClauseInfo *) node;
-
-		if (context->sublevels_up == 0)
-			ininfo->righthand = adjust_relid_set(ininfo->righthand,
-												 context->rt_index,
-												 context->new_index);
 		/* fall through to examine children */
 	}
 	if (IsA(node, AppendRelInfo))
@@ -508,23 +472,6 @@ ChangeVarNodes(Node *node, int rt_index, int new_index, int sublevels_up)
 	}
 	else
 		ChangeVarNodes_walker(node, &context);
-}
-
-/*
- * Substitute newrelid for oldrelid in a Relid set
- */
-static Relids
-adjust_relid_set(Relids relids, int oldrelid, int newrelid)
-{
-	if (bms_is_member(oldrelid, relids))
-	{
-		/* Ensure we have a modifiable copy */
-		relids = bms_copy(relids);
-		/* Remove old, add new */
-		relids = bms_del_member(relids, oldrelid);
-		relids = bms_add_member(relids, newrelid);
-	}
-	return relids;
 }
 
 /*
@@ -756,8 +703,7 @@ rangeTableEntry_used_walker(Node *node,
 		/* fall through to examine children */
 	}
 	/* Shouldn't need to handle planner auxiliary nodes here */
-	Assert(!IsA(node, OuterJoinInfo));
-	Assert(!IsA(node, InClauseInfo));
+	Assert(!IsA(node, SpecialJoinInfo));
 	Assert(!IsA(node, AppendRelInfo));
 
 	if (IsA(node, Query))
