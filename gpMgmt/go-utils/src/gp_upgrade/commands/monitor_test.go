@@ -45,11 +45,12 @@ var _ = Describe("monitor", func() {
 
 		buffer = gbytes.NewBuffer()
 	})
+
 	AfterEach(func() {
 		os.Setenv("HOME", save_home_dir)
 	})
 
-	Describe("when pg_upgrade is running on the target host", func() {
+	Describe("when pg_upgrade status can be determined on remote host", func() {
 		It("happy: it uses the default user for ssh connection when the user doesn't supply a ssh user", func() {
 			subject.User = ""
 			fake := &FailingSshConnecter{}
@@ -58,6 +59,7 @@ var _ = Describe("monitor", func() {
 
 			Expect(fake.user).ToNot(Equal(""))
 		})
+
 		It("parses 'active' status correctly", func() {
 			fake := &SucceedingSshConnector{}
 
@@ -66,6 +68,7 @@ var _ = Describe("monitor", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(buffer.Contents())).To(ContainSubstring(fmt.Sprintf(`pg_upgrade state - active`)))
 		})
+
 		It("parses 'inactive' status correctly", func() {
 			fake := &SucceedingSshConnector{}
 			inactiveParser := &InactiveShellParser{}
@@ -74,7 +77,6 @@ var _ = Describe("monitor", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(buffer.Contents())).To(ContainSubstring("inactive"))
 		})
-
 	})
 
 	Describe("errors", func() {
@@ -86,6 +88,7 @@ var _ = Describe("monitor", func() {
 
 			Expect(err).To(HaveOccurred())
 		})
+
 		It("returns an error when the configuration has no entry for the segment-id specified by user", func() {
 			fake := &FailingSshConnecter{}
 			ioutil.WriteFile(config.GetConfigFilePath(), []byte("[]"), 0600)
@@ -94,6 +97,7 @@ var _ = Describe("monitor", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("not known in this cluster configuration"))
 		})
+
 		Context("when ssh connector fails", func() {
 			It("returns an error", func() {
 				fake := &FailingSshConnecter{}

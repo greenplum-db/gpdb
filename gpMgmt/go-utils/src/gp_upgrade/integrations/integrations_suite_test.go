@@ -60,7 +60,6 @@ var _ = BeforeEach(func() {
 	waitForSocketToAllowConnections()
 })
 
-
 func waitForSocketToAllowConnections() {
 	time.Sleep(100 * time.Millisecond)
 	_, this_file_path, _, _ := runtime.Caller(0)

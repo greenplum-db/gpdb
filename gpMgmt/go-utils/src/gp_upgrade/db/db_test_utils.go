@@ -30,7 +30,6 @@ func CreateMockDBConn() (DBConnector, sqlmock.Sqlmock) {
 	return connector, mock
 }
 
-
 type TestDriver struct {
 	DBExists   bool
 	RoleExists bool

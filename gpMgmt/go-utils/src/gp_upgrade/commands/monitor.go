@@ -28,6 +28,7 @@ func (cmd MonitorCommand) Execute([]string) error {
 	}
 	return cmd.execute(connector, &shell_parsers.RealShellParser{}, os.Stdout)
 }
+
 func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, shellParser shell_parsers.ShellParser, writer io.Writer) error {
 	targetPort, err := readConfigForSegmentPort(cmd.SegmentId)
 	if err != nil {
