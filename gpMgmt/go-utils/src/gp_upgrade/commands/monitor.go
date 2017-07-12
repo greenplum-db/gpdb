@@ -50,7 +50,8 @@ func (cmd MonitorCommand) execute(connector ssh_client.SshConnector, shellParser
 	if !shellParser.IsPgUpgradeRunning(targetPort, output) {
 		status = "inactive"
 	}
-	fmt.Fprintf(writer, `pg_upgrade state - %s {"segment_id":%d,"host":"%s"}`, status, cmd.SegmentId, cmd.Host)
+	msg := fmt.Sprintf(`pg_upgrade state - %s {"segment_id":%d,"host":"%s"}`, status, cmd.SegmentId, cmd.Host)
+	fmt.Fprintf(writer, "%s\n", msg)
 
 	return nil
 }

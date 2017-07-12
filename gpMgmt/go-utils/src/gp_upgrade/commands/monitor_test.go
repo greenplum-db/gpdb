@@ -67,6 +67,7 @@ var _ = Describe("monitor", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(buffer.Contents())).To(ContainSubstring(fmt.Sprintf(`pg_upgrade state - active`)))
+			Expect(string(buffer.Contents())).To(HaveSuffix("\n"))
 		})
 
 		It("parses 'inactive' status correctly", func() {
@@ -76,6 +77,7 @@ var _ = Describe("monitor", func() {
 			err := subject.execute(fake, inactiveParser, buffer)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(buffer.Contents())).To(ContainSubstring("inactive"))
+			Expect(string(buffer.Contents())).To(HaveSuffix("\n"))
 		})
 	})
 
