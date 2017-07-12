@@ -191,11 +191,6 @@ class GpPkgProgram:
             if len(results) != 0 and 'not found' in results:
                 raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH')
 
-        if self.migrate:
-            MigratePackages(from_gphome = self.migrate[0],
-                            to_gphome = self.migrate[1]).run()
-            return
-
         # MASTER_DATA_DIRECTORY and PGPORT must not need to be set for
         # --build and --migrate to function properly
         if self.master_datadir is None:
@@ -204,6 +199,14 @@ class GpPkgProgram:
 
         # TODO: AK: Program logic should not drive host decisions.
         self._get_gpdb_host_list()
+
+        if self.migrate:
+            MigratePackages(from_gphome = self.migrate[0],
+                            to_gphome = self.migrate[1],
+                            standby_host = self.standby_host,
+                            segment_host_list = self.segment_host_list
+                            ).run()
+            return
 
         if self.install:
             pkg = Gppkg.from_package_path(self.install)
