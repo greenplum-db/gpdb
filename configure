@@ -656,6 +656,7 @@ acx_pthread_config
 LIBOBJS
 HAVE_IPV6
 CXXCPP
+GOLANG
 OSSP_UUID_LIBS
 CURL_LIBS
 CURL_CFLAGS
@@ -766,6 +767,7 @@ enable_tap_tests
 enable_dtrace
 DTRACEFLAGS
 DTRACE
+enable_go_utils
 enable_coverage
 GENHTML
 LCOV
@@ -847,6 +849,7 @@ enable_gpperfmon
 enable_debug
 enable_profiling
 enable_coverage
+enable_go_utils
 enable_dtrace
 enable_tap_tests
 with_CC
@@ -1533,6 +1536,7 @@ Optional Features:
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
   --enable-coverage       build with coverage testing instrumentation
+  --enable-go-utils      build all go executables in go-utils directory
   --enable-dtrace         build with DTrace support
   --enable-tap-tests      enable TAP tests (requires Perl and IPC::Run)
   --enable-depend         turn on automatic dependency tracking
@@ -3803,6 +3807,35 @@ fi
 
 else
   enable_coverage=no
+
+fi
+
+
+
+
+#
+# --enable-go-utils
+#
+
+pgac_args="$pgac_args enable_go_utils"
+
+# Check whether --enable-go-utils was given.
+if test "${enable_go_utils+set}" = set; then :
+  enableval=$enable_go_utils;
+  case $enableval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-go-utils option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_go_utils=no
 
 fi
 
@@ -11915,6 +11948,55 @@ else
 fi
 
   LIBS="$_LIBS"
+fi
+
+# Check for golang.
+if test "$enable_go_utils" = yes ; then
+  for ac_prog in go
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_GOLANG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$GOLANG"; then
+  ac_cv_prog_GOLANG="$GOLANG" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_GOLANG="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+GOLANG=$ac_cv_prog_GOLANG
+if test -n "$GOLANG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GOLANG" >&5
+$as_echo "$GOLANG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$GOLANG" && break
+done
+
+  if test -z "$GOLANG"; then
+    as_fn_error $? "go toolchain not found" "$LINENO" 5
+  fi
 fi
 
 ##

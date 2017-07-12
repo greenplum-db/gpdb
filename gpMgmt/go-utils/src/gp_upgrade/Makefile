@@ -1,3 +1,6 @@
+top_builddir = ../../../..
+include $(top_builddir)/src/Makefile.global
+
 SHELL := /bin/bash
 .DEFAULT_GOAL := all
 MODULE_NAME=$(shell basename `pwd`)
@@ -11,7 +14,7 @@ export PATH := $(PATH):$(GO_UTILS_DIR)/bin
 
 .NOTPARALLEL:
 
-all : build test
+all : build
 
 dependencies :
 		go get github.com/cppforlife/go-semi-semantic/version
@@ -55,4 +58,11 @@ linux :
 darwin :
 		GOOS=$@ GOARCH=$(ARCH) go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GO_UTILS_DIR)/bin/$(MODULE_NAME).$@
 
-platforms: linux darwin
+platforms : linux darwin
+
+install :
+	mkdir -p $(prefix)/bin
+	cp -p ../../bin/gp_upgrade $(prefix)/bin/
+
+clean:
+	rm -f ../../bin/gp_upgrade

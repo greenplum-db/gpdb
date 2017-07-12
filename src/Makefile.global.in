@@ -196,9 +196,9 @@ enable_netbackup	= @enable_netbackup@
 enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
 enable_gpperfmon    = @enable_gpperfmon@
-
 enable_segwalrep    = @enable_segwalrep@
 enable_tap_tests = @enable_tap_tests@
+enable_go_utils 	= @enable_go_utils@
 
 python_includespec	= @python_includespec@
 python_libdir		= @python_libdir@

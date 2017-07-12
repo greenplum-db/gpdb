@@ -33,6 +33,7 @@ all:
 	$(MAKE) -C gpAux/extensions all
 	$(MAKE) -C gpAux/gpperfmon all
 	$(MAKE) -C gpAux/platform all
+	$(MAKE) -C gpMgmt all
 	@echo "All of Greenplum Database successfully made. Ready to install."
 
 install:
