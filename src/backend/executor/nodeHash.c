@@ -1577,7 +1577,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
 
     /* Already reported on this batch? */
     if ( stats->endedbatch == curbatch 
-			|| curbatch >= hashtable->nbatch)
+			|| curbatch >= hashtable->nbatch || !hashtable->first_pass)
         return;
     stats->endedbatch = curbatch;
 
