@@ -136,6 +136,7 @@ def impl(context):
     context.backup_timestamp = json_timestamps[-1]
     context.inc_backup_timestamps = json_timestamps[1:]
     context.backup_subdir = json_timestamps[-1][:8]
+    context.full_backup_timestamp = json_timestamps[0]
 
 
 @given('the timestamp labels for scenario "{scenario_number}" are read from json')
@@ -945,19 +946,6 @@ def impl(context):
         raise Exception('Plan file %s not created for the latest timestamp' % filename)
 
 
-@then('the timestamp from gp_dump is stored and subdir is "{subdir}"')
-def impl(context, subdir):
-    stdout = context.stdout_message
-    context.backup_subdir = subdir
-    for line in stdout.splitlines():
-        if 'Timestamp Key: ' in line:
-            context.backup_timestamp = line.split()[-1]
-            validate_timestamp(context.backup_timestamp)
-            return
-
-    raise Exception('Timestamp not found %s' % stdout)
-
-
 def get_dump_dir(context, directory):
     dump_dir = directory.strip() if len(directory.strip()) != 0 else master_data_dir
     if use_ddboost():
@@ -1000,48 +988,6 @@ def impl(context, file_type, dirname, backup_type):
         raise Exception('Last operation file %s not generated' % last_operation_filename)
 
 
-@given('the user runs gp_restore with the the stored timestamp subdir and stored filename in "{dbname}"')
-@when('the user runs gp_restore with the the stored timestamp subdir and stored filename in "{dbname}"')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c --gp-f %s' % (
-    context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.filename)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gp_restore with the the stored timestamp and subdir in "{dbname}"')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c' % (
-    context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gp_restore with the the stored timestamp and subdir in "{dbname}" and bypasses ao stats')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c --gp-nostats' % (
-    context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gp_restore with the stored timestamp and subdir in "{dbname}" and backup_dir "{backup_dir}"')
-def impl(context, dbname, backup_dir):
-    command = 'gp_restore -i --gp-k %s --gp-d %s/db_dumps/%s --gp-i --gp-r %s/db_dumps/%s --gp-l=p -d %s --gp-c' % (
-    context.backup_timestamp, backup_dir, context.backup_subdir, backup_dir, context.backup_subdir, dbname)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@when('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}"')
-@then('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}"')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c -s db_dumps/%s/gp_dump_-1_1_%s.gz' % \
-              (context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir,
-               context.backup_timestamp)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
 @when('the user runs gpdbrestore -e with the stored timestamp')
 @then('the user runs gpdbrestore -e with the stored timestamp')
 def impl(context):
@@ -1057,6 +1003,12 @@ def impl(context, options):
     command = append_storage_config_to_restore_command(context, command)
     run_gpcommand(context, command)
 
+@then('the user runs gpdbrestore -e with the stored full timestamp and options "{options}"')
+@when('the user runs gpdbrestore -e with the stored full timestamp and options "{options}"')
+def impl(context, options):
+    command = 'gpdbrestore -e -t %s %s -a' % (context.full_backup_timestamp, options)
+    command = append_storage_config_to_restore_command(context, command)
+    run_gpcommand(context, command)
 
 @then('the user runs gpdbrestore -e with the date directory')
 @when('the user runs gpdbrestore -e with the date directory')

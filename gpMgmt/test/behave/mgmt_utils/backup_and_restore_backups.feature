@@ -70,22 +70,6 @@ Feature: Validate command line arguments
         And "dirty_list" file should be created under " "
         And all the data from "bkdb2" is saved for verification
 
-    @nbupartI
-    Scenario: 3 Incremental Backup with -u option
-        Given the backup test is initialized with database "bkdb3"
-        And there is a "ao" table "public.ao_table" in "bkdb3" with data
-        And there is a "heap" table "public.heap_table" in "bkdb3" with data
-        When the user runs "gpcrondump -a -x bkdb3 -u /tmp"
-        And table "public.ao_table" is assumed to be in dirty state in "bkdb3"
-        And the user runs "gpcrondump -a --incremental -x bkdb3 -u /tmp"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And verify that the "report" file in "/tmp" dir contains "Backup Type: Incremental"
-        And "dirty_list" file should be created under "/tmp"
-        And the subdir from gpcrondump is stored
-        And all the data from "bkdb3" is saved for verification
-        And database "bkdb3" is dropped and recreated
-
     Scenario: 4 gpdbrestore with -R for full dump
         Given the backup test is initialized with database "bkdb4"
         And there is a "ao" table "public.ao_table" in "bkdb4" with data
@@ -110,6 +94,8 @@ Feature: Validate command line arguments
         And the user runs "gpcrondump -a --incremental -x bkdb5 -u /tmp/5"
         And the timestamp from gpcrondump is stored
         Then gpcrondump should return a return code of 0
+        And verify that the "report" file in "/tmp/5" dir contains "Backup Type: Incremental"
+        And "dirty_list" file should be created under "/tmp/5"
         And all the data from the remote segments in "bkdb5" are stored in path "/tmp/5" for "inc"
         And all files for full backup have been removed in path "/tmp/5"
 
@@ -772,39 +758,6 @@ Feature: Validate command line arguments
         And the subdir from gpcrondump is stored
         And all the data from "bkdb51" is saved for verification
 
-    @scale
-    @nbupartII
-    Scenario: 52 Dirty File Scale Test
-        Given the backup test is initialized with database "bkdb52"
-        And there are "240" "heap" tables "public.heap_table" with data in "bkdb52"
-        And there are "10" "ao" tables "public.ao_table" with data in "bkdb52"
-        When the user runs "gpcrondump -a -x bkdb52"
-        Then gpcrondump should return a return code of 0
-        When table "public.ao_table_1" is assumed to be in dirty state in "bkdb52"
-        And table "public.ao_table_2" is assumed to be in dirty state in "bkdb52"
-        And all the data from "bkdb52" is saved for verification
-        And the user runs "gpcrondump -a --incremental -x bkdb52"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the subdir from gpcrondump is stored
-
-    @scale
-    Scenario: 53 Dirty File Scale Test for partitions
-        Given the backup test is initialized with database "bkdb53"
-        And there are "240" "heap" tables "public.heap_table" with data in "bkdb53"
-        And there is a "ao" partition table "public.ao_table" in "bkdb53" with data
-        Then data for partition table "ao_table" with partition level "1" is distributed across all segments on "bkdb53"
-        And verify that partitioned tables "ao_table" in "bkdb53" have 6 partitions
-        When the user runs "gpcrondump -a -x bkdb53"
-        Then gpcrondump should return a return code of 0
-        When table "public.ao_table_1_prt_p1_2_prt_1" is assumed to be in dirty state in "bkdb53"
-        And table "public.ao_table_1_prt_p1_2_prt_2" is assumed to be in dirty state in "bkdb53"
-        And all the data from "bkdb53" is saved for verification
-        And the user runs "gpcrondump -a --incremental -x bkdb53"
-        Then gpcrondump should return a return code of 0
-        And the timestamp from gpcrondump is stored
-        And the subdir from gpcrondump is stored
-
     Scenario: 54 Test gpcrondump and gpdbrestore verbose option
         Given the backup test is initialized with database "bkdb54"
         And there is a "ao" table "public.ao_table" in "bkdb54" with data
@@ -842,6 +795,7 @@ Feature: Validate command line arguments
     @ddpartII
     Scenario: 56 Incremental table filter gpdbrestore with noplan option
         Given the backup test is initialized with database "bkdb56"
+        And there is a list to store the incremental backup timestamps
         And there is a "ao" partition table "public.ao_part_table" in "bkdb56" with data
         And there is a "ao" partition table "public.ao_part_table1" in "bkdb56" with data
         Then data for partition table "ao_part_table" with partition level "1" is distributed across all segments on "bkdb56"
@@ -851,10 +805,10 @@ Feature: Validate command line arguments
         When the user runs "gpcrondump -a -x bkdb56"
         Then gpcrondump should return a return code of 0
         When all the data from "bkdb56" is saved for verification
+        And the timestamp from gpcrondump is stored in a list
         And the user runs "gpcrondump -a --incremental -x bkdb56"
         Then gpcrondump should return a return code of 0
-        And the subdir from gpcrondump is stored
-        And the timestamp from gpcrondump is stored
+        And the timestamp from gpcrondump is stored in a list
 
     @nbupartII
     @ddpartII
