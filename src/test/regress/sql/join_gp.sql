@@ -187,10 +187,24 @@ insert into dept values(4, 2, '4<-2<-1');
 insert into dept values(5, 1, '5<-1');
 insert into dept values(6, 5, '5<-1');
 insert into dept select i, i % 6 from generate_series(7,50) as i;
-insert into dept select i, 99 from generate_series(100,10000) as i;
+insert into dept select i, 99 from generate_series(100,15000) as i;
 
--- Test rescannable hashjoin with spilling hashtable
-set statement_mem='700kB';
+-- Test rescannable hashjoin with spilling hashtable for buffile
+set statement_mem='1000kB';
+set gp_workfile_type_hashjoin=buffile;
+WITH RECURSIVE subdept(id, parent_department, name) AS
+(
+	-- non recursive term
+	SELECT * FROM dept WHERE name = 'root'
+	UNION ALL
+	-- recursive term
+	SELECT d.* FROM dept AS d, subdept AS sd
+		WHERE d.pid = sd.id
+)
+SELECT count(*) FROM subdept;
+
+-- Test rescannable hashjoin with spilling hashtable for bfz
+set gp_workfile_type_hashjoin=bfz;
 WITH RECURSIVE subdept(id, parent_department, name) AS
 (
 	-- non recursive term
