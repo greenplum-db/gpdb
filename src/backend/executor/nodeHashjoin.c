@@ -266,10 +266,9 @@ ExecHashJoin(HashJoinState *node)
 	}
 
 	/* For a rescannable hash table we might need to reload batch 0 during rescan */
-	if (hashtable->curbatch == -1)
+	if (hashtable->curbatch == -1 && !hashtable->first_pass)
 	{
 		hashtable->curbatch = 0;
-
 		if (!ExecHashJoinReloadHashTable(node))
 		{
 			return NULL;
@@ -857,8 +856,11 @@ start_over:
 		batch->outerside.workfile = NULL;
 	}
 
-	/* For first time write, we need to spill batch 0 (in-memory batch) */
-	if (curbatch == 0 &&
+	/*
+	 * For first time write, we need to spill batch 0 (in-memory batch)
+	 * if we have more than 1 batch
+	 */
+	if (curbatch == 0 && nbatch > 1 &&
 			hjstate->rescannable && hashtable->first_pass)
 	{
 		SpillFirstBatch(hjstate);
@@ -1084,8 +1086,9 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	 */
 	if (node->hj_HashTable != NULL)
 	{
-		if (node->hj_HashTable->nbatch == 1 &&
-			((PlanState *) node)->righttree->chgParam == NULL
+		node->hj_HashTable->first_pass = false;
+
+		if (((PlanState *) node)->righttree->chgParam == NULL
 			&& !node->hj_HashTable->eagerlyReleased)
 		{
 			/*
@@ -1102,25 +1105,16 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 			 */
 			node->hj_OuterNotEmpty = false;
 
-			/* MPP-1600: reset the batch number */
-			node->hj_HashTable->curbatch = 0;
-		}
-		else if (node->rescannable && ((PlanState *) node)->righttree->chgParam == NULL)
-		{
-			node->hj_OuterNotEmpty = false;
-			HashState *hashState = (HashState *) innerPlanState(node);
-			HashJoinTable ht = hashState->hashtable;
-			/*
-			 * Check to see if we have some batch files before setting this flag.
-			 * We may hit a rescan call before even building the hash table
-			 */
-			if (ht != NULL && ht->nbatch > 1)
+			if (node->hj_HashTable->nbatch > 1)
 			{
-				ht->first_pass = false;
+				/* Force reloading batch 0 upon next ExecHashJoin */
+				node->hj_HashTable->curbatch = -1;
 			}
-
-			/* Force reloading batch 0 upon next ExecHashJoin */
-			ht->curbatch = -1;
+			else
+			{
+				/* MPP-1600: reset the batch number */
+				node->hj_HashTable->curbatch = 0;
+			}
 		}
 		else
 		{
