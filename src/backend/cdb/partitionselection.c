@@ -411,6 +411,8 @@ initPartitionSelection(PartitionSelector *node, EState *estate)
 	psstate->ps.targetlist = (List *) ExecInitExpr((Expr *) node->plan.targetlist,
 									(PlanState *) psstate);
 
+	psstate->seenScans = NULL;
+
 	return psstate;
 }
 

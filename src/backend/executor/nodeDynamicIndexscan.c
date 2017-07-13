@@ -262,11 +262,6 @@ setPidIndex(DynamicIndexScanState *node)
 	Assert(estate->dynamicTableScanInfo->numScans >= plan->scan.partIndex);
 	node->pidxIndex = estate->dynamicTableScanInfo->pidIndexes[plan->scan.partIndex - 1];
 	Assert(node->pidxIndex != NULL);
-
-	if (optimizer_partition_selection_log)
-	{
-		LogSelectedPartitionOids(node->pidxIndex);
-	}
 }
 
 /*

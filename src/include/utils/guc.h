@@ -508,7 +508,7 @@ extern int codegen_optimization_level;
 /**
  * Enable logging of DPE match in optimizer.
  */
-extern bool	optimizer_partition_selection_log;
+extern char *debug_partition_selection_log_level_str;
 
 extern char  *gp_email_smtp_server;
 extern char  *gp_email_smtp_userid;

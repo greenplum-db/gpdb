@@ -874,6 +874,17 @@ extern int gp_hashagg_default_nbatches;
 /* Hashjoin use bloom filter */
 extern int gp_hashjoin_bloomfilter;
 
+/* Partition Selection Log Level enum */
+typedef enum
+{
+        PARTITION_SELECTION_LOG_LEVEL_NONE,
+        PARTITION_SELECTION_LOG_LEVEL_TERSE,
+        PARTITION_SELECTION_LOG_LEVEL_VERBOSE
+} PartitionSelectionLogLevel;
+extern PartitionSelectionLogLevel partition_selection_log_level;
+extern const char *gpvars_assign_debug_partition_selection_log_level(const char *newval, bool doit, GucSource source);
+extern const char *gpvars_show_debug_partition_selection_log_level(void);
+
 /* Get statistics for partitioned parent from a child */
 extern bool 	gp_statistics_pullup_from_child_partition;
 

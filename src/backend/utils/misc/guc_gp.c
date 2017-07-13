@@ -467,7 +467,6 @@ bool		optimizer_log;
 int			optimizer_log_failure;
 bool		optimizer_control = true;
 bool		optimizer_trace_fallback;
-bool		optimizer_partition_selection_log;
 bool		optimizer_minidump;
 int			optimizer_cost_model;
 bool		optimizer_metadata_caching;
@@ -486,6 +485,15 @@ bool		optimizer_print_group_properties;
 bool		optimizer_print_optimization_context;
 bool		optimizer_print_optimization_stats;
 bool		optimizer_print_xform_results;
+
+/* Debugging GUCs */
+
+/*
+ * This GUC allows logging of partition selection by a partition selector
+ * operator. debug_partition_selection_log_level has three levels of verbosity:
+ * 'none', 'terse', and 'verbose'.
+ */
+char		*debug_partition_selection_log_level_str;
 
 /* array of xforms disable flags */
 bool		optimizer_xforms[OPTIMIZER_XFORMS_COUNT] = {[0 ... OPTIMIZER_XFORMS_COUNT - 1] = false};
@@ -2480,16 +2488,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_trace_fallback,
-		false, NULL, NULL
-	},
-
-	{
-		{"optimizer_partition_selection_log", PGC_USERSET, LOGGING_WHAT,
-			gettext_noop("Log optimizer partition selection."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
-		},
-		&optimizer_partition_selection_log,
 		false, NULL, NULL
 	},
 
@@ -5018,6 +5016,16 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&gp_sessionstate_loglevel_str,
 		"debug1", assign_gp_sessionstate_loglevel, NULL
+	},
+
+	{
+		{"debug_partition_selection_log_level", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Set the output log level of partition selector"),
+			gettext_noop("Valid values are 'terse' and 'verbose'."),
+			GUC_GPDB_ADDOPT
+		},
+		&debug_partition_selection_log_level_str,
+		"none", gpvars_assign_debug_partition_selection_log_level, gpvars_show_debug_partition_selection_log_level
 	},
 
 	{
