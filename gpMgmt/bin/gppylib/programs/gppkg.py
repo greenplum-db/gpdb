@@ -212,11 +212,20 @@ class GpPkgProgram:
             query_type, package_path = self.query
             QueryPackage(query_type, package_path).run()
         elif self.remove:
-            pkg_file_list = ListFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION).run()
-
+            # Check for exact match first, then use wildcard for what will be removed.
+            pkg_file_list = ListFilesByPattern(GPPKG_ARCHIVE_PATH, self.remove + GPPKG_EXTENSION).run()
             if len(pkg_file_list) == 0:
-                raise ExceptionNoStackTraceNeeded('Package %s has not been installed.' % self.remove)
-            assert len(pkg_file_list) == 1
+                # now try wildcard
+                pkg_file_list = ListFilesByPattern(GPPKG_ARCHIVE_PATH, self.remove + '*' + GPPKG_EXTENSION).run()
+                if len(pkg_file_list) == 0:
+                    raise ExceptionNoStackTraceNeeded('Package %s has not been installed.' % self.remove)
+
+                # refuse to remove at all if the match is too broad, i.e., > 1
+                if len(pkg_file_list) > 1:
+                    err_msg = "Remove request '%s' too broad. " \
+                              "Multiple packages match remove request: ( %s )." % (self.remove, ", ".join(pkg_file_list))
+                    raise ExceptionNoStackTraceNeeded(err_msg)
+
             pkg_file = pkg_file_list[0]
             pkg = Gppkg.from_package_path(os.path.join(GPPKG_ARCHIVE_PATH, pkg_file))
             UninstallPackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run()
