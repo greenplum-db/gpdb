@@ -79,7 +79,7 @@
             </tbody>
          </tgroup>
       </table>
-      <p>You can use the Greenplum Databasae built-in SQL function
+      <p>You can use the Greenplum Database built-in SQL function
             <codeph>gp_read_error_log()</codeph> to display formatting errors that are logged
          internally. For example, this command displays the error log information for the table
             <i>ext_expenses</i>:</p>
