@@ -338,14 +338,6 @@ processLevel(PartitionSelectorState *node, int level, TupleTableSlot *inputTuple
 						selparts->scanIds = lappend_int(selparts->scanIds, scanId);
 					}
 				}
-				else
-				{
-					/*
-					 * We'll need the oid of this rule to evaluate the PartOidExpr of the
-					 * PartitionSelector operator's target list. Save it in node->acceptedLeafOid.
-					 */
-					node->acceptedLeafOid = rule->parchildrelid;
-				}
 			}
 		}
 		/* Recursively call this function for next level's partition elimination */

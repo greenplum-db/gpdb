@@ -151,7 +151,6 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	{
 		/* propagate the part oids obtained via static partition selection */
 		partition_propagation(estate, ps->staticPartOids, ps->staticScanIds, ps->selectorId);
-		node->acceptedLeafOid = InvalidOid;
 		return NULL;
 	}
 
@@ -252,7 +251,6 @@ ExecPartitionSelector(PartitionSelectorState *node)
 		pfree(selparts);
 	}
 
-	node->acceptedLeafOid = InvalidOid;
 	return candidateOutputSlot;
 }
 
@@ -267,8 +265,6 @@ ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContext *exprCtxt)
 {
 	/* reset PartitionSelectorState */
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
-	
-	Assert (InvalidOid == node->acceptedLeafOid);
 	
 	for(int iter = 0; iter < ps->nLevels; iter++)
 	{
