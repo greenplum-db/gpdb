@@ -1,7 +1,7 @@
 from mock import *
 from gp_unittest import *
 from gppylib.operations.package import IsVersionCompatible, ListPackages, MigratePackages, AlreadyInstalledError, \
-    ARCHIVE_PATH, GPPKG_ARCHIVE_PATH, SyncPackages, CleanGppkg
+    ARCHIVE_PATH, SyncPackages, CleanGppkg
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 import os
@@ -83,7 +83,7 @@ class ListPackagesTestCase(GpTestCase):
     def test__execute_fail_raise_error_with_no_gppkg_postfix(self):
         self.mock_list_files_by_pattern_run.return_value = ['sample']
         with self.assertRaisesRegexp(Exception, "unable to parse sample as a gppkg"):
-            package_name_list = self.subject.execute()
+            self.subject.execute()
 
 
 class MigratePackagesTestCase(GpTestCase):
@@ -169,6 +169,7 @@ class MigratePackagesTestCase(GpTestCase):
                                                         self.mock_listdir.return_value[1]), log_messages)
         self.assertIn('The package migration has completed.', log_messages)
 
+
 class SyncPackagesTestCase(GpTestCase):
     def setUp(self):
         self.apply_patches([
@@ -245,6 +246,24 @@ class SyncPackagesTestCase(GpTestCase):
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
         self.assertIn('The following packages will be uninstalled on localhost: zing.gppkg, ga.gppkg', log_messages)
         self.assertNotIn('The packages on %s are consistent.' % hostname, log_messages)
+
+
+class CleanGppkgTestCase(GpTestCase):
+
+    def setUp(self):
+        self.apply_patches([
+            patch('gppylib.operations.package.SyncPackages'),
+            patch('gppylib.operations.package.ParallelOperation'),
+                ])
+        self.sync_packages_mock = self.get_mock_from_apply_patch('SyncPackages')
+        self.parallel_operation_mock = self.get_mock_from_apply_patch('ParallelOperation')
+
+    def test_two_segments_unreachable(self):
+        self.sync_packages_mock.return_value.get_ret.side_effect = [Exception('first failure'), Exception('second failure')]
+        subject = CleanGppkg("localhost", ["fiction", "fairytale"])
+
+        with self.assertRaisesRegexp(Exception, "SyncPackages failed:\nfirst failure\nsecond failure"):
+            subject.execute()
 
 
 if __name__ == '__main__':

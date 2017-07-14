@@ -115,7 +115,7 @@ class GpPkgProgram:
 
     def _get_gpdb_host_list(self):
         """
-        TODO: AK: Get rid of this. Program logic should not be driving host list building .
+        TODO: Perhaps the host list should be produced by gparray instead of here.
 
             This method gets the host names
             of all hosts in the gpdb array.
@@ -127,7 +127,6 @@ class GpPkgProgram:
 
         logger.debug('_get_gpdb_host_list')
 
-        #Get host list
         gparr = GpArray.initFromCatalog(dbconn.DbURL(port = self.master_port), utility = True)
         master_host = None
         standby_host = None
@@ -143,13 +142,13 @@ class GpPkgProgram:
             else:
                 segment_host_list.append(seg.getSegmentHostName())
 
-        #Deduplicate the hosts so that we
-        #dont install multiple times on the same host
+        # Deduplicate the hosts so that we
+        # dont install multiple times on the same host
         segment_host_list = list(set(segment_host_list))
 
-        #Segments might exist on the master host. Since we store the
-        #master host separately in self.master_host, storing the master_host
-        #in the segment_host_list is redundant.
+        # Segments might exist on the master host. Since we store the
+        # master host separately in self.master_host, storing the master_host
+        # in the segment_host_list is redundant.
         for host in segment_host_list:
             if host == master_host or host == standby_host:
                 segment_host_list.remove(host)
@@ -191,13 +190,10 @@ class GpPkgProgram:
             if len(results) != 0 and 'not found' in results:
                 raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH')
 
-        # MASTER_DATA_DIRECTORY and PGPORT must not need to be set for
-        # --build and --migrate to function properly
         if self.master_datadir is None:
             self.master_datadir = gp.get_masterdatadir()
         self.master_port = self._get_master_port(self.master_datadir)
 
-        # TODO: AK: Program logic should not drive host decisions.
         self._get_gpdb_host_list()
 
         if self.migrate:

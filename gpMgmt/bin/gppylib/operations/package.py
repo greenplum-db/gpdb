@@ -1221,11 +1221,16 @@ class CleanGppkg(Operation):
 
         ParallelOperation(operations).run()
 
+        err_msgs = 'SyncPackages failed:'
+        exceptions = ""
         for operation in operations:
             try:
                 operation.get_ret()
             except Exception, e:
-                raise ExceptionNoStackTraceNeeded('SyncPackages failed' + str(e))
+                exceptions += '\n'+str(e)
+
+        if exceptions:
+            raise ExceptionNoStackTraceNeeded("%s%s" % (err_msgs, exceptions))
 
         logger.info('Successfully cleaned the cluster')
 

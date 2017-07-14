@@ -5134,7 +5134,7 @@ def impl(context, gppkg_name):
         if not gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
-@then('"{gppkg_name}" gppkg files does not exist on all hosts')
+@then('"{gppkg_name}" gppkg files do not exist on any hosts')
 def impl(context, gppkg_name):
     remote_gphome = os.environ.get('GPHOME')
     hostlist = get_all_hostnames_as_list(context, 'template1')
