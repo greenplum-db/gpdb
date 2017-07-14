@@ -2434,6 +2434,15 @@ def impl(context, tname, dbname):
         curs = dbconn.execSQL(conn, sql)
         context.stored_rows = curs.fetchall()
 
+@given('results of the sql "{sql}" db "{dbname}" are stored in the context')
+@when( 'results of the sql "{sql}" db "{dbname}" are stored in the context')
+def impl(context, sql, dbname):
+    context.stored_sql_results = []
+
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        curs = dbconn.execSQL(conn, sql)
+        context.stored_sql_results = curs.fetchall()
+
 
 @then('validate that "{dataline}" "{formatter}" seperated by "{delim}" is in the stored rows')
 def impl(context, dataline, formatter, delim):
