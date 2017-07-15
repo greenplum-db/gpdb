@@ -18,6 +18,12 @@
       <li id="pw222281">
         <xref href="#topic10" type="topic" format="dita"/>
       </li>
+      <li id="pw22228177">
+        <xref href="#topic_pydatascimod" type="topic" format="dita"/>
+      </li>
+      <li id="pw21367233">
+        <xref href="#topic_yx3_yjq_rt" type="topic" format="dita"/>
+      </li>
       <li id="pw213672">
         <xref href="#topic11" type="topic" format="dita"/>
       </li>
@@ -30,16 +36,12 @@
     <title id="pw216140">About Greenplum PL/Python</title>
     <body>
       <p>PL/Python is a loadable procedural language. With the Greenplum Database PL/Python
-        extension, you can write a Greenplum Database user-defined functions in Python that take
+        extension, you can write Greenplum Database user-defined functions or anonymous code blocks in Python that take
         advantage of Python features and modules to quickly build robust database applications. </p>
-      <p>You can run PL/Python code blocks as anonymous code blocks. See the <codeph><xref
-            href="../sql_commands/DO.xml#topic1">DO</xref></codeph> command in the <cite>Greenplum
-          Database Reference Guide</cite>.</p>
-      <p>The Greenplum Database PL/Python extension is installed by default with Greenplum Database.
-        Greenplum Database installs a version of Python and PL/Python. This is location of the
-        Python installation that Greenplum Database uses:</p>
-      <codeblock>$GPHOME/ext/python/</codeblock>
-    </body>
+      <p>Greenplum Database provides a collection of data science-related Python
+         modules that you can install and import in your UDFs. You can also build
+         and install custom Python modules in your Greenplum Database cluster.</p>
+    </body> 
     <topic id="topic3" xml:lang="en">
       <title>Greenplum Database PL/Python Limitations</title>
       <body>
@@ -55,10 +57,23 @@
   <topic id="topic4" xml:lang="en">
     <title id="pw217326">Enabling and Removing PL/Python support</title>
     <body>
-      <p>The PL/Python language is installed with Greenplum Database. To create and run a PL/Python
+      <p>The PL/Python procedural language is installed with Greenplum Database. To create and run a PL/Python
         user-defined function (UDF) in a database, you must register the PL/Python language with the
         database. </p>
     </body>
+    <topic id="topic_pythonverify" xml:lang="en">
+      <title id="pw217326">Verifying Your Python Environment</title>
+      <body>
+        <p>When installed, Greenplum Database includes an embedded Python distribution. 
+          The <codeph>gpadmin</codeph> user environment is configured to use this embedded Python.</p>
+        <p>To verify the Python environment in your Greenplum Database installation, use the <codeph>which</codeph> command:</p>
+          <codeblock>$ which python</codeblock>
+        <p>The <codeph>which</codeph> command returns the path to the <codeph>python</codeph>
+        executable currently in use in your environment. The Python installed with
+        Greenplum Database is located in the <codeph>$GPHOME/ext/python</codeph> directory.</p>
+      <codeblock>/<varname>path_to_greenplum-db</varname>/ext/python/bin/python</codeblock>
+      </body>
+    </topic>
     <topic id="topic5" xml:lang="en">
       <title>Enabling PL/Python Support</title>
       <body>
@@ -285,296 +300,288 @@ $$;</codeblock>
     </topic>
   </topic>
   <topic id="topic10" xml:lang="en">
-    <title id="pw221333">Installing Python Modules</title>
+    <title id="pw221333">Python Modules</title>
     <body>
-      <p>When you install a Python module on Greenplum Database, the Greenplum Database Python
-        environment must have the module added to it across all segment hosts and mirror hosts in
-        the cluster. When expanding Greenplum Database, you must add the Python modules to the new
-        segment hosts. You can use the Greenplum Database utilities <codeph>gpssh</codeph> and
-          <codeph>gpscp</codeph> run commands on Greenplum Database hosts and copy files to the
-        hosts. For information about the utilities, see the <cite>Greenplum Database Utility
-          Guide</cite>.</p>
-      <p>As part of the Greenplum Database installation, the <codeph>gpadmin</codeph> user
-        environment is configured to use Python that is installed with Greenplum Database.</p>
-      <p>To check the Python environment, you can use the <codeph>which</codeph> command:</p>
-      <codeblock>which python</codeblock>
-      <p>The command returns the location of the Python installation. The Python installed with
-        Greenplum Database is in the Greenplum Database <codeph>ext/python</codeph> directory.</p>
-      <codeblock>/<varname>path_to_greenplum-db</varname>/ext/python/bin/python</codeblock>
-      <p>If you are building a Python module, you must ensure that the build creates the correct
-        executable. For example on a Linux system, the build should create a 64-bit executable.</p>
-      <p>Before building a Python module to be installed, ensure that the appropriate software to
-        build the module is installed and properly configured. The build environment is required
-        only on the host where you build the module. </p>
-      <p>These are examples of installing and testing Python modules:<ul id="ul_ukh_4wr_wt">
-          <li><xref href="#topic_yx3_yjq_rt" format="dita"/></li>
-          <li><xref href="#topic_j53_5jq_rt" format="dita"/></li>
-          <li><xref href="#topic_e4p_gcw_vt" format="dita"/></li>
-        </ul></p>
+      <p> A Python module is a text file containing Python statements and definitions. Python modules are named, with the file name for a module following the <codeph><varname>python-module-name</varname>.py</codeph> naming convention. You can import Python modules into user-defined functions that you create with PL/Python.  </p>
+      <p> Greenplum Database provides a collection of data science-related Python modules that you can install and import into your UDFs. You can also build and install custom Python modules in your Greenplum Database cluster.  </p>
     </body>
-    <topic id="topic_yx3_yjq_rt">
-      <title>Simple Python Module Installation Example (setuptools)</title>
+  </topic>
+
+  <topic id="topic_pydatascimod">
+    <title>Python Data Science Module Package</title>
+    <body>
+     <p> Greenplum Database provides a collection of data science-related Python modules. You can <ph otherprops="oss-only">build these modules in <codeph>.gppkg</codeph> format</ph> <ph otherprops="pivotal">download these modules in <codeph>.gppkg</codeph> format from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external">Pivotal Network</xref></ph>.
+       <table id="iq1395577">
+          <title>Data Science Modules</title>
+          <tgroup cols="2">
+            <colspec colnum="1" colname="col1" colwidth="1*"/>
+            <colspec colnum="2" colname="col2" colwidth="2*"/>
+            <thead>
+              <row>
+                <entry colname="col1">Module Name</entry>
+                <entry colname="col2">Description/Used For</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">
+                  Beautiful Soup
+                </entry>
+                <entry colname="col2">Navigating HTML and XML</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  Gensim
+                </entry>
+                <entry colname="col2">Topic modeling and document indexing</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  Keras
+                </entry>
+                <entry colname="col2">Deep learning</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  Lifelines
+                </entry>
+                <entry colname="col2">Survival analysis</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  lxml
+                </entry>
+                <entry colname="col2">XML and HTML processing</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  NLTK
+                </entry>
+                <entry colname="col2">Natural language toolkit</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  NumPy
+                </entry>
+                <entry colname="col2">Scientific computing</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  Pandas
+                </entry>
+                <entry colname="col2">Data analysis</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  Pattern-en
+                </entry>
+                <entry colname="col2">Part-of-speech tagging</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  pyLDAvis
+                </entry>
+                <entry colname="col2">Interactive topic model visualization</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  PyMC3
+                </entry>
+                <entry colname="col2">Statistical modeling and probabilistic machine learning</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  scikit-learn
+                </entry>
+                <entry colname="col2">Machine learning data mining and analysis</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  SciPy
+                </entry>
+                <entry colname="col2">Scientific computing</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  spaCy
+                </entry>
+                <entry colname="col2">Large scale natural language processing</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  StatsModels
+                </entry>
+                <entry colname="col2">Statistical modeling</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  Tensorflow
+                </entry>
+                <entry colname="col2">Numerical computation using data flow graphs</entry>
+              </row>
+              <row>
+                <entry colname="col1">
+                  XGBoost
+                </entry>
+                <entry colname="col2">Gradient boosting, classifying, ranking </entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table></p>
+    </body> 
+    <topic id="topic_instpdsm" xml:lang="en">
+      <title>Installing the Python Data Science Module Package</title>
       <body>
-        <p>This example manually installs the Python <codeph>setuptools</codeph> module from the
-          Python Package Index repository. The module lets you easily download, build, install,
-          upgrade, and uninstall Python packages.</p>
-        <p>This example first builds the module from a package and installs the module on a single
-          host. Then the module is built and installed on segment hosts.</p>
+        <p>Before you install the Python Data Science Module package, make sure that your Greenplum Database is running, you have sourced <codeph>greenplum_path.sh</codeph>, and that the <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> environment variables are set.</p>
+        <ol>
+          <li>Locate the Python Data Science module package that you built or downloaded.<p>The file name format of the package is <codeph>DataSciencePython-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeph>.</p></li>
+          <li>Copy the package to the Greenplum Database master host.</li>
+          <li>Use the <codeph>gppkg</codeph> command to install the package. For example:<codeblock>$ gppkg -i DataSciencePython-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeblock><p><codeph>gppkg</codeph> installs the Python Data Science modules on all nodes in your Greenplum Database cluster. The command also updates the <codeph>PYTHONPATH</codeph>, <codeph>PATH</codeph>, and <codeph>LD_LIBRARY_PATH</codeph> environment variables in your <codeph>greenplum_path.sh</codeph> file.</p></li>
+          <li>Restart Greenplum Database. You must re-source <codeph>greenplum_path.sh</codeph> before restarting your Greenplum cluster:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r</codeblock></li>
+        </ol>
+       <p>The Greenplum Database Python Data Science Modules are installed in the following directory:</p><codeblock>$GPHOME/ext/DataSciencePython/lib/python2.7/site-packages/</codeblock>
+      </body>
+    </topic>
+    <topic id="topic_removepdsm" xml:lang="en">
+      <title>Uninstalling the Python Data Science Module Package</title>
+      <body>
+        <p>Use the <codeph>gppkg</codeph> utility to uninstall the Python Data Science Module package. You must include the version number in the package name you provide to <codeph>gppkg</codeph>.</p>
+        <p> To determine your Python Data Science Module package version number and remove this package:</p>
+        <codeblock>$ gppkg -q --all | grep DataSciencePython
+DataSciencePython-&lt;version&gt;
+$ gppkg -r DataSciencePython-&lt;version&gt;</codeblock>
+        <p>The command removes the Python Data Science modules from your Greenplum Database cluster. It also updates the <codeph>PYTHONPATH</codeph>, <codeph>PATH</codeph>, and <codeph>LD_LIBRARY_PATH</codeph> environment variables in your <codeph>greenplum_path.sh</codeph> file to their pre-installation values.</p>
+        <p>Re-source <codeph>greenplum_path.sh</codeph> and restart Greenplum Database after you remove the Python Data Science Module package:</p>
+        <codeblock>$ . /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r </codeblock>
+        <note>When you uninstall the Python Data Science Module package from your Greenplum Database cluster, any UDFs that you have created that import Python modules installed with this package will return an error.</note>
+      </body>
+    </topic>
+  </topic>
+        
+  <topic id="topic_yx3_yjq_rt">
+    <title>Building/Installing Custom Python Modules</title>
+    <body>
+      <p>You can build a Python module on a host system outside of your Greenplum Database cluster
+        and later install the built module on all cluster hosts. Before building a Python
+        module, ensure that the appropriate software build dependencies
+        are installed and properly configured on the build system and that the build
+        generates the correct executable. For example, on a Linux system the build
+        should create a 64-bit executable.</p>
+      <note>Some Python modules require installing additional software, such as a third party library or a compiler. Refer to the Python module's documentation for information about the requirements for building and using the module.</note>
+      <p>When you install a custom Python module in Greenplum Database, you must add the module to
+        all segment and mirror hosts in the cluster. When you expand Greenplum Database, you
+        must add the Python modules to the new segment hosts. You can use the Greenplum Database
+        utilities <codeph>gpssh</codeph> and <codeph>gpscp</codeph> to run commands on,
+        and copy files to, remote Greenplum Database hosts.</p>
+      <p>Python module examples in this section include:<ul id="ul_ukh_4wr_wt">
+          <li><xref href="#topic_pycustombldinst" format="dita"/></li>
+          <li><xref href="#topic_e4p_gcw_vt" format="dita"/></li>
+          <li><xref href="#topic_troubleshoot_pymodimp" format="dita"/></li>
+        </ul></p>
+      </body>
+    <topic id="topic_pycustombldinst">
+    <title>Building/Installing a Simple Python Module (setuptools)</title>
+      <body>
+        <p><codeph>setuptools</codeph> is a Python module that enables you to easily
+          download, build, install, upgrade, and uninstall Python packages. <codeph>setuptools</codeph> 
+          is available from the Python Package Index repository.</p>
+        <p>In this example, you will build the <codeph>setuptools</codeph> module from the
+          download package and install it on a single host. You will then build and install 
+          the module on all segment hosts in your Greenplum Database cluster.</p>
         <ol id="ol_orb_3pq_rt">
-          <li>Get the module package from the Python Package Index site. For example, run this
-              <codeph>wget</codeph> command on a Greenplum Database host as the
-              <codeph>gpadmin</codeph> user to get the tar
-            file.<codeblock>wget --no-check-certificate https://pypi.python.org/packages/source/s/setuptools/setuptools-18.4.tar.gz</codeblock></li>
-          <li>Extract the files from the tar file.
-            <codeblock>tar -xzvf distribute-0.6.21.tar.gz</codeblock></li>
-          <li>Go to the directory that contains the package files and run the Python scripts to
-            build and install the Python
-            package.<codeblock>cd setuptools-18.4
-python setup.py build &amp;&amp; python setup.py install</codeblock></li>
-          <li>The following Python command returns no errors if the module is available to Python.
-            <codeblock>python -c "import setuptools"</codeblock></li>
-          <li>Copy the package to the Greenplum Database hosts with the <codeph>gpscp</codeph>
-            utility. For example, this command copies the tar file from the current host to the host
-            systems listed in the file
-            <codeph>remote-hosts</codeph>.<codeblock>gpscp -f remote-hosts setuptools-18.4.tar.gz =:/home/gpadmin</codeblock></li>
-          <li>Run the commands to build, install, and test the package with <codeph>gpssh</codeph>
-            utility on the hosts listed in the file <codeph>remote-hosts</codeph>. The file
-              <codeph>remote-hosts</codeph> lists all the remote Greenplum Database segment
-            hosts:<codeblock>gpssh -f remote_hosts
->>> tar -xzvf distribute-0.6.21.tar.gz
+          <li>(Optional) Create a work directory:
+             <codeblock>$ mkdir plpython_pkgs
+$ cd plpython_pkgs</codeblock></li>
+          <li>Download the <codeph>setuptools</codeph> module package from the Python
+             Package Index site. For example, run this <codeph>wget</codeph> command on
+             a Greenplum Database host as the <codeph>gpadmin</codeph> user:
+            <codeblock>$ wget --no-check-certificate https://pypi.python.org/packages/source/s/setuptools/setuptools-18.4.tar.gz</codeblock></li>
+          <li>Extract the files from the <codeph>.tar.gz</codeph> package:
+            <codeblock>$ tar xzvf setuptools-18.4.tar.gz</codeblock></li>
+          <li>Run the Python scripts to build and install the Python <codeph>setuptools</codeph>
+            package:
+           <codeblock>$ cd setuptools-18.4
+$ python setup.py build
+$ python setup.py install</codeblock><p>The package is installed to the location specified by the <codeph>$PYTHONPATH</codeph> environment variable.</p></li>
+          <li>Run the following command to verify that the module is available to Python:
+            <codeblock>$ python -c "import setuptools"</codeblock>
+            <p>If no error is returned, the <codeph>setuptools</codeph> module was
+            successfully imported.</p></li>
+          <li>The <codeph>setuptools</codeph> package installs the <codeph>easy_install</codeph> utility. This utility enables you to install Python packages from the Python Package Index repository. The following command installs the Python <codeph>pip</codeph> utility from the Python Package Index site:
+            <codeblock>$ easy_install pip</codeblock></li>
+          <li>Copy the <codeph>setuptools</codeph> source package to all Greenplum Database
+            hosts in your cluster. For example, this command uses the <codeph>gpscp</codeph>
+            utility to copy the <codeph>.tar.gz</codeph> file from the current host to 
+            the <codeph>/home/gpadmin</codeph> directory on all hosts listed in
+            the file <codeph>remote-hosts</codeph>.<codeblock>$ gpscp -f remote-hosts setuptools-18.4.tar.gz =:/home/gpadmin</codeblock></li>
+          <li>Run the following commands to build, install, and test the <codeph>setuptools</codeph>
+            package on each host to which you copied the <codeph>.tar.gz</codeph> file:
+            <codeblock>$ gpssh -f remote_hosts
+>>> tar xzvf ../setuptools-18.4.tar.gz
 >>> cd setuptools-18.4
->>> python setup.py build &amp;&amp; python setup.py install
+>>> python setup.py build
+>>> python setup.py install
 >>> python -c "import setuptools"
->>> exit</codeblock></li>
+>>> exit</codeblock><p>Alternatively, you could copy the built Python module files to each Greenplum Database host.</p></li>
         </ol>
-        <p>The <codeph>setuptools</codeph> package installs the <codeph>easy_install</codeph>
-          utility that lets you install Python packages from the Python Package Index repository.
-          For example, this command installs Python <codeph>PIP</codeph> utility from the Python
-          Package Index site.<codeblock>easy_install pip</codeblock></p>
-        <p>You can use the <codeph>gpssh</codeph> utility to run the <codeph>easy-install</codeph>
-          command on all the Greenplum Database segment hosts.</p>
-      </body>
-    </topic>
-    <topic id="topic_j53_5jq_rt">
-      <title>Complex Python Installation Example (NumPy)</title>
-      <body>
-        <p>This example builds and installs the Python module NumPy. NumPy is a module for
-          scientific computing with Python. For information about NumPy, see <xref
-            href="http://www.numpy.org/" scope="external" format="html"
-          >http://www.numpy.org/</xref>. </p>
-        <p>Building the NumPy package requires this software:<ul id="ul_gd2_1g4_vt">
-            <li>OpenBLAS libraries, an open source implementation of BLAS (Basic Linear Algebra
-              Subprograms).</li>
-            <li>The gcc compilers: gcc, gcc-gfortran, and gcc-c++. The compilers are required to
-              build the OpenBLAS libraries. See <xref href="#topic_bqb_dtq_wt" format="dita"/></li>
-          </ul></p>
-        <p>This example process assumes <codeph>yum</codeph> is installed on the Greenplum Database
-          segment hosts and the <codeph>gpadmin</codeph> user is a member of
-            <codeph>sudoers</codeph> with root privileges on the hosts.</p>
-        <p>Download the OpenBLAS and NumPy source files. For example, these <codeph>wget</codeph>
-          commands download tar files into the directory
-          <codeph>packages</codeph>:<codeblock>wget --directory-prefix=packages http://github.com/xianyi/OpenBLAS/tarball/v0.2.8
-wget --directory-prefix=packages http://sourceforge.net/projects/numpy/files/NumPy/1.8.0/numpy-1.8.0.tar.gz/download</codeblock></p>
-        <p>Distribute the software to the Greenplum Database hosts. For example, if you download the
-          software to <codeph>/home/gpadmin/packages</codeph> these commands create the directory on
-          the hosts and copies the software to hosts for the hosts listed in the
-            <codeph>gpdb_remotes</codeph>
-          file.<codeblock>gpssh -f gpdb_remotes mkdir packages 
-gpscp -f gpdb_remotes packages/* =:/home/gpadmin/packages</codeblock></p>
-      </body>
-      <topic id="topic_bqb_dtq_wt">
-        <title>OpenBLAS Prerequisites </title>
-        <body>
-          <p>If needed, use <codeph>yum</codeph> to install gcc compilers from system repositories.
-            The compilers are required on all hosts where you compile
-            OpenBLAS:<codeblock>sudo yum -y install gcc gcc-gfortran gcc-c++</codeblock></p>
-          <note>If you cannot install the correct compiler versions with yum, you can download the
-            gcc compilers, including gfortran, from source and install them. These two commands
-            download and install the compilers:<p>
-              <codeblock>wget http://gfortran.com/download/x86_64/snapshots/gcc-4.4.tar.xz
-tar xf gcc-4.4.tar.xz -C /usr/local/</codeblock>
-            </p><p>If you installed gcc manually from a tar file, add the new gcc binaries to
-                <codeph>PATH</codeph> and
-              <codeph>LD_LIBRARY_PATH</codeph>:<codeblock>export PATH=$PATH:/usr/local/gcc-4.4/bin
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/gcc-4.4/lib</codeblock></p></note>
-          <p>Create a symbolic link to g++ and call it gxx</p>
-          <p>
-            <codeblock>sudo ln -s /usr/bin/g++ /usr/bin/gxx</codeblock>
-          </p>
-          <p>You might also need to create symbolic links to any libraries that have different
-            versions available for example <codeph>libppl_c.so.4</codeph> to
-              <codeph>libppl_c.so.2</codeph>.</p>
-          <p>If needed, you can use the <codeph>gpscp</codeph> utility to copy files to Greenplum
-            Database hosts and the <codeph>gpssh</codeph> utility to run commands on the hosts. </p>
-        </body>
-      </topic>
-    </topic>
-    <topic id="topic_nmj_zsq_wt">
-      <title>Build and Install OpenBLAS Libraries</title>
-      <body>
-        <p>Before build and install the NumPy module, you install the OpenBLAS libraries. This
-          section describes how to build and install the libraries on a single host.</p>
-        <ol id="ol_fxc_w4r_wt">
-          <li>Extract the OpenBLAS files from the file. These commands extract the files from the
-            OpenBLAS tar file and simplify the directory name that contains the OpenBLAS
-            files.<codeblock>tar -xzf packages/v0.2.8 -C /home/gpadmin/packages
-mv /home/gpadmin/packages/xianyi-OpenBLAS-9c51cdf /home/gpadmin/packages/OpenBLAS</codeblock></li>
-          <li>Compile OpenBLAS. These commands set the <codeph>LIBRARY_PATH</codeph> environment
-            variable and run the <codeph>make</codeph> command to build OpenBLAS libraries.<p>
-              <codeblock>cd /home/gpadmin/packages/OpenBLAS
-export LIBRARY_PATH=$LD_LIBRARY_PATH
-make FC=gfortran USE_THREAD=0</codeblock>
-            </p></li>
-          <li>These commands install the OpenBLAS libraries in <codeph>/usr/local</codeph> as root
-            and change the owner of the files to
-            <codeph>gpadmin</codeph>.<codeblock>cd /home/gpadmin/packages/OpenBLAS/
-sudo make PREFIX=/usr/local install
-sudo ldconfig
-sudo chown -R gpadmin /usr/local/lib</codeblock></li>
-        </ol>
-        <p>These are the libraries that are installed and symbolic links that are
-          created:<codeblock>libopenblas.a -> libopenblas_sandybridge-r0.2.8.a
-libopenblas_sandybridge-r0.2.8.a
-libopenblas_sandybridge-r0.2.8.so
-libopenblas.so -> libopenblas_sandybridge-r0.2.8.so
-libopenblas.so.0 -> libopenblas_sandybridge-r0.2.8.so</codeblock></p>
-        <p>You can use the <codeph>gpssh</codeph> utility to build and install the OpenBLAS
-          libraries on multiple hosts.</p>
-        <p>All the Greenplum Database hosts (master and segment hosts) have identical
-          configurations. You can copy the OpenBLAS libraries from the system where they were built
-          instead of building the OpenBlas libraries on all the hosts. For example, these
-            <codeph>gpssh</codeph> and <codeph>gpscp</codeph> commands copy and install the OpenBLAS
-          libraries on the hosts listed in the <codeph>gpdb_remotes</codeph> file.</p>
-        <codeblock>gpssh -f gpdb_remotes -e 'sudo yum -y install gcc gcc-gfortran gcc-c++'
-gpssh -f gpdb_remotes -e 'ln -s /usr/bin/g++ /usr/bin/gxx'
-gpssh -f gpdb_remotes -e sudo chown gpadmin /usr/local/lib
-gpscp -f gpdb_remotes /usr/local/lib/libopen*sandy* =:/usr/local/lib
-
-gpssh -f gpdb_remotes
->>> cd /usr/local/lib
->>> ln -s libopenblas_sandybridge-r0.2.8.a libopenblas.a
->>> ln -s libopenblas_sandybridge-r0.2.8.so libopenblas.so
->>> ln -s libopenblas_sandybridge-r0.2.8.so libopenblas.so.0
->>> sudo ldconfig</codeblock>
-      </body>
-    </topic>
-    <topic id="topic_wwy_5sq_wt">
-      <title>Build and Install NumPy</title>
-      <body>
-        <p>After you have installed the OpenBLAS libraries, you can build and install NumPy module.
-          These steps install the NumPy module on a single host. You can use the
-            <codeph>gpssh</codeph> utility to build and install the NumPy module on multiple hosts. </p>
-        <ol id="ol_kv3_dpr_wt">
-          <li>Go to the <codeph>packages</codeph> subdirectory and get the NumPy module source and
-            extract the
-            files.<codeblock>cd /home/gpadmin/packages
-tar -xzf numpy-1.8.0.tar.gz</codeblock></li>
-          <li>Set up the environment for building and installing NumPy.
-            <codeblock>export BLAS=/usr/local/lib/libopenblas.a
-export LAPACK=/usr/local/lib/libopenblas.a
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
-export LIBRARY_PATH=$LD_LIBRARY_PATH</codeblock></li>
-          <li>Go to the NumPy directory and build and install NumPy. Building the NumPy package
-            might take some
-              time.<codeblock>cd numpy-1.8.0
-python setup.py build
-python setup.py install</codeblock><note>If
-              the NumPy module did not successfully build, the NumPy build process might need a
-                <codeph>site.cfg</codeph> that specifies the location of the OpenBLAS libraries.
-              Create the file <codeph>site.cfg</codeph> in the NumPy package
-                directory:<codeblock>cd ~/packages/numpy-1.8.0
-touch site.cfg</codeblock><p>Add the
-                following to the <codeph>site.cfg</codeph> file and run the NumPy build command
-                again:</p><codeblock>[default]
-library_dirs = /usr/local/lib
-
-[atlas]
-atlas_libs = openblas
-library_dirs = /usr/local/lib
-
-[lapack]
-lapack_libs = openblas
-library_dirs = /usr/local/lib
-
-# added for scikit-learn 
-[openblas]
-libraries = openblas
-library_dirs = /usr/local/lib
-include_dirs = /usr/local/include</codeblock></note></li>
-          <li>The following Python command ensures that the module is available for import by Python
-            on a host system.<codeblock>python -c "import numpy"</codeblock></li>
-        </ol>
-        <p>As in the simple module installation, you can use the <codeph>gpssh</codeph> utility to
-          build, install, and test the module on Greenplum Database segment hosts.</p>
-        <p>The environment variables that are require to build the NumPy module are also required in
-          the <codeph>gpadmin</codeph> user environment when running Python NumPy functions. You can
-          use the <codeph>gpssh</codeph> utility with the <codeph>echo</codeph> command to add the
-          environment variables to the <codeph>.bashrc</codeph> file. For example, these
-            <codeph>echo</codeph> commands add the environment variables to the
-            <codeph>.bashrc</codeph> file in the user home
-          directory.<codeblock>echo -e '\n#Needed for NumPy' >> ~/.bashrc
-echo -e 'export BLAS=/usr/local/lib/libopenblas.a' >> ~/.bashrc
-echo -e 'export LAPACK=/usr/local/lib/libopenblas.a' >> ~/.bashrc
-echo -e 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib' >> ~/.bashrc
-echo -e 'export LIBRARY_PATH=$LD_LIBRARY_PATH' >> ~/.bashrc</codeblock></p>
       </body>
     </topic>
     <topic id="topic_e4p_gcw_vt">
       <title>Testing Installed Python Modules</title>
       <body>
-        <p>You can create a simple PL/Python user-defined function (UDF) to validate that Python a
-          module is available in the Greenplum Database. This example tests the NumPy module.</p>
-        <p>This PL/Python UDF imports the NumPy module. The function returns
-            <codeph>SUCCESS</codeph> if the module is imported, and <codeph>FAILURE</codeph> if an
-          import error occurs.</p>
-        <codeblock>CREATE OR REPLACE FUNCTION plpy_test(x int)
-returns text
-as $$
+        <p>You can create a simple PL/Python user-defined function (UDF) to validate that a Python
+          module is available in Greenplum Database. This example tests the NumPy module 
+          installed with the Python Data Science Module package:</p>
+       <ol>
+         <li>Create a PL/Python UDF that imports the NumPy module.
+        <codeblock>CREATE OR REPLACE FUNCTION test_importnumpy(x int)
+RETURNS text
+AS $$
   try:
       from numpy import *
       return 'SUCCESS'
   except ImportError, e:
       return 'FAILURE'
-$$ language plpythonu;</codeblock>
-        <p>Create a table that contains data on each Greenplum Database segment instance. Depending
-          on the size of your Greenplum Database installation, you might need to generate more data
-          to ensure data is distributed to all segment instances.</p>
-        <codeblock>CREATE TABLE DIST AS (SELECT x FROM generate_series(1,50) x ) DISTRIBUTED RANDOMLY ;</codeblock>
-        <p>This <codeph>SELECT</codeph> command runs the UDF on the segment hosts where data is
-          stored in the primary segment instances. </p>
-        <codeblock>SELECT gp_segment_id, plpy_test(x) AS status
-  FROM dist
+$$ LANGUAGE plpythonu;</codeblock>
+        <p>The function returns <codeph>SUCCESS</codeph> if the module is imported,
+          and <codeph>FAILURE</codeph> if an import error occurs.</p></li>
+        <li>Create a table that loads data on each Greenplum Database segment instance. 
+        <codeblock>CREATE TABLE disttbl AS (SELECT x FROM generate_series(1,50) x ) DISTRIBUTED BY (x);</codeblock>
+        <p>Depending upon the size of your Greenplum Database installation, you may need
+          to generate a larger series to ensure that data is distributed to all segment instances.</p></li>
+        <li>Run the UDF on the segment nodes where data is stored in the primary segment instances:
+        <codeblock>SELECT gp_segment_id, test_importnumpy(x) AS status
+  FROM disttbl
   GROUP BY gp_segment_id, status
   ORDER BY gp_segment_id, status;</codeblock>
-        <p>The <codeph>SELECT</codeph> command returns <codeph>SUCCESS</codeph> if the UDF imported
-          the Python module on the Greenplum Database segment instance. If the
-            <codeph>SELECT</codeph> command returns <codeph>FAILURE</codeph>, you can find the
-          segment host of the segment instance host. The Greenplum Database system table
-            <codeph>gp_segment_configuration</codeph> contains information about mirroring and
-          segment configuration. This command returns the host name for a segment ID.</p>
-        <codeblock>SELECT hostname, content AS seg_ID FROM gp_segment_configuration
-  WHERE content = <varname>seg_id</varname> ;</codeblock>
-        <p>If <codeph>FAILURE</codeph> is returned, these are some possible causes:</p>
-        <ul id="ul_kx1_rwq_wt">
-          <li>A problem accessing required libraries. For the NumPy example, a Greenplum Database
-            might have a problem accessing the OpenBLAS libraries or the Python libraries on a
-            segment host.<p>Make sure you get no errors when running command on the segment host as
-              the <codeph>gpadmin</codeph> user. This <codeph>gpssh</codeph> command tests importing
-              the numpy module on the segment host
-              <codeph>mdw1</codeph>.<codeblock>gpssh -h mdw1 python -c "import numpy"</codeblock></p></li>
-          <li>If the Python <codeph>import</codeph> command does not return an error, environment
-            variables might not be configured in the Greenplum Database environment. For example,
-            the variables are not in the <codeph>.bashrc</codeph> file, or Greenplum Database might
-            not have been restarted after adding the environment variables to the
-              <codeph>.bashrc</codeph> file.<p>Ensure sure that the environment variables are
-              properly set and then restart the Greenplum Database. For the NumPy example, ensure
-              the environment variables listed at the end of the section <xref
-                href="#topic_wwy_5sq_wt" format="dita"/> are defined in the <codeph>.bashrc</codeph>
-              file for the <codeph>gpadmin</codeph> user on the master and segment
-              hosts.</p><note>On the Greenplum Database master and segment hosts, the
-                <codeph>.bashrc</codeph> file for the <codeph>gpadmin</codeph> user must source the
-              file <codeph>$GPHOME/greenplum_path.sh</codeph>.</note></li>
-        </ul>
+        <p>The <codeph>SELECT</codeph> command returns <codeph>SUCCESS</codeph> if the
+          UDF successfully imported the Python module on the Greenplum Database segment
+          instance. If the <codeph>SELECT</codeph> command returns <codeph>FAILURE</codeph>,
+          you can determine the hostname of the failed segment instance by querying the
+          Greenplum Database system table named <codeph>gp_segment_configuration</codeph>.</p>
+        <p>The following command returns the host name for a given segment ID:</p>
+         <codeblock>SELECT hostname, content AS seg_ID FROM gp_segment_configuration
+  WHERE content = <varname>seg_id</varname> ;</codeblock></li>
+        </ol>
+      </body>
+    </topic>
+
+    <topic id="topic_troubleshoot_pymodimp">
+      <title>Troubleshooting Python Module Import Failures</title>
+      <body>
+        <p>Possible causes of a Python module import failure could include:
+        <ul id="ul_mod_import_fail">
+          <li>A problem accessing required libraries. For the NumPy example, Greenplum Database
+            might have a problem accessing the Python libraries on a
+            segment host.<p><i>Try</i>: Test importing the module directly on the
+            segment host. The following <codeph>gpssh</codeph> command tests importing
+              the NumPy module on the segment host named
+              <codeph>mdw1</codeph>.<codeblock>$ gpssh -h mdw1 -e 'python -c "import numpy"'</codeblock></p></li>
+          <li>Environment variables may not be configured in the Greenplum Database environment. The Python <codeph>import</codeph> statement may not return an error in this case. <p><i>Try</i>: Ensure that any environment variables that are required by a module are properly set in <codeph>gpadmin</codeph>'s <codeph>.bashrc</codeph> file on every host in your Greenplum Database cluster.</p></li>
+          <li>Greenplum Database may not have been restarted after adding environment variable settings to the <codeph>.bashrc</codeph> file. Again, the Python <codeph>import</codeph> statement may not return an error in this case.<p><i>Try</i>: Ensure that you have restarted Greenplum Database after you make any updates to <codeph>gpadmin</codeph>'s <codeph>.bashrc</codeph>.</p><note>The <codeph>.bashrc</codeph> file for the <codeph>gpadmin</codeph> user must source <codeph>$GPHOME/greenplum_path.sh</codeph> on all Greenplum Database master and segment hosts.</note></li>
+        </ul></p>
       </body>
     </topic>
   </topic>
@@ -649,37 +656,15 @@ $$ language plpythonu;</codeblock>
     </body>
   </topic>
   <topic id="topic12" xml:lang="en">
-    <title id="pw213965">References</title>
-    <topic id="topic13" xml:lang="en">
-      <title>Technical References</title>
-      <body>
-        <p>For information about the Python language, see <xref href="https://www.python.org/"
-            scope="external" format="html">https://www.python.org/</xref>.</p>
-        <p>For information about PL/Python see the PostgreSQL documentation at <xref
-            href="https://www.postgresql.org/docs/8.3/static/plpython.html" scope="external"
-            format="html">https://www.postgresql.org/docs/8.3/static/plpython.html</xref>. </p>
-        <p>For information about Python Package Index (PyPI), see <xref
-            href="https://pypi.python.org/pypi" format="html" scope="external"
-            >https://pypi.python.org/pypi</xref>.</p>
-        <p>These are some Python modules that can be downloaded:<ul id="ul_wl3_mnr_wt">
-            <li>SciPy library provides user-friendly and efficient numerical routines such as
-              routines for numerical integration and optimization <xref
-                href="http://www.scipy.org/scipylib/index.html" format="html" scope="external"
-                >http://www.scipy.org/scipylib/index.html</xref>. This <codeph>wget</codeph> command
-              downloads the SciPy package tar
-              file.<codeblock>wget http://sourceforge.net/projects/scipy/files/scipy/0.10.1/scipy-0.10.1.tar.gz/download</codeblock></li>
-            <li>Natural Language Toolkit (nltk) is a platform for building Python programs to work
-              with human language data. <xref href="http://www.nltk.org/" format="html"
-                scope="external">http://www.nltk.org/</xref>. This <codeph>wget</codeph> command
-              downloads the nltk package tar
-                file.<codeblock>wget http://pypi.python.org/packages/source/n/nltk/nltk-2.0.2.tar.gz#md5=6e714ff74c3398e88be084748df4e657</codeblock><note>The
-                Python package Distribute <xref href="https://pypi.python.org/pypi/distribute"
-                  format="html" scope="external">https://pypi.python.org/pypi/distribute</xref> is
-                required for nltk. The Distribute module should be installed the ntlk package. This
-                  <codeph>wget</codeph> command downloads the Distribute package tar
-                file.<codeblock>wget http://pypi.python.org/packages/source/d/distribute/distribute-0.6.21.tar.gz</codeblock></note></li>
-          </ul></p>
-      </body>
-    </topic>
+    <title>Technical References</title>
+    <body>
+      <p>For information about the Python language, see <xref href="https://www.python.org/"
+        scope="external" format="html">https://www.python.org/</xref>.</p>
+      <p>For information about PL/Python see the PostgreSQL documentation at <xref
+        href="https://www.postgresql.org/docs/8.3/static/plpython.html" scope="external"
+        format="html">https://www.postgresql.org/docs/8.3/static/plpython.html</xref>.</p>
+      <p>For information about Python Package Index (PyPI), see <xref
+        href="https://pypi.python.org/pypi" format="html" scope="external">https://pypi.python.org/pypi</xref>.</p>
+    </body>
   </topic>
 </topic>
