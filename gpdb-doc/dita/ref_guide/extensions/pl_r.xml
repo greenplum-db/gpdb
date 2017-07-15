@@ -9,22 +9,25 @@
       <li id="py213657">
         <xref href="#topic2" type="topic" format="dita"/>
       </li>
-      <li id="py219391" otherprops="pivotal">
+      <li id="py219391">
         <xref href="#topic3" type="topic" format="dita"/>
       </li>
-      <li id="py214876" otherprops="pivotal">
+      <li id="py214876">
         <xref href="#topic6" type="topic" format="dita"/>
       </li>
       <li>
         <xref href="#topic5" format="dita"/></li>
-      <li id="py217384">
-        <xref href="#topic9" type="topic" format="dita"/>
+      <li id="py21366577">
+        <xref href="#topic_rdatascimod" type="topic" format="dita"/>
       </li>
       <li id="py213665">
         <xref href="#topic13" type="topic" format="dita"/>
       </li>
       <li id="py219064">
         <xref href="#topic14" type="topic" format="dita"/>
+      </li>
+      <li id="py217384">
+        <xref href="#topic9" type="topic" format="dita"/>
       </li>
       <li id="py217165">
         <xref href="#topic15" type="topic" format="dita"/>
@@ -43,10 +46,8 @@
     <topic id="topic3" xml:lang="en" otherprops="pivotal">
       <title id="py217167">Installing PL/R</title>
       <body>
-        <p otherprops="pivotal">The PL/R extension is available as a package. Download the package
-          from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
-            scope="external">Pivotal Network</xref> and install it with the Greenplum Package
-          Manager (<codeph>gppkg</codeph>). </p>
+        <p>The PL/R extension is available as a package. <ph otherprops="oss-only">Build this extension in <codeph>.gppkg</codeph> format</ph> <ph otherprops="pivotal">Download this extension in <codeph>.gppkg</codeph> format from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external">Pivotal Network</xref></ph>
+            and install it with the Greenplum Package Manager (<codeph>gppkg</codeph>). </p>
         <p>The <codeph>gppkg</codeph> utility installs Greenplum Database extensions, along with any
           dependencies, on all hosts across a cluster. It also automatically installs extensions on
           new hosts in the case of system expansion and segment recovery.</p>
@@ -61,12 +62,10 @@
               <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> variables are
             set.</p>
           <ol id="ol_nxv_ql2_4p">
-            <li id="py213681" otherprops="pivotal">Download the PL/R extension package from <xref
-                href="https://network.pivotal.io/products/pivotal-gpdb" format="html"
-                scope="external">Pivotal Network</xref>.</li>
+            <li id="py213681">Locate the PL/R extension package that you built or downloaded.</li>
             <li>Copy the PL/R package to the Greenplum Database master host. </li>
-            <li id="py214844">Install the software extension package by running the
-                <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
+            <li id="py214844">Run the <codeph>gppkg</codeph> command to install the software extension package.
+                This example installs the PL/R extension on a Linux
               system:<codeblock>$ gppkg -i plr-ossv8.3.0.15_pv2.2.0-GPDB-&lt;version>-orca-rhel6-x86_64.gppkg
 </codeblock></li>
             <li id="py215420">Restart the database.<codeblock>$ gpstop -r
@@ -137,6 +136,211 @@
           language with the database named <i>testdb</i>:</p>
         <codeblock>$ createlang plr -d testdb</codeblock>
         <p>PL/R is registered as an untrusted language.</p>
+      </body>
+    </topic>
+  <topic id="topic_rdatascimod">
+    <title>R Data Science Library Package</title>
+    <body>
+     <p> R packages are modules that contain R functions and data sets. Greenplum Database provides a collection of data science-related R libraries. You can <ph otherprops="oss-only">build these modules in <codeph>.gppkg</codeph> format</ph> <ph otherprops="pivotal">download these modules in <codeph>.gppkg</codeph> format from <xref href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external">Pivotal Network</xref></ph>.</p>
+     <p> Libraries provided in the R Data Science package include:
+      <simpletable id="l33">
+         <strow>
+            <stentry>
+               <p>abind</p>
+               <p>adabag</p>
+               <p>arm</p>
+               <p>assertthat</p>
+               <p>BH</p>
+               <p>bitops</p>
+               <p>car</p>
+               <p>caret</p>
+               <p>caTools</p>
+               <p>coda</p>
+               <p>colorspace</p>
+               <p>curl</p>
+               <p>data.table</p>
+               <p>DBI</p>
+               <p>dichromat</p>
+               <p>digest</p>
+               <p>dplyr</p>
+               <p>e1071</p>
+               <p>forecast</p>
+               <p>foreign</p>
+               <p>gdata</p>
+               <p>ggplot2</p>
+               <p>glmnet</p>
+            </stentry>
+            <stentry>
+               <p>gplots</p>
+               <p>gtable</p>
+               <p>gtools</p>
+               <p>hclust</p>
+               <p>hms</p>
+               <p>igraph</p>
+               <p>labeling</p>
+               <p>lattice</p>
+               <p>lazyeval</p>
+               <p>lme4</p>
+               <p>lmtest</p>
+               <p>magrittr</p>
+               <p>MASS</p>
+               <p>Matrix</p>
+               <p>MCMCPack</p>
+               <p>minqa</p>
+               <p>mts</p>
+               <p>munsell</p>
+               <p>neuralnet</p>
+               <p>nloptr</p>
+               <p>nnet</p>
+               <p>pbkrtest</p>
+               <p>plyr</p>
+            </stentry>
+            <stentry>
+               <p>quantreg</p>
+               <p>R2jags</p>
+               <p>R6</p>
+               <p>randomForest</p>
+               <p>RColorBrewer</p>
+               <p>Rcpp</p>
+               <p>RcppEigen</p>
+               <p>readr</p>
+               <p>reshape2</p>
+	       <p>rjags</p>
+	       <p>RobustRankAggreg</p>
+               <p>ROCR</p>
+               <p>rpart</p>
+               <p>RPostgreSQL</p>
+               <p>sandwich</p>
+               <p>scales</p>
+               <p>SparseM</p>
+               <p>stringi</p>
+               <p>stringr</p>
+               <p>survival</p>
+               <p>tibble</p>
+               <p>tseries</p>
+               <p>zoo</p>
+            </stentry>
+         </strow>
+      </simpletable></p>
+    </body> 
+    <topic id="topic_instpdsl" xml:lang="en">
+      <title>Installing the R Data Science Library Package</title>
+      <body>
+        <p>Before you install the R Data Science Library package, make sure that your Greenplum Database is running, you have sourced <codeph>greenplum_path.sh</codeph>, and that the <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> environment variables are set.</p>
+        <ol>
+          <li>Locate the R Data Science library package that you built or downloaded.<p>The file name format of the package is <codeph>DataScienceR-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeph>.</p></li>
+          <li>Copy the package to the Greenplum Database master host.</li>
+          <li>Use the <codeph>gppkg</codeph> command to install the package. For example:<codeblock>$ gppkg -i DataScienceR-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeblock><p><codeph>gppkg</codeph> installs the R Data Science libraries on all nodes in your Greenplum Database cluster. The command also sets the <codeph>R_LIBS_USER</codeph> environment variable and updates the <codeph>PATH</codeph> and <codeph>LD_LIBRARY_PATH</codeph> environment variables in your <codeph>greenplum_path.sh</codeph> file.</p></li>
+          <li>Restart Greenplum Database. You must re-source <codeph>greenplum_path.sh</codeph> before restarting your Greenplum cluster:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r</codeblock></li>
+        </ol>
+       <p>The Greenplum Database R Data Science Modules are installed in the following directory:<codeblock>$GPHOME/ext/DataScienceR/library</codeblock></p>
+        <note><codeph>rjags</codeph> libraries are installed in the <codeph>$GPHOME/ext/DataScienceR/extlib/lib</codeph> directory. If you want to use <codeph>rjags</codeph> and your <codeph>$GPHOME</codeph> is not <codeph>/usr/local/greenplum-db</codeph>, you must perform additional configuration steps to create a symbolic link from <codeph>$GPHOME</codeph> to <codeph>/usr/local/greenplum-db</codeph> on each node in your Greenplum Database cluster. For example: <codeblock>$ gpssh -f all_hosts -e 'ln -s $GPHOME /usr/local/greenplum-db'
+$ gpssh -f all_hosts -e 'chown -h gpadmin /usr/local/greenplum-db'
+</codeblock></note>
+      </body>
+    </topic>
+    <topic id="topic_removepdsl" xml:lang="en">
+      <title>Uninstalling the R Data Science Library Package</title>
+      <body>
+        <p>Use the <codeph>gppkg</codeph> utility to uninstall the R Data Science Library package. You must include the version number in the package name you provide to <codeph>gppkg</codeph>.</p>
+        <p> To determine your R Data Science Library package version number and remove this package:</p>
+        <codeblock>$ gppkg -q --all | grep DataScienceR
+DataScienceR-&lt;version&gt;
+$ gppkg -r DataScienceR-&lt;version&gt;</codeblock>
+        <p>The command removes the R Data Science libraries from your Greenplum Database cluster. It also removes the <codeph>R_LIBS_USER</codeph> environment variable and updates the <codeph>PATH</codeph> and <codeph>LD_LIBRARY_PATH</codeph> environment variables in your <codeph>greenplum_path.sh</codeph> file to their pre-installation values.</p>
+        <p>Re-source <codeph>greenplum_path.sh</codeph> and restart Greenplum Database after you remove the R Data Science Library package:</p>
+        <codeblock>$ . /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r </codeblock>
+        <note>When you uninstall the R Data Science Library package from your Greenplum Database cluster, any UDFs that you have created that use R libraries installed with this package will return an error.</note>
+      </body>
+    </topic>
+  </topic>
+ 
+
+    <topic id="topic13" xml:lang="en">
+      <title id="py218988">Downloading and Installing R Packages</title>
+      <body>
+        <p>R packages are modules that contain R functions and data sets. You can install R packages
+          to extend R and PL/R functionality in Greenplum Database. </p>
+        <note type="note">If you expand Greenplum Database and add segment hosts, you must install
+          the R packages in the R installation of the new hosts. </note>
+        <ol id="ol_bjw_tl2_4p">
+          <li id="py218997">For an R package, identify all dependent R packages and each package web
+            URL. The information can be found by selecting the given package from the following
+            navigation page: <p><xref
+                href="http://cran.r-project.org/web/packages/available_packages_by_name.html"
+                format="html" scope="external"/></p><p>As an example, the page for the R package arm
+              indicates that the package requires the following R libraries: Matrix, lattice, lme4,
+              R2WinBUGS, coda, abind, foreign, and MASS.</p><p>You can also try installing the
+              package with <codeph>R CMD INSTALL</codeph> command to determine the dependent
+              packages.</p><p>For the R installation included with the Greenplum Database PL/R
+              extension, the required R packages are installed with the PL/R extension. However, the
+              Matrix package requires a newer version. </p></li>
+          <li id="py219006">From the command line, use the <codeph>wget</codeph> utility to download
+            the <codeph>tar.gz</codeph> files for the arm package to the Greenplum Database master
+            host:<codeblock>wget http://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz</codeblock><codeblock>wget http://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_0.9996875-1.tar.gz</codeblock></li>
+          <li id="py219012">Use the <codeph>gpscp</codeph> utility and the hosts_all file to copy
+            the <codeph>tar.gz</codeph> files to the same directory on all nodes of the Greenplum
+            cluster. The <codeph>hosts_all</codeph> file contains a list of all the Greenplum
+            Database segment hosts. You might require root access to do
+            this.<codeblock>gpscp -f hosts_all Matrix_0.9996875-1.tar.gz =:/home/gpadmin </codeblock><codeblock>gpscp -f /hosts_all arm_1.5-03.tar.gz =:/home/gpadmin</codeblock></li>
+          <li id="py219020">Use the <codeph>gpssh</codeph> utility in interactive mode to log into
+            each Greenplum Database segment host (<codeph>gpssh -f all_hosts</codeph>). Install the
+            packages from the command prompt using the <codeph>R CMD INSTALL</codeph> command. Note
+            that this may require root access. For example, this R install command installs the
+            packages for the arm package.
+            <codeblock>$R_HOME/bin/R CMD INSTALL Matrix_0.9996875-1.tar.gz   arm_1.5-03.tar.gz</codeblock></li>
+          <li id="py219023">Ensure that the package is installed in the
+              <codeph>$R_HOME/library</codeph> directory on all the segments (the
+              <codeph>gpssh</codeph> can be use to install the package). For example, this
+              <codeph>gpssh</codeph> command list the contents of the R library
+            directory.<codeblock>gpssh -f all_hosts "ls $R_HOME/library"</codeblock></li>
+          <li id="py219025">Test if the R package can be loaded. <p>This function performs a simple
+              test to if an R package can be
+              loaded:</p><codeblock>CREATE OR REPLACE FUNCTION R_test_require(fname text)
+RETURNS boolean AS
+$BODY$
+    return(require(fname,character.only=T))
+$BODY$
+LANGUAGE 'plr';</codeblock><p>This
+              SQL command checks if the R package arm can be
+            loaded:</p><codeblock>SELECT R_test_require('arm');</codeblock></li>
+        </ol>
+      </body>
+    </topic>
+    <topic id="topic14" xml:lang="en">
+      <title id="py217297">Displaying R Library Information</title>
+      <body>
+        <p>You can use the R command line to display information about the installed libraries and
+          functions on the Greenplum Database host. You can also add and remove libraries from the R
+          installation. To start the R command line on the host, log into the host as the gadmin
+          user and run the script R from the directory
+          <codeph>$GPHOME/ext/R-3.3.1/bin</codeph>.</p>
+        <p>This R function lists the available R packages from the R command line:</p>
+        <codeblock>&gt; library()</codeblock>
+        <p>Display the documentation for a particular R package</p>
+        <codeblock>&gt; library(help="<varname>package_name</varname>")
+&gt; help(package="<varname>package_name</varname>")</codeblock>
+        <p>Display the help file for an R function:</p>
+        <codeblock>&gt; help("<varname>function_name</varname>")
+&gt; ?<varname>function_name</varname></codeblock>
+        <p>To see what packages are installed, use the R command
+            <codeph>installed.packages()</codeph>. This will return a matrix with a row for each
+          package that has been installed. Below, we look at the first 5 rows of this matrix.</p>
+        <codeblock>&gt; installed.packages()</codeblock>
+        <p>Any package that does not appear in the installed packages matrix must be installed and
+          loaded before its functions can be used. </p>
+        <p>An R package can be installed with <codeph>install.packages()</codeph>:</p>
+        <codeblock>&gt; install.packages("<varname>package_name</varname>") 
+&gt; install.packages("mypkg", dependencies = TRUE, type="source")</codeblock>
+        <p>Load a package from the R command
+          line.<codeblock>&gt; library(" <varname>package_name</varname> ") </codeblock></p>
+        <p>An R package can be removed with <codeph>remove.packages</codeph></p>
+        <codeblock>&gt; remove.packages("<varname>package_name</varname>")</codeblock>
+        <p>You can use the R command <codeph>-e</codeph> option to run functions from the command
+          line. For example, this command displays help on the R package MASS.</p>
+        <codeblock>$ R -e 'help("MASS")'</codeblock>
       </body>
     </topic>
     <topic id="topic9" xml:lang="en">
@@ -223,91 +427,6 @@ CREATE TABLE wj_model_results_roi AS SELECT *
   (SELECT cs FROM wj.droi2_array));</codeblock>
         </body>
       </topic>
-    </topic>
-    <topic id="topic13" xml:lang="en">
-      <title id="py218988">Downloading and Installing R Packages</title>
-      <body>
-        <p>R packages are modules that contain R functions and data sets. You can install R packages
-          to extend R and PL/R functionality in Greenplum Database. </p>
-        <note type="note">If you expand Greenplum Database and add segment hosts, you must install
-          the R packages in the R installation of the new hosts. </note>
-        <ol id="ol_bjw_tl2_4p">
-          <li id="py218997">For an R package, identify all dependent R packages and each package web
-            URL. The information can be found by selecting the given package from the following
-            navigation page: <p><xref
-                href="http://cran.r-project.org/web/packages/available_packages_by_name.html"
-                format="html" scope="external"/></p><p>As an example, the page for the R package arm
-              indicates that the package requires the following R libraries: Matrix, lattice, lme4,
-              R2WinBUGS, coda, abind, foreign, and MASS.</p><p>You can also try installing the
-              package with <codeph>R CMD INSTALL</codeph> command to determine the dependent
-              packages.</p><p>For the R installation included with the Greenplum Database PL/R
-              extension, the required R packages are installed with the PL/R extension. However, the
-              Matrix package requires a newer version. </p></li>
-          <li id="py219006">From the command line, use the <codeph>wget</codeph> utility to download
-            the <codeph>tar.gz</codeph> files for the arm package to the Greenplum Database master
-            host:<codeblock>wget http://cran.r-project.org/src/contrib/Archive/arm/arm_1.5-03.tar.gz</codeblock><codeblock>wget http://cran.r-project.org/src/contrib/Archive/Matrix/Matrix_0.9996875-1.tar.gz</codeblock></li>
-          <li id="py219012">Use the <codeph>gpscp</codeph> utility and the hosts_all file to copy
-            the <codeph>tar.gz</codeph> files to the same directory on all nodes of the Greenplum
-            cluster. The <codeph>hosts_all</codeph> file contains a list of all the Greenplum
-            Database segment hosts. You might require root access to do
-            this.<codeblock>gpscp -f hosts_all Matrix_0.9996875-1.tar.gz =:/home/gpadmin </codeblock><codeblock>gpscp -f /hosts_all arm_1.5-03.tar.gz =:/home/gpadmin</codeblock></li>
-          <li id="py219020">Use the <codeph>gpssh</codeph> utility in interactive mode to log into
-            each Greenplum Database segment host (<codeph>gpssh -f all_hosts</codeph>). Install the
-            packages from the command prompt using the <codeph>R CMD INSTALL</codeph> command. Note
-            that this may require root access. For example, this R install command installs the
-            packages for the arm package.
-            <codeblock>$R_HOME/bin/R CMD INSTALL Matrix_0.9996875-1.tar.gz   arm_1.5-03.tar.gz</codeblock></li>
-          <li id="py219023">Ensure that the package is installed in the
-              <codeph>$R_HOME/library</codeph> directory on all the segments (the
-              <codeph>gpssh</codeph> can be use to install the package). For example, this
-              <codeph>gpssh</codeph> command list the contents of the R library
-            directory.<codeblock>gpssh -f all_hosts "ls $R_HOME/library"</codeblock></li>
-          <li id="py219025">Test if the R package can be loaded. <p>This function performs a simple
-              test to if an R package can be
-              loaded:</p><codeblock>CREATE OR REPLACE FUNCTION R_test_require(fname text)
-RETURNS boolean AS
-$BODY$
-    return(require(fname,character.only=T))
-$BODY$
-LANGUAGE 'plr';</codeblock><p>This
-              SQL command checks if the R package arm can be
-            loaded:</p><codeblock>SELECT R_test_require('arm');</codeblock></li>
-        </ol>
-      </body>
-    </topic>
-    <topic id="topic14" xml:lang="en">
-      <title id="py217297">Displaying R Library Information</title>
-      <body>
-        <p>You can use the R command line to display information about the installed libraries and
-          functions on the Greenplum Database host. You can also add and remove libraries from the R
-          installation. To start the R command line on the host, log into the host as the gadmin
-          user and run the script R from the directory
-          <codeph>$GPHOME/ext/R-2.12.0/bin</codeph>.</p>
-        <p>This R function lists the available R packages from the R command line:</p>
-        <codeblock>&gt; library()</codeblock>
-        <p>Display the documentation for a particular R package</p>
-        <codeblock>&gt; library(help="<varname>package_name</varname>")
-&gt; help(package="<varname>package_name</varname>")</codeblock>
-        <p>Display the help file for an R function:</p>
-        <codeblock>&gt; help("<varname>function_name</varname>")
-&gt; ?<varname>function_name</varname></codeblock>
-        <p>To see what packages are installed, use the R command
-            <codeph>installed.packages()</codeph>. This will return a matrix with a row for each
-          package that has been installed. Below, we look at the first 5 rows of this matrix.</p>
-        <codeblock>&gt; installed.packages()</codeblock>
-        <p>Any package that does not appear in the installed packages matrix must be installed and
-          loaded before its functions can be used. </p>
-        <p>An R package can be installed with <codeph>install.packages()</codeph>:</p>
-        <codeblock>&gt; install.packages("<varname>package_name</varname>") 
-&gt; install.packages("mypkg", dependencies = TRUE, type="source")</codeblock>
-        <p>Load a package from the R command
-          line.<codeblock>&gt; library(" <varname>package_name</varname> ") </codeblock></p>
-        <p>An R package can be removed with <codeph>remove.packages</codeph></p>
-        <codeblock>&gt; remove.packages("<varname>package_name</varname>")</codeblock>
-        <p>You can use the R command <codeph>-e</codeph> option to run functions from the command
-          line. For example, this command displays help on the R package MASS.</p>
-        <codeblock>$ R -e 'help("MASS")'</codeblock>
-      </body>
     </topic>
     <topic id="topic15" xml:lang="en">
       <title id="py216497">References</title>
