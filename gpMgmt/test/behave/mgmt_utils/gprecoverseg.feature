@@ -5,6 +5,7 @@ Feature: gprecoverseg tests
     @multinode
     Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
         Given the database is running
+        Given database "gptest" exists
         And the information of a "mirror" segment on a remote host is saved
 
     Scenario: gprecoverseg should not output bootstrap error on success

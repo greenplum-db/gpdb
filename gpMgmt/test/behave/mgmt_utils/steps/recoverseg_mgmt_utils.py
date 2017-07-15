@@ -19,9 +19,8 @@ def impl(context, seg):
                        if seg.isSegmentMirror() and seg.getSegmentHostName() != platform.node()]
         context.remote_mirror_segdbId = mirror_segs[0].getSegmentDbId()
         context.remote_mirror_segcid = mirror_segs[0].getSegmentContentId()
-        context.remote_mirror_seg_host = mirror_segs[0].getSegmentHostName()
+        context.remote_mirror_seghost = mirror_segs[0].getSegmentHostName()
         context.remote_mirror_datadir = mirror_segs[0].getSegmentDataDirectory()
-        context.remote_mirror_seg_port = mirror_segs[0].getSegmentPort()
 
 @given('wait until the segment state of the corresponding primary goes in ChangeTrackingDisabled')
 @when('wait until the segment state of the corresponding primary goes in ChangeTrackingDisabled')
@@ -75,20 +74,20 @@ def impl(context, cmd, seg):
 @then('the saved mirror segment process is still running on that host')
 def impl(context):
     cmd = """ps ux | grep "/bin/postgres \-D %s " | grep -v grep""" % (context.remote_mirror_datadir)
-    cmd=Command(name='user command', cmdStr=cmd, ctxt=REMOTE, remoteHost=context.remote_mirror_seg_host)
+    cmd=Command(name='user command', cmdStr=cmd, ctxt=REMOTE, remoteHost=context.remote_mirror_seghost)
     cmd.run(validateAfter=True)
     res = cmd.get_results()
     if not res.stdout.strip():
-        raise Exception('Mirror segment "%s" not active on "%s"' % (context.remote_mirror_datadir, context.remote_mirror_seg_host))
+        raise Exception('Mirror segment "%s" not active on "%s"' % (context.remote_mirror_datadir, context.remote_mirror_seghost))
     
 @given('the saved mirror segment is marked down in config')
 @when('the saved mirror segment is marked down in config')
 @then('the saved mirror segment is marked down in config')
 def impl(context):
-    qry = """select count(*) from gp_segment_configuration where status='d' and hostname='%s' and dbid=%s""" % (context.remote_mirror_seg_host, context.remote_mirror_segdbId)
+    qry = """select count(*) from gp_segment_configuration where status='d' and hostname='%s' and dbid=%s""" % (context.remote_mirror_seghost, context.remote_mirror_segdbId)
     row_count = getRows('template1', qry)[0][0]
     if row_count != 1:
-        raise Exception('Expected mirror segment %s on host %s to be down, but it is running.' % (context.remote_mirror_datadir, context.remote_mirror_seg_host))
+        raise Exception('Expected mirror segment %s on host %s to be down, but it is running.' % (context.remote_mirror_datadir, context.remote_mirror_seghost))
 
 @given('the mirror with content id "{cid}" is marked down in config')
 @when('the mirror with content id "{cid}" is marked down in config')

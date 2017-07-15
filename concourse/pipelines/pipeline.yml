@@ -1197,22 +1197,40 @@ jobs:
       PULSE_PROJECT_NAME: "GPDB-BehaveGPCheckcat"
 
 - name: MM_gprecoverseg
+  max_in_flight: 1
   plan:
-  - aggregate: *post_packaging_gets_trigger_true
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+      action: create
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: ccp_src/aws/
+      vars:
+        aws_instance-node-instance_type: t2.medium
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
+      BEHAVE_FLAGS: --tags=gprecoverseg
+    on_failure:
+      <<: *ccp_destroy
+  - *ccp_destroy
 
 - name: MM_gpexpand
   plan:
