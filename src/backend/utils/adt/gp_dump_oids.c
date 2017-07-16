@@ -10,12 +10,43 @@
 #include "utils/builtins.h"
 #include "rewrite/rewriteHandler.h"
 #include "tcop/tcopprot.h"
+#include "cdb/cdbpartition.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
 Datum gp_dump_query_oids(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gp_dump_query_oids);
+
+
+/*
+ * Get all child tables including inheritances, interior and leaf partitions.
+ */
+static void getAllRelidsForChildTables(StringInfoData *relbuf, Oid relid)
+{
+	List *prels = NIL;
+	prels = find_all_inheritors(relid);
+	if((prels->length) <= 1)
+	{
+		return;
+	}
+	prels = list_delete_first(prels);
+	
+	if (NIL == prels) 
+	{
+		return;
+	}
+	else
+	{
+		ListCell   *lc;
+		Oid 	   temp_oid;
+		foreach(lc, prels)
+		{
+			temp_oid = lfirst_oid(lc);
+			appendStringInfo(relbuf, ",%u", temp_oid);
+		}
+	}
+}
 
 static void
 traverseQueryOids
@@ -46,6 +77,7 @@ traverseQueryOids
 					if (relbuf->len != 0)
 						appendStringInfo(relbuf, "%s", ",");
 					appendStringInfo(relbuf, "%u", relid);
+					getAllRelidsForChildTables(relbuf,relid);
 				}
 			}
 		}
