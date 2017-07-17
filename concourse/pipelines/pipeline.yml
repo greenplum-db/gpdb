@@ -728,17 +728,33 @@ jobs:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
+    - get: gpdb_binary
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
+    - get: ccp_src
     - get: centos-gpdb-dev-6
-  - task: gppkg
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+  - put: terraform
+    params:
+      <<: *ccp_create_params
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    on_failure:
+      <<: *ccp_destroy
+  - task: setup_gppkg_second_install
+    file: gpdb_src/concourse/tasks/gppkg_behave.yml
+    params:
+      SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      # Disable multinode tests for concourse.
-      BEHAVE_FLAGS: --tags=gppkg --tags=-gppkg_multinode_clean
+      BEHAVE_FLAGS: --tags=gppkg
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
 - name: MM_pt-rebuild
   plan:
@@ -1481,3 +1497,4 @@ debug_sleep_anchor: &debug_sleep
         args: ['-c', 'sleep 6h']
     ensure:
       <<: *ccp_destroy
+

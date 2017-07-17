@@ -1,0 +1,27 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: centos
+    tag: "6"
+inputs:
+- name: ccp_src
+- name: cluster_env_files
+- name: gpdb_src
+
+params:
+  SECOND_BINARY_INSTALL_LOCATION:
+
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+    ccp_src/aws/setup_ssh_to_cluster.sh
+    ssh mdw "mkdir -p /home/gpadmin/cluster_env_files"
+    scp cluster_env_files/hostfile_all mdw:/home/gpadmin/cluster_env_files/hostfile_all
+    ssh -t mdw "export SECOND_BINARY_INSTALL_LOCATION=$SECOND_BINARY_INSTALL_LOCATION && bash /home/gpadmin/gpdb_src/concourse/scripts/gppkg_behave.sh"
+

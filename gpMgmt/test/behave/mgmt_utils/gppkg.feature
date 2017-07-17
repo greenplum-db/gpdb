@@ -3,6 +3,7 @@ Feature: gppkg tests
     @gppkg_setup
     Scenario: gppkg environment does not have any gppkg
         Given the database is running
+        And database "gptest" exists
         Then the user runs "gppkg --remove sample"
 
     Scenario: gppkg -u should prompt user when package is updated with -a option
