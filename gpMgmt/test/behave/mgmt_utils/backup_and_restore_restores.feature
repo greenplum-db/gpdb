@@ -1183,6 +1183,13 @@ Feature: Validate command line arguments
         And verify that "appendonly=true" appears in the datconfig for database "bkdb118"
         And verify that "blocksize=65536" appears in the datconfig for database "bkdb118"
 
+    @ddpartIII
+    Scenario: 119 Backup database grants
+        Given the old timestamps are read from json
+        When the user runs gpdbrestore -e with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And verify that "test_gpadmin=C/" appears in the datacl for database "bkdb119"
+
     Scenario: 120 Simple full backup and restore with special character
         Given the old timestamps are read from json
         And the backup test is initialized for special characters

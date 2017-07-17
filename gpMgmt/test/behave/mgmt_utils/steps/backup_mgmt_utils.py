@@ -457,6 +457,14 @@ def impl(context, configString, dbname):
     if not datconfig or configString not in datconfig:
         raise Exception("%s is not in the datconfig for database '%s':\n %s" % (configString, dbname, datconfig))
 
+@then('verify that "{aclString}" appears in the datacl for database "{dbname}"')
+def impl(context, aclString, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = "select datacl from pg_database where datname in ('%s');" % dbname
+        datacl = dbconn.execSQLForSingleton(conn, query)
+    if not datacl or aclString not in datacl:
+        raise Exception("%s is not in the datacl for database '%s':\n %s" % (aclString, dbname, datacl))
+
 @given('a cast is created in "{dbname}"')
 def impl(context, dbname):
     function_sql = """CREATE FUNCTION castToInt(text) RETURNS integer STRICT IMMUTABLE LANGUAGE SQL AS 'SELECT cast($1 as integer);'"""

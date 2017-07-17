@@ -1728,6 +1728,18 @@ Feature: Validate command line arguments
         Then gpcrondump should return a return code of 0
         And the timestamp from gpcrondump is stored
 
+    @ddpartIII
+    Scenario: 119 Backup database grants
+        Given the backup test is initialized with database "bkdb119"
+        And the user runs """psql -c "DROP ROLE IF EXISTS test_gpadmin" bkdb119"""
+        And the user runs """psql -c "CREATE ROLE test_gpadmin LOGIN ENCRYPTED PASSWORD 'changeme' SUPERUSER INHERIT CREATEDB CREATEROLE RESOURCE QUEUE pg_default;" bkdb119"""
+        Then psql should return a return code of 0
+        When the user runs "psql -d bkdb119 -c "GRANT CREATE ON DATABASE bkdb119 to test_gpadmin ;""
+        Then psql should return a return code of 0
+        When the user runs "gpcrondump -a -x bkdb119"
+        Then gpcrondump should return a return code of 0
+        And the timestamp from gpcrondump is stored
+
     Scenario: 120 Simple full backup and restore with special character
         Given the backup test is initialized for special characters
         When the user runs "gpcrondump -a -x "$SP_CHAR_DB""

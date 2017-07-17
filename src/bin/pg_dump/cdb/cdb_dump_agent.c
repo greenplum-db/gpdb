@@ -8357,11 +8357,14 @@ dumpDatabaseDefinition()
 	int			ntups;
 	int			i_dba,
 				i_encoding,
-				i_tablespace;
+				i_tablespace,
+				i_datacl;
 	const char *datname,
 			   *dba,
 			   *encoding,
-			   *tablespace;
+			   *tablespace,
+			   *datacl,
+			   *fdbname;
 
 	datname = PQdb(g_conn);		/* the database we are dumping */
 
@@ -8391,6 +8394,7 @@ dumpDatabaseDefinition()
 	appendPQExpBuffer(dbQry, "SELECT "
 	  "(SELECT rolname FROM pg_catalog.pg_roles WHERE oid = datdba) as dba, "
 					  "pg_encoding_to_char(encoding) as encoding, "
+					  "datacl, "
 					  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = dattablespace) as tablespace "
 					  "FROM pg_database "
 					  "WHERE datname = ");
@@ -8418,10 +8422,12 @@ dumpDatabaseDefinition()
 	i_dba = PQfnumber(res, "dba");
 	i_encoding = PQfnumber(res, "encoding");
 	i_tablespace = PQfnumber(res, "tablespace");
+	i_datacl = PQfnumber(res, "datacl");
 
 	dba = PQgetvalue(res, 0, i_dba);
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
+	datacl = PQgetvalue(res, 0, i_datacl);
 
 	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
@@ -8440,6 +8446,16 @@ dumpDatabaseDefinition()
 						  fmtId(tablespace));
 	appendPQExpBuffer(createQry, ";\n");
 
+	// Don't use fmtId on owner for buildACLCommands, as this is used by the function internally
+
+	fdbname = strdup(fmtId(datname));
+	if(!buildACLCommands(fdbname, "DATABASE", datacl, dba,
+							  g_fout->remoteVersion, createQry)){
+		mpp_err_msg(logError, progname, "could not parse ACL list (%s) for object \"%s\" (%s)\n",
+					datacl, fdbname, "DATABASE");
+		exit_nicely();
+	}
+
     dumpDatabaseConfig(datname, &createQry);
 
 	/* write the CREATE DATABASE and ALTER DATABASE commands to the file */
@@ -8450,6 +8466,7 @@ dumpDatabaseDefinition()
 	}
 
 	PQclear(res);
+	free((void*) fdbname);
 	destroyPQExpBuffer(dbQry);
 	destroyPQExpBuffer(createQry);
 }
@@ -8471,11 +8488,14 @@ dumpDatabaseDefinitionToDDBoost()
 	int			ntups;
 	int			i_dba,
 				i_encoding,
-				i_tablespace;
+				i_tablespace,
+				i_datacl;
 	const char *datname,
 			   *dba,
 			   *encoding,
-			   *tablespace;
+			   *tablespace,
+			   *datacl,
+			   *fdbname;
 	int err = 0;
 	ddp_uint64_t ret_count, nmemb;
 	ddp_uint64_t offset = 0;
@@ -8531,6 +8551,7 @@ dumpDatabaseDefinitionToDDBoost()
 	appendPQExpBuffer(dbQry, "SELECT "
 	  "(SELECT rolname FROM pg_catalog.pg_roles WHERE oid = datdba) as dba, "
 					  "pg_encoding_to_char(encoding) as encoding, "
+					  "datacl, "
 					  "(SELECT spcname FROM pg_tablespace t WHERE t.oid = dattablespace) as tablespace "
 					  "FROM pg_database "
 					  "WHERE datname = ");
@@ -8558,10 +8579,12 @@ dumpDatabaseDefinitionToDDBoost()
 	i_dba = PQfnumber(res, "dba");
 	i_encoding = PQfnumber(res, "encoding");
 	i_tablespace = PQfnumber(res, "tablespace");
+	i_datacl = PQfnumber(res, "datacl");
 
 	dba = PQgetvalue(res, 0, i_dba);
 	encoding = PQgetvalue(res, 0, i_encoding);
 	tablespace = PQgetvalue(res, 0, i_tablespace);
+	datacl = PQgetvalue(res, 0, i_datacl);
 
 	appendPQExpBuffer(createQry, "CREATE DATABASE %s WITH TEMPLATE = template0",
 					  fmtId(datname));
@@ -8580,6 +8603,16 @@ dumpDatabaseDefinitionToDDBoost()
 						  fmtId(tablespace));
 	appendPQExpBuffer(createQry, ";\n");
 
+	// Don't use fmtId on owner for buildACLCommands, as this is used by the function internally
+
+	fdbname = strdup(fmtId(datname));
+	if(!buildACLCommands(fdbname, "DATABASE", datacl, dba,
+	                     g_fout->remoteVersion, createQry)){
+		mpp_err_msg(logError, progname, "could not parse ACL list (%s) for object \"%s\" (%s)\n",
+									datacl, fdbname, "DATABASE");
+		exit_nicely();
+	}
+
 	dumpDatabaseConfig(datname, &createQry);
 
 	/* write the CREATE DATABASE and ALTER DATABASE commands to the file */
@@ -8593,6 +8626,7 @@ dumpDatabaseDefinitionToDDBoost()
 
 	ddp_close_file(handle);
 	PQclear(res);
+	free((void*) fdbname);
 	destroyPQExpBuffer(dbQry);
 	destroyPQExpBuffer(createQry);
 }
