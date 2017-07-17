@@ -281,6 +281,10 @@ Known issues:
 * The Native macOS docker client available with docker 1.12+ (beta) or
   Community Edition 17+ may also work
 
+## Development with Vagrant
+
+There is a Vagrant-based [quickstart guide for developers](src/tools/vagrant/README.md).
+
 ## Code layout
 
 The directory layout of the repository follows the same general layout
@@ -362,7 +366,7 @@ It is also recommend that you follow the [developer's mailing list](http://green
 since some of the contributions may generate more detailed discussions there.
 
 Once you have your GitHub account, [fork](https://github.com/greenplum-db/gpdb/fork)
-repository so that you can have your private copy to start hacking on and to
+this repository so that you can have your private copy to start hacking on and to
 use as source of pull requests.
 
 Anybody contributing to Greenplum has to be covered by either the Corporate or
@@ -390,7 +394,7 @@ Apache Software Foundation maintains a list of these licenses under [Category A]
 Finally, keep in mind that it is NEVER a good idea to remove licensing headers from
 the work that is not your original one. Even if you are using parts of the file that
 originally had a licensing header at the top you should err on the side of preserving it.
-As always, if you are no quite sure about the licensing implications of your contributions
+As always, if you are not quite sure about the licensing implications of your contributions,
 feel free to reach out to us on the developer mailing list.
 
 ### Coding guidelines
@@ -413,11 +417,9 @@ We recommend using ```git diff --color``` when reviewing your changes so that yo
 don't have any spurious whitespace issues in the code that you submit.
 
 All new functionality that is contributed to Greenplum should be covered by regression
-tests that are contributed alongside it. If you are uncertain on how to test, or document 
-your work, please raise the question on the gpdb-dev mailinglist and the developer 
+tests that are contributed alongside it. If you are uncertain on how to test or document 
+your work, please raise the question on the gpdb-dev mailing list and the developer 
 community will do its best to help you.
-
-### Testing guidelines
 
 At the very minimum you should always be running 
 ```make installcheck-world```
@@ -436,10 +438,8 @@ you can be sure whether your changes may need to be forward-ported.
 
 To improve the odds of the right discussion of your patch or idea happening, pay attention 
 to what the community work cycle is. For example, if you send in a brand new idea in the 
-beta phase, don't be surprised if no one is paying attention because we are focused on 
-release work. Come back when the beta is done, please!
-
-You can read more on Greenplum release policy and timing in the RELEASE.md
+beta phase of a release, we may defer review or target its inclusion for a later version.
+Feel free to ask on the mailing list to learn more about the Greenplum release policy and timing.
 
 ### Patch submission
 
@@ -465,7 +465,7 @@ Keep in mind that the most common reason for a failed CLA check is a mismatch
 between an email on file and an email recorded in the commits submitted as
 part of the pull request.
 
-If you can not figure out why a certain validation check failed, feel free to
+If you cannot figure out why a certain validation check failed, feel free to
 ask on the developer's mailing list, but make sure to include a direct link
 to a pull request in your email.
 
@@ -511,22 +511,10 @@ If, on the other hand, the change is in the non-functional part of the code base
 (such as fixing a typo inside of a comment block) core team members can decide to
 just commit to the repository directly.
 
-## Glossary
-
-* __QD__
-
-  Query Dispatcher. A synonym for the master server.
-
-* __QE__
-
-  Query Executor. A synonym for a segment server.
-
 ## Documentation
 
-For Greenplum Database documentation, please check online docs:
+For Greenplum Database documentation, please check the online docs:
 http://greenplum.org/docs/
 
 For further information beyond the scope of this README, please see
 [our wiki](https://github.com/greenplum-db/gpdb/wiki)
-
-There is also a Vagrant-based quickstart guide for developers in `src/tools/vagrant/README.md`.
