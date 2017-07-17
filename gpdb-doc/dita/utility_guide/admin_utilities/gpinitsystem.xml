@@ -13,7 +13,7 @@
             [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
-            [<b>-s</b> <varname>standby_master_host</varname>] [<b>-P</b> <varname>standby_master_port</varname>][<b>-F</b> <varname>list_of_filespaces</varname>]
+            [<b>-s</b> <varname>standby_master_host</varname> [<b>-P</b> <varname>standby_master_port</varname>][<b>-F</b> <varname>standby_master_filespaces</varname>]]
             [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>] [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
             [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
@@ -228,16 +228,17 @@
                 </plentry>
                 <plentry>
                     <pt>-P <varname>standby_master_port</varname></pt>
-                    <pd>Optional. If you configure a backup master host, specify its port number
+                    <pd>Optional. If you configure a standby master host, specify its port number
                         using this option. The Greenplum Database software must already be installed
                         and configured on this host.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-F <varname>list_of_filespaces</varname></pt>
-                    <pd>A list of filespace names and the associated locations. Each filespace name
-                        and its location is separated by a colon. If there is more than one file
-                        space name, each pair (name and location) is separated by a comma. For
-                        example: </pd>
+                    <pt>-F <varname>standby_master_filespaces</varname></pt>
+                    <pd>Optional. If you configure a standby master host, specify a list of
+                        filespace names and the associated locations using this option. Each
+                        filespace name and its location is separated by a colon. If there is more
+                        than one file space name, each pair (name and location) is separated by a
+                        comma. For example: </pd>
                     <pd>
                         <codeblock>filespace1_name:fs1_location,filespace2_name:fs2_location</codeblock>
                     </pd>
