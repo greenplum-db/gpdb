@@ -5,6 +5,8 @@
    <title> log_alert_* </title>
    <body>
       <p>The <codeph>log_alert_*</codeph> tables store <codeph>pg_log</codeph> errors and warnings. </p>
+      <p>See <xref href="dbref.xml#overview/section_ok2_wd1_41b"/> for information about configuring
+         the system logger for gpperfmon.</p>
       <p>There are three <codeph>log_alert</codeph> tables, all having the same columns:</p>
       <ul>
          <li><codeph>log_alert_now</codeph> is an external table whose data is stored in
