@@ -59,8 +59,17 @@
         </p>
       </body>
     </topic>
+    <topic id="topic6" xml:lang="en">
+      <title>Creating a Database with a Different Owner</title>
+      <body>
+        <p>Another database owner can be assigned when a database is created:</p>
+        <p>
+          <codeblock>=&gt; CREATE DATABASE <i>new_dbname</i> WITH <i>owner=new_user</i>;</codeblock>
+        </p>
+      </body>
+    </topic>
   </topic>
-  <topic id="topic6" xml:lang="en">
+  <topic id="topic7" xml:lang="en">
     <title>Viewing the List of Databases</title>
     <body>
       <p>If you are working in the <codeph>psql</codeph> client program, you can use the
@@ -73,7 +82,7 @@
       </p>
     </body>
   </topic>
-  <topic id="topic7" xml:lang="en">
+  <topic id="topic8" xml:lang="en">
     <title>Altering a Database</title>
     <body>
       <p>The <ph>ALTER DATABASE</ph> command changes database attributes such as owner, name, or
@@ -86,7 +95,7 @@
       <p>To alter a database, you must be the owner of the database or a superuser. </p>
     </body>
   </topic>
-  <topic id="topic8" xml:lang="en">
+  <topic id="topic9" xml:lang="en">
     <title>Dropping a Database</title>
     <body>
       <p>The <codeph>DROP DATABASE</codeph> command drops (or deletes) a database. It removes the
