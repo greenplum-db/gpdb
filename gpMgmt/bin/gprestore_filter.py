@@ -194,7 +194,11 @@ def _handle_expressions_in_comments(state, line, arguments):
             if check_valid_schema(state.schema, schemas_in_table_file, schemas_in_schema_file):
                 state.line_buff = line
         elif data_type in ['ACL']:
-            state.output = check_valid_relname(state.schema, name, tables_in_table_file, schemas_in_schema_file)
+            relname_valid = check_valid_relname(state.schema, name, tables_in_table_file, schemas_in_schema_file)
+            schema_valid = False
+            if state.schema == "-":
+                schema_valid = check_valid_schema(name, schemas_in_table_file, schemas_in_schema_file)
+            state.output = relname_valid or schema_valid
         elif data_type in ['FUNCTION']:
             state.function_ddl = True
             state.output = check_valid_schema(state.schema, schemas_in_table_file, schemas_in_schema_file)
@@ -294,7 +298,6 @@ def check_valid_relname(schema, relname, tables_in_table_file, schemas_in_schema
     """
     check if relation is valid (can be from schema level restore)
     """
-
     if ((schemas_in_schema_file and schema in schemas_in_schema_file) or
        (tables_in_table_file and (schema, relname) in tables_in_table_file)):
         return True
