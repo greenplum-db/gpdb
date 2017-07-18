@@ -104,9 +104,9 @@
       <p>When Greenplum Database starts up with gpperfmon support enabled, it forks a
           <codeph>gpmmon</codeph> agent process. <codeph>gpmmon</codeph> then starts a
           <codeph>gpsmon</codeph> agent process on the master host and every segment host in the
-        Greenplum cluster. The Greenplum postmaster process monitors the <codeph>gpmmon</codeph>
-        process and restarts it if needed and the <codeph>gpmmon</codeph> process monitors and
-        restarts <codeph>gpsmon</codeph> processes as needed.</p>
+        Greenplum Database cluster. The Greenplum Database postmaster process monitors the
+          <codeph>gpmmon</codeph> process and restarts it if needed, and the <codeph>gpmmon</codeph>
+        process monitors and restarts <codeph>gpsmon</codeph> processes as needed.</p>
       <p>The <codeph>gpmmon</codeph> process runs in a loop and at configurable intervals retrieves
         data accumulated by the <codeph>gpsmon</codeph> processes, adds it to the data files for the
           <codeph>_now</codeph> and <codeph>_tail</codeph> external database tables, and then into
@@ -187,7 +187,7 @@
           <li>Truncates the <codeph>alert_log_stage</codeph> file.</li>
         </ol></p>
     </section>
-    <p>The following topics describe the contents of the tables in the 
-    <codeph>gpperfmon</codeph> database.</p>
+    <p>The following topics describe the contents of the tables in the <codeph>gpperfmon</codeph>
+      database.</p>
   </body>
 </topic>

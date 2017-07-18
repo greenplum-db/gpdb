@@ -183,7 +183,7 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
         <strow>
           <stentry>partition_age</stentry>
           <stentry>The number of months that gpperfmon statistics data will be retained. The default
-            it is 0, which means that partitions are never dropped automatically.</stentry>
+            value is 0, which means that partitions are never dropped automatically.</stentry>
         </strow>
         <strow>
           <stentry>quantum</stentry>

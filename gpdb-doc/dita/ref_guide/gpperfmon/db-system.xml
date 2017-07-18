@@ -11,7 +11,7 @@
             <codeph>system_now</codeph> is an external table whose data files are stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current system utilization
             data is stored in <codeph>system_now</codeph> during the period between data collection
-            from the gpperfmon agents and automatic commitment to the
+            from the <codeph>gpperfmon</codeph> agents and automatic commitment to the
                <codeph>system_history</codeph> table.</li>
          <li>
             <codeph>system_tail</codeph> is an external table whose data files are stored in

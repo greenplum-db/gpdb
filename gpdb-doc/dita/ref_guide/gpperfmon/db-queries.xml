@@ -13,7 +13,7 @@
             <codeph>queries_now</codeph> is an external table whose data files are stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current query status is
             stored in <codeph>queries_now</codeph> during the period between data collection from
-            the gpperfmon agents and automatic commitment to the
+            the <codeph>gpperfmon</codeph> agents and automatic commitment to the
                <codeph>queries_history</codeph> table.</li>
          <li>
             <codeph>queries_tail</codeph> is an external table whose data files are stored in

@@ -6,7 +6,7 @@
    <body>
       <p>The <codeph>log_alert_*</codeph> tables store <codeph>pg_log</codeph> errors and warnings. </p>
       <p>See <xref href="dbref.xml#overview/section_ok2_wd1_41b"/> for information about configuring
-         the system logger for gpperfmon.</p>
+         the system logger for <codeph>gpperfmon</codeph>.</p>
       <p>There are three <codeph>log_alert</codeph> tables, all having the same columns:</p>
       <ul>
          <li><codeph>log_alert_now</codeph> is an external table whose data is stored in
@@ -14,14 +14,14 @@
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory. Current
                <codeph>pg_log</codeph> errors and warnings data are available in
                <codeph>log_alert_now</codeph> during the period between data collection from the
-            gpperfmon agents and automatic commitment to the <codeph>log_alert_history</codeph>
-            table.</li>
+               <codeph>gpperfmon</codeph> agents and automatic commitment to the
+               <codeph>log_alert_history</codeph> table.</li>
          <li><codeph>log_alert_tail</codeph> is an external table with data stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs/alert_log_stage</codeph>. This is a
             transitional table for data that has been cleared from <codeph>log_alert_now</codeph>
             but has not yet been committed to <codeph>log_alert_history</codeph>. The table includes
             records from all alert logs except the most recent. It typically contains only a few
-            minutes worth of data.</li>
+            minutes' worth of data.</li>
          <li><codeph>log_alert_history</codeph> is a regular table that stores historical
             database-wide errors and warnings data. It is pre-partitioned into monthly partitions.
             Partitions are automatically added in two month increments as needed. </li>
