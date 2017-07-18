@@ -15,6 +15,7 @@
 
 #include "nodes/primnodes.h"
 #include "nodes/parsenodes.h"
+#include "nodes/relation.h"
 
 extern int	exprLocation(Node *expr);
 

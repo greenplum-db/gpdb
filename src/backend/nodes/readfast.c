@@ -2642,6 +2642,34 @@ _readAlterTSDictionaryStmt(void)
 	READ_DONE();
 }
 
+static PlaceHolderVar *
+_readPlaceHolderVar(void)
+{
+	READ_LOCALS(PlaceHolderVar);
+	
+	READ_NODE_FIELD(phexpr);
+	READ_BITMAPSET_FIELD(phrels);
+	READ_INT_FIELD(phid);
+	READ_INT_FIELD(phlevelsup);
+	
+	READ_DONE();
+}
+	
+static PlaceHolderInfo *
+_readPlaceHolderInfo(void)
+{
+	READ_LOCALS(PlaceHolderInfo);
+	
+	READ_INT_FIELD(phid);
+	READ_NODE_FIELD(ph_var);
+	READ_BITMAPSET_FIELD(ph_eval_at);
+	READ_BITMAPSET_FIELD(ph_needed);
+	READ_INT_FIELD(ph_width);
+	
+	READ_DONE();
+}
+
+
 static Node *
 _readValue(NodeTag nt)
 {
@@ -3502,6 +3530,13 @@ readNodeBinary(void)
 			case T_AlterTSDictionaryStmt:
 				return_value = _readAlterTSDictionaryStmt();
 				break;
+			case T_PlaceHolderVar:
+				return_value = _readPlaceHolderVar();
+				break;
+			case T_PlaceHolderInfo:
+				return_value = _readPlaceHolderInfo();
+				break;
+
 
 			default:
 				return_value = NULL; /* keep the compiler silent */

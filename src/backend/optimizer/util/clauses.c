@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/clauses.c,v 1.268 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/clauses.c,v 1.270 2008/10/21 20:42:53 tgl Exp $
  *
  * HISTORY
  *	  AUTHOR			DATE			MAJOR EVENT
@@ -60,6 +60,7 @@ typedef struct
 	bool		transform_stable_funcs;
 	bool		recurse_queries; /* recurse into query structures */
 	bool		recurse_sublink_testexpr; /* recurse into sublink test expressions */
+	bool		estimate;
 	Size        max_size; /* max constant binary size in bytes, 0: no restrictions */
 } eval_const_expressions_context;
 
@@ -1326,6 +1327,12 @@ find_nonnullable_rels_walker(Node *node, bool top_level)
 			 expr->booltesttype == IS_NOT_UNKNOWN))
 			result = find_nonnullable_rels_walker((Node *) expr->arg, false);
 	}
+	else if (IsA(node, PlaceHolderVar))
+	{
+		PlaceHolderVar *phv = (PlaceHolderVar *) node;
+		
+		result = find_nonnullable_rels_walker((Node *) phv->phexpr, top_level);
+	}
 	return result;
 }
 
@@ -1521,6 +1528,12 @@ find_nonnullable_vars_walker(Node *node, bool top_level)
 			 expr->booltesttype == IS_FALSE ||
 			 expr->booltesttype == IS_NOT_UNKNOWN))
 			result = find_nonnullable_vars_walker((Node *) expr->arg, false);
+	}
+	else if (IsA(node, PlaceHolderVar))
+	{
+		PlaceHolderVar *phv = (PlaceHolderVar *) node;
+		
+		result = find_nonnullable_vars_walker((Node *) phv->phexpr, top_level);
 	}
 	return result;
 }
@@ -2209,6 +2222,7 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.active_fns = NIL;	/* nothing being recursively simplified */
 	context.case_val = NULL;	/* no CASE being examined */
 	context.transform_stable_funcs = true;	/* safe transformations only */
+	context.estimate = false;	/* safe transformations only */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
@@ -2230,6 +2244,7 @@ eval_const_expressions(PlannerInfo *root, Node *node)
  *	  constant.  This effectively means that we plan using the first supplied
  *	  value of the Param.
  * 2. Fold stable, as well as immutable, functions to constants.
+ * 3. Reduce PlaceHolderVar nodes to their contained expressions.
  *--------------------
  */
 Node *
@@ -2243,6 +2258,7 @@ estimate_expression_value(PlannerInfo *root, Node *node)
 	context.active_fns = NIL;	/* nothing being recursively simplified */
 	context.case_val = NULL;	/* no CASE being examined */
 	context.transform_stable_funcs = true;	/* unsafe transformations OK */
+	context.estimate = true;	/* unsafe transformations OK */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
@@ -3199,6 +3215,21 @@ eval_const_expressions_mutator(Node *node,
 					eval_const_expressions_mutator,
 					(void *) context,
 					0);
+	}
+
+	if (IsA(node, PlaceHolderVar) && context->estimate)
+	{
+		/*
+		 * In estimation mode, just strip the PlaceHolderVar node altogether;
+		 * this amounts to estimating that the contained value won't be forced
+		 * to null by an outer join.  In regular mode we just use the default
+		 * behavior (ie, simplify the expression but leave the PlaceHolderVar
+		 * node intact).
+		 */
+		PlaceHolderVar *phv = (PlaceHolderVar *) node;
+		
+		return eval_const_expressions_mutator((Node *) phv->phexpr,
+											  context);
 	}
 
 	/*
@@ -4836,6 +4867,17 @@ expression_tree_mutator(Node *node,
 				return (Node *) newnode;
 			}
 			break;
+		case T_PlaceHolderVar:
+			{
+				PlaceHolderVar *phv = (PlaceHolderVar *) node;
+				PlaceHolderVar *newnode;
+				
+				FLATCOPY(newnode, phv, PlaceHolderVar);
+				MUTATE(newnode->phexpr, phv->phexpr, Expr *);
+				/* Assume we need not copy the relids bitmapset */
+				return (Node *) newnode;
+			}
+			break;
 		case T_AppendRelInfo:
 			{
 				AppendRelInfo *appinfo = (AppendRelInfo *) node;
@@ -4843,6 +4885,17 @@ expression_tree_mutator(Node *node,
 
 				FLATCOPY(newnode, appinfo, AppendRelInfo);
 				MUTATE(newnode->translated_vars, appinfo->translated_vars, List *);
+				return (Node *) newnode;
+			}
+			break;
+		case T_PlaceHolderInfo:
+			{
+				PlaceHolderInfo *phinfo = (PlaceHolderInfo *) node;
+				PlaceHolderInfo *newnode;
+				
+				FLATCOPY(newnode, phinfo, PlaceHolderInfo);
+				MUTATE(newnode->ph_var, phinfo->ph_var, PlaceHolderVar *);
+				/* Assume we need not copy the relids bitmapsets */
 				return (Node *) newnode;
 			}
 			break;

@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/relation.h,v 1.160 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/relation.h,v 1.162 2008/10/21 20:42:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -106,6 +106,8 @@ typedef struct PlannerGlobal
 	List	   *relationOids;	/* OIDs of relations the plan depends on */
 
 	List	   *invalItems;		/* other dependencies, as PlanInvalItems */
+	
+	Index		lastPHId;		/* highest PlaceHolderVar ID assigned */
 
 	bool		transientPlan;	/* redo plan when TransactionXmin changes? */
 
@@ -230,6 +232,8 @@ typedef struct PlannerInfo
 	List	   *join_info_list; /* list of SpecialJoinInfos */
 
 	List	   *append_rel_list;	/* list of AppendRelInfos */
+	
+	List	   *placeholder_list;	/* list of PlaceHolderInfos */
 
 	List	   *query_pathkeys; /* desired pathkeys for query_planner(), and
 								 * actual pathkeys afterwards */
@@ -369,9 +373,12 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  *			   clauses have been applied (ie, output rows of a plan for it)
  *		width - avg. number of bytes per tuple in the relation after the
  *				appropriate projections have been done (ie, output width)
- *		reltargetlist - List of Var nodes for the attributes we need to
- *						output from this relation (in no particular order)
- *						NOTE: in a child relation, may contain RowExprs
+ *		reltargetlist - List of Var and PlaceHolderVar nodes for the values
+ *						we need to output from this relation.
+ *						List is in no particular order, but all rels of an
+ *						appendrel set must use corresponding orders.
+ *						NOTE: in a child relation, may contain RowExpr or
+ *						ConvertRowtypeExpr representing a whole-row Var.
  *		pathlist - List of Path nodes, one for each potentially useful
  *				   method of generating the relation
  *		cheapest_startup_path - the pathlist member with lowest startup cost
@@ -1447,6 +1454,28 @@ typedef struct InnerIndexscanInfo
 	Path	   *cheapest_total_innerpath;		/* cheapest total cost */
 } InnerIndexscanInfo;
 
+/*
+ * Placeholder node for an expression to be evaluated below the top level
+ * of a plan tree.  This is used during planning to represent the contained
+ * expression.  At the end of the planning process it is replaced by either
+ * the contained expression or a Var referring to a lower-level evaluation of
+ * the contained expression.  Typically the evaluation occurs below an outer
+ * join, and Var references above the outer join might thereby yield NULL
+ * instead of the expression value.
+ *
+ * Although the planner treats this as an expression node type, it is not
+ * recognized by the parser or executor, so we declare it here rather than
+ * in primnodes.h.
+ */
+
+typedef struct PlaceHolderVar
+{
+	Expr		xpr;
+	Expr		*phexpr;			/* the represented expression */
+	Relids		phrels;			/* base relids syntactically within expr src */
+	Index		phid;			/* ID for PHV (unique within planner run) */
+	Index		phlevelsup;		/* > 0 if PHV belongs to outer query */
+} PlaceHolderVar;
 
 /*
  * "Special join" info.
@@ -1628,6 +1657,31 @@ typedef struct AppendRelInfo
 	 */
 	Oid			parent_reloid;	/* OID of parent relation */
 } AppendRelInfo;
+
+/*
+ * For each distinct placeholder expression generated during planning, we
+ * store a PlaceHolderInfo node in the PlannerInfo node's placeholder_list.
+ * This stores info that is needed centrally rather than in each copy of the
+ * PlaceHolderVar.  The phid fields identify which PlaceHolderInfo goes with
+ * each PlaceHolderVar.  Note that phid is unique throughout a planner run,
+ * not just within a query level --- this is so that we need not reassign ID's
+ * when pulling a subquery into its parent.
+ *
+ * The idea is to evaluate the expression at (only) the ph_eval_at join level,
+ * then allow it to bubble up like a Var until the ph_needed join level.
+ * ph_needed has the same definition as attr_needed for a regular Var.
+ */
+
+typedef struct PlaceHolderInfo
+{
+	NodeTag		type;
+	
+	Index		phid;			/* ID for PH (unique within planner run) */
+	PlaceHolderVar *ph_var;		/* copy of PlaceHolderVar tree */
+	Relids		ph_eval_at;		/* lowest level we can evaluate value at */
+	Relids		ph_needed;		/* highest level the value is needed at */
+	int32		ph_width;		/* estimated attribute width */
+} PlaceHolderInfo;
 
 /*
  * glob->paramlist keeps track of the PARAM_EXEC slots that we have decided

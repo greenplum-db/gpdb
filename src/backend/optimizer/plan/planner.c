@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.244 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.245 2008/10/21 20:42:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,7 +68,7 @@ planner_hook_type planner_hook = NULL;
 #define EXPRKIND_RTFUNC		2
 #define EXPRKIND_VALUES		3
 #define EXPRKIND_LIMIT		4
-#define EXPRKIND_APPINFO	5
+#define EXPRKIND_AUXINFO	5
 #define EXPRKIND_WINDOW_BOUND 6
 
 
@@ -439,6 +439,7 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->finalrtable = NIL;
 	glob->relationOids = NIL;
 	glob->invalItems = NIL;
+	glob->lastPHId = 0;
 	glob->transientPlan = false;
 	/* ApplyShareInputContext initialization. */
 	glob->share.producers = NULL;
@@ -700,6 +701,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	}
 
 	root->append_rel_list = NIL;
+	root->placeholder_list = NIL;
 
 	Assert(config);
 	root->config = config;
@@ -855,7 +857,10 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 
 	root->append_rel_list = (List *)
 		preprocess_expression(root, (Node *) root->append_rel_list,
-							  EXPRKIND_APPINFO);
+							  EXPRKIND_AUXINFO);
+	root->placeholder_list = (List *)
+	preprocess_expression(root, (Node *) root->placeholder_list,
+						  EXPRKIND_AUXINFO);
 
 	/* Also need to preprocess expressions for function and values RTEs */
 	foreach(l, parse->rtable)
@@ -1169,6 +1174,10 @@ inheritance_planner(PlannerInfo *root)
 								   appinfo);
 		subroot.returningLists = NIL;
 		subroot.init_plans = NIL;
+		/* We needn't modify the child's append_rel_list */
+		subroot.placeholder_list = (List *)
+				adjust_appendrel_attrs(&subroot, (Node *) root->placeholder_list,
+															appinfo);
 		/* There shouldn't be any OJ info to translate, as yet */
 		Assert(subroot.join_info_list == NIL);
 
@@ -2990,7 +2999,7 @@ make_subplanTargetList(PlannerInfo *root,
 	 * Vars; they will be replaced by Params later on).
 	 */
 	sub_tlist = flatten_tlist(tlist);
-	extravars = pull_var_clause(parse->havingQual, false);
+	extravars = pull_var_clause(parse->havingQual, true);
 	sub_tlist = add_to_flat_tlist(sub_tlist, extravars, false /* resjunk */);
 	list_free(extravars);
 

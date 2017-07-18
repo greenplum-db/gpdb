@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.332 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.334 2008/10/21 20:42:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -798,6 +798,27 @@ _equalRestrictInfo(RestrictInfo *a, RestrictInfo *b)
 }
 
 static bool
+_equalPlaceHolderVar(PlaceHolderVar *a, PlaceHolderVar *b)
+{
+	/*
+	 * We intentionally do not compare phexpr.  Two PlaceHolderVars with the
+	 * same ID and levelsup should be considered equal even if the contained
+	 * expressions have managed to mutate to different states.  One way in
+	 * which that can happen is that initplan sublinks would get replaced by
+	 * differently-numbered Params when sublink folding is done.  (The end
+	 * result of such a situation would be some unreferenced initplans, which
+	 * is annoying but not really a problem.)
+	 *
+	 * COMPARE_NODE_FIELD(phexpr);
+	 */
+	COMPARE_BITMAPSET_FIELD(phrels);
+	COMPARE_SCALAR_FIELD(phid);
+	COMPARE_SCALAR_FIELD(phlevelsup);
+	
+	return true;
+}
+
+static bool
 _equalSpecialJoinInfo(SpecialJoinInfo *a, SpecialJoinInfo *b)
 {
 	COMPARE_BITMAPSET_FIELD(min_lefthand);
@@ -825,6 +846,18 @@ _equalAppendRelInfo(AppendRelInfo *a, AppendRelInfo *b)
 	COMPARE_NODE_FIELD(translated_vars);
 	COMPARE_SCALAR_FIELD(parent_reloid);
 
+	return true;
+}
+
+static bool
+_equalPlaceHolderInfo(PlaceHolderInfo *a, PlaceHolderInfo *b)
+{
+	COMPARE_SCALAR_FIELD(phid);
+	COMPARE_NODE_FIELD(ph_var);
+	COMPARE_BITMAPSET_FIELD(ph_eval_at);
+	COMPARE_BITMAPSET_FIELD(ph_needed);
+	COMPARE_SCALAR_FIELD(ph_width);
+	
 	return true;
 }
 
@@ -2706,12 +2739,19 @@ equal(void *a, void *b)
 		case T_RestrictInfo:
 			retval = _equalRestrictInfo(a, b);
 			break;
+		case T_PlaceHolderVar:
+			retval = _equalPlaceHolderVar(a, b);
+			break;
 		case T_SpecialJoinInfo:
 			retval = _equalSpecialJoinInfo(a, b);
 			break;
 		case T_AppendRelInfo:
 			retval = _equalAppendRelInfo(a, b);
 			break;
+		case T_PlaceHolderInfo:
+			retval = _equalPlaceHolderInfo(a, b);
+			break;
+
 		case T_List:
 		case T_IntList:
 		case T_OidList:

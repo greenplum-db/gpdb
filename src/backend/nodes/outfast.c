@@ -2027,6 +2027,12 @@ _outNode(StringInfo str, void *obj)
 			case T_AlterTSDictionaryStmt:
 				_outAlterTSDictionaryStmt(str, obj);
 				break;
+			case T_PlaceHolderVar:
+				_outPlaceHolderVar(str, obj);
+				break;
+			case T_PlaceHolderInfo:
+				_outPlaceHolderInfo(str, obj);
+				break;
 
 			default:
 				elog(ERROR, "could not serialize unrecognized node type: %d",
