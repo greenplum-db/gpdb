@@ -22,6 +22,7 @@
 #include "optimizer/joininfo.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
+#include "optimizer/placeholder.h"
 #include "optimizer/planmain.h"
 #include "optimizer/prep.h"
 #include "optimizer/restrictinfo.h"
@@ -148,7 +149,7 @@ add_base_rels_to_query(PlannerInfo *root, Node *jtnode)
 void
 build_base_rel_tlists(PlannerInfo *root, List *final_tlist)
 {
-	List	   *tlist_vars = pull_var_clause((Node *) final_tlist, false);
+	List	   *tlist_vars = pull_var_clause((Node *) final_tlist, true);
 
 	if (tlist_vars != NIL)
 	{
@@ -163,6 +164,10 @@ build_base_rel_tlists(PlannerInfo *root, List *final_tlist)
  *	  relation's targetlist if not already present, and mark the variable
  *	  as being needed for the indicated join (or for final output if
  *	  where_needed includes "relation 0").
+ *
+ *	  The list may also contain PlaceHolderVars.  These don't necessarily
+ *	  have a single owning relation; we keep their attr_needed info in
+ *	  root->placeholder_list instead.
  */
 void
 add_vars_to_targetlist(PlannerInfo *root, List *vars, Relids where_needed)
@@ -173,39 +178,55 @@ add_vars_to_targetlist(PlannerInfo *root, List *vars, Relids where_needed)
 
 	foreach(temp, vars)
 	{
-		Var		   *var = (Var *) lfirst(temp);
-		RelOptInfo *rel = find_base_rel(root, var->varno);
-		int			attrno = var->varattno;
-
-		/* Pseudo column? */
-		if (attrno <= FirstLowInvalidHeapAttributeNumber)
+		Node	   *node = (Node *) lfirst(temp);
+		
+		if (IsA(node, Var))
 		{
-			CdbRelColumnInfo *rci = cdb_find_pseudo_column(root, var);
-
-			/* Add to targetlist. */
-			if (bms_is_empty(rci->where_needed))
+			Var		   *var = (Var *) node;
+			RelOptInfo *rel = find_base_rel(root, var->varno);
+			int			attno = var->varattno;
+			
+			/* Pseudo column? */
+			if (attno <= FirstLowInvalidHeapAttributeNumber)
 			{
-				Assert(rci->targetresno == 0);
-				rci->targetresno = list_length(rel->reltargetlist);
+				CdbRelColumnInfo *rci = cdb_find_pseudo_column(root, var);
+				
+				/* Add to targetlist. */
+				if (bms_is_empty(rci->where_needed))
+				{
+					Assert(rci->targetresno == 0);
+					rci->targetresno = list_length(rel->reltargetlist);
+					rel->reltargetlist = lappend(rel->reltargetlist, copyObject(var));
+				}
+				
+				/* Note relids which are consumers of the data from this column. */
+				rci->where_needed = bms_add_members(rci->where_needed, where_needed);
+				continue;
+			}
+			
+			/* System-defined attribute, whole row, or user-defined attribute */
+			Assert(attno >= rel->min_attr && attno <= rel->max_attr);
+			attno -= rel->min_attr;
+			if (rel->attr_needed[attno] == NULL)
+			{
+				/* Variable not yet requested, so add to reltargetlist */
+				/* XXX is copyObject necessary here? */
 				rel->reltargetlist = lappend(rel->reltargetlist, copyObject(var));
 			}
-
-			/* Note relids which are consumers of the data from this column. */
-			rci->where_needed = bms_add_members(rci->where_needed, where_needed);
-			continue;
+			rel->attr_needed[attno] = bms_add_members(rel->attr_needed[attno],
+													   where_needed);
 		}
-
-		/* System-defined attribute, whole row, or user-defined attribute */
-		Assert(attrno >= rel->min_attr && attrno <= rel->max_attr);
-		attrno -= rel->min_attr;
-		if (bms_is_empty(rel->attr_needed[attrno]))
+		else if (IsA(node, PlaceHolderVar))
 		{
-			/* Variable not yet requested, so add to reltargetlist */
-			/* XXX is copyObject necessary here? */
-			rel->reltargetlist = lappend(rel->reltargetlist, copyObject(var));
+			PlaceHolderVar *phv = (PlaceHolderVar *) node;
+			PlaceHolderInfo *phinfo = find_placeholder_info(root, phv);
+			
+			phinfo->ph_needed = bms_add_members(phinfo->ph_needed,
+												where_needed);
 		}
-		rel->attr_needed[attrno] = bms_add_members(rel->attr_needed[attrno],
-												   where_needed);
+		else
+			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
+		
 	}
 }
 
@@ -1260,7 +1281,7 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 	 */
 	if (bms_membership(relids) == BMS_MULTIPLE)
 	{
-		List	   *vars = pull_var_clause(clause, false);
+		List	   *vars = pull_var_clause(clause, true);
 
 		add_vars_to_targetlist(root, vars, relids);
 		list_free(vars);
