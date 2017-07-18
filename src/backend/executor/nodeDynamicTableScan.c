@@ -190,11 +190,6 @@ setPidIndex(DynamicTableScanState *node)
 	Assert(estate->dynamicTableScanInfo->numScans >= plan->partIndex);
 	node->pidIndex = estate->dynamicTableScanInfo->pidIndexes[plan->partIndex - 1];
 	Assert(node->pidIndex != NULL);
-
-	if (optimizer_partition_selection_log)
-	{
-		LogSelectedPartitionOids(node->pidIndex);
-	}
 }
 
 TupleTableSlot *

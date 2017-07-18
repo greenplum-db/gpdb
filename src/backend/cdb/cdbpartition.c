@@ -9339,62 +9339,6 @@ DebugPartitionOid(Datum *elements, int n)
 	return str.data;
 }
 
-/**
- * Function that returns partition oids and number of partitions
- * from the partOidHash hash table.
- *
- * partOidHash: a hash table with partition oids
- * partOids: out parameter; returns a palloc'ed array of oid datums
- * partCount: out parameter; returns the length of palloc'ed oid array
- *
- * The partOids are palloc'ed in current memory context. Caller should
- * ensure timely pfree.
- */
-void
-GetSelectedPartitionOids(HTAB *partOidHash, Datum **partOids, long *partCount)
-{
-	if (NULL != partOidHash)
-	{
-		int i = 0;
-		*partCount = hash_get_num_entries(partOidHash);
-		*partOids = (Datum *) palloc(*partCount * sizeof(Datum));
-
-		HASH_SEQ_STATUS pidStatus;
-		hash_seq_init(&pidStatus, partOidHash);
-
-		Oid *pid = NULL;
-		while ((pid = (Oid *) hash_seq_search(&pidStatus)) != NULL)
-		{
-			Assert(i < *partCount);
-			(*partOids)[i++] = ObjectIdGetDatum(*pid);
-		}
-
-		Assert(i == *partCount);
-	}
-	else
-	{
-		*partCount = 0;
-		*partOids = (Datum *) palloc(*partCount * sizeof(Datum));
-	}
-}
-
-
-/**
- * Prints the names of DPE selected partitions from a
- * HTAB (pidIndex) of partition oids.
- */
-void
-LogSelectedPartitionOids(HTAB *pidIndex)
-{
-	Datum *elements = NULL;
-	long numPartitions = 0;
-	GetSelectedPartitionOids(pidIndex, &elements, &numPartitions);
-	Assert(NULL != elements);
-
-	elog(LOG, "DPE matched partitions: %s", DebugPartitionOid(elements, numPartitions));
-	pfree(elements);
-}
-
 /*
  * findPartitionMetadataEntry
  *   Find PartitionMetadata object for a given partition oid from a list.

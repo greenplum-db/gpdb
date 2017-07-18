@@ -20,9 +20,13 @@
 #include "executor/instrument.h"
 #include "executor/nodePartitionSelector.h"
 #include "nodes/makefuncs.h"
+#include "utils/guc.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
-static void 
+static void LogPartitionSelection(EState *estate, int32 selectorId);
+
+static void
 partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
 
 /* PartitionSelector Slots */
@@ -192,6 +196,8 @@ ExecPartitionSelector(PartitionSelectorState *node)
 			 */
 			if (ps->partTabTargetlist)
 				InsertPidIntoDynamicTableScanInfo(estate, ps->scanId, InvalidOid, ps->selectorId);
+			else
+				LogPartitionSelection(estate, ps->selectorId);
 
 			return NULL;
 		}
@@ -254,6 +260,59 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	return candidateOutputSlot;
 }
 
+static void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const int32 scanId);
+
+void LogPartitionSelection(EState *estate, int32 selectorId)
+{
+	if (optimizer_partition_selection_log == false)
+		return;
+
+	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
+
+	Assert(dynamicTableScanInfo != NULL);
+
+	HTAB **pidIndexes = dynamicTableScanInfo->pidIndexes;
+
+	for (int32 scanIdMinusOne = 0; scanIdMinusOne < dynamicTableScanInfo->numScans; ++scanIdMinusOne)
+	{
+		HTAB *const pidIndex = pidIndexes[scanIdMinusOne];
+		if (pidIndex == NULL)
+			continue;
+		const int32 scanId = scanIdMinusOne + 1;
+
+		LogSelectedPartitionsForScan(selectorId, pidIndex, scanId);
+	}
+}
+
+void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const int32 scanId)
+{
+	int32 numPartitionsSelected = 0;
+	Datum *selectedPartOids = palloc(sizeof(Datum) * hash_get_num_entries(pidIndex));
+
+	HASH_SEQ_STATUS status;
+	PartOidEntry *partOidEntry;
+	hash_seq_init(&status, pidIndex);
+
+	for (partOidEntry = hash_seq_search(&status); partOidEntry != NULL; partOidEntry = hash_seq_search(&status))
+	{
+		if (list_member_int(partOidEntry->selectorList, selectorId))
+			selectedPartOids[numPartitionsSelected++] = ObjectIdGetDatum(partOidEntry->partOid);
+	}
+
+	if (numPartitionsSelected > 0)
+	{
+		char *debugPartitionOid = DebugPartitionOid(selectedPartOids, numPartitionsSelected);
+		ereport(LOG,
+				(errmsg_internal("scanId: %d, parttition: %s, selector: %d",
+								 scanId,
+								 debugPartitionOid,
+								 selectorId)));
+		pfree(debugPartitionOid);
+	}
+
+	pfree(selectedPartOids);
+}
+
 /* ----------------------------------------------------------------
  *		ExecReScanPartitionSelector(node)
  *
@@ -265,7 +324,7 @@ ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContext *exprCtxt)
 {
 	/* reset PartitionSelectorState */
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
-	
+
 	for(int iter = 0; iter < ps->nLevels; iter++)
 	{
 		node->levelPartRules[iter] = NULL;
