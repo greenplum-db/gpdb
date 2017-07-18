@@ -418,6 +418,8 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
+		case T_PlaceHolderVar:
+			return walker(((PlaceHolderVar *) node)->phexpr, context);
 		case T_AppendRelInfo:
 			{
 				AppendRelInfo *appinfo = (AppendRelInfo *) node;
@@ -427,6 +429,8 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
+		case T_PlaceHolderInfo:
+			return walker(((PlaceHolderInfo *) node)->ph_var, context);
 		case T_GroupingClause:
 			{
 				GroupingClause *g = (GroupingClause *) node;

@@ -1161,6 +1161,13 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 				}
 				return false;
 			}
+		case T_PlaceHolderVar:
+			{
+				/* 8.4-9.0-MERGE-FIXME: Confirm if we need to do special handling
+				 * for PlaceHolderVar. Currently we are just fall through the mutator.
+				 */
+				break;
+			}
 		default:
 			{
 				/* Do not descend beyond any other node */

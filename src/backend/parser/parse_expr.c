@@ -2730,6 +2730,9 @@ exprType(Node *expr)
 		case T_PartListNullTestExpr:
 			type = BOOLOID;
 			break;
+		case T_PlaceHolderVar:
+			type = exprType((Node *) ((PlaceHolderVar *) expr)->phexpr);
+			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(expr));
 			type = InvalidOid;	/* keep compiler quiet */
@@ -2930,6 +2933,8 @@ exprTypmod(Node *expr)
 			return ((CoerceToDomainValue *) expr)->typeMod;
 		case T_SetToDefault:
 			return ((SetToDefault *) expr)->typeMod;
+		case T_PlaceHolderVar:
+			return exprTypmod((Node *) ((PlaceHolderVar *) expr)->phexpr);
 		default:
 			break;
 	}

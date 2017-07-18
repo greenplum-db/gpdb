@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.249 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.251 2008/10/21 20:42:53 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -461,9 +461,9 @@ build_relation_tlist(RelOptInfo *rel)
 	foreach(v, rel->reltargetlist)
 	{
 		/* Do we really need to copy here?	Not sure */
-		Var		   *var = (Var *) copyObject(lfirst(v));
+		Node   *node = (Node *) copyObject(lfirst(v));
 
-		tlist = lappend(tlist, makeTargetEntry((Expr *) var,
+		tlist = lappend(tlist, makeTargetEntry((Expr *) node,
 											   resno,
 											   NULL,
 											   false));
@@ -482,6 +482,7 @@ use_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 {
 	RangeTblEntry *rte;
 	int			i;
+	ListCell   *lc;
 
 	/*
 	 * We can do this for real relation scans, subquery scans, function scans,
@@ -503,13 +504,26 @@ use_physical_tlist(PlannerInfo *root, RelOptInfo *rel)
 		return false;
 
 	/*
-	 * Can't do it if any system columns or whole-row Vars are requested,
-	 * either.	(This could possibly be fixed but would take some fragile
-	 * assumptions in setrefs.c, I think.)
+	 * Can't do it if any system columns or whole-row Vars are requested.
+	 * (This could possibly be fixed but would take some fragile assumptions
+	 * in setrefs.c, I think.)
 	 */
 	for (i = rel->min_attr; i <= 0; i++)
 	{
 		if (!bms_is_empty(rel->attr_needed[i - rel->min_attr]))
+			return false;
+	}
+
+	/*
+	 * Can't do it if the rel is required to emit any placeholder expressions,
+	 * either.
+	 */
+	foreach(lc, root->placeholder_list)
+	{
+		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(lc);
+		
+		if (bms_nonempty_difference(phinfo->ph_needed, rel->relids) &&
+			bms_is_subset(phinfo->ph_eval_at, rel->relids))
 			return false;
 	}
 
@@ -4660,7 +4674,7 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
 					if (em->em_is_const || em->em_is_child)
 						continue;
 					sortexpr = em->em_expr;
-					exprvars = pull_var_clause((Node *) sortexpr, false);
+					exprvars = pull_var_clause((Node *) sortexpr, true);
 					foreach(k, exprvars)
 					{
 						if (!tlist_member_ignore_relabel(lfirst(k), tlist))

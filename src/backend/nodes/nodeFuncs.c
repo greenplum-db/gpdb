@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.33 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/nodeFuncs.c,v 1.35 2008/10/21 20:42:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -329,6 +329,10 @@ exprLocation(Node *expr)
 			break;
 		case T_CommonTableExpr:
 			loc = ((CommonTableExpr *) expr)->location;
+			break;
+		case T_PlaceHolderVar:
+			/* just use argument's location */
+			loc = exprLocation((Node *) ((PlaceHolderVar *) expr)->phexpr);
 			break;
 		default:
 			/* for any other node type it's just unknown... */
