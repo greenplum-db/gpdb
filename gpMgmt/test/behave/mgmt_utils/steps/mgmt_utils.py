@@ -144,12 +144,76 @@ def impl(context, scenario_number):
     label_key = 'timestamp_labels' + scenario_number
     global_labels[label_key] = _read_label_from_json(context, label_key)
 
+@given('the cluster config is generated with data_checksums "{checksum_toggle}"')
+def impl(context, checksum_toggle):
+    stop_database(context)
+
+    cmd = """
+    cd ../gpAux/gpdemo; \
+        export MASTER_DEMO_PORT={master_port} && \
+        export DEMO_PORT_BASE={port_base} && \
+        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
+        export WITH_MIRRORS={with_mirrors} && \
+        ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
+        env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
+    """.format(master_port=os.getenv('MASTER_PORT', 15432),
+               port_base=os.getenv('PORT_BASE', 25432),
+               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
+               with_mirrors='true',
+               checksum_toggle=checksum_toggle)
+
+    run_command(context, cmd)
+
+    if context.ret_code != 0:
+        raise Exception('%s' % context.error_message)
+
 
 @given('the database is running')
+@then('the database is running')
 def impl(context):
     start_database_if_not_started(context)
     if has_exception(context):
         raise context.exception
+
+
+@given('the database is initialized with checksum "{checksum_toggle}"')
+def impl(context, checksum_toggle):
+    is_ok = check_database_is_running(context)
+
+    if is_ok:
+        run_command(context, "gpconfig -s data_checksums")
+        if context.ret_code != 0:
+            raise Exception("cannot run gpconfig: %s, stdout: %s" % (context.error_message, context.stdout_message))
+
+        try:
+            # will throw
+            check_stdout_msg(context, "Values on all segments are consistent")
+            check_stdout_msg(context, "Master  value: %s" % checksum_toggle)
+            check_stdout_msg(context, "Segment value: %s" % checksum_toggle)
+        except:
+            is_ok = False
+
+    if not is_ok:
+        stop_database(context)
+
+        cmd = """
+        cd ../gpAux/gpdemo; \
+            export MASTER_DEMO_PORT={master_port} && \
+            export DEMO_PORT_BASE={port_base} && \
+            export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
+            export WITH_MIRRORS={with_mirrors} && \
+            ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
+            env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ./demo_cluster.sh
+        """.format(master_port=os.getenv('MASTER_PORT', 15432),
+                   port_base=os.getenv('PORT_BASE', 25432),
+                   num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
+                   with_mirrors='true',
+                   checksum_toggle=checksum_toggle)
+
+        run_command(context, cmd)
+
+        if context.ret_code != 0:
+            raise Exception('%s' % context.error_message)
 
 
 @given('the database is not running')
