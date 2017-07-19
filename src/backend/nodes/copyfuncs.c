@@ -1634,7 +1634,22 @@ _copySubPlan(SubPlan *from)
 	COPY_NODE_FIELD(parParam);
 	COPY_NODE_FIELD(args);
 	COPY_NODE_FIELD(extParam);
+	COPY_SCALAR_FIELD(startup_cost);
+	COPY_SCALAR_FIELD(per_call_cost);
 
+	return newnode;
+}
+
+/*
+ * _copyAlternativeSubPlan
+ */
+static AlternativeSubPlan *
+_copyAlternativeSubPlan(AlternativeSubPlan *from)
+{
+	AlternativeSubPlan *newnode = makeNode(AlternativeSubPlan);
+	
+	COPY_NODE_FIELD(subplans);
+	
 	return newnode;
 }
 
@@ -4768,6 +4783,9 @@ copyObject(void *from)
 			break;
 		case T_SubPlan:
 			retval = _copySubPlan(from);
+			break;
+		case T_AlternativeSubPlan:
+			retval = _copyAlternativeSubPlan(from);
 			break;
 		case T_FieldSelect:
 			retval = _copyFieldSelect(from);

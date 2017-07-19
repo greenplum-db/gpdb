@@ -721,7 +721,8 @@ clause_selectivity(PlannerInfo *root,
 		s1 = (Selectivity) 0.3333333;
 	}
 #ifdef NOT_USED
-	else if (is_subplan(clause))
+	else if (IsA(clause, SubPlan) ||
+					IsA(clause, AlternativeSubPlan))
 	{
 		/*
 		 * Just for the moment! FIX ME! - vadim 02/04/98

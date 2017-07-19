@@ -1400,6 +1400,16 @@ _outSubPlan(StringInfo str, SubPlan *node)
 	WRITE_NODE_FIELD(parParam);
 	WRITE_NODE_FIELD(args);
 	WRITE_NODE_FIELD(extParam);
+	WRITE_FLOAT_FIELD(startup_cost, "%.2f");
+	WRITE_FLOAT_FIELD(per_call_cost, "%.2f");
+}
+
+static void
+_outAlternativeSubPlan(StringInfo str, AlternativeSubPlan *node)
+{
+	WRITE_NODE_TYPE("ALTERNATIVESUBPLAN");
+	
+	WRITE_NODE_FIELD(subplans);
 }
 
 static void
@@ -4560,6 +4570,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_SubPlan:
 				_outSubPlan(str, obj);
+				break;
+			case T_AlternativeSubPlan:
+				_outAlternativeSubPlan(str, obj);
 				break;
 			case T_FieldSelect:
 				_outFieldSelect(str, obj);

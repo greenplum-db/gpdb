@@ -988,7 +988,23 @@ _readSubPlan(void)
 	READ_NODE_FIELD(parParam);
 	READ_NODE_FIELD(args);
 	READ_NODE_FIELD(extParam);
+	READ_FLOAT_FIELD(startup_cost);
+	READ_FLOAT_FIELD(per_call_cost);
 
+	READ_DONE();
+}
+
+
+/*
+ * _readAlternativeSubPlan
+ */
+static AlternativeSubPlan *
+_readAlternativeSubPlan(void)
+{
+	READ_LOCALS(AlternativeSubPlan);
+	
+	READ_NODE_FIELD(subplans);
+	
 	READ_DONE();
 }
 
@@ -2951,6 +2967,9 @@ readNodeBinary(void)
 				break;
 			case T_SubPlan:
 				return_value = _readSubPlan();
+				break;
+			case T_AlternativeSubPlan:
+				return_value = _readAlternativeSubPlan();
 				break;
 			case T_FieldSelect:
 				return_value = _readFieldSelect();

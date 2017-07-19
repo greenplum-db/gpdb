@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.226.2.4 2010/08/26 18:54:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.232 2008/08/22 00:16:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -5474,6 +5474,19 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				parent->subPlan = lcons(sstate, parent->subPlan);
 
 				state = (ExprState *) sstate;
+			}
+			break;
+		case T_AlternativeSubPlan:
+			{
+				AlternativeSubPlan *asplan = (AlternativeSubPlan *) node;
+				AlternativeSubPlanState *asstate;
+				
+				if (!parent)
+					elog(ERROR, "AlternativeSubPlan found with no parent plan");
+				
+				asstate = ExecInitAlternativeSubPlan(asplan, parent);
+				
+				state = (ExprState *) asstate;
 			}
 			break;
 		case T_FieldSelect:

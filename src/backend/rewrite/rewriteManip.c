@@ -26,7 +26,7 @@
 typedef struct
 {
 	int			sublevels_up;
-} checkExprHasAggs_context;
+} contain_aggs_of_level_context;
 
 typedef struct
 {
@@ -34,8 +34,8 @@ typedef struct
 	int			sublevels_up;
 } locate_agg_of_level_context;
 
-static bool checkExprHasAggs_walker(Node *node,
-						checkExprHasAggs_context *context);
+static bool contain_aggs_of_level_walker(Node *node,
+										 contain_aggs_of_level_context *context);
 static bool locate_agg_of_level_walker(Node *node,
 						   locate_agg_of_level_context *context);
 static bool checkExprHasSubLink_walker(Node *node, void *context);
@@ -43,32 +43,42 @@ static bool checkExprHasSubLink_walker(Node *node, void *context);
 /*
  * checkExprHasAggs -
  *	Check if an expression contains an aggregate function call.
- *
- * The objective of this routine is to detect whether there are aggregates
- * belonging to the initial query level.  Aggregates belonging to subqueries
- * or outer queries do NOT cause a true result.  We must recurse into
- * subqueries to detect outer-reference aggregates that logically belong to
- * the initial query level.
  */
 bool
 checkExprHasAggs(Node *node)
 {
-	checkExprHasAggs_context context;
+	return contain_aggs_of_level(node, 0);
+}
 
-	context.sublevels_up = 0;
+/*
+ * checkExprHasAggs -
+ *	Check if an expression contains an aggregate function call.
+ *
+ * The objective of this routine is to detect whether there are aggregates
+ * belonging to the given query level.  Aggregates belonging to subqueries
+ * or outer queries do NOT cause a true result.  We must recurse into
+ * subqueries to detect outer-reference aggregates that logically belong to
+ * the specified query level.
+ */
+bool
+contain_aggs_of_level(Node *node, int levelsup)
+{
+	contain_aggs_of_level_context context;
+
+	context.sublevels_up = levelsup;
 
 	/*
 	 * Must be prepared to start with a Query or a bare expression tree; if
 	 * it's a Query, we don't want to increment sublevels_up.
 	 */
 	return query_or_expression_tree_walker(node,
-										   checkExprHasAggs_walker,
+										   contain_aggs_of_level_walker,
 										   (void *) &context,
 										   0);
 }
 
 static bool
-checkExprHasAggs_walker(Node *node, checkExprHasAggs_context *context)
+contain_aggs_of_level_walker(Node *node, contain_aggs_of_level_context *context)
 {
 	if (node == NULL)
 		return false;
@@ -93,12 +103,12 @@ checkExprHasAggs_walker(Node *node, checkExprHasAggs_context *context)
 
 		context->sublevels_up++;
 		result = query_tree_walker((Query *) node,
-								   checkExprHasAggs_walker,
+								   contain_aggs_of_level_walker,
 								   (void *) context, 0);
 		context->sublevels_up--;
 		return result;
 	}
-	return expression_tree_walker(node, checkExprHasAggs_walker,
+	return expression_tree_walker(node, contain_aggs_of_level_walker,
 								  (void *) context);
 }
 
