@@ -731,7 +731,7 @@ class GpcrondumpTestCase(unittest.TestCase):
                                'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_last_operation' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/gp_dump_20130101010101.rpt' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/gp_dump_status_-1_1_20130101010101' % self.options.masterDataDirectory]
-        self.assertEqual(files_file_list, expected_files_list)
+        self.assertEqual(sorted(files_file_list), sorted(expected_files_list))
 
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gppylib.operations.backup_utils.Context.get_master_port')
@@ -750,7 +750,7 @@ class GpcrondumpTestCase(unittest.TestCase):
                                'foo2:%s/db_dumps/20130101/gp_dump_20130101010101_last_operation' % self.options.masterDataDirectory,
                                'foo2:%s/db_dumps/20130101/gp_dump_20130101010101.rpt' % self.options.masterDataDirectory,
                                'foo2:%s/db_dumps/20130101/gp_dump_status_-1_1_20130101010101' % self.options.masterDataDirectory]
-        self.assertEqual(files_file_list, expected_files_list)
+        self.assertEqual(sorted(files_file_list), sorted(expected_files_list))
 
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gpcrondump.get_latest_full_dump_timestamp', return_value='20130101000000')
@@ -770,15 +770,15 @@ class GpcrondumpTestCase(unittest.TestCase):
                                'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_ao_state_file' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_co_state_file' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_last_operation' % self.options.masterDataDirectory,
-                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101.rpt' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/gp_dump_status_-1_1_20130101010101' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101.rpt' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/gp_dump_20130101000000_increments' % self.options.masterDataDirectory]
         self.assertEqual(sorted(files_file_list), sorted(expected_files_list))
 
     @patch('gpcrondump.validate_current_timestamp')
     @patch('gppylib.operations.backup_utils.get_latest_full_dump_timestamp', return_value='20130101000000')
     @patch('gppylib.operations.backup_utils.Context.get_master_port')
-    def test_get_files_file_list_with_filter(self, mock1, mock2, mock3, mock4):
+    def test_get_files_file_list_with_filter_and_prefix(self, mock1, mock2, mock3, mock4):
         self.options.timestamp_key = '20130101010101'
         self.options.local_dump_prefix = 'metro'
         self.options.include_dump_tables_file = 'bar'
@@ -795,7 +795,30 @@ class GpcrondumpTestCase(unittest.TestCase):
                                'foo1:%s/db_dumps/20130101/metro_gp_dump_20130101010101_last_operation' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/metro_gp_dump_20130101010101.rpt' % self.options.masterDataDirectory,
                                'foo1:%s/db_dumps/20130101/metro_gp_dump_status_-1_1_20130101010101' % self.options.masterDataDirectory,
-                               'foo1:%s/db_dumps/20130101/metro_gp_dump_20130101010101_filter' % self.options.masterDataDirectory]
+                               'foo1:%s/db_dumps/20130101/metro_gp_dump_20130101010101_filter' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/metro_gp_dump_20130101010101_table' % self.options.masterDataDirectory]
+        self.assertEqual(sorted(files_file_list), sorted(expected_files_list))
+
+    @patch('gpcrondump.validate_current_timestamp')
+    @patch('gppylib.operations.backup_utils.get_latest_full_dump_timestamp', return_value='20130101000000')
+    @patch('gppylib.operations.backup_utils.Context.get_master_port')
+    def test_get_files_file_list_with_filter_no_prefix(self, mock1, mock2, mock3, mock4):
+        self.options.timestamp_key = '20130101010101'
+        self.options.include_dump_tables_file = 'bar'
+        self.options.masterDataDirectory = '/data/foo'
+        gpcd = GpCronDump(self.options, None)
+        master = Mock()
+        master.getSegmentHostName.return_value = 'foo1'
+        gpcd.context.timestamp = '20130101010101'
+        dump_dir = gpcd.context.get_backup_dir()
+        files_file_list = gpcd._get_files_file_list(master)
+        expected_files_list = ['foo1:%s/db_dumps/20130101/gp_cdatabase_-1_1_20130101010101' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_ao_state_file' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_co_state_file' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_last_operation' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101.rpt' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_status_-1_1_20130101010101' % self.options.masterDataDirectory,
+                               'foo1:%s/db_dumps/20130101/gp_dump_20130101010101_table' % self.options.masterDataDirectory]
         self.assertEqual(sorted(files_file_list), sorted(expected_files_list))
 
     @patch('gpcrondump.validate_current_timestamp')

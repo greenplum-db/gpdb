@@ -123,6 +123,7 @@ Feature: Validate command line arguments
 
     @nbupartI
     @ddpartI
+    @skip_for_gpdb_43
     Scenario: 14 Full Backup with option -t and Restore
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp
@@ -132,6 +133,7 @@ Feature: Validate command line arguments
 
     @nbupartI
     @ddpartI
+    @skip_for_gpdb_43
     Scenario: 15 Full Backup with option -T and Restore
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp

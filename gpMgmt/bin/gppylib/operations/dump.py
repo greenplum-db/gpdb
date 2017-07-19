@@ -529,7 +529,8 @@ class DumpDatabase(Operation):
 
         # create filter file based on the include_dump_tables_file before we do formating of contents
         if self.context.dump_prefix and not self.context.incremental:
-            self.create_filter_file()
+            self.create_filter_file("filter")
+        self.create_filter_file("table")
 
         # Format sql strings for all schema and table names
         self.context.include_dump_tables_file = formatSQLString(rel_file=self.context.include_dump_tables_file, isTableName=True)
@@ -563,8 +564,8 @@ class DumpDatabase(Operation):
     # If using -t, copy the filter file over the table list to be passed to the master
     # If using -T, get the intersection of the filter and the table list
     # In either case, the filter file contains the list of tables to include
-    def create_filter_file(self):
-        filter_name = self.context.generate_filename("filter")
+    def create_filter_file(self, filetype):
+        filter_name = self.context.generate_filename(filetype)
         if self.context.include_dump_tables_file:
             shutil.copyfile(self.context.include_dump_tables_file, filter_name)
             if self.context.netbackup_service_host:
