@@ -1,6 +1,3 @@
-top_builddir = ../..
-include $(top_builddir)/src/Makefile.global
-
 # do nothing if global config is not enabled
 ifeq ($(enable_go_utils),no)
 all:

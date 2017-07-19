@@ -1,20 +1,22 @@
-top_builddir = ../../../..
-include $(top_builddir)/src/Makefile.global
-
 SHELL := /bin/bash
 .DEFAULT_GOAL := all
-MODULE_NAME=$(shell basename `pwd`)
-GO_UTILS_DIR=$(shell dirname `pwd`)/..
+
+# Not all platforms have a realpath binary in PATH, most notably macOS doesn't,
+# so provide an alternative implementation. Code inspired by:
+# http://stackoverflow.com/questions/3572030/bash-script-absolute-path-with-osx
+define realpath
+	[[ $(1) = /* ]] && echo "$(1)" || echo "$(PWD)/$({1#./})"
+endef
+
+THIS_MAKEFILE_DIR=$(dir $(call realpath,$(lastword $(MAKEFILE_LIST))))
+MODULE_NAME=$(shell basename $(THIS_MAKEFILE_DIR))
+GO_UTILS_DIR=$(THIS_MAKEFILE_DIR)/../..
 ARCH := amd64
 GPDB_VERSION := $(shell ../../../../getversion --short)
 
-# using a multiple-part GOPATH means that 'go get' will store dependencies in the *first* directory.
-export GOPATH := $(HOME)/go:$(GO_UTILS_DIR)
-export PATH := $(PATH):$(GO_UTILS_DIR)/bin
-
 .NOTPARALLEL:
 
-all : build
+all : build test
 
 dependencies :
 		go get github.com/cppforlife/go-semi-semantic/version
@@ -51,7 +53,6 @@ build : format
 
 coverage: dependencies format sshd_build build
 		./scripts/run_coverage.sh
-
 
 linux :
 		GOOS=$@ GOARCH=$(ARCH) go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GO_UTILS_DIR)/bin/$(MODULE_NAME).$@

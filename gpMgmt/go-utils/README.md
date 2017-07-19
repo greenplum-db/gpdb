@@ -41,7 +41,7 @@ If you are using an IDE, depending on the IDE, you may need to provide it with
 the custom $GOPATH by adding it to your .bashrc or .bash_profile (not relying
 on direnv).
 
-	cat >> ~/.bashrc <<"EOF"
+	cat >> ~/.bashrc <<EOF
 	export GOPATH=$HOME/workspace/gpdb/gpMgmt/go-utils:$HOME/go
 	export PATH=$HOME/workspace/gpdb/gpMgmt/go-utils/bin:$HOME/go/bin:$PATH
 	EOF
