@@ -226,7 +226,7 @@ pull_varattnos_walker(Node *node, Bitmapset **varattnos)
 	}
 	/* Should not find a subquery or subplan */
 	Assert(!IsA(node, Query));
-	Assert(!is_subplan(node));
+	Assert(!IsA(node, SubPlan));
 
 	return expression_tree_walker(node, pull_varattnos_walker,
 								  (void *) varattnos);
@@ -771,7 +771,7 @@ flatten_join_alias_vars_mutator(Node *node,
 		return (Node *) newnode;
 	}
 	/* Already-planned tree not supported */
-	Assert(!is_subplan(node));
+	Assert(!IsA(node, SubPlan));
 
 	return expression_tree_mutator(node, flatten_join_alias_vars_mutator,
 								   (void *) context);

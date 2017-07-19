@@ -1684,3 +1684,34 @@ EXPLAIN select count(distinct ss.ten) from
  Optimizer status: PQO version 2.34.1
 (27 rows)
 
+--
+-- In case of simple exists query, planner can generate alternative
+-- subplans and choose one of them during execution based on the cost.
+-- The below test check that we are generating alternative subplans,
+-- we should see 2 subplans in the explain
+--
+EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+                                                 QUERY PLAN
+------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..865.54 rows=1 width=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..865.54 rows=1 width=1)
+         ->  Limit  (cost=0.00..865.54 rows=1 width=1)
+               ->  Result  (cost=0.00..865.54 rows=3353 width=1)
+                     ->  Result  (cost=0.00..865.53 rows=6137 width=8)
+                           ->  Hash Left Join  (cost=0.00..865.49 rows=6137 width=8)
+                                 Hash Cond: tenk2.unique1 = tenk1.unique1
+                                 ->  Table Scan on tenk2  (cost=0.00..431.51 rows=3353 width=4)
+                                 ->  Hash  (cost=431.96..431.96 rows=3319 width=12)
+                                       ->  HashAggregate  (cost=0.00..431.96 rows=3319 width=12)
+                                             Group By: tenk1.unique1
+                                             ->  Table Scan on tenk1  (cost=0.00..431.51 rows=3319 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.36.0
+(14 rows)
+
+SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+ ?column?
+----------
+ t
+(1 row)
+

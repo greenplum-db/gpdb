@@ -1661,3 +1661,36 @@ EXPLAIN select count(distinct ss.ten) from
  Optimizer status: legacy query optimizer
 (16 rows)
 
+--
+-- In case of simple exists query, planner can generate alternative
+-- subplans and choose one of them during execution based on the cost.
+-- The below test check that we are generating alternative subplans,
+-- we should see 2 subplans in the explain
+--
+EXPLAIN SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..20.94 rows=1 width=4)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..20.94 rows=1 width=4)
+         ->  Limit  (cost=0.00..20.92 rows=1 width=4)
+               ->  Seq Scan on tenk2  (cost=0.00..248969.00 rows=3967 width=4)
+                     SubPlan 2
+                       ->  Materialize  (cost=230.90..349.90 rows=3967 width=4)
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..219.00 rows=3967 width=4)
+                                   ->  Seq Scan on tenk1  (cost=0.00..219.00 rows=3967 width=4)
+                     SubPlan 1
+                       ->  Result  (cost=248.76..248.88 rows=4 width=0)
+                             Filter: public.tenk1.unique1 = $0
+                             ->  Materialize  (cost=248.76..248.88 rows=4 width=0)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..248.75 rows=4 width=0)
+                                         ->  Seq Scan on tenk1  (cost=0.00..248.75 rows=4 width=0)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(16 rows)
+
+SELECT EXISTS(SELECT * FROM tenk1 WHERE tenk1.unique1 = tenk2.unique1) FROM tenk2 LIMIT 1;
+ ?column?
+----------
+ t
+(1 row)
+

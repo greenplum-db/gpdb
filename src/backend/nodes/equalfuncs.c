@@ -378,7 +378,17 @@ _equalSubPlan(SubPlan *a, SubPlan *b)
 	COMPARE_NODE_FIELD(parParam);
 	COMPARE_NODE_FIELD(args);
 	COMPARE_NODE_FIELD(extParam);
+	COMPARE_SCALAR_FIELD(startup_cost);
+	COMPARE_SCALAR_FIELD(per_call_cost);
 
+	return true;
+}
+
+static bool
+_equalAlternativeSubPlan(AlternativeSubPlan *a, AlternativeSubPlan *b)
+{
+	COMPARE_NODE_FIELD(subplans);
+	
 	return true;
 }
 
@@ -2592,6 +2602,9 @@ equal(void *a, void *b)
 			break;
 		case T_SubPlan:
 			retval = _equalSubPlan(a, b);
+			break;
+		case T_AlternativeSubPlan:
+			retval = _equalAlternativeSubPlan(a, b);
 			break;
 		case T_FieldSelect:
 			retval = _equalFieldSelect(a, b);

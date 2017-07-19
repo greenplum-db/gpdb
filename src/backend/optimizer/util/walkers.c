@@ -274,6 +274,8 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
+		case T_AlternativeSubPlan:
+			return walker(((AlternativeSubPlan *) node)->subplans, context);
 		case T_FieldSelect:
 			return walker(((FieldSelect *) node)->arg, context);
 		case T_FieldStore:
