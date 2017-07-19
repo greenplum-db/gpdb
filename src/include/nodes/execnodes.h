@@ -1103,6 +1103,17 @@ typedef struct SubPlanState
 } SubPlanState;
 
 /* ----------------
+ *		AlternativeSubPlanState node
+ * ----------------
+ */
+typedef struct AlternativeSubPlanState
+{
+	ExprState	xprstate;
+	List	   *subplans;		/* states of alternative subplans */
+	int			active;			/* list index of the one we're using */
+} AlternativeSubPlanState;
+
+/* ----------------
  *		FieldSelectState node
  * ----------------
  */
