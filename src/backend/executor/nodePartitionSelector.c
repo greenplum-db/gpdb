@@ -21,7 +21,6 @@
 #include "executor/nodePartitionSelector.h"
 #include "nodes/makefuncs.h"
 #include "utils/guc.h"
-#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
 static void LogPartitionSelection(EState *estate, int32 selectorId);
@@ -188,7 +187,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 			/* no more tuples from outerPlan */
 
 			/*
-			 * Make sure we have an entry for this partition selector in
+			 * Make sure we have an entry for this scan id in
 			 * dynamicTableScanInfo. Normally, this would've been done the
 			 * first time a partition is selected, but we must ensure that
 			 * there is an entry even if no partitions were selected.
@@ -293,7 +292,7 @@ void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const 
 	PartOidEntry *partOidEntry;
 	hash_seq_init(&status, pidIndex);
 
-	for (partOidEntry = hash_seq_search(&status); partOidEntry != NULL; partOidEntry = hash_seq_search(&status))
+	while ((partOidEntry = hash_seq_search(&status)) != NULL)
 	{
 		if (list_member_int(partOidEntry->selectorList, selectorId))
 			selectedPartOids[numPartitionsSelected++] = ObjectIdGetDatum(partOidEntry->partOid);
@@ -303,7 +302,7 @@ void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const 
 	{
 		char *debugPartitionOid = DebugPartitionOid(selectedPartOids, numPartitionsSelected);
 		ereport(LOG,
-				(errmsg_internal("scanId: %d, parttition: %s, selector: %d",
+				(errmsg_internal("scanId: %d, partitions: %s, selector: %d",
 								 scanId,
 								 debugPartitionOid,
 								 selectorId)));
