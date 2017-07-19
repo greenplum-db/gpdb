@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
+	"fmt"
 )
 
 var _ = Describe("check", func() {
@@ -29,6 +30,9 @@ var _ = Describe("check", func() {
 		It("happy: the database configuration is saved to a specified location", func() {
 			session := runCommand("check", "--master-host", "localhost")
 
+			if session.ExitCode() != 0 {
+				fmt.Println("make sure greenplum is running")
+			}
 			Eventually(session).Should(Exit(0))
 			// check file
 

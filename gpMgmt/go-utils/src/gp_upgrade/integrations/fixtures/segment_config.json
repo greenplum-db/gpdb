@@ -12,7 +12,6 @@
     "preferred_role": "p",
     "replication_port": null,
     "role": "p",
-    "san_mounts": null,
     "status": "u"
   },
   {
@@ -28,7 +27,6 @@
     "preferred_role": "p",
     "replication_port": 25438,
     "role": "p",
-    "san_mounts": null,
     "status": "u"
   },
   {
@@ -44,7 +42,6 @@
     "preferred_role": "p",
     "replication_port": 25439,
     "role": "p",
-    "san_mounts": null,
     "status": "u"
   },
   {
@@ -60,7 +57,6 @@
     "preferred_role": "p",
     "replication_port": 25440,
     "role": "p",
-    "san_mounts": null,
     "status": "u"
   },
   {
@@ -76,7 +72,6 @@
     "preferred_role": "m",
     "replication_port": 25441,
     "role": "m",
-    "san_mounts": null,
     "status": "u"
   },
   {
@@ -92,7 +87,6 @@
     "preferred_role": "m",
     "replication_port": 25442,
     "role": "m",
-    "san_mounts": null,
     "status": "u"
   },
   {
@@ -108,7 +102,6 @@
     "preferred_role": "m",
     "replication_port": 25443,
     "role": "m",
-    "san_mounts": null,
     "status": "u"
   }
 ]

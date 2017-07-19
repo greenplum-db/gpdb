@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"gp_upgrade/ssh_client"
 	"reflect"
-	"strings"
 	"time"
 
 	"runtime"
@@ -31,22 +30,27 @@ func TestCommands(t *testing.T) {
 }
 
 var (
-	commandPath string
-	sshd        *exec.Cmd
+	commandPath  string
+	sshd         *exec.Cmd
+	fixture_path string
 )
 
+var _ = BeforeSuite(func() {
+	var err error
+	commandPath, err = Build("gp_upgrade") // if you want build flags, do a separate Build() in a specific integration test
+	Expect(err).NotTo(HaveOccurred())
+	_, this_file_path, _, _ := runtime.Caller(0)
+	fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
+})
+
+var _ = SynchronizedAfterSuite(func() {}, func() {
+	CleanupBuildArtifacts()
+})
+
 var _ = BeforeEach(func() {
-	gopaths := strings.Split(os.Getenv("GOPATH"), ":")
-	binary_path := ""
-	for i := 0; i < len(gopaths); i++ {
-		one_path := path.Join(gopaths[i], "/bin/test/sshd")
-		if _, err := os.Stat(one_path); !os.IsNotExist(err) {
-			if len(binary_path) > 0 {
-				Fail(fmt.Sprintf("More than one path to sshd binary \n%v\n", gopaths))
-			} else {
-				binary_path = one_path
-			}
-		}
+	binary_path := path.Join(fixture_path, "../../../../bin/sshd")
+	if _, err := os.Stat(binary_path); os.IsNotExist(err) {
+		Fail(fmt.Sprintf("cannot find sshd binary at: \n%v\n", binary_path))
 	}
 	sshd = exec.Command(binary_path)
 	_, err := sshd.StdoutPipe()
@@ -62,8 +66,6 @@ var _ = BeforeEach(func() {
 
 func waitForSocketToAllowConnections() {
 	time.Sleep(100 * time.Millisecond)
-	_, this_file_path, _, _ := runtime.Caller(0)
-	fixture_path := path.Join(path.Dir(this_file_path), "fixtures")
 	register_path := path.Join(fixture_path, "registered_private_key.pem")
 
 	connector, err := ssh_client.NewSshConnector(register_path)
@@ -89,16 +91,6 @@ func waitForSocketToAllowConnections() {
 
 var _ = AfterEach(func() {
 	ShutDownSshdServer()
-})
-
-var _ = BeforeSuite(func() {
-	var err error
-	commandPath, err = Build("gp_upgrade") // if you want build flags, do a separate Build() in a specific integration test
-	Expect(err).NotTo(HaveOccurred())
-})
-
-var _ = SynchronizedAfterSuite(func() {}, func() {
-	CleanupBuildArtifacts()
 })
 
 func runCommand(args ...string) *Session {

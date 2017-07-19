@@ -42,7 +42,7 @@ func (cmd CheckCommand) execute(dbConnector db.DBConnector, writer config.Store)
 	defer dbConnector.Close()
 
 	rows, err := dbConnector.GetConn().Query(`select dbid, content, role, preferred_role,
-	mode, status, port, hostname, address, replication_port, san_mounts, fsefsoid, fsedbid, fselocation
+	mode, status, port, hostname, address, replication_port, fsefsoid, fsedbid, fselocation
 	from gp_segment_configuration, pg_filespace_entry
 	where fsedbid = dbid`)
 
