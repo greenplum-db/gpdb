@@ -93,15 +93,19 @@
     </body>
   </topic>
   <topic id="topic92" xml:lang="en">
-    <title>Sequence Overflow</title>
+    <title>Sequence Wraparound</title>
     <body>
-      <p>By default, a sequence does not overflow. That is, when the sequence reaches the max value
+      <p>By default, a sequence does not wrap around. That is, when the sequence reaches the max value
           (<codeph>+32767</codeph> for <codeph>SMALLSERIAL</codeph>, <codeph>+2147483647</codeph>
           for <codeph>SERIAL</codeph>, <codeph>+9223372036854775807</codeph> for
           <codeph>BIGSERIAL</codeph>), every <codeph>nextval()</codeph> call will produce an error.
           Alter the sequence to make it cycle around and start at <codeph>1</codeph> again:</p>
       <p>
         <codeblock>ALTER SEQUENCE sequence_name CYCLE;</codeblock>
+      </p>
+      <p>The wraparound behaviour can also specified when a sequence is created manually:</p>
+      <p>
+        <codeblock>CREATE SEQUENCE sequence_name CYCLE;</codeblock>
       </p>
     </body>
   </topic>
