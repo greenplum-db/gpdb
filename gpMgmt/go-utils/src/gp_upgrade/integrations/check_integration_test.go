@@ -1,7 +1,7 @@
 package integrations_test
 
 import (
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 	"io/ioutil"
 	"os"
 
@@ -21,7 +21,7 @@ var _ = Describe("check", func() {
 	)
 
 	BeforeEach(func() {
-		save_home_dir = test_utils.ResetTempHomeDir()
+		save_home_dir = testUtils.ResetTempHomeDir()
 	})
 	AfterEach(func() {
 		os.Setenv("HOME", save_home_dir)
@@ -38,11 +38,11 @@ var _ = Describe("check", func() {
 			// check file
 
 			_, err := ioutil.ReadFile(config.GetConfigFilePath())
-			test_utils.Check("cannot read file", err)
+			testUtils.Check("cannot read file", err)
 
 			reader := config.Reader{}
 			err = reader.Read()
-			test_utils.Check("cannot read config", err)
+			testUtils.Check("cannot read config", err)
 
 			// for extra credit, read db and compare info
 			Expect(len(reader.GetSegmentConfiguration())).To(BeNumerically(">", 1))

@@ -3,8 +3,6 @@ package commands
 import (
 	"gp_upgrade/config"
 
-	_ "github.com/lib/pq"
-
 	"gp_upgrade/db"
 
 	"gp_upgrade/utils"
@@ -32,7 +30,7 @@ func (cmd CheckCommand) Execute([]string) error {
 	return cmd.execute(dbConn, config.NewWriter())
 }
 
-func (cmd CheckCommand) execute(dbConnector db.DBConnector, writer config.Store) error {
+func (cmd CheckCommand) execute(dbConnector db.Connector, writer config.Store) error {
 
 	err := dbConnector.Connect()
 	if err != nil {

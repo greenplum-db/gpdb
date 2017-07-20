@@ -1,4 +1,4 @@
-package shell_parsers_test
+package shellParsers_test
 
 import (
 	"testing"

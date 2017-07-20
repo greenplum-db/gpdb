@@ -25,6 +25,8 @@ dependencies :
 		go get github.com/onsi/gomega
 		go get github.com/jessevdk/go-flags
 		go get golang.org/x/crypto/ssh
+		go get -u github.com/golang/lint/golint
+		go get github.com/alecthomas/gometalinter
 		go get
 # Counterfeiter is not a proper dependency of the app. It is only used occasionally to generate a test class that
 # is then checked in.  At the time of that generation, it can be added back to run the dependency list, temporarily.
@@ -33,6 +35,10 @@ dependencies :
 format : dependencies
 		goimports -w .
 		go fmt .
+
+lint :	dependencies
+		! gofmt -l . | read
+		gometalinter --config=gometalinter.config ./...
 
 unit : dependencies
 		ginkgo -r -randomizeSuites -randomizeAllSpecs -race --skipPackage=integrations
@@ -43,7 +49,7 @@ sshd_build : dependencies
 integration: dependencies
 		ginkgo -r -randomizeAllSpecs -race integrations
 
-test : format unit integration
+test : format unit integration lint
 
 push : format
 		git pull -r && make test && git push

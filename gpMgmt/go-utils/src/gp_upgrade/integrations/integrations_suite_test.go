@@ -8,12 +8,12 @@ import (
 	"os/exec"
 	"testing"
 
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 
 	"path"
 
 	"fmt"
-	"gp_upgrade/ssh_client"
+	"gp_upgrade/sshClient"
 	"reflect"
 	"time"
 
@@ -54,9 +54,9 @@ var _ = BeforeEach(func() {
 
 	sshd = exec.Command(sshdPath)
 	_, err := sshd.StdoutPipe()
-	test_utils.Check("cannot get stdout", err)
+	testUtils.Check("cannot get stdout", err)
 	_, err = sshd.StderrPipe()
-	test_utils.Check("cannot get stderr", err)
+	testUtils.Check("cannot get stderr", err)
 
 	err = sshd.Start()
 	Expect(err).ToNot(HaveOccurred())
@@ -68,7 +68,7 @@ func waitForSocketToAllowConnections() {
 	time.Sleep(100 * time.Millisecond)
 	register_path := path.Join(fixture_path, "registered_private_key.pem")
 
-	connector, err := ssh_client.NewSshConnector(register_path)
+	connector, err := sshClient.NewSSHConnector(register_path)
 	if err != nil {
 		Fail("cannot create client for testing sshd")
 	}

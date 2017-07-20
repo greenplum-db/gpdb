@@ -1,4 +1,4 @@
-package test_utils
+package testUtils
 
 import "fmt"
 
@@ -28,8 +28,8 @@ func (fake *FakeRows) Scan(dest ...interface{}) error {
 	}
 
 	for i, value := range fake.SampleRowStrings {
-		cast_dest := dest[i].(*interface{})
-		*cast_dest = value
+		castDest := dest[i].(*interface{})
+		*castDest = value
 	}
 
 	return nil

@@ -3,8 +3,6 @@ package commands
 import (
 	"fmt"
 
-	_ "github.com/lib/pq"
-
 	"io"
 
 	"gp_upgrade/db"
@@ -32,7 +30,7 @@ func (cmd CheckVersionCommand) Execute([]string) error {
 	return cmd.execute(dbConn, os.Stdout)
 }
 
-func (cmd CheckVersionCommand) execute(dbConnector db.DBConnector, outputWriter io.Writer) error {
+func (cmd CheckVersionCommand) execute(dbConnector db.Connector, outputWriter io.Writer) error {
 
 	err := dbConnector.Connect()
 	if err != nil {

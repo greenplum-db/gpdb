@@ -20,7 +20,7 @@ func (reader *Reader) Read() error {
 
 // returns -1 for not found
 func (reader Reader) GetPortForSegment(segmentDbid int) int {
-	var result int = -1
+	result := -1
 	for i := 0; i < len(reader.config); i++ {
 		segment := reader.config[i]
 		if segment.DBID == segmentDbid {

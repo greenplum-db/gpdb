@@ -4,14 +4,14 @@ import (
 	"os"
 
 	"gp_upgrade/config"
-	"gp_upgrade/shell_parsers"
+	"gp_upgrade/shellParsers"
 	"io/ioutil"
 
-	"gp_upgrade/ssh_client"
+	"gp_upgrade/sshClient"
 
 	"fmt"
 
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,31 +29,31 @@ pg_upgrade --verbose  --old-bindir /usr/local/greenplum-db-4.3.9.1/bin --new-bin
 var _ = Describe("monitor", func() {
 
 	var (
-		save_home_dir string
-		subject       MonitorCommand
-		buffer        *gbytes.Buffer
-		shellParser   *shell_parsers.RealShellParser
+		saveHomeDir string
+		subject     MonitorCommand
+		buffer      *gbytes.Buffer
+		shellParser *shellParsers.RealShellParser
 	)
 
 	BeforeEach(func() {
-		save_home_dir = test_utils.ResetTempHomeDir()
-		test_utils.WriteSampleConfig()
+		saveHomeDir = testUtils.ResetTempHomeDir()
+		testUtils.WriteSampleConfig()
 
-		subject = MonitorCommand{SegmentId: 7}
+		subject = MonitorCommand{SegmentID: 7}
 
-		shellParser = &shell_parsers.RealShellParser{}
+		shellParser = &shellParsers.RealShellParser{}
 
 		buffer = gbytes.NewBuffer()
 	})
 
 	AfterEach(func() {
-		os.Setenv("HOME", save_home_dir)
+		os.Setenv("HOME", saveHomeDir)
 	})
 
 	Describe("when pg_upgrade status can be determined on remote host", func() {
 		It("happy: it uses the default user for ssh connection when the user doesn't supply a ssh user", func() {
 			subject.User = ""
-			fake := &FailingSshConnecter{}
+			fake := &FailingSSHConnecter{}
 
 			subject.execute(fake, shellParser, buffer)
 
@@ -61,7 +61,7 @@ var _ = Describe("monitor", func() {
 		})
 
 		It("parses 'active' status correctly", func() {
-			fake := &SucceedingSshConnector{}
+			fake := &SucceedingSSHConnector{}
 
 			err := subject.execute(fake, shellParser, buffer)
 
@@ -71,7 +71,7 @@ var _ = Describe("monitor", func() {
 		})
 
 		It("parses 'inactive' status correctly", func() {
-			fake := &SucceedingSshConnector{}
+			fake := &SucceedingSSHConnector{}
 			inactiveParser := &InactiveShellParser{}
 
 			err := subject.execute(fake, inactiveParser, buffer)
@@ -83,7 +83,7 @@ var _ = Describe("monitor", func() {
 
 	Describe("errors", func() {
 		It("returns an error when the configuration cannot be read", func() {
-			fake := &FailingSshConnecter{}
+			fake := &FailingSSHConnecter{}
 			os.RemoveAll(config.GetConfigFilePath())
 
 			err := subject.execute(fake, shellParser, buffer)
@@ -92,7 +92,7 @@ var _ = Describe("monitor", func() {
 		})
 
 		It("returns an error when the configuration has no entry for the segment-id specified by user", func() {
-			fake := &FailingSshConnecter{}
+			fake := &FailingSSHConnecter{}
 			ioutil.WriteFile(config.GetConfigFilePath(), []byte("[]"), 0600)
 			err := subject.execute(fake, shellParser, buffer)
 
@@ -102,7 +102,7 @@ var _ = Describe("monitor", func() {
 
 		Context("when ssh connector fails", func() {
 			It("returns an error", func() {
-				fake := &FailingSshConnecter{}
+				fake := &FailingSSHConnecter{}
 
 				err := subject.execute(fake, shellParser, buffer)
 
@@ -124,24 +124,24 @@ var _ = Describe("monitor", func() {
 	})
 })
 
-type FailingSshConnecter struct {
+type FailingSSHConnecter struct {
 	user string
 }
 
-func (sshConnector FailingSshConnecter) Connect(Host string, Port int, user string) (ssh_client.SshSession, error) {
+func (sshConnector FailingSSHConnecter) Connect(Host string, Port int, user string) (sshClient.SSHSession, error) {
 	return nil, errors.New("fake connect error")
 }
-func (sshConnector *FailingSshConnecter) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
+func (sshConnector *FailingSSHConnecter) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
 	sshConnector.user = user
 	return "", errors.New("fake ConnectAndExecute error")
 }
 
-type SucceedingSshConnector struct{}
+type SucceedingSSHConnector struct{}
 
-func (sshConnector SucceedingSshConnector) Connect(Host string, Port int, user string) (ssh_client.SshSession, error) {
+func (sshConnector SucceedingSSHConnector) Connect(Host string, Port int, user string) (sshClient.SSHSession, error) {
 	return nil, nil
 }
-func (sshConnector SucceedingSshConnector) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
+func (sshConnector SucceedingSSHConnector) ConnectAndExecute(Host string, Port int, user string, command string) (string, error) {
 	return GREP_PG_UPGRADE, nil
 }
 

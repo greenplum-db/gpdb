@@ -2,7 +2,7 @@ package config_test
 
 import (
 	"encoding/json"
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 	"os"
 
 	"gp_upgrade/config"
@@ -29,7 +29,7 @@ var _ = Describe("config reader", func() {
 	)
 
 	BeforeEach(func() {
-		saved_old_home = test_utils.ResetTempHomeDir()
+		saved_old_home = testUtils.ResetTempHomeDir()
 		err := json.Unmarshal([]byte(expected_json), &json_structure)
 		Expect(err).NotTo(HaveOccurred())
 		subject = config.Reader{}
@@ -41,7 +41,7 @@ var _ = Describe("config reader", func() {
 
 	Describe("#Read", func() {
 		It("reads a configuration", func() {
-			test_utils.WriteSampleConfig()
+			testUtils.WriteSampleConfig()
 			err := subject.Read()
 
 			Expect(err).NotTo(HaveOccurred())

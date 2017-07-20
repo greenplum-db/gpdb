@@ -13,26 +13,26 @@ type Store interface {
 }
 
 type Writer struct {
-	TableJsonData []map[string]interface{}
+	TableJSONData []map[string]interface{}
 	Formatter     Formatter
 	FileWriter    FileWriter
 }
 
 func NewWriter() *Writer {
 	return &Writer{
-		Formatter:  NewJsonFormatter(),
+		Formatter:  NewJSONFormatter(),
 		FileWriter: NewRealFileWriter(),
 	}
 }
 
 func (configWriter *Writer) Load(rows utils.RowsWrapper) error {
 	var err error
-	configWriter.TableJsonData, err = translateColumnsIntoGenericStructure(rows)
+	configWriter.TableJSONData, err = translateColumnsIntoGenericStructure(rows)
 	return err
 }
 
 func (configWriter Writer) Write() error {
-	jsonData, err := json.Marshal(configWriter.TableJsonData)
+	jsonData, err := json.Marshal(configWriter.TableJSONData)
 	if err != nil {
 		return err
 	}

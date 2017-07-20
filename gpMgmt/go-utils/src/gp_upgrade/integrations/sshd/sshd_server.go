@@ -19,7 +19,7 @@ import (
 	"path"
 	"runtime"
 
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -37,17 +37,17 @@ func startShell(channel ssh.Channel, requests <-chan *ssh.Request) {
 			switch req.Type {
 			case "exec":
 				cmdName, err := parsePayload(payload)
-				test_utils.Check("Cannot parse payload", err)
+				testUtils.Check("Cannot parse payload", err)
 
 				cmd := exec.Command("bash", "-c", fmt.Sprintf("%s", cmdName))
 
 				stdout, err := cmd.StdoutPipe()
-				test_utils.Check("Cannot get stdoutpipe", err)
+				testUtils.Check("Cannot get stdoutpipe", err)
 
-				var cheatSheet test_utils.CheatSheet
+				var cheatSheet testUtils.CheatSheet
 				//TODO: Currently reading from a cheatsheet file; possibly passing through ssh server instead?
 				err = cheatSheet.ReadFromFile()
-				test_utils.Check("Cannot read from file", err)
+				testUtils.Check("Cannot read from file", err)
 
 				// NOTE: We are intentionally overwriting the bash command output
 				// Probably not necessary to actually run the command anymore...
@@ -139,10 +139,10 @@ func listenerForever() {
 	}
 }
 
-func startSshServer() {
-	_, this_file_path, _, _ := runtime.Caller(0)
-	sshd_directory := path.Dir(this_file_path)
-	authorizedKeysBytes, err := ioutil.ReadFile(path.Join(sshd_directory, "authorized_keys"))
+func startSSHServer() {
+	_, thisFilePath, _, _ := runtime.Caller(0)
+	sshdDirectory := path.Dir(thisFilePath)
+	authorizedKeysBytes, err := ioutil.ReadFile(path.Join(sshdDirectory, "authorized_keys"))
 	if err != nil {
 		log.Fatalf("Failed to load authorized_keys, err: %v", err)
 	}
@@ -170,7 +170,7 @@ func startSshServer() {
 		},
 	}
 
-	pBytes, err := ioutil.ReadFile(path.Join(sshd_directory, "fake_private_key.pem"))
+	pBytes, err := ioutil.ReadFile(path.Join(sshdDirectory, "fake_private_key.pem"))
 	if err != nil {
 		panic(err)
 	}
@@ -205,5 +205,5 @@ func main() {
 		fmt.Println("GOPATH is not set. Cannot start sshd server.")
 		os.Exit(1)
 	}
-	startSshServer()
+	startSSHServer()
 }

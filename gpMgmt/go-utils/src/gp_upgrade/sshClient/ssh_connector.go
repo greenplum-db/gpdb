@@ -1,4 +1,4 @@
-package ssh_client
+package sshClient
 
 import (
 	"fmt"
@@ -13,36 +13,36 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type SshConnector interface {
+type SSHConnector interface {
 	ConnectAndExecute(host string, port int, user string, command string) (string, error)
-	Connect(Host string, Port int, user string) (SshSession, error)
+	Connect(Host string, Port int, user string) (SSHSession, error)
 }
 
-type SshSession interface {
+type SSHSession interface {
 	Output(cmd string) ([]byte, error)
 	Close() error
 }
 
-type RealSshConnector struct {
-	SshDialer      Dialer
-	SshKeyParser   KeyParser
+type RealSSHConnector struct {
+	SSHDialer      Dialer
+	SSHKeyParser   KeyParser
 	PrivateKeyPath string
 }
 
-func NewSshConnector(privateKeyPath string) (SshConnector, error) {
+func NewSSHConnector(privateKeyPath string) (SSHConnector, error) {
 	privateKey, err := NewPrivateKeyGuarantor().Check(privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	return &RealSshConnector{
-		SshKeyParser:   RealKeyParser{},
-		SshDialer:      RealDialer{},
+	return &RealSSHConnector{
+		SSHKeyParser:   RealKeyParser{},
+		SSHDialer:      RealDialer{},
 		PrivateKeyPath: privateKey,
 	}, nil
 }
 
-func (ssh_connector *RealSshConnector) ConnectAndExecute(host string, port int, user string, command string) (string, error) {
+func (ssh_connector *RealSSHConnector) ConnectAndExecute(host string, port int, user string, command string) (string, error) {
 	session, err := ssh_connector.Connect(host, port, user)
 	if err != nil {
 		return "", err
@@ -62,12 +62,12 @@ func (ssh_connector *RealSshConnector) ConnectAndExecute(host string, port int, 
 	return output, nil
 }
 
-func (ssh_connector *RealSshConnector) Connect(Host string, Port int, user string) (SshSession, error) {
+func (ssh_connector *RealSSHConnector) Connect(Host string, Port int, user string) (SSHSession, error) {
 	pemBytes, err := ioutil.ReadFile(ssh_connector.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	}
-	signer, err := ssh_connector.SshKeyParser.ParsePrivateKey(pemBytes)
+	signer, err := ssh_connector.SSHKeyParser.ParsePrivateKey(pemBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (ssh_connector *RealSshConnector) Connect(Host string, Port int, user strin
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error { return nil },
 	}
 	hostAndPort := fmt.Sprintf("%s:%v", Host, Port)
-	client, err := ssh_connector.SshDialer.Dial("tcp", hostAndPort, config)
+	client, err := ssh_connector.SSHDialer.Dial("tcp", hostAndPort, config)
 	if err != nil {
 		return nil, err
 	}

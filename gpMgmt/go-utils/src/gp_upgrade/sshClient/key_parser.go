@@ -1,4 +1,4 @@
-package ssh_client
+package sshClient
 
 import (
 	"golang.org/x/crypto/ssh"

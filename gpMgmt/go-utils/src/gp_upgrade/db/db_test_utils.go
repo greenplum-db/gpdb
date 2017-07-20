@@ -17,7 +17,7 @@ func CreateMockDB() (*sqlx.DB, sqlmock.Sqlmock) {
 	return mockdb, mock
 }
 
-func CreateMockDBConn() (DBConnector, sqlmock.Sqlmock) {
+func CreateMockDBConn() (Connector, sqlmock.Sqlmock) {
 	mockdb, mock := CreateMockDB()
 	connector := NewDBConn("localhost", 0, "testdb")
 	gpdbConnStruct := connector.(*GPDBConnector)

@@ -1,4 +1,4 @@
-package test_utils
+package testUtils
 
 import (
 	"fmt"
@@ -37,9 +37,9 @@ func Check(msg string, e error) {
 }
 
 func ResetTempHomeDir() string {
-	config_dir := path.Join(TempHomeDir, ".gp_upgrade")
-	if _, err := os.Stat(config_dir); !os.IsNotExist(err) {
-		err = os.Chmod(config_dir, 0700)
+	configDir := path.Join(TempHomeDir, ".gp_upgrade")
+	if _, err := os.Stat(configDir); !os.IsNotExist(err) {
+		err = os.Chmod(configDir, 0700)
 		Check("cannot change mod", err)
 	}
 	err := os.RemoveAll(TempHomeDir)

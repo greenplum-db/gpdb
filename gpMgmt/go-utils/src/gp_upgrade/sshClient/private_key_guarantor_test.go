@@ -1,9 +1,9 @@
-package ssh_client_test
+package sshClient_test
 
 import (
 	"os"
 
-	"gp_upgrade/ssh_client"
+	"gp_upgrade/sshClient"
 
 	"io/ioutil"
 
@@ -13,11 +13,11 @@ import (
 
 var _ = Describe("PrivateKeyGuarantor", func() {
 	var (
-		subject *ssh_client.PrivateKeyGuarantor
+		subject *sshClient.PrivateKeyGuarantor
 	)
 
 	BeforeEach(func() {
-		subject = ssh_client.NewPrivateKeyGuarantor()
+		subject = sshClient.NewPrivateKeyGuarantor()
 	})
 
 	Describe("#Check", func() {

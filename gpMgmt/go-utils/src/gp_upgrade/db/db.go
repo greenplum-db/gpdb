@@ -13,10 +13,9 @@ import (
 	"gp_upgrade/utils"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
-type DBDriver interface {
+type Driver interface {
 	Connect(driverName string, dataSourceName string) (*sqlx.DB, error)
 }
 
@@ -27,7 +26,7 @@ func (driver RealGPDBDriver) Connect(driverName string, dataSourceName string) (
 	return sqlx.Connect(driverName, dataSourceName)
 }
 
-type DBConnector interface {
+type Connector interface {
 	Connect() error
 	Close()
 	GetConn() *sqlx.DB
@@ -39,10 +38,10 @@ type GPDBConnector struct {
 	dbName string
 	host   string
 	port   int
-	driver DBDriver // used for testing
+	driver Driver // used for testing
 }
 
-func NewDBConn(masterHost string, masterPort int, dbname string) DBConnector {
+func NewDBConn(masterHost string, masterPort int, dbname string) Connector {
 	currentUser, _, _ := utils.GetUser()
 	username := utils.TryEnv("PGUSER", currentUser)
 	if dbname == "" {

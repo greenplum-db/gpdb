@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gp_upgrade/config"
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 	"io/ioutil"
 	"os"
 
@@ -20,7 +20,7 @@ var _ = Describe("configWriter", func() {
 	)
 
 	BeforeEach(func() {
-		saved_old_home = test_utils.ResetTempHomeDir()
+		saved_old_home = testUtils.ResetTempHomeDir()
 		subject = config.NewWriter()
 	})
 
@@ -33,7 +33,7 @@ var _ = Describe("configWriter", func() {
 			sampleCombinedRows := make([]interface{}, 2)
 			sampleCombinedRows[0] = "value1"
 			sampleCombinedRows[1] = []byte{35}
-			fakeRows := &test_utils.FakeRows{
+			fakeRows := &testUtils.FakeRows{
 				FakeColumns:      []string{"colnameString", "colnameBytes"},
 				NumRows:          1,
 				SampleRowStrings: sampleCombinedRows,
@@ -41,9 +41,9 @@ var _ = Describe("configWriter", func() {
 			err := subject.Load(fakeRows)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(subject.TableJsonData)).To(Equal(1))
-			Expect(subject.TableJsonData[0]["colnameString"]).To(Equal("value1"))
-			Expect(subject.TableJsonData[0]["colnameBytes"]).To(Equal("#"))
+			Expect(len(subject.TableJSONData)).To(Equal(1))
+			Expect(subject.TableJSONData[0]["colnameString"]).To(Equal("value1"))
+			Expect(subject.TableJSONData[0]["colnameBytes"]).To(Equal("#"))
 		})
 		Describe("error cases", func() {
 			It("is returns an error if rows are empty", func() {
@@ -58,7 +58,7 @@ var _ = Describe("configWriter", func() {
 				sample = make([]interface{}, 1)
 
 				sample[0] = "value1"
-				fakeRows := &test_utils.FakeRows{
+				fakeRows := &testUtils.FakeRows{
 					FakeColumns:      []string{"colname1", "colname2"},
 					NumRows:          1,
 					SampleRowStrings: sample,
@@ -90,8 +90,8 @@ var _ = Describe("configWriter", func() {
 		})
 		It("writes a configuration when given json", func() {
 			subject := config.Writer{
-				TableJsonData: json_structure,
-				Formatter:     config.NewJsonFormatter(),
+				TableJSONData: json_structure,
+				Formatter:     config.NewJSONFormatter(),
 				FileWriter:    config.NewRealFileWriter(),
 			}
 			err := subject.Write()
@@ -104,16 +104,16 @@ var _ = Describe("configWriter", func() {
 		})
 		Describe("error cases", func() {
 			It("returns an error when home directory is not writable", func() {
-				os.Chmod(test_utils.TempHomeDir, 0100)
+				os.Chmod(testUtils.TempHomeDir, 0100)
 				subject := config.Writer{
-					TableJsonData: json_structure,
-					Formatter:     config.NewJsonFormatter(),
+					TableJSONData: json_structure,
+					Formatter:     config.NewJSONFormatter(),
 					FileWriter:    config.NewRealFileWriter(),
 				}
 				err := subject.Write()
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("mkdir %v/.gp_upgrade: permission denied", test_utils.TempHomeDir)))
+				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("mkdir %v/.gp_upgrade: permission denied", testUtils.TempHomeDir)))
 			})
 			It("returns an error when cluster config.go file cannot be opened", func() {
 				// pre-create the directory with 0100 perms
@@ -121,13 +121,13 @@ var _ = Describe("configWriter", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				subject := config.Writer{
-					TableJsonData: json_structure,
-					Formatter:     config.NewJsonFormatter(),
+					TableJSONData: json_structure,
+					Formatter:     config.NewJSONFormatter(),
 				}
 				err = subject.Write()
 
 				Expect(err).To(HaveOccurred())
-				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("open %v/.gp_upgrade/cluster_config.json: permission denied", test_utils.TempHomeDir)))
+				Expect(string(err.Error())).To(ContainSubstring(fmt.Sprintf("open %v/.gp_upgrade/cluster_config.json: permission denied", testUtils.TempHomeDir)))
 			})
 			It("returns an error when json marshalling fails", func() {
 				myMap := make(map[string]interface{})
@@ -136,8 +136,8 @@ var _ = Describe("configWriter", func() {
 					0: myMap,
 				}
 				subject := config.Writer{
-					TableJsonData: malformed_json_structure,
-					Formatter:     config.NewJsonFormatter(),
+					TableJSONData: malformed_json_structure,
+					Formatter:     config.NewJSONFormatter(),
 				}
 				err := subject.Write()
 
@@ -146,8 +146,8 @@ var _ = Describe("configWriter", func() {
 
 			It("returns an error when json pretty print fails", func() {
 				subject := config.Writer{
-					TableJsonData: json_structure,
-					Formatter:     &test_utils.ErrorFormatter{},
+					TableJSONData: json_structure,
+					Formatter:     &testUtils.ErrorFormatter{},
 				}
 				err := subject.Write()
 
@@ -156,9 +156,9 @@ var _ = Describe("configWriter", func() {
 
 			It("returns an error when file writing fails", func() {
 				subject := config.Writer{
-					TableJsonData: json_structure,
-					Formatter:     &test_utils.NilFormatter{},
-					FileWriter:    &test_utils.ErrorFileWriterDuringWrite{},
+					TableJSONData: json_structure,
+					Formatter:     &testUtils.NilFormatter{},
+					FileWriter:    &testUtils.ErrorFileWriterDuringWrite{},
 				}
 				err := subject.Write()
 

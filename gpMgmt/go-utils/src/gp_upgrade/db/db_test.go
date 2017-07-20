@@ -91,7 +91,7 @@ var _ = Describe("db connector", func() {
 	Describe("#Connect", func() {
 		Context("when the database exists", func() {
 			It("connects successfully", func() {
-				var mockDBConn DBConnector
+				var mockDBConn Connector
 				mockDBConn, _ = CreateMockDBConn()
 				err := mockDBConn.Connect()
 				defer mockDBConn.Close()

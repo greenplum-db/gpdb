@@ -8,6 +8,8 @@ import (
 	"gp_upgrade/utils"
 
 	"github.com/jessevdk/go-flags"
+
+	_ "github.com/lib/pq" // used for the db driver, which is an implicit dependency, thus use "_"
 )
 
 type AllCommands struct {

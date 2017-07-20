@@ -9,7 +9,7 @@ import (
 	"path"
 	"runtime"
 
-	. "gp_upgrade/test_utils"
+	. "gp_upgrade/testUtils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

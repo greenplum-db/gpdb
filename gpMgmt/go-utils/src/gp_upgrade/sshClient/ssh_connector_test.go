@@ -1,4 +1,4 @@
-package ssh_client_test
+package sshClient_test
 
 import (
 	"golang.org/x/crypto/ssh"
@@ -14,7 +14,7 @@ import (
 
 	"io/ioutil"
 
-	"gp_upgrade/ssh_client"
+	"gp_upgrade/sshClient"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,17 +26,17 @@ var (
 	param_config  *ssh.ClientConfig
 )
 
-var _ = Describe("SshConnector", func() {
+var _ = Describe("SSHConnector", func() {
 	var (
-		subject       *ssh_client.RealSshConnector
+		subject       *sshClient.RealSSHConnector
 		test_key_path string
 	)
 	BeforeEach(func() {
 		_, this_file_path, _, _ := runtime.Caller(0)
 		test_key_path = path.Join(path.Dir(this_file_path), "../integrations/sshd/fake_private_key.pem")
-		subject = &ssh_client.RealSshConnector{
-			SshDialer:      FakeDialer{},
-			SshKeyParser:   FakeKeyParser{},
+		subject = &sshClient.RealSSHConnector{
+			SSHDialer:      FakeDialer{},
+			SSHKeyParser:   FakeKeyParser{},
 			PrivateKeyPath: test_key_path,
 		}
 
@@ -46,12 +46,12 @@ var _ = Describe("SshConnector", func() {
 		It("populates the private key correctly", func() {
 			const PRIVATE_KEY_FILE_PATH = "/tmp/testPrivateKeyFile.key"
 			ioutil.WriteFile(PRIVATE_KEY_FILE_PATH, []byte("----TEST PRIVATE KEY ---"), 0600)
-			sshConnector, err := ssh_client.NewSshConnector(PRIVATE_KEY_FILE_PATH)
+			sshConnector, err := sshClient.NewSSHConnector(PRIVATE_KEY_FILE_PATH)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(sshConnector.(*ssh_client.RealSshConnector).PrivateKeyPath).To(Equal(PRIVATE_KEY_FILE_PATH))
+			Expect(sshConnector.(*sshClient.RealSSHConnector).PrivateKeyPath).To(Equal(PRIVATE_KEY_FILE_PATH))
 		})
 		It("returns an error when private key is missing", func() {
-			_, err := ssh_client.NewSshConnector("pathThatDoesNotExist")
+			_, err := sshClient.NewSSHConnector("pathThatDoesNotExist")
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -89,7 +89,7 @@ var _ = Describe("SshConnector", func() {
 
 			Context("private key file cannot be parsed", func() {
 				It("returns an error message", func() {
-					subject.SshKeyParser = ThrowingKeyParser{}
+					subject.SSHKeyParser = ThrowingKeyParser{}
 
 					_, err := subject.Connect("", 0, "")
 
@@ -100,7 +100,7 @@ var _ = Describe("SshConnector", func() {
 
 			Context("dialing connection returns error", func() {
 				It("returns an error message", func() {
-					subject.SshDialer = ThrowingDialer{}
+					subject.SSHDialer = ThrowingDialer{}
 
 					_, err := subject.Connect("", 0, "")
 
@@ -110,7 +110,7 @@ var _ = Describe("SshConnector", func() {
 			})
 			Context("new session returns error", func() {
 				It("returns an error message", func() {
-					subject.SshDialer = ThrowingBadClientDialer{}
+					subject.SSHDialer = ThrowingBadClientDialer{}
 
 					_, err := subject.Connect("", 0, "")
 
@@ -133,12 +133,12 @@ var _ = Describe("SshConnector", func() {
 		})
 		Context("errors", func() {
 			It("returns an error when connect fails", func() {
-				subject.SshDialer = ThrowingDialer{}
+				subject.SSHDialer = ThrowingDialer{}
 				_, err := subject.ConnectAndExecute("", -1, "", "")
 				Expect(err).To(HaveOccurred())
 			})
 			It("returns an error when Output has erroneous output", func() {
-				subject.SshDialer = GoodDialerBadOutput{}
+				subject.SSHDialer = GoodDialerBadOutput{}
 				_, err := subject.ConnectAndExecute("", 0, "", "")
 				Expect(err).To(HaveOccurred())
 			})
@@ -162,11 +162,11 @@ func (parser FakeKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error)
 	return FakeSigner{}, nil
 }
 
-type FakeSshClient struct {
+type FakeSSHClient struct {
 	buf bytes.Buffer
 }
 
-func (FakeSshClient) NewSession() (ssh_client.SshSession, error) {
+func (FakeSSHClient) NewSession() (sshClient.SSHSession, error) {
 	fakeSession := FakeSession{}
 	return &fakeSession, nil
 }
@@ -193,22 +193,22 @@ func (errorOutputSession ErrorOutputSession) Output(string) ([]byte, error) {
 
 type FakeDialer struct{}
 
-func (FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (FakeDialer) Dial(network, addr string, config *ssh.ClientConfig) (sshClient.SSHClient, error) {
 	param_network = network
 	param_addr = addr
 	param_config = config
-	return &FakeSshClient{}, nil
+	return &FakeSSHClient{}, nil
 }
 
 type GoodDialerBadOutput struct{}
 
-func (GoodDialerBadOutput) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (GoodDialerBadOutput) Dial(network, addr string, config *ssh.ClientConfig) (sshClient.SSHClient, error) {
 	return &GoodClientBadSession{}, nil
 }
 
 type GoodClientBadSession struct{}
 
-func (GoodClientBadSession) NewSession() (ssh_client.SshSession, error) {
+func (GoodClientBadSession) NewSession() (sshClient.SSHSession, error) {
 	return &ErrorOutputSession{}, nil
 }
 
@@ -220,18 +220,18 @@ func (ThrowingKeyParser) ParsePrivateKey(pemBytes []byte) (ssh.Signer, error) {
 
 type ThrowingDialer struct{}
 
-func (ThrowingDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (ThrowingDialer) Dial(network, addr string, config *ssh.ClientConfig) (sshClient.SSHClient, error) {
 	return nil, errors.New("test dialing failure")
 }
 
 type ThrowingClient struct{}
 
-func (ThrowingClient) NewSession() (ssh_client.SshSession, error) {
+func (ThrowingClient) NewSession() (sshClient.SSHSession, error) {
 	return nil, errors.New("test NewSession failure")
 }
 
 type ThrowingBadClientDialer struct{}
 
-func (ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (ssh_client.SshClient, error) {
+func (ThrowingBadClientDialer) Dial(network, addr string, config *ssh.ClientConfig) (sshClient.SSHClient, error) {
 	return new(ThrowingClient), nil
 }

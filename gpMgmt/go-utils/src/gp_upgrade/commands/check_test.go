@@ -2,7 +2,7 @@ package commands
 
 import (
 	"database/sql/driver"
-	"gp_upgrade/test_utils"
+	"gp_upgrade/testUtils"
 
 	"encoding/json"
 	"errors"
@@ -27,7 +27,7 @@ var _ = Describe("check tests", func() {
 	)
 
 	BeforeEach(func() {
-		saveHomeDir = test_utils.ResetTempHomeDir()
+		saveHomeDir = testUtils.ResetTempHomeDir()
 		subject = CheckCommand{}
 	})
 
@@ -45,7 +45,7 @@ var _ = Describe("check tests", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(dbConnector.GetConn().Stats().OpenConnections).To(Equal(0))
 				content, err := ioutil.ReadFile(config.GetConfigFilePath())
-				test_utils.Check("cannot read file", err)
+				testUtils.Check("cannot read file", err)
 
 				resultData := make([]map[string]interface{}, 0)
 				expectedData := make([]map[string]interface{}, 0)
@@ -89,7 +89,7 @@ var _ = Describe("check tests", func() {
 					dbConnector, mock := db.CreateMockDBConn()
 					setupSegmentConfigInDB(mock)
 					err := os.MkdirAll(config.GetConfigDir(), 0500)
-					test_utils.Check("cannot chmod: ", err)
+					testUtils.Check("cannot chmod: ", err)
 					subject.MasterHost = "localhost"
 
 					err = subject.execute(dbConnector, config.NewWriter())

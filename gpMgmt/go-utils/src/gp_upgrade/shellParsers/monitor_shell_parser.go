@@ -1,4 +1,4 @@
-package shell_parsers
+package shellParsers
 
 import (
 	"regexp"

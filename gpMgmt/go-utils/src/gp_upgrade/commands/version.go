@@ -20,7 +20,6 @@ func (cmd VersionCommand) Execute([]string) error {
 func versionString() string {
 	if GpdbVersion == "" {
 		return DefaultGpdbVersion
-	} else {
-		return "gp_upgrade version " + GpdbVersion
 	}
+	return "gp_upgrade version " + GpdbVersion
 }
