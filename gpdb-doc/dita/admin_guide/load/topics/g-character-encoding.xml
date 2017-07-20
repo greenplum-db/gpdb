@@ -30,6 +30,12 @@
       server configuration parameter <codeph>client_encoding</codeph></p>
       <codeblock>SET client_encoding TO 'latin1';
 </codeblock>
+      <p>Change the client-side character encoding back to the default value:</p>
+      <codeblock>RESET client_encoding;
+</codeblock>
+      <p>Show the current client-side character encoding setting:</p>
+      <codeblock>SHOW client_encoding;
+</codeblock>
     </body>
   </topic>
 </topic>
