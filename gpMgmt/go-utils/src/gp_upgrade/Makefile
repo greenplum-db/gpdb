@@ -16,7 +16,7 @@ GPDB_VERSION := $(shell ../../../../getversion --short)
 
 .NOTPARALLEL:
 
-all : build test
+all : build
 
 dependencies :
 		go get github.com/cppforlife/go-semi-semantic/version
@@ -34,16 +34,16 @@ format : dependencies
 		goimports -w .
 		go fmt .
 
-unit : dependencies sshd_build
+unit : dependencies
 		ginkgo -r -randomizeSuites -randomizeAllSpecs -race --skipPackage=integrations
 
 sshd_build : dependencies
 		make -C integrations/sshd
 
-integration: dependencies sshd_build
+integration: dependencies
 		ginkgo -r -randomizeAllSpecs -race integrations
 
-test : format unit sshd_build integration
+test : format unit integration
 
 push : format
 		git pull -r && make test && git push
@@ -51,7 +51,7 @@ push : format
 build : format
 		go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GO_UTILS_DIR)/bin/$(MODULE_NAME)
 
-coverage: dependencies format sshd_build build
+coverage: dependencies format build
 		./scripts/run_coverage.sh
 
 linux :

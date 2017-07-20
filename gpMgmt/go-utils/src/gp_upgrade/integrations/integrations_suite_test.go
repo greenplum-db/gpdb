@@ -8,8 +8,6 @@ import (
 	"os/exec"
 	"testing"
 
-	"os"
-
 	"gp_upgrade/test_utils"
 
 	"path"
@@ -33,12 +31,17 @@ var (
 	commandPath  string
 	sshd         *exec.Cmd
 	fixture_path string
+	sshdPath     string
 )
 
 var _ = BeforeSuite(func() {
 	var err error
 	commandPath, err = Build("gp_upgrade") // if you want build flags, do a separate Build() in a specific integration test
 	Expect(err).NotTo(HaveOccurred())
+
+	sshdPath, err = Build("gp_upgrade/integrations/sshd")
+	Expect(err).NotTo(HaveOccurred())
+
 	_, this_file_path, _, _ := runtime.Caller(0)
 	fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
 })
@@ -48,11 +51,8 @@ var _ = SynchronizedAfterSuite(func() {}, func() {
 })
 
 var _ = BeforeEach(func() {
-	binary_path := path.Join(fixture_path, "../../../../bin/sshd")
-	if _, err := os.Stat(binary_path); os.IsNotExist(err) {
-		Fail(fmt.Sprintf("cannot find sshd binary at: \n%v\n", binary_path))
-	}
-	sshd = exec.Command(binary_path)
+
+	sshd = exec.Command(sshdPath)
 	_, err := sshd.StdoutPipe()
 	test_utils.Check("cannot get stdout", err)
 	_, err = sshd.StderrPipe()

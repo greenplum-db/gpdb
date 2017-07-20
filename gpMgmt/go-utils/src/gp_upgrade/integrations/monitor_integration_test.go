@@ -34,7 +34,7 @@ var _ = Describe("monitor", func() {
 
 	BeforeEach(func() {
 		_, this_file_path, _, _ := runtime.Caller(0)
-		private_key_path = path.Join(path.Dir(this_file_path), "sshd/private_key.pem")
+		private_key_path = path.Join(path.Dir(this_file_path), "sshd/fake_private_key.pem")
 		fixture_path = path.Join(path.Dir(this_file_path), "fixtures")
 		save_home_dir = ResetTempHomeDir()
 		WriteSampleConfig()

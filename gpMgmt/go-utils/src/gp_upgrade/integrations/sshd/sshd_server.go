@@ -170,7 +170,7 @@ func startSshServer() {
 		},
 	}
 
-	pBytes, err := ioutil.ReadFile(path.Join(sshd_directory, "private_key.pem"))
+	pBytes, err := ioutil.ReadFile(path.Join(sshd_directory, "fake_private_key.pem"))
 	if err != nil {
 		panic(err)
 	}

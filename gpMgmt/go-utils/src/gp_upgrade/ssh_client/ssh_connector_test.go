@@ -33,7 +33,7 @@ var _ = Describe("SshConnector", func() {
 	)
 	BeforeEach(func() {
 		_, this_file_path, _, _ := runtime.Caller(0)
-		test_key_path = path.Join(path.Dir(this_file_path), "../integrations/sshd/private_key.pem")
+		test_key_path = path.Join(path.Dir(this_file_path), "../integrations/sshd/fake_private_key.pem")
 		subject = &ssh_client.RealSshConnector{
 			SshDialer:      FakeDialer{},
 			SshKeyParser:   FakeKeyParser{},
