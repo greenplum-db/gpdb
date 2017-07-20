@@ -27,7 +27,7 @@
     <title>Changing the Client-Side Character Encoding</title>
     <body>
       <p>The client-side character encoding can be changed for a session by setting the
-      server configuration paramter <codeph>client_encoding</codeph></p>
+      server configuration parameter <codeph>client_encoding</codeph></p>
       <codeblock>SET client_encoding TO 'latin1';
 </codeblock>
     </body>
