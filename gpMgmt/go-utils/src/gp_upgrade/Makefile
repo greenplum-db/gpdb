@@ -1,3 +1,6 @@
+top_builddir = ../../../..
+include $(top_builddir)/src/Makefile.global
+
 SHELL := /bin/bash
 .DEFAULT_GOAL := all
 
