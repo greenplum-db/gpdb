@@ -1670,6 +1670,8 @@ typedef struct AppendRelInfo
  * The idea is to evaluate the expression at (only) the ph_eval_at join level,
  * then allow it to bubble up like a Var until the ph_needed join level.
  * ph_needed has the same definition as attr_needed for a regular Var.
+ * We create a PlaceHolderInfo only after determining that the PlaceHolderVar
+ * is actually referenced in the plan tree.
  */
 
 typedef struct PlaceHolderInfo
