@@ -2664,6 +2664,7 @@ _readPlaceHolderInfo(void)
 	READ_NODE_FIELD(ph_var);
 	READ_BITMAPSET_FIELD(ph_eval_at);
 	READ_BITMAPSET_FIELD(ph_needed);
+	READ_BITMAPSET_FIELD(ph_may_need);
 	READ_INT_FIELD(ph_width);
 	
 	READ_DONE();

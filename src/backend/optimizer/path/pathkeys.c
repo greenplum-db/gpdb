@@ -194,7 +194,7 @@ gen_implied_qual(PlannerInfo *root,
 	 */
 	if (bms_membership(new_qualscope) == BMS_MULTIPLE)
 	{
-		List	   *vars = pull_var_clause(new_clause, false);
+		List	   *vars = pull_var_clause(new_clause, true);
 
 		add_vars_to_targetlist(root, vars, required_relids);
 		list_free(vars);

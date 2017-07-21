@@ -536,6 +536,8 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		 * Step 3: Find all the vars that are needed from the scan node
 		 * for upstream processing.
 		 */
+		// 8.4-9.0:MERGE-FIXME: Should we pass includePlaceHolderVars as true
+		// in pull_var_clause ?
 		List *scanVars = pull_var_clause((Node *) scanPlan->targetlist, false);
 		scanVars = list_concat(scanVars, pull_var_clause((Node *) resQual, false));
 
