@@ -737,7 +737,10 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 	Assert(hashtable->first_pass);
 
 	nbatch = oldnbatch * 2;
+
 	Assert(nbatch > 1);
+	if (memory_profiler_dataset_size == 10 && Gp_segment == 0)
+		elog(INFO, "Outer workfile: %x, First pass: %d, curbatch: %d, oldnbatch: %d, nbatch: %d. Original: %d", hashtable->batches[curbatch]->outerside.workfile, hashtable->first_pass, curbatch, oldnbatch, nbatch, hashtable->nbatch_original);
 
 #ifdef HJDEBUG
 	elog(LOG, "Increasing number of batches from %d to %d", oldnbatch, nbatch);
@@ -1056,6 +1059,7 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	else
 		hashfunctions = hashtable->inner_hashfunctions;
 
+	int ourKey = -1;
 	foreach(hk, hashkeys)
 	{
 		ExprState  *keyexpr = (ExprState *) lfirst(hk);
@@ -1101,6 +1105,7 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 			/* Compute the hash function */
 			uint32		hkey;
 
+			ourKey = DatumGetInt32(keyval);
 			hkey = DatumGetUInt32(FunctionCall1(&hashfunctions[i], keyval));
 			hashkey ^= hkey;
 		}
@@ -1111,6 +1116,8 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	MemoryContextSwitchTo(oldContext);
 
 	*hashvalue = hashkey;
+//	if (Gp_segment == 0 && memory_profiler_dataset_size == 10 && hashtable->first_pass)
+//		elog(INFO, "Key: %d, Hash: %u", ourKey, hashkey);
 	}
 	END_MEMORY_ACCOUNT();
 	return result;
@@ -1156,6 +1163,9 @@ ExecHashGetBucketAndBatch(HashJoinTable hashtable,
 		*bucketno = hashvalue & (nbuckets - 1);
 		*batchno = 0;
 	}
+
+//	if (Gp_segment == 0 && memory_profiler_dataset_size == 10 && hashtable->first_pass)
+//		elog(INFO, "nbatch: %d, nbuckets:%d, batchno: %d, Hash: %u", nbatch, nbuckets, *batchno, hashvalue);
 }
 
 /*

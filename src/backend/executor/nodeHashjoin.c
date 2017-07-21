@@ -888,6 +888,10 @@ start_over:
 			hashtable->batches[curbatch]->innerside.workfile == NULL))
 
 	{
+		// For rescannable we must complete respilling on first batch
+		if (hjstate->rescannable)
+			break;
+
 		batch = hashtable->batches[curbatch];
 		if (batch->outerside.workfile != NULL &&
 			((hjstate->js.jointype == JOIN_LEFT) ||
