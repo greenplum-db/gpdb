@@ -224,6 +224,13 @@ add_vars_to_targetlist(PlannerInfo *root, List *vars, Relids where_needed)
 			
 			phinfo->ph_needed = bms_add_members(phinfo->ph_needed,
 												where_needed);
+			/*
+			 * Update ph_may_need too.  This is currently only necessary
+			 * when being called from build_base_rel_tlists, but we may as
+			 * well do it always.
+			 */
+			phinfo->ph_may_need = bms_add_members(phinfo->ph_may_need,
+														  where_needed);
 		}
 		else
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
@@ -613,7 +620,11 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 
 		/* Now we can add the SpecialJoinInfo to join_info_list */
 		if (sjinfo)
+		{
 			root->join_info_list = lappend(root->join_info_list, sjinfo);
+			/* Each time we do that, recheck placeholder eval levels */
+			update_placeholder_eval_levels(root, sjinfo);
+		}
 
 		/*
 		 * Finally, compute the output joinlist.  We fold subproblems together
@@ -829,6 +840,32 @@ make_outerjoininfo(PlannerInfo *root,
 	}
 
 	/*
+	 * Examine PlaceHolderVars.  If a PHV is supposed to be evaluated within
+	 * this join's nullable side, and it may get used above this join, then
+	 * ensure that min_righthand contains the full eval_at set of the PHV.
+	 * This ensures that the PHV actually can be evaluated within the RHS.
+	 * Note that this works only because we should already have determined
+	 * the final eval_at level for any PHV syntactically within this join.
+	 */
+	foreach(l, root->placeholder_list)
+	{
+		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(l);
+		Relids		ph_syn_level = phinfo->ph_var->phrels;
+
+		/* Ignore placeholder if it didn't syntactically come from RHS */
+		if (!bms_is_subset(ph_syn_level, right_rels))
+			continue;
+
+		/* We can also ignore it if it's certainly not used above this join */
+		/* XXX this test is probably overly conservative */
+		if (bms_is_subset(phinfo->ph_may_need, min_righthand))
+			continue;
+
+		/* Else, prevent join from being formed before we eval the PHV */
+		min_righthand = bms_add_members(min_righthand, phinfo->ph_eval_at);
+	}
+
+	/*
 	 * If we found nothing to put in min_lefthand, punt and make it the full
 	 * LHS, to avoid having an empty min_lefthand which will confuse later
 	 * processing. (We don't try to be smart about such cases, just correct.)
@@ -974,6 +1011,7 @@ compute_semijoin_info(SpecialJoinInfo* sjinfo, PlannerInfo* root)
 	 * in case we try to unique-ify the subselect's outputs.
 	 * Add targetlist entries for each var needed sub_targetlist we computed above.
 	 */
+	// 8.4-9.0:MERGE_FIXME: Should we include placeholder vars as well in pull_var_clause?
 	in_vars = pull_var_clause((Node *) sjinfo->semi_rhs_exprs, false);
 	if (in_vars != NIL)
 	{

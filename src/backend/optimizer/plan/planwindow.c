@@ -1248,6 +1248,8 @@ make_lower_targetlist(Query *parse,
 	 */
 	for ( i = 0; i < context->nspecinfos; i++ )
 	{
+		// 8.4-9.0:MERGE-FIXME: Should we pass includePlaceHolderVars as true
+		// in pull_var_clause ?
 		extravars = list_concat(extravars,
 								pull_var_clause(context->specinfos[i].startOffset, false));
 
