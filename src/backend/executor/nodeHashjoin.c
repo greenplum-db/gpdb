@@ -888,7 +888,32 @@ start_over:
 			hashtable->batches[curbatch]->innerside.workfile == NULL))
 
 	{
-		// For rescannable we must complete respilling on first batch
+		/*
+		 * For rescannable we must complete respilling on first batch
+		 *
+		 * Consider case 2: the inner workfile is not null. We are on the first pass
+		 * (before ReScan was called). I.e., we are processing a join for the base
+		 * case of a recursive CTE. If the base case does not have tuples for batch
+		 * k (i.e., the outer workfile for batch k is null), and we never increased
+		 * the initial number of batches, then we will skip the inner batchfile (case 2).
+		 *
+		 * However, one iteration of recursive CTE is no guarantee that the future outer
+		 * batch will also not match batch k on the inner. Therefore, we may have a
+		 * non-null outer batch k on some future iteration.
+		 *
+		 * If during loading batch k inner workfile for future iteration triggers a re-spill
+		 * we will be forced to increase number of batches. This will result in wrong result
+		 * as we will not write any inner tuples (we consider inner workfiles read-only after
+		 * a rescan call).
+		 *
+		 * So, to produce wrong result, without this guard, the following conditions have
+		 * to be true:
+		 *
+		 * 1. Outer batchfile for batch k is null
+		 * 2. Inner batchfile for batch k not null
+		 * 3. No resizing of nbatch for batch (0...(k-1))
+		 * 4. Inner batchfile for batch k is too big to fit in memory
+		 */
 		if (hjstate->rescannable)
 			break;
 
