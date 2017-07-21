@@ -82,3 +82,13 @@ def after_scenario(context, scenario):
     if 'gpssh' in context.feature.tags:
         run_command(context, 'sudo tc qdisc del dev lo root netem')
 
+    # for cleaning up after @given('"{path}" has its permissions set to "{perm}"')
+    if (hasattr(context, 'path_for_which_to_restore_the_permissions') and
+            hasattr(context, 'permissions_to_restore_path_to')):
+        os.chmod(context.path_for_which_to_restore_the_permissions, context.permissions_to_restore_path_to)
+    elif hasattr(context, 'path_for_which_to_restore_the_permissions'):
+        raise Exception('Missing permissions_to_restore_path_to for %s' %
+                        context.path_for_which_to_restore_the_permissions)
+    elif hasattr(context, 'permissions_to_restore_path_to'):
+        raise Exception('Missing path_for_which_to_restore_the_permissions despite the specified permission %o' %
+                        context.permissions_to_restore_path_to)
