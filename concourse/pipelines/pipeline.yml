@@ -709,10 +709,9 @@ jobs:
       action: create
       delete_on_failure: true
       generate_random_name: true
-      ccp_options_anchor: &ccp_options
-        terraform_source: ccp_src/aws/
-        vars:
-          aws_instance-node-instance_type: t2.medium
+      terraform_source: ccp_src/aws/
+      vars:
+        aws_instance-node-instance_type: t2.medium
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     on_failure:
