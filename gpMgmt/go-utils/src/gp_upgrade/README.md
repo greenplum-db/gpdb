@@ -10,7 +10,7 @@ and the path to go-utils/ as the second entry. This allows all dependencies to b
 into the ~/go/ directory, away from the gpdb/ sources. See the
   [overall go-utils README](../../README.md) for more information
 
-You can run `make dependencies`, but most make targets will call it for you
+You can run `make dependencies` to download them.
 
 ### Build and test the upgrade tool
 
@@ -46,10 +46,25 @@ should be equivalent to `make linux && make darwin`
 
 ### Run the tests
 
+We use [ginkgo](https://github.com/onsi/ginkgo) and [gomega](https://github.com/onsi/gomega) to run our tests. We have `unit` and `integration` targets predefined.
+
+***Note:*** In order to run integration tests you need a running local gpdemo cluster. Instructions to setup one can be found [here](../../../../gpAux/gpdemo/README).
+
+#### Unit tests
 ```
+# To run all the unit tests
+make unit
+```
+#### Integration tests
+```
+# To run all the integration tests
+make integration
+```
+#### All tests
+```
+# To run all the tests
 make test
 ```
-should run all tests we consider the bar for ship-ability of this code.
 
 ## Command line parsing
 
