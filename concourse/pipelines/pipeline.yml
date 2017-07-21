@@ -721,9 +721,9 @@ jobs:
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_TAGS: --tags=analyzedb,backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
+      BEHAVE_FLAGS: --tags=analyzedb,backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
     on_failure:
-      <<: *ccp_destroy
+      <<: *debug_sleep
   - *ccp_destroy
 
 - name: MM_gppkg
