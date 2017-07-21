@@ -288,9 +288,23 @@ FileRepPrimary_ResyncWrite(FileRepResyncHashEntry_s	*entry)
 						if (XLByteLE(PageGetLSN(page), endResyncLSN) &&
 							XLByteLE(entry->mirrorBufpoolResyncCkptLoc, PageGetLSN(page))) 
 						{
-							smgrwrite(smgr_relation, 
+							/*
+							 * Because filerep sync is a special case, we don't do our write through the buffer
+							 * pool. We need to recalculate the checksum for every page that we ship via resync.
+							 * We only recalculate the checksum in a copy of the buffer, leaving the version in
+							 * shared buffer alone. As a result, the version written to disk gets the correct
+							 * checksum, but the buffer checksum is inconsistent with the buffer's data.
+							 *
+							 * If we don't first calculate the checksum, we are likely to be sending over a page
+							 * that isn't dirty, but still has the old checksum from the original disk read not
+							 * the one that has been written.
+							 */
+
+							char *pageCopy = PageSetChecksumCopy(page, blkno);
+
+							smgrwrite(smgr_relation,
 									  blkno,
-									  (char *)BufferGetBlock(buf),
+									  pageCopy,
 									  FALSE);
 						}
 
@@ -568,18 +582,19 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 				/*
 				 * if relation was truncated then block_num from change tracking can be beyond numBlocks 
 				 */
-				if (result->entries[ii].block_num >=  numBlocks)
+				const BlockNumber blkno = result->entries[ii].block_num;
+				if (blkno >= numBlocks)
 				{
 					ereport(LOG,	
 							(errmsg("could not resynchonize buffer pool relation '%s' block '%d' (maybe due to truncate), "
 									"lsn change tracking '%X/%X' "
 									"number of blocks '%d' ",
 									relidstr,
-									result->entries[ii].block_num,
+									blkno,
 									result->entries[ii].lsn_end.xlogid,
 									result->entries[ii].lsn_end.xrecoff,
-									numBlocks),						
-							 FileRep_errcontext()));						
+									numBlocks),
+							 FileRep_errcontext()));
 					
 					goto flush_check;
 				}
@@ -594,10 +609,10 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 				 */
 				FileRepResync_SetReadBufferRequest();
 				buf = ReadBuffer_Resync(smgr_relation,
-										result->entries[ii].block_num);
+										blkno);
 				FileRepResync_ResetReadBufferRequest();
 				
-				Assert(result->entries[ii].block_num < numBlocks);
+				Assert(blkno < numBlocks);
 				
 				LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 				page = BufferGetPage(buf);
@@ -611,7 +626,7 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 						 "lsn end change tracking '%X/%X' ",
 						 relidstr,
 						 numBlocks,
-						 result->entries[ii].block_num,
+						 blkno,
 						 loc.xlogid,
 						 loc.xrecoff,
 						 result->entries[ii].lsn_end.xlogid,
@@ -623,11 +638,11 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 					if (! XLByteEQ(PageGetLSN(page), result->entries[ii].lsn_end))
 					{
 						ereport(LOG,
-							(errmsg("Resynchonize buffer pool relation '%s' block '%d' has page lsn less than CT lsn, "
+							(errmsg("Resynchonize buffer pool relation '%s' block '%d' has page lsn more than CT lsn, "
 								"lsn end change tracking '%X/%X' lsn page '%X/%X' "
 								"number of blocks '%d'",
 								relidstr,
-								result->entries[ii].block_num,
+								blkno,
 								loc.xlogid,
 								loc.xrecoff,
 								result->entries[ii].lsn_end.xlogid,
@@ -636,6 +651,12 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 							 FileRep_errcontext()));
 
 					}
+
+					/*
+					 * We checksum every page before replicating for the reasons described
+					 * in FileRepPrimary_ResyncWrite above
+					 */
+					char *pageCopy = PageSetChecksumCopy(page, blkno);
 
 					/*
 					 * It's safe and better to perform write of the page to mirror,
@@ -651,11 +672,10 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 					 * CT records and doesn't have xlog LSN information to discard any
 					 * extra records from CT_TRANSIENT.
 					 */
-
 					smgrwrite(smgr_relation,
-							  result->entries[ii].block_num,
-							  (char *)BufferGetBlock(buf),
-							  FALSE);
+							blkno,
+							pageCopy,
+							FALSE);
 				}
 
 				SIMPLE_FAULT_INJECTOR(FileRepResyncWorker);
@@ -711,7 +731,7 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 											  result->entries[ii].relFileNode))
 						{
 							request->entries[0].last_fetched =
-								result->entries[ii].block_num;
+								blkno;
 							elog(LOG, "%u/%u/%u last fetched block %d",
 								 request->entries[0].relFileNode.spcNode,
 								 request->entries[0].relFileNode.dbNode,
@@ -724,7 +744,7 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 								 result->entries[ii].relFileNode.spcNode,
 								 result->entries[ii].relFileNode.dbNode,
 								 result->entries[ii].relFileNode.relNode,
-								 result->entries[ii].block_num);
+								 blkno);
 					}
 				}			
 							
