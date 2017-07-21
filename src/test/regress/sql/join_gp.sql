@@ -180,14 +180,16 @@ create table dept
 	name char(40)
 );
 
-insert into dept values(1, 0, 'root');
-insert into dept values(2, 1, '2<-1');
-insert into dept values(3, 2, '3<-2<-1');
-insert into dept values(4, 2, '4<-2<-1');
-insert into dept values(5, 1, '5<-1');
-insert into dept values(6, 5, '5<-1');
-insert into dept select i, i % 6 from generate_series(7,50) as i;
+insert into dept values(3, 0, 'root');
+insert into dept values(4, 3, '2<-1');
+insert into dept values(5, 4, '3<-2<-1');
+insert into dept values(6, 4, '4<-2<-1');
+insert into dept values(7, 3, '5<-1');
+insert into dept values(8, 7, '5<-1');
+insert into dept select i, i % 6 + 3 from generate_series(9,50) as i;
 insert into dept select i, 99 from generate_series(100,15000) as i;
+
+ANALYZE dept;
 
 -- Test rescannable hashjoin with spilling hashtable for buffile
 set statement_mem='1000kB';
