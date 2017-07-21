@@ -1,9 +1,8 @@
-# do nothing if global config is not enabled
-ifeq ($(enable_go_utils),no)
-all:
-	@echo "Configuration not enabled for go-utils."
+# include the top level Makefile.global to ensure that we can read the configuration variable
+top_builddir = ../..
+include $(top_builddir)/src/Makefile.global
 
-else
+ifeq ($(enable_go_utils),yes)
 all:
 	$(MAKE) -C src/gp_upgrade $@
 
@@ -12,5 +11,10 @@ clean distclean:
 
 install:
 	$(MAKE) -C src/gp_upgrade $@
+
+# do nothing if global config is not enabled
+else
+all:
+	@echo "Configuration not enabled for go-utils."
 
 endif

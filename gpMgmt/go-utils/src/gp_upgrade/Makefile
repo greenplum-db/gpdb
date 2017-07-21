@@ -70,7 +70,7 @@ darwin :
 
 platforms : linux darwin
 
-install :
+install : build
 	mkdir -p $(prefix)/bin
 	cp -p ../../bin/gp_upgrade $(prefix)/bin/
 
