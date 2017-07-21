@@ -299,19 +299,10 @@ OffsetVarNodes_walker(Node *node, OffsetVarNodes_context *context)
 		}
 		/* fall through to examine children */
 	}
-	if (IsA(node, PlaceHolderInfo))
-	{
-		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) node;
-		
-		if (context->sublevels_up == 0)
-		{
-			phinfo->ph_eval_at = offset_relid_set(phinfo->ph_eval_at,
-												  context->offset);
-			phinfo->ph_needed = offset_relid_set(phinfo->ph_needed,
-												 context->offset);
-		}
-		/* fall through to examine children */
-	}
+	/* Shouldn't need to handle other planner auxiliary nodes here */
+	Assert(!IsA(node, SpecialJoinInfo));
+	Assert(!IsA(node, PlaceHolderInfo));
+
 	if (IsA(node, Query))
 	{
 		/* Recurse into subselects */
@@ -475,21 +466,10 @@ ChangeVarNodes_walker(Node *node, ChangeVarNodes_context *context)
 		}
 		/* fall through to examine children */
 	}
-	if (IsA(node, PlaceHolderInfo))
-	{
-		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) node;
-		
-		if (context->sublevels_up == 0)
-		{
-			phinfo->ph_eval_at = adjust_relid_set(phinfo->ph_eval_at,
-												  context->rt_index,
-												  context->new_index);
-			phinfo->ph_needed = adjust_relid_set(phinfo->ph_needed,
-												 context->rt_index,
-												 context->new_index);
-		}
-		/* fall through to examine children */
-	}
+	/* Shouldn't need to handle other planner auxiliary nodes here */
+	Assert(!IsA(node, SpecialJoinInfo));
+	Assert(!IsA(node, PlaceHolderInfo));
+
 	if (IsA(node, Query))
 	{
 		/* Recurse into subselects */

@@ -136,7 +136,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * for "simple" rels.
 	 *
 	 * NOTE: append_rel_list was set up by subquery_planner, so do not touch
-	 * here; ditto placeholder_list; eq_classes may contain data already, too.
+	 * here; eq_classes may contain data already, too.
 	 */
 	root->simple_rel_array_size = list_length(parse->rtable) + 1;
 	root->simple_rel_array = (RelOptInfo **)
@@ -148,6 +148,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	root->right_join_clauses = NIL;
 	root->full_join_clauses = NIL;
 	root->join_info_list = NIL;
+	root->placeholder_list = NIL;
 	root->initial_rels = NIL;
 
 	/*
