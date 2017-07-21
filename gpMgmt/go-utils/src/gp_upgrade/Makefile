@@ -19,7 +19,7 @@ GPDB_VERSION := $(shell ../../../../getversion --short)
 
 .NOTPARALLEL:
 
-all : build
+all : dependencies build
 
 dependencies :
 		go get github.com/cppforlife/go-semi-semantic/version
@@ -35,32 +35,29 @@ dependencies :
 # is then checked in.  At the time of that generation, it can be added back to run the dependency list, temporarily.
 #		go get github.com/maxbrunsfeld/counterfeiter
 
-format : dependencies
+format :
 		goimports -w .
 		go fmt .
 
-lint :	dependencies
+lint :
 		! gofmt -l . | read
 		gometalinter --config=gometalinter.config ./...
 
-unit : dependencies
+unit :
 		ginkgo -r -randomizeSuites -randomizeAllSpecs -race --skipPackage=integrations
 
-sshd_build : dependencies
+sshd_build :
 		make -C integrations/sshd
 
-integration: dependencies
+integration:
 		ginkgo -r -randomizeAllSpecs -race integrations
 
-test : format unit integration lint
+test : lint unit integration
 
-push : format
-		git pull -r && make test && git push
-
-build : format
+build :
 		go build -ldflags "-X gp_upgrade/commands.GpdbVersion=$(GPDB_VERSION)" -o $(GO_UTILS_DIR)/bin/$(MODULE_NAME)
 
-coverage: dependencies format build
+coverage: build
 		./scripts/run_coverage.sh
 
 linux :
@@ -76,3 +73,5 @@ install : build
 
 clean:
 	rm -f ../../bin/gp_upgrade
+	rm -rf /tmp/go-build*
+	rm -rf /tmp/ginkgo*
