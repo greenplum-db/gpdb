@@ -23,6 +23,7 @@ groups:
   - DPM_backup-restore
   - MM_gppkg
   - MM_gpinitsystem
+  - MM_gpinitstandby
   - MM_pt-rebuild
   - regression_tests_pxf_centos
   - fts
@@ -883,7 +884,7 @@ jobs:
 
 - name: MM_gpperfmon
   plan:
-  - aggregate:
+  - aggregate: &gets_for_behave
     - get: gpdb_src
       params:
         submodules:
@@ -902,38 +903,17 @@ jobs:
 
 - name: MM_gpcheck
   plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: gpcheck_as_gpadmin
-      file: gpdb_src/concourse/tasks/behave_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        BEHAVE_TAGS: gpcheck_as_gpadmin
-        GPCHECK_SETUP: true
+  - aggregate: *gets_for_behave
+  - task: gpcheck_as_gpadmin
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpcheck_as_gpadmin
+      GPCHECK_SETUP: true
 
 - name: MM_analyzedb
   plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
+  - aggregate: *gets_for_behave
   - task: analyzedb
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
     image: centos-gpdb-dev-6
@@ -1001,43 +981,32 @@ jobs:
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_FLAGS: --tags=gppkg
+      BEHAVE_TAGS: gppkg
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
 
 - name: MM_gpinitsystem
   plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
+  - aggregate: *gets_for_behave
   - task: gpinitsystem
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_FLAGS: --tags=gpinitsystem
+      BEHAVE_TAGS: gpinitsystem
+
+- name: MM_gpinitstandby
+  plan:
+  - aggregate: *gets_for_behave
+  - task: gpinitstandby
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpinitstandby
 
 - name: MM_pt-rebuild
   plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
+  - aggregate: *gets_for_behave
   - aggregate:
     - task: persistent_table_rebuild
       file: gpdb_src/concourse/tasks/behave_gpdb.yml
