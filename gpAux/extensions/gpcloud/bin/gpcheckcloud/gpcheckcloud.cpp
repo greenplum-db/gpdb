@@ -8,6 +8,16 @@ string s3extErrorMessage;
 
 volatile bool QueryCancelPending = false;
 
+static bool uploadS3(const char *urlWithOptions, const char *fileToUpload);
+static bool downloadS3(const char *urlWithOptions);
+static bool checkConfig(const char *urlWithOptions);
+static void printBucketContents(const ListBucketResult &result);
+static void printTemplate();
+static void validateCommandLineArgs(map<char, string> &optionPairs);
+static map<char, string> parseCommandLineArgs(int argc, char *argv[]);
+static void registerSignalHandler();
+static void printUsage(FILE *stream);
+
 // As we can't catch 'IsAbortInProgress()' in UT, so here consider QueryCancelPending only
 bool S3QueryIsAbortInProgress(void) {
     return QueryCancelPending;
@@ -29,7 +39,7 @@ static void handleAbortSignal(int signum) {
     QueryCancelPending = true;
 }
 
-void registerSignalHandler() {
+static void registerSignalHandler() {
     signal(SIGHUP, handleAbortSignal);
     signal(SIGABRT, handleAbortSignal);
     signal(SIGTERM, handleAbortSignal);
@@ -37,7 +47,7 @@ void registerSignalHandler() {
     signal(SIGTSTP, handleAbortSignal);
 }
 
-void printUsage(FILE *stream) {
+static void printUsage(FILE *stream) {
     fprintf(stream,
             "Usage: gpcheckcloud -c \"s3://endpoint/bucket/prefix "
             "config=path_to_config_file [region=region_name]\", to check the configuration.\n"
@@ -50,7 +60,7 @@ void printUsage(FILE *stream) {
 }
 
 // parse the arguments into char-string value pairs
-map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
+static map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
     int opt = 0;
     map<char, string> optionPairs;
 
@@ -94,7 +104,7 @@ map<char, string> parseCommandLineArgs(int argc, char *argv[]) {
 }
 
 // check if command line arguments are valid
-void validateCommandLineArgs(map<char, string> &optionPairs) {
+static void validateCommandLineArgs(map<char, string> &optionPairs) {
     uint64_t count = optionPairs.count('f') + optionPairs.count('u');
 
     if ((count == 2) && (optionPairs.size() == 2)) {
@@ -125,7 +135,7 @@ void validateCommandLineArgs(map<char, string> &optionPairs) {
     }
 }
 
-void printTemplate() {
+static void printTemplate() {
     printf(
         "[default]\n"
         "secret = \"aws secret\"\n"
@@ -139,7 +149,7 @@ void printTemplate() {
         "proxy = \"\"\n");
 }
 
-void printBucketContents(const ListBucketResult &result) {
+static void printBucketContents(const ListBucketResult &result) {
     char urlbuf[256];
     vector<BucketContent>::const_iterator i;
 
@@ -149,7 +159,7 @@ void printBucketContents(const ListBucketResult &result) {
     }
 }
 
-bool checkConfig(const char *urlWithOptions) {
+static bool checkConfig(const char *urlWithOptions) {
     if (!urlWithOptions) {
         return false;
     }
@@ -175,7 +185,7 @@ bool checkConfig(const char *urlWithOptions) {
     return true;
 }
 
-bool downloadS3(const char *urlWithOptions) {
+static bool downloadS3(const char *urlWithOptions) {
     if (!urlWithOptions) {
         return false;
     }
@@ -210,7 +220,7 @@ bool downloadS3(const char *urlWithOptions) {
     return ret;
 }
 
-bool uploadS3(const char *urlWithOptions, const char *fileToUpload) {
+static bool uploadS3(const char *urlWithOptions, const char *fileToUpload) {
     if (!urlWithOptions) {
         return false;
     }
