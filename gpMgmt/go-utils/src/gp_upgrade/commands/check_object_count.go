@@ -57,8 +57,8 @@ const (
 	WHERE c.relkind = cast('r' as CHAR)                       -- All tables (including partitions)
 	  AND c.relstorage IN ('a','c')                           -- AO / CO
 	  AND n.nspname NOT LIKE 'pg_temp_%'                      -- not temp tables
-	  AND c.oid > 16384                                       -- No system tables
-	  AND (c.relnamespace > 16384 OR n.nspname = 'public')    -- No system schemas, but include 'public'
+	  AND c.oid >= 16384                                      -- No system tables
+	  AND (c.relnamespace >= 16384 OR n.nspname = 'public')   -- No system schemas, but include 'public'
 	  AND (NOT relhassubclass                                 -- not partition parent tables
 	       OR ( relhassubclass
 		    AND NOT EXISTS ( SELECT oid FROM pg_partition_rule p WHERE c.oid = p.parchildrelid )
@@ -74,8 +74,8 @@ const (
 	WHERE c.relkind = cast('r' as CHAR)                       -- All tables (including partitions)
 	  AND c.relstorage NOT IN ('a','c')                       -- NON AO / CO
 	  AND n.nspname NOT LIKE 'pg_temp_%'                      -- not temp tables
-	  AND c.oid > 16384                                       -- No system tables
-	  AND (c.relnamespace > 16384 OR n.nspname = 'public')    -- No system schemas, but include 'public'
+	  AND c.oid >= 16384                                      -- No system tables
+	  AND (c.relnamespace >= 16384 OR n.nspname = 'public')   -- No system schemas, but include 'public'
 	  AND (NOT relhassubclass                                 -- not partition parent tables
 	       OR ( relhassubclass
 		    AND NOT EXISTS ( SELECT oid FROM pg_partition_rule p WHERE c.oid = p.parchildrelid )
