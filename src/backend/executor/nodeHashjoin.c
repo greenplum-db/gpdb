@@ -294,7 +294,7 @@ ExecHashJoin(HashJoinState *node)
 			if (TupIsNull(outerTupleSlot))
 			{
 				/* end of join */
-				if (!node->rescannable)
+				if (!node->reuse_hashtable)
 					ExecEagerFreeHashJoin(node);
 
 				return NULL;
@@ -464,7 +464,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	hjstate = makeNode(HashJoinState);
 	hjstate->js.ps.plan = (Plan *) node;
 	hjstate->js.ps.state = estate;
-	hjstate->rescannable = (eflags & EXEC_FLAG_REWIND) != 0;
+	hjstate->reuse_hashtable = (eflags & EXEC_FLAG_REWIND) != 0;
 
 	/*
 	 * Miscellaneous initialization
@@ -861,7 +861,7 @@ start_over:
 	 * if we have more than 1 batch
 	 */
 	if (curbatch == 0 && nbatch > 1 &&
-			hjstate->rescannable && hashtable->first_pass)
+			hjstate->reuse_hashtable && hashtable->first_pass)
 	{
 		SpillFirstBatch(hjstate);
 	}
@@ -914,7 +914,7 @@ start_over:
 		 * 3. No resizing of nbatch for batch (0...(k-1))
 		 * 4. Inner batchfile for batch k is too big to fit in memory
 		 */
-		if (hjstate->rescannable)
+		if (hjstate->reuse_hashtable)
 			break;
 
 		batch = hashtable->batches[curbatch];
@@ -931,7 +931,7 @@ start_over:
 			break;				/* must process due to rule 3 */
 		/* We can ignore this batch. */
 		/* Release associated temp files right away. */
-		if (batch->innerside.workfile != NULL && !hjstate->rescannable)
+		if (batch->innerside.workfile != NULL && !hjstate->reuse_hashtable)
 		{
 			workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
 			batch->innerside.workfile = NULL;
@@ -1300,9 +1300,13 @@ isHashtableEmpty(HashJoinTable hashtable)
 
 /*
  * In our hybrid hash join we either spill when we increase number of batches
- * or when we re-spill. However, the first batch is always memory resident.
- * This optimization requires us to save the first batch separately if we
- * need to support rescanning (e.g., recursive CTE).
+ * or when we re-spill. However, the first batch is entirely processed in memory;
+ * i.e., it never gets spilled. As we read the outer tuples and finish joining for
+ * the first batch before we start loading the second batch, this works perfectly.
+ * However, losing first batch in a rescan scenario is not workable as we will
+ * see more outer tuples from later rescans that did not yet join with the first
+ * batch, even after we throw out the first batch. Therefore, we need to save the
+ * first batch separately if we need to support rescanning (e.g., recursive CTE).
  */
 static void
 SpillFirstBatch(HashJoinState *node)
@@ -1391,7 +1395,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 
 		SIMPLE_FAULT_INJECTOR(WorkfileHashJoinFailure);
 
-		if (!hjstate->rescannable)
+		if (!hjstate->reuse_hashtable)
 		{
 			workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
 			batch->innerside.workfile = NULL;
