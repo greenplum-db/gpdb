@@ -1,0 +1,2 @@
+test: setup
+test: fts_walrep

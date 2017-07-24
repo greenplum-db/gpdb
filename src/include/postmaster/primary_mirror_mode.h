@@ -279,6 +279,12 @@ extern void getFileRepRoleAndState(
 								   DataState_e *dataState,
                                    bool *isInFilerepTransitionOut,
                                    DataState_e *transitionTargetDataStateOut);
+#ifdef USE_SEGWALREP
+extern void getPrimaryMirrorStateTransition(SegmentState_e *segmentStateOut,
+											DataState_e *dataStateOut,
+											bool *isInTransitionOut,
+											DataState_e *transitionTargetDataStateOut);
+#endif
 
 /* functions for the postmaster/filerep interaction */
 extern bool isFullResync(void);

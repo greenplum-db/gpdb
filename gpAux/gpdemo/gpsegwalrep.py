@@ -134,6 +134,10 @@ class StartMirrors():
         for thread in startThreads:
             thread.join()
 
+        set_fault_strategy_cmd = "SET allow_system_table_mods=\"dml\"; UPDATE gp_fault_strategy SET fault_strategy = 'w'"
+        commands = ["PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % set_fault_strategy_cmd]
+        runcommands(commands, "StartMirror Parent Thread", "Set gp_fault_strategy to 'w'")
+
 class StopMirrors():
     ''' Stop the WAL replication mirror segment '''
 

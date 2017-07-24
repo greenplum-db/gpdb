@@ -21,7 +21,6 @@
 #include "commands/sequence.h"
 #include "executor/spi.h"
 #include "postmaster/primary_mirror_mode.h"
-#include "postmaster/fts.h"
 #include "storage/fd.h"
 #include "storage/lock.h"
 #include "storage/relfilenode.h"

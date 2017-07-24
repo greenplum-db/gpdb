@@ -111,7 +111,17 @@ extern void FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries);
  */
 extern bool FtsIsActive(void);
 
+#ifdef USE_SEGWALREP
+/*
+ * Interface for WalRep-specific segment state machine and transitions
+ */
+extern uint32 FtsGetPairStateWalRep(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
+extern uint32 FtsTransitionWalRep(uint32 stateOld, uint32 trans);
+extern void FtsResolveStateWalRep(FtsSegmentPairState *pairState);
 
+extern void FtsPreprocessProbeResultsWalRep(CdbComponentDatabases *dbs, uint8 *probe_results);
+extern void FtsFailoverWalRep(FtsSegmentStatusChange *changes, int changeCount);
+#else
 /*
  * Interface for FireRep-specific segment state machine and transitions
  */
@@ -121,7 +131,7 @@ extern void FtsResolveStateFilerep(FtsSegmentPairState *pairState);
 
 extern void FtsPreprocessProbeResultsFilerep(CdbComponentDatabases *dbs, uint8 *probe_results);
 extern void FtsFailoverFilerep(FtsSegmentStatusChange *changes, int changeCount);
-
+#endif
 
 /*
  * Interface for requesting master to shut down

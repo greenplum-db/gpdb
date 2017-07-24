@@ -148,6 +148,10 @@
 
 #include "cdb/cdbfilerep.h"
 
+#ifdef USE_SEGWALREP
+#include "cdb/cdbwalrep.h"
+#endif
+
 #ifdef EXEC_BACKEND
 #include "storage/spin.h"
 void SeqServerMain(int argc, char *argv[]);
@@ -792,6 +796,14 @@ signal_filerep_to_shutdown(SegmentState_e shutdownState)
         else signal_child(FilerepPID, SIGUSR2);
 	}
 }
+
+#ifdef USE_SEGWALREP
+static void
+signal_walrep_to_shutdown(SegmentState_e shutdownState)
+{
+	setPrimaryWalRepState(PRIMARYWALREP_SHUTDOWN);
+}
+#endif
 
 /*
  * Postmaster main entry point
@@ -3406,8 +3418,6 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 		ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
 							errmsg("invalid primary mirror transition packet (unable to read target mode value)")));
 	}
-
-
 	else if (strcmp("beginPostmasterReset", targetModeStr) == 0)
 	{
 		processTransitionRequest_beginPostmasterReset();
@@ -3483,11 +3493,25 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 		}
 
 
+#ifdef USE_SEGWALREP
+		SIMPLE_FAULT_INJECTOR(SegmentTransitionRequest);
 
+		if (strcmp(segmentState, "s") == 0)
+		{
+			args->dataState = DataStateInSync;
+			setPrimaryWalRepState(PRIMARYWALREP_STREAMING);
+		}
+		else if (strcmp(segmentState, "c") == 0)
+		{
+			args->dataState = DataStateInChangeTracking;
+			setPrimaryWalRepState(PRIMARYWALREP_ARCHIVING);
+		}
+#else
 		if (strcmp(segmentState, "s") == 0)
 			args->dataState = DataStateInSync;
 		else if (strcmp(segmentState, "c") == 0)
 			args->dataState = DataStateInChangeTracking;
+#endif
 		else if (strcmp(segmentState, "r") == 0)
 			args->dataState = DataStateInResync;
         else if (strcmp(segmentState, "f") == 0)
@@ -3574,6 +3598,23 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 	}
 }
 
+#ifdef USE_SEGWALREP
+static void
+sendPrimaryMirrorTransitionQuery(PrimaryWalRepState primaryState, FaultType_e faulttype)
+{
+	StringInfoData buf;
+
+	initStringInfo(&buf);
+
+	pq_beginmessage(&buf, '\0');
+
+	pq_sendint(&buf, primaryState, 4);
+	pq_sendint(&buf, faulttype, 4);
+
+	pq_endmessage(&buf);
+	pq_flush();
+}
+#else
 static void
 sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate, uint32 faulttype)
 {
@@ -3591,6 +3632,7 @@ sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
 	pq_endmessage(&buf);
 	pq_flush();
 }
+#endif
 
 /**
  * Called during startup packet processing.
@@ -3601,6 +3643,47 @@ sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate,
 static void
 processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 {
+#ifdef USE_SEGWALREP
+	PrimaryWalRepState primaryState;
+	FaultType_e faultType;
+
+	primaryState = getPrimaryWalRepState();
+	faultType = isPrimaryWalRepStateConsistent() ? FaultTypeNotInitialized : FaultTypeMirror;
+
+	SIMPLE_FAULT_INJECTOR(SegmentProbeResponse);
+
+	/* in case of a mirroring fault, check if there is a NIC failure */
+	if (faultType == FaultTypeNotInitialized || faultType == FaultTypeMirror)
+	{
+		if (primaryMirrorCheckNICFailure())
+		{
+			/* report NIC failure to FTS */
+			faultType = FaultTypeNet;
+		}
+	}
+
+	/*
+	 * FTS apart from below code doesn't perform any disk IO,
+	 * hence adding code to perform reads and writes to segment data directory.
+	 * Several DU cases exposed FTS not detecting server hangs because of IO hang.
+	 * Hence adding this code to perform IO and if some issue will hang similar to other queries,
+	 * causing FTS to detect the problem.
+	 */
+	if (fts_diskio_check)
+	{
+		if (faultType == FaultTypeNotInitialized)
+		{
+			bool failure = checkIODataDirectory();
+			if (failure)
+			{
+				elog(LOG, "FTS_PROBE for IO Check: FAILED");
+				faultType = FaultTypeIO;
+			}
+		}
+	}
+
+	sendPrimaryMirrorTransitionQuery(primaryState, faultType);
+#else
 	PrimaryMirrorTransitionPacket *transition = (PrimaryMirrorTransitionPacket *) pkt;
 	int length;
 
@@ -3681,7 +3764,7 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 	}
 
 	sendPrimaryMirrorTransitionQuery((uint32)pm_mode, (uint32)s_state, (uint32)d_state, (uint32)f_type);
-
+#endif
 	return;
 }
 
@@ -5866,7 +5949,11 @@ StateMachineTransition_ShutdownBackends(void)
 	/* and the wal writer too */
 	signal_child_if_up(WalWriterPID, SIGTERM);
 
-    signal_filerep_to_shutdown(SegmentStateShutdownFilerepBackends);
+#ifdef USE_SEGWALREP
+	signal_walrep_to_shutdown(SegmentStateShutdown);
+#else
+	signal_filerep_to_shutdown(SegmentStateShutdownFilerepBackends);
+#endif
 }
 
 /**
@@ -5914,7 +6001,11 @@ static void StateMachineTransition_ShutdownPostBgWriter(void)
 {
     /* these services take the same signal regardless of fast vs smart shutdown */
     StopServices(/* excludeFlags */ 0, SIGUSR2);
-    signal_filerep_to_shutdown(SegmentStateShutdown);
+#ifdef USE_SEGWALREP
+	signal_walrep_to_shutdown(SegmentStateShutdown);
+#else
+	signal_filerep_to_shutdown(SegmentStateShutdown);
+#endif
     signal_child_if_up(PgArchPID, SIGQUIT);
     signal_child_if_up(PgStatPID, SIGQUIT);
 

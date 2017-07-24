@@ -71,6 +71,10 @@
 #include "utils/workfile_mgr.h"
 #include "utils/session_state.h"
 
+#ifdef USE_SEGWALREP
+#include "cdb/cdbwalrep.h"
+#endif
+
 shmem_startup_hook_type shmem_startup_hook = NULL;
 
 static Size total_addin_request = 0;
@@ -289,6 +293,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	InitShmemIndex();
 
 	primaryMirrorModeShmemInit();
+#ifdef USE_SEGWALREP
+	primaryWalRepStateShmemInit();
+#endif
 
 	/*
 	 * Set up xlog, clog, and buffers

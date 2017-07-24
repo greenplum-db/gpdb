@@ -60,6 +60,10 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbpersistentcheck.o \
 	   partitionselection.o
 
+ifeq ($(enable_segwalrep), yes)
+OBJS := $(OBJS) cdbwalrep.o
+endif
+
 ifeq ($(PORTNAME),cygwin)
 .LIBPATTERNS := $(filter-out %.so,$(.LIBPATTERNS))
 endif

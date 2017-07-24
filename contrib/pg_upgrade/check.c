@@ -891,10 +891,18 @@ check_fts_fault_strategy(migratorContext *ctx)
 	snprintf(output_path, sizeof(output_path), "%s/fault_strategies.txt",
 			 ctx->cwd);
 
+#ifdef USE_SEGWALREP
+	/* In segment WAL replication, 'f' is removed and replaced with 'w' */
+	snprintf(query, sizeof(query),
+			 "SELECT fault_strategy "
+			 "FROM   pg_catalog.gp_fault_strategy "
+			 "WHERE  fault_strategy NOT IN ('n','w');");
+#else
 	snprintf(query, sizeof(query),
 			 "SELECT fault_strategy "
 			 "FROM   pg_catalog.gp_fault_strategy "
 			 "WHERE  fault_strategy NOT IN ('n','f');");
+#endif
 
 	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
 	{
