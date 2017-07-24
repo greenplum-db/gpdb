@@ -1304,7 +1304,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 			if (strstr(stmt->filename, "<SEGID>") == NULL)
 				ereport(ERROR,
-					(0, errmsg("<SEGID> is required for file name")));
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("<SEGID> is required for file name")));
 
 			char segid_buf[8];
 			snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
