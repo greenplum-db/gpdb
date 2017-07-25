@@ -2722,8 +2722,10 @@ class gpload:
                         os.kill(a.pid, signal.SIGTERM)
                 except OSError:
                     pass
+        self.log(self.LOG, 'terminating all threads')
         for t in self.threads:
             t.join()
+        self.log(self.LOG, 'all threads are terminated')
 
 
     def run2(self):
