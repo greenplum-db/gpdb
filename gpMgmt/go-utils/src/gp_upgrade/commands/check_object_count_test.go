@@ -52,27 +52,28 @@ var _ = Describe("object count tests", func() {
 
 				It("returns an error", func() {
 					dbConnector, mock := db.CreateMockDBConn()
-					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnError(errors.New("the query for AO table count has failed"))
+					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnError(errors.New("pq: the query for AO table count has failed"))
 
 					err := subject.execute(dbConnector, nil)
 
 					Expect(dbConnector.GetConn().Stats().OpenConnections).To(Equal(0))
 					Expect(err).To(HaveOccurred())
+					Expect(err).To(Equal(errors.New("ERROR: [check object-count] the query for AO table count has failed")))
+
 				})
 			})
 			Describe("when the query fails on heap-only table count", func() {
 
 				It("returns an error", func() {
 					dbConnector, mock := db.CreateMockDBConn()
-					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage IN.*").WillReturnRows(aofakeResult)
-					mock.ExpectQuery("SELECT COUNT.*AND c.relstorage NOT IN.*").WillReturnError(errors.New("the query for heap-only table count has failed"))
-					buffer := gbytes.NewBuffer()
+					mock.ExpectQuery("").WillReturnError(errors.New("pq: the query for heap-only table count has failed"))
 
-					err := subject.execute(dbConnector, buffer)
+					err := subject.execute(dbConnector, nil)
 
-					buffer.Close()
 					Expect(dbConnector.GetConn().Stats().OpenConnections).To(Equal(0))
 					Expect(err).To(HaveOccurred())
+					Expect(err).To(Equal(errors.New("ERROR: [check object-count] the query for heap-only table count has failed")))
+
 				})
 			})
 			Describe("when the db dbConn fails", func() {
