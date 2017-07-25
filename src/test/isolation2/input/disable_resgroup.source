@@ -1,6 +1,6 @@
 -- for all removed resgroups the cgroup dirs should also be removed
-! ls -d /sys/fs/cgroup/cpu/gpdb/*/;
-! ls -d /sys/fs/cgroup/cpuacct/gpdb/*/;
+! ls -d @cgroup_mnt_point@/cpu/gpdb/*/;
+! ls -d @cgroup_mnt_point@/cpuacct/gpdb/*/;
 
 -- reset the GUC and restart cluster.
 -- start_ignore

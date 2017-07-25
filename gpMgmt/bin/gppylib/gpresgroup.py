@@ -18,11 +18,11 @@ class GpResGroup(object):
     def validate(self):
         pool = base.WorkerPool()
         gp_array = GpArray.initFromCatalog(dbconn.DbURL(), utility=True)
-        host_cache = GpHostCache(gp_array, pool)
+        host_list = list(set(gp_array.get_hostlist(True)))
         msg = None
 
-        for h in host_cache.get_hosts():
-            cmd = Command(h.hostname, "gpcheckresgroupimpl", REMOTE, h.hostname)
+        for h in host_list:
+            cmd = Command(h, "gpcheckresgroupimpl", REMOTE, h)
             pool.addCommand(cmd)
         pool.join()
 
@@ -30,7 +30,7 @@ class GpResGroup(object):
         failed = []
         for i in items:
             if not i.was_successful():
-                failed.append("[%s:%s]"%(i.remoteHost, i.get_stderr()))
+                failed.append("[%s:%s]"%(i.remoteHost, i.get_stderr().rstrip()))
         pool.haltWork()
         pool.joinWorkers()
         if failed:

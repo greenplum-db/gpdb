@@ -160,6 +160,8 @@ unassignGroup(Oid group, const char *comp, int fddir)
 	}
 
 	close(fdr);
+	if (buflen == 0)
+		return;
 
 	buildPath(0, NULL, comp, "cgroup.procs", path, pathsize);
 
@@ -560,10 +562,8 @@ detectCgroupMountPoint(void)
 
 	fp = setmntent(PROC_MOUNTS, "r");
 	if (fp == NULL)
-	{
-		CGROUP_ERROR("can not open '%s' for read: %s",
-					 PROC_MOUNTS, strerror(errno));
-	}
+		CGROUP_ERROR("can not open '%s' for read", PROC_MOUNTS);
+
 
 	while ((me = getmntent(fp)))
 	{
@@ -572,19 +572,20 @@ detectCgroupMountPoint(void)
 		if (strcmp(me->mnt_type, "cgroup"))
 			continue;
 
-		Assert(strlen(me->mnt_dir) < sizeof(cgdir));
-		strncpy(cgdir, me->mnt_dir, sizeof(cgdir));
+		strncpy(cgdir, me->mnt_dir, sizeof(cgdir) - 1);
 
 		p = strrchr(cgdir, '/');
-		Assert(p != NULL);
-		*p = 0;
+		if (p == NULL)
+			CGROUP_ERROR("cgroup mount point parse error: %s", cgdir);
+		else
+			*p = 0;
 		break;
 	}
 
 	endmntent(fp);
 
 	if (!cgdir[0])
-		CGROUP_ERROR("can not find cgroup mount point: %s", strerror(errno));
+		CGROUP_ERROR("can not find cgroup mount point");
 }
 
 /* Return the name for the OS group implementation */

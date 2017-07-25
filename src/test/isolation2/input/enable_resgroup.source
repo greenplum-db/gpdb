@@ -1,8 +1,8 @@
 -- start_ignore
-! rmdir /sys/fs/cgroup/cpu/gpdb;
-! rmdir /sys/fs/cgroup/cpuacct/gpdb;
-! mkdir /sys/fs/cgroup/cpu/gpdb;
-! mkdir /sys/fs/cgroup/cpuacct/gpdb;
+! rmdir @cgroup_mnt_point@/cpu/gpdb;
+! rmdir @cgroup_mnt_point@/cpuacct/gpdb;
+! mkdir @cgroup_mnt_point@/cpu/gpdb;
+! mkdir @cgroup_mnt_point@/cpuacct/gpdb;
 -- end_ignore
 
 -- enable resource group and restart cluster.
