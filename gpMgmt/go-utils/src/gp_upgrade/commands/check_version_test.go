@@ -61,6 +61,21 @@ var _ = Describe("version tests", func() {
 				})
 
 			})
+			Describe("When the version does not compile", func() {
+				It("returns an error", func() {
+					header := []string{"version"}
+					versionRow := []driver.Value{"PostgreSQL 8.3.23 (Greenplum Database this.is.an.invalid.version.string. build dev) on x86_64-apple-darwin16.5.0, compiled by GCC Apple LLVM version 8.1.0 (clang-802.0.42) compiled on Jun  8 2017 17:30:28"}
+
+					dbConnector, mock := db.CreateMockDBConn()
+
+					fakeResult := sqlmock.NewRows(header).AddRow(versionRow...)
+					mock.ExpectQuery("SELECT version()").WillReturnRows(fakeResult)
+
+					err := subject.execute(dbConnector, nil)
+
+					Expect(err).To(HaveOccurred())
+				})
+			})
 			Describe("when the query fails", func() {
 
 				It("returns an error", func() {
