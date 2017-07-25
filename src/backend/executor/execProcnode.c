@@ -1484,15 +1484,36 @@ squelchNodeWalker(PlanState *node,
 	{
 		ShareInputScanState* sisc_state = (ShareInputScanState *)node;
 		ShareType share_type = ((ShareInputScan *)sisc_state->ss.ps.plan)->share_type;
+		bool isWriter = outerPlanState(sisc_state) != NULL;
+		bool tuplestoreInitialized = sisc_state->ts_state != NULL;
+
 		/*
 		 * If there is a SharedInputScan that is shared within the same slice
 		 * then its subtree may still need to be executed and the motions in the
 		 * subtree cannot yet be stopped. Thus, we short-circuit
 		 * squelchNodeWalker in this case.
-		 */
-		if (share_type == SHARE_MATERIAL || share_type == SHARE_SORT)
+		 *
+		 * In squelching a cross-slice SharedInputScan writer, we need to
+		 * ensure we don't block any reader on other slices as a result of
+		 * not materializing the shared plan.
+		 *
+		 * Note that we emphatically can't "fake" an empty tuple store
+		 * and just go ahead waking up the readers because that can
+		 * lead to wrong results.  c.f. nodeShareInputScan.c
+		*/
+		switch (share_type)
 		{
-			return CdbVisit_Skip;
+			case SHARE_MATERIAL:
+			case SHARE_SORT:
+				return CdbVisit_Skip;
+
+			case SHARE_MATERIAL_XSLICE:
+			case SHARE_SORT_XSLICE:
+				if (isWriter && !tuplestoreInitialized)
+					ExecProcNode(node);
+				break;
+			case SHARE_NOTSHARED:
+				break;
 		}
 	}
 	else if (IsA(node, MotionState))
