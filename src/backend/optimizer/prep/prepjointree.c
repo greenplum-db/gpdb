@@ -55,14 +55,15 @@ static void pull_up_fromlist_subqueries(PlannerInfo    *root,
 				                        bool            below_outer_join);
 static Node *pull_up_simple_subquery(PlannerInfo *root, Node *jtnode,
 						RangeTblEntry *rte,
-						bool below_outer_join,
-						bool append_rel_member);
+						JoinExpr *lowest_outer_join,
+						AppendRelInfo *containing_appendrel);
 bool is_simple_subquery(PlannerInfo *root, Query *subquery);
 static List *insert_targetlist_placeholders(PlannerInfo *root, List *tlist,
 											int varno, bool wrap_non_vars);
 static bool is_safe_append_member(Query *subquery);
 static void resolvenew_in_jointree(Node *jtnode, int varno,
-					   RangeTblEntry *rte, List *subtlist);
+					   RangeTblEntry *rte, List *subtlist,
+						List *subtlist_with_phvs, JoinExpr *lowest_outer_join);
 static reduce_outer_joins_state *reduce_outer_joins_pass1(Node *jtnode);
 static void reduce_outer_joins_pass2(Node *jtnode,
 						 reduce_outer_joins_state *state,
@@ -464,7 +465,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
  */
 Node *
 pull_up_subqueries(PlannerInfo *root, Node *jtnode,
-				   bool below_outer_join, bool append_rel_member)
+				   JoinExpr *lowest_outer_join, AppendRelInfo *containing_appendrel)
 {
 	if (jtnode == NULL)
 		return NULL;
@@ -483,10 +484,10 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 		if (rte->rtekind == RTE_SUBQUERY &&
 			!rte->forceDistRandom &&
 			is_simple_subquery(root, rte->subquery) &&
-			(!append_rel_member || is_safe_append_member(rte->subquery)))
+			(containing_appendrel == NULL || is_safe_append_member(rte->subquery)))
 			return pull_up_simple_subquery(root, jtnode, rte,
-										   below_outer_join,
-										   append_rel_member);
+										   lowest_outer_join,
+										   containing_appendrel);
 
 		/* PG:
 		 * Alternatively, is it a simple UNION ALL subquery?  If so, flatten
@@ -506,44 +507,46 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 	else if (IsA(jtnode, FromExpr))
 	{
 		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
 
-		Assert(!append_rel_member);
-		pull_up_fromlist_subqueries(root, &f->fromlist, below_outer_join);
+		Assert(containing_appendrel == NULL);
+		foreach(l, f->fromlist)
+			lfirst(l) = pull_up_subqueries(root, lfirst(l), lowest_outer_join, NULL);
 	}
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
 
-		Assert(!append_rel_member);
+		Assert(containing_appendrel == NULL);
 		/* Recurse, being careful to tell myself when inside outer join */
 		switch (j->jointype)
 		{
 			case JOIN_INNER:
 			case JOIN_SEMI:
 				j->larg = pull_up_subqueries(root, j->larg,
-											 below_outer_join, false);
+											 lowest_outer_join, NULL);
 				j->rarg = pull_up_subqueries(root, j->rarg,
-											 below_outer_join, false);
+											 lowest_outer_join, NULL);
 				break;
 			case JOIN_LEFT:
 			case JOIN_ANTI:
 			case JOIN_LASJ_NOTIN:
 				j->larg = pull_up_subqueries(root, j->larg,
-											 below_outer_join, false);
+											 lowest_outer_join, NULL);
 				j->rarg = pull_up_subqueries(root, j->rarg,
-											 true, false);
+											 j, NULL);
 				break;
 			case JOIN_FULL:
 				j->larg = pull_up_subqueries(root, j->larg,
-											 true, false);
+											 j, NULL);
 				j->rarg = pull_up_subqueries(root, j->rarg,
-											 true, false);
+											 j, NULL);
 				break;
 			case JOIN_RIGHT:
 				j->larg = pull_up_subqueries(root, j->larg,
-											 true, false);
+											 j, NULL);
 				j->rarg = pull_up_subqueries(root, j->rarg,
-											 below_outer_join, false);
+											 lowest_outer_join, NULL);
 				break;
 			default:
 				elog(ERROR, "unrecognized join type: %d",
@@ -571,6 +574,7 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 
 
 /*
+ * 8.4-9.0-MERGE_FIXME: Check if can be removed
  * pull_up_fromlist_subqueries
  *		Attempt to pull up subqueries in a List of jointree nodes.
  */
@@ -600,10 +604,13 @@ pull_up_fromlist_subqueries(PlannerInfo    *root,
  * subquery by pull_up_subqueries.	We return the replacement jointree node,
  * or jtnode itself if we determine that the subquery can't be pulled up after
  * all.
+ *
+ * rte is the RangeTblEntry referenced by jtnode.  Remaining parameters are
+ * as for pull_up_subqueries.
  */
 static Node *
 pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
-						bool below_outer_join, bool append_rel_member)
+						JoinExpr *lowest_outer_join, AppendRelInfo *containing_appendrel)
 {
 	Query	   *parse = root->parse;
 	int			varno = ((RangeTblRef *) jtnode)->rtindex;
@@ -611,6 +618,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	PlannerInfo *subroot;
 	int			rtoffset;
 	List	   *subtlist;
+	List	   *subtlist_with_phvs;
 	ListCell   *rt;
     ListCell   *cell;
 
@@ -674,13 +682,13 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * pull_up_subqueries' processing is complete for its jointree and
 	 * rangetable.
 	 *
-	 * Note: below_outer_join = false is correct here even if we are within an
-	 * outer join in the upper query; the lower query starts with a clean
-	 * slate for outer-join semantics.	Likewise, we say we aren't handling an
+	 * Note: we should pass NULL for containing-join info even if we are within an
+	 * an outer join in the upper query; the lower query starts with a clean
+	 * slate for outer-join semantics. Likewise, we say we aren't handling an
 	 * appendrel member.
 	 */
 	subquery->jointree = (FromExpr *)
-		pull_up_subqueries(subroot, (Node *) subquery->jointree, false, false);
+		pull_up_subqueries(subroot, (Node *) subquery->jointree, NULL, NULL);
 
 	/*
 	 * Now we must recheck whether the subquery is still simple enough to pull
@@ -691,7 +699,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * pull_up_subqueries.
 	 */
 	if (is_simple_subquery(root, subquery) &&
-		(!append_rel_member || is_safe_append_member(subquery)))
+		(containing_appendrel == NULL || is_safe_append_member(subquery)))
 	{
 		/* good to go */
 	}
@@ -737,20 +745,20 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	/*
 	 * The subquery's targetlist items are now in the appropriate form to
 	 * insert into the top query, but if we are under an outer join then
-	 * non-nullable items have to be turned into PlaceHolderVars.  If we
+	 * non-nullable items may have to be turned into PlaceHolderVars.  If we
 	 * are dealing with an appendrel member then anything that's not a
 	 * simple Var has to be turned into a PlaceHolderVar.
 	 */
-	if (below_outer_join || append_rel_member)
-		subtlist = insert_targetlist_placeholders(root, subquery->targetList,
-												  varno, append_rel_member);
+	subtlist = subquery->targetList;
+	if (lowest_outer_join != NULL || containing_appendrel != NULL)
+		subtlist_with_phvs = insert_targetlist_placeholders(root, subtlist, varno, containing_appendrel != NULL);
 	else
-		subtlist = subquery->targetList;
+		subtlist_with_phvs = subtlist;
 
 	List *newTList = (List *)
 		ResolveNew((Node *) parse->targetList,
 				   varno, 0, rte,
-				   subtlist, CMD_SELECT, 0);
+				   subtlist_with_phvs, CMD_SELECT, 0);
 
 	if (parse->scatterClause)
 	{
@@ -761,25 +769,24 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	 * Replace all of the top query's references to the subquery's outputs
 	 * with copies of the adjusted subtlist items, being careful not to
 	 * replace any of the jointree structure. (This'd be a lot cleaner if we
-	 * could use query_tree_mutator.)
+	 * could use query_tree_mutator.)  We have to use PHVs in the targetList,
+	 * returningList, and havingQual, since those are certainly above any
+	 * outer join.  resolvenew_in_jointree tracks its location in the jointree
+	 * and uses PHVs or not appropriately.
 	 */
 	parse->targetList = newTList;
 
 	parse->returningList = (List *)
 		ResolveNew((Node *) parse->returningList,
 				   varno, 0, rte,
-				   subtlist, CMD_SELECT, 0);
+				   subtlist_with_phvs, CMD_SELECT, 0);
 	resolvenew_in_jointree((Node *) parse->jointree, varno,
-						   rte, subtlist);
+						   rte, subtlist, subtlist_with_phvs, lowest_outer_join);
 	Assert(parse->setOperations == NULL);
 	parse->havingQual =
 		ResolveNew(parse->havingQual,
 				   varno, 0, rte,
-				   subtlist, CMD_SELECT, 0);
-	root->append_rel_list = (List *)
-		ResolveNew((Node *) root->append_rel_list,
-				   varno, 0, rte,
-				   subtlist, CMD_SELECT, 0);
+				   subtlist_with_phvs, CMD_SELECT, 0);
 
 	if (parse->windowClause)
 	{
@@ -804,6 +811,34 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 		}
 	}
 
+	/*
+	 * Replace references in the translated_vars lists of appendrels.
+	 * When pulling up an appendrel member, we do not need PHVs in the list
+	 * of the parent appendrel --- there isn't any outer join between.
+	 * Elsewhere, use PHVs for safety.  (This analysis could be made tighter
+	 * but it seems unlikely to be worth much trouble.)
+	 */
+	foreach(cell, root->append_rel_list)
+	{
+		AppendRelInfo *appinfo = (AppendRelInfo *) lfirst(cell);
+
+		appinfo->translated_vars = (List *)
+		ResolveNew((Node *) appinfo->translated_vars,
+				   varno, 0, rte,
+				   (appinfo == containing_appendrel) ?
+				   subtlist : subtlist_with_phvs,
+				   CMD_SELECT, 0);
+	}
+
+	/*
+	 * Replace references in the joinaliasvars lists of join RTEs.
+	 *
+	 * You might think that we could avoid using PHVs for alias vars of joins
+	 * below lowest_outer_join, but that doesn't work because the alias vars
+	 * could be referenced above that join; we need the PHVs to be present
+	 * in such references after the alias vars get flattened.  (It might be
+	 * worth trying to be smarter here, someday.)
+	 */
 	foreach(rt, parse->rtable)
 	{
 		RangeTblEntry *otherrte = (RangeTblEntry *) lfirst(rt);
@@ -812,7 +847,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 			otherrte->joinaliasvars = (List *)
 				ResolveNew((Node *) otherrte->joinaliasvars,
 						   varno, 0, rte,
-						   subtlist, CMD_SELECT, 0);
+						   subtlist_with_phvs, CMD_SELECT, 0);
 
 		else if (otherrte->rtekind == RTE_SUBQUERY && rte != otherrte)
 		{
@@ -823,7 +858,7 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 											  up to be a subquery range table; while on the other hand, we
 											  cannot directly put a subquery which refer to other relations
 											  of the same level after FROM. */
-							subtlist, CMD_SELECT, 0);
+							subtlist_with_phvs, CMD_SELECT, 0);
 		}
 	}
 
@@ -1073,7 +1108,7 @@ is_simple_union_all_recurse(Node *setOp, Query *setOpQuery, List *colTypes)
  *	  Insert PlaceHolderVar nodes into any non-junk targetlist items that are
  *	  not simple variables or strict functions of simple variables (and hence
  *	  might not correctly go to NULL when examined above the point of an outer
- *	  join).  We assume we can modify the tlist items in-place.
+ *	  join).
  *
  * varno is the upper-query relid of the subquery; this is used as the
  * syntactic location of the PlaceHolderVars.
@@ -1084,15 +1119,20 @@ static List *
 insert_targetlist_placeholders(PlannerInfo *root, List *tlist,
 							   int varno, bool wrap_non_vars)
 {
+	List	   *result = NIL;
 	ListCell   *lc;
 	
 	foreach(lc, tlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+		TargetEntry *newtle;
 		
-		/* ignore resjunk columns */
+		/* resjunk columns need not be changed */
 		if (tle->resjunk)
+		{
+			result = lappend(result, tle);
 			continue;
+		}
 		
 		/*
 		 * Simple Vars always escape being wrapped.  This is common enough
@@ -1100,7 +1140,10 @@ insert_targetlist_placeholders(PlannerInfo *root, List *tlist,
 		 */
 		if (tle->expr && IsA(tle->expr, Var) &&
 			((Var *) tle->expr)->varlevelsup == 0)
+		{
+			result = lappend(result, tle);
 			continue;
+		}
 		
 		if (!wrap_non_vars)
 		{
@@ -1113,15 +1156,21 @@ insert_targetlist_placeholders(PlannerInfo *root, List *tlist,
 			 */
 			if (contain_vars_of_level((Node *) tle->expr, 0) &&
 				!contain_nonstrict_functions((Node *) tle->expr))
+			{
+				result = lappend(result, tle);
 				continue;
+			}
 		}
 		
 		/* Else wrap it in a PlaceHolderVar */
-		tle->expr = (Expr *) make_placeholder_expr(root,
-												   tle->expr,
-												   bms_make_singleton(varno));
+		newtle = makeNode(TargetEntry);
+		memcpy(newtle, tle, sizeof(TargetEntry));
+
+		newtle->expr = (Expr *)make_placeholder_expr(root,
+													 tle->expr, bms_make_singleton(varno));
+		result = lappend(result, newtle);
 	}
-	return tlist;
+	return result;
 }
 
 /*
@@ -1164,10 +1213,16 @@ is_safe_append_member(Query *subquery)
  * Helper routine for pull_up_subqueries: do ResolveNew on every expression
  * in the jointree, without changing the jointree structure itself.  Ugly,
  * but there's no other way...
+ *
+ * If we are above lowest_outer_join then use subtlist_with_phvs; at or
+ * below it, use subtlist.  (When no outer joins are in the picture,
+ * these will be the same list.)
  */
 static void
 resolvenew_in_jointree(Node *jtnode, int varno,
-					   RangeTblEntry *rte, List *subtlist)
+					   RangeTblEntry *rte, List *subtlist,
+					   List *subtlist_with_phvs,
+					   JoinExpr *lowest_outer_join)
 {
 	ListCell   *l;
 
@@ -1182,22 +1237,29 @@ resolvenew_in_jointree(Node *jtnode, int varno,
 		FromExpr   *f = (FromExpr *) jtnode;
 
 		foreach(l, f->fromlist)
-			resolvenew_in_jointree(lfirst(l), varno, rte, subtlist);
+			resolvenew_in_jointree(lfirst(l), varno, rte, subtlist, subtlist_with_phvs,
+								   lowest_outer_join);
 		f->quals = ResolveNew(f->quals,
 							  varno, 0, rte,
-							  subtlist, CMD_SELECT, 0);
+							  subtlist_with_phvs, CMD_SELECT, 0);
 	}
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
 
-		resolvenew_in_jointree(j->larg, varno, rte, subtlist);
-		resolvenew_in_jointree(j->rarg, varno, rte, subtlist);
+		if (j == lowest_outer_join)
+		{
+			/* no more PHVs in or below this join */
+			subtlist_with_phvs = subtlist;
+			lowest_outer_join = NULL;
+		}
+		resolvenew_in_jointree(j->larg, varno, rte, subtlist, subtlist_with_phvs, lowest_outer_join);
+		resolvenew_in_jointree(j->rarg, varno, rte, subtlist, subtlist_with_phvs, lowest_outer_join);
 		foreach(l, j->subqfromlist)
-			resolvenew_in_jointree(lfirst(l), varno, rte, subtlist);
+			resolvenew_in_jointree(lfirst(l), varno, rte, subtlist, subtlist_with_phvs, lowest_outer_join);
 		j->quals = ResolveNew(j->quals,
 							  varno, 0, rte,
-							  subtlist, CMD_SELECT, 0);
+							  subtlist_with_phvs, CMD_SELECT, 0);
 
 		/*
 		 * We don't bother to update the colvars list, since it won't be used
