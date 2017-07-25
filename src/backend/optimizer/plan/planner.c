@@ -755,7 +755,7 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * this query.
 	 */
 	parse->jointree = (FromExpr *)
-		pull_up_subqueries(root, (Node *) parse->jointree, false, false);
+		pull_up_subqueries(root, (Node *) parse->jointree, NULL, NULL);
 
 	/*
 	 * Detect whether any rangetable entries are RTE_JOIN kind; if not, we can
