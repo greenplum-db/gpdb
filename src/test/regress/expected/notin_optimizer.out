@@ -443,17 +443,15 @@ select x,y from l1 where (x,y) not in
 --
 explain select * from g1 where (a,b,c) not in 
 	(select x,y,z from l1);
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=3.63..14.81 rows=11 width=12)
-   ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.63..14.81 rows=4 width=12)
-         Join Filter: g1.a = "NotIn_SUBQUERY".x AND g1.b = "NotIn_SUBQUERY".y AND g1.c = "NotIn_SUBQUERY".z
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=3.53..14.71 rows=11 width=12)
+   ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.53..14.71 rows=4 width=12)
+         Join Filter: g1.a = l1.x AND g1.b = l1.y AND g1.c = l1.z
          ->  Seq Scan on g1  (cost=0.00..2.11 rows=4 width=12)
-         ->  Materialize  (cost=3.63..3.93 rows=10 width=12)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.60 rows=10 width=12)
-                     ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..3.20 rows=4 width=12)
-                           ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=12)
- Settings:  optimizer=on
+         ->  Materialize  (cost=3.53..3.83 rows=10 width=12)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.50 rows=10 width=12)
+                     ->  Seq Scan on l1  (cost=0.00..3.10 rows=4 width=12)
  Optimizer status: legacy query optimizer
 (10 rows)
 

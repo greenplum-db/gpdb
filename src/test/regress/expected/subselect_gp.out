@@ -1496,23 +1496,21 @@ EXPLAIN SELECT '' AS three, f1, f2
   FROM SUBSELECT_TBL
   WHERE (f1, f2) NOT IN (SELECT f2, CAST(f3 AS int4) FROM SUBSELECT_TBL
                          WHERE f3 IS NOT NULL) ORDER BY 2,3;
-                                                               QUERY PLAN                                                               
-----------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.18..2.19 rows=4 width=8)
+                                                                             QUERY PLAN                                                                              
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=11.20..11.22 rows=8 width=8)
    Merge Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f2
-   ->  Sort  (cost=2.18..2.19 rows=2 width=8)
+   ->  Sort  (cost=11.20..11.22 rows=3 width=8)
          Sort Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f2
-         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=1.07..2.15 rows=2 width=8)
-               Join Filter: subselect_gp.subselect_tbl.f1 = "NotIn_SUBQUERY".f2 AND subselect_gp.subselect_tbl.f2 = "NotIn_SUBQUERY".f3
-               ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=8)
-               ->  Materialize  (cost=1.07..1.10 rows=1 width=8)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.06 rows=1 width=8)
-                           ->  Subquery Scan "NotIn_SUBQUERY"  (cost=0.00..1.02 rows=1 width=8)
-                                 ->  Seq Scan on subselect_tbl  (cost=0.00..1.01 rows=1 width=12)
-                                       Filter: f3 IS NOT NULL
- Settings:  optimizer=off
+         ->  Nested Loop Left Anti Semi Join (Not-In)  (cost=3.38..11.08 rows=3 width=8)
+               Join Filter: subselect_gp.subselect_tbl.f1 = subselect_gp.subselect_tbl.f2 AND subselect_gp.subselect_tbl.f2 = subselect_gp.subselect_tbl.f3::integer
+               ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=8)
+               ->  Materialize  (cost=3.38..3.59 rows=7 width=12)
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.36 rows=7 width=12)
+                           ->  Seq Scan on subselect_tbl  (cost=0.00..3.08 rows=3 width=12)
+                                 Filter: f3 IS NOT NULL
  Optimizer status: legacy query optimizer
-(14 rows)
+(12 rows)
 
 EXPLAIN SELECT * FROM tenk1 a, tenk1 b
 WHERE (a.unique1,b.unique2) IN (SELECT unique1,unique2 FROM tenk1 c);
@@ -1654,9 +1652,9 @@ EXPLAIN select count(distinct ss.ten) from
  Aggregate  (cost=952.08..952.09 rows=1 width=8)
    ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=952.01..952.06 rows=1 width=8)
          ->  Aggregate  (cost=952.01..952.02 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.79..927.12 rows=3319 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.79..927.12 rows=3319 width=4)
                      Hash Key: a.ten
-                     ->  Hash Join  (cost=414.79..728.02 rows=3319 width=8)
+                     ->  Hash Join  (cost=414.79..728.02 rows=3319 width=4)
                            Hash Cond: a.unique1 = b.hundred
                            ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=8)
                            ->  Hash  (cost=413.54..413.54 rows=34 width=4)
@@ -1677,7 +1675,7 @@ EXPLAIN select count(*) from
  Aggregate  (cost=752.98..752.99 rows=1 width=8)
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=752.91..752.96 rows=1 width=8)
          ->  Aggregate  (cost=752.91..752.92 rows=1 width=8)
-               ->  Hash Join  (cost=414.79..728.02 rows=3319 width=4)
+               ->  Hash Join  (cost=414.79..728.02 rows=3319 width=0)
                      Hash Cond: a.unique1 = b.hundred
                      ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=4)
                      ->  Hash  (cost=413.54..413.54 rows=34 width=4)
@@ -1698,9 +1696,9 @@ EXPLAIN select count(distinct ss.ten) from
  Aggregate  (cost=952.08..952.09 rows=1 width=8)
    ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=952.01..952.06 rows=1 width=8)
          ->  Aggregate  (cost=952.01..952.02 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.79..927.12 rows=3319 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.79..927.12 rows=3319 width=4)
                      Hash Key: a.ten
-                     ->  Hash Join  (cost=414.79..728.02 rows=3319 width=8)
+                     ->  Hash Join  (cost=414.79..728.02 rows=3319 width=4)
                            Hash Cond: a.unique1 = b.hundred
                            ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=8)
                            ->  Hash  (cost=413.54..413.54 rows=34 width=4)

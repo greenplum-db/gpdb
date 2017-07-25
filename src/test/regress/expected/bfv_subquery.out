@@ -389,6 +389,8 @@ SET enable_nestloop=off;
 SET enable_hashjoin=off;
 set enable_mergejoin = on;
 select * from t_outer where t_outer.b not in (select ctid from t_inner);
+NOTICE:  SELECT uses system-defined column "t_inner.ctid" without the necessary companion column "t_inner.gp_segment_id"
+HINT:  To uniquely identify a row within a distributed table, use the "gp_segment_id" column together with the "ctid" column.
  a | b 
 ---+---
 (0 rows)
