@@ -6,6 +6,10 @@
 -- check platform and start 'gpfdist'
 -- --------------------------------------
 set optimizer_print_missing_stats = off;
+CREATE EXTERNAL WEB TABLE gpfdist_status (x text)
+execute E'( python @bindir@/lib/gppinggpfdist.py @hostname@:7575 2>&1 || echo) '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
 
 CREATE EXTERNAL WEB TABLE gpfdist_start (x text)
 execute E'((@bindir@/gpfdist -p 7575 -d @abs_srcdir@/data/fixedwidth/  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '

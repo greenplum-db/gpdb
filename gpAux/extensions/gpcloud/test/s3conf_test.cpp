@@ -96,3 +96,8 @@ TEST(Config, SkipVerify) {
     S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=skip_verify");
     EXPECT_FALSE(params.isVerifyCert());
 }
+
+TEST(Config, Proxy) {
+    S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=proxy");
+    EXPECT_EQ("https://127.0.0.1:8080", params.getProxy());
+}

@@ -307,13 +307,13 @@ class RestoreDatabase(Operation):
             self._restore_stats()
             return
 
-        if self.context.drop_db:
-            self._multitry_createdb()
-
         if self.context.restore_global:
             self._restore_global(self.context)
             if self.context.restore_global == "only":
                 return
+
+        if self.context.drop_db:
+            self._multitry_createdb()
 
         """
         For full restore with table filter or for the first recurssion of the incremental restore

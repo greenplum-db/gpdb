@@ -48,6 +48,7 @@ typedef struct gfile_t
 	int(*close)(struct gfile_t*);
 	off_t compressed_size,compressed_position;
 	bool_t is_win_pipe;
+	bool_t held_pipe_lock; /* Whether held flock on pipe file, used to restrict only one reader of pipe */
 
 	union
 	{

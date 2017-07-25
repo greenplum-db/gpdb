@@ -115,7 +115,7 @@ class GpPkgProgram:
 
     def _get_gpdb_host_list(self):
         """
-        TODO: AK: Get rid of this. Program logic should not be driving host list building .
+        TODO: Perhaps the host list should be produced by gparray instead of here.
 
             This method gets the host names
             of all hosts in the gpdb array.
@@ -127,7 +127,6 @@ class GpPkgProgram:
 
         logger.debug('_get_gpdb_host_list')
 
-        #Get host list
         gparr = GpArray.initFromCatalog(dbconn.DbURL(port = self.master_port), utility = True)
         master_host = None
         standby_host = None
@@ -143,13 +142,13 @@ class GpPkgProgram:
             else:
                 segment_host_list.append(seg.getSegmentHostName())
 
-        #Deduplicate the hosts so that we
-        #dont install multiple times on the same host
+        # Deduplicate the hosts so that we
+        # dont install multiple times on the same host
         segment_host_list = list(set(segment_host_list))
 
-        #Segments might exist on the master host. Since we store the
-        #master host separately in self.master_host, storing the master_host
-        #in the segment_host_list is redundant.
+        # Segments might exist on the master host. Since we store the
+        # master host separately in self.master_host, storing the master_host
+        # in the segment_host_list is redundant.
         for host in segment_host_list:
             if host == master_host or host == standby_host:
                 segment_host_list.remove(host)
@@ -191,19 +190,19 @@ class GpPkgProgram:
             if len(results) != 0 and 'not found' in results:
                 raise ExceptionNoStackTraceNeeded('gppkg requires RPM to be available in PATH')
 
-        if self.migrate:
-            MigratePackages(from_gphome = self.migrate[0],
-                            to_gphome = self.migrate[1]).run()
-            return
-
-        # MASTER_DATA_DIRECTORY and PGPORT must not need to be set for
-        # --build and --migrate to function properly
         if self.master_datadir is None:
             self.master_datadir = gp.get_masterdatadir()
         self.master_port = self._get_master_port(self.master_datadir)
 
-        # TODO: AK: Program logic should not drive host decisions.
         self._get_gpdb_host_list()
+
+        if self.migrate:
+            MigratePackages(from_gphome = self.migrate[0],
+                            to_gphome = self.migrate[1],
+                            standby_host = self.standby_host,
+                            segment_host_list = self.segment_host_list
+                            ).run()
+            return
 
         if self.install:
             pkg = Gppkg.from_package_path(self.install)
@@ -212,11 +211,20 @@ class GpPkgProgram:
             query_type, package_path = self.query
             QueryPackage(query_type, package_path).run()
         elif self.remove:
-            pkg_file_list = ListFilesByPattern(GPPKG_ARCHIVE_PATH, '*' + GPPKG_EXTENSION).run()
-
+            # Check for exact match first, then use wildcard for what will be removed.
+            pkg_file_list = ListFilesByPattern(GPPKG_ARCHIVE_PATH, self.remove + GPPKG_EXTENSION).run()
             if len(pkg_file_list) == 0:
-                raise ExceptionNoStackTraceNeeded('Package %s has not been installed.' % self.remove)
-            assert len(pkg_file_list) == 1
+                # now try wildcard
+                pkg_file_list = ListFilesByPattern(GPPKG_ARCHIVE_PATH, self.remove + '*' + GPPKG_EXTENSION).run()
+                if len(pkg_file_list) == 0:
+                    raise ExceptionNoStackTraceNeeded('Package %s has not been installed.' % self.remove)
+
+                # refuse to remove at all if the match is too broad, i.e., > 1
+                if len(pkg_file_list) > 1:
+                    err_msg = "Remove request '%s' too broad. " \
+                              "Multiple packages match remove request: ( %s )." % (self.remove, ", ".join(pkg_file_list))
+                    raise ExceptionNoStackTraceNeeded(err_msg)
+
             pkg_file = pkg_file_list[0]
             pkg = Gppkg.from_package_path(os.path.join(GPPKG_ARCHIVE_PATH, pkg_file))
             UninstallPackage(pkg, self.master_host, self.standby_host, self.segment_host_list).run()

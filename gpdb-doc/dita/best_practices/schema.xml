@@ -7,9 +7,8 @@
     <p>This topic contains best practices for designing Greenplum Database schemas. </p>
     <p>Greenplum Database is an analytical, shared-nothing database, which is much different than a
       highly normalized, transactional SMP database. Greenplum Database performs best with a
-      denormalized schema design suited for MPP analytical processing, for example a star or
-      snowflake schema, with large centralized fact tables connected to multiple smaller dimension
-      tables.</p>
+      denormalized schema design suited for MPP analytical processing, a star or snowflake schema,
+      with large centralized fact tables connected to multiple smaller dimension tables.</p>
   </body>
   <topic id="data_types">
     <title>Data Types</title>
@@ -54,10 +53,9 @@
             Greenplum Database segment. For tables with a large number of columns consider columnar
             storage for data often accessed (hot) and row-oriented storage for data not often
             accessed (cold). </li>
-          <li>Storage options should be set at the partition level or at the level where the data is
-            stored.</li>
-          <li> Compress large tables to improve I/O performance and to make space in the cluster, if
-            needed.</li>
+          <li>Storage options should be set at the partition level.</li>
+          <li>Compress large tables to improve I/O performance and to make space in the
+            cluster.</li>
         </ol></p>
       <section id="heap_vs_ao">
         <title>Heap Storage or Append-Optimized Storage</title>
@@ -68,16 +66,16 @@
             <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>INSERT</codeph>
           operations. </p>
         <p>Use append-optimized storage for tables and partitions that are updated infrequently
-          after the initial load with subsequent inserts only performed in batch operations. Never
-          perform singleton <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
+          after the initial load and have subsequent inserts performed only in batch operations.
+          Avoid performing singleton <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
             <codeph>DELETE</codeph> operations on append-optimized tables. Concurrent batch
-            <codeph>INSERT</codeph> operations are okay but <i>never</i> perform concurrent batch
-            <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> operations. </p>
-        <p>Space occupied by rows that are updated and deleted in append-optimized tables is not
-          recovered and reused as efficiently as with heap tables, so the append-optimized storage
-          model is inappropriate for frequently updated tables. It is intended for large tables that
-          are loaded once, updated infrequently, and queried frequently for analytical query
-          processing. </p>
+            <codeph>INSERT</codeph> operations are acceptable, but <i>never</i> perform concurrent
+          batch <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> operations. </p>
+        <p>The append-optimized storage model is inappropriate for frequently updated tables,
+          because space occupied by rows that are updated and deleted in append-optimized tables is
+          not recovered and reused as efficiently as with heap tables. Append-optimized storage is
+          intended for large tables that are loaded once, updated infrequently, and queried
+          frequently for analytical query processing. </p>
       </section>
 
       <section id="row_vs_column">
@@ -108,8 +106,8 @@
         <p>Use column-oriented storage for data warehouse analytic workloads where selects are
           narrow or aggregations of data are computed over a small number of columns. Use
           column-oriented storage for tables that have single columns that are regularly updated
-          without modifying other columns in the row. <b>Reading a complete row in a wide columnar
-            table requires more time than reading the same row from a row-oriented table.</b> It is
+          without modifying other columns in the row. Reading a complete row in a wide columnar
+          table requires more time than reading the same row from a row-oriented table. It is
           important to understand that each column is a separate physical file on <i>every</i>
           segment in Greenplum Database. </p>
       </section>
@@ -121,18 +119,19 @@
       <p>Greenplum Database offers a variety of options to compress append-optimized tables and
         partitions. Use compression to improve I/O across the system by allowing more data to be
         read with each disk read operation. The best practice is to set the column compression
-        settings at the level where the data resides.</p>
+        settings at the partition level.</p>
       <p>Note that new partitions added to a partitioned table do not automatically inherit
         compression defined at the table level; you must <i>specifically</i> define compression when
         you add new partitions. </p>
-      <p>Delta and RLE compression provide the best levels of compression. Higher levels of
-        compression usually result in more compact storage on disk, but require additional time and
-        CPU cycles when compressing data on writes and uncompressing on reads. Sorting data, in
-        combination with the various compression options, can achieve the highest level of
+      <p>Run-length encoding (RLE) compression provides the best levels of compression. Higher
+        levels of compression usually result in more compact storage on disk, but require additional
+        time and CPU cycles when compressing data on writes and uncompressing on reads. Sorting
+        data, in combination with the various compression options, can achieve the highest level of
         compression. </p>
       <p>Data compression should never be used for data that is stored on a compressed file system. </p>
       <p>Test different compression types and ordering methods to determine the best compression for
-        your specific data.</p>
+        your specific data. For example, you might start zlib compression at level 4 or 5 and adjust
+        for best results. RLE compression works best with files that contain repetitive data.</p>
     </body>
   </topic>
   <topic id="distribution">
@@ -156,7 +155,7 @@
           <li>The distribution key column data should contain unique values or very high
             cardinality. </li>
           <li>If a single column cannot achieve an even distribution, use a multi-column
-            distribution key, but no more than two columns. Additional column values do not
+            distribution key with a maximum of two columns. Additional column values do not
             typically yield a more even distribution and they require additional time in the hashing
             process.</li>
           <li>If a two-column distribution key cannot achieve an even distribution of data, use a
@@ -169,8 +168,10 @@
       <p>Optimal distributions are critical when joining large tables together. To perform a join,
         matching rows must be located together on the same segment. If data is not distributed on
         the same join column, the rows needed from one of the tables are dynamically redistributed
-        to the other segments. In some cases a broadcast motion is performed rather than a
-        redistribution motion. </p>
+        to the other segments. In some cases a broadcast motion, in which each segment sends its
+        individual rows to all other segments, is performed rather than a redistribution motion,
+        where each segment rehashes the data and sends the rows to the appropriate segments
+        according to the hash key. </p>
       <section>
         <title>Local (Co-located) Joins</title>
         <p>Using a hash distribution that evenly distributes table rows across all segments and
@@ -178,7 +179,7 @@
           the same segment, much of the processing can be accomplished within the segment instance.
           These are called <i>local</i> or <i>co-located</i> joins. Local joins minimize data
           movement; each segment operates independently of the other segments, without network
-          traffic cor communications between segments. </p>
+          traffic or communications between segments. </p>
         <p>To achieve local joins for large tables commonly joined together, distribute the tables
           on the same column. Local joins require that both sides of a join be distributed on the
           same columns (and in the same order) <i>and</i> that all columns in the distribution
@@ -205,16 +206,16 @@ FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
             skew.<ul id="ul_cg4_1vp_y4">
             <li>The <codeph>gp_toolkit.gp_skew_coefficients</codeph> view shows data distribution
               skew by calculating the coefficient of variation (CV) for the data stored on each
-              segment. The <codeph>skccoeff</codeph> column shows the coefficient of variation (CV),
-              which is calculated as the standard deviation divided by the average. It takes into
-              account both the average and variability around the average of a data series. The
+              segment. The <codeph>skccoeff</codeph>  column shows the coefficient of variation
+              (CV), which is calculated as the standard deviation divided by the average. It takes
+              into account both the average and variability around the average of a data series. The
               lower the value, the better. Higher values indicate greater data skew.</li>
             <li>The <codeph>gp_toolkit.gp_skew_idle_fractions</codeph> view shows data distribution
               skew by calculating the percentage of the system that is idle during a table scan,
               which is an indicator of computational skew. The <codeph>siffraction</codeph> column
               shows the percentage of the system that is idle during a table scan. This is an
               indicator of uneven data distribution or query processing skew. For example, a value
-              of 0.1 indicates 10% skew, a value of 0.5 indicates 50% skew, and so on. Tables that
+              of 0.1 indicates  10% skew, a value of 0.5 indicates 50% skew, and so on. Tables that
               have more than10% skew should have their distribution policies evaluated.</li>
           </ul></p>
       </section>
@@ -275,128 +276,34 @@ Total 14856967207 bytes (13.8366 GB)</codeblock></p><p>If
               skew situations are caused by sort files, so you will need to customize the
               command:<codeblock>$ gpssh -f ~/hosts -e 
     "ls -l /data[1-2]/primary/gpseg*/base/19979/pgsql_tmp/*" 
-    | grep -i sort | sort</codeblock></p><p>Here
+    | grep -i sort | awk '{sub(/base.*tmp\//, ".../", $10); print $1,$6,$10}' | sort -k2 -n</codeblock></p><p>Here
               is output from this command:
-              <codeblock>[sdw1] -rw------- 1 gpadmin gpadmin 1002209280 Jul 29 12:48
-        /data1/primary/gpseg2/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_19791_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin 1003356160 Jul 29 12:48
-        /data1/primary/gpseg1/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_19789_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin  288718848 Jul 23 14:58
-        /data1/primary/gpseg2/base/19979/pgsql_tmp/pgsql_tmp_slice0_sort_17758_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin  291176448 Jul 23 14:58
-        /data2/primary/gpseg5/base/19979/pgsql_tmp/pgsql_tmp_slice0_sort_17764_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin  988446720 Jul 29 12:48
-        /data1/primary/gpseg0/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_19787_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin  995033088 Jul 29 12:48
-        /data2/primary/gpseg3/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_19793_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin  997097472 Jul 29 12:48
-        /data2/primary/gpseg5/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_19797_0001.0
-[sdw1] -rw------- 1 gpadmin gpadmin  997392384 Jul 29 12:48
-        /data2/primary/gpseg4/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_19795_0001.0
-[sdw2] -rw------- 1 gpadmin gpadmin 1002340352 Jul 29 12:48
-        /data2/primary/gpseg11/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_3973_0001.0
-[sdw2] -rw------- 1 gpadmin gpadmin 1004339200 Jul 29 12:48
-        /data1/primary/gpseg8/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_3967_0001.0
-[sdw2] -rw------- 1 gpadmin gpadmin  989036544 Jul 29 12:48
-        /data2/primary/gpseg10/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_3971_0001.0
-[sdw2] -rw------- 1 gpadmin gpadmin  993722368 Jul 29 12:48
-        /data1/primary/gpseg6/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_3963_0001.0
-[sdw2] -rw------- 1 gpadmin gpadmin  998277120 Jul 29 12:48
-        /data1/primary/gpseg7/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_3965_0001.0
-[sdw2] -rw------- 1 gpadmin gpadmin  999751680 Jul 29 12:48
-        /data2/primary/gpseg9/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_3969_0001.0
-[sdw3] -rw------- 1 gpadmin gpadmin 1000112128 Jul 29 12:48
-        /data1/primary/gpseg13/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_24723_0001.0
-[sdw3] -rw------- 1 gpadmin gpadmin 1004797952 Jul 29 12:48
-        /data2/primary/gpseg17/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_24731_0001.0
-[sdw3] -rw------- 1 gpadmin gpadmin 1004994560 Jul 29 12:48
-        /data2/primary/gpseg15/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_24727_0001.0
-[sdw3] -rw------- 1 gpadmin gpadmin 1006108672 Jul 29 12:48
-        /data1/primary/gpseg14/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_24725_0001.0
-[sdw3] -rw------- 1 gpadmin gpadmin  998244352 Jul 29 12:48
-        /data1/primary/gpseg12/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_24721_0001.0
-[sdw3] -rw------- 1 gpadmin gpadmin  998440960 Jul 29 12:48
-        /data2/primary/gpseg16/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_24729_0001.0
-[sdw4] -rw------- 1 gpadmin gpadmin 1001029632 Jul 29 12:48
-        /data2/primary/gpseg23/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29435_0001.0
-[sdw4] -rw------- 1 gpadmin gpadmin 1002504192 Jul 29 12:48
-        /data1/primary/gpseg20/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29429_0001.0
-[sdw4] -rw------- 1 gpadmin gpadmin 1002504192 Jul 29 12:48
-        /data2/primary/gpseg21/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29431_0001.0
-[sdw4] -rw------- 1 gpadmin gpadmin 1009451008 Jul 29 12:48
-        /data1/primary/gpseg19/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29427_0001.0
-[sdw4] -rw------- 1 gpadmin gpadmin  980582400 Jul 29 12:48
-        /data1/primary/gpseg18/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29425_0001.0
-[sdw4] -rw------- 1 gpadmin gpadmin  993230848 Jul 29 12:48
-        /data2/primary/gpseg22/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29433_0001.0
-[sdw5] -rw------- 1 gpadmin gpadmin 1000898560 Jul 29 12:48
-        /data2/primary/gpseg28/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_28641_0001.0
-[sdw5] -rw------- 1 gpadmin gpadmin 1003388928 Jul 29 12:48
-        /data2/primary/gpseg29/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_28643_0001.0
-[sdw5] -rw------- 1 gpadmin gpadmin 1008566272 Jul 29 12:48
-        /data1/primary/gpseg24/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_28633_0001.0
-[sdw5] -rw------- 1 gpadmin gpadmin  987332608 Jul 29 12:48
-        /data1/primary/gpseg25/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_28635_0001.0
-[sdw5] -rw------- 1 gpadmin gpadmin  990543872 Jul 29 12:48
-        /data2/primary/gpseg27/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_28639_0001.0
-[sdw5] -rw------- 1 gpadmin gpadmin  999620608 Jul 29 12:48
-        /data1/primary/gpseg26/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_28637_0001.0
-[sdw6] -rw------- 1 gpadmin gpadmin 1002242048 Jul 29 12:48
-        /data2/primary/gpseg33/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29598_0001.0
-[sdw6] -rw------- 1 gpadmin gpadmin 1003683840 Jul 29 12:48
-        /data1/primary/gpseg31/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29594_0001.0
-[sdw6] -rw------- 1 gpadmin gpadmin 1004732416 Jul 29 12:48
-        /data2/primary/gpseg34/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29600_0001.0
-[sdw6] -rw------- 1 gpadmin gpadmin  986447872 Jul 29 12:48
-        /data2/primary/gpseg35/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29602_0001.0
-[sdw6] -rw------- 1 gpadmin gpadmin  990543872 Jul 29 12:48
-        /data1/primary/gpseg30/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29592_0001.0
-[sdw6] -rw------- 1 gpadmin gpadmin  992870400 Jul 29 12:48
-        /data1/primary/gpseg32/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_29596_0001.0
-[sdw7] -rw------- 1 gpadmin gpadmin 1007321088 Jul 29 12:48
-        /data2/primary/gpseg39/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_18530_0001.0
-[sdw7] -rw------- 1 gpadmin gpadmin 1011187712 Jul 29 12:48
-        /data1/primary/gpseg37/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_18526_0001.0
-[sdw7] -rw------- 1 gpadmin gpadmin  987332608 Jul 29 12:48
-        /data2/primary/gpseg41/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_18534_0001.0
-[sdw7] -rw------- 1 gpadmin gpadmin  994344960 Jul 29 12:48
-        /data1/primary/gpseg38/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_18528_0001.0
-[sdw7] -rw------- 1 gpadmin gpadmin  996114432 Jul 29 12:48
-        /data2/primary/gpseg40/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_18532_0001.0
-[sdw7] -rw------- 1 gpadmin gpadmin  999194624 Jul 29 12:48
-        /data1/primary/gpseg36/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_18524_0001.0
-[sdw8] -rw------- 1 gpadmin gpadmin 1002242048 Jul 29 12:48
-        /data2/primary/gpseg46/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15675_0001.0
-[sdw8] -rw------- 1 gpadmin gpadmin 1003520000 Jul 29 12:48
-        /data1/primary/gpseg43/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15669_0001.0
-[sdw8] -rw------- 1 gpadmin gpadmin 1008009216 Jul 29 12:48
-        /data1/primary/gpseg44/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15671_0001.0
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:16
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0001.0
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:21
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:24
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0003.2
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:26
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0004.3
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:31
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0006.5
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:32
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0005.4
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:34
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0007.6
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:36
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0008.7
-[sdw8] -rw------- 1 gpadmin gpadmin 1073741824 Jul 29 12:43
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0009.8
-[sdw8] -rw------- 1 gpadmin gpadmin  924581888 Jul 29 12:48
-        /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0010.9
-[sdw8] -rw------- 1 gpadmin gpadmin  990085120 Jul 29 12:48
-        /data1/primary/gpseg42/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15667_0001.0
-[sdw8] -rw------- 1 gpadmin gpadmin  996933632 Jul 29 12:48
-      /data2/primary/gpseg47/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15677_0001.0</codeblock></p><p>Scanning
+              <codeblock>[sdw1] 288718848
+      /data1/primary/gpseg2/.../pgsql_tmp_slice0_sort_17758_0001.0[sdw1] 291176448
+      /data2/primary/gpseg5/.../pgsql_tmp_slice0_sort_17764_0001.0[sdw8] 924581888
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0010.9[sdw4] 980582400
+      /data1/primary/gpseg18/.../pgsql_tmp_slice10_sort_29425_0001.0[sdw6] 986447872
+      /data2/primary/gpseg35/.../pgsql_tmp_slice10_sort_29602_0001.0...[sdw5] 999620608
+      /data1/primary/gpseg26/.../pgsql_tmp_slice10_sort_28637_0001.0[sdw2] 999751680
+      /data2/primary/gpseg9/.../pgsql_tmp_slice10_sort_3969_0001.0[sdw3] 1000112128
+      /data1/primary/gpseg13/.../pgsql_tmp_slice10_sort_24723_0001.0[sdw5] 1000898560
+      /data2/primary/gpseg28/.../pgsql_tmp_slice10_sort_28641_0001.0...[sdw8] 1008009216
+      /data1/primary/gpseg44/.../pgsql_tmp_slice10_sort_15671_0001.0[sdw5] 1008566272
+      /data1/primary/gpseg24/.../pgsql_tmp_slice10_sort_28633_0001.0[sdw4] 1009451008
+      /data1/primary/gpseg19/.../pgsql_tmp_slice10_sort_29427_0001.0[sdw7] 1011187712
+      /data1/primary/gpseg37/.../pgsql_tmp_slice10_sort_18526_0001.0[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0001.0[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0002.1[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0003.2[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0004.3[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0005.4[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0006.5[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0007.6[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0008.7[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0009.8</codeblock></p><p>Scanning
               this output reveals that segment <codeph>gpseg45</codeph> on host
-                <codeph>sdw8</codeph> is the culprit.</p></li>
+                <codeph>sdw8</codeph> is the culprit, as its sort files are larger than the others
+              in the output.</p></li>
           <li>Log in to the offending node with <codeph>ssh</codeph> and become root. Use the
               <codeph>lsof</codeph> command to find the PID for the process that owns one of the
             sort
@@ -432,16 +339,17 @@ root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
     <body>
       <p>A good partitioning strategy reduces the amount of data to be scanned by reading only the
         partitions needed to satisfy a query. </p>
-      <p>Each partition is a separate physical file on <i>every</i> segment. Just as reading a
-        complete row in a wide columnar table requires more time than reading the same row from a
-        heap table, <i>reading all partitions in a partitioned table requires more time than reading
-          the same data from a non-partitioned table</i>. </p>
+      <p>Each partition is a separate physical file or set of tiles (in the case of column-oriented
+        tables) on <i>every</i> segment. Just as reading a complete row in a wide columnar table
+        requires more time than reading the same row from a heap table, <i>reading all partitions in
+          a partitioned table requires more time than reading the same data from a non-partitioned
+          table</i>. </p>
       <p>Following are partitioning best practices:<ul id="ul_wfh_bbb_3r">
           <li>Partition large tables only, do not partition small tables. </li>
           <li>Use partitioning on large tables <i>only</i> when partition elimination (partition
             pruning) can be achieved based on query criteria and is accomplished by partitioning the
-            table based on the query predicate. Use range partitioning over list partitioning.</li>
-          <li>Choose range partitioning over list partitioning.</li>
+            table based on the query predicate. Whenever possible, use range partitioning instead of
+            list partitioning.</li>
           <li>The query planner can selectively scan partitioned tables only when the query contains
             a direct and simple restriction of the table using immutable operators, such as
               <codeph>=</codeph>, <codeph>&lt;</codeph> , <codeph>&lt;= </codeph>,
@@ -503,15 +411,17 @@ root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
 
     <body>
       <p>Indexes are not generally needed in Greenplum Database. Most analytical queries operate on
-        large volumes of data. In Greenplum Database, a sequential scan is an efficient method to
-        read data as each segment contains an equal portion of the data and all segments work in
-        parallel to read the data. </p>
+        large volumes of data, while indexes are intended for locating single rows or small numbers
+        of rows of data. In Greenplum Database, a sequential scan is an efficient method to read
+        data as each segment contains an equal portion of the data and all segments work in parallel
+        to read the data. </p>
+      <p>If adding an index does not produce performance gains, drop it. Verify that every index you
+        create is used by the optimizer.</p>
       <p>For queries with high selectivity, indexes may improve query performance. Create an index
         on a single column of a columnar table for drill through purposes for high cardinality
-        tables that are required for selective queries. </p>
-      <p>If it is determined that indexes are needed, do not index columns that are frequently
-        updated. Creating an index on a column that is frequently updated increases the number of
-        writes required on updates. </p>
+        columns that are required for highly selective queries. </p>
+      <p>Do not index columns that are frequently updated. Creating an index on a column that is
+        frequently updated increases the number of writes required on updates. </p>
       <p>Indexes on expressions should be used only if the expression is used frequently in queries. </p>
       <p>An index with a predicate creates a partial index that can be used to select a small number
         of rows from large tables.</p>
@@ -523,20 +433,18 @@ root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
         values a column has divided by the number of rows in a table. For example, if a table has
         1000 rows and a column has 800 distinct values, the selectivity of the index is 0.8, which
         is considered good. </p>
-      <p>If adding an index does not produce performance gains, drop it. Verify that every index you
-        create is used by the optimizer.</p>
-      <p>Always drop indexes before loading data into a table. The load will run an order of
-        magnitude faster than loading data into a table with indexes. After the load, re-create the
-        indexes. </p>
+      <p>As a general rule, drop indexes before loading data into a table. The load will run an
+        order of magnitude faster than loading data into a table with indexes. After the load,
+        re-create the indexes. </p>
       <p>Bitmap indexes are suited for querying and not updating. Bitmap indexes perform best when
         the column has a low cardinality—100 to 100,000 distinct values. Do not use bitmap indexes
         for unique columns, very high, or very low cardinality data. Do not use bitmap indexes for
         transactional workloads.</p>
-      <p>In general, do not index partitioned tables. If indexes are needed, the index columns must
-        be different than the partition columns. A benefit of indexing partitioned tables is that
-        because the b-tree performance degrades exponentially as the size of the b-tree grows,
-        creating indexes on partitioned tables creates smaller b-trees that perform better than with
-        non-partitioned tables.</p>
+      <p>If indexes are needed on partitioned tables, the index columns must be different than the
+        partition columns. A benefit of indexing partitioned tables is that because the b-tree
+        performance degrades exponentially as the size of the b-tree grows, creating indexes on
+        partitioned tables creates smaller b-trees that perform better than with non-partitioned
+        tables.</p>
     </body>
   </topic>
   <topic id="column_sequence">

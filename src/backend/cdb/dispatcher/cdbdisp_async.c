@@ -680,7 +680,7 @@ signalQEs(CdbDispatchCmdAsync* pParms)
 		sent = cdbconn_signalQE(segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
 		if (sent)
 			dispatchResult->sentSignal = waitMode;
-		else if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
+		else
 			elog(LOG, "Unable to cancel: %s",
 				 strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
 	}

@@ -197,6 +197,7 @@ enable_gpcloud 	    = @enable_gpcloud@
 enable_gpperfmon    = @enable_gpperfmon@
 
 enable_segwalrep    = @enable_segwalrep@
+enable_tap_tests = @enable_tap_tests@
 
 python_includespec	= @python_includespec@
 python_libdir		= @python_libdir@
@@ -337,6 +338,36 @@ BZIP2	= bzip2
 
 PL_TESTDB = pl_regression
 CONTRIB_TESTDB = contrib_regression
+
+# Testing
+
+abs_top_builddir = @abs_top_builddir@
+abs_top_srcdir = @abs_top_srcdir@
+
+check:
+
+PROVE = @PROVE@
+# There are common routines in src/test/perl, and some test suites have
+# extra perl modules in their own directory.
+PG_PROVE_FLAGS = -I $(top_srcdir)/src/test/perl/ -I $(srcdir)
+# User-supplied prove flags such as --verbose can be provided in PROVE_FLAGS.
+PROVE_FLAGS =
+
+ifeq ($(enable_tap_tests),yes)
+define prove_installcheck
+rm -rf $(CURDIR)/tmp_check/log
+cd $(srcdir) && TESTDIR='$(CURDIR)' PATH="$(bindir):$$PATH" top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+endef
+
+define prove_check
+rm -rf $(CURDIR)/tmp_check/log
+cd $(srcdir) && TESTDIR='$(CURDIR)' $(with_temp_install) top_builddir='$(CURDIR)/$(top_builddir)' PG_REGRESS='$(CURDIR)/$(top_builddir)/src/test/regress/pg_regress' $(PROVE) $(PG_PROVE_FLAGS) $(PROVE_FLAGS) $(if $(PROVE_TESTS),$(PROVE_TESTS),t/*.pl)
+endef
+
+else
+prove_installcheck = @echo "TAP tests not enabled"
+prove_check = $(prove_installcheck)
+endif
 
 # Installation.
 

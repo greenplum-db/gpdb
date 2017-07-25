@@ -1194,11 +1194,11 @@ class GpMfr(Operation):
         """
         Try to reach DD three times, raise exception if ping test fails.
         """
-        for i in range(3):
+        for i in range(10):
             loss = ddSystem.pingTest()
             if loss == 0:
                 return
-            time.sleep(2)
+            time.sleep(6)
         # Non zero packet loss
         raise Exception("%s Data Domain not reachable." % ddSystem)
 

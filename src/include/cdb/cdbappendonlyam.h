@@ -376,11 +376,11 @@ typedef struct xl_ao_insert
 	/* meta data about the inserted block of AO data*/
 	RelFileNode node;
 	uint		segment_filenum;
-	uint64		offset;
+	int64		offset;
 		/* BLOCK DATA FOLLOWS AT END OF STRUCT */
 } xl_ao_insert;
 
-#define SizeOfAOInsert (offsetof(xl_ao_insert, offset) + sizeof(uint64))
+#define SizeOfAOInsert (offsetof(xl_ao_insert, offset) + sizeof(int64))
 
 extern void appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);

@@ -25,6 +25,8 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
+#include <stdio.h>
+#include <mntent.h>
 
 /*
  * Interfaces for OS dependent operations.
@@ -41,7 +43,9 @@
 	elog(ERROR, CGROUP_ERROR_PREFIX __VA_ARGS__); \
 } while (false)
 
+#define PROC_MOUNTS "/proc/self/mounts"
 #define MAX_INT_STRING_LEN 20
+#define MAX_PATH_LEN 256
 
 static char * buildPath(Oid group, const char *comp, const char *prop, char *path, size_t pathsize);
 static int lockDir(const char *path, bool block);
@@ -56,8 +60,10 @@ static void writeInt64(Oid group, const char *comp, const char *prop, int64 x);
 static bool checkPermission(Oid group, bool report);
 static void getMemoryInfo(unsigned long *ram, unsigned long *swap);
 static int getOvercommitRatio(void);
+static void detectCgroupMountPoint(void);
 
 static int cpucores = 0;
+static char cgdir[MAX_PATH_LEN];
 
 /*
  * Build path string with parameters.
@@ -72,10 +78,12 @@ buildPath(Oid group,
 		  char *path,
 		  size_t pathsize)
 {
+	Assert(cgdir[0] != 0);
+
 	if (group)
-		snprintf(path, pathsize, "/sys/fs/cgroup/%s/gpdb/%d/%s", comp, group, prop);
+		snprintf(path, pathsize, "%s/%s/gpdb/%d/%s", cgdir, comp, group, prop);
 	else
-		snprintf(path, pathsize, "/sys/fs/cgroup/%s/gpdb/%s", comp, prop);
+		snprintf(path, pathsize, "%s/%s/gpdb/%s", cgdir, comp, prop);
 
 	return path;
 }
@@ -527,6 +535,45 @@ getOvercommitRatio(void)
 	return ratio;
 }
 
+/* detect cgroup mount point */
+static void
+detectCgroupMountPoint(void)
+{
+	struct mntent *me;
+	FILE *fp;
+
+	if (cgdir[0])
+		return;
+
+	fp = setmntent(PROC_MOUNTS, "r");
+	if (fp == NULL)
+	{
+		CGROUP_ERROR("can not open '%s' for read: %s",
+					 PROC_MOUNTS, strerror(errno));
+	}
+
+	while ((me = getmntent(fp)))
+	{
+		char * p;
+
+		if (strcmp(me->mnt_type, "cgroup"))
+			continue;
+
+		Assert(strlen(me->mnt_dir) < sizeof(cgdir));
+		strncpy(cgdir, me->mnt_dir, sizeof(cgdir));
+
+		p = strrchr(cgdir, '/');
+		Assert(p != NULL);
+		*p = 0;
+		break;
+	}
+
+	endmntent(fp);
+
+	if (!cgdir[0])
+		CGROUP_ERROR("can not find cgroup mount point: %s", strerror(errno));
+}
+
 /* Return the name for the OS group implementation */
 const char *
 ResGroupOps_Name(void)
@@ -538,6 +585,7 @@ ResGroupOps_Name(void)
 void
 ResGroupOps_Bless(void)
 {
+	detectCgroupMountPoint();
 	checkPermission(0, true);
 }
 

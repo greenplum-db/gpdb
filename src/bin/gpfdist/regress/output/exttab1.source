@@ -9,6 +9,10 @@ CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152
 -- --------------------------------------
 -- 'gpfdist' protocol
 -- --------------------------------------
+CREATE EXTERNAL WEB TABLE exttab1_gpfdist_status (x text)
+execute E'( python @bindir@/lib/gppinggpfdist.py @hostname@:7070 2>&1 || echo) '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
 CREATE EXTERNAL WEB TABLE exttab1_gpfdist_start (x text)
 execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data  </dev/null >/dev/null 2>&1 &); sleep 1; echo "starting...") '
 on SEGMENT 0
@@ -151,6 +155,65 @@ SELECT * FROM EXT_REGION as r, EXT_NATION as n WHERE n.N_REGIONKEY = r.R_REGIONK
 Execute error
 \! wget --header='X-GP-PROTO:0' http://@hostname@:7070/exttab1/missing_fields1.data >/dev/null 2>&1 && echo "Execute successully";
 Execute successully
+-- test: multiple reader for pipe is forbidden
+DROP EXTERNAL WEB TABLE IF EXISTS create_pipe;
+-- start_ignore
+NOTICE:  table "create_pipe" does not exist, skipping
+-- end_ignore
+CREATE EXTERNAL WEB TABLE create_pipe (x text)
+execute E'(rm @abs_srcdir@/data/test_pipe; mkfifo @abs_srcdir@/data/test_pipe) > /dev/null 2>&1; echo "creating pipe..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+DROP EXTERNAL WEB TABLE IF EXISTS write_pipe;
+-- start_ignore
+NOTICE:  table "write_pipe" does not exist, skipping
+-- end_ignore
+CREATE EXTERNAL WEB TABLE write_pipe (x text)
+execute E'((for i in `seq 1 5000`;do cat @abs_srcdir@/data/exttab1/nation.tbl;done > @abs_srcdir@/data/test_pipe); echo "writing pipe...")'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+DROP EXTERNAL WEB TABLE IF EXISTS cat_sqlout_result;
+-- start_ignore
+NOTICE:  table "cat_sqlout_result" does not exist, skipping
+-- end_ignore
+CREATE EXTERNAL WEB TABLE cat_sqlout_result (x text)
+execute E'(grep -q "Multiple reader to a pipe is forbidden" @abs_srcdir@/data/sql1.out @abs_srcdir@/data/sql2.out && echo "Report error: Multiple reader to a pipe is forbidden";)'
+ on SEGMENT 0
+ FORMAT 'text' (delimiter '|');
+DROP EXTERNAL TABLE IF EXISTS pipe_ext1;
+-- start_ignore
+NOTICE:  table "pipe_ext1" does not exist, skipping
+-- end_ignore
+CREATE EXTERNAL TABLE pipe_ext1(LIKE EXT_NATION)
+location ('gpfdist://@hostname@:7070/test_pipe' )
+FORMAT 'text' (delimiter '|');
+DROP EXTERNAL TABLE IF EXISTS pipe_ext2;
+-- start_ignore
+NOTICE:  table "pipe_ext2" does not exist, skipping
+-- end_ignore
+CREATE EXTERNAL TABLE pipe_ext2(LIKE EXT_NATION)
+location ('file://@hostname@@abs_srcdir@/data/test_pipe' )
+FORMAT 'text' (delimiter '|');
+select * from create_pipe;
+        x         
+------------------
+ creating pipe...
+(1 row)
+
+\! psql -d gpfdist_regression -c 'select count(*) from pipe_ext1;' > @abs_srcdir@/data/sql1.out 2>&1  &
+\! psql -d gpfdist_regression -c 'select count(*) from pipe_ext2;' > @abs_srcdir@/data/sql2.out 2>&1  &
+select * from write_pipe;
+        x        
+-----------------
+ writing pipe...
+(1 row)
+
+select * from cat_sqlout_result;
+                          x                           
+------------------------------------------------------
+ Report error: Multiple reader to a pipe is forbidden
+(1 row)
+
 -- start_ignore
 -- end_ignore
 -- drop tables

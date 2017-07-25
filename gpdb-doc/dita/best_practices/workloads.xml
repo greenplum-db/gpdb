@@ -37,16 +37,17 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
       <ul id="ul_yrd_c1l_zt">
         <li>Tune the query to require less memory</li>
         <li>Reduce query concurrency using a resource queue</li>
-        <li>Decrease the number of segments per host in the Greenplum cluster</li>
-        <li>Increase memory on the host</li>
         <li>Validate the <codeph>gp_vmem_protect_limit</codeph> configuration parameter at the
           database level. See calculations for the maximum safe setting in <xref
             href="#topic_hhc_z5w_r4/section_r52_rbl_zt" format="dita"/>.</li>
+        <li> Set the memory quota on a resource queue to limit the memory used by queries executed
+          within the resource queue</li>
         <li>Use a session setting to reduce the <codeph>statement_mem</codeph> used by specific
           queries</li>
         <li>Decrease <codeph>statement_mem</codeph> at the database level</li>
-        <li> Set the memory quota on a resource queue to limit the memory used by queries executed
-          within the resource queue</li>
+        <li>Decrease the number of segments per host in the Greenplum Database cluster. This
+          solution requires a re-initializing Greenplum Database and reloading your data.</li>
+        <li>Increase memory on the host, if possible. (Additional hardware may be required.)</li>
       </ul>
       <p>Adding segment hosts to the cluster will not in itself alleviate out of memory problems.
         The memory used by each query is determined by the <codeph>statement_mem</codeph> parameter
@@ -56,7 +57,7 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
     </section>
     <section id="section_r52_rbl_zt">
       <title>Configuring Memory for Greenplum Database</title>
-      <p>Most out-of-memory conditions can be avoided if memory is thoughtfully managed. </p>
+      <p>Most out of memory conditions can be avoided if memory is thoughtfully managed. </p>
       <p>It is not always possible to increase system memory, but you can prevent out-of-memory
         conditions by configuring memory use correctly and setting up resource queues to manage
         expected workloads. </p>
@@ -182,8 +183,7 @@ gp_vmem_protect_limit = gp_vmem / maximum_acting_primary_segments
         accepted and when the resources are available to execute it. </p>
       <ul id="ul_svy_b3n_1s">
         <li>
-          <p>Do not use the default queue. Associate all roles with a user-defined resource
-            queue.</p>
+          <p>Associate all roles with an administrator-defined resource queue.</p>
           <p>Each login user (role) is associated with a single resource queue; any query the user
             submits is handled by the associated resource queue. If a queue is not explicitly
             assigned the user's queries are handed by the default queue,
@@ -207,7 +207,7 @@ gp_vmem_protect_limit = gp_vmem / maximum_acting_primary_segments
               <codeph>sample_queue</codeph>, has <codeph>ACTIVE_STATEMENTS</codeph> set to 10 and
               <codeph>MEMORY_LIMIT</codeph> set to 2000MB. This limits the queue to approximately 2
             gigabytes of memory per segment. For a cluster with 8 segments per server, the total
-            usage per server of 16 GB for <codeph>sample_queue</codeph> (2GB * 8 segments/server).
+            usage per server is 16 GB for <codeph>sample_queue</codeph> (2GB * 8 segments/server).
             If a segment server has 64GB of RAM, there could be no more than four of this type of
             resource queue on the system before there is a chance of running out of memory (4 queues
             * 16GB per queue). </p>
@@ -222,9 +222,8 @@ gp_vmem_protect_limit = gp_vmem / maximum_acting_primary_segments
         </li>
         <li>
           <p>Alter resource queues dynamically to match the real requirements of the queue for the
-            workload and time of day. </p>
-          <p>Typical environments have an operational flow that changes based on the time of day and
-            type of usage of the system. You can script these changes and add crontab entries to
+            workload and time of day. You can script an operational flow that changes based on the
+            time of day and type of usage of the system and add <codeph>crontab</codeph> entries to
             execute the scripts.</p>
         </li>
         <li>

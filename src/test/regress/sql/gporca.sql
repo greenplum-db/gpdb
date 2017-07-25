@@ -1404,6 +1404,14 @@ create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
 reset client_min_messages;
 reset optimizer_enable_ctas;
 
+-- start_ignore
+drop table bar;
+-- end_ignore
+-- TVF with a subplan that generates an RTABLE entry
+create table bar(name text);
+insert into bar values('person');
+select * from unnest((select string_to_array(name, ',') from bar)) as a;
+
 -- clean up
 drop schema orca cascade;
 reset optimizer_segments;

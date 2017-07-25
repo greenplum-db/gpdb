@@ -19,6 +19,9 @@
 #include "utils/array.h"
 
 #define MAX_MAX_BACKENDS (INT_MAX / BLCKSZ)
+#define MAX_AUTHENTICATION_TIMEOUT (600)
+#define MAX_PRE_AUTH_DELAY (60)
+
 
 struct StringInfoData;                  /* #include "lib/stringinfo.h" */
 

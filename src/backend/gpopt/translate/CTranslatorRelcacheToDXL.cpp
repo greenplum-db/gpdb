@@ -2732,6 +2732,10 @@ CTranslatorRelcacheToDXL::PdrgpdxlbucketTransformStats
 						dDistinct,
 						dHistFreq
 						);
+		if (0 == phistGPDBHist->UlBuckets())
+		{
+			fHasHist = false;
+		}
 	}
 
 	DrgPdxlbucket *pdrgpdxlbucket = NULL;
@@ -2851,6 +2855,7 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBHist
 	CDouble dFreqPerBucket = dFreqHist / CDouble(ulNumBuckets);
 
 	const ULONG ulBuckets = ulNumHistValues - 1;
+	BOOL fLastBucketWasSingleton = false;
 	// create buckets
 	DrgPbucket *pdrgppbucket = GPOS_NEW(pmp) DrgPbucket(pmp);
 	for (ULONG ul = 0; ul < ulBuckets; ul++)
@@ -2860,9 +2865,30 @@ CTranslatorRelcacheToDXL::PhistTransformGPDBHist
 
 		Datum datumMax = pdrgdatumHistValues[ul + 1];
 		IDatum *pdatumMax = CTranslatorScalarToDXL::Pdatum(pmp, pmdtype, false /* fNull */, datumMax);
+		BOOL fLowerClosed, fUpperClosed;
 
-		BOOL fLowerClosed = true; // GPDB histograms assumes lower bound to be closed
-		BOOL fUpperClosed = false; // GPDB histograms assumes upper bound to be open
+		if (pdatumMin->FStatsEqual(pdatumMax))
+		{
+			// Singleton bucket !!!!!!!!!!!!!
+			fLowerClosed = true;
+			fUpperClosed = true;
+			fLastBucketWasSingleton = true;
+		}
+		else if (fLastBucketWasSingleton)
+		{
+			// Last bucket was a singleton, so lower must be open now.
+			fLowerClosed = false;
+			fUpperClosed = false;
+			fLastBucketWasSingleton = false;
+		}
+		else
+		{
+			// Normal bucket
+			// GPDB histograms assumes lower bound to be closed and upper bound to be open
+			fLowerClosed = true;
+			fUpperClosed = false;
+		}
+
 		if (ul == ulBuckets - 1)
 		{
 			// last bucket upper bound is also closed

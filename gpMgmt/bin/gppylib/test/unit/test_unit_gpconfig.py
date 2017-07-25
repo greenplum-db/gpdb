@@ -6,6 +6,8 @@ import sys
 import tempfile
 
 from StringIO import StringIO
+
+import errno
 from pygresql.pg import DatabaseError
 
 from gparray import GpDB, GpArray, Segment
@@ -13,15 +15,18 @@ import shutil
 from mock import *
 from gp_unittest import *
 from gphostcache import GpHost
+from gpconfig_modules.parse_guc_metadata import ParseGuc
 
 db_singleton_side_effect_list = []
 
 
 def singleton_side_effect(unused1, unused2):
     # this function replaces dbconn.execSQLForSingleton(conn, sql), conditionally raising exception
-    if db_singleton_side_effect_list[0] == "DatabaseError":
-        raise DatabaseError("mock exception")
-    return db_singleton_side_effect_list[0]
+    if len(db_singleton_side_effect_list) > 0:
+        if db_singleton_side_effect_list[0] == "DatabaseError":
+            raise DatabaseError("mock exception")
+        return db_singleton_side_effect_list[0]
+    return None
 
 
 class GpConfig(GpTestCase):
@@ -45,6 +50,7 @@ class GpConfig(GpTestCase):
 
         self.os_env = dict(USER="my_user")
         self.os_env["MASTER_DATA_DIRECTORY"] = self.temp_dir
+        self.os_env["GPHOME"] = self.temp_dir
         self.gparray = self._create_gparray_with_2_primary_2_mirrors()
         self.host_cache = Mock()
 
@@ -80,6 +86,12 @@ class GpConfig(GpTestCase):
             patch('gpconfig.WorkerPool', return_value=self.pool)
         ])
         sys.argv = ["gpconfig"]  # reset to relatively empty args list
+
+        shared_dir = os.path.join(self.temp_dir, ParseGuc.DESTINATION_DIR)
+        _mkdir_p(shared_dir, 0755)
+        self.guc_disallowed_readonly_file = os.path.abspath(os.path.join(shared_dir, ParseGuc.DESTINATION_FILENAME))
+        with open(self.guc_disallowed_readonly_file, 'w') as f:
+            f.writelines("x\ny\n")
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
@@ -350,6 +362,43 @@ class GpConfig(GpTestCase):
         self.assertIn("[context: -1] [dbid: 2] [name: my_property_name] [value: foo | file: bar]",
                       mock_stdout.getvalue())
 
+    def test_setting_guc_when_guc_is_readonly_will_fail(self):
+        self.subject.read_only_gucs.add("is_superuser")
+        sys.argv = ["gpconfig", "-c", "is_superuser", "-v", "on"]
+        with self.assertRaisesRegexp(Exception, "not a modifiable GUC: 'is_superuser'"):
+            self.subject.do_main()
+
+    def test_change_will_populate_read_only_gucs_set(self):
+        sys.argv = ["gpconfig", "--change", "foobar", "--value", "baz"]
+        try:
+            self.subject.do_main()
+        except Exception:
+            pass
+        self.assertEqual(len(self.subject.read_only_gucs), 2)
+
+    def test_change_when_disallowed_gucs_file_is_missing_gives_warning(self):
+        os.remove(self.guc_disallowed_readonly_file)
+        db_singleton_side_effect_list.append("some happy result")
+        entry = 'my_property_name'
+        sys.argv = ["gpconfig", "-c", entry, "-v", "100", "--masteronly"]
+        # 'SELECT name, setting, unit, short_desc, context, vartype, min_val, max_val FROM pg_settings'
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', 'vartype', 'min_val', 'max_val']])
+        self.subject.do_main()
+
+        self.subject.LOGGER.info.assert_called_with("completed successfully")
+        target_warning = "disallowed GUCs file missing: '%s'" % self.guc_disallowed_readonly_file
+        self.subject.LOGGER.warning.assert_called_with(target_warning)
+
+    def test_when_gphome_env_unset_raises(self):
+        self.os_env['GPHOME'] = None
+        sys.argv = ["gpconfig", "-c", 'my_property_name', "-v", "100", "--masteronly"]
+
+        with self.assertRaisesRegexp(Exception, "GPHOME environment variable must be set"):
+            self.subject.do_main()
+
+
+
     @staticmethod
     def _create_gparray_with_2_primary_2_mirrors():
         master = GpDB.initFromString(
@@ -363,6 +412,16 @@ class GpConfig(GpTestCase):
         mirror1 = GpDB.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
         return GpArray([master, primary0, primary1, mirror0, mirror1])
+
+
+def _mkdir_p(path, mode):
+    try:
+        os.makedirs(path, mode)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
 
 if __name__ == '__main__':

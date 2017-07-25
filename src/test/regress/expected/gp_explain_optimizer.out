@@ -94,17 +94,13 @@ WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
    ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
          Join Filter: true
-         ->  Append  (cost=0.00..0.00 rows=1 width=12)
-               ->  Result  (cost=0.00..0.00 rows=1 width=12)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
-               ->  Result  (cost=0.00..0.00 rows=1 width=12)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
+         ->  Result  (cost=0.00..0.00 rows=1 width=12)
+               ->  Values Scan on "Values"  (cost=0.00..0.00 rows=1 width=12)
          ->  Index Scan using mpp22263_idx1 on mpp22263  (cost=0.00..2.00 rows=1 width=244)
-               Index Cond: mpp22263.unique1 = "outer".column1
-               Filter: mpp22263.stringu1::text = "outer".column2
- Settings:  optimizer=on
- Optimizer status: PQO version 2.7.0
-(13 rows)
+               Index Cond: mpp22263.unique1 = "Values".column1
+               Filter: mpp22263.stringu1::text = "Values".column2
+ Optimizer status: PQO version 2.35.1
+(9 rows)
 
 -- atmsort.pm masks out differences in the Filter line, so just memorizing
 -- the output of the above EXPLAIN isn't enough to catch a faulty Filter line.
@@ -115,10 +111,10 @@ select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
-                               et                                
------------------------------------------------------------------
+                                et                                
+------------------------------------------------------------------
          Join Filter: true
-               Filter: mpp22263.stringu1::text = "outer".column2
+               Filter: mpp22263.stringu1::text = "Values".column2
 (2 rows)
 
 --

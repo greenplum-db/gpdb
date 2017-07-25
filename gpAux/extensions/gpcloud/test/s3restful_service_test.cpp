@@ -320,3 +320,12 @@ TEST(S3RESTfulService, DISABLED_DeleteToDummyServerWithData) {
     Response resp = service.deleteRequest(url, headers);
     EXPECT_EQ(RESPONSE_OK, resp.getStatus());
 }
+
+TEST(S3RESTfulService, GetWithWrongProxy) {
+    HTTPHeaders headers;
+    S3RESTfulService service("https://127.0.0.1:8080");
+
+    string url = "https://www.bing.com/";
+
+    EXPECT_THROW(service.get(url, headers), S3ConnectionError);
+}

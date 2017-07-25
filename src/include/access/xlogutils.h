@@ -26,4 +26,9 @@ extern void XLogTruncateRelation(RelFileNode rnode, BlockNumber nblocks);
 
 extern Buffer XLogReadBuffer(Relation reln, BlockNumber blkno, bool init);
 
+#ifdef USE_SEGWALREP
+extern void XLogAOSegmentFile(RelFileNode rnode, int segmentFileNum);
+extern void XLogAODropSegmentFile(RelFileNode rnode, int segmentFileNum);
+#endif
+
 #endif

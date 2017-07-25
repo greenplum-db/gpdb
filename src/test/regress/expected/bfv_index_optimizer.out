@@ -27,17 +27,13 @@ explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
    ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
          Join Filter: true
-         ->  Append  (cost=0.00..0.00 rows=1 width=12)
-               ->  Result  (cost=0.00..0.00 rows=1 width=12)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
-               ->  Result  (cost=0.00..0.00 rows=1 width=12)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
-         ->  Index Scan using bfv_tab1_idx1 on bfv_tab1  (cost=0.00..2.00 rows=1 width=244)
-               Index Cond: bfv_tab1.unique1 = "outer".column1
-               Filter: bfv_tab1.stringu1::text = "outer".column2
- Settings:  optimizer=on
- Optimizer status: PQO version 1.621
-(13 rows)
+         ->  Result  (cost=0.00..0.00 rows=2 width=12)
+               ->  Values Scan on "Values"  (cost=0.00..0.00 rows=2 width=12)
+         ->  Index Scan using bfv_tab1_idx1 on bfv_tab1  (cost=0.00..6.00 rows=1 width=244)
+               Index Cond: bfv_tab1.unique1 = "Values".column1
+               Filter: bfv_tab1.stringu1::text = "Values".column2
+ Optimizer status: PQO version 2.35.1
+(9 rows)
 
 set gp_enable_relsize_collection=on;
 explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
@@ -47,17 +43,14 @@ explain select * from bfv_tab1, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.00 rows=1 width=256)
    ->  Nested Loop  (cost=0.00..2.00 rows=1 width=256)
          Join Filter: true
-         ->  Append  (cost=0.00..0.00 rows=1 width=12)
-               ->  Result  (cost=0.00..0.00 rows=1 width=12)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
-               ->  Result  (cost=0.00..0.00 rows=1 width=12)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=12)
-         ->  Index Scan using bfv_tab1_idx1 on bfv_tab1  (cost=0.00..2.00 rows=1 width=244)
-               Index Cond: bfv_tab1.unique1 = (147)
-               Filter: bfv_tab1.stringu1::text = ('RFAAAA'::text)
- Settings:  gp_enable_relsize_collection=on; optimizer=on
- Optimizer status: PQO version 1.667
-(13 rows)
+         ->  Result  (cost=0.00..0.00 rows=2 width=12)
+               ->  Values Scan on "Values"  (cost=0.00..0.00 rows=2 width=12)
+         ->  Index Scan using bfv_tab1_idx1 on bfv_tab1  (cost=0.00..6.00 rows=1 width=244)
+               Index Cond: bfv_tab1.unique1 = "Values".column1
+               Filter: bfv_tab1.stringu1::text = "Values".column2
+ Settings:  gp_enable_relsize_collection=on
+ Optimizer status: PQO version 2.35.1
+(10 rows)
 
 reset gp_enable_relsize_collection;
 --start_ignore

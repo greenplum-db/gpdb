@@ -20,15 +20,14 @@
         data collection agents. You must be the Greenplum Database system user
           (<codeph>gpadmin</codeph>) to run this utility. The <codeph>--port</codeph> option is
         required. When using the <codeph>--enable</codeph> option, the <codeph>--password</codeph>
-        option is also required. Use the <codeph>--port</codeph> option to
-        supply the port of the Greenplum Database master instance. If using the
-        <codeph>--enable</codeph> option, Greenplum Database
-        must be restarted after the utility completes.</p>
+        option is also required. Use the <codeph>--port</codeph> option to supply the port of the
+        Greenplum Database master instance. If using the <codeph>--enable</codeph> option, Greenplum
+        Database must be restarted after the utility completes.</p>
       <p>When run without the <codeph>--enable</codeph> option, the utility just creates the
           <codeph>gpperfmon</codeph> database (the database used to store system metrics collected
-        by the data collection agents). When run with the <codeph>--enable</codeph>
-          option, the utility also runs the following additional tasks
-        necessary to enable the performance monitor data collection agents:</p>
+        by the data collection agents). When run with the <codeph>--enable</codeph> option, the
+        utility also runs the following additional tasks necessary to enable the performance monitor
+        data collection agents:</p>
       <ol>
         <li id="ou143278">Creates the <codeph>gpmon</codeph> superuser role in Greenplum Database.
           The data collection agents require this role to connect to the database and write their
@@ -115,7 +114,7 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
           <pt>--password <varname>gpmon_password</varname></pt>
           <pd>Required if <codeph>--enable</codeph> is specified. Sets the password of the
               <codeph>gpmon</codeph> superuser. Disallowed if <codeph>--enable</codeph> is not
-              specified.</pd>
+            specified.</pd>
         </plentry>
         <plentry>
           <pt>--port <varname>gpdb_port</varname></pt>
@@ -183,8 +182,8 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
         </strow>
         <strow>
           <stentry>partition_age</stentry>
-          <stentry>The number of months that gperfmon statistics data will be retained. The default
-            it is 0, which means we won’t drop any data.</stentry>
+          <stentry>The number of months that gpperfmon statistics data will be retained. The default
+            value is 0, which means that partitions are never dropped automatically.</stentry>
         </strow>
         <strow>
           <stentry>quantum</stentry>
@@ -193,6 +192,12 @@ host       all           gpmon  ::1/128        <b>password</b></codeblock></p>
               prefer a less granular view of performance, or want to collect and analyze minimal
               amounts of data for system metrics, choose a higher quantum. To collect data more
               frequently, choose a lower value.</p></stentry>
+        </strow>
+        <strow>
+          <stentry>harvest_interval</stentry>
+          <stentry>The time, in seconds, between data harvests. A data harvest moves recent data
+            from the <codeph>gpperfmon</codeph> external (<codeph>_tail</codeph>) tables to their
+            corresponding history files. The default is 120. The minimum value is 30. </stentry>
         </strow>
         <strow>
           <stentry>ignore_qexec_packet</stentry>

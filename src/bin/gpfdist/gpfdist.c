@@ -1166,6 +1166,9 @@ static int local_send(request_t *r, const char* buf, int buflen)
 		if ( e == EPIPE || e == ECONNRESET )
 		{
 			gwarning(r, "gpfdist_send failed - the connection was terminated by the client (%d: %s)", e, strerror(e));
+			/* close stream and release fd & flock on pipe file*/
+			if (r->session)
+				session_end(r->session, 0);
 		} else {
 			gdebug(r, "gpfdist_send failed - due to (%d: %s)", e, strerror(e));
 		}

@@ -105,6 +105,8 @@ S3Params InitConfig(const string& urlWithOptions) {
     int64_t lowSpeedTime = s3Cfg.SafeScan("low_speed_time", configSection, 60, 0, INT_MAX);
     params.setLowSpeedTime(lowSpeedTime);
 
+    params.setProxy(s3Cfg.Get(configSection, "proxy", ""));
+
     params.setVerifyCert(verifyCert);
 
     CheckEssentialConfig(params);

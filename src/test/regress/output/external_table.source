@@ -497,6 +497,42 @@ SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_ext');
 ---------+---------+--------
 (0 rows)
 
+--
+-- These fail because there are more locations than there are segments.
+--
+-- As written, if you have a large enough cluster, with more than 20
+-- segments, this will fail to test what's intended. But we don't currently
+-- run automated tests like that, and you'll get a different error message,
+-- so it won't fail silently.
+--
+create external table ret_too_many_uris(a text, b text) location(
+  'gpfdist://foo.invalid:7070/ret.tbl1',  'gpfdist://foo.invalid:7070/ret.tbl2',
+  'gpfdist://foo.invalid:7070/ret.tbl3',  'gpfdist://foo.invalid:7070/ret.tbl4',
+  'gpfdist://foo.invalid:7070/ret.tbl5',  'gpfdist://foo.invalid:7070/ret.tbl6',
+  'gpfdist://foo.invalid:7070/ret.tbl7',  'gpfdist://foo.invalid:7070/ret.tbl8',
+  'gpfdist://foo.invalid:7070/ret.tbl9',  'gpfdist://foo.invalid:7070/ret.tbl10',
+  'gpfdist://foo.invalid:7070/ret.tbl11', 'gpfdist://foo.invalid:7070/ret.tbl12',
+  'gpfdist://foo.invalid:7070/ret.tbl13', 'gpfdist://foo.invalid:7070/ret.tbl14',
+  'gpfdist://foo.invalid:7070/ret.tbl15', 'gpfdist://foo.invalid:7070/ret.tbl16',
+  'gpfdist://foo.invalid:7070/ret.tbl17', 'gpfdist://foo.invalid:7070/ret.tbl18',
+  'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
+) format 'text';
+select * from ret_too_many_uris;
+ERROR:  There are more external files (URLs) than primary segments that can read them. Found 20 URLs and 3 primary segments.
+create writable external table wet_too_many_uris(a text, b text) location(
+  'gpfdist://foo.invalid:7070/wet.out1',  'gpfdist://foo.invalid:7070/wet.out2',
+  'gpfdist://foo.invalid:7070/wet.out3',  'gpfdist://foo.invalid:7070/wet.out4',
+  'gpfdist://foo.invalid:7070/wet.out5',  'gpfdist://foo.invalid:7070/wet.out6',
+  'gpfdist://foo.invalid:7070/wet.out7',  'gpfdist://foo.invalid:7070/wet.out8',
+  'gpfdist://foo.invalid:7070/wet.out9',  'gpfdist://foo.invalid:7070/wet.out10',
+  'gpfdist://foo.invalid:7070/wet.out11', 'gpfdist://foo.invalid:7070/wet.out12',
+  'gpfdist://foo.invalid:7070/wet.out13', 'gpfdist://foo.invalid:7070/wet.out14',
+  'gpfdist://foo.invalid:7070/wet.out15', 'gpfdist://foo.invalid:7070/wet.out16',
+  'gpfdist://foo.invalid:7070/wet.out17', 'gpfdist://foo.invalid:7070/wet.out18',
+  'gpfdist://foo.invalid:7070/wet.out19', 'gpfdist://foo.invalid:7070/wet.out20'
+) format 'text';
+insert into wet_too_many_uris values ('foo', 'bar');
+ERROR:  External table has more URLs than available primary segments that can write into them  (seg2 127.0.0.1:40002 pid=24162)
 -- Test for error log functionality 
 -- Scan with no errors
 CREATE EXTERNAL TABLE exttab_basic_1( i int, j text ) 

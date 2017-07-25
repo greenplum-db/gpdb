@@ -1551,7 +1551,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_UNIT_S
 		},
 		&AuthenticationTimeout,
-		60, 1, 600, NULL, NULL
+		60, 1, MAX_AUTHENTICATION_TIMEOUT, NULL, NULL
 	},
 
 	{
@@ -1562,7 +1562,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL | GUC_UNIT_S
 		},
 		&PreAuthDelay,
-		0, 0, 60, NULL, NULL
+		0, 0, MAX_PRE_AUTH_DELAY, NULL, NULL
 	},
 
 	{

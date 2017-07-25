@@ -13,6 +13,7 @@
 class S3RESTfulService : public RESTfulService {
    public:
     S3RESTfulService();
+    S3RESTfulService(const string& proxy);
     S3RESTfulService(const S3Params& params);
     virtual ~S3RESTfulService();
 
@@ -29,6 +30,8 @@ class S3RESTfulService : public RESTfulService {
    private:
     uint64_t lowSpeedLimit;
     uint64_t lowSpeedTime;
+
+    string proxy;
 
     bool debugCurl;
     bool verifyCert;

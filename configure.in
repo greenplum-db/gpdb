@@ -286,6 +286,13 @@ AC_SUBST(DTRACEFLAGS)])
 AC_SUBST(enable_dtrace)
 
 #
+# TAP tests
+#
+PGAC_ARG_BOOL(enable, tap-tests, no,
+              [  --enable-tap-tests      enable TAP tests (requires Perl and IPC::Run)])
+AC_SUBST(enable_tap_tests)
+
+#
 # C compiler
 #
 
@@ -2202,6 +2209,21 @@ PGAC_PATH_DOCBOOK_STYLESHEETS
 PGAC_PATH_COLLATEINDEX
 AC_CHECK_PROGS(SGMLSPL, sgmlspl)
 
+#
+# Check for test tools
+#
+if test "$enable_tap_tests" = yes; then
+  AC_CHECK_PROGS(PROVE, prove)
+  if test -z "$PROVE"; then
+    AC_MSG_ERROR([prove not found])
+  fi
+  if test -z "$PERL"; then
+    AC_MSG_ERROR([Perl not found])
+  fi
+  # Check for necessary modules
+  AX_PROG_PERL_MODULES(IPC::Run, ,
+    AC_MSG_ERROR([Perl module IPC::Run is required to run TAP tests]))
+fi
 # Thread testing
 
 # We have to run the thread test near the end so we have all our symbols

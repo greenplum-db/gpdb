@@ -151,6 +151,7 @@ CTranslatorDXLToPlStmt::InitTranslators()
 			{EdxlopPhysicalDynamicBitmapTableScan,	&gpopt::CTranslatorDXLToPlStmt::PplanBitmapTableScan},
 			{EdxlopPhysicalCTAS, 					&gpopt::CTranslatorDXLToPlStmt::PplanCTAS},
 			{EdxlopPhysicalPartitionSelector,		&gpopt::CTranslatorDXLToPlStmt::PplanPartitionSelector},
+			{EdxlopPhysicalValuesScan,				&gpopt::CTranslatorDXLToPlStmt::PplanValueScan},
 	};
 
 	const ULONG ulTranslators = GPOS_ARRAY_SIZE(rgTranslators);
@@ -539,8 +540,16 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 
 	if (ulLocations > ulParticipatingSegments)
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtExternalScanError,
-				GPOS_WSZ_LIT("There are more external files (URLs) than primary segments that can read them"));
+		// This should match the same error in createplan.c
+		char msgbuf[200];
+
+		snprintf(msgbuf, sizeof(msgbuf),
+				 "There are more external files (URLs) than primary segments that can read them. Found %d URLs and %d primary segments.",
+				 ulLocations, ulParticipatingSegments);
+
+		RaiseGpdbError(ERRCODE_INVALID_TABLE_DEFINITION, // errcode
+					   msgbuf, // errmsg
+					   NULL);  // errhint
 	}
 
 	BOOL fDone = false;
@@ -1843,14 +1852,8 @@ CTranslatorDXLToPlStmt::PplanFunctionScanFromDXLTVF
 	// translation context for column mappings
 	CDXLTranslateContextBaseTable dxltrctxbt(m_pmp);
 
-	// we will add the new range table entry as the last element of the range table
-	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
-
-	dxltrctxbt.SetIdx(iRel);
-
 	// create function scan node
 	FunctionScan *pfuncscan = MakeNode(FunctionScan);
-	pfuncscan->scan.scanrelid = iRel;
 	Plan *pplan = &(pfuncscan->scan.plan);
 
 	RangeTblEntry *prte = PrteFromDXLTVF(pdxlnTVF, pdxltrctxOut, &dxltrctxbt, pplan);
@@ -1858,6 +1861,11 @@ CTranslatorDXLToPlStmt::PplanFunctionScanFromDXLTVF
 
 	pfuncscan->funcexpr = prte->funcexpr;
 	pfuncscan->funccolnames = prte->eref->colnames;
+
+	// we will add the new range table entry as the last element of the range table
+	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+	dxltrctxbt.SetIdx(iRel);
+	pfuncscan->scan.scanrelid = iRel;
 
 	m_pctxdxltoplstmt->AddRTE(prte);
 
@@ -1992,6 +2000,77 @@ CTranslatorDXLToPlStmt::PrteFromDXLTVF
 
 	return prte;
 }
+
+
+// create a range table entry from a CDXLPhysicalValuesScan node
+RangeTblEntry *
+CTranslatorDXLToPlStmt::PrteFromDXLValueScan
+	(
+	const CDXLNode *pdxlnValueScan,
+	CDXLTranslateContext *pdxltrctxOut,
+	CDXLTranslateContextBaseTable *pdxltrctxbt,
+	Plan *pplanParent
+	)
+{
+	CDXLPhysicalValuesScan *pdxlop = CDXLPhysicalValuesScan::PdxlopConvert(pdxlnValueScan->Pdxlop());
+
+	RangeTblEntry *prte = MakeNode(RangeTblEntry);
+
+	prte->relid = InvalidOid;
+	prte->subquery = NULL;
+	prte->rtekind = RTE_VALUES;
+	prte->inh = false;			/* never true for values RTEs */
+	prte->inFromCl = true;
+	prte->requiredPerms = 0;
+	prte->checkAsUser = InvalidOid;
+
+	Alias *palias = MakeNode(Alias);
+	palias->colnames = NIL;
+
+	// get value alias
+	palias->aliasname = CTranslatorUtils::SzFromWsz(pdxlop->PstrOpName()->Wsz());
+
+	// project list
+	CDXLNode *pdxlnPrL = (*pdxlnValueScan)[EdxltsIndexProjList];
+
+	// get column names
+	const ULONG ulCols = pdxlnPrL->UlArity();
+	for (ULONG ul = 0; ul < ulCols; ul++)
+	{
+		CDXLNode *pdxlnPrElem = (*pdxlnPrL)[ul];
+		CDXLScalarProjElem *pdxlopPrEl = CDXLScalarProjElem::PdxlopConvert(pdxlnPrElem->Pdxlop());
+
+		CHAR *szColName = CTranslatorUtils::SzFromWsz(pdxlopPrEl->PmdnameAlias()->Pstr()->Wsz());
+
+		Value *pvalColName = gpdb::PvalMakeString(szColName);
+		palias->colnames = gpdb::PlAppendElement(palias->colnames, pvalColName);
+
+		// save mapping col id -> index in translate context
+		(void) pdxltrctxbt->FInsertMapping(pdxlopPrEl->UlId(), ul+1 /*iAttno*/);
+	}
+
+	CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt(m_pmp, pdxltrctxbt, NULL, pdxltrctxOut, m_pctxdxltoplstmt, pplanParent);
+	const ULONG ulChildren = pdxlnValueScan->UlArity();
+	List *values_lists = NIL;
+	for (ULONG ulValue = EdxlValIndexConstStart; ulValue < ulChildren; ulValue++)
+	{
+		CDXLNode *pdxlnValueList = (*pdxlnValueScan)[ulValue];
+		const ULONG ulCols = pdxlnValueList->UlArity();
+		List *value = NIL;
+		for (ULONG ulCol = 0; ulCol < ulCols ; ulCol++)
+		{
+			Expr *pconst = m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnValueList)[ulCol], &mapcidvarplstmt);
+			value = gpdb::PlAppendElement(value, pconst);
+		}
+		values_lists = gpdb::PlAppendElement(values_lists, value);
+	}
+
+	prte->values_lists = (List *) values_lists;
+	prte->eref = palias;
+
+	return prte;
+}
+
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -4355,9 +4434,11 @@ CTranslatorDXLToPlStmt::PplanDML
 		gpdb::GPDBFree(plTargetListDML);
 		plTargetListDML = plTargetListWithDroppedCols;
 	}
-	
-	// add ctid, action and oid columns to target list
-	pdml->oidColIdx = UlAddTargetEntryForColId(&plTargetListDML, &dxltrctxChild, pdxlop->UlOid(), true /*fResjunk*/);
+
+	// Extract column numbers of the action and ctid columns from the
+	// target list. ORCA also includes a third similar column for
+	// partition Oid to the target list, but we don't use it for anything
+	// in GPDB.
 	pdml->actionColIdx = UlAddTargetEntryForColId(&plTargetListDML, &dxltrctxChild, pdxlop->UlAction(), true /*fResjunk*/);
 	pdml->ctidColIdx = UlAddTargetEntryForColId(&plTargetListDML, &dxltrctxChild, pdxlop->UlCtid(), true /*fResjunk*/);
 	if (pdxlop->FPreserveOids())
@@ -4370,7 +4451,6 @@ CTranslatorDXLToPlStmt::PplanDML
 	}
 
 	GPOS_ASSERT(0 != pdml->actionColIdx);
-	GPOS_ASSERT(0 != pdml->oidColIdx);
 
 	pplan->targetlist = plTargetListDML;
 	
@@ -6105,5 +6185,70 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 
 	return pplan;
 }
+
+// translates a DXL Value Scan node into a GPDB Value scan node
+Plan *
+CTranslatorDXLToPlStmt::PplanValueScan
+	(
+	const CDXLNode *pdxlnValueScan,
+	CDXLTranslateContext *pdxltrctxOut,
+	Plan *pplanParent,
+	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings
+	)
+{
+	// translation context for column mappings
+	CDXLTranslateContextBaseTable dxltrctxbt(m_pmp);
+
+	// we will add the new range table entry as the last element of the range table
+	Index iRel = gpdb::UlListLength(m_pctxdxltoplstmt->PlPrte()) + 1;
+
+	dxltrctxbt.SetIdx(iRel);
+
+	// create value scan node
+	ValuesScan *pvaluescan = MakeNode(ValuesScan);
+	pvaluescan->scan.scanrelid = iRel;
+	Plan *pplan = &(pvaluescan->scan.plan);
+
+	RangeTblEntry *prte = PrteFromDXLValueScan(pdxlnValueScan, pdxltrctxOut, &dxltrctxbt, pplan);
+	GPOS_ASSERT(NULL != prte);
+
+	pvaluescan->values_lists = (List *)gpdb::PvCopyObject(prte->values_lists);
+
+	m_pctxdxltoplstmt->AddRTE(prte);
+
+	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
+	pplan->plan_parent_node_id = IPlanId(pplanParent);
+	pplan->nMotionNodes = 0;
+
+	// translate operator costs
+	TranslatePlanCosts
+	(
+		CDXLPhysicalProperties::PdxlpropConvert(pdxlnValueScan->Pdxlprop())->Pdxlopcost(),
+		&(pplan->startup_cost),
+		&(pplan->total_cost),
+		&(pplan->plan_rows),
+		&(pplan->plan_width)
+	);
+
+	// a table scan node must have at least 2 children: projection list and at least 1 value list
+	GPOS_ASSERT(2 <= pdxlnValueScan->UlArity());
+
+	CDXLNode *pdxlnPrL = (*pdxlnValueScan)[EdxltsIndexProjList];
+
+	// translate proj list
+	List *plTargetList = PlTargetListFromProjList
+							(
+							pdxlnPrL,
+							&dxltrctxbt,
+							NULL,
+							pdxltrctxOut,
+							pplan
+							);
+
+	pplan->targetlist = plTargetList;
+
+	return (Plan *) pvaluescan;
+}
+
 
 // EOF

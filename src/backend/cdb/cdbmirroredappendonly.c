@@ -30,6 +30,7 @@
 #include "cdb/cdbpersistentrecovery.h"
 
 #ifdef USE_SEGWALREP
+#include "access/xlogutils.h"
 #include "cdb/cdbappendonlyam.h"
 
 
@@ -2364,3 +2365,75 @@ int MirroredAppendOnly_Read(
 	errno = 0;
 	return FileRead(open->primaryFile, buffer, bufferLen);
 }
+
+#ifdef USE_SEGWALREP
+void
+ao_xlog_insert(XLogRecord *record)
+{
+	char *primaryFilespaceLocation;
+	char *mirrorFilespaceLocation;
+	char dbPath[MAXPGPATH + 1];
+	char path[MAXPGPATH + 1];
+	int written_len;
+	int64 seek_offset;
+	File file;
+
+	xl_ao_insert *xlrec = (xl_ao_insert*) XLogRecGetData(record);
+	char *buffer = (char*)xlrec + SizeOfAOInsert;
+	uint32 len = record->xl_len - SizeOfAOInsert;
+
+	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
+		xlrec->node.spcNode,
+		&primaryFilespaceLocation,
+		&mirrorFilespaceLocation);
+
+	FormDatabasePath(
+				dbPath,
+				primaryFilespaceLocation,
+				xlrec->node.spcNode,
+				xlrec->node.dbNode);
+
+	if (xlrec->segment_filenum == 0)
+		snprintf(path, MAXPGPATH, "%s/%u", dbPath, xlrec->node.relNode);
+	else
+		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, xlrec->node.relNode, xlrec->segment_filenum);
+
+	file = PathNameOpenFile(path, O_RDWR | PG_BINARY, 0600);
+	if (file < 0)
+	{
+		XLogAOSegmentFile(xlrec->node, xlrec->segment_filenum);
+		return;
+	}
+
+	seek_offset = FileSeek(file, xlrec->offset, SEEK_SET);
+	if (seek_offset != xlrec->offset)
+	{
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("seeked to position " INT64_FORMAT " but expected to seek to position " INT64_FORMAT " in file \"%s\": %m",
+						seek_offset,
+						xlrec->offset,
+						path)));
+	}
+
+	written_len = FileWrite(file, buffer, len);
+	if (written_len < 0 || written_len != len)
+	{
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("failed to write %d bytes in file \"%s\": %m",
+						len,
+						path)));
+	}
+
+	if (FileSync(file) != 0)
+	{
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("failed to flush file \"%s\": %m",
+						path)));
+	}
+
+	FileClose(file);
+}
+#endif /* USE_SEGWALREP */

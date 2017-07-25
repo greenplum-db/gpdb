@@ -377,7 +377,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	Assert(requested_size > 0);
 	size_t size_with_overhead = UserPtrSize_GetVmemPtrSize(requested_size);
 
-	Assert(size_with_overhead >= 0 && size_with_overhead <= MAX_REQUESTABLE_SIZE);
+	Assert(size_with_overhead <= MAX_REQUESTABLE_SIZE);
 
 	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)

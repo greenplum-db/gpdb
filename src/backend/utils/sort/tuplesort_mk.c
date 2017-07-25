@@ -1223,8 +1223,6 @@ grow_unsorted_array(Tuplesortstate_mk *state)
 
 	uint64		availMem = state->memAllowed - MemoryContextGetCurrentSpace(state->sortcontext);
 	uint64		avgTupSize = (uint64) (((double) state->totalTupleBytes) / ((double) state->totalNumTuples));
-
-	Assert(avgTupSize >= 0);
 	uint64		avgExtraForPrep = (uint64) (((double) state->mkctxt.estimatedExtraForPrep) / ((double) state->totalNumTuples));
 
 	if ((availMem / (sizeof(MKEntry) + avgTupSize + avgExtraForPrep)) == 0)

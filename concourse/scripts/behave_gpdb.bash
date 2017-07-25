@@ -8,12 +8,18 @@ source "${CWDIR}/common.bash"
 function gen_env(){
   cat > /opt/run_test.sh <<-EOF
 
+		BEHAVE_TAGS="${BEHAVE_TAGS}"
+		BEHAVE_FLAGS="${BEHAVE_FLAGS}"
+
 		source /usr/local/greenplum-db-devel/greenplum_path.sh
 		cd "\${1}/gpdb_src/gpAux"
 		source gpdemo/gpdemo-env.sh
 		cd "\${1}/gpdb_src/gpMgmt/"
-		# Does this report failures?
-		make -f Makefile.behave behave tags=${BEHAVE_TAGS}
+		if [ ! -z "\${BEHAVE_TAGS}" ]; then
+		    make -f Makefile.behave behave tags=\${BEHAVE_TAGS}
+		else
+		    flags="\${BEHAVE_FLAGS}" make -f Makefile.behave behave
+		fi
 	EOF
 
 	chmod a+x /opt/run_test.sh
@@ -55,8 +61,8 @@ function gpcheck_setup() {
 
 function _main() {
 
-    if [ -z "${BEHAVE_TAGS}" ]; then
-        echo "FATAL: BEHAVE_TAGS is not set"
+    if [ -z "${BEHAVE_TAGS}" ] && [ -z "${BEHAVE_FLAGS}" ]; then
+        echo "FATAL: BEHAVE_TAGS or BEHAVE_FLAGS not set"
         exit 1
     fi
 

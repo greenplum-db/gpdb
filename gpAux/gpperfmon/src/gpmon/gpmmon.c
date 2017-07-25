@@ -1628,9 +1628,6 @@ char* get_ip_for_host(char* host, bool* returnParamIsIpv6)
 		return NULL;
 	}
 
-	if (addrs == NULL)
-		return NULL;
-
 	ipstr = malloc(128);
 	/* just grab the first address... it should be fine */
 	if (addrs->ai_family == AF_INET)

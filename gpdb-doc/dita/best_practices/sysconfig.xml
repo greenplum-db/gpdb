@@ -3,21 +3,18 @@
 <topic id="topic_dt3_fkv_r4">
   <title>System Configuration</title>
   <body>
-    <p>The topics in this section describe requirements and best practices for configuring Greenplum
-      Database cluster hosts. </p>
-    <section id="os">
-      <title>Preferred Operating System</title>
-      <p>Red Hat Enterprise Linux (RHEL) is the preferred operating system. The latest supported
-        major version should be used, currently RHEL 6.</p>
-    </section>
+    <p>The topics in this section describe requirements and best practices for system administrators
+      who are  configuring Greenplum Database cluster hosts. Configuration of the Greenplum Database
+      cluster is usually performed as root.</p>
     <section id="file_system">
       <title>File System</title>
-      <p>XFS is the best practice file system for Greenplum Database data directories. XFS should be
-        mounted with the following mount options: <codeblock>rw,noatime,inode64</codeblock></p>
+      <p>XFS is the file system used for Greenplum Database data directories. XFS should be mounted
+        with the following mount options:
+        <codeblock>rw,noatime,nobarrier,nodev,inode64,allocsize=16m</codeblock></p>
     </section>
     <section id="port_config">
       <title>Port Configuration</title>
-      <p><codeph>ip_local_port_range</codeph> should be set up to not conflict with the Greenplum
+      <p>Set up <codeph>ip_local_port_range</codeph> so it does not conflict with the Greenplum
         Database port ranges. For example:
         <codeblock>net.ipv4.ip_local_port_range = 3000         65535
 PORT_BASE=2000
@@ -27,9 +24,8 @@ MIRROR_REPLICATION_PORT_BASE=2300</codeblock></p>
     </section>
     <section id="io_config">
       <title>I/O Configuration</title>
-      <p>blockdev read-ahead size should be set to 16384 on the devices that contain data
-        directories.</p>
-      <codeblock>/sbin/blockdev --getra /dev/sdb
+      <p>Set the blockdev read-ahead size to 16384 on the devices that contain data directories.</p>
+      <codeblock># /sbin/blockdev --getra /dev/sdb
 16384</codeblock>
       <p>The deadline IO scheduler should be set for all data directory devices. </p>
       <codeblock> # cat /sys/block/sdb/queue/scheduler
@@ -53,7 +49,17 @@ MIRROR_REPLICATION_PORT_BASE=2300</codeblock></p>
         memory allocation. These variables should be set as follows: </p>
       <p><codeph>vm.overcommit_memory</codeph> determines the method the OS uses for determining how
         much memory can be allocated to processes. This should be always set to 2, which is the only
-        safe setting for the database. </p>
+        safe setting for the database. <note>For information on configuration of overcommit memory,
+          refer to: <ul id="ul_pgp_4hz_m1b">
+            <li><xref
+                href="https://www.google.com/url?q=https://en.wikipedia.org/wiki/Memory_overcommitment&amp;sa=D&amp;ust=1499719618717000&amp;usg=AFQjCNErcHO7vErv4pn9fIhCxrR0XRiknA"
+                format="html" scope="external"
+                >https://en.wikipedia.org/wiki/Memory_overcommitment</xref></li>
+            <li><xref
+                href="https://www.google.com/url?q=https://www.kernel.org/doc/Documentation/vm/overcommit-accounting&amp;sa=D&amp;ust=1499719618717000&amp;usg=AFQjCNEmu5tZutAaN1KCSlIwz4hwqihkOQ"
+                format="html" scope="external"
+                >https://www.kernel.org/doc/Documentation/vm/overcommit-accounting</xref></li>
+          </ul></note></p>
       <p><codeph>vm.overcommit_ratio</codeph> is the percent of RAM that is used for application
         processes. The default is 50 on Red Hat Enterprise Linux. See <xref
           href="#topic_dt3_fkv_r4/segment_mem_config" format="dita"/> for a formula to calculate an
@@ -150,11 +156,8 @@ kernel.shmall = 4000000000</codeblock>
         space, or reduce the number of segments per host.</p>
       <p>Note that adding segment hosts to the cluster cannot help out-of-memory errors unless you
         use the additional hosts to decrease the number of segments per host.</p>
-      <p>Explain what spill files are. Then cover
-        <codeph>gp_workfile_limit_files_per_query</codeph>. Control the maximum number of spill
-        files created per segment per query with the configuration parameter
-          <codeph>gp_workfile_limit_files_per_query</codeph> . Then explain
-          <codeph>gp_workfile_limit_per_segment</codeph>. </p>
+      <p>Spill files are created when there is not enough memory to fit all the mapper output,
+        usually when 80% of the buffer space is occupied. </p>
       <p>Also, see <xref href="workloads.xml#topic_hhc_z5w_r4">Workload Management</xref> for best
         practices for managing query memory using resource queues.</p>
     </section>
@@ -193,8 +196,8 @@ kernel.shmall = 4000000000</codeblock>
         views.</p>
       <p>The <codeph>gp_workfile_compress_algorithm</codeph> configuration parameter specifies a
         compression algorithm to apply to spill files. It can have the value <codeph>none</codeph>
-        or <codeph>zlib</codeph>. Setting this parameter to <codeph>zlib</codeph> can improve
-        performance when spill files are used.</p>
+        (the default) or <codeph>zlib</codeph>. Setting this parameter to <codeph>zlib</codeph> can
+        improve performance when spill files are used.</p>
       <p>A query could generate a large number of spill files if not enough memory is allocated to
         it or if data skew is present in the queried data. If a query creates more than the
         specified number of spill files, Greenplum Database returns this error: </p>

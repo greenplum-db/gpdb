@@ -361,7 +361,7 @@ class GpdbRestore(Operation):
             elif self.search_for_dbname:
                 self._search_for_latest()
 
-        if not self.context.drop_db and not self.context.redirected_restore_db:
+        if not self.context.drop_db and not self.context.redirected_restore_db and (self.context.restore_global != "only"):
             dburl = dbconn.DbURL(port=self.context.master_port)
             conn = dbconn.connect(dburl)
             count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_database where datname='%s';" % escape_string(self.context.target_db, conn))

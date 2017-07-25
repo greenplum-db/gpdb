@@ -9,5 +9,6 @@ params:
   MAKE_TEST_COMMAND: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
   TEST_OS: ""
+  CONFIGURE_FLAGS: ""
 run:
   path: gpdb_src/concourse/scripts/tinc_gpdb.bash

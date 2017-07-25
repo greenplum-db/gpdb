@@ -2503,12 +2503,17 @@ PG_FUNCTION_INFO_V1(hasBackendsExist);
 Datum
 hasBackendsExist(PG_FUNCTION_ARGS)
 {
+	const char *walreceiver = "walreceiver";
+
 	int beid;
 	int32 result;
 	int timeout = PG_GETARG_INT32(0);
+
 	if (timeout < 0)
 		elog(ERROR, "timeout is expected not to be negative");
+
 	int pid = getpid();
+
 	while (timeout >= 0)
 	{
 		result = 0;
@@ -2517,7 +2522,9 @@ hasBackendsExist(PG_FUNCTION_ARGS)
 		for (beid = 1; beid <= tot_backends; beid++)
 		{
 			PgBackendStatus *beentry = pgstat_fetch_stat_beentry(beid);
-			if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid)
+			if (beentry && beentry->st_procpid >0 && beentry->st_procpid != pid
+					&& strncmp(walreceiver, beentry->st_appname, strlen(walreceiver)) /* exclude the WALREP process*/
+				)
 				result++;
 		}
 		if (result == 0 || timeout == 0)

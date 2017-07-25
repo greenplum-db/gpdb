@@ -3012,23 +3012,29 @@ CTranslatorQueryToDXL::PdxlnFromValues
 {
 	List *plTuples = prte->values_lists;
 	GPOS_ASSERT(NULL != plTuples);
-	
+
 	const ULONG ulValues = gpdb::UlListLength(plTuples);
 	GPOS_ASSERT(0 < ulValues);
 
 	// children of the UNION ALL
 	DrgPdxln *pdrgpdxln = GPOS_NEW(m_pmp) DrgPdxln(m_pmp);
-	
+
+	// array of datum arrays for Values
+	DrgPdrgPdxldatum *pdrgpdrgpdxldatumValues = GPOS_NEW(m_pmp) DrgPdrgPdxldatum(m_pmp);
+
 	// array of input colid arrays
 	DrgPdrgPul *pdrgpdrgulInputColIds = GPOS_NEW(m_pmp) DrgPdrgPul(m_pmp);
 
 	// array of column descriptor for the UNION ALL operator
 	DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(m_pmp) DrgPdxlcd(m_pmp);
-	
+
 	// translate the tuples in the value scan
 	ULONG ulTuplePos = 0;
 	ListCell *plcTuple = NULL;
 	GPOS_ASSERT(NULL != prte->eref);
+
+	// flag for checking value list has only constants. For all constants --> VALUESCAN operator else retain UnionAll
+	BOOL fAllConstant = true;
 	ForEach (plcTuple, plTuples)
 	{
 		List *plTuple = (List *) lfirst(plcTuple);
@@ -3039,24 +3045,24 @@ CTranslatorQueryToDXL::PdxlnFromValues
 
 		// array of project elements (for expression elements)
 		DrgPdxln *pdrgpdxlnPrEl = GPOS_NEW(m_pmp) DrgPdxln(m_pmp);
-		
+
 		// array of datum (for datum constant values)
 		DrgPdxldatum *pdrgpdxldatum = GPOS_NEW(m_pmp) DrgPdxldatum(m_pmp);
-		
+
 		// array of column descriptors for the CTG containing the datum array
 		DrgPdxlcd *pdrgpdxlcdCTG = GPOS_NEW(m_pmp) DrgPdxlcd(m_pmp);
-		
+
 		List *plColnames = prte->eref->colnames;
 		GPOS_ASSERT(NULL != plColnames);
 		GPOS_ASSERT(gpdb::UlListLength(plTuple) == gpdb::UlListLength(plColnames));
-		
+
 		// translate the columns
 		ULONG ulColPos = 0;
 		ListCell *plcColumn = NULL;
 		ForEach (plcColumn, plTuple)
 		{
 			Expr *pexpr = (Expr *) lfirst(plcColumn);
-			
+
 			CHAR *szColName = (CHAR *) strVal(gpdb::PvListNth(plColnames, ulColPos));
 			ULONG ulColId = ULONG_MAX;	
 			if (IsA(pexpr, Const))
@@ -3065,13 +3071,13 @@ CTranslatorQueryToDXL::PdxlnFromValues
 				Const *pconst = (Const *) pexpr;
 				CDXLDatum *pdxldatum = m_psctranslator->Pdxldatum(pconst);
 				pdrgpdxldatum->Append(pdxldatum);
-				
+
 				ulColId = m_pidgtorCol->UlNextId();
-				
+
 				CWStringDynamic *pstrAlias = CDXLUtils::PstrFromSz(m_pmp, szColName);
 				CMDName *pmdname = GPOS_NEW(m_pmp) CMDName(m_pmp, pstrAlias);
 				GPOS_DELETE(pstrAlias);
-				
+
 				CDXLColDescr *pdxlcd = GPOS_NEW(m_pmp) CDXLColDescr
 													(
 													m_pmp,
@@ -3091,17 +3097,18 @@ CTranslatorQueryToDXL::PdxlnFromValues
 			}
 			else
 			{
+				fAllConstant = false;
 				// translate the scalar expression into a project element
 				CDXLNode *pdxlnPrE = PdxlnPrEFromGPDBExpr(pexpr, szColName, true /* fInsistNewColIds */ );
 				pdrgpdxlnPrEl->Append(pdxlnPrE);
 				ulColId = CDXLScalarProjElem::PdxlopConvert(pdxlnPrE->Pdxlop())->UlId();
-				
+
 				if (0 == ulTuplePos)
 				{
 					CWStringDynamic *pstrAlias = CDXLUtils::PstrFromSz(m_pmp, szColName);
 					CMDName *pmdname = GPOS_NEW(m_pmp) CMDName(m_pmp, pstrAlias);
 					GPOS_DELETE(pstrAlias);
-					
+
 					CDXLColDescr *pdxlcd = GPOS_NEW(m_pmp) CDXLColDescr
 														(
 														m_pmp,
@@ -3113,52 +3120,74 @@ CTranslatorQueryToDXL::PdxlnFromValues
 														);
 					pdrgpdxlcd->Append(pdxlcd);
 				}
-			} 
+			}
 
 			GPOS_ASSERT(ULONG_MAX != ulColId);
 
 			pdrgpulColIds->Append(GPOS_NEW(m_pmp) ULONG(ulColId));
 			ulColPos++;
 		}
-		
+
 		pdrgpdxln->Append(PdxlnFromColumnValues(pdrgpdxldatum, pdrgpdxlcdCTG, pdrgpdxlnPrEl));
+		if (fAllConstant)
+		{
+			pdrgpdxldatum->AddRef();
+			pdrgpdrgpdxldatumValues->Append(pdrgpdxldatum);
+		}
+
 		pdrgpdrgulInputColIds->Append(pdrgpulColIds);
 		ulTuplePos++;
-		
+
 		// cleanup
 		pdrgpdxldatum->Release();
 		pdrgpdxlnPrEl->Release();
 		pdrgpdxlcdCTG->Release();
 	}
-	
+
 	GPOS_ASSERT(NULL != pdrgpdxlcd);
 
-	if (1 < ulValues)
+	if (fAllConstant)
+	{
+		// create Const Table DXL Node
+		CDXLLogicalConstTable *pdxlop = GPOS_NEW(m_pmp) CDXLLogicalConstTable(m_pmp, pdrgpdxlcd, pdrgpdrgpdxldatumValues);
+		CDXLNode *pdxln = GPOS_NEW(m_pmp) CDXLNode(m_pmp, pdxlop);
+
+		// make note of new columns from Value Scan
+		m_pmapvarcolid->LoadColumns(m_ulQueryLevel, ulRTIndex, pdxlop->Pdrgpdxlcd());
+
+		// cleanup
+		pdrgpdxln->Release();
+		pdrgpdrgulInputColIds->Release();
+
+		return pdxln;
+	}
+	else if (1 < ulValues)
 	{
 		// create a UNION ALL operator
 		CDXLLogicalSetOp *pdxlop = GPOS_NEW(m_pmp) CDXLLogicalSetOp(m_pmp, EdxlsetopUnionAll, pdrgpdxlcd, pdrgpdrgulInputColIds, false);
 		CDXLNode *pdxln = GPOS_NEW(m_pmp) CDXLNode(m_pmp, pdxlop, pdrgpdxln);
-		
+
 		// make note of new columns from UNION ALL
 		m_pmapvarcolid->LoadColumns(m_ulQueryLevel, ulRTIndex, pdxlop->Pdrgpdxlcd());
-		
+		pdrgpdrgpdxldatumValues->Release();
+
 		return pdxln;
 	}
 
-	
 	GPOS_ASSERT(1 == pdrgpdxln->UlLength());
-			
+
 	CDXLNode *pdxln = (*pdrgpdxln)[0];
 	pdxln->AddRef();
-		
+
 	// make note of new columns
 	m_pmapvarcolid->LoadColumns(m_ulQueryLevel, ulRTIndex, pdrgpdxlcd);	
-	
+
 	//cleanup
+	pdrgpdrgpdxldatumValues->Release();
 	pdrgpdxln->Release();
 	pdrgpdrgulInputColIds->Release();
 	pdrgpdxlcd->Release();
-	
+
 	return pdxln;
 }
 

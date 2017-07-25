@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-
+#include <sys/file.h>   /* for flock */
 
 #ifdef WIN32
 #include <io.h>
@@ -696,6 +696,10 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 #define S_IFDIR  _S_IFDIR
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #endif
+#if !defined(S_ISFIFO)
+#define S_IFIFO _S_IFIFO
+#define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
+#endif
 #define strcasecmp stricmp
 #endif 
 
@@ -886,6 +890,28 @@ int gfile_open(gfile_t* fd, const char* fpath, int flags, int* response_code, co
 		return 1;
 	}
 
+#ifndef WIN32
+	if (!is_win_pipe && (flags == GFILE_OPEN_FOR_READ))
+	{
+		/* Restrict only one reader session for each PIPE */
+		if (S_ISFIFO(sta.st_mode))
+		{
+			if (flock (fd->fd.filefd, LOCK_EX | LOCK_NB) != 0)
+			{
+				fd->held_pipe_lock = FALSE;
+				gfile_printf_then_putc_newline("gfile %s is a pipe", fpath);
+				*response_code = 404;
+				*response_string = "Multiple reader to a pipe is forbidden.";
+				return 1;
+			}
+			else
+			{
+				fd->held_pipe_lock = TRUE;
+			}
+		}
+	}
+#endif
+
 	/*
 	 * prepare to use the appropriate i/o routines 
 	 */
@@ -999,6 +1025,14 @@ gfile_close(gfile_t*fd)
 		}
 		else
 		{
+			int i;
+
+			if(fd->held_pipe_lock)
+			{
+#ifndef WIN32
+				flock (fd->fd.filefd, LOCK_UN);
+#endif
+			}
 			do
 			{
 				//fsync(fd->fd.filefd);

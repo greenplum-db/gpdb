@@ -136,6 +136,7 @@ def impl(context):
     context.backup_timestamp = json_timestamps[-1]
     context.inc_backup_timestamps = json_timestamps[1:]
     context.backup_subdir = json_timestamps[-1][:8]
+    context.full_backup_timestamp = json_timestamps[0]
 
 
 @given('the timestamp labels for scenario "{scenario_number}" are read from json')
@@ -945,19 +946,6 @@ def impl(context):
         raise Exception('Plan file %s not created for the latest timestamp' % filename)
 
 
-@then('the timestamp from gp_dump is stored and subdir is "{subdir}"')
-def impl(context, subdir):
-    stdout = context.stdout_message
-    context.backup_subdir = subdir
-    for line in stdout.splitlines():
-        if 'Timestamp Key: ' in line:
-            context.backup_timestamp = line.split()[-1]
-            validate_timestamp(context.backup_timestamp)
-            return
-
-    raise Exception('Timestamp not found %s' % stdout)
-
-
 def get_dump_dir(context, directory):
     dump_dir = directory.strip() if len(directory.strip()) != 0 else master_data_dir
     if use_ddboost():
@@ -1000,48 +988,6 @@ def impl(context, file_type, dirname, backup_type):
         raise Exception('Last operation file %s not generated' % last_operation_filename)
 
 
-@given('the user runs gp_restore with the the stored timestamp subdir and stored filename in "{dbname}"')
-@when('the user runs gp_restore with the the stored timestamp subdir and stored filename in "{dbname}"')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c --gp-f %s' % (
-    context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.filename)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gp_restore with the the stored timestamp and subdir in "{dbname}"')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c' % (
-    context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gp_restore with the the stored timestamp and subdir in "{dbname}" and bypasses ao stats')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c --gp-nostats' % (
-    context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@then('the user runs gp_restore with the stored timestamp and subdir in "{dbname}" and backup_dir "{backup_dir}"')
-def impl(context, dbname, backup_dir):
-    command = 'gp_restore -i --gp-k %s --gp-d %s/db_dumps/%s --gp-i --gp-r %s/db_dumps/%s --gp-l=p -d %s --gp-c' % (
-    context.backup_timestamp, backup_dir, context.backup_subdir, backup_dir, context.backup_subdir, dbname)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
-@when('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}"')
-@then('the user runs gp_restore with the the stored timestamp and subdir for metadata only in "{dbname}"')
-def impl(context, dbname):
-    command = 'gp_restore -i --gp-k %s --gp-d db_dumps/%s --gp-i --gp-r db_dumps/%s --gp-l=p -d %s --gp-c -s db_dumps/%s/gp_dump_-1_1_%s.gz' % \
-              (context.backup_timestamp, context.backup_subdir, context.backup_subdir, dbname, context.backup_subdir,
-               context.backup_timestamp)
-    command = append_storage_config_to_restore_command(context, command)
-    run_gpcommand(context, command)
-
-
 @when('the user runs gpdbrestore -e with the stored timestamp')
 @then('the user runs gpdbrestore -e with the stored timestamp')
 def impl(context):
@@ -1057,6 +1003,12 @@ def impl(context, options):
     command = append_storage_config_to_restore_command(context, command)
     run_gpcommand(context, command)
 
+@then('the user runs gpdbrestore -e with the stored full timestamp and options "{options}"')
+@when('the user runs gpdbrestore -e with the stored full timestamp and options "{options}"')
+def impl(context, options):
+    command = 'gpdbrestore -e -t %s %s -a' % (context.full_backup_timestamp, options)
+    command = append_storage_config_to_restore_command(context, command)
+    run_gpcommand(context, command)
 
 @then('the user runs gpdbrestore -e with the date directory')
 @when('the user runs gpdbrestore -e with the date directory')
@@ -5113,3 +5065,92 @@ def impl(context):
     run_gpcommand(context, command)
     if not context.exception:
         raise Exception("Directory for date %s still exists" % context.full_backup_timestamp[0:8])
+
+@then('"{gppkg_name}" gppkg files exist on all hosts')
+def impl(context, gppkg_name):
+    remote_gphome = os.environ.get('GPHOME')
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    # We can assume the GPDB is installed at the same location for all hosts
+    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+
+    for hostname in set(hostlist):
+        cmd = Command(name='check if internal rpm gppkg is installed',
+                      cmdStr=rpm_command_list_all,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=True)
+
+        if not gppkg_name in cmd.get_stdout():
+            raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
+
+@then('"{gppkg_name}" gppkg files do not exist on any hosts')
+def impl(context, gppkg_name):
+    remote_gphome = os.environ.get('GPHOME')
+    hostlist = get_all_hostnames_as_list(context, 'template1')
+
+    # We can assume the GPDB is installed at the same location for all hosts
+    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+
+    for hostname in set(hostlist):
+        cmd = Command(name='check if internal rpm gppkg is installed',
+                      cmdStr=rpm_command_list_all,
+                      ctxt=REMOTE,
+                      remoteHost=hostname)
+        cmd.run(validateAfter=True)
+
+        if gppkg_name in cmd.get_stdout():
+            raise Exception( '"%s" gppkg is installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
+
+def _remove_gppkg_from_host(context, gppkg_name, is_master_host):
+    remote_gphome = os.environ.get('GPHOME')
+
+    if is_master_host:
+        hostname = get_master_hostname()[0][0] # returns a list of list
+    else:
+        hostlist = get_segment_hostlist()
+        if not hostlist:
+            raise Exception("Current GPDB setup is not a multi-host cluster.")
+
+        # Let's just pick whatever is the first host in the list, it shouldn't
+        # matter which one we remove from
+        hostname = hostlist[0]
+
+    rpm_command_list_all = 'rpm -qa --dbpath %s/share/packages/database' % remote_gphome
+    cmd = Command(name='get all rpm from the host',
+                  cmdStr=rpm_command_list_all,
+                  ctxt=REMOTE,
+                  remoteHost=hostname)
+    cmd.run(validateAfter=True)
+    installed_gppkgs = cmd.get_stdout_lines()
+    if not installed_gppkgs:
+        raise Exception("Found no packages installed")
+
+    full_gppkg_name = next((gppkg for gppkg in installed_gppkgs if gppkg_name in gppkg), None)
+    if not full_gppkg_name:
+        raise Exception("Found no matches for gppkg '%s'\n"
+                        "gppkgs installed:\n%s" % (gppkg_name, installed_gppkgs))
+
+    rpm_remove_command = 'rpm -e %s --dbpath %s/share/packages/database' % (full_gppkg_name, remote_gphome)
+    cmd = Command(name='Cleanly remove from the remove host',
+                  cmdStr=rpm_remove_command,
+                  ctxt=REMOTE,
+                  remoteHost=hostname)
+    cmd.run(validateAfter=True)
+
+    remove_archive_gppgk = 'rm -f %s/share/packages/archive/%s.gppkg' % (remote_gphome, gppkg_name)
+    cmd = Command(name='Remove archive gppkg',
+                  cmdStr=remove_archive_gppgk,
+                  ctxt=REMOTE,
+                  remoteHost=hostname)
+    cmd.run(validateAfter=True)
+
+@when('gppkg "{gppkg_name}" is removed from a segment host')
+def impl(context, gppkg_name):
+    _remove_gppkg_from_host(context, gppkg_name, is_master_host=False)
+
+@when('gppkg "{gppkg_name}" is removed from master host')
+def impl(context, gppkg_name):
+    _remove_gppkg_from_host(context, gppkg_name, is_master_host=True)

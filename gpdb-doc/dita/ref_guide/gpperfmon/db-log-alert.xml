@@ -5,23 +5,26 @@
    <title> log_alert_* </title>
    <body>
       <p>The <codeph>log_alert_*</codeph> tables store <codeph>pg_log</codeph> errors and warnings. </p>
+      <p>See <xref href="dbref.xml#overview/section_ok2_wd1_41b"/> for information about configuring
+         the system logger for <codeph>gpperfmon</codeph>.</p>
       <p>There are three <codeph>log_alert</codeph> tables, all having the same columns:</p>
       <ul>
-         <li><codeph>log_alert_now</codeph> is an external table whose data files are stored in
-               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current
-               <codeph>pg_log</codeph> errors and warnings data is stored in
+         <li><codeph>log_alert_now</codeph> is an external table whose data is stored in
+               <codeph>.csv</codeph> files in the
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory. Current
+               <codeph>pg_log</codeph> errors and warnings data are available in
                <codeph>log_alert_now</codeph> during the period between data collection from the
-            Command Center agents and automatic commitment to the <codeph>log_alert_history</codeph>
-            table.</li>
-         <li><codeph>log_alert_tail</codeph> is an external table whose data files are stored in
-               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. This is a transitional table
-            for query workload data that has been cleared from <codeph>log_alert_now</codeph> but
-            has not yet been committed to <codeph>log_alert_history</codeph>. It typically only
-            contains a few minutes worth of data.</li>
+               <codeph>gpperfmon</codeph> agents and automatic commitment to the
+               <codeph>log_alert_history</codeph> table.</li>
+         <li><codeph>log_alert_tail</codeph> is an external table with data stored in
+               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs/alert_log_stage</codeph>. This is a
+            transitional table for data that has been cleared from <codeph>log_alert_now</codeph>
+            but has not yet been committed to <codeph>log_alert_history</codeph>. The table includes
+            records from all alert logs except the most recent. It typically contains only a few
+            minutes' worth of data.</li>
          <li><codeph>log_alert_history</codeph> is a regular table that stores historical
             database-wide errors and warnings data. It is pre-partitioned into monthly partitions.
-            Partitions are automatically added in two month increments as needed. Administrators
-            must drop old partitions for the months that are no longer needed.</li>
+            Partitions are automatically added in two month increments as needed. </li>
       </ul>
       <table>
          <tgroup cols="2">
@@ -246,29 +249,5 @@
             </tbody>
          </tgroup>
       </table>
-      <section id="rotation">
-         <title>Log Processing and Rotation</title>
-         <p>The Greenplum Database system logger writes alert logs in the
-               <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory.</p>
-         <p>The agent process (<codeph>gpmmon</codeph>) performs the following steps to consolidate
-            log files and load them into the <codeph>gpperfmon</codeph> database:</p>
-         <ol>
-            <li>Gathers all of the <codeph>gpdb-alert-*</codeph> files in the logs directory (except
-               the latest, which the syslogger has open and is writing to) into a single file,
-                  <codeph>alert_log_stage</codeph>.</li>
-            <li>Loads the <codeph>alert_log_stage</codeph> file into the
-                  <codeph>log_alert_history</codeph> table in the <codeph>gpperfmon</codeph>
-               database.</li>
-            <li>Truncates the <codeph>alert_log_stage</codeph> file.</li>
-            <li>Removes all of the <codeph>gp-alert-*</codeph> files, except the latest.</li>
-         </ol>
-         <p>The syslogger rotates the alert log every 24 hours or when the current log file reaches
-            or exceeds 1MB. A rotated log file can exceed 1MB if a single error message contains a
-            large SQL statement or a large stack trace. Also, the syslogger processes error messages
-            in chunks, with a separate chunk for each logging process. The size of a chunk is
-            OS-dependent; on Red Hat Enterprise Linux, for example, it is 4096 bytes. If many
-            Greenplum Database sessions generate error messages at the same time, the log file can
-            grow significantly before its size is checked and log rotation is triggered.</p>
-      </section>
    </body>
 </topic>

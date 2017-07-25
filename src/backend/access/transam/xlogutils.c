@@ -205,6 +205,37 @@ forget_invalid_pages_db(Oid tblspc, Oid dbid)
 	}
 }
 
+#ifdef USE_SEGWALREP
+/* Forget an invalid AO/AOCO segment file */
+static void
+forget_invalid_segment_file(RelFileNode rnode, int32 segmentFileNum)
+{
+	xl_invalid_page_key key;
+	bool		found;
+
+	if (invalid_page_tab == NULL)
+		return;					/* nothing to do */
+
+	key.node = rnode;
+	key.blkno = segmentFileNum;
+	hash_search(invalid_page_tab,
+				(void *) &key,
+				HASH_FIND, &found);
+	if (!found)
+		return;
+
+	if (hash_search(invalid_page_tab,
+					(void *) &key,
+					HASH_REMOVE, &found) == NULL)
+		elog(ERROR, "hash table corrupted");
+
+	elog(Debug_persistent_recovery_print ? PersistentRecovery_DebugPrintLevel() : DEBUG2,
+		 "segmentfile %u of relation %u/%u/%u has been dropped",
+		 key.blkno, key.node.spcNode,
+		 key.node.dbNode, key.node.relNode);
+}
+#endif
+
 /* Complain about any remaining invalid-page entries */
 void
 XLogCheckInvalidPages(void)
@@ -322,6 +353,20 @@ XLogReadBuffer(Relation reln, BlockNumber blkno, bool init)
 	return buffer;
 }
 
+#ifdef USE_SEGWALREP
+/*
+ * If the AO segment file does not exist, log the relfilenode into the
+ * invalid_page_table hash table using the segment file number as the
+ * block number to avoid creating a new hash table.  The entry will be
+ * removed if there is a following MMXLOG_REMOVE_FILE record for the
+ * relfilenode.
+ */
+void
+XLogAOSegmentFile(RelFileNode rnode, int32 segmentFileNum)
+{
+	log_invalid_page(rnode, segmentFileNum, false);
+}
+#endif
 
 /*
  * Lightweight "Relation" cache --- this substitutes for the normal relcache
@@ -663,6 +708,15 @@ XLogDropRelation(RelFileNode rnode)
 
 	forget_invalid_pages(rnode, 0);
 }
+
+#ifdef USE_SEGWALREP
+/* Drop an AO/CO segment file from the invalid_page_tab hash table */
+void
+XLogAODropSegmentFile(RelFileNode rnode, int32 segmentFileNum)
+{
+	forget_invalid_segment_file(rnode, segmentFileNum);
+}
+#endif
 
 /*
  * Drop a whole database during XLOG replay

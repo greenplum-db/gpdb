@@ -995,26 +995,6 @@ typedef struct BoolExprState
 } BoolExprState;
 
 /* ----------------
- *		PartOidExprState node
- * ----------------
- */
-typedef struct PartOidExprState
-{
-	ExprState	xprstate;
-
-	/*
-	 * Pointer to the accepted leaf OID stored in PartitionSelectorState.
-	 * Note: the other partition selector expressions refer to
-	 * PartitionSelectorState directly to extract information from the currently
-	 * selected rule. However, a PartOidExpr is different from those as this one
-	 * is used after the selection is done and rules list are freed to project
-	 * a partition oid output. Therefore, we cannot rely on reading part oid
-	 * from the currently selected leaf rule, stored inside levelPartRules.
-	 */
-	Oid *acceptedLeafOid;
-} PartOidExprState;
-
-/* ----------------
  *		PartSelectedExprState node
  * ----------------
  */
@@ -2721,7 +2701,6 @@ typedef struct PartitionSelectorState
 	PartitionNode *rootPartitionNode;                   /* PartitionNode for root table */
 	PartitionAccessMethods *accessMethods;              /* Access method for partition */
 	struct PartitionRule **levelPartRules; 				/* accepted partitions for all levels */
-	Oid acceptedLeafOid;     							/* accepted leaf OID for current tuple */
 	List *levelEqExprStates;                            /* ExprState for equality expressions for all levels */
 	List *levelExprStates;                              /* ExprState for general expressions for all levels */
 	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */

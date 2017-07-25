@@ -358,8 +358,6 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		rnode.dbNode = xlrec->database;
 		rnode.relNode = xlrec->relfilenode;
 
-		XLogDropRelation(rnode);
-
 		if (GpIdentity.segindex == MASTER_CONTENT_ID && !IsStandbyMode())
 		{
 			PersistentTablespaceGetFilespaces tablespaceGetFilespaces;
@@ -411,6 +409,9 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		 */
 		if (xlrec->segnum > 0)
 		{
+#ifdef USE_SEGWALREP
+			XLogAODropSegmentFile(rnode, xlrec->segnum);
+#endif
 			int primaryError;
 			MirroredAppendOnly_Drop(
 				&rnode,
@@ -422,6 +423,7 @@ mmxlog_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		}
 		else
 		{
+			XLogDropRelation(rnode);
 			/*
 			 * smgrdounlink() currently is specifically coded for dropping files
 			 * which are not for AO or CO tables because it finds and then drops

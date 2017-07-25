@@ -49,6 +49,7 @@ extern void FreeResGroupEntry(Oid groupId);
 extern void SerializeResGroupInfo(StringInfo str);
 extern void DeserializeResGroupInfo(const char *buf, int len);
 
+extern bool ShouldAssignResGroupOnMaster(void);
 extern void AssignResGroupOnMaster(void);
 extern void UnassignResGroupOnMaster(void);
 extern void SwitchResGroupOnSegment(const char *buf, int len);

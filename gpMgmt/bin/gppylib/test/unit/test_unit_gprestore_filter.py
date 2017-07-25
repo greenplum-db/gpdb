@@ -3,6 +3,7 @@
 
 import os, sys
 import unittest
+import difflib
 from gppylib import gplog
 from mock import patch
 from gppylib.mainUtils import ExceptionNoStackTraceNeeded
@@ -431,6 +432,32 @@ class GpRestoreFilterProcessLineTestCase(unittest.TestCase):
         self.assertFalse(newState.function_ddl)
         self.assertEqual(newState.schema, 'other_schema')
 
+    def test_ACL_expression_in_comments_exists_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = set(['schemaICareAbout'])
+        state = ParserState()
+        input_line = '-- Name: schemaICareAbout; Type: ACL; Schema: -; Owner: user_role_a;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertTrue(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, '-')
+
+    def test_ACL_expression_in_comments_does_not_exist_in_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = set(['schemaICareAbout'])
+        state = ParserState()
+        input_line = '-- Name: other_schema; Type: ACL; Schema: -; Owner: user_role_a;'
+
+        newState, line = process_line(state, input_line, arguments)
+
+        self.assertFalse(newState.output)
+        self.assertEquals(line, input_line)
+        self.assertFalse(newState.function_ddl)
+        self.assertEqual(newState.schema, '-')
+
     def test_function_expression_in_comments_exists_in_schema_file(self):
         arguments = Arguments(set(['schemaICareAbout']), set([('schemaICareAbout', 'table')]))
         arguments.schemas_in_schema_file = None
@@ -640,6 +667,12 @@ class GpRestoreFilterProcessLineTestCase(unittest.TestCase):
 
 class GpRestoreFilterTestCase(unittest.TestCase):
 
+    def prettyAssertEquals(self, actual, expected):
+        if actual != expected:
+            difflines = difflib.unified_diff(actual.splitlines(), expected.splitlines(), fromfile="actual", tofile="expected")
+            diffstring = '\n'.join(difflines)
+            self.fail("%s" % diffstring)
+
     def test_get_table_schema_set00(self):
         fname = os.path.join(os.getcwd(), 'test1')
         with open(fname, 'w') as fd:
@@ -804,7 +837,7 @@ COPY ao_table (column1, column2, column3) FROM stdin;
         with open(out_name, 'r') as fd:
             results = fd.read()
 
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
 
@@ -974,7 +1007,7 @@ COPY ao_part_table_comp_1_prt_p1_2_prt_1 (column1, column2, column3) FROM stdin;
         with open(out_name, 'r') as fd:
             results = fd.read()
 
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
 
@@ -1008,60 +1041,10 @@ COPY ao_table (column1, column2, column3) FROM stdin;
         with open(out_name, 'r') as fd:
             results = fd.read()
 
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
 
-
-    def test_process_data04(self):
-
-        test_case_buf = """
---
--- Greenplum Database database dump
---
-
-SET search_path = pepper, pg_catalog;
-
---
--- Data for Name: ao_table; Type: TABLE DATA; Schema: pepper; Owner: dcddev
---
-
- COPY ao_table (column1, column2, column3) FROM stdin;
-3	backup	2010-01-04
-7	backup	2010-01-08
-11	backup	2010-01-12
-15	backup	2010-01-16
-19	backup	2010-01-20
-23	backup	2010-01-24
-\.
-
-
---
--- Greenplum Database database dump complete
---
-"""
-
-        expected_out = """SET search_path = pepper, pg_catalog;
-"""
-
-        in_name = os.path.join(os.getcwd(), 'infile')
-        out_name = os.path.join(os.getcwd(), 'outfile')
-        with open(in_name, 'w') as fd:
-            fd.write(test_case_buf)
-
-        dump_schemas = set(['pepper'])
-        dump_tables = set([('pepper', 'ao_table')])
-        arguments = Arguments(dump_schemas, dump_tables)
-        with open(out_name, 'w') as fdout:
-            with open(in_name, 'r') as fdin:
-                process_data(dump_schemas, dump_tables, fdin, fdout)
-
-        with open(out_name, 'r') as fd:
-            results = fd.read()
-
-        self.assertEquals(results, expected_out)
-        os.remove(in_name)
-        os.remove(out_name)
 
     def test_process_data04(self):
 
@@ -1109,7 +1092,7 @@ SET search_path = pepper, pg_catalog;
         with open(out_name, 'r') as fd:
             results = fd.read()
 
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
 
@@ -1155,7 +1138,7 @@ COPY "测试" (column1, column2, column3) FROM stdin;
         with open(out_name, 'r') as fd:
             results = fd.read()
 
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
         os.remove(in_name)
         os.remove(out_name)
 
@@ -2844,6 +2827,14 @@ COPY test_table (a) FROM stdin;
 
 
 --
+-- Name: user_schema_a; Type: ACL; Schema: -; Owner: user_role_a
+--
+
+REVOKE ALL ON SCHEMA user_schema_a FROM PUBLIC;
+REVOKE ALL ON SCHEMA user_schema_a FROM user_role_a;
+GRANT ALL ON SCHEMA user_schema_a TO user_role_a;
+
+
 SET search_path = user_schema_a, pg_catalog;
 
 --
@@ -2862,7 +2853,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
 
         with open(outfile, 'r') as fd:
             results = fd.read()
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
 
         os.remove(infile)
         os.remove(outfile)
@@ -2929,11 +2920,10 @@ SET default_tablespace = '';
 
         with open(outfile, 'r') as fd:
             results = fd.read()
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
 
-
-    def test_process_schema_with_privileges(self):
-        test_case_buf = """--
+    def get_test_case_buf_for_process_schema_with_privileges(self):
+        return """--
 -- Greenplum Database database dump
 --
 
@@ -2985,16 +2975,28 @@ SET search_path = user_schema_a, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
+-- Name: user_table_1; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
 --
 
-CREATE TABLE user_table (
+CREATE TABLE user_table_1 (
     a character(1) NOT NULL,
     b character(60)
 ) DISTRIBUTED BY (a);
 
 
-ALTER TABLE user_schema_a.user_table OWNER TO user_role_b;
+ALTER TABLE user_schema_a.user_table_1 OWNER TO user_role_b;
+
+--
+-- Name: user_table_2; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
+--
+
+CREATE TABLE user_table_2 (
+    a character(1) NOT NULL,
+    b character(60)
+) DISTRIBUTED BY (a);
+
+
+ALTER TABLE user_schema_a.user_table_2 OWNER TO user_role_b;
 
 SET search_path = user_schema_b, pg_catalog;
 
@@ -3012,10 +3014,20 @@ ALTER TABLE user_schema_b.test_table OWNER TO dcddev;
 SET search_path = user_schema_a, pg_catalog;
 
 --
--- Data for Name: user_table; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
+-- Data for Name: user_table_1; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
 --
 
-COPY user_table (a, b) FROM stdin;
+COPY user_table_1 (a, b) FROM stdin;
+\.
+
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Data for Name: user_table_2; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
+--
+
+COPY user_table_2 (a, b) FROM stdin;
 \.
 
 
@@ -3059,27 +3071,38 @@ GRANT ALL ON SCHEMA user_schema_a TO user_role_a;
 SET search_path = user_schema_a, pg_catalog;
 
 --
--- Name: user_table; Type: ACL; Schema: user_schema_a; Owner: user_role_b
+-- Name: user_table_1; Type: ACL; Schema: user_schema_a; Owner: user_role_b
 --
 
-REVOKE ALL ON TABLE user_table FROM PUBLIC;
-REVOKE ALL ON TABLE user_table FROM user_role_b;
-GRANT ALL ON TABLE user_table TO user_role_b;
+REVOKE ALL ON TABLE user_table_1 FROM PUBLIC;
+REVOKE ALL ON TABLE user_table_1 FROM user_role_b;
+GRANT ALL ON TABLE user_table_1 TO user_role_b;
 
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Name: user_table_2; Type: ACL; Schema: user_schema_a; Owner: user_role_b
+--
+
+REVOKE ALL ON TABLE user_table_2 FROM PUBLIC;
+REVOKE ALL ON TABLE user_table_2 FROM user_role_b;
+GRANT ALL ON TABLE user_table_2 TO user_role_b;
 
 --
 -- Greenplum Database database dump complete
 --
 """
+    def test_process_schema_with_privileges_using_table_file(self):
 
         dump_schemas = ['user_schema_a']
-        dump_tables = [('user_schema_a', 'user_table')]
+        dump_tables = [('user_schema_a', 'user_table_1')]
         arguments = Arguments(dump_schemas, dump_tables)
 
         infile = '/tmp/test_schema.in'
         outfile = '/tmp/test_schema.out'
         with open(infile, 'w') as fd:
-            fd.write(test_case_buf)
+            fd.write(self.get_test_case_buf_for_process_schema_with_privileges())
 
         with open(infile, 'r') as fdin:
             with open(outfile, 'w') as fdout:
@@ -3117,37 +3140,175 @@ SET search_path = user_schema_a, pg_catalog;
 SET default_tablespace = '';
 
 --
--- Name: user_table; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
+-- Name: user_table_1; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
 --
 
-CREATE TABLE user_table (
+CREATE TABLE user_table_1 (
     a character(1) NOT NULL,
     b character(60)
 ) DISTRIBUTED BY (a);
 
 
-ALTER TABLE user_schema_a.user_table OWNER TO user_role_b;
+ALTER TABLE user_schema_a.user_table_1 OWNER TO user_role_b;
 
+--
 SET search_path = user_schema_a, pg_catalog;
 
 --
--- Data for Name: user_table; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
+-- Data for Name: user_table_1; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
 --
 
-COPY user_table (a, b) FROM stdin;
+COPY user_table_1 (a, b) FROM stdin;
 \.
 
 
 SET search_path = user_schema_a, pg_catalog;
 
 --
--- Name: user_table; Type: ACL; Schema: user_schema_a; Owner: user_role_b
+-- Name: user_schema_a; Type: ACL; Schema: -; Owner: user_role_a
 --
 
-REVOKE ALL ON TABLE user_table FROM PUBLIC;
-REVOKE ALL ON TABLE user_table FROM user_role_b;
-GRANT ALL ON TABLE user_table TO user_role_b;
+REVOKE ALL ON SCHEMA user_schema_a FROM PUBLIC;
+REVOKE ALL ON SCHEMA user_schema_a FROM user_role_a;
+GRANT ALL ON SCHEMA user_schema_a TO user_role_a;
 
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Name: user_table_1; Type: ACL; Schema: user_schema_a; Owner: user_role_b
+--
+
+REVOKE ALL ON TABLE user_table_1 FROM PUBLIC;
+REVOKE ALL ON TABLE user_table_1 FROM user_role_b;
+GRANT ALL ON TABLE user_table_1 TO user_role_b;
+
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+"""
+
+        with open(outfile, 'r') as fd:
+            results = fd.read()
+        self.prettyAssertEquals(results, expected_out)
+
+    def test_process_schema_with_privileges_using_schema_file(self):
+        arguments = Arguments()
+        arguments.schemas_in_schema_file = ['user_schema_a']
+
+        infile = '/tmp/test_schema.in'
+        outfile = '/tmp/test_schema.out'
+        with open(infile, 'w') as fd:
+            fd.write(self.get_test_case_buf_for_process_schema_with_privileges())
+
+        with open(infile, 'r') as fdin:
+            with open(outfile, 'w') as fdout:
+                process_schema(arguments, fdin, fdout)
+
+        expected_out = """SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = off;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET escape_string_warning = off;
+
+SET default_with_oids = false;
+
+--
+-- Name: user_schema_a; Type: SCHEMA; Schema: -; Owner: user_role_a
+--
+
+CREATE SCHEMA user_schema_a;
+
+
+ALTER SCHEMA user_schema_a OWNER TO user_role_a;
+
+--
+-- Name: plpgsql; Type: PROCEDURAL LANGUAGE; Schema: -; Owner: dcddev
+--
+
+CREATE PROCEDURAL LANGUAGE plpgsql;
+ALTER FUNCTION plpgsql_call_handler() OWNER TO dcddev;
+ALTER FUNCTION plpgsql_validator(oid) OWNER TO dcddev;
+
+
+SET search_path = user_schema_a, pg_catalog;
+
+SET default_tablespace = '';
+
+--
+-- Name: user_table_1; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
+--
+
+CREATE TABLE user_table_1 (
+    a character(1) NOT NULL,
+    b character(60)
+) DISTRIBUTED BY (a);
+
+
+ALTER TABLE user_schema_a.user_table_1 OWNER TO user_role_b;
+
+--
+-- Name: user_table_2; Type: TABLE; Schema: user_schema_a; Owner: user_role_b; Tablespace:
+--
+
+CREATE TABLE user_table_2 (
+    a character(1) NOT NULL,
+    b character(60)
+) DISTRIBUTED BY (a);
+
+
+ALTER TABLE user_schema_a.user_table_2 OWNER TO user_role_b;
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Data for Name: user_table_1; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
+--
+
+COPY user_table_1 (a, b) FROM stdin;
+\.
+
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Data for Name: user_table_2; Type: TABLE DATA; Schema: user_schema_a; Owner: user_role_b
+--
+
+COPY user_table_2 (a, b) FROM stdin;
+\.
+
+
+-- Name: user_schema_a; Type: ACL; Schema: -; Owner: user_role_a
+--
+
+REVOKE ALL ON SCHEMA user_schema_a FROM PUBLIC;
+REVOKE ALL ON SCHEMA user_schema_a FROM user_role_a;
+GRANT ALL ON SCHEMA user_schema_a TO user_role_a;
+
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Name: user_table_1; Type: ACL; Schema: user_schema_a; Owner: user_role_b
+--
+
+REVOKE ALL ON TABLE user_table_1 FROM PUBLIC;
+REVOKE ALL ON TABLE user_table_1 FROM user_role_b;
+GRANT ALL ON TABLE user_table_1 TO user_role_b;
+
+
+SET search_path = user_schema_a, pg_catalog;
+
+--
+-- Name: user_table_2; Type: ACL; Schema: user_schema_a; Owner: user_role_b
+--
+
+REVOKE ALL ON TABLE user_table_2 FROM PUBLIC;
+REVOKE ALL ON TABLE user_table_2 FROM user_role_b;
+GRANT ALL ON TABLE user_table_2 TO user_role_b;
 
 --
 -- Greenplum Database database dump complete
@@ -3156,7 +3317,7 @@ GRANT ALL ON TABLE user_table TO user_role_b;
 
         with open(outfile, 'r') as fd:
             results = fd.read()
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
 
 
     def test_special_char_schema_name_filter(self):
@@ -3310,6 +3471,13 @@ COPY "测试" (a, b) FROM stdin;
 
 
 --
+-- Name: 测试_schema; Type: ACL; Schema: -; Owner: user_role_a
+--
+
+REVOKE ALL ON SCHEMA "测试_schema" FROM PUBLIC;
+REVOKE ALL ON SCHEMA "测试_schema" FROM user_role_a;
+GRANT ALL ON SCHEMA "测试_schema" TO user_role_a;
+
 SET search_path = "测试_schema", pg_catalog;
 
 --
@@ -3328,7 +3496,7 @@ GRANT ALL ON TABLE "测试" TO user_role_b;
 
         with open(outfile, 'r') as fd:
             results = fd.read()
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
 
     def test_euro_char_schema_name_filter(self):
         test_case_buf = """--
@@ -3481,6 +3649,13 @@ COPY "Áá" (a, b) FROM stdin;
 
 
 --
+-- Name: Áá_schema; Type: ACL; Schema: -; Owner: user_role_a
+--
+
+REVOKE ALL ON SCHEMA "Áá_schema" FROM PUBLIC;
+REVOKE ALL ON SCHEMA "Áá_schema" FROM user_role_a;
+GRANT ALL ON SCHEMA "Áá_schema" TO user_role_a;
+
 SET search_path = "Áá_schema", pg_catalog;
 
 --
@@ -3499,7 +3674,7 @@ GRANT ALL ON TABLE "Áá" TO user_role_b;
 
         with open(outfile, 'r') as fd:
             results = fd.read()
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
 
     def test_cyrillic_char_schema_name_filter(self):
         test_case_buf = """--
@@ -3652,6 +3827,13 @@ COPY "Ж" (a, b) FROM stdin;
 
 
 --
+-- Name: Ж_schema; Type: ACL; Schema: -; Owner: user_role_a
+--
+
+REVOKE ALL ON SCHEMA "Ж_schema" FROM PUBLIC;
+REVOKE ALL ON SCHEMA "Ж_schema" FROM user_role_a;
+GRANT ALL ON SCHEMA "Ж_schema" TO user_role_a;
+
 SET search_path = "Ж_schema", pg_catalog;
 
 --
@@ -3670,4 +3852,5 @@ GRANT ALL ON TABLE "Ж" TO user_role_b;
 
         with open(outfile, 'r') as fd:
             results = fd.read()
-        self.assertEquals(results, expected_out)
+        self.prettyAssertEquals(results, expected_out)
+

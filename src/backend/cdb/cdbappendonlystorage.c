@@ -38,7 +38,13 @@ int32 AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)
 void
 appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
-	/* TODO add logic here to replay AO xlog records */
+	/*
+	 * Perform redo of AO XLOG records only for standby mode.  We do
+	 * not need to replay AO XLOG records in normal mode because fsync
+	 * is performed on file close.
+	 */
+	if (IsStandbyMode())
+		ao_xlog_insert(record);
 }
 
 void
@@ -50,7 +56,7 @@ appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 
 	if (info == XLOG_APPENDONLY_INSERT)
 	{
-		appendStringInfo(buf, "insert: rel %u/%u/%u seg/offset:%u/%lu len:%lu",
+		appendStringInfo(buf, "insert: rel %u/%u/%u seg/offset:%u/" INT64_FORMAT " len:%lu",
 						 xlrec->node.spcNode, xlrec->node.dbNode,
 						 xlrec->node.relNode, xlrec->segment_filenum,
 						 xlrec->offset, record->xl_len - SizeOfAOInsert);

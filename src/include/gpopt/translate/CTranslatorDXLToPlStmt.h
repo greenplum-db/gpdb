@@ -581,6 +581,15 @@ namespace gpdxl
 				DrgPdxltrctx *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
+			// translate a DXL Value Scan into GPDB Value Scan
+			Plan *PplanValueScan
+				(
+				const CDXLNode *pdxlnValueScan,
+				CDXLTranslateContext *pdxltrctxOut,
+				Plan *pplanParent,
+				DrgPdxltrctx *pdrgpdxltrctxPrevSiblings
+				);
+
 			// translate DXL filter list into GPDB filter list
 			List *PlFilterList
 				(
@@ -595,6 +604,15 @@ namespace gpdxl
 			RangeTblEntry *PrteFromDXLTVF
 				(
 				const CDXLNode *pdxlnTVF,
+				CDXLTranslateContext *pdxltrctxOut,
+				CDXLTranslateContextBaseTable *pdxltrctxbt,
+				Plan *pplanParent
+				);
+
+			// create range table entry from a CDXLPhysicalValueScan node
+			RangeTblEntry *PrteFromDXLValueScan
+				(
+				const CDXLNode *pdxlnValueScan,
 				CDXLTranslateContext *pdxltrctxOut,
 				CDXLTranslateContextBaseTable *pdxltrctxbt,
 				Plan *pplanParent
@@ -736,7 +754,7 @@ namespace gpdxl
 
 			// check if the given operator is a DML operator on a distributed table
 			BOOL FTargetTableDistributed(CDXLOperator *pdxlop);
-			
+
 			// add a target entry for the given colid to the given target list
 			ULONG UlAddTargetEntryForColId
 				(

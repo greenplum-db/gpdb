@@ -21,6 +21,7 @@ try:
     from gpconfig_modules.file_segment_guc import FileSegmentGuc
     from gpconfig_modules.guc_collection import GucCollection
     from gppylib.gpresgroup import GpResGroup
+    from gpconfig_modules.parse_guc_metadata import ParseGuc
 except ImportError as err:
     sys.exit('Cannot import modules.  Please check that you have sourced '
              'greenplum_path.sh.  Detail: ' + str(err))
@@ -29,6 +30,7 @@ EXECNAME = os.path.split(__file__)[-1]
 
 PROHIBITED_GUCS = set(["port", "listen_addresses"])
 SAMEVALUE_GUCS = set(["gp_default_storage_options"])
+read_only_gucs = set()  # populated at runtime
 LOGGER = get_default_logger()
 setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
 
@@ -74,6 +76,10 @@ def validate_mutual_options(options):
     user = os.getenv('USER')
     if user is None or user == ' ':
         log_and_raise("USER environment variable must be set.")
+
+    gphome = os.getenv('GPHOME')
+    if not gphome:
+        log_and_raise("GPHOME environment variable must be set.")
 
     if options.file and not options.show:
         log_and_raise("'--file' option must accompany '--show' option")
@@ -273,7 +279,7 @@ def do_change(options):
         gp_array = GpArray.initFromCatalog(dbconn.DbURL(), utility=True)
 
         if not options.skipvalidation:
-            validate_options(options)
+            validate_change_options(options)
 
     except DatabaseError as ex:
         LOGGER.error(ex.__str__())
@@ -348,7 +354,33 @@ def do_change(options):
         LOGGER.info("completed successfully")
 
 
-def validate_options(options):
+def _is_guc_writeable(options):
+    """
+FYI, metadata about gucs, like GUC_DISALLOW_IN_FILE, is not available via
+sql. We work around that by making use of a file already created during 'make install'.
+(That file is created by parsing the C code that defines all GUCS,
+ storing all properties with GUC_DISALLOW_IN_FILE into a file.)
+    """
+
+    gphome = os.getenv('GPHOME')
+    gpconfig_modules_dir = os.path.join(gphome, ParseGuc.DESTINATION_DIR)
+    disallowed_guc_file = os.path.abspath(os.path.join(gpconfig_modules_dir, ParseGuc.DESTINATION_FILENAME))
+    if os.path.exists(disallowed_guc_file):
+        with open(disallowed_guc_file) as f:
+            lines = f.readlines()
+        read_only_gucs.update([guc.strip() for guc in lines])
+    else:
+        msg = "disallowed GUCs file missing: '%s'" % disallowed_guc_file
+        LOGGER.warning(msg)
+    return options.entry not in read_only_gucs
+
+
+def validate_change_options(options):
+    if not _is_guc_writeable(options):
+        msg = "not a modifiable GUC: '%s'" % options.entry
+        LOGGER.fatal(msg)
+        raise Exception(msg)
+
     conn = dbconn.connect(dbconn.DbURL(), True)
     guc = get_normal_guc(conn, options)
     if not guc:

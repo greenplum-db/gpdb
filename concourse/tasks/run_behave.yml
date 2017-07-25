@@ -1,0 +1,13 @@
+platform: linux
+inputs:
+ - name: ccp_src
+ - name: cluster_env_files
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+    ccp_src/aws/setup_ssh_to_cluster.sh
+    ssh centos@mdw "sudo bash -c \"yum install -y valgrind mailx\""
+    ssh -t mdw "bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""

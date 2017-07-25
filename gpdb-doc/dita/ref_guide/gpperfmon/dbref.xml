@@ -4,26 +4,35 @@
   <title>The gpperfmon Database</title>
   <body>
     <p>The <codeph>gpperfmon</codeph> database is a dedicated database where data collection agents
-      on Greenplum segment hosts save statistics. The optional Greenplum Command Center management
-      tool requires the database. The <codeph>gpperfmon</codeph> database is created using the
+      on Greenplum segment hosts save query and system statistics. <ph otherprops="pivotal">The
+        optional Greenplum Command Center management tool depends upon the
+          <codeph>gpperfmon</codeph> database.</ph></p>
+    <p>The <codeph>gpperfmon</codeph> database is created using the
         <codeph>gpperfmon_install</codeph> command-line utility. The utility creates the database
-      and the <codeph>gpmon</codeph> database role and enables monitoring agents on the segment
-      hosts. See the <codeph>gpperfmon_install</codeph> reference in the <cite>Greenplum Database
-        Utility Guide</cite> for information about using the utility and configuring the data
-      collection agents.</p>
-    <p>The <codeph>gpperfmon</codeph> database consists of three sets of tables.</p>
+      and the <codeph>gpmon</codeph> database role and enables the data collection agents on the
+      master and segment hosts. See the <codeph>gpperfmon_install</codeph> reference in the
+        <cite>Greenplum Database Utility Guide</cite> for information about using the utility and
+      configuring the data collection agents.</p>
+    <p>The <codeph>gpperfmon</codeph> database consists of three sets of tables that capture query
+      and system status information at different stages.</p>
     <ul id="ul_oqn_xsy_tz">
-      <li>
-        <codeph>now</codeph> tables store data on current system metrics such as active
-        queries.</li>
-      <li><codeph>history</codeph> tables store data on historical metrics.</li>
-      <li><codeph>tail</codeph> tables are for data in transition. <codeph>Tail</codeph> tables are
-        for internal use only and should not be queried by users. The <codeph>now</codeph> and
-          <codeph>tail</codeph> data are stored as text files on the master host file system, and
-        accessed by the <codeph>gpperfmon</codeph> database via external tables. The
-          <codeph>history</codeph> tables are regular database tables stored within the
-          <codeph>gpperfmon</codeph>database.</li>
+      <li><codeph>_now</codeph> tables store current system metrics such as active queries. </li>
+      <li><codeph>_tail</codeph> tables are used to stage data before it is saved to the
+          <codeph>_history</codeph> tables. The <codeph>_tail</codeph> tables are for internal use
+        only and not to be queried by users.</li>
+      <li><codeph>_history</codeph> tables store historical metrics. </li>
     </ul>
+    <p>The data for <codeph>_now</codeph> and <codeph>_tail</codeph> tables are stored as text files
+      on the master host file system, and are accessed in the <codeph>gpperfmon</codeph> database
+      via external tables. The <codeph>history</codeph> tables are regular heap database tables in
+      the <codeph>gpperfmon</codeph> database. History is saved only for queries that run for a
+      minimum number of seconds, 20 by default. You can set this threshold to another value by
+      setting the <codeph>min_query_time</codeph> parameter in the
+        <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> configuration file.
+      Setting the value to 0 saves history for all queries. </p>
+    <p>The <codeph>history</codeph> tables are partitioned by month. See <xref
+        href="#overview/section_et2_wmt_n1b" format="dita"/> for information about removing old
+      partitions.</p>
     <p>The database contains the following categories of tables:</p>
     <ul>
       <li>The <codeph><xref href="db-database.xml#db-database">database_*</xref></codeph> tables
@@ -32,15 +41,10 @@
         store diskspace metrics.</li>
       <li>The <codeph><xref href="db-filerep.xml#db-filerep">filerep_*</xref></codeph> tables store
         health and status metrics for the file replication process. This process is how
-        high-availability/mirroring is achieved in Greenplum Database instance. Statistics are
+        high-availability/mirroring is achieved in a Greenplum Database instance. Statistics are
         maintained for each primary-mirror pair.</li>
-      <li>The <codeph><xref href="db-interface-stats.xml#db-interface_stats"
-            >interface_stats_*</xref></codeph> tables store statistical metrics for each active
-        interface of a Greenplum Database instance. Note: These tables are in place for future use
-        and are not currently populated.</li>
       <li>The <codeph><xref href="db-log-alert.xml#CommandCenterDatabaseReference-log_alert"
-            >log_alert_*</xref></codeph> tables store information about pg_log errors and
-        warnings.</li>
+            >log_alert_*</xref></codeph> tables store error and warning messages from pg_log.</li>
       <li>The <codeph><xref href="db-queries.xml#db-queries">queries_*</xref></codeph> tables store
         high-level query status information.</li>
       <li>The <codeph><xref href="db-segment.xml#db-segment">segment_*</xref></codeph> tables store
@@ -62,5 +66,128 @@
             >memory_info</xref></codeph> view shows per-host memory information from the
           <codeph>system_history</codeph> and <codeph>segment_history</codeph> tables.</li>
     </ul>
+    <section id="section_et2_wmt_n1b">
+      <title>History Table Partition Retention</title>
+      <p>The <codeph>history</codeph> tables in the <codeph>gpperfmon</codeph> database are
+        partitioned by month. Partitions are automatically added in two month increments as needed. </p>
+      <p>The <codeph>partition_age</codeph> parameter in the
+          <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> file can be set to
+        the maximum number of monthly partitions to keep. Partitions older than the specified value
+        are removed automatically when new partitions are added. </p>
+      <p>The default value for <codeph>partition_age</codeph> is <codeph>0</codeph>, which means
+        that administrators must manually remove unneeded partitions.</p>
+    </section>
+    <section id="section_ok2_wd1_41b">
+      <title>Alert Log Processing and Log Rotation</title>
+      <p>When the <codeph>gp_gperfmon_enable</codeph> server configuration parameter is set to true,
+        the Greenplum Database syslogger writes alert messages to a <codeph>.csv</codeph> file in
+        the <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory. </p>
+      <p>The level of messages written to the log can be set to <codeph>none</codeph>,
+          <codeph>warning</codeph>, <codeph>error</codeph>, <codeph>fatal</codeph>, or
+          <codeph>panic</codeph> by setting the <codeph>gpperfmon_log_alert_level</codeph> server
+        configuration parameter in <codeph>postgresql.conf</codeph>. The default message level is
+          <codeph>warning</codeph>.</p>
+      <p>The directory where the log is written can be changed by setting the
+          <codeph>log_location</codeph> configuration variable in the
+          <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> configuration file. </p>
+      <p>The syslogger rotates the alert log every 24 hours or when the current log file reaches or
+        exceeds 1MB. </p>
+      <p>A rotated log file can exceed 1MB if a single error message contains a large SQL statement
+        or a large stack trace. Also, the syslogger processes error messages in chunks, with a
+        separate chunk for each logging process. The size of a chunk is OS-dependent; on Red Hat
+        Enterprise Linux, for example, it is 4096 bytes. If many Greenplum Database sessions
+        generate error messages at the same time, the log file can grow significantly before its
+        size is checked and log rotation is triggered.</p>
+    </section>
+    <section id="rotation">
+      <title>gpperfmon Data Collection Process</title>
+      <p>When Greenplum Database starts up with gpperfmon support enabled, it forks a
+          <codeph>gpmmon</codeph> agent process. <codeph>gpmmon</codeph> then starts a
+          <codeph>gpsmon</codeph> agent process on the master host and every segment host in the
+        Greenplum Database cluster. The Greenplum Database postmaster process monitors the
+          <codeph>gpmmon</codeph> process and restarts it if needed, and the <codeph>gpmmon</codeph>
+        process monitors and restarts <codeph>gpsmon</codeph> processes as needed.</p>
+      <p>The <codeph>gpmmon</codeph> process runs in a loop and at configurable intervals retrieves
+        data accumulated by the <codeph>gpsmon</codeph> processes, adds it to the data files for the
+          <codeph>_now</codeph> and <codeph>_tail</codeph> external database tables, and then into
+        the <codeph>_history</codeph> regular heap database tables. </p>
+      <note>The <codeph>log_alert</codeph> tables in the <codeph>gpperfmon</codeph> database follow
+        a different process, since alert messages are delivered by the Greenplum Database system
+        logger instead of through <codeph>gpsmon</codeph>. See <xref
+          href="#overview/section_ok2_wd1_41b" format="dita"/> for more information.</note>
+      <p>Two configuration parameters in the
+          <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/conf/gpperfmon.conf</codeph> configuration file
+        control how often <codeph>gpmmon</codeph> activities are triggered:</p>
+      <ul id="ul_r1h_14b_41b">
+        <li>The <codeph>quantum</codeph> parameter is how frequently, in seconds,
+            <codeph>gpmmon</codeph> requests data from the <codeph>gpsmon</codeph> agents on the
+          segment hosts and adds retrieved data to the <codeph>_now</codeph> and
+            <codeph>_tail</codeph> external table data files. Valid values for the
+            <codeph>quantum</codeph> parameter are 10, 15, 20, 30, and 60. The default is 15.</li>
+        <li>The <codeph>harvest_interval</codeph> parameter is how frequently, in seconds, data in
+          the <codeph>_tail</codeph> tables is moved to the <codeph>_history</codeph> tables. The
+            <codeph>harvest_interval</codeph> must be at least 30. The default is 120. </li>
+      </ul>
+      <p>See the <codeph>gpperfmon_install</codeph> management utility reference in the
+          <cite>Greenplum Database Utility Guide</cite> for the complete list of gpperfmon
+        configuration parameters.</p>
+    </section>
+    <section>
+      <p>The following steps describe the flow of data from Greenplum Database into the
+          <codeph>gpperfmon</codeph> database when gpperfmon support is enabled.</p>
+      <ol id="ol_xcd_rbv_n1b">
+        <li>While executing queries, the Greenplum Database query dispatcher and query executor
+          processes send out query status messages in UDP datagrams. The
+            <codeph>gp_gpperfmon_send_interval</codeph> server configuration variable determines how
+          frequently the database sends these messages. The default is every second. </li>
+        <li>The <codeph>gpsmon</codeph> process on each host receives the UDP packets, consolidates
+          and summarizes the data they contain, and adds additional host metrics, such as CPU and
+          memory usage.</li>
+        <li>The <codeph>gpsmon</codeph> processes continue to accumulate data until they receive a
+          dump command from <codeph>gpmmon</codeph>.</li>
+        <li>The <codeph>gpsmon</codeph> processes respond to a dump command by sending their
+          accumulated status data and log alerts to a listening <codeph>gpmmon</codeph> event
+          handler thread.</li>
+        <li>The <codeph>gpmmon</codeph> event handler saves the metrics to <codeph>.txt</codeph>
+          files in the <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph> directory on the
+          master host. </li>
+      </ol>
+      <p>At each <codeph>quantum</codeph> interval (15 seconds by default), <codeph>gpmmon</codeph>
+        performs the following steps:</p>
+      <ol id="ol_jvt_rzb_41b">
+        <li>Sends a dump command to the <codeph>gpsmon</codeph> processes.</li>
+        <li>Gathers and converts the <codeph>.txt</codeph> files saved in <codeph>the
+            $MASTER_DATA_DIRECTORY/gpperfmon/data</codeph> directory into <codeph>.dat</codeph>
+          external data files for the <codeph>_now</codeph> and <codeph>_tail</codeph> external
+          tables in the <codeph>gpperfmon</codeph> database. <p>For example, disk space metrics are
+            added to the <codeph>diskspace_now.dat</codeph> and <codeph>_diskspace_tail.dat</codeph>
+            delimited text files. These text files are accessed via the
+              <codeph>diskspace_now</codeph> and <codeph>_diskspace_tail</codeph> tables in the
+              <codeph>gpperfmon</codeph> database.</p></li>
+      </ol>
+      <p>At each <codeph>harvest_interval</codeph> (120 seconds by default), <codeph>gpmmon</codeph>
+        performs the following steps for each <codeph>_tail</codeph> file:<ol id="ol_elf_11c_41b">
+          <li>Renames the <codeph>_tail</codeph> file to a <codeph>_stage</codeph> file.</li>
+          <li>Creates a new <codeph>_tail</codeph> file.</li>
+          <li>Appends data from the <codeph>_stage</codeph> file into the <codeph>_tail</codeph>
+            file.</li>
+          <li>Runs a SQL command to insert the data from the <codeph>_tail</codeph> external table
+            into the corresponding <codeph>_history</codeph> table.<p>For example, the contents of
+              the <codeph>_database_tail</codeph> external table is inserted into the
+                <codeph>database_history</codeph> regular (heap) table.</p></li>
+          <li>Deletes the <codeph>_tail</codeph> file after its contents have been loaded into the
+            database table.</li>
+          <li>Gathers all of the <codeph>gpdb-alert-*.csv</codeph> files in the
+              <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/logs</codeph> directory (except the most
+            recent, which the syslogger has open and is writing to) into a single file,
+              <codeph>alert_log_stage</codeph>.</li>
+          <li>Loads the <codeph>alert_log_stage</codeph> file into the
+              <codeph>log_alert_history</codeph> table in the <codeph>gpperfmon</codeph>
+            database.</li>
+          <li>Truncates the <codeph>alert_log_stage</codeph> file.</li>
+        </ol></p>
+    </section>
+    <p>The following topics describe the contents of the tables in the <codeph>gpperfmon</codeph>
+      database.</p>
   </body>
 </topic>

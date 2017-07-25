@@ -335,13 +335,6 @@ namespace gpdxl
 				CMappingColIdVar *pmapcidvar
 				);
 
-			// translate a scalar part oid into an Expr
-			Expr *PexprPartOid
-				(
-				const CDXLNode *pdxlnPartOid,
-				CMappingColIdVar *pmapcidvar
-				);
-
 			// translate a scalar part default into an Expr
 			Expr *PexprPartDefault
 				(

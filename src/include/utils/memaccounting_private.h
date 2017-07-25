@@ -172,8 +172,6 @@ MemoryAccounting_Free(MemoryAccountIdType memoryAccountId, Size allocatedSize)
 
 	MemoryAccountingOutstandingBalance -= allocatedSize;
 
-	Assert(MemoryAccountingOutstandingBalance >= 0);
-
 	return true;
 }
 

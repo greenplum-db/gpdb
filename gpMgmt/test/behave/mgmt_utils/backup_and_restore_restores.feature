@@ -42,17 +42,6 @@ Feature: Validate command line arguments
         And verify that the distribution policy of all the tables in "bkdb2" are validated after restore
         And verify that the tuple count of all appendonly tables are consistent in "bkdb2"
 
-    @nbupartI
-    Scenario: 3 Incremental Backup with -u option
-        Given the old timestamps are read from json
-        And the backup test is initialized with database "bkdb3"
-        Then the user runs gp_restore with the stored timestamp and subdir in "bkdb3" and backup_dir "/tmp"
-        And gp_restore should return a return code of 0
-        And verify that there is a "heap" table "public.heap_table" in "bkdb3"
-        And verify that there is a "ao" table "public.ao_table" in "bkdb3"
-        And verify that the data of the dirty tables under "/tmp" in "bkdb3" is validated after restore
-        And verify that the distribution policy of all the tables in "bkdb3" are validated after restore
-
     Scenario: 4 gpdbrestore with -R for full dump
         Given the old timestamps are read from json
         Then the user runs gpdbrestore with "-R" option in path "/tmp/4"
@@ -117,11 +106,10 @@ Feature: Validate command line arguments
     @ddpartI
     Scenario: 11 Backup and restore with -G only
         Given the old timestamps are read from json
-        When the user runs gpdbrestore -e with the stored timestamp and options "-G only"
+        When the user runs gpdbrestore without -e with the stored timestamp and options "-G only"
         Then gpdbrestore should return a return code of 0
-        And verify that a role "foo_user" exists in database "bkdb11"
-        And verify that there is no table "public.heap_table" in "bkdb11"
-        And the user runs "psql -c 'DROP ROLE foo_user' bkdb11"
+        And verify that a role "foo_user" exists in database "template1"
+        And the user runs "psql -c 'DROP ROLE foo_user' template1"
 
     @valgrind
     Scenario: 12 Valgrind test of gp_restore for incremental backup
@@ -458,31 +446,6 @@ Feature: Validate command line arguments
         Then the user runs gpdbrestore with "-R" option in path "/tmp"
         And the timestamps should be printed in sorted order
 
-    @scale
-    @nbupartII
-    Scenario: 52 Dirty File Scale Test
-        Given the old timestamps are read from json
-        Then database "bkdb52" is dropped and recreated
-        When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb52"
-        Then gp_restore should return a return code of 0
-        When the user runs gpdbrestore without -e with the stored timestamp and options "--noplan"
-        Then gpdbrestore should return a return code of 0
-        And verify that tables "public.ao_table_3, public.ao_table_4, public.ao_table_5, public.ao_table_6" in "bkdb52" has no rows
-        And verify that tables "public.ao_table_7, public.ao_table_8, public.ao_table_9, public.ao_table_10" in "bkdb52" has no rows
-        And verify that the data of the dirty tables under " " in "bkdb52" is validated after restore
-
-    @scale
-    Scenario: 53 Dirty File Scale Test for partitions
-        Given the old timestamps are read from json
-        Then database "bkdb53" is dropped and recreated
-        When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb53"
-        Then gp_restore should return a return code of 0
-        When the user runs gpdbrestore without -e with the stored timestamp and options "--noplan"
-        Then gpdbrestore should return a return code of 0
-        And verify that tables "public.ao_table_1_prt_p1_2_prt_3, public.ao_table_1_prt_p2_2_prt_1" in "bkdb53" has no rows
-        And verify that tables "public.ao_table_1_prt_p2_2_prt_2, public.ao_table_1_prt_p2_2_prt_3" in "bkdb53" has no rows
-        And verify that the data of the dirty tables under " " in "bkdb53" is validated after restore
-
     Scenario: 54 Test gpcrondump and gpdbrestore verbose option
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp and options "--verbose"
@@ -511,8 +474,8 @@ Feature: Validate command line arguments
     Scenario: 56 Incremental table filter gpdbrestore with noplan option
         Given the old timestamps are read from json
         And database "bkdb56" is dropped and recreated
-        When the user runs gp_restore with the the stored timestamp and subdir for metadata only in "bkdb56"
-        Then gp_restore should return a return code of 0
+        When the user runs gpdbrestore -e with the stored full timestamp and options "-m"
+        Then gpdbrestore should return a return code of 0
         When the user runs gpdbrestore without -e with the stored timestamp and options "-T public.ao_part_table --noplan"
         Then gpdbrestore should return a return code of 0
         And verify that tables "public.ao_part_table_1_prt_p1_2_prt_3, public.ao_part_table_1_prt_p2_2_prt_3" in "bkdb56" has no rows
@@ -1182,6 +1145,15 @@ Feature: Validate command line arguments
         And verify that "search_path=daisy" appears in the datconfig for database "bkdb118"
         And verify that "appendonly=true" appears in the datconfig for database "bkdb118"
         And verify that "blocksize=65536" appears in the datconfig for database "bkdb118"
+
+    @ddpartIII
+    @skip_for_gpdb_43
+    Scenario: 119 Backup database grants
+        Given the old timestamps are read from json
+        When the user runs gpdbrestore -e with the stored timestamp
+        Then gpdbrestore should return a return code of 0
+        And verify that "user_grant=C/" appears in the datacl for database "bkdb119"
+        And the user runs "psql -c 'DROP ROLE user_grant' bkdb11"
 
     Scenario: 120 Simple full backup and restore with special character
         Given the old timestamps are read from json

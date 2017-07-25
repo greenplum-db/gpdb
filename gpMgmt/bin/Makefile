@@ -29,6 +29,7 @@ LIB_DIR=$(SRC)/lib
 PYLIB_DIR=$(SRC)/ext
 
 core: pygresql subprocess32
+	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
 all: core lockfile paramiko pycrypto stream psutil
@@ -246,6 +247,7 @@ clean :
 	@rm -rf $(STREAM_DIR)/stream lib/stream  
 	@rm -rf *.pyc lib/*.pyc
 	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
+	@rm -f gpconfig_modules/gucs_disallowed_in_file.txt
 
 .PHONY: disclean
 distclean: clean

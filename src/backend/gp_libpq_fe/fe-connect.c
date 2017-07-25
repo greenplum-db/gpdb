@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
@@ -2777,12 +2778,15 @@ internal_cancel(SockAddr *raddr, int be_pid, int be_key,
 	int			tmpsock = -1;
 	char		sebuf[256];
 	int			maxlen;
+	struct pollfd	pollFds[1];
+	int				pollRet;
 	struct
 	{
 		uint32		packetlen;
 		CancelRequestPacket cp;
 	}			crp;
 
+retry2:
 	/*
 	 * We need to open a temporary connection to the postmaster. Do this with
 	 * only kernel calls.
@@ -2835,11 +2839,41 @@ retry4:
 	 * read to obtain any data, we are just waiting for EOF to be signaled.
 	 */
 retry5:
+	pollFds[0].fd = tmpsock;
+	pollFds[0].events = POLLIN;
+	pollFds[0].revents = 0;
+
+	/*
+	 * Wait for at most 660 seconds, which is the sum of max values of
+	 * authentication_timeout and pre_auth_delay. Most likely, it's long enough
+	 * to make sure the process forked by the postmaster on segment is finished.
+	 */
+	pollRet = poll(pollFds, 1, (MAX_AUTHENTICATION_TIMEOUT + MAX_PRE_AUTH_DELAY) * 1000);
+	if (pollRet == 0)
+	{
+		/* timeout */
+		close(tmpsock);
+		tmpsock = -1;
+		goto retry2;
+	}
+	else if (pollRet < 0)
+	{
+		int olderrno = errno;
+		if (olderrno == EAGAIN || olderrno == EINTR)
+			goto retry5;
+
+		/* error */
+		close(tmpsock);
+		tmpsock = -1;
+		goto retry2;
+	}
+
+retry6:
 	if (recv(tmpsock, (char *) &crp, 1, 0) < 0)
 	{
 		if (SOCK_ERRNO == EINTR)
 			/* Interrupted system call - we'll just try again */
-			goto retry5;
+			goto retry6;
 		/* we ignore other error conditions */
 	}
 

@@ -1057,7 +1057,6 @@ _outDML(StringInfo str, DML *node)
 	WRITE_NODE_TYPE("DML");
 
 	WRITE_UINT_FIELD(scanrelid);
-	WRITE_INT_FIELD(oidColIdx);
 	WRITE_INT_FIELD(actionColIdx);
 	WRITE_INT_FIELD(ctidColIdx);
 	WRITE_INT_FIELD(tupleoidColIdx);
@@ -3259,14 +3258,6 @@ _outDMLActionExpr(StringInfo str, DMLActionExpr *node)
 }
 
 static void
-_outPartOidExpr(StringInfo str, PartOidExpr *node)
-{
-	WRITE_NODE_TYPE("PARTOIDEXPR");
-
-	WRITE_INT_FIELD(level);
-}
-
-static void
 _outPartSelectedExpr(StringInfo str, PartSelectedExpr *node)
 {
 	WRITE_NODE_TYPE("PARTSELECTEDEXPR");
@@ -5146,10 +5137,6 @@ _outNode(StringInfo str, void *obj)
 
 			case T_DMLActionExpr:
 				_outDMLActionExpr(str, obj);
-				break;
-
-			case T_PartOidExpr:
-				_outPartOidExpr(str, obj);
 				break;
 
 			case T_PartSelectedExpr:

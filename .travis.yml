@@ -26,6 +26,11 @@ sudo: false
 git:
   submodules: false
 
+addons:
+  apt:
+    packages:
+    - libevent-dev
+
 ## ----------------------------------------------------------------------
 ## Build tools
 ## ----------------------------------------------------------------------
@@ -97,15 +102,6 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
-
-## ----------------------------------------------------------------------
-## Before install 
-## install libevent 
-## ----------------------------------------------------------------------
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-       brew install libevent;
-    fi
 
 ## ----------------------------------------------------------------------
 ## Notification

@@ -22,8 +22,7 @@
          <li>
             <codeph>socket_stats_history</codeph> is a regular table that stores historical socket
             statistical metrics. It is pre-partitioned into monthly partitions. Partitions are
-            automatically added in two month increments as needed. Administrators must drop old
-            partitions for the months that are no longer needed.</li>
+            automatically added in two month increments as needed. </li>
       </ul>
       <table>
          <tgroup cols="2">

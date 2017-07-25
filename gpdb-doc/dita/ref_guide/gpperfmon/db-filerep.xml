@@ -23,8 +23,7 @@
          <li>
             <codeph>filerep_history</codeph> is a regular table that stores historical database-wide
             file replication data. It is pre-partitioned into monthly partitions. Partitions are
-            automatically added in two month increments as needed. Administrators must drop old
-            partitions for the months that are no longer needed.</li>
+            automatically added in two month increments as needed.</li>
       </ul>
       <table>
          <tgroup cols="2">

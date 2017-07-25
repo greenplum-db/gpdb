@@ -33,6 +33,7 @@ import threading
 from gppylib.db import dbconn
 
 PRINT_LOCK = threading.Lock()
+THREAD_LOCK = threading.Lock()
 
 def runcommands(commands, thread_name, command_finish, exit_on_error=True):
     output = []
@@ -40,7 +41,8 @@ def runcommands(commands, thread_name, command_finish, exit_on_error=True):
     for command in commands:
         try:
             output.append('Running command... %s' % command)
-            output = output + subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True).split('\n')
+            with THREAD_LOCK:
+                output = output + subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True).split('\n')
         except subprocess.CalledProcessError, e:
             output.append(str(e))
             if exit_on_error:
@@ -70,11 +72,15 @@ class InitMirrors():
         primary_dir = segconfig[3]
         mirror_contentid = segconfig[1]
         mirror_dir = segconfig[3].replace('dbfast', 'dbfast_mirror')
+        mirror_port = primary_port + 10000
 
         commands.append("echo 'host  replication  %s  samenet  trust' >> %s/pg_hba.conf" % (user, primary_dir))
         commands.append("pg_ctl -D %s reload" % primary_dir)
         commands.append("pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D %s -h %s -p %d" % (mirror_dir, self.hostname, primary_port))
         commands.append("mkdir %s/pg_log; mkdir %s/pg_xlog/archive_status" % (mirror_dir, mirror_dir))
+
+        catalog_update_query = "select pg_catalog.gp_add_segment_mirror(%d::int2, '%s', '%s', %d, -1, '{pg_system, %s}')" % (mirror_contentid, self.hostname, self.hostname, mirror_port, mirror_dir)
+        commands.append("PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
 
         thread_name = 'Mirror content %d' % mirror_contentid
         command_finish = 'Initialized mirror at %s' % mirror_dir
@@ -86,8 +92,10 @@ class InitMirrors():
 
         initThreads = []
         for segconfig in self.segconfigs:
-            thread = threading.Thread(target=self.initThread, args=(segconfig, user))
-            thread.start()
+            if segconfig[4] == 'p':
+                thread = threading.Thread(target=self.initThread, args=(segconfig, user))
+                thread.start()
+                initThreads.append(thread)
 
         for thread in initThreads:
             thread.join()
@@ -95,16 +103,16 @@ class InitMirrors():
 class StartMirrors():
     ''' Start the WAL replication mirror segment '''
 
-    def __init__(self, segconfigs):
+    def __init__(self, segconfigs, host):
         self.segconfigs = segconfigs
         self.num_contents = len(segconfigs)
+        self.host = host
 
     def startThread(self, segconfig):
         commands = []
-        primary_port = segconfig[2]
-        mirror_port = primary_port + 10000
         mirror_contentid = segconfig[1]
-        mirror_dir = segconfig[3].replace('dbfast', 'dbfast_mirror')
+        mirror_port = segconfig[2]
+        mirror_dir = segconfig[3]
 
         opts = "-p %d --gp_dbid=0 --silent-mode=true -i -M mirrorless --gp_contentid=%d --gp_num_contents_in_cluster=%d" % (mirror_port, mirror_contentid, self.num_contents)
         commands.append("pg_ctl -D %s -o '%s' start" % (mirror_dir, opts))
@@ -117,8 +125,10 @@ class StartMirrors():
     def run(self):
         startThreads = []
         for segconfig in self.segconfigs:
-            thread = threading.Thread(target=self.startThread, args=(segconfig,))
-            thread.start()
+            if segconfig[4] == 'm':
+                thread = threading.Thread(target=self.startThread, args=(segconfig,))
+                thread.start()
+                startThreads.append(thread)
 
         for thread in startThreads:
             thread.join()
@@ -132,7 +142,7 @@ class StopMirrors():
     def stopThread(self, segconfig):
         commands = []
         mirror_contentid = segconfig[1]
-        mirror_dir = segconfig[3].replace('dbfast', 'dbfast_mirror')
+        mirror_dir = segconfig[3]
 
         commands.append("pg_ctl -D %s stop" % mirror_dir)
 
@@ -143,8 +153,10 @@ class StopMirrors():
     def run(self):
         stopThreads = []
         for segconfig in self.segconfigs:
-            thread = threading.Thread(target=self.stopThread, args=(segconfig,))
-            thread.start()
+            if segconfig[4] == 'm':
+                thread = threading.Thread(target=self.stopThread, args=(segconfig,))
+                thread.start()
+                stopThreads.append(thread)
 
         for thread in stopThreads:
             thread.join()
@@ -158,10 +170,13 @@ class DestroyMirrors():
     def destroyThread(self, segconfig):
         commands = []
         mirror_contentid = segconfig[1]
-        mirror_dir = segconfig[3].replace('dbfast', 'dbfast_mirror')
+        mirror_dir = segconfig[3]
 
         commands.append("pg_ctl -D %s stop" % mirror_dir)
         commands.append("rm -rf %s" % mirror_dir)
+
+        catalog_update_query = "select pg_catalog.gp_remove_segment_mirror(%d::int2)" % (mirror_contentid)
+        commands.append("PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
 
         thread_name = 'Mirror content %d' % mirror_contentid
         command_finish = 'Destroyed mirror at %s' % mirror_dir
@@ -170,15 +185,16 @@ class DestroyMirrors():
     def run(self):
         destroyThreads = []
         for segconfig in self.segconfigs:
-            thread = threading.Thread(target=self.destroyThread, args=(segconfig,))
-            thread.start()
-            destroyThreads.append(thread)
+            if segconfig[4] == 'm':
+                thread = threading.Thread(target=self.destroyThread, args=(segconfig,))
+                thread.start()
+                destroyThreads.append(thread)
 
         for thread in destroyThreads:
             thread.join()
 
 def getSegInfo(hostname, port, dbname):
-    query = "SELECT dbid, content, port, fselocation FROM gp_segment_configuration s, pg_filespace_entry f WHERE s.preferred_role='p' AND s.content != -1 AND s.dbid = fsedbid"
+    query = "SELECT dbid, content, port, fselocation, preferred_role FROM gp_segment_configuration s, pg_filespace_entry f WHERE s.content != -1 AND s.dbid = fsedbid"
     dburl = dbconn.DbURL(hostname, port, dbname)
 
     try:
@@ -213,7 +229,7 @@ if __name__ == "__main__":
     if args.operation == 'init':
         InitMirrors(segconfigs, args.host).run()
     elif args.operation == 'start':
-        StartMirrors(segconfigs).run()
+        StartMirrors(segconfigs, args.host).run()
     elif args.operation == 'stop':
         StopMirrors(segconfigs).run()
     elif args.operation == 'destroy':

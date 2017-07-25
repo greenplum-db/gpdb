@@ -11,7 +11,7 @@
             <codeph>system_now</codeph> is an external table whose data files are stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current system utilization
             data is stored in <codeph>system_now</codeph> during the period between data collection
-            from the Command Center agents and automatic commitment to the
+            from the <codeph>gpperfmon</codeph> agents and automatic commitment to the
                <codeph>system_history</codeph> table.</li>
          <li>
             <codeph>system_tail</codeph> is an external table whose data files are stored in
@@ -22,8 +22,7 @@
          <li>
             <codeph>system_history</codeph> is a regular table that stores historical system
             utilization metrics. It is pre-partitioned into monthly partitions. Partitions are
-            automatically added in two month increments as needed. Administrators must drop old
-            partitions for the months that are no longer needed.</li>
+            automatically added in two month increments as needed.</li>
       </ul>
       <table>
          <tgroup cols="2">

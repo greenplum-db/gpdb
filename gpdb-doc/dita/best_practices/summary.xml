@@ -6,16 +6,15 @@
     <p>This section contains a summary of best practices for Greenplum Database. </p>
     <section>
       <title>Data Model</title>
-      <ul id="ul_knm_src_3r">
-        <li> Greenplum Database is an analytical MPP shared nothing database. This model is
-          significantly different from a highly normalized/transactional SMP database. Greenplum
-          Database performs best with a denormalized schema design suited for MPP analytical
-          processing for example, Star or Snowflake schema, with large fact tables and smaller
-          dimension tables. </li>
-        <li>Use the same data types for columns used in joins between tables.</li>
-      </ul>
-      <p>See <xref href="schema.xml#schema_design"/>.</p>
     </section>
+    <section>Greenplum Database is an analytical MPP shared-nothing database. This model is
+      significantly different from a highly normalized/transactional SMP database. Because of this,
+      the following best practices are recommended.<ul id="ul_knm_src_3r">
+        <li>Greenplum Database performs best with a denormalized schema design suited for MPP
+          analytical processing for example, Star or Snowflake schema, with large fact tables and
+          smaller dimension tables. </li>
+        <li>Use the same data types for columns used in joins between tables.</li>
+      </ul><p>See <xref href="schema.xml#schema_design"/>.</p></section>
     <section>
       <title>Heap vs. Append-Optimized Storage</title>
       <ul id="ul_ypm_src_3r">
@@ -28,11 +27,11 @@
         <li>Use append-optimized storage for tables and partitions that are updated infrequently
           after the initial load and have subsequent inserts only performed in large batch
           operations. </li>
-        <li>Never perform singleton <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
+        <li>Avoid performing singleton <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
             <codeph>DELETE</codeph> operations on append-optimized tables. </li>
-        <li>Never perform concurrent batch <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
-          operations on append-optimized tables. Concurrent batch <codeph>INSERT</codeph> operations
-          are okay. </li>
+        <li>Avoid performing concurrent batch <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
+          operations on append-optimized tables. Concurrent batch <codeph>INSERT</codeph>
+          operations are acceptable. </li>
       </ul>
       <p>See <xref href="schema.xml#storage_model/heap_vs_ao"/>.</p>
     </section>
@@ -73,9 +72,8 @@
         <li> Never distribute and partition tables on the same column. </li>
         <li>Achieve local joins to significantly improve performance by distributing on the same
           column for large tables commonly joined together.</li>
-        <li>Validate that data is evenly distributed after the initial load and after incremental
-          loads. </li>
-        <li>Ultimately ensure there is no data skew!</li>
+        <li>To ensure there is no data skew, validate that data is evenly distributed after the
+          initial load and after incremental loads. </li>
       </ul>
       <p>See <xref href="schema.xml#distribution"/>.</p>
     </section>
@@ -86,7 +84,7 @@
         <li> Do not configure the OS to use huge pages. </li>
         <li> Use <codeph>gp_vmem_protect_limit</codeph> to set the maximum memory that the instance
           can allocate for <i>all</i> work being done in each segment database. </li>
-        <li> Set the value for <codeph>gp_vmem_protect_limit</codeph> by calculating:<ul
+        <li> You can use <codeph>gp_vmem_protect_limit</codeph> by calculating:<ul
             id="ul_bdj_xkq_kv">
             <li><codeph>gp_vmem</codeph> – the total memory available to Greenplum
               Database<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7</codeblock>where
@@ -115,7 +113,7 @@
             (<codeph>MEMORY_LIMIT</codeph>) that can be utilized by queries in the queue. </li>
         <li> Associate all users with a resource queue. Do not use the default queue. </li>
         <li> Set <codeph>PRIORITY</codeph> to match the real needs of the queue for the workload and
-          time of day. </li>
+          time of day. Avoid using MAX priority.</li>
         <li> Ensure that resource queue memory allocations do not exceed the setting for
             <codeph>gp_vmem_protect_limit</codeph>.</li>
         <li> Dynamically update resource queue settings to match daily operations flow.</li>
@@ -129,7 +127,7 @@
         <li>Use partitioning only if partition elimination (partition pruning) can be achieved based
           on the query criteria.</li>
         <li>Choose range partitioning over list partitioning.</li>
-        <li>Partition the table based on the query predicate.</li>
+        <li>Partition the table based on a commonly-used column, such as a date column.</li>
         <li>Never partition and distribute tables on the same column. </li>
         <li>Do not use default partitions. </li>
         <li>Do not use multi-level partitioning; create fewer partitions with more data in each
@@ -149,11 +147,13 @@
         <li>Create an index on a single column of a columnar table for drill-through purposes for
           high cardinality tables that require queries with high selectivity. </li>
         <li>Do not index columns that are frequently updated. </li>
-        <li>Always drop indexes before loading data into a table. After the load, re-create the
-          indexes for the table. </li>
+        <li>Consider dropping indexes before loading data into a table. After the load, re-create
+          the indexes for the table. </li>
         <li>Create selective B-tree indexes. </li>
         <li>Do not create bitmap indexes on columns that are updated. </li>
-        <li>Do not use bitmap indexes for unique columns, very high or very low cardinality data. </li>
+        <li>Avoid using bitmap indexes for unique columns, very high or very low cardinality data.
+          Bitmap indexes perform best when the column has a low cardinality—100 to 100,000 distinct
+          values. </li>
         <li>Do not use bitmap indexes for transactional workloads.</li>
         <li>In general do not index partitioned tables. If indexes are needed, the index columns
           must be different than the partition columns.</li>
@@ -169,8 +169,6 @@
           queries that members of the particular queue can run concurrently. </li>
         <li>Use the <codeph>MEMORY_LIMIT</codeph> parameter to control the total amount of memory
           that queries running through the queue can utilize. </li>
-        <li>Do not set all queues to <codeph>MEDIUM</codeph>, as this effectively does nothing to
-          manage the workload.</li>
         <li>Alter resource queues dynamically to match the workload and time of day.</li>
       </ul>
       <p>See <xref href="workloads.xml#topic_hhc_z5w_r4/configuring_rq"/>.</p>
@@ -192,15 +190,22 @@
         <li>Know the location and content of system log files and monitor them on a regular basis,
           not just when problems arise.</li>
       </ul>
-      <p>See <xref href="maintenance.xml#topic_yrk_bcx_r4"/> and <xref
-          href="logfiles.xml#topic_crh_2fc_3r"/>.</p>
+      <p>See <xref href="maintenance.xml#topic_yrk_bcx_r4"/>, <xref
+          href="../admin_guide/query/topics/query-profiling.xml#topic39/in198649">Query
+          Profiling</xref> and <xref href="logfiles.xml#topic_crh_2fc_3r"/>.</p>
     </section>
     <section id="_Toc286661612">
       <title>ANALYZE</title>
       <ul id="ul_spn_src_3r">
+        <li>Use <codeph>analyzedb</codeph> in preference to <codeph>ANALYZE</codeph>. The
+            <codeph>analyzedb</codeph> utility updates statistics data for the specified tables
+          incrementally and concurrently. For append optimized tables, <codeph>analyzedb</codeph>
+          updates statistics incrementally only if the statistics are not current. For heap tables,
+          statistics are always updated. <codeph>ANALYZE</codeph> does not update the table metadata
+          that the <codeph>analyzedb</codeph> utility uses to determine whether table statistics are
+          up to date.</li>
         <li>Do not run <codeph>ANALYZE</codeph> on the entire database. Selectively run
             <codeph>ANALYZE</codeph> at the table level when needed.</li>
-        <li>Always run <codeph>ANALYZE</codeph> after loading.</li>
         <li>Always run <codeph>ANALYZE</codeph> after <codeph>INSERT</codeph>,
             <codeph>UPDATE</codeph>. and <codeph>DELETE</codeph> operations that significantly
           changes the underlying data. </li>
@@ -209,6 +214,8 @@
             <codeph>ANALYZE</codeph> only on the columns used in a join condition,
             <codeph>WHERE</codeph> clause, <codeph>SORT</codeph>, <codeph>GROUP BY</codeph>, or
             <codeph>HAVING</codeph> clause. </li>
+        <li>When dealing with large sets of tables, use <codeph>analyzedb</codeph> instead of
+            <codeph>ANALYZE.</codeph></li>
       </ul>
       <p>See <xref href="analyze.xml#analyze"/>.</p>
     </section>
@@ -222,29 +229,24 @@
         <li>Frequently run <codeph>VACUUM</codeph> on the system catalogs to avoid catalog bloat and
           the need to run <codeph>VACUUM FULL</codeph> on catalog tables. </li>
         <li>Never kill <codeph>VACUUM</codeph> on catalog tables.</li>
-        <li>Do not run <codeph>VACUUM ANALYZE</codeph>.</li>
       </ul>
       <p>See <xref href="bloat.xml#topic_gft_h11_bp"/>.</p>
     </section>
     <section id="_Toc286661610">
       <title>Loading</title>
       <ul id="ul_jln_src_3r">
-        <li> Use <codeph>gpfdist</codeph> to load or unload data in Greenplum Database. </li>
         <li> Maximize the parallelism as the number of segments increase. </li>
         <li> Spread the data evenly across as many ETL nodes as possible. </li>
-        <li> Split very large data files into equal parts and spread the data across as many file
+        <li>Split very large data files into equal parts and spread the data across as many file
           systems as possible. </li>
         <li> Run two <codeph>gpfdist</codeph> instances per file system. </li>
         <li> Run <codeph>gpfdist</codeph> on as many interfaces as possible. </li>
-        <li> Use <codeph>gp_external_max_segs</codeph> to control the number of segments each
-            <codeph>gpfdist</codeph> serves. </li>
-        <li> Always keep <codeph>gp_external_max_segs</codeph> and the number of
+        <li>Use <codeph>gp_external_max_segs</codeph> to control the number of segments that will
+          request data from the <codeph>gpfdist</codeph> process. </li>
+        <li>Always keep <codeph>gp_external_max_segs</codeph> and the number of
             <codeph>gpfdist</codeph> processes an even factor.</li>
         <li> Always drop indexes before loading into existing tables and re-create the index after
           loading. </li>
-        <li> Always run <codeph>ANALYZE</codeph> on the table after loading it. </li>
-        <li> Disable automatic statistics collection during loading by setting
-            <codeph>gp_autostats_mode</codeph> to <codeph>NONE</codeph>. </li>
         <li> Run <codeph>VACUUM</codeph> after load errors to recover space. </li>
       </ul>
       <p>See <xref href="data_loading.xml#topic_fj5_b1x_r4"/>.</p>
@@ -292,7 +294,8 @@
           Attributes" in the <i>Greenplum Database Administrator Guide</i>. </li>
         <li>Database users should never log on as <codeph>gpadmin</codeph>, and ETL or production
           workloads should never run as <codeph>gpadmin</codeph>. </li>
-        <li>Assign a distinct role to each user who logs in. </li>
+        <li>Assign a distinct Greenplum Database role to each user, application, or  service that
+          logs in. </li>
         <li>For applications or web services, consider creating a distinct role for each application
           or service. </li>
         <li>Use groups to manage access privileges. </li>
@@ -317,9 +320,9 @@
         <li>A symmetric encryption scheme, where the same key is used to both encrypt and decrypt,
           has better performance than an asymmetric scheme and should be used when the key can be
           shared safely.</li>
-        <li>Use functions from the pgcrypto package to encrypt data on disk. The data is encrypted
-          and decrypted in the database process, so it is important to secure the client connection
-          with SSL to avoid transmitting unencrypted data.</li>
+        <li>Use crytographic functions to encrypt data on disk. The data is encrypted and decrypted
+          in the database process, so it is important to secure the client connection with SSL to
+          avoid transmitting unencrypted data.</li>
         <li>Use the gpfdists protocol to secure ETL data as it is loaded into or unloaded from the
           database. .</li>
       </ul>
@@ -327,6 +330,8 @@
     </section>
     <section>
       <title>High Availability</title>
+      <note>The following guidelines apply to actual hardware deployments, but not to public
+        cloud-based infrastructure, where high availability solutions may already exist.</note>
       <ul id="ul_ry5_syr_s4">
         <li>Use a hardware RAID storage solution with 8 to 24 disks.</li>
         <li>Use RAID 1, 5, or 6 so that the disk array can tolerate a failed disk.</li>
@@ -345,8 +350,6 @@
         <li>Set up mirrors for all segments.</li>
         <li>Locate primary segments and their mirrors on different hosts to protect against host
           failure.</li>
-        <li>Set up monitoring to send notifications in a system monitoring application or by email
-          when a primary segment fails.</li>
         <li>Recover failed segments promptly, using the <codeph>gprecoverseg</codeph> utility, to
           restore redundancy and return the system to optimal balance.</li>
         <li>Configure Greenplum Database to send SNMP notifications to your network monitor.</li>

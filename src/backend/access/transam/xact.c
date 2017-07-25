@@ -2249,7 +2249,7 @@ StartTransaction(void)
 			 TransStateAsString(s->state));
 
 	/* Acquire a resource group slot at the beginning of a transaction */
-	if (IsResGroupEnabled() && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
+	if (ShouldAssignResGroupOnMaster())
 		AssignResGroupOnMaster();
 
 	/*
@@ -2837,7 +2837,7 @@ CommitTransaction(void)
 	freeGangsForPortal(NULL);
 
 	/* Release resource group slot at the end of a transaction */
-	if (IsResGroupEnabled() && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
+	if (ShouldAssignResGroupOnMaster())
 		UnassignResGroupOnMaster();
 }
 
@@ -3390,7 +3390,7 @@ CleanupTransaction(void)
 	finishDistributedTransactionContext("CleanupTransaction", true);
 
 	/* Release resource group slot at the end of a transaction */
-	if (IsResGroupEnabled() && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
+	if (ShouldAssignResGroupOnMaster())
 		UnassignResGroupOnMaster();
 }
 

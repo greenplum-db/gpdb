@@ -20,9 +20,12 @@
 #include "executor/instrument.h"
 #include "executor/nodePartitionSelector.h"
 #include "nodes/makefuncs.h"
+#include "utils/guc.h"
 #include "utils/memutils.h"
 
-static void 
+static void LogPartitionSelection(EState *estate, int32 selectorId);
+
+static void
 partition_propagation(EState *estate, List *partOids, List *scanIds, int32 selectorId);
 
 /* PartitionSelector Slots */
@@ -151,7 +154,6 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	{
 		/* propagate the part oids obtained via static partition selection */
 		partition_propagation(estate, ps->staticPartOids, ps->staticScanIds, ps->selectorId);
-		node->acceptedLeafOid = InvalidOid;
 		return NULL;
 	}
 
@@ -185,7 +187,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 			/* no more tuples from outerPlan */
 
 			/*
-			 * Make sure we have an entry for this partition selector in
+			 * Make sure we have an entry for this scan id in
 			 * dynamicTableScanInfo. Normally, this would've been done the
 			 * first time a partition is selected, but we must ensure that
 			 * there is an entry even if no partitions were selected.
@@ -193,6 +195,8 @@ ExecPartitionSelector(PartitionSelectorState *node)
 			 */
 			if (ps->partTabTargetlist)
 				InsertPidIntoDynamicTableScanInfo(estate, ps->scanId, InvalidOid, ps->selectorId);
+			else
+				LogPartitionSelection(estate, ps->selectorId);
 
 			return NULL;
 		}
@@ -252,8 +256,60 @@ ExecPartitionSelector(PartitionSelectorState *node)
 		pfree(selparts);
 	}
 
-	node->acceptedLeafOid = InvalidOid;
 	return candidateOutputSlot;
+}
+
+static void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const int32 scanId);
+
+void LogPartitionSelection(EState *estate, int32 selectorId)
+{
+	if (optimizer_partition_selection_log == false)
+		return;
+
+	DynamicTableScanInfo *dynamicTableScanInfo = estate->dynamicTableScanInfo;
+
+	Assert(dynamicTableScanInfo != NULL);
+
+	HTAB **pidIndexes = dynamicTableScanInfo->pidIndexes;
+
+	for (int32 scanIdMinusOne = 0; scanIdMinusOne < dynamicTableScanInfo->numScans; ++scanIdMinusOne)
+	{
+		HTAB *const pidIndex = pidIndexes[scanIdMinusOne];
+		if (pidIndex == NULL)
+			continue;
+		const int32 scanId = scanIdMinusOne + 1;
+
+		LogSelectedPartitionsForScan(selectorId, pidIndex, scanId);
+	}
+}
+
+void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const int32 scanId)
+{
+	int32 numPartitionsSelected = 0;
+	Datum *selectedPartOids = palloc(sizeof(Datum) * hash_get_num_entries(pidIndex));
+
+	HASH_SEQ_STATUS status;
+	PartOidEntry *partOidEntry;
+	hash_seq_init(&status, pidIndex);
+
+	while ((partOidEntry = hash_seq_search(&status)) != NULL)
+	{
+		if (list_member_int(partOidEntry->selectorList, selectorId))
+			selectedPartOids[numPartitionsSelected++] = ObjectIdGetDatum(partOidEntry->partOid);
+	}
+
+	if (numPartitionsSelected > 0)
+	{
+		char *debugPartitionOid = DebugPartitionOid(selectedPartOids, numPartitionsSelected);
+		ereport(LOG,
+				(errmsg_internal("scanId: %d, partitions: %s, selector: %d",
+								 scanId,
+								 debugPartitionOid,
+								 selectorId)));
+		pfree(debugPartitionOid);
+	}
+
+	pfree(selectedPartOids);
 }
 
 /* ----------------------------------------------------------------
@@ -267,9 +323,7 @@ ExecReScanPartitionSelector(PartitionSelectorState *node, ExprContext *exprCtxt)
 {
 	/* reset PartitionSelectorState */
 	PartitionSelector *ps = (PartitionSelector *) node->ps.plan;
-	
-	Assert (InvalidOid == node->acceptedLeafOid);
-	
+
 	for(int iter = 0; iter < ps->nLevels; iter++)
 	{
 		node->levelPartRules[iter] = NULL;

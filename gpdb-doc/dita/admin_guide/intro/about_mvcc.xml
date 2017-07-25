@@ -211,27 +211,30 @@ COMMIT;
       <title>Removing Dead Rows from Tables</title>
       <p>Updating or deleting a row leaves an expired version of the row in the table. When an
         expired row is no longer referenced by any active transactions, it can be removed and the
-        space it occupied can be reused. The <codeph>VACUUM</codeph> command removes expired rows
-        from tables. </p>
+        space it occupied can be reused. The <codeph>VACUUM</codeph> command marks the space
+        used by expired rows for reuse.</p>
       <p>When expired rows accumulate in a table, the disk files must be extended to accommodate new
         rows. Performance suffers due to the increased disk I/O required to execute queries. This
         condition is called <i>bloat</i> and it should be managed by regularly vacuuming tables. </p>
       <p>The <codeph>VACUUM</codeph> command (without <codeph>FULL</codeph>) can run concurrently
-        with other queries. It removes expired rows from pages, and repacks the remaining rows to
-        consolidate the free space. If the amount of remaining free space is significant, it adds
-        the page to the table's free space map. When Greenplum Database later needs space for new
-        rows, it first consults the table's free space map to find pages with available space. If
-        none are found, new pages will be appended to the file. </p>
+        with other queries. It marks the space previously used by the expired rows as free. If the
+        amount of remaining free space is significant, it adds the page to the table's free space
+        map. When Greenplum Database later needs space for new rows, it first consults the table's
+        free space map to find pages with available space. If none are found, new pages will be
+        appended to the file. </p>
       <p><codeph>VACUUM</codeph> (without <codeph>FULL</codeph>) does not consolidate pages or
         reduce the size of the table on disk. The space it recovers is only available through the
         free space map. To prevent disk files from growing, it is important to run
-          <codeph>VACUUM</codeph> often enough, at least once per day, to ensure that the available
-        free space can be found through the free space map. It is also important to run
-          <codeph>VACUUM</codeph> after running a transaction that updates or deletes a large number
-        of rows. </p>
+          <codeph>VACUUM</codeph> often enough. The frequency of required <codeph>VACUUM</codeph>
+        runs depends on the frequency of updates and deletes in the table (inserts only ever add
+        new rows). Heavily updated tables might require several <codeph>VACUUM</codeph> runs per
+        day, to ensure that the available free space can be found through the free space map. It
+        is also important to run <codeph>VACUUM</codeph> after running a transaction that updates
+        or deletes a large number of rows. </p>
       <p>The <codeph>VACUUM FULL</codeph> command rewrites the table without expired rows, reducing
-        the table to its minimum size. There must be sufficient disk space to create the new table,
-        and the table is locked until <codeph>VACUUM FULL</codeph> completes. This is very expensive
+        the table to its minimum size. Every page in the table is checked, and visible rows are
+        moved up into pages which are not yet fully packed. Empty pages are discarded. The table
+        is locked until <codeph>VACUUM FULL</codeph> completes. This is very expensive
         compared to the regular <codeph>VACUUM</codeph> command, and can be avoided or postponed by
         vacuuming regularly. It is best to run <codeph>VACUUM FULL</codeph> during a maintenance
         period. An alternative to <codeph>VACUUM FULL</codeph> is to recreate the table with a

@@ -13,7 +13,7 @@
             <codeph>queries_now</codeph> is an external table whose data files are stored in
                <codeph>$MASTER_DATA_DIRECTORY/gpperfmon/data</codeph>. Current query status is
             stored in <codeph>queries_now</codeph> during the period between data collection from
-            the Command Center agents and automatic commitment to the
+            the <codeph>gpperfmon</codeph> agents and automatic commitment to the
                <codeph>queries_history</codeph> table.</li>
          <li>
             <codeph>queries_tail</codeph> is an external table whose data files are stored in
@@ -24,8 +24,7 @@
          <li>
             <codeph>queries_history</codeph> is a regular table that stores historical query status
             data. It is pre-partitioned into monthly partitions. Partitions are automatically added
-            in two month increments as needed. Administrators must drop old partitions for the
-            months that are no longer needed.</li>
+            in two month increments as needed. </li>
       </ul>
       <table>
          <tgroup cols="2">
@@ -137,10 +136,10 @@
                      <p>CPU usage by all processes across all segments executing this query (in
                         seconds). It is the sum of the CPU usage values taken from all active
                         primary segments in the database system.</p>
-                     <p>Note that the value is logged as 0 if the query runtime
-                        is shorter than the value for the quantum. This occurs even if the query
-                        runtime is greater than the value for <codeph>min_query_time</codeph>,
-                        and this value is lower than the value for the quantum.</p>
+                     <p>Note that the value is logged as 0 if the query runtime is shorter than the
+                        value for the quantum. This occurs even if the query runtime is greater than
+                        the value for <codeph>min_query_time</codeph>, and this value is lower than
+                        the value for the quantum.</p>
                   </entry>
                </row>
                <row>
@@ -164,8 +163,8 @@
                      <p>Displays the amount of processing skew in the system for this query.
                         Processing/CPU skew occurs when one segment performs a disproportionate
                         amount of processing for a query. This value is the coefficient of variation
-                        in the CPU% metric across all segments for this query,
-                        multiplied by 100. For example, a value of .95 is shown as 95.</p>
+                        in the CPU% metric across all segments for this query, multiplied by 100.
+                        For example, a value of .95 is shown as 95.</p>
                   </entry>
                </row>
                <row>
@@ -175,9 +174,9 @@
                   <entry>float</entry>
                   <entry>Displays the amount of row skew in the system. Row skew occurs when one
                      segment produces a disproportionate number of rows for a query. This value is
-                     the coefficient of variation for the <codeph>rows_in</codeph> metric 
-                     across all segments for this query, multiplied by 100. For example, a
-                     value of .95 is shown as 95.</entry>
+                     the coefficient of variation for the <codeph>rows_in</codeph> metric across all
+                     segments for this query, multiplied by 100. For example, a value of .95 is
+                     shown as 95.</entry>
                </row>
                <row>
                   <entry>
