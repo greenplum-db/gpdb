@@ -499,7 +499,8 @@ rewriteRuleAction(Query *parsetree,
 												   sub_action->rtable),
 										  parsetree->targetList,
 										  event,
-										  current_varno);
+										  current_varno,
+										  NULL);
 		if (sub_action_ptr)
 			*sub_action_ptr = sub_action;
 		else
@@ -529,7 +530,7 @@ rewriteRuleAction(Query *parsetree,
 								parsetree->rtable),
 					   rule_action->returningList,
 					   CMD_SELECT,
-					   0);
+					   0, &rule_action->hasSubLinks);
 
 		/*
 		 * There could have been some SubLinks in parsetree's returningList,
@@ -1542,7 +1543,8 @@ CopyAndAddInvertedQual(Query *parsetree,
 							  rt_fetch(rt_index, parsetree->rtable),
 							  parsetree->targetList,
 							  event,
-							  rt_index);
+							  rt_index,
+							  &parsetree->hasSubLinks);
 	/* And attach the fixed qual */
 	AddInvertedQual(parsetree, new_qual);
 
