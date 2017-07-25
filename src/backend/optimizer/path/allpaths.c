@@ -1564,7 +1564,7 @@ qual_contains_winref(Query *topquery,
 		 */
 		Node	   *qualNew = ResolveNew(qual, rti, 0, rte,
 										 subquery->targetList,
-										 CMD_SELECT, 0);
+										 CMD_SELECT, 0, NULL);
 
 		result = contain_window_function(qualNew);
 		pfree(qualNew);
@@ -1810,7 +1810,8 @@ subquery_push_qual(Query *subquery, RangeTblEntry *rte, Index rti, Node *qual)
 		 */
 		qual = ResolveNew(qual, rti, 0, rte,
 						  subquery->targetList,
-						  CMD_SELECT, 0);
+						  CMD_SELECT, 0,
+						  &subquery->hasSubLinks);
 
 		/*
 		 * Now attach the qual to the proper place: normally WHERE, but if the

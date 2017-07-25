@@ -17,6 +17,19 @@
 #include "nodes/parsenodes.h"
 
 
+typedef struct replace_rte_variables_context replace_rte_variables_context;
+typedef Node * (*replace_rte_variables_callback) (Var *var,
+													replace_rte_variables_context *context);
+struct replace_rte_variables_context
+{
+	replace_rte_variables_callback callback;	/* callback function */
+	void	   *callback_arg;		/* context data for callback function */
+	int			target_varno;		/* RTE index to search for */
+	int			sublevels_up;		/* (current) nesting depth */
+	bool		inserted_sublink;	/* have we inserted a SubLink? */
+};
+
+
 extern void OffsetVarNodes(Node *node, int offset, int sublevels_up);
 extern void ChangeVarNodes(Node *node, int old_varno, int new_varno,
 			   int sublevels_up);
@@ -44,6 +57,14 @@ extern bool checkExprHasAggs(Node *node);
 extern bool checkExprHasWindowFuncs(Node *node);
 extern bool checkExprHasSubLink(Node *node);
 
+extern Node *replace_rte_variables(Node *node,
+								   int target_varno, int sublevels_up,
+								   replace_rte_variables_callback callback,
+								   void *callback_arg,
+								   bool *outer_hasSubLinks);
+extern Node *replace_rte_variables_mutator(Node *node,
+											replace_rte_variables_context *context);
+
 extern Node *map_variable_attnos(Node *node,
 					int target_varno, int sublevels_up,
 					const AttrNumber *attno_map, int map_length,
@@ -51,6 +72,7 @@ extern Node *map_variable_attnos(Node *node,
 
 extern Node *ResolveNew(Node *node, int target_varno, int sublevels_up,
 		   RangeTblEntry *target_rte,
-		   List *targetlist, int event, int update_varno);
+		   List *targetlist, int event, int update_varno,
+		   bool *outer_hasSubLinks);
 
 #endif   /* REWRITEMANIP_H */
