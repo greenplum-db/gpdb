@@ -9,8 +9,7 @@
       You can join this table to the <xref
         href="pg_resgroup.xml#topic1" type="topic" format="dita"/> table by resource group object
       ID.</p>
-    <p>The <codeph>pg_resgroupcapability</codeph> table is populated only on the Greenplum Database
-        master. This table, defined in the
+    <p>The <codeph>pg_resgroupcapability</codeph> table, defined in the
         <codeph>pg_global</codeph> tablespace, is globally shared across all databases in
       the system.</p>
     <table id="hk141982">
@@ -66,8 +65,10 @@
             </entry>
             <entry colname="col2">opaque type</entry>
             <entry colname="col3"/>
-            <entry colname="col4">If the limit cannot be updated immediately, the proposed value
-              for the resource limit referenced in this record.</entry>
+            <entry colname="col4">If you altered a resource limit and the limit cannot be
+               updated immediately, the proposed value for the limit referenced in this
+               record. Otherwise, <codeph>proposed</codeph> reflects the currently set
+               <codeph>value</codeph>.</entry>
           </row>
         </tbody>
       </tgroup>
