@@ -640,6 +640,8 @@ ExecMergeJoin_guts(MergeJoinState *node)
 	bool		doFillOuter;
 	bool		doFillInner;
 
+	CHECK_FOR_INTERRUPTS();
+
 	/*
 	 * get information from node
 	 */

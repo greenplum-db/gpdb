@@ -26,6 +26,7 @@
 #include "cdb/cdbvars.h"
 #include "executor/execdebug.h"
 #include "executor/nodeNestloop.h"
+#include "miscadmin.h"
 #include "optimizer/clauses.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
@@ -77,6 +78,8 @@ ExecNestLoop_guts(NestLoopState *node)
 	List	   *otherqual;
 	ExprContext *econtext;
 	ListCell   *lc;
+
+	CHECK_FOR_INTERRUPTS();
 
 	/*
 	 * get information from the node

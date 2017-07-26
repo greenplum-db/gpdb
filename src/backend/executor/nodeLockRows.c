@@ -25,6 +25,7 @@
 #include "access/xact.h"
 #include "executor/executor.h"
 #include "executor/nodeLockRows.h"
+#include "miscadmin.h"
 #include "storage/bufmgr.h"
 #include "utils/rel.h"
 #include "utils/tqual.h"
@@ -42,6 +43,8 @@ ExecLockRows(LockRowsState *node)
 	PlanState  *outerPlan;
 	bool		epq_started;
 	ListCell   *lc;
+
+	CHECK_FOR_INTERRUPTS();
 
 	/*
 	 * get information from the node

@@ -49,6 +49,7 @@
 
 #include "executor/executor.h"
 #include "executor/nodeResult.h"
+#include "miscadmin.h"
 #include "utils/memutils.h"
 
 #include "catalog/pg_type.h"
@@ -131,6 +132,8 @@ ExecResult(ResultState *node)
 {
 	ExprContext *econtext;
 
+	CHECK_FOR_INTERRUPTS();
+
 	econtext = node->ps.ps_ExprContext;
 
 	/*
@@ -151,6 +154,8 @@ ExecResult(ResultState *node)
 
 	while (!outputSlot)
 	{
+		CHECK_FOR_INTERRUPTS();
+
 		TupleTableSlot *candidateOutputSlot = NULL;
 
 		/*

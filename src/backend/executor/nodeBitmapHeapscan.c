@@ -314,6 +314,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		Page		dp;
 		ItemId		lp;
 
+		CHECK_FOR_INTERRUPTS();
+
 		if (tbmres == NULL || tbmres->ntuples == 0)
 		{
 			CHECK_FOR_INTERRUPTS();

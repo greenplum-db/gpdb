@@ -29,6 +29,7 @@
 #include "access/relscan.h"
 #include "executor/execdebug.h"
 #include "executor/nodeIndexscan.h"
+#include "miscadmin.h"
 #include "optimizer/clauses.h"
 #include "utils/array.h"
 #include "utils/lsyscache.h"
@@ -78,6 +79,8 @@ IndexNext(IndexScanState *node)
 	 */
 	while ((tuple = index_getnext(scandesc, direction)) != NULL)
 	{
+		CHECK_FOR_INTERRUPTS();
+
 		/*
 		 * Store the scanned tuple in the scan tuple slot of the scan state.
 		 * Note: we pass 'false' because tuples returned by amgetnext are

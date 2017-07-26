@@ -808,6 +808,8 @@ process_ordered_aggregate_multi(AggState *aggstate,
 
 	while (tuplesort_gettupleslot(peraggstate->sortstate, true, slot1))
 	{
+		CHECK_FOR_INTERRUPTS();
+
 		/*
 		 * Extract the first numTransInputs columns as datums to pass to the
 		 * transfn.  (This will help execTuplesMatch too, so we do it
@@ -1120,6 +1122,8 @@ hash_agg_entry_size(int numAggs)
 TupleTableSlot *
 ExecAgg(AggState *node)
 {
+	CHECK_FOR_INTERRUPTS();
+
 	/*
 	 * Check to see if we're still projecting out tuples from a previous agg
 	 * tuple (because there is a function-returning-set in the projection
@@ -1186,6 +1190,8 @@ ExecAgg(AggState *node)
 		 */
 		for (;;)
 		{
+			CHECK_FOR_INTERRUPTS();
+
 			if (!node->hhashtable->is_spilling)
 			{
 				tuple = agg_retrieve_hash_table(node);

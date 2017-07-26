@@ -36,6 +36,7 @@
 #include "cdb/cdbvars.h"
 #include "executor/executor.h"
 #include "executor/nodeUnique.h"
+#include "miscadmin.h"
 #include "utils/memutils.h"
 
 
@@ -50,6 +51,8 @@ ExecUnique(UniqueState *node)
 	TupleTableSlot *resultTupleSlot;
 	TupleTableSlot *slot;
 	PlanState  *outerPlan;
+
+	CHECK_FOR_INTERRUPTS();
 
 	/*
 	 * get information from the node

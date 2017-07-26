@@ -42,6 +42,7 @@
 #include "executor/nodeMergeAppend.h"
 
 #include "lib/binaryheap.h"
+#include "miscadmin.h"
 
 /*
  * We have one slot for each item in the heap array.  We use SlotNumber
@@ -159,6 +160,8 @@ ExecMergeAppend(MergeAppendState *node)
 {
 	TupleTableSlot *result;
 	SlotNumber	i;
+
+	CHECK_FOR_INTERRUPTS();
 
 	if (!node->ms_initialized)
 	{

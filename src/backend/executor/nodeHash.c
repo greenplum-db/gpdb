@@ -1197,6 +1197,9 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 		}
 
 		hashTuple = hashTuple->next;
+
+		/* allow this loop to be cancellable */
+		CHECK_FOR_INTERRUPTS();
 	}
 	}
 	END_MEMORY_ACCOUNT();

@@ -59,6 +59,7 @@
 
 #include "executor/execdebug.h"
 #include "executor/nodeAppend.h"
+#include "miscadmin.h"
 
 static bool exec_append_initialize_next(AppendState *appendstate);
 
@@ -199,6 +200,8 @@ ExecAppend(AppendState *node)
 	{
 		PlanState  *subnode;
 		TupleTableSlot *result;
+
+		CHECK_FOR_INTERRUPTS();
 
 		/*
 		 * figure out which subplan we are currently processing
