@@ -1463,4 +1463,5 @@ debug_sleep_anchor: &debug_sleep
       run:
         path: 'sh'
         args: ['-c', 'sleep 6h']
-  - *ccp_destroy
+    ensure:
+      <<: *ccp_destroy
