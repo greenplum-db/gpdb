@@ -17,12 +17,6 @@
       and memory usage, it is not possible to guarantee acceptable performance. Memory is the
       resource most likely to limit the processing capacity of the system. Therefore, we begin with
       an overview of Greenplum Database memory usage. </p>
-    <p otherprops="pivotal">Pivotal Greenplum Workload Manager contains additional, flexible
-      workload management features that can be used to monitor and manage queries and to manage
-      resource queues. Pivotal Greenplum Workload Manager is included with Pivotal Greenplum Command
-      Center. See <xref href="http://gpcc.docs.pivotal.io/" format="html" scope="external"
-        >http://gpcc.docs.pivotal.io/</xref> for information about Pivotal Greenplum Command Center
-      and Pivotal Greenplum Workload Manager.</p>
   </body>
   <topic id="topic_nm3_brl_zp">
     <title>Overview of Memory Usage in Greenplum Database</title>
