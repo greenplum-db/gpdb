@@ -4,4 +4,5 @@
 	<prop att="otherprops" val="op-help" action="exclude"/>
 	<prop att="otherprops" val="op-hidden" action="exclude"/>
 	<prop att="otherprops" val="op-print" action="include"/>
+	<prop att="otherprops" val="pivotal" action="exclude"/>
 </val>
