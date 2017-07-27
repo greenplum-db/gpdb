@@ -2660,7 +2660,7 @@ def impl(context):
 
     kill_process(int(pid), seg_host)
 
-    time.sleep(10)
+    has_process_eventually_stopped(pid, seg_host)
 
     pid = get_pid_for_segment(seg_data_dir, seg_host)
     if pid is not None:
@@ -4570,16 +4570,10 @@ def impl(context):
 @then('wait until the process "{proc}" goes down')
 @given('wait until the process "{proc}" goes down')
 def impl(context, proc):
-    start_time = current_time = datetime.now()
-    is_running = False
-    while (current_time - start_time).seconds < 120:
-        is_running = is_process_running(proc)
-        if not is_running:
-            break
-        time.sleep(2)
-        current_time = datetime.now()
-    context.ret_code = 0 if not is_running else 1
-    context.error_message = ''
+    is_stopped = has_process_eventually_stopped(proc)
+    context.ret_code = 0 if is_stopped else 1
+    if not is_stopped:
+        context.error_message = 'The process %s is still running after waiting' % proc
     check_return_code(context, 0)
 
 
