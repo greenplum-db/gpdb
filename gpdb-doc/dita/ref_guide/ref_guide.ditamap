@@ -28,7 +28,6 @@
 			<topicref href="sql_commands/ALTER_TABLESPACE.xml"/>
 			<topicref href="sql_commands/ALTER_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/ALTER_TYPE.xml"/>
-			<topicref href="sql_commands/ALTER_USER.xml"/>
 			<topicref href="sql_commands/ALTER_VIEW.xml"/>
 			<topicref href="sql_commands/ANALYZE.xml"/>
 			<topicref href="sql_commands/BEGIN.xml"/>
@@ -63,7 +62,6 @@
 			<topicref href="sql_commands/CREATE_TABLESPACE.xml"/>
 			<topicref href="sql_commands/CREATE_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/CREATE_TYPE.xml"/>
-			<topicref href="sql_commands/CREATE_USER.xml"/>
 			<topicref href="sql_commands/CREATE_VIEW.xml"/>
 			<topicref href="sql_commands/DEALLOCATE.xml"/>
 			<topicref href="sql_commands/DECLARE.xml"/>
@@ -96,7 +94,6 @@
 			<topicref href="sql_commands/DROP_TABLESPACE.xml"/>
 			<topicref href="sql_commands/DROP_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/DROP_TYPE.xml"/>
-			<topicref href="sql_commands/DROP_USER.xml"/>
 			<topicref href="sql_commands/DROP_VIEW.xml"/>
 			<topicref href="sql_commands/END.xml"/>
 			<topicref href="sql_commands/EXECUTE.xml"/>

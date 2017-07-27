@@ -7522,8 +7522,8 @@
   <topic id="password_encryption">
     <title>password_encryption</title>
     <body>
-      <p>When a password is specified in <cmdname>CREATE USER</cmdname> or <cmdname>ALTER
-          USER</cmdname> without writing either <cmdname>ENCRYPTED</cmdname> or
+      <p>When a password is specified in <cmdname>CREATE ROLE</cmdname> or <cmdname>ALTER
+          ROLE</cmdname> without writing either <cmdname>ENCRYPTED</cmdname> or
           <cmdname>UNENCRYPTED</cmdname>, this option determines whether the password is to be
         encrypted. </p>
       <table id="password_encryption_table">

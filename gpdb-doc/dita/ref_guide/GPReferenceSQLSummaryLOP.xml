@@ -163,13 +163,6 @@
 		<codeblock conref="sql_commands/ALTER_TYPE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TYPE.xml"/> for more
 			information.</p>
-		<section id="ae1903787">
-			<title>ALTER USER</title>
-		</section>
-		<p conref="sql_commands/ALTER_USER.xml#topic1/sql_command_desc"/>
-		<codeblock conref="sql_commands/ALTER_USER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/ALTER_USER.xml"/> for more
-			information.</p>
 		<section>
 			<title>ALTER VIEW</title>
 		</section>
@@ -397,13 +390,6 @@
 		<codeblock conref="sql_commands/CREATE_TYPE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TYPE.xml"/> for more
 			information.</p>
-		<section id="ae1904741">
-			<title>CREATE USER</title>
-		</section>
-		<p conref="sql_commands/CREATE_USER.xml#topic1/sql_command_desc"/>
-		<codeblock conref="sql_commands/CREATE_USER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/CREATE_USER.xml"/> for more
-			information.</p>
 		<section id="ae1904779">
 			<title>CREATE VIEW</title>
 		</section>
@@ -617,13 +603,6 @@
 		<p conref="sql_commands/DROP_TYPE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_TYPE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_TYPE.xml"/> for more
-			information.</p>
-		<section id="ae1904953">
-			<title>DROP USER</title>
-		</section>
-		<p conref="sql_commands/DROP_USER.xml#topic1/sql_command_desc"/>
-		<codeblock conref="sql_commands/DROP_USER.xml#topic1/sql_command_synopsis"/>
-		<p otherprops="op-html">See <xref href="sql_commands/DROP_USER.xml"/> for more
 			information.</p>
 		<section id="ae1904959">
 			<title>DROP VIEW</title>

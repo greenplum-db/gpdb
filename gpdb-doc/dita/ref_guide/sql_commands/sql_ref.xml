@@ -73,9 +73,6 @@
       <li id="ad140319">
         <xref href="./ALTER_TYPE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad140323">
-        <xref href="./ALTER_USER.xml#topic1" type="topic" format="dita"/>
-      </li>
       <li id="ad142578"><codeph>ALTER USER MAPPING</codeph>*</li>
       <li>
         <xref href="./ALTER_VIEW.xml#topic1/am137232">ALTER VIEW</xref>
@@ -176,9 +173,6 @@
       <li id="ad140521">
         <xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142756">
-        <xref href="./CREATE_USER.xml#topic1" type="topic" format="dita"/>
-      </li>
       <li id="ad142757"><codeph>CREATE USER MAPPING</codeph>*</li>
       <li id="ad142761">
         <xref href="./CREATE_VIEW.xml#topic1" type="topic" format="dita"/>
@@ -271,9 +265,6 @@
       </li>
       <li id="ad140734">
         <xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="ad142843">
-        <xref href="./DROP_USER.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad142844"><codeph>DROP USER MAPPING</codeph>*</li>
       <li id="ad142848">
