@@ -13,14 +13,14 @@
     <p>Also, be sure to review <xref href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for
       monitoring activities you can script to quickly detect problems in the system. </p>
   </body>
-  <topic id="topic2" xml:lang="en" otherprops="pivotal">
+  <topic id="topic2" xml:lang="en">
     <title id="kj157177">Monitoring Database Activity and Performance</title>
     <body>
-      <p>Pivotal provides an optional system monitoring and management database,
-          <codeph>gpperfmon</codeph>, which administrators can enable with Greenplum Database. The
+      <p>Greenplum Database includes an optional system monitoring and management database,
+          <codeph>gpperfmon</codeph>, that administrators can enable. The
           <codeph>gpperfmon_install</codeph> command-line utility creates the
           <codeph>gpperfmon</codeph> database and enables data collection agents that collect and
-        store system metrics in the database. Administrators can query metrics in the
+        store query and system metrics in the database. Administrators can query metrics in the
           <codeph>gpperfmon</codeph> database. See the documentation for the
           <codeph>gpperfmon</codeph> database in the <cite>Greenplum Database Reference
         Guide</cite>.</p>
