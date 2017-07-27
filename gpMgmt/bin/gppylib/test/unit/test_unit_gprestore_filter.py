@@ -1235,6 +1235,186 @@ CREATE TABLE heap_table1 (
         os.remove(infile)
         os.remove(outfile)
 
+    def test_process_schema_function_with_begin_end_block_should_exclude(self):
+        test_case_buf = """--
+-- Greenplum Database database dump
+--
+
+SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+SET search_path = public, pg_catalog;
+
+SET default_with_oids = false;
+
+--
+-- Name: check_password(text, text); Type: FUNCTION; Schema: public; Owner: chajas
+--
+
+CREATE FUNCTION check_password(uname text, pass text) RETURNS boolean
+    AS $$
+DECLARE passed BOOLEAN;
+BEGIN
+        create table public.test (id int) ;
+        drop table public.test ;
+END;
+$$
+    LANGUAGE plpgsql NO SQL;
+
+
+ALTER FUNCTION public.check_password(uname text, pass text) OWNER TO chajas;
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: chajas
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM chajas;
+GRANT ALL ON SCHEMA public TO chajas;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- Greenplum Database database dump complete
+--"""
+
+        dump_schemas = ['testschema']
+        arguments = Arguments(dump_schemas)
+
+        infile = '/tmp/test_schema.in'
+        outfile = '/tmp/test_schema.out'
+        with open(infile, 'w') as fd:
+            fd.write(test_case_buf)
+
+        with open(infile, 'r') as fdin:
+            with open(outfile, 'w') as fdout:
+                process_schema(arguments, fdin, fdout)
+
+        expected_out = """SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+SET default_with_oids = false;
+
+--
+"""
+
+        with open(outfile, 'r') as fd:
+            results = fd.read()
+        self.prettyAssertEquals(results, expected_out)
+
+        os.remove(infile)
+        os.remove(outfile)
+
+    def test_process_schema_function_with_begin_end_block_should_include(self):
+        test_case_buf = """--
+-- Greenplum Database database dump
+--
+
+SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+SET search_path = public, pg_catalog;
+
+SET default_with_oids = false;
+
+--
+-- Name: check_password(text, text); Type: FUNCTION; Schema: public; Owner: chajas
+--
+
+CREATE FUNCTION check_password(uname text, pass text) RETURNS boolean
+    AS $$
+DECLARE passed BOOLEAN;
+BEGIN
+        create table public.test (id int) ;
+        drop table public.test ;
+END;
+$$
+    LANGUAGE plpgsql NO SQL;
+
+
+ALTER FUNCTION public.check_password(uname text, pass text) OWNER TO chajas;
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: chajas
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM chajas;
+GRANT ALL ON SCHEMA public TO chajas;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- Greenplum Database database dump complete
+--"""
+
+        dump_schemas = ['public']
+        arguments = Arguments(dump_schemas)
+
+        infile = '/tmp/test_schema.in'
+        outfile = '/tmp/test_schema.out'
+        with open(infile, 'w') as fd:
+            fd.write(test_case_buf)
+
+        with open(infile, 'r') as fdin:
+            with open(outfile, 'w') as fdout:
+                process_schema(arguments, fdin, fdout)
+
+        expected_out = """SET statement_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+SET search_path = public, pg_catalog;
+
+SET default_with_oids = false;
+
+--
+-- Name: check_password(text, text); Type: FUNCTION; Schema: public; Owner: chajas
+--
+
+CREATE FUNCTION check_password(uname text, pass text) RETURNS boolean
+    AS $$
+DECLARE passed BOOLEAN;
+BEGIN
+        create table public.test (id int) ;
+        drop table public.test ;
+END;
+$$
+    LANGUAGE plpgsql NO SQL;
+
+
+ALTER FUNCTION public.check_password(uname text, pass text) OWNER TO chajas;
+
+--
+-- Name: public; Type: ACL; Schema: -; Owner: chajas
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM chajas;
+GRANT ALL ON SCHEMA public TO chajas;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- Greenplum Database database dump complete
+--"""
+        with open(outfile, 'r') as fd:
+            results = fd.read()
+        self.prettyAssertEquals(results, expected_out)
+
+        os.remove(infile)
+        os.remove(outfile)
     def test_process_schema_matching_table(self):
         test_case_buf = """--
 -- Greenplum Database database dump
