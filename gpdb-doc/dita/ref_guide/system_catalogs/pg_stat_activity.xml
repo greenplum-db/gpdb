@@ -12,5 +12,5 @@ can be controlled with the server configuration parameter <codeph>pgstat_track_a
 can be:<p>lock, replication, or resgroup</p></entry></row>
         <row><entry colname="col1"><codeph>rsgid</codeph></entry><entry colname="col2">oid</entry><entry colname="col3">pg_resgroup.oid</entry><entry colname="col4">Resource group OID</entry></row>
         <row><entry colname="col1"><codeph>rsgname</codeph></entry><entry colname="col2">text</entry><entry colname="col3">pg_resgroup.rsgname</entry><entry colname="col4">Resource group name</entry></row>
-        <row><entry colname="col1"><codeph>rsgqueueduration</codeph></entry><entry colname="col2">interval</entry><entry colname="col3"/><entry colname="col4">Total queued time of all queued queries in this resource group</entry></row>
+        <row><entry colname="col1"><codeph>rsgqueueduration</codeph></entry><entry colname="col2">interval</entry><entry colname="col3"/><entry colname="col4">For a queued query, the total time the query has been queued.</entry></row>
 </tbody></tgroup></table></body></topic>
