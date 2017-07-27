@@ -1,3 +1,50 @@
+groups:
+- name: all
+  jobs:
+  - compile_gpdb_centos6
+  - compile_gpdb_open_source_centos6
+  - compile_gpdb_binary_swap_centos6
+  - compile_gpdb_centos7
+  - compile_gpdb_sles11
+  - compile_gpdb_windows_cl
+  - icw_planner_centos6
+  - icw_gporca_centos6
+  - icw_gporca_centos7
+  - icw_gporca_sles11
+  - icw_planner_ictcp_centos6
+  - MU_check_centos
+  - regression_tests_gpcloud_centos
+  - MM_gpperfmon
+  - MM_gpcheck
+  - DPM_backup-restore
+  - MM_gppkg
+  - MM_pt-rebuild
+  - fts
+  - storage
+  - QP_memory-accounting
+  - regression_tests_gphdfs_centos
+  - gpdb_rc_packaging_centos
+  - gpdb_rc_packaging_sles
+  - DPM_netbackup77
+  - DPM_backup-restore-ddboost
+  - DPM_backup_43_restore_5
+  - MM_gpcheckcat
+  - MM_gprecoverseg
+  - MM_gpexpand
+  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer-5x-to-5x
+  - cs-pg-two-phase
+  - cs-walrepl-multinode
+  - cs-filerep-schema-topology-crashrecov
+  - cs-filerep-end-to-end
+  - cs-aoco-compression
+  - mpp_interconnect
+  - QP_runaway-query
+  - QP_optimizer-functional
+
+- name: Release
+  jobs:
+  - Release_Candidate
 ## ======================================================================
 ## resource types
 ## ======================================================================
@@ -1442,6 +1489,52 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: Release_Candidate
+  plan:
+  - get: gpdb_src
+    trigger: true
+    passed:
+    - compile_gpdb_centos6
+    - compile_gpdb_open_source_centos6
+    - compile_gpdb_centos7
+    - compile_gpdb_sles11
+    - compile_gpdb_windows_cl
+    - icw_planner_centos6
+    - icw_gporca_centos6
+    - icw_gporca_centos7
+    - icw_gporca_sles11
+    - icw_planner_ictcp_centos6
+    - MU_check_centos
+    - regression_tests_gpcloud_centos
+    - MM_gpperfmon
+    - MM_gpcheck
+    - DPM_backup-restore
+    - MM_gppkg
+    - MM_pt-rebuild
+    - fts
+    - storage
+    - QP_memory-accounting
+    - regression_tests_gphdfs_centos
+    - gpdb_rc_packaging_centos
+    - gpdb_rc_packaging_sles
+    - DPM_netbackup77
+    - DPM_backup-restore-ddboost
+    - DPM_backup_43_restore_5
+    - MM_gpcheckcat
+    - MM_gprecoverseg
+    - MM_gpexpand
+    - DPM_gptransfer-43x-to-5x
+    - DPM_gptransfer-5x-to-5x
+    - cs-pg-two-phase
+    - cs-walrepl-multinode
+    - cs-filerep-schema-topology-crashrecov
+    - cs-filerep-end-to-end
+    - cs-aoco-compression
+    - mpp_interconnect
+    - QP_runaway-query
+    - QP_optimizer-functional
+
 
 ## ======================================================================
 ## reusable anchors
