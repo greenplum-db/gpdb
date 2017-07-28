@@ -4,6 +4,9 @@
 <topic id="topic1" xml:lang="en">
   <title id="ij138244">Greenplum PostGIS Extension</title>
   <body>
+    <draft-comment author="msk">DRAFT 5.0.0 - postgis - doc story <xref
+        href="https://www.pivotaltracker.com/story/show/149319461" format="html" scope="external"
+        >#149319461</xref></draft-comment>
     <p>This chapter contains the following information:</p>
     <ul>
       <li id="ij166737">
@@ -12,15 +15,16 @@
       <li id="ij168801">
         <xref href="#topic3" type="topic" format="dita"/>
       </li>
-      <li id="ij168816">
-        <xref href="#topic5" type="topic" format="dita"/>
-      </li>
-      <li><xref href="#topic_bv4_rrk_f1b" format="dita"/></li>
+      <li>
+        <xref href="#topic_b2l_hzw_q1b" format="dita"/></li>
       <li id="ij168827">
         <xref href="#topic7" type="topic" format="dita"/>
       </li>
       <li>
         <xref href="#postgis_support" format="dita"/>
+      </li>
+      <li id="ij168816">
+        <xref href="#topic5" type="topic" format="dita"/>
       </li>
     </ul>
   </body>
@@ -51,10 +55,10 @@
       <title id="ij168742">Greenplum PostGIS Extension</title>
       <body>
         <p>The Greenplum Database PostGIS extension package is available from <xref
-            href="https://network.pivotal.io" scope="external" format="html"><ph>Pivotal
-              Network</ph></xref>. You can install the package using the Greenplum Package Manager
-            (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph> in the <cite>Greenplum
-            Database Utility Guide</cite>.</p>
+            href="https://network.pivotal.io" scope="external" format="html">Pivotal Network</xref>.
+          You can install the package using the Greenplum Package Manager (<codeph>gppkg</codeph>).
+          For details, see <codeph>gppkg</codeph> in the <cite>Greenplum Database Utility
+            Guide</cite>.</p>
         <p>Greenplum Database supports the PostGIS extension with these component versions.<ul
             id="ul_csh_q3z_d1b">
             <li>PostGIS 2.1.5</li>
@@ -94,97 +98,55 @@
       </topic>
     </topic>
   </topic>
-  <topic id="topic5" xml:lang="en">
-    <title id="ij169610">Enabling PostGIS Support</title>
+  <topic id="topic_b2l_hzw_q1b">
+    <title>Enabling and Removing PostGIS Support</title>
     <body>
-      <p>After installing the PostGIS extension package, you enable PostGIS support for each
-        database that requires its use. To enable PostGIS support in your database, run SQL scripts
-        that are supplied with the PostGIS package in
-          <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph> .</p>
-      <p dir="ltr" id="docs-internal-guid-8c038020-7f9c-b023-7fae-617656ae21e7">These scripts enable
-        PostGIS, and the optional PostGIS Raster in a database.<ul id="ul_iph_ddm_d1b">
-          <li><codeph>postgis.sql</codeph> - Load the PostGIS objects and function definitions.</li>
-          <li><codeph>rtpostgis.sql</codeph> - Load the PostGIS <codeph>raster</codeph> object and
-            function definitions.</li>
-        </ul></p>
-      <note>If you are installing PostGIS Raster, PostGIS objects must be installed before PostGIS
-        Raster. PostGIS Raster depends on PostGIS objects. Greenplum Database returns an error if
-          <codeph>rtpostgis.sql</codeph> is run before <codeph>postgis.sql</codeph>.</note>
-      <p>These SQL scripts add data and comments to a PostGIS enabled database.<ul
-          id="ul_l3c_zbz_d1b">
-          <li><codeph>spatial_ref_sys.sql</codeph> - Populate the <codeph>spatial_ref_sys</codeph>
-            table with a complete set of EPSG coordinate system definition identifiers. With the
-            definition identifiers you can perform <codeph>ST_Transform()</codeph> operations on
-              geometries.<note type="note">If you have overridden standard entries and want to use
-              those overrides, do not load the <codeph>spatial_ref_sys.sql</codeph> file when
-              creating the new database.</note></li>
-          <li><codeph>postgis_comments.sql</codeph> - Add comments to the PostGIS functions.</li>
-          <li><codeph>raster_comments.sql</codeph> - Add comments to the PostGIS Raster
-            functions.</li>
-        </ul></p>
-      <p>You can view comments with the <codeph>pslq</codeph> meta-command <codeph>\dd
-            <varname>function_name</varname></codeph> or from any tool that can show Greenplum
-        Database function comments.</p>
-      <p>For example, these commands run the SQL scripts <codeph>postgis.sql</codeph>,
-          <codeph>rtpostgis.sql</codeph>, and <codeph>spatial_ref_sys.sql</codeph> in the database
-          <codeph>mydatabase</codeph>.</p>
-      <codeblock>psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.1/postgis.sql
-psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.1/rtpostgis.sql
-psql -d mydatabase -f 
-  $GPHOME/share/postgresql/contrib/postgis-2.1/spatial_ref_sys.sql</codeblock>
-      <p>After running the scripts, the database is spatially enabled and is PostGIS Raster
-        enabled.</p>
+      <p>The Greenplum Database PostGIS extension contains the <codeph>postgis_manager.sh</codeph>
+        script that installs or removes both the PostGIS and PostGIS Raster features in a database.
+        After the PostGIS extension package is installed, the script is in
+          <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>. The
+          <codeph>postgis_manager.sh</codeph> script runs SQL scripts that install or removes
+        PostGIS and PostGIS Raster from a database.</p>
+      <p>For information about the PostGIS and PostGIS Raster SQL scripts, and required PostGIS
+        Raster environment variables, see <xref href="#topic5" type="topic" format="dita"/>.</p>
     </body>
-    <topic id="topic_l4l_gg1_21b">
-      <title>Support for PostGIS Raster</title>
+    <topic id="topic_ln5_xcl_r1b">
+      <title>Enabling PostGIS Support</title>
       <body>
+        <p>Run the <codeph>postgis_manager.sh</codeph> script specifying the database and with the
+            <codeph>install</codeph> option to install PostGIS and PostGIS Raster. This example
+          installs PostGIS and PostGIS Raster objects in the database
+          <codeph>mydatabase</codeph>.<codeblock><codeph>postgis_manager.sh</codeph> mydatabase install</codeblock></p>
+        <p>The script runs all the PostGIS SQL scripts that enable PostGIS in a database:
+            <codeph>install/postgis.sql</codeph>, <codeph>install/rtpostgis.sql</codeph>
+          <codeph>install/spatial_ref_sys.sql</codeph>,
+            <codeph>install/postgis_comments.sql</codeph>, and
+            <codeph>install/raster_comments.sql</codeph>.</p>
         <p dir="ltr">The postGIS package installation adds these lines to the
-            <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support.</p>
+            <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support. </p>
         <codeblock>export GDAL_DATA=$GPHOME/share/gdal
 export POSTGIS_ENABLE_OUTDB_RASTERS=0
 export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
-        <p><codeph>GDAL_DATA</codeph> specifies the location of GDAL utilities and support files
-          used by the GDAL library. For example, the directory contains EPSG support files such as
-            <codeph>gcs.csv​</codeph> and <codeph>pcs.csv</codeph> (so called dictionaries, mostly
-          in ​CSV format). The GDAL library requires the support files to properly evaluate EPSG
-          codes.</p>
-        <p><codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph> sets the enabled GDAL drivers in the
-          PostGIS environment.</p>
-        <p><codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph> is a boolean configuration option to enable
-          access to out of database raster bands. </p>
       </body>
     </topic>
-  </topic>
-  <topic id="topic_bv4_rrk_f1b">
-    <title>Removing PostGIS Support</title>
-    <body>
-      <p>To remove PostGIS support from a database, run SQL scripts that are supplied with the
-        PostGIS extension package in <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>
-      </p>
-      <note>If you installed PostGIS Raster, you must uninstall the PostGIS Raster before you
-        uninstall the PostGIS objects. PostGIS Raster depends on PostGIS objects. Greenplum Database
-        returns an error if PostGIS objects are removed before PostGIS Raster.</note>
-      <p>These scripts remove PostGIS and PostGIS Raster objects from a database.<ul
-          id="ul_bzh_xrk_f1b">
-          <li><codeph>uninstall_rtpostgis.sql</codeph> - Removes the PostGIS Raster object and
-            function definitions.</li>
-          <li><codeph>uninstall_postgis.sql</codeph> - Removes the PostGIS objects and function
-            definitions.</li>
-        </ul></p>
-      <p>After PostGIS support has been removed from all databases in the Greenplum Database system,
-        you can remove the PostGIS extension package. For example this <codeph>gppkg</codeph>
-        command removes PostGIS extension package.
-        <codeblock>gppkg -r postgis-ossv2.1.5_pv2.1_gpdb5.0</codeblock></p>
-      <p>Restart Greenplum Database after removing the package.</p>
-      <codeblock>gpstop -r</codeblock>
-      <p dir="ltr">Ensure that these lines for PostGIS Raster support are removed from the
-          <codeph>greenplum_path.sh</codeph> file.</p>
-      <codeblock>export GDAL_DATA=$GPHOME/share/gdal
-export POSTGIS_ENABLE_OUTDB_RASTERS=0
-export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
-    </body>
+    <topic id="topic_bgz_vcl_r1b">
+      <title>Removing PostGIS Support</title>
+      <body>
+        <p>Run the <codeph>postgis_manager.sh</codeph> script specifying the database and with the
+            <codeph>uninstall</codeph> option to remove PostGIS and PostGIS Raster. This example
+          removes PostGIS and PostGIS Raster support from the database
+          <codeph>mydatabase</codeph>.<codeblock><codeph>postgis_manager.sh</codeph> mydatabase uninstall</codeblock></p>
+        <p>The script runs both the PostGIS SQL scripts that remove PostGIS and PostGIS Raster from
+          a database: <codeph>uninstall_rtpostgis.sql</codeph> and
+            <codeph>uninstall_postgis.sql</codeph>.</p>
+        <p>The <codeph>postgis_manager.sh</codeph> script does not remove these PostGIS Raster
+          environment variables the <codeph>greenplum_path.sh</codeph> file:
+            <codeph>GDAL_DATA</codeph>, <codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph>,
+            <codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph>. The environment variables are removed
+          when you uninstall the PostGIS extension package with the <codeph>gppkg</codeph> utility.
+        </p>
+      </body>
+    </topic>
   </topic>
   <topic id="topic7" xml:lang="en">
     <title id="ij170351">Usage</title>
@@ -226,8 +188,8 @@ SELECT name,ST_AsText(geopoint) FROM geotest;</codeblock>
         <body>
           <p>You can build a GiST index as follows:</p>
           <codeblock>CREATE INDEX <i>indexname</i>
-ON <i>tablename</i>
-USING GIST ( <i>geometryfield</i> );</codeblock>
+  ON <i>tablename</i>
+  USING GIST ( <i>geometryfield</i> );</codeblock>
         </body>
       </topic>
     </topic>
@@ -333,6 +295,114 @@ USING GIST ( <i>geometryfield</i> );</codeblock>
               table:<codeblock>CREATE TABLE geometries(id INTEGER);
 SELECT AddGeometryColumn('public', 'geometries', 'geom', 0, 'LINESTRING', 2);</codeblock></p></li>
         </ul>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic5" xml:lang="en">
+    <title id="ij169610">PostGIS Support Scripts</title>
+    <body>
+      <p>After installing the PostGIS extension package, you enable PostGIS support for each
+        database that requires its use. To enable or remove PostGIS support in your database, you
+        can run SQL scripts that are supplied with the PostGIS package in
+          <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>.<ul id="ul_xmd_xpz_r1b">
+          <li><xref href="#topic_ulm_4gl_r1b" format="dita"/></li>
+          <li><xref href="#topic_xp2_lgl_r1b" format="dita"/></li>
+        </ul></p>
+      <p>Instead of running the scripts individually, you can use the
+          <codeph>postgis_manager.sh</codeph> script to run SQL scripts that enable or remove
+        PostGIS support. See <xref href="#topic_b2l_hzw_q1b" format="dita"/>.</p>
+      <p>You can run the PostGIS SQL scripts individually to enable or remove PostGIS support. For
+        example, these commands run the SQL scripts <codeph>postgis.sql</codeph>,
+          <codeph>rtpostgis.sql</codeph>, and <codeph>spatial_ref_sys.sql</codeph> in the database
+          <codeph>mydatabase</codeph>.</p>
+      <codeblock>psql -d mydatabase -f 
+  $GPHOME/share/postgresql/contrib/postgis-2.1/install/postgis.sql
+psql -d mydatabase -f 
+  $GPHOME/share/postgresql/contrib/postgis-2.1/install/rtpostgis.sql
+psql -d mydatabase -f 
+  $GPHOME/share/postgresql/contrib/postgis-2.1/install/spatial_ref_sys.sql</codeblock>
+      <p>After running the scripts, the database is enabled with both PostGIS and PostGIS
+        Raster.</p>
+    </body>
+    <topic id="topic_ulm_4gl_r1b">
+      <title>Scripts that Enable PostGIS and PostGIS Raster Support</title>
+      <body>
+        <p dir="ltr" id="docs-internal-guid-8c038020-7f9c-b023-7fae-617656ae21e7">These scripts
+          enable PostGIS, and the optional PostGIS Raster in a database.<ul id="ul_iph_ddm_d1b">
+            <li><codeph>install/postgis.sql</codeph> - Load the PostGIS objects and function
+              definitions.</li>
+            <li><codeph>install/rtpostgis.sql</codeph> - Load the PostGIS <codeph>raster</codeph>
+              object and function definitions.</li>
+          </ul></p>
+        <note>If you are installing PostGIS Raster, PostGIS objects must be installed before PostGIS
+          Raster. PostGIS Raster depends on PostGIS objects. Greenplum Database returns an error if
+            <codeph>rtpostgis.sql</codeph> is run before <codeph>postgis.sql</codeph>.</note>
+        <p>These SQL scripts add data and comments to a PostGIS enabled database.<ul
+            id="ul_l3c_zbz_d1b">
+            <li><codeph>install/spatial_ref_sys.sql</codeph> - Populate the
+                <codeph>spatial_ref_sys</codeph> table with a complete set of EPSG coordinate system
+              definition identifiers. With the definition identifiers you can perform
+                <codeph>ST_Transform()</codeph> operations on geometries.<note type="note">If you
+                have overridden standard entries and want to use those overrides, do not load the
+                  <codeph>spatial_ref_sys.sql</codeph> file when creating the new
+              database.</note></li>
+            <li><codeph>install/postgis_comments.sql</codeph> - Add comments to the PostGIS
+              functions.</li>
+            <li><codeph>install/raster_comments.sql</codeph> - Add comments to the PostGIS Raster
+              functions.</li>
+          </ul></p>
+        <p>You can view comments with the <codeph>pslq</codeph> meta-command <codeph>\dd
+              <varname>function_name</varname></codeph> or from any tool that can show Greenplum
+          Database function comments.</p>
+      </body>
+      <topic id="topic_l4l_gg1_21b">
+        <title>PostGIS Raster Environment Variables</title>
+        <body>
+          <p dir="ltr">The postGIS package installation adds these lines to the
+              <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support.</p>
+          <codeblock>export GDAL_DATA=$GPHOME/share/gdal
+export POSTGIS_ENABLE_OUTDB_RASTERS=0
+export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
+          <p><codeph>GDAL_DATA</codeph> specifies the location of GDAL utilities and support files
+            used by the GDAL library. For example, the directory contains EPSG support files such as
+              <codeph>gcs.csv​</codeph> and <codeph>pcs.csv</codeph> (so called dictionaries, mostly
+            in ​CSV format). The GDAL library requires the support files to properly evaluate EPSG
+            codes.</p>
+          <p><codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph> sets the enabled GDAL drivers in the
+            PostGIS environment.</p>
+          <p><codeph>POSTGIS_ENABLE_OUTDB_RASTERS</codeph> is a boolean configuration option to
+            enable access to out of database raster bands. </p>
+        </body>
+      </topic>
+    </topic>
+    <topic id="topic_xp2_lgl_r1b">
+      <title>Scripts that Remove PostGIS and PostGIS Raster Support</title>
+      <body>
+        <p>To remove PostGIS support from a database, run SQL scripts that are supplied with the
+          PostGIS extension package in
+            <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>
+        </p>
+        <note>If you installed PostGIS Raster, you must uninstall the PostGIS Raster before you
+          uninstall the PostGIS objects. PostGIS Raster depends on PostGIS objects. Greenplum
+          Database returns an error if PostGIS objects are removed before PostGIS Raster.</note>
+        <p>These scripts remove PostGIS and PostGIS Raster objects from a database.<ul
+            id="ul_yp2_lgl_r1b">
+            <li><codeph>uninstall/uninstall_rtpostgis.sql</codeph> - Removes the PostGIS Raster
+              object and function definitions.</li>
+            <li><codeph>uninstall/uninstall_postgis.sql</codeph> - Removes the PostGIS objects and
+              function definitions.</li>
+          </ul></p>
+        <p>After PostGIS support has been removed from all databases in the Greenplum Database
+          system, you can remove the PostGIS extension package. For example this
+            <codeph>gppkg</codeph> command removes PostGIS extension package.
+          <codeblock>gppkg -r postgis-ossv2.1.5_pv2.1_gpdb5.0</codeblock></p>
+        <p>Restart Greenplum Database after removing the package.</p>
+        <codeblock>gpstop -r</codeblock>
+        <p dir="ltr">Ensure that these lines for PostGIS Raster support are removed from the
+            <codeph>greenplum_path.sh</codeph> file.</p>
+        <codeblock>export GDAL_DATA=$GPHOME/share/gdal
+export POSTGIS_ENABLE_OUTDB_RASTERS=0
+export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
       </body>
     </topic>
   </topic>
