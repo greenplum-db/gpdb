@@ -1529,7 +1529,7 @@ Optional Features:
   --enable-profiling      build with profiling enabled
   --enable-coverage       build with coverage testing instrumentation
   --enable-dtrace         build with DTrace support
-enable TAP tests (requires Perl and IPC::Run)
+  --enable-tap-tests      enable TAP tests (requires Perl and IPC::Run)
   --enable-depend         turn on automatic dependency tracking
   --enable-cassert        enable assertion checks (for debugging)
   --enable-debugbreak     enable debug_break and debug_break_n (for debugging)
