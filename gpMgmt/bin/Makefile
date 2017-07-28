@@ -4,7 +4,7 @@
 # Copyright Greenplum 2006-2011
 ################################################################################
 
-default: all
+default: install
 
 top_builddir=../..
 ifneq "$(wildcard $(top_builddir)/src/Makefile.global)" ""
@@ -32,9 +32,9 @@ core: pygresql subprocess32
 	python gpconfig_modules/parse_guc_metadata.py $(prefix)
 
 ifneq "$(wildcard $(CURDIR)/pythonSrc/ext/*.tar.gz)" ""
-all: core lockfile paramiko pycrypto stream psutil
+install: core lockfile paramiko pycrypto stream psutil
 else
-all: core stream
+install: core stream
 endif
 
 #
