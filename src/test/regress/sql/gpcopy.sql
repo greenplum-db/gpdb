@@ -674,6 +674,13 @@ SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject
 COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
 SELECT * FROM segment_reject_limit_from;
 
+-- STDIN is not support by copy from on segment
+COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
+SELECT * FROM segment_reject_limit_from;
+
+-- STDOUT is not support by copy to on segment
+COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
+
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by

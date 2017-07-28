@@ -1167,6 +1167,11 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cannot specify DELIMITER in BINARY mode")));
 
+	if (cstate->on_segment && stmt->filename==NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("STDIN and STDOUT are not supported by 'COPY ON SEGMENT'")));
+
 	/*
 	 * In PostgreSQL, HEADER is not allowed in text mode either, but in GPDB,
 	 * only forbid it with BINARY.
