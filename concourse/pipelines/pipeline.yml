@@ -1219,7 +1219,7 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=gprecoverseg
     on_failure:
-      <<: *ccp_destroy
+      <<: *debug_sleep
   - *ccp_destroy
 
 - name: MM_gpexpand
