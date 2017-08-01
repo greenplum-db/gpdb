@@ -459,13 +459,9 @@
         text passwords. Anyone who is able to view the <codeph>pg_authid</codeph> table can see hash
         strings, but no passwords. This also ensures that passwords are obscured when the database
         is dumped to backup files.</p>
-      <p>The hash function executes when the password is set by using any of the following
+      <p>The hash function executes when the password is set by using either of the following
           commands:<ul id="ul_e35_rmp_pt">
-          <li><codeph>CREATE USER <varname>name</varname> WITH ENCRYPTED PASSWORD
-                '<varname>password</varname>'</codeph></li>
           <li><codeph>CREATE ROLE <varname>name</varname> WITH LOGIN ENCRYPTED PASSWORD
-                '<varname>password</varname>'</codeph></li>
-          <li><codeph>ALTER USER <varname>name</varname> WITH ENCRYPTED PASSWORD
                 '<varname>password</varname>'</codeph></li>
           <li><codeph>ALTER ROLE <varname>name</varname> WITH ENCRYPTED PASSWORD
                 '<varname>password</varname>'</codeph></li>

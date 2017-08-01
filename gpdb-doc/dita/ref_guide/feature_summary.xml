@@ -345,12 +345,6 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"/>
             </row>
             <row>
-              <entry colname="col1"><codeph>ALTER USER</codeph></entry>
-              <entry colname="col2">YES</entry>
-              <entry colname="col3">An alias for <xref href="sql_commands/ALTER_ROLE.xml#topic1"
-                  type="topic" format="dita"/></entry>
-            </row>
-            <row>
               <entry colname="col1"><codeph>ALTER VIEW</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
@@ -574,12 +568,6 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
                   type must be <codeph>IMMUTABLE</codeph> functions.</p></entry>
             </row>
             <row>
-              <entry colname="col1"><codeph>CREATE USER</codeph></entry>
-              <entry colname="col2">YES</entry>
-              <entry colname="col3">An alias for <xref href="sql_commands/CREATE_ROLE.xml#topic1"
-                  type="topic" format="dita"/></entry>
-            </row>
-            <row>
               <entry colname="col1"><codeph>CREATE VIEW</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
@@ -748,12 +736,6 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>DROP TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
-            </row>
-            <row>
-              <entry colname="col1"><codeph>DROP USER</codeph></entry>
-              <entry colname="col2">YES</entry>
-              <entry colname="col3">An alias for <xref href="sql_commands/DROP_ROLE.xml#topic1"
-                /></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP VIEW</codeph></entry>
