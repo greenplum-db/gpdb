@@ -78,17 +78,30 @@ static bool
 initNextTableToScan(DynamicTableScanState *node)
 {
 	ScanState *scanState = (ScanState *)node;
+	Scan *scan = (Scan *)scanState->ps.plan;
+	DynamicTableScanInfo *partitionInfo = scanState->ps.state->dynamicTableScanInfo;
+
+	/* 1-based index */
+	Assert(partitionInfo->numScans >= scan->partIndex);
+	int32 numSelectors = list_nth_int(partitionInfo->numSelectorsPerScanId, scan->partIndex);
 
 	if (scanState->scan_state == SCAN_INIT ||
 		scanState->scan_state == SCAN_DONE)
 	{
-		Oid *pid = hash_seq_search(&node->pidStatus);
+		PartOidEntry *partOidEntry;
+		while ((partOidEntry = hash_seq_search(&node->pidStatus)) != NULL)
+		{
+			if (list_length(partOidEntry->selectorList) == numSelectors)
+				break;
+		}
+
+		Oid *pid = (Oid *) partOidEntry;
 		if (pid == NULL)
 		{
 			node->shouldCallHashSeqTerm = false;
 			return false;
 		}
-		
+
 		/* Collect number of partitions scanned in EXPLAIN ANALYZE */
 		if (NULL != scanState->ps.instrument)
 		{
