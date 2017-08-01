@@ -27,7 +27,7 @@ CREATE LANGUAGE plpythonu;
 -- Create our test tables (and functions) in a bespoken schema that we can drop
 -- at the end. We don't want to leave any corrupt files lying around!
 CREATE SCHEMA corrupt_heap_checksum;
-set search_path='corrupt_heap_checksum';
+set search_path='corrupt_heap_checksum',public;
 
 -- to ignore the CONTEXT from messages from the plpython helpers, and to ignore
 -- DETAILs from the checksum errors.
@@ -148,6 +148,38 @@ select invalidate_buffers_for_rel('bitmap_index') from gp_dist_random('gp_id');
 -- Verify corruption on Bitmap index 
 select SUM(corrupt_file(get_index_path('corrupt_bitmap_index'), -50)) from gp_dist_random('gp_id');
 insert into corrupt_bitmap_index select i, 'a' from generate_series(1, 10) i; -- insert will trigger scan of the index
+
+-- Test make sure full page image is captured in XLOG if hint bit change is the first change after checkpoint
+create table mark_buffer_dirty_hint(a int) distributed by (a);
+insert into mark_buffer_dirty_hint select generate_series (1, 10);
+-- buffer is marked dirty upon a hint bit change
+set gp_disable_tuple_hints=off;
+-- flush the data to disk
+checkpoint;
+-- skip all further checkpoint
+select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+-- set the hint bit on (the buffer will be marked dirty)
+select count(*) from mark_buffer_dirty_hint;
+-- using a DML to trigger the XLogFlush() to have the backup block written
+create table flush_xlog_page_to_disk (c int);
+-- corrupt the page on disk
+select SUM(corrupt_file(get_relation_path('mark_buffer_dirty_hint'), -50)) from gp_dist_random('gp_id');
+-- invalidate buffer and confirm data is corrupted
+select invalidate_buffers_for_rel('mark_buffer_dirty_hint') from gp_dist_random('gp_id');
+select count(*) from mark_buffer_dirty_hint;
+-- trigger recovery on primaries with multiple retries and ignore warning/notice messages
+select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'panic', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+set client_min_messages='ERROR';
+set dtx_phase2_retry_count=10;
+create table trigger_recovery_on_primaries(c int);
+reset client_min_messages;
+-- reconnect to the database after restart
+\c 
+-- EXPECT: Full Page Image (FPI) in XLOG should overwrite the corrupted page during recovery
+select count(*) from corrupt_heap_checksum.mark_buffer_dirty_hint;
+-- reset the fault injector
+select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
+select gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration where role = 'p';
 
 -- Clean up. We don't want to leave the corrupt tables lying around!
 reset search_path;
