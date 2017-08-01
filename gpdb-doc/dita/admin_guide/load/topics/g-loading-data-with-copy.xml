@@ -26,6 +26,7 @@
       <p>
           <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i>;</codeblock>
       </p>
+   </body>
   </topic>
   <topic id="topic2" xml:lang="en">
     <title>Loading From STDIN</title>
@@ -38,6 +39,7 @@
       <p>
           <codeblock>COPY <i>table_name</i> FROM <i>STDIN</i>;</codeblock>
       </p>
+   </body>
   </topic>
   <topic id="topic3" xml:lang="en">
     <title>Loading Data Using \copy</title>
@@ -55,6 +57,7 @@
       <p>
           <codeblock>\copy <i>table_name</i> FROM <i>filename</i>;</codeblock>
       </p>
+   </body>
   </topic>
   <topic id="topic4" xml:lang="en">
     <title>Input Format</title>
@@ -65,5 +68,6 @@
       <p>
           <codeblock>COPY <i>table_name</i> FROM <i>/path/to/filename</i> WITH FORMAT csv;</codeblock>
       </p>
+   </body>
   </topic>
 </topic>
