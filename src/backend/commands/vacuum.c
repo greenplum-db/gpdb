@@ -4406,7 +4406,10 @@ move_chain_tuple(Relation rel,
 									 HEAP_XMIN_INVALID |
 									 HEAP_MOVED_IN);
 	old_tup->t_data->t_infomask |= HEAP_MOVED_OFF;
+	HeapTupleHeaderClearHotUpdated(old_tup->t_data);
 	HeapTupleHeaderSetXvac(old_tup->t_data, myXID);
+	/* Make sure there is no forward chain link in t_ctid */
+	old_tup->t_data->t_ctid = old_tup->t_self;
 
 	/*
 	 * If this page was not used before - clean it.
@@ -4458,15 +4461,9 @@ move_chain_tuple(Relation rel,
 
 	ItemPointerSet(&(newtup.t_self), dst_vacpage->blkno, newoff);
 
-	/*
-	 * Set new tuple's t_ctid pointing to itself if last tuple in chain, and
-	 * to next tuple in chain otherwise.  (Since we move the chain in reverse
-	 * order, this is actually the previously processed tuple.)
-	 */
-	if (!ItemPointerIsValid(ctid))
-		newtup.t_data->t_ctid = newtup.t_self;
-	else
-		newtup.t_data->t_ctid = *ctid;
+	 /* Set new tuple's t_ctid pointing to itself as its not part of HOT chain */
+	newtup.t_data->t_ctid = newtup.t_self;
+
 	*ctid = newtup.t_self;
 
 	MarkBufferDirty(dst_buf);
@@ -4578,7 +4575,10 @@ move_plain_tuple(Relation rel,
 									 HEAP_XMIN_INVALID |
 									 HEAP_MOVED_IN);
 	old_tup->t_data->t_infomask |= HEAP_MOVED_OFF;
+	HeapTupleHeaderClearHotUpdated(old_tup->t_data);
 	HeapTupleHeaderSetXvac(old_tup->t_data, myXID);
+	/* Make sure there is no forward chain link in t_ctid */
+	old_tup->t_data->t_ctid = old_tup->t_self;
 
 	MarkBufferDirty(dst_buf);
 	MarkBufferDirty(old_buf);
