@@ -98,7 +98,7 @@
       <p>By default, a sequence does not wrap around. That is, when the sequence reaches the max value
           (<codeph>+32767</codeph> for <codeph>SMALLSERIAL</codeph>, <codeph>+2147483647</codeph>
           for <codeph>SERIAL</codeph>, <codeph>+9223372036854775807</codeph> for
-          <codeph>BIGSERIAL</codeph>), every <codeph>nextval()</codeph> call will produce an error.
+          <codeph>BIGSERIAL</codeph>), every <codeph>nextval()</codeph> call produces an error.
           Alter the sequence to make it cycle around and start at <codeph>1</codeph> again:</p>
       <p>
         <codeblock>ALTER SEQUENCE sequence_name CYCLE;</codeblock>
