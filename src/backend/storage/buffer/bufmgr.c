@@ -2537,7 +2537,8 @@ MarkBufferDirtyHint(Buffer buffer)
 	{
 		XLogRecPtr	lsn = InvalidXLogRecPtr;
 		bool		dirtied = false;
-#if 0
+		bool	saved_inCommit = MyProc->inCommit;
+
 		/*
 		 * If checksums are enabled, and the buffer is permanent, then a full
 		 * page image may be required even for some hint bit updates to protect
@@ -2584,9 +2585,10 @@ MarkBufferDirtyHint(Buffer buffer)
 			 * essential that CreateCheckpoint waits for virtual transactions
 			 * rather than full transactionids.
 			 */
+			MyProc->inCommit = true;
 			lsn = XLogSaveBufferForHint(buffer);
 		}
-#endif
+
 		LockBufHdr(bufHdr);
 		Assert(bufHdr->refcount > 0);
 		if (!(bufHdr->flags & BM_DIRTY))
@@ -2611,6 +2613,8 @@ MarkBufferDirtyHint(Buffer buffer)
 		}
 		bufHdr->flags |= (BM_DIRTY | BM_JUST_DIRTIED);
 		UnlockBufHdr(bufHdr);
+
+		MyProc->inCommit = saved_inCommit;
 
 		if (dirtied)
 		{

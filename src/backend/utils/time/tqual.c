@@ -131,7 +131,8 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (!gp_disable_tuple_hints)
 	{
-		MarkBufferDirtyHint(buffer);
+		if (!relation->rd_istemp)
+			MarkBufferDirtyHint(buffer);
 		return;
 	}
 
