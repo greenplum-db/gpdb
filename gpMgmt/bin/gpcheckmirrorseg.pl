@@ -804,12 +804,12 @@ sub get_presh2_txt
 #
 #			# bits			  64 16			
 #			# bytes			   8 2
-#			my @foo = unpack("L2 S S S S S S ", $buf);
+#			my @foo = unpack("L2 S S S S S S ", $buf); # referring to PageHeaderData in bufpage.h for details
 #			
 #			shift @foo; # discard XLogRecPtr
 #			shift @foo;
 #			
-#			shift @foo; # discard pd_tli, pd_flags
+#			shift @foo; # discard pd_checksum, pd_flags
 #			shift @foo;
 #			
 #			my $pd_lower = shift @foo;
@@ -892,6 +892,10 @@ sub get_presh2_txt
 #
 #				push @pagehdr, $skippi;
 #			}
+#
+#			@pagehdr[2] = 0; # mask out the checksum
+#			my $page_header_with_checksum_masked = pack("L2 S6", @pagehdr);
+#			substr($buf, 0, length($page_header_with_checksum_masked)) = $page_header_with_checksum_masked;
 #			
 #			my $ii = 0;
 #			
@@ -900,23 +904,21 @@ sub get_presh2_txt
 #			#   heap case:  find tuples and fix hint bits
 #			while ($ii < scalar(@baz))
 #			{
-#				my $s1 = $baz[$ii];
+#				my $s1 = $baz[$ii]; # $s1 and $s2 is representing data stored in ItemIdData, see itemid.h for details
 #				my $s2 = $baz[$ii+1];
 #				
 #				$ii += 2;
 #				
 #				my $lp_off = $s1;
-#				$lp_off = $lp_off & 0x7FFF;
-#				
-#				my $lp_flags = 0;
-#				
-#				my $lp_len = $s2 >> 1;
+#				$lp_off = $lp_off & 0x7FFF; # discard bit of lp_flags information
+#
+#				my $lp_len = $s2 >> 1; # discard bit of lp_flags information
 #
 #				if ($isBtree)
 #				{
 #					# fixup s2 (part of lp_flags) -- mask out
 #					# LP_DELETE hint bit
-#					$baz[$ii-1] = 0xFFFFFE & $s2;
+#					$baz[$ii-1] = 0xFFFE & $s2;
 #				}
 #				else # heap tuple hint bit cleanup
 #				{
@@ -934,10 +936,9 @@ sub get_presh2_txt
 #
 #			if ($isBtree)
 #			{
-#				# use revised lp_flags in page hdr
-#				push @pagehdr, @baz;
-#				my $fixhdr = pack("L2 S S S S S S S$twomax", @pagehdr);
-#				substr($buf, 0, length($fixhdr)) = $fixhdr;
+#				# use revised lp_flags in the lp array
+#				my $fix_lp_array = pack("S$twomax", @baz);
+#				substr($buf, length($page_header_with_checksum_masked), length($fix_lp_array)) = $fix_lp_array;
 #			}
 #
 #		  L_endloop:			
