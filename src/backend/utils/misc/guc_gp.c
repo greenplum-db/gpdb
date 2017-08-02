@@ -180,6 +180,7 @@ bool		gp_appendonly_verify_write_block = false;
 bool		gp_appendonly_verify_eof = true;
 bool		gp_appendonly_compaction = true;
 int			gp_appendonly_compaction_threshold = 0;
+bool		gp_heap_verify_checksums_on_mirror = false;
 bool		gp_heap_require_relhasoids_match = true;
 bool		Debug_appendonly_rezero_quicklz_compress_scratch = false;
 bool		Debug_appendonly_rezero_quicklz_decompress_scratch = false;
@@ -1154,6 +1155,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_appendonly_compaction,
 		true, NULL, NULL
+	},
+
+	{
+		{"gp_heap_verify_checksums_on_mirror", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Verify the heap checksums on mirror after receiving block from primary before writing to disk."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
+		},
+		&gp_heap_verify_checksums_on_mirror,
+		false, NULL, NULL
 	},
 
 	{

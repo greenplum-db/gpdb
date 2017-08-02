@@ -116,7 +116,6 @@ static int FileRepMirror_DropBufferPoolSegmentFiles(FileName  fileName, int segm
 
 static int FileRepMirror_Drop(FileName fileName);
 
-
 /****************************************************************
  * FILEREP SUB-PROCESS (FileRep Mirror RECEIVER Process)
  ****************************************************************/
@@ -1202,13 +1201,36 @@ FileRepMirror_RunConsumer(void)
 												   fileRepMessageHeader->fileRepRelationType,
 												   fileRepMessageHeader->fileRepOperation,
 												   fileRepMessageHeader->messageCount),
-								 FileRep_errcontext()));	
+								 FileRep_errcontext()));
 						break;
 						
 					}
 				}
 				
 				errno = 0;
+
+				if (gp_heap_verify_checksums_on_mirror)
+				{
+					if (fileRepMessageHeader->fileRepRelationType == FileRepRelationTypeBufferPool)
+					{
+						BlockNumber blkno = (BlockNumber) (
+								fileRepMessageHeader->fileRepOperationDescription.write.offset / BLCKSZ);
+						bool isBufferPoolChecksumCorrect = PageIsVerified(fileRepMessageBody, blkno);
+						if (!isBufferPoolChecksumCorrect)
+						{
+							PageHeader header = (PageHeader) fileRepMessageBody;
+							RelFileNode relfilenode = fileRepMessageHeader->fileRepIdentifier.fileRepRelationIdentifier.relFileNode;
+
+							ereport(ERROR,
+									(errmsg("Heap Checksum for relfilenode %d/%d/%d is inconsistent for blkno %d "
+													"with checksum %d from primary, suspect data corruption.",
+											relfilenode.spcNode, relfilenode.dbNode, relfilenode.relNode,
+											blkno,
+											header->pd_checksum),
+											errprintstack(true)));
+						}
+					}
+				}
 
 				if ((int) FileWrite(
 							fd, 
@@ -1219,7 +1241,7 @@ FileRepMirror_RunConsumer(void)
 					/* if write didn't set errno, assume problem is no disk space */
 					if (errno == 0)
 						errno = ENOSPC;
-					
+
 					status = STATUS_ERROR;
 					ereport(WARNING,
 							(errcode_for_file_access(),
@@ -1231,11 +1253,11 @@ FileRepMirror_RunConsumer(void)
 											   fileRepMessageHeader->fileRepRelationType,
 											   fileRepMessageHeader->fileRepOperation,
 											   fileRepMessageHeader->messageCount),
-							 FileRep_errcontext()));					
-					
+							 FileRep_errcontext()));
+
 					break;
 				}	
-				
+
 				break;
 			case FileRepOperationFlush:
 				
@@ -2671,4 +2693,3 @@ FileRepMirror_DropBufferPoolSegmentFiles(FileName  fileName, int segmentFileNum)
 	
 	return status;
 }
-
