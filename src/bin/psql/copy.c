@@ -234,6 +234,48 @@ error:
 }
 
 
+/* \copy command doesn't support on segment option */
+static void
+trim(char *s)
+{
+	int s_len = strlen(s);
+	if (strlen(s) == 0)
+		return;
+	char *read = s + 1;
+	char *write = s;
+	for (int i = 0; i < s_len; i++)
+	{
+		if (*(read) == '\0')
+		{
+			*(++write) = '\0';
+			break;
+		}
+		if (!(isspace(*write) && isspace(*read)))
+		{
+			*(++write) = *(read);
+		}
+		read++;
+	}
+	return;
+}
+
+static bool
+is_on_segment(char * after_tofrom)
+{
+	bool on_segment = false;
+	if (!after_tofrom || strlen(after_tofrom) == 0)
+		return false;
+	char *s = pg_strdup(after_tofrom);
+	trim(s);
+	if (strcasestr(s, "ON SEGMENT"))
+	{
+		on_segment = true;
+	}
+	free(s);
+	return on_segment;
+}
+
+
 /*
  * Execute a \copy command (frontend copy). We have to open a file, then
  * submit a COPY query to the backend and either feed it data from the
@@ -255,6 +297,12 @@ do_copy(const char *args)
 	if (!options)
 		return false;
 
+	if (options->after_tofrom && is_on_segment(options->after_tofrom))
+	{
+		psql_error("\\COPY command doesn't support ON SEGMENT\n");
+		free_copy_options(options);
+		return false;
+	}
 	/* prepare to read or write the target file */
 	if (options->file)
 		canonicalize_path(options->file);

@@ -681,6 +681,22 @@ SELECT * FROM segment_reject_limit_from;
 -- STDOUT is not support by copy to on segment
 COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
 
+-- \copy from doesn't support on segment
+--on segment lower case
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+--on segment with spaces
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on   segment log errors segment reject limit 3 rows;
+--on segment are capital
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT log errors segment reject limit 3 rows;
+
+-- \copy to doesn't support on segment
+--on segment lower case
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+--on segment with spaces
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on   segment log errors segment reject limit 3 rows;
+--on segment are capital
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' ON SEGMENT log errors segment reject limit 3 rows;
+
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by
