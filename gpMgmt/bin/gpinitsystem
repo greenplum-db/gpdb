@@ -349,12 +349,6 @@ CHK_PARAMS () {
 			fi
 		fi
 
-
-		# Deal with issue of mixed case segment names being created in all lower case on tails but mixed
-		# case in head system tables.
-		LWR_CASE_SEG_PREFIX=`$ECHO $SEG_PREFIX|$TR '[A-Z]' '[a-z]'`
-		SEG_PREFIX=$LWR_CASE_SEG_PREFIX
-
 		# MASTER_PORT
 		if [ x"" = x"$MASTER_PORT" ]; then
 			ERROR_EXIT "[FATAL]:-MASTER_PORT variable not set" 2
