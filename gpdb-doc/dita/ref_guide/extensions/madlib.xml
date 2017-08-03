@@ -518,11 +518,11 @@ insert into t1 values
   <topic id="topic10" xml:lang="en">
     <title id="pz213965">References</title>
     <body>
-      <p>MADlib web site is at <xref href="http://madlib.incubator.apache.org/" format="html"
-          scope="external">http://madlib.incubator.apache.org/</xref>.</p>
+      <p>MADlib web site is at <xref href="http://madlib.apache.org/" format="html"
+          scope="external">http://madlib.apache.org/</xref>.</p>
       <p>MADlib documentation is at <xref
-          href="http://madlib.incubator.apache.org/documentation.html" format="html"
-          scope="external">http://madlib.incubator.apache.org/documentation.html</xref>.</p>
+          href="http://madlib.apache.org/documentation.html" format="html"
+          scope="external">http://madlib.apache.org/documentation.html</xref>.</p>
       <p>PivotalR is a first class R package that enables users to interact with data resident in
         Greenplum Database and MADLib using an R client.</p>
     </body>

@@ -320,7 +320,7 @@ LANGUAGE 'plr';</codeblock><p>This
           page for PivotalR, a package that provides an R interface to operate on Greenplum Database
           tables and views that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also
           supports using the machine learning package <xref
-            href="http://madlib.incubator.apache.org/" format="html" scope="external">MADlib</xref>
+            href="http://madlib.apache.org/" format="html" scope="external">MADlib</xref>
           directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
