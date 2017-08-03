@@ -24,6 +24,7 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
 
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpu"), 0755)
         os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct"), 0755)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "memory"), 0755)
 
         self.cgroup = gpcheckresgroupimpl.cgroup()
         self.cgroup.mount_point = self.cgroup_mntpnt
@@ -39,6 +40,9 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cgroup.procs"), 0600)
         self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.usage"), 0400)
         self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.stat"), 0400)
+
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "memory.limit_in_bytes"), 0400)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "memory.memsw.limit_in_bytes"), 0400)
 
     def tearDown(self):
         shutil.rmtree(self.cgroup_mntpnt)
@@ -150,6 +154,17 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.stat"), 0100)
         with self.assertRaisesRegexp(AssertionError, "file '.*/cpuacct/gpdb/cpuacct.stat' permission denied: require permission 'r'"):
             self.cgroup.validate_all()
+
+    def test_when_memory_limit_in_bytes_missing(self):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "memory", "memory.limit_in_bytes"))
+        with self.assertRaisesRegexp(AssertionError, "file '.*/memory/memory.limit_in_bytes' does not exist"):
+            self.cgroup.validate_all()
+
+    def test_when_memsw_limit_in_bytes_bad_permission(self):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "memory", "memory.memsw.limit_in_bytes"), 0100)
+        with self.assertRaisesRegexp(AssertionError, "file '.*/memory/memory.memsw.limit_in_bytes' permission denied: require permission 'r'"):
+            self.cgroup.validate_all()
+
 
 if __name__ == '__main__':
     unittest.main()
