@@ -44,4 +44,5 @@ test: userDefinedTypes_withHDFS
 test: varchar_Extreadwrite
 test: varchar_ExtwriteToHdfsToExtread
 test: varchar_hdfsTextToGPDB
+test: all_ExtreadParquet
 #test: MPP16780
