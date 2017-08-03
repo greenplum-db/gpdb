@@ -326,7 +326,7 @@ extern void PrintPinnedBufs(void);
 extern Size BufferShmemSize(void);
 extern RelFileNode BufferGetFileNode(Buffer buffer);
 
-extern void MarkBufferDirtyHint(Buffer buffer);
+extern void MarkBufferDirtyHint(Buffer buffer, Relation relation);
 
 extern void UnlockBuffers(void);
 extern void LockBuffer(Buffer buffer, int mode);

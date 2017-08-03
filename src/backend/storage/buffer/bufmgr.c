@@ -2491,7 +2491,6 @@ IncrBufferRefCount(Buffer buffer)
 		PrivateRefCount[buffer - 1]++;
 }
 
-
 /*
  * MarkBufferDirtyHint
  *
@@ -2507,7 +2506,7 @@ IncrBufferRefCount(Buffer buffer)
  *    (due to a race condition), so it cannot be used for important changes.
  */
 void
-MarkBufferDirtyHint(Buffer buffer)
+MarkBufferDirtyHint(Buffer buffer, Relation relation)
 {
 	volatile BufferDesc *bufHdr;
 	Page	page = BufferGetPage(buffer);
@@ -2592,7 +2591,10 @@ MarkBufferDirtyHint(Buffer buffer)
 			 * rather than full transactionids.
 			 */
 			MyProc->inCommit = true;
-			lsn = XLogSaveBufferForHint(buffer);
+			if (!relation->rd_istemp)
+			{
+				lsn = XLogSaveBufferForHint(buffer, relation);
+			}
 		}
 
 		LockBufHdr(bufHdr);

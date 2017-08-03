@@ -131,9 +131,7 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (!gp_disable_tuple_hints)
 	{
-		if (!relation->rd_istemp)
-			MarkBufferDirtyHint(buffer);
-		return;
+		MarkBufferDirtyHint(buffer, relation);
 	}
 
 	/*
@@ -142,14 +140,14 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 	 */
 	if (relation == NULL)
 	{
-		MarkBufferDirtyHint(buffer);
+		MarkBufferDirtyHint(buffer, relation);
 		return;
 	}
 
 	if (relation->rd_issyscat)
 	{
 		/* Assume we want to always mark the buffer dirty */
-		MarkBufferDirtyHint(buffer);
+		MarkBufferDirtyHint(buffer, relation);
 		return;
 	}
 
@@ -163,7 +161,7 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 
 	if (xid == InvalidTransactionId)
 	{
-		MarkBufferDirtyHint(buffer);
+		MarkBufferDirtyHint(buffer, relation);
 		return;
 	}
 
@@ -172,7 +170,7 @@ markDirty(Buffer buffer, Relation relation, HeapTupleHeader tuple, bool isXmin)
 	 */
 	if (CLOGTransactionIsOld(xid))
 	{
-		MarkBufferDirtyHint(buffer);
+		MarkBufferDirtyHint(buffer, relation);
 		return;
 	}
 }

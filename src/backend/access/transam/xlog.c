@@ -129,6 +129,7 @@ bool		XLOG_DEBUG = false;
 /* these are derived from XLOG_sync_method by assign_xlog_sync_method */
 int			sync_method = DEFAULT_SYNC_METHOD;
 static int	open_sync_bit = DEFAULT_SYNC_FLAGBIT;
+static Relation	XLogSaveBufferForHint_Relation = NULL;
 
 /*
  * walreceiver process receives xlog data from walsender process.
@@ -9572,12 +9573,12 @@ RequestXLogSwitch(void)
  * i.e. those for which buffer_std == true
  */
 XLogRecPtr
-XLogSaveBufferForHint(Buffer buffer) 
+XLogSaveBufferForHint(Buffer buffer, Relation relation)
 {
 	XLogRecPtr recptr = InvalidXLogRecPtr;
 	XLogRecPtr lsn;
 	XLogRecData rdata[2];
-	BkpBlock bkpb;
+	BkpBlockWithPT bkpbwithpt;
 
 	/*
 	 * Ensure no checkpoint can change our view of RedoRecPtr.
@@ -9599,26 +9600,33 @@ XLogSaveBufferForHint(Buffer buffer)
 	/*
 	 * Check buffer while not holding an exclusive lock.
 	 */
-	if (XLogCheckBuffer(rdata, false, &lsn, &bkpb))
+	if (XLogCheckBuffer(rdata, false, &lsn, &bkpbwithpt.bkpb))
 	{
 		char copied_buffer[BLCKSZ];
 		char *origdata = (char *) BufferGetBlock(buffer);
 
+		if (!RelationAllowedToGenerateXLogRecord(relation))
+		{
+			return recptr;
+		}
+
+		RelationGetPTInfo(relation, &bkpbwithpt.persistentTid, &bkpbwithpt.persistentSerialNum);
+		
 		/*
 		 * Copy buffer so we don't have to worry about concurrent hint bit or
 		 * lsn updates. We assume pd_lower/upper cannot be changed without an
 		 * exclusive lock, so the contents bkp are not racy.
 		 */
-		memcpy(copied_buffer, origdata, bkpb.hole_offset);
-		memcpy(copied_buffer + bkpb.hole_offset,
-			   origdata + bkpb.hole_offset + bkpb.hole_length,
-			   BLCKSZ - bkpb.hole_offset - bkpb.hole_length);
+		memcpy(copied_buffer, origdata, bkpbwithpt.bkpb.hole_offset);
+		memcpy(copied_buffer + bkpbwithpt.bkpb.hole_offset,
+			   origdata + bkpbwithpt.bkpb.hole_offset + bkpbwithpt.bkpb.hole_length,
+			   BLCKSZ - bkpbwithpt.bkpb.hole_offset - bkpbwithpt.bkpb.hole_length);
 
 		/*
 		 * Header for backup block.
 		 */
-		rdata[0].data = (char *) &bkpb;
-		rdata[0].len = sizeof(BkpBlock);
+		rdata[0].data = (char *) &bkpbwithpt;
+		rdata[0].len = sizeof(BkpBlockWithPT);
 		rdata[0].buffer = InvalidBuffer;
 		rdata[0].next = &(rdata[1]);
 
@@ -9626,7 +9634,7 @@ XLogSaveBufferForHint(Buffer buffer)
 		 * Save copy of the buffer.
 		 */
 		rdata[1].data = copied_buffer;
-		rdata[1].len = BLCKSZ - bkpb.hole_length;
+		rdata[1].len = BLCKSZ - bkpbwithpt.bkpb.hole_length;
 		rdata[1].buffer = InvalidBuffer;
 		rdata[1].next = NULL;
 
@@ -9779,7 +9787,7 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 	else if (info == XLOG_HINT)
 	{
 		char *data;
-		BkpBlock bkpb;
+		BkpBlockWithPT bkpbwithpt;
 
 		/*
 		 * Hint bit records contain a backup block stored "inline" in the normal
@@ -9795,10 +9803,10 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		 * Which means nothing is needed in md.c etc
 		 */
 		data = XLogRecGetData(record);
-		memcpy(&bkpb, data, sizeof(BkpBlock));
-		data += sizeof(BkpBlock);
+		memcpy(&bkpbwithpt, data, sizeof(BkpBlockWithPT));
+		data += sizeof(BkpBlockWithPT);
 
-		RestoreBackupBlockContents(lsn, bkpb, data, false, false);
+		RestoreBackupBlockContents(lsn, bkpbwithpt.bkpb, data, false, false);
 	}
 	else if (info == XLOG_BACKUP_END)
 	{
@@ -9892,12 +9900,12 @@ xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 	}
 	else if (info == XLOG_HINT)
 	{
-		BkpBlock *bkp = (BkpBlock *) rec;
+		BkpBlockWithPT *bkpwithpt = (BkpBlockWithPT *) rec;
 		appendStringInfo(buf, "page hint: %u/%u/%u block %u",
-						 bkp->node.spcNode,
-						 bkp->node.dbNode,
-						 bkp->node.relNode,
-						 bkp->block);
+						 bkpwithpt->bkpb.node.spcNode,
+						 bkpwithpt->bkpb.node.dbNode,
+						 bkpwithpt->bkpb.node.relNode,
+						 bkpwithpt->bkpb.block);
 	}
 	else if (info == XLOG_NEXTRELFILENODE)
 	{

@@ -1245,7 +1245,7 @@ restart:
 				opaque->btpo_cycleid == vstate->cycleid)
 			{
 				opaque->btpo_cycleid = 0;
-				MarkBufferDirtyHint(buf);
+				MarkBufferDirtyHint(buf, rel);
 			}
 		}
 

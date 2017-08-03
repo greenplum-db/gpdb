@@ -49,7 +49,8 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 		/* page unchanged, so all is simple */
 		offset = ItemPointerGetOffsetNumber(iptr);
 		ItemIdMarkDead(PageGetItemId(p, offset));
-		MarkBufferDirtyHint(so->curbuf);
+
+		MarkBufferDirtyHint(so->curbuf, r);
 	}
 	else
 	{
@@ -63,7 +64,7 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 			{
 				/* found */
 				ItemIdMarkDead(PageGetItemId(p, offset));
-				MarkBufferDirtyHint(so->curbuf);
+				MarkBufferDirtyHint(so->curbuf, r);
 				break;
 			}
 		}

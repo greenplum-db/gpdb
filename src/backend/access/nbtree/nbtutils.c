@@ -1122,6 +1122,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	OffsetNumber maxoff;
 	int			i;
 	bool		killedsomething = false;
+	Relation rel = scan->indexRelation;
 
 	Assert(BufferIsValid(so->currPos.buf));
 
@@ -1177,7 +1178,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	if (killedsomething)
 	{
 		opaque->btpo_flags |= BTP_HAS_GARBAGE;
-		MarkBufferDirtyHint(so->currPos.buf);
+		MarkBufferDirtyHint(so->currPos.buf, rel);
 	}
 
 	if (!haveLock)
