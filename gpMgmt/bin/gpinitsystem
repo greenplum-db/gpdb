@@ -214,15 +214,11 @@ CHK_PARAMS () {
 		fi
 		# Make sure that script has been supplied a config file
 		if [ x"$CLUSTER_CONFIG" = x"" ] && [ x"$INPUT_CONFIG" = x"" ]; then
-			LOG_MSG "[FATAL]:-Please specify either -c or -I as an option." 1
-			USAGE
-			ERROR_EXIT "[FATAL]:-Greenplum configuration filename [-c] option or [-I] option not provided." 2
+			ERROR_EXIT "[FATAL]:-At least one of two options, [-c] or [-I], is required." 2
 		fi
 
 		if [ -n "$CLUSTER_CONFIG" ] && [ -n "$INPUT_CONFIG" ]; then
-			LOG_MSG "[FATAL]:-Option -c and -I cannot be both specified." 1
-			USAGE
-			ERROR_EXIT "[FATAL]:-Received both Greenplum configuration filename options [-c] and [-I]." 2
+			ERROR_EXIT "[FATAL]:-Options [-c] and [-I] cannot be used at the same time." 2
 		fi
 		
 		if [ x"" != x"$CLUSTER_CONFIG" ] ; then
