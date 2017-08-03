@@ -41,7 +41,26 @@ typedef enum PersistentTablespaceGetFilespaces
 	PersistentTablespaceGetFilespaces_FilespaceNotFound,
 	MaxPersistentTablespaceGetFilespaces /* must always be last */
 } PersistentTablespaceGetFilespaces;
-				
+
+typedef struct TablespaceDirEntryKey
+{
+	Oid	tablespaceOid;
+} TablespaceDirEntryKey;
+
+typedef struct TablespaceDirEntryData
+{
+	TablespaceDirEntryKey	key;
+
+	Oid						filespaceOid;
+
+	PersistentFileSysState	state;
+	int64					persistentSerialNum;
+	ItemPointerData 		persistentTid;
+	
+} TablespaceDirEntryData;
+typedef TablespaceDirEntryData *TablespaceDirEntry;
+extern HTAB *persistentTablespaceSharedHashTable;
+
 extern PersistentTablespaceGetFilespaces PersistentTablespace_TryGetPrimaryAndMirrorFilespaces(
 	Oid 		tablespaceOid,
 				/* The tablespace OID for the create. */
