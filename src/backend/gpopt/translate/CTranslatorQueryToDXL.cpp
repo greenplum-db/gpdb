@@ -837,7 +837,10 @@ CTranslatorQueryToDXL::PdxlnCTAS()
 	}
 	else
 	{
-		elog(NOTICE, "Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.");
+		GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
+					   NOTICE,
+					   "Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.",
+					   NULL);
 	}
 	
 	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly != ereldistrpolicy);

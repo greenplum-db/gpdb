@@ -547,7 +547,8 @@ CTranslatorDXLToPlStmt::MapLocationsFdist
 				 "There are more external files (URLs) than primary segments that can read them. Found %d URLs and %d primary segments.",
 				 ulLocations, ulParticipatingSegments);
 
-		RaiseGpdbError(ERRCODE_INVALID_TABLE_DEFINITION, // errcode
+		GpdbEreport(ERRCODE_INVALID_TABLE_DEFINITION, // errcode
+					   ERROR,
 					   msgbuf, // errmsg
 					   NULL);  // errhint
 	}
@@ -941,7 +942,8 @@ CTranslatorDXLToPlStmt::PlExternalScanUriList
 	if (extentry->iswritable)
 	{
 		// This should match the same error in createplan.c
-		RaiseGpdbError(ERRCODE_WRONG_OBJECT_TYPE, // errcode
+		GpdbEreport(ERRCODE_WRONG_OBJECT_TYPE, // errcode
+					   ERROR,
 					   "cannot read from a WRITABLE external table", // errmsg
 					   "Create the table as READABLE instead."); // errhint
 	}
@@ -971,7 +973,8 @@ CTranslatorDXLToPlStmt::PlExternalScanUriList
 		if (!gp_external_enable_exec)
 		{
 			// This should match the same error in createplan.c
-			RaiseGpdbError(ERRCODE_GP_FEATURE_NOT_CONFIGURED, // errcode
+			GpdbEreport(ERRCODE_GP_FEATURE_NOT_CONFIGURED, // errcode
+						   ERROR,
 						   "Using external tables with OS level commands (EXECUTE clause) is disabled", // errmsg
 						   "To enable set gp_external_enable_exec=on"); // errhint
 		}

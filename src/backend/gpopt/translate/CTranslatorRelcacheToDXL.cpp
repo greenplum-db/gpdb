@@ -2314,8 +2314,13 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 		pdrgdatumMCVValues = NULL;
 		pdrgfMCVFrequencies = NULL;
 
-		elog(LOG, "The number of most common values and frequencies do not match on column %ls of table %ls.",
+		char msgbuf[NAMEDATALEN * 2 + 100];
+		snprintf(msgbuf, sizeof(msgbuf), "The number of most common values and frequencies do not match on column %ls of table %ls.",
 				pmdcol->Mdname().Pstr()->Wsz(), pmdrel->Mdname().Pstr()->Wsz());
+		GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
+					   LOG,
+					   msgbuf,
+					   NULL);
 	}
 
 	Form_pg_statistic fpsStats = (Form_pg_statistic) GETSTRUCT(heaptupleStats);

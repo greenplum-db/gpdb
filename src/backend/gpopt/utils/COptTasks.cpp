@@ -1210,18 +1210,27 @@ COptTasks::PrintMissingStatsWarning
 			}
 
 			CMDName mdname = pmdrel->Pmdcol(ulPos)->Mdname();
-			elog(LOG, "Missing statistics for column: %s.%s", SzFromWsz(pmdrel->Mdname().Pstr()->Wsz()), SzFromWsz(mdname.Pstr()->Wsz()));
+
+			char msgbuf[NAMEDATALEN * 2 + 100];
+			snprintf(msgbuf, sizeof(msgbuf), "Missing statistics for column: %s.%s", SzFromWsz(pmdrel->Mdname().Pstr()->Wsz()), SzFromWsz(mdname.Pstr()->Wsz()));
+			GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
+						   LOG,
+						   msgbuf,
+						   NULL);
 		}
 	}
 
 	if (0 < phsmdidRel->UlEntries())
 	{
-		ereport(NOTICE,
-				(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-				errmsg("One or more columns in the following table(s) do not have statistics: %s", SzFromWsz(str.Wsz())),
-				errhint("For non-partitioned tables, run analyze <table_name>(<column_list>)."
-					" For partitioned tables, run analyze rootpartition <table_name>(<column_list>)."
-					" See log for columns missing statistics.")));
+		int length = NAMEDATALEN * phsmdidRel->UlEntries() + 200;
+		char msgbuf[length];
+		snprintf(msgbuf, sizeof(msgbuf), "One or more columns in the following table(s) do not have statistics: %s", SzFromWsz(str.Wsz()));
+		GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
+					   NOTICE,
+					   msgbuf,
+					   "For non-partitioned tables, run analyze <table_name>(<column_list>)."
+					   " For partitioned tables, run analyze rootpartition <table_name>(<column_list>)."
+					   " See log for columns missing statistics.");
 	}
 
 }

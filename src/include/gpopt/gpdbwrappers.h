@@ -418,10 +418,10 @@ namespace gpdb {
 	// create a duplicate of the given string in the given memory context
 	char *SzMemoryContextStrdup(MemoryContext context, const char *string);
 
-	// ereport() an error
-	void RaiseGpdbErrorImpl(int xerrcode, const char *xerrmsg, const char *xerrhint, const char *filename, int lineno, const char *funcname);
-#define RaiseGpdbError(xerrcode, xerrmsg, xerrhint) \
-	gpdb::RaiseGpdbErrorImpl(xerrcode, xerrmsg, xerrhint , __FILE__, __LINE__, PG_FUNCNAME_MACRO)
+	// similar to ereport for logging messages
+	void GpdbEreportImpl(int xerrcode, int severitylevel, const char *xerrmsg, const char *xerrhint, const char *filename, int lineno, const char *funcname);
+#define GpdbEreport(xerrcode, severitylevel, xerrmsg, xerrhint) \
+	gpdb::GpdbEreportImpl(xerrcode, severitylevel, xerrmsg, xerrhint , __FILE__, __LINE__, PG_FUNCNAME_MACRO)
 
 	// string representation of a node
 	char *SzNodeToString(void *obj);
