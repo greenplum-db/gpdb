@@ -13,6 +13,9 @@ export CC="ccache cc"
 export CXX="ccache c++"
 export PATH=/usr/local/bin:$PATH
 
+# this is necessary so that configure can find the orca libraries
+export LD_LIBRARY_PATH=/usr/local/lib
+
 rm -rf /usr/local/gpdb
 pushd ~/gpdb
   ./configure --prefix=/usr/local/gpdb $@
