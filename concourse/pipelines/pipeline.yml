@@ -46,6 +46,30 @@ groups:
 - name: Release
   jobs:
   - Release_Candidate
+
+- name: Remaining Pulse
+  jobs:
+  - DPM_netbackup77
+  - DPM_backup-restore-ddboost
+  - DPM_backup_43_restore_5
+  - MM_gpcheckcat
+  - MM_gpexpand
+  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer-5x-to-5x
+  - cs-pg-two-phase
+  - cs-walrepl-multinode
+  - cs-filerep-schema-topology-crashrecov
+  - cs-filerep-end-to-end
+  - cs-aoco-compression
+  - mpp_interconnect
+
+- name: Adopted CCP
+  jobs:
+  - icw_resource_group
+  - DPM_backup-restore
+  - MM_gppkg
+  - MM_gprecoverseg
+
 ## ======================================================================
 ## resource types
 ## ======================================================================
