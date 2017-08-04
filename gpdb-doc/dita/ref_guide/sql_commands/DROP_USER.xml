@@ -1,10 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dm20941">DROP USER</title><body><p id="sql_command_desc">Removes a database role.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP USER [IF EXISTS] <varname>name</varname> [, ...]</codeblock></section><section id="section3"><title>Description</title><p><codeph>DROP USER</codeph> is an obsolete command, though still accepted for backwards
-        compatibility. Groups (and users) have been superseded by the more general concept of roles.
-        See <codeph><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph> for more
-        information.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>IF EXISTS</pt><pd>Do not throw an error if the role does not exist. A notice is issued
-in this case. </pd></plentry><plentry><pt><varname>name</varname></pt><pd>The name of an existing role.</pd></plentry></parml></section><section id="section5"><title>Compatibility</title><p>There is no <codeph>DROP USER</codeph> statement in the SQL standard.
-The SQL standard leaves the definition of users to the implementation.
-</p></section><section id="section6"><title>See Also</title><p><codeph><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+<topic id="topic1">
+  <title id="dm20941">DROP USER</title>
+  <body>
+    <p id="sql_command_desc">Removes a database role.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">DROP USER [IF EXISTS] <varname>name</varname> [, ...]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>DROP USER</codeph> is an alias for <codeph><xref href="DROP_ROLE.xml#topic1"
+            type="topic" format="dita"/></codeph>. See <codeph><xref href="DROP_ROLE.xml#topic1"
+            type="topic" format="dita"/></codeph> for more information.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt>IF EXISTS</pt>
+          <pd>Do not throw an error if the role does not exist. A notice is issued in this case.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name of an existing role.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Compatibility</title>
+      <p>There is no <codeph>DROP USER</codeph> statement in the SQL standard. The SQL standard
+        leaves the definition of users to the implementation. </p>
+    </section>
+    <section id="section6">
+      <title>See Also</title>
+      <p><codeph><xref href="DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>
