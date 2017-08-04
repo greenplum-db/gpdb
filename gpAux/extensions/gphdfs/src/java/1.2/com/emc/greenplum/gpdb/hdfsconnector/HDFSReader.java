@@ -163,7 +163,7 @@ public class HDFSReader
 			avroReader.readAvroFormat();
 		}
 		else if (isParquetFormat) {
-			GpdbParquetFileReader parquetReader = new GpdbParquetFileReader(conf, segid, totalseg, inputpath, tableSchema, schemaComplete, autoSelect, new BufferedOutputStream(System.out));
+			GpdbParquetFileReader parquetReader = new GpdbParquetFileReader(conf, segid, totalseg, inputpath, tableSchema, schemaComplete, autoSelect, System.out);
 			parquetReader.readParquetFormat();
 		}
 		else {

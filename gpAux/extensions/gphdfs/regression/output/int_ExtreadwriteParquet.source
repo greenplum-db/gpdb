@@ -1,0 +1,12 @@
+create readable external table int_heap(datatype_int varchar,xcount_int bigint, max_int int, min_int int, x_int int, reverse_int int, increment_int int, nullcol_int int) location ('gphdfs://localhost:9000/plaintext/int.txt')format 'TEXT';
+create readable external table int_readhdfs_parquet
+(
+  like int_heap
+) location ('gphdfs://localhost:9000/extwrite/int_parquet') format 'PARQUET';
+insert into int_writehdfs_parquet
+select * from int_heap;
+select count(*) from int_readhdfs_parquet;
+ count
+-------
+  5000
+(1 row)
