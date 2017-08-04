@@ -422,6 +422,45 @@ resources:
     stop: 7:00 AM
 
 ## ======================================================================
+## reusable anchors
+## ======================================================================
+
+ccp_create_params_anchor: &ccp_create_params
+  action: create
+  delete_on_failure: true
+  generate_random_name: true
+  terraform_source: ccp_src/aws/
+  vars:
+    aws_instance-node-instance_type: t2.medium
+
+ccp_destroy_anchor: &ccp_destroy
+  put: terraform
+  params:
+    action: destroy
+    env_name_file: terraform/name
+    terraform_source: ccp_src/aws/
+    vars:
+      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
+  get_params:
+    action: destroy
+
+debug_sleep_anchor: &debug_sleep
+  do:
+  - task: debug_sleep
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+          tag: latest
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 6h']
+    ensure:
+      <<: *ccp_destroy
+
+## ======================================================================
 ## jobs
 ## ======================================================================
 
@@ -1613,44 +1652,4 @@ jobs:
     - mpp_interconnect
     - QP_runaway-query
     - QP_optimizer-functional
-
-
-## ======================================================================
-## reusable anchors
-## ======================================================================
-
-ccp_create_params_anchor: &ccp_create_params
-  action: create
-  delete_on_failure: true
-  generate_random_name: true
-  terraform_source: ccp_src/aws/
-  vars:
-    aws_instance-node-instance_type: t2.medium
-
-ccp_destroy_anchor: &ccp_destroy
-  put: terraform
-  params:
-    action: destroy
-    env_name_file: terraform/name
-    terraform_source: ccp_src/aws/
-    vars:
-      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
-  get_params:
-    action: destroy
-
-debug_sleep_anchor: &debug_sleep
-  do:
-  - task: debug_sleep
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: alpine
-          tag: latest
-      run:
-        path: 'sh'
-        args: ['-c', 'sleep 6h']
-    ensure:
-      <<: *ccp_destroy
 
