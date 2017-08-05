@@ -43,6 +43,7 @@ groups:
   - mpp_interconnect
   - QP_runaway-query
   - QP_optimizer-functional
+  - validate_pipeline
 
 - name: Release
   jobs:
@@ -1608,6 +1609,16 @@ jobs:
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: validate_pipeline
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: validate_pipeline
+    file: gpdb_src/concourse/tasks/validate_pipeline.yml
+    image: centos-gpdb-dev-6
+
 - name: Release_Candidate
   plan:
   - get: gpdb_src
@@ -1652,4 +1663,5 @@ jobs:
     - mpp_interconnect
     - QP_runaway-query
     - QP_optimizer-functional
+    - validate_pipeline
 

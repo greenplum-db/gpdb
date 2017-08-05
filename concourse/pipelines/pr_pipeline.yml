@@ -73,6 +73,13 @@ jobs:
           TARGET_OS_VERSION: 6
           BLD_TARGETS: "clients loaders"
 
+      - task: validate_pipeline
+        file: gpdb_src/concourse/tasks/validate_pipeline.yml
+        image: centos-gpdb-dev-6
+        input_mapping:
+          gpdb_src: gpdb_pr
+        on_failure: *pr_failure
+
     - aggregate:
       - task: icw_planner_centos6
         file: gpdb_pr/concourse/tasks/ic_gpdb.yml
