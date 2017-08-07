@@ -41,8 +41,8 @@ Follow [these macOS steps](README.macOS.md) for getting your system ready for GP
 
   Add the following Python modules (2.7 & 2.6 are supported)
 
-  * psutil
   * lockfile (>= 0.9.1)
+  * psutil
   * paramiko
   * setuptools
 
