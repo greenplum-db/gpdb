@@ -403,6 +403,25 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
+@given('the user asynchronously runs "{command}" and the process is saved')
+@when('the user asynchronously runs "{command}" and the process is saved')
+@then('the user asynchronously runs "{command}" and the process is saved')
+def impl(context, command):
+    run_gpcommand_async(context, command)
+
+
+@given('the async process finished with a return code of {ret_code}')
+@when('the async process finished with a return code of {ret_code}')
+@then('the async process finished with a return code of {ret_code}')
+def impl(context, ret_code):
+    rc, stdout_value, stderr_value = context.asyncproc.communicate2()
+    if rc != int(ret_code):
+        raise Exception("return code of the async proccess didn't match:\n"
+                        "rc: %s\n"
+                        "stdout: %s\n"
+                        "stderr: %s" % (rc, stdout_value, stderr_value))
+
+
 @given('a user runs "{command}" with gphome "{gphome}"')
 @when('a user runs "{command}" with gphome "{gphome}"')
 @then('a user runs "{command}" with gphome "{gphome}"')
@@ -416,11 +435,17 @@ def impl(context, command, gphome):
     cmd.run()
     context.ret_code = cmd.get_return_code()
 
+
 @given('the user runs command "{command}"')
 @when('the user runs command "{command}"')
 @then('the user runs command "{command}"')
 def impl(context, command):
     run_command(context, command)
+
+
+@when('the user runs async command "{command}"')
+def impl(context, command):
+    run_async_command(context, command)
 
 
 @given('the user puts cluster on "{HOST}" "{PORT}" "{USER}" in "{transition}"')

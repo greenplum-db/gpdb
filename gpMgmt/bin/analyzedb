@@ -20,10 +20,9 @@ import shutil
 import fnmatch
 import tempfile
 import time
-from threading import Thread
-import threading
 from datetime import datetime
 import pipes  # for shell-quoting, pipes.quote()
+import fcntl
 
 try:
     from gppylib import gplog, pgconf, userinput
@@ -43,8 +42,7 @@ except ImportError, e:
 EXECNAME = 'analyzedb'
 STATEFILE_DIR = 'db_analyze'
 logger = gplog.get_default_logger()
-CURR_TIME = None
-
+WRITE_LOCK_FILE_NAME = "write_lock_semaphore"
 ANALYZE_SQL = """analyze %s"""
 ANALYZE_ROOT_SQL = """analyze rootpartition %s"""
 
@@ -273,9 +271,6 @@ class AnalyzeDb(Operation):
             if self.clean_all or self.clean_last:
                 return 0
 
-            global CURR_TIME
-            CURR_TIME = generate_timestamp()
-
             # The below object is needed for some functions imported from dump.py
             self.context = Context()
             self.context.master_port = self.pg_port
@@ -304,21 +299,12 @@ class AnalyzeDb(Operation):
             curr_ao_state = self._get_ao_state(input_tables_set)  # (('schema', 'table', modcount), ...)
             curr_last_op = self._get_lastop_state(
                 input_tables_set)  # e.g. ['public,ao_tab,67468,ALTER,ADD COLUMN,2014-10-15 14:49:27.658777-07', ...]
-            last_analyze_timestamp = get_lastest_analyze_timestamp(self.master_datadir, self.analyze_dir, self.dbname)
 
-            # get the previous state of the database
-            prev_ao_state = get_prev_ao_state(last_analyze_timestamp, self.master_datadir, self.analyze_dir,
-                                              self.dbname)
-            prev_last_op = get_prev_last_op(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
+            last_analyze_timestamp, prev_ao_state, prev_col_dict, prev_last_op = self.read_last_analyzedb_output()
 
             # compare two states to get dirty tables
             dirty_partitions = self._get_dirty_data_tables(heap_partitions, curr_ao_state, curr_last_op, prev_ao_state,
                                                            prev_last_op)
-
-            # get the previous column states
-            # read from the file on disk which contains info about what columns had up-to-date stats after the last time the table was analyzed
-            prev_col_dict = get_prev_col_state(last_analyze_timestamp, self.master_datadir, self.analyze_dir,
-                                               self.dbname)
 
             candidates = set()  # set(['public.foo', 'public.bar', ...])
 
@@ -407,10 +393,9 @@ class AnalyzeDb(Operation):
                 raise
 
             finally:
-                self._write_back(curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
-                                 input_col_dict, prev_col_dict, root_partition_col_dict, self.full_analyze,
-                                 dirty_partitions,
-                                 target_list)
+                self._write_report(curr_ao_state, curr_last_op, heap_partitions, input_col_dict,
+                                   root_partition_col_dict, dirty_partitions, target_list)
+
                 end_time = time.time()
                 logger.info(
                     "Total elapsed time: %d seconds. Analyzed %d out of %d table(s) or partition(s) successfully."
@@ -425,6 +410,13 @@ class AnalyzeDb(Operation):
                 self.conn.close()
 
         return 0
+
+    def read_last_analyzedb_output(self):
+        last_analyze_timestamp = get_lastest_analyze_timestamp(self.master_datadir, self.analyze_dir, self.dbname)
+        prev_ao_state = get_prev_ao_state(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
+        prev_col_dict = get_prev_col_state(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
+        prev_last_op = get_prev_last_op(last_analyze_timestamp, self.master_datadir, self.analyze_dir, self.dbname)
+        return last_analyze_timestamp, prev_ao_state, prev_col_dict, prev_last_op
 
     def _get_pgport(self):
         env_pgport = os.getenv('PGPORT')
@@ -576,7 +568,9 @@ class AnalyzeDb(Operation):
 
     def _write_back(self, curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
                     input_col_dict, prev_col_dict, root_partition_col_dict, is_full, dirty_partitions, target_list):
-        validate_dir("%s/%s/%s/%s" % (self.master_datadir, self.analyze_dir, self.dbname, CURR_TIME))
+
+        current_time = generate_timestamp() # timestamp used for output directory
+        validate_dir("%s/%s/%s/%s" % (self.master_datadir, self.analyze_dir, self.dbname, current_time))
 
         curr_ao_state_dict = create_ao_state_dict(curr_ao_state)
         curr_last_op_dict = create_last_op_dict(curr_last_op)
@@ -606,7 +600,7 @@ class AnalyzeDb(Operation):
 
         if len(ao_state_output) > 0:
             ao_state_filename = generate_statefile_name('ao', self.master_datadir, self.analyze_dir, self.dbname,
-                                                        CURR_TIME)
+                                                        current_time)
             logger.info("Writing ao state file %s" % ao_state_filename)
             write_lines_to_file(ao_state_filename, ao_state_output)
             logger.debug("Verifying ao state file ...")
@@ -614,7 +608,7 @@ class AnalyzeDb(Operation):
 
         if len(last_op_output) > 0:
             last_operation_filename = generate_statefile_name('lastop', self.master_datadir, self.analyze_dir,
-                                                              self.dbname, CURR_TIME)
+                                                              self.dbname, current_time)
             logger.info("Writing last operation file %s" % last_operation_filename)
 
             lines_to_write = map((lambda x: '%s,%s,%s,%s,%s,%s' % (x[0], x[1], x[2], x[3], x[4], x[5])), last_op_output)
@@ -624,18 +618,18 @@ class AnalyzeDb(Operation):
 
         if len(prev_col_dict) > 0:
             col_state_filename = generate_statefile_name('col', self.master_datadir, self.analyze_dir, self.dbname,
-                                                         CURR_TIME)
+                                                         current_time)
             logger.info("Writing column state file %s" % col_state_filename)
             write_lines_to_file(col_state_filename, col_state_output)
             logger.debug("Verifying column state ...")
             verify_lines_in_file(col_state_filename, col_state_output)
 
         report_filename = generate_statefile_name('report', self.master_datadir, self.analyze_dir, self.dbname,
-                                                  CURR_TIME)
+                                                  current_time)
         logger.info("Writing report file %s" % report_filename)
         with open(report_filename, 'w') as fp:
             fp.write("%s:%s:%s:%s %s:%s:analyzedb %s\n\n" % (
-                CURR_TIME[:8], CURR_TIME[8:10], CURR_TIME[10:12], CURR_TIME[12:14],
+                current_time[:8], current_time[8:10], current_time[10:12], current_time[12:14],
                 unix.getLocalHostname(), unix.getUserName(), ' '.join(sys.argv[1:])))
             fp.write("Tables or partitions to analyze:\n---------------------------------------\n")
             for target in target_list:
@@ -766,6 +760,40 @@ class AnalyzeDb(Operation):
             return set([x[0] for x in cols])
         else:
             return col_dict[schema_table]
+
+    def ensure_semaphore_file_exists(self):
+        db_directory = "%s/%s/%s" % (self.master_datadir, self.analyze_dir, self.dbname)
+        validate_dir(db_directory)
+        lock_file_path = os.path.join(db_directory, WRITE_LOCK_FILE_NAME)
+
+        if not os.path.exists(lock_file_path):
+            with open(lock_file_path, 'w') as lock_file:
+                lock_file.write("semaphore for analyzedb")
+
+        return lock_file_path
+
+    def _write_report(self, curr_ao_state, curr_last_op, heap_partitions, input_col_dict,
+                      root_partition_col_dict, dirty_partitions, target_list):
+        lock_file_path = self.ensure_semaphore_file_exists()
+
+        with open(lock_file_path, 'r') as lock_file:
+            logger.info("about to request exclusive lock on '%s' for analyzedb, to be able to write results..." % lock_file_path)
+            fcntl.flock(lock_file, fcntl.LOCK_EX)  # will block until available
+            logger.info("acquired analyzedb output lock, proceeding...")
+            try:
+                # in case of a concurrent run which has already finished,
+                # update our perspective on the "last/previous" run
+                last_analyze_timestamp, prev_ao_state, prev_col_dict, prev_last_op = self.read_last_analyzedb_output()
+
+                # special case for two runs that end in the same second:
+                if last_analyze_timestamp == generate_timestamp():
+                    time.sleep(2)
+
+                self._write_back(curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
+                                 input_col_dict, prev_col_dict, root_partition_col_dict, self.full_analyze,
+                                 dirty_partitions, target_list)
+            finally:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 # Create a Command object that executes a query using psql.

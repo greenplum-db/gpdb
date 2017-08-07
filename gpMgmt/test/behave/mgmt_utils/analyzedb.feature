@@ -1734,3 +1734,39 @@ Feature: Incrementally analyze the database
         Then output should contain both "pg_catalog.pg_class" and "pg_catalog.pg_partition_rule"
         When the user runs "analyzedb -l -d incr_analyze"
         Then output should contain both "pg_catalog.pg_class" and "pg_catalog.pg_partition_rule"
+
+    @analyzedb_concurrent
+    Scenario: Concurrent analyzedb runs all capture the correct values in their output files
+        Given no state files exist for database "incr_analyze"
+        And the user runs "psql -d incr_analyze -c 'create schema incr_analyze_schema;'"
+        And there is a regular "ao" table ""analyzedb_test"" with column name list "id,val" and column type list "int,text" in schema "incr_analyze_schema"
+        And there is a regular "ao" table ""analyzedb_test_2"" with column name list "id,val" and column type list "int,text" in schema ""incr_analyze_schema""
+        And some data is inserted into table "analyzedb_test" in schema "incr_analyze_schema" with column type list "int,text"
+        And some data is inserted into table "analyzedb_test_2" in schema "incr_analyze_schema" with column type list "int,text"
+        # modcount for both tables should be 1 at this point
+        When the user runs "analyzedb -a -d incr_analyze -t incr_analyze_schema.analyzedb_test"
+        Then analyzedb should return a return code of 0
+        And "1" analyze directories exist for database "incr_analyze"
+        When some data is inserted into table "analyzedb_test" in schema "incr_analyze_schema" with column type list "int,text"
+        # modcount for analyzedb_test is now 2
+        And the user starts a transaction and runs "update incr_analyze_schema.analyzedb_test SET id = 3  where id = 1;" on "incr_analyze"
+        # the next analyze will have to wait on the previous transaction to finish
+        And the user asynchronously runs "analyzedb -a -d incr_analyze -t incr_analyze_schema.analyzedb_test" and the process is saved
+        # an analyze on second table will finish immediately
+        And the user runs "analyzedb -a -d incr_analyze -t incr_analyze_schema.analyzedb_test_2"
+        Then analyzedb should return a return code of 0
+        And "2" analyze directories exist for database "incr_analyze"
+
+        When the user rollsback the transaction
+        # modcount for analyzedb_test is still 2
+        And the async process finished with a return code of 0
+        Then "3" analyze directories exist for database "incr_analyze"
+
+        # we want any analyzedb run to watch out for concurrent runs and incorporate any new info in its output
+        Then "incr_analyze_schema,analyzedb_test,2" should appear in the latest ao_state file in database "incr_analyze"
+        And "incr_analyze_schema,analyzedb_test_2,1" should appear in the latest ao_state file in database "incr_analyze"
+        # finally, another run should find nothing to do
+        When the user runs "analyzedb -a -d incr_analyze -t incr_analyze_schema.analyzedb_test"
+        Then analyzedb should return a return code of 0
+        And analyzedb should print "There are no tables or partitions to be analyzed. Exiting" to stdout
+        And "3" analyze directories exist for database "incr_analyze"

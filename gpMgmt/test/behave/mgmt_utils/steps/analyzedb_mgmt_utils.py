@@ -56,8 +56,7 @@ def impl(context, tablename, schemaname):
     check_table_exists(context, context.dbname, '.'.join([schemaname, tablename]), table_type='ao')
 
 
-@given(
-    'there is a hard coded multi-level ao partition table "{tablename}" with 4 mid-level and 16 leaf-level partitions in schema "{schemaname}"')
+@given('there is a hard coded multi-level ao partition table "{tablename}" with 4 mid-level and 16 leaf-level partitions in schema "{schemaname}"')
 def impl(context, tablename, schemaname):
     if not check_schema_exists(context, schemaname, context.dbname):
         raise Exception("Schema %s does not exist in database %s" % (schemaname, context.dbname))
@@ -69,10 +68,17 @@ def impl(context, tablename, schemaname):
 
 @given('no state files exist for database "{dbname}"')
 def impl(context, dbname):
-    master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-    analyze_dir = os.path.join(master_data_dir, 'db_analyze', dbname)
+    analyze_dir = get_analyze_dir(dbname)
     if os.path.exists(analyze_dir):
         shutil.rmtree(analyze_dir)
+
+
+@then('"{number}" analyze directories exist for database "{dbname}"')
+def impl(context, number, dbname):
+    dirs_found = get_list_of_analyze_dirs(dbname)
+    if str(number) != str(len(dirs_found)):
+        raise Exception("number of directories expected, %s, didn't match number found: %s" % (
+            str(number), str(len(dirs_found))))
 
 
 @given('a view "{view_name}" exists on table "{table_name}" in schema "{schema_name}"')
@@ -89,6 +95,17 @@ def impl(context, qualified_table):
             assert False, "no state files found for database %s" % context.dbname
         else:
             assert False, "table %s not found in state file %s" % (qualified_table, os.path.basename(filename))
+
+
+@given('"{expected_result}" should appear in the latest ao_state file in database "{dbname}"')
+@then('"{expected_result}" should appear in the latest ao_state file in database "{dbname}"')
+def impl(context, expected_result, dbname):
+    latest_file = get_latest_aostate_file(dbname)
+    with open(latest_file, 'r') as f:
+        for line in f:
+            if expected_result in line:
+                return True
+    raise Exception("couldn't find %s in %s" % (expected_result, latest_file))
 
 
 @given('columns "{col_name_list}" of table "{qualified_table}" appear in the latest column state file')
@@ -167,6 +184,30 @@ def impl(context, tablename, schemaname):
     perform_ddl_on_table(context.conn, schemaname, tablename)
 
 
+@given('the user starts a transaction and runs "{query}" on "{dbname}"')
+@when('the user starts a transaction and runs "{query}" on "{dbname}"')
+def impl(context, query, dbname):
+    if 'long_lived_conn' not in context:
+        create_long_lived_conn(context, dbname)
+    dbconn.execSQL(context.long_lived_conn, 'BEGIN; %s' % query)
+
+
+@given('the user commits transaction')
+@when('the user commits transaction')
+def impl(context):
+    dbconn.execSQL(context.long_lived_conn, 'END;')
+
+
+@given('the user rollsback the transaction')
+@when('the user rollsback the transaction')
+def impl(context):
+    dbconn.execSQL(context.long_lived_conn, 'ROLLBACK;')
+
+
+def create_long_lived_conn(context, dbname):
+    context.long_lived_conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
+
+
 def table_found_in_state_file(dbname, qualified_table):
     comma_name = ','.join(qualified_table.split('.'))
     files = get_latest_analyze_state_files(dbname)
@@ -223,20 +264,44 @@ def delete_table_from_state_files(dbname, qualified_table):
         f.close()
 
 
+def get_list_of_analyze_dirs(dbname):
+    analyze_dir = get_analyze_dir(dbname)
+    if not os.path.exists(analyze_dir):
+        return []
+
+    ordered_list = [os.path.join(analyze_dir, x) for x in sorted(os.listdir(analyze_dir), reverse=True)]
+    return filter(os.path.isdir, ordered_list)
+
+
+def get_latest_analyze_dir(dbname):
+    analyze_dir = get_analyze_dir(dbname)
+    folders = get_list_of_analyze_dirs(dbname)
+
+    if len(folders) == 0:
+        return []
+    return os.path.join(analyze_dir, folders[0])
+
+
+def get_analyze_dir(dbname):
+    master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
+    analyze_dir = os.path.join(master_data_dir, 'db_analyze', dbname)
+    return analyze_dir
+
+
+def get_latest_aostate_file(dbname):
+    for path in get_latest_analyze_state_files(dbname):
+        if 'ao_state' in path:
+            return path
+    return None
+
+
 def get_latest_analyze_state_files(dbname):
     """
     return the latest state files (absolute paths)
     """
-    master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-    analyze_dir = os.path.join(master_data_dir, 'db_analyze', dbname)
-    if not os.path.exists(analyze_dir):
+    state_files_dir = get_latest_analyze_dir(dbname)
+    if not state_files_dir:
         return []
-
-    folders = sorted(os.listdir(analyze_dir), reverse=True)
-    if len(folders) == 0:
-        return []
-
-    state_files_dir = os.path.join(analyze_dir, folders[0])
     files = os.listdir(state_files_dir)
 
     if len(files) != 4:
@@ -252,16 +317,9 @@ def get_latest_analyze_report_file(dbname):
     """
     return the latest report file (absolute path)
     """
-    master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
-    analyze_dir = os.path.join(master_data_dir, 'db_analyze', dbname)
-    if not os.path.exists(analyze_dir):
+    report_file_dir = get_latest_analyze_dir(dbname)
+    if not report_file_dir:
         return []
-
-    folders = sorted(os.listdir(analyze_dir), reverse=True)
-    if len(folders) == 0:
-        return []
-
-    report_file_dir = os.path.join(analyze_dir, folders[0])
     files = os.listdir(report_file_dir)
 
     for f in files:
