@@ -17,6 +17,7 @@ groups:
   - regression_tests_gpcloud_centos
   - MM_gpperfmon
   - MM_gpcheck
+  - MM_analyzedb
   - DPM_backup-restore
   - MM_gppkg
   - MM_pt-rebuild
@@ -789,6 +790,25 @@ jobs:
         BEHAVE_TAGS: gpcheck_as_gpadmin
         GPCHECK_SETUP: true
 
+- name: MM_analyzedb
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: analyzedb
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: analyzedb
+
 - name: DPM_backup-restore
   plan:
   - aggregate:
@@ -814,7 +834,7 @@ jobs:
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_FLAGS: --tags=analyzedb,backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
+      BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
