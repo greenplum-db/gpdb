@@ -141,7 +141,7 @@ endif
 
 # And finally some extra C modules...
 
-all: all-spi tablespace-setup includecheck
+all: all-spi tablespace-setup includecheck hooktest
 
 .PHONY: all-spi
 all-spi:
@@ -157,6 +157,10 @@ tablespace-setup:
 .PHONY: includecheck
 includecheck:
 	$(srcdir)/checkinc.py
+
+.PHONY: hooktest
+hooktest:
+	$(MAKE) -C $< $@
 
 ##
 ## Run tests
@@ -177,7 +181,7 @@ check: all
 installcheck: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
 
-installcheck-good: all twophase_pqexecparams
+installcheck-good: all twophase_pqexecparams hooktest
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao; \
 	else \
@@ -213,6 +217,7 @@ clean distclean maintainer-clean: clean-lib
 # things built by `all' target
 	rm -f $(NAME)$(DLSUFFIX) $(OBJS)
 	$(MAKE) -C $(contribdir)/spi clean
+	$(MAKE) -C hooktest/ clean
 	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
 # things created by dynamic configs
 	find sql -type l | xargs rm -f

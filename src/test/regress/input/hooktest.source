@@ -1,0 +1,3 @@
+LOAD '@abs_builddir@/hooktest/test_hook@DLSUFFIX@';
+SET client_min_messages='log';
+SELECT 1 AS a;

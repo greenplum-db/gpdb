@@ -124,6 +124,8 @@ test: qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_fu
 test: olap_setup
 test: qp_olap_group qp_olap_group2
 
+test: hooktest
+
 ignore: tpch500GB_orca
 
 # Tests for "compaction", i.e. VACUUM, of updatable append-only tables

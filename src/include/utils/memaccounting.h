@@ -84,6 +84,7 @@ typedef enum MemoryOwnerType
 	MEMORY_OWNER_TYPE_MainEntry,
 	MEMORY_OWNER_TYPE_Parser,
 	MEMORY_OWNER_TYPE_Planner,
+	MEMORY_OWNER_TYPE_PlannerHook,
 	MEMORY_OWNER_TYPE_Optimizer,
 	MEMORY_OWNER_TYPE_Dispatcher,
 	MEMORY_OWNER_TYPE_Serializer,
