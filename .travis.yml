@@ -26,6 +26,11 @@ sudo: false
 git:
   submodules: false
 
+addons:
+  apt:
+    packages:
+    - libevent-dev
+
 ## ----------------------------------------------------------------------
 ## Build tools
 ## ----------------------------------------------------------------------
@@ -52,8 +57,8 @@ install:
 ## ----------------------------------------------------------------------
 
 env:
-  - APR=apr-1.5.2
-    APR_UTIL=apr-util-1.5.4
+  - APR=apr-1.6.2
+    APR_UTIL=apr-util-1.6.0
     APR_TAR=${APR}.tar.gz
     APR_UTIL_TAR=${APR_UTIL}.tar.gz
 
@@ -97,15 +102,6 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
-
-## ----------------------------------------------------------------------
-## Before install 
-## install libevent 
-## ----------------------------------------------------------------------
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-       brew install libevent;
-    fi
 
 ## ----------------------------------------------------------------------
 ## Notification

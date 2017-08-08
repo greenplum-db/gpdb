@@ -17,8 +17,6 @@
 
 #include "executor/execdesc.h"
 #include "nodes/parsenodes.h"
-#include "nodes/execnodes.h"
-#include "utils/tuplestore.h"
 
 #include "cdb/cdbdef.h"                 /* CdbVisitOpt */
 

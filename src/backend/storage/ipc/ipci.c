@@ -55,8 +55,7 @@
 #include "storage/sinvaladt.h"
 #include "storage/spin.h"
 #include "utils/backend_cancel.h"
-#include "utils/resscheduler.h"
-#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 #include "utils/faultinjector.h"
 #include "utils/sharedsnapshot.h"
 #include "utils/simex.h"
@@ -326,13 +325,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	/*
 	 * Set up resource schedular
 	 */
-	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
-	{
-		InitResScheduler();
-		InitResPortalIncrementHash();
-	}
-	else if (IsResGroupEnabled() && !IsUnderPostmaster)
-		ResGroupControlInit();
+	InitResManager();
 
 	if (!IsUnderPostmaster)
 	{
@@ -423,7 +416,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 	if (gp_enable_resqueue_priority)
 		BackoffStateInit();
 	
-	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
+	if (!IsResManagerMemoryPolicyNone())
 	{
 		SPI_InitMemoryReservation();
 	}

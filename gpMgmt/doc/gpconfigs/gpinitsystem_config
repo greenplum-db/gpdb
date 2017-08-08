@@ -7,7 +7,7 @@
 ################################################
 
 #### Name of this Greenplum system enclosed in quotes.
-ARRAY_NAME="EMC Greenplum DW"
+ARRAY_NAME="Greenplum Data Platform"
 
 #### Naming convention for utility-generated data directories.
 SEG_PREFIX=gpseg

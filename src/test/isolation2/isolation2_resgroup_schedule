@@ -1,12 +1,27 @@
 test: enable_resgroup_validate
 test: enable_resgroup
 
+# basic syntax
 test: resgroup_syntax
 test: resgroup_transaction
 
+# functions
 test: resgroup_concurrency
+test: resgroup_alter_concurrency
 test: resgroup_memory_statistic
 test: resgroup_memory_limit
 test: resgroup_cpu_rate_limit
+
+# memory spill tests
+test: resgroup_memory_hashagg_spill
+test: resgroup_memory_hashjoin_spill
+test: resgroup_memory_materialize_spill
+test: resgroup_memory_sisc_mat_sort
+test: resgroup_memory_sisc_sort_spill
+test: resgroup_memory_sort_spill
+test: resgroup_memory_spilltodisk
+
+# regression tests
+test: resgroup_recreate
 
 test: disable_resgroup

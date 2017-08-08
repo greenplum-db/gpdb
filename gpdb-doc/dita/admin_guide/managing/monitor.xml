@@ -13,23 +13,24 @@
     <p>Also, be sure to review <xref href="../monitoring/monitoring.dita#topic_kmz_lbg_rp"/> for
       monitoring activities you can script to quickly detect problems in the system. </p>
   </body>
-  <topic id="topic2" xml:lang="en" otherprops="pivotal">
+  <topic id="topic2" xml:lang="en">
     <title id="kj157177">Monitoring Database Activity and Performance</title>
     <body>
-      <p>Pivotal provides an optional system monitoring and management tool, Greenplum Command
-        Center, which administrators can enable with Greenplum Database. Greenplum Command Center
-        depends upon a dedicated database, <codeph>gpperfmon</codeph>, and segment data collection
-        agents that collect and store system metrics in the database. </p>
-      <p>The Greenplum Database <codeph>gpperfmon_install</codeph> management utility creates the
-          <codeph>gpperfmon</codeph> database and manages the data collection agents on the segment
-        hosts. Administrators can query metrics in the <codeph>gpperfmon</codeph> database.</p>
-      <p>The Greenplum Command Center Console is a web-based interface that graphically displays
-        metrics collected in the <codeph>gpperfmon</codeph> database and provides additional system
-        management tools. Greenplum Command Center ships separately from the Greenplum Database
-        distribution. Download the Greenplum Command Center package from <xref
-          href="https://network.pivotal.io" scope="external" format="html">Pivotal Network</xref>
-        and view documentation at the <xref href="http://gpcc.docs.pivotal.io" scope="external"
-          format="html">Greenplum Command Center Documentation</xref> web site. </p>
+      <p>Greenplum Database includes an optional system monitoring and management database,
+          <codeph>gpperfmon</codeph>, that administrators can enable. The
+          <codeph>gpperfmon_install</codeph> command-line utility creates the
+          <codeph>gpperfmon</codeph> database and enables data collection agents that collect and
+        store query and system metrics in the database. Administrators can query metrics in the
+          <codeph>gpperfmon</codeph> database. See the documentation for the
+          <codeph>gpperfmon</codeph> database in the <cite>Greenplum Database Reference
+        Guide</cite>.</p>
+      <p otherprops="pivotal">Pivotal Greenplum Command Center, an optional web-based interface,
+        graphically displays the metrics collected in the <codeph>gpperfmon</codeph> database and
+        provides additional system management tools. Download the Greenplum Command Center package
+        from <xref href="https://network.pivotal.io" scope="external" format="html">Pivotal
+          Network</xref> and view the documentation at the <xref href="http://gpcc.docs.pivotal.io"
+          scope="external" format="html">Greenplum Command Center Documentation</xref> web site.
+      </p>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">

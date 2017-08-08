@@ -24,6 +24,10 @@
 #include <signal.h>
 #include <unistd.h>
 
+#ifdef __linux__
+#include <mntent.h>
+#endif
+
 #ifdef HAVE_SYS_RESOURCE_H
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -144,6 +148,8 @@ typedef BOOL (WINAPI * __CreateRestrictedToken) (HANDLE, DWORD, DWORD, PSID_AND_
 /* Windows API define missing from MingW headers */
 #define DISABLE_MAX_PRIVILEGE	0x1
 #endif
+
+static bool detectCgroupMountPoint(char *cgdir, int len);
 
 /*
  * allow core files if possible.
@@ -417,11 +423,51 @@ typedef struct replacements
 	char *dlsuffix;
 	char *bindir;
 	char *orientation;
+	char *cgroup_mnt_point;
 } replacements;
+
+/* Internal helper function to detect cgroup mount point at runtime.*/
+static bool
+detectCgroupMountPoint(char *cgdir, int len)
+{
+#ifdef __linux__
+	struct mntent *me;
+	FILE *fp;
+	bool ret = false;
+
+	fp = setmntent("/proc/self/mounts", "r");
+	if (fp == NULL)
+		return ret;
+
+	while ((me = getmntent(fp)))
+	{
+		char *p;
+
+		if (strcmp(me->mnt_type, "cgroup"))
+			continue;
+
+		strncpy(cgdir, me->mnt_dir, len);
+
+		p = strrchr(cgdir, '/');
+		if (p != NULL)
+		{
+			*p = 0;
+			ret = true;
+		}
+		break;
+	}
+
+	endmntent(fp);
+	return ret;
+#else
+	return false;
+#endif
+}
 
 static void
 convert_line(char *line, replacements *repls)
 {
+	replace_string(line, "@cgroup_mnt_point@", repls->cgroup_mnt_point);
 	replace_string(line, "@abs_srcdir@", repls->abs_srcdir);
 	replace_string(line, "@abs_builddir@", repls->abs_builddir);
 	replace_string(line, "@testtablespace@", repls->testtablespace);
@@ -591,6 +637,8 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 	char		abs_builddir[MAXPGPATH];
 	char		testtablespace[MAXPGPATH];
 	char		indir[MAXPGPATH];
+	char		cgroup_mnt_point[MAXPGPATH];
+
 	replacements repls;
 	struct stat st;
 	int			ret;
@@ -674,12 +722,18 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 	make_directory(testtablespace);
 #endif
 
+	memset(cgroup_mnt_point, 0, sizeof(cgroup_mnt_point));
+	if (!detectCgroupMountPoint(cgroup_mnt_point,
+								sizeof(cgroup_mnt_point) - 1))
+		strcpy(cgroup_mnt_point, "/sys/fs/cgroup");
+
 	memset(&repls, 0, sizeof(repls));
 	repls.abs_srcdir = abs_srcdir;
 	repls.abs_builddir = abs_builddir;
 	repls.testtablespace = testtablespace;
 	repls.dlsuffix = DLSUFFIX;
 	repls.bindir = bindir;
+	repls.cgroup_mnt_point = cgroup_mnt_point;
 
 	/* finally loop on each file and do the replacement */
 	for (name = names; *name; name++)

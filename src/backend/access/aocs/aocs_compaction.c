@@ -445,7 +445,7 @@ AOCSDrop(Relation aorel,
 	for(i = 0 ; i < total_segfiles ; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (list_find_int(compaction_segno, segno) < 0)
+		if (!list_member_int(compaction_segno, segno))
 		{
 			continue;
 		}
@@ -538,7 +538,7 @@ AOCSCompact(Relation aorel,
 	for(i = 0 ; i < total_segfiles ; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (list_find_int(compaction_segno, segno) < 0)
+		if (!list_member_int(compaction_segno, segno))
 		{
 			continue;
 		}

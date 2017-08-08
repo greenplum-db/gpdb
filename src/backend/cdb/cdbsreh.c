@@ -304,22 +304,43 @@ void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
 	}
 }
 
-/*
- * SendNumRowsRejected
- *
- * Using this function the QE sends back to the client QD the number 
- * of rows that were rejected in this last data load in SREH mode.
- */
-void SendNumRowsRejected(int numrejected)
+static void
+sendnumrows_internal(int numrejected, int numcompleted)
 {
 	StringInfoData buf;
 	
 	if (Gp_role != GP_ROLE_EXECUTE)
-		elog(FATAL, "SendNumRowsRejected: called outside of execute context.");
+		elog(FATAL, "SendNumRows: called outside of execute context.");
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
 	pq_sendint(&buf, numrejected, 4);
+	if (numcompleted > 0) /* optional send completed num for COPY FROM ON SEGMENT */
+		pq_sendint(&buf, numcompleted, 4);
 	pq_endmessage(&buf);	
+}
+
+/*
+ * SendNumRowsRejected
+ *
+ * Using this function the QE sends back to the client QD the number
+ * of rows that were rejected in this last data load in SREH mode.
+ */
+void
+SendNumRowsRejected(int numrejected)
+{
+    sendnumrows_internal(numrejected, 0);
+}
+
+/*
+ * SendNumRows
+ *
+ * Using this function the QE sends back to the client QD the number
+ * of rows that were rejected and completed in this last data load
+ */
+void
+SendNumRows(int numrejected, int numcompleted)
+{
+    sendnumrows_internal(numrejected, numcompleted);
 }
 
 /* Identify the reject limit type */

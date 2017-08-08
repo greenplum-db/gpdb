@@ -9,25 +9,20 @@
  *--------------------------------------------------------------------------
  */
 #include "postgres.h"
-#include "funcapi.h"
-#include "fmgr.h"
+
 #include "access/genam.h"
 #include "access/hash.h"
 #include "catalog/index.h"
 #include "catalog/pg_constraint.h"
-#include "catalog/pg_partition_encoding.h"
 #include "catalog/pg_partition_rule.h"
 #include "cdb/cdbpartition.h"
 #include "cdb/partitionselection.h"
 #include "cdb/cdbvars.h"
-#include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
-#include "optimizer/planmain.h"
 #include "parser/parse_expr.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
-#include "utils/syscache.h"
 #include "utils/memutils.h"
 
 /* initial estimate for number of logical indexes */
@@ -884,7 +879,7 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 	{
 		int partKeyCol = lfirst_int(lc);
 
-		if (list_find_int(keys, partKeyCol) < 0)
+		if (!list_member_int(keys, partKeyCol))
 		{
 			// passed in key is not found in the constraint. return NULL
 			if (NULL != result)

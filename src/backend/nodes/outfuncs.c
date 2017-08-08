@@ -31,11 +31,8 @@
 #include "lib/stringinfo.h"
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
-#include "utils/builtins.h"
 #include "utils/datum.h"
 #include "cdb/cdbgang.h"
-#include "utils/workfile_mgr.h"
-#include "parser/parsetree.h"
 
 
 /*

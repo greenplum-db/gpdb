@@ -79,6 +79,7 @@ extern void StartFilerepProcesses(void);
 extern bool IsFilerepProcessRunning(void);
 extern void SetFilerepPeerResetResult(bool success);
 extern bool IsDatabaseInRunMode(void);
-
+extern char *processTransitionRequest_faultInject(
+	void * inputBuf, int *offsetPtr, int length);
 
 #endif   /* _POSTMASTER_H */

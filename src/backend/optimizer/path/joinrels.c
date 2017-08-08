@@ -20,8 +20,6 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 
-#include "cdb/cdbdef.h"                 /* CdbSwap */
-
 
 static List *make_rels_by_clause_joins(PlannerInfo *root,
 						  RelOptInfo *old_rel,

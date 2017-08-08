@@ -5,12 +5,12 @@
    <title>Greenplum Command Center Agent</title>
    <body>
       <p>The following parameters configure the data collection agents that populate the
-            <codeph>gpperfmon</codeph> database used by Greenplum Command Center.</p>
+            <codeph>gpperfmon</codeph> database<ph otherprops="pivotal"> used by Greenplum Command
+            Center</ph>.</p>
       <simpletable id="kh171891">
          <strow>
             <stentry>
-               <p>
-                  <codeph>gp_enable_gpperfmon</codeph>
+               <p><codeph>gp_enable_gpperfmon</codeph>
                </p>
                <p>
                   <codeph>gp_gpperfmon_send_interval</codeph>

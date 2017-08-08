@@ -49,6 +49,13 @@ typedef struct BkpBlock
 	/* ACTUAL BLOCK DATA FOLLOWS AT END OF STRUCT */
 } BkpBlock;
 
+typedef struct BkpBlockWithPT
+{
+	ItemPointerData persistentTid;
+	int64 persistentSerialNum;
+	BkpBlock bkpb;
+} BkpBlockWithPT;
+
 /*
  * When there is not enough space on current page for whole record, we
  * continue on the next page with continuation record.	(However, the

@@ -654,6 +654,49 @@ COPY errcopy from stdin delimiter '/' log errors segment reject limit 3 rows;
 \.
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
 
+-- exceed reject limit  on segment
+DROP TABLE IF EXISTS segment_reject_limit;
+CREATE TABLE segment_reject_limit (a int,b char) distributed by (a);
+INSERT INTO segment_reject_limit values(1,'1');
+INSERT INTO segment_reject_limit values(1,'2');
+INSERT INTO segment_reject_limit values(1,'a');
+INSERT INTO segment_reject_limit values(1,'b');
+
+COPY segment_reject_limit TO '/tmp/segment_reject_limit<SEGID>.csv' on segment;
+
+DROP TABLE IF EXISTS segment_reject_limit_from;
+CREATE TABLE segment_reject_limit_from (a int,b int);
+COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 2 rows;
+
+SELECT * FROM segment_reject_limit_from;
+SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject_limit_from');
+--not exceed reject limit  on segment
+COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+SELECT * FROM segment_reject_limit_from;
+
+-- STDIN is not support by copy from on segment
+COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
+SELECT * FROM segment_reject_limit_from;
+
+-- STDOUT is not support by copy to on segment
+COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
+
+-- \copy from doesn't support on segment
+--on segment lower case
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+--on segment with spaces
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on   segment log errors segment reject limit 3 rows;
+--on segment are capital
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT log errors segment reject limit 3 rows;
+
+-- \copy to doesn't support on segment
+--on segment lower case
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+--on segment with spaces
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on   segment log errors segment reject limit 3 rows;
+--on segment are capital
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' ON SEGMENT log errors segment reject limit 3 rows;
+
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by
@@ -696,8 +739,15 @@ SELECT COUNT(*) FROM test_first_segment_reject_limit;
 
 -- start_ignore
 DROP TABLE IF EXISTS test_copy_on_segment;
+DROP TABLE IF EXISTS test_copy_on_segment_withoids;
+DROP TABLE IF EXISTS test_copy_from_on_segment_txt;
+DROP TABLE IF EXISTS test_copy_from_on_segment_binary;
+DROP TABLE IF EXISTS test_copy_from_on_segment_csv;
+DROP TABLE IF EXISTS test_copy_from_on_segment_withoids;
+DROP TABLE IF EXISTS onek_copy_from_onsegment;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt1;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_csv1;
+DROP EXTERNAL TABLE IF EXISTS check_onek_copy_onsegment;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 -- end_ignore
 
@@ -737,6 +787,23 @@ ON SEGMENT 0
 FORMAT 'text';
 SELECT * FROM check_copy_onsegment_withoids;
 
+CREATE TABLE test_copy_from_on_segment_txt (LIKE test_copy_on_segment);
+COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename.txt' ON SEGMENT;
+COPY test_copy_from_on_segment_txt FROM '/tmp/valid_filename<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_from_on_segment_txt ORDER BY a;
+
+CREATE TABLE test_copy_from_on_segment_binary (LIKE test_copy_on_segment);
+COPY test_copy_from_on_segment_binary FROM '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
+SELECT * FROM test_copy_from_on_segment_binary ORDER BY a;
+
+CREATE TABLE test_copy_from_on_segment_csv (LIKE test_copy_on_segment);
+COPY test_copy_from_on_segment_csv FROM '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
+SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
+
+CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_withoids) WITH OIDS;
+COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
+SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
+
 CREATE TABLE onek_copy_onsegment (
     unique1     int4,
     unique2     int4,
@@ -765,6 +832,11 @@ ON SEGMENT 0
 FORMAT 'text';
 SELECT * FROM check_onek_copy_onsegment;
 
+CREATE TABLE onek_copy_from_onsegment (LIKE onek_copy_onsegment);
+COPY onek_copy_from_onsegment FROM '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt' ON SEGMENT;
+SELECT * FROM onek_copy_onsegment EXCEPT SELECT * FROM onek_copy_from_onsegment;
+SELECT count(*) FROM onek_copy_from_onsegment;
+
 CREATE EXTERNAL WEB TABLE rm_copy_onsegment_files (a int)
 EXECUTE E'(rm -rf /tmp/*valid_filename*.*)'
 ON SEGMENT 0
@@ -772,6 +844,12 @@ FORMAT 'text';
 SELECT * FROM rm_copy_onsegment_files;
 
 DROP TABLE IF EXISTS test_copy_on_segment;
+DROP TABLE IF EXISTS test_copy_on_segment_withoids;
+DROP TABLE IF EXISTS test_copy_from_on_segment_txt;
+DROP TABLE IF EXISTS test_copy_from_on_segment_binary;
+DROP TABLE IF EXISTS test_copy_from_on_segment_csv;
+DROP TABLE IF EXISTS test_copy_from_on_segment_withoids;
+DROP TABLE IF EXISTS onek_copy_from_onsegment;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt1;
 DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_csv1;
 DROP EXTERNAL TABLE IF EXISTS check_onek_copy_onsegment;

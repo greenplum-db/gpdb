@@ -989,9 +989,11 @@ class GpCronDump(Operation):
         file_list = []
         master_file_list = ['cdatabase', 'ao', 'co', 'last_operation', 'report', 'status']
 
-        if self.context.dump_prefix and (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file or \
+        if (self.context.include_dump_tables_file or self.context.exclude_dump_tables_file or \
                                          self.context.include_dump_tables or self.context.exclude_dump_tables):
-            master_file_list.append('filter')
+            if self.context.dump_prefix:
+                master_file_list.append('filter')
+            master_file_list.append('table')
 
         for filetype in master_file_list:
             file_list.append('%s:%s' % (master.getSegmentHostName(), self.context.generate_filename(filetype)))

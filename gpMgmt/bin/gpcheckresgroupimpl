@@ -5,15 +5,24 @@
 
 import os
 import sys
+import psutil
 
 class dummy(object):
 
     def validate_all(self):
         exit("resource group is not supported on this platform")
 
+
+def detectCgroupMountPoint():
+    for dp_info in psutil.disk_partitions(all=True):
+        if dp_info.fstype == 'cgroup':
+            mountpoint = os.path.dirname(dp_info.mountpoint)
+            return mountpoint
+    return ""
+
 class cgroup(object):
 
-    mount_point = "/sys/fs/cgroup/"
+    mount_point = detectCgroupMountPoint()
     tab = { 'r': os.R_OK, 'w': os.W_OK, 'x': os.X_OK, 'f': os.F_OK }
     impl = "cgroup"
     error_prefix = " is not properly configured: "
@@ -26,6 +35,9 @@ class cgroup(object):
         src/backend/utils/resgroup/resgroup-ops-cgroup.c
         """
 
+        if not self.mount_point:
+            self.die("failed to detect cgroup mount point.")
+
         self.validate_permission("cpu/gpdb/", "rwx")
         self.validate_permission("cpu/gpdb/cgroup.procs", "rw")
         self.validate_permission("cpu/gpdb/cpu.cfs_period_us", "rw")
@@ -36,6 +48,9 @@ class cgroup(object):
         self.validate_permission("cpuacct/gpdb/cgroup.procs", "rw")
         self.validate_permission("cpuacct/gpdb/cpuacct.usage", "r")
         self.validate_permission("cpuacct/gpdb/cpuacct.stat", "r")
+
+        self.validate_permission("memory/memory.limit_in_bytes", "r")
+        self.validate_permission("memory/memory.memsw.limit_in_bytes", "r")
 
     def die(self, msg):
         exit(self.impl + self.error_prefix + msg)

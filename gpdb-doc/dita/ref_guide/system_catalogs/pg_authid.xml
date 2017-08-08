@@ -126,7 +126,7 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>relresqueue</codeph>
+              <codeph>rolresqueue</codeph>
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3"/>
@@ -178,6 +178,16 @@
             <entry colname="col3"/>
             <entry colname="col4">Privilege to create write external tables with the
                 <codeph>gphdfs</codeph> protocol</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>rolresgroup</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Object ID of the associated resource group ID in
+                <i>pg_resgroup</i>
+            </entry>
           </row>
         </tbody>
       </tgroup>

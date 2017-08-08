@@ -11,12 +11,11 @@
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"    /* CDB_PROC_TIDTOI8 */
 #include "catalog/pg_type.h"    /* INT8OID */
-#include "miscadmin.h"          /* work_mem */
 #include "nodes/makefuncs.h"    /* makeFuncExpr() */
 #include "nodes/relation.h"     /* PlannerInfo, RelOptInfo, CdbRelDedupInfo */
 #include "optimizer/cost.h"     /* cpu_tuple_cost */
 #include "optimizer/pathnode.h" /* Path, pathnode_walker() */
-#include "optimizer/paths.h"    /* compare_pathkeys() */
+#include "optimizer/paths.h"
 #include "optimizer/planmain.h"
 
 #include "parser/parse_expr.h"	/* exprType() */
@@ -25,7 +24,6 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbdef.h"         /* CdbSwap() */
-#include "cdb/cdbllize.h"       /* makeFlow() */
 #include "cdb/cdbhash.h"        /* isGreenplumDbHashable() */
 
 #include "cdb/cdbpath.h"        /* me */

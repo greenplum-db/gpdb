@@ -17,14 +17,14 @@ CREATE OR REPLACE VIEW eat_memory_on_qd AS
 	SELECT hold_memory(0,20);
 
 CREATE OR REPLACE VIEW eat_memory_on_one_slice AS
-	SELECT count(*)
+	SELECT count(null)
 	FROM
 	gp_dist_random('gp_id') t1
 	WHERE hold_memory(t1.dbid,20)=0
 	;
 
 CREATE OR REPLACE VIEW eat_memory_on_slices AS
-	SELECT count(*)
+	SELECT count(null)
 	FROM
 	gp_dist_random('gp_id') t1,
 	gp_dist_random('gp_id') t2
@@ -32,24 +32,22 @@ CREATE OR REPLACE VIEW eat_memory_on_slices AS
 	  AND hold_memory(t2.dbid,20)=0
 	;
 
-CREATE VIEW memory_usage AS
-	SELECT s.rsgname, s.memory_usage::json->'-1' AS master_mem,
-	s.memory_usage::json->'0' AS seg0_mem,
-	s.memory_usage::json->'1' AS seg1_mem,
-	s.memory_usage::json->'2' AS seg2_mem
-	FROM gp_toolkit.gp_resgroup_status s;
-
-CREATE FUNCTION round_test(text, integer) RETURNS text AS $$
-	SELECT (round($1::integer / $2) * $2)::text
+CREATE FUNCTION round_test(float, integer) RETURNS float AS $$
+	SELECT round($1 / $2) * $2
 $$ LANGUAGE sql;
 
 CREATE VIEW memory_result AS
-	SELECT rsgname, round_test(master_mem::text, 10) AS master_mem,
-	round_test(seg0_mem::text, 10) AS seg0_mem,
-	round_test(seg1_mem::text, 10) AS seg1_mem,
-	round_test(seg2_mem::text, 10) AS seg2_mem
-	FROM memory_usage
-	WHERE rsgname='rg1_memory_test' OR rsgname='rg2_memory_test';
+	SELECT rsgname, ismaster, round_test(avg(memory_usage), 10) AS avg_mem
+	FROM(
+		SELECT rsgname,
+		       CASE (j->'key')::text WHEN '"-1"'::text THEN 1 ELSE 0 END AS ismaster,
+		       (j->'value')::text::int AS memory_usage
+		FROM(
+			SELECT rsgname, row_to_json(json_each(memory_usage::json)) AS j FROM
+			gp_toolkit.gp_resgroup_status
+			WHERE rsgname='rg1_memory_test' OR rsgname='rg2_memory_test'
+		    )a
+		)b GROUP BY (rsgname, ismaster) ORDER BY rsgname, ismaster;
 
 CREATE RESOURCE GROUP rg1_memory_test
 	WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30);

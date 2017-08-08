@@ -355,7 +355,7 @@ external_endscan(FileScanDesc scan)
 	if (scan->fs_pstate != NULL && scan->fs_pstate->errMode != ALL_OR_NOTHING)
 	{
 		if (Gp_role == GP_ROLE_EXECUTE)
-			SendNumRowsRejected(scan->fs_pstate->cdbsreh->rejectcount);
+			SendNumRows(scan->fs_pstate->cdbsreh->rejectcount, 0);
 
 		destroyCdbSreh(scan->fs_pstate->cdbsreh);
 	}

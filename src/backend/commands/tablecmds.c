@@ -19,7 +19,6 @@
 #include "access/appendonlywriter.h"
 #include "access/bitmap.h"
 #include "access/genam.h"
-#include "access/hash.h"
 #include "access/heapam.h"
 #include "access/nbtree.h"
 #include "access/reloptions.h"
@@ -42,8 +41,6 @@
 #include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_tablespace.h"
-#include "catalog/pg_resqueue.h"
-#include "catalog/pg_authid.h"
 #include "catalog/pg_partition.h"
 #include "catalog/pg_partition_rule.h"
 #include "catalog/toasting.h"
@@ -89,7 +86,6 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/numeric.h"
 #include "utils/relcache.h"
 #include "utils/syscache.h"
 
@@ -10272,12 +10268,20 @@ copy_buffer_pool_data(Relation rel, SMgrRelation dst,
 
 		smgrread(src, blkno, buf);
 
+		if (!PageIsVerified(page, blkno))
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_CORRUPTED),
+					 errmsg("invalid page in block %u of relation %s",
+							blkno, relpath(src->smgr_rnode))));
+
 		/* XLOG stuff */
 		if (useWal)
 		{
 			log_newpage_relFileNode(&dst->smgr_rnode, blkno, page, persistentTid,
 						persistentSerialNum);
 		}
+
+		PageSetChecksumInplace(page, blkno);
 
 		// -------- MirroredLock ----------
 		LWLockAcquire(MirroredLock, LW_SHARED);
@@ -12022,7 +12026,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			goto l_distro_fini;			
 		}
 
-		if (list_find_oid(qe_data->relids, tarrelid) < 0)
+		if (!list_member_oid(qe_data->relids, tarrelid))
 		{
 			heap_close(rel, NoLock);
 			goto l_distro_fini;			

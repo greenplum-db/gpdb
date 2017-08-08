@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2012. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2012. All Rights Reserved.
 #
 
 import unittest
-from gppylib.commands.base import Command, WorkerPool
+from gppylib.commands.base import Command, WorkerPool, RemoteExecutionContext, GPHOME
 from mock import patch
+
 
 class WorkerPoolTestCase(unittest.TestCase):
 
@@ -28,3 +29,15 @@ class WorkerPoolTestCase(unittest.TestCase):
         w.join()
         self.assertTrue(mock1.called_with('0.00% of jobs completed'))
         w.haltWork()
+
+    def test_RemoteExecutionContext_uses_default_gphome(self):
+        self.subject = RemoteExecutionContext("myhost", "my_stdin")
+        cmd = Command("dummy name", "echo 'foo'")
+        self.subject.execute(cmd)
+        self.assertIn(". %s/greenplum_path.sh;" % GPHOME, cmd.cmdStr)
+
+    def test_RemoteExecutionContext_uses_provided_gphome_when_set(self):
+        self.subject = RemoteExecutionContext(targetHost="myhost", stdin="my_stdin", gphome="other/gphome")
+        cmd = Command("dummy name", "echo 'foo'")
+        self.subject.execute(cmd)
+        self.assertIn(". other/gphome/greenplum_path.sh;", cmd.cmdStr)

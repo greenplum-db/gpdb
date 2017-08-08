@@ -8,7 +8,6 @@ import sys
 class GpPkgProgramTestCase(GpTestCase):
     def setUp(self):
         self.mock_cmd = Mock()
-        self.mock_list_files_by_pattern = Mock()
         self.mock_gppkg = Mock()
         self.mock_uninstall_package = Mock()
 
@@ -52,7 +51,7 @@ class GpPkgProgramTestCase(GpTestCase):
         self.subject = GpPkgProgram(options, args)
         self.subject.run()
 
-        self.mock_list_files_by_pattern.run.assert_called_once()
+        self.mock_listdir.assert_called_once()
         self.mock_uninstall_package.run.assert_called_once()
 
     def test__input_matches_multiple_packages(self):
@@ -73,8 +72,7 @@ class GpPkgProgramTestCase(GpTestCase):
                                                 "Multiple packages match remove request: \( sample.gppkg, sample2.gppkg \)."):
             self.subject.run()
 
-        self.mock_list_files_by_pattern.run.assert_called_once()
-        self.mock_uninstall_package.run.assert_called_once()
+        self.assertFalse(self.mock_uninstall_package.run.called)
 
     def test__input_exact_match_when_wildcard_would_have_more(self):
         sys.argv = ["gppkg", "--remove", "sample"]
@@ -93,5 +91,5 @@ class GpPkgProgramTestCase(GpTestCase):
 
         self.subject.run()
 
-        self.mock_list_files_by_pattern.run.assert_called_once()
+        self.mock_listdir.assert_called_once()
         self.mock_uninstall_package.run.assert_called_once()

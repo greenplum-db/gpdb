@@ -12,7 +12,6 @@
 
 #include "postgres.h"
 #include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
 #include "miscadmin.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbcopy.h"
@@ -406,12 +405,14 @@ processCopyEndResults(CdbCopy *c,
 					  bool *err_header,
 					  bool *first_error,
 					  int *failed_count,
-					  int *total_rows_rejected)
+					  int *total_rows_rejected,
+					  int *total_rows_completed)
 {
 	SegmentDatabaseDescriptor *q;
 	int seg;
 	PGresult *res;
-	int			segment_rows_rejected = 0; /* num of rows rejected by this QE */
+	int			segment_rows_rejected  = 0; /* num of rows rejected by this QE */
+	int			segment_rows_completed = 0; /* num of rows completed by this QE */
 
 	for (seg = 0; seg < size; seg ++)
 	{
@@ -554,6 +555,13 @@ processCopyEndResults(CdbCopy *c,
 			if (res->numRejected > 0)
 				segment_rows_rejected = res->numRejected;
 
+			/*
+			 * When COPY FROM ON SEGMENT, need to calculate the number of this
+			 * segment's completed rows
+			 */
+			if (res->numCompleted > 0)
+				segment_rows_completed = res->numCompleted;
+
 			/* Get AO tuple counts */
 			c->aotupcounts = PQprocessAoTupCounts(c->partitions, c->aotupcounts, res->aotupcounts, res->naotupcounts);
 			/* free the PGresult object */
@@ -572,6 +580,15 @@ processCopyEndResults(CdbCopy *c,
 		
 		segment_rows_rejected = 0;
 		
+		/*
+		 * add number of rows completed from this segment to the
+		 * total of completed rows. Only count from primary segs
+		 */
+		if ((NULL != total_rows_completed) && (segment_rows_completed > 0))
+			*total_rows_completed += segment_rows_completed;
+
+		segment_rows_completed = 0;
+
 		/* Lost the connection? */
 		if (PQstatus(q->conn) == CONNECTION_BAD)
 		{
@@ -609,6 +626,16 @@ processCopyEndResults(CdbCopy *c,
 int
 cdbCopyEnd(CdbCopy *c)
 {
+	return cdbCopyEndAndFetchRejectNum(c, NULL);
+}
+
+/*
+ * End the copy command on all segment databases,
+ * and fetch the total number of rows completed by all QEs
+ */
+int
+cdbCopyEndAndFetchRejectNum(CdbCopy *c, int *total_rows_completed)
+{
 	SegmentDatabaseDescriptor *q;
 	SegmentDatabaseDescriptor **failedSegDBs;
 	Gang	   *gp;
@@ -645,9 +672,13 @@ cdbCopyEnd(CdbCopy *c)
 		results[seg] = PQputCopyEnd(q->conn, NULL);
 	}
 
+	if (NULL != total_rows_completed)
+		*total_rows_completed = 0;
+
 	processCopyEndResults(c, db_descriptors, results, size,
 						  failedSegDBs, &err_header,
-						  &first_error, &failed_count, &total_rows_rejected);
+						  &first_error, &failed_count, &total_rows_rejected,
+						  total_rows_completed);
 
 	/* If lost contact with segment db, try to reconnect. */
 	if (failed_count > 0)

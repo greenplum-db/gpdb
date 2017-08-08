@@ -88,6 +88,7 @@ extern CdbSreh *makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 extern void destroyCdbSreh(CdbSreh *cdbsreh);
 extern void HandleSingleRowError(CdbSreh *cdbsreh);
 extern void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected);
+extern void SendNumRows(int numrejected, int numcompleted);
 extern void SendNumRowsRejected(int numrejected);
 extern bool IsErrorTable(Relation rel);
 extern void ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy);

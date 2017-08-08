@@ -47,14 +47,13 @@ extern Node *ParseFuncOrColumn(ParseState *pstate,
 				  bool is_column, WindowSpec *over, int location, Node *agg_filter);
 
 extern FuncDetailCode func_get_detail(List *funcname, List *fargs,
-									  int nargs, Oid *argtypes,
-                                      bool expand_variadic,
-									  bool expand_defaults,
-									  Oid *funcid, Oid *rettype,
-									  bool *retset, bool *retstrict, 
-                                      bool *retordered, int *nvargs, 
-									  Oid **true_typeids,
-									  List **argdefaults);
+				int nargs, Oid *argtypes,
+				bool expand_variadic, bool expand_defaults,
+				Oid *funcid, Oid *rettype,
+				bool *retset, bool *retstrict,
+				bool *retordered, int *nvargs,
+				Oid **true_typeids,
+				List **argdefaults);
 
 extern int func_match_argtypes(int nargs,
 					Oid *input_typeids,

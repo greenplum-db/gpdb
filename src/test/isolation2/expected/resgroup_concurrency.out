@@ -101,7 +101,7 @@ ALTER
 SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 rsgname            |num_running|num_queueing|num_queued|num_executed
 -------------------+-----------+------------+----------+------------
-rg_concurrency_test|3          |0           |1         |3           
+rg_concurrency_test|2          |1           |1         |2           
 (1 row)
 SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 concurrency|proposed_concurrency

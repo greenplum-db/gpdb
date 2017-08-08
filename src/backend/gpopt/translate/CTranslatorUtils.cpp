@@ -289,7 +289,7 @@ CTranslatorUtils::Pdxltvf
 		// function returns record - use col names and types from query
 		pdrgdxlcd = PdrgdxlcdRecord(pmp, pidgtor, prte->eref->colnames, prte->funccoltypes);
 	}
-	else if (pmdType->FComposite() && pmdType->PmdidBaseRelation()->FValid())
+	else if (pmdType->FComposite() && IMDId::FValid(pmdType->PmdidBaseRelation()))
 	{
 		// function returns a "table" type or a user defined type
 		pdrgdxlcd = PdrgdxlcdComposite(pmp, pmda, pidgtor, pmdType);

@@ -13,8 +13,8 @@ function gen_env(){
 	source /usr/local/greenplum-db-devel/greenplum_path.sh
 
 	cd "\${1}/gpdb_src/gpAux/extensions/gpcloud"
-	make
-	make gpcheckcloud
+	make USE_PGXS=1
+	make gpcheckcloud USE_PGXS=1
 	EOF
 
 	chown -R gpadmin:gpadmin $(pwd)
@@ -38,8 +38,11 @@ function push_to_staging_server() {
 	scp -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null bin_gpdb/bin_gpdb.tar.gz gpadmin@$EC2_INSTANCE_IP:/home/gpadmin/bin_gpdb.tar.gz
 	ssh -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpadmin@$EC2_INSTANCE_IP "rm -rf /home/gpadmin/greenplum-db-devel/;mkdir /home/gpadmin/greenplum-db-devel;tar -xzf /home/gpadmin/bin_gpdb.tar.gz -C /home/gpadmin/greenplum-db-devel;source /home/gpadmin/greenplum-db-data/env/env.sh;sed -ri 's/\/usr\/local/\/home\/gpadmin/g' /home/gpadmin/greenplum-db-devel/greenplum_path.sh;source /home/gpadmin/greenplum-db/greenplum_path.sh"
 
-	scp -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpdb_src/gpAux/extensions/gpcloud/bin/gpcheckcloud/gpcheckcloud gpadmin@$EC2_INSTANCE_IP:/home/gpadmin/greenplum-db/bin/
-	scp -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpdb_src/gpAux/extensions/gpcloud/gpcloud.so gpadmin@$EC2_INSTANCE_IP:/home/gpadmin/greenplum-db/lib/postgresql/
+	if [ "$overwrite_gpcloud" = "true" ]
+	then
+		scp -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpdb_src/gpAux/extensions/gpcloud/bin/gpcheckcloud/gpcheckcloud gpadmin@$EC2_INSTANCE_IP:/home/gpadmin/greenplum-db/bin/
+		scp -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpdb_src/gpAux/extensions/gpcloud/gpcloud.so gpadmin@$EC2_INSTANCE_IP:/home/gpadmin/greenplum-db/lib/postgresql/
+	fi
 	ssh -i /home/gpadmin/ec2_private_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null gpadmin@$EC2_INSTANCE_IP "source /home/gpadmin/greenplum-db-data/env/env.sh; source /home/gpadmin/greenplum-db/greenplum_path.sh; gpstart -a"
 }
 
@@ -47,9 +50,13 @@ function _main() {
 	time configure
 	time install_gpdb
 	time setup_gpadmin_user
-	time gen_env
 
-	time build_gpcloud_components
+	if [ "$overwrite_gpcloud" = "true" ]
+	then
+		time gen_env
+		time build_gpcloud_components
+	fi
+
 	time push_to_staging_server
 }
 

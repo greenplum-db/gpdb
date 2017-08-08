@@ -1,0 +1,36 @@
+-- start_ignore
+! rmdir @cgroup_mnt_point@/cpu/gpdb;
+! rmdir @cgroup_mnt_point@/cpuacct/gpdb;
+! mkdir @cgroup_mnt_point@/cpu/gpdb;
+! mkdir @cgroup_mnt_point@/cpuacct/gpdb;
+-- end_ignore
+
+-- enable resource group and restart cluster.
+-- start_ignore
+! rm -f /tmp/.resgroup_mem_helper.sh;
+! echo 'mem=$(free -b | grep "^Mem:" | (read a b c; echo $b))' >>/tmp/.resgroup_mem_helper.sh;
+! echo 'swap=$(free -b | grep "^Swap:" | (read a b c; echo $b))' >>/tmp/.resgroup_mem_helper.sh;
+! echo 'overcommit=$(cat /proc/sys/vm/overcommit_ratio)' >>/tmp/.resgroup_mem_helper.sh;
+! echo 'total=$((swap + mem * overcommit / 100))' >>/tmp/.resgroup_mem_helper.sh;
+! echo 'limit=$(((2 << 30) * 10000 * 4 / 3 / total))' >>/tmp/.resgroup_mem_helper.sh;
+! echo '[ "$limit" -le 9000 ] || limit=9000' >>/tmp/.resgroup_mem_helper.sh;
+! echo 'limitf=$(printf "0.%04d" $limit)' >>/tmp/.resgroup_mem_helper.sh;
+! echo 'gpconfig -c gp_resource_group_memory_limit -v $limitf' >>/tmp/.resgroup_mem_helper.sh;
+! bash /tmp/.resgroup_mem_helper.sh;
+! rm -f /tmp/.resgroup_mem_helper.sh;
+! gpconfig -c gp_resource_manager -v group;
+! gpconfig -c gp_resource_group_cpu_limit -v 0.9;
+! gpconfig -c max_connections -v 250 -m 25;
+! gpstop -rai;
+-- end_ignore
+
+SHOW gp_resource_manager;
+
+-- resource queue statistics should not crash
+SELECT * FROM pg_resqueue_status;
+SELECT * FROM gp_toolkit.gp_resqueue_status;
+SELECT * FROM gp_toolkit.gp_resq_priority_backend;
+
+-- by default admin_group has concurrency set to -1 which leads to
+-- very small memory quota for each resgroup slot, correct it.
+ALTER RESOURCE GROUP admin_group SET concurrency 2;

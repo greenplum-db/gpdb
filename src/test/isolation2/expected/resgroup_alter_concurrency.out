@@ -1,0 +1,137 @@
+-- create a resource group when gp_resource_manager is queue
+DROP ROLE IF EXISTS role_concurrency_test;
+DROP
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+ERROR:  resource group "rg_concurrency_test" does not exist
+-- end_ignore
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
+CREATE
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+CREATE
+
+--
+-- increase concurrency after pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21&:BEGIN;  <waiting ...>
+22&:BEGIN;  <waiting ...>
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+
+SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rsgname            |waiting_reason|current_query                                                     
+-------------------+--------------+------------------------------------------------------------------
+admin_group        |              |SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rg_concurrency_test|              |<IDLE> in transaction                                             
+rg_concurrency_test|resgroup      |BEGIN;                                                            
+rg_concurrency_test|resgroup      |BEGIN;                                                            
+(4 rows)
+
+11:END;
+END
+11q: ... <quitting>
+
+SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rsgname            |waiting_reason|current_query                                                     
+-------------------+--------------+------------------------------------------------------------------
+admin_group        |              |SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rg_concurrency_test|              |<IDLE> in transaction                                             
+rg_concurrency_test|              |<IDLE> in transaction                                             
+(3 rows)
+
+21<:  <... completed>
+BEGIN
+22<:  <... completed>
+BEGIN
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rsgname    |waiting_reason|current_query                                                     
+-----------+--------------+------------------------------------------------------------------
+admin_group|              |SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+(1 row)
+
+--
+-- increase concurrency before pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21&:BEGIN;  <waiting ...>
+22&:BEGIN;  <waiting ...>
+
+SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rsgname            |waiting_reason|current_query                                                     
+-------------------+--------------+------------------------------------------------------------------
+admin_group        |              |SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rg_concurrency_test|              |<IDLE> in transaction                                             
+rg_concurrency_test|resgroup      |BEGIN;                                                            
+rg_concurrency_test|resgroup      |BEGIN;                                                            
+(4 rows)
+
+11:END;
+END
+11q: ... <quitting>
+
+SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rsgname            |waiting_reason|current_query                                                     
+-------------------+--------------+------------------------------------------------------------------
+admin_group        |              |SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rg_concurrency_test|              |<IDLE> in transaction                                             
+rg_concurrency_test|              |<IDLE> in transaction                                             
+(3 rows)
+
+21<:  <... completed>
+BEGIN
+22<:  <... completed>
+BEGIN
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+rsgname    |waiting_reason|current_query                                                     
+-----------+--------------+------------------------------------------------------------------
+admin_group|              |SELECT rsgname,waiting_reason,current_query FROM pg_stat_activity;
+(1 row)
+
+-- cleanup
+DROP ROLE role_concurrency_test;
+DROP
+DROP RESOURCE GROUP rg_concurrency_test;
+DROP

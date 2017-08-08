@@ -1,0 +1,26 @@
+-- for all removed resgroups the cgroup dirs should also be removed
+! ls -d @cgroup_mnt_point@/cpu/gpdb/*/;
+@cgroup_mnt_point@/cpu/gpdb/6437/
+@cgroup_mnt_point@/cpu/gpdb/6438/
+
+! ls -d @cgroup_mnt_point@/cpuacct/gpdb/*/;
+@cgroup_mnt_point@/cpuacct/gpdb/6437/
+@cgroup_mnt_point@/cpuacct/gpdb/6438/
+
+
+-- reset the GUC and restart cluster.
+-- start_ignore
+! gpconfig -r gp_resource_manager;
+
+! gpstop -rai;
+-- end_ignore
+
+SHOW gp_resource_manager;
+gp_resource_manager
+-------------------
+queue              
+(1 row)
+
+-- reset admin_group concurrency setting
+ALTER RESOURCE GROUP admin_group SET concurrency 10;
+ALTER

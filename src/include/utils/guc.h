@@ -197,6 +197,7 @@ extern bool gp_appendonly_compaction;
  * 10% of the tuples are hidden.
  */ 
 extern int  gp_appendonly_compaction_threshold;
+extern bool gp_heap_verify_checksums_on_mirror;
 extern bool gp_heap_require_relhasoids_match;
 extern bool	Debug_appendonly_rezero_quicklz_compress_scratch;
 extern bool	Debug_appendonly_rezero_quicklz_decompress_scratch;

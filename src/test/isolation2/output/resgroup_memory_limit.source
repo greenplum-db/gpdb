@@ -101,18 +101,18 @@ CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
 count
 -----
-3    
+0    
 (1 row)
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
 count
 -----
-3    
+0    
 (1 row)
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382432)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158454)
 DETAIL:  
 Resource group memory limit reached
 SQL function "hold_memory_by_percent" statement 1
@@ -120,17 +120,17 @@ SQL function "hold_memory_by_percent" statement 1
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.45)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.45)=0;
 count
 -----
-3    
+0    
 (1 row)
 1q: ... <quitting>
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.55)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382450)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.55)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158468)
 DETAIL:  
 Resource group memory limit reached
 SQL function "hold_memory_by_percent" statement 1
@@ -198,23 +198,23 @@ CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 
 1: SET ROLE TO role1_memory_test;
 SET
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
 count
 -----
-3    
+0    
 (1 row)
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
 count
 -----
-3    
+0    
 (1 row)
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
 count
 -----
-3    
+0    
 (1 row)
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382486)
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158496)
 DETAIL:  
 Resource group memory limit reached
 SQL function "hold_memory_by_percent" statement 1
@@ -263,32 +263,32 @@ CONTEXT:  SQL function "hold_memory_by_percent" statement 1
 SET
 1: BEGIN;
 BEGIN
-1: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
 count
 -----
-3    
+0    
 (1 row)
 2: SET ROLE TO role1_memory_test;
 SET
 2: BEGIN;
 BEGIN
-2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
 count
 -----
-3    
+0    
 (1 row)
 2q: ... <quitting>
 2: SET ROLE TO role1_memory_test;
 SET
 2: BEGIN;
 BEGIN
-2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
 count
 -----
-3    
+0    
 (1 row)
-2: SELECT count(*) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
-ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=382540)
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+ERROR:  Out of memory  (seg0 slice1 172.17.0.3:25432 pid=158538)
 DETAIL:  
 Resource group memory limit reached
 SQL function "hold_memory_by_percent" statement 1

@@ -424,7 +424,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&resstate->ps);
 	ExecAssignProjectionInfo(&resstate->ps, NULL);
 
-	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
+	if (!IsResManagerMemoryPolicyNone()
 			&& IsResultMemoryIntesive(node))
 	{
 		SPI_ReserveMemory(((Plan *)node)->operatorMemKB * 1024L);

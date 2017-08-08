@@ -317,6 +317,12 @@ cat >> $CLUSTER_CONFIG <<-EOF
 
 EOF
 
+if [ -n "${STATEMENT_MEM}" ]; then
+	cat >> $CLUSTER_CONFIG_POSTGRES_ADDONS<<-EOF
+		statement_mem = ${STATEMENT_MEM}
+	EOF
+fi
+
 ## ======================================================================
 ## Create cluster
 ## ======================================================================

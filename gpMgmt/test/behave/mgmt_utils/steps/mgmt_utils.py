@@ -403,6 +403,19 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
+@given('a user runs "{command}" with gphome "{gphome}"')
+@when('a user runs "{command}" with gphome "{gphome}"')
+@then('a user runs "{command}" with gphome "{gphome}"')
+def impl(context, command, gphome):
+    masterhost = get_master_hostname()[0][0]
+    cmd = Command(name='Remove archive gppkg',
+                  cmdStr=command,
+                  ctxt=REMOTE,
+                  remoteHost=masterhost,
+                  gphome=gphome)
+    cmd.run()
+    context.ret_code = cmd.get_return_code()
+
 @given('the user runs command "{command}"')
 @when('the user runs command "{command}"')
 @then('the user runs command "{command}"')
@@ -1614,6 +1627,8 @@ def impl(context, filetype, directory):
         filename = 'gp_dump_%s_filter' % context.backup_timestamp
     elif filetype == '_schema':
         filename = 'gp_dump_%s_schema' % context.backup_timestamp
+    elif filetype == 'table':
+        filename = 'gp_dump_%s_table' % context.backup_timestamp
     else:
         raise Exception("Unknown filetype '%s' specified" % filetype)
 
@@ -2434,6 +2449,15 @@ def impl(context, tname, dbname):
         curs = dbconn.execSQL(conn, sql)
         context.stored_rows = curs.fetchall()
 
+@given('results of the sql "{sql}" db "{dbname}" are stored in the context')
+@when( 'results of the sql "{sql}" db "{dbname}" are stored in the context')
+def impl(context, sql, dbname):
+    context.stored_sql_results = []
+
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        curs = dbconn.execSQL(conn, sql)
+        context.stored_sql_results = curs.fetchall()
+
 
 @then('validate that "{dataline}" "{formatter}" seperated by "{delim}" is in the stored rows')
 def impl(context, dataline, formatter, delim):
@@ -2649,7 +2673,7 @@ def impl(context):
 
     kill_process(int(pid), seg_host)
 
-    time.sleep(10)
+    has_process_eventually_stopped(pid, seg_host)
 
     pid = get_pid_for_segment(seg_data_dir, seg_host)
     if pid is not None:
@@ -4559,16 +4583,10 @@ def impl(context):
 @then('wait until the process "{proc}" goes down')
 @given('wait until the process "{proc}" goes down')
 def impl(context, proc):
-    start_time = current_time = datetime.now()
-    is_running = False
-    while (current_time - start_time).seconds < 120:
-        is_running = is_process_running(proc)
-        if not is_running:
-            break
-        time.sleep(2)
-        current_time = datetime.now()
-    context.ret_code = 0 if not is_running else 1
-    context.error_message = ''
+    is_stopped = has_process_eventually_stopped(proc)
+    context.ret_code = 0 if is_stopped else 1
+    if not is_stopped:
+        context.error_message = 'The process %s is still running after waiting' % proc
     check_return_code(context, 0)
 
 
@@ -5086,6 +5104,8 @@ def impl(context, gppkg_name):
         if not gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
+@given('"{gppkg_name}" gppkg files do not exist on any hosts')
+@when('"{gppkg_name}" gppkg files do not exist on any hosts')
 @then('"{gppkg_name}" gppkg files do not exist on any hosts')
 def impl(context, gppkg_name):
     remote_gphome = os.environ.get('GPHOME')

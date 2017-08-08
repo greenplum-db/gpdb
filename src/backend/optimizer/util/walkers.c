@@ -8,6 +8,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
+#include "nodes/nodeFuncs.h"
 #include "optimizer/walkers.h"
 #include "optimizer/var.h"
 

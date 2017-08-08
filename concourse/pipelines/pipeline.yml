@@ -1,3 +1,73 @@
+groups:
+- name: all
+  jobs:
+  - compile_gpdb_centos6
+  - compile_gpdb_open_source_centos6
+  - compile_gpdb_binary_swap_centos6
+  - compile_gpdb_centos7
+  - compile_gpdb_sles11
+  - compile_gpdb_windows_cl
+  - icw_planner_centos6
+  - icw_gporca_centos6
+  - icw_gporca_centos7
+  - icw_gporca_sles11
+  - icw_planner_ictcp_centos6
+  - MU_check_centos
+  - regression_tests_gpcloud_centos
+  - MM_gpperfmon
+  - MM_gpcheck
+  - DPM_backup-restore
+  - MM_gppkg
+  - MM_pt-rebuild
+  - fts
+  - storage
+  - QP_memory-accounting
+  - regression_tests_gphdfs_centos
+  - gpdb_rc_packaging_centos
+  - gpdb_rc_packaging_sles
+  - DPM_netbackup77
+  - DPM_backup-restore-ddboost
+  - DPM_backup_43_restore_5
+  - MM_gpcheckcat
+  - MM_gprecoverseg
+  - MM_gpexpand
+  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer-5x-to-5x
+  - cs-pg-two-phase
+  - cs-walrepl-multinode
+  - cs-filerep-schema-topology-crashrecov
+  - cs-filerep-end-to-end
+  - cs-aoco-compression
+  - mpp_interconnect
+  - QP_runaway-query
+  - QP_optimizer-functional
+
+- name: Release
+  jobs:
+  - Release_Candidate
+
+- name: Remaining Pulse
+  jobs:
+  - DPM_netbackup77
+  - DPM_backup-restore-ddboost
+  - DPM_backup_43_restore_5
+  - MM_gpcheckcat
+  - MM_gpexpand
+  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer-5x-to-5x
+  - cs-pg-two-phase
+  - cs-walrepl-multinode
+  - cs-filerep-schema-topology-crashrecov
+  - cs-filerep-end-to-end
+  - cs-aoco-compression
+  - mpp_interconnect
+
+- name: Adopted CCP
+  jobs:
+  - DPM_backup-restore
+  - MM_gppkg
+  - MM_gprecoverseg
+
 ## ======================================================================
 ## resource types
 ## ======================================================================
@@ -19,6 +89,7 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
+    tag_filter: 1.0.0-beta.1
 
 - name: terraform
   type: terraform
@@ -613,7 +684,6 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
 
-
 - name: MU_check_centos
   plan:
   - aggregate:
@@ -706,12 +776,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - put: terraform
     params:
-      action: create
-      delete_on_failure: true
-      generate_random_name: true
-      terraform_source: ccp_src/aws/
-      vars:
-        aws_instance-node-instance_type: t2.medium
+      <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     on_failure:
@@ -733,17 +798,33 @@ jobs:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
       passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
+    - get: gpdb_binary
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
+    - get: ccp_src
     - get: centos-gpdb-dev-6
-  - task: gppkg
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+  - put: terraform
+    params:
+      <<: *ccp_create_params
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    on_failure:
+      <<: *ccp_destroy
+  - task: setup_gppkg_second_install
+    file: gpdb_src/concourse/tasks/gppkg_behave.yml
+    params:
+      SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
-      # Disable multinode tests for concourse.
-      BEHAVE_FLAGS: --tags=gppkg --tags=-gppkg_multinode_clean
+      BEHAVE_FLAGS: --tags=gppkg
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
 - name: MM_pt-rebuild
   plan:
@@ -789,7 +870,7 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: fts_transitions_part01
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=20 gp_fts_probe_interval=20
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
     - task: fts_transitions_part02
@@ -797,7 +878,7 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: fts_transitions_part02
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=20 gp_fts_probe_interval=20
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
     - task: fts_transitions_part03
@@ -805,7 +886,7 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         MAKE_TEST_COMMAND: fts_transitions_part03
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=20 gp_fts_probe_interval=20
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -1197,22 +1278,35 @@ jobs:
       PULSE_PROJECT_NAME: "GPDB-BehaveGPCheckcat"
 
 - name: MM_gprecoverseg
+  max_in_flight: 1
   plan:
-  - aggregate: *post_packaging_gets_trigger_true
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+      <<: *ccp_create_params
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveGPRecoverseg"
+      BEHAVE_FLAGS: --tags=gprecoverseg
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
 - name: MM_gpexpand
   plan:
@@ -1435,9 +1529,63 @@ jobs:
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: Release_Candidate
+  plan:
+  - get: gpdb_src
+    trigger: true
+    passed:
+    - compile_gpdb_centos6
+    - compile_gpdb_open_source_centos6
+    - compile_gpdb_centos7
+    - compile_gpdb_sles11
+    - compile_gpdb_windows_cl
+    - icw_planner_centos6
+    - icw_gporca_centos6
+    - icw_gporca_centos7
+    - icw_gporca_sles11
+    - icw_planner_ictcp_centos6
+    - MU_check_centos
+    - regression_tests_gpcloud_centos
+    - MM_gpperfmon
+    - MM_gpcheck
+    - DPM_backup-restore
+    - MM_gppkg
+    - MM_pt-rebuild
+    - fts
+    - storage
+    - QP_memory-accounting
+    - regression_tests_gphdfs_centos
+    - gpdb_rc_packaging_centos
+    - gpdb_rc_packaging_sles
+    - DPM_netbackup77
+    - DPM_backup-restore-ddboost
+    - DPM_backup_43_restore_5
+    - MM_gpcheckcat
+    - MM_gprecoverseg
+    - MM_gpexpand
+    - DPM_gptransfer-43x-to-5x
+    - DPM_gptransfer-5x-to-5x
+    - cs-pg-two-phase
+    - cs-walrepl-multinode
+    - cs-filerep-schema-topology-crashrecov
+    - cs-filerep-end-to-end
+    - cs-aoco-compression
+    - mpp_interconnect
+    - QP_runaway-query
+    - QP_optimizer-functional
+
+
 ## ======================================================================
 ## reusable anchors
 ## ======================================================================
+
+ccp_create_params_anchor: &ccp_create_params
+  action: create
+  delete_on_failure: true
+  generate_random_name: true
+  terraform_source: ccp_src/aws/
+  vars:
+    aws_instance-node-instance_type: t2.medium
 
 ccp_destroy_anchor: &ccp_destroy
   put: terraform
@@ -1446,7 +1594,7 @@ ccp_destroy_anchor: &ccp_destroy
     env_name_file: terraform/name
     terraform_source: ccp_src/aws/
     vars:
-      aws_instance-node-instance_type: t2.micro
+      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
   get_params:
     action: destroy
 
@@ -1463,4 +1611,6 @@ debug_sleep_anchor: &debug_sleep
       run:
         path: 'sh'
         args: ['-c', 'sleep 6h']
-  - *ccp_destroy
+    ensure:
+      <<: *ccp_destroy
+

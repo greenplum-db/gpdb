@@ -56,8 +56,7 @@
 #include "utils/inval.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
-#include "utils/resscheduler.h"
-#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 #include "utils/sharedsnapshot.h"
 #include "access/distributedlog.h"
 #include "access/clog.h"
@@ -2249,7 +2248,7 @@ StartTransaction(void)
 			 TransStateAsString(s->state));
 
 	/* Acquire a resource group slot at the beginning of a transaction */
-	if (IsResGroupEnabled() && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
+	if (ShouldAssignResGroupOnMaster())
 		AssignResGroupOnMaster();
 
 	/*
@@ -2837,7 +2836,7 @@ CommitTransaction(void)
 	freeGangsForPortal(NULL);
 
 	/* Release resource group slot at the end of a transaction */
-	if (IsResGroupEnabled() && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
+	if (ShouldAssignResGroupOnMaster())
 		UnassignResGroupOnMaster();
 }
 
@@ -3390,7 +3389,7 @@ CleanupTransaction(void)
 	finishDistributedTransactionContext("CleanupTransaction", true);
 
 	/* Release resource group slot at the end of a transaction */
-	if (IsResGroupEnabled() && IsNormalProcessingMode() && Gp_role == GP_ROLE_DISPATCH)
+	if (ShouldAssignResGroupOnMaster())
 		UnassignResGroupOnMaster();
 }
 

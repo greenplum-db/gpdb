@@ -259,7 +259,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 	return candidateOutputSlot;
 }
 
-static void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const int32 scanId);
+static void LogSelectedPartitionsForScan(int32 selectorId, HTAB *pidIndex, const int32 scanId);
 
 void LogPartitionSelection(EState *estate, int32 selectorId)
 {
@@ -283,7 +283,7 @@ void LogPartitionSelection(EState *estate, int32 selectorId)
 	}
 }
 
-void LogSelectedPartitionsForScan(int32 selectorId, const HTAB *pidIndex, const int32 scanId)
+void LogSelectedPartitionsForScan(int32 selectorId, HTAB *pidIndex, const int32 scanId)
 {
 	int32 numPartitionsSelected = 0;
 	Datum *selectedPartOids = palloc(sizeof(Datum) * hash_get_num_entries(pidIndex));

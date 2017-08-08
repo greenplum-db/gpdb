@@ -23,15 +23,13 @@
 
 #include "postgres.h"
 
-#include "access/attnum.h"
 #include "catalog/gp_policy.h"
 #include "miscadmin.h"
 #include "nodes/plannodes.h"
-#include "nodes/execnodes.h" /* CdbProcess, Slice, and SliceTable. */
 #include "nodes/relation.h"
 #include "utils/datum.h"
 #include "cdb/cdbgang.h"
-#include "nodes/nodeFuncs.h"
+
 
 /*
  * Macros to simplify copying of different kinds of fields.  Use these

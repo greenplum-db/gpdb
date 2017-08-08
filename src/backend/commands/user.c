@@ -42,8 +42,7 @@
 #include "utils/lsyscache.h"
 
 #include "executor/execdesc.h"
-#include "utils/resscheduler.h"
-#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbdisp_query.h"

@@ -246,6 +246,7 @@ extern void XLogFileRepFlushCache(
 	XLogRecPtr	*lastChangeTrackingEndLoc);
 
 extern void XLogGetLastRemoved(uint32 *log, uint32 *seg);
+extern XLogRecPtr XLogSaveBufferForHint(Buffer buffer, Relation relation);
 
 extern void xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
 extern void xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);

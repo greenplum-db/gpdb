@@ -847,6 +847,12 @@ processResults(CdbDispatchResult * dispatchResult)
 			if (pRes->numRejected > 0)
 				dispatchResult->numrowsrejected += pRes->numRejected;
 
+			/*
+			 * COPY FROM ON SEGMENT - get the number of rows completed by QE if any
+			 */
+			if (pRes->numCompleted > 0)
+				dispatchResult->numrowscompleted += pRes->numCompleted;
+
 			if (resultStatus == PGRES_COPY_IN ||
 				resultStatus == PGRES_COPY_OUT)
 				return true;

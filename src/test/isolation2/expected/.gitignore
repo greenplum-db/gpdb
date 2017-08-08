@@ -1,2 +1,6 @@
 resgroup_memory_statistic.out
 resgroup_memory_limit.out
+disable_resgroup.out
+enable_resgroup.out
+enable_resgroup_validate.out
+resgroup_cpu_rate_limit.out

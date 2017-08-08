@@ -27,7 +27,7 @@
 #include "utils/resowner.h"
 #include "utils/relcache.h"
 #include "executor/execdesc.h"
-#include "utils/resscheduler.h"
+#include "utils/resource_manager.h"
 
 
 /*

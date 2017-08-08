@@ -2438,7 +2438,7 @@ extract_query_dependencies_walker(Node *node, PlannerGlobal *context)
  * Note: This recurses into SubPlans. You better still call this for
  * every subplan in a overall plan, to make sure you capture dependencies
  * from subplans that are not referenced from the main plan, because
- * changes to the relations in eliminated subpland might require
+ * changes to the relations in eliminated subplans might require
  * re-planning, too. (XXX: it would be better to not recurse into SubPlans
  * here, as that's a waste of time.)
  */

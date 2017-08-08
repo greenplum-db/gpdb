@@ -129,9 +129,9 @@ AcquireRewriteLocks(Query *parsetree)
 				 * just grab AccessShareLock because then the executor would
 				 * be trying to upgrade the lock, leading to possible
 				 * deadlocks.
-                 *
-                 * CDB: The proper lock mode depends on whether the relation is
-                 * local or distributed, which is discovered by heap_open().
+				 *
+				 * CDB: The proper lock mode depends on whether the relation is
+				 * local or distributed, which is discovered by heap_open().
 				 * To handle this we make use of CdbOpenRelation().
 				 */
 				needLockUpgrade = false;
@@ -141,21 +141,20 @@ AcquireRewriteLocks(Query *parsetree)
 					lockmode = RowShareLock;
 				else
 					lockmode = AccessShareLock;
-								
-                /* Target of INSERT/UPDATE/DELETE? */
-                if (rt_index == parsetree->resultRelation)
-                {
-					lockmode = RowExclusiveLock;
-                	if (parsetree->commandType != CMD_INSERT)
-						needLockUpgrade = true;
-                }
 
-                /* FOR UPDATE/SHARE? */
+				/* Target of INSERT/UPDATE/DELETE? */
+				if (rt_index == parsetree->resultRelation)
+				{
+					lockmode = RowExclusiveLock;
+					if (parsetree->commandType != CMD_INSERT)
+						needLockUpgrade = true;
+				}
+
+				/* FOR UPDATE/SHARE? */
 				else if (get_rowmark(parsetree, rt_index) != NULL)
 				{
 					needLockUpgrade = true;
 				}
-
 
 				/* Take a lock either using CDB lock promotion or not */
 				if (needLockUpgrade)
@@ -167,8 +166,8 @@ AcquireRewriteLocks(Query *parsetree)
 					rel = heap_open(rte->relid, lockmode);
 				}
 
-                /* Close the relcache entry without releasing the lock. */
-                heap_close(rel, NoLock);
+				/* Close the relcache entry without releasing the lock. */
+				heap_close(rel, NoLock);
 				break;
 
 			case RTE_JOIN:

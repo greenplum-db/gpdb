@@ -76,7 +76,8 @@ pqParseInput3(PGconn *conn)
 	char		id;
 	int			msgLength;
 	int			avail;
-	int			numRejected = 0;
+	int			numRejected  = 0;
+	int			numCompleted = 0;
 
 	/*
 	 * Loop to parse successive complete messages available in the buffer.
@@ -162,29 +163,6 @@ pqParseInput3(PGconn *conn)
 		else if (id == 'N')
 		{
 			if (pqGetErrorNotice3(conn, false))
-				return;
-		}
-		else if (id == 'w')
-		{
-			int version_len=0;
-
-			if (pqGetInt(&(conn->motion_listener), 4, conn))
-				return;
-
-			if (pqGetInt(&version_len, 4, conn))
-				return;
-
-			if (conn->qe_version != NULL && version_len > 0)
-			{
-				free(conn->qe_version);
-				conn->qe_version = NULL;
-			}
-			conn->qe_version = malloc(version_len);
-
-			if (conn->qe_version == NULL)
-				return;
-
-			if (pqGetnchar(conn->qe_version, version_len, conn))
 				return;
 		}
 		else if (id == 'k')
@@ -477,6 +455,13 @@ pqParseInput3(PGconn *conn)
 						return;
 
 					conn->result->numRejected += numRejected;
+
+					/* Optionally receive completed number when COPY FROM ON SEGMENT */
+					if (msgLength >= 8 && !pqGetInt(&numCompleted, 4, conn))
+					{
+						conn->result->numCompleted += numCompleted;
+					}
+
 					break;
 				case 'Y':       /* CDB: statistical response from QE to QD */
 					/* for certain queries, the stats may arrive

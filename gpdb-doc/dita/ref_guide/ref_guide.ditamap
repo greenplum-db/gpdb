@@ -201,6 +201,8 @@
 				<topicref href="system_catalogs/pg_partitions.xml"/>
 				<topicref href="system_catalogs/pg_pltemplate.xml"/>
 				<topicref href="system_catalogs/pg_proc.xml"/>
+				<topicref href="system_catalogs/pg_resgroup.xml"/>
+				<topicref href="system_catalogs/pg_resgroupcapability.xml"/>
 				<topicref href="system_catalogs/pg_resourcetype.xml"/>
 				<topicref href="system_catalogs/pg_resqueue.xml"/>
 				<topicref href="system_catalogs/pg_resqueue_attributes.xml"/>

@@ -1,0 +1,12 @@
+CREATE FUNCTION gp_inject_fault(
+  faultname text,
+  type text,
+  ddl text,
+  database text,
+  tablename text,
+  numoccurrences int4,
+  sleeptime int4,
+  db_id smallint)
+RETURNS boolean
+AS '$libdir/gp_inject_fault'
+LANGUAGE C VOLATILE STRICT NO SQL;

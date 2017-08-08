@@ -2434,7 +2434,6 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, info, rdata, FrozenTransactionId);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -2837,7 +2836,6 @@ l1:
 		recptr = XLogInsert_OverrideXid(RM_HEAP_ID, XLOG_HEAP_DELETE, rdata, xid);
 
 		PageSetLSN(dp, recptr);
-		PageSetTLI(dp, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -2984,8 +2982,7 @@ heap_update_internal(Relation relation, ItemPointer otid, HeapTuple newtup,
 	PageHeader	dp;
 	Buffer		buffer,
 				newbuf;
-	bool		need_toast,
-				already_marked;
+	bool		need_toast;
 	Size		newtupsize,
 				pagefree;
 	bool		have_tuple_lock = false;
@@ -3210,9 +3207,9 @@ l2:
 	 * If the toaster needs to be activated, OR if the new tuple will not fit
 	 * on the same page as the old, then we need to release the content lock
 	 * (but not the pin!) on the old tuple's buffer while we are off doing
-	 * TOAST and/or table-file-extension work.	We must mark the old tuple to
-	 * show that it's already being updated, else other processes may try to
-	 * update it themselves.
+	 * TOAST and/or table-file-extension work.  We must mark the old tuple to
+	 * show that it's locked, else other processes may try to update it
+	 * themselves.
 	 *
 	 * We need to invoke the toaster if there are already any out-of-line
 	 * toasted values present, or if the new tuple is over-threshold.
@@ -3235,6 +3232,21 @@ l2:
 
 	if (need_toast || newtupsize > pagefree)
 	{
+		/*
+		 * To prevent concurrent sessions from updating the tuple, we have to
+		 * temporarily mark it locked, while we release the lock.
+		 *
+		 * To satisfy the rule that any xid potentially appearing in a buffer
+		 * written out to disk, we unfortunately have to WAL log this
+		 * temporary modification.  We can reuse xl_heap_lock for this
+		 * purpose.  If we crash/error before following through with the
+		 * actual update, xmax will be of an aborted transaction, allowing
+		 * other sessions to proceed.
+		 */
+
+
+		START_CRIT_SECTION();
+
 		/* Clear obsolete visibility flags ... */
 		oldtup.t_data->t_infomask &= ~(HEAP_XMAX_COMMITTED |
 									   HEAP_XMAX_INVALID |
@@ -3245,9 +3257,41 @@ l2:
 		/* ... and store info about transaction updating this tuple */
 		HeapTupleHeaderSetXmax(oldtup.t_data, xid);
 		HeapTupleHeaderSetCmax(oldtup.t_data, cid, iscombo);
-		/* temporarily make it look not-updated */
+		/* temporarily make it look not-updated, but locked */
+		oldtup.t_data->t_infomask |= HEAP_XMAX_EXCL_LOCK;
 		oldtup.t_data->t_ctid = oldtup.t_self;
-		already_marked = true;
+
+		MarkBufferDirty(buffer);
+
+		if (!relation->rd_istemp)
+		{
+			xl_heap_lock xlrec;
+			XLogRecPtr	recptr;
+			XLogRecData	rdata[2];
+
+			xl_heaptid_set(&xlrec.target, relation, &oldtup.t_self);
+
+			xlrec.locking_xid = xid;
+			xlrec.xid_is_mxact = false;
+			xlrec.shared_lock = false;
+
+			rdata[0].data = (char *) &xlrec;
+			rdata[0].len = SizeOfHeapLock;
+			rdata[0].buffer = InvalidBuffer;
+			rdata[0].next = &(rdata[1]);
+
+			rdata[1].data = NULL;
+			rdata[1].len = 0;
+			rdata[1].buffer = buffer;
+			rdata[1].buffer_std = true;
+			rdata[1].next = NULL;
+
+			recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_LOCK, rdata);
+			PageSetLSN(BufferGetPage(buffer), recptr);
+		}
+
+		END_CRIT_SECTION();
+
 		LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 
 		MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -3324,7 +3368,6 @@ l2:
 	else
 	{
 		/* No TOAST work needed, and it'll fit on same page */
-		already_marked = false;
 		newbuf = buffer;
 		heaptup = newtup;
 	}
@@ -3387,18 +3430,15 @@ l2:
 
 	RelationPutHeapTuple(relation, newbuf, heaptup);	/* insert new tuple */
 
-	if (!already_marked)
-	{
-		/* Clear obsolete visibility flags ... */
-		oldtup.t_data->t_infomask &= ~(HEAP_XMAX_COMMITTED |
-									   HEAP_XMAX_INVALID |
-									   HEAP_XMAX_IS_MULTI |
-									   HEAP_IS_LOCKED |
-									   HEAP_MOVED);
-		/* ... and store info about transaction updating this tuple */
-		HeapTupleHeaderSetXmax(oldtup.t_data, xid);
-		HeapTupleHeaderSetCmax(oldtup.t_data, cid, iscombo);
-	}
+	/* Clear obsolete visibility flags, possibly set by ourselves above... */
+	oldtup.t_data->t_infomask &= ~(HEAP_XMAX_COMMITTED |
+								   HEAP_XMAX_INVALID |
+								   HEAP_XMAX_IS_MULTI |
+								   HEAP_IS_LOCKED |
+								   HEAP_MOVED);
+	/* ... and store info about transaction updating this tuple */
+	HeapTupleHeaderSetXmax(oldtup.t_data, xid);
+	HeapTupleHeaderSetCmax(oldtup.t_data, cid, iscombo);
 
 	/* record address of new tuple in t_ctid of old one */
 	oldtup.t_data->t_ctid = heaptup->t_self;
@@ -3416,10 +3456,8 @@ l2:
 		if (newbuf != buffer)
 		{
 			PageSetLSN(BufferGetPage(newbuf), recptr);
-			PageSetTLI(BufferGetPage(newbuf), ThisTimeLineID);
 		}
 		PageSetLSN(BufferGetPage(buffer), recptr);
-		PageSetTLI(BufferGetPage(buffer), ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4129,7 +4167,6 @@ l3:
 		recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_LOCK, rdata);
 
 		PageSetLSN(dp, recptr);
-		PageSetTLI(dp, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4240,7 +4277,6 @@ heap_inplace_update_internal(Relation relation, HeapTuple tuple, bool freeze)
 			recptr = XLogInsert_OverrideXid(RM_HEAP_ID, XLOG_HEAP_INPLACE, rdata, FrozenTransactionId);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -4617,7 +4653,6 @@ log_heap_newpage(Relation rel,
 
 	recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_NEWPAGE, rdata);
 	PageSetLSN(page, recptr);
-	PageSetTLI(page, ThisTimeLineID);
 
 	END_CRIT_SECTION();
 }
@@ -4927,7 +4962,6 @@ log_newpage_internal(xl_heap_newpage *xlrec, Page page)
 	if (!PageIsNew(page))
 	{
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -5042,7 +5076,6 @@ heap_xlog_clean(XLogRecPtr lsn, XLogRecord *record, bool clean_move)
 	 */
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5113,7 +5146,6 @@ heap_xlog_freeze(XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5149,13 +5181,12 @@ heap_xlog_newpage(XLogRecPtr lsn, XLogRecord *record)
 	memcpy(page, (char *) xlrec + SizeOfHeapNewpage, BLCKSZ);
 
 	/*
-	 * The page may be uninitialized. If so, we can't set the LSN
-	 * and TLI because that would corrupt the page.
+	 * The page may be uninitialized. If so, we can't set the LSN because that
+	 * would corrupt the page.
 	 */
 	if (!PageIsNew(page))
 	{
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	MarkBufferDirty(buffer);
@@ -5249,7 +5280,6 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	/* Make sure there is no forward chain link in t_ctid */
 	htup->t_ctid = xlrec->target.tid;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5361,7 +5391,6 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	if (offnum == InvalidOffsetNumber)
 		elog(PANIC, "heap_insert_redo: failed to add tuple");
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5482,7 +5511,6 @@ heap_xlog_update(XLogRecPtr lsn, XLogRecord *record, bool move, bool hot_update)
 	if (samepage)
 		goto newsame;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 
@@ -5584,7 +5612,6 @@ newsame:;
 	if (offnum == InvalidOffsetNumber)
 		elog(PANIC, "heap_update_redo: failed to add tuple");
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5665,7 +5692,6 @@ heap_xlog_lock(XLogRecPtr lsn, XLogRecord *record)
 	/* Make sure there is no forward chain link in t_ctid */
 	htup->t_ctid = xlrec->target.tid;
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	
@@ -5739,7 +5765,6 @@ heap_xlog_inplace(XLogRecPtr lsn, XLogRecord *record)
 		   newlen);
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	

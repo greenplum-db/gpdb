@@ -47,9 +47,9 @@
 
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"		/* apply_shareinput */
+#include "cdb/cdbpartition.h"
 #include "cdb/cdbpath.h"		/* cdbpath_segments */
 #include "cdb/cdbpathtoplan.h"	/* cdbpathtoplan_create_flow() */
-#include "cdb/cdbpartition.h"	/* query_has_external_partition() */
 #include "cdb/cdbgroup.h"		/* grouping_planner extensions */
 #include "cdb/cdbsetop.h"		/* motion utilities */
 #include "cdb/cdbsubselect.h"	/* cdbsubselect_flatten_sublinks() */
@@ -706,10 +706,10 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	Assert(config);
 	root->config = config;
 
-	if (Gp_role != GP_ROLE_DISPATCH && root->config->cdbpath_segments > 0)
+	if (Gp_role == GP_ROLE_DISPATCH && gp_session_id > -1)
 	{
 		/* Choose a segdb to which our singleton gangs should be dispatched. */
-		gp_singleton_segindex = gp_session_id % root->config->cdbpath_segments;
+		gp_singleton_segindex = gp_session_id % getgpsegmentCount();
 	}
 
 	root->hasRecursion = hasRecursion;

@@ -1,0 +1,4 @@
+# Generated directories and files
+/results/
+/expected/setup.out
+/sql/setup.sql

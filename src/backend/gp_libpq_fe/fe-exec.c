@@ -176,6 +176,7 @@ PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     result->extraslen = 0;
 	
 	result->numRejected = 0;
+	result->numCompleted = 0;
 	result->naotupcounts = 0;
 	result->aotupcounts = NULL;
 

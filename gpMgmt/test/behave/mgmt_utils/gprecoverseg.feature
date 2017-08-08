@@ -5,6 +5,7 @@ Feature: gprecoverseg tests
     @multinode
     Scenario: gprecoverseg behave test requires a cluster with at least 2 hosts
         Given the database is running
+        Given database "gptest" exists
         And the information of a "mirror" segment on a remote host is saved
 
     Scenario: gprecoverseg should not output bootstrap error on success
@@ -177,3 +178,24 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         Then all the segments are running
         And the segments are synchronized
+
+    @multinode
+    @gprecoverseg_checksums
+    Scenario: gprecoverseg should use the same setting for data_checksums for a full recovery
+        Given the database is running
+        And results of the sql "show data_checksums" db "template1" are stored in the context
+        # cause a full recovery AFTER an injected failure on a remote primary
+        And all the segments are running
+        And the segments are synchronized
+        And the information of a "mirror" segment on a remote host is saved
+        And the information of the corresponding primary segment on a remote host is saved
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "primary" segment option
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved "primary" segment option
+        Then the saved mirror segment is marked down in config
+        And the saved mirror segment process is still running on that host
+        And user can start transactions
+        When the user runs "gprecoverseg -F -a"
+        Then gprecoverseg should return a return code of 0
+        And all the segments are running
+        # validate the the new segment has the correct setting by getting admin connection to that segment
+        Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved

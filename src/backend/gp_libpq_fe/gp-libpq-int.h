@@ -196,6 +196,8 @@ struct pg_result
 
 	/* GPDB: number of rows rejected in SREH (protocol message 'j') */
 	int			numRejected;
+	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
+	int			numCompleted;
 	/* GPDB: number of processed tuples for each AO partition */
 	int			naotupcounts;
 	PQaoRelTupCount *aotupcounts;
@@ -368,9 +370,7 @@ struct pg_conn
 	int			be_pid;			/* PID of backend --- needed for cancels */
 	int			be_key;			/* key of backend --- needed for cancels */
 	
-	int			motion_listener; /* CDB tcp port for the interconnect listener. */
     int64      mop_high_watermark;   /* highwater mark for mop */
-	char		*qe_version;
 	
 	char		md5Salt[4];		/* password salt received from backend */
 	pgParameterStatus *pstatus; /* ParameterStatus data */

@@ -1,3 +1,15 @@
 create or replace function dirty_buffers() returns setof record as
  '@abs_builddir@/fsync_helper@DLSUFFIX@', 'dirty_buffers'
   LANGUAGE C VOLATILE STRICT NO SQL;
+CREATE FUNCTION gp_inject_fault(
+  faultname text,
+  type text,
+  ddl text,
+  database text,
+  tablename text,
+  numoccurrences int4,
+  sleeptime int4,
+  db_id smallint)
+RETURNS boolean
+AS '$libdir/gp_inject_fault'
+LANGUAGE C VOLATILE STRICT NO SQL;

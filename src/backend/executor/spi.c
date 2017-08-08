@@ -2051,25 +2051,21 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 static void
 _SPI_assign_query_mem(QueryDesc * queryDesc)
 {
-	if (Gp_role == GP_ROLE_DISPATCH &&
-			IsResQueueEnabled() &&
-			!superuser() &&
-			ActivePortal &&
-			(gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE))
+	if (Gp_role == GP_ROLE_DISPATCH
+		&& ActivePortal
+		&& !IsResManagerMemoryPolicyNone())
+	{
+		if (!SPI_IsMemoryReserved())
 		{
-			if (!SPI_IsMemoryReserved())
-			{
-				queryDesc->plannedstmt->query_mem =
-					ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt,
-													 ActivePortal->queueId);
-			}
-			else
-			{
-				queryDesc->plannedstmt->query_mem =
-					SPI_GetMemoryReservation();
-			}
-			Assert(queryDesc->plannedstmt->query_mem > 0);
+			queryDesc->plannedstmt->query_mem =
+				ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 		}
+		else
+		{
+			queryDesc->plannedstmt->query_mem = SPI_GetMemoryReservation();
+		}
+		Assert(queryDesc->plannedstmt->query_mem > 0);
+	}
 }
 
 static int
@@ -2077,6 +2073,8 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, long tcount)
 {
 	int			operation = queryDesc->operation;
 	int			res;
+
+	_SPI_assign_query_mem(queryDesc);
 
 	switch (operation)
 	{
@@ -2122,31 +2120,10 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, long tcount)
 						/** TODO: siva - can we ever reach this point? */
 						ActivePortal->status = PORTAL_QUEUE;
 					
-						_SPI_assign_query_mem(queryDesc);
-
 						ActivePortal->releaseResLock =
 							ResLockPortal(ActivePortal, queryDesc);
 						ActivePortal->status = PORTAL_ACTIVE;
 					} 
-					else
-					{
-						/**
-						 * If we're in this case, then we already have a
-						 * resource queue lock which means we're calling an SPI
-						 * query after we've gone through the resource queue. We
-						 * need to determine how much memory this query
-						 * deserves. There are two possibilities:
-						 * 1) We're not in a function scan. We calculate the
-						 * query's limit using the queue. We don't go through
-						 * the queue, though.
-						 * 2) We're inside a function scan. We use the memory
-						 * allocated to the function scan operator.
-						 */
-						Assert(ActivePortal);
-						Assert(ActivePortal->releaseResLock);
-
-						_SPI_assign_query_mem(queryDesc);
-					}
 				}
 			}
 
@@ -2155,24 +2132,18 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, long tcount)
 		 * support is finished, the queryTree field will be gone.
 		 */
 		case CMD_INSERT:
-			_SPI_assign_query_mem(queryDesc);
-
 			if (queryDesc->plannedstmt->returningLists)
 				res = SPI_OK_INSERT_RETURNING;
 			else
 				res = SPI_OK_INSERT;
 			break;
 		case CMD_DELETE:
-			_SPI_assign_query_mem(queryDesc);
-
 			if (queryDesc->plannedstmt->returningLists)
 				res = SPI_OK_DELETE_RETURNING;
 			else
 				res = SPI_OK_DELETE;
 			break;
 		case CMD_UPDATE:
-			_SPI_assign_query_mem(queryDesc);
-
 			if (queryDesc->plannedstmt->returningLists)
 				res = SPI_OK_UPDATE_RETURNING;
 			else
@@ -2186,20 +2157,6 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, long tcount)
 	if (ShowExecutorStats)
 		ResetUsage();
 #endif
-
-	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
-			&& superuser())
-	{
-		if (!SPI_IsMemoryReserved())
-		{
-			queryDesc->plannedstmt->query_mem = ResourceQueueGetSuperuserQueryMemoryLimit();                		
-		}
-		else
-		{
-			queryDesc->plannedstmt->query_mem = SPI_GetMemoryReservation();
-		}
-		Assert(queryDesc->plannedstmt->query_mem > 0);
-	}
 
 	if (!cdbpathlocus_querysegmentcatalogs && fire_triggers)
 		AfterTriggerBeginQuery();
@@ -2578,7 +2535,7 @@ static uint64 SPIMemReserved = 0;
  */
 void SPI_InitMemoryReservation(void)
 {
-	Assert(gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE);
+	Assert(!IsResManagerMemoryPolicyNone());
 	SPIMemReserved = (uint64) statement_mem * 1024L;;
 }
 
@@ -2590,16 +2547,16 @@ void SPI_InitMemoryReservation(void)
  */
 void SPI_ReserveMemory(uint64 mem_reserved)
 {
-	Assert(gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE);
+	Assert(!IsResManagerMemoryPolicyNone());
 	if (mem_reserved > 0
 			&& (SPIMemReserved == 0 || mem_reserved < SPIMemReserved))
 	{
 		SPIMemReserved = mem_reserved;
 	}
 
-	if (gp_log_resqueue_memory)
+	if (LogResManagerMemory())
 	{
-		elog(gp_resqueue_memory_log_level, "SPI memory reservation %d", (int) SPIMemReserved);
+		elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "SPI memory reservation %d", (int) SPIMemReserved);
 	}
 }
 
@@ -2609,7 +2566,7 @@ void SPI_ReserveMemory(uint64 mem_reserved)
  */
 uint64 SPI_GetMemoryReservation(void)
 {
-	Assert(gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE);
+	Assert(!IsResManagerMemoryPolicyNone());
 	return SPIMemReserved;
 }
 
@@ -2618,7 +2575,7 @@ uint64 SPI_GetMemoryReservation(void)
  */
 bool SPI_IsMemoryReserved(void)
 {
-	Assert(gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE);
+	Assert(!IsResManagerMemoryPolicyNone());
 	return (SPIMemReserved == 0);
 }
 

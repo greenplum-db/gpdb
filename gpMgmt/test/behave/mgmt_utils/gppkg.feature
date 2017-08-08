@@ -3,6 +3,7 @@ Feature: gppkg tests
     @gppkg_setup
     Scenario: gppkg environment does not have any gppkg
         Given the database is running
+        And database "gptest" exists
         Then the user runs "gppkg --remove sample"
 
     Scenario: gppkg -u should prompt user when package is updated with -a option
@@ -112,3 +113,22 @@ Feature: gppkg tests
         Then gppkg should return a return code of 0
         And gppkg should print "The following packages will be uninstalled on .*: sample.gppkg" to stdout
         And "sample" gppkg files do not exist on any hosts
+
+    @gppkg_multinode_migrate
+    Scenario: gppkg --migrate copies all packages from master to all segment hosts
+        Given the database is running
+        And the user runs "gppkg -r sample"
+        When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg -r sample" with gphome "/tmp/gppkg_migrate"
+        And "sample" gppkg files do not exist on any hosts
+        When a user runs "MASTER_DATA_DIRECTORY=$MASTER_DATA_DIRECTORY gppkg --install $(pwd)/test/behave/mgmt_utils/steps/data/sample.gppkg" with gphome "/tmp/gppkg_migrate"
+        Then gppkg should return a return code of 0
+        And "sample" gppkg files do not exist on any hosts
+        And the user runs "gpstop -a && gpstart -a -m"
+        When the user runs "gppkg --migrate /tmp/gppkg_migrate $GPHOME"
+        Then gppkg should return a return code of 0
+        And gppkg should print "Installing sample.gppkg locally" to stdout
+        And gppkg should print "The following packages will be installed on .*: sample.gppkg" to stdout
+        And gppkg should print "Successfully cleaned the cluster" to stdout
+        And gppkg should print "The package migration has completed" to stdout
+        And the user runs "gpstop -ar"
+        And "sample" gppkg files exist on all hosts

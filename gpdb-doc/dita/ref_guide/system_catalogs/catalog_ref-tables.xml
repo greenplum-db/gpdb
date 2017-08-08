@@ -159,6 +159,12 @@
       <li id="eu149950">
         <xref href="./pg_proc.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="eu1499541">
+        <xref href="./pg_resgroup.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="eu1501941">
+        <xref href="./pg_resgroupcapability.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="eu150193">
         <xref href="./pg_resourcetype.xml#topic1" type="topic" format="dita"/>
       </li>

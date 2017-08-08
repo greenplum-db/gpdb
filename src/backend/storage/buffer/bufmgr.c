@@ -86,6 +86,7 @@ static bool IsForInput;
 /* local state for LockBufferForCleanup */
 static volatile BufferDesc *PinCountWaitBuf = NULL;
 
+static XLogRecPtr InvalidXLogRecPtr = {0, 0};
 
 static Buffer ReadBuffer_common(SMgrRelation reln, bool isLocalBuf,
 				  bool isTemp, BlockNumber blockNum, bool zeroPage,
@@ -373,6 +374,7 @@ ReadBuffer_common(SMgrRelation reln,
 	{
 		/* new buffers are zero-filled */
 		MemSet((char *) bufBlock, 0, BLCKSZ);
+		/* don't set checksum for all-zero page */
 		smgrextend(reln, blockNum, (char *) bufBlock,
 				   isTemp);
 	}
@@ -387,20 +389,20 @@ ReadBuffer_common(SMgrRelation reln,
 		else
 			smgrread(reln, blockNum, (char *) bufBlock);
 		/* check for garbage data */
-		if (!PageHeaderIsValid((PageHeader) bufBlock))
+		if (!PageIsVerified((Page) bufBlock, blockNum))
 		{
 			if (zero_damaged_pages)
 			{
 				ereport(WARNING,
 						(errcode(ERRCODE_DATA_CORRUPTED),
-						 errmsg("invalid page header in block %u of relation %s; zeroing out page",
+						 errmsg("invalid page in block %u of relation %s; zeroing out page",
 								blockNum, relpath(reln->smgr_rnode))));
 				MemSet((char *) bufBlock, 0, BLCKSZ);
 			}
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("invalid page header in block %u of relation %s",
+				 errmsg("invalid page in block %u of relation %s",
 						blockNum, relpath(reln->smgr_rnode)),
 				 errSendAlert(true)));
 		}
@@ -579,14 +581,23 @@ BufferAlloc(SMgrRelation smgr,
 				 * victim.	We need lock to inspect the page LSN, so this
 				 * can't be done inside StrategyGetBuffer.
 				 */
-				if (strategy != NULL &&
-					XLogNeedsFlush(BufferGetLSN(buf)) &&
-					StrategyRejectBuffer(strategy, buf))
+				if (strategy != NULL)
 				{
-					/* Drop lock/pin and loop around for another buffer */
-					ReleaseContentLock(buf);
-					UnpinBuffer(buf, true);
-					continue;
+					XLogRecPtr	lsn;
+
+					/* Read the LSN while holding buffer header lock */
+					LockBufHdr(buf);
+					lsn = BufferGetLSN(buf);
+					UnlockBufHdr(buf);
+
+					if (XLogNeedsFlush(lsn) &&
+						StrategyRejectBuffer(strategy, buf))
+					{
+						/* Drop lock/pin and loop around for another buffer */
+						LWLockRelease(buf->content_lock);
+						UnpinBuffer(buf, true);
+						continue;
+					}
 				}
 
 				/* OK, do the I/O */
@@ -1924,6 +1935,8 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	XLogRecPtr	recptr;
 	ErrorContextCallback errcontext;
 	XLogRecPtr GistXLogRecPtrForTemp = {1, 1};	/* Magic GIST value */
+	Block		bufBlock;
+	char		*bufToWrite;
 
 	/*
 	 * Acquire the buffer's io_in_progress lock.  If StartBufferIO returns
@@ -1943,12 +1956,23 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	if (reln == NULL)
 		reln = smgropen(buf->tag.rnode);
 
+	LockBufHdr(buf);
+
+	/*
+	 * Run PageGetLSN while holding header lock, since we don't have the
+	 * buffer locked exclusively in all cases.
+	 */
+	recptr = BufferGetLSN(buf);
+
+	/* To check if block content changes while flushing. - vadim 01/17/97 */
+	buf->flags &= ~BM_JUST_DIRTIED;
+	UnlockBufHdr(buf);
+
 	/*
 	 * Force XLOG flush up to buffer's LSN.  This implements the basic WAL
 	 * rule that log updates must hit disk before any of the data-file changes
 	 * they describe do.
 	 */
-	recptr = BufferGetLSN(buf);
 	if (recptr.xlogid != GistXLogRecPtrForTemp.xlogid ||
 		recptr.xrecoff != GistXLogRecPtrForTemp.xrecoff)
 	{
@@ -1960,15 +1984,21 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 	 * have been able to write it while we were busy with log flushing because
 	 * we have the io_in_progress lock.
 	 */
+	bufBlock = BufHdrGetBlock(buf);
 
-	/* To check if block content changes while flushing. - vadim 01/17/97 */
-	LockBufHdr(buf);
-	buf->flags &= ~BM_JUST_DIRTIED;
-	UnlockBufHdr(buf);
+	/*
+	 * Update page checksum if desired.  Since we have only shared lock on the
+	 * buffer, other processes might be updating hint bits in it, so we must
+	 * copy the page to private storage if we do checksumming.
+	 */
+	bufToWrite = PageSetChecksumCopy((Page) bufBlock, buf->tag.blockNum);
 
+	/*
+	 * bufToWrite is either the shared buffer or a copy, as appropriate.
+	 */
 	smgrwrite(reln,
 			  buf->tag.blockNum,
-			  (char *) BufHdrGetBlock(buf),
+			  bufToWrite,
 			  false);
 
 	BufferFlushCount++;
@@ -2077,6 +2107,36 @@ RelationTruncate(Relation rel, BlockNumber nblocks, bool markPersistentAsPhysica
 	{
 		UnlockRelationForResynchronize(&rel->rd_node, AccessExclusiveLock);
 	}
+}
+
+/*
+ * BufferGetLSNAtomic
+ *		Retrieves the LSN of the buffer atomically using a buffer header lock.
+ *		This is necessary for some callers who may not have an exclusive lock
+ *		on the buffer.
+ */
+XLogRecPtr
+BufferGetLSNAtomic(Buffer buffer)
+{
+	volatile BufferDesc *bufHdr = &BufferDescriptors[buffer - 1];
+	char				*page = BufferGetPage(buffer);
+	XLogRecPtr			 lsn;
+
+	/*
+	 * If we don't need locking for correctness, fastpath out.
+	 */
+	if (!DataChecksumsEnabled() || BufferIsLocal(buffer))
+		return PageGetLSN(page);
+
+	/* Make sure we've got a real buffer, and that we hold a pin on it. */
+	Assert(BufferIsValid(buffer));
+	Assert(BufferIsPinned(buffer));
+
+	LockBufHdr(bufHdr);
+	lsn = PageGetLSN(page);
+	UnlockBufHdr(bufHdr);
+
+	return lsn;
 }
 
 /* ---------------------------------------------------------------------
@@ -2259,6 +2319,9 @@ FlushRelationBuffers(Relation rel)
 				(bufHdr->flags & BM_VALID) && (bufHdr->flags & BM_DIRTY))
 			{
 				ErrorContextCallback errcontext;
+				Page					localpage;
+
+				localpage = (char *) LocalBufHdrGetBlock(bufHdr);
 
 				MIRROREDLOCK_BUFMGR_DECLARE;
 				
@@ -2271,10 +2334,12 @@ FlushRelationBuffers(Relation rel)
 				// -------- MirroredLock ----------
 				// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 				MIRROREDLOCK_BUFMGR_LOCK;
+
+				PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
 				
 				smgrwrite(rel->rd_smgr,
 						  bufHdr->tag.blockNum,
-						  (char *) LocalBufHdrGetBlock(bufHdr),
+						  localpage,
 						  rel->rd_istemp);
 
 				MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -2427,25 +2492,27 @@ IncrBufferRefCount(Buffer buffer)
 }
 
 /*
- * SetBufferCommitInfoNeedsSave
+ * MarkBufferDirtyHint
  *
- *	Mark a buffer dirty when we have updated tuple commit-status bits in it.
+ *	Mark a buffer dirty for non-critical changes.
  *
- * This is essentially the same as MarkBufferDirty, except that the caller
- * might have only share-lock instead of exclusive-lock on the buffer's
- * content lock.  We preserve the distinction mainly as a way of documenting
- * that the caller has not made a critical data change --- the status-bit
- * update could be redone by someone else just as easily.  Therefore, no WAL
- * log record need be generated, whereas calls to MarkBufferDirty really ought
- * to be associated with a WAL-entry-creating action.
+ * This is essentially the same as MarkBufferDirty, except:
+ *
+ * 1. The caller does not write WAL; so if checksums are enabled, we may need
+ *    to write an XLOG_HINT WAL record to protect against torn pages.
+ * 2. The caller might have only share-lock instead of exclusive-lock on the
+ *    buffer's content lock.
+ * 3. This function does not guarantee that the buffer is always marked dirty
+ *    (due to a race condition), so it cannot be used for important changes.
  */
 void
-SetBufferCommitInfoNeedsSave(Buffer buffer)
+MarkBufferDirtyHint(Buffer buffer, Relation relation)
 {
 	volatile BufferDesc *bufHdr;
+	Page	page = BufferGetPage(buffer);
 
 	if (!BufferIsValid(buffer))
-		elog(ERROR, "bad buffer id: %d", buffer);
+		elog(ERROR, "bad buffer ID: %d", buffer);
 
 	if (BufferIsLocal(buffer))
 	{
@@ -2462,23 +2529,109 @@ SetBufferCommitInfoNeedsSave(Buffer buffer)
 	/*
 	 * This routine might get called many times on the same page, if we are
 	 * making the first scan after commit of an xact that added/deleted many
-	 * tuples.	So, be as quick as we can if the buffer is already dirty.  We
-	 * do this by not acquiring spinlock if it looks like the status bits are
-	 * already OK.	(Note it is okay if someone else clears BM_JUST_DIRTIED
-	 * immediately after we look, because the buffer content update is already
-	 * done and will be reflected in the I/O.)
+	 * tuples. So, be as quick as we can if the buffer is already dirty.  We do
+	 * this by not acquiring spinlock if it looks like the status bits are
+	 * already set.  Since we make this test unlocked, there's a chance we
+	 * might fail to notice that the flags have just been cleared, and failed
+	 * to reset them, due to memory-ordering issues.  But since this function
+	 * is only intended to be used in cases where failing to write out the data
+	 * would be harmless anyway, it doesn't really matter.
 	 */
 	if ((bufHdr->flags & (BM_DIRTY | BM_JUST_DIRTIED)) !=
 		(BM_DIRTY | BM_JUST_DIRTIED))
 	{
+		XLogRecPtr	lsn = InvalidXLogRecPtr;
+		bool		dirtied = false;
+		bool	saved_inCommit = MyProc->inCommit;
+
+		/*
+		 * If checksums are enabled, and the buffer is permanent, then a full
+		 * page image may be required even for some hint bit updates to protect
+		 * against torn pages. This full page image is only necessary if the
+		 * hint bit update is the first change to the page since the last
+		 * checkpoint.
+		 *
+		 * We don't check full_page_writes here because that logic is
+		 * included when we call XLogInsert() since the value changes
+		 * dynamically.
+		 */
+		if (DataChecksumsEnabled())
+		{
+			/*
+			 * If we're in recovery we cannot dirty a page because of a hint.
+			 * We can set the hint, just not dirty the page as a result so
+			 * the hint is lost when we evict the page or shutdown.
+			 *
+			 * See src/backend/storage/page/README for longer discussion.
+			 */
+			if (RecoveryInProgress())
+				return;
+
+			/*
+			 * If the block is already dirty because we either made a change
+			 * or set a hint already, then we don't need to write a full page
+			 * image.  Note that aggressive cleaning of blocks
+			 * dirtied by hint bit setting would increase the call rate.
+			 * Bulk setting of hint bits would reduce the call rate...
+			 *
+			 * We must issue the WAL record before we mark the buffer dirty.
+			 * Otherwise we might write the page before we write the WAL.
+			 * That causes a race condition, since a checkpoint might occur
+			 * between writing the WAL record and marking the buffer dirty.
+			 * We solve that with a kluge, but one that is already in use
+			 * during transaction commit to prevent race conditions.
+			 * Basically, we simply prevent the checkpoint WAL record from
+			 * being written until we have marked the buffer dirty. We don't
+			 * start the checkpoint flush until we have marked dirty, so our
+			 * checkpoint must flush the change to disk successfully or the
+			 * checkpoint never gets written, so crash recovery will fix.
+			 *
+			 * It's possible we may enter here without an xid, so it is
+			 * essential that CreateCheckpoint waits for virtual transactions
+			 * rather than full transactionids.
+			 */
+			MyProc->inCommit = true;
+			if (!relation->rd_istemp)
+			{
+				lsn = XLogSaveBufferForHint(buffer, relation);
+			}
+		}
+
 		LockBufHdr(bufHdr);
 		Assert(bufHdr->refcount > 0);
-		if (!(bufHdr->flags & BM_DIRTY) && VacuumCostActive)
-			VacuumCostBalance += VacuumCostPageDirty;
+		if (!(bufHdr->flags & BM_DIRTY))
+		{
+			dirtied = true;		/* Means "will be dirtied by this action" */
+
+			/*
+			 * Set the page LSN if we wrote a backup block. We aren't
+			 * supposed to set this when only holding a share lock but
+			 * as long as we serialise it somehow we're OK. We choose to
+			 * set LSN while holding the buffer header lock, which causes
+			 * any reader of an LSN who holds only a share lock to also
+			 * obtain a buffer header lock before using PageGetLSN(),
+			 * which is enforced in BufferGetLSNAtomic().
+			 *
+			 * If checksums are enabled, you might think we should reset the
+			 * checksum here. That will happen when the page is written
+			 * sometime later in this checkpoint cycle.
+			 */
+			if (!XLogRecPtrIsInvalid(lsn))
+				PageSetLSN(page, lsn);
+		}
 		bufHdr->flags |= (BM_DIRTY | BM_JUST_DIRTIED);
 		UnlockBufHdr(bufHdr);
+
+		MyProc->inCommit = saved_inCommit;
+
+		if (dirtied)
+		{
+			if (VacuumCostActive)
+				VacuumCostBalance += VacuumCostPageDirty;
+		}
 	}
 }
+
 
 /*
  * Release buffer content locks for shared buffers.

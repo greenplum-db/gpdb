@@ -104,5 +104,6 @@ jobs:
     file: gpdb_src/concourse/tasks/staging_server_gpcloud.yml
     image: centos-gpdb-dev-6
     params:
+      overwrite_gpcloud: true
       EC2_PRIVATE_KEY: {{ec2_private_key}}
       EC2_INSTANCE_IP: {{ec2_instance_ip}}

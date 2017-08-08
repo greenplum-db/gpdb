@@ -25,7 +25,7 @@ class Context(Values, object):
         "increments": ("dump", "_increments"), "last_operation": ("dump", "_last_operation"), "master_config": ("master_config_files", ".tar"),
         "metadata": ("dump_%(content)d_%(dbid)s", ""), "partition_list": ("dump", "_table_list"), "pipes": ("dump", "_pipes"), "plan": ("restore", "_plan"),
         "postdata": ("dump_%(content)d_%(dbid)s", "_post_data"), "report": ("dump", ".rpt"), "schema": ("dump", "_schema"),
-        "segment_config": ("segment_config_files_%(content)d_%(dbid)s", ".tar"), "stats": ("statistics_%(content)d_%(dbid)s", ""),
+        "segment_config": ("segment_config_files_%(content)d_%(dbid)s", ".tar"), "stats": ("statistics_%(content)d_%(dbid)s", ""), "table": ("dump", "_table"),
         "status": ("dump_status_%(content)d_%(dbid)s", ""),
     }
     defaults = {

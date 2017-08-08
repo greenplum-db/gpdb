@@ -5,17 +5,21 @@ from gppylib.commands import gp
 from gppylib.gparray import GpArray
 from test.behave_utils.utils import *
 import platform
+from behave import given, when, then
 
+
+#  todo ONLY implemented for a mirror; change name of step?
 @given('the information of a "{seg}" segment on a remote host is saved')
 @when('the information of a "{seg}" segment on a remote host is saved')
 @then('the information of a "{seg}" segment on a remote host is saved')
 def impl(context, seg):
     if seg == "mirror":
         gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        mirror_segs = [seg for seg in gparray.getDbList() if seg.isSegmentMirror() and seg.getSegmentHostName() != platform.node()]
+        mirror_segs = [seg for seg in gparray.getDbList()
+                       if seg.isSegmentMirror() and seg.getSegmentHostName() != platform.node()]
         context.remote_mirror_segdbId = mirror_segs[0].getSegmentDbId()
         context.remote_mirror_segcid = mirror_segs[0].getSegmentContentId()
-        context.remote_mirror_segdbname = mirror_segs[0].getSegmentHostName()
+        context.remote_mirror_seghost = mirror_segs[0].getSegmentHostName()
         context.remote_mirror_datadir = mirror_segs[0].getSegmentDataDirectory()
 
 @given('wait until the segment state of the corresponding primary goes in ChangeTrackingDisabled')
@@ -52,6 +56,7 @@ def impl(context):
             context.remote_pair_primary_port = seg.getSegmentPort()
             context.remote_pair_primary_host = seg.getSegmentHostName()
 
+
 @given('user runs the command "{cmd}" with the saved "{seg}" segment option')
 @when('user runs the command "{cmd}" with the saved "{seg}" segment option')
 @then('user runs the command "{cmd}" with the saved "{seg}" segment option')
@@ -69,20 +74,20 @@ def impl(context, cmd, seg):
 @then('the saved mirror segment process is still running on that host')
 def impl(context):
     cmd = """ps ux | grep "/bin/postgres \-D %s " | grep -v grep""" % (context.remote_mirror_datadir)
-    cmd=Command(name='user command', cmdStr=cmd, ctxt=REMOTE, remoteHost=context.remote_mirror_segdbname)
+    cmd=Command(name='user command', cmdStr=cmd, ctxt=REMOTE, remoteHost=context.remote_mirror_seghost)
     cmd.run(validateAfter=True)
     res = cmd.get_results()
     if not res.stdout.strip():
-        raise Exception('Mirror segment "%s" not active on "%s"' % (context.remote_mirror_datadir, context.remote_mirror_segdbname))
+        raise Exception('Mirror segment "%s" not active on "%s"' % (context.remote_mirror_datadir, context.remote_mirror_seghost))
     
 @given('the saved mirror segment is marked down in config')
 @when('the saved mirror segment is marked down in config')
 @then('the saved mirror segment is marked down in config')
 def impl(context):
-    qry = """select count(*) from gp_segment_configuration where status='d' and hostname='%s' and dbid=%s""" % (context.remote_mirror_segdbname, context.remote_mirror_segdbId)
+    qry = """select count(*) from gp_segment_configuration where status='d' and hostname='%s' and dbid=%s""" % (context.remote_mirror_seghost, context.remote_mirror_segdbId)
     row_count = getRows('template1', qry)[0][0]
     if row_count != 1:
-        raise Exception('Expected mirror segment %s on host %s to be down, but it is running.' % (context.remote_mirror_datadir, context.remote_mirror_segdbname))
+        raise Exception('Expected mirror segment %s on host %s to be down, but it is running.' % (context.remote_mirror_datadir, context.remote_mirror_seghost))
 
 @given('the mirror with content id "{cid}" is marked down in config')
 @when('the mirror with content id "{cid}" is marked down in config')
@@ -159,6 +164,17 @@ def impl(context, cid):
     select gp_delete_persistent_relation_node_entry(ctid) from (select ctid from gp_persistent_relation_node where mirror_existence_state=1) as ctid;
     '''
     runCommandOnRemoteSegment(context, cid, remove_extra_tid_entry_sql)
+
+
+@then('the saved primary segment reports the same value for sql "{sql_cmd}" db "{dbname}" as was saved')
+def impl(context, sql_cmd, dbname):
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -t -h %s -p %s -c \"%s\"; " % (
+        dbname, context.remote_pair_primary_host, context.remote_pair_primary_port, sql_cmd)
+    cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd)
+    cmd.run(validateAfter=True)
+    if [cmd.get_results().stdout.strip()] not in context.stored_sql_results:
+        raise Exception("cmd results do not match\n expected: '%s'\n received: '%s'" % (
+            context.stored_sql_results, cmd.get_results().stdout.strip()))
 
 def isSegmentUp(context, dbid):
     qry = """select count(*) from gp_segment_configuration where status='d' and dbid=%s""" % dbid

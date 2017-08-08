@@ -22,8 +22,10 @@ extern void cluster(ClusterStmt *stmt, bool isTopLevel);
 extern void check_index_is_clusterable(Relation OldHeap, Oid indexOid,
 						   bool recheck);
 extern void mark_index_clustered(Relation rel, Oid indexOid);
-extern Oid make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace, 
-        bool createAoBlockDirectory);
-extern void swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid, bool swap_stats);
+extern Oid make_new_heap(Oid OIDOldHeap, const char *NewName,
+			  Oid NewTableSpace,
+			  bool createAoBlockDirectory);
+extern void swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid,
+								bool swap_stats);
 
 #endif   /* CLUSTER_H */

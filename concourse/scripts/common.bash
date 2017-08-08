@@ -39,6 +39,7 @@ function make_cluster() {
   # Currently, the max_concurrency tests in src/test/isolation2
   # require max_connections of at least 129.
   export DEFAULT_QD_MAX_CONNECT=150
+  export STATEMENT_MEM=250MB
   workaround_before_concourse_stops_stripping_suid_bits
   pushd gpdb_src/gpAux/gpdemo
     if [[ $CONFIGURE_FLAGS == *"--enable-segwalrep"* ]]; then

@@ -83,13 +83,30 @@
           <codeph>SERIAL</codeph> or <codeph>BIGSERIAL</codeph> type):</p>
       <p>
         <codeblock>CREATE TABLE ... (
-            id INT4 DEFAULT nextval('id_seq')
+            id INT4 DEFAULT nextval('myserial')
             );
 </codeblock>
       </p>
       <p>Alternatively, a column can be altered and a sequence can be added as default value:</p>
-        <codeblock>ALTER TABLE ... ALTER COLUMN id SET DEFAULT nextval('id_seq');
+        <codeblock>ALTER TABLE ... ALTER COLUMN id SET DEFAULT nextval('myserial');
 </codeblock>
+    </body>
+  </topic>
+  <topic id="topic92" xml:lang="en">
+    <title>Sequence Wraparound</title>
+    <body>
+      <p>By default, a sequence does not wrap around. That is, when the sequence reaches the max value
+          (<codeph>+32767</codeph> for <codeph>SMALLSERIAL</codeph>, <codeph>+2147483647</codeph>
+          for <codeph>SERIAL</codeph>, <codeph>+9223372036854775807</codeph> for
+          <codeph>BIGSERIAL</codeph>), every <codeph>nextval()</codeph> call produces an error.
+          Alter the sequence to make it cycle around and start at <codeph>1</codeph> again:</p>
+      <p>
+        <codeblock>ALTER SEQUENCE myserial CYCLE;</codeblock>
+      </p>
+      <p>The wraparound behaviour can also specified when a sequence is created manually:</p>
+      <p>
+        <codeblock>CREATE SEQUENCE myserial CYCLE;</codeblock>
+      </p>
     </body>
   </topic>
 </topic>

@@ -56,16 +56,18 @@ insert into fsync_test2 select -i, i from generate_series(1,100)i;
 end;
 
 -- Reset all faults.
-\!gpfaultinjector -f all -m async -y reset -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('all', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration;
 
 -- Start with a clean slate (no dirty buffers).
 checkpoint;
 
 -- Skip checkpoints.
-\!gpfaultinjector -f checkpoint -m async -y skip -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('checkpoint', 'skip', '', '', '', 0, 0, dbid)
+from gp_segment_configuration where role = 'p' and content > -1;
 
 -- Suspend bgwriter.
-\!gpfaultinjector -f fault_in_background_writer_main -m async -y suspend -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('fault_in_background_writer_main', 'suspend', '', '', '', 0, 0, dbid)
+from gp_segment_configuration where role = 'p' and content > -1;
 
 -- Ensure no buffers are dirty before we start.
 select * from dirty_buffers()
@@ -85,10 +87,12 @@ select sum(num_dirty('fsync_test2'::regclass)) > 0 as passed
  from gp_dist_random('gp_id');
 
 -- Flush all dirty pages by BgBufferSync()
-\!gpfaultinjector -f bg_buffer_sync_default_logic -m async -y skip -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('bg_buffer_sync_default_logic', 'skip', '', '', '', 0, 0, dbid)
+from gp_segment_configuration where role = 'p' and content > -1;
 
 -- Resume bgwriter.
-\!gpfaultinjector -f fault_in_background_writer_main -m async -y resume -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('fault_in_background_writer_main', 'resume', '', '', '', 0, 0, dbid)
+from gp_segment_configuration where role = 'p' and content > -1;
 
 -- Wait until bgwriter sweeps through and writes out dirty buffers.
 -- The 10 indicates timeout in terms of number of iterations to be
@@ -98,10 +102,12 @@ select wait_for_bgwriter('fsync_test1'::regclass, 25) as passed;
 select wait_for_bgwriter('fsync_test2'::regclass, 25) as passed;
 
 -- Inject fault to count relfiles fsync'ed by checkpointer.
-\!gpfaultinjector -f fsync_counter -m async -y skip -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('fsync_counter', 'skip', '', '', '', 0, 0, dbid)
+from gp_segment_configuration where role = 'p' and content > -1;
 
 -- Resume checkpoints.
-\!gpfaultinjector -f checkpoint -m async -y reset -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('checkpoint', 'reset', '', '', '', 0, 0, dbid)
+from gp_segment_configuration where role = 'p' and content > -1;
 
 checkpoint;
 
@@ -113,7 +119,7 @@ select dirty_buffers() from gp_dist_random('gp_id')
 -- least 2.  The two files fsync'ed should be corresponding to
 -- fsync_test1 and fsync_test2 tables. `num times hit` is corresponding
 -- to the number of files synced by `fsync_counter` fault type.
-\!if [[ $(gpfaultinjector -f fsync_counter -m async -y status -o 0 --seg_dbid 2 | grep 'num times hit' | sed -e 's/^.*num times hit[^0-9]*\([0-9]*\)[^0-9]*$/\1/') -gt 2 ]]; then echo "PASS: buffers synced"; else echo "FAIL: buffers not synced"; fi
+select gp_inject_fault('fsync_counter', 'status', '', '', '', 0, 0, 2::smallint);
 
 -- Reset all faults.
-\!gpfaultinjector -f all -m async -y reset -o 0 -H ALL -r primary | grep -i 'error\|fail\|done' | sed -e 's/.*DONE$/DONE/'
+select gp_inject_fault('all', 'reset', '', '', '', 0, 0, dbid) from gp_segment_configuration;

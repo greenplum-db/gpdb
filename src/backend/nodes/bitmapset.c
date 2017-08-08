@@ -588,6 +588,7 @@ bms_is_empty(const Bitmapset *a)
 	return true;
 }
 
+
 /*
  * These operations all "recycle" their non-const inputs, ie, either
  * return the modified input or pfree it if it can't hold the result.

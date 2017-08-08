@@ -115,10 +115,10 @@ class ParserState:
 
 def _handle_begin_end_block(state, line, _):
 
-    if (line[0] == begin_start) and line.startswith(begin_expr):
+    if (line[0] == begin_start) and line.startswith(begin_expr) and not state.function_ddl:
         state.in_block = True
         state.output = True
-    elif (line[0] == end_start) and line.startswith(end_expr):
+    elif (line[0] == end_start) and line.startswith(end_expr) and not state.function_ddl:
         state.in_block = False
         state.output = True
     elif state.in_block:

@@ -157,7 +157,8 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 	 */
 	if (bufHdr->flags & BM_DIRTY)
 	{
-		SMgrRelation oreln;
+		SMgrRelation	oreln;
+		Page			localpage = (char *) LocalBufHdrGetBlock(bufHdr);
 
 		/* Find smgr relation for buffer */
 		oreln = smgropen(bufHdr->tag.rnode);
@@ -166,10 +167,12 @@ LocalBufferAlloc(SMgrRelation smgr, BlockNumber blockNum, bool *foundPtr)
 		// UNDONE: Unfortunately, I think we write temp relations to the mirror...
 		LWLockAcquire(MirroredLock, LW_SHARED);
 
+		PageSetChecksumInplace(localpage, bufHdr->tag.blockNum);
+
 		/* And write... */
 		smgrwrite(oreln,
 				  bufHdr->tag.blockNum,
-				  (char *) LocalBufHdrGetBlock(bufHdr),
+				  localpage,
 				  true);
 
 		LWLockRelease(MirroredLock);

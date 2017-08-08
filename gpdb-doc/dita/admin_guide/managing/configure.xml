@@ -861,9 +861,9 @@
         </body>
       </topic>
       <topic id="topic36" xml:lang="en">
-        <title>Greenplum Command Center Agent</title>
+        <title>Greenplum Performance Monitoring Data Collection Agents</title>
         <body>
-          <p>The following parameters configure the data collection agents for the Command Center (<codeph>gpperfmon</codeph>) database.</p>
+          <p>The following parameters configure the data collection agents for the (<codeph>gpperfmon</codeph>) database.</p>
           <simpletable id="kh171891">
             <strow>
               <stentry>

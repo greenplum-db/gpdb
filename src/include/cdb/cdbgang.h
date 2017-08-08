@@ -92,7 +92,7 @@ bool isPrimaryWriterGangAlive(void);
 Gang *buildGangDefinition(GangType type, int gang_id, int size, int content);
 void build_gpqeid_param(char *buf, int bufsz, int segIndex, bool is_writer, int gangId, int hostSegs);
 char *makeOptions(void);
-bool segment_failure_due_to_recovery(struct PQExpBufferData *segdbDesc);
+extern bool segment_failure_due_to_recovery(const char *error_message);
 
 /*
  * disconnectAndDestroyIdleReaderGangs()

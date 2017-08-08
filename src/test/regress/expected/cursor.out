@@ -77,13 +77,30 @@ abort;
 CREATE TABLE cursor_writer_reader (a int, b int) DISTRIBUTED BY (a);
 BEGIN;
 INSERT INTO cursor_writer_reader VALUES(1, 666);
-\! gpfaultinjector -q -f qe_got_snapshot_and_interconnect -y suspend --seg_dbid 2
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'suspend', '', '', '', 1, 0, 2::smallint);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 DECLARE cursor_c2 CURSOR FOR SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 SAVEPOINT x;
 UPDATE cursor_writer_reader SET b=333 WHERE b=666;
-\! gpfaultinjector -f qe_got_snapshot_and_interconnect -y status --seg_dbid 2 | grep triggered | uniq | wc -l
-       1
-\! gpfaultinjector -q -f qe_got_snapshot_and_interconnect -y resume --seg_dbid 2
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'status', '', '', '', 1, 0, 2::smallint);
+NOTICE:  Success: fault name:'qe_got_snapshot_and_interconnect' fault type:'suspend' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'triggered'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'resume', '', '', '', 1, 0, 2::smallint);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 FETCH cursor_c2;
  a |  b  
 ---+-----
@@ -96,7 +113,13 @@ SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 (0 rows)
 
 END;
-\! gpfaultinjector -q -f qe_got_snapshot_and_interconnect -y reset --seg_dbid 2
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'reset', '', '', '', 1, 0, 2::smallint);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- start_ignore
 ------------------------------------------------------------------------------
 -- LAST MODIFIED:
