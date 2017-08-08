@@ -245,16 +245,21 @@ trim(char *s)
 	char *read = s + 1;
 	char *write = s;
 	*write = toupper(*write);
-	for (int i = 0; i < s_len; i++)
+	if (*write == '\t')
 	{
-		if (*(read) == '\0')
+		*write = ' ';
+	}
+	for (int i = 1; i < s_len; i++)
+	{
+		if (*read == '\0')
 		{
 			*(++write) = '\0';
 			break;
 		}
+
 		if (!(isspace(*write) && isspace(*read)))
 		{
-			*(++write) = toupper(*read);
+			*(++write) = isspace(*read)?' ':toupper(*read);
 		}
 		read++;
 	}

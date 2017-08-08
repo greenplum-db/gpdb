@@ -718,23 +718,29 @@ COPY segment_reject_limit_from to STDOUT on segment log errors segment reject li
 ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
 -- \copy from doesn't support on segment
 --on segment lower case
-\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment;
 \COPY command doesn't support ON SEGMENT
 --on segment with spaces
-\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on   segment log errors segment reject limit 3 rows;
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on   segment;
 \COPY command doesn't support ON SEGMENT
 --on segment are capital
-\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT log errors segment reject limit 3 rows;
+\COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
+\COPY command doesn't support ON SEGMENT
+--on segment with \t
+\copy segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on  segment;
 \COPY command doesn't support ON SEGMENT
 -- \copy to doesn't support on segment
 --on segment lower case
-\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on segment log errors segment reject limit 3 rows;
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on segment;
 \COPY command doesn't support ON SEGMENT
 --on segment with spaces
-\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on   segment log errors segment reject limit 3 rows;
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' on   segment;
 \COPY command doesn't support ON SEGMENT
 --on segment are capital
-\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' ON SEGMENT log errors segment reject limit 3 rows;
+\COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' ON SEGMENT;
+\COPY command doesn't support ON SEGMENT
+--on segment with \t
+\copy segment_reject_limit_from from '/tmp/copy_on_segment<SEGID>.csv' on       segment;
 \COPY command doesn't support ON SEGMENT
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
