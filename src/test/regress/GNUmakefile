@@ -141,7 +141,7 @@ endif
 
 # And finally some extra C modules...
 
-all: all-spi tablespace-setup includecheck
+all: all-spi tablespace-setup 
 
 .PHONY: all-spi
 all-spi:
