@@ -259,15 +259,21 @@ ReadyForQuery(CommandDest dest)
 
 /*
  * Send a gpdb libpq message.
+ *
+ * This sends a message identical to that used when sending values of
+ * GUC_REPORT gucs to the client (see ReportGUCOption()). The motion
+ * listener port is sent as if there was a GUC called "qe_listener_port".
  */
 void
 sendQEDetails(void)
 {
-	StringInfoData buf;
+	StringInfoData msgbuf;
+	char		port_str[11];
 
-	pq_beginmessage(&buf, 'w');
-	pq_sendint(&buf, (int32) Gp_listener_port, sizeof(int32));			
-	pq_sendint(&buf, sizeof(PG_VERSION_STR), sizeof(int32));
-	pq_sendbytes(&buf, PG_VERSION_STR, sizeof(PG_VERSION_STR));
-	pq_endmessage(&buf);
+	snprintf(port_str, sizeof(port_str), "%u", Gp_listener_port);
+
+	pq_beginmessage(&msgbuf, 'S');
+	pq_sendstring(&msgbuf, "qe_listener_port");
+	pq_sendstring(&msgbuf, port_str);
+	pq_endmessage(&msgbuf);
 }

@@ -1021,7 +1021,7 @@ extern int GpStandbyDbid;
 /* Stores the listener port that this process uses to listen for incoming
  * Interconnect connections from other Motion nodes.
  */
-extern int	Gp_listener_port;
+extern uint32 Gp_listener_port;
 
 
 

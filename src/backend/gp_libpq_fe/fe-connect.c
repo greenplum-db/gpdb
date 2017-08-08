@@ -2522,8 +2522,6 @@ freePGconn(PGconn *conn)
 
 	if (conn->gpqeid)			/* CDB */
 		free(conn->gpqeid);
-	if (conn->qe_version)		/* CDB */
-		free(conn->qe_version);
 
 	/* Note that conn->Pfdebug is not ours to close or free */
 	if (conn->last_query)
@@ -4401,16 +4399,6 @@ PQoptions(const PGconn *conn)
 	if (!conn)
 		return NULL;
 	return conn->pgoptions;
-}
-
-/* GPDB function to retrieve QE-backend details (motion listener) */
-int
-PQgetQEdetail(PGconn *conn)
-{
-	if (!conn || (PQstatus(conn) == CONNECTION_BAD))
-		return -1;
-
-	return conn->motion_listener;
 }
 
 ConnStatusType
