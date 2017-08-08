@@ -31,6 +31,7 @@
 #include "utils/builtins.h"
 #include "utils/syscache.h"
 
+
 static bool create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 							   bool is_part_child);
 static bool needs_toast_table(Relation rel);
@@ -65,7 +66,6 @@ AlterTableCreateToastTable(Oid relOid, bool is_part_child)
 
 	heap_close(rel, NoLock);
 }
-
 
 /*
  * Create a toast table during bootstrap

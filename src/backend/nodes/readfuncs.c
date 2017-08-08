@@ -27,7 +27,9 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
 #include <math.h>
+
 #include "nodes/parsenodes.h"
 #include "nodes/readfuncs.h"
 #include "cdb/cdbgang.h"

@@ -471,6 +471,7 @@ list_member(List *list, void *datum)
 
 	return false;
 }
+
 /*
  * Return true iff 'datum' is a member of the list. Equality is
  * determined by using simple pointer comparison.
