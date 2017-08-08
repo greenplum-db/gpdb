@@ -635,5 +635,6 @@ extern void btree_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 extern void btree_xlog_startup(void);
 extern void btree_xlog_cleanup(void);
 extern bool btree_safe_restartpoint(void);
+extern void btree_mask(char *pagedata, BlockNumber blkno);
 
 #endif   /* NBTREE_H */

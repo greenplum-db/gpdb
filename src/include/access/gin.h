@@ -471,4 +471,6 @@ extern void ginInsertRecordBA(BuildAccumulator *accum,
 				  ItemPointer heapptr, Datum *entries, int32 nentry);
 extern ItemPointerData *ginGetEntry(BuildAccumulator *accum, Datum *entry, uint32 *n);
 
+extern void gin_mask(char *pagedata, BlockNumber blkno);
+
 #endif

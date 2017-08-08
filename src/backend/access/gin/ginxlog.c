@@ -17,6 +17,8 @@
 
 #include "access/gin.h"
 #include "access/heapam.h"
+#include "access/bufmask.h"
+
 #include "utils/memutils.h"
 #include "utils/guc.h"
 #include "cdb/cdbfilerepprimary.h"
@@ -173,7 +175,7 @@ ginRedoInsert(XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	/* nothing else to do if page was backed up */
-	if (record->xl_info & XLR_BKP_BLOCK_1)
+	if (IsBkpBlockApplied(record, 0))
 		return;
 
 	reln = XLogOpenRelation(data->node);
@@ -405,7 +407,7 @@ ginRedoVacuumPage(XLogRecPtr lsn, XLogRecord *record)
 	Page		page;
 
 	/* nothing to do if page was backed up (and no info to do it with) */
-	if (record->xl_info & XLR_BKP_BLOCK_1)
+	if (IsBkpBlockApplied(record, 0))
 		return;
 
 	reln = XLogOpenRelation(data->node);
@@ -473,7 +475,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	if (!(record->xl_info & XLR_BKP_BLOCK_1))
+	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		buffer = XLogReadBuffer(reln, data->blkno, false);
 		if (BufferIsValid(buffer))
@@ -490,7 +492,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 		}
 	}
 
-	if (!(record->xl_info & XLR_BKP_BLOCK_2))
+	if (!(IsBkpBlockApplied(record, 1)))
 	{
 		buffer = XLogReadBuffer(reln, data->parentBlkno, false);
 		if (BufferIsValid(buffer))
@@ -508,7 +510,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 		}
 	}
 
-	if (!(record->xl_info & XLR_BKP_BLOCK_3) && data->leftBlkno != InvalidBlockNumber)
+	if (!(IsBkpBlockApplied(record, 2)) && data->leftBlkno != InvalidBlockNumber)
 	{
 		buffer = XLogReadBuffer(reln, data->leftBlkno, false);
 		if (BufferIsValid(buffer))
@@ -721,4 +723,37 @@ gin_safe_restartpoint(void)
 	if (incomplete_splits)
 		return false;
 	return true;
+}
+
+/*
+ * Mask a GIN page before running consistency checks on it.
+ */
+void
+gin_mask(char *pagedata, BlockNumber blkno)
+{
+	Page		page = (Page) pagedata;
+	GinPageOpaque opaque;
+
+	mask_page_lsn_and_checksum(page);
+	opaque = GinPageGetOpaque(page);
+
+	mask_page_hint_bits(page);
+
+	/*
+	 * GIN metapage doesn't use pd_lower/pd_upper. Other page types do. Hence,
+	 * we need to apply masking for those pages.
+	 */
+#if PG_VERSION_NUM >= 80400
+	if (opaque->flags != GIN_META)
+#endif
+	{
+		/*
+		 * For GIN_DELETED page, the page is initialized to empty. Hence, mask
+		 * the page content.
+		 */
+		if (opaque->flags & GIN_DELETED)
+			mask_page_content(page);
+		else
+			mask_unused_space(page);
+	}
 }
