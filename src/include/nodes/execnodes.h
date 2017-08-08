@@ -29,7 +29,6 @@
  */
 #define InvalidPartitionSelectorId  0
 
-struct CdbDispatchResults;              /* in cdbdispatchresult.h */
 struct CdbExplain_ShowStatCtx;          /* private, in "cdb/cdbexplain.c" */
 struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
 struct StringInfoData;                  /* #include "lib/stringinfo.h" */
