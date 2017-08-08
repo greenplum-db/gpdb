@@ -17,9 +17,6 @@
 #include "gpos/io/CFileWriter.h"
 #include "gpopt/gpdbwrappers.h"
 
-#include "gpos/version.h"
-#include "gpopt/version.h"
-
 extern "C" {
 
 PG_MODULE_MAGIC_CPP;
