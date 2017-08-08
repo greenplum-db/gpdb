@@ -28,9 +28,6 @@
 /* include unit under test */
 #include "../src/pxfutils.c"
 
-/* include mock files */
-#include "mock/libchurl_mock.c"
-
 void
 test_are_ips_equal(void **state)
 {
@@ -118,75 +115,6 @@ test_normalize_key_name(void **state)
 
 }
 
-void
-test_call_rest(void **state)
-{
-    GPHDUri *hadoop_uri = (GPHDUri*) palloc0(sizeof(GPHDUri));
-    hadoop_uri->host = "host";
-    hadoop_uri->port = "123";
-
-
-    ClientContext *client_context = (ClientContext*) palloc0(sizeof(ClientContext));
-    client_context->http_headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-    initStringInfo(&(client_context->the_rest_buf));
-
-    CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
-
-    char *rest_msg = "http://%s:%s/%s/%s";
-
-    expect_value(print_http_headers, headers, client_context->http_headers);
-    will_be_called(print_http_headers);(client_context->http_headers);
-
-
-    StringInfoData expected_url;
-    initStringInfo(&expected_url);
-    appendStringInfo(&expected_url, "http://host:123/%s/%s", PXF_SERVICE_PREFIX, PXF_VERSION);
-
-    expect_string(churl_init_download, url, expected_url.data);
-    expect_value(churl_init_download, headers, client_context->http_headers);
-    will_return(churl_init_download, handle);
-
-    expect_value(churl_read_check_connectivity, handle, handle);
-    will_be_called(churl_read_check_connectivity);
-
-    /* first call to read should return Hello */
-    expect_value(churl_read, handle, handle);
-    expect_any(churl_read, buf);
-    expect_any(churl_read, max_size);
-
-    char* str = pstrdup("Hello ");
-
-    //will_assign_memory(churl_read, buf, str, 7);
-    will_return(churl_read, 7);
-
-    /* second call to read should return World */
-    expect_value(churl_read, handle, handle);
-    expect_any(churl_read, buf);
-    expect_any(churl_read, max_size);
-    //will_assign_memory(churl_read, buf, "World", 6);
-    will_return(churl_read, 6);
-
-    /* third call will return nothing */
-    expect_value(churl_read, handle, handle);
-    expect_any(churl_read, buf);
-    expect_any(churl_read, max_size);
-    will_return(churl_read, 0);
-
-    expect_value(churl_cleanup, handle, handle);
-    expect_value(churl_cleanup, after_error, false);
-    will_be_called(churl_cleanup);
-
-    call_rest(hadoop_uri, client_context, rest_msg);
-
-    //TODO: debug this, seems will_assign_memory is not quite working
-    //assert_string_equal(client_context->the_rest_buf.data, "Hello World");
-
-    pfree(expected_url.data);
-    pfree(client_context->http_headers);
-    pfree(client_context);
-    pfree(hadoop_uri);
-}
-
 int
 main(int argc, char* argv[])
 {
@@ -195,8 +123,7 @@ main(int argc, char* argv[])
     const UnitTest tests[] = {
             unit_test(test_are_ips_equal),
             unit_test(test_port_to_str),
-            unit_test(test_normalize_key_name),
-            unit_test(test_call_rest)
+            unit_test(test_normalize_key_name)
     };
 
     MemoryContextInit();

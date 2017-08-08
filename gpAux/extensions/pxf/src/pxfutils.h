@@ -21,17 +21,7 @@
 #define _PXFUTILS_H_
 
 #include "postgres.h"
-#include "libchurl.h"
 #include "pxfuriparser.h"
-
-typedef struct sClientContext
-{
-	CHURL_HEADERS http_headers;
-	CHURL_HANDLE handle;
-									/* part of the HTTP response - received	*/
-									/* from one call to churl_read 			*/
-	StringInfoData the_rest_buf; 	/* contains the complete HTTP response 	*/
-} ClientContext;
 
 /* checks if two ip strings are equal */
 bool are_ips_equal(char *ip1, char *ip2);
@@ -39,13 +29,20 @@ bool are_ips_equal(char *ip1, char *ip2);
 /* override port str with given new port int */
 void port_to_str(char** port, int new_port);
 
-/* parse the REST message and issue the libchurl call */
-void call_rest(GPHDUri *hadoop_uri, ClientContext *client_context, char* rest_msg);
-
 /* convert input string to upper case and prepend "X-GP-" prefix */
 char* normalize_key_name(const char* key);
 
 /* get the name of the type, given the OID */
 char* TypeOidGetTypename(Oid typid);
 
-#endif	// _PXFUTILS_H_
+#define PXF_CLUSTER       "default"
+#define PXF_PROFILE       "PROFILE"
+#define FRAGMENTER        "FRAGMENTER"
+#define ACCESSOR          "ACCESSOR"
+#define RESOLVER          "RESOLVER"
+#define ANALYZER          "ANALYZER"
+#define PxfDefaultHost    "localhost"
+#define PxfDefaultPortStr "51200"
+#define PxfDefaultPort    51200
+
+#endif  // _PXFUTILS_H_
