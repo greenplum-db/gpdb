@@ -1,5 +1,7 @@
 -- Misc tests related to dispatching queries to segments.
 
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
 -- Mask out the whoami message
 -- start_matchsubs
 -- m/^ \(seg\d .*:\d+\)/
@@ -8,7 +10,7 @@
 -- s/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/DETAIL:  Internal error: No motion listener port/
 -- end_matchsubs
 
--- Test quoting of GUC values and databse names when they're sent to segments
+-- Test quoting of GUC values and database names when they're sent to segments
 
 -- There used to be a bug in the quoting when the search_path setting was sent
 -- to the segment. It was not easily visible when search_path was set with a
@@ -54,9 +56,9 @@ select * from dispatchtesttab where t = repeat('x', 1024*11);
 -- during backend initialization
 --
 
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 -- inject a 'skip' fault before QE sends its motion_listener
-select gp_inject_fault('send_qe_details_init_backend', 'skip', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'skip', 2);
 
 -- terminate exiting QEs first
 \c
@@ -64,7 +66,7 @@ select gp_inject_fault('send_qe_details_init_backend', 'skip', '', '', '', 1, 0,
 SELECT 1 FROM gp_dist_random('gp_id');
 
 -- reset fault injector
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 
 --
 -- Test suit : test gang creation and commands dispatching 
@@ -112,7 +114,7 @@ set gp_gang_creation_retry_timer to 1000;
 select cleanupAllGangs();
 
 -- trigger fault and put segment 0 into recovery mode
-select gp_inject_fault('process_startup_packet', 'segv', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'segv', 2);
 --start_ignore
 select 'trigger fault' from gp_dist_random('gp_id');
 --end_ignore
@@ -121,7 +123,7 @@ select 'trigger fault' from gp_dist_random('gp_id');
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 
 -- Case 1.2
 -- A segment in recovery mode for long time, writer gang retry gp_gang_creation_retry_count times and finally failed
@@ -132,8 +134,8 @@ set gp_gang_creation_retry_timer to 200;
 select cleanupAllGangs();
 
 -- trigger fault and put segment 0 into recovery mode
-select gp_inject_fault('process_startup_packet', 'segv', '', '', '', 1, 0, 2::smallint);
-select gp_inject_fault('quickdie', 'suspend', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'segv', 2);
+select gp_inject_fault('quickdie', 'suspend', 2);
 --start_ignore
 select 'trigger fault' from gp_dist_random('gp_id');
 --end_ignore
@@ -142,9 +144,9 @@ select 'trigger fault' from gp_dist_random('gp_id');
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('quickdie', 'resume', '', '', '', 1, 0, 2::smallint);
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
-select gp_inject_fault('quickdie', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('quickdie', 'resume', 2);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
+select gp_inject_fault('quickdie', 'reset', 2);
 
 --start_ignore
 -- enlarge the retry count
@@ -171,7 +173,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 select cleanupAllGangs();
 
 -- segment 0 report an error when get a request 
-select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
 
 -- expect failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
@@ -186,7 +188,7 @@ select sum(case when hasBackendsExist(30)='t' then 1 else 0 end) > 0 as hasbacke
 -- cleanupAllGangs();
 select cleanupAllGangs();
 
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 -- segment 0 report an error when get the second request (reader gang creation request)
 select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 3, 0, 2::smallint);
 
@@ -200,7 +202,7 @@ select * from hasGangsExist();
 -- expect QEs exist.
 select sum(case when hasBackendsExist(0)='t' then 1 else 0 end) > 0 as hasbackends from gp_dist_random('gp_id');
 
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 
 -- Case 1.4
 -- Test createGang timeout.
@@ -209,14 +211,14 @@ select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0
 set gp_segment_connect_timeout to 1;
 select cleanupAllGangs();
 
-select gp_inject_fault('process_startup_packet', 'suspend', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'suspend', 2);
 
 -- expect timeout failure
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('process_startup_packet', 'resume', '', '', '', 1, 0, 2::smallint);
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'resume', 2);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 
 set gp_segment_connect_timeout to 0;
 select cleanupAllGangs();
@@ -227,7 +229,7 @@ select gp_inject_fault('process_startup_packet', 'sleep', '', '', '', 1, 1, 2::s
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 
 -- Case 1.5
 -- query was cancelled when dispatching commands to one gang.
@@ -236,13 +238,13 @@ select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::s
 -- must set log_min_messages to default when using interrupt, there is a bug in fault injection.
 set log_min_messages to default;
 
-select gp_inject_fault('after_one_slice_dispatched', 'interrupt', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('after_one_slice_dispatched', 'interrupt', 1);
 
 -- should fail and report error
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 
-select gp_inject_fault('after_one_slice_dispatched', 'reset', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
 
 -- test logging of gang management
 SET gp_log_gang = 'debug';
@@ -300,9 +302,9 @@ DROP TABLE foo_test;
 -- Test dangling Gang would be destroyed if interrupted during the creation
 --
 \c
-select gp_inject_fault('gang_created', 'reset', '', '', '', 1, 0, 1::smallint);
-select gp_inject_fault('gang_created', 'error', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('gang_created', 'reset', 1);
+select gp_inject_fault('gang_created', 'error', 1);
 select 1 from gp_dist_random('gp_id') limit 1;
 -- if previous gang is not destroyed, snapshot collision would happen
 select 1 from gp_dist_random('gp_id') limit 1;
-select gp_inject_fault('gang_created', 'reset', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('gang_created', 'reset', 1);

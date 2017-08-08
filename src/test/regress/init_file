@@ -3,6 +3,11 @@
 -- Individual tests can contain additional patterns specific to the test.
 
 -- start_matchignore
+
+# Some tests use the gp_inject_fault extension, and create it at the beginning
+# of the test. Ignore the NOTICE if it exists already.
+m/^NOTICE:  extension "gp_inject_fault" already exists, skipping/
+
 # match ignore the gpmon WARNING message
 m/^WARNING:  gpmon:.*Connection refused.*/
 
