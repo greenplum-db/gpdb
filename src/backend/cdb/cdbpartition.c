@@ -497,48 +497,6 @@ rel_has_external_partition(Oid relid)
 }
 
 /*
- * Check if a Query struct has external partition relation
- */
-bool
-query_has_external_partition(Query *query)
-{
-	if (query == NULL)
-		return false;
-
-	ListCell *lc = NULL;
-	foreach(lc, query->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-		if (rte->rtekind == RTE_RELATION)
-		{
-			Assert(OidIsValid(rte->relid));
-			if (rel_has_external_partition(rte->relid))
-			{
-				return true;
-			}
-		}
-		else if (rte->rtekind == RTE_SUBQUERY)
-		{
-			Assert(rte->subquery != NULL);
-			if (query_has_external_partition(rte->subquery))
-			{
-				return true;
-			}
-		}
-	}
-
-	foreach(lc, query->cteList)
-	{
-		CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
-		if (query_has_external_partition((Query *)cte->ctequery))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-/*
  * Does relation have an appendonly partition?
  * Returns true only when the input is the root partition
  * of a partitioned table and it has appendonly partitions.

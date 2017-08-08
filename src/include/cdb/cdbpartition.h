@@ -71,8 +71,6 @@ extern void rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pki
 
 extern bool rel_has_external_partition(Oid relid);
 
-extern bool query_has_external_partition(Query *query);
-
 extern bool rel_has_appendonly_partition(Oid relid);
 
 extern bool rel_is_child_partition(Oid relid);
