@@ -183,7 +183,7 @@ bool		gp_enable_slow_cursor_testmode = false;
  * backends.  Assigned by initMotionLayerIPC() at process startup.  This port
  * is used for the duration of this process and should never change.
  */
-int			Gp_listener_port;
+uint32		Gp_listener_port;
 
 int			Gp_max_packet_size; /* max Interconnect packet size */
 
