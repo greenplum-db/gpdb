@@ -19,6 +19,7 @@ import json
 import csv
 import subprocess
 import commands
+import signal
 from collections import defaultdict
 
 from datetime import datetime
@@ -2671,7 +2672,7 @@ def impl(context):
     if pid is None:
         raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
 
-    kill_process(int(pid), seg_host)
+    kill_process(int(pid), seg_host, signal.SIGKILL)
 
     has_process_eventually_stopped(pid, seg_host)
 
