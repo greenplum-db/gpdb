@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "nodes/nodeFuncs.h"
+#include "optimizer/walkers.h"
 #include "parser/analyze.h"
 #include "parser/parse_cte.h"
 #include "parser/parse_expr.h"

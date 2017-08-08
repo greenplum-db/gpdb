@@ -2250,7 +2250,6 @@ get_select_query_def(Query *query, deparse_context *context,
 {
 	StringInfo	buf = context->buf;
 	bool		force_colno;
-	const char *sep;
 	ListCell   *l;
 
 	/* Insert the WITH clause if given */
@@ -2646,7 +2645,7 @@ get_rule_grouplist(List *grplist, List *tlist,
 				   bool in_grpsets, deparse_context *context)
 {
 	StringInfo buf = context->buf;
-	char *sep;
+	const char *sep;
 	ListCell *lc;
 
 	sep = "";
@@ -5237,7 +5236,7 @@ get_sortlist_expr(List *l, List *targetList, bool force_colno,
                   deparse_context *context, char *keyword_clause)
 {
 	ListCell *cell;
-	char *sep;
+	const char *sep;
 	StringInfo buf = context->buf;
 
 	appendContextKeyword(context, keyword_clause,
