@@ -143,6 +143,11 @@ partition_get_policies_attrs(PartitionNode *pn,
 extern PartitionNode *get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 		  bool includesubparts);
 
+extern PartitionNode *RelationBuildPartitionDesc(Relation rel,
+												 bool inctemplate);
+extern PartitionNode *RelationBuildPartitionDescByOid(Oid relid,
+												 bool inctemplate);
+
 extern List *
 rel_get_leaf_children_relids(Oid relid);
 
