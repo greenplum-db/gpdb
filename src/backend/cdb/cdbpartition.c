@@ -11,7 +11,7 @@
  *--------------------------------------------------------------------------
  */
 #include "postgres.h"
-#include "funcapi.h"
+
 #include "access/genam.h"
 #include "access/hash.h"
 #include "access/heapam.h"

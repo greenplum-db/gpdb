@@ -26,7 +26,6 @@
 #include "nodes/pg_list.h"
 #include "nodes/print.h"
 #include "utils/memutils.h"
-#include "utils/hsearch.h"
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
@@ -37,7 +36,6 @@
 #include "port/pg_crc32c.h"
 #include "storage/pmsignal.h"
 
-#include "cdb/cdbselect.h"
 #include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
@@ -52,9 +50,6 @@
 #include "pgtime.h"
 #include <netinet/in.h>
 
-#include "port.h"
-
-
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #ifndef _WIN32_WINNT
@@ -62,9 +57,6 @@
 #endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#define SHUT_RDWR SD_BOTH
-#define SHUT_RD SD_RECEIVE
-#define SHUT_WR SD_SEND
 
 /* If we have old platform sdk headers, WSAPoll() might not be there */
 #ifndef POLLIN

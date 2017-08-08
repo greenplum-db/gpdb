@@ -29,9 +29,7 @@
 #include "postgres.h"
 #include <math.h>
 #include "nodes/parsenodes.h"
-#include "nodes/execnodes.h" /* Just for Slice and SliceTable */
 #include "nodes/readfuncs.h"
-#include "utils/lsyscache.h"  /* For get_typlenbyval */
 #include "cdb/cdbgang.h"
 
 /*

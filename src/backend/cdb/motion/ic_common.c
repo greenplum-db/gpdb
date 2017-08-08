@@ -11,17 +11,12 @@
 #include "postgres.h"
 
 #include "nodes/execnodes.h"            /* Slice, SliceTable */
-#include "nodes/pg_list.h"
-#include "nodes/print.h"
-#include "utils/memutils.h"
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
 #include "utils/builtins.h"
 #include "utils/debugbreak.h"
 
-#include "cdb/cdbselect.h"
-#include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
@@ -32,8 +27,6 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <netinet/in.h>
-
-#include "port.h"
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN

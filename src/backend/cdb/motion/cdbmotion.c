@@ -11,16 +11,13 @@
  */
 #include "postgres.h"
 
-#include "miscadmin.h"
 #include "access/htup.h"
 #include "cdb/cdbconn.h"
-#include "nodes/execnodes.h" //SliceTable
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
 #include "cdb/htupfifo.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/tupser.h"
-#include "libpq/pqformat.h"
 #include "utils/memutils.h"
 #include "utils/typcache.h"
 
