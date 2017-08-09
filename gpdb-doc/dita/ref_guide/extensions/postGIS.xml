@@ -4,9 +4,6 @@
 <topic id="topic1" xml:lang="en">
   <title id="ij138244">Greenplum PostGIS Extension</title>
   <body>
-    <draft-comment author="msk">DRAFT 5.0.0 - postgis - doc story <xref
-        href="https://www.pivotaltracker.com/story/show/149319461" format="html" scope="external"
-        >#149319461</xref></draft-comment>
     <p>This chapter contains the following information:</p>
     <ul>
       <li id="ij166737">
@@ -54,11 +51,11 @@
     <topic id="topic3" xml:lang="en">
       <title id="ij168742">Greenplum PostGIS Extension</title>
       <body>
-        <p>The Greenplum Database PostGIS extension package is available from <xref
-            href="https://network.pivotal.io" scope="external" format="html">Pivotal Network</xref>.
-          You can install the package using the Greenplum Package Manager (<codeph>gppkg</codeph>).
-          For details, see <codeph>gppkg</codeph> in the <cite>Greenplum Database Utility
-            Guide</cite>.</p>
+        <p><ph otherprops="pivotal">The Greenplum Database PostGIS extension package is available
+            from <xref href="https://network.pivotal.io" scope="external" format="html">Pivotal
+              Network</xref>. </ph>You can install the package using the Greenplum Package Manager
+            (<codeph>gppkg</codeph>). For details, see <codeph>gppkg</codeph> in the <cite>Greenplum
+            Database Utility Guide</cite>.</p>
         <p>Greenplum Database supports the PostGIS extension with these component versions.<ul
             id="ul_csh_q3z_d1b">
             <li>PostGIS 2.1.5</li>
@@ -105,8 +102,8 @@
         script that installs or removes both the PostGIS and PostGIS Raster features in a database.
         After the PostGIS extension package is installed, the script is in
           <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>. The
-          <codeph>postgis_manager.sh</codeph> script runs SQL scripts that install or removes
-        PostGIS and PostGIS Raster from a database.</p>
+          <codeph>postgis_manager.sh</codeph> script runs SQL scripts that install or remove PostGIS
+        and PostGIS Raster from a database.</p>
       <p>For information about the PostGIS and PostGIS Raster SQL scripts, and required PostGIS
         Raster environment variables, see <xref href="#topic5" type="topic" format="dita"/>.</p>
     </body>
@@ -382,7 +379,7 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
           PostGIS extension package in
             <codeph>$GPHOME/share/postgresql/contrib/postgis-2.1/</codeph>
         </p>
-        <note>If you installed PostGIS Raster, you must uninstall the PostGIS Raster before you
+        <note>If you installed PostGIS Raster, you must uninstall PostGIS Raster before you
           uninstall the PostGIS objects. PostGIS Raster depends on PostGIS objects. Greenplum
           Database returns an error if PostGIS objects are removed before PostGIS Raster.</note>
         <p>These scripts remove PostGIS and PostGIS Raster objects from a database.<ul
@@ -394,7 +391,7 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
           </ul></p>
         <p>After PostGIS support has been removed from all databases in the Greenplum Database
           system, you can remove the PostGIS extension package. For example this
-            <codeph>gppkg</codeph> command removes PostGIS extension package.
+            <codeph>gppkg</codeph> command removes the PostGIS extension package.
           <codeblock>gppkg -r postgis-ossv2.1.5_pv2.1_gpdb5.0</codeblock></p>
         <p>Restart Greenplum Database after removing the package.</p>
         <codeblock>gpstop -r</codeblock>
