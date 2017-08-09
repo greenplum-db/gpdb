@@ -448,6 +448,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		case T_AppendOnlyScan: /* Rely on structure equivalence */
 		case T_AOCSScan: /* Rely on structure equivalence */
 		case T_ExternalScan: /* Rely on structure equivalence */
+		case T_WorkTableScan:
 			{
 				Scan    *splan = (Scan *) plan;
 
@@ -460,7 +461,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 #ifdef USE_ASSERT_CHECKING
 				Assert(splan->scanrelid <= list_length(glob->finalrtable) && "Scan node's relid is outside the finalrtable!");
 				RangeTblEntry *rte = rt_fetch(splan->scanrelid, glob->finalrtable);
-				Assert(rte->rtekind == RTE_RELATION && "Scan plan should refer to a scan relation");
+				Assert((rte->rtekind == RTE_RELATION || rte->rtekind == RTE_CTE) && "Scan plan should refer to a scan relation");
 #endif
 
 				splan->plan.targetlist =
@@ -665,17 +666,6 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		case T_CteScan:
 			{
 				CteScan *splan = (CteScan *) plan;
-
-				splan->scan.scanrelid += rtoffset;
-				splan->scan.plan.targetlist =
-					fix_scan_list(glob, splan->scan.plan.targetlist, rtoffset);
-				splan->scan.plan.qual =
-					fix_scan_list(glob, splan->scan.plan.qual, rtoffset);
-			}
-			break;
-		case T_WorkTableScan:
-			{
-				WorkTableScan *splan = (WorkTableScan *) plan;
 
 				splan->scan.scanrelid += rtoffset;
 				splan->scan.plan.targetlist =

@@ -1118,11 +1118,6 @@ select * from my_sum;
   1350
 (2 rows)
 
--- With clause with recursive
-with recursive my_sum(total) as (select sum(value) from with_test)
-select *
-from my_sum;
-ERROR:  RECURSIVE option in WITH clause is not supported
 -- ERROR cases
 -- duplicate CTE name
 with my_sum(total) as (select sum(value) from with_test1),

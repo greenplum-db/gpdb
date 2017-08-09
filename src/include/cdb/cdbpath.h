@@ -36,6 +36,9 @@ cdbpath_motion_for_join(PlannerInfo    *root,
 void 
 cdbpath_dedup_fixup(PlannerInfo *root, Path *path);
 
+bool
+cdbpath_contains_wts(Path *path);
+
 /*
  * cdbpath_rows
  *

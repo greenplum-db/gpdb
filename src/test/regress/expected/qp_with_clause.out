@@ -835,14 +835,6 @@ with capitals(code,id,name,code) as
 select * from capitals;
 ERROR:  WITH query "capitals" must not have duplicate column name: code
 HINT:  Specify a column list without duplicate names
--- negative case. RECURSIVE WITH clause should fail 
-with recursive allofficiallanguages(language) as 
-(
- select language from city,countrylanguage where countrylanguage.countrycode = city.countrycode and isofficial = 'True'
- UNION 
- select language from allofficiallanguages)
-select * from allofficiallanguages;-- negative cases with queries forward referencing other CTEs
-ERROR:  RECURSIVE option in WITH clause is not supported
 -- query1 CTE referencing itself
 with lang_total as
 ( select count(*) as lang_count,country.code,countrylanguage.countrycode

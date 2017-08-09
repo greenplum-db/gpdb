@@ -198,6 +198,16 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
+		case T_RecursiveUnion:
+			{
+				RecursiveUnion	   *ru = (RecursiveUnion *) node;
+				RecursiveUnion	   *newru;
+
+				FLATCOPY(newru, ru, RecursiveUnion);
+				PLANMUTATE(newru, ru);
+				return (Node *) newru;
+			}
+
 		case T_Sequence:
 			{
 				Sequence *sequence = (Sequence *) node;
@@ -318,7 +328,7 @@ plan_tree_mutator(Node *node,
 				return (Node *) newTableScan;
 			}
 			break;
-				
+
 		case T_DynamicTableScan:
 			{
 				DynamicTableScan *tableScan = (DynamicTableScan *) node;
@@ -475,6 +485,17 @@ plan_tree_mutator(Node *node,
 				return (Node *) newscan;
 			}
 			break;
+
+		case T_WorkTableScan:
+			{
+				WorkTableScan *wts = (WorkTableScan *) node;
+				WorkTableScan *newwts;
+
+				FLATCOPY(newwts, wts, WorkTableScan);
+				SCANMUTATE(newwts, wts);
+
+				return (Node *) newwts;
+			}
 
 		case T_Join:
 			/* Abstract: Should see only subclasses. */
