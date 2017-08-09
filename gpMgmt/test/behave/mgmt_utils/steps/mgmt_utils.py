@@ -3179,11 +3179,11 @@ def impl(context, directory, prefix):
     results = cmd.get_stdout().split('\n')
 
     if len(results) == 0:
-        raise Exception('Failed to find dump files %s on the master under %s' % (results, master_dump_dir))
+        raise Exception('Failed to find dump files %s on the master under %s' % (results, dump_dir))
     for filename in results:
         if not os.path.basename(filename).startswith(prefix.strip()):
             raise Exception('Dump file %s on master under %s does not have required prefix %s' % (
-            filename, master_dump_dir, prefix))
+            filename, dump_dir, prefix))
 
 
 @given('the environment variable "{var}" is not set')
