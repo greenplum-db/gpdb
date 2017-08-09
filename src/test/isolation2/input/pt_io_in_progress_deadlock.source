@@ -1,0 +1,59 @@
+--
+-- Validate that PersistentObjLock is not acquired while io_in_progress lock is
+-- held on a buffer.
+--
+
+create extension if not exists gp_inject_fault;
+
+create function flush_relation_buffers(oid)
+   returns void
+   as '@abs_builddir@/isolation2_regress@DLSUFFIX@'
+   language c immutable strict no sql;
+
+-- We need a user defined filespace because the filespace and tablespace hash
+-- tables are ignored when accessing tables in the default/system tablespace.
+create filespace pt_deadlock_fs @gpfilespace_regressionfs1@;
+create tablespace pt_deadlock_ts filespace pt_deadlock_fs;
+create table pt_deadlock_table (a int, b int) tablespace pt_deadlock_ts;
+
+-- We want to flush a buffer through this test, so suspend checkpointer and
+-- bgwriter processes.
+select gp_inject_fault('checkpoint', 'suspend', dbid) from
+ gp_segment_configuration where role = 'p' and content > -1;
+select gp_inject_fault('fault_in_background_writer_main', 'suspend', dbid)
+ from gp_segment_configuration where role = 'p' and content > -1;
+
+insert into pt_deadlock_table select i,i from generate_series(1,1000)i;
+
+-- By suspending fault_before_pending_delete_relation_entry here, the query
+-- executor will be suspended while holding the PersistentObjLock on the
+-- segments.
+select gp_inject_fault('fault_before_pending_delete_relation_entry', 'suspend', dbid)
+ from gp_segment_configuration where role = 'p' and content > -1;
+
+-- Backend 1 obtains PersistentObjLock and blocks.
+1&: create table acquire_pt_lock_table (a int) distributed by (a);
+
+select gp_inject_fault('fault_before_pending_delete_relation_entry', 'status', dbid)
+ from gp_segment_configuration where role = 'p' and content > -1;
+
+-- Backend 2 flushes the dirty buffers in the pt_deadlock_table, and as a result
+-- will attempt to access the filespace and tablespace hash tables. It will
+-- acquire io_in_progress lock before accessing the hash tables, and will block
+-- if it also attempts to acquire PersistentObjLock.
+2: select flush_relation_buffers(oid) from gp_dist_random('pg_class') where relname = 'pt_deadlock_table';
+
+-- The fact that backend 2 completed flushing the relation buffers indicates
+-- that this test was successful.
+
+-- Clean up faults
+select gp_inject_fault('all', 'reset', dbid)
+ from gp_segment_configuration where role = 'p' and content > -1;
+
+1<:
+
+-- Because filespaces persist through database drop, we need to clean up the
+-- filespace/tablespace explicitly.
+drop table pt_deadlock_table;
+drop tablespace pt_deadlock_ts;
+drop filespace pt_deadlock_fs;
