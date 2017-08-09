@@ -567,7 +567,7 @@ static void
 remove_segment_persistent_entries(int16 pridbid, seginfo *i)
 {
 	/*
-	 * Remove filespace entries in pg_filespace_entry and
+	 * Remove filespace references in pg_filespace_entry and
 	 * gp_persistent_filespace_node
 	 */
 	update_filespaces(pridbid, i, false, NULL);
@@ -588,7 +588,7 @@ remove_segment_persistent_entries(int16 pridbid, seginfo *i)
 	update_relations(pridbid, i, false);
 
 	/*
-	 * If we're adding a segment mirror, we need to dispatch to that
+	 * If we're removing a segment mirror, we need to dispatch to that
 	 * segment's primary.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && i->db.role == SEGMENT_ROLE_MIRROR)
