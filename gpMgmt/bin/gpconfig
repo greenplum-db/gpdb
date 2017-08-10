@@ -53,6 +53,7 @@ def parseargs():
     parser.add_option('-M', '--mirrorvalue', type='string')
     parser.add_option('-f', '--file', action='store_true')
     parser.add_option('--file-compare', dest='file_compare', action='store_true')
+    parser.setHelp([])
 
     (options, _) = parser.parse_args()
 
