@@ -40,12 +40,13 @@ def get_default_logger():
       - Logs output to stdout
       - Does not setup file logging.
 
-    Typicial usage would be to call one of the setup_*_logging() functions
+    Typical usage would be to call one of the setup_*_logging() functions
     at the beginning of a script in order to establish the exact type of
-    logging desired, afterwhich later calls to get_default_logger() can be
+    logging desired, after which later calls to get_default_logger() can be
     used to return a reference to the logger.
     """
     global _LOGGER, _SOUT_HANDLER
+
     if _LOGGER is None:
         _LOGGER = logging.getLogger('default')
         f = _get_default_formatter()
@@ -53,6 +54,7 @@ def get_default_logger():
         _SOUT_HANDLER.setFormatter(f)
         _LOGGER.addHandler(_SOUT_HANDLER)
         _LOGGER.setLevel(logging.INFO)
+
     return _LOGGER
 
 
@@ -69,7 +71,7 @@ def get_unittest_logger():
     more consistent to gave a single get_default_logger() method and supply
     a setup_unittest_logging() function.
     """
-    global _LOGGER, _SOUT_HANDLER
+    global _LOGGER
     if _LOGGER is None:
         _LOGGER = logging.getLogger('default')
         filename = "unittest.log"
@@ -97,9 +99,9 @@ def setup_tool_logging(appName, hostname, userName, logdir=None, nonuser=False):
     global _DEFAULT_FORMATTER
     global _APP_NAME_FOR_DEFAULT_FORMAT
 
-    loggerName = "%s:%s" % (hostname, userName)
+    logger_name = "%s:%s" % (hostname, userName)
     if nonuser:
-        appName = appName + "_" + loggerName
+        appName = appName + "_" + logger_name
     _APP_NAME_FOR_DEFAULT_FORMAT = appName
 
     _enable_gpadmin_logging(appName, logdir)
@@ -108,7 +110,7 @@ def setup_tool_logging(appName, hostname, userName, logdir=None, nonuser=False):
     # now reset the default formatter (someone may have called get_default_logger before calling setup_tool_logging)
     #
     logger = get_default_logger()
-    logger.name = loggerName
+    logger.name = logger_name
     _DEFAULT_FORMATTER = None
     f = _get_default_formatter()
     _SOUT_HANDLER.setFormatter(f)
@@ -204,8 +206,20 @@ def get_logger_if_verbose():
     return None
 
 
-# ------------------------------- Private --------------------------------
+def log_to_file_only(msg, level=None):
+    """
+    When using default logging, which echoes messages to both stdout and file,
+    allow user to turn off logging to stdout for a single call.
+    :param level: level at which to log; will use the current default logging level if not provided
+    """
+    if _LOGGER:
+        level = level or _LOGGER.level
+        _LOGGER.removeHandler(_SOUT_HANDLER)  # temporarily remove stdout handler
+        _LOGGER.log(level, msg)
+        _LOGGER.addHandler(_SOUT_HANDLER)
 
+
+# ------------------------------- Private --------------------------------
 # evil global
 _LOGGER = None
 _FILENAME = None
@@ -241,8 +255,8 @@ def _get_default_formatter():
 
     if _DEFAULT_FORMATTER is None:
         format_str = "%(asctime)s:%(programname)s:%(name)s-[%(levelname)-s]:-%(message)s"
-        appName = _APP_NAME_FOR_DEFAULT_FORMAT.replace("%", "")  # to make sure we don't produce a format string
-        format_str = format_str.replace("%(programname)s", "%06d %s" % (os.getpid(), appName))
+        app_name = _APP_NAME_FOR_DEFAULT_FORMAT.replace("%", "")  # to make sure we don't produce a format string
+        format_str = format_str.replace("%(programname)s", "%06d %s" % (os.getpid(), app_name))
         _DEFAULT_FORMATTER = logging.Formatter(format_str, "%Y%m%d:%H:%M:%S")
     return _DEFAULT_FORMATTER
 
@@ -276,8 +290,8 @@ def _enable_gpadmin_logging(name, logdir=None):
     now = datetime.date.today()
 
     if logdir is None:
-        homeDir = os.path.expanduser("~")
-        gpadmin_logs_dir = homeDir + "/gpAdminLogs"
+        home_dir = os.path.expanduser("~")
+        gpadmin_logs_dir = home_dir + "/gpAdminLogs"
     else:
         gpadmin_logs_dir = logdir
 
