@@ -89,7 +89,7 @@ makeCdbCopy(bool is_copy_in)
  * may pg_throw via elog/ereport.
  */
 void
-cdbCopyStart(CdbCopy *c, char *copyCmd)
+cdbCopyStart(CdbCopy *c, char *copyCmd, struct GpPolicy *policy)
 {
 	int			seg;
 	MemoryContext oldcontext;
@@ -166,7 +166,20 @@ cdbCopyStart(CdbCopy *c, char *copyCmd)
 	((CopyStmt *)q->utilityStmt)->ao_segnos = c->ao_segnos;
 
 	((CopyStmt *)q->utilityStmt)->skip_ext_partition = c->skip_ext_partition;
-	
+
+	if (policy)
+	{
+		((CopyStmt *)q->utilityStmt)->nattrs = policy->nattrs;
+		((CopyStmt *)q->utilityStmt)->ptype = policy->ptype;
+		((CopyStmt *)q->utilityStmt)->distribution_attrs = policy->attrs;
+	}
+	else
+	{
+		((CopyStmt *)q->utilityStmt)->nattrs = 0;
+		((CopyStmt *)q->utilityStmt)->ptype = 0;
+		((CopyStmt *)q->utilityStmt)->distribution_attrs = NULL;
+	}
+
 	MemoryContextSwitchTo(oldcontext);
 
 	CdbDispatchUtilityStatement((Node *) q->utilityStmt,

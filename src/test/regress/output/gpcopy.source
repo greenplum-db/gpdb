@@ -783,7 +783,7 @@ INSERT INTO test_copy_on_segment_array VALUES ('{233,2,1}', 'hj');
 INSERT INTO test_copy_on_segment_array VALUES ('{666,2,1}', 'hj');
 INSERT INTO test_copy_on_segment_array VALUES ('{3,555,1}', 'hj');
 COPY test_copy_on_segment_array TO '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
-CREATE TABLE test_copy_on_segment_array_1 (LIKE test_copy_on_segment_array) DISTRIBUTED BY (a);
+CREATE TABLE test_copy_on_segment_array_1 (a int[], b text) DISTRIBUTED BY (a);
 COPY test_copy_on_segment_array_1 FROM '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
 SELECT * FROM test_copy_on_segment_array EXCEPT SELECT * FROM test_copy_on_segment_array_1;
  a | b 
@@ -798,7 +798,7 @@ INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,3,3},{2,6,9}}');
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,233,3},{2,5,9}}');
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,666,3},{2,555,9}}');
 COPY test_copy_on_segment_2dim_array TO '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
-CREATE TABLE test_copy_on_segment_2dim_array_1 (LIKE test_copy_on_segment_2dim_array) DISTRIBUTED BY (a);
+CREATE TABLE test_copy_on_segment_2dim_array_1 (a int[][]) DISTRIBUTED BY (a);
 COPY test_copy_on_segment_2dim_array_1 FROM '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
 SELECT * FROM test_copy_on_segment_2dim_array EXCEPT SELECT * FROM test_copy_on_segment_2dim_array_1;
  a 
@@ -990,6 +990,86 @@ SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_2;
 ------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
 (0 rows)
 
+--Test for `COPY FROM ON SEGMENT` checking the distribution key restriction 
+-- start_matchsubs
+-- m/^ERROR:  Value of distribution key doesn't belong to segment with ID \d, it belongs to segment with ID \d.*$/
+-- s/^ERROR:  Value of distribution key doesn't belong to segment with ID \d, it belongs to segment with ID \d.*$/ERROR:  Value of distribution key doesn't belong to segment/
+-- m/^ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.*$/
+-- s/^ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.*$/ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table./
+-- m/^CONTEXT:  COPY .*, line \d*: .*$/
+-- s/^CONTEXT:  COPY .*, line \d*: .*$/CONTEXT:  COPY xxxxx line x: xxx/
+-- end_matchsubs
+-- start_ignore
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY;
+NOTICE:  table "copy_on_segment_check_distkey" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_TOW_DSITKEY;
+NOTICE:  table "copy_on_segment_check_tow_dsitkey" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
+NOTICE:  table "copy_on_segment_check_distkey_partioned" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
+NOTICE:  table "copy_on_segment_check_distkey_subpartition" does not exist, skipping
+-- end_ignore
+CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY(a int)DISTRIBUTED BY(a);
+INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY SELECT generate_series(0,10);
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY0.csv' CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  Value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1. (copy.c:5049)  (seg0 172.17.0.2:40000 pid=13551)
+CONTEXT:  COPY copy_on_segment_check_distkey, line 2: "0"
+CREATE TABLE COPY_ON_SEGMENT_CHECK_TOW_DSITKEY(a int,b int)DISTRIBUTED BY(a,b);
+INSERT INTO COPY_ON_SEGMENT_CHECK_TOW_DSITKEY SELECT generate_series(0,10),generate_series(0,10);
+COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY to '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY<SEGID>.csv' ON SEGMENT CSV;
+COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY to '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY0.csv' CSV;
+COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  Value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1. (copy.c:5049)  (seg0 172.17.0.2:40000 pid=13551)
+CONTEXT:  COPY copy_on_segment_check_tow_dsitkey, line 1: "0,0"
+--`COPY FROM ON SEGMENT` partitoned table
+CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED(a int) DISTRIBUTED BY (a) PARTITION BY range(a) ( START (0) END (10) EVERY (5));
+INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SELECT generate_series(0,9);
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
+ count 
+-------
+    20
+(1 row)
+
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED0.csv' CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  Value of distribution key doesn't belong to segment with ID 1, it belongs to segment with ID 2. (copy.c:5049)  (seg1 172.17.0.2:40000 pid=13551)
+CONTEXT:  COPY copy_on_segment_check_distkey_partioned, line 1: "0"
+SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
+ count 
+-------
+    20
+(1 row)
+
+ALTER table copy_on_segment_check_distkey_partioned_1_prt_1 set DISTRIBUTED RANDOMLY ;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table. (copy.c:1691)
+--`COPY FROM ON SEGMENT` SUBPARTITION table
+CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION(a int,b int) DISTRIBUTED BY (a) PARTITION BY range(a) 
+ SUBPARTITION BY RANGE (b)
+    SUBPARTITION TEMPLATE (
+       START (0) END (10) EVERY (3)
+    )
+( START (0) END (10) EVERY (5));
+INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION SELECT generate_series(0,9),generate_series(0,9);
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
+ count 
+-------
+    20
+(1 row)
+
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION0.csv'  CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  Value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1. (copy.c:5049)  (seg0 172.17.0.2:40000 pid=20583)
+CONTEXT:  COPY copy_on_segment_check_distkey_subpartition, line 2: "0,0"
+ALTER table copy_on_segment_check_distkey_subpartition_1_prt_1_2_prt_1 set DISTRIBUTED RANDOMLY ;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table. (copy.c:1692)
 -- start_ignore
 DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;

@@ -23,6 +23,7 @@
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
 #include "nodes/value.h"
+#include "catalog/gp_policy.h"
 
 typedef struct PartitionNode PartitionNode; /* see relation.h */
 
@@ -1422,6 +1423,9 @@ typedef struct CopyStmt
 	/* Convenient location for dispatch of misc meta data */
 	PartitionNode *partitions;
 	List		*ao_segnos;		/* AO segno map */
+	int			nattrs;
+	GpPolicyType	ptype;
+	AttrNumber	*distribution_attrs;
 } CopyStmt;
 
 /* ----------------------
