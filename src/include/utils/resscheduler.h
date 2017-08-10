@@ -20,11 +20,11 @@
 #include "nodes/plannodes.h"
 #include "storage/lock.h"
 #include "tcop/dest.h"
+#include "cdb/memquota.h"
 
 /*
  * GUC variables.
  */
-typedef enum ResManagerMemoryPolicy ResManagerMemoryPolicy;
 extern ResManagerMemoryPolicy   gp_resqueue_memory_policy;
 extern char                		*gp_resqueue_memory_policy_str;
 extern bool						gp_log_resqueue_memory;

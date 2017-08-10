@@ -152,7 +152,6 @@ endif # PGXS
 
 includedir_server = $(pkgincludedir)/server
 includedir_internal = $(pkgincludedir)/internal
-includedir_internal_cdb = $(pkgincludedir)/internal/cdb
 pgxsdir = $(pkglibdir)/pgxs
 
 sqlmansect_dummy = l

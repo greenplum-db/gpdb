@@ -17,8 +17,8 @@ all: pg_config.h pg_config_os.h check_oids
 
 
 # Subdirectories containing headers for server-side dev
-SUBDIRS = access bootstrap catalog codegen commands executor gpmon lib libpq mb \
-	nodes optimizer parser postmaster regex replication rewrite storage tcop \
+SUBDIRS = access bootstrap catalog cdb codegen commands executor gpmon lib libpq \
+	mb nodes optimizer parser postmaster regex replication rewrite storage tcop \
 	snowball snowball/libstemmer tsearch tsearch/dicts utils \
 	port port/atomics port/win32 port/win32_msvc port/win32_msvc/sys \
 	port/win32/arpa port/win32/netinet port/win32/sys \
@@ -48,14 +48,6 @@ install: all installdirs
 	  cp $(srcdir)/$$dir/*.h '$(DESTDIR)$(includedir_server)'/$$dir/ || exit; \
 	  chmod $(INSTALL_DATA_MODE) '$(DESTDIR)$(includedir_server)'/$$dir/*.h  || exit; \
 	done
-# These headers are needed for PGXS
-	$(INSTALL_DATA) $(srcdir)/cdb/cdbpublic.h   $(DESTDIR)$(includedir_internal_cdb)
-	$(INSTALL_DATA) $(srcdir)/cdb/cdbcat.h   $(DESTDIR)$(includedir_internal_cdb)
-	$(INSTALL_DATA) $(srcdir)/cdb/cdbpathlocus.h   $(DESTDIR)$(includedir_internal_cdb)
-	$(INSTALL_DATA) $(srcdir)/cdb/cdbdef.h   $(DESTDIR)$(includedir_internal_cdb)
-	$(INSTALL_DATA) $(srcdir)/cdb/cdbdistributedsnapshot.h   $(DESTDIR)$(includedir_internal_cdb)
-	$(INSTALL_DATA) $(srcdir)/cdb/cdblocaldistribxact.h   $(DESTDIR)$(includedir_internal_cdb)
-	$(INSTALL_DATA) $(srcdir)/cdb/cdbvars.h   $(DESTDIR)$(includedir_internal_cdb)
 ifeq ($(vpath_build),yes)
 	for file in dynloader.h parser/parse.h; do \
 	  cp $$file '$(DESTDIR)$(includedir_server)'/$$file || exit; \
@@ -64,8 +56,7 @@ ifeq ($(vpath_build),yes)
 endif
 
 installdirs:
-	$(MKDIR_P) '$(DESTDIR)$(includedir)/libpq' '$(DESTDIR)$(includedir_internal)/libpq' \
-	    '$(DESTDIR)$(includedir_internal_cdb)'
+	$(MKDIR_P) '$(DESTDIR)$(includedir)/libpq' '$(DESTDIR)$(includedir_internal)/libpq'
 	$(MKDIR_P) $(addprefix '$(DESTDIR)$(includedir_server)'/, $(SUBDIRS))
 
 

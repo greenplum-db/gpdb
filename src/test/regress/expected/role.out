@@ -133,3 +133,34 @@ ERROR:  role "market" does not exist
 DROP USER jona11;
 ERROR:  role "jona11" does not exist
 DROP USER jona12;
+-- Test that a non-superuser cannot use ALTER USER RESET ALL to reset
+-- superuser-only GUCs. (A bug that was fixed in PostgreSQL commit
+-- e429448f33.)
+-- First, drop old user, if it was left over from previous run of this test.
+set client_min_messages='warning';
+drop role if exists guctestrole;
+reset client_min_messages;
+-- Create a user with two per-user settings. One is superuser-only,
+-- and another is not.
+create user guctestrole;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+alter user guctestrole set zero_damaged_pages=off; -- PGC_SUSET
+alter user guctestrole set application_name='test'; -- PGC_USERSET
+select rolconfig from pg_roles where rolname = 'guctestrole';
+                   rolconfig                    
+------------------------------------------------
+ {zero_damaged_pages=off,application_name=test}
+(1 row)
+
+-- Switch to non-superuser role, and issue ALTER USER RESET ALL.
+-- It should clear the 'application_name' setting, but not the
+-- 'zero_damaged_pages' setting, because it's superuser-only.
+set role guctestrole;
+alter user guctestrole reset all;
+select rolconfig from pg_roles where rolname = 'guctestrole';
+        rolconfig         
+--------------------------
+ {zero_damaged_pages=off}
+(1 row)
+
+reset role;

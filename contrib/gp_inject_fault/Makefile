@@ -1,7 +1,9 @@
 MODULES = gp_inject_fault
-DATA_built = gp_inject_fault.sql
+
+EXTENSION = gp_inject_fault
+DATA = gp_inject_fault--1.0.sql
+
 REGRESS = inject_fault_test
-MODULEDIR = gp_inject_fault
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

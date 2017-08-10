@@ -1055,13 +1055,14 @@ gpdb::FCastFunc
 	Oid oidSrc,
 	Oid oidDest, 
 	bool *is_binary_coercible,
-	Oid *oidCastFunc
+	Oid *oidCastFunc,
+	CoercionPathType *pathtype
 	)
 {
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_cast */
-		return get_cast_func(oidSrc, oidDest, is_binary_coercible, oidCastFunc);
+		return get_cast_func(oidSrc, oidDest, is_binary_coercible, oidCastFunc, pathtype);
 	}
 	GP_WRAP_END;
 	return false;
@@ -1893,9 +1894,10 @@ gpdb::SzMemoryContextStrdup
 // would with ereport(...) in the backend. This could be extended for other
 // fields, but this is all we need at the moment.
 void
-gpdb::RaiseGpdbErrorImpl
+gpdb::GpdbEreportImpl
 	(
 	int xerrcode,
+	int severitylevel,
 	const char *xerrmsg,
 	const char *xerrhint,
 	const char *filename,
@@ -1910,7 +1912,7 @@ gpdb::RaiseGpdbErrorImpl
 		// expanded version of ereport(). It will be caught by the
 		// GP_WRAP_END, and propagated up as a C++ exception, to be
 		// re-thrown as a Postgres error once we leave the C++ land.
-		if (errstart(ERROR, filename, lineno, funcname, TEXTDOMAIN))
+		if (errstart(severitylevel, filename, lineno, funcname, TEXTDOMAIN))
 			errfinish (errcode(xerrcode),
 					   errmsg("%s", xerrmsg),
 					   xerrhint ? errhint("%s", xerrhint) : 0);

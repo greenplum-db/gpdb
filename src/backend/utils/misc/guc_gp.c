@@ -3832,6 +3832,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_interconnect_debug_retry_interval", PGC_USERSET, GP_ARRAY_TUNING,
+			gettext_noop("Sets the interval by retry times to record a debug message for retry."),
+			NULL,
+			GUC_GPDB_ADDOPT
+		},
+		&Gp_interconnect_debug_retry_interval,
+		10, 1, 4096, NULL, NULL
+	},
+
+	{
 		{"gp_udp_bufsize_k", PGC_BACKEND, GP_ARRAY_TUNING,
 			gettext_noop("Sets recv buf size of UDP interconnect, for testing."),
 			NULL,

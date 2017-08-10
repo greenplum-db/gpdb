@@ -35,6 +35,8 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/ml_ipc.h"			/* listener_setup */
 #include "cdb/cdbtm.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "libpq/ip.h"
 #include "utils/faultinjection.h"

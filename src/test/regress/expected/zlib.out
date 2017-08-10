@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 DROP TABLE IF EXISTS test_zlib_hashjoin;
 NOTICE:  table "test_zlib_hashjoin" does not exist, skipping
 CREATE TABLE test_zlib_hashjoin (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 int, i8 int) WITH (APPENDONLY=true) DISTRIBUTED BY (i1) ; 
@@ -8,21 +9,29 @@ SET gp_workfile_type_hashjoin=bfz;
 SET gp_workfile_compress_algorithm=zlib;
 SET statement_mem=5000;
 --Fail after workfile creation and before add it to workfile set
-\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
-20170125:11:06:19:002833 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
-20170125:11:06:19:002833 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:19:002833 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
-20170125:11:06:19:002845 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y error --seg_dbid 2
-20170125:11:06:19:002845 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:19:002845 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_creation_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 SELECT COUNT(t1.*) FROM test_zlib_hashjoin AS t1, test_zlib_hashjoin AS t2 WHERE t1.i1=t2.i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error'  (seg0 slice2 127.0.0.1:25432 pid=2829)
-\! gpfaultinjector -f workfile_creation_failure -y status --seg_dbid 2
-20170125:11:06:20:002864 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y status --seg_dbid 2
-20170125:11:06:20:002864 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:20:002864 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:20:002864 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'status', 2);
+NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 RESET statement_mem;
 DROP TABLE IF EXISTS test_zlib_hagg; 
 NOTICE:  table "test_zlib_hagg" does not exist, skipping
@@ -34,26 +43,37 @@ INSERT INTO test_zlib_hagg SELECT i,i,i,i FROM
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 SET statement_mem=2000;
 --Fail after workfile creation and before add it to workfile set
-\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
-20170125:11:06:21:002876 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
-20170125:11:06:21:002876 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:21:002876 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_creation_failure -y error --seg_dbid 2
-20170125:11:06:21:002891 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y error --seg_dbid 2
-20170125:11:06:21:002891 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:21:002891 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_creation_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 SELECT MAX(i1) FROM test_zlib_hagg GROUP BY i2;
 ERROR:  fault triggered, fault name:'workfile_creation_failure' fault type:'error'  (seg0 slice2 127.0.0.1:25432 pid=2829)
-\! gpfaultinjector -f workfile_creation_failure -y status --seg_dbid 2
-20170125:11:06:22:002907 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y status --seg_dbid 2
-20170125:11:06:22:002907 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:22:002907 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:22:002907 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'status', 2);
+NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Reset faultinjectors
-\! gpfaultinjector -f workfile_creation_failure -y reset --seg_dbid 2
-20170125:11:06:22:002919 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_creation_failure -y reset --seg_dbid 2
-20170125:11:06:22:002919 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:22:002919 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 create table t (i int, j text);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -76,14 +96,20 @@ EXCEPTION WHEN others THEN
 end
 $body$ language plpgsql;
 -- Inject fault before we close workfile in ExecHashJoinNewBatch
-\! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
-20170125:11:06:24:002931 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y reset --seg_dbid 2
-20170125:11:06:24:002931 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:24:002931 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_hashjoin_failure -y error --seg_dbid 2
-20170125:11:06:24:002943 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y error --seg_dbid 2
-20170125:11:06:24:002943 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:24:002943 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_creation_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 select FuncA();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -99,15 +125,20 @@ select * from t1;
 ---+---
 (0 rows)
 
-\! gpfaultinjector -f workfile_hashjoin_failure -y status --seg_dbid 2
-20170125:11:06:25:002955 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y status --seg_dbid 2
-20170125:11:06:25:002955 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:25:002955 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'workfile_hashjoin_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:25:002955 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'status', 2);
+NOTICE:  Success: fault name:'workfile_creation_failure' fault type:'error' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 drop function FuncA();
 drop table t;
 drop table t1;
-\! gpfaultinjector -f workfile_hashjoin_failure -y reset --seg_dbid 2
-20170125:11:06:26:002967 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_hashjoin_failure -y reset --seg_dbid 2
-20170125:11:06:26:002967 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:26:002967 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_creation_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+

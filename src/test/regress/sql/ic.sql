@@ -4,6 +4,8 @@
  * Parameter combination tests
  * Improve code coverage tests
  */
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
 CREATE SCHEMA ic_udp_test;
 SET search_path = ic_udp_test;
 
@@ -194,7 +196,7 @@ drop table if exists ic_test_1;
 create table ic_test_1 as select i as c1, i as c2 from generate_series(1, 100000) i;
 begin;
 declare ic_test_cursor_c1 cursor for select * from ic_test_1;
-\! gpfaultinjector -q -f interconnect_stop_ack_is_lost -y reset -s 1
-\! gpfaultinjector -q -f interconnect_stop_ack_is_lost -y skip -s 1
+select gp_inject_fault('interconnect_stop_ack_is_lost', 'reset', 1);
+select gp_inject_fault('interconnect_stop_ack_is_lost', 'skip', 1);
 commit;
 drop table ic_test_1;

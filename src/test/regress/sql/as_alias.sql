@@ -203,8 +203,8 @@ SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp without time
 -- end_equiv
 
 -- start_equiv
-SELECT count(*) AS One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without time zone 'now';
-SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without time zone 'now';
+SELECT count(*) AS One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without time zone 'now' + '2 seconds';
+SELECT count(*) One FROM TIMESTAMP_TBL_AS_TEST WHERE d1 = timestamp(2) without time zone 'now' + '2 seconds';
 -- end_equiv
 
 DELETE FROM TIMESTAMP_TBL_AS_TEST;

@@ -10,6 +10,8 @@
 #include "postgres.h"
 #include "portability/instr_time.h"
 
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
 #include "cdb/cdbdispatchresult.h"		/* CdbDispatchResults */
 #include "cdb/cdbexplain.h"		/* me */
@@ -19,8 +21,6 @@
 #include "executor/executor.h"	/* ExecStateTreeWalker */
 #include "executor/instrument.h"	/* Instrumentation */
 #include "lib/stringinfo.h"		/* StringInfo */
-#include "gp-libpq-fe.h"		/* PGresult; prereq for libpq-int.h */
-#include "gp-libpq-int.h"		/* pg_result */
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "utils/memutils.h"		/* MemoryContextGetPeakSpace() */
 #include "cdb/memquota.h"

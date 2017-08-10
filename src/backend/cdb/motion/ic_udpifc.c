@@ -4899,6 +4899,14 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now)
 	 * by OS for a long time. In this case, only a few times are tried.
 	 * Thus, the GUC Gp_interconnect_min_retries_before_timeout is added here.
 	 */
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG &&
+	   buf->nRetry % Gp_interconnect_debug_retry_interval == 0)
+	{
+		ereport(LOG, (errmsg("resending packet (seq %d) to %s (pid %d cid %d) with %d retries in %lu seconds",
+							 buf->pkt->seq, buf->conn->remoteHostAndPort, buf->pkt->dstPid,
+							 buf->pkt->dstContentId, buf->nRetry, (now - buf->sentTime) / 1000 / 1000 )));
+	}
+
 	if ((buf->nRetry > Gp_interconnect_min_retries_before_timeout) && (now - buf->sentTime) > ((uint64)Gp_interconnect_transmit_timeout * 1000 * 1000))
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

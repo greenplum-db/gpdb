@@ -101,6 +101,7 @@ static char *srcdir = NULL;
 static _stringlist *extraroles = NULL;
 static char *initfile = NULL;
 static char *aodir = NULL;
+static char *resgroupdir = NULL;
 
 /* internal variables */
 static const char *progname;
@@ -630,7 +631,7 @@ generate_uao_sourcefiles(char *src_dir, char *dest_dir, char *suffix, replacemen
  * in the "dest" directory, replacing the ".source" prefix in their names with
  * the given suffix.
  */
-static void
+static int
 convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 {
 	char		abs_srcdir[MAXPGPATH];
@@ -638,7 +639,6 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 	char		testtablespace[MAXPGPATH];
 	char		indir[MAXPGPATH];
 	char		cgroup_mnt_point[MAXPGPATH];
-
 	replacements repls;
 	struct stat st;
 	int			ret;
@@ -676,7 +676,7 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 		 * No warning, to avoid noise in tests that do not have
 		 * these directories; for example, ecpg, contrib and src/pl.
 		 */
-		return;
+		return count;
 	}
 
 	names = pgfnames(indir);
@@ -746,12 +746,22 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 		char		line[1024];
 		bool		has_tokens = false;
 
+
 		if (aodir && strncmp(*name, aodir, strlen(aodir)) == 0 &&
 			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
 		{
 			snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
 			snprintf(destfile, MAXPGPATH, "%s/%s/%s", dest_dir, dest, *name);
 			count += generate_uao_sourcefiles(srcfile, destfile, suffix, &repls);
+			continue;
+		}
+
+		if (resgroupdir && strncmp(*name, resgroupdir, strlen(resgroupdir)) == 0 &&
+			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
+		{
+			snprintf(srcfile, MAXPGPATH, "%s/%s", source, *name);
+			snprintf(destfile, MAXPGPATH, "%s/%s/%s", dest_dir, dest, *name);
+			count += convert_sourcefiles_in(srcfile, dest_dir, destfile, suffix);
 			continue;
 		}
 
@@ -824,6 +834,8 @@ convert_sourcefiles_in(char *source, char * dest_dir, char *dest, char *suffix)
 	}
 
 	pgfnames_cleanup(names);
+
+	return count;
 }
 
 /* Create the .sql, .out and .yml files from the .source files, if any */
@@ -2362,6 +2374,7 @@ help(void)
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
 	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
 	printf(_("                            UAO row and column tests\n"));
+	printf(_("  --resgroup-dir=DIR        directory name prefix containing resgroup tests\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-install\" mode:\n"));
 	printf(_("  --no-locale               use C locale\n"));
@@ -2414,6 +2427,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"temp-config", required_argument, NULL, 19},
         {"init-file", required_argument, NULL, 20},
         {"ao-dir", required_argument, NULL, 21},
+        {"resgroup-dir", required_argument, NULL, 22},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2517,6 +2531,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
                 break;
             case 21:
                 aodir = strdup(optarg);
+                break;
+            case 22:
+                resgroupdir = strdup(optarg);
                 break;
 			default:
 				/* getopt_long already emitted a complaint */

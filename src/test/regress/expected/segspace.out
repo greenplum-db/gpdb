@@ -1,6 +1,7 @@
 --
 -- Tests the spill files disk space accounting mechanism
 --
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- check segspace before test
 reset statement_mem;
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
@@ -28,14 +29,20 @@ ANALYZE segspace_test_hj_skew;
 --
 ------------ Interrupting SELECT query that spills -------------------
 -- enable the fault injector
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20170125:11:06:30:003151 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20170125:11:06:30:003151 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:30:003151 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20170125:11:06:30:003163 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20170125:11:06:30:003163 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:30:003163 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 set gp_workfile_type_hashjoin=buffile;
 set statement_mem=2048;
 set gp_autostats_mode = none;
@@ -44,11 +51,13 @@ begin;
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 ERROR:  canceling MPP operation  (seg0 slice2 127.0.0.1:25432 pid=26876)
 rollback;
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:31:003178 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:31:003178 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:31:003178 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:31:003178 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- check used segspace after test
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 
@@ -84,24 +93,32 @@ set statement_mem=2048;
 set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
 -- enable the fault injector
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20170125:11:06:32:003198 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20170125:11:06:32:003198 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:32:003198 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20170125:11:06:32:003210 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20170125:11:06:32:003210 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:32:003210 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 begin;
 insert into segspace_t1_created
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
 ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
 rollback;
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:33:003224 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:33:003224 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:33:003224 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:33:003224 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- check used segspace after test
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 
@@ -133,14 +150,20 @@ set statement_mem=2048;
 set gp_autostats_mode = none;
 set gp_hashjoin_metadata_memory_percent=0;
 -- enable the fault injector
-\! gpfaultinjector -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20170125:11:06:34:003244 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y reset --seg_dbid 2
-20170125:11:06:34:003244 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:34:003244 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20170125:11:06:35:003256 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y interrupt --seg_dbid 2
-20170125:11:06:35:003256 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:35:003256 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('exec_hashjoin_new_batch', 'interrupt', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 begin;
 create table segspace_t1_created AS
 SELECT t1.* FROM segspace_test_hj_skew AS t1, segspace_test_hj_skew AS t2 WHERE t1.i1=t2.i2;
@@ -148,11 +171,13 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i1
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  canceling MPP operation  (seg0 127.0.0.1:25432 pid=26876)
 rollback;
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:35:003270 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:35:003270 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:35:003270 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:35:003270 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- check used segspace after test
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 
@@ -194,14 +219,20 @@ set gp_resqueue_print_operator_memory_limits=on;
 set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 -- enable the fault injector
-\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:37:003290 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:37:003290 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:37:003290 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:37:003302 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:37:003302 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:37:003302 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_write_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_write_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- LEAK in UPDATE: update with sisc xslice sort
 update foo set j=m.cc1 from (
   with ctesisc as
@@ -210,11 +241,13 @@ update foo set j=m.cc1 from (
   from ctesisc as t1, ctesisc as t2
   where t1.i1 = t2.i2 ) as m;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice3 127.0.0.1:25432 pid=3175)
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:38:003328 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:38:003328 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:38:003328 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:38:003328 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 
 -----+-----
@@ -257,25 +290,33 @@ insert into foo select i, i % 1000 from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
 set statement_mem=1024; -- 1mb for 3 segment to get leak.
 -- enable the fault injector
-\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:39:003348 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:39:003348 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:39:003348 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:39:003360 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:39:003360 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:39:003360 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_write_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_write_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- LEAK in DELETE with APPEND ONLY tables
 delete from testsisc using (
   select *
   from foo
 ) src  where testsisc.i1 = src.i;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 127.0.0.1:25432 pid=3143)
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:39:003374 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:39:003374 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:39:003374 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:39:003374 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 
 -----+-----
@@ -309,14 +350,20 @@ create table foo (c int, d int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- enable the fault injector
-\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:41:003394 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:41:003394 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:41:003394 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:42:003406 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:42:003406 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:42:003406 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_write_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_write_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- expect to see leak if we hit error
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice1 127.0.0.1:25432 pid=27014)
@@ -327,11 +374,13 @@ select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used
    0 |   0
 (1 row)
 
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:42:003430 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:42:003430 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:42:003430 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:42:003430 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Run the test without fault injection
 -- expect to see leak if we hit error
 update foo set d = i1 from (select i1,i2 from testsort order by i2) x;
@@ -357,24 +406,32 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- expect to see leak if we hit error
 -- enable the fault injector
-\! gpfaultinjector -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:45:003446 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y reset --seg_dbid 2
-20170125:11:06:45:003446 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:45:003446 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:45:003458 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f workfile_write_failure -y error --seg_dbid 2
-20170125:11:06:45:003458 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:45:003458 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('workfile_write_failure', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('workfile_write_failure', 'error', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 update foo set d = i1 from (with ctesisc as (select * from testsisc order by i2)
 select * from
 (select count(*) from ctesisc) x(a), ctesisc
 where x.a = ctesisc.i1) y;
 ERROR:  fault triggered, fault name:'workfile_write_failure' fault type:'error'  (seg0 slice1 127.0.0.1:25432 pid=3175)
-\! gpfaultinjector -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:45:003477 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f exec_hashjoin_new_batch -y status --seg_dbid 2
-20170125:11:06:45:003477 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:45:003477 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:45:003477 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('exec_hashjoin_new_batch', 'status', 2);
+NOTICE:  Success: fault name:'exec_hashjoin_new_batch' fault type:'interrupt' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- check counter leak
 select max(bytes) as max, min(bytes) as min from gp_toolkit.gp_workfile_mgr_used_diskspace;
  max | min 

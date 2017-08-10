@@ -28,9 +28,10 @@
 #include "cdb/cdbdtxcontextinfo.h"
 
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
 #include "access/transam.h"
 #include "access/xact.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "lib/stringinfo.h"
 #include "access/twophase.h"

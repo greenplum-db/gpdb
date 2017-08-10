@@ -11,10 +11,11 @@
 #ifndef RES_GROUP_H
 #define RES_GROUP_H
 
+#include "cdb/memquota.h"
+
 /*
  * GUC variables.
  */
-typedef enum ResManagerMemoryPolicy ResManagerMemoryPolicy;
 extern ResManagerMemoryPolicy   gp_resgroup_memory_policy;
 extern char                		*gp_resgroup_memory_policy_str;
 extern bool						gp_log_resgroup_memory;

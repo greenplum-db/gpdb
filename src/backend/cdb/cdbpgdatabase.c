@@ -14,6 +14,8 @@
 #include "catalog/pg_type.h"
 #include "utils/builtins.h"
 #include "cdb/cdbutil.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 
 Datum		gp_pgdatabase__(PG_FUNCTION_ARGS);

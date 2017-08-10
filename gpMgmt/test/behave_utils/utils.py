@@ -104,6 +104,16 @@ def run_command(context, command):
     context.error_message = result.stderr
 
 
+def run_async_command(context, command):
+    context.exception = None
+    cmd = Command(name='run %s' % command, cmdStr='%s' % command)
+    try:
+        proc = cmd.runNoWait()
+    except ExecutionError, e:
+        context.exception = e
+    context.async_proc = proc
+
+
 def run_cmd(command):
     cmd = Command(name='run %s' % command, cmdStr='%s' % command)
     try:
@@ -139,6 +149,11 @@ def run_gpcommand(context, command, cmd_prefix=''):
     context.ret_code = result.rc
     context.stdout_message = result.stdout
     context.error_message = result.stderr
+
+
+def run_gpcommand_async(context, command):
+    cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
+    context.asyncproc = cmd.runNoWait()
 
 
 def check_stdout_msg(context, msg):

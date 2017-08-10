@@ -1,6 +1,5 @@
 #include "postgres.h"
 #include "miscadmin.h"
-#include "cdb/cdbconn.h"
 #include "cdb/cdbvars.h"
 #include "libpq/libpq-be.h"
 #include "access/xact.h"
@@ -8,6 +7,8 @@
 #include "storage/proc.h"
 #include "cmockery.h"
 #include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
+#include "cdb/cdbconn.h"
 
 #include "../cdbgang.c"
 

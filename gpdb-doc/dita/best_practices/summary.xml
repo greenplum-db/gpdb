@@ -197,15 +197,18 @@
     <section id="_Toc286661612">
       <title>ANALYZE</title>
       <ul id="ul_spn_src_3r">
-        <li>Use <codeph>analyzedb</codeph> in preference to <codeph>ANALYZE</codeph>. The
+        <li>Determine if  analyzing the database is actually needed. Analyzing is not needed if
+            g<codeph>p_autostats_mode</codeph> is set to <codeph>on_no_stats</codeph> (the default)
+          and the table is not partitioned.</li>
+        <li>Use <codeph>analyzedb</codeph> in preference to <codeph>ANALYZE</codeph> when dealing
+          with large sets of tables, as it does not require analyzing the entire database. The
             <codeph>analyzedb</codeph> utility updates statistics data for the specified tables
           incrementally and concurrently. For append optimized tables, <codeph>analyzedb</codeph>
           updates statistics incrementally only if the statistics are not current. For heap tables,
           statistics are always updated. <codeph>ANALYZE</codeph> does not update the table metadata
           that the <codeph>analyzedb</codeph> utility uses to determine whether table statistics are
           up to date.</li>
-        <li>Do not run <codeph>ANALYZE</codeph> on the entire database. Selectively run
-            <codeph>ANALYZE</codeph> at the table level when needed.</li>
+        <li>Selectively run <codeph>ANALYZE</codeph> at the table level when needed.</li>
         <li>Always run <codeph>ANALYZE</codeph> after <codeph>INSERT</codeph>,
             <codeph>UPDATE</codeph>. and <codeph>DELETE</codeph> operations that significantly
           changes the underlying data. </li>
@@ -236,15 +239,16 @@
       <title>Loading</title>
       <ul id="ul_jln_src_3r">
         <li> Maximize the parallelism as the number of segments increase. </li>
-        <li> Spread the data evenly across as many ETL nodes as possible. </li>
-        <li>Split very large data files into equal parts and spread the data across as many file
-          systems as possible. </li>
-        <li> Run two <codeph>gpfdist</codeph> instances per file system. </li>
-        <li> Run <codeph>gpfdist</codeph> on as many interfaces as possible. </li>
-        <li>Use <codeph>gp_external_max_segs</codeph> to control the number of segments that will
-          request data from the <codeph>gpfdist</codeph> process. </li>
-        <li>Always keep <codeph>gp_external_max_segs</codeph> and the number of
-            <codeph>gpfdist</codeph> processes an even factor.</li>
+        <li> Spread the data evenly across as many ETL nodes as possible. <ul id="ul_o1t_dqr_t1b">
+            <li>Split very large data files into equal parts and spread the data across as many file
+              systems as possible. </li>
+            <li> Run two <codeph>gpfdist</codeph> instances per file system. </li>
+            <li>Run <codeph>gpfdist</codeph> on as many interfaces as possible. </li>
+            <li>Use <codeph>gp_external_max_segs</codeph> to control the number of segments that
+              will request data from the <codeph>gpfdist</codeph> process. </li>
+            <li>Always keep <codeph>gp_external_max_segs</codeph> and the number of
+                <codeph>gpfdist</codeph> processes an even factor.</li>
+          </ul></li>
         <li> Always drop indexes before loading into existing tables and re-create the index after
           loading. </li>
         <li> Run <codeph>VACUUM</codeph> after load errors to recover space. </li>
@@ -254,8 +258,6 @@
     <section>
       <title>gptransfer</title>
       <ul id="ul_c2p_tl4_1s">
-        <li>For fastest transfer rates, use <codeph>gptransfer</codeph> to transfer data to a
-          destination database that is the same size or larger.</li>
         <li>Avoid using the <codeph>--full</codeph> or <codeph>--schema-only</codeph> options.
           Instead, copy schemas to the destination database using a different method, and then
           transfer the table data.</li>

@@ -3,6 +3,11 @@
 -- Individual tests can contain additional patterns specific to the test.
 
 -- start_matchignore
+
+# Some tests use the gp_inject_fault extension, and create it at the beginning
+# of the test. Ignore the NOTICE if it exists already.
+m/^NOTICE:  extension "gp_inject_fault" already exists, skipping/
+
 # match ignore the gpmon WARNING message
 m/^WARNING:  gpmon:.*Connection refused.*/
 
@@ -81,10 +86,6 @@ s/overlaps existing partition "r\d+"/partition "r##########"/
 # Mask out some numbers (part of temp table schema) that vary from run to run.
 m/Table "pg_temp_\d+.temp/
 s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
-
-# Mask out timestamp and whoami message for gpfaultinjector
-m/^\d+.*gpfaultinjector.*-\[INFO\]:-/
-s/^\d+.*gpfaultinjector.*-\[INFO\]:-//
 
 # Mask out oid in error concurrent drop message
 m/\d+ was concurrently dropped/

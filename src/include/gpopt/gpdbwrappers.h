@@ -18,6 +18,7 @@
 #include "postgres.h"
 #include "access/attnum.h"
 #include "utils/faultinjector.h"
+#include "parser/parse_coerce.h"
 
 // fwd declarations
 typedef struct SysScanDescData *SysScanDesc;
@@ -242,7 +243,7 @@ namespace gpdb {
 	Node *PnodePartConstraintRel(Oid oidRel, List **pplDefaultLevels);
 
 	// get the cast function for the specified source and destination types
-	bool FCastFunc(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc);
+	bool FCastFunc(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc, CoercionPathType *pathtype);
 	
 	// get type of operator
 	unsigned int UlCmpt(Oid oidOp, Oid oidLeft, Oid oidRight);
@@ -418,10 +419,10 @@ namespace gpdb {
 	// create a duplicate of the given string in the given memory context
 	char *SzMemoryContextStrdup(MemoryContext context, const char *string);
 
-	// ereport() an error
-	void RaiseGpdbErrorImpl(int xerrcode, const char *xerrmsg, const char *xerrhint, const char *filename, int lineno, const char *funcname);
-#define RaiseGpdbError(xerrcode, xerrmsg, xerrhint) \
-	gpdb::RaiseGpdbErrorImpl(xerrcode, xerrmsg, xerrhint , __FILE__, __LINE__, PG_FUNCNAME_MACRO)
+	// similar to ereport for logging messages
+	void GpdbEreportImpl(int xerrcode, int severitylevel, const char *xerrmsg, const char *xerrhint, const char *filename, int lineno, const char *funcname);
+#define GpdbEreport(xerrcode, severitylevel, xerrmsg, xerrhint) \
+	gpdb::GpdbEreportImpl(xerrcode, severitylevel, xerrmsg, xerrhint , __FILE__, __LINE__, PG_FUNCNAME_MACRO)
 
 	// string representation of a node
 	char *SzNodeToString(void *obj);

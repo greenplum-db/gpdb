@@ -1,3 +1,4 @@
+test: pg_terminate_backend
 test: deadlock_under_entry_db_singleton
 test: starve_case
 test: commit_transaction_block_checkpoint

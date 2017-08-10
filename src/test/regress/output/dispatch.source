@@ -1,4 +1,5 @@
 -- Misc tests related to dispatching queries to segments.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- Mask out the whoami message
 -- start_matchsubs
 -- m/^ \(seg\d .*:\d+\)/
@@ -6,7 +7,7 @@
 -- m/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/
 -- s/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/DETAIL:  Internal error: No motion listener port/
 -- end_matchsubs
--- Test quoting of GUC values and databse names when they're sent to segments
+-- Test quoting of GUC values and database names when they're sent to segments
 -- There used to be a bug in the quoting when the search_path setting was sent
 -- to the segment. It was not easily visible when search_path was set with a
 -- SET command, only when the setting was sent as part of the startup packet.
@@ -66,7 +67,7 @@ HINT:  Size controlled by gp_max_plan_size
 -- test QD will report failure if QE fails to send its motion_listener back
 -- during backend initialization
 --
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -74,7 +75,7 @@ NOTICE:  Success:
 (1 row)
 
 -- inject a 'skip' fault before QE sends its motion_listener
-select gp_inject_fault('send_qe_details_init_backend', 'skip', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'skip', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -88,7 +89,7 @@ SELECT 1 FROM gp_dist_random('gp_id');
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  Internal error: No motion listener port (seg0 127.0.0.1:25432)
 -- reset fault injector
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -149,7 +150,7 @@ select cleanupAllGangs();
 (1 row)
 
 -- trigger fault and put segment 0 into recovery mode
-select gp_inject_fault('process_startup_packet', 'segv', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'segv', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -172,7 +173,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
   1 |  1 |  2 |  2 |  1 |  2 |  3 |  1 |  2
 (1 row)
 
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -192,14 +193,14 @@ select cleanupAllGangs();
 (1 row)
 
 -- trigger fault and put segment 0 into recovery mode
-select gp_inject_fault('process_startup_packet', 'segv', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'segv', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('quickdie', 'suspend', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('quickdie', 'suspend', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -219,21 +220,21 @@ select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  segments is in recovery mode
-select gp_inject_fault('quickdie', 'resume', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('quickdie', 'resume', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('quickdie', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('quickdie', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -287,7 +288,7 @@ select cleanupAllGangs();
 (1 row)
 
 -- segment 0 report an error when get a request 
-select gp_inject_fault('send_qe_details_init_backend', 'error', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'error', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -321,7 +322,7 @@ select cleanupAllGangs();
  t
 (1 row)
 
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -356,7 +357,7 @@ select sum(case when hasBackendsExist(0)='t' then 1 else 0 end) > 0 as hasbacken
  t
 (1 row)
 
-select gp_inject_fault('send_qe_details_init_backend', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('send_qe_details_init_backend', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -374,7 +375,7 @@ select cleanupAllGangs();
  t
 (1 row)
 
-select gp_inject_fault('process_startup_packet', 'suspend', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'suspend', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -387,14 +388,14 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 ERROR:  failed to acquire resources on one or more segments
 DETAIL:  timeout expired
  (seg0 127.0.0.1:25432)
-select gp_inject_fault('process_startup_packet', 'resume', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'resume', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -423,7 +424,7 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
   1 |  1 |  2 |  2 |  1 |  2 |  3 |  1 |  2
 (1 row)
 
-select gp_inject_fault('process_startup_packet', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('process_startup_packet', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -435,7 +436,7 @@ NOTICE:  Success:
 -- query should be cancelled as expected.
 -- must set log_min_messages to default when using interrupt, there is a bug in fault injection.
 set log_min_messages to default;
-select gp_inject_fault('after_one_slice_dispatched', 'interrupt', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('after_one_slice_dispatched', 'interrupt', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -446,7 +447,7 @@ NOTICE:  Success:
 select * from dispatch_test_t1, dispatch_test_t2, dispatch_test_t3
 where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
 ERROR:  canceling statement due to user request
-select gp_inject_fault('after_one_slice_dispatched', 'reset', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -523,14 +524,14 @@ DROP TABLE foo_test;
 -- Test dangling Gang would be destroyed if interrupted during the creation
 --
 \c
-select gp_inject_fault('gang_created', 'reset', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('gang_created', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('gang_created', 'error', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('gang_created', 'error', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -546,7 +547,7 @@ select 1 from gp_dist_random('gp_id') limit 1;
         1
 (1 row)
 
-select gp_inject_fault('gang_created', 'reset', '', '', '', 1, 0, 1::smallint);
+select gp_inject_fault('gang_created', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------

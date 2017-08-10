@@ -38,6 +38,7 @@
 #include "naucrates/dxl/gpdb_types.h"
 
 #include "naucrates/md/CMDCastGPDB.h"
+#include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 #include "naucrates/md/CMDScCmpGPDB.h"
 
 #include "gpopt/translate/CTranslatorUtils.h"
@@ -2314,8 +2315,13 @@ CTranslatorRelcacheToDXL::PimdobjColStats
 		pdrgdatumMCVValues = NULL;
 		pdrgfMCVFrequencies = NULL;
 
-		elog(LOG, "The number of most common values and frequencies do not match on column %ls of table %ls.",
+		char msgbuf[NAMEDATALEN * 2 + 100];
+		snprintf(msgbuf, sizeof(msgbuf), "The number of most common values and frequencies do not match on column %ls of table %ls.",
 				pmdcol->Mdname().Pstr()->Wsz(), pmdrel->Mdname().Pstr()->Wsz());
+		GpdbEreport(ERRCODE_SUCCESSFUL_COMPLETION,
+					   LOG,
+					   msgbuf,
+					   NULL);
 	}
 
 	Form_pg_statistic fpsStats = (Form_pg_statistic) GETSTRUCT(heaptupleStats);
@@ -2583,14 +2589,16 @@ CTranslatorRelcacheToDXL::PimdobjCast
 	CMDIdCast *pmdidCast = CMDIdCast::PmdidConvert(pmdid);
 	IMDId *pmdidSrc = pmdidCast->PmdidSrc();
 	IMDId *pmdidDest = pmdidCast->PmdidDest();
+	IMDCast::EmdCoercepathType coercePathType;
 
 	OID oidSrc = CMDIdGPDB::PmdidConvert(pmdidSrc)->OidObjectId();
 	OID oidDest = CMDIdGPDB::PmdidConvert(pmdidDest)->OidObjectId();
+	CoercionPathType	pathtype;
 
 	OID oidCastFunc = 0;
 	BOOL fBinaryCoercible = false;
 	
-	BOOL fCastExists = gpdb::FCastFunc(oidSrc, oidDest, &fBinaryCoercible, &oidCastFunc);
+	BOOL fCastExists = gpdb::FCastFunc(oidSrc, oidDest, &fBinaryCoercible, &oidCastFunc, &pathtype);
 	
 	if (!fCastExists)
 	{
@@ -2619,6 +2627,21 @@ CTranslatorRelcacheToDXL::PimdobjCast
 
 	CMDName *pmdname = CDXLUtils::PmdnameFromSz(pmp, szFuncName);
 	
+	switch (pathtype) {
+		case COERCION_PATH_ARRAYCOERCE:
+		{
+			coercePathType = IMDCast::EmdtArrayCoerce;
+			return GPOS_NEW(pmp) CMDArrayCoerceCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc), IMDCast::EmdtArrayCoerce, -1, false, EdxlcfImplicitCast, -1);
+		}
+			break;
+		case COERCION_PATH_FUNC:
+			return GPOS_NEW(pmp) CMDCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc), IMDCast::EmdtFunc);
+			break;
+		default:
+			break;
+	}
+
+	// fall back for none path types
 	return GPOS_NEW(pmp) CMDCastGPDB(pmp, pmdid, pmdname, pmdidSrc, pmdidDest, fBinaryCoercible, GPOS_NEW(pmp) CMDIdGPDB(oidCastFunc));
 }
 
