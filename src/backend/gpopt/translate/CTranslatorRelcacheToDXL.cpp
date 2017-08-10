@@ -505,6 +505,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 	DrgPmdid *pdrgpmdidCheckConstraints = NULL;
 	BOOL fTemporary = false;
 	BOOL fHasOids = false;
+	BOOL fPartitioned = false;
 	IMDRelation *pmdrel = NULL;
 
 
@@ -544,7 +545,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 		{
 			GetPartKeysAndTypes(pmp, rel, oid, &pdrgpulPartKeys, &pdrgpszPartTypes);
 		}
-		BOOL fPartitioned = (NULL != pdrgpulPartKeys && 0 < pdrgpulPartKeys->UlLength());
+		fPartitioned = (NULL != pdrgpulPartKeys && 0 < pdrgpulPartKeys->UlLength());
 
 		if (fPartitioned && IMDRelation::ErelstorageAppendOnlyParquet != erelstorage && IMDRelation::ErelstorageExternal != erelstorage)
 		{
@@ -617,8 +618,11 @@ CTranslatorRelcacheToDXL::Pmdrel
 	}
 	else
 	{
-		// get part constraint
-		CMDPartConstraintGPDB *pmdpartcnstr = PmdpartcnstrRelation(pmp, pmda, oid, pdrgpmdcol);
+		CMDPartConstraintGPDB *pmdpartcnstr = NULL;
+
+		// retrieve the part constraints if relation is partitioned
+		if (fPartitioned)
+			pmdpartcnstr = PmdpartcnstrRelation(pmp, pmda, oid, pdrgpmdcol, pdrgpmdidIndexes->UlLength() > 0 /*fhasIndex*/);
 
 		pmdrel = GPOS_NEW(pmp) CMDRelationGPDB
 							(
@@ -3338,12 +3342,20 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 	IMemoryPool *pmp,
 	CMDAccessor *pmda,
 	OID oidRel,
-	DrgPmdcol *pdrgpmdcol
+	DrgPmdcol *pdrgpmdcol,
+	bool fhasIndex
 	)
 {
 	// get the part constraints
 	List *plDefaultLevelsRel = NIL;
 	Node *pnode = gpdb::PnodePartConstraintRel(oidRel, &plDefaultLevelsRel);
+
+	// don't retrieve part constraints if there are no indices
+	// and no default partitions at any level
+	if (!fhasIndex && NIL == plDefaultLevelsRel)
+	{
+		return NULL;
+	}
 
 	List *plPartKeys = gpdb::PlPartitionAttrs(oidRel);
 	const ULONG ulLevels = gpdb::UlListLength(plPartKeys);
@@ -3363,32 +3375,46 @@ CTranslatorRelcacheToDXL::PmdpartcnstrRelation
 		}
 	}
 
-	DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(pmp) DrgPdxlcd(pmp);
-	const ULONG ulColumns = pdrgpmdcol->UlLength();
-	for (ULONG ul = 0; ul < ulColumns; ul++)
+	CMDPartConstraintGPDB *pmdpartcnstr = NULL;
+
+	if (!fhasIndex)
 	{
-		const IMDColumn *pmdcol = (*pdrgpmdcol)[ul];
-		CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
-		CMDIdGPDB *pmdidColType = CMDIdGPDB::PmdidConvert(pmdcol->PmdidType());
-		pmdidColType->AddRef();
-
-		// create a column descriptor for the column
-		CDXLColDescr *pdxlcd = GPOS_NEW(pmp) CDXLColDescr
-										(
-										pmp,
-										pmdnameCol,
-										ul + 1, // ulColId
-										pmdcol->IAttno(),
-										pmdidColType,
-										false // fColDropped
-										);
-		pdrgpdxlcd->Append(pdxlcd);
+		// if there are no indices then we don't need to construct the partition constraint
+		// expression since ORCA is never going to use it.
+		// only send the default partition information.
+		pdrgpulDefaultLevels->AddRef();
+		pmdpartcnstr = GPOS_NEW(pmp) CMDPartConstraintGPDB(pmp, pdrgpulDefaultLevels, fUnbounded, NULL);
 	}
-	
-	CMDPartConstraintGPDB *pmdpartcnstr = PmdpartcnstrFromNode(pmp, pmda, pdrgpdxlcd, pnode, pdrgpulDefaultLevels, fUnbounded);
+	else
+	{
+		DrgPdxlcd *pdrgpdxlcd = GPOS_NEW(pmp) DrgPdxlcd(pmp);
+		const ULONG ulColumns = pdrgpmdcol->UlLength();
+		for (ULONG ul = 0; ul < ulColumns; ul++)
+		{
+			const IMDColumn *pmdcol = (*pdrgpmdcol)[ul];
+			CMDName *pmdnameCol = GPOS_NEW(pmp) CMDName(pmp, pmdcol->Mdname().Pstr());
+			CMDIdGPDB *pmdidColType = CMDIdGPDB::PmdidConvert(pmdcol->PmdidType());
+			pmdidColType->AddRef();
 
-	pdrgpulDefaultLevels->Release();	
-	pdrgpdxlcd->Release();
+			// create a column descriptor for the column
+			CDXLColDescr *pdxlcd = GPOS_NEW(pmp) CDXLColDescr
+											(
+											pmp,
+											pmdnameCol,
+											ul + 1, // ulColId
+											pmdcol->IAttno(),
+											pmdidColType,
+											false // fColDropped
+											);
+			pdrgpdxlcd->Append(pdxlcd);
+		}
+
+		pmdpartcnstr = PmdpartcnstrFromNode(pmp, pmda, pdrgpdxlcd, pnode, pdrgpulDefaultLevels, fUnbounded);
+		pdrgpdxlcd->Release();
+	}
+
+	gpdb::FreeList(plDefaultLevelsRel);
+	pdrgpulDefaultLevels->Release();
 
 	return pmdpartcnstr;
 }
@@ -3441,7 +3467,7 @@ CTranslatorRelcacheToDXL::PmdpartcnstrFromNode
 	GPOS_DELETE(pmapvarcolid);
 
 	pdrgpulDefaultParts->AddRef();
-	return GPOS_NEW(pmp) CMDPartConstraintGPDB(pmp, pdxlnScalar, pdrgpulDefaultParts, fUnbounded);
+	return GPOS_NEW(pmp) CMDPartConstraintGPDB(pmp, pdrgpulDefaultParts, fUnbounded, pdxlnScalar);
 }
 
 //---------------------------------------------------------------------------

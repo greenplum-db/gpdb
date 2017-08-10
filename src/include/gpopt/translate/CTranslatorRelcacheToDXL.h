@@ -319,7 +319,7 @@ namespace gpdxl
 
 			// retrieve part constraint for relation
 			static
-			CMDPartConstraintGPDB *PmdpartcnstrRelation(IMemoryPool *pmp, CMDAccessor *pmda, OID oidRel, DrgPmdcol *pdrgpmdcol);
+			CMDPartConstraintGPDB *PmdpartcnstrRelation(IMemoryPool *pmp, CMDAccessor *pmda, OID oidRel, DrgPmdcol *pdrgpmdcol, BOOL fhasIndex);
 
 			// retrieve part constraint from a GPDB node
 			static
