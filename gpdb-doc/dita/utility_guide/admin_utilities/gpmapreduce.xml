@@ -5,11 +5,7 @@
   <title id="kx20941">gpmapreduce</title>
   <!-- This file is the target of a conref from client_tool_guides/client/unix/gpmapreduce.xml. -->
   <body>
-    <p>Runs Greenplum MapReduce jobs as defined in a YAML specification document.
-          <note><codeph>gpmapreduce</codeph> is deprecated. Both <codeph>gpmapreduce</codeph> and
-        the associated YAML specification will be removed in the next major release (6.x) of
-        Greenplum Database. Use other query formats, such as SQL or a procedural language extension,
-        instead.</note></p>
+    <p>Runs Greenplum MapReduce jobs as defined in a YAML specification document. </p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpmapreduce</b> <b>-f</b> <varname>yaml_file</varname> [<varname>dbname</varname> [<varname>username</varname>]] 
