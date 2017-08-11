@@ -266,7 +266,8 @@ def do_add_config_script(pool, hostname, segs, value, options):
 
         print_verbosely(options, hostname, seg.hostname, seg.datadir)
 
-    cmd = GpAddConfigScript(hostname, directory_string, options.entry, value, options.remove, ctxt=REMOTE,
+    cmd = GpAddConfigScript(hostname, directory_string, options.entry, value=value, removeonly=options.remove,
+                            ctxt=REMOTE,
                             remoteHost=hostname)
     pool.addCommand(cmd)
 
@@ -279,7 +280,15 @@ def do_change(options):
         gp_array = GpArray.initFromCatalog(dbconn.DbURL(), utility=True)
 
         if not options.skipvalidation:
-            validate_change_options(options)
+            conn = dbconn.connect(dbconn.DbURL(), True)
+            guc = get_normal_guc(conn, options)
+
+            # Force the postgresql.conf parser to detect vartype string as GUC_STRING in the guc-file.c/guc-file.l
+            options.value = quote_string(guc, options.value)
+            options.mastervalue = quote_string(guc, options.mastervalue)
+
+            validate_change_options(options, conn, guc)
+            conn.close()
 
     except DatabaseError as ex:
         LOGGER.error(ex.__str__())
@@ -318,8 +327,8 @@ def do_change(options):
         # do the master
         if options.mastervalue or options.remove:
             print_verbosely(options, gp_array.master.hostname, gp_array.master.hostname, gp_array.master.datadir)
-            cmd = GpAddConfigScript("master", gp_array.master.datadir, options.entry, options.mastervalue,
-                                    options.remove, ctxt=REMOTE, remoteHost=gp_array.master.hostname)
+            cmd = GpAddConfigScript("master", gp_array.master.datadir, options.entry, value=options.mastervalue,
+                                    removeonly=options.remove, ctxt=REMOTE, remoteHost=gp_array.master.hostname)
             pool.addCommand(cmd)
 
             # do the standby master
@@ -327,7 +336,7 @@ def do_change(options):
                 print_verbosely(options, gp_array.standbyMaster.hostname, gp_array.standbyMaster.hostname,
                                 gp_array.standbyMaster.datadir)
                 cmd = GpAddConfigScript("standbymaster", gp_array.standbyMaster.datadir, options.entry,
-                                        options.mastervalue, options.remove, ctxt=REMOTE,
+                                        value=options.mastervalue, removeonly=options.remove, ctxt=REMOTE,
                                         remoteHost=gp_array.standbyMaster.hostname)
                 pool.addCommand(cmd)
 
@@ -354,6 +363,13 @@ def do_change(options):
         LOGGER.info("completed successfully")
 
 
+def quote_string(guc, value):
+    if value and guc and guc.vartype == "string":
+        if not value.startswith("'") and not value.endswith("'"):
+            value = "'" + value + "'"
+    return value
+
+
 def _is_guc_writeable(options):
     """
 FYI, metadata about gucs, like GUC_DISALLOW_IN_FILE, is not available via
@@ -375,14 +391,12 @@ sql. We work around that by making use of a file already created during 'make in
     return options.entry not in read_only_gucs
 
 
-def validate_change_options(options):
+def validate_change_options(options, conn, guc):
     if not _is_guc_writeable(options):
         msg = "not a modifiable GUC: '%s'" % options.entry
         LOGGER.fatal(msg)
         raise Exception(msg)
 
-    conn = dbconn.connect(dbconn.DbURL(), True)
-    guc = get_normal_guc(conn, options)
     if not guc:
         # Hidden gucs: a guc is considered hidden if both:
         #     1. It is not present with normal gucs in pg_settings
@@ -398,11 +412,12 @@ def validate_change_options(options):
               "Please refer to gpconfig documentation." % options.entry
         LOGGER.fatal(msg)
         raise Exception(msg)
-    conn.close()
+
     if options.entry in PROHIBITED_GUCS:
         msg = "The parameter '%s' is not modifiable with this tool" % options.entry
         LOGGER.fatal(msg)
         raise Exception(msg)
+
     if options.value:
         msg = guc.validate(options.value, options.mastervalue, options)
         if msg != "ok":

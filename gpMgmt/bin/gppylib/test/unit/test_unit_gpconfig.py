@@ -376,6 +376,94 @@ class GpConfig(GpTestCase):
             pass
         self.assertEqual(len(self.subject.read_only_gucs), 2)
 
+    def test_change_of_unquoted_string_to_quoted_succeeds(self):
+        vartype = 'string'
+        unquoted_value = 'baz'
+        sys.argv = ["gpconfig", "--change", "my_property_name", "--value", unquoted_value]
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', vartype, 'min_val', 'max_val']])
+
+        self.subject.do_main()
+
+        for call in self.pool.addCommand.call_args_list:
+            # call_obj[0] returns all unnamed arguments -> ['arg1', 'arg2']
+            # In this case, we have an object as an argument to poo.addCommand
+            # call_obj[1] returns a dict for all named arguments -> {key='arg3', key2='arg4'}
+            gp_add_config_script_obj = call[0][0]
+            value = base64.urlsafe_b64encode(pickle.dumps("'baz'"))
+            try:
+                self.assertTrue(value in gp_add_config_script_obj.cmdStr)
+            except AssertionError as e:
+                raise Exception("\nAssert failed: %s\n cmdStr:\n%s\nvs:\nvalue: %s" % (str(e),
+                                                                                       gp_add_config_script_obj.cmdStr,
+                                                                                       value))
+
+    def test_change_of_master_value_with_quotes_succeeds(self):
+        already_quoted_master_value = "'baz'"
+        vartype = 'string'
+        sys.argv = ["gpconfig", "--change", "my_property_name", "--value", 'baz', '--mastervalue', already_quoted_master_value]
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', vartype, 'min_val', 'max_val']])
+
+        self.subject.do_main()
+
+        for call in self.pool.addCommand.call_args_list:
+            # call_obj[0] returns all unnamed arguments -> ['arg1', 'arg2']
+            # In this case, we have an object as an argument to poo.addCommand
+            # call_obj[1] returns a dict for all named arguments -> {key='arg3', key2='arg4'}
+            gp_add_config_script_obj = call[0][0]
+            value = base64.urlsafe_b64encode(pickle.dumps("'baz'"))
+            try:
+                self.assertTrue(value in gp_add_config_script_obj.cmdStr)
+            except AssertionError as e:
+                raise Exception("\nAssert failed: %s\n cmdStr:\n%s\nvs:\nvalue: %s" % (str(e),
+                                                                                       gp_add_config_script_obj.cmdStr,
+                                                                                       value))
+
+    def test_change_of_master_only_quotes_succeeds(self):
+        unquoted_master_value = "baz"
+        vartype = 'string'
+        sys.argv = ["gpconfig", "--change", "my_property_name", "--value", unquoted_master_value, '--masteronly']
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', vartype, 'min_val', 'max_val']])
+
+        self.subject.do_main()
+
+        for call in self.pool.addCommand.call_args_list:
+            # call_obj[0] returns all unnamed arguments -> ['arg1', 'arg2']
+            # In this case, we have an object as an argument to poo.addCommand
+            # call_obj[1] returns a dict for all named arguments -> {key='arg3', key2='arg4'}
+            gp_add_config_script_obj = call[0][0]
+            value = base64.urlsafe_b64encode(pickle.dumps("'baz'"))
+            try:
+                self.assertTrue(value in gp_add_config_script_obj.cmdStr)
+            except AssertionError as e:
+                raise Exception("\nAssert failed: %s\n cmdStr:\n%s\nvs:\nvalue: %s" % (str(e),
+                                                                                       gp_add_config_script_obj.cmdStr,
+                                                                                       value))
+
+    def test_change_of_bool_guc_does_not_quote(self):
+        unquoted_value = "baz"
+        vartype = 'bool'
+        sys.argv = ["gpconfig", "--change", "my_property_name", "--value", unquoted_value]
+        self.cursor.set_result_for_testing([['my_property_name', 'setting', 'unit', 'short_desc',
+                                             'context', vartype, 'min_val', 'max_val']])
+
+        self.subject.do_main()
+
+        for call in self.pool.addCommand.call_args_list:
+            # call_obj[0] returns all unnamed arguments -> ['arg1', 'arg2']
+            # In this case, we have an object as an argument to poo.addCommand
+            # call_obj[1] returns a dict for all named arguments -> {key='arg3', key2='arg4'}
+            gp_add_config_script_obj = call[0][0]
+            value = base64.urlsafe_b64encode(pickle.dumps("baz"))
+            try:
+                self.assertTrue(value in gp_add_config_script_obj.cmdStr)
+            except AssertionError as e:
+                raise Exception("\nAssert failed: %s\n cmdStr:\n%s\nvs:\nvalue: %s" % (str(e),
+                                                                                       gp_add_config_script_obj.cmdStr,
+                                                                                       value))
+
     def test_change_when_disallowed_gucs_file_is_missing_gives_warning(self):
         os.remove(self.guc_disallowed_readonly_file)
         db_singleton_side_effect_list.append("some happy result")
