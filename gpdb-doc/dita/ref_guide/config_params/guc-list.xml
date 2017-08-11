@@ -57,7 +57,7 @@
             <li>
               <xref href="#custom_variable_classes"/>
             </li>
-            <li><xref href="#heap_checksums" format="dita"/></li>
+            <li><xref href="#data_checksums" format="dita"/></li>
             <li>
               <xref href="#DateStyle"/>
             </li>
@@ -468,6 +468,7 @@
             <li>
               <xref href="#gpperfmon_port"/>
             </li>
+            <li><xref href="#ignore_checksum_failure" format="dita"/></li>
             <li>
               <xref href="#integer_datetimes"/>
             </li>
@@ -1295,7 +1296,7 @@
       </table>
     </body>
   </topic>
-  <topic id="heap_checksums">
+  <topic id="data_checksums">
     <title>data_checksums</title>
     <body>
       <p>Reports whether heap checksums are enabled in the database system. </p>
@@ -5501,6 +5502,42 @@
               <entry colname="col1">integer</entry>
               <entry colname="col2">8888</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="ignore_checksum_failure">
+    <title>ignore_checksum_failure</title>
+    <body>
+      <p>Only has effect if <xref href="#data_checksums" format="dita"/> is enabled.</p>
+      <p>Detection of a checksum failure when reading a heap data page normally causes Greenplum
+        Database to report an error, aborting the current transaction. Setting
+          <codeph>ignore_checksum_failure</codeph> to on causes the system to ignore the failure,
+        but still report a warning, and continue processing. This behavior may <b>cause crashes,
+          propagate or hide corruption, or lead to other serious problems</b>. However, it may allow
+        you to get past the error and retrieve undamaged tuples that might still be present in the
+        table if the block header is still sane. If the header is corrupt an error will be reported
+        even if this option is enabled. The default setting is off, and it can only be changed by a
+        superuser.</p>
+      <table id="table_shd_32q_v1b">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">off</entry>
+              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>

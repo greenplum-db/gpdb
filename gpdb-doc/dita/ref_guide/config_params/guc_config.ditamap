@@ -22,6 +22,7 @@
             <topicref href="guc-list.xml#cpu_tuple_cost"/>
             <topicref href="guc-list.xml#cursor_tuple_fraction"/>
             <topicref href="guc-list.xml#custom_variable_classes"/>
+            <topicref href="guc-list.xml#data_checksums"/>
             <topicref href="guc-list.xml#DateStyle"/>
             <topicref href="guc-list.xml#db_user_namespace"/>
             <topicref href="guc-list.xml#deadlock_timeout"/>
@@ -157,7 +158,7 @@
             <topicref href="guc-list.xml#gp_workfile_limit_per_query"/>
             <topicref href="guc-list.xml#gp_workfile_limit_per_segment"/>
             <topicref href="guc-list.xml#gpperfmon_port"/>
-            <topicref href="guc-list.xml#heap_checksums"/>
+            <topicref href="guc-list.xml#ignore_checksum_failure"/>
             <topicref href="guc-list.xml#integer_datetimes"/>
             <topicref href="guc-list.xml#IntervalStyle"/>
             <topicref href="guc-list.xml#join_collapse_limit"/>
