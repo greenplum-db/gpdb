@@ -5512,14 +5512,14 @@
     <title>ignore_checksum_failure</title>
     <body>
       <p>Only has effect if <xref href="#data_checksums" format="dita"/> is enabled.</p>
-      <p>Detection of a checksum failure when reading a heap data page normally causes Greenplum
-        Database to report an error, aborting the current transaction. Setting
+      <p>By default, when Greenplum Database detects a checksum failure when reading a heap data
+        page it reports an error, aborting the current transaction. Setting
           <codeph>ignore_checksum_failure</codeph> to on causes the system to ignore the failure,
         but still report a warning, and continue processing. This behavior may <b>cause crashes,
           propagate or hide corruption, or lead to other serious problems</b>. However, it may allow
         you to get past the error and retrieve undamaged tuples that might still be present in the
-        table if the block header is still sane. If the header is corrupt an error will be reported
-        even if this option is enabled. The default setting is off, and it can only be changed by a
+        table if the block header is uncorrupted. If the header is corrupt an error is reported even
+        if this option is enabled. The default setting is off, and it can only be changed by a
         superuser.</p>
       <table id="table_shd_32q_v1b">
         <tgroup cols="3">
