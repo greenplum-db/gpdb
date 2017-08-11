@@ -4941,16 +4941,15 @@ def impl(context):
                               And wait until the process "gpsmon" is up
                               ''')
 
+
 @given('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 @when('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 def impl(context, variable_name, path_to_file):
     path = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), path_to_file)
-    match_start_of_line = '^' + variable_name + '.*'
-    pattern = re.compile(match_start_of_line)
-    with open(path, 'r') as f:
-        for line in f.read().split('\n'):
-            if pattern.match(line):
-                raise Exception('found in file %s the setting: %s' % (line, variable_name))
+    output_file = "/tmp/gpperfmon_temp_config"
+    cmd = Command("sed to remove line", "sed '/^%s/,+1 d' < %s > %s" % (variable_name, path, output_file))
+    cmd.run(validateAfter=True)
+    shutil.move(output_file, path)
 
 
 @given('the setting "{setting_string}" is placed in the configuration file "{path_to_file}"')
@@ -4960,6 +4959,7 @@ def impl(context, setting_string, path_to_file):
     with open(path, 'a') as f:
         f.write(setting_string)
         f.write("\n")
+
 
 @given('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
 @when('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')

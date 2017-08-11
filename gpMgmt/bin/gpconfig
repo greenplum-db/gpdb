@@ -349,9 +349,9 @@ def do_change(options):
     pool.joinWorkers()
 
     if failure:
-        LOGGER.error('finished with errors')
+        LOGGER.error("finished with errors, parameter string '%s'" %(" ".join(sys.argv[1:])))
     else:
-        LOGGER.info("completed successfully")
+        LOGGER.info("completed successfully with parameters '%s'" %(" ".join(sys.argv[1:])))
 
 
 def _is_guc_writeable(options):
