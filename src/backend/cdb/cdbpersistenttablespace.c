@@ -105,6 +105,8 @@ PersistentTablespace_FindEntryUnderLock(
 
 	TablespaceDirEntryKey key;
 
+	Assert(LWLockHeldByMe(TablespaceHashLock));
+
 	if (persistentTablespaceSharedHashTable == NULL)
 		elog(PANIC, "Persistent tablespace information shared-memory not setup");
 
@@ -133,6 +135,8 @@ PersistentTablespace_CreateEntryUnderLock(
 	TablespaceDirEntry	tablespaceDirEntry;
 
 	TablespaceDirEntryKey key;
+
+	Assert(LWLockHeldByMe(TablespaceHashLock));
 
 	if (persistentTablespaceSharedHashTable == NULL)
 		elog(PANIC, "Persistent tablespace information shared-memory not setup");
@@ -163,6 +167,8 @@ PersistentTablespace_RemoveEntryUnderLock(
 	TablespaceDirEntry	tablespaceDirEntry)
 {
 	TablespaceDirEntry	removeTablespaceDirEntry;
+
+	Assert(LWLockHeldByMe(TablespaceHashLock));
 
 	if (persistentTablespaceSharedHashTable == NULL)
 		elog(PANIC, "Persistent tablespace information shared-memory not setup");
@@ -847,12 +853,7 @@ PersistentTablespace_RemoveSegment(int16 dbid, bool ismirror)
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
-	/*
-	 * Writes to the shared tablespace hash table are protected by
-	 * PersistentObjLock, which is held at this point.  The tablespace hash
-	 * therefore, can be read without acquiring TablespaceHashLock because we
-	 * are not making any change to the hash table in this function.
-	 */
+	LWLockAcquire(TablespaceHashLock, LW_SHARED);
 	while ((tablespaceDirEntry = hash_seq_search(&hstat)) != NULL)
 	{
 		PersistentFileSysObjName fsObjName;
@@ -861,6 +862,8 @@ PersistentTablespace_RemoveSegment(int16 dbid, bool ismirror)
 		uint64 persistentSerialNum;
 
 		tablespaceDirEntry = PersistentTablespace_FindEntryUnderLock(tblspc);
+
+		LWLockRelease(TablespaceHashLock);
 
 		if (tablespaceDirEntry == NULL)
 			elog(ERROR, "Did not find persistent tablespace entry %u", 
@@ -876,7 +879,10 @@ PersistentTablespace_RemoveSegment(int16 dbid, bool ismirror)
 										   dbid,
 										   ismirror,
 										   /* flushToXlog */ false);
+		LWLockAcquire(TablespaceHashLock, LW_SHARED);
 	}
+	LWLockRelease(TablespaceHashLock);
+	
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 }
 
