@@ -1636,6 +1636,8 @@ jobs:
     - icw_planner_ictcp_centos6
     - MU_check_centos
     - regression_tests_gpcloud_centos
+    - MM_analyzedb
+    - MM_gpinitsystem
     - MM_gpperfmon
     - MM_gpcheck
     - DPM_backup-restore
