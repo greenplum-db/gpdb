@@ -48,13 +48,12 @@ fi
 EOF
 
 #setup PYTHONPATH
-if [ "x${PYTHONPATH}" == "x" ]; then
+cat <<-EOF
+if [ "x\${PYTHONPATH}" == "x" ]; then
     PYTHONPATH="\$GPHOME/lib/python"
 else
-    PYTHONPATH="\$GPHOME/lib/python:${PYTHONPATH}"
+    PYTHONPATH="\$GPHOME/lib/python:\${PYTHONPATH}"
 fi
-cat <<EOF
-PYTHONPATH=${PYTHONPATH}
 EOF
 
 # Solaris needs amd64 in PATH for java to work
