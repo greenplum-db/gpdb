@@ -41,6 +41,7 @@ from gppylib.utils import ParsedConfigFile, ParsedConfigFileRow, writeLinesToFil
 from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
+from gppylib.heapchecksum import HeapChecksum
 
 logger = gplog.get_default_logger()
 
@@ -1229,6 +1230,7 @@ class GpRecoverSegmentProgram:
             self.logger.info('No segments to recover')
         else:
             mirrorBuilder.checkForPortAndDirectoryConflicts(gpArray)
+            self.validate_heap_checksum_consistency(gpArray, mirrorBuilder)
 
             self.displayRecovery(mirrorBuilder, gpArray)
             self.__displayRecoveryWarnings(mirrorBuilder)
@@ -1259,6 +1261,30 @@ class GpRecoverSegmentProgram:
         if os.path.exists(pidfile):
             os.remove(pidfile)
         os._exit(0)
+
+    def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
+        live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]
+        if len(live_segments) == 0:
+            self.logger.info("No checksum validation necessary when there are no segments to recover.")
+            return
+
+        heap_checksum = HeapChecksum(gpArray, num_workers=len(live_segments), logger=self.logger)
+        successes, failures = heap_checksum.get_segments_checksum_settings(live_segments)
+        # go forward if we have at least one segment that has replied
+        if len(successes) == 0:
+            raise Exception("No segments responded to ssh query for heap checksum validation.")
+        consistent, inconsistent, master_checksum_value = heap_checksum.check_segment_consistency(successes)
+        if len(inconsistent) > 0:
+            self.logger.fatal("Heap checksum setting differences reported on segments")
+            self.logger.fatal("Failed checksum consistency validation:")
+            for gpdb in inconsistent:
+                segment_name = gpdb.getSegmentHostName()
+                checksum = gpdb.heap_checksum
+                self.logger.fatal("%s checksum set to %s differs from master checksum set to %s" %
+                                  (segment_name, checksum, master_checksum_value))
+            raise Exception("Heap checksum setting differences reported on segments")
+        self.logger.info("Heap checksum setting is consistent between master and the segments that are candidates "
+                         "for recoverseg")
 
     def cleanup(self):
         if self.__pool:

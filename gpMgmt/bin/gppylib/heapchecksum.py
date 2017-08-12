@@ -24,14 +24,19 @@ class HeapChecksum:
         value = cmd.get_value('Data page checksum version')
         return value
 
-    def get_segments_checksum_settings(self):
+    def get_segments_checksum_settings(self, gpdb_list=None):
         """
         :return: two lists of GpDB objects (as defined in gparray) for successes and failures,
         where successes have successfully reported their checksum values
         """
         failures = []
         successes = []
-        completed = self._get_pgcontrol_data_from_segments()
+        if not gpdb_list:
+            gpdb_list = []
+            for segment in self.gparray.getSegmentList():
+                gpdb_list.extend(segment.get_dbs())
+
+        completed = self._get_pgcontrol_data_from_segments(gpdb_list)
         for pg_control_data in completed:
             result = pg_control_data.get_results()
             gparray_gpdb = pg_control_data.gparray_gpdb
@@ -72,22 +77,22 @@ class HeapChecksum:
 
         return consistent, inconsistent, master
 
-    def are_segments_consistent(self, consistent, inconsistent):
+    @staticmethod
+    def are_segments_consistent(consistent, inconsistent):
         """
         :return: True if there is at least 1 segment that agrees with master and no segments that disagree
         """
         return len(consistent) >= 1 and len(inconsistent) == 0
 
     # private methods #######################################
-    def _get_pgcontrol_data_from_segments(self):
+    def _get_pgcontrol_data_from_segments(self, gpdb_list):
         pool = WorkerPool(numWorkers=self.workers)
         try:
-            for seg in self.gparray.getSegmentList():  # iterate for all segments
-                for gparray_gpdb in seg.get_dbs():  # iterate for both primary and mirror
-                    cmd = PgControlData(name='run pg_controldata', datadir=gparray_gpdb.getSegmentDataDirectory(),
-                                        ctxt=REMOTE, remoteHost=gparray_gpdb.getSegmentHostName())
-                    cmd.gparray_gpdb = gparray_gpdb
-                    pool.addCommand(cmd)
+            for gpdb in gpdb_list:  # iterate for all segments
+                cmd = PgControlData(name='run pg_controldata', datadir=gpdb.getSegmentDataDirectory(),
+                                    ctxt=REMOTE, remoteHost=gpdb.getSegmentHostName())
+                cmd.gparray_gpdb = gpdb
+                pool.addCommand(cmd)
             pool.join()
         finally:
             # Make sure that we halt the workers or else we'll hang
