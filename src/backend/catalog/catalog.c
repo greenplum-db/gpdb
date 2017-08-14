@@ -69,10 +69,8 @@
 
 #define OIDCHARS	10			/* max chars printed by %u */
 
-static void GetFilespacePathForTablespace(
-	Oid tablespaceOid,
-
-	char **filespacePath)
+static char *
+GetFilespacePathForTablespace(Oid tablespaceOid)
 {
 	PersistentTablespaceGetFilespaces tablespaceGetFilespaces;
 	Oid filespaceOid;
@@ -125,7 +123,7 @@ static void GetFilespacePathForTablespace(
 		pfree(mirror_path);
 	Assert(primary_path != NULL);
 
-	*filespacePath = primary_path;
+	return primary_path;
 }
 
 /*
@@ -165,9 +163,7 @@ relpath(RelFileNode rnode)
 		char *primary_path;
 
 		/* All other tablespaces are accessed via filespace locations */
-		GetFilespacePathForTablespace(
-								rnode.spcNode,
-								&primary_path);
+		primary_path = GetFilespacePathForTablespace(rnode.spcNode);
 
 		/* 
 		 * We should develop an interface for the above that doesn't
@@ -228,9 +224,7 @@ GetDatabasePath(Oid dbNode, Oid spcNode)
 		char *primary_path;
 
 		/* All other tablespaces are accessed via filespace locations */
-		GetFilespacePathForTablespace(
-								spcNode,
-								&primary_path);
+		primary_path = GetFilespacePathForTablespace(spcNode);
 
 		/* 
 		 * We should develop an interface for the above that doesn't
