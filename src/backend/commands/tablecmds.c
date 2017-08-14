@@ -9432,9 +9432,9 @@ copy_append_only_data(
 {
 	MIRRORED_LOCK_DECLARE;
 
+	char		   *basepath;
 	char srcFileName[MAXPGPATH];
 	char dstFileName[MAXPGPATH];
-	char extension[12];
 
 	File		srcFile;
 
@@ -9454,34 +9454,28 @@ copy_append_only_data(
 	MirrorDataLossTrackingState 	originalMirrorDataLossTrackingState;
 	int64 							originalMirrorDataLossTrackingSessionNum;
 
-	if (segmentFileNum > 0)
-	{
-		sprintf(extension, ".%u", segmentFileNum);
-	}
-	else
-		extension[0] = '\0';
-
-	CopyRelPath(srcFileName, MAXPGPATH, *oldRelFileNode);
-	if (segmentFileNum > 0)
-	{
-		strcat(srcFileName, extension);
-	}
-
 	/*
 	 * Open the files
 	 */
+	basepath = relpath(*oldRelFileNode);
+	if (segmentFileNum > 0)
+		snprintf(srcFileName, sizeof(srcFileName), "%s.%u", basepath, segmentFileNum);
+	else
+		snprintf(srcFileName, sizeof(srcFileName), "%s", basepath);
+	pfree(basepath);
+
 	srcFile = PathNameOpenFile(srcFileName, O_RDONLY | PG_BINARY, 0);
 	if (srcFile < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\": %m", srcFileName)));
 
-
-	CopyRelPath(dstFileName, MAXPGPATH, *newRelFileNode);
+	basepath = relpath(*newRelFileNode);
 	if (segmentFileNum > 0)
-	{
-		strcat(dstFileName, extension);
-	}
+		snprintf(dstFileName, sizeof(srcFileName), "%s.%u", basepath, segmentFileNum);
+	else
+		snprintf(dstFileName, sizeof(srcFileName), "%s", basepath);
+	pfree(basepath);
 
 	MirroredAppendOnly_OpenReadWrite(
 								&mirroredDstOpen,

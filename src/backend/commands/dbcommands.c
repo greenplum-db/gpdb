@@ -411,9 +411,9 @@ static void copy_append_only_segment_file(
 {
 	MIRRORED_LOCK_DECLARE;
 
+	char		   *basepath;
 	char srcFileName[MAXPGPATH];
 	char dstFileName[MAXPGPATH];
-	char extension[12];
 
 	File		srcFile;
 
@@ -446,18 +446,12 @@ static void copy_append_only_segment_file(
 			 ItemPointerToString(persistentTid),
 			 eof);
 
+	basepath = relpath(*srcRelFileNode);
 	if (segmentFileNum > 0)
-	{
-		sprintf(extension, ".%u", segmentFileNum);
-	}
+		snprintf(srcFileName, sizeof(srcFileName), "%s.%u", basepath, segmentFileNum);
 	else
-		extension[0] = '\0';
-	
-	CopyRelPath(srcFileName, MAXPGPATH, *srcRelFileNode);
-	if (segmentFileNum > 0)
-	{
-		strcat(srcFileName, extension);
-	}
+		snprintf(srcFileName, sizeof(srcFileName), "%s", basepath);
+	pfree(basepath);
 
 	/*
 	 * Open the files
@@ -468,11 +462,12 @@ static void copy_append_only_segment_file(
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\": %m", srcFileName)));
 
-	CopyRelPath(dstFileName, MAXPGPATH, *dstRelFileNode);
+	basepath = relpath(*dstRelFileNode);
 	if (segmentFileNum > 0)
-	{
-		strcat(dstFileName, extension);
-	}
+		snprintf(dstFileName, sizeof(dstFileName), "%s.%u", basepath, segmentFileNum);
+	else
+		snprintf(dstFileName, sizeof(dstFileName), "%s", basepath);
+	pfree(basepath);
 
 	MirroredAppendOnly_OpenReadWrite(
 							&mirroredDstOpen,
