@@ -280,12 +280,15 @@ static bool PersistentTablespace_ScanTupleCallback(
 
 void PersistentTablespace_Reset(void)
 {
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
+
 	HASH_SEQ_STATUS stat;
 
 	TablespaceDirEntry tablespaceDirEntry;
 
 	hash_seq_init(&stat, persistentTablespaceSharedHashTable);
 
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 	WRITE_TABLESPACE_HASH_LOCK;
 
 	while (true)
@@ -322,6 +325,7 @@ void PersistentTablespace_Reset(void)
 	}
 
 	WRITE_TABLESPACE_HASH_UNLOCK;
+	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 }
 
 extern void PersistentTablespace_LookupTidAndSerialNum(
