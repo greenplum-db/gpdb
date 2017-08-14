@@ -1299,7 +1299,14 @@
   <topic id="data_checksums">
     <title>data_checksums</title>
     <body>
-      <p>Reports whether heap checksums are enabled in the database system. </p>
+      <p>Reports whether checksums are enabled for heap data storage in the database system.
+        Checksums for heap data are enabled or disabled when the database system is initialized and
+        cannot be changed. When enabled, Greenplum Database computes and stores checksums for heap
+        data blocks on the Greenplum Database master and standby instances, and on all primary and
+        mirror segments. Checksums are verified when a block is later read from storage and a
+        failure generates an error, terminating the transaction. Heap data blocks store heap tables,
+        catalog tables, indexes, and database metadata. Append-optimized storage has built-in
+        checksum support that is unrelated to this parameter.</p>
       <table id="table_djn_1nb_v1b">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
