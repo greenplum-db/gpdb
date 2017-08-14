@@ -197,8 +197,7 @@ public class HDFSReader
 			}
 		}
 
-		if (segSplits.size() > 0)
-			lrr.close();
+		lrr.close();
 	}
 
 	/**
@@ -229,8 +228,7 @@ public class HDFSReader
 			}
 		}
 
-		if (segSplits.size() > 0)
-			sfrr.close();
+		sfrr.close();
 	}
 
 	/**
