@@ -10,7 +10,7 @@ params:
   MAKE_TEST_COMMAND: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
   TEST_OS: ""
-  TEST_BINARY_SWAP: false
+  TEST_BINARY_SWAP: true
   CONFIGURE_FLAGS: ""
 run:
   path: gpdb_src/concourse/scripts/ic_gpdb.bash
