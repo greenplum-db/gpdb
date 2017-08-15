@@ -627,6 +627,7 @@ static void PersistentFileSysObj_DoInitScan(void)
 
 	Assert(persistentFileSysObjPrivateSharedData->needInitScan);
 
+	LWLockAcquire(PersistentObjLock, LW_SHARED);
 	for (fsObjType = PersistentFsObjType_First;
 		 fsObjType <= PersistentFsObjType_Last;
 		 fsObjType++)
@@ -639,6 +640,7 @@ static void PersistentFileSysObj_DoInitScan(void)
 						 &fileSysObjData->storeData,
 						 &fileSysObjSharedData->storeSharedData);
 	}
+	LWLockRelease(PersistentObjLock);
 
 	 persistentFileSysObjPrivateSharedData->needInitScan = false;
 }
