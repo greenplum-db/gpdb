@@ -654,7 +654,7 @@ COPY errcopy from stdin delimiter '/' log errors segment reject limit 3 rows;
 \.
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('errcopy');
 
--- exceed reject limit  on segment
+-- exceed reject limit on segment
 DROP TABLE IF EXISTS segment_reject_limit;
 CREATE TABLE segment_reject_limit (a int,b char) distributed by (a);
 INSERT INTO segment_reject_limit values(1,'1');
@@ -670,7 +670,7 @@ COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on se
 
 SELECT * FROM segment_reject_limit_from;
 SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject_limit_from');
---not exceed reject limit  on segment
+-- not exceed reject limit on segment
 COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
 SELECT * FROM segment_reject_limit_from;
 
@@ -739,26 +739,59 @@ SELECT COUNT(*) FROM test_first_segment_reject_limit;
 
 -- start_ignore
 DROP TABLE IF EXISTS test_copy_on_segment;
+DROP TABLE IF EXISTS test_copy_on_segment_nocol;
+DROP TABLE IF EXISTS test_copy_on_segment_array;
+DROP TABLE IF EXISTS test_copy_on_segment_array_1;
+DROP TABLE IF EXISTS test_copy_on_segment_2dim_array;
+DROP TABLE IF EXISTS test_copy_on_segment_2dim_array_1;
 DROP TABLE IF EXISTS test_copy_on_segment_withoids;
 DROP TABLE IF EXISTS test_copy_from_on_segment_txt;
 DROP TABLE IF EXISTS test_copy_from_on_segment_binary;
 DROP TABLE IF EXISTS test_copy_from_on_segment_csv;
 DROP TABLE IF EXISTS test_copy_from_on_segment_withoids;
 DROP TABLE IF EXISTS onek_copy_from_onsegment;
-DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt1;
-DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_csv1;
-DROP EXTERNAL TABLE IF EXISTS check_onek_copy_onsegment;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 -- end_ignore
 
-CREATE TABLE test_copy_on_segment (a int, b text, c text);
+CREATE TABLE test_copy_on_segment_nocol ();
+COPY test_copy_on_segment_nocol TO '/tmp/valid_filename_nocol<SEGID>.txt' ON SEGMENT;
+COPY test_copy_on_segment_nocol FROM '/tmp/valid_filename_nocol<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_on_segment_nocol;
+
+CREATE TABLE test_copy_on_segment_array (a int[], b text) DISTRIBUTED BY (a);
+INSERT INTO test_copy_on_segment_array VALUES ('{1,2,3}', 'sd');
+INSERT INTO test_copy_on_segment_array VALUES ('{2,2,3}', 'fg');
+INSERT INTO test_copy_on_segment_array VALUES ('{3,2,1}', 'hj');
+INSERT INTO test_copy_on_segment_array VALUES ('{233,2,1}', 'hj');
+INSERT INTO test_copy_on_segment_array VALUES ('{666,2,1}', 'hj');
+INSERT INTO test_copy_on_segment_array VALUES ('{3,555,1}', 'hj');
+COPY test_copy_on_segment_array TO '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
+
+CREATE TABLE test_copy_on_segment_array_1 (LIKE test_copy_on_segment_array) DISTRIBUTED BY (a);
+COPY test_copy_on_segment_array_1 FROM '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_on_segment_array EXCEPT SELECT * FROM test_copy_on_segment_array_1;
+
+CREATE TABLE test_copy_on_segment_2dim_array (a int[][]) DISTRIBUTED BY (a);
+INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,2,3},{2,5,9}}');
+INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,8,3},{2,5,9}}');
+INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,9,3},{2,9,9}}');
+INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,3,3},{2,6,9}}');
+INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,233,3},{2,5,9}}');
+INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,666,3},{2,555,9}}');
+COPY test_copy_on_segment_2dim_array TO '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
+
+CREATE TABLE test_copy_on_segment_2dim_array_1 (LIKE test_copy_on_segment_2dim_array) DISTRIBUTED BY (a);
+COPY test_copy_on_segment_2dim_array_1 FROM '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_on_segment_2dim_array EXCEPT SELECT * FROM test_copy_on_segment_2dim_array_1;
+
+CREATE TABLE test_copy_on_segment (a int, b text, c text) DISTRIBUTED BY (b);
 INSERT INTO test_copy_on_segment VALUES (1, 's', 'd');
 INSERT INTO test_copy_on_segment VALUES (2, 'f', 'g');
 INSERT INTO test_copy_on_segment VALUES (3, 'h', 'j');
 INSERT INTO test_copy_on_segment VALUES (4, 'i', 'l');
 INSERT INTO test_copy_on_segment VALUES (5, 'q', 'w');
 
-CREATE TABLE test_copy_on_segment_withoids (a int, b text, c text) WITH OIDS;
+CREATE TABLE test_copy_on_segment_withoids (a int, b text, c text) WITH OIDS DISTRIBUTED BY (a,c);
 INSERT INTO test_copy_on_segment_withoids VALUES (1, 's', 'd');
 INSERT INTO test_copy_on_segment_withoids VALUES (2, 'f', 'g');
 INSERT INTO test_copy_on_segment_withoids VALUES (3, 'h', 'j');
@@ -769,38 +802,20 @@ COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
 COPY test_copy_on_segment TO '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
 COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 
-CREATE EXTERNAL WEB TABLE check_copy_onsegment_txt1 (a int, b text, c text)
-EXECUTE E'(cat /tmp/valid_filename*.txt)'
-ON SEGMENT 0
-FORMAT 'text';
-SELECT * FROM check_copy_onsegment_txt1 ORDER BY a;
-
-CREATE EXTERNAL WEB TABLE check_copy_onsegment_csv1 (a int, b text, c text)
-EXECUTE E'(tail -q -n +2 /tmp/valid_filename*.csv)'
-ON SEGMENT 0
-FORMAT 'csv';
-SELECT * FROM check_copy_onsegment_csv1 ORDER BY a;
-
-CREATE EXTERNAL WEB TABLE check_copy_onsegment_withoids (sum int)
-EXECUTE E'(cat /tmp/withoids_valid_filename*.csv|wc -l)'
-ON SEGMENT 0
-FORMAT 'text';
-SELECT * FROM check_copy_onsegment_withoids;
-
-CREATE TABLE test_copy_from_on_segment_txt (LIKE test_copy_on_segment);
+CREATE TABLE test_copy_from_on_segment_txt (LIKE test_copy_on_segment) DISTRIBUTED BY (b);
 COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename.txt' ON SEGMENT;
 COPY test_copy_from_on_segment_txt FROM '/tmp/valid_filename<SEGID>.txt' ON SEGMENT;
 SELECT * FROM test_copy_from_on_segment_txt ORDER BY a;
 
-CREATE TABLE test_copy_from_on_segment_binary (LIKE test_copy_on_segment);
+CREATE TABLE test_copy_from_on_segment_binary (LIKE test_copy_on_segment) DISTRIBUTED BY (b);
 COPY test_copy_from_on_segment_binary FROM '/tmp/valid_filename<SEGID>.bin' ON SEGMENT BINARY;
 SELECT * FROM test_copy_from_on_segment_binary ORDER BY a;
 
-CREATE TABLE test_copy_from_on_segment_csv (LIKE test_copy_on_segment);
+CREATE TABLE test_copy_from_on_segment_csv (LIKE test_copy_on_segment) DISTRIBUTED BY (b);
 COPY test_copy_from_on_segment_csv FROM '/tmp/valid_filename<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER IGNORE EXTERNAL PARTITIONS;
 SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
 
-CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_withoids) WITH OIDS;
+CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_withoids) WITH OIDS DISTRIBUTED BY (a,c);
 COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
 
@@ -821,16 +836,10 @@ CREATE TABLE onek_copy_onsegment (
     stringu1    name,
     stringu2    name,
     string4     name
-);
+) DISTRIBUTED BY (two,four,odd);
 \COPY onek_copy_onsegment FROM 'data/onek.data';
 SELECT count(*) FROM onek_copy_onsegment;
 COPY onek_copy_onsegment TO '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt' ON SEGMENT;
-
-CREATE EXTERNAL WEB TABLE check_onek_copy_onsegment (a int)
-EXECUTE E'(cat /tmp/valid_filename_onek_copy_onsegment*.txt |wc -l)'
-ON SEGMENT 0
-FORMAT 'text';
-SELECT * FROM check_onek_copy_onsegment;
 
 CREATE TABLE onek_copy_from_onsegment (LIKE onek_copy_onsegment);
 COPY onek_copy_from_onsegment FROM '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt' ON SEGMENT;
@@ -844,15 +853,17 @@ FORMAT 'text';
 SELECT * FROM rm_copy_onsegment_files;
 
 DROP TABLE IF EXISTS test_copy_on_segment;
+DROP TABLE IF EXISTS test_copy_on_segment_nocol;
+DROP TABLE IF EXISTS test_copy_on_segment_array;
+DROP TABLE IF EXISTS test_copy_on_segment_array_1;
+DROP TABLE IF EXISTS test_copy_on_segment_2dim_array;
+DROP TABLE IF EXISTS test_copy_on_segment_2dim_array_1;
 DROP TABLE IF EXISTS test_copy_on_segment_withoids;
 DROP TABLE IF EXISTS test_copy_from_on_segment_txt;
 DROP TABLE IF EXISTS test_copy_from_on_segment_binary;
 DROP TABLE IF EXISTS test_copy_from_on_segment_csv;
 DROP TABLE IF EXISTS test_copy_from_on_segment_withoids;
 DROP TABLE IF EXISTS onek_copy_from_onsegment;
-DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_txt1;
-DROP EXTERNAL TABLE IF EXISTS check_copy_onsegment_csv1;
-DROP EXTERNAL TABLE IF EXISTS check_onek_copy_onsegment;
 DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 
 -- Test for COPY FROM/TO with mulitple blocks data file
