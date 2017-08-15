@@ -22,8 +22,6 @@
 #include "gpmon/gpmon.h"
 
 struct CdbExplain_ShowStatCtx;  /* private, in "cdb/cdbexplain.c" */
-struct EState;                  /* #include "nodes/execnodes.h" */
-struct PlanState;               /* #include "nodes/execnodes.h" */
 
 
 /* GangType enumeration is used in several structures related to CDB
@@ -237,8 +235,8 @@ typedef struct QueryDesc
 
 	/* These fields are set by ExecutorStart */
 	TupleDesc	tupDesc;		/* descriptor for result tuples */
-	struct EState      *estate;			/* executor's query-wide state */
-	struct PlanState   *planstate;		/* tree of per-plan-node state */
+	EState	   *estate;			/* executor's query-wide state */
+	PlanState  *planstate;		/* tree of per-plan-node state */
 
 	/* This field is set by ExecutorEnd after collecting cdbdisp results */
 	uint64		es_processed;	/* # of tuples processed */

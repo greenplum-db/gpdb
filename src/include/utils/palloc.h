@@ -54,8 +54,9 @@
 #define CDB_PALLOC_CALLER_ID
 */
 
+#ifdef USE_ASSERT_CHECKING
 #define CDB_PALLOC_TAGS
-#define ALLOC_SITE_KEY_SIZE 255
+#endif
 
 /* CDB_PALLOC_TAGS implies CDB_PALLOC_CALLER_ID */
 #if defined(CDB_PALLOC_TAGS) && !defined(CDB_PALLOC_CALLER_ID)
@@ -84,16 +85,6 @@ typedef uint32 OOMTimeType;
  * do not provide the struct contents here.
  */
 typedef struct MemoryContextData *MemoryContext;
-
-typedef struct
-{
-	char hash_key[ALLOC_SITE_KEY_SIZE];
-	char* file_name;
-	int line_no;
-	int64 alloc_count;
-	int64 alloc_size;
-	uint64 gen_allocated; // which generations did we allocate from this site
-} AllocSiteInfo;
 
 /*
  * CurrentMemoryContext is the default allocation context for palloc().

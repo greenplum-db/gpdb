@@ -9,12 +9,11 @@
  */
 
 #include "postgres.h"
-#include "miscadmin.h"
+
 #include "access/genam.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/gp_policy.h"
-#include "catalog/indexing.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"

@@ -91,6 +91,7 @@ extern PGDLLIMPORT volatile int32 CritSectionCount;
 extern void ProcessInterrupts(const char* filename, int lineno);
 extern void BackoffBackendTick(void);
 extern bool gp_enable_resqueue_priority;
+extern void gp_set_thread_sigmasks(void);
 
 /* in utils/resource_manager.h */
 extern bool IsResQueueEnabled(void);

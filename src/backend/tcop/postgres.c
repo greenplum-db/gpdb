@@ -94,8 +94,7 @@
 #include "access/twophase.h"
 #include "postmaster/backoff.h"
 #include <pthread.h>
-#include "utils/resscheduler.h"
-#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 #include "utils/resgroup-ops.h"
 #include "pgstat.h"
 #include "executor/nodeFunctionscan.h"
@@ -3575,7 +3574,7 @@ StatementCancelHandler(SIGNAL_ARGS)
 
 
 /* CDB: Signal handler for program errors */
-void
+static void
 CdbProgramErrorHandler(SIGNAL_ARGS)
 {
     int			save_errno = errno;

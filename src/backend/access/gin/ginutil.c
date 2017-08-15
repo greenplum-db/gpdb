@@ -18,7 +18,6 @@
 #include "access/heapam.h"
 #include "access/reloptions.h"
 #include "storage/freespace.h"
-#include "cdb/cdbfilerepprimary.h"
 
 void
 initGinState(GinState *state, Relation index)

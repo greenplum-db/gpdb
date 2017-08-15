@@ -17,13 +17,12 @@
  */
 
 #include "postgres.h"
-#include "miscadmin.h"
+
 #include "access/genam.h"
 #include "access/hash.h"
 #include "catalog/index.h"
 #include "commands/vacuum.h"
-#include "nodes/tidbitmap.h"
-#include "cdb/cdbfilerepprimary.h"
+
 
 /* Working state for hashbuild and its callback */
 typedef struct
@@ -207,11 +206,9 @@ hashgettuple(PG_FUNCTION_ARGS)
 			ItemIdMarkDead(PageGetItemId(page, offnum));
 
 			/*
-			 * Since this can be redone later if needed, it's treated the same
-			 * as a commit-hint-bit status update for heap tuples: we mark the
-			 * buffer dirty but don't make a WAL log entry.
+			 * Since this can be redone later if needed, mark as a hint.
 			 */
-			SetBufferCommitInfoNeedsSave(so->hashso_curbuf);
+			MarkBufferDirtyHint(so->hashso_curbuf, rel);
 		}
 
 		/*

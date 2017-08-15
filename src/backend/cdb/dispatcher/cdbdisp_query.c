@@ -10,6 +10,8 @@
  */
 
 #include "postgres.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbutil.h"

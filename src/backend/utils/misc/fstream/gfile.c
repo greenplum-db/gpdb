@@ -1025,8 +1025,6 @@ gfile_close(gfile_t*fd)
 		}
 		else
 		{
-			int i;
-
 			if(fd->held_pipe_lock)
 			{
 #ifndef WIN32

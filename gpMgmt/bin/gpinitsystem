@@ -214,15 +214,11 @@ CHK_PARAMS () {
 		fi
 		# Make sure that script has been supplied a config file
 		if [ x"$CLUSTER_CONFIG" = x"" ] && [ x"$INPUT_CONFIG" = x"" ]; then
-			LOG_MSG "[FATAL]:-Please specify either -c or -I as an option." 1
-			USAGE
-			ERROR_EXIT "[FATAL]:-Greenplum configuration filename [-c] option or [-I] option not provided." 2
+			ERROR_EXIT "[FATAL]:-At least one of two options, [-c] or [-I], is required." 2
 		fi
 
 		if [ -n "$CLUSTER_CONFIG" ] && [ -n "$INPUT_CONFIG" ]; then
-			LOG_MSG "[FATAL]:-Option -c and -I cannot be both specified." 1
-			USAGE
-			ERROR_EXIT "[FATAL]:-Received both Greenplum configuration filename options [-c] and [-I]." 2
+			ERROR_EXIT "[FATAL]:-Options [-c] and [-I] cannot be used at the same time." 2
 		fi
 		
 		if [ x"" != x"$CLUSTER_CONFIG" ] ; then
@@ -234,7 +230,7 @@ CHK_PARAMS () {
 		    fi
 		    
 		    # Make sure old CLUSTER_CONFIG settings are not hanging around.
-		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE
+		    unset PORT_BASE SEG_PREFIX DATA_DIRECTORY REPLICATION_PORT_BASE HEAP_CHECKSUM
 
 		    # Make sure it is not a dos file with CTRL M at end of each line
 		    $CAT $CLUSTER_CONFIG|$SED -e 's/$//g' > $TMP_FILE
@@ -284,6 +280,12 @@ CHK_PARAMS () {
 		if [ x"" = x"$DATA_DIRECTORY" ]; then
 			ERROR_EXIT "[FATAL]:-DATA_DIRECTORY not specified in $CLUSTER_CONFIG file, is this the correct instance configuration file." 2
 		fi
+
+		if [ x"" = x"$HEAP_CHECKSUM" ]; then
+			HEAP_CHECKSUM=on
+			LOG_MSG "[INFO]:-Could not find HEAP_CHECKSUM in cluster config, defaulting to on."
+		fi
+
 		if [ x"" == x"$LOCALE_SETTING" ];then
 			LOG_MSG "[INFO]:-Locale has not been set in $CLUSTER_CONFIG, will set to default value" 1
 			LOCALE_SETTING=$DEFAULT_LOCALE_SETTING
@@ -346,12 +348,6 @@ CHK_PARAMS () {
 				ERROR_EXIT "[FATAL]:-Master hostname in gpinitsystem configuration file must be $MASTER_HOSTNAME" 2
 			fi
 		fi
-
-
-		# Deal with issue of mixed case segment names being created in all lower case on tails but mixed
-		# case in head system tables.
-		LWR_CASE_SEG_PREFIX=`$ECHO $SEG_PREFIX|$TR '[A-Z]' '[a-z]'`
-		SEG_PREFIX=$LWR_CASE_SEG_PREFIX
 
 		# MASTER_PORT
 		if [ x"" = x"$MASTER_PORT" ]; then
@@ -1080,6 +1076,7 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:-Postgres param file        = $PG_ADD" 1
 		LOG_MSG "[INFO]:-Initdb to be used          = $INITDB" 1
 		LOG_MSG "[INFO]:-GP_LIBRARY_PATH is         = $GP_LIBRARY_PATH" 1
+		LOG_MSG "[INFO]:-HEAP_CHECKSUM is           = $HEAP_CHECKSUM" 1
 		if [ $ULIMIT_WARN -eq 1 ];then
 			LOG_MSG "[WARN]:-Ulimit check               = Warnings generated, see log file $WARN_MARK" 1
 		else
@@ -1230,6 +1227,9 @@ CREATE_QD_DB () {
 		cmd="$cmd --max_connections=$MASTER_MAX_CONNECT"
 		cmd="$cmd --shared_buffers=$MASTER_SHARED_BUFFERS"
 		cmd="$cmd --is_filerep_mirrored=no"
+		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
+			cmd="$cmd --data-checksums"
+		fi
 		cmd="$cmd --backend_output=$GP_DIR.initdb"
 
 		LOG_MSG "[INFO]:-Commencing local $cmd"
@@ -1442,7 +1442,7 @@ CREATE_QES_PRIMARY () {
                 HAS_MIRRORS_OPTION=no
             fi
 
-			$GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE \
+			$GPCREATESEG $FLAG $$ 1 $I IS_PRIMARY $HAS_MIRRORS_OPTION $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 			PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1502,7 +1502,7 @@ CREATE_QES_MIRROR () {
 		    FLAG="-p $PG_CONF_ADD_FILE"
 		fi
 
-		$GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE \
+		$GPCREATESEG $FLAG $$ 1 ${MIRRORS_ORDERED_BY_CONTENT_ID[$I_INDEX]} ${PRIMARIES_ORDERED_BY_CONTENT_ID[$I_INDEX]} no $INST_COUNT  $LOG_FILE $HEAP_CHECKSUM \
 `$ECHO ${MASTER_IP_ADDRESS[@]}|$TR ' ' '~'` \
 `$ECHO ${STANDBY_IP_ADDRESS[@]}|$TR ' ' '~'` &
 		PARALLEL_COUNT $BATCH_LIMIT $BATCH_DEFAULT
@@ -1671,6 +1671,10 @@ DUMP_OUTPUT_CONFIG () {
     fi
     
     $ECHO "SEG_PREFIX=$SEG_PREFIX" >> $OUTPUT_CONFIG
+
+    if [ x"" != x"$HEAP_CHECKSUM" ] ; then
+	$ECHO "HEAP_CHECKSUM=$HEAP_CHECKSUM" >> $OUTPUT_CONFIG
+    fi
 
     $ECHO "QD_PRIMARY_ARRAY=$QD_PRIMARY_ARRAY" >> $OUTPUT_CONFIG
     $ECHO "declare -a PRIMARY_ARRAY=(" >> $OUTPUT_CONFIG

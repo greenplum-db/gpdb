@@ -11,9 +11,6 @@
 #ifndef CDBCONN_H
 #define CDBCONN_H
 
-#include "gp-libpq-fe.h"               /* prerequisite for libpq-int.h */
-#include "gp-libpq-int.h"              /* PQExpBufferData */
-
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for segment database definition and working values
@@ -57,10 +54,9 @@ typedef struct SegmentDatabaseDescriptor
      *
      * NB: Use malloc/free, not palloc/pfree, for the items below.
      */
-    int4		            motionListener; /* interconnect listener port */
+    uint32		            motionListener; /* interconnect listener port */
     int4					backendPid;
     char                   *whoami;         /* QE identifier for msgs */
-    struct SegmentDatabaseDescriptor * myAgent;
 
 } SegmentDatabaseDescriptor;
 

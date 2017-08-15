@@ -14,6 +14,9 @@
 #ifndef RESOURCEMANAGER_H
 #define RESOURCEMANAGER_H
 
+#include "utils/resscheduler.h"
+#include "utils/resgroup.h"
+
 typedef enum
 {
 	RESOURCE_MANAGER_POLICY_QUEUE,
@@ -28,5 +31,7 @@ extern ResourceManagerPolicy Gp_resource_manager_policy;
 
 extern bool IsResQueueEnabled(void);
 extern bool IsResGroupEnabled(void);
+
+extern void InitResManager(void);
 
 #endif   /* RESOURCEMANAGER_H */

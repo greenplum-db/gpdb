@@ -16,21 +16,27 @@
 #ifndef RESSCHEDULER_H
 #define RESSCHEDULER_H
 
+#include "executor/execdesc.h"
 #include "nodes/plannodes.h"
 #include "storage/lock.h"
 #include "tcop/dest.h"
-#include "utils/resource_manager.h"
+#include "cdb/memquota.h"
 
 /*
  * GUC variables.
  */
+extern ResManagerMemoryPolicy   gp_resqueue_memory_policy;
+extern char                		*gp_resqueue_memory_policy_str;
+extern bool						gp_log_resqueue_memory;
+extern int						gp_resqueue_memory_policy_auto_fixed_mem;
+extern bool						gp_resqueue_print_operator_memory_limits;
+
 extern int	MaxResourceQueues;
 extern int	MaxResourcePortalsPerXact;
 extern bool	ResourceSelectOnly;
 extern bool	ResourceCleanupIdleGangs;
 
 extern Oid MyQueueId; /* resource queue for current role. */
-
 
 /*
  * Data structures
@@ -172,4 +178,18 @@ extern void AtAbort_ResScheduler(void);
 extern void ResHandleUtilityStmt(Portal portal, Node *stmt);
 extern bool ResLockUtilityPortal(Portal portal, float4 ignoreCostLimit);
 
+ /**
+  * What is the memory limit on a queue per the catalog in bytes. Returns -1 if not set.
+  */
+extern int64 ResourceQueueGetMemoryLimitInCatalog(Oid queueId);
+
+/**
+ * What is the memory limit configuration for a specific queue?
+ */
+extern int64 ResourceQueueGetMemoryLimit(Oid queueId);
+
+/*
+ * How many memory reserved for the query
+ */
+extern uint64 ResourceQueueGetQueryMemoryLimit(PlannedStmt *stmt, Oid queueId);
 #endif   /* RESSCHEDULER_H */

@@ -34,11 +34,10 @@
 #include "storage/lmgr.h"
 #include "storage/smgr.h"
 #include "utils/lsyscache.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 static bool _hash_alloc_buckets(Relation rel, BlockNumber firstblock,
-								uint32 nblocks);
+					uint32 nblocks);
 static void _hash_splitbucket(Relation rel, Buffer metabuf,
 				  Bucket obucket, Bucket nbucket,
 				  BlockNumber start_oblkno,

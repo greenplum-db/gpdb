@@ -20,7 +20,6 @@
 #include "storage/lmgr.h"
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
-#include "cdb/cdbfilerepprimary.h"
 
 typedef struct ItemPos
 {

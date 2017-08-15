@@ -1369,7 +1369,7 @@ text_lt(PG_FUNCTION_ARGS)
 
 Datum
 text_le(PG_FUNCTION_ARGS)
-{	
+{
 	text	   *arg1 = PG_GETARG_TEXT_PP(0);
 	text	   *arg2 = PG_GETARG_TEXT_PP(1);
 	bool		result;
@@ -1475,6 +1475,7 @@ internal_text_pattern_compare(text *arg1, text *arg2)
 	else
 		return 0;
 }
+
 
 Datum
 text_pattern_lt(PG_FUNCTION_ARGS)

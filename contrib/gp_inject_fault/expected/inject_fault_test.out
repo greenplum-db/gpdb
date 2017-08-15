@@ -1,17 +1,6 @@
 -- Install a helper function to inject faults, using the fault injection
 -- mechanism built into the server.
-CREATE FUNCTION gp_inject_fault(
-  faultname text,
-  type text,
-  ddl text,
-  database text,
-  tablename text,
-  numoccurrences int4,
-  sleeptime int4,
-  db_id smallint)
-RETURNS boolean
-AS '$libdir/gp_inject_fault'
-LANGUAGE C VOLATILE STRICT NO SQL;
+CREATE EXTENSION gp_inject_fault;
 begin;
 -- inject fault of type sleep on all primaries
 select gp_inject_fault('finish_prepared_after_record_commit_prepared',

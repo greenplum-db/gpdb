@@ -72,6 +72,7 @@ fileset = {
     'sys/times.h':           [],
     'sys/types.h':           [],
     'sys/un.h':              [],
+    'sys/poll.h':            [],
     'unix.h':                [],
     'windows.h':             [],
     'winsock.h':             [],

@@ -26,7 +26,6 @@
 #include "nodes/pg_list.h"
 #include "nodes/print.h"
 #include "utils/memutils.h"
-#include "utils/hsearch.h"
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
@@ -37,7 +36,6 @@
 #include "port/pg_crc32c.h"
 #include "storage/pmsignal.h"
 
-#include "cdb/cdbselect.h"
 #include "cdb/tupchunklist.h"
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
@@ -52,9 +50,6 @@
 #include "pgtime.h"
 #include <netinet/in.h>
 
-#include "port.h"
-
-
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #ifndef _WIN32_WINNT
@@ -62,9 +57,6 @@
 #endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#define SHUT_RDWR SD_BOTH
-#define SHUT_RD SD_RECEIVE
-#define SHUT_WR SD_SEND
 
 /* If we have old platform sdk headers, WSAPoll() might not be there */
 #ifndef POLLIN
@@ -2671,8 +2663,6 @@ startOutgoingUDPConnections(ChunkTransportState *transportStates,
 			conn->state = mcsSetupOutgoingConnection;
 			conn->route = i++;
 
-			conn->waitEOS = false;
-
 			(*pOutgoingCount)++;
 		}
 
@@ -4907,6 +4897,14 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now)
 	 * by OS for a long time. In this case, only a few times are tried.
 	 * Thus, the GUC Gp_interconnect_min_retries_before_timeout is added here.
 	 */
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG &&
+	   buf->nRetry % Gp_interconnect_debug_retry_interval == 0)
+	{
+		ereport(LOG, (errmsg("resending packet (seq %d) to %s (pid %d cid %d) with %d retries in %lu seconds",
+							 buf->pkt->seq, buf->conn->remoteHostAndPort, buf->pkt->dstPid,
+							 buf->pkt->dstContentId, buf->nRetry, (now - buf->sentTime) / 1000 / 1000 )));
+	}
+
 	if ((buf->nRetry > Gp_interconnect_min_retries_before_timeout) && (now - buf->sentTime) > ((uint64)Gp_interconnect_transmit_timeout * 1000 * 1000))
 	{
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -6600,7 +6598,7 @@ dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname)
 		fprintf(ofile, "conns[%d] motNodeId=%d: remoteContentId=%d pid=%d sockfd=%d remote=%s local=%s "
 				"capacity=%d sentSeq=%d receivedAckSeq=%d consumedSeq=%d rtt=" UINT64_FORMAT
 				" dev=" UINT64_FORMAT " deadlockCheckBeginTime=" UINT64_FORMAT " route=%d msgSize=%d msgPos=%p"
-				" recvBytes=%d tupleCount=%d waitEOS=%d stillActive=%d stopRequested=%d "
+				" recvBytes=%d tupleCount=%d stillActive=%d stopRequested=%d "
 				"state=%d\n",
 				 i, pEntry->motNodeId,
 				 conn->remoteContentId,
@@ -6610,7 +6608,7 @@ dumpConnections(ChunkTransportStateEntry *pEntry, const char *fname)
 				 conn->localHostAndPort,
 				 conn->capacity, conn->sentSeq, conn->receivedAckSeq, conn->consumedSeq,
 				 conn->rtt, conn->dev, conn->deadlockCheckBeginTime, conn->route, conn->msgSize, conn->msgPos,
-				 conn->recvBytes, conn->tupleCount, conn->waitEOS, conn->stillActive, conn->stopRequested,
+				 conn->recvBytes, conn->tupleCount, conn->stillActive, conn->stopRequested,
 				 conn->state);
 		fprintf(ofile, "conn_info [%s: seq %d extraSeq %d]: motNodeId %d, crc %d len %d "
 				"srcContentId %d dstDesContentId %d "

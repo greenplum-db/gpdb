@@ -14,12 +14,9 @@
 
 #include "postgres.h"
 #include "access/gin.h"
-#include "miscadmin.h"
 #include "catalog/index.h"
 #include "utils/memutils.h"
 #include "nodes/tidbitmap.h"
-#include "storage/lwlock.h"
-#include "cdb/cdbfilerepprimary.h"
 
 static bool
 findItemInPage(Page page, ItemPointer item, OffsetNumber *off)

@@ -1,12 +1,28 @@
-test: enable_resgroup_validate
-test: enable_resgroup
+test: resgroup/enable_resgroup_validate
+test: resgroup/enable_resgroup
 
-test: resgroup_syntax
-test: resgroup_transaction
+# basic syntax
+test: resgroup/resgroup_syntax
+test: resgroup/resgroup_transaction
 
-test: resgroup_concurrency
-test: resgroup_memory_statistic
-test: resgroup_memory_limit
-test: resgroup_cpu_rate_limit
+# functions
+test: resgroup/resgroup_concurrency
+test: resgroup/resgroup_alter_concurrency
+test: resgroup/resgroup_memory_statistic
+test: resgroup/resgroup_memory_limit
+test: resgroup/resgroup_alter_memory
+test: resgroup/resgroup_cpu_rate_limit
 
-test: disable_resgroup
+# memory spill tests
+test: resgroup/resgroup_memory_hashagg_spill
+test: resgroup/resgroup_memory_hashjoin_spill
+test: resgroup/resgroup_memory_materialize_spill
+test: resgroup/resgroup_memory_sisc_mat_sort
+test: resgroup/resgroup_memory_sisc_sort_spill
+test: resgroup/resgroup_memory_sort_spill
+test: resgroup/resgroup_memory_spilltodisk
+
+# regression tests
+test: resgroup/resgroup_recreate
+
+test: resgroup/disable_resgroup

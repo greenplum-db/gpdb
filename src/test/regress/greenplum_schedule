@@ -15,10 +15,6 @@
 #   hitting max_connections limit on segments.
 #
 
-# Creates helper function for injecting faults.  Subsequent tests can
-# make use of it.  So this 'test' should be run first.
-test: create_fault_function
-
 test: gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml pgoptions shared_scan
 
 test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table

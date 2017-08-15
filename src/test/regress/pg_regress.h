@@ -42,6 +42,7 @@ extern bool debug;
 extern char *inputdir;
 extern char *outputdir;
 extern bool optimizer_enabled;
+extern bool resgroup_enabled;
 
 /*
  * This should not be global but every module should be able to read command

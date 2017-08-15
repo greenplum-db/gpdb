@@ -8,25 +8,16 @@
  */
 #include "postgres.h"
 #include "miscadmin.h"
-#include "pgstat.h"
 
 #include "cdb/cdbglobalsequence.h"
 
 #include "catalog/catalog.h"
-#include "catalog/pg_namespace.h"
-#include "catalog/pg_authid.h"
-#include "catalog/pg_tablespace.h"
-#include "catalog/pg_database.h"
 #include "catalog/gp_persistent.h"
 #include "cdb/cdbdirectopen.h"
 
 #include "storage/itemptr.h"
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "access/transam.h"
-#include "utils/guc.h"
-#include "storage/smgr.h"
-#include "storage/ipc.h"
 
 static void GlobalSequence_MakeTid(
 	GpGlobalSequence		gpGlobalSequence,

@@ -9,7 +9,6 @@
  */
 
 #include "postgres.h"
-#include <assert.h>
 
 #include "miscadmin.h"
 #include "gp-libpq-fe.h"

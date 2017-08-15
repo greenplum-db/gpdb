@@ -11,42 +11,34 @@
 #include "nodes/plannodes.h"
 #include "cdb/cdbplan.h"
 
-typedef enum ResQueueMemoryPolicy
+typedef enum ResManagerMemoryPolicy
 {
-	RESQUEUE_MEMORY_POLICY_NONE,
-	RESQUEUE_MEMORY_POLICY_AUTO,
-	RESQUEUE_MEMORY_POLICY_EAGER_FREE
-} ResQueueMemoryPolicy;
+	RESMANAGER_MEMORY_POLICY_NONE,
+	RESMANAGER_MEMORY_POLICY_AUTO,
+	RESMANAGER_MEMORY_POLICY_EAGER_FREE
+} ResManagerMemoryPolicy;
 
-extern char                		*gp_resqueue_memory_policy_str;
-extern ResQueueMemoryPolicy		gp_resqueue_memory_policy;
-extern bool						gp_log_resqueue_memory;
-extern int						gp_resqueue_memory_policy_auto_fixed_mem;
-extern const int				gp_resqueue_memory_log_level;
-extern bool						gp_resqueue_print_operator_memory_limits;
+extern ResManagerMemoryPolicy gp_resmanager_memory_policy_default;
+extern bool						gp_log_resmanager_memory_default;
+extern int						gp_resmanager_memory_policy_auto_fixed_mem_default;
+extern bool						gp_resmanager_print_operator_memory_limits_default;
+
+extern ResManagerMemoryPolicy	*gp_resmanager_memory_policy;
+extern bool						*gp_log_resmanager_memory;
+extern int						*gp_resmanager_memory_policy_auto_fixed_mem;
+extern bool						*gp_resmanager_print_operator_memory_limits;
+
+#define GP_RESMANAGER_MEMORY_LOG_LEVEL NOTICE
+
+#define IsResManagerMemoryPolicyNone() (*gp_resmanager_memory_policy == RESMANAGER_MEMORY_POLICY_NONE)
+#define IsResManagerMemoryPolicyAuto() (*gp_resmanager_memory_policy == RESMANAGER_MEMORY_POLICY_AUTO)
+#define IsResManagerMemoryPolicyEagerFree() (*gp_resmanager_memory_policy == RESMANAGER_MEMORY_POLICY_EAGER_FREE)
+
+#define LogResManagerMemory() (*gp_log_resmanager_memory == true)
+#define ResManagerPrintOperatorMemoryLimits() (*gp_resmanager_print_operator_memory_limits == true)
 
 extern void PolicyAutoAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memoryAvailable);
 extern void PolicyEagerFreeAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memoryAvailable);
-
-/**
- * What is the memory limit on a queue per the catalog?
- */
-extern int64 ResourceQueueGetMemoryLimitInCatalog(Oid queueId);
-
-/**
- * What is the memory limit for a specific queue?
- */
-extern int64 ResourceQueueGetMemoryLimit(Oid queueId);
-
-/**
- * What is the memory limit for a query on a specific queue?
- */
-extern uint64 ResourceQueueGetQueryMemoryLimit(PlannedStmt *stmt, Oid queueId);
-
-/**
- * What is the memory reservation for superuser queries?
- */
-extern uint64 ResourceQueueGetSuperuserQueryMemoryLimit(void);
 
 /**
  * Inverse for explain analyze.
@@ -57,5 +49,10 @@ extern uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOp
  * Is result node memory intensive?
  */
 extern bool IsResultMemoryIntesive(Result *res);
+
+/*
+ * Calculate the amount of memory reserved for the query
+ */
+extern int64 ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt);
 
 #endif /* MEMQUOTA_H_ */

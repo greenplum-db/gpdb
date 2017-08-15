@@ -45,3 +45,4 @@ test: varchar_Extreadwrite
 test: varchar_ExtwriteToHdfsToExtread
 test: varchar_hdfsTextToGPDB
 #test: MPP16780
+test: int_ExtreadwriteParquet

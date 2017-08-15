@@ -488,6 +488,14 @@ log_autostats=off	# print additional autostats information
 										# resource lockwait.
 gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing. 
 									# eager_free, auto or none
+
+#---------------------------------------------------------------------------
+# RESOURCE GROUP
+#---------------------------------------------------------------------------
+gp_resgroup_memory_policy = 'eager_free'	# memory assignment policy for
+											# resource group.
+											# eager_free, auto or none
+
 #---------------------------------------------------------------------------
 # EXTERNAL TABLES
 #---------------------------------------------------------------------------

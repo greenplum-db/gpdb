@@ -2395,6 +2395,9 @@ checkResourceQueueMemoryLimits(PG_FUNCTION_ARGS)
 	ResQueue queue;
 	double v1, v2;
 
+	if (!IsResQueueEnabled())
+		return (Datum)0;
+
 	if (queueName == NULL)
 		return (Datum)0;
 
@@ -2877,6 +2880,9 @@ resGroupPalloc(PG_FUNCTION_ARGS)
 	int size;
 	int count;
 	int i;
+
+	if (!IsResGroupEnabled())
+		PG_RETURN_INT32(0);
 
 	ResGroupGetMemInfo(&memLimit, &slotQuota, &sharedQuota);
 	size = ceilf(memLimit * ratio);

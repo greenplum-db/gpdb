@@ -450,77 +450,6 @@ list_nth_oid(List *list, int n)
 	return lfirst_oid(list_nth_cell(list, n));
 }
 
-/* 
- * find if datum's position in list (0 based).  If not in list return -1.
- * find predicate is equal(), int==, oid==, ptr== respecitively.
- */
-int list_find(List *list, void *datum)
-{
-	ListCell *cell;
-	int i = 0;
-
-	check_list_invariants(list);
-
-	foreach(cell, list)
-	{
-		if(equal(lfirst(cell), datum))
-			return i; 
-		++i;
-	}
-	return -1;
-}
-
-int list_find_int(List *list, int datum)
-{
-	ListCell *cell;
-	int i = 0;
-
-	Assert(IsIntegerList(list));
-	check_list_invariants(list);
-
-	foreach(cell, list)
-	{
-		if(lfirst_int(cell) == datum)
-			return i; 
-		++i;
-	}
-	return -1;
-}
-
-int list_find_oid(List *list, Oid datum)
-{
-	ListCell *cell;
-	int i = 0;
-
-	Assert(IsOidList(list));
-	check_list_invariants(list);
-
-	foreach(cell, list)
-	{
-		if(lfirst_oid(cell) == datum)
-			return i; 
-		++i;
-	}
-	return -1;
-}
-
-int list_find_ptr(List *list, void *datum)
-{
-	ListCell *cell;
-	int i = 0;
-
-	Assert(IsPointerList(list));
-	check_list_invariants(list);
-
-	foreach(cell, list)
-	{
-		if(lfirst(cell) == datum)
-			return i; 
-		++i;
-	}
-	return -1;
-}
-
 /*
  * Return true iff 'datum' is a member of the list. Equality is
  * determined via equal(), so callers should ensure that they pass a
@@ -542,6 +471,7 @@ list_member(List *list, void *datum)
 
 	return false;
 }
+
 /*
  * Return true iff 'datum' is a member of the list. Equality is
  * determined by using simple pointer comparison.

@@ -54,8 +54,6 @@
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 #include "utils/xml.h"
-#include "gp-libpq-fe.h"
-#include "pqexpbuffer.h"
 
 
 /* ----------

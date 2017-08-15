@@ -9,7 +9,6 @@
 #include <signal.h>
 
 #include <unistd.h>
-#include <assert.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/time.h>

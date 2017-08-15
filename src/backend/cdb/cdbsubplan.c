@@ -337,7 +337,7 @@ isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList)
  * This list is input to the function findParamType(), which loops over the
  * list looking for a specific paramid, and returns its type.
  */
-bool
+static bool
 param_walker(Node *node, ParamWalkerContext * context)
 {
 	if (node == NULL)
@@ -361,7 +361,7 @@ param_walker(Node *node, ParamWalkerContext * context)
  * trying to match on the passed-in paramid. Returns the paramtype of a
  * match, else error.
  */
-Oid
+static Oid
 findParamType(List *params, int paramid)
 {
 	ListCell   *l;

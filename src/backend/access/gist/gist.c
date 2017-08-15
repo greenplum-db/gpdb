@@ -19,7 +19,6 @@
 #include "catalog/index.h"
 #include "miscadmin.h"
 #include "utils/memutils.h"
-#include "cdb/cdbfilerepprimary.h"
 
 /* Working state for gistbuild and its callback */
 typedef struct
@@ -128,7 +127,6 @@ gistbuild(PG_FUNCTION_ARGS)
 
 		recptr = XLogInsert(RM_GIST_ID, XLOG_GIST_CREATE_INDEX, rdata);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 	else
 		PageSetLSN(page, GetXLogRecPtrForTemp());
@@ -429,7 +427,6 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 			for (ptr = dist; ptr; ptr = ptr->next)
 			{
 				PageSetLSN(ptr->page, recptr);
-				PageSetTLI(ptr->page, ThisTimeLineID);
 			}
 		}
 		else
@@ -501,7 +498,6 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 
 			recptr = XLogInsert(RM_GIST_ID, XLOG_GIST_PAGE_UPDATE, rdata);
 			PageSetLSN(state->stack->page, recptr);
-			PageSetTLI(state->stack->page, ThisTimeLineID);
 		}
 		else
 			PageSetLSN(state->stack->page, GetXLogRecPtrForTemp());
@@ -1060,7 +1056,6 @@ gistnewroot(Relation r, Buffer buffer, IndexTuple *itup, int len, ItemPointer ke
 
 		recptr = XLogInsert(RM_GIST_ID, XLOG_GIST_NEW_ROOT, rdata);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 	else
 		PageSetLSN(page, GetXLogRecPtrForTemp());

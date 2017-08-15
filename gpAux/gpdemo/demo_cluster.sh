@@ -242,7 +242,7 @@ cat >> $CLUSTER_CONFIG <<-EOF
 	CLUSTER_NAME="Demo $HOSTNAME Cluster"
 	
 	# This file must exist in the same directory that you execute gpinitsystem in
-	MACHINE_LIST_FILE=hostfile
+	MACHINE_LIST_FILE=`pwd`/hostfile
 	
 	# This names the data directories for the Segment Instances and the Entry Postmaster
 	SEG_PREFIX=$SEG_PREFIX
@@ -292,6 +292,10 @@ if [ "${WITH_MIRRORS}" == "true" ]; then
 	EOF
 fi
 
+if [ ! -z "${EXTRA_CONFIG}" ]; then
+  echo ${EXTRA_CONFIG} >> $CLUSTER_CONFIG
+fi
+
 cat >> $CLUSTER_CONFIG <<-EOF
 
 	# Path for Greenplum mgmt utils and Greenplum binaries
@@ -321,6 +325,11 @@ if [ -n "${STATEMENT_MEM}" ]; then
 	cat >> $CLUSTER_CONFIG_POSTGRES_ADDONS<<-EOF
 		statement_mem = ${STATEMENT_MEM}
 	EOF
+fi
+
+if [ "${ONLY_PREPARE_CLUSTER_ENV}" == "true" ]; then
+    echo "ONLY_PREPARE_CLUSTER_ENV set, generated clusterConf file: $CLUSTER_CONFIG, exiting"
+    exit 0
 fi
 
 ## ======================================================================

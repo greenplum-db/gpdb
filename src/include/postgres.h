@@ -471,10 +471,6 @@ extern int ExceptionalCondition(const char *conditionName,
 					 const char *errorType,
 					 const char *fileName, int lineNumber);
 
-extern int SyncAgentMain(int, char **, const char *);
-extern void CdbProgramErrorHandler(SIGNAL_ARGS);
-extern void gp_set_thread_sigmasks(void);
-
 
 #ifdef __cplusplus
 }   /* extern "C" */

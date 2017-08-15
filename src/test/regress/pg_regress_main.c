@@ -21,6 +21,24 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+static bool
+detect_answer_file(char *name,
+				   int namesize,
+				   const char *testname,
+				   const char *variant)
+{
+	snprintf(name, namesize, "%s/expected/%s%s.out",
+			 outputdir, testname, variant);
+
+	if (file_exists(name))
+		return true;
+
+	snprintf(name, namesize, "%s/expected/%s%s.out",
+			 inputdir, testname, variant);
+
+	return file_exists(name);
+}
+
 /*
  * start a psql test process for specified file (including redirection),
  * and return process ID
@@ -82,31 +100,18 @@ psql_start_test(const char *testname,
 			}
 		}
 	}
-	
-	if (optimizer_enabled)
+
+	if      (optimizer_enabled && resgroup_enabled &&
+			 detect_answer_file(expectfile, sizeof(expectfile), testname, "_optimizer_resgroup")) ;
+	else if (optimizer_enabled &&
+			 detect_answer_file(expectfile, sizeof(expectfile), testname, "_optimizer")) ;
+	else if (resgroup_enabled &&
+			 detect_answer_file(expectfile, sizeof(expectfile), testname, "_resgroup")) ;
+	else if (detect_answer_file(expectfile, sizeof(expectfile), testname, "")) ;
+	else
 	{
-		snprintf(expectfile, sizeof(expectfile), "%s/expected/%s_optimizer.out",
-				 outputdir, testname);
-		if (!file_exists(expectfile))
-		{
-			snprintf(expectfile, sizeof(expectfile), "%s/expected/%s_optimizer.out",
-					 inputdir, testname);
-		}
-	}
-
-	// if optimizer is off or there is no orca-specific answer file, then
-	// use the default answer file
-
-	if (!file_exists(expectfile))
-	{
-		snprintf(expectfile, sizeof(expectfile), "%s/expected/%s.out",
-				 outputdir, testname);
-
-		if (!file_exists(expectfile))
-		{
-			snprintf(expectfile, sizeof(expectfile), "%s/expected/%s.out",
-					 inputdir, testname);
-		}
+		fprintf(stderr, _("missing answer file for test \"%s\"\n"), testname);
+		exit_nicely(2);
 	}
 
 	add_stringlist_item(resultfiles, outfile);

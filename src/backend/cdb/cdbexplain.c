@@ -10,21 +10,19 @@
 #include "postgres.h"
 #include "portability/instr_time.h"
 
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
 #include "cdb/cdbdispatchresult.h"		/* CdbDispatchResults */
 #include "cdb/cdbexplain.h"		/* me */
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"		/* Gp_segment */
 #include "executor/execUtils.h"
-#include "executor/executor.h"	/* ExecStateTreeWalker */
 #include "executor/instrument.h"	/* Instrumentation */
 #include "lib/stringinfo.h"		/* StringInfo */
-#include "gp-libpq-fe.h"		/* PGresult; prereq for libpq-int.h */
-#include "gp-libpq-int.h"		/* pg_result */
 #include "libpq/pqformat.h"		/* pq_beginmessage() etc. */
 #include "utils/memutils.h"		/* MemoryContextGetPeakSpace() */
 #include "cdb/memquota.h"
-#include "inttypes.h"
 #include "utils/vmem_tracker.h"
 #include "parser/parsetree.h"
 
@@ -2161,7 +2159,7 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 		appendStringInfoChar(str, '\n');
 	}
 
-	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
+	if (!IsResManagerMemoryPolicyNone())
 	{
 		appendStringInfoString(str, "Statement statistics:\n");
 		appendStringInfo(str, "  Memory used: %.0fK bytes", ceil((double) stmt->query_mem / 1024.0));

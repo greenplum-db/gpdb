@@ -14,8 +14,6 @@
 
 #include "postgres.h"
 #include "access/gin.h"
-#include "storage/lwlock.h"
-#include "cdb/cdbfilerepprimary.h"
 
 int
 compareItemPointers(ItemPointer a, ItemPointer b)

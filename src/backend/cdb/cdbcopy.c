@@ -11,16 +11,15 @@
 */
 
 #include "postgres.h"
+#include "miscadmin.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
-#include "miscadmin.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbcopy.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
-#include "cdb/cdbsrlz.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"

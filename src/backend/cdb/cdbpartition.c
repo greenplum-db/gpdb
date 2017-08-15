@@ -11,7 +11,7 @@
  *--------------------------------------------------------------------------
  */
 #include "postgres.h"
-#include "funcapi.h"
+
 #include "access/genam.h"
 #include "access/hash.h"
 #include "access/heapam.h"
@@ -450,8 +450,17 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 	// now order the keys and kinds by level
 	for (int i = 0; i< nlevels; i++)
 	{
-		int pos = list_find_int(levels, i);
-		Assert (0 <= pos);
+		ListCell   *cell;
+		int			pos = 0;
+
+		/* Find i's position in the 'levels' list. */
+		foreach(cell, levels)
+		{
+			if (lfirst_int(cell) == i)
+				break;
+			++pos;
+		}
+		Assert (cell != NULL);
 
 		if (pkeys != NULL)
 			*pkeys = lappend(*pkeys, list_nth(keysUnordered, pos));
@@ -493,48 +502,6 @@ rel_has_external_partition(Oid relid)
 		heap_close(rel, NoLock);
 	}
 
-	return false;
-}
-
-/*
- * Check if a Query struct has external partition relation
- */
-bool
-query_has_external_partition(Query *query)
-{
-	if (query == NULL)
-		return false;
-
-	ListCell *lc = NULL;
-	foreach(lc, query->rtable)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-		if (rte->rtekind == RTE_RELATION)
-		{
-			Assert(OidIsValid(rte->relid));
-			if (rel_has_external_partition(rte->relid))
-			{
-				return true;
-			}
-		}
-		else if (rte->rtekind == RTE_SUBQUERY)
-		{
-			Assert(rte->subquery != NULL);
-			if (query_has_external_partition(rte->subquery))
-			{
-				return true;
-			}
-		}
-	}
-
-	foreach(lc, query->cteList)
-	{
-		CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
-		if (query_has_external_partition((Query *)cte->ctequery))
-		{
-			return true;
-		}
-	}
 	return false;
 }
 
@@ -2690,7 +2657,7 @@ getPartConstraintsContainsKeys(Oid partOid, Oid rootOid, List *partKey)
 		for (int i = 0; i < numKeys; i++)
 		{
 			int16 key_elem =  DatumGetInt16(dats[i]);
-			if (list_find_int(partKey, key_elem) >= 0)
+			if (list_member_int(partKey, key_elem))
 			{
 				found = true;
 				break;
@@ -9416,32 +9383,4 @@ findPartitionNodeEntry(PartitionNode *partitionNode, Oid partOid)
 	}
 
 	return childNode;
-}
-
-/*
- * createValueArrays
- *   Create an Datum/bool array that will be used to populate partition key value.
- *
- * The size of this array is based on the attribute number of the partition key.
- */
-void
-createValueArrays(int keyAttno, Datum **values, bool **isnull)
-{
-	*values = palloc0(keyAttno * sizeof(Datum));
-	*isnull = palloc(keyAttno * sizeof(bool));
-
-	MemSet(*isnull, true, keyAttno * sizeof(bool));
-}
-
-/*
- * freeValueArrays
- *    Free Datum/bool array.
- */
-void
-freeValueArrays(Datum *values, bool *isnull)
-{
-	Assert (NULL != values);
-	Assert (NULL != isnull);
-	pfree(values);
-	pfree(isnull);
 }

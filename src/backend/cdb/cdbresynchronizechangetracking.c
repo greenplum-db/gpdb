@@ -13,6 +13,7 @@
 #include "cdb/cdbutil.h"
 #include <unistd.h>
 
+#include "access/xlog_internal.h"
 #include "access/bitmap.h"
 #include "access/htup.h"
 #include "access/nbtree.h"
@@ -576,7 +577,6 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 		/*
 		 * The following changes aren't interesting to the change log
 		 */
-		case RM_XLOG_ID:
 		case RM_CLOG_ID:
 		case RM_MULTIXACT_ID:
 		case RM_XACT_ID:
@@ -605,6 +605,23 @@ void ChangeTracking_GetRelationChangeInfoFromXlog(
 		/*
 		 * The following changes must be logged in the change log.
 		 */
+		case RM_XLOG_ID:
+			if (info == XLOG_HINT)
+			{
+				BkpBlockWithPT bkpbwithpt;
+
+				memcpy(&bkpbwithpt, data, sizeof(BkpBlockWithPT));
+				ChangeTracking_AddRelationChangeInfo(
+					relationChangeInfoArray,
+					relationChangeInfoArrayCount,
+					relationChangeInfoMaxSize,
+					&(bkpbwithpt.bkpb.node),
+					bkpbwithpt.bkpb.block,
+					&bkpbwithpt.persistentTid,
+					bkpbwithpt.persistentSerialNum);
+			}
+			break;
+
 		case RM_HEAP2_ID:
 			op = info & XLOG_HEAP_OPMASK;
 			switch (op)

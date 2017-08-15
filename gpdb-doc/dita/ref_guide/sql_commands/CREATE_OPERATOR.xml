@@ -6,9 +6,7 @@
        [, LEFTARG = <varname>lefttype</varname>] [, RIGHTARG = <varname>righttype</varname>]
        [, COMMUTATOR = <varname>com_op</varname>] [, NEGATOR = <varname>neg_op</varname>]
        [, RESTRICT = <varname>res_proc</varname>] [, JOIN = <varname>join_proc</varname>]
-       [, HASHES] [, MERGES]
-       [, SORT1 = <varname>left_sort_op</varname>] [, SORT2 = <varname>right_sort_op</varname>]
-       [, LTCMP = <varname>less_than_op</varname>] [, GTCMP = <varname>greater_than_op</varname>] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR</codeph> defines a new operator. The user who
+       [, HASHES] [, MERGES] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR</codeph> defines a new operator. The user who
 defines an operator becomes its owner. </p><p>The operator name is a sequence of up to <codeph>NAMEDATALEN</codeph>-1
 (63 by default) characters from the following list: <codeph>+ - * / &lt;
 &gt; = ~ ! @ # % ^ &amp; | ` ?</codeph></p><p>There are a few restrictions on your choice of name: </p><ul><li id="bw144996"><codeph>--</codeph> and <codeph>/*</codeph> cannot appear anywhere in
@@ -82,52 +80,76 @@ work.</pd><pd>You can usually just use one of the following system standard join
                                 </p><p><codeph>areajoinsel</codeph> for 2D area-based comparisons
                                 </p><p><codeph>positionjoinsel</codeph> for 2D position-based
                             comparisons </p><p><codeph>contjoinsel</codeph> for 2D containment-based
-                            comparisons </p></pd></plentry><plentry><pt>HASHES</pt><pd>The optional <codeph>HASHES</codeph> clause tells the system that
-it is permissible to use the hash join method for a join based on this
-operator. <codeph>HASHES</codeph> only makes sense for a binary operator
-that returns <codeph>boolean</codeph>. The hash join operator can only
-return true for pairs of left and right values that hash to the same
-hash code. If two values get put in different hash buckets, the join
-will never compare them at all, implicitly assuming that the result of
-the join operator must be false. So it never makes sense to specify <codeph>HASHES</codeph>
-for operators that do not represent equality. </pd><pd>To be marked <codeph>HASHES</codeph>, the join operator must appear
-in a hash index operator class. Attempts to use the operator in hash
-joins will fail at run time if no such operator class exists. The system
-needs the operator class to find the data-type-specific hash function
-for the operator's input data type. You must also supply a suitable
-hash function before you can create the operator class. Care should be
-exercised when preparing a hash function, because there are machine-dependent
-ways in which it might fail to do the right thing.</pd></plentry><plentry><pt>MERGES</pt><pd>The <codeph>MERGES</codeph> clause, if present, tells the system
+                            comparisons </p></pd></plentry><plentry><pt>HASHES</pt><pd>The optional <codeph>HASHES</codeph> clause tells the system that it is permissible to use the
+                        hash join method for a join based on this operator. <codeph>HASHES</codeph>
+                        only makes sense for a binary operator that returns
+                        <codeph>boolean</codeph>. The hash join operator can only return true for
+                        pairs of left and right values that hash to the same hash code. If two
+                        values are put in different hash buckets, the join will never compare them,
+                        implicitly assuming that the result of the join operator must be false.
+                        Because of this, it never makes sense to specify <codeph>HASHES</codeph> for
+                        operators that do not represent equality. </pd>
+                    <pd>In most cases, it is only practical to support hashing for operators that
+                        take the same data type on both sides. However, you can design compatible
+                        hash functions for two or more data types, which are functions that will
+                        generate the same hash codes for "equal" values, even if the values are
+                        differently represented. </pd><pd>To be marked <codeph>HASHES</codeph>, the join operator must appear in a hash index operator
+                        class. Attempts to use the operator in hash joins will fail at run time if
+                        no such operator class exists. The system needs the operator class to find
+                        the data-type-specific hash function for the operator's input data type. You
+                        must also supply a suitable hash function before you can create the operator
+                        class. Exercise care when preparing a hash function, as there are
+                        machine-dependent ways in which it could fail to function correctly. For
+                        example, on machines that meet the IEEE floating-point standard, negative
+                        zero and positive zero are different values (different bit patterns) but are
+                        defined to compare as equal. If a float value could contain a negative zero,
+                        define it to generate the same hash value as positive zero.</pd>
+                    <pd>
+                        <p>A hash-joinable operator must have a commutator (itself, if the two
+                            operand data types are the same, or a related equality operator if they
+                            are different) that appears in the same operator family. Otherwise,
+                            planner errors can occur when the operator is used. For better
+                            optimization, a hash operator family that supports multiple data types
+                            should provide equality operators for every combination of the data
+                            types. <note>The function underlying a hash-joinable operator must be
+                                marked immutable or stable; an operator marked as volatile will not
+                                be used. If a hash-joinable operator has an underlying function that
+                                is marked strict, the function must also be complete, returning true
+                                or false, and not null, for any two non-null inputs.</note></p>
+                    </pd></plentry><plentry><pt>MERGES</pt><pd>The <codeph>MERGES</codeph> clause, if present, tells the system
 that it is permissible to use the merge-join method for a join based
 on this operator. <codeph>MERGES</codeph> only makes sense for a binary
 operator that returns <codeph>boolean</codeph>, and in practice the operator
-must represent equality for some data type or pair of data types. </pd><pd>Merge join is based on the idea of sorting the left- and right-hand
-tables into order and then scanning them in parallel. So, both data types
-must be capable of being fully ordered, and the join operator must be
-one that can only succeed for pairs of values that fall at the same place
-in the sort order. In practice this means that the join operator must
-behave like equality. It is possible to merge-join two distinct data
-types so long as they are logically compatible. For example, the smallint-versus-integer
-equality operator is merge-joinable. We only need sorting operators that
-will bring both data types into a logically compatible sequence.</pd><pd>Execution of a merge join requires that the system be able to identify
-four operators related to the merge-join equality operator: less-than
-comparison for the left operand data type, less-than comparison for the
-right operand data type, less-than comparison between the two data types,
-and greater-than comparison between the two data types. It is possible
-to specify these operators individually by name, as the <codeph>SORT1</codeph>,
-<codeph>SORT2</codeph>, <codeph>LTCMP</codeph>, and <codeph>GTCMP</codeph>
-options respectively. The system will fill in the default names if any
-of these are omitted when <codeph>MERGES</codeph> is specified.</pd></plentry><plentry><pt><varname>left_sort_op</varname></pt><pd>If this operator can support a merge join, the less-than operator
-that sorts the left-hand data type of this operator. <codeph>&lt;</codeph>
-is the default if not specified.</pd></plentry><plentry><pt><varname>right_sort_op</varname></pt><pd>If this operator can support a merge join, the less-than operator
-that sorts the right-hand data type of this operator. <codeph>&lt;</codeph>
-is the default if not specified.</pd></plentry><plentry><pt><varname>less_than_op</varname></pt><pd>If this operator can support a merge join, the less-than operator
-that compares the input data types of this operator. <codeph>&lt;</codeph>
-is the default if not specified. </pd></plentry><plentry><pt><varname>greater_than_op</varname></pt><pd>If this operator can support a merge join, the greater-than operator that compares the input
-                        data types of this operator. <codeph>&gt;</codeph> is the default if not
-                            specified.<p>To give a schema-qualified operator name in optional
-                            arguments, use the <codeph>OPERATOR()</codeph> syntax, for
-                        example:</p><codeblock>COMMUTATOR = OPERATOR(myschema.===) ,</codeblock></pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Any functions used to implement the operator must be defined as <codeph>IMMUTABLE</codeph>.</p></section><section id="section6"><title>Examples</title><p>Here is an example of creating an operator for adding two complex numbers,
+must represent equality for some data type or pair of data types. </pd>
+                    <pd>Merge join is based on the idea of sorting the left- and right-hand tables
+                        into order and then scanning them in parallel. This means both data types
+                        must be capable of being fully ordered, and the join operator must be one
+                        that can only succeed for pairs of values that fall at equivalent places in
+                        the sort order. In practice, this means that the join operator must behave
+                        like an equality operator. However, you can merge-join two distinct data
+                        types so long as they are logically compatible. For example, the
+                            <codeph>smallint-versus-integer</codeph> equality operator is
+                        merge-joinable. Only sorting operators that bring both data types into a
+                        logically compatible sequence are needed. </pd>
+                    <pd>To be marked <codeph>MERGES</codeph>, the join operator must appear as an
+                        equality member of a btree index operator family. This is not enforced when
+                        you create the operator, because the referencing operator family does not
+                        exist until later. However, the operator will not actually be used for merge
+                        joins unless a matching operator family can be found. The
+                            <codeph>MERGE</codeph> flag thus acts as a suggestion to the planner to
+                        look for a matching operator family.</pd>
+                    <pd>A merge-joinable operator must have a commutator that appears in the same
+                        operator family. This would be itself, if the two operand data types are the
+                        same, or a related equality operator if the data types are different.
+                        Without an appropriate commutator, planner errors can occur when the
+                        operator is used. Also, although not strictly required, a btree operator
+                        family that supports multiple data types should be able to provide equality
+                        operators for every combination of the data types; this allows better
+                        optimization. <note>SORT1, SORT2, LTCMP, and GTCMP were formerly used to
+                            specify the names of sort operators associated with a merge-joinable
+                            operator. Information about associated operators is now found by looking
+                            at B-tree operator families; specifying any of these operators will be
+                            ignored, except that it will implicitly set MERGES to true. </note></pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Any functions used to implement the operator must be defined as <codeph>IMMUTABLE</codeph>.</p></section><section id="section6"><title>Examples</title><p>Here is an example of creating an operator for adding two complex numbers,
 assuming we have already created the definition of type <codeph>complex</codeph>.
 First define the function that does the work, then define the operator:
 </p><codeblock>CREATE FUNCTION complex_add(complex, complex)

@@ -823,7 +823,6 @@ _bitmap_log_newpage(Relation rel, uint8 info, Buffer buf)
 	recptr = XLogInsert(RM_BITMAP_ID, info, rdata);
 
 	PageSetLSN(page, recptr);
-	PageSetTLI(page, ThisTimeLineID);
 }
 
 /*
@@ -857,7 +856,6 @@ _bitmap_log_metapage(Relation rel, Page page)
 	recptr = XLogInsert(RM_BITMAP_ID, XLOG_BITMAP_INSERT_META, rdata);
 
 	PageSetLSN(page, recptr);
-	PageSetTLI(page, ThisTimeLineID);
 	pfree(xlMeta);
 }
 
@@ -894,7 +892,6 @@ _bitmap_log_bitmap_lastwords(Relation rel, Buffer lovBuffer,
 						rdata);
 
 	PageSetLSN(BufferGetPage(lovBuffer), recptr);
-	PageSetTLI(BufferGetPage(lovBuffer), ThisTimeLineID);
 }
 
 /*
@@ -935,11 +932,9 @@ _bitmap_log_lovitem(Relation rel, Buffer lovBuffer, OffsetNumber offset,
 		Page metapage = BufferGetPage(metabuf);
 
 		PageSetLSN(metapage, recptr);
-		PageSetTLI(metapage, ThisTimeLineID);
 	}
 
 	PageSetLSN(lovPage, recptr);
-	PageSetTLI(lovPage, ThisTimeLineID);
 
 	elog(DEBUG1, "Insert a new lovItem at (blockno, offset): (%d,%d)",
 		 BufferGetBlockNumber(lovBuffer), offset);
@@ -1023,10 +1018,8 @@ _bitmap_log_bitmapwords(Relation rel, Buffer bitmapBuffer, Buffer lovBuffer,
 	recptr = XLogInsert(RM_BITMAP_ID, XLOG_BITMAP_INSERT_WORDS, rdata);
 
 	PageSetLSN(bitmapPage, recptr);
-	PageSetTLI(bitmapPage, ThisTimeLineID);
 
 	PageSetLSN(lovPage, recptr);
-	PageSetTLI(lovPage, ThisTimeLineID);
 
 	pfree(xlBitmapWords);
 }
@@ -1070,7 +1063,6 @@ _bitmap_log_updateword(Relation rel, Buffer bitmapBuffer, int word_no)
 	recptr = XLogInsert(RM_BITMAP_ID, XLOG_BITMAP_UPDATEWORD, rdata);
 
 	PageSetLSN(bitmapPage, recptr);
-	PageSetTLI(bitmapPage, ThisTimeLineID);
 }
 						
 
@@ -1153,12 +1145,10 @@ _bitmap_log_updatewords(Relation rel,
 	recptr = XLogInsert(RM_BITMAP_ID, XLOG_BITMAP_UPDATEWORDS, rdata);
 
 	PageSetLSN(firstPage, recptr);
-	PageSetTLI(firstPage, ThisTimeLineID);
 
 	if (BufferIsValid(secondBuffer))
 	{
 		PageSetLSN(secondPage, recptr);
-		PageSetTLI(secondPage, ThisTimeLineID);
 	}
 
 	if (new_lastpage)
@@ -1166,7 +1156,6 @@ _bitmap_log_updatewords(Relation rel,
 		Page lovPage = BufferGetPage(lovBuffer);
 
 		PageSetLSN(lovPage, recptr);
-		PageSetTLI(lovPage, ThisTimeLineID);
 	}
 }
 

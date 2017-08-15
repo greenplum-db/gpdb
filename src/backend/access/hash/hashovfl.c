@@ -18,7 +18,6 @@
 #include "postgres.h"
 
 #include "access/hash.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 static Buffer _hash_getovflpage(Relation rel, Buffer metabuf);

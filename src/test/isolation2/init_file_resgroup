@@ -4,7 +4,7 @@ m/^CONTEXT:  SQL function ".+" statement \d+$/
 
 -- start_matchsubs
 m/^[0-9:]+\sgpconfig:[^:]+:/
-s/^[0-9:]+\sgpconfig:[^:]+:/TIMESTAMP gpconfig:SEGMENT:/
+s/^[0-9:]+\sgpconfig:[^:]+:[^-]*-\[/TIMESTAMP gpconfig:SEGMENT:USER-[/
 
 m/\[\S+:cgroup is not properly configured:/
 s/\[\S+:cgroup is not properly configured:/\[SEGMENT:cgroup is not properly configured:/

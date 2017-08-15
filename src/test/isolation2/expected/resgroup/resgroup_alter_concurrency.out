@@ -1,0 +1,436 @@
+-- create a resource group when gp_resource_manager is queue
+DROP ROLE IF EXISTS role_concurrency_test;
+DROP
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+ERROR:  resource group "rg_concurrency_test" does not exist
+-- end_ignore
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=10);
+CREATE
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+CREATE
+
+CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, waiting_reason, current_query FROM pg_stat_activity WHERE rsgname='rg_concurrency_test';
+CREATE
+
+--
+-- increase concurrency after pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21&:BEGIN;  <waiting ...>
+22&:BEGIN;  <waiting ...>
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+11:END;
+END
+11q: ... <quitting>
+21<:  <... completed>
+BEGIN
+22<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+(2 rows)
+
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT * FROM rg_activity_status;
+rsgname|waiting_reason|current_query
+-------+--------------+-------------
+(0 rows)
+
+--
+-- increase concurrency before pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21&:BEGIN;  <waiting ...>
+22&:BEGIN;  <waiting ...>
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+11:END;
+END
+11q: ... <quitting>
+21<:  <... completed>
+BEGIN
+22<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+(2 rows)
+
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT * FROM rg_activity_status;
+rsgname|waiting_reason|current_query
+-------+--------------+-------------
+(0 rows)
+
+--
+-- increase both concurrency & memory_shared_quota after pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 60;
+ALTER
+
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21&:BEGIN;  <waiting ...>
+22&:BEGIN;  <waiting ...>
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 20;
+ALTER
+
+21<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+11:END;
+END
+11q: ... <quitting>
+22<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+(2 rows)
+
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT * FROM rg_activity_status;
+rsgname|waiting_reason|current_query
+-------+--------------+-------------
+(0 rows)
+
+--
+-- increase both concurrency & memory_shared_quota before pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 60;
+ALTER
+
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 20;
+ALTER
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21:BEGIN;
+BEGIN
+22&:BEGIN;  <waiting ...>
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+11:END;
+END
+11q: ... <quitting>
+22<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+(2 rows)
+
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT * FROM rg_activity_status;
+rsgname|waiting_reason|current_query
+-------+--------------+-------------
+(0 rows)
+
+--
+-- increase both concurrency & memory_limit after pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 0;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 30;
+ALTER
+
+-- proc 11 gets a quota of 30/1=30
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21&:BEGIN;  <waiting ...>
+22&:BEGIN;  <waiting ...>
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+-- now a new query needs a quota of 30/2=15 to run,
+-- there is no free quota at the moment, so 21 & 22 are still pending
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 50;
+ALTER
+-- now a new query needs a quota of 50/2=25 to run,
+-- but there is only 50-30=20 free quota, so 21 & 22 are still pending
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
+ALTER
+-- now a new query needs a quota of 60/2=30 to run,
+-- and there is 60-30=30 free quota, so 21 gets executed and 22 is still pending
+
+21<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+11:END;
+END
+-- 11 releases its quota, so there is now 30 free quota,
+-- so 22 gets executed
+11q: ... <quitting>
+22<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+(2 rows)
+
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT * FROM rg_activity_status;
+rsgname|waiting_reason|current_query
+-------+--------------+-------------
+(0 rows)
+
+--
+-- increase both concurrency & memory_limit before pending queries
+--
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 0;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 30;
+ALTER
+
+-- proc 11 gets a quota of 30/1=30
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 2;
+ALTER
+-- now a new query needs a quota of 30/2=15 to run,
+-- there is no free quota at the moment
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+(1 row)
+
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 60;
+ALTER
+-- now a new query needs a quota of 60/2=30 to run,
+-- and there is 60-30=30 free quota,
+-- so one new query can get executed immediately
+
+21:SET ROLE role_concurrency_test;
+SET
+22:SET ROLE role_concurrency_test;
+SET
+21:BEGIN;
+BEGIN
+-- proc 21 gets executed, there is no free quota now,
+-- so proc 22 is pending
+22&:BEGIN;  <waiting ...>
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|resgroup      |BEGIN;               
+(3 rows)
+
+11:END;
+END
+-- 11 releases its quota, so there is now 30 free quota,
+-- so 22 gets executed
+11q: ... <quitting>
+22<:  <... completed>
+BEGIN
+
+SELECT * FROM rg_activity_status;
+rsgname            |waiting_reason|current_query        
+-------------------+--------------+---------------------
+rg_concurrency_test|              |<IDLE> in transaction
+rg_concurrency_test|              |<IDLE> in transaction
+(2 rows)
+
+21:END;
+END
+22:END;
+END
+21q: ... <quitting>
+22q: ... <quitting>
+
+SELECT * FROM rg_activity_status;
+rsgname|waiting_reason|current_query
+-------+--------------+-------------
+(0 rows)
+
+-- cleanup
+DROP VIEW rg_activity_status;
+DROP
+DROP ROLE role_concurrency_test;
+DROP
+DROP RESOURCE GROUP rg_concurrency_test;
+DROP

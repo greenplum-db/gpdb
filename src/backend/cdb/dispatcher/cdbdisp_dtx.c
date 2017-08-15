@@ -1,4 +1,3 @@
-
 /*-------------------------------------------------------------------------
  *
  * cdbdisp_dtx.c
@@ -11,21 +10,18 @@
  */
 
 #include "postgres.h"
+
 #include "utils/guc.h"
 #include "utils/memutils.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_dtx.h"
-#include "cdb/cdbdisp_thread.h" /* for CdbDispatchCmdThreads and DispatchCommandParms */
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbgang.h"
-#include "cdb/cdbutil.h"
-#include "cdb/cdbtm.h"
-#include "cdb/cdbvars.h"
-#include "utils/palloc.h"
 
 #include "storage/procarray.h"	/* updateSharedLocalSnapshot */
-#include "gp-libpq-fe.h"
 
 /*
  * Parameter structure for DTX protocol commands

@@ -13,6 +13,7 @@
  *
  */
 #include "postgres.h"
+
 #include <signal.h>
 
 #include "cdb/cdbvars.h"
@@ -20,10 +21,10 @@
 #include "cdb/cdbfilerepconnclient.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
-#include "pqexpbuffer.h"
 #include "cdb/cdbfilerepservice.h"
 
-static PGconn	*conn = NULL;
+static PGconn	*filerep_conn = NULL;
+
 /*
  *
  */
@@ -34,51 +35,52 @@ FileRepConnClient_EstablishConnection(
 	bool	reportError)
 {
 	int			status = STATUS_OK;
-	PQExpBuffer	buffer = NULL;
-	
+	char		portbuf[11];
+	char		timeoutbuf[11];
+	const char *keys[5];
+	const char *vals[5];
+
 /*	FileRepConnClient_CloseConnection();*/
-	
-	buffer = createPQExpBuffer();
 
-	if (PQExpBufferBroken(buffer))
+	snprintf(portbuf, sizeof(portbuf), "%d", port);
+	snprintf(timeoutbuf, sizeof(timeoutbuf), "%d", gp_segment_connect_timeout);
+
+	keys[0] = "host";
+	vals[0] = hostAddress;
+	keys[1] = "port";
+	vals[1] = portbuf;
+	keys[2] = "dbname";
+	vals[2] = "postgres";
+	keys[3] = "connect_timeout";
+	vals[3] = timeoutbuf;
+	keys[4] = NULL;
+	vals[4] = NULL;
+
+	filerep_conn = PQconnectdbParams(keys, vals, false);
+
+	if (PQstatus(filerep_conn) != CONNECTION_OK)
 	{
-		destroyPQExpBuffer(buffer);
-		/* XXX: allocation failed. Is this the right thing to do ? */
-		return STATUS_ERROR;
-	}
-
-	appendPQExpBuffer(buffer, "host=%s ", hostAddress);	
-	appendPQExpBuffer(buffer, "port=%d ", port);
-	appendPQExpBuffer(buffer, "dbname=postgres ");
-	appendPQExpBuffer(buffer, "connect_timeout=%d", gp_segment_connect_timeout);
-	
-	conn = PQconnectdb(buffer->data);
-
-	if (PQstatus(conn) != CONNECTION_OK) {		
 		if (reportError || Debug_filerep_print)
 			ereport(WARNING, 
 					(errcode_for_socket_access(),
 					 errmsg("could not establish connection with server, host:'%s' port:'%d' err:'%s' : %m",
 							hostAddress,
 							port,
-							PQerrorMessage(conn)),
+							PQerrorMessage(filerep_conn)),
 					 errSendAlert(true),
 					 FileRep_errcontext()));
-		
+
 		status = STATUS_ERROR;
-		
-		if (conn) {
-			PQfinish(conn);
-			conn = NULL;
+
+		if (filerep_conn)
+		{
+			PQfinish(filerep_conn);
+			filerep_conn = NULL;
 		}
 	}
-	
+
 	/* NOTE Handle error message see ftsprobe.c */
-	
-	if (buffer) {
-		destroyPQExpBuffer(buffer);
-		buffer = NULL;
-	}
+
 	return status;	
 }
 
@@ -88,11 +90,12 @@ FileRepConnClient_EstablishConnection(
 void
 FileRepConnClient_CloseConnection(void)
 {
-	if (conn) {
+	if (filerep_conn)
+	{
 		/* use non-blocking mode to avoid the long timeout in pqSendSome */
-		conn->nonblocking = TRUE;
-		PQfinish(conn);
-		conn = NULL;
+		filerep_conn->nonblocking = TRUE;
+		PQfinish(filerep_conn);
+		filerep_conn = NULL;
 	}
 	return;
 }
@@ -118,7 +121,7 @@ FileRepConnClient_SendMessage(
 	int status = STATUS_OK;
 
 #ifdef USE_ASSERT_CHECKING
-	int prevOutCount = conn->outCount;
+	int prevOutCount = filerep_conn->outCount;
 #endif // USE_ASSERT_CHECKING
 
 	switch(messageType)
@@ -143,12 +146,12 @@ FileRepConnClient_SendMessage(
 	 * Note that pqPutMsgStart and pqPutnchar both may grow the connection's internal buffer, and do not
 	 *   flush data
 	 */
-	if (pqPutMsgStart(msgType, true, conn) < 0 )
+	if (pqPutMsgStart(msgType, true, filerep_conn) < 0 )
 	{
 		return false;
 	}
 
-	if ( pqPutnchar(message, messageLength, conn) < 0 )
+	if ( pqPutnchar(message, messageLength, filerep_conn) < 0 )
 	{
 		return false;
 	}
@@ -156,23 +159,23 @@ FileRepConnClient_SendMessage(
 	/* Server side needs complete messages for mode-transitions so disable auto-flush since it flushes
 	 *  partial messages
 	 */
-	pqPutMsgEndNoAutoFlush(conn);
+	pqPutMsgEndNoAutoFlush(filerep_conn);
 
 	/* assert that a flush did not occur */
-	Assert( prevOutCount + messageLength + 5 == conn->outCount ); /* the +5 is the amount added by pgPutMsgStart */
+	Assert( prevOutCount + messageLength + 5 == filerep_conn->outCount ); /* the +5 is the amount added by pgPutMsgStart */
 
 	/*
 	 *                note also that we could do a flush beforehand to avoid
 	 *                having pqPutMsgStart and pqPutnchar growing the buffer
 	 */
-	 if (messageSynchronous || conn->outCount >= file_rep_min_data_before_flush )
+	 if (messageSynchronous || filerep_conn->outCount >= file_rep_min_data_before_flush )
 	{
 		int result = 0;
 		/* wait and timeout will be handled by pqWaitTimeout */
-		while ((status = pqFlushNonBlocking(conn)) > 0)
+		while ((status = pqFlushNonBlocking(filerep_conn)) > 0)
 		{
 			/* retry on timeout */
-			while (!(result = pqWaitTimeout(FALSE, TRUE, conn, time(NULL) + file_rep_socket_timeout)))
+			while (!(result = pqWaitTimeout(FALSE, TRUE, filerep_conn, time(NULL) + file_rep_socket_timeout)))
 			{
 				if (FileRepSubProcess_IsStateTransitionRequested())
 				{

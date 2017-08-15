@@ -472,6 +472,22 @@ declare -a PRIMARY_ARRAY=(
                         and content IDs to match the values of an existing Greenplum Database
                         backup.</pd>
                 </plentry>
+                <plentry>
+                    <pt>HEAP_CHECKSUM</pt>
+                    <pd><b>Optional.</b> This parameter specifies if checksums are enabled for heap
+                        data. When enabled, checksums are calculated for heap storage in all
+                        databases, enabling Greenplum Database to detect corruption in the I/O
+                        system. This option is set when the system is initialized and cannot be
+                        changed later.</pd>
+                    <pd>The <codeph>HEAP_CHECKSUM</codeph> option is on by default and turning it
+                        off is strongly discouraged. If you set this option to off, data corruption
+                        in storage can go undetected and make recovery much more difficult.</pd>
+                    <pd>To determine if heap checksums are enabled in a Greenplum Database system,
+                        you can query the <codeph>data_checksums</codeph> server configuration
+                        parameter with the <codeph>gpconfig</codeph> management
+                        utility:<codeblock>$ gpconfig -s data_checksums</codeblock>
+                    </pd>
+                </plentry>
             </parml>
         </section>
         <section id="section6">
@@ -487,16 +503,17 @@ hostfile_gpinitsystem --su-password=mypassword</codeblock>
             <p>Initialize a Greenplum Database array with an optional standby master host:</p>
             <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
 hostfile_gpinitsystem -s host09</codeblock>
-        
-        <p>Instead of initializing a Greenplum Database array, write the provided configuration to
-            an output file. The output file uses the <codeph>QD_PRIMARY_ARRAY</codeph> and
-                <codeph>PRIMARY_ARRAY</codeph> parameters to define master and segment hosts:</p>
-        <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
+            <p>Instead of initializing a Greenplum Database array, write the provided configuration
+                to an output file. The output file uses the <codeph>QD_PRIMARY_ARRAY</codeph> and
+                    <codeph>PRIMARY_ARRAY</codeph> parameters to define master and segment
+                hosts:</p>
+            <codeblock>$ gpinitsystem -c gpinitsystem_config -h 
 hostfile_gpinitsystem -S -O cluster_init.config</codeblock>
-        <p>Initialize a Greenplum Database using an input configuration file (a file that defines
-            the Greenplum Database array using <codeph>QD_PRIMARY_ARRAY</codeph> and
-                <codeph>PRIMARY_ARRAY</codeph> parameters:</p>
-            <codeblock>$ gpinitsystem -I cluster_init.config</codeblock></section>
+            <p>Initialize a Greenplum Database using an input configuration file (a file that
+                defines the Greenplum Database array using <codeph>QD_PRIMARY_ARRAY</codeph> and
+                    <codeph>PRIMARY_ARRAY</codeph> parameters:</p>
+            <codeblock>$ gpinitsystem -I cluster_init.config</codeblock>
+        </section>
         <section id="section7">
             <title>See Also</title>
             <p><codeph><xref href="./gpssh-exkeys.xml#topic1" type="topic" format="dita"/></codeph>,

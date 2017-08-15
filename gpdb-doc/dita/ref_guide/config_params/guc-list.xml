@@ -57,6 +57,7 @@
             <li>
               <xref href="#custom_variable_classes"/>
             </li>
+            <li><xref href="#heap_checksums" format="dita"/></li>
             <li>
               <xref href="#DateStyle"/>
             </li>
@@ -1288,6 +1289,33 @@
               <entry colname="col1">comma-separated list of class names</entry>
               <entry colname="col2">unset</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="heap_checksums">
+    <title>data_checksums</title>
+    <body>
+      <p>Reports whether heap checksums are enabled in the database system. </p>
+      <table id="table_djn_1nb_v1b">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">on</entry>
+              <entry colname="col3">read only</entry>
             </row>
           </tbody>
         </tgroup>

@@ -1,15 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ao20941">ALTER GROUP</title><body><p id="sql_command_desc">Changes a role name or membership.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER GROUP <varname>groupname</varname> ADD USER <varname>username</varname> [, ... ]
+<topic id="topic1">
+  <title id="ao20941">ALTER GROUP</title>
+  <body>
+    <p id="sql_command_desc">Changes a role name or membership.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">ALTER GROUP <varname>groupname</varname> ADD USER <varname>username</varname> [, ... ]
 
 ALTER GROUP <varname>groupname</varname> DROP USER <varname>username</varname> [, ... ]
 
-ALTER GROUP <varname>groupname</varname> RENAME TO <varname>newname</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER GROUP</codeph> is an obsolete command, though still accepted for backwards
-        compatibility. Groups (and users) have been superseded by the more general concept of roles.
-        See <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> for
-        more information.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>groupname</varname></pt><pd>The name of the group (role) to modify. </pd></plentry><plentry><pt><varname>username</varname></pt><pd>Users (roles) that are to be added to or removed from the group.
-The users (roles) must already exist. </pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the group (role). </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To add users to a group: </p><codeblock>ALTER GROUP staff ADD USER karl, john;</codeblock><p>To remove a user from a group:</p><codeblock>ALTER GROUP workers DROP USER beth;</codeblock></section><section id="section6"><title>Compatibility</title><p>There is no <codeph>ALTER GROUP</codeph> statement in the SQL standard.
-</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./GRANT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
-            href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+ALTER GROUP <varname>groupname</varname> RENAME TO <varname>newname</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>ALTER GROUP</codeph> is an alias for <codeph>ALTER ROLE</codeph>. See <codeph><xref
+            href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> for more
+        information.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>groupname</varname></pt>
+          <pd>The name of the group (role) to modify. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>username</varname></pt>
+          <pd>Users (roles) that are to be added to or removed from the group. The users (roles)
+            must already exist. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>newname</varname></pt>
+          <pd>The new name of the group (role). </pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Examples</title>
+      <p>To add users to a group: </p>
+      <codeblock>ALTER GROUP staff ADD USER karl, john;</codeblock>
+      <p>To remove a user from a group:</p>
+      <codeblock>ALTER GROUP workers DROP USER beth;</codeblock>
+    </section>
+    <section id="section6">
+      <title>Compatibility</title>
+      <p>There is no <codeph>ALTER GROUP</codeph> statement in the SQL standard. </p>
+    </section>
+    <section id="section7">
+      <title>See Also</title>
+      <p><codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

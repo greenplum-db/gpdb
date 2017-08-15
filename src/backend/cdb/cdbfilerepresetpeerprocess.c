@@ -27,7 +27,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <assert.h>
 #include <sys/time.h>
 // #include "libpq/pqcomm.h"
 #include "libpq/ip.h"

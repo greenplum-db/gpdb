@@ -18,6 +18,7 @@
 #include "catalog/gp_policy.h"
 #include "nodes/pg_list.h"
 #include "utils/relcache.h"
+#include "parser/parse_coerce.h"
 
 /* I/O function selector for get_type_io_data */
 typedef enum IOFuncSelector
@@ -190,7 +191,7 @@ extern GpPolicy *relation_policy(Relation rel);
 extern bool child_distribution_mismatch(Relation rel);
 extern bool child_triggers(Oid relationId, int32 triggerType);
 
-extern bool get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc);
+extern bool get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc, CoercionPathType *pathtype);
 
 extern Oid get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt);
 extern CmpType get_comparison_type(Oid oidOp, Oid oidLeft, Oid oidRight);

@@ -50,7 +50,7 @@ FOREIGN_KEY(relid REFERENCES pg_class(oid));
 */
 typedef FormData_pg_appendonly *Form_pg_appendonly;
 
-#define Natts_pg_appendonly					13
+#define Natts_pg_appendonly					12
 #define Anum_pg_appendonly_relid			1
 #define Anum_pg_appendonly_blocksize		2
 #define Anum_pg_appendonly_safefswritesize	3

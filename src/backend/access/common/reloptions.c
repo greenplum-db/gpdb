@@ -1241,65 +1241,6 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	}
 }
 
-void
-heap_test_override_reloptions(char relkind, StdRdOptions *stdRdOptions, int *safewrite)
-{
-	if (IsBootstrapProcessingMode())
-		return;
-
-	if (relkind != RELKIND_RELATION)
-		return;
-
-	/*
-	 * Normally, the default is a regular table.
-	 * If the override is on, change the default to be an appendonly
-	 * table.
-	 */
-	if (!stdRdOptions->appendonly && Test_appendonly_override)
-	{
-		stdRdOptions->appendonly = true;
-	}
-
-	if (!stdRdOptions->appendonly)
-		return;
-
-	/*
-	 * Normally, appendonly tables are not compressed by default.
-	 * If the override is on, compress it with the override value.
-	 */
-	if (Test_compresslevel_override != DEFAULT_COMPRESS_LEVEL)
-	{
-		stdRdOptions->compresslevel = Test_compresslevel_override;
-
-		stdRdOptions->compresstype = AO_DEFAULT_COMPRESSTYPE;
-	}
-
-	/*
-	 * Normally, appendonly tables are created with the default 32KB block
-	 * size. If the override has a different value - use the override value.
-	 */
-	if (Test_blocksize_override != DEFAULT_APPENDONLY_BLOCK_SIZE)
-	{
-		stdRdOptions->blocksize = Test_blocksize_override;
-	}
-
-	/*
-	 * Same for safefswritesize.
-	 */
-	if (Test_safefswritesize_override != DEFAULT_FS_SAFE_WRITE_SIZE)
-	{
-		*safewrite = Test_safefswritesize_override;
-	}
-
-    /*
-     * Testing for columnstore override
-     */
-    if (gp_test_orientation_override)
-    {
-        stdRdOptions->columnstore = true;
-    }
-}
-
 /*
  * Parse options for heaps (and perhaps someday toast tables).
  */

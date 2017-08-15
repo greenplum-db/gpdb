@@ -20,7 +20,6 @@
 #include "nodes/tidbitmap.h"
 #include "pgstat.h"
 #include "utils/memutils.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 static OffsetNumber gistfindnext(IndexScanDesc scan, OffsetNumber n,
@@ -49,7 +48,8 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 		/* page unchanged, so all is simple */
 		offset = ItemPointerGetOffsetNumber(iptr);
 		ItemIdMarkDead(PageGetItemId(p, offset));
-		SetBufferCommitInfoNeedsSave(so->curbuf);
+
+		MarkBufferDirtyHint(so->curbuf, r);
 	}
 	else
 	{
@@ -63,7 +63,7 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 			{
 				/* found */
 				ItemIdMarkDead(PageGetItemId(p, offset));
-				SetBufferCommitInfoNeedsSave(so->curbuf);
+				MarkBufferDirtyHint(so->curbuf, r);
 				break;
 			}
 		}

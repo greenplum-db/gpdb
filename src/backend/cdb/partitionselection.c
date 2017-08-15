@@ -109,16 +109,18 @@ partition_selection(PartitionNode *pn, PartitionAccessMethods *accessMethods, Oi
 	TupleDesc tupDesc = RelationGetDescr(rel);
 	Assert(tupDesc->natts >= partAttno);
 
-	Datum *values = NULL;
-	bool *isnull = NULL;
-	createValueArrays(partAttno, &values, &isnull);
-
+	int			i;
+	Datum	   *values = palloc0(partAttno * sizeof(Datum));
+	bool	   *isnull = palloc(partAttno * sizeof(bool));
+	for (i = 0; i < partAttno - 1; i++)
+		isnull[i] = true;
 	isnull[partAttno - 1] = isNull;
 	values[partAttno - 1] = value;
 
 	PartitionRule *result = get_next_level_matched_partition(pn, values, isnull, tupDesc, accessMethods, exprTypid);
 
-	freeValueArrays(values, isnull);
+	pfree(values);
+	pfree(isnull);
 	relation_close(rel, NoLock);
 
 	return result;

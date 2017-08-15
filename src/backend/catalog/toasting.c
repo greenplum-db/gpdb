@@ -26,12 +26,11 @@
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
 #include "catalog/toasting.h"
-#include "commands/tablecmds.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "utils/builtins.h"
 #include "utils/syscache.h"
-#include "utils/guc.h"
+
 
 static bool create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 							   bool is_part_child);
@@ -67,7 +66,6 @@ AlterTableCreateToastTable(Oid relOid, bool is_part_child)
 
 	heap_close(rel, NoLock);
 }
-
 
 /*
  * Create a toast table during bootstrap

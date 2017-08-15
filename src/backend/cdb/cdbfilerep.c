@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include <assert.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>

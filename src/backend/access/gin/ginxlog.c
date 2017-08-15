@@ -19,7 +19,6 @@
 #include "access/heapam.h"
 #include "utils/memutils.h"
 #include "utils/guc.h"
-#include "cdb/cdbfilerepprimary.h"
 
 static MemoryContext opCtx;		/* working memory for operations */
 static MemoryContext topCtx;
@@ -92,7 +91,6 @@ ginRedoCreateIndex(XLogRecPtr lsn, XLogRecord *record)
 	GinInitBuffer(buffer, GIN_LEAF);
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
@@ -127,7 +125,6 @@ ginRedoCreatePTree(XLogRecPtr lsn, XLogRecord *record)
 	GinPageGetOpaque(page)->maxoff = data->nitem;
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
@@ -255,7 +252,6 @@ ginRedoInsert(XLogRecPtr lsn, XLogRecord *record)
 		}
 
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
 
 		MarkBufferDirty(buffer);
 	}
@@ -355,11 +351,9 @@ ginRedoSplit(XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	PageSetLSN(rpage, lsn);
-	PageSetTLI(rpage, ThisTimeLineID);
 	MarkBufferDirty(rbuffer);
 
 	PageSetLSN(lpage, lsn);
-	PageSetTLI(lpage, ThisTimeLineID);
 	MarkBufferDirty(lbuffer);
 
 	if (!data->isLeaf && data->updateBlkno != InvalidBlockNumber)
@@ -384,7 +378,6 @@ ginRedoSplit(XLogRecPtr lsn, XLogRecord *record)
 		}
 
 		PageSetLSN(rootPage, lsn);
-		PageSetTLI(rootPage, ThisTimeLineID);
 
 		MarkBufferDirty(rootBuf);
 		UnlockReleaseBuffer(rootBuf);
@@ -454,8 +447,6 @@ ginRedoVacuumPage(XLogRecPtr lsn, XLogRecord *record)
 		}
 
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
-
 		MarkBufferDirty(buffer);
 	}
 
@@ -492,7 +483,6 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 				Assert(GinPageIsData(page));
 				GinPageGetOpaque(page)->flags = GIN_DELETED;
 				PageSetLSN(page, lsn);
-				PageSetTLI(page, ThisTimeLineID);
 				MarkBufferDirty(buffer);
 			}
 			UnlockReleaseBuffer(buffer);
@@ -511,7 +501,6 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 				Assert(!GinPageIsLeaf(page));
 				PageDeletePostingItem(page, data->parentOffset);
 				PageSetLSN(page, lsn);
-				PageSetTLI(page, ThisTimeLineID);
 				MarkBufferDirty(buffer);
 			}
 			UnlockReleaseBuffer(buffer);
@@ -529,7 +518,6 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 				Assert(GinPageIsData(page));
 				GinPageGetOpaque(page)->rightlink = data->rightLink;
 				PageSetLSN(page, lsn);
-				PageSetTLI(page, ThisTimeLineID);
 				MarkBufferDirty(buffer);
 			}
 			UnlockReleaseBuffer(buffer);

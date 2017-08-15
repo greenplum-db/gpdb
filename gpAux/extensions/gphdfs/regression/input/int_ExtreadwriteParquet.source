@@ -1,0 +1,23 @@
+-- start_ignore
+drop external table int_heap;
+drop external table int_readhdfs_parquet;
+drop external table int_writehdfs_parquet;
+-- end_ignore
+
+create readable external table int_heap(datatype_int varchar,xcount_int bigint, max_int int, min_int int, x_int int, reverse_int int, increment_int int, nullcol_int int) location ('gpfdist://%localhost%:%gpfdistPort%/int.txt')format 'TEXT';
+
+create readable external table int_readhdfs_parquet
+(
+  like int_heap
+) location ('gphdfs://%HDFSaddr%/extwrite/int_parquet') format 'PARQUET';
+-- start_ignore
+create writable external table int_writehdfs_parquet
+(
+  like int_heap
+) location ('gphdfs://%HDFSaddr%/extwrite/int_parquet') format 'PARQUET';
+-- end_ignore
+
+insert into int_writehdfs_parquet
+select * from int_heap;
+
+select count(*) from int_readhdfs_parquet;

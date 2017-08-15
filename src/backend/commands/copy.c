@@ -20,17 +20,13 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/file.h>
 
 #include "access/fileam.h"
 #include "access/heapam.h"
-#include "access/aosegfiles.h"
 #include "access/appendonlywriter.h"
 #include "access/xact.h"
-#include "catalog/gp_policy.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
-#include "catalog/catalog.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbpartition.h"
@@ -48,7 +44,6 @@
 #include "parser/parse_relation.h"
 #include "rewrite/rewriteHandler.h"
 #include "storage/fd.h"
-#include "storage/smgr.h"
 #include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
@@ -56,19 +51,11 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/resscheduler.h"
-#include "utils/builtins.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbcopy.h"
 #include "cdb/cdbhash.h"
-#include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbsreh.h"
-#include "cdb/cdbutil.h"
-#include "cdb/cdbvarblock.h"
-#include "cdb/cdbbufferedappend.h"
-#include "commands/vacuum.h"
-#include "utils/lsyscache.h"
-#include "nodes/makefuncs.h"
 #include "postmaster/autostats.h"
 
 /* DestReceiver for COPY (SELECT) TO */
@@ -1304,7 +1291,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 			if (strstr(stmt->filename, "<SEGID>") == NULL)
 				ereport(ERROR,
-					(0, errmsg("<SEGID> is required for file name")));
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("<SEGID> is required for file name")));
 
 			char segid_buf[8];
 			snprintf(segid_buf, 8, "%d", GpIdentity.segindex);
@@ -5114,6 +5102,7 @@ PROCESS_SEGMENT_DATA:
 
 		CopyFromProcessDataFileHeader(cstate, cdbCopy, &file_has_oids);
 		CopyInitDataParser(cstate);
+		no_more_data = false;
 
 		goto PROCESS_SEGMENT_DATA;
 	}

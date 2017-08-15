@@ -18,6 +18,8 @@
 #include "utils/guc.h"
 #include "catalog/gp_segment_config.h"
 #include "cdb/cdbvars.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbutil.h"
@@ -26,7 +28,6 @@
 #include "libpq/libpq-be.h"
 #include "utils/memutils.h"
 #include "utils/resource_manager.h"
-#include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 #include "storage/bfz.h"
 #include "storage/proc.h"
@@ -184,7 +185,7 @@ bool		gp_enable_slow_cursor_testmode = false;
  * backends.  Assigned by initMotionLayerIPC() at process startup.  This port
  * is used for the duration of this process and should never change.
  */
-int			Gp_listener_port;
+uint32		Gp_listener_port;
 
 int			Gp_max_packet_size; /* max Interconnect packet size */
 
@@ -199,6 +200,7 @@ int			Gp_interconnect_min_rto = 20;
 int			Gp_interconnect_fc_method = INTERCONNECT_FC_METHOD_LOSS;
 int			Gp_interconnect_transmit_timeout = 3600;
 int			Gp_interconnect_min_retries_before_timeout = 100;
+int			Gp_interconnect_debug_retry_interval= 10;
 
 int			Gp_interconnect_hash_multiplier = 2;		/* sets the size of the
 														 * hash table used by
@@ -1286,15 +1288,15 @@ gpvars_assign_max_resource_groups(int newval, bool doit, GucSource source __attr
 const char *
 gpvars_assign_gp_resqueue_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
 {
-	ResQueueMemoryPolicy newtype = RESQUEUE_MEMORY_POLICY_NONE;
+	ResManagerMemoryPolicy newtype = RESMANAGER_MEMORY_POLICY_NONE;
 
 	if (newval == NULL || newval[0] == 0 ||
 		!pg_strcasecmp("none", newval))
-		newtype = RESQUEUE_MEMORY_POLICY_NONE;
+		newtype = RESMANAGER_MEMORY_POLICY_NONE;
 	else if (!pg_strcasecmp("auto", newval))
-		newtype = RESQUEUE_MEMORY_POLICY_AUTO;
+		newtype = RESMANAGER_MEMORY_POLICY_AUTO;
 	else if (!pg_strcasecmp("eager_free", newval))
-		newtype = RESQUEUE_MEMORY_POLICY_EAGER_FREE;
+		newtype = RESMANAGER_MEMORY_POLICY_EAGER_FREE;
 	else
 		elog(ERROR, "unknown resource queue memory policy: current policy is '%s'", gpvars_show_gp_resqueue_memory_policy());
 
@@ -1311,14 +1313,54 @@ gpvars_show_gp_resqueue_memory_policy(void)
 {
 	switch (gp_resqueue_memory_policy)
 	{
-		case RESQUEUE_MEMORY_POLICY_NONE:
+		case RESMANAGER_MEMORY_POLICY_NONE:
 			return "none";
-		case RESQUEUE_MEMORY_POLICY_AUTO:
+		case RESMANAGER_MEMORY_POLICY_AUTO:
 			return "auto";
-		case RESQUEUE_MEMORY_POLICY_EAGER_FREE:
+		case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
 			return "eager_free";
 		default:
-			return "none";
+			elog(ERROR, "Invalid resource queue memory policy");
+	}
+}
+
+/*
+ * gpvars_assign_gp_resgroup_memory_policy
+ * gpvars_show_gp_resgroup_memory_policy
+ */
+const char *
+gpvars_assign_gp_resgroup_memory_policy(const char *newval, bool doit, GucSource source __attribute__((unused)))
+{
+	ResManagerMemoryPolicy newtype = RESMANAGER_MEMORY_POLICY_NONE;
+
+	if (newval == NULL)
+		elog(ERROR, "unknown resource group memory policy: current policy is '%s'", gpvars_show_gp_resgroup_memory_policy());
+	else if (!pg_strcasecmp("auto", newval))
+		newtype = RESMANAGER_MEMORY_POLICY_AUTO;
+	else if (!pg_strcasecmp("eager_free", newval))
+		newtype = RESMANAGER_MEMORY_POLICY_EAGER_FREE;
+	else
+		elog(ERROR, "unknown resource group memory policy: current policy is '%s'", gpvars_show_gp_resgroup_memory_policy());
+
+	if (doit)
+	{
+		gp_resgroup_memory_policy = newtype;
+	}
+
+	return newval;
+}
+
+const char *
+gpvars_show_gp_resgroup_memory_policy(void)
+{
+	switch (gp_resgroup_memory_policy)
+	{
+		case RESMANAGER_MEMORY_POLICY_AUTO:
+			return "auto";
+		case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
+			return "eager_free";
+		default:
+			elog(ERROR, "Invalid resource group memory policy");
 	}
 }
 

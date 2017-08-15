@@ -18,7 +18,6 @@
 #include "catalog/namespace.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_exttable.h"
-#include "catalog/pg_depend.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
@@ -34,10 +33,7 @@
 #include "miscadmin.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
-#include "utils/lsyscache.h"
-#include "utils/syscache.h"
 #include "utils/bytea.h"
-#include "nodes/makefuncs.h"
 
 static int  GetNextSegid(CdbSreh *cdbsreh);
 static void PreprocessByteaData(char *src);
@@ -186,43 +182,31 @@ void HandleSingleRowError(CdbSreh *cdbsreh)
 static TupleDesc
 GetErrorTupleDesc(void)
 {
-	static TupleDesc tupdesc = NULL, tmp;
-	MemoryContext oldcontext;
-	int natts = NUM_ERRORTABLE_ATTR;
-	FormData_pg_attribute attrs[NUM_ERRORTABLE_ATTR] = {
-		{0,{"cmdtime"},1184,-1,8,1,0,-1,-1,true,'p','d',false,false,false,true,0},
-		{0,{"relname"},25,-1,-1,2,0,-1,-1,false,'x','i',false,false,false,true,0},
-		{0,{"filename"},25,-1,-1,3,0,-1,-1,false,'x','i',false,false,false,true,0},
-		{0,{"linenum"},23,-1,4,4,0,-1,-1,true,'p','i',false,false,false,true,0},
-		{0,{"bytenum"},23,-1,4,5,0,-1,-1,true,'p','i',false,false,false,true,0},
-		{0,{"errmsg"},25,-1,-1,6,0,-1,-1,false,'x','i',false,false,false,true,0},
-		{0,{"rawdata"},25,-1,-1,7,0,-1,-1,false,'x','i',false,false,false,true,0},
-		{0,{"rawbytes"},17,-1,-1,8,0,-1,-1,false,'x','i',false,false,false,true,0}
-	};
-
-	/* If we have created it, use it. */
-	if (tupdesc != NULL)
-		return tupdesc;
+	static TupleDesc tupdesc = NULL;
 
 	/*
-	 * Keep the tupdesc for long in the cache context.  It should never
-	 * be scribbled.
+	 * Create the tuple descriptor on first call, and reuse on subsequent
+	 * calls. It should never be scribbled on.
 	 */
-	oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
-	tmp = CreateTemplateTupleDesc(natts, false);
-	tmp->tdrefcount = 0;
-	tmp->tdtypeid = RECORDOID;
-	tmp->tdtypmod = -1;
-	for (int i = 0; i < natts; i++)
+	if (tupdesc == NULL)
 	{
-		memcpy(tmp->attrs[i], &attrs[i], ATTRIBUTE_FIXED_PART_SIZE);
-		tmp->attrs[i]->attcacheoff = -1;
+		TupleDesc tmp;
+		MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
+
+		tmp = CreateTemplateTupleDesc(NUM_ERRORTABLE_ATTR, false);
+		TupleDescInitEntry(tmp, 1, "cmdtime", TIMESTAMPTZOID, -1, 0);
+		TupleDescInitEntry(tmp, 2, "relname", TEXTOID, -1, 0);
+		TupleDescInitEntry(tmp, 3, "filename", TEXTOID, -1, 0);
+		TupleDescInitEntry(tmp, 4, "linenum", INT4OID, -1, 0);
+		TupleDescInitEntry(tmp, 5, "bytenum", INT4OID, -1, 0);
+		TupleDescInitEntry(tmp, 6, "errmsg", TEXTOID, -1, 0);
+		TupleDescInitEntry(tmp, 7, "rawdata", TEXTOID, -1, 0);
+		TupleDescInitEntry(tmp, 8, "rawbytes", BYTEAOID, -1, 0);
+
+		MemoryContextSwitchTo(oldcontext);
+
+		tupdesc = tmp;
 	}
-	tmp->attrs[0]->attcacheoff = 0;
-
-	tupdesc = tmp;
-
-	MemoryContextSwitchTo(oldcontext);
 
 	return tupdesc;
 }

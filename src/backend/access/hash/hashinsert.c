@@ -15,10 +15,7 @@
 
 #include "postgres.h"
 
-#include "miscadmin.h"
-
 #include "access/hash.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 static OffsetNumber _hash_pgaddtup(Relation rel, Buffer buf,

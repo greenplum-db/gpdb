@@ -15,6 +15,7 @@
 #define BUFPAGE_H
 
 #include "storage/bufmgr.h"
+#include "storage/block.h"
 #include "storage/item.h"
 #include "storage/off.h"
 #include "access/xlog.h"
@@ -89,7 +90,7 @@ typedef uint16 LocationIndex;
  * space management information generic to any page
  *
  *		pd_lsn		- identifies xlog record for last change to this page.
- *		pd_tli		- ditto.
+ *		pd_checksum	- page checksum, if set.
  *		pd_flags	- flag bits.
  *		pd_lower	- offset to start of free space.
  *		pd_upper	- offset to end of free space.
@@ -100,9 +101,17 @@ typedef uint16 LocationIndex;
  * The LSN is used by the buffer manager to enforce the basic rule of WAL:
  * "thou shalt write xlog before data".  A dirty buffer cannot be dumped
  * to disk until xlog has been flushed at least as far as the page's LSN.
- * We also store the 16 least significant bits of the TLI for identification
- * purposes (it is not clear that this is actually necessary, but it seems
- * like a good idea).
+ *
+ * pd_checksum stores the page checksum, if it has been set for this page;
+ * zero is a valid value for a checksum. If a checksum is not in use then
+ * we leave the field unset. This will typically mean the field is zero
+ * though non-zero values may also be present if databases have been
+ * pg_upgraded from releases prior to 9.3, when the same byte offset was
+ * used to store the current timelineid when the page was last updated.
+ * Note that there is no indication on a page as to whether the checksum
+ * is valid or not, a deliberate design choice which avoids the problem
+ * of relying on the page contents to decide whether to verify it. Hence
+ * there are no flag bits relating to checksums.
  *
  * pd_prune_xid is a hint field that helps determine whether pruning will be
  * useful.	It is currently unused in index pages.
@@ -125,8 +134,7 @@ typedef struct PageHeaderData
 	/* XXX LSN is member of *any* block, not only page-organized ones */
 	XLogRecPtr	pd_lsn;			/* LSN: next byte after last byte of xlog
 								 * record for last change to this page */
-	uint16		pd_tli;			/* least significant bits of the TimeLineID
-								 * containing the LSN */
+	uint16		pd_checksum;	/* checksum */
 	uint16		pd_flags;		/* flag bits, see below */
 	LocationIndex pd_lower;		/* offset to start of free space */
 	LocationIndex pd_upper;		/* offset to end of free space */
@@ -351,12 +359,6 @@ typedef PageHeaderData *PageHeader;
 #define PageSetLSN(page, lsn) \
 	(((PageHeader) (page))->pd_lsn = (lsn))
 
-/* NOTE: only the 16 least significant bits are stored */
-#define PageGetTLI(page) \
-	(((PageHeader) (page))->pd_tli)
-#define PageSetTLI(page, tli) \
-	(((PageHeader) (page))->pd_tli = (uint16) (tli))
-
 #define PageHasFreeLinePointers(page) \
 	(((PageHeader) (page))->pd_flags & PD_HAS_FREE_LINES)
 #define PageSetHasFreeLinePointers(page) \
@@ -401,7 +403,7 @@ do { \
  */
 
 extern void PageInit(Page page, Size pageSize, Size specialSize);
-extern bool PageHeaderIsValid(PageHeader page);
+extern bool PageIsVerified(Page page, BlockNumber blkno);
 extern OffsetNumber PageAddItem(Page page, Item item, Size size,
 			OffsetNumber offsetNumber, bool overwrite, bool is_heap);
 extern Page PageGetTempPage(Page page, Size specialSize);
@@ -412,5 +414,7 @@ extern Size PageGetExactFreeSpace(Page page);
 extern Size PageGetHeapFreeSpace(Page page);
 extern void PageIndexTupleDelete(Page page, OffsetNumber offset);
 extern void PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems);
+extern char *PageSetChecksumCopy(Page page, BlockNumber blkno);
+extern void PageSetChecksumInplace(Page page, BlockNumber blkno);
 
 #endif   /* BUFPAGE_H */

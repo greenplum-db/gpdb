@@ -63,7 +63,6 @@ RemoveRewriteRule(Oid owningRel, const char *ruleName, DropBehavior behavior,
 			ereport(NOTICE,
 					(errmsg("rule \"%s\" for relation \"%s\" does not exist, skipping",
 							ruleName, get_rel_name(owningRel))));
-
 		return;
 	}
 

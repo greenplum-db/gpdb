@@ -235,9 +235,6 @@ struct MotionConn
 
 	int			tupleCount;
 
-	/* indicate whether main thread is waiting EOS ack on this connection */
-	bool waitEOS;
-
 	bool		stillActive;
 	bool		stopRequested;
 
@@ -246,7 +243,6 @@ struct MotionConn
 	uint64		wakeup_ms;
 
 	struct icpkthdr		conn_info;
-	bool		isMirror;
 
     struct CdbProcess  *cdbProc;
     int			remoteContentId;
@@ -273,9 +269,6 @@ struct MotionConn
 	uint64 stat_count_resent;
 	uint64 stat_max_resent;
 	uint64 stat_count_dropped;
-
-	/* Indicate whether an EOS is received and acked. */
-	bool eosAcked;
 
 	/*
 	 * used by the sender.

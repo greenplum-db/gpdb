@@ -17,7 +17,6 @@
 #include "access/bitmap.h"
 #include "access/xlogutils.h"
 #include "utils/guc.h"
-#include "cdb/cdbfilerepprimary.h"
 
 static void forget_incomplete_insert_bitmapwords(RelFileNode node,
 									 xl_bm_bitmapwords* newWords);
@@ -133,7 +132,6 @@ _bitmap_xlog_newpage(XLogRecPtr lsn, XLogRecord *record)
 		}
 
 		PageSetLSN(page, lsn);
-		PageSetTLI(page, ThisTimeLineID);
 		_bitmap_wrtbuf(buffer);
 	}
 	else
@@ -230,7 +228,6 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 					RelationGetRelationName(reln))));
 
 		PageSetLSN(lovPage, lsn);
-		PageSetTLI(lovPage, ThisTimeLineID);
 
 		_bitmap_wrtbuf(lovBuffer);
 	}
@@ -259,7 +256,6 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
  			metapage->bm_lov_lastpage = xlrec->bm_lov_blkno;
  			
  			PageSetLSN(BufferGetPage(metabuf), lsn);
- 			PageSetTLI(BufferGetPage(metabuf), ThisTimeLineID);
 
  			_bitmap_wrtbuf(metabuf);
  		}
@@ -313,7 +309,6 @@ _bitmap_xlog_insert_meta(XLogRecPtr lsn, XLogRecord *record)
 		metapage->bm_lov_lastpage = xlrec->bm_lov_lastpage;
 
 		PageSetLSN(mp, lsn);
-		PageSetTLI(mp, ThisTimeLineID);
 		_bitmap_wrtbuf(metabuf);
 	}
 	else
@@ -372,7 +367,6 @@ _bitmap_xlog_insert_bitmap_lastwords(XLogRecPtr lsn,
 				lovItem->bm_last_tid_location = xlrec->bm_last_tid_location;
 				
 				PageSetLSN(lovPage, lsn);
-				PageSetTLI(lovPage, ThisTimeLineID);
 
 				_bitmap_wrtbuf(lovBuffer);
 			}
@@ -495,7 +489,6 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 			_bitmap_init_bitmappage(reln, nextBuffer);
 			
 			PageSetLSN(nextPage, lsn);
-			PageSetTLI(nextPage, ThisTimeLineID);
 
 			_bitmap_wrtbuf(nextBuffer);
 
@@ -503,7 +496,6 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 		}
 
 		PageSetLSN(bitmapPage, lsn);
-		PageSetTLI(bitmapPage, ThisTimeLineID);
 
 		_bitmap_wrtbuf(bitmapBuffer);
 
@@ -543,7 +535,6 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
  			lovItem->bm_lov_head = lovItem->bm_lov_tail;
  		
  		PageSetLSN(lovPage, lsn);
- 		PageSetTLI(lovPage, ThisTimeLineID);
  		
  		_bitmap_wrtbuf(lovBuffer);
  		
@@ -555,7 +546,6 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
  		lovItem->bm_lov_tail = lovItem->bm_lov_head;
  		
  		PageSetLSN(lovPage, lsn);
- 		PageSetTLI(lovPage, ThisTimeLineID);
  		
  		_bitmap_wrtbuf(lovBuffer);
  	}
@@ -614,7 +604,6 @@ _bitmap_xlog_updateword(XLogRecPtr lsn, XLogRecord *record)
 			bitmap->hwords[xlrec->bm_word_no/BM_HRL_WORD_SIZE] = xlrec->bm_hword;
 
 			PageSetLSN(bitmapPage, lsn);
-			PageSetTLI(bitmapPage, ThisTimeLineID);
 			_bitmap_wrtbuf(bitmapBuffer);
 		}
 
@@ -684,7 +673,6 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
 				firstOpaque->bm_bitmap_next = xlrec->bm_next_blkno;
 
 			PageSetLSN(firstPage, lsn);
-			PageSetTLI(firstPage, ThisTimeLineID);
 			_bitmap_wrtbuf(firstBuffer);
 		}
 		else
@@ -714,7 +702,6 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
  			secondOpaque->bm_bitmap_next = xlrec->bm_next_blkno;
  			
  			PageSetLSN(secondPage, lsn);
- 			PageSetTLI(secondPage, ThisTimeLineID);
  			_bitmap_wrtbuf(secondBuffer);
  		}
  		
@@ -751,7 +738,6 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
  			lovItem->bm_lov_tail = xlrec->bm_second_blkno;
  			
  			PageSetLSN(lovPage, lsn);
- 			PageSetTLI(lovPage, ThisTimeLineID);
  			
  			_bitmap_wrtbuf(lovBuffer);
  		}

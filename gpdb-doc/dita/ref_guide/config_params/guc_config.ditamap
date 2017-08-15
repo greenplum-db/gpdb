@@ -157,6 +157,7 @@
             <topicref href="guc-list.xml#gp_workfile_limit_per_query"/>
             <topicref href="guc-list.xml#gp_workfile_limit_per_segment"/>
             <topicref href="guc-list.xml#gpperfmon_port"/>
+            <topicref href="guc-list.xml#heap_checksums"/>
             <topicref href="guc-list.xml#integer_datetimes"/>
             <topicref href="guc-list.xml#IntervalStyle"/>
             <topicref href="guc-list.xml#join_collapse_limit"/>

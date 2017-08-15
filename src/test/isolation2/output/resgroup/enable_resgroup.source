@@ -1,0 +1,77 @@
+-- start_ignore
+! rmdir @cgroup_mnt_point@/cpu/gpdb;
+
+! rmdir @cgroup_mnt_point@/cpuacct/gpdb;
+
+! mkdir @cgroup_mnt_point@/cpu/gpdb;
+
+! mkdir @cgroup_mnt_point@/cpuacct/gpdb;
+
+! chmod 755 @cgroup_mnt_point@/cpu/gpdb;
+
+! chmod 755 @cgroup_mnt_point@/cpuacct/gpdb;
+
+-- end_ignore
+
+-- enable resource group and restart cluster.
+-- start_ignore
+! rm -f /tmp/.resgroup_mem_helper.sh;
+
+! echo 'mem=$(free -b | grep "^Mem:" | (read a b c; echo $b))' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo 'swap=$(free -b | grep "^Swap:" | (read a b c; echo $b))' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo 'overcommit=$(cat /proc/sys/vm/overcommit_ratio)' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo 'total=$((swap + mem * overcommit / 100))' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo 'limit=$(((2 << 30) * 10000 * 4 / 3 / total))' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo '[ "$limit" -le 9000 ] || limit=9000' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo 'limitf=$(printf "0.%04d" $limit)' >>/tmp/.resgroup_mem_helper.sh;
+
+! echo 'gpconfig -c gp_resource_group_memory_limit -v $limitf' >>/tmp/.resgroup_mem_helper.sh;
+
+! bash /tmp/.resgroup_mem_helper.sh;
+20170713:03:19:18:063942 gpconfig:ad3e397dc7b9:gpadmin-[INFO]:-completed successfully
+
+! rm -f /tmp/.resgroup_mem_helper.sh;
+
+! gpconfig -c gp_resource_manager -v group;
+20170502:01:28:12:000367 gpconfig:sdw6:gpadmin-[WARNING]:-Managing queries with resource groups is an experimental feature. A work-in-progress version is enabled.
+20170502:01:28:13:000367 gpconfig:sdw6:gpadmin-[INFO]:-completed successfully
+
+! gpconfig -c gp_resource_group_cpu_limit -v 0.9;
+20170731:09:42:33:021079 gpconfig:sdw8:nyu-[INFO]:-completed successfully
+
+! gpconfig -c max_connections -v 125 -m 25;
+20170731:09:42:34:021163 gpconfig:sdw8:nyu-[INFO]:-completed successfully
+
+! gpstop -rai;
+-- end_ignore
+
+SHOW gp_resource_manager;
+gp_resource_manager
+-------------------
+group              
+(1 row)
+
+-- resource queue statistics should not crash
+SELECT * FROM pg_resqueue_status;
+rsqname|rsqcountlimit|rsqcountvalue|rsqcostlimit|rsqcostvalue|rsqwaiters|rsqholders
+-------+-------------+-------------+------------+------------+----------+----------
+(0 rows)
+SELECT * FROM gp_toolkit.gp_resqueue_status;
+queueid|rsqname|rsqcountlimit|rsqcountvalue|rsqcostlimit|rsqcostvalue|rsqmemorylimit|rsqmemoryvalue|rsqwaiters|rsqholders
+-------+-------+-------------+-------------+------------+------------+--------------+--------------+----------+----------
+(0 rows)
+SELECT * FROM gp_toolkit.gp_resq_priority_backend;
+rqpsession|rqpcommand|rqppriority|rqpweight
+----------+----------+-----------+---------
+(0 rows)
+
+-- by default admin_group has concurrency set to -1 which leads to
+-- very small memory quota for each resgroup slot, correct it.
+ALTER RESOURCE GROUP admin_group SET concurrency 2;
+ALTER

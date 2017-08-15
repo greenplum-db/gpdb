@@ -13,23 +13,28 @@
  */
 #define elog_finish elog_finish_impl
 int
-elog_finish_impl(int level __attribute__((unused)),
-				 int dummy __attribute__((unused)),
-				 ...)
+elog_finish_impl(int elevel, const char * fmt, ...)
 {
-	if (level >= ERROR)
+	check_expected(elevel);
+	check_expected(fmt);
+	optional_assignment(fmt);
+	mock();
+	if (elevel >= ERROR)
 		siglongjmp(*PG_exception_stack, 1);
 	return 0;
 }
 
 #include "../xact.c"
 
-void helper_elog(LOG_LEVEL)
+void helper_elog(int expect_elevel)
 {
 	expect_any(elog_start, filename);
 	expect_any(elog_start, lineno);
 	expect_any(elog_start, funcname);
 	will_be_called(elog_start);
+	expect_value(elog_finish_impl, elevel, expect_elevel);
+	expect_any(elog_finish_impl, fmt);
+	will_be_called(elog_finish_impl);
 }
 
 void

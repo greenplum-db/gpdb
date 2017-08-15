@@ -25,7 +25,6 @@
 #include "storage/lwlock.h"
 #include "storage/shmem.h"
 #include "utils/lsyscache.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 static bool _bt_compare_scankey_args(IndexScanDesc scan, ScanKey op,
@@ -1122,6 +1121,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	OffsetNumber maxoff;
 	int			i;
 	bool		killedsomething = false;
+	Relation rel = scan->indexRelation;
 
 	Assert(BufferIsValid(so->currPos.buf));
 
@@ -1169,9 +1169,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	}
 
 	/*
-	 * Since this can be redone later if needed, it's treated the same as a
-	 * commit-hint-bit status update for heap tuples: we mark the buffer dirty
-	 * but don't make a WAL log entry.
+	 * Since this can be redone later if needed, mark as dirty hint.
 	 *
 	 * Whenever we mark anything LP_DEAD, we also set the page's
 	 * BTP_HAS_GARBAGE flag, which is likewise just a hint.
@@ -1179,7 +1177,7 @@ _bt_killitems(IndexScanDesc scan, bool haveLock)
 	if (killedsomething)
 	{
 		opaque->btpo_flags |= BTP_HAS_GARBAGE;
-		SetBufferCommitInfoNeedsSave(so->currPos.buf);
+		MarkBufferDirtyHint(so->currPos.buf, rel);
 	}
 
 	if (!haveLock)

@@ -21,7 +21,6 @@
 #include "utils/memutils.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-#include "cdb/cdbfilerepprimary.h"
 
 /* 
  * Helper functions for hashing and matching build data. At this stage, the

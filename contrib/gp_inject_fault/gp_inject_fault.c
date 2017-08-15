@@ -48,7 +48,7 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 	char	   *tableName = TextDatumGetCString(PG_GETARG_DATUM(4));
 	int			numOccurrences = PG_GETARG_INT32(5);
 	int			sleepTimeSeconds = PG_GETARG_INT32(6);
-	int         dbid = PG_GETARG_INT16(7);
+	int         dbid = PG_GETARG_INT32(7);
 	StringInfo  faultmsg = makeStringInfo();
 
 	/* Fast path if injecting fault in our postmaster. */
@@ -78,13 +78,13 @@ gp_inject_fault(PG_FUNCTION_ARGS)
 	ScanKeyInit(&scankey,
 				Anum_gp_segment_configuration_dbid,
 				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(dbid));
+				Int16GetDatum((int16) dbid));
 	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
 							   GetTransactionSnapshot(), 1, &scankey);
 	tuple = systable_getnext(sscan);
 
 	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cannot find dbid %i", dbid);
+		elog(ERROR, "cannot find dbid %d", dbid);
 
 	bool isnull;
 	Datum datum = heap_getattr(tuple, Anum_gp_segment_configuration_hostname,

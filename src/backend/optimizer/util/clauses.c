@@ -3485,9 +3485,6 @@ inline_function(Oid funcid, Oid result_type, List *args,
 	 * finger the function that bad information came from.
 	 */
 	sqlerrcontext.callback = sql_inline_error_callback;
-	/* XXX XXX: could pass the pcqCtx or prosrc directly here to avoid
-	 * SysCacheGetAttr 
-	 */
 	sqlerrcontext.arg = func_tuple;
 	sqlerrcontext.previous = error_context_stack;
 	error_context_stack = &sqlerrcontext;

@@ -18,7 +18,6 @@
 #include "access/heapam.h"
 #include "access/hio.h"
 #include "storage/freespace.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 /*

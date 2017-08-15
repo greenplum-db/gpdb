@@ -36,6 +36,7 @@
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
+
 /*
  * current_database()
  *	Expose the current database to the user

@@ -42,6 +42,13 @@
 /*
  * GUC variables.
  */
+char                		*gp_resqueue_memory_policy_str = NULL;
+ResManagerMemoryPolicy     	gp_resqueue_memory_policy = RESMANAGER_MEMORY_POLICY_NONE;
+bool						gp_log_resqueue_memory = false;
+int							gp_resqueue_memory_policy_auto_fixed_mem;
+bool						gp_resqueue_print_operator_memory_limits = false;
+
+
 int		MaxResourceQueues;						/* Max # of queues. */
 int		MaxResourcePortalsPerXact;				/* Max # tracked portals -
 												 * per backend . */
@@ -584,23 +591,23 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				incData.increments[RES_COUNT_LIMIT] = 1;
 				incData.increments[RES_COST_LIMIT] = ceil(plan->total_cost);
 
-				if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
+				if (!IsResManagerMemoryPolicyNone())
 				{
-					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_AUTO ||
-						   gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_EAGER_FREE);
+					Assert(IsResManagerMemoryPolicyAuto() ||
+						   IsResManagerMemoryPolicyEagerFree());
 					
 					uint64 queryMemory = qDesc->plannedstmt->query_mem;
 					Assert(queryMemory > 0);
-					if (gp_log_resqueue_memory)
+					if (LogResManagerMemory())
 					{
-						elog(gp_resqueue_memory_log_level, "query requested %.0fKB", (double) queryMemory / 1024.0);
+						elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "query requested %.0fKB", (double) queryMemory / 1024.0);
 					}					
 					
 					incData.increments[RES_MEMORY_LIMIT] = (Cost) queryMemory;
 				}
 				else 
 				{
-					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_NONE);
+					Assert(IsResManagerMemoryPolicyNone());
 					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;				
 				}
 				takeLock = true;
@@ -623,14 +630,14 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				incData.increments[RES_COST_LIMIT] = ceil(plan->total_cost);
 				incData.isHold = portal->cursorOptions & CURSOR_OPT_HOLD;
 
-				if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
+				if (!IsResManagerMemoryPolicyNone())
 				{
-					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_AUTO ||
-						   gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_EAGER_FREE);
+					Assert(IsResManagerMemoryPolicyAuto() ||
+						   IsResManagerMemoryPolicyEagerFree());
 					
 					uint64 queryMemory = qDesc->plannedstmt->query_mem;
 					Assert(queryMemory > 0);
-					if (gp_log_resqueue_memory)
+					if (LogResManagerMemory())
 					{
 						elog(NOTICE, "query requested %.0fKB", (double) queryMemory / 1024.0);
 					}
@@ -639,7 +646,7 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				}
 				else 
 				{
-					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_NONE);
+					Assert(IsResManagerMemoryPolicyNone());
 					incData.increments[RES_MEMORY_LIMIT] = (Cost) 0.0;				
 				}
 
@@ -660,7 +667,6 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 			break;
 	
 		}
-	
 	
 		/*
 		 * Get the resource lock.
@@ -1091,3 +1097,4 @@ ResHandleUtilityStmt(Portal portal, Node *stmt)
 		portal->status = PORTAL_ACTIVE;
 	}
 }
+

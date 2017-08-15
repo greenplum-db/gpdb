@@ -1,21 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bc20941">ALTER USER</title><body><p id="sql_command_desc">Changes the definition of a database role (user).</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER USER <varname>name</varname> RENAME TO <varname>newname</varname>
+<topic id="topic1">
+    <title id="bc20941">ALTER USER</title>
+    <body>
+        <p id="sql_command_desc">Changes the definition of a database role (user).</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">ALTER USER <varname>name</varname> RENAME TO <varname>newname</varname>
 
 ALTER USER <varname>name</varname> SET <varname>config_parameter</varname> {TO | =} {<varname>value</varname> | DEFAULT}
 
 ALTER USER <varname>name</varname> RESET <varname>config_parameter</varname>
 
-ALTER USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock><p>where <varname>option</varname> can be:</p><codeblock>      SUPERUSER | NOSUPERUSER
+ALTER USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock>
+            <p>where <varname>option</varname> can be:</p>
+            <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>'</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER USER</codeph> is a deprecated command but is still accepted for historical reasons.
-        It is an alias for <codeph>ALTER ROLE</codeph>. See <codeph><xref
-            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> for more
-        information.</p></section><section id="section4"><title>Compatibility</title><p>The <codeph>ALTER USER</codeph> statement is a Greenplum Database extension.
-The SQL standard leaves the definition of users to the implementation.</p></section><section id="section5"><title>See Also</title><p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+    | VALID UNTIL '<varname>timestamp</varname>'</codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>ALTER USER</codeph> is an alias for <codeph>ALTER ROLE</codeph>. See
+                        <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"
+                    /></codeph> for more information.</p>
+        </section>
+        <section id="section4">
+            <title>Compatibility</title>
+            <p>The <codeph>ALTER USER</codeph> statement is a Greenplum Database extension. The SQL
+                standard leaves the definition of users to the implementation.</p>
+        </section>
+        <section id="section5">
+            <title>See Also</title>
+            <p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p>
+        </section>
+    </body>
+</topic>

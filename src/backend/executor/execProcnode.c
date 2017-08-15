@@ -24,7 +24,6 @@
  *		ExecProcNode	-		get a tuple by executing the plan node
  *		ExecEndNode		-		shut down a plan node and its subplans
  *		ExecSquelchNode		-	notify subtree that no more tuples are needed
- *		ExecStateTreeWalker -	call given function for each node of plan state
  *
  *	 NOTES
  *		This used to be three files.  It is now all combined into

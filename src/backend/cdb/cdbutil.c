@@ -17,8 +17,6 @@
 
 #include "postgres.h"
 
-#include "fmgr.h"
-#include "funcapi.h"
 #include "access/genam.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_type.h"
@@ -27,21 +25,20 @@
 #include "parser/parse_type.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
-#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
 #include "cdb/cdbutil.h"
-#include "nodes/execnodes.h"	/* Slice, SliceTable */
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/ml_ipc.h"			/* listener_setup */
 #include "cdb/cdbtm.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "libpq/ip.h"
-#include "catalog/indexing.h"
 #include "utils/faultinjection.h"
 
 /*

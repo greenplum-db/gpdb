@@ -30,7 +30,7 @@ typedef struct _FuncCandidateList
 	Oid			oid;			/* the function or operator's OID */
 	int			nargs;			/* number of arg types returned */
 	int			nvargs;			/* number of args to become variadic array */
-	int         ndargs;         /* number of defaulted args */
+	int			ndargs;			/* number of defaulted args */
 	Oid			args[1];		/* arg types --- VARIABLE LENGTH ARRAY */
 }	*FuncCandidateList;	/* VARIABLE LENGTH STRUCT */
 
@@ -60,7 +60,9 @@ extern bool RelationIsVisible(Oid relid);
 extern Oid	TypenameGetTypid(const char *typname);
 extern bool TypeIsVisible(Oid typid);
 
-extern FuncCandidateList FuncnameGetCandidates(List *names, int nargs, bool expand_variadic, bool expand_defaults);
+extern FuncCandidateList FuncnameGetCandidates(List *names, int nargs,
+					  bool expand_variadic,
+					  bool expand_defaults);
 extern bool FunctionIsVisible(Oid funcid);
 
 extern Oid	OpernameGetOprid(List *names, Oid oprleft, Oid oprright);

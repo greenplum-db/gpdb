@@ -4,3 +4,4 @@ disable_resgroup.sql
 enable_resgroup.sql
 enable_resgroup_validate.sql
 resgroup_cpu_rate_limit.sql
+resgroup_alter_memory.sql

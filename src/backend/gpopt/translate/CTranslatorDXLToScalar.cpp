@@ -1094,7 +1094,7 @@ CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
 
 	Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
 
-	if (pdxlop->PmdidFunc()->FValid())
+	if (IMDId::FValid(pdxlop->PmdidFunc()))
 	{
 		FuncExpr *pfuncexpr = MakeNode(FuncExpr);
 		pfuncexpr->funcid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidFunc())->OidObjectId();

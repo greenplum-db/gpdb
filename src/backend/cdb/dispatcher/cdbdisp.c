@@ -19,6 +19,8 @@
 #include "cdb/cdbdisp_thread.h"
 #include "cdb/cdbdisp_async.h"
 #include "cdb/cdbdispatchresult.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbsreh.h"
@@ -386,7 +388,6 @@ cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
 /*
  * Free memory in CdbDispatcherState
  *
- * Free the PQExpBufferData allocated in libpq.
  * Free dispatcher memory context.
  */
 void

@@ -20,11 +20,6 @@
 #include "access/reloptions.h"
 #include "storage/freespace.h"
 
-#include "storage/lmgr.h"
-#include "storage/bufmgr.h"
-#include "utils/rel.h"
-#include "cdb/cdbfilerepprimary.h"
-
 /*
  * static *S used for temrorary storage (saves stack and palloc() call)
  */

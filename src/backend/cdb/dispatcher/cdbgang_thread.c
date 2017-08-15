@@ -15,6 +15,8 @@
 
 #include "storage/ipc.h"		/* For proc_exit_inprogress  */
 #include "tcop/tcopprot.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
@@ -403,7 +405,7 @@ checkConnectionStatus(Gang* gp, int* countInRecovery, int* countSuccessful, stru
 			ereport(LOG, (errcode(segdbDesc->errcode), errmsg("%s",segdbDesc->error_message.data)));
 
 			/* this connect failed -- but why ? */
-			if (segment_failure_due_to_recovery(&segdbDesc->error_message))
+			if (segment_failure_due_to_recovery(segdbDesc->error_message.data))
 			{
 				elog(LOG, "segment is in recovery mode (%s)", segdbDesc->whoami);
 				(*countInRecovery)++;

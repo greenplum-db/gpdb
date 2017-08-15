@@ -1,6 +1,5 @@
 #include "postgres.h"
 #include "miscadmin.h"
-#include "cdb/cdbconn.h"
 #include "cdb/cdbvars.h"
 #include "libpq/libpq-be.h"
 #include "access/xact.h"
@@ -8,6 +7,8 @@
 #include "storage/proc.h"
 #include "cmockery.h"
 #include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
+#include "cdb/cdbconn.h"
 
 #include "../cdbgang.c"
 
@@ -102,8 +103,12 @@ void validateCdbInfo(CdbComponentDatabaseInfo *cdbinfo, int segindex)
 	assert_int_equal(cdbinfo->preferred_role, 'p');
 }
 
-void mockLibpq(PGconn *pgConn, int motionListener, int qePid)
+void mockLibpq(PGconn *pgConn, uint32 motionListener, int qePid)
 {
+	static char	motionListener_str[11];
+
+	snprintf(motionListener_str, sizeof(motionListener_str), "%u", motionListener);
+
 	expect_any_count(PQconnectdbParams, keywords, -1);
 	expect_any_count(PQconnectdbParams, values, -1);
 	expect_any_count(PQconnectdbParams, expand_dbname, -1);
@@ -117,8 +122,9 @@ void mockLibpq(PGconn *pgConn, int motionListener, int qePid)
 	expect_any_count(PQsetNoticeReceiver, arg, -1);
 	will_return_count(PQsetNoticeReceiver, CONNECTION_OK, -1);
 
-	expect_value_count(PQgetQEdetail, conn, pgConn, -1);
-	will_return_count(PQgetQEdetail, motionListener, -1);
+	expect_value_count(PQparameterStatus, conn, pgConn, -1);
+	expect_string_count(PQparameterStatus, paramName, "qe_listener_port", -1);
+	will_return_count(PQparameterStatus, motionListener_str, -1);
 
 	expect_value_count(PQbackendPID, conn, pgConn, -1);
 	will_return_count(PQbackendPID, qePid, -1);
@@ -129,7 +135,7 @@ static void test__createWriterGang(void **state)
 	int segmentCount = TOTOAL_SEGMENTS;
 	int ftsVersion = 1;
 	PGconn *conn = &pgconn;
-	int motionListener = 10000;
+	uint32 motionListener = 10000;
 	int qePid = 2000;
 	int i = 0;
 
@@ -169,7 +175,6 @@ static void test__createWriterGang(void **state)
 		assert_int_equal(segdb->errcode, 0);
 		assert_int_equal(segdb->error_message.len, 0);
 		assert_int_equal(segdb->motionListener, motionListener);
-		assert_int_equal(segdb->myAgent, NULL);
 		assert_int_equal(segdb->segindex, i);
 
 		validateCdbInfo(segdb->segment_database_info, segdb->segindex);
@@ -182,7 +187,7 @@ static void test__createReaderGang(void **state)
 	int ftsVersion = 1;
 	PGconn *conn = &pgconn;
 	const char *portalName = "portal1";
-	int motionListener = 10000;
+	uint32 motionListener = 10000;
 	int qePid = 2000;
 	int i = 0;
 
@@ -219,7 +224,6 @@ static void test__createReaderGang(void **state)
 		assert_int_equal(segdb->errcode, 0);
 		assert_int_equal(segdb->error_message.len, 0);
 		assert_int_equal(segdb->motionListener, motionListener);
-		assert_int_equal(segdb->myAgent, NULL);
 		assert_int_equal(segdb->segindex, i);
 
 		validateCdbInfo(segdb->segment_database_info, segdb->segindex);

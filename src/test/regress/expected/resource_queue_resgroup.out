@@ -1,0 +1,676 @@
+-- SQL coverage of RESOURCE QUEUE
+CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |           -1 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             2 |         2000 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq COST THRESHOLD 3000.00 OVERCOMMIT;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             2 |         3000 | t             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq COST THRESHOLD 4e+3 NOOVERCOMMIT;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             2 |         4000 | f             |                  0
+(1 row)
+
+DROP RESOURCE QUEUE regressq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+(0 rows)
+
+-- more coverage
+CREATE RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |         2000 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITHOUT (max_cost);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |           -1 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000)
+WITHOUT (overcommit); -- negative
+ERROR:  option "overcommit" is not a valid resource type
+ALTER RESOURCE QUEUE regressq ACTIVE THRESHOLD 1 WITH (max_cost=2000)
+WITHOUT (cost_overcommit); -- works
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |         2000 | f             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq OVERCOMMIT WITH (max_cost=2000);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |         2000 | t             |                  0
+(1 row)
+
+ALTER RESOURCE QUEUE regressq IGNORE THRESHOLD 1 WITHOUT (max_cost);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+----------+---------------+--------------+---------------+--------------------
+ regressq |             1 |           -1 | t             |                  1
+(1 row)
+
+ALTER RESOURCE QUEUE regressq WITH (priority=high);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
+ rsqname  |      resname      | ressetting | restypid 
+----------+-------------------+------------+----------
+ regressq | active_statements | 1          |        1
+ regressq | max_cost          | -1         |        2
+ regressq | min_cost          | 1          |        3
+ regressq | cost_overcommit   | 1          |        4
+ regressq | priority          | high       |        5
+ regressq | memory_limit      | -1         |        6
+(6 rows)
+
+ALTER RESOURCE QUEUE regressq WITH (priority='MeDiUm');
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue_attributes WHERE rsqname='regressq';
+ rsqname  |      resname      | ressetting | restypid 
+----------+-------------------+------------+----------
+ regressq | active_statements | 1          |        1
+ regressq | max_cost          | -1         |        2
+ regressq | min_cost          | 1          |        3
+ regressq | cost_overcommit   | 1          |        4
+ regressq | priority          | MeDiUm     |        5
+ regressq | memory_limit      | -1         |        6
+(6 rows)
+
+ALTER RESOURCE QUEUE regressq;
+ERROR:  at least one threshold, overcommit or ignore limit must be specified
+DROP RESOURCE QUEUE regressq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT * FROM pg_resqueue WHERE rsqname='regressq';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+(0 rows)
+
+-- negative
+CREATE RESOURCE QUEUE regressq2;
+ERROR:  at least one threshold ("ACTIVE_STATEMENTS", "MAX_COST") must be specified
+CREATE RESOURCE QUEUE none ACTIVE THRESHOLD 2;
+ERROR:  resource queue name "none" is reserved
+;
+CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+ALTER RESOURCE QUEUE regressq2 ACTIVE THRESHOLD -10;
+ERROR:  active threshold cannot be less than -1 or equal to 0
+ALTER RESOURCE QUEUE regressq2 COST THRESHOLD -1000.00;
+ERROR:  cost threshold must be equal to -1 or greater than 0
+ALTER RESOURCE QUEUE regressq2 WITH(max_cost=20,max_cost=21);
+ERROR:  conflicting or redundant options
+ALTER RESOURCE QUEUE regressq2 WITH(PRIORITY=funky);
+ERROR:  Invalid parameter value "funky" for resource type "PRIORITY"
+ALTER RESOURCE QUEUE regressq2 WITHOUT(PRIORITY);
+ERROR:  option "priority" cannot be disabled
+DROP RESOURCE QUEUE regressq2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD -10;
+ERROR:  active threshold cannot be less than -1 or equal to 0
+CREATE RESOURCE QUEUE regressq2 COST THRESHOLD -1000.00;
+ERROR:  cost threshold cannot be less than -1 or equal to 0
+CREATE RESOURCE QUEUE regressq2 IGNORE THRESHOLD -10;
+ERROR:  min_cost threshold cannot be negative
+CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2 ACTIVE THRESHOLD 2;
+ERROR:  conflicting or redundant options
+CREATE RESOURCE QUEUE regressq2 COST THRESHOLD 2 COST THRESHOLD 2;
+ERROR:  conflicting or redundant options
+CREATE RESOURCE QUEUE regressq2 OVERCOMMIT OVERCOMMIT;
+ERROR:  conflicting or redundant options
+CREATE RESOURCE QUEUE regressq2 OVERCOMMIT NOOVERCOMMIT;
+ERROR:  conflicting or redundant options
+CREATE RESOURCE QUEUE regressq2 IGNORE THRESHOLD 1 IGNORE THRESHOLD 1 ;
+ERROR:  conflicting or redundant options
+CREATE RESOURCE QUEUE regressq2 WITH (WITHLISTSTART=funky);
+ERROR:  option "withliststart" is not a valid resource type
+CREATE RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+ALTER RESOURCE QUEUE regressq2 ACTIVE THRESHOLD 2 ACTIVE THRESHOLD 2;
+ERROR:  conflicting or redundant options
+ALTER RESOURCE QUEUE regressq2 COST THRESHOLD 2 COST THRESHOLD 2;
+ERROR:  conflicting or redundant options
+ALTER RESOURCE QUEUE regressq2 OVERCOMMIT OVERCOMMIT;
+ERROR:  conflicting or redundant options
+ALTER RESOURCE QUEUE regressq2 OVERCOMMIT NOOVERCOMMIT;
+ERROR:  conflicting or redundant options
+ALTER RESOURCE QUEUE regressq2 IGNORE THRESHOLD 1 IGNORE THRESHOLD 1 ;
+ERROR:  conflicting or redundant options
+ALTER RESOURCE QUEUE none IGNORE THRESHOLD 1 ;
+ERROR:  resource queue "none" does not exist
+DROP RESOURCE QUEUE regressq2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Create resource queue with cost_overcommit=true
+create resource queue t3_test_q with (active_statements = 6,max_cost=5e+06 ,cost_overcommit=true, min_cost=50000);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+select * from pg_resqueue where rsqname='t3_test_q';
+  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+-----------+---------------+--------------+---------------+--------------------
+ t3_test_q |             6 |        5e+06 | t             |              50000
+(1 row)
+
+drop resource queue t3_test_q;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Resource Queue should not be created inside Transaction block the error is the expected behavior
+begin;
+CREATE RESOURCE QUEUE db_resque_new1 ACTIVE THRESHOLD 2 COST THRESHOLD 2000.00;
+ERROR:  CREATE RESOURCE QUEUE cannot run inside a transaction block
+end;
+--
+-- memory quota feature
+--
+-- negative
+create resource queue test_rq with (max_cost=2000000, memory_limit='1gB'); -- should error out
+ERROR:  Invalid parameter value "1gB" for resource type "MEMORY_LIMIT". Value must be in kB, MB or GB.
+create resource queue test_rq with (max_cost=2000000, memory_limit='0'); -- should error out
+ERROR:  Invalid parameter value "0" for resource type "MEMORY_LIMIT". Value must be at least 10240kB
+-- Creates and drops
+create resource queue test_rq with (active_statements=2);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+drop resource queue test_rq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+create resource queue test_rq with (active_statements=2, memory_limit='1024MB');
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Alters
+alter resource queue test_rq with (memory_limit='1024mb');
+ERROR:  Invalid parameter value "1024mb" for resource type "MEMORY_LIMIT". Value must be in kB, MB or GB.
+alter resource queue test_rq with (memory_limit='1024Kb');
+ERROR:  Invalid parameter value "1024Kb" for resource type "MEMORY_LIMIT". Value must be in kB, MB or GB.
+alter resource queue test_rq with (memory_limit='2GB');
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+alter resource queue test_rq without (memory_limit);
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+drop resource queue test_rq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- SQL coverage of ROLE -> RESOURCE QUEUE
+CREATE RESOURCE QUEUE reg_activeq ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE reg_costq COST THRESHOLD 30000.00;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE USER reg_u1 RESOURCE QUEUE reg_costq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+GRANT SELECT ON tenk1 TO reg_u1;
+SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and rolname='reg_u1';
+ rolname | rolsuper |  rsqname  
+---------+----------+-----------
+ reg_u1  | f        | reg_costq
+(1 row)
+
+ALTER USER reg_u1 RESOURCE QUEUE reg_activeq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and rolname='reg_u1';
+ rolname | rolsuper |   rsqname   
+---------+----------+-------------
+ reg_u1  | f        | reg_activeq
+(1 row)
+
+CREATE USER reg_u2 RESOURCE QUEUE reg_activeq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+GRANT SELECT ON tenk1 TO reg_u2;
+SELECT u.rolname, u.rolsuper, r.rsqname FROM pg_roles as u, pg_resqueue as r WHERE u.rolresqueue=r.oid and r.rsqname='reg_activeq';
+ rolname | rolsuper |   rsqname   
+---------+----------+-------------
+ reg_u2  | f        | reg_activeq
+ reg_u1  | f        | reg_activeq
+(2 rows)
+
+-- negative
+CREATE USER reg_u3 RESOURCE QUEUE bogusq;
+ERROR:  resource queue "bogusq" does not exist
+-- feature must be on for tests to be valid
+show resource_scheduler;
+ resource_scheduler 
+--------------------
+ on
+(1 row)
+
+-- switch to a non privileged user for next tests
+SET SESSION AUTHORIZATION reg_u1;
+-- self deadlock (active queue threshold 2)
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
+DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
+DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1; -- should detect deadlock
+END;
+-- track cursor open/close count (should not deadlock)
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
+CLOSE c1;
+DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
+DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1;
+CLOSE c3;
+DECLARE c4 CURSOR FOR SELECT 4 FROM tenk1;
+FETCH c4;
+ ?column? 
+----------
+        4
+(1 row)
+
+END;
+-- switch to a cost-limited queue
+RESET SESSION AUTHORIZATION;
+ALTER USER reg_u2 RESOURCE QUEUE reg_costq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+SET SESSION AUTHORIZATION reg_u2;
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT * FROM tenk1;
+SELECT rsqname, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
+ rsqname | rsqholders 
+---------+------------
+(0 rows)
+
+DECLARE c2 CURSOR FOR SELECT * FROM tenk1 a NATURAL JOIN tenk1 b;
+SELECT rsqname, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
+ rsqname | rsqholders 
+---------+------------
+(0 rows)
+
+CLOSE c1;
+CLOSE c2;
+END;
+-- rsqcostvalue should go back to 0 when queue is empty (MPP-3578)
+SELECT rsqname, rsqholders FROM pg_resqueue_status where rsqcostvalue != 0 or rsqcountvalue != 0 or rsqholders != 0;
+ rsqname | rsqholders 
+---------+------------
+(0 rows)
+
+-- MPP-3796.  When a cursor exceeds the cost limit and the transaction is
+-- aborted, resources which had already been granted to other cursors should
+-- be released.  Here there are no other concurrent transactions sharing the
+-- queue, so rsqcostvalue should go back to 0.
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT * FROM tenk1;
+SELECT rsqname, rsqcostlimit, rsqwaiters, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
+ rsqname | rsqcostlimit | rsqwaiters | rsqholders 
+---------+--------------+------------+------------
+(0 rows)
+
+DECLARE c2 CURSOR FOR SELECT * FROM tenk1;
+SELECT rsqname, rsqcostlimit, rsqwaiters, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
+ rsqname | rsqcostlimit | rsqwaiters | rsqholders 
+---------+--------------+------------+------------
+(0 rows)
+
+DECLARE c3 CURSOR FOR SELECT * FROM tenk1 a, tenk1 b;
+SELECT rsqname, rsqcostlimit, rsqwaiters, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
+ rsqname | rsqcostlimit | rsqwaiters | rsqholders 
+---------+--------------+------------+------------
+(0 rows)
+
+DECLARE c4 CURSOR FOR SELECT * FROM tenk1 a, tenk1 b, tenk1 c;
+SELECT rsqname, rsqcostlimit, rsqwaiters, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
+ rsqname | rsqcostlimit | rsqwaiters | rsqholders 
+---------+--------------+------------+------------
+(0 rows)
+
+END;
+SELECT rsqname, rsqholders FROM pg_resqueue_status where rsqcostvalue != 0 or rsqcountvalue != 0 or rsqholders != 0; -- 1 row expected
+ rsqname | rsqholders 
+---------+------------
+(0 rows)
+
+-- return to the super user
+RESET SESSION AUTHORIZATION;
+-- reset session to super user. make sure no longer queued
+BEGIN;
+DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
+DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
+DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1; -- should not deadlock, we are SU.
+END;
+-- cleanup
+DROP OWNED BY reg_u1, reg_u2 CASCADE;
+DROP USER reg_u1;
+DROP USER reg_u2;
+DROP RESOURCE QUEUE reg_activeq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE reg_costq;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Followup additional tests.
+-- MPP-7474
+CREATE RESOURCE QUEUE rq_test_q ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE USER rq_test_u RESOURCE QUEUE rq_test_q;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10386)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10385)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10387)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+create table rq_product (
+	pn int not null,
+	pname text not null,
+	pcolor text,
+	primary key (pn)
+) distributed by (pn);
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "rq_product_pkey" for table "rq_product"
+-- Products
+insert into rq_product values 
+  ( 100, 'Sword', 'Black'),
+  ( 200, 'Dream', 'Black'),
+  ( 300, 'Castle', 'Grey'),
+  ( 400, 'Justice', 'Clear'),
+  ( 500, 'Donuts', 'Plain'),
+  ( 600, 'Donuts', 'Chocolate'),
+  ( 700, 'Hamburger', 'Grey'),
+  ( 800, 'Fries', 'Grey');
+GRANT SELECT ON rq_product TO rq_test_u;
+set session authorization rq_test_u;
+begin;
+declare c0 cursor for select pcolor, pname, pn from rq_product order by 1,2,3;
+fetch c0;
+ pcolor | pname | pn  
+--------+-------+-----
+ Black  | Dream | 200
+(1 row)
+
+fetch c0;
+ pcolor | pname | pn  
+--------+-------+-----
+ Black  | Sword | 100
+(1 row)
+
+fetch c0;
+  pcolor   | pname  | pn  
+-----------+--------+-----
+ Chocolate | Donuts | 600
+(1 row)
+
+select * from rq_product;
+ pn  |   pname   |  pcolor   
+-----+-----------+-----------
+ 400 | Justice   | Clear
+ 600 | Donuts    | Chocolate
+ 800 | Fries     | Grey
+ 200 | Dream     | Black
+ 300 | Castle    | Grey
+ 100 | Sword     | Black
+ 500 | Donuts    | Plain
+ 700 | Hamburger | Grey
+(8 rows)
+
+fetch c0;
+ pcolor |  pname  | pn  
+--------+---------+-----
+ Clear  | Justice | 400
+(1 row)
+
+abort;
+begin;
+declare c0 cursor for select pcolor, pname, pn from rq_product order by 1,2,3;
+fetch c0;
+ pcolor | pname | pn  
+--------+-------+-----
+ Black  | Dream | 200
+(1 row)
+
+fetch c0;
+ pcolor | pname | pn  
+--------+-------+-----
+ Black  | Sword | 100
+(1 row)
+
+fetch c0;
+  pcolor   | pname  | pn  
+-----------+--------+-----
+ Chocolate | Donuts | 600
+(1 row)
+
+fetch c0;
+ pcolor |  pname  | pn  
+--------+---------+-----
+ Clear  | Justice | 400
+(1 row)
+
+select * from rq_product;
+ pn  |   pname   |  pcolor   
+-----+-----------+-----------
+ 200 | Dream     | Black
+ 300 | Castle    | Grey
+ 400 | Justice   | Clear
+ 600 | Donuts    | Chocolate
+ 800 | Fries     | Grey
+ 100 | Sword     | Black
+ 500 | Donuts    | Plain
+ 700 | Hamburger | Grey
+(8 rows)
+
+fetch c0;
+ pcolor | pname  | pn  
+--------+--------+-----
+ Grey   | Castle | 300
+(1 row)
+
+abort;
+begin;
+declare c0 cursor for
+select pcolor, pname, pn,
+    row_number() over (w) as n,
+    lag(pn+0) over (w) as l0,
+    lag(pn+1) over (w) as l1,
+    lag(pn+2) over (w) as l2,
+    lag(pn+3) over (w) as l3,
+    lag(pn+4) over (w) as l4,
+    lag(pn+5) over (w) as l5,
+    lag(pn+6) over (w) as l6,
+    lag(pn+7) over (w) as l7,
+    lag(pn+8) over (w) as l8,
+    lag(pn+9) over (w) as l9,
+    lag(pn+10) over (w) as l10,
+    lag(pn+11) over (w) as l11,
+    lag(pn+12) over (w) as l12,
+    lag(pn+13) over (w) as l13,
+    lag(pn+14) over (w) as l14,
+    lag(pn+15) over (w) as l15,
+    lag(pn+16) over (w) as l16,
+    lag(pn+17) over (w) as l17,
+    lag(pn+18) over (w) as l18,
+    lag(pn+19) over (w) as l19,
+    lag(pn+20) over (w) as l20,
+    lag(pn+21) over (w) as l21,
+    lag(pn+22) over (w) as l22,
+    lag(pn+23) over (w) as l23,
+    lag(pn+24) over (w) as l24,
+    lag(pn+25) over (w) as l25,
+    lag(pn+26) over (w) as l26,
+    lag(pn+27) over (w) as l27,
+    lag(pn+28) over (w) as l28,
+    lag(pn+29) over (w) as l29,
+    lag(pn+30) over (w) as l30,
+    lag(pn+31) over (w) as l31,
+    lag(pn+32) over (w) as l32
+from rq_product
+window w as (partition by pcolor order by pname) order by 1,2,3;
+fetch c0;
+ pcolor | pname | pn  | n | l0 | l1 | l2 | l3 | l4 | l5 | l6 | l7 | l8 | l9 | l10 | l11 | l12 | l13 | l14 | l15 | l16 | l17 | l18 | l19 | l20 | l21 | l22 | l23 | l24 | l25 | l26 | l27 | l28 | l29 | l30 | l31 | l32 
+--------+-------+-----+---+----+----+----+----+----+----+----+----+----+----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----
+ Black  | Dream | 200 | 1 |    |    |    |    |    |    |    |    |    |    |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |    
+(1 row)
+
+select * from rq_product;
+ pn  |   pname   |  pcolor   
+-----+-----------+-----------
+ 100 | Sword     | Black
+ 500 | Donuts    | Plain
+ 700 | Hamburger | Grey
+ 400 | Justice   | Clear
+ 600 | Donuts    | Chocolate
+ 800 | Fries     | Grey
+ 200 | Dream     | Black
+ 300 | Castle    | Grey
+(8 rows)
+
+fetch c0;
+ pcolor | pname | pn  | n | l0  | l1  | l2  | l3  | l4  | l5  | l6  | l7  | l8  | l9  | l10 | l11 | l12 | l13 | l14 | l15 | l16 | l17 | l18 | l19 | l20 | l21 | l22 | l23 | l24 | l25 | l26 | l27 | l28 | l29 | l30 | l31 | l32 
+--------+-------+-----+---+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----
+ Black  | Sword | 100 | 2 | 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207 | 208 | 209 | 210 | 211 | 212 | 213 | 214 | 215 | 216 | 217 | 218 | 219 | 220 | 221 | 222 | 223 | 224 | 225 | 226 | 227 | 228 | 229 | 230 | 231 | 232
+(1 row)
+
+abort;
+begin;
+create view window_view as
+select pcolor, pname, pn,
+    row_number() over (w) as n,
+    lag(pn+0) over (w) as l0,
+    lag(pn+1) over (w) as l1,
+    lag(pn+2) over (w) as l2,
+    lag(pn+3) over (w) as l3,
+    lag(pn+4) over (w) as l4,
+    lag(pn+5) over (w) as l5,
+    lag(pn+6) over (w) as l6,
+    lag(pn+7) over (w) as l7,
+    lag(pn+8) over (w) as l8,
+    lag(pn+9) over (w) as l9,
+    lag(pn+10) over (w) as l10,
+    lag(pn+11) over (w) as l11,
+    lag(pn+12) over (w) as l12,
+    lag(pn+13) over (w) as l13,
+    lag(pn+14) over (w) as l14,
+    lag(pn+15) over (w) as l15,
+    lag(pn+16) over (w) as l16,
+    lag(pn+17) over (w) as l17,
+    lag(pn+18) over (w) as l18,
+    lag(pn+19) over (w) as l19,
+    lag(pn+20) over (w) as l20,
+    lag(pn+21) over (w) as l21,
+    lag(pn+22) over (w) as l22,
+    lag(pn+23) over (w) as l23,
+    lag(pn+24) over (w) as l24,
+    lag(pn+25) over (w) as l25,
+    lag(pn+26) over (w) as l26,
+    lag(pn+27) over (w) as l27,
+    lag(pn+28) over (w) as l28,
+    lag(pn+29) over (w) as l29,
+    lag(pn+30) over (w) as l30,
+    lag(pn+31) over (w) as l31,
+    lag(pn+32) over (w) as l32
+from rq_product
+window w as (partition by pcolor order by pname);
+DECLARE c0 cursor for select * from window_view order by 1,2,3;
+fetch c0;
+ pcolor | pname | pn  | n | l0 | l1 | l2 | l3 | l4 | l5 | l6 | l7 | l8 | l9 | l10 | l11 | l12 | l13 | l14 | l15 | l16 | l17 | l18 | l19 | l20 | l21 | l22 | l23 | l24 | l25 | l26 | l27 | l28 | l29 | l30 | l31 | l32 
+--------+-------+-----+---+----+----+----+----+----+----+----+----+----+----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----
+ Black  | Dream | 200 | 1 |    |    |    |    |    |    |    |    |    |    |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |    
+(1 row)
+
+select * from rq_product;
+ pn  |   pname   |  pcolor   
+-----+-----------+-----------
+ 400 | Justice   | Clear
+ 600 | Donuts    | Chocolate
+ 800 | Fries     | Grey
+ 200 | Dream     | Black
+ 300 | Castle    | Grey
+ 100 | Sword     | Black
+ 500 | Donuts    | Plain
+ 700 | Hamburger | Grey
+(8 rows)
+
+fetch c0;
+ pcolor | pname | pn  | n | l0  | l1  | l2  | l3  | l4  | l5  | l6  | l7  | l8  | l9  | l10 | l11 | l12 | l13 | l14 | l15 | l16 | l17 | l18 | l19 | l20 | l21 | l22 | l23 | l24 | l25 | l26 | l27 | l28 | l29 | l30 | l31 | l32 
+--------+-------+-----+---+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----
+ Black  | Sword | 100 | 2 | 200 | 201 | 202 | 203 | 204 | 205 | 206 | 207 | 208 | 209 | 210 | 211 | 212 | 213 | 214 | 215 | 216 | 217 | 218 | 219 | 220 | 221 | 222 | 223 | 224 | 225 | 226 | 227 | 228 | 229 | 230 | 231 | 232
+(1 row)
+
+abort;
+RESET SESSION_AUTHORIZATION;
+DROP OWNED BY rq_test_u CASCADE;
+DROP USER rq_test_u;
+DROP RESOURCE QUEUE rq_test_q;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP TABLE rq_product;

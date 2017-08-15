@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 DROP TABLE if exists lu_customer;
 NOTICE:  table "lu_customer" does not exist, skipping
 CREATE TABLE lu_customer (
@@ -77,7 +78,7 @@ abort;
 CREATE TABLE cursor_writer_reader (a int, b int) DISTRIBUTED BY (a);
 BEGIN;
 INSERT INTO cursor_writer_reader VALUES(1, 666);
-select gp_inject_fault('qe_got_snapshot_and_interconnect', 'suspend', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'suspend', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -87,14 +88,14 @@ NOTICE:  Success:
 DECLARE cursor_c2 CURSOR FOR SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 SAVEPOINT x;
 UPDATE cursor_writer_reader SET b=333 WHERE b=666;
-select gp_inject_fault('qe_got_snapshot_and_interconnect', 'status', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'status', 2);
 NOTICE:  Success: fault name:'qe_got_snapshot_and_interconnect' fault type:'suspend' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'triggered'  num times hit:'1'
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
-select gp_inject_fault('qe_got_snapshot_and_interconnect', 'resume', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'resume', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
@@ -113,7 +114,7 @@ SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 (0 rows)
 
 END;
-select gp_inject_fault('qe_got_snapshot_and_interconnect', 'reset', '', '', '', 1, 0, 2::smallint);
+select gp_inject_fault('qe_got_snapshot_and_interconnect', 'reset', 2);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------

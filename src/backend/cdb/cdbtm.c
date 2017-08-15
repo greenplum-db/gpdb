@@ -10,10 +10,8 @@
 #include "postgres.h"
 
 #include <time.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/file.h>
-#include <sys/stat.h>
 
 #include "catalog/pg_authid.h"
 #include "cdb/cdbtm.h"
@@ -28,9 +26,10 @@
 #include "cdb/cdbdtxcontextinfo.h"
 
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
 #include "access/transam.h"
 #include "access/xact.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "lib/stringinfo.h"
 #include "access/twophase.h"
@@ -43,7 +42,6 @@
 #include "cdb/cdbllize.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
-#include "utils/memutils.h"
 #include "utils/sharedsnapshot.h"
 
 extern bool Test_print_direct_dispatch_info;
@@ -67,17 +65,12 @@ static volatile bool *shmTmRecoverred;
 static volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
 static volatile DistributedTransactionId *shmGIDSeq = NULL;
 static volatile int *shmNumGxacts;
-static int *shmCurrentPhase1Count;
 
 static int	ControlLockCount = 0;
-
-volatile int *shmSegmentCount;
-volatile int *shmSegmentStatesByteLen;
 
 uint32 					 *shmNextSnapshotId;
 
 volatile bool	*shmDtmStarted;
-volatile bool	*shmDtmRecoveryDeferred; /* when starting in readonly mode */
 
 /* global transaction array */
 static TMGXACT **shmGxactArray;
@@ -656,15 +649,6 @@ doPrepareTransaction(void)
 	getTmLock();
 	Assert(currentGxact->state == DTX_STATE_ACTIVE_DISTRIBUTED);
 	setCurrentGxactState( DTX_STATE_PREPARING );
-
-	/*
-	 * We keep a current count of the number of DTX transactions between
-	 * 'PREPARING' and confirmed 'COMMIT' or 'ABORT'.
-	 *
-	 * To simplify bookkeeping, we turn on a flag in the gxact object.
-	 */
-	(*shmCurrentPhase1Count)++;
-	currentGxact->bumpedPhase1Count = true;
 	releaseTmLock();
 
 	elog(DTM_DEBUG5, "doPrepareTransaction moved to state = %s", DtxStateToString(currentGxact->state));
@@ -1638,12 +1622,8 @@ tmShmemInit(void)
 		*shmGIDSeq = FirstDistributedTransactionId;
 	}
 	shmDtmStarted = &shared->DtmStarted;
-	shmDtmRecoveryDeferred = &shared->DtmDeferRecovery;
-	shmSegmentCount = &shared->SegmentCount;
-	shmSegmentStatesByteLen = &shared->SegmentsStatesByteLen;
 	shmNextSnapshotId = &shared->NextSnapshotId;
 	shmNumGxacts = &shared->num_active_xacts;
-	shmCurrentPhase1Count = &shared->currentPhase1Count;
 	shmGxactArray = shared->gxact_array;
 
 	if (!IsUnderPostmaster)
@@ -1668,7 +1648,7 @@ tmShmemInit(void)
 /*
  * restore global transaction during tm log recovery
  */
-void
+static void
 restoreGxact(TMGXACT_LOG * gxact_log, DtxState state)
 {
 	Assert (gxact_log != NULL);
@@ -2275,8 +2255,6 @@ initGxact(TMGXACT * gxact)
 
 	gxact->xminDistributedSnapshot = InvalidDistributedTransactionId;
 
-	gxact->bumpedPhase1Count = false;
-
 	gxact->badPrepareGangs = false;
 
 	gxact->retryPhase2RecursionStop = false;
@@ -2654,11 +2632,6 @@ releaseGxact_UnderLocks(void)
 		shmGxactArray[*shmNumGxacts] = currentGxact;
 	}
 
-	if (currentGxact->bumpedPhase1Count)
-	{
-		(*shmCurrentPhase1Count)--;
-	}
-
 	currentGxact = NULL;
 }
 
@@ -2918,6 +2891,8 @@ getMaxDistributedXid(void)
 static void
 recoverTM(void)
 {
+	bool		dtmRecoveryDeferred;
+
 	/* intialize fts sync count */
 	verifyFtsSyncCount();
 
@@ -2939,10 +2914,10 @@ recoverTM(void)
 		}
 		currentGxact = NULL;
 
-		*shmDtmRecoveryDeferred = true;
+		dtmRecoveryDeferred = true;
 	}
 	else
-		*shmDtmRecoveryDeferred = false;
+		dtmRecoveryDeferred = false;
 
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
@@ -2950,7 +2925,7 @@ recoverTM(void)
 		return;
 	}
 
-	if (!*shmDtmRecoveryDeferred)
+	if (!dtmRecoveryDeferred)
 	{
 		/*
 		 * Attempt to recover all in-doubt transactions.
@@ -3773,8 +3748,6 @@ finishDistributedTransactionContext (char* debugCaller, bool aborted)
 	   (currentGxact->state != DTX_STATE_RETRY_COMMIT_PREPARED &&
 	    currentGxact->state != DTX_STATE_RETRY_ABORT_PREPARED))
 	{
-/*		PleaseDebugMe("finishDistributedTransactionContext currentGxact == NULL"); */
-
 		elog(FATAL, "Expected currentGxact to be NULL at this point.  Found gid =%s, gxid = %u (state = %s, caller = %s)",
 			currentGxact->gid, currentGxact->gxid, DtxStateToString(currentGxact->state), debugCaller);
 	}

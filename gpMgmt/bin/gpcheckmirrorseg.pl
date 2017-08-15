@@ -217,8 +217,7 @@ tables have a similar issue, since the implementation encodes the eof
 for each file of the cols of a segno in a single raw vpinfo struct
 (containing a variable length array) that is stored in a catalog
 column as a bytea.  In particular (see MPP-10900), we assume that
-platform is 64-bit aligned little-endian (x86), with the exception
-that all Mac is 32-bit aligned.
+platform is 64-bit aligned little-endian (x86).
 
 =head1 AUTHORS
 
@@ -499,6 +498,7 @@ sub ignore_list
 		gp_temporary_files_filespace
 		gp_transaction_files_filespace
 		slru_checksum_file
+                errlog
 		);
 
 	# add any other expressions (eg user-supplied)
@@ -756,8 +756,8 @@ sub get_presh2_txt
 #			
 #			if ($readlen && ($readlen < $bufl))
 #			{
-#				warn "file $filnam shorter than $orig_sz bytes";
-#				die "read only $cur_sz bytes (last block $readlen bytes vs $bufl)" ;
+#				warn "file $filnam shorter than $orig_sz bytes\n";
+#				die "read only $cur_sz bytes (last block $readlen bytes vs $bufl)\n" ;
 #			}
 #			
 #			if ($bufsiz > $sz)
@@ -804,12 +804,12 @@ sub get_presh2_txt
 #
 #			# bits			  64 16			
 #			# bytes			   8 2
-#			my @foo = unpack("L2 S S S S S S ", $buf);
+#			my @foo = unpack("L2 S S S S S S ", $buf); # referring to PageHeaderData in bufpage.h for details
 #			
 #			shift @foo; # discard XLogRecPtr
 #			shift @foo;
 #			
-#			shift @foo; # discard pd_tli, pd_flags
+#			shift @foo; # discard pd_checksum, pd_flags
 #			shift @foo;
 #			
 #			my $pd_lower = shift @foo;
@@ -892,6 +892,10 @@ sub get_presh2_txt
 #
 #				push @pagehdr, $skippi;
 #			}
+#
+#			@pagehdr[2] = 0; # mask out the checksum
+#			my $page_header_with_checksum_masked = pack("L2 S6", @pagehdr);
+#			substr($buf, 0, length($page_header_with_checksum_masked)) = $page_header_with_checksum_masked;
 #			
 #			my $ii = 0;
 #			
@@ -900,23 +904,21 @@ sub get_presh2_txt
 #			#   heap case:  find tuples and fix hint bits
 #			while ($ii < scalar(@baz))
 #			{
-#				my $s1 = $baz[$ii];
+#				my $s1 = $baz[$ii]; # $s1 and $s2 is representing data stored in ItemIdData, see itemid.h for details
 #				my $s2 = $baz[$ii+1];
 #				
 #				$ii += 2;
 #				
 #				my $lp_off = $s1;
-#				$lp_off = $lp_off & 0x7FFF;
-#				
-#				my $lp_flags = 0;
-#				
-#				my $lp_len = $s2 >> 1;
+#				$lp_off = $lp_off & 0x7FFF; # discard bit of lp_flags information
+#
+#				my $lp_len = $s2 >> 1; # discard bit of lp_flags information
 #
 #				if ($isBtree)
 #				{
 #					# fixup s2 (part of lp_flags) -- mask out
 #					# LP_DELETE hint bit
-#					$baz[$ii-1] = 0xFFFFFE & $s2;
+#					$baz[$ii-1] = 0xFFFE & $s2;
 #				}
 #				else # heap tuple hint bit cleanup
 #				{
@@ -934,10 +936,9 @@ sub get_presh2_txt
 #
 #			if ($isBtree)
 #			{
-#				# use revised lp_flags in page hdr
-#				push @pagehdr, @baz;
-#				my $fixhdr = pack("L2 S S S S S S S$twomax", @pagehdr);
-#				substr($buf, 0, length($fixhdr)) = $fixhdr;
+#				# use revised lp_flags in the lp array
+#				my $fix_lp_array = pack("S$twomax", @baz);
+#				substr($buf, length($page_header_with_checksum_masked), length($fix_lp_array)) = $fix_lp_array;
 #			}
 #
 #		  L_endloop:			
@@ -1240,21 +1241,11 @@ sub find_eof_in_vpinfo
 
 		my $nentry = $ppp[0];
 
-		# MPP-10900: treat all platforms as 64 bit aligned (except
-		# mac).  XXX XXX: May need to get a bit more sophisticated at
-		# a later date to handle platforms like 64 bit mac, 32 bit
-		# Centos, or Sparc.
-		my $isMac = 0;
-
-		$isMac = 
-			($Config{'osname'} =~ m/darwin|mac|apple/i);
-
 		# two 64 bit (I2) fields in each entry, so multiply by 4
 		my $nentry2 = $nentry * 4;
 
-		# the mac is 32 bit aligned, but other platforms are 64 bit
-		# aligned, so we need another 32 bits of packing.
-		$nentry2++ unless $isMac;
+		# 64 bit aligned, so we need another 32 bits of packing.
+		$nentry2++;
 
 		@ppp = unpack("I2 I$nentry2", $bigbuf);
 
@@ -1263,7 +1254,7 @@ sub find_eof_in_vpinfo
 		shift @ppp;
 
 		# and discard the packing...
-		shift @ppp unless $isMac;
+		shift @ppp;
 
 #		print "\nppp: \n",Data::Dumper->Dump(\@ppp);
 
@@ -1583,7 +1574,7 @@ sub get_relfilenode_func
 			}
 
 			unless (exists($rnod->{relkind})
-					&& ($rnod->{relkind} =~ m/^(r|o|t|i)$/))
+					&& ($rnod->{relkind} =~ m/^(r|o|t|i|b|m|S)$/))
 			{
 				$bstat = 0;
 				print Data::Dumper->Dump([$vv2]),"\n";

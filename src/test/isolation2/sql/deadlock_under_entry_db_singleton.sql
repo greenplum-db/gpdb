@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
 -- Test to validate that ENTRY_DB_SINGLETON reader does not cause a
 -- deadlock.
 --
@@ -34,8 +36,8 @@ END $$ /*in func*/
 LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 
 -- inject fault on QD
-! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1;
-! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y suspend -o 0 -s 1;
+select gp_inject_fault('transaction_start_under_entry_db_singleton', 'reset', 1);
+select gp_inject_fault('transaction_start_under_entry_db_singleton', 'suspend', 1);
 
 -- The QD should already hold RowExclusiveLock and ExclusiveLock on
 -- deadlock_entry_db_singleton_table and the QE ENTRY_DB_SINGLETON
@@ -43,7 +45,7 @@ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 1&:UPDATE deadlock_entry_db_singleton_table set d = d + 1 FROM (select 1 from deadlock_entry_db_singleton_table, function_volatile(5)) t;
 
 -- verify the fault hit
-! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y status -o 0 -s 1;
+select gp_inject_fault('transaction_start_under_entry_db_singleton', 'status', 1);
 
 -- This session will wait for ExclusiveLock on
 -- deadlock_entry_db_singleton_table.
@@ -55,8 +57,8 @@ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
 -- In spite of the waitMask conflict the lock should be granted to
 -- ENTRY_DB_SINGLETON reader because its writer already holds the
 -- lock.  Otherwise, we may have a deadlock.
-! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y resume  -o 0 -s 1;
-! gpfaultinjector -f transaction_start_under_entry_db_singleton -m async -y reset -o 0 -s 1;
+select gp_inject_fault('transaction_start_under_entry_db_singleton', 'resume', 1);
+select gp_inject_fault('transaction_start_under_entry_db_singleton', 'reset', 1);
 
 -- verify the deadlock across multiple pids with same mpp session id
 with lock_on_deadlock_entry_db_singleton_table as (select * from pg_locks

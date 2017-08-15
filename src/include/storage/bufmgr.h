@@ -14,6 +14,8 @@
 #ifndef BUFMGR_H
 #define BUFMGR_H
 
+#include "cdb/cdbfilerepprimary.h"
+#include "miscadmin.h"
 #include "storage/buf.h"
 #include "storage/buf_internals.h"
 #include "storage/bufpage.h"
@@ -318,6 +320,7 @@ extern void FlushDatabaseBuffers(Oid dbid);
 extern void DropRelFileNodeBuffers(RelFileNode rnode, bool istemp,
 					   BlockNumber firstDelBlock);
 extern void DropDatabaseBuffers(Oid tbpoid, Oid dbid);
+extern XLogRecPtr BufferGetLSNAtomic(Buffer buffer);
 
 #ifdef NOT_USED
 extern void PrintPinnedBufs(void);
@@ -325,7 +328,7 @@ extern void PrintPinnedBufs(void);
 extern Size BufferShmemSize(void);
 extern RelFileNode BufferGetFileNode(Buffer buffer);
 
-extern void SetBufferCommitInfoNeedsSave(Buffer buffer);
+extern void MarkBufferDirtyHint(Buffer buffer, Relation relation);
 
 extern void UnlockBuffers(void);
 extern void LockBuffer(Buffer buffer, int mode);

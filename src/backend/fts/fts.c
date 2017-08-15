@@ -23,6 +23,8 @@
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "cdb/cdbvars.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "postmaster/fork_process.h"
 #include "postmaster/postmaster.h"

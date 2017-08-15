@@ -10,6 +10,8 @@
 DROP TABLE IF EXISTS ao;
 CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
 
+ALTER RESOURCE GROUP admin_group SET CONCURRENCY 130;
+
 1: BEGIN;
 2: BEGIN;
 3: BEGIN;
@@ -396,3 +398,5 @@ CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@)
 128: ROLLBACK;
 SELECT * FROM ao;
 SELECT * FROM gp_ao_or_aocs_seg_name('ao') ORDER BY segno;
+
+ALTER RESOURCE GROUP admin_group SET CONCURRENCY 20;

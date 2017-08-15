@@ -1,0 +1,215 @@
+-- start_ignore
+DROP ROLE IF EXISTS role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+ERROR:  resource group "rg1_memory_test" does not exist
+-- end_ignore
+
+CREATE OR REPLACE FUNCTION resGroupPalloc(float) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'resGroupPalloc' LANGUAGE C READS SQL DATA;
+CREATE
+
+CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($2) $$ LANGUAGE sql;
+CREATE
+
+CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, proposed_memory_limit, memory_shared_quota, proposed_memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test';
+CREATE
+
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=50, memory_shared_quota=0, memory_spill_ratio=20);
+CREATE
+CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
+CREATE
+
+--
+-- 1.1) alter memory shared quota with low memory usage
+--
+
+ALTER RESOURCE GROUP rg1_memory_test SET CONCURRENCY 2;
+ALTER
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 60;
+ALTER
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 50;
+ALTER
+
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|60          |60                   |50                 |50                          
+(1 row)
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,0.1);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+-- proc 1 gets a quota of 60%*50%/2=15%
+-- it has consumed 60%*10%=6%
+-- the group has 60%*50%-15%=15% free quota and 60%*50%=30% free shared quota
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 20;
+ALTER
+
+-- now the group has 60%*80%-15%=33% free quota and 60%*20%=12% free shared quota,
+-- so memory_shared_quota shall be the new value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|60          |60                   |20                 |20                          
+(1 row)
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 70;
+ALTER
+
+-- now the group has 60%*30%-15%=3% free quota and 60%*70%=42% free shared quota,
+-- so memory_shared_quota shall be the new value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|60          |60                   |70                 |70                          
+(1 row)
+
+--
+-- 1.2) alter memory shared quota with high memory usage
+--
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 80;
+ALTER
+
+-- now the group has 60%*20%-15%=-3% free quota and 60%*80%=48% free shared quota,
+-- so memory_shared_quota shall be the old value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|60          |60                   |70                 |80                          
+(1 row)
+
+1q: ... <quitting>
+
+--
+-- 2.1) alter memory limit with low memory usage (and low memory shared usage)
+--
+
+ALTER RESOURCE GROUP rg1_memory_test SET CONCURRENCY 2;
+ALTER
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 50;
+ALTER
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 60;
+ALTER
+
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|50          |50                   |60                 |60                          
+(1 row)
+
+1: SET ROLE TO role1_memory_test;
+SET
+1: BEGIN;
+BEGIN
+1: SELECT hold_memory_by_percent(1,0.1);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+-- proc 1 gets a quota of 50%*40%/2=10%
+-- it has consumed 50%*10%=5%
+-- the group has 50%*40%-10%=10% free quota and 50%*60%=30% free shared quota
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 60;
+ALTER
+
+-- now the group has 60%*40%-10%=14% free quota and 60%*60%=36% free shared quota,
+-- so memory_limit shall be the new value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|60          |60                   |60                 |60                          
+(1 row)
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 40;
+ALTER
+
+-- now the group has 40%*40%-10%=6% free quota and 40%*60%=24% free shared quota,
+-- so memory_limit shall be the new value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|40          |40                   |60                 |60                          
+(1 row)
+
+--
+-- 2.2) alter memory limit with high memory usage and low memory shared usage
+--
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 10;
+ALTER
+
+-- now the group has 10%*40%-10%=-6% free quota and 10%*60%=6% free shared quota,
+-- so memory_limit shall be the old value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|40          |10                   |60                 |60                          
+(1 row)
+
+--
+-- 8.3) alter memory limit with high memory usage and high memory shared usage
+--
+
+ALTER RESOURCE GROUP rg1_memory_test SET CONCURRENCY 2;
+ALTER
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 40;
+ALTER
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 60;
+ALTER
+
+-- now the group has 40%*40%-10%=6% free quota and 40%*60%=24% free shared quota,
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|40          |40                   |60                 |60                          
+(1 row)
+
+1: SELECT hold_memory_by_percent(1,0.5);
+hold_memory_by_percent
+----------------------
+0                     
+(1 row)
+-- proc 1 has consumed another 50%*50%=25%, in total 30%
+-- now it has consumed all its 10% quota, as well as 20% shared quota
+-- now the group has 40%*40%-10%=6% free quota and 40%*60%-20%=4% free shared quota,
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SHARED_QUOTA 20;
+ALTER
+
+-- now the group has 40%*80%-10%=22% free quota and 40%*20%-20%=-12% free shared quota,
+-- so memory_shared_quota shall be the old value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|40          |40                   |60                 |20                          
+(1 row)
+
+ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 30;
+ALTER
+
+-- now the group has 30%*80%-10%=14% free quota and 30%*20%-20%=-14% free shared quota,
+-- so memory_limit shall be the old value.
+SELECT * FROM rg_mem_status;
+groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
+---------------+------------+---------------------+-------------------+----------------------------
+rg1_memory_test|40          |30                   |60                 |20                          
+(1 row)
+
+1q: ... <quitting>
+
+-- cleanup
+DROP VIEW rg_mem_status;
+DROP
+DROP ROLE role1_memory_test;
+DROP
+DROP RESOURCE GROUP rg1_memory_test;
+DROP

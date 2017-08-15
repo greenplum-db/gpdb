@@ -285,10 +285,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE &&
-			gp_log_resqueue_memory)
+		if (!IsResManagerMemoryPolicyNone() &&
+			LogResManagerMemory())
 		{
-			elog(gp_resqueue_memory_log_level, "query requested %.0fKB of memory",
+			elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "query requested %.0fKB of memory",
 				 (double) queryDesc->plannedstmt->query_mem / 1024.0);
 		}
 
@@ -298,18 +298,18 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 		 */
 		if (queryDesc->plannedstmt->query_mem > 0)
 		{
-			switch(gp_resqueue_memory_policy)
+			switch(*gp_resmanager_memory_policy)
 			{
-				case RESQUEUE_MEMORY_POLICY_AUTO:
+				case RESMANAGER_MEMORY_POLICY_AUTO:
 					PolicyAutoAssignOperatorMemoryKB(queryDesc->plannedstmt,
 													 queryDesc->plannedstmt->query_mem);
 					break;
-				case RESQUEUE_MEMORY_POLICY_EAGER_FREE:
+				case RESMANAGER_MEMORY_POLICY_EAGER_FREE:
 					PolicyEagerFreeAssignOperatorMemoryKB(queryDesc->plannedstmt,
 														  queryDesc->plannedstmt->query_mem);
 					break;
 				default:
-					Assert(gp_resqueue_memory_policy == RESQUEUE_MEMORY_POLICY_NONE);
+					Assert(IsResManagerMemoryPolicyNone());
 					break;
 			}
 		}
@@ -4697,7 +4697,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 	DR_intorel *myState;
 	char	   *intoTableSpaceName;
     GpPolicy   *targetPolicy;
-	int			safefswritesize = gp_safefswritesize;
 	bool		bufferPoolBulkLoad;
 
 	RelFileNode relFileNode;
@@ -4802,7 +4801,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 
 	/* get the relstorage (heap or AO tables) */
 	stdRdOptions = (StdRdOptions*) heap_reloptions(relkind, reloptions, true);
-	heap_test_override_reloptions(relkind, stdRdOptions, &safefswritesize);
 	if(stdRdOptions->appendonly)
 		relstorage = stdRdOptions->columnstore ? RELSTORAGE_AOCOLS : RELSTORAGE_AOROWS;
 	else

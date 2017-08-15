@@ -14,30 +14,8 @@
  */
 #include "postgres.h"
 
-#include <time.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-
 #include "cdb/cdbtm.h"
-#include "miscadmin.h"
-#include "storage/shmem.h"
-#include "storage/ipc.h"
-#include "cdb/cdbdisp_query.h"
-#include "cdb/cdbdtxcontextinfo.h"
-
-#include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
-#include "access/transam.h"
 #include "access/xact.h"
-#include "cdb/cdbfts.h"
-#include "lib/stringinfo.h"
-#include "access/twophase.h"
-#include "access/distributedlog.h"
-#include "postmaster/postmaster.h"
-
-#include "cdb/cdbllize.h"
 
 /*
  * Crack open the gid to get the DTM start time and distributed
@@ -119,18 +97,5 @@ char* DtxContextToString(DtxContext context)
 		case DTX_CONTEXT_QE_PREPARED: return "Segment Prepared";
 		case DTX_CONTEXT_QE_FINISH_PREPARED: return "Segment Finish Prepared";
 		default: return "Unknown";
-	}
-}
-
-void
-PleaseDebugMe(char *caller)
-{
-	int i;
-
-	for (i = 0; i < 300;i++)
-	{
-		elog(LOG, "%s  --> Now would be a good time to debug pid = %d", caller, MyProcPid);
-		elog(NOTICE, "%s  --> Now would be a good time to debug pid = %d", caller, MyProcPid);
-		pg_usleep(1000000L);
 	}
 }

@@ -21,6 +21,8 @@
 
 #include "storage/ipc.h"		/* For proc_exit_inprogress  */
 #include "tcop/tcopprot.h"
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
@@ -158,7 +160,7 @@ create_gang_retry:
 				{
 					case PGRES_POLLING_OK:
 						cdbconn_doConnectComplete(segdbDesc);
-						if (segdbDesc->motionListener == -1 || segdbDesc->motionListener == 0)
+						if (segdbDesc->motionListener == 0)
 							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 									errmsg("failed to acquire resources on one or more segments"),
 									errdetail("Internal error: No motion listener port (%s)", segdbDesc->whoami)));
@@ -179,7 +181,7 @@ create_gang_retry:
 						break;
 
 					case PGRES_POLLING_FAILED:
-						if (segment_failure_due_to_recovery(&segdbDesc->conn->errorMessage))
+						if (segment_failure_due_to_recovery(PQerrorMessage(segdbDesc->conn)))
 						{
 							in_recovery_mode_count++;
 							connStatusDone[i] = true;

@@ -28,9 +28,7 @@
 #include "storage/freespace.h"
 #include "storage/lmgr.h"
 #include "utils/inval.h"
-#include "access/heapam.h"	// For RelationFetchGpRelationNodeForXLog.
-#include "utils/guc.h"
-#include "cdb/cdbfilerepprimary.h"
+#include "access/heapam.h"	/* For RelationFetchGpRelationNodeForXLog. */
 
 /*
  *	_bt_initmetapage() -- Fill a page buffer with a correct metapage image
@@ -246,9 +244,7 @@ _bt_getroot(Relation rel, int access)
 			recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_NEWROOT, &rdata);
 
 			PageSetLSN(rootpage, recptr);
-			PageSetTLI(rootpage, ThisTimeLineID);
 			PageSetLSN(metapg, recptr);
-			PageSetTLI(metapg, ThisTimeLineID);
 		}
 
 		END_CRIT_SECTION();
@@ -741,7 +737,6 @@ _bt_delitems(Relation rel, Buffer buf,
 		recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_DELETE, rdata);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -1317,22 +1312,17 @@ _bt_pagedel(Relation rel, Buffer buf, BTStack stack, bool vacuum_full)
 		if (BufferIsValid(metabuf))
 		{
 			PageSetLSN(metapg, recptr);
-			PageSetTLI(metapg, ThisTimeLineID);
 		}
 		page = BufferGetPage(pbuf);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 		page = BufferGetPage(rbuf);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 		page = BufferGetPage(buf);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 		if (BufferIsValid(lbuf))
 		{
 			page = BufferGetPage(lbuf);
 			PageSetLSN(page, recptr);
-			PageSetTLI(page, ThisTimeLineID);
 		}
 	}
 

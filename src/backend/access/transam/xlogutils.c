@@ -16,24 +16,19 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "postgres.h"
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-	 
-#include "postgres.h"
 
 #include "access/xlogutils.h"
-#include "catalog/pg_tablespace.h"
 #include "storage/bufpage.h"
 #include "storage/smgr.h"
 #include "utils/hsearch.h"
 
-#include "cdb/cdbmirroredfilesysobj.h"
-#include "cdb/cdbfilerepprimary.h"
 #include "cdb/cdbpersistentrecovery.h"
 #include "cdb/cdbpersistenttablespace.h"
-#include "utils/guc.h"
-#include "postmaster/postmaster.h"
 
 
 /*

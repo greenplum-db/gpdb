@@ -8,12 +8,10 @@
  */
 #include "postgres.h"
 
-#include "miscadmin.h"
-#include "pgstat.h"
-#include "utils/palloc.h"
-#include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
+#include "miscadmin.h"
 #include "storage/fd.h"
 #include "storage/relfilenode.h"
 #include "storage/dbdirnode.h"
@@ -29,7 +27,6 @@
 #include "access/aosegfiles.h"
 #include "access/aocssegfiles.h"
 #include "access/appendonlytid.h"
-#include "utils/guc.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 
 

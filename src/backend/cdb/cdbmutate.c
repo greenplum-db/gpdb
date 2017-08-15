@@ -944,6 +944,8 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
             if (flow->segindex >= 0 &&
                 context->sliceDepth == 0)
                 flow->segindex = -1;
+            else if (flow->segindex >= 0)
+                flow->segindex = gp_singleton_segindex;
 
             if (flow->numSortCols > 0)
             {

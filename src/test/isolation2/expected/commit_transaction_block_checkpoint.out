@@ -1,13 +1,14 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
 -- TEST 1: block checkpoint on segments
 
 -- pause the 2PC after setting inCommit flag
-! gpfaultinjector -f twophase_transaction_commit_prepared -m async -y suspend -o 0 -H ALL -r primary;
-20170303:00:02:12:067930 gpfaultinjector:-[INFO]:-Starting gpfaultinjector with args: -f twophase_transaction_commit_prepared -m async -y suspend -o 0 -H ALL -r primary
-20170303:00:02:12:067930 gpfaultinjector:-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170303:00:02:12:067930 gpfaultinjector:-[INFO]:-Injecting fault on content=1:dbid=3:mode=s:status=u
-20170303:00:02:12:067930 gpfaultinjector:-[INFO]:-Injecting fault on content=2:dbid=4:mode=s:status=u
-20170303:00:02:12:067930 gpfaultinjector:-[INFO]:-DONE
-
+select gp_inject_fault('twophase_transaction_commit_prepared', 'suspend', 3);
+gp_inject_fault
+---------------
+t              
+(1 row)
 
 -- trigger a 2PC, and it will block at commit;
 2: checkpoint;
@@ -22,13 +23,11 @@ CREATE
 3U&: checkpoint;  <waiting ...>
 
 -- resume the 2PC after setting inCommit flag
-! gpfaultinjector -f twophase_transaction_commit_prepared -m async -y reset -o 0 -H ALL -r primary;
-20170303:00:02:14:067954 gpfaultinjector:-[INFO]:-Starting gpfaultinjector with args: -f twophase_transaction_commit_prepared -m async -y reset -o 0 -H ALL -r primary
-20170303:00:02:14:067954 gpfaultinjector:-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170303:00:02:14:067954 gpfaultinjector:-[INFO]:-Injecting fault on content=1:dbid=3:mode=s:status=u
-20170303:00:02:14:067954 gpfaultinjector:-[INFO]:-Injecting fault on content=2:dbid=4:mode=s:status=u
-20170303:00:02:14:067954 gpfaultinjector:-[INFO]:-DONE
-
+select gp_inject_fault('twophase_transaction_commit_prepared', 'reset', 3);
+gp_inject_fault
+---------------
+t              
+(1 row)
 2<:  <... completed>
 COMMIT
 3U<:  <... completed>
@@ -38,11 +37,11 @@ CHECKPOINT
 
 -- pause the CommitTransaction right before persistent table cleanup after
 -- notifyCommittedDtxTransaction()
-! gpfaultinjector -f transaction_commit_pass1_from_drop_in_memory_to_drop_pending -m async -y suspend -o 0 -s 1;
-20170303:00:02:15:067973 gpfaultinjector:-[INFO]:-Starting gpfaultinjector with args: -f transaction_commit_pass1_from_drop_in_memory_to_drop_pending -m async -y suspend -o 0 -s 1
-20170303:00:02:15:067973 gpfaultinjector:-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170303:00:02:15:067973 gpfaultinjector:-[INFO]:-DONE
-
+select gp_inject_fault('transaction_commit_pass1_from_drop_in_memory_to_drop_pending', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
 
 -- trigger a 2PC, and it will block at commit;
 2: checkpoint;
@@ -57,11 +56,11 @@ DROP
 1U&: checkpoint;  <waiting ...>
 
 -- resume the 2PC
-! gpfaultinjector -f transaction_commit_pass1_from_drop_in_memory_to_drop_pending -m async -y reset -o 0 -s 1;
-20170303:00:02:16:067988 gpfaultinjector:-[INFO]:-Starting gpfaultinjector with args: -f transaction_commit_pass1_from_drop_in_memory_to_drop_pending -m async -y reset -o 0 -s 1
-20170303:00:02:16:067988 gpfaultinjector:-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170303:00:02:16:067988 gpfaultinjector:-[INFO]:-DONE
-
+select gp_inject_fault('transaction_commit_pass1_from_drop_in_memory_to_drop_pending', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
 2<:  <... completed>
 COMMIT
 1U<:  <... completed>

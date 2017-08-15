@@ -560,12 +560,10 @@ DefineQueryRewrite(char *rulename,
 		
 			heap_close(relNodeRelation, RowExclusiveLock);		
 		}
-		
 	}
 
 	/* Close rel, but keep lock till commit... */
 	heap_close(event_relation, NoLock);
-	
 }
 
 /*

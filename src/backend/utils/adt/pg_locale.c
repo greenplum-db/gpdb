@@ -193,9 +193,9 @@ pg_perm_setlocale(int category, const char *locale)
 }
 
 
-	/*
+/*
  * Is the locale name valid for the locale category?
-	 */
+ */
 bool
 check_locale(int category, const char *value)
 {

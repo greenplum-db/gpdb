@@ -26,7 +26,6 @@
 #include "storage/smgr.h"
 #include "parser/parse_oper.h"
 #include "utils/memutils.h"
-#include "cdb/cdbfilerepprimary.h"
 
 static void bmbuildCallback(Relation index,	ItemPointer tupleId, Datum *attdata,
 							bool *nulls, bool tupleIsAlive,	void *state);

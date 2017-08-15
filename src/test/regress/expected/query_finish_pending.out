@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 drop table if exists _tmp_table;
 NOTICE:  table "_tmp_table" does not exist, skipping
 create table _tmp_table (i1 int, i2 int, i3 int, i4 int);
@@ -8,15 +9,21 @@ insert into _tmp_table select i, i % 100, i % 10000, i % 75 from generate_series
 set statement_mem="2MB";
 set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
-\! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
-20170125:11:06:26:002993 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execsort_mksort_mergeruns -y reset --seg_dbid 2
-20170125:11:06:26:002993 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:26:002993 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- set QueryFinishPending=true in sort mergeruns. This will stop sort and set result_tape to NULL
-\! gpfaultinjector -f execsort_mksort_mergeruns -y finish_pending --seg_dbid 2
-20170125:11:06:26:003005 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execsort_mksort_mergeruns -y finish_pending --seg_dbid 2
-20170125:11:06:26:003005 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:26:003005 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execsort_mksort_mergeruns', 'finish_pending', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- return results although sort will be interrupted in one of the segments 
 select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS T, count(*) over (partition by i1) AS S from _tmp_table) AS TMP;
  s 
@@ -24,11 +31,13 @@ select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS
  1
 (1 row)
 
-\! gpfaultinjector -f execsort_mksort_mergeruns -y status --seg_dbid 2
-20170125:11:06:27:003020 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execsort_mksort_mergeruns -y status --seg_dbid 2
-20170125:11:06:27:003020 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:27:003020 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'execsort_mksort_mergeruns' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:27:003020 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execsort_mksort_mergeruns', 'status', 2);
+NOTICE:  Success: fault name:'execsort_mksort_mergeruns' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node
 drop table if exists testsisc;
@@ -42,16 +51,22 @@ insert into testsisc select i, i % 1000, i % 100000, i % 75 from
 set gp_resqueue_print_operator_memory_limits=on;
 set statement_mem='2MB';
 set gp_enable_mk_sort=off;
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
-20170125:11:06:27:003032 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y reset --seg_dbid 2
-20170125:11:06:27:003032 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:27:003032 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execshare_input_next', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
-\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
-20170125:11:06:27:003047 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y finish_pending --seg_dbid 2
-20170125:11:06:27:003047 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:27:003047 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execshare_input_next', 'finish_pending', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
@@ -61,24 +76,32 @@ LIMIT 2;
      1
 (2 rows)
 
-\! gpfaultinjector -f execshare_input_next -y status --seg_dbid 2
-20170125:11:06:28:003059 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y status --seg_dbid 2
-20170125:11:06:28:003059 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:28:003059 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:28:003059 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execshare_input_next', 'status', 2);
+NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node and sort_mk algorithm is used
 set gp_enable_mk_sort=on;
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
-20170125:11:06:28:003071 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y reset --seg_dbid 2
-20170125:11:06:28:003071 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:28:003071 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execshare_input_next', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
-\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
-20170125:11:06:28:003083 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y finish_pending --seg_dbid 2
-20170125:11:06:28:003083 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:28:003083 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execshare_input_next', 'finish_pending', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
@@ -88,18 +111,26 @@ LIMIT 2;
      1
 (2 rows)
 
-\! gpfaultinjector -f execshare_input_next -y status --seg_dbid 2
-20170125:11:06:28:003095 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y status --seg_dbid 2
-20170125:11:06:28:003095 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:28:003095 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'10' fault injection state:'completed'  num times hit:'1' 
-20170125:11:06:28:003095 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execshare_input_next', 'status', 2);
+NOTICE:  Success: fault name:'execshare_input_next' fault type:'finish_pending' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'completed'  num times hit:'1'
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 reset gp_enable_mk_sort;
 -- Disable faultinjectors
-\! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
-20170125:11:06:29:003107 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execsort_mksort_mergeruns -y reset --seg_dbid 2
-20170125:11:06:29:003107 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:29:003107 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
-20170125:11:06:29:003119 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Starting gpfaultinjector with args: -f execshare_input_next -y reset --seg_dbid 2
-20170125:11:06:29:003119 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170125:11:06:29:003119 gpfaultinjector:nikos-mac:narmenatzoglou-[INFO]:-DONE
+select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select gp_inject_fault('execshare_input_next', 'reset', 2);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+

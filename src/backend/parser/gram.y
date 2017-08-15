@@ -527,7 +527,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	LIKE LIMIT LISTEN LOAD LOCAL LOCALTIME LOCALTIMESTAMP LOCATION
 	LOCK_P LOGIN_P
 
-	MAPPING MATCH MAXVALUE MINUTE_P MINVALUE MODE MONTH_P MOVE
+	MAPPING MATCH MAXVALUE MEMORY_LIMIT MEMORY_SHARED_QUOTA MINUTE_P MINVALUE
+	MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NOCREATEDB
 	NOCREATEROLE NOCREATEUSER NOINHERIT NOLOGIN_P NONE NOSUPERUSER
@@ -786,6 +787,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc MASTER
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
+			%nonassoc MEMORY_LIMIT
+			%nonassoc MEMORY_SHARED_QUOTA
 			%nonassoc MERGE
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
@@ -1330,6 +1333,14 @@ OptResourceGroupElem:
 			| CPU_RATE_LIMIT IntegerOnly
 				{
 					$$ = makeDefElem("cpu_rate_limit", (Node *)$2);
+				}
+			| MEMORY_SHARED_QUOTA IntegerOnly
+				{
+					$$ = makeDefElem("memory_shared_quota", (Node *)$2);
+				}
+			| MEMORY_LIMIT IntegerOnly
+				{
+					$$ = makeDefElem("memory_limit", (Node *)$2);
 				}
 		;
 
@@ -13124,6 +13135,8 @@ unreserved_keyword:
 			| MASTER
 			| MATCH
 			| MAXVALUE
+			| MEMORY_LIMIT
+			| MEMORY_SHARED_QUOTA
 			| MERGE
 			| MINUTE_P
 			| MINVALUE
@@ -13419,6 +13432,8 @@ PartitionIdentKeyword: ABORT_P
 			| MASTER
 			| MATCH
 			| MAXVALUE
+			| MEMORY_LIMIT
+			| MEMORY_SHARED_QUOTA
 			| MERGE
 			| MINVALUE
 			| MISSING

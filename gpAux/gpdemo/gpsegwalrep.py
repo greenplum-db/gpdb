@@ -45,6 +45,7 @@ def runcommands(commands, thread_name, command_finish, exit_on_error=True):
                 output = output + subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True).split('\n')
         except subprocess.CalledProcessError, e:
             output.append(str(e))
+            output.append(e.output)
             if exit_on_error:
                 with PRINT_LOCK:
                     for line in output:

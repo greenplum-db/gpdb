@@ -12,9 +12,7 @@
 #include "funcapi.h"
 #include "access/heapam.h"
 #include "catalog/pg_type.h"
-#include "utils/builtins.h"
 #include "cdb/cdbutil.h"
-#include "cdb/cdbfts.h"
 
 Datum		gp_pgdatabase__(PG_FUNCTION_ARGS);
 

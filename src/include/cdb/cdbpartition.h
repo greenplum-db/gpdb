@@ -71,8 +71,6 @@ extern void rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pki
 
 extern bool rel_has_external_partition(Oid relid);
 
-extern bool query_has_external_partition(Query *query);
-
 extern bool rel_has_appendonly_partition(Oid relid);
 
 extern bool rel_is_child_partition(Oid relid);
@@ -144,6 +142,11 @@ partition_get_policies_attrs(PartitionNode *pn,
 /* RelationBuildPartitionDesc is built from get_parts */
 extern PartitionNode *get_parts(Oid relid, int2 level, Oid parent, bool inctemplate,
 		  bool includesubparts);
+
+extern PartitionNode *RelationBuildPartitionDesc(Relation rel,
+												 bool inctemplate);
+extern PartitionNode *RelationBuildPartitionDescByOid(Oid relid,
+												 bool inctemplate);
 
 extern List *
 rel_get_leaf_children_relids(Oid relid);
@@ -246,12 +249,6 @@ countLeafPartTables(Oid rootOid);
 extern void
 findPartitionMetadataEntry(List *partsMetadata, Oid partOid, PartitionNode **partsAndRules,
 							PartitionAccessMethods **accessMethods);
-
-extern void
-createValueArrays(int keyAttno, Datum **values, bool **isnull);
-
-extern void
-freeValueArrays(Datum *values, bool *isnull);
 
 extern PartitionRule*
 get_next_level_matched_partition(PartitionNode *partnode, Datum *values, bool *isnull,

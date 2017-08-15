@@ -19,6 +19,8 @@
 extern int	pq_flush(void);
 extern int	pq_putmessage(char msgtype, const char *s, size_t len);
 
+static uint32 cdbconn_get_motion_listener_port(PGconn *conn);
+
 #include "cdb/cdbconn.h"            /* me */
 #include "cdb/cdbutil.h"            /* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"
@@ -238,7 +240,6 @@ void cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
 	segdbDesc->conn = NULL;
 	segdbDesc->motionListener = 0;
 	segdbDesc->backendPid = 0;
-	segdbDesc->myAgent = NULL;
 
 	/*whoami*/
 	segdbDesc->whoami = NULL;
@@ -378,9 +379,9 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		 * Wait for it to respond giving us the TCP port number
 		 * where it listens for connections from the gang below.
 		 */
-		segdbDesc->motionListener = PQgetQEdetail(segdbDesc->conn);
+		segdbDesc->motionListener = cdbconn_get_motion_listener_port(segdbDesc->conn);
 		segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
-		if (segdbDesc->motionListener == -1 || segdbDesc->motionListener == 0)
+		if (segdbDesc->motionListener == 0)
 		{
 			segdbDesc->errcode = ERRCODE_GP_INTERNAL_ERROR;
 			appendPQExpBuffer(&segdbDesc->error_message,
@@ -395,7 +396,7 @@ void cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		else
 		{
 			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("Connected to %s motionListener=%d/%d with options: %s\n",
+				write_log("Connected to %s motionListener=%u/%u with options: %s\n",
 						  segdbDesc->whoami,
 						  (segdbDesc->motionListener & 0x0ffff),
 						  ((segdbDesc->motionListener>>16) & 0x0ffff),
@@ -495,14 +496,13 @@ cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc)
 	 * Wait for it to respond giving us the TCP port number
 	 * where it listens for connections from the gang below.
 	 */
-	segdbDesc->motionListener = PQgetQEdetail(segdbDesc->conn);
+	segdbDesc->motionListener = cdbconn_get_motion_listener_port(segdbDesc->conn);
 	segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
 
-	if (segdbDesc->motionListener != -1 &&
-		segdbDesc->motionListener != 0 &&
+	if (segdbDesc->motionListener != 0 &&
 		gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 	{
-		elog(LOG, "Connected to %s motionListenerPorts=%d/%d with options %s",
+		elog(LOG, "Connected to %s motionListenerPorts=%u/%u with options %s",
 			 segdbDesc->whoami,
 			 (segdbDesc->motionListener & 0x0ffff),
 			 ((segdbDesc->motionListener >> 16) & 0x0ffff),
@@ -658,4 +658,25 @@ cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
 
 	PQfreeCancel(cn);
 	return ret;
+}
+
+
+/* GPDB function to retrieve QE-backend details (motion listener) */
+static uint32
+cdbconn_get_motion_listener_port(PGconn *conn)
+{
+	const char *val;
+	char	   *endptr;
+	uint32		result;
+
+	val = PQparameterStatus(conn, "qe_listener_port");
+	if (!val)
+		return 0;
+
+	errno = 0;
+	result = strtoul(val, &endptr, 10);
+	if (endptr == val || *endptr != '\0' || errno == ERANGE)
+		return 0;
+
+	return result;
 }

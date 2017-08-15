@@ -29,11 +29,6 @@ typedef struct _readindexinfo
 	OffsetNumber maxoff;
 } readindexinfo;
 
-static bool
-FileRepPrimary_IsResyncManagerOrWorker()
-{
-	return false;
-}
 
 #define FIXED_COLUMN 5
 

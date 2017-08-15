@@ -1,7 +1,9 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
 -- TEST 1: block checkpoint on segments
 
 -- pause the 2PC after setting inCommit flag
-! gpfaultinjector -f twophase_transaction_commit_prepared -m async -y suspend -o 0 -H ALL -r primary;
+select gp_inject_fault('twophase_transaction_commit_prepared', 'suspend', 3);
 
 -- trigger a 2PC, and it will block at commit;
 2: checkpoint;
@@ -13,7 +15,7 @@
 3U&: checkpoint;
 
 -- resume the 2PC after setting inCommit flag
-! gpfaultinjector -f twophase_transaction_commit_prepared -m async -y reset -o 0 -H ALL -r primary;
+select gp_inject_fault('twophase_transaction_commit_prepared', 'reset', 3);
 2<:
 3U<:
 
@@ -21,7 +23,7 @@
 
 -- pause the CommitTransaction right before persistent table cleanup after
 -- notifyCommittedDtxTransaction()
-! gpfaultinjector -f transaction_commit_pass1_from_drop_in_memory_to_drop_pending -m async -y suspend -o 0 -s 1;
+select gp_inject_fault('transaction_commit_pass1_from_drop_in_memory_to_drop_pending', 'suspend', 1);
 
 -- trigger a 2PC, and it will block at commit;
 2: checkpoint;
@@ -33,7 +35,7 @@
 1U&: checkpoint;
 
 -- resume the 2PC
-! gpfaultinjector -f transaction_commit_pass1_from_drop_in_memory_to_drop_pending -m async -y reset -o 0 -s 1;
+select gp_inject_fault('transaction_commit_pass1_from_drop_in_memory_to_drop_pending', 'reset', 1);
 2<:
 1U<:
 

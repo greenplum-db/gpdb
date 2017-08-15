@@ -90,14 +90,14 @@ SELECT coalesce(
 create language plpythonu;
 -- end_ignore
 
-CREATE OR REPLACE FUNCTION wait_for_trigger_fault(fault text, segno int)
+CREATE OR REPLACE FUNCTION wait_for_trigger_fault(dbname text, fault text, segno int)
 RETURNS bool as $$
     import subprocess 
     import time
-    cmd = 'gpfaultinjector -f %s -y status -s %d | grep -i triggered | wc -l' % (fault, segno)
+    cmd = 'psql %s -c "select gp_inject_fault(\'%s\', \'status\', %d)"' % (dbname, fault, segno)
     for i in range(100):
         cmd_output = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
-        if int(cmd_output.stdout.read()):
+        if 'triggered' in cmd_output.stdout.read():
             return True
         time.sleep(0.5)
     return False 

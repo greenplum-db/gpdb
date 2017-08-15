@@ -12,6 +12,7 @@ import difflib
 
 import yaml
 
+from datetime import datetime
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
@@ -103,6 +104,16 @@ def run_command(context, command):
     context.error_message = result.stderr
 
 
+def run_async_command(context, command):
+    context.exception = None
+    cmd = Command(name='run %s' % command, cmdStr='%s' % command)
+    try:
+        proc = cmd.runNoWait()
+    except ExecutionError, e:
+        context.exception = e
+    context.async_proc = proc
+
+
 def run_cmd(command):
     cmd = Command(name='run %s' % command, cmdStr='%s' % command)
     try:
@@ -138,6 +149,11 @@ def run_gpcommand(context, command, cmd_prefix=''):
     context.ret_code = result.rc
     context.stdout_message = result.stdout
     context.error_message = result.stderr
+
+
+def run_gpcommand_async(context, command):
+    cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
+    context.asyncproc = cmd.runNoWait()
 
 
 def check_stdout_msg(context, msg):
@@ -1294,6 +1310,17 @@ def kill_process(pid, host=None, sig=signal.SIGTERM):
     else:
         os.kill(pid, sig)
 
+def has_process_eventually_stopped(proc, host=None):
+    start_time = current_time = datetime.now()
+    is_running = False
+    while (current_time - start_time).seconds < 120:
+        is_running = is_process_running(proc, host)
+        if not is_running:
+            break
+        time.sleep(2)
+        current_time = datetime.now()
+    return not is_running
+
 
 def get_num_segments(primary=True, mirror=True, master=True, standby=True):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
@@ -1645,8 +1672,15 @@ def populate_regular_table_data(context, tabletype, table_name, compression_type
                          rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
 
 
-def is_process_running(proc_name):
-    cmd = Command(name='pgrep for %s' % proc_name, cmdStr="pgrep %s" % proc_name)
+def is_process_running(proc_name, host=None):
+    if host is not None:
+        cmd = Command(name='pgrep for %s' % proc_name,
+                      cmdStr="pgrep %s" % proc_name,
+                      ctxt=REMOTE,
+                      remoteHost=host)
+    else:
+        cmd = Command(name='pgrep for %s' % proc_name,
+                      cmdStr="pgrep %s" % proc_name)
     cmd.run()
     if cmd.get_return_code() > 1:
         raise Exception("unexpected problem with pgrep, return code: %s" % cmd.get_return_code())

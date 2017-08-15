@@ -28,6 +28,8 @@
 #include "utils/sharedsnapshot.h"
 #include "tcop/pquery.h"
 
+#include "gp-libpq-fe.h"
+#include "gp-libpq-int.h"
 #include "cdb/cdbconn.h"		/* SegmentDatabaseDescriptor */
 #include "cdb/cdbfts.h"
 #include "cdb/cdbdisp_query.h"
@@ -38,8 +40,6 @@
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"		/* Gp_role, etc. */
 #include "storage/bfz.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
 
@@ -99,7 +99,9 @@ static CdbComponentDatabaseInfo *findDatabaseInfoBySegIndex(
 		CdbComponentDatabases *cdbs, int segIndex);
 static void addGangToAllocated(Gang *gp);
 static Gang *getAvailableGang(GangType type, int size, int content);
+#ifdef USE_ASSERT_CHECKING
 static bool readerGangsExist(void);
+#endif
 
 /*
  * Create a reader gang.
@@ -312,17 +314,13 @@ isPrimaryWriterGangAlive(void)
 /*
  * Check the segment failure reason by comparing connection error message.
  */
-bool segment_failure_due_to_recovery(struct PQExpBufferData* error_message)
+bool
+segment_failure_due_to_recovery(const char *error_message)
 {
-	char *fatal = NULL, *message = NULL, *ptr = NULL;
+	char *fatal = NULL, *ptr = NULL;
 	int fatal_len = 0;
 
 	if (error_message == NULL)
-		return false;
-
-	message = error_message->data;
-
-	if (message == NULL)
 		return false;
 
 	fatal = _("FATAL");
@@ -336,14 +334,14 @@ bool segment_failure_due_to_recovery(struct PQExpBufferData* error_message)
 	 * the strings a lot we have to take extreme care with looking at
 	 * the string.
 	 */
-	ptr = strstr(message, fatal);
+	ptr = strstr(error_message, fatal);
 	if ((ptr != NULL) && ptr[fatal_len] == ':')
 	{
-		if (strstr(message, _(POSTMASTER_IN_STARTUP_MSG)))
+		if (strstr(error_message, _(POSTMASTER_IN_STARTUP_MSG)))
 		{
 			return true;
 		}
-		if (strstr(message, _(POSTMASTER_IN_RECOVERY_MSG)))
+		if (strstr(error_message, _(POSTMASTER_IN_RECOVERY_MSG)))
 		{
 			return true;
 		}

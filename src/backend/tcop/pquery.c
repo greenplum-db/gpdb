@@ -243,35 +243,35 @@ ProcessQuery(Portal portal,
 				GetResqueuePriority(portal->queueId));
 	}
 
-	/*
-	 * If resource scheduling is enabled and we are locking non SELECT queries,
-	 * or this is a SELECT INTO then lock the portal here. 
-	 * Skip if this query is added by the rewriter or
-	 * we are superuser.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH && 
-		IsResQueueEnabled() &&
-		(!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) && 
-		stmt->canSetTag
-		&& !superuser())
+	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
+
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		portal->status = PORTAL_QUEUE;
-		
-		if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
-			queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
-		
-		portal->releaseResLock = ResLockPortal(portal, queryDesc);
+
+		/*
+		 * If resource scheduling is enabled and we are locking non SELECT queries,
+		 * or this is a SELECT INTO then lock the portal here.
+		 * Skip if this query is added by the rewriter or
+		 * we are superuser.
+		 */
+		if (IsResQueueEnabled() && !superuser())
+		{
+			if((!ResourceSelectOnly || portal->sourceTag == T_SelectStmt) &&
+			   stmt->canSetTag)
+			{
+				portal->status = PORTAL_QUEUE;
+
+				portal->releaseResLock = ResLockPortal(portal, queryDesc);
+			}
+			else
+			{
+				/* we will not track this query, so reset the query_mem*/
+				queryDesc->plannedstmt->query_mem = 0;
+			}
+		}
 	}
 
 	portal->status = PORTAL_ACTIVE;
-	
-	if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
-			&& Gp_role == GP_ROLE_DISPATCH
-			&& gp_session_id > -1
-			&& superuser())
-	{
-		queryDesc->plannedstmt->query_mem = ResourceQueueGetSuperuserQueryMemoryLimit();
-	}
 
 	/*
 	 * Set up to collect AFTER triggers
@@ -672,54 +672,36 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 					queryDesc->portal_name = (portal->name ? pstrdup(portal->name) : (char *) NULL);
 				}
 
-				/*
-				 * If resource scheduling is enabled, lock the portal here.
-				 * Skip this if we are superuser!
-				 */
-				if (Gp_role == GP_ROLE_DISPATCH
-						&& IsResQueueEnabled()
-						&& !superuser() )
+				queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
+
+				if (Gp_role == GP_ROLE_DISPATCH)
 				{
-					/* 
-					 * MPP-16369 - If we are in SPI context, only acquire 
-					 * resource queue lock if the outer portal hasn't 
-					 * acquired it already. This code is analogous
-					 * to the code in _SPI_pquery. For cases where there is a 
-					 * cursor inside PL/pgSQL, we don't go via _SPI_pquery,
-					 * but execute PortalStart directly. Hence the following
-					 * check is needed to prevent self-deadlocks as described 
-					 * in MPP-16369. 
-					 * If not in SPI context, acquire resource queue lock with
-					 * no additional checks.
-					 */ 
-					if (SPI_context() && 
-						saveActivePortal && 
-						saveActivePortal->releaseResLock)
+					/*
+					 * If resource scheduling is enabled, lock the portal here.
+					 * Skip this if we are superuser!
+					 */
+					if (IsResQueueEnabled() && !superuser())
 					{
 						portal->status = PORTAL_QUEUE;
-						if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
-							queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
-					}
-					else
-					{
-						portal->status = PORTAL_QUEUE;
-						
-						if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE)
-							queryDesc->plannedstmt->query_mem = ResourceQueueGetQueryMemoryLimit(queryDesc->plannedstmt, portal->queueId);
-						portal->releaseResLock = ResLockPortal(portal, queryDesc);
+						/*
+						 * MPP-16369 - If we are in SPI context, only acquire
+						 * resource queue lock if the outer portal hasn't
+						 * acquired it already. This code is analogous
+						 * to the code in _SPI_pquery. For cases where there is a
+						 * cursor inside PL/pgSQL, we don't go via _SPI_pquery,
+						 * but execute PortalStart directly. Hence the following
+						 * check is needed to prevent self-deadlocks as described
+						 * in MPP-16369.
+						 * If not in SPI context, acquire resource queue lock with
+						 * no additional checks.
+						 */
+						if (!SPI_context() || !saveActivePortal || !saveActivePortal->releaseResLock)
+							portal->releaseResLock = ResLockPortal(portal, queryDesc);
 					}
 				}
 
 				portal->status = PORTAL_ACTIVE;
 
-				if (gp_resqueue_memory_policy != RESQUEUE_MEMORY_POLICY_NONE
-						&& Gp_role == GP_ROLE_DISPATCH
-						&& gp_session_id > -1
-						&& superuser())
-				{
-					queryDesc->plannedstmt->query_mem = ResourceQueueGetSuperuserQueryMemoryLimit();
-				}
-				
 				/*
 				 * We do *not* call AfterTriggerBeginQuery() here.	We assume
 				 * that a SELECT cannot queue any triggers.  It would be messy

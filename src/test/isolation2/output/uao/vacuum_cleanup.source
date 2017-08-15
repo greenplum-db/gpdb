@@ -1,6 +1,9 @@
 -- @Description Test that when there is a parallel vacuum going on in drop phase, the age of
 -- the AO/AOCS table gets reduced correctly.
 
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+
 1: create table ao_@orientation@_vacuum_cleanup1(a int, b int) with(appendonly=true, orientation=@orientation@);
 CREATE
 1: insert into ao_@orientation@_vacuum_cleanup1 select 1, i from generate_series(1, 100) i;
@@ -19,15 +22,15 @@ INSERT 100
 UPDATE 100
 
 
-1: !gpfaultinjector -f vacuum_relation_open_relation_during_drop_phase -y suspend -s 2;
-20170505:11:00:18:092363 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Starting gpfaultinjector with args: -f vacuum_relation_open_relation_during_drop_phase -y suspend -s 2
-20170505:11:00:18:092363 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170505:11:00:18:092363 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-DONE
-
+1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 2);
+gp_inject_fault
+---------------
+t              
+(1 row)
 
 2&: vacuum ao_@orientation@_vacuum_cleanup1;  <waiting ...>
 
-1: select wait_for_trigger_fault('vacuum_relation_open_relation_during_drop_phase', 2);
+1: select wait_for_trigger_fault((select current_database()), 'vacuum_relation_open_relation_during_drop_phase', 2);
 wait_for_trigger_fault
 ----------------------
 t                     
@@ -53,11 +56,11 @@ age
 3  
 (1 row)
 
-1: !gpfaultinjector -f vacuum_relation_open_relation_during_drop_phase -y reset -s 2;
-20170505:11:00:19:092390 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Starting gpfaultinjector with args: -f vacuum_relation_open_relation_during_drop_phase -y reset -s 2
-20170505:11:00:19:092390 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Injecting fault on content=0:dbid=2:mode=s:status=u
-20170505:11:00:19:092390 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-DONE
-
+1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 2);
+gp_inject_fault
+---------------
+t              
+(1 row)
 2<:  <... completed>
 VACUUM
 
@@ -78,16 +81,16 @@ age
 ---
 3  
 (1 row)
-1: !gpfaultinjector -f vacuum_relation_open_relation_during_drop_phase -y suspend -s 1;
-20170509:15:52:16:071163 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Starting gpfaultinjector with args: -f vacuum_relation_open_relation_during_drop_phase -y suspend -s 1
-20170509:15:52:16:071163 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170509:15:52:16:071163 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-DONE
-
+1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
 1&: vacuum ao_@orientation@_vacuum_cleanup3;  <waiting ...>
 
 -- Wait till compaction phase is completed and only then start the serializable
 -- transaction to ensure that only drop phase is skipped
-2: select wait_for_trigger_fault('vacuum_relation_open_relation_during_drop_phase', 1);
+2: select wait_for_trigger_fault((select current_database()), 'vacuum_relation_open_relation_during_drop_phase', 1);
 wait_for_trigger_fault
 ----------------------
 t                     
@@ -99,11 +102,11 @@ BEGIN
 --------
 123     
 (1 row)
-2: !gpfaultinjector -f vacuum_relation_open_relation_during_drop_phase -y reset -s 1;
-20170509:15:52:17:071190 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Starting gpfaultinjector with args: -f vacuum_relation_open_relation_during_drop_phase -y reset -s 1
-20170509:15:52:17:071190 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-Injecting fault on content=-1:dbid=1:mode=s:status=u
-20170509:15:52:17:071190 gpfaultinjector:subraa4-mac:abhijits-[INFO]:-DONE
-
+2: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
 
 1<:  <... completed>
 VACUUM

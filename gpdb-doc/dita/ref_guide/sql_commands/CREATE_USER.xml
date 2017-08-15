@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ci20941">CREATE USER</title><body><p id="sql_command_desc">Defines a new database role with the <codeph>LOGIN</codeph> privilege
-by default.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock><p>where <varname>option</varname> can be:</p><codeblock>      SUPERUSER | NOSUPERUSER
+<topic id="topic1">
+    <title id="ci20941">CREATE USER</title>
+    <body>
+        <p id="sql_command_desc">Defines a new database role with the <codeph>LOGIN</codeph>
+            privilege by default.</p>
+        <section id="section2">
+            <title>Synopsis</title>
+            <codeblock id="sql_command_synopsis">CREATE USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock>
+            <p>where <varname>option</varname> can be:</p>
+            <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
@@ -15,10 +23,24 @@ by default.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_
     | ROLE <varname>rolename</varname> [, ...]
     | ADMIN <varname>rolename</varname> [, ...]
     | USER <varname>rolename</varname> [, ...]
-    | SYSID <varname>uid</varname>    | RESOURCE QUEUE <varname>queue_name</varname></codeblock></section><section id="section3"><title>Description</title><p>As of Greenplum Database release 2.2, <codeph>CREATE USER</codeph> has been replaced by
-            <codeph><xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
-        although it is still accepted for backwards compatibility.</p><p>The only difference between <codeph>CREATE ROLE</codeph> and <codeph>CREATE
-USER</codeph> is that <codeph>LOGIN</codeph> is assumed by default with
-<codeph>CREATE USER</codeph>, whereas <codeph>NOLOGIN</codeph> is assumed
-by default with <codeph>CREATE ROLE</codeph>. </p></section><section id="section4"><title>Compatibility</title><p>There is no <codeph>CREATE USER</codeph> statement in the SQL standard.
-</p></section><section id="section5"><title>See Also</title><p><codeph><xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+    | SYSID <varname>uid</varname>    | RESOURCE QUEUE <varname>queue_name</varname></codeblock>
+        </section>
+        <section id="section3">
+            <title>Description</title>
+            <p><codeph>CREATE USER</codeph> is an alias for <codeph><xref
+                        href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>.</p>
+            <p>The only difference between <codeph>CREATE ROLE</codeph> and <codeph>CREATE
+                    USER</codeph> is that <codeph>LOGIN</codeph> is assumed by default with
+                    <codeph>CREATE USER</codeph>, whereas <codeph>NOLOGIN</codeph> is assumed by
+                default with <codeph>CREATE ROLE</codeph>. </p>
+        </section>
+        <section id="section4">
+            <title>Compatibility</title>
+            <p>There is no <codeph>CREATE USER</codeph> statement in the SQL standard. </p>
+        </section>
+        <section id="section5">
+            <title>See Also</title>
+            <p><codeph><xref href="CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph></p>
+        </section>
+    </body>
+</topic>

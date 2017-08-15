@@ -152,7 +152,6 @@ endif # PGXS
 
 includedir_server = $(pkgincludedir)/server
 includedir_internal = $(pkgincludedir)/internal
-includedir_internal_cdb = $(pkgincludedir)/internal/cdb
 pgxsdir = $(pkglibdir)/pgxs
 
 sqlmansect_dummy = l
@@ -176,6 +175,7 @@ with_zlib	= @with_zlib@
 with_apr_config	= @with_apr_config@
 with_apu_config	= @with_apu_config@
 with_libsigar	= @with_libsigar@
+with_pxf        = @with_pxf@
 enable_shared	= @enable_shared@
 enable_rpath	= @enable_rpath@
 # NLS is not supported in Greenplum, see comment documenting
@@ -247,6 +247,7 @@ CC = @CC@
 GCC = @GCC@
 SUN_STUDIO_CC = @SUN_STUDIO_CC@
 CFLAGS = @CFLAGS@
+CFLAGS_VECTOR = @CFLAGS_VECTOR@
 CFLAGS_SSE42 = @CFLAGS_SSE42@
 
 CXX = @CXX@

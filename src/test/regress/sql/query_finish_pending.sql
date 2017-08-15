@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
 drop table if exists _tmp_table;
 create table _tmp_table (i1 int, i2 int, i3 int, i4 int);
 insert into _tmp_table select i, i % 100, i % 10000, i % 75 from generate_series(0,99999) i;
@@ -7,14 +9,14 @@ set statement_mem="2MB";
 set gp_enable_mk_sort=on;
 set gp_cte_sharing=on;
 
-\! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
+select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
 -- set QueryFinishPending=true in sort mergeruns. This will stop sort and set result_tape to NULL
-\! gpfaultinjector -f execsort_mksort_mergeruns -y finish_pending --seg_dbid 2
+select gp_inject_fault('execsort_mksort_mergeruns', 'finish_pending', 2);
 
 -- return results although sort will be interrupted in one of the segments 
 select DISTINCT S from (select row_number() over(partition by i1 order by i2) AS T, count(*) over (partition by i1) AS S from _tmp_table) AS TMP;
 
-\! gpfaultinjector -f execsort_mksort_mergeruns -y status --seg_dbid 2
+select gp_inject_fault('execsort_mksort_mergeruns', 'status', 2);
 
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node
@@ -28,34 +30,34 @@ set gp_resqueue_print_operator_memory_limits=on;
 set statement_mem='2MB';
 set gp_enable_mk_sort=off;
 
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+select gp_inject_fault('execshare_input_next', 'reset', 2);
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
-\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
+select gp_inject_fault('execshare_input_next', 'finish_pending', 2);
 
 select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
 
-\! gpfaultinjector -f execshare_input_next -y status --seg_dbid 2
+select gp_inject_fault('execshare_input_next', 'status', 2);
 
 -- test if shared input scan deletes memory correctly when QueryFinishPending and its child has been eagerly freed,
 -- where the child is a Sort node and sort_mk algorithm is used
 
 set gp_enable_mk_sort=on;
 
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+select gp_inject_fault('execshare_input_next', 'reset', 2);
 -- Set QueryFinishPending to true after SharedInputScan has retrieved the first tuple. 
 -- This will eagerly free the memory context of shared input scan's child node.  
-\! gpfaultinjector -f execshare_input_next -y finish_pending --seg_dbid 2
+select gp_inject_fault('execshare_input_next', 'finish_pending', 2);
 
 select COUNT(i2) over(partition by i1)
 from testsisc
 LIMIT 2;
 
-\! gpfaultinjector -f execshare_input_next -y status --seg_dbid 2
+select gp_inject_fault('execshare_input_next', 'status', 2);
 
 reset gp_enable_mk_sort;
 -- Disable faultinjectors
-\! gpfaultinjector -f execsort_mksort_mergeruns -y reset --seg_dbid 2
-\! gpfaultinjector -f execshare_input_next -y reset --seg_dbid 2
+select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
+select gp_inject_fault('execshare_input_next', 'reset', 2);

@@ -37,9 +37,9 @@ cluster create-demo-cluster:
 	@echo ""
 
 create-segwalrep-cluster:
-	@WITH_MIRRORS=false ./demo_cluster.sh
-	@./gpsegwalrep.py init --host `hostname`
-	@./gpsegwalrep.py start
+	@WITH_MIRRORS=false ./demo_cluster.sh # will generate gpdemo-env.sh
+	@. ./gpdemo-env.sh;./gpsegwalrep.py init --host `hostname`
+	@. ./gpdemo-env.sh;./gpsegwalrep.py start
 	@echo""
 
 probe:

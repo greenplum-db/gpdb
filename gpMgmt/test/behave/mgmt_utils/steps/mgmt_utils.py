@@ -19,6 +19,7 @@ import json
 import csv
 import subprocess
 import commands
+import signal
 from collections import defaultdict
 
 from datetime import datetime
@@ -144,12 +145,76 @@ def impl(context, scenario_number):
     label_key = 'timestamp_labels' + scenario_number
     global_labels[label_key] = _read_label_from_json(context, label_key)
 
+@given('the cluster config is generated with data_checksums "{checksum_toggle}"')
+def impl(context, checksum_toggle):
+    stop_database(context)
+
+    cmd = """
+    cd ../gpAux/gpdemo; \
+        export MASTER_DEMO_PORT={master_port} && \
+        export DEMO_PORT_BASE={port_base} && \
+        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
+        export WITH_MIRRORS={with_mirrors} && \
+        ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
+        env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
+    """.format(master_port=os.getenv('MASTER_PORT', 15432),
+               port_base=os.getenv('PORT_BASE', 25432),
+               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
+               with_mirrors='true',
+               checksum_toggle=checksum_toggle)
+
+    run_command(context, cmd)
+
+    if context.ret_code != 0:
+        raise Exception('%s' % context.error_message)
+
 
 @given('the database is running')
+@then('the database is running')
 def impl(context):
     start_database_if_not_started(context)
     if has_exception(context):
         raise context.exception
+
+
+@given('the database is initialized with checksum "{checksum_toggle}"')
+def impl(context, checksum_toggle):
+    is_ok = check_database_is_running(context)
+
+    if is_ok:
+        run_command(context, "gpconfig -s data_checksums")
+        if context.ret_code != 0:
+            raise Exception("cannot run gpconfig: %s, stdout: %s" % (context.error_message, context.stdout_message))
+
+        try:
+            # will throw
+            check_stdout_msg(context, "Values on all segments are consistent")
+            check_stdout_msg(context, "Master  value: %s" % checksum_toggle)
+            check_stdout_msg(context, "Segment value: %s" % checksum_toggle)
+        except:
+            is_ok = False
+
+    if not is_ok:
+        stop_database(context)
+
+        cmd = """
+        cd ../gpAux/gpdemo; \
+            export MASTER_DEMO_PORT={master_port} && \
+            export DEMO_PORT_BASE={port_base} && \
+            export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
+            export WITH_MIRRORS={with_mirrors} && \
+            ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
+            env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ./demo_cluster.sh
+        """.format(master_port=os.getenv('MASTER_PORT', 15432),
+                   port_base=os.getenv('PORT_BASE', 25432),
+                   num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
+                   with_mirrors='true',
+                   checksum_toggle=checksum_toggle)
+
+        run_command(context, cmd)
+
+        if context.ret_code != 0:
+            raise Exception('%s' % context.error_message)
 
 
 @given('the database is not running')
@@ -403,6 +468,25 @@ def impl(context, command):
     run_gpcommand(context, command)
 
 
+@given('the user asynchronously runs "{command}" and the process is saved')
+@when('the user asynchronously runs "{command}" and the process is saved')
+@then('the user asynchronously runs "{command}" and the process is saved')
+def impl(context, command):
+    run_gpcommand_async(context, command)
+
+
+@given('the async process finished with a return code of {ret_code}')
+@when('the async process finished with a return code of {ret_code}')
+@then('the async process finished with a return code of {ret_code}')
+def impl(context, ret_code):
+    rc, stdout_value, stderr_value = context.asyncproc.communicate2()
+    if rc != int(ret_code):
+        raise Exception("return code of the async proccess didn't match:\n"
+                        "rc: %s\n"
+                        "stdout: %s\n"
+                        "stderr: %s" % (rc, stdout_value, stderr_value))
+
+
 @given('a user runs "{command}" with gphome "{gphome}"')
 @when('a user runs "{command}" with gphome "{gphome}"')
 @then('a user runs "{command}" with gphome "{gphome}"')
@@ -416,11 +500,17 @@ def impl(context, command, gphome):
     cmd.run()
     context.ret_code = cmd.get_return_code()
 
+
 @given('the user runs command "{command}"')
 @when('the user runs command "{command}"')
 @then('the user runs command "{command}"')
 def impl(context, command):
     run_command(context, command)
+
+
+@when('the user runs async command "{command}"')
+def impl(context, command):
+    run_async_command(context, command)
 
 
 @given('the user puts cluster on "{HOST}" "{PORT}" "{USER}" in "{transition}"')
@@ -2671,9 +2761,9 @@ def impl(context):
     if pid is None:
         raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
 
-    kill_process(int(pid), seg_host)
+    kill_process(int(pid), seg_host, signal.SIGKILL)
 
-    time.sleep(10)
+    has_process_eventually_stopped(pid, seg_host)
 
     pid = get_pid_for_segment(seg_data_dir, seg_host)
     if pid is not None:
@@ -4583,16 +4673,10 @@ def impl(context):
 @then('wait until the process "{proc}" goes down')
 @given('wait until the process "{proc}" goes down')
 def impl(context, proc):
-    start_time = current_time = datetime.now()
-    is_running = False
-    while (current_time - start_time).seconds < 120:
-        is_running = is_process_running(proc)
-        if not is_running:
-            break
-        time.sleep(2)
-        current_time = datetime.now()
-    context.ret_code = 0 if not is_running else 1
-    context.error_message = ''
+    is_stopped = has_process_eventually_stopped(proc)
+    context.ret_code = 0 if is_stopped else 1
+    if not is_stopped:
+        context.error_message = 'The process %s is still running after waiting' % proc
     check_return_code(context, 0)
 
 
@@ -4851,7 +4935,7 @@ def impl(context):
                               When the user runs "gpstart -a"
                               Then gpstart should return a return code of 0
                               And verify that a role "gpmon" exists in database "gpperfmon"
-                              And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level=warning"
+                              And verify that the last line of the file "postgresql.conf" in the master data directory contains the string "gpperfmon_log_alert_level='warning'"
                               And verify that there is a "heap" table "database_history" in "gpperfmon"
                               Then wait until the process "gpmmon" is up
                               And wait until the process "gpsmon" is up

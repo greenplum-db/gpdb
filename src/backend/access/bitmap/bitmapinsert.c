@@ -24,7 +24,6 @@
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
-#include "cdb/cdbfilerepprimary.h"
 
 /*
  * The following structure along with BMTIDBuffer are used to buffer

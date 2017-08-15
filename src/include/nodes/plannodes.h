@@ -201,7 +201,6 @@ typedef struct Plan
 	 */
 	List	   *targetlist;		/* target list to be computed at this node */
 	List	   *qual;			/* implicitly-ANDed qual conditions */
-
 	struct Plan *lefttree;		/* input plan tree(s) */
 	struct Plan *righttree;
 	List	   *initPlan;		/* Init Plan nodes (un-correlated expr
@@ -844,7 +843,7 @@ typedef struct ShareInputScan
 } ShareInputScan;
 
 /* ----------------
- * 		materialization node
+ *		materialization node
  * ----------------
  */
 typedef struct Material
@@ -859,7 +858,6 @@ typedef struct Material
 	int         nsharer;						/* number of sharer */
 	int 		nsharer_xslice;					/* number of sharer cross slice */
 } Material;
-
 
 /* ----------------
  *		sort node

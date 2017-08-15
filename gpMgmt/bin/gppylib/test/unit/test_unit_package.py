@@ -63,6 +63,7 @@ class ListPackagesTestCase(GpTestCase):
         self.apply_patches([
             patch('gppylib.operations.package.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
             patch('gppylib.operations.package.ListFilesByPattern.run'),
+            patch('gppylib.operations.package.MakeDir.run'),
         ])
         self.mock_logger = self.get_mock_from_apply_patch('logger')
 

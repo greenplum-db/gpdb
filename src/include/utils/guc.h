@@ -173,13 +173,10 @@ extern bool gp_crash_recovery_abort_suppress_fatal;
 extern bool gp_persistent_statechange_suppress_error;
 extern bool Debug_bitmap_print_insert;
 extern bool Test_appendonly_override;
-extern bool gp_test_orientation_override;
 extern bool	gp_permit_persistent_metadata_update;
 extern bool gp_permit_relation_node_change;
 extern bool enable_checksum_on_tables;
 extern int  Test_compresslevel_override;
-extern int	Test_blocksize_override;
-extern int  Test_safefswritesize_override;
 extern bool Master_mirroring_administrator_disable;
 extern int  gp_max_local_distributed_cache;
 extern bool gp_local_distributed_cache_stats;
@@ -197,6 +194,7 @@ extern bool gp_appendonly_compaction;
  * 10% of the tuples are hidden.
  */ 
 extern int  gp_appendonly_compaction_threshold;
+extern bool gp_heap_verify_checksums_on_mirror;
 extern bool gp_heap_require_relhasoids_match;
 extern bool	Debug_appendonly_rezero_quicklz_compress_scratch;
 extern bool	Debug_appendonly_rezero_quicklz_decompress_scratch;

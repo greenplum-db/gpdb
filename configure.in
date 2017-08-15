@@ -20,7 +20,7 @@ m4_pattern_forbid(^PGAC_)dnl to catch undefined macros
 dnl The PACKAGE_VERSION from upstream PostgreSQL is maintained in the
 dnl PG_PACKAGE_VERSION variable, when merging make sure to update this
 dnl variable with the merge conflict from the AC_INIT() statement.
-AC_INIT([Greenplum Database], [5.0.0-alpha], [support@greenplum.org])
+AC_INIT([Greenplum Database], [5.0.0-beta.6], [support@greenplum.org])
 [PG_PACKAGE_VERSION=8.3.23]
 AC_SUBST(PG_PACKAGE_VERSION)
 
@@ -459,6 +459,11 @@ fi
 AC_SUBST(PG_CRC32C_OBJS)
 
 
+# set CFLAGS_VECTOR from the environment, if available
+if test "$ac_env_CFLAGS_VECTOR_set" = set; then
+  CFLAGS_VECTOR=$ac_env_CFLAGS_VECTOR_value
+fi
+
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
 # ICC pretends to be GCC but it's lying; it doesn't support these options.
@@ -490,6 +495,9 @@ if test "$GCC" = yes -a "$ICC" = no; then
 
   #-Wno-error=enum-compare -Wno-error=address -Wno-error=maybe-uninitialized
 
+  # Optimization flags for specific files that benefit from vectorization
+  PGAC_PROG_CC_VAR_OPT(CFLAGS_VECTOR, [-funroll-loops])
+  PGAC_PROG_CC_VAR_OPT(CFLAGS_VECTOR, [-ftree-vectorize])
 elif test "$ICC" = yes; then
   # Intel's compiler has a bug/misoptimization in checking for
   # division by NAN (NaN == 0), -mp1 fixes it, so add it to the CFLAGS.
@@ -500,6 +508,8 @@ elif test x"${CC}" = x"xlc"; then
   # AIX xlc has to have strict aliasing turned off too
   PGAC_PROG_CC_CFLAGS_OPT([-qnoansialias])
 fi
+
+AC_SUBST(CFLAGS_VECTOR, $CFLAGS_VECTOR)
 
 # supply -g if --enable-debug
 if test "$enable_debug" = yes && test "$ac_cv_prog_cc_g" = yes; then
@@ -838,6 +848,14 @@ AC_MSG_CHECKING([whether to build Python modules])
 PGAC_ARG_BOOL(with, python, no, [  --with-python           build Python modules (PL/Python)])
 AC_MSG_RESULT([$with_python])
 AC_SUBST(with_python)
+
+#
+# Optionally build PXF support
+#
+AC_MSG_CHECKING([whether to build PXF modules])
+PGAC_ARG_BOOL(with, pxf, no, [  --with-pxf              build Greenplum PXF support])
+AC_MSG_RESULT([$with_pxf])
+AC_SUBST(with_pxf)
 
 #
 # GSSAPI

@@ -587,7 +587,6 @@ DefineSequence(CreateSeqStmt *seq)
 		recptr = XLogInsert(RM_SEQ_ID, XLOG_SEQ_LOG, rdata);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -716,7 +715,6 @@ AlterSequence(AlterSeqStmt *stmt)
 		recptr = XLogInsert(RM_SEQ_ID, XLOG_SEQ_LOG, rdata);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -1065,7 +1063,6 @@ cdb_sequence_nextval(SeqTable elm,
 		recptr = XLogInsert(RM_SEQ_ID, XLOG_SEQ_LOG, rdata);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 
 		/* need to update where we've inserted to into shmem so that the QD can flush it
 		 * when necessary
@@ -1291,7 +1288,6 @@ do_setval(Oid relid, int64 next, bool iscalled)
 		recptr = XLogInsert(RM_SEQ_ID, XLOG_SEQ_LOG, rdata);
 
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();
@@ -1490,7 +1486,7 @@ read_seq_tuple(SeqTable elm, Relation rel, Buffer *buf, HeapTuple seqtuple)
 		HeapTupleHeaderSetXmax(seqtuple->t_data, InvalidTransactionId);
 		seqtuple->t_data->t_infomask &= ~HEAP_XMAX_COMMITTED;
 		seqtuple->t_data->t_infomask |= HEAP_XMAX_INVALID;
-		SetBufferCommitInfoNeedsSave(*buf);
+		MarkBufferDirtyHint(*buf, rel);
 	}
 
 	seq = (Form_pg_sequence) GETSTRUCT(seqtuple);
@@ -1864,7 +1860,6 @@ seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 		elog(PANIC, "seq_redo: failed to add item to page");
 
 	PageSetLSN(page, lsn);
-	PageSetTLI(page, ThisTimeLineID);
 	MarkBufferDirty(buffer);
 	UnlockReleaseBuffer(buffer);
 	

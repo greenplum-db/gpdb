@@ -21,6 +21,8 @@
 
 
 #include "catalog/genbki.h"
+#include "parser/parsetree.h"
+#include "tcop/pquery.h"
 
 /* ----------------
  *		pg_resqueue definition.  cpp turns this into

@@ -20,20 +20,24 @@
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "catalog/pg_resqueue.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbvars.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/lock.h"
 #include "storage/lmgr.h"
 #include "utils/builtins.h"
+#include "utils/guc_tables.h"
 #include "utils/memutils.h"
 #include "utils/portal.h"
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
 #include "utils/resscheduler.h"
 #include "cdb/memquota.h"
+#include "commands/queue.h"
 
 static void ResCleanUpLock(LOCK *lock, PROCLOCK *proclock, uint32 hashcode, bool wakeupNeeded);
 
@@ -47,7 +51,7 @@ static void ResLockUpdateLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncremen
 static void ResGrantLock(LOCK *lock, PROCLOCK *proclock);
 static bool ResUnGrantLock(LOCK *lock, PROCLOCK *proclock);
 
-
+static uint64 ResourceQueueGetSuperuserQueryMemoryLimit(void);
 /*
  * Global Variables
  */
@@ -2017,4 +2021,168 @@ pg_resqueue_status_kv(PG_FUNCTION_ARGS)
 	}
 	else
 		SRF_RETURN_DONE(funcctx);
+}
+
+ /**
+  * What is the memory limit on a queue per the catalog in bytes. Returns -1 if not set.
+  */
+int64 ResourceQueueGetMemoryLimitInCatalog(Oid queueId)
+{
+	int memoryLimitKB = -1;
+
+	Assert(queueId != InvalidOid);
+
+	List * capabilitiesList = GetResqueueCapabilityEntry(queueId); /* This is a list of lists */
+
+	ListCell *le = NULL;
+	foreach(le, capabilitiesList)
+	{
+		List *entry = NULL;
+		Value *key = NULL;
+		entry = (List *) lfirst(le);
+		Assert(entry);
+		key = (Value *) linitial(entry);
+		Assert(key->type == T_Integer); /* This is resource type id */
+		if (intVal(key) == PG_RESRCTYPE_MEMORY_LIMIT)
+		{
+			Value *val = lsecond(entry);
+			Assert(val->type == T_String);
+
+#ifdef USE_ASSERT_CHECKING
+			bool result =
+
+#endif
+					parse_int(strVal(val), &memoryLimitKB, GUC_UNIT_KB, NULL);
+
+			Assert(result);
+		}
+	}
+	list_free(capabilitiesList);
+
+	Assert(memoryLimitKB == -1 || memoryLimitKB > 0);
+
+	if (memoryLimitKB == -1)
+	{
+		return (int64) -1;
+	}
+
+	return (int64) memoryLimitKB * 1024;
+
+}
+
+/**
+ * Get memory limit associated with queue in bytes.
+ * Returns -1 if a limit does not exist.
+ */
+int64 ResourceQueueGetMemoryLimit(Oid queueId)
+{
+	int64 memoryLimitBytes = -1;
+
+	Assert(queueId != InvalidOid);
+
+	if (!IsResManagerMemoryPolicyNone())
+	{
+		memoryLimitBytes = ResourceQueueGetMemoryLimitInCatalog(queueId);
+	}
+
+	return memoryLimitBytes;
+}
+
+/**
+ * Given a queueid, how much memory should a query take in bytes.
+ */
+uint64 ResourceQueueGetQueryMemoryLimit(PlannedStmt *stmt, Oid queueId)
+{
+	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
+	Assert(queueId != InvalidOid);
+
+
+	/* resource queue will not limit super user */
+	if (superuser())
+		return ResourceQueueGetSuperuserQueryMemoryLimit();
+
+	if (IsResManagerMemoryPolicyNone())
+		return 0;
+
+	/** Assert that I do not hold lwlock */
+	Assert(!LWLockHeldExclusiveByMe(ResQueueLock));
+
+	int64 resqLimitBytes = ResourceQueueGetMemoryLimit(queueId);
+
+	/**
+	 * If there is no memory limit on the queue, simply use statement_mem.
+	 */
+	AssertImply(resqLimitBytes < 0, resqLimitBytes == -1);
+	if (resqLimitBytes == -1)
+	{
+		return (uint64) statement_mem * 1024L;
+	}
+
+	/**
+	 * This method should only be called while holding exclusive lock on ResourceQueues. This means
+	 * that nobody can modify any resource queue while current process is performing this computation.
+	 */
+	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+
+	ResQueue resQueue = ResQueueHashFind(queueId);
+
+	LWLockRelease(ResQueueLock);
+
+	Assert(resQueue);
+	int numSlots = (int) ceil(resQueue->limits[RES_COUNT_LIMIT].threshold_value);
+	double costLimit = (double) resQueue->limits[RES_COST_LIMIT].threshold_value;
+	double planCost = stmt->planTree->total_cost;
+
+	if (planCost < 1.0)
+		planCost = 1.0;
+
+	Assert(planCost > 0.0);
+
+	if (LogResManagerMemory())
+	{
+		elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "numslots: %d, costlimit: %f", numSlots, costLimit);
+	}
+
+	if (numSlots < 1)
+	{
+		/** there is no statement limit set */
+		numSlots = 1;
+	}
+
+	if (costLimit < 0.0)
+	{
+		/** there is no cost limit set */
+		costLimit = planCost;
+	}
+
+	double minRatio = Min( 1.0/ (double) numSlots, planCost / costLimit);
+
+	minRatio = Min(minRatio, 1.0);
+
+	if (LogResManagerMemory())
+	{
+		elog(GP_RESMANAGER_MEMORY_LOG_LEVEL, "slotratio: %0.3f, costratio: %0.3f, minratio: %0.3f",
+				1.0/ (double) numSlots, planCost / costLimit, minRatio);
+	}
+
+	uint64 queryMem = (uint64) resqLimitBytes * minRatio;
+
+	/**
+	 * If user requests more using statement_mem, grant that.
+	 */
+	if (queryMem < statement_mem * 1024L)
+	{
+		queryMem = (uint64) statement_mem * 1024L;
+	}
+
+	return queryMem;
+}
+
+/**
+ * How much memory should superuser queries get?
+ */
+static uint64 ResourceQueueGetSuperuserQueryMemoryLimit(void)
+{
+	Assert(superuser());
+	return (uint64) statement_mem * 1024L;
 }

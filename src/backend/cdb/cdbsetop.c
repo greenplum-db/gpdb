@@ -14,19 +14,13 @@
  */
 #include "postgres.h"
 
-#include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbsetop.h"
-#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpullup.h"
-
-#include "optimizer/tlist.h" /* tlist_member */
-#include "parser/parse_expr.h" /* exprType and exprTypmod */
-#include "parser/parsetree.h" /* get_tle_by_resno */
 
 static Flow *copyFlow(Flow *model_flow, bool withExprs, bool withSort);
 static List *makeHashExprsFromNonjunkTargets(List *targetList);

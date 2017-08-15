@@ -19,7 +19,6 @@
 #include "catalog/index.h"
 #include "miscadmin.h"
 #include "utils/memutils.h"
-#include "cdb/cdbfilerepprimary.h"
 
 
 typedef struct
@@ -81,8 +80,6 @@ createPostingTree(Relation index, ItemPointerData *items, uint32 nitems)
 
 		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_CREATE_PTREE, rdata);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
-
 	}
 
 	UnlockReleaseBuffer(buffer);
@@ -301,11 +298,8 @@ ginbuild(PG_FUNCTION_ARGS)
 
 		page = BufferGetPage(buffer);
 
-
 		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_CREATE_INDEX, &rdata);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
-
 	}
 
 	UnlockReleaseBuffer(buffer);

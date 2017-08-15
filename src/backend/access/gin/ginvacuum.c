@@ -20,8 +20,6 @@
 #include "storage/freespace.h"
 #include "storage/freespace.h"
 #include "commands/vacuum.h"
-#include "storage/lwlock.h"
-#include "cdb/cdbfilerepprimary.h"
 
 typedef struct
 {
@@ -149,7 +147,6 @@ xlogVacuumPage(Relation index, Buffer buffer)
 
 	recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_VACUUM_PAGE, rdata);
 	PageSetLSN(page, recptr);
-	PageSetTLI(page, ThisTimeLineID);
 }
 
 static bool
@@ -349,14 +346,11 @@ ginDeletePage(GinVacuumState *gvs, BlockNumber deleteBlkno, BlockNumber leftBlkn
 
 		recptr = XLogInsert(RM_GIN_ID, XLOG_GIN_DELETE_PAGE, rdata);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 		PageSetLSN(parentPage, recptr);
-		PageSetTLI(parentPage, ThisTimeLineID);
 		if (leftBlkno != InvalidBlockNumber)
 		{
 			page = BufferGetPage(lBuffer);
 			PageSetLSN(page, recptr);
-			PageSetTLI(page, ThisTimeLineID);
 		}
 	}
 

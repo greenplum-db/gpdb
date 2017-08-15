@@ -1,0 +1,706 @@
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE adhoc11 ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='adhoc11';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+ adhoc11 |             1 |           -1 | f             |                  0
+(1 row)
+
+
+--create role and assign role to resource queue
+CREATE ROLE role11 with LOGIN RESOURCE QUEUE adhoc11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select role, resource queue details from pg_roles and pg_resqueue tables
+SELECT rolname, rsqname FROM pg_roles AS r,pg_resqueue AS q WHERE r.rolresqueue=q.oid and rolname='role11';
+ rolname | rsqname 
+---------+---------
+ role11  | adhoc11
+(1 row)
+
+
+-- drop role
+DROP ROLE role11;
+
+-- drop resource queue
+DROP RESOURCE QUEUE adhoc11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE adhoc12 ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='adhoc12';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+ adhoc12 |             2 |           -1 | f             |                  0
+(1 row)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE adhoc12;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+--select * from pg_resqueue;
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE adhoc13 ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE adhoc14 ACTIVE THRESHOLD 3;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='adhoc13' and rsqname='adhoc14';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+(0 rows)
+
+
+--create role and assign role to resource queue
+CREATE ROLE role13 with LOGIN RESOURCE QUEUE adhoc13;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE ROLE role14 with LOGIN RESOURCE QUEUE adhoc14;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select role, resource queue details from pg_roles and pg_resqueue tables
+SELECT rolname, rsqname FROM pg_roles AS r,pg_resqueue AS q WHERE r.rolresqueue=q.oid and rolname in ('role13','role14');
+ rolname | rsqname 
+---------+---------
+ role13  | adhoc13
+ role14  | adhoc14
+(2 rows)
+
+
+-- drop role
+DROP ROLE IF EXISTS role13;
+DROP ROLE IF EXISTS role14;
+
+-- drop resource queue
+DROP RESOURCE QUEUE adhoc13;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE adhoc14;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE adhoc1 ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE adhoc2 ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE adhoc3 ACTIVE THRESHOLD 3;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+--CREATE RESOURCE QUEUE adhoc4 ACTIVE THRESHOLD 4;
+
+-- select from pg_resqueue table
+--select * from pg_resqueue;
+
+-- drop resource queue
+DROP RESOURCE QUEUE adhoc1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE adhoc2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE adhoc3;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+--DROP RESOURCE QUEUE adhoc4;
+
+-- select from pg_resqueue table
+--select * from pg_resqueue;
+
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE adhoc1 ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE webuser1 ACTIVE THRESHOLD 3;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser1 ACTIVE THRESHOLD 5;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname in ('adhoc1','webuser1','mgmtuser1');
+  rsqname  | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+-----------+---------------+--------------+---------------+--------------------
+ adhoc1    |             1 |           -1 | f             |                  0
+ webuser1  |             3 |           -1 | f             |                  0
+ mgmtuser1 |             5 |           -1 | f             |                  0
+(3 rows)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE adhoc1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE webuser1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+
+-- select from pg_resqueue table
+--select * from pg_resqueue;
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue and assuming that 8 is the maximum limit for the resource queue and 1 resource queue is already present in the table
+-- it will give error if it crosses the maximum limit of resource queue
+CREATE RESOURCE QUEUE adhoc1 ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE webuser1 ACTIVE THRESHOLD 3;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser1 ACTIVE THRESHOLD 5;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser2 ACTIVE THRESHOLD 7;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser3 ACTIVE THRESHOLD 9;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser4 ACTIVE THRESHOLD 8;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser5 ACTIVE THRESHOLD 6;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE mgmtuser6 ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue;
+  rsqname   | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+------------+---------------+--------------+---------------+--------------------
+ pg_default |            20 |           -1 | f             |                  0
+ adhoc1     |             1 |           -1 | f             |                  0
+ webuser1   |             3 |           -1 | f             |                  0
+ mgmtuser1  |             5 |           -1 | f             |                  0
+ mgmtuser2  |             7 |           -1 | f             |                  0
+ mgmtuser3  |             9 |           -1 | f             |                  0
+ mgmtuser4  |             8 |           -1 | f             |                  0
+ mgmtuser5  |             6 |           -1 | f             |                  0
+ mgmtuser6  |             2 |           -1 | f             |                  0
+(9 rows)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE adhoc1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE webuser1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser3;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser4;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser5;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE mgmtuser6;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue;
+  rsqname   | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+------------+---------------+--------------+---------------+--------------------
+ pg_default |            20 |           -1 | f             |                  0
+(1 row)
+
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE bob ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='bob';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+ bob     |             1 |           -1 | f             |                  0
+(1 row)
+
+
+-- ALTER Resource Queue
+ALTER RESOURCE QUEUE bob ACTIVE THRESHOLD 7;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='bob';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+ bob     |             7 |           -1 | f             |                  0
+(1 row)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE bob;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+-- select * from pg_resqueue;
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE sameera ACTIVE THRESHOLD 2;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='sameera';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+ sameera |             2 |           -1 | f             |                  0
+(1 row)
+
+
+--create role and assign role to resource queue
+CREATE ROLE aryan with LOGIN RESOURCE QUEUE sameera;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- ALTER Resource Queue
+ALTER ROLE aryan RESOURCE QUEUE none;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select role, resource queue details from pg_roles and pg_resqueue tables
+SELECT rolname, rsqname FROM pg_roles AS r,pg_resqueue AS q WHERE r.rolresqueue=q.oid and rolname='aryan';
+ rolname |  rsqname   
+---------+------------
+ aryan   | pg_default
+(1 row)
+
+
+-- drop role
+DROP ROLE aryan;
+
+-- drop resource queue
+DROP RESOURCE QUEUE sameera;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+--select * from pg_resqueue;
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE ram ACTIVE THRESHOLD 1;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue where rsqname='ram';
+ rsqname | rsqcountlimit | rsqcostlimit | rsqovercommit | rsqignorecostlimit 
+---------+---------------+--------------+---------------+--------------------
+ ram     |             1 |           -1 | f             |                  0
+(1 row)
+
+
+--create role and assign role to resource queue
+CREATE ROLE sita with LOGIN RESOURCE QUEUE ram;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE ROLE samrat with LOGIN RESOURCE QUEUE ram;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- ALTER ROLE
+ALTER ROLE sita RESOURCE QUEUE ram;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+ALTER ROLE samrat RESOURCE QUEUE ram;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select role, resource queue details from pg_roles and pg_resqueue tables
+SELECT rolname, rsqname FROM pg_roles AS r,pg_resqueue AS q WHERE r.rolresqueue=q.oid and rsqname='ram';
+ rolname | rsqname 
+---------+---------
+ samrat  | ram
+ sita    | ram
+(2 rows)
+
+
+-- drop role
+DROP ROLE sita;
+DROP ROLE samrat;
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE ram;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE camy11 COST THRESHOLD 200.0;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE RESOURCE QUEUE camy22 COST THRESHOLD 500.0;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+
+-- select from pg_resqueue table
+select * from pg_resqueue_status where rsqname in ('camy11','camy22');
+ rsqname | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqwaiters | rsqholders 
+---------+---------------+---------------+--------------+--------------+------------+------------
+(0 rows)
+
+
+--create role and assign role to resource queue
+CREATE ROLE creig11 with LOGIN RESOURCE QUEUE camy11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+CREATE ROLE creig22 with LOGIN RESOURCE QUEUE camy22;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- ALTER Resource Queue
+ALTER ROLE creig11 RESOURCE QUEUE camy11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+ALTER ROLE creig22 RESOURCE QUEUE camy22;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- drop role
+DROP ROLE creig11;
+DROP ROLE creig22;
+
+-- drop resource queue
+DROP RESOURCE QUEUE camy11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+DROP RESOURCE QUEUE camy22;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue_status table
+--select * from pg_resqueue_status;
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE tom ACTIVE THRESHOLD 20;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- ALTER RESOURCE QUEUE
+ALTER RESOURCE QUEUE tom COST THRESHOLD 100.0;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue_status where rsqname='tom';
+ rsqname | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqwaiters | rsqholders 
+---------+---------------+---------------+--------------+--------------+------------+------------
+(0 rows)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE tom;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue_status table
+--select * from pg_resqueue_status;
+
+
+
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE myq11 ACTIVE THRESHOLD 10;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- ALTER RESOURCE QUEUE
+ALTER RESOURCE QUEUE myq11 COST THRESHOLD 50.0;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+ALTER RESOURCE QUEUE myq11 COST THRESHOLD 3e+7;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue_status where rsqname='myq11';
+ rsqname | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqwaiters | rsqholders 
+---------+---------------+---------------+--------------+--------------+------------+------------
+(0 rows)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE myq11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue_status table
+--select * from pg_resqueue_status;
+
+
+
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE myq21 ACTIVE THRESHOLD 7;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- ALTER RESOURCE QUEUE
+ALTER RESOURCE QUEUE myq21 COST THRESHOLD 70.0;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+ALTER RESOURCE QUEUE myq21 COST THRESHOLD 3e+9 NOOVERCOMMIT;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue table
+select * from pg_resqueue_status where rsqname='myq21';
+ rsqname | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqwaiters | rsqholders 
+---------+---------------+---------------+--------------+--------------+------------+------------
+(0 rows)
+
+
+-- drop resource queue
+DROP RESOURCE QUEUE myq21;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue_status table
+--select * from pg_resqueue_status;
+
+
+
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE tom11 ACTIVE THRESHOLD 20;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+--create role and assign role to resource queue
+CREATE ROLE shaun11 with LOGIN RESOURCE QUEUE tom11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue, pg_roles table
+SELECT rolname, rsqname FROM pg_roles, pg_resqueue WHERE pg_roles.rolresqueue=pg_resqueue.oid and rolname='shaun11';
+ rolname | rsqname 
+---------+---------
+ shaun11 | tom11
+(1 row)
+
+
+-- create a view
+CREATE VIEW role2que AS SELECT rolname, rsqname FROM pg_roles, pg_resqueue WHERE pg_roles.rolresqueue=pg_resqueue.oid and rolname='shaun11';
+
+-- select from view
+select * from role2que where rolname='shaun11';
+ rolname | rsqname 
+---------+---------
+ shaun11 | tom11
+(1 row)
+
+
+-- drop role name
+DROP ROLE shaun11;
+
+-- drop resource queue
+DROP RESOURCE QUEUE tom11;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from view
+--select * from role2que;
+
+-- drop view
+DROP VIEW role2que;
+
+-- Test Workload Administration and Resource queuing
+
+-- create resource queue
+CREATE RESOURCE QUEUE tom55 ACTIVE THRESHOLD 10;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+--create role and assign role to resource queue
+CREATE ROLE shaun55 with LOGIN RESOURCE QUEUE tom55;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+NOTICE:  resource group required -- using default resource group "default_group"
+WARNING:  resource scheduling is disabled  (seg1 172.17.0.2:25433 pid=10483)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg2 172.17.0.2:25434 pid=10484)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+WARNING:  resource scheduling is disabled  (seg0 172.17.0.2:25432 pid=10482)
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from pg_resqueue, pg_role table
+SELECT rolname, rsqname, pid, granted, current_query,datname FROM pg_roles, pg_resqueue, pg_locks, pg_stat_activity WHERE pg_roles.rolresqueue=pg_locks.objid AND pg_locks.objid=pg_resqueue.oid AND pg_stat_activity.procpid=pg_locks.pid;
+ rolname | rsqname | pid | granted | current_query | datname 
+---------+---------+-----+---------+---------------+---------
+(0 rows)
+
+
+-- create a view
+CREATE VIEW resq_procs AS SELECT rolname, rsqname, pid, granted, current_query,datname FROM pg_roles, pg_resqueue, pg_locks, pg_stat_activity WHERE pg_roles.rolresqueue=pg_locks.objid AND pg_locks.objid=pg_resqueue.oid AND pg_stat_activity.procpid=pg_locks.pid;
+
+-- select from view
+select * from resq_procs;
+ rolname | rsqname | pid | granted | current_query | datname 
+---------+---------+-----+---------+---------------+---------
+(0 rows)
+
+
+-- drop role name
+DROP ROLE shaun55;
+
+-- drop resource queue
+DROP RESOURCE QUEUE tom55;
+WARNING:  resource scheduling is disabled
+HINT:  To enable set resource_scheduler=on and gp_resource_manager=queue
+
+-- select from view
+--select * from resq_procs;
+
+-- drop view
+DROP VIEW resq_procs;
+
+

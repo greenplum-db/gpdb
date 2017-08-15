@@ -751,7 +751,6 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 				recptr = log_heap_freeze(onerel, buf, FreezeLimit,
 										 frozen, nfrozen);
 				PageSetLSN(page, recptr);
-				PageSetTLI(page, ThisTimeLineID);
 			}
 		}
 
@@ -955,7 +954,6 @@ lazy_vacuum_page(Relation onerel, BlockNumber blkno, Buffer buffer,
 								unused, uncnt,
 								false);
 		PageSetLSN(page, recptr);
-		PageSetTLI(page, ThisTimeLineID);
 	}
 
 	END_CRIT_SECTION();

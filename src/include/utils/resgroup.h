@@ -11,12 +11,68 @@
 #ifndef RES_GROUP_H
 #define RES_GROUP_H
 
+#include "cdb/memquota.h"
+#include "catalog/pg_resgroup.h"
+
+/*
+ * Resource group capability.
+ */
+typedef struct ResGroupCap
+{
+	int		value;
+	int		proposed;
+} ResGroupCap;
+
+/*
+ * Resource group capabilities.
+ *
+ * These are usually a snapshot of the pg_resgroupcapability table
+ * for a resource group.
+ *
+ * The properties must be in the same order as ResGroupLimitType.
+ */
+typedef struct ResGroupCaps
+{
+	ResGroupCap		__unknown;
+	ResGroupCap		concurrency;
+	ResGroupCap		cpuRateLimit;
+	ResGroupCap		memLimit;
+	ResGroupCap		memSharedQuota;
+	ResGroupCap		memSpillRatio;
+} ResGroupCaps;
+
+/*
+ * Resource group setting options.
+ *
+ * These can represent the effective settings of a resource group,
+ * or the new settings from ALTER RESOURCE GROUP syntax.
+ *
+ * The properties must be in the same order as ResGroupLimitType.
+ */
+typedef struct ResGroupOpts
+{
+	int32			__unknown;
+	int32			concurrency;
+	int32			cpuRateLimit;
+	int32			memLimit;
+	int32			memSharedQuota;
+	int32			memSpillRatio;
+} ResGroupOpts;
+
 /*
  * GUC variables.
  */
+extern ResManagerMemoryPolicy   gp_resgroup_memory_policy;
+extern char                		*gp_resgroup_memory_policy_str;
+extern bool						gp_log_resgroup_memory;
+extern int						gp_resgroup_memory_policy_auto_fixed_mem;
+extern bool						gp_resgroup_print_operator_memory_limits;
+
 extern int MaxResourceGroups;
 extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
+
+struct ResGroupConfigSnapshot;
 
 /* Type of statistic infomation */
 typedef enum
@@ -47,7 +103,8 @@ extern void AllocResGroupEntry(Oid groupId);
 extern void FreeResGroupEntry(Oid groupId);
 
 extern void SerializeResGroupInfo(StringInfo str);
-extern void DeserializeResGroupInfo(const char *buf, int len);
+extern void DeserializeResGroupInfo(struct ResGroupConfigSnapshot *config,
+									const char *buf, int len);
 
 extern bool ShouldAssignResGroupOnMaster(void);
 extern void AssignResGroupOnMaster(void);
@@ -64,13 +121,20 @@ extern bool ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool 
 /* Update the memory usage of resource group */
 extern void ResGroupReleaseMemory(int32 memoryChunks);
 
-extern void ResGroupAlterCheckForWakeup(Oid groupId, int value, int proposed);
+extern void ResGroupAlterCheckForWakeup(Oid groupId);
 extern void ResGroupDropCheckForWakeup(Oid groupId, bool isCommit);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
-extern int CalcConcurrencyValue(int groupId, int val, int proposed, int newProposed);
+extern void ResGroupDecideMemoryCaps(int groupId,
+									 ResGroupCaps *caps,
+									 const ResGroupOpts *opts);
+extern void ResGroupDecideConcurrencyCaps(Oid groupId,
+										  ResGroupCaps *caps,
+										  const ResGroupOpts *opts);
 
 /* test helper function */
 extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
+
+extern int ResourceGroupGetQueryMemoryLimit(void);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
