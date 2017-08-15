@@ -1446,7 +1446,6 @@ jobs:
       PULSE_PROJECT_NAME: "GPDB-BehaveGPCheckcat"
 
 - name: MM_gprecoverseg
-  max_in_flight: 1
   plan:
   - aggregate:
     - get: gpdb_src
