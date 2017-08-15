@@ -6,30 +6,8 @@
  */
 #include "postgres.h"
 
-#include "executor/executor.h"
-#include "utils/lsyscache.h"
 #include "cdb/cdbvars.h"
-#include "miscadmin.h"
-
-char * GetScanRelNameGpmon(Oid relid, char schema_rel_name[SCAN_REL_NAME_BUF_SIZE])
-{
-	if (relid > 0)
-	{
-		char *relname = get_rel_name(relid);
-		char *schemaname = get_namespace_name(get_rel_namespace(relid));
-		snprintf(schema_rel_name, SCAN_REL_NAME_BUF_SIZE, "%s.%s", schemaname, relname);
-		if (relname)
-		{
-			pfree(relname);
-		}
-		
-		if (schemaname)
-		{
-			pfree(schemaname);
-		}
-	}
-	return schema_rel_name;
-}
+#include "nodes/execnodes.h"
 
 void CheckSendPlanStateGpmonPkt(PlanState *ps)
 {

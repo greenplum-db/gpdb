@@ -1418,7 +1418,6 @@ typedef struct Gpmon_NameVal_Text
 } Gpmon_NameVal_Text;
 
 /* Gpperfmon helper functions defined in execGpmon.c */
-extern char *GetScanRelNameGpmon(Oid relid, char schema_table_name[SCAN_REL_NAME_BUF_SIZE]);
 extern void CheckSendPlanStateGpmonPkt(PlanState *ps);
 extern void EndPlanStateGpmonPkt(PlanState *ps);
 extern void InitPlanNodeGpmonPkt(Plan* plan, gpmon_packet_t *gpmon_pkt, EState *estate);
