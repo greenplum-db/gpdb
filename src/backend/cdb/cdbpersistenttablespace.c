@@ -255,14 +255,20 @@ static bool PersistentTablespace_ScanTupleCallback(
 									&parentXid,
 									&serialNum);
 
-	WRITE_TABLESPACE_HASH_LOCK;
+	/*
+	 * Normally we would acquire this lock with the WRITE_TABLESPACE_HASH_LOCK
+	 * macro, however, this particular function can be called during startup.
+	 * During startup, which executes in a single threaded context, no
+	 * PersistentObjLock exists and we cannot assert that we're holding it.
+	 */
+	LWLockAcquire(TablespaceHashLock, LW_EXCLUSIVE);
 	tablespaceDirEntry =
 		PersistentTablespace_CreateEntryUnderLock(filespaceOid, tablespaceOid);
 
 	tablespaceDirEntry->state = state;
 	tablespaceDirEntry->persistentSerialNum = serialNum;
 	tablespaceDirEntry->persistentTid = *persistentTid;
-	WRITE_TABLESPACE_HASH_UNLOCK;
+	LWLockRelease(TablespaceHashLock);
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 

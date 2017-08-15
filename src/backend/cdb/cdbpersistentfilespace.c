@@ -248,7 +248,13 @@ static bool PersistentFilespace_ScanTupleCallback(
 									&parentXid,
 									&serialNum);
 
-	WRITE_FILESPACE_HASH_LOCK;
+   /*
+	* Normally we would acquire this lock with the WRITE_FILESPACE_HASH_LOCK
+	* macro, however, this particular function can be called during startup.
+	* During startup, which executes in a single threaded context, no
+	* PersistentObjLock exists and we cannot assert that we're holding it.
+	*/
+	LWLockAcquire(FilespaceHashLock, LW_EXCLUSIVE);
 
 	filespaceDirEntry =	PersistentFilespace_CreateDirUnderLock(filespaceOid);
 
@@ -262,7 +268,7 @@ static bool PersistentFilespace_ScanTupleCallback(
 	filespaceDirEntry->persistentSerialNum = serialNum;
 	filespaceDirEntry->persistentTid = *persistentTid;
 
-	WRITE_FILESPACE_HASH_UNLOCK;
+	LWLockRelease(FilespaceHashLock);
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(),
