@@ -12,11 +12,11 @@ resources:
     username: {{docker_username}}
     password: {{docker_password}}
 
-- name: coverity_twice_weekly
+- name: coverity_daily
   type: time
   source:
     location: America/Los_Angeles
-    days: [Monday, Thursday]
+    days: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
     start: 4:00 AM
     stop: 5:00 AM
 
@@ -24,7 +24,7 @@ jobs:
 
 - name: coverity_scan
   plan:
-  - get: coverity_twice_weekly
+  - get: coverity_daily
     trigger: true
   - aggregate:
     - get: gpdb_src
