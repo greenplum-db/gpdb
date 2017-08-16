@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
+    <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
+        format="html" otherprops="pivotal"/>
     <topicref href="admin_guide.xml" navtitle="Administration Guide">
         <topicref href="intro/partI.xml" id="partI" format="dita">
             <topicref href="intro/arch_overview.xml" id="arch_overview"/>
@@ -53,6 +55,4 @@
                 id="perf_troubleshoot"/>
         </topicref>
     </topicref>
-    <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-        format="html" otherprops="pivotal"/>
 </map>

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
+	<topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
+		format="html" otherprops="pivotal"/>
 	<topicref href="ref_guide.xml" navtitle="Reference Guide">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>
@@ -252,6 +254,4 @@
 		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"
 			id="feature_summary"/>
 	</topicref>
-	<topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-		format="html" otherprops="pivotal"/>
 </map>
