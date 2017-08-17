@@ -15,6 +15,7 @@
             <topicref href="topics/query-piv-uniform-part-tbl.xml"/>
         </topicref>
         <topicref href="topics/defining-queries.xml"/>
+        <topicref href="topics/CTE-query.xml"/>
         <topicref href="topics/functions-operators.xml"/>
         <topicref href="topics/json-data.xml"/>
         <topicref href="topics/xml-data.xml"/>
