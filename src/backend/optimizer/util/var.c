@@ -527,7 +527,7 @@ contain_vars_of_level_or_above_cbAggref(Aggref *aggref, void *unused, int sublev
                          contain_vars_of_level_or_above_cbAggref,
 						 NULL,
                          NULL,
-                         NULL, // 8.4-9.0-MERGE_FIXME: Can arguments of Aggref contain PlaceHolderVars ?
+                         NULL, // GPDB_84_MERGE_FIXME: Can arguments of Aggref contain PlaceHolderVars ?
                          sublevelsup);
 }
 
@@ -673,7 +673,7 @@ find_minimum_var_level_cbPlaceHolderVar(PlaceHolderVar   *placeholdervar,
 	return cdb_walk_vars((Node *) placeholdervar->phexpr,
 						 find_minimum_var_level_cbVar,
 						 find_minimum_var_level_cbAggref,
-						 NULL,  // 8.4-9.0-MERGE_FIXME: Can PlaceHolder expression have CurrentOf ?
+						 NULL,  // GPDB_84_MERGE_FIXME: Can PlaceHolder expression have CurrentOf ?
 						 find_minimum_var_level_cbPlaceHolderVar,
 						 ctx,
 						 sublevelsup);

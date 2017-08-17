@@ -1011,7 +1011,7 @@ compute_semijoin_info(SpecialJoinInfo* sjinfo, PlannerInfo* root)
 	 * in case we try to unique-ify the subselect's outputs.
 	 * Add targetlist entries for each var needed sub_targetlist we computed above.
 	 */
-	// 8.4-9.0:MERGE_FIXME: Should we include placeholder vars as well in pull_var_clause?
+	// GPDB_84_MERGE_FIXME: Should we include placeholder vars as well in pull_var_clause?
 	in_vars = pull_var_clause((Node *) sjinfo->semi_rhs_exprs, false);
 	if (in_vars != NIL)
 	{

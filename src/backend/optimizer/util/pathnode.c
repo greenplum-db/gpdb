@@ -1704,7 +1704,7 @@ create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath)
 }
 
 
-/* 8.4-9.0-MERGE-NOTE: Before commit e006a24a, this function used in_info_list
+/* GPDB_84_MERGE_NOTE: Before commit e006a24a, this function used in_info_list
  * to compute in_operators and uniq_exprs. After this commit, this function used sjinfo instead.
  * But in GPDB, this function receives distinct_on_operators (in_operators) and distinct_on_exprs (uniq_exprs)
  * hence we don't need to make any changes here. */
