@@ -4171,7 +4171,7 @@ make_valuesscan(List *qptlist,
 	return node;
 }
 
-static CteScan * pg_attribute_unused()
+static pg_attribute_unused() CteScan *
 make_ctescan(List *qptlist,
 			 List *qpqual,
 			 Index scanrelid,
