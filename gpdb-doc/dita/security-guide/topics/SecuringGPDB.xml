@@ -2,6 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_iqr_ym2_jr">
   <title>Securing the Database</title>
+  <shortdesc>Introduces Greenplum Database security topics.</shortdesc>
   <body>
     <p>The intent of security configuration is to configure the Greenplum Database server to
       eliminate as many security vulnerabilities as possible. This guide provides a baseline for

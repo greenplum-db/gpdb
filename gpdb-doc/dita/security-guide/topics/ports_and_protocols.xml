@@ -2,6 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="greenplum_database_ports_and_protocols">
   <title>Greenplum Database Ports and Protocols</title>
+  <shortdesc>Lists network ports and protocols used within the Greenplum cluster.</shortdesc>
   <body>
     <p>Greenplum Database clients connect with TCP to the Greenplum master instance at the client
       connection port, 5432 by default. The listen port can be reconfigured in the

@@ -2,10 +2,10 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_nyc_mdf_jr">
   <title>Security Best Practices</title>
+  <shortdesc>Describes basic security best practices that you should follow to ensure the highest
+    level of system security. </shortdesc>
   <body>
-    <p> This chapter describes basic security best practices that you should follow to ensure the
-      highest level of system security.  </p>
-    <p>Greenplum Database default security configuration:<ul id="ul_mhk_rrg_4r">
+    <p>In the default Greenplum Database security configuration:<ul id="ul_mhk_rrg_4r">
         <li>Only local connections are allowed. </li>
         <li>Basic authentication is configured for the superuser (<codeph>gpadmin</codeph>).</li>
         <li>The superuser is authorized to do anything.</li>

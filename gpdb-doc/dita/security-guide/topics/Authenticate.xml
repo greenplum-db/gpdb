@@ -2,6 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_n5w_gtd_jr">
   <title>Configuring Client Authentication</title>
+  <shortdesc>Describes the available methods for authenticating Greenplum Database
+    clients.</shortdesc>
   <body>
     <p>When a Greenplum Database system is first initialized, the system contains one predefined
       superuser role. This role will have the same name as the operating system user who initialized

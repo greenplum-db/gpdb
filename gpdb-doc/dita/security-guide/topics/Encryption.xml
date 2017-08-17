@@ -2,9 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_th5_5bf_jr">
   <title>Encrypting Data and Database Connections</title>
+  <shortdesc>Describes how to encrypt data at rest in the database or in transit over the network,
+    to protect from evesdroppers or man-in-the-middle attacks.</shortdesc>
   <body>
-    <p>Encryption can be used to protect data in transit over the network between the database and
-      clients, and data at rest in the database. </p>
     <ul id="ul_wxd_dxc_lr">
       <li>Connections between clients and the master database can be encrypted with SSL. This is
         enabled with the <codeph>ssl</codeph> server configuration parameter, which is
