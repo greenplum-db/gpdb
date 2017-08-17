@@ -569,7 +569,7 @@ typedef enum SubLinkType
 	EXPR_SUBLINK,
 	ARRAY_SUBLINK,
 	CTE_SUBLINK,
-	NOT_EXISTS_SUBLINK   /* GPDB_90_MERGE_FIXME: Does ORCA really need this? */
+	NOT_EXISTS_SUBLINK   /* GPDB_84_MERGE_FIXME: Does ORCA really need this? */
 } SubLinkType;
 
 

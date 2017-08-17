@@ -1451,7 +1451,7 @@ nulltestsel(PlannerInfo *root, NullTestType nulltesttype, Node *arg,
 	double		selec;
 
 	/*
-	 * 8.4-9.0-MERGE-NOTE: The following hack is removed in the upstream commit e006a24a.
+	 * GPDB_84_MERGE_NOTE: Following hack is removed in the upstream commit e006a24a.
 	 * However, removing this causes cost differences for some ICG queries.
 	 * Hence, keeping the hack in GPDB
 	 * Special hack: an IS NULL test being applied at an outer join should not

@@ -1321,14 +1321,14 @@ make_lower_targetlist(Query *parse,
 			
 		if ( window_edge_is_delayed(f->trail) )
 		{
-			// 8.4-9.0:MERGE-FIXME: Should we pass includePlaceHolderVars as true
+			// GPDB_84_MERGE_FIXME: Should we pass includePlaceHolderVars as true
 			// in pull_var_clause ?
 			extravars = list_concat(extravars, 
 							pull_var_clause(f->trail->val, false));
 		}
 		if ( window_edge_is_delayed(f->lead) )
 		{
-			// 8.4-9.0:MERGE-FIXME: Should we pass includePlaceHolderVars as true
+			// GPDB_84_MERGE_FIXME: Should we pass includePlaceHolderVars as true
 			// in pull_var_clause ?
 			extravars = list_concat(extravars,
 							pull_var_clause(f->lead->val, false));
@@ -4131,7 +4131,7 @@ window_edge_is_delayed(WindowFrameEdge *edge)
 		return true;
 
 	/* Non-delayed frame edge must not have Var */
-	// 8.4-9.0:MERGE-FIXME: Should we pass includePlaceHolderVars as true
+	// GPDB_84_MERGE_FIXME: Should we pass includePlaceHolderVars as true
 	// in pull_var_clause ?
 	Assert(pull_var_clause((Node *) edge->val, false) == NIL);
 

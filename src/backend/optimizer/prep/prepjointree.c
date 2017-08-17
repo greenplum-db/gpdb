@@ -317,7 +317,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 		}
 		else if (sublink->subLinkType == ALL_SUBLINK)
 		{
-			/* GPDB_90_MERGE_FIXME: Should convert_IN_to_antijoin() also use available_rels ? */
+			/* GPDB_84_MERGE_FIXME: Should convert_IN_to_antijoin() also use available_rels ? */
 			j = convert_IN_to_antijoin(root, sublink);
 			if (j)
 			{
@@ -436,7 +436,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 
 			if (IsA(rarg, SubLink))
 			{
-				/* GPDB_90_MERGE_FIXME: Should convert_EXPR_to_join() also use available_rels ? */
+				/* GPDB_84_MERGE_FIXME: Should convert_EXPR_to_join() also use available_rels ? */
 				j = convert_EXPR_to_join(root, opexp);
 				if (j)
 				{
@@ -598,7 +598,7 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 
 
 /*
- * 8.4-9.0-MERGE_FIXME: Check if can be removed
+ * GPDB_84_MERGE_FIXME: Check if can be removed
  * pull_up_fromlist_subqueries
  *		Attempt to pull up subqueries in a List of jointree nodes.
  */
@@ -1976,7 +1976,7 @@ get_relids_in_jointree(Node *jtnode, bool include_joins)
 		if (include_joins && j->rtindex)
 			result = bms_add_member(result, j->rtindex);
 
-		/* GPDB_90_MERGE_FIXME: Not present upstream; is this really needed? */
+		/* GPDB_84_MERGE_FIXME: Not present upstream; is this really needed? */
 		foreach(l, j->subqfromlist)
 			result = bms_join(result, get_relids_in_jointree((Node *)lfirst(l), include_joins));
 	}
