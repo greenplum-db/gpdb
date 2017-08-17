@@ -2,10 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_fj5_b1x_r4">
   <title>Loading Data</title>
-  <body>
-    <p>There are several ways to add data to Greenplum Database, each with its appropriate uses.
-    </p>
-  </body>
+  <shortdesc>Description of the different ways to add data to Greenplum Database.</shortdesc>
   <topic id="topic_tmf_t2t_bp">
     <title>INSERT Statement with Column Values</title>
     <body>

@@ -2,9 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="schema_design">
   <title>Schema Design</title>
+  <shortdesc>Best practices for designing Greenplum Database schemas.</shortdesc>
 
   <body>
-    <p>This topic contains best practices for designing Greenplum Database schemas. </p>
     <p>Greenplum Database is an analytical, shared-nothing database, which is much different than a
       highly normalized, transactional SMP database. Greenplum Database performs best with a
       denormalized schema design suited for MPP analytical processing, a star or snowflake schema,

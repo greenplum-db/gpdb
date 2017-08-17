@@ -2,13 +2,14 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_gptransfer">
   <title>Migrating Data with Gptransfer</title>
+  <shortdesc>Information about the <codeph>gptransfer</codeph> migration utility, which transfers
+    Greenplum Database metadata and data from one Greenplum database to another.</shortdesc>
   <body>
-    <p>The <codeph>gptransfer</codeph> migration utility transfers Greenplum Database metadata and
-      data from one Greenplum database to another Greenplum database, allowing you to migrate the
-      entire contents of a database, or just selected tables, to another database. The source and
-      destination databases may be in the same or a different cluster. <codeph>gptransfer</codeph>
-      moves data in parallel across all the segments, using the <codeph>gpfdist</codeph> data
-      loading utility to attain the highest transfer rates. </p>
+    <p><codeph>gptransfer</codeph> enables you to migrate the entire contents of a database, or just
+      selected tables, to another database. The source and destination databases may be in the same
+      or a different cluster. <codeph>gptransfer</codeph> moves data in parallel across all the
+      segments, using the <codeph>gpfdist</codeph> data loading utility to attain the highest
+      transfer rates. </p>
     <p><codeph>gptransfer</codeph> handles the setup and execution of the data transfer.
       Participating clusters must already exist, have network access between all hosts in both
       clusters, and have certificate-authenticated ssh access between all hosts in both clusters. </p>

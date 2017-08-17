@@ -2,12 +2,10 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_q5g_pmj_s4">
   <title>High Availability</title>
-  <body>
-    <p>Greenplum Database supports highly available, fault-tolerant database services when you
-      enable and properly configure Greenplum high availability features. To guarantee a required
-      level of service, each component must have a standby ready to take its place if it should
-      fail.</p>
-  </body>
+  <shortdesc>Greenplum Database supports highly available, fault-tolerant database services when you
+    enable and properly configure Greenplum high availability features. To guarantee a required
+    level of service, each component must have a standby ready to take its place if it should
+    fail.</shortdesc>
   <topic id="topic_vrb_sxc_54">
     <title>Disk Storage</title>
     <body>

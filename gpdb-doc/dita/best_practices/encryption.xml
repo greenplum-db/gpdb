@@ -2,6 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_th5_5bf_jr">
   <title>Encrypting Data and Database Connections</title>
+  <shortdesc>Best practices for implementing encryption and managing keys.</shortdesc>
   <body>
     <section>
       <p>Encryption can be used to protect data in a Greenplum Database system in the following

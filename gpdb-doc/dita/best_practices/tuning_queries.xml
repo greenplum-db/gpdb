@@ -2,14 +2,15 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_tpt_bqw_r4">
   <title>Tuning SQL Queries</title>
+  <shortdesc>The Greenplum Database cost-based optimizer evaluates many strategies for executing a
+    query and chooses the least costly method. </shortdesc>
   <body>
-    <p>The Greenplum Database cost-based optimizer evaluates many strategies for executing a query
-      and chooses the least costly method. Like other RDBMS optimizers, the Greenplum optimizer
-      takes into account factors such as the number of rows in tables to be joined, availability of
-      indexes, and cardinality of column data when calculating the costs of alternative execution
-      plans. The optimizer also accounts for the location of the data, preferring to perform as much
-      of the work as possible on the segments and to minimize the amount of data that must be
-      transmitted between segments to complete the query.</p>
+    <p>Like other RDBMS optimizers, the Greenplum optimizer takes into account factors such as the
+      number of rows in tables to be joined, availability of indexes, and cardinality of column data
+      when calculating the costs of alternative execution plans. The optimizer also accounts for the
+      location of the data, preferring to perform as much of the work as possible on the segments
+      and to minimize the amount of data that must be transmitted between segments to complete the
+      query.</p>
     <p>When a query runs slower than you expect, you can view the plan the optimizer selected as
       well as the cost it calculated for each step of the plan. This will help you determine which
       steps are consuming the most resources and then modify the query or the schema to provide the

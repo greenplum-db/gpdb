@@ -2,10 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_yrk_bcx_r4">
   <title>System Monitoring and Maintenance</title>
-  <body>
-    <p>This section contains best practices for regular maintenance that will ensure Greenplum
-      Database high availability and optimal performance. </p>
-  </body>
+  <shortdesc>Best practices for regular maintenance that will ensure Greenplum Database high
+    availability and optimal performance.</shortdesc>
   <topic id="topic_izw_bwb_s4">
     <title id="monitoring">Monitoring</title>
     <body>
