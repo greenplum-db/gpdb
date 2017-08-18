@@ -94,4 +94,9 @@ void    GPHDUri_verify_cluster_exists(GPHDUri *uri, char* cluster);
  */
 void     freeGPHDUri(GPHDUri *uri);
 
+/*
+ * Frees the given fragment
+ */
+void  free_fragment(FragmentData *data);
+
 #endif    // _PXFURIPARSER_H_

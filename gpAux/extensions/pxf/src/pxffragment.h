@@ -15,28 +15,37 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#ifndef _PXFUTILS_H_
-#define _PXFUTILS_H_
+#ifndef GPDB_PXFFRAGMENT_H
+#define GPDB_PXFFRAGMENT_H
 
-#include "postgres.h"
 #include "pxfuriparser.h"
+#include "libchurl.h"
+#include "pxfheaders.h"
+#include "lib/stringinfo.h"
 
-/* convert input string to upper case and prepend "X-GP-" prefix */
-char* normalize_key_name(const char* key);
+/*
+ * Context for the Fragmenter
+ */
+typedef struct sClientContext
+{
+	CHURL_HEADERS http_headers;
+	CHURL_HANDLE handle;
+	/* part of the HTTP response - received	*/
+	/* from one call to churl_read 			*/
+	/* contains the complete HTTP response 	*/
+	StringInfoData the_rest_buf;
+} ClientContext;
 
-/* get the name of the type, given the OID */
-char* TypeOidGetTypename(Oid typid);
+/*
+ * One debug level for all log messages from the data allocation algorithm
+ */
+#define FRAGDEBUG DEBUG2
 
-#define PXF_CLUSTER       "default"
-#define PXF_PROFILE       "PROFILE"
-#define FRAGMENTER        "FRAGMENTER"
-#define ACCESSOR          "ACCESSOR"
-#define RESOLVER          "RESOLVER"
-#define ANALYZER          "ANALYZER"
-#define PxfDefaultHost    "localhost"
-#define PxfDefaultPortStr "51200"
-#define PxfDefaultPort    51200
+#define REST_HEADER_JSON_RESPONSE "Accept: application/json"
 
-#endif  // _PXFUTILS_H_
+extern void set_fragments(GPHDUri* uri, Relation relation);
+
+#endif //GPDB_PXFFRAGMENT_H
