@@ -102,3 +102,32 @@ RETURNS bool as $$
         time.sleep(0.5)
     return False 
 $$ LANGUAGE plpythonu;
+
+CREATE OR REPLACE FUNCTION kill_postmaster(datadir text)
+RETURNS int as $$
+    import os
+    ps_cmd = 'ps uxww | grep "[-]D %s" | awk \'{ print $2 }\' | xargs kill' % datadir
+    return os.system(ps_cmd)
+$$ LANGUAGE plpythonu;
+
+CREATE OR REPLACE FUNCTION wait_for_changetracking(num_loops int, num_changetracking int)
+RETURNS boolean AS
+$$
+declare
+    d int;	/* in func */
+    i int;	/* in func */
+begin	/* in func */
+    i := 0;	/* in func */
+    loop	/* in func */
+        select count(*) from gp_segment_configuration where mode = 'c' into d;	/* in func */
+        if d = $2 then	/* in func */
+            return true;	/* in func */
+        end if;	/* in func */
+        if i >= $1 then	/* in func */
+            return false;	/* in func */
+        end if;	/* in func */
+        perform pg_sleep(.5);	/* in func */
+        i := i + 1;	/* in func */
+  end loop;	/* in func */
+end;	/* in func */
+$$ LANGUAGE plpgsql;

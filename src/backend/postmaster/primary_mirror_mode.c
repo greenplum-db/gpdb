@@ -21,6 +21,10 @@
 #include "access/slru.h"
 #include "access/xlog_internal.h"
 
+#ifdef USE_SEGWALREP
+#include "cdb/cdbwalrep.h"
+#endif
+
 #define BUFFER_LEN (2 * (MAXPGPATH))
 /**
  * todo MIRRORING Review setup of signal handlers here --
@@ -825,6 +829,77 @@ getFileRepRoleAndState(
 	if (transitionTargetDataStateOut)
 		*transitionTargetDataStateOut = transitionTargetDataState;
 }
+
+#ifdef USE_SEGWALREP
+/*
+ * Fetch the current and target replication role and states.  Returns values through the pointer arguments.
+ *
+ * Note that any of the arguments may be NULL in which case that piece of information is not returned.
+ *
+ * @param segmentStateOut may be NULL. If not NULL, *segmentStateOut is filled in with the current segment state.
+ * @param dataStateOut may be NULL. If not NULL, *dataStateOut is filled in with the current data state.
+ * @param isInTransitionOut  may be NULL. If not NULL, *isInTransitionOut is filled in with true or false depending on
+ *                           if the segment is in transition to primary or mirror mode.
+ * @param transitionTargetDataStateOut  may be NULL. If not NULL, *transitionTargetDataStateOut is filled
+ *                           in with the target data state, or DataStateNotInitialized if there is
+ *                           no transition to primary or mirror mode in progress.
+ */
+void
+getPrimaryMirrorStateTransition(SegmentState_e *segmentStateOut,
+								DataState_e *dataStateOut,
+								bool *isInTransitionOut,
+								DataState_e *transitionTargetDataStateOut)
+{
+	assertModuleInitialized();
+
+	SegmentState_e	segmentState;
+	DataState_e		dataState;
+	bool isInTransition;
+	DataState_e transitionTargetDataState;
+
+	acquireModuleSpinLockAndMaybeStartCriticalSection(false);
+	{
+		/*
+		 * Check to see if the postmaster is still processing a
+		 * transition.  Note that here we don't need to check to see
+		 * if the listener is complete.
+		 */
+		isInTransition = isInValidTransition_UnderLock();
+
+		switch (pmModuleState->mode)
+		{
+			case PMModePrimarySegment:
+			case PMModeMirrorSegment:
+				dataState = pmModuleState->dataState;
+				segmentState = pmModuleState->segmentState;
+				transitionTargetDataState = isInTransition ?
+						pmModuleState->requestedTransition.dataState : DataStateNotInitialized;
+				break;
+			case PMModeMirrorlessSegment:
+				dataState = pmModuleState->dataState;
+				segmentState = pmModuleState->segmentState;
+				transitionTargetDataState = DataStateNotInitialized;
+				break;
+			default:
+				dataState = DataStateNotInitialized;
+				segmentState = SegmentStateNotInitialized;
+				transitionTargetDataState = DataStateNotInitialized;
+				break;
+		}
+	}
+	releaseModuleSpinLockAndEndCriticalSectionAsNeeded();
+
+	/* now fill in output! */
+	if (segmentStateOut)
+		*segmentStateOut = segmentState;
+	if (dataStateOut)
+		*dataStateOut = dataState;
+	if (isInTransitionOut)
+		*isInTransitionOut = isInTransition;
+	if (transitionTargetDataStateOut)
+		*transitionTargetDataStateOut = transitionTargetDataState;
+}
+#endif
 
 static void
 assertIsTransitioning(void)
@@ -1981,7 +2056,14 @@ applyStepForTransitionToPrimarySegmentMode(PrimaryMirrorModeTransitionArguments 
 				case PMModeQuiescentSegment:
 				case PMModeMirrorlessSegment:
 				case PMModeUninitialized:
+#ifdef USE_SEGWALREP
+					elog(LOG, "TransitiontoPrimary: initializing XLog Startup");
+					XLogStartupInit();
+					copyTransitionInputParameters(args, SegmentStateReady);
+					*stateInOut = TSDoDatabaseStartup;
+#else
 					*stateInOut = TSDoFilerepBackendsShutdown;
+#endif
 					return PMTransitionSuccess;
 				default:
 					return invalidMode(args);

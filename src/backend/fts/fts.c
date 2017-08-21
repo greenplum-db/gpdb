@@ -574,11 +574,19 @@ probePublishUpdate(uint8 *probe_results)
 	bool update_found = false;
 	int i;
 
+#ifdef USE_SEGWALREP
+	if (failover_strategy == 'w')
+	{
+		/* preprocess probe results to decide what is the current segment state */
+		FtsPreprocessProbeResultsWalRep(cdb_component_dbs, probe_results);
+	}
+#else
 	if (failover_strategy == 'f')
 	{
 		/* preprocess probe results to decide what is the current segment state */
 		FtsPreprocessProbeResultsFilerep(cdb_component_dbs, probe_results);
 	}
+#endif
 
 	for (i = 0; i < cdb_component_dbs->total_segment_dbs; i++)
 	{
@@ -619,7 +627,11 @@ probePublishUpdate(uint8 *probe_results)
 			continue;
 		}
 
+#ifdef USE_SEGWALREP
+		Assert(failover_strategy == 'w');
+#else
 		Assert(failover_strategy == 'f');
+#endif
 		Assert(mirror != NULL);
 
 		/* changes required for primary and mirror */
@@ -647,7 +659,11 @@ probePublishUpdate(uint8 *probe_results)
 		}
 
 			/* get current state */
+#ifdef USE_SEGWALREP
+		stateOld = FtsGetPairStateWalRep(primary, mirror);
+#else
 		stateOld = FtsGetPairStateFilerep(primary, mirror);
+#endif
 
 		/* get new state */
 		stateNew = transition(stateOld, trans, primary, mirror, &changes[0], &changes[1]);
@@ -739,7 +755,11 @@ transition
 	}
 
 	/* get new state for primary and mirror */
+#ifdef USE_SEGWALREP
+	stateNew = FtsTransitionWalRep(stateOld, trans);
+#else
 	stateNew = FtsTransitionFilerep(stateOld, trans);
+#endif
 
 	/* check if transition is required */
 	if (stateNew != stateOld)
@@ -757,7 +777,11 @@ transition
 			elog(LOG, "FTS: state machine transition from %d to %d.", stateOld, stateNew);
 		}
 
+#ifdef USE_SEGWALREP
+		FtsResolveStateWalRep(&pairState);
+#else
 		FtsResolveStateFilerep(&pairState);
+#endif
 
 		buildSegmentStateChange(primary, changesPrimary, pairState.statePrimary);
 		buildSegmentStateChange(mirror, changesMirror, pairState.stateMirror);
@@ -799,7 +823,11 @@ updateConfiguration(FtsSegmentStatusChange *changes, int changeEntries)
 	bool commit = probeUpdateConfig(changes, changeEntries);
 
 	if (commit)
+#ifdef USE_SEGWALREP
+		FtsFailoverWalRep(changes, changeEntries);
+#else
 		FtsFailoverFilerep(changes, changeEntries);
+#endif
 
 	if (gp_log_fts >= GPVARS_VERBOSITY_VERBOSE)
 	{
@@ -854,7 +882,11 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 
 		if (changelogging)
 		{
+#ifdef USE_SEGWALREP
+			Assert(failover_strategy == 'w');
+#else
 			Assert(failover_strategy == 'f');
+#endif
 			Assert(primary && valid);
 		}
 
@@ -979,7 +1011,11 @@ FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo)
 {
 	switch (failover_strategy)
 	{
+#ifdef USE_SEGWALREP
+		case 'w':
+#else
 		case 'f':
+#endif
 			if (SEGMENT_IS_ACTIVE_MIRROR(segInfo) && SEGMENT_IS_ALIVE(segInfo))
 				return true;
 			/* fallthrough */

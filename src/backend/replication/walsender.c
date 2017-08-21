@@ -69,6 +69,9 @@
 #include "utils/resowner.h"
 #include "utils/timestamp.h"
 
+#ifdef USE_SEGWALREP
+#include "cdb/cdbwalrep.h"
+#endif
 
 /* Array of WalSnds in shared memory */
 WalSndCtlData *WalSndCtl = NULL;
@@ -399,6 +402,9 @@ ProcessRepliesIfAny(void)
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg("unexpected EOF on standby connection"),
 					 errSendAlert(true)));
+#ifdef USE_SEGWALREP
+			WalUpdateStandbyState(PRIMARYWALREP_FAULT);
+#endif
 			proc_exit(0);
 		}
 		if (r == 0)
@@ -426,6 +432,9 @@ ProcessRepliesIfAny(void)
 						"walsnd processreply -- "
 						"Received 'X' as first character in reply from standby. "
 						"Standby is closing down the socket, hence exiting.");
+#ifdef USE_SEGWALREP
+				WalUpdateStandbyState(PRIMARYWALREP_FAULT);
+#endif
 				proc_exit(0);
 
 			default:

@@ -83,14 +83,21 @@ FileRepPrimary_GetMirrorDataLossTrackingSessionNum(int64 *sessionNum)
 
     *sessionNum = getChangeTrackingSessionId();
 
+#ifdef USE_SEGWALREP
+	getPrimaryMirrorStateTransition(&segmentState, &dataState, NULL, NULL);
+#else
     getFileRepRoleAndState(&fileRepRole, &segmentState, &dataState, NULL, NULL);
+#endif
 
 	switch (dataState) {
 		case DataStateNotInitialized:
 			return MirrorDataLossTrackingState_MirrorNotConfigured;
 
 		case DataStateInResync:
-			if (! FileRepResync_IsReMirrorAllowed() &&
+			if (
+#ifndef USE_SEGWALREP
+! FileRepResync_IsReMirrorAllowed() &&
+#endif
 				(segmentState == SegmentStateInitialization ||
 				 segmentState == SegmentStateInResyncTransition))
 				return MirrorDataLossTrackingState_MirrorDown;
@@ -101,7 +108,7 @@ FileRepPrimary_GetMirrorDataLossTrackingSessionNum(int64 *sessionNum)
 			return MirrorDataLossTrackingState_MirrorCurrentlyUpInSync;
 
 		case DataStateInChangeTracking:
-
+#ifndef USE_SEGWALREP
             /*
              * If segment is in transition to Change Tracking then IO activity
              * must be suspended.
@@ -112,7 +119,7 @@ FileRepPrimary_GetMirrorDataLossTrackingSessionNum(int64 *sessionNum)
                                                    FileRepRelationTypeNotSpecified,
                                                    FileRepOperationNotSpecified);
             }
-
+#endif
 			return MirrorDataLossTrackingState_MirrorDown;
 
 		default:

@@ -27,6 +27,10 @@
 
 #include "cdb/ml_ipc.h" /* gettime_elapsed_ms */
 
+#ifdef USE_SEGWALREP
+#include "cdb/cdbwalrep.h"
+#endif
+
 #ifdef HAVE_POLL_H
 #include <poll.h>
 #endif
@@ -42,7 +46,11 @@
  * CONSTANTS
  */
 
+#ifdef USE_SEGWALREP
+#define PROBE_RESPONSE_LEN  (12)         /* size of segment response message */
+#else
 #define PROBE_RESPONSE_LEN  (20)         /* size of segment response message */
+#endif
 #define PROBE_ERR_MSG_LEN   (256)        /* length of error message for errno */
 
 /*
@@ -699,9 +707,13 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 {
 	Assert(probeInfo->segmentStatus == PROBE_DEAD);
 
+#ifdef USE_SEGWALREP
+	PrimaryWalRepState primaryState;
+#else
 	PrimaryMirrorMode role;
 	SegmentState_e state;
 	DataState_e mode;
+#endif
 	FaultType_e fault;
 	uint32 bufInt;
 
@@ -712,6 +724,30 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 		return false;
 	}
 
+#ifdef USE_SEGWALREP
+	memcpy(&bufInt, probeInfo->response + 4, sizeof(bufInt));
+	primaryState = (PrimaryWalRepState)ntohl(bufInt);
+
+	memcpy(&bufInt, probeInfo->response + 8, sizeof(bufInt));
+	fault = (FaultType_e)ntohl(bufInt);
+
+	probeInfo->segmentStatus = PROBE_ALIVE;
+
+	/* get fault type - this will be used to decide the next segment state */
+	if (primaryState == PRIMARYWALREP_FAULT)
+	{
+		switch(fault)
+		{
+			case FaultTypeMirror:
+				probeInfo->segmentStatus |= PROBE_FAULT_MIRROR;
+				break;
+			default:
+				Assert(!"Unexpected segment fault type");
+		}
+	}
+	write_log("FTS: segment (dbid=%d, content=%d) reported fault %s segmentstatus %x to the prober.",
+			  probeInfo->dbId, probeInfo->segmentId, getFaultTypeLabel(fault), probeInfo->segmentStatus);
+#else
 	memcpy(&bufInt, probeInfo->response + 4, sizeof(bufInt));
 	role = (PrimaryMirrorMode)ntohl(bufInt);
 
@@ -786,7 +822,7 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 		write_log("FTS: segment (dbid=%d, content=%d) reported fault %s segmentstatus %x to the prober.",
 				  probeInfo->dbId, probeInfo->segmentId, getFaultTypeLabel(fault), probeInfo->segmentStatus);
 	}
-
+#endif
 	return true;
 }
 

@@ -52,3 +52,6 @@ installcheck: all gpdiff.pl gpstringsubs.pl
 
 installcheck-resgroup: all gpdiff.pl gpstringsubs.pl
 	./pg_isolation2_regress --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_resgroup --psqldir='$(PSQLDIR)' --inputdir=$(srcdir) --resgroup-dir=resgroup --dbname=isolation2resgrouptest --schedule=$(srcdir)/isolation2_resgroup_schedule
+
+installcheck-walrep: all gpdiff.pl gpstringsubs.pl
+	./pg_isolation2_regress --init-file=$(top_builddir)/src/test/regress/init_file --psqldir='$(PSQLDIR)' --inputdir=$(srcdir) --dbname=isolation2walrep --schedule=$(srcdir)/isolation2_walrep_schedule
