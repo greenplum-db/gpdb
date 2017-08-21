@@ -843,6 +843,11 @@ extern bool gp_dynamic_partition_pruning;
  */
 extern bool gp_cte_sharing;
 
+/**
+ * Enable prototype recursive CTE feature
+ */
+extern bool gp_recursive_cte_prototype;
+
 /* MPP-7770: disallow altering storage using SET WITH */
 
 extern bool	gp_setwith_alter_storage;

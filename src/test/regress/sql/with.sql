@@ -4,6 +4,7 @@
 
 --start_ignore
 set gp_cte_sharing = on;
+set gp_recursive_cte_prototype = true;
 --end_ignore
 
 -- Basic WITH

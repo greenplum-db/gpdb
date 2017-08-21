@@ -20,6 +20,7 @@
 #include "parser/parse_cte.h"
 #include "parser/parse_expr.h"
 #include "utils/builtins.h"
+#include "cdb/cdbvars.h"
 
 
 /* Enumeration of contexts in which a self-reference is disallowed */
@@ -113,6 +114,13 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	Assert(pstate->p_ctenamespace == NIL);
 	Assert(pstate->p_future_ctes == NIL);
 
+	/* WITH RECURISVE is disabled if gp_recursive_cte_prototype is not set */
+	if (withClause->recursive && !gp_recursive_cte_prototype)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
+						errmsg("RECURSIVE option in WITH clause is not supported")));
+	}
 	/*
 	 * For either type of WITH, there must not be duplicate CTE names in
 	 * the list.  Check this right away so we needn't worry later.
