@@ -5241,11 +5241,6 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 
 	if (XLByteLE(lsn, PageGetLSN(page)))		/* changes are applied */
 	{
-		UnlockReleaseBuffer(buffer);
-		
-		MIRROREDLOCK_BUFMGR_UNLOCK;
-		// -------- MirroredLock ----------
-		
 		if (Debug_print_qd_mirroring)
 		{
 			elog(LOG, "delete already appplied: lsn (%X,%X), page (%X,%X)",
@@ -5254,6 +5249,12 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 				 PageGetLSN(page).xlogid,
 				 PageGetLSN(page).xrecoff);
 		}
+
+		UnlockReleaseBuffer(buffer);
+
+		MIRROREDLOCK_BUFMGR_UNLOCK;
+		// -------- MirroredLock ----------
+
 		return;
 	}
 

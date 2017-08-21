@@ -43,7 +43,7 @@ killtuple(Relation r, GISTScanOpaque so, ItemPointer iptr)
 	gistcheckpage(r, so->curbuf);
 	p = (Page) BufferGetPage(so->curbuf);
 
-	if (XLByteEQ(so->stack->lsn, PageGetLSN(p)))
+	if (XLByteEQ(so->stack->lsn, BufferGetLSNAtomic(so->curbuf)))
 	{
 		/* page unchanged, so all is simple */
 		offset = ItemPointerGetOffsetNumber(iptr);
@@ -240,7 +240,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 		opaque = GistPageGetOpaque(p);
 
 		/* remember lsn to identify page changed for tuple's killing */
-		so->stack->lsn = PageGetLSN(p);
+		so->stack->lsn = BufferGetLSNAtomic(so->curbuf);
 
 		/* check page split, occured from last visit or visit to parent */
 		if (!XLogRecPtrIsInvalid(so->stack->parentlsn) &&

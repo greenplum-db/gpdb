@@ -562,7 +562,7 @@ gistfindleaf(GISTInsertState *state, GISTSTATE *giststate)
 		state->stack->page = (Page) BufferGetPage(state->stack->buffer);
 		opaque = GistPageGetOpaque(state->stack->page);
 
-		state->stack->lsn = PageGetLSN(state->stack->page);
+		state->stack->lsn = BufferGetLSNAtomic(state->stack->buffer);
 		Assert(state->r->rd_istemp || !XLogRecPtrIsInvalid(state->stack->lsn));
 
 		if (state->stack->blkno != GIST_ROOT_BLKNO &&
@@ -699,7 +699,7 @@ gistFindPath(Relation r, BlockNumber child)
 			break;
 		}
 
-		top->lsn = PageGetLSN(page);
+		top->lsn = BufferGetLSNAtomic(buffer);
 
 		if (top->parent && XLByteLT(top->parent->lsn, GistPageGetOpaque(page)->nsn) &&
 			GistPageGetOpaque(page)->rightlink != InvalidBlockNumber /* sanity check */ )
