@@ -14,9 +14,18 @@
 static volatile PrimaryWalRepState *primaryWalRepState = NULL;
 static slock_t primaryWalRepStateLock;
 
+static const char *primaryWalRepStateLabels[] = {"Archiving",
+												 "Catchup",
+												 "Streaming",
+												 "Shutdown",
+												 "Fault",
+												 "Unknown"};
+
 void
 primaryWalRepStateShmemInit(void)
 {
+	Assert(primaryWalRepState == NULL);
+
 	primaryWalRepState = (PrimaryWalRepState *) ShmemAlloc(sizeof(PrimaryWalRepState));
 	*primaryWalRepState = PRIMARYWALREP_STREAMING;
 	SpinLockInit(&primaryWalRepStateLock);
@@ -56,14 +65,7 @@ getPrimaryWalRepStateFromWalSnd(void)
 const char *
 getPrimaryWalRepStateLabel(PrimaryWalRepState state)
 {
-	static const char *labels[] = {"Archiving",
-								   "Catchup",
-								   "Streaming",
-								   "Shutdown",
-								   "Fault",
-								   "Unknown"};
-
-	return labels[state];
+	return primaryWalRepStateLabels[state];
 }
 
 /*
@@ -101,8 +103,9 @@ setPrimaryWalRepState(PrimaryWalRepState state)
 }
 
 /*
- * Block and wait for FTS to update gp_segment_configuration before
- * moving on.
+ * Block and wait for FTS to update gp_segment_configuration before moving
+ * on. We unblock when an appropriate transition request is processed in
+ * processPrimaryMirrorTransitionRequest.
  */
 void
 WalWaitForSegmentConfigurationChange(void)

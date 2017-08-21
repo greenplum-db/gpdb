@@ -173,10 +173,7 @@ else
 	$(MAKE) -C contrib/pg_upgrade check
 endif
 
-installcheck-walrep:
-	$(MAKE) -C src/test/isolation2 $@
-
-installcheck-resgroup:
+installcheck-resgroup installcheck-walrep:
 	$(MAKE) -C src/test/isolation2 $@
 
 # Create or destory a demo cluster.
