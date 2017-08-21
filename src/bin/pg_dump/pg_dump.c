@@ -8344,6 +8344,7 @@ dumpOpfamily(Archive *fout, OpfamilyInfo *opfinfo)
 			destroyPQExpBuffer(query);
 			destroyPQExpBuffer(q);
 			destroyPQExpBuffer(delq);
+			destroyPQExpBuffer(labelq);
 			return;
 		}
 
