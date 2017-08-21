@@ -1397,7 +1397,7 @@ mmxlog_add_filespace(
 											/* isPrimary */ false);
 	if (filespaceLocation2 != NULL)
 	{
-		strncpy(m->path2, filespaceLocation2, MAXPGPATH);
+		strlcpy(m->path2, filespaceLocation2, MAXPGPATH);
 		pfree(filespaceLocation2);
 	}
 	else
