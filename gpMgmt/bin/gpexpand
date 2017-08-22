@@ -39,6 +39,7 @@ try:
     from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, \
         GP_TEMPORARY_FILES_FILESPACE, GetCurrentFilespaceEntries, GetFilespaceEntries, GetFilespaceEntriesDict, \
         RollBackFilespaceChanges, GetMoveOperationList, FileType, UpdateFlatFiles
+    from gppylib.heapchecksum import HeapChecksum
 
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -54,6 +55,10 @@ GPDB_UTILITY = 3
 FILE_SPACES_INPUT_FILENAME_SUFFIX = ".fs"
 SEGMENT_CONFIGURATION_BACKUP_FILE = "gpexpand.gp_segment_configuration"
 FILE_SPACES_INPUT_FILE_LINE_1_PREFIX = "filespaceOrder"
+
+#global var
+_gp_expand = None
+table_expand_error = False
 
 description = ("""
 Adds additional segments to a pre-existing GPDB Array.
@@ -157,7 +162,9 @@ def parseargs():
 
     # Parse the command line arguments
     (options, args) = parser.parse_args()
+    return options, args, parser
 
+def validate_options(options, args, parser):
     if len(args) > 0:
         logger.error('Unknown argument %s' % args[0])
         parser.exit()
@@ -1215,7 +1222,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         return has_unique_indexes
 
-    def rollback(self, dburl, options):
+    def rollback(self, dburl):
         """Rolls back and expansion setup that didn't successfully complete"""
         cleanSchema = False
         status_history = self.statusLogger.get_status_history()
@@ -1364,17 +1371,17 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         except Exception, e:
             raise ExpansionError('Invalid input file: %s' % e)
 
-    def read_input_files(self, options, inputFilename=None):
+    def read_input_files(self, inputFilename=None):
         """Reads and validates line format of the input file passed
         in on the command line via the -i arg"""
 
         retValue = []
 
-        if not options.filename and not inputFilename:
+        if not self.options.filename and not inputFilename:
             raise ExpansionError('Missing input file')
 
-        if options.filename:
-            inputFilename = options.filename
+        if self.options.filename:
+            inputFilename = self.options.filename
         fsInputFilename = inputFilename + FILE_SPACES_INPUT_FILENAME_SUFFIX
         fsOidList = []
         fsDictionary = {}
@@ -1473,7 +1480,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 f.close()
             return retValue
         except IOError:
-            raise ExpansionError('Input file %s not found' % options.filename)
+            raise ExpansionError('Input file %s not found' % self.options.filename)
 
     def add_segments(self):
         """Starts the process of adding the new segments to the array"""
@@ -1634,7 +1641,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         for the new segments.
         """
         self.statusLogger.set_gp_segment_configuration_backup(
-        self.options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
+            self.options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
         self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
 
@@ -2469,6 +2476,39 @@ UPDATE gp_distribution_policy
         UpdateFlatFiles(self.gparray, primaries=False, expansion=True).run()
 
 
+    def validate_heap_checksums(self):
+        num_workers = min(len(self.gparray.get_hostlist()), MAX_PARALLEL_EXPANDS)
+        heap_checksum_util = HeapChecksum(gparray=self.gparray, num_workers=num_workers, logger=self.logger)
+        successes, failures = heap_checksum_util.get_segments_checksum_settings()
+        if len(successes) == 0:
+            logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
+            return 1
+
+        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+
+        inconsistent_segment_msgs = []
+        for segment in inconsistent:
+            inconsistent_segment_msgs.append("dbid: %s "
+                                             "checksum set to %s differs from master checksum set to %s" %
+                                             (segment.getSegmentDbId(), segment.heap_checksum,
+                                              master_heap_checksum))
+
+        if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
+            self.logger.fatal("Cluster heap checksum setting differences reported")
+            self.logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+                              % (len(inconsistent_segment_msgs), len(self.gparray.segments)))
+            self.logger.fatal("Review %s for details" % get_logfile())
+            log_to_file_only("Failed checksum consistency validation:", logging.WARN)
+            self.logger.fatal("gpexpand error: Cluster will not be modified as checksum settings are not consistent "
+                              "across the cluster.")
+
+            for msg in inconsistent_segment_msgs:
+                log_to_file_only(msg, logging.WARN)
+                raise Exception("Segments have heap_checksum set inconsistently to master")
+        else:
+            self.logger.info("Heap checksum setting consistent across cluster")
+
+
 # -----------------------------------------------
 class ExpandTable():
     def __init__(self, options, row=None):
@@ -2997,12 +3037,12 @@ def sig_handler(sig):
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
-def main():
+def main(options, args, parser):
+    global _gp_expand
+    global table_expand_error
+
     remove_pid = True
-    table_expand_error = False
-
     try:
-
         # setup signal handlers so we can clean up correctly
         signal.signal(signal.SIGTERM, sig_handler)
         signal.signal(signal.SIGHUP, sig_handler)
@@ -3010,7 +3050,7 @@ def main():
         logger = get_default_logger()
         setup_tool_logging(EXECNAME, getLocalHostname(), getUserName())
 
-        options, args = parseargs()
+        options, args = validate_options(options, args, parser)
 
         if options.verbose:
             enable_verbose_logging()
@@ -3098,7 +3138,8 @@ def main():
                 if not options.silent:
                     if not ask_yesno(None, "Would you like to continue with System Expansion", 'N'):
                         raise ValidationError()
-            newSegList = _gp_expand.read_input_files(options)
+            _gp_expand.validate_heap_checksums()
+            newSegList = _gp_expand.read_input_files()
             _gp_expand.addNewSegments(newSegList)
             _gp_expand.sync_packages()
             _gp_expand.start_prepare()
@@ -3134,7 +3175,7 @@ def main():
         gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
         sys.exit()
     except Exception, e:
-        if options.verbose:
+        if options and options.verbose:
             logger.exception("gpexpand failed. exiting...")
         else:
             logger.error("gpexpand failed: %s \n\nExiting..." % e)
@@ -3166,7 +3207,7 @@ def main():
 
     finally:
         try:
-            if remove_pid:
+            if remove_pid and options:
                 remove_pid_file(options.master_data_directory)
         except NameError:
             pass
@@ -3175,5 +3216,5 @@ def main():
             _gp_expand.halt_work()
 
 if __name__ == '__main__':
-    _gp_expand = None
-    main()
+    options, args, parser = parseargs()
+    main(options, args, parser)
