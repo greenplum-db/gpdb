@@ -89,6 +89,7 @@ static _stringlist *loadlanguage = NULL;
 static int	max_connections = 0;
 static char *encoding = NULL;
 static _stringlist *schedulelist = NULL;
+static _stringlist *exclude_tests = NULL;
 static _stringlist *extra_tests = NULL;
 static char *temp_install = NULL;
 static char *temp_config = NULL;
@@ -127,6 +128,8 @@ static void drop_database_if_exists(const char *dbname);
 
 static int
 run_diff(const char *cmd, const char *filename);
+
+static bool should_exclude_test(char *test);
 
 static void
 header(const char *fmt,...)
@@ -1890,10 +1893,24 @@ run_schedule(const char *schedule, test_function tfunc)
 							schedule, line_num);
 					exit_nicely(2);
 				}
+
+				if (num_tests - 1 >= 0 && should_exclude_test(tests[num_tests - 1]))
+					num_tests--;
+
 				tests[num_tests] = c;
 				num_tests++;
 				inword = true;
 			}
+		}
+
+		/* The last test in the line needs to be checked for exclusion */
+		if (num_tests - 1 >= 0 && should_exclude_test(tests[num_tests - 1]))
+		{
+			num_tests--;
+
+			/* All tests in this line are to be excluded, so go to the next line */
+			if (num_tests == 0)
+				continue;
 		}
 
 		if (num_tests == 0)
@@ -2285,6 +2302,22 @@ trim_white_space(char *str)
 }
 
 /*
+ * Should the test be excluded from running
+ */
+static bool
+should_exclude_test(char *test)
+{
+	_stringlist *sl;
+	for (sl = exclude_tests; sl != NULL; sl = sl->next)
+	{
+		if (strcmp(test, sl->str) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+/*
  * @brief Check whether a feature (i.e., optimizer or codegen) is on or off.
  * If the input feature is optimizer, then set the global
  * variable "optimizer_enabled" accordingly.
@@ -2369,6 +2402,7 @@ help(void)
 	printf(_("  --outputdir=DIR           place output files in DIR (default \".\")\n"));
 	printf(_("  --schedule=FILE           use test ordering schedule from FILE\n"));
 	printf(_("                            (can be used multiple times to concatenate)\n"));
+	printf(_("  --exclude-tests=TEST      command or space delimited tests to exclude from running\n"));
 	printf(_("  --srcdir=DIR              absolute path to source directory (for VPATH builds)\n"));
 	printf(_("  --temp-install=DIR        create a temporary installation in DIR\n"));
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
@@ -2428,6 +2462,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
         {"init-file", required_argument, NULL, 20},
         {"ao-dir", required_argument, NULL, 21},
         {"resgroup-dir", required_argument, NULL, 22},
+        {"exclude-tests", required_argument, NULL, 23},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2534,6 +2569,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
                 break;
             case 22:
                 resgroupdir = strdup(optarg);
+                break;
+            case 23:
+                split_to_stringlist(strdup(optarg), ", ", &exclude_tests);
                 break;
 			default:
 				/* getopt_long already emitted a complaint */

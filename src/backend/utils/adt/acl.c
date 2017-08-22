@@ -31,11 +31,6 @@
 #include "utils/memutils.h"
 #include "utils/syscache.h"
 
-typedef struct
-{
-	const char *name;
-	AclMode		value;
-} priv_map;
 
 /*
  * We frequently need to test whether a given role is a member of some other
@@ -1389,6 +1384,7 @@ convert_priv_string(text *priv_type_text)
 	return ACL_NO_RIGHTS;		/* keep compiler quiet */
 }
 
+
 /*
  * has_table_privilege variants
  *		These are all named "has_table_privilege" at the SQL level.
@@ -1882,6 +1878,7 @@ convert_database_priv_string(text *priv_type_text)
 			 errmsg("unrecognized privilege type: \"%s\"", priv_type)));
 	return ACL_NO_RIGHTS;		/* keep compiler quiet */
 }
+
 
 /*
  * has_function_privilege variants

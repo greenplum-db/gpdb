@@ -55,8 +55,6 @@ namespace gpdxl
 
 			CDXLTranslateContext *m_pdxltrctxOut;
 
-			Plan *m_pplan;
-
 			// translator context used to translate initplan and subplans associated
 			// with a param node
 			CContextDXLToPlStmt *m_pctxdxltoplstmt;
@@ -69,8 +67,7 @@ namespace gpdxl
 				const CDXLTranslateContextBaseTable *pdxltrctxbt,
 				DrgPdxltrctx *pdrgpdxltrctx,
 				CDXLTranslateContext *pdxltrctxOut,
-				CContextDXLToPlStmt *pctxdxltoplstmt,
-				Plan *pplan
+				CContextDXLToPlStmt *pctxdxltoplstmt
 				);
 
 			// translate DXL ScalarIdent node into GPDB Var node
@@ -82,9 +79,6 @@ namespace gpdxl
 
 			// get the output translator context
 			CDXLTranslateContext *PpdxltrctxOut();
-
-			// return the parent plan
-			Plan *Pplan();
 
 			// return the context of the DXL->PlStmt translation
 			CContextDXLToPlStmt *Pctxdxltoplstmt();

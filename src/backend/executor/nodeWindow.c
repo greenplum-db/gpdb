@@ -164,10 +164,9 @@ typedef struct WindowStatePerLevelData
 	 */
 	bool		empty_frame;
 
-	/* XXX: merge the following 4 fields into 2 */
 	/* state for rows frame is simple (for now) */
-	long int	trail_rows;
-	long int	lead_rows;
+	int64		trail_rows;
+	int64		lead_rows;
 
 	/* state for range frame is more complex */
 	Datum		trail_range;
@@ -179,8 +178,8 @@ typedef struct WindowStatePerLevelData
 	 *
 	 * For preceding edges, these numbers are 0 or negative.
 	 */
-	long int	num_trail_rows;
-	long int	num_lead_rows;
+	int64		num_trail_rows;
+	int64		num_lead_rows;
 
 	/* state for frame edges (for both ROWS and RANGE frames) */
 	ExprState  *trail_expr;
@@ -431,15 +430,15 @@ typedef struct WindowFrameBufferData
 	 *
 	 * Currently, these two counters do not be modified after a trim operation.
 	 */
-	long int	num_rows_before;
-	long int	num_rows_after;
+	int64		num_rows_before;
+	int64		num_rows_after;
 
 	/*
 	 * The trailing and leading number of rows from current_row if this frame
 	 * is a ROW frame.
 	 */
-	long int	trail_rows;
-	long int	lead_rows;
+	int64		trail_rows;
+	int64		lead_rows;
 
 	/*
 	 * The trailing and leading range from current_row if this frame is a
@@ -467,10 +466,10 @@ typedef WindowFrameBufferData *WindowFrameBuffer;
 
 static WindowFrameBuffer createRangeFrameBuffer(Datum trail_range,
 					   Datum lead_range,
-					   int bytes);
-static WindowFrameBuffer createRowsFrameBuffer(long int trail_rows,
-					  long int lead_rows,
-					  int bytes);
+					   int64 bytes);
+static WindowFrameBuffer createRowsFrameBuffer(int64 trail_rows,
+					  int64 lead_rows,
+					  int64 bytes);
 static WindowFrameBuffer resetFrameBuffer(WindowFrameBuffer buffer);
 static void appendToFrameBuffer(WindowStatePerLevel level_state,
 					WindowState * wstate,
@@ -485,8 +484,8 @@ static bool hasEnoughDataInRange(WindowFrameBuffer buffer,
 static bool hasEnoughDataInRows(WindowFrameBuffer buffer,
 					WindowStatePerLevel level_state,
 					WindowState * wstate,
-					long int trail_rows,
-					long int lead_rows);
+					int64 trail_rows,
+					int64 lead_rows);
 static void computeFrameValue(WindowStatePerLevel level_state,
 				  WindowState * wstate,
 				  NTupleStoreAccessor * trail_reader,
@@ -593,7 +592,7 @@ static void setEmptyFrame(WindowStatePerLevel level_state,
  * Create the tuplestore and all accessors.
  */
 static void
-initFrameBuffer(WindowFrameBuffer buffer, int bytes)
+initFrameBuffer(WindowFrameBuffer buffer, int64 bytes)
 {
 	buffer->tuplestore = ntuplestore_create(bytes);
 
@@ -613,7 +612,7 @@ initFrameBuffer(WindowFrameBuffer buffer, int bytes)
  * createRangeFrameBuffer -- create a new WindowFrameBuffer of the RANGE type.
  */
 static WindowFrameBuffer
-createRangeFrameBuffer(Datum trail_range, Datum lead_range, int bytes)
+createRangeFrameBuffer(Datum trail_range, Datum lead_range, int64 bytes)
 {
 	WindowFrameBuffer buffer =
 	(WindowFrameBuffer) palloc0(sizeof(WindowFrameBufferData));
@@ -631,7 +630,7 @@ createRangeFrameBuffer(Datum trail_range, Datum lead_range, int bytes)
  * createRowsFrameBuffer -- create a new WindowFrameBuffer of the ROWS type.
  */
 static WindowFrameBuffer
-createRowsFrameBuffer(long int trail_rows, long int lead_rows, int bytes)
+createRowsFrameBuffer(int64 trail_rows, int64 lead_rows, int64 bytes)
 {
 	WindowFrameBuffer buffer =
 	(WindowFrameBuffer) palloc0(sizeof(WindowFrameBufferData));
@@ -653,7 +652,7 @@ static void
 createFrameBuffers(WindowState * wstate)
 {
 	int			level;
-	int			bytes;
+	int64		bytes;
 
 	if (wstate->numlevels <= 0)
 		return;
@@ -1598,7 +1597,7 @@ static bool
 hasEnoughDataInRows(WindowFrameBuffer buffer,
 					WindowStatePerLevel level_state,
 					WindowState * wstate,
-					long int trail_rows, long int lead_rows)
+					int64 trail_rows, int64 lead_rows)
 {
 	if (level_state->empty_frame)
 		return true;
@@ -4012,7 +4011,7 @@ get_delay_edge(WindowFrameEdge * edge,
 				 errmsg("%s parameter cannot be NULL",
 						(is_rows ? "ROWS" : "RANGE"))));
 
-	if (is_rows && edge_param < 0)
+	if (is_rows && DatumGetInt64(edge_param) < 0)
 		ereport(ERROR,
 				(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
 				 errmsg("%s parameter cannot be negative",
@@ -4380,8 +4379,8 @@ adjustDelayBoundEdgeForRows(WindowStatePerLevel level_state,
 							WindowFrameEdge * edge,
 							ExprState *edge_expr,
 							NTupleStoreAccessor * edge_reader,
-							long int *p_request_num_rows,
-							long int *p_num_rows,
+							int64 *p_request_num_rows,
+							int64 *p_num_rows,
 							bool is_lead_edge)
 {
 	WindowFrameBuffer frame_buffer = level_state->frame_buffer;
@@ -5638,16 +5637,15 @@ init_frames(WindowState * wstate)
 				if (EDGE_IS_BOUND(frame->trail) &&
 					level_state->frame->trail->val != NULL)
 				{
-					long int	rows_param = 0;
+					int64		rows_param = 0;
 					bool		isnull = true;
 					Expr	   *expr = (Expr *)level_state->frame->trail->val;
 
-					expr = coerceType(expr, INT4OID);
+					Assert(exprType((Node *) expr) == INT8OID);
 
 					level_state->trail_expr =
 						ExecInitExpr((Expr *)expr,
 									 (PlanState *) wstate);
-
 
 					if (!EDGE_IS_DELAYED_BOUND(frame->trail))
 					{
@@ -5655,8 +5653,14 @@ init_frames(WindowState * wstate)
 												  econtext,
 												  &isnull,
 												  NULL);
-
-						Insist(!isnull);
+						if (isnull)
+							ereport(ERROR,
+									(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+									 errmsg("frame starting offset must not be null")));
+						if (DatumGetInt64(rows_param) < 0)
+							ereport(ERROR,
+									(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+									 errmsg("ROWS parameter cannot be negative")));
 					}
 
 					if (frame->trail->kind == WINDOW_BOUND_PRECEDING)
@@ -5670,11 +5674,11 @@ init_frames(WindowState * wstate)
 				if (EDGE_IS_BOUND(frame->lead) &&
 					level_state->frame->lead->val != NULL)
 				{
-					long int	rows_param = 0;
+					int64		rows_param = 0;
 					bool		isnull = true;
 					Expr	   *expr = (Expr *)level_state->frame->lead->val;
 
-					expr = coerceType(expr, INT4OID);
+					Assert(exprType((Node *) expr) == INT8OID);
 
 					level_state->lead_expr =
 						ExecInitExpr((Expr *)expr,
@@ -5686,8 +5690,14 @@ init_frames(WindowState * wstate)
 												  econtext,
 												  &isnull,
 												  NULL);
-
-						Insist(!isnull);
+						if (isnull)
+							ereport(ERROR,
+									(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+									 errmsg("frame ending offset must not be null")));
+						if (DatumGetInt64(rows_param) < 0)
+							ereport(ERROR,
+									(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+									 errmsg("ROWS parameter cannot be negative")));
 					}
 
 					if (frame->lead->kind == WINDOW_BOUND_PRECEDING)
@@ -6603,6 +6613,39 @@ ntile_final(PG_FUNCTION_ARGS)
 }
 
 /*
+ * Check that the 'offset' argument to LEAD or LAG function is
+ * valid.
+ */
+static void
+check_lead_lag_offset(int64 value, bool isnull, bool is_lead)
+{
+	if (isnull)
+	{
+		if (is_lead)
+			ereport(ERROR,
+					(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+					 errmsg("LEAD offset cannot be NULL")));
+		else
+			ereport(ERROR,
+					(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
+					 errmsg("LAG offset cannot be NULL")));
+	}
+
+	if (value < 0)
+	{
+		if (is_lead)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("LEAD offset cannot be negative")));
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("LAG offset cannot be negative")));
+	}
+
+}
+
+/*
  * The common code for lead and lag.
  */
 static Datum
@@ -6625,23 +6668,9 @@ lead_lag_internal(PG_FUNCTION_ARGS, bool is_lead, bool *isnull)
 	 */
 	if (PG_NARGS() > 2)
 	{
-		int64		offset = 1;
-
-		if (PG_ARGISNULL(2))
-		{
-			if (is_lead)
-				elog(ERROR, "LEAD offset cannot be NULL");
-			else
-				elog(ERROR, "LAG offset cannot be NULL");
-		}
-
-		offset = PG_GETARG_INT64(2);
-		if (offset < 0)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("%s offset cannot be negative",
-							is_lead ? "LEAD" : "LAG")));
-
+		check_lead_lag_offset(PG_GETARG_INT64(2),
+							  PG_ARGISNULL(2),
+							  is_lead);
 	}
 
 	/*
@@ -6946,7 +6975,11 @@ lead_lag_frame_maker(PG_FUNCTION_ARGS)
 	char		winkind;
 
 	if (list_length(wref->args) > 1)
-		offset = (Node *) list_nth(wref->args, 1);
+	{
+		offset = list_nth(wref->args, 1);
+		offset = coerce_to_specific_type(NULL, offset, INT8OID, "ROWS");
+		offset = eval_const_expressions(NULL, offset);
+	}
 	else
 	{
 		offset = (Node *) makeConst(INT8OID,
@@ -6993,6 +7026,20 @@ lead_lag_frame_maker(PG_FUNCTION_ARGS)
 			break;
 		default:
 			elog(ERROR, "internal window framing error");
+	}
+
+	/*
+	 * If the offset is a constant, we can check immediately that it's
+	 * valid.
+	 */
+	if (IsA(offset, Const))
+	{
+		Const *con = (Const *) offset;
+
+		Assert(con->consttype == INT8OID);
+
+		check_lead_lag_offset(DatumGetInt64(con->constvalue), con->constisnull,
+							  winkind == WINKIND_LEAD);
 	}
 
 	frame->trail->val = frame->lead->val = offset;

@@ -1037,6 +1037,11 @@ InsertPgClassTuple(Relation pg_class_desc,
 	bool		nulls[Natts_pg_class];
 	HeapTuple	tup;
 
+	Assert(should_have_valid_relfrozenxid(
+			   new_rel_oid, rd_rel->relkind, rd_rel->relstorage) ?
+		   (rd_rel->relfrozenxid != InvalidTransactionId) :
+		   (rd_rel->relfrozenxid == InvalidTransactionId));
+
 	/* This is a tad tedious, but way cleaner than what we used to do... */
 	memset(values, 0, sizeof(values));
 	memset(nulls, false, sizeof(nulls));
@@ -1148,11 +1153,7 @@ AddNewRelationTuple(Relation pg_class_desc,
 	}
 
 	/* Initialize relfrozenxid */
-	if (relkind == RELKIND_RELATION ||
-		relkind == RELKIND_TOASTVALUE ||
-		relkind == RELKIND_AOSEGMENTS ||
-		relkind == RELKIND_AOBLOCKDIR ||
-		relkind == RELKIND_AOVISIMAP)
+	if (should_have_valid_relfrozenxid(new_rel_oid, relkind, relstorage))
 	{
 		/*
 		 * Initialize to the minimum XID that could put tuples in the table.
@@ -2507,11 +2508,11 @@ heap_drop_with_catalog(Oid relid)
 
 /*
  * Store a default expression for column attnum of relation rel.
- * The expression must be presented as a nodeToString() string.
  */
 void
 StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 {
+	char	   *adbin;
 	char	   *adsrc;
 	Relation	adrel;
 	HeapTuple	tuple;
@@ -2523,6 +2524,11 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 	Oid			attrdefOid;
 	ObjectAddress colobject,
 				defobject;
+
+	/*
+	 * Flatten expression to string form for storage.
+	 */
+	adbin = nodeToString(expr);
 
 	/*
 	 * Also deparse it to form the mostly-obsolete adsrc field.
@@ -2537,7 +2543,7 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 	 */
 	values[Anum_pg_attrdef_adrelid - 1] = RelationGetRelid(rel);
 	values[Anum_pg_attrdef_adnum - 1] = attnum;
-	values[Anum_pg_attrdef_adbin - 1] = CStringGetTextDatum(nodeToString(expr));
+	values[Anum_pg_attrdef_adbin - 1] = CStringGetTextDatum(adbin);
 	values[Anum_pg_attrdef_adsrc - 1] = CStringGetTextDatum(adsrc);
 
 	adrel = heap_open(AttrDefaultRelationId, RowExclusiveLock);
@@ -2561,6 +2567,7 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 	pfree(DatumGetPointer(values[Anum_pg_attrdef_adbin - 1]));
 	pfree(DatumGetPointer(values[Anum_pg_attrdef_adsrc - 1]));
 	heap_freetuple(tuple);
+	pfree(adbin);
 	pfree(adsrc);
 
 	/*
@@ -3523,4 +3530,35 @@ insert_ordered_unique_oid(List *list, Oid datum)
 	/* Insert datum into list after 'prev' */
 	lappend_cell_oid(list, prev, datum);
 	return list;
+}
+
+bool
+should_have_valid_relfrozenxid(Oid oid, char relkind, char relstorage)
+{
+	switch (relkind)
+	{
+		case RELKIND_RELATION:
+			if (relstorage == RELSTORAGE_EXTERNAL ||
+				relstorage == RELSTORAGE_FOREIGN  ||
+				relstorage == RELSTORAGE_VIRTUAL ||
+				relstorage == RELSTORAGE_AOROWS ||
+				relstorage == RELSTORAGE_AOCOLS)
+			{
+				return false;
+			}
+
+			/* Persistent tables' always store tuples with forzenXid. */
+			if (GpPersistent_IsPersistentRelation(oid))
+				return false;
+
+			return true;
+
+		case RELKIND_TOASTVALUE:
+		case RELKIND_AOSEGMENTS:
+		case RELKIND_AOBLOCKDIR:
+		case RELKIND_AOVISIMAP:
+			return true;
+	}
+
+	return false;
 }

@@ -6,6 +6,9 @@ use Data::Dumper;
 use strict;
 use warnings;
 
+use File::Temp;
+use IO::File;
+
 # IMPLEMENTATION NOTES:
 #
 # EXPLAIN ANALYZE final statistics in analyze_node:
@@ -344,15 +347,7 @@ sub explain_init
     {
         if ($colorscheme =~ m/list|dump/i)
         {
-            use IO::File;
-            use POSIX qw(tmpnam);
-
-            my ($tmpnam, $tmpfh);
-
-            for (;;) {
-                $tmpnam = tmpnam();
-                sysopen($tmpfh, $tmpnam, O_RDWR | O_CREAT | O_EXCL) && last;
-            }
+            my ($tmpfh, $tmpnam) = tempfile();
 
             # write to a temporary file
             dodumpcolor(\%glob_coltab, $tmpfh);
@@ -1063,17 +1058,7 @@ sub run
         {
             $glob_optn = "jpg";
 
-            use IO::File;
-            use POSIX qw(tmpnam);
-
-            my $tmpnam;
-
-            for (;;) {
-                my $tmpfh;
-
-                $tmpnam = tmpnam();
-                sysopen($tmpfh, $tmpnam, O_RDWR | O_CREAT | O_EXCL) && last;
-            }
+            my ($tmpfh, $tmpnam) = tempfile();
 
             # create a temporary directory name -- just append ".dir"
             # to the new tempfile name and mkdir
@@ -1193,17 +1178,7 @@ sub run
             # directly to dotapp, but didn't work.  Use a tmpfile
             # instead.
 
-            use IO::File;
-            use POSIX qw(tmpnam);
-
-            my $tmpnam;
-
-            for (;;) {
-                my $tmpfh;
-
-                $tmpnam = tmpnam();
-                sysopen($tmpfh, $tmpnam, O_RDWR | O_CREAT | O_EXCL) && last;
-            }
+            my ($tmpfh, $tmpnam) = tempfile();
             open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
 
             close STDOUT;
@@ -1708,7 +1683,7 @@ L_get_est:
 
         if (scalar(@foo))
         {
-            use POSIX;
+            require POSIX;
 
             my $esti = $foo[0];
 

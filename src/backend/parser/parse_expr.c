@@ -196,7 +196,7 @@ transformExpr(ParseState *pstate, Node *expr)
 						 * not a domain, transformTypeCast is a no-op.
 						 */
 						targetType = getBaseTypeAndTypmod(targetType,
-														 &targetTypmod);
+														  &targetTypmod);
 						tc = copyObject(tc);
 						tc->arg = transformArrayExpr(pstate,
 													 (A_ArrayExpr *) tc->arg,
@@ -847,7 +847,8 @@ transformAExprAnd(ParseState *pstate, A_Expr *a)
 	rexpr = coerce_to_boolean(pstate, rexpr, "AND");
 
 	return (Node *) makeBoolExpr(AND_EXPR,
-								 list_make2(lexpr, rexpr), a->location);
+								 list_make2(lexpr, rexpr),
+								 a->location);
 }
 
 static Node *
@@ -860,7 +861,8 @@ transformAExprOr(ParseState *pstate, A_Expr *a)
 	rexpr = coerce_to_boolean(pstate, rexpr, "OR");
 
 	return (Node *) makeBoolExpr(OR_EXPR,
-								 list_make2(lexpr, rexpr), a->location);
+								 list_make2(lexpr, rexpr),
+								 a->location);
 }
 
 static Node *
@@ -871,7 +873,8 @@ transformAExprNot(ParseState *pstate, A_Expr *a)
 	rexpr = coerce_to_boolean(pstate, rexpr, "NOT");
 
 	return (Node *) makeBoolExpr(NOT_EXPR,
-								 list_make1(rexpr), a->location);
+								 list_make1(rexpr),
+								 a->location);
 }
 
 static Node *

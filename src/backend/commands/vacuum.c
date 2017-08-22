@@ -1829,6 +1829,7 @@ vac_update_relstats(Oid relid, BlockNumber num_pages, double num_tuples,
 	 * InvalidTransactionId if it has no new data.
 	 */
 	if (TransactionIdIsNormal(frozenxid) &&
+		TransactionIdIsValid(pgcform->relfrozenxid) &&
 		TransactionIdPrecedes(pgcform->relfrozenxid, frozenxid))
 	{
 		pgcform->relfrozenxid = frozenxid;
@@ -1902,27 +1903,13 @@ vac_update_datfrozenxid(void)
 	{
 		Form_pg_class classForm = (Form_pg_class) GETSTRUCT(classTup);
 
-		/*
-		 * Only consider heap and TOAST tables (anything else should have
-		 * InvalidTransactionId in relfrozenxid anyway.)
-		 */
-		if (classForm->relkind != RELKIND_RELATION &&
-			classForm->relkind != RELKIND_TOASTVALUE &&
-			classForm->relkind != RELKIND_AOSEGMENTS &&
-			classForm->relkind != RELKIND_AOBLOCKDIR &&
-			classForm->relkind != RELKIND_AOVISIMAP)
+		if (!should_have_valid_relfrozenxid(HeapTupleGetOid(classTup),
+											classForm->relkind,
+											classForm->relstorage))
+		{
+			Assert(!TransactionIdIsValid(classForm->relfrozenxid));
 			continue;
-
-		/* MPP-10108 - exclude relations with external storage */
-		if (classForm->relkind == RELKIND_RELATION && (
-				classForm->relstorage == RELSTORAGE_EXTERNAL ||
-				classForm->relstorage == RELSTORAGE_FOREIGN  ||
-				classForm->relstorage == RELSTORAGE_VIRTUAL))
-			continue;
-
-		/* exclude persistent tables, as all updates to it are frozen */
-		if (GpPersistent_IsPersistentRelation(HeapTupleGetOid(classTup)))
-			continue;
+		}
 
 		Assert(TransactionIdIsNormal(classForm->relfrozenxid));
 

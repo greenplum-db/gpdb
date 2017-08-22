@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema materialize_spill;
 set search_path to materialize_spill;
 
@@ -44,7 +48,7 @@ language plpythonu;
 -- in memory, the Materialize will spill to disk.
 --
 CREATE TABLE test_mat_small (i1 int);
-INSERT INTO test_mat_small SELECT i from generate_series(1, 5) i;
+INSERT INTO test_mat_small SELECT i from generate_series(101, 105) i;
 
 -- Scale the larger table's size with the number of segments, so that there is enough
 -- data on every segment to cause spilling.
@@ -62,7 +66,6 @@ CREATE RESOURCE GROUP rg1_memory_test WITH
 CREATE ROLE role1_memory_test SUPERUSER RESOURCE GROUP rg1_memory_test;
 SET ROLE TO role1_memory_test;
 
-SET statement_mem=1024;
 set gp_resgroup_print_operator_memory_limits=on;
 set enable_hashjoin = false;
 set enable_nestloop = true;

@@ -103,6 +103,7 @@ static ArrayType *array_fill_internal(ArrayType *dims, ArrayType *lbs,
 					Datum value, bool isnull, Oid elmtype,
 					FunctionCallInfo fcinfo);
 
+
 /*
  * array_in :
  *		  converts an array from the external format in "string" to

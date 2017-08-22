@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema hashagg_spill;
 CREATE
 set search_path to hashagg_spill;
@@ -22,23 +26,17 @@ INSERT 51000
 DROP ROLE IF EXISTS role1_memory_test;
 DROP
 DROP RESOURCE GROUP rg1_memory_test;
-DROP
+ERROR:  resource group "rg1_memory_test" does not exist
 -- end_ignore
 CREATE ROLE role1_memory_test SUPERUSER;
 CREATE
-CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=10, memory_shared_quota=0, memory_spill_ratio=10);
+CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=10);
 CREATE
 SET ROLE TO role1_memory_test;
 SET
 
-set statement_mem="1800";
-SET
-0: ALTER ROLE role1_memory_test RESOURCE GROUP none;
+0: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SPILL_RATIO 2;
 ALTER
-0: DROP RESOURCE GROUP rg1_memory_test;
-DROP
-0: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=2);
-CREATE
 0: ALTER ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 ALTER
 set gp_resgroup_print_operator_memory_limits=on;
@@ -94,8 +92,6 @@ insert into aggspill select i, i*2, i::text from generate_series(1, 1000000) i;
 INSERT 1000000
 
 -- No spill with large statement memory
-set statement_mem = '125MB';
-SET
 0: ALTER ROLE role1_memory_test RESOURCE GROUP none;
 ALTER
 0: DROP RESOURCE GROUP rg1_memory_test;
@@ -111,8 +107,6 @@ count
 (1 row)
 
 -- Reduce the statement memory to induce spilling
-set statement_mem = '10MB';
-SET
 0: ALTER ROLE role1_memory_test RESOURCE GROUP none;
 ALTER
 0: DROP RESOURCE GROUP rg1_memory_test;
@@ -135,14 +129,8 @@ count
 -- Reduce the statement memory, nbatches and entrysize even further to cause multiple overflows
 set gp_hashagg_default_nbatches = 4;
 SET
-set statement_mem = '5MB';
-SET
-0: ALTER ROLE role1_memory_test RESOURCE GROUP none;
+0: ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_SPILL_RATIO 5;
 ALTER
-0: DROP RESOURCE GROUP rg1_memory_test;
-DROP
-0: CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=30, memory_shared_quota=0, memory_spill_ratio=5);
-CREATE
 0: ALTER ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 ALTER
 

@@ -33,7 +33,7 @@ typedef enum
 } RecursionContext;
 
 /* Associated error messages --- each must have one %s for CTE name */
-static const char * const recursion_errormsgs[] = {
+static const char *const recursion_errormsgs[] = {
 	/* RECURSION_OK */
 	NULL,
 	/* RECURSION_NONRECURSIVETERM */
@@ -234,6 +234,7 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 		foreach (lc, withClause->ctes)
 		{
 			CommonTableExpr *cte = (CommonTableExpr *)lfirst(lc);
+
 			analyzeCTE(pstate, cte);
 			pstate->p_ctenamespace = lappend(pstate->p_ctenamespace, cte);
 			pstate->p_future_ctes = list_delete_first(pstate->p_future_ctes);

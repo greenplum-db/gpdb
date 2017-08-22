@@ -1997,10 +1997,6 @@ create_indexscan_plan(PlannerInfo *root,
 	 * predicate, but only in a plain SELECT; when scanning a target relation
 	 * of UPDATE/DELETE/SELECT FOR UPDATE, we must leave such quals in the
 	 * plan so that they'll be properly rechecked by EvalPlanQual testing.
-	 *
-	 * While at it, we strip off the RestrictInfos to produce a list of plain
-	 * expressions (this loop replaces extract_actual_clauses used in the
-	 * other routines in this file).  We have to ignore pseudoconstants.
 	 */
 	qpqual = NIL;
 	foreach(l, scan_clauses)
@@ -2021,17 +2017,20 @@ create_indexscan_plan(PlannerInfo *root,
 			if (best_path->indexinfo->indpred)
 			{
 				if (baserelid != root->parse->resultRelation &&
-					!list_member_int(root->parse->rowMarks, baserelid))
+					get_rowmark(root->parse, baserelid) == NULL)
 					if (predicate_implied_by(clausel,
 											 best_path->indexinfo->indpred))
 						continue;
 			}
 		}
-		qpqual = lappend(qpqual, rinfo->clause);
+		qpqual = lappend(qpqual, rinfo);
 	}
 
 	/* Sort clauses into best execution order */
 	qpqual = order_qual_clauses(root, qpqual);
+
+	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
+	qpqual = extract_actual_clauses(qpqual, false);
 
 	/* Finally ready to build the plan node */
 	scan_plan = make_indexscan(tlist,
@@ -2651,11 +2650,11 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path,
 
 	Assert(scan_relid > 0);
 
-	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
-	scan_clauses = extract_actual_clauses(scan_clauses, false);
-
 	/* Sort clauses into best execution order */
 	scan_clauses = order_qual_clauses(root, scan_clauses);
+
+	/* Reduce RestrictInfo list to bare expressions; ignore pseudoconstants */
+	scan_clauses = extract_actual_clauses(scan_clauses, false);
 
 	scan_plan = make_subqueryscan(root, tlist,
 								  scan_clauses,
@@ -2667,7 +2666,6 @@ create_ctescan_plan(PlannerInfo *root, Path *best_path,
 
 	return scan_plan;
 }
-
 
 /*
  * create_worktablescan_plan
@@ -2696,7 +2694,7 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path,
 	 */
 	levelsup = rte->ctelevelsup;
 	if (levelsup == 0)			/* shouldn't happen */
-			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
+		elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
 	levelsup--;
 	cteroot = root;
 	while (levelsup-- > 0)
@@ -2705,7 +2703,7 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path,
 		if (!cteroot)			/* shouldn't happen */
 			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
 	}
-	if (cteroot->wt_param_id < 0)	/* shouldn't happen */
+	if (cteroot->wt_param_id < 0)		/* shouldn't happen */
 		elog(ERROR, "could not find param ID for CTE \"%s\"", rte->ctename);
 
 	/* Sort clauses into best execution order */
@@ -4172,7 +4170,7 @@ make_valuesscan(List *qptlist,
 	return node;
 }
 
-static CteScan * pg_attribute_unused()
+static pg_attribute_unused() CteScan *
 make_ctescan(List *qptlist,
 			 List *qpqual,
 			 Index scanrelid,
@@ -4323,7 +4321,6 @@ make_nestloop(List *tlist,
 	plan->righttree = righttree;
 	node->join.jointype = jointype;
 	node->join.joinqual = joinclauses;
-
 
 	return node;
 }

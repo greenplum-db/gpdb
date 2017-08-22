@@ -1,4 +1,15 @@
 --
+-- Test \dx and \dx+, to display extensions.
+--
+-- We just use gp_inject_fault as an example of an extension here. We don't
+-- inject any faults.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
+\dx gp_inject*
+\dx+ gp_inject*
+
+
+--
 -- Test extended \du flags
 --
 -- https://github.com/greenplum-db/gpdb/issues/1028
@@ -40,7 +51,7 @@ CREATE ROLE test_psql_du_e5 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', pr
 \du test_psql_du_e5
 DROP ROLE test_psql_du_e5;
 
--- does dot exist
+-- does not exist
 CREATE ROLE test_psql_du_e6 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'http');
 \du test_psql_du_e6
 DROP ROLE test_psql_du_e6;

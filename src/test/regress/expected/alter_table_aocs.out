@@ -513,20 +513,20 @@ select a, f_renamed from addcol1 where a = 999;
 (1 row)
 
 -- try altering statistics of a column
-alter table addcol1 alter column f_renamed set statistics 1000;
+alter table addcol1 alter column f_renamed set statistics 10000;
 select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
  attstattarget
 ---------------
-          1000
+          10000
 (1 row)
 
 set client_min_messages to error;
-alter table addcol1 alter column f_renamed set statistics 1001; -- should limit to 1000 and give warning
+alter table addcol1 alter column f_renamed set statistics 10001; -- should limit to 10000 and give warning
 set client_min_messages to notice;
 select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
  attstattarget
 ---------------
-          1000
+          10000
 (1 row)
 
 -- test alter distribution policy

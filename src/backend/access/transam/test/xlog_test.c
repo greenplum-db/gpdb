@@ -6,6 +6,46 @@
 #include "../xlog.c"
 
 void
+test_GetXLogCleanUpToForMaster(void **state)
+{
+	XLogRecPtr pointer = {0};
+	uint32 actual_logId = 0;
+	uint32 actual_logSeg = 0;
+
+	GpIdentity.segindex = MASTER_CONTENT_ID;
+
+	will_return(WalSndCtlGetXLogCleanUpTo, &pointer);
+
+	/*
+	 * Make the CheckKeepWalSegments return immediately
+	 */
+	keep_wal_segments = 0;
+
+	GetXLogCleanUpTo(pointer, &actual_logId, &actual_logSeg);
+}
+
+#ifdef USE_SEGWALREP
+void
+test_GetXLogCleanUpToForSegments(void **state)
+{
+	XLogRecPtr pointer = {0};
+	uint32 actual_logId = 0;
+	uint32 actual_logSeg = 0;
+
+	GpIdentity.segindex = 0; // not master
+
+	will_return(WalSndCtlGetXLogCleanUpTo, &pointer);
+
+	/*
+	 * Make the CheckKeepWalSegments return immediately
+	 */
+	keep_wal_segments = 0;
+
+	GetXLogCleanUpTo(pointer, &actual_logId, &actual_logSeg);
+}
+#endif
+
+void
 test_CheckKeepWalSegments(void **state)
 {
 	XLogRecPtr recptr;
@@ -143,6 +183,10 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test_CheckKeepWalSegments)
+		, unit_test(test_GetXLogCleanUpToForMaster)
+#ifdef USE_SEGWALREP
+		, unit_test(test_GetXLogCleanUpToForSegments)
+#endif
 	};
 	return run_tests(tests);
 }

@@ -483,18 +483,6 @@ _readGroupId(void)
 	READ_DONE();
 }
 
-static WindowSpecParse *
-_readWindowSpecParse(void)
-{
-	READ_LOCALS(WindowSpecParse);
-
-	READ_STRING_FIELD(name);
-	READ_NODE_FIELD(elems);
-
-	READ_DONE();
-}
-
-#ifndef COMPILING_BINARY_FUNCS
 static WindowSpec *
 _readWindowSpec(void)
 {
@@ -509,7 +497,6 @@ _readWindowSpec(void)
 
 	READ_DONE();
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static WindowFrame *
 _readWindowFrame(void)
@@ -3040,7 +3027,6 @@ static ParseNodeInfo infoAr[] =
 	{"WINDOWKEY", (ReadFn)_readWindowKey},
 	{"WINDOWREF", (ReadFn)_readWindowRef},
 	{"WINDOWSPEC", (ReadFn)_readWindowSpec},
-	{"WINDOWSPECPARSE", (ReadFn)_readWindowSpecParse},
 	{"WITHCLAUSE", (ReadFn)_readWithClause},
 	{"XMLEXPR", (ReadFn)_readXmlExpr},
 };

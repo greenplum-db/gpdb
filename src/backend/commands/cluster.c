@@ -1141,10 +1141,6 @@ swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid, bool swap_stats)
 
 	/* we should not swap reltoastidxid */
 
-	/* set rel1's frozen Xid */
-	Assert(TransactionIdIsNormal(frozenXid));
-	relform1->relfrozenxid = frozenXid;
-
 	/*
 	 * Swap the AO auxiliary relations and their indexes. Unlike the toast
 	 * relations, we need to swap the index oids as well.
@@ -1184,6 +1180,19 @@ swap_relation_files(Oid r1, Oid r2, TransactionId frozenXid, bool swap_stats)
 	swapchar = relform1->relstorage;
 	relform1->relstorage = relform2->relstorage;
 	relform2->relstorage = swapchar;
+
+	/*
+	 * This needs to be performed after the relkind and relstorage has been
+	 * swapped to correctly reflect the relfrozenxid.
+	 */
+	if (should_have_valid_relfrozenxid(r1, relform1->relkind, relform1->relstorage))
+	{
+		/* set rel1's frozen Xid */
+		Assert(TransactionIdIsNormal(frozenXid));
+		relform1->relfrozenxid = frozenXid;
+	}
+	else
+		relform1->relfrozenxid = InvalidTransactionId;
 
 	if (Debug_persistent_print)
 		elog(Persistent_DebugPrintLevel(), 

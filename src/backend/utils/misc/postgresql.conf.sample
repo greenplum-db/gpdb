@@ -363,7 +363,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 # - ANALYZE Statistics on Database Contents -
 
-#default_statistics_target = 25		# range 1 - 1000 (target # of
+#default_statistics_target = 100	# range 1 - 10000 (target # of
 					# histogram bins)
 #gp_analyze_relative_error = 0.25	# range 0.0 - 1.0 (target relative
 					# error fraction)
@@ -488,13 +488,6 @@ log_autostats=off	# print additional autostats information
 										# resource lockwait.
 gp_resqueue_memory_policy = 'eager_free'	# memory request based queueing. 
 									# eager_free, auto or none
-
-#---------------------------------------------------------------------------
-# RESOURCE GROUP
-#---------------------------------------------------------------------------
-gp_resgroup_memory_policy = 'eager_free'	# memory assignment policy for
-											# resource group.
-											# eager_free, auto or none
 
 #---------------------------------------------------------------------------
 # EXTERNAL TABLES

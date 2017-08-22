@@ -17,6 +17,12 @@
         <xref href="./gp_pgdatabase.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
+        <xref href="./gp_resgroup_config.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gp_resgroup_status.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
         <xref href="./gp_resqueue_status.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>

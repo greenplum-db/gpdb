@@ -996,6 +996,8 @@ listenerSetup(void)
 		close(listenerFd);
 	}
 
+	freeaddrinfo(addrs);
+
 	if (rp == NULL)
 	{               /* No address succeeded */
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),

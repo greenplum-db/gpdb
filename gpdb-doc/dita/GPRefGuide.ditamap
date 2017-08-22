@@ -85,6 +85,7 @@
 		<topicref href="ref_guide/sql_commands/ALTER_OPERATOR_CLASS.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_OPERATOR_FAMILY.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_PROTOCOL.xml"/>
+		<topicref href="ref_guide/sql_commands/ALTER_RESOURCE_GROUP.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_RESOURCE_QUEUE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_ROLE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_SCHEMA.xml"/>
@@ -117,6 +118,7 @@
 		<topicref href="ref_guide/sql_commands/CREATE_OPERATOR_CLASS.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_OPERATOR_FAMILY.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_PROTOCOL.xml"/>
+		<topicref href="ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_RESOURCE_QUEUE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_ROLE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_RULE.xml"/>
@@ -150,6 +152,7 @@
 		<topicref href="ref_guide/sql_commands/DROP_OPERATOR_FAMILY.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_OWNED.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_PROTOCOL.xml"/>
+		<topicref href="ref_guide/sql_commands/DROP_RESOURCE_GROUP.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_RESOURCE_QUEUE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_ROLE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_RULE.xml"/>

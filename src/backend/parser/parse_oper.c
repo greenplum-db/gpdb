@@ -956,6 +956,7 @@ make_op(ParseState *pstate, List *opname, Node *ltree, Node *rtree,
 
 	/* Do typecasting and build the expression tree */
 	result = make_op_expr(pstate, tup, ltree, rtree, ltypeId, rtypeId);
+	((OpExpr *) result)->location = location;
 
 	ReleaseSysCache(tup);
 

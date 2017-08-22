@@ -13,8 +13,10 @@
             [<b>-h</b> <varname>hostfile_gpinitsystem</varname>]
             [<b>-B</b> <varname>parallel_processes</varname>] 
             [<b>-p</b> <varname>postgresql_conf_param_file</varname>]
-            [<b>-s</b> <varname>standby_master_host</varname> [<b>-P</b> <varname>standby_master_port</varname>][<b>-F</b> <varname>standby_master_filespaces</varname>]]
-            [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>] [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
+            [<b>-s</b> <varname>standby_master_host</varname> [<b>-P</b> <varname>standby_master_port</varname>]
+              [<b>-F</b> <varname>standby_master_filespaces</varname>]]
+            [<b>-m</b> <varname>number</varname> | <b>--max_connections</b>=<varname>number</varname>]
+            [<b>-b</b> <varname>size</varname> | <b>--shared_buffers</b>=<varname>size</varname>]
             [<b>-n <varname>locale</varname> | --locale</b>=<varname>locale</varname>] [<b>--lc-collate</b>=<varname>locale</varname>] 
             [<b>--lc-ctype</b>=<varname>locale</varname>] [<b>--lc-messages</b>=<varname>locale</varname>] 
             [<b>--lc-monetary</b>=<varname>locale</varname>] [<b>--lc-numeric</b>=<varname>locale</varname>] 
@@ -196,10 +198,10 @@
                         supplied cluster configuration information to the specified
                                 <codeph><varname>output_configuration_file</varname></codeph>. This
                         file defines Greenplum Database members and segments using the
-                            <codeph>QD_PRIMARY_ARRAY</codeph> and <codeph>PRIMARY_ARRAY</codeph>
-                        parameters, and can be later used with <codeph>-I
-                                <varname>input_configuration_file</varname></codeph> to initialize a
-                        new cluster.</pd>
+                            <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>, and
+                            <codeph>MIRROR_ARRAY</codeph> parameters, and can be later used with
+                            <codeph>-I <varname>input_configuration_file</varname></codeph> to
+                        initialize a new cluster.</pd>
                 </plentry>
                 <plentry>
                     <pt>-p <varname>postgresql_conf_param_file</varname></pt>
@@ -273,11 +275,11 @@
                         than the number of segment instances.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-v | --version</pt>
+                    <pt>-v</pt>
                     <pd>Displays the version of this utility.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--help</pt>
+                    <pt>-h</pt>
                     <pd>Displays the online help.</pd>
                 </plentry>
             </parml>
@@ -449,13 +451,14 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt>QD_PRIMARY_ARRAY, PRIMARY_ARRAY</pt>
+                    <pt>QD_PRIMARY_ARRAY, PRIMARY_ARRAY, MIRROR_ARRAY</pt>
                     <pd>These parameters can only be provided using an input configuration file,
                         with the <codeph>gpinitsystem</codeph>
                         <codeph>-I <varname>input_configuration_file</varname></codeph> option.
-                            <codeph>QD_PRIMARY_ARRAY</codeph> and <codeph>PRIMARY_ARRAY</codeph>
-                        define the Greenplum Database master and segment hosts, respectively, using
-                        the format:
+                            <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>, and
+                            <codeph>MIRROR_ARRAY</codeph> define the Greenplum Database master host
+                        and the primary and mirror instances on the segment hosts, respectively,
+                        using the format:
                         <codeblock><varname>host</varname>~<varname>port</varname>~<varname>data_directory</varname>/<varname>seg_prefix&lt;segment_id></varname>~<varname>dbid</varname>~<varname>content_id</varname>~<varname>replication_port</varname></codeblock>The
                         Greenplum Database master always uses the value -1 for the segment ID and
                         content ID. For
@@ -463,14 +466,18 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock>
 declare -a PRIMARY_ARRAY=(
 127.0.0.1~40000~/gpdata1/gpsne0~2~0~6000
 127.0.0.1~40001~/gpdata2/gpsne1~3~1~6001
+)
+declare -a MIRROR_ARRAY=(
+127.0.0.1~50000~/gpmirror1/gpsne0~4~0~51000
+127.0.0.1~50001~/gpmirror2/gpsne1~5~1~51001
 )</codeblock></pd>
                     <pd>You can use the <codeph>gpinitsystem</codeph>
                         <codeph>-O <varname>output_configuration_file</varname></codeph> to populate
-                            <codeph>QD_PRIMARY_ARRAY</codeph> and <codeph>PRIMARY_ARRAY</codeph>
-                        using the hosts, data directories, segment prefix, and base port values that
-                        you provide to the command. For recovery purposes, you can edit the segment
-                        and content IDs to match the values of an existing Greenplum Database
-                        backup.</pd>
+                            <codeph>QD_PRIMARY_ARRAY</codeph>, <codeph>PRIMARY_ARRAY</codeph>,
+                            <codeph>MIRROR_ARRAY</codeph> using the hosts, data directories, segment
+                        prefix, and base port values that you provide to the command. For recovery
+                        purposes, you can edit the segment and content IDs to match the values of an
+                        existing Greenplum Database backup.</pd>
                 </plentry>
                 <plentry>
                     <pt>HEAP_CHECKSUM</pt>

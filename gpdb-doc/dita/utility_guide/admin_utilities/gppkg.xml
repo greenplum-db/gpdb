@@ -13,7 +13,7 @@
             <codeblock><b>gppkg</b> [<b>-i</b> <varname>package</varname> | <b>-u</b> <varname>package</varname> | <b>-r </b> <varname>name</varname>-<varname>version</varname> | <b>-c</b>] 
         [<b>-d</b> <varname>master_data_directory</varname>] [<b>-a</b>] [<b>-v</b>]
 
-<b>gppkg --migrate</b> <varname>GPHOME_1</varname> <varname>GPHOME_2</varname> [<b>-a</b>] [<b>-v</b>]
+<b>gppkg --migrate</b> <varname>GPHOME_old</varname> <varname>GPHOME_new</varname> [<b>-a</b>] [<b>-v</b>]
 
 <b>gppkg</b> [<b>-q</b> | <b>--query</b>] <varname>query_option</varname>
 
@@ -62,20 +62,24 @@
                         and installation of any dependencies.</pd>
                 </plentry>
                 <plentry>
-                    <pt>--migrate <varname>GPHOME_1</varname>
-                        <varname>GPHOME_2</varname></pt>
+                    <pt>--migrate <varname>GPHOME_old</varname>
+                        <varname>GPHOME_new</varname></pt>
                     <pd>Migrates packages from a separate <codeph>$GPHOME</codeph>. Carries over
                         packages from one version of Greenplum Database to another.</pd>
                     <pd>For example: <codeph>gppkg --migrate
                             /usr/local/greenplum-db-&lt;old-version>
                             /usr/local/greenplum-db-&lt;new-version></codeph></pd>
-                    <pd>This option is automatically invoked by the installer during minor upgrades.
-                        This option is given here for cases when the user wants to migrate packages
-                        manually.</pd>
-                    <pd>Migration can only proceed if <codeph>gppkg</codeph> is executed from the
-                        installation directory to which packages are being migrated. That is,
-                            <codeph>GPHOME_2</codeph> must match the <codeph>$GPHOME</codeph> from
-                        which the currently executing <codeph>gppkg</codeph> is being run. </pd>
+                    <pd>When migrating packages, these requirements must be met.<ul
+                            id="ul_sx3_hwx_41b">
+                            <li>At least the master instance of the destination Greenplum Database
+                                must be started (the instance installed in
+                                    <varname>GPHOME_new</varname>). Before running the
+                                    <codeph>gppkg</codeph> command start the Greenplum Database
+                                master with the command <codeph>gpstart -m</codeph>.</li>
+                            <li>Run the <codeph>gppkg</codeph> utility from the
+                                    <varname>GPHOME_new</varname> installation. The migration
+                                destination installation directory. </li>
+                        </ul></pd>
                 </plentry>
                 <plentry>
                     <pt>-q | --query <varname>query_option</varname></pt>

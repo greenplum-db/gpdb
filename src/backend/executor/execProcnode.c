@@ -1006,7 +1006,7 @@ ExecProcNode(PlanState *node)
 #endif   /* CDB_TRACE_EXECUTOR */
 
 	if(node->plan)
-		PG_TRACE5(execprocnode__enter, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id, node->plan->plan_parent_node_id);
+		PG_TRACE4(execprocnode__enter, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
 	if (node->chgParam != NULL) /* something changed */
 		ExecReScan(node, NULL); /* let ReScan handle this */
@@ -1199,7 +1199,7 @@ ExecProcNode(PlanState *node)
 		InstrStopNode(node->instrument, TupIsNull(result) ? 0.0 : 1.0);
 
 	if (node->plan)
-		PG_TRACE5(execprocnode__exit, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id, node->plan->plan_parent_node_id);
+		PG_TRACE4(execprocnode__exit, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
 #ifdef CDB_TRACE_EXECUTOR
 	ExecCdbTraceNode(node, false, result);
@@ -1261,8 +1261,7 @@ MultiExecProcNode(PlanState *node)
 
 	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
 {
-	PG_TRACE5(execprocnode__enter, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id,
-			  node->plan->plan_parent_node_id);
+	PG_TRACE4(execprocnode__enter, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
 	if (node->chgParam != NULL) /* something changed */
 		ExecReScan(node, NULL); /* let ReScan handle this */
@@ -1295,8 +1294,7 @@ MultiExecProcNode(PlanState *node)
 			break;
 	}
 
-	PG_TRACE5(execprocnode__exit, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id,
-			  node->plan->plan_parent_node_id);
+	PG_TRACE4(execprocnode__exit, Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 }
 	END_MEMORY_ACCOUNT();
 	return result;

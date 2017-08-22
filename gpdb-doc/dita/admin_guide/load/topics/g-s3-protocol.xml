@@ -23,6 +23,7 @@
             <li><xref href="#amazon-emr/section_stk_c2r_kx" format="dita"/></li>
             <li><xref href="#amazon-emr/section_c2f_zvs_3x" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_serversideencrypt" format="dita"/></li>
+            <li><xref href="#amazon-emr/s3_proxy" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_config_param" format="dita"/></li>
             <li><xref href="#amazon-emr/s3_config_file" format="dita"/></li>
             <li><xref href="#amazon-emr/section_tsq_n3t_3x" format="dita"/></li>
@@ -55,13 +56,13 @@
                   </ol></li>
                <li>On each Greenplum Database segment, create and install the <codeph>s3</codeph>
                   protocol configuration file:<ol id="ol_mnq_rnq_kx">
-                     <li>Create a template s3 protocol configuration file using the
+                     <li>Create a template <codeph>s3</codeph> protocol configuration file using the
                            <codeph>gpcheckcloud</codeph>
                         utility:<codeblock>gpcheckcloud -t > ./mytest_s3.config</codeblock></li>
                      <li>Edit the template file to specify the <codeph>accessid</codeph> and
                            <codeph>secret</codeph> required to connect to the S3 location. See <xref
                            href="#amazon-emr/s3_config_file" format="dita"/> for information about
-                        configuration other protocol parameters.</li>
+                        other <codeph>s3</codeph> protocol configuration parameters.</li>
                      <li>Copy the file to the same location and filename for all Greenplum Database
                         segments on all hosts. The default file location is
                               <codeph><varname>gpseg_data_dir</varname>/<varname>gpseg_prefix</varname><varname>N</varname>/s3/s3.conf</codeph>.
@@ -79,18 +80,18 @@
                            the correct path to the configuration file for your system, as well as
                            the S3 endpoint name and bucket that you want to check.
                               <codeph>gpcheckcloud</codeph> attempts to connect to the S3 endpoint
-                           and lists any files in the s3 bucket, if available. A successful
+                           and lists any files in the S3 bucket, if available. A successful
                            connection ends with the
                            message:<codeblock>Your configuration works well.</codeblock>You can
                            optionally use <codeph>gpcheckcloud</codeph> to validate uploading to and
                            downloading from the S3 bucket, as described in <xref
                               href="#amazon-emr/s3chkcfg_utility" format="dita"/>.</p></li>
                   </ol></li>
-               <li>After completing the previous steps to create and configure the S3 protocol, you
-                  can specify an S3 protocol URL in the <codeph>CREATE EXTERNAL TABLE</codeph>
-                  command to define S3 external tables. For read-only S3 tables, the URL defines the
-                  location and prefix used to select existing data files that comprise the S3 table.
-                  For example:
+               <li>After completing the previous steps to create and configure the
+                     <codeph>s3</codeph> protocol, you can specify an <codeph>s3</codeph> protocol
+                  URL in the <codeph>CREATE EXTERNAL TABLE</codeph> command to define S3 external
+                  tables. For read-only S3 tables, the URL defines the location and prefix used to
+                  select existing data files that comprise the S3 table. For example:
                      <codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
    LOCATION('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/
       config=/home/gpadmin/aws_s3/s3.conf')
@@ -116,7 +117,8 @@
             name. Each Greenplum Database segment instance must have access to the S3 location. The
             optional <varname>S3_prefix</varname> value is used to select files for read-only S3
             tables, or as a filename prefix to use when uploading files for S3 writable tables.</p>
-         <note>The Greenplum Database <codeph>s3</codeph> protocol URL must include the S3 endpoint hostname.</note>
+         <note>The Greenplum Database <codeph>s3</codeph> protocol URL must include the S3 endpoint
+            hostname.</note>
          <p>To specify an ECS endpoint (an Amazon S3 compatible service) in the
                <codeph>LOCATION</codeph> clause, you must set the <codeph>s3</codeph> configuration
             file parameter <codeph>version</codeph> to 2. The <codeph>version</codeph> parameter
@@ -140,31 +142,36 @@
          <p>For read-only S3 tables, the S3 file prefix is optional. If you specify an
                <varname>S3_prefix</varname>, then the <codeph>s3</codeph> protocol selects all files
             that start with the specified prefix as data files for the external table. The
-               <codeph>s3</codeph> protocol does not use the slash character (<codeph>/</codeph>)
-            as a delimiter, so a slash character following a prefix is treated as part of the
-            prefix itself. </p>
-         <p>For example, consider the following 5 files that each have the <varname>S3_endpoint</varname>
-            named <codeph>s3-us-west-2.amazonaws.com</codeph>
-            and the <varname>bucket_name</varname> <codeph>test1</codeph>:</p>
+               <codeph>s3</codeph> protocol does not use the slash character (<codeph>/</codeph>) as
+            a delimiter, so a slash character following a prefix is treated as part of the prefix
+            itself. </p>
+         <p>For example, consider the following 5 files that each have the
+               <varname>S3_endpoint</varname> named <codeph>s3-us-west-2.amazonaws.com</codeph> and
+            the <varname>bucket_name</varname>
+            <codeph>test1</codeph>:</p>
          <codeblock>s3://s3-us-west-2.amazonaws.com/test1/abc
 s3://s3-us-west-2.amazonaws.com/test1/abc/
 s3://s3-us-west-2.amazonaws.com/test1/abc/xx
 s3://s3-us-west-2.amazonaws.com/test1/abcdef
 s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
          <ul id="ul_yll_xjm_qv">
-            <li>If the S3 URL is provided as <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc</codeph>, then the
+            <li>If the S3 URL is provided as
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc</codeph>, then the
                   <codeph>abc</codeph> prefix selects all 5 files.</li>
-            <li>If the S3 URL is provided as <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/</codeph>, then the
+            <li>If the S3 URL is provided as
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/</codeph>, then the
                   <codeph>abc/</codeph> prefix selects the files
                   <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/</codeph> and
                   <codeph>s3://s3-us-west-2.amazonaws.com/test1/abc/xx</codeph>.</li>
-            <li>If the S3 URL is provided as <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcd</codeph>, then the
+            <li>If the S3 URL is provided as
+                  <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcd</codeph>, then the
                   <codeph>abcd</codeph> prefix selects the files
                   <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcdef</codeph> and
                   <codeph>s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeph></li>
          </ul>
-         <p>Wildcard characters are not supported in an <varname>S3_prefix</varname>; however, the S3
-            prefix functions as if a wildcard character immediately followed the prefix itself.</p>
+         <p>Wildcard characters are not supported in an <varname>S3_prefix</varname>; however, the
+            S3 prefix functions as if a wildcard character immediately followed the prefix
+            itself.</p>
          <p>All of the files selected by the S3 URL
                (<varname>S3_endpoint</varname>/<varname>bucket_name</varname>/<varname>S3_prefix</varname>)
             are used as the source for the external table, so they must have the same format. Each
@@ -190,10 +197,9 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
       <section id="section_c2f_zvs_3x">
          <title>About S3 Data Files</title>
          <p>For each <codeph>INSERT</codeph> operation to a writable S3 table, each Greenplum
-            Database segment uploads a single file to the configured S3 bucket using the
-            filename format <codeph>
-               &lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph> where:<ul
-               id="ul_sw1_qvs_3x">
+            Database segment uploads a single file to the configured S3 bucket using the filename
+            format <codeph> &lt;prefix>&lt;segment_id>&lt;random>.&lt;extension>[.gz]</codeph>
+               where:<ul id="ul_sw1_qvs_3x">
                <li><codeph>&lt;prefix></codeph> is the prefix specified in the S3 URL.</li>
                <li><codeph>&lt;segment_id></codeph> is the Greenplum Database segment ID.</li>
                <li><codeph>&lt;random></codeph> is a random number that is used to ensure that the
@@ -233,43 +239,71 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
       </section>
       <section id="s3_serversideencrypt">
          <title>s3 Protocol AWS Server-Side Encryption Support</title>
-         <p>Greenplum Database supports server-side encryption using Amazon S3-managed keys
-           (SSE-S3) for AWS S3 files you access with readable and writable external tables created using the <codeph>s3</codeph>
-           protocol. SSE-S3 encrypts your object data as it writes to disk, and transparently
-           decrypts the data for you when you access it.</p>
-         <note>The <codeph>s3</codeph> protocol supports SSE-S3 only for Amazon Web Services S3 files. SS3-SE is not supported when accessing files in S3 compatible services.</note>
-         <p> Your S3 <codeph>accessid</codeph> and <codeph>secret</codeph> permissions govern your access
-             to all S3 bucket objects, whether the data is encrypted or not. However, you must configure
-             your client to use S3-managed keys for accessing encrypted data.</p>
-           <p>Refer to
-           <xref href="http://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html" format="html" scope="external">Protecting Data Using Server-Side Encryption</xref>
-            in the AWS documentation for additional information about AWS Server-Side Encryption. </p>
-          <sectiondiv>
+         <p>Greenplum Database supports server-side encryption using Amazon S3-managed keys (SSE-S3)
+            for AWS S3 files you access with readable and writable external tables created using the
+               <codeph>s3</codeph> protocol. SSE-S3 encrypts your object data as it writes to disk,
+            and transparently decrypts the data for you when you access it.</p>
+         <note>The <codeph>s3</codeph> protocol supports SSE-S3 only for Amazon Web Services S3
+            files. SS3-SE is not supported when accessing files in S3 compatible services.</note>
+         <p> Your S3 <codeph>accessid</codeph> and <codeph>secret</codeph> permissions govern your
+            access to all S3 bucket objects, whether the data is encrypted or not. However, you must
+            configure your client to use S3-managed keys for accessing encrypted data.</p>
+         <p>Refer to <xref
+               href="http://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html"
+               format="html" scope="external">Protecting Data Using Server-Side Encryption</xref> in
+            the AWS documentation for additional information about AWS Server-Side Encryption. </p>
+         <sectiondiv>
             <p><b>Configuring S3 Server-Side Encryption</b></p>
             <p><codeph>s3</codeph> protocol server-side encryption is disabled by default. To take
                advantage of server-side encryption on AWS S3 objects you write using the Greenplum
                Database <codeph>s3</codeph> protocol, you must set the
-               <codeph>server_side_encryption</codeph> configuration parameter in your
-               <codeph>s3</codeph> configuration file to the value <codeph>sse-s3</codeph>:</p>
-<p><codeblock>
+                  <codeph>server_side_encryption</codeph> configuration parameter in your
+                  <codeph>s3</codeph> configuration file to the value <codeph>sse-s3</codeph>:</p>
+            <p><codeblock>
 server_side_encryption = sse-s3
-</codeblock> </p>
-               <p>When the configuration file you provide to a <codeph>CREATE WRITABLE EXTERNAL TABLE</codeph>
-               call using the <codeph>s3</codeph> protocol includes the <codeph>server_side_encryption = sse-s3</codeph>
-               setting, Greenplum Database applies encryption headers for you on
-               all <codeph>INSERT</codeph> operations on that external table. S3 then encrypts on
-               write the object(s) identified by the URI you provided in the <codeph>LOCATION</codeph> clause.</p>
-             <p>S3 transparently decrypts data during read operations of encrypted files accessed
-               via readable external tables you create using the <codeph>s3</codeph> protocol.
-               No additional configuration is required.  </p>
-             <p>For further encryption configuration granularity, you may consider creating Amazon
-               Web Services S3 <i>Bucket Policy</i>(s), identifying the objects you want to
-               encrypt and the write actions on those objects as described in the
-               <xref href="http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html" format="html" scope="external">Protecting Data Using Server-Side Encryption with Amazon S3-Managed Encryption Keys (SSE-S3)</xref> AWS documentation.</p>
-          </sectiondiv>
+</codeblock>
+            </p>
+            <p>When the configuration file you provide to a <codeph>CREATE WRITABLE EXTERNAL
+                  TABLE</codeph> call using the <codeph>s3</codeph> protocol includes the
+                  <codeph>server_side_encryption = sse-s3</codeph> setting, Greenplum Database
+               applies encryption headers for you on all <codeph>INSERT</codeph> operations on that
+               external table. S3 then encrypts on write the object(s) identified by the URI you
+               provided in the <codeph>LOCATION</codeph> clause.</p>
+            <p>S3 transparently decrypts data during read operations of encrypted files accessed via
+               readable external tables you create using the <codeph>s3</codeph> protocol. No
+               additional configuration is required. </p>
+            <p>For further encryption configuration granularity, you may consider creating Amazon
+               Web Services S3 <i>Bucket Policy</i>(s), identifying the objects you want to encrypt
+               and the write actions on those objects as described in the <xref
+                  href="http://docs.aws.amazon.com/AmazonS3/latest/dev/UsingServerSideEncryption.html"
+                  format="html" scope="external">Protecting Data Using Server-Side Encryption with
+                  Amazon S3-Managed Encryption Keys (SSE-S3)</xref> AWS documentation.</p>
+         </sectiondiv>
+      </section>
+      <section id="s3_proxy">
+         <title>s3 Protocol Proxy Support </title>
+         <p>You can specify a URL that is the proxy that S3 uses to connect to a data source. S3
+            supports these protocols: HTTP, HTTPS, and SOCKS (4, 4a, 5, 5h). You can specify a proxy
+            with the <codeph>s3</codeph> protocol configuration parameter <codeph>proxy</codeph> or
+            an environment variable. If the configuration parameter is set, the environment
+            variables are ignored. </p>
+         <p>To specify proxy with an environment variable, you set the environment variable based
+            on the protocol: <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
+               <codeph>socks_proxy</codeph>. You can specify a different URL for each protocol by
+            setting the appropriate environment variable. S3 supports these environment
+               variables.<ul id="ul_cy3_km2_r1b">
+               <li><codeph>all_proxy</codeph> specifies the proxy URL that is used if an environment
+                  variable for a specific protocol is not set. </li>
+               <li><codeph>no_proxy</codeph> specifies a comma-separated list of hosts names that do
+                  not use the proxy specified by an environment variable. </li>
+            </ul></p>
+         <p>The environment variables must be set must and must be accessible to Greenplum Database
+            on all Greenplum Database hosts.</p>
+         <p>For information about the configuration parameter <codeph>proxy</codeph>, see <xref
+               href="#amazon-emr/s3_config_file" format="dita"/>.</p>
       </section>
       <section id="s3_config_param">
-         <title>About the S3 Protocol config Parameter</title>
+         <title>About the s3 Protocol config Parameter</title>
          <!--conref in CREATE EXTERNAL TABLE-->
          <p>The optional <codeph>config</codeph> parameter specifies the location of the required
                <codeph>s3</codeph> protocol configuration file. The file contains Amazon Web
@@ -367,7 +401,7 @@ chunksize = 67108864</codeblock></p>
                      value is <codeph>true</codeph>. The values <codeph>true</codeph>,
                         <codeph>t</codeph>, <codeph>on</codeph>, <codeph>yes</codeph>, and
                         <codeph>y</codeph> (case insensitive) are treated as <codeph>true</codeph>.
-                     Any other value is treated as <codeph>false</codeph>.<p>If the port is not
+                     Any other value is treated as <codeph>false</codeph>. <p>If the port is not
                         specified in the URL in the <codeph>LOCATION</codeph> clause of the
                            <codeph>CREATE EXTERNAL TABLE</codeph> command, the configuration file
                            <codeph>encryption</codeph> parameter affects the port used by the
@@ -391,12 +425,32 @@ chunksize = 67108864</codeblock></p>
                      of 0 specifies no time limit.</pd>
                </plentry>
                <plentry>
+                  <pt>proxy</pt>
+                  <pd>Specify a URL that is the proxy that S3 uses to connect to a data source. S3
+                     supports these protocols: HTTP, HTTPS, and SOCKS (4, 4a, 5, 5h). This is the
+                     format for the
+                     parameter.<codeblock>proxy = <varname>protocol</varname>://[<varname>user</varname>:<varname>password</varname>@]<varname>proxyhost</varname>[:<varname>port</varname>]</codeblock></pd>
+                  <pd>If this parameter is not set or is an empty string (<codeph>proxy =
+                        ""</codeph>), S3 uses the proxy specified by the environment variable
+                        <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
+                        <codeph>socks_proxy</codeph> (and the environment variables
+                        <codeph>all_proxy</codeph> and <codeph>no_proxy</codeph>). The environment
+                     variable that S3 uses depends on the protocol. For information about the
+                     environment variables, see <xref
+                        href="../../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_proxy"
+                        format="dita" scope="peer">s3 Protocol Proxy Support</xref><ph
+                        otherprops="op-print"> in the <cite>Greenplum Database Administrator
+                           Guide</cite></ph>.</pd>
+                  <pd>There can be at most one <codeph>proxy</codeph> parameter in the configuration
+                     file. The URL specified by the parameter is the proxy for all supported
+                     protocols. </pd>
+               </plentry>
+               <plentry>
                   <pt>server_side_encryption</pt>
                   <pd>The S3 server-side encryption method that has been configured for the bucket.
-                     Greenplum Database supports
-                     only server-side encryption with Amazon S3-managed keys, identified by
-                     the configuration parameter value <codeph>sse-s3</codeph>. Server-side
-                     encryption is disabled (<codeph>none</codeph>) by default.</pd>
+                     Greenplum Database supports only server-side encryption with Amazon S3-managed
+                     keys, identified by the configuration parameter value <codeph>sse-s3</codeph>.
+                     Server-side encryption is disabled (<codeph>none</codeph>) by default.</pd>
                </plentry>
                <plentry>
                   <pt>threadnum</pt>
@@ -472,8 +526,8 @@ chunksize = 67108864</codeblock></p>
                   supported.<codeblock>s3://<varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>]</codeblock></li>
                <li>Only the S3 endpoint is supported. The protocol does not support virtual hosting
                   of S3 buckets (binding a domain name to an S3 bucket).</li>
-               <li>AWS signature version 2 and version 4 signing process are supported. <p>For
-                     information about the S3 endpoints supported by each signing process, see <xref
+               <li>AWS signature version 4 signing process is supported. <p>For information about
+                     the S3 endpoints supported by each signing process, see <xref
                         href="http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region"
                         format="html" scope="external"
                         >http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region</xref>.</p></li>

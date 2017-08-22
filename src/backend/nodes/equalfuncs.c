@@ -2298,15 +2298,6 @@ _equalGroupId(GroupId *a __attribute__((unused)), GroupId *b __attribute__((unus
 }
 
 static bool
-_equalWindowSpecParse(WindowSpecParse *a, WindowSpecParse *b)
-{
-	COMPARE_STRING_FIELD(name);
-	COMPARE_NODE_FIELD(elems);
-
-	return true;
-}
-
-static bool
 _equalWindowSpec(WindowSpec *a, WindowSpec *b)
 {
 	COMPARE_STRING_FIELD(name);
@@ -3113,9 +3104,6 @@ equal(void *a, void *b)
 			break;
 		case T_GroupId:
 			retval = _equalGroupId(a, b);
-			break;
-		case T_WindowSpecParse:
-			retval = _equalWindowSpecParse(a, b);
 			break;
 		case T_WindowSpec:
 			retval = _equalWindowSpec(a, b);

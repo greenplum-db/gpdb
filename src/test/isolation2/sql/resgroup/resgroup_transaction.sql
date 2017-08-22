@@ -13,190 +13,59 @@ CREATE OR REPLACE VIEW rg_test_monitor AS
 	WHERE groupname='rg_test_group';
 
 -- ----------------------------------------------------------------------
--- Test: new resource group created in transaction then rollback
+-- Test: create/alter/drop a resource group in transaction block
 -- ----------------------------------------------------------------------
 
--- CREATE then ROLLBACK
+-- CREATE RESOURCE GROUP cannot run inside a transaction block
 BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
+	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+END;
 SELECT * FROM rg_test_monitor;
 
--- CREATE, DROP then ROLLBACK
+-- ALTER RESOURCE GROUP cannot run inside a transaction block
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
+	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10;
+END;
+SELECT * FROM rg_test_monitor;
 
+-- DROP RESOURCE GROUP cannot run inside a transaction block
+BEGIN;
 	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
+END;
 SELECT * FROM rg_test_monitor;
 
--- CREATE, ALTER then ROLLBACK
-BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
-SELECT * FROM rg_test_monitor;
-
--- CREATE, ALTER, DROP then ROLLBACK
-BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-
-	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
-SELECT * FROM rg_test_monitor;
-
--- ----------------------------------------------------------------------
--- Test: new resource group created in transaction then commit
--- ----------------------------------------------------------------------
-
--- CREATE then COMMIT
-BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
-COMMIT;
-SELECT * FROM rg_test_monitor;
 DROP RESOURCE GROUP rg_test_group;
+
+
+-- ----------------------------------------------------------------------
+-- Test: create/alter/drop a resource group and DML in transaction block
+-- ----------------------------------------------------------------------
+
+-- CREATE RESOURCE GROUP cannot run inside a transaction block
+BEGIN;
+	SELECT 1;
+	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+END;
 SELECT * FROM rg_test_monitor;
 
--- CREATE, DROP then COMMIT
+-- ALTER RESOURCE GROUP cannot run inside a transaction block
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
+	SELECT 1;
+	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10;
+END;
+SELECT * FROM rg_test_monitor;
 
+-- DROP RESOURCE GROUP cannot run inside a transaction block
+BEGIN;
+	SELECT 1;
 	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-COMMIT;
+END;
 SELECT * FROM rg_test_monitor;
 
--- CREATE, ALTER then COMMIT
-BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-COMMIT;
-SELECT * FROM rg_test_monitor;
 DROP RESOURCE GROUP rg_test_group;
-SELECT * FROM rg_test_monitor;
 
--- CREATE, ALTER, DROP then COMMIT
-BEGIN;
-	CREATE RESOURCE GROUP rg_test_group
-		WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-
-	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-COMMIT;
-SELECT * FROM rg_test_monitor;
-
--- ----------------------------------------------------------------------
--- Test: manage existing resource group in transaction then rollback
--- ----------------------------------------------------------------------
-
-CREATE RESOURCE GROUP rg_test_group
-	WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-
--- DROP then ROLLBACK
-BEGIN;
-	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
-SELECT * FROM rg_test_monitor;
-
--- ALTER then ROLLBACK
-BEGIN;
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
-SELECT * FROM rg_test_monitor;
-
--- ALTER, DROP then ROLLBACK
-BEGIN;
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-
-	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-ROLLBACK;
-SELECT * FROM rg_test_monitor;
-
--- ----------------------------------------------------------------------
--- Test: manage existing resource group in transaction then commit
--- ----------------------------------------------------------------------
-
--- DROP then COMMIT
-BEGIN;
-	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-COMMIT;
-SELECT * FROM rg_test_monitor;
-CREATE RESOURCE GROUP rg_test_group
-	WITH (concurrency=10, cpu_rate_limit=10, memory_limit=10);
-SELECT * FROM rg_test_monitor;
-
--- ALTER then COMMIT
-BEGIN;
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 11;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 11;
-	SELECT * FROM rg_test_monitor;
-COMMIT;
-SELECT * FROM rg_test_monitor;
-
--- ALTER, DROP then COMMIT
-BEGIN;
-	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 12;
-	SELECT * FROM rg_test_monitor;
-
-	ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 12;
-	SELECT * FROM rg_test_monitor;
-
-	DROP RESOURCE GROUP rg_test_group;
-	SELECT * FROM rg_test_monitor;
-COMMIT;
-SELECT * FROM rg_test_monitor;
 
 -- ----------------------------------------------------------------------
 -- Test: create/alter/drop a resource group in subtransaction
@@ -208,22 +77,60 @@ BEGIN;
 	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 	ROLLBACK TO SAVEPOINT rg_savepoint;
 ABORT;
+SELECT * FROM rg_test_monitor;
 
 -- ALTER RESOURCE GROUP cannot run inside a subtransaction
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 BEGIN;
-	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 	SAVEPOINT rg_savepoint;
 	ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10;
 	ROLLBACK TO SAVEPOINT rg_savepoint;
 ABORT;
+SELECT * FROM rg_test_monitor;
 
 -- DROP RESOURCE GROUP cannot run inside a subtransaction
 BEGIN;
-	CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
 	SAVEPOINT rg_savepoint;
 	DROP RESOURCE GROUP rg_test_group;
 	ROLLBACK TO SAVEPOINT rg_savepoint;
 ABORT;
+SELECT * FROM rg_test_monitor;
+
+DROP RESOURCE GROUP rg_test_group;
+
+-- ----------------------------------------------------------------------
+-- Test: create/alter/drop a resource group in function call
+-- ----------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION rg_create_func() RETURNS VOID
+AS $$ CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5) $$
+LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION rg_alter_func() RETURNS VOID
+AS $$ ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 10 $$
+LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION rg_drop_func() RETURNS VOID
+AS $$ DROP RESOURCE GROUP rg_test_group $$
+LANGUAGE SQL;
+
+-- CREATE RESOURCE GROUP cannot run inside a function call
+SELECT * FROM rg_create_func();
+SELECT * FROM rg_test_monitor;
+
+-- ALTER RESOURCE GROUP cannot run inside a function call
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+SELECT * FROM rg_alter_func();
+SELECT * FROM rg_test_monitor;
+
+-- DROP RESOURCE GROUP cannot run inside a function call
+SELECT * FROM rg_drop_func();
+SELECT * FROM rg_test_monitor;
+
+DROP RESOURCE GROUP rg_test_group;
+DROP FUNCTION rg_create_func();
+DROP FUNCTION rg_alter_func();
+DROP FUNCTION rg_drop_func();
 
 -- cleanup
 DROP VIEW rg_test_monitor;

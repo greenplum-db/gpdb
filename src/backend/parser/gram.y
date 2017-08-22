@@ -110,7 +110,6 @@ static Node *makeIntConst(int val, int location);
 static Node *makeFloatConst(char *str, int location);
 static Node *makeNullAConst(int location);
 static Node *makeAConst(Value *v, int location);
-static Node *makeAArrayExpr(List *elements, int location);
 static A_Const *makeBoolAConst(bool state, int location);
 static FuncCall *makeOverlaps(List *largs, List *rargs, int location);
 static void check_qualified_name(List *names);
@@ -124,6 +123,7 @@ static void insertSelectOptions(SelectStmt *stmt,
 static Node *makeSetOp(SetOperation op, bool all, Node *larg, Node *rarg);
 static Node *doNegate(Node *n, int location);
 static void doNegateFloat(Value *v);
+static Node *makeAArrayExpr(List *elements, int location);
 static Node *makeXmlExpr(XmlExprOp op, char *name, List *named_args,
 						 List *args, int location);
 static List *mergeTableFuncParameters(List *func_args, List *columns);
@@ -173,28 +173,22 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 }
 
 %type <node>	stmt schema_stmt
-		AlterDatabaseStmt AlterDatabaseSetStmt AlterDomainStmt
-		AlterGroupStmt
-		AlterObjectSchemaStmt AlterOwnerStmt AlterQueueStmt AlterSeqStmt AlterTableStmt
+		AlterDatabaseStmt AlterDatabaseSetStmt AlterDomainStmt AlterGroupStmt
+		AlterObjectSchemaStmt AlterOwnerStmt AlterSeqStmt AlterTableStmt
 		AlterExtensionStmt AlterExtensionContentsStmt
-		AlterUserStmt AlterUserSetStmt AlterResourceGroupStmt AlterRoleStmt AlterRoleSetStmt
+		AlterUserStmt AlterUserSetStmt AlterRoleStmt AlterRoleSetStmt
 		AnalyzeStmt ClosePortalStmt ClusterStmt CommentStmt
 		ConstraintsSetStmt CopyStmt CreateAsStmt CreateCastStmt
-		CreateDomainStmt CreateExtensionStmt CreateExternalStmt CreateFileSpaceStmt CreateGroupStmt
-		CreateOpClassStmt
+		CreateDomainStmt CreateExtensionStmt CreateGroupStmt CreateOpClassStmt
 		CreateOpFamilyStmt AlterOpFamilyStmt CreatePLangStmt
-		CreateQueueStmt CreateResourceGroupStmt CreateSchemaStmt CreateSeqStmt CreateStmt
-		CreateTableSpaceStmt
-		CreateAssertStmt CreateTrigStmt 
-		CreateUserStmt CreateRoleStmt
+		CreateSchemaStmt CreateSeqStmt CreateStmt CreateTableSpaceStmt
+		CreateAssertStmt CreateTrigStmt CreateUserStmt CreateRoleStmt
 		CreatedbStmt DeclareCursorStmt DefineStmt DeleteStmt DiscardStmt DoStmt
-		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropQueueStmt DropResourceGroupStmt DropStmt
+		DropGroupStmt DropOpClassStmt DropOpFamilyStmt DropPLangStmt DropStmt
 		DropAssertStmt DropTrigStmt DropRuleStmt DropCastStmt DropRoleStmt
-		DropUserStmt DropdbStmt
-		ExplainStmt
-		ExtTypedesc FetchStmt
+		DropUserStmt DropdbStmt ExplainStmt FetchStmt
 		GrantStmt GrantRoleStmt IndexStmt InsertStmt ListenStmt LoadStmt
-		LockStmt NotifyStmt OptSingleRowErrorHandling ExplainableStmt PreparableStmt
+		LockStmt NotifyStmt ExplainableStmt PreparableStmt
 		CreateFunctionStmt AlterFunctionStmt ReindexStmt RemoveAggrStmt
 		RemoveFuncStmt RemoveOperStmt RenameStmt RevokeStmt RevokeRoleStmt
 		RuleActionStmt RuleActionStmtOrEmpty RuleStmt
@@ -205,7 +199,13 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 		DeallocateStmt PrepareStmt ExecuteStmt
 		DropOwnedStmt ReassignOwnedStmt
 		AlterTSConfigurationStmt AlterTSDictionaryStmt
-		AlterTypeStmt 
+
+/* GPDB-specific commands */
+%type <node>	AlterTypeStmt AlterQueueStmt AlterResourceGroupStmt
+		CreateExternalStmt CreateFileSpaceStmt
+		CreateQueueStmt CreateResourceGroupStmt
+		DropQueueStmt DropResourceGroupStmt
+		ExtTypedesc OptSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -215,22 +215,26 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <node>	alter_column_default opclass_item opclass_drop alter_using
 %type <ival>	add_drop opt_asc_desc opt_nulls_order
 
-%type <node>	alter_table_cmd alter_rel_cmd alter_table_partition_id_spec
-				alter_table_partition_cmd
-				alter_table_partition_id_spec_with_opt_default
+%type <node>	alter_table_cmd alter_rel_cmd
 %type <list>	alter_table_cmds alter_rel_cmds
-				part_values_clause multi_spec_value_list part_values_single
+
+%type <node>	alter_table_partition_cmd alter_table_partition_id_spec
+				alter_table_partition_id_spec_with_opt_default
+%type <list>	part_values_clause multi_spec_value_list part_values_single
 %type <ival>	opt_table_partition_exchange_validate partition_hash_keyword
 				partition_coalesce_keyword
 
 %type <dbehavior>	opt_drop_behavior
 
 %type <list>	createdb_opt_list alterdb_opt_list copy_opt_list
-				ext_on_clause_list format_opt format_opt_list format_def_list transaction_mode_list
+				transaction_mode_list
+%type <defelt>	createdb_opt_item alterdb_opt_item copy_opt_item
+				transaction_mode_item
+
+%type <list>	ext_on_clause_list format_opt format_opt_list format_def_list
 				ext_options ext_options_opt ext_options_list
 				ext_opt_encoding_list create_extension_opt_list alter_extension_opt_list
-%type <defelt>	createdb_opt_item alterdb_opt_item copy_opt_item
-				ext_on_clause_item format_opt_item format_def_item transaction_mode_item
+%type <defelt>	ext_on_clause_item format_opt_item format_def_item
 				ext_options_item
 				ext_opt_encoding_item create_extension_opt_item alter_extension_opt_item
 
@@ -318,7 +322,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <fun_param_mode> arg_class
 %type <typnam>	func_return func_type
 
-%type <boolean>  TriggerForType OptTemp OptWeb OptWritable OptSrehLimitType OptLogErrorTable
+%type <boolean>  TriggerForType OptTemp
+%type <boolean>  OptWeb OptWritable OptSrehLimitType OptLogErrorTable
 %type <oncommit> OnCommitOption
 
 %type <node>	for_locking_item
@@ -357,25 +362,15 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <istmt>	insert_rest
 
 %type <vsetstmt> set_rest SetResetClause
-%type <node>	TableElement ExtTableElement ConstraintElem TableFuncElement
-%type <node>	columnDef ExtcolumnDef
-%type <node>	cdb_string
+%type <node>	TableElement ConstraintElem TableFuncElement
+%type <node>	columnDef
 %type <defelt>	def_elem old_aggr_elem keyvalue_pair
+%type <node>	ExtTableElement
+%type <node>	ExtcolumnDef
+%type <node>	cdb_string
 %type <node>	def_arg columnElem where_clause where_or_current_clause
 				a_expr b_expr c_expr simple_func func_expr AexprConst indirection_el
 				columnref in_expr having_clause func_table array_expr
-%type <list>	window_definition_list window_clause
-%type <boolean>	window_frame_units
-%type <ival>	window_frame_exclusion
-%type <node>	window_spec
-%type <node>	window_frame_extent
-				window_frame_start window_frame_preceding window_frame_between
-				window_frame_bound window_frame_following 
-				window_frame_clause opt_window_frame_clause
-%type <list>	window_partition_clause opt_window_partition_clause
-				opt_window_order_clause
-%type <str>		opt_window_name window_name
-
 %type <list>	row type_list array_expr_list
 %type <node>	case_expr case_arg when_clause when_operand case_default
 %type <list>	when_clause_list
@@ -476,6 +471,18 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <with> 	with_clause
 %type <list>	cte_list
 
+%type <list>	window_definition_list window_clause
+%type <boolean>	window_frame_units
+%type <ival>	window_frame_exclusion
+%type <node>	window_spec
+%type <node>	window_frame_extent
+				window_frame_start window_frame_preceding window_frame_between
+				window_frame_bound window_frame_following 
+				window_frame_clause opt_window_frame_clause
+%type <list>	window_partition_clause opt_window_partition_clause
+				opt_window_order_clause
+%type <str>		opt_window_name window_name
+
 
 /*
  * If you make any token changes, update the keyword table in
@@ -505,7 +512,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	DICTIONARY DISABLE_P DISCARD DISTINCT DO DOCUMENT_P DOMAIN_P DOUBLE_P DROP
 
 	EACH ELSE ENABLE_P ENCODING ENCRYPTED END_P ENUM_P ESCAPE EXCEPT
-    EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN EXTENSION EXTERNAL EXTRACT
+	EXCLUDING EXCLUSIVE EXECUTE EXISTS EXPLAIN EXTENSION EXTERNAL EXTRACT
 
 	FALSE_P FAMILY FETCH FIRST_P FLOAT_P FOR FORCE FOREIGN FORWARD
 	FREEZE FROM FULL FUNCTION
@@ -527,8 +534,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	LIKE LIMIT LISTEN LOAD LOCAL LOCALTIME LOCALTIMESTAMP LOCATION
 	LOCK_P LOGIN_P
 
-	MAPPING MATCH MAXVALUE MEMORY_LIMIT MEMORY_SHARED_QUOTA MINUTE_P MINVALUE
-	MODE MONTH_P MOVE
+	MAPPING MATCH MAXVALUE MEMORY_LIMIT MEMORY_SHARED_QUOTA MEMORY_SPILL_RATIO
+	MINUTE_P MINVALUE MODE MONTH_P MOVE
 
 	NAME_P NAMES NATIONAL NATURAL NCHAR NEW NEXT NO NOCREATEDB
 	NOCREATEROLE NOCREATEUSER NOINHERIT NOLOGIN_P NONE NOSUPERUSER
@@ -789,6 +796,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc MAXVALUE
 			%nonassoc MEMORY_LIMIT
 			%nonassoc MEMORY_SHARED_QUOTA
+			%nonassoc MEMORY_SPILL_RATIO
 			%nonassoc MERGE
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
@@ -1341,6 +1349,10 @@ OptResourceGroupElem:
 			| MEMORY_LIMIT IntegerOnly
 				{
 					$$ = makeDefElem("memory_limit", (Node *)$2);
+				}
+			| MEMORY_SPILL_RATIO IntegerOnly
+				{
+					$$ = makeDefElem("memory_spill_ratio", (Node *)$2);
 				}
 		;
 
@@ -3575,7 +3587,7 @@ column_reference_storage_directive:
 					$$ = (Node *)n;
 				}
 		;
-				
+
 columnDef:	ColId Typename ColQualList opt_storage_encoding
 				{
 					ColumnDef *n = makeNode(ColumnDef);
@@ -3881,7 +3893,7 @@ opt_column_list:
 			'(' columnList ')'						{ $$ = $2; }
 			| /*EMPTY*/								{ $$ = NIL; }
 		;
-		
+
 columnList:
 			columnElem								{ $$ = list_make1($1); }
 			| columnList ',' columnElem				{ $$ = lappend($1, $3); }
@@ -7034,8 +7046,7 @@ CreateFunctionStmt:
 					$$ = (Node *)n;
 				}
 			| CREATE opt_or_replace FUNCTION func_name func_args_with_defaults
-			  RETURNS TABLE '(' table_func_column_list ')' 
-              createfunc_opt_list opt_definition
+			  RETURNS TABLE '(' table_func_column_list ')' createfunc_opt_list opt_definition
 				{
 					CreateFunctionStmt *n = makeNode(CreateFunctionStmt);
 					n->replace = $2;
@@ -9751,167 +9762,6 @@ having_clause:
 			| /*EMPTY*/								{ $$ = NULL; }
 		;
 
-window_clause:
-			WINDOW window_definition_list			{ $$ = $2; }
-			| /*EMPTY*/								{ $$ = NIL; }
-		;
-
-window_definition_list: 
-			window_name AS '(' window_spec ')'
-				{
-                    ((WindowSpec *)$4)->name = $1;
-                    ((WindowSpec *)$4)->location = @3;
-					$$ = list_make1($4);
-				}
-			| window_definition_list ',' window_name AS '(' window_spec ')'
-				{
-					((WindowSpec *)$6)->name = $3;
-					((WindowSpec *)$6)->location = @5;
-					$$ = lappend($1, $6);
-				}
-		;
-
-window_spec: opt_window_name opt_window_partition_clause 
-				opt_window_order_clause opt_window_frame_clause
-				{
-					WindowSpec *n = makeNode(WindowSpec);
-					n->parent = $1;
-					n->partition = $2;
-					n->order = $3;
-					n->frame = (WindowFrame *)$4;
-					n->location = -1;
-					$$ = (Node *)n;
-				}
-		;
-
-opt_window_name: window_name { $$ = $1; }
-			| /*EMPTY*/ { $$ = NULL; }
-		;
-
-opt_window_partition_clause: window_partition_clause { $$ = $1; }
-			| /*EMPTY*/ { $$ = NIL; }
-		;
-
-window_partition_clause: PARTITION BY sortby_list { $$ = (List *)$3; }
-		;
-
-opt_window_order_clause: sort_clause { $$ = $1; }
-			| /*EMPTY*/ { $$ = NIL; }
-        ;
-
-opt_window_frame_clause: window_frame_clause { $$ = $1; }
-		| /*EMPTY*/ { $$ = NULL; }
-		;
-
-window_frame_clause: window_frame_units window_frame_extent 
-			window_frame_exclusion
-				{
-					WindowFrame *n = makeNode(WindowFrame);
-					n->is_rows = $1;
-					setWindowExclude(n, $3);
-
-					if (IsA($2, List))
-					{
-						List *ex = (List *)$2;
-
-						n->trail = (WindowFrameEdge *)linitial(ex);
-						n->lead = (WindowFrameEdge *)lsecond(ex);
-						n->is_between = true;
-					}
-					else
-					{
-						Assert(IsA($2, WindowFrameEdge));
-						n->trail = (WindowFrameEdge *)$2;
-						n->lead = NULL;
-						n->is_between = false;
-					}
-					$$ = (Node *)n;
-				}
-		;
-
-/* units are either rows (true) otherwise false */
-window_frame_units: ROWS { $$ = true; }
-			| RANGE { $$ = false; }
-		;
-
-window_frame_extent:
-			window_frame_start { $$ = $1; }
-			| window_frame_between { $$ = $1; }
-		;
-
-window_frame_start:
-			UNBOUNDED PRECEDING
-				{
-					WindowFrameEdge *n = makeNode(WindowFrameEdge);
-					n->kind = WINDOW_UNBOUND_PRECEDING;
-					n->val = NULL;
-					$$ = (Node *)n;
-				}
-			| window_frame_preceding
-				{
-					WindowFrameEdge *n = makeNode(WindowFrameEdge);
-					n->kind = WINDOW_BOUND_PRECEDING;
-					n->val = $1;
-					$$ = (Node *)n;
-				}
-			| CURRENT_P ROW
-				{
-					WindowFrameEdge *n = makeNode(WindowFrameEdge);
-					n->kind = WINDOW_CURRENT_ROW;
-					$$ = (Node *)n;
-				}
-		;
-
-window_frame_preceding: a_expr PRECEDING 
-				{ 
-					$$ = (Node *)$1;
-				}
-		;
-
-window_frame_between: 
-			BETWEEN window_frame_bound AND window_frame_bound
-				{
-					/* slightly dodgy hack */
-					$$ = (Node *)list_make2($2, $4);
-				}
-		;
-
-/*
- * Be careful that we don't allow BETWEEN UNBOUND PRECEDING AND
- * UNBOUND PRECEDING
- */
-
-window_frame_bound:
-			window_frame_start { $$ = $1; }
-			| UNBOUNDED FOLLOWING 
-				{
-					WindowFrameEdge *n = makeNode(WindowFrameEdge);
-					n->kind = WINDOW_UNBOUND_FOLLOWING;
-					n->val = NULL;
-					$$ = (Node *)n;
-				}
-			| window_frame_following
-				{
-					WindowFrameEdge *n = makeNode(WindowFrameEdge);
-					n->kind = WINDOW_BOUND_FOLLOWING;
-					n->val = $1;
-					$$ = (Node *)n;
-				}
-		;
-
-window_frame_following: a_expr FOLLOWING 
-				{ 
-					$$ = (Node *)$1;
-				}
-		;
-
-window_frame_exclusion: EXCLUDE CURRENT_P ROW { $$ = WINDOW_EXCLUSION_CUR_ROW; }
-			| EXCLUDE GROUP_P { $$ = WINDOW_EXCLUSION_GROUP; }
-			| EXCLUDE TIES  { $$ = WINDOW_EXCLUSION_TIES; }
-			| EXCLUDE NO OTHERS { $$ = WINDOW_EXCLUSION_NO_OTHERS; }
-			| /*EMPTY*/ { $$ = WINDOW_EXCLUSION_NULL; }
-		;
-
 for_locking_clause:
 			for_locking_items						{ $$ = $1; }
 			| FOR READ ONLY							{ $$ = NIL; }
@@ -11408,11 +11258,11 @@ c_expr:		columnref								{ $$ = $1; }
 			| ARRAY array_expr
 				{	$$ = $2;	}
             | TABLE '(' table_value_select_clause ')'
-				{	
+				{
 					TableValueExpr *n = makeNode(TableValueExpr);
 					n->subquery = $3;
 					n->location = @1;
-					$$ = (Node*) n;
+					$$ = (Node *)n;
 				}
 			| row
 				{
@@ -11462,12 +11312,25 @@ simple_func: 	func_name '(' ')'
 					n->over = NULL;
 					$$ = (Node *)n;
 				}
+			| func_name '(' expr_list ')'
+				{
+					FuncCall *n = makeNode(FuncCall);
+					n->funcname = $1;
+					n->args = $3;
+					n->agg_order = NIL;
+					n->agg_star = FALSE;
+					n->agg_distinct = FALSE;
+					n->agg_filter = NULL;
+					n->location = @1;
+					n->over = NULL;
+					$$ = (Node *)n;
+				}
 			| func_name '(' VARIADIC a_expr ')'
 				{
 					FuncCall *n = makeNode(FuncCall);
 					n->funcname = $1;
 					n->args = list_make1($4);
-                    n->agg_order = NIL;
+					n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
 					n->func_variadic = TRUE;
@@ -11481,23 +11344,10 @@ simple_func: 	func_name '(' ')'
 					FuncCall *n = makeNode(FuncCall);
 					n->funcname = $1;
 					n->args = lappend($3, $6);
-                    n->agg_order = NIL;
+					n->agg_order = NIL;
 					n->agg_star = FALSE;
 					n->agg_distinct = FALSE;
 					n->func_variadic = TRUE;
-					n->agg_filter = NULL;
-					n->location = @1;
-					n->over = NULL;
-					$$ = (Node *)n;
-				}
-			| func_name '(' expr_list ')'
-				{
-					FuncCall *n = makeNode(FuncCall);
-					n->funcname = $1;
-					n->args = $3;
-					n->agg_order = NULL;
-					n->agg_star = FALSE;
-					n->agg_distinct = FALSE;
 					n->agg_filter = NULL;
 					n->location = @1;
 					n->over = NULL;
@@ -12238,6 +12088,172 @@ xmlexists_argument:
 				}
 		;
 
+
+/*
+ * Window Definitions
+ */
+window_clause:
+			WINDOW window_definition_list			{ $$ = $2; }
+			| /*EMPTY*/								{ $$ = NIL; }
+		;
+
+window_definition_list:
+			window_name AS '(' window_spec ')'
+				{
+                    ((WindowSpec *)$4)->name = $1;
+                    ((WindowSpec *)$4)->location = @3;
+					$$ = list_make1($4);
+				}
+			| window_definition_list ',' window_name AS '(' window_spec ')'
+				{
+					((WindowSpec *)$6)->name = $3;
+					((WindowSpec *)$6)->location = @5;
+					$$ = lappend($1, $6);
+				}
+		;
+
+window_spec: opt_window_name opt_window_partition_clause
+				opt_window_order_clause opt_window_frame_clause
+				{
+					WindowSpec *n = makeNode(WindowSpec);
+					n->parent = $1;
+					n->partition = $2;
+					n->order = $3;
+					n->frame = (WindowFrame *)$4;
+					n->location = -1;
+					$$ = (Node *)n;
+				}
+		;
+
+opt_window_name: window_name { $$ = $1; }
+			| /*EMPTY*/ { $$ = NULL; }
+		;
+
+opt_window_partition_clause: window_partition_clause { $$ = $1; }
+			| /*EMPTY*/ { $$ = NIL; }
+		;
+
+window_partition_clause: PARTITION BY sortby_list { $$ = (List *)$3; }
+		;
+
+opt_window_order_clause: sort_clause { $$ = $1; }
+			| /*EMPTY*/ { $$ = NIL; }
+        ;
+
+opt_window_frame_clause: window_frame_clause { $$ = $1; }
+		| /*EMPTY*/ { $$ = NULL; }
+		;
+
+window_frame_clause: window_frame_units window_frame_extent
+			window_frame_exclusion
+				{
+					WindowFrame *n = makeNode(WindowFrame);
+					n->is_rows = $1;
+					setWindowExclude(n, $3);
+
+					if (IsA($2, List))
+					{
+						List *ex = (List *)$2;
+
+						n->trail = (WindowFrameEdge *)linitial(ex);
+						n->lead = (WindowFrameEdge *)lsecond(ex);
+						n->is_between = true;
+					}
+					else
+					{
+						Assert(IsA($2, WindowFrameEdge));
+						n->trail = (WindowFrameEdge *)$2;
+						n->lead = NULL;
+						n->is_between = false;
+					}
+					$$ = (Node *)n;
+				}
+		;
+
+/* units are either rows (true) otherwise false */
+window_frame_units: ROWS { $$ = true; }
+			| RANGE { $$ = false; }
+		;
+
+window_frame_extent:
+			window_frame_start { $$ = $1; }
+			| window_frame_between { $$ = $1; }
+		;
+
+window_frame_start:
+			UNBOUNDED PRECEDING
+				{
+					WindowFrameEdge *n = makeNode(WindowFrameEdge);
+					n->kind = WINDOW_UNBOUND_PRECEDING;
+					n->val = NULL;
+					$$ = (Node *)n;
+				}
+			| window_frame_preceding
+				{
+					WindowFrameEdge *n = makeNode(WindowFrameEdge);
+					n->kind = WINDOW_BOUND_PRECEDING;
+					n->val = $1;
+					$$ = (Node *)n;
+				}
+			| CURRENT_P ROW
+				{
+					WindowFrameEdge *n = makeNode(WindowFrameEdge);
+					n->kind = WINDOW_CURRENT_ROW;
+					$$ = (Node *)n;
+				}
+		;
+
+window_frame_preceding: a_expr PRECEDING
+				{
+					$$ = (Node *)$1;
+				}
+		;
+
+window_frame_between:
+			BETWEEN window_frame_bound AND window_frame_bound
+				{
+					/* slightly dodgy hack */
+					$$ = (Node *)list_make2($2, $4);
+				}
+		;
+
+/*
+ * Be careful that we don't allow BETWEEN UNBOUND PRECEDING AND
+ * UNBOUND PRECEDING
+ */
+
+window_frame_bound:
+			window_frame_start { $$ = $1; }
+			| UNBOUNDED FOLLOWING
+				{
+					WindowFrameEdge *n = makeNode(WindowFrameEdge);
+					n->kind = WINDOW_UNBOUND_FOLLOWING;
+					n->val = NULL;
+					$$ = (Node *)n;
+				}
+			| window_frame_following
+				{
+					WindowFrameEdge *n = makeNode(WindowFrameEdge);
+					n->kind = WINDOW_BOUND_FOLLOWING;
+					n->val = $1;
+					$$ = (Node *)n;
+				}
+		;
+
+window_frame_following: a_expr FOLLOWING
+				{
+					$$ = (Node *)$1;
+				}
+		;
+
+window_frame_exclusion: EXCLUDE CURRENT_P ROW { $$ = WINDOW_EXCLUSION_CUR_ROW; }
+			| EXCLUDE GROUP_P { $$ = WINDOW_EXCLUSION_GROUP; }
+			| EXCLUDE TIES  { $$ = WINDOW_EXCLUSION_TIES; }
+			| EXCLUDE NO OTHERS { $$ = WINDOW_EXCLUSION_NO_OTHERS; }
+			| /*EMPTY*/ { $$ = WINDOW_EXCLUSION_NULL; }
+		;
+
+
 /*
  * Supporting nonterminals for expressions.
  */
@@ -12340,6 +12356,7 @@ array_expr: '[' expr_list ']'
 array_expr_list: array_expr							{ $$ = list_make1($1); }
 			| array_expr_list ',' array_expr		{ $$ = lappend($1, $3); }
 		;
+
 
 extract_list:
 			extract_arg FROM a_expr
@@ -12671,11 +12688,10 @@ target_el:	a_expr AS ColLabel
 			 * as an infix expression, which we accomplish by assigning
 			 * IDENT a precedence higher than POSTFIXOP.
 			 *
-			 * In GPDB, we extent this to allow most
-			 * unreserved_keywords by also assigning them a
-			 * precedence.  There are certain keywords that can't work
-			 * without the as: reserved_keywords, the date modifier
-			 * suffixes (DAY, MONTH, YEAR, etc) and a few other
+			 * In GPDB, we extend this to allow most unreserved_keywords by
+			 * also assigning them a precedence.  There are certain keywords
+			 * that can't work without the as: reserved_keywords, the date
+			 * modifier suffixes (DAY, MONTH, YEAR, etc) and a few other
 			 * obscure cases.
 			 */
 			| a_expr IDENT
@@ -13137,6 +13153,7 @@ unreserved_keyword:
 			| MAXVALUE
 			| MEMORY_LIMIT
 			| MEMORY_SHARED_QUOTA
+			| MEMORY_SPILL_RATIO
 			| MERGE
 			| MINUTE_P
 			| MINVALUE
@@ -13434,6 +13451,7 @@ PartitionIdentKeyword: ABORT_P
 			| MAXVALUE
 			| MEMORY_LIMIT
 			| MEMORY_SHARED_QUOTA
+			| MEMORY_SPILL_RATIO
 			| MERGE
 			| MINVALUE
 			| MISSING
@@ -14056,7 +14074,6 @@ extractArgTypes(List *parameters)
 	{
 		FunctionParameter *p = (FunctionParameter *) lfirst(i);
 
-		/* keep if IN or INOUT or VARIADIC*/
 		if (p->mode != FUNC_PARAM_OUT && p->mode != FUNC_PARAM_TABLE)
 			result = lappend(result, p->argType);
 	}
@@ -14224,7 +14241,7 @@ doNegateFloat(Value *v)
 	}
 }
 
-static Node*
+static Node *
 makeAArrayExpr(List *elements, int location)
 {
 	A_ArrayExpr *n = makeNode(A_ArrayExpr);

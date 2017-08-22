@@ -1447,22 +1447,22 @@ pg_get_serial_sequence(PG_FUNCTION_ARGS)
 
 /*
  * pg_get_function_arguments
- * 		Get a nicely-formatted list of arguments for a function.
- * 		This is everything that would go between the parentheses in
- * 		CREATE FUNCTION.
+ *		Get a nicely-formatted list of arguments for a function.
+ *		This is everything that would go between the parentheses in
+ *		CREATE FUNCTION.
  */
 Datum
 pg_get_function_arguments(PG_FUNCTION_ARGS)
 {
-	Oid         	funcid = PG_GETARG_OID(0);
-	StringInfoData	buf;
-	HeapTuple   	proctup;
+	Oid			funcid = PG_GETARG_OID(0);
+	StringInfoData buf;
+	HeapTuple	proctup;
 
 	initStringInfo(&buf);
 
 	proctup = SearchSysCache(PROCOID,
-                            ObjectIdGetDatum(funcid),
-                            0, 0, 0);
+							 ObjectIdGetDatum(funcid),
+							 0, 0, 0);
 	if (!HeapTupleIsValid(proctup))
 		elog(ERROR, "cache lookup failed for function %u", funcid);
 
@@ -1473,19 +1473,18 @@ pg_get_function_arguments(PG_FUNCTION_ARGS)
 	PG_RETURN_TEXT_P(string_to_text(buf.data));
 }
 
-
 /*
  * pg_get_function_identity_arguments
- * 		Get a formatted list of arguments for a function.
- * 		This is everything that would go between the parentheses in
- * 		ALTER FUNCTION, etc. In particular, don't print defaults.
+ *		Get a formatted list of arguments for a function.
+ *		This is everything that would go between the parentheses in
+ *		ALTER FUNCTION, etc.  In particular, don't print defaults.
  */
 Datum
 pg_get_function_identity_arguments(PG_FUNCTION_ARGS)
 {
-	Oid         funcid = PG_GETARG_OID(0);
+	Oid			funcid = PG_GETARG_OID(0);
 	StringInfoData buf;
-	HeapTuple   proctup;
+	HeapTuple	proctup;
 
 	initStringInfo(&buf);
 
@@ -1502,21 +1501,20 @@ pg_get_function_identity_arguments(PG_FUNCTION_ARGS)
 	PG_RETURN_TEXT_P(string_to_text(buf.data));
 }
 
-
 /*
  * pg_get_function_result
- * 		Get a nicely-formatted version of the result type of a function.
- * 		This is what would appear after RETURNS in CREATE FUNCTION.
+ *		Get a nicely-formatted version of the result type of a function.
+ *		This is what would appear after RETURNS in CREATE FUNCTION.
  */
 Datum
 pg_get_function_result(PG_FUNCTION_ARGS)
 {
-	Oid         	funcid = PG_GETARG_OID(0);
-	StringInfoData 	buf;
-	StringInfoData	argbuf;
-	HeapTuple   	proctup;
-	Form_pg_proc 	procform;
-	int         	ntabargs = 0;
+	Oid			funcid = PG_GETARG_OID(0);
+	StringInfoData buf;
+	StringInfoData argbuf;
+	HeapTuple	proctup;
+	Form_pg_proc procform;
+	int			ntabargs = 0;
 
 	initStringInfo(&buf);
 	initStringInfo(&argbuf);
@@ -1563,48 +1561,52 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 						 bool print_table_args, bool print_defaults)
 {
 	Form_pg_proc proc = (Form_pg_proc) GETSTRUCT(proctup);
-	int         numargs;
-	Oid        *argtypes;
-	char      **argnames;
-	char       *argmodes;
-	int         argsprinted;
+	int			numargs;
+	Oid		   *argtypes;
+	char	  **argnames;
+	char	   *argmodes;
+	int			argsprinted;
 	int			inputargno;
 	int			nlackdefaults;
 	ListCell   *nextargdefault = NULL;
-	Datum       proargdefaults;
-	bool        isnull;
-	int         i;
+	int			i;
 
 	numargs = get_func_arg_info(proctup,
 								&argtypes, &argnames, &argmodes);
 
 	nlackdefaults = numargs;
-	proargdefaults = SysCacheGetAttr(PROCOID, proctup,
-									 Anum_pg_proc_proargdefaults, &isnull);
-	if (!isnull && print_defaults)
+	if (print_defaults && proc->pronargdefaults > 0)
 	{
-		char   *str;
-		List   *argdefaults;
+		Datum		proargdefaults;
+		bool		isnull;
 
-		str = TextDatumGetCString(proargdefaults);
-		argdefaults = (List *) stringToNode(str);
-		Assert(IsA(argdefaults, List));
-		pfree(str);
-		nextargdefault = list_head(argdefaults);
-		/* nlackdefaults counts only *input* arguments lacking defaults */
-		nlackdefaults = proc->pronargs - list_length(argdefaults);
+		proargdefaults = SysCacheGetAttr(PROCOID, proctup,
+										 Anum_pg_proc_proargdefaults,
+										 &isnull);
+		if (!isnull)
+		{
+			char	   *str;
+			List	   *argdefaults;
+
+			str = TextDatumGetCString(proargdefaults);
+			argdefaults = (List *) stringToNode(str);
+			Assert(IsA(argdefaults, List));
+			pfree(str);
+			nextargdefault = list_head(argdefaults);
+			/* nlackdefaults counts only *input* arguments lacking defaults */
+			nlackdefaults = proc->pronargs - list_length(argdefaults);
+		}
 	}
 
 	argsprinted = 0;
 	inputargno = 0;
 	for (i = 0; i < numargs; i++)
 	{
-		Oid     argtype = argtypes[i];
-		char   *argname = argnames ? argnames[i] : NULL;
-		char    argmode = argmodes ? argmodes[i] : PROARGMODE_IN;
+		Oid			argtype = argtypes[i];
+		char	   *argname = argnames ? argnames[i] : NULL;
+		char		argmode = argmodes ? argmodes[i] : PROARGMODE_IN;
 		const char *modename;
-
-		bool	isinput;
+		bool		isinput;
 
 		switch (argmode)
 		{
@@ -1630,12 +1632,12 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 				break;
 			default:
 				elog(ERROR, "invalid parameter mode '%c'", argmode);
-				modename = NULL; /* keep compiler quiet */
+				modename = NULL;	/* keep compiler quiet */
 				isinput = false;
 				break;
 		}
 		if (isinput)
-			inputargno++;       /* this is a 1-based counter */
+			inputargno++;		/* this is a 1-based counter */
 
 		if (print_table_args != (argmode == PROARGMODE_TABLE))
 			continue;
@@ -1646,10 +1648,9 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 		if (argname && argname[0])
 			appendStringInfo(buf, "%s ", quote_identifier(argname));
 		appendStringInfoString(buf, format_type_be(argtype));
-
 		if (print_defaults && isinput && inputargno > nlackdefaults)
 		{
-			Node    *expr;
+			Node	   *expr;
 
 			Assert(nextargdefault != NULL);
 			expr = (Node *) lfirst(nextargdefault);
@@ -1663,6 +1664,7 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 
 	return argsprinted;
 }
+
 
 /*
  * deparse_expression			- General utility for deparsing expressions
@@ -2179,8 +2181,8 @@ static void
 get_with_clause(Query *query, deparse_context *context)
 {
 	StringInfo	buf = context->buf;
-	const char	*sep;
-	ListCell	*l;
+	const char *sep;
+	ListCell   *l;
 
 	if (query->cteList == NIL)
 		return;
@@ -2248,7 +2250,6 @@ get_select_query_def(Query *query, deparse_context *context,
 {
 	StringInfo	buf = context->buf;
 	bool		force_colno;
-	const char *sep;
 	ListCell   *l;
 
 	/* Insert the WITH clause if given */
@@ -2274,11 +2275,11 @@ get_select_query_def(Query *query, deparse_context *context,
 	/* Add the ORDER BY clause if given */
 	if (query->sortClause != NIL)
 	{
-        get_sortlist_expr(query->sortClause,
-                          query->targetList,
-                          force_colno,
-                          context,
-                          " ORDER BY ");
+		get_sortlist_expr(query->sortClause,
+						  query->targetList,
+						  force_colno,
+						  context,
+						  " ORDER BY ");
 	}
 
 	/* Add the LIMIT clause if given */
@@ -3597,7 +3598,8 @@ get_name_for_var_field(Var *var, int fieldno,
 				{
 					Assert(cte != NULL);
 					
-					TargetEntry *ste = get_tle_by_resno(GetCTETargetList(cte), attnum);
+					TargetEntry *ste = get_tle_by_resno(GetCTETargetList(cte),
+														attnum);
 					if (ste == NULL || ste->resjunk)
 					{
 						ereport(WARNING, (errcode(ERRCODE_INTERNAL_ERROR),
@@ -3618,8 +3620,8 @@ get_name_for_var_field(Var *var, int fieldno,
 						 * Furthermore it could be an outer CTE, so we may
 						 * have to delete some levels of namespace.
 						 */
-						List *save_nslist = context->namespaces;
-						List *new_nslist;
+						List	   *save_nslist = context->namespaces;
+						List	   *new_nslist;
 						deparse_namespace mydpns;
 						Query *ctequery = (Query *)cte->ctequery;
 						Assert(ctequery != NULL && IsA(ctequery, Query));
@@ -3634,7 +3636,7 @@ get_name_for_var_field(Var *var, int fieldno,
 
 						result = get_name_for_var_field((Var *) expr, fieldno,
 														0, context);
-						
+
 						context->namespaces = save_nslist;
 
 						return result;
@@ -3711,8 +3713,8 @@ find_rte_by_refname(const char *refname, deparse_context *context)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(rtlist);
 
-            if (rte->eref &&
-                strcmp(rte->eref->aliasname, refname) == 0)
+			if (rte->eref &&
+				strcmp(rte->eref->aliasname, refname) == 0)
 			{
 				if (result)
 					return NULL;	/* it's ambiguous */
@@ -4403,7 +4405,6 @@ get_rule_expr(Node *node, deparse_context *context,
 								IsA(strip_implicit_coercions(linitial(args)),
 									CaseTestExpr))
 								w = (Node *) lsecond(args);
-
 						}
 					}
 
@@ -5081,7 +5082,8 @@ get_func_expr(FuncExpr *expr, deparse_context *context,
 	}
 
 	appendStringInfo(buf, "%s(",
-					 generate_function_name(funcoid, nargs, argtypes, &is_variadic));
+					 generate_function_name(funcoid, nargs, argtypes,
+											&is_variadic));
 	nargs = 0;
 	foreach(l, expr->args)
 	{
@@ -5090,7 +5092,6 @@ get_func_expr(FuncExpr *expr, deparse_context *context,
 		if (is_variadic && lnext(l) == NULL)
 			appendStringInfoString(buf, "VARIADIC ");
 		get_rule_expr((Node *) lfirst(l), context, true);
-
 	}
 	appendStringInfoChar(buf, ')');
 }
@@ -5418,19 +5419,20 @@ get_windowref_expr(WindowRef *wref, deparse_context *context)
 	ListCell   *l;
 	WindowSpec *spec;
 
+	if (list_length(wref->args) >= FUNC_MAX_ARGS)
+		ereport(ERROR,
+				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
+				 errmsg("too many arguments")));
 	nargs = 0;
 	foreach(l, wref->args)
 	{
-		if (nargs >= FUNC_MAX_ARGS)
-			ereport(ERROR,
-					(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-					 errmsg("too many arguments")));
 		argtypes[nargs] = exprType((Node *) lfirst(l));
 		nargs++;
 	}
 
 	appendStringInfo(buf, "%s(",
-					 generate_function_name(wref->winfnoid, nargs, argtypes, NULL));
+					 generate_function_name(wref->winfnoid,
+											nargs, argtypes, NULL));
 
 	get_rule_expr((Node *) wref->args, context, true);
 	appendStringInfoChar(buf, ')');
@@ -5845,7 +5847,8 @@ get_from_clause_item(Node *jtnode, Query *query, deparse_context *context)
 				/* Normal relation RTE */
 				appendStringInfo(buf, "%s%s",
 								 only_marker(rte),
-								 generate_relation_name(rte->relid, context->namespaces));
+								 generate_relation_name(rte->relid,
+														context->namespaces));
 				break;
 			case RTE_SUBQUERY:
 				/* Subquery RTE */
@@ -6525,7 +6528,8 @@ generate_relation_name(Oid relid, List *namespaces)
  * The result includes all necessary quoting and schema-prefixing.
  */
 static char *
-generate_function_name(Oid funcid, int nargs, Oid *argtypes, bool *is_variadic)
+generate_function_name(Oid funcid, int nargs, Oid *argtypes,
+					   bool *is_variadic)
 {
 	HeapTuple	proctup;
 	Form_pg_proc procform;

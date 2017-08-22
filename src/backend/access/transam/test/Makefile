@@ -15,3 +15,6 @@ xact.t: \
 	$(MOCK_DIR)/backend/storage/lmgr/lwlock_mock.o \
 	$(MOCK_DIR)/backend/access/transam/subtrans_mock.o \
 	$(MOCK_DIR)/backend/utils/error/elog_mock.o
+
+xlog.t: \
+    $(MOCK_DIR)/backend/replication/walsender_mock.o

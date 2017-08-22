@@ -26,6 +26,7 @@
     | ROLE <varname>rolename</varname> [, ...]
     | ADMIN <varname>rolename</varname> [, ...]
     | RESOURCE QUEUE <varname>queue_name</varname>
+    | RESOURCE GROUP <varname>group_name</varname>
     | [ DENY <varname>deny_point</varname> ]
     | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]</codeblock>
         </section>
@@ -156,6 +157,19 @@
                         giving them the right to grant membership in this role to others.</pd>
                 </plentry>
                 <plentry>
+                    <pt>RESOURCE GROUP <varname>group_name</varname></pt>
+                    <pd> The name of the resource group to assign to the the new role.  The role 
+                        will be subject to the concurrent transaction, memory, and CPU limits
+                        configured for the resource group.
+                        You can assign a single resource group to one or more roles.</pd>
+                    <pd>If you do not specify a resource group for a new role, the role is
+                        automatically assigned the default resource group for the role's capability,
+                        <codeph>admin_group</codeph> for <codeph>SUPERUSER</codeph> roles,
+                        <codeph>default_group</codeph> for non-admin roles.</pd>
+                    <pd>You can assign the <codeph>admin_group</codeph> resource group to any role having the <codeph>SUPERUSER</codeph> attribute.</pd>
+                    <pd>You can assign the <codeph>default_group</codeph> resource group to any role.</pd>
+                </plentry>
+                <plentry>
                     <pt>RESOURCE QUEUE <varname>queue_name</varname></pt>
                     <pd>The name of the resource queue to which the new user-level role is to be
                         assigned. Only roles with <codeph>LOGIN</codeph> privilege can be assigned
@@ -213,7 +227,8 @@
                 create databases, even if <codeph>INHERIT</codeph> is set. These
                 privileges/attributes are never inherited: <codeph>SUPERUSER</codeph>,
                     <codeph>CREATEDB</codeph>, <codeph>CREATEROLE</codeph>,
-                    <codeph>CREATEEXTTABLE</codeph>, <codeph>LOGIN</codeph>, and <codeph>RESOURCE
+                    <codeph>CREATEEXTTABLE</codeph>, <codeph>LOGIN</codeph>, <codeph>RESOURCE
+                    GROUP</codeph>, and <codeph>RESOURCE
                     QUEUE</codeph>. The attributes must be set on each user-level role.</p>
             <p>The <codeph>INHERIT</codeph> attribute is the default for reasons of backwards
                 compatibility. In prior releases of Greenplum Database, users always had access to
@@ -250,6 +265,8 @@
             <codeblock>CREATE ROLE admin WITH CREATEDB CREATEROLE;</codeblock>
             <p>Create a role that does not allow login access on Sundays:</p>
             <codeblock>CREATE ROLE user3 DENY DAY 'Sunday';</codeblock>
+            <p>Create a role, assigning a resource group:</p>
+            <codeblock>CREATE ROLE bill RESOURCE GROUP rg_light;</codeblock>
         </section>
         <section id="section7">
             <title>Compatibility</title>
@@ -276,6 +293,8 @@
                         type="topic" format="dita"/></codeph>, <codeph><xref
                         href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph>,
                         <codeph><xref href="CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
+                        format="dita"/></codeph>
+                        <codeph><xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic"
                         format="dita"/></codeph></p>
         </section>
     </body>

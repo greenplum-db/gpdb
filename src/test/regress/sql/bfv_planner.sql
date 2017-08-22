@@ -157,6 +157,18 @@ insert into booltest values ('t');
 insert into booltest values (null);
 select * from booltest a, booltest b where (a.b = b.b) is not false;
 
+-- Lossy index qual, used as a partial index predicate, and same column is
+-- used in FOR SHARE. Once upon a time, this happened to tickle a bug in the
+-- planner at one point.
+create table tstest (t tsvector);
+create index i_tstest on tstest using gist (t) WHERE t @@ 'bar';
+insert into tstest values ('foo');
+insert into tstest values ('bar');
+
+set enable_bitmapscan =off;
+set enable_seqscan =off;
+select * from tstest where t @@ 'bar' for share of tstest;
+
 
 -- start_ignore
 drop table if exists bfv_planner_x;

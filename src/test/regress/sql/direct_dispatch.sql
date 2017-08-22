@@ -220,6 +220,45 @@ EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHER
 SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = b.j) and a.i = 1;
 SELECT a.* FROM MPP_22019_a a  WHERE a.j NOT IN (SELECT j FROM MPP_22019_a a2 where a2.j = a.j) and a.i = 1;
 
+
+--
+-- Test direct dispatch with volatile functions, and nextval().
+--
+
+-- Simple table.
+create table ddtesttab (i int, j int, k int8) distributed by (k);
+create sequence ddtestseq;
+
+insert into ddtesttab values (1, 1, 5);
+insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
+insert into ddtesttab values (1, 1, nextval('ddtestseq'));
+insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
+
+drop table ddtesttab;
+
+-- Partitioned table, with mixed distribution keys.
+create table ddtesttab (i int, j int, k int8) distributed by (i) partition by
+range(k)
+(start(1) end(20) every(10));
+
+
+insert into ddtesttab values (1, 1, 5);
+insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
+insert into ddtesttab values (1, 1, nextval('ddtestseq'));
+insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
+
+-- One partition is randomly distributed, while others are distributed by key.
+alter table ddtesttab_1_prt_2 set distributed randomly;
+
+insert into ddtesttab values (1, 1, 5);
+insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
+insert into ddtesttab values (1, 1, nextval('ddtestseq'));
+insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
+
+drop table ddtesttab;
+drop sequence ddtestseq;
+
+
 -- cleanup
 set test_print_direct_dispatch_info=off;
 

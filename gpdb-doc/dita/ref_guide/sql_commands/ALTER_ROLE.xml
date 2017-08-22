@@ -9,6 +9,8 @@ ALTER ROLE <varname>name</varname> RESET <varname>config_parameter</varname>
 
 ALTER ROLE <varname>name</varname> RESOURCE QUEUE {<varname>queue_name</varname> | NONE}
 
+ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname> | NONE}
+
 ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock><p>where <varname>option</varname> can be:</p><codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
@@ -44,7 +46,12 @@ its password if the password is MD5-encrypted.</li><li id="av136604"><b>SET | RE
           role can only belong to one resource queue. For a role without <codeph>LOGIN</codeph>
           privilege, resource queues have no effect. See <codeph><xref
               href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/></codeph> for
-          more information.</li><li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role attributes that can be
+          more information.</li><li id="av1370583"><b>RESOURCE GROUP</b> — Assigns a resource group to the role.
+          The role would then be subject to the concurrent transaction, memory, and CPU limits
+          configured for the resource group. You can assign a single resource group to one or more roles. 
+          See <codeph><xref
+              href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/></codeph> for
+          additional information.</li><li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role attributes that can be
           specified in <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"
             /></codeph>. Attributes not mentioned in the command retain their previous settings.
           Database superusers can change any of these settings for any role. Roles having
@@ -55,7 +62,9 @@ its password if the password is MD5-encrypted.</li><li id="av136604"><b>SET | RE
             default setting in new sessions. Use <codeph>RESET ALL</codeph> to clear all
             role-specific settings. See <codeph><xref href="./SET.xml#topic1" type="topic"
                 format="dita"/></codeph> and <xref href="../config_params/guc_config.xml" type="topic"
-              format="dita"/> for information about user-settable configuration parameters. </pd></plentry><plentry><pt><varname>queue_name</varname></pt><pd>The name of the resource queue to which the user-level role is to
+              format="dita"/> for information about user-settable configuration parameters. </pd></plentry><plentry><pt><varname>group_name</varname></pt><pd>The name of the resource group to assign to this role.
+Specifying the <varname>group_name</varname> <codeph>NONE</codeph> removes the role's current resource group assignment and assigns a default resource group based on the role's capability. <codeph>SUPERUSER</codeph> roles are assigned the <codeph>admin_group</codeph> resource group, while the <codeph>default_group</codeph> resource group is assigned to non-admin roles.
+</pd></plentry><plentry><pt><varname>queue_name</varname></pt><pd>The name of the resource queue to which the user-level role is to
 be assigned. Only roles with <codeph>LOGIN</codeph> privilege can be
 assigned to a resource queue. To unassign a role from a resource queue
 and put it in the default resource queue, specify <codeph>NONE</codeph>.
@@ -87,9 +96,11 @@ change a role's password. </p><p>It is also possible to tie a session default to
         Role-specific settings override database-specific ones if there is a conflict. See
             <codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"
         /></codeph>.</p></section><section id="section6"><title>Examples</title><p>Change the password for a role: </p><codeblock>ALTER ROLE daria WITH PASSWORD 'passwd123';</codeblock><p>Change a password expiration date:</p><codeblock>ALTER ROLE scott VALID UNTIL 'May 4 12:00:00 2015 +1';</codeblock><p>Make a password valid forever:</p><codeblock>ALTER ROLE luke VALID UNTIL 'infinity';</codeblock><p>Give a role the ability to create other roles and new databases: </p><codeblock>ALTER ROLE joelle CREATEROLE CREATEDB;</codeblock><p>Give a role a non-default setting of the <codeph>maintenance_work_mem</codeph> parameter: </p><codeblock>ALTER ROLE admin SET maintenance_work_mem = 100000;</codeblock><p>Assign a role to a resource queue: </p><codeblock>ALTER ROLE sammy RESOURCE QUEUE poweruser;</codeblock><p>Give a role permission to create writable external tables:</p><codeblock>ALTER ROLE load CREATEEXTTABLE (type='writable');</codeblock><p>Alter a role so it does not allow login access on Sundays:</p><codeblock>ALTER ROLE user3 DENY DAY 'Sunday';</codeblock><p>Alter a role to remove the constraint that does not allow login access
-on Sundays:</p><codeblock>ALTER ROLE user3 DROP DENY FOR DAY 'Sunday';</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>ALTER ROLE</codeph> statement is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
+on Sundays:</p><codeblock>ALTER ROLE user3 DROP DENY FOR DAY 'Sunday';</codeblock><p>Assign a new resource group to a role: </p><codeblock>ALTER ROLE parttime_user RESOURCE GROUP rg_light;</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>ALTER ROLE</codeph> statement is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          /></codeph>,
             <codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
           /></codeph>, <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
         /></codeph>, <codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"

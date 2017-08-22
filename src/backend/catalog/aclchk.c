@@ -747,7 +747,6 @@ ExecGrant_Relation(InternalGrant *istmt)
 		}
 		else
 		{
-
 			/* 
 			 * Adjust the default permissions based on whether it is a 
 			 * sequence
@@ -808,7 +807,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 					}
 				}
 			}
-	
+
 			/*
 			 * Get owner ID and working copy of existing ACL. If
 			 * there's no ACL, substitute the proper default.
@@ -822,7 +821,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 									 ownerId);
 			else
 				old_acl = DatumGetAclPCopy(aclDatum);
-	
+
 			/* Determine ID to do the grant as, and available grant options */
 			select_best_grantor(GetUserId(), this_privileges,
 								old_acl, ownerId,
@@ -2037,6 +2036,7 @@ pg_class_aclmask(Oid table_oid, Oid roleid,
 			}
 		}
 	}
+
 	/*
 	 * Otherwise, superusers bypass all permission-checking.
 	 */

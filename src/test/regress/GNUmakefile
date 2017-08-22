@@ -141,7 +141,7 @@ endif
 
 # And finally some extra C modules...
 
-all: all-spi tablespace-setup includecheck
+all: all-spi tablespace-setup includecheck hooktest
 
 .PHONY: all-spi
 all-spi:
@@ -158,11 +158,22 @@ tablespace-setup:
 includecheck:
 	$(srcdir)/checkinc.py
 
+.PHONY: hooktest
+hooktest:
+	$(MAKE) -C $< $@
+
 ##
 ## Run tests
 ##
 
 pg_regress_call = ./pg_regress --inputdir=$(srcdir) --multibyte=$(MULTIBYTE) $(MAXCONNOPT) $(NOLOCALE) --init-file=$(srcdir)/init_file
+
+# These are currently skipped because they don't work yet for segment wal replication
+# segspace: cannot restart database at the moment
+# filespace: segment wal replication does not handle filespaces yet
+ifeq ($(enable_segwalrep), yes)
+pg_regress_call := $(pg_regress_call) --exclude-tests="segspace_setup segspace segspace_cleanup filespace"
+endif
 
 check: all
 	$(pg_regress_call) --temp-install=./tmp_check --top-builddir=$(top_builddir) --srcdir=$(abs_srcdir) --temp-port=$(TEMP_PORT) --schedule=$(srcdir)/parallel_schedule 
@@ -170,7 +181,7 @@ check: all
 installcheck: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
 
-installcheck-good: all twophase_pqexecparams
+installcheck-good: all twophase_pqexecparams hooktest
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao; \
 	else \
@@ -206,6 +217,7 @@ clean distclean maintainer-clean: clean-lib
 # things built by `all' target
 	rm -f $(NAME)$(DLSUFFIX) $(OBJS)
 	$(MAKE) -C $(contribdir)/spi clean
+	$(MAKE) -C hooktest/ clean
 	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
 # things created by dynamic configs
 	find sql -type l | xargs rm -f

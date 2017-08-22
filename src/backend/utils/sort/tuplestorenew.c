@@ -641,7 +641,7 @@ ntuplestore_destroy(NTupleStore *ts)
 }
 
 NTupleStore *
-ntuplestore_create(int maxBytes)
+ntuplestore_create(int64 maxBytes)
 {
 	NTupleStore *store = (NTupleStore *) palloc(sizeof(NTupleStore));
 	store->mcxt = CurrentMemoryContext;
@@ -690,7 +690,7 @@ ntuplestore_create(int maxBytes)
  *   filename does not include the pgsql_tmp/ prefix
  */
 NTupleStore *
-ntuplestore_create_readerwriter(const char *filename, int maxBytes, bool isWriter)
+ntuplestore_create_readerwriter(const char *filename, int64 maxBytes, bool isWriter)
 {
 	NTupleStore* store = NULL;
 	char filenameprefix[MAXPGPATH];
@@ -783,7 +783,7 @@ ntuplestore_init_reader(NTupleStore *store, int maxBytes)
  * The workSet needs to be initialized by the caller.
  */
 NTupleStore *
-ntuplestore_create_workset(workfile_set *workSet, int maxBytes)
+ntuplestore_create_workset(workfile_set *workSet, int64 maxBytes)
 {
 
 	elog(gp_workfile_caching_loglevel, "Creating tuplestore with workset in directory %s", workSet->path);

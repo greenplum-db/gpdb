@@ -110,30 +110,10 @@ static bool replace_shareinput_targetlists_walker(Node *node, PlannerGlobal *glo
 static bool fixup_subplan_walker(Node *node, SubPlanWalkerContext *context);
 
 /*
- * Given an expression, return true if it contains anything non-constant.
+ * Is target list of a Result node all-constant?
  *
- * an expression is considered "constant" if they consist of constant
- * expressions and non-volatile functions with constant arguments.
- */
-static bool
-contains_nonconstant_walker(Node *node, void *context)
-{
-	if (node == NULL)
-		return false;
-
-    if (IsA(node, Const))
-        return false;
-    if (contain_volatile_functions(node))
-        return true;
-    return expression_tree_walker(node, contains_nonconstant_walker, context);
-}
-
-/*
- * Is target list all-constant ?
- *
- * That means that there is no subplan and the elements of the
- * targetlist are either constant or guaranteed to produce constants
- * (non-volatile functions with all constant arguments).
+ * That means that there is no subplan, and the elements of the
+ * targetlist are Const nodes.
  */
 static bool
 allConstantValuesClause(Plan *node)
@@ -152,7 +132,7 @@ allConstantValuesClause(Plan *node)
 
 		Assert(tle->expr);
 
-		if (contains_nonconstant_walker((Node *)tle->expr, NULL))
+		if (!IsA(tle->expr, Const))
 			return false;
 	}
 
@@ -1861,14 +1841,12 @@ static void shareinput_walker(SHAREINPUT_MUTATOR f, Node *node, PlannerGlobal *g
 typedef struct
 {
 	int			nextPlanId;
-	List	   *planNodes;
 } assign_plannode_id_walker_context;
 
 static void
 assign_plannode_id_walker(Node *node, assign_plannode_id_walker_context *ctxt)
 {
 	Plan	   *plan;
-	Plan	   *parent;
 
 	if(node == NULL)
 		return;
@@ -1891,15 +1869,6 @@ assign_plannode_id_walker(Node *node, assign_plannode_id_walker_context *ctxt)
 	plan = (Plan *) node;
 
 	plan->plan_node_id = ++ctxt->nextPlanId;
-
-	parent = ctxt->planNodes == NIL ? NIL : linitial(ctxt->planNodes);
-
-	if(!parent)
-		plan->plan_parent_node_id = -1;
-	else
-		plan->plan_parent_node_id = parent->plan_node_id;
-
-	ctxt->planNodes = lcons(plan, ctxt->planNodes);
 
 	if(IsA(node, Append))
 	{
@@ -1933,8 +1902,6 @@ assign_plannode_id_walker(Node *node, assign_plannode_id_walker_context *ctxt)
 		assign_plannode_id_walker((Node *)plan->righttree, ctxt);
 		assign_plannode_id_walker((Node *)plan->initPlan, ctxt);
 	}
-
-	list_delete_first(ctxt->planNodes);
 }
 
 /*
@@ -2602,22 +2569,16 @@ apply_shareinput_xslice(Plan *plan, PlannerGlobal *glob)
 void assign_plannode_id(PlannedStmt *stmt)
 {
 	assign_plannode_id_walker_context ctxt;
+	ListCell *lc;
 
-	/* We only care about planNodes and nextPlanId, so initialize them. */
-	ctxt.planNodes = NIL;
 	ctxt.nextPlanId = 0;
 
 	assign_plannode_id_walker((Node *) stmt->planTree, &ctxt);
 
-	ctxt.planNodes = NIL;
-
-	ListCell *lc = NULL;
 	foreach (lc, stmt->subplans)
 	{
 		Plan *subplan = lfirst(lc);
 		Assert(subplan);
-
-		ctxt.planNodes = NIL;
 
 		assign_plannode_id_walker((Node *) subplan, &ctxt);
 	}

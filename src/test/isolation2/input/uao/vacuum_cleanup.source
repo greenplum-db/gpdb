@@ -23,13 +23,13 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 1: set vacuum_freeze_min_age = 0;
 -- Check the age of the table just before vacuum
-1: select age(relfrozenxid) from gp_dist_random('pg_class') where relname = 'ao_@orientation@_vacuum_cleanup2' and gp_segment_id = 0;
+1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
 1: vacuum ao_@orientation@_vacuum_cleanup2;
 
 -- We expect the age to be 3. This is because all the xids before the first
 -- vacuum will be frozen. The relfrozenxid will be the xid of the last
 -- transaction before the vacuum (in this case it is the update statement)
-1: select age(relfrozenxid) from gp_dist_random('pg_class') where relname = 'ao_@orientation@_vacuum_cleanup2' and gp_segment_id = 0;
+1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
 
 1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 2);
 2<:
@@ -43,7 +43,7 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 
 -- Check the age of the table before vacuum to make sure that clean phase gets
 -- performed
-1: select age(relfrozenxid) from gp_dist_random('pg_class') where relname = 'ao_@orientation@_vacuum_cleanup3' and gp_segment_id = 0;
+1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
 1: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
 1&: vacuum ao_@orientation@_vacuum_cleanup3;
 
@@ -55,7 +55,7 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 2: select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
 
 1<:
-1: select age(relfrozenxid) from gp_dist_random('pg_class') where relname = 'ao_@orientation@_vacuum_cleanup3' and gp_segment_id = 0;
+1: select age(relfrozenxid), regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup3'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup3'::regclass::oid || '%') and gp_segment_id = 0;
 
 -- Validate that the drop phase was skipped. segfile 1 should be in state 2
 -- (AWAITING_DROP)

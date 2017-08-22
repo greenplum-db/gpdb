@@ -147,7 +147,7 @@ int2vectorin(PG_FUNCTION_ARGS)
 		while (*intString && isspace((unsigned char) *intString))
 			intString++;
 		if (*intString == '\0')
-			break;		
+			break;
 		result->values[n] = pg_atoi(intString, sizeof(int16), ' ');
 		while (*intString && !isspace((unsigned char) *intString))
 			intString++;

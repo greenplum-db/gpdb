@@ -192,8 +192,8 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
             input stream of data. External web tables are not rescannable during query
             execution.</pd>
           <pd>The <codeph>s3</codeph> protocol does not support external web tables. You can,
-            however, create an external web table that executes a third-party tool to read data
-            from or write data to S3 directly.</pd>
+            however, create an external web table that executes a third-party tool to read data from
+            or write data to S3 directly.</pd>
         </plentry>
         <plentry>
           <pt>
@@ -360,15 +360,14 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
         </plentry>
         <plentry>
           <pt>ON MASTER</pt>
-          <pd>Restricts all table-related operations to the Greenplum master segment. Permitted 
-            only on readable and writable external tables created with the 
-            <codeph>s3</codeph> or custom protocols. The <codeph>gpfdist</codeph>,
-            <codeph>gpfdists</codeph>, <codeph>gphdfs</codeph>, and <codeph>file</codeph>
-            protocols do not support <codeph>ON MASTER</codeph>.
-            <note>Be aware of potential resource impacts when reading from or writing to
-            external tables you create with the <codeph>ON MASTER</codeph> clause. You may
-            encounter performance issues when you restrict table operations solely to the
-            Greenplum master segment.</note></pd>
+          <pd>Restricts all table-related operations to the Greenplum master segment. Permitted only
+            on readable and writable external tables created with the <codeph>s3</codeph> or custom
+            protocols. The <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>,
+              <codeph>gphdfs</codeph>, and <codeph>file</codeph> protocols do not support <codeph>ON
+              MASTER</codeph>. <note>Be aware of potential resource impacts when reading from or
+              writing to external tables you create with the <codeph>ON MASTER</codeph> clause. You
+              may encounter performance issues when you restrict table operations solely to the
+              Greenplum master segment.</note></pd>
         </plentry>
         <plentry>
           <pt>EXECUTE <varname>'command'</varname> [ON ...]</pt>
@@ -656,6 +655,11 @@ customer_id=123;</codeblock>
             database owner privilege is required. If <codeph>*.*</codeph> is specified, operating
             system super-user privilege is required.</p></li>
       </ul>
+      <p>When multiple Greenplum Database external tables are defined with the
+          <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>, or <codeph>file</codeph> protocol and
+        access the same named pipe a Linux system, Greenplum Database restricts access to the named
+        pipe to a single reader. An error is returned if a second reader attempts to access the
+        named pipe. </p>
     </section>
     <section id="section9"><title>HDFS File Format Support for the gphdfs Protocol</title><p>If you
         specify <codeph>gphdfs</codeph> protocol to read or write file to a Hadoop file system

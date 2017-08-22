@@ -180,9 +180,8 @@ typedef struct Plan
 {
 	NodeTag		type;
 
-	/* Plan node id and parent node id */
-	int 	plan_node_id;
-	int 	plan_parent_node_id;
+	/* Plan node id */
+	int			plan_node_id;	/* unique across entire final plan tree */
 
 	/*
 	 * estimated execution costs for plan (see costsize.c for more info)

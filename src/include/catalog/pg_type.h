@@ -696,25 +696,25 @@ DATA(insert OID = 6994 (gp_relation_node PGNSP PGUID -1 f c t \054 5094 0 0 reco
 #define  TYPTYPE_ENUM		'e' /* enumerated type */
 #define  TYPTYPE_PSEUDO		'p' /* pseudo-type */
 
-/* 
+/*
  * typcategory is from Postgres 9.0 catalog changes.
  * Used only (so far) for JSON functions
  */
-# define  TYPCATEGORY_INVALID			'\0'	/* not an allowed category */
-# define  TYPCATEGORY_ARRAY				'A'
-# define  TYPCATEGORY_BOOLEAN			'B'
-# define  TYPCATEGORY_COMPOSITE			'C'
-# define  TYPCATEGORY_DATETIME			'D'
-# define  TYPCATEGORY_ENUM				'E'
-# define  TYPCATEGORY_GEOMETRIC			'G'
-# define  TYPCATEGORY_NETWORK			'I'		/* think INET */
-# define  TYPCATEGORY_NUMERIC			'N'
-# define  TYPCATEGORY_PSEUDOTYPE		'P'
-# define  TYPCATEGORY_STRING			'S'
-# define  TYPCATEGORY_TIMESPAN			'T'
-# define  TYPCATEGORY_USER				'U'
-# define  TYPCATEGORY_BITSTRING			'V'		/* er ... "varbit"? */
-# define  TYPCATEGORY_UNKNOWN			'X'
+#define  TYPCATEGORY_INVALID	'\0'	/* not an allowed category */
+#define  TYPCATEGORY_ARRAY		'A'
+#define  TYPCATEGORY_BOOLEAN	'B'
+#define  TYPCATEGORY_COMPOSITE	'C'
+#define  TYPCATEGORY_DATETIME	'D'
+#define  TYPCATEGORY_ENUM		'E'
+#define  TYPCATEGORY_GEOMETRIC	'G'
+#define  TYPCATEGORY_NETWORK	'I'		/* think INET */
+#define  TYPCATEGORY_NUMERIC	'N'
+#define  TYPCATEGORY_PSEUDOTYPE 'P'
+#define  TYPCATEGORY_STRING		'S'
+#define  TYPCATEGORY_TIMESPAN	'T'
+#define  TYPCATEGORY_USER		'U'
+#define  TYPCATEGORY_BITSTRING	'V'		/* er ... "varbit"? */
+#define  TYPCATEGORY_UNKNOWN	'X'
 
 /* Is a type OID a polymorphic pseudotype?	(Beware of multiple evaluation) */
 #define IsPolymorphicType(typid)  \

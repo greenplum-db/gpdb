@@ -12,22 +12,17 @@
 # or
 #   run(input filename, output filename)
 #
-#
-#
 package atmsort;
 
 #use Data::Dumper; # only used by commented-out debug statements.
 use strict;
 use warnings;
-use File::Spec;
 use File::Temp qw/ tempfile /;
 
 # Load explain.pm from the same directory where atmsort.pm is.
 use FindBin;
 use lib "$FindBin::Bin";
 use explain;
-
-my $glob_id = "";
 
 # optional set of prefixes to identify sql statements, query output,
 # and sorted lines (for testing purposes)
@@ -298,7 +293,6 @@ sub match_then_subs
 
     for my $ff (@{$glob_match_then_sub_fnlist})
     {
-
         # get the function and execute it
         my $fn1 = $ff->[0];
         if (!$glob_verbose)
@@ -403,7 +397,6 @@ m/^WARNING:  Referential integrity \(.*\) constraints are not supported in Green
         # the NOTICE is different from the ERROR case, which does not
         # end with "skipping"
 m/^NOTICE:  \w+ \".*\" does not exist\, skipping\s*$/
-
 
 # the EOF ends the HERE document
 EOF_matchignores

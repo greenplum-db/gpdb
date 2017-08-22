@@ -1,4 +1,24 @@
 --
+-- Test \dx and \dx+, to display extensions.
+--
+-- We just use gp_inject_fault as an example of an extension here. We don't
+-- inject any faults.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+\dx gp_inject*
+                           List of installed extensions
+      Name       | Version | Schema |                 Description                  
+-----------------+---------+--------+----------------------------------------------
+ gp_inject_fault | 1.0     | public | simulate various faults for testing purposes
+(1 row)
+
+\dx+ gp_inject*
+                           List of installed extensions
+      Name       | Version | Schema |                 Description                  
+-----------------+---------+--------+----------------------------------------------
+ gp_inject_fault | 1.0     | public | simulate various faults for testing purposes
+(1 row)
+
+--
 -- Test extended \du flags
 --
 -- https://github.com/greenplum-db/gpdb/issues/1028
@@ -66,7 +86,7 @@ CREATE ROLE test_psql_du_e5 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', pr
  test_psql_du_e5 | Superuser, Ext http Table, Cannot login | {}
 
 DROP ROLE test_psql_du_e5;
--- does dot exist
+-- does not exist
 CREATE ROLE test_psql_du_e6 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'http');
 ERROR:  invalid CREATEEXTTABLE specification. writable http external tables do not exist
 \du test_psql_du_e6

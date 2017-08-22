@@ -1311,7 +1311,6 @@ class GpError(Exception): pass
 
 ######
 def get_user():
-    logger.debug("Checking if LOGNAME or USER env variable is set.")
     username = os.environ.get('LOGNAME') or os.environ.get('USER')
     if not username:
         raise GpError('Environment Variable LOGNAME or USER not set')
@@ -1319,7 +1318,6 @@ def get_user():
 
 
 def get_gphome():
-    logger.debug("Checking if GPHOME env variable is set.")
     gphome=os.getenv('GPHOME',None)
     if not gphome:
         raise GpError('Environment Variable GPHOME not set')
@@ -1328,7 +1326,6 @@ def get_gphome():
 
 ######
 def get_masterdatadir():
-    logger.debug("Checking if MASTER_DATA_DIRECTORY env variable is set.")
     master_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
     if not master_datadir:
         raise GpError("Environment Variable MASTER_DATA_DIRECTORY not set!")

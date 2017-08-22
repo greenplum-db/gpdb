@@ -753,7 +753,6 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	set_cheapest(root, rel);
 }
 
-
 /*
  * set_function_pathlist
  *		Build the (single) access path for a function RTE
@@ -1594,17 +1593,17 @@ qual_is_pushdown_safe_set_operation(Query *subquery, Node *qual)
  * it will work correctly: sublinks will already have been transformed into
  * subplans in the qual, but not in the subquery).
  *
- * 2. If we try to push qual below set operation, then qual must be pushable
+ * 2X. If we try to push qual below set operation, then qual must be pushable
  * below set operation children
  *
- * 3. The qual must not refer to the whole-row output of the subquery
+ * 2. The qual must not refer to the whole-row output of the subquery
  * (since there is no easy way to name that within the subquery itself).
  *
- * 4. The qual must not refer to any subquery output columns that were
+ * 3. The qual must not refer to any subquery output columns that were
  * found to have inconsistent types across a set operation tree by
  * subquery_is_pushdown_safe().
  *
- * 5. If the subquery uses DISTINCT ON, we must not push down any quals that
+ * 4. If the subquery uses DISTINCT ON, we must not push down any quals that
  * refer to non-DISTINCT output columns, because that could change the set
  * of rows returned.  This condition is vacuous for DISTINCT, because then
  * there are no non-DISTINCT output columns, but unfortunately it's fairly
@@ -1612,11 +1611,11 @@ qual_is_pushdown_safe_set_operation(Query *subquery, Node *qual)
  * parsetree representation.  It's cheaper to just make sure all the Vars
  * in the qual refer to DISTINCT columns.
  *
- * 6. We must not push down any quals that refer to subselect outputs that
+ * 5. We must not push down any quals that refer to subselect outputs that
  * return sets, else we'd introduce functions-returning-sets into the
  * subquery's WHERE/HAVING quals.
  *
- * 7. We must not push down any quals that refer to subselect outputs that
+ * 6. We must not push down any quals that refer to subselect outputs that
  * contain volatile functions, for fear of introducing strange results due
  * to multiple evaluation of a volatile function.
  */
@@ -1634,7 +1633,7 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 		return false;
 
 	/*
-	 * (point 2)
+	 * (point 2X)
 	 * if we try to push quals below set operation, make
 	 * sure that qual is pushable to below set operation children
 	 */
@@ -1656,7 +1655,7 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 
 		Assert(var->varno == rti);
 
-		/* Check point 3 */
+		/* Check point 2 */
 		if (var->varattno == 0)
 		{
 			safe = false;
@@ -1672,7 +1671,7 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 			continue;
 		tested = bms_add_member(tested, var->varattno);
 
-		/* Check point 4 */
+		/* Check point 3 */
 		if (differentTypes[var->varattno])
 		{
 			safe = false;
@@ -1684,7 +1683,7 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 		Assert(tle != NULL);
 		Assert(!tle->resjunk);
 
-		/* If subquery uses DISTINCT or DISTINCT ON, check point 5 */
+		/* If subquery uses DISTINCT or DISTINCT ON, check point 4 */
 		if (subquery->distinctClause != NIL &&
 			!targetIsInSortGroupList(tle, InvalidOid, subquery->distinctClause))
 		{
@@ -1693,14 +1692,14 @@ qual_is_pushdown_safe(Query *subquery, Index rti, Node *qual,
 			break;
 		}
 
-		/* Refuse functions returning sets (point 6) */
+		/* Refuse functions returning sets (point 5) */
 		if (expression_returns_set((Node *) tle->expr))
 		{
 			safe = false;
 			break;
 		}
 
-		/* Refuse volatile functions (point 7) */
+		/* Refuse volatile functions (point 6) */
 		if (contain_volatile_functions((Node *) tle->expr))
 		{
 			safe = false;

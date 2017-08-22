@@ -135,6 +135,15 @@
               have a header defined by the array subroutines.</entry>
           </row>
           <row>
+            <entry colname="col1"><codeph>typarray</codeph></entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">If not 0, identifies another row in <codeph>pg_type</codeph>,
+              which is the "true" array type having this type as its  element. Use
+                <codeph>pg_type.typarray</codeph> to locate the array type associated with a
+              specific type.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>typinput</codeph>
             </entry>

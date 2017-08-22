@@ -18,6 +18,7 @@
  *
  */
 
+#include "pxfutils.h"
 #include "pxfbridge.h"
 #include "access/extprotocol.h"
 
@@ -46,9 +47,44 @@ static void check_caller(PG_FUNCTION_ARGS, const char* func_name);
 Datum
 pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 {
-    //TODO: provide real implementation
-	elog(INFO, "Dummy PXF protocol validate");
-	PG_RETURN_VOID();
+    /* Must be called via the external table format manager */
+    if (!CALLED_AS_EXTPROTOCOL_VALIDATOR(fcinfo))
+        elog(ERROR, "cannot execute pxfprotocol_validate_urls outside protocol manager");
+
+    /* There must be only ONE url. */
+    if (EXTPROTOCOL_VALIDATOR_GET_NUM_URLS(fcinfo) != 1)
+        ereport(ERROR,
+                (errcode(ERRCODE_PROTOCOL_VIOLATION),
+                 errmsg("number of URLs must be one")));
+
+    char *uri_string = EXTPROTOCOL_VALIDATOR_GET_NTH_URL(fcinfo, 1);
+    elog(DEBUG2, "pxfprotocol_validate_urls: uri %s", uri_string);
+    GPHDUri *uri = parseGPHDUri(uri_string);
+
+    /* Test that Fragmenter or Profile was specified in the URI */
+    if (!GPHDUri_opt_exists(uri, FRAGMENTER) && !GPHDUri_opt_exists(uri, PXF_PROFILE))
+        ereport(ERROR,
+                (errcode(ERRCODE_SYNTAX_ERROR),
+                 errmsg("FRAGMENTER or PROFILE option must exist in %s", uri->uri)));
+
+    /* Check for valid cluster name */
+    GPHDUri_verify_cluster_exists(uri, PXF_CLUSTER);
+
+    /* No duplicate options. */
+    GPHDUri_verify_no_duplicate_options(uri);
+
+    /* Check for existence of core options if profile wasn't supplied */
+    if (!GPHDUri_opt_exists(uri, PXF_PROFILE))
+    {
+        List *coreOptions = list_make2(ACCESSOR, RESOLVER);
+        if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
+            coreOptions = lcons(FRAGMENTER, coreOptions);
+        GPHDUri_verify_core_options_exist(uri, coreOptions);
+        list_free(coreOptions);
+    }
+
+    freeGPHDUri(uri);
+    PG_RETURN_VOID();
 }
 
 /*
@@ -58,7 +94,7 @@ Datum
 pxfprotocol_export(PG_FUNCTION_ARGS)
 {
     //TODO: provide real implementation
-	elog(INFO, "Dummy PXF protocol write");
+    elog(INFO, "Dummy PXF protocol write");
     PG_RETURN_INT32(0);
 }
 
@@ -89,7 +125,6 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
     }
 
     int bytes_read = gpbridge_read(context, EXTPROTOCOL_GET_DATABUF(fcinfo), EXTPROTOCOL_GET_DATALEN(fcinfo));
-
     PG_RETURN_INT32(bytes_read);
 }
 
@@ -113,7 +148,6 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
     fragment 2: segwork=46@127.0.0.1@51200@tmp/dummy1.2@0@ZnJhZ21lbnQy@@@
     fragment 3: segwork=46@127.0.0.1@51200@tmp/dummy1.3@0@ZnJhZ21lbnQz@@@
     */
-
     appendStringInfo(&uri_with_segwork,
                      "%s&segwork=46@127.0.0.1@51200@tmp/dummy1.%d@0@ZnJhZ21lbnQ%c@@@",
                      original_uri,
@@ -159,5 +193,5 @@ check_caller(PG_FUNCTION_ARGS, const char* func_name)
     if (!CALLED_AS_EXTPROTOCOL(fcinfo))
         ereport(ERROR,
                 (errcode(ERRCODE_INTERNAL_ERROR),
-                        errmsg("%s not called by external protocol manager", func_name)));
+                 errmsg("%s not called by external protocol manager", func_name)));
 }

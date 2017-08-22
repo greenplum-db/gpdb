@@ -1001,17 +1001,6 @@ typedef struct WindowSpec
 	int			location;		/* token location, or -1 if unknown */
 } WindowSpec;
 
-/*
- * Due to the complexity of the grammar, we need a basic structure inside
- * the grammar parser so that we can get data into the analyzer efficiently
- */
-typedef struct WindowSpecParse
-{
-	NodeTag type;
-	char *name;
-	List *elems;
-} WindowSpecParse;
-
 
 /* ----------------------
  *		Set Operation node for post-analysis query trees

@@ -22,7 +22,7 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-
+#include "access/transam.h"
 
 /*
  * SetRelationRuleStatus
@@ -65,6 +65,7 @@ SetRelationRuleStatus(Oid relationId, bool relHasRules,
 		{
 			classForm->relkind = RELKIND_VIEW;
 			classForm->relstorage = RELSTORAGE_VIRTUAL;
+			classForm->relfrozenxid = InvalidTransactionId;
 		}
 
 		simple_heap_update(relationRelation, &tuple->t_self, tuple);

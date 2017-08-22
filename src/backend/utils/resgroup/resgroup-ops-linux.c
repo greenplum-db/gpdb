@@ -180,12 +180,27 @@ unassignGroup(Oid group, const char *comp, int fddir)
 	while (1)
 	{
 		pid = strtol(ptr, &end, 10);
+		__CHECK(pid != LONG_MIN && pid != LONG_MAX,
+				( close(fdw), close(fddir) ),
+				"can't parse pid");
+
 		if (ptr == end)
 			break;
 
-		int n = write(fdw, ptr, end - ptr);
-		__CHECK(n >= 0, ( close(fddir) ), "can't write to file");
-		__CHECK(n == end - ptr, ( close(fddir) ), "can't write to file");
+		char str[16];
+		sprintf(str, "%ld", pid);
+		int n = write(fdw, str, strlen(str));
+		if (n < 0)
+		{
+			elog(LOG, "failed to migrate pid to gpdb root cgroup: pid=%ld: %s",
+				 pid, strerror(errno));
+		}
+		else
+		{
+			__CHECK(n == strlen(str),
+					( close(fdw), close(fddir) ),
+					"can't write to file");
+		}
 
 		ptr = end;
 	}
@@ -334,6 +349,8 @@ removeDir(Oid group, const char *comp, bool unassign)
 		 */
 		CGROUP_ERROR("can't remove dir: %s: %s", path, strerror(err));
 	}
+
+	elog(DEBUG1, "cgroup dir '%s' removed", path);
 
 	/* close() also releases the lock */
 	close(fddir);

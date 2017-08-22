@@ -119,18 +119,16 @@ vacuum ao_age_test;
 
 -- Assuming no other activity, vacuum needs one transaction ID for
 -- each of the three tables.
-select relname, 0 < age(relfrozenxid) as age_positive,
-       age(relfrozenxid) < 100 as age_within_limit
-from pg_class
+-- AO/CO tables should have relfrozenxid = 0.
+select relname, relfrozenxid from pg_class
 where relname like 'ao_age_test%' and relkind = 'r' order by 1;
 
--- Vacuum the other two empty tables and verify their age is updated
--- correctly.
+-- Vacuum the other two empty tables and verify the age of auxiliary tables is
+-- updated correctly.
 vacuum ao_empty;
 vacuum aocs_empty;
-select relname, 0 < age(relfrozenxid) as age_positive,
-       age(relfrozenxid) < 100 as age_within_limit
-from pg_class
+-- AO/CO tables should have relfrozenxid = 0.
+select relname, relfrozenxid from pg_class
 where relname in ('ao_empty', 'aocs_empty') order by 1;
 select * from ao_empty;
 select * from aocs_empty;

@@ -171,9 +171,7 @@ _copyOidAssignment(OidAssignment *from)
 static void
 CopyPlanFields(Plan *from, Plan *newnode)
 {
-
 	COPY_SCALAR_FIELD(plan_node_id);
-	COPY_SCALAR_FIELD(plan_parent_node_id);
 
 	COPY_SCALAR_FIELD(startup_cost);
 	COPY_SCALAR_FIELD(total_cost);
@@ -2341,17 +2339,6 @@ static GroupId *
 _copyGroupId(GroupId *from)
 {
 	GroupId *newnode = makeNode(GroupId);
-
-	return newnode;
-}
-
-static WindowSpecParse *
-_copyWindowSpecParse(WindowSpecParse *from)
-{
-	WindowSpecParse *newnode = makeNode(WindowSpecParse);
-
-	COPY_STRING_FIELD(name);
-	COPY_NODE_FIELD(elems);
 
 	return newnode;
 }
@@ -5342,9 +5329,6 @@ copyObject(void *from)
 			break;
 		case T_GroupId:
 			retval = _copyGroupId(from);
-			break;
-		case T_WindowSpecParse:
-			retval = _copyWindowSpecParse(from);
 			break;
 		case T_WindowSpec:
 			retval = _copyWindowSpec(from);

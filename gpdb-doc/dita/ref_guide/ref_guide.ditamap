@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
+	<topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
+		format="html" otherprops="pivotal"/>
 	<topicref href="ref_guide.xml" navtitle="Reference Guide">
 		<topicref href="sql_commands/sql_ref.xml">
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>
@@ -20,6 +22,7 @@
 			<topicref href="sql_commands/ALTER_OPERATOR_CLASS.xml"/>
 			<topicref href="sql_commands/ALTER_OPERATOR_FAMILY.xml"/>
 			<topicref href="sql_commands/ALTER_PROTOCOL.xml"/>
+			<topicref href="sql_commands/ALTER_RESOURCE_GROUP.xml"/>
 			<topicref href="sql_commands/ALTER_RESOURCE_QUEUE.xml"/>
 			<topicref href="sql_commands/ALTER_ROLE.xml"/>
 			<topicref href="sql_commands/ALTER_SCHEMA.xml"/>
@@ -53,6 +56,7 @@
 			<topicref href="sql_commands/CREATE_OPERATOR_CLASS.xml"/>
 			<topicref href="sql_commands/CREATE_OPERATOR_FAMILY.xml"/>
 			<topicref href="sql_commands/CREATE_PROTOCOL.xml"/>
+			<topicref href="sql_commands/CREATE_RESOURCE_GROUP.xml"/>
 			<topicref href="sql_commands/CREATE_RESOURCE_QUEUE.xml"/>
 			<topicref href="sql_commands/CREATE_ROLE.xml"/>
 			<topicref href="sql_commands/CREATE_RULE.xml"/>
@@ -87,6 +91,7 @@
 			<topicref href="sql_commands/DROP_OPERATOR_FAMILY.xml"/>
 			<topicref href="sql_commands/DROP_OWNED.xml"/>
 			<topicref href="sql_commands/DROP_PROTOCOL.xml"/>
+			<topicref href="sql_commands/DROP_RESOURCE_GROUP.xml"/>
 			<topicref href="sql_commands/DROP_RESOURCE_QUEUE.xml"/>
 			<topicref href="sql_commands/DROP_ROLE.xml"/>
 			<topicref href="sql_commands/DROP_RULE.xml"/>
@@ -154,6 +159,8 @@
 				<topicref href="system_catalogs/gp_persistent_tablespace_node.xml"/>
 				<topicref href="system_catalogs/gp_pgdatabase.xml"/>
 				<topicref href="system_catalogs/gp_relation_node.xml"/>
+				<topicref href="system_catalogs/gp_resgroup_config.xml"/>
+				<topicref href="system_catalogs/gp_resgroup_status.xml"/>
 				<topicref href="system_catalogs/gp_resqueue_status.xml"/>
 				<topicref href="system_catalogs/gp_segment_configuration.xml"/>
 				<topicref href="system_catalogs/gp_transaction_log.xml"/>
@@ -252,6 +259,4 @@
 		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"
 			id="feature_summary"/>
 	</topicref>
-	<topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-		format="html" otherprops="pivotal"/>
 </map>

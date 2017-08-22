@@ -1,5 +1,7 @@
 import unittest
 
+from mock import MagicMock, Mock
+
 
 class GpTestCase(unittest.TestCase):
     def __init__(self, methodName='runTest'):
@@ -17,13 +19,14 @@ class GpTestCase(unittest.TestCase):
         self.__class__.apply_patches_counter += 1
 
     def get_mock_from_apply_patch(self, mock_name):
-        ''' Return None if there is no existing object
+        """ Return None if there is no existing object
             mock name prints out the last "namespace"
             for example "os.path.exists", mock_name will be "exists"
-        '''
+        """
         for mock_obj in self.mock_objs:
-            if mock_name == mock_obj._mock_name:
-                return mock_obj
+            if isinstance(mock_obj, Mock) or isinstance(mock_obj, MagicMock):
+                if mock_name == mock_obj._mock_name:
+                    return mock_obj
         return None
 
     # if you have a tearDown() in your test class,

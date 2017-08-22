@@ -17,7 +17,6 @@ set enable_hashagg=off;
 set enable_mergejoin=on;
 set enable_hashjoin=off;
 set enable_nestloop=off;
-set statement_mem=10000;
 
 create temporary table spilltestresult1 as
 select t1.a as t1a, t2.a as t2a
@@ -34,7 +33,6 @@ insert into spilltest select a, a%25 from generate_series(1,8000) a;
 analyze;
 set enable_hashagg=on;
 set enable_groupagg=off;
-set statement_mem=10000;
 
 select b,count(*) from spilltest group by b order by b;
 
@@ -47,7 +45,6 @@ analyze; -- We have to do an analyze to force a hash join
 set enable_mergejoin=off;
 set enable_nestloop=off;
 set enable_hashjoin=on;
-set statement_mem=10000;
 
 create temporary table spilltestresult2 as
 select t1.a as t1a, t1.b as t1b, t2.a as t2a, t2.b as t2b from spilltest t1, spilltest t2 where t1.a = t2.a;

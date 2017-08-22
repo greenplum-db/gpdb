@@ -3473,7 +3473,7 @@ DecodeISO8601Interval(char *str,
 					if (*str != '-')
 						return DTERR_BAD_FORMAT;
 					str++;
-					
+
 					dterr = ParseISO8601Number(str, &str, &val, &fval);
 					if (dterr)
 						return dterr;

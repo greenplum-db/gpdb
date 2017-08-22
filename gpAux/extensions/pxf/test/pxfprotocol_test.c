@@ -32,14 +32,55 @@
 #include "mock/pxfbridge_mock.c"
 #include "mock/pxfuriparser_mock.c"
 
+const char* uri_no_profile = "pxf://default/tmp/dummy1?FRAGMENTER=xxx&RESOLVER=yyy&ACCESSOR=zzz";
 const char* uri_param = "pxf://localhost:51200/tmp/dummy1";
 const char* uri_param_segwork = "pxf://localhost:51200/tmp/dummy1&segwork=46@127.0.0.1@51200@tmp/dummy1.1@0@ZnJhZ21lbnQx@@@";
 
 void
 test_pxfprotocol_validate_urls(void **state)
 {
-    Datum d = pxfprotocol_validate_urls(NULL);
+    /* setup call info with no call context */
+    PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
+    fcinfo->context = palloc(sizeof(ExtProtocolValidatorData));
+    fcinfo->context->type = T_ExtProtocolValidatorData;
+    Value *v = makeString(uri_no_profile);
+    List* list = list_make1(v);
+    ((ExtProtocolValidatorData*) fcinfo->context)->url_list = list;
+
+    /* set mock behavior for uri parsing */
+    GPHDUri* gphd_uri = palloc0(sizeof(GPHDUri));
+    expect_string(parseGPHDUri, uri_str, uri_no_profile);
+    will_return(parseGPHDUri, gphd_uri);
+
+    expect_value(GPHDUri_verify_cluster_exists, uri, gphd_uri);
+    expect_string(GPHDUri_verify_cluster_exists, cluster, PXF_CLUSTER);
+    will_be_called(GPHDUri_verify_cluster_exists);
+
+    expect_value(GPHDUri_verify_no_duplicate_options, uri, gphd_uri);
+    will_be_called(GPHDUri_verify_no_duplicate_options);
+
+    expect_value(GPHDUri_opt_exists, uri, gphd_uri);
+    expect_string(GPHDUri_opt_exists, key, FRAGMENTER);
+    will_return(GPHDUri_opt_exists, true);
+
+    expect_value(GPHDUri_opt_exists, uri, gphd_uri);
+    expect_string(GPHDUri_opt_exists, key, PXF_PROFILE);
+    will_return(GPHDUri_opt_exists, false);
+
+    expect_value(GPHDUri_verify_core_options_exist, uri, gphd_uri);
+    expect_any(GPHDUri_verify_core_options_exist, coreoptions);
+    will_be_called(GPHDUri_verify_core_options_exist);
+
+    expect_value(freeGPHDUri, uri, gphd_uri);
+    will_be_called(freeGPHDUri);
+
+    Datum d = pxfprotocol_validate_urls(fcinfo);
     assert_int_equal(DatumGetInt32(d), 0);
+
+    /* cleanup */
+    list_free_deep(list);
+    pfree(fcinfo->context);
+    pfree(fcinfo);
 }
 
 void
@@ -66,6 +107,7 @@ test_pxfprotocol_import_first_call(void **state)
 
     /* set mock behavior for uri parsing */
     GPHDUri* gphd_uri = palloc0(sizeof(GPHDUri));
+    gphd_uri->fragments = palloc(sizeof(List));
     expect_string(parseGPHDUri, uri_str, uri_param_segwork);
     will_return(parseGPHDUri, gphd_uri);
 

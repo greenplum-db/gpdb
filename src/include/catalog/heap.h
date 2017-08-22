@@ -150,5 +150,5 @@ extern void MetaTrackDropObject(Oid		classid,
 		|| ((relkind) == RELKIND_VIEW)) 
 
 extern void remove_gp_relation_node_and_schedule_drop(Relation rel);
-
+extern bool should_have_valid_relfrozenxid(Oid oid, char relkind, char relstorage);
 #endif   /* HEAP_H */

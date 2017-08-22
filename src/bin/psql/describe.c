@@ -4189,6 +4189,17 @@ listExtensionContents(const char *pattern)
 		return true;
 	}
 
+	/*
+	 * GPDB_91_MERGE_FIXME: We don't have the pg_desribe_object function,
+	 * needed for \dx+, in GPDB yet. We will get it when we merge with
+	 * PostgreSQL 9.1 (or if we decide to cherry-pick it earlier). Until
+	 * then, print the same as plain \dx does.
+	 */
+	if (pset.sversion < 90100)
+	{
+		return listExtensions(pattern);
+	}
+
 	initPQExpBuffer(&buf);
 	printfPQExpBuffer(&buf,
 					  "SELECT e.extname, e.oid\n"

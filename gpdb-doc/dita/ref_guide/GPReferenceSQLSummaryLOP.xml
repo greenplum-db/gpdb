@@ -114,6 +114,13 @@
 		<codeblock conref="sql_commands/ALTER_PROTOCOL.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_PROTOCOL.xml"/> for more
 			information.</p>
+		<section id="ae19034513">
+			<title>ALTER RESOURCE GROUP</title>
+		</section>
+		<p conref="sql_commands/ALTER_RESOURCE_GROUP.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_RESOURCE_GROUP.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_RESOURCE_GROUP.xml"/> for more
+			information.</p>
 		<section id="ae1903451">
 			<title>ALTER RESOURCE QUEUE</title>
 		</section>
@@ -333,6 +340,13 @@
 		<p conref="sql_commands/CREATE_PROTOCOL.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/CREATE_PROTOCOL.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_PROTOCOL.xml"/> for more
+			information.</p>
+		<section id="ae19043333">
+			<title>CREATE RESOURCE GROUP</title>
+		</section>
+		<p conref="sql_commands/CREATE_RESOURCE_GROUP.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_RESOURCE_GROUP.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_RESOURCE_GROUP.xml"/> for more
 			information.</p>
 		<section id="ae1904333">
 			<title>CREATE RESOURCE QUEUE</title>
@@ -561,6 +575,13 @@
 		<p conref="sql_commands/DROP_PROTOCOL.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_PROTOCOL.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_PROTOCOL.xml"/> for more
+			information.</p>
+		<section id="ae19048993">
+			<title>DROP RESOURCE GROUP</title>
+		</section>
+		<p conref="sql_commands/DROP_RESOURCE_GROUP.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_RESOURCE_GROUP.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_RESOURCE_GROUP.xml"/> for more
 			information.</p>
 		<section id="ae1904899">
 			<title>DROP RESOURCE QUEUE</title>

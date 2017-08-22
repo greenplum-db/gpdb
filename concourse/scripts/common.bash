@@ -42,11 +42,7 @@ function make_cluster() {
   export STATEMENT_MEM=250MB
   workaround_before_concourse_stops_stripping_suid_bits
   pushd gpdb_src/gpAux/gpdemo
-    if [[ $CONFIGURE_FLAGS == *"--enable-segwalrep"* ]]; then
-      su gpadmin -c "make create-segwalrep-cluster"
-    else
-      su gpadmin -c "make create-demo-cluster"
-    fi
+  su gpadmin -c "make create-demo-cluster"
   popd
 }
 

@@ -2134,9 +2134,8 @@ select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.
 
 select lead(cn) from sale;
 ERROR:  function lead(integer) may only be called as a window function
-HINT:  To call a function as a window function use an OVER clause.
 select cn, cname, lead(cname, -1) over (order by cn) from customer;
-ERROR:  LEAD offset cannot be negative
+ERROR:  ROWS parameter cannot be negative
 -- actual LEAD tests
 select cn, cname, lead(cname, 2, 'undefined') over (order by cn) from customer;
  cn |    cname     |     lead     

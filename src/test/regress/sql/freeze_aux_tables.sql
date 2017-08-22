@@ -32,8 +32,9 @@ $$ LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE TYPE rel_ages AS (segid integer, relname text, age integer);
 
--- Get age(relfrozenxid) of a table, and all its auxiliary tables. On
--- master, and on all segments.
+-- Get age(relfrozenxid) of a table, and all its auxiliary tables. On master,
+-- and on all segments. For AO and CO table relfrozenxid = 0 and should stay
+-- 0. So, essentially base AO / CO tables should not show-up in the results.
 CREATE OR REPLACE FUNCTION aux_rel_ages(testrelid regclass) RETURNS SETOF rel_ages as
 $$
 declare
@@ -43,6 +44,7 @@ begin
     from pg_class
     where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v')
     and (relname like '%' || testrelid::oid || '%' or oid = testrelid::oid )
+    and not relfrozenxid = 0
   loop
     return next rec;
   end loop;
@@ -51,6 +53,7 @@ begin
     from gp_dist_random('pg_class')
     where relkind in ('r','t','o','b','m') and relstorage not in ('x','f','v')
     and (relname like '%' || testrelid::oid || '%' or oid = testrelid::oid )
+    and not relfrozenxid = 0
   loop
     return next rec;
   end loop;

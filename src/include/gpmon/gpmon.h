@@ -198,7 +198,6 @@ typedef struct gpmon_qexeckey_t {
 
 struct gpmon_qexec_t {
 	gpmon_qexeckey_t key;
-	int32  		pnid;	/* plan parent node id */
 	char		_hname[NAMEDATALEN];
 	uint8		status;    /* node status using PerfmonNodeStatus */
 	uint64		_cpu_elapsed; /* CPU elapsed for iter */

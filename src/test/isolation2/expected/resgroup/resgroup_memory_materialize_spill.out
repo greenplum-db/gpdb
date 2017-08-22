@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema materialize_spill;
 CREATE
 set search_path to materialize_spill;
@@ -5,7 +9,7 @@ SET
 
 -- start_ignore
 create language plpythonu;
-ERROR:  language "plpythonu" already exists
+CREATE
 -- end_ignore
 
 -- Helper function to verify that a plan spilled to disk. For each node
@@ -33,7 +37,7 @@ CREATE
 --
 CREATE TABLE test_mat_small (i1 int);
 CREATE
-INSERT INTO test_mat_small SELECT i from generate_series(1, 5) i;
+INSERT INTO test_mat_small SELECT i from generate_series(101, 105) i;
 INSERT 5
 
 -- Scale the larger table's size with the number of segments, so that there is enough
@@ -56,8 +60,6 @@ CREATE
 SET ROLE TO role1_memory_test;
 SET
 
-SET statement_mem=1024;
-SET
 set gp_resgroup_print_operator_memory_limits=on;
 SET
 set enable_hashjoin = false;
@@ -71,13 +73,13 @@ SET
 
 -- This is the actual test query.
 select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1=t2.i2;
-i1|i1|i2|i3|i4|i5|i6|i7|i8
---+--+--+--+--+--+--+--+--
-1 |1 |1 |1 |1 |1 |1 |1 |1 
-2 |2 |2 |2 |2 |2 |2 |2 |2 
-3 |3 |3 |3 |3 |3 |3 |3 |3 
-4 |4 |4 |4 |4 |4 |4 |4 |4 
-5 |5 |5 |5 |5 |5 |5 |5 |5 
+i1 |i1 |i2 |i3 |i4 |i5 |i6 |i7 |i8 
+---+---+---+---+---+---+---+---+---
+101|101|101|101|101|101|101|101|101
+102|102|102|102|102|102|102|102|102
+103|103|103|103|103|103|103|103|103
+104|104|104|104|104|104|104|104|104
+105|105|105|105|105|105|105|105|105
 (5 rows)
 
 -- Check that the Materialize node spilled to disk, to make sure we're testing spilling
@@ -93,13 +95,13 @@ difference
 
 -- Repeat, with a LIMIT. This causes the underlying scan to finish earlier.
 select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1=t2.i2 limit 10;
-i1|i1|i2|i3|i4|i5|i6|i7|i8
---+--+--+--+--+--+--+--+--
-1 |1 |1 |1 |1 |1 |1 |1 |1 
-2 |2 |2 |2 |2 |2 |2 |2 |2 
-3 |3 |3 |3 |3 |3 |3 |3 |3 
-4 |4 |4 |4 |4 |4 |4 |4 |4 
-5 |5 |5 |5 |5 |5 |5 |5 |5 
+i1 |i1 |i2 |i3 |i4 |i5 |i6 |i7 |i8 
+---+---+---+---+---+---+---+---+---
+101|101|101|101|101|101|101|101|101
+102|102|102|102|102|102|102|102|102
+103|103|103|103|103|103|103|103|103
+104|104|104|104|104|104|104|104|104
+105|105|105|105|105|105|105|105|105
 (5 rows)
 select n - (select count (distinct gp_segment_id) from test_mat_small) as difference from num_workfiles_created($$ explain analyze select * FROM test_mat_small as t1 left outer join test_mat_large AS t2 on t1.i1=t2.i2 limit 10 $$) as n;
 difference

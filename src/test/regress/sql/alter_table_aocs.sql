@@ -298,10 +298,10 @@ alter table addcol1 add column f_renamed int default 20;
 select a, f_renamed from addcol1 where a = 999;
 
 -- try altering statistics of a column
-alter table addcol1 alter column f_renamed set statistics 1000;
+alter table addcol1 alter column f_renamed set statistics 10000;
 select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
 set client_min_messages to error;
-alter table addcol1 alter column f_renamed set statistics 1001; -- should limit to 1000 and give warning
+alter table addcol1 alter column f_renamed set statistics 10001; -- should limit to 10000 and give warning
 set client_min_messages to notice;
 select attstattarget from pg_attribute where attrelid = 'aocs_addcol.addcol1'::regclass and attname = 'f_renamed';
 

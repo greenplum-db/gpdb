@@ -267,20 +267,6 @@ _readCurrentOfExpr(void)
 	READ_DONE();
 }
 
-static WindowSpec *
-_readWindowSpec(void)
-{
-	READ_LOCALS(WindowSpec);
-
-	READ_STRING_FIELD(name);
-	READ_STRING_FIELD(parent);
-	READ_NODE_FIELD(partition);
-	READ_NODE_FIELD(order);
-	READ_NODE_FIELD(frame);
-	READ_INT_FIELD(location);
-	READ_DONE();
-}
-
 static DMLActionExpr *
 _readDMLActionExpr(void)
 {
@@ -2340,7 +2326,6 @@ void readScanInfo(Scan *local_node)
 void readPlanInfo(Plan *local_node)
 {
 	READ_INT_FIELD(plan_node_id);
-	READ_INT_FIELD(plan_parent_node_id);
 	READ_FLOAT_FIELD(startup_cost);
 	READ_FLOAT_FIELD(total_cost);
 	READ_FLOAT_FIELD(plan_rows);
@@ -3302,9 +3287,6 @@ readNodeBinary(void)
 				break;
 			case T_GroupId:
 				return_value = _readGroupId();
-				break;
-			case T_WindowSpecParse:
-				return_value = _readWindowSpecParse();
 				break;
 			case T_WindowSpec:
 				return_value = _readWindowSpec();

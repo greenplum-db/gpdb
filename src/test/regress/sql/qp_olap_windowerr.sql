@@ -4033,6 +4033,43 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc rows between floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.pn) preceding and unbounded following );
 -- mvd 3,4,1->2; 
 
+
+-- The PRECEDING/FOLLOWING clauses cannot be NULL.
+SELECT sum(g) OVER (ORDER BY g ROWS BETWEEN NULL::int4 PRECEDING AND UNBOUNDED FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g ROWS BETWEEN UNBOUNDED PRECEDING AND NULL::int4 FOLLOWING) from generate_series(1, 5) g;
+
+-- Not even an expression that yields NULL at runtime.
+create function retnull() returns int4 as $$ select NULL::int4 $$ language sql volatile;
+SELECT sum(g) OVER (ORDER BY g ROWS BETWEEN retnull() PRECEDING AND UNBOUNDED FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g ROWS BETWEEN UNBOUNDED PRECEDING AND retnull() FOLLOWING) from generate_series(1, 5) g;
+drop function retnull();
+
+-- But an expression that contains a NULL, but doesn't return NULL, is OK. (May seem like
+-- an odd case to test, but we used to incorrectly reject expressions that contained
+-- any NULL constants anywhere.)
+SELECT sum(g) OVER (ORDER BY g ROWS BETWEEN (array[1,2, NULL])[1] PRECEDING AND UNBOUNDED FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g ROWS BETWEEN UNBOUNDED PRECEDING AND (array[1,2, NULL])[1] FOLLOWING) from generate_series(1, 5) g;
+
+
+-- The PRECEDING/FOLLOWING expression must be an integer (or coercible to
+-- an integer).
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND ('2'::text) FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND '2' FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND '2' || '' FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND ('2' || '')::integer FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN now() PRECEDING AND UNBOUNDED FOLLOWING) from generate_series(1, 5) g;
+
+-- And it must not be negative. Check with a constant, a stable expression that
+-- can be evaluated at planning time, and with a volatile expression.
+create function retneg() returns int4 as $$ begin return -1::int4; end; $$ language plpgsql volatile;
+
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND -123 FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND '-123' FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND ('-123' || '')::integer FOLLOWING) from generate_series(1, 5) g;
+SELECT sum(g) OVER (ORDER BY g  ROWS BETWEEN UNBOUNDED PRECEDING AND retneg() FOLLOWING) from generate_series(1, 5) g;
+
+drop function retneg();
+
 -- start_ignore
 CREATE TABLE filter_test (i int, j int) DISTRIBUTED BY (i);
 INSERT INTO filter_test VALUES (1, 1);
@@ -4055,13 +4092,13 @@ SELECT ntile(0) over (order by i) FROM filter_test;
 
 SELECT ntile(0) over (order by i) FROM filter_test;
 
+
 -- start_ignore
 DROP TABLE filter_test;
 
 --
 -- STANDARD DATA FOR olap_* TESTS.
 --
-
 drop table cf_olap_windowerr_customer;
 drop table cf_olap_windowerr_vendor;
 drop table cf_olap_windowerr_product;

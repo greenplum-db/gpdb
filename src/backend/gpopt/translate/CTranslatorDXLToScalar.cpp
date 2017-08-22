@@ -631,13 +631,6 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	CDXLNode *pdxlnChild = (*pdxlnSubPlan)[0];
         GPOS_ASSERT(EdxloptypePhysical == pdxlnChild->Pdxlop()->Edxloperatortype());
 
-	Plan *pplan = ((CMappingColIdVarPlStmt*) pmapcidvar)->Pplan();
-
-	if(NULL == pplan)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, ExmiDXL2PlStmtMissingPlanForSubPlanTranslation);
-	}
-
 	GPOS_ASSERT(NULL != pdxlnSubPlan);
 	GPOS_ASSERT(EdxlopScalarSubPlan == pdxlnSubPlan->Pdxlop()->Edxlop());
 	GPOS_ASSERT(1 == pdxlnSubPlan->UlArity());
@@ -652,7 +645,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 							m_ulSegments
 							);
 	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
-	Plan *pplanChild = trdxltoplstmt.PplFromDXL(pdxlnChild, &dxltrctxSubplan, pplan, pdrgpdxltrctxPrevSiblings);
+	Plan *pplanChild = trdxltoplstmt.PplFromDXL(pdxlnChild, &dxltrctxSubplan, pdrgpdxltrctxPrevSiblings);
 	pdrgpdxltrctxPrevSiblings->Release();
 
 	GPOS_ASSERT(NULL != pplanChild->targetlist && 1 <= gpdb::UlListLength(pplanChild->targetlist));

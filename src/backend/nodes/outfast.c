@@ -275,7 +275,6 @@ static void
 _outPlanInfo(StringInfo str, Plan *node)
 {
 	WRITE_INT_FIELD(plan_node_id);
-	WRITE_INT_FIELD(plan_parent_node_id);
 
 	WRITE_FLOAT_FIELD(startup_cost, "%.2f");
 	WRITE_FLOAT_FIELD(total_cost, "%.2f");
@@ -1836,9 +1835,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_GroupId:
 				_outGroupId(str, obj);
-				break;
-			case T_WindowSpecParse:
-				_outWindowSpecParse(str, obj);
 				break;
 			case T_WindowSpec:
 				_outWindowSpec(str, obj);

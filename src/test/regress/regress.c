@@ -32,8 +32,7 @@
 #include "utils/geo_decls.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-#include "utils/resscheduler.h"
-#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 
 #define P_MAXDIG 12
 #define LDELIM			'('

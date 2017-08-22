@@ -41,6 +41,9 @@
       <li id="kh158581">
         <xref href="#topic44" type="topic" format="dita"/>
       </li>
+      <li id="kh1585815">
+        <xref href="#topic444" type="topic" format="dita"/>
+      </li>
       <li id="kh158590">
         <xref href="#topic45" type="topic" format="dita"/>
       </li>
@@ -1122,7 +1125,7 @@
     </body>
   </topic>
   <topic id="topic44" xml:lang="en">
-    <title id="kh155069">Workload Management Parameters</title>
+    <title id="kh155069">Workload Management Parameters (Resource Queues)</title>
     <body>
       <p>The following configuration parameters configure the Greenplum Database workload management
         feature (resource queues), query prioritization, memory utilization and concurrency control. </p>
@@ -1180,6 +1183,37 @@
             </p>
             <p><xref href="guc-list.xml#vmem_process_interrupt" type="section"
                 >vmem_process_interrupt</xref></p>
+          </stentry>
+        </strow>
+      </simpletable>
+    </body>
+  </topic>
+  <topic id="topic444" xml:lang="en">
+    <title id="kh1550694">Workload Management Parameters (Resource Groups)</title>
+    <body>
+      <p>The following parameters configure the Greenplum Database resource group
+        workload management feature. </p>
+      <simpletable id="kh1571613" frame="none">
+        <strow>
+          <stentry>
+            <p>
+              <xref href="guc-list.xml#gp_resource_group_cpu_limit" type="section"
+                >gp_resource_group_cpu_limit</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
+                >gp_resource_group_memory_limit</xref>
+            </p>
+          </stentry>
+          <stentry>
+            <p>
+              <xref href="guc-list.xml#gp_resource_manager" type="section"
+                >gp_resource_manager</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#max_resource_groups" type="section"
+                >max_resource_groups</xref>
+            </p>
           </stentry>
         </strow>
       </simpletable>

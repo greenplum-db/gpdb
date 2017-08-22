@@ -47,8 +47,7 @@ CMappingColIdVarPlStmt::CMappingColIdVarPlStmt
 	const CDXLTranslateContextBaseTable *pdxltrctxbt,
 	DrgPdxltrctx *pdrgpdxltrctx,
 	CDXLTranslateContext *pdxltrctxOut,
-	CContextDXLToPlStmt *pctxdxltoplstmt,
-	Plan *pplan
+	CContextDXLToPlStmt *pctxdxltoplstmt
 	)
 	:
 	CMappingColIdVar(pmp),
@@ -57,9 +56,6 @@ CMappingColIdVarPlStmt::CMappingColIdVarPlStmt
 	m_pdxltrctxOut(pdxltrctxOut),
 	m_pctxdxltoplstmt(pctxdxltoplstmt)
 {
-	GPOS_ASSERT(NULL != pplan);
-
-	m_pplan = pplan;
 }
 
 //---------------------------------------------------------------------------
@@ -88,21 +84,6 @@ CDXLTranslateContext *
 CMappingColIdVarPlStmt::PpdxltrctxOut()
 {
 	return m_pdxltrctxOut;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CMappingColIdVarPlStmt::Pplan
-//
-//	@doc:
-//		Returns the plan
-//
-//---------------------------------------------------------------------------
-Plan *
-CMappingColIdVarPlStmt::Pplan()
-{
-	return m_pplan;
 }
 
 //---------------------------------------------------------------------------

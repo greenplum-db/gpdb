@@ -6,12 +6,10 @@
 # THIS IMPORT MUST COME FIRST
 #
 # import mainUtils FIRST to get python version check
+import sys
+from optparse import OptionGroup, SUPPRESS_HELP
+
 from gppylib.mainUtils import *
-
-import os, sys, copy, time
-
-import time
-from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE, SUPPRESS_HELP
 
 try:
     import pickle
@@ -19,7 +17,7 @@ try:
     from gppylib.db import dbconn
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gparray import *
-    from gppylib.gplog import *
+    from gppylib.gplog import get_default_logger, log_to_file_only
     from gppylib import gphostcache
     from gppylib import userinput
     from gppylib.db import catalog
@@ -30,6 +28,7 @@ try:
     from gppylib.commands import pg
     from gppylib.commands import dca
     from gppylib import pgconf
+    from gppylib.heapchecksum import HeapChecksum
     from gppylib.commands.pg import PgControlData
     from gppylib.operations.startSegments import *
     from gppylib.utils import TableLogger
@@ -55,7 +54,8 @@ class GpStart:
                  masteronly=False,
                  interactive=False,
                  timeout=SEGMENT_TIMEOUT_DEFAULT,
-                 logfileDirectory=False
+                 logfileDirectory=False,
+                 skip_heap_checksum_validation=False,
                  ):
         assert (specialMode in [None, 'maintenance'])
         self.specialMode = specialMode
@@ -69,10 +69,11 @@ class GpStart:
         self.master_datadir = master_datadir
         self.interactive = interactive
         self.timeout = timeout
-        self.wrapper = wrapper;
-        self.wrapper_args = wrapper_args;
-        self.skip_standby_check = skip_standby_check;
+        self.wrapper = wrapper
+        self.wrapper_args = wrapper_args
+        self.skip_standby_check = skip_standby_check
         self.logfileDirectory = logfileDirectory
+        self.skip_heap_checksum_validation = skip_heap_checksum_validation
 
         #
         # Some variables that are set during execution
@@ -121,6 +122,44 @@ class GpStart:
 
             if self.masteronly:
                 return 0
+
+            if self.skip_heap_checksum_validation:
+                logger.warning("Because of --skip-heap-checksum-validation, the GUC for data_checksums "
+                               "will not be checked between master and segments")
+            else:
+                # check that checksum settings are consistent across the cluster
+                num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
+                heap_checksum = HeapChecksum(gparray=self.gparray, num_workers=num_workers, logger=logger)
+                successes, failures = heap_checksum.get_segments_checksum_settings()
+                if len(successes) == 0:
+                    logger.fatal("No segments responded to ssh query for heap checksum. Not starting the array.")
+                    return 1
+
+                consistent, inconsistent, master_checksum_value = heap_checksum.check_segment_consistency(successes)
+
+                if not heap_checksum.are_segments_consistent(consistent, inconsistent):
+                    logger.fatal("Cluster heap checksum setting differences reported.")
+                    logger.fatal("Shutting down master")
+                    cmd = gp.GpStop("Shutting down master", masterOnly=True,
+                                    fast=True, quiet=logging_is_quiet(),
+                                    verbose=logging_is_verbose(),
+                                    datadir=self.master_datadir,
+                                    logfileDirectory=self.logfileDirectory)
+                    cmd.run()
+
+                    logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+                                 % (len(inconsistent), len(inconsistent) + len(consistent)))
+                    logger.fatal("Review %s for details" % get_logfile())
+                    log_to_file_only("Failed checksum consistency validation:", logging.WARN)
+                    for gpdb in inconsistent:
+                        segment_id = gpdb.getSegmentDbId()
+                        checksum = gpdb.heap_checksum
+                        log_to_file_only("dbid: %s "
+                                         "checksum set to %s differs from master checksum set to %s" %
+                                         (segment_id, checksum, master_checksum_value), logging.WARN)
+
+                    return 1
+                logger.info("Heap checksum setting is consistent across the cluster")
 
             # Do we have an even-number of recovered segments ?
             if len(self.gparray.recoveredSegmentDbids) > 0 and len(self.gparray.recoveredSegmentDbids) % 2 == 0:
@@ -394,7 +433,7 @@ class GpStart:
                              numContentsInCluster, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
-                             );
+                             )
         cmd.run()
 
         if cmd.get_results().rc != 0:
@@ -649,7 +688,7 @@ class GpStart:
             assert failedFromMirroring == 0
             tableLog.infoOrWarn(failedNotFromMirroring > 0, ["Failed segment starts", "= %d" % failedNotFromMirroring])
 
-        tableLog.infoOrWarn(len(invalidSegments) > 0, \
+        tableLog.infoOrWarn(len(invalidSegments) > 0,
                             ["Skipped segment starts (segments are marked down in configuration)",
                              "= %d" % len(invalidSegments)])
         tableLog.addSeparator()
@@ -706,14 +745,14 @@ class GpStart:
 
     ######
     def _start_final_master(self):
-        ''' Last item in the startup sequence is to start the master.
+        """ Last item in the startup sequence is to start the master.
 
             After starting the master we connect to it.  This is done both as a check that the system is
             actually started but its also done because certain backend processes don't get kickstarted
             until the first connection.  The DTM is an example of this and it allows those initialization
             messages to end up in the gpstart log as opposed to the user's psql session.
             Returns a tuple of (result[bool], message[string])
-        '''
+        """
         restrict_txt = ""
         if self.restricted:
             restrict_txt = "in RESTRICTED mode"
@@ -767,10 +806,10 @@ class GpStart:
 
     ######
     def _start_standby(self):
-        ''' used to start the standbymaster if necessary.
+        """ used to start the standbymaster if necessary.
 
             returns if the standby master was started or not
-        '''
+        """
         if self.start_standby and self.gparray.standbyMaster is not None:
             try:
                 self.attempt_standby_start = True
@@ -819,9 +858,13 @@ class GpStart:
                          help='start in restricted mode. Only users with superuser privilege are allowed to connect.')
         addTo.add_option('-t', '--timeout', dest='timeout', default=SEGMENT_TIMEOUT_DEFAULT, type='int',
                          help='time to wait for segment startup (in seconds)')
-        addTo.add_option('', '--wrapper', dest="wrapper", default=None, type='string');
-        addTo.add_option('', '--wrapper-args', dest="wrapper_args", default=None, type='string');
+        addTo.add_option('', '--wrapper', dest="wrapper", default=None, type='string')
+        addTo.add_option('', '--wrapper-args', dest="wrapper_args", default=None, type='string')
         addTo.add_option('-S', '--skip_standby_check', dest="skip_standby_check", action='store_true', default=False)
+        addTo.add_option('--skip-heap-checksum-validation', dest='skip_heap_checksum_validation',
+                         action='store_true', default=False, help='Skip the validation of data_checksums GUC. '
+                                                                  'Note: Starting up the cluster without this '
+                                                                  'validation could lead to data loss.')
 
         parser.set_defaults(verbose=False, filters=[], slice=(None, None))
 
@@ -853,7 +896,9 @@ class GpStart:
                        wrapper=options.wrapper,
                        wrapper_args=options.wrapper_args,
                        skip_standby_check=options.skip_standby_check,
-                       logfileDirectory=logfileDirectory)
+                       logfileDirectory=logfileDirectory,
+                       skip_heap_checksum_validation=options.skip_heap_checksum_validation
+                       )
 
 
 if __name__ == '__main__':

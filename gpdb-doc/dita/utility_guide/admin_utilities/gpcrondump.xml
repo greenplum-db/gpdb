@@ -67,6 +67,11 @@
         status file for SQL execution errors and displays a warning if an error is found. The
         default location of the backup status files are in the
             <codeph>db_dumps/<varname>date</varname>/</codeph> directory.</p>
+      <p>If you specify an option that includes or excludes tables or schemas, such as
+          <codeph>-t</codeph>, <codeph>-T</codeph>, <codeph>-s</codeph>, or <codeph>-S</codeph>, the
+        schema qualified names of the tables that are backed up are listed in the file
+            <codeph>gp_dump_<varname>timestamp</varname>_table</codeph>. The file is stored in the
+        backup directory of the master segment. </p>
       <p><codeph>gpcrondump</codeph> allows you to schedule routine backups of a Greenplum database
         using <codeph>cron</codeph> (a scheduling utility for UNIX operating systems). Cron jobs
         that call <codeph>gpcrondump</codeph> should be scheduled on the master host.</p>

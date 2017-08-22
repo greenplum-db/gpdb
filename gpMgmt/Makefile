@@ -65,7 +65,7 @@ generate_greenplum_path_file:
 
 install: generate_greenplum_path_file
 	# Generate some python libraries
-	$(MAKE) -C bin all prefix=$(DESTDIR)$(prefix)
+	$(MAKE) -C bin $@ prefix=$(DESTDIR)$(prefix)
 
 	# Copy the management utilities
 	mkdir -p $(DESTDIR)$(prefix)/bin

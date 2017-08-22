@@ -161,6 +161,20 @@
               protocol.</entry>
           </row>
           <row>
+            <entry colname="col1"><codeph>rolcreaterexthdfs</codeph></entry>
+            <entry colname="col2">bool</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Role may create readable external tables that use the gphdfs
+              protocol.</entry>
+          </row>
+          <row>
+            <entry colname="col1">rolcreatewexthdfs</entry>
+            <entry colname="col2">bool</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Role may create writable external tables that use the gphdfs
+              protocol.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph> rolresgroup</codeph>
             </entry>

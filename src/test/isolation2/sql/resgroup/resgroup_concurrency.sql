@@ -120,79 +120,15 @@ CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
 -- DROP should fail if there're running transactions
 32:SET ROLE role_concurrency_test;
 32:BEGIN;
-BEGIN;
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
-END;
 32:END;
-32:RESET ROLE;
-
--- DROP is abortted
-BEGIN;
-DROP ROLE role_concurrency_test;
-DROP RESOURCE GROUP rg_concurrency_test;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-32:SET ROLE role_concurrency_test;
-32&:BEGIN;
-ABORT;
-32<:
-32:SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-32:END;
-32:RESET ROLE;
-
--- DROP is committed
-BEGIN;
-DROP ROLE role_concurrency_test;
-DROP RESOURCE GROUP rg_concurrency_test;
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
-32:SET ROLE role_concurrency_test;
-32&:BEGIN;
-END;
-32<:
-32q:
-SELECT r.rsgname, num_running, num_queueing, num_queued, num_executed FROM gp_toolkit.gp_resgroup_status s, pg_resgroup r WHERE s.groupid=r.oid AND r.rsgname='rg_concurrency_test';
 
 DROP ROLE IF EXISTS role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 
 -- test5: concurrently alter resource group cpu rate limit
-
--- start_ignore
-DROP RESOURCE GROUP rg1_concurrency_test;
-DROP RESOURCE GROUP rg2_concurrency_test;
--- end_ignore
-
-CREATE RESOURCE GROUP rg1_concurrency_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20);
-CREATE RESOURCE GROUP rg2_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
-
-41:BEGIN;
-41:ALTER RESOURCE GROUP rg1_concurrency_test SET CPU_RATE_LIMIT 35;
-42:BEGIN;
-42&:ALTER RESOURCE GROUP rg2_concurrency_test SET CPU_RATE_LIMIT 35;
-41:ABORT;
-42<:
-42:COMMIT;
-SELECT g.rsgname, c.cpu_rate_limit FROM gp_toolkit.gp_resgroup_config c, pg_resgroup g WHERE c.groupid=g.oid ORDER BY g.oid;
-
-DROP RESOURCE GROUP rg1_concurrency_test;
-DROP RESOURCE GROUP rg2_concurrency_test;
-
-CREATE RESOURCE GROUP rg1_concurrency_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=20);
-CREATE RESOURCE GROUP rg2_concurrency_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
-
-41:BEGIN;
-41:ALTER RESOURCE GROUP rg1_concurrency_test SET CPU_RATE_LIMIT 35;
-42:BEGIN;
-42&:ALTER RESOURCE GROUP rg2_concurrency_test SET CPU_RATE_LIMIT 35;
-41:COMMIT;
-42<:
-41q:
-42q:
-SELECT g.rsgname, c.cpu_rate_limit FROM gp_toolkit.gp_resgroup_config c, pg_resgroup g WHERE c.groupid=g.oid ORDER BY g.oid;
-
-DROP RESOURCE GROUP rg1_concurrency_test;
-DROP RESOURCE GROUP rg2_concurrency_test;
-
+-- NONE
 
 -- test6: cancel a query that is waiting for a slot
 DROP ROLE IF EXISTS role_concurrency_test;

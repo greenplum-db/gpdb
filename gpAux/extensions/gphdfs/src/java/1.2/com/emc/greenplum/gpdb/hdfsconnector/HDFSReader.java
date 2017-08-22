@@ -180,13 +180,13 @@ public class HDFSReader
 	 * @throws Exception when something goes wrong
 	 */
 	protected void readTextFormat() throws IOException {
-		// Text uses LineRecordReader
-		LineRecordReader lrr = new LineRecordReader();
 		TaskAttemptContext fakeTaskCtx =
 			new TaskAttemptContextImpl(conf, new TaskAttemptID());
 
 		// For each split, use the record reader to read the stuff
 		for(int i=0; i<segSplits.size(); i++) {
+			// Text uses LineRecordReader
+			LineRecordReader lrr = new LineRecordReader();
 			lrr.initialize(segSplits.get(i), fakeTaskCtx);
 			while(lrr.nextKeyValue()) {
 				Text val = lrr.getCurrentValue();
@@ -195,10 +195,8 @@ public class HDFSReader
 				System.out.println();
 				System.out.flush();
 			}
-		}
-
-		if (segSplits.size() > 0)
 			lrr.close();
+		}
 	}
 
 	/**
@@ -208,9 +206,6 @@ public class HDFSReader
 	 * @throws Exception when something goes wrong
 	 */
 	protected void readGPDBWritableFormat() throws IOException, InterruptedException {
-		// GPDBWritable uses SequenceFileRecordReader
-		SequenceFileRecordReader<LongWritable, GPDBWritable> sfrr =
-			new SequenceFileRecordReader<LongWritable, GPDBWritable>();
 		TaskAttemptContext fakeTaskCtx =
 			new TaskAttemptContextImpl(conf, new TaskAttemptID());
 
@@ -221,16 +216,17 @@ public class HDFSReader
 		 */
 		DataOutputStream dos = new DataOutputStream(System.out);
 		for(int i=0; i<segSplits.size(); i++) {
+			// GPDBWritable uses SequenceFileRecordReader
+			SequenceFileRecordReader<LongWritable, GPDBWritable> sfrr =
+				new SequenceFileRecordReader<LongWritable, GPDBWritable>();
 			sfrr.initialize(segSplits.get(i), fakeTaskCtx);
 			while(sfrr.nextKeyValue()) {
 				GPDBWritable val = sfrr.getCurrentValue();
 				val.write(dos);
 				dos.flush();
 			}
-		}
-
-		if (segSplits.size() > 0)
 			sfrr.close();
+		}
 	}
 
 	/**

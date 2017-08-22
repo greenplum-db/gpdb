@@ -251,7 +251,6 @@ static int compare_order(List *a, List* b);
 static int compare_edge(WindowFrameEdge *a, WindowFrameEdge *b);
 static int compare_frame(WindowFrame *a, WindowFrame *b);
 static int compare_spec_info_ptr(const void *arg1, const void *arg2);
-static bool validateBound(Node *node, bool is_rows);
 static WindowFrameEdge *adjustFrameBound(WindowFrameEdge *edge, bool is_rows);
 static void make_lower_targetlist(Query *parse, WindowContext *context);
 static void set_window_keys(WindowContext *context, int wind_index);
@@ -855,6 +854,10 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 			Assert(sinfo->frame == NULL);
 			sinfo->frame = (WindowFrame *) DatumGetPointer(
 				OidFunctionCall1(rinfo->framemakerfunc, PointerGetDatum(ref)));
+			if (sinfo->frame && sinfo->frame->lead)
+				Assert(exprType(sinfo->frame->lead->val) == INT8OID);
+			if (sinfo->frame && sinfo->frame->trail)
+				Assert(exprType(sinfo->frame->trail->val) == INT8OID);
 		}
 		else if ( sinfo->frame != NULL )
 		{
@@ -1214,49 +1217,6 @@ static int compare_edge(WindowFrameEdge *a, WindowFrameEdge *b)
 	return 1;
 }
 
-
-/* If the node is a Const with a value and we understand the value
- * well enough, make sure it is non-negative.
- *
- * The result is true, if the bound is constant and valid.
- * The result is false if we must delay checking until run time.
- * The function issues an error, if the bound is constant and invalid.
- */
-static bool validateBound(Node *node, bool is_rows)
-{
-	Const *bound;
-	Operator tup;
-	Type typ;
-	Datum zero;
-	Oid funcoid;
-	bool isNeg;
-	
-	if ( node == NULL || !IsA(node,Const) )
-		return FALSE; /* Can't check here, wait until run time. */
-	
-	bound = (Const*)node;
-	
-	tup = ordering_oper(bound->consttype, TRUE);
-	if ( !HeapTupleIsValid(tup) )
-		return FALSE ; /* Can't check here, wait until run time. */
-	
-	typ = typeidType(bound->consttype);
-	funcoid = oprfuncid(tup);
-	zero = stringTypeDatum(typ, "0", exprTypmod(node));
-	isNeg = OidFunctionCall2(funcoid, bound->constvalue, zero);
-	
-	if ( isNeg )						
-		ereport(ERROR,
-				(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
-				 errmsg("%s parameter cannot be negative", is_rows ? "ROWS" : "RANGE")));
-	
-	ReleaseSysCache(tup);
-	ReleaseSysCache(typ);
-	
-	return TRUE;
-}
-
-
 /* Make any necessary adjustments to an ordinary window frame edge to
  * prepare it for later planning stages and for execution.
  *
@@ -1280,7 +1240,7 @@ static WindowFrameEdge *adjustFrameBound(WindowFrameEdge *edge, bool is_rows)
 	
 	if ( kind == WINDOW_BOUND_PRECEDING || kind == WINDOW_BOUND_FOLLOWING )
 	{
-		if ( validateBound(edge->val, is_rows) )
+		if ( edge->val && IsA(edge->val, Const))
 			;
 		else
 		{

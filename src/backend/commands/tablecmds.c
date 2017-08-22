@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablecmds.c,v 1.215 2007/02/16 22:04:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablecmds.c,v 1.273 2008/12/13 19:13:44 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -6469,9 +6469,9 @@ ATExecSetStatistics(Relation rel, const char *colName, Node *newValue)
 				 errmsg("statistics target %d is too low",
 						newtarget)));
 	}
-	else if (newtarget > 1000)
+	else if (newtarget > 10000)
 	{
-		newtarget = 1000;
+		newtarget = 10000;
 		ereport(WARNING,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("lowering statistics target to %d",
@@ -9432,9 +9432,9 @@ copy_append_only_data(
 {
 	MIRRORED_LOCK_DECLARE;
 
+	char		   *basepath;
 	char srcFileName[MAXPGPATH];
 	char dstFileName[MAXPGPATH];
-	char extension[12];
 
 	File		srcFile;
 
@@ -9454,34 +9454,28 @@ copy_append_only_data(
 	MirrorDataLossTrackingState 	originalMirrorDataLossTrackingState;
 	int64 							originalMirrorDataLossTrackingSessionNum;
 
-	if (segmentFileNum > 0)
-	{
-		sprintf(extension, ".%u", segmentFileNum);
-	}
-	else
-		extension[0] = '\0';
-
-	CopyRelPath(srcFileName, MAXPGPATH, *oldRelFileNode);
-	if (segmentFileNum > 0)
-	{
-		strcat(srcFileName, extension);
-	}
-
 	/*
 	 * Open the files
 	 */
+	basepath = relpath(*oldRelFileNode);
+	if (segmentFileNum > 0)
+		snprintf(srcFileName, sizeof(srcFileName), "%s.%u", basepath, segmentFileNum);
+	else
+		snprintf(srcFileName, sizeof(srcFileName), "%s", basepath);
+	pfree(basepath);
+
 	srcFile = PathNameOpenFile(srcFileName, O_RDONLY | PG_BINARY, 0);
 	if (srcFile < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\": %m", srcFileName)));
 
-
-	CopyRelPath(dstFileName, MAXPGPATH, *newRelFileNode);
+	basepath = relpath(*newRelFileNode);
 	if (segmentFileNum > 0)
-	{
-		strcat(dstFileName, extension);
-	}
+		snprintf(dstFileName, sizeof(srcFileName), "%s.%u", basepath, segmentFileNum);
+	else
+		snprintf(dstFileName, sizeof(srcFileName), "%s", basepath);
+	pfree(basepath);
 
 	MirroredAppendOnly_OpenReadWrite(
 								&mirroredDstOpen,
@@ -10464,7 +10458,6 @@ inherit_parent(Relation parent_rel, Relation child_rel, bool is_partition, List 
 	while (HeapTupleIsValid(inheritsTuple = systable_getnext(scan)))
 	{
 		Form_pg_inherits inh = (Form_pg_inherits) GETSTRUCT(inheritsTuple);
-
 		if (inh->inhparent == RelationGetRelid(parent_rel))
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_TABLE),

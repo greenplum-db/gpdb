@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="au20941">ALTER RESOURCE GROUP</title>
+  <body>
+    <p id="sql_command_desc">Changes the limits of a resource group.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">ALTER RESOURCE GROUP <varname>name</varname> SET <varname>group_attribute</varname> <varname>value</varname></codeblock>
+<p>where <varname>group_attribute</varname> is one of:</p>
+      <codeblock>CONCURRENCY <varname>integer</varname>
+CPU_RATE_LIMIT <varname>integer</varname>
+MEMORY_LIMIT <varname>integer</varname>
+MEMORY_SHARED_QUOTA <varname>integer</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>ALTER RESOURCE GROUP</codeph> changes the limits of a resource group. 
+        Only a superuser can alter a resource group.</p>
+        <p>You can set or reset the concurrency limit of a resource group to control the maximum
+        number of active concurrent statements in that group. You can also reset the CPU rate limit of a
+        resource group to control the amount of CPU resources that all queries submitted through
+        the group can consume on each segment host.</p>
+        <p>The new resource limit is immediately applied if current resource usage is less than or equal to the new value. If current resource usage exceeds the new limit value, Greenplum Database will defer the new limit assignment until resource usage is within the range of the new value.</p>
+        <p>You can alter one limit type in a single <codeph>ALTER RESOURCE GROUP</codeph> call.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name of the resource group to alter. </pd>
+        </plentry>
+        <plentry>
+          <pt>CONCURRENCY <varname>integer</varname></pt>
+          <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group.
+            Any transactions submitted after the <codeph>CONCURRENCY</codeph> value limit is
+            reached are queued. When a running transaction completes, the earliest queued
+            transaction is executed.</pd>
+          <pd> The <codeph>CONCURRENCY</codeph> value
+            must be an integer in the range [1 .. <codeph>max_connections</codeph>]. The default 
+            <codeph>CONCURRENCY</codeph> value is 20.</pd>
+        </plentry>
+        <plentry>
+          <pt>CPU_RATE_LIMIT <varname>integer</varname></pt>
+          <pd>The percentage of CPU resources to allocate to
+            this resource group. The minimum CPU percentage for a resource group is 1.
+            The maximum is 100. The sum of the
+            <codeph>CPU_RATE_LIMIT</codeph>s of all resource groups defined in the
+            Greenplum Database cluster must not exceed 100.</pd>
+        </plentry>
+        <plentry>
+          <pt>MEMORY_LIMIT <varname>integer</varname></pt>
+          <pd>The percentage of memory resources to allocate to
+            this resource group. The minimum memory percentage for a resource group is 1.
+            The maximum is 100. The sum of the
+            <codeph>MEMORY_LIMIT</codeph>s of all resource groups defined in the
+            Greenplum Database cluster must not exceed 100.</pd>
+        </plentry>
+        <plentry>
+          <pt>MEMORY_SHARED_QUOTA <varname>integer</varname></pt>
+          <pd>The percentage of memory resources to share among transactions in
+            the resource group. The minimum memory shared quota percentage for a
+            resource group is 0.  The maximum is 100.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Notes</title>
+      <p>Use <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or
+            <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> to
+        assign a specific resource group to a role (user).</p>
+      <p>You cannot submit an <codeph>ALTER RESOURCE GROUP</codeph> command in an explicit transaction or sub-transaction.</p>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Change the active transaction limit for a resource group: </p>
+      <codeblock>ALTER RESOURCE GROUP rgroup1 SET CONCURRENCY 13;</codeblock>
+      <p>Update the CPU limit for a resource group: </p>
+      <codeblock>ALTER RESOURCE GROUP rgroup2 SET CPU_RATE_LIMIT 45;</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p>The <codeph>ALTER RESOURCE GROUP</codeph> statement is a Greenplum Database extension. This
+        command does not exist in standard PostgreSQL.</p>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          /></codeph>, <codeph><xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./ALTER_ROLE.xml#topic1" type="topic"
+            format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

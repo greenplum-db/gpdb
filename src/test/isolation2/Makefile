@@ -6,6 +6,10 @@ subdir = src/test/isolation2
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
+NAME = isolation2_regress
+OBJS = isolation2_regress.o
+include $(top_srcdir)/src/Makefile.shlib
+
 # where to find psql for testing an existing installation
 PSQLDIR = $(bindir)
 
@@ -16,7 +20,7 @@ endif
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
-all: pg_isolation2_regress$(X)
+all: pg_isolation2_regress$(X) all-lib
 
 pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o

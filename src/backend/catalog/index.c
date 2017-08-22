@@ -1528,7 +1528,17 @@ setNewRelfilenode(Relation relation, TransactionId freezeXid)
 	rd_rel->relfilenode = newrelfilenode;
 	rd_rel->relpages = 0;		/* it's empty until further notice */
 	rd_rel->reltuples = 0;
-	rd_rel->relfrozenxid = freezeXid;
+	if (should_have_valid_relfrozenxid(HeapTupleGetOid(tuple),
+									   rd_rel->relkind,
+									   rd_rel->relstorage))
+	{
+		rd_rel->relfrozenxid = freezeXid;
+	}
+	else
+	{
+		rd_rel->relfrozenxid = InvalidTransactionId;
+	}
+
 	simple_heap_update(pg_class, &tuple->t_self, tuple);
 	CatalogUpdateIndexes(pg_class, tuple);
 

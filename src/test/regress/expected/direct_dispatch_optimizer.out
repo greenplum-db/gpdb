@@ -470,6 +470,94 @@ INFO:  Dispatch command to ALL contents
 ---+---
 (0 rows)
 
+--
+-- Test direct dispatch with volatile functions, and nextval().
+--
+-- Simple table.
+create table ddtesttab (i int, j int, k int8) distributed by (k);
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+create sequence ddtestseq;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, 5);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, nextval('ddtestseq'));
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop table ddtesttab;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- Partitioned table, with mixed distribution keys.
+create table ddtesttab (i int, j int, k int8) distributed by (i) partition by
+range(k)
+(start(1) end(20) every(10));
+NOTICE:  CREATE TABLE will create partition "ddtesttab_1_prt_1" for table "ddtesttab"
+NOTICE:  CREATE TABLE will create partition "ddtesttab_1_prt_2" for table "ddtesttab"
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, 5);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, nextval('ddtestseq'));
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+-- One partition is randomly distributed, while others are distributed by key.
+alter table ddtesttab_1_prt_2 set distributed randomly;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, 5);
+INFO:  Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, nextval('ddtestseq'));
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
+INFO:  Dispatch command to ALL contents
+INFO:  Dispatch command to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop table ddtesttab;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+drop sequence ddtestseq;
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 -- cleanup
 set test_print_direct_dispatch_info=off;
 begin;

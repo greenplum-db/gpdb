@@ -3179,11 +3179,11 @@ def impl(context, directory, prefix):
     results = cmd.get_stdout().split('\n')
 
     if len(results) == 0:
-        raise Exception('Failed to find dump files %s on the master under %s' % (results, master_dump_dir))
+        raise Exception('Failed to find dump files %s on the master under %s' % (results, dump_dir))
     for filename in results:
         if not os.path.basename(filename).startswith(prefix.strip()):
             raise Exception('Dump file %s on master under %s does not have required prefix %s' % (
-            filename, master_dump_dir, prefix))
+            filename, dump_dir, prefix))
 
 
 @given('the environment variable "{var}" is not set')
@@ -4164,12 +4164,12 @@ def impl(context, tablename, dbconn):
 @then('verify that gptransfer has a sub batch size of "{num}"')
 def impl(context, num):
     num = int(num)
-    logdir = "%s/gpAdminLogs" % os.path.expanduser("~")
-    if not os.path.exists(logdir):
-        raise Exception('No such directory: %s' % logdir)
-    logname = get_log_name('gptransfer', logdir)
+    log_dir = _get_gpAdminLogs_directory()
+    if not os.path.exists(log_dir):
+        raise Exception('No such directory: %s' % log_dir)
+    log_name = get_log_name('gptransfer', log_dir)
 
-    full_path = os.path.join(logdir, logname)
+    full_path = os.path.join(log_dir, log_name)
 
     if not os.path.isfile(full_path):
         raise Exception("Can not find file: %s" % full_path)
@@ -4190,6 +4190,10 @@ def impl(context, num):
         check_string_not_present_stdout(context, worker)
     except:
         raise Exception("gptransfer sub batch size should be %d, is at least %d" % (num, num + 1))
+
+
+def _get_gpAdminLogs_directory():
+    return "%s/gpAdminLogs" % os.path.expanduser("~")
 
 
 # Read in a full map file, remove the first host, print it to a new file
@@ -4941,16 +4945,15 @@ def impl(context):
                               And wait until the process "gpsmon" is up
                               ''')
 
+
 @given('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 @when('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 def impl(context, variable_name, path_to_file):
     path = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), path_to_file)
-    match_start_of_line = '^' + variable_name + '.*'
-    pattern = re.compile(match_start_of_line)
-    with open(path, 'r') as f:
-        for line in f.read().split('\n'):
-            if pattern.match(line):
-                raise Exception('found in file %s the setting: %s' % (line, variable_name))
+    output_file = "/tmp/gpperfmon_temp_config"
+    cmd = Command("sed to remove line", "sed '/^%s/,+1 d' < %s > %s" % (variable_name, path, output_file))
+    cmd.run(validateAfter=True)
+    shutil.move(output_file, path)
 
 
 @given('the setting "{setting_string}" is placed in the configuration file "{path_to_file}"')
@@ -4960,6 +4963,7 @@ def impl(context, setting_string, path_to_file):
     with open(path, 'a') as f:
         f.write(setting_string)
         f.write("\n")
+
 
 @given('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
 @when('the latest gpperfmon gpdb-alert log is copied to a file with a fake (earlier) timestamp')
@@ -5194,6 +5198,7 @@ def impl(context, gppkg_name):
         if not gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is not installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
 
+
 @given('"{gppkg_name}" gppkg files do not exist on any hosts')
 @when('"{gppkg_name}" gppkg files do not exist on any hosts')
 @then('"{gppkg_name}" gppkg files do not exist on any hosts')
@@ -5213,6 +5218,7 @@ def impl(context, gppkg_name):
 
         if gppkg_name in cmd.get_stdout():
             raise Exception( '"%s" gppkg is installed on host: %s. \nInstalled packages: %s' % (gppkg_name, hostname, cmd.get_stdout()))
+
 
 def _remove_gppkg_from_host(context, gppkg_name, is_master_host):
     remote_gphome = os.environ.get('GPHOME')
@@ -5257,10 +5263,40 @@ def _remove_gppkg_from_host(context, gppkg_name, is_master_host):
                   remoteHost=hostname)
     cmd.run(validateAfter=True)
 
+
 @when('gppkg "{gppkg_name}" is removed from a segment host')
 def impl(context, gppkg_name):
     _remove_gppkg_from_host(context, gppkg_name, is_master_host=False)
 
+
 @when('gppkg "{gppkg_name}" is removed from master host')
 def impl(context, gppkg_name):
     _remove_gppkg_from_host(context, gppkg_name, is_master_host=True)
+
+
+@given('gpAdminLogs directory has no "{prefix}" files')
+def impl(context, prefix):
+    log_dir = _get_gpAdminLogs_directory()
+    items = glob.glob('%s/%s_*.log' % (log_dir, prefix))
+    for item in items:
+        os.remove(item)
+
+
+@given('"{filepath}" is copied to the install directory')
+def impl(context, filepath):
+    gphome = os.getenv("GPHOME")
+    if not gphome:
+        raise Exception("GPHOME must be set")
+    shutil.copy(filepath, os.path.join(gphome, "bin"))
+
+
+@then('{command} should print "{target}" to logfile')
+def impl(context, command, target):
+    log_dir = _get_gpAdminLogs_directory()
+    filename = glob.glob('%s/%s_*.log' % (log_dir, command))[0]
+    contents = ''
+    with open(filename) as fr:
+        for line in fr:
+            contents += line
+    if target not in contents:
+        raise Exception("cannot find %s in %s" % (target, filename))

@@ -1884,14 +1884,14 @@ CTranslatorUtils::FWindowSpec
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorUtils::PdxlnInt4Const
+//		CTranslatorUtils::PdxlnInt8Const
 //
 //	@doc:
-// 		Construct a scalar const value expression for the given INT value
+// 		Construct a scalar const value expression for the given BIGINT value
 //
 //---------------------------------------------------------------------------
 CDXLNode *
-CTranslatorUtils::PdxlnInt4Const
+CTranslatorUtils::PdxlnInt8Const
 	(
 	IMemoryPool *pmp,
 	CMDAccessor *pmda,
@@ -1899,10 +1899,10 @@ CTranslatorUtils::PdxlnInt4Const
 	)
 {
 	GPOS_ASSERT(NULL != pmp);
-	const IMDTypeInt4 *pmdtypeint4 = pmda->PtMDType<IMDTypeInt4>();
-	pmdtypeint4->Pmdid()->AddRef();
+	const IMDTypeInt8 *pmdtypeint8 = pmda->PtMDType<IMDTypeInt8>();
+	pmdtypeint8->Pmdid()->AddRef();
 
-	CDXLDatumInt4 *pdxldatum = GPOS_NEW(pmp) CDXLDatumInt4(pmp, pmdtypeint4->Pmdid(), false /*fConstNull*/, iVal);
+	CDXLDatumInt8 *pdxldatum = GPOS_NEW(pmp) CDXLDatumInt8(pmp, pmdtypeint8->Pmdid(), false /*fConstNull*/, iVal);
 
 	CDXLScalarConstValue *pdxlConst = GPOS_NEW(pmp) CDXLScalarConstValue(pmp, pdxldatum);
 

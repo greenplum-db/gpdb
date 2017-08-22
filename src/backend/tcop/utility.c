@@ -1743,14 +1743,23 @@ ProcessUtility(Node *parsetree,
 			 * ********************* RESOURCE GROUP statements ****
 			 */
 		case T_CreateResourceGroupStmt:
+			if (Gp_role == GP_ROLE_DISPATCH)
+				PreventTransactionChain(isTopLevel, "CREATE RESOURCE GROUP");
+
 			CreateResourceGroup((CreateResourceGroupStmt *) parsetree);
 			break;
 
 		case T_AlterResourceGroupStmt:
+			if (Gp_role == GP_ROLE_DISPATCH)
+				PreventTransactionChain(isTopLevel, "ALTER RESOURCE GROUP");
+
 			AlterResourceGroup((AlterResourceGroupStmt *) parsetree);
 			break;
 
 		case T_DropResourceGroupStmt:
+			if (Gp_role == GP_ROLE_DISPATCH)
+				PreventTransactionChain(isTopLevel, "DROP RESOURCE GROUP");
+
 			DropResourceGroup((DropResourceGroupStmt *) parsetree);
 			break;
 

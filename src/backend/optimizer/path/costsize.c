@@ -2344,6 +2344,7 @@ cost_hashjoin(HashPath *path, PlannerInfo *root)
 	path->jpath.path.total_cost = startup_cost + run_cost;
 }
 
+
 /*
  * cost_qual_eval
  *		Estimate the CPU costs of evaluating a WHERE clause.
@@ -3171,6 +3172,7 @@ set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel, Plan *cteplan)
 	/* Now estimate number of output rows, etc */
 	set_baserel_size_estimates(root, rel);
 }
+
 
 /*
  * set_rel_width

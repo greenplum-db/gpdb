@@ -19,7 +19,10 @@ export with_openssl
 MASTER_PORT ?= 15432
 PORT_BASE ?= 25432
 NUM_PRIMARY_MIRROR_PAIRS ?= 3
-WITH_MIRRORS ?= true
+
+ifeq ($(WITH_MIRRORS), )
+WITH_MIRRORS = true
+endif
 
 export MASTER_DEMO_PORT=$(MASTER_PORT)
 export DEMO_PORT_BASE=$(PORT_BASE)
@@ -33,14 +36,18 @@ all:
 	$(MAKE) probe
 
 cluster create-demo-cluster:
+ifeq ($(enable_segwalrep), yes)
+	@WITH_MIRRORS=false ./demo_cluster.sh # will generate gpdemo-env.sh
+	@if [[ $(WITH_MIRRORS) == true ]]; then \
+	 	. ./gpdemo-env.sh; \
+	 	./gpsegwalrep.py init --host `hostname`; \
+	 	./gpsegwalrep.py start; \
+	 fi
+	@echo ""
+else
 	@./demo_cluster.sh
 	@echo ""
-
-create-segwalrep-cluster:
-	@WITH_MIRRORS=false ./demo_cluster.sh # will generate gpdemo-env.sh
-	@. ./gpdemo-env.sh;./gpsegwalrep.py init --host `hostname`
-	@. ./gpdemo-env.sh;./gpsegwalrep.py start
-	@echo""
+endif
 
 probe:
 	@./probe_config.sh

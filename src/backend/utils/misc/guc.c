@@ -1229,7 +1229,7 @@ static struct config_int ConfigureNamesInt[] =
 				"column-specific target set via ALTER TABLE SET STATISTICS.")
 		},
 		&default_statistics_target,
-		25, 1, 1000, NULL, NULL
+		100, 1, 10000, NULL, NULL
 	},
 	{
 		{"from_collapse_limit", PGC_USERSET, QUERY_TUNING_OTHER,

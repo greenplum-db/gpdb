@@ -69,10 +69,8 @@
 
 #define OIDCHARS	10			/* max chars printed by %u */
 
-static void GetFilespacePathForTablespace(
-	Oid tablespaceOid,
-
-	char **filespacePath)
+static char *
+GetFilespacePathForTablespace(Oid tablespaceOid)
 {
 	PersistentTablespaceGetFilespaces tablespaceGetFilespaces;
 	Oid filespaceOid;
@@ -125,7 +123,7 @@ static void GetFilespacePathForTablespace(
 		pfree(mirror_path);
 	Assert(primary_path != NULL);
 
-	*filespacePath = primary_path;
+	return primary_path;
 }
 
 /*
@@ -165,9 +163,7 @@ relpath(RelFileNode rnode)
 		char *primary_path;
 
 		/* All other tablespaces are accessed via filespace locations */
-		GetFilespacePathForTablespace(
-								rnode.spcNode,
-								&primary_path);
+		primary_path = GetFilespacePathForTablespace(rnode.spcNode);
 
 		/* 
 		 * We should develop an interface for the above that doesn't
@@ -187,57 +183,6 @@ relpath(RelFileNode rnode)
 	Assert(snprintfResult < pathlen);
 
 	return path;
-}
-
-void
-CopyRelPath(char *target, int targetMaxLen, RelFileNode rnode)
-{
-	int 		snprintfResult;
-
-	if (rnode.spcNode == GLOBALTABLESPACE_OID)
-	{
-		/* Shared system relations live in {datadir}/global */
-		Assert(rnode.dbNode == 0);
-		snprintfResult =
-			snprintf(target, targetMaxLen, "global/%u",
-					 rnode.relNode);
-	}
-	else if (rnode.spcNode == DEFAULTTABLESPACE_OID)
-	{
-		/* The default tablespace is {datadir}/base */
-		snprintfResult =
-			snprintf(target, targetMaxLen, "base/%u/%u",
-					 rnode.dbNode, rnode.relNode);
-	}
-	else
-	{
-		char *primary_path;
-
-		/* All other tablespaces are accessed via filespace locations */
-		GetFilespacePathForTablespace(
-								rnode.spcNode,
-								&primary_path);
-
-		/* Copy path into the passed in target location */
-		snprintfResult =
-			snprintf(target, targetMaxLen, "%s/%u/%u/%u",
-					 primary_path, rnode.spcNode, rnode.dbNode, rnode.relNode);
-
-		/* Throw away the allocation we got from persistent layer */
-		pfree(primary_path);
-	}
-
-	if (snprintfResult < 0)
-		elog(ERROR, "CopyRelPath formatting error");
-
-	/*
-	 * Magically truncating the result to fit in the target string is unacceptable here
-	 * because it can result in the wrong file-system object being referenced.
-	 */
-	if (snprintfResult >= targetMaxLen)
-		elog(ERROR, "CopyRelPath formatting result length %d exceeded the maximum length %d",
-					snprintfResult,
-					targetMaxLen);
 }
 
 /*
@@ -279,9 +224,7 @@ GetDatabasePath(Oid dbNode, Oid spcNode)
 		char *primary_path;
 
 		/* All other tablespaces are accessed via filespace locations */
-		GetFilespacePathForTablespace(
-								spcNode,
-								&primary_path);
+		primary_path = GetFilespacePathForTablespace(spcNode);
 
 		/* 
 		 * We should develop an interface for the above that doesn't
