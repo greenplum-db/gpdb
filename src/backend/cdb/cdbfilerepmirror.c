@@ -2468,8 +2468,7 @@ FileRepMirror_DropFilesFromDir(FileName fileName)
 			{
 				if (errno == EPERM)
 				{
-					stat(path, &st);
-					if (S_ISDIR(st.st_mode))
+					if ((stat(path, &st) >= 0) && (S_ISDIR(st.st_mode)))
 						continue;
 				}	
 

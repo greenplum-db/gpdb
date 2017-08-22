@@ -222,7 +222,9 @@ slurp_oid_files(migratorContext *ctx)
 	if (!oid_dump)
 		pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", GLOBAL_OIDS_DUMP_FILE);
 
-	fstat(fileno(oid_dump), &st);
+	if (fstat(fileno(oid_dump), &st) != 0)
+		pg_log(ctx, PG_FATAL, "Could not read file \"%s\": %s\n",
+			   GLOBAL_OIDS_DUMP_FILE, strerror(errno));
 
 	reserved_oids = pg_malloc(ctx, st.st_size + 1);
 	fread(reserved_oids, st.st_size, 1, oid_dump);
@@ -241,7 +243,9 @@ slurp_oid_files(migratorContext *ctx)
 		if (!oid_dump)
 			pg_log(ctx, PG_FATAL, "Could not open necessary file:  %s\n", filename);
 
-		fstat(fileno(oid_dump), &st);
+		if (fstat(fileno(oid_dump), &st) != 0)
+			pg_log(ctx, PG_FATAL, "Could not read file \"%s\": %s\n",
+				   filename, strerror(errno));
 
 		reserved_oids = pg_malloc(ctx, st.st_size + 1);
 		fread(reserved_oids, st.st_size, 1, oid_dump);
