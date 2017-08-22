@@ -451,6 +451,7 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 						   MAXALIGN(cwords_size));
 		memcpy(newWords.last_tids, last_tids, lastTids_size);
 		memcpy(newWords.cwords, cwords, cwords_size);
+		newWords.num_cwords = xlrec->bm_num_cwords;
 		memcpy(newWords.hwords, hwords, hwords_size);
 
 		/*
