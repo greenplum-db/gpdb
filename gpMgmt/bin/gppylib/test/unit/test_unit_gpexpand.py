@@ -5,7 +5,6 @@ from gp_unittest import *
 
 
 class GpExpand(GpTestCase):
-
     def setUp(self):
         # because gpexpand does not have a .py extension,
         # we have to use imp to import it
