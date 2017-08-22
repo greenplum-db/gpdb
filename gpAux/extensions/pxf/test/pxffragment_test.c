@@ -30,8 +30,6 @@ static bool compareFragment(ListCell* fragment_cell1, ListCell* fragment_cell2);
 void
 test_filter_fragments_for_segment(void **state)
 {
-    expect_any_count(free_fragment, data, -1);
-    will_be_called_count(free_fragment, -1);
     /* --- 1 segment, all fragements should be processed by it */
     char* expected_1_1_0[1] = {"0"}; // 1 fragment
     test_list(0, 1, 1, 1, expected_1_1_0, ARRSIZE(expected_1_1_0)); // xid=1

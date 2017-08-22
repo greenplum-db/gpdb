@@ -76,3 +76,20 @@ TypeOidGetTypename(Oid typid)
 
     return tname.data;
 }
+
+/* Concatenate multiple literal strings using stringinfo */
+char* concat(int num_args, ...)
+{
+    va_list ap;
+    StringInfoData str;
+    initStringInfo(&str);
+
+    va_start(ap, num_args);
+
+    for (int i = 0; i < num_args; i++) {
+        appendStringInfoString(&str, va_arg(ap, char*));
+    }
+    va_end(ap);
+
+    return str.data;
+}

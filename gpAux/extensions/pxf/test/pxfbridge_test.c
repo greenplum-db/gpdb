@@ -13,6 +13,7 @@
 #include "mock/libchurl_mock.c"
 #include "mock/pxfuriparser_mock.c"
 #include "mock/pxfheaders_mock.c"
+#include "../src/pxfbridge.h"
 
 /* helper functions */
 static void expect_set_headers_call(CHURL_HEADERS headers_handle, const char* header_key, const char* header_value);
@@ -121,6 +122,8 @@ test_gpbridge_read_one_fragment_less_than_buffer(void **state)
 {
     /* init data in context */
     gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
     CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
     context->churl_handle = handle;
 
@@ -156,6 +159,8 @@ test_gpbridge_read_one_fragment_buffer(void **state)
 {
     /* init data in context */
     gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
     CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
     context->churl_handle = handle;
 
@@ -207,6 +212,7 @@ test_gpbridge_read_next_fragment_buffer(void **state)
 
     context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
     context->gphd_uri->profile = "profile";
+    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
 
     int datalen = 10;
     char *databuf = (char *) palloc0(datalen);
@@ -262,6 +268,8 @@ test_gpbridge_read_last_fragment_finished(void **state)
 {
     /* init data in context */
     gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
+    context->gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+    context->gphd_uri->fragments = (FragmentData *) palloc0(sizeof(FragmentData));
     CHURL_HANDLE handle = (CHURL_HANDLE) palloc0(sizeof(CHURL_HANDLE));
     context->churl_handle = handle;
 

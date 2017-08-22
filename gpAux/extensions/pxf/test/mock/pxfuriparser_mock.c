@@ -43,11 +43,3 @@ GPHDUri_verify_cluster_exists(GPHDUri *uri, char* cluster)
     check_expected(cluster);
     mock();
 }
-
-void
-free_fragment(FragmentData *data)
-{
-    check_expected(data);
-    optional_assignment(data);
-    mock();
-}

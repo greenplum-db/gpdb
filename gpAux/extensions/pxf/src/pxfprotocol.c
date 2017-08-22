@@ -18,11 +18,13 @@
  *
  */
 
-#include "pxfutils.h"
 #include "pxfbridge.h"
-#include "access/extprotocol.h"
 #include "pxffragment.h"
+#include "pxfutils.h"
+
+#include "access/extprotocol.h"
 #include "nodes/pg_list.h"
+
 #include <unistd.h>
 
 /* define magic module unless run as a part of test cases */
@@ -109,7 +111,6 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
 {
     /* Must be called via the external table format manager */
     check_caller(fcinfo, "pxfprotocol_import");
-
     /* retrieve user context required for data read*/
     gphadoop_context *context = (gphadoop_context *) EXTPROTOCOL_GET_USER_CTX(fcinfo);
 
@@ -121,11 +122,11 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
     }
     /* first call -- do any desired init */
     if (context == NULL) {
-    	context = create_context(fcinfo, true);
-		EXTPROTOCOL_SET_USER_CTX(fcinfo, context);
-		gpbridge_import_start(context);
+        context = create_context(fcinfo, true);
+        EXTPROTOCOL_SET_USER_CTX(fcinfo, context);
+        gpbridge_import_start(context);
     }
-
+    /* Read data */
     int bytes_read = gpbridge_read(context, EXTPROTOCOL_GET_DATABUF(fcinfo), EXTPROTOCOL_GET_DATALEN(fcinfo));
 
     PG_RETURN_INT32(bytes_read);
@@ -141,8 +142,8 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
     GPHDUri *uri = parseGPHDUri(EXTPROTOCOL_GET_URL(fcinfo));
     Relation relation = EXTPROTOCOL_GET_RELATION(fcinfo);
 
-    /* set fragments */
-    set_fragments(uri, relation);
+    /* fetch data fragments */
+    get_fragments(uri, relation);
 
     /* set context */
     gphadoop_context* context = palloc0(sizeof(gphadoop_context));

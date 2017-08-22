@@ -18,17 +18,20 @@
  *
  */
 
-#include <json-c/json.h>
-#include "postgres.h"
+#include "pxffragment.h"
+#include "pxfutils.h"
+
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
-#include "pxffragment.h"
+#include "postgres.h"
+#include "../../../../src/include/lib/stringinfo.h"
+
+#include <json-c/json.h>
 
 static List* get_data_fragment_list(GPHDUri *hadoop_uri,  ClientContext* client_context);
 static void rest_request(GPHDUri *hadoop_uri, ClientContext* client_context, char *rest_msg);
 static List* parse_get_fragments_response(List *fragments, StringInfo rest_buf);
-static char* concat(int num_args, ...);
 static List* filter_fragments_for_segment(List* list);
 static void init(GPHDUri* uri, ClientContext* cl_context);
 static void print_fragment_list(List *fragments);
@@ -40,35 +43,35 @@ static void process_request(ClientContext* client_context, char *uri);
 /* Get List of fragments using PXF
  * Returns selected fragments that have been allocated to the current segment
  */
-void set_fragments(GPHDUri* uri, Relation relation) {
+void get_fragments(GPHDUri *uri, Relation relation) {
 
-	List *data_fragments = NIL;
+    List *data_fragments = NIL;
 
-	/* Context for the Fragmenter API */
-	ClientContext client_context;
-	PxfInputData inputData = {0};
+    /* Context for the Fragmenter API */
+    ClientContext client_context;
+    PxfInputData inputData = {0};
 
-	Assert(uri != NULL);
+    Assert(uri != NULL);
 
-	/*
-	 * 1. Initialize curl headers
-	 */
-	init(uri, &client_context);
-	if (!uri)
-		return;
+    /*
+     * 1. Initialize curl headers
+     */
+    init(uri, &client_context);
+    if (!uri)
+        return;
 
-	/*
-	 * Enrich the curl HTTP header
-	 */
-	inputData.headers = client_context.http_headers;
-	inputData.gphduri = uri;
-	inputData.rel = relation;
-	build_http_headers(&inputData);
+    /*
+     * Enrich the curl HTTP header
+     */
+    inputData.headers = client_context.http_headers;
+    inputData.gphduri = uri;
+    inputData.rel = relation;
+    build_http_headers(&inputData);
 
-	/*
-	 * Get the fragments data from the PXF service
-	 */
-	data_fragments = get_data_fragment_list(uri, &client_context);
+    /*
+     * Get the fragments data from the PXF service
+     */
+    data_fragments = get_data_fragment_list(uri, &client_context);
     if (data_fragments == NIL)
         return;
 
@@ -79,9 +82,11 @@ void set_fragments(GPHDUri* uri, Relation relation) {
     }
 
     /*
-	 * Call the work allocation algorithm
-	 */
-	data_fragments = filter_fragments_for_segment(data_fragments);
+     * Call the work allocation algorithm
+     */
+    data_fragments = filter_fragments_for_segment(data_fragments);
+    if (data_fragments == NIL)
+        return;
 
     /*
      * Assign PXF location for the allocated fragments
@@ -94,9 +99,9 @@ void set_fragments(GPHDUri* uri, Relation relation) {
         print_fragment_list(data_fragments);
     }
 
-	uri->fragments = data_fragments;
+    uri->fragments = data_fragments;
 
-	return;
+    return;
 }
 
 /*
@@ -106,10 +111,14 @@ void set_fragments(GPHDUri* uri, Relation relation) {
 static void assign_pxf_location_to_fragments(List *fragments)
 {
     ListCell *frag_c = NULL;
+    StringInfoData authority;
+    initStringInfo(&authority);
+    appendStringInfo(&authority, "%s:%d", PxfDefaultHost, PxfDefaultPort);
+
     foreach(frag_c, fragments)
     {
         FragmentData 	*fragment	= (FragmentData*)lfirst(frag_c);
-        fragment->authority = concat(3, "localhost", ":", "51200");
+        fragment->authority = authority.data;
     }
     return;
 }
@@ -167,15 +176,15 @@ parse_get_fragments_response(List *fragments, StringInfo rest_buf)
         elog(ERROR, "Failed to parse fragments list from PXF");
     }
     struct json_object	*head;
-	List* ret_frags = fragments;
+    List* ret_frags = fragments;
 
     if(!json_object_object_get_ex(whole, "PXFFragments", &head))
-	{
-		elog(INFO, "No Data Fragments available for the resource");
-		return ret_frags;
-	}
+    {
+        elog(INFO, "No Data Fragments available for the resource");
+        return ret_frags;
+    }
 
-	int length	= json_object_array_length(head);
+    int length	= json_object_array_length(head);
 
     /* obtain split information from the block */
     for (int i = 0; i < length; i++)
@@ -221,23 +230,6 @@ parse_get_fragments_response(List *fragments, StringInfo rest_buf)
     }
 
     return ret_frags;
-}
-
-/* Concatenate multiple literal strings using stringinfo */
-static char* concat(int num_args, ...)
-{
-    va_list ap;
-    StringInfoData str;
-    initStringInfo(&str);
-
-    va_start(ap, num_args);
-
-    for (int i = 0; i < num_args; i++) {
-        appendStringInfoString(&str, va_arg(ap, char*));
-    }
-    va_end(ap);
-
-    return str.data;
 }
 
 /*
@@ -315,42 +307,63 @@ static void init(GPHDUri* uri, ClientContext* cl_context)
 }
 
 /*
+ * Free fragment data
+ */
+void
+free_fragment(FragmentData *data)
+{
+    if (data->authority)
+        pfree(data->authority);
+    if (data->fragment_md)
+        pfree(data->fragment_md);
+    if (data->index)
+        pfree(data->index);
+    if (data->profile)
+        pfree(data->profile);
+    if (data->source_name)
+        pfree(data->source_name);
+    if (data->user_data)
+        pfree(data->user_data);
+    pfree(data);
+}
+
+/*
  * Debug function - print the splits data structure obtained from the namenode
  * response to <GET_BLOCK_LOCATIONS> request
  */
 static void
 print_fragment_list(List *fragments)
 {
-	ListCell *fragment_cell = NULL;
-	StringInfoData log_str;
-	initStringInfo(&log_str);
+    ListCell *fragment_cell = NULL;
+    StringInfoData log_str;
+    initStringInfo(&log_str);
 
-	appendStringInfo(&log_str, "Fragment list: (%d elements)\n",
-			fragments ? fragments->length : 0);
+    appendStringInfo(&log_str, "Fragment list: (%d elements)\n",
+            fragments ? fragments->length : 0);
 
-	foreach(fragment_cell, fragments)
-	{
-		FragmentData	*frag	= (FragmentData*)lfirst(fragment_cell);
+    foreach(fragment_cell, fragments)
+    {
+        FragmentData	*frag	= (FragmentData*)lfirst(fragment_cell);
 
-		appendStringInfo(&log_str, "Fragment index: %s\n", frag->index);
+        appendStringInfo(&log_str, "Fragment index: %s\n", frag->index);
 
         appendStringInfo(&log_str, "authority: %s\n", frag->authority);
         appendStringInfo(&log_str, "source: %s\n", frag->source_name);
-		appendStringInfo(&log_str, "metadata: %s\n", frag->fragment_md ? frag->fragment_md : "NULL");
+        appendStringInfo(&log_str, "metadata: %s\n", frag->fragment_md ? frag->fragment_md : "NULL");
 
-		if (frag->user_data)
-		{
-			appendStringInfo(&log_str, "user data: %s\n", frag->user_data);
-		}
+        if (frag->user_data)
+        {
+            appendStringInfo(&log_str, "user data: %s\n", frag->user_data);
+        }
 
-		if (frag->profile)
-		{
-			appendStringInfo(&log_str, "profile: %s\n", frag->profile);
-		}
-	}
+        if (frag->profile)
+        {
+            appendStringInfo(&log_str, "profile: %s\n", frag->profile);
+        }
+    }
 
-	elog(FRAGDEBUG, "%s", log_str.data);
-	pfree(log_str.data);
+    elog(FRAGDEBUG, "%s", log_str.data);
+    pfree(log_str.data);
 }
 
 /*
@@ -358,9 +371,9 @@ print_fragment_list(List *fragments)
  */
 static void init_client_context(ClientContext *client_context)
 {
-	client_context->http_headers = NULL;
-	client_context->handle = NULL;
-	initStringInfo(&(client_context->the_rest_buf));
+    client_context->http_headers = NULL;
+    client_context->handle = NULL;
+    initStringInfo(&(client_context->the_rest_buf));
 }
 
 
@@ -373,18 +386,18 @@ static void init_client_context(ClientContext *client_context)
 static void
 call_rest(GPHDUri *hadoop_uri, ClientContext *client_context, char *rest_msg)
 {
-	StringInfoData request;
-	initStringInfo(&request);
+    StringInfoData request;
+    initStringInfo(&request);
 
-	appendStringInfo(&request, rest_msg,
-								hadoop_uri->host,
-								hadoop_uri->port,
-								PXF_SERVICE_PREFIX,
-								PXF_VERSION);
+    appendStringInfo(&request, rest_msg,
+                                hadoop_uri->host,
+                                hadoop_uri->port,
+                                PXF_SERVICE_PREFIX,
+                                PXF_VERSION);
 
-	/* send the request. The response will exist in rest_buf.data */
-	process_request(client_context, request.data);
-	pfree(request.data);
+    /* send the request. The response will exist in rest_buf.data */
+    process_request(client_context, request.data);
+    pfree(request.data);
 }
 
 /*

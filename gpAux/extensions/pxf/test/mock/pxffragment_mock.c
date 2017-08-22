@@ -1,5 +1,5 @@
 void
-set_fragments(GPHDUri* uri, Relation relation)
+get_fragments(GPHDUri *uri, Relation relation)
 {
 	check_expected(uri);
 	check_expected(relation);
@@ -23,5 +23,13 @@ call_rest(GPHDUri* hadoop_uri, ClientContext* client_context, char* rest_msg)
 static void
 process_request(ClientContext* client_context, char* uri)
 {
+	mock();
+}
+
+void
+free_fragment(FragmentData *data)
+{
+	check_expected(data);
+	optional_assignment(data);
 	mock();
 }

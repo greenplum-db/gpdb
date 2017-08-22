@@ -21,9 +21,10 @@
 #ifndef GPDB_PXFFRAGMENT_H
 #define GPDB_PXFFRAGMENT_H
 
-#include "pxfuriparser.h"
 #include "libchurl.h"
 #include "pxfheaders.h"
+#include "pxfuriparser.h"
+
 #include "lib/stringinfo.h"
 
 /*
@@ -31,13 +32,30 @@
  */
 typedef struct sClientContext
 {
-	CHURL_HEADERS http_headers;
-	CHURL_HANDLE handle;
-	/* part of the HTTP response - received	*/
-	/* from one call to churl_read 			*/
-	/* contains the complete HTTP response 	*/
-	StringInfoData the_rest_buf;
+    CHURL_HEADERS http_headers;
+    CHURL_HANDLE handle;
+    /* part of the HTTP response - received	*/
+    /* from one call to churl_read 			*/
+    /* contains the complete HTTP response 	*/
+    StringInfoData the_rest_buf;
 } ClientContext;
+
+/*
+ * FragmentData - describes a single Hadoop file split / HBase table region
+ * in means of location (ip, port), the source name of the specific file/table that is being accessed,
+ * and the index of a of list of fragments (splits/regions) for that source name.
+ * The index refers to the list of the fragments of that source name.
+ * user_data is optional.
+ */
+typedef struct FragmentData
+{
+    char    *authority;
+    char    *index;
+    char    *source_name;
+    char    *fragment_md;
+    char    *user_data;
+    char    *profile;
+} FragmentData;
 
 /*
  * One debug level for all log messages from the data allocation algorithm
@@ -46,6 +64,14 @@ typedef struct sClientContext
 
 #define REST_HEADER_JSON_RESPONSE "Accept: application/json"
 
-extern void set_fragments(GPHDUri* uri, Relation relation);
+/*
+ * Gets the fragments for the given uri location
+ */
+extern void get_fragments(GPHDUri *uri, Relation relation);
+
+/*
+ * Frees the given fragment
+ */
+extern void  free_fragment(FragmentData *data);
 
 #endif //GPDB_PXFFRAGMENT_H

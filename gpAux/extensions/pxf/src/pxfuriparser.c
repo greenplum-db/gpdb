@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include "libchurl.h"
 #include "pxfuriparser.h"
+#include "pxffragment.h"
 #include "pxfutils.h"
 #include "utils/formatting.h"
 
@@ -288,41 +288,20 @@ GPHDUri_free_options(GPHDUri *uri)
 }
 
 /*
- * Free fragment data
- */
-void
-free_fragment(FragmentData *data)
-{
-	if (data->authority)
-		pfree(data->authority);
-	if (data->fragment_md)
-		pfree(data->fragment_md);
-	if (data->index)
-		pfree(data->index);
-	if (data->profile)
-		pfree(data->profile);
-	if (data->source_name)
-		pfree(data->source_name);
-	if (data->user_data)
-		pfree(data->user_data);
-	pfree(data);
-}
-
-/*
  * Free fragments list
  */
 static void
 GPHDUri_free_fragments(GPHDUri *uri)
 {
-	ListCell *fragment = NULL;
+    ListCell *fragment = NULL;
 
-	foreach(fragment, uri->fragments)
-	{
-		FragmentData *data = (FragmentData*)lfirst(fragment);
-		free_fragment(data);
-	}
-	list_free(uri->fragments);
-	uri->fragments = NIL;
+    foreach(fragment, uri->fragments)
+    {
+        FragmentData *data = (FragmentData*)lfirst(fragment);
+        free_fragment(data);
+    }
+    list_free(uri->fragments);
+    uri->fragments = NIL;
 }
 
 /*

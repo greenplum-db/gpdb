@@ -112,10 +112,10 @@ test_pxfprotocol_import_first_call(void **state)
 
     /* set mock behavior for set fragments */
     gphd_uri->fragments = palloc0(sizeof(List));
-    expect_value(set_fragments, uri, gphd_uri);
-    expect_value(set_fragments, relation, relation);
-    will_assign_memory(set_fragments, uri, gphd_uri, sizeof(GPHDUri));
-    will_be_called(set_fragments);
+    expect_value(get_fragments, uri, gphd_uri);
+    expect_value(get_fragments, relation, relation);
+    will_assign_memory(get_fragments, uri, gphd_uri, sizeof(GPHDUri));
+    will_be_called(get_fragments);
 
     /* set mock behavior for bridge import start -- nothing here */
     expect_any(gpbridge_import_start, context);

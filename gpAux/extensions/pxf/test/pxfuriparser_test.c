@@ -29,8 +29,9 @@
 #include "../src/pxfutils.c"
 #include "../src/pxfuriparser.c"
 
+#include "mock/pxffragment_mock.c"
+
 static void test_parseGPHDUri_helper(const char* uri, const char* message);
-static void test_parseFragment_helper(const char* fragment, const char* message);
 static void test_verify_cluster_exception_helper(const char* uri_str);
 
 static char uri[] = "pxf://default/some/path/and/table.tbl?FRAGMENTER=SomeFragmenter&ACCESSOR=SomeAccessor&RESOLVER=SomeResolver&ANALYZER=SomeAnalyzer";
@@ -41,14 +42,20 @@ static char uri[] = "pxf://default/some/path/and/table.tbl?FRAGMENTER=SomeFragme
 void
 test_parseGPHDUri_ValidURI(void **state)
 {
+//    expect_any_count(free_fragment, data, -1);
+//    will_be_called_count(free_fragment, -1);
+
     GPHDUri* parsed = parseGPHDUri(uri);
+    StringInfoData port;
+    initStringInfo(&port);
+    appendStringInfo(&port, "%d", PxfDefaultPort);
 
     assert_true(parsed != NULL);
     assert_string_equal(parsed->uri, uri);
 
     assert_string_equal(parsed->protocol, "pxf");
     assert_string_equal(parsed->host, PxfDefaultHost);
-    assert_string_equal(parsed->port, PxfDefaultPortStr);
+    assert_string_equal(parsed->port, port.data);
     assert_string_equal(parsed->data, "some/path/and/table.tbl");
 
     List *options = parsed->options;

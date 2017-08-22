@@ -11,3 +11,10 @@ TypeOidGetTypename(Oid typid)
 	check_expected(typid);
 	return (char*) mock();
 }
+
+char*
+concat(int num_args, ...)
+{
+    check_expected(num_args);
+    return (char*) mock();
+}
