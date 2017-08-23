@@ -77,8 +77,9 @@ void get_fragments(GPHDUri *uri, Relation relation) {
 
     if ((FRAGDEBUG >= log_min_messages) || (FRAGDEBUG >= client_min_messages))
     {
-        elog(FRAGDEBUG, "Available Data fragments\n");
+        elog(FRAGDEBUG, "---Available Data fragments---\n");
         print_fragment_list(data_fragments);
+        elog(FRAGDEBUG, "------\n");
     }
 
     /*
@@ -95,8 +96,9 @@ void get_fragments(GPHDUri *uri, Relation relation) {
 
     if ((FRAGDEBUG >= log_min_messages) || (FRAGDEBUG >= client_min_messages))
     {
-        elog(FRAGDEBUG, "Allocated Data fragments\n");
+        elog(FRAGDEBUG, "---Allocated Data fragments---\n");
         print_fragment_list(data_fragments);
+        elog(FRAGDEBUG, "------\n");
     }
 
     uri->fragments = data_fragments;
@@ -147,7 +149,9 @@ get_data_fragment_list(GPHDUri *hadoop_uri,
 }
 
 /*
- * Wrap the REST call with a retry for the HA HDFS scenario
+ * Wrap the REST call.
+ * TODO: Add logic later to handle HDFS HA related exception
+ *       to failover with a retry for the HA HDFS scenario.
  */
 static void
 rest_request(GPHDUri *hadoop_uri, ClientContext* client_context, char *rest_msg)
@@ -192,27 +196,27 @@ parse_get_fragments_response(List *fragments, StringInfo rest_buf)
         struct json_object *js_fragment = json_object_array_get_idx(head, i);
         FragmentData* fragment = (FragmentData*)palloc0(sizeof(FragmentData));
 
-        /* 0. source name */
+        /* source name */
         struct json_object *block_data;
         if(json_object_object_get_ex(js_fragment, "sourceName", &block_data))
             fragment->source_name = pstrdup(json_object_get_string(block_data));
 
-        /* 1. fragment index, incremented per source name */
+        /* fragment index, incremented per source name */
         struct json_object *index;
         if(json_object_object_get_ex(js_fragment, "index", &index) && index)
             fragment->index = pstrdup(json_object_get_string(index));
 
-        /* 3. location - fragment meta data */
+        /* location - fragment meta data */
         struct json_object *js_fragment_metadata;
         if (json_object_object_get_ex(js_fragment, "metadata", &js_fragment_metadata) && js_fragment_metadata)
             fragment->fragment_md = pstrdup(json_object_get_string(js_fragment_metadata));
 
-        /* 4. userdata - additional user information */
+        /* userdata - additional user information */
         struct json_object *js_user_data;
         if (json_object_object_get_ex(js_fragment, "userData", &js_user_data) && js_user_data)
             fragment->user_data = pstrdup(json_object_get_string(js_user_data));
 
-        /* 5. profile - recommended profile to work with fragment */
+        /* profile - recommended profile to work with fragment */
         struct json_object *js_profile;
         if (json_object_object_get_ex(js_fragment, "profile", &js_profile) && js_profile)
             fragment->profile = pstrdup(json_object_get_string(js_profile));

@@ -42,9 +42,6 @@ static char uri[] = "pxf://default/some/path/and/table.tbl?FRAGMENTER=SomeFragme
 void
 test_parseGPHDUri_ValidURI(void **state)
 {
-//    expect_any_count(free_fragment, data, -1);
-//    will_be_called_count(free_fragment, -1);
-
     GPHDUri* parsed = parseGPHDUri(uri);
     StringInfoData port;
     initStringInfo(&port);
