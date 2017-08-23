@@ -2900,8 +2900,8 @@
           <codeph>APPENDONLY=TRUE</codeph> in the <cmdname>WITH</cmdname> clause.</p>
       <p>This example <cmdname>gpconfig</cmdname> utility command sets the default storage option
         for a Greenplum Database system. If you set the defaults for multiple table storage options,
-        the value must be enclosed in single quotes and then in double
-        quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v "'appendonly=true, orientation=column'"</codeblock></p>
+        the value must be enclosed in single
+        quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v 'appendonly=true, orientation=column'</codeblock></p>
       <p>This example <cmdname>gpconfig</cmdname> utility command shows the value of the parameter.
         The parameter value must be consistent across the Greenplum Database master and all
         segments.<codeblock>gpconfig -s 'gp_default_storage_options'</codeblock></p>
@@ -4710,8 +4710,8 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
-      <p>Identifies the maximum percentage of system CPU resources to allocate to resource
-        groups on each Greenplum Database segment node.</p>
+      <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
+        each Greenplum Database segment node.</p>
       <table id="gp_resource_group_cpu_limit_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4738,7 +4738,8 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
-      <p>Identifies the maximum percentage of system memory resources to allocate to resource groups on each Greenplum Database segment node.</p>
+      <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
+        on each Greenplum Database segment node.</p>
       <table id="gp_resource_group_memory_limit_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4765,7 +4766,8 @@
   <topic id="gp_resource_manager">
     <title>gp_resource_manager</title>
     <body>
-      <p>Identifies the resource management scheme currently enabled in the Greenplum Database cluster. The default scheme is workload management using resource queues.</p>
+      <p>Identifies the resource management scheme currently enabled in the Greenplum Database
+        cluster. The default scheme is workload management using resource queues.</p>
       <table id="gp_resource_manager_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6604,7 +6606,7 @@
     <title>log_temp_files</title>
     <body>
       <p>Controls logging of temporary file names and sizes. Temporary files can be created for
-        sorts, hashes,  temporary query results and spill files. A log entry is made in
+        sorts, hashes, temporary query results and spill files. A log entry is made in
           <codeph>pg_log</codeph> for each temporary file when it is deleted. Depending on the
         source of the temporary files, the log entry could be created on either the master and/or
         segments. A <codeph>log_temp_files</codeph> value of zero logs all temporary file
