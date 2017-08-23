@@ -24,6 +24,17 @@ class HeapChecksum:
         value = cmd.get_value('Data page checksum version')
         return value
 
+    def get_standby_value(self):
+        """
+        can raise
+        :return: the heap checksum setting (1 or 0) for the standby master
+        """
+        standbyMaster_gpdb = self.gparray.standbyMaster
+        cmd = PgControlData(name='run pg_controldata', datadir=standbyMaster_gpdb.getSegmentDataDirectory())
+        cmd.run(validateAfter=True)
+        value = cmd.get_value('Data page checksum version')
+        return value
+
     def get_segments_checksum_settings(self, gpdb_list=None):
         """
         :return: two lists of GpDB objects (as defined in gparray) for successes and failures,
