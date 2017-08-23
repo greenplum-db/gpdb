@@ -1381,19 +1381,28 @@ groupApplyMemCaps(ResGroupData *group, const ResGroupCaps *caps)
 
 	/* memStocksAvailable is the total free non-shared quota */
 	memStocksAvailable = group->memQuotaGranted - group->memQuotaUsed;
-	/*
-	 * memStocksNeeded is the total non-shared quota needed
-	 * by all the free slots
-	 */
-	memStocksNeeded = slotGetMemQuotaExpected(caps) *
-		(caps->concurrency.proposed - group->nRunning);
 
-	/*
-	 * if memStocksToFree > 0 then we can safely release these
-	 * non-shared quota and still have enough quota to run
-	 * all the free slots.
-	 */
-	memStocksToFree = memStocksAvailable - memStocksNeeded;
+	if (caps->concurrency.proposed > group->nRunning)
+	{
+		/*
+		 * memStocksNeeded is the total non-shared quota needed
+		 * by all the free slots
+		 */
+		memStocksNeeded = slotGetMemQuotaExpected(caps) *
+			(caps->concurrency.proposed - group->nRunning);
+
+		/*
+		 * if memStocksToFree > 0 then we can safely release these
+		 * non-shared quota and still have enough quota to run
+		 * all the free slots.
+		 */
+		memStocksToFree = memStocksAvailable - memStocksNeeded;
+	}
+	else
+	{
+		memStocksToFree = Min(memStocksAvailable,
+							  group->memQuotaGranted - groupGetMemQuotaExpected(caps));
+	}
 
 	/* TODO: optimize the free logic */
 	if (memStocksToFree > 0)
@@ -1647,16 +1656,30 @@ wakeupGroups(Oid skipGroupId)
 static bool 
 groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot, const ResGroupCaps *caps)
 {
-	int32		memQuotaExpected;
-	int32		memQuotaToFree;
+	int32		memQuotaNeedFree;
 	int32		memSharedNeeded;
+	int32		memQuotaToFree;
 	int32		memSharedToFree;
+	int32       memQuotaExpected;
 
 	Assert(LWLockHeldExclusiveByMe(ResGroupLock));
 
 	/* Return the over used memory quota to sys */
-	memQuotaExpected = slotGetMemQuotaExpected(caps);
-	memQuotaToFree = slot->memQuota - memQuotaExpected;
+	memQuotaNeedFree = group->memQuotaGranted - groupGetMemQuotaExpected(caps);
+	memQuotaToFree = memQuotaNeedFree > 0 ? Min(memQuotaNeedFree, slot->memQuota) : 0;
+
+	if (caps->concurrency.proposed >= group->nRunning)
+	{
+		/*
+		 * Under this situation, when this slot is released,
+		 * others will not be blocked by concurrency limit if
+		 * they come to acquire this slot. So we could decide
+		 * not to give all the memory to syspool even if we could.
+		 */
+		memQuotaExpected = slotGetMemQuotaExpected(caps);
+		if (memQuotaToFree > memQuotaExpected)
+			memQuotaToFree -= memQuotaExpected;
+	}
 
 	if (memQuotaToFree > 0)
 	{
