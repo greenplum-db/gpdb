@@ -3576,10 +3576,6 @@ boolean mapred_create_object(PGconn *conn, mapred_document_t *doc,
 					 * Note that unlike the columns set by the mapper or the
 					 * input this is a list that must be de-allocated.
 					 */
-					columns = mapred_malloc(sizeof(mapred_plist_t));
-					columns->name = "value";  /* FIXME */
-					columns->type = "text";   /* FIXME */
-					columns->next = grouping;
 					columns = last;
 
 					/*
