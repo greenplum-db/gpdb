@@ -1305,15 +1305,16 @@
       <p>Heap data pages store heap tables, catalog tables, indexes, and database metadata.
         Append-optimized storage has built-in checksum support that is unrelated to this
         parameter.</p>
-      <p>When heap data checksums are enabled, Greenplum Database computes and stores checksums on
-        heap data pages when they are written to disk. When a page is retrieved from disk, the
-        checksum is verified. If the verification fails, an error is generated and the page is not
-        permitted to load into PostgreSQL managed memory. </p>
+      <p>Greenplum Database uses checksums to prevent loading data corrupted in the file system into
+        memory managed by database processes. When heap data checksums are enabled, Greenplum
+        Database computes and stores checksums on heap data pages when they are written to disk.
+        When a page is retrieved from disk, the checksum is verified. If the verification fails, an
+        error is generated and the page is not permitted to load into managed memory. </p>
       <p>If the <codeph>ignore_checksum_failure</codeph> configuration parameter has been set to on,
         a failed checksum verification generates a warning, but the page is allowed to be loaded
-        into PostgreSQL managed memory. If the page is then updated, it is flushed to disk and
-        replicated to the mirror. This can cause data corruption to propagate to the mirror and
-        prevent a complete recovery. Because of the potential for data loss, the
+        into managed memory. If the page is then updated, it is flushed to disk and replicated to
+        the mirror. This can cause data corruption to propagate to the mirror and prevent a complete
+        recovery. Because of the potential for data loss, the
           <codeph>ignore_checksum_failure</codeph> parameter should only be enabled when needed to
         recover data. See <xref href="#ignore_checksum_failure" format="dita"/> for more
         information.</p>
@@ -5529,13 +5530,14 @@
     <title>ignore_checksum_failure</title>
     <body>
       <p>Only has effect if <xref href="#data_checksums" format="dita"/> is enabled.</p>
+      <p>Greenplum Database uses checksums to prevent loading data that has been corrupted in the
+        file system into memory managed by database processes. </p>
       <p>By default, when a checksum verify error occurs when reading a heap data page, Greenplum
-        Database generates an error and prevents the page from being loaded into PostgreSQL managed
-        memory. When <codeph>ignore_checksum_failure</codeph> is set to on and a checksum verify
-        failure occurs, Greenplum Database generates a warning, and allows the page to be read into
-        PostgreSQL managed memory. If the page is then updated it is saved to disk and replicated to
-        the mirror. If the page header is corrupt an error is reported even if this option is
-        enabled. </p>
+        Database generates an error and prevents the page from being loaded into managed memory.
+        When <codeph>ignore_checksum_failure</codeph> is set to on and a checksum verify failure
+        occurs, Greenplum Database generates a warning, and allows the page to be read into managed
+        memory. If the page is then updated it is saved to disk and replicated to the mirror. If the
+        page header is corrupt an error is reported even if this option is enabled. </p>
       <note type="warning"> Setting <codeph>ignore_checksum_failure</codeph> to on may propagate or
         hide data corruption or lead to other serious problems. However, if a checksum failure has
         already been detected and the page header is uncorrupted, setting
