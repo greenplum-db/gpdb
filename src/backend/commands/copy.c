@@ -1685,9 +1685,9 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 			if (rel_is_partitioned(relid))
 			{
-				if (cstate->on_segment && !partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
+				if (cstate->on_segment && gp_enable_segment_copy_checking && !partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
 				{
-					elog(ERROR, "COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.");
+					elog(ERROR, "COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table.\"SET gp_enable_segment_copy_checking=off\" can disable distribution key checking.");
 					return cstate->processed;
 				}
 				PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
@@ -4513,7 +4513,7 @@ CopyFrom(CopyState cstate)
 	attr_count = list_length(cstate->attnumlist);
 	num_defaults = 0;
 	bool		is_segment_data_processed = (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE) ? false : true;
-	bool		is_check_distkey = (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE) ? true : false;
+	bool is_check_distkey = (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE && gp_enable_segment_copy_checking) ? true : false;
 	GpDistributionData	distData; /* distribution data used to compute target seg */
 	unsigned int	target_seg = 0; /* result segment of cdbhash */
 
@@ -5091,7 +5091,7 @@ PROCESS_SEGMENT_DATA:
 					target_seg = get_target_seg(distData, values, nulls);
 					/*check distribution key if COPY FROM ON SEGMENT*/
 					if (GpIdentity.segindex != target_seg)
-						elog(ERROR, "Value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d.", GpIdentity.segindex, target_seg);
+						elog(ERROR, "Value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d.\"SET gp_enable_segment_copy_checking=off\" can disable distribution key checking.", GpIdentity.segindex, target_seg);
 				}
 
 				if (relstorage == RELSTORAGE_AOROWS)
