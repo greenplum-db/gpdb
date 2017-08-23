@@ -52,7 +52,7 @@ test_parseGPHDUri_ValidURI(void **state)
 
     assert_string_equal(parsed->protocol, "pxf");
     assert_string_equal(parsed->host, PxfDefaultHost);
-    assert_string_equal(parsed->port, port.data);
+    assert_string_equal(parsed->port, pstrdup(port.data));
     assert_string_equal(parsed->data, "some/path/and/table.tbl");
 
     List *options = parsed->options;

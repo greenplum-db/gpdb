@@ -25,8 +25,6 @@
 #include "access/extprotocol.h"
 #include "nodes/pg_list.h"
 
-#include <unistd.h>
-
 /* define magic module unless run as a part of test cases */
 #ifndef UNIT_TESTING
 PG_MODULE_MAGIC;

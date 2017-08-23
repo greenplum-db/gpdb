@@ -120,7 +120,7 @@ static void assign_pxf_location_to_fragments(List *fragments)
     foreach(frag_c, fragments)
     {
         FragmentData 	*fragment	= (FragmentData*)lfirst(frag_c);
-        fragment->authority = authority.data;
+        fragment->authority = pstrdup(authority.data);
     }
     return;
 }
