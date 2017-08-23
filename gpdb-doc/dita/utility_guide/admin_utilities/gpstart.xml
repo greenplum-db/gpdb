@@ -95,9 +95,10 @@
                         checksum setting among the Greenplum Database master and segment instances.
                         The default is to ensure that the heap checksum setting is the same on all
                         instances, either enabled or disabled. <note type="warning">Starting
-                            Greenplum Database without this validation could lead to data loss. This
-                            option should only be used to start Greenplum Database to perform
-                            maintenance or recovery tasks.</note></pd>
+                            Greenplum Database without this validation could lead to data loss. Use
+                            this option to start Greenplum Database only when it is necessary to
+                            ignore the heap checksum verification errors to recover data or to
+                            troubleshoot the errors.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>-t <varname>timeout_seconds</varname></pt>
