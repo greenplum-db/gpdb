@@ -38,14 +38,12 @@
                 validation can be disabled by specifying the option
                     <codeph>--skip-heap-checksum-validation</codeph>. For more information about
                 heap checksums, see <xref
-                    href="../../admin_guide/highavail/topics/g-overview-of-high-availability-in-greenplum-database.xml"
-                    format="dita" scope="peer">Overview of Greenplum Database High
-                    Availability</xref> in the <cite>Greenplum Database Admininstartor
-                Guide</cite>.</p>
+                    href="../../admin_guide/highavail/topics/g-enabling-high-availability-features.xml"
+                    format="dita" scope="peer">Enabling High Availability and Data Consistency
+                    Features</xref> in the <cite>Greenplum Database Admininstartor Guide</cite>.</p>
             <note>Before you can start a Greenplum Database system, you must have initialized the
                 system using <codeph>gpinitsystem</codeph>. Enabling or disabing heap checksums is
-                performed system intitalization with and cannot be changed after
-                initalization.</note>
+                set when you initalize the system and cannot be changed after initalization.</note>
         </section>
         <section id="section4">
             <title>Options</title>
