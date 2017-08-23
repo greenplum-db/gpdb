@@ -1746,12 +1746,16 @@ pg_re_throw(void)
 bool
 elog_demote(int downgrade_to_elevel)
 {
-	ErrorData  *edata = &errordata[errordata_stack_depth];
+	ErrorData  *edata;
+
+	if (errordata_stack_depth < 0 ||
+		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
+		return false;
+
+	edata = &errordata[errordata_stack_depth];
 
 	if (downgrade_to_elevel >= ERROR ||
 		recursion_depth != 0 ||
-		errordata_stack_depth < 0 ||
-		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1 ||
 		edata->elevel > ERROR ||
 		edata->elevel < downgrade_to_elevel)
 		return false;
@@ -1782,14 +1786,18 @@ elog_demote(int downgrade_to_elevel)
 bool
 elog_dismiss(int downgrade_to_elevel)
 {
-	ErrorContextCallback *saveCallbackStack = error_context_stack;
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-	bool		shouldEmit = false;
+	ErrorContextCallback   *saveCallbackStack = error_context_stack;
+	ErrorData			   *edata;
+	bool					shouldEmit = false;
+
+	if (errordata_stack_depth < 0 ||
+		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1)
+		return false;
+
+	edata = &errordata[errordata_stack_depth];
 
 	if (downgrade_to_elevel >= ERROR ||
 		recursion_depth != 0 ||
-		errordata_stack_depth < 0 ||
-		errordata_stack_depth >= ERRORDATA_STACK_SIZE - 1 ||
 		edata->elevel > ERROR)
 		return false;
 
