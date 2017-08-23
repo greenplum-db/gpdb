@@ -11,7 +11,7 @@ from gppylib.mainUtils import *
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 import os, sys, getopt, socket, StringIO, signal, copy
 
-from gppylib import gparray, gplog, pgconf, userinput, utils
+from gppylib import gparray, gplog, pgconf, userinput, utils, heapchecksum
 from gppylib.util import gp_utils
 from gppylib.commands import base, gp, pg, unix
 from gppylib.db import catalog, dbconn
@@ -32,6 +32,7 @@ from gppylib.userinput import *
 
 logger = gplog.get_default_logger()
 
+MAX_PARALLEL_ADD_MIRRORS = 96
 
 def validateFlexibleHeadersListAllFilespaces(configFileLabel, gpArray, fileData):
     """
@@ -110,7 +111,7 @@ class GpMirrorBuildCalculator:
 
         Unlike __addMirrorForTargetHost, this does not require that the segments be added to
                a host that already has a primary
-        
+
         """
         if targetHost not in self.__mirrorsAddedByHost:
             self.__mirrorsAddedByHost[targetHost] = 0
@@ -291,7 +292,7 @@ class GpMirrorBuildCalculator:
 class GpAddMirrorsProgram:
     """
     The implementation of gpaddmirrors
-    
+
     """
 
     def __init__(self, options):
@@ -387,7 +388,7 @@ class GpAddMirrorsProgram:
         lines.append("filespaceOrder=" + (":".join([fs.getName() for fs in filespaceArr])))
 
         #
-        # now a line for each mirror 
+        # now a line for each mirror
         #
         for i, toBuild in enumerate(mirrorBuilder.getMirrorsToBuild()):
             mirror = toBuild.getFailoverSegment()
@@ -592,6 +593,40 @@ class GpAddMirrorsProgram:
                 'Value of port offset supplied via -p option produces ports outside of the valid range' \
                 'Mirror port base range must be between %d and %d' % (minAllowedPort, maxAllowedPort))
 
+
+    def validate_heap_checksums(self, gpArray):
+        num_workers = min(len(gpArray.get_hostlist()), MAX_PARALLEL_ADD_MIRRORS)
+        heap_checksum_util = heapchecksum.HeapChecksum(gparray=gpArray, num_workers=num_workers, logger=logger)
+        successes, failures = heap_checksum_util.get_segments_checksum_settings()
+        if len(successes) == 0:
+            logger.fatal("No segments responded to ssh query for heap checksum. Not expanding the cluster.")
+            return 1
+
+        consistent, inconsistent, master_heap_checksum = heap_checksum_util.check_segment_consistency(successes)
+
+        inconsistent_segment_msgs = []
+        for segment in inconsistent:
+            inconsistent_segment_msgs.append("dbid: %s "
+                                             "checksum set to %s differs from master checksum set to %s" %
+                                             (segment.getSegmentDbId(), segment.heap_checksum,
+                                              master_heap_checksum))
+
+        if not heap_checksum_util.are_segments_consistent(consistent, inconsistent):
+            logger.fatal("Cluster heap checksum setting differences reported")
+            logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
+                              % (len(inconsistent_segment_msgs), len(gpArray.segments)))
+            logger.fatal("Review %s for details" % get_logfile())
+            log_to_file_only("Failed checksum consistency validation:", logging.WARN)
+            logger.fatal("gpaddmirrors error: Cluster will not be modified as checksum settings are not consistent "
+                              "across the cluster.")
+
+            for msg in inconsistent_segment_msgs:
+                log_to_file_only(msg, logging.WARN)
+                raise Exception("Segments have heap_checksum set inconsistently to master")
+        else:
+            logger.info("Heap checksum setting consistent across cluster")
+
+
     def run(self):
         if self.__options.parallelDegree < 1 or self.__options.parallelDegree > 64:
             raise ProgramArgumentValidationException(
@@ -603,6 +638,9 @@ class GpAddMirrorsProgram:
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getMasterPort())
         confProvider = configInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
         gpArray = confProvider.loadSystemConfig(useUtilityMode=False)
+
+        # check that heap_checksums is consistent across cluster, fail immediately if not
+        self.validate_heap_checksums(gpArray)
 
         # check that we actually have mirrors
         if gpArray.getFaultStrategy() != gparray.FAULT_STRATEGY_NONE:
