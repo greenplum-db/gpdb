@@ -8,22 +8,29 @@
             privilege by default.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock>
+            <codeblock id="sql_command_synopsis">CREATE USER <varname>name</varname> [[WITH] <varname>option</varname> [ ... ]]</codeblock>
             <p>where <varname>option</varname> can be:</p>
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
+    | CREATEEXTTABLE | NOCREATEEXTTABLE 
+      [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
+           where <varname>attributes</varname> and <varname>value</varname> are:
+           type='readable'|'writable'
+           protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
+    | CONNECTION LIMIT <varname>connlimit</varname>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
     | VALID UNTIL '<varname>timestamp</varname>' 
     | IN ROLE <varname>rolename</varname> [, ...]
-    | IN GROUP <varname>rolename</varname> [, ...]
     | ROLE <varname>rolename</varname> [, ...]
     | ADMIN <varname>rolename</varname> [, ...]
-    | USER <varname>rolename</varname> [, ...]
-    | SYSID <varname>uid</varname>    | RESOURCE QUEUE <varname>queue_name</varname></codeblock>
+    | RESOURCE QUEUE <varname>queue_name</varname>
+    | RESOURCE GROUP <varname>group_name</varname>
+    | [ DENY <varname>deny_point</varname> ]
+    | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

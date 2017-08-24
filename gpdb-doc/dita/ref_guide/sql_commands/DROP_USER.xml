@@ -15,20 +15,6 @@
             type="topic" format="dita"/></codeph>. See <codeph><xref href="DROP_ROLE.xml#topic1"
             type="topic" format="dita"/></codeph> for more information.</p>
     </section>
-    <section id="section4">
-      <title>Parameters</title>
-      <parml>
-        <plentry>
-          <pt>IF EXISTS</pt>
-          <pd>Do not throw an error if the role does not exist. A notice is issued in this case.
-          </pd>
-        </plentry>
-        <plentry>
-          <pt><varname>name</varname></pt>
-          <pd>The name of an existing role.</pd>
-        </plentry>
-      </parml>
-    </section>
     <section id="section5">
       <title>Compatibility</title>
       <p>There is no <codeph>DROP USER</codeph> statement in the SQL standard. The SQL standard
