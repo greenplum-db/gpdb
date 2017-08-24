@@ -5,8 +5,8 @@
    <title>Database Table Parameters</title>
    <body>
       <p>The following parameter configures default option settings for Greenplum Database tables. </p>
-      <p>See <xref href="../ddl/ddl-table.xml#topic_jtv_5vy_sp"/> for more
-         information about Greenplum Database tables.</p>
+      <p>See <xref href="../ddl/ddl-table.xml#topic_jtv_5vy_sp"/> for more information about
+         Greenplum Database tables.</p>
       <ul>
          <li id="kh164980">
             <codeph>gp_create_table_random_default_distribution</codeph>
@@ -15,14 +15,16 @@
             <codeph>gp_default_storage_options</codeph>
          </li>
          <li><codeph>gp_enable_exchange_default_partition</codeph></li>
+         <li><codeph>gp_enable_segment_copy_checking</codeph></li>
       </ul>
    </body>
    <topic id="topic_jjz_nnp_kq">
       <title>Append-Optimized Table Parameters</title>
       <body>
-         <p>The following parameters configure the <ph>append-optimized</ph> tables feature of Greenplum Database. </p>
-         <p>See <xref href="../ddl/ddl-storage.xml#topic38"/> for more information
-            about append-optimized tables.</p>
+         <p>The following parameters configure the <ph>append-optimized</ph> tables feature of
+            Greenplum Database. </p>
+         <p>See <xref href="../ddl/ddl-storage.xml#topic38"/> for more information about
+            append-optimized tables.</p>
          <ul id="ul_gvm_pnp_kq">
             <li>
                <codeph>gp_default_storage_options</codeph>

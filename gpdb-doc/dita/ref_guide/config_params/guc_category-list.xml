@@ -269,10 +269,9 @@
     <topic id="topic19" xml:lang="en">
       <title>Cost-Based Vacuum Delay Parameters</title>
       <body>
-        <note type="warning">Do not use cost-based vacuum delay because it runs
-          asynchronously among the segment instances. The vacuum cost limit and delay is invoked at
-          the segment level without taking into account the state of the entire Greenplum Database
-          array</note>
+        <note type="warning">Do not use cost-based vacuum delay because it runs asynchronously among
+          the segment instances. The vacuum cost limit and delay is invoked at the segment level
+          without taking into account the state of the entire Greenplum Database array</note>
         <p>You can configure the execution cost of <codeph>VACUUM</codeph> and
             <codeph>ANALYZE</codeph> commands to reduce the I/O impact on concurrent database
           activity. When the accumulated cost of I/O operations reaches the limit, the process
@@ -1191,8 +1190,8 @@
   <topic id="topic444" xml:lang="en">
     <title id="kh1550694">Workload Management Parameters (Resource Groups)</title>
     <body>
-      <p>The following parameters configure the Greenplum Database resource group
-        workload management feature. </p>
+      <p>The following parameters configure the Greenplum Database resource group workload
+        management feature. </p>
       <simpletable id="kh1571613" frame="none">
         <strow>
           <stentry>
@@ -1275,6 +1274,7 @@
               <xref href="guc-list.xml#gp_enable_exchange_default_partition"
                 >gp_enable_exchange_default_partition</xref>
             </p>
+            <p><xref href="guc-list.xml#gp_enable_segment_copy_checking">gp_enable_segment_copy_checking</xref></p>
           </stentry>
         </strow>
       </simpletable>

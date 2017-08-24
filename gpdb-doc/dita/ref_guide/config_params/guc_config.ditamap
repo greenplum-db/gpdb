@@ -92,6 +92,7 @@
             <topicref href="guc-list.xml#gp_enable_predicate_propagation"/>
             <topicref href="guc-list.xml#gp_enable_preunique"/>
             <topicref href="guc-list.xml#gp_enable_relsize_collection"/>
+            <topicref href="guc-list.xml#gp_enable_segment_copy_checking"/>
             <topicref href="guc-list.xml#gp_enable_sequential_window_plans"/>
             <topicref href="guc-list.xml#gp_enable_sort_distinct"/>
             <topicref href="guc-list.xml#gp_enable_sort_limit"/>
