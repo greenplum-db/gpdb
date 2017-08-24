@@ -3589,13 +3589,6 @@
   <topic id="gp_enable_segment_copy_checking">
     <title>gp_enable_segment_copy_checking</title>
     <body>
-      <draft-comment author="msk">5.0.0 -  DRAFT <xref
-          href="https://www.pivotaltracker.com/story/show/150158098" format="html" scope="external"
-          >#150158098</xref>
-        <xref href="https://github.com/greenplum-db/gpdb/pull/3038" format="html" scope="external"
-          >gpdb/pull/3038</xref><p otherprops="op-hidden">HIDDEN - GUC ditamap - NOTES: - Add GUC to
-          list of GUCs
-          RefGuide/AdminGuide<codeblock>                        &lt;topicref href="guc-list.xml#gp_enable_segment_copy_checking"/></codeblock></p></draft-comment>
       <p>Controls whether the distribution policy for a table (from the table
           <codeph>DISTRIBUTED</codeph> clause) is checked when data is copied into the table with
         the <codeph>COPY FROM...ON SEGMENT</codeph> command. The default is <codeph>true</codeph>,
@@ -6662,7 +6655,7 @@
     <title>log_temp_files</title>
     <body>
       <p>Controls logging of temporary file names and sizes. Temporary files can be created for
-        sorts, hashes,  temporary query results and spill files. A log entry is made in
+        sorts, hashes, temporary query results and spill files. A log entry is made in
           <codeph>pg_log</codeph> for each temporary file when it is deleted. Depending on the
         source of the temporary files, the log entry could be created on either the master and/or
         segments. A <codeph>log_temp_files</codeph> value of zero logs all temporary file
