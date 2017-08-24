@@ -138,6 +138,7 @@ get_data_fragment_list(GPHDUri *hadoop_uri,
                        ClientContext *client_context)
 {
     List *data_fragments = NIL;
+    Assert(hadoop_uri->data != NULL);
     char *restMsg = concat(2, "http://%s:%s/%s/%s/Fragmenter/getFragments?path=", hadoop_uri->data);
 
     rest_request(hadoop_uri, client_context, restMsg);

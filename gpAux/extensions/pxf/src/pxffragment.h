@@ -62,8 +62,6 @@ typedef struct FragmentData
  */
 #define FRAGDEBUG DEBUG2
 
-#define REST_HEADER_JSON_RESPONSE "Accept: application/json"
-
 /*
  * Gets the fragments for the given uri location
  */
