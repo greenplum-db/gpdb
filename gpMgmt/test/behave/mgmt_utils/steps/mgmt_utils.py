@@ -3302,6 +3302,7 @@ def impl(context, dbname):
 
 
 @when('sql "{sql}" is executed in "{dbname}" db')
+@then('sql "{sql}" is executed in "{dbname}" db')
 def impl(context, sql, dbname):
     execute_sql(dbname, sql)
 
