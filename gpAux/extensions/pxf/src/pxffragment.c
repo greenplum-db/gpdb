@@ -350,20 +350,11 @@ print_fragment_list(List *fragments)
         FragmentData	*frag	= (FragmentData*)lfirst(fragment_cell);
 
         appendStringInfo(&log_str, "Fragment index: %s\n", frag->index);
-
         appendStringInfo(&log_str, "authority: %s\n", frag->authority);
         appendStringInfo(&log_str, "source: %s\n", frag->source_name);
         appendStringInfo(&log_str, "metadata: %s\n", frag->fragment_md ? frag->fragment_md : "NULL");
-
-        if (frag->user_data)
-        {
-            appendStringInfo(&log_str, "user data: %s\n", frag->user_data);
-        }
-
-        if (frag->profile)
-        {
-            appendStringInfo(&log_str, "profile: %s\n", frag->profile);
-        }
+        appendStringInfo(&log_str, "user data: %s\n", frag->user_data ? frag->user_data : "NULL");
+        appendStringInfo(&log_str, "profile: %s\n", frag->profile ? frag->profile : "NULL");
     }
 
     elog(FRAGDEBUG, "%s", log_str.data);
