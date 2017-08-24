@@ -25,7 +25,7 @@
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
 #include "postgres.h"
-#include "../../../../src/include/lib/stringinfo.h"
+#include "lib/stringinfo.h"
 
 #include <json-c/json.h>
 
@@ -57,8 +57,6 @@ void get_fragments(GPHDUri *uri, Relation relation) {
      * 1. Initialize curl headers
      */
     init(uri, &client_context);
-    if (!uri)
-        return;
 
     /*
      * Enrich the curl HTTP header
@@ -305,8 +303,6 @@ static void init(GPHDUri* uri, ClientContext* cl_context)
 
     /* set HTTP header that guarantees response in JSON format */
     churl_headers_append(cl_context->http_headers, REST_HEADER_JSON_RESPONSE, NULL);
-    if (!cl_context->http_headers)
-        return;
 
     return;
 }
