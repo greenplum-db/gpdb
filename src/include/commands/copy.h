@@ -19,6 +19,7 @@
 #include "tcop/dest.h"
 #include "executor/executor.h"
 #include "cdb/cdbhash.h"
+#include "cdb/cdbcopy.h"
 
 /*
  * Represents the different source/dest cases we need to worry about at
@@ -298,6 +299,37 @@ typedef struct GpDistributionData
 	AttrNumber p_nattrs; /* num of attributes in the distribution policy */
 	Oid *p_attr_types;   /* types for each policy attribute */
 	CdbHash *cdbHash;
+	HTAB *hashmap;
 } GpDistributionData;
 
-#endif   /* COPY_H */
+typedef struct PartitionData
+{
+	/* variables for partitioning */
+	Datum *part_values ;
+	Oid *part_attr_types; /* types for partitioning */
+	Oid *part_typio ;
+	FmgrInfo *part_infuncs ;
+	AttrNumber *part_attnum ;
+	int part_attnums ;
+} PartitionData;
+
+typedef struct GetAttrContext
+{
+	TupleDesc tupDesc;
+	Form_pg_attribute *attr;
+	AttrNumber num_phys_attrs;
+	int *attr_offsets;
+	bool *nulls;
+	Datum *values;
+	CdbCopy *cdbCopy;
+	int original_lineno_for_qe;
+} GetAttrContext;
+
+typedef struct  cdbhashdata
+{
+	Oid relid;
+	CdbHash *cdbHash; /* a CdbHash API object */
+	GpPolicy *policy; /* policy for this cdb hash */
+} cdbhashdata;
+
+#endif /* COPY_H */
