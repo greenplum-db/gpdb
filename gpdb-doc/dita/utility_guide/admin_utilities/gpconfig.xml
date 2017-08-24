@@ -182,10 +182,10 @@ $ gpconfig -c gp_email_to -v 'gpdb-admin@example.com'</codeblock></p>
         quotes around the
         values:<codeblock>gp_email_from='gpdb-server@example.com'
 gp_email_to='gpdb-admin@example.com'</codeblock></p>
-      <p>These example shows the syntax required due to bash shell string processing.</p>
+      <p>These examples shows the syntax required due to bash shell string processing.</p>
       <codeblock>gpconfig -c search_path -v '"\$user",public'
 gpconfig -c dynamic_library_path -v '\$libdir'</codeblock>
-      <p>The configuration paramters are added to the <codeph>postgresql.conf</codeph> file.</p>
+      <p>The configuration parameters are added to the <codeph>postgresql.conf</codeph> file.</p>
       <codeblock>search_path='"$user",public'
 dynamic_library_path='$libdir'</codeblock>
       <p>Comment out all instances of the <codeph>default_statistics_target</codeph> configuration
