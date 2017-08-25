@@ -107,6 +107,22 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 drop table foo_p;
 drop table bar_p;
 
+-- still different schema, but more than one level partitioning
+CREATE TABLE two_level_pt(a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+      SUBPARTITION BY RANGE (c)
+      SUBPARTITION TEMPLATE (
+      START (11) END (12) EVERY (1))
+      ( START (1) END (2) EVERY (1));
+
+CREATE TABLE candidate_for_leaf(a int, c int);
+
+-- should fail
+ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
+      EXCHANGE PARTITION FOR (11) WITH TABLE candidate_for_leaf;
+
+
 -- different owner 
 create role part_role;
 create table foo_p (i int, j int) distributed by (i)
