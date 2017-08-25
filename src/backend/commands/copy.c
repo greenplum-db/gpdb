@@ -454,16 +454,6 @@ CopySendEndOfRow(CopyState cstate)
 						(errcode_for_file_access(),
 						 errmsg("could not write to COPY file: %m")));
 
-			/* Send "\n" to QD for "processed" line number counting */
-			if (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE)
-			{
-				if (cstate->ignore_extra_line) /* the csv header */
-					/* ignore the csv header, set the flag */
-					cstate->ignore_extra_line = false;
-				else
-					(void) pq_putmessage('d', "\n", 1);
-			}
-
 			break;
 		case COPY_OLD_FE:
 			/* The FE/BE protocol uses \n as newline for all platforms */
@@ -1338,10 +1328,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			struct stat st;
 			char *filename = cstate->filename;
 
-			/*
-			 * If on_segment, QD receives "\n" for "processed" line number counting, saves
-			 * them to /dev/null to avoid nonsense file
-			 */
 			if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
 				filename = "/dev/null";
 
@@ -2173,7 +2159,6 @@ CopyToDispatch(CopyState cstate)
 		}
 
 		/* add a newline and flush the data */
-		cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 		CopySendEndOfRow(cstate);
 	}
 
@@ -2370,7 +2355,6 @@ CopyTo(CopyState cstate)
 					CopyAttributeOutCSV(cstate, colname, false,
 										list_length(cstate->attnumlist) == 1);
 				}
-				cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 				CopySendEndOfRow(cstate);
 			}
 		}
@@ -2540,14 +2524,13 @@ CopyTo(CopyState cstate)
 			/* Generate trailer for a binary copy */
 			CopySendInt16(cstate, -1);
 
-			/* Trailer doesn't count in "processed" line numbers */
-			if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
-				cstate->ignore_extra_line = true;
-
 			/* Need to flush out the trailer */
 			CopySendEndOfRow(cstate);
 		}
 	}
+
+	if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
+		SendNumRows(0, cstate->processed);
 
 	MemoryContextDelete(cstate->rowcontext);
 }

@@ -339,6 +339,11 @@ bool cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 						c->remote_data_err = true;
 					}
 
+					if (res->numCompleted > 0)
+					{
+						*rows_processed += res->numCompleted;
+					}
+
 					/* free the PGresult object */
 					PQclear(res);
 				}
