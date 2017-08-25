@@ -44,7 +44,9 @@ found in the top-level [README.md](../../../README.md) ("_Build the
 database_" section).
 
 ## Create and use PXF external table
-At this time, only PXF Demo profile is working:
+If you wish to simply test GPDB and PXF without hadoop, you can use the Demo Profile.
+The Demo profile demonstrates how GPDB can parallely the external data via the PXF agents. The data served is 
+static data from the PXF agents themselves.
 ```
 # CREATE EXTERNAL TABLE pxf_read_test (a TEXT, b TEXT, c TEXT) \
 LOCATION ('pxf://localhost:51200/tmp/dummy1' \
