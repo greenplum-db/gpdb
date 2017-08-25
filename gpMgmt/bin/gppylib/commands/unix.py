@@ -51,26 +51,18 @@ class CommandNotFoundException(Exception):
         return "Could not locate command: '%s' in this set of paths: %s" % (self.cmd, repr(self.paths))
 
 
-def findCmdInPath(cmd, additionalPaths=[], printError=True):
+def findCmdInPath(cmd):
     global CMD_CACHE
 
     if cmd not in CMD_CACHE:
-        # Search additional paths and don't add to cache.
-        for p in additionalPaths:
-            f = os.path.join(p, cmd)
-            if os.path.exists(f):
-                return f
-
         for p in CMDPATH:
             f = os.path.join(p, cmd)
             if os.path.exists(f):
                 CMD_CACHE[cmd] = f
                 return f
 
-        if printError:
-            logger.critical('Command %s not found' % cmd)
+        logger.critical('Command %s not found' % cmd)
         search_path = CMDPATH[:]
-        search_path.extend(additionalPaths)
         raise CommandNotFoundException(cmd, search_path)
     else:
         return CMD_CACHE[cmd]
