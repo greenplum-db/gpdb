@@ -1,6 +1,7 @@
 # The PXF extension client for GPDB
 
-At present, this extension is in development status, where only Demo PXF profile is working and no real data is yet accessible.
+PXF is an extensible framework that allows GPDB or any other parallel database to query external datasets. The framework is built in Java and provides built-in connectors for accessing data of various formats(text,sequence files, orc,etc) that exists inside HDFS files, Hive tables, HBase tables and many more stores.
+This module includes the PXF C client and using the 'pxf' protocol with external table, GPDB can query external datasets via PXF service that runs alongside GPDB segments.
 
 ## Table of Contents
 
@@ -25,6 +26,14 @@ make
 ```
 
 The build will produce the pxf client shared library named `pxf.so`.
+
+### Run unit tests
+
+This will run the unit tests located in the `test` directory
+
+```
+make unittest-check
+```
  
 ### Install the PXF extension
 ```
@@ -45,6 +54,7 @@ database_" section).
 
 ## Create and use PXF external table
 If you wish to simply test GPDB and PXF without hadoop, you can use the Demo Profile.
+
 The Demo profile demonstrates how GPDB can parallely the external data via the PXF agents. The data served is 
 static data from the PXF agents themselves.
 ```
@@ -56,6 +66,12 @@ LOCATION ('pxf://localhost:51200/tmp/dummy1' \
 FORMAT 'TEXT' (DELIMITER ',');
 ```
 
+If you wish to use PXF with Hadoop, instructions will be made available shortly.
+
+
+
+
+Please refer to [PXF Setup](https://cwiki.apache.org/confluence/display/HAWQ/PXF+Build+and+Install) for instructions to setup PXF.
 Once you also install and run PXF server on the machines where GPDB segments are run, you can select data from the demo PXF profile:
 ```
 # SELECT * from pxf_read_test order by a;
@@ -71,13 +87,6 @@ Once you also install and run PXF server on the machines where GPDB segments are
 (6 rows)
 ```
 
-### Run unit tests
-
-This will run the unit tests located in the `test` directory
-
-```
-make unittest-check
-```
 
 ## Run regression tests
 
