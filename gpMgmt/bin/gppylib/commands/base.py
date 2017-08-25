@@ -414,6 +414,7 @@ class LocalExecutionContext(ExecutionContext):
                                        stdin=subprocess.PIPE,
                                        stderr=subprocess.PIPE,
                                        stdout=subprocess.PIPE, close_fds=True)
+        cmd.pid = self.proc.pid
         if wait:
             (rc, stdout_value, stderr_value) = self.proc.communicate2(input=self.stdin)
             self.completed = True
