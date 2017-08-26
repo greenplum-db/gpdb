@@ -20,7 +20,6 @@
 #include "storage/lwlock.h"
 #include "storage/shmem.h"
 
-
 /* struct PGPROC is declared in proc.h, but must forward-reference it */
 typedef struct PGPROC PGPROC;
 
@@ -550,8 +549,9 @@ extern LockAcquireResult LockAcquire(const LOCKTAG *locktag,
 extern bool LockRelease(const LOCKTAG *locktag,
 			LOCKMODE lockmode, bool sessionLock);
 extern void LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks);
-extern void LockReleaseCurrentOwner(void);
-extern void LockReassignCurrentOwner(void);
+// TODO why are we missing extern void LockReleaseSession(LOCKMETHODID lockmethodid); ?
+extern void LockReleaseCurrentOwner(LOCALLOCK **locallocks, int nlocks);
+extern void LockReassignCurrentOwner(LOCALLOCK **locallocks, int nlocks);
 extern VirtualTransactionId *GetLockConflicts(const LOCKTAG *locktag,
 				 LOCKMODE lockmode);
 extern void AtPrepare_Locks(void);
