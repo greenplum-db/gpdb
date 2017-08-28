@@ -13,8 +13,8 @@
 # it is provided by or on behalf of Pivotal Software, Inc.
 
 """
-gptransfer utility is for tranfering one GPDB system to another. Currently
-only table data or the entire system can be transfered.  In the future this
+gptransfer utility is for transferring one GPDB system to another. Currently
+only table data or the entire system can be transferred.  In the future this
 transfer will include dependent roles, UDFs, UDTs, views, resource queues,
 and possibly a subset of system configuration of specified tables.
 """
@@ -36,20 +36,15 @@ from gppylib.gpversion import GpVersion
 from gptransfer_modules.partition_comparators import PartitionComparatorFactory
 
 try:
-    from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions, \
-        ProgramArgumentValidationException
+    from gppylib.mainUtils import simple_main, addStandardLoggingAndHelpOptions, ProgramArgumentValidationException
     from gppylib.gplog import get_default_logger
     from gppylib.gpparseopts import OptParser, OptChecker
-    from gppylib.commands.base import Command, LOCAL, REMOTE, WorkerPool, \
-        ExecutionError, CommandResult
-    from gppylib.commands.unix import MakeDirectory, RemoveDirectory, \
-        RemoveFiles, FileDirExists, Scp, LINUX, curr_platform
+    from gppylib.commands.base import Command, LOCAL, REMOTE, WorkerPool, ExecutionError, CommandResult
+    from gppylib.commands.unix import MakeDirectory, RemoveDirectory, FileDirExists, RemoveGlob
     from gppylib.commands.gp import get_gphome
     from gppylib.db import dbconn
-    from gppylib.db.dbconn import connect, DbURL, execSQL, \
-        execSQLForSingletonRow, UnexpectedRowsError
-    from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, \
-        dropSchemaIfExist
+    from gppylib.db.dbconn import connect, DbURL, execSQL, execSQLForSingletonRow
+    from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, dropSchemaIfExist
     from gppylib.gparray import GpArray
     from gppylib.userinput import ask_yesno
     from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
@@ -2251,18 +2246,18 @@ FROM (
 
         for host in self._host_map.keys():
             address = iter(self._host_map[host]).next()
-            cmd = RemoveFiles('remove dir for table %s'
+            cmd = RemoveDirectory('remove dir for table %s'
                               % self._table_pair.source,
                               os.path.dirname(self._pipe),
                               REMOTE, address)
             self._pool.addCommand(cmd)
 
-        cmd = RemoveFiles('remove dir for table %s'
+        cmd = RemoveDirectory('remove dir for table %s'
                           % self._table_pair.source,
                           os.path.dirname(self._pipe),
                           REMOTE, self._dest_host)
         self._pool.addCommand(cmd)
-        cmd = RemoveFiles('remove dir for table %s'
+        cmd = RemoveDirectory('remove dir for table %s'
                           % self._table_pair.source,
                           os.path.dirname(self._pipe),
                           REMOTE, self._src_host)
@@ -2788,8 +2783,8 @@ class GpTransfer(object):
 
             for host in self._host_map.keys():
                 address = iter(self._host_map[host]).next()
-                cmd = RemoveFiles('stopping gpfdist on %s' % address,
-                                os.path.join(self._work_dir, '*.pid' ), REMOTE, address)
+                cmd = RemoveGlob('stopping gpfdist on %s' % address,
+                                 os.path.join(self._work_dir, '*.pid' ), REMOTE, address)
                 self._pool.addCommand(cmd)
             # We join() here so that all pid files are removed before directories,
             # ensuring that empty directories are removed

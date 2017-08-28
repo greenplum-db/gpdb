@@ -409,21 +409,15 @@ try:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in newConfig.oldMirrorList:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
-            cmd = RemoveFiles("remove old mirror segment directories"
-                              , mirror.dataDirectory
-                              , ctxt=REMOTE
-                              , remoteHost=mirror.address
-                              )
+            cmd = RemoveDirectory("remove old mirror segment directories", mirror.dataDirectory, ctxt=REMOTE,
+                                  remoteHost=mirror.address)
             pool.addCommand(cmd)
             for filespaceName in mirror.filespaces.keys():
                 logger.info(
                     "About to remove old mirror filespace directory: " + filespaceName + " : " + mirror.filespaces[
                         filespaceName])
-                cmd = RemoveFiles("remove old mirror segment directories"
-                                  , mirror.filespaces[filespaceName]
-                                  , ctxt=REMOTE
-                                  , remoteHost=mirror.address
-                                  )
+                cmd = RemoveDirectory("remove old mirror segment directories", mirror.filespaces[filespaceName],
+                                      ctxt=REMOTE, remoteHost=mirror.address)
                 pool.addCommand(cmd)
 
         # Wait for the segments to finish

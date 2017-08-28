@@ -579,9 +579,9 @@ class GpExpandStatus():
         if os.path.exists(self._status_standby_filename):
             os.unlink(self._status_standby_filename)
         if self._master_mirror:
-            RemoveFiles.remote('gpexpand master mirror status file cleanup',
-                               self._master_mirror.getSegmentHostName(),
-                               self._status_filename)
+            RemoveFile.remote('gpexpand master mirror status file cleanup',
+                              self._master_mirror.getSegmentHostName(),
+                              self._status_filename)
 
     def remove_segment_configuration_backup_file(self):
         """ Remove the segment configuration backup file """
@@ -851,29 +851,29 @@ class SegmentTemplate:
                     cpCmd.run(validateAfter=True)
 
         # Don't need log files and gpperfmon files in template.
-        rmCmd = RemoveFiles('gpexpand remove gppermfon data from template',
-                            self.tempDir + '/gpperfmon/data')
+        rmCmd = RemoveDirectory('gpexpand remove gppermfon data from template',
+                                self.tempDir + '/gpperfmon/data')
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove logs from template',
-                            self.tempDir + '/pg_log/*')
+        rmCmd = RemoveDirectoryContents('gpexpand remove logs from template',
+                                        self.tempDir + '/pg_log')
         rmCmd.run(validateAfter=True)
 
         # other files not needed
-        rmCmd = RemoveFiles('gpexpand remove postmaster.opt from template',
+        rmCmd = RemoveFile('gpexpand remove postmaster.opt from template',
                             self.tempDir + '/postmaster.opts')
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove postmaster.pid from template',
+        rmCmd = RemoveFile('gpexpand remove postmaster.pid from template',
                             self.tempDir + '/postmaster.pid')
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove gpexpand files from template',
+        rmCmd = RemoveGlob('gpexpand remove gpexpand files from template',
                             self.tempDir + '/gpexpand.*')
         rmCmd.run(validateAfter=True)
 
         # We dont need the flat files
-        rmCmd = RemoveFiles('gpexpand remove transaction flat file from template',
+        rmCmd = RemoveFile('gpexpand remove transaction flat file from template',
                             self.tempDir + '/' + GP_TRANSACTION_FILES_FILESPACE)
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove temporary flat file from template',
+        rmCmd = RemoveFile('gpexpand remove temporary flat file from template',
                             self.tempDir + '/' + GP_TEMPORARY_FILES_FILESPACE)
         rmCmd.run(validateAfter=True)
 
@@ -911,9 +911,9 @@ class SegmentTemplate:
     def cleanup_build_segment_template(tarFile, tempDir):
         """Reverts the work done by build_segment_template.  Deletes the temp
         directory and local tar file"""
-        rmCmd = RemoveFiles('gpexpand remove temp dir: %s' % tempDir, tempDir)
+        rmCmd = RemoveDirectory('gpexpand remove temp dir: %s' % tempDir, tempDir)
         rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFiles('gpexpand remove segment template file', tarFile)
+        rmCmd = RemoveFile('gpexpand remove segment template file', tarFile)
         rmCmd.run(validateAfter=True)
 
     @staticmethod
@@ -928,8 +928,8 @@ class SegmentTemplate:
 
         # Remove template tar file
         for host in hosts:
-            rmCmd = RemoveFiles('gpexpand remove segment template file on host: %s' % host,
-                                tarFile, ctxt=REMOTE, remoteHost=host)
+            rmCmd = RemoveFile('gpexpand remove segment template file on host: %s' % host,
+                               tarFile, ctxt=REMOTE, remoteHost=host)
             pool.addCommand(rmCmd)
 
         if removeDataDirs:
@@ -938,8 +938,8 @@ class SegmentTemplate:
                 filespaces = seg.getSegmentFilespaces()
                 for oid in filespaces:
                     datadir = filespaces[oid]
-                    rmCmd = RemoveFiles('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
-                                        datadir, ctxt=REMOTE, remoteHost=hostname)
+                    rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
+                                            datadir, ctxt=REMOTE, remoteHost=hostname)
                     pool.addCommand(rmCmd)
         pool.join()
         pool.check_results()

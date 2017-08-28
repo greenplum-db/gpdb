@@ -322,9 +322,9 @@ def remove_standby_filespace_dirs(array):
         pool = base.WorkerPool(numWorkers=DEFAULT_BATCH_SIZE)
         
         for fs_dir in fs_dirs:
-            cmd = unix.RemoveFiles('delete standby filespace dir',
-                                   fs_dir, ctxt=base.REMOTE,
-                                   remoteHost=array.standbyMaster.getSegmentHostName())
+            cmd = unix.RemoveDirectory('delete standby filespace dir',
+                                       fs_dir, ctxt=base.REMOTE,
+                                       remoteHost=array.standbyMaster.getSegmentHostName())
             pool.addCommand(cmd)
         
         pool.join()
@@ -607,10 +607,10 @@ def cleanup_pg_hba_conf_backup(array):
     standby_data_dir = array.standbyMaster.getSegmentDataDirectory()
     
     try:
-        unix.RemoveFiles.local('cleanup master pg_hba.conf backup', '%s/%s' % (master_data_dir, PG_HBA_BACKUP))
-        unix.RemoveFiles.remote('cleanup standby pg_hba.conf backup',
-                                array.standbyMaster.getSegmentHostName(),
-                                '%s/%s' % (standby_data_dir, PG_HBA_BACKUP))
+        unix.RemoveFile.local('cleanup master pg_hba.conf backup', '%s/%s' % (master_data_dir, PG_HBA_BACKUP))
+        unix.RemoveFile.remote('cleanup standby pg_hba.conf backup',
+                               array.standbyMaster.getSegmentHostName(),
+                               '%s/%s' % (standby_data_dir, PG_HBA_BACKUP))
     except:
         # ignore...
         pass

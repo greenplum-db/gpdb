@@ -40,9 +40,9 @@ class GpCleanSegmentDirectoryProgram:
 
             for toClean in gDatabaseDirectories:
                 if toClean != "pg_log":
-                    unix.RemoveFiles('clean segment', os.path.join(dir, toClean)).run( validateAfter=True )
+                    unix.RemoveDirectory('clean segment', os.path.join(dir, toClean)).run(validateAfter=True)
             for toClean in gDatabaseFiles:
-                unix.RemoveFiles('clean segment', os.path.join(dir, toClean)).run( validateAfter=True )
+                unix.RemoveFile('clean segment', os.path.join(dir, toClean)).run(validateAfter=True)
 
         for segment in segments:
             for filespaceOid, dir in segment.getSegmentFilespaces().iteritems():
@@ -50,7 +50,7 @@ class GpCleanSegmentDirectoryProgram:
                     #
                     # delete entire filespace directory -- filerep code on server will recreate it
                     #
-                    unix.RemoveFiles('clean segment filespace dir', dir ).run( validateAfter=True )
+                    unix.RemoveDirectory('clean segment filespace dir', dir).run(validateAfter=True)
 
     def cleanup(self):
         pass

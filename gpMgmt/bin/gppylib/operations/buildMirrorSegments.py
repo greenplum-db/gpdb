@@ -674,13 +674,13 @@ class GpMirrorListToBuild:
         logger.info('Cleaning files')
         cmds = []
         for hostName, segments in destSegmentByHost.iteritems():
-            cmds.append(unix.RemoveFiles('remove tar file', tarFileName, ctxt=gp.REMOTE, remoteHost=hostName))
+            cmds.append(unix.RemoveFile('remove tar file', tarFileName, ctxt=gp.REMOTE, remoteHost=hostName))
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "cleaning up tar file on segment hosts")
 
         #
         # clean up the local temp directory
         #
-        unix.RemoveFiles.local('remove temp directory', tempDir)
+        unix.RemoveDirectory.local('remove temp directory', tempDir)
 
     def _get_running_postgres_segments(self, segments):
         running_segments = []

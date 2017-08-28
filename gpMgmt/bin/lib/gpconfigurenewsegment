@@ -126,7 +126,7 @@ class ConfExpSegCmd(Command):
                 targetDir = self.filespaceDirs[i]
                 cpCmd = unix.LocalDirCopy("copy filespace from %s to %s" % (sourceDir, targetDir), sourceDir, targetDir)
                 cpCmd.run(validateAfter=True)
-            unix.RemoveFiles.local("remove filespace template after copy to proper location", filespaceDataDir)
+            unix.RemoveDirectory.local("remove filespace template after copy to proper location", filespaceDataDir)
         except Exception, e:
             self.set_results(CommandResult(1, '', e, True, False))
             raise

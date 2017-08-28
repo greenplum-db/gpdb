@@ -6,15 +6,16 @@
 Set of Classes for executing unix commands.
 """
 import os
-import psutil
 import platform
+import psutil
 import socket
 import signal
+import uuid
 
-from gppylib.gplog import *
+from gppylib.gplog import get_default_logger
 from gppylib.commands.base import *
 
-logger = gplog.get_default_logger()
+logger = get_default_logger()
 
 # ---------------platforms--------------------
 # global variable for our platform
@@ -31,7 +32,6 @@ curr_platform = platform.uname()[0].lower()
 GPHOME = os.environ.get('GPHOME', None)
 
 # ---------------command path--------------------
-
 CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
            '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
 
@@ -520,40 +520,98 @@ class InlinePerlReplace(Command):
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
 
-# -------------rmdir------------------
+# ------------- remove a directory recursively ------------------
 class RemoveDirectory(Command):
+    """
+    remove a directory recursively, including the directory itself.
+    Uses rsync for efficiency.
+    """
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
-        self.directory = directory
-        cmdStr = "%s %s" % (findCmdInPath('rmdir'), directory)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def local(name, directory):
-        rmCmd = RemoveDirectory(name, directory)
-        rmCmd.run(validateAfter=True)
+        unique_dir = "/tmp/emptyForRemove%s" % uuid.uuid4()
+        cmd_str = "if [ -d {target_dir} ]; then " \
+                  "mkdir -p {unique_dir}  &&  " \
+                  "{cmd} -a --delete {unique_dir}/ {target_dir}/  &&  " \
+                  "rmdir {target_dir} {unique_dir} ; fi".format(
+                    unique_dir=unique_dir,
+                    cmd=findCmdInPath('rsync'),
+                    target_dir=directory
+        )
+        Command.__init__(self, name, cmd_str, ctxt, remoteHost)
 
     @staticmethod
     def remote(name, remote_host, directory):
-        rmCmd = RemoveDirectory(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        rmCmd.run(validateAfter=True)
+        rm_cmd = RemoveDirectory(name, directory, ctxt=REMOTE, remoteHost=remote_host)
+        rm_cmd.run(validateAfter=True)
+
+    @staticmethod
+    def local(name, directory):
+        rm_cmd = RemoveDirectory(name, directory)
+        rm_cmd.run(validateAfter=True)
 
 
 # -------------rm -rf ------------------
-class RemoveFiles(Command):
-    def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
-        self.directory = directory
-        cmdStr = "%s -rf %s" % (findCmdInPath('rm'), directory)
+class RemoveFile(Command):
+    def __init__(self, name, filepath, ctxt=LOCAL, remoteHost=None):
+        cmdStr = "%s -f %s" % (findCmdInPath('rm'), filepath)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
     @staticmethod
-    def remote(name, remote_host, directory):
-        rmCmd = RemoveFiles(name, directory, ctxt=REMOTE, remoteHost=remote_host)
+    def remote(name, remote_host, filepath):
+        rmCmd = RemoveFile(name, filepath, ctxt=REMOTE, remoteHost=remote_host)
         rmCmd.run(validateAfter=True)
 
     @staticmethod
-    def local(name, directory):
-        rmCmd = RemoveFiles(name, directory)
+    def local(name, filepath):
+        rmCmd = RemoveFile(name, filepath)
         rmCmd.run(validateAfter=True)
+
+
+class RemoveDirectoryContents(Command):
+    """
+    remove contents of a directory recursively, excluding the parent directory.
+    Uses rsync for efficiency.
+    """
+    def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
+        unique_dir = "/tmp/emptyForRemove%s" % uuid.uuid4()
+        cmd_str = "if [ -d {target_dir} ]; then " \
+                  "mkdir -p {unique_dir}  &&  " \
+                  "{cmd} -a --delete {unique_dir}/ {target_dir}/  &&  " \
+                  "rmdir {unique_dir} ; fi".format(
+                    unique_dir=unique_dir,
+                    cmd=findCmdInPath('rsync'),
+                    target_dir=directory
+        )
+        Command.__init__(self, name, cmd_str, ctxt, remoteHost)
+
+    @staticmethod
+    def remote(name, remote_host, directory):
+        rm_cmd = RemoveDirectoryContents(name, directory, ctxt=REMOTE, remoteHost=remote_host)
+        rm_cmd.run(validateAfter=True)
+
+    @staticmethod
+    def local(name, directory):
+        rm_cmd = RemoveDirectoryContents(name, directory)
+        rm_cmd.run(validateAfter=True)
+
+
+class RemoveGlob(Command):
+    """
+    This glob removal tool uses rm -rf, so it can fail OoM if there are too many files that match.
+    """
+
+    def __init__(self, name, glob, ctxt=LOCAL, remoteHost=None):
+        cmd_str = "%s -rf %s" % (findCmdInPath('rm'), glob)
+        Command.__init__(self, name, cmd_str, ctxt, remoteHost)
+
+    @staticmethod
+    def remote(name, remote_host, directory):
+        rm_cmd = RemoveGlob(name, directory, ctxt=REMOTE, remoteHost=remote_host)
+        rm_cmd.run(validateAfter=True)
+
+    @staticmethod
+    def local(name, directory):
+        rm_cmd = RemoveGlob(name, directory)
+        rm_cmd.run(validateAfter=True)
 
 
 # -------------file and dir existence -------------

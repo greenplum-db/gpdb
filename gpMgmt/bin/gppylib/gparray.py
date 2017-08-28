@@ -463,7 +463,7 @@ class GpDB:
                 res = cpCmd.get_results()
 
             # Remove the gp_dbid file from the data dir
-            RemoveFiles.local('Remove gp_dbid file', os.path.normpath(dstDir + '/gp_dbid'))
+            RemoveFile.local('Remove gp_dbid file', os.path.normpath(dstDir + '/gp_dbid'))
             logger.info("Cleaning up catalog for schema only copy on destination")
             # We need 700 permissions or postgres won't start
             Chmod.local('set template permissions', dstDir, '0700')
