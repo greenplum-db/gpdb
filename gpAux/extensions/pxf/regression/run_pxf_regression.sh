@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # set variables if they are unset or null
-# override HADOOP_HOME based on your environment
+export HADOOP_HOME=${HADOOP_HOME:-/hdfsrepo/hadoop}
 export GP_HADOOP_TARGET_VERSION=${GP_HADOOP_TARGET_VERSION:-cdh4.1}
 export HADOOP_HOST=${HADOOP_HOST:-localhost}
 export HADOOP_PORT=${HADOOP_PORT:-8020}
