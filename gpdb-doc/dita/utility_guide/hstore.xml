@@ -10,6 +10,13 @@
    length; an error will be thrown if this limit is exceeded. These maximum lengths may change in
    future releases.</p>
   <section>
+   <title>Installing hstore</title>
+   <p>Before you can use <codeph>hstore</codeph> data type and functions, run the installation
+    script <codeph>$GPHOME/share/postgresql/contrib/hstore.sql</codeph> in each database where you
+    want the ability to query other
+    databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/hstore.sql</codeblock></p>
+  </section>
+  <section>
    <title>hstore External Representation</title>
    <p>The text representation of an <codeph>hstore</codeph> value includes zero or more
      <varname>key</varname>
