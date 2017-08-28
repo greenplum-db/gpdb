@@ -25,6 +25,14 @@ function gen_env(){
 	make installcheck USE_PGXS=1
 
 	[ -s regression.diffs ] && cat regression.diffs && exit 1
+
+	export HADOOP_HOME=\${1}/singlecluster/hadoop
+	cd "\${1}/gpdb_src/gpAux/extensions/pxf/regression/integrate"
+	HADOOP_HOST=localhost HADOOP_PORT=8020 ./generate_hdfs_data.sh
+
+	cd "\${1}/gpdb_src/gpAux/extensions/pxf/regression"
+	GP_HADOOP_TARGET_VERSION=cdh4.1 HADOOP_HOST=localhost HADOOP_PORT=8020 ./run_pxf_regression.sh
+
 	exit 0
 	EOF
 
@@ -56,7 +64,10 @@ function setup_singlecluster() {
 	pushd singlecluster/bin
 	# set Standalone PXF mode without Hadoop
 	export PXFDEMO=true
+	export SLAVES=1
+	./init-gphd.sh
 	./init-pxf.sh
+	./start-hdfs.sh
 	./start-pxf.sh
 	popd
 }

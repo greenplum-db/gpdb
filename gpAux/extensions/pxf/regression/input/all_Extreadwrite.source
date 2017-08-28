@@ -1,0 +1,85 @@
+-- start_ignore
+CREATE EXTENSION pxf;
+DROP EXTERNAL TABLE all_gphdfs;
+DROP EXTERNAL TABLE all_pxf;
+-- end_ignore
+
+CREATE READABLE EXTERNAL TABLE all_gphdfs (
+    datatype_all       VARCHAR,
+    xcount_bigint      BIGINT,
+    col1_time          TIME,
+    col2_time          TIME,
+    col3_time          TIME,
+    col4_time          TIME,
+    col5_time          TIME,
+    col6_time          TIME,
+    col7_time          TIME,
+    col8_time          TIME,
+    col9_time          TIME,
+    nullcol_time       TIME,
+    col1_timestamp     TIMESTAMP,
+    col2_timestamp     TIMESTAMP,
+    col3_timestamp     TIMESTAMP,
+    nullcol_timestamp  TIMESTAMP,
+    col1_date          DATE,
+    col2_date          DATE,
+    col3_date          DATE,
+    col4_date          DATE,
+    col5_date          DATE,
+    col6_date          DATE,
+    col7_date          DATE,
+    nullcol_date       DATE,
+    max_bigint         BIGINT,
+    min_bigint         BIGINT,
+    x_bigint           BIGINT,
+    reverse_bigint     BIGINT,
+    increment_bigint   BIGINT,
+    nullcol_bigint     BIGINT,
+    max_int            INT,
+    min_int            INT,
+    x_int              INT,
+    reverse_int        INT,
+    increment_int      INT,
+    nullcol_int        INT,
+    max_smallint       SMALLINT,
+    min_smallint       SMALLINT,
+    x_smallint         SMALLINT,
+    reverse_smallint   SMALLINT,
+    increment_smallint SMALLINT,
+    nullcol_smallint   SMALLINT,
+    max_real           REAL,
+    min_real           REAL,
+    pi_real            REAL,
+    piX_real           REAL,
+    nullcol_real       REAL,
+    max_float          FLOAT,
+    min_float          FLOAT,
+    pi_float           FLOAT,
+    piX_float          FLOAT,
+    nullcol_float      FLOAT,
+    col1_boolean       BOOLEAN,
+    nullcol_boolean    BOOLEAN,
+    col1_bpchar        BPCHAR,
+    col2_bpchar        BPCHAR,
+    nullcol_bpchar     BPCHAR,
+    col1_varchar       VARCHAR,
+    col2_varchar       VARCHAR,
+    nullcol_varchar    VARCHAR,
+    max_numeric        NUMERIC,
+    min_numeric        NUMERIC,
+    x_numeric          NUMERIC,
+    reverse_numeric    NUMERIC,
+    increment_numeric  NUMERIC,
+    nullcol_numeric    NUMERIC,
+    col1_text          TEXT,
+    col2_text          TEXT,
+    nullcol_text       TEXT
+) LOCATION ('gpfdist://%localhost%:%gpfdistPort%/all_20.txt') FORMAT 'TEXT';
+
+CREATE READABLE EXTERNAL TABLE all_pxf (LIKE all_gphdfs)
+  LOCATION ('pxf://default/plaintext/all_20.txt?PROFILE=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER=E'\t');
+
+SELECT COUNT(*) FROM all_gphdfs;
+SELECT COUNT(*) FROM all_pxf;
+
+(SELECT * FROM all_gphdfs EXCEPT SELECT * FROM all_pxf) UNION (SELECT * FROM all_pxf EXCEPT SELECT * FROM all_gphdfs);
