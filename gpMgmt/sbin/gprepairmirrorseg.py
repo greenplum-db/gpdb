@@ -7,15 +7,9 @@ from gppylib.commands.base import *
 from gppylib.commands.gp import *
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 from time import strftime, sleep
-import bisect
-import copy
-import datetime
 import os
-import pprint
 import signal
 import sys
-import tempfile
-import threading
 import traceback
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "../bin"))
@@ -25,13 +19,10 @@ try:
     from pysync import *
     from gppylib.commands.unix import *
     from gppylib.commands.gp import *
-    from gppylib.commands.pg import PgControlData
-    from gppylib.gparray import GpArray, get_host_interface
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gplog import *
     from gppylib.db import dbconn
     from gppylib.userinput import *
-    from pygresql.pgdb import DatabaseError
     from pygresql import pg
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -59,7 +50,6 @@ TEN_MEG = 10485760
 ONE_GIG = 128 * TEN_MEG
 TEN_GIG = 1024 * TEN_MEG
 
-PID_FILE = "gprepairmirrorseg.pid"
 
 # Keep the value of the name/value dictionary entry the same length for printing.
 categoryAction = {}
@@ -80,7 +70,6 @@ categoryAction['unknown:'] = NO_ACTION
 
 # -------------------------------------------------------------------------------
 def prettyPrintFiles(resyncFile):
-    fileIndex = 0
     fileListLength = len(resyncFile.fileList)
 
     for fileIndex in range(fileListLength):
@@ -140,7 +129,7 @@ def runAndCheckCommandComplete(cmd):
     cmd.run(validateAfter=False)
     if sshBusy(cmd) == True:
         """ Couldn't make the connection. put in a delay, and return"""
-        self.logger.debug("gprepairmirrorseg ssh is busy... need to retry the command: " + str(cmd))
+        logger.debug("gprepairmirrorseg ssh is busy... need to retry the command: " + str(cmd))
         time.sleep(1)
         retValue = False
     else:
@@ -199,6 +188,7 @@ def sig_handler(sig, arg):
 # -------------------------------------------------------------------------------
 def create_pid_file():
     """Creates gprepairmirrorseg pid file"""
+    fp = None
     try:
         fp = open(PID_FILE, 'w')
         fp.write(str(os.getpid()))
@@ -287,8 +277,8 @@ class GPResyncFile:
 
     # -------------------------------------------------------------------------------
     def readfile(self):
+        file = None
         try:
-            file = None
             file = open(self.filename, 'r')
 
             for line in file:
@@ -417,12 +407,14 @@ class PySyncPlus(PySync):
    This the the main body of code for gprepairmirrorseg.
 """
 
+logger = get_default_logger()
+remove_pid = False
+
 try:
     # setup signal handlers so we can clean up correctly
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGHUP, sig_handler)
 
-    logger = get_default_logger()
     applicationName = EXECNAME
     setup_tool_logging(appName=applicationName
                        , hostname=getLocalHostname()
@@ -443,10 +435,10 @@ try:
     if is_gprepairmirrorseg_running():
         logger.error('gprepairmirrorseg is already running.  Only one instance')
         logger.error('of gprepairmirrorseg is allowed at a time.')
-        remove_pid = False
         sys.exit(1)
     else:
         create_pid_file()
+        remove_pid = True
 
     resyncFiles = GPResyncFile(options.file)
     logger.info("gprepairmirrorseg will attempt to repair the following files:")
@@ -505,6 +497,8 @@ try:
 except Exception, e:
     logger.error("gprepairmirrorseg failed: %s \n\nExiting..." % str(e))
     traceback.print_exc()
+    if remove_pid:
+        remove_pid_file()
     sys.exit(3)
 
 except KeyboardInterrupt:
@@ -514,18 +508,11 @@ except KeyboardInterrupt:
     # Re-enabled SIGINT
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
+    if remove_pid:
+        remove_pid_file()
     sys.exit('\nUser Interrupted')
 
-except Exception, e:
-    print "FATAL Exception: " + str(e)
-    traceback.print_exc()
-    sys.exit(1)
-
-
 finally:
-    try:
-        if remove_pid:
-            remove_pid_file()
-    except Exception:
-        pass
+    if remove_pid:
+        remove_pid_file()
     logger.info("gprepairmirrorseg exit")
