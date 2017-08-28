@@ -8,7 +8,11 @@
       define new data types using the <codeph>CREATE TYPE</codeph> command. This reference shows all
       of the built-in data types. In addition to the types listed here, there are also some
       internally used data types, such as <i>oid</i> (object identifier), but those are not
-      documented in this guide.</p>
+      documented in this guide. </p>
+    <p>Optional modules in the <filepath>contrib</filepath> directory may also install new data
+      types.  The <codeph>hstore</codeph> module, for example, introduces a new data type and
+      associated functions for working with key-value pairs. See <xref
+        href="../utility_guide/hstore.xml#topic_vcn_jkq_1bb"/>.</p>
     <p>The following data types are specified by SQL: <i>bit</i>, <i>bit varying</i>,
       <i>boolean</i>, <i>character varying, varchar</i>, <i>character, char</i>, <i>date</i>,
         <i>double precision</i>, <i>integer</i>, <i>interval</i>, <i>numeric</i>, <i>decimal</i>,
