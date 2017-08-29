@@ -3604,18 +3604,19 @@
           situations.<ul id="ul_nmf_sqm_z1b">
           <li>For a table that is not a partitioned table, an error is returned if the row of data
             violates the distribution policy for a segment instance.</li>
-          <li>For a partitioned table, an error is returned<ul id="ul_yqz_dsm_z1b">
+          <li>For a partitioned table, an error is returned if either of the following is true.<ul
+              id="ul_yqz_dsm_z1b">
               <li>If the distribution policy of the child leaf partitioned table is the same as the
                 root table and the row of data violates the distribution policy for a segment
                 instance.</li>
-              <li>The distribution policy of the child leaf partitioned table is not the same as the
-                root table. </li>
+              <li>If the distribution policy of the child leaf partitioned table is not the same as
+                the root table. </li>
             </ul></li>
         </ul></p>
-      <p>If the value is <codeph>false</codeph>, the distribution policy not checked. The data added
-        to the table might violate the table distribution policy for the segment instance. Manual
-        redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph> clause
-          <codeph>WITH REORGANIZE</codeph>.</p>
+      <p>If the value is <codeph>false</codeph>, the distribution policy is not checked. The data
+        added to the table might violate the table distribution policy for the segment instance.
+        Manual redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph>
+        clause <codeph>WITH REORGANIZE</codeph>.</p>
       <p>This parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <table id="table_gxf_hpm_z1b">
