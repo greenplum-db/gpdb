@@ -75,6 +75,14 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>prorows</codeph>
+            </entry>
+            <entry colname="col2">float4</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Estimated number of result rows (zero if not proretset)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>provariadic</codeph>
             </entry>
             <entry colname="col2">oid</entry>

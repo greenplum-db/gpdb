@@ -18,7 +18,7 @@
 #include "nodes/parsenodes.h"
 #include "tcop/dest.h"
 #include "executor/executor.h"
-
+#include "cdb/cdbhash.h"
 
 /*
  * Represents the different source/dest cases we need to worry about at
@@ -291,5 +291,13 @@ extern void truncateEol(StringInfo buf, EolType	eol_type);
 extern void truncateEolStr(char *str, EolType eol_type);
 extern void setEncodingConversionProc(CopyState cstate, int client_encoding, bool iswritable);
 extern void CopyEolStrToType(CopyState cstate);
+
+typedef struct GpDistributionData
+{
+	GpPolicy *policy;	/* the partitioning policy for this table */
+	AttrNumber p_nattrs; /* num of attributes in the distribution policy */
+	Oid *p_attr_types;   /* types for each policy attribute */
+	CdbHash *cdbHash;
+} GpDistributionData;
 
 #endif   /* COPY_H */

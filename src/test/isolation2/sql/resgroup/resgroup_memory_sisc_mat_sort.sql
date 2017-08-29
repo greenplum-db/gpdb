@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema sisc_mat_sort;
 set search_path to sisc_mat_sort;
 
@@ -43,7 +47,6 @@ CREATE ROLE role1_memory_test SUPERUSER RESOURCE GROUP rg1_memory_test;
 SET ROLE TO role1_memory_test;
 
 
-set statement_mem="3MB";
 set gp_resgroup_print_operator_memory_limits=on;
 set gp_cte_sharing=on;
 set gp_enable_mk_sort=on;

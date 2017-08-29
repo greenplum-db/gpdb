@@ -22,6 +22,10 @@
  */
 #define GpFaultStrategyRelationId	5039
 
+#define GpFaultStrategyMirrorLess		'n'
+#define GpFaultStrategyFileRepMirrorred	'f'
+
+
 CATALOG(gp_fault_strategy,5039) BKI_SHARED_RELATION BKI_WITHOUT_OIDS
 {
 	char	fault_strategy;	

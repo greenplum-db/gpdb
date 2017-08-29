@@ -72,7 +72,7 @@
                     session holding or waiting to hold a lock. For example:</p>
                 <p>
                     <codeblock>SELECT locktype, database, c.relname, l.relation, 
-l.transactionid, l.transaction, l.pid, l.mode, l.granted, 
+l.transactionid, l.pid, l.mode, l.granted, 
 a.current_query 
         FROM pg_locks l, pg_class c, pg_stat_activity a 
         WHERE l.relation=c.oid AND l.pid=a.procpid 

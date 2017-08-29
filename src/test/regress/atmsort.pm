@@ -1332,7 +1332,7 @@ sub atmsort_bigloop
             }
 
             # prune notices with segment info if they are duplicates
-            if ($ini =~ m/^\s*(?:NOTICE|ERROR|HINT|DETAIL|WARNING)\:/)
+            if ($ini =~ m/^\s*(?:NOTICE|ERROR|HINT|DETAIL|WARNING)\:.*\(seg.*pid.*\)/)
             {
                 $ini =~ s/\s+(?:\W)?(?:\W)?\(seg.*pid.*\)//;
 

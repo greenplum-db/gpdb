@@ -231,11 +231,12 @@ workfile_mgr_create_set(enum ExecWorkFileType type, bool can_be_reused, PlanStat
 
 	if (NULL == newEntry)
 	{
-		/* Could not acquire another entry from the cache - we filled it up */
-		elog(ERROR, "could not create workfile manager entry: exceeded number of concurrent spilling queries");
-
 		/* Clean up the directory we created. */
 		workfile_mgr_delete_set_directory(dir_path);
+
+		/* Could not acquire another entry from the cache - we filled it up */
+		ereport(ERROR,
+				(errmsg("could not create workfile manager entry: exceeded number of concurrent spilling queries")));
 	}
 
 	/* Path has now been copied to the workfile_set. We can free it */

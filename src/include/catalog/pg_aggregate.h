@@ -39,13 +39,7 @@
  *  aggorder            array of ordering columns (can be NULL)
  * ----------------------------------------------------------------
  */
-
-/* ----------------
- *		pg_aggregate definition.  cpp turns this into
- *		typedef struct FormData_pg_aggregate
- * ----------------
- */
-#define AggregateRelationId	2600
+#define AggregateRelationId  2600
 
 CATALOG(pg_aggregate,2600) BKI_WITHOUT_OIDS
 {
@@ -77,7 +71,6 @@ FOREIGN_KEY(aggtranstype REFERENCES pg_type(oid));
  * ----------------
  */
 typedef FormData_pg_aggregate *Form_pg_aggregate;
-
 
 /* ----------------
  *		compiler constants for pg_aggregate

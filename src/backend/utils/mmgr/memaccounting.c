@@ -975,6 +975,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "Parser";
 	case MEMORY_OWNER_TYPE_Planner:
 		return "Planner";
+	case MEMORY_OWNER_TYPE_PlannerHook:
+		return "PlannerHook";
 	case MEMORY_OWNER_TYPE_Optimizer:
 		return "Optimizer";
 	case MEMORY_OWNER_TYPE_Dispatcher:

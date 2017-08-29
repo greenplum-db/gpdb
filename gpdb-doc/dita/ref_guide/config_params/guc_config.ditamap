@@ -112,6 +112,7 @@
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
             <topicref href="guc-list.xml#gp_idf_deduplicate"/>
             <topicref href="guc-list.xml#topic_lvm_ttc_3p"/>
+            <topicref href="guc-list.xml#gp_interconnect_debug_retry_interval"/>
             <topicref href="guc-list.xml#gp_interconnect_fc_method"/>
             <topicref href="guc-list.xml#gp_interconnect_hash_multiplier"/>
             <topicref href="guc-list.xml#gp_interconnect_queue_depth"/>
@@ -121,6 +122,7 @@
             <topicref href="guc-list.xml#gp_log_format"/>
             <topicref href="guc-list.xml#gp_log_fts"/>
             <topicref href="guc-list.xml#gp_log_gang"/>
+            <topicref href="guc-list.xml#gp_log_interconnect"/>
             <topicref href="guc-list.xml#gp_max_csv_line_length"/>
             <topicref href="guc-list.xml#gp_max_databases"/>
             <topicref href="guc-list.xml#gp_max_filespaces"/>

@@ -226,6 +226,7 @@ slurp_oid_files(migratorContext *ctx)
 
 	reserved_oids = pg_malloc(ctx, st.st_size + 1);
 	fread(reserved_oids, st.st_size, 1, oid_dump);
+	fclose(oid_dump);
 	reserved_oids[st.st_size] = '\0';
 
 	ctx->old.global_reserved_oids = reserved_oids;
@@ -244,6 +245,7 @@ slurp_oid_files(migratorContext *ctx)
 
 		reserved_oids = pg_malloc(ctx, st.st_size + 1);
 		fread(reserved_oids, st.st_size, 1, oid_dump);
+		fclose(oid_dump);
 		reserved_oids[st.st_size] = '\0';
 
 		olddb->reserved_oids = reserved_oids;

@@ -28,7 +28,9 @@
 #include "utils/syscache.h"
 #include "utils/varbit.h"
 
+
 static void pcb_error_callback(void *arg);
+
 
 /*
  * make_parsestate
@@ -158,6 +160,7 @@ parser_errposition(ParseState *pstate, int location)
 	return errposition(pos);
 }
 
+
 /*
  * setup_parser_errposition_callback
  *		Arrange for non-parser errors to report an error position
@@ -212,6 +215,7 @@ pcb_error_callback(void *arg)
 	if (geterrcode() != ERRCODE_QUERY_CANCELED)
 		(void) parser_errposition(pcbstate->pstate, pcbstate->location);
 }
+
 
 /*
  * make_var
@@ -517,7 +521,6 @@ make_const(ParseState *pstate, Value *value, int location)
 			break;
 
 		case T_BitString:
-
 			/* arrange to report location if bit_in() fails */
 			setup_parser_errposition_callback(&pcbstate, pstate, location);
 			val = DirectFunctionCall3(bit_in,

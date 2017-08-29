@@ -27,6 +27,7 @@
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
+#include "utils/resowner.h"
 
 static int getPollTimeout(const struct timeval* startTS);
 static Gang *createGang_async(GangType type, int gang_id, int size, int content);

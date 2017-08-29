@@ -37,3 +37,4 @@ psql_gpdb_du.out
 session_level_memory_consumption.out
 sreh_optimizer.out
 transient_types.out
+hooktest.out

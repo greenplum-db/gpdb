@@ -84,7 +84,7 @@ AggregateCreate(const char *aggName,
 	if (!aggtransfnName)
 		elog(ERROR, "aggregate must have a transition function");
 
-	/* check for polymorphic arguments and INTERNAL arguments */
+	/* check for polymorphic and INTERNAL arguments */
 	hasPolyArg = false;
 	hasInternalArg = false;
 	for (i = 0; i < numArgs; i++)

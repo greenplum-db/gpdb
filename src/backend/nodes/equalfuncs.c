@@ -227,7 +227,6 @@ _equalWindowRef(WindowRef *a, WindowRef *b)
 	COMPARE_SCALAR_FIELD(winfnoid);
 	COMPARE_SCALAR_FIELD(restype);
 	COMPARE_NODE_FIELD(args);
-	COMPARE_SCALAR_FIELD(winlevelsup);
 	COMPARE_SCALAR_FIELD(windistinct);
 	COMPARE_SCALAR_FIELD(winspec);
 	COMPARE_SCALAR_FIELD(winindex);
@@ -1148,8 +1147,9 @@ _equalCopyStmt(CopyStmt *a, CopyStmt *b)
 	COMPARE_STRING_FIELD(filename);
 	COMPARE_NODE_FIELD(options);
 	COMPARE_NODE_FIELD(sreh);
-
-
+	COMPARE_SCALAR_FIELD(nattrs);
+	COMPARE_SCALAR_FIELD(ptype);
+	COMPARE_POINTER_FIELD(distribution_attrs,a->nattrs * sizeof(AttrNumber));
 	return true;
 }
 
@@ -2298,15 +2298,6 @@ _equalGroupId(GroupId *a __attribute__((unused)), GroupId *b __attribute__((unus
 }
 
 static bool
-_equalWindowSpecParse(WindowSpecParse *a, WindowSpecParse *b)
-{
-	COMPARE_STRING_FIELD(name);
-	COMPARE_NODE_FIELD(elems);
-
-	return true;
-}
-
-static bool
 _equalWindowSpec(WindowSpec *a, WindowSpec *b)
 {
 	COMPARE_STRING_FIELD(name);
@@ -3113,9 +3104,6 @@ equal(void *a, void *b)
 			break;
 		case T_GroupId:
 			retval = _equalGroupId(a, b);
-			break;
-		case T_WindowSpecParse:
-			retval = _equalWindowSpecParse(a, b);
 			break;
 		case T_WindowSpec:
 			retval = _equalWindowSpec(a, b);

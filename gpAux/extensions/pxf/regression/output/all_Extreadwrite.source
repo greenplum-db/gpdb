@@ -1,0 +1,103 @@
+-- start_ignore
+CREATE EXTENSION pxf;
+DROP EXTERNAL TABLE all_gphdfs;
+ERROR:  table "all_gphdfs" does not exist
+DROP EXTERNAL TABLE all_pxf;
+ERROR:  table "all_pxf" does not exist
+-- end_ignore
+CREATE READABLE EXTERNAL TABLE all_gphdfs (
+    datatype_all       VARCHAR,
+    xcount_bigint      BIGINT,
+    col1_time          TIME,
+    col2_time          TIME,
+    col3_time          TIME,
+    col4_time          TIME,
+    col5_time          TIME,
+    col6_time          TIME,
+    col7_time          TIME,
+    col8_time          TIME,
+    col9_time          TIME,
+    nullcol_time       TIME,
+    col1_timestamp     TIMESTAMP,
+    col2_timestamp     TIMESTAMP,
+    col3_timestamp     TIMESTAMP,
+    nullcol_timestamp  TIMESTAMP,
+    col1_date          DATE,
+    col2_date          DATE,
+    col3_date          DATE,
+    col4_date          DATE,
+    col5_date          DATE,
+    col6_date          DATE,
+    col7_date          DATE,
+    nullcol_date       DATE,
+    max_bigint         BIGINT,
+    min_bigint         BIGINT,
+    x_bigint           BIGINT,
+    reverse_bigint     BIGINT,
+    increment_bigint   BIGINT,
+    nullcol_bigint     BIGINT,
+    max_int            INT,
+    min_int            INT,
+    x_int              INT,
+    reverse_int        INT,
+    increment_int      INT,
+    nullcol_int        INT,
+    max_smallint       SMALLINT,
+    min_smallint       SMALLINT,
+    x_smallint         SMALLINT,
+    reverse_smallint   SMALLINT,
+    increment_smallint SMALLINT,
+    nullcol_smallint   SMALLINT,
+    max_real           REAL,
+    min_real           REAL,
+    pi_real            REAL,
+    piX_real           REAL,
+    nullcol_real       REAL,
+    max_float          FLOAT,
+    min_float          FLOAT,
+    pi_float           FLOAT,
+    piX_float          FLOAT,
+    nullcol_float      FLOAT,
+    col1_boolean       BOOLEAN,
+    nullcol_boolean    BOOLEAN,
+    col1_bpchar        BPCHAR,
+    col2_bpchar        BPCHAR,
+    nullcol_bpchar     BPCHAR,
+    col1_varchar       VARCHAR,
+    col2_varchar       VARCHAR,
+    nullcol_varchar    VARCHAR,
+    max_numeric        NUMERIC,
+    min_numeric        NUMERIC,
+    x_numeric          NUMERIC,
+    reverse_numeric    NUMERIC,
+    increment_numeric  NUMERIC,
+    nullcol_numeric    NUMERIC,
+    col1_text          TEXT,
+    col2_text          TEXT,
+    nullcol_text       TEXT
+) LOCATION ('gphdfs://%localhost%:%gpfdistPort%/plaintext/all_20.txt') FORMAT 'TEXT';
+CREATE READABLE EXTERNAL TABLE all_pxf (LIKE all_gphdfs)
+  LOCATION ('pxf://default/plaintext/all_20.txt?PROFILE=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER=E'\t');
+SELECT COUNT(*) FROM all_gphdfs;
+ count  
+--------
+ 100000
+(1 row)
+
+SELECT COUNT(*) FROM all_pxf;
+ count  
+--------
+ 100000
+(1 row)
+
+(SELECT * FROM all_gphdfs EXCEPT SELECT * FROM all_pxf) UNION (SELECT * FROM all_pxf EXCEPT SELECT * FROM all_gphdfs);
+ datatype_all | xcount_bigint | col1_time | col2_time | col3_time | col4_time | col5_time | col6_time | col7_time | col8_time | col9_time | nullcol_time | col1_timestamp | col2_timestamp | col3_timestamp | nullcol_timestamp | col1_date | col2_date | col3_date | col4_date | col5_date | col6_date | col7_date | nullcol_date | max_bigint | min_bigint | x_bigint | reverse_bigint | increment_bigint | nullcol_bigint | max_int | min_int | x_int | reverse_int | increment_int | nullcol_int | max_smallint | min_smallint | x_smallint | reverse_smallint | increment_smallint | nullcol_smallint | max_real | min_real | pi_real | pix_real | nullcol_real | max_float | min_float | pi_float | pix_float | nullcol_float | col1_boolean | nullcol_boolean | col1_bpchar | col2_bpchar | nullcol_bpchar | col1_varchar | col2_varchar | nullcol_varchar | max_numeric | min_numeric | x_numeric | reverse_numeric | increment_numeric | nullcol_numeric | col1_text | col2_text | nullcol_text 
+--------------+---------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+----------------+----------------+----------------+-------------------+-----------+-----------+-----------+-----------+-----------+-----------+-----------+--------------+------------+------------+----------+----------------+------------------+----------------+---------+---------+-------+-------------+---------------+-------------+--------------+--------------+------------+------------------+--------------------+------------------+----------+----------+---------+----------+--------------+-----------+-----------+----------+-----------+---------------+--------------+-----------------+-------------+-------------+----------------+--------------+--------------+-----------------+-------------+-------------+-----------+-----------------+-------------------+-----------------+-----------+-----------+--------------
+(0 rows)
+
+--start_ignore
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapreduce/*
+rm: `/mapreduce/*': No such file or directory
+\!/usr/hdp/2.3.2.0-2950/hadoop/bin/hadoop fs -rm -r /mapred/*
+rm: `/mapred/*': No such file or directory
+--end_ignore

@@ -1161,14 +1161,14 @@ _outRangeVar(StringInfo str, RangeVar *node)
 	WRITE_ENUM_FIELD(inhOpt, InhOption);
 	WRITE_BOOL_FIELD(istemp);
 	WRITE_NODE_FIELD(alias);
-    WRITE_LOCATION_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
 _outIntoClause(StringInfo str, IntoClause *node)
 {
 	WRITE_NODE_TYPE("INTOCLAUSE");
-	
+
 	WRITE_NODE_FIELD(rel);
 	WRITE_NODE_FIELD(colNames);
 	WRITE_NODE_FIELD(options);
@@ -2746,7 +2746,7 @@ _outPartitionBy(StringInfo str, PartitionBy *node)
 	WRITE_NODE_FIELD(partSpec);
 	WRITE_INT_FIELD(partDepth);
 	WRITE_INT_FIELD(partQuiet);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -2757,7 +2757,7 @@ _outPartitionSpec(StringInfo str, PartitionSpec *node)
 	WRITE_NODE_FIELD(partElem);
 	WRITE_NODE_FIELD(subSpec);
 	WRITE_BOOL_FIELD(istemplate);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -2773,7 +2773,7 @@ _outPartitionElem(StringInfo str, PartitionElem *node)
 	WRITE_INT_FIELD(partno);
 	WRITE_LONG_FIELD(rrand);
 	WRITE_NODE_FIELD(colencs);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -2782,7 +2782,7 @@ _outPartitionRangeItem(StringInfo str, PartitionRangeItem *node)
 	WRITE_NODE_TYPE("PARTITIONRANGEITEM");
 	WRITE_NODE_FIELD(partRangeVal);
 	WRITE_ENUM_FIELD(partedge, PartitionEdgeBounding);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -2795,7 +2795,7 @@ _outPartitionBoundSpec(StringInfo str, PartitionBoundSpec *node)
 	WRITE_NODE_FIELD(partEvery);
 	WRITE_NODE_FIELD(everyGenList);
 	WRITE_STRING_FIELD(pWithTnameStr);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -2804,7 +2804,7 @@ _outPartitionValuesSpec(StringInfo str, PartitionValuesSpec *node)
 {
 	WRITE_NODE_TYPE("PARTITIONVALUESSPEC");
 	WRITE_NODE_FIELD(partValues);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -3059,6 +3059,7 @@ _outSingleRowErrorDesc(StringInfo str, SingleRowErrorDesc *node)
 	WRITE_BOOL_FIELD(into_file);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCopyStmt(StringInfo str, CopyStmt *node)
 {
@@ -3072,7 +3073,16 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
 	WRITE_NODE_FIELD(ao_segnos);
+	WRITE_INT_FIELD(nattrs);
+	WRITE_ENUM_FIELD(ptype, GpPolicyType);
+	appendStringInfoLiteral(str, " :distribution_attrs");
+	for (int i = 0; i < node->nattrs; i++)
+	{
+		appendStringInfo(str, " %d", node->distribution_attrs[i]);
+	}
+
 }
+#endif/* COMPILING_BINARY_FUNCS */
 
 
 static void
@@ -3558,15 +3568,6 @@ _outGroupId(StringInfo str, GroupId *node __attribute__((unused)))
 }
 
 static void
-_outWindowSpecParse(StringInfo str, WindowSpecParse *node)
-{
-	WRITE_NODE_TYPE("WINDOWSPECPARSE");
-
-	WRITE_STRING_FIELD(name);
-	WRITE_NODE_FIELD(elems);
-}
-
-static void
 _outWindowSpec(StringInfo str, WindowSpec *node)
 {
 	WRITE_NODE_TYPE("WINDOWSPEC");
@@ -3576,7 +3577,7 @@ _outWindowSpec(StringInfo str, WindowSpec *node)
 	WRITE_NODE_FIELD(partition);
 	WRITE_NODE_FIELD(order);
 	WRITE_NODE_FIELD(frame);
-    WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -3612,7 +3613,7 @@ _outPercentileExpr(StringInfo str, PercentileExpr *node)
 	WRITE_NODE_FIELD(sortTargets);
 	WRITE_NODE_FIELD(pcExpr);
 	WRITE_NODE_FIELD(tcExpr);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -3629,21 +3630,21 @@ static void
 _outWithClause(StringInfo str, WithClause *node)
 {
 	WRITE_NODE_TYPE("WITHCLAUSE");
-	
+
 	WRITE_NODE_FIELD(ctes);
 	WRITE_BOOL_FIELD(recursive);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
 _outCommonTableExpr(StringInfo str, CommonTableExpr *node)
 {
 	WRITE_NODE_TYPE("COMMONTABLEEXPR");
-	
-    WRITE_STRING_FIELD(ctename);
+
+	WRITE_STRING_FIELD(ctename);
 	WRITE_NODE_FIELD(aliascolnames);
 	WRITE_NODE_FIELD(ctequery);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 	WRITE_BOOL_FIELD(cterecursive);
 	WRITE_INT_FIELD(cterefcount);
 	WRITE_NODE_FIELD(ctecolnames);
@@ -3853,7 +3854,7 @@ _outParamRef(StringInfo str, ParamRef *node)
 	WRITE_NODE_TYPE("PARAMREF");
 
 	WRITE_INT_FIELD(number);
-	WRITE_INT_FIELD(location);  /*CDB*/
+	WRITE_LOCATION_FIELD(location);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -3922,7 +3923,7 @@ _outSortBy(StringInfo str, SortBy *node)
 	WRITE_INT_FIELD(sortby_nulls);
 	WRITE_NODE_FIELD(useOp);
 	WRITE_NODE_FIELD(node);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -5020,9 +5021,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_GroupId:
 				_outGroupId(str, obj);
-				break;
-			case T_WindowSpecParse:
-				_outWindowSpecParse(str, obj);
 				break;
 			case T_WindowSpec:
 				_outWindowSpec(str, obj);

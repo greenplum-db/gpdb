@@ -45,7 +45,7 @@
                   <codeph>log_executor_stats</codeph>
                </p><p>
                   <codeph>log_hostname</codeph>
-               </p><p>
+               </p><p><codeph>gp_log_interconnect</codeph></p><p>
                   <codeph>log_parser_stats</codeph>
                </p><p>
                   <codeph>log_planner_stats</codeph>

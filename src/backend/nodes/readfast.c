@@ -267,20 +267,6 @@ _readCurrentOfExpr(void)
 	READ_DONE();
 }
 
-static WindowSpec *
-_readWindowSpec(void)
-{
-	READ_LOCALS(WindowSpec);
-
-	READ_STRING_FIELD(name);
-	READ_STRING_FIELD(parent);
-	READ_NODE_FIELD(partition);
-	READ_NODE_FIELD(order);
-	READ_NODE_FIELD(frame);
-	READ_INT_FIELD(location);
-	READ_DONE();
-}
-
 static DMLActionExpr *
 _readDMLActionExpr(void)
 {
@@ -1188,7 +1174,7 @@ _readPartitionBy(void)
 	READ_NODE_FIELD(partSpec);
 	READ_INT_FIELD(partDepth);
 	READ_INT_FIELD(partQuiet);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1201,7 +1187,7 @@ _readPartitionSpec(void)
 	READ_NODE_FIELD(partElem);
 	READ_NODE_FIELD(subSpec);
 	READ_BOOL_FIELD(istemplate);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 	READ_NODE_FIELD(enc_clauses);
 
 	READ_DONE();
@@ -1220,7 +1206,7 @@ _readPartitionElem(void)
 	READ_INT_FIELD(partno);
 	READ_LONG_FIELD(rrand);
 	READ_NODE_FIELD(colencs);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1232,7 +1218,7 @@ _readPartitionRangeItem(void)
 
 	READ_NODE_FIELD(partRangeVal);
 	READ_ENUM_FIELD(partedge, PartitionEdgeBounding);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1245,7 +1231,7 @@ _readPartitionBoundSpec(void)
 	READ_NODE_FIELD(partStart);
 	READ_NODE_FIELD(partEnd);
 	READ_NODE_FIELD(partEvery);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1256,7 +1242,7 @@ _readPartitionValuesSpec(void)
 	READ_LOCALS(PartitionValuesSpec);
 
 	READ_NODE_FIELD(partValues);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1405,7 +1391,9 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(sreh);
 	READ_NODE_FIELD(partitions);
 	READ_NODE_FIELD(ao_segnos);
-
+	READ_INT_FIELD(nattrs);
+	READ_ENUM_FIELD(ptype, GpPolicyType);
+	READ_INT_ARRAY(distribution_attrs, local_node->nattrs, AttrNumber);
 	READ_DONE();
 
 }
@@ -3301,9 +3289,6 @@ readNodeBinary(void)
 				break;
 			case T_GroupId:
 				return_value = _readGroupId();
-				break;
-			case T_WindowSpecParse:
-				return_value = _readWindowSpecParse();
 				break;
 			case T_WindowSpec:
 				return_value = _readWindowSpec();

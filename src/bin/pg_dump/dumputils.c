@@ -1165,14 +1165,12 @@ custom_fmtopts_string(const char *src)
 		char       *find_res = NULL;
 		int        last = 0;
 
-		if(!src || !srcdup || !result)
+		if (!srcdup || !result)
 		{
 			if (result)
 				free(result);
 			if (srcdup)
 				free(srcdup);
-			if (srcdup_start)
-				free(srcdup_start);
 			return NULL;
 		}
 

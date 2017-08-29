@@ -3095,7 +3095,7 @@ renameFile(struct ddboost_options *dd_options, ddp_conn_desc_t ddp_conn)
 		return -1;
 	}
 
-	*toFile = Safe_strdup(dd_options->to_file);
+	toFile = Safe_strdup(dd_options->to_file);
 	if (!toFile)
 	{
 		mpp_err_msg(logError, progname, "Destination file on GPDB not specified\n");

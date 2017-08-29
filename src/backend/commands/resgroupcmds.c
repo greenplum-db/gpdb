@@ -34,6 +34,7 @@
 #include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 #include "utils/resource_manager.h"
+#include "utils/resowner.h"
 #include "utils/syscache.h"
 
 #define RESGROUP_DEFAULT_CONCURRENCY (20)
@@ -47,7 +48,6 @@
 #define RESGROUP_MAX_CPU_RATE_LIMIT	(100)
 
 #define RESGROUP_MIN_MEMORY_LIMIT	(1)
-#define RESGROUP_MAX_MEMORY_LIMIT	(100)
 
 #define RESGROUP_MIN_MEMORY_SHARED_QUOTA	(0)
 #define RESGROUP_MAX_MEMORY_SHARED_QUOTA	(100)
@@ -195,7 +195,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	pg_resgroup_rel = heap_open(ResGroupRelationId, ExclusiveLock);
 
 	/* Check if max_resource_group limit is reached */
-	sscan = systable_beginscan(pg_resgroup_rel, InvalidOid, false,
+	sscan = systable_beginscan(pg_resgroup_rel, ResGroupRsgnameIndexId, false,
 							   SnapshotNow, 0, NULL);
 	nResGroups = 0;
 	while (systable_getnext(sscan) != NULL)
@@ -269,7 +269,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 	heap_close(pg_resgroup_rel, NoLock);
 
 	/* Add this group into shared memory */
-	if (IsResGroupEnabled())
+	if (IsResGroupActivated())
 	{
 		Oid			*callbackArg;
 
@@ -393,11 +393,11 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 
-	if (IsResGroupEnabled())
+	if (IsResGroupActivated())
 	{
 		ResGroupCheckForDrop(groupid, stmt->name);
 
@@ -424,6 +424,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	int			concurrency;
 	int			cpuRateLimitNew;
 	int			memSharedQuotaNew;
+	int			memSpillRatioNew;
 	int			memLimitNew;
 	DefElem		*defel;
 	ResGroupLimitType	limitType;
@@ -501,6 +502,20 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 								RESGROUP_MAX_MEMORY_LIMIT)));
 			/* overall limit will be verified later after groupid is known */
 			break;
+		case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
+			memSpillRatioNew = defGetInt64(defel);
+			if (memSpillRatioNew < RESGROUP_MIN_MEMORY_SPILL_RATIO)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_LIMIT_VALUE),
+						 errmsg("memory spill ratio must be greater than %d",
+								RESGROUP_MIN_MEMORY_SPILL_RATIO)));
+			if (memSpillRatioNew > RESGROUP_MAX_MEMORY_SPILL_RATIO)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_LIMIT_VALUE),
+						 errmsg("memory spill ratio must be less than %d",
+								RESGROUP_MAX_MEMORY_SPILL_RATIO)));
+			/* sum of shared and spill will be verified later after groupid is known */
+			break;
 
 		default:
 			ereport(ERROR,
@@ -542,11 +557,11 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	/*
 	 * In validateCapabilities() we scan all the resource groups
 	 * to check whether the total cpu_rate_limit exceed 100 or not.
-	 * We need to use ExclusiveLock here to prevent concurrent
+	 * We need to use AccessExclusiveLock here to prevent concurrent
 	 * increase on different resource group.
 	 */
 	pg_resgroupcapability_rel = heap_open(ResGroupCapabilityRelationId,
-										  ExclusiveLock);
+										  AccessExclusiveLock);
 
 	/* Load currency resource group capabilities */
 	GetResGroupCapabilities(groupid, &caps);
@@ -595,6 +610,17 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 
 			ResGroupDecideMemoryCaps(groupid, &caps, &opts);
 			break;
+		case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
+			if (caps.memSharedQuota.proposed + memSpillRatioNew > RESGROUP_MAX_MEMORY_LIMIT)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("The sum of memory_shared_quota (%d) and memory_spill_ratio (%d) exceeds %d",
+								caps.memSharedQuota.proposed, memSpillRatioNew,
+								RESGROUP_MAX_MEMORY_LIMIT)));
+
+			caps.memSpillRatio.value = memSpillRatioNew;
+			caps.memSpillRatio.proposed = memSpillRatioNew;
+			break;
 
 		default:
 			ereport(ERROR,
@@ -612,14 +638,14 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									GetAssignedOidsForDispatch(), /* FIXME */
+									GetAssignedOidsForDispatch(),
 									NULL);
 	}
 
 	/* Bump command counter to make this change visible in the callback function alterResGroupCommitCallback() */
 	CommandCounterIncrement();
 
-	if (IsResGroupEnabled())
+	if (IsResGroupActivated())
 	{
 		callbackCtx->caps = caps;
 		registerResourceGroupCallback(alterResGroupCommitCallback, (void *)callbackCtx);
@@ -667,7 +693,7 @@ GetResGroupCapabilities(Oid groupId, ResGroupCaps *resgroupCaps)
 				ObjectIdGetDatum(groupId));
 
 	sscan = systable_beginscan(relResGroupCapability,
-							   ResGroupCapabilityResgroupidResLimittypeIndexId,
+							   ResGroupCapabilityResgroupidIndexId,
 							   true,
 							   SnapshotNow, 1, &key);
 
@@ -1127,7 +1153,7 @@ updateResgroupCapabilities(Oid groupid, const ResGroupCaps *resgroupCaps)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(groupid));
 
-	sscan = systable_beginscan(resgroupCapabilityRel, ResGroupCapabilityResgroupidResLimittypeIndexId, true,
+	sscan = systable_beginscan(resgroupCapabilityRel, ResGroupCapabilityResgroupidIndexId, true,
 							   SnapshotNow, 1, &scankey);
 
 	MemSet(values, 0, sizeof(values));
@@ -1203,7 +1229,7 @@ validateCapabilities(Relation rel,
 	int totalCpu = options->cpuRateLimit;
 	int totalMem = options->memLimit;
 
-	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	sscan = systable_beginscan(rel, ResGroupCapabilityResgroupidIndexId, true, SnapshotNow, 0, NULL);
 
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{

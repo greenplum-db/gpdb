@@ -18,6 +18,7 @@ WANTED_DIRS = \
 		indexscan \
 		dict_int \
 		dict_xsyn \
+		hstore		\
 		intarray \
 		pageinspect \
 		pg_upgrade \

@@ -904,6 +904,7 @@ PersistentBuild_TruncateAllGpRelationNode(void)
 
 		btree_metapage = (Page)palloc(BLCKSZ);
 		_bt_initmetapage(btree_metapage, P_NONE, 0);
+		PageSetChecksumInplace(btree_metapage, 0);
 		smgrwrite(
 			smgrRelation, 
 			/* blockNum */ 0, 

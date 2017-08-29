@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema sisc_mat_sort;
 CREATE
 set search_path to sisc_mat_sort;
@@ -15,7 +19,7 @@ CREATE
 create table testsiscm (i1 int, i2 int, i3 int, i4 int);
 CREATE
 insert into testsiscm select i, i % 1000, i % 100000, i % 75 from (select generate_series(1, nsegments * 150000) as i from (select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
-INSERT 450000
+INSERT 300000
 
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
@@ -31,8 +35,6 @@ SET ROLE TO role1_memory_test;
 SET
 
 
-set statement_mem="3MB";
-SET
 set gp_resgroup_print_operator_memory_limits=on;
 SET
 set gp_cte_sharing=on;

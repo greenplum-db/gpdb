@@ -84,3 +84,6 @@ upstream. You can simply set a default for the additional column,
 and only include the additional column in DATA rows that need a
 non-default value. GPDB_COLUMN_DEFAULTs are processed by
 process_col_defaults.pl script, before generating postgres.bki.
+If you need to provide non-default values for the GPDB-added
+attributes for some rows, you can do so with the GPDB_EXTRA_COL
+macro.

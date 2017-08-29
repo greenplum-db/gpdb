@@ -435,7 +435,7 @@ typedef enum NodeTag
 	T_AlterTSDictionaryStmt,
 	T_AlterTSConfigurationStmt,
 	T_WindowSpec,
-	T_WindowSpecParse,
+	T_WindowSpecParse,		/* GPDB_84_MERGE_FIXME: Unused, remove once we're open for catalog changes again */
 	T_PartitionBy,
 	T_PartitionElem,
 	T_PartitionRangeItem,

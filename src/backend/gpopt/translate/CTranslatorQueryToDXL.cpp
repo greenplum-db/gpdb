@@ -1329,8 +1329,8 @@ CTranslatorQueryToDXL::PdxlwfLeadLag
 		pdxlnLeadEdge = GPOS_NEW(m_pmp) CDXLNode(m_pmp, GPOS_NEW(m_pmp) CDXLScalarWindowFrameEdge(m_pmp, true /* fLeading */, edxlfbLead));
 		pdxlnTrailEdge = GPOS_NEW(m_pmp) CDXLNode(m_pmp, GPOS_NEW(m_pmp) CDXLScalarWindowFrameEdge(m_pmp, false /* fLeading */, edxlfbTrail));
 
-		pdxlnLeadEdge->AddChild(CTranslatorUtils::PdxlnInt4Const(m_pmp, m_pmda, 1 /*iVal*/));
-		pdxlnTrailEdge->AddChild(CTranslatorUtils::PdxlnInt4Const(m_pmp, m_pmda, 1 /*iVal*/));
+		pdxlnLeadEdge->AddChild(CTranslatorUtils::PdxlnInt8Const(m_pmp, m_pmda, 1 /*iVal*/));
+		pdxlnTrailEdge->AddChild(CTranslatorUtils::PdxlnInt8Const(m_pmp, m_pmda, 1 /*iVal*/));
 	}
 	else
 	{

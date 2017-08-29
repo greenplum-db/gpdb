@@ -27,18 +27,19 @@ extern RangeTblEntry *refnameRangeTblEntry(ParseState *pstate,
 					 const char *refname,
 					 int location,
 					 int *sublevels_up);
-extern void checkNameSpaceConflicts(ParseState *pstate, List *namespace1,
-						List *namespace2);
 extern CommonTableExpr *scanNameSpaceForCTE(ParseState *pstate,
 											const char *refname,
 											Index *ctelevelsup);
+extern void checkNameSpaceConflicts(ParseState *pstate, List *namespace1,
+						List *namespace2);
 extern int RTERangeTablePosn(ParseState *pstate,
 				  RangeTblEntry *rte,
 				  int *sublevels_up);
 extern RangeTblEntry *GetRTEByRangeTablePosn(ParseState *pstate,
 					   int varno,
 					   int sublevels_up);
-extern CommonTableExpr *GetCTEForRTE(ParseState *pstate, RangeTblEntry *rte, int rtelevelsup);
+extern CommonTableExpr *GetCTEForRTE(ParseState *pstate, RangeTblEntry *rte,
+			 int rtelevelsup);
 extern Node *scanRTEForColumn(ParseState *pstate, RangeTblEntry *rte,
 				 char *colname, int location);
 extern Node *colNameToVar(ParseState *pstate, char *colname, bool localonly,

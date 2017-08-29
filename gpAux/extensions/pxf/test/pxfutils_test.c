@@ -29,45 +29,6 @@
 #include "../src/pxfutils.c"
 
 void
-test_are_ips_equal(void **state)
-{
-    assert_false(are_ips_equal(NULL, "ip"));
-    assert_false(are_ips_equal("ip", NULL));
-    assert_false(are_ips_equal("ip", "pi"));
-    assert_false(are_ips_equal("IP", "ip"));
-    assert_true(are_ips_equal("ip", "ip"));
-}
-
-void
-test_port_to_str(void **state)
-{
-
-    char* port = pstrdup("123");
-    port_to_str(&port, 65535);
-    assert_string_equal(port, "65535");
-
-    /* test null original port */
-    MemoryContext old_context = CurrentMemoryContext;
-    PG_TRY();
-    {
-        port = pstrdup("123");
-        port_to_str(NULL, 65535);
-        assert_false("Expected Exception");
-    }
-    PG_CATCH();
-    {
-        MemoryContextSwitchTo(old_context);
-        ErrorData *edata = CopyErrorData();
-        assert_true(edata->elevel == ERROR);
-        char* expected_message = pstrdup("unexpected internal error in pxfutils.c");
-        assert_string_equal(edata->message, expected_message);
-        pfree(expected_message);
-        pfree(port);
-    }
-    PG_END_TRY();
-}
-
-void
 test_normalize_key_name(void **state)
 {
     char* replaced = normalize_key_name("bar");
@@ -121,8 +82,6 @@ main(int argc, char* argv[])
     cmockery_parse_arguments(argc, argv);
 
     const UnitTest tests[] = {
-            unit_test(test_are_ips_equal),
-            unit_test(test_port_to_str),
             unit_test(test_normalize_key_name)
     };
 

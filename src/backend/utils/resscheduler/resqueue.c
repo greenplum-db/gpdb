@@ -1446,7 +1446,6 @@ ResIncrementAdd(ResPortalIncrement *incSet, PROCLOCK *proclock, ResourceOwner ow
 	{
 		incrementSet->pid = incSet->pid;
 		incrementSet->portalId = incSet->portalId;
-		incrementSet->owner = owner;
 		incrementSet->isHold = incSet->isHold;
 		incrementSet->isCommitted = false;
 		for (i = 0; i < NUM_RES_LIMIT_TYPES; i++)

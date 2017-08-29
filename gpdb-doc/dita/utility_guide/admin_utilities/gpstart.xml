@@ -8,8 +8,9 @@
         <p>Starts a Greenplum Database system.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock><b>gpstart</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>] 
+            <codeblock><b>gpstart</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-B</b> <varname>parallel_processes</varname>] [<b>-R</b>]
         [<b>-m</b>] [<b>-y</b>] [<b>-a</b>] [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-l</b> <varname>logfile_directory</varname>] 
+        [<b>--skip-heap-checksum-validation</b>]
         [<b>-v</b> | <b>-q</b>]
 
 <b>gpstart</b> <b>-?</b> | <b>-h</b> | <b>--help</b> 
@@ -30,8 +31,19 @@
                 efficiently. If new hosts are added to the system, you must manually remove this
                 file from the <codeph>gpadmin</codeph> user's home directory. The utility will
                 create a new hosts cache file at the next startup.</p>
-            <p>Before you can start a Greenplum Database system, you must have initialized the
-                system using <codeph>gpinitsystem</codeph> first.</p>
+            <p>As part of the startup process, the utility checks the consistency of heap checksum
+                setting among the Greenplum Database master and segment instances, either enabled or
+                disabled on all instances. If the heap checksum setting is different among the
+                instances, an error is returned and Greenplum Database does not start. The
+                validation can be disabled by specifying the option
+                    <codeph>--skip-heap-checksum-validation</codeph>. For more information about
+                heap checksums, see <xref
+                    href="../../admin_guide/highavail/topics/g-enabling-high-availability-features.xml"
+                    format="dita" scope="peer">Enabling High Availability and Data Consistency
+                    Features</xref> in the <cite>Greenplum Database Admininstartor Guide</cite>.</p>
+            <note>Before you can start a Greenplum Database system, you must have initialized the
+                system using <codeph>gpinitsystem</codeph>. Enabling or disabing heap checksums is
+                set when you initalize the system and cannot be changed after initalization.</note>
         </section>
         <section id="section4">
             <title>Options</title>
@@ -64,6 +76,8 @@
                     <pd>
                         <codeblock>PGOPTIONS='-c gp_session_role=utility' psql</codeblock>
                     </pd>
+                    <pd>The consistency of the heap checksum setting on master and segment instances
+                        is not checked.</pd>
                 </plentry>
                 <plentry>
                     <pt>-q</pt>
@@ -74,6 +88,17 @@
                     <pt>-R</pt>
                     <pd>Starts Greenplum Database in restricted mode (only database superusers are
                         allowed to connect).</pd>
+                </plentry>
+                <plentry>
+                    <pt>--skip-heap-checksum-validation</pt>
+                    <pd>During startup, the utility does not validate the consistency of the heap
+                        checksum setting among the Greenplum Database master and segment instances.
+                        The default is to ensure that the heap checksum setting is the same on all
+                        instances, either enabled or disabled. <note type="warning">Starting
+                            Greenplum Database without this validation could lead to data loss. Use
+                            this option to start Greenplum Database only when it is necessary to
+                            ignore the heap checksum verification errors to recover data or to
+                            troubleshoot the errors.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>-t <varname>timeout_seconds</varname></pt>

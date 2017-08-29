@@ -260,7 +260,7 @@ ProcedureCreate(const char *procedureName,
 					break;
 				case PROARGMODE_OUT:
 				case PROARGMODE_TABLE:
-					/* Okay */
+					/* okay */
 					break;
 				case PROARGMODE_VARIADIC:
 					if (OidIsValid(variadicType))

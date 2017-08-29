@@ -2542,7 +2542,7 @@ MarkBufferDirtyHint(Buffer buffer, Relation relation)
 	{
 		XLogRecPtr	lsn = InvalidXLogRecPtr;
 		bool		dirtied = false;
-		bool	saved_inCommit = MyProc->inCommit;
+		bool		saved_inCommit = false;
 
 		/*
 		 * If checksums are enabled, and the buffer is permanent, then a full
@@ -2564,7 +2564,7 @@ MarkBufferDirtyHint(Buffer buffer, Relation relation)
 			 *
 			 * See src/backend/storage/page/README for longer discussion.
 			 */
-			if (RecoveryInProgress())
+			if (RecoveryInProgress() || IsInitProcessingMode())
 				return;
 
 			/*
@@ -2590,6 +2590,8 @@ MarkBufferDirtyHint(Buffer buffer, Relation relation)
 			 * essential that CreateCheckpoint waits for virtual transactions
 			 * rather than full transactionids.
 			 */
+			Assert(MyProc);
+			saved_inCommit = MyProc->inCommit;
 			MyProc->inCommit = true;
 			if (!relation->rd_istemp)
 			{
@@ -2622,7 +2624,11 @@ MarkBufferDirtyHint(Buffer buffer, Relation relation)
 		bufHdr->flags |= (BM_DIRTY | BM_JUST_DIRTIED);
 		UnlockBufHdr(bufHdr);
 
-		MyProc->inCommit = saved_inCommit;
+		if (!saved_inCommit)
+		{
+			Assert(MyProc);
+			MyProc->inCommit = false;
+		}
 
 		if (dirtied)
 		{

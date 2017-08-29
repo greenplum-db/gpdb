@@ -14,7 +14,7 @@ CREATE OR REPLACE VIEW rg_activity_status AS SELECT rsgname, waiting_reason, cur
 CREATE
 
 --
--- increase concurrency after pending queries
+-- 1. increase concurrency after pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -71,7 +71,7 @@ rsgname|waiting_reason|current_query
 (0 rows)
 
 --
--- increase concurrency before pending queries
+-- 2. increase concurrency before pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -128,7 +128,7 @@ rsgname|waiting_reason|current_query
 (0 rows)
 
 --
--- increase both concurrency & memory_shared_quota after pending queries
+-- 3. increase both concurrency & memory_shared_quota after pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -199,7 +199,7 @@ rsgname|waiting_reason|current_query
 (0 rows)
 
 --
--- increase both concurrency & memory_shared_quota before pending queries
+-- 4. increase both concurrency & memory_shared_quota before pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -259,7 +259,7 @@ rsgname|waiting_reason|current_query
 (0 rows)
 
 --
--- increase both concurrency & memory_limit after pending queries
+-- 5. increase both concurrency & memory_limit after pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -350,7 +350,7 @@ rsgname|waiting_reason|current_query
 (0 rows)
 
 --
--- increase both concurrency & memory_limit before pending queries
+-- 6. increase both concurrency & memory_limit before pending queries
 --
 
 ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
@@ -426,6 +426,49 @@ SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query
 -------+--------------+-------------
 (0 rows)
+
+--
+-- 7. decrease concurrency
+--
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_LIMIT 50;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET MEMORY_SHARED_QUOTA 0;
+ALTER
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 10;
+ALTER
+11:SET ROLE role_concurrency_test;
+SET
+11:BEGIN;
+BEGIN
+
+12:SET ROLE role_concurrency_test;
+SET
+12:BEGIN;
+BEGIN
+
+13:SET ROLE role_concurrency_test;
+SET
+13:BEGIN;
+BEGIN
+
+14:SET ROLE role_concurrency_test;
+SET
+14:BEGIN;
+BEGIN
+
+15:SET ROLE role_concurrency_test;
+SET
+15:BEGIN;
+BEGIN
+
+ALTER RESOURCE GROUP rg_concurrency_test SET CONCURRENCY 1;
+ALTER
+
+11q: ... <quitting>
+12q: ... <quitting>
+13q: ... <quitting>
+14q: ... <quitting>
+15q: ... <quitting>
 
 -- cleanup
 DROP VIEW rg_activity_status;

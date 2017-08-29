@@ -6,22 +6,23 @@ create table nhtest (i numeric(10, 2)) distributed by (i);
 insert into nhtest values(100000.22);
 insert into nhtest values(300000.19);
 explain select * from nhtest a join nhtest b using (i);
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.00 rows=1 width=11)
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=11)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=11)
          Hash Cond: public.nhtest.i = public.nhtest.i
          ->  Table Scan on nhtest  (cost=0.00..431.00 rows=1 width=11)
          ->  Hash  (cost=431.00..431.00 rows=1 width=11)
                ->  Table Scan on nhtest  (cost=0.00..431.00 rows=1 width=11)
- Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on; optimizer_segments=3
-(7 rows)
+ Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on
+ Optimizer status: PQO version 2.39.2
+(8 rows)
 
 select * from nhtest a join nhtest b using (i);
      i     
 -----------
- 300000.19
  100000.22
+ 300000.19
 (2 rows)
 
 create temp table l(a int);
@@ -55,22 +56,24 @@ select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j =
 -- 1. Use FULL OUTER JOIN to induce a Merge Join
 -- 2. Use a large tuple size to induce a Materialize
 -- 3. Use gp_dist_random() to induce a Redistribute
----
-  ON (alpha.i = theta.i)
- i | j | i | j 
----+---+---+---
-CREATE TABLE alpha (i int, j int) distributed by (i);
-CREATE TABLE theta (i int, j char(10000000)) distributed by (i);
-DROP TABLE IF EXISTS alpha;
-DROP TABLE IF EXISTS theta;
-FROM gp_dist_random('alpha') FULL OUTER JOIN gp_dist_random('theta')
-INSERT INTO alpha values (1, 1), (2, 2);
-INSERT INTO theta values (1, 'f'), (2, 'g');
-SELECT *
-WHERE (alpha.j IS NULL or theta.j IS NULL);
+--
 set enable_hashjoin to off;
 set enable_mergejoin to on;
 set enable_nestloop to off;
+DROP TABLE IF EXISTS alpha;
+NOTICE:  table "alpha" does not exist, skipping
+DROP TABLE IF EXISTS theta;
+NOTICE:  table "theta" does not exist, skipping
+CREATE TABLE alpha (i int, j int) distributed by (i);
+CREATE TABLE theta (i int, j char(10000000)) distributed by (i);
+INSERT INTO alpha values (1, 1), (2, 2);
+INSERT INTO theta values (1, 'f'), (2, 'g');
+SELECT *
+FROM gp_dist_random('alpha') FULL OUTER JOIN gp_dist_random('theta')
+  ON (alpha.i = theta.i)
+WHERE (alpha.j IS NULL or theta.j IS NULL);
+ i | j | i | j 
+---+---+---+---
 (0 rows)
 
 reset enable_hashjoin;
@@ -93,22 +96,23 @@ analyze t2;
 -- infer over equalities
 --
 explain select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=0.00..862.01 rows=1 width=8)
-   ->  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..862.01 rows=1 width=8)
-         ->  Aggregate  (cost=0.00..862.01 rows=1 width=8)
-               ->  Hash Join  (cost=0.00..862.01 rows=1 width=1)
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=0.00..862.00 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+         ->  Aggregate  (cost=0.00..862.00 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=1)
                      Hash Cond: t1.x = t2.x
-                     ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
                            Hash Key: t1.x
                            ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=4)
                                  Filter: x = 100
                      ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                            ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=4)
                                  Filter: x = 100
- Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on; optimizer_segments=3
-(13 rows)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.39.2
+(14 rows)
 
 select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
  count 
@@ -120,17 +124,18 @@ select count(*) from t1,t2 where t1.x = 100 and t1.x = t2.x;
 -- infer over >=
 --
 explain select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..1324040.53 rows=34 width=24)
-   ->  Nested Loop  (cost=0.00..1324040.53 rows=17 width=24)
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324039.56 rows=34 width=24)
+   ->  Nested Loop  (cost=0.00..1324039.56 rows=12 width=24)
          Join Filter: t2.x >= t1.x
-         ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=2 width=12)
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=12)
                      Filter: x = 100
-         ->  Table Scan on t2  (cost=0.00..431.00 rows=50 width=12)
- Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on; optimizer_segments=3
-(8 rows)
+         ->  Table Scan on t2  (cost=0.00..431.00 rows=34 width=12)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.39.2
+(9 rows)
 
 select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
   x  |  y  |  z  |  x  |  y  |  z  
@@ -143,23 +148,24 @@ select * from t1,t2 where t1.x = 100 and t2.x >= t1.x;
 --
 set optimizer_segments=2;
 explain select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
-                                                  QUERY PLAN                                                  
---------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..862.01 rows=1 width=24)
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.01 rows=1 width=24)
    ->  Hash Join  (cost=0.00..862.01 rows=1 width=24)
          Hash Cond: t1.x = t2.y
          Join Filter: t1.x <= t2.x
-         ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=12)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                Hash Key: t1.x
                ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=12)
                      Filter: x = 100
          ->  Hash  (cost=431.00..431.00 rows=1 width=12)
-               ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=0.00..431.00 rows=1 width=12)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
                      Hash Key: t2.y
                      ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=12)
                            Filter: y = 100
- Settings:  enable_hashjoin=on; enable_mergejoin=off; enable_nestloop=off; optimizer=on; optimizer_segments=2
-(14 rows)
+ Settings:  optimizer=on; optimizer_segments=2
+ Optimizer status: PQO version 2.39.2
+(15 rows)
 
 reset optimizer_segments;
 select * from t1,t2 where t1.x = 100 and t1.x = t2.y and t1.x <= t2.x;
@@ -202,11 +208,11 @@ select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (f
 select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
      f1      |     f1      
 -------------+-------------
+  2147483647 |  2147483647
       123456 |      123456
  -2147483647 | -2147483647
            0 |           0
      -123456 |     -123456
-  2147483647 |  2147483647
 (5 rows)
 
 -- Same as the last query, but with a partitioned table (which requires a
@@ -224,9 +230,9 @@ insert into part4_tbl values
 select * from part4_tbl a join part4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
    f1    |   f1    
 ---------+---------
+       0 |       0
   123456 |  123456
  -123456 | -123456
-       0 |       0
 (3 rows)
 
 --
@@ -247,17 +253,17 @@ from tjoin1
 left outer join (tjoin2 left outer join tjoin3 on tjoin2.id=tjoin3.id) on tjoin1.id=tjoin3.id;
  id |  t  |  t  
 ----+-----+-----
-  1 | 2-1 | 2-1
-  1 | 2-1 | 1-1
-  1 | 1-1 | 2-1
-  1 | 1-1 | 1-1
   3 |     | 
-  1 | 2-1 | 2-1
-  1 | 2-1 | 1-1
-  1 | 1-1 | 2-1
-  1 | 1-1 | 1-1
   3 |     | 
+  1 | 2-1 | 1-1
+  1 | 2-1 | 2-1
+  1 | 1-1 | 1-1
+  1 | 1-1 | 2-1
   2 |     | 
+  1 | 2-1 | 1-1
+  1 | 2-1 | 2-1
+  1 | 1-1 | 1-1
+  1 | 1-1 | 2-1
   2 |     | 
 (12 rows)
 
@@ -290,11 +296,11 @@ select count(*) from hjn_test, (select 3 as bar) foo where hjn_test.i = least (f
 select * from int4_tbl a join int4_tbl b on (a.f1 = (select f1 from int4_tbl c where c.f1=b.f1));
      f1      |     f1      
 -------------+-------------
+  2147483647 |  2147483647
       123456 |      123456
  -2147483647 | -2147483647
            0 |           0
      -123456 |     -123456
-  2147483647 |  2147483647
 (5 rows)
 
 reset enable_hashjoin;
@@ -316,7 +322,7 @@ explain select a from foo where a<1 and a>1 and not exists (select c from bar wh
    ->  Result  (cost=0.00..0.00 rows=0 width=4)
          One-Time Filter: false
  Settings:  optimizer=on
- Optimizer status: PQO version 2.5.0
+ Optimizer status: PQO version 2.39.2
 (5 rows)
 
 select a from foo where a<1 and a>1 and not exists (select c from bar where c=a);
@@ -334,8 +340,8 @@ set enable_mergejoin to on;
 select * from foo where a not in (select c from bar where c <= 5);
  a  | b 
 ----+---
-  6 |  
   7 |  
+  6 |  
   8 |  
   9 |  
  10 |  

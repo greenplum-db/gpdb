@@ -41,7 +41,7 @@ SELECT f1 AS "Ten" FROM TIMETZ_TBL WHERE f1 >= '00:00-07' ORDER BY 1;
 
 SELECT f1 + time with time zone '00:01' AS "Illegal" FROM TIMETZ_TBL;
 
---- basic sanity of sample timezones
+-- basic sanity of sample timezones
 set timezone = 'America/New_York';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as NYC;
 set timezone = 'America/Los_Angeles';
@@ -52,9 +52,9 @@ set timezone = 'Asia/Kolkata';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Kolkata;
 set timezone = 'Asia/Shanghai';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Shanghai;
---- verify some newly added timezones
+-- verify some newly added timezones
 set timezone = 'Asia/Khandyga';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Khandyga;
---- Casablanca time has changed in new timezone db lets verify it
+-- Casablanca time has changed in new timezone db lets verify it
 set timezone = 'Africa/Casablanca';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Casablanca;

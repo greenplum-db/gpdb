@@ -74,6 +74,7 @@ typedef FormData_pg_pltemplate *Form_pg_pltemplate;
  *		initial contents of pg_pltemplate
  * ----------------
  */
+
 DATA(insert ( "plpgsql"		t t "plpgsql_call_handler" "plpgsql_inline_handler" "plpgsql_validator" "$libdir/plpgsql" _null_ ));
 DATA(insert ( "pltcl"		t t "pltcl_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));
 DATA(insert ( "pltclu"		f f "pltclu_call_handler" _null_ _null_ "$libdir/pltcl" _null_ ));

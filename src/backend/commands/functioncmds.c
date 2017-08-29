@@ -1280,7 +1280,7 @@ RemoveFunction(RemoveFuncStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 }
@@ -1717,7 +1717,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 }
@@ -2106,7 +2106,7 @@ DropCast(DropCastStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 }

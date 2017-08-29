@@ -716,6 +716,8 @@ static int XLogReconcileEofInternal(
 void HandleStartupProcInterrupts(void);
 static bool CheckForStandbyTrigger(void);
 
+static void GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg);
+
 /*
  * Whether we need to always generate transaction log (XLOG), or if we can
  * bypass it and get better performance.
@@ -8400,38 +8402,51 @@ UnpackCheckPointRecord(
 	ckptExtended->dtxCheckpointLen =
 		TMGXACT_CHECKPOINT_BYTES((ckptExtended->dtxCheckpoint)->committedCount);
 
-	Assert (remainderLen > ckptExtended->dtxCheckpointLen);
+	/*
+	 * The master mirror checkpoint (mmxlog) and prepared transaction aggregate state (ptas) will be skipped
+	 * when gp_before_filespace_setup is ON.
+	 */
+	if (remainderLen > ckptExtended->dtxCheckpointLen)
+	{
+		current_record_ptr = current_record_ptr + ckptExtended->dtxCheckpointLen;
+		remainderLen -= ckptExtended->dtxCheckpointLen;
 
-	current_record_ptr = current_record_ptr + ckptExtended->dtxCheckpointLen;
-	remainderLen -= ckptExtended->dtxCheckpointLen;
 
-	/* Lets fetch the master mirroring information */
-	ckptExtended->masterMirroringCheckpointLen =
-		mmxlog_get_checkpoint_record_fields(current_record_ptr,
-											&(ckptExtended->masterMirroringCheckpoint));
+		/* Lets fetch the master mirroring information */
+		ckptExtended->masterMirroringCheckpointLen =
+				mmxlog_get_checkpoint_record_fields(current_record_ptr,
+				                                    &(ckptExtended->masterMirroringCheckpoint));
 
-	Assert(remainderLen > ckptExtended->masterMirroringCheckpointLen);
+		Assert(remainderLen > ckptExtended->masterMirroringCheckpointLen);
 
-	current_record_ptr = current_record_ptr + ckptExtended->masterMirroringCheckpointLen;
-	remainderLen -= ckptExtended->masterMirroringCheckpointLen;
+		current_record_ptr = current_record_ptr + ckptExtended->masterMirroringCheckpointLen;
+		remainderLen -= ckptExtended->masterMirroringCheckpointLen;
 
-	/* Finally, point to prepared transaction information */
-	ckptExtended->ptas = (prepared_transaction_agg_state *)current_record_ptr;
+		/* Finally, point to prepared transaction information */
+		ckptExtended->ptas = (prepared_transaction_agg_state *) current_record_ptr;
+		Assert(remainderLen == PREPARED_TRANSACTION_CHECKPOINT_BYTES(ckptExtended->ptas->count));
+	}
+	else
+	{
+		Assert(remainderLen == ckptExtended->dtxCheckpointLen);
+		ckptExtended->masterMirroringCheckpointLen = 0;
+		ckptExtended->ptas = NULL;
+	}
 
 	if (Debug_persistent_recovery_print)
 	{
 		elog(PersistentRecovery_DebugPrintLevel(),
-			 "UnpackCheckPointRecord: Checkpoint record data length = %u "
-			 "DTX committed count %d, DTX data length %u "
-			 "Master Mirroring length %u, filespaces %d, tablespaces %d, databases %d "
+			 "UnpackCheckPointRecord: Checkpoint record data length = %u, "
+			 "DTX committed count %d, DTX data length %u, "
+			 "Master Mirroring length %u, filespaces %d, tablespaces %d, databases %d, "
 			 "Prepared Transaction count = %d",
 			 record->xl_len,
 			 ckptExtended->dtxCheckpoint->committedCount, ckptExtended->dtxCheckpointLen,
 			 ckptExtended->masterMirroringCheckpointLen,
-			 ckptExtended->masterMirroringCheckpoint.fspc->count,
-			 ckptExtended->masterMirroringCheckpoint.tspc->count,
-			 ckptExtended->masterMirroringCheckpoint.dbdir->count,
-			 ckptExtended->ptas->count);
+			 ckptExtended->masterMirroringCheckpointLen ? ckptExtended->masterMirroringCheckpoint.fspc->count : 0,
+			 ckptExtended->masterMirroringCheckpointLen ? ckptExtended->masterMirroringCheckpoint.tspc->count : 0,
+			 ckptExtended->masterMirroringCheckpointLen ? ckptExtended->masterMirroringCheckpoint.dbdir->count : 0,
+			 ckptExtended->ptas ? ckptExtended->ptas->count : 0);
 	}
 }
 
@@ -9244,28 +9259,7 @@ CreateCheckPoint(int flags)
 	 */
 	if (gp_keep_all_xlog == false && (_logId || _logSeg))
 	{
-		/* Only for MASTER check this GUC and act */
-		if (GpIdentity.segindex == MASTER_CONTENT_ID)
-		{
-			/*
-			 * See if we have a live WAL sender and see if it has a
-			 * start xlog location (with active basebackup) or standby fsync location
-			 * (with active standby). We have to compare it with prev. checkpoint
-			 * location. We use the min out of them to figure out till
-			 * what point we need to save the xlog seg files
-			 * Currently, applicable to Master only
-			 */
-			XLogRecPtr xlogCleanUpTo = WalSndCtlGetXLogCleanUpTo();
-			if (!XLogRecPtrIsInvalid(xlogCleanUpTo))
-			{
-				if (XLByteLT(recptr, xlogCleanUpTo))
-					xlogCleanUpTo = recptr;
-			}
-			else
-				xlogCleanUpTo = recptr;
-
-			CheckKeepWalSegments(xlogCleanUpTo, &_logId, &_logSeg);
-		}
+		GetXLogCleanUpTo(recptr, &_logId, &_logSeg);
 
 		PrevLogSeg(_logId, _logSeg);
 		RemoveOldXlogFiles(_logId, _logSeg, recptr);
@@ -12166,4 +12160,34 @@ bool
 IsStandbyMode(void)
 {
 	return StandbyMode;
+}
+
+static void
+GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg)
+{
+#ifndef USE_SEGWALREP
+	/* Only for MASTER check this GUC and act */
+    if (GpIdentity.segindex == MASTER_CONTENT_ID)
+    {
+#endif
+	/*
+	 * See if we have a live WAL sender and see if it has a
+	 * start xlog location (with active basebackup) or standby fsync location
+	 * (with active standby). We have to compare it with prev. checkpoint
+	 * location. We use the min out of them to figure out till
+	 * what point we need to save the xlog seg files
+	 */
+	XLogRecPtr xlogCleanUpTo = WalSndCtlGetXLogCleanUpTo();
+	if (!XLogRecPtrIsInvalid(xlogCleanUpTo))
+	{
+		if (XLByteLT(recptr, xlogCleanUpTo))
+			xlogCleanUpTo = recptr;
+	}
+	else
+		xlogCleanUpTo = recptr;
+
+	CheckKeepWalSegments(xlogCleanUpTo, _logId, _logSeg);
+#ifndef USE_SEGWALREP
+	}
+#endif
 }

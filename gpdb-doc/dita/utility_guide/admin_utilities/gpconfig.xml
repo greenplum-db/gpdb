@@ -77,6 +77,12 @@
           <pd>The value to use for the configuration parameter you specified with the
               <codeph>-c</codeph> option. By default, this value is applied to all segments, their
             mirrors, the master, and the standby master.</pd>
+          <pd>Parameter values that are not simple identifiers or numbers must be enclosed in single
+            quotes (<codeph>'</codeph>). For example, values that contain spaces or special
+            characters must be enclosed in single quotes. To embed a single quote in a parameter
+            value, enter either two single quotes or backslash and quote (<codeph>\'</codeph>).</pd>
+          <pd>The utility encloses the value in single quotes when adding the setting to the
+              <codeph>postgresql.conf</codeph> files.</pd>
         </plentry>
         <plentry>
           <pt>-m | --mastervalue <varname>master_value</varname></pt>
@@ -170,13 +176,18 @@
       <codeblock>gpconfig -c max_connections -v 100 -m 10</codeblock>
       <p>Set the server configuration parameters <codeph>gp_email_to</codeph> and
           <codeph>gp_email_from</codeph>. These parameters require single quotes around the values.
-        When you specify the values for the parameters, enclose the values with double quotes
-          (<codeph>"</codeph>).<codeblock>$ gpconfig -c gp_email_from -v "'gpdb-server@example.com'"
-$ gpconfig -c gp_email_to -v "'gpdb-admin@example.com'"</codeblock></p>
+        <codeblock>$ gpconfig -c gp_email_from -v 'gpdb-server@example.com'
+$ gpconfig -c gp_email_to -v 'gpdb-admin@example.com'</codeblock></p>
       <p>In the <codeph>postgresql.conf</codeph> file, the parameters are set correctly, with single
         quotes around the
         values:<codeblock>gp_email_from='gpdb-server@example.com'
 gp_email_to='gpdb-admin@example.com'</codeblock></p>
+      <p>These examples shows the syntax required due to bash shell string processing.</p>
+      <codeblock>gpconfig -c search_path -v '"\$user",public'
+gpconfig -c dynamic_library_path -v '\$libdir'</codeblock>
+      <p>The configuration parameters are added to the <codeph>postgresql.conf</codeph> file.</p>
+      <codeblock>search_path='"$user",public'
+dynamic_library_path='$libdir'</codeblock>
       <p>Comment out all instances of the <codeph>default_statistics_target</codeph> configuration
         parameter, and restore the system default:</p>
       <codeblock>gpconfig -r default_statistics_target</codeblock>

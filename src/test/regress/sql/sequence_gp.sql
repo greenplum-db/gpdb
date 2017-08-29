@@ -1,6 +1,6 @@
----
---- Test Overflow with NO CYCLE
----
+--
+-- Test Overflow with NO CYCLE
+--
 CREATE TABLE tmp_table (a int);
 INSERT INTO tmp_table VALUES (0),(1),(2),(3);
 

@@ -18,9 +18,12 @@
  *
  */
 
-#include "pxfutils.h"
 #include "pxfbridge.h"
+#include "pxffragment.h"
+#include "pxfutils.h"
+
 #include "access/extprotocol.h"
+#include "nodes/pg_list.h"
 
 /* define magic module unless run as a part of test cases */
 #ifndef UNIT_TESTING
@@ -106,8 +109,7 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
 {
     /* Must be called via the external table format manager */
     check_caller(fcinfo, "pxfprotocol_import");
-
-    /* retrieve user context */
+    /* retrieve user context required for data read*/
     gphadoop_context *context = (gphadoop_context *) EXTPROTOCOL_GET_USER_CTX(fcinfo);
 
     /* last call -- cleanup */
@@ -116,55 +118,40 @@ pxfprotocol_import(PG_FUNCTION_ARGS)
         EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
         PG_RETURN_INT32(0);
     }
-
     /* first call -- do any desired init */
     if (context == NULL) {
         context = create_context(fcinfo, true);
         EXTPROTOCOL_SET_USER_CTX(fcinfo, context);
         gpbridge_import_start(context);
     }
-
+    /* Read data */
     int bytes_read = gpbridge_read(context, EXTPROTOCOL_GET_DATABUF(fcinfo), EXTPROTOCOL_GET_DATALEN(fcinfo));
+
     PG_RETURN_INT32(bytes_read);
 }
 
 /*
- * Allocates context and initializes values.
+ * Allocates context and sets values for the segment
  */
 static gphadoop_context*
 create_context(PG_FUNCTION_ARGS, bool is_import)
 {
+    /* parse and set uri */
+    GPHDUri *uri = parseGPHDUri(EXTPROTOCOL_GET_URL(fcinfo));
+    Relation relation = EXTPROTOCOL_GET_RELATION(fcinfo);
+
+    /* fetch data fragments */
+    get_fragments(uri, relation);
+
+    /* set context */
     gphadoop_context* context = palloc0(sizeof(gphadoop_context));
-
-    //TODO: remove mocking fragment data
-    // append mock fragment data to original uri
-    //&segwork=<size>@<ip>@<port>@<index><size>@<ip>@<port>@<index><size>
-    char *original_uri = EXTPROTOCOL_GET_URL(fcinfo);
-    StringInfoData uri_with_segwork;
-    initStringInfo(&uri_with_segwork);
-
-    /*
-    fragment 1: segwork=46@127.0.0.1@51200@tmp/dummy1.1@0@ZnJhZ21lbnQx@@@
-    fragment 2: segwork=46@127.0.0.1@51200@tmp/dummy1.2@0@ZnJhZ21lbnQy@@@
-    fragment 3: segwork=46@127.0.0.1@51200@tmp/dummy1.3@0@ZnJhZ21lbnQz@@@
-    */
-    appendStringInfo(&uri_with_segwork,
-                     "%s&segwork=46@127.0.0.1@51200@tmp/dummy1.%d@0@ZnJhZ21lbnQ%c@@@",
-                     original_uri,
-                     GpIdentity.segindex + 1,
-                     'x' + GpIdentity.segindex);
-
-    /* parse the URI */
-    context->gphd_uri = parseGPHDUri(uri_with_segwork.data);
+    context->gphd_uri = uri;
     if (is_import)
         Assert(context->gphd_uri->fragments != NULL);
 
     initStringInfo(&context->uri);
     initStringInfo(&context->write_file_name);
-    context->relation = EXTPROTOCOL_GET_RELATION(fcinfo);
-
-    //TODO: remove this when using real fragmentation data
-    pfree(uri_with_segwork.data);
+    context->relation = relation;
 
     return context;
 }

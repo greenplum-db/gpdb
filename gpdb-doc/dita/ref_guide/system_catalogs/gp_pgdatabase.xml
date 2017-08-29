@@ -49,7 +49,7 @@
             <entry colname="col3">gp_segment_ configuration.content</entry>
             <entry colname="col4">The ID for the portion of data on an instance. A primary segment
               instance and its mirror will have the same content ID.<p>For a segment the value is
-                from 0-<i>N</i>, where <i>N</i> is the number of segments in Greenplum Database.</p><p>For the master, the value is -1.</p></entry>
+                from 0-<i>N-1</i>, where <i>N</i> is the number of segments in Greenplum Database.</p><p>For the master, the value is -1.</p></entry>
           </row>
           <row>
             <entry colname="col1">

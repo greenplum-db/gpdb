@@ -295,9 +295,9 @@ namespace gpdxl
 			static
 			BOOL FWindowSpec(Node *pnode, List *plWindowClause, List *plTargetList);
 
-			// create a scalar const value expression for the given int4 value
+			// create a scalar const value expression for the given int8 value
 			static
-			CDXLNode *PdxlnInt4Const(IMemoryPool *pmp, CMDAccessor *pmda, INT iVal);
+			CDXLNode *PdxlnInt8Const(IMemoryPool *pmp, CMDAccessor *pmda, INT iVal);
 
 			// check to see if the target list entry is a grouping column
 			static

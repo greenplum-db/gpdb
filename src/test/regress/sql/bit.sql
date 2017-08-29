@@ -53,7 +53,7 @@ SELECT v,
        SUBSTRING(v FROM 6) AS sub_6
        FROM VARBIT_TABLE ORDER BY 1;
 
---- Bit operations
+-- Bit operations
 DROP TABLE varbit_table;
 CREATE TABLE varbit_table (a BIT VARYING(16), b BIT VARYING(16));
 COPY varbit_table FROM stdin;
@@ -77,7 +77,7 @@ SELECT a,a<<4 AS "a<<4",b,b>>2 AS "b>>2" FROM varbit_table ORDER BY 1,2,3;
 
 DROP TABLE varbit_table;
 
---- Bit operations
+-- Bit operations
 DROP TABLE bit_table;
 CREATE TABLE bit_table (a BIT(16), b BIT(16));
 COPY bit_table FROM stdin;

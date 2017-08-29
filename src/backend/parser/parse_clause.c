@@ -79,7 +79,7 @@ static Node *transformFromClauseItem(ParseState *pstate, Node *n,
 static Node *buildMergedJoinVar(ParseState *pstate, JoinType jointype,
 				   Var *l_colvar, Var *r_colvar);
 static TargetEntry *findTargetlistEntrySQL92(ParseState *pstate, Node *node,
-					List **tlist, int clause);
+						 List **tlist, int clause);
 static TargetEntry *findTargetlistEntrySQL99(ParseState *pstate, Node *node,
 					List **tlist);
 static List *findListTargetlistEntries(ParseState *pstate, Node *node,
@@ -156,32 +156,12 @@ transformFromClause(ParseState *pstate, List *frmList)
 	}
 }
 
-static bool
-expr_null_check_walker(Node *node, void *context)
-{
-	if (!node)
-		return false;
-
-	if (IsA(node, Const))
-	{
-		Const *con = (Const *)node;
-
-		if (con->constisnull)
-			return true;
-	}
-	return expression_tree_walker(node, expr_null_check_walker, context);
-}
-
-static bool
-expr_contains_null_const(Expr *expr)
-{
-	return expr_null_check_walker((Node *)expr, NULL);
-}
-
 static void
 transformWindowFrameEdge(ParseState *pstate, WindowFrameEdge *e,
 						 WindowSpec *spec, Query *qry, bool is_rows)
 {
+	const char *constructName = NULL;
+
 	/* Only bound frame edges will have a value */
 	if (e->kind == WINDOW_BOUND_PRECEDING ||
 		e->kind == WINDOW_BOUND_FOLLOWING)
@@ -189,26 +169,12 @@ transformWindowFrameEdge(ParseState *pstate, WindowFrameEdge *e,
 		if (is_rows)
 		{
 			/* the e->val should already be transformed */
-			if (IsA(e->val, Const))
-			{
-				Const *con = (Const *)e->val;
 
-				if (con->consttype != INT4OID)
-					ereport(ERROR,
-							(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
-							 errmsg("ROWS parameter must be an integer expression"),
-							 parser_errposition(pstate, con->location)));
-				if (DatumGetInt32(con->constvalue) < 0)
-					ereport(ERROR,
-							(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
-							 errmsg("ROWS parameter cannot be negative"),
-							 parser_errposition(pstate, con->location)));
-			}
-
-			if (expr_contains_null_const((Expr *)e->val))
-				ereport(ERROR,
-						(errcode(ERROR_INVALID_WINDOW_FRAME_PARAMETER),
-						 errmsg("ROWS parameter cannot contain NULL value")));
+			/*
+			 * Like LIMIT clause, simply coerce to int8
+			 */
+			constructName = "ROWS";
+			e->val = coerce_to_specific_type(pstate, e->val, INT8OID, constructName);
 		}
 		else
 		{
@@ -723,13 +689,10 @@ transformWindowClause(ParseState *pstate, Query *qry)
 				nf->lead = e;
 			}
 
-			ParseCallbackState pcbstate;
-			setup_parser_errposition_callback(&pcbstate, pstate, newspec->location);
 			transformWindowFrameEdge(pstate, nf->trail, newspec, qry,
 									 nf->is_rows);
 			transformWindowFrameEdge(pstate, nf->lead, newspec, qry,
 									 nf->is_rows);
-			cancel_parser_errposition_callback(&pcbstate);
 			newspec->frame = nf;
 		}
 
@@ -2082,22 +2045,21 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
  *	  If no matching entry exists, one is created and appended to the target
  *	  list as a "resjunk" node.
  *
- *    This function supports the old SQL92 ORDER BY interpretation, where the
- *    expression is an output column name or number.  If we fail to find a match
- *    of that sort, we fall through to the SQL99 rules. For historical reasons,
- *    Postgres also allows this interpretation for GROUP BY, though the standard
- *    never did. However, for GROUP BY we prefer a SQL99 match.  This function
- *    is *not* used for WINDOW definitions.
+ * This function supports the old SQL92 ORDER BY interpretation, where the
+ * expression is an output column name or number.  If we fail to find a
+ * match of that sort, we fall through to the SQL99 rules.  For historical
+ * reasons, Postgres also allows this interpretation for GROUP BY, though
+ * the standard never did.  However, for GROUP BY we prefer a SQL99 match.
+ * This function is *not* used for WINDOW definitions.
  *
- *    node    : the ORDER BY, GROUP BY, or DISTINCT ON expression to be matched
- *    tlist   : the target list (passed by reference so we can append to it)
- *    clause  : identifies clause type being processed
+ * node		the ORDER BY, GROUP BY, or DISTINCT ON expression to be matched
+ * tlist	the target list (passed by reference so we can append to it)
+ * clause	identifies clause type being processed
  */
 static TargetEntry *
-findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist, 
-                         int clause)
+findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
+						 int clause)
 {
-	TargetEntry *target_result = NULL;
 	ListCell   *tl;
 
 	/*----------
@@ -2150,8 +2112,8 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 			/*
 			 * In GROUP BY, we must prefer a match against a FROM-clause
 			 * column to one against the targetlist.  Look to see if there is
-			 * a matching column.  If so, fall through to use SQL99 rules
-             * NOTE: if name could refer ambiguously to more than one column
+			 * a matching column.  If so, fall through to use SQL99 rules.
+			 * NOTE: if name could refer ambiguously to more than one column
 			 * name exposed by FROM, colNameToVar will ereport(ERROR). That's
 			 * just what we want here.
 			 *
@@ -2169,6 +2131,8 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 
 		if (name != NULL)
 		{
+			TargetEntry *target_result = NULL;
+
 			foreach(tl, *tlist)
 			{
 				TargetEntry *tle = (TargetEntry *) lfirst(tl);
@@ -2209,7 +2173,9 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 			/* translator: %s is name of a SQL construct, eg ORDER BY */
 					 errmsg("non-integer constant in %s",
-							clauseText[clause])));
+							clauseText[clause]),
+					 parser_errposition(pstate, location)));
+
 		target_pos = intVal(val);
 		foreach(tl, *tlist)
 		{
@@ -2228,7 +2194,6 @@ findTargetlistEntrySQL92(ParseState *pstate, Node *node, List **tlist,
 						clauseText[clause], target_pos),
 				 parser_errposition(pstate, location)));
 	}
-
 
 	/*
 	 * Otherwise, we have an expression, so process it per SQL99 rules.
@@ -2755,31 +2720,34 @@ transformGroupClause(ParseState *pstate, List *grouplist,
  *
  * ORDER BY items will be added to the targetlist (as resjunk columns)
  * if not already present, so the targetlist must be passed by reference.
+ *
+ * This is also used for window and aggregate ORDER BY clauses (which act
+ * almost the same, but are always interpreted per SQL99 rules).
  */
 List *
 transformSortClause(ParseState *pstate,
 					List *orderlist,
 					List **targetlist,
 					bool resolveUnknown,
-                    bool useSQL99)
+					bool useSQL99)
 {
 	List	   *sortlist = NIL;
 	ListCell   *olitem;
 
 	foreach(olitem, orderlist)
 	{
-		SortBy	   *sortby = lfirst(olitem);
+		SortBy	   *sortby = (SortBy *) lfirst(olitem);
 		TargetEntry *tle;
 
-        if (useSQL99)
-            tle = findTargetlistEntrySQL99(pstate, sortby->node, targetlist);
-        else
-            tle = findTargetlistEntrySQL92(pstate, sortby->node, targetlist, 
-                                           ORDER_CLAUSE);
+		if (useSQL99)
+			tle = findTargetlistEntrySQL99(pstate, sortby->node, targetlist);
+		else
+			tle = findTargetlistEntrySQL92(pstate, sortby->node, targetlist,
+										   ORDER_CLAUSE);
 
 		sortlist = addTargetToSortList(pstate, tle,
-									   sortlist, *targetlist,
-									   sortby, resolveUnknown);
+									   sortlist, *targetlist, sortby,
+									   resolveUnknown);
 	}
 
 	return sortlist;
@@ -3103,8 +3071,8 @@ addAllTargetsToSortList(ParseState *pstate, List *sortlist,
  */
 List *
 addTargetToSortList(ParseState *pstate, TargetEntry *tle,
-					List *sortlist, List *targetlist,
-					SortBy *sortby, bool resolveUnknown)
+					List *sortlist, List *targetlist, SortBy *sortby,
+					bool resolveUnknown)
 {
 	Oid			restype = exprType((Node *) tle->expr);
 	Oid			sortop;
@@ -3201,7 +3169,8 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 				sortcl->nulls_first = false;
 				break;
 			default:
-				elog(ERROR, "unrecognized sortby_nulls: %d", sortby->sortby_nulls);
+				elog(ERROR, "unrecognized sortby_nulls: %d",
+					 sortby->sortby_nulls);
 				break;
 		}
 

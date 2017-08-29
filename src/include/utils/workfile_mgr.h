@@ -17,6 +17,7 @@
 #include "utils/sharedcache.h"
 #include "nodes/execnodes.h"
 #include "utils/timestamp.h"
+#include "utils/resowner.h"
 
 /*
  * Workfile management default parameters

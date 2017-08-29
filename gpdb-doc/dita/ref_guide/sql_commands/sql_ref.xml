@@ -51,6 +51,9 @@
       <li id="ad143363">
         <xref href="./ALTER_PROTOCOL.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="ad1433683">
+        <xref href="./ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad143368">
         <xref href="./ALTER_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -147,6 +150,9 @@
       </li>
       <li>
         <xref href="./CREATE_PROTOCOL.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="ad1405713">
+        <xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad140571">
         <xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/>
@@ -246,6 +252,9 @@
       </li>
       <li>
         <xref href="./DROP_PROTOCOL.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="ad1407123">
+        <xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad140712">
         <xref href="./DROP_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/>

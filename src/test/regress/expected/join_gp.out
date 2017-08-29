@@ -55,14 +55,14 @@ select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j =
 -- 1. Use FULL OUTER JOIN to induce a Merge Join
 -- 2. Use a large tuple size to induce a Materialize
 -- 3. Use gp_dist_random() to induce a Redistribute
----
+--
 set enable_hashjoin to off;
 set enable_mergejoin to on;
 set enable_nestloop to off;
-CREATE TABLE alpha (i int, j int) distributed by (i);
-CREATE TABLE theta (i int, j char(10000000)) distributed by (i);
 DROP TABLE IF EXISTS alpha;
 DROP TABLE IF EXISTS theta;
+CREATE TABLE alpha (i int, j int) distributed by (i);
+CREATE TABLE theta (i int, j char(10000000)) distributed by (i);
 INSERT INTO alpha values (1, 1), (2, 2);
 INSERT INTO theta values (1, 'f'), (2, 'g');
 SELECT *

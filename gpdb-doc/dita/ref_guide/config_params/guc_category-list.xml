@@ -41,6 +41,9 @@
       <li id="kh158581">
         <xref href="#topic44" type="topic" format="dita"/>
       </li>
+      <li id="kh1585815">
+        <xref href="#topic444" type="topic" format="dita"/>
+      </li>
       <li id="kh158590">
         <xref href="#topic45" type="topic" format="dita"/>
       </li>
@@ -266,10 +269,9 @@
     <topic id="topic19" xml:lang="en">
       <title>Cost-Based Vacuum Delay Parameters</title>
       <body>
-        <note type="warning">Do not use cost-based vacuum delay because it runs
-          asynchronously among the segment instances. The vacuum cost limit and delay is invoked at
-          the segment level without taking into account the state of the entire Greenplum Database
-          array</note>
+        <note type="warning">Do not use cost-based vacuum delay because it runs asynchronously among
+          the segment instances. The vacuum cost limit and delay is invoked at the segment level
+          without taking into account the state of the entire Greenplum Database array</note>
         <p>You can configure the execution cost of <codeph>VACUUM</codeph> and
             <codeph>ANALYZE</codeph> commands to reduce the I/O impact on concurrent database
           activity. When the accumulated cost of I/O operations reaches the limit, the process
@@ -713,6 +715,8 @@
                 <xref href="guc-list.xml#client_min_messages" type="section"
                   >client_min_messages</xref>
               </p>
+              <p><xref href="guc-list.xml#gp_interconnect_debug_retry_interval"
+                  >gp_interconnect_debug_retry_interval</xref></p>
               <p>
                 <xref href="guc-list.xml#log_error_verbosity" type="section"
                   >log_error_verbosity</xref>
@@ -792,6 +796,8 @@
               </p>
               <p>
                 <xref href="guc-list.xml#log_hostname" type="section">log_hostname</xref>
+              </p>
+              <p><xref href="guc-list.xml#gp_log_interconnect">gp_log_interconnect</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#log_parser_stats" type="section">log_parser_stats</xref>
@@ -1122,7 +1128,7 @@
     </body>
   </topic>
   <topic id="topic44" xml:lang="en">
-    <title id="kh155069">Workload Management Parameters</title>
+    <title id="kh155069">Workload Management Parameters (Resource Queues)</title>
     <body>
       <p>The following configuration parameters configure the Greenplum Database workload management
         feature (resource queues), query prioritization, memory utilization and concurrency control. </p>
@@ -1185,6 +1191,37 @@
       </simpletable>
     </body>
   </topic>
+  <topic id="topic444" xml:lang="en">
+    <title id="kh1550694">Workload Management Parameters (Resource Groups)</title>
+    <body>
+      <p>The following parameters configure the Greenplum Database resource group workload
+        management feature. </p>
+      <simpletable id="kh1571613" frame="none">
+        <strow>
+          <stentry>
+            <p>
+              <xref href="guc-list.xml#gp_resource_group_cpu_limit" type="section"
+                >gp_resource_group_cpu_limit</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
+                >gp_resource_group_memory_limit</xref>
+            </p>
+          </stentry>
+          <stentry>
+            <p>
+              <xref href="guc-list.xml#gp_resource_manager" type="section"
+                >gp_resource_manager</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#max_resource_groups" type="section"
+                >max_resource_groups</xref>
+            </p>
+          </stentry>
+        </strow>
+      </simpletable>
+    </body>
+  </topic>
   <topic id="topic45" xml:lang="en">
     <title id="kh155070">External Table Parameters</title>
     <body>
@@ -1241,6 +1278,8 @@
               <xref href="guc-list.xml#gp_enable_exchange_default_partition"
                 >gp_enable_exchange_default_partition</xref>
             </p>
+            <p><xref href="guc-list.xml#gp_enable_segment_copy_checking"
+                >gp_enable_segment_copy_checking</xref></p>
           </stentry>
         </strow>
       </simpletable>

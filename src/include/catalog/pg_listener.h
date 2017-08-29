@@ -29,9 +29,9 @@
 
 CATALOG(pg_listener,2614) BKI_WITHOUT_OIDS
 {
-	NameData	relname;		
-	int4		listenerpid;	
-	int4		notification;	
+	NameData	relname;
+	int4		listenerpid;
+	int4		notification;
 } FormData_pg_listener;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -44,15 +44,14 @@ CATALOG(pg_listener,2614) BKI_WITHOUT_OIDS
  */
 typedef FormData_pg_listener *Form_pg_listener;
 
-
 /* ----------------
  *		compiler constants for pg_listener
  * ----------------
  */
-#define Natts_pg_listener				3
-#define Anum_pg_listener_relname		1
-#define Anum_pg_listener_listenerpid	2
-#define Anum_pg_listener_notification	3
+#define Natts_pg_listener						3
+#define Anum_pg_listener_relname				1
+#define Anum_pg_listener_listenerpid			2
+#define Anum_pg_listener_notification			3
 
 /* ----------------
  *		initial contents of pg_listener are NOTHING.

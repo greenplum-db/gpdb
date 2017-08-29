@@ -483,18 +483,6 @@ _readGroupId(void)
 	READ_DONE();
 }
 
-static WindowSpecParse *
-_readWindowSpecParse(void)
-{
-	READ_LOCALS(WindowSpecParse);
-
-	READ_STRING_FIELD(name);
-	READ_NODE_FIELD(elems);
-
-	READ_DONE();
-}
-
-#ifndef COMPILING_BINARY_FUNCS
 static WindowSpec *
 _readWindowSpec(void)
 {
@@ -505,11 +493,10 @@ _readWindowSpec(void)
 	READ_NODE_FIELD(partition);
 	READ_NODE_FIELD(order);
 	READ_NODE_FIELD(frame);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 static WindowFrame *
 _readWindowFrame(void)
@@ -548,7 +535,7 @@ _readPercentileExpr(void)
 	READ_NODE_FIELD(sortTargets);
 	READ_NODE_FIELD(pcExpr);
 	READ_NODE_FIELD(tcExpr);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -574,7 +561,7 @@ _readWithClause(void)
 
 	READ_NODE_FIELD(ctes);
 	READ_BOOL_FIELD(recursive);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -587,7 +574,7 @@ _readCommonTableExpr(void)
 	READ_STRING_FIELD(ctename);
 	READ_NODE_FIELD(aliascolnames);
 	READ_NODE_FIELD(ctequery);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 	READ_BOOL_FIELD(cterecursive);
 	READ_INT_FIELD(cterefcount);
 	READ_NODE_FIELD(ctecolnames);
@@ -2002,7 +1989,7 @@ _readSortBy(void)
 	READ_INT_FIELD(sortby_nulls);
 	READ_NODE_FIELD(useOp);
 	READ_NODE_FIELD(node);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -2862,202 +2849,6 @@ _readAlterTypeStmt(void)
 
 #ifndef COMPILING_BINARY_FUNCS
 /*
- * Greenplum Database developers added code to improve performance over the
- * linear searching that existed in the postgres version of
- * parseNodeString.  We introduced a struct containing
- * the node type string and read function pointer.
- * We created a sorted array of these for all node types supported
- * by parseNodeString, with Greenplum Database extensions.
- * This array is searched for a node type string.   If found,
- * the function pointer is excuted.
- */
-
-/*
- * Typedefs used in binary searching for node type in parseNodeString.
- */
-
-/*
- * ReadFn is the typedef of a read function for a node type.
- */
-typedef void * (*ReadFn)(void);
-
-/*
- * ParseNodeInfo is a struct containing the string and read function for a node type.
- */
-typedef struct ParseNodeInfo
-{
-	char	*pzNodeName;
-	ReadFn	readNode;
-} ParseNodeInfo;
-
-/*
- * infoAr is an array of the ParseNodeInfo for all node type that have read functions.
- * This array MUST be kept in sorted order (based on alphabetical order of the NodeName).
- */
-static ParseNodeInfo infoAr[] =
-{
-	{"A_ARRAYEXPR", (ReadFn)_readA_ArrayExpr},
-	{"AEXPR", (ReadFn)_readAExpr},
-	{"AGGORDER", (ReadFn)_readAggOrder},
-	{"AGGREF", (ReadFn)_readAggref},
-	{"ALIAS", (ReadFn)_readAlias},
-	{"ALTERDOMAINSTMT", (ReadFn)_readAlterDomainStmt},
-	{"ALTERFUNCTIONSTMT", (ReadFn)_readAlterFunctionStmt},
-	{"ALTEROBJECTSCHEMASTMT", (ReadFn)_readAlterObjectSchemaStmt},
-	{"ALTEROWNERSTMT", (ReadFn)_readAlterOwnerStmt},
-	{"ALTEROPFAMILYSTMT", (ReadFn)_readAlterOpFamilyStmt},
-	{"ALTERPARTITIONCMD", (ReadFn)_readAlterPartitionCmd},
-	{"ALTERPARTITIONID", (ReadFn)_readAlterPartitionId},
-	{"ALTERROLESETSTMT", (ReadFn)_readAlterRoleSetStmt},
-	{"ALTERROLESTMT", (ReadFn)_readAlterRoleStmt},
-	{"ALTERSEQSTMT", (ReadFn)_readAlterSeqStmt},
-	{"ALTERTABLECMD", (ReadFn)_readAlterTableCmd},
-	{"ALTERTABLESTMT", (ReadFn)_readAlterTableStmt},
-	{"ALTERTYPESTMT", (ReadFn)_readAlterTypeStmt},
-	{"ARRAY", (ReadFn)_readArrayExpr},
-	{"ARRAYCOERCEEXPR", (ReadFn)_readArrayCoerceExpr},
-	{"ARRAYREF", (ReadFn)_readArrayRef},
-	{"A_CONST", (ReadFn)_readAConst},
-	{"BOOLEANTEST", (ReadFn)_readBooleanTest},
-	{"BOOLEXPR", (ReadFn)_readBoolExpr},
-	{"CASE", (ReadFn)_readCaseExpr},
-	{"CASETESTEXPR", (ReadFn)_readCaseTestExpr},
-	{"CDBPROCESS", (ReadFn)_readCdbProcess},
-	{"CLUSTERSTMT", (ReadFn)_readClusterStmt},
-	{"COALESCE", (ReadFn)_readCoalesceExpr},
-	{"COERCETODOMAIN", (ReadFn)_readCoerceToDomain},
-	{"COERCETODOMAINVALUE", (ReadFn)_readCoerceToDomainValue},
-	{"COERCEVIAIO", (ReadFn)_readCoerceViaIO},
-	{"COLUMNDEF", (ReadFn)_readColumnDef},
-	{"COLUMNREF", (ReadFn)_readColumnRef},
-	{"COMMONTABLEEXPR", (ReadFn)_readCommonTableExpr},
-	{"COMPTYPESTMT", (ReadFn)_readCompositeTypeStmt},
-	{"CONST", (ReadFn)_readConst},
-	{"CONSTRAINT", (ReadFn)_readConstraint},
-	{"CONSTRAINTSSETSTMT", (ReadFn)_readConstraintsSetStmt},
-	{"CONVERTROWTYPEEXPR", (ReadFn)_readConvertRowtypeExpr},
-	{"CREATECAST", (ReadFn)_readCreateCastStmt},
-	{"CREATECONVERSION", (ReadFn)_readCreateConversionStmt},
-	{"CREATEDBSTMT", (ReadFn)_readCreatedbStmt},
-	{"CREATEDOMAINSTMT", (ReadFn)_readCreateDomainStmt},
-	{"CREATEENUMSTMT", (ReadFn)_readCreateEnumStmt},
-	{"CREATEEXTERNALSTMT", (ReadFn)_readCreateExternalStmt},
-	{"CREATEFUNCSTMT", (ReadFn)_readCreateFunctionStmt},
-	{"CREATEOPCLASS", (ReadFn)_readCreateOpClassStmt},
-	{"CREATEOPCLASSITEM", (ReadFn)_readCreateOpClassItem},
-	{"CREATEOPFAMILYSTMT", (ReadFn)_readCreateOpFamilyStmt},
-	{"CREATEPLANGSTMT", (ReadFn)_readCreatePLangStmt},
-	{"CREATEROLESTMT", (ReadFn)_readCreateRoleStmt},
-	{"CREATESCHEMASTMT", (ReadFn)_readCreateSchemaStmt},
-	{"CREATESEQSTMT", (ReadFn)_readCreateSeqStmt},
-	{"CREATESTMT", (ReadFn)_readCreateStmt},
-	{"CREATETRIGSTMT", (ReadFn)_readCreateTrigStmt},
-	{"CURRENTOFEXPR", (ReadFn)_readCurrentOfExpr},
-	{"CURSORPOSINFO", (ReadFn)_readCursorPosInfo},
-	{"DECLARECURSOR", (ReadFn)_readDeclareCursorStmt},
-	{"DEFELEM", (ReadFn)_readDefElem},
-	{"DEFINESTMT", (ReadFn)_readDefineStmt},
-	{"DENYLOGININTERVAL", (ReadFn)_readDenyLoginInterval},
-	{"DENYLOGINPOINT", (ReadFn)_readDenyLoginPoint},
-	{"DISTINCTEXPR", (ReadFn)_readDistinctExpr},
-	{"DROPCAST", (ReadFn)_readDropCastStmt},
-	{"DROPDBSTMT", (ReadFn)_readDropdbStmt},
-	{"DROPPLANGSTMT", (ReadFn)_readDropPLangStmt},
-	{"DROPPROPSTMT", (ReadFn)_readDropPropertyStmt},
-	{"DROPROLESTMT", (ReadFn)_readDropRoleStmt},
-	{"DROPSTMT", (ReadFn)_readDropStmt},
-	{"EXTTABLETYPEDESC", (ReadFn)_readExtTableTypeDesc},
-	{"FIELDSELECT", (ReadFn)_readFieldSelect},
-	{"FIELDSTORE", (ReadFn)_readFieldStore},
-	{"FKCONSTRAINT", (ReadFn)_readFkConstraint},
-	{"FROMEXPR", (ReadFn)_readFromExpr},
-	{"FUNCCALL", (ReadFn)_readFuncCall},
-	{"FUNCEXPR", (ReadFn)_readFuncExpr},
-	{"FUNCTIONPARAMETER", (ReadFn)_readFunctionParameter},
-	{"FUNCWITHARGS", (ReadFn)_readFuncWithArgs},
-	{"GRANTROLESTMT", (ReadFn)_readGrantRoleStmt},
-	{"GRANTSTMT", (ReadFn)_readGrantStmt},
-	{"GROUPCLAUSE", (ReadFn)_readGroupClause},
-	{"GROUPID", (ReadFn)_readGroupId},
-	{"GROUPING", (ReadFn)_readGrouping},
-	{"GROUPINGCLAUSE", (ReadFn)_readGroupingClause},
-	{"GROUPINGFUNC", (ReadFn)_readGroupingFunc},
-	{"INDEXELEM", (ReadFn)_readIndexElem},
-	{"INDEXSTMT", (ReadFn)_readIndexStmt},
-	{"INHERITPARTITION", (ReadFn)_readInheritPartitionCmd},
-	{"INTOCLAUSE", (ReadFn)_readIntoClause},
-	{"JOINEXPR", (ReadFn)_readJoinExpr},
-	{"LOCKSTMT", (ReadFn)_readLockStmt},
-	{"MINMAX", (ReadFn)_readMinMaxExpr},
-	{"NOTIFY", (ReadFn)_readNotifyStmt},
-	{"NULLIFEXPR", (ReadFn)_readNullIfExpr},
-	{"NULLTEST", (ReadFn)_readNullTest},
-	{"OPEXPR", (ReadFn)_readOpExpr},
-	{"PARAM", (ReadFn)_readParam},
-	{"PARTITION", (ReadFn)_readPartition},
-	{"PARTITIONNODE", (ReadFn)_readPartitionNode},
-	{"PGPARTRULE", (ReadFn)_readPgPartRule},
-	{"PARTITIONRULE", (ReadFn)_readPartitionRule},
-	{"PERCENTILEEXPR", (ReadFn)_readPercentileExpr},
-	{"PRIVGRANTEE", (ReadFn)_readPrivGrantee},
-	{"QUERY", (ReadFn)_readQuery},
-	{"RANGETBLREF", (ReadFn)_readRangeTblRef},
-	{"RANGEVAR", (ReadFn)_readRangeVar},
-	{"REINDEXSTMT", (ReadFn)_readReindexStmt},
-	{"RELABELTYPE", (ReadFn)_readRelabelType},
-	{"REMOVEFUNCSTMT", (ReadFn)_readRemoveFuncStmt},
-	{"REMOVEOPCLASS", (ReadFn)_readRemoveOpClassStmt},
-	{"REMOVEOPFAMILY", (ReadFn)_readRemoveOpFamilyStmt},
-	{"RENAMESTMT", (ReadFn)_readRenameStmt},
-	{"ROW", (ReadFn)_readRowExpr},
-	{"ROWCOMPAREEXPR", (ReadFn)_readRowCompareExpr},
-	{"ROWMARKCLAUSE", (ReadFn)_readRowMarkClause},
-	{"RTE", (ReadFn)_readRangeTblEntry},
-	{"RULESTMT", (ReadFn)_readRuleStmt},
-	{"SCALARARRAYOPEXPR", (ReadFn)_readScalarArrayOpExpr},
-	{"SEGFILEMAPNODE", (ReadFn)_readSegfileMapNode},
-	{"SETDISTRIBUTIONCMD", (ReadFn)_readSetDistributionCmd},
-	{"SETOPERATIONSTMT", (ReadFn)_readSetOperationStmt},
-	{"SETTODEFAULT", (ReadFn)_readSetToDefault},
-	{"SINGLEROWERRORDESC",(ReadFn)_readSingleRowErrorDesc},
-	{"SLICE", (ReadFn)_readSlice},
-	{"SLICETABLE", (ReadFn)_readSliceTable},
-	{"SORTBY", (ReadFn)_readSortBy},
-	{"SORTCLAUSE", (ReadFn)_readSortClause},
-	{"SUBLINK", (ReadFn)_readSubLink},
-	{"TABLEVALUEEXPR", (ReadFn)_readTableValueExpr},
-	{"TARGETENTRY", (ReadFn)_readTargetEntry},
-	{"TRUNCATESTMT", (ReadFn)_readTruncateStmt},
-	{"TYPECAST", (ReadFn)_readTypeCast},
-	{"TYPENAME", (ReadFn)_readTypeName},
-	{"VACUUMSTMT", (ReadFn)_readVacuumStmt},
-	{"VAR", (ReadFn)_readVar},
-	{"VARIABLESETSTMT", (ReadFn)_readVariableSetStmt},
-	{"VIEWSTMT", (ReadFn)_readViewStmt},
-	{"WHEN", (ReadFn)_readCaseWhen},
-	{"WINDOWFRAME", (ReadFn)_readWindowFrame},
-	{"WINDOWFRAMEEDGE", (ReadFn)_readWindowFrameEdge},
-	{"WINDOWKEY", (ReadFn)_readWindowKey},
-	{"WINDOWREF", (ReadFn)_readWindowRef},
-	{"WINDOWSPEC", (ReadFn)_readWindowSpec},
-	{"WINDOWSPECPARSE", (ReadFn)_readWindowSpecParse},
-	{"WITHCLAUSE", (ReadFn)_readWithClause},
-	{"XMLEXPR", (ReadFn)_readXmlExpr},
-};
-
-/*
- * cmpParseNodeInfo is the compare function for ParseNodeInfo, used in bsearch.
- * It compares based on the NodeName.
- */
-static int cmpParseNodeInfo( const void *x, const void *y)
-{
-	const ParseNodeInfo *px = (const ParseNodeInfo *)x;
-	const ParseNodeInfo *py = (const ParseNodeInfo *)y;
-
-	return strcmp( px->pzNodeName, py->pzNodeName );
-}
-
-/*
  * parseNodeString
  *
  * Given a character string representing a node tree, parseNodeString creates
@@ -3069,55 +2860,328 @@ Node *
 parseNodeString(void)
 {
 	void	   *return_value;
-	ParseNodeInfo pni;
-	ParseNodeInfo *found;
-	char *pztokname;
 
 	READ_TEMP_LOCALS();
 
 	token = pg_strtok(&length);
 
-	/*
-	 * Make a string with the token, for use in the binary search
-	 * of the infoAr.  In this way, we find the read function
-	 * for the node type represented by the token.
-	 */
-	pztokname = palloc( length + 1 );
-	memcpy(pztokname, token, length);
-	pztokname[length] = '\0';
+#define MATCH(tokname, namelen) \
+	(length == namelen && strncmp(token, tokname, namelen) == 0)
 
 	/*
-	 * We have to search with a key that is the same data type as we have in the infoAr
-	 * i.e. a ParseNodeInfo.  Since the compare function is based on name only,
-	 * we can set the readNode element of the key to NULL.
+	 * Same as MATCH, but we make our life a bit easier by relying on the
+	 * compiler to be smart, and evaluate the strlen("<constant>") at
+	 * compilation time for us.
 	 */
-	pni.pzNodeName = pztokname;
-	pni.readNode = NULL;
+#define MATCHX(tokname) \
+	(length == strlen(tokname) && strncmp(token, tokname, strlen(tokname)) == 0)
 
-	found = bsearch( &pni, infoAr, lengthof(infoAr), sizeof(ParseNodeInfo), cmpParseNodeInfo);
+	if (MATCH("QUERY", 5))
+		return_value = _readQuery();
+	else if (MATCH("SORTCLAUSE", 10))
+		return_value = _readSortClause();
+	else if (MATCH("GROUPCLAUSE", 11))
+		return_value = _readGroupClause();
+	else if (MATCH("ROWMARKCLAUSE", 13))
+		return_value = _readRowMarkClause();
+	else if (MATCH("SETOPERATIONSTMT", 16))
+		return_value = _readSetOperationStmt();
+	else if (MATCH("ALIAS", 5))
+		return_value = _readAlias();
+	else if (MATCH("RANGEVAR", 8))
+		return_value = _readRangeVar();
+	else if (MATCH("INTOCLAUSE", 10))
+		return_value = _readIntoClause();
+	else if (MATCH("VAR", 3))
+		return_value = _readVar();
+	else if (MATCH("CONST", 5))
+		return_value = _readConst();
+	else if (MATCH("PARAM", 5))
+		return_value = _readParam();
+	else if (MATCH("AGGREF", 6))
+		return_value = _readAggref();
+	else if (MATCH("ARRAYREF", 8))
+		return_value = _readArrayRef();
+	else if (MATCH("FUNCEXPR", 8))
+		return_value = _readFuncExpr();
+	else if (MATCH("OPEXPR", 6))
+		return_value = _readOpExpr();
+	else if (MATCH("DISTINCTEXPR", 12))
+		return_value = _readDistinctExpr();
+	else if (MATCH("SCALARARRAYOPEXPR", 17))
+		return_value = _readScalarArrayOpExpr();
+	else if (MATCH("BOOLEXPR", 8))
+		return_value = _readBoolExpr();
+	else if (MATCH("SUBLINK", 7))
+		return_value = _readSubLink();
+	else if (MATCH("FIELDSELECT", 11))
+		return_value = _readFieldSelect();
+	else if (MATCH("FIELDSTORE", 10))
+		return_value = _readFieldStore();
+	else if (MATCH("RELABELTYPE", 11))
+		return_value = _readRelabelType();
+	else if (MATCH("COERCEVIAIO", 11))
+		return_value = _readCoerceViaIO();
+	else if (MATCH("ARRAYCOERCEEXPR", 15))
+		return_value = _readArrayCoerceExpr();
+	else if (MATCH("CONVERTROWTYPEEXPR", 18))
+		return_value = _readConvertRowtypeExpr();
+	else if (MATCH("CASE", 4))
+		return_value = _readCaseExpr();
+	else if (MATCH("WHEN", 4))
+		return_value = _readCaseWhen();
+	else if (MATCH("CASETESTEXPR", 12))
+		return_value = _readCaseTestExpr();
+	else if (MATCH("ARRAY", 5))
+		return_value = _readArrayExpr();
+	else if (MATCH("ROW", 3))
+		return_value = _readRowExpr();
+	else if (MATCH("ROWCOMPARE", 10))
+		return_value = _readRowCompareExpr();
+	else if (MATCH("COALESCE", 8))
+		return_value = _readCoalesceExpr();
+	else if (MATCH("MINMAX", 6))
+		return_value = _readMinMaxExpr();
+	else if (MATCH("XMLEXPR", 7))
+		return_value = _readXmlExpr();
+	else if (MATCH("NULLIFEXPR", 10))
+		return_value = _readNullIfExpr();
+	else if (MATCH("NULLTEST", 8))
+		return_value = _readNullTest();
+	else if (MATCH("BOOLEANTEST", 11))
+		return_value = _readBooleanTest();
+	else if (MATCH("COERCETODOMAIN", 14))
+		return_value = _readCoerceToDomain();
+	else if (MATCH("COERCETODOMAINVALUE", 19))
+		return_value = _readCoerceToDomainValue();
+	else if (MATCH("SETTODEFAULT", 12))
+		return_value = _readSetToDefault();
+	else if (MATCH("CURRENTOFEXPR", 13))
+		return_value = _readCurrentOfExpr();
+	else if (MATCH("TARGETENTRY", 11))
+		return_value = _readTargetEntry();
+	else if (MATCH("RANGETBLREF", 11))
+		return_value = _readRangeTblRef();
+	else if (MATCH("JOINEXPR", 8))
+		return_value = _readJoinExpr();
+	else if (MATCH("FROMEXPR", 8))
+		return_value = _readFromExpr();
+	else if (MATCH("RTE", 3))
+		return_value = _readRangeTblEntry();
+	else if (MATCH("NOTIFY", 6))
+		return_value = _readNotifyStmt();
+	else if (MATCH("DECLARECURSOR", 13))
+		return_value = _readDeclareCursorStmt();
 
-	pfree(pztokname);
-
-	if ( found == NULL )
-	{
-        ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-                        errmsg("This operation involves an internal data item "
-                               "of a type called \"%.*s\" which is not "
-                               "supported in this version of %s.",
-                               length, token, PACKAGE_NAME)
-                ));
-		return_value = NULL;	/* keep compiler quiet */
-	}
+	/* GPDB additions */
+	else if (MATCHX("A_ARRAYEXPR"))
+		return_value = _readA_ArrayExpr();
+	else if (MATCHX("A_CONST"))
+		return_value = _readAConst();
+	else if (MATCHX("AEXPR"))
+		return_value = _readAExpr();
+	else if (MATCHX("AGGORDER"))
+		return_value = _readAggOrder();
+	else if (MATCHX("ALTERDOMAINSTMT"))
+		return_value = _readAlterDomainStmt();
+	else if (MATCHX("ALTERFUNCTIONSTMT"))
+		return_value = _readAlterFunctionStmt();
+	else if (MATCHX("ALTEROBJECTSCHEMASTMT"))
+		return_value = _readAlterObjectSchemaStmt();
+	else if (MATCHX("ALTEROWNERSTMT"))
+		return_value = _readAlterOwnerStmt();
+	else if (MATCHX("ALTEROPFAMILYSTMT"))
+		return_value = _readAlterOpFamilyStmt();
+	else if (MATCHX("ALTERPARTITIONCMD"))
+		return_value = _readAlterPartitionCmd();
+	else if (MATCHX("ALTERPARTITIONID"))
+		return_value = _readAlterPartitionId();
+	else if (MATCHX("ALTERROLESETSTMT"))
+		return_value = _readAlterRoleSetStmt();
+	else if (MATCHX("ALTERROLESTMT"))
+		return_value = _readAlterRoleStmt();
+	else if (MATCHX("ALTERSEQSTMT"))
+		return_value = _readAlterSeqStmt();
+	else if (MATCHX("ALTERTABLECMD"))
+		return_value = _readAlterTableCmd();
+	else if (MATCHX("ALTERTABLESTMT"))
+		return_value = _readAlterTableStmt();
+	else if (MATCHX("ALTERTYPESTMT"))
+		return_value = _readAlterTypeStmt();
+	else if (MATCHX("CDBPROCESS"))
+		return_value = _readCdbProcess();
+	else if (MATCHX("CLUSTERSTMT"))
+		return_value = _readClusterStmt();
+	else if (MATCHX("COLUMNDEF"))
+		return_value = _readColumnDef();
+	else if (MATCHX("COLUMNREF"))
+		return_value = _readColumnRef();
+	else if (MATCHX("COMMONTABLEEXPR"))
+		return_value = _readCommonTableExpr();
+	else if (MATCHX("COMPTYPESTMT"))
+		return_value = _readCompositeTypeStmt();
+	else if (MATCHX("CONSTRAINT"))
+		return_value = _readConstraint();
+	else if (MATCHX("CONSTRAINTSSETSTMT"))
+		return_value = _readConstraintsSetStmt();
+	else if (MATCHX("CREATECAST"))
+		return_value = _readCreateCastStmt();
+	else if (MATCHX("CREATECONVERSION"))
+		return_value = _readCreateConversionStmt();
+	else if (MATCHX("CREATEDBSTMT"))
+		return_value = _readCreatedbStmt();
+	else if (MATCHX("CREATEDOMAINSTMT"))
+		return_value = _readCreateDomainStmt();
+	else if (MATCHX("CREATEENUMSTMT"))
+		return_value = _readCreateEnumStmt();
+	else if (MATCHX("CREATEEXTERNALSTMT"))
+		return_value = _readCreateExternalStmt();
+	else if (MATCHX("CREATEFUNCSTMT"))
+		return_value = _readCreateFunctionStmt();
+	else if (MATCHX("CREATEOPCLASS"))
+		return_value = _readCreateOpClassStmt();
+	else if (MATCHX("CREATEOPCLASSITEM"))
+		return_value = _readCreateOpClassItem();
+	else if (MATCHX("CREATEOPFAMILYSTMT"))
+		return_value = _readCreateOpFamilyStmt();
+	else if (MATCHX("CREATEPLANGSTMT"))
+		return_value = _readCreatePLangStmt();
+	else if (MATCHX("CREATEROLESTMT"))
+		return_value = _readCreateRoleStmt();
+	else if (MATCHX("CREATESCHEMASTMT"))
+		return_value = _readCreateSchemaStmt();
+	else if (MATCHX("CREATESEQSTMT"))
+		return_value = _readCreateSeqStmt();
+	else if (MATCHX("CREATESTMT"))
+		return_value = _readCreateStmt();
+	else if (MATCHX("CREATETRIGSTMT"))
+		return_value = _readCreateTrigStmt();
+	else if (MATCHX("CURSORPOSINFO"))
+		return_value = _readCursorPosInfo();
+	else if (MATCHX("DEFELEM"))
+		return_value = _readDefElem();
+	else if (MATCHX("DEFINESTMT"))
+		return_value = _readDefineStmt();
+	else if (MATCHX("DENYLOGININTERVAL"))
+		return_value = _readDenyLoginInterval();
+	else if (MATCHX("DENYLOGINPOINT"))
+		return_value = _readDenyLoginPoint();
+	else if (MATCHX("DROPCAST"))
+		return_value = _readDropCastStmt();
+	else if (MATCHX("DROPDBSTMT"))
+		return_value = _readDropdbStmt();
+	else if (MATCHX("DROPPLANGSTMT"))
+		return_value = _readDropPLangStmt();
+	else if (MATCHX("DROPPROPSTMT"))
+		return_value = _readDropPropertyStmt();
+	else if (MATCHX("DROPROLESTMT"))
+		return_value = _readDropRoleStmt();
+	else if (MATCHX("DROPSTMT"))
+		return_value = _readDropStmt();
+	else if (MATCHX("EXTTABLETYPEDESC"))
+		return_value = _readExtTableTypeDesc();
+	else if (MATCHX("FKCONSTRAINT"))
+		return_value = _readFkConstraint();
+	else if (MATCHX("FUNCCALL"))
+		return_value = _readFuncCall();
+	else if (MATCHX("FUNCTIONPARAMETER"))
+		return_value = _readFunctionParameter();
+	else if (MATCHX("FUNCWITHARGS"))
+		return_value = _readFuncWithArgs();
+	else if (MATCHX("GRANTROLESTMT"))
+		return_value = _readGrantRoleStmt();
+	else if (MATCHX("GRANTSTMT"))
+		return_value = _readGrantStmt();
+	else if (MATCHX("GROUPID"))
+		return_value = _readGroupId();
+	else if (MATCHX("GROUPING"))
+		return_value = _readGrouping();
+	else if (MATCHX("GROUPINGCLAUSE"))
+		return_value = _readGroupingClause();
+	else if (MATCHX("GROUPINGFUNC"))
+		return_value = _readGroupingFunc();
+	else if (MATCHX("INDEXELEM"))
+		return_value = _readIndexElem();
+	else if (MATCHX("INDEXSTMT"))
+		return_value = _readIndexStmt();
+	else if (MATCHX("INHERITPARTITION"))
+		return_value = _readInheritPartitionCmd();
+	else if (MATCHX("LOCKSTMT"))
+		return_value = _readLockStmt();
+	else if (MATCHX("PARTITION"))
+		return_value = _readPartition();
+	else if (MATCHX("PARTITIONNODE"))
+		return_value = _readPartitionNode();
+	else if (MATCHX("PGPARTRULE"))
+		return_value = _readPgPartRule();
+	else if (MATCHX("PARTITIONRULE"))
+		return_value = _readPartitionRule();
+	else if (MATCHX("PERCENTILEEXPR"))
+		return_value = _readPercentileExpr();
+	else if (MATCHX("PRIVGRANTEE"))
+		return_value = _readPrivGrantee();
+	else if (MATCHX("REINDEXSTMT"))
+		return_value = _readReindexStmt();
+	else if (MATCHX("REMOVEFUNCSTMT"))
+		return_value = _readRemoveFuncStmt();
+	else if (MATCHX("REMOVEOPCLASS"))
+		return_value = _readRemoveOpClassStmt();
+	else if (MATCHX("REMOVEOPFAMILY"))
+		return_value = _readRemoveOpFamilyStmt();
+	else if (MATCHX("RENAMESTMT"))
+		return_value = _readRenameStmt();
+	else if (MATCHX("RULESTMT"))
+		return_value = _readRuleStmt();
+	else if (MATCHX("SEGFILEMAPNODE"))
+		return_value = _readSegfileMapNode();
+	else if (MATCHX("SETDISTRIBUTIONCMD"))
+		return_value = _readSetDistributionCmd();
+	else if (MATCHX("SINGLEROWERRORDESC"))
+		return_value = _readSingleRowErrorDesc();
+	else if (MATCHX("SLICE"))
+		return_value = _readSlice();
+	else if (MATCHX("SLICETABLE"))
+		return_value = _readSliceTable();
+	else if (MATCHX("SORTBY"))
+		return_value = _readSortBy();
+	else if (MATCHX("TABLEVALUEEXPR"))
+		return_value = _readTableValueExpr();
+	else if (MATCHX("TRUNCATESTMT"))
+		return_value = _readTruncateStmt();
+	else if (MATCHX("TYPECAST"))
+		return_value = _readTypeCast();
+	else if (MATCHX("TYPENAME"))
+		return_value = _readTypeName();
+	else if (MATCHX("VACUUMSTMT"))
+		return_value = _readVacuumStmt();
+	else if (MATCHX("VARIABLESETSTMT"))
+		return_value = _readVariableSetStmt();
+	else if (MATCHX("VIEWSTMT"))
+		return_value = _readViewStmt();
+	else if (MATCHX("WINDOWFRAME"))
+		return_value = _readWindowFrame();
+	else if (MATCHX("WINDOWFRAMEEDGE"))
+		return_value = _readWindowFrameEdge();
+	else if (MATCHX("WINDOWKEY"))
+		return_value = _readWindowKey();
+	else if (MATCHX("WINDOWREF"))
+		return_value = _readWindowRef();
+	else if (MATCHX("WINDOWSPEC"))
+		return_value = _readWindowSpec();
+	else if (MATCHX("WITHCLAUSE"))
+		return_value = _readWithClause();
 	else
 	{
-		/*
-		* We matched the token with a node type.
-		* Call the read function.
-		*/
-		return_value = (*found->readNode)();
+        ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("This operation involves an internal data item "
+						"of a type called \"%.*s\" which is not "
+						"supported in this version of %s.",
+						length, token, PACKAGE_NAME)));
+		return_value = NULL;	/* keep compiler quiet */
 	}
 
-	return (Node *)return_value;
+	return (Node *) return_value;
 }
 
 

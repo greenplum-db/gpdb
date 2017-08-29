@@ -27,7 +27,7 @@ SELECT i,j FROM filter_test order by i;
     | 2
 (10 rows)
 
---- TEST COUNT(*)
+-- TEST COUNT(*)
 SELECT count(*) FROM filter_test;
  count 
 -------
@@ -70,7 +70,7 @@ SELECT count(*) FROM filter_test WHERE j = 1;
      3
 (1 row)
 
---- TEST COUNT(i)
+-- TEST COUNT(i)
 SELECT count(i) FROM filter_test;
  count 
 -------
@@ -113,7 +113,7 @@ SELECT count(i) FROM filter_test WHERE j = 1;
      3
 (1 row)
 
---- TEST MAX(*) => should error
+-- TEST MAX(*) => should error
 SELECT max(*) FROM filter_test;
 ERROR:  function max() does not exist
 LINE 1: SELECT max(*) FROM filter_test;
@@ -126,7 +126,7 @@ LINE 1: SELECT max(*) FILTER (WHERE i < 5) FROM filter_test;
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- Use old sort implementation
 set gp_enable_mk_sort=off;
---- TEST MAX(i)
+-- TEST MAX(i)
 SELECT max(i) FROM filter_test;
  max 
 -----
@@ -145,7 +145,7 @@ SELECT max(i) FROM filter_test WHERE i < 5;
    4
 (1 row)
 
---- TEST MIN(i)
+-- TEST MIN(i)
 SELECT min(i) FROM filter_test;
  min 
 -----
@@ -164,7 +164,7 @@ SELECT min(i) FROM filter_test WHERE i < 5;
    1
 (1 row)
 
---- TEST MAX(i)
+-- TEST MAX(i)
 SELECT MAX(i) FROM filter_test;
  max 
 -----
@@ -183,7 +183,7 @@ SELECT MAX(i) FROM filter_test WHERE i < 5;
    4
 (1 row)
 
---- TEST AVG(i)
+-- TEST AVG(i)
 SELECT AVG(i) FROM filter_test;
        avg        
 ------------------
@@ -202,7 +202,7 @@ SELECT AVG(i) FROM filter_test WHERE i < 5;
  2.5
 (1 row)
 
---- TEST SUM(i)
+-- TEST SUM(i)
 SELECT sum(i) FROM filter_test;
  sum 
 -----
@@ -259,7 +259,7 @@ SELECT sum(i::numeric) FILTER (WHERE i < 5) FROM filter_test;
   10
 (1 row)
 
---- TEST with cumulative aggs
+-- TEST with cumulative aggs
 SELECT i, j, count(j) OVER (order by i) FROM filter_test ORDER BY i;
  i  | j | count 
 ----+---+-------
@@ -299,7 +299,7 @@ SELECT i, j, count(j) OVER (order by i) FROM filter_test WHERE i % 2 = 1 ORDER B
  9 | 3 |     4
 (4 rows)
 
---- TEST with partitioned aggs
+-- TEST with partitioned aggs
 select i, j, count(i) over (partition by j) from filter_test ORDER BY j, i;
  i  | j | count 
 ----+---+-------
@@ -330,7 +330,7 @@ select i, j, count(i) filter (WHERE i % 2 = 1) over (partition by j) from filter
  10 |   |     0
 (10 rows)
 
---- TEST with rolling window aggs
+-- TEST with rolling window aggs
 select i, j, count(i) over(w) from filter_test 
 window w as (order by i rows between 1 preceding and 1 following) ORDER BY i;
  i  | j | count 
@@ -363,7 +363,7 @@ window w as (order by i rows between 1 preceding and 1 following) ORDER BY i;
     | 2 |     0
 (10 rows)
 
---- TEST with group by
+-- TEST with group by
 select j, count(i) from filter_test group by j ORDER BY j;
  j | count 
 ---+-------
@@ -393,7 +393,7 @@ select count(i) from filter_test;
      9
 (1 row)
 
---- TEST with multi-parameter aggs
+-- TEST with multi-parameter aggs
 select covar_pop(i,j) from filter_test;
     covar_pop     
 ------------------
@@ -424,7 +424,7 @@ select covar_pop(i,j) filter (where j in (1,2)) from filter_test;
       0.72
 (1 row)
 
---- TEST with window functions => should error
+-- TEST with window functions => should error
 select i, j, row_number() over (partition by j order by i) from filter_test ORDER BY j,i;
  i  | j | row_number 
 ----+---+------------
@@ -504,7 +504,7 @@ from filter_test where j < 4 ORDER BY j, i;
 ERROR:  filter clause specified, but ntile is not an aggregate function
 LINE 1: select i, ntile(4-j) filter (where true) over (partition by ...
                   ^
---- TEST against non aggregate function => should error
+-- TEST against non aggregate function => should error
 select i, lower('Hello') from filter_test order by i;
  i  | lower 
 ----+-------
@@ -524,7 +524,7 @@ select i, lower('Hello') filter (where i < 5) from filter_test order by i;
 ERROR:  filter clause specified, but lower is not an aggregate function
 LINE 1: select i, lower('Hello') filter (where i < 5) from filter_te...
                   ^
---- TEST against function like projection => should error
+-- TEST against function like projection => should error
 create or replace function maketuple() returns setof filter_test 
 as 'select * from filter_test' language sql READS SQL DATA;
 select i(t), j(t) from (select maketuple() as t) x order by i(t);
@@ -548,7 +548,7 @@ LINE 1: select i(t) filter (where true) from (select maketuple() as ...
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 drop function maketuple();
---- TEST non-exsistant function => same error
+-- TEST non-exsistant function => same error
 select chocolate(i) from filter_test;
 ERROR:  function chocolate(integer) does not exist
 LINE 1: select chocolate(i) from filter_test;
@@ -559,13 +559,13 @@ ERROR:  function chocolate(integer) does not exist
 LINE 1: select chocolate(i) filter (where true) from filter_test;
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
---- TEST filter from outside scope => error
+-- TEST filter from outside scope => error
 select * from (select i from filter_test where j = 1) x1, 
               (select sum(i) filter (where i < x1.i) from filter_test where j = 2) x2;
 ERROR:  subquery in FROM cannot refer to other relations of same query level
 LINE 2:               (select sum(i) filter (where i < x1.i) from fi...
                               ^
---- TEST against user defined aggregation function
+-- TEST against user defined aggregation function
 create or replace function _maxodd(oldmax int, newval int) returns int as $$
   SELECT CASE WHEN $1 is NULL 
               THEN (CASE WHEN abs($2) % 2 = 1 THEN $2 
@@ -607,7 +607,7 @@ SELECT j, maxodd(i) FILTER (WHERE TRUE) from filter_test group by j order by j;
    |      0
 (4 rows)
 
---- TEST NON-STRICT user defined aggregation function => should error
+-- TEST NON-STRICT user defined aggregation function => should error
 create or replace function _maxodd(oldmax int, newval int) returns int as $$
   SELECT CASE WHEN $1 is NULL 
               THEN (CASE WHEN abs($2) % 2 = 1 THEN $2 

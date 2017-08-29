@@ -29,8 +29,6 @@ set enable_hashjoin=off;
 SET
 set enable_nestloop=off;
 SET
-set statement_mem=10000;
-SET
 
 create temporary table spilltestresult1 as select t1.a as t1a, t2.a as t2a from (select a from spilltest1 group by a) t1, (select a from spilltest2 group by a) t2 where t1.a = t2.a;
 CREATE 400000
@@ -52,8 +50,6 @@ ANALYZE
 set enable_hashagg=on;
 SET
 set enable_groupagg=off;
-SET
-set statement_mem=10000;
 SET
 
 select b,count(*) from spilltest group by b order by b;
@@ -127,8 +123,6 @@ ANALYZE;
 set enable_nestloop=off;
 SET
 set enable_hashjoin=on;
-SET
-set statement_mem=10000;
 SET
 
 create temporary table spilltestresult2 as select t1.a as t1a, t1.b as t1b, t2.a as t2a, t2.b as t2b from spilltest t1, spilltest t2 where t1.a = t2.a;

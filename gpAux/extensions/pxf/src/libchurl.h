@@ -144,5 +144,6 @@ void print_http_headers(CHURL_HEADERS headers);
 #define PxfServiceAddress "localhost:51200"
 #define LocalhostIpV4Entry ":127.0.0.1"
 #define LocalhostIpV4 "localhost"
+#define REST_HEADER_JSON_RESPONSE "Accept: application/json"
 
 #endif //_GPHDFS_LIBCHURL_H_

@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema hashjoin_spill;
 set search_path to hashjoin_spill;
 
@@ -41,7 +45,6 @@ CREATE TABLE test_hj_spill (i1 int, i2 int, i3 int, i4 int, i5 int, i6 int, i7 i
 insert into test_hj_spill SELECT i,i,i%1000,i,i,i,i,i from
 	(select generate_series(1, nsegments * 15000) as i from
 	(select count(*) as nsegments from gp_segment_configuration where role='p' and content >= 0) foo) bar;
-SET statement_mem=1024;
 set gp_resgroup_print_operator_memory_limits=on;
 
 set gp_workfile_type_hashjoin=buffile;

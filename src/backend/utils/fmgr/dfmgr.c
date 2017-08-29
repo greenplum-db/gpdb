@@ -247,14 +247,6 @@ internal_load_library(const char *libname)
 		/* Check the magic function to determine compatibility */
 		magic_func = (PGModuleMagicFunction)
 			pg_dlsym(file_scanner->handle, PG_MAGIC_FUNCTION_NAME_STRING);
-
-		if (magic_func == NULL)
-		{
-			/* Check if this is a C++ library */
-			magic_func =(PGModuleMagicFunction)
-				pg_dlsym(file_scanner->handle, PG_MAGIC_FUNCTION_NAME_CPP_STRING);
-		}
-
 		if (magic_func)
 		{
 			const Pg_magic_struct *magic_data_ptr = (*magic_func) ();

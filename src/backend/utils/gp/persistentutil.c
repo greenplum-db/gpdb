@@ -251,6 +251,7 @@ gp_delete_persistent_filespace_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObjData			*fileSysObjData;
 	PersistentFileSysObjSharedData		*fileSysObjSharedData;
 	ItemPointer							 tid;
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	/* Must be super user */
 	if (!superuser())
@@ -267,11 +268,14 @@ gp_delete_persistent_filespace_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObj_GetDataPtrs(fileSysObjType, 
 									 &fileSysObjData, 
 									 &fileSysObjSharedData);
+
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 	PersistentFileSysObj_FreeTuple(fileSysObjData,
 								   fileSysObjSharedData,
 								   fileSysObjType,
 								   tid,
 								   true  /* flushToXLog */);
+	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	PG_RETURN_BOOL(true);
 }
@@ -283,6 +287,7 @@ gp_delete_persistent_tablespace_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObjData			*fileSysObjData;
 	PersistentFileSysObjSharedData		*fileSysObjSharedData;
 	ItemPointer							 tid;
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	/* Must be super user */
 	if (!superuser())
@@ -299,11 +304,14 @@ gp_delete_persistent_tablespace_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObj_GetDataPtrs(fileSysObjType, 
 									 &fileSysObjData, 
 									 &fileSysObjSharedData);
+
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 	PersistentFileSysObj_FreeTuple(fileSysObjData,
 								   fileSysObjSharedData,
 								   fileSysObjType,
 								   tid,
 								   true  /* flushToXLog */);
+	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	PG_RETURN_BOOL(true);
 }
@@ -315,6 +323,7 @@ gp_delete_persistent_database_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObjData			*fileSysObjData;
 	PersistentFileSysObjSharedData		*fileSysObjSharedData;
 	ItemPointer							 tid;
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	/* Must be super user */
 	if (!superuser())
@@ -331,11 +340,14 @@ gp_delete_persistent_database_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObj_GetDataPtrs(fileSysObjType, 
 									 &fileSysObjData, 
 									 &fileSysObjSharedData);
+
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 	PersistentFileSysObj_FreeTuple(fileSysObjData,
 								   fileSysObjSharedData,
 								   fileSysObjType,
 								   tid,
 								   true  /* flushToXLog */);
+	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	PG_RETURN_BOOL(true);
 }
@@ -347,6 +359,7 @@ gp_delete_persistent_relation_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObjData			*fileSysObjData;
 	PersistentFileSysObjSharedData		*fileSysObjSharedData;
 	ItemPointer							 tid;
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	/* Must be super user */
 	if (!superuser())
@@ -363,11 +376,14 @@ gp_delete_persistent_relation_node_entry(PG_FUNCTION_ARGS)
 	PersistentFileSysObj_GetDataPtrs(fileSysObjType, 
 									 &fileSysObjData, 
 									 &fileSysObjSharedData);
+
+	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 	PersistentFileSysObj_FreeTuple(fileSysObjData,
 								   fileSysObjSharedData,
 								   fileSysObjType,
 								   tid,
 								   true  /* flushToXLog */);
+	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	PG_RETURN_BOOL(true);
 }

@@ -135,54 +135,6 @@ heap_compute_data_size(TupleDesc tupleDesc,
 	return data_length;
 }
 
-/* ----------------
- *		ComputeDataSize
- *
- * Determine size of the data area of a tuple to be constructed
- *
- * OLD API with char 'n'/' ' convention for indicating nulls
- * ----------------
- */
-static Size
-ComputeDataSize(TupleDesc tupleDesc,
-				Datum *values,
-				char *nulls)
-{
-	Size		data_length = 0;
-	int			i;
-	int			numberOfAttributes = tupleDesc->natts;
-	Form_pg_attribute *att = tupleDesc->attrs;
-
-	for (i = 0; i < numberOfAttributes; i++)
-	{
-		Datum		val;
-
-		if (nulls[i] != ' ')
-			continue;
-
-		val = values[i];
-
-		if (ATT_IS_PACKABLE(att[i]) &&
-			VARATT_CAN_MAKE_SHORT(DatumGetPointer(val)))
-		{
-			/*
-			 * we're anticipating converting to a short varlena header, so
-			 * adjust length and don't count any alignment
-			 */
-			data_length += VARATT_CONVERTED_SHORT_SIZE(DatumGetPointer(val));
-		}
-		else
-		{
-			data_length = att_align_datum(data_length, att[i]->attalign,
-										  att[i]->attlen, val);
-			data_length = att_addlength_datum(data_length, att[i]->attlen,
-											  val);
-		}
-	}
-
-	return data_length;
-}
-
 /*
  * heap_fill_tuple
  *		Load data portion of a tuple from values/isnull arrays
@@ -898,95 +850,16 @@ heap_formtuple(TupleDesc tupleDescriptor,
 			   char *nulls)
 {
 	HeapTuple	tuple;			/* return tuple */
-	HeapTupleHeader td;			/* tuple data */
-	Size		len,
-				data_len;
-	int			hoff;
-	bool		hasnull = false;
-	Form_pg_attribute *att = tupleDescriptor->attrs;
 	int			numberOfAttributes = tupleDescriptor->natts;
+	bool	   *boolNulls = (bool *) palloc(numberOfAttributes * sizeof(bool));
 	int			i;
 
-	if (numberOfAttributes > MaxTupleAttributeNumber)
-		ereport(ERROR,
-				(errcode(ERRCODE_TOO_MANY_COLUMNS),
-				 errmsg("number of columns (%d) exceeds limit (%d)",
-						numberOfAttributes, MaxTupleAttributeNumber)));
-
-	/*
-	 * Check for nulls and embedded tuples; expand any toasted attributes in
-	 * embedded tuples.  This preserves the invariant that toasting can only
-	 * go one level deep.
-	 *
-	 * We can skip calling toast_flatten_tuple_attribute() if the attribute
-	 * couldn't possibly be of composite type.  All composite datums are
-	 * varlena and have alignment 'd'; furthermore they aren't arrays. Also,
-	 * if an attribute is already toasted, it must have been sent to disk
-	 * already and so cannot contain toasted attributes.
-	 */
 	for (i = 0; i < numberOfAttributes; i++)
-	{
-		if (nulls[i] != ' ')
-			hasnull = true;
-		else if (att[i]->attlen == -1 &&
-				 att[i]->attalign == 'd' &&
-				 att[i]->attndims == 0 &&
-				 !VARATT_IS_EXTENDED(values[i]))
-		{
-			values[i] = toast_flatten_tuple_attribute(values[i],
-													  att[i]->atttypid,
-													  att[i]->atttypmod);
-		}
-	}
+		boolNulls[i] = (nulls[i] == 'n');
 
-	/*
-	 * Determine total space needed
-	 */
-	len = offsetof(HeapTupleHeaderData, t_bits);
+	tuple = heap_form_tuple(tupleDescriptor, values, boolNulls);
 
-	if (hasnull)
-		len += BITMAPLEN(numberOfAttributes);
-
-	if (tupleDescriptor->tdhasoid)
-		len += sizeof(Oid);
-
-	hoff = len = MAXALIGN(len); /* align user data safely */
-
-	data_len = ComputeDataSize(tupleDescriptor, values, nulls);
-
-	len += data_len;
-
-	/*
-	 * Allocate and zero the space needed.	Note that the tuple body and
-	 * HeapTupleData management structure are allocated in one chunk.
-	 */
-	tuple = (HeapTuple) palloc0(HEAPTUPLESIZE + len);
-	tuple->t_data = td = (HeapTupleHeader) ((char *) tuple + HEAPTUPLESIZE);
-
-	/*
-	 * And fill in the information.  Note we fill the Datum fields even though
-	 * this tuple may never become a Datum.
-	 */
-	tuple->t_len = len;
-	ItemPointerSetInvalid(&(tuple->t_self));
-
-	HeapTupleHeaderSetDatumLength(td, len);
-	HeapTupleHeaderSetTypeId(td, tupleDescriptor->tdtypeid);
-	HeapTupleHeaderSetTypMod(td, tupleDescriptor->tdtypmod);
-
-	HeapTupleHeaderSetNatts(td, numberOfAttributes);
-	td->t_hoff = hoff;
-
-	if (tupleDescriptor->tdhasoid)		/* else leave infomask = 0 */
-		td->t_infomask = HEAP_HASOID;
-
-	heap_fill_tuple(tupleDescriptor,
-			 values,
-			 nulls,
-			 (char *) td + hoff,
-			 data_len,
-			 &td->t_infomask,
-			 (hasnull ? td->t_bits : NULL));
+	pfree(boolNulls);
 
 	return tuple;
 }

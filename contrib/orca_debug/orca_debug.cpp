@@ -19,7 +19,7 @@
 
 extern "C" {
 
-PG_MODULE_MAGIC_CPP;
+PG_MODULE_MAGIC;
 
 #undef PG_DETOAST_DATUM
 #define PG_DETOAST_DATUM(datum) \

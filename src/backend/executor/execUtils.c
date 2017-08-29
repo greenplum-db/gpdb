@@ -2573,12 +2573,12 @@ void AssertSliceTableIsValid(SliceTable *st, struct PlannedStmt *pstmt)
 
 	Assert(maxIndex == list_length(st->slices));
 
-	foreach (lc, st->slices)
+	foreach_with_count(lc, st->slices, i)
 	{
 		Slice *s = (Slice *) lfirst(lc);
 
 		/* The n-th slice entry has sliceIndex of n */
-		Assert(s->sliceIndex == i++ && "slice index incorrect");
+		Assert(s->sliceIndex == i && "slice index incorrect");
 
 		/* The root index of a slice is either 0 or is a slice corresponding to an init plan */
 		Assert((s->rootIndex == 0) || (s->rootIndex > st->nMotions && s->rootIndex < maxIndex));

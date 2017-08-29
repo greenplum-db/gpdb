@@ -987,6 +987,8 @@ extern Datum numeric_demalg(PG_FUNCTION_ARGS); /* MPP */
 extern Datum int8_avg_demalg(PG_FUNCTION_ARGS); /* MPP */
 extern Datum float8_avg_demalg(PG_FUNCTION_ARGS); /* MPP */
 extern Datum numeric_avg_demalg(PG_FUNCTION_ARGS); /* MPP */
+
+/* complex_type.c */
 extern Datum complex_cmp(PG_FUNCTION_ARGS);
 extern Datum complex_lt(PG_FUNCTION_ARGS);
 extern Datum complex_gt(PG_FUNCTION_ARGS);
@@ -1094,9 +1096,6 @@ extern Datum pg_prepared_statement(PG_FUNCTION_ARGS);
 /* utils/mmgr/portalmem.c */
 extern Datum pg_cursor(PG_FUNCTION_ARGS);
 
-/* tqual.c */
-extern Datum mpp_global_xid_map(PG_FUNCTION_ARGS);
-
 /* utils/resscheduler/resqueue.c */
 extern Datum pg_resqueue_status(PG_FUNCTION_ARGS);
 extern Datum pg_resqueue_status_kv(PG_FUNCTION_ARGS);
@@ -1112,7 +1111,6 @@ extern Datum matrix_add(PG_FUNCTION_ARGS);
 Datum int4_pivot_accum(PG_FUNCTION_ARGS);
 Datum int8_pivot_accum(PG_FUNCTION_ARGS);
 Datum float8_pivot_accum(PG_FUNCTION_ARGS);
-Datum unnest(PG_FUNCTION_ARGS);
 
 /* cdb/cdbpersistentbuild.c */
 Datum gp_persistent_build_db(PG_FUNCTION_ARGS);
@@ -1208,7 +1206,7 @@ extern Datum test_quicklz_compression(PG_FUNCTION_ARGS);
 extern Datum percentile_cont_trans(PG_FUNCTION_ARGS);
 extern Datum percentile_disc_trans(PG_FUNCTION_ARGS);
 
-/* gp_partition_funtions.c */
+/* gp_partition_functions.c */
 extern void dumpDynamicTableScanPidIndex(EState *estate, int index);
 
 /* XForms */

@@ -19,7 +19,6 @@
 #include "storage/itemptr.h"
 #include "storage/lwlock.h"
 #include "storage/shmem.h"
-#include "utils/resowner.h"
 
 
 /* struct PGPROC is declared in proc.h, but must forward-reference it */
@@ -467,7 +466,7 @@ typedef struct LOCALLOCK
 
 /* Waiter global locallock. (needed by resource queuing). */
 extern LOCALLOCK *awaitedLock;
-extern ResourceOwner awaitedOwner;
+extern struct ResourceOwnerData *awaitedOwner;
 
 /*
  * This struct holds information passed from lmgr internals to the lock

@@ -335,6 +335,7 @@ const char *const GucSource_Names[] =
 	 /* PGC_S_DATABASE */ "database",
 	 /* PGC_S_USER */ "user",
 	 /* PGC_S_CLIENT */ "client",
+	 /* PGC_S_RESGROUP */ "resource group",
 	 /* PGC_S_OVERRIDE */ "override",
 	 /* PGC_S_INTERACTIVE */ "interactive",
 	 /* PGC_S_TEST */ "test",
@@ -2736,6 +2737,7 @@ static void ShowAllGUCConfig(DestReceiver *dest);
 static char *_ShowOption(struct config_generic * record, bool use_units);
 static bool is_newvalue_equal(struct config_generic * record, const char *newvalue);
 
+static void DispatchSetPGVariable(const char *name, List *args, bool is_local);
 
 /*
  * Some infrastructure for checking malloc/strdup/realloc calls
@@ -5431,6 +5433,7 @@ ExecSetVariableStmt(VariableSetStmt *stmt)
 							  PGC_S_SESSION,
 							  action,
 							  true);
+			DispatchSetPGVariable(stmt->name, stmt->args, stmt->is_local);
 			break;
 		case VAR_SET_MULTI:
 
@@ -5493,6 +5496,29 @@ ExecSetVariableStmt(VariableSetStmt *stmt)
 			ResetAllOptions();
 			break;
 	}
+
+	if (stmt->kind == VAR_SET_DEFAULT ||
+		stmt->kind == VAR_RESET ||
+		stmt->kind == VAR_RESET_ALL)
+	{
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			/*
+			 * RESET must be dispatched different, because it can't
+			 * be in a user transaction
+			 */
+			StringInfoData buffer;
+
+			initStringInfo(&buffer);
+
+			if (stmt->kind == VAR_RESET_ALL)
+				appendStringInfo(&buffer, "RESET ALL");
+			else
+				appendStringInfo(&buffer, "RESET %s", stmt->name);
+
+			CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, NULL);
+		}
+	}
 }
 
 /*
@@ -5541,27 +5567,32 @@ SetPGVariableOptDispatch(const char *name, List *args, bool is_local, bool gp_di
 					  is_local ? GUC_ACTION_LOCAL : GUC_ACTION_SET,
 					  true);
 
-	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode())
+	if (gp_dispatch)
+		DispatchSetPGVariable(name, args, is_local);
+}
+
+static void
+DispatchSetPGVariable(const char *name, List *args, bool is_local)
+{
+	ListCell   *l;
+	StringInfoData buffer;
+
+	if (Gp_role != GP_ROLE_DISPATCH || IsBootstrapProcessingMode())
+		return;
+
+	initStringInfo( &buffer );
+
+	if (args == NIL)
 	{
+		appendStringInfo(&buffer, "RESET %s", name);
+	}
+	else
+	{
+		appendStringInfo(&buffer, "SET ");
+		if (is_local)
+			appendStringInfo(&buffer, "LOCAL ");
 
-		ListCell * l;
-		StringInfoData buffer;
-
-		initStringInfo( &buffer );
-
-        if (argstring == NULL)
-        {
-            appendStringInfo(&buffer, "RESET %s", name);
-            args = NIL;
-        }
-        else
-        {
-            appendStringInfo(&buffer, "SET ");
-		    if (is_local)
-			    appendStringInfo(&buffer, "LOCAL ");
-
-		    appendStringInfo(&buffer, "%s TO ", name);
-        }
+		appendStringInfo(&buffer, "%s TO ", name);
 
 		foreach(l, args)
 		{
@@ -5586,9 +5617,9 @@ SetPGVariableOptDispatch(const char *name, List *args, bool is_local, bool gp_di
 				case T_String:
 					val = strVal(&arg->val);
 
-						/*
-						 * Plain string literal or identifier., quote it
-						 */
+					/*
+					 * Plain string literal or identifier. Quote it.
+					 */
 
 					if (val[0] != '\'')
 						appendStringInfo(&buffer, "%s", quote_literal_internal(val));
@@ -5603,12 +5634,9 @@ SetPGVariableOptDispatch(const char *name, List *args, bool is_local, bool gp_di
 					break;
 			}
 		}
-
-		if (gp_dispatch)
-		{
-			CdbDispatchSetCommand( buffer.data, false, /*no txn*/ false );
-		}
 	}
+
+	CdbDispatchSetCommand( buffer.data, false, /*no txn*/ false );
 }
 
 /*

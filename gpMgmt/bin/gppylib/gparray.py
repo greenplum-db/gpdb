@@ -1227,6 +1227,9 @@ class GpArray:
                                                           str(self.standbyMaster) if self.standbyMaster else 'Not Configured',
                                                           "\n".join([str(seg) for seg in self.segments]))
 
+    def hasStandbyMaster(self):
+        return self.standbyMaster is not None
+
     def addSegmentDb(self, segdb):
         content = segdb.getSegmentContentId()
 

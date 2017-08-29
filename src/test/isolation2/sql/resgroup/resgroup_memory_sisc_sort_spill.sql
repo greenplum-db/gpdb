@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/INSERT \d+/
+-- s/INSERT \d+/INSERT/
+-- end_matchsubs
 create schema sisc_sort_spill;
 set search_path to sisc_sort_spill;
 
@@ -42,7 +46,6 @@ CREATE RESOURCE GROUP rg1_memory_test WITH
 CREATE ROLE role1_memory_test SUPERUSER RESOURCE GROUP rg1_memory_test;
 SET ROLE TO role1_memory_test;
 
-set statement_mem="2MB";
 set gp_resgroup_print_operator_memory_limits=on;
 set gp_cte_sharing=on;
 -- ORCA optimizes away the ORDER BY in our test query, and therefore doesn't exercise

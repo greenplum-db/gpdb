@@ -8,6 +8,8 @@
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 
+#include "catalog/pg_exttable.h"
+
 
 typedef struct DemoUri
 {
@@ -36,6 +38,23 @@ typedef struct {
 	char	  *filename;
 	FILE	  *file;
 } extprotocol_t;
+
+static void check_ext_options(const FunctionCallInfo fcinfo)
+{
+        ListCell *cell;
+        Relation rel = EXTPROTOCOL_GET_RELATION(fcinfo);
+        ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
+        List *options = exttbl->options;
+
+        foreach(cell, options) {
+                DefElem *def = (DefElem *) lfirst(cell);
+                char *key = def->defname;
+
+                if (key && strcasestr(key, "database") && !strcasestr(key, "greenplum")) {
+                        ereport(ERROR, (0, errmsg("This is greenplum.")));
+                }
+        }
+}
 
 /*
  * Import data into GPDB.
@@ -85,6 +104,9 @@ demoprot_import(PG_FUNCTION_ARGS)
 		if(strcasecmp(parsed_url->protocol, p_name) != 0)
 			elog(ERROR, "internal error: demoprot called with a different protocol (%s)",
 						parsed_url->protocol);
+
+		/* An example of checking options */
+		check_ext_options(fcinfo);
 
 		FreeDemoUri(parsed_url);
 		

@@ -21,6 +21,7 @@
 #include "cdb/cdbtimer.h"
 #include "cdb/cdbvars.h"
 #include "libpq/pqsignal.h"
+#include "utils/resowner.h"
 
 #define EXEC_DATA_P 0 /* index to data pipe */
 #define EXEC_ERR_P 1 /* index to error pipe  */

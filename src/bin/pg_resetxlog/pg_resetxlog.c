@@ -100,6 +100,7 @@ main(int argc, char *argv[])
 	uint32		minXlogTli = 0,
 				minXlogId = 0,
 				minXlogSeg = 0;
+	uint32		data_checksum_version = (uint32) PG_DATA_CHECKSUM_VERSION + 1;
 	char	   *endptr;
 	char	   *endptr2;
 	char	   *endptr3;
@@ -130,7 +131,7 @@ main(int argc, char *argv[])
 	}
 
 
-	while ((c = getopt(argc, argv, "yfl:m:no:r:O:x:e:")) != -1)
+	while ((c = getopt(argc, argv, "yfl:m:no:r:O:x:e:k:")) != -1)
 	{
 		switch (c)
 		{
@@ -260,6 +261,22 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'k':
+				data_checksum_version = strtol(optarg, &endptr, 0);
+				if (endptr == optarg || *endptr != '\0')
+				{
+					fprintf(stderr, _("%s: invalid argument for option -k\n"), progname);
+					fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
+					exit(1);
+				}
+				if (data_checksum_version > PG_DATA_CHECKSUM_VERSION)
+				{
+					fprintf(stderr, _("%s: data_checksum_version (-k) must be within 0..%d\n"),
+					        progname, PG_DATA_CHECKSUM_VERSION);
+					exit(1);
+				}
+				break;
+
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
 				exit(1);
@@ -362,6 +379,11 @@ main(int argc, char *argv[])
 	{
 		newXlogId = minXlogId;
 		newXlogSeg = minXlogSeg;
+	}
+
+	if (data_checksum_version <= PG_DATA_CHECKSUM_VERSION)
+	{
+		ControlFile.data_checksum_version = data_checksum_version;
 	}
 
 	/*
@@ -582,6 +604,7 @@ GuessControlValues(void)
 	ControlFile.enableIntTimes = FALSE;
 #endif
 	ControlFile.localeBuflen = LOCALE_NAME_BUFLEN;
+	ControlFile.data_checksum_version = PG_DATA_CHECKSUM_VERSION;
 
 	localeptr = setlocale(LC_COLLATE, "");
 	if (!localeptr)
@@ -1114,6 +1137,7 @@ usage(void)
 	printf(_("Options:\n"));
 	printf(_("  -e XIDEPOCH     set next transaction ID epoch\n"));
 	printf(_("  -f              force update to be done\n"));
+	printf(_("  -k data_checksum_version     set data_checksum_version\n"));
 	printf(_("  -l TLI,FILE,SEG force minimum WAL starting location for new transaction log\n"));
 	printf(_("  -m XID          set next multitransaction ID\n"));
 	printf(_("  -n              no update, just show extracted control values (for testing)\n"));

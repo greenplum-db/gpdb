@@ -1404,7 +1404,7 @@ AlterQueue(AlterQueueStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 		MetaTrackUpdObject(ResQueueRelationId,
 						   queueid,
@@ -1544,7 +1544,7 @@ DropQueue(DropQueueStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 	/* MPP-6929, MPP-7583: metadata tracking */

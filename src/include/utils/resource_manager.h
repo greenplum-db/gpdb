@@ -32,6 +32,9 @@ extern ResourceManagerPolicy Gp_resource_manager_policy;
 extern bool IsResQueueEnabled(void);
 extern bool IsResGroupEnabled(void);
 
+extern bool IsResGroupActivated(void);
+
+extern void ResManagerShmemInit(void);
 extern void InitResManager(void);
 
 #endif   /* RESOURCEMANAGER_H */

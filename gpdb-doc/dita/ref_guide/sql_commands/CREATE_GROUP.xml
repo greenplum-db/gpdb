@@ -7,22 +7,29 @@
         <p id="sql_command_desc">Defines a new database role.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">CREATE GROUP <i>name</i> [ [WITH] <i>option</i> [ ... ] ]</codeblock>
-            <p>where <i>option</i> can be:</p>
+            <codeblock id="sql_command_synopsis">CREATE GROUP <varname>name</varname> [[WITH] <varname>option</varname> [ ... ]]</codeblock>
+            <p>where <varname>option</varname> can be:</p>
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
+    | CREATEEXTTABLE | NOCREATEEXTTABLE 
+      [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
+           where <varname>attributes</varname> and <varname>value</varname> are:
+           type='readable'|'writable'
+           protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<i>password</i>'
-    | VALID UNTIL '<i>timestamp</i>' 
-    | IN ROLE <i>rolename</i> [, ...]
-    | IN GROUP <i>rolename</i> [, ...]
-    | ROLE <i>rolename</i> [, ...]
-    | ADMIN <i>rolename</i> [, ...]
-    | USER <i>rolename</i> [, ...]
-    | SYSID <i>uid</i></codeblock>
+    | CONNECTION LIMIT <varname>connlimit</varname>
+    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
+    | VALID UNTIL '<varname>timestamp</varname>' 
+    | IN ROLE <varname>rolename</varname> [, ...]
+    | ROLE <varname>rolename</varname> [, ...]
+    | ADMIN <varname>rolename</varname> [, ...]
+    | RESOURCE QUEUE <varname>queue_name</varname>
+    | RESOURCE GROUP <varname>group_name</varname>
+    | [ DENY <varname>deny_point</varname> ]
+    | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

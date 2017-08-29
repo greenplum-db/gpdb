@@ -173,46 +173,6 @@ class UDPICTestCases(SQLTestCase):
         except IOError:
             return str(IOError)
 
-class UDPICShortReadTestCases(UDPICTestCases):
-    # GUC 
-    gp_udpic_fault_inject_percent = "gp_udpic_fault_inject_percent"
-    def test_short_read_once(self):
-        try:
-            out = self.checkGUC(self.gp_udpic_fault_inject_percent)
-            self.assertTrue(len(out) >= 4)
-        except:
-            self.skipTest("GUC " + self.gp_udpic_fault_inject_percent + " not defined")
-
-        result = self.run_sql_file(local_path(self.common_sql + str(self._testMethodName) + '.sql'), 
-                                local_path(self.common_sql + str(self._testMethodName) + '.ans'))
-        self.assertTrue(result)
-
-
-    def test_short_read_quit(self):
-        try:
-            out = self.checkGUC(self.gp_udpic_fault_inject_percent)
-            self.assertTrue(len(out) >= 4)
-        except:
-            self.skipTest("GUC " + self.gp_udpic_fault_inject_percent + " not defined")
-
-        sql_file = local_path(self.common_sql + str(self._testMethodName) + '.sql')
-        self.assertTrue(PSQL.run_sql_file(sql_file))
-
-        outfile = sql_file.replace('.sql','.out')
-        pattern_arr = ["Interconnect error waiting for peer ack", "short read during recvfrom() call"]
-        ret = self.checkOutputPattern(outfile, pattern_arr)
-        self.assertFalse(type(ret) == str)
-
-        if (ret == False):
-            self.fail('Query not quit for successive short read') 
-
-    '''
-    def test_short_read_regression(self):
-        result = self.run_sql_file(local_path(self.common_sql + str(self._testMethodName) + '.sql'),
-                                local_path(self.common_sql + str(self._testMethodName) + '.ans'))
-        self.assertTrue(result)
-    '''
-
 class UDPICFullTestCases(UDPICTestCases):
     gp_udpic_fault_inject_percent = "gp_udpic_fault_inject_percent"
 

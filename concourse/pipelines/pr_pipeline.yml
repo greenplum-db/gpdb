@@ -51,6 +51,8 @@ jobs:
         image: centos-gpdb-dev-6
         input_mapping:
           gpdb_src: gpdb_pr
+        params:
+          CONFIGURE_FLAGS: {{configure_flags}}
         on_failure: &pr_failure
           put: gpdb_pr
           params:
@@ -69,6 +71,7 @@ jobs:
           IVYREPO_REALM: {{ivyrepo_realm}}
           IVYREPO_USER: {{ivyrepo_user}}
           IVYREPO_PASSWD: {{ivyrepo_passwd}}
+          CONFIGURE_FLAGS: {{configure_flags}}
           TARGET_OS: centos
           TARGET_OS_VERSION: 6
           BLD_TARGETS: "clients loaders"
@@ -91,6 +94,7 @@ jobs:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
+          CONFIGURE_FLAGS: {{configure_flags}}
         timeout: 1h
         on_failure: *pr_failure
 
@@ -104,6 +108,7 @@ jobs:
           MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
+          CONFIGURE_FLAGS: {{configure_flags}}
         timeout: 2h30m
         on_failure: *pr_failure
 

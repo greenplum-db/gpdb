@@ -62,5 +62,6 @@
         </topicref>
         <topicref href="orafce_ref.xml"/>
         <topicref href="dblink.xml"/>
+        <topicref href="hstore.xml"/>
     </topicref>
 </map>

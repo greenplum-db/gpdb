@@ -1,5 +1,4 @@
 import os
-import pickle
 import signal
 import time
 
@@ -8,46 +7,46 @@ from gppylib.mainUtils import *
 from gppylib.utils import checkNotNone, appendNewEntriesToHbaFile
 from gppylib.db import dbconn
 from gppylib import gparray, gplog
-from gppylib.gplog import *
 from gppylib.commands import unix
 from gppylib.commands import gp
 from gppylib.commands import base
 from gppylib.gparray import GpArray
-from gppylib import gphostcache
 from gppylib.testold.testUtils import *
-from gppylib.operations import startSegments, Operation
+from gppylib.operations import startSegments
 from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
-from gppylib.operations.unix import CleanSharedMem 
-from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, GP_TEMPORARY_FILES_FILESPACE, GetMoveOperationList, GetFilespaceEntriesDict, GetFilespaceEntries, GetCurrentFilespaceEntries, RollBackFilespaceChanges, UpdateFlatFiles, FileType, MoveFilespaceError
+from gppylib.operations.unix import CleanSharedMem
+from gppylib.operations.filespace import PG_SYSTEM_FILESPACE, GP_TRANSACTION_FILES_FILESPACE, \
+    GP_TEMPORARY_FILES_FILESPACE, GetMoveOperationList, GetFilespaceEntriesDict, GetFilespaceEntries, \
+    GetCurrentFilespaceEntries, RollBackFilespaceChanges, UpdateFlatFiles, FileType, MoveFilespaceError
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
-    
-logger = get_default_logger()
+
+logger = gplog.get_default_logger()
 
 gDatabaseDirectories = [
-        # this list and the gDatabaseSubDirectories occur combined inside initdb.c
-        "global",
-        "pg_log",
-        "pg_xlog",
-        "pg_clog",
-        "pg_changetracking",
-        "pg_subtrans",
-        "pg_twophase",
-        "pg_multixact",
-        "pg_distributedxidmap",
-        "pg_distributedlog",
-        "pg_utilitymodedtmredo",
-        "base",
-        "pg_tblspc",
-        "pg_stat_tmp"
-        ]
+    # this list and the gDatabaseSubDirectories occur combined inside initdb.c
+    "global",
+    "pg_log",
+    "pg_xlog",
+    "pg_clog",
+    "pg_changetracking",
+    "pg_subtrans",
+    "pg_twophase",
+    "pg_multixact",
+    "pg_distributedxidmap",
+    "pg_distributedlog",
+    "pg_utilitymodedtmredo",
+    "base",
+    "pg_tblspc",
+    "pg_stat_tmp"
+]
 gDatabaseSubDirectories = [
-        "pg_xlog/archive_status",
-        "pg_multixact/members",
-        "pg_multixact/offsets",
-        "base/1"
-         ]
+    "pg_xlog/archive_status",
+    "pg_multixact/members",
+    "pg_multixact/offsets",
+    "base/1"
+]
 
 #
 # Database files that may exist in the root directory and need deleting 
@@ -61,7 +60,8 @@ gDatabaseFiles = [
     "postmaster.opts",
     "postmaster.pid",
     "gp_dbid"
-        ]
+]
+
 
 def MPP_12038_fault_injection():
     """This function will check for the environment variable
@@ -76,43 +76,49 @@ def MPP_12038_fault_injection():
         logger.info("Sleeping for %d seconds for MPP-12038 test..." % (probe_interval_secs * 2))
         time.sleep(probe_interval_secs * 2)
 
+
 #
 # note: it's a little quirky that caller must set up failed/failover so that failover is in gparray but
 #                                 failed is not (if both set)...change that, or at least protect against problems
 #
 
 class GpMirrorToBuild:
-
     def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization):
         checkNotNone("liveSegment", liveSegment)
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
         if failedSegment is None and failoverSegment is None:
-            raise Exception( "No mirror passed to GpMirrorToBuild")
+            raise Exception("No mirror passed to GpMirrorToBuild")
 
         if not liveSegment.isSegmentQE():
-            raise ExceptionNoStackTraceNeeded("Segment to recover from for content %s is not a correct segment " \
-                    "(it is a master or standby master)" % liveSegment.getSegmentContentId())
+            raise ExceptionNoStackTraceNeeded("Segment to recover from for content %s is not a correct segment "
+                                              "(it is a master or standby master)" % liveSegment.getSegmentContentId())
         if not liveSegment.isSegmentPrimary(True):
-            raise ExceptionNoStackTraceNeeded("Segment to recover from for content %s is not a primary" % liveSegment.getSegmentContentId())
+            raise ExceptionNoStackTraceNeeded(
+                "Segment to recover from for content %s is not a primary" % liveSegment.getSegmentContentId())
         if not liveSegment.isSegmentUp():
-            raise ExceptionNoStackTraceNeeded("Primary segment is not up for content %s" % liveSegment.getSegmentContentId())
+            raise ExceptionNoStackTraceNeeded(
+                "Primary segment is not up for content %s" % liveSegment.getSegmentContentId())
 
         if failedSegment is not None:
             if failedSegment.getSegmentContentId() != liveSegment.getSegmentContentId():
-                raise ExceptionNoStackTraceNeeded("The primary is not of the same content as the failed mirror.  Primary content %d, " \
-                        "mirror content %d" % (liveSegment.getSegmentContentId(), failedSegment.getSegmentContentId()))
+                raise ExceptionNoStackTraceNeeded(
+                    "The primary is not of the same content as the failed mirror.  Primary content %d, "
+                    "mirror content %d" % (liveSegment.getSegmentContentId(), failedSegment.getSegmentContentId()))
             if failedSegment.getSegmentDbId() == liveSegment.getSegmentDbId():
-                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  " \
-                                    "A segment may not be recovered from itself" % liveSegment.getSegmentDbId())
+                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
+                                                  "A segment may not be recovered from itself" %
+                                                  liveSegment.getSegmentDbId())
 
         if failoverSegment is not None:
             if failoverSegment.getSegmentContentId() != liveSegment.getSegmentContentId():
-                raise ExceptionNoStackTraceNeeded("The primary is not of the same content as the mirror.  Primary content %d, " \
-                        "mirror content %d" % (liveSegment.getSegmentContentId(), failoverSegment.getSegmentContentId()))
+                raise ExceptionNoStackTraceNeeded(
+                    "The primary is not of the same content as the mirror.  Primary content %d, "
+                    "mirror content %d" % (liveSegment.getSegmentContentId(), failoverSegment.getSegmentContentId()))
             if failoverSegment.getSegmentDbId() == liveSegment.getSegmentDbId():
-                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  " \
-                                    "A segment may not be built from itself" % liveSegment.getSegmentDbId())
+                raise ExceptionNoStackTraceNeeded("For content %d, the dbid values are the same.  "
+                                                  "A segment may not be built from itself"
+                                                  % liveSegment.getSegmentDbId())
 
         if failedSegment is not None and failoverSegment is not None:
             # for now, we require the code to have produced this -- even when moving the segment to another
@@ -129,7 +135,6 @@ class GpMirrorToBuild:
            process on the server
         """
         self.__forceFullSynchronization = forceFullSynchronization
-
 
     def getFailedSegment(self):
         """
@@ -165,6 +170,7 @@ class GpMirrorToBuild:
 
         return False
 
+
 class GpMirrorListToBuild:
     def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None):
         self.__mirrorsToBuild = toBuild
@@ -178,7 +184,7 @@ class GpMirrorListToBuild:
         Returns a newly allocated list
         """
         return [m for m in self.__mirrorsToBuild]
-    
+
     def getAdditionalWarnings(self):
         """
         Returns any additional warnings generated during building of list
@@ -197,16 +203,18 @@ class GpMirrorListToBuild:
         pg_system_filespace_entries = GetFilespaceEntriesDict(GetFilespaceEntries(gparray,
                                                                                   PG_SYSTEM_FILESPACE).run()).run()
         cur_filespace_name = gparray.getFileSpaceName(int(cur_filespace_entries[1][0]))
-        segments = [target_segment] + [seg for seg in gparray.getDbList() if seg.getSegmentContentId() == target_segment.getSegmentContentId() and seg.getSegmentDbId() != target_segment.getSegmentDbId()] 
-        
+        segments = [target_segment] + [seg for seg in gparray.getDbList() if
+                                       seg.getSegmentContentId() == target_segment.getSegmentContentId() and
+                                       seg.getSegmentDbId() != target_segment.getSegmentDbId()]
+
         logger.info('Starting file move procedure for %s' % target_segment)
 
         if os.path.exists(os.path.join(default_filespace_dir, GP_TRANSACTION_FILES_FILESPACE)):
-            #On the expansion segments, the current filespace used by existing nodes will be the 
-            #new filespace to which we want to move the transaction and temp files.
-            #The filespace directories which have to be moved will be the default pg_system directories. 
-            new_filespace_entries = GetFilespaceEntriesDict(GetCurrentFilespaceEntries(gparray,
-                                                                                FileType.TRANSACTION_FILES).run()).run()
+            # On the expansion segments, the current filespace used by existing nodes will be the
+            # new filespace to which we want to move the transaction and temp files.
+            # The filespace directories which have to be moved will be the default pg_system directories.
+            new_filespace_entries = GetFilespaceEntriesDict(
+                GetCurrentFilespaceEntries(gparray, FileType.TRANSACTION_FILES).run()).run()
             logger.info('getting filespace information')
             new_filespace_name = gparray.getFileSpaceName(int(new_filespace_entries[1][0]))
             logger.info('getting move operations list for filespace %s' % new_filespace_name)
@@ -227,11 +235,11 @@ class GpMirrorListToBuild:
             except Exception, e:
                 logger.info('Failed to move transaction filespace. Rolling back changes ...')
                 RollBackFilespaceChanges(gparray.getExpansionSegDbList(),
-                                        FileType.TRANSACTION_FILES,
-                                        cur_filespace_name,
-                                        cur_filespace_entries,
-                                        new_filespace_entries,
-                                        pg_system_filespace_entries).run() 
+                                         FileType.TRANSACTION_FILES,
+                                         cur_filespace_name,
+                                         cur_filespace_entries,
+                                         new_filespace_entries,
+                                         pg_system_filespace_entries).run()
                 raise
 
         if os.path.exists(os.path.join(default_filespace_dir, GP_TEMPORARY_FILES_FILESPACE)):
@@ -245,7 +253,7 @@ class GpMirrorListToBuild:
                                                   cur_filespace_entries,
                                                   pg_system_filespace_entries).run()
             logger.info('Starting temporary files move')
-            ParallelOperation(operation_list).run() 
+            ParallelOperation(operation_list).run()
 
             logger.debug('Checking temporary files move')
             try:
@@ -255,13 +263,13 @@ class GpMirrorListToBuild:
             except Exception, e:
                 logger.info('Failed to move temporary filespace. Rolling back changes ...')
                 RollBackFilespaceChanges(gparray.getExpansionDbList(),
-                                        FileType.TRANSACTION_FILES,
-                                        cur_filespace_name,
-                                        cur_filespace_entries,
-                                        new_filespace_entries,
-                                        pg_system_filespace_entries).run() 
+                                         FileType.TRANSACTION_FILES,
+                                         cur_filespace_name,
+                                         cur_filespace_entries,
+                                         new_filespace_entries,
+                                         pg_system_filespace_entries).run()
                 raise
-        
+
     def buildMirrors(self, actionName, gpEnv, gpArray):
         """
         Build the mirrors.
@@ -301,7 +309,7 @@ class GpMirrorListToBuild:
 
                 isTargetReusedLocation = False
                 if toRecover.getFailedSegment() is not None and \
-                    toRecover.getFailoverSegment() is None:
+                                toRecover.getFailoverSegment() is None:
                     #
                     # We are recovering a failed segment in-place
                     #
@@ -310,7 +318,8 @@ class GpMirrorListToBuild:
 
                 if toRecover.getFailoverSegment() is not None:
                     targetSegment = toRecover.getFailoverSegment()
-                else: targetSegment = toRecover.getFailedSegment()
+                else:
+                    targetSegment = toRecover.getFailedSegment()
 
                 d = GpCopySegmentDirectoryDirective(toRecover.getLiveSegment(), targetSegment, isTargetReusedLocation)
                 copyDirectives.append(d)
@@ -320,20 +329,20 @@ class GpMirrorListToBuild:
         self.__ensureMarkedDown(gpEnv, toEnsureMarkedDown)
         self.__cleanUpSegmentDirectories(cleanupDirectives)
         self.__copySegmentDirectories(gpEnv, gpArray, copyDirectives)
-        
-        #Move the filespace for transaction and temporary files
+
+        # Move the filespace for transaction and temporary files
         for toRecover in self.__mirrorsToBuild:
             target_segment = None
 
             if toRecover.getFailoverSegment() is not None:
                 target_segment = toRecover.getFailoverSegment()
             elif toRecover.isFullSynchronization():
-                target_segment = toRecover.getFailedSegment() 
+                target_segment = toRecover.getFailedSegment()
 
             if target_segment is not None:
                 self.__moveFilespaces(gpArray, target_segment)
 
-        #If we are adding mirrors, we need to update the flat files on the primaries as well
+        # If we are adding mirrors, we need to update the flat files on the primaries as well
         if actionName == "add":
             try:
                 UpdateFlatFiles(gpArray, primaries=True).run()
@@ -347,7 +356,7 @@ class GpMirrorListToBuild:
             except MoveFilespaceError, e:
                 logger.error(str(e))
                 raise
-            
+
         # update and save metadata in memory
         for toRecover in self.__mirrorsToBuild:
 
@@ -360,10 +369,11 @@ class GpMirrorListToBuild:
                 #   being overwritten in the configuration with the failover segment
                 for gpArraySegment in gpArray.getDbList():
                     if gpArraySegment is seg:
-                        raise Exception("failed segment should not be in the new configuration if failing over to new segment")
+                        raise Exception(
+                            "failed segment should not be in the new configuration if failing over to new segment")
 
                 seg = toRecover.getFailoverSegment()
-            seg.setSegmentStatus(gparray.STATUS_DOWN) # down initially, we haven't started it yet
+            seg.setSegmentStatus(gparray.STATUS_DOWN)  # down initially, we haven't started it yet
             seg.setSegmentMode(gparray.MODE_RESYNCHRONIZATION)
 
         # figure out what needs to be started or transitioned
@@ -374,7 +384,7 @@ class GpMirrorListToBuild:
         for toRecover in self.__mirrorsToBuild:
             seg = toRecover.getFailoverSegment()
             if seg is None:
-                seg = toRecover.getFailedSegment() # we are recovering in place
+                seg = toRecover.getFailedSegment()  # we are recovering in place
             mirrorsToStart.append(seg)
             primarySeg = toRecover.getLiveSegment()
             # The change in configuration to of the mirror to down requires
@@ -391,25 +401,25 @@ class GpMirrorListToBuild:
         programName = os.path.split(sys.argv[0])[-1]
 
         # Disable Ctrl-C, going to save metadata in database and transition segments
-        signal.signal(signal.SIGINT,signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
             logger.info("Updating configuration with new mirrors")
             configInterface.getConfigurationProvider().updateSystemConfig(
                 gpArray,
                 "%s: segment config for resync" % programName,
-                dbIdToForceMirrorRemoveAdd = fullResyncMirrorDbIds, 
-                useUtilityMode = False, 
-                allowPrimary = False 
+                dbIdToForceMirrorRemoveAdd=fullResyncMirrorDbIds,
+                useUtilityMode=False,
+                allowPrimary=False
             )
-            
+
             MPP_12038_fault_injection()
-          
+
             logger.info("Updating mirrors")
             self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
 
             logger.info("Starting mirrors")
             self.__startAll(gpEnv, gpArray, mirrorsToStart)
-            
+
             logger.info("Updating configuration to mark mirrors up")
             for seg in mirrorsToStart:
                 seg.setSegmentStatus(gparray.STATUS_UP)
@@ -418,9 +428,9 @@ class GpMirrorListToBuild:
             configInterface.getConfigurationProvider().updateSystemConfig(
                 gpArray,
                 "%s: segment resync marking mirrors up and primaries resync" % programName,
-                dbIdToForceMirrorRemoveAdd = {},
-                useUtilityMode = True,
-                allowPrimary = False
+                dbIdToForceMirrorRemoveAdd={},
+                useUtilityMode=True,
+                allowPrimary=False
             )
 
             MPP_12038_fault_injection()
@@ -435,8 +445,8 @@ class GpMirrorListToBuild:
             logger.info("Done updating primaries")
         finally:
             # Reenable Ctrl-C
-            signal.signal(signal.SIGINT,signal.default_int_handler)
-        
+            signal.signal(signal.SIGINT, signal.default_int_handler)
+
     def __verifyGpArrayContents(self, gpArray):
         """
         Run some simple assertions against gpArray contents
@@ -444,7 +454,7 @@ class GpMirrorListToBuild:
         for seg in gpArray.getDbList():
             if seg.getSegmentDataDirectory() != seg.getSegmentFilespaces()[gparray.SYSTEM_FILESPACE]:
                 raise Exception("Mismatch between segment data directory and filespace entry for segment %s" %
-                            seg.getSegmentDbId())
+                                seg.getSegmentDbId())
 
     def checkForPortAndDirectoryConflicts(self, gpArray):
         """
@@ -463,36 +473,40 @@ class GpMirrorListToBuild:
                 port = segment.getSegmentPort()
                 dbid = segment.getSegmentDbId()
                 if port in usedPorts:
-                    raise Exception("On host %s, port %s for segment with dbid %s conflicts with port for segment dbid %s" \
-                            % (hostName, port, dbid, usedPorts.get(port)))
+                    raise Exception(
+                        "On host %s, port %s for segment with dbid %s conflicts with port for segment dbid %s" %
+                        (hostName, port, dbid, usedPorts.get(port)))
 
                 if segment.isSegmentQE():
                     if replicationPort is None:
-                        raise Exception("On host %s, the replication port is not set for segment with dbid %s" \
-                                % (hostName, dbid))
+                        raise Exception("On host %s, the replication port is not set for segment with dbid %s" %
+                                        (hostName, dbid))
 
                     if replicationPort in usedPorts:
-                        raise Exception("On host %s, replication port %s for segment with dbid %s conflicts with a port for segment dbid %s" \
-                                % (hostName, dbid, replicationPort, usedPorts.get(replicationPort)))
+                        raise Exception(
+                            "On host %s, replication port %s for segment with dbid %s conflicts "
+                            "with a port for segment dbid %s" %
+                            (hostName, dbid, replicationPort, usedPorts.get(replicationPort)))
 
                     if port == replicationPort:
-                        raise Exception("On host %s, segment with dbid %s has equal port and replication port" \
-                        % (hostName, dbid))
+                        raise Exception("On host %s, segment with dbid %s has equal port and replication port" %
+                                        (hostName, dbid))
 
                 usedPorts[port] = dbid
                 usedPorts[replicationPort] = dbid
 
                 # check for directory conflict; could improve this by reporting nicer the conflicts
-                paths = [path for oid, path in segment.getSegmentFilespaces().items() if oid != gparray.SYSTEM_FILESPACE]
+                paths = [path for oid, path in segment.getSegmentFilespaces().items() if
+                         oid != gparray.SYSTEM_FILESPACE]
                 paths.append(segment.getSegmentDataDirectory())
 
                 for path in paths:
                     if path in usedDataDirectories:
-                        raise Exception("On host %s, directory (base or filespace) for segment with dbid %s conflicts with a " \
-                                        "directory (base or filespace) for segment dbid %s; directory: %s" % \
-                                        (hostName, dbid, usedDataDirectories.get(path), path))
+                        raise Exception(
+                            "On host %s, directory (base or filespace) for segment with dbid %s conflicts with a "
+                            "directory (base or filespace) for segment dbid %s; directory: %s" %
+                            (hostName, dbid, usedDataDirectories.get(path), path))
                     usedDataDirectories[path] = dbid
-
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False):
         for cmd in cmds:
@@ -508,7 +522,7 @@ class GpMirrorListToBuild:
             cmd = gp.LocalCopy("copy file for segment", srcDir + "/" + name, destDir + "/" + name)
             cmd.run(validateAfter=True)
 
-    def __createEmptyDirectories( self, dir, newDirectoryNames ):
+    def __createEmptyDirectories(self, dir, newDirectoryNames):
         for name in newDirectoryNames:
             subDir = os.path.join(dir, name)
             unix.MakeDirectory("create blank directory for segment", subDir).run(validateAfter=True)
@@ -524,31 +538,30 @@ class GpMirrorListToBuild:
 
         # note that this tempdir will be left around on the system (this is what other scripts do currently)
         tempDir = gp.createTempDirectoryName(gpEnv.getMasterDataDir(), "gpbuildingsegment")
-        unix.MakeDirectory("create temp directory for segment", tempDir ).run(validateAfter=True)
+        unix.MakeDirectory("create temp directory for segment", tempDir).run(validateAfter=True)
 
         schemaDir = tempDir + "/schema"
-        unix.MakeDirectory("create temp schema directory for segment", schemaDir ).run(validateAfter=True)
-        unix.Chmod.local('set permissions on schema dir', schemaDir, '0700') # set perms so postgres can start
+        unix.MakeDirectory("create temp schema directory for segment", schemaDir).run(validateAfter=True)
+        unix.Chmod.local('set permissions on schema dir', schemaDir, '0700')  # set perms so postgres can start
 
         #
         # Copy remote files from the sample segment to the master
         #
         for toCopyFromRemote in ["postgresql.conf", "pg_hba.conf"]:
             cmd = gp.RemoteCopy('copying %s from a segment' % toCopyFromRemote,
-                               os.path.join(sampleSegment.getSegmentDataDirectory(), toCopyFromRemote),
-                               masterSegment.getSegmentHostName(), schemaDir, ctxt=base.REMOTE,
-                               remoteHost=sampleSegment.getSegmentAddress())
+                                os.path.join(sampleSegment.getSegmentDataDirectory(), toCopyFromRemote),
+                                masterSegment.getSegmentHostName(), schemaDir, ctxt=base.REMOTE,
+                                remoteHost=sampleSegment.getSegmentAddress())
             cmd.run(validateAfter=True)
 
-        appendNewEntriesToHbaFile( schemaDir + "/pg_hba.conf", newSegments)
+        appendNewEntriesToHbaFile(schemaDir + "/pg_hba.conf", newSegments)
 
         #
         # Use the master's version of other files, and build
         #
-        self.__createEmptyDirectories( schemaDir, gDatabaseDirectories )
-        self.__createEmptyDirectories( schemaDir, gDatabaseSubDirectories )
+        self.__createEmptyDirectories(schemaDir, gDatabaseDirectories)
+        self.__createEmptyDirectories(schemaDir, gDatabaseSubDirectories)
         self.__copyFiles(masterDir, schemaDir, ["PG_VERSION", "pg_ident.conf"])
-
 
         #
         # Build final tar
@@ -574,20 +587,22 @@ class GpMirrorListToBuild:
         newSegmentInfo = gp.ConfigureNewSegment.buildSegmentInfoForNewSegment(destSegments, isTargetReusedLocation)
 
         logger.info('Building template directory')
-        (tempDir, blankTarFile, tarFileName) = self.__buildTarFileForTransfer(gpEnv, gpArray.master, srcSegments[0], destSegments)
+        (tempDir, blankTarFile, tarFileName) = self.__buildTarFileForTransfer(gpEnv, gpArray.master, srcSegments[0],
+                                                                              destSegments)
 
         def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly):
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             return gp.ConfigureNewSegment(cmdLabel,
-                                            segmentInfo,
-                                            tarFile=tarFileName,
-                                            newSegments=True,
-                                            verbose=gplog.logging_is_verbose(),
-                                            batchSize=self.__parallelDegree,
-                                            ctxt=gp.REMOTE,
-                                            remoteHost=hostName,
-                                            validationOnly=validationOnly)
+                                          segmentInfo,
+                                          tarFile=tarFileName,
+                                          newSegments=True,
+                                          verbose=gplog.logging_is_verbose(),
+                                          batchSize=self.__parallelDegree,
+                                          ctxt=gp.REMOTE,
+                                          remoteHost=hostName,
+                                          validationOnly=validationOnly)
+
         #
         # validate directories for target segments
         #
@@ -620,7 +635,7 @@ class GpMirrorListToBuild:
         logger.info('Copying template directory file')
         cmds = []
         for hostName in destSegmentByHost.keys():
-            cmds.append( gp.RemoteCopy("copy segment tar", blankTarFile, hostName, tarFileName ))
+            cmds.append(gp.RemoteCopy("copy segment tar", blankTarFile, hostName, tarFileName))
 
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "building and transferring basic segment directory")
 
@@ -640,15 +655,16 @@ class GpMirrorListToBuild:
             for destSeg in destSegments:
                 if srcSeg.content == destSeg.content:
                     src_dump_dir = os.path.join(srcSeg.getSegmentDataDirectory(), 'db_dumps')
-                    cmd = base.Command('check existence of db_dumps directory', 'ls %s' % (src_dump_dir), ctxt=base.REMOTE, remoteHost=destSeg.getSegmentAddress())
+                    cmd = base.Command('check existence of db_dumps directory', 'ls %s' % (src_dump_dir),
+                                       ctxt=base.REMOTE, remoteHost=destSeg.getSegmentAddress())
                     cmd.run()
-                    if cmd.results.rc == 0: # Only try to copy directory if it exists
+                    if cmd.results.rc == 0:  # Only try to copy directory if it exists
                         cmd = Scp('copy db_dumps from old segment to new segment',
-                                   os.path.join(srcSeg.getSegmentDataDirectory(), 'db_dumps*', '*'),
-                                   os.path.join(destSeg.getSegmentDataDirectory(), 'db_dumps'),
-                                   srcSeg.getSegmentAddress(),
-                                   destSeg.getSegmentAddress(),
-                                   recursive=True)
+                                  os.path.join(srcSeg.getSegmentDataDirectory(), 'db_dumps*', '*'),
+                                  os.path.join(destSeg.getSegmentDataDirectory(), 'db_dumps'),
+                                  srcSeg.getSegmentAddress(),
+                                  destSeg.getSegmentAddress(),
+                                  recursive=True)
                         cmd.run(validateAfter=True)
                         break
 
@@ -676,11 +692,14 @@ class GpMirrorListToBuild:
                     if is_pid_postmaster(datadir, pid, seg.getSegmentHostName()):
                         running_segments.append(seg)
                     else:
-                        logger.info("Skipping to stop segment %s on host %s since it is not a postgres process" % (seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
+                        logger.info("Skipping to stop segment %s on host %s since it is not a postgres process" % (
+                        seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
                 else:
-                    logger.debug("Skipping to stop segment %s on host %s since process with pid %s is not running" % (seg.getSegmentDataDirectory(), seg.getSegmentHostName(), pid))
+                    logger.debug("Skipping to stop segment %s on host %s since process with pid %s is not running" % (
+                    seg.getSegmentDataDirectory(), seg.getSegmentHostName(), pid))
             else:
-                logger.debug("Skipping to stop segment %s on host %s since pid could not be found" % (seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
+                logger.debug("Skipping to stop segment %s on host %s since pid could not be found" % (
+                seg.getSegmentDataDirectory(), seg.getSegmentHostName()))
 
         return running_segments
 
@@ -707,7 +726,8 @@ class GpMirrorListToBuild:
         logger.info('Ensuring that shared memory is cleaned up for stopped segments')
         segments = [d.getSegment() for d in directives]
         segmentsByHost = GpArray.getSegmentsByHostName(segments)
-        operation_list = [RemoteOperation(CleanSharedMem(segments), host=hostName) for hostName, segments in segmentsByHost.items()]
+        operation_list = [RemoteOperation(CleanSharedMem(segments), host=hostName) for hostName, segments in
+                          segmentsByHost.items()]
         ParallelOperation(operation_list).run()
 
         for operation in operation_list:
@@ -715,7 +735,7 @@ class GpMirrorListToBuild:
                 operation.get_ret()
             except Exception as e:
                 logger.warning('Unable to clean up shared memory for stopped segments on host (%s)' % operation.host)
-        
+
     def __ensureStopped(self, gpEnv, directives):
         """
 
@@ -732,12 +752,12 @@ class GpMirrorListToBuild:
 
         cmds = []
         for hostName, segments in segmentByHost.iteritems():
-            cmd=gp.GpSegStopCmd("remote segment stop on host '%s'" % hostName,
-                                gpEnv.getGpHome(), gpEnv.getGpVersion(),
-                                mode='fast', dbs=segments, verbose=logging_is_verbose(),
-                                ctxt=base.REMOTE, remoteHost=hostName)
+            cmd = gp.GpSegStopCmd("remote segment stop on host '%s'" % hostName,
+                                  gpEnv.getGpHome(), gpEnv.getGpVersion(),
+                                  mode='fast', dbs=segments, verbose=gplog.logging_is_verbose(),
+                                  ctxt=base.REMOTE, remoteHost=hostName)
 
-            cmds.append( cmd)
+            cmds.append(cmd)
 
         # we suppress checking for the error.  This is because gpsegstop will actually error
         #  in many cases where the stop is actually done (that is, for example, the segment is
@@ -750,15 +770,15 @@ class GpMirrorListToBuild:
 
     def __ensureMarkedDown(self, gpEnv, toEnsureMarkedDown):
         """Waits for FTS prober to mark segments as down"""
-        
-        wait_time = 60 * 30 # Wait up to 30 minutes to handle very large, busy
-                            # clusters that may have faults.  In most cases the
-                            # actual time to wait will be small and this operation
-                            # is only needed when moving mirrors that are up and
-                            # needed to be stopped, an uncommon operation.
+
+        wait_time = 60 * 30  # Wait up to 30 minutes to handle very large, busy
+        # clusters that may have faults.  In most cases the
+        # actual time to wait will be small and this operation
+        # is only needed when moving mirrors that are up and
+        # needed to be stopped, an uncommon operation.
 
         dburl = dbconn.DbURL(port=gpEnv.getMasterPort(), dbname='template1')
-        
+
         time_elapsed = 0
         seg_up_count = 0
         initial_seg_up_count = len(toEnsureMarkedDown)
@@ -770,41 +790,40 @@ class GpMirrorListToBuild:
 
         logger.info("Waiting for segments to be marked down.")
         logger.info("This may take up to %d seconds on large clusters." % wait_time)
-        
+
         # wait for all needed segments to be marked down by the prober.  We'll wait
         # a max time of double the interval 
         while wait_time > time_elapsed:
             seg_up_count = 0
             current_gparray = GpArray.initFromCatalog(dburl, True)
             seg_db_map = current_gparray.getSegDbMap()
-            
+
             # go through and get the status of each segment we need to be marked down
             for segdb in toEnsureMarkedDown:
-                if segdb.getSegmentDbId() in seg_db_map and seg_db_map[segdb.getSegmentDbId()].isSegmentUp() == True:
+                if segdb.getSegmentDbId() in seg_db_map and seg_db_map[segdb.getSegmentDbId()].isSegmentUp():
                     seg_up_count += 1
             if seg_up_count == 0:
                 break
             else:
                 if last_seg_up_count != seg_up_count:
                     print "\n",
-                    logger.info("%d of %d segments have been marked down." % 
+                    logger.info("%d of %d segments have been marked down." %
                                 (initial_seg_up_count - seg_up_count, initial_seg_up_count))
                     last_seg_up_count = seg_up_count
-                    
-                for _i in range(1,5):
+
+                for _i in range(1, 5):
                     time.sleep(1)
                     sys.stdout.write(".")
                     sys.stdout.flush()
-                    
+
                 time_elapsed += 5
 
         if seg_up_count == 0:
             print "\n",
-            logger.info("%d of %d segments have been marked down." % 
+            logger.info("%d of %d segments have been marked down." %
                         (initial_seg_up_count, initial_seg_up_count))
         else:
             raise Exception("%d segments were not marked down by FTS" % seg_up_count)
-    
 
     def __cleanUpSegmentDirectories(self, directives):
         if len(directives) == 0:
@@ -816,16 +835,16 @@ class GpMirrorListToBuild:
 
         cmds = []
         for hostName, segments in segmentByHost.iteritems():
-            cmds.append( gp.GpCleanSegmentDirectories("clean segment directories on %s" % hostName, \
-                    segments, gp.REMOTE, hostName))
+            cmds.append(gp.GpCleanSegmentDirectories("clean segment directories on %s" % hostName,
+                                                     segments, gp.REMOTE, hostName))
 
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "cleaning existing directories")
 
     def __createStartSegmentsOp(self, gpEnv):
         return startSegments.StartSegmentsOperation(self.__pool, self.__quiet,
-                gpEnv.getLocaleData(), gpEnv.getGpVersion(),
-                gpEnv.getGpHome(), gpEnv.getMasterDataDir()
-                )
+                                                    gpEnv.getLocaleData(), gpEnv.getGpVersion(),
+                                                    gpEnv.getGpHome(), gpEnv.getMasterDataDir()
+                                                    )
 
     def __updateGpIdFile(self, gpEnv, gpArray, segments):
         segmentByHost = GpArray.getSegmentsByHostName(segments)
@@ -836,14 +855,14 @@ class GpMirrorListToBuild:
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             cmd = gp.ConfigureNewSegment("update gpid file",
-                                            segmentInfo,
-                                            newSegments=False,
-                                            verbose=gplog.logging_is_verbose(),
-                                            batchSize=self.__parallelDegree,
-                                            ctxt=gp.REMOTE,
-                                            remoteHost=hostName,
-                                            validationOnly=False,
-                                            writeGpIdFileOnly=True)
+                                         segmentInfo,
+                                         newSegments=False,
+                                         verbose=gplog.logging_is_verbose(),
+                                         batchSize=self.__parallelDegree,
+                                         ctxt=gp.REMOTE,
+                                         remoteHost=hostName,
+                                         validationOnly=False,
+                                         writeGpIdFileOnly=True)
 
             cmds.append(cmd)
         self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "writing updated gpid files")
@@ -853,20 +872,28 @@ class GpMirrorListToBuild:
         # the newly started segments should belong to the current era
         era = read_era(gpEnv.getMasterDataDir(), logger=gplog.get_logger_if_verbose())
 
-        segmentStartResult = self.__createStartSegmentsOp(gpEnv).startSegments(gpArray, segments, startSegments.START_AS_PRIMARY_OR_MIRROR, era)
+        segmentStartResult = self.__createStartSegmentsOp(gpEnv).startSegments(gpArray, segments,
+                                                                               startSegments.START_AS_PRIMARY_OR_MIRROR,
+                                                                               era)
 
         for failure in segmentStartResult.getFailedSegmentObjs():
             failedSeg = failure.getSegment()
             failureReason = failure.getReason()
-            logger.warn("Failed to start segment.  The fault prober will shortly mark it as down. Segment: %s: REASON: %s" % (failedSeg, failureReason))
+            logger.warn(
+                "Failed to start segment.  The fault prober will shortly mark it as down. Segment: %s: REASON: %s" % (
+                failedSeg, failureReason))
         pass
 
     def __convertAllPrimaries(self, gpEnv, gpArray, segments, convertUsingFullResync):
-        segmentStartResult = self.__createStartSegmentsOp(gpEnv).transitionSegments(gpArray, segments, convertUsingFullResync, startSegments.MIRROR_MODE_PRIMARY)
+        segmentStartResult = self.__createStartSegmentsOp(gpEnv).transitionSegments(gpArray, segments,
+                                                                                    convertUsingFullResync,
+                                                                                    startSegments.MIRROR_MODE_PRIMARY)
         for failure in segmentStartResult.getFailedSegmentObjs():
             failedSeg = failure.getSegment()
             failureReason = failure.getReason()
-            logger.warn("Failed to inform primary segment of updated mirroring state.  Segment: %s: REASON: %s" % (failedSeg, failureReason))
+            logger.warn("Failed to inform primary segment of updated mirroring state.  Segment: %s: REASON: %s" % (
+            failedSeg, failureReason))
+
 
 class GpCleanupSegmentDirectoryDirective:
     def __init__(self, segment):
@@ -876,6 +903,7 @@ class GpCleanupSegmentDirectoryDirective:
     def getSegment(self):
         return self.__segment
 
+
 class GpStopSegmentDirectoryDirective:
     def __init__(self, segment):
         checkNotNone("segment", segment)
@@ -884,9 +912,9 @@ class GpStopSegmentDirectoryDirective:
     def getSegment(self):
         return self.__segment
 
-class GpCopySegmentDirectoryDirective:
 
-    def __init__(self, source, dest, isTargetReusedLocation ):
+class GpCopySegmentDirectoryDirective:
+    def __init__(self, source, dest, isTargetReusedLocation):
         """
         @param isTargetReusedLocation if True then the dest location is a cleaned-up location
         """
@@ -902,6 +930,6 @@ class GpCopySegmentDirectoryDirective:
 
     def getDestSegment(self):
         return self.__dest
-        
+
     def isTargetReusedLocation(self):
         return self.__isTargetReusedLocation

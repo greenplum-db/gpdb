@@ -40,6 +40,7 @@
 #include "pgstat.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
+#include "utils/resowner.h"
 #include "utils/testutils.h"
 #include "executor/execdesc.h"
 #include "utils/resscheduler.h"

@@ -30,15 +30,15 @@
  * Contains the data necessary to build the HTTP headers required for calling on the pxf service
  */
 typedef struct sPxfInputData
-{	
-	CHURL_HEADERS	headers;
-	GPHDUri			*gphduri;
-	Relation		rel;
+{
+    CHURL_HEADERS	headers;
+    GPHDUri			*gphduri;
+    Relation		rel;
 } PxfInputData;
 
 /*
  * Adds the headers necessary for PXF service call
  */
-void build_http_headers(PxfInputData *input);
+extern void build_http_headers(PxfInputData *input);
 
 #endif //_PXFHEADERS_H_

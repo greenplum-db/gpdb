@@ -969,6 +969,7 @@ distributed by (a);
 WARNING:  column "b" has type "unknown"
 DETAIL:  Proceeding with relation creation anyway.
 WARNING:  column "c" has type "unknown"
+DETAIL:  Proceeding with relation creation anyway.
 insert into aocs_unknown
 select i, 'unknown' from generate_series(1, 10)i;
 select * from aocs_unknown;

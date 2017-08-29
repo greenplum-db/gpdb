@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1">
+  <title id="by20941">CREATE RESOURCE GROUP</title>
+  <body>
+    <p id="sql_command_desc">Defines a new resource group.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">CREATE RESOURCE GROUP <varname>name</varname> WITH (<varname>group_attribute</varname>=<varname>value</varname> [, ... ])</codeblock>
+      <p>where <varname>group_attribute</varname> is:</p>
+      <codeblock>CPU_RATE_LIMIT=<varname>integer</varname>
+MEMORY_LIMIT=<varname>integer</varname>
+[ CONCURRENCY=<varname>integer</varname> ]
+[ MEMORY_SHARED_QUOTA=<varname>integer</varname> ]
+[ MEMORY_SPILL_RATIO=<varname>integer</varname> ]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>Creates a new resource group for Greenplum Database workload management. A resource
+         group is assigned to one or more roles and identifies concurrent transaction, memory,
+         and CPU limits for the role when resource group-based workload management is enabled. Only a superuser can create a resource group.</p>
+      <p>Greenplum Database pre-defines two default resource groups: <codeph>admin_group</codeph>
+         and <codeph>default_group</codeph>. These group names are reserved.</p>
+      <p>The <codeph>max_resource_groups</codeph> server configuration parameter governs the maximum number of resource groups you can create.</p>
+      <p>
+        To set appropriate limits for resource groups, the Greenplum Database administrator must
+        be familiar with the queries typically executed on the system, as well as the users/roles executing those queries.</p>
+      <p>
+        After defining a resource group, assign the group to one or more roles using the <codeph><xref
+            href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> or <codeph><xref
+            href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph> commands.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt>
+            <varname>name</varname>
+          </pt>
+          <pd>The name of the resource group.</pd>
+        </plentry>
+        <plentry>
+          <pt>CONCURRENCY <varname>integer</varname></pt>
+          <pd>The maximum number of concurrent transactions, including active and idle transactions, that are permitted for this resource group. The <codeph>CONCURRENCY</codeph> value must be an integer in the range [1 .. <codeph>max_connections</codeph>]. The default <codeph>CONCURRENCY</codeph> value is 20.
+            </pd>
+        </plentry>
+        <plentry>
+          <pt>CPU_RATE_LIMIT <varname>integer</varname></pt>
+          <pd>Required. The percentage of CPU resources to allocate to this resource group. The minimum CPU percentage you can specify for a resource group is 1. The maximum is 100. The sum of the <codeph>CPU_RATE_LIMIT</codeph> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>MEMORY_LIMIT <varname>integer</varname></pt>
+          <pd>Required. The total percentage of Greenplum Database memory resources to allocate to this resource group. The minimum memory percentage you can specify for a resource group is 1. The maximum is 100. The sum of the <codeph>MEMORY_LIMIT</codeph> values specified for all resource groups defined in the Greenplum Database cluster must be less than or equal to 100.</pd>
+        </plentry>
+        <plentry>
+          <pt>MEMORY_SHARED_QUOTA <varname>integer</varname></pt>
+          <pd>The quota of shared memory in the resource group. Resource groups with a <codeph>MEMORY_SHARED_QUOTA</codeph> threshold set aside a percentage of memory allotted to the resource group to share across transactions. This shared memory is allocated on a first-come first-server basis as available. A transaction may use none, some, or all of this memory. The minimum memory shared quota percentage you can specify for a resource group is 0. The maximum is 100. The default <codeph>MEMORY_SHARED_QUOTA</codeph> value is 20. The sum of the <codeph>MEMORY_SHARED_QUOTA</codeph> and <codeph>MEMORY_SPILL_RATIO</codeph> values specified for a resource group cannot exceed 100.</pd>
+        </plentry>
+        <plentry>
+          <pt>MEMORY_SPILL_RATIO <varname>integer</varname></pt>
+          <pd>The memory usage threshold for memory-intensive operators in a transaction. When the transaction reaches this threshold, it spills to disk. The minimum memory spill ratio percentage you can specify for a resource group is 1. The maximum is 100. The upper limit is (100 - <codeph>MEMORY_SHARED_QUOTA</codeph>). The default <codeph>MEMORY_SPILL_RATIO</codeph> value is 20. The sum of the <codeph>MEMORY_SHARED_QUOTA</codeph> and <codeph>MEMORY_SPILL_RATIO</codeph> values specified for a resource group cannot exceed 100.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5"><title>Notes</title>
+        <p>You cannot submit a <codeph>CREATE RESOURCE GROUP</codeph> command in an explicit transaction or sub-transaction.</p>
+        <p>Use the
+          <codeph>gp_toolkit.gp_resgroup_config</codeph> system view to display the limit 
+        settings of all resource groups:</p><codeblock>SELECT * FROM gp_toolkit.gp_resgroup_config;</codeblock>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Create a resource group with CPU and memory limit percentages of 35: </p>
+      <codeblock>CREATE RESOURCE GROUP rgroup1 WITH (CPU_RATE_LIMIT=35, MEMORY_LIMIT=35);</codeblock>
+      <p>Create a resource group with a concurrent transaction limit of 30, a memory limit of 15, and a CPU limit of 25:</p>
+      <codeblock>CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
+  MEMORY_LIMIT=15, CPU_RATE_LIMIT=25);</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p><codeph>CREATE RESOURCE GROUP</codeph> is a Greenplum Database extension. There is no
+        provision for resource groups or workload management in the SQL standard.</p>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="ALTER_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+          /></codeph>, <codeph><xref href="./DROP_RESOURCE_GROUP.xml#topic1" type="topic"
+            format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

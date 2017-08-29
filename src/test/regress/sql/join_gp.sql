@@ -29,7 +29,7 @@ select count(*) from hjtest a1, hjtest a2 where a2.i = least (a1.i,4) and a2.j =
 -- 1. Use FULL OUTER JOIN to induce a Merge Join
 -- 2. Use a large tuple size to induce a Materialize
 -- 3. Use gp_dist_random() to induce a Redistribute
----
+--
 
 set enable_hashjoin to off;
 set enable_mergejoin to on;

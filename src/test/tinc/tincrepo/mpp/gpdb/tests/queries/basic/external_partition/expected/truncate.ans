@@ -49,7 +49,7 @@ psql:/path/sql_file:1: ERROR:  "pt_ext_1_prt_part1" is an external relation and 
 truncate pt_ext_1_prt_part2;
 TRUNCATE TABLE
 truncate pt_ext;
-psql:/path/sql_file:1: ERROR:  Cannot truncate table having external partition:"pt_ext_1_prt_part1". (tablecmds.c:1834)
+psql:/path/sql_file:1: ERROR:  cannot truncate table having external partition: "pt_ext_1_prt_part1"
 select count(*) from pt_ext; 
  count 
 -------

@@ -34,23 +34,6 @@
 #define IS_PXF_URI(uri_str) (pg_strncasecmp(uri_str, PROTOCOL_PXF, strlen(PROTOCOL_PXF)) == 0)
 
 /*
- * FragmentData - describes a single Hadoop file split / HBase table region
- * in means of location (ip, port), the source name of the specific file/table that is being accessed,
- * and the index of a of list of fragments (splits/regions) for that source name.
- * The index refers to the list of the fragments of that source name.
- * user_data is optional.
- */
-typedef struct FragmentData
-{
-    char    *authority;
-    char    *index;
-    char    *source_name;
-    char    *fragment_md;
-    char    *user_data;
-    char    *profile;
-} FragmentData;
-
-/*
  * Structure to store options data, such as types of fragmenters, accessors and resolvers
  */
 typedef struct OptionData
@@ -71,7 +54,7 @@ typedef struct GPHDUri
     char    *port;      /* port number as string    */
     char    *data;      /* data location (path)     */
     char    *profile;   /* profile option           */
-    List    *fragments; /* list of FragmentData     */
+    List    *fragments; /* list of fragments        */
     List    *options;   /* list of OptionData       */
 } GPHDUri;
 

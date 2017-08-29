@@ -383,7 +383,7 @@ static void *gp_malloc_internal(int64 requested_size)
 	if (MemoryAllocation_Success == stat)
 	{
 		usable_pointer = malloc_and_store_metadata(requested_size);
-		Assert(VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(usable_pointer)) == requested_size);
+		Assert(usable_pointer == NULL || VmemPtr_GetUserPtrSize(UserPtr_GetVmemPtr(usable_pointer)) == requested_size);
 
 #ifdef USE_TEST_UTILS
 		if (gp_simex_init && gp_simex_run && gp_simex_class == SimExESClass_OOM && usable_pointer)

@@ -1,0 +1,74 @@
+-- start_ignore
+DROP RESOURCE GROUP rg_spill_test;
+ERROR:  resource group "rg_spill_test" does not exist
+-- end_ignore
+CREATE RESOURCE GROUP rg_spill_test WITH (concurrency=10, cpu_rate_limit=20, memory_limit=20, memory_shared_quota=20, memory_spill_ratio=10);
+CREATE
+
+CREATE OR REPLACE VIEW rg_spill_status AS SELECT groupname, memory_shared_quota, proposed_memory_shared_quota, memory_spill_ratio, proposed_memory_spill_ratio FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_spill_test';
+CREATE
+
+-- ALTER MEMORY_SPILL_RATIO
+
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |10                |10                         
+(1 row)
+
+-- positive
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20;
+ALTER
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |20                |20                         
+(1 row)
+
+-- negative: memory_spill_ratio is invalid
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20.0;
+ERROR:  syntax error at or near "20.0"
+LINE 1: ...ER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 20.0;
+                                                                  ^
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO a;
+ERROR:  syntax error at or near "a"
+LINE 1: ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO a;
+                                                                  ^
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |20                |20                         
+(1 row)
+
+-- negative: memory_spill_ratio is less than RESGROUP_MIN_MEMORY_SPILL_RATIO
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 0;
+ERROR:  memory spill ratio must be greater than 1
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |20                |20                         
+(1 row)
+
+-- negative: memory_spill_ratio is larger than RESGROUP_MAX_MEMORY_SPILL_RATIO
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
+ERROR:  memory spill ratio must be less than 100
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |20                |20                         
+(1 row)
+
+-- negative: sum of shared and spill exceeds RESGROUP_MAX_MEMORY_LIMIT
+ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 81;
+ERROR:  The sum of memory_shared_quota (20) and memory_spill_ratio (81) exceeds 100
+SELECT * FROM rg_spill_status;
+groupname    |memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------------+-------------------+----------------------------+------------------+---------------------------
+rg_spill_test|20                 |20                          |20                |20                         
+(1 row)
+
+-- cleanup
+DROP VIEW rg_spill_status;
+DROP
+DROP RESOURCE GROUP rg_spill_test;
+DROP

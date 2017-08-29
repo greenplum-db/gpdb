@@ -14,6 +14,7 @@ extern "C" {
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/resowner.h"
 }
 
 #include "gpreader.h"

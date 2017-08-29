@@ -86,7 +86,7 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                </table> For example, the following commands use the Greenplum Database utilities
                   <codeph>gpconfig</codeph> and <codeph>gpstop</codeph> to set the server
                configuration parameters and restart Greenplum
-               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v "'hdb2'"
+               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v 'hdb2'
 gpstop -u</codeblock>
                For information about the Greenplum Database utilities <codeph>gpconfig</codeph> and
                   <codeph>gpstop</codeph>, see the <cite>Greenplum Database Utility Guide</cite>. </li>
