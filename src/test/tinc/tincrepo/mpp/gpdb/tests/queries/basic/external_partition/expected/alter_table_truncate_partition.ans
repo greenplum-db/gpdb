@@ -48,9 +48,9 @@ drop table ret;
 DROP TABLE
 --end_ignore
 alter table pt_ext truncate partition for (5); 
-psql:/path/sql_file:1: ERROR:  Cannot truncate external partition (tablecmds.c:17373)
+psql:/path/sql_file:1: ERROR:  cannot truncate external partition
 alter table pt_ext truncate partition part1;
-psql:/path/sql_file:1: ERROR:  Cannot truncate external partition (tablecmds.c:17373)
+psql:/path/sql_file:1: ERROR:  cannot truncate external partition
 select count(*) from pt_ext;
  count 
 -------
