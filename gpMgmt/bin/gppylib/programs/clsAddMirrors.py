@@ -663,7 +663,8 @@ class GpAddMirrorsProgram:
                     raise UserAbortedException()
 
             gpArray.setFaultStrategy(gparray.FAULT_STRATEGY_FILE_REPLICATION)
-            mirrorBuilder.buildMirrors("add", gpEnv, gpArray)
+            if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
+                return 1
 
             logger.info("******************************************************************")
             logger.info("Mirror segments have been added; data synchronization is in progress.")
