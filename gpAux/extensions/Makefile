@@ -32,7 +32,7 @@ mapreduce:
 gpcloud:
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
 		echo "gpcloud enabled"; \
-		$(MAKE) -C gpcloud; \
+		$(MAKE) -C gpcloud && \
 		$(MAKE) -C gpcloud/bin/gpcheckcloud; \
 	fi
 
@@ -47,7 +47,7 @@ install:
 		$(MAKE) -C gpmapreduce install; \
 	fi
 	@if [ "$(enable_gpcloud)" = "yes" ]; then \
-		$(MAKE) -C gpcloud install; \
+		$(MAKE) -C gpcloud install && \
 		$(MAKE) -C gpcloud/bin/gpcheckcloud install; \
 	fi
 	@if [ "$(with_pxf)" = "yes" ]; then \
