@@ -98,6 +98,15 @@ static void flush_ssl_buffer(int fd, short event, void* arg);
 /* SSL end */
 #endif
 
+/* signal handler global flag for asyc function*/
+volatile static int sig_flag = 0;
+void asyc_signal_handler(void);
+#define CHECK_SIGNAL() do { \
+	if (sig_flag == SIGINT || sig_flag == SIGTERM) \
+	{ \
+		asyc_signal_handler(); \
+	} \
+} while(0)
 /**************
 
  NOTE on GP_PROTO
@@ -2168,6 +2177,7 @@ static void do_accept(int fd, short event, void* arg)
 	return;
 
 failure:
+	CHECK_SIGNAL();
 	gwarning(NULL, "accept failed");
 	return;
 }
@@ -2528,23 +2538,28 @@ http_setup(void)
 	}
 }
 
+void 
+asyc_signal_handler(void )
+{
+	gwarning(NULL, "signal %d received. gpfdist exits", sig_flag);
+	log_gpfdist_status();
+	fflush(stdout);
+
+	int i;
+	for (i = 0; i < gcb.listen_sock_count; i++)
+	{
+		if (gcb.listen_socks[i] > 0)
+		{
+			closesocket(gcb.listen_socks[i]);
+		}
+	}
+	exit(1);
+}
+
 void
 process_signal(int sig)
 {
-	if (sig == SIGINT || sig == SIGTERM)
-	{
-		gwarning(NULL, "signal %d received. gpfdist exits", sig);
-		log_gpfdist_status();
-		fflush(stdout);
-
-		int i;
-		for (i = 0; i < gcb.listen_sock_count; i++)
-			if (gcb.listen_socks[i] > 0)
-			{
-				closesocket(gcb.listen_socks[i]);
-			}
-		exit(1);
-	}
+	sig_flag = sig;
 }
 
 
@@ -3561,7 +3576,16 @@ int gpfdist_init(int argc, const char* const argv[])
 
 int gpfdist_run()
 {
-	return event_dispatch();
+	struct timeval t;
+	t.tv_sec = 1;
+	t.tv_usec = 0;
+	for(;;)
+	{
+		event_loopexit(&t);
+		event_dispatch();
+		CHECK_SIGNAL();
+	}
+	return 0;
 }
 
 #ifndef WIN32
@@ -3961,7 +3985,9 @@ static SSL_CTX *initialize_ctx(void)
  */
 static int gpfdist_socket_send(const request_t *r, const void *buf, const size_t buflen)
 {
-	return send(r->sock, buf, buflen, 0);
+	int ret = send(r->sock, buf, buflen, 0);
+	CHECK_SIGNAL();
+	return ret;
 }
 
 #ifdef USE_SSL
@@ -3975,6 +4001,7 @@ static int gpfdist_SSL_send(const request_t *r, const void *buf, const size_t bu
 
 	/* Write the data to socket */
 	int n = BIO_write(r->io, buf, buflen);
+	CHECK_SIGNAL();
 	/* Try to flush */
 	(void)BIO_flush(r->io);
 
@@ -4020,7 +4047,9 @@ static int gpfdist_SSL_send(const request_t *r, const void *buf, const size_t bu
  */
 static int gpfdist_socket_receive(const request_t *r, void *buf, const size_t buflen)
 {
-	return ( recv(r->sock, buf, buflen, 0) );
+	int ret = recv(r->sock, buf, buflen, 0);
+	CHECK_SIGNAL();
+	return ret;
 }
 
 
@@ -4032,8 +4061,9 @@ static int gpfdist_socket_receive(const request_t *r, void *buf, const size_t bu
  */
 static int gpfdist_SSL_receive(const request_t *r, void *buf, const size_t buflen)
 {
-	return ( BIO_read(r->io, buf, buflen) );
-	/* todo: add error checks here */
+	int ret = BIO_read(r->io, buf, buflen);
+	CHECK_SIGNAL();
+	return ret;
 }
 
 
