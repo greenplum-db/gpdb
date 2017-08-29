@@ -80,13 +80,11 @@ install_pxf() {
 		echo "======================================================================"
 		pushd pxf_tarball > /dev/null
 		unpack_tarball ./*.tar.gz
-		for X in distributions/pxf-*.tar.gz; do
-			tar -xvzf ${X}
-		done
 		mkdir -p ${hdfsrepo}/pxf/conf
-		mv pxf-*/pxf-*.jar ${hdfsrepo}/pxf
-		mv pxf-*/pxf.war ${hdfsrepo}/pxf
-		mv pxf-*/conf/{pxf-public.classpath,pxf-profiles.xml,pxf-private.classpath} ${hdfsrepo}/pxf/conf
+		mv lib/pxf-*.jar ${hdfsrepo}/pxf
+		mv lib/pxf.war ${hdfsrepo}/pxf
+		mv conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
+		mv conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
 		popd > /dev/null
 		pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
 			ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \

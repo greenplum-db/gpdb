@@ -1,0 +1,10 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+  - name: pxf_src
+outputs:
+  - name: pxf_tarball
+run:
+  path: gpdb_src/concourse/scripts/compile_pxf.bash

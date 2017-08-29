@@ -152,6 +152,13 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
+- name: pxf_src
+  type: git
+  source:
+    branch: {{pxf-git-branch}}
+    private_key: {{pxf-git-key}}
+    uri: {{pxf-git-remote}}
+
 - name: centos-gpdb-dev-6
   type: docker-image
   source:
@@ -537,7 +544,14 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
+      trigger: true
     - get: centos-gpdb-dev-6
+  - task: compile_pxf
+    image: centos-gpdb-dev-6
+    file: gpdb_src/concourse/tasks/compile_pxf.yml
+    params:
+      TARGET_OS: centos
   - task: compile_gpdb_pxf
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -554,6 +568,9 @@ jobs:
     - put: bin_gpdb_pxf_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
+    - put: pxf_tarball
+      params:
+        file: pxf_tarball/pxf*.tar.gz
 
 - name: compile_gpdb_open_source_centos6
   public: true
@@ -872,7 +889,7 @@ jobs:
     - get: singlecluster
       trigger: true
     - get: pxf_tarball
-      trigger: true
+      passed: [compile_gpdb_pxf_centos6]
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
