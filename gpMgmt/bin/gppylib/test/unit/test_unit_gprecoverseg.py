@@ -53,8 +53,8 @@ class GpRecoversegTestCase(GpTestCase):
         self.pgconf_dict["port"] = setting("port", "123", None, None, None)
         self.pgconf_dict["max_connection"] = setting("max_connections", "1", None, None, None)
 
-        configProviderMock = MagicMock(spec=GpConfigurationProvider)
-        configProviderMock.initializeProvider.return_value = configProviderMock
+        config_provider_mock = MagicMock(spec=GpConfigurationProvider)
+        config_provider_mock.initializeProvider.return_value = config_provider_mock
 
         self.gpArrayMock = MagicMock(spec=GpArray)
         self.gpArrayMock.getDbList.side_effect = [[], [self.primary0], [self.primary0]]
@@ -62,7 +62,7 @@ class GpRecoversegTestCase(GpTestCase):
         self.gpArrayMock.isStandardArray.return_value = (True, None)
         self.gpArrayMock.master = self.gparray.master
 
-        configProviderMock.loadSystemConfig.return_value = self.gpArrayMock
+        config_provider_mock.loadSystemConfig.return_value = self.gpArrayMock
 
         self.mirror_to_build = GpMirrorToBuild(self.mirror0, self.primary0, None, False)
         self.apply_patches([
@@ -70,13 +70,12 @@ class GpRecoversegTestCase(GpTestCase):
             patch('gppylib.db.dbconn.connect', return_value=self.conn),
             patch('gppylib.db.dbconn.execSQL', return_value=self.cursor),
             patch('gppylib.db.dbconn.execSQLForSingletonRow', return_value=["foo"]),
-            patch('gppylib.commands.base.WorkerPool'),
             patch('gppylib.pgconf.readfile', return_value=self.pgconf_dict),
             patch('gppylib.commands.gp.GpVersion'),
             patch('gppylib.db.catalog.getCollationSettings',
                   return_value=("en_US.utf-8", "en_US.utf-8", "en_US.utf-8")),
             patch('gppylib.system.faultProberInterface.getFaultProber'),
-            patch('gppylib.system.configurationInterface.getConfigurationProvider', return_value=configProviderMock),
+            patch('gppylib.system.configurationInterface.getConfigurationProvider', return_value=config_provider_mock),
             patch('gppylib.commands.base.WorkerPool', return_value=self.pool),
             patch('gppylib.gparray.GpArray.getSegmentsByHostName', return_value={}),
             patch('gppylib.gplog.get_default_logger'),
@@ -164,7 +163,6 @@ class GpRecoversegTestCase(GpTestCase):
         self.subject.logger.info.assert_any_call('No checksum validation necessary when '
                                                  'there are no segments to recover.')
 
-
     def _create_gparray_with_2_primary_2_mirrors(self):
         master = GpDB.initFromString(
             "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
@@ -177,7 +175,6 @@ class GpRecoversegTestCase(GpTestCase):
         mirror1 = GpDB.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
         return GpArray([master, self.primary0, primary1, self.mirror0, mirror1])
-
 
 
 if __name__ == '__main__':
