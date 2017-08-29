@@ -32,7 +32,6 @@
  *		See struct FormData_pg_attribute for details.
  * ----------------
  */
-
 #define TypeRelationId	1247
 
 CATALOG(pg_type,1247) BKI_BOOTSTRAP
@@ -371,7 +370,7 @@ DESCR("double-precision floating point complex number, 16-byte storage");
 #define COMPLEXOID 195
 DATA(insert OID = 196 (	_complex	   PGNSP PGUID -1 f b t \054 0 195 0 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
 
-/*  OIDS 200 - 299  */
+/* OIDS 200 - 299 */
 
 DATA(insert OID = 210 (  smgr	   PGNSP PGUID 2 t b t \054 0 0 0 smgrin smgrout - - - - - s p f 0 -1 0 _null_ _null_ ));
 DESCR("storage manager");
@@ -403,6 +402,7 @@ DATA(insert OID = 628 (  line	   PGNSP PGUID 32 f b t \054 0 701 629 line_in lin
 DESCR("geometric line (not implemented)");
 #define LINEOID			628
 DATA(insert OID = 629 (  _line	   PGNSP PGUID	-1 f b t \054 0 628 0 array_in array_out array_recv array_send - - - d x f 0 -1 0 _null_ _null_ ));
+DESCR("");
 
 /* OIDS 700 - 799 */
 
@@ -491,6 +491,7 @@ DATA(insert OID = 1041 (  _inet		 PGNSP PGUID -1 f b t \054 0  869 0 array_in ar
 DATA(insert OID = 651  (  _cidr		 PGNSP PGUID -1 f b t \054 0  650 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 DATA(insert OID = 1263 (  _cstring	 PGNSP PGUID -1 f b t \054 0 2275 0 array_in array_out array_recv array_send - - - i x f 0 -1 0 _null_ _null_ ));
 #define CSTRINGARRAYOID		1263
+
 DATA(insert OID = 1042 ( bpchar		 PGNSP PGUID -1 f b t \054 0	0 1014 bpcharin bpcharout bpcharrecv bpcharsend bpchartypmodin bpchartypmodout - i x f 0 -1 0 _null_ _null_ ));
 DESCR("char(length), blank-padded string, fixed storage length");
 #define BPCHAROID		1042
@@ -732,7 +733,9 @@ DATA(insert OID = 6994 (gp_relation_node PGNSP PGUID -1 f c t \054 5094 0 0 reco
 /*
  * prototypes for functions in pg_type.c
  */
-extern Oid TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId);
+extern Oid	TypeShellMake(const char *typeName,
+						  Oid typeNamespace,
+						  Oid ownerId);
 
 extern Oid TypeCreate(Oid newTypeOid,
 		   const char *typeName,
@@ -814,10 +817,11 @@ extern void GenerateTypeDependencies(Oid typeNamespace,
 extern void TypeRename(Oid typeOid, const char *newTypeName,
 		   Oid typeNamespace);
 
+extern char *makeArrayTypeName(const char *typeName, Oid typeNamespace);
+
 extern bool moveArrayTypeName(Oid typeOid, const char *typeName,
 				  Oid typeNamespace);
 
-extern char *makeArrayTypeName(const char *typeName, Oid typeNamespace);
 extern void add_type_encoding(Oid typid, Datum typoptions);
 
 #endif /* !FRONTEND */

@@ -3020,7 +3020,7 @@ static List *make_rowkey_targets()
 	row->winfnoid = ROW_NUMBER_OID;
 	row->restype = ROW_NUMBER_TYPE;
 	row->args = NIL;
-	row->winlevelsup = row->winspec = row->winindex = 0;
+	row->winspec = row->winindex = 0;
 	row->winstage = WINSTAGE_ROWKEY; /* so setrefs doesn't get confused  */
 	row->winlevel = 0;
 	

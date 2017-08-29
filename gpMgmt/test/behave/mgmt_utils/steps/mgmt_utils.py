@@ -14,6 +14,7 @@ import platform
 import shutil
 import socket
 import tarfile
+import tempfile
 import thread
 import json
 import csv
@@ -2641,6 +2642,50 @@ def delete_data_dir(host):
     cmd.run(validateAfter=True)
 
 
+@when('the user initializes a standby on the same host as master')
+def impl(context):
+    hostname = get_master_hostname('template1')[0][0]
+    port_guaranteed_open = get_open_port()
+    temp_data_dir = tempfile.mkdtemp() + "/standby_datadir"
+    cmd = "gpinitstandby -a -s %s -P %d -F pg_system:%s" % (hostname, port_guaranteed_open, temp_data_dir)
+    run_gpcommand(context, cmd)
+    context.standby_data_dir = temp_data_dir
+    context.standby_was_initialized = True
+
+
+# from https://stackoverflow.com/questions/2838244/get-open-tcp-port-in-python/2838309#2838309
+def get_open_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("",0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+@given('"{path}" has its permissions set to "{perm}"')
+def impl(context, path, perm):
+    path = os.path.expandvars(path)
+    if not os.path.exists(path):
+        raise Exception('Path does not exist! "%s"' % path)
+    old_permissions = os.stat(path).st_mode  # keep it as a number that has a meaningful representation in octal
+    test_permissions = int(perm, 8)          # accept string input with octal semantics and convert to a raw number
+    os.chmod(path, test_permissions)
+    context.path_for_which_to_restore_the_permissions = path
+    context.permissions_to_restore_path_to = old_permissions
+
+
+@then('rely on environment.py to restore path permissions')
+def impl(context):
+    print "go look in environment.py to see how it uses the path and permissions on context to make sure it's cleaned up"
+
+
+@when('the user runs pg_controldata against the standby data directory')
+def impl(context):
+    cmd = "pg_controldata " + context.standby_data_dir
+    run_gpcommand(context, cmd)
+
+
 @when('the user initializes standby master on "{hostname}"')
 def impl(context, hostname):
     create_standby(context, hostname)
@@ -2784,20 +2829,6 @@ def impl(context, filename_prefix):
                       ctxt=REMOTE,
                       remoteHost=host)
         cmd.run(validateAfter=True)
-
-
-@then('the standby is initialized if required')
-def impl(context):
-    if context.standby_was_initialized or hasattr(context, 'cluster_had_standby'):
-        if get_standby_host():
-            return
-        delete_data_dir(context.standby_host)
-        cmd = Command('create the standby', cmdStr='gpinitstandby -s %s -a' % context.standby_host)
-        cmd.run(validateAfter=True)
-    else:
-        standby = get_standby_host()
-        if standby:
-            run_gpcommand(context, 'gpinitstandby -ra')
 
 
 @given('user can start transactions')
@@ -4025,15 +4056,6 @@ def impl(context):
         context.cluster_had_standby = True
         context.standby_host = standby
         run_gpcommand(context, 'gpinitstandby -ra')
-
-
-@given('"{path}" has "{perm}" permissions')
-@then('"{path}" has "{perm}" permissions')
-def impl(context, path, perm):
-    path = os.path.expandvars(path)
-    if not os.path.exists(path):
-        raise Exception('Path does not exist! "%s"' % path)
-    os.chmod(path, int(perm, 8))
 
 
 @when('user can "{can_ssh}" ssh locally on standby')

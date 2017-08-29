@@ -689,13 +689,10 @@ transformWindowClause(ParseState *pstate, Query *qry)
 				nf->lead = e;
 			}
 
-			ParseCallbackState pcbstate;
-			setup_parser_errposition_callback(&pcbstate, pstate, newspec->location);
 			transformWindowFrameEdge(pstate, nf->trail, newspec, qry,
 									 nf->is_rows);
 			transformWindowFrameEdge(pstate, nf->lead, newspec, qry,
 									 nf->is_rows);
-			cancel_parser_errposition_callback(&pcbstate);
 			newspec->frame = nf;
 		}
 

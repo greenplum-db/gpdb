@@ -514,7 +514,6 @@ CTranslatorDXLToScalar::PwindowrefFromDXLNodeScWindowRef
 	WindowRef *pwindowref = MakeNode(WindowRef);
 	pwindowref->winfnoid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidFunc())->OidObjectId();
 	pwindowref->windistinct = pdxlop->FDistinct();
-	pwindowref->winlevelsup = 0;
 	pwindowref->location = -1;
 	pwindowref->winlevel = 0;
 	pwindowref->winspec = pdxlop->UlWinSpecPos();

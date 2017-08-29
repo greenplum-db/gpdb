@@ -43,6 +43,7 @@
 #include "miscadmin.h"
 #include "postmaster/autovacuum.h"
 #include "replication/syncrep.h"
+#include "replication/walsender.h"
 #include "storage/ipc.h"
 #include "storage/spin.h"
 #include "storage/sinval.h"
@@ -258,6 +259,14 @@ InitProcess(void)
 	volatile PROC_HDR *procglobal = ProcGlobal;
 	SHMEM_OFFSET myOffset;
 	int			i;
+
+	/*
+	 * Autovacuum and WAL sender processes are marked as GP_ROLE_UTILITY to
+	 * prevent unwanted GP_ROLE_DISPATCH MyProc settings such as mppSessionId
+	 * being valid and mppIsWriter set to true.
+	 */
+	if (IsAutoVacuumWorkerProcess() || am_walsender)
+		Gp_role = GP_ROLE_UTILITY;
 
 	/*
 	 * ProcGlobal should be set up already (if we are a backend, we inherit

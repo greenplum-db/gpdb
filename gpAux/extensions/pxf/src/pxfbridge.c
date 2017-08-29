@@ -20,6 +20,7 @@
 
 #include "pxfbridge.h"
 #include "pxfheaders.h"
+#include "pxffragment.h"
 
 /* helper function declarations */
 static void build_uri_for_read(gphadoop_context* context);
@@ -55,6 +56,8 @@ gpbridge_cleanup(gphadoop_context *context)
 void
 gpbridge_import_start(gphadoop_context *context)
 {
+    if (context->gphd_uri->fragments == NULL)
+        return;
 
     context->current_fragment = list_head(context->gphd_uri->fragments);
     build_uri_for_read(context);
@@ -76,6 +79,9 @@ int
 gpbridge_read(gphadoop_context *context, char *databuf, int datalen)
 {
     size_t n = 0;
+
+    if (context->gphd_uri->fragments == NULL)
+        return (int) n;
 
     while ((n = fill_buffer(context, databuf, datalen)) == 0)
     {

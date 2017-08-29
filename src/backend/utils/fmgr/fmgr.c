@@ -2193,10 +2193,7 @@ get_call_expr_argtype(Node *expr, int argnum)
 	 * array.
 	 */
 	if (IsA(expr, ScalarArrayOpExpr) &&
-			argnum == 1)
-		argtype = get_element_type(argtype);
-	else if (IsA(expr, ArrayCoerceExpr) &&
-			argnum == 0)
+		argnum == 1)
 		argtype = get_element_type(argtype);
 	else if (IsA(expr, ArrayCoerceExpr) &&
 			 argnum == 0)

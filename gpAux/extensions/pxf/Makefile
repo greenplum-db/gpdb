@@ -1,7 +1,7 @@
 EXTENSION = pxf
 DATA = pxf--1.0.sql
 MODULE_big = pxf
-OBJS       = src/pxfprotocol.o src/pxfbridge.o src/pxfuriparser.o src/libchurl.o src/pxfutils.o src/pxfheaders.o
+OBJS       = src/pxfprotocol.o src/pxfbridge.o src/pxfuriparser.o src/libchurl.o src/pxfutils.o src/pxfheaders.o src/pxffragment.o
 REGRESS    = setup pxf pxfinvalid
 
 ifdef USE_PGXS
@@ -15,7 +15,7 @@ endif
 
 CURL_DIR = /usr/local/opt/curl
 
-SHLIB_LINK += -lcurl
+SHLIB_LINK += -lcurl -ljson-c
 
 unittest-check:
 	$(MAKE) -C test check

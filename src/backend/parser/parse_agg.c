@@ -37,11 +37,6 @@ typedef struct
 typedef struct
 {
 	int sublevels_up;
-} checkHasWindFuncs_context;
-
-typedef struct
-{
-	int sublevels_up;
 } checkHasGroupExtFuncs_context;
 
 static void check_ungrouped_columns(Node *node, ParseState *pstate,
@@ -118,8 +113,6 @@ check_call(ParseState *pstate, Node *call)
 
 	if (is_agg)	
 		((Aggref *)call)->agglevelsup = min_varlevel;
-	else
-		((WindowRef *)call)->winlevelsup = min_varlevel;
 	
 	/* Mark the correct pstate as having aggregates */
 	while (min_varlevel-- > 0)
@@ -753,15 +746,13 @@ check_aggregate_ingroup(Node *grpcl, ParseState *pstate, List *targetList, List 
 }
 
 static bool
-checkExprHasWindFuncs_walker(Node *node, checkHasWindFuncs_context *context)
+checkExprHasWindFuncs_walker(Node *node, void *context)
 {
 	if (node == NULL)
 		return false;
 	if (IsA(node, WindowRef))
 	{
-		if (((WindowRef *) node)->winlevelsup == context->sublevels_up)
-			return true;		/* abort the tree traversal and return true */
-		/* else fall through to examine argument */
+		return true;		/* abort the tree traversal and return true */
 	}
 	else if (IsA(node, SortBy))
 	{
@@ -785,14 +776,9 @@ checkExprHasWindFuncs_walker(Node *node, checkHasWindFuncs_context *context)
 	else if (IsA(node, Query))
 	{
 		/* Recurse into subselects */
-		bool		result;
-
-		context->sublevels_up++;
-		result = query_tree_walker((Query *) node,
-								   checkExprHasWindFuncs_walker,
-								   (void *) context, 0);
-		context->sublevels_up--;
-		return result;
+		return query_tree_walker((Query *) node,
+								 checkExprHasWindFuncs_walker,
+								 (void *) context, 0);
 	}
 	else if(IsA(node, A_Expr))
 	{
@@ -836,16 +822,13 @@ checkExprHasWindFuncs_walker(Node *node, checkHasWindFuncs_context *context)
 bool
 checkExprHasWindFuncs(Node *node)
 {
-	checkHasWindFuncs_context context;
-	context.sublevels_up = 0;
-	
 	/*
 	 * Must be prepared to start with a Query or a bare expression tree; if
 	 * it's a Query, we don't want to increment sublevels_up.
 	 */
 	return query_or_expression_tree_walker(node,
 										   checkExprHasWindFuncs_walker,
-										   (void *) &context, 0);
+										   NULL, 0);
 }
 
 static bool

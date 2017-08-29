@@ -6,7 +6,7 @@
 # Usage: cat <input headers> | perl process_col_defaults.pl > postgres_bki_srcs
 #
 # Reads catalog header files, and injects default values for missing
-# columns, per GPDB_COLUMN_DEFAULT() directives.
+# columns, per GPDB_COLUMN_DEFAULT() and GPDB_EXTRA_COL() directives.
 #
 #
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
@@ -32,6 +32,8 @@ my $numcols;
 my $numdefaults;
 
 my $processing_data = 0;
+
+my %extra_values;
 
 while (<>)
 {
@@ -68,23 +70,35 @@ while (<>)
 	    # need.
 	    $numcols = scalar keys %colnums;
 	    $numdefaults = scalar keys %coldefaults;
-	    #print STDERR "$catalogname has $numcols columns, of which $numdefaults are optional\n";
+	    print "/* process_col_defaults.pl parsed $catalogname with $numcols columns, of which $numdefaults are optional */\n";
 	}
     }
 
     if ($processing_data)
     {
-	# Process DATA rows. For each row, check the number of columns. Each
-	# DATA row should have either $numcols columns, or
-	# $numcols - $numdefaults. In other words, either all of the extra
-	# columns with defaults need to be present, or none of them.
-	# Otherwise it gets too complicated to figure out which columns have
-	# values and which should use the defaults.
+	# Process DATA rows, and possible GPDB_EXTRA_COL rows.
 
+	# GPDB_EXTRA_COL(colname = value)
+	if (m/^GPDB_EXTRA_COL\(\s*(\w+)\s*=\s*(.+)\s*\)/) {
+	    my $colname = $1;
+	    my $val = $2;
+
+	    die "unknown column $colname on line: $line" if (!defined($colnums{$colname}));
+
+	    $extra_values{$colname} = $val;
+	}
+
+	# For each DATA row, check the number of columns. Each DATA row
+	# should have either $numcols columns, or $numcols - $numdefaults.
+	# In other words, either all of the extra columns with defaults need
+	# to be present, or none of them. Otherwise it gets too complicated
+	# to figure out which columns have values and which should use the
+	# defaults.
+	#
 	# Parse the DATA line enough to extract the middle part containing
 	# the columns. This leaves the "insert OID = part" in $begin, and
 	# the "));"  in $end.
-	if (m/^(DATA\(.*?\()(.*)(\)\s*\))/) {
+	elsif (m/^(DATA\(.*?\()(.*)(\)\s*\).*)/) {
 	    my $begin = $1;
 	    my $middle = $2;
 	    my $end = $3;
@@ -113,6 +127,16 @@ while (<>)
 		foreach my $colnum (sort { $a <=> $b } keys %coldefaults) {
 		    splice @cols, ($colnum - 1), 0, $coldefaults{$colnum};
 		}
+
+		# Apply any extra per-line values.
+		foreach my $colname (keys %extra_values) {
+		    my $colnum = $colnums{$colname};
+		    my $extra_value = $extra_values{$colname};
+
+		    $cols[$colnum - 1] = $extra_value;
+		}
+		%extra_values = ();
+
 		$middle = join(' ', @cols);
 
 		# Reconstruct the whole line.

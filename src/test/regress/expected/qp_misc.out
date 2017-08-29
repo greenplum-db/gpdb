@@ -13121,6 +13121,8 @@ group by
 f1,f2,f3,f4,f5
 ) Q ) P;
 ERROR:  window specifications with a framing clause must have an ORDER BY clause
+LINE 12: select rnum, c1, c2, c3, avg( c3 ) over(partition by c1 rows...
+                                                ^
 -- OlapCoreCountMultiplePartitions_p1
 select 'OlapCoreCountMultiplePartitions_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (
@@ -13185,6 +13187,8 @@ group by
 f1,f2,f3,f4,f5
 ) Q ) P;
 ERROR:  window specifications with a framing clause must have an ORDER BY clause
+LINE 12: select rnum, c1, c2, c3, count( c3 ) over(partition by c1 ro...
+                                                  ^
 -- OlapCoreCountStar_p1
 select 'OlapCoreCountStar_p1' test_name_part, case when c = 1 then 1 else 0 end pass_ind from (
 select count(distinct c) c from (

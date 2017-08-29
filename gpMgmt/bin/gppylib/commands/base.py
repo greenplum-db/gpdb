@@ -52,6 +52,8 @@ class WorkerPool(object):
 
     halt_command='halt command'
     def __init__(self,numWorkers=16,items=None,daemonize=False):
+        if numWorkers <= 0:
+            raise Exception("WorkerPool(): numWorkers should be greater than 0.")
         self.workers=[]
         self.should_stop=False
         self.work_queue=Queue()

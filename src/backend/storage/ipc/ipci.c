@@ -325,9 +325,9 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		Persistent_PostDTMRecv_ShmemInit();
 
 	/*
-	 * Set up resource schedular
+	 * Set up resource manager 
 	 */
-	InitResManager();
+	ResManagerShmemInit();
 
 	if (!IsUnderPostmaster)
 	{

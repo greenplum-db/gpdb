@@ -35,6 +35,7 @@
 
 /* for process_col_defaults.pl */
 #define GPDB_COLUMN_DEFAULT(col, default) extern int no_such_variable
+#define GPDB_EXTRA_COL(x) extern int no_such_variable
 
 /* for process_foreign_keys.pl */
 #define FOREIGN_KEY(x) extern int no_such_variable

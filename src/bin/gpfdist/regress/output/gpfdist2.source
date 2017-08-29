@@ -411,7 +411,7 @@ FORMAT 'text'
 )
 ;
 SELECT count(*) FROM ext_lineitem;
-ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/gpfdist2/invalid_filename.txt): HTTP/1.0 404 file not found (url_curl.c:467)  (seg0 slice1 172.17.0.4:25432 pid=36415)
+ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/gpfdist2/invalid_filename.txt): HTTP/1.0 404 file not found  (seg0 slice1 172.17.0.4:25432 pid=36415)
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 12
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -548,7 +548,7 @@ FORMAT 'text'
 )
 ;
 SELECT DISTINCT L_ORDERKEY FROM ext_lineitem WHERE L_ORDERKEY > 10 GROUP BY L_ORDERKEY ORDER BY L_ORDERKEY LIMIT 10 OFFSET 2;
-ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/gpfdist2/data/lineitem.tbl): HTTP/1.0 404 file not found (url_curl.c:467)  (seg0 slice1 172.17.0.4:25432 pid=36454)
+ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/gpfdist2/data/lineitem.tbl): HTTP/1.0 404 file not found  (seg0 slice1 172.17.0.4:25432 pid=36454)
 DROP EXTERNAL TABLE ext_lineitem;
 -- test 16
 CREATE EXTERNAL TABLE ext_lineitem (
@@ -958,7 +958,7 @@ FORMAT 'text'
 )
 ;
 SELECT count(*) FROM ext_test;
-ERROR:  gpfdist error - line too long in file @abs_srcdir@/data/gpfdist2/longline.txt near (0 bytes) (url_curl.c:1505)  (seg1 slice1 172.17.0.4:25433 pid=36416)
+ERROR:  gpfdist error - line too long in file @abs_srcdir@/data/gpfdist2/longline.txt near (0 bytes)  (seg1 slice1 172.17.0.4:25433 pid=36416)
 DETAIL:  External table ext_test, file gpfdist://@hostname@:7070/gpfdist2/longline.txt
 DROP EXTERNAL TABLE ext_test;
 CREATE EXTERNAL TABLE ext_test1 (
@@ -975,7 +975,7 @@ FORMAT 'csv'
 )
 ;
 SELECT count(*) FROM ext_test1;
-ERROR:  gpfdist error - line too long in file @abs_srcdir@/data/gpfdist2/longline.csv near (0 bytes) (url_curl.c:1505)  (seg0 slice1 172.17.0.4:25432 pid=36415)
+ERROR:  gpfdist error - line too long in file @abs_srcdir@/data/gpfdist2/longline.csv near (0 bytes)  (seg0 slice1 172.17.0.4:25432 pid=36415)
 DETAIL:  External table ext_test1, file gpfdist://@hostname@:7070/gpfdist2/longline.csv
 DROP EXTERNAL TABLE ext_test1;
 CREATE EXTERNAL TABLE ext_lineitem (

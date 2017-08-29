@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="av20941">ALTER ROLE</title><body><p id="sql_command_desc">Changes a database role (user or group).</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER ROLE <varname>name</varname> RENAME TO <varname>newname</varname>
+<topic id="topic1">
+  <title id="av20941">ALTER ROLE</title>
+  <body>
+    <p id="sql_command_desc">Changes a database role (user or group).</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">ALTER ROLE <varname>name</varname> RENAME TO <varname>newname</varname>
 
 ALTER ROLE <varname>name</varname> SET <varname>config_parameter</varname> {TO | =} {<varname>value</varname> | DEFAULT}
 
@@ -11,9 +17,12 @@ ALTER ROLE <varname>name</varname> RESOURCE QUEUE {<varname>queue_name</varname>
 
 ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname> | NONE}
 
-ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock><p>where <varname>option</varname> can be:</p><codeblock>      SUPERUSER | NOSUPERUSER
+ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock>
+      <p>where <varname>option</varname> can be:</p>
+      <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
+    | CREATEUSER | NOCREATEUSER
     | CREATEEXTTABLE | NOCREATEEXTTABLE 
       [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
            where <varname>attributes</varname> and <varname>value</varname> are:
@@ -26,13 +35,19 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
     | VALID UNTIL '<varname>timestamp</varname>'
     | [ DENY <varname>deny_point</varname> ]
     | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]
-    | [ DROP DENY FOR <varname>deny_point</varname> ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER ROLE</codeph> changes the attributes of a Greenplum Database
-role. There are several variants of this command:</p><ul><li id="av136726"><b>RENAME</b> — Changes the name of the role. Database superusers
-can rename any role. Roles having <codeph>CREATEROLE</codeph> privilege
-can rename non-superuser roles. The current session user cannot be renamed
-(connect as a different user to rename a role). Because MD5-encrypted
-passwords use the role name as cryptographic salt, renaming a role clears
-its password if the password is MD5-encrypted.</li><li id="av136604"><b>SET | RESET</b> — changes a role's session default for a specified
+    | [ DROP DENY FOR <varname>deny_point</varname> ]</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>ALTER ROLE</codeph> changes the attributes of a Greenplum Database role. There are
+        several variants of this command:</p>
+      <ul>
+        <li id="av136726"><b>RENAME</b> — Changes the name of the role. Database superusers can
+          rename any role. Roles having <codeph>CREATEROLE</codeph> privilege can rename
+          non-superuser roles. The current session user cannot be renamed (connect as a different
+          user to rename a role). Because MD5-encrypted passwords use the role name as cryptographic
+          salt, renaming a role clears its password if the password is MD5-encrypted.</li>
+        <li id="av136604"><b>SET | RESET</b> — changes a role's session default for a specified
           configuration parameter. Whenever the role subsequently starts a new session, the
           specified value becomes the session default, overriding whatever setting is present in
           server configuration file (<codeph>postgresql.conf</codeph>). For a role without
@@ -40,68 +55,176 @@ its password if the password is MD5-encrypted.</li><li id="av136604"><b>SET | RE
           change their own session defaults. Superusers can change anyone's session defaults. Roles
           having <codeph>CREATEROLE</codeph> privilege can change defaults for non-superuser roles.
           See the <i>Greenplum Database Administrator Guide</i> for information about all
-          user-settable configuration parameters.</li><li id="av137058"><b>RESOURCE QUEUE</b> — Assigns the role to a workload management resource queue.
-          The role would then be subject to the limits assigned to the resource queue when issuing
-          queries. Specify <codeph>NONE</codeph> to assign the role to the default resource queue. A
-          role can only belong to one resource queue. For a role without <codeph>LOGIN</codeph>
-          privilege, resource queues have no effect. See <codeph><xref
+          user-settable configuration parameters.</li>
+        <li id="av137058"><b>RESOURCE QUEUE</b> — Assigns the role to a workload management resource
+          queue. The role would then be subject to the limits assigned to the resource queue when
+          issuing queries. Specify <codeph>NONE</codeph> to assign the role to the default resource
+          queue. A role can only belong to one resource queue. For a role without
+            <codeph>LOGIN</codeph> privilege, resource queues have no effect. See <codeph><xref
               href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/></codeph> for
-          more information.</li><li id="av1370583"><b>RESOURCE GROUP</b> — Assigns a resource group to the role.
-          The role would then be subject to the concurrent transaction, memory, and CPU limits
-          configured for the resource group. You can assign a single resource group to one or more roles. 
-          See <codeph><xref
-              href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"/></codeph> for
-          additional information.</li><li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role attributes that can be
-          specified in <codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"
-            /></codeph>. Attributes not mentioned in the command retain their previous settings.
-          Database superusers can change any of these settings for any role. Roles having
-            <codeph>CREATEROLE</codeph> privilege can change any of these settings, but only for
-          non-superuser roles. Ordinary roles can only change their own password.</li></ul></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name of the role whose attributes are to be altered. </pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the role. </pd></plentry><plentry><pt><varname>config_parameter=value</varname></pt><pd>Set this role's session default for the specified configuration parameter to the given value. If
-            value is <codeph>DEFAULT</codeph> or if <codeph>RESET</codeph> is used, the
+          more information.</li>
+        <li id="av1370583"><b>RESOURCE GROUP</b> — Assigns a resource group to the role. The role
+          would then be subject to the concurrent transaction, memory, and CPU limits configured for
+          the resource group. You can assign a single resource group to one or more roles. See
+              <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+            /></codeph> for additional information.</li>
+        <li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role
+          attributes that can be specified in <codeph><xref href="./CREATE_ROLE.xml#topic1"
+              type="topic" format="dita"/></codeph>. Attributes not mentioned in the command retain
+          their previous settings. Database superusers can change any of these settings for any
+          role. Roles having <codeph>CREATEROLE</codeph> privilege can change any of these settings,
+          but only for non-superuser roles. Ordinary roles can only change their own password.</li>
+      </ul>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name of the role whose attributes are to be altered. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>newname</varname></pt>
+          <pd>The new name of the role. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>config_parameter=value</varname></pt>
+          <pd>Set this role's session default for the specified configuration parameter to the given
+            value. If value is <codeph>DEFAULT</codeph> or if <codeph>RESET</codeph> is used, the
             role-specific variable setting is removed, so the role will inherit the system-wide
             default setting in new sessions. Use <codeph>RESET ALL</codeph> to clear all
             role-specific settings. See <codeph><xref href="./SET.xml#topic1" type="topic"
-                format="dita"/></codeph> and <xref href="../config_params/guc_config.xml" type="topic"
-              format="dita"/> for information about user-settable configuration parameters. </pd></plentry><plentry><pt><varname>group_name</varname></pt><pd>The name of the resource group to assign to this role.
-Specifying the <varname>group_name</varname> <codeph>NONE</codeph> removes the role's current resource group assignment and assigns a default resource group based on the role's capability. <codeph>SUPERUSER</codeph> roles are assigned the <codeph>admin_group</codeph> resource group, while the <codeph>default_group</codeph> resource group is assigned to non-admin roles.
-</pd></plentry><plentry><pt><varname>queue_name</varname></pt><pd>The name of the resource queue to which the user-level role is to
-be assigned. Only roles with <codeph>LOGIN</codeph> privilege can be
-assigned to a resource queue. To unassign a role from a resource queue
-and put it in the default resource queue, specify <codeph>NONE</codeph>.
-A role can only belong to one resource queue.</pd></plentry><plentry><pt>SUPERUSER | NOSUPERUSER</pt><pt>CREATEDB | NOCREATEDB</pt><pt>CREATEROLE | NOCREATEROLE</pt><pt>CREATEEXTTABLE | NOCREATEEXTTABLE [(attribute='value')]</pt><pd>If <codeph>CREATEEXTTABLE</codeph> is specified, the role being defined
-is allowed to create external tables. The default <codeph>type</codeph>
-is <codeph>readable</codeph> and the default <codeph>protocol</codeph>
-is <codeph>gpfdist</codeph> if not specified. <codeph>NOCREATEEXTTABLE</codeph>
-(the default) denies the role the ability to create external tables.
-Note that external tables that use the <codeph>file</codeph> or <codeph>execute</codeph>
-protocols can only be created by superusers.</pd></plentry><plentry><pt>INHERIT | NOINHERIT</pt><pt>LOGIN | NOLOGIN</pt><pt>CONNECTION LIMIT connlimit </pt><pt>PASSWORD password</pt><pt>ENCRYPTED | UNENCRYPTED</pt><pt>VALID UNTIL 'timestamp'</pt><pd>These clauses alter role attributes originally set by <codeph><xref
-                href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>. </pd></plentry><plentry><pt>DENY deny_point</pt><pt>DENY BETWEEN deny_point AND deny_point</pt><pd>The <codeph>DENY</codeph> and <codeph>DENY BETWEEN</codeph> keywords set time-based constraints
-            that are enforced at login. <codeph>DENY</codeph>sets a day or a day and time to deny
-            access. <codeph>DENY BETWEEN</codeph> sets an interval during which access is denied.
-            Both use the parameter <varname>deny_point</varname> that has following
-            format:<codeblock>DAY day [ TIME 'time' ]</codeblock></pd><pd>The two parts of the <codeph>deny_point</codeph> parameter use the following formats:<p>For
+                format="dita"/></codeph> and <xref href="../config_params/guc_config.xml"
+              type="topic" format="dita"/> for information about user-settable configuration
+            parameters. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>group_name</varname></pt>
+          <pd>The name of the resource group to assign to this role. Specifying the
+              <varname>group_name</varname>
+            <codeph>NONE</codeph> removes the role's current resource group assignment and assigns a
+            default resource group based on the role's capability. <codeph>SUPERUSER</codeph> roles
+            are assigned the <codeph>admin_group</codeph> resource group, while the
+              <codeph>default_group</codeph> resource group is assigned to non-admin roles. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>queue_name</varname></pt>
+          <pd>The name of the resource queue to which the user-level role is to be assigned. Only
+            roles with <codeph>LOGIN</codeph> privilege can be assigned to a resource queue. To
+            unassign a role from a resource queue and put it in the default resource queue, specify
+              <codeph>NONE</codeph>. A role can only belong to one resource queue.</pd>
+        </plentry>
+        <plentry>
+          <pt>SUPERUSER | NOSUPERUSER</pt>
+          <pt>CREATEDB | NOCREATEDB</pt>
+          <pt>CREATEROLE | NOCREATEROLE</pt>
+          <pt>CREATEUSER | NOCREATEUSER</pt>
+          <pd><codeph>CREATEUSER</codeph> and <codeph>NOCREATEUSER</codeph> are obsolete, but still
+            accepted, spellings of <codeph>SUPERUSER</codeph> and <codeph>NOSUPERUSER</codeph>. Note
+            that they are not equivalent to the <codeph>CREATEROLE and</codeph>
+            <codeph>NOCREATEROLE</codeph> clauses.</pd>
+        </plentry>
+        <plentry>
+          <pt>CREATEEXTTABLE | NOCREATEEXTTABLE [(attribute='value')]</pt>
+          <pd>If <codeph>CREATEEXTTABLE</codeph> is specified, the role being defined is allowed to
+            create external tables. The default <codeph>type</codeph> is <codeph>readable</codeph>
+            and the default <codeph>protocol</codeph> is <codeph>gpfdist</codeph> if not specified.
+              <codeph>NOCREATEEXTTABLE</codeph> (the default) denies the role the ability to create
+            external tables. Note that external tables that use the <codeph>file</codeph> or
+              <codeph>execute</codeph> protocols can only be created by superusers.</pd>
+        </plentry>
+        <plentry>
+          <pt>INHERIT | NOINHERIT</pt>
+          <pt>LOGIN | NOLOGIN</pt>
+          <pt>CONNECTION LIMIT connlimit </pt>
+          <pt>PASSWORD password</pt>
+          <pt>ENCRYPTED | UNENCRYPTED</pt>
+          <pt>VALID UNTIL 'timestamp'</pt>
+          <pd>These clauses alter role attributes originally set by <codeph><xref
+                href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>. </pd>
+        </plentry>
+        <plentry>
+          <pt>DENY deny_point</pt>
+          <pt>DENY BETWEEN deny_point AND deny_point</pt>
+          <pd>The <codeph>DENY</codeph> and <codeph>DENY BETWEEN</codeph> keywords set time-based
+            constraints that are enforced at login. <codeph>DENY</codeph>sets a day or a day and
+            time to deny access. <codeph>DENY BETWEEN</codeph> sets an interval during which access
+            is denied. Both use the parameter <varname>deny_point</varname> that has following
+            format:<codeblock>DAY day [ TIME 'time' ]</codeblock></pd>
+          <pd>The two parts of the <codeph>deny_point</codeph> parameter use the following
+              formats:<p>For
               day:</p><codeblock>{'Sunday' | 'Monday' | 'Tuesday' |'Wednesday' | 'Thursday' | 'Friday' | 
 'Saturday' | 0-6 }</codeblock><p>For
-                <codeph>time:</codeph></p><p>{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}</p></pd><pd>The <codeph>DENY BETWEEN</codeph> clause uses two <varname>deny_point</varname> parameters.</pd><pd><codeblock>DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname></codeblock></pd><pd>For more information about time-based constraints and examples, see "Managing Roles and
-            Privileges" in the <i>Greenplum Database Administrator Guide</i>.</pd></plentry><plentry><pt>DROP DENY FOR deny_point</pt><pd>The <codeph>DROP DENY FOR</codeph> clause removes a time-based constraint from the
-            role. It uses the <varname>deny_point</varname> parameter described above. </pd><pd>For more information about time-based constraints and examples, see "Managing Roles and
-            Privileges" in the <i>Greenplum Database Administrator Guide</i>.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Use <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"/></codeph> and
+                <codeph>time:</codeph></p><p>{ 00-23 : 00-59 | 01-12 : 00-59 { AM | PM }}</p></pd>
+          <pd>The <codeph>DENY BETWEEN</codeph> clause uses two <varname>deny_point</varname>
+            parameters.</pd>
+          <pd>
+            <codeblock>DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname></codeblock>
+          </pd>
+          <pd>For more information about time-based constraints and examples, see "Managing Roles
+            and Privileges" in the <i>Greenplum Database Administrator Guide</i>.</pd>
+        </plentry>
+        <plentry>
+          <pt>DROP DENY FOR deny_point</pt>
+          <pd>The <codeph>DROP DENY FOR</codeph> clause removes a time-based constraint from the
+            role. It uses the <varname>deny_point</varname> parameter described above. </pd>
+          <pd>For more information about time-based constraints and examples, see "Managing Roles
+            and Privileges" in the <i>Greenplum Database Administrator Guide</i>.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Notes</title>
+      <p>Use <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"/></codeph> and
             <codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph> for
-        adding and removing role memberships.</p><p>Caution must be exercised when specifying an unencrypted password
-with this command. The password will be transmitted to the server in
-clear text, and it might also be logged in the client's command history
-or the server log. The <codeph>psql</codeph> command-line client contains
-a meta-command <codeph>\password</codeph> that can be used to safely
-change a role's password. </p><p>It is also possible to tie a session default to a specific database rather than to a role.
+        adding and removing role memberships.</p>
+      <p>Caution must be exercised when specifying an unencrypted password with this command. The
+        password will be transmitted to the server in clear text, and it might also be logged in the
+        client's command history or the server log. The <codeph>psql</codeph> command-line client
+        contains a meta-command <codeph>\password</codeph> that can be used to safely change a
+        role's password. </p>
+      <p>It is also possible to tie a session default to a specific database rather than to a role.
         Role-specific settings override database-specific ones if there is a conflict. See
             <codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"
-        /></codeph>.</p></section><section id="section6"><title>Examples</title><p>Change the password for a role: </p><codeblock>ALTER ROLE daria WITH PASSWORD 'passwd123';</codeblock><p>Change a password expiration date:</p><codeblock>ALTER ROLE scott VALID UNTIL 'May 4 12:00:00 2015 +1';</codeblock><p>Make a password valid forever:</p><codeblock>ALTER ROLE luke VALID UNTIL 'infinity';</codeblock><p>Give a role the ability to create other roles and new databases: </p><codeblock>ALTER ROLE joelle CREATEROLE CREATEDB;</codeblock><p>Give a role a non-default setting of the <codeph>maintenance_work_mem</codeph> parameter: </p><codeblock>ALTER ROLE admin SET maintenance_work_mem = 100000;</codeblock><p>Assign a role to a resource queue: </p><codeblock>ALTER ROLE sammy RESOURCE QUEUE poweruser;</codeblock><p>Give a role permission to create writable external tables:</p><codeblock>ALTER ROLE load CREATEEXTTABLE (type='writable');</codeblock><p>Alter a role so it does not allow login access on Sundays:</p><codeblock>ALTER ROLE user3 DENY DAY 'Sunday';</codeblock><p>Alter a role to remove the constraint that does not allow login access
-on Sundays:</p><codeblock>ALTER ROLE user3 DROP DENY FOR DAY 'Sunday';</codeblock><p>Assign a new resource group to a role: </p><codeblock>ALTER ROLE parttime_user RESOURCE GROUP rg_light;</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>ALTER ROLE</codeph> statement is a Greenplum Database extension.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
+        /></codeph>.</p>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Change the password for a role: </p>
+      <codeblock>ALTER ROLE daria WITH PASSWORD 'passwd123';</codeblock>
+      <p>Change a password expiration date:</p>
+      <codeblock>ALTER ROLE scott VALID UNTIL 'May 4 12:00:00 2015 +1';</codeblock>
+      <p>Make a password valid forever:</p>
+      <codeblock>ALTER ROLE luke VALID UNTIL 'infinity';</codeblock>
+      <p>Give a role the ability to create other roles and new databases: </p>
+      <codeblock>ALTER ROLE joelle CREATEROLE CREATEDB;</codeblock>
+      <p>Give a role a non-default setting of the <codeph>maintenance_work_mem</codeph> parameter: </p>
+      <codeblock>ALTER ROLE admin SET maintenance_work_mem = 100000;</codeblock>
+      <p>Assign a role to a resource queue: </p>
+      <codeblock>ALTER ROLE sammy RESOURCE QUEUE poweruser;</codeblock>
+      <p>Give a role permission to create writable external tables:</p>
+      <codeblock>ALTER ROLE load CREATEEXTTABLE (type='writable');</codeblock>
+      <p>Alter a role so it does not allow login access on Sundays:</p>
+      <codeblock>ALTER ROLE user3 DENY DAY 'Sunday';</codeblock>
+      <p>Alter a role to remove the constraint that does not allow login access on Sundays:</p>
+      <codeblock>ALTER ROLE user3 DROP DENY FOR DAY 'Sunday';</codeblock>
+      <p>Assign a new resource group to a role: </p>
+      <codeblock>ALTER ROLE parttime_user RESOURCE GROUP rg_light;</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p>The <codeph>ALTER ROLE</codeph> statement is a Greenplum Database extension.</p>
+    </section>
+    <section id="section8">
+      <title>See Also</title>
+      <p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-          /></codeph>,
-            <codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"
-          /></codeph>, <codeph><xref href="./GRANT.xml#topic1" type="topic" format="dita"
-        /></codeph>, <codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"
-        /></codeph></p></section></body></topic>
+          /></codeph>, <codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./GRANT.xml#topic1" type="topic"
+            format="dita"/></codeph>, <codeph><xref href="./REVOKE.xml#topic1" type="topic"
+            format="dita"/></codeph></p>
+    </section>
+  </body>
+</topic>

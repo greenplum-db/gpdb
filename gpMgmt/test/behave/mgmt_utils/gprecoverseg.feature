@@ -98,6 +98,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should print "1 segment\(s\) to recover" to stdout
 
     @multinode
+    @fail_on_corrupted_change_tracking
     Scenario: gprecoverseg fails on corrupted change tracking logs, must run full recovery
         Given the database is running
         And the database "gptest1" does not exist
@@ -196,6 +197,7 @@ Feature: gprecoverseg tests
         And user can start transactions
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Heap checksum setting is consistent between master and the segments that are candidates for recoverseg" to stdout
         And all the segments are running
         # validate the the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved

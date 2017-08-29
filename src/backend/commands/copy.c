@@ -54,7 +54,6 @@
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbcopy.h"
-#include "cdb/cdbhash.h"
 #include "cdb/cdbsreh.h"
 #include "postmaster/autostats.h"
 
@@ -453,16 +452,6 @@ CopySendEndOfRow(CopyState cstate)
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not write to COPY file: %m")));
-
-			/* Send "\n" to QD for "processed" line number counting */
-			if (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE)
-			{
-				if (cstate->ignore_extra_line) /* the csv header */
-					/* ignore the csv header, set the flag */
-					cstate->ignore_extra_line = false;
-				else
-					(void) pq_putmessage('d', "\n", 1);
-			}
 
 			break;
 		case COPY_OLD_FE:
@@ -1338,10 +1327,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 			struct stat st;
 			char *filename = cstate->filename;
 
-			/*
-			 * If on_segment, QD receives "\n" for "processed" line number counting, saves
-			 * them to /dev/null to avoid nonsense file
-			 */
 			if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
 				filename = "/dev/null";
 
@@ -1686,6 +1671,11 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 			if (rel_is_partitioned(relid))
 			{
+				if (cstate->on_segment && gp_enable_segment_copy_checking && !partition_policies_equal(cstate->rel->rd_cdbpolicy, RelationBuildPartitionDesc(cstate->rel, false)))
+				{
+					elog(ERROR, "COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table. \"SET gp_enable_segment_copy_checking=off\" can disable distribution key checking.");
+					return cstate->processed;
+				}
 				PartitionNode *pn = RelationBuildPartitionDesc(cstate->rel, false);
 				all_relids = list_concat(all_relids, all_partition_relids(pn));
 			}
@@ -1727,6 +1717,16 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		else
 		{
 			/* data needs to get inserted locally */
+			if (cstate->on_segment)
+			{
+				MemoryContext oldcxt;
+				oldcxt = MemoryContextSwitchTo(CacheMemoryContext);
+				cstate->rel->rd_cdbpolicy = palloc(sizeof(GpPolicy) + sizeof(AttrNumber) * stmt->nattrs);
+				cstate->rel->rd_cdbpolicy->nattrs = stmt->nattrs;
+				cstate->rel->rd_cdbpolicy->ptype = stmt->ptype;
+				memcpy(cstate->rel->rd_cdbpolicy->attrs, stmt->distribution_attrs, sizeof(AttrNumber) * stmt->nattrs);
+				MemoryContextSwitchTo(oldcxt);
+			}
 			CopyFrom(cstate);
 		}
 
@@ -2102,7 +2102,7 @@ CopyToDispatch(CopyState cstate)
 
 	PG_TRY();
 	{
-		cdbCopyStart(cdbCopy, cdbcopy_cmd.data);
+		cdbCopyStart(cdbCopy, cdbcopy_cmd.data, NULL);
 	}
 	PG_CATCH();
 	{
@@ -2173,7 +2173,6 @@ CopyToDispatch(CopyState cstate)
 		}
 
 		/* add a newline and flush the data */
-		cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 		CopySendEndOfRow(cstate);
 	}
 
@@ -2370,7 +2369,6 @@ CopyTo(CopyState cstate)
 					CopyAttributeOutCSV(cstate, colname, false,
 										list_length(cstate->attnumlist) == 1);
 				}
-				cstate->ignore_extra_line = true; /* CSV header line doesn't count in "processed" line numbers */
 				CopySendEndOfRow(cstate);
 			}
 		}
@@ -2540,14 +2538,13 @@ CopyTo(CopyState cstate)
 			/* Generate trailer for a binary copy */
 			CopySendInt16(cstate, -1);
 
-			/* Trailer doesn't count in "processed" line numbers */
-			if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
-				cstate->ignore_extra_line = true;
-
 			/* Need to flush out the trailer */
 			CopySendEndOfRow(cstate);
 		}
 	}
+
+	if (Gp_role == GP_ROLE_EXECUTE && cstate->on_segment)
+		SendNumRows(0, cstate->processed);
 
 	MemoryContextDelete(cstate->rowcontext);
 }
@@ -3394,7 +3391,7 @@ CopyFromDispatch(CopyState cstate)
 	elog(DEBUG5, "COPY command sent to segdbs: %s", cdbcopy_cmd.data);
 	PG_TRY();
 	{
-		cdbCopyStart(cdbCopy, cdbcopy_cmd.data);
+		cdbCopyStart(cdbCopy, cdbcopy_cmd.data, cstate->rel->rd_cdbpolicy);
 	}
 	PG_CATCH();
 	{
@@ -4299,6 +4296,155 @@ CopyFromDispatch(CopyState cstate)
 	FreeExecutorState(estate);
 }
 
+static GpDistributionData
+initDistributionData(CopyState cstate, Form_pg_attribute *attr,AttrNumber num_phys_attrs)
+{
+	/*
+	 * Variables for cdbpolicy
+	 */
+	GpPolicy *policy;	/* the partitioning policy for this table */
+	AttrNumber p_nattrs; /* num of attributes in the distribution policy */
+	Oid *p_attr_types;   /* types for each policy attribute */
+
+	CdbHash *cdbHash = NULL;
+	AttrNumber h_attnum; /* hash key attribute number */
+	int p_index;
+	int total_segs = getgpsegmentCount();
+	int i = 0;
+
+	policy = GpPolicyCopy(CurrentMemoryContext, cstate->rel->rd_cdbpolicy);
+
+	if (policy)
+		p_nattrs = policy->nattrs; /* number of partitioning keys */
+	else
+		p_nattrs = 0;
+	/* Create hash API reference */
+	cdbHash = makeCdbHash(total_segs);
+
+	/*
+	 * Extract types for each partition key from the tuple descriptor,
+	 * and convert them when necessary. We don't want to do this
+	 * for each tuple since get_typtype() is quite expensive when called
+	 * lots of times.
+	 * The array key for p_attr_types is the attribute number of the attribute
+	 * in question.
+ 	 */	
+	p_attr_types = (Oid *)palloc0(num_phys_attrs * sizeof(Oid));
+
+	for (i = 0; i < p_nattrs; i++)
+	{
+		h_attnum = policy->attrs[i];
+
+		/*
+		 * get the data type of this attribute. If it's an
+		 * array type use anyarray, or else just use as is.
+		 */
+		if (attr[h_attnum - 1]->attndims > 0)
+			p_attr_types[h_attnum - 1] = ANYARRAYOID;
+		else
+		{
+			/* If this type is a domain type, get its base type. */
+			p_attr_types[h_attnum - 1] = attr[h_attnum - 1]->atttypid;
+			if (get_typtype(p_attr_types[h_attnum - 1]) == 'd')
+				p_attr_types[h_attnum - 1] =
+					getBaseType(p_attr_types[h_attnum - 1]);
+		}
+	}
+
+	/*
+	 * for optimized parsing - get the last field number in the
+	 * file that we need to parse to have all values for the hash keys.
+	 * (If the table has an empty distribution policy, then we don't need
+	 * to parse any attributes really... just send the row away using
+	 * a special cdbhash function designed for this purpose).
+	 */
+	cstate->last_hash_field = 0;
+
+	for (p_index = 0; p_index < p_nattrs; p_index++)
+	{
+		i = 1;
+
+		/*
+		 * for this partitioning key, search for its location in the attr list.
+		 * (note that fields may be out of order).
+		 */
+		ListCell *cur;
+		foreach (cur, cstate->attnumlist)
+		{
+			int attnum = lfirst_int(cur);
+
+			if (attnum == policy->attrs[p_index])
+			{
+				if (i > cstate->last_hash_field)
+					cstate->last_hash_field = i;
+			}
+			i++;
+		}
+	}
+	GpDistributionData distData;
+	distData.policy = policy;
+	distData.p_nattrs = p_nattrs;
+	distData.p_attr_types = p_attr_types;
+	distData.cdbHash = cdbHash;
+	return distData;
+}
+
+static unsigned int
+get_target_seg(GpDistributionData distData, Datum *baseValues, bool *baseNulls)
+{
+	unsigned int target_seg = 0;
+	CdbHash *cdbHash = distData.cdbHash;
+	GpPolicy *policy = distData.policy;		 /* the partitioning policy for this table */
+	AttrNumber p_nattrs = distData.p_nattrs; /* num of attributes in the distribution policy */
+	Oid *p_attr_types = distData.p_attr_types;
+
+	if (!policy)
+	{
+		elog(FATAL, "Bad or undefined policy. (%p)", policy);
+	}
+
+	/*
+	 * At this point in the code, baseValues[x] is final for this
+	 * data row -- either the input data, a null or a default
+	 * value is in there, and constraints applied.
+	 *
+	 * Perform a cdbhash on this data row. Perform a hash operation
+	 * on each attribute.
+	 */
+	Assert(PointerIsValid(cdbHash));
+	/* Assert does not activate in production build */
+	if (!cdbHash)
+	{
+		elog(FATAL, "Bad cdb_hash: %p", cdbHash);
+	}
+	cdbhashinit(cdbHash);
+
+	AttrNumber h_attnum;
+	Datum h_key;
+	for (int i = 0; i < p_nattrs; i++)
+	{
+		/* current attno from the policy */
+		h_attnum = policy->attrs[i];
+
+		h_key = baseValues[h_attnum - 1]; /* value of this attr */
+		if (!baseNulls[h_attnum - 1])
+			cdbhash(cdbHash, h_key, p_attr_types[h_attnum - 1]);
+		else
+			cdbhashnull(cdbHash);
+	}
+
+	/*
+	 * If this is a relation with an empty policy, there is no
+	 * hash key to use, therefore use cdbhashnokey() to pick a
+	 * hash value for us.
+	 */
+	if (p_nattrs == 0)
+		cdbhashnokey(cdbHash);
+
+	target_seg = cdbhashreduce(cdbHash); /* hash result segment */
+	return target_seg;
+}
+
 /*
  * Copy FROM file to relation.
  */
@@ -4350,6 +4496,9 @@ CopyFrom(CopyState cstate)
 	attr_count = list_length(cstate->attnumlist);
 	num_defaults = 0;
 	bool		is_segment_data_processed = (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE) ? false : true;
+	bool is_check_distkey = (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE && gp_enable_segment_copy_checking) ? true : false;
+	GpDistributionData	distData; /* distribution data used to compute target seg */
+	unsigned int	target_seg = 0; /* result segment of cdbhash */
 
 	/*----------
 	 * Check to see if we can avoid writing WAL
@@ -4457,6 +4606,12 @@ CopyFrom(CopyState cstate)
 				num_defaults++;
 			}
 		}
+	}
+
+	/* prepare distribuion data for computing target seg*/
+	if (is_check_distkey)
+	{
+		distData = initDistributionData(cstate, attr,num_phys_attrs);
 	}
 
 	/* Prepare to catch AFTER triggers. */
@@ -4572,7 +4727,6 @@ PROCESS_SEGMENT_DATA:
 				bool		skip_tuple;
 				Oid			loaded_oid = InvalidOid;
 				char		relstorage;
-				
 				CHECK_FOR_INTERRUPTS();
 
 				/* Reset the per-tuple exprcontext */
@@ -4913,6 +5067,14 @@ PROCESS_SEGMENT_DATA:
 				{
 					values = baseValues;
 					nulls = baseNulls;
+				}
+
+				if (is_check_distkey)
+				{
+					target_seg = get_target_seg(distData, values, nulls);
+					/*check distribution key if COPY FROM ON SEGMENT*/
+					if (GpIdentity.segindex != target_seg)
+						elog(ERROR, "Value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d. \"SET gp_enable_segment_copy_checking=off\" can disable distribution key checking.", GpIdentity.segindex, target_seg);
 				}
 
 				if (relstorage == RELSTORAGE_AOROWS)

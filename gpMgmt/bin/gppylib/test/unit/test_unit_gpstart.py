@@ -55,6 +55,7 @@ class GpStart(GpTestCase):
             patch("gpstart.gp.MasterStart.local"),
             patch("gpstart.pg.DbStatus.local"),
             patch("gpstart.TableLogger"),
+            patch('gpstart.PgControlData'),
         ])
 
         self.mockFilespaceConsistency = self.get_mock_from_apply_patch("CheckFilespaceConsistency")
@@ -212,9 +213,28 @@ class GpStart(GpTestCase):
                                                     'the GUC for data_checksums '
                                                     'will not be checked between master and segments')
 
+    def test_gpstart_fails_if_standby_heap_checksum_doesnt_match_master(self):
+        sys.argv = ["gpstart", "-a"]
+        self.gparray = GpArray([self.master, self.primary0, self.primary1, self.mirror0, self.mirror1, self.standby])
+        self.segments_by_content_id = GpArray.getSegmentsByContentId(self.gparray.getSegDbList())
+        self.mock_os_path_exists.side_effect = os_exists_check
+        self.subject.unix.PgPortIsActive.local.return_value = False
+        self.mock_heap_checksum.return_value.get_master_value.return_value = 1
+        self.mock_heap_checksum.return_value.get_standby_value.return_value = 0
+
+        parser = self.subject.GpStart.createParser()
+        options, args = parser.parse_args()
+        gpstart = self.subject.GpStart.createProgram(options, args)
+
+        with patch("gpstart.GpArray.initFromCatalog", return_value=self.gparray):
+            return_code = gpstart.run()
+        self.assertEqual(return_code, 1)
+        self.subject.logger.warning.assert_any_call("Heap checksum settings on standby master do not match master <<<<<<<<")
+        self.subject.logger.error.assert_any_call("gpstart error: Heap checksum settings are not consistent across the cluster.")
+
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = GpDB.initFromString(
-            "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+            "1|-1|p|p|s|u|mdw|mdw|5432|5532|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
         self.primary0 = GpDB.initFromString(
             "2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
         self.primary1 = GpDB.initFromString(
@@ -223,6 +243,8 @@ class GpStart(GpTestCase):
             "4|0|m|m|s|u|sdw2|sdw2|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
         self.mirror1 = GpDB.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
+        self.standby = GpDB.initFromString(
+            "6|-1|m|m|s|u|sdw3|sdw3|5433|5533|/data/standby||/data/standby/base/10899,/data/standby/base/1,/data/standby/base/10898,/data/standby/base/25780,/data/standby/base/34782")
         return GpArray([self.master, self.primary0, self.primary1, self.mirror0, self.mirror1])
 
     def _get_env(self, arg):

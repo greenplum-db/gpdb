@@ -860,17 +860,17 @@ set_values_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 /*
  * set_cte_pathlist
- *		Buld the (single) access path for a CTE RTE.
+ *		Build the (single) access path for a CTE RTE.
  */
 static void
 set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
-	/* Find the referenced CTE based on the given range table entry */
-	Index		levelsup = rte->ctelevelsup;
-	PlannerInfo *cteroot = root;
+	PlannerInfo *cteroot;
+	Index		levelsup;
+	int			ndx;
 	ListCell   *lc;
-	CommonTableExpr *cte = NULL;
 	int			planinfo_id;
+	CommonTableExpr *cte = NULL;
 	double		tuple_fraction = 0.0;
 	CtePlanInfo *cteplaninfo;
 	Plan	   *subplan = NULL;
@@ -878,28 +878,38 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	List	   *pathkeys = NULL;
 	PlannerInfo *subroot = NULL;
 
-	while (levelsup > 0)
+	/*
+	 * Find the referenced CTE based on the given range table entry
+	 */
+	levelsup = rte->ctelevelsup;
+	cteroot = root;
+	while (levelsup-- > 0)
 	{
 		cteroot = cteroot->parent_root;
-		Assert(cteroot != NULL);
-		levelsup--;
+		if (!cteroot)			/* shouldn't happen */
+			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
 	}
 
-	planinfo_id = 0;
+	ndx = 0;
 	foreach(lc, cteroot->parse->cteList)
 	{
 		cte = (CommonTableExpr *) lfirst(lc);
 
 		if (strcmp(cte->ctename, rte->ctename) == 0)
 			break;
-		planinfo_id++;
+		ndx++;
 	}
-
-	Assert(lc != NULL);
-	Assert(cte != NULL);
-
+	if (lc == NULL)				/* shouldn't happen */
+		elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
 
 	Assert(IsA(cte->ctequery, Query));
+
+	/*
+	 * In PostgreSQL, we use the index to look up the plan ID in the
+	 * cteroot->cte_plan_ids list. In GPDB, CTE plans work differently, and
+	 * we look up the CtePlanInfo struct in the list_cteplaninfo instead.
+	 */
+	planinfo_id = ndx;
 
 	/*
 	 * Determine whether we need to generate a new subplan for this CTE.

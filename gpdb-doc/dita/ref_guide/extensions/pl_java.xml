@@ -316,8 +316,7 @@
         <li id="pv160327">Set the <codeph>pljava_classpath</codeph> server configuration parameter
           in the master <codeph>postgresql.conf</codeph> file. For this example, the parameter value
           is a colon (:) separated list of the JAR files. For
-            example:<codeblock>$ gpconfig -c pljava_classpath 
--v \'examples.jar:myclasses.jar\'</codeblock><p>The
+            example:<codeblock>$ gpconfig -c pljava_classpath -v 'examples.jar:myclasses.jar'</codeblock><p>The
             file <codeph>examples.jar</codeph> is installed when you install the PL/Java extension
             package with the <codeph>gppkg</codeph> utility.</p><note>If you install JAR files in a
             directory other than <codeph>$GPHOME/lib/postgresql/java/</codeph>, you must specify the
@@ -999,7 +998,7 @@ Build-Date: 01/20/2013 10:09 AM</codeblock>
       <p>Use the <codeph>gpconfig</codeph> utility to set the Greenplum
           <codeph>pljava_classpath</codeph> server configuration parameter. The parameter lists the
         installed jar files.</p>
-      <codeblock>gpconfig -c pljava_classpath -v \'analytics.jar\'</codeblock>
+      <codeblock>gpconfig -c pljava_classpath -v 'analytics.jar'</codeblock>
       <p>Run the <codeph>gpstop</codeph> utility with the <codeph>-u</codeph> option to reload the
         configuration files.</p>
       <codeblock>gpstop -u</codeblock>

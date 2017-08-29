@@ -1164,7 +1164,7 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
 							 fn->agg_distinct,
 							 fn->func_variadic,
 							 false,
-							 (WindowSpec *)fn->over,
+							 fn->over,
 							 fn->location, 
 							 fn->agg_filter);
 }

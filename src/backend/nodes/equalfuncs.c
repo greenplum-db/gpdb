@@ -227,7 +227,6 @@ _equalWindowRef(WindowRef *a, WindowRef *b)
 	COMPARE_SCALAR_FIELD(winfnoid);
 	COMPARE_SCALAR_FIELD(restype);
 	COMPARE_NODE_FIELD(args);
-	COMPARE_SCALAR_FIELD(winlevelsup);
 	COMPARE_SCALAR_FIELD(windistinct);
 	COMPARE_SCALAR_FIELD(winspec);
 	COMPARE_SCALAR_FIELD(winindex);
@@ -1148,8 +1147,9 @@ _equalCopyStmt(CopyStmt *a, CopyStmt *b)
 	COMPARE_STRING_FIELD(filename);
 	COMPARE_NODE_FIELD(options);
 	COMPARE_NODE_FIELD(sreh);
-
-
+	COMPARE_SCALAR_FIELD(nattrs);
+	COMPARE_SCALAR_FIELD(ptype);
+	COMPARE_POINTER_FIELD(distribution_attrs,a->nattrs * sizeof(AttrNumber));
 	return true;
 }
 

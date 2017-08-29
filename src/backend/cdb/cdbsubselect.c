@@ -1248,7 +1248,7 @@ add_notin_subquery_rte(Query *parse, Query *subselect)
 
 	/* assume new rte is at end */
 	subq_indx = list_length(parse->rtable);
-	Assert(subq_rte = rt_fetch(subq_indx, parse->rtable));
+	Assert(subq_rte == rt_fetch(subq_indx, parse->rtable));
 
 	return subq_indx;
 }
@@ -1290,7 +1290,7 @@ add_expr_subquery_rte(Query *parse, Query *subselect)
 
 	/* assume new rte is at end */
 	subq_indx = list_length(parse->rtable);
-	Assert(subq_rte = rt_fetch(subq_indx, parse->rtable));
+	Assert(subq_rte == rt_fetch(subq_indx, parse->rtable));
 
 	return subq_indx;
 }

@@ -21,11 +21,12 @@
 #ifndef _PXFBRIDGE_H
 #define _PXFBRIDGE_H
 
+#include "pxfuriparser.h"
+#include "libchurl.h"
+
 #include "postgres.h"
 #include "cdb/cdbvars.h"
-#include "libchurl.h"
 #include "nodes/pg_list.h"
-#include "pxfuriparser.h"
 
 /*
  * Context for single query execution by PXF bridge

@@ -13,16 +13,29 @@ ALTER USER <varname>name</varname> SET <varname>config_parameter</varname> {TO |
 
 ALTER USER <varname>name</varname> RESET <varname>config_parameter</varname>
 
+ALTER USER <varname>name</varname> RESOURCE QUEUE {<varname>queue_name</varname> | NONE}
+
+ALTER USER <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname> | NONE}
+
 ALTER USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock>
             <p>where <varname>option</varname> can be:</p>
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
     | CREATEUSER | NOCREATEUSER
-    | INHERIT | NOINHERIT
+    | CREATEEXTTABLE | NOCREATEEXTTABLE 
+      [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
+           where <varname>attributes</varname> and <varname>value</varname> are:
+           type='readable'|'writable'
+           protocol='gpfdist'|'http'
+    | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>'</codeblock>
+    | CONNECTION LIMIT <varname>connlimit</varname>
+    | [ENCRYPTED | UNENCRYPTED] PASSWORD '<varname>password</varname>'
+    | VALID UNTIL '<varname>timestamp</varname>'
+    | [ DENY <varname>deny_point</varname> ]
+    | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]
+    | [ DROP DENY FOR <varname>deny_point</varname> ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>

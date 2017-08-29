@@ -3570,81 +3570,6 @@ get_name_for_var_field(Var *var, int fieldno,
 				}
 			}
 			break;
-		case RTE_CTE:
-			{
-				/* similar to RTE_SUBQUERY */
-				CommonTableExpr *cte = NULL;
-				Index ctelevelsup;
-				ListCell *lc = NULL;
-
-				/*
-				 * Try to find the referenced CTE using the namespace stack.
-				 */
-				ctelevelsup = rte->ctelevelsup + levelsup;
-				if (ctelevelsup < list_length(context->namespaces))
-				{
-					deparse_namespace *ctenamespace;
-
-					ctenamespace = (deparse_namespace *)
-						list_nth(context->namespaces, ctelevelsup);
-					foreach(lc, ctenamespace->ctes)
-					{
-						cte = (CommonTableExpr *) lfirst(lc);
-						if (strcmp(cte->ctename, rte->ctename) == 0)
-							break;
-					}
-				}
-				if (lc != NULL)
-				{
-					Assert(cte != NULL);
-					
-					TargetEntry *ste = get_tle_by_resno(GetCTETargetList(cte),
-														attnum);
-					if (ste == NULL || ste->resjunk)
-					{
-						ereport(WARNING, (errcode(ERRCODE_INTERNAL_ERROR),
-										  errmsg_internal("bogus var: varno=%d varattno=%d",
-														  var->varno, var->varattno) ));
-						return "*BOGUS*";
-					}
-					
-					expr = (Node *) ste->expr;
-					if (IsA(expr, Var))
-					{
-						const char *result = NULL;
-
-						/*
-						 * Recurse into the CTE to see what its Var refers to.
-						 * We have to build an additional level of namespace
-						 * to keep in step with varlevelsup in the CTE.
-						 * Furthermore it could be an outer CTE, so we may
-						 * have to delete some levels of namespace.
-						 */
-						List	   *save_nslist = context->namespaces;
-						List	   *new_nslist;
-						deparse_namespace mydpns;
-						Query *ctequery = (Query *)cte->ctequery;
-						Assert(ctequery != NULL && IsA(ctequery, Query));
-
-						memset(&mydpns, 0, sizeof(mydpns));
-						mydpns.rtable = ctequery->rtable;
-						mydpns.ctes = ctequery->cteList;
-
-						new_nslist = list_copy_tail(context->namespaces,
-													ctelevelsup);
-						context->namespaces = lcons(&mydpns, new_nslist);
-
-						result = get_name_for_var_field((Var *) expr, fieldno,
-														0, context);
-
-						context->namespaces = save_nslist;
-
-						return result;
-					}
-					/* else fall through to inspect the expression */
-				}
-			}
-			break;
 		case RTE_JOIN:
 			/* Join RTE --- recursively inspect the alias variable */
 			if (rte->joinaliasvars == NIL)
@@ -3664,6 +3589,83 @@ get_name_for_var_field(Var *var, int fieldno,
 			 * We couldn't get here unless a function is declared with one of
 			 * its result columns as RECORD, which is not allowed.
 			 */
+			break;
+		case RTE_CTE:
+			/* CTE reference: examine subquery's output expr */
+			{
+				CommonTableExpr *cte = NULL;
+				Index		ctelevelsup;
+				ListCell   *lc;
+
+				/*
+				 * Try to find the referenced CTE using the namespace stack.
+				 */
+				ctelevelsup = rte->ctelevelsup + levelsup;
+				if (ctelevelsup >= list_length(context->namespaces))
+					lc = NULL;
+				else
+				{
+					deparse_namespace *ctedpns;
+
+					ctedpns = (deparse_namespace *)
+						list_nth(context->namespaces, ctelevelsup);
+					foreach(lc, ctedpns->ctes)
+					{
+						cte = (CommonTableExpr *) lfirst(lc);
+						if (strcmp(cte->ctename, rte->ctename) == 0)
+							break;
+					}
+				}
+				if (lc != NULL)
+				{
+					Query	   *ctequery = (Query *) cte->ctequery;
+					TargetEntry *ste = get_tle_by_resno(GetCTETargetList(cte),
+														attnum);
+
+					if (ste == NULL || ste->resjunk)
+					{
+						ereport(WARNING, (errcode(ERRCODE_INTERNAL_ERROR),
+										  errmsg_internal("bogus var: varno=%d varattno=%d",
+														  var->varno, var->varattno) ));
+						return "*BOGUS*";
+					}
+
+					expr = (Node *) ste->expr;
+					if (IsA(expr, Var))
+					{
+						/*
+						 * Recurse into the CTE to see what its Var refers to.
+						 * We have to build an additional level of namespace
+						 * to keep in step with varlevelsup in the CTE.
+						 * Furthermore it could be an outer CTE, so we may
+						 * have to delete some levels of namespace.
+						 */
+						List	   *save_nslist = context->namespaces;
+						List	   *new_nslist;
+						deparse_namespace mydpns;
+						const char *result;
+
+						mydpns.rtable = ctequery->rtable;
+						mydpns.ctes = ctequery->cteList;
+#if 0					/* GPDB_84_FIXME: we'll get subplans in 8.4 */
+						mydpns.subplans = NIL;
+#endif
+						mydpns.outer_plan = mydpns.inner_plan = NULL;
+
+						new_nslist = list_copy_tail(context->namespaces,
+													ctelevelsup);
+						context->namespaces = lcons(&mydpns, new_nslist);
+
+						result = get_name_for_var_field((Var *) expr, fieldno,
+														0, context);
+
+						context->namespaces = save_nslist;
+
+						return result;
+					}
+					/* else fall through to inspect the expression */
+				}
+			}
 			break;
 		case RTE_VOID:
             /* No references should exist to a deleted RTE. */
@@ -5857,9 +5859,6 @@ get_from_clause_item(Node *jtnode, Query *query, deparse_context *context)
 							  context->prettyFlags, context->indentLevel);
 				appendStringInfoChar(buf, ')');
 				break;
-			case RTE_CTE:
-				appendStringInfoString(buf, quote_identifier(rte->ctename));
-				break;
 			case RTE_TABLEFUNCTION:
 				/* Table Function RTE */
 				/* fallthrough */
@@ -5870,6 +5869,9 @@ get_from_clause_item(Node *jtnode, Query *query, deparse_context *context)
 			case RTE_VALUES:
 				/* Values list RTE */
 				get_values_def(rte->values_lists, context);
+				break;
+			case RTE_CTE:
+				appendStringInfoString(buf, quote_identifier(rte->ctename));
 				break;
 			default:
 				elog(ERROR, "unrecognized RTE kind: %d", (int) rte->rtekind);

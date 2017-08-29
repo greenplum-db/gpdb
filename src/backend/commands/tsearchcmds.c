@@ -845,7 +845,7 @@ AlterTSDictionary(AlterTSDictionaryStmt *stmt)
 									DF_CANCEL_ON_ERROR |
 									DF_NEED_TWO_PHASE |
 									DF_WITH_SNAPSHOT,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 }
 
@@ -1749,7 +1749,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 									DF_CANCEL_ON_ERROR |
 									DF_NEED_TWO_PHASE |
 									DF_WITH_SNAPSHOT,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 }
 

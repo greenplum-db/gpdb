@@ -3242,16 +3242,16 @@ interval_mul(PG_FUNCTION_ARGS)
 	Interval   *span = PG_GETARG_INTERVAL_P(0);
 	float8		factor = PG_GETARG_FLOAT8(1);
 	double		month_remainder_days,
-	sec_remainder;
+				sec_remainder;
 	int32		orig_month = span->month,
-	orig_day = span->day;
+				orig_day = span->day;
 	Interval   *result;
-	
+
 	result = (Interval *) palloc(sizeof(Interval));
-	
+
 	result->month = (int32) (span->month * factor);
 	result->day = (int32) (span->day * factor);
-	
+
 	/*
 	 * The above correctly handles the whole-number part of the month and day
 	 * products, but we have to do something with any fractional part
@@ -3261,7 +3261,7 @@ interval_mul(PG_FUNCTION_ARGS)
 	 * so by the representation.  The user can choose to cascade up later,
 	 * using justify_hours and/or justify_days.
 	 */
-	
+
 	/*
 	 * Fractional months full days into days.
 	 *
@@ -3273,9 +3273,9 @@ interval_mul(PG_FUNCTION_ARGS)
 	month_remainder_days = (orig_month * factor - result->month) * DAYS_PER_MONTH;
 	month_remainder_days = TSROUND(month_remainder_days);
 	sec_remainder = (orig_day * factor - result->day +
-					 month_remainder_days - (int) month_remainder_days) * SECS_PER_DAY;
+		   month_remainder_days - (int) month_remainder_days) * SECS_PER_DAY;
 	sec_remainder = TSROUND(sec_remainder);
-	
+
 	/*
 	 * Might have 24:00:00 hours due to rounding, or >24 hours because of time
 	 * cascade from months and days.  It might still be >24 if the combination
@@ -3286,7 +3286,7 @@ interval_mul(PG_FUNCTION_ARGS)
 		result->day += (int) (sec_remainder / SECS_PER_DAY);
 		sec_remainder -= (int) (sec_remainder / SECS_PER_DAY) * SECS_PER_DAY;
 	}
-	
+
 	/* cascade units down */
 	result->day += (int32) month_remainder_days;
 #ifdef HAVE_INT64_TIMESTAMP
@@ -3294,7 +3294,7 @@ interval_mul(PG_FUNCTION_ARGS)
 #else
 	result->time = span->time * factor + sec_remainder;
 #endif
-	
+
 	PG_RETURN_INTERVAL_P(result);
 }
 

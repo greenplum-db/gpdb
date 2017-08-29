@@ -1578,10 +1578,6 @@ CTranslatorScalarToDXL::PdxlnScWindowref
 	}
 
 	GPOS_ASSERT(EdxlwinstageSentinel != edxlwinstage && "Invalid window stage");
-	if (0 != pwindowref->winlevelsup)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Window functions with outer references"));
-	}
 
 	CDXLScalarWindowRef *pdxlopWinref = GPOS_NEW(m_pmp) CDXLScalarWindowRef
 													(

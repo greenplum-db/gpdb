@@ -183,7 +183,7 @@ ExecRenameStmt(RenameStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 
@@ -249,7 +249,7 @@ ExecAlterObjectSchemaStmt(AlterObjectSchemaStmt *stmt)
 									DF_CANCEL_ON_ERROR|
 									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
-									NIL, /* FIXME */
+									NIL,
 									NULL);
 	}
 }

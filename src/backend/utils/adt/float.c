@@ -362,11 +362,11 @@ float4send(PG_FUNCTION_ARGS)
 Datum
 float8in(PG_FUNCTION_ARGS)
 {
-	char			*num = PG_GETARG_CSTRING(0);
-	char			*orig_num;
-	long double		val;
-	char			*endptr;
-	bool 			literal_inf = true;
+	char	   *num = PG_GETARG_CSTRING(0);
+	char	   *orig_num;
+	long double val;
+	char	   *endptr;
+	bool 		literal_inf = true;
 
 	/*
 	 * endptr points to the first character _after_ the sequence we recognized
@@ -1215,6 +1215,7 @@ i2tof(PG_FUNCTION_ARGS)
 
 	PG_RETURN_FLOAT4((float4) num);
 }
+
 
 /*
  *		=======================

@@ -399,17 +399,17 @@ typedef enum {
 #define GP_HEADER_VERSION_NUM 1
 
 /* The actual data block contents */
-#define PG_MODULE_MAGIC_DATA					\
-{												\
-	sizeof(Pg_magic_struct),					\
-	GP_VERSION_NUM / 100,						\
-	FUNC_MAX_ARGS,								\
-	INDEX_MAX_KEYS,								\
-	NAMEDATALEN,								\
-	FLOAT4PASSBYVAL,							\
-	FLOAT8PASSBYVAL,							\
-	PgMagicProductGreenplum,					\
-	GP_HEADER_VERSION_NUM,                    \
+#define PG_MODULE_MAGIC_DATA \
+{ \
+	sizeof(Pg_magic_struct), \
+	GP_VERSION_NUM / 100, \
+	FUNC_MAX_ARGS, \
+	INDEX_MAX_KEYS, \
+	NAMEDATALEN, \
+	FLOAT4PASSBYVAL, \
+	FLOAT8PASSBYVAL, \
+	PgMagicProductGreenplum, \
+	GP_HEADER_VERSION_NUM, \
 }
 
 #ifndef FLOAT4PASSBYVAL
@@ -427,25 +427,15 @@ typedef const Pg_magic_struct *(*PGModuleMagicFunction) (void);
 #define PG_MAGIC_FUNCTION_NAME Pg_magic_func
 #define PG_MAGIC_FUNCTION_NAME_STRING "Pg_magic_func"
 
-/*
- * magic function name for C++ dynamic libraries;
- * we need a different name to avoid duplicate symbol problems
- */
-#define PG_MAGIC_FUNCTION_NAME_CPP Pg_magic_func_cpp
-#define PG_MAGIC_FUNCTION_NAME_CPP_STRING "Pg_magic_func_cpp"
-
-#define PG_MAGIC_FUNC(func) \
-extern PGDLLIMPORT const Pg_magic_struct *func(void); \
+#define PG_MODULE_MAGIC \
+extern PGDLLIMPORT const Pg_magic_struct *PG_MAGIC_FUNCTION_NAME(void); \
 const Pg_magic_struct * \
-func(void) \
+PG_MAGIC_FUNCTION_NAME(void) \
 { \
 	static const Pg_magic_struct Pg_magic_data = PG_MODULE_MAGIC_DATA; \
 	return &Pg_magic_data; \
 } \
 extern int no_such_variable
-
-#define PG_MODULE_MAGIC  		PG_MAGIC_FUNC(PG_MAGIC_FUNCTION_NAME)
-#define PG_MODULE_MAGIC_CPP  	PG_MAGIC_FUNC(PG_MAGIC_FUNCTION_NAME_CPP)
 
 
 /*-------------------------------------------------------------------------

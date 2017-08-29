@@ -7,7 +7,7 @@ to it, nor can it have any statements waiting in the queue. Only a superuser
 can drop a resource queue.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>queue_name</varname></pt><pd>The name of a resource queue to remove.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Use <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> to remove a
         user from a resource queue.</p><p>To see all the currently active queries for all resource queues, perform
 the following query of the <codeph>pg_locks</codeph> table joined with
-the <codeph>pg_roles</codeph> and <codeph>pg_resqueue</codeph> tables:</p><codeblock>SELECT rolname, rsqname, locktype, objid, transaction, pid, 
+the <codeph>pg_roles</codeph> and <codeph>pg_resqueue</codeph> tables:</p><codeblock>SELECT rolname, rsqname, locktype, objid, pid, 
 mode, granted FROM pg_roles, pg_resqueue, pg_locks WHERE 
 pg_roles.rolresqueue=pg_locks.objid AND 
 pg_locks.objid=pg_resqueue.oid;</codeblock><p>To see the roles assigned to a resource queue, perform the following query

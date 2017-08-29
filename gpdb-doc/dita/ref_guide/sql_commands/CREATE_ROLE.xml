@@ -12,6 +12,7 @@
             <codeblock>      SUPERUSER | NOSUPERUSER
     | CREATEDB | NOCREATEDB
     | CREATEROLE | NOCREATEROLE
+    | CREATEUSER | NOCREATEUSER
     | CREATEEXTTABLE | NOCREATEEXTTABLE 
       [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
            where <varname>attributes</varname> and <varname>value</varname> are:
@@ -72,6 +73,14 @@
                         allowed to create new roles, alter other roles, and drop other roles.
                             <codeph>NOCREATEROLE</codeph> (the default) will deny a role the ability
                         to create roles or modify roles other than their own. </pd>
+                </plentry>
+                <plentry>
+                    <pt>CREATEUSER</pt>
+                    <pt>NOCREATEUSER</pt>
+                    <pd>These clauses are obsolete, but still accepted, spellings of
+                            <codeph>SUPERUSER</codeph> and <codeph>NOSUPERUSER</codeph>. Note that
+                        they are not equivalent to the <codeph>CREATEROLE</codeph> and
+                            <codeph>NOCREATEROLE</codeph> clauses.</pd>
                 </plentry>
                 <plentry>
                     <pt>CREATEEXTTABLE</pt>
@@ -158,16 +167,18 @@
                 </plentry>
                 <plentry>
                     <pt>RESOURCE GROUP <varname>group_name</varname></pt>
-                    <pd> The name of the resource group to assign to the the new role.  The role 
-                        will be subject to the concurrent transaction, memory, and CPU limits
-                        configured for the resource group.
-                        You can assign a single resource group to one or more roles.</pd>
+                    <pd> The name of the resource group to assign to the the new role. The role will
+                        be subject to the concurrent transaction, memory, and CPU limits configured
+                        for the resource group. You can assign a single resource group to one or
+                        more roles.</pd>
                     <pd>If you do not specify a resource group for a new role, the role is
                         automatically assigned the default resource group for the role's capability,
-                        <codeph>admin_group</codeph> for <codeph>SUPERUSER</codeph> roles,
-                        <codeph>default_group</codeph> for non-admin roles.</pd>
-                    <pd>You can assign the <codeph>admin_group</codeph> resource group to any role having the <codeph>SUPERUSER</codeph> attribute.</pd>
-                    <pd>You can assign the <codeph>default_group</codeph> resource group to any role.</pd>
+                            <codeph>admin_group</codeph> for <codeph>SUPERUSER</codeph> roles,
+                            <codeph>default_group</codeph> for non-admin roles.</pd>
+                    <pd>You can assign the <codeph>admin_group</codeph> resource group to any role
+                        having the <codeph>SUPERUSER</codeph> attribute.</pd>
+                    <pd>You can assign the <codeph>default_group</codeph> resource group to any
+                        role.</pd>
                 </plentry>
                 <plentry>
                     <pt>RESOURCE QUEUE <varname>queue_name</varname></pt>
@@ -228,8 +239,8 @@
                 privileges/attributes are never inherited: <codeph>SUPERUSER</codeph>,
                     <codeph>CREATEDB</codeph>, <codeph>CREATEROLE</codeph>,
                     <codeph>CREATEEXTTABLE</codeph>, <codeph>LOGIN</codeph>, <codeph>RESOURCE
-                    GROUP</codeph>, and <codeph>RESOURCE
-                    QUEUE</codeph>. The attributes must be set on each user-level role.</p>
+                    GROUP</codeph>, and <codeph>RESOURCE QUEUE</codeph>. The attributes must be set
+                on each user-level role.</p>
             <p>The <codeph>INHERIT</codeph> attribute is the default for reasons of backwards
                 compatibility. In prior releases of Greenplum Database, users always had access to
                 all privileges of groups they were members of. However, <codeph>NOINHERIT</codeph>
@@ -294,8 +305,8 @@
                         href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph>,
                         <codeph><xref href="CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
                         format="dita"/></codeph>
-                        <codeph><xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic"
-                        format="dita"/></codeph></p>
+                <codeph><xref href="CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
+                    /></codeph></p>
         </section>
     </body>
 </topic>

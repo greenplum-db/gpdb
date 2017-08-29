@@ -191,6 +191,7 @@
             <topicref href="guc-list.xml#log_rotation_size"/>
             <topicref href="guc-list.xml#log_statement"/>
             <topicref href="guc-list.xml#log_statement_stats"/>
+            <topicref href="guc-list.xml#log_temp_files"/>
             <topicref href="guc-list.xml#log_timezone"/>
             <topicref href="guc-list.xml#log_truncate_on_rotation"/>
             <topicref href="guc-list.xml#max_appendonly_tables"/>

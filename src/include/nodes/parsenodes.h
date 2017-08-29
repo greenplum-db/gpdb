@@ -23,6 +23,7 @@
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
 #include "nodes/value.h"
+#include "catalog/gp_policy.h"
 
 typedef struct PartitionNode PartitionNode; /* see relation.h */
 
@@ -320,7 +321,7 @@ typedef struct FuncCall
 	bool		agg_distinct;	/* arguments were labeled DISTINCT */
 	bool		func_variadic;	/* last argument was labeled VARIADIC */
 	int			location;		/* token location, or -1 if unknown */
-	Node	   *over;			/* over clause */
+	struct WindowSpec *over;	/* OVER clause, if any */
     Node       *agg_filter;     /* aggregation filter clause */
 } FuncCall;
 
@@ -1422,6 +1423,9 @@ typedef struct CopyStmt
 	/* Convenient location for dispatch of misc meta data */
 	PartitionNode *partitions;
 	List		*ao_segnos;		/* AO segno map */
+	int			nattrs;
+	GpPolicyType	ptype;
+	AttrNumber	*distribution_attrs;
 } CopyStmt;
 
 /* ----------------------

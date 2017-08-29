@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -17,15 +17,13 @@
  * under the License.
  */
 
-#include "libchurl.h"
 #include "pxfuriparser.h"
+#include "pxffragment.h"
 #include "pxfutils.h"
 #include "utils/formatting.h"
 
-static const char* SEGWORK_SUBSTRING = "segwork=";
 static const char* PTC_SEP = "://";
 static const char* OPTION_SEP = "&";
-static const char  SEGWORK_SEPARATOR = '@';
 static const int   EMPTY_VALUE_LEN = 2;
 
 /* helper function declarations */
@@ -35,10 +33,7 @@ static void  GPHDUri_parse_data(GPHDUri *uri, char **cursor);
 static void  GPHDUri_parse_options(GPHDUri *uri, char **cursor);
 static List* GPHDUri_parse_option(char* pair, GPHDUri *uri);
 static void  GPHDUri_free_options(GPHDUri *uri);
-static void  GPHDUri_parse_segwork(GPHDUri *uri, const char *uri_str);
-static List* GPHDUri_parse_fragment(char* fragment, List* fragments);
 static void  GPHDUri_free_fragments(GPHDUri *uri);
-static char* GPHDUri_dup_without_segwork(const char* uri);
 
 /* parseGPHDUri
  *
@@ -46,7 +41,7 @@ static char* GPHDUri_dup_without_segwork(const char* uri);
  * verifying valid structure given a specific target protocol.
  *
  * URI format:
- *     <protocol name>://<cluster>/<data>?<option>&<option>&<...>&segwork=<segwork>
+ *     <protocol name>://<cluster>/<data>?<option>&<option>&<...>
  *
  *
  * protocol name    - must be 'pxf'
@@ -77,10 +72,9 @@ parseGPHDUriHostPort(const char *uri_str, const char *host, const int port)
     initStringInfo(&portstr);
     appendStringInfo(&portstr, "%d", port);
     uri->port = portstr.data;
-    uri->uri = GPHDUri_dup_without_segwork(uri_str);
+    uri->uri = pstrdup(uri_str);
     char *cursor = uri->uri;
 
-    GPHDUri_parse_segwork(uri, uri_str);
     GPHDUri_parse_protocol(uri, &cursor);
     GPHDUri_parse_cluster(uri, &cursor);
     GPHDUri_parse_data(uri, &cursor);
@@ -294,189 +288,20 @@ GPHDUri_free_options(GPHDUri *uri)
 }
 
 /*
- * GPHDUri_parse_segwork parses the segwork section of the uri.
- * ...&segwork=<size>@<ip>@<port>@<index><size>@<ip>@<port>@<index><size>...
- */
-static void
-GPHDUri_parse_segwork(GPHDUri *uri, const char *uri_str)
-{
-    char *size_end, *sizestr, *fragment;
-    /* skip segwork= */
-    char *segwork = strstr(uri_str, SEGWORK_SUBSTRING);
-    if (segwork == NULL)
-        return;
-    segwork += strlen(SEGWORK_SUBSTRING);
-
-    /* read next segment. each segment is prefixed with its size. */
-    int fragment_size, count = 0;
-    while (segwork && strlen(segwork))
-    {
-        /* expect size */
-        size_end = strchr(segwork, SEGWORK_SEPARATOR);
-        Assert(size_end != NULL);
-        sizestr = pnstrdup(segwork, size_end - segwork);
-        fragment_size = atoi(sizestr);
-        pfree(sizestr);
-        segwork = size_end + 1; /* skip the size field */
-        Assert(fragment_size <= strlen(segwork));
-
-        fragment = pnstrdup(segwork, fragment_size);
-        elog(DEBUG2, "GPHDUri_parse_segwork: fragment #%d, size %d", count, fragment_size);
-        uri->fragments = GPHDUri_parse_fragment(fragment, uri->fragments);
-        segwork += fragment_size;
-        pfree(fragment);
-        count++;
-    }
-}
-
-/*
- * Parsed a fragment string in the form:
- * <ip>@<port>@<index>[@user_data] - 192.168.1.1@1422@1[@user_data]
- * to authority ip:port - 192.168.1.1:1422
- * to index - 1
- * user data is optional
- */
-static List*
-GPHDUri_parse_fragment(char* fragment, List* fragments)
-{
-    if (!fragment)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is null.")));
-
-    FragmentData* fragment_data = palloc0(sizeof(FragmentData));
-    StringInfoData authority_formatter;
-    initStringInfo(&authority_formatter);
-    char *dup_frag = pstrdup(fragment);
-    char *value_start = dup_frag;
-
-    /* expect ip */
-    char *value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    appendStringInfo(&authority_formatter, "%s:", value_start);
-    value_start = value_end + 1;
-
-    /* expect port */
-    value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    appendStringInfoString(&authority_formatter, value_start);
-    fragment_data->authority = authority_formatter.data;
-    value_start = value_end + 1;
-
-    /* expect source name */
-    value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    fragment_data->source_name = pstrdup(value_start);
-    value_start = value_end + 1;
-
-    /* expect index */
-    value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    fragment_data->index = pstrdup(value_start);
-    value_start = value_end + 1;
-
-    /* expect fragment metadata */
-    Assert(value_start);
-    value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    fragment_data->fragment_md = pstrdup(value_start);
-    value_start = value_end + 1;
-
-    /* expect user data */
-    Assert(value_start);
-    value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    fragment_data->user_data = pstrdup(value_start);
-    value_start = value_end + 1;
-
-    /* expect for profile */
-    Assert(value_start);
-    value_end = strchr(value_start, SEGWORK_SEPARATOR);
-    if (value_end == NULL)
-        ereport(ERROR,
-                (errcode(ERRCODE_INTERNAL_ERROR),
-                 errmsg("internal error in GPHDUri_parse_fragment. Fragment string is invalid.")));
-    *value_end = '\0';
-    if (strlen(value_start) > 0)
-        fragment_data->profile = pstrdup(value_start);
-
-    pfree(dup_frag);
-    return lappend(fragments, fragment_data);
-}
-
-/*
- * Free fragment data
- */
-static void
-GPHDUri_free_fragment(FragmentData *data)
-{
-    if (data->authority)
-        pfree(data->authority);
-    if (data->fragment_md)
-        pfree(data->fragment_md);
-    if (data->index)
-        pfree(data->index);
-    if (data->profile)
-        pfree(data->profile);
-    if (data->source_name)
-        pfree(data->source_name);
-    if (data->user_data)
-        pfree(data->user_data);
-    pfree(data);
-}
-
-/*
  * Free fragments list
  */
-static void 
+static void
 GPHDUri_free_fragments(GPHDUri *uri)
 {
-    ListCell *fragment;
+    ListCell *fragment = NULL;
+
     foreach(fragment, uri->fragments)
-        GPHDUri_free_fragment((FragmentData*)lfirst(fragment));
+    {
+        FragmentData *data = (FragmentData*)lfirst(fragment);
+        free_fragment(data);
+    }
     list_free(uri->fragments);
     uri->fragments = NIL;
-}
-
-/*
- * Returns a uri without the segwork section.
- * segwork section removed so users won't get it 
- * when an error occurs and the uri is printed
- */
-static char*
-GPHDUri_dup_without_segwork(const char* uri)
-{
-    char *segwork = strstr(uri, SEGWORK_SUBSTRING);
-    if (segwork != NULL) {
-        segwork--; /* Discard the last character */
-        return pnstrdup(uri, segwork - uri);
-    }
-    /* segwork_substring was not found */
-    return pstrdup(uri);
 }
 
 /*

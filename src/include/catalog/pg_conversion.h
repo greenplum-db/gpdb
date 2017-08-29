@@ -35,7 +35,6 @@
  *	condefault			TRUE if this is a default conversion
  * ----------------------------------------------------------------
  */
-
 #define ConversionRelationId  2607
 
 CATALOG(pg_conversion,2607)

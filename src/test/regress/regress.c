@@ -2880,7 +2880,7 @@ resGroupPalloc(PG_FUNCTION_ARGS)
 	int count;
 	int i;
 
-	if (!IsResGroupEnabled())
+	if (!IsResGroupActivated())
 		PG_RETURN_INT32(0);
 
 	ResGroupGetMemInfo(&memLimit, &slotQuota, &sharedQuota);

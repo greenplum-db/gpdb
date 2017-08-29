@@ -596,14 +596,6 @@ IncrementVarSublevelsUp_walker(Node *node,
 			agg->agglevelsup += context->delta_sublevels_up;
 		/* fall through to recurse into argument */
 	}
-	if (IsA(node, WindowRef))
-	{
-		WindowRef	   *wref = (WindowRef *) node;
-
-		if (wref->winlevelsup >= context->min_sublevels_up)
-			wref->winlevelsup += context->delta_sublevels_up;
-		/* fall through to recurse into argument */
-	}
 	if (IsA(node, RangeTblEntry))
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) node;

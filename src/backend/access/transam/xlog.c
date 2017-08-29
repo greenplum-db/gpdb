@@ -8402,38 +8402,51 @@ UnpackCheckPointRecord(
 	ckptExtended->dtxCheckpointLen =
 		TMGXACT_CHECKPOINT_BYTES((ckptExtended->dtxCheckpoint)->committedCount);
 
-	Assert (remainderLen > ckptExtended->dtxCheckpointLen);
+	/*
+	 * The master mirror checkpoint (mmxlog) and prepared transaction aggregate state (ptas) will be skipped
+	 * when gp_before_filespace_setup is ON.
+	 */
+	if (remainderLen > ckptExtended->dtxCheckpointLen)
+	{
+		current_record_ptr = current_record_ptr + ckptExtended->dtxCheckpointLen;
+		remainderLen -= ckptExtended->dtxCheckpointLen;
 
-	current_record_ptr = current_record_ptr + ckptExtended->dtxCheckpointLen;
-	remainderLen -= ckptExtended->dtxCheckpointLen;
 
-	/* Lets fetch the master mirroring information */
-	ckptExtended->masterMirroringCheckpointLen =
-		mmxlog_get_checkpoint_record_fields(current_record_ptr,
-											&(ckptExtended->masterMirroringCheckpoint));
+		/* Lets fetch the master mirroring information */
+		ckptExtended->masterMirroringCheckpointLen =
+				mmxlog_get_checkpoint_record_fields(current_record_ptr,
+				                                    &(ckptExtended->masterMirroringCheckpoint));
 
-	Assert(remainderLen > ckptExtended->masterMirroringCheckpointLen);
+		Assert(remainderLen > ckptExtended->masterMirroringCheckpointLen);
 
-	current_record_ptr = current_record_ptr + ckptExtended->masterMirroringCheckpointLen;
-	remainderLen -= ckptExtended->masterMirroringCheckpointLen;
+		current_record_ptr = current_record_ptr + ckptExtended->masterMirroringCheckpointLen;
+		remainderLen -= ckptExtended->masterMirroringCheckpointLen;
 
-	/* Finally, point to prepared transaction information */
-	ckptExtended->ptas = (prepared_transaction_agg_state *)current_record_ptr;
+		/* Finally, point to prepared transaction information */
+		ckptExtended->ptas = (prepared_transaction_agg_state *) current_record_ptr;
+		Assert(remainderLen == PREPARED_TRANSACTION_CHECKPOINT_BYTES(ckptExtended->ptas->count));
+	}
+	else
+	{
+		Assert(remainderLen == ckptExtended->dtxCheckpointLen);
+		ckptExtended->masterMirroringCheckpointLen = 0;
+		ckptExtended->ptas = NULL;
+	}
 
 	if (Debug_persistent_recovery_print)
 	{
 		elog(PersistentRecovery_DebugPrintLevel(),
-			 "UnpackCheckPointRecord: Checkpoint record data length = %u "
-			 "DTX committed count %d, DTX data length %u "
-			 "Master Mirroring length %u, filespaces %d, tablespaces %d, databases %d "
+			 "UnpackCheckPointRecord: Checkpoint record data length = %u, "
+			 "DTX committed count %d, DTX data length %u, "
+			 "Master Mirroring length %u, filespaces %d, tablespaces %d, databases %d, "
 			 "Prepared Transaction count = %d",
 			 record->xl_len,
 			 ckptExtended->dtxCheckpoint->committedCount, ckptExtended->dtxCheckpointLen,
 			 ckptExtended->masterMirroringCheckpointLen,
-			 ckptExtended->masterMirroringCheckpoint.fspc->count,
-			 ckptExtended->masterMirroringCheckpoint.tspc->count,
-			 ckptExtended->masterMirroringCheckpoint.dbdir->count,
-			 ckptExtended->ptas->count);
+			 ckptExtended->masterMirroringCheckpointLen ? ckptExtended->masterMirroringCheckpoint.fspc->count : 0,
+			 ckptExtended->masterMirroringCheckpointLen ? ckptExtended->masterMirroringCheckpoint.tspc->count : 0,
+			 ckptExtended->masterMirroringCheckpointLen ? ckptExtended->masterMirroringCheckpoint.dbdir->count : 0,
+			 ckptExtended->ptas ? ckptExtended->ptas->count : 0);
 	}
 }
 

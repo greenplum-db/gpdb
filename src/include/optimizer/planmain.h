@@ -106,7 +106,7 @@ extern Plan *wrap_plan(PlannerInfo *root, Plan *plan, Query *query, List **p_pat
 
 
 /*
- * prototype for plan/plangroupexp.c
+ * prototype for plan/plangroupext.c
  */
 extern Plan *plan_grouping_extension(PlannerInfo *root,
 									 Path *path,

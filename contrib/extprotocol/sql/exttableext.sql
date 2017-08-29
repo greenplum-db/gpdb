@@ -2,6 +2,16 @@ SET search_path TO 'exttableext';
 -- Test 3: create RET and WET using created protocol
 
     -- Create external RET and WET
+    DROP EXTERNAL TABLE IF EXISTS exttabtest_options_r;
+    CREATE READABLE EXTERNAL TABLE exttabtest_options_r(like exttabtest)
+        LOCATION('demoprot://exttabtest.txt') 
+    FORMAT 'text'
+    OPTIONS (database 'redplum');
+
+    SELECT * FROM exttabtest_options_r
+    EXCEPT ALL
+    SELECT * FROM exttabtest;
+
     DROP EXTERNAL TABLE IF EXISTS exttabtest_w;
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
@@ -11,7 +21,8 @@ SET search_path TO 'exttableext';
     DROP EXTERNAL TABLE IF EXISTS exttabtest_r;
     CREATE READABLE EXTERNAL TABLE exttabtest_r(like exttabtest)
         LOCATION('demoprot://exttabtest.txt') 
-    FORMAT 'text';
+    FORMAT 'text'
+    OPTIONS (database 'greenplum', foo 'bar');
 
     -- Checking pg_exttable for new created RET and WET
     select urilocation,fmttype,fmtopts,encoding,writable from pg_exttable 

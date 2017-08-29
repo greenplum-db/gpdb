@@ -542,7 +542,8 @@ AssignTransactionId(TransactionState s)
 	 * the Xid as "running".  See GetNewTransactionId.
 	 */
 	s->transactionId = GetNewTransactionId(isSubXact, true);
-	elog((Debug_print_full_dtm ? LOG : DEBUG5), "AssignTransactionId(): assigned xid %u", s->transactionId);
+	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+			(errmsg("AssignTransactionId(): assigned xid %u", s->transactionId)));
 
 	if (isSubXact)
 	{
@@ -779,7 +780,8 @@ bool IsCurrentTransactionIdForReader(TransactionId xid) {
 		 */
 		if (TransactionIdEquals(xid, writer_xid))
 		{
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),"qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = true -- TOP", xid);
+			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+					(errmsg("qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = true -- TOP", xid)));
 			isCurrent = true;
 		}
 		else
@@ -847,9 +849,9 @@ TransactionIdIsCurrentTransactionId(TransactionId xid)
 	{
 		isCurrentTransactionId = IsCurrentTransactionIdForReader(xid);
 
-		elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		     "qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = %s -- Subtransaction",
-		     xid, (isCurrentTransactionId ? "true" : "false"));
+		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+				(errmsg("qExec Reader CheckSharedSnapshotForSubtransaction(xid = %u) = %s -- Subtransaction",
+						xid, (isCurrentTransactionId ? "true" : "false"))));
 
 		return isCurrentTransactionId;
 	}
@@ -2191,11 +2193,11 @@ SetSharedTransactionId_writer(void)
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT);
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "%s setting shared xid %u -> %u",
-		 DtxContextToString(DistributedTransactionContext),
-		 SharedLocalSnapshotSlot->xid,
-		 TopTransactionStateData.transactionId);
+	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+			(errmsg("%s setting shared xid %u -> %u",
+					DtxContextToString(DistributedTransactionContext),
+					SharedLocalSnapshotSlot->xid,
+					TopTransactionStateData.transactionId)));
 	SharedLocalSnapshotSlot->xid = TopTransactionStateData.transactionId;
 }
 
@@ -2214,10 +2216,10 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 	 */
 	TopTransactionStateData.transactionId = xid;
 	currentCommandId = cid;
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "qExec READER setting local xid=%u, cid=%u (distributedXid %u/%u)",
-		 TopTransactionStateData.transactionId, currentCommandId,
-		 QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync);
+	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+			(errmsg("qExec READER setting local xid=%u, cid=%u (distributedXid %u/%u)",
+					TopTransactionStateData.transactionId, currentCommandId,
+					QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync)));
 }
 
 /*
@@ -2329,9 +2331,9 @@ StartTransaction(void)
 				SharedLocalSnapshotSlot->startTimestamp = stmtStartTimestamp;
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
-				elog((Debug_print_full_dtm ? LOG : DEBUG5),
-					 "setting SharedLocalSnapshotSlot->startTimestamp = " INT64_FORMAT "[old=" INT64_FORMAT "])",
-					 stmtStartTimestamp, oldStartTimestamp);
+				ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+						(errmsg("setting SharedLocalSnapshotSlot->startTimestamp = " INT64_FORMAT "[old=" INT64_FORMAT "])",
+								stmtStartTimestamp, oldStartTimestamp)));
 			}
 		}
 		break;
@@ -2396,15 +2398,15 @@ StartTransaction(void)
 				SharedLocalSnapshotSlot->pid = MyProc->pid;
 				SharedLocalSnapshotSlot->writer_proc = MyProc;
 
-				elog((Debug_print_full_dtm ? LOG : DEBUG5),
-					 "qExec writer setting distributedXid: %d sharedQDxid %d (shared xid %u -> %u) ready %s (shared timeStamp = " INT64_FORMAT " -> " INT64_FORMAT ")",
-					 QEDtxContextInfo.distributedXid,
-					 SharedLocalSnapshotSlot->QDxid,
-					 SharedLocalSnapshotSlot->xid,
-					 s->transactionId,
-					 SharedLocalSnapshotSlot->ready ? "true" : "false",
-					 SharedLocalSnapshotSlot->startTimestamp,
-					 xactStartTimestamp);
+				ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+						(errmsg("qExec writer setting distributedXid: %d sharedQDxid %d (shared xid %u -> %u) ready %s (shared timeStamp = " INT64_FORMAT " -> " INT64_FORMAT ")",
+								QEDtxContextInfo.distributedXid,
+								SharedLocalSnapshotSlot->QDxid,
+								SharedLocalSnapshotSlot->xid,
+								s->transactionId,
+								SharedLocalSnapshotSlot->ready ? "true" : "false",
+								SharedLocalSnapshotSlot->startTimestamp,
+								xactStartTimestamp)));
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 			}
 		}
@@ -2419,12 +2421,13 @@ StartTransaction(void)
 			Assert (SharedLocalSnapshotSlot != NULL);
 			s->distribXid = QEDtxContextInfo.distributedXid;
 
-			elog((Debug_print_full_dtm ? LOG : DEBUG5), "qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
-				 QEDtxContextInfo.distributedXid,
-				 QEDtxContextInfo.curcid,
-				 getDistributedTransactionId(),
-				 DtxContextToString(DistributedTransactionContext),
-				 SharedSnapshotDump());
+			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+					(errmsg("qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
+							QEDtxContextInfo.distributedXid,
+							QEDtxContextInfo.curcid,
+							getDistributedTransactionId(),
+							DtxContextToString(DistributedTransactionContext),
+							SharedSnapshotDump())));
 		}
 		break;
 	
@@ -2439,13 +2442,13 @@ StartTransaction(void)
 			break;
 	}
 
-	elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-		 "[Distributed Snapshot #%u] *StartTransaction* (gxid = %u, xid = %u, '%s')", 
-		 (SerializableSnapshot == NULL ? 0 :
-		  SerializableSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
-		 getDistributedTransactionId(),
-		 s->transactionId,
-		 DtxContextToString(DistributedTransactionContext));
+	ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
+			(errmsg("[Distributed Snapshot #%u] *StartTransaction* (gxid = %u, xid = %u, '%s')",
+					(SerializableSnapshot == NULL ? 0 :
+					 SerializableSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
+					getDistributedTransactionId(),
+					s->transactionId,
+					DtxContextToString(DistributedTransactionContext))));
 
 	/*
 	 * Assign a new LocalTransactionId, and combine it with the backendId to
@@ -2508,10 +2511,10 @@ StartTransaction(void)
 
 	ShowTransactionState("StartTransaction");
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "StartTransaction in DTX Context = '%s', %s",
-		 DtxContextToString(DistributedTransactionContext),
-	     LocalDistribXact_DisplayString(MyProc));
+	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+			(errmsg("StartTransaction in DTX Context = '%s', %s",
+					DtxContextToString(DistributedTransactionContext),
+					LocalDistribXact_DisplayString(MyProc))));
 }
 
 /*
@@ -3463,11 +3466,10 @@ StartTransactionCommand(void)
 
 				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
 
-				elog((Debug_print_full_dtm ? LOG : DEBUG3),
-						"qExec WRITER updating shared xid: %u -> %u (StartTransactionCommand) timestamp: "
-						INT64_FORMAT " -> " INT64_FORMAT ")",
-						oldXid, s->transactionId,
-						oldStartTimestamp, xactStartTimestamp);
+				ereport((Debug_print_full_dtm ? LOG : DEBUG3),
+						(errmsg("qExec WRITER updating shared xid: %u -> %u (StartTransactionCommand) timestamp: " INT64_FORMAT " -> " INT64_FORMAT ")",
+								oldXid, s->transactionId,
+								oldStartTimestamp, xactStartTimestamp)));
 			}
 			break;
 
@@ -5200,7 +5202,8 @@ ExecutorMarkTransactionDoesWrites(void)
 	// UNDONE: Verify we are in transaction...
 	if (!TopTransactionStateData.executorSaysXactDoesWrites)
 	{
-		elog((Debug_print_full_dtm ? LOG : DEBUG5), "ExecutorMarkTransactionDoesWrites called");
+		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+				(errmsg("ExecutorMarkTransactionDoesWrites called")));
 		TopTransactionStateData.executorSaysXactDoesWrites = true;
 	}
 }

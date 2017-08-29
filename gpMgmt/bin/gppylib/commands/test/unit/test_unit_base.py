@@ -41,3 +41,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         cmd = Command("dummy name", "echo 'foo'")
         self.subject.execute(cmd)
         self.assertIn(". other/gphome/greenplum_path.sh;", cmd.cmdStr)
+
+    def test_no_workders_in_WorkerPool(self):
+        with self.assertRaises(Exception):
+            w = WorkerPool(numWorkers=0)

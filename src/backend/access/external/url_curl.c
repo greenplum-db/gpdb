@@ -462,9 +462,11 @@ check_response(URL_CURL_FILE *file, int *rc, char **response_string)
 			*/
 			pg_usleep(1000000);
 
-			elog(ERROR, "http response code %ld from gpfdist (%s): %s",
-				 response_code, file->common.url,
-				 file->http_response ? file->http_response : "?");
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("http response code %ld from gpfdist (%s): %s",
+							response_code, file->common.url,
+							file->http_response ? file->http_response : "?")));
 		}
 	}
 
@@ -582,8 +584,10 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 					break;
 
 				default:
-					elog(ERROR, "error while getting response from gpfdist on %s (code %d, msg %s)",
-							file->curl_url, response_code, response_string);
+					ereport(ERROR,
+							(errcode(ERRCODE_CONNECTION_FAILURE),
+							 errmsg("error while getting response from gpfdist on %s (code %d, msg %s)",
+									file->curl_url, response_code, response_string)));
 			}
 			if (response_string)
 				pfree(response_string);
@@ -592,8 +596,10 @@ gp_curl_easy_perform_backoff_and_check_response(URL_CURL_FILE *file)
 
 		if (wait_time > MAX_TRY_WAIT_TIME || timeout_count >= 2)
 		{
-			elog(ERROR, "error when writing data to gpfdist %s, quit after %d tries",
-				 file->curl_url, retry_count+1);
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("error when writing data to gpfdist %s, quit after %d tries",
+							file->curl_url, retry_count+1)));
 		}
 		else
 		{
@@ -692,7 +698,9 @@ fill_buffer(URL_CURL_FILE *curl, int want)
 						  curl->in.bot, curl->in.top, want, maxfd, nfds, e, curl->still_running,
 						  curl->for_write, curl->error, curl->eof, curl->block.datalen);
 				get_gpfdist_status(curl);
-				elog(ERROR, "segment has not received data from gpfdist for long time, cancelling the query.");
+				ereport(ERROR,
+						(errcode(ERRCODE_CONNECTION_FAILURE),
+						 errmsg("segment has not received data from gpfdist for long time, cancelling the query.")));
 				break;
 			}
 		}
@@ -1207,7 +1215,10 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 			snprintf(extssl_cer_full, MAXPGPATH, "%s/%s", DataDir, extssl_cert);
 
 			if (!is_file_exists(extssl_cer_full))
-				elog(ERROR, "file %s doesn't exists", extssl_cer_full);
+				ereport(ERROR,
+						(errcode(errcode_for_file_access()),
+						 errmsg("could not open certificate file \"%s\": %m",
+								extssl_cer_full)));
 
 			CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLCERT, extssl_cer_full);
 		}
@@ -1225,19 +1236,25 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 			snprintf(extssl_key_full, MAXPGPATH, "%s/%s", DataDir, extssl_key);
 
 			if (!is_file_exists(extssl_key_full))
-				elog(ERROR, "file %s doesn't exists", extssl_cer_full);
+				ereport(ERROR,
+						(errcode(errcode_for_file_access()),
+						 errmsg("could not open private key file \"%s\": %m",
+								extssl_key_full)));
 
 			CURL_EASY_SETOPT(file->curl->handle, CURLOPT_SSLKEY, extssl_key_full);
 		}
 
-		/* set the file with the certs vaildating the server */
+		/* set the file with the CA certificates, for validating the server */
 		if (extssl_ca != NULL)
 		{
 			memset(extssl_cas_full, 0, MAXPGPATH);
 			snprintf(extssl_cas_full, MAXPGPATH, "%s/%s", DataDir, extssl_ca);
 
 			if (!is_file_exists(extssl_cas_full))
-				elog(ERROR, "file %s doesn't exists", extssl_cer_full);
+				ereport(ERROR,
+						(errcode(errcode_for_file_access()),
+						 errmsg("could not open private key file \"%s\": %m",
+								extssl_cer_full)));
 
 			CURL_EASY_SETOPT(file->curl->handle, CURLOPT_CAINFO, extssl_cas_full);
 		}
@@ -1461,16 +1478,14 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		n = file->in.top - file->in.bot;
 
 		if (n == 0)
-		{
-			elog(ERROR, "gpfdist error: server closed connection.\n");
-			return -1;
-		}
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("gpfdist error: server closed connection.")));
 
 		if (n < 5)
-		{
-			elog(ERROR, "gpfdist error: incomplete packet - packet len %d\n", n);
-			return -1;
-		}
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("gpfdist error: incomplete packet - packet len %d", n)));
 
 		/* read type */
 		type = file->in.ptr[file->in.bot++];
@@ -1502,7 +1517,9 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 				 */
 				char x = file->in.ptr[file->in.bot + n - 1];
 				file->in.ptr[file->in.bot + n - 1] = 0;
-				elog(ERROR, "gpfdist error - %s%c", &file->in.ptr[file->in.bot], x);
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_EXCEPTION),
+						 errmsg("gpfdist error - %s%c", &file->in.ptr[file->in.bot], x)));
 			}
 
 			elog(ERROR, "gpfdist error: please check gpfdist log messages.");
@@ -1605,11 +1622,13 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	{
 		file->error = 1;
 		
-		if(!file->still_running)
-			elog(ERROR, "gpfdist server closed connection. \nThis is not a "
-			     "GPDB defect.  \nThe root cause is an overload of the ETL host or "
-			     "a temporary network glitch between the database and the ETL host "
-			     "causing the connection between the gpfdist and database to disconnect.\n");
+		if (!file->still_running)
+			ereport(ERROR,
+					(errcode(ERRCODE_CONNECTION_FAILURE),
+					 errmsg("gpfdist server closed connection."),
+					 errhint("This is not a GPDB defect.  \nThe root cause is an overload of the ETL host or "
+							 "a temporary network glitch between the database and the ETL host "
+							 "causing the connection between the gpfdist and database to disconnect.")));
 	}
 
 	if (n > bufsz)

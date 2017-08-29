@@ -170,3 +170,65 @@ SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE waiting_reason=
 62q:
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
+
+--
+-- Test cursors, pl/* functions only take one slot.
+--
+-- set concurrency to 1
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=1, cpu_rate_limit=20, memory_limit=20);
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+
+-- declare cursors and verify that it only takes one resource group slot
+71:SET ROLE TO role_concurrency_test;
+71:CREATE TABLE foo_concurrency_test as select i as c1 , i as c2 from generate_series(1, 1000) i;
+71:CREATE TABLE bar_concurrency_test as select i as c1 , i as c2 from generate_series(1, 1000) i;
+71:BEGIN;
+71:DECLARE c1 CURSOR for select c1, c2 from foo_concurrency_test order by c1 limit 10;
+71:DECLARE c2 CURSOR for select c1, c2 from bar_concurrency_test order by c1 limit 10;
+71:DECLARE c3 CURSOR for select count(*) from foo_concurrency_test t1, bar_concurrency_test t2 where t1.c2 = t2.c2;
+71:
+71:Fetch ALL FROM c1;
+71:Fetch ALL FROM c2;
+71:Fetch ALL FROM c3;
+71:END;
+
+-- create a pl function and verify that it only takes one resource group slot.
+CREATE OR REPLACE FUNCTION func_concurrency_test () RETURNS integer as /*in func*/
+$$ /*in func*/
+DECLARE /*in func*/
+	tmprecord RECORD; /*in func*/
+	ret integer; /*in func*/
+BEGIN /*in func*/
+	SELECT count(*) INTO ret FROM foo_concurrency_test;	 /*in func*/
+	FOR tmprecord IN SELECT * FROM bar_concurrency_test LOOP /*in func*/
+		SELECT count(*) INTO ret FROM foo_concurrency_test;	 /*in func*/
+	END LOOP; /*in func*/
+ /*in func*/
+	select 1/0; /*in func*/
+EXCEPTION /*in func*/
+	WHEN division_by_zero THEN /*in func*/
+		SELECT count(*) INTO ret FROM foo_concurrency_test;	 /*in func*/
+		raise NOTICE 'divided by zero'; /*in func*/
+	RETURN ret; /*in func*/
+END; /*in func*/
+$$ /*in func*/
+LANGUAGE plpgsql;
+
+71: select func_concurrency_test();
+
+-- Prepare/execute statements and verify that it only takes one resource group slot. 
+71:BEGIN;
+71:PREPARE p1 (integer) as select * from foo_concurrency_test where c2=$1;
+71:PREPARE p2 (integer) as select * from bar_concurrency_test where c2=$1;
+71:EXECUTE p1(1);
+71:EXECUTE p2(2);
+71:END;
+71:PREPARE p3 (integer) as select * from foo_concurrency_test where c2=$1;
+71:PREPARE p4 (integer) as select * from bar_concurrency_test where c2=$1;
+71:EXECUTE p3(1);
+71:EXECUTE p4(2);
+
+DROP TABLE foo_concurrency_test;
+DROP TABLE bar_concurrency_test;
+DROP ROLE role_concurrency_test;
+DROP RESOURCE GROUP rg_concurrency_test;

@@ -351,19 +351,19 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict)
 		if (attr1->attalign != attr2->attalign)
 			return false;
 
-        if (strict)
-        {
-            if (attr1->attnotnull != attr2->attnotnull)
-                return false;
-            if (attr1->atthasdef != attr2->atthasdef)
-                return false;
-            if (attr1->attisdropped != attr2->attisdropped)
-                return false;
-            if (attr1->attislocal != attr2->attislocal)
-                return false;
-            if (attr1->attinhcount != attr2->attinhcount)
-                return false;
-        }
+		if (strict)
+		{
+			if (attr1->attnotnull != attr2->attnotnull)
+				return false;
+			if (attr1->atthasdef != attr2->atthasdef)
+				return false;
+			if (attr1->attisdropped != attr2->attisdropped)
+				return false;
+			if (attr1->attislocal != attr2->attislocal)
+				return false;
+			if (attr1->attinhcount != attr2->attinhcount)
+				return false;
+		}
 	}
 
 	if (!strict)
@@ -512,7 +512,7 @@ TupleDescInitEntry(TupleDesc desc,
  * Given a relation schema (list of ColumnDef nodes), build a TupleDesc.
  *
  * Note: the default assumption is no OIDs; caller may modify the returned
- * TupleDesc if it wants OIDs.	Also, tdtypeid will need to be filled in
+ * TupleDesc if it wants OIDs.  Also, tdtypeid will need to be filled in
  * later on.
  */
 TupleDesc
@@ -522,7 +522,7 @@ BuildDescForRelation(List *schema)
 	AttrNumber	attnum;
 	ListCell   *l;
 	TupleDesc	desc;
-	TupleConstr *constr = (TupleConstr *) palloc0(sizeof(TupleConstr));
+	bool		has_not_null;
 	char	   *attname;
 	Oid			atttypid;
 	int32		atttypmod;
@@ -533,7 +533,7 @@ BuildDescForRelation(List *schema)
 	 */
 	natts = list_length(schema);
 	desc = CreateTemplateTupleDesc(natts, false);
-	constr->has_not_null = false;
+	has_not_null = false;
 
 	attnum = 0;
 
@@ -562,24 +562,25 @@ BuildDescForRelation(List *schema)
 						   atttypid, atttypmod, attdim);
 
 		/* Fill in additional stuff not handled by TupleDescInitEntry */
-		if (entry->is_not_null)
-			constr->has_not_null = true;
 		desc->attrs[attnum - 1]->attnotnull = entry->is_not_null;
+		has_not_null |= entry->is_not_null;
 		desc->attrs[attnum - 1]->attislocal = entry->is_local;
 		desc->attrs[attnum - 1]->attinhcount = entry->inhcount;
 	}
 
-	if (constr->has_not_null)
+	if (has_not_null)
 	{
-		desc->constr = constr;
+		TupleConstr *constr = (TupleConstr *) palloc0(sizeof(TupleConstr));
+
+		constr->has_not_null = true;
 		constr->defval = NULL;
 		constr->num_defval = 0;
 		constr->check = NULL;
 		constr->num_check = 0;
+		desc->constr = constr;
 	}
 	else
 	{
-		pfree(constr);
 		desc->constr = NULL;
 	}
 

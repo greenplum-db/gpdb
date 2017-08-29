@@ -23,17 +23,14 @@
 #include "postgres.h"
 #include "pxfuriparser.h"
 
-/* checks if two ip strings are equal */
-bool are_ips_equal(char *ip1, char *ip2);
-
-/* override port str with given new port int */
-void port_to_str(char** port, int new_port);
-
 /* convert input string to upper case and prepend "X-GP-" prefix */
 char* normalize_key_name(const char* key);
 
 /* get the name of the type, given the OID */
 char* TypeOidGetTypename(Oid typid);
+
+/* Concatenate multiple literal strings using stringinfo */
+char* concat(int num_args, ...);
 
 #define PXF_CLUSTER       "default"
 #define PXF_PROFILE       "PROFILE"
@@ -42,7 +39,6 @@ char* TypeOidGetTypename(Oid typid);
 #define RESOLVER          "RESOLVER"
 #define ANALYZER          "ANALYZER"
 #define PxfDefaultHost    "localhost"
-#define PxfDefaultPortStr "51200"
 #define PxfDefaultPort    51200
 
 #endif  // _PXFUTILS_H_

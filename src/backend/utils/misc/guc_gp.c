@@ -591,6 +591,8 @@ static char *gp_server_version_string;
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
 
+/* copy */
+bool		gp_enable_segment_copy_checking = true;
 /*
  * Default storage options GUC.  Value is comma-separated name=value
  * pairs.  E.g. "appendonly=true,orientation=column"
@@ -3308,6 +3310,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&pljava_classpath_insecure,
 		false, assign_pljava_classpath_insecure, NULL
 	},
+	{
+		{"gp_enable_segment_copy_checking", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Enable check the distribution key restriction on segment for command \"COPY FROM ON SEGMENT\"."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
+		},
+		&gp_enable_segment_copy_checking,
+		true, NULL, NULL
+	},
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -3458,6 +3469,15 @@ struct config_int ConfigureNamesInt_gp[] =
 #else
 		128000, 1000, INT_MAX, gpvars_assign_statement_mem, NULL
 #endif
+	},
+
+	{
+		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the memory_spill_ratio for resource group."),
+			NULL
+		},
+		&memory_spill_ratio,
+		20, 1, 100, NULL, NULL
 	},
 
 	{

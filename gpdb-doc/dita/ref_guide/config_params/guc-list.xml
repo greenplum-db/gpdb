@@ -579,6 +579,9 @@
               <xref href="#log_statement_stats"/>
             </li>
             <li>
+              <xref href="#log_temp_files"/>
+            </li>
+            <li>
               <xref href="#log_timezone"/>
             </li>
             <li>
@@ -1313,22 +1316,23 @@
     <body>
       <p>Reports whether checksums are enabled for heap data storage in the database system.
         Checksums for heap data are enabled or disabled when the database system is initialized and
-        cannot be changed. When enabled, Greenplum Database computes and stores checksums for heap
-        data blocks on the Greenplum Database master and standby instances, and on all primary and
-        mirror segments. </p>
-      <p>When a block is later read from storage, the checksum is verified. Unless the
-          <codeph>ignore_checksum_failure</codeph> configuration parameter has been set to on, a
-        failed checksum verification generates an error and terminates the transaction, ensuring
-        that the corrupted data is not propagated to a standby or mirror segment. </p>
-      <p>If the <codeph>ignore_checksum_failure</codeph> configuration parameter has been set to on,
-        a failed checksum verification generates a warning and the transaction continues. This can
-        allow data corruption to propagate, preventing a complete recovery. Because of the potential
-        for data loss, the <codeph>ignore_checksum_failure</codeph> parameter should only be enabled
-        in unsual circumstances. See <xref href="#ignore_checksum_failure" format="dita"/> for more
-        information.</p>
-      <p>Heap data blocks store heap tables, catalog tables, indexes, and database metadata.
+        cannot be changed. </p>
+      <p>Heap data pages store heap tables, catalog tables, indexes, and database metadata.
         Append-optimized storage has built-in checksum support that is unrelated to this
         parameter.</p>
+      <p>Greenplum Database uses checksums to prevent loading data corrupted in the file system into
+        memory managed by database processes. When heap data checksums are enabled, Greenplum
+        Database computes and stores checksums on heap data pages when they are written to disk.
+        When a page is retrieved from disk, the checksum is verified. If the verification fails, an
+        error is generated and the page is not permitted to load into managed memory. </p>
+      <p>If the <codeph>ignore_checksum_failure</codeph> configuration parameter has been set to on,
+        a failed checksum verification generates a warning, but the page is allowed to be loaded
+        into managed memory. If the page is then updated, it is flushed to disk and replicated to
+        the mirror. This can cause data corruption to propagate to the mirror and prevent a complete
+        recovery. Because of the potential for data loss, the
+          <codeph>ignore_checksum_failure</codeph> parameter should only be enabled when needed to
+        recover data. See <xref href="#ignore_checksum_failure" format="dita"/> for more
+        information.</p>
       <table id="table_djn_1nb_v1b">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -2897,8 +2901,8 @@
           <codeph>APPENDONLY=TRUE</codeph> in the <cmdname>WITH</cmdname> clause.</p>
       <p>This example <cmdname>gpconfig</cmdname> utility command sets the default storage option
         for a Greenplum Database system. If you set the defaults for multiple table storage options,
-        the value must be enclosed in single quotes and then in double
-        quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v "'appendonly=true, orientation=column'"</codeblock></p>
+        the value must be enclosed in single
+        quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v 'appendonly=true, orientation=column'</codeblock></p>
       <p>This example <cmdname>gpconfig</cmdname> utility command shows the value of the parameter.
         The parameter value must be consistent across the Greenplum Database master and all
         segments.<codeblock>gpconfig -s 'gp_default_storage_options'</codeblock></p>
@@ -4707,8 +4711,8 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
-      <p>Identifies the maximum percentage of system CPU resources to allocate to resource
-        groups on each Greenplum Database segment node.</p>
+      <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
+        each Greenplum Database segment node.</p>
       <table id="gp_resource_group_cpu_limit_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4735,7 +4739,8 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
-      <p>Identifies the maximum percentage of system memory resources to allocate to resource groups on each Greenplum Database segment node.</p>
+      <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
+        on each Greenplum Database segment node.</p>
       <table id="gp_resource_group_memory_limit_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4762,7 +4767,8 @@
   <topic id="gp_resource_manager">
     <title>gp_resource_manager</title>
     <body>
-      <p>Identifies the resource management scheme currently enabled in the Greenplum Database cluster. The default scheme is workload management using resource queues.</p>
+      <p>Identifies the resource management scheme currently enabled in the Greenplum Database
+        cluster. The default scheme is workload management using resource queues.</p>
       <table id="gp_resource_manager_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -5623,17 +5629,20 @@
     <title>ignore_checksum_failure</title>
     <body>
       <p>Only has effect if <xref href="#data_checksums" format="dita"/> is enabled.</p>
-      <p>By default, when Greenplum Database detects a checksum failure when reading a heap data
-        page it reports an error, aborting the current transaction. Setting
-          <codeph>ignore_checksum_failure</codeph> to on causes the system to ignore the failure,
-        but still report a warning, and continue processing. If the header is corrupt an error is
-        reported even if this option is enabled. The default setting is off, and it can only be
-        changed by a superuser.</p>
+      <p>Greenplum Database uses checksums to prevent loading data that has been corrupted in the
+        file system into memory managed by database processes. </p>
+      <p>By default, when a checksum verify error occurs when reading a heap data page, Greenplum
+        Database generates an error and prevents the page from being loaded into managed memory.
+        When <codeph>ignore_checksum_failure</codeph> is set to on and a checksum verify failure
+        occurs, Greenplum Database generates a warning, and allows the page to be read into managed
+        memory. If the page is then updated it is saved to disk and replicated to the mirror. If the
+        page header is corrupt an error is reported even if this option is enabled. </p>
       <note type="warning"> Setting <codeph>ignore_checksum_failure</codeph> to on may propagate or
-        hide corruption or lead to other serious problems. However, if a checksum failure has
-        already been detected and the block header is uncorrupted, setting
-          <codeph>ignore_checksum_failure</codeph> to on may allow you to get past the error and
-        recover undamaged tuples that might still be present in the table. </note>
+        hide data corruption or lead to other serious problems. However, if a checksum failure has
+        already been detected and the page header is uncorrupted, setting
+          <codeph>ignore_checksum_failure</codeph> to on may allow you to bypass the error and
+        recover undamaged tuples that may still be present in the table. </note>
+      <p>The default setting is off, and it can only be changed by a superuser.</p>
       <table id="table_shd_32q_v1b">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -6591,6 +6600,40 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
               <entry colname="col3">master<p>session</p><p>reload</p><p>superuser</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="log_temp_files">
+    <title>log_temp_files</title>
+    <body>
+      <p>Controls logging of temporary file names and sizes. Temporary files can be created for
+        sorts, hashes, temporary query results and spill files. A log entry is made in
+          <codeph>pg_log</codeph> for each temporary file when it is deleted. Depending on the
+        source of the temporary files, the log entry could be created on either the master and/or
+        segments. A <codeph>log_temp_files</codeph> value of zero logs all temporary file
+        information, while positive values log only files whose size is greater than or equal to the
+        specified number of kilobytes. The default setting is <codeph>-1</codeph>, which disables
+        logging. Only superusers can change this setting.</p>
+      <table id="log_temp_files_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Integer</entry>
+              <entry colname="col2">-1</entry>
+              <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>

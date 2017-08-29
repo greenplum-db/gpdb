@@ -6,36 +6,7 @@
 /* Fetch definition of PG_exception_stack */
 #include "postgres.h"
 
-/*
- * Must be defined before including the module under test (xact.c) so
- * that elog_finish() calls within xact.c code will be replaced with
- * elog_finish_impl().
- */
-#define elog_finish elog_finish_impl
-int
-elog_finish_impl(int elevel, const char * fmt, ...)
-{
-	check_expected(elevel);
-	check_expected(fmt);
-	optional_assignment(fmt);
-	mock();
-	if (elevel >= ERROR)
-		siglongjmp(*PG_exception_stack, 1);
-	return 0;
-}
-
 #include "../xact.c"
-
-void helper_elog(int expect_elevel)
-{
-	expect_any(elog_start, filename);
-	expect_any(elog_start, lineno);
-	expect_any(elog_start, funcname);
-	will_be_called(elog_start);
-	expect_value(elog_finish_impl, elevel, expect_elevel);
-	expect_any(elog_finish_impl, fmt);
-	will_be_called(elog_finish_impl);
-}
 
 void
 test_TransactionIdIsCurrentTransactionIdInternal(void **state)
@@ -178,7 +149,6 @@ test_IsCurrentTransactionIdForReader(void **state)
 	/* test: writer_proc is null */
 	SharedLocalSnapshotSlot->writer_proc = NULL;
 	helper_ExpectLWLock(testSlot.slotLock);
-	helper_elog(ERROR);
 	PG_TRY();
 	{
 		IsCurrentTransactionIdForReader(100);
@@ -193,7 +163,6 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testSlot.writer_proc = &testProc;
 	testProc.pid = 0;
 	helper_ExpectLWLock(testSlot.slotLock);
-	helper_elog(ERROR);
 	PG_TRY();
 	{
 		IsCurrentTransactionIdForReader(100);
@@ -221,7 +190,6 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testProc.xid = 100;
 
 	helper_ExpectLWLock(testSlot.slotLock);
-	helper_elog(DEBUG5);
 	assert_true(IsCurrentTransactionIdForReader(100));
 
 	/* test: subtransaction found in writer_proc cache */

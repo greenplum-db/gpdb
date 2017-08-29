@@ -95,11 +95,10 @@ static const FormData_pg_attribute Desc_pg_class[Natts_pg_class] = {Schema_pg_cl
 static const FormData_pg_attribute Desc_pg_attribute[Natts_pg_attribute] = {Schema_pg_attribute};
 static const FormData_pg_attribute Desc_pg_proc[Natts_pg_proc] = {Schema_pg_proc};
 static const FormData_pg_attribute Desc_pg_type[Natts_pg_type] = {Schema_pg_type};
-static const FormData_pg_attribute Desc_pg_index[Natts_pg_index] = {Schema_pg_index};
-
 static const FormData_pg_attribute Desc_pg_database[Natts_pg_database] = {Schema_pg_database};
 static const FormData_pg_attribute Desc_pg_authid[Natts_pg_authid] = {Schema_pg_authid};
 static const FormData_pg_attribute Desc_pg_auth_members[Natts_pg_auth_members] = {Schema_pg_auth_members};
+static const FormData_pg_attribute Desc_pg_index[Natts_pg_index] = {Schema_pg_index};
 
 /*
  *		Hash tables that index the relation cache
@@ -219,7 +218,7 @@ static void write_item(const void *data, Size len, FILE *fp);
 
 static void formrdesc(const char *relationName, Oid relationReltype,
 		  bool isshared, bool hasoids,
-		  int natts, const FormData_pg_attribute *att);
+		  int natts, const FormData_pg_attribute *attrs);
 
 static HeapTuple ScanPgRelation(Oid targetRelId, bool indexOK, Relation *pg_class_relation);
 static Relation AllocateRelationDesc(Form_pg_class relp);

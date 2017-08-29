@@ -35,6 +35,7 @@
 
 #define timestamptz Datum
 
+
 /* ----------------
  *		pg_authid definition.  cpp turns this into
  *		typedef struct FormData_pg_authid
@@ -44,22 +45,21 @@
 
 CATALOG(pg_authid,1260) BKI_SHARED_RELATION
 {
-	NameData	rolname;			/* name of role   */
-	bool		rolsuper;			/* read this field via superuser() only!  */
-	bool		rolinherit;			/* inherit privileges from other roles?  */
-	bool		rolcreaterole;		/* allowed to create more roles?  */
-	bool		rolcreatedb;		/* allowed to create databases?  */
-	bool		rolcatupdate;		/* allowed to alter catalogs manually?  */
-	bool		rolcanlogin;		/* allowed to log in as session user?  */
-	int4		rolconnlimit;		/* max connections allowed (-1=no limit)  */
+	NameData	rolname;		/* name of role */
+	bool		rolsuper;		/* read this field via superuser() only! */
+	bool		rolinherit;		/* inherit privileges from other roles? */
+	bool		rolcreaterole;	/* allowed to create more roles? */
+	bool		rolcreatedb;	/* allowed to create databases? */
+	bool		rolcatupdate;	/* allowed to alter catalogs manually? */
+	bool		rolcanlogin;	/* allowed to log in as session user? */
+	int4		rolconnlimit;	/* max connections allowed (-1=no limit) */
 
-
-	/* remaining fields may be null. use heap_getattr to read them!  */
-	text		rolpassword;		/* password, if any  */
-	timestamptz	rolvaliduntil;		/* password expiration time, if any */
-	text		rolconfig[1];		/* GUC settings to apply at login  */
-	Oid			rolresqueue;		/* ID of resource queue for this role  */
+	/* remaining fields may be null; use heap_getattr to read them! */
+	text		rolpassword;	/* password, if any */
+	timestamptz rolvaliduntil;	/* password expiration time, if any */
+	text		rolconfig[1];	/* GUC settings to apply at login */
 	/* GP added fields */
+	Oid			rolresqueue;	/* ID of resource queue for this role */
 	bool		rolcreaterextgpfd;	/* allowed to create readable gpfdist tbl?  */
 	bool		rolcreaterexthttp;	/* allowed to create readable http tbl?  */
 	bool		rolcreatewextgpfd;	/* allowed to create writable gpfdist tbl?  */

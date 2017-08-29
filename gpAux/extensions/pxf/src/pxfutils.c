@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -20,35 +20,6 @@
 #include "pxfutils.h"
 #include "utils/formatting.h"
 #include "utils/syscache.h"
-
-/*
- * Checks if two strings are equal
- */
-bool
-are_ips_equal(char *ip1, char *ip2)
-{
-    if ((ip1 == NULL) || (ip2 == NULL))
-        return false;
-    return (strcmp(ip1, ip2) == 0);
-}
-
-/*
- * Override port str with given new port int
- */
-void
-port_to_str(char **port, int new_port)
-{
-    char tmp[10];
-
-    if (!port)
-        elog(ERROR, "unexpected internal error in pxfutils.c");
-    if (*port)
-        pfree(*port);
-
-    Assert((new_port <= 65535) && (new_port >= 1)); /* legal port range */
-    pg_ltoa(new_port, tmp);
-    *port = pstrdup(tmp);
-}
 
 /*
  * Full name of the HEADER KEY expected by the PXF service
@@ -104,4 +75,21 @@ TypeOidGetTypename(Oid typid)
     ReleaseSysCache(typtup);
 
     return tname.data;
+}
+
+/* Concatenate multiple literal strings using stringinfo */
+char* concat(int num_args, ...)
+{
+    va_list ap;
+    StringInfoData str;
+    initStringInfo(&str);
+
+    va_start(ap, num_args);
+
+    for (int i = 0; i < num_args; i++) {
+        appendStringInfoString(&str, va_arg(ap, char*));
+    }
+    va_end(ap);
+
+    return str.data;
 }

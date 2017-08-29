@@ -131,7 +131,7 @@
                                     EXCLUSIVE</codeph>). This mode guarantees that the holder is the
                                 only transaction accessing the table in any way. Acquired
                                 automatically by the <codeph>ALTER TABLE</codeph>, <codeph>DROP
-                                    TABLE</codeph>, <codeph>REINDEX</codeph>,
+                                    TABLE</codeph>, <codeph>TRUNCATE</codeph>, <codeph>REINDEX</codeph>,
                                     <codeph>CLUSTER</codeph>, and <codeph>VACUUM FULL</codeph>
                                 commands. This is the default lock mode for <codeph>LOCK
                                     TABLE</codeph> statements that do not specify a mode explicitly.

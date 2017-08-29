@@ -29,8 +29,28 @@ insert into sourcetable values
   ( 4, 40, 700, '1401-6-1', 1, 1),
   ( 4, 40, 800, '1401-6-1', 1, 1);
 
+-- Check that the rows come out in order, if there's an ORDER BY in
+-- the view definition.
+--
+-- FIXME: gpdiff will unfortunately mask out any differences in the
+-- row order, so this test wouldn't catch a bug in that.
 create view  v_sourcetable as select * from sourcetable order by vn;
 select * from v_sourcetable;
 
 create view v_sourcetable1 as SELECT sourcetable.qty, vn, pn FROM sourcetable union select sourcetable.qty, sourcetable.vn, sourcetable.pn from sourcetable order by qty;
 select * from v_sourcetable1;
+
+
+-- Check that the row-comparison operator is serialized and deserialized
+-- correctly, when it's used in a view. This isn't particularly interesting,
+-- compared to all the other expression types, but we happened to have a
+-- silly bug that broke this particular case.
+
+create view v_sourcetable2 as
+  select a.cn as cn, a.vn as a_vn, b.vn as b_vn, a.pn as a_pn, b.pn as b_pn
+  from sourcetable a, sourcetable b
+  where row(a.*) < row(b.*)
+  and a.cn = 1 and b.cn = 1;
+select * from v_sourcetable2;
+
+drop view v_sourcetable2;

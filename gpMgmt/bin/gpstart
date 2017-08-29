@@ -130,6 +130,12 @@ class GpStart:
                 # check that checksum settings are consistent across the cluster
                 num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
                 heap_checksum = HeapChecksum(gparray=self.gparray, num_workers=num_workers, logger=logger)
+                if self.gparray.hasStandbyMaster():
+                    if heap_checksum.get_master_value() != heap_checksum.get_standby_value():
+                        logger.warning("Heap checksum settings on standby master do not match master <<<<<<<<")
+                        logger.error("gpstart error: Heap checksum settings are not consistent across the cluster.")
+                        return 1
+
                 successes, failures = heap_checksum.get_segments_checksum_settings()
                 if len(successes) == 0:
                     logger.fatal("No segments responded to ssh query for heap checksum. Not starting the array.")

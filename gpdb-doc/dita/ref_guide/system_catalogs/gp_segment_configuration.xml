@@ -38,7 +38,7 @@
             <entry colname="col3"/>
             <entry colname="col4">The content identifier for a segment instance. A primary segment
               instance and its corresponding mirror will always have the same content
-                identifier.<p>For a segment the value is from 0-<i>N</i>, where <i>N</i> is the
+                identifier.<p>For a segment the value is from 0-<i>N-1</i>, where <i>N</i> is the
                 number of primary segments in the system.</p><p>For the master, the value is always
                 -1.</p></entry>
           </row>

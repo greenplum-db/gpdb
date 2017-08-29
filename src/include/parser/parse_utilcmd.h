@@ -18,6 +18,7 @@
 #include "parser/analyze.h"
 #include "parser/parse_node.h"
 
+
 extern List *transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartition);
 extern List *transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString);
 extern List *transformAlterTableStmt(AlterTableStmt *stmt,
@@ -27,7 +28,6 @@ extern void transformRuleStmt(RuleStmt *stmt, const char *queryString,
 				  List **actions, Node **whereClause);
 extern List *transformCreateSchemaStmt(CreateSchemaStmt *stmt);
 
-extern void transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDefer);
 extern void transformInhRelation(ParseState *pstate, CreateStmtContext *cxt,
 								 InhRelation *inhRelation, bool forceBareCol);
 

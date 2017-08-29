@@ -52,7 +52,6 @@ FOREIGN_KEY(lanowner REFERENCES pg_authid(oid));
  */
 typedef FormData_pg_language *Form_pg_language;
 
-
 /* ----------------
  *		compiler constants for pg_language
  * ----------------
@@ -66,7 +65,6 @@ typedef FormData_pg_language *Form_pg_language;
 #define Anum_pg_language_laninline		6
 #define Anum_pg_language_lanvalidator	7
 #define Anum_pg_language_lanacl			8
-
 
 /* ----------------
  *		initial contents of pg_language

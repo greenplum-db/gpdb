@@ -1,5 +1,5 @@
-
 #include "postgres.h"
+
 #include "fmgr.h"
 #include "funcapi.h"
 
@@ -233,7 +233,7 @@ encoding_encode_strinfo(FunctionCallInfo fcinfo, StringInfo strinfo, bool is_imp
 	{
 		/* transfer converted data back to strinfo */
 		resetStringInfo(strinfo);
-		appendBinaryStringInfo(strinfo, cvt, strlen(cvt));
+		appendStringInfoString(strinfo, cvt);
 		pfree(cvt);
 	}
 }
@@ -279,15 +279,16 @@ make_null_val_with_blanks(char *value, int field_size)
  * 	blank padded    - padded value of size field_size, in case value is NULL the return string will contain only blanks
  *  value
  */
-static char*
+static char *
 make_val_with_blanks(FunctionCallInfo fcinfo, char *value, int field_size, StringInfo buf)
 {
-	int   	sz = 0;
-	
+	int			sz;
+
+	resetStringInfo(buf);
+
 	if (value)
 	{
-		sz = strlen(value);
-		appendBinaryStringInfo(buf, value, sz);
+		appendStringInfoString(buf, value);
 
 		/*
 		 * convert value from server encoding to external table encoding. Since
@@ -295,43 +296,19 @@ make_val_with_blanks(FunctionCallInfo fcinfo, char *value, int field_size, Strin
 		 * original string we must re-adjust if necessary
 		 */
 		encoding_encode_strinfo(fcinfo, buf, false /* export */);
-		
-		sz = buf->len;
-		if (sz > field_size)
-			ereport(ERROR,
-					(errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH),
-					 errmsg("The size of the value cannot be bigger than the field size value: %s, size: %d, field_size %d",
-							value, sz, field_size)));			
-		appendStringInfoFill(buf, field_size - sz, ' ');
-	}
-	else 
-	{
-		appendStringInfoFill(buf, field_size, ' ');
 	}
 
-
-	if(buf->len != field_size)
-	{
-		/* encoded string width was changed. fix it */
-		if(buf->len < field_size)
-		{
-			/* pad missing bytes with blanks */
-			appendStringInfoFill(buf, field_size - buf->len, ' ');
-		}
-		else
-		{
-			/* truncate extra bytes */
-			if (buf->data[field_size - 1] != ' ') /* oh oh... we are truncating user data. don't allow */
-				ereport(ERROR,
-						(errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH),
-						 errmsg("The size of the value after conversion to external table encoding became bigger than the field size value: %s, size: %d, field_size %d",
-								value, sz, field_size),
-						 errhint("Set the width of this column to a larger value")));
-
-
-			truncateStringInfo(buf, field_size);
-		}
-	}
+	/*
+	 * Error out if the value is too large, and pad with spaces if it's too
+	 * small.
+	 */
+	sz = buf->len;
+	if (sz > field_size)
+		ereport(ERROR,
+				(errcode(ERRCODE_STRING_DATA_LENGTH_MISMATCH),
+				 errmsg("The size of the value cannot be bigger than the field size value: %s, size: %d, field_size %d",
+						value, sz, field_size)));
+	appendStringInfoFill(buf, field_size - sz, ' ');
 
 	return buf->data;
 }
@@ -612,9 +589,7 @@ fixedwidth_out(PG_FUNCTION_ARGS)
 		idx  = lfirst_int(curIdx) - 1;		
 		isnull = myData->nulls[idx];
 		value = myData->values[idx];
-		
-		resetStringInfo(&(myData->one_field));
-		
+
 		if ( isnull )
 		{
 			mapped_val_with_blanks = make_val_with_blanks(fcinfo, format_out_config.null_value, field_size, &(myData->one_field));

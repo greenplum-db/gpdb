@@ -207,7 +207,7 @@ bool ToBool(string str) {
     }
 }
 
-const char UriMapping[256] = {
+const signed char UriMapping[256] = {
     /*       0   1   2   3   4   5   6   7
      *       8   9   A   B   C   D   E   F */
     /* 0 */ -1, -1, -1, -1, -1, -1, -1, -1,
@@ -293,7 +293,7 @@ string UriEncode(const string &src) {
 }
 
 string UriDecode(const string &src) {
-    char dec1, dec2;
+    signed char dec1, dec2;
 
     auto srcStr = src.begin();
     auto srcEnd = src.end() - 2;

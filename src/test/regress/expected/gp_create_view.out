@@ -30,6 +30,11 @@ insert into sourcetable values
   ( 3, 30, 600, '1401-6-1', 12, 5),
   ( 4, 40, 700, '1401-6-1', 1, 1),
   ( 4, 40, 800, '1401-6-1', 1, 1);
+-- Check that the rows come out in order, if there's an ORDER BY in
+-- the view definition.
+--
+-- FIXME: gpdiff will unfortunately mask out any differences in the
+-- row order, so this test wouldn't catch a bug in that.
 create view  v_sourcetable as select * from sourcetable order by vn;
 select * from v_sourcetable;
  cn | vn | pn  |     dt     | qty  | prc  
@@ -64,3 +69,28 @@ select * from v_sourcetable1;
  1100 | 40 | 100
 (10 rows)
 
+-- Check that the row-comparison operator is serialized and deserialized
+-- correctly, when it's used in a view. This isn't particularly interesting,
+-- compared to all the other expression types, but we happened to have a
+-- silly bug that broke this particular case.
+create view v_sourcetable2 as
+  select a.cn as cn, a.vn as a_vn, b.vn as b_vn, a.pn as a_pn, b.pn as b_pn
+  from sourcetable a, sourcetable b
+  where row(a.*) < row(b.*)
+  and a.cn = 1 and b.cn = 1;
+select * from v_sourcetable2;
+ cn | a_vn | b_vn | a_pn | b_pn 
+----+------+------+------+------
+  1 |   10 |   30 |  200 |  500
+  1 |   10 |   30 |  200 |  300
+  1 |   10 |   50 |  200 |  400
+  1 |   10 |   20 |  200 |  100
+  1 |   20 |   30 |  100 |  500
+  1 |   20 |   30 |  100 |  300
+  1 |   20 |   50 |  100 |  400
+  1 |   30 |   50 |  500 |  400
+  1 |   30 |   30 |  300 |  500
+  1 |   30 |   50 |  300 |  400
+(10 rows)
+
+drop view v_sourcetable2;

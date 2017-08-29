@@ -430,6 +430,10 @@ testdb=#</codeblock>
             shown.</pd>
         </plentry>
         <plentry>
+          <pt>\dE [<varname>relation_pattern</varname>]</pt>
+          <pd>Lists all external tables, or only those that match the pattern.</pd>
+        </plentry>
+        <plentry>
           <pt>\df [<varname>function_pattern</varname>] | \df+ [<varname>function_pattern
             </varname>]</pt>
           <pd>Lists available functions, together with their argument and return types. If pattern
@@ -493,8 +497,8 @@ testdb=#</codeblock>
           <pd>Lists all database roles, or only those that match pattern.</pd>
         </plentry>
         <plentry>
-          <pt>\dx [<varname>extension_pattern</varname>]</pt>
-          <pd>Lists all installed extensions, or only those that match the pattern.</pd>
+          <pt>\dx [<varname>extension_pattern</varname>] | \dx+ [<varname>extension_pattern</varname>]</pt>
+          <pd>Lists all installed extensions, or only those that match the pattern. <codeph>\dx</codeph> and <codeph>\dx+</codeph> are functionally equivalent.</pd>
         </plentry>
         <plentry>
           <pt>\e | \edit [<varname>filename</varname>]</pt>

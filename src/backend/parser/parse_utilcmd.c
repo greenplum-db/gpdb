@@ -68,6 +68,7 @@
 #include "cdb/partitionselection.h"
 #include "cdb/cdbvars.h"
 
+
 /* State shared by transformCreateSchemaStmt and its subroutines */
 typedef struct
 {
@@ -82,19 +83,25 @@ typedef struct
 	List	   *grants;			/* GRANT items */
 } CreateSchemaStmtContext;
 
+
 static void transformColumnDefinition(ParseState *pstate,
 						  CreateStmtContext *cxt,
 						  ColumnDef *column);
 static void transformTableConstraint(ParseState *pstate,
 						 CreateStmtContext *cxt,
 						 Constraint *constraint);
-static IndexStmt *generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
+static IndexStmt *generateClonedIndexStmt(CreateStmtContext *cxt,
+						Relation source_idx,
 						const AttrNumber *attmap, int attmap_length);
 static List *get_opclass(Oid opclass, Oid actual_datatype);
+static void transformIndexConstraints(ParseState *pstate,
+						  CreateStmtContext *cxt, bool mayDefer);
 static IndexStmt *transformIndexConstraint(Constraint *constraint,
 						 CreateStmtContext *cxt);
-static void transformFKConstraints(ParseState *pstate, CreateStmtContext *cxt,
-					   bool skipValidation, bool isAddConstraint);
+static void transformFKConstraints(ParseState *pstate,
+					   CreateStmtContext *cxt,
+					   bool skipValidation,
+					   bool isAddConstraint);
 static void transformConstraintAttrs(List *constraintList);
 static void transformColumnType(ParseState *pstate, ColumnDef *column);
 static void setSchemaName(char *context_schema, char **stmt_schema_name);
@@ -2085,7 +2092,7 @@ fillin_encoding(List *list)
  *		We also merge in any index definitions arising from
  *		LIKE ... INCLUDING INDEXES.
  */
-void
+static void
 transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDefer)
 {
 	IndexStmt  *index;

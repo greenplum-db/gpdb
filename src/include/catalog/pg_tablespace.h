@@ -49,13 +49,13 @@
  */
 CATALOG(pg_tablespace,1213) BKI_SHARED_RELATION
 {
-	NameData	spcname;		    /* tablespace name */
-	Oid			spcowner;		    /* owner of tablespace */
-	text		spclocation;	    /* physical location (VAR LENGTH) */
-	aclitem		spcacl[1];          /* access permissions (VAR LENGTH) */
+	NameData	spcname;		/* tablespace name */
+	Oid			spcowner;		/* owner of tablespace */
+	text		spclocation;	/* physical location (VAR LENGTH) */
+	aclitem		spcacl[1];		/* access permissions (VAR LENGTH) */
 	text		spcprilocations[1];	/* primary segment physical location */
 	text		spcmirlocations[1];	/* mirror segment physical location  */
-	Oid         spcfsoid;           /* FilespaceOid */
+	Oid			spcfsoid;		/* FilespaceOid */
 } FormData_pg_tablespace;
 
 /* GPDB added foreign key definitions for gpcheckcat. */

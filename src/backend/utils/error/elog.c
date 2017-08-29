@@ -1866,7 +1866,7 @@ elog_getelevel(void)
 
 /*
  * Note: A pointer is returned.  Make a copy of the message
- * before re-throwing or flusing the error state.
+ * before re-throwing or flushing the error state.
  */
 char*
 elog_message(void)
