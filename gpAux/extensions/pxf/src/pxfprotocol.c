@@ -146,9 +146,6 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
     /* set context */
     gphadoop_context* context = palloc0(sizeof(gphadoop_context));
     context->gphd_uri = uri;
-    if (is_import)
-        Assert(context->gphd_uri->fragments != NULL);
-
     initStringInfo(&context->uri);
     initStringInfo(&context->write_file_name);
     context->relation = relation;
