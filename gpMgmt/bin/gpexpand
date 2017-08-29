@@ -58,7 +58,6 @@ FILE_SPACES_INPUT_FILE_LINE_1_PREFIX = "filespaceOrder"
 
 #global var
 _gp_expand = None
-table_expand_error = False
 
 description = ("""
 Adds additional segments to a pre-existing GPDB Array.
@@ -2219,7 +2218,6 @@ UPDATE gp_distribution_policy
 
     def perform_expansion(self):
         """Performs the actual table re-organiations"""
-        global table_expand_error
         expansionStart = datetime.datetime.now()
 
         # setup a threadpool
@@ -2247,6 +2245,8 @@ UPDATE gp_distribution_policy
             cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options)
             self.queue.addCommand(cmd)
 
+        table_expand_error = False
+
         stopTime = None
         stoppedEarly = False
         if self.options.end:
@@ -2267,6 +2267,13 @@ UPDATE gp_distribution_policy
         self.pool.joinWorkers()
         self.queue.haltWork()
         self.queue.joinWorkers()
+
+        # Doing this after the halt and join workers guarantees that no new completed items can be added
+        # while we're doing a check
+        for expandCommand in self.queue.getCompletedItems():
+            if expandCommand.table_expand_error:
+                table_expand_error = True
+                break
 
         if stoppedEarly:
             logger.info('End time reached.  Stopping expansion.')
@@ -2733,12 +2740,12 @@ class ExpandCommand(SQLCommand):
         self.cmdStr = "Expand %s.%s" % (table.dbname, table.fq_name)
         self.table_url = copy.deepcopy(status_url)
         self.table_url.pgdb = table.dbname
+        self.table_expand_error = False
 
         SQLCommand.__init__(self, name)
         pass
 
     def run(self, validateAfter=False):
-        global table_expand_error
         # connect.
         status_conn = None
         table_conn = None
@@ -2753,7 +2760,7 @@ class ExpandCommand(SQLCommand):
             logger.error(ex.__str__().strip())
             if status_conn: status_conn.close()
             if table_conn: table_conn.close()
-            table_expand_error = True
+            self.table_expand_error = True
             return
 
         # validate table hasn't been dropped
@@ -2785,7 +2792,7 @@ class ExpandCommand(SQLCommand):
 
         except Exception, ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
-                table_expand_error = True
+                self.table_expand_error = True
                 if self.options.verbose:
                     logger.exception(ex)
                 logger.error('Table %s.%s failed to expand: %s' % (self.table.dbname.decode('utf-8'),
@@ -3039,7 +3046,6 @@ def sig_handler(sig):
 # --------------------------------------------------------------------------
 def main(options, args, parser):
     global _gp_expand
-    global table_expand_error
 
     remove_pid = True
     try:
