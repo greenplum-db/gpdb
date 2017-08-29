@@ -65,7 +65,7 @@
          <p>When a Greenplum Database cluster starts up, the <codeph>gpstart</codeph> utility checks
             that heap checksums are consistently enabled or disabled on the master and all segments.
             If there are any differences, the cluster fails to start. See <xref
-               href="../../../../../../../Pivotal-DataFabric/docs-gpdb/utility_guide/admin_utilities/gpstart.xml#topic1"
+               href="../../../utility_guide/admin_utilities/gpstart.xml#topic1"
             />.</p>
          <p>In cases where it is necessary to ignore heap checksum verification errors so that data
             can be recovered, setting the <xref
