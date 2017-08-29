@@ -6,13 +6,10 @@
 #
 from gppylib.mainUtils import SimpleMainLock, ExceptionNoStackTraceNeeded
 
-import copy
-import datetime
 import os
 import sys
-import socket
 import signal
-from time import strftime, sleep
+from time import strftime
 
 try:
     from gppylib.commands.unix import *
@@ -171,7 +168,7 @@ def sig_handler(sig, arg):
 def lookupGpdb(address, port, dataDirectory):
     """ Look up the segment gpdb by address, port, and dataDirectory """
 
-    gpdbList = gparray.getDbList()
+    gpdbList = gpArrayInstance.getDbList()
     for gpdb in gpdbList:
         if address == str(gpdb.getSegmentAddress()) and port == str(gpdb.getSegmentPort()) and dataDirectory == str(
                 gpdb.getSegmentDataDirectory()):
@@ -195,13 +192,12 @@ def lookupFilespaces(gpdb):
     """ Look up the segment's filespaces, and return map of filespace name : location. """
 
     retValue = {}
-    gpFilespaceObjList = gparray.getFilespaces(includeSystemFilespace=False)
     gpdbFilespaceDict = gpdb.getSegmentFilespaces()
 
     for oid in gpdbFilespaceDict:
         if oid == SYSTEM_FILESPACE:
             continue
-        name = gparray.getFileSpaceName(oid)
+        name = gpArrayInstance.getFileSpaceName(oid)
         location = gpdbFilespaceDict[oid]
         retValue[name] = location
     return retValue
@@ -329,13 +325,13 @@ pidfilepid = None  # pid of the process which has the lock
 locktorelease = None
 sml = None  # sml (simple main lock)
 
+logger = get_default_logger()
+
 try:
 
     # setup signal handlers so we can clean up correctly
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGHUP, sig_handler)
-
-    logger = get_default_logger()
 
     options, args = parseargs()
 
@@ -361,7 +357,7 @@ try:
 
     # Get array configuration
     try:
-        gparray = GpArray.initFromCatalog(dburl, utility=True)
+        gpArrayInstance = GpArray.initFromCatalog(dburl, utility=True)
     except DatabaseError, ex:
         logger.error('Failed to connect to database.  Make sure the')
         logger.error('Greenplum instance is running, and that')
@@ -403,7 +399,7 @@ try:
 
     """ Delete old mirror directories. """
     try:
-        fileSpacesObjList = gparray.getFilespaces(includeSystemFilespace=False)
+        fileSpacesObjList = gpArrayInstance.getFilespaces(includeSystemFilespace=False)
         totalDirsToDelete = len(newConfig.oldMirrorList) + len(fileSpacesObjList)
         numberOfWorkers = min(totalDirsToDelete, options.batch_size)
         pool = WorkerPool(numWorkers=numberOfWorkers)
