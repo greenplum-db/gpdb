@@ -168,6 +168,10 @@ Data page checksum version:           1
         self.assertEquals(len(successes), 4)
         self.assertEquals(len(failures), 0)
 
+    def test_0_workers_in_WorkerPool_raises(self):
+        with self.assertRaises(Exception):
+            HeapChecksum(None, 0)
+
     # ****************** tools ************************
     def setup_worker_pool(self, values):
         mocks = [Mock() for _ in range(len(self.results))]

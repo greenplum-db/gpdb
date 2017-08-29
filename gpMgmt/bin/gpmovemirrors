@@ -398,10 +398,10 @@ try:
     cmd.run(validateAfter=True)
 
     """ Delete old mirror directories. """
-    try:
-        fileSpacesObjList = gpArrayInstance.getFilespaces(includeSystemFilespace=False)
-        totalDirsToDelete = len(newConfig.oldMirrorList) + len(fileSpacesObjList)
-        numberOfWorkers = min(totalDirsToDelete, options.batch_size)
+    fileSpacesObjList = gpArrayInstance.getFilespaces(includeSystemFilespace=False)
+    totalDirsToDelete = len(newConfig.oldMirrorList) + len(fileSpacesObjList)
+    numberOfWorkers = min(totalDirsToDelete, options.batch_size)
+    if numberOfWorkers > 1:
         pool = WorkerPool(numWorkers=numberOfWorkers)
         for mirror in newConfig.oldMirrorList:
             logger.info("About to remove old mirror segment directory: " + mirror.dataDirectory)
@@ -443,9 +443,6 @@ try:
             logging.error("Although the system is in the process of recovering the mirrors to their new location,")
             logging.error("There was an issue removing the old mirror segment directories.")
             raise Exception("Unable to complete removal of old mirror segment directories.")
-
-    except Exception, e:
-        raise e
 
 except Exception, e:
     if options is not None and options.verbose:

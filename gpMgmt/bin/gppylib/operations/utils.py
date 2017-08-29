@@ -54,22 +54,26 @@ class RemoteOperation(Operation):
     def __str__(self):
         return "Remote(%s)" % str(self.operation)
 
+
 class ParallelOperation(Operation):
     """ 
-    Caveat: The execute always returns None. It is the caller's responsiblity to introspect operations.
+    Caveat: execute returns None. It is the caller's responsibility to introspect operations.
     """
     def __init__(self, operations, max_parallelism=DEFAULT_NUM_WORKERS):
         super(ParallelOperation, self).__init__()
         self.operations = operations        
         self.parallelism = min(len(operations), max_parallelism)
-    def execute(self):        
-        """TODO: Make Command a subclass of Operation. Then, make WorkerPool work with Operation objects."""
+
+    def execute(self):
+        if not self.operations or len(self.operations) == 0:
+            return
         pool = OperationWorkerPool(numWorkers=self.parallelism, operations=self.operations)
         pool.join()
         pool.haltWork()
-        return None
+
     def __str__(self):
         return "Parallel(%d)" % len(self.operations)
+
 
 class SerialOperation(Operation):
     """ 

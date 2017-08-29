@@ -60,6 +60,9 @@ class GpdbRestore(Operation):
         if options.list_backup and options.drop_db:
             raise ProgramArgumentValidationException("Cannot specify --list-backup and -e together")
 
+        if self.context.batch_default <= 0:
+            raise ProgramArgumentValidationException("-B <parallel processes> must be greater than 0")
+
         if not options.masterDataDirectory:
             options.masterDataDirectory = gp.get_masterdatadir()
 

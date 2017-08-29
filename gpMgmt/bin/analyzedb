@@ -355,9 +355,8 @@ class AnalyzeDb(Operation):
             if not self.silent and not userinput.ask_yesno(None, "\nContinue with Analyze", 'N'):
                 raise UserAbortedException()
 
-            num_workers = min(self.parallel_level, len(ordered_candidates))
-            logger.info("Starting analyze with %d workers..." % num_workers)
-            pool = AnalyzeWorkerPool(numWorkers=num_workers)
+            logger.info("Starting analyze with %d workers..." % self.parallel_level)
+            pool = AnalyzeWorkerPool(numWorkers=self.parallel_level)
             for can in ordered_candidates:
                 can_schema, can_table = can[0], can[1]
                 if can in candidates:

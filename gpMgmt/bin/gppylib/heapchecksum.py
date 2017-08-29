@@ -9,6 +9,8 @@ class HeapChecksum:
     """
 
     def __init__(self, gparray, num_workers=8, logger=None):
+        if num_workers <= 0:
+            raise Exception("number of workers must be greater than 0")
         self.gparray = gparray
         self.workers = num_workers
         self.logger = logger

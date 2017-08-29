@@ -256,7 +256,7 @@ def parseargs():
 
     if options.batch_size <= 0:
         logger.warn('batch_size was less than zero.  Setting to 1.')
-        batch_size = 1
+        options.batch_size = 1
 
     if options.newsegments and not options.tarfile:
         raise Exception('-n option requires -t option to be specified')

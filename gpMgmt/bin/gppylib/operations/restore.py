@@ -290,6 +290,9 @@ class RestoreDatabase(Operation):
         self.context = context
 
     def execute(self):
+        if self.context.batch_default <= 0:
+            raise Exception("-B <parallel processes> must be greater than 0")
+
         if self.context.redirected_restore_db:
             self.context.target_db = self.context.redirected_restore_db
 
