@@ -2,7 +2,7 @@ from mock import Mock, patch
 
 from gparray import GpDB, GpArray
 from gppylib.commands.base import CommandResult
-from gppylib.heapchecksum import HeapChecksum
+from gppylib.heapchecksum import HeapChecksum, REMOTE
 from gppylib.test.unit.gp_unittest import GpTestCase
 
 
@@ -77,7 +77,9 @@ Data page checksum version:           1
             "4|0|m|m|s|u|sdw2|sdw2|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
         mirror1 = GpDB.initFromString(
             "5|1|m|m|s|u|sdw1|sdw1|50001|51001|/data/mirror1||/data/mirror1/base/10899,/data/mirror1/base/1,/data/mirror1/base/10898,/data/mirror1/base/25780,/data/mirror1/base/34782")
-        return GpArray([master, self.primary0, primary1, mirror0, mirror1])
+        standby_master = GpDB.initFromString(
+            "6|-1|m|m|s|u|mdw_standby|mdw_standby|25432|None|/data/standby_master||/data/standby_master/base/10899,/data/standby_master/base/1,/data/standby_master/base/10898,/data/standby_master/base/25780,/data/standby_master/base/34782")
+        return GpArray([master, self.primary0, primary1, mirror0, mirror1, standby_master])
 
     def test_consistent_heap_checksum_returns_true(self):
         get_values = ['1', '1', '1', '1']
@@ -144,6 +146,18 @@ Data page checksum version:           1
 
         self.assertEquals(len(successes), 1)
         self.assertEquals(len(failures), 0)
+
+    @patch('gppylib.heapchecksum.PgControlData')
+    def test_standby_master_context_is_remote(self, mock_pg_control_data):
+        #  the standby can either be remote or local, depending on the user setup.
+        self.subject.get_standby_value()
+        self.assertEquals(len(mock_pg_control_data.call_args_list), 1)
+        call_args_dict = mock_pg_control_data.call_args_list[0][1]
+        try:
+            self.assertEquals(call_args_dict['ctxt'], REMOTE)
+            self.assertEquals(call_args_dict['remoteHost'], 'mdw_standby')
+        except KeyError as e:
+            raise Exception("Argument is missing from the call argument %s " % str(e))
 
     def test_get_segments_checksum_settings_uses_gparray(self):
         get_values = ['1', '1', '1', '1']

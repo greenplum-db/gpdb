@@ -628,13 +628,13 @@ create external table bad_location1 (a int4, b text)
 location ('gpfdist://@hostname@:7070/exttab1/non_existent_dir/*' )
 format 'csv';
 select count(*) from bad_location1;
-ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/exttab1/non_existent_dir/*): HTTP/1.0 404 file not found (url_curl.c:467)
+ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/exttab1/non_existent_dir/*): HTTP/1.0 404 file not found
 drop external table bad_location1;
 create external table bad_location2 (a int4, b text)
 location ('gpfdist://@hostname@:7070/exttab1/non_existent_file.txt' )
 format 'csv';
 select count(*) from bad_location2;
-ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/exttab1/non_existent_file.txt): HTTP/1.0 404 file not found (url_curl.c:467)
+ERROR:  http response code 404 from gpfdist (gpfdist://@hostname@:7070/exttab1/non_existent_file.txt): HTTP/1.0 404 file not found
 drop external table bad_location2;
 --
 -- WET tests

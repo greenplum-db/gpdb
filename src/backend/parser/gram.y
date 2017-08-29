@@ -158,6 +158,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	FuncWithArgs		*funwithargs;
 	DefElem				*defelt;
 	SortBy				*sortby;
+	WindowSpec			*winspec;
 	JoinExpr			*jexpr;
 	IndexElem			*ielem;
 	Alias				*alias;
@@ -471,17 +472,16 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <with> 	with_clause
 %type <list>	cte_list
 
-%type <list>	window_definition_list window_clause
+%type <list>	window_clause window_definition_list opt_partition_clause
+%type <winspec>	window_definition window_specification
+%type <list>	opt_window_order_clause
+%type <str>		opt_existing_window_name
 %type <boolean>	window_frame_units
 %type <ival>	window_frame_exclusion
-%type <node>	window_spec
 %type <node>	window_frame_extent
 				window_frame_start window_frame_preceding window_frame_between
-				window_frame_bound window_frame_following 
+				window_frame_bound window_frame_following
 				window_frame_clause opt_window_frame_clause
-%type <list>	window_partition_clause opt_window_partition_clause
-				opt_window_order_clause
-%type <str>		opt_window_name window_name
 
 
 /*
@@ -11153,14 +11153,14 @@ b_expr:		c_expr
  * ambiguity to the b_expr syntax.
  */
 c_expr:		columnref								{ $$ = $1; }
-			| func_expr OVER '(' window_spec ')'
+			| func_expr OVER window_specification
 				{
 					/*
 					 * We break out the window function from func_expr
 					 * to avoid shift/reduce errors.
 					 */
 					if (IsA($1, FuncCall))
-						((FuncCall *)$1)->over = $4;
+						((FuncCall *) $1)->over = $3;
 					else
 						ereport(ERROR,
 								(errcode(ERRCODE_SYNTAX_ERROR),
@@ -11288,15 +11288,6 @@ table_value_select_clause:
 			$$ = (Node *) s;
 		}
   		;
-
-/*
- * Users can write their own inline specification or refer to a
- * specification made after the WHERE clause
- */
-
-window_name: ColId { $$ = $1; }
-		;
-
 
 simple_func: 	func_name '(' ')'
 				{
@@ -12098,42 +12089,40 @@ window_clause:
 		;
 
 window_definition_list:
-			window_name AS '(' window_spec ')'
+			window_definition						{ $$ = list_make1($1); }
+			| window_definition_list ',' window_definition
+													{ $$ = lappend($1, $3); }
+		;
+
+window_definition:
+			ColId AS window_specification
 				{
-                    ((WindowSpec *)$4)->name = $1;
-                    ((WindowSpec *)$4)->location = @3;
-					$$ = list_make1($4);
-				}
-			| window_definition_list ',' window_name AS '(' window_spec ')'
-				{
-					((WindowSpec *)$6)->name = $3;
-					((WindowSpec *)$6)->location = @5;
-					$$ = lappend($1, $6);
+					WindowSpec *n = $3;
+					n->name = $1;
+					$$ = n;
 				}
 		;
 
-window_spec: opt_window_name opt_window_partition_clause
-				opt_window_order_clause opt_window_frame_clause
+window_specification: '(' opt_existing_window_name opt_partition_clause
+				opt_window_order_clause opt_window_frame_clause ')'
 				{
 					WindowSpec *n = makeNode(WindowSpec);
-					n->parent = $1;
-					n->partition = $2;
-					n->order = $3;
-					n->frame = (WindowFrame *)$4;
-					n->location = -1;
-					$$ = (Node *)n;
+					n->name = NULL;
+					n->parent = $2;
+					n->partition = $3;
+					n->order = $4;
+					n->frame = (WindowFrame *) $5;
+					n->location = @1;
+					$$ = n;
 				}
 		;
 
-opt_window_name: window_name { $$ = $1; }
+opt_existing_window_name: ColId						{ $$ = $1; }
 			| /*EMPTY*/ { $$ = NULL; }
 		;
 
-opt_window_partition_clause: window_partition_clause { $$ = $1; }
+opt_partition_clause: PARTITION BY sortby_list { $$ = $3; }
 			| /*EMPTY*/ { $$ = NIL; }
-		;
-
-window_partition_clause: PARTITION BY sortby_list { $$ = (List *)$3; }
 		;
 
 opt_window_order_clause: sort_clause { $$ = $1; }

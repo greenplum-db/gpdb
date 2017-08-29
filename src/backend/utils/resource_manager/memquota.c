@@ -1044,7 +1044,7 @@ ResourceManagerGetQueryMemoryLimit(PlannedStmt* stmt)
 
 	if (IsResQueueEnabled())
 		return ResourceQueueGetQueryMemoryLimit(stmt, ActivePortal->queueId);
-	if (IsResGroupEnabled())
+	if (IsResGroupActivated())
 		return ResourceGroupGetQueryMemoryLimit();
 
 	return 0;

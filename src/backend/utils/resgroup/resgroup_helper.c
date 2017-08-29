@@ -236,7 +236,7 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
-		if (IsResGroupEnabled())
+		if (IsResGroupActivated())
 		{
 			Relation	pg_resgroup_rel;
 			SysScanDesc	sscan;

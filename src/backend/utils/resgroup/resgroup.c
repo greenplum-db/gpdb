@@ -598,7 +598,7 @@ ResGroupGetStat(Oid groupId, ResGroupStatType type)
 	ResGroupData	*group;
 	Datum result;
 
-	Assert(IsResGroupEnabled());
+	Assert(IsResGroupActivated());
 
 	LWLockAcquire(ResGroupLock, LW_SHARED);
 
@@ -699,6 +699,12 @@ ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool *waiverUsed)
 	ResGroupProcData	*procInfo = MyResGroupProcInfo;
 	ResGroupData		*sharedInfo = MyResGroupSharedInfo;
 
+	/*
+	 * Memories may be allocated before resource group is initialized,
+	 * however,we need to track those memories once resource group is
+	 * enabled, so we use IsResGroupEnabled() instead of
+	 * IsResGroupActivated() here.
+	 */
 	if (!IsResGroupEnabled())
 		return true;
 
@@ -792,7 +798,7 @@ ResGroupReleaseMemory(int32 memoryChunks)
 	ResGroupData		*sharedInfo = MyResGroupSharedInfo;
 	int32				oldUsage;
 
-	if (!IsResGroupEnabled())
+	if (!IsResGroupActivated())
 		return;
 
 	Assert(memoryChunks >= 0);
@@ -853,7 +859,7 @@ ResGroupDecideConcurrencyCaps(Oid groupId,
 	ResGroupData	*group;
 
 	/* If resource group is not in use we can always pick the new settings. */
-	if (!IsResGroupEnabled())
+	if (!IsResGroupActivated())
 	{
 		caps->concurrency.value = opts->concurrency;
 		caps->concurrency.proposed = opts->concurrency;
@@ -904,7 +910,7 @@ ResGroupDecideMemoryCaps(int groupId,
 	ResGroupCaps	capsNew;
 
 	/* If resource group is not in use we can always pick the new settings. */
-	if (!IsResGroupEnabled())
+	if (!IsResGroupActivated())
 	{
 		caps->memLimit.value = opts->memLimit;
 		caps->memLimit.proposed = opts->memLimit;
@@ -1875,7 +1881,7 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 bool
 ShouldAssignResGroupOnMaster(void)
 {
-	return IsResGroupEnabled() &&
+	return IsResGroupActivated() &&
 		IsNormalProcessingMode() &&
 		Gp_role == GP_ROLE_DISPATCH &&
 		!AmIInSIGUSR1Handler();

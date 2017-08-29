@@ -12,3 +12,10 @@ DATA = uninstall_hstore.sql
 REGRESS = hstore
 
 include $(top_srcdir)/contrib/contrib-global.mk
+
+installcheck: prepare_hstore_sql
+
+prepare_hstore_sql:
+	cp $(GPHOME)/share/postgresql/contrib/hstore.sql ./hstore.sql
+
+.PHONY: prepare_hstore_sql

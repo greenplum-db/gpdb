@@ -360,6 +360,24 @@ outLogicalIndexInfo(StringInfo str, LogicalIndexInfo *node)
 }
 
 static void
+_outCopyStmt(StringInfo str, CopyStmt *node)
+{
+	WRITE_NODE_TYPE("COPYSTMT");
+	WRITE_NODE_FIELD(relation);
+	WRITE_NODE_FIELD(attlist);
+	WRITE_BOOL_FIELD(is_from);
+	WRITE_BOOL_FIELD(skip_ext_partition);
+	WRITE_STRING_FIELD(filename);
+	WRITE_NODE_FIELD(options);
+	WRITE_NODE_FIELD(sreh);
+	WRITE_NODE_FIELD(partitions);
+	WRITE_NODE_FIELD(ao_segnos);
+	WRITE_INT_FIELD(nattrs);
+	WRITE_ENUM_FIELD(ptype, GpPolicyType);
+	WRITE_INT_ARRAY(distribution_attrs, node->nattrs, AttrNumber);
+}
+
+static void
 _outSubqueryScan(StringInfo str, SubqueryScan *node)
 {
 	WRITE_NODE_TYPE("SUBQUERYSCAN");

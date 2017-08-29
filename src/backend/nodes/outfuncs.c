@@ -3059,6 +3059,7 @@ _outSingleRowErrorDesc(StringInfo str, SingleRowErrorDesc *node)
 	WRITE_BOOL_FIELD(into_file);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outCopyStmt(StringInfo str, CopyStmt *node)
 {
@@ -3072,7 +3073,16 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
 	WRITE_NODE_FIELD(ao_segnos);
+	WRITE_INT_FIELD(nattrs);
+	WRITE_ENUM_FIELD(ptype, GpPolicyType);
+	appendStringInfoLiteral(str, " :distribution_attrs");
+	for (int i = 0; i < node->nattrs; i++)
+	{
+		appendStringInfo(str, " %d", node->distribution_attrs[i]);
+	}
+
 }
+#endif/* COMPILING_BINARY_FUNCS */
 
 
 static void

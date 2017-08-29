@@ -997,7 +997,7 @@ buildGpQueryString(struct CdbDispatcherState *ds,
 	char zero = 0;
 
 	initStringInfo(&resgroupInfo);
-	if (IsResGroupEnabled())
+	if (IsResGroupActivated())
 		SerializeResGroupInfo(&resgroupInfo);
 
 	total_query_len = 1 /* 'M' */ +

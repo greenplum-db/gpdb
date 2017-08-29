@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_vcn_jkq_1bb">
+ <title>hstore Functions</title>
+ <body>
+  <p>The <codeph>hstore</codeph> module implements a data type for storing sets of (key,value) pairs
+   within a single Greenplum Database data field. This can be useful in various scenarios, such as
+   rows with many attributes that are rarely examined, or semi-structured data.</p>
+  <p>In the current implementation, neither the key nor the value string can exceed 65535 bytes in
+   length; an error will be thrown if this limit is exceeded. These maximum lengths may change in
+   future releases.</p>
+  <section>
+   <title>Installing hstore</title>
+   <p>Before you can use <codeph>hstore</codeph> data type and functions, run the installation
+    script <codeph>$GPHOME/share/postgresql/contrib/hstore.sql</codeph> in each database where you
+    want the ability to query other
+    databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/hstore.sql</codeblock></p>
+  </section>
+  <section>
+   <title>hstore External Representation</title>
+   <p>The text representation of an <codeph>hstore</codeph> value includes zero or more
+     <varname>key</varname>
+    <codeph>=&gt;</codeph>
+    <varname>value</varname> items, separated by commas. For example:
+    <codeblock>k => v
+foo => bar, baz => whatever
+"1-a" => "anything at all"</codeblock> The order
+    of the items is not considered significant (and may not be reproduced on output). Whitespace
+    between items or around the <codeph>=&gt;</codeph> sign is ignored. Use double quotes if a key
+    or value includes whitespace, comma, <codeph>=</codeph> or <codeph>&gt;</codeph>. To include a
+    double quote or a backslash in a key or value, precede it with another backslash. (Keep in mind
+    that depending on the setting of <varname>standard_conforming_strings</varname>, you may need to
+    double backslashes in SQL literal strings.)</p>
+   <p>A value (but not a key) can be a SQL NULL. This is represented as
+    <codeblock>key => NULL</codeblock> The <codeph>NULL</codeph> keyword is not case-sensitive.
+    Again, use double quotes if you want the string <codeph>null</codeph> to be treated as an
+    ordinary data value.</p>
+   <p>Currently, double quotes are always used to surround key and value strings on output, even
+    when this is not strictly necessary.</p>
+  </section>
+  <section>
+   <title>hstore Operators and Functions</title>
+   <table id="hstore-op-table">
+    <title>hstore Operators</title>
+    <tgroup cols="4">
+     <thead>
+      <row>
+       <entry>Operator</entry>
+       <entry>Description</entry>
+       <entry>Example</entry>
+       <entry>Result</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><codeph>hstore</codeph>
+        <codeph>-&gt;</codeph>
+        <codeph>text</codeph></entry>
+       <entry>get value for key (null if not present)</entry>
+       <entry><codeph>'a=&gt;x, b=&gt;y'::hstore -&gt; 'a'</codeph></entry>
+       <entry><codeph>x</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>text</codeph>
+        <codeph>=&gt;</codeph>
+        <codeph>text</codeph></entry>
+       <entry>make single-item <codeph>hstore</codeph></entry>
+       <entry><codeph>'a' =&gt; 'b'</codeph></entry>
+       <entry><codeph>"a"=&gt;"b"</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>hstore</codeph>
+        <codeph>||</codeph>
+        <codeph>hstore</codeph></entry>
+       <entry>concatenation</entry>
+       <entry><codeph>'a=&gt;b, c=&gt;d'::hstore || 'c=&gt;x, d=&gt;q'::hstore</codeph></entry>
+       <entry><codeph>"a"=&gt;"b", "c"=&gt;"x", "d"=&gt;"q"</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>hstore</codeph>
+        <codeph>?</codeph>
+        <codeph>text</codeph></entry>
+       <entry>does <codeph>hstore</codeph> contain key?</entry>
+       <entry><codeph>'a=&gt;1'::hstore ? 'a'</codeph></entry>
+       <entry><codeph>t</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>hstore</codeph>
+        <codeph>@&gt;</codeph>
+        <codeph>hstore</codeph></entry>
+       <entry>does left operand contain right?</entry>
+       <entry><codeph>'a=&gt;b, b=&gt;1, c=&gt;NULL'::hstore @&gt; 'b=&gt;1'</codeph></entry>
+       <entry><codeph>t</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>hstore</codeph>
+        <codeph>&lt;@</codeph>
+        <codeph>hstore</codeph></entry>
+       <entry>is left operand contained in right?</entry>
+       <entry><codeph>'a=&gt;c'::hstore &lt;@ 'a=&gt;b, b=&gt;1, c=&gt;NULL'</codeph></entry>
+       <entry><codeph>f</codeph></entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+   <note>The <codeph>=&gt;</codeph> operator is deprecated and may be removed in a future release.
+    Use the <codeph>hstore(text, text)</codeph> function instead.</note>
+   <table id="hstore-func-table">
+    <title>hstore Functions</title>
+    <tgroup cols="5">
+     <thead>
+      <row>
+       <entry>Function</entry>
+       <entry>Return Type</entry>
+       <entry>Description</entry>
+       <entry>Example</entry>
+       <entry>Result</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><codeph>hstore(text, text)</codeph></entry>
+       <entry><codeph>hstore</codeph></entry>
+       <entry>make single-item <codeph>hstore</codeph></entry>
+       <entry><codeph>hstore('a', 'b')</codeph></entry>
+       <entry><codeph>"a"=&gt;"b"</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>akeys(hstore)</codeph></entry>
+       <entry><codeph>text[]</codeph></entry>
+       <entry>get <codeph>hstore</codeph>'s keys as array</entry>
+       <entry><codeph>akeys('a=&gt;1,b=&gt;2')</codeph></entry>
+       <entry><codeph>{a,b}</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>skeys(hstore)</codeph></entry>
+       <entry><codeph>setof text</codeph></entry>
+       <entry>get <codeph>hstore</codeph>'s keys as set</entry>
+       <entry><codeph>skeys('a=&gt;1,b=&gt;2')</codeph></entry>
+       <entry>
+        <codeblock>a
+b</codeblock>
+       </entry>
+      </row>
+      <row>
+       <entry><codeph>avals(hstore)</codeph></entry>
+       <entry><codeph>text[]</codeph></entry>
+       <entry>get <codeph>hstore</codeph>'s values as array</entry>
+       <entry><codeph>avals('a=&gt;1,b=&gt;2')</codeph></entry>
+       <entry><codeph>{1,2}</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>svals(hstore)</codeph></entry>
+       <entry><codeph>setof text</codeph></entry>
+       <entry>get <codeph>hstore</codeph>'s values as set</entry>
+       <entry><codeph>svals('a=&gt;1,b=&gt;2')</codeph></entry>
+       <entry>
+        <codeblock>1
+2</codeblock>
+       </entry>
+      </row>
+      <row>
+       <entry><codeph>each(hstore)</codeph></entry>
+       <entry><codeph>setof (key text, value text)</codeph></entry>
+       <entry>get <codeph>hstore</codeph>'s keys and values as set</entry>
+       <entry><codeph>select * from each('a=&gt;1,b=&gt;2')</codeph></entry>
+       <entry>
+        <codeblock> key | value
+-----+-------
+ a   | 1
+ b   | 2</codeblock>
+       </entry>
+      </row>
+      <row>
+       <entry><codeph>exist(hstore,text)</codeph></entry>
+       <entry><codeph>boolean</codeph></entry>
+       <entry>does <codeph>hstore</codeph> contain key?</entry>
+       <entry><codeph>exist('a=&gt;1','a')</codeph></entry>
+       <entry><codeph>t</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>defined(hstore,text)</codeph></entry>
+       <entry><codeph>boolean</codeph></entry>
+       <entry>does <codeph>hstore</codeph> contain non-null value for key?</entry>
+       <entry><codeph>defined('a=&gt;NULL','a')</codeph></entry>
+       <entry><codeph>f</codeph></entry>
+      </row>
+      <row>
+       <entry><codeph>delete(hstore,text)</codeph></entry>
+       <entry><codeph>hstore</codeph></entry>
+       <entry>delete any item matching key</entry>
+       <entry><codeph>delete('a=&gt;1,b=&gt;2','b')</codeph></entry>
+       <entry><codeph>"a"=>"1"</codeph></entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </section>
+  <section>
+   <title>Indexes</title>
+   <p><codeph>hstore</codeph> has index support for <codeph>@&gt;</codeph> and <codeph>?</codeph>
+    operators. You can use the GiST index type. For example:</p>
+   <codeblock>CREATE INDEX hidx ON testhstore USING GIST(h);</codeblock>
+  </section>
+  <section>
+   <title>Examples</title>
+   <p>Add a key, or update an existing key with a new value:</p>
+   <codeblock>UPDATE tab SET h = h || ('c' => '3');</codeblock>
+   <p>Delete a key:</p>
+   <codeblock>UPDATE tab SET h = delete(h, 'k1');</codeblock>
+  </section>
+  <section>
+   <title>Statistics</title>
+   <p>The <codeph>hstore</codeph> type, because of its intrinsic liberality, could contain a lot of
+    different keys. Checking for valid keys is the task of the application. Examples below
+    demonstrate several techniques for checking keys and obtaining statistics.</p>
+   <p>Simple example:</p>
+   <codeblock>SELECT * FROM each('aaa=>bq, b=>NULL, ""=>1');</codeblock>
+   <p>Using a table:</p>
+   <codeblock>SELECT (each(h)).key, (each(h)).value INTO stat FROM testhstore;</codeblock>
+   <p>Online statistics:</p>
+   <codeblock>SELECT key, count(*) FROM
+  (SELECT (each(h)).key FROM testhstore) AS stat
+  GROUP BY key
+  ORDER BY count DESC, key;
+    key    | count
+-----------+-------
+ line      |   883
+ query     |   207
+ pos       |   203
+ node      |   202
+ space     |   197
+ status    |   195
+ public    |   194
+ title     |   190
+ org       |   189
+...................</codeblock>
+  </section>
+ </body>
+</topic>

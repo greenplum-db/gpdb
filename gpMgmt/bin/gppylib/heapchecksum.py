@@ -30,7 +30,8 @@ class HeapChecksum:
         :return: the heap checksum setting (1 or 0) for the standby master
         """
         standbyMaster_gpdb = self.gparray.standbyMaster
-        cmd = PgControlData(name='run pg_controldata', datadir=standbyMaster_gpdb.getSegmentDataDirectory())
+        cmd = PgControlData(name='run pg_controldata', datadir=standbyMaster_gpdb.getSegmentDataDirectory(),
+                            ctxt=REMOTE, remoteHost=standbyMaster_gpdb.getSegmentHostName())
         cmd.run(validateAfter=True)
         value = cmd.get_value('Data page checksum version')
         return value

@@ -95,7 +95,6 @@
 #include "postmaster/backoff.h"
 #include <pthread.h>
 #include "utils/resource_manager.h"
-#include "utils/resgroup-ops.h"
 #include "pgstat.h"
 #include "executor/nodeFunctionscan.h"
 #include "cdb/cdbfilerep.h"
@@ -4656,17 +4655,9 @@ PostgresMain(int argc, char *argv[],
 	SetProcessingMode(NormalProcessing);
 
 	/*
-	 * Initialize resource scheduler hash structure.
+	 * Initialize resource manager.
 	 */
-	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && !am_walsender)
-	{
-		InitResQueues();
-	}
-	else if (IsResGroupEnabled() && (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) && !am_walsender)
-	{
-		InitResGroups();
-		ResGroupOps_AdjustGUCs();
-	}
+	InitResManager();
 
 	/*
 	 * Now all GUC states are fully set up.  Report them to client if
@@ -5160,7 +5151,7 @@ PostgresMain(int argc, char *argv[],
 
 					elog((Debug_print_full_dtm ? LOG : DEBUG5), "MPP dispatched stmt from QD: %s.",query_string);
 
-					if (IsResGroupEnabled())
+					if (IsResGroupActivated() && resgroupInfoLen > 0)
 						SwitchResGroupOnSegment(resgroupInfoBuf, resgroupInfoLen);
 
 					if (suid > 0)

@@ -518,14 +518,14 @@ CreateRole(CreateRoleStmt *stmt)
 					 errmsg("only superuser can be assigned to admin resgroup")));
 
 		new_record[Anum_pg_authid_rolresgroup - 1] = ObjectIdGetDatum(rsgid);
-		if (!IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
+		if (!IsResGroupActivated() && Gp_role == GP_ROLE_DISPATCH)
 			ereport(WARNING,
 					(errmsg("resource group is disabled"),
 					 errhint("To enable set resource_scheduler=on and gp_resource_manager=group")));
 	}
 	else if (issuper)
 	{
-		if (IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
+		if (IsResGroupActivated() && Gp_role == GP_ROLE_DISPATCH)
 		{
 			ereport(NOTICE,
 					(errmsg("resource group required -- using admin resource group \"admin_group\"")));
@@ -535,7 +535,7 @@ CreateRole(CreateRoleStmt *stmt)
 	}
 	else
 	{
-		if (IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
+		if (IsResGroupActivated() && Gp_role == GP_ROLE_DISPATCH)
 		{
 			ereport(NOTICE,
 					(errmsg("resource group required -- using default resource group \"default_group\"")));
@@ -1133,7 +1133,7 @@ AlterRole(AlterRoleStmt *stmt)
 			else
 				resgroup = pstrdup("default_group");
 
-			if (IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
+			if (IsResGroupActivated() && Gp_role == GP_ROLE_DISPATCH)
 				ereport(NOTICE,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						 errmsg("resource group required -- "
@@ -1155,7 +1155,7 @@ AlterRole(AlterRoleStmt *stmt)
 			ObjectIdGetDatum(rsgid);
 		new_record_repl[Anum_pg_authid_rolresgroup - 1] = true;
 
-		if (!IsResGroupEnabled() && Gp_role == GP_ROLE_DISPATCH)
+		if (!IsResGroupActivated() && Gp_role == GP_ROLE_DISPATCH)
 		{
 			ereport(WARNING,
 					(errmsg("resource group is disabled"),

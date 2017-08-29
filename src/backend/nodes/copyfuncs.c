@@ -3144,7 +3144,9 @@ _copyCopyStmt(CopyStmt *from)
 	COPY_STRING_FIELD(filename);
 	COPY_NODE_FIELD(options);
 	COPY_NODE_FIELD(sreh);
-
+	COPY_SCALAR_FIELD(nattrs);
+	COPY_SCALAR_FIELD(ptype);
+	COPY_POINTER_FIELD(distribution_attrs,from->nattrs * sizeof(AttrNumber));
 	return newnode;
 }
 
