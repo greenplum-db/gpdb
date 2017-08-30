@@ -1538,7 +1538,7 @@ XLogCheckBuffer(XLogRecData *rdata, bool holdsExclusiveLock,
 	 * an exclusive lock on the page and/or the relation.
 	 */
 	if (holdsExclusiveLock)
-		*lsn = PageGetLSN(page);
+		*lsn = PageGetLSN((Page) page);
 	else
 		*lsn = BufferGetLSNAtomic(rdata->buffer);
 
