@@ -3886,6 +3886,7 @@ def impl(context, seg):
 def impl(context, to_file):
     write_lines = []
     BLDWRAP_TOP = os.environ.get('BLDWRAP_TOP')
+    # this file is the output of the pulse system, where gpinit has been run
     from_file = BLDWRAP_TOP + '/sys_mgmt_test/test/general/cluster_conf.out'
     with open(from_file) as fr:
         lines = fr.readlines()
