@@ -369,11 +369,6 @@ class ExecutionContext():
 
     """
 
-    propagate_env_map = {}
-    """
-    Dict. mapping environment variables to their values. 
-    """
-
     def __init__(self):
         pass
 
@@ -400,12 +395,11 @@ class LocalExecutionContext(ExecutionContext):
     def execute(self, cmd, wait=True):
         # prepend env. variables from ExcecutionContext.propagate_env_map
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
-        for k, v in self.__class__.propagate_env_map.iteritems():
-            cmd.cmdStr = "%s=%s %s" % (k, v, cmd.cmdStr)
 
         # also propagate env from command instance specific map
-        for k, v in cmd.propagate_env_map.iteritems():
-            cmd.cmdStr = "%s=%s %s" % (k, v, cmd.cmdStr)
+        keys = sorted(cmd.propagate_env_map.keys(), reverse=True)
+        for k in keys:
+            cmd.cmdStr = "%s=%s && %s" % (k, cmd.propagate_env_map[k], cmd.cmdStr)
 
         # executable='/bin/bash' is to ensure the shell is bash.  bash isn't the
         # actual command executed, but the shell that command string runs under.
@@ -622,18 +616,19 @@ class RemoteExecutionContext(LocalExecutionContext):
     def execute(self, cmd):
         # prepend env. variables from ExcecutionContext.propagate_env_map
         # e.g. Given {'FOO': 1, 'BAR': 2}, we'll produce "FOO=1 BAR=2 ..."
-        for k, v in self.__class__.propagate_env_map.iteritems():
-            cmd.cmdStr = "%s=%s %s" % (k, v, cmd.cmdStr)
         self.__class__.trail.add(self.targetHost)
 
         # also propagate env from command instance specific map
-        for k, v in cmd.propagate_env_map.iteritems():
-            cmd.cmdStr = "%s=%s %s" % (k, v, cmd.cmdStr)
+        keys = sorted(cmd.propagate_env_map.keys(), reverse=True)
+        for k in keys:
+            cmd.cmdStr = "%s=%s && %s" % (k, cmd.propagate_env_map[k], cmd.cmdStr)
 
         # Escape " for remote execution otherwise it interferes with ssh
         cmd.cmdStr = cmd.cmdStr.replace('"', '\\"')
-        cmd.cmdStr = "ssh -o 'StrictHostKeyChecking no' %s \"%s %s\"" % (
-        self.targetHost, ". %s/greenplum_path.sh;" % self.gphome, cmd.cmdStr)
+        cmd.cmdStr = "ssh -o 'StrictHostKeyChecking no' " \
+                     "{targethost} \"{gphome} {cmdstr}\"".format(targethost=self.targetHost,
+                                                                 gphome=". %s/greenplum_path.sh;" % self.gphome,
+                                                                 cmdstr=cmd.cmdStr)
         LocalExecutionContext.execute(self, cmd)
         if (cmd.get_results().stderr.startswith('ssh_exchange_identification: Connection closed by remote host')):
             self.__retry(cmd)

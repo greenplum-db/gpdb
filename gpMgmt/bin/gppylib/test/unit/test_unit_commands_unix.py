@@ -2,11 +2,15 @@ import os
 
 from mock import patch
 
-from commands.unix import RemoveFile, RemoveDirectory, RemoveDirectoryContents, RemoveGlob
+from commands.unix import RemoveFile, RemoveDirectory, RemoveDirectoryContents, RemoveGlob, REMOTE, Command
 from gp_unittest import *
 
 
 class CommandsUnix(GpTestCase):
+    """
+    this is technically an integration test since it uses actual bash shell processes
+    """
+
     def setUp(self):
         self.dir = "/tmp/command_unix_test"
         if not os.path.exists(self.dir):
@@ -20,10 +24,19 @@ class CommandsUnix(GpTestCase):
 
     def tearDown(self):
         RemoveDirectory.local("", self.dir)
+        Command.propagate_env_map.clear()
         super(CommandsUnix, self).tearDown()
+
 
     def test_RemoveFile_for_file_succeeds_locally(self):
         RemoveFile.local("testing", self.filepath)
+        self.assertFalse(os.path.exists(self.filepath))
+        self.assertTrue(os.path.exists(self.dir))
+
+    def test_RemoveFile_for_file_succeeds_with_environment(self):
+        cmd = RemoveFile("testing", self.filepath)
+        cmd.propagate_env_map['foo'] = 1
+        cmd.run(validateAfter=True)
         self.assertFalse(os.path.exists(self.filepath))
         self.assertTrue(os.path.exists(self.dir))
 
@@ -82,6 +95,13 @@ class CommandsUnix(GpTestCase):
     #     self.assertFalse(os.path.exists(self.filepath))
     #     self.assertTrue(os.path.exists(self.dir))
 
+    # def test_RemoveFile_for_file_succeeds_remotely_with_environment(self):
+    #     cmd = RemoveFile("testing", self.filepath, REMOTE, "localhost")
+    #     cmd.propagate_env_map["foo"] = 1
+    #     cmd.run(validateAfter=True)
+    #     self.assertFalse(os.path.exists(self.filepath))
+    #     self.assertTrue(os.path.exists(self.dir))
+    #
     # def test_RemoveDirectory_succeeds_remotely(self):
     #     RemoveDirectory.remote("testing", "localhost", self.dir)
     #     self.assertFalse(os.path.exists(self.dir))
