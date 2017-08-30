@@ -3,36 +3,16 @@
 set -euo pipefail
 
 # set variables if they are unset or null
-# override HADOOP_HOME based on your environment
+export HADOOP_HOME=${HADOOP_HOME:-/singlecluster/hadoop}
 export GP_HADOOP_TARGET_VERSION=${GP_HADOOP_TARGET_VERSION:-cdh4.1}
 export HADOOP_HOST=${HADOOP_HOST:-localhost}
 export HADOOP_PORT=${HADOOP_PORT:-8020}
 
-export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64/jre
-
-override_core_site() {
-	cat > "${HADOOP_HOME}/etc/hadoop/core-site.xml" <<-EOF
-	<configuration>
-	<property>
-	<name>fs.defaultFS</name>
-	<value>hdfs://${HADOOP_HOST}:${HADOOP_PORT}/</value>
-	</property>
-	</configuration>
-	EOF
-}
+export JAVA_HOME=${JAVA_HOME:-/usr/lib/jvm/java-1.7.0-openjdk.x86_64/jre}
 
 allow_hadoop_user_to_connect() {
 	echo "local    all     _hadoop_perm_test_role    trust" >> ${MASTER_DATA_DIRECTORY}/pg_hba.conf
 	gpstop -u
-}
-
-build_test_jar() {
-	source ${CURDIR}/set_hadoop_classpath.sh
-
-	pushd $CURDIR/legacy
-	javac -cp .:$CLASSPATH:${CURDIR}/${GP_HADOOP_TARGET_VERSION}-gnet-1.2.0.0.jar javaclasses/*.java
-	jar cf maptest.jar javaclasses/*.class
-	popd
 }
 
 create_runcmd() {
@@ -46,7 +26,7 @@ create_runcmd() {
 	export HADOOP_PORT=${HADOOP_PORT}
 	export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin
 	source ${CURDIR}/set_hadoop_classpath.sh
-	java -cp .:\${CLASSPATH}:${CURDIR}/${GP_HADOOP_TARGET_VERSION}-gnet-1.2.0.0.jar:${CURDIR}/legacy/maptest.jar -Dhdfshost=${HADOOP_HOST} -Ddatanodeport=${HADOOP_PORT} -Djobtrackerhost=${HADOOP_HOST} -Djobtrackerport=${HADOOP_PORT} "\$@"
+	java -cp .:\${CLASSPATH}:${GPHOME}/lib/hadoop/${GP_HADOOP_TARGET_VERSION}-gnet-1.2.0.0.jar:${CURDIR}/maptest.jar -Dhdfshost=${HADOOP_HOST} -Ddatanodeport=${HADOOP_PORT} -Djobtrackerhost=${HADOOP_HOST} -Djobtrackerport=${HADOOP_PORT} "\$@"
 	EOF
 
 	chmod +x "${CMDPATH}"
@@ -54,13 +34,10 @@ create_runcmd() {
 
 _main() {
 	allow_hadoop_user_to_connect
-	#override_core_site
 
 	local CURDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	local PGREGRESS=$GPHOME/lib/postgresql/pgxs/src/test/regress/pg_regress
 	local HADOOPCMD=$HADOOP_HOME/bin/hadoop
-
-	build_test_jar
 
 	rm -rf $CURDIR/source_replaced/
 	mkdir -p $CURDIR/source_replaced/input

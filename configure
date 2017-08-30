@@ -7334,7 +7334,7 @@ if test "${with_pxf+set}" = set; then :
   esac
 
 else
-  with_pxf=no
+  with_pxf=yes
 
 fi
 

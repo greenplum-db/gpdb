@@ -2,21 +2,17 @@ groups:
 - name: all
   jobs:
   - compile_gpdb_centos6
-  - compile_gpdb_pxf_centos6
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_windows_cl
   - icw_planner_centos6
-  - icw_planner_pxf_centos6
   - icw_gporca_centos6
-  - icw_gporca_pxf_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
   - icw_planner_ictcp_centos6
   - MU_check_centos
-  - regression_tests_gpcloud_centos
   - MM_gpperfmon
   - MM_gpcheck
   - MM_analyzedb
@@ -25,11 +21,12 @@ groups:
   - MM_gpinitsystem
   - MM_gpinitstandby
   - MM_pt-rebuild
-  - regression_tests_pxf_centos
   - fts
   - storage
   - QP_memory-accounting
+  - regression_tests_gpcloud_centos
   - regression_tests_gphdfs_centos
+  - regression_tests_pxf_centos
   - gpdb_rc_packaging_centos
   - gpdb_rc_packaging_sles
   - DPM_netbackup77
@@ -190,15 +187,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
-
-- name: bin_gpdb_pxf_centos6
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{bin_gpdb_pxf_centos_versioned_file}}
 
 - name: binary_swap_gpdb_centos6
   type: s3
@@ -438,8 +426,8 @@ resources:
 - name: singlecluster
   type: s3
   source:
-    access_key_id: {{hawq-aws-access-key-id}}
-    secret_access_key: {{hawq-aws-secret-access-key}}
+    access_key_id: {{pxf-aws-access-key-id}}
+    secret_access_key: {{pxf-aws-secret-access-key}}
     bucket: {{pxf-aws-bucket-name}}
     region_name: {{aws-region}}
     versioned_file: singlecluster-without-pxf/singlecluster-CDH.tar.gz
@@ -447,8 +435,8 @@ resources:
 - name: pxf_tarball
   type: s3
   source:
-    access_key_id: {{hawq-aws-access-key-id}}
-    secret_access_key: {{hawq-aws-secret-access-key}}
+    access_key_id: {{pxf-aws-access-key-id}}
+    secret_access_key: {{pxf-aws-secret-access-key}}
     bucket: {{pxf-aws-bucket-name}}
     region_name: {{aws-region}}
     versioned_file: tarballs/pxf.tar.gz
@@ -514,7 +502,14 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
+      trigger: true
     - get: centos-gpdb-dev-6
+  - task: compile_pxf
+    image: centos-gpdb-dev-6
+    file: gpdb_src/concourse/tasks/compile_pxf.yml
+    params:
+      TARGET_OS: centos
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -537,37 +532,6 @@ jobs:
     - put: installer_rhel6_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip
-
-- name: compile_gpdb_pxf_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      trigger: true
-    - get: gpaddon_src
-    - get: pxf_src
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: compile_pxf
-    image: centos-gpdb-dev-6
-    file: gpdb_src/concourse/tasks/compile_pxf.yml
-    params:
-      TARGET_OS: centos
-  - task: compile_gpdb_pxf
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      CONFIGURE_FLAGS: {{configure_pxf_flags}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-      BLD_TARGETS: "clients loaders"
-  - aggregate:
-    - put: bin_gpdb_pxf_centos6
-      params:
-        file: gpdb_artifacts/bin_gpdb.tar.gz
     - put: pxf_tarball
       params:
         file: pxf_tarball/pxf*.tar.gz
@@ -722,29 +686,6 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
-- name: icw_planner_pxf_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_pxf_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_pxf_centos6
-      passed: [compile_gpdb_pxf_centos6]
-      trigger: true
-    - get: binary_swap_gpdb
-      resource: binary_swap_gpdb_centos6
-      passed: [compile_gpdb_binary_swap_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_pxf_flags}}
-
 - name: icw_gporca_centos6
   plan:
   - aggregate:
@@ -763,25 +704,6 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_pxf_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_pxf_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_pxf_centos6
-      passed: [compile_gpdb_pxf_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_pxf_flags}}
 
 - name: icw_gporca_centos7
   serial: true
@@ -881,15 +803,15 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [compile_gpdb_pxf_centos6]
+      passed: [compile_gpdb_centos6]
     - get: bin_gpdb
-      resource: bin_gpdb_pxf_centos6
-      passed: [compile_gpdb_pxf_centos6]
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
       trigger: true
     - get: singlecluster
       trigger: true
     - get: pxf_tarball
-      passed: [compile_gpdb_pxf_centos6]
+      passed: [compile_gpdb_centos6]
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
@@ -1739,7 +1661,6 @@ jobs:
     - icw_gporca_sles11
     - icw_planner_ictcp_centos6
     - MU_check_centos
-    - regression_tests_gpcloud_centos
     - MM_analyzedb
     - MM_gpinitsystem
     - MM_gpperfmon
@@ -1750,7 +1671,9 @@ jobs:
     - fts
     - storage
     - QP_memory-accounting
+    - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
+    - regression_tests_pxf_centos
     - gpdb_rc_packaging_centos
     - gpdb_rc_packaging_sles
     - DPM_netbackup77
