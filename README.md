@@ -56,7 +56,7 @@ ssh <hostname of your machine>  # e.g., ssh briarwood
 
 <a name="buildOrca"></a>
 ### Build the optimizer
-
+#### Manually
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
 system and tries to build with ORCA by default.  For your convenience, here are
 the steps of how to build the optimizer. For the most up-to-date way of
@@ -94,8 +94,13 @@ building, see the README at the following repositories:
     ```
     checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
     ```
+### Using conan dependency manager
 
-
+    1. cd gpdb/depends
+    2. conan install --build
+       * This command will fetch the orca and xerces artifacts from bintray repository, build and install them.
+       * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory. 
+       In case, the files should be copied elsewhere, please change the location.
     
 ### Build the database
 ```
