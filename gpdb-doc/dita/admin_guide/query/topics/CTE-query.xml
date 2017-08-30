@@ -30,11 +30,11 @@ GROUP BY region, product;
     <p>The query could have been written without the <codeph>WITH</codeph> clause, but would have
       required two levels of nested sub-SELECTs. It is easier to follow with the
         <codeph>WITH</codeph> clause.</p>
-    <p>The optional <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server
-      configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
-        <codeph>on</codeph>.<note type="warning">The <codeph>RECURSIVE</codeph> feature currently is
-        an experimental feature. The feature is not intended for use in a production environment.
-        The feature will promoted from experimental in a future release.</note></p>
+    <p>The <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server configuration
+      parameter <codeph>gp_recursive_cte_prototype</codeph> to <codeph>on</codeph>.<note
+        type="warning">The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not
+        intended for use in a production environment. Experimental features are subject to change
+        without notice in future releases.</note></p>
     <p>The optional <codeph>RECURSIVE</codeph> keyword changes <codeph>WITH</codeph> accomplishes
       things not otherwise possible in standard SQL. Using <codeph>RECURSIVE</codeph>, a query in
       the <codeph>WITH</codeph> clause can refer to its own output. This is a simple example that

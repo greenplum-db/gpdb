@@ -54,8 +54,9 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
               ( <varname>column_definition</varname> [, ...] )
 <varname>from_item</varname> [NATURAL] <varname>join_type</varname> <varname>from_item</varname>
           [ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] )]</codeblock>
-      <p><b>NOTE:</b>
-        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature.</p>
+      <p><b>Note:</b>
+        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not
+        recommended for production use.</p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -116,16 +117,15 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
           each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
           specified; if the list of column names is omitted, the names are inferred from the
           subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
-          executed at the same time. </p><p>The optional <codeph>RECURSIVE</codeph> keyword can be
-          enabled by setting the server configuration parameter
-            <codeph>gp_recursive_cte_prototype</codeph> to <codeph>true</codeph>. For information
-          about the parameter, see <xref href="../config_params/guc_config.xml#topic1"/>.<note
-            type="warning">The <codeph>RECURSIVE</codeph> feature currently is an experimental
-            feature. The feature is not intended for use in a production environment. The feature
-            will promoted from experimental in a future release.</note></p><p>If
-            <codeph>RECURSIVE</codeph> is specified, it allows a subquery to reference itself by
-          name. Such a subquery, the <varname>select</varname> portion of the
-            <varname>with_query</varname> , must have the
+          executed at the same time. </p><p>The <codeph>RECURSIVE</codeph> keyword can be enabled by
+          setting the server configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
+            <codeph>true</codeph>. For information about the parameter, see <xref
+            href="../config_params/guc_config.xml#topic1"/>.<note type="warning">The
+              <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not intended for
+            use in a production environment. Experimental features are subject to change without
+            notice in future releases.</note></p><p>If <codeph>RECURSIVE</codeph> is specified, it
+          allows a subquery to reference itself by name. Such a subquery, the
+            <varname>select</varname> portion of the <varname>with_query</varname> , must have the
           form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL] <varname>recursive_term</varname></codeblock><p>The
           recursive self-reference must appear on the right-hand side of the <codeph>UNION
             [ALL]</codeph>. Only one recursive self-reference is permitted per query. </p><p>If the
