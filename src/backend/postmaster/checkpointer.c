@@ -41,6 +41,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/bgwriter.h"
+#include "replication/syncrep.h"
 #include "storage/fd.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
@@ -344,6 +345,9 @@ CheckpointerMain(void)
 	 */
 	PG_SETMASK(&UnBlockSig);
 
+	/* update global shmem state for sync rep */
+	SyncRepUpdateSyncStandbysDefined();
+
 	/*
 	 * Loop forever
 	 */
@@ -370,6 +374,9 @@ CheckpointerMain(void)
 		{
 			got_SIGHUP = false;
 			ProcessConfigFile(PGC_SIGHUP);
+
+			/* update global shmem state for sync rep */
+			SyncRepUpdateSyncStandbysDefined();
 		}
 		if (checkpoint_requested)
 		{

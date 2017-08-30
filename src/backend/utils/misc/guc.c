@@ -53,6 +53,7 @@
 #include "postmaster/bgwriter.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/syslogger.h"
+#include "replication/syncrep.h"
 #include "replication/walsender.h"
 #include "replication/walreceiver.h"
 #include "postmaster/walwriter.h"
@@ -2635,6 +2636,17 @@ static struct config_string ConfigureNamesString[] =
 		},
 		&pgstat_temp_directory,
 		"pg_stat_tmp", assign_pgstat_temp_directory, NULL
+	},
+
+	{
+		{"synchronous_standby_names", PGC_SIGHUP, WAL_REPLICATION,
+			gettext_noop("List of names of potential synchronous standbys."),
+			NULL,
+			GUC_LIST_INPUT
+		},
+		&SyncRepStandbyNames,
+		"",
+		check_synchronous_standby_names, NULL, NULL
 	},
 
 	{
