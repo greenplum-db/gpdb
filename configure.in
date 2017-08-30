@@ -232,6 +232,13 @@ PGAC_ARG_BOOL(enable, gpfdist, yes,
 AC_SUBST(enable_gpfdist)
 
 #
+# pxf
+#
+PGAC_ARG_BOOL(enable, pxf, yes,
+             [  --disable-pxf           do not use pxf])
+AC_SUBST(enable_pxf)
+
+#
 # --enable-gpperfmon
 #
 PGAC_ARG_BOOL(enable, gpperfmon, no,
@@ -848,14 +855,6 @@ AC_MSG_CHECKING([whether to build Python modules])
 PGAC_ARG_BOOL(with, python, no, [  --with-python           build Python modules (PL/Python)])
 AC_MSG_RESULT([$with_python])
 AC_SUBST(with_python)
-
-#
-# Optionally build PXF support
-#
-AC_MSG_CHECKING([whether to build PXF modules])
-PGAC_ARG_BOOL(with, pxf, yes, [  --with-pxf              build Greenplum PXF support])
-AC_MSG_RESULT([$with_pxf])
-AC_SUBST(with_pxf)
 
 #
 # GSSAPI
@@ -1526,10 +1525,14 @@ if test "$enable_mapreduce" = yes; then
 fi
 
 # json-c
-AC_CHECK_HEADERS(json-c/json.h, [], [AC_MSG_ERROR([header file <json-c/json.h> is required.
-Check config.log for details. It is possible the compiler isn't looking in the proper directory.])])
-AC_SEARCH_LIBS(json_tokener_parse, json-c json, [], [AC_MSG_ERROR([library 'json-c' is required.
-Check config.log for details. It is possible the compiler isn't looking in the proper directory.])], [])
+if test "$enable_pxf" = yes ; then
+  if test "$PORTNAME" != "win32" ; then
+    AC_CHECK_HEADERS(json-c/json.h, [], [AC_MSG_ERROR([header file <json-c/json.h> is required.
+    Check config.log for details. It is possible the compiler isn't looking in the proper directory.])])
+    AC_SEARCH_LIBS(json_tokener_parse, json-c json, [], [AC_MSG_ERROR([library 'json-c' is required.
+    Check config.log for details. It is possible the compiler isn't looking in the proper directory.])], [])
+  fi
+fi
 
 ##
 ## Types, structures, compiler characteristics
