@@ -97,7 +97,8 @@ building, see the README at the following repositories:
 #### Using conan dependency manager
 
     1. cd gpdb/depends
-    2. conan install --build
+    2. conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
+    3. conan install --build
        * This command will fetch the orca and xerces artifacts from bintray repository, build and install them.
        * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory. 
        In case, the files should be copied elsewhere, please change the location.
