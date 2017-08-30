@@ -94,7 +94,7 @@ building, see the README at the following repositories:
     ```
     checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
     ```
-### Using conan dependency manager
+#### Using conan dependency manager
 
     1. cd gpdb/depends
     2. conan install --build
