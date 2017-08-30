@@ -83,6 +83,7 @@ class InitMirrors():
         catalog_update_query = "select pg_catalog.gp_add_segment_mirror(%d::int2, '%s', '%s', %d, -1, '{pg_system, %s}')" % (mirror_contentid, self.hostname, self.hostname, mirror_port, mirror_dir)
         commands.append("PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
 
+
         thread_name = 'Mirror content %d' % mirror_contentid
         command_finish = 'Initialized mirror at %s' % mirror_dir
         runcommands(commands, thread_name, command_finish)
@@ -90,6 +91,16 @@ class InitMirrors():
     def run(self):
         # Assume db user is current user
         user = subprocess.check_output(["whoami"]).rstrip('\n')
+
+        ''' Notify Primary of mirror addition, to start blocking. Currently do not have
+        way to set GUC for specific segment. Hence at end of initializing all
+        mirrors adding the GUC. Can't have it in InitMirrors as query to master
+        at StartMirror gets blocked, so need to perform the same after starting
+        mirrors. '''
+        commands = []
+        commands.append("gpconfig -c synchronous_standby_names -v \"*\"");
+        commands.append("gpstop -u");
+        runcommands(commands, "Main Mirror Init", "Notified primaries of mirror addition")
 
         initThreads = []
         for segconfig in self.segconfigs:
@@ -133,6 +144,7 @@ class StartMirrors():
 
         for thread in startThreads:
             thread.join()
+
 
 class StopMirrors():
     ''' Stop the WAL replication mirror segment '''
@@ -194,12 +206,23 @@ class DestroyMirrors():
         for thread in destroyThreads:
             thread.join()
 
+        commands = []
+
+        '''
+        Notify Primary of mirror deletion, to stop blocking. Currently do not
+        have way to set GUC for specific segment. Hence at end of removing
+        all mirrors removing the GUC.
+        '''
+        commands.append("gpconfig -r synchronous_standby_names");
+        commands.append("gpstop -u");
+        runcommands(commands, "Main Mirror Destroy", "Notified primaries of mirror removal")
+
 def getSegInfo(hostname, port, dbname):
     query = "SELECT dbid, content, port, fselocation, preferred_role FROM gp_segment_configuration s, pg_filespace_entry f WHERE s.content != -1 AND s.dbid = fsedbid"
     dburl = dbconn.DbURL(hostname, port, dbname)
 
     try:
-        with dbconn.connect(dburl) as conn:
+        with dbconn.connect(dburl, utility=True) as conn:
             segconfigs = dbconn.execSQL(conn, query).fetchall()
     except Exception, e:
         print e
