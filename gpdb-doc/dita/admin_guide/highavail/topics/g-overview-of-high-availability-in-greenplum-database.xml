@@ -37,10 +37,9 @@
          <title>Data storage checksums</title>
          <p>Greenplum Database uses checksums to verify that data loaded from disk to memory has not
             been corrupted on the file system. </p>
-         <p>Greenplum Database has two kinds of storage for database data: heap and
-            append-optimized. Both storage models use checksums to verify data read from the file
-            system and, with the default settings, they handle checksum verification errors in a
-            similar way.</p>
+         <p>Greenplum Database has two kinds of storage for user data: heap and append-optimized.
+            Both storage models use checksums to verify data read from the file system and, with the
+            default settings, they handle checksum verification errors in a similar way.</p>
          <p>Greenplum Database primary and segment database processes update data on pages in the
             memory they manage. When a memory page is updated and flushed to disk, checksums are
             computed and saved with the page. When a page is later retrieved from disk, the
@@ -75,7 +74,7 @@
             If the page is updated and saved to disk, the corrupted data could be replicated to the
             mirror segment. Because this can lead to data loss, setting
                <codeph>ignore_checksum_failure</codeph> to on should only be done to enable data
-            recovery or system maintenance. </p>
+            recovery. </p>
          <p>For append-optimized storage, checksum support is one of several storage options set at
             the time an append-optimized table is created with the <codeph>CREATE TABLE</codeph>
             statement. The default storage options are specified in the
