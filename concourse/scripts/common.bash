@@ -26,8 +26,8 @@ function configure() {
       # on these options for deciding what to test. Since we don't ship
       # Perl on SLES we must also skip GPMapreduce as it uses pl/perl.
       if [ "$TEST_OS" == "sles" ]; then
-        ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --disable-orca ${CONFIGURE_FLAGS}
-	  else
+        ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --disable-orca --disable-pxf ${CONFIGURE_FLAGS}
+      else
         ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --disable-orca ${CONFIGURE_FLAGS}
       fi
   popd
@@ -51,7 +51,7 @@ workaround_before_concourse_stops_stripping_suid_bits() {
 }
 
 function run_test() {
-	# is this particular python version giving us trouble?
+  # is this particular python version giving us trouble?
   ln -s "$(pwd)/gpdb_src/gpAux/ext/rhel6_x86_64/python-2.7.12" /opt
   su - gpadmin -c "bash /opt/run_test.sh $(pwd)"
 }
