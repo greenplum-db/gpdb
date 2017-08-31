@@ -4,7 +4,12 @@
  *		Access into the motion-layer in order to send and receive tuples
  *		within a motion node ID within a particular process group id.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/cdbmotion.c
  *
  * Reviewers: jzhang, tkordas
  *-------------------------------------------------------------------------

@@ -3,7 +3,12 @@
  * gp_policy.h
  *	  definitions for the gp_distribution_policy catalog table
  *
- * Copyright (c) 2005-2011, Greenplum inc
+ * Portions Copyright (c) 2005-2011, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/gp_policy.h
  *
  * NOTES
  *

@@ -5,7 +5,12 @@
  * 		Representation of compression algorithms for user extensibility of
  * 		compression used by the storage layer.
  *
- * Copyright (c) EMC, 2011
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_compression.h
  *
  *-------------------------------------------------------------------------
  */

@@ -2,7 +2,12 @@
  *
  * cdbrelsize.c
  *
- * Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbrelsize.c
  *
  *-------------------------------------------------------------------------
  */

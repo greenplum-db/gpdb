@@ -1,8 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * nodeSequence.h
  *    header file for nodeSequence.c.
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeSequence.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef NODESEQUENCE_H
 #define NODESEQUENCE_H

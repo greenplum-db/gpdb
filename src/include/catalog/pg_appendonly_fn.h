@@ -1,11 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* pg_appendonly_fn.h
-*	  Functions related to AO-table related system catalogs.
-*
-* Copyright (c) 2008-2010, Greenplum Inc.
-*-------------------------------------------------------------------------
-*/
+ *
+ * pg_appendonly_fn.h
+ *	  Functions related to AO-table related system catalogs.
+ *
+ * Portions Copyright (c) 2008-2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_appendonly_fn.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef PG_APPENDONLY_FN_H
 #define PG_APPENDONLY_FN_H
 

@@ -1,13 +1,21 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * nodeDynamicIndexscan.c 
- *	Support routines for scanning one or more indexes that
- *	are determined at runtime.
+ *	  Support routines for scanning one or more indexes that are
+ *	  determined at runtime.
  *
  *	DynamicIndexScan node scans each index one after the other.
  *	For each index, it opens the index, scans the index, and returns
  *	relevant tuples.
  *
- * Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeDynamicIndexscan.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

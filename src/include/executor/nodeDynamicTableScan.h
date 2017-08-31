@@ -1,7 +1,15 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * nodeDynamicTableScan.h
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeDynamicTableScan.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef NODEDYNAMICTABLESCAN_H
 #define NODEDYNAMICTABLESCAN_H

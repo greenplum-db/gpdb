@@ -1,13 +1,19 @@
 /*--------------------------------------------------------------------------
-*
-* cdbsreh.c
-*	  Provides routines for single row error handling for COPY and external
-*	  tables.
-*
-* Copyright (c) 2007-2008, Greenplum inc
-*
-*--------------------------------------------------------------------------
-*/
+ *
+ * cdbsreh.c
+ *	  Provides routines for single row error handling for COPY and external
+ *	  tables.
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbsreh.c
+ *
+ *--------------------------------------------------------------------------
+ */
+
 #include "postgres.h"
 #include <unistd.h>
 #include <sys/stat.h>

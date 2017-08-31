@@ -1,11 +1,16 @@
 /*--------------------------------------------------------------------------
-*
-* cdbcopy.c
-*	 Rrovides routines that executed a COPY command on an MPP cluster. These
-*	 routines are called from the backend COPY command whenever MPP is in the
-*	 default dispatch mode.
-*
-* Copyright (c) 2005-2008, Greenplum inc
+ *
+ * cdbcopy.c
+ * 	 Rrovides routines that executed a COPY command on an MPP cluster. These
+ * 	 routines are called from the backend COPY command whenever MPP is in the
+ * 	 default dispatch mode.
+ *
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbcopy.c
 *
 *--------------------------------------------------------------------------
 */

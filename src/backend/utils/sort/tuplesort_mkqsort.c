@@ -1,13 +1,21 @@
-/* 
- * tuplesort_mkheap.c
- * 		Multi level key quick sort.
- * 
- * Copyright (c) Greenplum Inc, 2008.
+/*-------------------------------------------------------------------------
+ *
+ * tuplesort_mkqsort.c
+ *	  Multi level key quick sort.
  *
  * A multi level key Bentley McIlroy 3-way partitioning quick sort.
- * 	See [1] J. Bentley, M. McIlroy.  Engineering a sort function, 
+ * 	See [1] J. Bentley, M. McIlroy.  Engineering a sort function,
  * 		Software Practice and Experience, Vol 23(11) Nov, 1993.
  * 	    [2] R. Sedgewick, J. Bentley. Quicksort is optimal.
+ *
+ * Portions Copyright (c) Greenplum Inc, 2008.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/sort/tuplesort_mkqsort.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

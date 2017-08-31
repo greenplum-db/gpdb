@@ -2,7 +2,12 @@
  *
  * cdbappendonlystorageformat.c
  *
- * Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbappendonlystorageformat.c
  *
  *-------------------------------------------------------------------------
  */

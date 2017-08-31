@@ -4,11 +4,16 @@
  *	  GPDB resource group management code.
  *
  *
- * Copyright (c) 2006-2017, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/resgroup/resgroup.c
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "access/genam.h"

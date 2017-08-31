@@ -3,7 +3,12 @@
  * cdbmutate.h
  *	  definitions for cdbmutate.c utilities
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbmutate.h
  *
  *-------------------------------------------------------------------------
  */

@@ -2,7 +2,12 @@
  * tupchunklist.c
  *	  The data-structures and functions for dealing with tuple chunk lists.
  *
- * Copyright (c) 2005-2008, Greenplum
+ * Portions Copyright (c) 2005-2008, Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/tupchunklist.c
  *
  * Reviewers: jzhang, ftian, tkordas
  *-------------------------------------------------------------------------

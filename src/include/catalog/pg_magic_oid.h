@@ -1,6 +1,16 @@
-/* 
- * Magic oids 
- *      Copyright (c) 2009, Greenplum Inc.
+/*-------------------------------------------------------------------------
+ *
+ * pg_magic_oid.h
+ *	  Magic oids
+ *
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_magic_oid.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef PG_MAGIC_OID_H

@@ -4,7 +4,12 @@
  *	  definition of the system configuration
  *
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/gp_configuration.h
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki

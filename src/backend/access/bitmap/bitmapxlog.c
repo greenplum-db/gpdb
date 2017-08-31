@@ -1,15 +1,20 @@
 /*-------------------------------------------------------------------------
  *
  * bitmapxlog.c
- *	WAL replay logic for the bitmap index.
+ *	  WAL replay logic for the bitmap index.
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
  * 
+ *
  * IDENTIFICATION
- *	$PostgreSQL$
+ *	  src/backend/access/bitmap/bitmapxlog.c
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include <unistd.h>

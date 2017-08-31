@@ -1,7 +1,8 @@
 /*
  * PostgreSQL System Views
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
  * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.48 2008/01/01 19:45:48 momjian Exp $

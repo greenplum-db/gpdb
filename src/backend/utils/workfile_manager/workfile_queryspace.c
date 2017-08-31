@@ -3,7 +3,12 @@
  * workfile_queryspace.c
  *	 Implementation of workfile manager per query disk space accounting
  *
- * Copyright (c) 2013, EMC Corp.
+ * Portions Copyright (c) 2013, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/workfile_manager/workfile_queryspace.c
  *
  *-------------------------------------------------------------------------
  */

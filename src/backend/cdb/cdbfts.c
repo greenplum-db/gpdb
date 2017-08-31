@@ -3,7 +3,12 @@
  * cdbfts.c
  *	  Provides fault tolerance service routines for mpp.
  *
- * Copyright (c) 2003-2008, Greenplum inc
+ * Portions Copyright (c) 2003-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbfts.c
  *
  *-------------------------------------------------------------------------
  */

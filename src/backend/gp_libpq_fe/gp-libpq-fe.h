@@ -5,10 +5,13 @@
  *	  externs for functions used by frontend postgres applications.
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/interfaces/libpq/libpq-fe.h,v 1.147 2009/06/11 14:49:14 momjian Exp $
+ *
+ * IDENTIFICATION
+ *	    src/backend/gp_libpq_fe/gp-libpq-fe.h
  *
  *-------------------------------------------------------------------------
  */

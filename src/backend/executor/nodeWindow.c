@@ -4,7 +4,12 @@
  *	  Routines to handle window nodes.
  *
  *
- * Copyright (c) 2007-2012, Greenplum inc *
+ * Portions Copyright (c) 2007-2012, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeWindow.c
  *
  *-------------------------------------------------------------------------
  */

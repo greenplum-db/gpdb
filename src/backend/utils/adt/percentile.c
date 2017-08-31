@@ -4,7 +4,12 @@
  *	  Support functions for inverse distribution functions.
  *
  *
- * Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/adt/percentile.c
  *
  *
  *-------------------------------------------------------------------------

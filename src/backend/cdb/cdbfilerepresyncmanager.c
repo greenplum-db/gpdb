@@ -1,7 +1,15 @@
-/*
- *  cdbfilerepresyncmanager.c
+/*-------------------------------------------------------------------------
  *
- *  Copyright 2009-2010 Greenplum Inc. All rights reserved. *
+ * cdbfilerepresyncmanager.c
+ *
+ * Portions Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbfilerepresyncmanager.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 /*

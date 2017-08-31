@@ -1,14 +1,19 @@
 /*--------------------------------------------------------------------------
-*
-* cdbcopy.h
-*	 Definitions and API functions for cdbcopy.c
-*	 These are functions that are used by the backend
-*	 COPY command in Greenplum Database.
-*
-* Copyright (c) 2005-2008, Greenplum inc
-*
-*--------------------------------------------------------------------------
-*/
+ *
+ * cdbcopy.h
+ *	 Definitions and API functions for cdbcopy.c
+ *	 These are functions that are used by the backend
+ *	 COPY command in Greenplum Database.
+ *
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbcopy.h
+ *
+ *--------------------------------------------------------------------------
+ */
 #ifndef CDBCOPY_H
 #define CDBCOPY_H
 

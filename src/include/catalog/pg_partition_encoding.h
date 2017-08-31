@@ -3,7 +3,12 @@
  * pg_partition_encoding.h
  *	  some where to stash ENCODING() clauses for partition templates
  *
- * Copyright (c) EMC, 2011
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_partition_encoding.h
  *
  *-------------------------------------------------------------------------
  */

@@ -1,8 +1,16 @@
-/* 
- * tuplesort_mk_details.h 
- * 	Tuplesort Multi Key.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) Greenplum Inc. 2008.
+ * tuplesort_mk_details.h 
+ *	  Tuplesort Multi Key.
+ *
+ * Portions Copyright (c) Greenplum Inc. 2008.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/tuplesort_mk_details.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef TUPLESORT_MK_DETAILS_H

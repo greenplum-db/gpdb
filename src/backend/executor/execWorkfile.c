@@ -3,10 +3,16 @@
  * execWorkfile.c
  *    Management of temporary work files used by the executor nodes.
  *
- * Copyright (c) 2010. Greenplum Inc.
- *
  * WorkFiles provide a general interface to different implementations of
  * temporary files used by the executor nodes.
+ *
+ * Portions Copyright (c) 2010. Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execWorkfile.c
+ *
  *-------------------------------------------------------------------------
  */
 

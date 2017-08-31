@@ -1,8 +1,15 @@
-/*
- *  cdbfilerepprimaryack.c
- *  
+/*-------------------------------------------------------------------------
  *
- *  Copyright 2009-2010 Greenplum Inc. All rights reserved. *
+ * cdbfilerepprimaryack.c
+ *  
+ * Portions Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbfilerepprimaryack.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

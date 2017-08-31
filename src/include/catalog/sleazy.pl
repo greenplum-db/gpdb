@@ -258,7 +258,8 @@ then that value is used.
 
 Jeffrey I Cohen
 
-Copyright (c) 2012, 2013 Greenplum.  All rights reserved.  
+Portions Copyright (c) 2012, 2013 Greenplum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 

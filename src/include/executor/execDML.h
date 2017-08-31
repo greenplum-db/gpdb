@@ -3,7 +3,12 @@
  * execDML.h
  *	  Prototypes for execDML.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/execDML.h
  *
  *-------------------------------------------------------------------------
  */

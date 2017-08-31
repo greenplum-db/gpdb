@@ -1,7 +1,15 @@
-/* 
+/*-------------------------------------------------------------------------
+ *
  * Fault injection utilities 
  * 
- * Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/faultinjection.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef GP_FAULT_INJECTION_H

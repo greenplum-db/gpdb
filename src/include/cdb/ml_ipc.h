@@ -1,10 +1,16 @@
 /*-------------------------------------------------------------------------
-* ml_ipc.h
-*	Motion Layer IPC Layer.
-*
-* Copyright (c) 2005-2008, Greenplum inc
-*-------------------------------------------------------------------------
-*/
+ * ml_ipc.h
+ *	  Motion Layer IPC Layer.
+ *
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/ml_ipc.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef ML_IPC_H
 #define ML_IPC_H
 

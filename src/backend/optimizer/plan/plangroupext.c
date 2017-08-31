@@ -3,10 +3,13 @@
  * plangroupext.c
  *    Planning routines for grouping extensions.
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
  *
  * IDENTIFICATION
  *    src/backend/optimizer/plan/plangroupext.c
+ *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"

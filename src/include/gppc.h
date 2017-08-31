@@ -28,7 +28,12 @@
  * GPPC 1.1 is compatible with Greenplum Database 4.2.2.0 and above.
  * GPPC 1.2 is compatible with Greenplum Database 4.2.2.0 and above.
  *
- * Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/gppc.h
  *
  *//* ----------------------------------------------------------------------- */
 #ifndef GPPC_H

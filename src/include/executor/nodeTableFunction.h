@@ -2,7 +2,12 @@
  *
  * nodeTableFunction.h
  *
- * Copyright (c) 2011 - present, EMC
+ * Portions Copyright (c) 2011 - present, EMC
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeTableFunction.h
  *
  *-------------------------------------------------------------------------
  */

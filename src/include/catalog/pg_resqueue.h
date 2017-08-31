@@ -4,11 +4,14 @@
  *	  definition of the system "resource queue" relation (pg_resqueue).
  *
  *
- * Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2006-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL$
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_resqueue.h
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki

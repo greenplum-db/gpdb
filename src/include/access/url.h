@@ -4,7 +4,8 @@
  *    routines for external table access to urls.
  *    to the qExec processes.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  * src/include/access/url.h
  *

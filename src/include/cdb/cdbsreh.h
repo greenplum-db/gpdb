@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* cdbsreh.h
-*	  routines for single row error handling
-*
-* Copyright (c) 2007-2008, Greenplum inc
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * cdbsreh.h
+ *	  routines for single row error handling
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbsreh.h
+ *
+ *-------------------------------------------------------------------------
+ */
 
 #ifndef CDBSREH_H
 #define CDBSREH_H

@@ -1,9 +1,15 @@
 /*-------------------------------------------------------------------------
  *
- * access/formatter.h
+ * formatter.h
  *	  Declarations for External Table Formatter functions
  *
- * Copyright (c) 2010, EMC corporation
+ * Portions Copyright (c) 2010, EMC corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/formatter.h
+ *
  *-------------------------------------------------------------------------
  */
 

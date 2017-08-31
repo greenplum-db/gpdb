@@ -1,7 +1,16 @@
-/*
- * Append only columnar access methods
+/*--------------------------------------------------------------------------
  *
- *	Copyright (c), 2009-2010, Greenplum Inc.
+ * aocsam.c
+ *	  Append only columnar access methods
+ *
+ * Portions Copyright (c) 2009-2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/aocs/aocsam.c
+ *
+ *--------------------------------------------------------------------------
  */
 
 #include "postgres.h"

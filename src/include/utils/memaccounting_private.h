@@ -5,7 +5,11 @@
  *	  are only supposed to be used by privileged callers such a memory managers.
  *	  Other files should not include this file.
  *
- * Copyright (c) 2016, Pivotal Inc.
+ * Copyright (c) 2016-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/memaccounting_private.h
  *
  *-------------------------------------------------------------------------
  */

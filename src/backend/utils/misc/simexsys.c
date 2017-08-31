@@ -1,8 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * simexsys.c
  * 		Implementation of system call wrappers with integrated ES injection
  *
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/simexsys.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include <sys/socket.h>

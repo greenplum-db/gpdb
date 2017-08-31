@@ -1,12 +1,18 @@
 /*-------------------------------------------------------------------------
  *
  * transform.c
- * 	This file contains methods to transform the query tree
+ *	  This file contains methods to transform the query tree
  *
  * Portions Copyright (c) 2011, EMC Greenplum
- * Author: Siva Narayanan
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	  src/backend/optimizer/plan/transform.c
+ *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 #include "nodes/parsenodes.h"
 #include "nodes/makefuncs.h"

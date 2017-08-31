@@ -1,17 +1,22 @@
 /*-------------------------------------------------------------------------
  *
  * cdbtmutils.c
- *	  Provides routines for help performing distributed transaction management
+ *	  Provides routines for help performing distributed transaction
+ *    management
  *
- *	  Unlike cdbtm.c, this file deals mainly with packing and unpacking structures,
- *	    converting values to strings, etc.
+ * Unlike cdbtm.c, this file deals mainly with packing and unpacking
+ * structures, converting values to strings, etc.
  *
- * Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * src/backend/cdb/cdbtmutils.c
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbtmutils.c
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "cdb/cdbtm.h"

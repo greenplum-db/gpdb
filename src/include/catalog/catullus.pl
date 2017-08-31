@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 #
-# copyright (c) 2011
+# Portions Copyright (c) 2011 Greenplum Inc
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 
 use POSIX;
@@ -83,7 +85,8 @@ pg_window.  And operators and operator classes?  Access methods? Casts?
 
 Jeffrey I Cohen
 
-Copyright (c) 2011 Greenplum.  All rights reserved.  
+Portions Copyright (c) 2011 Greenplum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 

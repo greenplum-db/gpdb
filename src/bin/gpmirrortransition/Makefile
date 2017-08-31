@@ -3,10 +3,12 @@
 # Makefile for src/bin/gpmirrortransition
 #
 # Portions Copyright (c) 2009 Greenplum Inc 
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 #
 # This Makefile was copied from the pg_dump makefile and modified accordingly
 #
-# $PostgreSQL: pgsql/src/bin/gpmirrortransition/Makefile,v 1.62 2006/03/05 15:58:50 momjian Exp $
+# IDENTIFICATION
+#		src/bin/gpmirrortransition/Makefile
 #
 #-------------------------------------------------------------------------
 

@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * nodeRepeat.c
- *    Repeatly output each result tuple in the subplan with some defined number
- *    of counts.
+ *    Repeatly output each result tuple in the subplan with some defined
+ *    number of counts.
  *
  * DESCRIPTION
  *
@@ -12,15 +12,13 @@
  *    For example, it is useful in grouping extension queries where the query
  *    contain duplicate grouping sets.
  *
- * Copyright (c) 2008 - present, Greenplum Inc.
+ * Portions Copyright (c) 2008 - present, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * IDENTIFICATION:
- *     $Id$
  *
- * $File$
- * $Change$
- * $Author$
- * $DateTime$
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeRepeat.c
+ *
  *-------------------------------------------------------------------------
  */
 

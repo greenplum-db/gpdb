@@ -1,7 +1,16 @@
-/* 
+/*-------------------------------------------------------------------------
+ *
  * debugbreak.c
- * 	Debugging facilities
- * Copyright (c) 2007-2008, Greenplum inc
+ *	  Debugging facilities
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/error/debugbreak.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

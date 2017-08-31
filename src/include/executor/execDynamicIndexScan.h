@@ -3,7 +3,11 @@
  * execDynamicIndexScan.h
  *	 Definitions and API functions for execDynamicIndexScan.c
  *
- * Copyright (c) 2014, Pivotal, Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/execDynamicIndexScan.h
  *
  *--------------------------------------------------------------------------
  */

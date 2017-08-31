@@ -1,8 +1,15 @@
-/* 
+/*-------------------------------------------------------------------------
+ *
  * faultinject.c
- * 	 Fault injection utilities
+ *	  Fault injection utilities
  * 
- * Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/error/faultinject.c
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

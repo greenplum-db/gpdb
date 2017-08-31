@@ -1,9 +1,14 @@
 /*-------------------------------------------------------------------------
  *
- * nodeRowTriggerOp.h
+ * nodeRowTrigger.h
  *	  Prototypes for nodeRowTriggerOp.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeRowTrigger.h
  *
  *-------------------------------------------------------------------------
  */

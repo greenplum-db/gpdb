@@ -1,9 +1,15 @@
 /*-------------------------------------------------------------------------
  *
  * aomd.h
- *	  declarations and functions for supporting aomd.c
+ *	  Declarations and functions for supporting aomd.c
  *
  * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/aomd.h
+ *
  *-------------------------------------------------------------------------
  */
 #ifndef AOMD_H

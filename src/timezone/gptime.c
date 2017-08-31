@@ -1,11 +1,12 @@
 /*
- * gptime
+ * gptime.c
  *   define time-related functions used in GPDB
  * 
- * Copyright (c), EMC DCD (Greenplum)
+ * Portions Copyright (c), EMC DCD (Greenplum)
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  * IDENTIFICATION
- *   $Id$
+ *   src/timezone/gptime.c
  */
 #include "c.h"
 

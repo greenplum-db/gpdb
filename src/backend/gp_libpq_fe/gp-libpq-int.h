@@ -10,10 +10,13 @@
  *	  only the official API.
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/interfaces/libpq/libpq-int.h,v 1.143 2009/06/23 18:13:23 mha Exp $
+ *
+ * IDENTIFICATION
+ *	    src/backend/gp_libpq_fe/gp-libpq-int.h
  *
  *-------------------------------------------------------------------------
  */

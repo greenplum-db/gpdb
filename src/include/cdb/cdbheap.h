@@ -5,7 +5,12 @@
  * Generic heap functions, that can be used with any
  * data structure and comparator function
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbheap.h
  *
  *-------------------------------------------------------------------------
  */

@@ -1,11 +1,15 @@
 /*------------------------------------------------------------------------------
  *
- * aocs_compaction
+ * aocs_compaction.h
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/aocs_compaction.h
  *
  *------------------------------------------------------------------------------
-*/
+ */
 #ifndef AOCS_COMPACTION_H
 #define AOCS_COMPACTION_H
 

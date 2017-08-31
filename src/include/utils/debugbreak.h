@@ -1,7 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * debugbreak.h
  * 		Debugging facilities
- * Copyright (c) 2007-2008, Greenplum inc
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/debugbreak.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef _DEBUG_BREAK_H_

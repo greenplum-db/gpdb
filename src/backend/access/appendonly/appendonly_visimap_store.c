@@ -4,7 +4,11 @@
  *   maintain a visibility bitmap for all rows in a
  *   minipage.
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/appendonly/appendonly_visimap_store.c
  *
  *------------------------------------------------------------------------------
 */

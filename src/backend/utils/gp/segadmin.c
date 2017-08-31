@@ -1,9 +1,16 @@
 /*-------------------------------------------------------------------------
  *
- * Copyright (c) 2010 Greenplum
+ * segadmin.c
+ *	  Functions to support administrative tasks with GPDB segments.
  *
- * Functions to support administrative tasks with GPDB segments.
+ * Portions Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/gp/segadmin.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 #include "miscadmin.h"

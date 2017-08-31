@@ -1,9 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * debugutils.h
+ *	  Debugging tools and routines
  * 
- * Debugging tools and routines
- * 
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/debugutils.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef _DEBUGUTILS_H_

@@ -1,27 +1,32 @@
 /*-------------------------------------------------------------------------
-*
-* fileam.c
-*	  file access method routines
-*
-* This access layer mimics the heap access API with respect to how it
-* communicates with its respective scan node (external scan node) but
-* instead of accessing the heap pages, it actually "scans" data by
-* reading it from a local flat file or a remote data source.
-*
-* The actual data access, whether local or remote, is done with the
-* curl c library ('libcurl') which uses a 'c-file like' API but behind
-* the scenes actually does all the work of parsing the URI and communicating
-* with the target. In this case if the URI uses the file protocol (file://)
-* curl will try to open the specified file locally. If the URI uses the
-* http protocol (http://) then curl will reach out to that address and
-* get the data from there.
-*
-* As data is being read it gets parsed with the COPY command parsing rules,
-* as if it is data meant for COPY. Therefore, currently, with the lack of
-* single row error handling the first error will raise an error and the
-* query will terminate.
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * fileam.c
+ *	  file access method routines
+ *
+ * This access layer mimics the heap access API with respect to how it
+ * communicates with its respective scan node (external scan node) but
+ * instead of accessing the heap pages, it actually "scans" data by
+ * reading it from a local flat file or a remote data source.
+ *
+ * The actual data access, whether local or remote, is done with the
+ * curl c library ('libcurl') which uses a 'c-file like' API but behind
+ * the scenes actually does all the work of parsing the URI and communicating
+ * with the target. In this case if the URI uses the file protocol (file://)
+ * curl will try to open the specified file locally. If the URI uses the
+ * http protocol (http://) then curl will reach out to that address and
+ * get the data from there.
+ *
+ * As data is being read it gets parsed with the COPY command parsing rules,
+ * as if it is data meant for COPY. Therefore, currently, with the lack of
+ * single row error handling the first error will raise an error and the
+ * query will terminate.
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/external/fileam.c
  *
  *-------------------------------------------------------------------------
  */

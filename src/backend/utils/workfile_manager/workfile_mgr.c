@@ -3,7 +3,12 @@
  * workfile_mgr.c
  *	 Implementation of workfile manager and workfile caching.
  *
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/workfile_manager/workfile_mgr.c
  *
  *-------------------------------------------------------------------------
  */

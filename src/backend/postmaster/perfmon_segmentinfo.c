@@ -3,15 +3,19 @@
  * perfmon_segmentinfo.c
  *    Send segment information to perfmon
  *
- * Copyright (c) 2010, Greenplum inc.
- *
  * This file contains functions for sending segment information to
  * perfmon. At startup the postmaster process forks a new process
  * that sends segment info in predefined intervals using UDP packets.
  *
- *
  *  Created on: Feb 28, 2010
  *      Author: kkrik
+ *
+ * Portions Copyright (c) 2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/perfmon_segmentinfo.c
  *
  *-------------------------------------------------------------------------
 */

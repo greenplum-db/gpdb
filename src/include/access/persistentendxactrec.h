@@ -3,7 +3,12 @@
  * persistentendxactrec.h
  *	  Make and read persistent information in commit, abort, and prepared records.
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/persistentendxactrec.h
  *
  *-------------------------------------------------------------------------
  */

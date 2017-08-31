@@ -1,7 +1,15 @@
-/*
- * DatumStreamBlock
+/*-------------------------------------------------------------------------
  *
- *	Copyright (c) 2011, EMC, Inc.
+ * datumstreamblock.c
+ *
+ * Portions Copyright (c) 2011, EMC, Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/datumstream/datumstreamblock.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

@@ -5,7 +5,11 @@
  *   visibility map tables. This file is identical in functionality to aoseg.c
  *   that exists in the same directory.
  *
- * Copyright (c) 2013, Pivotal Inc.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/catalog/aovisimap.c
  *
  *-------------------------------------------------------------------------
  */

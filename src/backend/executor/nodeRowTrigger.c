@@ -3,7 +3,12 @@
  * nodeRowTriggerOp.c
  *	  Implementation of nodeRowTriggerOp.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeRowTrigger.c
  *
  * The semantics of triggers is the following:
  * After triggers are executed after each tuple is processed, which

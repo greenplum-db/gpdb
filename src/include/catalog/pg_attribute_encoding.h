@@ -3,7 +3,12 @@
  * pg_attribute_encoding.h
  *	  some where to stash column level ENCODING () clauses
  *
- * Copyright (c) EMC, 2011
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_attribute_encoding.h
  *
  *-------------------------------------------------------------------------
  */

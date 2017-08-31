@@ -1,8 +1,16 @@
-/*
- * execHeapScan.c
- *   Support routines for scanning Heap tables.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * execHeapScan.c
+ *	  Support routines for scanning Heap tables.
+ *
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execHeapScan.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

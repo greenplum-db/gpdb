@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 #
-# copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.  
+# Portions Copyright (c) 2007, 2008, 2009 GreenPlum.  All rights reserved.
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 #
 # Pod::Usage is loaded lazily when needed, if the --help or other such option

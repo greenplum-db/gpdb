@@ -3,7 +3,12 @@
  * cdbplan.h
  *	  definitions for cdbplan.c utilities
  *
- * Copyright (c) 2004-2008, Greenplum inc
+ * Portions Copyright (c) 2004-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbplan.h
  *
  *-------------------------------------------------------------------------
  */

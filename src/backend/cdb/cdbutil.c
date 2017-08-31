@@ -3,7 +3,12 @@
  * cdbutil.c
  *	  Internal utility support functions for Greenplum Database/PostgreSQL.
  *
- * Copyright (c) 2005-2011, Greenplum inc
+ * Portions Copyright (c) 2005-2011, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbutil.c
  *
  * NOTES
  *

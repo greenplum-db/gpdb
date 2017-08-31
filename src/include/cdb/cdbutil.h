@@ -4,7 +4,12 @@
  *	  Header file for routines in cdbutil.c and results returned by
  *	  those routines.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbutil.h
  *
  *-------------------------------------------------------------------------
  */

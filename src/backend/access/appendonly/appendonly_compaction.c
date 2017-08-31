@@ -12,7 +12,11 @@
  * the compacted segment files are dropped and the eof/tupcount/varblock
  * information in pg_aoseg_<oid> are reset to 0.
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/appendonly/appendonly_compaction.c
  *
  *------------------------------------------------------------------------------
  */

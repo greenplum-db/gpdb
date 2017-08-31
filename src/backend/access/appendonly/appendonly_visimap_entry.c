@@ -3,7 +3,11 @@
  * appendonly_visimap
  *   maintain a visibility bitmap entry
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/appendonly/appendonly_visimap_entry.c
  *
  *------------------------------------------------------------------------------
 */

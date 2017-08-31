@@ -2,7 +2,12 @@
  *
  * cdbappendonlystorage_int.h
  *
- * Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2007-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbappendonlystorage_int.h
  *
  *-------------------------------------------------------------------------
  */

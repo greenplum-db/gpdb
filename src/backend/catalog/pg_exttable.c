@@ -4,8 +4,13 @@
  *	  routines to support manipulation of the pg_exttable relation
  *
  * Portions Copyright (c) 2009, Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2006, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/catalog/pg_exttable.c
  *
  *-------------------------------------------------------------------------
  */

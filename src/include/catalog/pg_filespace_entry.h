@@ -14,11 +14,14 @@
  *    bootstrapping issue of what gets added first (the segment or the 
  *    filespace_entry for the segment).
  *
- * Copyright (c) 2009-2010, Greenplum Inc
+ * Portions Copyright (c) 2009-2010, Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL$
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_filespace_entry.h
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki

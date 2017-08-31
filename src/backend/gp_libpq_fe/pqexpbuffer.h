@@ -16,8 +16,13 @@
  * be linked into libpq.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/gp_libpq_fe/pqexpbuffer.h
  *
  * $PostgreSQL: pgsql/src/interfaces/libpq/pqexpbuffer.h,v 1.24 2010/01/02 16:58:12 momjian Exp $
  *

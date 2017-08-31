@@ -11,7 +11,11 @@
  * The visibility map store is responsible for storing and finding
  * visibility map entries. 
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/appendonly_visimap.h
  *
  *------------------------------------------------------------------------------
 */

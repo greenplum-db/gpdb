@@ -1,34 +1,52 @@
-/**
- * cdbfilerepresetprocess
+/*-------------------------------------------------------------------------
  *
- * This reset process should be launched during postmaster reset when we want to coordinate the reset with the filerep peer
+ * cdbfilerepresetpeerprocess.c
+ *	  Reset process to be launched during postmaster reset when we want to
+ *	  coordinate the reset with the filerep peer
  *
  * FileRepResetPeer_Main does two things:
  *   1) set up general process code
  *   2) run the coordination with the peer
  *
  * The process will exit cleanly with one of two codes:
- *   1 (EXIT_CODE_SHOULD_ENTER_FAULT) if the postmaster should transition to a filerep fault rather than continue with database/mirror restart
- *   0 (EXIT_CODE_SHOULD_RESTART_SHMEM_CLEANLY) if the postmaster should continue with shared memory reset followed by startup of the database and mirror
+ *   1: (EXIT_CODE_SHOULD_ENTER_FAULT) if the postmaster should transition to
+ *      a filerep fault rather than continue with database/mirror restart
+ *   0: (EXIT_CODE_SHOULD_RESTART_SHMEM_CLEANLY) if the postmaster should
+ *      continue with shared memory reset followed by startup of the database
+ *	    and mirror
  *
- * Since it's hard to set up two-way communication over a single channel, we instead have the peer reset process
- *   work by periodically polling the other postmaster, which spawns a process to answer the "question" quickly.
+ * Since it's hard to set up two-way communication over a single channel, we
+ * instead have the peer reset process work by periodically polling the other
+ * postmaster, which spawns a process to answer the "question" quickly.
  *
  * Coordinated reset works by:
  *
- *   1) Instruct peer to reset, at the same time receiving a "reset counter" (an integer, 0-padded to several digits).
- *   2) Poll the peer for status.  If the peer is also in a reset point (and we are a mirror*) then we can proceed
- *                  with the restart.  Or, if the peer is running and the returned counter is >= our counter from
- *                  step 1), we can proceed with the restart.    *:this check can actually be removed now that
- *                  primaries and mirrors can be started in any order
+ *   1) Instruct peer to reset, at the same time receiving a "reset counter"
+ *      (an integer, 0-padded to several digits).
+ *   2) Poll the peer for status.  If the peer is also in a reset point (and
+ *      we are a mirror*) then we can proceed with the restart.  Or, if the
+ *      peer is running and the returned counter is >= our counter from
+ *      step 1), we can proceed with the restart. TODO: this check can
+ *      actually be removed now that primaries and mirrors can be started
+ *      in any order
+ *
+ * Portions Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbfilerepresetpeerprocess.c
+ *
+ *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/time.h>
-// #include "libpq/pqcomm.h"
+
 #include "libpq/ip.h"
 #include "libpq/pqsignal.h"
 

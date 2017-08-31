@@ -2,7 +2,11 @@
  *
  * Code dealing with the compaction of append-only tables.
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/aocs/aocs_compaction.c
  *
  *------------------------------------------------------------------------------
  */

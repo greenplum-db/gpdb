@@ -5,6 +5,7 @@
  *
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION

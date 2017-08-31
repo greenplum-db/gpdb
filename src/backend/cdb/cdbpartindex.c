@@ -4,7 +4,12 @@
  *	Provides utility routines to support indexes over partitioned tables
  *	within Greenplum Database.
  *
- * Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbpartindex.c
  *
  *--------------------------------------------------------------------------
  */

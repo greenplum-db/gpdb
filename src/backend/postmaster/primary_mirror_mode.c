@@ -1,5 +1,10 @@
 /**
- * Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2005-2009, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/primary_mirror_mode.c
  *
  * Manages transitions between primary/mirror modes.
  *

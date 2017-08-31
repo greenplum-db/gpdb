@@ -5,7 +5,12 @@
  *   directory tables. This file is identical in functionality to aoseg.c
  *   that exists in the same directory.
  *
- * Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/catalog/aoblkdir.c
  *
  *-------------------------------------------------------------------------
  */

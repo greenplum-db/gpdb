@@ -1,19 +1,28 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * syncbitvector.c
  * 		Implementation of interface for synchronized bit vectors.
  *
- * Synchronized bit vectors are stored in shared memory, so they can be accessed
- * by all backends. Synchronization is achieved by using the test-and-test-and-set
- * technique so the overhead is minimal.
+ * Synchronized bit vectors are stored in shared memory, so they can be
+ * accessed by all backends. Synchronization is achieved by using the
+ * test-and-test-and-set technique so the overhead is minimal.
  *
  * The size of each bit vector is set to BITVECTOR_SIZE_BYTES. The postmaster
- * allocates a shared memory segment that can hold up to SYNC_BITVECTOR_MAX_COUNT
- * bit vectors. This shared memory segment is passed to all backends during their
- * initialization. At shutdown the postmaster releases the shared memory segment.
- * In the occurrence of a severe failure, the postmaster resets shared memory; at
- * this point the bit vector information is lost.
+ * allocates a shared memory segment that can hold up to
+ * SYNC_BITVECTOR_MAX_COUNT bit vectors. This shared memory segment is passed
+ * to all backends during their initialization. At shutdown the postmaster
+ * releases the shared memory segment.  In the occurrence of a severe failure,
+ * the postmaster resets shared memory; at this point the bit vector
+ * information is lost.
  *
- * Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/syncbitvector.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

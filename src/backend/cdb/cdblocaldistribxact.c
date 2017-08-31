@@ -9,7 +9,12 @@
  * visibility routines for better performance.  Used to avoid reading the
  * distributed log SLRU files too frequently.
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdblocaldistribxact.c
  *
  *-------------------------------------------------------------------------
  */

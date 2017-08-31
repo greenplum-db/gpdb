@@ -3,7 +3,12 @@
  * nodeAssertOp.c
  *	  Implementation of nodeAssertOp.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeAssertOp.c
  *
  *-------------------------------------------------------------------------
  */

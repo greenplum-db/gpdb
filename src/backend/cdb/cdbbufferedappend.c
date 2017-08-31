@@ -5,7 +5,12 @@
  *
  * (See .h file for usage comments)
  *
- * Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbbufferedappend.c
  *
  *-------------------------------------------------------------------------
  */

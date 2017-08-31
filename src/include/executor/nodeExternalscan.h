@@ -1,11 +1,16 @@
 /*-------------------------------------------------------------------------
-*
-* nodeExternalscan.h
-*
-* Copyright (c) 2007-2008, Greenplum inc
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * nodeExternalscan.h
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeExternalscan.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef NODEEXTERNALSCAN_H
 #define NODEEXTERNALSCAN_H
 

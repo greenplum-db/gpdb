@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* pg_partition_rule.h
-*
-*	  internal specifications of the partition configuration rules.
-*
-* Portions Copyright (c) 2008-2010, Greenplum Inc.
-*-------------------------------------------------------------------------
-*/
+ *
+ * pg_partition_rule.h
+ *	  internal specifications of the partition configuration rules.
+ *
+ * Portions Copyright (c) 2008-2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_partition_rule.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef PG_PARTITION_RULE_H
 #define PG_PARTITION_RULE_H
 

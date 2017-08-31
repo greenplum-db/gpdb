@@ -3,7 +3,11 @@
  * execDynamicIndexScan.c
  *	  Support routines for iterating through dynamically chosen partitions of an index relation
  *
- * Portions Copyright (c) 2014, Pivotal, Inc.
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execDynamicIndexScan.c
  *
  *-------------------------------------------------------------------------
  */
