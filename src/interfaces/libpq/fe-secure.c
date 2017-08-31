@@ -81,8 +81,8 @@
 
 static bool verify_peer_name_matches_certificate(PGconn *);
 static int	verify_cb(int ok, X509_STORE_CTX *ctx);
-static int	init_ssl_system(PGconn *conn);
-static void destroy_ssl_system(void);
+static int	init_ssl(PGconn *conn);
+static void destroy_ssl(void);
 static int	initialize_SSL(PGconn *conn);
 static void destroySSL(void);
 static PostgresPollingStatusType open_client_SSL(PGconn *);
@@ -92,7 +92,7 @@ static void SSLerrfree(char *buf);
 
 static bool pq_init_ssl_lib = true;
 static bool pq_init_crypto_lib = true;
-static SSL_CTX *SSL_context = NULL;
+static bool ssl_lib_initialized = false;
 
 #ifdef ENABLE_THREAD_SAFETY
 static long ssl_open_connections = 0;
@@ -223,7 +223,7 @@ pqsecure_initialize(PGconn *conn)
 	int			r = 0;
 
 #ifdef USE_SSL
-	r = init_ssl_system(conn);
+	r = init_ssl(conn);	
 #endif
 
 	return r;
@@ -250,26 +250,9 @@ pqsecure_open_client(PGconn *conn)
 	/* First time through? */
 	if (conn->ssl == NULL)
 	{
-		/* We cannot use MSG_NOSIGNAL to block SIGPIPE when using SSL */
-		conn->sigpipe_flag = false;
-
-		/* Create a connection-specific SSL object */
-		if (!(conn->ssl = SSL_new(SSL_context)) ||
-			!SSL_set_app_data(conn->ssl, conn) ||
-			!SSL_set_fd(conn->ssl, conn->sock))
-		{
-			char	   *err = SSLerrmessage();
-
-			printfPQExpBuffer(&conn->errorMessage,
-				   libpq_gettext("could not establish SSL connection: %s\n"),
-							  err);
-			SSLerrfree(err);
-			close_SSL(conn);
-			return PGRES_POLLING_FAILED;
-		}
-
 		/*
-		 * Load client certificate, private key, and trusted CA certs.
+		 * Create a connection-specific SSL object, and load client certificate,
+		 * private key, and trusted CA certs.
 		 */
 		if (initialize_SSL(conn) != 0)
 		{
@@ -870,8 +853,7 @@ pq_lockingcallback(int mode, int n, const char *file, int line)
 #endif   /* ENABLE_THREAD_SAFETY */
 
 /*
- * Initialize SSL system, in particular creating the SSL_context object
- * that will be shared by all SSL-using connections in this process.
+ * Initialize SSL library.
  *
  * In threadsafe mode, this includes setting up libcrypto callback functions
  * to do thread locking.
@@ -886,7 +868,7 @@ pq_lockingcallback(int mode, int n, const char *file, int line)
  * Returns 0 if OK, -1 on failure (with a message in conn->errorMessage).
  */
 static int
-init_ssl_system(PGconn *conn)
+init_ssl(PGconn *conn)
 {
 #ifdef ENABLE_THREAD_SAFETY
 #ifdef WIN32
@@ -943,7 +925,7 @@ init_ssl_system(PGconn *conn)
 	}
 #endif   /* ENABLE_THREAD_SAFETY */
 
-	if (!SSL_context)
+	if (!ssl_lib_initialized)
 	{
 		if (pq_init_ssl_lib)
 		{
@@ -953,29 +935,8 @@ init_ssl_system(PGconn *conn)
 			SSL_library_init();
 			SSL_load_error_strings();
 		}
-
-		SSL_context = SSL_CTX_new(TLSv1_method());
-		if (!SSL_context)
-		{
-			char	   *err = SSLerrmessage();
-
-			printfPQExpBuffer(&conn->errorMessage,
-						 libpq_gettext("could not create SSL context: %s\n"),
-							  err);
-			SSLerrfree(err);
-#ifdef ENABLE_THREAD_SAFETY
-			pthread_mutex_unlock(&ssl_config_mutex);
-#endif
-			return -1;
-		}
-
-		/*
-		 * Disable OpenSSL's moving-write-buffer sanity check, because it
-		 * causes unnecessary failures in nonblocking send cases.
-		 */
-		SSL_CTX_set_mode(SSL_context, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+		ssl_lib_initialized = true;
 	}
-
 #ifdef ENABLE_THREAD_SAFETY
 	pthread_mutex_unlock(&ssl_config_mutex);
 #endif
@@ -994,10 +955,10 @@ init_ssl_system(PGconn *conn)
  *	we only need to remove them in this case.
  */
 static void
-destroy_ssl_system(void)
+destroy_ssl(void)
 {
 #ifdef ENABLE_THREAD_SAFETY
-	/* Mutex is created in initialize_ssl_system() */
+	/* Mutex is created in initialize_ssl() */
 	if (pthread_mutex_lock(&ssl_config_mutex))
 		return;
 
@@ -1024,26 +985,22 @@ destroy_ssl_system(void)
 }
 
 /*
- *	Initialize (potentially) per-connection SSL data, namely the
- *	client certificate, private key, and trusted CA certs.
- *
- *	conn->ssl must already be created.	It receives the connection's client
- *	certificate and private key.  Note however that certificates also get
- *	loaded into the SSL_context object, and are therefore accessible to all
- *	connections in this process.  This should be OK as long as there aren't
- *	any hash collisions among the certs.
+ *	Create per-connection SSL object, and load the client certificate,
+ *	private key, and trusted CA certs.
  *
  *	Returns 0 if OK, -1 on failure (with a message in conn->errorMessage).
  */
 static int
 initialize_SSL(PGconn *conn)
 {
+	SSL_CTX	   *SSL_context;
 	struct stat buf;
 	char		homedir[MAXPGPATH];
 	char		fnbuf[MAXPGPATH];
 	char		sebuf[256];
 	bool		have_homedir;
 	bool		have_cert;
+	bool		have_rootcert;
 	EVP_PKEY   *pkey = NULL;
 
 	/*
@@ -1058,6 +1015,123 @@ initialize_SSL(PGconn *conn)
 		have_homedir = pqGetHomeDirectory(homedir, sizeof(homedir));
 	else	/* won't need it */
 		have_homedir = false;
+
+	/*
+	 * Create a new SSL_CTX object.
+	 *
+	 * We used to share a single SSL_CTX between all connections, but it was
+	 * complicated if connections used different certificates. So now we create
+	 * a separate context for each connection, and accept the overhead.
+	 */
+	SSL_context = SSL_CTX_new(TLSv1_method());
+	if (!SSL_context)
+	{
+		char	   *err = SSLerrmessage();
+
+		printfPQExpBuffer(&conn->errorMessage,
+						 libpq_gettext("could not create SSL context: %s\n"),
+							  err);
+		SSLerrfree(err);
+		return -1;
+	}
+
+	/* Disable old protocol versions */
+	SSL_CTX_set_options(SSL_context, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+
+	/*
+	 * Disable OpenSSL's moving-write-buffer sanity check, because it
+	 * causes unnecessary failures in nonblocking send cases.
+	 */
+	SSL_CTX_set_mode(SSL_context, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+
+	/*
+	 * If the root cert file exists, load it so we can perform certificate
+	 * verification. If sslmode is "verify-full" we will also do further
+	 * verification after the connection has been completed.
+	 */
+	if (conn->sslrootcert && strlen(conn->sslrootcert) > 0)
+		strlcpy(fnbuf, conn->sslrootcert, sizeof(fnbuf));
+	else if (have_homedir)
+		snprintf(fnbuf, sizeof(fnbuf), "%s/%s", homedir, ROOT_CERT_FILE);
+	else
+		fnbuf[0] = '\0';
+
+	if (fnbuf[0] != '\0' &&
+		stat(fnbuf, &buf) == 0)
+	{
+		X509_STORE *cvstore;
+
+		if (SSL_CTX_load_verify_locations(SSL_context, fnbuf, NULL) != 1)
+		{
+			char	   *err = SSLerrmessage();
+
+			printfPQExpBuffer(&conn->errorMessage,
+							  libpq_gettext("could not read root certificate file \"%s\": %s\n"),
+							  fnbuf, err);
+			SSLerrfree(err);
+			SSL_CTX_free(SSL_context);
+			return -1;
+		}
+
+		if ((cvstore = SSL_CTX_get_cert_store(SSL_context)) != NULL)
+		{
+			if (conn->sslcrl && strlen(conn->sslcrl) > 0)
+				strlcpy(fnbuf, conn->sslcrl, sizeof(fnbuf));
+			else if (have_homedir)
+				snprintf(fnbuf, sizeof(fnbuf), "%s/%s", homedir, ROOT_CRL_FILE);
+			else
+				fnbuf[0] = '\0';
+
+			/* Set the flags to check against the complete CRL chain */
+			if (fnbuf[0] != '\0' &&
+				X509_STORE_load_locations(cvstore, fnbuf, NULL) == 1)
+			{
+				/* OpenSSL 0.96 does not support X509_V_FLAG_CRL_CHECK */
+#ifdef X509_V_FLAG_CRL_CHECK
+				X509_STORE_set_flags(cvstore,
+						  X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
+#else
+				char	   *err = SSLerrmessage();
+
+				printfPQExpBuffer(&conn->errorMessage,
+								  libpq_gettext("SSL library does not support CRL certificates (file \"%s\")\n"),
+								  fnbuf);
+				SSLerrfree(err);
+				SSL_CTX_free(SSL_context);
+				return -1;
+#endif
+			}
+			/* if not found, silently ignore;  we do not require CRL */
+		}
+		have_rootcert = true;
+	}
+	else
+	{
+		/*
+		 * stat() failed; assume root file doesn't exist.  If sslmode is
+		 * verify-ca or verify-full, this is an error.  Otherwise, continue
+		 * without performing any server cert verification.
+		 */
+		if (conn->sslmode[0] == 'v')	/* "verify-ca" or "verify-full" */
+		{
+			/*
+			 * The only way to reach here with an empty filename is if
+			 * pqGetHomeDirectory failed.  That's a sufficiently unusual case
+			 * that it seems worth having a specialized error message for it.
+			 */
+			if (fnbuf[0] == '\0')
+				printfPQExpBuffer(&conn->errorMessage,
+								  libpq_gettext("could not get home directory to locate root certificate file\n"
+												"Either provide the file or change sslmode to disable server certificate verification.\n"));
+			else
+				printfPQExpBuffer(&conn->errorMessage,
+				libpq_gettext("root certificate file \"%s\" does not exist\n"
+							  "Either provide the file or change sslmode to disable server certificate verification.\n"), fnbuf);
+			SSL_CTX_free(SSL_context);
+			return -1;
+		}
+		have_rootcert = false;
+	}
 
 	/* Read the client certificate file */
 	if (conn->sslcert && strlen(conn->sslcert) > 0)
@@ -1091,16 +1165,9 @@ initialize_SSL(PGconn *conn)
 	else
 	{
 		/*
-		 * Cert file exists, so load it.  Since OpenSSL doesn't provide the
-		 * equivalent of "SSL_use_certificate_chain_file", we actually have to
-		 * load the file twice.  The first call loads any extra certs after
-		 * the first one into chain-cert storage associated with the
-		 * SSL_context.  The second call loads the first cert (only) into the
-		 * SSL object, where it will be correctly paired with the private key
-		 * we load below.  We do it this way so that each connection
-		 * understands which subject cert to present, in case different
-		 * sslcert settings are used for different connections in the same
-		 * process.
+		 * Cert file exists, so load it. Since OpenSSL doesn't provide the
+		 * equivalent of "SSL_use_certificate_chain_file", we have to load
+		 * it into the SSL context, rather than the SSL object.
 		 */
 		if (SSL_CTX_use_certificate_chain_file(SSL_context, fnbuf) != 1)
 		{
@@ -1110,21 +1177,41 @@ initialize_SSL(PGconn *conn)
 			   libpq_gettext("could not read certificate file \"%s\": %s\n"),
 							  fnbuf, err);
 			SSLerrfree(err);
+			SSL_CTX_free(SSL_context);
 			return -1;
 		}
-		if (SSL_use_certificate_file(conn->ssl, fnbuf, SSL_FILETYPE_PEM) != 1)
+
+		/* need to load the associated private key, too */
+		have_cert = true;
+	}
+
+	/*
+	 * The SSL context is now loaded with the correct root and client certificates.
+	 * Create a connection-specific SSL object. The private key is loaded directly
+	 * into the SSL object. (We could load the private key into the context, too, but
+	 * we have done it this way historically, and it doesn't really matter.)
+	 */
+	if (!(conn->ssl = SSL_new(SSL_context)) ||
+		!SSL_set_app_data(conn->ssl, conn) ||
+		!SSL_set_fd(conn->ssl, conn->sock))
 		{
 			char	   *err = SSLerrmessage();
 
 			printfPQExpBuffer(&conn->errorMessage,
-			   libpq_gettext("could not read certificate file \"%s\": %s\n"),
-							  fnbuf, err);
+				   libpq_gettext("could not establish SSL connection: %s\n"),
+						  err);
 			SSLerrfree(err);
+			SSL_CTX_free(SSL_context);
 			return -1;
 		}
-		/* need to load the associated private key, too */
-		have_cert = true;
-	}
+
+	/*
+	 * SSL contexts are reference counted by OpenSSL. We can free it as soon as we
+	 * have created the SSL object, and it will stick around for as long as it's
+	 * actually needed.
+	 */
+	SSL_CTX_free(SSL_context);
+	SSL_context = NULL;
 
 	/*
 	 * Read the SSL key. If a key is specified, treat it as an engine:key
@@ -1271,92 +1358,11 @@ initialize_SSL(PGconn *conn)
 		SSLerrfree(err);
 		return -1;
 	}
-
 	/*
-	 * If the root cert file exists, load it so we can perform certificate
-	 * verification. If sslmode is "verify-full" we will also do further
-	 * verification after the connection has been completed.
+	 * If a root cert was loaded, also set our certificate verification callback.
 	 */
-	if (conn->sslrootcert && strlen(conn->sslrootcert) > 0)
-		strncpy(fnbuf, conn->sslrootcert, sizeof(fnbuf));
-	else if (have_homedir)
-		snprintf(fnbuf, sizeof(fnbuf), "%s/%s", homedir, ROOT_CERT_FILE);
-	else
-		fnbuf[0] = '\0';
-
-	if (fnbuf[0] != '\0' &&
-		stat(fnbuf, &buf) == 0)
-	{
-		X509_STORE *cvstore;
-
-		if (SSL_CTX_load_verify_locations(SSL_context, fnbuf, NULL) != 1)
-		{
-			char	   *err = SSLerrmessage();
-
-			printfPQExpBuffer(&conn->errorMessage,
-							  libpq_gettext("could not read root certificate file \"%s\": %s\n"),
-							  fnbuf, err);
-			SSLerrfree(err);
-			return -1;
-		}
-
-		if ((cvstore = SSL_CTX_get_cert_store(SSL_context)) != NULL)
-		{
-			if (conn->sslcrl && strlen(conn->sslcrl) > 0)
-				strncpy(fnbuf, conn->sslcrl, sizeof(fnbuf));
-			else if (have_homedir)
-				snprintf(fnbuf, sizeof(fnbuf), "%s/%s", homedir, ROOT_CRL_FILE);
-			else
-				fnbuf[0] = '\0';
-
-			/* Set the flags to check against the complete CRL chain */
-			if (fnbuf[0] != '\0' &&
-				X509_STORE_load_locations(cvstore, fnbuf, NULL) == 1)
-			{
-				/* OpenSSL 0.96 does not support X509_V_FLAG_CRL_CHECK */
-#ifdef X509_V_FLAG_CRL_CHECK
-				X509_STORE_set_flags(cvstore,
-						  X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
-#else
-				char	   *err = SSLerrmessage();
-
-				printfPQExpBuffer(&conn->errorMessage,
-								  libpq_gettext("SSL library does not support CRL certificates (file \"%s\")\n"),
-								  fnbuf);
-				SSLerrfree(err);
-				return -1;
-#endif
-			}
-			/* if not found, silently ignore;  we do not require CRL */
-		}
-
+	if (have_rootcert)
 		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, verify_cb);
-	}
-	else
-	{
-		/*
-		 * stat() failed; assume root file doesn't exist.  If sslmode is
-		 * verify-ca or verify-full, this is an error.	Otherwise, continue
-		 * without performing any server cert verification.
-		 */
-		if (conn->sslmode[0] == 'v')	/* "verify-ca" or "verify-full" */
-		{
-			/*
-			 * The only way to reach here with an empty filename is if
-			 * pqGetHomeDirectory failed.  That's a sufficiently unusual case
-			 * that it seems worth having a specialized error message for it.
-			 */
-			if (fnbuf[0] == '\0')
-				printfPQExpBuffer(&conn->errorMessage,
-								  libpq_gettext("could not get home directory to locate root certificate file\n"
-												"Either provide the file or change sslmode to disable server certificate verification.\n"));
-			else
-				printfPQExpBuffer(&conn->errorMessage,
-				libpq_gettext("root certificate file \"%s\" does not exist\n"
-							  "Either provide the file or change sslmode to disable server certificate verification.\n"), fnbuf);
-			return -1;
-		}
-	}
 
 	/*
 	 * If the OpenSSL version used supports it (from 1.0.0 on) and the user
@@ -1375,7 +1381,7 @@ initialize_SSL(PGconn *conn)
 static void
 destroySSL(void)
 {
-	destroy_ssl_system();
+	destroy_ssl();
 }
 
 /*
