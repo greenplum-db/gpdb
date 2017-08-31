@@ -418,7 +418,7 @@ class GpMirrorListToBuild:
             self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
 
             logger.info("Starting mirrors")
-            self.__startAll(gpEnv, gpArray, mirrorsToStart)
+            start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
 
             logger.info("Updating configuration to mark mirrors up")
             for seg in mirrorsToStart:
@@ -446,6 +446,8 @@ class GpMirrorListToBuild:
         finally:
             # Reenable Ctrl-C
             signal.signal(signal.SIGINT, signal.default_int_handler)
+
+        return start_all_successful
 
     def __verifyGpArrayContents(self, gpArray):
         """
@@ -869,6 +871,7 @@ class GpMirrorListToBuild:
 
     def __startAll(self, gpEnv, gpArray, segments):
 
+        success = True
         # the newly started segments should belong to the current era
         era = read_era(gpEnv.getMasterDataDir(), logger=gplog.get_logger_if_verbose())
 
@@ -882,7 +885,9 @@ class GpMirrorListToBuild:
             logger.warn(
                 "Failed to start segment.  The fault prober will shortly mark it as down. Segment: %s: REASON: %s" % (
                 failedSeg, failureReason))
-        pass
+            if success:
+                success = False
+        return success
 
     def __convertAllPrimaries(self, gpEnv, gpArray, segments, convertUsingFullResync):
         segmentStartResult = self.__createStartSegmentsOp(gpEnv).transitionSegments(gpArray, segments,

@@ -1248,7 +1248,8 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
-            mirrorBuilder.buildMirrors("recover", gpEnv, gpArray)
+            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+                os._exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
                                               len(mirrorBuilder.getMirrorsToBuild()), True)
