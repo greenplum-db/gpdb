@@ -1,0 +1,33 @@
+The remote tests is intended to be run for remote server,
+which means you are compiling loader package on local
+machine but GPDB server is located on a separate machine.
+
+To run this test, first source greenplum_path.sh in
+greenplum-db-devel, not the greenplum-loaders-devel,
+because loader package don't have the necessary diff tools.
+
+Then setup necessary environment variables.
+export PGHOST=127.0.0.1
+export PGUSER=gpadmin
+export PGPORT=15432
+
+You can also use SSH to setup a tunnel and forward tcp
+packet for you. This way the remote server will treat
+the connection as a local connection. No need to modify
+pg_hba.conf. Run the following command on GPDB server:
+
+ssh -L8081:127.0.0.1:8081 -L8082:127.0.0.1:8082 \
+    -R15432:127.0.0.1:15432 \
+    gpadmin@test-machine
+
+Or run the following command on test machine:
+
+ssh -R8081:127.0.0.1:8081 -R8082:127.0.0.1:8082 \
+    -L15432:127.0.0.1:15432 \
+    gpadmin@server-machine
+
+Finally start the test by:
+python TEST_REMOTE.py
+
+On AIX7, you need to run:
+python_64 TEST_REMOTE.py
