@@ -80,7 +80,6 @@ install_pxf() {
 	mv ${pxfhome}/lib/pxf.war ${hdfsrepo}/pxf
 	mv ${pxfhome}/conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
 	mv ${pxfhome}/conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
-	popd > /dev/null
 	pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
 		ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
 	done
