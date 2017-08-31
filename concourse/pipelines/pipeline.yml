@@ -432,15 +432,6 @@ resources:
     region_name: {{aws-region}}
     versioned_file: singlecluster-without-pxf/singlecluster-CDH.tar.gz
 
-- name: pxf_tarball
-  type: s3
-  source:
-    access_key_id: {{pxf-aws-access-key-id}}
-    secret_access_key: {{pxf-aws-secret-access-key}}
-    bucket: {{pxf-aws-bucket-name}}
-    region_name: {{aws-region}}
-    versioned_file: tarballs/pxf.tar.gz
-
 - name: nightly-trigger
   type: time
   source:
@@ -505,11 +496,6 @@ jobs:
     - get: pxf_src
       trigger: true
     - get: centos-gpdb-dev-6
-  - task: compile_pxf
-    image: centos-gpdb-dev-6
-    file: gpdb_src/concourse/tasks/compile_pxf.yml
-    params:
-      TARGET_OS: centos
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -532,9 +518,6 @@ jobs:
     - put: installer_rhel6_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip
-    - put: pxf_tarball
-      params:
-        file: pxf_tarball/pxf*.tar.gz
 
 - name: compile_gpdb_open_source_centos6
   public: true
@@ -555,6 +538,8 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
+      trigger: true
     - get: centos-gpdb-dev-7
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -585,6 +570,7 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
     - get: sles-gpdb-dev-11-beta
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -614,6 +600,7 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
     - get: centos-mingw
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -645,6 +632,7 @@ jobs:
       resource: gpdb_src_binary_swap
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
     - get: centos-gpdb-dev-6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -810,8 +798,6 @@ jobs:
       trigger: true
     - get: singlecluster
       trigger: true
-    - get: pxf_tarball
-      passed: [compile_gpdb_centos6]
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml

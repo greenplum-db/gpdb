@@ -74,23 +74,17 @@ function setup_singlecluster() {
 
 install_pxf() {
 	local hdfsrepo=$1
-	if [ -d pxf_tarball ]; then
-		echo "======================================================================"
-		echo "                            Install PXF"
-		echo "======================================================================"
-		pushd pxf_tarball > /dev/null
-		unpack_tarball ./*.tar.gz
-		mkdir -p ${hdfsrepo}/pxf/conf
-		mv lib/pxf-*.jar ${hdfsrepo}/pxf
-		mv lib/pxf.war ${hdfsrepo}/pxf
-		mv conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
-		mv conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
-		popd > /dev/null
-		pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
-			ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
-		done
-		popd > /dev/null
-	fi
+	local pxfhome="/usr/local/greenplum-db-devel/pxf"
+	mkdir -p ${hdfsrepo}/pxf/conf
+	mv ${pxfhome}/lib/pxf-*.jar ${hdfsrepo}/pxf
+	mv ${pxfhome}/lib/pxf.war ${hdfsrepo}/pxf
+	mv ${pxfhome}/conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
+	mv ${pxfhome}/conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
+	popd > /dev/null
+	pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
+		ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
+	done
+	popd > /dev/null
 }
 
 function _main() {
