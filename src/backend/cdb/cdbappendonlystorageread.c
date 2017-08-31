@@ -839,7 +839,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 														  &storedChecksum,
 														  &computedChecksum))
 			ereport(ERROR,
-					(errmsg("Header checksum does not match.  Expected 0x%X and found 0x%X ",
+					(errcode(ERRCODE_DATA_CORRUPTED),
+					 errmsg("Header checksum does not match.  Expected 0x%X and found 0x%X ",
 							storedChecksum,
 							computedChecksum),
 			   errdetail_appendonly_read_storage_content_header(storageRead),
@@ -855,7 +856,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 									  &storageRead->current.actualHeaderLen);
 	if (checkError != AOHeaderCheckOk)
 		ereport(ERROR,
-				(errmsg("Bad append-only storage header.  Header check error %d, detail '%s'",
+				(errcode(ERRCODE_DATA_CORRUPTED),
+				 errmsg("Bad append-only storage header.  Header check error %d, detail '%s'",
 						(int) checkError,
 						AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
 			   errdetail_appendonly_read_storage_content_header(storageRead),
@@ -915,7 +917,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errmsg("Bad append-only storage header of type small content. Header check error %d, detail '%s'",
+						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						 errmsg("Bad append-only storage header of type small content. Header check error %d, detail '%s'",
 								(int) checkError,
 						   AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
 				errdetail_appendonly_read_storage_content_header(storageRead),
@@ -938,7 +941,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				 &storageRead->current.rowCount);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errmsg("Bad append-only storage header of type large content. Header check error %d, detail '%s'",
+						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						 errmsg("Bad append-only storage header of type large content. Header check error %d, detail '%s'",
 								(int) checkError,
 						   AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
 				errdetail_appendonly_read_storage_content_header(storageRead),
@@ -968,7 +972,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errmsg("Bad append-only storage header of type non-bulk dense content. Header check error %d, detail '%s'",
+						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						 errmsg("Bad append-only storage header of type non-bulk dense content. Header check error %d, detail '%s'",
 								(int) checkError,
 						   AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
 				errdetail_appendonly_read_storage_content_header(storageRead),
@@ -999,7 +1004,8 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errmsg("Bad append-only storage header of type bulk dense content. Header check error %d, detail '%s'",
+						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						 errmsg("Bad append-only storage header of type bulk dense content. Header check error %d, detail '%s'",
 								(int) checkError,
 						   AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
 				errdetail_appendonly_read_storage_content_header(storageRead),
@@ -1177,7 +1183,8 @@ AppendOnlyStorageRead_InternalGetBuffer(AppendOnlyStorageRead *storageRead,
 														 &storedChecksum,
 														 &computedChecksum))
 			ereport(ERROR,
-					(errmsg("Block checksum does not match.  Expected 0x%X and found 0x%X",
+					(errcode(ERRCODE_DATA_CORRUPTED),
+					 errmsg("Block checksum does not match.  Expected 0x%X and found 0x%X",
 							storedChecksum,
 							computedChecksum),
 			   errdetail_appendonly_read_storage_content_header(storageRead),
