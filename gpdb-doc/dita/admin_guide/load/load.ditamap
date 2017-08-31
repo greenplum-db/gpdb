@@ -14,13 +14,7 @@
          <topicref href="topics/g-accessing-ext-files-custom-protocol.xml"/>
          <topicref href="topics/g-handling-errors-ext-table-data.xml"/>
       </topicref>
-      <topicref href="topics/g-using-the-greenplum-parallel-file-server--gpfdist-.xml">
-         <topicref href="topics/g-about-gpfdist-setup-and-performance.xml"/>
-         <topicref href="topics/g-controlling-segment-parallelism.xml"/>
-         <topicref href="topics/g-installing-gpfdist.xml"/>
-         <topicref href="topics/g-starting-and-stopping-gpfdist.xml"/>
-         <topicref href="topics/g-troubleshooting-gpfdist.xml"/>
-      </topicref>
+      <topicref href="topics/g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
       <topicref href="topics/g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic"
         >
          <topicref href="topics/g-one-time-hdfs-protocol-installation.xml" type="topic">
