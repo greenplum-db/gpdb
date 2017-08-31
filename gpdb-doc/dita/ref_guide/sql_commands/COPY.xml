@@ -378,8 +378,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <codeph>COPY FROM...ON SEGMENT</codeph> was run.</p>
       <note>If you run <codeph>COPY FROM...ON SEGMENT</codeph>and the server configuration parameter
           <codeph>gp_enable_segment_copy_checking</codeph> is <codeph>false</codeph>, manual
-        redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph> clause
-          <codeph>WITH REORGANIZE</codeph>.</note>
+        redistribution of table data might be required.</note>
       <p>When you specify the <codeph>LOG ERRORS</codeph> clause, Greenplum Database captures errors
         that occur while reading the external table data. You can view and manage the captured error
         log data. </p>
