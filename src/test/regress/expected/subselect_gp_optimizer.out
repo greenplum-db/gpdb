@@ -1090,6 +1090,60 @@ where t1.a = foo.a;
 ---+---
 (0 rows)
 
+---
+--- Correlated subqueries with limit/offset clause must not be pulled up as join
+---
+insert into t1 values (1);
+insert into t2 values (1);
+explain select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1293.00 rows=1 width=4)
+   ->  Result  (cost=0.00..1293.00 rows=1 width=1)
+         Filter: (subplan)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+               ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=4)
+         SubPlan 1
+           ->  Limit  (cost=0.00..431.00 rows=1 width=4)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       Filter: $1 = 1
+                       ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                   ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=3
+ Optimizer status: PQO version 2.39.2
+(14 rows)
+
+explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
+                                                  QUERY PLAN
+--------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1293.00 rows=1 width=4)
+   ->  Result  (cost=0.00..1293.00 rows=1 width=1)
+         Filter: (subplan)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+               ->  Table Scan on t1  (cost=0.00..431.00 rows=1 width=4)
+         SubPlan 1
+           ->  Limit  (cost=0.00..431.00 rows=1 width=4)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       Filter: $1 = 1
+                       ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                   ->  Table Scan on t2  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=3
+ Optimizer status: PQO version 2.39.2
+(14 rows)
+
+select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
+ ?column?
+----------
+        1
+(1 row)
+
+select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
+ ?column?
+----------
+(0 rows)
+
 drop table if exists t1;
 drop table if exists t2;
 --
