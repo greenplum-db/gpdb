@@ -1,7 +1,9 @@
-# The PXF extension client for GPDB
+# The PXF extension for GPDB
 
 PXF is an extension framework that allows GPDB or any other database to query external distributed datasets. The framework is built in Java and provides built-in connectors for accessing data of various formats(text,sequence files, avro, orc,etc) that may exist inside HDFS files, Hive tables, HBase tables and many more stores.
-This module includes the PXF C client and using the 'pxf' protocol with external table, GPDB can query external datasets via PXF service that runs alongside GPDB segments.
+PXF consists of a server side JVM based component and a C client component which serves as the means for GPDB to interact with the PXF service.
+This module only includes the PXF C client and the build instructions only builds the client.
+Using the 'pxf' protocol with external table, GPDB can query external datasets via PXF service that runs alongside GPDB segments.
 
 ## Table of Contents
 
