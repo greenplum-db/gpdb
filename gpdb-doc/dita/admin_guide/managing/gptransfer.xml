@@ -66,8 +66,8 @@
             source data into the writable external table</li>
           <li>executes a <codeph>SELECT INTO</codeph> statement in the destination database to
             insert the data from the readable external table into the destination table</li>
-          <li>optionally validates the data by comparing row counts or MD5 hashes of the rows in the
-            source and destination</li>
+          <li>optionally validates the data by comparing row counts or SHA-256 hashes of the rows in
+            the source and destination</li>
           <li>cleans up the external tables, named pipes, and <codeph>gpfdist</codeph>
             processes</li>
         </ul></p>
@@ -265,8 +265,8 @@ host2_name,host2_ipaddr
           <i>type</i> can be one of the following:<ul id="ul_lqh_wnh_dp">
           <li><codeph>count</codeph> &#8211; Compares the row counts for the tables in the source
             and destination databases. </li>
-          <li><codeph>md5</codeph> &#8211; Sorts tables on both source and destination, and then
-            performs a row-by-row comparison of the MD5 hashes of the sorted rows.</li>
+          <li><codeph>sha256</codeph> &#8211; Sorts tables on both source and destination, and then
+            performs a row-by-row comparison of the SHA-256 hashes of the sorted rows.</li>
         </ul></p>
       <p>If the database is accessible during the transfer, be sure to add the <codeph>-x</codeph>
         option to lock the table. Otherwise, the table could be modified during the transfer,
