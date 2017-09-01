@@ -14,6 +14,7 @@ function gen_env(){
 		cd \${base_path}/gpdb_src/gpMgmt/go-utils/src/gp_upgrade
 		export GOPATH=\${base_path}/gpdb_src/gpMgmt/go-utils
 		export PATH=\$PATH:/usr/local/go/bin:\$GOPATH/bin
+		make dependencies
 		make test
 	EOF
 
@@ -27,9 +28,9 @@ function setup_gpadmin_user() {
 function _main() {
 
     configure
-    # install_gpdb
+    install_gpdb
     setup_gpadmin_user
-    # make_cluster
+    make_cluster
     gen_env
     run_test
 }
