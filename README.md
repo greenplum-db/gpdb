@@ -201,6 +201,7 @@ Currently, GPDPB is built with PXF by default. If you don't need PXF, use --disa
 Also PXF requires curl version > 7.21.3. On most centos6 environments with curl version 7.19 compilation will fail due to this dependancy.
 You can either try upgrading your curl version, or simply disable pxf during build.
 
+
 ```
 # Clean environment
 make distclean
