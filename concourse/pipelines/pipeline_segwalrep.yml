@@ -19,6 +19,13 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
+- name: pxf_src
+  type: git
+  source:
+    branch: {{pxf-git-branch}}
+    private_key: {{pxf-git-key}}
+    uri: {{pxf-git-remote}}
+
 - name: centos-gpdb-dev-6
   type: docker-image
   source:
@@ -48,6 +55,7 @@ jobs:
     - get: gpdb_src
       trigger: true
     - get: gpaddon_src
+    - get: pxf_src
     - get: centos-gpdb-dev-6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
