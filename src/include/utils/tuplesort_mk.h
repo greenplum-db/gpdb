@@ -4,6 +4,11 @@
  *	  Public API to GPDB multi-key tuple sorting routines.
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/tuplesort_mk.h
  *
  *-------------------------------------------------------------------------
  */

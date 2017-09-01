@@ -4,7 +4,12 @@
  *	  Interface for a synchronized, refcounted hashtable.
  *
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/syncrefhashtable.h
  *
  *
  *-------------------------------------------------------------------------

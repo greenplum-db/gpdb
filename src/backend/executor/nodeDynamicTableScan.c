@@ -1,12 +1,21 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * nodeDynamicTableScan.c
- *    Support routines for scanning one or more relations that are determined
- * at run time. The relations could be Heap, AppendOnly Row, AppendOnly Columnar.
+ *	  Support routines for scanning one or more relations that are
+ *	  determined at run time. The relations could be Heap, AppendOnly Row,
+ *	  AppendOnly Columnar.
  *
- * DynamicTableScan node scans each relation one after the other. For each relation,
- * it opens the table, scans the tuple, and returns relevant tuples.
+ * DynamicTableScan node scans each relation one after the other. For each
+ * relation, it opens the table, scans the tuple, and returns relevant tuples.
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeDynamicTableScan.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

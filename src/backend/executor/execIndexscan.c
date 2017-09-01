@@ -1,8 +1,17 @@
-/*
- * execIndexscan.c
- * 	Define common routines that are used by IndexScan, BitmapIndexScan, and DynamicIndexScan nodes.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2013 - present, EMC/Greenplum
+ * execIndexscan.c
+ *	  Define common routines that are used by IndexScan, BitmapIndexScan,
+ *	  and DynamicIndexScan nodes.
+ *
+ * Portions Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execIndexscan.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

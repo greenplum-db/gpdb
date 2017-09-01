@@ -3,7 +3,12 @@
  * cdbdisp_gang.h
  * routines for multi-thread implementation of creating gang
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbgang_thread.h
  *
  *-------------------------------------------------------------------------
  */

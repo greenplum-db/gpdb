@@ -3,7 +3,12 @@
  * gp_fault_strategy.h
  *    FTS fault strategy configuration
  *
- * Copyright (c) 2009-2011, Greenplum Inc.
+ * Portions Copyright (c) 2009-2011, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/gp_fault_strategy.h
  *
  *-------------------------------------------------------------------------
  */

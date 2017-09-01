@@ -1,7 +1,16 @@
-/* 
- * AOCS Segment files.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2009, Greenplum Inc.
+ * aocssegfiles.c
+ *	  AOCS Segment files.
+ *
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/aocs/aocssegfiles.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

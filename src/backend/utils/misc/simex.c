@@ -1,25 +1,34 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * simex.c
  * 		Implementation of interface for simulating Exceptional Situations (ES).
  *
- * The Simulator of Exceptions (SimEx) framework controls when an ES will be injected
- * and what ES subclass will be used.
+ * The Simulator of Exceptions (SimEx) framework controls when an ES will be
+ * injected and what ES subclass will be used.
  *
- * The ES class to be simulated is set at startup and is associated with a set of ES
- * subclasses. SimEx uses bit vectors (one per ES subclass) to track which stacks have
- * been examined. On each call, a hash value is calculating over the frame addresses in
- * the stack. Then, the corresponding bit is checked in all bit vectors. The first bit
- * vector that has the bit unset gives the ES subclass to be injected.
+ * The ES class to be simulated is set at startup and is associated with a set
+ * of ES subclasses. SimEx uses bit vectors (one per ES subclass) to track
+ * which stacks have been examined. On each call, a hash value is calculating
+ * over the frame addresses in the stack. Then, the corresponding bit is
+ * checked in all bit vectors. The first bit vector that has the bit unset
+ * gives the ES subclass to be injected.
  *
- * After identifying the ES subclass, SimEx logs the prominent ES injection. Logged
- * information includes the ES class-subclass names, the file and the line where
- * injection will occur and the current stack trace.
+ * After identifying the ES subclass, SimEx logs the prominent ES injection.
+ * Logged information includes the ES class-subclass names, the file and the
+ * line where injection will occur and the current stack trace.
  *
- * Bit vectors are stored in a shared memory segment; the postmaster is responsible
- * for initializing, reseting and deleting it. All backends access the same bit
- * vectors through this shmem segment.
+ * Bit vectors are stored in a shared memory segment; the postmaster is
+ * responsible for initializing, reseting and deleting it. All backends access
+ * the same bit vectors through this shmem segment.
  *
- * Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/simex.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include <dlfcn.h>

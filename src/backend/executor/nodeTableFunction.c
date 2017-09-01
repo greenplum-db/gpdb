@@ -26,7 +26,13 @@
  *	 ExecStopTableFunctionScan		closes external resources before EOD.
  *	 ExecTableFunctionReScan		rescans the relation
  *
- * Copyright (c) 2011, EMC
+ * Portions Copyright (c) 2011, EMC
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeTableFunction.c
+ *
  *-------------------------------------------------------------------------
  */
 

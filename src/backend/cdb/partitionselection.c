@@ -3,7 +3,11 @@
  * partitionselection.c
  *	  Provides utility routines to support partition selection.
  *
- * Copyright (c) Pivotal Inc.
+ * Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/partitionselection.c
  *
  *--------------------------------------------------------------------------
  */

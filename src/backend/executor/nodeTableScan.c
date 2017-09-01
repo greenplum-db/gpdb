@@ -1,9 +1,17 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * nodeTableScan.c
  *    Support routines for scanning a relation. This relation can be Heap,
- * AppendOnly Row, or AppendOnly Columnar.
+ *    AppendOnly Row, or AppendOnly Columnar.
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeTableScan.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

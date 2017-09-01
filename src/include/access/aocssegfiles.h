@@ -1,7 +1,16 @@
-/* 
+/*-------------------------------------------------------------------------
+ *
  * aocssegfiles.h
  *      AOCS segment files
- * Copyright (c) 2009, Greenplum INC.
+ *
+ * Portions Copyright (c) 2009, Greenplum INC.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/aocssegfiles.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef AOCS_SEGFILES_H

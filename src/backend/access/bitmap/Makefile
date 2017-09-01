@@ -3,10 +3,12 @@
 # Makefile--
 #    Makefile for access/bitmap
 #
-#  Copyright (c) 2006, PostgreSQL Global Development Group
+#  Portions Copyright (c) 2007-2010 Greenplum Inc
+#  Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#  Portions Copyright (c) 2006, PostgreSQL Global Development Group
 #
 # IDENTIFICATION
-#    $PostgreSQL$
+#    src/backend/access/bitmap/Makefile
 #
 #-------------------------------------------------------------------------
 

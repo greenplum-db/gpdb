@@ -1,8 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * syncbitvector.h
  *		Interface for synchronized bit vectors.
  *
- * Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/syncbitvector.h
+ *
+ *-------------------------------------------------------------------------
  */
 
 #ifndef SYNCBITVECTOR_H_

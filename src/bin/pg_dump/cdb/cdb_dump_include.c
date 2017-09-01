@@ -6,8 +6,13 @@
  *	  largely extracted from pg_dump.c.
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ *
+ * IDENTIFICATION
+ *	    src/bin/pg_dump/cdb/cdb_dump_include.c
  *
  *-------------------------------------------------------------------------
  */

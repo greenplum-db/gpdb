@@ -3,7 +3,12 @@
  * pg_extprotocol.h
  *    an external table custom protocol table
  *
- * Copyright (c) 2011, Greenplum Inc.
+ * Portions Copyright (c) 2011, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_extprotocol.h
  *
  *-------------------------------------------------------------------------
  */

@@ -3,7 +3,12 @@
  * nodeSplitUpdate.h
  *        Prototypes for nodeSplitUpdate.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeSplitUpdate.h
  *
  *-------------------------------------------------------------------------
  */

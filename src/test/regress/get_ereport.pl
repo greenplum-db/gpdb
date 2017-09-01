@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 #
-# copyright (c) 2009, 2010, 2011
+# Portions Copyright (c) 2009, 2010, 2011 Greenplum Inc
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 #
 #
@@ -75,7 +77,8 @@ entries of level ERROR, WARNING, NOTICE, or FATAL.
 
 Jeffrey I Cohen
 
-Copyright (c) 2009-2011 GreenPlum.  All rights reserved.  
+Portions Copyright (c) 2009-2011 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 

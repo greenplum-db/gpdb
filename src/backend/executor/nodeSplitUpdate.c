@@ -3,7 +3,12 @@
  * nodeSplitUpdate.c
  *	  Implementation of nodeSplitUpdate.
  *
- * Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeSplitUpdate.c
  *
  *-------------------------------------------------------------------------
  */

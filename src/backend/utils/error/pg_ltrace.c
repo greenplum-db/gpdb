@@ -1,8 +1,15 @@
-/* 
- * pg_ltrace.c
- * 	Poor linux's tracing facility.
+/*-------------------------------------------------------------------------
  *
- * Copyright (c) 2008, Greenplum Inc.
+ * pg_ltrace.c
+ *	  Poor linux's tracing facility.
+ *
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/error/pg_ltrace.c
+ *-------------------------------------------------------------------------
  */
 
 #include <pg_config.h>

@@ -1,9 +1,15 @@
 /*-------------------------------------------------------------------------
  *
- * access/exttableprotocol.h
+ * extprotocol.h
  *	  Declarations for External Table Protocol functions
  *
- * Copyright (c) 2010, EMC corporation
+ * Portions Copyright (c) 2010, EMC corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/extprotocol.h
+ *
  *-------------------------------------------------------------------------
  */
 

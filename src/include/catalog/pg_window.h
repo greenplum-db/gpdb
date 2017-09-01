@@ -5,7 +5,12 @@
  *	  along with the relation's initial contents.
  *
  *
- * Copyright (c) 2007-2010, Greenplum inc
+ * Portions Copyright (c) 2007-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_window.h
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki

@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
  *
  * memquota.c
- * Routines related to memory quota for queries.
+ *	  Routines related to memory quota for queries.
+ *
+ * Portions Copyright (c) 2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  *
- * Copyright (c) 2010, Greenplum inc
- *
- *-------------------------------------------------------------------------*/
+ * IDENTIFICATION
+ *	    src/backend/utils/resource_manager/memquota.c
+ * 
+ *-------------------------------------------------------------------------
+ */
 
 #include "postgres.h"
 

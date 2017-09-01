@@ -2,15 +2,13 @@
  *
  * nodeRepeat.h
  *
- * Copyright (c) 2008 - present, Greenplum Inc.
+ * Portions Copyright (c) 2008 - present, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * IDENTIFICATION:
- *     $Id$
  *
- * $File$
- * $Change$
- * $Author$
- * $DateTime$
+ * IDENTIFICATION
+ *	    src/include/executor/nodeRepeat.h
+ *
  *-------------------------------------------------------------------------
  */
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 #
-# copyright (c) 2007-2010
+# Portions Copyright (c) 2007-2010, Greenplum Inc
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 # Author: Jeffrey I Cohen
 #
 #
@@ -56,7 +57,8 @@ Substitute the correct "connect string" for your postgres database.
 
 Jeffrey I Cohen
 
-Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
+Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 

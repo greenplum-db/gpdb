@@ -1,15 +1,24 @@
 /*-------------------------------------------------------------------------
  *
- * Copyright (c) 2010 Greenplum
+ * persistentutil.c
  *
  * Functions to support administrative tasks against gp_persistent_*_node
  * tables, gp_global_sequence and gp_relation_node. These tables do not have
  * normal MVCC semantics and changing them is usually part of a more complex
- * chain of events in the backend. So, we cannot modify them with INSERT, UPDATE
- * or DELETE as we might other catalog tables.
+ * chain of events in the backend. So, we cannot modify them with INSERT,
+ * UPDATE or DELETE as we might other catalog tables.
  *
  * So we provide these functions which update the tables and also update the in
  * memory persistent table / file rep data structures.
+ *
+ * Portions Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/gp/persistentutil.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 #include "miscadmin.h"

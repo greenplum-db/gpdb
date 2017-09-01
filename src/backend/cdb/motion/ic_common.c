@@ -2,7 +2,12 @@
  * ic_common.c
  *	   Interconnect code shared between UDP, and TCP IPC Layers.
  *
- * Copyright (c) 2005-2008, Greenplum
+ * Portions Copyright (c) 2005-2008, Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/ic_common.c
  *
  * Reviewers: jzhang, tkordas
  *-------------------------------------------------------------------------

@@ -5,7 +5,12 @@
  *	  Functions to dispatch commands to QExecutors.
  *
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/dispatcher/cdbdisp.c
  *
  *-------------------------------------------------------------------------
  */

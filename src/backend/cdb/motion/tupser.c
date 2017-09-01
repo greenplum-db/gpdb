@@ -2,7 +2,12 @@
  * tupser.c
  *	   Functions for serializing and deserializing a heap tuple.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/tupser.c
  *
  *      Reviewers: jzhang, ftian, tkordas
  *

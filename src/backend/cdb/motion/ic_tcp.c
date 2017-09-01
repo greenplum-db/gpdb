@@ -2,7 +2,12 @@
  * ic_tcp.c
  *	   Interconnect code specific to TCP transport.
  *
- * Copyright (c) 2005-2008, Greenplum, Inc.
+ * Portions Copyright (c) 2005-2008, Greenplum, Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/ic_tcp.c
  *
  *-------------------------------------------------------------------------
  */

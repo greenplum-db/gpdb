@@ -3,7 +3,12 @@
  * filespace.c
  *	  Commands to manipulate filespaces
  *
- * Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/commands/filespace.c
  *
  *-------------------------------------------------------------------------
  */

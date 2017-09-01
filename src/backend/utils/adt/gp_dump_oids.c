@@ -1,7 +1,14 @@
-/*
- * Copyright (c) 2015 Pivotal Inc. All Rights Reserved
+/*---------------------------------------------------------------------
  *
- * ---------------------------------------------------------------------
+ * gp_dump_oids.c
+ *
+ * Copyright (c) 2015-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/adt/gp_dump_oids.c
+ *
+ *---------------------------------------------------------------------
  */
 #include "postgres.h"
 

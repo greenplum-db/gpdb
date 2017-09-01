@@ -1,7 +1,6 @@
-/*
- * Copyright (c) 2014 Pivotal Inc. All Rights Reserved
+/*---------------------------------------------------------------------
  *
- * ---------------------------------------------------------------------
+ * gp_session_state_memory_stats.c
  *
  * The dynamically linked library created from this source can be reference by
  * creating a function in psql that references it. For example,
@@ -10,6 +9,13 @@
  *	RETURNS SETOF record
  *	AS '$libdir/gp_session_state', 'gp_session_state_memory_entries'
  *	LANGUAGE C IMMUTABLE;
+ *
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ * IDENTIFICATION
+ *	    contrib/gp_internal_tools/gp_session_state_memory_stats.c
+ *
+ *---------------------------------------------------------------------
  */
 
 #include "postgres.h"

@@ -797,7 +797,7 @@ LINE 2:     SCATTER BY (a,b);
 (10 rows)
 
     SELECT * FROM transform( TABLE(select distinct b,c from t1) );
-ERROR:  invalid input tuple for function mytransform (gppc.c:1340)  (seg0 slice2 172.17.0.4:25432 pid=35333)
+ERROR:  invalid input tuple for function mytransform   (seg0 slice2 172.17.0.4:25432 pid=35333)
     -- CONSTANT input
     SELECT * FROM transform( TABLE( SELECT 2 as id,'haha'::text as value FROM intable) );
   a   | b 
@@ -3551,15 +3551,15 @@ LINE 1: SELECT id FROM project( TABLE( SELECT time,id FROM history )...
     WITH (describe = project_desc);
 -- Invalid projection position 
     SELECT * FROM project( TABLE( SELECT * FROM history ), NULL);
-ERROR:  the 2nd argument must be an integer (gppc.c:1340)
+ERROR:  the 2nd argument must be an integer 
     SELECT * FROM project( TABLE( SELECT * FROM history ), -1);
-ERROR:  invalid column position -1 (gppc.c:1340)
+ERROR:  invalid column position -1 
     SELECT * FROM project( TABLE( SELECT * FROM history ), 0);
-ERROR:  invalid column position 0 (gppc.c:1340)
+ERROR:  invalid column position 0 
     SELECT * FROM project( TABLE( SELECT * FROM history ), 25);
-ERROR:  invalid column position 25 (gppc.c:1340)
+ERROR:  invalid column position 25 
     SELECT * FROM project( TABLE( SELECT time FROM history ), 2);
-ERROR:  invalid column position 2 (gppc.c:1340)
+ERROR:  invalid column position 2 
     SELECT * FROM project( TABLE( SELECT * FROM t1 ), (ARRAY[2,3])[1]);
 ERROR:  unable to resolve function argument
 LINE 1: ...T * FROM project( TABLE( SELECT * FROM t1 ), (ARRAY[2,3])[1]...
@@ -4849,7 +4849,7 @@ ERROR:  CREATE VIEW statements cannot include calls to dynamically typed functio
 CREATE OR REPLACE FUNCTION project_errorcallback(anytable, OUT int, OUT int) RETURNS SETOF record AS '$libdir/tabfunc_gppc_demo' LANGUAGE c;
 SELECT * FROM project_errorcallback(TABLE(SELECT CASE WHEN a < 10 THEN a END, a FROM generate_series(1, 10)a SCATTER BY a));
 INFO:  message: Hello, world!  (seg2 slice2 172.17.0.4:25434 pid=36338)
-ERROR:  first attribute is NULL (gppc.c:1340)  (seg2 slice2 172.17.0.4:25434 pid=36338)
+ERROR:  first attribute is NULL   (seg2 slice2 172.17.0.4:25434 pid=36338)
 SELECT * FROM project_errorcallback(TABLE(SELECT a, a FROM generate_series(1, 5)a SCATTER BY a)) ORDER BY 1;
  column1 | column2 
 ---------+---------

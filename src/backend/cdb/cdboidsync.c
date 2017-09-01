@@ -4,7 +4,12 @@
  *
  * Make sure we don't re-use oids already used on the segment databases
  *
- * Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdboidsync.c
  *
  *-------------------------------------------------------------------------
  */

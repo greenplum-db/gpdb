@@ -4,7 +4,12 @@
  *	  Interface for workfile manager and workfile caching.
  *
  *
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/workfile_mgr.h
  *
  *
  *-------------------------------------------------------------------------

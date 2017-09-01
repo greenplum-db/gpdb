@@ -9,7 +9,12 @@
  *	   would mean we would possibly need to make copies of tuples when they
  *	   are added and/or when they are retrieved.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/htupfifo.h
  *
  *-------------------------------------------------------------------------
  */

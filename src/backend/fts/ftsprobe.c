@@ -3,7 +3,12 @@
  * ftsprobe.c
  *	  Implementation of segment probing interface
  *
- * Copyright (c) 2006-2011, Greenplum inc
+ * Portions Copyright (c) 2006-2011, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/fts/ftsprobe.c
  *
  *-------------------------------------------------------------------------
  */

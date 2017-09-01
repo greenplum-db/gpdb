@@ -3,7 +3,11 @@
  * execDynamicScan.c
  *	  Support routines for iterating through dynamically chosen partitions of a relation
  *
- * Portions Copyright (c) 2014, Pivotal, Inc.
+ * Portions Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execDynamicScan.c
  *
  *-------------------------------------------------------------------------
  */

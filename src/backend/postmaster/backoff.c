@@ -1,9 +1,7 @@
 /*-------------------------------------------------------------------------
  *
- * Backoff.c
+ * backoff.c
  *	  Query Prioritization
- *
- * Copyright (c) 2009-2010, Greenplum inc.
  *
  * This file contains functions that implement the Query Prioritization
  * feature. Query prioritization is implemented by employing a
@@ -11,15 +9,19 @@
  * backend use the CPU. A sweeper process identifies backends that are
  * making active progress and determines what the relative CPU usage
  * should be.
- * Please see the design doc in
- * docs/design/queryprioritization/QueryPrioritization.docx for
- * details.
  *
  * BackoffBackendTick() - a CHECK_FOR_INTERRUPTS() call in a backend
  *						  leads to a backend 'tick'. If enough 'ticks'
  *						  elapse, then the backend considers a
  *						  backoff.
  * BackoffSweeper()		- workhorse for the sweeper process
+ *
+ * Portions Copyright (c) 2009-2010, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/postmaster/backoff.c
  *
  *-------------------------------------------------------------------------
  */

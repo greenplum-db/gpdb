@@ -3,7 +3,12 @@
  * gppc_test.c
  *	  libgppc test program
  *
- * Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/interfaces/gppc/test/gppc_test/gppc_test.c
  *
  *-------------------------------------------------------------------------
  */

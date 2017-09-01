@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 #
-# copyright (c) 2006, 2007, 2008, 2009 
+# Portions Copyright (c) 2006, 2007, 2008, 2009 Greenplum Inc
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
 # Author: Jeffrey I Cohen
 #
 #
@@ -240,7 +242,8 @@ correctly identify the left and right children.
 
 Jeffrey I Cohen
 
-Copyright (c) 2006, 2007, 2008, 2009 GreenPlum.  All rights reserved.  
+Portions Copyright (c) 2006, 2007, 2008, 2009 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 

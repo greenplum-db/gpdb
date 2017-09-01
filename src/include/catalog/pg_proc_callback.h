@@ -7,7 +7,13 @@
  *   and consists of:
  *     - DESCRIBE() - to support more complex pseudotype resolution
  *
- * Copyright (c) EMC, 2011
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/pg_proc_callback.h
+ *
  *-------------------------------------------------------------------------
  */
 #ifndef PG_PROC_CALLBACK_H

@@ -1,10 +1,13 @@
 /*-------------------------------------------------------------------------
  *
- * resgroup.h
+ * resgroup-ops.h
  *	  GPDB resource group definitions.
  *
+ * Copyright (c) 2017 Pivotal Software, Inc.
  *
- * Copyright (c) 2017, Pivotal Software Inc.
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/resgroup-ops.h
  *
  *-------------------------------------------------------------------------
  */

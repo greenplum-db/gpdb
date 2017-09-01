@@ -3,7 +3,12 @@
  * gp_segment_config.h
  *    a segment configuration table
  *
- * Copyright (c) 2006-2011, Greenplum Inc.
+ * Portions Copyright (c) 2006-2011, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/catalog/gp_segment_config.h
  *
  *-------------------------------------------------------------------------
  */

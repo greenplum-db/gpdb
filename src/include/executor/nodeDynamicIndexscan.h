@@ -1,7 +1,15 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * nodeDynamicIndexScan.h
  *
- * Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2013 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodeDynamicIndexscan.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef NODEDYNAMICINDEXSCAN_H
 #define NODEDYNAMICINDEXSCAN_H

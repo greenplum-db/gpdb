@@ -4,7 +4,12 @@
  *	  Provides routines for preprocessing initPlan subplans
  *		and executing queries with initPlans
  *
- * Copyright (c) 2003-2008, Greenplum inc
+ * Portions Copyright (c) 2003-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbsubplan.c
  *
  *-------------------------------------------------------------------------
  */

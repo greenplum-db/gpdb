@@ -1,19 +1,27 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * faultinjector.c
- * Copyright 2009-2010 Greenplum Inc. All rights reserved.
- *
- * GP Fault Injector utility (gpfaultinjector python script) is used 
- * for Greenplum internal testing only. 
+ *	  GP Fault Injector utility (gpfaultinjector python script) is used 
+ *	  for Greenplum internal testing only. 
  * 
- * The utility inject faults (as defined by 'fault_type') on primary or mirror segment 
- *	at predefined 'fault_name. 
+ * The utility inject faults (as defined by 'fault_type') on primary or
+ * mirror segment at predefined 'fault_name. 
  * 
- * The utility is started on master host. Master host sends the fault injection request to specified segment. 
- *			It connects to postmaster on a segment.
- *			Postmaster spawns backend process that sets fault injection request into shared memory.
- *			Shared memory is accessible to all segment processes.
- *			Segment processes are checking shared memory to find if/when fault has to be injected.
+ * The utility is started on master host.  Master host sends the fault
+ * injection request to specified segment.  It connects to postmaster on a
+ * segment.  Postmaster spawns backend process that sets fault injection
+ * request into shared memory.  Shared memory is accessible to all segment
+ * processes.  Segment processes are checking shared memory to find if/when
+ * fault has to be injected.
  *
+ * Portions Copyright (c) 2009-2010 Greenplum Inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/faultinjector.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

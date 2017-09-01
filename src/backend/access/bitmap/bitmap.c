@@ -1,19 +1,23 @@
-
 /*-------------------------------------------------------------------------
  *
  * bitmap.c
- *	Implementation of the Hybrid Run-Length (HRL) on-disk bitmap index.
+ *	  Implementation of the Hybrid Run-Length (HRL) on-disk bitmap index.
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ *
  *
  * IDENTIFICATION
- *	$PostgreSQL$
+ *	  src/backend/access/bitmap/bitmap.c
  *
  * NOTES
  *	This file contains only the public interface routines.
  *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "access/genam.h"

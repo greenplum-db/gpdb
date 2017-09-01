@@ -1,12 +1,17 @@
 /*-------------------------------------------------------------------------
-*
-* uriparser.c
-*	  Functions for parsing URI strings
-*
-* Copyright (c) 2007-2008, Greenplum inc
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * uriparser.c
+ *	  Functions for parsing URI strings
+ *
+ * Portions Copyright (c) 2007-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/misc/uriparser.c
+ *
+ *-------------------------------------------------------------------------
+ */
 
 #include "postgres.h"
 #include "utils/uri.h"

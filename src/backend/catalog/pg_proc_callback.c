@@ -7,7 +7,13 @@
  *   and consists of:
  *     - DESCRIBE() - to support more complex pseudotype resolution
  *
- * Copyright (c) EMC, 2011
+ * Portions Copyright (c) EMC, 2011
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/catalog/pg_proc_callback.c
+ *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"

@@ -1,10 +1,17 @@
 /*-------------------------------------------------------------------------
  *
  * memquota.h
- * Routines related to memory quota for queries.
+ *	  Routines related to memory quota for queries.
  *
- * Copyright (c) 2005-2010, Greenplum inc
- *-------------------------------------------------------------------------*/
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/memquota.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef MEMQUOTA_H_
 #define MEMQUOTA_H_
 

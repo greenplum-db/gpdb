@@ -3,9 +3,12 @@
  * cdbtimer.h
  *	  Functions to manipulate timers used in a backend.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * $Id$
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbtimer.h
  *
  *-------------------------------------------------------------------------
  */

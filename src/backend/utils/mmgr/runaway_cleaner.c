@@ -8,7 +8,11 @@
  *	 cleanup is finished, the runaway cleaner also informs the red zone handler
  *	 so that a new runaway session can be chosen if necessary.
  *
- * Copyright (c) 2014 Pivotal Inc. All Rights Reserved
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/mmgr/runaway_cleaner.c
  *
  *-------------------------------------------------------------------------
  */

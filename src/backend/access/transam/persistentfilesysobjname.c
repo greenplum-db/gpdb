@@ -2,7 +2,12 @@
  *
  * persistentfilesysobjname.c
  *
- * Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2009-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/transam/persistentfilesysobjname.c
  *
  *-------------------------------------------------------------------------
  */

@@ -1,8 +1,14 @@
-/* 
- * MemTuple
- * 
- * Copyright (c) 2006-2008, Greenplum inc
+/*-------------------------------------------------------------------------
  *
+ * memtuple.c
+ * 
+ * Portions Copyright (c) 2006-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/common/memtuple.c
+ *
+ *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"

@@ -3,7 +3,12 @@
  * nodeMotion.c
  *	  Routines to handle moving tuples around in Greenplum Database.
  *
- * Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2005-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeMotion.c
  *
  *-------------------------------------------------------------------------
  */

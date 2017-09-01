@@ -2,8 +2,13 @@
  * ic_udpifc.c
  *	   Interconnect code specific to UDP transport.
  *
- * Copyright (c) 2005-2011, Greenplum Inc.
+ * Portions Copyright (c) 2005-2011, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2011-2012, EMC Corporation
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/motion/ic_udpifc.c
  *
  *-------------------------------------------------------------------------
  */

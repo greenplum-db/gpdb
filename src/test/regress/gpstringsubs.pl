@@ -1,8 +1,9 @@
 #!/usr/bin/env perl
 #
-# Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
-# Author: Jeffrey I Cohen
+# Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 #
+# Author: Jeffrey I Cohen
 #
 use Pod::Usage;
 use Getopt::Long;
@@ -92,7 +93,8 @@ The tokens are:
 
 Jeffrey I Cohen
 
-Copyright (c) 2007-2010 GreenPlum.  All rights reserved.  
+Portions Copyright (c) 2007-2010 GreenPlum.  All rights reserved.
+Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 
 Address bug reports and comments to: bugs@greenplum.org
 

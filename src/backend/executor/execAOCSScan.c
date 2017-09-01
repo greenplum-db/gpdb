@@ -1,8 +1,16 @@
-/*
+/*-------------------------------------------------------------------------
+ *
  * execAOCSScan.c
  *   Support routines for scanning AppendOnly Columnar tables.
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/execAOCSScan.c
+ *
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

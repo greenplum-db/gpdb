@@ -6,7 +6,11 @@
  *	 handler identifies the session that consumes most vmem and asks it
  *	 to gracefully release its memory.
  *
- * Copyright (c) 2014 Pivotal Inc. All Rights Reserved
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/utils/mmgr/redzone_handler.c
  *
  *-------------------------------------------------------------------------
  */

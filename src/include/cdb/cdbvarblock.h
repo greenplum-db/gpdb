@@ -78,7 +78,12 @@
  *		    }
  *       }
  *        
- * Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2007, greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbvarblock.h
  *
  *-------------------------------------------------------------------------
  */

@@ -1,15 +1,21 @@
 /*-------------------------------------------------------------------------
  *
  * bitmapattutil.c
- *	Defines the routines to maintain all distinct attribute values
- *	which are indexed in the on-disk bitmap index.
+ *	  Defines the routines to maintain all distinct attribute values
+ *	  which are indexed in the on-disk bitmap index.
  *
- * Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2007-2010 Greenplum Inc
+ * Portions Copyright (c) 2010-2012 EMC Corporation
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Portions Copyright (c) 2006-2008, PostgreSQL Global Development Group
+ *
  *
  * IDENTIFICATION
- *	  $PostgreSQL$
+ *	  src/backend/access/bitmap/bitmapattutil.c
+ *
  *-------------------------------------------------------------------------
  */
+
 #include "postgres.h"
 
 #include "access/genam.h"

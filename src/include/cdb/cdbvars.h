@@ -3,7 +3,12 @@
  * cdbvars.h
  *	  definitions for Greenplum-specific global variables
  *
- * Copyright (c) 2003-2010, Greenplum inc
+ * Portions Copyright (c) 2003-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbvars.h
  *
  * NOTES
  *	  See src/backend/utils/misc/guc_gp.c for variable external specification.

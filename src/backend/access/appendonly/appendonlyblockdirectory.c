@@ -3,7 +3,12 @@
  * appendonlyblockdirectory.c
  *    maintain the block directory to blocks in append-only relation files.
  *
- * Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2009, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/appendonly/appendonlyblockdirectory.c
  *
  *-----------------------------------------------------------------------------
  */

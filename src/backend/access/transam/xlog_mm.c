@@ -4,7 +4,12 @@
  *
  * Special xlog handling for master mirroring.
  *
- * Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2010 Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/access/transam/xlog_mm.c
  *
  *-------------------------------------------------------------------------
  */

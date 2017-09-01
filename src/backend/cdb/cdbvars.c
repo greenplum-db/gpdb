@@ -4,7 +4,12 @@
  *	  Provides storage areas and processing routines for Greenplum Database variables
  *	  managed by GUC.
  *
- * Copyright (c) 2003-2010, Greenplum inc
+ * Portions Copyright (c) 2003-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbvars.c
  *
  *
  * NOTES

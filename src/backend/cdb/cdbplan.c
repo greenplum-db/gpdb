@@ -3,7 +3,12 @@
  * cdbplan.c
  *	  Provides routines supporting plan tree manipulation.
  *
- * Copyright (c) 2004-2008, Greenplum inc
+ * Portions Copyright (c) 2004-2008, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbplan.c
  *
  * NOTES
  *	See src/backend/optimizer/util/clauses.c for background information

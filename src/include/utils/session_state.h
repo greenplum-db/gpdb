@@ -3,7 +3,13 @@
  * session_state.h
  *	  This file contains declarations for session state information.
  *
- * Copyright (c) 2014, Pivotal Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/session_state.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef SESSIONSTATE_H
 #define SESSIONSTATE_H

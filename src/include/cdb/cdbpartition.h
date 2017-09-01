@@ -3,7 +3,12 @@
  * cdbpartition.h
  *	 Definitions and API functions for cdbpartition.c
  *
- * Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/cdb/cdbpartition.h
  *
  *--------------------------------------------------------------------------
  */

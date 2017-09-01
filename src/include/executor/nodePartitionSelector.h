@@ -5,7 +5,11 @@
  *	  Oids based on a given set of predicates. It works for both constant
  *	  partition elimination and join partition elimination
  *
- * Copyright (c) 2014, Pivotal Inc.
+ * Copyright (c) 2014-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/executor/nodePartitionSelector.h
  *
  *-------------------------------------------------------------------------
  */

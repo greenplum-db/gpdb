@@ -4,8 +4,13 @@
  *	  Implementation of interface for FireRep-specific segment state machine
  *	  and transitions
  *
- * Copyright (c) 2005-2010, Greenplum Inc.
- * Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2005-2010, Greenplum Inc.
+ * Portions Copyright (c) 2011, EMC Corp.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/fts/ftsfilerep.c
  *
  *-------------------------------------------------------------------------
  */

@@ -3,11 +3,14 @@
  * resource_manager.c
  *	  GPDB resource manager code.
  *
+ * Portions Copyright (c) 2006-2017, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
- * Copyright (c) 2006-2017, Greenplum inc.
  *
+ * IDENTIFICATION
+ *	    src/backend/utils/resource_manager/resource_manager.c
  *
- -------------------------------------------------------------------------
+ *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 

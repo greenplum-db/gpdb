@@ -9,6 +9,9 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
+ * IDENTIFICATION
+ *	    src/bin/pg_dump/cdb/cdb_seginst.c
+ *
  *-------------------------------------------------------------------------
  */
 

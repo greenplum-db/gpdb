@@ -3,7 +3,8 @@
  * resgroupcmds.c
  *	  Commands for manipulating resource group.
  *
- * Copyright (c) 2006-2017, Greenplum inc.
+ * Portions Copyright (c) 2006-2017, Greenplum inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  * IDENTIFICATION
  *    src/backend/commands/resgroupcmds.c

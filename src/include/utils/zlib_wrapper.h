@@ -4,7 +4,11 @@
  *	 Wrapper functions for zlib to provide better integration with GPDB
  *
  * Greenplum Database
- * Copyright (C) 2016 Pivotal Software, Inc
+ * Copyright (c) 2016-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/zlib_wrapper.h
  *
  *-------------------------------------------------------------------------
  */

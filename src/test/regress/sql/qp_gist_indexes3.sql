@@ -14,7 +14,8 @@ set search_path to qp_gist_indexes3;
 
 ------------------------------------------------------------------------------
 -- start_ignore
--- COPYRIGHT (c) 2010, Greenplum, Inc.  All rights reserved.  
+-- Portions Copyright (c) 2010, Greenplum, Inc.  All rights reserved.
+-- Portions Copyright (c) 2012-Present Pivotal Software, Inc.
 -- PURPOSE:
 --     Test VACUUM on GiST indexes.
 --     Also test somewhat larger data sets than most of my other GiST index 

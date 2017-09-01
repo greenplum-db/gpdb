@@ -7,7 +7,9 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/interfaces/libpq/fe-auth.h,v 1.30 2009/01/01 17:24:03 momjian Exp $
+ *
+ * IDENTIFICATION
+ *	    src/backend/gp_libpq_fe/gp-fe-auth.h
  *
  *-------------------------------------------------------------------------
  */

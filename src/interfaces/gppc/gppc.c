@@ -3,7 +3,12 @@
  * gppc.c
  *	  libgppc wrapper main
  *
- * Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/interfaces/gppc/gppc.c
  *
  *-------------------------------------------------------------------------
  */

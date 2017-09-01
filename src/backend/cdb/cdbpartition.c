@@ -6,7 +6,12 @@
  *
  *    Many items are just extensions of tablecmds.c.
  *
- * Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/cdb/cdbpartition.c
  *
  *--------------------------------------------------------------------------
  */

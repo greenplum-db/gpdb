@@ -13,7 +13,11 @@
  * in bitmap indexes. These algorithms have build in assumptions not
  * given in the use case this compression algorithm was developed for.
  *
- * Copyright (c) 2013, Pivotal.
+ * Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/bitmap_compression.h
  *
  *------------------------------------------------------------------------------
 */

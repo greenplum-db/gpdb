@@ -2,7 +2,12 @@
  * nodeSequence.c
  *   Routines to handle Sequence node.
  *
- * Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012 - present, EMC/Greenplum
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/backend/executor/nodeSequence.c
  *
  * Sequence node contains a list of subplans, which will be processed in the 
  * order of left-to-right. Result tuples from the last subplan will be outputted

@@ -43,7 +43,8 @@
  * before switching to the other state or activating a different read pointer.
  *
  *
- * Portions Copyright (c) 2007-2017, Pivotal Software Inc.
+ * Portions Copyright (c) 2007-2010, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *

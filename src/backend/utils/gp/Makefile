@@ -1,8 +1,14 @@
 #-------------------------------------------------------------------------
 #
+# Makefile--
 #    Makefile for utils/gp
 #
-# Copyright (c) Greenplum 2010
+# Portions Copyright (c) Greenplum 2010
+# Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+#
+#
+# IDENTIFICATION
+#	    src/backend/utils/gp/Makefile
 #
 #-------------------------------------------------------------------------
 

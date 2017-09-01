@@ -1,9 +1,16 @@
 /*-------------------------------------------------------------------------
  *
  * gp_alloc.h
- *	  This file contains declarations for an allocator that works with vmem quota.
+ *	  This file contains declarations for an allocator that works with
+ *	  vmem quota.
  *
- * Copyright (c) 2016, Pivotal Inc.
+ * Copyright (c) 2016-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/utils/gp_alloc.h
+ *
+ *-------------------------------------------------------------------------
  */
 #ifndef GP_ALLOC_H
 #define GP_ALLOC_H

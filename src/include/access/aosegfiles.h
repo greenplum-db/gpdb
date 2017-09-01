@@ -1,12 +1,18 @@
 /*-------------------------------------------------------------------------
-*
-* aosegfiles.h
-*	  internal specifications of the pg_aoseg_* Append Only file segment
-*	  list relation.
-*
-* Portions Copyright (c) 2008, Greenplum Inc.
-*-------------------------------------------------------------------------
-*/
+ *
+ * aosegfiles.h
+ *	  Internal specifications of the pg_aoseg_* Append Only file segment
+ *	  list relation.
+ *
+ * Portions Copyright (c) 2008, Greenplum Inc.
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    src/include/access/aosegfiles.h
+ *
+ *-------------------------------------------------------------------------
+ */
 #ifndef AOSEGFILES_H
 #define AOSEGFILES_H
 
