@@ -24,6 +24,10 @@ brew install go # Or get the latest from https://golang.org/dl/
 
 # Installing python libraries
 brew install python
+export PATH="/usr/local/opt/python/libexec/bin:$PATH"
+cat >> ~/.bash_profile << EOF
+export PATH="/usr/local/opt/python/libexec/bin:$PATH"
+EOF
 pip install lockfile psi paramiko pysql psutil setuptools
 pip install unittest2 parse pexpect mock pyyaml
 pip install git+https://github.com/behave/behave@v1.2.4
