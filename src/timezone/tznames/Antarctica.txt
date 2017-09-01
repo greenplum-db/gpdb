@@ -7,17 +7,20 @@
 # src/timezone/tznames/Antarctica.txt
 #
 
-CLST   -10800 D  # Chile Summer Time
+AWST    28800    # Australian Western Standard Time
+                 #     (Antarctica/Casey)
+                 #     (Australia/Perth)
+CLST   -10800 D  # Chile Summer Time (obsolete)
                  #     (America/Santiago)
                  #     (Antarctica/Palmer)
-CLT    -14400    # Chile Time
+CLT    America/Santiago  # Chile Time
                  #     (America/Santiago)
                  #     (Antarctica/Palmer)
-DAVT    25200    # Davis Time (Antarctica)
+DAVT    Antarctica/Davis  # Davis Time (Antarctica)
                  #     (Antarctica/Davis)
 DDUT    36000    # Dumont-d`Urville Time (Antarctica)
                  #     (Antarctica/DumontDUrville)
-MAWT    18000    # Mawson Time (Antarctica) (caution: this used to mean 21600)
+MAWT    Antarctica/Mawson  # Mawson Time (Antarctica)
                  #     (Antarctica/Mawson)
 MIST    39600    # Macquarie Island Time
                  #     (Antarctica/Macquarie)
@@ -33,9 +36,3 @@ SYOT    10800    # Syowa Time
                  #     (Antarctica/Syowa)
 VOST    21600    # Vostok time
                  #     (Antarctica/Vostok)
-# CONFLICT! WST is not unique
-# Other timezones:
-#  - WST: West Samoa Time
-WST     28800    # Western Standard Time (Australia)
-                 #     (Antarctica/Casey)
-                 #     (Australia/Perth)

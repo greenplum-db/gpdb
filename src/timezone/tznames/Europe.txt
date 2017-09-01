@@ -7,9 +7,10 @@
 # src/timezone/tznames/Europe.txt
 #
 
+# CONFLICT! BST is not unique
+# Other timezones:
+#  - BST: Bougainville Standard Time (Papua New Guinea)
 BST      3600 D  # British Summer Time
-                 # Brazil Standard Time
-                 # Bering Summer Time
                  #     (Europe/London)
 CEST     7200 D  # Central Europe Summer Time
                  #     (Africa/Ceuta)
@@ -154,7 +155,7 @@ EETDST  10800 D  # East-Egypt Summertime
                  #     (Europe/Uzhgorod)
                  #     (Europe/Vilnius)
                  #     (Europe/Zaporozhye)
-FET     10800    # Further-eastern European Time
+FET     10800    # Further-eastern European Time (obsolete)
                  #     (Europe/Kaliningrad)
                  #     (Europe/Minsk)
 GMT         0    # Greenwich Mean Time
@@ -186,15 +187,13 @@ MET      3600    # Middle Europe Time (not in zic)
 METDST   7200 D  # Middle Europe Summer Time (not in zic)
 MEZ      3600    # Mitteleuropäische Zeit (German) (not in zic)
 MSD     14400 D  # Moscow Daylight Time (obsolete)
+MSK     Europe/Moscow  # Moscow Time
                  #     (Europe/Moscow)
-MSK     14400    # Moscow Time (caution: this used to mean 10800)
-                 #     (Europe/Moscow)
-SAMST   18000 D  # Samara Summer Time (obsolete)
-                 #     (Europe/Samara)
-SAMT    14400    # Samara Time
-                 #     (Europe/Samara)
-VOLT    14400    # Volgograd Time
                  #     (Europe/Volgograd)
+SAMST   Europe/Samara  # Samara Summer Time (obsolete)
+SAMT    Europe/Samara  # Samara Time
+                 #     (Europe/Samara)
+VOLT    Europe/Volgograd  # Volgograd Time (obsolete)
 WEST     3600 D  # Western Europe Summer Time
                  #     (Africa/Casablanca)
                  #     (Atlantic/Canary)

@@ -7,9 +7,6 @@
 # src/timezone/tznames/Atlantic.txt
 #
 
-# CONFLICT! ADT is not unique
-# Other timezones:
-#  - ADT: Arabic Daylight Time (Asia)
 ADT    -10800 D  # Atlantic Daylight Time
                  #     (America/Glace_Bay)
                  #     (America/Goose_Bay)
@@ -51,12 +48,11 @@ AZOST       0 D  # Azores Summer Time
                  #     (Atlantic/Azores)
 AZOT    -3600    # Azores Time
                  #     (Atlantic/Azores)
-CVT     -3600    # Cape Verde Time
+CVT     Atlantic/Cape_Verde  # Cape Verde Time
                  #     (Atlantic/Cape_Verde)
-FKST   -10800 D  # Falkland Islands Summer Time
+FKST    Atlantic/Stanley  # Falkland Islands Summer/Standard Time
                  #     (Atlantic/Stanley)
-FKT    -14400    # Falkland Islands Time
-                 #     (Atlantic/Stanley)
+FKT     Atlantic/Stanley  # Falkland Islands Time (obsolete)
 GMT         0    # Greenwich Mean Time
                  #     (Africa/Abidjan)
                  #     (Africa/Bamako)

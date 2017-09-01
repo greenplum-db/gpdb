@@ -14,13 +14,8 @@ ACT    -18000    # Acre Time
                  #     (America/Rio_Branco)
 # CONFLICT! ACST is not unique
 # Other timezones:
-#  - ACST: Central Australia Standard Time (Australia)
-ACST   -14400 D  # Acre Summer Time (not in zic)
-                 #     (America/Eirunepe)
-                 #     (America/Rio_Branco)
-# CONFLICT! ADT is not unique
-# Other timezones:
-#  - ADT: Arabic Daylight Time (Asia)
+#  - ACST: Australian Central Standard Time
+ACST   -14400 D  # Acre Summer Time (obsolete, not in zic)
 ADT    -10800 D  # Atlantic Daylight Time
                  #     (America/Glace_Bay)
                  #     (America/Goose_Bay)
@@ -52,7 +47,7 @@ AMT    -14400    # Amazon Time
                  #     (America/Cuiaba)
                  #     (America/Manaus)
                  #     (America/Porto_Velho)
-ART    -10800    # Argentina Time
+ART    America/Argentina/Buenos_Aires  # Argentina Time
                  #     (America/Argentina/Buenos_Aires)
                  #     (America/Argentina/Cordoba)
                  #     (America/Argentina/Tucuman)
@@ -63,7 +58,7 @@ ART    -10800    # Argentina Time
                  #     (America/Argentina/Mendoza)
                  #     (America/Argentina/Rio_Gallegos)
                  #     (America/Argentina/Ushuaia)
-ARST    -7200 D  # Argentina Summer Time
+ARST    America/Argentina/Buenos_Aires  # Argentina Summer Time
 # CONFLICT! AST is not unique
 # Other timezones:
 #  - AST: Arabic Standard Time (Asia)
@@ -121,7 +116,6 @@ CDT    -14400 D  # Cuba Central Daylight Time
 #  - CDT: Cuba Central Daylight Time (America)
 #  - CDT: Canada Central Daylight Time (America)
 CDT    -18000 D  # Central Daylight Time
-                 #     (America/Cancun)
                  #     (America/Chicago)
                  #     (America/Menominee)
                  #     (America/Merida)
@@ -131,10 +125,10 @@ CDT    -18000 D  # Central Daylight Time
                  #     (America/Rainy_River)
                  #     (America/Rankin_Inlet)
                  #     (America/Winnipeg)
-CLST   -10800 D  # Chile Summer Time
+CLST   -10800 D  # Chile Summer Time (obsolete)
                  #     (America/Santiago)
                  #     (Antarctica/Palmer)
-CLT    -14400    # Chile Time
+CLT    America/Santiago  # Chile Time
                  #     (America/Santiago)
                  #     (Antarctica/Palmer)
 COT    -18000    # Columbia Time (not in zic)
@@ -142,14 +136,15 @@ COT    -18000    # Columbia Time (not in zic)
 # Other timezones:
 #  - CST: Central Standard Time (Australia)
 #  - CST: Central Standard Time (America)
+#  - CST: China Standard Time (Asia)
 CST    -18000    # Cuba Central Standard Time (America)
                  #     (America/Havana)
 # CONFLICT! CST is not unique
 # Other timezones:
 #  - CST: Central Standard Time (Australia)
+#  - CST: China Standard Time (Asia)
 #  - CST: Cuba Central Standard Time (America)
 CST    -21600    # Central Standard Time (America)
-                 #     (America/Cancun)
                  #     (America/Chicago)
                  #     (America/Menominee)
                  #     (America/Merida)
@@ -189,6 +184,7 @@ EGT     -3600    # East Greenland Time (Svalbard & Jan Mayen)
 # Other timezones:
 #  - EST: Eastern Standard Time (Australia)
 EST    -18000    # Eastern Standard Time (America)
+                 #     (America/Cancun)
                  #     (America/Cayman)
                  #     (America/Coral_Harbour)
                  #     (America/Detroit)
@@ -233,11 +229,13 @@ GMT         0    # Greenwich Mean Time
                  #     (Etc/GMT)
                  #     (Europe/Dublin)
                  #     (Europe/London)
-GYT    -14400    # Guyana Time
+GYT    America/Guyana  # Guyana Time
                  #     (America/Guyana)
-HADT   -32400 D  # Hawaii-Aleutain Daylight Time
+HADT   -32400 D  # Hawaii-Aleutian Daylight Time (obsolete abbreviation)
                  #     (America/Adak)
-HAST   -36000    # Hawaii-Aleutain Standard Time
+HAST   -36000    # Hawaii-Aleutian Standard Time (obsolete abbreviation)
+                 #     (America/Adak)
+HDT    -32400 D  # Hawaiian-Aleutian Daylight Time
                  #     (America/Adak)
 MDT    -21600 D  # Mexico Mountain Daylight Time
                  # Mountain Daylight Time
@@ -290,13 +288,15 @@ PST    -28800    # Pacific Standard Time
                  #     (Pacific/Pitcairn)
 PYST   -10800 D  # Paraguay Summer Time
                  #     (America/Asuncion)
-PYT    -14400    # Paraguay Time
+PYT    America/Asuncion  # Paraguay Time
                  #     (America/Asuncion)
-SRT    -10800    # Suriname Time
+SRT    America/Paramaribo  # Suriname Time
                  #     (America/Paramaribo)
-UYST    -7200 D  # Uruguay Summer Time (not in zic)
-UYT    -10800    # Uruguay Time (not in zic)
-VET    -16200    # Venezuela Time (caution: this used to mean -14400)
+UYST    -7200 D  # Uruguay Summer Time (obsolete)
+                 #     (America/Montevideo)
+UYT    -10800    # Uruguay Time
+                 #     (America/Montevideo)
+VET    America/Caracas  # Venezuela Time
                  #     (America/Caracas)
 WGST    -7200 D  # Western Greenland Summer Time
                  #     (America/Godthab)
