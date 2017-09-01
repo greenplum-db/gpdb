@@ -729,8 +729,8 @@ sdw4,192.0.2.4</codeblock>
                         validation.</pd>
                     <pd><codeph>count</codeph> - Specify this value to compare row counts between
                         source and destination table data.</pd>
-                    <pd><codeph>MD5</codeph> - Specify this value to compare MD5 values between
-                        source and destination table data. </pd>
+                    <pd><codeph>sha256</codeph> - Specify this value to compare SHA-256 values
+                        between source and destination table data. </pd>
                     <pd>If validation for a table fails, <codeph>gptransfer</codeph> displays the
                         name of the table and writes the file name to the text file
                             <codeph>failed_migrated_tables_</codeph><varname>yyyymmdd_hhmmss</varname><codeph>.txt</codeph>.
