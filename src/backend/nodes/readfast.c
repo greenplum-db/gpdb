@@ -1362,6 +1362,7 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(relation);
 	READ_NODE_FIELD(attlist);
 	READ_BOOL_FIELD(is_from);
+	READ_BOOL_FIELD(is_program);
 	READ_BOOL_FIELD(skip_ext_partition);
 	READ_STRING_FIELD(filename);
 	READ_NODE_FIELD(options);

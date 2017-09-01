@@ -33,7 +33,7 @@ LIBS += $(PTHREAD_LIBS)
 OBJS = $(LIBOBJS) $(PG_CRC32C_OBJS) chklocale.o copydir.o dirmod.o exec.o \
 	inet_net_ntop.o noblock.o path.o \
 	pgcheckdir.o pgmkdirp.o pgsleep.o pgstrcasecmp.o quotes.o qsort.o \
-	qsort_arg.o sprompt.o thread.o tar.o
+	qsort_arg.o sprompt.o thread.o tar.o wait_error.o
 ifneq (,$(filter $(PORTNAME),cygwin win32))
 OBJS += pipe.o
 endif

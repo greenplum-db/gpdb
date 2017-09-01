@@ -19,4 +19,6 @@ extern char *strtokx(const char *s,
 		bool del_quotes,
 		int encoding);
 
+extern void strip_quotes(char *source, char quote, char escape, int encoding);
+
 #endif   /* STRINGUTILS_H */

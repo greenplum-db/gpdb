@@ -3063,6 +3063,7 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(attlist);
 	WRITE_BOOL_FIELD(is_from);
+	WRITE_BOOL_FIELD(is_program);
 	WRITE_BOOL_FIELD(skip_ext_partition);
 	WRITE_STRING_FIELD(filename);
 	WRITE_NODE_FIELD(options);

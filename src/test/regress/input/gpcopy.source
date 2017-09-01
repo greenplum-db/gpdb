@@ -674,12 +674,14 @@ SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject
 COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
 SELECT * FROM segment_reject_limit_from;
 
--- STDIN is not support by copy from on segment
+-- STDIN is not support by copy from on segment and copy program
 COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
+COPY segment_reject_limit_from from PROGRAM STDIN log errors segment reject limit 3 rows;
 SELECT * FROM segment_reject_limit_from;
 
--- STDOUT is not support by copy to on segment
+-- STDOUT is not support by copy to on segment and copy program
 COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
+COPY segment_reject_limit_from to PROGRAM STDOUT log errors segment reject limit 3 rows;
 
 -- \copy from doesn't support on segment
 --on segment lower case
@@ -700,6 +702,12 @@ COPY segment_reject_limit_from to STDOUT on segment log errors segment reject li
 \COPY segment_reject_limit_from to '/tmp/copy_on_segment<SEGID>.csv' ON SEGMENT;
 --on segment with \t
 \copy segment_reject_limit_from from '/tmp/copy_on_segment<SEGID>.csv' on	segment;  
+
+-- \copy to/from 'stdin'/'stdout' (quoted)
+\copy segment_reject_limit_from to 'stdin';
+\copy segment_reject_limit_from from 'stdin';
+\copy segment_reject_limit_from to 'stdout';
+\copy segment_reject_limit_from from 'stdout';
 
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
@@ -875,6 +883,9 @@ DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
+DROP TABLE IF EXISTS LINEITEM_3;
+DROP TABLE IF EXISTS LINEITEM_4;
+DROP TABLE IF EXISTS LINEITEM_5;
 -- end_ignore
 CREATE TABLE LINEITEM ( L_ORDERKEY INTEGER NOT NULL,
 L_PARTKEY INTEGER NOT NULL,
@@ -895,6 +906,9 @@ L_COMMENT VARCHAR(44) NOT NULL);
 
 CREATE TABLE LINEITEM_1 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_2 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_3 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_4 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_5 (LIKE LINEITEM);
 
 COPY LINEITEM FROM '@abs_srcdir@/data/lineitem.csv' WITH DELIMITER '|' CSV;
 SELECT COUNT(*) FROM LINEITEM;
@@ -908,6 +922,21 @@ SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_1;
 COPY LINEITEM_2 FROM '/tmp/lineitem_s<SEGID>.csv' ON SEGMENT CSV;
 SELECT COUNT(*) FROM LINEITEM_2;
 SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_2;
+
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program.csv' CSV;
+COPY LINEITEM_3 FROM PROGRAM 'cat /tmp/lineitem_program.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_3;
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_3;
+
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+COPY LINEITEM_4 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM LINEITEM_4;
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_4;
+
+\COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program_client.csv' CSV;
+\COPY LINEITEM_5 FROM PROGRAM 'cat /tmp/lineitem_program_client.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_5;
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_5;
 
 --Test for `COPY FROM ON SEGMENT` checking the distribution key restriction 
 -- start_matchsubs
@@ -995,4 +1024,7 @@ COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK
 DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
+DROP TABLE IF EXISTS LINEITEM_3;
+DROP TABLE IF EXISTS LINEITEM_4;
+DROP TABLE IF EXISTS LINEITEM_5;
 -- end_ignore

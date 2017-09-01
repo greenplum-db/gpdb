@@ -122,6 +122,7 @@ static bool CopyCheckIsLastLine(CopyState cstate);
 static char *extract_line_buf(CopyState cstate);
 uint64
 DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate);
+static void ClosePipeToProgram(CopyState cstate);
 
 static GpDistributionData *
 InitDistributionData(CopyState cstate, Form_pg_attribute *attr,
@@ -470,9 +471,35 @@ CopySendEndOfRow(CopyState cstate)
 			(void) fwrite(fe_msgbuf->data, fe_msgbuf->len,
 						  1, cstate->copy_file);
 			if (ferror(cstate->copy_file))
-				ereport(ERROR,
+			{
+				if (cstate->is_program)
+				{
+					if (errno == EPIPE)
+					{
+						/*
+						 * The pipe will be closed automatically on error at
+						 * the end of transaction, but we might get a better
+						 * error message from the subprocess' exit code than
+						 * just "Broken Pipe"
+						 */
+						ClosePipeToProgram(cstate);
+
+						/*
+						 * If ClosePipeToProgram() didn't throw an error,
+						 * the program terminated normally, but closed the
+						 * pipe first. Restore errno, and throw an error.
+						 */
+						errno = EPIPE;
+					}
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							 errmsg("could not write to COPY program: %m")));
+				}
+				else
+					ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not write to COPY file: %m")));
+			}
 
 			break;
 		case COPY_OLD_FE:
@@ -527,9 +554,35 @@ CopyToDispatchFlush(CopyState cstate)
 			(void) fwrite(fe_msgbuf->data, fe_msgbuf->len,
 						  1, cstate->copy_file);
 			if (ferror(cstate->copy_file))
-				ereport(ERROR,
+			{
+				if (cstate->is_program)
+				{
+					if (errno == EPIPE)
+					{
+						/*
+						 * The pipe will be closed automatically on error at
+						 * the end of transaction, but we might get a better
+						 * error message from the subprocess' exit code than
+						 * just "Broken Pipe"
+						 */
+						ClosePipeToProgram(cstate);
+
+						/*
+						 * If ClosePipeToProgram() didn't throw an error,
+						 * the program terminated normally, but closed the
+						 * pipe first. Restore errno, and throw an error.
+						 */
+						errno = EPIPE;
+					}
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							 errmsg("could not write to COPY program: %m")));
+				}
+				else
+					ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not write to COPY file: %m")));
+			}
 			break;
 		case COPY_OLD_FE:
 
@@ -1164,7 +1217,12 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cannot specify DELIMITER in BINARY mode")));
 
-	if (cstate->on_segment && stmt->filename==NULL)
+	if (stmt->is_program && stmt->filename == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("STDIN/STDOUT not allowed with PROGRAM")));
+
+	if (cstate->on_segment && stmt->filename == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("STDIN and STDOUT are not supported by 'COPY ON SEGMENT'")));
@@ -1280,13 +1338,22 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	if (cstate->eol_str)
 		CopyEolStrToType(cstate);
 
-	/* Disallow file COPY except to superusers. */
+	/* Disallow COPY to/from file or program except to superusers. */
 	if (!pipe && !superuser())
-		ereport(ERROR,
+	{
+		if (stmt->is_program)
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("must be superuser to COPY to or from an external program"),
+					 errhint("Anyone can COPY to stdout or from stdin. "
+							 "psql's \\copy command also works for anyone.")));
+		else
+			ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to COPY to or from a file"),
 				 errhint("Anyone can COPY to stdout or from stdin. "
 						 "psql's \\copy command also works for anyone.")));
+	}
 
 	cstate->copy_dest = COPY_FILE;		/* default */
 	if (Gp_role == GP_ROLE_EXECUTE)
@@ -1332,6 +1399,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	cstate->fe_msgbuf = NULL;
 	cstate->fe_eof = false;
 	cstate->missing_bytes = 0;
+	cstate->is_program = stmt->is_program;
 	
 	if(!is_from)
 	{
@@ -1344,39 +1412,54 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		}
 		else
 		{
-			mode_t		oumask; /* Pre-existing umask value */
-			struct stat st;
-			char *filename = cstate->filename;
+			if (cstate->is_program)
+			{
+				if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
+					cstate->copy_file = OpenPipeStream("cat > /dev/null", PG_BINARY_W);
+				else
+					cstate->copy_file = OpenPipeStream(cstate->filename, PG_BINARY_W);
 
-			if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
-				filename = "/dev/null";
+				if (cstate->copy_file == NULL)
+					ereport(ERROR,
+							(errmsg("could not execute command \"%s\": %m",
+									cstate->filename)));
+			}
+			else
+			{
+				mode_t		oumask; /* Pre-existing umask value */
+				struct stat st;
+				char *filename = cstate->filename;
 
-			/*
-			 * Prevent write to relative path ... too easy to shoot oneself in the
-			 * foot by overwriting a database file ...
-			 */
-			if (!is_absolute_path(filename))
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_NAME),
-						 errmsg("relative path not allowed for COPY to file")));
+				if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
+					filename = "/dev/null";
 
-			oumask = umask((mode_t) 022);
-			cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
-			umask(oumask);
+				/*
+				* Prevent write to relative path ... too easy to shoot oneself in the
+				* foot by overwriting a database file ...
+				*/
+				if (!is_absolute_path(filename))
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_NAME),
+							errmsg("relative path not allowed for COPY to file")));
 
-			if (cstate->copy_file == NULL)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not open file \"%s\" for writing: %m", filename)));
+				oumask = umask((mode_t) 022);
+				cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
+				umask(oumask);
 
-			// Increase buffer size to improve performance  (cmcdevitt)
-			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+				if (cstate->copy_file == NULL)
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							errmsg("could not open file \"%s\" for writing: %m", filename)));
 
-			fstat(fileno(cstate->copy_file), &st);
-			if (S_ISDIR(st.st_mode))
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("\"%s\" is a directory", filename)));
+				// Increase buffer size to improve performance  (cmcdevitt)
+				setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+
+				fstat(fileno(cstate->copy_file), &st);
+				if (S_ISDIR(st.st_mode))
+					ereport(ERROR,
+							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							errmsg("\"%s\" is a directory", filename)));
+			}
 		}
 
 	}
@@ -1595,7 +1678,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 	if (is_from)				/* copy from file to database */
 	{
-		bool		pipe = (cstate->filename == NULL);
+		bool		pipe = (cstate->filename == NULL || Gp_role == GP_ROLE_EXECUTE);
 		bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH &&
 									  cstate->rel->rd_cdbpolicy != NULL);
 		char		relkind;
@@ -1628,11 +1711,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 					 errmsg("COPY single row error handling only available for distributed user tables")));
 
-		if (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE)
-		{
-			pipe = true;
-		}
-
 		if (pipe)
 		{
 			if (whereToSendOutput == DestRemote)
@@ -1642,29 +1720,44 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		}
 		else
 		{
-			struct stat st;
-			char *filename = cstate->filename;
+			if (cstate->is_program)
+			{
+				if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
+					cstate->copy_file = OpenPipeStream("cat /dev/null", PG_BINARY_R);
+				else
+					cstate->copy_file = OpenPipeStream(cstate->filename, PG_BINARY_R);
 
-			/* Use dummy file on master for COPY FROM ON SEGMENT */
-			if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
-				filename = "/dev/null";
+				if (cstate->copy_file == NULL)
+					ereport(ERROR,
+							(errmsg("could not execute command \"%s\": %m",
+									cstate->filename)));
+			}
+			else
+			{
+				struct stat st;
+				char *filename = cstate->filename;
 
-			cstate->copy_file = AllocateFile(filename, PG_BINARY_R);
+				/* Use dummy file on master for COPY FROM ON SEGMENT */
+				if (cstate->on_segment && Gp_role == GP_ROLE_DISPATCH)
+					filename = "/dev/null";
 
-			if (cstate->copy_file == NULL)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("could not open file \"%s\" for reading: %m",
-								filename)));
+				cstate->copy_file = AllocateFile(filename, PG_BINARY_R);
 
-			// Increase buffer size to improve performance  (cmcdevitt)
-            setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+				if (cstate->copy_file == NULL)
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							errmsg("could not open file \"%s\" for reading: %m",
+									filename)));
 
-			fstat(fileno(cstate->copy_file), &st);
-			if (S_ISDIR(st.st_mode))
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("\"%s\" is a directory", filename)));
+				// Increase buffer size to improve performance  (cmcdevitt)
+				setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+
+				fstat(fileno(cstate->copy_file), &st);
+				if (S_ISDIR(st.st_mode))
+					ereport(ERROR,
+							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							errmsg("\"%s\" is a directory", filename)));
+			}
 		}
 
 
@@ -1756,11 +1849,17 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 		if (!pipe)
 		{
-			if (FreeFile(cstate->copy_file))
-				ereport(ERROR,
+			if (cstate->is_program)
+			{
+				ClosePipeToProgram(cstate);
+			}
+			else if (FreeFile(cstate->copy_file))
+			{
+					ereport(ERROR,
 						(errcode_for_file_access(),
-						 errmsg("could not write to file \"%s\": %m",
+						 errmsg("could not close file \"%s\": %m",
 								cstate->filename)));
+			}
 		}
 	}
 	else
@@ -1841,6 +1940,26 @@ DoCopy(const CopyStmt *stmt, const char *queryString)
 	PG_END_TRY();
 	pfree(cstate);
 	return result;
+}
+
+/*
+ * Closes the pipe to an external program, checking the pclose() return code.
+ */
+static void
+ClosePipeToProgram(CopyState cstate)
+{
+	int pclose_rc;
+
+	Assert(cstate->is_program);
+
+	pclose_rc = ClosePipeStream(cstate->copy_file);
+	if (pclose_rc == -1)
+		ereport(ERROR,
+				(errmsg("could not close pipe to external command: %m")));
+	else if (pclose_rc != 0)
+		ereport(ERROR,
+				(errmsg("program \"%s\" failed: %s",
+						cstate->filename, wait_result_to_str(pclose_rc))));
 }
 
 /*
@@ -1953,11 +2072,17 @@ DoCopyTo(CopyState cstate)
 
 	if (!pipe)
 	{
-		if (FreeFile(cstate->copy_file))
+		if (cstate->is_program)
+		{
+			ClosePipeToProgram(cstate);
+		}
+		else if (FreeFile(cstate->copy_file))
+		{
 			ereport(ERROR,
 					(errcode_for_file_access(),
-					 errmsg("could not write to file \"%s\": %m",
+					 errmsg("could not close file \"%s\": %m",
 							cstate->filename)));
+		}
 	}
 }
 
@@ -2006,13 +2131,22 @@ static void CopyToCreateDispatchCommand(CopyState cstate,
 			appendStringInfo(cdbcopy_cmd, ")");
 	}
 
+	if (cstate->is_program)
+		appendStringInfo(cdbcopy_cmd, " TO PROGRAM");
+	else
+		appendStringInfo(cdbcopy_cmd, " TO");
+
 	if (cstate->on_segment)
 	{
-		appendStringInfo(cdbcopy_cmd, " TO '%s' WITH ON SEGMENT", cstate->filename);
+		appendStringInfo(cdbcopy_cmd, " '%s' WITH ON SEGMENT", cstate->filename);
+	}
+	else if (cstate->is_program)
+	{
+			appendStringInfo(cdbcopy_cmd, " '%s' WITH", cstate->filename);
 	}
 	else
 	{
-		appendStringInfo(cdbcopy_cmd, " TO STDOUT WITH");
+			appendStringInfo(cdbcopy_cmd, " STDOUT WITH");
 	}
 
 	if (cstate->oids)
@@ -2914,7 +3048,12 @@ static int CopyFromCreateDispatchCommand(CopyState cstate,
 	 * error log file).
 	 */
 	if(cstate->filename)
-		appendStringInfo(cdbcopy_cmd, " FROM %s WITH", quote_literal_internal(cstate->filename));
+	{
+		if (cstate->is_program)
+			appendStringInfo(cdbcopy_cmd, " FROM PROGRAM %s WITH", quote_literal_internal(cstate->filename));
+		else
+			appendStringInfo(cdbcopy_cmd, " FROM %s WITH", quote_literal_internal(cstate->filename));
+	}
 	else
 		appendStringInfo(cdbcopy_cmd, " FROM STDIN WITH");
 
@@ -4102,7 +4241,7 @@ CopyFrom(CopyState cstate)
 	EState	   *estate = CreateExecutorState(); /* for ExecConstraints() */
 	TupleTableSlot *baseSlot;
 	TupleTableSlot *slot;
-	bool		file_has_oids;
+	bool		file_has_oids = false;
 	int		   *defmap;
 	ExprState **defexprs;		/* array of default att expressions */
 	ExprContext *econtext;		/* used for ExecEvalExpr for default atts */
@@ -4870,24 +5009,37 @@ PROCESS_SEGMENT_DATA:
 	 */
 	if (!is_segment_data_processed)
 	{
-		struct stat st;
-		char *filename = cstate->filename;
-		cstate->copy_file = AllocateFile(filename, PG_BINARY_R);
+		if (cstate->is_program)
+		{
+			cstate->copy_file = OpenPipeStream(cstate->filename, PG_BINARY_R);
 
-		if (cstate->copy_file == NULL)
-			ereport(ERROR,
-					(errcode_for_file_access(),
+			if (cstate->copy_file == NULL)
+				ereport(ERROR,
+						(errmsg("could not execute command \"%s\": %m",
+								cstate->filename)));
+		}
+		else
+		{
+			struct stat st;
+			char *filename = cstate->filename;
+			cstate->copy_file = AllocateFile(filename, PG_BINARY_R);
+
+			if (cstate->copy_file == NULL)
+				ereport(ERROR,
+						(errcode_for_file_access(),
 						errmsg("could not open file \"%s\" for reading: %m",
-							filename)));
+								filename)));
 
-		/* Increase buffer size to improve performance (cmcdevitt) */
-		setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+			// Increase buffer size to improve performance  (cmcdevitt)
+			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
 
-		fstat(fileno(cstate->copy_file), &st);
-		if (S_ISDIR(st.st_mode))
-			ereport(ERROR,
-					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+			fstat(fileno(cstate->copy_file), &st);
+			if (S_ISDIR(st.st_mode))
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						errmsg("\"%s\" is a directory", filename)));
+		}
+
 		cstate->copy_dest = COPY_FILE;
 
 		is_segment_data_processed = true;

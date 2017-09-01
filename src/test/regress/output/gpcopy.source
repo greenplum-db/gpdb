@@ -703,19 +703,23 @@ SELECT * FROM segment_reject_limit_from;
  1 | 2
 (2 rows)
 
--- STDIN is not support by copy from on segment
+-- STDIN is not support by copy from on segment and copy program
 COPY segment_reject_limit_from from STDIN on segment log errors segment reject limit 3 rows;
 ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
+COPY segment_reject_limit_from from PROGRAM STDIN log errors segment reject limit 3 rows;
+ERROR:  STDIN/STDOUT not allowed with PROGRAM
 SELECT * FROM segment_reject_limit_from;
- a | b
+ a | b 
 ---+---
  1 | 1
  1 | 2
 (2 rows)
 
--- STDOUT is not support by copy to on segment
+-- STDOUT is not support by copy to on segment and copy program
 COPY segment_reject_limit_from to STDOUT on segment log errors segment reject limit 3 rows;
 ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
+COPY segment_reject_limit_from to PROGRAM STDOUT log errors segment reject limit 3 rows;
+ERROR:  STDIN/STDOUT not allowed with PROGRAM
 -- \copy from doesn't support on segment
 --on segment lower case
 \COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment;
@@ -742,6 +746,11 @@ ERROR:  STDIN and STDOUT are not supported by 'COPY ON SEGMENT'
 --on segment with \t
 \copy segment_reject_limit_from from '/tmp/copy_on_segment<SEGID>.csv' on       segment;
 \COPY command doesn't support ON SEGMENT
+-- \copy to/from 'stdin'/'stdout' (quoted)
+\copy segment_reject_limit_from to 'stdin';
+\copy segment_reject_limit_from from 'stdin';
+\copy segment_reject_limit_from to 'stdout';
+\copy segment_reject_limit_from from 'stdout';
 -- gp_initial_bad_row_limit guc test. This guc allows user to set the initial
 -- number of rows which can contain errors before the database stops loading
 -- the data. If there is a valid row within the first 'n' rows specified by
@@ -938,6 +947,9 @@ DROP EXTERNAL TABLE IF EXISTS rm_copy_onsegment_files;
 DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
+DROP TABLE IF EXISTS LINEITEM_3;
+DROP TABLE IF EXISTS LINEITEM_4;
+DROP TABLE IF EXISTS LINEITEM_5;
 -- end_ignore
 CREATE TABLE LINEITEM ( L_ORDERKEY INTEGER NOT NULL,
 L_PARTKEY INTEGER NOT NULL,
@@ -957,6 +969,9 @@ L_SHIPMODE CHAR(10) NOT NULL,
 L_COMMENT VARCHAR(44) NOT NULL);
 CREATE TABLE LINEITEM_1 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_2 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_3 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_4 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_5 (LIKE LINEITEM);
 COPY LINEITEM FROM '@abs_srcdir@/data/lineitem.csv' WITH DELIMITER '|' CSV;
 SELECT COUNT(*) FROM LINEITEM;
  count 
@@ -986,6 +1001,45 @@ SELECT COUNT(*) FROM LINEITEM_2;
 (1 row)
 
 SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_2;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
+(0 rows)
+
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program.csv' CSV;
+COPY LINEITEM_3 FROM PROGRAM 'cat /tmp/lineitem_program.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_3;
+ count 
+-------
+ 57190
+(1 row)
+
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_3;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
+(0 rows)
+
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+COPY LINEITEM_4 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM LINEITEM_4;
+ count 
+-------
+ 57190
+(1 row)
+
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_4;
+ l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
+------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
+(0 rows)
+
+\COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program_client.csv' CSV;
+\COPY LINEITEM_5 FROM PROGRAM 'cat /tmp/lineitem_program_client.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_5;
+ count 
+-------
+ 57190
+(1 row)
+
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_5;
  l_orderkey | l_partkey | l_suppkey | l_linenumber | l_quantity | l_extendedprice | l_discount | l_tax | l_returnflag | l_linestatus | l_shipdate | l_commitdate | l_receiptdate | l_shipinstruct | l_shipmode | l_comment 
 ------------+-----------+-----------+--------------+------------+-----------------+------------+-------+--------------+--------------+------------+--------------+---------------+----------------+------------+-----------
 (0 rows)
@@ -1121,4 +1175,7 @@ HINT:  "SET gp_enable_segment_copy_checking=off" can be used to disable distribu
 DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
+DROP TABLE IF EXISTS LINEITEM_3;
+DROP TABLE IF EXISTS LINEITEM_4;
+DROP TABLE IF EXISTS LINEITEM_5;
 -- end_ignore

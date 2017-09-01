@@ -27,7 +27,7 @@
  */
 typedef enum CopyDest
 {
-	COPY_FILE,					/* to/from file */
+	COPY_FILE,					/* to/from file (or a piped program) */
 	COPY_OLD_FE,				/* to/from frontend (2.0 protocol) */
 	COPY_NEW_FE,				/* to/from frontend (3.0 protocol) */
 	COPY_EXTERNAL_SOURCE		/* to/from external source (RET/WET) */
@@ -138,6 +138,7 @@ typedef struct CopyStateData
 	List	   *force_quote;	/* the raw fc column name list */
 	List	   *force_notnull;  /* the raw fnn column name list */
 	char	   *filename;		/* filename, or NULL for STDIN/STDOUT */
+	bool		is_program;		/* is 'filename' a program to popen? */
 	bool		custom;			/* custom format? */
 	bool		oids;			/* include OIDs? */
 	bool        binary;         /* binary format */
