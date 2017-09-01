@@ -1,6 +1,6 @@
 # The PXF extension client for GPDB
 
-PXF is an extensible framework that allows GPDB or any other parallel database to query external datasets. The framework is built in Java and provides built-in connectors for accessing data of various formats(text,sequence files, orc,etc) that exists inside HDFS files, Hive tables, HBase tables and many more stores.
+PXF is an extension framework that allows GPDB or any other database to query external distributed datasets. The framework is built in Java and provides built-in connectors for accessing data of various formats(text,sequence files, avro, orc,etc) that may exist inside HDFS files, Hive tables, HBase tables and many more stores.
 This module includes the PXF C client and using the 'pxf' protocol with external table, GPDB can query external datasets via PXF service that runs alongside GPDB segments.
 
 ## Table of Contents
@@ -66,13 +66,9 @@ LOCATION ('pxf://localhost:51200/tmp/dummy1' \
 FORMAT 'TEXT' (DELIMITER ',');
 ```
 
-If you wish to use PXF with Hadoop, instructions will be made available shortly.
-
-
-
 
 Please refer to [PXF Setup](https://cwiki.apache.org/confluence/display/HAWQ/PXF+Build+and+Install) for instructions to setup PXF.
-Once you also install and run PXF server on the machines where GPDB segments are run, you can select data from the demo PXF profile:
+Once you install and run PXF server alongside the GPDB segments, you can select data from the demo PXF profile:
 ```
 # SELECT * from pxf_read_test order by a;
 
@@ -86,6 +82,10 @@ Once you also install and run PXF server on the machines where GPDB segments are
  fragment3 row2 | value1 | value2
 (6 rows)
 ```
+
+
+If you wish to use PXF with Hadoop, you will need to integrate with Hdfs or Hive, you can refer to the above doc on steps to install them.
+
 
 
 ## Run regression tests

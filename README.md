@@ -194,6 +194,12 @@ to be available in the environment. [Build and Install](#buildOrca) the latest O
 
 If you want to build GPDB without ORCA, configure requires `--disable-orca` flag to be set.
 
+### Building GPDB without PXF
+PXF is an extension framework for GPDB to enable access to external hadoop datasets.
+Refer to [PXF extension](https://github.com/greenplum-db/gpdb/tree/master/gpAux/extensions/pxf) for more information.
+Currently, GPDPB is built with PXF by default. If you don't need PXF, use --disable-pxf flag with configure.
+
+
 ```
 # Clean environment
 make distclean
