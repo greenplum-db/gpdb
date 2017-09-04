@@ -8,10 +8,15 @@
 #
 use Pod::Usage;
 use Getopt::Long;
+Getopt::Long::Configure qw(pass_through);
 use Data::Dumper;
 use File::Spec;
 use strict;
 use warnings;
+
+use FindBin;
+use lib "$FindBin::Bin";
+use GPTest qw(print_version);
 
 =head1 NAME
 
@@ -96,78 +101,16 @@ if (1)
 	my $bFullname = 0;
 	my $bElog	  = 0;
 
-    # check for man or help args
-    if (scalar(@ARGV))
-    {
-		while ($ARGV[0] =~ m/^\-/)
-		{
-			if ($ARGV[0] =~ m/^\-(\-)*(v|version)$/)
-			{
-				$verzion = 1;
-				goto L_wWhile;
-			}
-			elsif ($ARGV[0] =~ m/^\-(\-)*(man|h|help|\?)$/i)
-			{
-				if ($ARGV[0] =~ m/man/i)
-				{
-					$man = 1;
-				}
-				else
-				{
-					$help = 1;
-				}
-				goto L_wWhile;
-			}
-			elsif ($ARGV[0] =~ m/^\-(\-)*quiet$/i)			
-			{
-				$bQuiet = 1;
-				goto L_wWhile;
-			}
-			elsif ($ARGV[0] =~ m/^\-(\-)*lax$/i)
-			{
-				$bLax = 1;
-				goto L_wWhile;
-			}
-			elsif ($ARGV[0] =~ m/^\-(\-)*fullname$/i)
-			{
-				$bFullname = 1;
-				goto L_wWhile;
-			}
-			elsif ($ARGV[0] =~ m/^\-(\-)*elog$/i)
-			{
-				$bElog = 1;
-				goto L_wWhile;
-			}
+GetOptions(
+    'help|h|?' => \$help, man => \$man, 
+    'quiet' => \$bQuiet,
+    'lax' => \$bLax,
+    'fullname' => \$bFullname,
+    'elog' => \$bElog,
+    'version|v' => \&print_version
+    );
 
-			last;
-			
-
-		  L_wWhile:
-			shift @ARGV;
-			next;
-        }
-    }
-    else
-    {
-        $pmsg = "missing an operand after \`get_ereport.pl\'";
-        $help = 1;
-    }
-
-    if ((1 == scalar(@ARGV)) && 
-        ($ARGV[0] =~ m/^\-(\-)*/) &&
-        (!($help || $man || $verzion)))
-    {
-        $pmsg = "unknown operand: $ARGV[0]";
-        $help = 1;
-    }
-
-    if ($verzion)
-    {
-        my $VERSION = do { my @r = (q$Revision$ =~ /\d+/g); sprintf "%d.". "%02d" x $#r, @r }; # must be all one line, for MakeMaker
-
-        print "$0 version $VERSION\n";
-        exit(1);
-    }
+    pod2usage(-msg => $pmsg, -exitstatus => 1) unless (scalar(@ARGV) >= 1);
 
     pod2usage(-msg => $pmsg, -exitstatus => 1) if $help;
     pod2usage(-msg => $pmsg, -exitstatus => 0, -verbose => 2) if $man;
