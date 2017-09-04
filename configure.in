@@ -614,6 +614,12 @@ if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
     sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
 fi
 
+GPTEST_IN="src/test/regress/GPTest.pm.in"
+GPTEST_PM="src/test/regress/GPTest.pm"
+if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
+fi
+
 # Create compiler version string
 if test x"$GCC" = x"yes" ; then
   cc_string="GCC `${CC} --version | sed q`"

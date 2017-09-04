@@ -27,8 +27,11 @@ pg_regress.o:
 gpstringsubs.pl:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpstringsubs.pl
 
-gpdiff.pl: atmsort.pm explain.pm
+gpdiff.pl: atmsort.pm explain.pm GPTest.pm
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpdiff.pl
+
+GPTest.pm:
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/GPTest.pm
 
 atmsort.pm:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/atmsort.pm
@@ -75,7 +78,7 @@ endif
 clean distclean:
 	rm -f isolationtester$(X) pg_isolation_regress$(X) $(OBJS) isolation_main.o
 	rm -f pg_regress.o
-	rm -f gpstringsubs.pl gpdiff.pl atmsort.pm explain.pm
+	rm -f gpstringsubs.pl gpdiff.pl atmsort.pm explain.pm GPTest.pm
 	rm -rf $(pg_regress_clean_files)
 
 maintainer-clean: distclean
