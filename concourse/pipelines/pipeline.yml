@@ -945,7 +945,7 @@ jobs:
           ccp_src/aws/install_gpdb.sh gpdb4_binary
           ccp_src/aws/run_inspec.sh
     on_failure:
-      <<: *debug_sleep
+      <<: *ccp_destroy
   - task: run_backup_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
