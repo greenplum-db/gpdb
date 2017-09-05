@@ -109,7 +109,7 @@ class GpEraFile:
         """
         Write a new era based on the specified values
         """
-        m = hashlib.md5()
+        m = hashlib.sha256()
         m.update(str(host))
         m.update(str(port))
         m.update(str(self.datadir))
