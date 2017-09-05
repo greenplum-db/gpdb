@@ -38,7 +38,7 @@ psql:/path/sql_file:1: NOTICE:  dropped partition "other" for relation "mpp6297"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp6297_1_prt_jan09" for table "mpp6297"
 psql:/path/sql_file:1: NOTICE:  CREATE TABLE will create partition "mpp6297_1_prt_other" for table "mpp6297"
 ALTER TABLE
--- Uses pg_get_partition_def for pg_dump and gp_dump
+-- Uses pg_get_partition_def for pg_dump
 select pg_get_partition_def('mpp6297'::regclass, true, true);
                                                                  pg_get_partition_def                                                                  
 -------------------------------------------------------------------------------------------------------------------------------------------------------

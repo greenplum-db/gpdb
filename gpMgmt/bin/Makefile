@@ -266,7 +266,7 @@ clean :
 	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
 	@rm -rf $(STREAM_DIR)/stream lib/stream  
 	@rm -rf *.pyc lib/*.pyc
-	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
+	@rm -f gpcheckcatc gpexpandc gptransferc
 	@rm -f gpconfig_modules/gucs_disallowed_in_file.txt
 
 .PHONY: disclean

@@ -129,18 +129,6 @@ class OOMTestCase(MPPTestCase, ScenarioTestCase):
     #     test_case_list3.append('resource_management.memory_accounting.scenario.oom_test.runsql.verify.test_oom_count')
     #     self.test_case_scenario.append(test_case_list3)
 
-    def test_05_dumpusage(self):
-        """
-        @description Test with GUC gp_dump_memory_usage
-        """
-        test_case_list1 = []
-        test_case_list1.append('resource_management.memory_accounting.scenario.oom_test.runsql.runtest.test_oom_dumpusage')
-        self.test_case_scenario.append(test_case_list1)
-
-        test_case_list2 = []
-        test_case_list2.append('resource_management.memory_accounting.scenario.oom_test.runsql.verify.test_dumpusage')
-        self.test_case_scenario.append(test_case_list2)
-
     # QA-2748, need at least 48GB ram to run this test
     # GPDB should use the DCA, for HAWQ should use gpdb26.rel.dh.greenplum.com
     # This test is dependent on how much memory

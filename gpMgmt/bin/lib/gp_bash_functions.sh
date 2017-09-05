@@ -147,7 +147,6 @@ SCRIPTDIR="`$DIRNAME $PSQLBIN`/bin"
 #******************************************************************************
 GPINITSYSTEM=$SCRIPTDIR/gpinitsystem
 GPCONFIG=$SCRIPTDIR/gpconfig
-GPCRONDUMP=$SCRIPTDIR/gpcrondump
 GPINITSTANDBY=$SCRIPTDIR/gpinitstandby
 GPRECOVERSEG=$SCRIPTDIR/gprecoverseg
 GPSTART=$SCRIPTDIR/gpstart

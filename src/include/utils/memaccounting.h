@@ -51,10 +51,6 @@ extern char* memory_profiler_query_id;
  */
 extern int memory_profiler_dataset_size;
 
-/*
- * Should we save the memory usage information before resetting the memory accounting?
- */
-extern bool gp_dump_memory_usage;
 
 /*
  * Each memory account can assume one of the following memory

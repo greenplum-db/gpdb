@@ -2,15 +2,13 @@
 --
 -- Greenplum DB backup test
 --
--- Check database version and gp_dump, pg_dump
+-- Check database version and pg_dump
 select version();
                                                                                                                     version                                                                                                                    
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  PostgreSQL 8.2.4 (Greenplum Database cvs Head build dev build ) on i386-apple-darwin8.9.1, compiled by GCC i686-apple-darwin8-gcc-4.0.1 (GCC) 4.0.1 (Apple Computer, Inc. build 5367) compiled on Jun  5 2007 12:29:58 (with assert checking)
 (1 row)
 
-\! gp_dump --version
-gp_dump (Greenplum Database) 8.2.4
 \! pg_dump --version
 pg_dump (PostgreSQL) 8.2.4
 -- Create target database

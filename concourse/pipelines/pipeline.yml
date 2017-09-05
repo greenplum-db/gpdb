@@ -17,7 +17,6 @@ groups:
   - MM_gpperfmon
   - MM_gpcheck
   - MM_analyzedb
-  - DPM_backup-restore
   - MM_gppkg
   - MM_gpinitsystem
   - MM_gpinitstandby
@@ -32,9 +31,6 @@ groups:
   - regression_tests_pxf_centos
   - gpdb_rc_packaging_centos
   - gpdb_rc_packaging_sles
-  - DPM_netbackup77
-  - DPM_backup-restore-ddboost
-  - DPM_backup_43_restore_5
   - MM_gpcheckcat
   - MM_gprecoverseg
   - MM_gpexpand
@@ -55,8 +51,6 @@ groups:
 
 - name: Remaining Pulse
   jobs:
-  - DPM_netbackup77
-  - DPM_backup-restore-ddboost
   - MM_gpcheckcat
   - MM_gpexpand
   - DPM_gptransfer-43x-to-5x
@@ -72,11 +66,9 @@ groups:
   - cs_walrep_1
   - cs_walrep_2
   - mpp_resource_group
-  - DPM_backup-restore
   - MM_gpcheckcat
   - MM_gppkg
   - MM_gprecoverseg
-  - DPM_backup_43_restore_5
 
 ## ======================================================================
 ## resource types
@@ -887,128 +879,6 @@ jobs:
     params:
       BEHAVE_TAGS: analyzedb
 
-- name: DPM_backup-restore
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_create_params
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: DPM_backup_43_restore_5
-  plan:
-  - get: nightly-trigger
-    trigger: true
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-    - get: gpdb4_binary
-      resource: bin_gpdb4_centos6
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_create_params
-  - task: setup_gpdb4
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: centos
-          tag: "7"
-      inputs:
-      - name: terraform
-      - name: gpdb4_binary
-      - name: ccp_src
-      - name: gpdb_src
-      outputs:
-      - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          source ccp_src/aws/generate_env_files.sh
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          ccp_src/aws/preinstall_gpdb.sh
-          ccp_src/aws/install_gpdb.sh gpdb4_binary
-          ccp_src/aws/run_inspec.sh
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_backup_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - task: setup_gpdb5
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: centos
-          tag: "7"
-      inputs:
-      - name: terraform
-      - name: gpdb_binary
-      - name: ccp_src
-      - name: gpdb_src
-      - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          scp cluster_env_files/hostfile_all mdw:/home/gpadmin/hostfile_all
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; copy_backup_files"
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; destroy_gpdb"
-          ccp_src/aws/install_gpdb.sh gpdb_binary
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; restore_backup_files"
-    on_failure:
-      <<: *debug_sleep
-  - task: run_restore_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
 - name: MM_gppkg
   plan:
   - aggregate:
@@ -1443,7 +1313,7 @@ jobs:
 
 # Stage 3: Trigger jobs that rely on packaging
 
-- name: DPM_netbackup77
+- name: MM_gpexpand
   plan:
   - get: nightly-trigger
     trigger: true
@@ -1474,7 +1344,7 @@ jobs:
       gpdb_src_behave_tarball: gpdb_src_behave_tarball
     params: &pulse_properties
       PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
       PULSE_USERNAME: {{pulse_username}}
       PULSE_PASSWORD: {{pulse_password}}
   - task: monitor_pulse
@@ -1482,26 +1352,6 @@ jobs:
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
-
-- name: DPM_backup-restore-ddboost
-  plan:
-  - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_HarmonizeDDBoost"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_HarmonizeDDBoost"
 
 - name: MM_gpcheckcat
   plan:
@@ -1562,26 +1412,6 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
-
-- name: MM_gpexpand
-  plan:
-  - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
 
 - name: DPM_gptransfer-43x-to-5x
   plan:
@@ -1814,7 +1644,6 @@ jobs:
     - MM_gpinitsystem
     - MM_gpperfmon
     - MM_gpcheck
-    - DPM_backup-restore
     - MM_gppkg
     - MM_pt-rebuild
     - fts
@@ -1827,9 +1656,6 @@ jobs:
     - regression_tests_pxf_centos
     - gpdb_rc_packaging_centos
     - gpdb_rc_packaging_sles
-    - DPM_netbackup77
-    - DPM_backup-restore-ddboost
-    - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg
     - MM_gpexpand

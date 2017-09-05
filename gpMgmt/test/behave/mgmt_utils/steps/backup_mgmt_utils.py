@@ -7,7 +7,6 @@ import glob
 from gppylib.commands.base import Command, REMOTE, WorkerPool, CommandResult
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
-from gppylib.operations.backup_utils import Context
 from gppylib.operations.unix import CheckFile
 from test.behave_utils.utils import *
 
@@ -42,7 +41,7 @@ def impl(context, query, dbname, poolname):
 @when('the user runs the "{cmd}" in a worker pool "{poolname}"')
 @then('the user runs the "{cmd}" in a worker pool "{poolname}"')
 def impl(context, cmd, poolname):
-    command = Command(name='run gpcrondump in a separate thread', cmdStr=cmd)
+    command = Command(cmdStr=cmd)
     pool = WorkerPool(numWorkers=1)
     pool.addCommand(command)
     if not hasattr(context, 'pool'):
@@ -215,11 +214,6 @@ def impl(context, target):
         if fd:
             fd.close()
 
-def __get_dump_metadata_path(context, dump_dir):
-    filename = "gp_dump_*_1_%s.gz" % context.backup_timestamp
-    metadata_path = glob.glob(os.path.join(dump_dir, "db_dumps", context.backup_timestamp[0:8], filename))[0]
-    return metadata_path
-
 def get_comment_keys(line):
     try:
         temp = line[len_start_comment_expr:]
@@ -241,72 +235,6 @@ def get_comment_values(line):
     except:
         return (None, None, None)
     return (name, type, schema)
-
-@given('verify that {filetype} file is generated in {dir}')
-@when('verify that {filetype} file is generated in {dir}')
-@then('verify that {filetype} file is generated in {dir}')
-def impl(context, filetype, dir):
-    if dir == 'master_data_directory':
-        dir = master_data_dir
-    if filetype == 'report':
-        filename = '%s/gp_restore_%s.rpt' % (dir, context.backup_timestamp)
-        if not os.path.isfile(filename):
-            raise Exception('Report file %s is not present in master data directory' % filename)
-    elif filetype == 'status':
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        if dir == 'segment_data_directory':
-            primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-            for seg in primary_segs:
-                host = seg.getSegmentHostName()
-                seg_data_dir = seg.getSegmentDataDirectory()
-                cmd = Command('check status file', "ls %s/gp_restore_status_*_%s" % (seg_data_dir, context.backup_timestamp), ctxt=REMOTE, remoteHost=host)
-                cmd.run(validateAfter=True)
-                results = cmd.get_results()
-                if not results.stdout.strip():
-                    raise Exception('Status file ending with timestamp %s is not present in segment %s data directory' % (context.backup_timestamp, host))
-        else:
-            count = 0
-            primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-            for seg in primary_segs:
-                host = seg.getSegmentHostName()
-                cmd = Command('check status file', "ls %s/gp_restore_status_*_%s" % (dir, context.backup_timestamp), ctxt=REMOTE, remoteHost=host)
-                cmd.run(validateAfter=True)
-                results = cmd.get_results()
-                if results.stdout.strip():
-                    count += 1
-                else:
-                    raise Exception('Status file not found in segment: %s' % host)
-            segs = len(primary_segs)
-            if count != segs:
-                raise Exception('Expected %d status file but found %d' % (segs, count))
-
-@given('there are no {filetype} files in "{dir}"')
-@when('there are no {filetype} files in "{dir}"')
-@then('there are no {filetype} files in "{dir}"')
-def impl(context, filetype, dir):
-    if filetype == 'report':
-        if dir == 'master_data_directory':
-            dir = master_data_dir
-        filenames = os.listdir(dir)
-        for filename in filenames:
-            if filename.startswith('gp_restore') and filename.endswith('.rpt'):
-                filename = '%s/%s' % (dir, filename)
-                os.remove(filename)
-    if filetype == 'status':
-        gparray = GpArray.initFromCatalog(dbconn.DbURL())
-        if dir == 'segment_data_directory':
-            primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-            for seg in primary_segs:
-                host = seg.getSegmentHostName()
-                seg_data_dir = seg.getSegmentDataDirectory()
-                cmd = Command('remove status file', "rm -f %s/gp_restore_status_*" % (seg_data_dir), ctxt=REMOTE, remoteHost=host)
-                cmd.run(validateAfter=True)
-        else:
-            primary_segs = [seg for seg in gparray.getDbList() if seg.isSegmentPrimary()]
-            for seg in primary_segs:
-                host = seg.getSegmentHostName()
-                cmd = Command('remove status file', "rm -f %s/gp_restore_status_*" % dir, ctxt=REMOTE, remoteHost=host)
-                cmd.run(validateAfter=True)
 
 @given('the mail_contacts file does not exist')
 @then('the mail_contacts file does not exist')
@@ -349,53 +277,6 @@ def impl(context, email_file_path):
         exception_raised = True
     if exception_raised == False:
         raise Exception("File is in proper format")
-
-@then('verify that emails are sent to the given contacts with appropriate messages after backup of "{dblist}"')
-def impl(context, dblist):
-    cmd_list = []
-    sending_email_list = []
-    database_list = dblist.split(',')
-    stdout = context.stdout_message
-    for line in stdout.splitlines():
-        if "Sending mail to" in line:
-            str = line.split(':-')[1]
-            sending_email_list.append(str.strip())
-        if "Email command string=" in line:
-            log_msg, delim, txt = line.partition('=')
-            cmd_list.append(txt.strip())
-    if len(sending_email_list) != len(database_list):
-        raise Exception("Emails are not sent properly")
-    count = 0
-    for dbname in database_list:
-        #expected email details
-        for email in context.email_details:
-            if dbname in email['DBNAME']:
-                expected_from  = email['FROM']
-                expected_sub = email['SUBJECT']
-            else:
-                expected_sub = "Report from gpcrondump on host %s [COMPLETED]" % socket.gethostname()
-        #original email details
-        result_cmd = cmd_list[count]
-        str = result_cmd[result_cmd.find("-s")+4:]
-        result_sub = (str[:str.find('"')]).strip()
-        if expected_sub != result_sub:
-            raise Exception("Subject of the sent email is not correct")
-        if result_cmd.find("-- -f") >= 0:
-            result_from = result_cmd[result_cmd.find("-- -f")+6:]
-            if expected_from != result_from:
-                raise Exception("ef : RF", expected_from, result_from, count)
-                #raise Exception("Sender of the sent email is not correct")
-        count += 1
-
-@then('verify that function is backedup correctly in "{dumpfile}"')
-def impl(context, dumpfile):
-    buf = """CREATE ORDERED AGGREGATE agg_array(anyelement) (
-    SFUNC = array_append,
-    STYPE = anyarray,
-    INITCOND = '{}'
-);"""
-    if not buf in open(dumpfile).read():
-        raise Exception("pg_dump did not backup aggregate functions correctly.")
 
 @given('verify that a role "{role_name}" exists in database "{dbname}"')
 @then('verify that a role "{role_name}" exists in database "{dbname}"')
@@ -511,66 +392,3 @@ def impl(context, dbname, schema):
 
     if check_cast_exists(dbname, schema):
         raise Exception('A function "casttoint" exists in %s in schema %s when it should not' % (dbname, schema))
-
-def use_netbackup():
-    if os.getenv('NETBACKUP'):
-        return True
-    else:
-        return False
-
-@then('the backup sets are replicated to the remote DataDomain')
-def impl(context):
-    master_port = os.environ.get('PGPORT')
-    for timestamp in context.inc_backup_timestamps:
-        cmdStr = 'gpmfr.py --replicate="%s" --master-port=%s --max-streams=15' % (timestamp, master_port)
-        cmd = Command("Replicate backup files", cmdStr)
-        cmd.run(validateAfter=True)
-        results = cmd.get_results()
-        if results.rc != 0:
-            raise Exception("Error replicating backup files for backup set %s: %s" % (timestamp, results.stderr))
-
-@then('the files in the backup sets are validated for the "{which}" storage unit')
-def impl(context, which):
-    master_port = os.environ.get('PGPORT')
-    cmdStr = 'gpmfr.py --list-files="%s" --master-port=%s' % ("%s", master_port)
-    if which == "remote":
-        cmdStr += " --remote"
-    elif which != "local":
-        raise Exception('Invalid storage unit specified.  Options are "local" and "remote".')
-
-    for timestamp in context.inc_backup_timestamps:
-        cmd = Command("List %s backup files" % which, cmdStr % timestamp)
-        cmd.run(validateAfter=True)
-        results = cmd.get_results()
-        stdout = results.stdout.strip()
-        if not stdout:
-            raise Exception("No backup files found on %s storage unit for backup set %s" % (which, timestamp))
-
-        # We assume that if the metadata files and at least one data file exist, the backup was successful, no need to check for every file
-        backup_utils = Context()
-        metadata_filename = "%s%s.gz" % (backup_utils.generate_prefix("metadata"), timestamp)
-        data_filename = "%s%s.gz" % (backup_utils.generate_prefix("dump", dbid=2), timestamp)
-        postdata_filename = "%s%s.gz" % (backup_utils.generate_prefix("postdata"), timestamp)
-        if not (metadata_filename in stdout and data_filename in stdout and postdata_filename in stdout):
-            raise Exception("Backup set %s on storage unit %s is missing files:\n%s" % (timestamp, which, stdout))
-
-@then('the backup sets on the "{which}" storage unit are deleted using gp_mfr')
-def impl(context, which):
-    master_port = os.environ.get('PGPORT')
-    for timestamp in context.inc_backup_timestamps:
-        cmdStr = 'echo "y" | gpmfr.py --delete="%s" --master-port=%s' % (timestamp, master_port)
-        cmd = Command("Delete backup files", cmdStr)
-        cmd.run(validateAfter=True)
-        results = cmd.get_results()
-        if results.rc != 0:
-            raise Exception("Error deleting backup files for backup set %s: %s" % (timestamp, results.stderr))
-
-@when('the remote backup sets are restored to the local storage unit')
-def impl(context):
-    master_port = os.environ.get('PGPORT')
-    cmdStr = 'gpmfr.py --recover="%s" --master-port=%s --max-streams=15' % (context.backup_timestamp, master_port)
-    cmd = Command("Recover backup files", cmdStr)
-    cmd.run(validateAfter=True)
-    results = cmd.get_results()
-    if results.rc != 0:
-        raise Exception("Error recovering backup files for backup set %s: %s" % (context.backup_timestamp, results.stderr))

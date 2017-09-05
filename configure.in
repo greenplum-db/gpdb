@@ -734,24 +734,6 @@ AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
 AC_SUBST(enable_snmp)
 
 #
-# --enable-ddboost enables DD Boost support
-#
-PGAC_ARG_BOOL(enable, ddboost, no,  [  --enable-ddboost        enable DD Boost support],
-              [AC_DEFINE([USE_DDBOOST], 1,
-                         [Define to 1 to build with DD Boost capabilities. (--enable-ddboost)])])
-AC_MSG_RESULT([checking whether to build with DD Boost support... $enable_ddboost])
-AC_SUBST(enable_ddboost)
-
-#
-# --enable-netbackup enables NetBackup support
-#
-PGAC_ARG_BOOL(enable, netbackup, no,  [  --enable-netbackup      enable NetBackup support],
-              [AC_DEFINE([USE_NETBACKUP], 1,
-                         [Define to 1 to build with NetBackup capabilities. (--enable-netbackup)])])
-AC_MSG_RESULT([checking whether to build with NetBackup support... $enable_netbackup])
-AC_SUBST(enable_netbackup)
-
-#
 # --enable-mapreduce enables GPMapreduce support
 #
 PGAC_ARG_BOOL(enable, mapreduce, no, [  --enable-mapreduce      enable Greenplum Mapreduce support],
@@ -1339,13 +1321,6 @@ if test "$with_ossp_uuid" = yes ; then
 fi
 AC_SUBST(OSSP_UUID_LIBS)
 
-# Check for DD Boost
-if test "$enable_ddboost" = yes ; then
-  _LIBS="$LIBS"
-  AC_CHECK_LIB(DDBoost, main, [], [AC_MSG_ERROR([library 'DDBoost' is required for DD Boost support])])
-  LIBS="$_LIBS"
-fi
-
 ##
 ## Header files
 ##
@@ -1493,10 +1468,6 @@ fi
 
 if test "$with_bonjour" = yes ; then
   AC_CHECK_HEADER(DNSServiceDiscovery/DNSServiceDiscovery.h, [], [AC_MSG_ERROR([header file <DNSServiceDiscovery/DNSServiceDiscovery.h> is required for Bonjour])])
-fi
-
-if test "$enable_ddboost" = yes ; then
-  AC_CHECK_HEADER(ddp_api.h, [], [AC_MSG_ERROR([header file <ddp_api.h> is required for DD Boost])])
 fi
 
 # For processor affinity support in Linux on NUMA platforms such as

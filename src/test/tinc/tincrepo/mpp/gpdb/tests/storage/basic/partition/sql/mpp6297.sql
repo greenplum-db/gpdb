@@ -17,7 +17,7 @@ START ('2009-01-01') INCLUSIVE
 END ('2009-02-01') EXCLUSIVE
 INTO (PARTITION jan09, PARTITION other);
 
--- Uses pg_get_partition_def for pg_dump and gp_dump
+-- Uses pg_get_partition_def for pg_dump
 select pg_get_partition_def('mpp6297'::regclass, true, true);
 
 \! pg_dump -t mpp6297 -s -O @DBNAME@ > @out_dir@/mpp6297-pg_dump.out

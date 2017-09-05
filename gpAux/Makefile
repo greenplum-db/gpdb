@@ -162,13 +162,13 @@ APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
 aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl --disable-orca $(APR_CONFIG)
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca --disable-gpcloud $(APR_CONFIG)
 sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml $(APR_CONFIG)
-rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --enable-ddboost --with-gssapi --enable-netbackup --enable-pxf --with-libxml $(APR_CONFIG)
-rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup ${ORCA_CONFIG} --enable-pxf --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup --enable-mapreduce ${ORCA_CONFIG} --enable-pxf --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --enable-ddboost --with-gssapi --enable-netbackup --enable-mapreduce ${ORCA_CONFIG} --enable-pxf --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost  --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-ddboost  --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --with-gssapi --enable-pxf --with-libxml $(APR_CONFIG)
+rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --enable-pxf --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce ${ORCA_CONFIG} --enable-pxf --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce ${ORCA_CONFIG} --enable-pxf --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 
@@ -954,16 +954,7 @@ endif
 
 libcopy=(cd $(1) && $(TAR) cf - $(2)) | (cd $(3) && $(TAR) xvf -)$(check_pipe_for_errors)
 
-.PHONY: copy-nbu-libs
-
-copy-nbu-libs:
-	#Copy NetBackup libs
-ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 rhel5_x86_64))
-	rm -f $(INSTLOC)/lib/libxbsa64.so;
-	cp -fpr $(BLD_THIRDPARTY_LIB_DIR)/../Netbackup/nbu77 $(INSTLOC)/lib/;
-endif
-
-copylibs : thirdparty-dist copy-nbu-libs
+copylibs : thirdparty-dist
 	if [ `uname -s` = 'SunOS' ]; then cp `ldd $(INSTLOC)/bin/psql | grep gcc | head -1 | awk '{print $$3}'` $(INSTLOC)/lib; fi
 	if [ `uname -s` = 'Darwin' ] ; then \
 	    for lib in `otool -L $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|libkrb5|curl|readline|numa' | awk '{print $$1}'`; do \
@@ -1132,7 +1123,6 @@ GPPKG_SOURCES = \
 else
 GPPKG_SOURCES = \
 	../contrib/pgcrypto \
-	../src/bin/pg_dump/cdb/ddboost \
 	extensions/postgis-2.0.3 \
 	extensions/plr \
 	$(NULL)

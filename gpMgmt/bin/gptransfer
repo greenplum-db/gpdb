@@ -47,7 +47,7 @@ try:
     from gppylib.db.catalog import getUserDatabaseList, doesSchemaExist, dropSchemaIfExist
     from gppylib.gparray import GpArray
     from gppylib.userinput import ask_yesno
-    from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
+    from gppylib.utils import escapeDoubleQuoteInSQLString
     from pygresql.pg import DB
     from pygresql import pg
 except ImportError, import_exception:

@@ -853,10 +853,6 @@ subpartition by list (c) subpartition template ( subpartition lll1 values ('M'),
   end (date '2010-01-01') every (interval '1 year')
 );
 
--- start_ignore
-\! gp_dump gptest -t mpp3373
--- end_ignore
-
 drop table mpp3373;
 CREATE TABLE mpp3438 (
         unique1         int4,
