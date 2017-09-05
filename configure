@@ -1527,7 +1527,7 @@ Optional Features:
   --disable-spinlocks     do not use spinlocks
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
-  --disable-pxf           do not use pxf
+  --enable-pxf            build with pxf
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
@@ -3582,7 +3582,7 @@ if test "${enable_pxf+set}" = set; then :
   esac
 
 else
-  enable_pxf=yes
+  enable_pxf=no
 
 fi
 

@@ -234,8 +234,8 @@ AC_SUBST(enable_gpfdist)
 #
 # pxf
 #
-PGAC_ARG_BOOL(enable, pxf, yes,
-             [  --disable-pxf           do not use pxf])
+PGAC_ARG_BOOL(enable, pxf, no,
+             [  --enable-pxf            build with pxf])
 AC_SUBST(enable_pxf)
 
 #

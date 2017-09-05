@@ -201,14 +201,16 @@ make distclean
 ./configure --disable-orca --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
 ```
 
-### Building GPDB without PXF
-PXF is an extension framework for GPDB to enable access to external hadoop datasets.
+### Building GPDB with PXF
+PXF is an extension framework for GPDB to enable fast access to external hadoop datasets.
 Refer to [PXF extension](https://github.com/greenplum-db/gpdb/tree/master/gpAux/extensions/pxf) for more information.
-Currently, GPDPB is built with PXF by default.
-PXF requires curl version > 7.21.3. On most centos6 environments with curl version 7.19 compilation will fail due to this dependancy.
-You can either try upgrading your curl version, or simply disable pxf during build.
-If you don't need PXF, use --disable-pxf flag with configure.
-
+Currently, GPDPB isn't built with PXF by default.
+PXF requires curl version >= 7.21.3 and also has an additional dependancy on json-c library
+In order to build GPDB with pxf, simply change `configure` with additional option `--enable-pxf`.
+```
+# Configure build environment to build/install PXF at /usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb --enable-pxf 
+```
 
 ### Building GPDB with code generation enabled
 
