@@ -2841,7 +2841,6 @@ _copyQuery(Query *from)
 	COPY_NODE_FIELD(scatterClause);
 	COPY_NODE_FIELD(cteList);
 	COPY_SCALAR_FIELD(hasRecursive);
-	COPY_SCALAR_FIELD(hasModifyingCTE);
 	COPY_NODE_FIELD(limitOffset);
 	COPY_NODE_FIELD(limitCount);
 	COPY_NODE_FIELD(rowMarks);

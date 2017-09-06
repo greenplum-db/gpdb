@@ -580,7 +580,6 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		{
 			qry->hasRecursive = selectStmt->withClause->recursive;
 			qry->cteList = transformWithClause(pstate, selectStmt->withClause);
-			qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
 		}
 
 		foreach(lc, selectStmt->valuesLists)
@@ -681,7 +680,6 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		{
 			qry->hasRecursive = selectStmt->withClause->recursive;
 			qry->cteList = transformWithClause(pstate, selectStmt->withClause);
-			qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
 		}
 
 		/* Do basic expression transformation (same as a ROW() expr) */
@@ -1497,7 +1495,6 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	{
 		qry->hasRecursive = stmt->withClause->recursive;
 		qry->cteList = transformWithClause(pstate, stmt->withClause);
-		qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
 	}
 
 	/* process the FROM clause */
@@ -1667,7 +1664,6 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
 	{
 		qry->hasRecursive = stmt->withClause->recursive;
 		qry->cteList = transformWithClause(pstate, stmt->withClause);
-		qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
 	}
 
 	/*
@@ -1931,7 +1927,6 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	{
 		qry->hasRecursive = stmt->withClause->recursive;
 		qry->cteList = transformWithClause(pstate, stmt->withClause);
-		qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
 	}
 
 	/*

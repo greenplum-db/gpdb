@@ -243,7 +243,6 @@ _readQuery(void)
 	READ_NODE_FIELD(scatterClause);
 	READ_NODE_FIELD(cteList);
 	READ_BOOL_FIELD(hasRecursive);
-	READ_BOOL_FIELD(hasModifyingCTE);
 	READ_NODE_FIELD(limitOffset);
 	READ_NODE_FIELD(limitCount);
 	READ_NODE_FIELD(rowMarks);

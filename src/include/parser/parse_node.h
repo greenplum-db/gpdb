@@ -86,7 +86,6 @@ typedef struct ParseState
 	bool		p_hasAggs;
 	bool		p_hasWindowFuncs;
 	bool		p_hasSubLinks;
-	bool		p_hasModifyingCTE;
 	bool		p_is_insert;
 	bool		p_is_update;
 	Relation	p_target_relation;

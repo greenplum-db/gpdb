@@ -160,7 +160,6 @@ typedef struct Query
 	List	   *cteList;		/* a list of CommonTableExprs in WITH clause */
 	bool		hasRecursive;	/* Whether this query has a recursive WITH
 								 * clause */
-	bool		hasModifyingCTE;	/* has INSERT/UPDATE/DELETE in WITH clause */
 
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
