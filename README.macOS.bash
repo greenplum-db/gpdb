@@ -24,6 +24,9 @@ brew install go # Or get the latest from https://golang.org/dl/
 
 # Installing python libraries
 brew install python
+pip2 install --upgrade pip setuptools
+echo "alias pip=pip2" >> ~/.bash_profile
+alias pip=pip2
 pip install lockfile psi paramiko pysql psutil setuptools
 pip install unittest2 parse pexpect mock pyyaml
 pip install git+https://github.com/behave/behave@v1.2.4
