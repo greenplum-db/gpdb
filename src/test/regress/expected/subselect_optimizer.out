@@ -551,7 +551,19 @@ group by f1,f2,fs;
 -- Check that whole-row Vars reading the result of a subselect don't include
 -- any junk columns therein
 --
-select q from (select max(f1) as max from int4_tbl group by f1 order by f1) q order by max;
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q
+  order by max;
+       q
+---------------
+ (-2147483647)
+ (-123456)
+ (0)
+ (123456)
+ (2147483647)
+(5 rows)
+
+with q as (select max(f1) from int4_tbl group by f1 order by f1)
+  select q from q;
        q       
 ---------------
  (-2147483647)
