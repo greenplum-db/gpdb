@@ -1,6 +1,5 @@
-1. ORCA requires [CMake](https://cmake.org) and
-   [Ninja](https://ninja-build.org/), make sure you have them installed.
-   Installation instructions vary, please check the CMake and Ninja websites.
+1. ORCA require [CMake](https://cmake.org), make sure you have it installed.
+   Installation instructions vary, please check the CMake website.
    
 1. Install needed python modules
 
