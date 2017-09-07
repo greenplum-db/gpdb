@@ -286,7 +286,7 @@ class GpMirrorListToBuild:
 
         if len(self.__mirrorsToBuild) == 0:
             self.__logger.info("No segments to " + actionName)
-            return False    # as we don't want caller to print any success messages
+            return True
 
         self.checkForPortAndDirectoryConflicts(gpArray)
 
