@@ -85,6 +85,7 @@ building, see the README at the following repositories:
        In case, the files should be copied elsewhere, please change the location.
     
 ### Build the database
+Note: If you are using CentOS, first make sure that you add `/usr/local/lib` and `/usr/local/lib64` to `/etc/ld.so.conf`, run command `ldconfig`.
 ```
 # Configure build environment to install at /usr/local/gpdb
 ./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
