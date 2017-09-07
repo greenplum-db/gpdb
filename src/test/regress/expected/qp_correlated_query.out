@@ -1301,6 +1301,40 @@ select * from B where not exists (select * from C,A where C.i in (select C.i fro
  32 |  5
 (4 rows)
 
+explain select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=7.81..11.26 rows=39 width=8)
+   ->  Hash Join  (cost=7.81..11.26 rows=13 width=8)
+         Hash Cond: a.i = qp_correlated_query.c.j
+         ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=8)
+         ->  Hash  (cost=7.72..7.72 rows=3 width=4)
+               ->  HashAggregate  (cost=7.65..7.72 rows=3 width=4)
+                     Group By: qp_correlated_query.c.j
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=3.14..7.50 rows=20 width=4)
+                           Hash Key: qp_correlated_query.c.j
+                           ->  Nested Loop  (cost=3.14..6.33 rows=20 width=4)
+                                 ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=3.14..3.16 rows=1 width=0)
+                                       ->  Limit  (cost=3.14..3.14 rows=1 width=0)
+                                             ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.14..3.16 rows=1 width=0)
+                                                   ->  Limit  (cost=3.14..3.14 rows=1 width=0)
+                                                         ->  Hash Semi Join  (cost=3.14..6.33 rows=3 width=0)
+                                                               Hash Cond: qp_correlated_query.c.i = b.i
+                                                               ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+                                                               ->  Hash  (cost=3.06..3.06 rows=2 width=4)
+                                                                     ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
+                                 ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(22 rows)
+
+select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
+ i | j 
+---+---
+ 1 | 1
+ 1 | 1
+(2 rows)
+
 -- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
 -- ----------------------------------------------------------------------

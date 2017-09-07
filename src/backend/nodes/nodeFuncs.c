@@ -1572,7 +1572,6 @@ expression_tree_mutator(Node *node,
 				FLATCOPY(newnode, join, JoinExpr);
 				MUTATE(newnode->larg, join->larg, Node *);
 				MUTATE(newnode->rarg, join->rarg, Node *);
-				MUTATE(newnode->subqfromlist, join->subqfromlist, List *);  /*CDB*/
 				MUTATE(newnode->quals, join->quals, Node *);
 				/* We do not mutate alias or using by default */
 				return (Node *) newnode;

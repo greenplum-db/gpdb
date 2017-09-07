@@ -68,9 +68,6 @@ static Node *pull_up_sublinks_jointree_recurse(PlannerInfo *root, Node *jtnode,
 								  Relids *relids);
 static Node *pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 							  Relids available_rels, Node **jtlink);
-static void pull_up_fromlist_subqueries(PlannerInfo    *root,
-                                        List          **inout_fromlist,
-				                        bool            below_outer_join);
 static Node *pull_up_simple_subquery(PlannerInfo *root, Node *jtnode,
 						RangeTblEntry *rte,
 						JoinExpr *lowest_outer_join,
@@ -662,55 +659,12 @@ pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 					 (int) j->jointype);
 				break;
 		}
-
-        /*
-         * CDB: If subqueries from the JOIN...ON search condition were
-         * flattened, 'subqfromlist' is a list of RangeTblRef nodes to be
-         * included in the cross product with larg and rarg.  Try to pull up
-         * the referenced subqueries.  For outer joins, let below_outer_join
-         * be true, because the subquery tables belong in the null-augmented
-         * side of the JOIN (right side of LEFT JOIN).
-         */
-		ListCell   *l;
-        if (j->subqfromlist)
-			foreach(l, j->subqfromlist)
-			{
-				if(lowest_outer_join != NULL)
-					lfirst(l) = pull_up_subqueries(root, lfirst(l), lowest_outer_join, NULL);
-				else if(j->jointype != JOIN_INNER)
-					lfirst(l) = pull_up_subqueries(root, lfirst(l), j, NULL);
-				else
-					lfirst(l) = pull_up_subqueries(root, lfirst(l), NULL, NULL);
-			}
 	}
 	else
 		elog(ERROR, "unrecognized node type: %d",
 			 (int) nodeTag(jtnode));
 	return jtnode;
 }
-
-
-/*
- * GPDB_84_MERGE_FIXME: Check if can be removed
- * pull_up_fromlist_subqueries
- *		Attempt to pull up subqueries in a List of jointree nodes.
- */
-static void
-pull_up_fromlist_subqueries(PlannerInfo    *root,
-                            List          **inout_fromlist,
-				            bool            below_outer_join)
-{
-    ListCell   *l;
-
-    foreach(l, *inout_fromlist)
-    {
-        Node   *oldkid = (Node *)lfirst(l);
-        Node   *newkid = pull_up_subqueries(root, oldkid,
-											below_outer_join, false);
-
-        lfirst(l) = newkid;
-    }
-}                               /* pull_up_fromlist_subqueries */
 
 
 /*
@@ -1303,9 +1257,6 @@ replace_vars_in_jointree(Node *jtnode, pullup_replace_vars_context *context,
 		replace_vars_in_jointree(j->larg, context, lowest_outer_join);
 		replace_vars_in_jointree(j->rarg, context, lowest_outer_join);
 
-		foreach(l, j->subqfromlist)
-			replace_vars_in_jointree(lfirst(l), context, lowest_outer_join);
-
 		j->quals = pullup_replace_vars(j->quals, context);
 
 		/*
@@ -1615,15 +1566,6 @@ reduce_outer_joins_pass1(Node *jtnode)
 										 sub_state->relids);
 		result->contains_outer |= sub_state->contains_outer;
 		result->sub_states = lappend(result->sub_states, sub_state);
-
-		foreach(l, j->subqfromlist)
-		{
-			sub_state = reduce_outer_joins_pass1(lfirst(l));
-			result->relids = bms_add_members(result->relids,
-											 sub_state->relids);
-			result->contains_outer |= sub_state->contains_outer;
-			result->sub_states = lappend(result->sub_states, sub_state);
-		}
 	}
 	else
 		elog(ERROR, "unrecognized node type: %d",
@@ -1649,9 +1591,6 @@ reduce_outer_joins_pass2(Node *jtnode,
 						 List *nonnullable_vars,
 						 List *forced_null_vars)
 {
-	ListCell   *l;
-	ListCell   *s;
-
 	/*
 	 * pass 2 should never descend as far as an empty subnode or base rel,
 	 * because it's only called on subtrees marked as contains_outer.
@@ -1702,7 +1641,6 @@ reduce_outer_joins_pass2(Node *jtnode,
 		JoinType	jointype = j->jointype;
 		reduce_outer_joins_state *left_state = linitial(state->sub_states);
 		reduce_outer_joins_state *right_state = lsecond(state->sub_states);
-		reduce_outer_joins_state *sub_state;
 		List       *local_nonnullable_vars = NIL;
 		bool        computed_local_nonnullable_vars = false;
 
@@ -1908,25 +1846,6 @@ reduce_outer_joins_pass2(Node *jtnode,
 										 pass_forced_null_vars);
 			}
 
-            /*
-             * CDB: Simplify outer joins pulled up from flattened subqueries.
-             * For a left or right outer join, the subqfromlist items belong
-             * to the null-augmented side; so we pass local_nonnullable down
-             * regardless of the jointype.  (For FULL JOIN, subqfromlist is
-             * always empty.)
-             */
-            s = lnext(lnext(list_head(state->sub_states)));
-            foreach(l, j->subqfromlist)
-            {
-                sub_state = (reduce_outer_joins_state *)lfirst(s);
-                if (sub_state->contains_outer)
-				    reduce_outer_joins_pass2(lfirst(l), sub_state, root,
-											 pass_nonnullable_rels,
-											 pass_nonnullable_vars,
-											 pass_forced_null_vars);
-                s = lnext(s);
-            }
-
 			bms_free(local_nonnullable_rels);
 		}
 	}
@@ -2079,10 +1998,6 @@ get_relids_in_jointree(Node *jtnode, bool include_joins)
 
 		if (include_joins && j->rtindex)
 			result = bms_add_member(result, j->rtindex);
-
-		/* GPDB_84_MERGE_FIXME: Not present upstream; is this really needed? */
-		foreach(l, j->subqfromlist)
-			result = bms_join(result, get_relids_in_jointree((Node *)lfirst(l), include_joins));
 	}
 	else
 		elog(ERROR, "unrecognized node type: %d",
@@ -2147,13 +2062,6 @@ find_jointree_node_for_rel(Node *jtnode, int relid)
 		jtnode = find_jointree_node_for_rel(j->rarg, relid);
 		if (jtnode)
 			return jtnode;
-
-		foreach(l, j->subqfromlist)
-		{
-			jtnode = find_jointree_node_for_rel(lfirst(l), relid);
-			if (jtnode)
-				return jtnode;
-		}
 	}
 	else
 		elog(ERROR, "unrecognized node type: %d",

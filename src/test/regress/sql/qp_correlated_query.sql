@@ -230,6 +230,8 @@ explain select A.i from A where not exists (select B.i from B where B.i in (sele
 select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
 explain select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
 select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
+explain select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
+select * from A where A.i in (select C.j from C,B where B.i in (select i from C));
 
 
 -- ----------------------------------------------------------------------

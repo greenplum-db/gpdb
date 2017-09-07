@@ -42,8 +42,6 @@ static Node *make_lasj_quals(PlannerInfo *root, SubLink *sublink, int subquery_i
 
 static Node *add_null_match_clause(Node *clause);
 
-static Node *not_null_inner_vars(Node *clause);
-
 typedef struct NonNullableVarsContext
 {
 	Query	   *query;			/* Query in question. */

@@ -119,13 +119,9 @@ add_base_rels_to_query(PlannerInfo *root, Node *jtnode)
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
-		ListCell   *l;
 
 		add_base_rels_to_query(root, j->larg);
 		add_base_rels_to_query(root, j->rarg);
-
-        foreach(l, j->subqfromlist)
-			add_base_rels_to_query(root, lfirst(l));
 	}
 	else
 		elog(ERROR, "unrecognized node type: %d",
@@ -432,7 +428,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 		List	   *leftjoinlist,
 				   *rightjoinlist;
 		SpecialJoinInfo *sjinfo;
-        ListCell   *cell;
 		ListCell   *l;
 		List *child_postponed_quals = NIL;
 		/*
@@ -489,6 +484,7 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 													&child_postponed_quals);
 				*qualscope = bms_union(leftids, rightids);
 				*inner_join_rels = bms_union(left_inners, right_inners);
+				*inner_join_rels = bms_add_members(*inner_join_rels, rightids);
 				/* Semi join adds no restrictions for quals */
 				nonnullable_rels = NULL;
  				break;
@@ -514,46 +510,6 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				leftjoinlist = rightjoinlist = NIL;
 				break;
 		}
-
-        /*
-         * CDB: If subqueries from the JOIN...ON search condition were
-         * flattened, 'subqfromlist' is a list of jointree nodes to be
-         * included in the cross product with larg and rarg.
-         *
-         * For left or right joins, the flattened subquery tables must be
-         * associated with the null-augmented side (right side of LEFT JOIN).
-         * For inner joins either side is ok.  For full outer joins the
-         * subqfromlist is not used at present.
-         */
-        foreach(cell, j->subqfromlist)
-        {
-            List       *sub_joinlist;
-		    Relids		sub_qualscope = NULL;
-            Relids      sub_inners;
-
-		    sub_joinlist = deconstruct_recurse(root, lfirst(cell),
-                                               below_outer_join ||
-                                                    (j->jointype != JOIN_INNER),
-										       &sub_qualscope,
-                                               &sub_inners,
-											   &child_postponed_quals
-                                               );
-		    rightids = bms_add_members(rightids, sub_qualscope);
-            *qualscope = bms_add_members(*qualscope, sub_qualscope);
-            *inner_join_rels = bms_add_members(*inner_join_rels, rightids);
-            switch (j->jointype)
-            {
-                case JOIN_INNER:
-                case JOIN_LEFT:
-                    rightjoinlist = list_concat(rightjoinlist, sub_joinlist);
-                    break;
-                case JOIN_RIGHT:
-                    leftjoinlist = list_concat(leftjoinlist, sub_joinlist);
-                    break;
-                default:
-                    Assert(0);
-            }
-        }
 
 		/*
 		 * For an OJ, form the SpecialJoinInfo now, because we need the OJ's

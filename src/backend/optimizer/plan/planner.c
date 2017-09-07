@@ -932,13 +932,9 @@ preprocess_qual_conditions(PlannerInfo *root, Node *jtnode)
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
-		ListCell   *l;
 
 		preprocess_qual_conditions(root, j->larg);
 		preprocess_qual_conditions(root, j->rarg);
-
-		foreach(l, j->subqfromlist)
-			preprocess_qual_conditions(root, lfirst(l));
 
 		j->quals = preprocess_expression(root, j->quals, EXPRKIND_QUAL);
 	}

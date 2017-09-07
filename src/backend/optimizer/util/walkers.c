@@ -398,8 +398,6 @@ expression_tree_walker(Node *node,
 					return true;
 				if (walker(join->rarg, context))
 					return true;
-				if (walker(join->subqfromlist, context))    /*CDB*/
-					return true;                            /*CDB*/
 				if (walker(join->quals, context))
 					return true;
 

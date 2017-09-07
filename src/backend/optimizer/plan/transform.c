@@ -149,7 +149,6 @@ static Node* normalize_query_jointree(Node *node)
 					join->rarg = rarg;
 					join->quals = NULL; /* Cross product */
 					join->rtindex = 0;
-					join->subqfromlist = NIL;
 					join->usingClause = NIL;
 					result = (Node *) join;
 				}

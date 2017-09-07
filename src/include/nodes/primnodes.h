@@ -1292,10 +1292,6 @@ typedef struct RangeTblRef
  * be created that refer to the outputs of the join.  The planner sometimes
  * generates JoinExprs internally; these can have rtindex = 0 if there are
  * no join alias variables referencing such joins.
- *
- * CDB: When the planner flattens sublinks in the JOIN...ON clause, it may
- * attach a list of RangeTblRef nodes ('subqfromlist') which are to be
- * included in the cross product along with 'larg' and 'rarg'.
  *----------
  */
 typedef struct JoinExpr
@@ -1309,8 +1305,6 @@ typedef struct JoinExpr
 	Node	   *quals;			/* qualifiers on join, if any */
 	Alias	   *alias;			/* user-written alias clause, if any */
 	int			rtindex;		/* RT index assigned for join, or 0 */
-    List       *subqfromlist;   /* CDB: List of join subtrees resulting from
-                                 *  flattening of sublinks */
 } JoinExpr;
 
 /*----------

@@ -1672,8 +1672,6 @@ _outJoinExpr(StringInfo str, JoinExpr *node)
 	WRITE_BOOL_FIELD(isNatural);
 	WRITE_NODE_FIELD(larg);
 	WRITE_NODE_FIELD(rarg);
-    if (node->subqfromlist)                     /*CDB*/
-        WRITE_NODE_FIELD(subqfromlist);         /*CDB*/
 	WRITE_NODE_FIELD_AS(usingClause, using);    /*CDB*/
 	WRITE_NODE_FIELD(quals);
 	WRITE_NODE_FIELD(alias);
