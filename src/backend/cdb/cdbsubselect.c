@@ -645,7 +645,7 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 
 /* check if NOT IN conversion to antijoin is possible */
 static bool
-safe_to_convert_NOTIN(SubLink *sublink)
+safe_to_convert_NOTIN(SubLink *sublink, Relids available_rels)
 {
 	Query	   *subselect = (Query *) sublink->subselect;
 	Relids		left_varnos;
@@ -671,6 +671,12 @@ safe_to_convert_NOTIN(SubLink *sublink)
 	/* Left-hand expressions must contain some Vars of the current */
 	left_varnos = pull_varnos(sublink->testexpr);
 	if (bms_is_empty(left_varnos))
+		return false;
+
+	/*
+	 * However, it can't refer to anything outside available_rels.
+	 */
+	if (!bms_is_subset(left_varnos, available_rels))
 		return false;
 
 	/* Correlation - subquery referencing Vars of parent not handled */
@@ -1282,12 +1288,13 @@ is_targetlist_nullable(Query *subq)
  * in a top-level where clause (or through a series of inner joins).
  */
 JoinExpr*
-convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink)
+convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
+						Relids available_rels)
 {
 	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;
 
-	if (safe_to_convert_NOTIN(sublink))
+	if (safe_to_convert_NOTIN(sublink, available_rels))
 	{
 		/* Delete ORDER BY and DISTINCT. */
 		cdbsubselect_drop_orderby(subselect);

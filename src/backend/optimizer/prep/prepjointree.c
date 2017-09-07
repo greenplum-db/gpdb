@@ -340,8 +340,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 		}
 		else if (sublink->subLinkType == ALL_SUBLINK)
 		{
-			/* GPDB_84_MERGE_FIXME: Should convert_IN_to_antijoin() also use available_rels ? */
-			j = convert_IN_to_antijoin(root, sublink);
+			j = convert_IN_to_antijoin(root, sublink, available_rels);
 			if (j)
 			{
 				/* Yes; recursively process what we pulled up */
@@ -478,7 +477,6 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 
 			if (IsA(rarg, SubLink))
 			{
-				/* GPDB_84_MERGE_FIXME: Should convert_EXPR_to_join() also use available_rels ? */
 				j = convert_EXPR_to_join(root, opexp);
 				if (j)
 				{
