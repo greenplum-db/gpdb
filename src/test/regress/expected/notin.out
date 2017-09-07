@@ -996,22 +996,21 @@ select c1 from t1 where not exists (select c2 from t2 where c2 = c1);
 
 --
 --q39
--- GPDB_90_MERGE_FIXME: Pull up nested sublinks.
 --
 explain select c1 from t1 where not exists (select c2 from t2 where c2 not in (select c3 from t3) and c2 = c1);
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=4.13..7.30 rows=4 width=4)
-   ->  Hash Anti Join  (cost=4.13..7.30 rows=2 width=4)
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=4.42..7.59 rows=4 width=4)
+   ->  Hash Anti Join  (cost=4.42..7.59 rows=2 width=4)
          Hash Cond: t1.c1 = t2.c2
          ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
-         ->  Hash  (cost=4.10..4.10 rows=1 width=4)
-               ->  Seq Scan on t2  (cost=2.04..4.10 rows=1 width=4)
-                     Filter: NOT ((hashed subplan))
-                     SubPlan 1
-                       ->  Materialize  (cost=2.03..2.06 rows=1 width=4)
-                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.03 rows=1 width=4)
-                                   ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
+         ->  Hash  (cost=4.38..4.38 rows=2 width=4)
+               ->  Hash Left Anti Semi Join (Not-In)  (cost=2.26..4.38 rows=2 width=4)
+                     Hash Cond: t2.c2 = t3.c3
+                     ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
+                     ->  Hash  (cost=2.15..2.15 rows=3 width=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
+                                 ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
 (15 rows)
@@ -1031,30 +1030,31 @@ select c1 from t1 where not exists (select c2 from t2 where c2 not in (select c3
 
 --
 --q40
--- GPDB_90_MERGE_FIXME: Pull up nested sublinks.
 -- GPDB_90_MERGE_FIXME: We should be able to push down join filter on param $0 to a result node on top of LASJ (Not in)
 --
 explain select c1 from t1 where not exists (select c2 from t2 where exists (select c3 from t3) and c2 <>all (select c3 from t3) and c2 = c1);
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=7.86..11.09 rows=10 width=4)
-   ->  Hash Anti Join  (cost=7.86..11.09 rows=4 width=4)
+                                                 QUERY PLAN                                                  
+-------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=5.12..8.35 rows=10 width=4)
+   ->  Hash Anti Join  (cost=5.12..8.35 rows=4 width=4)
          Hash Cond: t1.c1 = t2.c2
          Join Filter: $0
          InitPlan 1 (returns $0)  (slice4)
-           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.03 rows=3 width=0)
-                 ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=0)
+           ->  Limit  (cost=0.00..0.70 rows=1 width=0)
+                 ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..0.70 rows=1 width=0)
+                       ->  Limit  (cost=0.00..0.68 rows=1 width=0)
+                             ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=0)
          ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
-         ->  Hash  (cost=7.16..7.16 rows=1 width=4)
-               ->  Seq Scan on t2  (cost=0.00..7.16 rows=1 width=4)
-                     Filter: (subplan)
-                     SubPlan 2
-                       ->  Materialize  (cost=2.03..2.06 rows=1 width=4)
-                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.03 rows=1 width=4)
-                                   ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
+         ->  Hash  (cost=4.38..4.38 rows=2 width=4)
+               ->  Hash Left Anti Semi Join (Not-In)  (cost=2.26..4.38 rows=2 width=4)
+                     Hash Cond: t2.c2 = notin.t3.c3
+                     ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
+                     ->  Hash  (cost=2.15..2.15 rows=3 width=4)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
+                                 ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(17 rows)
+(19 rows)
 
 select c1 from t1 where not exists (select c2 from t2 where exists (select c3 from t3) and c2 <>all (select c3 from t3) and c2 = c1);
  c1 

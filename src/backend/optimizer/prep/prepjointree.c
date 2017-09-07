@@ -301,9 +301,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 				j->rarg = pull_up_sublinks_jointree_recurse(root,
 															j->rarg,
 															&child_rels);
-				/* Pulled-up ANY/EXISTS quals can use those rels too */
-				child_rels = bms_add_members(child_rels, available_rels);
-				/* ... and any inserted joins get stacked onto j->rarg */
+				/* Any inserted joins get stacked onto j->rarg */
 				j->quals = pull_up_sublinks_qual_recurse(root,
 														 j->quals,
 														 child_rels,
@@ -326,9 +324,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 				j->rarg = pull_up_sublinks_jointree_recurse(root,
 															j->rarg,
 															&child_rels);
-				/* Pulled-up ANY/EXISTS quals can use those rels too */
-				child_rels = bms_add_members(child_rels, available_rels);
-				/* ... and any inserted joins get stacked onto j->rarg */
+				/* Any inserted joins get stacked onto j->rarg */
 				j->quals = pull_up_sublinks_qual_recurse(root,
 														 j->quals,
 														 child_rels,
@@ -352,9 +348,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 				j->rarg = pull_up_sublinks_jointree_recurse(root,
 															j->rarg,
 															&child_rels);
-				/* Pulled-up ANY/EXISTS quals can use those rels too */
-				child_rels = bms_add_members(child_rels, available_rels);
-				/* ... and any inserted joins get stacked onto j->rarg */
+				/* Any inserted joins get stacked onto j->rarg */
 				j->quals = pull_up_sublinks_qual_recurse(root,
 														 j->quals,
 														 child_rels,
@@ -390,9 +384,7 @@ pull_up_sublinks_qual_recurse(PlannerInfo *root, Node *node,
 					j->rarg = pull_up_sublinks_jointree_recurse(root,
 																j->rarg,
 																&child_rels);
-					/* Pulled-up ANY/EXISTS quals can use those rels too */
-					child_rels = bms_add_members(child_rels, available_rels);
-					/* ... and any inserted joins get stacked onto j->rarg */
+					/* Any inserted joins get stacked onto j->rarg */
 					j->quals = pull_up_sublinks_qual_recurse(root,
 															 j->quals,
 															 child_rels,
