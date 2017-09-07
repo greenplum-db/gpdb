@@ -34,7 +34,6 @@ cdb_add_subquery_join_paths(PlannerInfo    *root,
 					        RelOptInfo     *rel1,
 					        RelOptInfo     *rel2,
 					        JoinType        jointype,
-					        JoinType        swapjointype,
 					        List           *restrictlist,
 							SpecialJoinInfo *sjinfo);
 static bool has_join_restriction(PlannerInfo *root, RelOptInfo *rel);
@@ -642,16 +641,38 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
         (rel2->dedup_info && rel2->dedup_info->later_dedup_pathlist))
 	{
 		/* Reversed jointype is useful when rel2 becomes outer and rel1 is inner. */
-		JoinType    swapjointype;
+		JoinType jointype = sjinfo->jointype;
 
-		if (sjinfo->jointype == JOIN_LEFT)
-			swapjointype = JOIN_RIGHT;
-		else if (sjinfo->jointype == JOIN_RIGHT)
-			swapjointype = JOIN_LEFT;
-		else
-			swapjointype = sjinfo->jointype;
-		cdb_add_subquery_join_paths(root, joinrel, rel1, rel2,
-									sjinfo->jointype, swapjointype, restrictlist, sjinfo);
+		switch(jointype)
+		{
+			case JOIN_ANTI:
+			case JOIN_LASJ_NOTIN:
+				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
+											restrictlist, sjinfo);
+				break;
+			case JOIN_LEFT:
+				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
+											restrictlist, sjinfo);
+				cdb_add_subquery_join_paths(root, joinrel, rel2, rel1, JOIN_RIGHT,
+											restrictlist, sjinfo);
+				break;
+			case JOIN_RIGHT:
+				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
+											restrictlist, sjinfo);
+				cdb_add_subquery_join_paths(root, joinrel, rel2, rel1, JOIN_LEFT,
+											restrictlist, sjinfo);
+				break;
+			case JOIN_INNER:
+			case JOIN_FULL:
+				cdb_add_subquery_join_paths(root, joinrel, rel1, rel2, jointype,
+											restrictlist, sjinfo);
+				cdb_add_subquery_join_paths(root, joinrel, rel2, rel1, jointype,
+											restrictlist, sjinfo);
+				break;
+			default:
+				elog(ERROR, "unrecognized join type: %d", (int) sjinfo->jointype);
+				break;
+		}
 		bms_free(joinrelids);
 		return joinrel;
 	}
@@ -742,96 +763,107 @@ cdb_add_subquery_join_paths(PlannerInfo    *root,
 					        RelOptInfo     *rel1,
 					        RelOptInfo     *rel2,
 					        JoinType        jointype,
-					        JoinType        swapjointype,
 					        List           *restrictlist,
-							SpecialJoinInfo *sjinfo
-							)
+							SpecialJoinInfo *sjinfo)
 {
-    CdbRelDedupInfo    *dedup1 = rel1->dedup_info;
-    CdbRelDedupInfo    *dedup2 = rel2->dedup_info;
-    List               *save1_pathlist;
-    Path               *save1_cheapest_startup;
-    Path               *save1_cheapest_total;
-    List               *save2_pathlist;
-    Path               *save2_cheapest_startup;
-    Path               *save2_cheapest_total;
+	CdbRelDedupInfo    *dedup1 = rel1->dedup_info;
+	CdbRelDedupInfo    *dedup2 = rel2->dedup_info;
+	List               *save1_pathlist;
+	Path               *save1_cheapest_startup;
+	Path               *save1_cheapest_total;
+	List               *save2_pathlist;
+	Path               *save2_cheapest_startup;
+	Path               *save2_cheapest_total;
+	bool				consider_rel1_later_path, consider_rel2_later_path;
 
-    /* If only one input's later_dedup_pathlist is nonempty, let it be rel2. */
-    if (!dedup2 ||
-        !dedup2->later_dedup_pathlist)
-    {
-        CdbSwap(RelOptInfo*, rel1, rel2);
-        CdbSwap(CdbRelDedupInfo*, dedup1, dedup2);
-        CdbSwap(JoinType, jointype, swapjointype);
-        Assert(dedup2 && dedup2->later_dedup_pathlist);
-    }
+	consider_rel1_later_path = dedup1 && dedup1->later_dedup_pathlist;
+	consider_rel2_later_path = dedup2 && dedup2->later_dedup_pathlist;
 
-    /* Consider joins between rel1's main paths and rel2's main paths. */
-    if (rel1->pathlist && rel2->pathlist)
-    {
-        add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-        add_paths_to_joinrel(root, joinrel, rel2, rel1, swapjointype, sjinfo, restrictlist);
-    }
+	/* Consider joins between rel1's main paths and rel2's main paths always */
+	if (rel1->pathlist && rel2->pathlist)
+	{
+		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
+	}
 
-    /* Save rel2's main pathlist ptrs. */
-    save2_pathlist = rel2->pathlist;
-    save2_cheapest_startup = rel2->cheapest_startup_path;
-    save2_cheapest_total = rel2->cheapest_total_path;
+	/* Consider joins between rel2's main paths and rel1's later_dedup paths. */
+	if (rel2->pathlist && consider_rel1_later_path)
+	{
+		/* Save rel1's main pathlist ptrs. */
+		save1_pathlist = rel1->pathlist;
+		save1_cheapest_startup = rel1->cheapest_startup_path;
+		save1_cheapest_total = rel1->cheapest_total_path;
 
-    /* Swap in rel2's later_dedup_pathlist. */
-    rel2->pathlist = dedup2->later_dedup_pathlist;
-    rel2->cheapest_startup_path = dedup2->cheapest_startup_path;
-    rel2->cheapest_total_path = dedup2->cheapest_total_path;
+		/* Swap in rel1's later_dedup_pathlist. */
+		rel1->pathlist = dedup1->later_dedup_pathlist;
+		rel1->cheapest_startup_path = dedup1->cheapest_startup_path;
+		rel1->cheapest_total_path = dedup1->cheapest_total_path;
 
-    /* Consider joins between rel1's main paths and rel2's later_dedup paths. */
-    if (rel1->pathlist)
-    {
-        add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-        add_paths_to_joinrel(root, joinrel, rel2, rel1, swapjointype, sjinfo, restrictlist);
-    }
+		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
 
-    /* Finished if rel1 doesn't have later_dedup paths. */
-    if (!dedup1 ||
-        !dedup1->later_dedup_pathlist)
-    {
-        /* Restore rel2's main pathlist ptrs. */
-        rel2->pathlist = save2_pathlist;
-        rel2->cheapest_startup_path = save2_cheapest_startup;
-        rel2->cheapest_total_path = save2_cheapest_total;
-        return;
-    }
+		/* Restore rel1's main pathlist ptrs. */
+		rel1->pathlist = save1_pathlist;
+		rel1->cheapest_startup_path = save1_cheapest_startup;
+		rel1->cheapest_total_path = save1_cheapest_total;
+	}
 
-    /* Save rel1's main pathlist ptrs. */
-    save1_pathlist = rel1->pathlist;
-    save1_cheapest_startup = rel1->cheapest_startup_path;
-    save1_cheapest_total = rel1->cheapest_total_path;
+	/* Consider joins between rel1's main paths and rel2's later_dedup paths. */
+	if (rel1->pathlist && consider_rel2_later_path)
+	{
+		/* Save rel2's main pathlist ptrs. */
+		save2_pathlist = rel2->pathlist;
+		save2_cheapest_startup = rel2->cheapest_startup_path;
+		save2_cheapest_total = rel2->cheapest_total_path;
 
-    /* Swap in rel1's later_dedup_pathlist. */
-    rel1->pathlist = dedup1->later_dedup_pathlist;
-    rel1->cheapest_startup_path = dedup1->cheapest_startup_path;
-    rel1->cheapest_total_path = dedup1->cheapest_total_path;
+		/* Swap in rel2's later_dedup_pathlist. */
+		rel2->pathlist = dedup2->later_dedup_pathlist;
+		rel2->cheapest_startup_path = dedup2->cheapest_startup_path;
+		rel2->cheapest_total_path = dedup2->cheapest_total_path;
 
-    /* Consider joins between later_dedup paths of both rel1 and rel2. */
-    add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-    add_paths_to_joinrel(root, joinrel, rel2, rel1, swapjointype, sjinfo, restrictlist);
+		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
 
-    /* Restore rel2's main pathlist ptrs. */
-    rel2->pathlist = save2_pathlist;
-    rel2->cheapest_startup_path = save2_cheapest_startup;
-    rel2->cheapest_total_path = save2_cheapest_total;
+		/* Restore rel2's main pathlist ptrs. */
+		rel2->pathlist = save2_pathlist;
+		rel2->cheapest_startup_path = save2_cheapest_startup;
+		rel2->cheapest_total_path = save2_cheapest_total;
+	}
 
-    /* Consider joins between rel1's later_dedup paths and rel2's main paths. */
-    if (rel2->pathlist)
-    {
-        add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
-        add_paths_to_joinrel(root, joinrel, rel2, rel1, swapjointype, sjinfo, restrictlist);
-    }
+	/* Consider joins between later_dedup paths of both rel1 and rel2. */
+	if (consider_rel1_later_path && consider_rel2_later_path)
+	{
+		/* Save rel1's main pathlist ptrs. */
+		save1_pathlist = rel1->pathlist;
+		save1_cheapest_startup = rel1->cheapest_startup_path;
+		save1_cheapest_total = rel1->cheapest_total_path;
 
-    /* Restore rel1's main pathlist ptrs. */
-    rel1->pathlist = save1_pathlist;
-    rel1->cheapest_startup_path = save1_cheapest_startup;
-    rel1->cheapest_total_path = save1_cheapest_total;
-}                               /* cdb_add_subquery_join_paths */
+		/* Swap in rel1's later_dedup_pathlist. */
+		rel1->pathlist = dedup1->later_dedup_pathlist;
+		rel1->cheapest_startup_path = dedup1->cheapest_startup_path;
+		rel1->cheapest_total_path = dedup1->cheapest_total_path;
+
+		/* Save rel2's main pathlist ptrs. */
+		save2_pathlist = rel2->pathlist;
+		save2_cheapest_startup = rel2->cheapest_startup_path;
+		save2_cheapest_total = rel2->cheapest_total_path;
+
+		/* Swap in rel2's later_dedup_pathlist. */
+		rel2->pathlist = dedup2->later_dedup_pathlist;
+		rel2->cheapest_startup_path = dedup2->cheapest_startup_path;
+		rel2->cheapest_total_path = dedup2->cheapest_total_path;
+
+		/* Consider joins between later_dedup paths of both rel1 and rel2. */
+		add_paths_to_joinrel(root, joinrel, rel1, rel2, jointype, sjinfo, restrictlist);
+
+		/* Restore rel1's main pathlist ptrs. */
+		rel1->pathlist = save1_pathlist;
+		rel1->cheapest_startup_path = save1_cheapest_startup;
+		rel1->cheapest_total_path = save1_cheapest_total;
+
+		/* Restore rel2's main pathlist ptrs. */
+		rel2->pathlist = save2_pathlist;
+		rel2->cheapest_startup_path = save2_cheapest_startup;
+		rel2->cheapest_total_path = save2_cheapest_total;
+	}
+}
 
 
 /*

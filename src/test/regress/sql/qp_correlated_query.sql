@@ -226,6 +226,10 @@ explain select C.j from C where not exists (select rank() over (order by B.i) fr
 select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
 explain select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
 select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
+explain select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
+select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
+explain select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
+select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
 
 
 -- ----------------------------------------------------------------------

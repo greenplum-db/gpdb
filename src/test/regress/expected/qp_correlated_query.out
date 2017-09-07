@@ -1243,6 +1243,64 @@ select * from A where not exists (select sum(C.i) from C where C.i = A.i group b
  19 | 5
 (1 row)
 
+explain select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=6.44..9.55 rows=4 width=4)
+   ->  Hash Anti Join  (cost=6.44..9.55 rows=2 width=4)
+         Hash Cond: a.i = b.i
+         ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=4)
+         ->  Hash  (cost=6.36..6.36 rows=3 width=4)
+               ->  Hash Semi Join  (cost=3.20..6.36 rows=3 width=4)
+                     Hash Cond: b.i = c.i
+                     ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
+                     ->  Hash  (cost=3.09..3.09 rows=3 width=4)
+                           ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(12 rows)
+
+select A.i from A where not exists (select B.i from B where B.i in (select C.i from C) and B.i = A.i);
+ i  
+----
+ 99
+ 78
+ 19
+(3 rows)
+
+explain select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=9.58..12.69 rows=4 width=8)
+   ->  Hash Anti Join  (cost=9.58..12.69 rows=2 width=8)
+         Hash Cond: b.i = qp_correlated_query.c.i
+         ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=8)
+         ->  Hash  (cost=9.52..9.52 rows=2 width=4)
+               ->  Hash Semi Join  (cost=6.34..9.52 rows=2 width=4)
+                     Hash Cond: qp_correlated_query.c.i = qp_correlated_query.c.i
+                     ->  Seq Scan on c  (cost=0.00..3.11 rows=3 width=4)
+                           Filter: i <> 10
+                     ->  Hash  (cost=6.29..6.29 rows=2 width=8)
+                           ->  Hash Join  (cost=3.11..6.29 rows=2 width=8)
+                                 Hash Cond: qp_correlated_query.c.i = a.i
+                                 ->  Seq Scan on c  (cost=0.00..3.11 rows=3 width=4)
+                                       Filter: i <> 10
+                                 ->  Hash  (cost=3.06..3.06 rows=2 width=4)
+                                       ->  Seq Scan on a  (cost=0.00..3.06 rows=2 width=4)
+                                             Filter: i <> 10
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(19 rows)
+
+select * from B where not exists (select * from C,A where C.i in (select C.i from C where C.i = A.i and C.i != 10) AND B.i = C.i);
+ i  | j  
+----+----
+ 88 |  1
+ -1 | 62
+  2 |  7
+ 32 |  5
+(4 rows)
+
 -- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
 -- ----------------------------------------------------------------------
