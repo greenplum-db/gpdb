@@ -82,10 +82,10 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                     <pd>The name of the new procedural language. The language name is case
                         insensitive. The name must be unique among the languages in the database.
                         Built-in support is included for <codeph>plpgsql</codeph>,
-                            <codeph>plperl</codeph>, <codeph>plpython</codeph>,
-                            <codeph>plpythonu</codeph>, and <codeph>plr</codeph>. The languages
-                            <codeph>plpgsql</codeph> (PL/pgSQL) and <codeph>plpythonu</codeph>
-                        (PL/Python) are installed by default in Greenplum Database.</pd>
+                            <codeph>plperl</codeph>, <codeph>plpythonu</codeph>, and
+                            <codeph>plr</codeph>. The languages <codeph>plpgsql</codeph> (PL/pgSQL)
+                        and <codeph>plpythonu</codeph> (PL/Python) are installed by default in
+                        Greenplum Database.</pd>
                 </plentry>
                 <plentry>
                     <pt>HANDLER <varname>call_handler</varname></pt>

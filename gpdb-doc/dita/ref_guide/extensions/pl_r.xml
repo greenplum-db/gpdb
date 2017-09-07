@@ -67,14 +67,14 @@
             <li>Copy the PL/R package to the Greenplum Database master host. </li>
             <li id="py214844">Install the software extension package by running the
                 <codeph>gppkg</codeph> command. This example installs the PL/R extension on a Linux
-              system:<codeblock>$ gppkg -i plr-ossv8.3.0.15_pv2.2.0-GPDB-&lt;version>-orca-rhel6-x86_64.gppkg
+              system:<codeblock>$ gppkg -i plr-2.3.1-gp5-rhel6-x86_64.gppkg
 </codeblock></li>
             <li id="py215420">Restart the database.<codeblock>$ gpstop -r
 </codeblock></li>
             <li id="py215434">Source the file <codeph>$GPHOME/greenplum_path.sh</codeph>.</li>
           </ol>
           <p>The extension and the R environment is installed in this directory:</p>
-          <codeblock>$GPHOME/ext/R-3.3.1/
+          <codeblock>$GPHOME/ext/R-3.3.3/
 </codeblock>
           <note type="note">The version of some shared libraries installed with the operating system
             might not be compatible with the Greenplum Database PL/R extension. <p>If a shared
@@ -83,7 +83,7 @@
                 <codeph>LD_LIBRARY_PATH </codeph>to specify the location that is installed with the
               PL/R extension.
             </p><codeblock>export <i>LD_LIBRARY_PATH= 
-   $GPHOME/ext/R-3.3.1/lib:$LD_LIBRARY_PATH</i></codeblock></note>
+   $GPHOME/ext/R-3.3.3/lib:$LD_LIBRARY_PATH</i></codeblock></note>
         </body>
       </topic>
     </topic>
@@ -118,8 +118,8 @@
         <body>
           <p>If no databases have PL/R as a registered language, uninstall the Greenplum PL/R
             extension with the <codeph>gppkg</codeph> utility. This example uninstalls PL/R package
-            version 1.0</p>
-          <codeblock>$ gppkg -r plr-2.20</codeblock>
+            version 2.3.1</p>
+          <codeblock>$ gppkg -r plr-2.3.1</codeblock>
           <p>You can run the <codeph>gppkg</codeph> utility with the options <codeph>-q
               --all</codeph> to list the installed extensions and their versions.</p>
           <p>Restart the database.</p>
@@ -229,6 +229,13 @@ CREATE TABLE wj_model_results_roi AS SELECT *
       <body>
         <p>R packages are modules that contain R functions and data sets. You can install R packages
           to extend R and PL/R functionality in Greenplum Database. </p>
+        <p otherprops="pivotal">Greenplum Database provides a collection of data science-related R
+          libraries that can be used with the Greenplum Database PL/R language. You can download
+          these libraries in <codeph>.gppkg</codeph> format from <xref
+            href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
+            >Pivotal Network</xref>. For information about the libraries, see <xref scope="peer"
+            type="topic" format="dita" href="../../install_guide/install_r_dslib.xml#topic1">R Data
+            Science Library Package</xref>.</p>
         <note type="note">If you expand Greenplum Database and add segment hosts, you must install
           the R packages in the R installation of the new hosts. </note>
         <ol id="ol_bjw_tl2_4p">
@@ -281,8 +288,7 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>You can use the R command line to display information about the installed libraries and
           functions on the Greenplum Database host. You can also add and remove libraries from the R
           installation. To start the R command line on the host, log into the host as the gadmin
-          user and run the script R from the directory
-          <codeph>$GPHOME/ext/R-2.12.0/bin</codeph>.</p>
+          user and run the script R from the directory <codeph>$GPHOME/ext/R-3.3.3/bin</codeph>.</p>
         <p>This R function lists the available R packages from the R command line:</p>
         <codeblock>&gt; library()</codeblock>
         <p>Display the documentation for a particular R package</p>
@@ -320,8 +326,7 @@ LANGUAGE 'plr';</codeblock><p>This
           page for PivotalR, a package that provides an R interface to operate on Greenplum Database
           tables and views that is similar to the R <cmdname>data.frame</cmdname>. PivotalR also
           supports using the machine learning package <xref
-            href="http://madlib.apache.org/" format="html" scope="external">MADlib</xref>
-          directly from R.</p>
+            href="http://madlib.apache.org/" format="html" scope="external">MADlib</xref> directly from R.</p>
         <p>R documentation is installed with the Greenplum R package:</p>
         <p>
           <codeph>$GPHOME/ext/R-3.3.1/doc</codeph>

@@ -4,293 +4,290 @@
 <topic id="topic1" xml:lang="en">
   <title id="iz173472">Using Resource Queues</title>
   <body>
-     <p>Use Greenplum Database resource queues to prioritize and allocate resources to
-       queries according to business requirements and to prevent queries from starting when resources
-       are unavailable.</p>
-      <p>Resource queues are one tool to manage the degree of concurrency in a Greenplum
-        Database system. Resource queues are database objects that you create with the
-          <codeph>CREATE RESOURCE QUEUE</codeph> SQL statement. You can use them to manage the
-        number of active queries that may execute concurrently, the amount of memory each type of
-        query is allocated, and the relative priority of queries. Resource queues can also guard
-        against queries that would consume too many resources and degrade overall system
-        performance.</p>
-      <p>Each database role is associated with a single resource queue; multiple roles can share the
-        same resource queue. Roles are assigned to resource queues using the <codeph>RESOURCE
-          QUEUE</codeph> phrase of the <codeph>CREATE ROLE</codeph> or <codeph>ALTER ROLE</codeph>
-        statements. If a resource queue is not specified, the role is associated with the default
-        resource queue, <codeph>pg_default</codeph>. </p>
-      <p>When the user submits a query for execution, the query is evaluated against the resource
-        queue's limits. If the query does not cause the queue to exceed its resource limits, then
-        that query will run immediately. If the query causes the queue to exceed its limits (for
-        example, if the maximum number of active statement slots are currently in use), then the
-        query must wait until queue resources are free before it can run. Queries are evaluated on a
-        first in, first out basis. If query prioritization is enabled, the active workload on the
-        system is periodically assessed and processing resources are reallocated according to query
-        priority (see <xref href="#priorities" format="dita"/>). Roles with the
-          <codeph>SUPERUSER</codeph> attribute are exempt from resource queue limits. Superuser
-        queries always run immediately regardless of limits imposed by their assigned resource
-        queue. </p>
-      <fig id="iz153477">
-        <title>Resource Queue Process</title>
-        <image href="graphics/resource_queues.jpg" placement="break" width="443px" height="173px"
-          id="image_u4c_qxw_wq"/>
-      </fig>
-      <p>Resource queues define classes of queries with similar resource requirements. Administratrors should create resource queues for the various types of workloads in
-        their organization. For example, you could create resource queues for the following classes
-        of queries, corresponding to different service level agreements: <ul id="ul_h3q_5qz_zp">
-          <li>ETL queries</li>
-          <li>Reporting queries</li>
-          <li>Executive queries</li>
-        </ul></p>
-      <p>A resource queue has the following characteristics:<parml>
-          <plentry>
-            <pt>MEMORY_LIMIT</pt>
-            <pd>The amount of memory used by all the queries in the queue (per segment). For
-              example, setting <varname>MEMORY_LIMIT</varname> to 2GB on the ETL queue allows ETL
-              queries to use up to 2GB of memory in each segment. </pd>
-          </plentry>
-          <plentry>
-            <pt>ACTIVE_STATEMENTS</pt>
-            <pd>The number of <i>slots</i> for a queue; the maximum concurrency level for a queue.
-              When all slots are used, new queries must wait. Each query uses an equal amount of
-              memory by default. </pd>
-            <pd>For example, the <codeph>pg_default</codeph> resource queue has
-                <varname>ACTIVE_STATEMENTS</varname> = 20.</pd>
-          </plentry>
-          <plentry>
-            <pt>PRIORITY</pt>
-            <pd>The relative CPU usage for queries. This may be one of the following levels:
-                <codeph>LOW</codeph>, <codeph>MEDIUM</codeph>, <codeph>HIGH</codeph>,
-                <codeph>MAX</codeph>. The default level is <codeph>MEDIUM</codeph>. The query
-              prioritization mechanism monitors the CPU usage of all the queries running in the
-              system, and adjusts the CPU usage for each to conform to its priority level. For
-              example, you could set <codeph>MAX</codeph> priority to the <codeph>executive</codeph>
-              resource queue and <codeph>MEDIUM</codeph> to other queues to ensure that executive
-              queries receive a greater share of CPU.</pd>
-          </plentry>
-          <plentry>
-            <pt>MAX_COST</pt>
-            <pd>Query plan cost limit. </pd>
-            <pd>The Greenplum Database optimizer assigns a numeric cost to each query. If the cost
-              exceeds the <codeph>MAX_COST</codeph> value set for the resource queue, the query is
-              rejected as too expensive.</pd>
-            <pd>
-              <note>Use <codeph>MEMORY_LIMIT</codeph> and
-                  <codeph>ACTIVE_STATEMENTS</codeph> to set limits for resource queues rather than
-                  <codeph>MAX_COST</codeph>. </note>
-            </pd>
-          </plentry>
-        </parml></p>
-      <p>The default configuration for a Greenplum Database system has a single default resource
-        queue named <codeph>pg_default</codeph>. The <codeph>pg_default</codeph> resource queue has
-        an <codeph>ACTIVE_STATEMENTS</codeph> setting of 20, no <codeph>MEMORY_LIMIT</codeph>,
-        medium <codeph>PRIORITY</codeph>, and no set <codeph>MAX_COST</codeph>. This means that all
-        queries are accepted and run immediately, at the same priority and with no memory
-        limitations; however, only twenty queries may execute concurrently. </p>
-      <p>The number of concurrent queries a resource queue allows depends on whether the
-          <codeph>MEMORY_LIMIT</codeph> parameter is set:</p>
-      <ul id="ul_p5p_jxp_wq">
-        <li>If no <codeph>MEMORY_LIMIT</codeph> is set for a resource queue, the amount of memory
-          allocated per query is the value of the <codeph><xref href="../ref_guide/config_params/guc-list.xml#statement_mem" type="section">statement_mem</xref></codeph> server
-          configuration parameter. The maximum memory the resource queue can use is the product of
-            <codeph>statement_mem</codeph> and <codeph>ACTIVE_STATEMENTS</codeph>. </li>
-        <li>When a <codeph>MEMORY_LIMIT</codeph> is set on a resource queue, the number of queries
-          that the queue can execute concurrently is limited by the queue's available memory. </li>
-      </ul>
-      <p>A query admitted to the system is allocated an amount of memory and a query plan tree is
-        generated for it. Each node of the tree is an operator, such as a sort or hash join. Each
-        operator is a separate execution thread and is allocated a fraction of the overall statement
-        memory, at minimum 100KB. If the plan has a large number of operators, the minimum memory
-        required for operators can exceed the available memory and the query will be rejected with
-        an insufficient memory error. Operators determine if they can complete their tasks in the
-        memory allocated, or if they must spill data to disk, in work files. The mechanism that
-        allocates and controls the amount of memory used by each operator is called <i>memory
-          quota</i>. </p>
-      <p>Not all SQL statements submitted through a resource queue are evaluated against the queue
-        limits. By default only <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>,
-          <codeph>CREATE TABLE AS SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> statements
-        are evaluated. If the server configuration parameter <codeph>resource_select_only</codeph>
-        is set to <i>off</i>, then <codeph>INSERT</codeph><ph>,
-            <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph></ph> statements will be evaluated
-        as well.</p>
-      <p>Also, an SQL statement that is run during the execution of an <codeph>EXPLAIN
-          ANALYZE</codeph> command is excluded from resource queues.</p>
+    <p>Use Greenplum Database resource queues to prioritize and allocate resources to queries
+      according to business requirements and to prevent queries from starting when resources are
+      unavailable.</p>
+    <p>Resource queues are one tool to manage the degree of concurrency in a Greenplum Database
+      system. Resource queues are database objects that you create with the <codeph>CREATE RESOURCE
+        QUEUE</codeph> SQL statement. You can use them to manage the number of active queries that
+      may execute concurrently, the amount of memory each type of query is allocated, and the
+      relative priority of queries. Resource queues can also guard against queries that would
+      consume too many resources and degrade overall system performance.</p>
+    <p>Each database role is associated with a single resource queue; multiple roles can share the
+      same resource queue. Roles are assigned to resource queues using the <codeph>RESOURCE
+        QUEUE</codeph> phrase of the <codeph>CREATE ROLE</codeph> or <codeph>ALTER ROLE</codeph>
+      statements. If a resource queue is not specified, the role is associated with the default
+      resource queue, <codeph>pg_default</codeph>. </p>
+    <p>When the user submits a query for execution, the query is evaluated against the resource
+      queue's limits. If the query does not cause the queue to exceed its resource limits, then that
+      query will run immediately. If the query causes the queue to exceed its limits (for example,
+      if the maximum number of active statement slots are currently in use), then the query must
+      wait until queue resources are free before it can run. Queries are evaluated on a first in,
+      first out basis. If query prioritization is enabled, the active workload on the system is
+      periodically assessed and processing resources are reallocated according to query priority
+      (see <xref href="#priorities" format="dita"/>). Roles with the <codeph>SUPERUSER</codeph>
+      attribute are exempt from resource queue limits. Superuser queries always run immediately
+      regardless of limits imposed by their assigned resource queue. </p>
+    <fig id="iz153477">
+      <title>Resource Queue Process</title>
+      <image href="graphics/resource_queues.jpg" placement="break" width="443px" height="173px"
+        id="image_u4c_qxw_wq"/>
+    </fig>
+    <p>Resource queues define classes of queries with similar resource requirements. Administratrors
+      should create resource queues for the various types of workloads in their organization. For
+      example, you could create resource queues for the following classes of queries, corresponding
+      to different service level agreements: <ul id="ul_h3q_5qz_zp">
+        <li>ETL queries</li>
+        <li>Reporting queries</li>
+        <li>Executive queries</li>
+      </ul></p>
+    <p>A resource queue has the following characteristics:<parml>
+        <plentry>
+          <pt>MEMORY_LIMIT</pt>
+          <pd>The amount of memory used by all the queries in the queue (per segment). For example,
+            setting <varname>MEMORY_LIMIT</varname> to 2GB on the ETL queue allows ETL queries to
+            use up to 2GB of memory in each segment. </pd>
+        </plentry>
+        <plentry>
+          <pt>ACTIVE_STATEMENTS</pt>
+          <pd>The number of <i>slots</i> for a queue; the maximum concurrency level for a queue.
+            When all slots are used, new queries must wait. Each query uses an equal amount of
+            memory by default. </pd>
+          <pd>For example, the <codeph>pg_default</codeph> resource queue has
+              <varname>ACTIVE_STATEMENTS</varname> = 20.</pd>
+        </plentry>
+        <plentry>
+          <pt>PRIORITY</pt>
+          <pd>The relative CPU usage for queries. This may be one of the following levels:
+              <codeph>LOW</codeph>, <codeph>MEDIUM</codeph>, <codeph>HIGH</codeph>,
+              <codeph>MAX</codeph>. The default level is <codeph>MEDIUM</codeph>. The query
+            prioritization mechanism monitors the CPU usage of all the queries running in the
+            system, and adjusts the CPU usage for each to conform to its priority level. For
+            example, you could set <codeph>MAX</codeph> priority to the <codeph>executive</codeph>
+            resource queue and <codeph>MEDIUM</codeph> to other queues to ensure that executive
+            queries receive a greater share of CPU.</pd>
+        </plentry>
+        <plentry>
+          <pt>MAX_COST</pt>
+          <pd>Query plan cost limit. </pd>
+          <pd>The Greenplum Database optimizer assigns a numeric cost to each query. If the cost
+            exceeds the <codeph>MAX_COST</codeph> value set for the resource queue, the query is
+            rejected as too expensive.</pd>
+          <pd>
+            <note>Use <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> to set
+              limits for resource queues rather than <codeph>MAX_COST</codeph>. </note>
+          </pd>
+        </plentry>
+      </parml></p>
+    <p>The default configuration for a Greenplum Database system has a single default resource queue
+      named <codeph>pg_default</codeph>. The <codeph>pg_default</codeph> resource queue has an
+        <codeph>ACTIVE_STATEMENTS</codeph> setting of 20, no <codeph>MEMORY_LIMIT</codeph>, medium
+        <codeph>PRIORITY</codeph>, and no set <codeph>MAX_COST</codeph>. This means that all queries
+      are accepted and run immediately, at the same priority and with no memory limitations;
+      however, only twenty queries may execute concurrently. </p>
+    <p>The number of concurrent queries a resource queue allows depends on whether the
+        <codeph>MEMORY_LIMIT</codeph> parameter is set:</p>
+    <ul id="ul_p5p_jxp_wq">
+      <li>If no <codeph>MEMORY_LIMIT</codeph> is set for a resource queue, the amount of memory
+        allocated per query is the value of the <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#statement_mem" type="section"
+            >statement_mem</xref></codeph> server configuration parameter. The maximum memory the
+        resource queue can use is the product of <codeph>statement_mem</codeph> and
+          <codeph>ACTIVE_STATEMENTS</codeph>. </li>
+      <li>When a <codeph>MEMORY_LIMIT</codeph> is set on a resource queue, the number of queries
+        that the queue can execute concurrently is limited by the queue's available memory. </li>
+    </ul>
+    <p>A query admitted to the system is allocated an amount of memory and a query plan tree is
+      generated for it. Each node of the tree is an operator, such as a sort or hash join. Each
+      operator is a separate execution thread and is allocated a fraction of the overall statement
+      memory, at minimum 100KB. If the plan has a large number of operators, the minimum memory
+      required for operators can exceed the available memory and the query will be rejected with an
+      insufficient memory error. Operators determine if they can complete their tasks in the memory
+      allocated, or if they must spill data to disk, in work files. The mechanism that allocates and
+      controls the amount of memory used by each operator is called <i>memory quota</i>. </p>
+    <p>Not all SQL statements submitted through a resource queue are evaluated against the queue
+      limits. By default only <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>, <codeph>CREATE
+        TABLE AS SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> statements are evaluated. If
+      the server configuration parameter <codeph>resource_select_only</codeph> is set to <i>off</i>,
+      then <codeph>INSERT</codeph><ph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph></ph>
+      statements will be evaluated as well.</p>
+    <p>Also, an SQL statement that is run during the execution of an <codeph>EXPLAIN
+        ANALYZE</codeph> command is excluded from resource queues.</p>
   </body>
   <topic id="topic111" xml:lang="en">
     <title>Resource Queue Example</title>
-     <body>
-        <p>The default resource queue, <codeph>pg_default</codeph>, allows a maximum of 20 active
-          queries and allocates the same amount of memory to each. This is generally not adequate
-          resource control for production systems. To ensure that the system meets performance
-          expectations, you can define classes of queries and assign them to resource queues
-          configured to execute them with the concurrency, memory, and CPU resources best suited for
-          that class of query.</p>
-        <p>The following illustration shows an example resource queue configuration for a Greenplum
-          Database system with <codeph>gp_vmem_protect_limit</codeph> set to 8GB:<fig
-            id="fig_p3y_mg5_1q">
-            <title>Resource Queue Configuration Example</title>
-            <image href="graphics/resource_queue_examp.png" id="image_wnh_wpc_dq" width="6in"/>
-          </fig></p>
-        <p>This example has three classes of queries with different characteristics and service
-          level agreements (SLAs). Three resource queues are configured for them. A portion of the
-          segment memory is reserved as a safety margin. <table frame="all" id="table_kns_wg5_1q">
-            <tgroup cols="4">
-              <colspec colname="c1" colnum="1" colwidth="1.0*"/>
-              <colspec colname="c2" colnum="2" colwidth="1.0*"/>
-              <colspec colname="c3" colnum="3" colwidth="1.0*"/>
-              <colspec colname="c4" colnum="4" colwidth="1.0*"/>
-              <thead>
-                <row>
-                  <entry>Resource Queue Name</entry>
-                  <entry>Active Statements</entry>
-                  <entry>Memory Limit</entry>
-                  <entry>Memory per Query</entry>
-                </row>
-              </thead>
-              <tbody>
-                <row>
-                  <entry>ETL</entry>
-                  <entry>3</entry>
-                  <entry>2GB</entry>
-                  <entry>667MB</entry>
-                </row>
-                <row>
-                  <entry>Reporting</entry>
-                  <entry>7</entry>
-                  <entry>3GB</entry>
-                  <entry>429MB</entry>
-                </row>
-                <row>
-                  <entry>Executive</entry>
-                  <entry>1</entry>
-                  <entry>1.4GB</entry>
-                  <entry>1.4GB</entry>
-                </row>
-              </tbody>
-            </tgroup>
-          </table></p>
-        <p>The total memory allocated to the queues is 6.4GB, or 80% of the total segment memory
-          defined by the <codeph>gp_vmem_protect_limit</codeph> server configuration parameter.
-          Allowing a safety margin of 20% accommodates some operators and queries that are known to
-          use more memory than they are allocated by the resource queue. </p>
-        <p>See the <codeph>CREATE RESOURCE QUEUE</codeph> and <codeph>CREATE/ALTER
-            ROLE</codeph> statements in the <cite>Greenplum Database Reference Guide</cite> for help
-          with command syntax and detailed reference information.</p>
-      </body>
-      </topic>
-      <topic id="topic113" xml:lang="en">
-        <title>How Memory Limits Work</title>
-      <body>
-        <p>Setting <codeph>MEMORY_LIMIT</codeph> on a resource queue sets the maximum amount of
-          memory that all active queries submitted through the queue can consume for a segment
-          instance. The amount of memory allotted to a query is the queue memory limit divided by
-          the active statement limit. (Use the memory limits in conjunction
-          with statement-based queues rather than cost-based queues.) For example, if a queue has a
-          memory limit of 2000MB and an active statement limit of 10, each query submitted through
-          the queue is allotted 200MB of memory by default. The default memory allotment can be
-          overridden on a per-query basis using the <codeph>statement_mem</codeph> server
-          configuration parameter (up to the queue memory limit). Once a query has started
-          executing, it holds its allotted memory in the queue until it completes, even if during
-          execution it actually consumes less than its allotted amount of memory.</p>
-        <p>You can use the <codeph>statement_mem</codeph> server configuration parameter to override
-          memory limits set by the current resource queue. At the session level, you can increae
-            <codeph>statement_mem</codeph> up to the resource queue's <codeph>MEMORY_LIMIT</codeph>.
-          This will allow an individual query to use all of the memory allocated for the entire
-          queue without affecting other resource queues.</p>
-        <p>The value of <codeph>statement_mem</codeph> is capped using the
-            <codeph>max_statement_mem</codeph> configuration parameter (a superuser parameter). For
-          a query in a resource queue with <codeph>MEMORY_LIMIT</codeph> set, the maximum value for
-            <codeph>statement_mem</codeph> is <codeph>min(MEMORY_LIMIT, max_statement_mem)</codeph>.
-          When a query is admitted, the memory allocated to it is subtracted from
-            <codeph>MEMORY_LIMIT</codeph>. If <codeph>MEMORY_LIMIT</codeph> is exhausted, new
-          queries in the same resource queue must wait. This happens even if
-            <codeph>ACTIVE_STATEMENTS</codeph> has not yet been reached. Note that this can happen
-          only when <codeph>statement_mem</codeph> is used to override the memory allocated by the
-          resource queue.</p>
-        <p>For example, consider a resource queue named <codeph>adhoc</codeph> with the following
-            settings:<ul id="ul_dpr_vnd_dq">
-            <li><codeph>MEMORY_LIMIT</codeph> is 1.5GB </li>
-            <li><codeph>ACTIVE_STATEMENTS</codeph> is 3</li>
-          </ul>
-        </p>
-        <p>By default each statement submitted to the queue is allocated 500MB of memory. Now
-          consider the following series of events:<ol id="ol_hjq_14d_dq">
-            <li>User <codeph>ADHOC_1</codeph> submits query <codeph>Q1</codeph>,
-                overriding<codeph>STATEMENT_MEM</codeph> to 800MB. The <codeph>Q1</codeph> statement
-              is admitted into the system. </li>
-            <li>User <codeph>ADHOC_2</codeph> submits query <codeph>Q2</codeph>, using the default
-              500MB.</li>
-            <li>With <codeph>Q1</codeph> and <codeph>Q2</codeph> still running, user
-                <codeph>ADHOC3</codeph> submits query <codeph>Q3</codeph>, using the default
-              500MB.</li>
-          </ol></p>
-        <p>Queries <codeph>Q1</codeph> and <codeph>Q2</codeph> have used 1300MB of the queue's
-          1500MB. Therefore, <codeph>Q3</codeph> must wait for <codeph>Q1</codeph> or
-            <codeph>Q2</codeph> to complete before it can run. </p>
-        <p>If <codeph>MEMORY_LIMIT</codeph> is not set on a queue, queries are admitted until all of
-          the <codeph>ACTIVE_STATEMENTS</codeph> slots are in use, and each query can set an
-          arbitrarily high <codeph>statement_mem</codeph>. This could lead to a resource queue using
-          unbounded amounts of memory.</p>
-        <p>For more information on configuring memory limits on a resource queue, and other memory
-          utilization controls, see <xref href="#topic12" type="topic" format="dita"/>.</p>
-      </body>
-      </topic>
-      <topic id="priorities">
-        <title>How Priorities Work</title>
-      <body>
-        <p>The <codeph>PRIORITY</codeph> setting for a resource queue differs from the
-            <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> settings, which
-          determine whether a query will be admitted to the queue and eventually executed. The
-            <codeph>PRIORITY</codeph> setting applies to queries after they become active. Active
-          queries share available CPU resources as determined by the priority settings for its
-          resource queue. When a statement from a high-priority queue enters the group of actively
-          running statements, it may claim a greater share of the available CPU, reducing the share
-          allocated to already-running statements in queues with a lesser priority setting.</p>
-        <p>The comparative size or complexity of the queries does not affect the allotment of CPU.
-          If a simple, low-cost query is running simultaneously with a large, complex query, and
-          their priority settings are the same, they will be allocated the same share of available
-          CPU resources. When a new query becomes active, the CPU shares will be recalculated, but
-          queries of equal priority will still have equal amounts of CPU. </p>
-        <p>For example, an administrator creates three resource queues: <i>adhoc</i> for ongoing
-          queries submitted by business analysts, <i>reporting</i> for scheduled reporting jobs, and
-            <i>executive</i> for queries submitted by executive user roles. The administrator wants
-          to ensure that scheduled reporting jobs are not heavily affected by unpredictable resource
-          demands from ad-hoc analyst queries. Also, the administrator wants to make sure that
-          queries submitted by executive roles are allotted a significant share of CPU. Accordingly,
-          the resource queue priorities are set as shown:<ul id="ul_ppy_3cy_wq">
-            <li id="iz160250"><i>adhoc</i> — Low priority</li>
-            <li id="iz161065"><i>reporting</i> — High priority</li>
-            <li id="iz161070"><i>executive</i> — Maximum priority</li>
-          </ul></p>
-        <p>At runtime, the CPU share of active statements is determined by these priority settings.
-          If queries 1 and 2 from the reporting queue are running simultaneously, they have equal
-          shares of CPU. When an ad-hoc query becomes active, it claims a smaller share of CPU. The
-          exact share used by the reporting queries is adjusted, but remains equal due to their
-          equal priority setting:</p>
-        <fig id="iz173993">
-          <title>CPU share readjusted according to priority</title>
-          <image href="graphics/gp_query_priority1.png" placement="break" width="432px"
-            height="298px" id="image_lgv_lcy_wq"/>
-        </fig>
-        <note type="note">
-          <p>The percentages shown in these illustrations are approximate. CPU usage between high,
-            low and maximum priority queues is not always calculated in precisely these
-            proportions.</p>
-        </note>
-        <p>When an executive query enters the group of running statements, CPU usage is adjusted to
-          account for its maximum priority setting. It may be a simple query compared to the analyst
-          and reporting queries, but until it is completed, it will claim the largest share of
-          CPU.</p>
-        <fig id="iz160829">
-          <title>CPU share readjusted for maximum priority query</title>
-          <image href="graphics/gp_query_priority2.png" placement="break" width="194px"
-            height="305px" id="image_lrr_ddy_wq"/>
-        </fig>
-        <p>For more information about commands to set priorities, see <xref href="#topic16"
-            type="topic" format="dita"/>.</p>
-      </body>
-      </topic>
-  
+    <body>
+      <p>The default resource queue, <codeph>pg_default</codeph>, allows a maximum of 20 active
+        queries and allocates the same amount of memory to each. This is generally not adequate
+        resource control for production systems. To ensure that the system meets performance
+        expectations, you can define classes of queries and assign them to resource queues
+        configured to execute them with the concurrency, memory, and CPU resources best suited for
+        that class of query.</p>
+      <p>The following illustration shows an example resource queue configuration for a Greenplum
+        Database system with <codeph>gp_vmem_protect_limit</codeph> set to 8GB:<fig
+          id="fig_p3y_mg5_1q">
+          <title>Resource Queue Configuration Example</title>
+          <image href="graphics/resource_queue_examp.png" id="image_wnh_wpc_dq" width="6in"/>
+        </fig></p>
+      <p>This example has three classes of queries with different characteristics and service level
+        agreements (SLAs). Three resource queues are configured for them. A portion of the segment
+        memory is reserved as a safety margin. <table frame="all" id="table_kns_wg5_1q">
+          <tgroup cols="4">
+            <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+            <colspec colname="c3" colnum="3" colwidth="1.0*"/>
+            <colspec colname="c4" colnum="4" colwidth="1.0*"/>
+            <thead>
+              <row>
+                <entry>Resource Queue Name</entry>
+                <entry>Active Statements</entry>
+                <entry>Memory Limit</entry>
+                <entry>Memory per Query</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>ETL</entry>
+                <entry>3</entry>
+                <entry>2GB</entry>
+                <entry>667MB</entry>
+              </row>
+              <row>
+                <entry>Reporting</entry>
+                <entry>7</entry>
+                <entry>3GB</entry>
+                <entry>429MB</entry>
+              </row>
+              <row>
+                <entry>Executive</entry>
+                <entry>1</entry>
+                <entry>1.4GB</entry>
+                <entry>1.4GB</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table></p>
+      <p>The total memory allocated to the queues is 6.4GB, or 80% of the total segment memory
+        defined by the <codeph>gp_vmem_protect_limit</codeph> server configuration parameter.
+        Allowing a safety margin of 20% accommodates some operators and queries that are known to
+        use more memory than they are allocated by the resource queue. </p>
+      <p>See the <codeph>CREATE RESOURCE QUEUE</codeph> and <codeph>CREATE/ALTER ROLE</codeph>
+        statements in the <cite>Greenplum Database Reference Guide</cite> for help with command
+        syntax and detailed reference information.</p>
+    </body>
+  </topic>
+  <topic id="topic113" xml:lang="en">
+    <title>How Memory Limits Work</title>
+    <body>
+      <p>Setting <codeph>MEMORY_LIMIT</codeph> on a resource queue sets the maximum amount of memory
+        that all active queries submitted through the queue can consume for a segment instance. The
+        amount of memory allotted to a query is the queue memory limit divided by the active
+        statement limit. (Use the memory limits in conjunction with statement-based queues rather
+        than cost-based queues.) For example, if a queue has a memory limit of 2000MB and an active
+        statement limit of 10, each query submitted through the queue is allotted 200MB of memory by
+        default. The default memory allotment can be overridden on a per-query basis using the
+          <codeph>statement_mem</codeph> server configuration parameter (up to the queue memory
+        limit). Once a query has started executing, it holds its allotted memory in the queue until
+        it completes, even if during execution it actually consumes less than its allotted amount of
+        memory.</p>
+      <p>You can use the <codeph>statement_mem</codeph> server configuration parameter to override
+        memory limits set by the current resource queue. At the session level, you can increae
+          <codeph>statement_mem</codeph> up to the resource queue's <codeph>MEMORY_LIMIT</codeph>.
+        This will allow an individual query to use all of the memory allocated for the entire queue
+        without affecting other resource queues.</p>
+      <p>The value of <codeph>statement_mem</codeph> is capped using the
+          <codeph>max_statement_mem</codeph> configuration parameter (a superuser parameter). For a
+        query in a resource queue with <codeph>MEMORY_LIMIT</codeph> set, the maximum value for
+          <codeph>statement_mem</codeph> is <codeph>min(MEMORY_LIMIT, max_statement_mem)</codeph>.
+        When a query is admitted, the memory allocated to it is subtracted from
+          <codeph>MEMORY_LIMIT</codeph>. If <codeph>MEMORY_LIMIT</codeph> is exhausted, new queries
+        in the same resource queue must wait. This happens even if
+          <codeph>ACTIVE_STATEMENTS</codeph> has not yet been reached. Note that this can happen
+        only when <codeph>statement_mem</codeph> is used to override the memory allocated by the
+        resource queue.</p>
+      <p>For example, consider a resource queue named <codeph>adhoc</codeph> with the following
+          settings:<ul id="ul_dpr_vnd_dq">
+          <li><codeph>MEMORY_LIMIT</codeph> is 1.5GB </li>
+          <li><codeph>ACTIVE_STATEMENTS</codeph> is 3</li>
+        </ul>
+      </p>
+      <p>By default each statement submitted to the queue is allocated 500MB of memory. Now consider
+        the following series of events:<ol id="ol_hjq_14d_dq">
+          <li>User <codeph>ADHOC_1</codeph> submits query <codeph>Q1</codeph>,
+              overriding<codeph>STATEMENT_MEM</codeph> to 800MB. The <codeph>Q1</codeph> statement
+            is admitted into the system. </li>
+          <li>User <codeph>ADHOC_2</codeph> submits query <codeph>Q2</codeph>, using the default
+            500MB.</li>
+          <li>With <codeph>Q1</codeph> and <codeph>Q2</codeph> still running, user
+              <codeph>ADHOC3</codeph> submits query <codeph>Q3</codeph>, using the default
+            500MB.</li>
+        </ol></p>
+      <p>Queries <codeph>Q1</codeph> and <codeph>Q2</codeph> have used 1300MB of the queue's 1500MB.
+        Therefore, <codeph>Q3</codeph> must wait for <codeph>Q1</codeph> or <codeph>Q2</codeph> to
+        complete before it can run. </p>
+      <p>If <codeph>MEMORY_LIMIT</codeph> is not set on a queue, queries are admitted until all of
+        the <codeph>ACTIVE_STATEMENTS</codeph> slots are in use, and each query can set an
+        arbitrarily high <codeph>statement_mem</codeph>. This could lead to a resource queue using
+        unbounded amounts of memory.</p>
+      <p>For more information on configuring memory limits on a resource queue, and other memory
+        utilization controls, see <xref href="#topic12" type="topic" format="dita"/>.</p>
+    </body>
+  </topic>
+  <topic id="priorities">
+    <title>How Priorities Work</title>
+    <body>
+      <p>The <codeph>PRIORITY</codeph> setting for a resource queue differs from the
+          <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> settings, which
+        determine whether a query will be admitted to the queue and eventually executed. The
+          <codeph>PRIORITY</codeph> setting applies to queries after they become active. Active
+        queries share available CPU resources as determined by the priority settings for its
+        resource queue. When a statement from a high-priority queue enters the group of actively
+        running statements, it may claim a greater share of the available CPU, reducing the share
+        allocated to already-running statements in queues with a lesser priority setting.</p>
+      <p>The comparative size or complexity of the queries does not affect the allotment of CPU. If
+        a simple, low-cost query is running simultaneously with a large, complex query, and their
+        priority settings are the same, they will be allocated the same share of available CPU
+        resources. When a new query becomes active, the CPU shares will be recalculated, but queries
+        of equal priority will still have equal amounts of CPU. </p>
+      <p>For example, an administrator creates three resource queues: <i>adhoc</i> for ongoing
+        queries submitted by business analysts, <i>reporting</i> for scheduled reporting jobs, and
+          <i>executive</i> for queries submitted by executive user roles. The administrator wants to
+        ensure that scheduled reporting jobs are not heavily affected by unpredictable resource
+        demands from ad-hoc analyst queries. Also, the administrator wants to make sure that queries
+        submitted by executive roles are allotted a significant share of CPU. Accordingly, the
+        resource queue priorities are set as shown:<ul id="ul_ppy_3cy_wq">
+          <li id="iz160250"><i>adhoc</i> — Low priority</li>
+          <li id="iz161065"><i>reporting</i> — High priority</li>
+          <li id="iz161070"><i>executive</i> — Maximum priority</li>
+        </ul></p>
+      <p>At runtime, the CPU share of active statements is determined by these priority settings. If
+        queries 1 and 2 from the reporting queue are running simultaneously, they have equal shares
+        of CPU. When an ad-hoc query becomes active, it claims a smaller share of CPU. The exact
+        share used by the reporting queries is adjusted, but remains equal due to their equal
+        priority setting:</p>
+      <fig id="iz173993">
+        <title>CPU share readjusted according to priority</title>
+        <image href="graphics/gp_query_priority1.png" placement="break" width="432px" height="298px"
+          id="image_lgv_lcy_wq"/>
+      </fig>
+      <note type="note">
+        <p>The percentages shown in these illustrations are approximate. CPU usage between high, low
+          and maximum priority queues is not always calculated in precisely these proportions.</p>
+      </note>
+      <p>When an executive query enters the group of running statements, CPU usage is adjusted to
+        account for its maximum priority setting. It may be a simple query compared to the analyst
+        and reporting queries, but until it is completed, it will claim the largest share of
+        CPU.</p>
+      <fig id="iz160829">
+        <title>CPU share readjusted for maximum priority query</title>
+        <image href="graphics/gp_query_priority2.png" placement="break" width="194px" height="305px"
+          id="image_lrr_ddy_wq"/>
+      </fig>
+      <p>For more information about commands to set priorities, see <xref href="#topic16"
+          type="topic" format="dita"/>.</p>
+    </body>
+  </topic>
+
   <topic id="topic8" xml:lang="en">
     <title id="iz153124">Steps to Enable Workload Management</title>
     <body>
@@ -313,7 +310,8 @@
     <body>
       <p>Resource scheduling is enabled by default when you install Greenplum Database, and is
         required for all roles. The default resource queue, <codeph>pg_default</codeph>, has an
-        active statement limit of 20, no memory limit, and a medium priority setting. Create resource queues for the various types of workloads.</p>
+        active statement limit of 20, no memory limit, and a medium priority setting. Create
+        resource queues for the various types of workloads.</p>
       <section id="iz169600">
         <title>To configure workload management</title>
         <ol>
@@ -339,16 +337,15 @@
           <li id="iz169478">The following parameters are related to memory utilization:<ul
               id="ul_ehc_w3c_34">
               <li id="iz172344"><codeph>gp_resqueue_memory_policy</codeph> - Enables Greenplum
-                Database memory management features. <p>In Greenplum Database<ph>
-                    4.2 and later</ph>, the distribution algorithm <codeph>eager_free</codeph> takes
-                  advantage of the fact that not all operators execute at the same time. The query
-                  plan is divided into stages and Greenplum Database eagerly frees memory allocated
-                  to a previous stage at the end of that stage's execution, then allocates the
-                  eagerly freed memory to the new stage.</p><p><ph>When set to
-                      <codeph>none</codeph>, memory management is the same as in Greenplum Database
-                    releases prior to 4.1. </ph>When set to <codeph>auto</codeph>, query memory
-                  usage is controlled by <codeph>statement_mem</codeph> and resource queue memory
-                  limits. </p></li>
+                Database memory management features. <p>In Greenplum Database<ph> 4.2 and
+                  later</ph>, the distribution algorithm <codeph>eager_free</codeph> takes advantage
+                  of the fact that not all operators execute at the same time. The query plan is
+                  divided into stages and Greenplum Database eagerly frees memory allocated to a
+                  previous stage at the end of that stage's execution, then allocates the eagerly
+                  freed memory to the new stage.</p><p><ph>When set to <codeph>none</codeph>, memory
+                    management is the same as in Greenplum Database releases prior to 4.1. </ph>When
+                  set to <codeph>auto</codeph>, query memory usage is controlled by
+                    <codeph>statement_mem</codeph> and resource queue memory limits. </p></li>
               <li id="iz172366"><codeph>statement_mem</codeph> and
                   <codeph>max_statement_mem</codeph> - Used to allocate memory to a particular query
                 at runtime (override the default allocation assigned by the resource queue).
@@ -445,18 +442,19 @@
       <body>
         <p>Resource queues with a <codeph>MEMORY_LIMIT</codeph><ph> setting control the amount of
             memory for all the queries submitted through the queue. The total memory should not
-            exceed the physical memory available per-segment. Set
-            </ph><codeph>MEMORY_LIMIT</codeph> to 90% of memory available on a per-segment basis.
-          For example, if a host has 48 GB of physical memory and 6 segment instances, then the
-          memory available per segment instance is 8 GB. You can calculate the recommended
-            <codeph>MEMORY_LIMIT</codeph> for a single queue as 0.90*8=7.2 GB. If there are multiple
-          queues created on the system, their total memory limits must also add up to 7.2 GB.</p>
+            exceed the physical memory available per-segment. Set </ph><codeph>MEMORY_LIMIT</codeph>
+          to 90% of memory available on a per-segment basis. For example, if a host has 48 GB of
+          physical memory and 6 segment instances, then the memory available per segment instance is
+          8 GB. You can calculate the recommended <codeph>MEMORY_LIMIT</codeph> for a single queue
+          as 0.90*8=7.2 GB. If there are multiple queues created on the system, their total memory
+          limits must also add up to 7.2 GB.</p>
         <p>When used in conjunction with <codeph>ACTIVE_STATEMENTS</codeph>, the default amount of
           memory allotted per query is: <codeph>MEMORY_LIMIT</codeph><codeph> /
             </codeph><codeph>ACTIVE_STATEMENTS</codeph>. When used in conjunction with
             <codeph>MAX_COST</codeph>, the default amount of memory allotted per query is:
-            <codeph>MEMORY_LIMIT * (query_cost <codeph>/ </codeph>MAX_COST)</codeph>. Use <codeph>MEMORY_LIMIT</codeph> in conjunction with
-            <codeph>ACTIVE_STATEMENTS</codeph> rather than with <codeph>MAX_COST</codeph>.</p>
+            <codeph>MEMORY_LIMIT * (query_cost <codeph>/ </codeph>MAX_COST)</codeph>. Use
+            <codeph>MEMORY_LIMIT</codeph> in conjunction with <codeph>ACTIVE_STATEMENTS</codeph>
+          rather than with <codeph>MAX_COST</codeph>.</p>
         <p>For example, to create a resource queue with an active query limit of 10 and a total
           memory limit of 2000MB (each query will be allocated 200MB of segment host memory at
           execution time): </p>
@@ -499,7 +497,7 @@ MEMORY_LIMIT='2000MB');
         <p>When the query prioritization feature is enabled, resource queues are given a
             <codeph>MEDIUM</codeph> priority by default if not explicitly assigned. For more
           information on how priority settings are evaluated at runtime, see <xref
-            href="#priorities" type="section" format="dita"/>.</p>
+            href="#priorities" type="topic" format="dita"/>.</p>
         <note type="important">In order for resource queue priority levels to be enforced on the
           active query workload, you must enable the query prioritization feature by setting the
           associated server configuration parameters. See <xref href="#topic9" type="topic"
@@ -754,7 +752,7 @@ MEMORY_LIMIT='2000MB');
           and provides the priority, session ID, and other information.</p>
         <p>This view is only available through the <codeph>gp_toolkit</codeph> administrative
           schema. <ph>See the <i>Greenplum Database Reference Guide</i> for more
-            information.</ph></p>
+          information.</ph></p>
       </body>
     </topic>
     <topic id="topic29" xml:lang="en">
