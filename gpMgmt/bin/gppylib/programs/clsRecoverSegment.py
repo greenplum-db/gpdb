@@ -23,7 +23,8 @@ from optparse import OptionGroup
 import os, sys, signal, time
 from gppylib import gparray, gplog, userinput, utils
 from gppylib.util import gp_utils
-from gppylib.commands import base, gp, pg, unix
+from gppylib.commands import gp, pg, unix
+from gppylib.commands.base import Command, WorkerPool
 from gppylib.db import dbconn
 from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib.operations.startSegments import *
@@ -34,10 +35,9 @@ from gppylib.programs.clsAddMirrors import validateFlexibleHeadersListAllFilespa
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
 from gppylib.testold.testUtils import *
-from gppylib.parseutils import line_reader, parse_filespace_order, parse_gprecoverseg_line, \
-    canonicalize_address
+from gppylib.parseutils import line_reader, parse_filespace_order, parse_gprecoverseg_line, canonicalize_address
 from gppylib.utils import ParsedConfigFile, ParsedConfigFileRow, writeLinesToFile, \
-    normalizeAndValidateInputPath, TableLogger
+     normalizeAndValidateInputPath, TableLogger
 from gppylib.gphostcache import GpInterfaceToHostNameCache
 from gppylib.operations.utils import ParallelOperation
 from gppylib.operations.package import SyncPackages
@@ -100,7 +100,7 @@ class PortAssigner:
 
 # -------------------------------------------------------------------------
 
-class RemoteQueryCommand(base.Command):
+class RemoteQueryCommand(Command):
     def __init__(self, qname, query, hostname, port, dbname=None):
         self.qname = qname
         self.query = query
@@ -1122,7 +1122,7 @@ class GpRecoverSegmentProgram:
             raise ProgramArgumentValidationException(
                 "Invalid parallelDegree provided with -B argument: %d" % self.__options.parallelDegree)
 
-        self.__pool = base.WorkerPool(self.__options.parallelDegree)
+        self.__pool = WorkerPool(self.__options.parallelDegree)
         gpEnv = GpMasterEnvironment(self.__options.masterDataDirectory, True)
 
         # verify "where to recover" options
@@ -1216,10 +1216,13 @@ class GpRecoverSegmentProgram:
                     if not userinput.ask_yesno(None, "\nContinue with segment rebalance procedure", 'N'):
                         raise UserAbortedException()
 
-                mirrorBuilder.rebalance()
-
+                fullRebalanceDone = mirrorBuilder.rebalance()
                 self.logger.info("******************************************************************")
-                self.logger.info("The rebalance operation has completed successfully.")
+                if fullRebalanceDone:
+                    self.logger.info("The rebalance operation has completed successfully.")
+                else:
+                    self.logger.info("The rebalance operation has completed with WARNINGS."
+                                     " Please review the output in the gprecoverseg log.")
                 self.logger.info("There is a resynchronization running in the background to bring all")
                 self.logger.info("segments in sync.")
                 self.logger.info("")
@@ -1245,7 +1248,8 @@ class GpRecoverSegmentProgram:
             if new_hosts:
                 self.syncPackages(new_hosts)
 
-            mirrorBuilder.buildMirrors("recover", gpEnv, gpArray)
+            if not mirrorBuilder.buildMirrors("recover", gpEnv, gpArray):
+                sys.exit(1)
 
             confProvider.sendPgElogFromMaster("Recovery of %d segment(s) has been started." % \
                                               len(mirrorBuilder.getMirrorsToBuild()), True)
@@ -1257,10 +1261,7 @@ class GpRecoverSegmentProgram:
             self.logger.info("Use  gpstate -s  to check the resynchronization progress.")
             self.logger.info("******************************************************************")
 
-        pidfile = os.path.join(gpEnv.getMasterDataDir(), 'gprecoverseg.pid')
-        if os.path.exists(pidfile):
-            os.remove(pidfile)
-        os._exit(0)
+        sys.exit(0)
 
     def validate_heap_checksum_consistency(self, gpArray, mirrorBuilder):
         live_segments = [target.getLiveSegment() for target in mirrorBuilder.getMirrorsToBuild()]
