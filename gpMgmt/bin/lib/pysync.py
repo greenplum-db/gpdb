@@ -429,7 +429,7 @@ class LocalPysync:
         -i name: Only transfer named file or directory. Don't be too
             creative with the name.  For example, "directory/./file" will not
             work--use "directory/file".  Name is relative to sourcedir.
-        --insecure: Do not check MD5 digest after transfering data.
+        --insecure: Do not check SHA256 digest after transfering data.
             This makes pysync.py run faster, but a bad guy can forge TCP
             packets and put junk of his choice into your files.
         --delete: Delete things in dst that do not exist in src.
@@ -521,7 +521,7 @@ class LocalPysync:
         elif what[0] == 'getList':
             return self.getList()
         elif what[0] == 'getDigest':
-            m = hashlib.md5()
+            m = hashlib.sha256()
             m.update(self.readFile(what[1], what[2], what[3]))
             return m.digest()
         elif what[0] == 'getData':

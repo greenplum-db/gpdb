@@ -696,7 +696,7 @@ class RemotePysync:
                                 f.seek(offset)
                                 b = f.read(size)
                                 assert len(b) == size
-                                m = hashlib.md5()
+                                m = hashlib.sha256()
                                 m.update(b)
                                 a = m.digest()
                                 digest = self.getAnswer()
@@ -712,7 +712,7 @@ class RemotePysync:
                             if not self.options.insecure:
                                 if digest == None:
                                     digest = self.doCommand('getDigest', name, offset, size)
-                                m = hashlib.md5()
+                                m = hashlib.sha256()
                                 m.update(data)
                                 if m.digest() != digest:
                                     raise Exception('Digest did not match.')
