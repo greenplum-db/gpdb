@@ -748,6 +748,14 @@ resources:
     secret_access_key: {{gpdb4-bucket-secret-access-key}}
     versioned_file: netbackup-installation/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz
 
+- name: reduced-frequency-trigger
+  type: time
+  source:
+    location: America/Los_Angeles
+    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
+    start: {{reduced-frequency-trigger-start}}
+    stop: {{reduced-frequency-trigger-stop}}
+
 ## ======================================================================
 ## reusable anchors
 ## ======================================================================
@@ -963,9 +971,10 @@ jobs:
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
-      passed: [gate_compile_start]
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: pxf_src
@@ -999,9 +1008,10 @@ jobs:
   public: true
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
-      passed: [gate_compile_start]
+      trigger: {{gpdb_src-trigger-flag}}
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -1012,9 +1022,10 @@ jobs:
 - name: compile_gpdb_centos7
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
-      passed: [gate_compile_start]
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: pxf_src
@@ -1066,9 +1077,10 @@ jobs:
 - name: compile_gpdb_sles11
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
-      passed: [gate_compile_start]
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: pxf_src
@@ -1096,10 +1108,10 @@ jobs:
 - name: compile_gpdb_windows_cl
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      tags: ["gpdb5_wix_external_worker"]
-      trigger: true
-      passed: [gate_compile_start]
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
       tags: ["gpdb5_wix_external_worker"]
       passed: [gate_compile_start]
