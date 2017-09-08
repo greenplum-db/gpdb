@@ -44,23 +44,8 @@ Follow [these linux steps](README.linux.md) for getting your system ready for GP
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
 system and tries to build with ORCA by default.  For your convenience, here are
 the steps of how to build the optimizer. For the most up-to-date way of
-building, see the README at the following repositories:
-
-* https://github.com/greenplum-db/gp-xerces
-* https://github.com/greenplum-db/gporca
-
-1. Install our patched version of Xerces-C
-
-    ```
-    git clone https://github.com/greenplum-db/gp-xerces
-    mkdir gp-xerces/build
-    cd gp-xerces/build
-    ../configure
-    make install
-    cd ../..
-    ```
-
-1. Install ORCA, the query optimizer:
+building, see the README in the
+[ORCA repository](https://github.com/greenplum-db/gporca).
 
     ```
     git clone https://github.com/greenplum-db/gporca
@@ -77,13 +62,13 @@ building, see the README at the following repositories:
     ```
 #### Using conan dependency manager
 
-    1. cd gpdb/depends
-    2. conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
-    3. conan install --build
-       * This command will fetch the orca and xerces artifacts from bintray repository, build and install them.
-       * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory. 
-       In case, the files should be copied elsewhere, please change the location.
-    
+1. cd gpdb/depends
+2. conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
+3. conan install --build
+   * This command will fetch the ORCA and xerces artifacts from bintray repository, build and install them.
+   * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory.
+     In case, the files should be copied elsewhere, please change the location.
+
 ### Build the database
 ```
 # Configure build environment to install at /usr/local/gpdb
@@ -170,6 +155,7 @@ make installcheck-world
 ## Alternative Configurations
 
 ### Building GPDB without GPORCA
+
 Currently, GPDB is built with ORCA by default so latest ORCA libraries and headers need
 to be available in the environment. [Build and Install](#buildOrca) the latest ORCA.
 
@@ -183,14 +169,15 @@ make distclean
 ```
 
 ### Building GPDB with PXF
+
 PXF is an extension framework for GPDB to enable fast access to external hadoop datasets.
 Refer to [PXF extension](https://github.com/greenplum-db/gpdb/tree/master/gpAux/extensions/pxf) for more information.
 Currently, GPDPB isn't built with PXF by default.
 PXF requires curl version >= 7.21.3 and also has an additional dependancy on json-c library
-In order to build GPDB with pxf, simply change `configure` with additional option `--enable-pxf`.
+In order to build GPDB with pxf, simply invoke `./configure` with the additional option `--enable-pxf`.
 ```
 # Configure build environment to build/install PXF at /usr/local/gpdb
-./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb --enable-pxf 
+./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb --enable-pxf
 ```
 
 ### Building GPDB with code generation enabled
@@ -234,7 +221,7 @@ Known issues:
 
 ### Running regression tests with Docker
 
-1. Create a docker host with 8gb RAM and 4 cores
+1. Create a docker host with 8GB RAM and 4 cores
     ```bash
     docker-machine create -d virtualbox --virtualbox-cpu-count 4 --virtualbox-disk-size 50000 --virtualbox-memory 8192 gpdb
     eval $(docker-machine env gpdb)
@@ -264,7 +251,7 @@ Known issues:
 
 ### Caveats
 
-* No Space Left On Device
+* No Space Left On Device:
     On macOS the docker-machine vm can periodically become full with unused images.
     You can clear these images with a combination of docker commands.
     ```bash
@@ -308,7 +295,7 @@ throughout the codebase, but a few larger additions worth noting:
 
 * __gpdb-doc/__
 
-  Constains the Greenplum documentation in DITA XML format. Refer to
+  Contains the Greenplum documentation in DITA XML format. Refer to
   `gpdb-doc/README.md` for information on how to build, and work with
   the documentation.
 
@@ -358,7 +345,7 @@ future releases.
 
 Greenplum is developed on GitHub, and anybody wishing to contribute to it will
 have to [have a GitHub account](https://github.com/signup/free) and be familiar
-with [Git tools and workflow](https://wiki.postgresql.org/wiki/Working_with_Git). 
+with [Git tools and workflow](https://wiki.postgresql.org/wiki/Working_with_Git).
 It is also recommend that you follow the [developer's mailing list](http://greenplum.org/#contribute)
 since some of the contributions may generate more detailed discussions there.
 
@@ -378,10 +365,10 @@ easier to submit one instead of claiming an "obvious fix" exception.
 
 If the contribution you're submitting is original work, you can assume that Pivotal
 will release it as part of an overall Greenplum release available to the downstream
-consumers under the Apache License, Version 2.0. However, in addition to that, Pivotal 
+consumers under the Apache License, Version 2.0. However, in addition to that, Pivotal
 may also decide to release it under a different license (such as [PostgreSQL License](https://www.postgresql.org/about/licence/) to the upstream consumers that require it. A typical example here would be Pivotal
 upstreaming your contribution back to PostgreSQL community (which can be done either
-verbatim or your contribution being upstreamed as part of the larger changeset). 
+verbatim or your contribution being upstreamed as part of the larger changeset).
 
 If the contribution you're submitting is NOT original work you have to indicate the name
 of the license and also make sure that it is similar in terms to the Apache License 2.0.
@@ -404,7 +391,7 @@ code. Even when your proposal gets validated by the community, we still recommen
 doing the actual work as a series of small, self-contained commits. This makes
 the reviewer's job much easier and increases the timeliness of feedback.
 
-When it comes to C and C++ parts of Greenplum, we try to follow 
+When it comes to C and C++ parts of Greenplum, we try to follow
 [PostgreSQL Coding Conventions](https://www.postgresql.org/docs/devel/static/source.html).
 In addition to that we require that:
    * All Python code passes [Pylint](https://www.pylint.org/)
@@ -414,11 +401,11 @@ We recommend using ```git diff --color``` when reviewing your changes so that yo
 don't have any spurious whitespace issues in the code that you submit.
 
 All new functionality that is contributed to Greenplum should be covered by regression
-tests that are contributed alongside it. If you are uncertain on how to test or document 
-your work, please raise the question on the gpdb-dev mailing list and the developer 
+tests that are contributed alongside it. If you are uncertain on how to test or document
+your work, please raise the question on the gpdb-dev mailing list and the developer
 community will do its best to help you.
 
-At the very minimum you should always be running 
+At the very minimum you should always be running
 ```make installcheck-world```
 to make sure that you're not breaking anything.
 
@@ -433,15 +420,15 @@ you can be sure whether your changes may need to be forward-ported.
 
 ### Submission timing
 
-To improve the odds of the right discussion of your patch or idea happening, pay attention 
-to what the community work cycle is. For example, if you send in a brand new idea in the 
+To improve the odds of the right discussion of your patch or idea happening, pay attention
+to what the community work cycle is. For example, if you send in a brand new idea in the
 beta phase of a release, we may defer review or target its inclusion for a later version.
 Feel free to ask on the mailing list to learn more about the Greenplum release policy and timing.
 
 ### Patch submission
 
 Once you are ready to share your work with the Greenplum core team and the rest of
-the Greenplum community, you should push all the commits to a branch in your own 
+the Greenplum community, you should push all the commits to a branch in your own
 repository forked from the official Greenplum and [send us a pull request](https://help.github.com/articles/about-pull-requests/).
 
 For now, we require all pull requests to be submitted against the main master
@@ -468,13 +455,13 @@ to a pull request in your email.
 
 ### Patch review
 
-A submitted pull request with passing validation checks is assumed to be available 
-for peer review. Peer review is the process that ensures that contributions to Greenplum 
+A submitted pull request with passing validation checks is assumed to be available
+for peer review. Peer review is the process that ensures that contributions to Greenplum
 are of high quality and align well with the road map and community expectations. Every
 member of the Greenplum community is encouraged to review pull requests and provide
 feedback. Since you don't have to be a core team member to be able to do that, we
 recommend following a stream of pull reviews to anybody who's interested in becoming
-a long-term contributor to Greenplum. As [Linus would say](https://en.wikipedia.org/wiki/Linus's_Law) 
+a long-term contributor to Greenplum. As [Linus would say](https://en.wikipedia.org/wiki/Linus's_Law)
 "given enough eyeballs, all bugs are shallow".
 
 One outcome of the peer review could be a consensus that you need to modify your
@@ -483,11 +470,11 @@ a branch from which a pull request was sent. Those additional commits will be th
 visible to all of the reviewers.
 
 A peer review converges when it receives at least one +1 and no -1s votes from
-the participants. At that point you should expect one of the core team 
+the participants. At that point you should expect one of the core team
 members to pull your changes into the project.
 
-Greenplum prides itself on being a collaborative, consensus-driven environment. 
-We do not believe in vetoes and any -1 vote casted as part of the peer review 
+Greenplum prides itself on being a collaborative, consensus-driven environment.
+We do not believe in vetoes and any -1 vote casted as part of the peer review
 has to have a detailed technical explanation of what's wrong with the change.
 Should a strong disagreement arise it may be advisable to take the matter onto
 the mailing list since it allows for a more natural flow of the conversation.
@@ -510,8 +497,8 @@ just commit to the repository directly.
 
 ## Documentation
 
-For Greenplum Database documentation, please check the online docs:
-http://greenplum.org/docs/
+For Greenplum Database documentation, please check the
+[online documentation](http://greenplum.org/docs/).
 
 For further information beyond the scope of this README, please see
 [our wiki](https://github.com/greenplum-db/gpdb/wiki)
