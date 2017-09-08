@@ -8,6 +8,7 @@ else
 fi
 
 brew install bash-completion
+brew install xerces-c #gporca
 brew install cmake # gporca
 brew install ninja # gporca
 brew install libyaml   # enables `--enable-mapreduce`
