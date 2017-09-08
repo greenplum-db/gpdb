@@ -86,7 +86,7 @@ class Context(Values, object):
         if timestamp is None:
             timestamp = self.timestamp
 
-        if directory:
+        if directory is not None:
             use_dir = directory
         elif dbid == 1:
             use_dir = self.get_backup_dir(timestamp)
@@ -158,7 +158,9 @@ class Context(Values, object):
         if not report_file:
             raise Exception("Unable to locate report file for timestamp %s" % timestamp)
         report_contents = get_lines_from_file(report_file)
-        old_metadata = self.generate_filename("metadata", timestamp=timestamp, use_old_format=True, use_compress=False)
+        # We specify directory='' because we only care about matching the
+        # filename and not the full path
+        old_metadata = self.generate_filename("metadata", timestamp=timestamp, use_old_format=True, use_compress=False, directory='')
         old_format = False
         for line in report_contents:
             if old_metadata in line:
@@ -1021,4 +1023,4 @@ def validate_netbackup_params(param_dict):
     for label, param in param_dict.iteritems():
         if param and len(param) > max_len:
             raise Exception("Netbackup {0} ({1}) exceeds the maximum length of {2} characters".format(label, param, max_len))
-    
+

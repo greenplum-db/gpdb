@@ -204,6 +204,13 @@ class BackupUtilsTestCase(GpTestCase):
     def test_is_timestamp_in_old_format_empty_report_file(self, mock1, mock2, mock3):
         self.assertFalse(self.context.is_timestamp_in_old_format())
 
+    @patch('os.path.exists', side_effect=[True])
+    @patch('gppylib.operations.backup_utils.Context.get_dump_dirs', return_value=['/tmp/db_dumps/20160101'])
+    @patch('gppylib.operations.backup_utils.get_lines_from_file',
+         return_value=['BackupFile /backup/DCA/20160101/gp_dump_1_1_20160101010101.gz: Succeeded'])
+    def test_is_timestamp_in_old_format_wrong_path(self, mock1, mock2, mock3):
+        self.assertTrue(self.context.is_timestamp_in_old_format())
+
     @patch('glob.glob', return_value=['/data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz'])
     def test_get_filename_for_content_master_exists(self, mock1):
         filename = get_filename_for_content(self.context, "metadata", -1)
