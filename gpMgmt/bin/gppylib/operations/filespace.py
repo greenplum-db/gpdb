@@ -548,8 +548,8 @@ class MoveTransFilespaceLocally(Operation):
         self.pg_system_filespace_entry = pg_system_filespace_entry
         self.rollback = rollback
 
-    def get_md5(self, directory):
-        m = hashlib.md5()
+    def get_sha256(self, directory):
+        m = hashlib.sha256()
 
         files_to_hash = []
         for root, dirs, filenames in os.walk(directory):
@@ -568,15 +568,15 @@ class MoveTransFilespaceLocally(Operation):
                     m.update(data)
         return m.hexdigest()
 
-    def md5_check(self, src_dir, dst_dir):
-        src_md5 = self.get_md5(src_dir)
-        dst_md5 = self.get_md5(dst_dir)
+    def sha256_check(self, src_dir, dst_dir):
+        src_sha256 = self.get_sha256(src_dir)
+        dst_sha256 = self.get_sha256(dst_dir)
 
-        logger.info('md5 checksum for %s = %s' % (src_dir, src_md5))
-        logger.info('md5 checksum for %s = %s' % (dst_dir, dst_md5))
+        logger.info('sha256 checksum for %s = %s' % (src_dir, src_sha256))
+        logger.info('sha256 checksum for %s = %s' % (dst_dir, dst_sha256))
 
-        if src_md5 != dst_md5:
-            raise MoveFilespaceError('MD5 Checksum failed for %s' % src_dir)
+        if src_sha256 != dst_sha256:
+            raise MoveFilespaceError('sha256 Checksum failed for %s' % src_dir)
 
     def execute(self):
 
@@ -610,9 +610,9 @@ class MoveTransFilespaceLocally(Operation):
                         logger.info('copying %s' % src_dir)
                         shutil.copytree(src_dir, dst_dir)
                         try:
-                            self.md5_check(src_dir, dst_dir)
+                            self.sha256_check(src_dir, dst_dir)
                         except (IOError, OSError), e:
-                            raise MoveFilespaceError('Failed to calculate md5 checksums !')
+                            raise MoveFilespaceError('Failed to calculate sha256 checksums !')
                 elif CheckDir(src_dir).run():
                     # We use the src segment as the source of truth and copy everything
                     if CheckDir(dst_dir).run():
@@ -622,9 +622,9 @@ class MoveTransFilespaceLocally(Operation):
                     shutil.copytree(src_dir, dst_dir)
 
                     try:
-                        self.md5_check(src_dir, dst_dir)
+                        self.sha256_check(src_dir, dst_dir)
                     except (IOError, OSError), e:
-                        raise MoveFilespaceError('Failed to calculate md5 checksums !')
+                        raise MoveFilespaceError('Failed to calculate sha256 checksums !')
 
             except (IOError, OSError), e:
                 logger.error('Failed to copy transaction files to new Filespace location.')
