@@ -26,17 +26,15 @@
     type="topic"/>
   </topicref>
  </topicref>
- <topicref href="hadoop-tables.xml">
-  <topicref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic">
-   <topicref href="g-one-time-hdfs-protocol-installation.xml" type="topic"/>
-   <topicref href="g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>
-   <topicref href="g-specify-hdfs-data-in-an-external-table-definition.xml" type="topic"/>
-   <topicref href="g-hdfs-avro-format.xml"/>
-   <topicref href="g-hdfs-parquet-format.xml"/>
-   <topicref href="g-hdfs-readable-and-writable-external-table-examples.xml" type="topic"/>
-   <topicref href="g-reading-and-writing-custom-formatted-hdfs-data.xml" type="topic"/>
-   <topicref href="g-hdfs-emr-config.xml"/>
-  </topicref>
+ <topicref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic">
+  <topicref href="g-one-time-hdfs-protocol-installation.xml" type="topic"/>
+  <topicref href="g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>
+  <topicref href="g-specify-hdfs-data-in-an-external-table-definition.xml" type="topic"/>
+  <topicref href="g-hdfs-avro-format.xml"/>
+  <topicref href="g-hdfs-parquet-format.xml"/>
+  <topicref href="g-hdfs-readable-and-writable-external-table-examples.xml" type="topic"/>
+  <topicref href="g-reading-and-writing-custom-formatted-hdfs-data.xml" type="topic"/>
+  <topicref href="g-hdfs-emr-config.xml"/>
  </topicref>
  <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
 </map>

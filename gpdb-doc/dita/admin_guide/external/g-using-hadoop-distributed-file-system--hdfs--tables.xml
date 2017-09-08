@@ -3,7 +3,7 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic19">
    <!-- hack for HTML/PDF -->
-   <title>Accessing HDFS Tables with gphdfs</title>
+   <title>Accessing HDFS Data with gphdfs</title>
    <body>
       <p>There are three steps to using the gphdfs protocol with HDFS:</p>
       <ul otherprops="op-print">
