@@ -30,6 +30,10 @@ class GPReader : public Reader {
         return bucketReader.getKeyList();
     }
 
+    const S3Params &getParams() {
+        return params;
+    }
+
    protected:
     S3Params params;
     S3BucketReader bucketReader;

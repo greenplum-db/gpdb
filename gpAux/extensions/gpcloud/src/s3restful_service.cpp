@@ -60,7 +60,8 @@ static size_t RESTfulServiceAbortFuncCallback(char *ptr, size_t size, size_t nme
 }
 
 // curl's headers write function callback.
-static size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nmemb, void *userp) {
+static size_t RESTfulServiceHeadersWriteFuncCallback(char *ptr, size_t size, size_t nmemb,
+                                                     void *userp) {
     if (S3QueryIsAbortInProgress()) {
         return 0;
     }

@@ -2,7 +2,7 @@
 
 bool hasHeader;
 
-char eolString[EOL_CHARS_MAX_LEN + 1] = "";  // meaningless for gpcheckcloud
+char eolString[EOL_CHARS_MAX_LEN + 1] = "\n";  // LF by default
 
 string s3extErrorMessage;
 
@@ -138,6 +138,8 @@ static void validateCommandLineArgs(map<char, string> &optionPairs) {
 static void printTemplate() {
     printf(
         "[default]\n"
+        "version = \"\"\n"
+        "proxy = \"\"\n"
         "secret = \"aws secret\"\n"
         "accessid = \"aws access id\"\n"
         "threadnum = 4\n"
@@ -146,7 +148,10 @@ static void printTemplate() {
         "low_speed_time = 60\n"
         "encryption = true\n"
         "autocompress = true\n"
-        "proxy = \"\"\n");
+        "verifycert = true\n"
+        "server_side_encryption = \"none\"\n"
+        "# gpcheckcloud config\n"
+        "gpcheckcloud_newline = \"\\n\"\n");
 }
 
 static void printBucketContents(const ListBucketResult &result) {
@@ -200,6 +205,8 @@ static bool downloadS3(const char *urlWithOptions) {
     if (!reader) {
         return false;
     }
+
+    strcpy(eolString, reader->getParams().getGpcheckcloud_newline().c_str());
 
     do {
         data_len = BUF_SIZE;

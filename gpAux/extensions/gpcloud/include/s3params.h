@@ -137,6 +137,14 @@ class S3Params {
         this->proxy = proxy;
     }
 
+    const string& getGpcheckcloud_newline() const {
+        return gpcheckcloud_newline;
+    }
+
+    void setGpcheckcloud_newline(string gpcheckcloud_newline) {
+        this->gpcheckcloud_newline = gpcheckcloud_newline;
+    }
+
    private:
     S3Url s3Url;  // original url to read/write.
 
@@ -160,6 +168,8 @@ class S3Params {
     S3SSEType sseType;
 
     S3MemoryContext memoryContext;
+
+    string gpcheckcloud_newline;  // newline LF, CRLF, CR
 };
 
 inline void PrepareS3MemContext(const S3Params& params) {
