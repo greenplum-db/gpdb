@@ -374,9 +374,9 @@ class RestoreDatabase(Operation):
                 update_ao_statistics(self.context, self.context.restore_tables, self.context.restore_schemas, restore_all=restore_all)
 
         if not self.context.metadata_only:
-            if (not self.context.no_analyze) and len(self.context.restore_tables) == 0:
+            if (not self.context.no_analyze) and len(self.context.restore_tables) == 0 and len(self.context.restore_schemas) == 0:
                 self._analyze(self.context)
-            elif (not self.context.no_analyze) and len(self.context.restore_tables) > 0:
+            elif (not self.context.no_analyze) and (len(self.context.restore_tables) > 0 or len(self.context.restore_schemas) > 0):
                 self._analyze_restore_tables()
         if self.context.restore_stats:
             self._restore_stats()
