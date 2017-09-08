@@ -4,6 +4,8 @@
 <topic id="topic19">
    <!-- hack for HTML/PDF -->
    <title>Accessing HDFS Data with gphdfs</title>
+   <shortdesc>Greenplum Database leverages the parallel architecture of a Hadoop Distributed File
+      System to read and write data files efficiently using the <codeph>gphdfs</codeph> protocol. </shortdesc>
    <body>
       <p>There are three steps to using the gphdfs protocol with HDFS:</p>
       <ul otherprops="op-print">
