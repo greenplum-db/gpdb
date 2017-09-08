@@ -1284,17 +1284,14 @@ FaultInjector_UpdateHashEntry(
 {
 	
 	FaultInjectorEntry_s	*entryLocal;
-	bool					exists;
 	int						status = STATUS_OK;
 
 	FiLockAcquire();
 
-	entryLocal = FaultInjector_InsertHashEntry(entry->faultInjectorIdentifier, &exists);
+	entryLocal = FaultInjector_LookupHashEntry(entry->faultInjectorIdentifier);
 	
-	/* entry should be found since fault has not been injected yet */			
-	Assert(entryLocal != NULL);
-	
-	if (!exists) {
+	if (entryLocal == NULL)
+	{
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,
