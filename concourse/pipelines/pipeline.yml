@@ -454,6 +454,14 @@ resources:
     start: 6:00 AM
     stop: 7:00 AM
 
+- name: reduced-frequency-trigger
+  type: time
+  source:
+    location: America/Los_Angeles
+    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
+    start: {{reduced-frequency-trigger-start}}
+    stop: {{reduced-frequency-trigger-stop}}
+
 ## ======================================================================
 ## reusable anchors
 ## ======================================================================
@@ -504,8 +512,10 @@ jobs:
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
     - get: pxf_src
       trigger: true
@@ -537,8 +547,10 @@ jobs:
   public: true
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
+      trigger: {{gpdb_src-trigger-flag}}
     - get: centos-gpdb-dev-6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source.yml
@@ -549,8 +561,10 @@ jobs:
 - name: compile_gpdb_centos7
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
     - get: pxf_src
       trigger: true
@@ -581,8 +595,10 @@ jobs:
 - name: compile_gpdb_sles11
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
     - get: pxf_src
     - get: sles-gpdb-dev-11-beta
@@ -611,8 +627,10 @@ jobs:
 - name: compile_gpdb_windows_cl
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: true
+      trigger: {{gpdb_src-trigger-flag}}
     - get: gpaddon_src
     - get: pxf_src
     - get: centos-mingw
@@ -920,7 +938,7 @@ jobs:
 - name: DPM_backup_43_restore_5
   plan:
   - get: nightly-trigger
-    trigger: true
+    trigger: {{nightly-trigger-flag}}
   - aggregate:
     - get: gpdb_src
       params:
@@ -930,6 +948,7 @@ jobs:
     - get: gpdb_binary
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb4_binary
       resource: bin_gpdb4_centos6
     - get: ccp_src
@@ -1446,12 +1465,13 @@ jobs:
 - name: DPM_netbackup77
   plan:
   - get: nightly-trigger
-    trigger: true
-  - aggregate: &post_packaging_gets_trigger_false
+    trigger: {{nightly-trigger-flag}}
+  - aggregate: &post_packaging_gets_trigger_based_on_flag
     - get: gpdb_src
       params: {submodules: none}
       tags: ["gpdb5-pulse-worker"]
       passed: [gpdb_rc_packaging_centos]
+      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src_tinc_tarball
       tags: ["gpdb5-pulse-worker"]
       passed: [gpdb_rc_packaging_centos]
@@ -1486,8 +1506,8 @@ jobs:
 - name: DPM_backup-restore-ddboost
   plan:
   - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
+    trigger: {{nightly-trigger-flag}}
+  - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -1566,8 +1586,8 @@ jobs:
 - name: MM_gpexpand
   plan:
   - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
+    trigger: {{nightly-trigger-flag}}
+  - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -1586,8 +1606,8 @@ jobs:
 - name: DPM_gptransfer-43x-to-5x
   plan:
   - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
+    trigger: {{nightly-trigger-flag}}
+  - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -1678,8 +1698,8 @@ jobs:
 - name: cs-filerep-end-to-end
   plan:
   - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
+    trigger: {{nightly-trigger-flag}}
+  - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -1698,8 +1718,8 @@ jobs:
 - name: cs-aoco-compression
   plan:
   - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
+    trigger: {{nightly-trigger-flag}}
+  - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
