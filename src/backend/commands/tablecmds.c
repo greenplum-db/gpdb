@@ -8131,7 +8131,7 @@ ATPrepAlterColumnType(List **wqueue,
 			ereport(ERROR,
 					(errcode(ERRCODE_GROUPING_ERROR),
 			errmsg("cannot use aggregate function in transform expression")));
-		if (pstate->p_hasWindFuncs)
+		if (pstate->p_hasWindowFuncs)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 			errmsg("cannot use window function in transform expression")));
@@ -11782,10 +11782,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 							RelationGetRelationName(rel))));
 			}
 
-			policy = (GpPolicy *) palloc(sizeof(GpPolicy));
-			policy->ptype = POLICYTYPE_PARTITIONED;
-			policy->nattrs = 0;
-
+			policy = createRandomDistribution();
 			rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel), policy);
 			GpPolicyReplace(RelationGetRelid(rel), policy);
 
@@ -11943,6 +11940,26 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			elog(LOG, "ALTER SET DISTRIBUTED BY: falling back to legacy query optimizer to ensure re-distribution of tuples.");
 		}
 
+		GpPolicy * original_policy = NULL;
+
+		if (force_reorg && !rand_pol)
+		{
+			/*
+			 * since we force the reorg, we don't care about the original
+			 * distribution policy of the source table hence, we can set the
+			 * policy to random, which will force it to redistribute if the new
+			 * distribution policy is partitioned, even the new partition policy
+			 * is same as the original one, the query optimizer will generate
+			 * redistribute plan.
+			 */
+			GpPolicy * random_policy = createRandomDistribution();
+
+			original_policy = rel->rd_cdbpolicy;
+			rel->rd_cdbpolicy = GpPolicyCopy(GetMemoryChunkContext(rel),
+											 random_policy);
+			GpPolicyReplace(RelationGetRelid(rel), random_policy);
+		}
+
 		/* Step (b) - build CTAS */
 		queryDesc = build_ctas_with_dist(rel, ldistro,
 						untransformRelOptions(newOptions),
@@ -11980,6 +11997,12 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		PG_END_TRY();
 
 		CommandCounterIncrement(); /* see the effects of the command */
+
+		if (original_policy)
+		{
+			rel->rd_cdbpolicy = original_policy;
+			GpPolicyReplace(RelationGetRelid(rel), original_policy);
+		}
 
 		/*
 		 * Step (d) - tell the seg nodes about the temporary relation. This

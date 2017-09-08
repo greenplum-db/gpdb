@@ -83,6 +83,11 @@ add_paths_to_joinrel(PlannerInfo *root,
            innerrel->cheapest_startup_path &&
            innerrel->cheapest_total_path);
 
+	/* Don't consider paths that have WorkTableScan as inner rel */
+	if (cdbpath_contains_wts(innerrel->cheapest_startup_path) ||
+		cdbpath_contains_wts(innerrel->cheapest_total_path))
+		return;
+
 	/*
 	 * Find potential mergejoin clauses.  We can skip this if we are not
 	 * interested in doing a mergejoin.  However, mergejoin is currently our
@@ -425,6 +430,8 @@ match_unsorted_outer(PlannerInfo *root,
 				unique_path->umethod == UNIQUE_PATH_HASH)
 				materialize_inner = false;
 		}
+		else if (inner_cheapest_total->pathtype == T_WorkTableScan)
+			materialize_inner = false;
 
 		if (materialize_inner)
 			matpath = (Path *)create_material_path(root, innerrel, inner_cheapest_total);

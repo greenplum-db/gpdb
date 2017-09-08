@@ -3404,9 +3404,60 @@ ERROR:  argument value out of range
 HINT:  NTILE expects a positive integer argument.
 -- start_ignore
 DROP TABLE filter_test;
+-- end_ignore
+-- Test use of window functions in places they shouldn't be allowed: MPP-2382
+-- CHECK constraints
+CREATE TABLE wintest_for_window_seq (i int check (i < count(*) over (order by i)));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  cannot use window function in check constraint
+CREATE TABLE wintest_for_window_seq (i int default count(*) over (order by i));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ERROR:  cannot use window function in default expression
+-- index expression and function
+CREATE TABLE wintest_for_window_seq (i int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into wintest_for_window_seq values(1);
+CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (i) where i < count(*) over (order by i);
+ERROR:  cannot use window function in index predicate
+CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (sum(i) over (order by i));
+ERROR:  syntax error at or near "("
+LINE 1: ...window_seq on wintest_for_window_seq (sum(i) over (order by ...
+                                                             ^
+CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq ((sum(i) over (order by i)));
+ERROR:  cannot use window function in index expression
+-- alter table
+ALTER TABLE wintest_for_window_seq alter i set default count(*) over (order by i);
+ERROR:  cannot use window function in default expression
+alter table wintest_for_window_seq alter column i type float using count(*) over (order by
+i)::float;
+ERROR:  cannot use window function in transform expression
+-- select
+select * from wintest_for_window_seq where count(*) over (order by i) > 0;
+ERROR:  window functions not allowed in WHERE clause
+LINE 1: select * from wintest_for_window_seq where count(*) over (or...
+                                                   ^
+-- update
+update wintest_for_window_seq set i = count(*) over (order by i);
+ERROR:  cannot use window function in UPDATE
+LINE 1: update wintest_for_window_seq set i = count(*) over (order b...
+                                              ^
+update wintest_for_window_seq set i = 1 where count(*) over (order by i) > 0;
+ERROR:  cannot use window function in UPDATE
+LINE 1: update wintest_for_window_seq set i = 1 where count(*) over ...
+                                                      ^
+-- delete
+delete from wintest_for_window_seq where count(*) over (order by i) > 0;
+ERROR:  window functions not allowed in WHERE clause
+LINE 1: delete from wintest_for_window_seq where count(*) over (orde...
+                                                 ^
+drop table wintest_for_window_seq;
 --
 -- STANDARD DATA FOR olap_* TESTS.
 --
+-- start_ignore
 drop table cf_olap_windowerr_customer;
 drop table cf_olap_windowerr_vendor;
 drop table cf_olap_windowerr_product;

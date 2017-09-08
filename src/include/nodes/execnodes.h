@@ -858,14 +858,13 @@ typedef struct GroupingFuncExprState
  */
 typedef struct WindowRefExprState
 {
-	ExprState        xprstate;
+	ExprState	xprstate;
 	struct WindowState *windowstate; /* reflect parent window state */
-	List           *args;                        /* states of argument expressions */
-	bool           *argtypbyval;        /* pg_type.typbyval for each argument */
-	int16           *argtyplen;                /* pg_type.typlen of each argument */
-	int                        funcno;                        /* index in window state's func_state array */
-	// bool                isAgg;                        /* aggregate-derived? */
-	char                winkind;                /* pg_window.winkind */
+	List	   *args;			/* states of argument expressions */
+	bool	   *argtypbyval;	/* pg_type.typbyval for each argument */
+	int16	   *argtyplen;		/* pg_type.typlen of each argument */
+	int			funcno;			/* index in window state's func_state array */
+	char		winkind;		/* pg_window.winkind */
 } WindowRefExprState;
 
 /* ----------------
@@ -1554,7 +1553,7 @@ typedef struct BitmapOrState
 } BitmapOrState;
 
 /* ----------------------------------------------------------------
- *	                  Scan State Information
+ *				 Scan State Information
  * ----------------------------------------------------------------
  */
 
@@ -2252,6 +2251,7 @@ typedef struct HashJoinState
 
 	/* set if the operator created workfiles */
 	bool workfiles_created;
+	bool reuse_hashtable; /* Do we need to preserve hash table to support rescan */
 } HashJoinState;
 
 
@@ -2429,9 +2429,9 @@ typedef struct AggState
 } AggState;
 
 
-/* ---------------------
- *        WindowState information
- * -------------------------
+/* ----------------
+ *	WindowState information
+ * ----------------
  */
 typedef struct WindowStatePerLevelData *WindowStatePerLevel;
 typedef struct WindowStatePerFunctionData *WindowStatePerFunction;
@@ -2450,11 +2450,11 @@ typedef struct WindowState
 	bool		cur_slot_is_new;	/* is this a slot from a buffer or outer plan */
 	bool		cur_slot_part_break; /* slot breaks the partition key */
 	int			cur_slot_key_break; /* break level of the key in the slot */
-        
+
 	/* Array of working states per distinct window function */
 	int			numfuncs;
 	WindowStatePerFunction func_state;
-        
+
 	/* Per row state */
 	int64		row_index;
 

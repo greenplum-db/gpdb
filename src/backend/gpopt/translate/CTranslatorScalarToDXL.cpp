@@ -1379,9 +1379,7 @@ CTranslatorScalarToDXL::Edxlfb
 			{WINDOW_BOUND_PRECEDING, EdxlfbBoundedPreceding},
 			{WINDOW_CURRENT_ROW, EdxlfbCurrentRow},
 			{WINDOW_BOUND_FOLLOWING, EdxlfbBoundedFollowing},
-			{WINDOW_UNBOUND_FOLLOWING, EdxlfbUnboundedFollowing},
-			{WINDOW_DELAYED_BOUND_PRECEDING, EdxlfbDelayedBoundedPreceding},
-		    {WINDOW_DELAYED_BOUND_FOLLOWING, EdxlfbDelayedBoundedFollowing}
+			{WINDOW_UNBOUND_FOLLOWING, EdxlfbUnboundedFollowing}
 			};
 
 	const ULONG ulArity = GPOS_ARRAY_SIZE(rgrgulMapping);
@@ -1439,27 +1437,9 @@ CTranslatorScalarToDXL::Pdxlwf
 	EdxlFrameBoundary edxlfbLead = Edxlfb(pwindowframe->lead->kind, pwindowframe->lead->val);
 	EdxlFrameBoundary edxlfbTrail = Edxlfb(pwindowframe->trail->kind, pwindowframe->trail->val);
 
-	static ULONG rgrgulExclusionMapping[][2] =
-			{
-			{WINDOW_EXCLUSION_NULL, EdxlfesNulls},
-			{WINDOW_EXCLUSION_CUR_ROW, EdxlfesCurrentRow},
-			{WINDOW_EXCLUSION_GROUP, EdxlfesGroup},
-			{WINDOW_EXCLUSION_TIES, EdxlfesTies},
-			{WINDOW_EXCLUSION_NO_OTHERS, EdxlfesNone},
-			};
-
-	const ULONG ulArityExclusion = GPOS_ARRAY_SIZE(rgrgulExclusionMapping);
-	EdxlFrameExclusionStrategy edxlfes = EdxlfesSentinel;
-	for (ULONG ul = 0; ul < ulArityExclusion; ul++)
-	{
-		ULONG *pulElem = rgrgulExclusionMapping[ul];
-		if ((ULONG) pwindowframe->exclude == pulElem[0])
-		{
-			edxlfes = (EdxlFrameExclusionStrategy) pulElem[1];
-			break;
-		}
-	}
-	GPOS_ASSERT(EdxlfesSentinel != edxlfes && "Invalid window frame exclusion");
+	// We don't support non-default EXCLUDE [CURRENT ROW | GROUP | TIES |
+	// NO OTHERS] options.
+	EdxlFrameExclusionStrategy edxlfes = EdxlfesNulls;
 
 	CDXLNode *pdxlnLeadEdge = GPOS_NEW(m_pmp) CDXLNode(m_pmp, GPOS_NEW(m_pmp) CDXLScalarWindowFrameEdge(m_pmp, true /* fLeading */, edxlfbLead));
 	CDXLNode *pdxlnTrailEdge = GPOS_NEW(m_pmp) CDXLNode(m_pmp, GPOS_NEW(m_pmp) CDXLScalarWindowFrameEdge(m_pmp, false /* fLeading */, edxlfbTrail));

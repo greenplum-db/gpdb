@@ -498,8 +498,6 @@ ParseConfigFile(const char *config_file, const char *calling_file,
 			 * An include directive isn't a variable and should be processed
 			 * immediately.
 			 */
-			unsigned int save_ConfigFileLineno = ConfigFileLineno;
-
 			if (!ParseConfigFile(opt_value, config_file,
 								 depth + 1, context, elevel,
 								 head_p, tail_p))

@@ -122,5 +122,6 @@ cdb_sequence_nextval_server(Oid    tablespaceid,
                             int64 *pincrement,
                             bool  *poverflow);
 
+extern void seq_mask(char *pagedata, BlockNumber blkno);
 
 #endif   /* SEQUENCE_H */

@@ -1527,7 +1527,7 @@ Optional Features:
   --disable-spinlocks     do not use spinlocks
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
-  --disable-pxf           do not use pxf
+  --enable-pxf            build with pxf
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
@@ -3582,7 +3582,7 @@ if test "${enable_pxf+set}" = set; then :
   esac
 
 else
-  enable_pxf=yes
+  enable_pxf=no
 
 fi
 
@@ -5869,6 +5869,12 @@ GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
 GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
 if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
     sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
+fi
+
+GPTEST_IN="src/test/regress/GPTest.pm.in"
+GPTEST_PM="src/test/regress/GPTest.pm"
+if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
 fi
 
 # Create compiler version string
@@ -12534,7 +12540,7 @@ int
 main ()
 {
 
-return strncmp("2.41.", GPORCA_VERSION_STRING, 5);
+return strncmp("2.42.", GPORCA_VERSION_STRING, 5);
 
   ;
   return 0;
@@ -12544,7 +12550,7 @@ if ac_fn_cxx_try_run "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
 else
-  as_fn_error $? "Your ORCA version is expected to be 2.41.XXX" "$LINENO" 5
+  as_fn_error $? "Your ORCA version is expected to be 2.42.XXX" "$LINENO" 5
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \

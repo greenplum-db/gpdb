@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic48">
+    <title>Example 4—Single gpfdist instance with error logging</title>
+    <body>
+        <p>Uses the gpfdist protocol to create a readable external table,
+                <codeph>ext_expenses,</codeph> from all files with the <i>txt</i> extension. The
+            column delimiter is a pipe ( | ) and NULL (' ') is a space.</p>
+        <p>Access to the external table is single row error isolation mode. Input data formatting
+            errors are captured internally in Greenplum Database with a description of the error.
+            See <xref
+                href="../load/topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml#topic58"
+            /> for information about investigating error rows. You can view the errors, fix the
+            issues, and then reload the rejected data. If the error count on a segment is greater
+            than five (the <codeph>SEGMENT REJECT LIMIT</codeph> value), the entire external table
+            operation fails and no rows are processed. </p>
+        <p>
+            <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( name text, 
+   date date, amount float4, category text, desc1 text ) 
+   LOCATION ('gpfdist://etlhost-1:8081/*.txt', 
+             'gpfdist://etlhost-2:8082/*.txt')
+   FORMAT 'TEXT' ( DELIMITER '|' NULL ' ')
+   LOG ERRORS SEGMENT REJECT LIMIT 5;
+</codeblock>
+        </p>
+        <p>To create the readable ext_expenses table from CSV-formatted text files:</p>
+        <p>
+            <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( name text, 
+   date date,  amount float4, category text, desc1 text ) 
+   LOCATION ('gpfdist://etlhost-1:8081/*.txt', 
+             'gpfdist://etlhost-2:8082/*.txt')
+   FORMAT 'CSV' ( DELIMITER ',' )
+   LOG ERRORS SEGMENT REJECT LIMIT 5;
+</codeblock>
+        </p>
+        <p> </p>
+    </body>
+</topic>

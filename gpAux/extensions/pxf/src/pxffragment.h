@@ -32,12 +32,12 @@
  */
 typedef struct sClientContext
 {
-    CHURL_HEADERS http_headers;
-    CHURL_HANDLE handle;
-    /* part of the HTTP response - received	*/
-    /* from one call to churl_read 			*/
-    /* contains the complete HTTP response 	*/
-    StringInfoData the_rest_buf;
+	CHURL_HEADERS http_headers;
+	CHURL_HANDLE handle;
+	/* part of the HTTP response - received	*/
+	/* from one call to churl_read 			*/
+	/* contains the complete HTTP response 	*/
+	StringInfoData the_rest_buf;
 } ClientContext;
 
 /*
@@ -49,12 +49,12 @@ typedef struct sClientContext
  */
 typedef struct FragmentData
 {
-    char    *authority;
-    char    *index;
-    char    *source_name;
-    char    *fragment_md;
-    char    *user_data;
-    char    *profile;
+	char	   *authority;
+	char	   *index;
+	char	   *source_name;
+	char	   *fragment_md;
+	char	   *user_data;
+	char	   *profile;
 } FragmentData;
 
 /*
@@ -70,6 +70,6 @@ extern void get_fragments(GPHDUri *uri, Relation relation);
 /*
  * Frees the given fragment
  */
-extern void  free_fragment(FragmentData *data);
+extern void free_fragment(FragmentData *data);
 
-#endif //GPDB_PXFFRAGMENT_H
+#endif							/* GPDB_PXFFRAGMENT_H */

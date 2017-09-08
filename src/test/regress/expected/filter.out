@@ -482,7 +482,7 @@ select i, ntile(3) over (order by i) from filter_test ORDER BY i;
 (10 rows)
 
 select i, ntile(3) filter (where true) over (order by i) from filter_test ORDER BY i;
-ERROR:  filter clause specified, but ntile is not an aggregate function
+ERROR:  window function "ntile" can not be used with a filter clause
 LINE 1: select i, ntile(3) filter (where true) over (order by i) fro...
                   ^
 select i, ntile(4-j) over (partition by j order by i) 
@@ -501,7 +501,7 @@ FROM filter_test where j < 4 ORDER BY j, i;
 
 select i, ntile(4-j) filter (where true) over (partition by j order by i) 
 from filter_test where j < 4 ORDER BY j, i;
-ERROR:  filter clause specified, but ntile is not an aggregate function
+ERROR:  window function "ntile" can not be used with a filter clause
 LINE 1: select i, ntile(4-j) filter (where true) over (partition by ...
                   ^
 -- TEST against non aggregate function => should error

@@ -107,7 +107,7 @@ static void registerResourceGroupCallback(ResourceGroupCallback callback, void *
  * Register callback functions for resource group related operations.
  *
  * At transaction end, the callback occurs post-commit or post-abort, so the
- * callback functions can only do noncritical cleanup.
+ * callback functions can only do non-critical cleanup.
  */
 static void
 registerResourceGroupCallback(ResourceGroupCallback callback, void *arg)
@@ -368,7 +368,6 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 
 	systable_endscan(authid_scan);
 	heap_close(authIdRel, RowExclusiveLock);
-
 
 	/*
 	 * Delete the resource group from the catalog.
@@ -673,7 +672,7 @@ GetResGroupCapabilities(Oid groupId, ResGroupCaps *resgroupCaps)
 	ResourceOwner owner = NULL;
 	/*
 	 * We maintain a bit mask to track which resgroup limit capability types
-	 * have been retrived, when mask is 0 then no limit capability is found
+	 * have been retrieved, when mask is 0 then no limit capability is found
 	 * for the given groupId.
 	 */
 	int			mask = 0;
@@ -1062,7 +1061,7 @@ dropResGroupAbortCallback(bool isCommit, void *arg)
 /*
  * Resource group call back function
  *
- * When ALTER RESOURCE GROUP SET CONCURRENCY commits, some queueing
+ * When ALTER RESOURCE GROUP SET CONCURRENCY commits, some queuing
  * transaction of this resource group may need to be woke up.
  *
  */
@@ -1142,7 +1141,7 @@ updateResgroupCapabilities(Oid groupid, const ResGroupCaps *resgroupCaps)
 	const ResGroupCap	*caps = (ResGroupCap *) resgroupCaps;
 	/*
 	 * We maintain a bit mask to track which resgroup limit capability types
-	 * have been retrived, when mask is 0 then no limit capability is found
+	 * have been retrieved, when mask is 0 then no limit capability is found
 	 * for the given groupid.
 	 */
 	int			mask = 0;

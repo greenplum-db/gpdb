@@ -29,8 +29,11 @@ pg_regress.o:
 gpstringsubs.pl:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpstringsubs.pl
 
-gpdiff.pl: atmsort.pm explain.pm
+gpdiff.pl: atmsort.pm explain.pm GPTest.pm
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/gpdiff.pl
+
+GPTest.pm:
+	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/GPTest.pm
 
 atmsort.pm:
 	rm -f $@ && $(LN_S) $(top_builddir)/src/test/regress/atmsort.pm

@@ -2463,6 +2463,21 @@ gpdb::Pexttable
 	return NULL;
 }
 
+List *
+gpdb::PlExternalScanUriList
+	(
+	ExtTableEntry *ext,
+	bool *ismasteronlyp
+	)
+{
+	GP_WRAP_START;
+	{
+		return create_external_scan_uri_list(ext, ismasteronlyp);
+	}
+	GP_WRAP_END;
+	return NULL;
+}
+
 TargetEntry *
 gpdb::PteMember
 	(

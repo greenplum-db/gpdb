@@ -817,11 +817,11 @@ LINE 1: SELECT nosuchagg(a order by a) FROM aggtest;
                ^
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 SELECT lag(a order by a) from aggtest;       -- window function (no window clause)
-ERROR:  ORDER BY specified, but lag is not an ordered aggregate function
+ERROR:  window function call requires an OVER clause
 LINE 1: SELECT lag(a order by a) from aggtest;
                ^
 SELECT lag(a order by a) over (order by a) FROM aggtest;  -- window function
-ERROR:  ORDER BY specified, but lag is not an ordered aggregate function
+ERROR:  aggregate ORDER BY is not implemented for window functions
 LINE 1: SELECT lag(a order by a) over (order by a) FROM aggtest;
                ^
 SELECT count(a order by a) over (order by a) FROM aggtest;  -- window derived aggregate

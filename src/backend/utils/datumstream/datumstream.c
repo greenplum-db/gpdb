@@ -1090,7 +1090,8 @@ datumstreamwrite_lob(DatumStreamWrite * acc,
 	 */
 	if (VARATT_IS_EXTERNAL(DatumGetPointer(d)))
 	{
-		d = PointerGetDatum(heap_tuple_fetch_attr(DatumGetPointer(d)));
+		d = PointerGetDatum(heap_tuple_fetch_attr(
+								(struct varlena *) DatumGetPointer(d)));
 	}
 
 	p = (uint8 *) DatumGetPointer(d);

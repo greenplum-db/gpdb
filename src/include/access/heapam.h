@@ -295,6 +295,7 @@ extern bool heap_getrelfilenode(
 	RelFileNode		*relFileNode);
 extern void heap2_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *rptr);
 extern void heap2_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
+extern void heap_mask(char *pagedata, BlockNumber blkno);
 
 extern void log_heap_newpage(Relation rel, 
 							 Page page,

@@ -31,9 +31,9 @@
  */
 typedef struct sPxfInputData
 {
-    CHURL_HEADERS	headers;
-    GPHDUri			*gphduri;
-    Relation		rel;
+	CHURL_HEADERS headers;
+	GPHDUri    *gphduri;
+	Relation	rel;
 } PxfInputData;
 
 /*
@@ -41,4 +41,4 @@ typedef struct sPxfInputData
  */
 extern void build_http_headers(PxfInputData *input);
 
-#endif //_PXFHEADERS_H_
+#endif							/* _PXFHEADERS_H_ */

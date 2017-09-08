@@ -8,12 +8,12 @@
                 <cmdname>gpfdist</cmdname>, or the Hadoop Distributed File System interface,
                 <codeph>gphdfs</codeph>. </p>
         <p>Use the <codeph>CREATE WRITABLE EXTERNAL TABLE</codeph> command to define the external
-            table and specify the location and format of the output files. <ph>See
-                    <xref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml#topic13"/>
-                for instructions on setting up <cmdname>gpfdist</cmdname> for use with an external
-                table and <xref
-                    href="g-using-hadoop-distributed-file-system--hdfs--tables.xml#topic19"/> for
-                instructions on setting up <codeph>gphdfs</codeph> for use with an external
+            table and specify the location and format of the output files. <ph>See <xref
+                    href="../../external/g-using-the-greenplum-parallel-file-server--gpfdist-.xml#topic13"
+                /> for instructions on setting up <cmdname>gpfdist</cmdname> for use with an
+                external table and <xref
+                    href="../../external/g-using-hadoop-distributed-file-system--hdfs--tables.xml#topic19"
+                /> for instructions on setting up <codeph>gphdfs</codeph> for use with an external
                 table.</ph></p>
         <ul>
             <li id="du175508">With a writable external table using the <cmdname>gpfdist</cmdname>

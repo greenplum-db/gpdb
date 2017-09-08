@@ -716,7 +716,7 @@ is_simple_subquery(PlannerInfo *root, Query *subquery)
 	 * limiting, or WITH.  (XXX WITH could possibly be allowed later)
 	 */
 	if (subquery->hasAggs ||
-	    subquery->hasWindFuncs ||
+	    subquery->hasWindowFuncs ||
 		subquery->groupClause ||
 		subquery->havingQual ||
 		subquery->windowClause ||

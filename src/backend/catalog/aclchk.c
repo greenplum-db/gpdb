@@ -735,7 +735,7 @@ ExecGrant_Relation(InternalGrant *istmt)
 				char *aclstr = strVal(lfirst(lc));
 				AclItem *newai;
 
-				newai = DatumGetPointer(DirectFunctionCall1(aclitemin,
+				newai = (AclItem *)DatumGetPointer(DirectFunctionCall1(aclitemin,
 											CStringGetDatum(aclstr)));
 
 				aip->ai_grantee = newai->ai_grantee;

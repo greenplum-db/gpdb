@@ -322,10 +322,6 @@ namespace gpdxl
 			// reassign the sorting clause from the derived table to the new top-level query
 			static
 			void ReassignSortClause(Query *pqueryNew, Query *pqueryDrdTbl);
-
-			// fix window frame edge boundary when its value is defined by a subquery
-			static
-			Query *PqueryFixWindowFrameEdgeBoundary(const Query *pquery);
 	};
 }
 #endif // GPDXL_CWalkerUtils_H

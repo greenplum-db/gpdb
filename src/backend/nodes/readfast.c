@@ -127,7 +127,7 @@
 
 /* Read a bytea field */
 #define READ_BYTEA_FIELD(fldname) \
-	local_node->fldname = DatumGetPointer(readDatum(false))
+	local_node->fldname = (bytea *) DatumGetPointer(readDatum(false))
 
 /* Read a dummy field */
 #define READ_DUMMY_FIELD(fldname,fldvalue) \
@@ -228,7 +228,7 @@ _readQuery(void)
 	READ_INT_FIELD(resultRelation);
 	READ_NODE_FIELD(intoClause);
 	READ_BOOL_FIELD(hasAggs);
-	READ_BOOL_FIELD(hasWindFuncs);
+	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_BOOL_FIELD(hasDynamicFunctions);
 	READ_NODE_FIELD(rtable);
@@ -243,7 +243,6 @@ _readQuery(void)
 	READ_NODE_FIELD(scatterClause);
 	READ_NODE_FIELD(cteList);
 	READ_BOOL_FIELD(hasRecursive);
-	READ_BOOL_FIELD(hasModifyingCTE);
 	READ_NODE_FIELD(limitOffset);
 	READ_NODE_FIELD(limitCount);
 	READ_NODE_FIELD(rowMarks);
@@ -665,29 +664,6 @@ _readUpdateStmt(void)
 	READ_NODE_FIELD(targetList);
 	READ_NODE_FIELD(whereClause);
 	READ_NODE_FIELD(returningList);
-	READ_DONE();
-}
-
-/*
- * _readFuncCall
- *
- * This parsenode is transformed during parse_analyze.
- * It not stored in views = no upgrade implication for changes
- */
-static FuncCall *
-_readFuncCall(void)
-{
-	READ_LOCALS(FuncCall);
-
-	READ_NODE_FIELD(funcname);
-	READ_NODE_FIELD(args);
-    READ_NODE_FIELD(agg_order);
-	READ_BOOL_FIELD(agg_star);
-	READ_BOOL_FIELD(agg_distinct);
-	READ_BOOL_FIELD(func_variadic);
-	READ_NODE_FIELD(over);
-	READ_INT_FIELD(location);
-	READ_NODE_FIELD(agg_filter);
 	READ_DONE();
 }
 
@@ -1450,6 +1426,7 @@ _readPlannedStmt(void)
 	READ_ENUM_FIELD(planGen, PlanGenerator);
 	READ_BOOL_FIELD(canSetTag);
 	READ_BOOL_FIELD(transientPlan);
+	READ_BOOL_FIELD(oneoffPlan);
 	READ_NODE_FIELD(planTree);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(resultRelations);
@@ -1561,6 +1538,18 @@ _readAppend(void)
 	READ_NODE_FIELD(appendplans);
 	READ_BOOL_FIELD(isTarget);
 	READ_BOOL_FIELD(isZapped);
+
+	READ_DONE();
+}
+
+static RecursiveUnion *
+_readRecursiveUnion(void)
+{
+	READ_LOCALS(RecursiveUnion);
+
+	readPlanInfo((Plan *)local_node);
+
+	READ_INT_FIELD(wtParam);
 
 	READ_DONE();
 }
@@ -1796,6 +1785,18 @@ _readBitmapTableScan(void)
 	readScanInfo((Scan *)local_node);
 
 	READ_NODE_FIELD(bitmapqualorig);
+
+	READ_DONE();
+}
+
+static WorkTableScan *
+_readWorkTableScan(void)
+{
+	READ_LOCALS(WorkTableScan);
+
+	readScanInfo((Scan *)local_node);
+
+	READ_INT_FIELD(wtParam);
 
 	READ_DONE();
 }
@@ -2755,6 +2756,9 @@ readNodeBinary(void)
 			case T_Append:
 				return_value = _readAppend();
 				break;
+			case T_RecursiveUnion:
+				return_value = _readRecursiveUnion();
+				break;
 			case T_Sequence:
 				return_value = _readSequence();
 				break;
@@ -2802,6 +2806,9 @@ readNodeBinary(void)
 				break;
 			case T_BitmapTableScan:
 				return_value = _readBitmapTableScan();
+				break;
+			case T_WorkTableScan:
+				return_value = _readWorkTableScan();
 				break;
 			case T_TidScan:
 				return_value = _readTidScan();

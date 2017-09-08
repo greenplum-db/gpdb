@@ -391,6 +391,7 @@ makeAggrefByOid(Oid aggfnoid, List *args)
 	aggref->aggdistinct = false;
 	aggref->aggstage = AGGSTAGE_NORMAL;
 	aggref->aggorder = NULL;
+	aggref->location = -1;
 
 	return aggref;
 }

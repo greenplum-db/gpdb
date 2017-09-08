@@ -2060,7 +2060,7 @@ ERROR:  table functions must be invoked in FROM clause
 SELECT multiset_3( TABLE(SELECT a from example) );  -- not in the from clause
 ERROR:  table functions must be invoked in FROM clause
 SELECT multiset_5( TABLE(SELECT * from example) ) over (order by 1);
-ERROR:  window functions may not return sets
+ERROR:  OVER specified, but multiset_5 is not a window function nor an aggregate function
 LINE 1: SELECT multiset_5( TABLE(SELECT * from example) ) over (orde...
                ^
 SELECT * from example where 3 = multiset_scalar_value( TABLE(select a from example) ); -- not in from

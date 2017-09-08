@@ -380,7 +380,8 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "  pg_catalog.pg_get_function_arguments(p.oid) as \"%s\",\n"
 						  " CASE\n"
 						  "  WHEN p.proisagg THEN '%s'\n"
-						  "  WHEN p.proiswin THEN '%s'\n"
+/* GPDB_84_MERGE_FIXME: This ought to be "proiswin" for GPDB 5, and we should use the above branch, with "proiswindow", for GPDB 6 and above */
+						  "  WHEN p.proiswindow THEN '%s'\n"
 						  "  WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN '%s'\n"
 						  "  ELSE '%s'\n"
 						  "END as \"%s\"",

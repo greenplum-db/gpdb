@@ -87,6 +87,7 @@ install: all installdirs
 	$(INSTALL_PROGRAM) atmsort.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pm'
 	$(INSTALL_PROGRAM) explain.pl '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pl'
 	$(INSTALL_PROGRAM) explain.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pm'
+	$(INSTALL_PROGRAM) GPTest.pm '$(DESTDIR)$(pgxsdir)/$(subdir)/GPTest.pm'
 
 uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/pg_regress$(X)'
@@ -96,12 +97,15 @@ uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/atmsort.pm'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pl'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/explain.pm'
+	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/GPTest.pm'
 
 
 # Build dynamically-loaded object file for CREATE FUNCTION ... LANGUAGE C.
 
 NAME = regress
-OBJS = regress.o partindex.o workfile_mgr_test.o
+OBJS = regress.o
+
+OBJS += regress_gp.o partindex.o workfile_mgr_test.o
 
 include $(top_srcdir)/src/Makefile.shlib
 

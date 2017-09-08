@@ -325,7 +325,10 @@ group by f1,f2,fs;
 -- any junk columns therein
 --
 
-select q from (select max(f1) as max from int4_tbl group by f1 order by f1) q order by max;
+select q from (select max(f1) from int4_tbl group by f1 order by f1) q
+  order by max;
+with q as (select max(f1) from int4_tbl group by f1 order by f1)
+  select q from q;
 
 --
 -- Test case for sublinks pushed down into subselects via join alias expansion

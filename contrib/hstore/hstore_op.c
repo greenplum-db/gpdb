@@ -618,7 +618,7 @@ each(PG_FUNCTION_ARGS)
 		HEntry	   *ptr = &(ARRPTR(st->hs)[st->i]);
 		Datum		res,
 					dvalues[2];
-		char		nulls[] = {' ', ' '};
+		bool        nulls[2] = {false, false};
 		text	   *item;
 		HeapTuple	tuple;
 
@@ -630,7 +630,7 @@ each(PG_FUNCTION_ARGS)
 		if (ptr->valisnull)
 		{
 			dvalues[1] = (Datum) 0;
-			nulls[1] = 'n';
+			nulls[1] = true;
 		}
 		else
 		{
@@ -643,11 +643,11 @@ each(PG_FUNCTION_ARGS)
 		}
 		st->i++;
 
-		tuple = heap_formtuple(funcctx->attinmeta->tupdesc, dvalues, nulls);
+		tuple = heap_form_tuple(funcctx->attinmeta->tupdesc, dvalues, nulls);
 		res = HeapTupleGetDatum(tuple);
 
 		pfree(DatumGetPointer(dvalues[0]));
-		if (nulls[1] != 'n')
+		if (!nulls[1])
 			pfree(DatumGetPointer(dvalues[1]));
 
 		SRF_RETURN_NEXT(funcctx, res);

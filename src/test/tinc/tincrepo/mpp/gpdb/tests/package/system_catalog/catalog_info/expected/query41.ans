@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_window;
- winfnoid | winrequireorder | winallowframe | winpeercount | wincount | winfunc | winprefunc | winpretype | winfinfunc 
-----------+-----------------+---------------+--------------+----------+---------+------------+------------+------------
-(0 rows)
-
--- end_ignore

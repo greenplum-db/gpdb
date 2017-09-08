@@ -1018,46 +1018,6 @@ CTranslatorUtils::Edxlsetop
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorUtils::Windowexclusion
-//
-//	@doc:
-//		Return the GPDB frame exclusion strategy from its corresponding
-//		DXL representation
-//
-//---------------------------------------------------------------------------
-WindowExclusion
-CTranslatorUtils::Windowexclusion
-	(
-	EdxlFrameExclusionStrategy edxlfes
-	)
-{
-	GPOS_ASSERT(EdxlfesSentinel > edxlfes);
-	ULONG rgrgulMapping[][2] =
-		{
-		{EdxlfesNulls, WINDOW_EXCLUSION_NULL},
-		{EdxlfesCurrentRow, WINDOW_EXCLUSION_CUR_ROW},
-		{EdxlfesGroup, WINDOW_EXCLUSION_GROUP},
-		{EdxlfesTies, WINDOW_EXCLUSION_TIES}
-		};
-
-	const ULONG ulArity = GPOS_ARRAY_SIZE(rgrgulMapping);
-	WindowExclusion we = WINDOW_EXCLUSION_NO_OTHERS;
-
-	for (ULONG ul = 0; ul < ulArity; ul++)
-	{
-		ULONG *pulElem = rgrgulMapping[ul];
-		if ((ULONG) edxlfes == pulElem[0])
-		{
-			we = (WindowExclusion) pulElem[1];
-			break;
-		}
-	}
-	return we;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorUtils::Windowboundkind
 //
 //	@doc:
@@ -1080,8 +1040,11 @@ CTranslatorUtils::Windowboundkind
 			{EdxlfbCurrentRow, WINDOW_CURRENT_ROW},
 			{EdxlfbBoundedFollowing, WINDOW_BOUND_FOLLOWING},
 			{EdxlfbUnboundedFollowing, WINDOW_UNBOUND_FOLLOWING},
-			{EdxlfbDelayedBoundedPreceding, WINDOW_DELAYED_BOUND_PRECEDING},
-		    {EdxlfbDelayedBoundedFollowing, WINDOW_DELAYED_BOUND_FOLLOWING}
+	// We don't distinguish between the delayed and undelayed versions
+	// beoynd this point. Executor will make that decision without our
+	// help.
+			{EdxlfbDelayedBoundedPreceding, WINDOW_BOUND_PRECEDING},
+			{EdxlfbDelayedBoundedFollowing, WINDOW_BOUND_FOLLOWING}
 			};
 
 	const ULONG ulArity = GPOS_ARRAY_SIZE(rgrgulMapping);
@@ -1095,7 +1058,7 @@ CTranslatorUtils::Windowboundkind
 			break;
 		}
 	}
-	GPOS_ASSERT(WINDOW_DELAYED_BOUND_FOLLOWING >= wbk && "Invalid window frame boundary");
+	GPOS_ASSERT(WINDOW_BOUND_FOLLOWING >= wbk && "Invalid window frame boundary");
 
 	return wbk;
 }

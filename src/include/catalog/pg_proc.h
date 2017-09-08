@@ -45,6 +45,7 @@ CATALOG(pg_proc,1255) BKI_BOOTSTRAP
 	float4		prorows;		/* estimated # of rows out (if proretset) */
 	Oid			provariadic;	/* element type of variadic array, or 0 */
 	bool		proisagg;		/* is it an aggregate? */
+	bool		proiswindow;	/* is it a window function? */
 	bool		prosecdef;		/* security definer */
 	bool		proisstrict;	/* strict with respect to NULLs? */
 	bool		proretset;		/* returns a set? */
@@ -52,7 +53,6 @@ CATALOG(pg_proc,1255) BKI_BOOTSTRAP
 	int2		pronargs;		/* number of arguments */
 	int2		pronargdefaults;	/* number of arguments with defaults */
 	Oid			prorettype;		/* OID of result type */
-	bool		proiswin;		/* is it a window function? */
 
 	/* VARIABLE LENGTH FIELDS: */
 	oidvector	proargtypes;	/* parameter types (excludes OUT params) */
@@ -97,16 +97,16 @@ typedef FormData_pg_proc *Form_pg_proc;
 #define Anum_pg_proc_provariadic		7
 GPDB_COLUMN_DEFAULT(pg_proc_provariadic, 0);
 #define Anum_pg_proc_proisagg			8
-#define Anum_pg_proc_prosecdef			9
-#define Anum_pg_proc_proisstrict		10
-#define Anum_pg_proc_proretset			11
-#define Anum_pg_proc_provolatile		12
-#define Anum_pg_proc_pronargs			13
-#define Anum_pg_proc_pronargdefaults	14
+#define Anum_pg_proc_proiswindow		9
+GPDB_COLUMN_DEFAULT(pg_proc_proiswindow, f);
+#define Anum_pg_proc_prosecdef			10
+#define Anum_pg_proc_proisstrict		11
+#define Anum_pg_proc_proretset			12
+#define Anum_pg_proc_provolatile		13
+#define Anum_pg_proc_pronargs			14
+#define Anum_pg_proc_pronargdefaults	15
 GPDB_COLUMN_DEFAULT(pg_proc_pronargdefaults, 0);
-#define Anum_pg_proc_prorettype			15
-#define Anum_pg_proc_proiswin			16
-GPDB_COLUMN_DEFAULT(pg_proc_proiswin, f);
+#define Anum_pg_proc_prorettype			16
 #define Anum_pg_proc_proargtypes		17
 #define Anum_pg_proc_proallargtypes		18
 #define Anum_pg_proc_proargmodes		19
@@ -4219,11 +4219,11 @@ DATA(insert OID = 3949 (  json_array_element        PGNSP PGUID 12 1 0  f f t f 
 DESCR("get json array element");
 DATA(insert OID = 3950 (  json_array_element_text   PGNSP PGUID 12 1 0  f f t f i  2 25  "114 23" _null_ _null_ "{from_json,element_index}" json_array_element_text - _null_ _null_ ));
 DESCR("get json array element as text");
-DATA(insert OID = 3951 (  json_extract_path	        PGNSP PGUID 12 1 0 25 f f t f i  2 0 114 f "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path - _null_ _null_ n ));
+DATA(insert OID = 3951 (  json_extract_path	        PGNSP PGUID 12 1 0 25 f f f t f i  2 0 114 "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path - _null_ _null_ n ));
 DESCR("get value from json with path elements");
 DATA(insert OID = 3952 (  json_extract_path_op      PGNSP PGUID 12 1 0 f f t f i  2 114 "114 1009" _null_ _null_  "{from_json,path_elems}" json_extract_path - _null_ _null_ ));
 DESCR("get value from json with path elements");
-DATA(insert OID = 3953 (  json_extract_path_text	PGNSP PGUID 12 1 0 25 f f t f i  2 0 25 f "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path_text - _null_ _null_ n ));
+DATA(insert OID = 3953 (  json_extract_path_text	PGNSP PGUID 12 1 0 25 f f f t f i  2 0 25 "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path_text - _null_ _null_ n ));
 DESCR("get value from json as text with path elements");
 DATA(insert OID = 3954 (  json_extract_path_text_op PGNSP PGUID 12 1 0  f f t f i  2 25 "114 1009" _null_ _null_  "{from_json,path_elems}" json_extract_path_text - _null_ _null_ ));
 DESCR("get value from json as text with path elements");
@@ -4579,13 +4579,13 @@ DATA(insert OID = 2948 (  txid_visible_in_snapshot	PGNSP PGUID 12 1  0 f f t f i
 DESCR("is txid visible in snapshot?");
 
 /* Extensions */
-DATA(insert OID = 3082 (  pg_available_extensions		PGNSP PGUID 12 10 100 0 f f t t s 0 0 2249 f "" "{19,25,25}" "{o,o,o}" "{name,default_version,comment}" _null_ pg_available_extensions _null_ _null_ _null_ n ));
+DATA(insert OID = 3082 (  pg_available_extensions		PGNSP PGUID 12 10 100 0 f f f t t s 0 0 2249 "" "{19,25,25}" "{o,o,o}" "{name,default_version,comment}" _null_ pg_available_extensions _null_ _null_ _null_ n ));
 DESCR("list available extensions");
-DATA(insert OID = 3083 (  pg_available_extension_versions	PGNSP PGUID 12 10 100 0 f f t t s 0 0 2249 f "" "{19,25,16,16,19,1003,25}" "{o,o,o,o,o,o,o}" "{name,version,superuser,relocatable,schema,requires,comment}" _null_ pg_available_extension_versions _null_ _null_ _null_ n ));
+DATA(insert OID = 3083 (  pg_available_extension_versions	PGNSP PGUID 12 10 100 0 f f f t t s 0 0 2249 "" "{19,25,16,16,19,1003,25}" "{o,o,o,o,o,o,o}" "{name,version,superuser,relocatable,schema,requires,comment}" _null_ pg_available_extension_versions _null_ _null_ _null_ n ));
 DESCR("list available extension versions");
-DATA(insert OID = 3084 (  pg_extension_update_paths		PGNSP PGUID 12 10 100 0 f f t t s 1 0 2249 f "19" "{19,25,25,25}" "{i,o,o,o}" "{name,source,target,path}" _null_ pg_extension_update_paths _null_ _null_ _null_ n ));
+DATA(insert OID = 3084 (  pg_extension_update_paths		PGNSP PGUID 12 10 100 0 f f f t t s 1 0 2249 "19" "{19,25,25,25}" "{i,o,o,o}" "{name,source,target,path}" _null_ pg_extension_update_paths _null_ _null_ _null_ n ));
 DESCR("list an extension's version update paths");
-DATA(insert OID = 3086 (  pg_extension_config_dump		PGNSP PGUID 12 1 0 0 f f t f v 2 0 2278 f "2205 25" _null_ _null_ _null_ _null_ pg_extension_config_dump _null_ _null_ _null_ n));
+DATA(insert OID = 3086 (  pg_extension_config_dump		PGNSP PGUID 12 1 0 0 f f f t f v 2 0 2278 "2205 25" _null_ _null_ _null_ _null_ pg_extension_config_dump _null_ _null_ _null_ n));
 DESCR("flag an extension's table contents to be emitted by pg_dump");
 
 /*
@@ -4602,11 +4602,11 @@ DESCR("flag an extension's table contents to be emitted by pg_dump");
  * syntax, we need to create the DATA statement manually and place it here.
  */
 /* gp_read_error_log(IN exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) => SETOF record */ 
-DATA(insert OID = 3000 ( gp_read_error_log  PGNSP PGUID 12 1 1000 0 f f t t v 1 0 2249 f "25" "{25,1184,25,25,23,23,25,25,17}" "{i,o,o,o,o,o,o,o,o}" "{exttable,cmdtime,relname,filename,linenum,bytenum,errmsg,rawdata,rawbytes}" _null_ gp_read_error_log _null_ _null_ _null_ s ));
+DATA(insert OID = 3000 ( gp_read_error_log  PGNSP PGUID 12 1 1000 0 f f f t t v 1 0 2249 "25" "{25,1184,25,25,23,23,25,25,17}" "{i,o,o,o,o,o,o,o,o}" "{exttable,cmdtime,relname,filename,linenum,bytenum,errmsg,rawdata,rawbytes}" _null_ gp_read_error_log _null_ _null_ _null_ s ));
 DESCR("read the error log for the specified external table");
 
 /* gp_truncate_error_log(text) => bool */ 
-DATA(insert OID = 3069 ( gp_truncate_error_log  PGNSP PGUID 12 1 0 0 f f t f v 1 0 16 f "25" _null_ _null_ _null_ _null_ gp_truncate_error_log _null_ _null_ _null_ m ));
+DATA(insert OID = 3069 ( gp_truncate_error_log  PGNSP PGUID 12 1 0 0 f f f t f v 1 0 16 "25" _null_ _null_ _null_ _null_ gp_truncate_error_log _null_ _null_ _null_ m ));
 DESCR("truncate the error log for the specified external table");
 
 /*

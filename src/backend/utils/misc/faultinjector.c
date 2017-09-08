@@ -313,8 +313,6 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* pause FTS process before committing changes, until shutdown */
 	_("runaway_cleanup"),
 		/* inject fault before cleaning up a runaway query */		
-	_("opt_task_allocate_string_buffer"),
-		/* inject fault while allocating string buffer */
 	_("opt_relcache_translator_catalog_access"),
 		/* inject fault while translating relcache entries */
 	_("send_qe_details_init_backend"),
@@ -337,6 +335,8 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault in FinishPreparedTransaction() after recording the commit prepared record */
 	_("gang_created"),
 		/* inject fault to report ERROR just after creating Gang */
+	_("resgroup_assigned_on_master"),
+		/* inject fault to report ERROR just after resource group is assigned on master */
 	_("not recognized"),
 };
 
@@ -1128,7 +1128,6 @@ FaultInjector_NewHashEntry(
 		case DtmBroadcastCommitPrepared:
 		case DtmBroadcastAbortPrepared:
 		case DtmXLogDistributedCommit:
-		case OptTaskAllocateStringBuffer:
 		case OptRelcacheTranslatorCatalogAccess:
 			
 			if (fileRepRole != FileRepNoRoleConfigured)
@@ -1285,17 +1284,14 @@ FaultInjector_UpdateHashEntry(
 {
 	
 	FaultInjectorEntry_s	*entryLocal;
-	bool					exists;
 	int						status = STATUS_OK;
 
 	FiLockAcquire();
 
-	entryLocal = FaultInjector_InsertHashEntry(entry->faultInjectorIdentifier, &exists);
+	entryLocal = FaultInjector_LookupHashEntry(entry->faultInjectorIdentifier);
 	
-	/* entry should be found since fault has not been injected yet */			
-	Assert(entryLocal != NULL);
-	
-	if (!exists) {
+	if (entryLocal == NULL)
+	{
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,

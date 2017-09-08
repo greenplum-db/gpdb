@@ -104,9 +104,6 @@
 extern int	optind;
 extern char *optarg;
 
-extern char *savedSeqServerHost;
-extern int savedSeqServerPort;
-
 /* ----------------
  *		global variables
  * ----------------
@@ -1355,11 +1352,13 @@ exec_mpp_query(const char *query_string,
 						  list_make1(plan ? (Node*)plan : (Node*)utilityStmt),
 						  NULL);
 
+		/* Set up the sequence server */
+		SetupSequenceServer(seqServerHost, seqServerPort);
+
 		/*
 		 * Start the portal.
 		 */
-		PortalStart(portal, paramLI, InvalidSnapshot,
-					seqServerHost, seqServerPort, ddesc);
+		PortalStart(portal, paramLI, InvalidSnapshot, ddesc);
 
 		/*
 		 * Select text output format, the default.
@@ -1766,11 +1765,13 @@ exec_simple_query(const char *query_string, const char *seqServerHost, int seqSe
 						  plantree_list,
 						  NULL);
 
+		/* Set up the sequence server */
+		SetupSequenceServer(seqServerHost, seqServerPort);
+
 		/*
 		 * Start the portal.  No parameters here.
 		 */
-		PortalStart(portal, NULL, InvalidSnapshot,
-					seqServerHost, seqServerPort, NULL);
+		PortalStart(portal, NULL, InvalidSnapshot, NULL);
 
 		/*
 		 * Select the appropriate output format: text unless we are doing a
@@ -2519,19 +2520,7 @@ exec_bind_message(StringInfo input_message)
 		 * destruction.
 		 */
 		cplan = RevalidateCachedPlan(psrc, false);
-
-		/*
-		 * Make a copy of the plan in portal's memory context, because GPDB
-		 * would modify the plan tree later in exec_make_plan_constant before
-		 * dispatching, and the modification would make another copy of the plan
-		 * from the same memory context of the plan tree, so if we use the
-		 * cached plan directly here, the copy in exec_make_plan_constant would
-		 * be allocated in CachedPlan context, which lives for the whole life
-		 * span of the process and can cause memory leak.
-		 */
-		oldContext = MemoryContextSwitchTo(PortalGetHeapMemory(portal));
-		plan_list = copyObject(cplan->stmt_list);
-		MemoryContextSwitchTo(oldContext);
+		plan_list = cplan->stmt_list;
 	}
 	else
 	{
@@ -2590,8 +2579,7 @@ exec_bind_message(StringInfo input_message)
 	/*
 	 * And we're ready to start portal execution.
 	 */
-	PortalStart(portal, params, InvalidSnapshot,
-				savedSeqServerHost, savedSeqServerPort, NULL);
+	PortalStart(portal, params, InvalidSnapshot, NULL);
 
 	/*
 	 * Apply the result format requests to the portal.

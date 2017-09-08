@@ -327,6 +327,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	hashtable->stats = NULL;
 	hashtable->eagerlyReleased = false;
 	hashtable->hjstate = hjstate;
+	hashtable->first_pass = true;
 
 	/*
 	 * Get info about the hash functions to be used for each hash key. Also
@@ -734,6 +735,9 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 	if (oldnbatch > Min(INT_MAX / 2, MaxAllocSize / (sizeof(void *) * 2)))
 		return;
 
+	/* A reusable hash table can only respill during first pass */
+	AssertImply(hashtable->hjstate->reuse_hashtable, hashtable->first_pass);
+
 	nbatch = oldnbatch * 2;
 	Assert(nbatch > 1);
 
@@ -990,10 +994,17 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 			}
 		}
 	}
-	else
+	else if (hashtable->first_pass)
 	{
 		/*
-		 * put the tuple into a temp file for later batches
+		 * Put the tuple into a temp file for later batches.
+		 *
+		 * For rescannable hash join, we may see the same tuples many times
+		 * during rescans. However, only the first pass (before rescanning) requires
+		 * us to save the tuples to their corresponding batch files. The later passes
+		 * just read those tuples from batch files. As the tuples are already spilled
+		 * during first pass we no longer need to worry about saving those tuples in
+		 * batch files.
 		 */
 		Assert(batchno > hashtable->curbatch);
 		ExecHashJoinSaveTuple(ps, tuple,
@@ -1575,7 +1586,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
 
     /* Already reported on this batch? */
     if ( stats->endedbatch == curbatch 
-			|| curbatch >= hashtable->nbatch)
+			|| curbatch >= hashtable->nbatch || !hashtable->first_pass)
         return;
     stats->endedbatch = curbatch;
 

@@ -1,0 +1,54 @@
+-- https://github.com/greenplum-db/gpdb/issues/1109
+--
+-- ALTER TABLE ... SET WITH (REORGANIZE = true); should always redistribute the
+-- data even with matching distribution policy
+create table ats_dist_by_c (c int, d int) distributed by (c);
+create table ats_dist_by_d (c int, d int) distributed by (d);
+insert into ats_dist_by_c select i, 0 from generate_series(1, 47) i;
+copy ats_dist_by_c to '/tmp/ats_dist_by_c<SEGID>' on segment;
+-- load the data back from the segment file, but wrong distribution
+set gp_enable_segment_copy_checking = false;
+show gp_enable_segment_copy_checking;
+ gp_enable_segment_copy_checking 
+---------------------------------
+ off
+(1 row)
+
+copy ats_dist_by_d from '/tmp/ats_dist_by_c<SEGID>' on segment;
+-- try to use the reorganize = true to fix it
+alter table ats_dist_by_d set with (reorganize = true);
+-- construct expected table
+create table ats_expected_by_d (c int, d int) distributed by (d);
+insert into ats_expected_by_d select * from ats_dist_by_c;
+-- expect to see data distributed in the same way as the freshly constructed
+-- table
+select count(*) = 0 as has_same_distribution from
+(select gp_segment_id, * from ats_dist_by_d except
+	select gp_segment_id, * from ats_expected_by_d) t;
+ has_same_distribution 
+-----------------------
+ t
+(1 row)
+
+-- reload for random distribution test
+truncate table ats_dist_by_d;
+copy ats_dist_by_d from '/tmp/ats_dist_by_c<SEGID>' on segment;
+-- we expect the new random distribution to differ from both the
+-- distributed-by-c table and the distributed-by-d table
+alter table ats_dist_by_d set with (reorganize = true) distributed randomly;
+select count(*) > 0 as has_different_distribution from
+(select gp_segment_id, * from ats_dist_by_d except
+	select gp_segment_id, * from ats_dist_by_c) t;
+ has_different_distribution 
+----------------------------
+ t
+(1 row)
+
+select count(*) > 0 as has_different_distribution from
+(select gp_segment_id, * from ats_dist_by_d except
+	select gp_segment_id, * from ats_expected_by_d) t;
+ has_different_distribution 
+----------------------------
+ t
+(1 row)
+

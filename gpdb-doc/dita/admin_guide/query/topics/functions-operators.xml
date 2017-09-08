@@ -2,6 +2,8 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic26" xml:lang="en">
     <title id="in151167">Using Functions and Operators</title>
+    <shortdesc>Description of user-defined and built-in functions and operators in Greenplum
+        Database.</shortdesc>
     <body>
         <ul>
             <li id="in140953">

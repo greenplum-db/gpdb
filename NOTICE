@@ -2333,6 +2333,7 @@ Finland, http://www.stat.fi/worldinfigures.
 =================================================================
 
 For the following components:
+ gpAux\extensions\pxf\src\gpdbwritableformatter.c
  gpAux\extensions\pxf\src\libchurl.c
  gpAux\extensions\pxf\src\libchurl.h
  gpAux\extensions\pxf\src\pxfbridge.c
@@ -2342,12 +2343,9 @@ For the following components:
  gpAux\extensions\pxf\src\pxfprotocol.c
  gpAux\extensions\pxf\src\pxfuriparser.c
  gpAux\extensions\pxf\src\pxfuriparser.h
- gpAux\extensions\pxf\src\pxfutils.c
- gpAux\extensions\pxf\src\pxfutils.h
  gpAux\extensions\pxf\test\pxfheaders_test.c
  gpAux\extensions\pxf\test\pxfprotocol_test.c
  gpAux\extensions\pxf\test\pxfuriparser_test.c
- gpAux\extensions\pxf\test\pxfutils_test.c
 
 Apache HAWQ (incubating)
 Copyright 2017 The Apache Software Foundation.

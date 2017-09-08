@@ -28,9 +28,11 @@
 #endif
 
 #include "access/gin.h"
+#include "access/rmgr.h"
 #include "access/transam.h"
 #include "access/twophase.h"
 #include "access/xact.h"
+#include "access/xlog_internal.h"
 #include "catalog/namespace.h"
 #include "commands/async.h"
 #include "commands/prepare.h"
@@ -137,6 +139,9 @@ extern char *SSLCipherSuites;
 
 static const char *assign_log_destination(const char *value,
 					   bool doit, GucSource source);
+
+static const char *assign_wal_consistency_checking(const char *newval,
+											bool doit, GucSource source);
 
 #ifdef HAVE_SYSLOG
 static int	syslog_facility = LOG_LOCAL0;
@@ -2690,6 +2695,7 @@ static struct config_string ConfigureNamesString[] =
 		&external_pid_file,
 		NULL, assign_canonical_path, NULL
 	},
+
 	/* placed here as a temporary hack until we get guc enums */
 		{
 			{"bytea_output", PGC_USERSET, CLIENT_CONN_STATEMENT,
@@ -2699,6 +2705,18 @@ static struct config_string ConfigureNamesString[] =
 			&bytea_output_temp,
 			"escape", assign_bytea, NULL, NULL
 		},
+
+	{
+		{"wal_consistency_checking", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("Sets the WAL resource managers for which WAL consistency checks are done."),
+			gettext_noop("Full-page images will be logged for all data blocks and cross-checked against the results of WAL replay."),
+			GUC_LIST_INPUT | GUC_NOT_IN_SAMPLE
+		},
+		&wal_consistency_checking_string,
+		"",
+		assign_wal_consistency_checking, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, NULL, NULL, NULL
@@ -7398,6 +7416,96 @@ assign_msglvl(int *var, const char *newval, bool doit, GucSource source)
 	else
 		return NULL;			/* fail */
 	return newval;				/* OK */
+}
+
+/*
+ * assign_hook and show_hook subroutines
+ */
+
+static const char *
+assign_wal_consistency_checking(const char *newval, bool doit, GucSource source)
+{
+	char	   *rawstring;
+	List	   *elemlist;
+	ListCell   *l;
+	bool		newwalconsistency[RM_MAX_ID + 1];
+
+	/* Initialize the array */
+	MemSet(newwalconsistency, 0, (RM_MAX_ID + 1) * sizeof(bool));
+
+	/* Need a modifiable copy of string */
+	rawstring = guc_strdup(ERROR, newval);
+
+	/* Parse string into list of identifiers */
+	if (!SplitIdentifierString(rawstring, ',', &elemlist))
+	{
+		free(rawstring);
+		list_free(elemlist);
+
+		/* syntax error in list */
+		ereport(GUC_complaint_elevel(source),
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("List syntax is invalid.")));
+		return NULL;
+	}
+
+	free(rawstring);
+
+	foreach(l, elemlist)
+	{
+		char	   *tok = (char *) lfirst(l);
+		bool		found = false;
+		RmgrId		rmid;
+
+		/* Check for 'all'. */
+		if (pg_strcasecmp(tok, "all") == 0)
+		{
+			for (rmid = 0; rmid <= RM_MAX_ID; rmid++)
+				if (RmgrTable[rmid].rm_mask != NULL)
+					newwalconsistency[rmid] = true;
+			found = true;
+		}
+		else
+		{
+			/*
+			 * Check if the token matches with any individual resource
+			 * manager.
+			 */
+			for (rmid = 0; rmid <= RM_MAX_ID; rmid++)
+			{
+				if (pg_strcasecmp(tok, RmgrTable[rmid].rm_name) == 0 &&
+					RmgrTable[rmid].rm_mask != NULL)
+				{
+					newwalconsistency[rmid] = true;
+					found = true;
+				}
+			}
+		}
+
+		/* If a valid resource manager is found, check for the next one. */
+		if (!found)
+		{
+			list_free(elemlist);
+
+			ereport(GUC_complaint_elevel(source),
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("Unrecognized key word: \"%s\".", tok)));
+			return NULL;
+		}
+	}
+
+	list_free(elemlist);
+
+	if (doit)
+	{
+		/* assign new value */
+		wal_consistency_checking = guc_malloc(ERROR, (RM_MAX_ID + 1) * sizeof(bool));
+		memcpy(wal_consistency_checking,
+			   newwalconsistency,
+			   (RM_MAX_ID + 1) * sizeof(bool));
+	}
+
+	return newval;
 }
 
 static const char *

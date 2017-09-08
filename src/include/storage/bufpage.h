@@ -388,6 +388,8 @@ PageGetLSN(Page page)
  */
 #define PageSetLSN(page, lsn) \
 	(((PageHeader) (page))->pd_lsn = (lsn))
+#define PageXLogRecPtrSet(ptr, lsn) \
+	((ptr).xlogid = (uint32) ((lsn) >> 32), (ptr).xrecoff = (uint32) (lsn))
 
 #define PageHasFreeLinePointers(page) \
 	(((PageHeader) (page))->pd_flags & PD_HAS_FREE_LINES)

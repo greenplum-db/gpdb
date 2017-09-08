@@ -1,8 +1,0 @@
--- start_ignore
-select * from pg_shdescription;
- objoid | classoid |        description        
---------+----------+---------------------------
-      1 |     1262 | Default template database
-(1 row)
-
--- end_ignore

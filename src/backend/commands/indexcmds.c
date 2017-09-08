@@ -36,11 +36,11 @@
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "optimizer/clauses.h"
-#include "parser/parse_agg.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_func.h"
 #include "parser/parsetree.h"
+#include "rewrite/rewriteManip.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
@@ -931,7 +931,7 @@ CheckPredicate(Expr *predicate)
 		ereport(ERROR,
 				(errcode(ERRCODE_GROUPING_ERROR),
 				 errmsg("cannot use aggregate in index predicate")));
-	if (checkExprHasWindFuncs((Node *)predicate))
+	if (checkExprHasWindowFuncs((Node *)predicate))
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("cannot use window function in index predicate")));
@@ -1033,7 +1033,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 				ereport(ERROR,
 						(errcode(ERRCODE_GROUPING_ERROR),
 				errmsg("cannot use aggregate function in index expression")));
-			if (checkExprHasWindFuncs(attribute->expr))
+			if (checkExprHasWindowFuncs(attribute->expr))
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("cannot use window function in index expression")));

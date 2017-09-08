@@ -109,6 +109,7 @@ typedef struct PlannerGlobal
 	List	   *invalItems;		/* other dependencies, as PlanInvalItems */
 
 	bool		transientPlan;	/* redo plan when TransactionXmin changes? */
+	bool		oneoffPlan;		/* redo plan on every execution? */
 
 	ApplyShareInputContext share;	/* workspace for GPDB plan sharing */
 
@@ -492,16 +493,7 @@ typedef struct RelOptInfo
 	List	   *subrtable;		/* if subquery */
 
 	/* used by external scan */
-	List		*urilocationlist;
-	List		*execlocationlist;
-	char		*execcommand;
-	char		fmttype;
-	char		*fmtopts;
-	int32		rejectlimit;
-	char		rejectlimittype;
-	Oid			fmterrtbl;
-	int32		ext_encoding;
-	bool		writable;	   /* true for writable, false for readable ext tables*/
+	struct ExtTableEntry *extEntry;
 
 	/* used by various scans and joins: */
 	List	   *baserestrictinfo;		/* RestrictInfo structures (if base

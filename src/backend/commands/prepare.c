@@ -35,9 +35,6 @@
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 
-extern char *savedSeqServerHost;
-extern int savedSeqServerPort;
-
 /*
  * The hash table in which prepared queries are stored. This is
  * per-backend: query plans are not shared between backends.
@@ -299,8 +296,7 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	/*
 	 * Run the portal to completion.
 	 */
-	PortalStart(portal, paramLI, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort, NULL);
+	PortalStart(portal, paramLI, ActiveSnapshot, NULL);
 
 	(void) PortalRun(portal, FETCH_ALL, false, dest, dest, completionTag);
 

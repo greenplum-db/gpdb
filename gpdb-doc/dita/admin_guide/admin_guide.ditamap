@@ -42,6 +42,7 @@
         <topicref href="partIV.xml" navtitle="Working with Databases" id="partIV">
             <topicref href="ddl/ddl.ditamap" format="ditamap"/>
             <topicref href="dml.xml" navtitle="Managing Data" id="dml"/>
+            <topicref href="external/external-tables.ditamap" format="ditamap"/>
             <topicref href="load/load.ditamap" format="ditamap"/>
             <topicref href="query/query.ditamap" format="ditamap"/>
         </topicref>

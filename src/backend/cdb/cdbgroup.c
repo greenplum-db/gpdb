@@ -3006,6 +3006,7 @@ void generate_three_tlists(List *tlist,
 			new_aggref->aggstar = false;
 			new_aggref->aggdistinct = false; /* handled in preliminary aggregation */
 			new_aggref->aggstage = AGGSTAGE_INTERMEDIATE;
+			new_aggref->location = -1;
 
 			new_expr = (Expr *)new_aggref;
 		}
@@ -3678,7 +3679,7 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			if ( ctx->use_irefs_tlist )
 			{
 				TargetEntry *inter_tle;
-				
+
 				iref = makeNode(Aggref);
 				iref->aggfnoid = pref->aggfnoid;
 				iref->aggtype = transtype;
@@ -3687,7 +3688,8 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 				iref->aggstar = false;
 				iref->aggdistinct = false;
 				iref->aggstage = AGGSTAGE_INTERMEDIATE;
-				
+				iref->location = -1;
+
 				inter_tle =  makeTargetEntry((Expr*)iref, attrno, NULL, false);
 				inter_tle->ressortgroupref = ctx->split_aggref_sortgroupref;
 				ctx->irefs_tlist = lappend(ctx->irefs_tlist, inter_tle);
@@ -3703,6 +3705,7 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			fref->aggstar = false;
 			fref->aggdistinct = false; /* handled in preliminary aggregation */
 			fref->aggstage = AGGSTAGE_FINAL;
+			fref->location = -1;
 			final_tle = makeTargetEntry((Expr*)fref, attrno, NULL, false);
 			final_tle->ressortgroupref = ctx->split_aggref_sortgroupref;
 			ctx->frefs_tlist = lappend(ctx->frefs_tlist, final_tle);

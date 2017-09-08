@@ -56,13 +56,11 @@
 #include "catalog/gp_id.h"
 #include "catalog/gp_version.h"
 #include "catalog/toasting.h"
-#include "catalog/gp_policy.h"
 
 #include "miscadmin.h"
 #include "storage/fd.h"
 #include "utils/fmgroids.h"
 #include "utils/relcache.h"
-#include "utils/lsyscache.h"
 
 #include "cdb/cdbpersistenttablespace.h"
 #include "cdb/cdbvars.h"

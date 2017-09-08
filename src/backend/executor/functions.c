@@ -572,20 +572,22 @@ postquel_end(execution_state *es)
 		saveActiveSnapshot = ActiveSnapshot;
 		PG_TRY();
 		{
+			Oid			relationOid = InvalidOid; 	/* relation that is modified */
+			AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
+
 			ActiveSnapshot = es->qd->snapshot;
 
 			if (es->qd->operation != CMD_SELECT)
 				AfterTriggerEndQuery(es->qd->estate);
+
+			if (Gp_role == GP_ROLE_DISPATCH)
+				autostats_get_cmdtype(es->qd, &cmdType, &relationOid);
+
 			ExecutorEnd(es->qd);
 
 			/* MPP-14001: Running auto_stats */
 			if (Gp_role == GP_ROLE_DISPATCH)
-			{
-				Oid			relationOid = InvalidOid; 					/* relation that is modified */
-				AutoStatsCmdType cmdType = AUTOSTATS_CMDTYPE_SENTINEL; 	/* command type */
-				autostats_get_cmdtype(es->qd, &cmdType, &relationOid);
 				auto_stats(cmdType, relationOid, es->qd->es_processed, true /* inFunction */);
-			}
 		}
 		PG_CATCH();
 		{

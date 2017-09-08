@@ -116,6 +116,7 @@ test: rowtypes
 test: returning
 # GPDB_83_MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 ignore: largeobject
+test: with
 test: xml
 test: stats
 ignore: tablespace

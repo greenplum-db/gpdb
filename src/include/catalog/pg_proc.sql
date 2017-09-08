@@ -163,585 +163,585 @@
  CREATE FUNCTION array_sum(_int4) RETURNS _int4 LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=6013, proisagg="t");
 
 -- Window functions (similar to aggregates) 
- CREATE FUNCTION row_number() RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7000, proiswin="t");
+ CREATE FUNCTION row_number() RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7000, proiswindow="t");
 -- #define ROW_NUMBER_OID 7000
 -- #define ROW_NUMBER_TYPE 20
 
- CREATE FUNCTION rank() RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7001, proiswin="t");
+ CREATE FUNCTION rank() RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7001, proiswindow="t");
 
- CREATE FUNCTION dense_rank() RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7002, proiswin="t");
+ CREATE FUNCTION dense_rank() RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7002, proiswindow="t");
 
- CREATE FUNCTION percent_rank() RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7003, proiswin="t");
+ CREATE FUNCTION percent_rank() RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7003, proiswindow="t");
 
- CREATE FUNCTION cume_dist() RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7004, proiswin="t");
+ CREATE FUNCTION cume_dist() RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7004, proiswindow="t");
 -- #define CUME_DIST_OID 7004
 
- CREATE FUNCTION ntile(int4) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7005, proiswin="t");
+ CREATE FUNCTION ntile(int4) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7005, proiswindow="t");
 
- CREATE FUNCTION ntile(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7006, proiswin="t");
+ CREATE FUNCTION ntile(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7006, proiswindow="t");
 
- CREATE FUNCTION ntile("numeric") RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7007, proiswin="t");
+ CREATE FUNCTION ntile("numeric") RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7007, proiswindow="t");
 
 --  XXX for now, window functions with arguments, just cite numeric = 1700, need to overload. 
- CREATE FUNCTION first_value(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7017, proiswin="t");
+ CREATE FUNCTION first_value(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7017, proiswindow="t");
 
- CREATE FUNCTION first_value("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7018, proiswin="t");
+ CREATE FUNCTION first_value("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7018, proiswindow="t");
 
- CREATE FUNCTION first_value(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7019, proiswin="t");
+ CREATE FUNCTION first_value(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7019, proiswindow="t");
 
- CREATE FUNCTION first_value(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7020, proiswin="t");
+ CREATE FUNCTION first_value(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7020, proiswindow="t");
 
- CREATE FUNCTION first_value(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7021, proiswin="t");
+ CREATE FUNCTION first_value(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7021, proiswindow="t");
 
- CREATE FUNCTION first_value(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7022, proiswin="t");
+ CREATE FUNCTION first_value(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7022, proiswindow="t");
 
- CREATE FUNCTION first_value(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7023, proiswin="t");
+ CREATE FUNCTION first_value(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7023, proiswindow="t");
 
- CREATE FUNCTION first_value("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7024, proiswin="t");
+ CREATE FUNCTION first_value("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7024, proiswindow="t");
 
- CREATE FUNCTION first_value(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7025, proiswin="t");
+ CREATE FUNCTION first_value(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7025, proiswindow="t");
 
- CREATE FUNCTION first_value(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7026, proiswin="t");
+ CREATE FUNCTION first_value(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7026, proiswindow="t");
 
- CREATE FUNCTION first_value(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7027, proiswin="t");
+ CREATE FUNCTION first_value(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7027, proiswindow="t");
 
- CREATE FUNCTION first_value(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7028, proiswin="t");
+ CREATE FUNCTION first_value(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7028, proiswindow="t");
 
- CREATE FUNCTION first_value(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7029, proiswin="t");
+ CREATE FUNCTION first_value(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7029, proiswindow="t");
 
- CREATE FUNCTION first_value(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7030, proiswin="t");
+ CREATE FUNCTION first_value(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7030, proiswindow="t");
 
- CREATE FUNCTION first_value(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7031, proiswin="t");
+ CREATE FUNCTION first_value(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7031, proiswindow="t");
 
- CREATE FUNCTION first_value(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7032, proiswin="t");
+ CREATE FUNCTION first_value(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7032, proiswindow="t");
 
- CREATE FUNCTION first_value("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7033, proiswin="t");
+ CREATE FUNCTION first_value("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7033, proiswindow="t");
 
- CREATE FUNCTION first_value(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7034, proiswin="t");
+ CREATE FUNCTION first_value(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7034, proiswindow="t");
 
- CREATE FUNCTION first_value(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7035, proiswin="t");
+ CREATE FUNCTION first_value(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7035, proiswindow="t");
 
- CREATE FUNCTION first_value(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7036, proiswin="t");
+ CREATE FUNCTION first_value(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7036, proiswindow="t");
 
- CREATE FUNCTION first_value(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7037, proiswin="t");
+ CREATE FUNCTION first_value(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7037, proiswindow="t");
 
- CREATE FUNCTION first_value(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7038, proiswin="t");
+ CREATE FUNCTION first_value(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7038, proiswindow="t");
 
- CREATE FUNCTION first_value(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7039, proiswin="t");
+ CREATE FUNCTION first_value(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7039, proiswindow="t");
 
- CREATE FUNCTION first_value(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7040, proiswin="t");
+ CREATE FUNCTION first_value(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7040, proiswindow="t");
 
- CREATE FUNCTION first_value("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7041, proiswin="t");
+ CREATE FUNCTION first_value("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7041, proiswindow="t");
 
- CREATE FUNCTION first_value("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7042, proiswin="t");
+ CREATE FUNCTION first_value("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7042, proiswindow="t");
 
- CREATE FUNCTION first_value(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7043, proiswin="t");
+ CREATE FUNCTION first_value(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7043, proiswindow="t");
 
- CREATE FUNCTION first_value(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7044, proiswin="t");
+ CREATE FUNCTION first_value(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7044, proiswindow="t");
 
- CREATE FUNCTION first_value(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7045, proiswin="t");
+ CREATE FUNCTION first_value(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7045, proiswindow="t");
 
- CREATE FUNCTION first_value("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7046, proiswin="t");
+ CREATE FUNCTION first_value("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7046, proiswindow="t");
 
- CREATE FUNCTION first_value(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7047, proiswin="t");
+ CREATE FUNCTION first_value(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7047, proiswindow="t");
 
- CREATE FUNCTION first_value(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7232, proiswin="t");
+ CREATE FUNCTION first_value(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7232, proiswindow="t");
 
- CREATE FUNCTION first_value("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7256, proiswin="t");
+ CREATE FUNCTION first_value("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7256, proiswindow="t");
 
- CREATE FUNCTION first_value(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7272, proiswin="t");
+ CREATE FUNCTION first_value(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7272, proiswindow="t");
 
- CREATE FUNCTION first_value(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7288, proiswin="t");
+ CREATE FUNCTION first_value(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7288, proiswindow="t");
 
- CREATE FUNCTION last_value(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7012, proiswin="t");
+ CREATE FUNCTION last_value(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7012, proiswindow="t");
 
- CREATE FUNCTION last_value(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7013, proiswin="t");
+ CREATE FUNCTION last_value(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7013, proiswindow="t");
 
- CREATE FUNCTION last_value(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7014, proiswin="t");
+ CREATE FUNCTION last_value(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7014, proiswindow="t");
 
- CREATE FUNCTION last_value("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7015, proiswin="t");
+ CREATE FUNCTION last_value("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7015, proiswindow="t");
 
- CREATE FUNCTION last_value(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7016, proiswin="t");
+ CREATE FUNCTION last_value(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7016, proiswindow="t");
 
- CREATE FUNCTION last_value(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7063, proiswin="t");
+ CREATE FUNCTION last_value(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7063, proiswindow="t");
 
- CREATE FUNCTION last_value("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7072, proiswin="t");
+ CREATE FUNCTION last_value("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7072, proiswindow="t");
 
- CREATE FUNCTION last_value(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7073, proiswin="t");
+ CREATE FUNCTION last_value(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7073, proiswindow="t");
 
- CREATE FUNCTION last_value(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7048, proiswin="t");
+ CREATE FUNCTION last_value(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7048, proiswindow="t");
 
- CREATE FUNCTION last_value(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7049, proiswin="t");
+ CREATE FUNCTION last_value(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7049, proiswindow="t");
 
- CREATE FUNCTION last_value(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7050, proiswin="t");
+ CREATE FUNCTION last_value(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7050, proiswindow="t");
 
- CREATE FUNCTION last_value(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7051, proiswin="t");
+ CREATE FUNCTION last_value(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7051, proiswindow="t");
 
- CREATE FUNCTION last_value("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7052, proiswin="t");
+ CREATE FUNCTION last_value("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7052, proiswindow="t");
 
- CREATE FUNCTION last_value(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7053, proiswin="t");
+ CREATE FUNCTION last_value(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7053, proiswindow="t");
 
- CREATE FUNCTION last_value(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7054, proiswin="t");
+ CREATE FUNCTION last_value(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7054, proiswindow="t");
 
- CREATE FUNCTION last_value(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7055, proiswin="t");
+ CREATE FUNCTION last_value(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7055, proiswindow="t");
 
- CREATE FUNCTION last_value(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7056, proiswin="t");
+ CREATE FUNCTION last_value(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7056, proiswindow="t");
 
- CREATE FUNCTION last_value(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7057, proiswin="t");
+ CREATE FUNCTION last_value(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7057, proiswindow="t");
 
- CREATE FUNCTION last_value(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7058, proiswin="t");
+ CREATE FUNCTION last_value(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7058, proiswindow="t");
 
- CREATE FUNCTION last_value(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7059, proiswin="t");
+ CREATE FUNCTION last_value(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7059, proiswindow="t");
 
- CREATE FUNCTION last_value(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7060, proiswin="t");
+ CREATE FUNCTION last_value(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7060, proiswindow="t");
 
- CREATE FUNCTION last_value(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7061, proiswin="t");
+ CREATE FUNCTION last_value(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7061, proiswindow="t");
 
- CREATE FUNCTION last_value(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7062, proiswin="t");
+ CREATE FUNCTION last_value(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7062, proiswindow="t");
 
- CREATE FUNCTION last_value(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7064, proiswin="t");
+ CREATE FUNCTION last_value(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7064, proiswindow="t");
 
- CREATE FUNCTION last_value("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7065, proiswin="t");
+ CREATE FUNCTION last_value("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7065, proiswindow="t");
 
- CREATE FUNCTION last_value("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7066, proiswin="t");
+ CREATE FUNCTION last_value("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7066, proiswindow="t");
 
- CREATE FUNCTION last_value(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7067, proiswin="t");
+ CREATE FUNCTION last_value(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7067, proiswindow="t");
 
- CREATE FUNCTION last_value(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7068, proiswin="t");
+ CREATE FUNCTION last_value(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7068, proiswindow="t");
 
- CREATE FUNCTION last_value(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7069, proiswin="t");
+ CREATE FUNCTION last_value(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7069, proiswindow="t");
 
- CREATE FUNCTION last_value("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7070, proiswin="t");
+ CREATE FUNCTION last_value("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7070, proiswindow="t");
 
- CREATE FUNCTION last_value(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7071, proiswin="t");
+ CREATE FUNCTION last_value(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7071, proiswindow="t");
 
- CREATE FUNCTION last_value(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7238, proiswin="t");
+ CREATE FUNCTION last_value(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7238, proiswindow="t");
 
- CREATE FUNCTION last_value("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7258, proiswin="t");
+ CREATE FUNCTION last_value("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7258, proiswindow="t");
 
- CREATE FUNCTION last_value(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7274, proiswin="t");
+ CREATE FUNCTION last_value(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7274, proiswindow="t");
 
- CREATE FUNCTION last_value(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7290, proiswin="t");
+ CREATE FUNCTION last_value(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7290, proiswindow="t");
 
- CREATE FUNCTION lag(bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7675, proiswin="t");
+ CREATE FUNCTION lag(bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7675, proiswindow="t");
 
- CREATE FUNCTION lag(bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7491, proiswin="t");
+ CREATE FUNCTION lag(bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7491, proiswindow="t");
 
- CREATE FUNCTION lag(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7493, proiswin="t");
+ CREATE FUNCTION lag(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7493, proiswindow="t");
 
- CREATE FUNCTION lag("char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7495, proiswin="t");
+ CREATE FUNCTION lag("char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7495, proiswindow="t");
 
- CREATE FUNCTION lag("char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7497, proiswin="t");
+ CREATE FUNCTION lag("char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7497, proiswindow="t");
 
- CREATE FUNCTION lag("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7499, proiswin="t");
+ CREATE FUNCTION lag("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7499, proiswindow="t");
 
- CREATE FUNCTION lag(cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7501, proiswin="t");
+ CREATE FUNCTION lag(cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7501, proiswindow="t");
 
- CREATE FUNCTION lag(cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7503, proiswin="t");
+ CREATE FUNCTION lag(cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7503, proiswindow="t");
 
- CREATE FUNCTION lag(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7505, proiswin="t");
+ CREATE FUNCTION lag(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7505, proiswindow="t");
 
- CREATE FUNCTION lag(circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7507, proiswin="t");
+ CREATE FUNCTION lag(circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7507, proiswindow="t");
 
- CREATE FUNCTION lag(circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7509, proiswin="t");
+ CREATE FUNCTION lag(circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7509, proiswindow="t");
 
- CREATE FUNCTION lag(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7511, proiswin="t");
+ CREATE FUNCTION lag(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7511, proiswindow="t");
 
- CREATE FUNCTION lag(float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7513, proiswin="t");
+ CREATE FUNCTION lag(float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7513, proiswindow="t");
 
- CREATE FUNCTION lag(float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7515, proiswin="t");
+ CREATE FUNCTION lag(float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7515, proiswindow="t");
 
- CREATE FUNCTION lag(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7517, proiswin="t");
+ CREATE FUNCTION lag(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7517, proiswindow="t");
 
- CREATE FUNCTION lag(float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7519, proiswin="t");
+ CREATE FUNCTION lag(float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7519, proiswindow="t");
 
- CREATE FUNCTION lag(float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7521, proiswin="t");
+ CREATE FUNCTION lag(float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7521, proiswindow="t");
 
- CREATE FUNCTION lag(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7523, proiswin="t");
+ CREATE FUNCTION lag(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7523, proiswindow="t");
 
- CREATE FUNCTION lag(inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7525, proiswin="t");
+ CREATE FUNCTION lag(inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7525, proiswindow="t");
 
- CREATE FUNCTION lag(inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7527, proiswin="t");
+ CREATE FUNCTION lag(inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7527, proiswindow="t");
 
- CREATE FUNCTION lag(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7529, proiswin="t");
+ CREATE FUNCTION lag(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7529, proiswindow="t");
 
- CREATE FUNCTION lag("interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7531, proiswin="t");
+ CREATE FUNCTION lag("interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7531, proiswindow="t");
 
- CREATE FUNCTION lag("interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7533, proiswin="t");
+ CREATE FUNCTION lag("interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7533, proiswindow="t");
 
- CREATE FUNCTION lag("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7535, proiswin="t");
+ CREATE FUNCTION lag("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7535, proiswindow="t");
 
- CREATE FUNCTION lag(line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7537, proiswin="t");
+ CREATE FUNCTION lag(line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7537, proiswindow="t");
 
- CREATE FUNCTION lag(line, int8) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7539, proiswin="t");
+ CREATE FUNCTION lag(line, int8) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7539, proiswindow="t");
 
- CREATE FUNCTION lag(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7541, proiswin="t");
+ CREATE FUNCTION lag(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7541, proiswindow="t");
 
- CREATE FUNCTION lag(lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7543, proiswin="t");
+ CREATE FUNCTION lag(lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7543, proiswindow="t");
 
- CREATE FUNCTION lag(lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7545, proiswin="t");
+ CREATE FUNCTION lag(lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7545, proiswindow="t");
 
- CREATE FUNCTION lag(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7547, proiswin="t");
+ CREATE FUNCTION lag(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7547, proiswindow="t");
 
- CREATE FUNCTION lag(macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7549, proiswin="t");
+ CREATE FUNCTION lag(macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7549, proiswindow="t");
 
- CREATE FUNCTION lag(macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7551, proiswin="t");
+ CREATE FUNCTION lag(macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7551, proiswindow="t");
 
- CREATE FUNCTION lag(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7553, proiswin="t");
+ CREATE FUNCTION lag(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7553, proiswindow="t");
 
- CREATE FUNCTION lag(int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7555, proiswin="t");
+ CREATE FUNCTION lag(int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7555, proiswindow="t");
 
- CREATE FUNCTION lag(int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7557, proiswin="t");
+ CREATE FUNCTION lag(int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7557, proiswindow="t");
 
- CREATE FUNCTION lag(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7559, proiswin="t");
+ CREATE FUNCTION lag(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7559, proiswindow="t");
 
- CREATE FUNCTION lag(int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7561, proiswin="t");
+ CREATE FUNCTION lag(int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7561, proiswindow="t");
 
- CREATE FUNCTION lag(int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7563, proiswin="t");
+ CREATE FUNCTION lag(int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7563, proiswindow="t");
 
- CREATE FUNCTION lag(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7565, proiswin="t");
+ CREATE FUNCTION lag(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7565, proiswindow="t");
 
- CREATE FUNCTION lag(int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7567, proiswin="t");
+ CREATE FUNCTION lag(int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7567, proiswindow="t");
 
- CREATE FUNCTION lag(int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7569, proiswin="t");
+ CREATE FUNCTION lag(int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7569, proiswindow="t");
 
- CREATE FUNCTION lag(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7571, proiswin="t");
+ CREATE FUNCTION lag(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7571, proiswindow="t");
 
- CREATE FUNCTION lag(money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7573, proiswin="t");
+ CREATE FUNCTION lag(money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7573, proiswindow="t");
 
- CREATE FUNCTION lag(money, int8) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7575, proiswin="t");
+ CREATE FUNCTION lag(money, int8) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7575, proiswindow="t");
 
- CREATE FUNCTION lag(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7577, proiswin="t");
+ CREATE FUNCTION lag(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7577, proiswindow="t");
 
- CREATE FUNCTION lag(name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7579, proiswin="t");
+ CREATE FUNCTION lag(name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7579, proiswindow="t");
 
- CREATE FUNCTION lag(name, int8) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7581, proiswin="t");
+ CREATE FUNCTION lag(name, int8) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7581, proiswindow="t");
 
- CREATE FUNCTION lag(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7583, proiswin="t");
+ CREATE FUNCTION lag(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7583, proiswindow="t");
 
- CREATE FUNCTION lag("numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7585, proiswin="t");
+ CREATE FUNCTION lag("numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7585, proiswindow="t");
 
- CREATE FUNCTION lag("numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7587, proiswin="t");
+ CREATE FUNCTION lag("numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7587, proiswindow="t");
 
- CREATE FUNCTION lag("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7589, proiswin="t");
+ CREATE FUNCTION lag("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7589, proiswindow="t");
 
- CREATE FUNCTION lag(oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7591, proiswin="t");
+ CREATE FUNCTION lag(oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7591, proiswindow="t");
 
- CREATE FUNCTION lag(oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7593, proiswin="t");
+ CREATE FUNCTION lag(oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7593, proiswindow="t");
 
- CREATE FUNCTION lag(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7595, proiswin="t");
+ CREATE FUNCTION lag(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7595, proiswindow="t");
 
- CREATE FUNCTION lag(path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7597, proiswin="t");
+ CREATE FUNCTION lag(path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7597, proiswindow="t");
 
- CREATE FUNCTION lag(path, int8) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7599, proiswin="t");
+ CREATE FUNCTION lag(path, int8) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7599, proiswindow="t");
 
- CREATE FUNCTION lag(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7601, proiswin="t");
+ CREATE FUNCTION lag(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7601, proiswindow="t");
 
- CREATE FUNCTION lag(point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7603, proiswin="t");
+ CREATE FUNCTION lag(point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7603, proiswindow="t");
 
- CREATE FUNCTION lag(point, int8) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7605, proiswin="t");
+ CREATE FUNCTION lag(point, int8) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7605, proiswindow="t");
 
- CREATE FUNCTION lag(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7607, proiswin="t");
+ CREATE FUNCTION lag(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7607, proiswindow="t");
 
- CREATE FUNCTION lag(polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7609, proiswin="t");
+ CREATE FUNCTION lag(polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7609, proiswindow="t");
 
- CREATE FUNCTION lag(polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7611, proiswin="t");
+ CREATE FUNCTION lag(polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7611, proiswindow="t");
 
- CREATE FUNCTION lag(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7613, proiswin="t");
+ CREATE FUNCTION lag(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7613, proiswindow="t");
 
- CREATE FUNCTION lag(reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7615, proiswin="t");
+ CREATE FUNCTION lag(reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7615, proiswindow="t");
 
- CREATE FUNCTION lag(reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7617, proiswin="t");
+ CREATE FUNCTION lag(reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7617, proiswindow="t");
 
- CREATE FUNCTION lag(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7619, proiswin="t");
+ CREATE FUNCTION lag(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7619, proiswindow="t");
 
- CREATE FUNCTION lag(text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7621, proiswin="t");
+ CREATE FUNCTION lag(text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7621, proiswindow="t");
 
- CREATE FUNCTION lag(text, int8) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7623, proiswin="t");
+ CREATE FUNCTION lag(text, int8) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7623, proiswindow="t");
 
- CREATE FUNCTION lag(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7625, proiswin="t");
+ CREATE FUNCTION lag(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7625, proiswindow="t");
 
- CREATE FUNCTION lag(tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7627, proiswin="t");
+ CREATE FUNCTION lag(tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7627, proiswindow="t");
 
- CREATE FUNCTION lag(tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7629, proiswin="t");
+ CREATE FUNCTION lag(tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7629, proiswindow="t");
 
- CREATE FUNCTION lag(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7631, proiswin="t");
+ CREATE FUNCTION lag(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7631, proiswindow="t");
 
- CREATE FUNCTION lag("time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7633, proiswin="t");
+ CREATE FUNCTION lag("time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7633, proiswindow="t");
 
- CREATE FUNCTION lag("time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7635, proiswin="t");
+ CREATE FUNCTION lag("time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7635, proiswindow="t");
 
- CREATE FUNCTION lag("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7637, proiswin="t");
+ CREATE FUNCTION lag("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7637, proiswindow="t");
 
- CREATE FUNCTION lag("timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7639, proiswin="t");
+ CREATE FUNCTION lag("timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7639, proiswindow="t");
 
- CREATE FUNCTION lag("timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7641, proiswin="t");
+ CREATE FUNCTION lag("timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7641, proiswindow="t");
 
- CREATE FUNCTION lag("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7643, proiswin="t");
+ CREATE FUNCTION lag("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7643, proiswindow="t");
 
- CREATE FUNCTION lag(timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7645, proiswin="t");
+ CREATE FUNCTION lag(timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7645, proiswindow="t");
 
- CREATE FUNCTION lag(timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7647, proiswin="t");
+ CREATE FUNCTION lag(timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7647, proiswindow="t");
 
- CREATE FUNCTION lag(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7649, proiswin="t");
+ CREATE FUNCTION lag(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7649, proiswindow="t");
 
- CREATE FUNCTION lag(timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7651, proiswin="t");
+ CREATE FUNCTION lag(timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7651, proiswindow="t");
 
- CREATE FUNCTION lag(timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7653, proiswin="t");
+ CREATE FUNCTION lag(timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7653, proiswindow="t");
 
- CREATE FUNCTION lag(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7655, proiswin="t");
+ CREATE FUNCTION lag(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7655, proiswindow="t");
 
- CREATE FUNCTION lag(varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7657, proiswin="t");
+ CREATE FUNCTION lag(varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7657, proiswindow="t");
 
- CREATE FUNCTION lag(varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7659, proiswin="t");
+ CREATE FUNCTION lag(varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7659, proiswindow="t");
 
- CREATE FUNCTION lag(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7661, proiswin="t");
+ CREATE FUNCTION lag(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7661, proiswindow="t");
 
- CREATE FUNCTION lag("varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7663, proiswin="t");
+ CREATE FUNCTION lag("varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7663, proiswindow="t");
 
- CREATE FUNCTION lag("varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7665, proiswin="t");
+ CREATE FUNCTION lag("varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7665, proiswindow="t");
 
- CREATE FUNCTION lag("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7667, proiswin="t");
+ CREATE FUNCTION lag("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7667, proiswindow="t");
 
- CREATE FUNCTION lag(xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7669, proiswin="t");
+ CREATE FUNCTION lag(xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7669, proiswindow="t");
 
- CREATE FUNCTION lag(xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7671, proiswin="t");
+ CREATE FUNCTION lag(xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7671, proiswindow="t");
 
- CREATE FUNCTION lag(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7673, proiswin="t");
+ CREATE FUNCTION lag(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7673, proiswindow="t");
 
- CREATE FUNCTION lag(anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7211, proiswin="t");
+ CREATE FUNCTION lag(anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7211, proiswindow="t");
 
- CREATE FUNCTION lag(anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7212, proiswin="t");
+ CREATE FUNCTION lag(anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7212, proiswindow="t");
 
- CREATE FUNCTION lag(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7213, proiswin="t");
+ CREATE FUNCTION lag(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7213, proiswindow="t");
 
- CREATE FUNCTION lag(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7226, proiswin="t");
+ CREATE FUNCTION lag(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7226, proiswindow="t");
 
- CREATE FUNCTION lag(bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7228, proiswin="t");
+ CREATE FUNCTION lag(bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7228, proiswindow="t");
 
- CREATE FUNCTION lag(bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7230, proiswin="t");
+ CREATE FUNCTION lag(bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7230, proiswindow="t");
 
- CREATE FUNCTION lag("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7250, proiswin="t");
+ CREATE FUNCTION lag("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7250, proiswindow="t");
 
- CREATE FUNCTION lag("bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7252, proiswin="t");
+ CREATE FUNCTION lag("bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7252, proiswindow="t");
 
- CREATE FUNCTION lag("bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7254, proiswin="t");
+ CREATE FUNCTION lag("bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7254, proiswindow="t");
 
- CREATE FUNCTION lag(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7266, proiswin="t");
+ CREATE FUNCTION lag(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7266, proiswindow="t");
 
- CREATE FUNCTION lag(box, int8) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7268, proiswin="t");
+ CREATE FUNCTION lag(box, int8) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7268, proiswindow="t");
 
- CREATE FUNCTION lag(box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7270, proiswin="t");
+ CREATE FUNCTION lag(box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7270, proiswindow="t");
 
- CREATE FUNCTION lead(int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7011, proiswin="t");
+ CREATE FUNCTION lead(int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7011, proiswindow="t");
 
- CREATE FUNCTION lead(int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7074, proiswin="t");
+ CREATE FUNCTION lead(int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7074, proiswindow="t");
 
- CREATE FUNCTION lead(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7075, proiswin="t");
+ CREATE FUNCTION lead(int4) RETURNS int4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7075, proiswindow="t");
 
- CREATE FUNCTION lead(bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7310, proiswin="t");
+ CREATE FUNCTION lead(bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7310, proiswindow="t");
 
- CREATE FUNCTION lead(bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7312, proiswin="t");
+ CREATE FUNCTION lead(bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7312, proiswindow="t");
 
- CREATE FUNCTION lead(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7314, proiswin="t");
+ CREATE FUNCTION lead(bool) RETURNS bool LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7314, proiswindow="t");
 
- CREATE FUNCTION lead("char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7316, proiswin="t");
+ CREATE FUNCTION lead("char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7316, proiswindow="t");
 
- CREATE FUNCTION lead("char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7318, proiswin="t");
+ CREATE FUNCTION lead("char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7318, proiswindow="t");
 
- CREATE FUNCTION lead("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7320, proiswin="t");
+ CREATE FUNCTION lead("char") RETURNS "char" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7320, proiswindow="t");
 
- CREATE FUNCTION lead(cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7322, proiswin="t");
+ CREATE FUNCTION lead(cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7322, proiswindow="t");
 
- CREATE FUNCTION lead(cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7324, proiswin="t");
+ CREATE FUNCTION lead(cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7324, proiswindow="t");
 
- CREATE FUNCTION lead(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7326, proiswin="t");
+ CREATE FUNCTION lead(cidr) RETURNS cidr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7326, proiswindow="t");
 
- CREATE FUNCTION lead(circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7328, proiswin="t");
+ CREATE FUNCTION lead(circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7328, proiswindow="t");
 
- CREATE FUNCTION lead(circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7330, proiswin="t");
+ CREATE FUNCTION lead(circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7330, proiswindow="t");
 
- CREATE FUNCTION lead(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7332, proiswin="t");
+ CREATE FUNCTION lead(circle) RETURNS circle LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7332, proiswindow="t");
 
- CREATE FUNCTION lead(float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7334, proiswin="t");
+ CREATE FUNCTION lead(float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7334, proiswindow="t");
 
- CREATE FUNCTION lead(float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7336, proiswin="t");
+ CREATE FUNCTION lead(float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7336, proiswindow="t");
 
- CREATE FUNCTION lead(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7338, proiswin="t");
+ CREATE FUNCTION lead(float4) RETURNS float4 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7338, proiswindow="t");
 
- CREATE FUNCTION lead(float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7340, proiswin="t");
+ CREATE FUNCTION lead(float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7340, proiswindow="t");
 
- CREATE FUNCTION lead(float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7342, proiswin="t");
+ CREATE FUNCTION lead(float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7342, proiswindow="t");
 
- CREATE FUNCTION lead(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7344, proiswin="t");
+ CREATE FUNCTION lead(float8) RETURNS float8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7344, proiswindow="t");
 
- CREATE FUNCTION lead(inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7346, proiswin="t");
+ CREATE FUNCTION lead(inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7346, proiswindow="t");
 
- CREATE FUNCTION lead(inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7348, proiswin="t");
+ CREATE FUNCTION lead(inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7348, proiswindow="t");
 
- CREATE FUNCTION lead(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7350, proiswin="t");
+ CREATE FUNCTION lead(inet) RETURNS inet LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7350, proiswindow="t");
 
- CREATE FUNCTION lead("interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7352, proiswin="t");
+ CREATE FUNCTION lead("interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7352, proiswindow="t");
 
- CREATE FUNCTION lead("interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7354, proiswin="t");
+ CREATE FUNCTION lead("interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7354, proiswindow="t");
 
- CREATE FUNCTION lead("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7356, proiswin="t");
+ CREATE FUNCTION lead("interval") RETURNS "interval" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7356, proiswindow="t");
 
- CREATE FUNCTION lead(line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7358, proiswin="t");
+ CREATE FUNCTION lead(line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7358, proiswindow="t");
 
- CREATE FUNCTION lead(line, int8) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7360, proiswin="t");
+ CREATE FUNCTION lead(line, int8) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7360, proiswindow="t");
 
- CREATE FUNCTION lead(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7362, proiswin="t");
+ CREATE FUNCTION lead(line) RETURNS line LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7362, proiswindow="t");
 
- CREATE FUNCTION lead(lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7364, proiswin="t");
+ CREATE FUNCTION lead(lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7364, proiswindow="t");
 
- CREATE FUNCTION lead(lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7366, proiswin="t");
+ CREATE FUNCTION lead(lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7366, proiswindow="t");
 
- CREATE FUNCTION lead(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7368, proiswin="t");
+ CREATE FUNCTION lead(lseg) RETURNS lseg LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7368, proiswindow="t");
 
- CREATE FUNCTION lead(macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7370, proiswin="t");
+ CREATE FUNCTION lead(macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7370, proiswindow="t");
 
- CREATE FUNCTION lead(macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7372, proiswin="t");
+ CREATE FUNCTION lead(macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7372, proiswindow="t");
 
- CREATE FUNCTION lead(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7374, proiswin="t");
+ CREATE FUNCTION lead(macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7374, proiswindow="t");
 
- CREATE FUNCTION lead(int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7376, proiswin="t");
+ CREATE FUNCTION lead(int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7376, proiswindow="t");
 
- CREATE FUNCTION lead(int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7378, proiswin="t");
+ CREATE FUNCTION lead(int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7378, proiswindow="t");
 
- CREATE FUNCTION lead(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7380, proiswin="t");
+ CREATE FUNCTION lead(int2) RETURNS int2 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7380, proiswindow="t");
 
- CREATE FUNCTION lead(int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7382, proiswin="t");
+ CREATE FUNCTION lead(int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7382, proiswindow="t");
 
- CREATE FUNCTION lead(int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7384, proiswin="t");
+ CREATE FUNCTION lead(int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7384, proiswindow="t");
 
- CREATE FUNCTION lead(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7386, proiswin="t");
+ CREATE FUNCTION lead(int8) RETURNS int8 LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7386, proiswindow="t");
 
- CREATE FUNCTION lead(money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7388, proiswin="t");
+ CREATE FUNCTION lead(money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7388, proiswindow="t");
 
- CREATE FUNCTION lead(money, int8) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7390, proiswin="t");
+ CREATE FUNCTION lead(money, int8) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7390, proiswindow="t");
 
- CREATE FUNCTION lead(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7392, proiswin="t");
+ CREATE FUNCTION lead(money) RETURNS money LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7392, proiswindow="t");
 
- CREATE FUNCTION lead(name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7394, proiswin="t");
+ CREATE FUNCTION lead(name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7394, proiswindow="t");
 
- CREATE FUNCTION lead(name, int8) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7396, proiswin="t");
+ CREATE FUNCTION lead(name, int8) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7396, proiswindow="t");
 
- CREATE FUNCTION lead(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7398, proiswin="t");
+ CREATE FUNCTION lead(name) RETURNS name LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7398, proiswindow="t");
 
- CREATE FUNCTION lead("numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7400, proiswin="t");
+ CREATE FUNCTION lead("numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7400, proiswindow="t");
 
- CREATE FUNCTION lead("numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7402, proiswin="t");
+ CREATE FUNCTION lead("numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7402, proiswindow="t");
 
- CREATE FUNCTION lead("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7404, proiswin="t");
+ CREATE FUNCTION lead("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7404, proiswindow="t");
 
- CREATE FUNCTION lead(oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7406, proiswin="t");
+ CREATE FUNCTION lead(oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7406, proiswindow="t");
 
- CREATE FUNCTION lead(oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7408, proiswin="t");
+ CREATE FUNCTION lead(oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7408, proiswindow="t");
 
- CREATE FUNCTION lead(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7410, proiswin="t");
+ CREATE FUNCTION lead(oid) RETURNS oid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7410, proiswindow="t");
 
- CREATE FUNCTION lead(path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7412, proiswin="t");
+ CREATE FUNCTION lead(path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7412, proiswindow="t");
 
- CREATE FUNCTION lead(path, int8) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7414, proiswin="t");
+ CREATE FUNCTION lead(path, int8) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7414, proiswindow="t");
 
- CREATE FUNCTION lead(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7416, proiswin="t");
+ CREATE FUNCTION lead(path) RETURNS path LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7416, proiswindow="t");
 
- CREATE FUNCTION lead(point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7418, proiswin="t");
+ CREATE FUNCTION lead(point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7418, proiswindow="t");
 
- CREATE FUNCTION lead(point, int8) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7420, proiswin="t");
+ CREATE FUNCTION lead(point, int8) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7420, proiswindow="t");
 
- CREATE FUNCTION lead(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7422, proiswin="t");
+ CREATE FUNCTION lead(point) RETURNS point LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7422, proiswindow="t");
 
- CREATE FUNCTION lead(polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7424, proiswin="t");
+ CREATE FUNCTION lead(polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7424, proiswindow="t");
 
- CREATE FUNCTION lead(polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7426, proiswin="t");
+ CREATE FUNCTION lead(polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7426, proiswindow="t");
 
- CREATE FUNCTION lead(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7428, proiswin="t");
+ CREATE FUNCTION lead(polygon) RETURNS polygon LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7428, proiswindow="t");
 
- CREATE FUNCTION lead(reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7430, proiswin="t");
+ CREATE FUNCTION lead(reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7430, proiswindow="t");
 
- CREATE FUNCTION lead(reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7432, proiswin="t");
+ CREATE FUNCTION lead(reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7432, proiswindow="t");
 
- CREATE FUNCTION lead(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7434, proiswin="t");
+ CREATE FUNCTION lead(reltime) RETURNS reltime LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7434, proiswindow="t");
 
- CREATE FUNCTION lead(text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7436, proiswin="t");
+ CREATE FUNCTION lead(text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7436, proiswindow="t");
 
- CREATE FUNCTION lead(text, int8) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7438, proiswin="t");
+ CREATE FUNCTION lead(text, int8) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7438, proiswindow="t");
 
- CREATE FUNCTION lead(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7440, proiswin="t");
+ CREATE FUNCTION lead(text) RETURNS text LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7440, proiswindow="t");
 
- CREATE FUNCTION lead(tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7442, proiswin="t");
+ CREATE FUNCTION lead(tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7442, proiswindow="t");
 
- CREATE FUNCTION lead(tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7444, proiswin="t");
+ CREATE FUNCTION lead(tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7444, proiswindow="t");
 
- CREATE FUNCTION lead(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7446, proiswin="t");
+ CREATE FUNCTION lead(tid) RETURNS tid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7446, proiswindow="t");
 
- CREATE FUNCTION lead("time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7448, proiswin="t");
+ CREATE FUNCTION lead("time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7448, proiswindow="t");
 
- CREATE FUNCTION lead("time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7450, proiswin="t");
+ CREATE FUNCTION lead("time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7450, proiswindow="t");
 
- CREATE FUNCTION lead("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7452, proiswin="t");
+ CREATE FUNCTION lead("time") RETURNS "time" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7452, proiswindow="t");
 
- CREATE FUNCTION lead("timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7454, proiswin="t");
+ CREATE FUNCTION lead("timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7454, proiswindow="t");
 
- CREATE FUNCTION lead("timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7456, proiswin="t");
+ CREATE FUNCTION lead("timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7456, proiswindow="t");
 
- CREATE FUNCTION lead("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7458, proiswin="t");
+ CREATE FUNCTION lead("timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7458, proiswindow="t");
 
- CREATE FUNCTION lead(timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7460, proiswin="t");
+ CREATE FUNCTION lead(timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7460, proiswindow="t");
 
- CREATE FUNCTION lead(timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7462, proiswin="t");
+ CREATE FUNCTION lead(timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7462, proiswindow="t");
 
- CREATE FUNCTION lead(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7464, proiswin="t");
+ CREATE FUNCTION lead(timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7464, proiswindow="t");
 
- CREATE FUNCTION lead(timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7466, proiswin="t");
+ CREATE FUNCTION lead(timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7466, proiswindow="t");
 
- CREATE FUNCTION lead(timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7468, proiswin="t");
+ CREATE FUNCTION lead(timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7468, proiswindow="t");
 
- CREATE FUNCTION lead(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7470, proiswin="t");
+ CREATE FUNCTION lead(timetz) RETURNS timetz LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7470, proiswindow="t");
 
- CREATE FUNCTION lead(varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7472, proiswin="t");
+ CREATE FUNCTION lead(varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7472, proiswindow="t");
 
- CREATE FUNCTION lead(varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7474, proiswin="t");
+ CREATE FUNCTION lead(varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7474, proiswindow="t");
 
- CREATE FUNCTION lead(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7476, proiswin="t");
+ CREATE FUNCTION lead(varbit) RETURNS varbit LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7476, proiswindow="t");
 
- CREATE FUNCTION lead("varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7478, proiswin="t");
+ CREATE FUNCTION lead("varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7478, proiswindow="t");
 
- CREATE FUNCTION lead("varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7480, proiswin="t");
+ CREATE FUNCTION lead("varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7480, proiswindow="t");
 
- CREATE FUNCTION lead("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7482, proiswin="t");
+ CREATE FUNCTION lead("varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7482, proiswindow="t");
 
- CREATE FUNCTION lead(xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7484, proiswin="t");
+ CREATE FUNCTION lead(xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7484, proiswindow="t");
 
- CREATE FUNCTION lead(xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7486, proiswin="t");
+ CREATE FUNCTION lead(xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7486, proiswindow="t");
 
- CREATE FUNCTION lead(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7488, proiswin="t");
+ CREATE FUNCTION lead(xid) RETURNS xid LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7488, proiswindow="t");
 
- CREATE FUNCTION lead(anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7214, proiswin="t");
+ CREATE FUNCTION lead(anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7214, proiswindow="t");
 
- CREATE FUNCTION lead(anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7215, proiswin="t");
+ CREATE FUNCTION lead(anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7215, proiswindow="t");
 
- CREATE FUNCTION lead(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7216, proiswin="t");
+ CREATE FUNCTION lead(anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7216, proiswindow="t");
 
- CREATE FUNCTION lead(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7220, proiswin="t");
+ CREATE FUNCTION lead(bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7220, proiswindow="t");
 
- CREATE FUNCTION lead(bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7222, proiswin="t");
+ CREATE FUNCTION lead(bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7222, proiswindow="t");
 
- CREATE FUNCTION lead(bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7224, proiswin="t");
+ CREATE FUNCTION lead(bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7224, proiswindow="t");
 
- CREATE FUNCTION lead("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7244, proiswin="t");
+ CREATE FUNCTION lead("bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7244, proiswindow="t");
 
- CREATE FUNCTION lead("bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7246, proiswin="t");
+ CREATE FUNCTION lead("bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7246, proiswindow="t");
 
- CREATE FUNCTION lead("bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7248, proiswin="t");
+ CREATE FUNCTION lead("bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7248, proiswindow="t");
 
- CREATE FUNCTION lead(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7260, proiswin="t");
+ CREATE FUNCTION lead(box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7260, proiswindow="t");
 
- CREATE FUNCTION lead(box, int8) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7262, proiswin="t");
+ CREATE FUNCTION lead(box, int8) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7262, proiswindow="t");
 
- CREATE FUNCTION lead(box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7264, proiswin="t");
+ CREATE FUNCTION lead(box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE AS 'window_dummy' WITH (OID=7264, proiswindow="t");
 
 ---
 
@@ -880,565 +880,565 @@
 
  CREATE FUNCTION dense_rank_immed(internal) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'dense_rank_immed' WITH (OID=7102, DESCRIPTION="window immediate function");
 
- CREATE FUNCTION lag_bool(internal, bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7490, proiswin="t");
+ CREATE FUNCTION lag_bool(internal, bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7490, proiswindow="t");
 
- CREATE FUNCTION lag_bool(internal, bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7492, proiswin="t");
+ CREATE FUNCTION lag_bool(internal, bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7492, proiswindow="t");
 
- CREATE FUNCTION lag_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7494, proiswin="t");
+ CREATE FUNCTION lag_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7494, proiswindow="t");
 
- CREATE FUNCTION lag_char(internal, "char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7496, proiswin="t");
+ CREATE FUNCTION lag_char(internal, "char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7496, proiswindow="t");
 
- CREATE FUNCTION lag_char(internal, "char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7498, proiswin="t");
+ CREATE FUNCTION lag_char(internal, "char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7498, proiswindow="t");
 
- CREATE FUNCTION lag_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7500, proiswin="t");
+ CREATE FUNCTION lag_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7500, proiswindow="t");
 
- CREATE FUNCTION lag_cidr(internal, cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7502, proiswin="t");
+ CREATE FUNCTION lag_cidr(internal, cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7502, proiswindow="t");
 
- CREATE FUNCTION lag_cidr(internal, cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7504, proiswin="t");
+ CREATE FUNCTION lag_cidr(internal, cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7504, proiswindow="t");
 
- CREATE FUNCTION lag_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7506, proiswin="t");
+ CREATE FUNCTION lag_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7506, proiswindow="t");
 
- CREATE FUNCTION lag_circle(internal, circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7508, proiswin="t");
+ CREATE FUNCTION lag_circle(internal, circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7508, proiswindow="t");
 
- CREATE FUNCTION lag_circle(internal, circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7510, proiswin="t");
+ CREATE FUNCTION lag_circle(internal, circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7510, proiswindow="t");
 
- CREATE FUNCTION lag_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7512, proiswin="t");
+ CREATE FUNCTION lag_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7512, proiswindow="t");
 
- CREATE FUNCTION lag_float4(internal, float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7514, proiswin="t");
+ CREATE FUNCTION lag_float4(internal, float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7514, proiswindow="t");
 
- CREATE FUNCTION lag_float4(internal, float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7516, proiswin="t");
+ CREATE FUNCTION lag_float4(internal, float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7516, proiswindow="t");
 
- CREATE FUNCTION lag_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7518, proiswin="t");
+ CREATE FUNCTION lag_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7518, proiswindow="t");
 
- CREATE FUNCTION lag_float8(internal, float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7520, proiswin="t");
+ CREATE FUNCTION lag_float8(internal, float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7520, proiswindow="t");
 
- CREATE FUNCTION lag_float8(internal, float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7522, proiswin="t");
+ CREATE FUNCTION lag_float8(internal, float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7522, proiswindow="t");
 
- CREATE FUNCTION lag_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7524, proiswin="t");
+ CREATE FUNCTION lag_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7524, proiswindow="t");
 
- CREATE FUNCTION lag_inet(internal, inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7526, proiswin="t");
+ CREATE FUNCTION lag_inet(internal, inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7526, proiswindow="t");
 
- CREATE FUNCTION lag_inet(internal, inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7528, proiswin="t");
+ CREATE FUNCTION lag_inet(internal, inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7528, proiswindow="t");
 
- CREATE FUNCTION lag_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7530, proiswin="t");
+ CREATE FUNCTION lag_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7530, proiswindow="t");
 
- CREATE FUNCTION lag_interval(internal, "interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7532, proiswin="t");
+ CREATE FUNCTION lag_interval(internal, "interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7532, proiswindow="t");
 
- CREATE FUNCTION lag_interval(internal, "interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7534, proiswin="t");
+ CREATE FUNCTION lag_interval(internal, "interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7534, proiswindow="t");
 
- CREATE FUNCTION lag_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7536, proiswin="t");
+ CREATE FUNCTION lag_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7536, proiswindow="t");
 
- CREATE FUNCTION lag_line(internal, line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7538, proiswin="t");
+ CREATE FUNCTION lag_line(internal, line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7538, proiswindow="t");
 
- CREATE FUNCTION lag_line(internal, line, int8) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7540, proiswin="t");
+ CREATE FUNCTION lag_line(internal, line, int8) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7540, proiswindow="t");
 
- CREATE FUNCTION lag_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7542, proiswin="t");
+ CREATE FUNCTION lag_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7542, proiswindow="t");
 
- CREATE FUNCTION lag_lseg(internal, lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7544, proiswin="t");
+ CREATE FUNCTION lag_lseg(internal, lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7544, proiswindow="t");
 
- CREATE FUNCTION lag_lseg(internal, lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7546, proiswin="t");
+ CREATE FUNCTION lag_lseg(internal, lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7546, proiswindow="t");
 
- CREATE FUNCTION lag_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7548, proiswin="t");
+ CREATE FUNCTION lag_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7548, proiswindow="t");
 
- CREATE FUNCTION lag_macaddr(internal, macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7550, proiswin="t");
+ CREATE FUNCTION lag_macaddr(internal, macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7550, proiswindow="t");
 
- CREATE FUNCTION lag_macaddr(internal, macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7552, proiswin="t");
+ CREATE FUNCTION lag_macaddr(internal, macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7552, proiswindow="t");
 
- CREATE FUNCTION lag_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7554, proiswin="t");
+ CREATE FUNCTION lag_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7554, proiswindow="t");
 
- CREATE FUNCTION lag_smallint(internal, int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7556, proiswin="t");
+ CREATE FUNCTION lag_smallint(internal, int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7556, proiswindow="t");
 
- CREATE FUNCTION lag_smallint(internal, int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7558, proiswin="t");
+ CREATE FUNCTION lag_smallint(internal, int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7558, proiswindow="t");
 
- CREATE FUNCTION lag_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7560, proiswin="t");
+ CREATE FUNCTION lag_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7560, proiswindow="t");
 
- CREATE FUNCTION lag_int4(internal, int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7562, proiswin="t");
+ CREATE FUNCTION lag_int4(internal, int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7562, proiswindow="t");
 
- CREATE FUNCTION lag_int4(internal, int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7564, proiswin="t");
+ CREATE FUNCTION lag_int4(internal, int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7564, proiswindow="t");
 
- CREATE FUNCTION lag_int4(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7566, proiswin="t");
+ CREATE FUNCTION lag_int4(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7566, proiswindow="t");
 
- CREATE FUNCTION lag_int8(internal, int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7568, proiswin="t");
+ CREATE FUNCTION lag_int8(internal, int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7568, proiswindow="t");
 
- CREATE FUNCTION lag_int8(internal, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7570, proiswin="t");
+ CREATE FUNCTION lag_int8(internal, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7570, proiswindow="t");
 
- CREATE FUNCTION lag_int8(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7572, proiswin="t");
+ CREATE FUNCTION lag_int8(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7572, proiswindow="t");
 
- CREATE FUNCTION lag_money(internal, money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7574, proiswin="t");
+ CREATE FUNCTION lag_money(internal, money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7574, proiswindow="t");
 
- CREATE FUNCTION lag_money(internal, money, int8) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7576, proiswin="t");
+ CREATE FUNCTION lag_money(internal, money, int8) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7576, proiswindow="t");
 
- CREATE FUNCTION lag_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7578, proiswin="t");
+ CREATE FUNCTION lag_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7578, proiswindow="t");
 
- CREATE FUNCTION lag_name(internal, name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7580, proiswin="t");
+ CREATE FUNCTION lag_name(internal, name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7580, proiswindow="t");
 
- CREATE FUNCTION lag_name(internal, name, int8) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7582, proiswin="t");
+ CREATE FUNCTION lag_name(internal, name, int8) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7582, proiswindow="t");
 
- CREATE FUNCTION lag_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7584, proiswin="t");
+ CREATE FUNCTION lag_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7584, proiswindow="t");
 
- CREATE FUNCTION lag_numeric(internal, "numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7586, proiswin="t");
+ CREATE FUNCTION lag_numeric(internal, "numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7586, proiswindow="t");
 
- CREATE FUNCTION lag_numeric(internal, "numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7588, proiswin="t");
+ CREATE FUNCTION lag_numeric(internal, "numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7588, proiswindow="t");
 
- CREATE FUNCTION lag_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7590, proiswin="t");
+ CREATE FUNCTION lag_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7590, proiswindow="t");
 
- CREATE FUNCTION lag_oid(internal, oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7592, proiswin="t");
+ CREATE FUNCTION lag_oid(internal, oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7592, proiswindow="t");
 
- CREATE FUNCTION lag_oid(internal, oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7594, proiswin="t");
+ CREATE FUNCTION lag_oid(internal, oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7594, proiswindow="t");
 
- CREATE FUNCTION lag_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7596, proiswin="t");
+ CREATE FUNCTION lag_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7596, proiswindow="t");
 
- CREATE FUNCTION lag_path(internal, path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7598, proiswin="t");
+ CREATE FUNCTION lag_path(internal, path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7598, proiswindow="t");
 
- CREATE FUNCTION lag_path(internal, path, int8) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7600, proiswin="t");
+ CREATE FUNCTION lag_path(internal, path, int8) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7600, proiswindow="t");
 
- CREATE FUNCTION lag_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7602, proiswin="t");
+ CREATE FUNCTION lag_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7602, proiswindow="t");
 
- CREATE FUNCTION lag_point(internal, point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7604, proiswin="t");
+ CREATE FUNCTION lag_point(internal, point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7604, proiswindow="t");
 
- CREATE FUNCTION lag_point(internal, point, int8) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7606, proiswin="t");
+ CREATE FUNCTION lag_point(internal, point, int8) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7606, proiswindow="t");
 
- CREATE FUNCTION lag_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7608, proiswin="t");
+ CREATE FUNCTION lag_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7608, proiswindow="t");
 
- CREATE FUNCTION lag_polygon(internal, polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7610, proiswin="t");
+ CREATE FUNCTION lag_polygon(internal, polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7610, proiswindow="t");
 
- CREATE FUNCTION lag_polygon(internal, polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7612, proiswin="t");
+ CREATE FUNCTION lag_polygon(internal, polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7612, proiswindow="t");
 
- CREATE FUNCTION lag_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7614, proiswin="t");
+ CREATE FUNCTION lag_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7614, proiswindow="t");
 
- CREATE FUNCTION lag_reltime(internal, reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7616, proiswin="t");
+ CREATE FUNCTION lag_reltime(internal, reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7616, proiswindow="t");
 
- CREATE FUNCTION lag_reltime(internal, reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7618, proiswin="t");
+ CREATE FUNCTION lag_reltime(internal, reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7618, proiswindow="t");
 
- CREATE FUNCTION lag_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7620, proiswin="t");
+ CREATE FUNCTION lag_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7620, proiswindow="t");
 
- CREATE FUNCTION lag_text(internal, text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7622, proiswin="t");
+ CREATE FUNCTION lag_text(internal, text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7622, proiswindow="t");
 
- CREATE FUNCTION lag_text(internal, text, int8) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7624, proiswin="t");
+ CREATE FUNCTION lag_text(internal, text, int8) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7624, proiswindow="t");
 
- CREATE FUNCTION lag_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7626, proiswin="t");
+ CREATE FUNCTION lag_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7626, proiswindow="t");
 
- CREATE FUNCTION lag_tid(internal, tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7628, proiswin="t");
+ CREATE FUNCTION lag_tid(internal, tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7628, proiswindow="t");
 
- CREATE FUNCTION lag_tid(internal, tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7630, proiswin="t");
+ CREATE FUNCTION lag_tid(internal, tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7630, proiswindow="t");
 
- CREATE FUNCTION lag_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7632, proiswin="t");
+ CREATE FUNCTION lag_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7632, proiswindow="t");
 
- CREATE FUNCTION lag_time(internal, "time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7634, proiswin="t");
+ CREATE FUNCTION lag_time(internal, "time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7634, proiswindow="t");
 
- CREATE FUNCTION lag_time(internal, "time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7636, proiswin="t");
+ CREATE FUNCTION lag_time(internal, "time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7636, proiswindow="t");
 
- CREATE FUNCTION lag_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7638, proiswin="t");
+ CREATE FUNCTION lag_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7638, proiswindow="t");
 
- CREATE FUNCTION lag_timestamp(internal, "timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7640, proiswin="t");
+ CREATE FUNCTION lag_timestamp(internal, "timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7640, proiswindow="t");
 
- CREATE FUNCTION lag_timestamp(internal, "timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7642, proiswin="t");
+ CREATE FUNCTION lag_timestamp(internal, "timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7642, proiswindow="t");
 
- CREATE FUNCTION lag_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7644, proiswin="t");
+ CREATE FUNCTION lag_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7644, proiswindow="t");
 
- CREATE FUNCTION lag_timestamptz(internal, timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7646, proiswin="t");
+ CREATE FUNCTION lag_timestamptz(internal, timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7646, proiswindow="t");
 
- CREATE FUNCTION lag_timestamptz(internal, timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7648, proiswin="t");
+ CREATE FUNCTION lag_timestamptz(internal, timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7648, proiswindow="t");
 
- CREATE FUNCTION lag_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7650, proiswin="t");
+ CREATE FUNCTION lag_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7650, proiswindow="t");
 
- CREATE FUNCTION lag_timetz(internal, timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7652, proiswin="t");
+ CREATE FUNCTION lag_timetz(internal, timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7652, proiswindow="t");
 
- CREATE FUNCTION lag_timetz(internal, timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7654, proiswin="t");
+ CREATE FUNCTION lag_timetz(internal, timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7654, proiswindow="t");
 
- CREATE FUNCTION lag_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7656, proiswin="t");
+ CREATE FUNCTION lag_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7656, proiswindow="t");
 
- CREATE FUNCTION lag_varbit(internal, varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7658, proiswin="t");
+ CREATE FUNCTION lag_varbit(internal, varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7658, proiswindow="t");
 
- CREATE FUNCTION lag_varbit(internal, varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7660, proiswin="t");
+ CREATE FUNCTION lag_varbit(internal, varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7660, proiswindow="t");
 
- CREATE FUNCTION lag_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7662, proiswin="t");
+ CREATE FUNCTION lag_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7662, proiswindow="t");
 
- CREATE FUNCTION lag_varchar(internal, "varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7664, proiswin="t");
+ CREATE FUNCTION lag_varchar(internal, "varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7664, proiswindow="t");
 
- CREATE FUNCTION lag_varchar(internal, "varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7666, proiswin="t");
+ CREATE FUNCTION lag_varchar(internal, "varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7666, proiswindow="t");
 
- CREATE FUNCTION lag_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7668, proiswin="t");
+ CREATE FUNCTION lag_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7668, proiswindow="t");
 
- CREATE FUNCTION lag_xid(internal, xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7670, proiswin="t");
+ CREATE FUNCTION lag_xid(internal, xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7670, proiswindow="t");
 
- CREATE FUNCTION lag_xid(internal, xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7672, proiswin="t");
+ CREATE FUNCTION lag_xid(internal, xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7672, proiswindow="t");
 
- CREATE FUNCTION lag_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7674, proiswin="t");
+ CREATE FUNCTION lag_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7674, proiswindow="t");
 
- CREATE FUNCTION lag_any(internal, anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7208, proiswin="t");
+ CREATE FUNCTION lag_any(internal, anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7208, proiswindow="t");
 
- CREATE FUNCTION lag_any(internal, anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7209, proiswin="t");
+ CREATE FUNCTION lag_any(internal, anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7209, proiswindow="t");
 
- CREATE FUNCTION lag_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7210, proiswin="t");
+ CREATE FUNCTION lag_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7210, proiswindow="t");
 
- CREATE FUNCTION lag_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7227, proiswin="t");
+ CREATE FUNCTION lag_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7227, proiswindow="t");
 
- CREATE FUNCTION lag_bytea(internal, bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7229, proiswin="t");
+ CREATE FUNCTION lag_bytea(internal, bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7229, proiswindow="t");
 
- CREATE FUNCTION lag_bytea(internal, bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7231, proiswin="t");
+ CREATE FUNCTION lag_bytea(internal, bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7231, proiswindow="t");
 
- CREATE FUNCTION lag_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7251, proiswin="t");
+ CREATE FUNCTION lag_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7251, proiswindow="t");
 
- CREATE FUNCTION lag_bit(internal, "bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7253, proiswin="t");
+ CREATE FUNCTION lag_bit(internal, "bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7253, proiswindow="t");
 
- CREATE FUNCTION lag_bit(internal, "bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7255, proiswin="t");
+ CREATE FUNCTION lag_bit(internal, "bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7255, proiswindow="t");
 
- CREATE FUNCTION lag_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7267, proiswin="t");
+ CREATE FUNCTION lag_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7267, proiswindow="t");
 
- CREATE FUNCTION lag_box(internal, box, int8) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7269, proiswin="t");
+ CREATE FUNCTION lag_box(internal, box, int8) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7269, proiswindow="t");
 
- CREATE FUNCTION lag_box(internal, box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7271, proiswin="t");
+ CREATE FUNCTION lag_box(internal, box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lag_generic' WITH (OID=7271, proiswindow="t");
 
- CREATE FUNCTION lead_int(internal, int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7106, proiswin="t");
+ CREATE FUNCTION lead_int(internal, int4, int8, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7106, proiswindow="t");
 
- CREATE FUNCTION lead_int(internal, int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7104, proiswin="t");
+ CREATE FUNCTION lead_int(internal, int4, int8) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7104, proiswindow="t");
 
- CREATE FUNCTION lead_int(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7105, proiswin="t");
+ CREATE FUNCTION lead_int(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7105, proiswindow="t");
 
- CREATE FUNCTION lead_bool(internal, bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7311, proiswin="t");
+ CREATE FUNCTION lead_bool(internal, bool, int8, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7311, proiswindow="t");
 
- CREATE FUNCTION lead_bool(internal, bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7313, proiswin="t");
+ CREATE FUNCTION lead_bool(internal, bool, int8) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7313, proiswindow="t");
 
- CREATE FUNCTION lead_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7315, proiswin="t");
+ CREATE FUNCTION lead_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7315, proiswindow="t");
 
- CREATE FUNCTION lead_char(internal, "char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7317, proiswin="t");
+ CREATE FUNCTION lead_char(internal, "char", int8, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7317, proiswindow="t");
 
- CREATE FUNCTION lead_char(internal, "char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7319, proiswin="t");
+ CREATE FUNCTION lead_char(internal, "char", int8) RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7319, proiswindow="t");
 
- CREATE FUNCTION lead_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7321, proiswin="t");
+ CREATE FUNCTION lead_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7321, proiswindow="t");
 
- CREATE FUNCTION lead_cidr(internal, cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7323, proiswin="t");
+ CREATE FUNCTION lead_cidr(internal, cidr, int8, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7323, proiswindow="t");
 
- CREATE FUNCTION lead_cidr(internal, cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7325, proiswin="t");
+ CREATE FUNCTION lead_cidr(internal, cidr, int8) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7325, proiswindow="t");
 
- CREATE FUNCTION lead_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7327, proiswin="t");
+ CREATE FUNCTION lead_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7327, proiswindow="t");
 
- CREATE FUNCTION lead_circle(internal, circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7329, proiswin="t");
+ CREATE FUNCTION lead_circle(internal, circle, int8, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7329, proiswindow="t");
 
- CREATE FUNCTION lead_circle(internal, circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7331, proiswin="t");
+ CREATE FUNCTION lead_circle(internal, circle, int8) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7331, proiswindow="t");
 
- CREATE FUNCTION lead_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7333, proiswin="t");
+ CREATE FUNCTION lead_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7333, proiswindow="t");
 
- CREATE FUNCTION lead_float4(internal, float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7335, proiswin="t");
+ CREATE FUNCTION lead_float4(internal, float4, int8, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7335, proiswindow="t");
 
- CREATE FUNCTION lead_float4(internal, float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7337, proiswin="t");
+ CREATE FUNCTION lead_float4(internal, float4, int8) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7337, proiswindow="t");
 
- CREATE FUNCTION lead_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7339, proiswin="t");
+ CREATE FUNCTION lead_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7339, proiswindow="t");
 
- CREATE FUNCTION lead_float8(internal, float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7341, proiswin="t");
+ CREATE FUNCTION lead_float8(internal, float8, int8, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7341, proiswindow="t");
 
- CREATE FUNCTION lead_float8(internal, float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7343, proiswin="t");
+ CREATE FUNCTION lead_float8(internal, float8, int8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7343, proiswindow="t");
 
- CREATE FUNCTION lead_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7345, proiswin="t");
+ CREATE FUNCTION lead_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7345, proiswindow="t");
 
- CREATE FUNCTION lead_inet(internal, inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7347, proiswin="t");
+ CREATE FUNCTION lead_inet(internal, inet, int8, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7347, proiswindow="t");
 
- CREATE FUNCTION lead_inet(internal, inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7349, proiswin="t");
+ CREATE FUNCTION lead_inet(internal, inet, int8) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7349, proiswindow="t");
 
- CREATE FUNCTION lead_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7351, proiswin="t");
+ CREATE FUNCTION lead_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7351, proiswindow="t");
 
- CREATE FUNCTION lead_interval(internal, "interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7353, proiswin="t");
+ CREATE FUNCTION lead_interval(internal, "interval", int8, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7353, proiswindow="t");
 
- CREATE FUNCTION lead_interval(internal, "interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7355, proiswin="t");
+ CREATE FUNCTION lead_interval(internal, "interval", int8) RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7355, proiswindow="t");
 
- CREATE FUNCTION lead_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7357, proiswin="t");
+ CREATE FUNCTION lead_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7357, proiswindow="t");
 
- CREATE FUNCTION lead_line(internal, line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7359, proiswin="t");
+ CREATE FUNCTION lead_line(internal, line, int8, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7359, proiswindow="t");
 
- CREATE FUNCTION lead_line(internal, line, int8) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7361, proiswin="t");
+ CREATE FUNCTION lead_line(internal, line, int8) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7361, proiswindow="t");
 
- CREATE FUNCTION lead_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7363, proiswin="t");
+ CREATE FUNCTION lead_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7363, proiswindow="t");
 
- CREATE FUNCTION lead_lseg(internal, lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7365, proiswin="t");
+ CREATE FUNCTION lead_lseg(internal, lseg, int8, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7365, proiswindow="t");
 
- CREATE FUNCTION lead_lseg(internal, lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7367, proiswin="t");
+ CREATE FUNCTION lead_lseg(internal, lseg, int8) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7367, proiswindow="t");
 
- CREATE FUNCTION lead_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7369, proiswin="t");
+ CREATE FUNCTION lead_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7369, proiswindow="t");
 
- CREATE FUNCTION lead_macaddr(internal, macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7371, proiswin="t");
+ CREATE FUNCTION lead_macaddr(internal, macaddr, int8, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7371, proiswindow="t");
 
- CREATE FUNCTION lead_macaddr(internal, macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7373, proiswin="t");
+ CREATE FUNCTION lead_macaddr(internal, macaddr, int8) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7373, proiswindow="t");
 
- CREATE FUNCTION lead_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7375, proiswin="t");
+ CREATE FUNCTION lead_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7375, proiswindow="t");
 
- CREATE FUNCTION lead_smallint(internal, int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7377, proiswin="t");
+ CREATE FUNCTION lead_smallint(internal, int2, int8, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7377, proiswindow="t");
 
- CREATE FUNCTION lead_smallint(internal, int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7379, proiswin="t");
+ CREATE FUNCTION lead_smallint(internal, int2, int8) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7379, proiswindow="t");
 
- CREATE FUNCTION lead_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7381, proiswin="t");
+ CREATE FUNCTION lead_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7381, proiswindow="t");
 
- CREATE FUNCTION lead_int8(internal, int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7383, proiswin="t");
+ CREATE FUNCTION lead_int8(internal, int8, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7383, proiswindow="t");
 
- CREATE FUNCTION lead_int8(internal, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7385, proiswin="t");
+ CREATE FUNCTION lead_int8(internal, int8, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7385, proiswindow="t");
 
- CREATE FUNCTION lead_int8(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7387, proiswin="t");
+ CREATE FUNCTION lead_int8(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7387, proiswindow="t");
 
- CREATE FUNCTION lead_money(internal, money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7389, proiswin="t");
+ CREATE FUNCTION lead_money(internal, money, int8, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7389, proiswindow="t");
 
- CREATE FUNCTION lead_money(internal, money, int8) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7391, proiswin="t");
+ CREATE FUNCTION lead_money(internal, money, int8) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7391, proiswindow="t");
 
- CREATE FUNCTION lead_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7393, proiswin="t");
+ CREATE FUNCTION lead_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7393, proiswindow="t");
 
- CREATE FUNCTION lead_name(internal, name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7395, proiswin="t");
+ CREATE FUNCTION lead_name(internal, name, int8, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7395, proiswindow="t");
 
- CREATE FUNCTION lead_name(internal, name, int8) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7397, proiswin="t");
+ CREATE FUNCTION lead_name(internal, name, int8) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7397, proiswindow="t");
 
- CREATE FUNCTION lead_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7399, proiswin="t");
+ CREATE FUNCTION lead_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7399, proiswindow="t");
 
- CREATE FUNCTION lead_numeric(internal, "numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7401, proiswin="t");
+ CREATE FUNCTION lead_numeric(internal, "numeric", int8, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7401, proiswindow="t");
 
- CREATE FUNCTION lead_numeric(internal, "numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7403, proiswin="t");
+ CREATE FUNCTION lead_numeric(internal, "numeric", int8) RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7403, proiswindow="t");
 
- CREATE FUNCTION lead_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7405, proiswin="t");
+ CREATE FUNCTION lead_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7405, proiswindow="t");
 
- CREATE FUNCTION lead_oid(internal, oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7407, proiswin="t");
+ CREATE FUNCTION lead_oid(internal, oid, int8, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7407, proiswindow="t");
 
- CREATE FUNCTION lead_oid(internal, oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7409, proiswin="t");
+ CREATE FUNCTION lead_oid(internal, oid, int8) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7409, proiswindow="t");
 
- CREATE FUNCTION lead_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7411, proiswin="t");
+ CREATE FUNCTION lead_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7411, proiswindow="t");
 
- CREATE FUNCTION lead_path(internal, path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7413, proiswin="t");
+ CREATE FUNCTION lead_path(internal, path, int8, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7413, proiswindow="t");
 
- CREATE FUNCTION lead_path(internal, path, int8) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7415, proiswin="t");
+ CREATE FUNCTION lead_path(internal, path, int8) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7415, proiswindow="t");
 
- CREATE FUNCTION lead_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7417, proiswin="t");
+ CREATE FUNCTION lead_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7417, proiswindow="t");
 
- CREATE FUNCTION lead_point(internal, point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7419, proiswin="t");
+ CREATE FUNCTION lead_point(internal, point, int8, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7419, proiswindow="t");
 
- CREATE FUNCTION lead_point(internal, point, int8) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7421, proiswin="t");
+ CREATE FUNCTION lead_point(internal, point, int8) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7421, proiswindow="t");
 
- CREATE FUNCTION lead_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7423, proiswin="t");
+ CREATE FUNCTION lead_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7423, proiswindow="t");
 
- CREATE FUNCTION lead_polygon(internal, polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7425, proiswin="t");
+ CREATE FUNCTION lead_polygon(internal, polygon, int8, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7425, proiswindow="t");
 
- CREATE FUNCTION lead_polygon(internal, polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7427, proiswin="t");
+ CREATE FUNCTION lead_polygon(internal, polygon, int8) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7427, proiswindow="t");
 
- CREATE FUNCTION lead_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7429, proiswin="t");
+ CREATE FUNCTION lead_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7429, proiswindow="t");
 
- CREATE FUNCTION lead_reltime(internal, reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7431, proiswin="t");
+ CREATE FUNCTION lead_reltime(internal, reltime, int8, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7431, proiswindow="t");
 
- CREATE FUNCTION lead_reltime(internal, reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7433, proiswin="t");
+ CREATE FUNCTION lead_reltime(internal, reltime, int8) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7433, proiswindow="t");
 
- CREATE FUNCTION lead_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7435, proiswin="t");
+ CREATE FUNCTION lead_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7435, proiswindow="t");
 
- CREATE FUNCTION lead_text(internal, text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7437, proiswin="t");
+ CREATE FUNCTION lead_text(internal, text, int8, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7437, proiswindow="t");
 
- CREATE FUNCTION lead_text(internal, text, int8) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7439, proiswin="t");
+ CREATE FUNCTION lead_text(internal, text, int8) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7439, proiswindow="t");
 
- CREATE FUNCTION lead_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7441, proiswin="t");
+ CREATE FUNCTION lead_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7441, proiswindow="t");
 
- CREATE FUNCTION lead_tid(internal, tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7443, proiswin="t");
+ CREATE FUNCTION lead_tid(internal, tid, int8, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7443, proiswindow="t");
 
- CREATE FUNCTION lead_tid(internal, tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7445, proiswin="t");
+ CREATE FUNCTION lead_tid(internal, tid, int8) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7445, proiswindow="t");
 
- CREATE FUNCTION lead_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7447, proiswin="t");
+ CREATE FUNCTION lead_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7447, proiswindow="t");
 
- CREATE FUNCTION lead_time(internal, "time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7449, proiswin="t");
+ CREATE FUNCTION lead_time(internal, "time", int8, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7449, proiswindow="t");
 
- CREATE FUNCTION lead_time(internal, "time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7451, proiswin="t");
+ CREATE FUNCTION lead_time(internal, "time", int8) RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7451, proiswindow="t");
 
- CREATE FUNCTION lead_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7453, proiswin="t");
+ CREATE FUNCTION lead_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7453, proiswindow="t");
 
- CREATE FUNCTION lead_timestamp(internal, "timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7455, proiswin="t");
+ CREATE FUNCTION lead_timestamp(internal, "timestamp", int8, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7455, proiswindow="t");
 
- CREATE FUNCTION lead_timestamp(internal, "timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7457, proiswin="t");
+ CREATE FUNCTION lead_timestamp(internal, "timestamp", int8) RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7457, proiswindow="t");
 
- CREATE FUNCTION lead_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7459, proiswin="t");
+ CREATE FUNCTION lead_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7459, proiswindow="t");
 
- CREATE FUNCTION lead_timestamptz(internal, timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7461, proiswin="t");
+ CREATE FUNCTION lead_timestamptz(internal, timestamptz, int8, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7461, proiswindow="t");
 
- CREATE FUNCTION lead_timestamptz(internal, timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7463, proiswin="t");
+ CREATE FUNCTION lead_timestamptz(internal, timestamptz, int8) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7463, proiswindow="t");
 
- CREATE FUNCTION lead_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7465, proiswin="t");
+ CREATE FUNCTION lead_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7465, proiswindow="t");
 
- CREATE FUNCTION lead_timetz(internal, timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7467, proiswin="t");
+ CREATE FUNCTION lead_timetz(internal, timetz, int8, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7467, proiswindow="t");
 
- CREATE FUNCTION lead_timetz(internal, timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7469, proiswin="t");
+ CREATE FUNCTION lead_timetz(internal, timetz, int8) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7469, proiswindow="t");
 
- CREATE FUNCTION lead_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7471, proiswin="t");
+ CREATE FUNCTION lead_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7471, proiswindow="t");
 
- CREATE FUNCTION lead_varbit(internal, varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7473, proiswin="t");
+ CREATE FUNCTION lead_varbit(internal, varbit, int8, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7473, proiswindow="t");
 
- CREATE FUNCTION lead_varbit(internal, varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7475, proiswin="t");
+ CREATE FUNCTION lead_varbit(internal, varbit, int8) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7475, proiswindow="t");
 
- CREATE FUNCTION lead_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7477, proiswin="t");
+ CREATE FUNCTION lead_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7477, proiswindow="t");
 
- CREATE FUNCTION lead_varchar(internal, "varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7479, proiswin="t");
+ CREATE FUNCTION lead_varchar(internal, "varchar", int8, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7479, proiswindow="t");
 
- CREATE FUNCTION lead_varchar(internal, "varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7481, proiswin="t");
+ CREATE FUNCTION lead_varchar(internal, "varchar", int8) RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7481, proiswindow="t");
 
- CREATE FUNCTION lead_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7483, proiswin="t");
+ CREATE FUNCTION lead_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7483, proiswindow="t");
 
- CREATE FUNCTION lead_xid(internal, xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7485, proiswin="t");
+ CREATE FUNCTION lead_xid(internal, xid, int8, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7485, proiswindow="t");
 
- CREATE FUNCTION lead_xid(internal, xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7487, proiswin="t");
+ CREATE FUNCTION lead_xid(internal, xid, int8) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7487, proiswindow="t");
 
- CREATE FUNCTION lead_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7489, proiswin="t");
+ CREATE FUNCTION lead_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7489, proiswindow="t");
 
- CREATE FUNCTION lead_any(internal, anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7217, proiswin="t");
+ CREATE FUNCTION lead_any(internal, anyarray, int8, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7217, proiswindow="t");
 
- CREATE FUNCTION lead_any(internal, anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7218, proiswin="t");
+ CREATE FUNCTION lead_any(internal, anyarray, int8) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7218, proiswindow="t");
 
- CREATE FUNCTION lead_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7219, proiswin="t");
+ CREATE FUNCTION lead_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7219, proiswindow="t");
 
- CREATE FUNCTION lead_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7221, proiswin="t");
+ CREATE FUNCTION lead_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7221, proiswindow="t");
 
- CREATE FUNCTION lead_bytea(internal, bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7223, proiswin="t");
+ CREATE FUNCTION lead_bytea(internal, bytea, int8) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7223, proiswindow="t");
 
- CREATE FUNCTION lead_bytea(internal, bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7225, proiswin="t");
+ CREATE FUNCTION lead_bytea(internal, bytea, int8, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7225, proiswindow="t");
 
- CREATE FUNCTION lead_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7245, proiswin="t");
+ CREATE FUNCTION lead_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7245, proiswindow="t");
 
- CREATE FUNCTION lead_bit(internal, "bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7247, proiswin="t");
+ CREATE FUNCTION lead_bit(internal, "bit", int8) RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7247, proiswindow="t");
 
- CREATE FUNCTION lead_bit(internal, "bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7249, proiswin="t");
+ CREATE FUNCTION lead_bit(internal, "bit", int8, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7249, proiswindow="t");
 
- CREATE FUNCTION lead_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7261, proiswin="t");
+ CREATE FUNCTION lead_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7261, proiswindow="t");
 
- CREATE FUNCTION lead_box(internal, box, int8) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7263, proiswin="t");
+ CREATE FUNCTION lead_box(internal, box, int8) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7263, proiswindow="t");
 
- CREATE FUNCTION lead_box(internal, box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7265, proiswin="t");
+ CREATE FUNCTION lead_box(internal, box, int8, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'lead_generic' WITH (OID=7265, proiswindow="t");
 
- CREATE FUNCTION first_value_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7111, proiswin="t");
+ CREATE FUNCTION first_value_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7111, proiswindow="t");
 
- CREATE FUNCTION first_value_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7112, proiswin="t");
+ CREATE FUNCTION first_value_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7112, proiswindow="t");
 
- CREATE FUNCTION first_value_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7113, proiswin="t");
+ CREATE FUNCTION first_value_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7113, proiswindow="t");
 
- CREATE FUNCTION first_value_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7114, proiswin="t");
+ CREATE FUNCTION first_value_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7114, proiswindow="t");
 
- CREATE FUNCTION first_value_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7115, proiswin="t");
+ CREATE FUNCTION first_value_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7115, proiswindow="t");
 
- CREATE FUNCTION first_value_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7116, proiswin="t");
+ CREATE FUNCTION first_value_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7116, proiswindow="t");
 
- CREATE FUNCTION first_value_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7117, proiswin="t");
+ CREATE FUNCTION first_value_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7117, proiswindow="t");
 
- CREATE FUNCTION first_value_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7118, proiswin="t");
+ CREATE FUNCTION first_value_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7118, proiswindow="t");
 
- CREATE FUNCTION first_value_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7119, proiswin="t");
+ CREATE FUNCTION first_value_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7119, proiswindow="t");
 
- CREATE FUNCTION first_value_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7120, proiswin="t");
+ CREATE FUNCTION first_value_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7120, proiswindow="t");
 
- CREATE FUNCTION first_value_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7121, proiswin="t");
+ CREATE FUNCTION first_value_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7121, proiswindow="t");
 
- CREATE FUNCTION first_value_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7122, proiswin="t");
+ CREATE FUNCTION first_value_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7122, proiswindow="t");
 
- CREATE FUNCTION first_value_int4(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7123, proiswin="t");
+ CREATE FUNCTION first_value_int4(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7123, proiswindow="t");
 
- CREATE FUNCTION first_value_int8(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7124, proiswin="t");
+ CREATE FUNCTION first_value_int8(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7124, proiswindow="t");
 
- CREATE FUNCTION first_value_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7125, proiswin="t");
+ CREATE FUNCTION first_value_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7125, proiswindow="t");
 
- CREATE FUNCTION first_value_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7126, proiswin="t");
+ CREATE FUNCTION first_value_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7126, proiswindow="t");
 
- CREATE FUNCTION first_value_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7127, proiswin="t");
+ CREATE FUNCTION first_value_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7127, proiswindow="t");
 
- CREATE FUNCTION first_value_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7128, proiswin="t");
+ CREATE FUNCTION first_value_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7128, proiswindow="t");
 
- CREATE FUNCTION first_value_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7129, proiswin="t");
+ CREATE FUNCTION first_value_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7129, proiswindow="t");
 
- CREATE FUNCTION first_value_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7130, proiswin="t");
+ CREATE FUNCTION first_value_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7130, proiswindow="t");
 
- CREATE FUNCTION first_value_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7131, proiswin="t");
+ CREATE FUNCTION first_value_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7131, proiswindow="t");
 
- CREATE FUNCTION first_value_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7132, proiswin="t");
+ CREATE FUNCTION first_value_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7132, proiswindow="t");
 
- CREATE FUNCTION first_value_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7133, proiswin="t");
+ CREATE FUNCTION first_value_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7133, proiswindow="t");
 
- CREATE FUNCTION first_value_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7134, proiswin="t");
+ CREATE FUNCTION first_value_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7134, proiswindow="t");
 
- CREATE FUNCTION first_value_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7135, proiswin="t");
+ CREATE FUNCTION first_value_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7135, proiswindow="t");
 
- CREATE FUNCTION first_value_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7136, proiswin="t");
+ CREATE FUNCTION first_value_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7136, proiswindow="t");
 
- CREATE FUNCTION first_value_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7137, proiswin="t");
+ CREATE FUNCTION first_value_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7137, proiswindow="t");
 
- CREATE FUNCTION first_value_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7138, proiswin="t");
+ CREATE FUNCTION first_value_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7138, proiswindow="t");
 
- CREATE FUNCTION first_value_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7139, proiswin="t");
+ CREATE FUNCTION first_value_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7139, proiswindow="t");
 
- CREATE FUNCTION first_value_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7140, proiswin="t");
+ CREATE FUNCTION first_value_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7140, proiswindow="t");
 
- CREATE FUNCTION first_value_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7141, proiswin="t");
+ CREATE FUNCTION first_value_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7141, proiswindow="t");
 
- CREATE FUNCTION first_value_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7233, proiswin="t");
+ CREATE FUNCTION first_value_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7233, proiswindow="t");
 
- CREATE FUNCTION first_value_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7257, proiswin="t");
+ CREATE FUNCTION first_value_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7257, proiswindow="t");
 
- CREATE FUNCTION first_value_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7273, proiswin="t");
+ CREATE FUNCTION first_value_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7273, proiswindow="t");
 
- CREATE FUNCTION first_value_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7289, proiswin="t");
+ CREATE FUNCTION first_value_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'first_value_generic' WITH (OID=7289, proiswindow="t");
 
- CREATE FUNCTION last_value_int(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7103, proiswin="t");
+ CREATE FUNCTION last_value_int(internal, int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7103, proiswindow="t");
 
- CREATE FUNCTION last_value_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7107, proiswin="t");
+ CREATE FUNCTION last_value_smallint(internal, int2) RETURNS int2 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7107, proiswindow="t");
 
- CREATE FUNCTION last_value_bigint(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7108, proiswin="t");
+ CREATE FUNCTION last_value_bigint(internal, int8) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7108, proiswindow="t");
 
- CREATE FUNCTION last_value_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7109, proiswin="t");
+ CREATE FUNCTION last_value_numeric(internal, "numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7109, proiswindow="t");
 
- CREATE FUNCTION last_value_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7110, proiswin="t");
+ CREATE FUNCTION last_value_text(internal, text) RETURNS text LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7110, proiswindow="t");
 
- CREATE FUNCTION last_value_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7165, proiswin="t");
+ CREATE FUNCTION last_value_bool(internal, bool) RETURNS bool LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7165, proiswindow="t");
 
- CREATE FUNCTION last_value_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7166, proiswin="t");
+ CREATE FUNCTION last_value_char(internal, "char") RETURNS "char" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7166, proiswindow="t");
 
- CREATE FUNCTION last_value_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7167, proiswin="t");
+ CREATE FUNCTION last_value_cidr(internal, cidr) RETURNS cidr LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7167, proiswindow="t");
 
- CREATE FUNCTION last_value_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7168, proiswin="t");
+ CREATE FUNCTION last_value_circle(internal, circle) RETURNS circle LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7168, proiswindow="t");
 
- CREATE FUNCTION last_value_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7142, proiswin="t");
+ CREATE FUNCTION last_value_float4(internal, float4) RETURNS float4 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7142, proiswindow="t");
 
- CREATE FUNCTION last_value_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7143, proiswin="t");
+ CREATE FUNCTION last_value_float8(internal, float8) RETURNS float8 LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7143, proiswindow="t");
 
- CREATE FUNCTION last_value_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7144, proiswin="t");
+ CREATE FUNCTION last_value_inet(internal, inet) RETURNS inet LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7144, proiswindow="t");
 
- CREATE FUNCTION last_value_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7145, proiswin="t");
+ CREATE FUNCTION last_value_interval(internal, "interval") RETURNS "interval" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7145, proiswindow="t");
 
- CREATE FUNCTION last_value_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7146, proiswin="t");
+ CREATE FUNCTION last_value_line(internal, line) RETURNS line LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7146, proiswindow="t");
 
- CREATE FUNCTION last_value_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7147, proiswin="t");
+ CREATE FUNCTION last_value_lseg(internal, lseg) RETURNS lseg LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7147, proiswindow="t");
 
- CREATE FUNCTION last_value_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7148, proiswin="t");
+ CREATE FUNCTION last_value_macaddr(internal, macaddr) RETURNS macaddr LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7148, proiswindow="t");
 
- CREATE FUNCTION last_value_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7149, proiswin="t");
+ CREATE FUNCTION last_value_money(internal, money) RETURNS money LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7149, proiswindow="t");
 
- CREATE FUNCTION last_value_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7150, proiswin="t");
+ CREATE FUNCTION last_value_name(internal, name) RETURNS name LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7150, proiswindow="t");
 
- CREATE FUNCTION last_value_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7151, proiswin="t");
+ CREATE FUNCTION last_value_oid(internal, oid) RETURNS oid LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7151, proiswindow="t");
 
- CREATE FUNCTION last_value_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7152, proiswin="t");
+ CREATE FUNCTION last_value_path(internal, path) RETURNS path LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7152, proiswindow="t");
 
- CREATE FUNCTION last_value_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7153, proiswin="t");
+ CREATE FUNCTION last_value_point(internal, point) RETURNS point LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7153, proiswindow="t");
 
- CREATE FUNCTION last_value_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7154, proiswin="t");
+ CREATE FUNCTION last_value_polygon(internal, polygon) RETURNS polygon LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7154, proiswindow="t");
 
- CREATE FUNCTION last_value_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7155, proiswin="t");
+ CREATE FUNCTION last_value_reltime(internal, reltime) RETURNS reltime LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7155, proiswindow="t");
 
- CREATE FUNCTION last_value_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7157, proiswin="t");
+ CREATE FUNCTION last_value_tid(internal, tid) RETURNS tid LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7157, proiswindow="t");
 
- CREATE FUNCTION last_value_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7158, proiswin="t");
+ CREATE FUNCTION last_value_time(internal, "time") RETURNS "time" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7158, proiswindow="t");
 
- CREATE FUNCTION last_value_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7159, proiswin="t");
+ CREATE FUNCTION last_value_timestamp(internal, "timestamp") RETURNS "timestamp" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7159, proiswindow="t");
 
- CREATE FUNCTION last_value_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7160, proiswin="t");
+ CREATE FUNCTION last_value_timestamptz(internal, timestamptz) RETURNS timestamptz LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7160, proiswindow="t");
 
- CREATE FUNCTION last_value_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7161, proiswin="t");
+ CREATE FUNCTION last_value_timetz(internal, timetz) RETURNS timetz LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7161, proiswindow="t");
 
- CREATE FUNCTION last_value_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7162, proiswin="t");
+ CREATE FUNCTION last_value_varbit(internal, varbit) RETURNS varbit LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7162, proiswindow="t");
 
- CREATE FUNCTION last_value_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7163, proiswin="t");
+ CREATE FUNCTION last_value_varchar(internal, "varchar") RETURNS "varchar" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7163, proiswindow="t");
 
- CREATE FUNCTION last_value_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7164, proiswin="t");
+ CREATE FUNCTION last_value_xid(internal, xid) RETURNS xid LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7164, proiswindow="t");
 
- CREATE FUNCTION last_value_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7239, proiswin="t");
+ CREATE FUNCTION last_value_bytea(internal, bytea) RETURNS bytea LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7239, proiswindow="t");
 
- CREATE FUNCTION last_value_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7259, proiswin="t");
+ CREATE FUNCTION last_value_bit(internal, "bit") RETURNS "bit" LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7259, proiswindow="t");
 
- CREATE FUNCTION last_value_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7275, proiswin="t");
+ CREATE FUNCTION last_value_box(internal, box) RETURNS box LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7275, proiswindow="t");
 
- CREATE FUNCTION last_value_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7291, proiswin="t");
+ CREATE FUNCTION last_value_any(internal, anyarray) RETURNS anyarray LANGUAGE internal IMMUTABLE STRICT AS 'last_value_generic' WITH (OID=7291, proiswindow="t");
 
  CREATE FUNCTION cume_dist_prelim(internal) RETURNS int8 LANGUAGE internal IMMUTABLE STRICT AS 'cume_dist_prelim' WITH (OID=7204, DESCRIPTION="window preliminary function");
 -- #define CUME_DIST_PRELIM_OID 7204

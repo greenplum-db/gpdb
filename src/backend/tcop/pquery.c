@@ -574,7 +574,7 @@ FetchStatementTargetList(Node *stmt)
  */
 void
 PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
-			const char *seqServerHost, int seqServerPort, QueryDispatchDesc *ddesc)
+			QueryDispatchDesc *ddesc)
 {
 	Portal		saveActivePortal;
 	Snapshot	saveActiveSnapshot;
@@ -586,9 +586,6 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 
 	AssertArg(PortalIsValid(portal));
 	AssertState(portal->status == PORTAL_DEFINED);
-
-	/* Set up the sequence server */
-	SetupSequenceServer(seqServerHost, seqServerPort);
 
 	portal->releaseResLock = false;
     

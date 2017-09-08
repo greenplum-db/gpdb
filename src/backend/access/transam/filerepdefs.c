@@ -13,8 +13,7 @@
  */
 
 #include "postgres.h"
-#include "storage/relfilenode.h"
-#include "storage/itemptr.h"
+
 #include "access/filerepdefs.h"
 
 char * 

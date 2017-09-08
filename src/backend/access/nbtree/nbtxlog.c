@@ -13,10 +13,11 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
-
 #include "access/nbtree.h"
 #include "access/transam.h"
 #include "utils/guc.h"
+#include "miscadmin.h"
+#include "access/bufmask.h"
 
 /*
  * We must keep track of expected insertions due to page splits, and apply
@@ -220,7 +221,7 @@ btree_xlog_insert(bool isleaf, bool ismeta,
 		datalen -= sizeof(xl_btree_metadata);
 	}
 
-	if ((record->xl_info & XLR_BKP_BLOCK_1) && !ismeta && isleaf)
+	if ((IsBkpBlockApplied(record, 0)) && !ismeta && isleaf)
 		return;					/* nothing to do */
 
 	reln = XLogOpenRelation(xlrec->target.node);
@@ -228,7 +229,7 @@ btree_xlog_insert(bool isleaf, bool ismeta,
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	if (!(record->xl_info & XLR_BKP_BLOCK_1))
+	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		buffer = XLogReadBuffer(reln,
 							 ItemPointerGetBlockNumber(&(xlrec->target.tid)),
@@ -309,7 +310,7 @@ btree_xlog_split(bool onleft, bool isroot,
 		forget_matching_split(xlrec->node, downlink, false);
 
 		/* Extract left hikey and its size (still assuming 16-bit alignment) */
-		if (!(record->xl_info & XLR_BKP_BLOCK_1))
+		if (!(IsBkpBlockApplied(record, 0)))
 		{
 			/* We assume 16-bit alignment is enough for IndexTupleSize */
 			left_hikey = (Item) datapos;
@@ -329,7 +330,7 @@ btree_xlog_split(bool onleft, bool isroot,
 		datalen -= sizeof(OffsetNumber);
 	}
 
-	if (onleft && !(record->xl_info & XLR_BKP_BLOCK_1))
+	if (onleft && !(IsBkpBlockApplied(record, 0)))
 	{
 		/*
 		 * We assume that 16-bit alignment is enough to apply IndexTupleSize
@@ -381,7 +382,7 @@ btree_xlog_split(bool onleft, bool isroot,
 	 * item number order, but it does not reproduce the physical order they
 	 * would have had.	Is this worth changing?  See also _bt_restore_page().
 	 */
-	if (!(record->xl_info & XLR_BKP_BLOCK_1))
+	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		Buffer		lbuf = XLogReadBuffer(reln, xlrec->leftsib, false);
 
@@ -450,7 +451,7 @@ btree_xlog_split(bool onleft, bool isroot,
 	UnlockReleaseBuffer(rbuf);
 
 	/* Fix left-link of the page to the right of the new right sibling */
-	if (xlrec->rnext != P_NONE && !(record->xl_info & XLR_BKP_BLOCK_2))
+	if (xlrec->rnext != P_NONE && !(IsBkpBlockApplied(record, 1)))
 	{
 		Buffer		buffer = XLogReadBuffer(reln, xlrec->rnext, false);
 
@@ -490,7 +491,7 @@ btree_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	Page		page;
 	BTPageOpaque opaque;
 
-	if (record->xl_info & XLR_BKP_BLOCK_1)
+	if (IsBkpBlockApplied(record, 0))
 		return;
 
 	xlrec = (xl_btree_delete *) XLogRecGetData(record);
@@ -570,7 +571,7 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_LOCK;
 
 	/* parent page */
-	if (!(record->xl_info & XLR_BKP_BLOCK_1))
+	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		buffer = XLogReadBuffer(reln, parent, false);
 		REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, parent, buffer, lsn);
@@ -617,7 +618,7 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	/* Fix left-link of right sibling */
-	if (!(record->xl_info & XLR_BKP_BLOCK_2))
+	if (!(IsBkpBlockApplied(record, 1)))
 	{
 		buffer = XLogReadBuffer(reln, rightsib, false);
 		REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, rightsib, buffer, lsn);
@@ -642,7 +643,7 @@ btree_xlog_delete_page(uint8 info, XLogRecPtr lsn, XLogRecord *record)
 	}
 
 	/* Fix right-link of left sibling, if any */
-	if (!(record->xl_info & XLR_BKP_BLOCK_3))
+	if (!(IsBkpBlockApplied(record, 2)))
 	{
 		if (leftsib != P_NONE)
 		{
@@ -853,14 +854,14 @@ out_insert(StringInfo buf, bool isleaf, bool ismeta, XLogRecord *record)
 		datalen -= sizeof(xl_btree_metadata);
 	}
 
-	if ((record->xl_info & XLR_BKP_BLOCK_1) && !ismeta && isleaf)
+	if ((IsBkpBlockApplied(record, 0)) && !ismeta && isleaf)
 	{
 		appendStringInfo(buf, "; page %u",
 						 ItemPointerGetBlockNumber(&(xlrec->target.tid)));
 		return;					/* nothing to do */
 	}
 
-	if (!(record->xl_info & XLR_BKP_BLOCK_1))
+	if (!(IsBkpBlockApplied(record, 0)))
 	{
 		appendStringInfo(buf, "; add length %d item at offset %d in page %u",
 						 datalen, 
@@ -890,7 +891,7 @@ out_delete(StringInfo buf, XLogRecord *record)
 	char			*rec = XLogRecGetData(record);
 	xl_btree_delete *xlrec = (xl_btree_delete *) rec;
 
-	if (record->xl_info & XLR_BKP_BLOCK_1)
+	if (IsBkpBlockApplied(record, 0))
 		return;
 
 	xlrec = (xl_btree_delete *) XLogRecGetData(record);
@@ -1142,4 +1143,53 @@ btree_safe_restartpoint(void)
 	if (incomplete_actions)
 		return false;
 	return true;
+}
+
+/*
+ * Mask a btree page before performing consistency checks on it.
+ */
+void
+btree_mask(char *pagedata, BlockNumber blkno)
+{
+	Page		page = (Page) pagedata;
+	BTPageOpaque maskopaq;
+
+	mask_page_lsn_and_checksum(page);
+
+	mask_page_hint_bits(page);
+	mask_unused_space(page);
+
+	maskopaq = (BTPageOpaque) PageGetSpecialPointer(page);
+
+	if (P_ISDELETED(maskopaq))
+	{
+		/*
+		 * Mask page content on a DELETED page since it will be re-initialized
+		 * during replay. See btree_xlog_unlink_page() for details.
+		 */
+		mask_page_content(page);
+	}
+	else if (P_ISLEAF(maskopaq))
+	{
+		/*
+		 * In btree leaf pages, it is possible to modify the LP_FLAGS without
+		 * emitting any WAL record. Hence, mask the line pointer flags. See
+		 * _bt_killitems(), _bt_check_unique() for details.
+		 */
+		mask_lp_flags(page);
+	}
+
+	/*
+	 * BTP_HAS_GARBAGE is just an un-logged hint bit. So, mask it. See
+	 * _bt_killitems(), _bt_check_unique() for details.
+	 */
+	maskopaq->btpo_flags &= ~BTP_HAS_GARBAGE;
+
+	/*
+	 * During replay of a btree page split, we don't set the BTP_SPLIT_END
+	 * flag of the right sibling and initialize the cycle_id to 0 for the same
+	 * page. See btree_xlog_split() for details.
+	 */
+	maskopaq->btpo_flags &= ~BTP_SPLIT_END;
+	maskopaq->btpo_cycleid = 0;
 }

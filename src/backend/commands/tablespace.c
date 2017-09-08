@@ -633,9 +633,7 @@ remove_tablespace_directories(Oid tablespaceoid, bool redo, char *phys)
 	/* Now we have removed all of our linkage to the physical
 	 * location; remove the per-segment location that we built at
 	 * CreateTablespace() time */
- 	tempstr = palloc(MAXPGPATH);
-
-	sprintf(tempstr,"%s/seg%d",phys,Gp_segment);
+	tempstr = psprintf("%s/seg%d", phys, Gp_segment);
 
 	if (rmdir(tempstr) < 0)
 		ereport(ERROR,
@@ -1347,9 +1345,7 @@ tblspc_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 						 location)));
 
 		/* Create segment subdirectory. */
-	 	sublocation = palloc(MAXPGPATH);
-
-		sprintf(sublocation,"%s/seg%d",location,Gp_segment);
+		sublocation = psprintf("%s/seg%d", location, Gp_segment);
 
 		if (mkdir(sublocation, 0700) != 0)
 			ereport(ERROR,

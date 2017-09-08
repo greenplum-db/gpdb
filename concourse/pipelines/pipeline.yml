@@ -12,6 +12,7 @@ groups:
   - icw_gporca_centos7
   - icw_gporca_sles11
   - icw_planner_ictcp_centos6
+  - mpp_resource_group
   - MU_check_centos
   - MM_gpperfmon
   - MM_gpcheck
@@ -23,6 +24,8 @@ groups:
   - MM_pt-rebuild
   - fts
   - storage
+  - cs_walrep_1
+  - cs_walrep_2
   - QP_memory-accounting
   - regression_tests_gpcloud_centos
   - regression_tests_gphdfs_centos
@@ -38,7 +41,6 @@ groups:
   - DPM_gptransfer-43x-to-5x
   - DPM_gptransfer-5x-to-5x
   - cs-pg-two-phase
-  - cs-walrepl-multinode
   - cs-filerep-schema-topology-crashrecov
   - cs-filerep-end-to-end
   - cs-aoco-compression
@@ -55,13 +57,11 @@ groups:
   jobs:
   - DPM_netbackup77
   - DPM_backup-restore-ddboost
-  - DPM_backup_43_restore_5
   - MM_gpcheckcat
   - MM_gpexpand
   - DPM_gptransfer-43x-to-5x
   - DPM_gptransfer-5x-to-5x
   - cs-pg-two-phase
-  - cs-walrepl-multinode
   - cs-filerep-schema-topology-crashrecov
   - cs-filerep-end-to-end
   - cs-aoco-compression
@@ -69,9 +69,13 @@ groups:
 
 - name: Adopted CCP
   jobs:
+  - cs_walrep_1
+  - cs_walrep_2
+  - mpp_resource_group
   - DPM_backup-restore
   - MM_gppkg
   - MM_gprecoverseg
+  - DPM_backup_43_restore_5
 
 ## ======================================================================
 ## resource types
@@ -232,6 +236,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     regexp: windows-cl/greenplum-loaders-5.(.*)-WinXP-x86_32.msi
+
+- name: bin_gpdb4_centos6
+  type: s3
+  source:
+    access_key_id: {{gpdb4-bucket-access-key-id}}
+    bucket: {{gpdb4-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{gpdb4-bucket-secret-access-key}}
+    versioned_file: bin_gpdb_centos/bin_gpdb.tar.gz
 
 - name: installer_rhel6_gpdb_rc
   type: s3
@@ -672,6 +685,7 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
+      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_gporca_centos6
@@ -750,6 +764,33 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
+
+- name: mpp_resource_group
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_create_params
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    input_mapping:
+      gpdb_binary: bin_gpdb
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
+    image: centos-gpdb-dev-6
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
 - name: MU_check_centos
   plan:
@@ -871,6 +912,98 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+
+- name: DPM_backup_43_restore_5
+  plan:
+  - get: nightly-trigger
+    trigger: true
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+    - get: gpdb4_binary
+      resource: bin_gpdb4_centos6
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_create_params
+  - task: setup_gpdb4
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: "7"
+      inputs:
+      - name: terraform
+      - name: gpdb4_binary
+      - name: ccp_src
+      - name: gpdb_src
+      outputs:
+      - name: cluster_env_files
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -ex
+          source ccp_src/aws/generate_env_files.sh
+          ccp_src/aws/setup_ssh_to_cluster.sh
+          ccp_src/aws/preinstall_gpdb.sh
+          ccp_src/aws/install_gpdb.sh gpdb4_binary
+          ccp_src/aws/run_inspec.sh
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_backup_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
+    on_failure:
+      <<: *debug_sleep
+  - task: setup_gpdb5
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: "7"
+      inputs:
+      - name: terraform
+      - name: gpdb_binary
+      - name: ccp_src
+      - name: gpdb_src
+      - name: cluster_env_files
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -ex
+          ccp_src/aws/setup_ssh_to_cluster.sh
+          scp cluster_env_files/hostfile_all mdw:/home/gpadmin/hostfile_all
+          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; copy_backup_files"
+          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; destroy_gpdb"
+          ccp_src/aws/install_gpdb.sh gpdb_binary
+          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; restore_backup_files"
+    on_failure:
+      <<: *debug_sleep
+  - task: run_restore_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
@@ -1034,6 +1167,60 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
       image: centos-gpdb-dev-6
       timeout: 3h
+
+- name: cs_walrep_1
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_create_params
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: walrep_1
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+
+- name: cs_walrep_2
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_create_params
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: walrep_2
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
 - name: QP_memory-accounting
   plan:
@@ -1315,26 +1502,6 @@ jobs:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_HarmonizeDDBoost"
 
-- name: DPM_backup_43_restore_5
-  plan:
-  - get: nightly-trigger
-    trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore-43_to_5"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore-43_to_5"
-
 - name: MM_gpcheckcat
   plan:
   - aggregate: &post_packaging_gets_trigger_true
@@ -1476,24 +1643,6 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "cs-pg-two-phase"
-
-- name: cs-walrepl-multinode
-  plan:
-  - aggregate: *post_packaging_gets_trigger_true
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "cs-walrepl-multinode"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "cs-walrepl-multinode"
 
 - name: cs-filerep-schema-topology-crashrecov
   plan:
@@ -1646,6 +1795,7 @@ jobs:
     - icw_gporca_centos7
     - icw_gporca_sles11
     - icw_planner_ictcp_centos6
+    - mpp_resource_group
     - MU_check_centos
     - MM_analyzedb
     - MM_gpinitsystem
@@ -1656,6 +1806,8 @@ jobs:
     - MM_pt-rebuild
     - fts
     - storage
+    - cs_walrep_1
+    - cs_walrep_2
     - QP_memory-accounting
     - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
@@ -1672,7 +1824,6 @@ jobs:
     - DPM_gptransfer-43x-to-5x
     - DPM_gptransfer-5x-to-5x
     - cs-pg-two-phase
-    - cs-walrepl-multinode
     - cs-filerep-schema-topology-crashrecov
     - cs-filerep-end-to-end
     - cs-aoco-compression

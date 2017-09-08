@@ -364,6 +364,7 @@ ExecWorkFile_Rewind(ExecWorkFile *workfile)
 
 	long ret = 0;
 	int64 file_size = 0;
+	bfz_t *f = NULL;
 	switch(workfile->fileType)
 	{
 		case BUFFILE:
@@ -371,8 +372,22 @@ ExecWorkFile_Rewind(ExecWorkFile *workfile)
 			/* BufFileSeek returns 0 if everything went OK */
 			return (0 == ret);
 		case BFZ:
-			file_size = bfz_append_end((bfz_t *)workfile->file);
-			ExecWorkFile_AdjustBFZSize(workfile, file_size);
+			f = ((bfz_t *)workfile->file);
+			if (f->mode == BFZ_MODE_APPEND)
+			{
+				file_size = bfz_append_end((bfz_t *)workfile->file);
+				ExecWorkFile_AdjustBFZSize(workfile, file_size);
+			}
+			/*
+			 * For BFZ, the scan mode must be preceded by "BFZ_MODE_FREED"
+			 * so that SCAN can verify that the bfz buffer was freed. This
+			 * state is true when we were in append mode and we called bfz_append_end().
+			 * However, we may need to rewind multiple times (e.g., spill files for
+			 * rescannable hash join) after we finished appending. Therefore, to
+			 * satisfy the state change prerequisite, we set the mode to BFZ_MODE_FREED
+			 * regardless of bfz_append_end() call.
+			 */
+			f->mode = BFZ_MODE_FREED;
 			bfz_scan_begin((bfz_t *)workfile->file);
 			break;
 		default:

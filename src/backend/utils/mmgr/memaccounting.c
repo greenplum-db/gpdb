@@ -1074,6 +1074,12 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_BitmapTableScan";
 	case MEMORY_OWNER_TYPE_Exec_PartitionSelector:
 		return "X_PartitionSelector";
+	case MEMORY_OWNER_TYPE_Exec_RecursiveUnion:
+		return "X_RecursiveUnion";
+	case MEMORY_OWNER_TYPE_Exec_CteScan:
+		return "X_CteScan";
+	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
+		return "X_WorkTableScan";
 	default:
 		Assert(false);
 		break;

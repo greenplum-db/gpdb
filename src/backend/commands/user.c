@@ -41,30 +41,20 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/syscache.h"
 
 #include "executor/execdesc.h"
 #include "utils/resource_manager.h"
-#include "utils/syscache.h"
 
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 
 
-typedef struct genericPair
-{
-	char* key1;
-	char* val1;
-	char* key2;
-	char* val2;
-	
-} genericPair;
-
 typedef struct extAuthPair
 {
-	char* protocol;
-	char* type;
-
+	char	   *protocol;
+	char	   *type;
 } extAuthPair;
 
 extern bool Password_encryption;
@@ -76,8 +66,7 @@ static void AddRoleMems(const char *rolename, Oid roleid,
 static void DelRoleMems(const char *rolename, Oid roleid,
 			List *memberNames, List *memberIds,
 			bool admin_opt);
-static void TransformExttabAuthClause(DefElem *defel, 
-			extAuthPair *extauth);
+static extAuthPair *TransformExttabAuthClause(DefElem *defel);
 static void SetCreateExtTableForRole(List* allow, 
 			List* disallow, bool* createrextgpfd,
 			bool* createrexthttp, bool* createwextgpfd,
@@ -92,6 +81,7 @@ static void AddRoleDenials(const char *rolename, Oid roleid,
 			List *addintervals); 
 static void DelRoleDenials(const char *rolename, Oid roleid, 
 			List *dropintervals);
+
 
 /* Check if current user has createrole privileges */
 static bool
@@ -303,19 +293,19 @@ CreateRole(CreateRoleStmt *stmt)
 		}
 		else if (strcmp(defel->defname, "exttabauth") == 0)
 		{
-			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
-			
-			TransformExttabAuthClause(defel, extauth);
-			
+			extAuthPair *extauth;
+
+			extauth = TransformExttabAuthClause(defel);
+
 			/* now actually append our transformed key value pairs to the list */
 			exttabcreate = lappend(exttabcreate, extauth);			
 		}			  
 		else if (strcmp(defel->defname, "exttabnoauth") == 0)
 		{
-			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
-			
-			TransformExttabAuthClause(defel, extauth);
-			
+			extAuthPair *extauth;
+
+			extauth = TransformExttabAuthClause(defel);
+
 			/* now actually append our transformed key value pairs to the list */
 			exttabnocreate = lappend(exttabnocreate, extauth);
 		}
@@ -821,9 +811,9 @@ AlterRole(AlterRoleStmt *stmt)
 		}
 		else if (strcmp(defel->defname, "exttabauth") == 0)
 		{
-			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
+			extAuthPair *extauth;
 			
-			TransformExttabAuthClause(defel, extauth);
+			extauth = TransformExttabAuthClause(defel);
 			
 			/* now actually append our transformed key value pairs to the list */
 			exttabcreate = lappend(exttabcreate, extauth);	
@@ -832,9 +822,9 @@ AlterRole(AlterRoleStmt *stmt)
 		}			  
 		else if (strcmp(defel->defname, "exttabnoauth") == 0)
 		{
-			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
+			extAuthPair *extauth;
 			
-			TransformExttabAuthClause(defel, extauth);
+			extauth = TransformExttabAuthClause(defel);
 			
 			/* now actually append our transformed key value pairs to the list */
 			exttabnocreate = lappend(exttabnocreate, extauth);
@@ -2122,104 +2112,109 @@ static void CheckValueBelongsToKey(char *key, char *val, const char **keys, cons
  *   - 'readable' + ' gpfdist' if both type and protocol aren't defined.
  * 
  */
-static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
+static extAuthPair *
+TransformExttabAuthClause(DefElem *defel)
 {
-	ListCell   	*lc;
 	List	   	*l = (List *) defel->arg;
-	DefElem 	*d1 = NULL, 
-				*d2 = NULL;
-	genericPair *genpair = (genericPair *) palloc0 (4 * sizeof(char *));
-	
+	DefElem 	*d1,
+				*d2;
+	struct
+	{
+		char	   *key1;
+		char	   *val1;
+		char	   *key2;
+		char	   *val2;
+	} genpair;
+
 	const int	numkeys = 2;
 	const int	numvals = 6;
 	const char *keys[] = { "type", "protocol"};	 /* order matters for validation. don't change! */
 	const char *vals[] = { /* types     */ "readable", "writable", 
 						   /* protocols */ "gpfdist", "gpfdists" , "http", "gphdfs"};
+	extAuthPair *result;
 
 	if(list_length(l) > 2)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("invalid [NO]CREATEEXTTABLE specification. too many values")));				
 
-		
 	if(list_length(l) == 2)
 	{
 		/* both a protocol and type specification */
-		
-		lc = list_head(l); 
-		d1 = (DefElem *) lfirst(lc);
-		genpair->key1 = pstrdup(d1->defname);
-		genpair->val1 = pstrdup(strVal(d1->arg));
-		
-		lc = lnext(lc);
-		d2 = (DefElem *) lfirst(lc);
-		genpair->key2 = pstrdup(d2->defname);
-		genpair->val2 = pstrdup(strVal(d2->arg));
+
+		d1 = (DefElem *) linitial(l);
+		genpair.key1 = pstrdup(d1->defname);
+		genpair.val1 = pstrdup(strVal(d1->arg));
+
+		d2 = (DefElem *) lsecond(l);
+		genpair.key2 = pstrdup(d2->defname);
+		genpair.val2 = pstrdup(strVal(d2->arg));
 	}
 	else if(list_length(l) == 1)
 	{
 		/* either a protocol or type specification */
-		
-		lc = list_head(l); 
-		d1 = (DefElem *) lfirst(lc);
-		genpair->key1 = pstrdup(d1->defname);
-		genpair->val1 = pstrdup(strVal(d1->arg));
-		
-		if(strcasecmp(genpair->key1, "type") == 0)
+
+		d1 = (DefElem *) linitial(l);
+		genpair.key1 = pstrdup(d1->defname);
+		genpair.val1 = pstrdup(strVal(d1->arg));
+
+		if(strcasecmp(genpair.key1, "type") == 0)
 		{
 			/* default value for missing protocol */
-			genpair->key2 = pstrdup("protocol");
-			genpair->val2 = pstrdup("gpfdist");
+			genpair.key2 = pstrdup("protocol");
+			genpair.val2 = pstrdup("gpfdist");
 		}
 		else
 		{
 			/* default value for missing type */
-			genpair->key2 = pstrdup("type");
-			genpair->val2 = pstrdup("readable");
+			genpair.key2 = pstrdup("type");
+			genpair.val2 = pstrdup("readable");
 		}
 	}
 	else
 	{
 		/* none specified. use global default */
-		
-		genpair->key1 = pstrdup("protocol");
-		genpair->val1 = pstrdup("gpfdist");
-		genpair->key2 = pstrdup("type");
-		genpair->val2 = pstrdup("readable");
-	}
-	
-	/* check all keys and values are legal */
-	CheckKeywordIsValid(genpair->key1, keys, numkeys);
-	CheckKeywordIsValid(genpair->key2, keys, numkeys);
-	CheckKeywordIsValid(genpair->val1, vals, numvals);
-	CheckKeywordIsValid(genpair->val2, vals, numvals);
-		
-	/* check all values are of the proper key */
-	CheckValueBelongsToKey(genpair->key1, genpair->val1, keys, vals);
-	CheckValueBelongsToKey(genpair->key2, genpair->val2, keys, vals);
 
-	if(strcasecmp(genpair->key1, genpair->key2) == 0)
+		genpair.key1 = pstrdup("protocol");
+		genpair.val1 = pstrdup("gpfdist");
+		genpair.key2 = pstrdup("type");
+		genpair.val2 = pstrdup("readable");
+	}
+
+	/* check all keys and values are legal */
+	CheckKeywordIsValid(genpair.key1, keys, numkeys);
+	CheckKeywordIsValid(genpair.key2, keys, numkeys);
+	CheckKeywordIsValid(genpair.val1, vals, numvals);
+	CheckKeywordIsValid(genpair.val2, vals, numvals);
+
+	/* check all values are of the proper key */
+	CheckValueBelongsToKey(genpair.key1, genpair.val1, keys, vals);
+	CheckValueBelongsToKey(genpair.key2, genpair.val2, keys, vals);
+
+	if (strcasecmp(genpair.key1, genpair.key2) == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("redundant option for \"%s\"", genpair->key1)));
-	
-	/* now set values in extauth, which is the result returned */
-	if(strcasecmp(genpair->key1, "protocol") == 0)
+				 errmsg("redundant option for \"%s\"", genpair.key1)));
+
+	/* now create the result struct */
+	result = (extAuthPair *) palloc(sizeof(extAuthPair));
+	if (strcasecmp(genpair.key1, "protocol") == 0)
 	{
-		extauth->protocol = pstrdup(genpair->val1);
-		extauth->type = pstrdup(genpair->val2);
+		result->protocol = pstrdup(genpair.val1);
+		result->type = pstrdup(genpair.val2);
 	}
 	else
 	{
-		extauth->protocol = pstrdup(genpair->val2);
-		extauth->type = pstrdup(genpair->val1);
+		result->protocol = pstrdup(genpair.val2);
+		result->type = pstrdup(genpair.val1);
 	}
-	
-	pfree(genpair->key1);
-	pfree(genpair->key2);
-	pfree(genpair->val1);
-	pfree(genpair->val2);
-	pfree(genpair);
+
+	pfree(genpair.key1);
+	pfree(genpair.key2);
+	pfree(genpair.val1);
+	pfree(genpair.val2);
+
+	return result;
 }
 
 /*

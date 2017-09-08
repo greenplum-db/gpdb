@@ -8,7 +8,7 @@
       procedures), both built-in functions and those defined by <codeph>CREATE FUNCTION</codeph>.
       The table contains data for aggregate and window functions as well as plain functions. If
         <codeph>proisagg</codeph> is true, there should be a matching row in
-        <codeph>pg_aggregate</codeph>. If <codeph>proiswin</codeph> is true, there should be a
+        <codeph>pg_aggregate</codeph>. If <codeph>proiswindow</codeph> is true, there should be a
       matching row in <codeph>pg_window</codeph>.</p>
     <p>For compiled functions, both built-in and dynamically loaded, <codeph>prosrc</codeph>
       contains the function's C-language name (link symbol). For all other currently-known language
@@ -100,6 +100,15 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>proiswindow</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Function is neither an aggregate nor a scalar function, but a pure
+              window function.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>prosecdef</codeph>
             </entry>
             <entry colname="col2">boolean</entry>
@@ -162,15 +171,6 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">Data type of the return value.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>proiswin</codeph>
-            </entry>
-            <entry colname="col2">boolean</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">Function is neither an aggregate nor a scalar function, but a pure
-              window function.</entry>
           </row>
           <row>
             <entry colname="col1">

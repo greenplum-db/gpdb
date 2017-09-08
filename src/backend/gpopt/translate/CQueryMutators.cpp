@@ -1280,7 +1280,7 @@ CQueryMutators::PqueryNormalizeHaving
 		pqueryNewSubquery->targetList = NIL;
 
 		pqueryNewSubquery->hasAggs = false;
-		pqueryNewSubquery->hasWindFuncs = false;
+		pqueryNewSubquery->hasWindowFuncs = false;
 		pqueryNewSubquery->hasSubLinks = false;
 
 		ListCell *plc = NULL;
@@ -1334,13 +1334,9 @@ CQueryMutators::PqueryNormalize
 	GPOS_ASSERT(NULL == pqueryEliminateDistinct->distinctClause);
 	gpdb::GPDBFree(pqueryResolveJoinVarReferences);
 
-	// fix window frame edge boundary
-	Query *pqueryFixedWindowFrameEdge = CQueryMutators::PqueryFixWindowFrameEdgeBoundary(pqueryEliminateDistinct);
-	gpdb::GPDBFree(pqueryEliminateDistinct);
-
 	// normalize window operator's project list
-	Query *pqueryWindowPlNormalized = CQueryMutators::PqueryNormalizeWindowPrL(pmp, pmda, pqueryFixedWindowFrameEdge);
-	gpdb::GPDBFree(pqueryFixedWindowFrameEdge);
+	Query *pqueryWindowPlNormalized = CQueryMutators::PqueryNormalizeWindowPrL(pmp, pmda, pqueryEliminateDistinct);
+	gpdb::GPDBFree(pqueryEliminateDistinct);
 
 	// pull-up having quals into a select
 	Query *pqueryHavingNormalized = CQueryMutators::PqueryNormalizeHaving(pmp, pmda, pqueryWindowPlNormalized);
@@ -1595,7 +1591,7 @@ CQueryMutators::FNeedsWindowPrLNormalization
 	const Query *pquery
 	)
 {
-	if (!pquery->hasWindFuncs)
+	if (!pquery->hasWindowFuncs)
 	{
 		return false;
 	}
@@ -1614,60 +1610,6 @@ CQueryMutators::FNeedsWindowPrLNormalization
 	}
 
 	return false;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CQueryMutators::PqueryFixWindowFrameEdgeBoundary
-//
-//	@doc:
-//		Fix window frame edge boundary when its value is defined by a subquery
-//---------------------------------------------------------------------------
-Query *
-CQueryMutators::PqueryFixWindowFrameEdgeBoundary
-	(
-	const Query *pquery
-	)
-{
-	Query *pqueryNew = (Query *) gpdb::PvCopyObject(const_cast<Query*>(pquery));
-
-	List *plWindowClause = pqueryNew->windowClause;
-	ListCell *plcWindowCl = NULL;
-	ForEach (plcWindowCl, plWindowClause)
-	{
-		WindowSpec *pwindowspec = (WindowSpec*) lfirst(plcWindowCl);
-		if (NULL != pwindowspec->frame)
-		{
-			WindowFrame *pwindowframe = pwindowspec->frame;
-			if (NULL != pwindowframe->lead->val && IsA(pwindowframe->lead->val, SubLink))
-			{
-				if (WINDOW_BOUND_PRECEDING == pwindowframe->lead->kind)
-				{
-					pwindowframe->lead->kind = WINDOW_DELAYED_BOUND_PRECEDING;
-				}
-				else
-				{
-					GPOS_ASSERT(WINDOW_BOUND_FOLLOWING == pwindowframe->lead->kind);
-					pwindowframe->lead->kind = WINDOW_DELAYED_BOUND_FOLLOWING;
-				}
-			}
-
-			if (NULL != pwindowframe->trail->val && IsA(pwindowframe->trail->val, SubLink))
-			{
-				if (WINDOW_BOUND_PRECEDING == pwindowframe->trail->kind)
-				{
-					pwindowframe->trail->kind = WINDOW_DELAYED_BOUND_PRECEDING;
-				}
-				else
-				{
-					GPOS_ASSERT(WINDOW_BOUND_FOLLOWING == pwindowframe->trail->kind);
-					pwindowframe->trail->kind = WINDOW_DELAYED_BOUND_FOLLOWING;
-				}
-			}
-		}
-	}
-
-	return pqueryNew;
 }
 
 //---------------------------------------------------------------------------
@@ -1759,7 +1701,7 @@ CQueryMutators::PqueryNormalizeWindowPrL
 
 	GPOS_ASSERT(gpdb::UlListLength(pqueryNew->targetList) <= gpdb::UlListLength(pquery->targetList));
 
-	pqueryNew->hasWindFuncs = false;
+	pqueryNew->hasWindowFuncs = false;
 	ReassignSortClause(pqueryNew, pqueryDrdTbl);
 
 	return pqueryNew;

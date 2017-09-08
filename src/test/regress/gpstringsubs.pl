@@ -14,6 +14,10 @@ use File::Spec;
 use Env;
 use Data::Dumper;
 
+use FindBin;
+use lib "$FindBin::Bin";
+use GPTest qw(print_version);
+
 =head1 NAME
 
 B<gpstringsubs.pl> - GreenPlum string substitution 
@@ -112,7 +116,8 @@ BEGIN {
 
     GetOptions(
                'help|?' => \$help, man => \$man,
-               "connect=s" => \$conn
+               "connect=s" => \$conn,
+               'version|v' => \&print_version
                )
         or pod2usage(2);
 

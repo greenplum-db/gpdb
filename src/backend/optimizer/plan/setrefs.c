@@ -449,6 +449,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		case T_AppendOnlyScan: /* Rely on structure equivalence */
 		case T_AOCSScan: /* Rely on structure equivalence */
 		case T_ExternalScan: /* Rely on structure equivalence */
+		case T_WorkTableScan:
 			{
 				Scan    *splan = (Scan *) plan;
 
@@ -461,7 +462,7 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 #ifdef USE_ASSERT_CHECKING
 				Assert(splan->scanrelid <= list_length(glob->finalrtable) && "Scan node's relid is outside the finalrtable!");
 				RangeTblEntry *rte = rt_fetch(splan->scanrelid, glob->finalrtable);
-				Assert(rte->rtekind == RTE_RELATION && "Scan plan should refer to a scan relation");
+				Assert((rte->rtekind == RTE_RELATION || rte->rtekind == RTE_CTE) && "Scan plan should refer to a scan relation");
 #endif
 
 				splan->plan.targetlist =
@@ -674,17 +675,6 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 					fix_scan_list(glob, splan->scan.plan.qual, rtoffset);
 			}
 			break;
-		case T_WorkTableScan:
-			{
-				WorkTableScan *splan = (WorkTableScan *) plan;
-
-				splan->scan.scanrelid += rtoffset;
-				splan->scan.plan.targetlist =
-					fix_scan_list(glob, splan->scan.plan.targetlist, rtoffset);
-				splan->scan.plan.qual =
-					fix_scan_list(glob, splan->scan.plan.qual, rtoffset);
-			}
-			break;
 		case T_NestLoop:
 		case T_MergeJoin:
 		case T_HashJoin:
@@ -826,23 +816,12 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 
 					if (frame != NULL)
 					{
-						/*
-						 * Fix reference of frame edge expression *only*
-						 * when the edge is DELAYED type. Otherwise it will have
-						 * potential risk that the edge expression is converted
-						 * to Var (see fix_upper_expr_mutator for reason), which
-						 * cannot be evaluated in the executor's init stage.
-						 * It is ok that DELAYED frame edges have Var, since
-						 * they are evaluated at the executor's run time stage.
-						 */
-						if (window_edge_is_delayed(frame->trail))
-							frame->trail->val =
-								fix_upper_expr(glob, frame->trail->val,
-											   subplan_itlist, rtoffset);
-						if (window_edge_is_delayed(frame->lead))
-							frame->lead->val =
-								fix_upper_expr(glob, frame->lead->val,
-											   subplan_itlist, rtoffset);
+						frame->trail->val =
+							fix_upper_expr(glob, frame->trail->val,
+										   subplan_itlist, rtoffset);
+						frame->lead->val =
+							fix_upper_expr(glob, frame->lead->val,
+										   subplan_itlist, rtoffset);
 					}
 				}
 				pfree(subplan_itlist);
@@ -1076,9 +1055,6 @@ trivial_subqueryscan(SubqueryScan *plan)
 	if (list_length(plan->scan.plan.targetlist) !=
 		list_length(plan->subplan->targetlist))
 		return false;			/* tlists not same length */
-
-	if ( IsA(plan->subplan, Window) )
-		return false;
 
 	attrno = 1;
 	forboth(lp, plan->scan.plan.targetlist, lc, plan->subplan->targetlist)

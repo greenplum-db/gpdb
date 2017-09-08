@@ -164,7 +164,7 @@ select 1 union (select distinct 10 from (select 1, 3.0 union select distinct 2, 
 (2 rows)
 
 select 1 union (select distinct '10' from (select 1, 3.0 union select distinct 2, null::integer) as foo);
-ERROR:  UNION/INTERSECT/EXCEPT could not convert type text to integer
+ERROR:  UNION types integer and text cannot be matched
 select distinct a from (select 'A' union select 'B') as foo(a);
  a 
 ---

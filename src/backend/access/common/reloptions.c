@@ -873,7 +873,7 @@ parseRelOptions(Datum options, int numkeywords, const char *const * keywords,
 		return;
 
 	array = DatumGetArrayTypeP(options);
-	isArrayToBeFreed = (array != DatumGetPointer(options));
+	isArrayToBeFreed = (array != (ArrayType *)DatumGetPointer(options));
 
 	Assert(ARR_ELEMTYPE(array) == TEXTOID);
 

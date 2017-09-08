@@ -11,22 +11,5 @@
          comma separated values (<codeph>CSV</codeph>) format. External data must be formatted
          correctly to be read by Greenplum Database. This topic explains the format of
          data files expected by Greenplum Database.</p>
-      <ul otherprops="op-print">
-         <li id="du174849">
-            <xref href="g-formatting-rows.xml#topic96"/>
-         </li>
-         <li id="du174853">
-            <xref href="g-formatting-columns.xml#topic97"/>
-         </li>
-         <li id="du174857">
-            <xref href="g-representing-null-values.xml#topic98"/>
-         </li>
-         <li id="du174861">
-            <xref href="g-escaping.xml#topic99"/>
-         </li>
-         <li id="du174865">
-            <xref href="g-character-encoding.xml#topic102"/>
-         </li>
-      </ul>
    </body>
 </topic>

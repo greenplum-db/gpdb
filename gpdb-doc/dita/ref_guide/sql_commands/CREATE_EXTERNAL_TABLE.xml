@@ -305,14 +305,14 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
               <codeph>s3</codeph> protocol selects those all those files that have the specified S3
             file prefix.</pd>
           <pd>
-            <note conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3-prefix-note"
+            <note conref="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3-prefix-note"
             />
           </pd>
           <pd>The <codeph>config</codeph> parameter in the <codeph>LOCATION</codeph> clause
             specifies the location of the required <codeph>s3</codeph> protocol configuration file
             that contains Amazon Web Services (AWS) connection credentials and communication
             parameters. For information about <codeph>s3</codeph> configuration file parameters, see
-              <xref href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_config_file"
+              <xref href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3_config_file"
             />.</pd>
           <pd>This is an example read-only external table definition with the <codeph>s3</codeph>
             protocol.<codeblock>CREATE READABLE EXTERNAL TABLE S3TBL (date text, time text, amt int)
@@ -355,8 +355,8 @@ CREATE WRITABLE EXTERNAL WEB TABLE <varname>table_name</varname>
             endpoint.<codeblock>LOCATION ('s3://s3-us-west-2.amazonaws.com/s3test.example.com/dataset1/normal/ <b>region=us-west-2</b>
       config=/home/gpadmin/aws_s3/s3.conf')</codeblock></pd>
           <pd>For information about the <codeph>s3</codeph> protocol, see <xref
-              href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr">s3://
-              Protocol</xref> in the <cite>Greenplum Database Administrator Guide</cite>.</pd>
+              href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr">s3:// Protocol</xref>
+            in the <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>
         <plentry>
           <pt>ON MASTER</pt>
@@ -865,13 +865,13 @@ customer_id=123;</codeblock>
         Amazon Simple Storage Service (Amazon S3) bucket. The protocol creates or downloads all
         files specified by the <codeph>LOCATION</codeph> clause. Each Greenplum Database segment
         instance downloads or uploads one file at a time using several threads. See <xref
-          href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/> in the <cite>Greenplum
+          href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/> in the <cite>Greenplum
           Database Administrator Guide</cite>. </p>
     </section>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/section_tsq_n3t_3x"/>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
-    <section conref="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr/s3_config_file"/>
+    <section conref="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
+    <section conref="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/section_tsq_n3t_3x"/>
+    <section conref="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/section_stk_c2r_kx"/>
+    <section conref="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3_config_file"/>
     <section id="section6">
       <title>Compatibility</title>
       <p><codeph>CREATE EXTERNAL TABLE</codeph> is a Greenplum Database extension. The SQL standard

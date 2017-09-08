@@ -129,7 +129,7 @@ static Node *makeXmlExpr(XmlExprOp op, char *name, List *named_args,
 						 List *args, int location);
 static List *mergeTableFuncParameters(List *func_args, List *columns);
 static TypeName *TableFuncTypeName(List *columns);
-static void setWindowExclude(WindowFrame *wframe, WindowExclusion exclude);
+static void checkWindowExclude(void);
 static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %}
@@ -12139,7 +12139,6 @@ window_frame_clause: window_frame_units window_frame_extent
 				{
 					WindowFrame *n = makeNode(WindowFrame);
 					n->is_rows = $1;
-					setWindowExclude(n, $3);
 
 					if (IsA($2, List))
 					{
@@ -12236,11 +12235,11 @@ window_frame_following: a_expr FOLLOWING
 				}
 		;
 
-window_frame_exclusion: EXCLUDE CURRENT_P ROW { $$ = WINDOW_EXCLUSION_CUR_ROW; }
-			| EXCLUDE GROUP_P { $$ = WINDOW_EXCLUSION_GROUP; }
-			| EXCLUDE TIES  { $$ = WINDOW_EXCLUSION_TIES; }
-			| EXCLUDE NO OTHERS { $$ = WINDOW_EXCLUSION_NO_OTHERS; }
-			| /*EMPTY*/ { $$ = WINDOW_EXCLUSION_NULL; }
+window_frame_exclusion: EXCLUDE CURRENT_P ROW { checkWindowExclude(); $$ = 0; }
+			| EXCLUDE GROUP_P { checkWindowExclude(); $$ = 0; }
+			| EXCLUDE TIES { checkWindowExclude(); $$ = 0; }
+			| EXCLUDE NO OTHERS { checkWindowExclude(); $$ = 0; }
+			| /*EMPTY*/ { $$ = 0; }
 		;
 
 
@@ -14336,42 +14335,20 @@ TableFuncTypeName(List *columns)
 }
 
 static void 
-setWindowExclude(WindowFrame *wframe, WindowExclusion exclude)
+checkWindowExclude(void)
 {
-	switch (exclude)
-	{
-		case WINDOW_EXCLUSION_NULL:
-			wframe->exclude = exclude;
-			return;
+	/*
+	 * because the syntax has historically existed without doing anything
+	 * we have chosen to add a guc to allow simply ignoring the exclude clause
+	 * rather than raising an error.
+	 */
+	if (gp_ignore_window_exclude)
+		return;
 
-		case WINDOW_EXCLUSION_CUR_ROW:	/* exclude current row */
-		case WINDOW_EXCLUSION_GROUP:	/* exclude rows matching us */
-		case WINDOW_EXCLUSION_TIES:		/* exclude rows matching us, and current row */
-		case WINDOW_EXCLUSION_NO_OTHERS: /* don't exclude */
-
-			/*
-			 * because the syntax has historically existed without doing anything
-			 * we have chosen to add a guc to allow simply ignoring the exclude clause
-			 * rather than raising an error.
-			 */
-			if (gp_ignore_window_exclude)
-			{
-				wframe->exclude = WINDOW_EXCLUSION_NULL;
-				return;
-			}
-
-			/* MPP-13628 */
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("window EXCLUDE clause not yet implemented")));
-			break;
-
-		default:
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("invalid window EXCLUDE clause")));
-			break;
-	}
+	/* MPP-13628 */
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("window EXCLUDE clause not yet implemented")));
 }
 
 /*

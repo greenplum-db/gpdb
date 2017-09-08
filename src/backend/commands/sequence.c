@@ -17,6 +17,7 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "access/bufmask.h"
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/dependency.h"
@@ -2007,3 +2008,14 @@ cdb_sequence_nextval_server(Oid    tablespaceid,
     /* Cleanup. */
     cdb_sequence_relation_term(seqrel);
 }                               /* cdb_sequence_server_nextval */
+
+/*
+ * Mask a Sequence page before performing consistency checks on it.
+ */
+void
+seq_mask(char *page, BlockNumber blkno)
+{
+	mask_page_lsn_and_checksum(page);
+
+	mask_unused_space(page);
+}

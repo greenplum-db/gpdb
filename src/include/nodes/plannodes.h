@@ -71,6 +71,7 @@ typedef struct PlannedStmt
 	bool		canSetTag;		/* do I set the command result tag? */
 
 	bool		transientPlan;	/* redo plan when TransactionXmin changes? */
+	bool		oneoffPlan;		/* redo plan on every execution? */
 
 	struct Plan *planTree;		/* tree of Plan nodes */
 

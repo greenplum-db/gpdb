@@ -238,18 +238,20 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		queryDesc->operation == CMD_UPDATE ||
 		queryDesc->operation == CMD_DELETE)
 	{
-		MemoryContext oldContext;
-		List *cursors;
+		List	   *cursors;
 
 		/*
-		 * memory context of plan tree should not change
+		 * Need to be careful not to modify the original PlannedStmt, because
+		 * it might be a cached plan. So make a copy. A shallow copy of the
+		 * fields we don't modify should be enough.
 		 */
-		MemoryContext mc = GetMemoryChunkContext(stmt->planTree);
-		oldContext = MemoryContextSwitchTo(mc);
+		stmt = palloc(sizeof(PlannedStmt));
+		memcpy(stmt, queryDesc->plannedstmt, sizeof(PlannedStmt));
+		stmt->subplans = list_copy(stmt->subplans);
 
 		stmt->planTree = (Plan *) exec_make_plan_constant(stmt, is_SRI, &cursors);
+		queryDesc->plannedstmt = stmt;
 
-		MemoryContextSwitchTo(oldContext);
 		queryDesc->ddesc->cursorPositions = (List *) copyObject(cursors);
 	}
 

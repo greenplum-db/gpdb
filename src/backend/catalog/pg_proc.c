@@ -307,7 +307,7 @@ ProcedureCreate(const char *procedureName,
 	values[Anum_pg_proc_prorows - 1] = Float4GetDatum(prorows);
 	values[Anum_pg_proc_provariadic - 1] = ObjectIdGetDatum(variadicType);
 	values[Anum_pg_proc_proisagg - 1] = BoolGetDatum(isAgg);
-	values[Anum_pg_proc_proiswin - 1] = BoolGetDatum(isWin);
+	values[Anum_pg_proc_proiswindow - 1] = BoolGetDatum(isWin);
 	values[Anum_pg_proc_prosecdef - 1] = BoolGetDatum(security_definer);
 	values[Anum_pg_proc_proisstrict - 1] = BoolGetDatum(isStrict);
 	values[Anum_pg_proc_proretset - 1] = BoolGetDatum(returnsSet);
@@ -518,9 +518,9 @@ ProcedureCreate(const char *procedureName,
 						 errmsg("function \"%s\" is not an aggregate",
 								procedureName)));
 		}
-		if (oldproc->proiswin != isWin)
+		if (oldproc->proiswindow != isWin)
 		{
-			if (oldproc->proiswin)
+			if (oldproc->proiswindow)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 						 errmsg("function \"%s\" is a window function",

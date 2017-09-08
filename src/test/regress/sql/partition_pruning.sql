@@ -106,6 +106,24 @@ INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
 
 ANALYZE pt_lt_tab_df;
 
+--
+-- Test that stable functions are evaluated when constructing the plan. This
+-- differs from PostgreSQL. In PostgreSQL, PREPARE/EXECUTE creates a reusable
+-- plan, while in GPDB, we re-plan the query on every execution, so that the
+-- stable function is executed during planning, and we can therefore do
+-- partition pruning based on its result.
+--
+create or replace function stabletestfunc() returns integer as $$
+begin
+  return 10;
+end;
+$$ language plpgsql stable;
+
+PREPARE prep_prune AS select * from pt_lt_tab WHERE col2 = stabletestfunc();
+
+-- The plan should only scan one partition, where col2 = 10.
+EXPLAIN EXECUTE prep_prune;
+
 
 -- @description B-tree single index key = non-partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col1);

@@ -37,8 +37,6 @@
 #include "cdb/cdbvars.h"
 #include "postmaster/backoff.h"
 
-extern char *savedSeqServerHost;
-extern int savedSeqServerPort;
 
 /*
  * PerformCursorOpen
@@ -169,8 +167,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	/*
 	 * Start execution, inserting parameters if any.
 	 */
-	PortalStart(portal, params, ActiveSnapshot,
-				savedSeqServerHost, savedSeqServerPort, NULL);
+	PortalStart(portal, params, ActiveSnapshot, NULL);
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 

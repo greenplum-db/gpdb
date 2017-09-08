@@ -1759,19 +1759,20 @@ static void
 checkPgDir(const char *dir)
 {
 	struct stat st;
-	char buf[strlen(DataDir) + strlen(dir) + 32];
+	/*
+	 * DataDir is known to be smaller than MAXPGPATH, and 'dir' argument is always
+	 * a short constant.
+	 */
+	char		buf[MAXPGPATH + MAXPGPATH];
 
-	snprintf(buf, ARRAY_SIZE(buf), "%s%s", DataDir, dir);
-	buf[ARRAY_SIZE(buf) - 1] = '\0';
+	snprintf(buf, sizeof(buf), "%s%s", DataDir, dir);
 
 	if (stat(buf, &st) != 0)
 	{
 		/* check if pg_log is there */
-		snprintf(buf, ARRAY_SIZE(buf), "%s%s", DataDir, "/pg_log");
+		snprintf(buf, sizeof(buf), "%s%s", DataDir, "/pg_log");
 		if (stat(buf, &st) == 0)
-		{
 			elog(LOG, "System file or directory missing (%s), shutting down segment", dir);
-		}
 
 		/* quit all processes and exit */
 		pmdie(SIGQUIT);
@@ -1781,32 +1782,29 @@ checkPgDir(const char *dir)
 /*
  * check if file or directory under current transaction filespace exists and is accessible
  */
-static void checkPgDir2(const char *dir)
+static void
+checkPgDir2(const char *dir)
 {
 	Assert(DataDir);
 
 	struct stat st;
-	char buf[MAXPGPATH];
-	char *path = makeRelativeToTxnFilespace((char*)dir);
+	char	   *path = makeRelativeToTxnFilespace((char*)dir);
 
-	snprintf(buf, MAXPGPATH, "%s", path);
-	buf[ARRAY_SIZE(buf) - 1] = '\0';
-
-	if (stat(buf, &st) != 0)
+	if (stat(path, &st) != 0)
 	{
 		/* check if pg_log is there */
-		snprintf(buf, ARRAY_SIZE(buf), "%s%s", DataDir, "/pg_log");
+		char		buf[MAXPGPATH + MAXPGPATH];
+
+		snprintf(buf, sizeof(buf), "%s%s", DataDir, "/pg_log");
 		if (stat(buf, &st) == 0)
-		{
 			elog(LOG, "System file or directory missing (%s), shutting down segment", path);
-		}
 
 		pfree(path);
 		/* quit all processes and exit */
 		pmdie(SIGQUIT);
 		return;
 	}
-	
+
 	pfree(path);
 }
 

@@ -423,6 +423,13 @@ select sum(z) over (partition by x) as sumx, sum(z) over (partition by y) as sum
 
 drop table test1;
 
+-- This failed at one point because of an over-zealous syntax check, with
+-- "window functions not allowed in WHERE clause" error.
+select sum(g) from generate_series(1, 5) g
+where g in (
+  select rank() over (order by x) from generate_series(1,5) x
+);
+
 
 -- CLEANUP
 -- start_ignore

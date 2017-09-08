@@ -148,7 +148,6 @@ typedef enum TBlockState
  */
 typedef struct TransactionStateData
 {
-	DistributedTransactionId distribXid;	/* My distributed transaction id, or Invalid if none. */
 	TransactionId transactionId;	/* my XID, or Invalid if none */
 	SubTransactionId subTransactionId;	/* my subxact ID */
 	char	   *name;			/* savepoint name, if any */
@@ -183,7 +182,6 @@ static TransactionState previousFastLink;
  * transaction at all, or when in a top-level transaction.
  */
 static TransactionStateData TopTransactionStateData = {
-	0,							/* distributed transaction id */
 	0,							/* transaction id */
 	0,							/* subtransaction id */
 	NULL,						/* savepoint name */
@@ -207,6 +205,9 @@ static TransactionStateData TopTransactionStateData = {
 };
 
 static TransactionState CurrentTransactionState = &TopTransactionStateData;
+
+/* distributed transaction id of current transaction, if any. */
+static DistributedTransactionId currentDistribXid;
 
 /*
  * The subtransaction ID and command ID assignment counters are global
@@ -285,6 +286,7 @@ File subxip_file = 0;
 
 /* local function prototypes */
 static void AssignTransactionId(TransactionState s);
+static void AbortTransaction(void);
 static void AtAbort_Memory(void);
 static void AtCleanup_Memory(void);
 static void AtAbort_ResourceOwner(void);
@@ -299,7 +301,9 @@ static void CallSubXactCallbacks(SubXactEvent event,
 					 SubTransactionId mySubid,
 					 SubTransactionId parentSubid);
 static void CleanupTransaction(void);
+static void CommitTransaction(void);
 static TransactionId RecordTransactionAbort(bool isSubXact);
+static void StartTransaction(void);
 
 static void RecordSubTransactionCommit(void);
 static void StartSubTransaction(void);
@@ -325,14 +329,6 @@ static void DispatchRollbackToSavepoint(char *name);
 static bool IsCurrentTransactionIdForReader(TransactionId xid);
 
 extern void FtsCondSetTxnReadOnly(bool *);
-
-/*
- * Make the following three functions external because old dtrace
- * cannot reference static symbol.
- */
-extern void StartTransaction(void);
-extern void CommitTransaction(void);
-extern void AbortTransaction(void);
 
 char *
 XactInfoKind_Name(const XactInfoKind		kind)
@@ -415,7 +411,7 @@ GetAllTransactionXids(
 {
 	TransactionState s = CurrentTransactionState;
 
-	*distribXid = s->distribXid;
+	*distribXid = currentDistribXid;
 	*localXid = s->transactionId;
 	*subXid = s->subTransactionId;
 }
@@ -2225,7 +2221,7 @@ SetSharedTransactionId_reader(TransactionId xid, CommandId cid)
 /*
  *	StartTransaction
  */
-void
+static void
 StartTransaction(void)
 {
 	TransactionState s;
@@ -2235,6 +2231,18 @@ StartTransaction(void)
 	{
 		SIMPLE_FAULT_INJECTOR(TransactionStartUnderEntryDbSingleton);
 	}
+
+	/*
+	 * Acquire a resource group slot.
+	 *
+	 * AssignResGroupOnMaster() might throw error, so call it before touch
+	 * transaction state.
+	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned,
+	 * this slot will be release when transaction is committed or abortted,
+	 * so don't error out before transaction state is set to TRANS_START.
+	 */
+	if (ShouldAssignResGroupOnMaster())
+		AssignResGroupOnMaster();
 
 	/*
 	 * Let's just make sure the state stack is empty
@@ -2248,11 +2256,6 @@ StartTransaction(void)
 	if (s->state != TRANS_DEFAULT)
 		elog(WARNING, "StartTransaction while in %s state",
 			 TransStateAsString(s->state));
-
-	/* Acquire a resource group slot at the beginning of a transaction */
-	if (ShouldAssignResGroupOnMaster())
-		AssignResGroupOnMaster();
-
 	/*
 	 * set the current transaction state information appropriately during
 	 * start processing
@@ -2322,7 +2325,7 @@ StartTransaction(void)
 			 * distributed transaction to a local transaction id for the
 			 * master database.
 			 */
-			createDtx(&s->distribXid);
+			createDtx(&currentDistribXid);
 
 			if (SharedLocalSnapshotSlot != NULL)
 			{
@@ -2373,7 +2376,7 @@ StartTransaction(void)
 			if (DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
 				DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
 			{
-				s->distribXid = QEDtxContextInfo.distributedXid;
+				currentDistribXid = QEDtxContextInfo.distributedXid;
 
 				Assert(QEDtxContextInfo.distributedTimeStamp != 0);
 				Assert(QEDtxContextInfo.distributedXid != InvalidDistributedTransactionId);
@@ -2419,7 +2422,7 @@ StartTransaction(void)
 			 * MPP: we're a QE Reader.
 			 */
 			Assert (SharedLocalSnapshotSlot != NULL);
-			s->distribXid = QEDtxContextInfo.distributedXid;
+			currentDistribXid = QEDtxContextInfo.distributedXid;
 
 			ereport((Debug_print_full_dtm ? LOG : DEBUG5),
 					(errmsg("qExec reader: distributedXid %d currcid %d gxid = %u DtxContext '%s' sharedsnapshots: %s",
@@ -2522,7 +2525,7 @@ StartTransaction(void)
  *
  * NB: if you change this routine, better look at PrepareTransaction too!
  */
-void
+static void
 CommitTransaction(void)
 {
 	MIRRORED_LOCK_DECLARE;
@@ -2817,7 +2820,7 @@ CommitTransaction(void)
 		LocalDistribXactCache_ShowStats("CommitTransaction");
 	}
 
-	s->distribXid = InvalidDistributedTransactionId;
+	currentDistribXid = InvalidDistributedTransactionId;
 	s->transactionId = InvalidTransactionId;
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
@@ -3108,7 +3111,7 @@ PrepareTransaction(void)
 		LocalDistribXactCache_ShowStats("PrepareTransaction");
 	}
 
-	s->distribXid = InvalidDistributedTransactionId;
+	currentDistribXid = InvalidDistributedTransactionId;
 	s->transactionId = InvalidTransactionId;
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
@@ -3131,7 +3134,7 @@ PrepareTransaction(void)
 /*
  *	AbortTransaction
  */
-void
+static void
 AbortTransaction(void)
 {
 	MIRRORED_LOCK_DECLARE;
@@ -3373,7 +3376,7 @@ CleanupTransaction(void)
 
 	AtCleanup_Memory();			/* and transaction memory */
 
-	s->distribXid = InvalidDistributedTransactionId;
+	currentDistribXid = InvalidDistributedTransactionId;
 	s->transactionId = InvalidTransactionId;
 	s->subTransactionId = InvalidSubTransactionId;
 	s->nestingLevel = 0;
@@ -4546,35 +4549,18 @@ DefineDispatchSavepoint(char *name)
 	/* First we attempt to create on the QEs */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		char	   *cmd = NULL;
-		bool		freecmd;
+		char	   *cmd;
 
-		if (name != NULL)
-		{
-			cmd = palloc(sizeof("SAVEPOINT ") + strlen(name));
-			Assert(cmd != NULL);
-			if (cmd == NULL)
-				elog(ERROR, "Can't define savepoint name too long (%s)", name);
-			sprintf(cmd, "SAVEPOINT %s", name);
-			freecmd = true;
-		}
-		else
-		{
-			cmd = "SAVEPOINT";
-			freecmd = false;
-		}
+		cmd = psprintf("SAVEPOINT %s", name);
 
 		/*
 		 * dispatch a DTX command, in the event of an error, this call
 		 * will either exit via elog()/ereport() or return false
 		 */
 		if (!dispatchDtxCommand(cmd))
-		{
 			elog(ERROR, "Could not create a new savepoint (%s)", cmd);
-		}
 
-		if (freecmd)
-			pfree(cmd);
+		pfree(cmd);
 	}
 
 	DefineSavepoint(name);
@@ -4694,35 +4680,18 @@ ReleaseSavepoint(List *options)
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		char	   *cmd = NULL;
-		bool		freecmd;
+		char	   *cmd;
 
-		if (name != NULL)
-		{
-			cmd = palloc(sizeof("RELEASE SAVEPOINT ") + strlen(name));
-			Assert(cmd != NULL);
-			if (cmd == NULL)
-				elog(ERROR, "Can't release savepoint name too long (%s)", name);
-			sprintf(cmd, "RELEASE SAVEPOINT %s", name);
-			freecmd = true;
-		}
-		else
-		{
-			cmd = "RELEASE SAVEPOINT";
-			freecmd = false;
-		}
+		cmd = psprintf("RELEASE SAVEPOINT %s", name);
 
 		/*
 		 * dispatch a DTX command, in the event of an error, this call will
 		 * either exit via elog()/ereport() or return false
 		 */
 		if (!dispatchDtxCommand(cmd))
-		{
 			elog(ERROR, "Could not release savepoint (%s)", cmd);
-		}
 
-		if (freecmd)
-			pfree(cmd);
+		pfree(cmd);
 	}
 
 	for (target = s; PointerIsValid(target); target = target->parent)
@@ -4875,34 +4844,20 @@ static void
 DispatchRollbackToSavepoint(char *name)
 {
 	char	   *cmd;
-	bool		freecmd;
 
-	if (name != NULL)
-	{
-		cmd = palloc(sizeof("ROLLBACK TO SAVEPOINT ") + strlen(name));
-		Assert(cmd != NULL);
-		if (cmd == NULL)
-			elog(ERROR, "Can't rollback to savepoint, name too long (%s)", name);
-		sprintf(cmd, "ROLLBACK TO SAVEPOINT %s", name);
-		freecmd = true;
-	}
-	else
-	{
-		cmd = "ROLLBACK TO SAVEPOINT";
-		freecmd = false;
-	}
+	if (!name)
+		elog(ERROR, "could not find savepoint name for ROLLBACK TO SAVEPOINT");
+
+	cmd = psprintf("ROLLBACK TO SAVEPOINT %s", name);
 
 	/*
 	 * dispatch a DTX command, in the event of an error, this call will
 	 * either exit via elog()/ereport() or return false
 	 */
 	if (!dispatchDtxCommand(cmd))
-	{
 		elog(ERROR, "Could not rollback to savepoint (%s)", cmd);
-	}
 
-	if (freecmd)
-		pfree(cmd);
+	pfree(cmd);
 }
 
 /*
@@ -5252,6 +5207,9 @@ TransactionBlockStatusCode(void)
 	return 0;					/* keep compiler quiet */
 }
 
+/*
+ * IsSubTransaction
+ */
 bool
 IsSubTransaction(void)
 {
@@ -5595,7 +5553,6 @@ PushTransaction(void)
 	 * We can now stack a minimally valid subtransaction without fear of
 	 * failure.
 	 */
-	s->distribXid = p->distribXid;
 	s->transactionId = InvalidTransactionId;	/* until assigned */
 	s->subTransactionId = currentSubTransactionId;
 	s->parent = p;

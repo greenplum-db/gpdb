@@ -2119,7 +2119,7 @@ RelationTruncate(Relation rel, BlockNumber nblocks, bool markPersistentAsPhysica
 XLogRecPtr
 BufferGetLSNAtomic(Buffer buffer)
 {
-	volatile BufferDesc *bufHdr = &BufferDescriptors[buffer - 1];
+	volatile BufferDesc *bufHdr;
 	char				*page = BufferGetPage(buffer);
 	XLogRecPtr			 lsn;
 
@@ -2132,8 +2132,11 @@ BufferGetLSNAtomic(Buffer buffer)
 	/* Make sure we've got a real buffer, and that we hold a pin on it. */
 	Assert(BufferIsValid(buffer));
 	Assert(BufferIsPinned(buffer));
+
 	/* Caller should hold share lock on the buffer contents. */
+	bufHdr = &BufferDescriptors[buffer - 1];
 	Assert(LWLockHeldByMe(bufHdr->content_lock));
+
 	LockBufHdr(bufHdr);
 	lsn = PageGetLSN(page);
 	UnlockBufHdr(bufHdr);

@@ -175,6 +175,8 @@ ExtProtocolCreate(const char *protocolName,
 
 	/* dependency on owner */
 	recordDependencyOnOwner(ExtprotocolRelationId, protOid, GetUserId());
+	/* dependency on extension */
+	recordDependencyOnCurrentExtension(&myself, false);
 
 	return protOid;
 }
@@ -221,8 +223,6 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 {
 	Oid			fnOid;
 	bool		retset;
-	bool        retstrict;
-	bool        retordered;
 	Oid		   *true_oid_array;
 	Oid 	    actual_rettype;
 	Oid			desired_rettype;
@@ -245,8 +245,8 @@ ValidateProtocolFunction(List *fnName, ExtPtcFuncType fntype)
 	 * the function.
 	 */
 	fdresult = func_get_detail(fnName, NIL, nargs, inputTypes, false, false,
-							   &fnOid, &actual_rettype, &retset, &retstrict,
-							   &retordered, &nvargs, &true_oid_array, NULL);
+							   &fnOid, &actual_rettype, &retset,
+							   &nvargs, &true_oid_array, NULL);
 
 	/* only valid case is a normal function not returning a set */
 	if (fdresult != FUNCDETAIL_NORMAL || !OidIsValid(fnOid))

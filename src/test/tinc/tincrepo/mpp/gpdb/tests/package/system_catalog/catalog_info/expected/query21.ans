@@ -1,9 +1,0 @@
--- start_ignore
-select * from pg_constraint;
-           conname            | connamespace | contype | condeferrable | condeferred | conrelid | contypid | confrelid | confupdtype | confdeltype | confmatchtype | conkey | confkey |                                                                                                        conbin                                                                                                        |    consrc    
-------------------------------+--------------+---------+---------------+-------------+----------+----------+-----------+-------------+-------------+---------------+--------+---------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------
- cardinal_number_domain_check |        10630 | c       | f             | f           |        0 |    10644 |         0 |             |             |               |        |         | {OPEXPR :opno 525 :opfuncid 0 :opresulttype 16 :opretset false :args ({COERCETODOMAINVALUE :typeId 23 :typeMod -1} {CONST :consttype 23 :constlen 4 :constbyval true :constisnull false :constvalue 4 [ 0 0 0 0 ]})} | (VALUE >= 0)
- department_pkey              |         2200 | p       | f             | f           |    42044 |        0 |         0 |             |             |               | {1}    |         |                                                                                                                                                                                                                      | 
-(2 rows)
-
--- end_ignore

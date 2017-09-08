@@ -2135,7 +2135,9 @@ select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.
 (105 rows)
 
 select lead(cn) from sale;
-ERROR:  function lead(integer) may only be called as a window function
+ERROR:  window function call requires an OVER clause
+LINE 1: select lead(cn) from sale;
+               ^
 select cn, cname, lead(cname, -1) over (order by cn) from customer;
 ERROR:  ROWS parameter cannot be negative
 -- actual LEAD tests
@@ -7615,42 +7617,11 @@ select ord, cn,vn,sum(vn) over (order by ord rows between 3 following and floor(
   12 |  4 | 40 |    
 (12 rows)
 
--- Test use of window functions in places they shouldn't be allowed: MPP-2382
--- CHECK constraints
-CREATE TABLE wintest_for_window_seq (i int check (i < count(*) over (order by i)));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  cannot use window function in check constraint
-CREATE TABLE wintest_for_window_seq (i int default count(*) over (order by i));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  cannot use window function in default expression
--- index expression and function
-CREATE TABLE wintest_for_window_seq (i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (i) where i < count(*) over (order by i);
-ERROR:  cannot use window function in index predicate
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (sum(i) over (order by i));
-ERROR:  syntax error at or near "("
-LINE 1: ...window_seq on wintest_for_window_seq (sum(i) over (order by ...
-                                                             ^
--- alter table
-ALTER TABLE wintest_for_window_seq alter i set default count(*) over (order by i);
-ERROR:  cannot use window function in default expression
-alter table wintest_for_window_seq alter column i type float using count(*) over (order by
-i)::float;
-ERROR:  cannot use window function in transform expression
--- update
-insert into wintest_for_window_seq values(1);
-update wintest_for_window_seq set i = count(*) over (order by i);
-ERROR:  cannot use window function in UPDATE
 -- domain suport
 create domain wintestd as int default count(*) over ();
 ERROR:  cannot use window function in default expression
 create domain wintestd as int check (value < count(*) over ());
 ERROR:  cannot use window function in check constraint
-drop table wintest_for_window_seq;
 -- MPP-3295
 -- begin equivalent
 select cn,vn,rank() over (partition by cn order by vn) as rank
@@ -7837,7 +7808,8 @@ order by 1,2,3;
  Plain     | Donuts    | 500 | 1 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |    
 (8 rows)
 
--- MPP-4840
+-- Once upon a time, there was a bug in deparsing a Window node with EXPLAIN
+-- that this query triggered (MPP-4840)
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
                                      QUERY PLAN                                      
 -------------------------------------------------------------------------------------

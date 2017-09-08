@@ -14,6 +14,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
 use explain;
+use GPTest qw(print_version);
 
 =head1 NAME
 
@@ -276,7 +277,8 @@ GetOptions(
     "prune:s" => \$prune,
     "output:s" => \$outfile,
     "statcolor:s" => \$statcol,
-    "edge:s" => \$edgescheme)
+    "edge:s" => \$edgescheme,
+    'version|v' => \&print_version)
     or pod2usage(2);
 
     

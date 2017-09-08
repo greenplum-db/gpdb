@@ -10,17 +10,5 @@
          tables.</p>
       <p>This topic describes how to unload data from Greenplum Database using parallel unload
          (writable external tables) and non-parallel unload (<codeph>COPY</codeph>). </p>
-      <ul otherprops="op-print">
-         <li id="du168427"><xref href="g-defining-a-file-based-writable-external-table.xml#topic68"
-            />
-         </li>
-         <li id="du168601"><xref
-               href="g-defining-a-command-based-writable-external-web-table.xml#topic71"/>
-         </li>
-         <li><xref href="g-unloading-data-using-a-writable-external-table.xml#topic73"/>
-         </li>
-         <li id="du173594"><xref href="g-unloading-data-using-copy.xml#topic74"/>
-         </li>
-      </ul>
    </body>
 </topic>

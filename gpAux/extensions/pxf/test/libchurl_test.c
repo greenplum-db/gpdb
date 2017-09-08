@@ -13,256 +13,261 @@
 #include "mock/curl_mock.c"
 
 /* test strings */
-const char* uri_param = "pxf://localhost:51200/tmp/dummy1";
-const char* read_string = "Hello World!\0";
+const char *uri_param = "pxf://localhost:51200/tmp/dummy1";
+const char *read_string = "Hello World!\0";
 
 void
 test_set_curl_option(void **state)
 {
-    // set up context with a curl_handle
-    churl_context* context = palloc0(sizeof(churl_context));
-    context->curl_handle = (CURL*)palloc0(sizeof(CURL));
+	/* set up context with a curl_handle */
+	churl_context *context = palloc0(sizeof(churl_context));
 
-    // set mock behavior for curl_easy_setopt
-    expect_value(curl_easy_setopt, curl, context->curl_handle);
-    expect_value(curl_easy_setopt, option, CURLOPT_URL);
-    will_return(curl_easy_setopt, CURLE_OK);
+	context->curl_handle = (CURL *) palloc0(sizeof(CURL));
 
-    set_curl_option(context, CURLOPT_URL, uri_param);
+	/* set mock behavior for curl_easy_setopt */
+	expect_value(curl_easy_setopt, curl, context->curl_handle);
+	expect_value(curl_easy_setopt, option, CURLOPT_URL);
+	will_return(curl_easy_setopt, CURLE_OK);
 
-    // cleanup
-    pfree(context->curl_handle);
-    pfree(context);
+	set_curl_option(context, CURLOPT_URL, uri_param);
+
+	/* cleanup */
+	pfree(context->curl_handle);
+	pfree(context);
 }
 
 void
-curl_easy_setopt_test_helper(CURL* curl_handle, CURLoption in_option)
+curl_easy_setopt_test_helper(CURL * curl_handle, CURLoption in_option)
 {
-    expect_value(curl_easy_setopt, curl, curl_handle);
-    expect_value(curl_easy_setopt, option, in_option);
-    will_return(curl_easy_setopt, CURLE_OK);
+	expect_value(curl_easy_setopt, curl, curl_handle);
+	expect_value(curl_easy_setopt, option, in_option);
+	will_return(curl_easy_setopt, CURLE_OK);
 }
 
 void
 curl_slist_append_test_helper(struct curl_slist *slist, char *header_string)
 {
-    expect_any(curl_slist_append, list);
-    expect_string(curl_slist_append, string, header_string);
-    will_return(curl_slist_append, slist);
+	expect_any(curl_slist_append, list);
+	expect_string(curl_slist_append, string, header_string);
+	will_return(curl_slist_append, slist);
 }
 
 void
 test_churl_init_upload(void **state)
 {
-    CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
+	CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
 
-    // set mock behavior for curl handle initialization
-    CURL* mock_curl_handle = palloc0(sizeof(CURL));
+	/* set mock behavior for curl handle initialization */
+	CURL	   *mock_curl_handle = palloc0(sizeof(CURL));
 
-    will_return(curl_easy_init, mock_curl_handle);
-
-
-    /* set mock behavior for all the set_curl_option calls */
-
-    curl_slist_append_test_helper(NULL, "localhost:51200:127.0.0.1");
-
-    // set mock behavior for all the curl_easy_setopt calls
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_RESOLVE);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_URL);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_VERBOSE);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_ERRORBUFFER);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_IPRESOLVE);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEFUNCTION);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEDATA);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERFUNCTION);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERDATA);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HTTPHEADER);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_POST);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_READFUNCTION);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_READDATA);
-
-    struct curl_slist* mock_curl_slist = palloc0(sizeof(struct curl_slist));
-
-    curl_slist_append_test_helper(mock_curl_slist, "Content-Type: application/octet-stream");
-    curl_slist_append_test_helper(mock_curl_slist, "Transfer-Encoding: chunked");
-    curl_slist_append_test_helper(mock_curl_slist, "Expect: 100-continue");
+	will_return(curl_easy_init, mock_curl_handle);
 
 
-    /* setup_multi_handle mock setup */
+	/* set mock behavior for all the set_curl_option calls */
 
-    CURLM* mock_multi_handle = palloc0(sizeof(CURLM));
+	curl_slist_append_test_helper(NULL, "localhost:51200:127.0.0.1");
 
-    will_return(curl_multi_init, mock_multi_handle);
+	/* set mock behavior for all the curl_easy_setopt calls */
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_RESOLVE);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_URL);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_VERBOSE);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_ERRORBUFFER);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_IPRESOLVE);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEFUNCTION);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEDATA);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERFUNCTION);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERDATA);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HTTPHEADER);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_POST);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_READFUNCTION);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_READDATA);
 
-    expect_value(curl_multi_add_handle, multi_handle, mock_multi_handle);
-    expect_value(curl_multi_add_handle, curl_handle, mock_curl_handle);
-    will_return(curl_multi_add_handle, CURLM_OK);
+	struct curl_slist *mock_curl_slist = palloc0(sizeof(struct curl_slist));
 
-    expect_value(curl_multi_perform, multi_handle, mock_multi_handle);
-    expect_any(curl_multi_perform, running_handles);
-    will_return(curl_multi_perform, CURLM_OK);
+	curl_slist_append_test_helper(mock_curl_slist, "Content-Type: application/octet-stream");
+	curl_slist_append_test_helper(mock_curl_slist, "Transfer-Encoding: chunked");
+	curl_slist_append_test_helper(mock_curl_slist, "Expect: 100-continue");
 
 
-    CHURL_HANDLE handle = churl_init_upload(uri_param, headers);
+	/* setup_multi_handle mock setup */
 
-    churl_context* context = (churl_context*)handle;
-    assert_true(context->upload == true);
-    assert_true(context->curl_error_buffer[0] == 0);
-    assert_true(context->download_buffer != NULL);
-    assert_true(context->upload_buffer != NULL);
-    assert_true(context->curl_handle != NULL);
-    assert_true(context->multi_handle != NULL);
-    assert_true(context->last_http_reponse == NULL);
-    assert_true(context->curl_still_running == 0);
+	CURLM	   *mock_multi_handle = palloc0(sizeof(CURLM));
 
-    /* tear down */
-    pfree(headers);
-    pfree(handle);
+	will_return(curl_multi_init, mock_multi_handle);
+
+	expect_value(curl_multi_add_handle, multi_handle, mock_multi_handle);
+	expect_value(curl_multi_add_handle, curl_handle, mock_curl_handle);
+	will_return(curl_multi_add_handle, CURLM_OK);
+
+	expect_value(curl_multi_perform, multi_handle, mock_multi_handle);
+	expect_any(curl_multi_perform, running_handles);
+	will_return(curl_multi_perform, CURLM_OK);
+
+
+	CHURL_HANDLE handle = churl_init_upload(uri_param, headers);
+
+	churl_context *context = (churl_context *) handle;
+
+	assert_true(context->upload == true);
+	assert_true(context->curl_error_buffer[0] == 0);
+	assert_true(context->download_buffer != NULL);
+	assert_true(context->upload_buffer != NULL);
+	assert_true(context->curl_handle != NULL);
+	assert_true(context->multi_handle != NULL);
+	assert_true(context->last_http_reponse == NULL);
+	assert_true(context->curl_still_running == 0);
+
+	/* tear down */
+	pfree(headers);
+	pfree(handle);
 }
 
 void
 test_churl_init_download(void **state)
 {
-    CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
+	CHURL_HEADERS headers = palloc0(sizeof(CHURL_HEADERS));
 
-    // set mock behavior for curl handle initialization
-    CURL* mock_curl_handle = palloc0(sizeof(CURL));
-    will_return(curl_easy_init, mock_curl_handle);
+	/* set mock behavior for curl handle initialization */
+	CURL	   *mock_curl_handle = palloc0(sizeof(CURL));
+
+	will_return(curl_easy_init, mock_curl_handle);
 
 
-    /* set mock behavior for all the set_curl_option calls */
+	/* set mock behavior for all the set_curl_option calls */
 
-    curl_slist_append_test_helper(NULL, "localhost:51200:127.0.0.1");
+	curl_slist_append_test_helper(NULL, "localhost:51200:127.0.0.1");
 
-    // set mock behavior for all the curl_easy_setopt calls
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_RESOLVE);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_URL);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_VERBOSE);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_ERRORBUFFER);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_IPRESOLVE);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEFUNCTION);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEDATA);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERFUNCTION);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERDATA);
-    curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HTTPHEADER);
+	/* set mock behavior for all the curl_easy_setopt calls */
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_RESOLVE);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_URL);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_VERBOSE);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_ERRORBUFFER);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_IPRESOLVE);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEFUNCTION);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_WRITEDATA);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERFUNCTION);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HEADERDATA);
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_HTTPHEADER);
 
-    /* setup_multi_handle mock setup */
+	/* setup_multi_handle mock setup */
 
-    CURLM* mock_multi_handle = palloc0(sizeof(CURLM));
+	CURLM	   *mock_multi_handle = palloc0(sizeof(CURLM));
 
-    will_return(curl_multi_init, mock_multi_handle);
+	will_return(curl_multi_init, mock_multi_handle);
 
-    expect_value(curl_multi_add_handle, multi_handle, mock_multi_handle);
-    expect_value(curl_multi_add_handle, curl_handle, mock_curl_handle);
-    will_return(curl_multi_add_handle, CURLM_OK);
+	expect_value(curl_multi_add_handle, multi_handle, mock_multi_handle);
+	expect_value(curl_multi_add_handle, curl_handle, mock_curl_handle);
+	will_return(curl_multi_add_handle, CURLM_OK);
 
-    expect_value(curl_multi_perform, multi_handle, mock_multi_handle);
-    expect_any(curl_multi_perform, running_handles);
-    will_return(curl_multi_perform, CURLM_OK);
+	expect_value(curl_multi_perform, multi_handle, mock_multi_handle);
+	expect_any(curl_multi_perform, running_handles);
+	will_return(curl_multi_perform, CURLM_OK);
 
-    /* function call */
+	/* function call */
 
-    CHURL_HANDLE handle = churl_init_download(uri_param, headers);
+	CHURL_HANDLE handle = churl_init_download(uri_param, headers);
 
-    churl_context* context = (churl_context*)handle;
+	churl_context *context = (churl_context *) handle;
 
-    /* test assertions */
-    assert_true(context->upload == false);
-    assert_true(context->curl_error_buffer[0] == 0);
-    assert_true(context->download_buffer != NULL);
-    assert_true(context->upload_buffer != NULL);
-    assert_true(context->curl_handle != NULL);
-    assert_true(context->multi_handle != NULL);
-    assert_true(context->last_http_reponse == NULL);
+	/* test assertions */
+	assert_true(context->upload == false);
+	assert_true(context->curl_error_buffer[0] == 0);
+	assert_true(context->download_buffer != NULL);
+	assert_true(context->upload_buffer != NULL);
+	assert_true(context->curl_handle != NULL);
+	assert_true(context->multi_handle != NULL);
+	assert_true(context->last_http_reponse == NULL);
 
-    /* tear down */
-    pfree(headers);
-    pfree(handle);
+	/* tear down */
+	pfree(headers);
+	pfree(handle);
 }
 
-// wrapper function to enable sideeffect testing with multiple parameters
+/*  wrapper function to enable sideeffect testing with multiple parameters */
 void
-write_callback_wrapper(churl_context* user_context)
+write_callback_wrapper(churl_context * user_context)
 {
-    write_callback(read_string, sizeof(char), strlen(read_string) + 1, user_context);
+	write_callback(read_string, sizeof(char), strlen(read_string) + 1, user_context);
 }
 
 void
 test_churl_read(void **state)
 {
 
-    int READ_LEN = 32;
-    ;
-    /* context setup */
-    CHURL_HANDLE handle = palloc0(sizeof(CHURL_HANDLE));
-    churl_context* context = (churl_context*)handle;
-    CURLM* mock_multi_handle = palloc0(sizeof(CURLM));
-    context->download_buffer = palloc0(sizeof(churl_buffer));
+	int			READ_LEN = 32;
 
-    context->multi_handle = mock_multi_handle;
-    context->curl_still_running = 1;
-    context->upload = 0;
-    context->download_buffer->top = 0;
-    context->download_buffer->bot = 0;
-    context->download_buffer->ptr = palloc0(sizeof(READ_LEN));
-    context->download_buffer->max = READ_LEN;
+	;
+	/* context setup */
+	CHURL_HANDLE handle = palloc0(sizeof(CHURL_HANDLE));
+	churl_context *context = (churl_context *) handle;
+	CURLM	   *mock_multi_handle = palloc0(sizeof(CURLM));
 
-    // buffer to read into
-    char buf[READ_LEN];
+	context->download_buffer = palloc0(sizeof(churl_buffer));
 
-    /* mock behavior setup */
+	context->multi_handle = mock_multi_handle;
+	context->curl_still_running = 1;
+	context->upload = 0;
+	context->download_buffer->top = 0;
+	context->download_buffer->bot = 0;
+	context->download_buffer->ptr = palloc0(sizeof(READ_LEN));
+	context->download_buffer->max = READ_LEN;
 
-    // set up curl_multi_fdset mock behavior
-    expect_value(curl_multi_fdset, multi_handle, mock_multi_handle);
-    expect_any(curl_multi_fdset, read_fd_set);
-    expect_any(curl_multi_fdset, write_fd_set);
-    expect_any(curl_multi_fdset, exc_fd_set);
-    expect_any(curl_multi_fdset, max_fd);
-    will_assign_value(curl_multi_fdset, max_fd, 1);
-    will_return(curl_multi_fdset, CURLM_OK);
+	/* buffer to read into */
+	char		buf[READ_LEN];
 
-    // set up select mock behavior
-    expect_value(select, nfds, 2);
-    expect_any(select, read_fds);
-    expect_any(select, write_fds);
-    expect_any(select, except_fds);
-    expect_any(select, timeout);
-    will_return(select, 1);
+	/* mock behavior setup */
 
-    // set up curl_multi_perform mock behavior
-    // this function invokes callback functions which are handled by
-    // write_callback_wrapper
-    expect_value(curl_multi_perform, multi_handle, mock_multi_handle);
-    expect_any(curl_multi_perform, running_handles);
-    will_assign_value(curl_multi_perform, running_handles, 0);
-    will_return_with_sideeffect(curl_multi_perform, CURLM_OK, write_callback_wrapper, context);
+	/* set up curl_multi_fdset mock behavior */
+	expect_value(curl_multi_fdset, multi_handle, mock_multi_handle);
+	expect_any(curl_multi_fdset, read_fd_set);
+	expect_any(curl_multi_fdset, write_fd_set);
+	expect_any(curl_multi_fdset, exc_fd_set);
+	expect_any(curl_multi_fdset, max_fd);
+	will_assign_value(curl_multi_fdset, max_fd, 1);
+	will_return(curl_multi_fdset, CURLM_OK);
+
+	/* set up select mock behavior */
+	expect_value(select, nfds, 2);
+	expect_any(select, read_fds);
+	expect_any(select, write_fds);
+	expect_any(select, except_fds);
+	expect_any(select, timeout);
+	will_return(select, 1);
+
+	/* set up curl_multi_perform mock behavior */
+	/* this function invokes callback functions which are handled by */
+	/* write_callback_wrapper */
+	expect_value(curl_multi_perform, multi_handle, mock_multi_handle);
+	expect_any(curl_multi_perform, running_handles);
+	will_assign_value(curl_multi_perform, running_handles, 0);
+	will_return_with_sideeffect(curl_multi_perform, CURLM_OK, write_callback_wrapper, context);
 
 
-    /* function call */
-    size_t buffer_offset = churl_read(handle, buf, 32);
+	/* function call */
+	size_t		buffer_offset = churl_read(handle, buf, 32);
 
-    /* test assertions */
-    assert_true(context->curl_still_running == 0);
-    assert_true(strcmp(buf, read_string) == 0);
-    assert_true(buffer_offset == 13);
-    assert_true(context->download_buffer->bot == 13);
-    assert_true(context->download_buffer->bot == context->download_buffer->top);
+	/* test assertions */
+	assert_true(context->curl_still_running == 0);
+	assert_true(strcmp(buf, read_string) == 0);
+	assert_true(buffer_offset == 13);
+	assert_true(context->download_buffer->bot == 13);
+	assert_true(context->download_buffer->bot == context->download_buffer->top);
 }
 
 
 int
-main(int argc, char* argv[])
+main(int argc, char *argv[])
 {
-    cmockery_parse_arguments(argc, argv);
+	cmockery_parse_arguments(argc, argv);
 
-    const UnitTest tests[] = {
-            unit_test(test_set_curl_option),
-            unit_test(test_churl_init_upload),
-            unit_test(test_churl_init_download),
-            unit_test(test_churl_read)
-    };
+	const		UnitTest tests[] = {
+		unit_test(test_set_curl_option),
+		unit_test(test_churl_init_upload),
+		unit_test(test_churl_init_download),
+		unit_test(test_churl_read)
+	};
 
-    MemoryContextInit();
+	MemoryContextInit();
 
-    return run_tests(tests);
+	return run_tests(tests);
 }

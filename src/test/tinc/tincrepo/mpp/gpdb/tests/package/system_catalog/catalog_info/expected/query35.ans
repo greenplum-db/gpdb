@@ -1,8 +1,0 @@
--- start_ignore
-select * from pg_shdepend;
- dbid | classid | objid | refclassid | refobjid | deptype 
-------+---------+-------+------------+----------+---------
-    0 |       0 |     0 |       1260 |       10 | p
-(1 row)
-
--- end_ignore

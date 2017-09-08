@@ -89,7 +89,7 @@
           <codeph>INSERT</codeph> transactions into a single append-optimized table. </p>
       <p>For writable S3 external tables, the <codeph>INSERT</codeph> operation uploads to one or
         more files in the configured S3 bucket, as described in <xref
-          href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/>. Pressing
+          href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/>. Pressing
           <codeph>Ctrl-c</codeph> cancels the <codeph>INSERT</codeph> and stops uploading to S3. </p>
     </section>
     <section id="section7">
@@ -129,7 +129,7 @@
       <p><codeph><xref href="COPY.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="CREATE_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/></codeph>, <xref
-          href="../../admin_guide/load/topics/g-s3-protocol.xml#amazon-emr"/></p>
+          href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr"/></p>
     </section>
   </body>
 </topic>

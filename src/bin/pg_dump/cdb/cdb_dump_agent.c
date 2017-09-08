@@ -3740,8 +3740,8 @@ format_table_function_columns(FuncInfo *finfo, int nallargs,
 		char	   *typname;
 
 		/*
-		 * argmodes are checked in format_function_arguments. Isn't neccessery
-		 * check argmodes here again
+		 * argmodes are checked in format_function_arguments, it isn't necessary
+		 * to check argmodes here again
 		 */
 		if (argmodes[j][0] == PROARGMODE_TABLE)
 		{

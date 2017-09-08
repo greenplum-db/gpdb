@@ -337,10 +337,11 @@ typedef struct WindowRef
 	Oid			winfnoid;		/* pg_proc Oid of the window function */
 	Oid			restype;		/* type Oid of result of the window function */
 	List	   *args;			/* arguments */	
-	Index		winlevelsup;	/* FIXME: unused, but we cannot remove it right now because that would require a catalog change */
-	bool		windistinct;	/* TRUE if it's agg(DISTINCT ...) */
 	Index		winspec;		/* index into Query window clause */
-	
+	bool		winstar;		/* TRUE if argument list was really '*' */
+	bool		winagg;			/* is function a simple aggregate? */
+	bool		windistinct;	/* TRUE if it's agg(DISTINCT ...) */
+
 	/* Following fields are significant only in a Plan tree. */
 	Index		winindex;		/* RefInfo index during planning. */
 	WinStage	winstage;		/* Stage of execution. */
@@ -426,7 +427,6 @@ typedef struct FuncExpr
 	int			location;		/* token location, or -1 if unknown */
 	bool        is_tablefunc;   /* Is a TableFunction reference */
 } FuncExpr;
-
 
 /*
  * OpExpr - expression node for an operator invocation
@@ -967,6 +967,50 @@ typedef struct MinMaxExpr
 } MinMaxExpr;
 
 /*
+ * XmlExpr - various SQL/XML functions requiring special grammar productions
+ *
+ * 'name' carries the "NAME foo" argument (already XML-escaped).
+ * 'named_args' and 'arg_names' represent an xml_attribute list.
+ * 'args' carries all other arguments.
+ *
+ * Note: result type/typmod/collation are not stored, but can be deduced
+ * from the XmlExprOp.  The type/typmod fields are just used for display
+ * purposes, and are NOT necessarily the true result type of the node.
+ * (We also use type == InvalidOid to mark a not-yet-parse-analyzed XmlExpr.)
+ */
+typedef enum XmlExprOp
+{
+	IS_XMLCONCAT,				/* XMLCONCAT(args) */
+	IS_XMLELEMENT,				/* XMLELEMENT(name, xml_attributes, args) */
+	IS_XMLFOREST,				/* XMLFOREST(xml_attributes) */
+	IS_XMLPARSE,				/* XMLPARSE(text, is_doc, preserve_ws) */
+	IS_XMLPI,					/* XMLPI(name [, args]) */
+	IS_XMLROOT,					/* XMLROOT(xml, version, standalone) */
+	IS_XMLSERIALIZE,			/* XMLSERIALIZE(is_document, xmlval) */
+	IS_DOCUMENT					/* xmlval IS DOCUMENT */
+} XmlExprOp;
+
+typedef enum
+{
+	XMLOPTION_DOCUMENT,
+	XMLOPTION_CONTENT
+} XmlOptionType;
+
+typedef struct XmlExpr
+{
+	Expr		xpr;
+	XmlExprOp	op;				/* xml function ID */
+	char	   *name;			/* name in xml(NAME foo ...) syntaxes */
+	List	   *named_args;		/* non-XML expressions for xml_attributes */
+	List	   *arg_names;		/* parallel list of Value strings */
+	List	   *args;			/* list of expressions */
+	XmlOptionType xmloption;	/* DOCUMENT or CONTENT */
+	Oid			type;			/* target type/typmod for XMLSERIALIZE */
+	int32		typmod;
+	int			location;		/* token location, or -1 if unknown */
+} XmlExpr;
+
+/*
  * NullIfExpr - a NULLIF expression
  *
  * Like DistinctExpr, this is represented the same as an OpExpr referencing
@@ -1019,50 +1063,6 @@ typedef struct BooleanTest
 	Expr	   *arg;			/* input expression */
 	BoolTestType booltesttype;	/* test type */
 } BooleanTest;
-
-/*
- * XmlExpr - various SQL/XML functions requiring special grammar productions
- *
- * 'name' carries the "NAME foo" argument (already XML-escaped).
- * 'named_args' and 'arg_names' represent an xml_attribute list.
- * 'args' carries all other arguments.
- *
- * Note: result type/typmod/collation are not stored, but can be deduced
- * from the XmlExprOp.  The type/typmod fields are just used for display
- * purposes, and are NOT necessarily the true result type of the node.
- * (We also use type == InvalidOid to mark a not-yet-parse-analyzed XmlExpr.)
- */
-typedef enum XmlExprOp
-{
-	IS_XMLCONCAT,				/* XMLCONCAT(args) */
-	IS_XMLELEMENT,				/* XMLELEMENT(name, xml_attributes, args) */
-	IS_XMLFOREST,				/* XMLFOREST(xml_attributes) */
-	IS_XMLPARSE,				/* XMLPARSE(text, is_doc, preserve_ws) */
-	IS_XMLPI,					/* XMLPI(name [, args]) */
-	IS_XMLROOT,					/* XMLROOT(xml, version, standalone) */
-	IS_XMLSERIALIZE,			/* XMLSERIALIZE(is_document, xmlval) */
-	IS_DOCUMENT					/* xmlval IS DOCUMENT */
-} XmlExprOp;
-
-typedef enum
-{
-	XMLOPTION_DOCUMENT,
-	XMLOPTION_CONTENT
-} XmlOptionType;
-
-typedef struct XmlExpr
-{
-	Expr		xpr;
-	XmlExprOp	op;				/* xml function ID */
-	char	   *name;			/* name in xml(NAME foo ...) syntaxes */
-	List	   *named_args;		/* non-XML expressions for xml_attributes */
-	List	   *arg_names;		/* parallel list of Value strings */
-	List	   *args;			/* list of expressions */
-	XmlOptionType xmloption;	/* DOCUMENT or CONTENT */
-	Oid			type;			/* target type/typmod for XMLSERIALIZE */
-	int32		typmod;
-	int			location;		/* token location, or -1 if unknown */
-} XmlExpr;
 
 /*
  * CoerceToDomain
@@ -1381,25 +1381,13 @@ typedef enum GroupingType
 	GROUPINGTYPE_GROUPING_SETS   /* GROUPING SETS grouping extension */
 } GroupingType;
 
-typedef enum WindowExclusion
-{
-	WINDOW_EXCLUSION_NULL = 0,
-	WINDOW_EXCLUSION_CUR_ROW, /* exclude current row */
-	WINDOW_EXCLUSION_GROUP, /* exclude rows matching us */
-	WINDOW_EXCLUSION_TIES, /* exclude rows matching us, and current row */
-	WINDOW_EXCLUSION_NO_OTHERS /* don't exclude -- distinct from EMPTY so
-								* that we may dump */
-} WindowExclusion;
-
 typedef enum WindowBoundingKind
 {
 	WINDOW_UNBOUND_PRECEDING,
 	WINDOW_BOUND_PRECEDING,
 	WINDOW_CURRENT_ROW,
 	WINDOW_BOUND_FOLLOWING,
-	WINDOW_UNBOUND_FOLLOWING,
-	WINDOW_DELAYED_BOUND_PRECEDING,
-    WINDOW_DELAYED_BOUND_FOLLOWING
+	WINDOW_UNBOUND_FOLLOWING
 } WindowBoundingKind;
 
 typedef struct WindowFrameEdge
@@ -1421,7 +1409,6 @@ typedef struct WindowFrame
 	 */
 	WindowFrameEdge *trail; /* trailing edge of the frame */
 	WindowFrameEdge *lead; /* leading edge of the frame */
-	WindowExclusion exclude; /* exclusion clause */
 } WindowFrame;
 
 

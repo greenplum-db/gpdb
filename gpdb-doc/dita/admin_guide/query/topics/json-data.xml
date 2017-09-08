@@ -2,9 +2,10 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="ih135496">Working with JSON Data</title>
+  <shortdesc>Greenplum Database supports the <codeph>json</codeph> data type that stores JSON
+    (JavaScript Object Notation) data.</shortdesc>
   <body>
-    <p>Greenplum Database supports the <codeph>json</codeph> data type that stores JSON (JavaScript
-      Object Notation) data, as specified in the <xref href="http://rfc7159.net/rfc7159"
+    <p>Greenplum Database supports JSON as specified in the <xref href="http://rfc7159.net/rfc7159"
         format="html" scope="external">RFC 7159</xref> document and enforces data validity according
       to the JSON rules. There are also JSON-specific functions and operators available for
         <codeph>json</codeph> data. See <xref href="#topic_gn4_x3w_mq" format="dita"/>. </p>

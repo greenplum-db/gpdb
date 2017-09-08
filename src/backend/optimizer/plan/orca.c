@@ -104,6 +104,7 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	glob->subrtables = NIL;
 	glob->rewindPlanIDs = NULL;
 	glob->transientPlan = false;
+	glob->oneoffPlan = false;
 	glob->share.producers = NULL;
 	glob->share.producer_count = 0;
 	glob->share.sliceMarks = NULL;
@@ -233,6 +234,8 @@ optimize_query(Query *parse, ParamListInfo boundParams)
 	result->subplans = glob->subplans;
 	result->relationOids = glob->relationOids;
 	result->invalItems = glob->invalItems;
+	result->oneoffPlan = glob->oneoffPlan;
+	result->transientPlan = glob->transientPlan;
 
 	return result;
 }

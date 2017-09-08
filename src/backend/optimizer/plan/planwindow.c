@@ -250,7 +250,6 @@ static int compare_order(List *a, List* b);
 static int compare_edge(WindowFrameEdge *a, WindowFrameEdge *b);
 static int compare_frame(WindowFrame *a, WindowFrame *b);
 static int compare_spec_info_ptr(const void *arg1, const void *arg2);
-static WindowFrameEdge *adjustFrameBound(WindowFrameEdge *edge, bool is_rows);
 static void make_lower_targetlist(Query *parse, WindowContext *context);
 static void set_window_keys(WindowContext *context, int wind_index);
 static void assign_window_info(WindowContext *context);
@@ -296,7 +295,7 @@ window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
 	/* Assert existence of windowing in query. */
 	Assert(parse->targetList != NIL);
 	Assert(parse->windowClause != NULL);
-	Assert(parse->hasWindFuncs);	
+	Assert(parse->hasWindowFuncs);
 	/* Assert no unsupported stuff */
 	Assert(parse->setOperations == NULL);
 	Assert(!parse->hasAggs);
@@ -856,17 +855,6 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 			if (sinfo->frame && sinfo->frame->trail)
 				Assert(exprType(sinfo->frame->trail->val) == INT8OID);
 		}
-		else if ( sinfo->frame != NULL )
-		{
-			if (sinfo->frame->lead &&
-				sinfo->frame->lead->kind != WINDOW_DELAYED_BOUND_PRECEDING &&
-				sinfo->frame->lead->kind != WINDOW_DELAYED_BOUND_FOLLOWING)
-				sinfo->frame->lead = adjustFrameBound(sinfo->frame->lead, sinfo->frame->is_rows);
-			if (sinfo->frame->trail &&
-				sinfo->frame->trail->kind != WINDOW_DELAYED_BOUND_PRECEDING &&
-				sinfo->frame->trail->kind != WINDOW_DELAYED_BOUND_FOLLOWING)
-				sinfo->frame->trail = adjustFrameBound(sinfo->frame->trail, sinfo->frame->is_rows);
-		}
 		
 		sinfo->refset = bms_add_member(sinfo->refset, i);
 		
@@ -1188,11 +1176,6 @@ static int compare_frame(WindowFrame *a, WindowFrame *b)
 	if ( n != 0 )
 		return n;
 	
-	if ( a->exclude < b->exclude )
-		return -1;
-	else if ( a->exclude > b->exclude )
-		return 1;
-	
 	return 0;
 }
 
@@ -1212,50 +1195,6 @@ static int compare_edge(WindowFrameEdge *a, WindowFrameEdge *b)
 		return -1;
 
 	return 1;
-}
-
-/* Make any necessary adjustments to an ordinary window frame edge to
- * prepare it for later planning stages and for execution.
- *
- * Currently this is just resetting the window frame bound to delayed
- * if the value parameter can't be validated at planning time.  The
- * function issues an error if the value parameter is a negative 
- * constant.
- *
- * The function assumes the frame comes from the parser/rewriter so 
- * it will reject a delayed frame bound.  So don't use this to adjust 
- * edges of special frames such as those created for LAG/LEAD functions.
- */
-static WindowFrameEdge *adjustFrameBound(WindowFrameEdge *edge, bool is_rows)
-{
-	WindowBoundingKind kind;
-	
-	if ( edge == NULL )
-		return NULL;
-		
-	kind = edge->kind;
-	
-	if ( kind == WINDOW_BOUND_PRECEDING || kind == WINDOW_BOUND_FOLLOWING )
-	{
-		if ( edge->val && IsA(edge->val, Const))
-			;
-		else
-		{
-			edge = copyObject(edge);
-			if ( kind == WINDOW_BOUND_PRECEDING )
-				edge->kind = WINDOW_DELAYED_BOUND_PRECEDING;
-			else
-				edge->kind = WINDOW_DELAYED_BOUND_FOLLOWING;
-		}
-	}
-	else if ( edge->kind == WINDOW_BOUND_PRECEDING 
-			|| edge->kind == WINDOW_BOUND_FOLLOWING
-			|| edge->val != NULL )
-	{
-		elog(ERROR,"invalid window frame edge");
-	}
-	
-	return edge;
 }
 
 
@@ -1303,7 +1242,7 @@ make_lower_targetlist(Query *parse,
 	SortClause *dummy;
 	ListCell   *lc;
 
-	Assert ( parse->hasWindFuncs );
+	Assert ( parse->hasWindowFuncs );
 	
 	/* Start with a "flattened" tlist (having just the vars mentioned in 
 	 * the targetlist or the window clause --- but no upper-level Vars; 
@@ -1320,16 +1259,10 @@ make_lower_targetlist(Query *parse,
 		if ( f == NULL )
 			continue;
 			
-		if ( window_edge_is_delayed(f->trail) )
-		{
-			extravars = list_concat(extravars, 
-							pull_var_clause(f->trail->val, false));
-		}
-		if ( window_edge_is_delayed(f->lead) )
-		{
-			extravars = list_concat(extravars, 
-							pull_var_clause(f->lead->val, false));
-		}
+		extravars = list_concat(extravars,
+								pull_var_clause(f->trail->val, false));
+		extravars = list_concat(extravars,
+								pull_var_clause(f->lead->val, false));
 	}
 	lower_tlist = add_to_flat_tlist(lower_tlist, extravars, false /* resjunk */);
 	list_free(extravars);
@@ -1556,7 +1489,7 @@ lookup_window_function(RefInfo *rinfo)
 		elog(ERROR, "cache lookup failed for function %u", fnoid);
 	proform = (Form_pg_proc) GETSTRUCT(tuple);
 	isagg = proform->proisagg;
-	iswin = proform->proiswin;
+	iswin = proform->proiswindow;
 	
 	if ( (!isagg) && (!iswin) )
 	{
@@ -3007,12 +2940,12 @@ static List *make_rowkey_targets()
 {
 	FuncExpr *seg;
 	WindowRef *row;
-	
+
 	seg = makeFuncExpr(MPP_EXECUTION_SEGMENT_OID, 
 					   MPP_EXECUTION_SEGMENT_TYPE, 
 					   NIL, 
 					   COERCE_DONTCARE);
-								  
+
 	row = makeNode(WindowRef);
 	row->winfnoid = ROW_NUMBER_OID;
 	row->restype = ROW_NUMBER_TYPE;
@@ -3020,7 +2953,8 @@ static List *make_rowkey_targets()
 	row->winspec = row->winindex = 0;
 	row->winstage = WINSTAGE_ROWKEY; /* so setrefs doesn't get confused  */
 	row->winlevel = 0;
-	
+	row->location = -1;
+
 	return list_make2(
 		makeTargetEntry((Expr*)seg, 1, pstrdup("segment_join_key"), false),
 		makeTargetEntry((Expr*)row, 1, pstrdup("row_join_key"), false) );
@@ -3090,7 +3024,7 @@ static AttrNumber addTargetToCoplan(Node *target, Coplan *coplan, WindowContext 
 static Aggref* makeWindowAggref(WindowRef *winref)
 {
 	Aggref *aggref = makeNode(Aggref);
-	
+
 	aggref->aggfnoid = winref->winfnoid;
 	aggref->aggtype = winref->restype;
 	aggref->args = copyObject(winref->args);
@@ -3098,6 +3032,7 @@ static Aggref* makeWindowAggref(WindowRef *winref)
 	aggref->aggstar = false; /* at this point in processing, doesn't matter */
 	aggref->aggdistinct = winref->windistinct;
 	aggref->aggstage = AGGSTAGE_NORMAL;
+	aggref->location = -1;
 
 	return aggref;
 }
@@ -3105,7 +3040,7 @@ static Aggref* makeWindowAggref(WindowRef *winref)
 static Aggref* makeAuxCountAggref()
 {
 	Aggref *aggref = makeNode(Aggref);
-	
+
 	aggref->aggfnoid = 2803; /* TODO count(*) oid define in pg_proc.h */
 	aggref->aggtype = 20; /* TODO count(*) result type oid in pg_proc.h */
 	aggref->args = NIL;
@@ -3113,7 +3048,8 @@ static Aggref* makeAuxCountAggref()
 	aggref->aggstar = true; 
 	aggref->aggdistinct = false; 
 	aggref->aggstage = AGGSTAGE_NORMAL;
-	
+	aggref->location = -1;
+
 	return aggref;
 }
 
@@ -3958,7 +3894,7 @@ Plan *wrap_plan(PlannerInfo *root, Plan *plan, Query *query,
 	subquery->resultRelation = 0;
 	subquery->intoClause = NULL;
 	subquery->hasAggs = false;
-	subquery->hasWindFuncs = false;
+	subquery->hasWindowFuncs = false;
 	subquery->hasSubLinks = false;
 	subquery->returningList = NIL;
 	subquery->groupClause = NIL;
@@ -4084,7 +4020,7 @@ Query *copy_common_subquery(Query *original, List *targetList)
 	common->resultRelation = 0;
 	common->utilityStmt = NULL;
 	common->intoClause = NULL;
-	common->hasWindFuncs = false;
+	common->hasWindowFuncs = false;
 	common->hasSubLinks = false; /* XXX */
 	common->returningList = NIL;
 	common->distinctClause = NIL;
@@ -4094,41 +4030,4 @@ Query *copy_common_subquery(Query *original, List *targetList)
 	common->rowMarks = NIL;
 	
 	return common;
-}
-
-/*
- * Return true if a node contains WindowRefs.
- *
- * 'context' is not used in this function.
- */
-bool
-contain_windowref(Node *node, void *context)
-{
-	if (node == NULL)
-		return false;
-	
-	if (IsA(node, WindowRef))
-		return true;
-	
-	return expression_tree_walker(node, contain_windowref, NULL);
-}
-
-/*
- * Does the given window frame edge contains an expression that must be
- * evaluated at run time (i.e., may contain a Var)?
- */
-bool
-window_edge_is_delayed(WindowFrameEdge *edge)
-{
-	if (edge == NULL)
-		return false;
-	if ((edge->kind == WINDOW_DELAYED_BOUND_PRECEDING ||
-		 edge->kind == WINDOW_DELAYED_BOUND_FOLLOWING) &&
-			edge->val != NULL)
-		return true;
-
-	/* Non-delayed frame edge must not have Var */
-	Assert(pull_var_clause((Node *) edge->val, false) == NIL);
-
-	return false;
 }

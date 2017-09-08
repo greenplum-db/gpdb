@@ -106,6 +106,8 @@ char	   *XLogArchiveCommand = NULL;
 char	   *XLOG_sync_method = NULL;
 const char	XLOG_sync_method_default[] = DEFAULT_SYNC_METHOD_STR;
 bool		fullPageWrites = true;
+char   *wal_consistency_checking_string = NULL;
+bool   *wal_consistency_checking = NULL;
 bool		log_checkpoints = false;
 
 #ifdef WAL_DEBUG
@@ -176,6 +178,9 @@ static bool recoveryLogRestartpoints = false;
 static TransactionId recoveryTargetXid;
 static TimestampTz recoveryTargetTime;
 static TimestampTz recoveryLastXTime = 0;
+
+static char *replay_image_masked = NULL;
+static char *master_image_masked = NULL;
 
 /* options taken from recovery.conf for XLOG streaming */
 static bool StandbyModeRequested = false;
@@ -596,12 +601,6 @@ static TimeLineID lastSegmentTLI = 0;
 
 static bool InRedo = false;
 
-/* Aligning xlog mirrored buffer */
-static int32 writeBufLen = 0;
-static char	*writeBuf = NULL;
-
-char	*writeBufAligned = NULL;
-
 /*
  * Flag set by interrupt handlers for later service in the redo loop.
  */
@@ -625,9 +624,11 @@ static void CheckPointGuts(XLogRecPtr checkPointRedo, int flags);
 static void Checkpoint_RecoveryPass(XLogRecPtr checkPointRedo);
 
 static bool XLogCheckBuffer(XLogRecData *rdata, bool holdsExclusiveLock,
-				XLogRecPtr *lsn, BkpBlock *bkpb);
-static Buffer RestoreBackupBlockContents(XLogRecPtr lsn, BkpBlock bkpb,
+							bool wal_check_consistency_enabled,
+							XLogRecPtr *lsn, BkpBlock *bkpb);
+static void RestoreBackupBlockContents(XLogRecPtr lsn, BkpBlock bkpb,
 				char *blk, bool get_cleanup_lock, bool keep_buffer);
+
 static bool AdvanceXLInsertBuffer(bool new_segment);
 static void XLogWrite(XLogwrtRqst WriteRqst, bool flexible, bool xlog_switch);
 static void XLogFileInit(
@@ -717,6 +718,7 @@ void HandleStartupProcInterrupts(void);
 static bool CheckForStandbyTrigger(void);
 
 static void GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg);
+static void checkXLogConsistency(XLogRecord *record, XLogRecPtr EndRecPtr);
 
 /*
  * Whether we need to always generate transaction log (XLOG), or if we can
@@ -846,6 +848,7 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 	bool		doPageWrites;
 	bool		isLogSwitch = (rmid == RM_XLOG_ID && info == XLOG_SWITCH);
 	bool		rdata_iscopy = false;
+	uint8       extended_info = 0;
 
     /* Safety check in case our assumption is ever broken. */
 	/* NOTE: This is slightly modified from the one in xact.c -- the test for */
@@ -898,6 +901,15 @@ XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId h
 	}
 
 	/*
+	 * Enforce consistency checks for this record if user is looking for
+	 * it. Do this before at the beginning of this routine to give the
+	 * possibility for callers of XLogInsert() to pass XLR_CHECK_CONSISTENCY
+	 * directly for a record.
+	 */
+	if (wal_consistency_checking[rmid])
+		extended_info |= XLR_CHECK_CONSISTENCY;
+
+	/*
 	 * Here we scan the rdata chain, determine which buffers must be backed
 	 * up, and compute the CRC values for the data.  Note that the record
 	 * header isn't added into the CRC initially since we don't know the final
@@ -948,8 +960,13 @@ begin:;
 			{
 				if (rdt->buffer == dtbuf[i])
 				{
-					/* Buffer already referenced by earlier chain item */
-					if (dtbuf_bkp[i])
+					/*
+					 * Buffer already referenced by earlier chain item and
+					 * will be applied then only ignore it. Block can exist
+					 * for consistency check purpose and hence should include
+					 * original data along if its only for that purpose.
+					 */
+					if (dtbuf_bkp[i] && (dtbuf_xlg[i].block_info & BLOCK_APPLY))
 						rdt->data = NULL;
 					else if (rdt->data)
 					{
@@ -962,11 +979,23 @@ begin:;
 				{
 					/* OK, put it in this slot */
 					dtbuf[i] = rdt->buffer;
+
 					if (doPageWrites && XLogCheckBuffer(rdt, true,
+										(extended_info & XLR_CHECK_CONSISTENCY) != 0,
 										&(dtbuf_lsn[i]), &(dtbuf_xlg[i])))
 					{
 						dtbuf_bkp[i] = true;
-						rdt->data = NULL;
+
+						if (dtbuf_xlg[i].block_info & BLOCK_APPLY)
+							rdt->data = NULL;
+						else
+						{
+							if (rdt->data)
+							{
+								len += rdt->len;
+								COMP_CRC32C(rdata_crc, rdt->data, rdt->len);
+							}
+						}
 					}
 					else if (rdt->data)
 					{
@@ -1214,6 +1243,7 @@ begin:;
 	record->xl_len = len;		/* doesn't include backup blocks */
 	record->xl_info = info;
 	record->xl_rmid = rmid;
+	record->xl_extended_info = extended_info;
 
 	/* Now we can finish computing the record's CRC */
 	COMP_CRC32C(rdata_crc, (char *) record + sizeof(pg_crc32),
@@ -1525,9 +1555,11 @@ XLogLastInsertDataLen(void)
  */
 static bool
 XLogCheckBuffer(XLogRecData *rdata, bool holdsExclusiveLock,
+				bool wal_check_consistency_enabled,
 				XLogRecPtr *lsn, BkpBlock *bkpb)
 {
 	PageHeader	page;
+	bool needs_backup;
 
 	page = (PageHeader) BufferGetBlock(rdata->buffer);
 
@@ -1542,13 +1574,26 @@ XLogCheckBuffer(XLogRecData *rdata, bool holdsExclusiveLock,
 	else
 		*lsn = BufferGetLSNAtomic(rdata->buffer);
 
-	if (XLByteLE(*lsn, RedoRecPtr))
+	needs_backup = XLByteLE(page->pd_lsn, RedoRecPtr);
+
+	if (needs_backup || wal_check_consistency_enabled)
 	{
 		/*
 		 * The page needs to be backed up, so set up *bkpb
 		 */
 		bkpb->node = BufferGetFileNode(rdata->buffer);
 		bkpb->block = BufferGetBlockNumber(rdata->buffer);
+		bkpb->block_info = 0;
+
+		/*
+		 * If WAL consistency checking is enabled for the
+		 * resource manager of this WAL record, a full-page
+		 * image is included in the record for the block
+		 * modified. During redo, the full-page is replayed
+		 * only if block_apply is set.
+		 */
+		if (needs_backup)
+			bkpb->block_info |= BLOCK_APPLY;
 
 		if (rdata->buffer_std)
 		{
@@ -3386,9 +3431,9 @@ RestoreBkpBlocks(XLogRecord *record, XLogRecPtr lsn)
 		memcpy(&bkpb, blk, sizeof(BkpBlock));
 		blk += sizeof(BkpBlock);
 
-		RestoreBackupBlockContents(lsn, bkpb, blk, false, /* get_cleanup_lock is ignored in GPDB */
-								   false);
-		
+		/* get_cleanup_lock is ignored in GPDB */
+		RestoreBackupBlockContents(lsn, bkpb, blk, false, false);
+
 		blk += BLCKSZ - bkpb.hole_length;
 	}
 }
@@ -3398,13 +3443,16 @@ RestoreBkpBlocks(XLogRecord *record, XLogRecPtr lsn)
  *
  * Restores a full-page image from BkpBlock and a data pointer.
  */
-static Buffer
+static void
 RestoreBackupBlockContents(XLogRecPtr lsn, BkpBlock bkpb, char *blk,
 						   bool get_cleanup_lock, bool keep_buffer)
 {
 	Buffer		buffer;
 	Page		page;
 	Relation	reln;
+
+	if (! (bkpb.block_info & BLOCK_APPLY))
+		return;
 
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
@@ -3451,7 +3499,34 @@ RestoreBackupBlockContents(XLogRecPtr lsn, BkpBlock bkpb, char *blk,
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
 
-	return buffer;
+	return;
+}
+
+bool
+IsBkpBlockApplied(XLogRecord *record, uint8 block_id)
+{
+	BkpBlock	bkpb;
+	char	   *blk;
+	int			i;
+
+	Assert(block_id < XLR_MAX_BKP_BLOCKS);
+
+	blk = (char *) XLogRecGetData(record) + record->xl_len;
+	for (i = 0; i <= block_id; i++)
+	{
+		if (!(record->xl_info & XLR_SET_BKP_BLOCK(i)))
+			continue;
+
+		memcpy(&bkpb, blk, sizeof(BkpBlock));
+		blk += sizeof(BkpBlock);
+
+		if (i == block_id)
+			return (bkpb.block_info & BLOCK_APPLY) != 0;
+
+		blk += BLCKSZ - bkpb.hole_length;
+	}
+
+	return false;
 }
 
 /*
@@ -6370,6 +6445,14 @@ ApplyStartupRedo(
 
 	RmgrTable[record->xl_rmid].rm_redo(*beginLoc, *lsn, record);
 
+	/*
+	 * After redo, check whether the backup pages associated with
+	 * the WAL record are consistent with the existing pages. This
+	 * check is done only if consistency check is enabled for this
+	 * record.
+	 */
+	if ((record->xl_extended_info & XLR_CHECK_CONSISTENCY) != 0)
+		checkXLogConsistency(record, *lsn);
 	/* Pop the error context stack */
 	error_context_stack = errcontext.previous;
 
@@ -6587,6 +6670,13 @@ StartupXLOG(void)
 	 */
 	if (StandbyModeRequested)
 		OwnLatch(&XLogCtl->recoveryWakeupLatch);
+
+	/*
+	 * Allocate pages dedicated to WAL consistency checks, those had better
+	 * be aligned.
+	 */
+	replay_image_masked = (char *) palloc(BLCKSZ);
+	master_image_masked = (char *) palloc(BLCKSZ);
 
 	if (read_backup_label(&checkPointLoc, &backupEndRequired))
 	{
@@ -7613,6 +7703,13 @@ StartupXLOG_Pass3(void)
 		if (ckptExtended.ptas)
 			SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
 	}
+
+	/*
+	 * Allocate pages dedicated to WAL consistency checks, those had better
+	 * be aligned.
+	 */
+	replay_image_masked = (char *) palloc(BLCKSZ);
+	master_image_masked = (char *) palloc(BLCKSZ);
 
 	record = XLogReadRecord(&XLogCtl->pass1StartLoc, false, PANIC);
 
@@ -9593,7 +9690,7 @@ XLogSaveBufferForHint(Buffer buffer, Relation relation)
 	/*
 	 * Check buffer while not holding an exclusive lock.
 	 */
-	if (XLogCheckBuffer(rdata, false, &lsn, &bkpbwithpt.bkpb))
+	if (XLogCheckBuffer(rdata, false, false, &lsn, &bkpbwithpt.bkpb))
 	{
 		char copied_buffer[BLCKSZ];
 		char *origdata = (char *) BufferGetBlock(buffer);
@@ -11994,41 +12091,6 @@ int XLogAddRecordsToChangeTracking(
 	return count;
 }
 
-/*
- * The following two gucs
- *					a) fsync=on
- *					b) wal_sync_method=open_sync
- * open XLOG files with O_DIRECT flag.
- * O_DIRECT flag requires XLOG buffer to be 512 byte aligned.
- */
-void
-XLogInitMirroredAlignedBuffer(int32 bufferLen)
-{
-	if (bufferLen > writeBufLen)
-	{
-		if (writeBuf != NULL)
-		{
-			pfree(writeBuf);
-			writeBuf = NULL;
-			writeBufAligned = NULL;
-			writeBufLen = 0;
-		}
-	}
-
-	if (writeBuf == NULL)
-	{
-		writeBufLen = bufferLen;
-
-		writeBuf = MemoryContextAlloc(TopMemoryContext, writeBufLen + ALIGNOF_XLOG_BUFFER);
-		if (writeBuf == NULL)
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 (errmsg("could not allocate memory for mirrored aligned buffer"))));
-		writeBufAligned = (char *) TYPEALIGN(ALIGNOF_XLOG_BUFFER, writeBuf);
-	}
-}
-
-
 int
 XLogRecoverMirror(void)
 {
@@ -12190,4 +12252,141 @@ GetXLogCleanUpTo(XLogRecPtr recptr, uint32 *_logId, uint32 *_logSeg)
 #ifndef USE_SEGWALREP
 	}
 #endif
+}
+
+/*
+ * Checks whether the current buffer page and backup page stored in the
+ * WAL record are consistent or not. Before comparing the two pages, a
+ * masking can be applied to the pages to ignore certain areas like hint bits,
+ * unused space between pd_lower and pd_upper among other things. This
+ * function should be called once WAL replay has been completed for a
+ * given record.
+ */
+static void
+checkXLogConsistency(XLogRecord *record, XLogRecPtr EndRecPtr)
+{
+	MIRROREDLOCK_BUFMGR_DECLARE;
+	RmgrId		rmid = record->xl_rmid;
+	char       *blk;
+
+	/* Records with no backup blocks have no need for consistency checks. */
+	if (!(record->xl_info & XLR_BKP_BLOCK_MASK))
+		return;
+
+	Assert((record->xl_extended_info & XLR_CHECK_CONSISTENCY) != 0);
+
+	blk = (char *) XLogRecGetData(record) + record->xl_len;
+	for (int i = 0; i < XLR_MAX_BKP_BLOCKS; i++)
+	{
+		Relation    reln;
+		BkpBlock    bkpb;
+		Buffer		buf;
+		Page		page;
+		char       *src_buffer;
+
+		if (!(record->xl_info & XLR_SET_BKP_BLOCK(i)))
+		{
+			/*
+			 * WAL record doesn't contain a block do nothing.
+			 */
+			continue;
+		}
+
+		memcpy(&bkpb, blk, sizeof(BkpBlock));
+		blk += sizeof(BkpBlock);
+		src_buffer = blk;
+		/* move on to point to next block */
+		blk += BLCKSZ - bkpb.hole_length;
+
+		if (bkpb.block_info & BLOCK_APPLY)
+		{
+			/*
+			 * WAL record has already applied the page, so bypass the
+			 * consistency check as that would result in comparing the full
+			 * page stored in the record with itself.
+			 */
+			continue;
+		}
+
+		reln = XLogOpenRelation(bkpb.node);
+
+		// -------- MirroredLock ----------
+		MIRROREDLOCK_BUFMGR_LOCK;
+
+		/*
+		 * Read the contents from the current buffer and store it in a
+		 * temporary page.
+		 */
+		buf = XLogReadBuffer(reln, bkpb.block, false);
+		if (!BufferIsValid(buf))
+			continue;
+
+		page = BufferGetPage(buf);
+
+		/*
+		 * Take a copy of the local page where WAL has been applied to have a
+		 * comparison base before masking it...
+		 */
+		memcpy(replay_image_masked, page, BLCKSZ);
+
+		/* No need for this page anymore now that a copy is in. */
+		UnlockReleaseBuffer(buf);
+
+		MIRROREDLOCK_BUFMGR_UNLOCK;
+		// -------- MirroredLock ----------
+
+		/*
+		 * If the block LSN is already ahead of this WAL record, we can't
+		 * expect contents to match.  This can happen if recovery is
+		 * restarted.
+		 */
+		if (XLByteLT(EndRecPtr, PageGetLSN(replay_image_masked)))
+			continue;
+
+		/*
+		 * Read the contents from the backup copy, stored in WAL record and
+		 * store it in a temporary page. There is no need to allocate a new
+		 * page here, a local buffer is fine to hold its contents and a mask
+		 * can be directly applied on it.
+		 */
+		if (bkpb.hole_length == 0)
+		{
+			memcpy((char *) master_image_masked, src_buffer, BLCKSZ);
+		}
+		else
+		{
+			/* zero-fill the hole, anyways gets masked out */
+			MemSet((char *) master_image_masked, 0, BLCKSZ);
+			memcpy((char *) master_image_masked, src_buffer, bkpb.hole_offset);
+			memcpy((char *) master_image_masked + (bkpb.hole_offset + bkpb.hole_length),
+				   src_buffer + bkpb.hole_offset,
+				   BLCKSZ - (bkpb.hole_offset + bkpb.hole_length));
+		}
+
+		/*
+		 * If masking function is defined, mask both the master and replay
+		 * images
+		 */
+		if (RmgrTable[rmid].rm_mask != NULL)
+		{
+			RmgrTable[rmid].rm_mask(replay_image_masked, bkpb.block);
+			RmgrTable[rmid].rm_mask(master_image_masked, bkpb.block);
+		}
+
+		/* Time to compare the master and replay images. */
+		if (memcmp(replay_image_masked, master_image_masked, BLCKSZ) != 0)
+		{
+			elog(FATAL,
+				 "inconsistent page found, rel %u/%u/%u, blkno %u",
+				 bkpb.node.spcNode, bkpb.node.dbNode, bkpb.node.relNode,
+				 bkpb.block);
+		}
+		else
+		{
+			elog(DEBUG1,
+				 "Consistent page for rel %u/%u/%u, blkno %u",
+				 bkpb.node.spcNode, bkpb.node.dbNode, bkpb.node.relNode,
+				 bkpb.block);
+		}
+	}
 }

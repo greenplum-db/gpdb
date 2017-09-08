@@ -1428,7 +1428,8 @@ ChangeTracking_GetIncrementalChangeList(void)
 					result = ChangeTracking_InitIncrementalChangeList(proc);
 				
 				/* convert to desired data type */
-				persistentTid = DatumGetPointer(DirectFunctionCall1(tidin, CStringGetDatum(str_tid)));
+				persistentTid = (ItemPointer) DatumGetPointer(
+					DirectFunctionCall1(tidin, CStringGetDatum(str_tid)));
 				persistentSerialNum = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(str_sn)));
 				numblocks = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(str_numb)));
 				
@@ -3178,7 +3179,8 @@ int ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr*	upto
 				relfile.relNode = DatumGetObjectId(DirectFunctionCall1(oidin, CStringGetDatum(str_rel)));
 				blocknum = DatumGetUInt32(DirectFunctionCall1(int4in, CStringGetDatum(str_blocknum)));
 				endlsn = (XLogRecPtr*) DatumGetPointer(DirectFunctionCall1(gpxloglocin, CStringGetDatum(str_endlsn)));
-				persistentTid = DatumGetPointer(DirectFunctionCall1(tidin, CStringGetDatum(str_tid)));
+				persistentTid = (ItemPointer) DatumGetPointer(
+					DirectFunctionCall1(tidin, CStringGetDatum(str_tid)));
 				persistentSerialNum = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(str_sn)));
 
 				SIMPLE_FAULT_INJECTOR(FileRepChangeTrackingCompacting);

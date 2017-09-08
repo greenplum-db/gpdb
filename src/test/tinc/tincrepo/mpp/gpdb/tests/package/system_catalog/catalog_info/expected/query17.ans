@@ -1,7 +1,0 @@
--- start_ignore
-select * from pg_autovacuum;
- vacrelid | enabled | vac_base_thresh | vac_scale_factor | anl_base_thresh | anl_scale_factor | vac_cost_delay | vac_cost_limit | freeze_min_age | freeze_max_age 
-----------+---------+-----------------+------------------+-----------------+------------------+----------------+----------------+----------------+----------------
-(0 rows)
-
--- end_ignore

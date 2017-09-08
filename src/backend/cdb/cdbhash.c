@@ -311,7 +311,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
              * If we did a pg_detoast_datum, we need to remember to pfree, 
              * or we will leak memory.  Because of the 1-byte varlena header stuff.
              */
-            if (num != DatumGetPointer(datum)) 
+            if (num != (Numeric) DatumGetPointer(datum)) 
                 tofree = num;
 
 			break;

@@ -212,10 +212,6 @@ namespace gpdxl
 			static
 			EdxlSetOpType Edxlsetop(SetOperation setop, BOOL fAll);
 
-			// return the GPDB frame exclusion strategy from its corresponding DXL representation
-			static
-			WindowExclusion Windowexclusion(EdxlFrameExclusionStrategy edxlfes);
-
 			// return the GPDB frame boundary kind from its corresponding DXL representation
 			static
 			WindowBoundingKind Windowboundkind(EdxlFrameBoundary edxlfb);

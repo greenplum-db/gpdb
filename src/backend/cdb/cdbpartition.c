@@ -2156,11 +2156,11 @@ partMakePartition(HeapTuple tuple)
 	p->paristemplate = partrow->paristemplate;
 	p->parnatts = partrow->parnatts;
 
-	atts = DatumGetPointer(SysCacheGetAttr(PARTOID, tuple,
+	atts = (int2vector *) DatumGetPointer(SysCacheGetAttr(PARTOID, tuple,
 										   Anum_pg_partition_paratts,
 										   &isnull));
 	Assert(!isnull);
-	oids = DatumGetPointer(SysCacheGetAttr(PARTOID, tuple,
+	oids = (oidvector *) DatumGetPointer(SysCacheGetAttr(PARTOID, tuple,
 										   Anum_pg_partition_parclass,
 										   &isnull));
 	Assert(!isnull);
@@ -2373,8 +2373,9 @@ get_partition_key_bitmapset(Oid relid)
 			continue;  /* no interest in template parts */
 
 		natts = partrow->parnatts;
-		atts = DatumGetPointer(heap_getattr(tuple, Anum_pg_partition_paratts,
-											tupledesc, &isnull));
+		atts = (int2vector *) DatumGetPointer(
+			heap_getattr(tuple, Anum_pg_partition_paratts,
+						 tupledesc, &isnull));
 		Insist(!isnull);
 
 		for ( i = 0; i < natts; i++ )

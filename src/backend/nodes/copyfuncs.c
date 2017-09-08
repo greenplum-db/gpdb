@@ -74,7 +74,7 @@
 	do { \
 		if (from->fldname) \
 		{ \
-			newnode->fldname = DatumGetPointer( \
+			newnode->fldname = (bytea *) DatumGetPointer( \
 					datumCopy(PointerGetDatum(from->fldname), false, len)); \
 		} \
 	} while (0)
@@ -101,6 +101,7 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_SCALAR_FIELD(planGen);
 	COPY_SCALAR_FIELD(canSetTag);
 	COPY_SCALAR_FIELD(transientPlan);
+	COPY_SCALAR_FIELD(oneoffPlan);
 	COPY_NODE_FIELD(planTree);
 	COPY_NODE_FIELD(rtable);
 	COPY_NODE_FIELD(resultRelations);
@@ -1469,8 +1470,10 @@ _copyWindowRef(WindowRef *from)
 	COPY_SCALAR_FIELD(winfnoid);
 	COPY_SCALAR_FIELD(restype);
 	COPY_NODE_FIELD(args);
-	COPY_SCALAR_FIELD(windistinct);
 	COPY_SCALAR_FIELD(winspec);
+	COPY_SCALAR_FIELD(winstar);
+	COPY_SCALAR_FIELD(winagg);
+	COPY_SCALAR_FIELD(windistinct);
 	COPY_SCALAR_FIELD(winindex);
 	COPY_SCALAR_FIELD(winstage);
 	COPY_SCALAR_FIELD(winlevel);
@@ -2364,7 +2367,6 @@ _copyWindowFrame(WindowFrame *from)
 	COPY_SCALAR_FIELD(is_between);
 	COPY_NODE_FIELD(trail);
 	COPY_NODE_FIELD(lead);
-	COPY_SCALAR_FIELD(exclude);
 
 	return newnode;
 }
@@ -2514,13 +2516,13 @@ _copyFuncCall(FuncCall *from)
 
 	COPY_NODE_FIELD(funcname);
 	COPY_NODE_FIELD(args);
-    COPY_NODE_FIELD(agg_order);
+	COPY_NODE_FIELD(agg_order);
+	COPY_NODE_FIELD(agg_filter);
 	COPY_SCALAR_FIELD(agg_star);
 	COPY_SCALAR_FIELD(agg_distinct);
 	COPY_SCALAR_FIELD(func_variadic);
 	COPY_NODE_FIELD(over);
 	COPY_SCALAR_FIELD(location);
-	COPY_NODE_FIELD(agg_filter);
 
 	return newnode;
 }
@@ -2826,7 +2828,7 @@ _copyQuery(Query *from)
 	COPY_SCALAR_FIELD(resultRelation);
 	COPY_NODE_FIELD(intoClause);
 	COPY_SCALAR_FIELD(hasAggs);
-	COPY_SCALAR_FIELD(hasWindFuncs);
+	COPY_SCALAR_FIELD(hasWindowFuncs);
 	COPY_SCALAR_FIELD(hasSubLinks);
 	COPY_SCALAR_FIELD(hasDynamicFunctions);
 	COPY_NODE_FIELD(rtable);
@@ -2841,7 +2843,6 @@ _copyQuery(Query *from)
 	COPY_NODE_FIELD(scatterClause);
 	COPY_NODE_FIELD(cteList);
 	COPY_SCALAR_FIELD(hasRecursive);
-	COPY_SCALAR_FIELD(hasModifyingCTE);
 	COPY_NODE_FIELD(limitOffset);
 	COPY_NODE_FIELD(limitCount);
 	COPY_NODE_FIELD(rowMarks);

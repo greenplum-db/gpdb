@@ -468,7 +468,7 @@ get_eclass_for_sort_expr(PlannerInfo *root,
 		if (newec->ec_has_volatile ||
 			expression_returns_set((Node *) expr) ||
 			contain_agg_clause((Node *) expr) ||
-			contain_window_functions((Node *) expr))
+			contain_window_function((Node *) expr))
 		{
 			newec->ec_has_const = false;
 			newem->em_is_const = false;

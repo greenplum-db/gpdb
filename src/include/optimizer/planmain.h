@@ -19,6 +19,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 #include "optimizer/clauses.h" /* AggClauseCounts */
+#include "utils/uri.h"
 
 /* GUC parameters */
 #define DEFAULT_CURSOR_TUPLE_FRACTION 1.0 /* assume all rows will be fetched */
@@ -100,8 +101,6 @@ extern Plan *make_distinctaggs_for_rollup(PlannerInfo *root, bool is_agg,
 extern Plan *window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr);
 extern RangeTblEntry *package_plan_as_rte(Query *query, Plan *plan, Alias *eref, List *pathkeys);
 extern Value *get_tle_name(TargetEntry *tle, List* rtable, const char *default_name);
-extern bool contain_windowref(Node *node, void *context);
-extern bool window_edge_is_delayed(WindowFrameEdge *edge);
 extern Plan *wrap_plan(PlannerInfo *root, Plan *plan, Query *query, List **p_pathkeys,
        const char *alias_name, List *col_names, Query **query_p);
 
@@ -209,6 +208,8 @@ extern Plan *add_agg_cost(PlannerInfo *root, Plan *plan,
 		 long numGroups, int num_nullcols,
 		 int numAggs, int transSpace);
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
+
+extern List *create_external_scan_uri_list(struct ExtTableEntry *extEntry, bool *ismasteronly);
 
 /*
  * prototypes for plan/initsplan.c

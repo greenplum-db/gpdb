@@ -30,7 +30,8 @@ typedef struct ParamWalkerContext
 {
 	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
 	List	   *params;
-}	ParamWalkerContext;
+	Bitmapset  *wtParams;
+} ParamWalkerContext;
 
 static bool param_walker(Node *node, ParamWalkerContext * context);
 static Oid	findParamType(List *params, int paramid);
@@ -224,6 +225,7 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 
 	exec_init_plan_tree_base(&context.base, stmt);
 	context.params = NIL;
+	context.wtParams = NULL;
 	param_walker((Node *) plan, &context);
 	
 	/* 
@@ -258,7 +260,7 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 		}
 	}
 
-	if (context.params == NIL)
+	if (context.params == NIL && bms_num_members(context.wtParams) < nIntPrm)
 	{
 		/* We apparently have an initplan with no corresponding parameter.
 		 * This shouldn't happen, but we had a bug once (MPP-239) because
@@ -357,6 +359,11 @@ param_walker(Node *node, ParamWalkerContext * context)
 			context->params = lappend(context->params, param);
 			return false;
 		}
+	}
+	else if (IsA(node, WorkTableScan))
+	{
+		WorkTableScan *wt = (WorkTableScan *) node;
+		context->wtParams = bms_add_member(context->wtParams, wt->wtParam);
 	}
 	return plan_tree_walker(node, param_walker, context);
 }

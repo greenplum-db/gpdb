@@ -234,40 +234,106 @@ CTranslatorRelcacheToDXL::PmdnameRel
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
+//		CTranslatorRelcacheToDXL::PdrgpmdRelIndexInfo
 //
 //	@doc:
 //		Return the indexes defined on the given relation
 //
 //---------------------------------------------------------------------------
-DrgPmdid *
-CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
+DrgPmdIndexInfo *
+CTranslatorRelcacheToDXL::PdrgpmdRelIndexInfo
 	(
 	IMemoryPool *pmp,
 	Relation rel
 	)
 {
 	GPOS_ASSERT(NULL != rel);
-	DrgPmdid *pdrgpmdidIndexes = GPOS_NEW(pmp) DrgPmdid(pmp);
 
-	List *plIndexOids = NIL;
-	
-	if (gpdb::FRelPartIsNone(rel->rd_id))
+	if (gpdb::FRelPartIsNone(rel->rd_id) || gpdb::FLeafPartition(rel->rd_id))
 	{
-		// not a partitioned table: obtain indexes directly from the catalog
-		plIndexOids = gpdb::PlRelationIndexes(rel);
+		return PdrgpmdRelIndexInfoNonPartTable(pmp, rel);
 	}
 	else if (gpdb::FRelPartIsRoot(rel->rd_id))
 	{
-		// root of partitioned table: aggregate index information across different parts
-		plIndexOids = PlIndexOidsPartTable(rel);
+		return PdrgpmdRelIndexInfoPartTable(pmp, rel);
 	}
 	else  
 	{
-		// interior or leaf partition: do not consider indexes
-		return pdrgpmdidIndexes;
+		// interior partition: do not consider indexes
+		DrgPmdIndexInfo *pdrgpmdIndexInfo = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
+		return pdrgpmdIndexInfo;
 	}
-	
+}
+
+// return index info list of indexes defined on a partitioned table
+DrgPmdIndexInfo *
+CTranslatorRelcacheToDXL::PdrgpmdRelIndexInfoPartTable
+	(
+	IMemoryPool *pmp,
+	Relation relRoot
+	)
+{
+	DrgPmdIndexInfo *pdrgpmdIndexInfo = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
+
+	// root of partitioned table: aggregate index information across different parts
+	List *plLogicalIndexInfo = PlIndexInfoPartTable(relRoot);
+
+	ListCell *plc = NULL;
+
+	ForEach (plc, plLogicalIndexInfo)
+	{
+		LogicalIndexInfo *logicalIndexInfo = (LogicalIndexInfo *) lfirst(plc);
+		OID oidIndex = logicalIndexInfo->logicalIndexOid;
+
+		// only add supported indexes
+		Relation relIndex = gpdb::RelGetRelation(oidIndex);
+
+		if (NULL == relIndex)
+		{
+			WCHAR wsz[1024];
+			CWStringStatic str(wsz, 1024);
+			COstreamString oss(&str);
+			oss << (ULONG) oidIndex;
+			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, str.Wsz());
+		}
+
+		GPOS_ASSERT(NULL != relIndex->rd_indextuple);
+
+		GPOS_TRY
+		{
+			if (FIndexSupported(relIndex))
+			{
+				CMDIdGPDB *pmdidIndex = GPOS_NEW(pmp) CMDIdGPDB(oidIndex);
+				BOOL fPartial = (NULL != logicalIndexInfo->partCons) || (NIL != logicalIndexInfo->defaultLevels);
+				CMDIndexInfo *pmdIndexInfo = GPOS_NEW(pmp) CMDIndexInfo(pmdidIndex, fPartial);
+				pdrgpmdIndexInfo->Append(pmdIndexInfo);
+			}
+
+			gpdb::CloseRelation(relIndex);
+		}
+		GPOS_CATCH_EX(ex)
+		{
+			gpdb::CloseRelation(relIndex);
+			GPOS_RETHROW(ex);
+		}
+		GPOS_CATCH_END;
+	}
+	return pdrgpmdIndexInfo;
+}
+
+// return index info list of indexes defined on regular, external tables or leaf partitions
+DrgPmdIndexInfo *
+CTranslatorRelcacheToDXL::PdrgpmdRelIndexInfoNonPartTable
+	(
+	IMemoryPool *pmp,
+	Relation rel
+	)
+{
+	DrgPmdIndexInfo *pdrgpmdIndexInfo = GPOS_NEW(pmp) DrgPmdIndexInfo(pmp);
+
+	// not a partitioned table: obtain indexes directly from the catalog
+	List *plIndexOids = gpdb::PlRelationIndexes(rel);
+
 	ListCell *plc = NULL;
 
 	ForEach (plc, plIndexOids)
@@ -293,7 +359,9 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 			if (FIndexSupported(relIndex))
 			{
 				CMDIdGPDB *pmdidIndex = GPOS_NEW(pmp) CMDIdGPDB(oidIndex);
-				pdrgpmdidIndexes->Append(pmdidIndex);
+				// for a regular table, external table or leaf partition, an index is always complete
+				CMDIndexInfo *pmdIndexInfo = GPOS_NEW(pmp) CMDIndexInfo(pmdidIndex, false /* fPartial */);
+				pdrgpmdIndexInfo->Append(pmdIndexInfo);
 			}
 
 			gpdb::CloseRelation(relIndex);
@@ -306,30 +374,24 @@ CTranslatorRelcacheToDXL::PdrgpmdidRelIndexes
 		GPOS_CATCH_END;
 	}
 
-	return pdrgpmdidIndexes;
+	return pdrgpmdIndexInfo;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::PlIndexOidsPartTable
+//		CTranslatorRelcacheToDXL::PlIndexInfoPartTable
 //
 //	@doc:
-//		Return the index oids of a partitioned table
+//		Return the index info list of on a partitioned table
 //
 //---------------------------------------------------------------------------
 List *
-CTranslatorRelcacheToDXL::PlIndexOidsPartTable
+CTranslatorRelcacheToDXL::PlIndexInfoPartTable
 	(
 	Relation rel
 	)
 {
-	if (!gpdb::FRelPartIsRoot(rel->rd_id))
-	{
-		// not a partitioned table
-		return NIL;
-	}
-
-	List *plOids = NIL;
+	List *plgidxinfo = NIL;
 	
 	LogicalIndexes *plgidx = gpdb::Plgidx(rel->rd_id);
 
@@ -344,12 +406,12 @@ CTranslatorRelcacheToDXL::PlIndexOidsPartTable
 	for (ULONG ul = 0; ul < ulIndexes; ul++)
 	{
 		LogicalIndexInfo *pidxinfo = (plgidx->logicalIndexInfo)[ul];
-		plOids = gpdb::PlAppendOid(plOids, pidxinfo->logicalIndexOid);
+		plgidxinfo = gpdb::PlAppendElement(plgidxinfo, pidxinfo);
 	}
 	
 	gpdb::GPDBFree(plgidx);
 	
-	return plOids;
+	return plgidxinfo;
 }
 
 //---------------------------------------------------------------------------
@@ -495,7 +557,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 	DrgPmdcol *pdrgpmdcol = NULL;
 	IMDRelation::Ereldistrpolicy ereldistribution = IMDRelation::EreldistrSentinel;
 	DrgPul *pdrpulDistrCols = NULL;
-	DrgPmdid *pdrgpmdidIndexes = NULL;
+	DrgPmdIndexInfo *pdrgpmdIndexInfo = NULL;
 	DrgPmdid *pdrgpmdidTriggers = NULL;
 	DrgPul *pdrgpulPartKeys = NULL;
 	DrgPsz *pdrgpszPartTypes = NULL;
@@ -535,7 +597,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 		fConvertHashToRandom = gpdb::FChildPartDistributionMismatch(rel);
 
 		// collect relation indexes
-		pdrgpmdidIndexes = PdrgpmdidRelIndexes(pmp, rel);
+		pdrgpmdIndexInfo = PdrgpmdRelIndexInfo(pmp, rel);
 
 		// collect relation triggers
 		pdrgpmdidTriggers = PdrgpmdidTriggers(pmp, rel);
@@ -608,7 +670,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 							pdrpulDistrCols,
 							fConvertHashToRandom,
 							pdrgpdrgpulKeys,
-							pdrgpmdidIndexes,
+							pdrgpmdIndexInfo,
 							pdrgpmdidTriggers,
 							pdrgpmdidCheckConstraints,
 							extentry->rejectlimit,
@@ -622,7 +684,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 
 		// retrieve the part constraints if relation is partitioned
 		if (fPartitioned)
-			pmdpartcnstr = PmdpartcnstrRelation(pmp, pmda, oid, pdrgpmdcol, pdrgpmdidIndexes->UlLength() > 0 /*fhasIndex*/);
+			pmdpartcnstr = PmdpartcnstrRelation(pmp, pmda, oid, pdrgpmdcol, pdrgpmdIndexInfo->UlLength() > 0 /*fhasIndex*/);
 
 		pmdrel = GPOS_NEW(pmp) CMDRelationGPDB
 							(
@@ -639,7 +701,7 @@ CTranslatorRelcacheToDXL::Pmdrel
 							ulLeafPartitions,
 							fConvertHashToRandom,
 							pdrgpdrgpulKeys,
-							pdrgpmdidIndexes,
+							pdrgpmdIndexInfo,
 							pdrgpmdidTriggers,
 							pdrgpmdidCheckConstraints,
 							pmdpartcnstr,
@@ -1003,12 +1065,14 @@ CTranslatorRelcacheToDXL::Pmdindex
 			IMDIndex *pmdindex = PmdindexPartTable(pmp, pmda, pmdidIndex, pmdrel, plgidx);
 
 			// cleanup
-			pmdidRel->Release();
-	
 			gpdb::GPDBFree(plgidx);
-			gpdb::CloseRelation(relIndex);
 
-			return pmdindex;
+			if (NULL != pmdindex)
+			{
+				pmdidRel->Release();
+				gpdb::CloseRelation(relIndex);
+				return pmdindex;
+			}
 		}
 	
 		emdindt = IMDIndex::EmdindBtree;
@@ -1064,7 +1128,6 @@ CTranslatorRelcacheToDXL::Pmdindex
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,
-										false, // fPartial
 										pdrgpulKeyCols,
 										pdrgpulIncludeCols,
 										pdrgpmdidOpFamilies,
@@ -1103,7 +1166,7 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	LogicalIndexInfo *pidxinfo = PidxinfoLookup(plind, oid);
 	if (NULL == pidxinfo)
 	{
-		 GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDCacheEntryNotFound, pmdidIndex->Wsz());
+		 return NULL;
 	}
 	
 	return PmdindexPartTable(pmp, pmda, pidxinfo, pmdidIndex, pmdrel);
@@ -1258,8 +1321,6 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 	}
 	gpdb::FreeList(plDefaultLevelsDerived);
 
-	BOOL fPartial = (NULL != pnodePartCnstr || NIL != plDefaultLevels);
-
 	if (NULL == pnodePartCnstr)
 	{
 		if (NIL == plDefaultLevels)
@@ -1298,7 +1359,6 @@ CTranslatorRelcacheToDXL::PmdindexPartTable
 										pgIndex->indisclustered,
 										emdindt,
 										pmdidItemType,
-										fPartial,
 										pdrgpulKeyCols,
 										pdrgpulIncludeCols,
 										pdrgpmdidOpFamilies,

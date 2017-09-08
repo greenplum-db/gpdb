@@ -676,8 +676,8 @@ ERROR:  window OVER clause can only be used with an aggregate
 -- SQL with IDF , aggregate func and over clause within IDF : ERROR
 select percentile_cont(0.2) within group (order by stddev(b) over() ) from perct;
 ERROR:  argument of percentile function must not contain window functions
-LINE 1: select percentile_cont(0.2) within group (order by stddev(b)...
-               ^
+LINE 1: ...elect percentile_cont(0.2) within group (order by stddev(b) ...
+                                                             ^
 select median(avg(a) over()) from perct;
 ERROR:  argument of percentile function must not contain window functions
 LINE 1: select median(avg(a) over()) from perct;

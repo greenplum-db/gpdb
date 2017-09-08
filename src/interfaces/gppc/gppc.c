@@ -518,7 +518,7 @@ GppcDatumGetTimestampTz(GppcDatum x)
 GppcAnyTable
 GppcDatumGetAnyTable(GppcDatum x)
 {
-	return DatumGetPointer(x);
+	return (GppcAnyTable) DatumGetPointer(x);
 }
 
 /*
@@ -527,7 +527,7 @@ GppcDatumGetAnyTable(GppcDatum x)
 GppcTupleDesc
 GppcDatumGetTupleDesc(GppcDatum x)
 {
-	return DatumGetPointer(x);
+	return (GppcTupleDesc) DatumGetPointer(x);
 }
 
 /*
@@ -536,7 +536,7 @@ GppcDatumGetTupleDesc(GppcDatum x)
 GppcHeapTuple
 GppcDatumGetHeapTuple(GppcDatum x)
 {
-	return DatumGetPointer(x);
+	return (GppcHeapTuple) DatumGetPointer(x);
 }
 
 /*
@@ -1488,7 +1488,7 @@ GppcTupleDescInitEntry(GppcTupleDesc desc,
 GppcHeapTuple
 GppcHeapFormTuple(GppcTupleDesc tupdesc, GppcDatum *values, bool *nulls)
 {
-	return (GppcHeapTuple) heap_form_tuple((TupleDesc) tupdesc, values, nulls);
+	return (GppcHeapTuple) heap_form_tuple((TupleDesc) tupdesc, (Datum *) values, nulls);
 }
 
 /*
@@ -1499,7 +1499,7 @@ GppcBuildHeapTupleDatum(GppcTupleDesc tupdesc, GppcDatum *values, bool *nulls)
 {
 	HeapTuple		tuple;
 
-	tuple = heap_form_tuple((TupleDesc) tupdesc, values, nulls);
+	tuple = heap_form_tuple((TupleDesc) tupdesc, (Datum *) values, nulls);
 	return (GppcDatum) HeapTupleGetDatum(tuple);
 }
 

@@ -443,7 +443,7 @@ sub make_opt
 			provolatile	 => $provolatile,
 #			pronargs
 #			prorettype
-			proiswin	 => 0,
+			proiswindow	 => 0,
 #			proargtypes
 #			proallargtypes
 #			proargmodes
@@ -790,7 +790,7 @@ sub get_fnwithhash
 			$vv =~ s/^\s+//;
 			$vv =~ s/\s+$//;
 
-			if ($kk =~ m/proisagg|proiswin/)
+			if ($kk =~ m/proisagg|proiswindow/)
 			{
 				# unquote the string
 				$vv =~ s/\"//g;
@@ -847,6 +847,8 @@ sub printfndef
 		($tup->{provariadic} ? $tup->{provariadic} : "0") . " " .
 		(exists($fndef->{with}->{proisagg}) ? $fndef->{with}->{proisagg} :
 		 ($tup->{proisagg} ? "t" : "f") ) . " " .
+		(exists($fndef->{with}->{proiswindow}) ? $fndef->{with}->{proiswindow} :
+		 ($tup->{proiswindow} ? "t" : "f")) . " " .
 		($tup->{prosecdef} ? "t" : "f") . " " .
 		($tup->{proisstrict} ? "t" : "f") . " " .
 		($tup->{proretset} ? "t" : "f") . " " .
@@ -854,8 +856,6 @@ sub printfndef
 		($tup->{pronargs} ? $tup->{pronargs} : 0) . " " .
 		($tup->{pronargdefaults} ? $tup->{pronargdefaults} : 0) . " " .
 		($tup->{prorettype} ? $tup->{prorettype} : '""') . " " .
-		(exists($fndef->{with}->{proiswin}) ? $fndef->{with}->{proiswin} :
-		 ($tup->{proiswin} ? "t" : "f")) . " " .
 		($tup->{proargtypes} ? '"'. $tup->{proargtypes} . '"' : '""') . " " .
 		($tup->{proallargtypes} ? '"' . $tup->{proallargtypes} . '"'  : "_null_")  . " " .
 		($tup->{proargmodes} ? '"' . $tup->{proargmodes} . '"' : "_null_") . " " .

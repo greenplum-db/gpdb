@@ -375,8 +375,6 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 static void
 get_external_relation_info(Relation relation, RelOptInfo *rel)
 {
-	ExtTableEntry *extentry;
-
 	/*
      * Get partitioning key info for distributed relation.
      */
@@ -385,18 +383,7 @@ get_external_relation_info(Relation relation, RelOptInfo *rel)
 	/*
 	 * Get the pg_exttable fields for this table
 	 */
-	extentry = GetExtTableEntry(RelationGetRelid(relation));
-
-	rel->urilocationlist = extentry->urilocations;
-	rel->execlocationlist = extentry->execlocations;
-	rel->execcommand = extentry->command;
-	rel->fmttype = extentry->fmtcode;
-	rel->fmtopts = extentry->fmtopts;
-	rel->rejectlimit = extentry->rejectlimit;
-	rel->rejectlimittype = extentry->rejectlimittype;
-	rel->fmterrtbl = extentry->fmterrtbl;
-	rel->ext_encoding = extentry->encoding;
-	rel->writable = extentry->iswritable;
+	rel->extEntry = GetExtTableEntry(RelationGetRelid(relation));
 }
 
 /*

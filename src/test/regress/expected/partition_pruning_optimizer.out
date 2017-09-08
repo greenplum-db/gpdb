@@ -99,6 +99,33 @@ INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
 INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
 INSERT INTO pt_lt_tab_df VALUES(NULL,NULL,NULL,NULL);
 ANALYZE pt_lt_tab_df;
+--
+-- Test that stable functions are evaluated when constructing the plan. This
+-- differs from PostgreSQL. In PostgreSQL, PREPARE/EXECUTE creates a reusable
+-- plan, while in GPDB, we re-plan the query on every execution, so that the
+-- stable function is executed during planning, and we can therefore do
+-- partition pruning based on its result.
+--
+create or replace function stabletestfunc() returns integer as $$
+begin
+  return 10;
+end;
+$$ language plpgsql stable;
+PREPARE prep_prune AS select * from pt_lt_tab WHERE col2 = stabletestfunc();
+-- The plan should only scan one partition, where col2 = 10.
+EXPLAIN EXECUTE prep_prune;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=14)
+   ->  Sequence  (cost=0.00..431.00 rows=1 width=14)
+         ->  Partition Selector for pt_lt_tab (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+               Filter: col2 = 10::numeric
+               Partitions selected: 1 (out of 5)
+         ->  Dynamic Table Scan on pt_lt_tab (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=14)
+               Filter: col2 = 10::numeric
+ Settings:  enable_bitmapscan=on; enable_indexscan=on; enable_seqscan=off; optimizer=on
+(9 rows)
+
 -- @description B-tree single index key = non-partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col1);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"

@@ -17,6 +17,7 @@
 #include "nodes/relation.h"
 #include "optimizer/walkers.h"
 
+
 #define is_opclause(clause)		((clause) != NULL && IsA(clause, OpExpr))
 #define is_funcclause(clause)	((clause) != NULL && IsA(clause, FuncExpr))
 #define is_subplan(clause)		((clause) != NULL && IsA(clause, SubPlan))
@@ -71,6 +72,8 @@ extern List *make_ands_implicit(Expr *clause);
 extern bool contain_agg_clause(Node *clause);
 extern void count_agg_clauses(Node *clause, AggClauseCounts *counts);
 
+extern bool contain_window_function(Node *clause);
+
 extern bool expression_returns_set(Node *clause);
 extern double expression_returns_set_rows(Node *clause);
 
@@ -78,7 +81,6 @@ extern bool contain_subplans(Node *clause);
 
 extern bool contain_mutable_functions(Node *clause);
 extern bool contain_volatile_functions(Node *clause);
-extern bool contain_window_functions(Node *clause);
 extern bool contain_nonstrict_functions(Node *clause);
 extern Relids find_nonnullable_rels(Node *clause);
 

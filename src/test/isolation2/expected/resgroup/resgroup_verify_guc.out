@@ -1,0 +1,48 @@
+-- start_ignore
+! gpconfig -c max_statement_mem -v 20GB ! gpconfig -c statement_mem -v 10GB ! gpstop -rai;
+20170830:02:23:03:300931 gpconfig:ad3e397dc7b9:gpadmin-[INFO]:-completed successfully with parameters '-c max_statement_mem -v 20GB'
+20170830:02:23:04:301007 gpconfig:ad3e397dc7b9:gpadmin-[INFO]:-completed successfully with parameters '-c statement_mem -v 10GB'
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Gathering information and validating the environment...
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Obtaining Segment details from master...
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 5.0.0-beta.9+dev.48.gdf8d694 build dev'
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-There are 0 connections to the database
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Master host=ad3e397dc7b9
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20170830:02:23:04:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20170830:02:23:05:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20170830:02:23:05:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20170830:02:23:05:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-No standby master host configured
+20170830:02:23:05:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20170830:02:23:05:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-0.00% of jobs completed
+20170830:02:23:15:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-100.00% of jobs completed
+20170830:02:23:15:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20170830:02:23:15:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-0.00% of jobs completed
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-100.00% of jobs completed
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-----------------------------------------------------
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-----------------------------------------------------
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-No leftover gpmmon process found
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20170830:02:23:25:301083 gpstop:ad3e397dc7b9:gpadmin-[INFO]:-Restarting System...
+
+-- end_ignore
+
+show max_statement_mem;
+max_statement_mem
+-----------------
+20GB             
+(1 row)
+show statement_mem;
+statement_mem
+-------------
+10GB         
+(1 row)

@@ -1,9 +1,0 @@
--- start_ignore
-select * from pg_authid;
-  rolname  | rolsuper | rolinherit | rolcreaterole | rolcreatedb | rolcatupdate | rolcanlogin | rolconnlimit |             rolpassword             | rolvaliduntil |          rolconfig           | rolresqueue 
------------+----------+------------+---------------+-------------+--------------+-------------+--------------+-------------------------------------+---------------+------------------------------+-------------
- jeenathan | f        | t          | f             | f           | f            | t           |           -1 |                                     |               |                              |       38296
- admin     | t        | t          | t             | t           | t            | t           |           -1 | md5aa7f699b05410918b73774931ed3d156 |               | {maintenance_work_mem=10000} |            
-(2 rows)
-
--- end_ignore

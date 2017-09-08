@@ -70,6 +70,7 @@ typedef struct XLogRecord
 	uint32		xl_len;			/* total len of rmgr data */
 	uint8		xl_info;		/* flag bits, see below */
 	RmgrId		xl_rmid;		/* resource manager for this record */
+	uint8       xl_extended_info; /* flag bits, see below */
 
 	/* Depending on MAXALIGN, there are either 2 or 6 wasted bytes here */
 
@@ -82,9 +83,19 @@ typedef struct XLogRecord
 #define XLogRecGetData(record)	((char*) (record) + SizeOfXLogRecord)
 
 /*
- * XLOG uses only low 4 bits of xl_info.  High 4 bits may be used by rmgr.
+ * XLOG uses only low 4 bits of xl_info. High 4 bits may be used by rmgr.
+ * XLR_CHECK_CONSISTENCY bits can be passed by XLogInsert caller.
  */
 #define XLR_INFO_MASK			0x0F
+
+/*
+ * Enforces consistency checks of replayed WAL at recovery. If enabled,
+ * each record will log a full-page write for each block modified by the
+ * record and will reuse it afterwards for consistency checks. The caller
+ * of XLogInsert can use this value if necessary, but if
+ * wal_consistency_checking is enabled for a rmgr this is set unconditionally.
+ */
+#define XLR_CHECK_CONSISTENCY 0x02
 
 /*
  * If we backed up any disk blocks with the XLOG record, we use flag bits in
@@ -167,6 +178,10 @@ extern char *XLOG_sync_method;
 extern const char XLOG_sync_method_default[];
 extern bool gp_keep_all_xlog;
 extern int keep_wal_segments;
+
+extern bool *wal_consistency_checking;
+extern char *wal_consistency_checking_string;
+
 extern bool log_checkpoints;
 
 #define XLogArchivingActive()	(XLogArchiveMode)
@@ -184,8 +199,6 @@ extern bool XLog_CanBypassWal(void);
  * For FileRep code that doesn't have the Bypass WAL logic yet.
  */
 extern bool XLog_UnconvertedCanBypassWal(void);
-
-extern char *writeBufAligned;
 
 extern bool am_startup;
 
@@ -312,8 +325,6 @@ extern int XLogAddRecordsToChangeTracking(
 	XLogRecPtr	*lastChangeTrackingEndLoc);
 extern void XLogInChangeTrackingTransition(void);
 
-extern void XLogInitMirroredAlignedBuffer(int32 bufferLen);
-
 extern void xlog_print_redo_read_buffer_not_found(
 		Relation		reln,
 		BlockNumber 	blkno,
@@ -359,5 +370,8 @@ extern void do_pg_abort_backup(void);
 /* File path names (all relative to $PGDATA) */
 #define BACKUP_LABEL_FILE		"backup_label"
 #define BACKUP_LABEL_OLD		"backup_label.old"
+
+extern bool
+IsBkpBlockApplied(XLogRecord *record, uint8 block_id);
 
 #endif   /* XLOG_H */

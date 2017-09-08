@@ -1317,30 +1317,9 @@ select ord, pn,cn,vn,sum(vn) over (order by ord, pn rows between cn following an
 -- MPP-2323
 select ord, cn,vn,sum(vn) over (order by ord rows between 3 following and floor(cn) following ) from sale_ord;
 
--- Test use of window functions in places they shouldn't be allowed: MPP-2382
--- CHECK constraints
-CREATE TABLE wintest_for_window_seq (i int check (i < count(*) over (order by i)));
-
-CREATE TABLE wintest_for_window_seq (i int default count(*) over (order by i));
-
--- index expression and function
-CREATE TABLE wintest_for_window_seq (i int);
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (i) where i < count(*) over (order by i);
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (sum(i) over (order by i));
--- alter table
-ALTER TABLE wintest_for_window_seq alter i set default count(*) over (order by i);
-alter table wintest_for_window_seq alter column i type float using count(*) over (order by
-i)::float;
-
--- update
-insert into wintest_for_window_seq values(1);
-update wintest_for_window_seq set i = count(*) over (order by i);
-
 -- domain suport
 create domain wintestd as int default count(*) over ();
 create domain wintestd as int check (value < count(*) over ());
-
-drop table wintest_for_window_seq;
 
 -- MPP-3295
 -- begin equivalent
@@ -1415,8 +1394,11 @@ from product
 window w as (partition by pcolor order by pname)
 order by 1,2,3;
 
--- MPP-4840
+-- Once upon a time, there was a bug in deparsing a Window node with EXPLAIN
+-- that this query triggered (MPP-4840)
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
+
+
 -- Test for MPP-11645
 
 create table olap_window_r (a int, b int, x int,  y int,  z int ) distributed by (b);

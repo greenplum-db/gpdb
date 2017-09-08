@@ -508,21 +508,12 @@ external_insert_init(Relation rel)
 
 	if (extentry->command)
 	{
-		/* EXECUTE */
-
-		const char *command = extentry->command;
-		const char *prefix = "execute:";
-		char	   *prefixed_command = NULL;
-
-		/* allocate space for "execute:<cmd>" + 1 for null in sprintf */
-		prefixed_command = (char *) palloc((strlen(prefix) +
-											strlen(command)) *
-										   sizeof(char) + 1);
-
-		/* build the command string - 'execute:command' */
-		sprintf((char *) prefixed_command, "%s%s", prefix, command);
-
-		extInsertDesc->ext_uri = prefixed_command;
+		/*
+		 * EXECUTE
+		 *
+		 * build the command string, 'execute:<command>'
+		 */
+		extInsertDesc->ext_uri = psprintf("execute:%s", extentry->command);
 	}
 	else
 	{
@@ -766,10 +757,7 @@ else \
 	/* set the error message. Use original msg and add column name if availble */ \
 	if (pstate->cur_attname)\
 	{\
-		pstate->cdbsreh->errmsg = (char *) palloc((strlen(edata->message) + \
-												   strlen(pstate->cur_attname) + \
-												   10 + 1) * sizeof(char)); \
-		sprintf(pstate->cdbsreh->errmsg, "%s, column %s", \
+		pstate->cdbsreh->errmsg = psprintf("%s, column %s", \
 				edata->message, \
 				pstate->cur_attname); \
 	}\

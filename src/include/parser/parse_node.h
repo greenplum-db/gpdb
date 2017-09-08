@@ -84,9 +84,8 @@ typedef struct ParseState
 	Node	   *p_value_substitute;		/* what to replace VALUE with, if any */
 	bool		p_variableparams;
 	bool		p_hasAggs;
-	bool		p_hasWindFuncs;
+	bool		p_hasWindowFuncs;
 	bool		p_hasSubLinks;
-	bool		p_hasModifyingCTE;
 	bool		p_is_insert;
 	bool		p_is_update;
 	Relation	p_target_relation;
@@ -96,9 +95,6 @@ typedef struct ParseState
 	struct HTAB *p_namecache;  /* parse state object name cache */
 	bool        p_hasTblValueExpr;
 	bool        p_hasDynamicFunction; /* function w/unstable return type */
-	List	   *p_setopTypes;		/* predicated types on Setop */
-	List	   *p_setopTypmods;		/* predicated typmods on Setop */
-	bool        p_propagateSetopTypes;      /* if possible to propagate types on Setop */
 } ParseState;
 
 /* Support for parser_errposition_callback function */

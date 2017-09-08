@@ -2134,7 +2134,9 @@ select p.proname, p.proargtypes from pg_window w, pg_proc p, pg_proc p2 where w.
 (105 rows)
 
 select lead(cn) from sale;
-ERROR:  function lead(integer) may only be called as a window function  (seg1 slice1 localhost:10002 pid=57055)
+ERROR:  window function call requires an OVER clause
+LINE 1: select lead(cn) from sale;
+               ^
 select cn, cname, lead(cname, -1) over (order by cn) from customer;
 ERROR:  LEAD offset cannot be negative
 -- actual LEAD tests
@@ -7613,42 +7615,11 @@ select ord, cn,vn,sum(vn) over (order by ord rows between 3 following and floor(
   12 |  4 | 40 |    
 (12 rows)
 
--- Test use of window functions in places they shouldn't be allowed: MPP-2382
--- CHECK constraints
-CREATE TABLE wintest_for_window_seq (i int check (i < count(*) over (order by i)));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  cannot use window function in check constraint
-CREATE TABLE wintest_for_window_seq (i int default count(*) over (order by i));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-ERROR:  cannot use window function in default expression
--- index expression and function
-CREATE TABLE wintest_for_window_seq (i int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (i) where i < count(*) over (order by i);
-ERROR:  cannot use window function in index predicate
-CREATE INDEX wintest_idx_for_window_seq on wintest_for_window_seq (sum(i) over (order by i));
-ERROR:  syntax error at or near "("
-LINE 1: ...window_seq on wintest_for_window_seq (sum(i) over (order by ...
-                                                             ^
--- alter table
-ALTER TABLE wintest_for_window_seq alter i set default count(*) over (order by i);
-ERROR:  cannot use window function in default expression
-alter table wintest_for_window_seq alter column i type float using count(*) over (order by
-i)::float;
-ERROR:  cannot use window function in transform expression
--- update
-insert into wintest_for_window_seq values(1);
-update wintest_for_window_seq set i = count(*) over (order by i);
-ERROR:  cannot use window function in UPDATE
 -- domain suport
 create domain wintestd as int default count(*) over ();
 ERROR:  cannot use window function in default expression
 create domain wintestd as int check (value < count(*) over ());
 ERROR:  cannot use window function in check constraint
-drop table wintest_for_window_seq;
 -- MPP-3295
 -- begin equivalent
 select cn,vn,rank() over (partition by cn order by vn) as rank
@@ -7835,16 +7806,17 @@ order by 1,2,3;
  Plain     | Donuts    | 500 | 1 |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |     |    
 (8 rows)
 
--- MPP-4840
+-- Once upon a time, there was a bug in deparsing a Window node with EXPLAIN
+-- that this query triggered (MPP-4840)
 explain select n from ( select row_number() over () from (values (0)) as t(x) ) as r(n) group by n;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
- HashAggregate  (cost=0.03..0.04 rows=1 width=8)
-   Group By: n
-   ->  Subquery Scan r  (cost=0.00..0.02 rows=2 width=8)
-         ->  Window  (cost=0.00..0.01 rows=0 width=0)
-               ->  Values Scan on "*VALUES*"  (cost=0.00..0.01 rows=0 width=0)
- Settings:  gp_enable_sequential_window_plans=on
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ HashAggregate  (cost=0.02..0.03 rows=1 width=8)
+   Group By: pg_catalog.row_number()
+   ->  Window  (cost=0.00..0.01 rows=1 width=0)
+         ->  Values Scan on "*VALUES*"  (cost=0.00..0.01 rows=1 width=0)
+ Settings:  gp_enable_sequential_window_plans=on; optimizer=off
+ Optimizer status: legacy query optimizer
 (6 rows)
 
 -- Test for MPP-11645
@@ -8050,19 +8022,19 @@ create table redundant_sort_check (i int, j int, k int) distributed by (i);
 explain select count(*) over (order by i), count(*) over (partition by i order by j) from redundant_sort_check;
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
- Subquery Scan coplan  (cost=0.01..0.06 rows=1 width=8)
-   ->  Window  (cost=0.01..0.05 rows=1 width=8)
-         Order By: coplan.i
-         ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.01..0.05 rows=1 width=8)
-               Merge Key: coplan.i, coplan.j
-               ->  Subquery Scan coplan  (cost=0.01..0.03 rows=1 width=8)
-                     ->  Window  (cost=0.01..0.02 rows=1 width=8)
-                           Partition By: redundant_sort_check.i
-                           Order By: redundant_sort_check.j
-                           ->  Sort  (cost=0.01..0.02 rows=1 width=8)
-                                 Sort Key: redundant_sort_check.i, redundant_sort_check.j
-                                 ->  Seq Scan on redundant_sort_check  (cost=0.00..0.00 rows=1 width=8)
- Settings:  gp_enable_sequential_window_plans=on
+ Subquery Scan coplan  (cost=7208.12..11103.12 rows=77900 width=8)
+   ->  Window  (cost=7208.12..10324.12 rows=77900 width=8)
+         Order By: redundant_sort_check.i
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7208.12..10129.37 rows=77900 width=8)
+               Merge Key: redundant_sort_check.i, redundant_sort_check.j
+               ->  Window  (cost=7208.12..7792.37 rows=25967 width=8)
+                     Partition By: redundant_sort_check.i
+                     Order By: redundant_sort_check.j
+                     ->  Sort  (cost=7208.12..7402.87 rows=25967 width=8)
+                           Sort Key: redundant_sort_check.i, redundant_sort_check.j
+                           ->  Seq Scan on redundant_sort_check  (cost=0.00..879.00 rows=25967 width=8)
+ Settings:  gp_enable_sequential_window_plans=on; optimizer=off
+ Optimizer status: legacy query optimizer
 (13 rows)
 
 -- End of MPP-13710

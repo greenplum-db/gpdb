@@ -82,42 +82,6 @@ skipPadding(StringInfo serialTup)
 	serialTup->cursor = TYPEALIGN(TUPLE_CHUNK_ALIGN,serialTup->cursor);
 }
 
-/*
- * stringInfoGetInt32
- *
- * Pull a 4-byte integer out of str, at the current cursor location.  The
- * cursor is then incremented by 4.  If there is not 4 bytes left between the
- * cursor and the end of the string, an error is reported.
- *
- * The input is expected to be in the current architecture's byte-ordering.
- *
- * Hopefully this is faster than the stuff in stringinfo.c or pqformat.c!
- */
-static inline int32
-stringInfoGetInt32(StringInfo str)
-{
-	int32		res;
-
-	/* Make sure there are enough bytes left. */
-	if (str->len - str->cursor < 4)
-	{
-		ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-						errmsg("deserialize data underflow")));
-	}
-
-	/*
-	 * Pull out the int32.	We cast the pointer to the next part of the data
-	 * to an int32 pointer, and just retrieve the integer from that location
-	 * in the array.
-	 */
-	res = *((int32 *) (str->data + str->cursor));
-
-	/* Update the cursor. */
-	str->cursor += 4;
-
-	return res;
-}
-
 /* Look up all of the information that SerializeTuple() and DeserializeTuple()
  * need to perform their jobs quickly.	Also, scratchpad space is allocated
  * for serialization and desrialization of datum values, and for formation/
@@ -182,13 +146,9 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 		attrInfo->atttypid = tupdesc->attrs[i]->atttypid;
 		
 		/*
-		 * Ok, we want the Binary input/output routines for the type if they exist,
-		 * else we want the normal text input/output routines.
-		 * 
-		 * User defined types might or might not have binary routines.
-		 * 
-		 * getTypeBinaryOutputInfo throws an error if we try to call it to get
-		 * the binary output routine and one doesn't exist, so let's not call that.
+		 * Serialization will be performed at a high level abstraction,
+		 * we only care about whether it's toasted or pass-by-value or
+		 * a CString, so only track the high level type information.
 		 */
 		{
 			HeapTuple	typeTuple;
@@ -210,55 +170,11 @@ InitSerTupInfo(TupleDesc tupdesc, SerTupInfo * pSerInfo)
 						 errmsg("type %s is only a shell",
 								format_type_be(attrInfo->atttypid))));
 								
-			/* If we don't have both binary routines */
-			if (!OidIsValid(pt->typsend) || !OidIsValid(pt->typreceive))
-			{
-				/* Use the normal text routines (slower) */
-				if (!OidIsValid(pt->typoutput))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_FUNCTION),
-						 errmsg("no output function available for type %s",
-								format_type_be(attrInfo->atttypid))));
-				if (!OidIsValid(pt->typinput))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_FUNCTION),
-						 errmsg("no input function available for type %s",
-								format_type_be(attrInfo->atttypid))));
-		
-				attrInfo->typsend = pt->typoutput;
-				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
-				attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-				attrInfo->typrecv = pt->typinput;
-				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
-			}
-			else
-			{
-				/* Use binary routines */
-		
-				attrInfo->typsend = pt->typsend;
-				attrInfo->send_typio_param = getTypeIOParam(typeTuple);
-				attrInfo->typisvarlena = (!pt->typbyval) && (pt->typlen == -1);
-				attrInfo->typrecv  = pt->typreceive;
-				attrInfo->recv_typio_param = getTypeIOParam(typeTuple);
-			}
+			attrInfo->typlen = pt->typlen;
+			attrInfo->typbyval = pt->typbyval;
 
 			ReleaseSysCache(typeTuple);
 		}
-		
-		fmgr_info(attrInfo->typsend, &attrInfo->send_finfo);
-
-		fmgr_info(attrInfo->typrecv, &attrInfo->recv_finfo);
-
-#ifdef TUPSER_SCRATCH_SPACE
-
-		/*
-		 * If the field is a varlena, allocate some space to use for
-		 * deserializing it.  If most of the values are smaller than this
-		 * scratch-space then we save time on allocation and freeing.
-		 */
-		attrInfo->pv_varlen_scratch = palloc(VARLEN_SCRATCH_SIZE);
-		attrInfo->varlen_scratch_size = VARLEN_SCRATCH_SIZE;
-#endif
 	}
 }
 
@@ -483,7 +399,6 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 	TupleDesc	tupdesc;
 	int			i,
 		natts;
-	bool		fHandled;
 
 	AssertArg(tcList != NULL);
 	AssertArg(tuple != NULL);
@@ -596,164 +511,63 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo * pSerInfo, TupleChunkList 
 				SerAttrInfo *attrInfo = pSerInfo->myinfo + i;
 				Datum		origattr = pSerInfo->values[i],
 					attr;
-				bytea	   *outputbytes=0;
 
 				/* skip null attributes (already taken care of above) */
 				if (pSerInfo->nulls[i])
 					continue;
 
-				/*
-				 * If we have a toasted datum, forcibly detoast it here to avoid
-				 * memory leakage: we want to force the detoast allocation(s) to
-				 * happen in our reset-able serialization context.
-				 */
-				if (attrInfo->typisvarlena)
+				if (attrInfo->typlen == -1)
 				{
+					int32		sz;
+					char	   *data;
+
+					/*
+					 * If we have a toasted datum, forcibly detoast it here to avoid
+					 * memory leakage: we want to force the detoast allocation(s) to
+					 * happen in our reset-able serialization context.
+					 */
 					oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);
-					/* we want to detoast but leave compressed, if
-					 * possible, but we have to handle varlena
-					 * attributes (and others ?) differently than we
-					 * currently do (first step is to use
-					 * heap_tuple_fetch_attr() instead of
-					 * PG_DETOAST_DATUM()). */
-					attr = PointerGetDatum(PG_DETOAST_DATUM(origattr));
+					attr = PointerGetDatum(PG_DETOAST_DATUM_PACKED(origattr));
 					MemoryContextSwitchTo(oldCtxt);
+
+					sz = VARSIZE_ANY_EXHDR(attr);
+					data = VARDATA_ANY(attr);
+
+					/* Send length first, then data */
+					addInt32ToChunkList(tcList, sz, &pSerInfo->chunkCache);
+					addByteStringToChunkList(tcList, data, sz, &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, sz);
+				}
+				else if (attrInfo->typlen == -2)
+				{
+					int32		sz;
+					char	   *data;
+
+					/* CString, we would send the string with the terminating '\0' */
+					data = DatumGetCString(origattr);
+					sz = strlen(data) + 1;
+
+					/* Send length first, then data */
+					addInt32ToChunkList(tcList, sz, &pSerInfo->chunkCache);
+					addByteStringToChunkList(tcList, data, sz, &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, sz);
+				}
+				else if (attrInfo->typbyval)
+				{
+					/*
+					 * We send a full-width Datum for all pass-by-value types, regardless of
+					 * the actual size.
+					 */
+					addByteStringToChunkList(tcList, (char *) &origattr, sizeof(Datum), &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, sizeof(Datum));
 				}
 				else
+				{
+					addByteStringToChunkList(tcList, DatumGetPointer(origattr), attrInfo->typlen, &pSerInfo->chunkCache);
+					addPadding(tcList, &pSerInfo->chunkCache, attrInfo->typlen);
+
 					attr = origattr;
-
-				/*
-				 * Assume that the data's output will be handled by the special IO
-				 * code, and if not then we can handle it the slow way.
-				 */
-				fHandled = true;
-				switch (attrInfo->atttypid)
-				{
-					case INT4OID:
-						addInt32ToChunkList(tcList, DatumGetInt32(attr), &pSerInfo->chunkCache);
-						break;
-					case CHAROID:
-						addCharToChunkList(tcList, DatumGetChar(attr), &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,1);
-						break;
-					case BPCHAROID:
-					case VARCHAROID:
-					case INT2VECTOROID: /* postgres serialization logic broken, use our own */
-					case OIDVECTOROID: /* postgres serialization logic broken, use our own */
-					case ANYARRAYOID:
-					{
-						text	   *pText = DatumGetTextP(attr);
-						int32		textSize = VARSIZE(pText) - VARHDRSZ;
-
-						addInt32ToChunkList(tcList, textSize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, (char *) VARDATA(pText), textSize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,textSize);
-						break;
-					}
-					case DATEOID:
-					{
-						DateADT date = DatumGetDateADT(attr);
-
-						addByteStringToChunkList(tcList, (char *) &date, sizeof(DateADT), &pSerInfo->chunkCache);
-						break;
-					}
-					case NUMERICOID:
-					{
-						/*
-						 * Treat the numeric as a varlena variable, and just push
-						 * the whole shebang to the output-buffer.	We don't care
-						 * about the guts of the numeric.
-						 */
-						Numeric		num = DatumGetNumeric(attr);
-						int32		numSize = VARSIZE(num) - VARHDRSZ;
-
-						addInt32ToChunkList(tcList, numSize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, (char *) VARDATA(num), numSize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,numSize);
-						break;
-					}
-
-					case ACLITEMOID:
-					{
-						AclItem		*aip = DatumGetAclItemP(attr);
-						char		*outputstring;
-						int32		aclSize ;
-
-						outputstring = DatumGetCString(DirectFunctionCall1(aclitemout,
-																		   PointerGetDatum(aip)));
-
-						aclSize = strlen(outputstring);
-						addInt32ToChunkList(tcList, aclSize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, outputstring,aclSize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,aclSize);
-						break;
-					}	
-
-					case 210: /* storage manager */
-					{
-						char		*smgrstr;
-						int32		strsize;
-
-						smgrstr = DatumGetCString(DirectFunctionCall1(smgrout, 0));
-						strsize = strlen(smgrstr);
-						addInt32ToChunkList(tcList, strsize, &pSerInfo->chunkCache);
-						addByteStringToChunkList(tcList, smgrstr, strsize, &pSerInfo->chunkCache);
-						addPadding(tcList,&pSerInfo->chunkCache,strsize);
-						break;
-					}
-
-					default:
-						fHandled = false;
 				}
-
-				if (fHandled)
-					continue;
-
-				/*
-				 * the FunctionCall2 call into the send function may result in some
-				 * allocations which we'd like to have contained by our reset-able
-				 * context
-				 */
-				oldCtxt = MemoryContextSwitchTo(s_tupSerMemCtxt);						  
-							  
-				/* Call the attribute type's binary input converter. */
-				if (attrInfo->send_finfo.fn_nargs == 1)
-					outputbytes =
-						DatumGetByteaP(FunctionCall1(&attrInfo->send_finfo,
-													 attr));
-				else if (attrInfo->send_finfo.fn_nargs == 2)
-					outputbytes =
-						DatumGetByteaP(FunctionCall2(&attrInfo->send_finfo,
-													 attr,
-													 ObjectIdGetDatum(attrInfo->send_typio_param)));
-				else if (attrInfo->send_finfo.fn_nargs == 3)
-					outputbytes =
-						DatumGetByteaP(FunctionCall3(&attrInfo->send_finfo,
-													 attr,
-													 ObjectIdGetDatum(attrInfo->send_typio_param),
-													 Int32GetDatum(tupdesc->attrs[i]->atttypmod)));
-				else
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-							 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
-				}
-		
-				MemoryContextSwitchTo(oldCtxt);
-
-				/* We assume the result will not have been toasted */
-				addInt32ToChunkList(tcList, VARSIZE(outputbytes) - VARHDRSZ, &pSerInfo->chunkCache);
-				addByteStringToChunkList(tcList, VARDATA(outputbytes),
-										 VARSIZE(outputbytes) - VARHDRSZ, &pSerInfo->chunkCache);
-				addPadding(tcList,&pSerInfo->chunkCache,VARSIZE(outputbytes) - VARHDRSZ);
-
-				/*
-				 * this was allocated in our reset-able context, but we *are* done
-				 * with it; and for tuples with several large columns it'd be nice to
-				 * free the memory back to the context
-				 */
-				pfree(outputbytes);
-
 			}
 
 			MemoryContextReset(s_tupSerMemCtxt);
@@ -912,11 +726,7 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 	HeapTuple	htup;
 	int			natts;
 	SerAttrInfo *attrInfo;
-	uint32		attr_size;
-
 	int			i;
-	StringInfoData attr_data;
-	bool		fHandled;
 
 	AssertArg(pSerInfo != NULL);
 	AssertArg(serialTup != NULL);
@@ -936,7 +746,6 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 	skipPadding(serialTup);
 
 	/* Deserialize the non-NULL attributes of this tuple */
-	initStringInfo(&attr_data);
 	for (i = 0; i < natts; ++i)
 	{
 		attrInfo = pSerInfo->myinfo + i;
@@ -947,180 +756,56 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 			continue;
 		}
 
-		/*
-		 * Assume that the data's output will be handled by the special IO
-		 * code, and if not then we can handle it the slow way.
-		 */
-		fHandled = true;
-		switch (attrInfo->atttypid)
+		if (attrInfo->typlen == -1)
 		{
-			case INT4OID:
-				pSerInfo->values[i] = Int32GetDatum(stringInfoGetInt32(serialTup));
-				break;
+			int32		sz;
+			struct varlena *p;
 
-			case CHAROID:
-				pSerInfo->values[i] = CharGetDatum(pq_getmsgbyte(serialTup));
-				skipPadding(serialTup);
-				break;
+			/* Read length first */
+			pq_copymsgbytes(serialTup, (char *) &sz, sizeof(int32));
+			if (sz < 0)
+				elog(ERROR, "invalid length received for a varlen Datum");
 
-			case BPCHAROID:
-			case VARCHAROID:
-			case INT2VECTOROID: /* postgres serialization logic broken, use our own */
-			case OIDVECTOROID: /* postgres serialization logic broken, use our own */
-			case ANYARRAYOID:
-			{
-				text	   *pText;
-				int			textSize;
+			p = palloc(sz + VARHDRSZ);
 
-				textSize = stringInfoGetInt32(serialTup);
+			pq_copymsgbytes(serialTup, VARDATA(p), sz);
+			SET_VARSIZE(p, sz + VARHDRSZ);
 
-#ifdef TUPSER_SCRATCH_SPACE
-				if (textSize + VARHDRSZ <= attrInfo->varlen_scratch_size)
-					pText = (text *) attrInfo->pv_varlen_scratch;
-				else
-					pText = (text *) palloc(textSize + VARHDRSZ);
-#else
-				pText = (text *) palloc(textSize + VARHDRSZ);
-#endif
-
-				SET_VARSIZE(pText, textSize + VARHDRSZ);
-				pq_copymsgbytes(serialTup, VARDATA(pText), textSize);
-				skipPadding(serialTup);
-				pSerInfo->values[i] = PointerGetDatum(pText);
-				break;
-			}
-
-			case DATEOID:
-			{
-				/*
-				 * TODO:  I would LIKE to do something more efficient, but
-				 * DateADT is not strictly limited to 4 bytes by its
-				 * definition.
-				 */
-				DateADT date;
-
-				pq_copymsgbytes(serialTup, (char *) &date, sizeof(DateADT));
-				skipPadding(serialTup);
-				pSerInfo->values[i] = DateADTGetDatum(date);
-				break;
-			}
-
-			case NUMERICOID:
-			{
-				/*
-				 * Treat the numeric as a varlena variable, and just push
-				 * the whole shebang to the output-buffer.	We don't care
-				 * about the guts of the numeric.
-				 */
-				Numeric		num;
-				int			numSize;
-
-				numSize = stringInfoGetInt32(serialTup);
-
-#ifdef TUPSER_SCRATCH_SPACE
-				if (numSize + VARHDRSZ <= attrInfo->varlen_scratch_size)
-					num = (Numeric) attrInfo->pv_varlen_scratch;
-				else
-					num = (Numeric) palloc(numSize + VARHDRSZ);
-#else
-				num = (Numeric) palloc(numSize + VARHDRSZ);
-#endif
-
-				SET_VARSIZE(num, numSize + VARHDRSZ);
-				pq_copymsgbytes(serialTup, VARDATA(num), numSize);
-				skipPadding(serialTup);
-				pSerInfo->values[i] = NumericGetDatum(num);
-				break;
-			}
-
-			case ACLITEMOID:
-			{
-				int		aclSize, k, cnt;
-				char		*inputstring, *starsfree;
-
-				aclSize = stringInfoGetInt32(serialTup);
-				inputstring = (char*) palloc(aclSize  + 1);
-				starsfree = (char*) palloc(aclSize  + 1);
-				cnt = 0;
-	
-
-				pq_copymsgbytes(serialTup, inputstring, aclSize);
-				skipPadding(serialTup);
-				inputstring[aclSize] = '\0';
-				for(k=0; k<aclSize; k++)
-				{					
-					if( inputstring[k] != '*')
-					{
-						starsfree[cnt] = inputstring[k];
-						cnt++;
-					}
-				}
-				starsfree[cnt] = '\0';
-
-				pSerInfo->values[i] = DirectFunctionCall1(aclitemin, CStringGetDatum(starsfree));
-				pfree(inputstring);
-				break;
-			}
-
-			case 210:
-			{
-				int 		strsize;
-				char		*smgrstr;
-
-				strsize = stringInfoGetInt32(serialTup);
-				smgrstr = (char*) palloc(strsize + 1);
-				pq_copymsgbytes(serialTup, smgrstr, strsize);
-				skipPadding(serialTup);
-				smgrstr[strsize] = '\0';
-
-				pSerInfo->values[i] = DirectFunctionCall1(smgrin, CStringGetDatum(smgrstr));
-				break;
-			}
-			default:
-				fHandled = false;
+			pSerInfo->values[i] = PointerGetDatum(p);
 		}
+		else if (attrInfo->typlen == -2)
+		{
+			int32		sz;
+			char	   *p;
 
-		if (fHandled)
-			continue;
+			/* CString, with terminating '\0' included */
 
-		attr_size = stringInfoGetInt32(serialTup);
+			/* Read length first */
+			pq_copymsgbytes(serialTup, (char *) &sz, sizeof(int32));
+			if (sz < 0)
+				elog(ERROR, "invalid length received for a CString");
 
-		/* reset attr_data to empty, and load raw data into it */
+			p = palloc(sz + VARHDRSZ);
 
-		attr_data.len = 0;
-		attr_data.data[0] = '\0';
-		attr_data.cursor = 0;
+			/* Then data */
+			pq_copymsgbytes(serialTup, p, sz);
 
-		appendBinaryStringInfo(&attr_data,
-							   pq_getmsgbytes(serialTup, attr_size), attr_size);
-		skipPadding(serialTup);
+			pSerInfo->values[i] = CStringGetDatum(p);
+		}
+		else if (attrInfo->typbyval)
+		{
+			/* Read a whole Datum */
 
-		/* Call the attribute type's binary input converter. */
-		if (attrInfo->recv_finfo.fn_nargs == 1)
-			pSerInfo->values[i] = FunctionCall1(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data));
-		else if (attrInfo->recv_finfo.fn_nargs == 2)
-			pSerInfo->values[i] = FunctionCall2(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data),
-												ObjectIdGetDatum(attrInfo->recv_typio_param));
-		else if (attrInfo->recv_finfo.fn_nargs == 3)
-			pSerInfo->values[i] = FunctionCall3(&attrInfo->recv_finfo,
-												PointerGetDatum(&attr_data),
-												ObjectIdGetDatum(attrInfo->recv_typio_param),
-												Int32GetDatum(tupdesc->attrs[i]->atttypmod) );  
+			pq_copymsgbytes(serialTup, (char *) &(pSerInfo->values[i]), sizeof(Datum));
+		}
 		else
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-					 errmsg("Conversion function takes %d args",attrInfo->recv_finfo.fn_nargs)));
-		}
+			/* fixed width, pass-by-ref */
+			char	   *p = palloc(attrInfo->typlen);
 
-		/* Trouble if it didn't eat the whole buffer */
-		if (attr_data.cursor != attr_data.len)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
-					 errmsg("incorrect binary data format")));
+			pq_copymsgbytes(serialTup, p, attrInfo->typlen);
+
+			pSerInfo->values[i] = PointerGetDatum(p);
 		}
 	}
 
@@ -1133,6 +818,12 @@ DeserializeTuple(SerTupInfo * pSerInfo, StringInfo serialTup)
 	htup = heap_form_tuple(tupdesc, pSerInfo->values, pSerInfo->nulls);
 
 	MemoryContextReset(s_tupSerMemCtxt);
+
+	/* Trouble if it didn't eat the whole buffer */
+	if (serialTup->cursor != serialTup->len)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
+				 errmsg("incorrect binary data format")));
 
 	/* All done.  Return the result. */
 	return htup;

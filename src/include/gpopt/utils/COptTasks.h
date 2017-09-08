@@ -221,10 +221,6 @@ class COptTasks
 		static
 		DrgPss *PdrgPssLoad(IMemoryPool *pmp, char *szPath);
 
-		// allocate memory for string
-		static
-		CHAR *SzAllocate(IMemoryPool *pmp, ULONG ulSize);
-
 		// helper for converting wide character string to regular string
 		static
 		CHAR *SzFromWsz(const WCHAR *wsz);

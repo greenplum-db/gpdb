@@ -21,6 +21,7 @@ use File::Spec;
 use FindBin;
 use lib "$FindBin::Bin";
 use atmsort;
+use GPTest qw(print_version);
 
 =head1 NAME
 
@@ -368,7 +369,8 @@ GetOptions(
     'gpd_init|gp_init|init:s' => \@init_file,
     'do_equiv:s' => \$do_equiv,
     'order_warn|orderwarn' => \$orderwarn,
-    'verbose' => \$verbose
+    'verbose' => \$verbose,
+    'version|v' => \&print_version
     )
     or lazy_pod2usage(2);
 

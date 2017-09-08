@@ -334,49 +334,6 @@ COptTasks::SOptimizeMinidumpContext::PoptmdpConvert
 
 //---------------------------------------------------------------------------
 //	@function:
-//		SzAllocate
-//
-//	@doc:
-//		Allocate string buffer with protection against OOM
-//
-//---------------------------------------------------------------------------
-CHAR *
-COptTasks::SzAllocate
-	(
-	IMemoryPool *pmp,
-	ULONG ulSize
-	)
-{
-	CHAR *sz = NULL;
-	GPOS_TRY
-	{
-		// allocation of string buffer may happen outside gpos_exec() function,
-		// we must guard against system OOM here
-#ifdef FAULT_INJECTOR
-		gpdb::OptTasksFaultInjector(OptTaskAllocateStringBuffer);
-#endif // FAULT_INJECTOR
-
-		if (NULL == pmp)
-		{
-			sz = (CHAR *) gpdb::GPDBAlloc(ulSize);
-		}
-		else
-		{
-			sz = GPOS_NEW_ARRAY(pmp, CHAR, ulSize);
-		}
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiNoAvailableMemory);
-	}
-	GPOS_CATCH_END;
-
-	return sz;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
 //		SzFromWsz
 //
 //	@doc:
@@ -395,7 +352,7 @@ COptTasks::SzFromWsz
 	const ULONG ulWCHARSize = GPOS_SIZEOF(WCHAR);
 	const ULONG ulMaxLength = (ulInputLength + 1) * ulWCHARSize;
 
-	CHAR *sz = SzAllocate(NULL, ulMaxLength);
+	CHAR *sz = (CHAR *) gpdb::GPDBAlloc(ulMaxLength);
 
 	gpos::clib::LWcsToMbs(sz, const_cast<WCHAR *>(wsz), ulMaxLength);
 	sz[ulMaxLength - 1] = '\0';

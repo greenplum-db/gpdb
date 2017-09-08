@@ -2,9 +2,9 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
   <title id="ih135496">Working with XML Data</title>
+  <shortdesc>Greenplum Database supports the <codeph>xml</codeph> data type that stores XML data. </shortdesc>
   <body>
-    <p>Greenplum Database supports the <codeph>xml</codeph> data type that stores XML data. The
-        <codeph>xml</codeph> data type checks the input values for well-formedness, providing an
+    <p>The <codeph>xml</codeph> data type checks the input values for well-formedness, providing an
       advantage over simply storing XML data in a text field. Additionally, support functions allow
       you to perform type-safe operations on this data; refer to <xref href="#topic_gn4_x3w_mq"
         format="dita"/>, below. </p>

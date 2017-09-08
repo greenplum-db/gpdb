@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic31">
+   <title>Creating and Using External Web Tables</title>
+   <shortdesc>External web tables allow Greenplum Database to treat dynamic data sources like
+      regular database tables. Because web table data can change as a query runs, the data is not
+      rescannable.</shortdesc>
+   <body>
+      <p>
+         <codeph>CREATE EXTERNAL WEB TABLE</codeph> creates a web table definition. You can define
+         command-based or URL-based external web tables. The definition forms are distinct: you
+         cannot mix command-based and URL-based definitions.</p>
+   </body>
+   <topic id="topic32">
+      <title>Command-based External Web Tables</title>
+      <body>
+         <p>The output of a shell command or script defines command-based web table data. Specify
+            the command in the <codeph>EXECUTE</codeph> clause of <codeph>CREATE EXTERNAL WEB
+               TABLE</codeph>. The data is current as of the time the command runs. The
+               <codeph>EXECUTE</codeph> clause runs the shell command or script on the specified
+            master, and/or segment host or hosts. The command or script must reside on the hosts
+            corresponding to the host(s) defined in the <codeph>EXECUTE</codeph> clause.</p>
+         <p>By default, the command is run on segment hosts when active segments have output rows to
+            process. For example, if each segment host runs four primary segment instances that have
+            output rows to process, the command runs four times per segment host. You can optionally
+            limit the number of segment instances that execute the web table command. All segments
+            included in the web table definition in the <codeph>ON</codeph> clause run the command
+            in parallel.</p>
+         <p>The command that you specify in the external table definition executes from the database
+            and cannot access environment variables from <codeph>.bashrc</codeph> or
+               <codeph>.profile</codeph>. Set environment variables in the <codeph>EXECUTE</codeph>
+            clause. For example:</p>
+         <p>
+            <codeblock>=# CREATE EXTERNAL WEB TABLE output (output text)
+    EXECUTE 'PATH=/home/gpadmin/programs; export PATH; myprogram.sh' 
+    FORMAT 'TEXT';
+</codeblock>
+         </p>
+         <p>Scripts must be executable by the <codeph>gpadmin</codeph> user and reside in the same
+            location on the master or segment hosts.</p>
+         <p>The following command defines a web table that runs a script. The script runs on each
+            segment host where a segment has output rows to process. </p>
+         <p>
+            <codeblock>=# CREATE EXTERNAL WEB TABLE log_output 
+    (linenum int, message text) 
+    EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST 
+    FORMAT 'TEXT' (DELIMITER '|');
+</codeblock>
+         </p>
+      </body>
+   </topic>
+   <topic id="topic33">
+      <title>URL-based External Web Tables</title>
+      <body>
+         <p>A URL-based web table accesses data from a web server using the HTTP protocol. Web table
+            data is dynamic; the data is not rescannable.</p>
+         <p>Specify the <codeph>LOCATION</codeph> of files on a web server using
+               <codeph>http://</codeph>. The web data file(s) must reside on a web server that
+            Greenplum segment hosts can access. The number of URLs specified corresponds to the
+            number of segment instances that work in parallel to access the web table. For example,
+            if you specify two external files to a Greenplum Database system with eight primary
+            segments, two of the eight segments access the web table in parallel at query
+            runtime.</p>
+         <p>The following sample command defines a web table that gets data from several URLs.</p>
+         <p>
+            <codeblock>=# CREATE EXTERNAL WEB TABLE ext_expenses (name text, 
+  date date, amount float4, category text, description text) 
+  LOCATION ( 
+
+  'http://intranet.company.com/expenses/sales/file.csv',
+  'http://intranet.company.com/expenses/exec/file.csv',
+  'http://intranet.company.com/expenses/finance/file.csv',
+  'http://intranet.company.com/expenses/ops/file.csv',
+  'http://intranet.company.com/expenses/marketing/file.csv',
+  'http://intranet.company.com/expenses/eng/file.csv' 
+
+   )
+  FORMAT 'CSV' ( HEADER );
+</codeblock>
+         </p>
+      </body>
+   </topic>
+</topic>

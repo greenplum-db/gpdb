@@ -95,10 +95,10 @@ WHERE p1.oid < p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     (p1.proisagg = false OR p2.proisagg = false) AND
-    (p1.proiswin = false OR p1.proiswin = false) AND
+    (p1.proiswindow = false OR p1.proiswindow = false) AND
     (p1.prolang != p2.prolang OR
      p1.proisagg != p2.proisagg OR
-     p1.proiswin != p2.proiswin OR
+     p1.proiswindow != p2.proiswindow OR
      p1.prosecdef != p2.prosecdef OR
      p1.proisstrict != p2.proisstrict OR
      p1.proretset != p2.proretset OR
@@ -128,7 +128,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.prorettype < p2.prorettype);
 
 SELECT DISTINCT p1.proargtypes[0]::regtype, p2.proargtypes[0]::regtype
@@ -138,7 +138,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[0] < p2.proargtypes[0]);
 
 SELECT DISTINCT p1.proargtypes[1]::regtype, p2.proargtypes[1]::regtype
@@ -148,7 +148,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[1] < p2.proargtypes[1]);
 
 SELECT DISTINCT p1.proargtypes[2]::regtype, p2.proargtypes[2]::regtype
@@ -158,7 +158,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[2] < p2.proargtypes[2]);
 
 SELECT DISTINCT p1.proargtypes[3]::regtype, p2.proargtypes[3]::regtype
@@ -168,7 +168,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[3] < p2.proargtypes[3]);
 
 SELECT DISTINCT p1.proargtypes[4]::regtype, p2.proargtypes[4]::regtype
@@ -178,7 +178,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[4] < p2.proargtypes[4]);
 
 SELECT DISTINCT p1.proargtypes[5]::regtype, p2.proargtypes[5]::regtype
@@ -188,7 +188,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[5] < p2.proargtypes[5]);
 
 SELECT DISTINCT p1.proargtypes[6]::regtype, p2.proargtypes[6]::regtype
@@ -198,7 +198,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[6] < p2.proargtypes[6]);
 
 SELECT DISTINCT p1.proargtypes[7]::regtype, p2.proargtypes[7]::regtype
@@ -208,7 +208,7 @@ WHERE p1.oid != p2.oid AND
 	p1.prosrc NOT IN ('gp_deprecated') AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
-    NOT p1.proiswin AND NOT p2.proiswin AND
+    NOT p1.proiswindow AND NOT p2.proiswindow AND
     (p1.proargtypes[7] < p2.proargtypes[7]);
 
 -- The checks above only extend to the first 8 parameters, list any
@@ -226,7 +226,7 @@ WHERE pronargs > 8 and prolang = 12 AND
 					'gp_update_persistent_database_node_entry',
 					'gp_update_persistent_tablespace_node_entry') AND
     NOT proisagg AND 
-    NOT proiswin;
+    NOT proiswindow;
 
 
 -- Look for functions that return type "internal" and do not have any

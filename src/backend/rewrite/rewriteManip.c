@@ -35,10 +35,18 @@ typedef struct
 	int			sublevels_up;
 } locate_agg_of_level_context;
 
+typedef struct
+{
+	int			win_location;
+} locate_windowfunc_context;
+
 static bool checkExprHasAggs_walker(Node *node,
 						checkExprHasAggs_context *context);
 static bool locate_agg_of_level_walker(Node *node,
 						   locate_agg_of_level_context *context);
+static bool contain_windowfuncs_walker(Node *node, void *context);
+static bool locate_windowfunc_walker(Node *node,
+						 locate_windowfunc_context *context);
 static bool checkExprHasSubLink_walker(Node *node, void *context);
 static Relids offset_relid_set(Relids relids, int offset);
 static Relids adjust_relid_set(Relids relids, int oldrelid, int newrelid);
@@ -178,6 +186,131 @@ locate_agg_of_level_walker(Node *node,
 		return result;
 	}
 	return expression_tree_walker(node, locate_agg_of_level_walker,
+								  (void *) context);
+}
+
+/*
+ * checkExprHasWindowFuncs -
+ *	Check if an expression contains a window function call of the
+ *	current query level.
+ */
+bool
+checkExprHasWindowFuncs(Node *node)
+{
+	/*
+	 * Must be prepared to start with a Query or a bare expression tree; if
+	 * it's a Query, we don't want to increment sublevels_up.
+	 */
+	return query_or_expression_tree_walker(node,
+										   contain_windowfuncs_walker,
+										   NULL,
+										   0);
+}
+
+static bool
+contain_windowfuncs_walker(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, WindowRef))
+	{
+		return true;		/* abort the tree traversal and return true */
+	}
+	else if (IsA(node, SortBy))
+	{
+		SortBy	   *s = (SortBy *) node;
+		return contain_windowfuncs_walker(s->node, context);
+	}
+	else if (IsA(node, WindowFrame))
+	{
+		WindowFrame *f = (WindowFrame *) node;
+		if (contain_windowfuncs_walker((Node *)f->trail, context))
+			return true;
+		if (contain_windowfuncs_walker((Node *)f->lead, context))
+			return true;
+	}
+	else if (IsA(node, WindowFrameEdge))
+	{
+		WindowFrameEdge *e = (WindowFrameEdge *) node;
+
+		return contain_windowfuncs_walker(e->val, context);
+	}
+	else if(IsA(node, A_Expr))
+	{
+		/* could be seen inside an untransformed window clause */
+		return false;
+	}
+	else if(IsA(node, ColumnRef))
+	{
+		/* could be seen inside an untransformed window clause */
+		return false;
+	}
+
+	else if (IsA(node, A_Const))
+	{
+		/* could be seen inside an untransformed window clause */
+		return false;
+	}
+
+	else if (IsA(node, TypeCast))
+	{
+		/* could be seen inside an untransformed window clause */
+		return false;
+	}
+
+	/* Mustn't recurse into subselects */
+	return expression_tree_walker(node, contain_windowfuncs_walker,
+								  (void *) context);
+}
+
+/*
+ * locate_windowfunc -
+ *	  Find the parse location of any windowfunc of the current query level.
+ *
+ * Returns -1 if no such windowfunc is in the querytree, or if they all have
+ * unknown parse location.  (The former case is probably caller error,
+ * but we don't bother to distinguish it from the latter case.)
+ *
+ * Note: it might seem appropriate to merge this functionality into
+ * contain_windowfuncs, but that would complicate that function's API.
+ * Currently, the only uses of this function are for error reporting,
+ * and so shaving cycles probably isn't very important.
+ */
+int
+locate_windowfunc(Node *node)
+{
+	locate_windowfunc_context context;
+
+	context.win_location = -1;	/* in case we find nothing */
+
+	/*
+	 * Must be prepared to start with a Query or a bare expression tree; if
+	 * it's a Query, we don't want to increment sublevels_up.
+	 */
+	(void) query_or_expression_tree_walker(node,
+										   locate_windowfunc_walker,
+										   (void *) &context,
+										   0);
+
+	return context.win_location;
+}
+
+static bool
+locate_windowfunc_walker(Node *node, locate_windowfunc_context *context)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, WindowRef))
+	{
+		if (((WindowRef *) node)->location >= 0)
+		{
+			context->win_location = ((WindowRef *) node)->location;
+			return true;		/* abort the tree traversal and return true */
+		}
+		/* else fall through to examine argument */
+	}
+	/* Mustn't recurse into subselects */
+	return expression_tree_walker(node, locate_windowfunc_walker,
 								  (void *) context);
 }
 

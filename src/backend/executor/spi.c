@@ -31,9 +31,6 @@
 #include "executor/functions.h"
 #include "cdb/memquota.h"
 
-extern char *savedSeqServerHost;
-extern int savedSeqServerPort;
-
 /*
  * Update the legacy 32-bit processed counter, but handle overflow.
  */
@@ -1275,8 +1272,7 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	/*
 	 * Start portal execution.
 	 */
-	PortalStart(portal, paramLI, snapshot,
-				savedSeqServerHost, savedSeqServerPort, NULL);
+	PortalStart(portal, paramLI, snapshot, NULL);
 
 	Assert(portal->strategy != PORTAL_MULTI_QUERY);
 

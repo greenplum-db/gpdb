@@ -1271,7 +1271,7 @@ FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                      QUERY PLAN                                                      
 ---------------------------------------------------------------------------------------------------------------------
- Nested Loop  (cost=8184.20..128107063.42 rows=93400 width=28)
+ Nested Loop  (cost=8184.20..128107296.92 rows=93400 width=28)
    ->  Aggregate  (cost=4154.80..4154.81 rows=1 width=0)
          ->  Shared Scan (share slice:id 0:0)  (cost=4029.40..4154.80 rows=93400 width=28)
                ->  Materialize  (cost=3095.40..4029.40 rows=93400 width=28)
@@ -1279,9 +1279,8 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                            ->  Append  (cost=0.00..1134.00 rows=31134 width=28)
                                  ->  Seq Scan on t_mpp_20470_ptr1 b  (cost=0.00..567.00 rows=15567 width=28)
                                  ->  Seq Scan on t_mpp_20470_ptr2 b  (cost=0.00..567.00 rows=15567 width=28)
-   ->  Subquery Scan coplan  (cost=4029.40..5088.80 rows=93400 width=28)
-         ->  Window  (cost=4029.40..4154.80 rows=93400 width=28)
-               ->  Shared Scan (share slice:id 0:0)  (cost=4029.40..4154.80 rows=93400 width=28)
+   ->  Window  (cost=4029.40..4154.80 rows=93400 width=28)
+         ->  Shared Scan (share slice:id 0:0)  (cost=4029.40..4154.80 rows=93400 width=28)
    SubPlan 1
      ->  Aggregate  (cost=1371.47..1371.48 rows=1 width=8)
            ->  Result  (cost=0.00..1367.50 rows=32 width=4)
@@ -1296,9 +1295,9 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                              ->  Materialize  (cost=683.80..684.26 rows=16 width=4)
                                    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..683.75 rows=47 width=4)
                                          ->  Seq Scan on t_mpp_20470_ptr2 a  (cost=0.00..683.75 rows=16 width=4)
- Settings:  optimizer_segments=3
+ Settings:  optimizer=off; optimizer_nestloop_factor=1; optimizer_segments=3
  Optimizer status: legacy query optimizer
-(27 rows)
+(26 rows)
 
 drop view v1_mpp_20470;
 drop table t_mpp_20470;

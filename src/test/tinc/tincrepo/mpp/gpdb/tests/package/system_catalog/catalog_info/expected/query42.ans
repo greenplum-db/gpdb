@@ -1,9 +1,0 @@
--- start_ignore
-select * from pg_resqueue_status;
-  rsqname  | rsqcountlimit | rsqcountvalue | rsqcostlimit | rsqcostvalue | rsqwaiters | rsqholders 
------------+---------------+---------------+--------------+--------------+------------+------------
- myqueue2  |            -1 |               |         3330 |            0 |          0 |          0
- poweruser |            20 |             0 |           -1 |              |          0 |          0
-(2 rows)
-
--- end_ignore

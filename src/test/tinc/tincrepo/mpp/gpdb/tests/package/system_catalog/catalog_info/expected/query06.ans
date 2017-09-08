@@ -1,8 +1,0 @@
--- start_ignore
-select * from gp_version_at_initdb;
- schemaversion |    productversion    
----------------+----------------------
-             2 | 3.0.0.0-beta build 6
-(1 row)
-
--- end_ignore

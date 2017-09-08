@@ -41,6 +41,7 @@
 #include "parser/parse_coerce.h"
 #include "parser/parse_func.h"
 #include "parser/parse_expr.h"
+#include "rewrite/rewriteManip.h"
 #include "tcop/tcopprot.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -57,7 +58,7 @@ typedef struct
 	PlannerGlobal *glob;
 	List	   *active_fns;
 	Node	   *case_val;
-	bool		transform_stable_funcs;
+	bool		estimate;
 	bool		recurse_queries; /* recurse into query structures */
 	bool		recurse_sublink_testexpr; /* recurse into sublink test expressions */
 	Size        max_size; /* max constant binary size in bytes, 0: no restrictions */
@@ -77,7 +78,6 @@ static bool expression_returns_set_rows_walker(Node *node, double *count);
 static bool contain_subplans_walker(Node *node, void *context);
 static bool contain_mutable_functions_walker(Node *node, void *context);
 static bool contain_volatile_functions_walker(Node *node, void *context);
-static bool contain_window_functions_walker(Node *node, void *context);
 static bool contain_nonstrict_functions_walker(Node *node, void *context);
 static Relids find_nonnullable_rels_walker(Node *node, bool top_level);
 static bool is_strict_saop(ScalarArrayOpExpr *expr, bool falseOK);
@@ -573,6 +573,25 @@ count_agg_clauses_walker(Node *node, AggClauseCounts *counts)
 
 
 /*****************************************************************************
+ *		Window-function clause manipulation
+ *****************************************************************************/
+
+/*
+ * contain_window_function
+ *	  Recursively search for WindowFunc nodes within a clause.
+ *
+ * Since window functions don't have level fields, but are hard-wired to
+ * be associated with the current query level, this is just the same as
+ * rewriteManip.c's function.
+ */
+bool
+contain_window_function(Node *clause)
+{
+	return checkExprHasWindowFuncs(clause);
+}
+
+
+/*****************************************************************************
  *		Support for expressions returning sets
  *****************************************************************************/
 
@@ -959,42 +978,6 @@ contain_volatile_functions_walker(Node *node, void *context)
 		/* else fall through to check args */
 	}
 	return expression_tree_walker(node, contain_volatile_functions_walker,
-								  context);
-}
-
-
-/*****************************************************************************
- *		Check clauses for calls to window functions
- *****************************************************************************/
-
-/*
- * contain_window_functions
- *	  Recursively search for window functions within a clause.
- *
- * Returns true if any window function is found.
- *
- * Window function calls are only allowed in the target list of window
- * queries and may not be nested. We do not examine sub-selects for uses of
- * window functions because if there are any, they pertain to a different
- * planning level.
- */
-bool
-contain_window_functions(Node *clause)
-{
-	return contain_window_functions_walker(clause, NULL);
-}
-
-static bool
-contain_window_functions_walker(Node *node, void *context)
-{
-	if (node == NULL)
-		return false;
-	if (IsA(node, WindowRef))
-	{
-		return true;
-		/* else fall through to check args */
-	}
-	return expression_tree_walker(node, contain_window_functions_walker,
 								  context);
 }
 
@@ -1764,7 +1747,7 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 	context.boundParams = boundParams;
 	context.active_fns = NIL;	/* nothing being recursively simplified */
 	context.case_val = NULL;	/* no CASE being examined */
-	context.transform_stable_funcs = true;	/* safe transformations only */
+	context.estimate = false;	/* safe transformations only */
 	context.recurse_queries = true; /* recurse into query structures */
 	context.recurse_sublink_testexpr = false; /* do not recurse into sublink test expressions */
 
@@ -1892,7 +1875,7 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	}
 	context.active_fns = NIL;	/* nothing being recursively simplified */
 	context.case_val = NULL;	/* no CASE being examined */
-	context.transform_stable_funcs = true;	/* safe transformations only */
+	context.estimate = false;	/* safe transformations only */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
@@ -1926,7 +1909,7 @@ estimate_expression_value(PlannerInfo *root, Node *node)
 	context.glob = NULL;
 	context.active_fns = NIL;	/* nothing being recursively simplified */
 	context.case_val = NULL;	/* no CASE being examined */
-	context.transform_stable_funcs = true;	/* unsafe transformations OK */
+	context.estimate = true;	/* unsafe transformations OK */
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
@@ -1955,7 +1938,8 @@ eval_const_expressions_mutator(Node *node,
 			if (OidIsValid(prm->ptype))
 			{
 				/* OK to substitute parameter value? */
-				if (context->transform_stable_funcs || (prm->pflags & PARAM_FLAG_CONST))
+				if (context->estimate || (prm->pflags & PARAM_FLAG_CONST) ||
+					context->glob)
 				{
 					/*
 					 * Return a Const representing the param value.  Must copy
@@ -1966,6 +1950,19 @@ eval_const_expressions_mutator(Node *node,
 					int16		typLen;
 					bool		typByVal;
 					Datum		pval;
+
+					/*
+					 * In GPDB, unlike in upstream, we go ahead and evaluate
+					 * stable functions in any case. But it means that the
+					 * plan is only good for this execution, and will need to
+					 * be re-planned on next one. For GPDB, that's considered
+					 * a good tradeoff, as typical queries are long running,
+					 * and evaluating the stable functions aggressively can
+					 * allow partition pruning to happen, which can be a big
+					 * win.
+					 */
+					if (!(context->estimate || (prm->pflags & PARAM_FLAG_CONST)))
+						context->glob->oneoffPlan = true;
 
 					Assert(prm->ptype == param->paramtype);
 					get_typlenbyval(param->paramtype, &typLen, &typByVal);
@@ -3392,8 +3389,13 @@ evaluate_function(Oid funcid, Oid result_type, int32 result_typmod, List *args,
 	 */
 	if (funcform->provolatile == PROVOLATILE_IMMUTABLE)
 		 /* okay */ ;
-	else if (context->transform_stable_funcs && funcform->provolatile == PROVOLATILE_STABLE)
+	else if (context->estimate && funcform->provolatile == PROVOLATILE_STABLE)
 		 /* okay */ ;
+	else if (context->glob && funcform->provolatile == PROVOLATILE_STABLE)
+	{
+		 /* okay, but we cannot reuse this plan */
+		context->glob->oneoffPlan = true;
+	}
 	else
 		return NULL;
 

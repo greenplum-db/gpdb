@@ -1,8 +1,0 @@
--- start_ignore
-select * from gp_distributed_xacts;
- distributed_xid |    distributed_id     |         state          | gp_session_id | xmin_distributed_snapshot 
------------------+-----------------------+------------------------+---------------+---------------------------
-            8154 | 1192613132-0000008154 | Active Not Distributed |          2395 |                      8154
-(1 row)
-
--- end_ignore

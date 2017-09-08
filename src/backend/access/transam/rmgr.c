@@ -26,28 +26,28 @@
 #include "cdb/cdbappendonlyam.h"
 
 const RmgrData RmgrTable[RM_MAX_ID + 1] = {
-	{"XLOG", xlog_redo, xlog_desc, NULL, NULL, NULL},
-	{"Transaction", xact_redo, xact_desc, NULL, NULL, NULL},
-	{"Storage", smgr_redo, smgr_desc, NULL, NULL, NULL},
-	{"CLOG", clog_redo, clog_desc, NULL, NULL, NULL},
-	{"Database", dbase_redo, dbase_desc, NULL, NULL, NULL},
-	{"Tablespace", tblspc_redo, tblspc_desc, NULL, NULL, NULL},
-	{"MultiXact", multixact_redo, multixact_desc, NULL, NULL, NULL},
-	{"Reserved 7", NULL, NULL, NULL, NULL, NULL},
-	{"Reserved 8", NULL, NULL, NULL, NULL, NULL},
-	{"Heap2", heap2_redo, heap2_desc, NULL, NULL, NULL},
-	{"Heap", heap_redo, heap_desc, NULL, NULL, NULL},
-	{"Btree", btree_redo, btree_desc, btree_xlog_startup, btree_xlog_cleanup, btree_safe_restartpoint},
-	{"Hash", hash_redo, hash_desc, NULL, NULL, NULL},
-	{"Gin", gin_redo, gin_desc, gin_xlog_startup, gin_xlog_cleanup, gin_safe_restartpoint},
-	{"Gist", gist_redo, gist_desc, gist_xlog_startup, gist_xlog_cleanup, gist_safe_restartpoint},
-	{"Sequence", seq_redo, seq_desc, NULL, NULL, NULL},
-	{"Bitmap", bitmap_redo, bitmap_desc, bitmap_xlog_startup, bitmap_xlog_cleanup, bitmap_safe_restartpoint},
-	{"DistributedLog", DistributedLog_redo, DistributedLog_desc, NULL, NULL, NULL},
-	{"Master Mirror Log Records", mmxlog_redo, mmxlog_desc, NULL, NULL, NULL},
+	{"XLOG", xlog_redo, xlog_desc, NULL, NULL, NULL, NULL},
+	{"Transaction", xact_redo, xact_desc, NULL, NULL, NULL, NULL},
+	{"Storage", smgr_redo, smgr_desc, NULL, NULL, NULL, NULL},
+	{"CLOG", clog_redo, clog_desc, NULL, NULL, NULL, NULL},
+	{"Database", dbase_redo, dbase_desc, NULL, NULL, NULL, NULL},
+	{"Tablespace", tblspc_redo, tblspc_desc, NULL, NULL, NULL, NULL},
+	{"MultiXact", multixact_redo, multixact_desc, NULL, NULL, NULL, NULL},
+	{"Reserved 7", NULL, NULL, NULL, NULL, NULL, NULL},
+	{"Reserved 8", NULL, NULL, NULL, NULL, NULL, NULL},
+	{"Heap2", heap2_redo, heap2_desc, NULL, NULL, NULL, heap_mask},
+	{"Heap", heap_redo, heap_desc, NULL, NULL, NULL, heap_mask},
+	{"Btree", btree_redo, btree_desc, btree_xlog_startup, btree_xlog_cleanup, btree_safe_restartpoint, btree_mask},
+	{"Hash", hash_redo, hash_desc, NULL, NULL, NULL, NULL},
+	{"Gin", gin_redo, gin_desc, gin_xlog_startup, gin_xlog_cleanup, gin_safe_restartpoint, gin_mask},
+	{"Gist", gist_redo, gist_desc, gist_xlog_startup, gist_xlog_cleanup, gist_safe_restartpoint, gist_mask},
+	{"Sequence", seq_redo, seq_desc, NULL, NULL, NULL, seq_mask},
+	{"Bitmap", bitmap_redo, bitmap_desc, bitmap_xlog_startup, bitmap_xlog_cleanup, bitmap_safe_restartpoint, NULL},
+	{"DistributedLog", DistributedLog_redo, DistributedLog_desc, NULL, NULL, NULL, NULL},
+	{"Master Mirror Log Records", mmxlog_redo, mmxlog_desc, NULL, NULL, NULL, NULL},
 
 #ifdef USE_SEGWALREP
-	{"Appendonly Table Log Records", appendonly_redo, appendonly_desc, NULL, NULL, NULL}
+	{"Appendonly Table Log Records", appendonly_redo, appendonly_desc, NULL, NULL, NULL, NULL}
 #endif		/* USE_SEGWALREP */
 
 };

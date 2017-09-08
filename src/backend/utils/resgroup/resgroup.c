@@ -146,8 +146,8 @@ typedef struct ResGroupControl
 	 */
 	bool			loaded;
 
-	int32			totalChunks;	/* total memory chuncks on this segment */
-	int32			freeChunks;		/* memory chuncks not allocated to any group */
+	int32			totalChunks;	/* total memory chunks on this segment */
+	int32			freeChunks;		/* memory chunks not allocated to any group */
 
 	int				nGroups;
 	ResGroupData	groups[1];
@@ -359,8 +359,8 @@ InitResGroups(void)
 	Relation			relResGroupCapability;
 
 	/*
-	 * On master, the postmaster does the initializtion
-	 * On segments, the first QE does the initializtion
+	 * On master, the postmaster does the initialization
+	 * On segments, the first QE does the initialization
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH && GpIdentity.segindex != MASTER_CONTENT_ID)
 		return;
@@ -400,6 +400,11 @@ InitResGroups(void)
 	/* These initialization must be done before ResGroupCreate() */
 	pResGroupControl->totalChunks = getSegmentChunks();
 	pResGroupControl->freeChunks = pResGroupControl->totalChunks;
+	if (pResGroupControl->totalChunks == 0)
+		ereport(PANIC,
+				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
+				 errmsg("insufficient memory available"),
+				 errhint("Increase gp_resource_group_memory_limit")));
 
 	ResGroupOps_Init();
 
@@ -418,7 +423,7 @@ InitResGroups(void)
 		if (!group)
 			ereport(PANIC,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
-			 		errmsg("not enough shared memory for resource groups")));
+					 errmsg("not enough shared memory for resource groups")));
 
 		ResGroupOps_CreateGroup(groupId);
 		ResGroupOps_SetCpuRateLimit(groupId, cpuRateLimit);
@@ -482,7 +487,7 @@ ResGroupCheckForDrop(Oid groupId, char *name)
 
 /*
  * Wake up the backends in the wait queue when DROP RESOURCE GROUP finishes.
- * Unlock the resource group if the transaction is abortted.
+ * Unlock the resource group if the transaction is aborted.
  * Remove the resource group entry in shared memory if the transaction is committed.
  *
  * This function is called in the callback function of DROP RESOURCE GROUP.
@@ -1059,7 +1064,7 @@ attachToSlot(ResGroupData *group,
 /*
  * Detach current proc from a resource group & slot.
  *
- * Current proc's memory usage will be substracted from the group & slot.
+ * Current proc's memory usage will be subtracted from the group & slot.
  */
 static void
 detachFromSlot(ResGroupData *group,
@@ -1578,7 +1583,8 @@ groupGetMemSpillTotal(const ResGroupCaps *caps)
 static int32
 slotGetMemQuotaExpected(const ResGroupCaps *caps)
 {
-	return groupGetMemQuotaExpected(caps) / caps->concurrency.proposed;
+	Assert(caps->concurrency.proposed != 0);
+	return Max(1, groupGetMemQuotaExpected(caps) / caps->concurrency.proposed);
 }
 
 /*
@@ -1587,6 +1593,7 @@ slotGetMemQuotaExpected(const ResGroupCaps *caps)
 static int32
 slotGetMemSpill(const ResGroupCaps *caps)
 {
+	Assert(caps->concurrency.proposed != 0);
 	return groupGetMemSpillTotal(caps) / caps->concurrency.proposed;
 }
 
@@ -1773,7 +1780,7 @@ ResGroupSlotRelease(void)
 	MyProc->resSlotId = InvalidSlotId;
 
 	/*
-	 * My slot is put back, then how many queueing queries should I wake up?
+	 * My slot is put back, then how many queuing queries should I wake up?
 	 * Maybe zero, maybe one, maybe more, depends on how the resgroup's
 	 * configuration were changed during our execution.
 	 */
@@ -1909,40 +1916,53 @@ AssignResGroupOnMaster(void)
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	/* Acquire slot */
-	slotId = ResGroupSlotAcquire();
-	Assert(slotId != InvalidSlotId);
-	Assert(MyResGroupSharedInfo != NULL);
-	sharedInfo = MyResGroupSharedInfo;
-	groupId = sharedInfo->groupId;
-	Assert(groupId != InvalidOid);
-	Assert(!MyResGroupProcInfo->doMemCheck);
+	PG_TRY();
+	{
+		/* Acquire slot */
+		slotId = ResGroupSlotAcquire();
+		Assert(slotId != InvalidSlotId);
+		Assert(MyResGroupSharedInfo != NULL);
+		sharedInfo = MyResGroupSharedInfo;
+		groupId = sharedInfo->groupId;
+		Assert(groupId != InvalidOid);
+		Assert(!MyResGroupProcInfo->doMemCheck);
 
-	/* Init slot */
-	slot = &sharedInfo->slots[slotId];
-	Assert(slot->memQuota > 0);
-	slot->sessionId = gp_session_id;
-	ResGroupSetMemorySpillRatio(&slot->caps);
-	pg_atomic_add_fetch_u32((pg_atomic_uint32*)&slot->nProcs, 1);
-	Assert(slot->memQuota > 0);
+		/* Init slot */
+		slot = &sharedInfo->slots[slotId];
+		Assert(slot->memQuota > 0);
+		slot->sessionId = gp_session_id;
+		pg_atomic_add_fetch_u32((pg_atomic_uint32*)&slot->nProcs, 1);
 
-	/* Init MyResGroupProcInfo */
-	procInfo = MyResGroupProcInfo;
-	procInfo->groupId = groupId;
-	procInfo->slotId = slotId;
-	procInfo->caps = slot->caps;
-	Assert(pResGroupControl != NULL);
-	Assert(pResGroupControl->segmentsOnMaster > 0);
+		/* Init MyResGroupProcInfo */
+		procInfo = MyResGroupProcInfo;
+		procInfo->groupId = groupId;
+		procInfo->slotId = slotId;
+		procInfo->caps = slot->caps;
+		Assert(pResGroupControl != NULL);
+		Assert(pResGroupControl->segmentsOnMaster > 0);
 
-	attachToSlot(sharedInfo, slot, procInfo);
+		attachToSlot(sharedInfo, slot, procInfo);
 
-	/* Start memory limit checking */
-	Assert(procInfo->groupId != InvalidOid);
-	Assert(procInfo->slotId != InvalidSlotId);
-	procInfo->doMemCheck = true;
+		/* Start memory limit checking */
+		Assert(procInfo->groupId != InvalidOid);
+		Assert(procInfo->slotId != InvalidSlotId);
+		procInfo->doMemCheck = true;
 
-	/* Add into cgroup */
-	ResGroupOps_AssignGroup(sharedInfo->groupId, MyProcPid);
+		/* Don't error out before this line in this function */
+		SIMPLE_FAULT_INJECTOR(ResGroupAssignedOnMaster);
+
+		/* Add into cgroup */
+		ResGroupOps_AssignGroup(sharedInfo->groupId, MyProcPid);
+
+		/* Set spill guc */
+		ResGroupSetMemorySpillRatio(&slot->caps);
+	}
+	PG_CATCH();
+	{
+		UnassignResGroupOnMaster();
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 }
 
 /*
@@ -1984,7 +2004,7 @@ UnassignResGroupOnMaster(void)
 	/* Cleanup slotInfo */
 	pg_atomic_sub_fetch_u32((pg_atomic_uint32*)&slot->nProcs, 1);
 
-	/* Relesase the slot */
+	/* Release the slot */
 	ResGroupSlotRelease();
 
 	/* Cleanup sharedInfo */
@@ -2274,7 +2294,7 @@ AtProcExit_ResGroup(int code, Datum arg)
  * The proc may wait on the queue for a slot, or wait for the
  * DROP transaction to finish. In the first case, at the same time
  * we get interrupted (SIGINT or SIGTERM), we could have been
- * grantted a slot or not. In the second case, there's no running
+ * granted a slot or not. In the second case, there's no running
  * transaction in the group. If the DROP transaction is finished
  * (commit or abort) at the same time as we get interrupted,
  * MyProc should have been removed from the wait queue, and the

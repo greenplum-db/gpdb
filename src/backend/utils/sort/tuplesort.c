@@ -978,7 +978,7 @@ tuplesort_putdatum(Tuplesortstate *state, Datum val, bool isNull)
 	{
 		stup.datum1 = datumCopy(val, false, state->datumTypeLen);
 		stup.isnull1 = false;
-		stup.tuple = DatumGetPointer(stup.datum1);
+		stup.tuple = (MemTuple) DatumGetPointer(stup.datum1);
 		USEMEM(state, GetMemoryChunkSpace(DatumGetPointer(stup.datum1))); 
 	}
 

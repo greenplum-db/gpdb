@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="ix146103">Managing Data</title>
+  <title id="ix146103">Inserting, Updating, and Deleting Data</title>
   <shortdesc>This section provides information about manipulating data and concurrent access in
     Greenplum Database.</shortdesc>
   <body>

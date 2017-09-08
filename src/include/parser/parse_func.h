@@ -37,6 +37,7 @@ typedef enum
 	FUNCDETAIL_MULTIPLE,		/* too many matching functions */
 	FUNCDETAIL_NORMAL,			/* found a matching regular function */
 	FUNCDETAIL_AGGREGATE,		/* found a matching aggregate function */
+	FUNCDETAIL_WINDOWFUNC,		/* found a matching window function */
 	FUNCDETAIL_COERCION			/* it's a type coercion request */
 } FuncDetailCode;
 
@@ -50,8 +51,8 @@ extern FuncDetailCode func_get_detail(List *funcname, List *fargs,
 				int nargs, Oid *argtypes,
 				bool expand_variadic, bool expand_defaults,
 				Oid *funcid, Oid *rettype,
-				bool *retset, bool *retstrict,
-				bool *retordered, int *nvargs,
+				bool *retset,
+				int *nvargs,
 				Oid **true_typeids,
 				List **argdefaults);
 

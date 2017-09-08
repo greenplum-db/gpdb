@@ -1162,7 +1162,7 @@ DatumStreamBlockWrite_PrintInputVarlenaInfo(
 {
 	uint8	   *p;
 
-	p = DatumGetPointer(originalDatum);
+	p = (uint8 *) DatumGetPointer(originalDatum);
 
 	ereport(LOG,
 		  (errmsg("Write input varlena input <%s> (nth %d, was extended %s)",

@@ -62,9 +62,9 @@ int		TCP_listenerFd;
 int		UDP_listenerFd;
 
 /* Socket file descriptor for the sequence server. */
-int		savedSeqServerFd = -1;
-char	*savedSeqServerHost = NULL;
-uint16	savedSeqServerPort = 0;
+static int	savedSeqServerFd = -1;
+static char *savedSeqServerHost = NULL;
+static uint16 savedSeqServerPort = 0;
 
 /*=========================================================================
  * FUNCTIONS PROTOTYPES

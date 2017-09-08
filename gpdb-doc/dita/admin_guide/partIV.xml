@@ -6,14 +6,4 @@
   <shortdesc>The topics in this section describe how to create and manage database objects and
     manipulate data in the database. Additional topics describe parallel data loading and writing
     SQL queries in the Greenplum MPP environment.</shortdesc>
-  <body>
-    <section otherprops="op-print">
-      <p>This section contains the following topics:<ul id="ul_pqy_3pq_lp" otherprops="op-print">
-          <li><xref href="ddl/ddl.xml#topic1"/></li>
-          <li><xref href="dml.xml#topic1"/></li>
-          <li><xref href="load/topics/g-loading-and-unloading-data.xml#topic1"/></li>
-          <li><xref href="query/topics/query.xml#topic1"/></li>
-        </ul></p>
-    </section>
-  </body>
 </topic>

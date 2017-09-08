@@ -1018,7 +1018,7 @@ hostSegsHashTableInit(void)
 
 	/* Set key and entry sizes. */
 	MemSet(&info, 0, sizeof(info));
-	info.keysize = sizeof(INET6_ADDRSTRLEN);
+	info.keysize = INET6_ADDRSTRLEN;
 	info.entrysize = sizeof(HostSegsEntry);
 
 	return hash_create("HostSegs", 32, &info, HASH_ELEM);

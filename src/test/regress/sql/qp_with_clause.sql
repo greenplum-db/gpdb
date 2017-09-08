@@ -5730,16 +5730,6 @@ with capitals(code,id,name,code) as
 
 select * from capitals;
 
-
--- negative case. RECURSIVE WITH clause should fail 
-
-with recursive allofficiallanguages(language) as 
-(
- select language from city,countrylanguage where countrylanguage.countrycode = city.countrycode and isofficial = 'True'
- UNION 
- select language from allofficiallanguages)
-select * from allofficiallanguages;-- negative cases with queries forward referencing other CTEs
-
 -- query1 CTE referencing itself
 with lang_total as
 ( select count(*) as lang_count,country.code,countrylanguage.countrycode

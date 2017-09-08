@@ -170,6 +170,32 @@ set enable_seqscan =off;
 select * from tstest where t @@ 'bar' for share of tstest;
 
 
+-- Stable (and volatile) functions need to be re-evaluated on every
+-- execution of a prepared statement. There used to be a bug, where
+-- they were evaluated once at planning time or at first execution,
+-- and the same value was incorrectly reused on subsequent executions.
+create function stabletestfunc() returns integer as $$
+begin
+  raise notice 'stabletestfunc executed';
+  return 123;
+end;
+$$ language plpgsql stable;
+
+create table stabletesttab (id integer);
+
+insert into stabletesttab values (1);
+insert into stabletesttab values (1000);
+
+-- This might evaluate the function, for cost estimate purposes. That's
+-- not of importance for this test.
+prepare myprep as select * from stabletesttab where id < stabletestfunc();
+
+-- Check that the stable function should be re-executed on every execution of the prepared statetement.
+execute myprep;
+execute myprep;
+execute myprep;
+
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;

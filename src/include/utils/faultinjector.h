@@ -205,7 +205,6 @@ typedef enum FaultInjectorIdentifier_e {
 
 	RunawayCleanup,
 
-	OptTaskAllocateStringBuffer,
 	OptRelcacheTranslatorCatalogAccess,
 
 	SendQEDetailsInitBackend,
@@ -223,6 +222,7 @@ typedef enum FaultInjectorIdentifier_e {
 
 	GangCreated,
 
+	ResGroupAssignedOnMaster,
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	

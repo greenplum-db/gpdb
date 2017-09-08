@@ -179,7 +179,7 @@ callCompressionConstructor(PGFunction constructor,
 						   StorageAttributes *sa,
 						   bool is_compress)
 {
-  return DatumGetPointer(DirectFunctionCall3(constructor,
+	return (CompressionState *) DatumGetPointer(DirectFunctionCall3(constructor,
 											 PointerGetDatum(tupledesc),
 											 PointerGetDatum(sa),
 											 BoolGetDatum(is_compress)));
@@ -226,7 +226,7 @@ zlib_constructor(PG_FUNCTION_ARGS)
 	/* PG_GETARG_POINTER(0) is TupleDesc that is currently unused.
 	 * It is passed as NULL */
 
-	StorageAttributes *sa = PG_GETARG_POINTER(1);
+	StorageAttributes *sa = (StorageAttributes *) PG_GETARG_POINTER(1);
 	CompressionState *cs	   = palloc0(sizeof(CompressionState));
 	zlib_state	   *state	= palloc0(sizeof(zlib_state));
 	bool			  compress = PG_GETARG_BOOL(2);
@@ -251,7 +251,7 @@ zlib_constructor(PG_FUNCTION_ARGS)
 Datum
 zlib_destructor(PG_FUNCTION_ARGS)
 {
-	CompressionState *cs = PG_GETARG_POINTER(0);
+	CompressionState *cs = (CompressionState *) PG_GETARG_POINTER(0);
 
 	if (cs != NULL && cs->opaque != NULL)
  	{
@@ -268,7 +268,7 @@ zlib_compress(PG_FUNCTION_ARGS)
 	int32			 src_sz   = PG_GETARG_INT32(1);
 	void			 *dst	  = PG_GETARG_POINTER(2);
 	int32			 dst_sz   = PG_GETARG_INT32(3);
-	int32			*dst_used = PG_GETARG_POINTER(4);
+	int32			*dst_used = (int32 *) PG_GETARG_POINTER(4);
 	CompressionState *cs	   = (CompressionState *) PG_GETARG_POINTER(5);
 	zlib_state	   *state	= (zlib_state *) cs->opaque;
 	int				last_error;
@@ -317,7 +317,7 @@ zlib_decompress(PG_FUNCTION_ARGS)
 	int32			src_sz = PG_GETARG_INT32(1);
 	void		   *dst	= PG_GETARG_POINTER(2);
 	int32			dst_sz = PG_GETARG_INT32(3);
-	int32		   *dst_used = PG_GETARG_POINTER(4);
+	int32		   *dst_used = (int32 *) PG_GETARG_POINTER(4);
 	CompressionState *cs = (CompressionState *) PG_GETARG_POINTER(5);
 	zlib_state	   *state = (zlib_state *) cs->opaque;
 	int				last_error;

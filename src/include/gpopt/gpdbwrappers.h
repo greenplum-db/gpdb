@@ -535,6 +535,9 @@ namespace gpdb {
 	// get external table entry with given oid
 	ExtTableEntry *Pexttable(Oid relationId);
 
+	// get external table entry with given oid
+	List *PlExternalScanUriList(ExtTableEntry *ext, bool *isMasterOnlyP);
+
 	// return the first member of the given targetlist whose expression is
 	// equal to the given expression, or NULL if no such member exists
 	TargetEntry *PteMember(Node *node, List *targetlist);
