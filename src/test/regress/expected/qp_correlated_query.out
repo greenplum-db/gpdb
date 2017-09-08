@@ -587,42 +587,32 @@ select A.i, B.i, C.j from A, B, C where A.j = any ( select C.j from C where not 
 (10 rows)
 
 explain select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
-                                                                           QUERY PLAN                                                                            
------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=100.41..100.63 rows=10 width=12)
-   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=100.41..100.63 rows=10 width=12)
-         Merge Key: a.i, qp_correlated_query.b.i, qp_correlated_query.c.j
-         ->  Limit  (cost=100.41..100.43 rows=4 width=12)
-               ->  Sort  (cost=100.41..100.74 rows=45 width=12)
-                     Sort Key: a.i, qp_correlated_query.b.i, qp_correlated_query.c.j
-                     ->  Nested Loop  (cost=6.42..97.49 rows=45 width=12)
-                           ->  Nested Loop  (cost=3.10..86.07 rows=8 width=8)
-                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..81.62 rows=3 width=4)
-                                       ->  Seq Scan on a  (cost=0.00..81.52 rows=1 width=4)
-                                             Filter: (subplan)
-                                             SubPlan 2
-                                               ->  Result  (cost=31.38..31.39 rows=1 width=4)
-                                                     Filter: qp_correlated_query.c.j = $1 AND NOT ((subplan))
-                                                     ->  Materialize  (cost=31.38..31.39 rows=1 width=4)
-                                                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..31.38 rows=1 width=4)
-                                                                 ->  Seq Scan on c  (cost=0.00..31.38 rows=1 width=4)
-                                                     SubPlan 1
-                                                       ->  Aggregate  (cost=3.13..3.14 rows=1 width=8)
-                                                             ->  Result  (cost=0.00..3.08 rows=1 width=4)
-                                                                   One-Time Filter: $0 <> 10
-                                                                   ->  Result  (cost=3.08..3.09 rows=1 width=4)
-                                                                         Filter: $0 = qp_correlated_query.b.i
-                                                                         ->  Materialize  (cost=3.08..3.09 rows=1 width=4)
-                                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.08 rows=1 width=4)
-                                                                                     ->  Seq Scan on b  (cost=0.00..3.08 rows=1 width=4)
-                                 ->  Materialize  (cost=3.10..3.19 rows=3 width=4)
-                                       ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
-                           ->  Materialize  (cost=3.32..3.50 rows=6 width=4)
-                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..3.30 rows=6 width=4)
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=21.64..21.86 rows=10 width=12)
+   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=21.64..21.86 rows=10 width=12)
+         Merge Key: a.i, b.i, qp_correlated_query.c.j
+         ->  Limit  (cost=21.64..21.66 rows=4 width=12)
+               ->  Sort  (cost=21.64..21.97 rows=45 width=12)
+                     Sort Key: a.i, b.i, qp_correlated_query.c.j
+                     ->  Nested Loop  (cost=6.56..18.72 rows=45 width=12)
+                           ->  Nested Loop  (cost=3.08..7.14 rows=5 width=8)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.01..3.18 rows=3 width=4)
+                                       ->  Seq Scan on a  (cost=0.01..3.08 rows=1 width=4)
+                                             Filter: (hashed SubPlan 1)
+                                             SubPlan 1
+                                               ->  Materialize  (cost=0.01..0.02 rows=1 width=0)
+                                                     ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=0.00..0.01 rows=1 width=0)
+                                                           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+                                                                 One-Time Filter: false
+                                 ->  Materialize  (cost=3.07..3.13 rows=2 width=4)
                                        ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
+                           ->  Materialize  (cost=3.48..3.75 rows=9 width=4)
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.45 rows=9 width=4)
+                                       ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(33 rows)
+(23 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = any (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
  i | i | j 
@@ -781,41 +771,32 @@ select A.i, B.i, C.j from A, B, C where A.j < all ( select C.j from C where not 
 (0 rows)
 
 explain select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
-                                                                           QUERY PLAN                                                                            
------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=100.41..100.63 rows=10 width=12)
-   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=100.41..100.63 rows=10 width=12)
-         Merge Key: a.i, qp_correlated_query.b.i, qp_correlated_query.c.j
-         ->  Limit  (cost=100.41..100.43 rows=4 width=12)
-               ->  Sort  (cost=100.41..100.74 rows=45 width=12)
-                     Sort Key: a.i, qp_correlated_query.b.i, qp_correlated_query.c.j
-                     ->  Nested Loop  (cost=6.42..97.49 rows=45 width=12)
-                           ->  Nested Loop  (cost=3.10..86.07 rows=8 width=8)
-                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..81.62 rows=3 width=4)
-                                       ->  Seq Scan on a  (cost=0.00..81.52 rows=1 width=4)
-                                             Filter: (subplan)
-                                             SubPlan 2
-                                               ->  Result  (cost=31.38..31.39 rows=1 width=4)
-                                                     Filter: qp_correlated_query.c.j = $1 AND NOT ((subplan))
-                                                     ->  Materialize  (cost=31.38..31.39 rows=1 width=4)
-                                                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..31.38 rows=1 width=4)
-                                                                 ->  Seq Scan on c  (cost=0.00..31.38 rows=1 width=4)
-                                                     SubPlan 1
-                                                       ->  Aggregate  (cost=3.13..3.14 rows=1 width=8)
-                                                             ->  Result  (cost=0.00..3.08 rows=1 width=4)
-                                                                   One-Time Filter: $0 <> 10
-                                                                   ->  Result  (cost=3.08..3.09 rows=1 width=4)
-                                                                         Filter: $0 = qp_correlated_query.b.i
-                                                                         ->  Materialize  (cost=3.08..3.09 rows=1 width=4)
-                                                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.08 rows=1 width=4)
-                                                                                     ->  Seq Scan on b  (cost=0.00..3.08 rows=1 width=4)
-                                 ->  Materialize  (cost=3.10..3.19 rows=3 width=4)
-                                       ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
-                           ->  Materialize  (cost=3.32..3.50 rows=6 width=4)
-                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..3.30 rows=6 width=4)
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=21.65..21.88 rows=10 width=12)
+   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=21.65..21.88 rows=10 width=12)
+         Merge Key: a.i, b.i, qp_correlated_query.c.j
+         ->  Limit  (cost=21.65..21.68 rows=4 width=12)
+               ->  Sort  (cost=21.65..21.99 rows=45 width=12)
+                     Sort Key: a.i, b.i, qp_correlated_query.c.j
+                     ->  Nested Loop  (cost=6.54..18.74 rows=45 width=12)
+                           ->  Nested Loop  (cost=3.07..7.16 rows=5 width=8)
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.19 rows=3 width=4)
+                                       ->  Seq Scan on a  (cost=0.00..3.09 rows=1 width=4)
+                                             Filter: (SubPlan 1)
+                                             SubPlan 1
+                                               ->  Materialize  (cost=0.01..0.02 rows=1 width=0)
+                                                     ->  Broadcast Motion 1:3  (slice1; segments: 1)  (cost=0.00..0.01 rows=1 width=0)
+                                                           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+                                                                 One-Time Filter: false
+                                 ->  Materialize  (cost=3.07..3.13 rows=2 width=4)
                                        ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
+                           ->  Materialize  (cost=3.48..3.75 rows=9 width=4)
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.45 rows=9 width=4)
+                                       ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
+ Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(32 rows)
+(23 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = all (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
  i | i  | j  
@@ -1128,25 +1109,20 @@ select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1
 (0 rows)
 
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=31.43..31.45 rows=5 width=4)
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=6.33..6.33 rows=4 width=4)
    Merge Key: c.j
-   ->  Sort  (cost=31.43..31.45 rows=2 width=4)
+   ->  Sort  (cost=6.33..6.33 rows=2 width=4)
          Sort Key: c.j
-         ->  Seq Scan on c  (cost=0.00..31.39 rows=2 width=4)
-               Filter: NOT ((subplan))
-               SubPlan 1
-                 ->  Aggregate  (cost=3.13..3.14 rows=1 width=4)
-                       Filter: max(b.i) IS NOT NULL
-                       ->  Result  (cost=3.08..3.09 rows=1 width=4)
-                             Filter: $0 = b.i
-                             ->  Materialize  (cost=3.08..3.09 rows=1 width=4)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.08 rows=1 width=4)
-                                         ->  Seq Scan on b  (cost=0.00..3.08 rows=1 width=4)
+         ->  Hash Anti Join  (cost=3.14..6.30 rows=2 width=4)
+               Hash Cond: c.i = b.i
+               ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=8)
+               ->  Hash  (cost=3.06..3.06 rows=2 width=4)
+                     ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(16 rows)
+(11 rows)
 
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
  j  
@@ -1158,25 +1134,16 @@ select C.j from C where not exists (select max(B.i) from B  where C.i = B.i havi
 (4 rows)
 
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=31.39..31.40 rows=5 width=4)
-   Merge Key: c.j
-   ->  Sort  (cost=31.39..31.40 rows=2 width=4)
-         Sort Key: c.j
-         ->  Seq Scan on c  (cost=0.00..31.34 rows=2 width=4)
-               Filter: NOT ((subplan))
-               SubPlan 1
-                 ->  Limit  (cost=3.14..3.14 rows=1 width=4)
-                       ->  Aggregate  (cost=3.13..3.14 rows=1 width=4)
-                             ->  Result  (cost=3.08..3.09 rows=1 width=4)
-                                   Filter: $0 = b.i
-                                   ->  Materialize  (cost=3.08..3.09 rows=1 width=4)
-                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.08 rows=1 width=4)
-                                               ->  Seq Scan on b  (cost=0.00..3.08 rows=1 width=4)
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.23..3.26 rows=9 width=4)
+   Merge Key: j
+   ->  Sort  (cost=3.23..3.26 rows=3 width=4)
+         Sort Key: j
+         ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(16 rows)
+(7 rows)
 
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
   j  
@@ -1192,27 +1159,21 @@ select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offs
  889
 (9 rows)
 
--- GPDB_90_MERGE_FIXME: Pull up nested sublinks.
 explain select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=6.39..6.39 rows=4 width=4)
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=6.33..6.33 rows=4 width=4)
    Merge Key: c.j
-   ->  Sort  (cost=6.39..6.39 rows=2 width=4)
+   ->  Sort  (cost=6.33..6.33 rows=2 width=4)
          Sort Key: c.j
-         ->  Seq Scan on c  (cost=0.00..26.35 rows=2 width=4)
-               Filter: NOT ((subplan))
-               SubPlan 1
-                 ->  Window  (cost=0.00..3.10 rows=1 width=4)
-                       Order By: b.i
-                       ->  Result  (cost=3.08..3.09 rows=1 width=4)
-                             Filter: $0 = b.i
-                             ->  Materialize  (cost=3.08..3.09 rows=1 width=4)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.08 rows=1 width=4)
-                                         ->  Seq Scan on b  (cost=0.00..3.08 rows=1 width=4)
+         ->  Hash Anti Join  (cost=3.14..6.30 rows=2 width=4)
+               Hash Cond: c.i = b.i
+               ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=8)
+               ->  Hash  (cost=3.06..3.06 rows=2 width=4)
+                     ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(13 rows)
+(11 rows)
 
 select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
  j  

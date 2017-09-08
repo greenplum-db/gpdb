@@ -1264,7 +1264,6 @@ select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offs
  889
 (9 rows)
 
--- GPDB_90_MERGE_FIXME: Pull up nested sublinks.
 explain select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
                                                                QUERY PLAN                                                                
 -----------------------------------------------------------------------------------------------------------------------------------------

@@ -3220,9 +3220,12 @@ set_rel_width(PlannerInfo *root, RelOptInfo *rel)
 			int32		item_width;
 			
 			Assert(var->varno == rel->relid);
-			Assert(var->varattno >= rel->min_attr);
-			Assert(var->varattno <= rel->max_attr);
-			
+			/*
+			 * Postgres Upstream asserts for var->varattno >= rel->min_attr and
+			 * var->varattno <= rel->max_attr are not valid in GPDB since GPDB
+			 * also handles cases for virtual columns.
+			 */
+
 			/* Virtual column? */
 			if (var->varattno <= FirstLowInvalidHeapAttributeNumber)
 			{
