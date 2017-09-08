@@ -210,12 +210,21 @@ select * from A where exists (select * from C,B where C.j = A.j and exists (sele
 
 select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and not exists (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
 select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and not exists (select sum(B.i) from B where C.i = B.i and C.i !=10)) order by A.i, B.i, C.j limit 10;
+select * from A where not exists (select sum(C.i) from C where C.i = A.i);
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i offset 1000) order by C.j;
 explain select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
 select C.j from C where not exists (select rank() over (order by B.i) from B  where C.i = B.i) order by C.j;
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
+select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
 
 
 -- ----------------------------------------------------------------------

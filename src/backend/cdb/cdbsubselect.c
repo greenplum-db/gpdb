@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "catalog/pg_type.h"	/* INT8OID */
+#include "catalog/pg_operator.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/subselect.h"	/* convert_testexpr() */
@@ -801,13 +802,38 @@ convert_NOT_EXISTS_to_antijoin(PlannerInfo *root, List **rtrlist_inout, SubLink 
 		cdbsubselect_drop_distinct(subselect);
 
 		/*
-		 * Trivial NOT EXISTS subquery can be eliminated altogether.
+		 * 'LIMIT n' makes NOT EXISTS true when n <= 0, and doesn't affect the
+		 * outcome when n > 0.  Delete subquery's LIMIT and build (0 < n) expr to
+		 * be ANDed into the parent qual.
+		 *
 		 */
-		if (subselect->hasAggs
-			&& subselect->havingQual == NULL)
+		if (subselect->limitCount != NULL)
 		{
+			Node	   *limitqual = NULL;
+			Expr	   *lnode;
+			Expr	   *rnode;
+
+			/* Do not handle limit offset for now */
 			Assert(!subselect->limitOffset);
 
+			rnode = copyObject(subselect->limitCount);
+			IncrementVarSublevelsUp((Node *) rnode, -1, 1);
+			lnode = (Expr *) makeConst(INT8OID, -1, sizeof(int64), Int64GetDatum(0),
+									   false, true);
+			limitqual = (Node *) make_opclause(Int8LessOperator, BOOLOID, false, lnode, rnode);
+
+			subselect->limitCount = NULL;
+
+			return (Node *) make_notclause((Expr *) limitqual);
+		}
+
+		/*
+		 * Trivial NOT EXISTS subquery without a LIMIT can be eliminated altogether.
+		 */
+		if (subselect->hasAggs &&
+			subselect->groupClause == NIL &&
+			subselect->havingQual == NULL)
+		{
 			return makeBoolConst(false, false);
 		}
 
@@ -901,8 +927,8 @@ convert_EXISTS_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink
 {
 	Query	   *subselect = (Query *) sublink->subselect;
 	Node	   *limitqual = NULL;
-	Node	   *lnode;
-	Node	   *rnode;
+	Expr	   *lnode;
+	Expr	   *rnode;
 	Node	   *node;
 	InClauseInfo *ininfo;
 	RangeTblEntry *rte;
@@ -940,11 +966,10 @@ convert_EXISTS_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink
 	if (subselect->limitCount)
 	{
 		rnode = copyObject(subselect->limitCount);
-		IncrementVarSublevelsUp(rnode, -1, 1);
-		lnode = (Node *) makeConst(INT8OID, -1, sizeof(int64), Int64GetDatum(0),
+		IncrementVarSublevelsUp((Node *) rnode, -1, 1);
+		lnode = (Expr *) makeConst(INT8OID, -1, sizeof(int64), Int64GetDatum(0),
 								   false, true);
-		limitqual = (Node *) make_op(NULL, list_make1(makeString("<")),
-									 lnode, rnode, -1);
+		limitqual = (Node *) make_opclause(Int8LessOperator, BOOLOID, false, lnode, rnode);
 		subselect->limitCount = NULL;
 	}
 
@@ -972,17 +997,16 @@ convert_EXISTS_to_join(PlannerInfo *root, List **rtrlist_inout, SubLink *sublink
 		if (subselect->limitOffset)
 		{
 			lnode = copyObject(subselect->limitOffset);
-			IncrementVarSublevelsUp(lnode, -1, 1);
-			rnode = (Node *) makeConst(INT8OID, -1, sizeof(int64), Int64GetDatum(1),
+			IncrementVarSublevelsUp((Node *) lnode, -1, 1);
+			rnode = (Expr *) makeConst(INT8OID, -1, sizeof(int64), Int64GetDatum(1),
 									   false, true);
-			node = (Node *) make_op(NULL, list_make1(makeString("<")),
-									lnode, rnode, -1);
+			node = (Node *) make_opclause(Int8LessOperator, BOOLOID, false, lnode, rnode);
 			limitqual = make_and_qual(limitqual, node);
 		}
 
 		/* Replace trivial EXISTS(...) with TRUE if no LIMIT/OFFSET. */
 		if (limitqual == NULL)
-			limitqual = makeBoolConst(true, false);
+			limitqual = (Node *) makeBoolConst(true, false);
 
 		return limitqual;
 	}

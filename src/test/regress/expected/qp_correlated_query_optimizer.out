@@ -1116,6 +1116,87 @@ select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j
 ---+---+---
 (0 rows)
 
+select * from A where not exists (select sum(C.i) from C where C.i = A.i);
+ i | j 
+---+---
+(0 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.12 rows=5 width=8)
+   ->  Nested Loop Left Anti Semi Join  (cost=0.00..882688.12 rows=2 width=8)
+         Join Filter: true
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+         ->  Result  (cost=0.00..0.00 rows=0 width=1)
+               One-Time Filter: false
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.0
+(8 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0);
+ i  | j  
+----+----
+ 19 |  5
+ 99 | 62
+ 78 | -1
+  1 |  1
+  1 |  1
+(5 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324035.78 rows=2 width=8)
+   Filter: (subplan)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+   SubPlan 1
+     ->  Limit  (cost=0.00..431.00 rows=1 width=8)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       Filter: c.i = $0
+                       ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                   ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.0
+(14 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
+ i  | j  
+----+----
+ 99 | 62
+ 78 | -1
+  1 |  1
+  1 |  1
+ 19 |  5
+(5 rows)
+
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324035.78 rows=2 width=8)
+   Filter: (subplan)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+         ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
+   SubPlan 1
+     ->  Limit  (cost=0.00..431.00 rows=1 width=8)
+           ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                       Filter: c.i = $0
+                       ->  Materialize  (cost=0.00..431.00 rows=3 width=4)
+                             ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
+                                   ->  Table Scan on c  (cost=0.00..431.00 rows=3 width=4)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.0
+(14 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
+ i | j 
+---+---
+(0 rows)
+
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
                                           QUERY PLAN                                           
 -----------------------------------------------------------------------------------------------
@@ -1215,6 +1296,24 @@ select C.j from C where not exists (select rank() over (order by B.i) from B  wh
   7
  62
 (4 rows)
+
+-- start_ignore
+-- FIXME: ORCA produces the wrong plan and results for subselects with a grouping clause
+-- end_ignore
+explain select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
+                   QUERY PLAN                   
+------------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=8)
+   ->  Result  (cost=0.00..0.00 rows=0 width=8)
+         One-Time Filter: false
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.42.3
+(5 rows)
+
+select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
+ i | j 
+---+---
+(0 rows)
 
 -- ----------------------------------------------------------------------
 -- Test:  Correlated Subquery: CSQ using DML (Heap) 
