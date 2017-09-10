@@ -2471,11 +2471,6 @@ initWindowFuncState(WindowState * wstate, Window * node)
 				 winref->winfnoid);
 		proform = (Form_pg_proc) GETSTRUCT(heap_tuple);
 
-		/*
-		 * NOTE: We cannot trust the WindowRef->winagg field to be set correctly,
-		 * because that flag is lost in the translation when ORCA is used.
-		 * Hence we must look up that information from the syscache here.
-		 */
 		isAgg = proform->proisagg;
 		isWin = proform->proiswindow;
 		isSet = proform->proretset;
@@ -2485,6 +2480,7 @@ initWindowFuncState(WindowState * wstate, Window * node)
 		ReleaseSysCache(heap_tuple);
 
 		Assert(isAgg != isWin);
+		Assert(isAgg == winref->winagg);
 		Assert(!isSet);
 
 		/*
