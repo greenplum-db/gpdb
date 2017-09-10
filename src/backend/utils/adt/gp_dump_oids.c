@@ -22,29 +22,26 @@ PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 /*
  * Get all child tables including inheritances, interior and leaf partitions.
  */
-static void getAllRelidsForChildTables(StringInfoData *relbuf, Oid relid)
+static void appendChildrenRelids(StringInfoData *relbuf, Oid relid)
 {
+	/*
+ 	 * find_all_inheritors did all the recursive search work, 
+ 	 * we only need to process its return value
+ 	 */
 	List *prels = NIL;
 	prels = find_all_inheritors(relid);
 	if((prels->length) <= 1)
 	{
 		return;
 	}
+	/*we delete relid itself in the return value*/
 	prels = list_delete_first(prels);
-	
-	if (NIL == prels) 
+	ListCell   *lc;
+	Oid 	   temp_oid;
+	foreach(lc, prels)
 	{
-		return;
-	}
-	else
-	{
-		ListCell   *lc;
-		Oid 	   temp_oid;
-		foreach(lc, prels)
-		{
-			temp_oid = lfirst_oid(lc);
-			appendStringInfo(relbuf, ",%u", temp_oid);
-		}
+		temp_oid = lfirst_oid(lc);
+		appendStringInfo(relbuf, ",%u", temp_oid);
 	}
 }
 
@@ -77,7 +74,7 @@ traverseQueryOids
 					if (relbuf->len != 0)
 						appendStringInfo(relbuf, "%s", ",");
 					appendStringInfo(relbuf, "%u", relid);
-					getAllRelidsForChildTables(relbuf,relid);
+					appendChildrenRelids(relbuf, relid);
 				}
 			}
 		}
