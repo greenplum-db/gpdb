@@ -146,7 +146,7 @@ class GpCheckCatTestCase(GpTestCase):
         self.db_connection.query.return_value.getresult.return_value = [['4.3']]
         self.db_connection.query.return_value.dictresult.return_value = primaries
 
-        testargs = ['gpcrondump', '-port 1', '-R foo']
+        testargs = ['some_string','-port 1', '-R foo']
 
         # GOOD_MOCK_EXAMPLE for testing functionality in "__main__": put all code inside a method "main()",
         # which can then be mocked as necessary.

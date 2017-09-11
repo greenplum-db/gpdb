@@ -177,7 +177,7 @@ cat <<-EOF
 
 EOF
 
-GPPATH=`find $GPSEARCH -name gp_dump| tail -1`
+GPPATH=`find $GPSEARCH -name gpstart| tail -1`
 RETVAL=$?
 
 if [ "$RETVAL" -ne 0 ]; then

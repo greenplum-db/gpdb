@@ -1,4 +1,4 @@
-from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
+from gppylib.utils import escapeDoubleQuoteInSQLString
 
 class LeakedSchemaDropper:
 

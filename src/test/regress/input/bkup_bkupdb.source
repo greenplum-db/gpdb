@@ -4,59 +4,11 @@
 --
 
 
--- Check database version and gp_dump, pg_dump
+-- Check database version and pg_dump
 select version();
-\! gp_dump --version
 \! pg_dump --version
 
--- simple dump
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump
-\! gp_dump regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_dump
-
-
- -- -a, -s (data only and schema only)
-\! rm -fr @abs_builddir@/results/gpdump_datatype_datadump
-\! rm -fr @abs_builddir@/results/gpdump_datatype_schemadump
-\! mkdir @abs_builddir@/results/gpdump_datatype_datadump
-\! mkdir @abs_builddir@/results/gpdump_datatype_schemadump
-\! gp_dump -a regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_datadump
-\! gp_dump -s regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_schemadump
-
--- dump only schema s6
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump_s6
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump_s6
-\! gp_dump -c regressbkuptest1
-\! gp_dump -n s6 regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_dump_s6
-
--- dump only t1
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump_t1
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump_t1
-\! gp_dump -c regressbkuptest1
-\! gp_dump -t t1 regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_dump_t1
-
-
--- dump with oid 
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump_oid
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump_oid
-\! gp_dump -o regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_dump_oid
-
--- dump without ownder
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump_noowner
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump_noowner
-\! gp_dump -O regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_dump_noowner
-
--- zip dump
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump_zip
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump_zip
-\! gp_dump regressbkuptest1 --gp-c --gp-d=@abs_builddir@/results/gpdump_datatype_dump_zip
-
--- segment dump
-\! rm -fr @abs_builddir@/results/gpdump_datatype_dump_seg
-\! mkdir @abs_builddir@/results/gpdump_datatype_dump_seg
-\! gp_dump --gp-s=i[1] regressbkuptest1 --gp-d=@abs_builddir@/results/gpdump_datatype_dump_seg
-
-\echo Finished gp_dump, now test pg_dump
+\echo Test pg_dump
 \! rm -fr @abs_builddir@/results/pgdump_datatype
 \! mkdir @abs_builddir@/results/pgdump_datatype
 

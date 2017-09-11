@@ -3769,57 +3769,6 @@ subpartition by list (c) subpartition template ( subpartition lll1 values ('M'),
   end (date '2010-01-01') every (interval '1 year')
 );
 CREATE TABLE
--- start_ignore
-\! gp_dump gptest
-20080908:14:10:4|gp_dump-[INFO]:-Preparing to dump the following segments:
-20080908:14:10:4|gp_dump-[INFO]:-Master (dbid 1)
-20080908:14:10:4|gp_dump-[INFO]:-Primary segment 0 (dbid 2)
-20080908:14:10:4|gp_dump-[INFO]:-Primary segment 1 (dbid 3)
-20080908:14:10:4|gp_dump-[INFO]:-Primary segment 2 (dbid 4)
-20080908:14:10:4|gp_dump-[INFO]:-Command line options analyzed.
-20080908:14:10:4|gp_dump-[INFO]:-Connecting to master database on host localhost port 18501 database gptest.
-20080908:14:10:4|gp_dump-[INFO]:-Reading Greenplum Database configuration info from master database.
-20080908:14:10:4|gp_dump-[INFO]:-Starting a transaction on master database gptest.
-20080908:14:10:4|gp_dump-[INFO]:-Getting a list of Greenplum Database managed tables for database gptest.
-20080908:14:10:4|gp_dump-[INFO]:-Issuing "LOCK IN EXCLUSIVE MODE" for managed tables on database gptest.
-20080908:14:10:4|gp_dump-[INFO]:-About to spin off 4 threads with timestamp key 20080908141048
-20080908:14:10:4|gp_dump-[INFO]:-Creating thread to backup dbid 1: host minithump10 port 18501 database gptest
-20080908:14:10:4|gp_dump-[INFO]:-Creating thread to backup dbid 2: host localhost port 18507 database gptest
-20080908:14:10:4|gp_dump-[INFO]:-Creating thread to backup dbid 3: host localhost port 18508 database gptest
-20080908:14:10:4|gp_dump-[INFO]:-Creating thread to backup dbid 4: host localhost port 18509 database gptest
-20080908:14:10:4|gp_dump-[INFO]:-Waiting for remote gp_dump_agent processes to start transactions in serializable isolation level
-20080908:14:10:4|gp_dump-[INFO]:-Listening for messages from server on dbid 1 connection
-20080908:14:10:4|gp_dump-[INFO]:-Successfully launched Greenplum Database backup on dbid 1 server
-20080908:14:10:4|gp_dump-[INFO]:-Listening for messages from server on dbid 3 connection
-20080908:14:10:4|gp_dump-[INFO]:-Listening for messages from server on dbid 2 connection
-20080908:14:10:4|gp_dump-[INFO]:-Successfully launched Greenplum Database backup on dbid 3 server
-20080908:14:10:4|gp_dump-[INFO]:-Successfully launched Greenplum Database backup on dbid 2 server
-20080908:14:10:4|gp_dump-[INFO]:-Listening for messages from server on dbid 4 connection
-20080908:14:10:4|gp_dump-[INFO]:-Successfully launched Greenplum Database backup on dbid 4 server
-20080908:14:10:5|gp_dump-[INFO]:-backup succeeded for dbid 1 on host minithump10
-20080908:14:10:5|gp_dump-[INFO]:-backup succeeded for dbid 3 on host localhost
-20080908:14:10:5|gp_dump-[INFO]:-backup succeeded for dbid 2 on host localhost
-20080908:14:10:5|gp_dump-[INFO]:-20080908:14:10:5|gp_dump-[INFO]:-backup succeeded for dbid 4 on host localhost
-All remote gp_dump_agent processes have set transacactions in serializable isolation level
-20080908:14:10:5|gp_dump-[INFO]:-Committing transaction on the master database, thereby releasing locks.
-20080908:14:10:5|gp_dump-[INFO]:-Waiting for all remote gp_dump_agent programs to finish.
-20080908:14:10:5|gp_dump-[INFO]:-All remote gp_dump_agent programs are finished.
-20080908:14:10:5|gp_dump-[INFO]:-Report results also written to ./gp_dump_20080908141048.rpt.
-
-Greenplum Database Backup Report
-Timestamp Key: 20080908141048
-gp_dump Command Line: gptest
-Pass through Command Line Options: None
-Compression Program: None
-
-Individual Results
-	Master (dbid 1) Host minithump10 Port 18501 Database gptest BackupFile /export/home/jsoedomo/gpdemo/datadirs/qddir/demoDataDir-1/./gp_dump_1_1_20080908141048: Succeeded 
-	Primary segment 0 (dbid 2) Host localhost Port 18507 Database gptest BackupFile /export/home/jsoedomo/gpdemo/datadirs/dbfast1/demoDataDir0/./gp_dump_0_2_20080908141048: Succeeded 
-	Primary segment 1 (dbid 3) Host localhost Port 18508 Database gptest BackupFile /export/home/jsoedomo/gpdemo/datadirs/dbfast2/demoDataDir1/./gp_dump_0_3_20080908141048: Succeeded 
-	Primary segment 2 (dbid 4) Host localhost Port 18509 Database gptest BackupFile /export/home/jsoedomo/gpdemo/datadirs/dbfast3/demoDataDir2/./gp_dump_0_4_20080908141048: Succeeded 
-
-gp_dump utility finished successfully.
--- end_ignore
 drop table mpp3373;
 DROP TABLE
 -- start_ignore

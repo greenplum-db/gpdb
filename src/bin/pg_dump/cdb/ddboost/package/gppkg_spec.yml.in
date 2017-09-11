@@ -1,22 +1,0 @@
-Pkgname: ddboostlib
-Architecture: #arch
-Version: 2.6.2_pv1.2.1_gpdb4.3orca
-OS: #os
-GPDBVersion: 4.3
-Description: The DDBoostlib package updates the Data Domain services for the Greenplum database.
-PreInstall:- Master: "if [ -f $GPHOME/lib/libDDBoost.so ]; then \
-               mkdir -p $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data; \
-               cp $GPHOME/lib/libDDBoost.so $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data; \
-           fi"
-     - Segment: "if [ -f $GPHOME/lib/libDDBoost.so ]; then \
-               mkdir -p $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data; \
-               cp $GPHOME/lib/libDDBoost.so $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data; \
-           fi"PostUnInstall:
-- Master: "if [ -f $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data/libDDBoost.so ]; then \
-               cp -f $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data/libDDBoost.so $GPHOME/lib/; \
-	       rm -rf $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data; \
-           fi"
-- Segment: "if [ -f $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data/libDDBoost.so ]; then \
-                cp -f $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data/libDDBoost.so $GPHOME/lib/; \
-	        rm -rf $GPHOME/share/packages/archive/DDBoostlib-2.4.1_remove_data; \
-            fi"

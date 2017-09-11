@@ -4,7 +4,6 @@ include $(top_builddir)/src/Makefile.global
 
 TARGETS=cdbtm \
 	cdbbufferedread \
-	cdbbackup \
 	cdbfilerep \
 	cdbsrlz \
 	cdbdistributedsnapshot

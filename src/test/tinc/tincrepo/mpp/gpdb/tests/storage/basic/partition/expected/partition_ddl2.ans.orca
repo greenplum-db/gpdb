@@ -3760,22 +3760,6 @@ subpartition by list (c) subpartition template ( subpartition lll1 values ('M'),
   end (date '2010-01-01') every (interval '1 year')
 );
 CREATE TABLE
--- start_ignore
-\! gp_dump gptest -t mpp3373
-20150901:06:27:59|gp_dump-[INFO]:-Preparing to dump the following segments:
-20150901:06:27:59|gp_dump-[INFO]:-Segment 1 (dbid 3)
-20150901:06:27:59|gp_dump-[INFO]:-Segment 0 (dbid 2)
-20150901:06:27:59|gp_dump-[INFO]:-Master (dbid 1)
-20150901:06:27:59|gp_dump-[INFO]:-Converting tablenames to oids
-20150901:06:27:59|gp_dump-[INFO]:-Processing tables in batches of 1000
-20150901:06:27:59|gp_dump-[INFO]:-Finished processing batch 1 of tables
-20150901:06:27:59|gp_dump-[ERROR]:-No matching tables were found
-20150901:06:27:59|gp_dump-[ERROR]:-*** aborted because of error: 
-20150901:06:27:59|gp_dump-[INFO]:-Read params: -t mpp3373
-20150901:06:27:59|gp_dump-[INFO]:-Command line options analyzed.
-20150901:06:27:59|gp_dump-[INFO]:-Connecting to master database on host localhost port 22500 database gptest.
-20150901:06:27:59|gp_dump-[INFO]:-Reading Greenplum Database configuration info from master database.
--- end_ignore
 drop table mpp3373;
 DROP TABLE
 CREATE TABLE mpp3438 (

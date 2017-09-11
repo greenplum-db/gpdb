@@ -7,10 +7,9 @@ import tempfile
 import shutil
 from mock import *
 from gp_unittest import *
-from gparray import GpDB, GpArray
+from gppylib.gparray import GpDB, GpArray
 from gppylib.db.dbconn import UnexpectedRowsError
 from pygresql import pgdb
-from gppylib.operations.backup_utils import escapeDoubleQuoteInSQLString
 
 cursor_keys = dict(
     normal_tables=re.compile(".*n\.nspname, c\.relname, c\.relstorage.*c\.oid NOT IN \( SELECT parchildrelid.*"),
@@ -57,8 +56,8 @@ class GpTransfer(GpTestCase):
 
         self.apply_patches([
             patch('os.environ', new={"GPHOME": "my_gp_home"}),
-            patch('gppylib.operations.dump.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gptransfer.connect', return_value=self.db_connection),
+            patch('gppylib.gparray.GpArray.initFromCatalog', return_value=self.gparray),
             patch('gptransfer.getUserDatabaseList', return_value=[["my_first_database"], ["my_second_database"]]),
             patch('gppylib.db.dbconn.connect', return_value=self.db_connection),
             patch('gptransfer.WorkerPool', return_value=self.workerpool),
@@ -68,7 +67,6 @@ class GpTransfer(GpTestCase):
             patch('gptransfer.execSQLForSingletonRow', new=self.db_singleton),
             patch("gppylib.commands.unix.FileDirExists.remote", return_value=True),
             patch("gptransfer.wait_for_pool", return_value=([], [])),
-            patch("gptransfer.escapeDoubleQuoteInSQLString"),
         ])
 
         # We have a GIGANTIC class that uses 31 arguments, so pre-setting this
@@ -252,9 +250,8 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
         side_effect = CursorSideEffect()
-        side_effect.append_regexp_key(cursor_keys['attname'], [['foo']])
+        side_effect.append_regexp_key(cursor_keys['attname'], [['escaped_string']])
         self.cursor.side_effect = side_effect.cursor_side_effect
-        self.subject.escapeDoubleQuoteInSQLString.return_value='"escaped_string"'
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
         expected_distribution = '''DISTRIBUTED BY ("escaped_string")'''
 
@@ -271,9 +268,8 @@ class GpTransfer(GpTestCase):
         dest_table = gptransfer.GpTransferTable(*dest_args)
         cmd_args['table_pair'] = gptransfer.GpTransferTablePair(source_table, dest_table)
         side_effect = CursorSideEffect()
-        side_effect.append_regexp_key(cursor_keys['attname'], [['foo'], ['bar']])
+        side_effect.append_regexp_key(cursor_keys['attname'], [['first_escaped_value'], ['second_escaped_value']])
         self.cursor.side_effect = side_effect.cursor_side_effect
-        self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"first_escaped_value"', '"second_escaped_value"']
         table_validator = gptransfer.GpTransferCommand(**cmd_args)
         expected_distribution = '''DISTRIBUTED BY ("first_escaped_value", "second_escaped_value")'''
 
@@ -505,10 +501,6 @@ class GpTransfer(GpTestCase):
         cursor_side_effect.first_values[cursor_keys["partition_tables"]] = [["public", "my_table_partition1", ""],
                                                                             ["public", "my_table_partition2", ""]]
         self.cursor.side_effect = cursor_side_effect.cursor_side_effect
-
-        # call through to unmocked version of this function because the function gets called too many times
-        # to easily mock in this case
-        self.subject.escapeDoubleQuoteInSQLString = escapeDoubleQuoteInSQLString
 
         class SingletonSideEffectWithIterativeReturns(SingletonSideEffect):
             def __init__(self):
@@ -868,14 +860,11 @@ class GpTransfer(GpTestCase):
             self.subject.GpTransfer(Mock(**options), [])
 
     def test__row_count_validation_escapes_schema_and_table_names(self):
-        self.subject.escapeDoubleQuoteInSQLString.side_effect = ['"escapedSchema"', '"escapedTable"',
-                                                                 '"escapedSchema"', '"escapedTable"']
-
         escaped_query = 'SELECT count(*) FROM "escapedSchema"."escapedTable"'
 
-        table_mock = Mock(spec=['schema','table'])
-        table_mock.schema = 'mySchema'
-        table_mock.table = 'myTable'
+        table_mock = Mock(spec=['escapedSchema','escapedTable'])
+        table_mock.schema = 'escapedSchema'
+        table_mock.table = 'escapedTable'
         table_pair = Mock(spec=['source','dest'])
         table_pair.source = table_mock
         table_pair.dest = table_mock
