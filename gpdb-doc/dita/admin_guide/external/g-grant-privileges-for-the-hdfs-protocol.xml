@@ -2,9 +2,10 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic21">
-   <title>Grant Privileges for the HDFS Protocol</title>
+   <title>Grant Privileges for the gphdfs Protocol</title>
    <body>
-      <p>To enable privileges required to create external tables that access files on HDFS:</p>
+      <p>To enable privileges required to create external tables that access files on HDFS using
+            <codeph>gphdfs</codeph>:</p>
       <ol>
          <li id="du191971">Grant the following privileges on <codeph>gphdfs</codeph> to the owner of
             the external table.<ul id="ul_jg3_wl5_h4">

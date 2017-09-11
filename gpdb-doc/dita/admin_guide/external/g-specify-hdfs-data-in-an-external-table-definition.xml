@@ -2,10 +2,11 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic22">
-   <title>Specify HDFS Data in an External Table Definition</title>
+   <title>Specify gphdfs Protocol in an External Table Definition</title>
    <body>
-      <p>The <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL TABLE</codeph> command
-         for HDFS files differs slightly for Hadoop HA (High Availability) clusters, Hadoop clusters
+      <p>The <codeph>gphdfs</codeph>
+         <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL TABLE</codeph> command for
+         HDFS files differs slightly for Hadoop HA (High Availability) clusters, Hadoop clusters
          without HA, and MapR clusters. </p>
       <p>In a Hadoop HA cluster, the <codeph>LOCATION</codeph> clause references the logical
          nameservices id (the <codeph>dfs.nameservices</codeph> property in the

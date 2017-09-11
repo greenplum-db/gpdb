@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic20">
-   <title>One-time HDFS Protocol Installation</title>
+   <title>One-time gphdfs Protocol Installation</title>
    <body>
       <p>Install and configure Hadoop for use with <codeph>gphdfs</codeph> as follows:<ol
             id="ol_whb_fxz_h4">
