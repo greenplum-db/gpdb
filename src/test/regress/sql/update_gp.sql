@@ -52,3 +52,54 @@ update target set b = 10 where c = 10;
 
 drop table todelete;
 drop table target;
+--
+-- Explicit Distribution motion must be added if any of the child nodes
+-- contains any motion excluding the motions in initplans.
+-- These test cases and expectation are applicable for GPDB planner not for ORCA.
+--
+SET gp_autostats_mode = NONE;
+CREATE TABLE keo1 ( user_vie_project_code_pk character varying(24), user_vie_fiscal_year_period_sk character varying(24), user_vie_act_cntr_marg_cum character varying(24)) DISTRIBUTED RANDOMLY;
+INSERT INTO keo1 VALUES ('1', '1', '1');
+
+CREATE TABLE keo2 ( projects_pk character varying(24)) DISTRIBUTED RANDOMLY;
+INSERT INTO keo2 VALUES ('1');
+
+CREATE TABLE keo3 ( sky_per character varying(24), bky_per character varying(24)) DISTRIBUTED BY (sky_per);
+INSERT INTO keo3 VALUES ('1', '1');
+
+CREATE TABLE keo4 ( keo_para_required_period character varying(6), keo_para_budget_date character varying(24)) DISTRIBUTED RANDOMLY;
+INSERT INTO keo4 VALUES ('1', '1');
+-- Explicit Redistribution motion should be added in case of GPDB Planner (test case not applicable for ORCA)
+EXPLAIN UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
+    ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b 
+        ON b.projects_pk=a.user_vie_project_code_pk
+        WHERE a.user_vie_fiscal_year_period_sk =
+          (SELECT MAX (sky_per) FROM keo3 WHERE bky_per =
+             (SELECT keo4.keo_para_required_period FROM keo4 WHERE keo_para_budget_date =
+                (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
+    ) t1
+WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
+UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
+    ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b 
+        ON b.projects_pk=a.user_vie_project_code_pk
+        WHERE a.user_vie_fiscal_year_period_sk =
+          (SELECT MAX (sky_per) FROM keo3 WHERE bky_per =
+             (SELECT keo4.keo_para_required_period FROM keo4 WHERE keo_para_budget_date =
+                (SELECT min (keo4.keo_para_budget_date) FROM keo4)))
+    ) t1
+WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
+SELECT user_vie_act_cntr_marg_cum FROM keo1;
+
+-- Explicit Redistribution motion should not be added in case of GPDB Planner (test case not applicable to ORCA)
+CREATE TABLE keo5 (x int, y int) DISTRIBUTED BY (x);
+INSERT INTO keo5 VALUES (1,1);
+EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
+DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
+SELECT x FROM keo5;
+
+RESET gp_autostats_mode;
+DROP TABLE keo1;
+DROP TABLE keo2;
+DROP TABLE keo3;
+DROP TABLE keo4;
+DROP TABLE keo5;

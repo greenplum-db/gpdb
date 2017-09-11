@@ -66,7 +66,7 @@ typedef struct ApplyMotionState
 	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
 	int			nextMotionID;
     int         sliceDepth;
-    int         numInitPlanMotionNodes;
+    bool		containMotionNodes;
     List       *initPlans;
 }	ApplyMotionState;
 
@@ -247,7 +247,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	planner_init_plan_tree_base(&state.base, root); /* error on attempt to descend into subplan plan */
 	state.nextMotionID = 1;		/* Start at 1 so zero will mean "unassigned". */
     state.sliceDepth = 0;
-    state.numInitPlanMotionNodes = 0;
+    state.containMotionNodes = false;
     state.initPlans = NIL;
 
 	Assert(is_plan_node((Node *) plan) && IsA(query, Query));
@@ -833,7 +833,25 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
 	
     /* An expression node might have subtrees containing plans to be mutated. */
     if (!is_plan_node(node))
-		return plan_tree_mutator(node, apply_motion_mutator, context);
+	{
+		/*
+		 * The containMotionNodes flag keeps track of whether there are any
+		 * Motion nodes, ignoring any in InitPlans. So if we recurse into an
+		 * InitPlan, save and restore the flag.
+		 */
+		if (IsA(node, SubPlan) && ((SubPlan *) node)->is_initplan)
+		{
+			bool		saveContainMotionNodes = context->containMotionNodes;
+
+			node = plan_tree_mutator(node, apply_motion_mutator, context);
+
+			context->containMotionNodes = saveContainMotionNodes;
+
+			return node;
+		}
+		else
+			return plan_tree_mutator(node, apply_motion_mutator, context);
+	}
 
     plan = (Plan *)node;
     flow = plan->flow;
@@ -866,7 +884,6 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
     {
         ListCell   *cell;
         SubPlan    *subplan;
-        int         nMotion = 0;
 
         foreach(cell, plan->initPlan)
         {
@@ -875,12 +892,9 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
             Assert(IsA(subplan, SubPlan));
             Assert(root);
             Assert(planner_subplan_get_plan(root, subplan));
-            nMotion += planner_subplan_get_plan(root, subplan)->nMotionNodes;
+
             context->initPlans = lappend(context->initPlans, subplan);
         }
-
-        /* Keep track of the number of Motion nodes found in Init Plans. */
-        context->numInitPlanMotionNodes += nMotion;
     }
 
     /* Pre-existing Motion nodes must be renumbered. */
@@ -965,7 +979,7 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
         	/* add an ExplicitRedistribute motion node only if child plan nodes
         	 * have a motion node
         	 */ 
-        	if (context->nextMotionID - context->numInitPlanMotionNodes - saveNextMotionID > 0)
+        	if (context->containMotionNodes)
         	{
         		/* motion node in child nodes: add a ExplicitRedistribute motion */
 				newnode = (Node *) make_explicit_motion(plan,
@@ -1026,6 +1040,19 @@ done:
     plan = (Plan *)newnode;
     plan->nMotionNodes = context->nextMotionID - saveNextMotionID;
     plan->nInitPlans = list_length(context->initPlans) - saveNumInitPlans;
+
+	/*
+	 * Remember if this was a Motion node. This is used at the top of the
+	 * tree, with MOVEMENT_EXPLICIT, to avoid adding an explicit motion, if
+	 * there were no Motion in the subtree. Note that this does not take
+	 * InitPlans containing Motion nodes into account. InitPlans are
+	 * executed as a separate step before the main plan, and hence any
+	 * Motion nodes in them don't need to affect the way the main plan is
+	 * executed.
+	 */
+	if (IsA(newnode, Motion))
+		context->containMotionNodes = true;
+
 	return newnode;
 }                               /* apply_motion_mutator */
 
