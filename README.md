@@ -51,9 +51,8 @@ building, see the README in the
     git clone https://github.com/greenplum-db/gporca
     mkdir gporca/build
     cd gporca/build
-    cmake ../
-    make
-    make install
+    cmake -GNinja ..
+    ninja install
     cd ../..
     ```
     **Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
