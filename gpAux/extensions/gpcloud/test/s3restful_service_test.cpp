@@ -329,3 +329,12 @@ TEST(S3RESTfulService, GetWithWrongProxy) {
 
     EXPECT_THROW(service.get(url, headers), S3ConnectionError);
 }
+
+TEST(S3RESTfulService, GetWithWrongProxyUrl) {
+    HTTPHeaders headers;
+    S3RESTfulService service("https://xx.proxy");
+
+    string url = "https://www.bing.com/";
+
+    EXPECT_THROW(service.get(url, headers), S3ResolveError);
+}

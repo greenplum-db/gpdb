@@ -122,8 +122,10 @@ struct CURLWrapper {
 void S3RESTfulService::performCurl(CURL *curl, Response &response) {
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
-        if (res == CURLE_COULDNT_RESOLVE_HOST) {
+        if (res == CURLE_COULDNT_RESOLVE_HOST || res == CURLE_COULDNT_RESOLVE_PROXY) {
             S3_DIE(S3ResolveError, curl_easy_strerror(res));
+        } else if (res == CURLE_COULDNT_CONNECT) {
+            S3_DIE(S3ConnectionError, "Failed to connect to host or proxy.");
         } else {
             S3_DIE(S3ConnectionError, curl_easy_strerror(res));
         }

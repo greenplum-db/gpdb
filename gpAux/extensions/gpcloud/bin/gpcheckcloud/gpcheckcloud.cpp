@@ -149,7 +149,7 @@ static void printTemplate() {
         "encryption = true\n"
         "autocompress = true\n"
         "verifycert = true\n"
-        "server_side_encryption = \"none\"\n"
+        "server_side_encryption = \"\"\n"
         "# gpcheckcloud config\n"
         "gpcheckcloud_newline = \"\\n\"\n");
 }
