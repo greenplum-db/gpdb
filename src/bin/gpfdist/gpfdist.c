@@ -2313,8 +2313,6 @@ print_addrinfo_list(struct addrinfo *head)
 static void
 signal_register()
 {
-    gwarning(NULL, "Register TERM Signal");
-
     /* when SIGTERM raised invoke process_term_signal */
     signal_set(&gcb.signal_event,SIGTERM,process_term_signal,0);
 
