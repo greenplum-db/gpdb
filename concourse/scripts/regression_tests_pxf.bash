@@ -76,7 +76,7 @@ function start_pxf() {
 	local hdfsrepo=$1
 	local pxfhome="/usr/local/greenplum-db-devel/pxf"
 	pushd ${pxfhome} > /dev/null
-	./bin/pxf init --hadoop-home ${hdfsrepo}
+	./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop
 	./bin/pxf start
 
 	#mkdir -p ${hdfsrepo}/pxf/conf
