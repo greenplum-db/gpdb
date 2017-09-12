@@ -265,6 +265,12 @@ static bool groupWaitQueueIsEmpty(const ResGroupData *group);
 static bool shouldBypassQuery(const char* query_string);
 
 
+static void resgroupDumpGroup(StringInfo str, ResGroupData *group);
+static void resgroupDumpWaitQueue(StringInfo str, PROC_QUEUE *queue);
+static void resgroupDumpCaps(StringInfo str, ResGroupCap *caps);
+static void resgroupDumpSlots(StringInfo str);
+static void resgroupDumpFreeSlots(StringInfo str);
+
 /*
  * Estimate size the resource group structures will need in
  * shared memory.
@@ -3116,4 +3122,162 @@ shouldBypassQuery(const char* query_string)
 	}
 
 	return true;
+}
+
+/*
+ * Debug helper functions
+ */
+void
+ResGroupDumpInfo(StringInfo str)
+{
+	int				i;
+
+	if (!IsResGroupEnabled())
+		return;
+
+	verifyGpIdentityIsSet();
+
+	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
+	
+	/* dump each group */
+	appendStringInfo(str, "\"groups\":[");
+	for (i = 0; i < pResGroupControl->nGroups; i++)
+	{
+		resgroupDumpGroup(str, &pResGroupControl->groups[i]);
+		if (i < pResGroupControl->nGroups - 1)
+			appendStringInfo(str, ","); 
+	}
+	appendStringInfo(str, "],"); 
+	/* dump slots */
+	resgroupDumpSlots(str);
+
+	appendStringInfo(str, ",");
+
+	/* dump freeslot links */
+	resgroupDumpFreeSlots(str);
+
+	appendStringInfo(str, "}"); 
+}
+
+static void
+resgroupDumpGroup(StringInfo str, ResGroupData *group)
+{
+	appendStringInfo(str, "{");
+	appendStringInfo(str, "\"group_id\":%u,", group->groupId);
+	appendStringInfo(str, "\"nRunning\":%d,", group->nRunning);
+	appendStringInfo(str, "\"locked_for_drop\":%d,", group->lockedForDrop);
+	appendStringInfo(str, "\"memExpected\":%d,", group->memExpected);
+	appendStringInfo(str, "\"memQuotaGranted\":%d,", group->memQuotaGranted);
+	appendStringInfo(str, "\"memSharedGranted\":%d,", group->memSharedGranted);
+	appendStringInfo(str, "\"memQuotaUsed\":%d,", group->memQuotaUsed);
+	appendStringInfo(str, "\"memUsage\":%d,", group->memUsage);
+	appendStringInfo(str, "\"memSharedUsage\":%d,", group->memSharedUsage);
+
+	resgroupDumpWaitQueue(str, &group->waitProcs);
+	resgroupDumpCaps(str, (ResGroupCap*)(&group->caps));
+	
+	appendStringInfo(str, "}");
+}
+
+static void
+resgroupDumpWaitQueue(StringInfo str, PROC_QUEUE *queue)
+{
+	PGPROC *proc;
+
+	appendStringInfo(str, "\"wait_queue\":{");
+	appendStringInfo(str, "\"wait_queue_size\":%d,", queue->size);
+	appendStringInfo(str, "\"wait_queue_content\":[");
+
+	proc = (PGPROC *)SHMQueueNext(&queue->links,
+								  &queue->links, 
+								  offsetof(PGPROC, links));
+
+	if (!SHM_PTR_VALID(&proc->links))
+	{
+		appendStringInfo(str, "]},");
+		return;
+	}
+
+	while (proc)
+	{
+		appendStringInfo(str, "{");
+		appendStringInfo(str, "\"pid\":%d,", proc->pid);
+		appendStringInfo(str, "\"resWaiting\":%d,", proc->resWaiting);
+		appendStringInfo(str, "\"resSlotId\":%d", proc->resSlotId);
+		appendStringInfo(str, "}");
+		proc = (PGPROC *)SHMQueueNext(&queue->links,
+							&proc->links, 
+							offsetof(PGPROC, links));
+		if (proc)
+			appendStringInfo(str, ",");
+	}
+	appendStringInfo(str, "]},");
+}
+
+static void
+resgroupDumpCaps(StringInfo str, ResGroupCap *caps)
+{
+	int i;
+	appendStringInfo(str, "\"caps\":[");
+	for (i = 1; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
+	{
+		appendStringInfo(str, "{\"value\":%d,\"proposed\":%d}", caps[i].value, caps[i].proposed);
+		if (i < RESGROUP_LIMIT_TYPE_COUNT - 1)
+			appendStringInfo(str, ",");
+	}
+	appendStringInfo(str, "]");
+}
+
+static void
+resgroupDumpSlots(StringInfo str)
+{
+	int               i;
+	int               next_id;
+	int               prev_id;
+	ResGroupSlotData* slot;
+	ResGroupSlotData* root;
+
+	root = &pResGroupControl->freeSlot;
+	
+	appendStringInfo(str, "\"slots\":[");
+
+	for (i = 0; i < RESGROUP_MAX_SLOTS; i++)
+	{
+		slot = &(pResGroupControl->slots[i]);
+		prev_id = (slot->prev == NULL || slot->prev == root) ? -1 : slotGetId(slot->prev);
+		next_id = (slot->next == NULL || slot->next == root) ? -1 : slotGetId(slot->next);
+
+		appendStringInfo(str, "{");
+		appendStringInfo(str, "\"slotId\":%d,", i);
+		appendStringInfo(str, "\"sessionId\":%d,", slot->sessionId);
+		appendStringInfo(str, "\"groupId\":%u,", slot->groupId);
+		appendStringInfo(str, "\"memQuota\":%d,", slot->memQuota);
+		appendStringInfo(str, "\"memUsage\":%d,", slot->memUsage);
+		appendStringInfo(str, "\"nProcs\":%d,", slot->nProcs);
+		appendStringInfo(str, "\"prev\":%d,", prev_id);
+		appendStringInfo(str, "\"next\":%d,", next_id);
+		resgroupDumpCaps(str, (ResGroupCap*)(&slot->caps));
+		appendStringInfo(str, "}");
+		if (i < RESGROUP_MAX_SLOTS - 1)
+			appendStringInfo(str, ",");
+	}
+	
+	appendStringInfo(str, "]");
+}
+
+static void
+resgroupDumpFreeSlots(StringInfo str)
+{
+	ResGroupSlotData* root;
+	int               prev_id;
+	int               next_id;
+	
+	root = &pResGroupControl->freeSlot;
+	prev_id = root->prev == root ? -1 : slotGetId(root->prev);
+	next_id = root->next == root ? -1 : slotGetId(root->next);
+	
+	appendStringInfo(str, "\"free_slot_root\":{");
+	appendStringInfo(str, "\"prev\":%d,", prev_id);
+	appendStringInfo(str, "\"next\":%d", next_id);
+	appendStringInfo(str, "}");
 }

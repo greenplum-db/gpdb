@@ -36,6 +36,9 @@ test: resgroup/resgroup_verify_guc
 #test: resgroup/restore_default_resgroup
 #test: resgroup/resgroup_parallel_queries
 
+# dump info
+test: resgroup/resgroup_dumpinfo
+
 # fault injection tests
 test: resgroup/resgroup_assign_slot_fail
 

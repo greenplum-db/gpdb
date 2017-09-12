@@ -169,6 +169,8 @@ extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
 
 extern int64 ResourceGroupGetQueryMemoryLimit(void);
 
+extern void ResGroupDumpInfo(StringInfo str);
+
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
 
