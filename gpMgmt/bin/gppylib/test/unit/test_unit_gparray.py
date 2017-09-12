@@ -9,7 +9,7 @@
 """
 import os
 
-from gppylib.gparray import GpArray, GpDB, createSegmentRows, FAULT_STRATEGY_NONE, get_gparray_from_config
+from gppylib.gparray import GpArray, GpDB, createSegmentRows, get_gparray_from_config
 from gppylib import gplog
 from gp_unittest import *
 from mock import patch, Mock
@@ -169,13 +169,13 @@ class GpArrayTestCase(GpTestCase):
         getConfigProviderFunctionMock.return_value = configProviderMock
         configProviderMock.initializeProvider.return_value = configProviderMock
         gpArrayMock = Mock(spec=GpArray)
-        gpArrayMock.getFaultStrategy.return_value = FAULT_STRATEGY_NONE
+        gpArrayMock.hasMirrors = False
         configProviderMock.loadSystemConfig.return_value = gpArrayMock
         gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
 
         gpArray = get_gparray_from_config()
 
-        self.assertEquals(gpArray.getFaultStrategy(), FAULT_STRATEGY_NONE)
+        self.assertEquals(gpArray.hasMirrors, False)
         gpMasterEnvironmentMock.assert_called_once_with("MY_TEST_DIR", False)
         getConfigProviderFunctionMock.assert_any_call()
         configProviderMock.initializeProvider.assert_called_once_with(123456)

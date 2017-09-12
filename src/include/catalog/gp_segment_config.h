@@ -76,4 +76,6 @@ typedef FormData_gp_segment_configuration *Form_gp_segment_configuration;
 #define Anum_gp_segment_configuration_address			9
 #define Anum_gp_segment_configuration_replication_port	10
 
+extern bool gp_segment_config_has_mirrors(void);
+
 #endif /*_GP_SEGMENT_CONFIG_H_*/

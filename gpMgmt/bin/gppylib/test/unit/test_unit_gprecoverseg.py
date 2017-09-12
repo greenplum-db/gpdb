@@ -6,7 +6,7 @@ import tempfile
 from mock import *
 
 from gp_unittest import *
-from gppylib.gparray import GpArray, GpDB, FAULT_STRATEGY_FILE_REPLICATION
+from gppylib.gparray import GpArray, GpDB
 from gppylib.heapchecksum import HeapChecksum
 from gppylib.operations.buildMirrorSegments import GpMirrorToBuild, GpMirrorListToBuild
 from gppylib.pgconf import gucdict, setting
@@ -60,7 +60,7 @@ class GpRecoversegTestCase(GpTestCase):
 
         self.gpArrayMock = MagicMock(spec=GpArray)
         self.gpArrayMock.getDbList.side_effect = [[], [self.primary0], [self.primary0]]
-        self.gpArrayMock.getFaultStrategy.return_value = FAULT_STRATEGY_FILE_REPLICATION
+        self.gpArrayMock.hasMirrors = True
         self.gpArrayMock.isStandardArray.return_value = (True, None)
         self.gpArrayMock.master = self.gparray.master
 

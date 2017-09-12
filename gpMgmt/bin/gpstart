@@ -397,7 +397,7 @@ class GpStart:
         logger.info("Segment instances that will be started")
         logger.info("--------------------------------------")
 
-        isFileReplication = self.gparray.getFaultStrategy() == FAULT_STRATEGY_FILE_REPLICATION
+        isFileReplication = self.gparray.hasMirrors
 
         tabLog = TableLogger().setWarnWithArrows(True)
         header = ["Host", "Datadir", "Port"]
@@ -478,12 +478,9 @@ class GpStart:
             raise ExceptionNoStackTraceNeeded(
                 "Found a System Expansion Setup in progress. Please run 'gpexpand --rollback'")
 
-        strategy = self.gparray.getFaultStrategy()
-        logger.debug("Strategy in gparray is %s" % strategy)
+        logger.debug("gparray does%s have mirrors" % ("" if self.gparray.hasMirrors else " not"))
 
-        # The SAN ('s') fault strategy leaves the mirrors shutdown until they're needed.
-        # so we don't want to start them -- SAN-start works just like a mirror-less start.
-        if strategy == FAULT_STRATEGY_FILE_REPLICATION:
+        if self.gparray.hasMirrors:
             startMode = START_AS_PRIMARY_OR_MIRROR
         else:
             startMode = START_AS_MIRRORLESS
@@ -684,8 +681,7 @@ class GpStart:
         tableLog.addSeparator()
         tableLog.info(["Successful segment starts", "= %d" % started])
 
-        if self.gparray.getFaultStrategy() == FAULT_STRATEGY_FILE_REPLICATION and \
-                        failedFromMirroring > 0:
+        if self.gparray.hasMirrors and failedFromMirroring > 0:
             tableLog.warn(["Failed segment starts, from mirroring connection between primary and mirror",
                            "= %d" % failedFromMirroring])
             tableLog.infoOrWarn(failedNotFromMirroring > 0,

@@ -1,4 +1,4 @@
-from gppylib.gparray import FAULT_STRATEGY_FILE_REPLICATION, get_gparray_from_config
+from gppylib.gparray import get_gparray_from_config
 
 
 class MirrorMatchingCheck:
@@ -7,7 +7,7 @@ class MirrorMatchingCheck:
         logger.info('-----------------------------------')
         logger.info('Checking mirroring_matching')
 
-        is_config_mirror_enabled = get_gparray_from_config().getFaultStrategy() == FAULT_STRATEGY_FILE_REPLICATION
+        is_config_mirror_enabled = get_gparray_from_config().hasMirrors
 
         # This query returns the mirroring status of all segments
         mirroring_query = """SELECT gp_segment_id, mirror_existence_state FROM gp_dist_random('gp_persistent_relation_node') GROUP BY 1,2"""

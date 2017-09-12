@@ -35,10 +35,6 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 
-#ifdef USE_SEGWALREP
-#include "catalog/gp_fault_strategy.h"
-#endif
-
 #define MASTER_ONLY 0x1
 #define UTILITY_MODE 0x2
 #define SUPERUSER 0x4
@@ -98,47 +94,6 @@ standby_exists()
 {
 	return segment_has_mirror(MASTER_CONTENT_ID);
 }
-
-#ifdef USE_SEGWALREP
-/*
- * Tell the caller whether any segment mirrors exist.
- */
-static bool
-segment_mirrors_exist()
-{
-	bool mirrors_exist;
-	Relation rel;
-	ScanKeyData scankey[2];
-	SysScanDesc scan;
-	HeapTuple tuple;
-
-	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
-
-	/*
-	 * SELECT dbid FROM gp_segment_configuration
-	 * WHERE content != :1 AND role = :2
-	 */
-	ScanKeyInit(&scankey[0],
-				Anum_gp_segment_configuration_content,
-				BTEqualStrategyNumber, F_INT2NE,
-				Int16GetDatum(MASTER_CONTENT_ID));
-	ScanKeyInit(&scankey[1],
-				Anum_gp_segment_configuration_role,
-				BTEqualStrategyNumber, F_CHAREQ,
-				CharGetDatum('m'));
-
-	scan = systable_beginscan(rel, InvalidOid, false,
-							  SnapshotNow, 2, scankey);
-
-	tuple = systable_getnext(scan);
-	mirrors_exist = HeapTupleIsValid(tuple);
-
-	systable_endscan(scan);
-	heap_close(rel, AccessShareLock);
-
-	return mirrors_exist;
-}
-#endif
 
 /*
  * Get the highest dbid defined in the system. We AccessExclusiveLock
@@ -939,11 +894,6 @@ gp_add_segment_mirror(PG_FUNCTION_ARGS)
 
 	heap_close(rel, NoLock);
 
-#ifdef USE_SEGWALREP
-	/* update the gp_fault_strategy */
-	update_gp_fault_strategy(GpFaultStrategyWalRepMirrored);
-#endif
-
 	PG_RETURN_INT16(new.db.dbid);
 }
 
@@ -990,15 +940,6 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 	remove_segment(pridbid, mirdbid);
 
 	heap_close(rel, NoLock);
-
-#ifdef USE_SEGWALREP
-	/* Increment so we can see the change when checking if any mirrors still exist */
-	CommandCounterIncrement();
-
-	/* If we removed the last segment mirror, update the gp_fault_strategy */
-	if (!segment_mirrors_exist())
-		update_gp_fault_strategy(GpFaultStrategyMirrorLess);
-#endif
 
 	PG_RETURN_BOOL(true);
 }

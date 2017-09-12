@@ -643,10 +643,9 @@ class GpAddMirrorsProgram:
         self.validate_heap_checksums(gpArray)
 
         # check that we actually have mirrors
-        if gpArray.getFaultStrategy() != gparray.FAULT_STRATEGY_NONE:
+        if gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded( \
-                "GPDB physical mirroring cannot be added.  The cluster is already configured with %s." % \
-                gparray.getFaultStrategyLabel(gpArray.getFaultStrategy()))
+                "GPDB physical mirroring cannot be added.  The cluster is already configured with Mirrors.")
 
         # figure out what needs to be done
         mirrorBuilder = self.__getMirrorsToBuildBasedOnOptions(gpEnv, gpArray)
@@ -662,7 +661,6 @@ class GpAddMirrorsProgram:
                 if not userinput.ask_yesno(None, "\nContinue with add mirrors procedure", 'N'):
                     raise UserAbortedException()
 
-            gpArray.setFaultStrategy(gparray.FAULT_STRATEGY_FILE_REPLICATION)
             if not mirrorBuilder.buildMirrors("add", gpEnv, gpArray):
                 return 1
 

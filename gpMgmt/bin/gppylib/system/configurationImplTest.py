@@ -28,7 +28,6 @@ class GpConfigurationProviderForTesting(GpConfigurationProvider) :
 
     def __init__(self):
         self.__testSegments=[]
-        self.__faultStrategy = FAULT_STRATEGY_NONE 
         pass
 
     def initializeProvider( self, masterPort ) :
@@ -53,7 +52,6 @@ class GpConfigurationProviderForTesting(GpConfigurationProvider) :
         for segment in self.__testSegments:
             segments.append(segment.copy())
         result = GpArray(segments)
-        result.setFaultStrategy(self.__faultStrategy)
         return result
 
     def sendPgElogFromMaster( self, msg, sendAlerts):
@@ -77,6 +75,3 @@ class GpConfigurationProviderForTesting(GpConfigurationProvider) :
         Add a test segment.  The segment is COPIED before adding
         """
         self.__testSegments.append(configForSegment.copy())
-
-    def setFaultStrategy(self, faultStrategy):
-        self.__faultStrategy = faultStrategy

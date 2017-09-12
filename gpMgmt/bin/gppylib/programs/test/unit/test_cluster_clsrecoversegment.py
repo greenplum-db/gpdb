@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from gparray import GpDB, GpArray, FAULT_STRATEGY_NONE
+from gparray import GpDB, GpArray
 from gppylib import gparray
 from gppylib.commands.base import CommandResult, WorkerPool, Command
 from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
@@ -218,7 +218,8 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
     def test_is_segment_mirror_state_mismatched_cluster_mirroring_enabled_segment_mirroring_disabled(self):
         self.execSqlResult.fetchall.return_value = [[3], [1]]
         gparray_mock = Mock(spec=GpArray)
-        gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
+        gparray_mock.hasMirrors = True
+
         segment_mock = Mock(spec=GpDB)
         segment_mock.getSegmentContentId.return_value = 0
         mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
@@ -227,7 +228,8 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
     def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_enabled(self):
         self.execSqlResult.fetchall.return_value = [[3]]
         gparray_mock = Mock(spec=GpArray)
-        gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_FILE_REPLICATION
+        gparray_mock.hasMirrors = True
+
         segment_mock = Mock(spec=GpDB)
         segment_mock.getSegmentContentId.return_value = 0
         mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
@@ -235,7 +237,8 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
 
     def test_is_segment_mirror_state_mismatched_cluster_and_segments_mirroring_disabled(self):
         gparray_mock = Mock(spec=GpArray)
-        gparray_mock.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
+        gparray_mock.hasMirrors = False
+
         segment_mock = Mock(spec=GpDB)
         segment_mock.getSegmentDbId.return_value = 0
         mismatched = self.subject.is_segment_mirror_state_mismatched(gparray_mock, segment_mock)
@@ -243,7 +246,7 @@ class GpRecoverSegmentProgramTestCase(GpTestCase):
 
     def test__run__when_no_replication_is_setup__raises(self):
         self.gparray.getSegDbList.return_value = []
-        self.gparray.getFaultStrategy.return_value = gparray.FAULT_STRATEGY_NONE
+        self.gparray.hasMirrors = False
 
         with self.assertRaisesRegexp(Exception, 'replication is not configured'):
             self.subject.run()

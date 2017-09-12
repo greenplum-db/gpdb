@@ -54,7 +54,6 @@ GP_USER=$USER_NAME
 GP_TBL=gp_id
 GP_CONFIG_TBL=gp_segment_configuration
 PG_SYSTEM_FILESPACE=3052
-GP_FAILOVER_CONFIG_TBL=gp_fault_strategy
 unset PG_CONF_ADD_FILE
 #unset QD_PRIMARY_ARRAY QE_PRIMARY_ARRAY QE_MIRROR_ARRAY
 EXIT_STATUS=0
@@ -2043,11 +2042,6 @@ CREATE_QD_DB
 CREATE_QES_PRIMARY
 if [ $MIRRORING -ne 0 ]; then
 	CREATE_QES_MIRROR
-	# We've created a FILEREP mirror -- set the failover strategy to 'f'
-	env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "INSERT INTO $GP_FAILOVER_CONFIG_TBL VALUES ('f');" >> $LOG_FILE 2>&1
-else
-	# We have no FILEREP mirror -- set the failover strategy to 'n'
-	env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "INSERT INTO $GP_FAILOVER_CONFIG_TBL VALUES ('n');" >> $LOG_FILE 2>&1
 fi
 if [ $REPORT_FAIL -ne 0 ];then
 	LOG_MSG "[FATAL]:-Errors generated from parallel processes" 1

@@ -158,16 +158,11 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
             originalSeg = update.dbsegmap.get(seg.getSegmentDbId())
             self.__updateSystemConfigUpdateSegment(conn, gpArray, seg, originalSeg, textForConfigTable)
 
-        # apply update to fault strategy
-        if gpArray.getStrategyAsLoadedFromDb() != gpArray.getFaultStrategy():
-            self.__updateSystemConfigFaultStrategy(conn, gpArray)
-
         # commit changes
         logger.debug("Committing configuration table changes")
         dbconn.execSQL(conn, "COMMIT")
         conn.close()
 
-        gpArray.setStrategyAsLoadedFromDb( [gpArray.getFaultStrategy()])
         gpArray.setSegmentsAsLoadedFromDb([seg.copy() for seg in gpArray.getDbList()])
 
 
@@ -273,17 +268,6 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
             self.__updateSegmentReplicationPort(conn, seg)
 
         self.__insertConfigHistory(conn, seg.getSegmentDbId(), what % textForConfigTable)
-
-
-    def __updateSystemConfigFaultStrategy(self, conn, gpArray):
-        """
-        Update the fault strategy.
-        """
-        fs  = gpArray.getFaultStrategy()
-        sql = "UPDATE gp_fault_strategy\n SET fault_strategy = " + self.__toSqlCharValue(fs) + "\n"
-        logger.debug(sql)
-        dbconn.executeUpdateOrInsert(conn, sql, 1)
-
 
     def __callSegmentRemoveMirror(self, conn, seg):
         """

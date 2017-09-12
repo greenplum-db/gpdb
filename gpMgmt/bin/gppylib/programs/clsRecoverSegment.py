@@ -546,7 +546,7 @@ class GpRecoverSegmentProgram:
                              (', '.join(str(seg_id) for seg_id in segs_persistent_mirroring_disabled)))
 
     def is_segment_mirror_state_mismatched(self, gpArray, segment):
-        if gpArray.getFaultStrategy() == gparray.FAULT_STRATEGY_FILE_REPLICATION:
+        if gpArray.hasMirrors:
             # Determines whether cluster has mirrors
             with dbconn.connect(dbconn.DbURL()) as conn:
                 res = dbconn.execSQL(conn,
@@ -1151,7 +1151,7 @@ class GpRecoverSegmentProgram:
 
         self.check_segment_state_ready_for_recovery(gpArray.getSegDbList(), gpArray.getSegDbMap())
 
-        if gpArray.getFaultStrategy() != gparray.FAULT_STRATEGY_FILE_REPLICATION:
+        if not gpArray.hasMirrors:
             raise ExceptionNoStackTraceNeeded(
                 'GPDB Mirroring replication is not configured for this Greenplum Database instance.')
 

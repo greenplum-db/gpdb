@@ -19,7 +19,6 @@ static void check_for_isn_and_int8_passing_mismatch(migratorContext *ctx,
 												Cluster whichCluster);
 static void check_for_reg_data_type_usage(migratorContext *ctx, Cluster whichCluster);
 static void check_external_partition(migratorContext *ctx);
-static void check_fts_fault_strategy(migratorContext *ctx);
 static void check_covering_aoindex(migratorContext *ctx);
 
 
@@ -103,7 +102,6 @@ check_old_cluster(migratorContext *ctx, bool live_check,
 	check_for_reg_data_type_usage(ctx, CLUSTER_OLD);
 	check_for_isn_and_int8_passing_mismatch(ctx, CLUSTER_OLD);
 	check_external_partition(ctx);
-	check_fts_fault_strategy(ctx);
 	check_covering_aoindex(ctx);
 
 	/* old = PG 8.3 checks? */
@@ -865,81 +863,6 @@ check_external_partition(migratorContext *ctx)
 			   "| tables as partitions.  These partitions need to be removed\n"
 			   "| from the partition hierarchy before the upgrade.  A list of\n"
 			   "| external partitions to remove is in the file:\n"
-			   "| \t%s\n\n", output_path);
-	}
-	else
-	{
-		check_ok(ctx);
-	}
-}
-
-/*
- *	check_fts_fault_strategy
- *
- *	FTS fault strategies other than FILEREPLICATION 'f' and NONE 'n' are no
- *	longer supported, but we don't have an automated way to reconfigure the
- *	cluster so abort upgrade in case discovered.
- */
-static void
-check_fts_fault_strategy(migratorContext *ctx)
-{
-	ClusterInfo *old_cluster = &ctx->old;
-	char		query[QUERY_ALLOC];
-	char		output_path[MAXPGPATH];
-	FILE	   *script = NULL;
-	bool		found = false;
-	int			dbnum;
-
-	prep_status(ctx, "Checking for deprecated FTS fault strategies");
-
-	snprintf(output_path, sizeof(output_path), "%s/fault_strategies.txt",
-			 ctx->cwd);
-
-	snprintf(query, sizeof(query),
-			 "SELECT fault_strategy "
-			 "FROM   pg_catalog.gp_fault_strategy "
-#ifdef USE_SEGWALREP
-			 /* In segment WAL replication, 'f' is removed and replaced with 'w' */
-			 "WHERE  fault_strategy NOT IN ('n','w');");
-#else
-			 "WHERE  fault_strategy NOT IN ('n','f');");
-#endif
-
-	for (dbnum = 0; dbnum < old_cluster->dbarr.ndbs; dbnum++)
-	{
-		PGresult   *res;
-		int			ntups;
-		DbInfo	   *active_db = &old_cluster->dbarr.dbs[dbnum];
-		PGconn	   *conn;
-
-		conn = connectToServer(ctx, active_db->db_name, CLUSTER_OLD);
-		res = executeQueryOrDie(ctx, conn, query);
-
-		ntups = PQntuples(res);
-
-		if (ntups > 0)
-		{
-			found = true;
-
-			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(ctx, PG_FATAL, "Could not create necessary file:  %s\n",
-					   output_path);
-
-			fprintf(script, "Deprecated fault strategy in database \"%s\"\n",
-					active_db->db_name);
-		}
-
-		PQclear(res);
-		PQfinish(conn);
-	}
-	if (found)
-	{
-		fclose(script);
-		pg_log(ctx, PG_REPORT, "fatal\n");
-		pg_log(ctx, PG_FATAL,
-			   "| Your installation contains a deprecated FTS fault strategy\n"
-			   "| configuration.  A list of database to reconfigure manually\n"
-			   "| before restarting upgrade is in the file:\n"
 			   "| \t%s\n\n", output_path);
 	}
 	else

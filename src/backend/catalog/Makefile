@@ -20,7 +20,7 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        pg_type.o toasting.o \
        pg_exttable.o pg_extprotocol.o \
        pg_proc_callback.o \
-       aoseg.o aoblkdir.o gp_fastsequence.o gp_fault_strategy.o \
+       aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        gp_global_sequence.o gp_persistent.o pg_appendonly.o \
        oid_dispatch.o aocatalog.o $(QUICKLZ_COMPRESSION)
@@ -49,7 +49,7 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_ts_config.h pg_ts_config_map.h pg_ts_dict.h \
 	pg_ts_parser.h pg_ts_template.h pg_extension.h \
 	gp_configuration.h gp_id.h gp_policy.h gp_version.h \
-	gp_segment_config.h gp_fault_strategy.h \
+	gp_segment_config.h \
 	pg_window.h \
 	pg_exttable.h pg_appendonly.h aoseg.h \
 	gp_fastsequence.h pg_extprotocol.h \

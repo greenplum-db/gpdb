@@ -26,7 +26,7 @@ def testGuessSpreadAndMultiHome(args):
 
     configStr = args[0]
 
-    driver.setSegments(configStr, gparray.FAULT_STRATEGY_FILE_REPLICATION)
+    driver.setSegments(configStr)
     gpArray = configInterface.getConfigurationProvider().initializeProvider(5432).loadSystemConfig(useUtilityMode=False)
 
     testOutput("")

@@ -106,19 +106,7 @@ VALID_SEGMENT_STATES = [
 def getDataModeLabel(mode):
     return MODE_LABELS[mode]
 
-
-FAULT_STRATEGY_NONE = 'n'               # mirrorless systems
-FAULT_STRATEGY_FILE_REPLICATION = 'f'   # valid for versions 4.0+
-FAULT_STRATEGY_LABELS = {
-    FAULT_STRATEGY_NONE:               "none",
-    FAULT_STRATEGY_FILE_REPLICATION:   "physical mirroring",
- }
-VALID_FAULT_STRATEGY = FAULT_STRATEGY_LABELS.keys()
-
 MASTER_CONTENT_ID = -1
-
-def getFaultStrategyLabel(strategy):
-    return FAULT_STRATEGY_LABELS[strategy]
 
 class InvalidSegmentConfiguration(Exception):
     """Exception raised when an invalid gparray configuration is
@@ -1168,7 +1156,7 @@ class GpArray:
     """
 
     # --------------------------------------------------------------------
-    def __init__(self, segments, segmentsAsLoadedFromDb=None, strategyLoadedFromDb=None):
+    def __init__(self, segments, segmentsAsLoadedFromDb=None):
         """
         segmentsInDb is used only be the configurationImpl* providers; it is used to track the state of the
           segments in the database
@@ -1187,8 +1175,7 @@ class GpArray:
 
         self.__version = None
         self.__segmentsAsLoadedFromDb = segmentsAsLoadedFromDb
-        self.__strategyLoadedFromDb = strategyLoadedFromDb
-        self.__strategy = FAULT_STRATEGY_NONE
+        self.hasMirrors = False
 
         self.setFilespaces([])
 
@@ -1328,6 +1315,7 @@ class GpArray:
         Factory method, initializes a GpArray from provided database URL
         """
 
+        hasMirrors = False
         conn = dbconn.connect(dbURL, utility)
 
         # Get the version from the database:
@@ -1336,64 +1324,22 @@ class GpArray:
             version_str = row[0]
         version = GpVersion(version_str)
 
-        if version.getVersionRelease() in ("3.0", "3.1", "3.2", "3.3"):
+        config_rows = dbconn.execSQL(conn, '''
+        SELECT dbid, content, role, preferred_role, mode, status,
+        hostname, address, port, replication_port, fs.oid,
+        fselocation
+        FROM pg_catalog.gp_segment_configuration
+        JOIN pg_catalog.pg_filespace_entry on (dbid = fsedbid)
+        JOIN pg_catalog.pg_filespace fs on (fsefsoid = fs.oid)
+        ORDER BY content, preferred_role DESC, fs.oid
+        ''')
 
-            # In older releases we get the fault strategy using the
-            # gp_fault_action guc.
-            strategy_rows = dbconn.execSQL(conn, "show gp_fault_action")
-
-            # Note: Mode may not be "right", certainly 4.0 concepts of mirroring
-            # mode do not apply to 3.x, so it depends on how the scripts are
-            # making use of mode.  For now it is initialized to synchronized.
-            #
-            # Note: hostname is initialized to null since the catalog does not
-            # contain this information.  Initializing a hostcache using the
-            # resulting gparray will automatically fill in a value for hostname.
-            #
-            # Note: this should be kept in sync with the code in
-            # GpDB.InitFromString() code for initializing old catalog formats.
-            config_rows = dbconn.execSQL(conn, '''
-                SELECT dbid, content,
-                       case when isprimary then 'p' else 'm' end as role,
-                       case when definedprimary then 'p' else 'm' end as preferred_role,
-                       's' as mode,
-                       case when valid then 'u' else 'd' end as status,
-                       null as hostname,
-                       hostname as address,
-                       port,
-                       null as replication_port,
-                       %s as fsoid,
-                       datadir as fselocation
-                FROM pg_catalog.gp_configuration
-                ORDER BY content, preferred_role DESC
-            ''' % str(SYSTEM_FILESPACE))
-
-            # no filespace support in older releases.
-            filespaceArr = []
-
-        else:
-
-            strategy_rows = dbconn.execSQL(conn, '''
-                SELECT fault_strategy FROM gp_fault_strategy
-            ''')
-
-            config_rows = dbconn.execSQL(conn, '''
-                SELECT dbid, content, role, preferred_role, mode, status,
-                       hostname, address, port, replication_port, fs.oid,
-                       fselocation
-                FROM pg_catalog.gp_segment_configuration
-                JOIN pg_catalog.pg_filespace_entry on (dbid = fsedbid)
-                JOIN pg_catalog.pg_filespace fs on (fsefsoid = fs.oid)
-                ORDER BY content, preferred_role DESC, fs.oid
-            ''')
-
-            filespaceRows = dbconn.execSQL(conn, '''
-                SELECT oid, fsname
-                FROM pg_filespace
-                ORDER BY fsname;
-            ''')
-            filespaceArr = [GpFilespaceObj(fsRow[0], fsRow[1]) for fsRow in filespaceRows]
-
+        filespaceRows = dbconn.execSQL(conn, '''
+        SELECT oid, fsname
+        FROM pg_filespace
+        ORDER BY fsname;
+        ''')
+        filespaceArr = [GpFilespaceObj(fsRow[0], fsRow[1]) for fsRow in filespaceRows]
 
         # Todo: add checks that all segments should have the same filespaces?
         recoveredSegmentDbids = []
@@ -1404,6 +1350,10 @@ class GpArray:
             # Extract fields from the row
             (dbid, content, role, preferred_role, mode, status, hostname,
              address, port, replicationPort, fsoid, fslocation) = row
+
+            # Check if mirrors exist
+            if preferred_role == ROLE_MIRROR:
+                hasMirrors = True
 
             # If we have segments which have recovered, record them.
             if preferred_role != role and content >= 0:
@@ -1446,17 +1396,11 @@ class GpArray:
 
         origSegments = [seg.copy() for seg in segments]
 
-        if strategy_rows.rowcount == 0:
-            raise Exception("Database does not contain gp_fault_strategy entry")
-        if strategy_rows.rowcount > 1:
-            raise Exception("Database has too many gp_fault_strategy entries")
-        strategy = strategy_rows.fetchone()[0]
-
-        array = GpArray(segments, origSegments, strategy)
+        array = GpArray(segments, origSegments)
         array.__version = version
         array.recoveredSegmentDbids = recoveredSegmentDbids
-        array.setFaultStrategy(strategy)
         array.setFilespaces(filespaceArr)
+        array.hasMirrors = hasMirrors
 
         return array
 
@@ -1503,50 +1447,6 @@ class GpArray:
         fp.close()
 
     # --------------------------------------------------------------------
-    def setFaultStrategy(self, strategy):
-        """
-        Sets the fault strategy of the array.
-
-        The input strategy should either be a valid fault strategy code:
-          ['n', 'f', ...]
-
-        Or it should be a valid fault strategy label:
-          ['none', 'physical mirroring', ...]
-
-        The reason that we need to accept both forms of input is that fault
-        strategy is modeled differently in the catalog depending on the catalog
-        version.
-
-        In 3.x fault strategy is stored using the label via the gp_fault_action
-        guc.
-
-        In 4.0 fault strategy is stored using the code via the gp_fault_strategy
-        table.
-        """
-
-        checkNotNone("strategy", strategy)
-
-        # Try to lookup the strategy as a label
-        for (key, value) in FAULT_STRATEGY_LABELS.iteritems():
-            if value == strategy:
-                strategy = key
-                break
-        if strategy not in VALID_FAULT_STRATEGY:
-            raise Exception("Invalid fault strategy '%s'" % strategy)
-        self.__strategy = strategy
-
-    # --------------------------------------------------------------------
-    def getFaultStrategy(self):
-        """
-        Will return a string matching one of the FAULT_STRATEGY_* constants
-        """
-
-        if self.__strategy not in VALID_FAULT_STRATEGY:
-            raise Exception("Fault strategy is not set correctly: '%s'" %
-                            self.__strategy)
-
-        return self.__strategy
-
     def setFilespaces(self, filespaceArr):
         """
         @param filespaceArr of GpFilespaceObj objects
@@ -2386,7 +2286,7 @@ class GpArray:
         """
         Guess whether self is a spread mirroring configuration.
         """
-        if self.getFaultStrategy() != FAULT_STRATEGY_FILE_REPLICATION:
+        if not self.hasMirrors:
             return False
 
         mirrors = [seg for seg in self.getSegDbList() if seg.isSegmentMirror(current_role=False)]
@@ -2457,19 +2357,6 @@ class GpArray:
             To be called by the configuration providers only
             """
         self.__segmentsAsLoadedFromDb = segments
-
-    def getStrategyAsLoadedFromDb(self):
-        """
-        To be called by the configuration providers only
-        """
-        return self.__strategyLoadedFromDb
-
-    def setStrategyAsLoadedFromDb(self, strategy):
-        """
-            To be called by the configuration providers only
-            """
-        self.__strategyLoadedFromDb = strategy
-
 
 def get_segment_hosts(master_port):
     """

@@ -52,7 +52,6 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"
 
-#include "catalog/gp_fault_strategy.h"
 #include "catalog/gp_segment_config.h"
 
 #include "storage/backendid.h"
@@ -89,8 +88,6 @@ static volatile bool rescan_requested = false;
 static volatile sig_atomic_t got_SIGHUP = false;
 
 static char *probeDatabase = "postgres";
-
-static char fault_strategy = GpFaultStrategyMirrorLess;
 
 /* struct holding segment configuration */
 static CdbComponentDatabases *cdb_component_dbs = NULL;
@@ -480,9 +477,9 @@ void FtsLoop()
 			processing_fullscan = false;
 
 		readCdbComponentInfoAndUpdateStatus(probeContext);
-		fault_strategy = get_gp_fault_strategy();
 
-		if (fault_strategy == GpFaultStrategyMirrorLess)
+		/* Check here gp_segment_configuration if has mirror's */
+		if (! gp_segment_config_has_mirrors())
 		{
 			/* The dispatcher could have requested a scan so just ignore it and unblock the dispatcher */
 			if (processing_fullscan)
@@ -584,12 +581,6 @@ probePublishUpdate(uint8 *probe_results)
 {
 	bool update_found = false;
 	int i;
-
-#ifdef USE_SEGWALREP
-	Assert(fault_strategy == GpFaultStrategyWalRepMirrored);
-#else
-	Assert(fault_strategy == GpFaultStrategyFileRepMirrored);
-#endif
 
 	/* preprocess probe results to decide what is the current segment state */
 	FtsPreprocessProbeResultsFilerep(cdb_component_dbs, probe_results);
@@ -824,12 +815,6 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 	int i;
 	char desc[SQL_CMD_BUF_SIZE];
 
-#ifdef USE_SEGWALREP
-	Assert(fault_strategy == GpFaultStrategyWalRepMirrored);
-#else
-	Assert(fault_strategy == GpFaultStrategyFileRepMirrored);
-#endif
-
 	/*
 	 * Commit/abort transaction below will destroy
 	 * CurrentResourceOwner.  We need it for catalog reads.
@@ -939,12 +924,6 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 bool
 FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo)
 {
-#ifdef USE_SEGWALREP
-	Assert(fault_strategy == GpFaultStrategyWalRepMirrored);
-#else
-	Assert(fault_strategy == GpFaultStrategyFileRepMirrored);
-#endif
-
 	if (SEGMENT_IS_ACTIVE_MIRROR(segInfo) && SEGMENT_IS_ALIVE(segInfo))
 		return true;
 

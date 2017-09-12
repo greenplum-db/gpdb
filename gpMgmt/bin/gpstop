@@ -463,8 +463,7 @@ class GpStop:
 
         self.hostcache.log_contents()
 
-        strategy = self.gparray.getFaultStrategy()
-        if strategy == FAULT_STRATEGY_FILE_REPLICATION:
+        if self.gparray.hasMirrors:
             # stop primaries
             logger.info("Commencing parallel primary segment instance shutdown, please wait...")
             try:
