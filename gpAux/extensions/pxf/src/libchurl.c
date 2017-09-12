@@ -106,7 +106,7 @@ void		multi_remove_handle(churl_context *context);
 void		cleanup_internal_buffer(churl_buffer *buffer);
 void		churl_cleanup_context(churl_context *context);
 size_t		write_callback(char *buffer, size_t size, size_t nitems, void *userp);
-int			fill_internal_buffer(churl_context *context, int want);
+void		fill_internal_buffer(churl_context *context, int want);
 void		churl_headers_set(churl_context *context, CHURL_HEADERS settings);
 void		check_response_status(churl_context *context);
 void		check_response_code(churl_context *context);
@@ -318,19 +318,6 @@ churl_init(const char *url, CHURL_HEADERS headers)
 
 	create_curl_handle(context);
 	clear_error_buffer(context);
-
-	/* needed to resolve localhost */
-	if (strstr(url, LocalhostIpV4) != NULL)
-	{
-		struct curl_slist *resolve_hosts = NULL;
-		char	   *pxf_host_entry = (char *) palloc0(strlen(PxfServiceAddress) + strlen(LocalhostIpV4Entry) + 1);
-
-		strcat(pxf_host_entry, PxfServiceAddress);
-		strcat(pxf_host_entry, LocalhostIpV4Entry);
-		resolve_hosts = curl_slist_append(NULL, pxf_host_entry);
-		set_curl_option(context, CURLOPT_RESOLVE, resolve_hosts);
-		pfree(pxf_host_entry);
-	}
 
 	set_curl_option(context, CURLOPT_URL, url);
 	set_curl_option(context, CURLOPT_VERBOSE, (const void *) FALSE);
@@ -628,20 +615,17 @@ flush_internal_buffer(churl_context *context)
  * The returned value should be free'd.
  */
 char *
-get_dest_address(CURL * curl_handle)
+get_dest_address(CURL *curl_handle)
 {
-	char	   *dest_ip = NULL;
-	long		dest_port = 0;
+	char	   *dest_url = NULL;
 	StringInfoData addr;
 
 	initStringInfo(&addr);
 
 	/* add dest ip and port, if any, and curl was nice to tell us */
-	if (CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_PRIMARY_IP, &dest_ip) &&
-		CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_PRIMARY_PORT, &dest_port) &&
-		dest_ip && dest_port)
+	if (CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_EFFECTIVE_URL, &dest_url) && dest_url)
 	{
-		appendStringInfo(&addr, "'%s:%ld'", dest_ip, dest_port);
+		appendStringInfo(&addr, "'%s'", dest_url);
 	}
 	return addr.data;
 }
@@ -761,7 +745,7 @@ write_callback(char *buffer, size_t size, size_t nitems, void *userp)
  * Fills internal buffer up to want bytes.
  * returns when size reached or transfer ended
  */
-int
+void
 fill_internal_buffer(churl_context *context, int want)
 {
 	fd_set		fdread;
@@ -786,33 +770,41 @@ fill_internal_buffer(churl_context *context, int want)
 		CHECK_FOR_INTERRUPTS();
 
 		/* set a suitable timeout to fail on */
-		timeout.tv_sec = 5;
+		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 
+		long curl_timeo = -1;
+		curl_multi_timeout(context->multi_handle, &curl_timeo);
+		if (curl_timeo >= 0)
+		{
+			timeout.tv_sec = curl_timeo / 1000;
+			if (timeout.tv_sec > 1)
+				timeout.tv_sec = 1;
+			else
+				timeout.tv_usec = (curl_timeo % 1000) * 1000;
+		}
+
 		/* get file descriptors from the transfers */
-		if (CURLE_OK != (curl_error = curl_multi_fdset(context->multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd)))
+		curl_error = curl_multi_fdset(context->multi_handle, &fdread, &fdwrite, &fdexcep, &maxfd);
+		if (CURLE_OK != curl_error)
 			elog(ERROR, "internal error: curl_multi_fdset failed (%d - %s)",
 				 curl_error, curl_easy_strerror(curl_error));
 
-		if (maxfd <= 0)
-		{
-			context->curl_still_running = 0;
-			break;
-		}
+		/* curl is not ready if maxfd -1 is returned */
+		if (maxfd == -1)
+			pg_usleep(100);
+		else
+			nfds = (select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout));
 
-		if (-1 == (nfds = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout)))
+		if (nfds == -1)
 		{
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
 			elog(ERROR, "internal error: select failed on curl_multi_fdset (maxfd %d) (%d - %s)",
 				 maxfd, errno, strerror(errno));
 		}
-
-		if (nfds > 0)
-			multi_perform(context);
+		multi_perform(context);
 	}
-
-	return 0;
 }
 
 void
