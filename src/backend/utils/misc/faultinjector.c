@@ -337,6 +337,18 @@ FaultInjectorIdentifierEnumToString[] = {
 		/* inject fault to report ERROR just after creating Gang */
 	_("resgroup_assigned_on_master"),
 		/* inject fault to report ERROR just after resource group is assigned on master */
+	_("plcontainer_before_container_started"),
+		/* inject fault to plcontainer before container started */
+	_("plcontainer_before_container_connected"),
+		/* inject fault to plcontainer before container connected */
+	_("plcontainer_before_udf_execution"),
+		/* inject fault before udf is executed in plcontainer */
+	_("plcontainer_during_udf_execution"),
+		/* inject fault during udf is executed in plcontainer */
+	_("plcontainer_after_udf_execution"),
+		/*inject fault after udf in plcontainer is finished*/
+	_("plconainer_cleanup_process"),
+		/*inject fault to plcontainer cleanup process*/
 	_("not recognized"),
 };
 

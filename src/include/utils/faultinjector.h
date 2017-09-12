@@ -223,6 +223,14 @@ typedef enum FaultInjectorIdentifier_e {
 	GangCreated,
 
 	ResGroupAssignedOnMaster,
+
+	PlcontainerBeforeContainerStarted,
+	PlcontainerBeforeContainerConnected,
+	PlcontainerBeforeUDFExecution,
+	PlcontainerDuringUDFExecution,
+	PlcontainerAfterUDFExecution,
+	PlcontainerCleanupProcess,
+
 	/* INSERT has to be done before that line */
 	FaultInjectorIdMax,
 	
