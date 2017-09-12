@@ -49,7 +49,7 @@ function setup_gpadmin_user() {
 	./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "$TARGET_OS"
 }
 
-unpack_tarball() {
+function unpack_tarball() {
 	local tarball=$1
 	echo "Unpacking tarball: $(ls ${tarball})"
 	tar xfp ${tarball} --strip-components=1
@@ -59,30 +59,34 @@ function setup_singlecluster() {
 	pushd singlecluster && if [ -f ./*.tar.gz ]; then \
 		unpack_tarball ./*.tar.gz; \
 	fi && popd
-	install_pxf ${1}/singlecluster
+	#install_pxf ${1}/singlecluster
 
 	pushd singlecluster/bin
 	# set Standalone PXF mode without Hadoop
-	export PXFDEMO=true
+	#export PXFDEMO=true
 	export SLAVES=1
 	./init-gphd.sh
-	./init-pxf.sh
+	#./init-pxf.sh
 	./start-hdfs.sh
-	./start-pxf.sh
+	#./start-pxf.sh
 	popd
 }
 
-install_pxf() {
+function start_pxf() {
 	local hdfsrepo=$1
 	local pxfhome="/usr/local/greenplum-db-devel/pxf"
-	mkdir -p ${hdfsrepo}/pxf/conf
-	mv ${pxfhome}/lib/pxf-*.jar ${hdfsrepo}/pxf
-	mv ${pxfhome}/lib/pxf.war ${hdfsrepo}/pxf
-	mv ${pxfhome}/conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
-	mv ${pxfhome}/conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
-	pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
-		ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
-	done
+	pushd ${pxfhome} > /dev/null
+	./bin/pxf init --hadoop-home ${hdfsrepo}
+	./bin/pxf start
+
+	#mkdir -p ${hdfsrepo}/pxf/conf
+	#mv ${pxfhome}/lib/pxf-*.jar ${hdfsrepo}/pxf
+	#mv ${pxfhome}/lib/pxf.war ${hdfsrepo}/pxf
+	#mv ${pxfhome}/conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
+	#mv ${pxfhome}/conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
+	#pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
+	#	ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
+	#done
 	popd > /dev/null
 }
 
@@ -104,7 +108,8 @@ function _main() {
 	time make_cluster
 	time gen_env
 
-	time setup_singlecluster $(pwd)
+	time setup_singlecluster
+	time start_pxf $(pwd)/singlecluster
 	time run_regression_test
 }
 
