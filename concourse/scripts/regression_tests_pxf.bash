@@ -59,16 +59,11 @@ function setup_singlecluster() {
 	pushd singlecluster && if [ -f ./*.tar.gz ]; then \
 		unpack_tarball ./*.tar.gz; \
 	fi && popd
-	#install_pxf ${1}/singlecluster
 
 	pushd singlecluster/bin
-	# set Standalone PXF mode without Hadoop
-	#export PXFDEMO=true
 	export SLAVES=1
 	./init-gphd.sh
-	#./init-pxf.sh
 	./start-hdfs.sh
-	#./start-pxf.sh
 	popd
 }
 
@@ -78,15 +73,6 @@ function start_pxf() {
 	pushd ${pxfhome} > /dev/null
 	./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop
 	./bin/pxf start
-
-	#mkdir -p ${hdfsrepo}/pxf/conf
-	#mv ${pxfhome}/lib/pxf-*.jar ${hdfsrepo}/pxf
-	#mv ${pxfhome}/lib/pxf.war ${hdfsrepo}/pxf
-	#mv ${pxfhome}/conf/pxf-profiles-default.xml ${hdfsrepo}/pxf/conf/pxf-profiles.xml
-	#mv ${pxfhome}/conf/{pxf-public.classpath,pxf-private.classpath} ${hdfsrepo}/pxf/conf
-	#pushd ${hdfsrepo}/pxf && for X in pxf-*-[0-9]*.jar; do \
-	#	ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
-	#done
 	popd > /dev/null
 }
 
