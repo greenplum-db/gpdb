@@ -2063,7 +2063,10 @@ _SPI_assign_query_mem(QueryDesc * queryDesc)
 		{
 			queryDesc->plannedstmt->query_mem = SPI_GetMemoryReservation();
 		}
-		Assert(queryDesc->plannedstmt->query_mem > 0);
+		/*
+		 * queryDesc->plannedstmt->query_mem(uint64) can be 0 here.
+		 * And in such cases it will use work_mem to run the query.
+		 * */
 	}
 }
 

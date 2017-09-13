@@ -17,6 +17,7 @@ test: resgroup/resgroup_set_memory_spill_ratio
 test: resgroup/resgroup_func_concurrency
 
 # memory spill tests
+test: resgroup/resgroup_zero_workmem
 #test: resgroup/resgroup_memory_hashagg_spill
 #test: resgroup/resgroup_memory_hashjoin_spill
 test: resgroup/resgroup_memory_materialize_spill
