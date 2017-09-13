@@ -1,0 +1,17 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: installer_aix7_gpdb_clients
+  - name: installer_aix7_gpdb_loaders
+  - name: bin_gpdb
+  - name: gpdb_src
+outputs:
+params:
+  BLD_TARGETS:
+  REMOTE_HOST:
+  REMOTE_PORT:
+  REMOTE_USER:
+  REMOTE_KEY:
+run:
+  path: gpdb_src/concourse/scripts/ic_gpdb_remote.bash
