@@ -155,7 +155,7 @@ test_filter_fragments_for_segment(void **state)
 		ErrorData  *edata = CopyErrorData();
 
 		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("internal error in pxffragment.c:filter_fragments_for_segment. Parameter list is null.");
+		char	   *expected_message = pstrdup("Parameter list is null in filter_fragments_for_segment");
 
 		assert_string_equal(edata->message, expected_message);
 		pfree(expected_message);
@@ -175,7 +175,7 @@ test_filter_fragments_for_segment(void **state)
 		ErrorData  *edata = CopyErrorData();
 
 		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("internal error in pxffragment.c:filter_fragments_for_segment. Cannot get distributed transaction identifier.");
+		char	   *expected_message = pstrdup("Cannot get distributed transaction identifier in filter_fragments_for_segment");
 
 		assert_string_equal(edata->message, expected_message);
 		pfree(expected_message);

@@ -354,16 +354,12 @@ static List *
 filter_fragments_for_segment(List *list)
 {
 	if (!list)
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("internal error in pxffragment.c:filter_fragments_for_segment. Parameter list is null.")));
+		elog(ERROR, "Parameter list is null in filter_fragments_for_segment");
 
 	DistributedTransactionId xid = getDistributedTransactionId();
 
 	if (xid == InvalidDistributedTransactionId)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("internal error in pxffragment.c:filter_fragments_for_segment. Cannot get distributed transaction identifier.")));
+		elog(ERROR, "Cannot get distributed transaction identifier in filter_fragments_for_segment");
 
 	/*
 	 * to determine which segment S should process an element at a given index
@@ -531,7 +527,9 @@ process_request(ClientContext *client_context, char *uri)
 	print_http_headers(client_context->http_headers);
 	client_context->handle = churl_init_download(uri, client_context->http_headers);
 	if (client_context->handle == NULL)
-		elog(ERROR, "Unsuccessful connection to uri: %s", uri);
+		ereport(ERROR,
+				(errcode(ERRCODE_CONNECTION_FAILURE),
+				 errmsg("Unsuccessful connection to uri: \"%s\"", uri)));
 	memset(buffer, 0, RAW_BUF_SIZE);
 	resetStringInfo(&(client_context->the_rest_buf));
 
