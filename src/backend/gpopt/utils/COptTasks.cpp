@@ -521,19 +521,27 @@ COptTasks::Execute
 	}
 	GPOS_CATCH_EX(ex)
 	{
-		LogErrorAndDelete(err_buf);
+		LogExceptionMessageAndDelete(err_buf, ex.UlSeverityLevel());
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
-	LogErrorAndDelete(err_buf);
+	LogExceptionMessageAndDelete(err_buf);
 }
 
 void
-COptTasks::LogErrorAndDelete(CHAR* err_buf) {
+COptTasks::LogExceptionMessageAndDelete(CHAR* err_buf, ULONG ulSeverityLevel)
+{
 
 	if ('\0' != err_buf[0])
 	{
-		elog(LOG, "%s", SzFromWsz((WCHAR *)err_buf));
+		int ulGpdbSeverityLevel;
+
+		if (ulSeverityLevel == CException::ExsevDebug1)
+			ulGpdbSeverityLevel = DEBUG1;
+		else
+			ulGpdbSeverityLevel = LOG;
+
+		elog(ulGpdbSeverityLevel, "%s", SzFromWsz((WCHAR *)err_buf));
 	}
 
 	pfree(err_buf);
