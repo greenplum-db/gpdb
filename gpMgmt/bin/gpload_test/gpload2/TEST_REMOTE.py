@@ -26,7 +26,6 @@ def ensure_env(name):
     if v == None:
         print "Environment variable " + name + " is required"
         sys.exit(1)
-    print name + ": " + v
     return v
 
 DBNAME = "postgres"
@@ -201,7 +200,6 @@ def run(cmd):
             function, so you can theoretically pass any value that is
             valid for the second parameter of open().
     """
-    print cmd
     p = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     out = p.communicate()[0]
     ret = []
@@ -381,6 +379,18 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\u0009'")
         self.doTest(4)
 
+    def test_05_gpload_formatOpts_delimiter(self):
+        "5  gpload formatOpts delimiter E'\\'' with reuse"
+        copy_data('external_file_03.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="E'\''")
+        self.doTest(5)
+
+    def test_06_gpload_formatOpts_delimiter(self):
+        "6  gpload formatOpts delimiter \"'\" with reuse"
+        copy_data('external_file_03.txt','data_file.txt')
+        write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',delimiter="\"'\"")
+        self.doTest(6)
+
     def test_07_gpload_reuse_table_insert_mode_without_reuse(self):
         "7  gpload insert mode without reuse"
         runfile(mkpath('setup.sql'))
@@ -419,6 +429,25 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_08.txt','data_file.txt')
         write_config_file('merge','true',file='data_file.txt')
         self.doTest(12)
+
+    def test_13_gpload_reuse_table_merge_mode_with_different_columns_number_in_DB(self):
+        "13  gpload merge mode with reuse (RERUN with different columns number in DB table) "
+        preTest = mkpath('pre_test_13.sql')
+        psql_run(preTest, dbname='reuse_gptest')
+        copy_data('external_file_09.txt','data_file.txt')
+        write_config_file('merge','true',file='data_file.txt')
+        self.doTest(13)
+
+    def test_14_gpload_reuse_table_update_mode_with_reuse_RERUN(self):
+        "14 gpload update mode with reuse (RERUN) "
+        write_config_file('update','true',file='data_file.txt')
+        self.doTest(14)
+
+    def test_15_gpload_reuse_table_merge_mode_with_different_columns_order(self):
+        "15 gpload merge mode with different columns' order "
+        copy_data('external_file_10.txt','data/data_file.tbl')
+        write_config_file('merge','true',file='data/data_file.tbl',columns_flag='1',mapping='1')
+        self.doTest(15)
 
     def test_16_gpload_formatOpts_quote(self):
         "16  gpload formatOpts quote unspecified in CSV with reuse "

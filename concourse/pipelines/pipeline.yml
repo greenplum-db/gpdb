@@ -7,12 +7,14 @@ groups:
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_windows_cl
+  - compile_gpdb_aix7_remote
   - icw_planner_centos6
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
   - icw_planner_ictcp_centos6
   - mpp_resource_group
+  - client_loader_remote_test_aix
   - MU_check_centos
   - MM_gpperfmon
   - MM_gpcheck
@@ -380,6 +382,24 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
 
+- name: installer_aix7_gpdb_clients
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-clients-5.(.*)-aix7_ppc_64.zip
+
+- name: installer_aix7_gpdb_loaders
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    regexp: deliverables/greenplum-loaders-5.(.*)-aix7_ppc_64.zip
+
 - name: qautils_rhel6_tarball
   type: s3
   source:
@@ -460,6 +480,14 @@ resources:
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
     start: 6:00 AM
     stop: 7:00 AM
+
+- name: nightly-trigger-aix
+  type: time
+  source:
+    location: America/Los_Angeles
+    days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
+    start: 8:00 AM
+    stop: 9:00 AM
 
 ## ======================================================================
 ## reusable anchors
@@ -640,6 +668,41 @@ jobs:
       params:
         file: gpdb_artifacts/greenplum-loaders-*-WinXP-x86_32.msi
 
+# Compile gpdb on a remote AIX machine, triggered by concourse.
+# We need to serialize this job to avoid overwhelming workload
+# on remote machine.
+- name: compile_gpdb_aix7_remote
+  serial: true
+  plan:
+  - aggregate:
+    - get: nightly-trigger-aix
+      trigger: true
+    - get: gpdb_src
+    - get: gpaddon_src
+    - get: centos-gpdb-dev-6
+  - task: compile_gpdb_aix7_remote
+    file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
+    image: centos-gpdb-dev-6
+    params:
+      REMOTE_HOST: {{remote_host}}
+      REMOTE_PORT: {{remote_port}}
+      REMOTE_USER: {{remote_user}}
+      REMOTE_KEY: {{remote_key}}
+
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+
+      BLD_TARGETS: "clients loaders"
+  - aggregate:
+    - put: installer_aix7_gpdb_clients
+      params:
+        file: gpdb_artifacts/greenplum-clients-*-aix7_ppc_64.zip
+    - put: installer_aix7_gpdb_loaders
+      params:
+        file: gpdb_artifacts/greenplum-loaders-*-aix7_ppc_64.zip
+
 # This acts like a cache as this job will only be run once to get a
 # binary to use for our binary swap compatibility tests. Setting a new
 # tag or branch for the gpdb_src_binary_swap resource via set-pipeline
@@ -769,6 +832,31 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
+
+- name: client_loader_remote_test_aix
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_aix7_remote]
+    - get: installer_aix7_gpdb_clients
+      passed: [compile_gpdb_aix7_remote]
+    - get: installer_aix7_gpdb_loaders
+      passed: [compile_gpdb_aix7_remote]
+      trigger: true
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos6]
+      resource: bin_gpdb_centos6
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb_cl
+    file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
+    image: centos-gpdb-dev-6
+    params:
+      BLD_TARGETS: "clients loaders"
+      REMOTE_HOST: {{remote_host}}
+      REMOTE_PORT: {{remote_port}}
+      REMOTE_USER: {{remote_user}}
+      REMOTE_KEY: {{remote_key}}
 
 - name: mpp_resource_group
   plan:
@@ -1809,12 +1897,14 @@ jobs:
     - compile_gpdb_centos7
     - compile_gpdb_sles11
     - compile_gpdb_windows_cl
+    - compile_gpdb_aix7_remote
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
     - icw_gporca_sles11
     - icw_planner_ictcp_centos6
     - mpp_resource_group
+    - client_loader_remote_test_aix
     - MU_check_centos
     - MM_analyzedb
     - MM_gpinitsystem
