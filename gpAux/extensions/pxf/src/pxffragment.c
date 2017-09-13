@@ -1,13 +1,13 @@
+#include "postgres.h"
+
 #include "pxffragment.h"
 #include "pxfutils.h"
 
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
 #include "commands/copy.h"
-#include "postgres.h"
 #include "lib/stringinfo.h"
-
-#include <json-c/json.h>
+#include "utils/jsonapi.h"
 
 static List *get_data_fragment_list(GPHDUri *hadoop_uri, ClientContext *client_context);
 static void rest_request(GPHDUri *hadoop_uri, ClientContext *client_context, char *rest_msg);
@@ -19,6 +19,10 @@ static void init_client_context(ClientContext *client_context);
 static void assign_pxf_location_to_fragments(List *fragments);
 static void call_rest(GPHDUri *hadoop_uri, ClientContext *client_context, char *rest_msg);
 static void process_request(ClientContext *client_context, char *uri);
+static void pxf_fragment_scalar(void *state, char *token, JsonTokenType type);
+static void pxf_fragment_object_start(void *state, char *name, bool isnull);
+static void pxf_array_element_start(void *state, bool isnull);
+static void pxf_array_element_end(void *state, bool isnull);
 
 /* Get List of fragments using PXF
  * Returns selected fragments that have been allocated to the current segment
@@ -156,76 +160,189 @@ rest_request(GPHDUri *hadoop_uri, ClientContext *client_context, char *rest_msg)
  * Response (left as a single line purposefully):
  * {"PXFFragments":[{"index":0,"userData":null,"sourceName":"demo/text2.csv","metadata":"rO0ABXcQAAAAAAAAAAAAAAAAAAAABXVyABNbTGphdmEubGFuZy5TdHJpbmc7rdJW5+kde0cCAAB4cAAAAAN0ABxhZXZjZWZlcm5hczdtYnAuY29ycC5lbWMuY29tdAAcYWV2Y2VmZXJuYXM3bWJwLmNvcnAuZW1jLmNvbXQAHGFldmNlZmVybmFzN21icC5jb3JwLmVtYy5jb20=","replicas":["10.207.4.23","10.207.4.23","10.207.4.23"]},{"index":0,"userData":null,"sourceName":"demo/text_csv.csv","metadata":"rO0ABXcQAAAAAAAAAAAAAAAAAAAABnVyABNbTGphdmEubGFuZy5TdHJpbmc7rdJW5+kde0cCAAB4cAAAAAN0ABxhZXZjZWZlcm5hczdtYnAuY29ycC5lbWMuY29tdAAcYWV2Y2VmZXJuYXM3bWJwLmNvcnAuZW1jLmNvbXQAHGFldmNlZmVybmFzN21icC5jb3JwLmVtYy5jb20=","replicas":["10.207.4.23","10.207.4.23","10.207.4.23"]}]}
  */
+
+typedef enum pxf_fragment_object
+{
+	PXF_PARSE_START,
+	PXF_PARSE_INDEX,
+	PXF_PARSE_USERDATA,
+	PXF_PARSE_PROFILE,
+	PXF_PARSE_SOURCENAME,
+	PXF_PARSE_METADATA,
+	PXF_PARSE_REPLICAS
+} pxf_fragment_object;
+
+typedef struct FragmentState
+{
+	JsonLexContext		   *lex;
+	pxf_fragment_object		object;
+	List				   *fragments;
+	bool					has_replicas;
+	int						arraydepth;
+} FragmentState;
+
+static void
+pxf_fragment_object_start(void *state, char *name, bool isnull)
+{
+	FragmentState *s = (FragmentState *) state;
+
+	if (s->lex->token_type == JSON_TOKEN_NUMBER)
+	{
+		if (pg_strcasecmp(name, "index") == 0)
+			s->object = PXF_PARSE_INDEX;
+	}
+	else if (s->lex->token_type == JSON_TOKEN_STRING || s->lex->token_type == JSON_TOKEN_NULL)
+	{
+		if (pg_strcasecmp(name, "userData") == 0)
+			s->object = PXF_PARSE_USERDATA;
+		else if (pg_strcasecmp(name, "sourceName") == 0)
+			s->object = PXF_PARSE_SOURCENAME;
+		else if (pg_strcasecmp(name, "metadata") == 0)
+			s->object = PXF_PARSE_METADATA;
+		else if (pg_strcasecmp(name, "profile") == 0)
+			s->object = PXF_PARSE_PROFILE;
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("unrecognized object in PXF fragment: \"%s\"",
+					 		name)));
+	}
+	else if (s->lex->token_type == JSON_TOKEN_ARRAY_START)
+	{
+		if (pg_strcasecmp(name, "PXFFragments") == 0)
+		{
+			if (s->object != PXF_PARSE_START)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("malformed PXF fragment")));
+		}
+		else if (pg_strcasecmp(name, "replicas") == 0)
+		{
+			s->object = PXF_PARSE_REPLICAS;
+			s->has_replicas = false;
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("unrecognized array in PXF fragment: \"%s\"",
+					 		name)));
+	}
+}
+
+static void
+check_and_assign(char **field, JsonTokenType type, char *token,
+				 JsonTokenType expected_type, bool nullable)
+{
+	if (type == JSON_TOKEN_NULL && nullable)
+		return;
+
+	if (type == expected_type)
+		*field = pstrdup(token);
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("unexpected value \"%s\" for attribute", token)));
+}
+
+static void
+pxf_fragment_scalar(void *state, char *token, JsonTokenType type)
+{
+	FragmentState  *s = (FragmentState *) state;
+	FragmentData   *d = (FragmentData *) llast(s->fragments);
+
+	/* Populate the fragment depending on the type of the scalar and the current object */
+	switch(s->object)
+	{
+		case PXF_PARSE_USERDATA:
+			check_and_assign(&(d->user_data), type, token, JSON_TOKEN_STRING, true);
+			break;
+		case PXF_PARSE_METADATA:
+			check_and_assign(&(d->fragment_md), type, token, JSON_TOKEN_STRING, true);
+			break;
+		case PXF_PARSE_PROFILE:
+			check_and_assign(&(d->profile), type, token, JSON_TOKEN_STRING, true);
+			break;
+		case PXF_PARSE_SOURCENAME:
+			check_and_assign(&(d->source_name), type, token, JSON_TOKEN_STRING, false);
+			break;
+		case PXF_PARSE_INDEX:
+			check_and_assign(&(d->index), type, token, JSON_TOKEN_NUMBER, true);
+			break;
+		case PXF_PARSE_REPLICAS:
+			if (type == JSON_TOKEN_STRING)
+				s->has_replicas = true;
+			break;
+		case PXF_PARSE_START:
+			break;
+		default:
+			elog(ERROR, "Unexpected PXF object state: %d", s->object);
+			break;
+	}
+}
+
+static void
+pxf_array_element_start(void *state, bool isnull)
+{
+	FragmentState  *s = (FragmentState *) state;
+	FragmentData   *data;
+
+	/*
+	 * If we are entering a nested array, an array inside the object in the
+	 * main PXFFragments array, then we are still inside the current fragment
+	 * and there is nothing but book keeping to do
+	 */
+	if (++s->arraydepth > 1)
+		return;
+
+	/*
+	 * Reaching here means we are entering a new fragment in the PXFFragments
+	 * array, allocate a new fragment on the list to populate during parsing.
+	 */
+	data = palloc0(sizeof(FragmentData));
+	s->fragments = lappend(s->fragments, data);
+	s->has_replicas = false;
+	s->object = PXF_PARSE_START;
+}
+
+static void
+pxf_array_element_end(void *state, bool isnull)
+{
+	FragmentState  *s = (FragmentState *) state;
+
+	if (--s->arraydepth == 0)
+	{
+		if (!s->has_replicas)
+			s->fragments = list_truncate(s->fragments,
+										 list_length(s->fragments) - 1);
+	}
+}
+
 static List *
 parse_get_fragments_response(List *fragments, StringInfo rest_buf)
 {
-	struct json_object *whole = json_tokener_parse(rest_buf->data);
+	JsonSemAction	*sem;
+	FragmentState	*state;
 
-	if ((whole == NULL) || is_error(whole))
-	{
-		elog(ERROR, "Failed to parse fragments list from PXF");
-	}
-	struct json_object *head;
-	List	   *ret_frags = fragments;
+	sem = palloc0(sizeof(JsonSemAction));
+	state = palloc0(sizeof(FragmentState));
 
-	if (!json_object_object_get_ex(whole, "PXFFragments", &head))
-	{
-		elog(INFO, "No Data Fragments available for the resource");
-		return ret_frags;
-	}
+	state->fragments = NIL;
+	state->lex = makeJsonLexContext(cstring_to_text(rest_buf->data), true);
+	state->object = PXF_PARSE_START;
+	state->arraydepth = 0;
+	state->has_replicas = false;
 
-	int			length = json_object_array_length(head);
+	sem->semstate = state;
+	sem->scalar = pxf_fragment_scalar;
+	sem->object_field_start = pxf_fragment_object_start;
+	sem->array_element_start = pxf_array_element_start;
+	sem->array_element_end = pxf_array_element_end;
 
-	/* obtain split information from the block */
-	for (int i = 0; i < length; i++)
-	{
-		struct json_object *js_fragment = json_object_array_get_idx(head, i);
-		FragmentData *fragment = (FragmentData *) palloc0(sizeof(FragmentData));
+	pg_parse_json(state->lex, sem);
 
-		/* source name */
-		struct json_object *block_data;
+	pfree(state->lex);
 
-		if (json_object_object_get_ex(js_fragment, "sourceName", &block_data))
-			fragment->source_name = pstrdup(json_object_get_string(block_data));
-
-		/* fragment index, incremented per source name */
-		struct json_object *index;
-
-		if (json_object_object_get_ex(js_fragment, "index", &index) && index)
-			fragment->index = pstrdup(json_object_get_string(index));
-
-		/* location - fragment meta data */
-		struct json_object *js_fragment_metadata;
-
-		if (json_object_object_get_ex(js_fragment, "metadata", &js_fragment_metadata) && js_fragment_metadata)
-			fragment->fragment_md = pstrdup(json_object_get_string(js_fragment_metadata));
-
-		/* userdata - additional user information */
-		struct json_object *js_user_data;
-
-		if (json_object_object_get_ex(js_fragment, "userData", &js_user_data) && js_user_data)
-			fragment->user_data = pstrdup(json_object_get_string(js_user_data));
-
-		/* profile - recommended profile to work with fragment */
-		struct json_object *js_profile;
-
-		if (json_object_object_get_ex(js_fragment, "profile", &js_profile) && js_profile)
-			fragment->profile = pstrdup(json_object_get_string(js_profile));
-
-		/*
-		 * Ignore fragment if it doesn't contain any host locations, for
-		 * example if the file is empty.
-		 */
-		struct json_object *js_replica;
-
-		if (json_object_object_get_ex(js_fragment, "replicas", &js_replica) && js_replica)
-			ret_frags = lappend(ret_frags, fragment);
-		else
-			free_fragment(fragment);
-
-	}
-
-	return ret_frags;
+    return state->fragments;
 }
 
 /*

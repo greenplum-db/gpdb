@@ -15,7 +15,7 @@ endif
 
 CURL_DIR = /usr/local/opt/curl
 
-SHLIB_LINK += -lcurl -ljson-c
+SHLIB_LINK += -lcurl
 
 unittest-check:
 	$(MAKE) -C test check

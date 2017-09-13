@@ -1518,16 +1518,6 @@ if test "$enable_mapreduce" = yes; then
   AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([YAML includes required for Greenplum Mapreduce])])
 fi
 
-# json-c
-if test "$enable_pxf" = yes ; then
-  if test "$PORTNAME" != "win32" ; then
-    AC_CHECK_HEADERS(json-c/json.h, [], [AC_MSG_ERROR([header file <json-c/json.h> is required.
-    Check config.log for details. It is possible the compiler isn't looking in the proper directory.])])
-    AC_SEARCH_LIBS(json_tokener_parse, json-c json, [], [AC_MSG_ERROR([library 'json-c' is required.
-    Check config.log for details. It is possible the compiler isn't looking in the proper directory.])], [])
-  fi
-fi
-
 ##
 ## Types, structures, compiler characteristics
 ##

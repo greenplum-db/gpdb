@@ -291,9 +291,6 @@
 /* Define to 1 if you have isinf(). */
 #undef HAVE_ISINF
 
-/* Define to 1 if you have the <json-c/json.h> header file. */
-#undef HAVE_JSON_C_JSON_H
-
 /* Define to 1 if you have the <kernel/image.h> header file. */
 #undef HAVE_KERNEL_IMAGE_H
 

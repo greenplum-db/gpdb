@@ -17,7 +17,6 @@ brew install apr # gpperfmon
 brew install apr-util # gpperfmon
 brew link --force apr
 brew link --force apr-util
-brew install json-c # pxf
 brew install curl # pxf
 
 # Installing Golang
