@@ -647,3 +647,14 @@ select '1'::text in (select '1'::name union all select '1'::name);
  t
 (1 row)
 
+--
+-- Check sane behavior with nested IN SubLinks
+--
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);
+ f1 
+----
+  0
+(1 row)
+
