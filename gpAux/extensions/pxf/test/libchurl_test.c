@@ -59,6 +59,10 @@ test_churl_init()
 	will_return(curl_easy_init, mock_curl_handle);
 
 	/* set mock behavior for all the curl_easy_setopt calls */
+#ifdef CURLOPT_RESOLVE
+	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_RESOLVE);
+	curl_slist_append_test_helper(NULL, "localhost:51200:127.0.0.1");
+#endif
 	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_URL);
 	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_VERBOSE);
 	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_ERRORBUFFER);

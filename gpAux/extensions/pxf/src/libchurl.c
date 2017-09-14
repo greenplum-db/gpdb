@@ -119,7 +119,6 @@ void		realloc_internal_buffer(churl_buffer *buffer, size_t required);
 bool		handle_special_error(long response, StringInfo err);
 char	   *get_http_error_msg(long http_ret_code, char *msg, char *curl_error_buffer);
 char	   *build_header_str(const char *format, const char *key, const char *value);
-void		print_http_headers(CHURL_HEADERS headers);
 
 
 /*
@@ -318,6 +317,22 @@ churl_init(const char *url, CHURL_HEADERS headers)
 
 	create_curl_handle(context);
 	clear_error_buffer(context);
+
+/* CURLOPT_RESOLVE is only available in curl versions 7.21 and above */
+#ifdef CURLOPT_RESOLVE
+	/* needed to resolve localhost */
+	if (strstr(url, LocalhostIpV4) != NULL)
+	{
+		struct curl_slist *resolve_hosts = NULL;
+		char	   *pxf_host_entry = (char *) palloc0(strlen(PxfServiceAddress) + strlen(LocalhostIpV4Entry) + 1);
+
+		strcat(pxf_host_entry, PxfServiceAddress);
+		strcat(pxf_host_entry, LocalhostIpV4Entry);
+		resolve_hosts = curl_slist_append(NULL, pxf_host_entry);
+		set_curl_option(context, CURLOPT_RESOLVE, resolve_hosts);
+		pfree(pxf_host_entry);
+	}
+#endif
 
 	set_curl_option(context, CURLOPT_URL, url);
 	set_curl_option(context, CURLOPT_VERBOSE, (const void *) FALSE);
@@ -752,8 +767,7 @@ fill_internal_buffer(churl_context *context, int want)
 	fd_set		fdwrite;
 	fd_set		fdexcep;
 	int			maxfd;
-	int			nfds,
-				curl_error;
+	int			curl_error;
 
 	/* attempt to fill buffer */
 	while (context->curl_still_running &&
@@ -791,10 +805,7 @@ fill_internal_buffer(churl_context *context, int want)
 		/* curl is not ready if maxfd -1 is returned */
 		if (maxfd == -1)
 			pg_usleep(100);
-		else
-			nfds = select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
-
-		if (nfds == -1)
+		else if (-1 == select(maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout))
 		{
 			if (errno == EINTR || errno == EAGAIN)
 				continue;
