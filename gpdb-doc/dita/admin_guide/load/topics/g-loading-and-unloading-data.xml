@@ -35,6 +35,12 @@
             >http://ggc.docs.pivotal.io/</xref>. For information about Pivotal Gemfire, see <xref
             href="http://gemfire.docs.pivotal.io/" format="html" scope="external"
             >http://gemfire.docs.pivotal.io/</xref>.</li>
+         <li otherprops="pivotal">The Greenplum-Spark Connector provides high speed, parallel data transfer between
+          Pivotal Greenplum Database and Apache Spark.
+          For information about using the Greenplum-Spark Connector, refer to the
+          documentation at <xref
+            href="https://greenplum-spark.docs.pivotal.io/" format="html" scope="external"
+            >https://greenplum-spark.docs.pivotal.io/</xref>.</li>
       </ul>The method you choose to load data depends on the characteristics of the source
       data&#8212;its location, size, format, and any transformations required. </p>
     <p>In the simplest case, the <codeph>COPY</codeph> SQL command loads data into a table from a
