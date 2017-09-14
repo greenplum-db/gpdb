@@ -3251,7 +3251,7 @@ static void processTransitionRequest_getFaultInjectStatus(void * buf, int *offse
 		return;
 	}
 
-	if (FaultInjector_IsFaultInjected(FaultInjectorIdentifierStringToEnum(faultName))) {
+	if (FaultInjector_IsFaultInjected(faultName)) {
 		isDone = true;
 	}
 
@@ -3289,9 +3289,10 @@ processTransitionRequest_faultInject(void * inputBuf, int *offsetPtr, int length
 	elog(DEBUG1, "FAULT INJECTED: Name %s Type %s, DDL %s, DB %s, Table %s, NumOccurrences %d  SleepTime %d",
 		 faultName, type, ddlStatement, databaseName, tableName, numOccurrences, sleepTimeSeconds );
 
+	strncpy(faultInjectorEntry.faultName, faultName, sizeof(faultInjectorEntry.faultName));
+	faultInjectorEntry.faultName[FAULT_NAME_MAX_LENGTH-1] = '\0';
 	faultInjectorEntry.faultInjectorIdentifier = FaultInjectorIdentifierStringToEnum(faultName);
-	if (faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified ||
-		faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdMax) {
+	if (faultInjectorEntry.faultInjectorIdentifier == FaultInjectorIdNotSpecified) {
 		ereport(COMMERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
 							errmsg("could not recognize fault name")));
 
