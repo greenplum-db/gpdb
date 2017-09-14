@@ -1166,8 +1166,7 @@
           <tbody>
             <row>
               <entry colname="col1">DEBUG5
-                  <p>DEBUG4</p><p>DEBUG3</p><p>DEBUG2</p><p>DEBUG1</p><p>LOG
-                  NOTICE</p><p>WARNING</p><p>ERROR</p><p>FATAL</p><p>PANIC</p></entry>
+                  <p>DEBUG4</p><p>DEBUG3</p><p>DEBUG2</p><p>DEBUG1</p><p>LOG</p><p>NOTICE</p><p>WARNING</p><p>ERROR</p><p>FATAL</p><p>PANIC</p></entry>
               <entry colname="col2">NOTICE</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
@@ -3616,7 +3615,8 @@
         </ul></p>
       <p>If the value is <codeph>false</codeph>, the distribution policy is not checked. The data
         added to the table might violate the table distribution policy for the segment instance.
-        Manual redistribution of table data might be required. </p>
+        Manual redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph>
+        clause <codeph>WITH REORGANIZE</codeph>.</p>
       <p>The parameter can be set for a database system or a session. The parameter cannot be set
         for a specific database.</p>
       <table id="table_gxf_hpm_z1b">
@@ -4878,7 +4878,9 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource group-based workload management is an experimental feature and
+        is not intended for use in a production environment. Experimental features are subject to
+        change without notice in future releases.</note>
       <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
         each Greenplum Database segment node.</p>
       <table id="gp_resource_group_cpu_limit_table">
@@ -4907,7 +4909,9 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
-     <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource group-based workload management is an experimental feature and
+        is not intended for use in a production environment. Experimental features are subject to
+        change without notice in future releases.</note>
       <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
         on each Greenplum Database segment node.</p>
       <table id="gp_resource_group_memory_limit_table">
@@ -4936,7 +4940,9 @@
   <topic id="gp_resource_manager">
     <title>gp_resource_manager</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource group-based workload management is an experimental feature and
+        is not intended for use in a production environment. Experimental features are subject to
+        change without notice in future releases.</note>
       <p>Identifies the resource management scheme currently enabled in the Greenplum Database
         cluster. The default scheme is workload management using resource queues.</p>
       <table id="gp_resource_manager_table">
@@ -7213,7 +7219,9 @@
   <topic id="max_resource_groups">
     <title>max_resource_groups</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource group-based workload management is an experimental feature and
+        is not intended for use in a production environment. Experimental features are subject to
+        change without notice in future releases.</note>
       <p>Sets the maximum number of resource groups that you can create in a Greenplum Database
         system. Resource groups are defined system-wide.</p>
       <table id="max_resource_queues_table">
