@@ -41,6 +41,18 @@ Feature: gptransfer tests
         And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
         And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
 
+    Scenario: gptransfer full sha256 validator in TEXT format with '\010' delimiter
+        Given the gptransfer test is initialized
+        And the user runs "gptransfer --full --delimiter '\010' --format text --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --batch-size=10"
+        Then gptransfer should return a return code of 0
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
+        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
+        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
+        And verify that table "empty_table" in "gptransfer_testdb4" has "0" rows
+        And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
+        And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
+
     @T339888
     @T339914
     Scenario: gptransfer full count validator in TEXT format with '\010' delimiter
@@ -59,6 +71,18 @@ Feature: gptransfer tests
     Scenario: gptransfer full md5 validator in CSV format
         Given the gptransfer test is initialized
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 --format=csv --batch-size=10"
+        Then gptransfer should return a return code of 0
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
+        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
+        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
+        And verify that table "empty_table" in "gptransfer_testdb4" has "0" rows
+        And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
+        And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
+
+    Scenario: gptransfer full sha256 validator in CSV format
+        Given the gptransfer test is initialized
+        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --format=csv --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
         And verify that table "t1" in "gptransfer_testdb1" has "200" rows
@@ -230,7 +254,7 @@ Feature: gptransfer tests
 
     @T339842
     @T339950
-    Scenario: gptransfer single database
+    Scenario: gptransfer single database with md5 validation
         Given the gptransfer test is initialized
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "CREATE TABLE my_random_dist_table(i int) DISTRIBUTED RANDOMLY;" -d gptransfer_testdb1"
         And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -v --batch-size=10"
@@ -243,16 +267,44 @@ Feature: gptransfer tests
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "DROP TABLE my_random_dist_table;" -d gptransfer_testdb1"
 
     @T339951
-    Scenario: gptransfer single table
+    Scenario: gptransfer single table with md5 validation
         Given the gptransfer test is initialized
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 --batch-size=10"
         Then gptransfer should return a return code of 0
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
 
     @T339952
-    Scenario: gptransfer input file
+    Scenario: gptransfer input file with md5 validation
         Given the gptransfer test is initialized
         And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate md5 -f test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=1"
+        Then gptransfer should return a return code of 0
+        And verify that gptransfer is in order of "test/behave/mgmt_utils/steps/data/gptransfer_infile" when partition transfer is "None"
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+        And verify that table "t0" in "gptransfer_testdb3" has "700" rows
+
+    Scenario: gptransfer single database with sha256 validation
+        Given the gptransfer test is initialized
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "CREATE TABLE my_random_dist_table(i int) DISTRIBUTED RANDOMLY;" -d gptransfer_testdb1"
+        And the user runs "gptransfer -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 -v --batch-size=10"
+        Then gptransfer should return a return code of 0
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+        And verify that table "t1" in "gptransfer_testdb1" has "200" rows
+        And verify that table "t2" in "gptransfer_testdb1" has "300" rows
+        And the user runs "psql gptransfer_testdb1 -c '\d+ my_random_dist_table'"
+        Then psql should print "Distributed randomly" to stdout 1 times
+        And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "DROP TABLE my_random_dist_table;" -d gptransfer_testdb1"
+
+    @T339951
+    Scenario: gptransfer single table with sha256 validation
+        Given the gptransfer test is initialized
+        And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --batch-size=10"
+        Then gptransfer should return a return code of 0
+        And verify that table "t0" in "gptransfer_testdb1" has "100" rows
+
+    @T339952
+    Scenario: gptransfer input file with sha256 validation
+        Given the gptransfer test is initialized
+        And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 -f test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=1"
         Then gptransfer should return a return code of 0
         And verify that gptransfer is in order of "test/behave/mgmt_utils/steps/data/gptransfer_infile" when partition transfer is "None"
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
