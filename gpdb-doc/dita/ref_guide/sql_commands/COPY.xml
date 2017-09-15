@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">COPY <varname>table</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>file</varname>' | PROGRAM 'command' | STDIN}
+      <codeblock id="sql_command_synopsis">COPY <varname>table</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>file</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
      [ [WITH]  
        [ON SEGMENT]
        [BINARY]
@@ -23,7 +23,7 @@
        [[LOG ERRORS]  
        SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
 
-COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>file</varname>' | PROGRAM 'command' | STDOUT}
+COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>file</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
       [ [WITH] 
         [ON SEGMENT]
         [BINARY]
@@ -128,8 +128,8 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <pd>Specify a command to execute. The <varname>command</varname> must be specified from
             the viewpoint of the Greenplum Database master host system, and must be executable by
             the Greenplum Database administrator user (<codeph>gpadmin</codeph>). The <codeph>COPY
-              FROM</codeph> command reads the input from standard output of the command, and for the
-              <codeph>COPY TO</codeph> command, the output is written to the standard input of the
+              FROM</codeph> command reads the input from the standard output of the command, and for
+            the <codeph>COPY TO</codeph> command, the output is written to the standard input of the
             command.</pd>
           <pd>The <varname>command</varname> is invoked by a shell. When passing arguments to the
             shell, strip or escape any special characters that have a special meaning for the shell.
