@@ -1257,7 +1257,7 @@ FaultInjector_NewHashEntry(
 		
 	entryLocal->faultInjectorType = entry->faultInjectorType;
 	entryLocal->faultInjectorIdentifier = entry->faultInjectorIdentifier;
-	strncpy(entryLocal->faultName, entry->faultName, sizeof(entryLocal->faultName));
+	strlcpy(entryLocal->faultName, entry->faultName, sizeof(entryLocal->faultName));
 
 	entryLocal->sleepTime = entry->sleepTime;
 	entryLocal->ddlStatement = entry->ddlStatement;
