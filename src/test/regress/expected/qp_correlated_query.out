@@ -1058,19 +1058,10 @@ select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 0
 (5 rows)
 
 explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..18.91 rows=3 width=8)
-   ->  Seq Scan on a  (cost=0.00..18.91 rows=1 width=8)
-         Filter: NOT ((subplan))
-         SubPlan 1
-           ->  Limit  (cost=3.17..3.17 rows=1 width=8)
-                 ->  Aggregate  (cost=3.16..3.17 rows=1 width=8)
-                       ->  Result  (cost=3.11..3.12 rows=1 width=4)
-                             Filter: c.i = $0
-                             ->  Materialize  (cost=3.11..3.12 rows=1 width=4)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.11 rows=1 width=4)
-                                         ->  Seq Scan on c  (cost=0.00..3.11 rows=1 width=4)
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.05 rows=5 width=8)
+   ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=8)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
 (13 rows)
@@ -1086,19 +1077,10 @@ select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5
 (5 rows)
 
 explain select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..18.91 rows=3 width=8)
-   ->  Seq Scan on a  (cost=0.00..18.91 rows=1 width=8)
-         Filter: NOT ((subplan))
-         SubPlan 1
-           ->  Limit  (cost=3.16..3.17 rows=1 width=8)
-                 ->  Aggregate  (cost=3.16..3.17 rows=1 width=8)
-                       ->  Result  (cost=3.11..3.12 rows=1 width=4)
-                             Filter: c.i = $0
-                             ->  Materialize  (cost=3.11..3.12 rows=1 width=4)
-                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.11 rows=1 width=4)
-                                         ->  Seq Scan on c  (cost=0.00..3.11 rows=1 width=4)
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.01 rows=1 width=0)
+   One-Time Filter: false
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
 (13 rows)
@@ -1188,7 +1170,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=3.20..6.31 rows=4 width=8)
-   ->  Hash Left Anti Semi Join  (cost=3.20..6.31 rows=2 width=8)
+   ->  Hash Anti Join  (cost=3.20..6.31 rows=2 width=8)
          Hash Cond: a.i = c.i
          ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=8)
          ->  Hash  (cost=3.09..3.09 rows=3 width=4)

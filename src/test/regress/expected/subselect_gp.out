@@ -1120,7 +1120,7 @@ explain select 1 from t1 where a in (select b from t2 where a = 1 limit 1);
 ---------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.53 rows=1 width=0)
    ->  Seq Scan on t1  (cost=0.00..1.53 rows=1 width=0)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
            ->  Limit  (cost=0.00..1.03 rows=1 width=4)
                  ->  Limit  (cost=0.00..1.01 rows=1 width=4)
@@ -1139,7 +1139,7 @@ explain select 1 from t1 where a in (select b from t2 where a = 1 offset 1);
 ---------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..2.05 rows=1 width=0)
    ->  Seq Scan on t1  (cost=0.00..2.05 rows=1 width=0)
-         Filter: (subplan)
+         Filter: (SubPlan 1)
          SubPlan 1
            ->  Limit  (cost=1.03..1.03 rows=1 width=4)
                  ->  Result  (cost=0.00..1.01 rows=1 width=4)

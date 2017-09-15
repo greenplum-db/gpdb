@@ -98,14 +98,14 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
  Update (slice0; segments: 3)  (rows=2325 width=142)
    ->  Explicit Redistribute Motion 3:3  (slice6; segments: 3)  (cost=1790.74..2439.02 rows=2325 width=142)
          ->  Hash Join  (cost=1790.74..2439.02 rows=2325 width=142)
-               Hash Cond: b.projects_pk::text = keo1.user_vie_project_code_pk::text
-               InitPlan  (slice9)
+               Hash Cond: b.projects_pk::text = a.user_vie_project_code_pk::text
+               InitPlan 3 (returns $2)  (slice9)
                  ->  Aggregate  (cost=1212.70..1212.71 rows=1 width=32)
-                       InitPlan  (slice8)
+                       InitPlan 2 (returns $1)  (slice8)
                          ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=430.08..860.08 rows=27 width=28)
                                ->  Seq Scan on keo4  (cost=430.08..860.08 rows=9 width=28)
                                      Filter: keo_para_budget_date::text = $0
-                                     InitPlan  (slice7)
+                                     InitPlan 1 (returns $0)  (slice7)
                                        ->  Aggregate  (cost=430.07..430.08 rows=1 width=32)
                                              ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=430.00..430.05 rows=1 width=32)
                                                    ->  Aggregate  (cost=430.00..430.01 rows=1 width=32)
@@ -152,7 +152,7 @@ EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x F
  Delete (slice0; segments: 3)  (rows=2471070 width=10)
    ->  Result  (cost=1198.81..76722.41 rows=2471070 width=10)
          One-Time Filter: $0
-         InitPlan  (slice2)
+         InitPlan 1 (returns $0)  (slice2)
            ->  Limit  (cost=0.00..0.06 rows=1 width=0)
                  ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.06 rows=1 width=0)
                        ->  Limit  (cost=0.00..0.04 rows=1 width=0)
