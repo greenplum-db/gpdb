@@ -7105,9 +7105,12 @@ extract_line_buf(CopyState cstate)
 			lineno_delim = memchr(line_start, COPY_METADATA_DELIM,
 								  Min(32, cstate->line_buf.len));
 
-			value_len = lineno_delim - line_start + 1;
-			line_start += value_len;
-			line_buf = line_start;
+			if (lineno_delim && (lineno_delim != line_start))
+			{
+				value_len = lineno_delim - line_start + 1;
+				line_start += value_len;
+				line_buf = line_start;
+			}
 		}
 	}
 
