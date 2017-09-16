@@ -28,6 +28,11 @@
 #include "utils/syscache.h"
 #include "libpq/ip.h"
 
+#include "gp-libpq-fe.h"
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbdispatchresult.h"
+#include "cdb/cdbvars.h"
+
 /* bogus ... these externs should be in a header file */
 extern Datum pg_stat_get_numscans(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_tuples_returned(PG_FUNCTION_ARGS);
@@ -47,6 +52,7 @@ extern Datum pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_get_backend_idset(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_activity(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_segment_replication(PG_FUNCTION_ARGS);
 extern Datum pg_backend_pid(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_pid(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_backend_session_id(PG_FUNCTION_ARGS);
@@ -92,6 +98,14 @@ extern Datum pg_stat_reset(PG_FUNCTION_ARGS);
 
 /* Global bgwriter statistics, from bgwriter.c */
 extern PgStat_MsgBgWriter bgwriterStats;
+
+typedef struct
+{
+	int currIdx;
+	int numsegresults;
+	int tuplecount;
+	struct pg_result **segresults;
+} Pg_Get_Segment_Replication;
 
 static char *
 pgstat_waiting_string(char reason)
@@ -681,6 +695,221 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 	}
 }
 
+/*
+ * pg_get_segment_replication - produce a view with one row per segment replication stream
+ */
+Datum
+pg_stat_get_segment_replication(PG_FUNCTION_ARGS)
+{
+	FuncCallContext *funcctx;
+	Pg_Get_Segment_Replication *replicationdata;
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		TupleDesc	tupdesc;
+		MemoryContext oldcontext;
+
+		/* create a function context for cross-call persistence */
+		funcctx = SRF_FIRSTCALL_INIT();
+
+		/*
+		 * switch to memory context appropriate for multiple function calls
+		 */
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+
+		tupdesc = CreateTemplateTupleDesc(15, false);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "gp_segment_id",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "procpid",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "usesysid",
+						   OIDOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 4, "usename",
+						   NAMEOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 5, "application_name",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 6, "client_addr",
+						   INETOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 7, "client_port",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 8, "backend_start",
+						   TIMESTAMPTZOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 9, "state",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "sent_location",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "write_location",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "flush_location",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 13, "replay_location",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 14, "sync_priority",
+						   INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 15, "sync_state",
+						   TEXTOID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+		replicationdata = (Pg_Get_Segment_Replication *) palloc(sizeof(Pg_Get_Segment_Replication));
+		funcctx->user_fctx = (void *) replicationdata;
+
+		replicationdata->tuplecount = 0;
+		replicationdata->numsegresults = 0;
+		replicationdata->currIdx = 0;
+		replicationdata->segresults = NULL;
+
+		if (Gp_role == GP_ROLE_DISPATCH)
+		{
+			CdbPgResults cdb_pgresults = {NULL, 0};
+			StringInfoData buffer;
+			int i;
+			initStringInfo(&buffer);
+
+			/*
+			 * This query has to match the tupledesc we just made above.
+			 */
+
+			appendStringInfo(&buffer,
+					"SELECT gp_execution_segment(), * FROM pg_stat_replication");
+			/*
+			 * We need to dispatch a command directly rather than run with gp_dist_random, because we are querying a
+			 * view, and Greenplum does not currently have the concept of a 'distributed view'.
+			 */
+
+			CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
+
+			if (cdb_pgresults.numResults == 0)
+				elog(ERROR, "did not receive any replication data from segments");
+
+			for (i = 0; i < cdb_pgresults.numResults; i++)
+			{
+				/*
+				 * Any error here should have propagated into errbuf, so we shouldn't
+				 * ever see anything other that tuples_ok here.  But, check to be
+				 * sure.
+				 */
+				if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
+				{
+					cdbdisp_clearCdbPgResults(&cdb_pgresults);
+					elog(ERROR,"replication data from segments are not valid");
+				}
+				else
+				{
+					replicationdata->tuplecount += PQntuples(cdb_pgresults.pg_results[i]);
+				}
+			}
+
+			replicationdata->numsegresults = cdb_pgresults.numResults;
+			replicationdata->segresults = cdb_pgresults.pg_results;
+		}
+
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+	replicationdata = (Pg_Get_Segment_Replication *) funcctx->user_fctx;
+
+	while (replicationdata->currIdx <= replicationdata->tuplecount)
+	{
+		HeapTuple	tuple;
+		Datum		result;
+		Datum		values[15];
+		bool		nulls[15];
+		int i;
+		NameData usename;
+		int whichresultset = 0;
+		int whichelement = replicationdata->currIdx;
+		int whichrow = whichelement;
+
+		Assert(Gp_role == GP_ROLE_DISPATCH);
+
+		/*
+		 * Because we have one result set per segDB (rather than one big result set with everything),
+		 * we need to figure out which result set we are on, and which row within that result set
+		 * we are returning.
+		 *
+		 * So, we walk through all the result sets and all the rows in each one, in order.
+		 */
+
+		while(whichrow >= PQntuples(replicationdata->segresults[whichresultset]))
+		{
+			whichrow -= PQntuples(replicationdata->segresults[whichresultset]);
+			whichresultset++;
+			if (whichresultset >= replicationdata->numsegresults)
+				break;
+		}
+
+		/*
+		 * If this condition is true, we have already sent everything back,
+		 * and we just want to do the SRF_RETURN_DONE
+		 */
+		if (whichresultset >= replicationdata->numsegresults)
+			break;
+
+		replicationdata->currIdx++;
+
+		/*
+		 * Form tuple with appropriate data we got from the segDBs
+		 */
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+
+		/*
+		 * For each column, extract out the value (which comes out in text).
+		 * Convert it to the appropriate datatype to match our tupledesc,
+		 * and put that in values.
+		 */
+		namestrcpy(&usename, PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 3));
+
+		values[0] = Int32GetDatum(atoi(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 0)));
+		values[1] = Int32GetDatum(atoi(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 1)));
+		values[2] = ObjectIdGetDatum(atoi(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 2)));
+		values[3] = NameGetDatum(&usename);
+		values[4] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 4));
+		values[5] = DirectFunctionCall1(inet_in,
+										CStringGetDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 5)));
+		values[6] = Int32GetDatum(atoi(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 6)));
+		values[7] = DirectFunctionCall3(timestamptz_in,
+										CStringGetDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 7)),
+										ObjectIdGetDatum(InvalidOid),
+										Int32GetDatum(-1));
+		values[8] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 8));
+		values[9] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 9));
+		values[10] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 10));
+		values[11] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 11));
+		values[12] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 12));
+		values[13] = Int32GetDatum(atoi(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 13)));
+		values[14] = CStringGetTextDatum(PQgetvalue(replicationdata->segresults[whichresultset], whichrow, 14));
+
+		/*
+		 * Copy the null info over.  It should all match properly.
+		 */
+		for (i=0; i<15; i++)
+		{
+			nulls[i] = PQgetisnull(replicationdata->segresults[whichresultset], whichrow, i);
+		}
+
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+		result = HeapTupleGetDatum(tuple);
+		SRF_RETURN_NEXT(funcctx, result);
+	}
+
+	/*
+	 * if we dispatched to the segDBs, free up the memory holding the result sets.
+	 * Otherwise we might leak this memory each time we got called (does it automatically
+	 * get freed by the pool being deleted?  Probably, but this is safer).
+	 */
+	if (replicationdata->segresults != NULL)
+	{
+		int i;
+		for (i = 0; i < replicationdata->numsegresults; i++)
+			PQclear(replicationdata->segresults[i]);
+
+		free(replicationdata->segresults);
+	}
+
+	SRF_RETURN_DONE(funcctx);
+}
 
 Datum
 pg_backend_pid(PG_FUNCTION_ARGS)

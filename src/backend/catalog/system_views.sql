@@ -407,6 +407,13 @@ CREATE VIEW pg_stat_replication AS
     WHERE S.usesysid = U.oid AND
             S.procpid = W.pid;
 
+CREATE VIEW pg_stat_replication_segments AS
+    SELECT * FROM pg_stat_get_segment_replication() AS s;
+
+CREATE VIEW pg_stat_replication_all AS
+    SELECT * FROM pg_stat_get_segment_replication() AS s
+    UNION SELECT -1 AS gp_segment_id, * FROM pg_stat_replication AS r;
+
 CREATE VIEW pg_stat_database AS 
     SELECT 
             D.oid AS datid, 
