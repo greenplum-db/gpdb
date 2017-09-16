@@ -1125,7 +1125,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.12 rows=5 width=8)
-   ->  Nested Loop Left Anti Semi Join  (cost=0.00..882688.12 rows=2 width=8)
+   ->  Nested Loop Anti Join  (cost=0.00..882688.12 rows=2 width=8)
          Join Filter: true
          ->  Table Scan on a  (cost=0.00..431.00 rows=2 width=8)
          ->  Result  (cost=0.00..0.00 rows=0 width=1)

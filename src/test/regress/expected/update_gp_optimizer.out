@@ -162,11 +162,11 @@ EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x F
 ------------------------------------------------------------------------------------------------------------------------------
  Delete  (cost=0.00..1324463.20 rows=1 width=1)
    ->  Result  (cost=0.00..1324463.17 rows=1 width=22)
-         ->  Hash EXISTS Join  (cost=0.00..1324463.17 rows=1 width=18)
+         ->  Hash Semi Join  (cost=0.00..1324463.17 rows=1 width=18)
                Hash Cond: public.keo5.x = public.keo5.x
                ->  Table Scan on keo5  (cost=0.00..431.00 rows=1 width=18)
                ->  Hash  (cost=1324032.17..1324032.17 rows=1 width=4)
-                     ->  Nested Loop EXISTS Join  (cost=0.00..1324032.17 rows=1 width=4)
+                     ->  Nested Loop Semi Join  (cost=0.00..1324032.17 rows=1 width=4)
                            Join Filter: true
                            ->  Table Scan on keo5  (cost=0.00..431.00 rows=1 width=4)
                            ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
