@@ -5657,9 +5657,9 @@
     <title>gp_workfile_compress_algorithm</title>
     <body>
       <p>When a hash aggregation or hash join operation spills to disk during query processing,
-        specifies the compression algorithm to use on the spill files. If using zlib, it must be in
-        your $PATH on all segments.</p>
-      <p>If your Greenplum database installation uses serial ATA (SATA) disk drives, setting the
+        specifies the compression algorithm to use on the spill files. If using zlib, the zlib
+        library must be installed on all hosts in the Greenplum Database cluster. </p>
+      <p>If your Greenplum Database installation uses serial ATA (SATA) disk drives, setting the
         value of this parameter to <codeph>zlib</codeph> might help to avoid overloading the disk
         subsystem with IO operations.</p>
       <table id="gp_workfile_compress_algorithm_table">
