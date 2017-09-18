@@ -95,9 +95,30 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 Datum
 pxfprotocol_export(PG_FUNCTION_ARGS)
 {
-	/* TODO: provide real implementation */
-	elog(INFO, "Dummy PXF protocol write");
-	PG_RETURN_INT32(0);
+	/* Must be called via the external table format manager */
+	check_caller(fcinfo, "pxfprotocol_export");
+	/* retrieve user context required for data write */
+	gphadoop_context *context = (gphadoop_context *) EXTPROTOCOL_GET_USER_CTX(fcinfo);
+
+	/* last call -- cleanup */
+	if (EXTPROTOCOL_IS_LAST_CALL(fcinfo))
+	{
+		cleanup_context(context);
+		EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
+		PG_RETURN_INT32(0);
+	}
+
+	/* first call -- do any desired init */
+	if (context == NULL)
+	{
+		context = create_context(fcinfo, true);
+		EXTPROTOCOL_SET_USER_CTX(fcinfo, context);
+		gpbridge_export_start(context);
+	}
+	/* Read data */
+	int			bytes_written = gpbridge_write(context, EXTPROTOCOL_GET_DATABUF(fcinfo), EXTPROTOCOL_GET_DATALEN(fcinfo));
+
+	PG_RETURN_INT32(bytes_written);
 }
 
 /*
@@ -141,8 +162,10 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 	GPHDUri    *uri = parseGPHDUri(EXTPROTOCOL_GET_URL(fcinfo));
 	Relation	relation = EXTPROTOCOL_GET_RELATION(fcinfo);
 
-	/* fetch data fragments */
-	get_fragments(uri, relation);
+	if (is_import) {
+		/* fetch data fragments */
+		get_fragments(uri, relation);
+	}
 
 	/* set context */
 	gphadoop_context *context = palloc0(sizeof(gphadoop_context));

@@ -21,9 +21,14 @@
 #include "pxfbridge.h"
 #include "pxfheaders.h"
 #include "pxffragment.h"
+#include "pxfutils.h"
+#include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h"
 
 /* helper function declarations */
 static void build_uri_for_read(gphadoop_context *context);
+static void build_uri_for_write(gphadoop_context *context);
+static void build_file_name_for_write(gphadoop_context *context);
 static void add_querydata_to_http_headers(gphadoop_context *context);
 static void set_current_fragment_headers(gphadoop_context *context);
 static size_t fill_buffer(gphadoop_context *context, char *start, size_t size);
@@ -73,7 +78,21 @@ gpbridge_import_start(gphadoop_context *context)
 }
 
 /*
- * Reads data from PXF into the given buffer of a given size
+ * Sets up data before starting export
+ */
+void
+gpbridge_export_start(gphadoop_context *context)
+{
+	build_file_name_for_write(context);
+	build_uri_for_write(context);
+	context->churl_headers = churl_headers_init();
+	add_querydata_to_http_headers(context);
+
+	context->churl_handle = churl_init_upload(context->uri.data, context->churl_headers);
+}
+
+/*
+ * Reads data from the PXF server into the given buffer of a given size
  */
 int
 gpbridge_read(gphadoop_context *context, char *databuf, int datalen)
@@ -107,7 +126,24 @@ gpbridge_read(gphadoop_context *context, char *databuf, int datalen)
 }
 
 /*
- * Format the URI by adding PXF service endpoint details
+ * Writes data from the given buffer of a given size to the PXF server
+ */
+int
+gpbridge_write(gphadoop_context *context, char *databuf, int datalen)
+{
+	size_t		n = 0;
+
+	if (datalen > 0)
+	{
+		n = churl_write(context->churl_handle, databuf, datalen);
+		elog(DEBUG5, "pxf gpbridge_write: wrote %zu bytes to %s", n, context->write_file_name.data);
+	}
+
+	return (int) n;
+}
+
+/*
+ * Format the URI for reading by adding PXF service endpoint details
  */
 static void
 build_uri_for_read(gphadoop_context *context)
@@ -119,6 +155,38 @@ build_uri_for_read(gphadoop_context *context)
 					 data->authority, PXF_SERVICE_PREFIX, PXF_VERSION);
 	elog(DEBUG2, "pxf: uri %s for read", context->uri.data);
 }
+
+/*
+ * Format the URI for writing by adding PXF service endpoint details
+ */
+static void
+build_uri_for_write(gphadoop_context *context)
+{
+	appendStringInfo(&context->uri, "http://%s:%d/%s/%s/Writable/stream?path=%s",
+					 PxfDefaultHost, PxfDefaultPort,
+					 PXF_SERVICE_PREFIX, PXF_VERSION, context->write_file_name.data);
+	elog(DEBUG2, "pxf: uri %s with file name for write: %s", context->uri.data, context->write_file_name.data);
+}
+
+/*
+ * Builds a unique file name for write per segment, based on
+ * directory name from the table's URI, the transaction id (XID) and segment id.
+ * e.g. with path in URI '/data/writable/table1', XID 1234 and segment id 3,
+ * the file name will be '/data/writable/table1/1234_3'.
+ */
+static void
+build_file_name_for_write(gphadoop_context *context)
+{
+	char		xid[TMGIDSIZE];
+
+	if (!getDistributedTransactionIdentifier(xid))
+		elog(ERROR, "Unable to obtain distributed transaction id");
+
+	appendStringInfo(&context->write_file_name, "/%s/%s_%d",
+					 context->gphd_uri->data, xid, GpIdentity.segindex);
+	elog(DEBUG2, "pxf: file name for write: %s", context->write_file_name.data);
+}
+
 
 /*
  * Add key/value pairs to connection header. These values are the context of the query and used

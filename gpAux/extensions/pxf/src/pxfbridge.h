@@ -53,8 +53,18 @@ void		gpbridge_cleanup(gphadoop_context *context);
 void		gpbridge_import_start(gphadoop_context *context);
 
 /*
- * Reads data from PXF into the given buffer of a given size
+ * Sets up data before starting export
+ */
+void		gpbridge_export_start(gphadoop_context *context);
+
+/*
+ * Reads data from the PXF server into the given buffer of a given size
  */
 int			gpbridge_read(gphadoop_context *context, char *databuf, int datalen);
+
+/*
+ * Writes data from the given buffer of a given size to the PXF server
+ */
+int			gpbridge_write(gphadoop_context *context, char *databuf, int datalen);
 
 #endif							/* _PXFBRIDGE_H */
