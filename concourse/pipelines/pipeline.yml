@@ -17,6 +17,7 @@ groups:
   - MM_gpperfmon
   - MM_gpcheck
   - MM_analyzedb
+  - MM_gp_upgrade
   - DPM_backup-restore
   - MM_gppkg
   - MM_gpinitsystem
