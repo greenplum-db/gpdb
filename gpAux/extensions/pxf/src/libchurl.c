@@ -318,9 +318,10 @@ churl_init(const char *url, CHURL_HEADERS headers)
 	create_curl_handle(context);
 	clear_error_buffer(context);
 
-/* CURLOPT_RESOLVE is only available in curl versions 7.21 and above */
+/* Required for resolving localhost on some docker environments that
+/* had intermittent networking issues when using pxf on HAWQ
+/* However, CURLOPT_RESOLVE is only available in curl versions 7.21 and above */
 #ifdef CURLOPT_RESOLVE
-	/* needed to resolve localhost */
 	if (strstr(url, LocalhostIpV4) != NULL)
 	{
 		struct curl_slist *resolve_hosts = NULL;
@@ -633,16 +634,13 @@ char *
 get_dest_address(CURL *curl_handle)
 {
 	char	   *dest_url = NULL;
-	StringInfoData addr;
 
-	initStringInfo(&addr);
-
-	/* add dest ip and port, if any, and curl was nice to tell us */
+	/* add dest url, if any, and curl was nice to tell us */
 	if (CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_EFFECTIVE_URL, &dest_url) && dest_url)
 	{
-		appendStringInfo(&addr, "'%s'", dest_url);
+		return psprintf("'%s'", dest_url);
 	}
-	return addr.data;
+	return dest_url;
 }
 
 void
