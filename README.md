@@ -104,6 +104,7 @@ building, see the README at the following repositories:
        In case, the files should be copied elsewhere, please change the location.
     
 ### Build the database
+
 ```
 # Configure build environment to install at /usr/local/gpdb
 ./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
