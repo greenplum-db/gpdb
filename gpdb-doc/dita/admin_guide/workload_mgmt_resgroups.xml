@@ -39,7 +39,7 @@
             </row>
             <row>
               <entry colname="col1">MEMORY_SPILL_RATIO</entry>
-              <entry colname="col2">The memory usage threshold for memory-intensive operators in a transaction. When a transaction reaches this threshold, it spills to disk.</entry>
+              <entry colname="col2">The memory usage threshold for memory-intensive transactions. When a transaction reaches this threshold, it spills to disk.</entry>
             </row>
           </tbody>
         </tgroup>
