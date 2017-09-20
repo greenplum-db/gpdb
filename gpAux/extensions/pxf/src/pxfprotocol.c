@@ -71,9 +71,6 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("FRAGMENTER or PROFILE option must exist in %s", uri->uri)));
 
-	/* Check for valid cluster name */
-	GPHDUri_verify_cluster_exists(uri, PXF_CLUSTER);
-
 	/* No duplicate options. */
 	GPHDUri_verify_no_duplicate_options(uri);
 

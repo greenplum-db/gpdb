@@ -32,9 +32,8 @@
 #include "mock/pxffragment_mock.c"
 
 static void test_parseGPHDUri_helper(const char *uri, const char *message);
-static void test_verify_cluster_exception_helper(const char *uri_str);
 
-static char uri[] = "pxf://default/some/path/and/table.tbl?FRAGMENTER=SomeFragmenter&ACCESSOR=SomeAccessor&RESOLVER=SomeResolver&ANALYZER=SomeAnalyzer";
+static char uri[] = "pxf://some/path/and/table.tbl?FRAGMENTER=SomeFragmenter&ACCESSOR=SomeAccessor&RESOLVER=SomeResolver&ANALYZER=SomeAnalyzer";
 
 /*
  * Test parsing of valid uri as given in LOCATION in a PXF external table.
@@ -92,7 +91,7 @@ test_parseGPHDUri_ValidURI(void **state)
 void
 test_parseGPHDUri_NegativeTestNoProtocol(void **state)
 {
-	char	   *uri = "pxf:/default/some/path/and/table.tbl?FRAGMENTER=HdfsDataFragmenter";
+	char	   *uri = "pxf:/some/path/and/table.tbl?FRAGMENTER=HdfsDataFragmenter";
 
 	test_parseGPHDUri_helper(uri, "");
 }
@@ -103,20 +102,9 @@ test_parseGPHDUri_NegativeTestNoProtocol(void **state)
 void
 test_parseGPHDUri_NegativeTestNoOptions(void **state)
 {
-	char	   *uri = "pxf://default/some/path/and/table.tbl";
+	char	   *uri = "pxf://some/path/and/table.tbl";
 
 	test_parseGPHDUri_helper(uri, ": missing options section");
-}
-
-/*
- * Negative test: parsing of uri without cluster part
- */
-void
-test_parseGPHDUri_NegativeTestNoCluster(void **state)
-{
-	char	   *uri = "pxf:///default/some/path/and/table.tbl";
-
-	test_parseGPHDUri_helper(uri, ": missing cluster section");
 }
 
 /*
@@ -125,7 +113,7 @@ test_parseGPHDUri_NegativeTestNoCluster(void **state)
 void
 test_parseGPHDUri_NegativeTestMissingEqual(void **state)
 {
-	char	   *uri = "pxf://default/some/path/and/table.tbl?FRAGMENTER";
+	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER";
 
 	test_parseGPHDUri_helper(uri, ": option 'FRAGMENTER' missing '='");
 }
@@ -136,7 +124,7 @@ test_parseGPHDUri_NegativeTestMissingEqual(void **state)
 void
 test_parseGPHDUri_NegativeTestDuplicateEquals(void **state)
 {
-	char	   *uri = "pxf://default/some/path/and/table.tbl?FRAGMENTER=HdfsDataFragmenter=DuplicateFragmenter";
+	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER=HdfsDataFragmenter=DuplicateFragmenter";
 
 	test_parseGPHDUri_helper(uri, ": option 'FRAGMENTER=HdfsDataFragmenter=DuplicateFragmenter' contains duplicate '='");
 }
@@ -147,7 +135,7 @@ test_parseGPHDUri_NegativeTestDuplicateEquals(void **state)
 void
 test_parseGPHDUri_NegativeTestMissingKey(void **state)
 {
-	char	   *uri = "pxf://default/some/path/and/table.tbl?=HdfsDataFragmenter";
+	char	   *uri = "pxf://some/path/and/table.tbl?=HdfsDataFragmenter";
 
 	test_parseGPHDUri_helper(uri, ": option '=HdfsDataFragmenter' missing key before '='");
 }
@@ -158,7 +146,7 @@ test_parseGPHDUri_NegativeTestMissingKey(void **state)
 void
 test_parseGPHDUri_NegativeTestMissingValue(void **state)
 {
-	char	   *uri = "pxf://default/some/path/and/table.tbl?FRAGMENTER=";
+	char	   *uri = "pxf://some/path/and/table.tbl?FRAGMENTER=";
 
 	test_parseGPHDUri_helper(uri, ": option 'FRAGMENTER=' missing value after '='");
 }
@@ -295,71 +283,6 @@ test_GPHDUri_verify_core_options_exist(void **state)
 }
 
 /*
- * Test GPHDUri_verify_cluster_exists to check if the specified cluster is present in the URI
- */
-void
-test_GPHDUri_verify_cluster_exists(void **state)
-{
-	char	   *uri_with_cluster = "pxf://default/some/file/path?key=value";
-	char	   *cursor = strstr(uri_with_cluster, PTC_SEP) + strlen(PTC_SEP);
-	GPHDUri    *uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-
-	GPHDUri_parse_cluster(uri, &cursor);
-	GPHDUri_verify_cluster_exists(uri, "default");
-	pfree(uri);
-
-	char	   *uri_different_cluster = "pxf://asdf:1034/some/file/path?key=value";
-
-	test_verify_cluster_exception_helper(uri_different_cluster);
-
-	char	   *uri_invalid_cluster = "pxf://asdf/default/file/path?key=value";
-
-	test_verify_cluster_exception_helper(uri_invalid_cluster);
-}
-
-/*
- * Test GPHDUri_verify_cluster_exists to check if the specified cluster is present in the URI
- */
-static void
-test_verify_cluster_exception_helper(const char *uri_str)
-{
-	char	   *cursor = strstr(uri_str, PTC_SEP) + strlen(PTC_SEP);
-	GPHDUri    *uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-
-	GPHDUri_parse_cluster(uri, &cursor);
-
-	MemoryContext old_context = CurrentMemoryContext;
-
-	PG_TRY();
-	{
-		GPHDUri_verify_cluster_exists(uri, "default");
-		assert_false("Expected Exception");
-	}
-	PG_CATCH();
-	{
-		MemoryContextSwitchTo(old_context);
-		ErrorData  *edata = CopyErrorData();
-
-		FlushErrorState();
-
-		/* Validate the type of expected error */
-		assert_true(edata->sqlerrcode == ERRCODE_SYNTAX_ERROR);
-		assert_true(edata->elevel == ERROR);
-		StringInfoData expected_message;
-
-		initStringInfo(&expected_message);
-		appendStringInfo(&expected_message, "Invalid URI %s: CLUSTER NAME %s not found", uri->uri, "default");
-
-		assert_string_equal(edata->message, expected_message.data);
-		pfree(expected_message.data);
-		elog_dismiss(INFO);
-	}
-	PG_END_TRY();
-
-	pfree(uri);
-}
-
-/*
  * Helper function for parse uri test cases
  */
 static void
@@ -406,7 +329,6 @@ main(int argc, char *argv[])
 		unit_test(test_parseGPHDUri_ValidURI),
 		unit_test(test_parseGPHDUri_NegativeTestNoProtocol),
 		unit_test(test_parseGPHDUri_NegativeTestNoOptions),
-		unit_test(test_parseGPHDUri_NegativeTestNoCluster),
 		unit_test(test_parseGPHDUri_NegativeTestMissingEqual),
 		unit_test(test_parseGPHDUri_NegativeTestDuplicateEquals),
 		unit_test(test_parseGPHDUri_NegativeTestMissingKey),
@@ -414,7 +336,6 @@ main(int argc, char *argv[])
 		unit_test(test_GPHDUri_opt_exists),
 		unit_test(test_GPHDUri_verify_no_duplicate_options),
 		unit_test(test_GPHDUri_verify_core_options_exist),
-		unit_test(test_GPHDUri_verify_cluster_exists)
 	};
 
 	MemoryContextInit();

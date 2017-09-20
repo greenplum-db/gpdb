@@ -13,7 +13,6 @@ char	   *TypeOidGetTypename(Oid typid);
 /* Concatenate multiple literal strings using stringinfo */
 char	   *concat(int num_args,...);
 
-#define PXF_CLUSTER       "default"
 #define PXF_PROFILE       "PROFILE"
 #define FRAGMENTER        "FRAGMENTER"
 #define ACCESSOR          "ACCESSOR"

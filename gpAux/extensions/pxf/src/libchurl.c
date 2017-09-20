@@ -319,8 +319,8 @@ churl_init(const char *url, CHURL_HEADERS headers)
 	clear_error_buffer(context);
 
 /* Required for resolving localhost on some docker environments that
-/* had intermittent networking issues when using pxf on HAWQ
-/* However, CURLOPT_RESOLVE is only available in curl versions 7.21 and above */
+ * had intermittent networking issues when using pxf on HAWQ
+ * However, CURLOPT_RESOLVE is only available in curl versions 7.21 and above */
 #ifdef CURLOPT_RESOLVE
 	if (strstr(url, LocalhostIpV4) != NULL)
 	{
