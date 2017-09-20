@@ -5,7 +5,7 @@ ROOT_DIR=`pwd`
 
 # Get ssh private key from REMOTE_KEY, which is assumed to
 # be encode in base64. We can't pass the key content directly
-# since newline doesn't not work well for env variable.
+# since newline doesn't work well for env variable.
 function setup_ssh_keys() {
     # Setup ssh keys
     echo -n $REMOTE_KEY | base64 -d > ~/remote.key
@@ -55,7 +55,7 @@ EOF
     cd ..
 }
 
-# Since we're cloning in a different machine, changes are that
+# Since we're cloning in a different machine, maybe there's 
 # new commit pushed to the same repo. We need to reset to the
 # same commit to current concourse build.
 function remote_clone() {

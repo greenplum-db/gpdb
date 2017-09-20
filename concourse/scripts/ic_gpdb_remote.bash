@@ -11,7 +11,7 @@ function setup_gpadmin_user() {
 
 # Get ssh private key from REMOTE_KEY, which is assumed to
 # be encode in base64. We can't pass the key content directly
-# since newline doesn't not work well for env variable.
+# since newline doesn't work well for env variable.
 function import_remote_key() {
     echo -n $REMOTE_KEY | base64 -d > ~/remote.key
     chmod 400 ~/remote.key

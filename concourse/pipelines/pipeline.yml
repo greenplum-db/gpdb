@@ -1874,11 +1874,13 @@ jobs:
     - compile_gpdb_centos7
     - compile_gpdb_sles11
     - compile_gpdb_windows_cl
+    - compile_gpdb_aix7_remote
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
     - icw_gporca_sles11
     - icw_planner_ictcp_centos6
+    - client_loader_remote_test_aix
     - mpp_resource_group_centos6
     - MU_check_centos
     - MM_analyzedb
