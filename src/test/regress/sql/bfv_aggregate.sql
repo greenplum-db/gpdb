@@ -1351,6 +1351,16 @@ select c0, c1, array_length(ARRAY[
  SUM(c4 % 5670), SUM(c4 % 5671)], 1)
 from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
 
+-- MPP-29042 Multistage aggregation plans should have consistent targetlists in
+-- case of same column aliases and grouping on them.
+DROP TABLE IF EXISTS t1;
+CREATE TABLE t1 (a varchar) DISTRIBUTED RANDOMLY;
+INSERT INTO t1 VALUES ('aaaaaaa');
+INSERT INTO t1 VALUES ('aaaaaaa');
+INSERT INTO t1 VALUES ('bbbbbbb');
+INSERT INTO t1 VALUES ('bbbbbbb');
+INSERT INTO t1 VALUES ('bbbbb');
+SELECT substr(a, 1) as a FROM (SELECT ('-'||a)::varchar as a FROM (SELECT a FROM t1) t2) t3 GROUP BY a ORDER BY a;
 
 -- CLEANUP
 set client_min_messages='warning';

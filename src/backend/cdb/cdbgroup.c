@@ -3487,9 +3487,14 @@ Node* deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 	/* If the given expression is a grouping expression, replace it with
 	 * a Var node referring to the (lower) preliminary aggregation's
 	 * target list.
+	 *
+	 * While building subplan targetlist we flatten (deduplicate) the
+	 * targetlist ignoring RelabelType node.
+	 * Including RelabelType will cause inconsistent top level target list
+	 * and final target list for aggregation plans.
 	 */
-	tle = tlist_member(node, ctx->grps_tlist);
-	if ( tle != NULL )
+	tle = tlist_member_ignore_relabel(node, ctx->grps_tlist);
+	if( tle != NULL )
 	{
 		return  (Node*) makeVar(grp_varno, tle->resno,
 								exprType((Node*)tle->expr),
