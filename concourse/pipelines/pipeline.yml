@@ -1167,35 +1167,8 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - task: setup_gpdb5
-    params:
-      <<: *ccp_gen_cluster_default_params
-      platform: centos6
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: centos
-          tag: "7"
-      inputs:
-      - name: terraform
-      - name: gpdb_binary
-      - name: ccp_src
-      - name: gpdb_src
-      - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_software.sh
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          scp cluster_env_files/hostfile_all mdw:/home/gpadmin/hostfile_all
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; copy_backup_files"
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; destroy_gpdb"
-          ccp_src/aws/install_gpdb.sh 2 gpdb_binary || exit 1
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; restore_backup_files"
+    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
+    image: centos-gpdb-dev-6
     on_failure:
       <<: *debug_sleep
   - task: run_restore_tests

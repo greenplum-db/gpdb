@@ -25,3 +25,13 @@ destroy_gpdb() {
     yes|gpdeletesystem -f -d $MASTER_DATA_DIRECTORY
     rm -rf $GPHOME/*
 }
+
+setup_ddboost() {
+    ssh centos@mdw "sudo rpm -ivh https://discuss.pivotal.io/hc/en-us/article_attachments/201458518/compat-libstdc__-33-3.2.3-69.el6.x86_64.rpm"
+    ssh centos@mdw "echo \"$DD_SOURCE_HOST source-dd\" | sudo tee -a /etc/hosts"
+    ssh centos@mdw "echo \"$DD_DEST_HOST dest-dd\" | sudo tee -a /etc/hosts"
+
+    ssh centos@sdw1 "sudo rpm -ivh https://discuss.pivotal.io/hc/en-us/article_attachments/201458518/compat-libstdc__-33-3.2.3-69.el6.x86_64.rpm"
+    ssh centos@sdw1 "echo \"$DD_SOURCE_HOST source-dd\" | sudo tee -a /etc/hosts"
+    ssh centos@sdw1 "echo \"$DD_DEST_HOST dest-dd\" | sudo tee -a /etc/hosts"
+}
