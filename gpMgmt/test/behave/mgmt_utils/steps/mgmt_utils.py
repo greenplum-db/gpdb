@@ -5074,9 +5074,9 @@ def ddboost_config_setup(context, storage_unit=None):
 
     cmd_config
     local = pexpect.spawn(cmd_config)
-    local.expect('Password: ')
+    local.expect('Password: ', timeout=60)
     local.sendline(context._root['local_ddboost_password'])
-    local.expect(pexpect.EOF)
+    local.expect(pexpect.EOF, timeout=60)
     local.close()
 
     cmd_config = "gpcrondump --ddboost-host %s --ddboost-user %s --ddboost-backupdir %s --ddboost-remote" % \
@@ -5089,9 +5089,9 @@ def ddboost_config_setup(context, storage_unit=None):
 
     cmd_config
     local = pexpect.spawn(cmd_config)
-    local.expect('Password: ')
+    local.expect('Password: ', timeout=60)
     local.sendline(context._root['remote_ddboost_password'])
-    local.expect(pexpect.EOF)
+    local.expect(pexpect.EOF, timeout=60)
     local.close()
 
 def _copy_nbu_lib_files(context, ver, gphome):
@@ -5142,16 +5142,15 @@ def impl(context, ver):
 @given('the test suite is initialized for DDBoost')
 def impl(context):
     os.environ["DDBOOST"] = "TRUE"
-    DDBOOSTDICT = defaultdict(dict)
-    DDBOOSTDICT['DDBOOSTINFO'] = parse_config_params()
-    context._root['local_ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST_1']
-    context._root['local_ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER_1']
-    context._root['local_ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD_1']
-    context._root['remote_ddboost_host'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_HOST_2']
-    context._root['remote_ddboost_user'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_USER_2']
-    context._root['remote_ddboost_password'] = DDBOOSTDICT['DDBOOSTINFO']['DDBOOST_PASSWORD_2']
+    context._root['local_ddboost_host'] = os.environ["DD_SOURCE_HOST"]
+    context._root['local_ddboost_user'] = os.environ["DD_USER"]
+    context._root['local_ddboost_password'] = os.environ["DD_PASSWORD"]
+    context._root['remote_ddboost_host'] = os.environ["DD_DEST_HOST"]
+    context._root['remote_ddboost_user'] = os.environ["DD_USER"]
+    context._root['remote_ddboost_password'] = os.environ["DD_PASSWORD"]
     if 'ddboost_backupdir' not in context._root:
-        directory = os.getenv('PULSE_PROJECT', default='GPDB') + os.getenv('PULSE_BUILD_VERSION', default='') + os.getenv('PULSE_STAGE', default='') + '_DIR'
+        with open("/tmp/terraform_name", 'r') as tf_name_file:
+            directory = "GPDB-" + tf_name_file.readline() + "-DIR"
         context._root['ddboost_backupdir'] = directory
     ddboost_config_setup(context, storage_unit="GPDB")
 

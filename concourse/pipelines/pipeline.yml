@@ -47,7 +47,9 @@ groups:
   - gpdb_rc_packaging_centos
   - gpdb_rc_packaging_sles
   - DPM_netbackup77
-  - DPM_backup-restore-ddboost
+  - DPM_backup-restore_ddboost_part1
+  - DPM_backup-restore_ddboost_part2
+  - DPM_backup-restore_ddboost_part3
   - DPM_backup_43_restore_5
   - MM_gpcheckcat
   - MM_gprecoverseg
@@ -68,7 +70,6 @@ groups:
 - name: Remaining Pulse
   jobs:
   - DPM_netbackup77
-  - DPM_backup-restore-ddboost
   - MM_gpcheckcat
   - MM_gpexpand
   - DPM_gptransfer-43x-to-5x
@@ -99,6 +100,9 @@ groups:
   - MM_gppkg
   - MM_gprecoverseg
   - DPM_backup_43_restore_5
+  - DPM_backup-restore_ddboost_part1
+  - DPM_backup-restore_ddboost_part2
+  - DPM_backup-restore_ddboost_part3
 
 ## ======================================================================
 ## resource types
@@ -149,6 +153,21 @@ resources:
       #     bucket_path: dev/[Team Name]/                       #
       #                                                         #
       ###########################################################
+      bucket_path: {{tf-bucket-path}}
+
+- name: terraform_gpdb4
+  type: terraform
+  source:
+    env:
+      AWS_ACCESS_KEY_ID: {{gpdb4-tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{gpdb4-tf-machine-secret-access-key}}
+    storage:
+      access_key_id: {{gpdb4-tf-machine-access-key-id}}
+      secret_access_key: {{gpdb4-tf-machine-secret-access-key}}
+      region_name: {{aws-region}}
+      # This is not parameterized, on purpose. All tfstates will go to this spot,
+      # and different teams will place there clusters' tfstate files under different paths
+      bucket: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
       bucket_path: {{tf-bucket-path}}
 
 - name: aix_environments
@@ -543,12 +562,30 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
+ccp_destroy_anchor_gpdb4: &ccp_destroy_gpdb4
+  put: terraform_gpdb4
+  params:
+    action: destroy
+    env_name_file: terraform_gpdb4/name
+    terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+    vars:
+      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
+  get_params:
+    action: destroy
+
 ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
   AWS_DEFAULT_REGION: {{aws-region}}
   BUCKET_PATH: {{tf-bucket-path}}
   BUCKET_NAME: {{tf-bucket-name}}
+
+ccp_gpdb4_gen_cluster_default_params_anchor: &ccp_gpdb4_gen_cluster_default_params
+  AWS_ACCESS_KEY_ID: {{gpdb4-tf-machine-access-key-id}}
+  AWS_SECRET_ACCESS_KEY: {{gpdb4-tf-machine-secret-access-key}}
+  AWS_DEFAULT_REGION: {{aws-region}}
+  BUCKET_PATH: {{tf-bucket-path}}
+  BUCKET_NAME: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
 
 debug_sleep_anchor: &debug_sleep
   do:
@@ -566,6 +603,21 @@ debug_sleep_anchor: &debug_sleep
     ensure:
       <<: *ccp_destroy
 
+debug_sleep_anchor_gpdb4: &debug_sleep_gpdb4
+  do:
+  - task: debug_sleep
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+          tag: latest
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 6h']
+    ensure:
+      <<: *ccp_destroy_gpdb4
 ## ======================================================================
 ## jobs
 ## ======================================================================
@@ -1095,36 +1147,11 @@ jobs:
       vars:
         <<: *ccp_default_vars
   - task: setup_gpdb4
+    file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      platform: centos6
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: centos
-          tag: "7"
-      inputs:
-      - name: terraform
-      - name: gpdb4_binary
-      - name: ccp_src
-      - name: gpdb_src
-      outputs:
-      - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_software.sh
-          ccp_src/aws/download_tf_state.sh
-          ccp_src/aws/generate_env_files.sh 2 || exit 1
-          ccp_src/aws/generate_ssh_files.sh 2 || exit 1
-          ccp_src/aws/preinstall_gpdb.sh 2 || exit 1
-          ccp_src/aws/install_gpdb.sh 2 gpdb4_binary
-          ccp_src/aws/run_inspec.sh 2
+    input_mapping:
+      gpdb_binary: gpdb4_binary
     on_failure:
       <<: *ccp_destroy
   - task: run_backup_tests
@@ -1135,35 +1162,10 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - task: setup_gpdb5
+    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      platform: centos6
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: centos
-          tag: "7"
-      inputs:
-      - name: terraform
-      - name: gpdb_binary
-      - name: ccp_src
-      - name: gpdb_src
-      - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_software.sh
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          scp cluster_env_files/hostfile_all mdw:/home/gpadmin/hostfile_all
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; copy_backup_files"
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; destroy_gpdb"
-          ccp_src/aws/install_gpdb.sh 2 gpdb_binary
-          ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; restore_backup_files"
+    image: centos-gpdb-dev-6
     on_failure:
       <<: *debug_sleep
   - task: run_restore_tests
@@ -2068,25 +2070,137 @@ jobs:
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params: *pulse_properties
 
-- name: DPM_backup-restore-ddboost
+- name: DPM_backup-restore_ddboost_part1
   plan:
   - get: nightly-trigger
     trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+  - put: terraform_gpdb4
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_HarmonizeDDBoost"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+  - task: gen_cluster
+    input_mapping:
+      terraform: terraform_gpdb4
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveBackupRestore_HarmonizeDDBoost"
+      <<: *ccp_gpdb4_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy_gpdb4
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=ddboostsetup,ddpartI
+      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
+      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
+    on_failure:
+      <<: *debug_sleep_gpdb4
+  - *ccp_destroy_gpdb4
+
+- name: DPM_backup-restore_ddboost_part2
+  plan:
+  - get: nightly-trigger
+    trigger: true
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+  - put: terraform_gpdb4
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+  - task: gen_cluster
+    input_mapping:
+      terraform: terraform_gpdb4
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gpdb4_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy_gpdb4
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=ddboostsetup,ddpartII
+      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
+      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
+    on_failure:
+      <<: *debug_sleep_gpdb4
+  - *ccp_destroy_gpdb4
+
+- name: DPM_backup-restore_ddboost_part3
+  plan:
+  - get: nightly-trigger
+    trigger: true
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+  - put: terraform_gpdb4
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+  - task: gen_cluster
+    input_mapping:
+      terraform: terraform_gpdb4
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gpdb4_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy_gpdb4
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=ddboostsetup,ddpartIII
+      CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
+      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
+    on_failure:
+      <<: *debug_sleep_gpdb4
+  - *ccp_destroy_gpdb4
 
 - name: MM_gpcheckcat
   plan:
@@ -2396,7 +2510,9 @@ jobs:
     - gpdb_rc_packaging_centos
     - gpdb_rc_packaging_sles
     - DPM_netbackup77
-    - DPM_backup-restore-ddboost
+    - DPM_backup-restore_ddboost_part1
+    - DPM_backup-restore_ddboost_part2
+    - DPM_backup-restore_ddboost_part3
     - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg
