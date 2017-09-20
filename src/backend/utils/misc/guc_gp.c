@@ -5605,7 +5605,14 @@ assign_pljava_classpath_insecure(bool newval, bool doit, GucSource source)
 	if ( newval == true )
 	{
 		struct config_generic *pljava_cp = find_option("pljava_classpath", false, ERROR);
-		pljava_cp->context = PGC_USERSET;
+		if (pljava_cp != NULL)
+		{
+			pljava_cp->context = PGC_USERSET;
+		}
+		else
+		{
+			elog(ERROR, "Failed to set insecure PLJAVA classpath");
+		}
 	}
 	return true;
 }
