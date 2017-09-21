@@ -64,7 +64,7 @@ function run_pxf_automation() {
 	export GPHD_ROOT=\${1}/singlecluster
 
     cp -r /usr/lib64/python2.6/site-packages/psi $GPHOME/lib/python
-	psql -d template1 -c "create extension pxf if not exists"
+	psql -d template1 -c "create extension pxf"
 	cd \${1}/pxf_automation_src
 	make TEST=HdfsSmokeTest
 
