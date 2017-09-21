@@ -172,7 +172,7 @@
         the type of lock acquired, subsequent transactions may have to wait before they can access
         the same relation. For more information on the types of locks, see "Managing Data" in the
           <i>Greenplum Database Administrator Guide</i>. Greenplum Database resource queues (used
-        for workload management) also use locks to control the admission of queries into the
+        for resource management) also use locks to control the admission of queries into the
         system.</p>
       <p>The <codeph class="+ topic/ph pr-d/codeph ">gp_locks_*</codeph> family of views can help
         diagnose queries and sessions that are waiting to access an object due to a lock. </p>
@@ -1759,7 +1759,7 @@
       class="- topic/topic ">
       <title id="ie196285" class="- topic/title ">gp_resqueue_status</title>
       <body class="- topic/body ">
-        <p>This view allows administrators to see status and activity for a workload management
+        <p>This view allows administrators to see status and activity for a
           resource queue. It shows how many queries are waiting to run and how many queries are
           currently active in the system from a particular resource queue.</p>
         <table id="ie196287" class="- topic/table ">

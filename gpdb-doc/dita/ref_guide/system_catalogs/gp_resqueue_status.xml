@@ -5,7 +5,7 @@
   <title id="fp141670">gp_resqueue_status</title>
   <body>
     <p>The <codeph>gp_toolkit.gp_resqueue_status</codeph> view allows administrators to see status
-      and activity for a workload management resource queue. It shows how many queries are waiting
+      and activity for a resource queue. It shows how many queries are waiting
       to run and how many queries are currently active in the system from a particular resource
       queue.</p>
     <table id="fp141982">

@@ -23,7 +23,7 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>Creates a new resource queue for Greenplum Database workload management. A resource queue
+      <p>Creates a new resource queue for Greenplum Database resource management. A resource queue
         must have either an <codeph>ACTIVE_STATEMENTS</codeph> or a <codeph>MAX_COST</codeph> value
         (or it can have both). Only a superuser can create a resource queue.</p>
       <p>Resource queues with an <codeph>ACTIVE_STATEMENTS</codeph> threshold set a maximum limit on
@@ -181,7 +181,7 @@
     <section id="section7">
       <title>Compatibility</title>
       <p><codeph>CREATE RESOURCE QUEUE</codeph> is a Greenplum Database extension. There is no
-        provision for resource queues or workload management in the SQL standard.</p>
+        provision for resource queues or resource management in the SQL standard.</p>
     </section>
     <section id="section8">
       <title>See Also</title>

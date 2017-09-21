@@ -4,7 +4,7 @@
 <topic id="topic1" xml:lang="en">
   <title id="iz173472">Using Resource Groups</title>
   <body>
-    <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+    <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
     <p>You can use resource groups to manage the number of active queries that may execute concurrently in your Greenplum Database cluster. With resource groups, you can also manage the amount of CPU and memory resources Greenplum allocates to each query.</p>
 
     <p>When the user executes a query, Greenplum Database evaluates the query against a set of limits defined for the resource group. Greenplum Database executes the query immediately if the group's resource limits have not yet been reached and the query does not cause the group to exceed the concurrent transaction limit. If these conditions are not met, Greenplum Database queues the query. For example, if the maximum number of concurrent transactions for the resource group has already been reached, a subsequent query is queued and must wait until other queries complete before it runs. Greenplum Database may also execute a pending query when the resource group's concurrency and memory limits are altered to large enough values.</p>
@@ -61,7 +61,7 @@
     <body>
       <p>The <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_resource_group_cpu_limit" type="section"/></codeph> server configuration parameter identifies the maximum percentage of system CPU resources to allocate to resource groups on each Greenplum Database segment node. The remaining CPU resources are used for the OS kernel and the Greenplum Database daemon processes. The default <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
       <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient CPU resources if you are running other workloads on your Greenplum Database cluster nodes, so be sure to adjust this server configuration parameter accordingly.</note>
-      <p>The Greenplum Database node CPU percentage is further divided equally among each segment on the Greenplum node. Each resource group reserves a percentage of the segment CPU for workload management. You identify this percentage via the <codeph>CPU_RATE_LIMIT</codeph> value you provide when you create the resource group.</p>
+      <p>The Greenplum Database node CPU percentage is further divided equally among each segment on the Greenplum node. Each resource group reserves a percentage of the segment CPU for resource management. You identify this percentage via the <codeph>CPU_RATE_LIMIT</codeph> value you provide when you create the resource group.</p>
       <p>The minimum <codeph>CPU_RATE_LIMIT</codeph> percentage you can specify for a resource group is 1, the maximum is 100.</p>
       <p>The sum of <codeph>CPU_RATE_LIMIT</codeph>s specified for all resource groups you define in your Greenplum Database cluster must not exceed 100.</p>
       <p>CPU resource assignment is elastic in that Greenplum Database may allocate the CPU resources of an idle resource group to a busier one(s). In such situations, CPU resources are re-allocated to the previously idle resource group when that resource group next becomes active. If multiple resource groups are busy, they are allocated the CPU resources of any idle resource groups based on the ratio of their <codeph>CPU_RATE_LIMIT</codeph>s. For example, a resource group created with a <codeph>CPU_RATE_LIMIT</codeph> of 40 will be allocated twice as much extra CPU resource as a resource group you create with a <codeph>CPU_RATE_LIMIT</codeph> of 20.</p>
@@ -70,10 +70,10 @@
   <topic id="topic8339717" xml:lang="en">
     <title>Memory Limits</title>
     <body>
-      <p>When resource group-based workload management is enabled, memory usage is managed at the Greenplum Database node, segment, resource group, and transaction levels.</p>
+      <p>When resource groups are enabled, memory usage is managed at the Greenplum Database node, segment, resource group, and transaction levels.</p>
 
       <p>The <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_resource_group_memory_limit" type="section"/></codeph> server configuration parameter identifies the maximum percentage of system memory resources to allocate to resource groups on each Greenplum Database segment node. The default <codeph>gp_resource_group_memory_limit</codeph> value is .9 (90%).</p>
-     <p>The memory resource available on a Greenplum Database node is further divided equally among each segment on the node. Each resource group reserves a percentage of the segment memory for workload management. You identify this percentage via the <codeph>MEMORY_LIMIT</codeph> value you specify when you create the resource group. The minimum <codeph>MEMORY_LIMIT</codeph> percentage you can specify for a resource group is 1, the maximum is 100.</p>
+     <p>The memory resource available on a Greenplum Database node is further divided equally among each segment on the node. Each resource group reserves a percentage of the segment memory for resource management. You identify this percentage via the <codeph>MEMORY_LIMIT</codeph> value you specify when you create the resource group. The minimum <codeph>MEMORY_LIMIT</codeph> percentage you can specify for a resource group is 1, the maximum is 100.</p>
       <p>The sum of <codeph>MEMORY_LIMIT</codeph>s specified for all resource groups you define in your Greenplum Database cluster must not exceed 100.</p>
       <p>The memory reserved by the resource group is divided into fixed and shared components. The <codeph>MEMORY_SHARED_QUOTA</codeph> value you specify when you create the resource group identifies the percentage of reserved resource group memory that may be shared among the currently running transactions. This memory is allotted on a first-come, first-served basis. A running transaction may use none, some, or all of the <codeph>MEMORY_SHARED_QUOTA</codeph>.</p>
 
@@ -100,13 +100,13 @@
   </topic>
 
   <topic id="topic71717999" xml:lang="en">
-    <title>Using Resource Group-Based Workload Management</title>
+    <title>Using Resource Groups</title>
     <body>
     <section id="topic833" xml:lang="en">
       <title>Prerequisite</title>
-      <p>Greenplum Database resource group-based workload management uses Linux Control Groups (cgroups) to manage CPU resources. With cgroups, Greenplum isolates the CPU usage of your Greenplum processes from other processes on the node. This allows Greenplum to support CPU usage restrictions on a per-resource-group basis.</p>
+      <p>Greenplum Database resource groups use Linux Control Groups (cgroups) to manage CPU resources. With cgroups, Greenplum isolates the CPU usage of your Greenplum processes from other processes on the node. This allows Greenplum to support CPU usage restrictions on a per-resource-group basis.</p>
       <p>For detailed information about cgroups, refer to the Control Groups documentation for your Linux distribution.</p>
-        <p>Complete the following tasks on each node in your Greenplum Database cluster to set up cgroups for use with resource group-based workload management:</p>
+        <p>Complete the following tasks on each node in your Greenplum Database cluster to set up cgroups for use with resource groups:</p>
         <ol>
           <li>If you are running the Suse 11+ operating system on your Greenplum Database cluster nodes, you must enable swap accounting on each node and restart your Greenplum Database cluster. The <codeph>swapaccount</codeph> kernel boot parameter governs the swap accounting setting on Suse 11+ systems. After setting this boot parameter, you must reboot your systems. For details, refer to the <xref href="https://www.suse.com/releasenotes/x86_64/SUSE-SLES/11-SP2/#fate-310471" format="html" scope="external">Cgroup Swap Control</xref> discussion in the Suse 11 release notes. You must be the superuser or have <codeph>sudo</codeph> access to configure kernel boot parameters and reboot systems.
           </li>
@@ -162,19 +162,19 @@ ls -l <i>cgroup_mount_point</i>/cpuacct/gpdb
 
       <p>To use resource groups in your Greenplum Database cluster, you:</p>
       <ol>
-        <li><xref href="#topic8" type="topic" format="dita">Enable resource group-based workload management for your Greenplum Database cluster</xref>.</li>
+        <li><xref href="#topic8" type="topic" format="dita">Enable resource groups for your Greenplum Database cluster</xref>.</li>
         <li><xref href="#topic10" type="topic" format="dita">Create resource groups</xref>.</li>
         <li><xref href="#topic17" type="topic" format="dita">Assign the resource groups to one or more roles</xref>.</li>
-        <li><xref href="#topic22" type="topic" format="dita">Use workload management system views to monitor and manage the resource groups</xref>.</li>
+        <li><xref href="#topic22" type="topic" format="dita">Use resource management system views to monitor and manage the resource groups</xref>.</li>
       </ol>
     </section>
     </body>
   </topic>
 
   <topic id="topic8" xml:lang="en">
-    <title id="iz153124">Enabling Workload Management with Resource Groups</title>
+    <title id="iz153124">Enabling Resource Groups</title>
     <body>
-      <p>When you install Greenplum Database, workload management using resource queues is enabled by default. To enable resource group-based workload management in Greenplum Database, you must set the <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_resource_manager" type="section"/></codeph> server configuration parameter.</p>
+      <p>When you install Greenplum Database, resource queues are enabled by default. To use resource groups instead of resource queues, you must set the <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_resource_manager" type="section"/></codeph> server configuration parameter.</p>
       <ol id="ol_ec5_4dy_wq">
         <li>Set the <codeph>gp_resource_manager</codeph> server configuration parameter to the value <codeph>"group"</codeph>:
           <codeblock>gpconfig -s gp_resource_manager

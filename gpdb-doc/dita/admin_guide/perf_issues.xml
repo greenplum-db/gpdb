@@ -45,7 +45,7 @@
     <title id="jb155843">Managing Workload</title>
     <body>
       <p>A database system has a limited CPU capacity, memory, and disk I/O resources. When multiple
-        workloads compete for access to these resources, database performance suffers. Workload
+        workloads compete for access to these resources, database performance suffers. Resource
         management maximizes system throughput while meeting varied business requirements. Greenplum
         Database provides resource queues and resource groups to help you manage these 
         system resources.</p>

@@ -1128,9 +1128,9 @@
     </body>
   </topic>
   <topic id="topic44" xml:lang="en">
-    <title id="kh155069">Workload Management Parameters (Resource Queues)</title>
+    <title id="kh155069">Resource Management Parameters (Resource Queues)</title>
     <body>
-      <p>The following configuration parameters configure the Greenplum Database workload management
+      <p>The following configuration parameters configure the Greenplum Database resource management
         feature (resource queues), query prioritization, memory utilization and concurrency control. </p>
       <simpletable id="kh157161" frame="none">
         <strow>
@@ -1192,9 +1192,9 @@
     </body>
   </topic>
   <topic id="topic444" xml:lang="en">
-    <title id="kh1550694">Workload Management Parameters (Resource Groups)</title>
+    <title id="kh1550694">Resource Management Parameters (Resource Groups)</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
       <p>The following parameters configure the Greenplum Database resource group workload
         management feature. </p>
       <simpletable id="kh1571613" frame="none">

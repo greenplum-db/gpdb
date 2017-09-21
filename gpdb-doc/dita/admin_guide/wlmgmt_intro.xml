@@ -13,7 +13,7 @@
         of memory, CPU, and disk IO simultaneously, while working on queries in parallel. </p>
       <p>For best query throughput, the memory configuration should be managed carefully. There are
         memory configuration options at every level in Greenplum Database, from operating system
-        parameters, to managing workloads with resource queues and resource groups, to setting the amount of memory
+        parameters, to managing resources with resource queues and resource groups, to setting the amount of memory
         allocated to an individual query.</p>
       <section>
         <title>Segment Host Memory</title>
@@ -40,11 +40,12 @@
           memory per segment.</p>
         <p>The segments (<i>C</i>) each get an equal share of the Greenplum Database Memory
             (<i>B</i>). </p>
-        <p>Within a segment, the currently active workload management scheme, <i>Resource Queues</i>
-           or <i>Resource Groups</i>, govern how memory is allocated to execute a SQL
-          statement. These constructs allow you to translate business requirements into execution
-          policies in your Greenplum Database system and to guard against queries that could degrade
-          performance. For an overview of resource groups and resource queues, refer to <xref href="wlmgmt.xml#topic1" type="topic" format="dita"/>.</p>
+        <p>Within a segment, the currently active resource management scheme, <i>Resource Queues</i>
+        or <i>Resource Groups</i>, governs how memory is allocated to execute a SQL statement. These
+        constructs allow you to translate business requirements into execution policies in your
+        Greenplum Database system and to guard against queries that could degrade performance. For
+        an overview of resource groups and resource queues, refer to <xref href="wlmgmt.xml#topic1"
+          type="topic" format="dita"/>.</p>
       </section>
       <section>
         <title>Options for Configuring Segment Host Memory</title>
@@ -114,7 +115,7 @@
         <p>where <codeph>max_acting_primary_segments</codeph> is the maximum number of primary
           segments that could be running on a host when mirror segments are activated due to a host
           or segment failure. </p>
-        <note>The workload management scheme currently active (resource queues or resource
+        <note>The resource management scheme currently active (resource queues or resource
           groups) for your Greenplum Database cluster may impose additional considerations
           on <varname>gp_vmem_protect_limit</varname>.</note> 
         <p>Resource queues and resource groups support additional configuration parameters that

@@ -79,10 +79,9 @@ a.current_query
         ORDER BY c.relname;
 </codeblock>
                 </p>
-                <p>If you use resource queues for workload management, queries that are waiting in a
-                    queue will also show in <i>pg_locks</i>. To see how many queries are waiting to
-                    run from a resource queue, use the<i> gp_resqueue_status </i>system catalog
-                    view. For example:</p>
+                <p>If you use resource queues, queries that are waiting in a queue will also show in
+                        <i>pg_locks</i>. To see how many queries are waiting to run from a resource
+                    queue, use the<i> gp_resqueue_status </i>system catalog view. For example:</p>
                 <p>
                     <codeblock>SELECT * FROM gp_toolkit.gp_resqueue_status;
 </codeblock>

@@ -4881,8 +4881,8 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and
-        is not intended for use in a production environment. Experimental features are subject to
+      <note type="warning">Resource groups are an experimental feature and
+        are not intended for use in a production environment. Experimental features are subject to
         change without notice in future releases.</note>
       <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
         each Greenplum Database segment node.</p>
@@ -4912,8 +4912,8 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and
-        is not intended for use in a production environment. Experimental features are subject to
+      <note type="warning">Resource groups are an experimental feature and
+        are not intended for use in a production environment. Experimental features are subject to
         change without notice in future releases.</note>
       <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
         on each Greenplum Database segment node.</p>
@@ -4943,11 +4943,11 @@
   <topic id="gp_resource_manager">
     <title>gp_resource_manager</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and
-        is not intended for use in a production environment. Experimental features are subject to
+      <note type="warning">Resource groups are an experimental feature and
+        are not intended for use in a production environment. Experimental features are subject to
         change without notice in future releases.</note>
       <p>Identifies the resource management scheme currently enabled in the Greenplum Database
-        cluster. The default scheme is workload management using resource queues.</p>
+        cluster. The default scheme is to use resource queues.</p>
       <table id="gp_resource_manager_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7195,7 +7195,7 @@
     <body>
       <p>Sets the maximum number of simultaneously open user-declared cursors allowed per
         transaction. Note that an open cursor will hold an active query slot in a resource queue.
-        Used for workload management.</p>
+        Used for resource management.</p>
       <table id="max_resource_portals_per_transaction_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7222,8 +7222,8 @@
   <topic id="max_resource_groups">
     <title>max_resource_groups</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and
-        is not intended for use in a production environment. Experimental features are subject to
+      <note type="warning">Resource groups are an experimental feature and
+        are not intended for use in a production environment. Experimental features are subject to
         change without notice in future releases.</note>
       <p>Sets the maximum number of resource groups that you can create in a Greenplum Database
         system. Resource groups are defined system-wide.</p>
@@ -7352,7 +7352,7 @@
   <topic id="memory_spill_ratio">
     <title>memory_spill_ratio</title>
     <body>
-      <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
       <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When a transaction reaches this threshold, it spills to disk.</p>
       <p>The default <codeph>memory_spill_ratio</codeph> is the value defined for the resource group assigned to the currently active role. You can set <codeph>memory_spill_ratio</codeph> at the session level to selectively set this limit on a per-query basis. For example, if you have a specific query that spills to disk and requires more memory, you may choose to set a larger <codeph>memory_spill_ratio</codeph> to increase the initial memory allocation.</p>
       <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, 

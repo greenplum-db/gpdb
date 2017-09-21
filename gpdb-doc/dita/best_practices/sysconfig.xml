@@ -158,7 +158,7 @@ kernel.shmall = 4000000000</codeblock>
         use the additional hosts to decrease the number of segments per host.</p>
       <p>Spill files are created when there is not enough memory to fit all the mapper output,
         usually when 80% of the buffer space is occupied. </p>
-      <p>Also, see <xref href="workloads.xml#topic_hhc_z5w_r4">Workload Management</xref> for best
+      <p>Also, see <xref href="workloads.xml#topic_hhc_z5w_r4">Resource Management</xref> for best
         practices for managing query memory using resource queues.</p>
     </section>
     <section id="spill_files">

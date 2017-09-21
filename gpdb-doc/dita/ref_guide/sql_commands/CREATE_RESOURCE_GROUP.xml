@@ -4,7 +4,7 @@
 <topic id="topic1">
   <title id="by20941">CREATE RESOURCE GROUP</title>
   <body>
-    <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+    <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
     <p id="sql_command_desc">Defines a new resource group.</p>
     <section id="section2">
       <title>Synopsis</title>
@@ -18,9 +18,9 @@ MEMORY_LIMIT=<varname>integer</varname>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>Creates a new resource group for Greenplum Database workload management. A resource
+      <p>Creates a new resource group for Greenplum Database resource management. A resource
          group is assigned to one or more roles and identifies concurrent transaction, memory,
-         and CPU limits for the role when resource group-based workload management is enabled. Only a superuser can create a resource group.</p>
+         and CPU limits for the role when resource groups are enabled. Only a superuser can create a resource group.</p>
       <p>Greenplum Database pre-defines two default resource groups: <codeph>admin_group</codeph>
          and <codeph>default_group</codeph>. These group names are reserved.</p>
       <p>The <codeph>max_resource_groups</codeph> server configuration parameter governs the maximum number of resource groups you can create.</p>
@@ -82,7 +82,7 @@ MEMORY_LIMIT=<varname>integer</varname>
     <section id="section7">
       <title>Compatibility</title>
       <p><codeph>CREATE RESOURCE GROUP</codeph> is a Greenplum Database extension. There is no
-        provision for resource groups or workload management in the SQL standard.</p>
+        provision for resource groups or resource management in the SQL standard.</p>
     </section>
     <section id="section8">
       <title>See Also</title>

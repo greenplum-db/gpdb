@@ -447,7 +447,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <li><codeph>COPY FROM</codeph> command where the source is <codeph>stdin</codeph></li>
           <li><codeph>COPY TO</codeph> command where the destination is <codeph>stdout</codeph></li>
         </ul></p>
-      <p>For information about resource queues, see "Workload Management with Resource Queues" in
+      <p>For information about resource queues, see "Resource Management with Resource Queues" in
         the <cite>Greenplum Database Administrator Guide</cite>.</p>
     </section>
     <section id="section7">
