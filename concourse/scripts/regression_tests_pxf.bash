@@ -64,6 +64,7 @@ function run_pxf_automation() {
 	export PG_MODE=GPDB
 	export GPHD_ROOT=\${1}/singlecluster
 
+	psql -d template1 -c "create extension pxf"
 	cd \${1}/pxf_automation_src
 	make TEST=HdfsSmokeTest
 
