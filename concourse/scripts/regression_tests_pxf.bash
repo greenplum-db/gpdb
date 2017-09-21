@@ -50,7 +50,7 @@ function run_pxf_automation() {
 		mkdir -p pxf && cd pxf
 		ln -s ${PXF_HOME}/conf conf
 		for X in ${PXF_HOME}/lib/pxf-*-[0-9]*.jar; do \
-			ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
+			ln -s ${X} $(echo $(basename ${X}) | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
 		done
 	popd > /dev/null
 
