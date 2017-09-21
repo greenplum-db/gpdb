@@ -14,7 +14,7 @@
       <note type="warning">Resource groups are an experimental feature and are not intended for use
       in a production environment. Experimental features are subject to change without notice in
       future releases.</note>
-    <p>Either the resource queueor the resource group management scheme can be active in Greenplum
+    <p>Either the resource queue or the resource group management scheme can be active in Greenplum
       Database; both schemes cannot be active at the same time.</p>
     <p>Resource queues are enabled by default when you install your Greenplum Database cluster.
       While you can create and assign resource groups when resource queues are active, you must

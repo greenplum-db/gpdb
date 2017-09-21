@@ -4,9 +4,8 @@
 <topic id="topic44">
    <title>Resource Management Parameters</title>
    <body>
-      <p>The following configuration parameters configure Greenplum Database resource management
-         features (resource queues), query prioritization, memory utilization and concurrency
-         control. </p>
+      <p>The following configuration parameters configure Greenplum Database resource queues, query
+         prioritization, memory utilization and concurrency control. </p>
       <simpletable id="kh157161">
          <strow>
             <stentry>
