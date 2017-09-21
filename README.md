@@ -81,11 +81,10 @@ make install
 # Bring in greenplum environment into your running shell
 source /usr/local/gpdb/greenplum_path.sh
 
-# Start demo cluster (gpdemo-env.sh is created which contain
-# __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
-cd gpAux/gpdemo
+# Start demo cluster
 make create-demo-cluster
-source gpdemo-env.sh
+# (gpdemo-env.sh contains __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
+source gpAux/gpdemo/gpdemo-env.sh
 ```
 
 Compilation can be sped up with parallelization. Instead of `make`, consider:
