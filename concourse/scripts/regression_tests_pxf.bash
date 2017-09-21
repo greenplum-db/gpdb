@@ -4,8 +4,9 @@ set -exo pipefail
 
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/common.bash"
+PXF_HOME="/usr/local/greenplum-db-devel/pxf"
 
-function gen_env(){
+function run_regression_test() {
 	cat > /home/gpadmin/run_regression_test.sh <<-EOF
 	set -exo pipefail
 
@@ -39,10 +40,39 @@ function gen_env(){
 	chown -R gpadmin:gpadmin $(pwd)
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_test.sh
 	chmod a+x /home/gpadmin/run_regression_test.sh
+
+	su gpadmin -c "bash /home/gpadmin/run_regression_test.sh $(pwd)"
 }
 
-function run_regression_test() {
-	su gpadmin -c "bash /home/gpadmin/run_regression_test.sh $(pwd)"
+function run_pxf_automation() {
+	export GPHD_ROOT=$1
+	pushd ${GPHD_ROOT} > /dev/null
+		mkdir -p pxf && cd pxf
+		ln -s ${PXF_HOME}/conf conf
+		for X in ${PXF_HOME}/lib/pxf-*-[0-9]*.jar; do \
+			ln -s ${X} $(echo ${X} | sed -e 's/-[a-zA-Z0-9.]*.jar/.jar/'); \
+		done
+	popd > /dev/null
+
+	cat > /home/gpadmin/run_pxf_automation_test.sh <<-EOF
+	set -exo pipefail
+
+	source /opt/gcc_env.sh
+	source /usr/local/greenplum-db-devel/greenplum_path.sh
+	source \${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
+
+	export PG_MODE=GPDB
+	export GPHD_ROOT=\${1}/singlecluster
+
+	cd \${1}/pxf_automation_src
+	make TEST=HdfsSmokeTest
+
+	exit 0
+	EOF
+
+	chown gpadmin:gpadmin /home/gpadmin/run_pxf_automation_test.sh
+	chmod a+x /home/gpadmin/run_pxf_automation_test.sh
+	su gpadmin -c "bash /home/gpadmin/run_pxf_automation_test.sh $(pwd)"
 }
 
 function setup_gpadmin_user() {
@@ -69,8 +99,7 @@ function setup_singlecluster() {
 
 function start_pxf() {
 	local hdfsrepo=$1
-	local pxfhome="/usr/local/greenplum-db-devel/pxf"
-	pushd ${pxfhome} > /dev/null
+	pushd ${PXF_HOME} > /dev/null
 	./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop
 	./bin/pxf start
 	popd > /dev/null
@@ -92,11 +121,11 @@ function _main() {
 	time install_gpdb
 	time setup_gpadmin_user
 	time make_cluster
-	time gen_env
 
 	time setup_singlecluster
 	time start_pxf $(pwd)/singlecluster
 	time run_regression_test
+	time run_pxf_automation $(pwd)/singlecluster
 }
 
 _main "$@"

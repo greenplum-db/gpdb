@@ -157,6 +157,13 @@ resources:
     private_key: {{pxf-git-key}}
     uri: {{pxf-git-remote}}
 
+- name: pxf_automation_src
+  type: git
+  source:
+    branch: {{pxf_automation-git-branch}}
+    private_key: {{pxf-git-key}}
+    uri: {{pxf_automation-git-remote}}
+
 - name: centos-gpdb-dev-6
   type: docker-image
   source:
@@ -856,6 +863,8 @@ jobs:
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: singlecluster
+      trigger: true
+    - get: pxf_automation_src
       trigger: true
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
