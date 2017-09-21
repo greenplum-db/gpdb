@@ -223,7 +223,8 @@ AC_SUBST(enable_gpfdist)
 # pxf
 #
 PGAC_ARG_BOOL(enable, pxf, no,
-             [  --enable-pxf            build with pxf])
+             [  --enable-pxf            build with pxf],
+			 [AC_DEFINE([with_libcurl], "yes")])
 AC_SUBST(enable_pxf)
 
 #

@@ -3541,7 +3541,8 @@ if test "${enable_pxf+set}" = set; then :
   enableval=$enable_pxf;
   case $enableval in
     yes)
-      :
+      $as_echo "#define with_libcurl \"yes\"" >>confdefs.h
+
       ;;
     no)
       :
