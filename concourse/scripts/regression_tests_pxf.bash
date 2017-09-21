@@ -16,12 +16,6 @@ function run_regression_test() {
 	cd "\${1}/gpdb_src/gpAux"
 	source gpdemo/gpdemo-env.sh
 
-	if [ "$overwrite_pxf" = "true" ]
-	then
-		cd "\${1}/gpdb_src/gpAux/extensions/pxf"
-		make install
-	fi
-
 	cd "\${1}/gpdb_src/gpAux/extensions/pxf"
 	make installcheck USE_PGXS=1
 
@@ -62,10 +56,12 @@ function run_pxf_automation() {
 	export PG_MODE=GPDB
 	export GPHD_ROOT=\${1}/singlecluster
 
-    cp -r /usr/lib64/python2.6/site-packages/psi $GPHOME/lib/python
+	# Copy PSI package from system python to GPDB as automation test requires it
+	psi_dir=\$(find /usr/lib64 -name psi | sort -r | head -1)
+	cp -r \${psi_dir} $GPHOME/lib/python
 	psql -d template1 -c "create extension pxf"
 	cd \${1}/pxf_automation_src
-	make TEST=HdfsSmokeTest
+	make GROUP=gpdb
 
 	exit 0
 	EOF
