@@ -37,7 +37,6 @@ function run_regression_test() {
 	exit 0
 	EOF
 
-	chown -R gpadmin:gpadmin $(pwd)
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_test.sh
 	chmod a+x /home/gpadmin/run_regression_test.sh
 
@@ -125,6 +124,7 @@ function _main() {
 
 	time setup_singlecluster
 	time start_pxf $(pwd)/singlecluster
+	chown -R gpadmin:gpadmin $(pwd)
 	time run_pxf_automation $(pwd)/singlecluster
 	time run_regression_test
 }
