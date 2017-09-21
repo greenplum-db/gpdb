@@ -223,7 +223,8 @@ AC_SUBST(enable_gpfdist)
 # pxf
 #
 PGAC_ARG_BOOL(enable, pxf, no,
-             [  --enable-pxf            build with pxf])
+             [  --enable-pxf            build with pxf],
+			 [AC_DEFINE([with_libcurl], "yes")])
 AC_SUBST(enable_pxf)
 
 #
@@ -1031,6 +1032,10 @@ AC_SUBST(with_rt)
 PGAC_ARG_BOOL(with, libcurl, yes,
               [  --without-libcurl       do not use libcurl])
 AC_SUBST(with_libcurl)
+
+if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
+  AC_MSG_ERROR([libcurl is required by PXF])
+fi
 
 #
 # libapr. Used for gpfdist and gpperfmon
