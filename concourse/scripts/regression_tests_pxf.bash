@@ -125,8 +125,8 @@ function _main() {
 
 	time setup_singlecluster
 	time start_pxf $(pwd)/singlecluster
-	time run_regression_test
 	time run_pxf_automation $(pwd)/singlecluster
+	time run_regression_test
 }
 
 _main "$@"
