@@ -3252,6 +3252,18 @@ class GpTransfer(object):
             logger.warning('Found no tables to exclude from transfer table list')
             sys.exit(0)
 
+        if self._options.validator == 'sha256':
+            cmdStr = 'test -e `pg_config  --pkglibdir`/pgcrypto.so'
+            cmd = Command('test pgcrypto on source', cmdStr, LOCAL, self._options.source_host)
+            cmd.run()
+            if cmd.get_results().rc != 0:
+                raise Exception('Source system must have pgcrypto installed when using sha256 validator')
+
+            cmd = Command('test pgcrypto on destination', cmdStr, LOCAL, self._options.dest_host)
+            cmd.run()
+            if cmd.get_results().rc != 0:
+                raise Exception('Destination system must have pgcrypto installed when using sha256 validator')
+
     def _final_count_validation(self):
         logger.info('Running final table row count validation on destination tables...')
 
