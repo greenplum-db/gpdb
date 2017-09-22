@@ -3556,7 +3556,7 @@ if test "${enable_pxf+set}" = set; then :
   esac
 
 else
-  enable_pxf=no
+  enable_pxf=yes
 
 fi
 
