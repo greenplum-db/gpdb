@@ -47,26 +47,54 @@ class BackupUtilsTestCase(GpTestCase):
         output = self.context.generate_filename("dump", dbid=dbid)
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_content_master_new_format(self):
-        expected_output = '/data/master/db_dumps/20160101/gp_dump_-1_*_20160101010101.gz'
+    def test_generate_filename_content_master_new_format_no_standby(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_-1_(1)_20160101010101.gz'
         output = self.context.generate_filename("dump", content=-1)
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_content_segment_new_format(self):
+    def test_generate_filename_content_segment_new_format_no_mirror(self):
         content = 1
-        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_*_20160101010101.gz'
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_(3)_20160101010101.gz'
+        del self.context.content_map[5]
         output = self.context.generate_filename("dump", content=content)
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_content_master_old_format(self):
-        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_[1]_20160101010101.gz'
+    def test_generate_filename_content_master_new_format_with_standby(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_-1_(1|10)_20160101010101.gz'
+        self.context.content_map[10] = -1
+        output = self.context.generate_filename("dump", content=-1)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_segment_new_format_with_mirror(self):
+        content = 1
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_(3|5)_20160101010101.gz'
+        output = self.context.generate_filename("dump", content=content)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_master_old_format_no_standby(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_(1)_20160101010101.gz'
         self.context.use_old_filename_format = True
         output = self.context.generate_filename("dump", content=-1)
         self.assertEquals(output, expected_output)
 
-    def test_generate_filename_content_segment_old_format(self):
+    def test_generate_filename_content_segment_old_format_no_mirror(self):
         content = 1
-        expected_output = '/data/master/db_dumps/20160101/gp_dump_0_[3|5]_20160101010101.gz'
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_0_(3)_20160101010101.gz'
+        self.context.use_old_filename_format = True
+        del self.context.content_map[5]
+        output = self.context.generate_filename("dump", content=content)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_master_old_format_with_standby(self):
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_1_(1|10)_20160101010101.gz'
+        self.context.use_old_filename_format = True
+        self.context.content_map[10] = -1
+        output = self.context.generate_filename("dump", content=-1)
+        self.assertEquals(output, expected_output)
+
+    def test_generate_filename_content_segment_old_format_with_mirror(self):
+        content = 1
+        expected_output = '/data/master/db_dumps/20160101/gp_dump_0_(3|5)_20160101010101.gz'
         self.context.use_old_filename_format = True
         output = self.context.generate_filename("dump", content=content)
         self.assertEquals(output, expected_output)
@@ -211,8 +239,15 @@ class BackupUtilsTestCase(GpTestCase):
     def test_is_timestamp_in_old_format_wrong_path(self, mock1, mock2, mock3):
         self.assertTrue(self.context.is_timestamp_in_old_format())
 
+    @patch('glob.glob', return_value=['/data/master/db_dumps/20160101/gp_dump_1_1_20160101010101.gz'])
+    def test_get_filename_for_content_old_format_master_exists(self, mock1):
+        self.context.use_old_filename_format=True
+        filename = get_filename_for_content(self.context, "metadata", -1)
+        self.assertEquals(filename, '/data/master/db_dumps/20160101/gp_dump_1_1_20160101010101.gz')
+
     @patch('glob.glob', return_value=['/data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz'])
-    def test_get_filename_for_content_master_exists(self, mock1):
+    def test_get_filename_for_content_new_format_master_exists(self, mock1):
+        self.context.use_old_filename_format=False
         filename = get_filename_for_content(self.context, "metadata", -1)
         self.assertEquals(filename, '/data/master/db_dumps/20160101/gp_dump_-1_1_20160101010101.gz')
 
