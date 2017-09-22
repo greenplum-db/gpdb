@@ -4,14 +4,15 @@ set -exo pipefail
 
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/common.bash"
-PXF_HOME="/usr/local/greenplum-db-devel/pxf"
+GPHOME="/usr/local/greenplum-db-devel"
+PXF_HOME="${GPHOME}/pxf"
 
 function run_regression_test() {
 	cat > /home/gpadmin/run_regression_test.sh <<-EOF
 	set -exo pipefail
 
 	source /opt/gcc_env.sh
-	source /usr/local/greenplum-db-devel/greenplum_path.sh
+	source ${GPHOME}/greenplum_path.sh
 
 	cd "\${1}/gpdb_src/gpAux"
 	source gpdemo/gpdemo-env.sh
@@ -50,7 +51,7 @@ function run_pxf_automation() {
 	cat > /home/gpadmin/run_pxf_automation_test.sh <<-EOF
 	set -exo pipefail
 
-	source /usr/local/greenplum-db-devel/greenplum_path.sh
+	source ${GPHOME}/greenplum_path.sh
 	source \${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 
 	export PG_MODE=GPDB
@@ -58,8 +59,8 @@ function run_pxf_automation() {
 
 	# Copy PSI package from system python to GPDB as automation test requires it
 	psi_dir=\$(find /usr/lib64 -name psi | sort -r | head -1)
-	cp -r \${psi_dir} $GPHOME/lib/python
-	psql -d template1 -c "create extension pxf"
+	cp -r \${psi_dir} ${GPHOME}/lib/python
+	psql -d template1 -c "CREATE EXTENSION PXF"
 	cd \${1}/pxf_automation_src
 	make GROUP=gpdb
 
