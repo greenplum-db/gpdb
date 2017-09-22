@@ -50,7 +50,6 @@ static void UpdateFileSegInfo_internal(Relation parentrel,
 						   int64 eof,
 						   int64 eof_uncompressed,
 						   int64 tuples_added,
-/* FIXME: diagnostics: int64 or uint64 */
 						   int64 varblocks_added,
 						   int64 modcount_added,
 						   FileSegInfoState newState);
@@ -645,9 +644,7 @@ UpdateFileSegInfo(Relation parentrel,
 				  int segno,
 				  int64 eof,
 				  int64 eof_uncompressed,
-/* FIXME: diagnostics: int64 or uint64 */
 				  int64 tuples_added,
-/* FIXME: diagnostics: int64 or uint64 */
 				  int64 varblocks_added,
 /* FIXME: diagnostics: int64 or uint64 */
 				  int64 modcount_added,
@@ -682,9 +679,7 @@ UpdateFileSegInfo_internal(Relation parentrel,
 						   int segno,
 						   int64 eof,
 						   int64 eof_uncompressed,
-/* FIXME: diagnostics: int64 or uint64 */
 						   int64 tuples_added,
-/* FIXME: diagnostics: int64 or uint64 */
 						   int64 varblocks_added,
 /* FIXME: diagnostics: int64 or uint64 */
 						   int64 modcount_added,
