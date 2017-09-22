@@ -675,8 +675,9 @@ jobs:
   serial: true
   plan:
   - aggregate:
-    - get: gpdb_src
+    - get: nightly-trigger
       trigger: true
+    - get: gpdb_src
     - get: gpaddon_src
     - get: centos-gpdb-dev-6
   - task: compile_gpdb_aix7_remote
