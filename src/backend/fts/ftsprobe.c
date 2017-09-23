@@ -48,7 +48,7 @@
  */
 
 #ifdef USE_SEGWALREP
-#define PROBE_RESPONSE_LEN  (4)         /* size of segment response message */
+#define PROBE_RESPONSE_LEN  (sizeof(ProbeResponse) + sizeof(PacketLen))         /* size of segment response message */
 #else
 #define PROBE_RESPONSE_LEN  (20)         /* size of segment response message */
 #endif
@@ -78,6 +78,9 @@ typedef struct ProbeConnectionInfo
 	char role;                           /* primary ('p'), mirror ('m') */
 	char mode;                           /* sync ('s'), resync ('r'), change-tracking ('c') */
 	GpMonotonicTime startTime;           /* probe start timestamp */
+#ifdef USE_SEGWALREP
+	probe_result *result;
+#endif
 	char segmentStatus;                  /* probed segment status */
 	int16 probe_errno;                   /* saved errno from the latest system call */
 	char errmsg[PROBE_ERR_MSG_LEN];      /* message returned by strerror() */
@@ -89,7 +92,6 @@ typedef struct ProbeMsg
 	uint32 packetlen;
 	PrimaryMirrorTransitionPacket payload;
 } ProbeMsg;
-
 
 /*
  * STATIC VARIABLES
@@ -119,7 +121,6 @@ static bool probePollIn(ProbeConnectionInfo *probeInfo);
 static bool probeReceive(ProbeConnectionInfo *probeInfo);
 static bool probeProcessResponse(ProbeConnectionInfo *probeInfo);
 static bool probeTimeout(ProbeConnectionInfo *probeInfo, const char* calledFrom);
-
 
 /*
  * strerror() is not threadsafe.  Therefore, prober threads must use
@@ -234,24 +235,8 @@ FtsProbeSegments(CdbComponentDatabases *dbs, uint8 *probeRes)
 	}
 }
 
-/*
- * This is called from several different threads: ONLY USE THREADSAFE FUNCTIONS INSIDE.
- */
-static char
-probeSegment(CdbComponentDatabaseInfo *dbInfo)
+static char probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo probeInfo)
 {
-	Assert(dbInfo != NULL);
-
-	/* setup probe descriptor */
-	ProbeConnectionInfo probeInfo;
-	memset(&probeInfo, 0, sizeof(ProbeConnectionInfo));
-	probeInfo.segmentId = dbInfo->segindex;
-	probeInfo.dbId = dbInfo->dbid;
-	probeInfo.role = dbInfo->role;
-	probeInfo.mode = dbInfo->mode;
-
-	probeInfo.segmentStatus = PROBE_DEAD;
-
 	/*
 	 * probe segment: open socket -> connect -> send probe msg -> receive response;
 	 * on any error the connection is shut down, the socket is closed
@@ -287,7 +272,9 @@ probeSegment(CdbComponentDatabaseInfo *dbInfo)
 	if (!FtsIsActive())
 	{
 		/* the returned value will be ignored */
+#ifndef USE_SEGWALREP
 		probeInfo.segmentStatus = PROBE_ALIVE;
+#endif
 	}
 
 	if (retryCnt == gp_fts_probe_retries)
@@ -301,9 +288,141 @@ probeSegment(CdbComponentDatabaseInfo *dbInfo)
 
 	if (probeInfo.conn)
 		PQfinish(probeInfo.conn);
+
+#ifndef USE_SEGWALREP
 	return probeInfo.segmentStatus;
+#endif
 }
 
+/*
+ * This is called from several different threads: ONLY USE THREADSAFE FUNCTIONS INSIDE.
+ */
+
+static char probeSegment(CdbComponentDatabaseInfo *dbInfo)
+{
+	Assert(dbInfo != NULL);
+
+	/* setup probe descriptor */
+	ProbeConnectionInfo probeInfo;
+	memset(&probeInfo, 0, sizeof(ProbeConnectionInfo));
+	probeInfo.segmentId = dbInfo->segindex;
+	probeInfo.dbId = dbInfo->dbid;
+	probeInfo.role = dbInfo->role;
+	probeInfo.mode = dbInfo->mode;
+
+	probeInfo.segmentStatus = PROBE_DEAD;
+
+	return probeSegmentHelper(dbInfo, probeInfo);
+}
+
+#ifdef USE_SEGWALREP
+static void
+probeWalRepSegment(probe_response_per_segment *response)
+{
+	Assert(response);
+	CdbComponentDatabaseInfo *segment_db_info = response->segment_db_info;
+	Assert(segment_db_info);
+
+	if(!FtsIsSegmentAlive(response->segment_db_info))
+	{
+		response->result.isPrimaryAlive = false;
+		response->result.isMirrorAlive = false;
+
+		return;
+	}
+
+	/* setup probe descriptor */
+	ProbeConnectionInfo probeInfo;
+	memset(&probeInfo, 0, sizeof(ProbeConnectionInfo));
+	probeInfo.segmentId = segment_db_info->segindex;
+	probeInfo.dbId = segment_db_info->dbid;
+	probeInfo.role = segment_db_info->role;
+	probeInfo.mode = segment_db_info->mode;
+	probeInfo.result = &(response->result);
+
+	probeSegmentHelper(segment_db_info, probeInfo);
+}
+
+static void *
+probeWalRepSegmentFromThread(void *arg)
+{
+	probe_context *context = (probe_context *)arg;
+
+	Assert(context);
+
+	int number_of_probed_segments = 0;
+
+	while(number_of_probed_segments < context->count)
+	{
+		/*
+		 * Look for the unprocessed context
+		 */
+		int response_index = number_of_probed_segments;
+
+		pthread_mutex_lock(&worker_thread_mutex);
+		while(response_index < context->count)
+		{
+			if (!context->responses[response_index].isScheduled)
+			{
+				context->responses[response_index].isScheduled = true;
+				break;
+			}
+			number_of_probed_segments++;
+			response_index++;
+		}
+		pthread_mutex_unlock(&worker_thread_mutex);
+
+		/*
+		 * If probed all the segments, we are done.
+		 */
+		if (response_index == context->count)
+			break;
+
+		/*
+		 * If FTS is shutdown, abort.
+		 */
+		if (!FtsIsActive())
+			break;
+
+		/* now let's probe the primary. */
+		probe_response_per_segment *response = &context->responses[response_index];
+		Assert(SEGMENT_IS_ACTIVE_PRIMARY(response->segment_db_info));
+		probeWalRepSegment(response);
+	}
+
+	return NULL;
+}
+
+void
+FtsWalRepProbeSegments(probe_context *context)
+{
+	int workers = gp_fts_probe_threadcount;
+	pthread_t *threads = NULL;
+	Assert(context);
+
+	threads = (pthread_t *)palloc(workers * sizeof(pthread_t));
+
+	for(int i = 0; i < workers; i++)
+	{
+		int ret = gp_pthread_create(&threads[i], probeWalRepSegmentFromThread, context, "FtsWalRepProbeSegments");
+
+		if (ret)
+		{
+			ereport(ERROR, (errmsg("FTS: failed to create probing thread")));
+		}
+	}
+
+	for(int i = 0; i < workers; i++)
+	{
+		int ret = pthread_join(threads[i], NULL);
+
+		if (ret)
+		{
+			ereport(ERROR, (errmsg("FTS: failed to join probing thread")));
+		}
+	}
+}
+#endif
 
 /*
  * Establish async libpq connection to a segment
@@ -490,7 +609,7 @@ static bool
 probeProcessResponse(ProbeConnectionInfo *probeInfo)
 {
 	int32 responseLen;
-	pqGetInt(&responseLen, 4, probeInfo->conn);
+	pqGetInt(&responseLen, sizeof(PacketLen), probeInfo->conn);
 	if (responseLen != PROBE_RESPONSE_LEN)
 	{
 		write_log("FTS: invalid response length %d from segment "
@@ -498,17 +617,19 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 				  probeInfo->dbId, probeInfo->conn->errorMessage.data);
 		return false;
 	}
+#ifdef USE_SEGWALREP
+	ProbeResponse response;
+	pqGetnchar((char *)&response, sizeof(ProbeResponse), probeInfo->conn);
+	probeInfo->result->isPrimaryAlive = true;
+	probeInfo->result->isMirrorAlive = response.IsMirrorUp;
+	write_log("FTS: segment (content=%d, dbid=%d, role=%c) reported IsMirrorUp %d to the prober.",
+			  probeInfo->segmentId, probeInfo->dbId, probeInfo->role, response.IsMirrorUp);
+#else
 	/* segment responded to probe, mark it as alive */
 	probeInfo->segmentStatus = PROBE_ALIVE;
 	write_log("FTS: segment (content=%d, dbid=%d) reported segmentstatus %x to the prober.",
 			  probeInfo->segmentId, probeInfo->dbId, probeInfo->segmentStatus);
-#ifdef USE_SEGWALREP
-	/*
-	 * Walrep primary segments return empty response to FTS probes, which means
-	 * a libpq message with length header and no body.
-	 */
-	return true;
-#endif
+
 	int32 role;
 	int32 state;
 	int32 mode;
@@ -578,6 +699,7 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 		write_log("FTS: segment (content=%d, dbid=%d) reported fault %s segment status %x to the prober.",
 				  probeInfo->segmentId, probeInfo->dbId, getFaultTypeLabel(fault), probeInfo->segmentStatus);
 	}
+#endif
 	return true;
 }
 
@@ -697,6 +819,5 @@ probeSegmentFromThread(void *arg)
 
 	return NULL;
 }
-
 
 /* EOF */

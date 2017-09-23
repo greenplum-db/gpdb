@@ -20,6 +20,10 @@ override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
 OBJS = basebackup.o gp_libpqwalreceiver.o repl_gram.o walreceiver.o \
 	   walreceiverfuncs.o walsender.o syncrep.o
 
+ifeq ($(enable_segwalrep), yes)
+OBJS += gp_replication.o
+endif
+
 include $(top_srcdir)/src/backend/common.mk
 
 # repl_scanner is compiled as part of repl_gram

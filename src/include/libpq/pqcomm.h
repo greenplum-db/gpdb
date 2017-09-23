@@ -220,7 +220,7 @@ typedef struct CancelRequestPacket
 typedef struct PrimaryMirrorTransitionPacket
 {
 	MsgType protocolCode;
-	uint32 dataLength;
+	PacketLen dataLength;
 } PrimaryMirrorTransitionPacket;
 
 /* the number of times trying to acquire the send mutex for the front

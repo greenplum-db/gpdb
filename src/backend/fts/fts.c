@@ -79,8 +79,10 @@
  * STATIC VARIABLES
  */
 
+#ifndef USE_SEGWALREP
 /* one byte of status for each segment */
 static uint8 scan_status[MAX_NUM_OF_SEGMENTS];
+#endif
 
 static bool am_ftsprobe = false;
 
@@ -420,10 +422,191 @@ readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
 	}
 }
 
+#ifdef USE_SEGWALREP
+static void
+probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive)
+{
+	/*
+	 * Insert new tuple into gp_configuration_history catalog.
+	 */
+	{
+		Relation histrel;
+		HeapTuple histtuple;
+		Datum histvals[Natts_gp_configuration_history];
+		bool histnulls[Natts_gp_configuration_history] = { false };
+		char desc[SQL_CMD_BUF_SIZE];
+
+		histrel = heap_open(GpConfigHistoryRelationId,
+							RowExclusiveLock);
+
+		histvals[Anum_gp_configuration_history_time-1] =
+				TimestampTzGetDatum(GetCurrentTimestamp());
+		histvals[Anum_gp_configuration_history_dbid-1] =
+				Int16GetDatum(dbid);
+		snprintf(desc, sizeof(desc),
+				"FTS: update status for dbid %d with contentid %d to %c",
+				dbid, segindex,
+				IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
+					GP_SEGMENT_CONFIGURATION_STATUS_DOWN);
+		histvals[Anum_gp_configuration_history_desc-1] =
+				CStringGetTextDatum(desc);
+		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+		simple_heap_insert(histrel, histtuple);
+		CatalogUpdateIndexes(histrel, histtuple);
+
+		heap_close(histrel, RowExclusiveLock);
+	}
+
+	/*
+	 * Find and update gp_segment_configuration tuple.
+	 */
+	{
+		Relation configrel;
+
+		HeapTuple configtuple;
+		HeapTuple newtuple;
+
+		Datum configvals[Natts_gp_segment_configuration];
+		bool confignulls[Natts_gp_segment_configuration] = { false };
+		bool repls[Natts_gp_segment_configuration] = { false };
+
+		ScanKeyData scankey;
+		SysScanDesc sscan;
+
+		configrel = heap_open(GpSegmentConfigRelationId,
+							  RowExclusiveLock);
+
+		ScanKeyInit(&scankey,
+					Anum_gp_segment_configuration_dbid,
+					BTEqualStrategyNumber, F_INT2EQ,
+					Int16GetDatum(dbid));
+		sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
+								   true, SnapshotNow, 1, &scankey);
+
+		configtuple = systable_getnext(sscan);
+
+		if (!HeapTupleIsValid(configtuple))
+		{
+			elog(ERROR, "FTS cannot find dbid=%d in %s", dbid,
+				 RelationGetRelationName(configrel));
+		}
+
+		configvals[Anum_gp_segment_configuration_status-1] =
+			CharGetDatum(IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
+										GP_SEGMENT_CONFIGURATION_STATUS_DOWN);
+		repls[Anum_gp_segment_configuration_status-1] = true;
+
+		newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
+									 configvals, confignulls, repls);
+		simple_heap_update(configrel, &configtuple->t_self, newtuple);
+		CatalogUpdateIndexes(configrel, newtuple);
+
+		systable_endscan(sscan);
+		pfree(newtuple);
+
+		heap_close(configrel, RowExclusiveLock);
+	}
+}
+
+static bool
+probeWalRepPublishUpdate(probe_context *context)
+{
+	bool is_updated = false;
+
+	for (int response_index = 0; response_index < context->count; response_index ++)
+	{
+		probe_response_per_segment *response = &(context->responses[response_index]);
+
+		Assert(SEGMENT_IS_ACTIVE_PRIMARY(response->segment_db_info));
+
+		if (!FtsIsActive())
+		{
+			return false;
+		}
+
+		CdbComponentDatabaseInfo *primary = response->segment_db_info;
+		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(primary->segindex, primary->dbid);
+
+		bool IsPrimaryAlive = response->result.isPrimaryAlive;
+		bool IsMirrorAlive = response->result.isMirrorAlive;
+
+		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
+		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
+
+		if (UpdatePrimary || UpdateMirror)
+		{
+			/*
+			 * Commit/abort transaction below will destroy
+			 * CurrentResourceOwner.  We need it for catalog reads.
+			 */
+			ResourceOwner save = CurrentResourceOwner;
+			StartTransactionCommand();
+			GetTransactionSnapshot();
+
+			if (UpdatePrimary)
+				probeWalRepUpdateConfig(primary->dbid, primary->segindex, IsPrimaryAlive);
+
+			if (UpdateMirror)
+				probeWalRepUpdateConfig(mirror->dbid, mirror->segindex, IsMirrorAlive);
+
+			if (shutdown_requested)
+			{
+				elog(LOG, "Shutdown in progress, ignoring FTS prober updates.");
+				return is_updated;
+			}
+
+			is_updated = true;
+
+			CommitTransactionCommand();
+			CurrentResourceOwner = save;
+		}
+
+	}
+
+	return is_updated;
+}
+
+static void
+FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, probe_context *context)
+{
+	context->count = cdb_component_dbs->total_segments;
+	context->responses = (probe_response_per_segment *)palloc(context->count * sizeof(probe_response_per_segment));
+
+	int response_index = 0;
+
+	for(int segment_index = 0; segment_index < cdbs->total_segment_dbs; segment_index++)
+	{
+		CdbComponentDatabaseInfo *segment = &(cdb_component_dbs->segment_db_info[segment_index]);
+		probe_response_per_segment *response = &(context->responses[response_index]);
+
+		if (!SEGMENT_IS_ACTIVE_PRIMARY(segment))
+			continue;
+
+		/*
+		 * We initialize the probe_result.IsPrimaryAlive and
+		 * probe_result.IsMirrorAlive to current state, and that will prevent
+		 * changing of mirror status if the primary goes down.
+		 */
+		CdbComponentDatabaseInfo *primary = segment;
+		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(primary->segindex,
+															 primary->dbid);
+
+		response->result.isPrimaryAlive = SEGMENT_IS_ALIVE(primary);
+		response->result.isMirrorAlive = SEGMENT_IS_ALIVE(mirror);
+
+		response->segment_db_info = primary;
+		response->isScheduled = false;
+
+		Assert(response_index < context->count);
+		response_index ++;
+	}
+}
+#endif
+
 static
 void FtsLoop()
 {
-	bool	updated_bitmap, processing_fullscan;
+	bool	updated_probe_state, processing_fullscan;
 	MemoryContext probeContext = NULL, oldContext = NULL;
 	time_t elapsed,	probe_start_time;
 
@@ -502,6 +685,14 @@ void FtsLoop()
 		 */
 		oldContext = MemoryContextSwitchTo(probeContext);
 
+#ifdef USE_SEGWALREP
+		probe_context context;
+
+		FtsWalRepInitProbeContext(cdb_component_dbs, &context);
+		FtsWalRepProbeSegments(&context);
+
+		updated_probe_state = probeWalRepPublishUpdate(&context);
+#else
 		/* probe segments */
 		FtsProbeSegments(cdb_component_dbs, scan_status);
 
@@ -509,8 +700,8 @@ void FtsLoop()
 		 * Now we've completed the scan, update shared-memory. if we
 		 * change anything, we return true.
 		 */
-		updated_bitmap = probePublishUpdate(scan_status);
-
+		updated_probe_state = probePublishUpdate(scan_status);
+#endif
 
 		MemoryContextSwitchTo(oldContext);
 
@@ -536,7 +727,7 @@ void FtsLoop()
 		 * bump the version (this also serves as an acknowledgement to
 		 * a probe-request).
 		 */
-		if (updated_bitmap || processing_fullscan)
+		if (updated_probe_state || processing_fullscan)
 		{
 			ftsProbeInfo->fts_statusVersion = ftsProbeInfo->fts_statusVersion + 1;
 			rescan_requested = false;

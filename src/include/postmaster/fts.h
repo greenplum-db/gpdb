@@ -16,6 +16,35 @@
 #ifndef FTS_H
 #define FTS_H
 
+#include "cdb/cdbutil.h"
+
+#ifdef USE_SEGWALREP
+typedef struct
+{
+	int16 dbid;
+	bool isPrimaryAlive;
+	bool isMirrorAlive;
+} probe_result;
+
+typedef struct
+{
+	CdbComponentDatabaseInfo *segment_db_info;
+	probe_result result;
+	bool isScheduled;
+} probe_response_per_segment;
+
+typedef struct
+{
+	int count;
+	probe_response_per_segment *responses;
+} probe_context;
+
+typedef struct ProbeResponse
+{
+	bool IsMirrorUp;
+} ProbeResponse;
+
+#endif
 
 /*
  * ENUMS
@@ -90,7 +119,6 @@ typedef struct
 	uint32 stateMirror;
 } FtsSegmentPairState;
 
-
 /*
  * FTS process interface
  */
@@ -100,6 +128,10 @@ extern int ftsprobe_start(void);
  * Interface for probing segments
  */
 extern void FtsProbeSegments(CdbComponentDatabases *dbs, uint8 *scan_status);
+
+#ifdef USE_SEGWALREP
+extern void FtsWalRepProbeSegments(probe_context *context);
+#endif
 
 /*
  * Interface for segment state checking
@@ -114,6 +146,12 @@ extern void FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries);
  */
 extern bool FtsIsActive(void);
 
+#ifdef USE_SEGWALREP
+/*
+ * Interface for WALREP specific checking
+ */
+extern void HandleFtsWalRepProbe(void);
+#endif
 
 /*
  * Interface for FireRep-specific segment state machine and transitions
