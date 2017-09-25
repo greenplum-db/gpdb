@@ -251,8 +251,15 @@ dblink_connect(PG_FUNCTION_ARGS)
 		connname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 	}
 	else if (PG_NARGS() == 1)
+	{
 		connstr = text_to_cstring(PG_GETARG_TEXT_PP(0));
-
+	}
+	else
+	{
+		ereport(ERROR,
+			(errcode(ERRCODE_CONNECTION_EXCEPTION),
+			 errmsg("could not establish connection")));
+	}
 	if (connname)
 		rconn = (remoteConn *) MemoryContextAlloc(TopMemoryContext,
 												  sizeof(remoteConn));
