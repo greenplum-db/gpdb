@@ -262,68 +262,23 @@ class GpDB:
         """
         tup = s.strip().split('|')
 
-        # Old format: 8 fields
-        #    Todo: remove the need for this, or rework it to be cleaner
-        if len(tup) == 8:
-            # This describes the gp_configuration catalog (pre 3.4)
-            content         = int(tup[0])
-            definedprimary  = tup[1]
-            dbid            = int(tup[2])
-            isprimary       = tup[3]
-            valid           = tup[4]
-            address         = tup[5]
-            port            = int(tup[6])
-            datadir         = tup[7]
-
-            # Calculate new fields from old ones
-            #
-            # Note: this should be kept in sync with the code in
-            # GpArray.InitFromCatalog() code for initializing old catalog
-            # formats.
-            preferred_role  = ROLE_PRIMARY if definedprimary else ROLE_MIRROR
-            role            = ROLE_PRIMARY if isprimary else ROLE_MIRROR
-            hostname        = None
-            mode            = MODE_SYNCHRONIZED       # ???
-            status          = STATUS_UP if valid else STATUS_DOWN
-            replicationPort = None
-            filespaces      = ""
-            catdirs         = ""
-
-        # Catalog 3.4 format: 12 fields
-        elif len(tup) == 12:
-            # This describes the gp_segment_configuration catalog (3.4)
-            dbid            = int(tup[0])
-            content         = int(tup[1])
-            role            = tup[2]
-            preferred_role  = tup[3]
-            mode            = tup[4]
-            status          = tup[5]
-            hostname        = tup[6]
-            address         = tup[7]
-            port            = int(tup[8])
-            replicationPort = tup[9]
-            datadir         = tup[10]  # from the pg_filespace_entry table
-            filespaces      = tup[11]
-            catdirs         = ""
-
-        # Catalog 4.0+: 13 fields
-        elif len(tup) == 13:
-            # This describes the gp_segment_configuration catalog (3.4+)
-            dbid            = int(tup[0])
-            content         = int(tup[1])
-            role            = tup[2]
-            preferred_role  = tup[3]
-            mode            = tup[4]
-            status          = tup[5]
-            hostname        = tup[6]
-            address         = tup[7]
-            port            = int(tup[8])
-            replicationPort = tup[9]
-            datadir         = tup[10]  # from the pg_filespace_entry table
-            filespaces      = tup[11]
-            catdirs         = tup[12]
-        else:
+        if len(tup) != 13:
             raise Exception("GpDB unknown input format: %s" % s)
+
+        # This describes the gp_segment_configuration catalog
+        dbid            = int(tup[0])
+        content         = int(tup[1])
+        role            = tup[2]
+        preferred_role  = tup[3]
+        mode            = tup[4]
+        status          = tup[5]
+        hostname        = tup[6]
+        address         = tup[7]
+        port            = int(tup[8])
+        replicationPort = tup[9]
+        datadir         = tup[10]  # from the pg_filespace_entry table
+        filespaces      = tup[11]
+        catdirs         = tup[12]
 
         # Initialize segment without filespace information
         gpdb = GpDB(content         = content,

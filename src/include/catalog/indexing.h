@@ -349,17 +349,6 @@ DECLARE_UNIQUE_INDEX(pg_exttable_reloid_index, 6041, on pg_exttable using btree(
 DECLARE_UNIQUE_INDEX(pg_window_fnoid_index, 5005, on pg_window using btree(winfnoid oid_ops));
 #define WindowWinfnoidIndexId	5005
 
-DECLARE_UNIQUE_INDEX(gp_configuration_content_definedprimary_index, 6101, on gp_configuration using btree(content int2_ops, definedprimary bool_ops));
-#define GpConfigurationContentDefinedprimaryIndexId	6101
-DECLARE_UNIQUE_INDEX(gp_configuration_dbid_index, 6102, on gp_configuration using btree(dbid int2_ops));
-#define GpConfigurationDbidIndexId	6102
-
-DECLARE_INDEX(gp_db_interfaces_dbid_index, 6108, on gp_db_interfaces using btree(dbid int2_ops));
-#define GpDbInterfacesDbidIndexId	6108
-
-DECLARE_UNIQUE_INDEX(gp_interfaces_interface_index, 6109, on gp_interfaces using btree(interfaceid int2_ops));
-#define GpInterfacesInterfaceidIndexId	6109
-
 DECLARE_INDEX(pg_filespace_entry_fs_index, 6090, on pg_filespace_entry using btree(fsefsoid oid_ops));
 #define FileSpaceEntryFsefsoidIndexId	6090
 DECLARE_UNIQUE_INDEX(pg_filespace_entry_fsdb_index, 6091, on pg_filespace_entry using btree(fsefsoid oid_ops, fsedbid int2_ops));

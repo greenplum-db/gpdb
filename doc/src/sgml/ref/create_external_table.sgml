@@ -177,7 +177,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE table_name
 	if your array has 4 primary segment instances per segment host, you may place 
 	4 external files on each segment host. Also, the host name used in the URI 
 	must match the segment host name as registered in the 
-	<literal>gp_configuration</literal> system catalog table.
+	<literal>gp_segment_configuration</literal> system catalog table.
   </para>
   
   <para>

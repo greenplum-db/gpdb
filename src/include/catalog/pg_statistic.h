@@ -246,8 +246,6 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  */
 #define STATISTIC_KIND_CORRELATION	3
 
-/* quoting pg_authid and gp_configuration: */
-
 /*
  * The CATALOG definition has to refer to the type of log_time as
  * "timestamptz" (lower case) so that bootstrap mode recognizes it.  But

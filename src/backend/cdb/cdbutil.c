@@ -28,7 +28,6 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
-#include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbmotion.h"
@@ -133,10 +132,9 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
 	{
 		/*
-		 * Grab the fields that we need from gp_configuration.  We do
-		 * this first, because until we read them, we don't know
-		 * whether this is an entry database row or a segment database
-		 * row.
+		 * Grab the fields that we need from gp_segment_configuration.  We do
+		 * this first, because until we read them, we don't know whether this
+		 * is an entry database row or a segment database row.
 		 */
 		CdbComponentDatabaseInfo *pRow;
 
@@ -595,28 +593,6 @@ CdbComponentDatabaseInfoCompare(const void *p1, const void *p2)
 }
 
 /*
- * We're going to sort interface-ids by priority.  So we need a little
- * struct, and a comparison function to hand-off to qsort().
- */
-struct priority_iface {
-	int priority;
-	int interface_id;
-};
-
-/*
- * iface_priority_compare() A compare function for interface-priority
- * structs.  for use with qsort.
- */
-static int
-iface_priority_compare(const void *p1, const void *p2)
-{
-	const struct priority_iface *obj1 = (struct priority_iface *) p1;
-	const struct priority_iface *obj2 = (struct priority_iface *) p2;
-
-	return (obj1->priority - obj2->priority);
-}
-
-/*
  * Maintain a cache of names.
  *
  * The keys are all NAMEDATALEN long.
@@ -835,150 +811,15 @@ getDnsAddress(char *hostname, int port, int elevel)
  * Given a component-db in the system, find the addresses at which it
  * can be reached, appropriately populate the argument-structure, and
  * maintain the ip-lookup-cache.
- *
- * We get all of the interface-ids, sort them in priority order, then
- * go get their details ... and then make sure they're cached properly.
  */
 static void
 getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 {
-	Relation	gp_db_interface_rel;
-	Relation	gp_interface_rel;
-	HeapTuple	tuple;
-	ScanKeyData	key;
-	SysScanDesc	dbscan, ifacescan;
-
-	int			j, i=0;
-	struct priority_iface *ifaces=NULL;
-	int			iface_count, iface_max=0;
-
-	Datum		attr;
-	bool		isNull;
-
-	int			dbid;
-	int			iface_id;
-	int			priority;
-
 	char		*name;
 
 	Assert(c != NULL);
-		
-	gp_db_interface_rel = heap_open(GpDbInterfacesRelationId, AccessShareLock);
 
-	/* CaQL UNDONE: no test coverage */
-	ScanKeyInit(&key, Anum_gp_db_interfaces_dbid,
-				BTEqualStrategyNumber, F_INT2EQ,
-				ObjectIdGetDatum(c->dbid));
-
-	dbscan = systable_beginscan(gp_db_interface_rel, GpDbInterfacesDbidIndexId,
-								true, SnapshotNow, 1, &key);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(dbscan)))
-	{
-		i++;
-		if (i > iface_max)
-		{
-			/* allocate 8-more slots */
-			if (ifaces == NULL)
-				ifaces = palloc((iface_max + 8) * sizeof(struct priority_iface));
-			else
-				ifaces = repalloc(ifaces, (iface_max + 8) * sizeof(struct priority_iface));
-
-			memset(ifaces + iface_max, 0, 8 * sizeof(struct priority_iface));
-			iface_max += 8;
-		}
-
-		/* dbid is for sanity-check on scan condition only */
-		attr = heap_getattr(tuple, Anum_gp_db_interfaces_dbid, gp_db_interface_rel->rd_att, &isNull);
-		Assert(!isNull);
-		dbid = DatumGetInt16(attr);
-		Assert(dbid == c->dbid);
-
-		attr = heap_getattr(tuple, Anum_gp_db_interfaces_interfaceid, gp_db_interface_rel->rd_att, &isNull);
-		Assert(!isNull);
-		iface_id = DatumGetInt16(attr);
-
-		attr = heap_getattr(tuple, Anum_gp_db_interfaces_priority, gp_db_interface_rel->rd_att, &isNull);
-		Assert(!isNull);
-		priority = DatumGetInt16(attr);
-
-		ifaces[i-1].priority = priority;
-		ifaces[i-1].interface_id = iface_id;
-	}
-	iface_count = i;
-
-	/* Finish up scan and close appendonly catalog. */
-	systable_endscan(dbscan);
-
-	heap_close(gp_db_interface_rel, AccessShareLock);
-
-	/* we now have the unsorted list, or an empty list. */
-	do
-	{
-		/* fallback to using hostname if our list is empty */
-		if (iface_count == 0)
-			break;
-
-		qsort(ifaces, iface_count, sizeof(struct priority_iface), iface_priority_compare);
-
-		/* we now have interfaces, sorted by priority. */
-
-		gp_interface_rel = heap_open(GpInterfacesRelationId, AccessShareLock);
-
-		j=0;
-		for (i=0; i < iface_count; i++)
-		{
-			int status=0;
-
-			/* CaQL UNDONE: no test coverage */
-			/* Start a new scan. */
-			ScanKeyInit(&key, Anum_gp_interfaces_interfaceid,
-						BTEqualStrategyNumber, F_INT2EQ,
-						ObjectIdGetDatum(ifaces[i].interface_id));
-
-			ifacescan = systable_beginscan(gp_interface_rel, GpInterfacesInterfaceidIndexId,
-										   true, SnapshotNow, 1, &key);
-
-			tuple = systable_getnext(ifacescan);
-
-			Assert(HeapTupleIsValid(tuple));
-
-			/* iface_id is for sanity-check on scan condition only */
-			attr = heap_getattr(tuple, Anum_gp_interfaces_interfaceid, gp_interface_rel->rd_att, &isNull);
-			Assert(!isNull);
-			iface_id = DatumGetInt16(attr);
-			Assert(iface_id == ifaces[i].interface_id); 
-
-			attr = heap_getattr(tuple, Anum_gp_interfaces_status, gp_interface_rel->rd_att, &isNull);
-			Assert(!isNull);
-			status = DatumGetInt16(attr);
-
-			/* if the status is "alive" use the interface. */
-			if (status == 1)
-			{
-				attr = heap_getattr(tuple, Anum_gp_interfaces_address, gp_interface_rel->rd_att, &isNull);
-				Assert(!isNull);
-				name = getDnsCachedAddress(DatumGetCString(attr), c->port, elevel);
-				if (name)
-					c->hostaddrs[j++] = pstrdup(name);
-			}
-
-			systable_endscan(ifacescan);
-		}
-
-		heap_close(gp_interface_rel, AccessShareLock);
-
-		/* fallback to using hostname if our list is empty */
-		if (j == 0)
-			break;
-
-		/* successfully retrieved at least one entry. */
-
-		return;
-	}
-	while (0);
-
-	/* fallback to using hostname */
+	/* Use hostname */
 	memset(c->hostaddrs, 0, COMPONENT_DBS_MAX_ADDRS * sizeof(char *));
 
 	/*

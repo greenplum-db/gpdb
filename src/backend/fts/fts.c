@@ -22,7 +22,6 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/gp_configuration.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_authid.h"
 #include "libpq/pqsignal.h"
@@ -53,6 +52,7 @@
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"
 
+#include "catalog/gp_configuration_history.h"
 #include "catalog/gp_segment_config.h"
 
 #include "storage/backendid.h"

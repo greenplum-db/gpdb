@@ -48,7 +48,7 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_authid.h pg_auth_members.h pg_shdepend.h pg_shdescription.h pg_resqueue.h pg_resgroup.h\
 	pg_ts_config.h pg_ts_config_map.h pg_ts_dict.h \
 	pg_ts_parser.h pg_ts_template.h pg_extension.h \
-	gp_configuration.h gp_id.h gp_policy.h gp_version.h \
+	gp_configuration_history.h gp_id.h gp_policy.h gp_version.h \
 	gp_segment_config.h \
 	pg_window.h \
 	pg_exttable.h pg_appendonly.h aoseg.h \

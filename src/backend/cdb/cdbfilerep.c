@@ -3281,19 +3281,10 @@ FileRep_GetRelationPath(
  *		  ----------------
  *
  *
- * START
- *		Postmaster forks FileRep process. Input (gp_configuration)
- *		parameters for FileRep process are stored in shared memory.
- *		Postmaster-backend process writes input parameters. FileRep
- *		and Postmaster processes read them (never write).
- *
- *		INPUT parameters (gp_configuration parameters)
- *				Replica Role
- *				Replica State
- *				Primary IP address
- *				Mirror IP address
- *				Primary Port
- *				Mirror Port
+ * START Postmaster forks FileRep process. Input parameters for FileRep
+ *		process are stored in shared memory.  Postmaster-backend process
+ *		writes input parameters. FileRep and Postmaster processes read them
+ *		(never write).
  *
  *		After FileRep process completes Initialization phase it
  *      signal SIGUSR1 (reason PMSIGNAL_RECOVERY_CONSISTENT)
@@ -3304,7 +3295,6 @@ FileRep_GetRelationPath(
  *			*) initialize and populate shared memory for FileSpaces
  *			*) initialize shared memory for FileRep mirror messages
  *			*) initialize shared memory for FileRep Ack mirror messages
- *			*) initialize and populate shared memory for gp_configuration
  *			*) FS_OBJECTS is TBD
  *			*) dedicate shared memory for maintaining FileRepState_e
  *			   and postmaster PID.

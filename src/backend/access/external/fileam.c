@@ -178,7 +178,7 @@ external_beginscan(Relation relation, Index scanrelid, uint32 scancounter,
 
 		/*
 		 * Segindex may be -1, for the following case. A slice is executed on
-		 * entry db, (for example, gp_configuration), then external table is
+		 * entry db, (for example, gp_segment_configuration), then external table is
 		 * executed on another slice. Entry db slice will still call
 		 * ExecInitExternalScan (probably we should fix this?), then segindex
 		 * = -1 will bomb out here.

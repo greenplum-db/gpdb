@@ -6,7 +6,7 @@
 Greenplum hostcache file facilities.
 
 This Module contains some helper functions for mapping network
-interface names used in gp_configuration to a collapsed set
+interface names used in gp_segment_configuration to a collapsed set
 of hostnames.
 
 example:  sdw1-1, sdw1-2, sdw1-3, and sdw1-4 are all located

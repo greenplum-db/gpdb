@@ -54,17 +54,6 @@ def getPostmasterPID(hostname, datadir):
     except:
         return -1
 
-def get_max_dbid(name,conn):
-    try:
-        curs=conn.cursor()
-        curs.execute("SELECT max(dbid) FROM gp_configuration")
-        rows = curs.fetchall()
-        if len(rows) != 1:
-            raise Exception, 'Failed to retrieve maximum dbid from catalog'
-        return rows[0][0]
-    finally:
-        curs.close()
-
 #-----------------------------------------------
 class PySync(Command):
     def __init__(self,name,srcDir,dstHost,dstDir,ctxt=LOCAL,remoteHost=None, options=None):

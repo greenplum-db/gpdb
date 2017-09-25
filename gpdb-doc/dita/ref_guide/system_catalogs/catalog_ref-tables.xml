@@ -11,9 +11,6 @@
       <li id="eu150554">
         <xref href="./gp_configuration_history.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150176">
-        <xref href="gp_db_interfaces.xml" type="topic" format="dita"/>
-      </li>
       <li id="eu150300">
         <xref href="./gp_distribution_policy.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -28,9 +25,6 @@
       </li>
       <li id="eu150476">
         <xref href="./gp_id.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="eu150180">
-        <xref href="./gp_interfaces.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="eu152757">gp_master_mirroring (Deprecated. See <xref
         href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>.)</li>
