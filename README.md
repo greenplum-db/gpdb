@@ -41,15 +41,10 @@ Follow [these linux steps](README.linux.md) for getting your system ready for GP
 ### Build the optimizer
 #### Automatically with Conan dependency manager
 
-**Note**: Conan may fail to install xerces on a fresh install of Mac OS. If you
-are using a Mac, we recommend the manual build steps in the next section.
-
-1. cd gpdb/depends
-2. conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
-3. conan install --build
-   * This command will fetch the ORCA and xerces artifacts from bintray repository, build and install them.
-   * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory.
-     In case, the files should be copied elsewhere, please change the location.
+    cd depends
+    conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
+    conan install --build
+    cd ..
 
 #### Manually
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
