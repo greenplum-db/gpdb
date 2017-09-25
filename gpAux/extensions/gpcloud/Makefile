@@ -54,7 +54,7 @@ format:
 		&& clang-format -style="{BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100, AllowShortFunctionsOnASingleLine: None}" -i src/*.cpp bin/gpcheckcloud/*.cpp test/*.cpp include/*.h \
 		|| echo clang-format 5.0.0 is not found.
 
-cleanall:
+clean:
 	@-$(MAKE) clean # incase PGXS not included
 	@-$(MAKE) -C bin/gpcheckcloud clean
 	@$(MAKE) -C test clean
@@ -62,4 +62,4 @@ cleanall:
 	rm -f *.gcov src/*.gcov src/*.gcda src/*.gcno
 	rm -f src/*.o src/*.d bin/gpcheckcloud/*.o bin/gpcheckcloud/*.d test/*.o test/*.d test/*.a lib/*.o lib/*.d
 
-.PHONY: format lint tags test coverage cleanall
+.PHONY: format lint tags test coverage clean
