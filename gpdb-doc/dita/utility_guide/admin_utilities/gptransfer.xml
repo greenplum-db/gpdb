@@ -204,6 +204,13 @@
                     utility uses a different configuration of named pipes and
                         <codeph>gpfdist</codeph> instances in the two situations. </p>
             </sectiondiv>
+            <sectiondiv><b>Validating Table Data with SHA-256</b>
+                <p>Validating table data with SHA-256 (specifying the option
+                        <codeph>--validate=sha256</codeph>) requires the Greenplum Database pgcrypto
+                    extension. The extension is included with Pivotal Greenplum 5.x. The extension
+                    package must be installed on supported Pivotal Greenplum 4.3.x systems. Support
+                    for pgcrypto functions in a Greenplum 4.3.x database is not
+                required.</p></sectiondiv>
         </section>
         <section id="section6">
             <title>Options</title>
@@ -731,15 +738,12 @@ sdw4,192.0.2.4</codeblock>
                         source and destination table data.</pd>
                     <pd><codeph>md5</codeph> - Specify this value to compare MD5 values between
                         source and destination table data. </pd>
-                    <pd><codeph>sha-256</codeph> - Specify this value to compare SHA-256 values
+                    <pd><codeph>sha256</codeph> - Specify this value to compare SHA-256 values
                         between source and destination table data. <p>On a Greenplum Database system
                             with FIPS enabled, the option <codeph>md5</codeph> is not available. Use
-                            the option <codeph>sha-256</codeph> to validate table data.
-                                <note>Validation with SHA-256 requires the Greenplum Database
-                                pgcrypto extension. The extension is included with Pivotal Greenplum
-                                5.x. The extension package must be installed on supported Pivotal
-                                Greenplum 4.3.x systems. Support for pgcrypto functions in a
-                                Greenplum 4.3.x database is not required.</note></p></pd>
+                            the option <codeph>sha256</codeph> to validate table data. For more
+                            information, see <xref href="#topic1/section4" format="dita"
+                                >Notes</xref>.</p></pd>
                     <pd>If validation for a table fails, <codeph>gptransfer</codeph> displays the
                         name of the table and writes the file name to the text file
                             <codeph>failed_migrated_tables_</codeph><varname>yyyymmdd_hhmmss</varname><codeph>.txt</codeph>.
