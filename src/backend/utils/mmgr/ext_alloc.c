@@ -15,6 +15,7 @@
 #include "utils/gp_alloc.h"
 #include "utils/memaccounting.h"
 #include "utils/memaccounting_private.h"
+#include "utils/ext_alloc.h"
 
 /*
  * This variable is used to track memory that is not freed by Orca during a
@@ -47,7 +48,6 @@ Ext_OptimizerAlloc(size_t size)
 void
 Ext_OptimizerFree(void *ptr)
 {
-	MemoryAccount *account = MemoryAccounting_ConvertIdToAccount(ActiveMemoryAccountId);
 	void *malloc_pointer = UserPtr_GetVmemPtr(ptr);
 	size_t freed_size = VmemPtr_GetUserPtrSize((VmemHeader*) malloc_pointer);
 	MemoryAccounting_Free(ActiveMemoryAccountId, freed_size);

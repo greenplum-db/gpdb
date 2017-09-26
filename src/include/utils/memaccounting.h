@@ -235,10 +235,10 @@ extern void
 MemoryAccounting_PrettyPrint(void);
 
 extern uint64
-MemoryAccounting_DeclareDone();
+MemoryAccounting_DeclareDone(void);
 
 extern uint64
-MemoryAccounting_RequestQuotaIncrease();
+MemoryAccounting_RequestQuotaIncrease(void);
 
 extern void
 MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(StringInfoData *str);

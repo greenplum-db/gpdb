@@ -24,7 +24,7 @@ extern void*
 Ext_OptimizerAlloc(size_t size);
 
 extern uint64
-GetOptimizerOutstandingMemoryBalance();
+GetOptimizerOutstandingMemoryBalance(void);
 
 
 #ifdef __cplusplus
