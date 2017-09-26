@@ -745,7 +745,7 @@ sdw4,192.0.2.4</codeblock>
                             >Notes</xref>.</pd>
                     <pd>
                         <note>On a Greenplum Database system with FIPS enabled, the option
-                                <codeph>md5</codeph> is not available. Use the
+                                <codeph>md5</codeph> is not supported. Use the
                                 <codeph>count</codeph> or <codeph>sha256</codeph> option to validate
                             table data. </note>
                     </pd>
