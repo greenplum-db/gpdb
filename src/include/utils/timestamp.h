@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/timestamp.h,v 1.75 2008/02/17 02:09:31 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/timestamp.h,v 1.76 2008/03/21 01:31:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,6 +55,7 @@ typedef double Timestamp;
 typedef double TimestampTz;
 typedef double TimeOffset;
 typedef double fsec_t;			/* fractional seconds (in seconds) */
+
 #endif
 
 typedef struct
@@ -162,6 +163,7 @@ typedef struct
 #define DT_NOBEGIN		(-DBL_MAX)
 #define DT_NOEND		(DBL_MAX)
 #endif
+
 #endif   /* HAVE_INT64_TIMESTAMP */
 
 

@@ -22,7 +22,7 @@ SET MEMORY_SPILL_RATIO TO 70;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 
--- negative set to session level
+-- positive set to session level
 SET MEMORY_SPILL_RATIO TO 0;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
@@ -32,7 +32,7 @@ SET MEMORY_SPILL_RATIO TO 101;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 
--- negative set to session level
+-- positive set to session level
 SET MEMORY_SPILL_RATIO TO 90;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
@@ -52,7 +52,7 @@ SET MEMORY_SPILL_RATIO TO 60;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 
--- change role, negative for session level
+-- change role, positive for session level
 SET ROLE role2_spill_test;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;

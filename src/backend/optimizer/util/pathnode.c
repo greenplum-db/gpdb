@@ -2315,7 +2315,6 @@ Path *
 create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
 	Path	   *pathnode = makeNode(Path);
-	char		data_access = PRODATAACCESS_NONE;
 
 	pathnode->pathtype = T_FunctionScan;
 	pathnode->parent = rel;
@@ -2329,16 +2328,53 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	Assert(rte->rtekind == RTE_FUNCTION);
 
 	if (rte->funcexpr && IsA(rte->funcexpr, FuncExpr))
-		data_access = func_data_access(((FuncExpr *) rte->funcexpr)->funcid);
-	if (data_access == PRODATAACCESS_SEGMENT)
-		CdbPathLocus_MakeStrewn(&pathnode->locus);
-	else if (contain_mutable_functions(rte->funcexpr))
-		CdbPathLocus_MakeEntry(&pathnode->locus);
-	else
-		CdbPathLocus_MakeGeneral(&pathnode->locus);
+	{
+		char		exec_location;
 
-    pathnode->motionHazard = false;
-	
+		exec_location = func_exec_location(((FuncExpr *) rte->funcexpr)->funcid);
+
+		switch (exec_location)
+		{
+			case PROEXECLOCATION_ANY:
+				CdbPathLocus_MakeGeneral(&pathnode->locus);
+
+				/*
+				 * If the function is ON ANY, we presumably could execute the
+				 * function anywhere. However, historically, before the
+				 * EXECUTE ON syntax was introduced, we always executed
+				 * non-IMMUTABLE functions on the master. Keep that behavior
+				 * for backwards compatibility.
+				 */
+				if (contain_mutable_functions(rte->funcexpr))
+					CdbPathLocus_MakeEntry(&pathnode->locus);
+				else
+					CdbPathLocus_MakeGeneral(&pathnode->locus);
+				break;
+			case PROEXECLOCATION_MASTER:
+				CdbPathLocus_MakeEntry(&pathnode->locus);
+				break;
+			case PROEXECLOCATION_ALL_SEGMENTS:
+				CdbPathLocus_MakeStrewn(&pathnode->locus);
+				break;
+			default:
+				elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+		}
+	}
+	else
+	{
+		/*
+		 * The expression might've been simplified into a Const. Which can
+		 * be executed anywhere.
+		 */
+		/* The default behavior is */
+		if (contain_mutable_functions(rte->funcexpr))
+			CdbPathLocus_MakeEntry(&pathnode->locus);
+		else
+			CdbPathLocus_MakeGeneral(&pathnode->locus);
+	}
+
+	pathnode->motionHazard = false;
+
 	/* For now, be conservative. */
 	pathnode->rescannable = false;
 	pathnode->sameslice_relids = NULL;

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_listener.h,v 1.23 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_listener.h,v 1.24 2008/03/27 03:57:34 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -20,10 +20,11 @@
 
 #include "catalog/genbki.h"
 
-/* ----------------
- *		pg_listener definition.  cpp turns this into
- *		typedef struct FormData_pg_listener
- * ----------------
+/* ----------------------------------------------------------------
+ *		pg_listener definition.
+ *
+ *		cpp turns this into typedef struct FormData_pg_listener
+ * ----------------------------------------------------------------
  */
 #define ListenerRelationId	2614
 

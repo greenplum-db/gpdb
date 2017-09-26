@@ -2,11 +2,10 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic44">
-   <title>Workload Management Parameters</title>
+   <title>Resource Management Parameters</title>
    <body>
-      <p>The following configuration parameters configure the Greenplum Database workload management
-         feature (resource queues), query prioritization, memory utilization and concurrency
-         control. </p>
+      <p>The following configuration parameters configure Greenplum Database resource queues, query
+         prioritization, memory utilization and concurrency control. </p>
       <simpletable id="kh157161">
          <strow>
             <stentry>

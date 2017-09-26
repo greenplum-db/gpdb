@@ -442,3 +442,28 @@ BEGIN;
 DECLARE c CURSOR FOR SELECT * FROM aocotest;
 DELETE FROM aocotest WHERE CURRENT OF c;
 ROLLBACK;
+
+
+--
+-- PL/pgSQL cursors
+--
+
+-- Test that cursors opened in PL/pgSQL can also be updated.
+-- (Not supported by ORCA, as of this writing.)
+create temp table uctest3 as
+  select n as i, n as j from generate_series(1, 5) n distributed randomly;
+
+create or replace function plpgsql_uc_test() returns void as $$
+declare
+  c cursor for select * from uctest3 where i = 3;
+  r record;
+begin
+  open c;
+  fetch c into r;
+  raise notice '%, %', r.i, r.j;
+  update uctest3 set i = i * 100, j = r.j * 2 where current of c;
+end;
+$$ language plpgsql;
+
+select plpgsql_uc_test();
+select * from uctest3;

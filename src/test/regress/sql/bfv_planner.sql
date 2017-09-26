@@ -196,9 +196,28 @@ execute myprep;
 execute myprep;
 
 
+-- Test agg on top of join subquery on partition table with ORDER-BY clause
+CREATE TABLE bfv_planner_t1 (a int, b int, c int) distributed by (c);
+CREATE TABLE bfv_planner_t2 (f int,g int) DISTRIBUTED BY (f) PARTITION BY RANGE(g)
+(
+PARTITION "201612" START (1) END (10)
+);
+insert into bfv_planner_t1 values(1,2,3), (2,3,4), (3,4,5);
+insert into bfv_planner_t2 values(3,1), (4,2), (5,2);
+
+select count(*) from
+(select a,b,c from bfv_planner_t1 order by c) T1
+join
+(select f,g from bfv_planner_t2) T2
+on
+T1.a=T2.g and T1.c=T2.f;
+
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
 drop table if exists bfv_planner_foo;
 drop table if exists testmedian;
+drop table if exists bfv_planner_t1;
+drop table if exists bfv_planner_t2;
 -- end_ignore

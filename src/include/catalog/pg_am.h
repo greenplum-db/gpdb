@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_am.h,v 1.53 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_am.h,v 1.54 2008/03/27 03:57:34 tgl Exp $
  *
  * NOTES
  *		the genbki.sh script reads this file and generates .bki
@@ -53,7 +53,7 @@ CATALOG(pg_am,2601)
 	regproc		aminsert;		/* "insert this tuple" function */
 	regproc		ambeginscan;	/* "start new scan" function */
 	regproc		amgettuple;		/* "next valid tuple" function */
-	regproc		amgetmulti; 	/* "fetch next bitmap" function */ 
+	regproc		amgetbitmap; 	/* "fetch all valid tuples" function */
 	regproc		amrescan;		/* "restart this scan" function */
 	regproc		amendscan;		/* "end this scan" function */
 	regproc		ammarkpos;		/* "mark current scan position" function */
@@ -69,7 +69,7 @@ CATALOG(pg_am,2601)
 FOREIGN_KEY(aminsert REFERENCES pg_proc(oid));
 FOREIGN_KEY(ambeginscan REFERENCES pg_proc(oid));
 FOREIGN_KEY(amgettuple REFERENCES pg_proc(oid));
-FOREIGN_KEY(amgetmulti REFERENCES pg_proc(oid));
+FOREIGN_KEY(amgetbitmap REFERENCES pg_proc(oid));
 FOREIGN_KEY(amrescan REFERENCES pg_proc(oid));
 FOREIGN_KEY(amendscan REFERENCES pg_proc(oid));
 FOREIGN_KEY(ammarkpos REFERENCES pg_proc(oid));
@@ -124,21 +124,21 @@ GPDB_COLUMN_DEFAULT(pg_am_amcanshrink, t);
  * ----------------
  */
 
-DATA(insert OID = 403 (  btree	5 1 t t t t t t f t btinsert btbeginscan btgettuple btgetmulti btrescan btendscan btmarkpos btrestrpos btbuild btbulkdelete btvacuumcleanup btcostestimate btoptions ));
+DATA(insert OID = 403 (  btree	5 1 t t t t t t f t btinsert btbeginscan btgettuple btgetbitmap btrescan btendscan btmarkpos btrestrpos btbuild btbulkdelete btvacuumcleanup btcostestimate btoptions ));
 DESCR("b-tree index access method");
 #define BTREE_AM_OID 403
-DATA(insert OID = 405 (  hash	1 1 f f f f f f f f hashinsert hashbeginscan hashgettuple hashgetmulti hashrescan hashendscan hashmarkpos hashrestrpos hashbuild hashbulkdelete hashvacuumcleanup hashcostestimate hashoptions ));
+DATA(insert OID = 405 (  hash	1 1 f f f f f f f f hashinsert hashbeginscan hashgettuple hashgetbitmap hashrescan hashendscan hashmarkpos hashrestrpos hashbuild hashbulkdelete hashvacuumcleanup hashcostestimate hashoptions ));
 DESCR("hash index access method");
 #define HASH_AM_OID 405
-DATA(insert OID = 783 (  gist	0 7 f f t t t t t t gistinsert gistbeginscan gistgettuple gistgetmulti gistrescan gistendscan gistmarkpos gistrestrpos gistbuild gistbulkdelete gistvacuumcleanup gistcostestimate gistoptions ));
+DATA(insert OID = 783 (  gist	0 7 f f t t t t t t gistinsert gistbeginscan gistgettuple gistgetbitmap gistrescan gistendscan gistmarkpos gistrestrpos gistbuild gistbulkdelete gistvacuumcleanup gistcostestimate gistoptions ));
 DESCR("GiST index access method");
 #define GIST_AM_OID 783
-DATA(insert OID = 2742 (  gin	0 4 f f f f f f t f gininsert ginbeginscan gingettuple gingetmulti ginrescan ginendscan ginmarkpos ginrestrpos ginbuild ginbulkdelete ginvacuumcleanup gincostestimate ginoptions ));
+DATA(insert OID = 2742 (  gin	0 4 f f f f f f t f gininsert ginbeginscan gingettuple gingetbitmap ginrescan ginendscan ginmarkpos ginrestrpos ginbuild ginbulkdelete ginvacuumcleanup gincostestimate ginoptions ));
 DESCR("GIN index access method");
 #define GIN_AM_OID 2742
 
 GPDB_EXTRA_COL(pg_am_amcanshrink = f);
-DATA(insert OID = 3013 (  bitmap	5 1 f f t t t f f f f bminsert bmbeginscan bmgettuple bmgetmulti bmrescan bmendscan bmmarkpos bmrestrpos bmbuild bmbulkdelete bmvacuumcleanup bmcostestimate bmoptions ));
+DATA(insert OID = 3013 (  bitmap	5 1 f f t t t f f f f bminsert bmbeginscan bmgettuple bmgetbitmap bmrescan bmendscan bmmarkpos bmrestrpos bmbuild bmbulkdelete bmvacuumcleanup bmcostestimate bmoptions ));
 DESCR("bitmap index access method");
 #define BITMAP_AM_OID 3013
 
@@ -152,7 +152,7 @@ DESCR("bitmap index access method");
  * "utils/fmgroids.h" before including pg_am.h.
  */
 #define Am_btree \
-	{"btree"}, 5, 1, true, true, true, true, true, true, false, true, true, F_BTINSERT, F_BTBEGINSCAN, F_BTGETTUPLE, F_BTGETMULTI, F_BTRESCAN, F_BTENDSCAN, F_BTMARKPOS, F_BTRESTRPOS, F_BTBUILD, F_BTBULKDELETE, F_BTVACUUMCLEANUP, F_BTCOSTESTIMATE, F_BTOPTIONS
+	{"btree"}, 5, 1, true, true, true, true, true, true, false, true, true, F_BTINSERT, F_BTBEGINSCAN, F_BTGETTUPLE, F_BTGETBITMAP, F_BTRESCAN, F_BTENDSCAN, F_BTMARKPOS, F_BTRESTRPOS, F_BTBUILD, F_BTBULKDELETE, F_BTVACUUMCLEANUP, F_BTCOSTESTIMATE, F_BTOPTIONS
 
 
 #endif   /* PG_AM_H */

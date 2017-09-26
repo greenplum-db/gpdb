@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/prep.h,v 1.59.2.1 2008/11/11 18:13:44 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/prep.h,v 1.60 2008/03/18 22:04:14 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,6 +24,7 @@
  * prototypes for prepjointree.c
  */
 extern Node *pull_up_IN_clauses(PlannerInfo *root, List **rtrlist_inout, Node *node);
+extern void inline_set_returning_functions(PlannerInfo *root);
 extern Node *pull_up_subqueries(PlannerInfo *root, Node *jtnode,
 				   bool below_outer_join, bool append_rel_member);
 extern void reduce_outer_joins(PlannerInfo *root);

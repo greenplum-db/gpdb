@@ -9,7 +9,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  *
- *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.38.2.2 2009/12/09 21:58:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/include/utils/guc_tables.h,v 1.41 2008/03/17 17:45:09 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -26,7 +26,8 @@ enum config_type
 	PGC_BOOL,
 	PGC_INT,
 	PGC_REAL,
-	PGC_STRING
+	PGC_STRING,
+	PGC_ENUM
 };
 
 union config_var_value
@@ -35,6 +36,7 @@ union config_var_value
 	int			intval;
 	double		realval;
 	char	   *stringval;
+	int			enumval;
 };
 
 /*
@@ -264,6 +266,19 @@ struct config_string
 	char	   *reset_val;
 };
 
+struct config_enum
+{
+	struct config_generic gen;
+	/* constant fields, must be set correctly in initial value: */
+	int		   *variable;
+	int			boot_val;
+	const struct config_enum_entry *options;
+	GucEnumAssignHook assign_hook;
+	GucShowHook show_hook;
+	/* variable fields, initialized at runtime: */
+	int			reset_val;
+};
+
 /* constant tables corresponding to enums above and in guc.h */
 extern const char *const config_group_names[];
 extern const char *const config_type_names[];
@@ -276,15 +291,21 @@ extern int get_num_guc_variables(void);
 
 extern void build_guc_variables(void);
 
+/* search in enum options */
+extern const char *config_enum_lookup_by_value(struct config_enum *record, int val);
+extern bool config_enum_lookup_by_name(struct config_enum *record,
+									  const char *value, int *retval);
+
 extern bool parse_int(const char *value, int *result, int flags, const char **hintmsg);
 
 /* guc_gp.c needs this from guc.c */
-const char *assign_msglvl(int *var, const char *newval, bool doit, GucSource source);
+extern const struct config_enum_entry message_level_options[];
 
 /* guc_gp.c exports these for guc.c */
 extern struct config_bool ConfigureNamesBool_gp[];
 extern struct config_int ConfigureNamesInt_gp[];
 extern struct config_real ConfigureNamesReal_gp[];
 extern struct config_string ConfigureNamesString_gp[];
+extern struct config_enum ConfigureNamesEnum_gp[];
 
 #endif   /* GUC_TABLES_H */

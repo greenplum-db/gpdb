@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/interfaces/libpq/Makefile,v 1.163 2008/02/26 14:26:16 petere Exp $
+# $PostgreSQL: pgsql/src/interfaces/libpq/Makefile,v 1.165 2008/04/07 14:15:58 petere Exp $
 #
 #-------------------------------------------------------------------------
 

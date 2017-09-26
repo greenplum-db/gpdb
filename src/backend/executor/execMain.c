@@ -28,7 +28,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.303.2.3 2009/12/09 21:58:16 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.305 2008/03/28 00:21:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -74,7 +74,10 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/tqual.h"
+
 #include "utils/ps_status.h"
+#include "utils/snapmgr.h"
 #include "utils/typcache.h"
 #include "utils/workfile_mgr.h"
 #include "utils/faultinjector.h"
@@ -118,12 +121,8 @@ typedef struct evalPlanQual
 
 /* decls for local routines only used within this module */
 static void InitPlan(QueryDesc *queryDesc, int eflags);
-static void initResultRelInfo(ResultRelInfo *resultRelInfo,
-				  Relation resultRelationDesc,
-				  Index resultRelationIndex,
-				  CmdType operation,
-				  bool doInstrument);
 static void ExecCheckPlanOutput(Relation resultRel, List *targetList);
+static void ExecEndPlan(PlanState *planstate, EState *estate);
 static TupleTableSlot *ExecutePlan(EState *estate, PlanState *planstate,
 			CmdType operation,
 			long numberTuples,
@@ -1440,7 +1439,7 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 			{
 				resultRelation = heap_open(resultRelationOid, lockmode);
 			}
-			initResultRelInfo(resultRelInfo,
+			InitResultRelInfo(resultRelInfo,
 							  resultRelation,
 							  resultRelationIndex,
 							  operation,
@@ -2169,8 +2168,8 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 /*
  * Initialize ResultRelInfo data for one result relation
  */
-static void
-initResultRelInfo(ResultRelInfo *resultRelInfo,
+void
+InitResultRelInfo(ResultRelInfo *resultRelInfo,
 				  Relation resultRelationDesc,
 				  Index resultRelationIndex,
 				  CmdType operation,
@@ -2387,11 +2386,11 @@ ExecGetTriggerResultRel(EState *estate, Oid relid)
 	/*
 	 * Make the new entry in the right context.  Currently, we don't need any
 	 * index information in ResultRelInfos used only for triggers, so tell
-	 * initResultRelInfo it's a DELETE.
+	 * InitResultRelInfo it's a DELETE.
 	 */
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
 	rInfo = makeNode(ResultRelInfo);
-	initResultRelInfo(rInfo,
+	InitResultRelInfo(rInfo,
 					  rel,
 					  0,		/* dummy rangetable index */
 					  CMD_DELETE,
@@ -5230,7 +5229,7 @@ get_part(EState *estate, Datum *values, bool *isnull, TupleDesc tupdesc)
 		estate->es_num_result_relations++;
 
 		resultRelation = heap_open(targetid, RowExclusiveLock);
-		initResultRelInfo(resultRelInfo,
+		InitResultRelInfo(resultRelInfo,
 						  resultRelation,
 						  1,
 						  CMD_INSERT,

@@ -212,7 +212,7 @@ contain_windowfuncs_walker(Node *node, void *context)
 {
 	if (node == NULL)
 		return false;
-	if (IsA(node, WindowRef))
+	if (IsA(node, WindowFunc))
 		return true;			/* abort the tree traversal and return true */
 	/* Mustn't recurse into subselects */
 	return expression_tree_walker(node, contain_windowfuncs_walker,
@@ -256,11 +256,11 @@ locate_windowfunc_walker(Node *node, locate_windowfunc_context *context)
 {
 	if (node == NULL)
 		return false;
-	if (IsA(node, WindowRef))
+	if (IsA(node, WindowFunc))
 	{
-		if (((WindowRef *) node)->location >= 0)
+		if (((WindowFunc *) node)->location >= 0)
 		{
-			context->win_location = ((WindowRef *) node)->location;
+			context->win_location = ((WindowFunc *) node)->location;
 			return true;		/* abort the tree traversal and return true */
 		}
 		/* else fall through to examine argument */

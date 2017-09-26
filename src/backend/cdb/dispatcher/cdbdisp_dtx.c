@@ -16,6 +16,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "gp-libpq-fe.h"
@@ -27,6 +28,7 @@
 #include "cdb/cdbgang.h"
 
 #include "storage/procarray.h"	/* updateSharedLocalSnapshot */
+#include "utils/snapmgr.h"
 
 /*
  * Parameter structure for DTX protocol commands

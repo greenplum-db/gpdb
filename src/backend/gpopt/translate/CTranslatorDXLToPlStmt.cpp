@@ -2221,8 +2221,8 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	DrgPdxltrctx *pdrgpdxltrctxPrevSiblings
 	)
 {
-	// create a window plan node
-	Window *pwindow = MakeNode(Window);
+	// create a WindowAgg plan node
+	WindowAgg *pwindow = MakeNode(WindowAgg);
 
 	Plan *pplan = &(pwindow->plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
@@ -2267,14 +2267,14 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 
 	// translate partition columns
 	const DrgPul *pdrpulPartCols = pdxlopWindow->PrgpulPartCols();
-	pwindow->numPartCols = pdrpulPartCols->UlLength();
+	pwindow->partNumCols = pdrpulPartCols->UlLength();
 	pwindow->partColIdx = NULL;
 	pwindow->partOperators = NULL;
 
-	if (pwindow->numPartCols > 0)
+	if (pwindow->partNumCols > 0)
 	{
-		pwindow->partColIdx = (AttrNumber *) gpdb::GPDBAlloc(pwindow->numPartCols * sizeof(AttrNumber));
-		pwindow->partOperators = (Oid *) gpdb::GPDBAlloc(pwindow->numPartCols * sizeof(Oid));
+		pwindow->partColIdx = (AttrNumber *) gpdb::GPDBAlloc(pwindow->partNumCols * sizeof(AttrNumber));
+		pwindow->partOperators = (Oid *) gpdb::GPDBAlloc(pwindow->partNumCols * sizeof(Oid));
 	}
 
 	const ULONG ulPartCols = pdrpulPartCols->UlLength();
@@ -2295,12 +2295,117 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	}
 
 	// translate window keys
-	pwindow->windowKeys = NIL;
 	const ULONG ulSize = pdxlopWindow->UlWindowKeys();
-	for (ULONG ul = 0; ul < ulSize; ul++)
+	if (ulSize > 1)
+	  {
+	    GpdbEreport(ERRCODE_INTERNAL_ERROR,
+			ERROR,
+			"ORCA produced a plan with more than one window key",
+			NULL);
+	  }
+	GPOS_ASSERT(ulSize <= 1 && "cannot have more than one window key");
+
+	if (ulSize == 1)
 	{
-		WindowKey *pwindowkey = PwindowKey(pdxlopWindow->PdxlWindowKey(ul), &dxltrctxChild, pdxltrctxOut, pplan);
-		pwindow->windowKeys = gpdb::PlAppendElement(pwindow->windowKeys, pwindowkey);
+		// translate the sorting columns used in the window key
+		const CDXLWindowKey *pdxlwindowkey = pdxlopWindow->PdxlWindowKey(0);
+		const CDXLWindowFrame *pdxlwf = pdxlwindowkey->Pdxlwf();
+		const CDXLNode *pdxlnSortColList = pdxlwindowkey->PdxlnSortColList();
+
+		const ULONG ulNumCols = pdxlnSortColList->UlArity();
+
+		pwindow->ordNumCols = ulNumCols;
+		pwindow->ordColIdx = (AttrNumber *) gpdb::GPDBAlloc(ulNumCols * sizeof(AttrNumber));
+		pwindow->ordOperators = (Oid *) gpdb::GPDBAlloc(ulNumCols * sizeof(Oid));
+		pwindow->nullsFirst = (bool *) gpdb::GPDBAlloc(ulNumCols * sizeof(bool));
+		TranslateSortCols(pdxlnSortColList, &dxltrctxChild, pwindow->ordColIdx, pwindow->ordOperators, pwindow->nullsFirst);
+
+		// translate the window frame specified in the window key
+		if (NULL != pdxlwindowkey->Pdxlwf())
+		{
+			pwindow->frameOptions = FRAMEOPTION_NONDEFAULT;
+			if (EdxlfsRow == pdxlwf->Edxlfs())
+			{
+				pwindow->frameOptions |= FRAMEOPTION_ROWS;
+			}
+			else
+			{
+				pwindow->frameOptions |= FRAMEOPTION_RANGE;
+			}
+
+			if (pdxlwf->Edxlfes() != EdxlfesNulls)
+			{
+				GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					   GPOS_WSZ_LIT("EXCLUDE clause in window frame"));
+			}
+
+			// translate the CDXLNodes representing the leading and trailing edge
+			DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
+			pdrgpdxltrctx->Append(&dxltrctxChild);
+
+			CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
+			(
+			 m_pmp,
+			 NULL,
+			 pdrgpdxltrctx,
+			 pdxltrctxOut,
+			 m_pctxdxltoplstmt
+			);
+
+			// Translate lead boundary
+			//
+			// Note that we don't distinguish between the delayed and undelayed
+			// versions beoynd this point. Executor will make that decision
+			// without our help.
+			//
+			CDXLNode *pdxlnLead = pdxlwf->PdxlnLeading();
+			EdxlFrameBoundary leadBoundary = CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnLead->Pdxlop())->Edxlfb();
+			if (leadBoundary == EdxlfbUnboundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
+			if (leadBoundary == EdxlfbBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_PRECEDING;
+			if (leadBoundary == EdxlfbCurrentRow)
+				pwindow->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
+			if (leadBoundary == EdxlfbBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_FOLLOWING;
+			if (leadBoundary == EdxlfbUnboundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
+			if (leadBoundary == EdxlfbDelayedBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_PRECEDING;
+			if (leadBoundary == EdxlfbDelayedBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_END_VALUE_FOLLOWING;
+			if (0 != pdxlnLead->UlArity())
+			{
+				pwindow->endOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnLead)[0], &mapcidvarplstmt);
+			}
+
+			// And the same for the trail boundary
+			CDXLNode *pdxlnTrail = pdxlwf->PdxlnTrailing();
+			EdxlFrameBoundary trailBoundary = CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnTrail->Pdxlop())->Edxlfb();
+			if (trailBoundary == EdxlfbUnboundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
+			if (trailBoundary == EdxlfbBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_PRECEDING;
+			if (trailBoundary == EdxlfbCurrentRow)
+				pwindow->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
+			if (trailBoundary == EdxlfbBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_FOLLOWING;
+			if (trailBoundary == EdxlfbUnboundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
+			if (trailBoundary == EdxlfbDelayedBoundedPreceding)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_PRECEDING;
+			if (trailBoundary == EdxlfbDelayedBoundedFollowing)
+				pwindow->frameOptions |= FRAMEOPTION_START_VALUE_FOLLOWING;
+			if (0 != pdxlnTrail->UlArity())
+			{
+				pwindow->startOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnTrail)[0], &mapcidvarplstmt);
+			}
+
+			// cleanup
+			pdrgpdxltrctx->Release();
+		}
+		else
+			pwindow->frameOptions = FRAMEOPTION_DEFAULTS;
 	}
 
 	SetParamIds(pplan);
@@ -2309,126 +2414,6 @@ CTranslatorDXLToPlStmt::PwindowFromDXLWindow
 	pdrgpdxltrctx->Release();
 
 	return (Plan *) pwindow;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::PwindowKey
-//
-//	@doc:
-//		Translate the DXL window frame into GPDB Window key node
-//
-//---------------------------------------------------------------------------
-WindowKey *
-CTranslatorDXLToPlStmt::PwindowKey
-	(
-	const CDXLWindowKey *pdxlwindowkey,
-	const CDXLTranslateContext *pdxltrctxChild,
-	CDXLTranslateContext *pdxltrctxOut,
-	Plan *pplan
-	)
-{
-	WindowKey *pwindowkey = MakeNode(WindowKey);
-
-	// translate the sorting columns used in the window key
-	const CDXLWindowFrame *pdxlwf = pdxlwindowkey->Pdxlwf();
-	const CDXLNode *pdxlnSortColList = pdxlwindowkey->PdxlnSortColList();
-
-	const ULONG ulNumCols = pdxlnSortColList->UlArity();
-	pwindowkey->numSortCols = ulNumCols;
-	pwindowkey->sortColIdx = (AttrNumber *) gpdb::GPDBAlloc(ulNumCols * sizeof(AttrNumber));
-	pwindowkey->sortOperators = (Oid *) gpdb::GPDBAlloc(ulNumCols * sizeof(Oid));
-	pwindowkey->nullsFirst = (bool *) gpdb::GPDBAlloc(ulNumCols * sizeof(bool));
-	TranslateSortCols(pdxlnSortColList, pdxltrctxChild, pwindowkey->sortColIdx, pwindowkey->sortOperators, pwindowkey->nullsFirst);
-
-	// translate the window frame specified in the window key
-	if (NULL != pdxlwindowkey->Pdxlwf())
-	{
-		pwindowkey->frameOptions = FRAMEOPTION_NONDEFAULT;
-		if (EdxlfsRow == pdxlwf->Edxlfs())
-		{
-			pwindowkey->frameOptions |= FRAMEOPTION_ROWS;
-		}
-		else
-		{
-			pwindowkey->frameOptions |= FRAMEOPTION_RANGE;
-		}
-
-		if (pdxlwf->Edxlfes() != EdxlfesNulls)
-		{
-		  GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					 GPOS_WSZ_LIT("EXCLUDE clause in window frame"));
-		}
-
-		// translate the CDXLNodes representing the leading and trailing edge
-		DrgPdxltrctx *pdrgpdxltrctx = GPOS_NEW(m_pmp) DrgPdxltrctx(m_pmp);
-		pdrgpdxltrctx->Append(pdxltrctxChild);
-
-		CMappingColIdVarPlStmt mapcidvarplstmt = CMappingColIdVarPlStmt
-		(
-		 m_pmp,
-		 NULL,
-		 pdrgpdxltrctx,
-		 pdxltrctxOut,
-		 m_pctxdxltoplstmt
-		 );
-
-		// Translate lead boundary
-		//
-		// Note that we don't distinguish between the delayed and undelayed
-		// versions beoynd this point. Executor will make that decision
-		// without our help.
-		//
-		CDXLNode *pdxlnLead = pdxlwf->PdxlnLeading();
-		EdxlFrameBoundary leadBoundary = CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnLead->Pdxlop())->Edxlfb();
-		if (leadBoundary == EdxlfbUnboundedPreceding)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_UNBOUNDED_PRECEDING;
-		if (leadBoundary == EdxlfbBoundedPreceding)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_VALUE_PRECEDING;
-		if (leadBoundary == EdxlfbCurrentRow)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_CURRENT_ROW;
-		if (leadBoundary == EdxlfbBoundedFollowing)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_VALUE_FOLLOWING;
-		if (leadBoundary == EdxlfbUnboundedFollowing)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_UNBOUNDED_FOLLOWING;
-		if (leadBoundary == EdxlfbDelayedBoundedPreceding)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_VALUE_PRECEDING;
-		if (leadBoundary == EdxlfbDelayedBoundedFollowing)
-			pwindowkey->frameOptions |= FRAMEOPTION_END_VALUE_FOLLOWING;
-		if (0 != pdxlnLead->UlArity())
-		{
-			pwindowkey->endOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnLead)[0], &mapcidvarplstmt);
-		}
-
-		// And the same for the trail boundary
-		CDXLNode *pdxlnTrail = pdxlwf->PdxlnTrailing();
-		EdxlFrameBoundary trailBoundary = CDXLScalarWindowFrameEdge::PdxlopConvert(pdxlnTrail->Pdxlop())->Edxlfb();
-		if (trailBoundary == EdxlfbUnboundedPreceding)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_UNBOUNDED_PRECEDING;
-		if (trailBoundary == EdxlfbBoundedPreceding)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_VALUE_PRECEDING;
-		if (trailBoundary == EdxlfbCurrentRow)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_CURRENT_ROW;
-		if (trailBoundary == EdxlfbBoundedFollowing)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_VALUE_FOLLOWING;
-		if (trailBoundary == EdxlfbUnboundedFollowing)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_UNBOUNDED_FOLLOWING;
-		if (trailBoundary == EdxlfbDelayedBoundedPreceding)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_VALUE_PRECEDING;
-		if (trailBoundary == EdxlfbDelayedBoundedFollowing)
-			pwindowkey->frameOptions |= FRAMEOPTION_START_VALUE_FOLLOWING;
-		if (0 != pdxlnTrail->UlArity())
-		{
-			pwindowkey->startOffset = (Node *) m_pdxlsctranslator->PexprFromDXLNodeScalar((*pdxlnTrail)[0], &mapcidvarplstmt);
-		}
-
-		// cleanup
-		pdrgpdxltrctx->Release();
-	}
-	else
-		pwindowkey->frameOptions = FRAMEOPTION_DEFAULTS;
-
-	return pwindowkey;
 }
 
 //---------------------------------------------------------------------------

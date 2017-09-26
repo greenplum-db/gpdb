@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $PostgreSQL: pgsql/configure.in,v 1.552 2008/02/24 05:21:54 tgl Exp $
+dnl $PostgreSQL: pgsql/configure.in,v 1.555 2008/03/30 04:08:14 neilc Exp $
 dnl
 dnl Developers, please strive to achieve this order:
 dnl
@@ -172,7 +172,7 @@ AC_MSG_RESULT([$enable_integer_datetimes])
 # Default port number (--with-pgport), default 5432
 #
 AC_MSG_CHECKING([for default port number])
-PGAC_ARG_REQ(with, pgport, [  --with-pgport=PORTNUM   change default port number [[5432]]],
+PGAC_ARG_REQ(with, pgport, [  --with-pgport=PORTNUM   set default port number [[5432]]],
              [default_port=$withval],
              [default_port=5432])
 AC_MSG_RESULT([$default_port])
@@ -286,6 +286,69 @@ AC_SUBST(enable_dtrace)
 PGAC_ARG_BOOL(enable, tap-tests, no,
               [  --enable-tap-tests      enable TAP tests (requires Perl and IPC::Run)])
 AC_SUBST(enable_tap_tests)
+
+#
+# Block size
+#
+AC_MSG_CHECKING([for block size])
+PGAC_ARG_REQ(with, blocksize, [  --with-blocksize=BLOCKSIZE  set block size in kB [[32]]],
+             [blocksize=$withval],
+             [blocksize=32])
+case ${blocksize} in
+  1) BLCKSZ=1024;;
+  2) BLCKSZ=2048;;
+  4) BLCKSZ=4096;;
+  8) BLCKSZ=8192;;
+ 16) BLCKSZ=16384;;
+ 32) BLCKSZ=32768;;
+  *) AC_MSG_ERROR([Invalid block size. Allowed values are 1,2,4,8,16,32.])
+esac
+AC_MSG_RESULT([${blocksize}kB])
+
+AC_DEFINE_UNQUOTED([BLCKSZ], ${BLCKSZ}, [
+ Size of a disk block --- this also limits the size of a tuple.  You
+ can set it bigger if you need bigger tuples (although TOAST should
+ reduce the need to have large tuples, since fields can be spread
+ across multiple tuples).
+ 
+ BLCKSZ must be a power of 2.  The maximum possible value of BLCKSZ
+ is currently 2^15 (32768).  This is determined by the 15-bit widths
+ of the lp_off and lp_len fields in ItemIdData (see
+ include/storage/itemid.h).
+ 
+ Changing BLCKSZ requires an initdb.
+]) 
+
+#
+# File segment size
+#
+AC_MSG_CHECKING([for segment size])
+PGAC_ARG_REQ(with, segsize, [  --with-segsize=SEGSIZE  set segment size in GB [[1]]],
+             [segsize=$withval],
+             [segsize=1])
+# this expression is set up to avoid unnecessary integer overflow
+RELSEG_SIZE=`expr '(' 1024 '*' ${segsize} / ${blocksize} ')' '*' 1024`
+test $? -eq 0 || exit 1
+AC_MSG_RESULT([${segsize}GB])
+
+AC_DEFINE_UNQUOTED([RELSEG_SIZE], ${RELSEG_SIZE}, [
+ RELSEG_SIZE is the maximum number of blocks allowed in one disk file.
+ Thus, the maximum size of a single file is RELSEG_SIZE * BLCKSZ;
+ relations bigger than that are divided into multiple files.
+ 
+ RELSEG_SIZE * BLCKSZ must be less than your OS' limit on file size.
+ This is often 2 GB or 4GB in a 32-bit operating system, unless you
+ have large file support enabled.  By default, we make the limit 1 GB
+ to avoid any possible integer-overflow problems within the OS.
+ A limit smaller than necessary only means we divide a large
+ relation into more chunks than necessary, so it seems best to err
+ in the direction of a small limit.
+
+ A power-of-2 value is recommended to save a few cycles in md.c,
+ but is not absolutely required.
+
+ Changing RELSEG_SIZE requires an initdb.
+])
 
 #
 # C compiler
@@ -1026,11 +1089,15 @@ PGAC_ARG_BOOL(with, rt, yes,
 AC_SUBST(with_rt)
 
 #
-# libcurl. Used for external table support
+# libcurl. Used for external table support and the PXF extension
 #
 PGAC_ARG_BOOL(with, libcurl, yes,
               [  --without-libcurl       do not use libcurl])
 AC_SUBST(with_libcurl)
+
+if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
+  AC_MSG_ERROR([libcurl is required by PXF])
+fi
 
 #
 # libapr. Used for gpfdist and gpperfmon

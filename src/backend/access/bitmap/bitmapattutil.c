@@ -39,9 +39,10 @@
 #include "nodes/primnodes.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
-#include "utils/syscache.h"
-#include "utils/lsyscache.h"
 #include "utils/builtins.h"
+#include "utils/lsyscache.h"
+#include "utils/syscache.h"
+#include "utils/snapmgr.h"
 
 static TupleDesc _bitmap_create_lov_heapTupleDesc(Relation rel);
 

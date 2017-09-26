@@ -1222,7 +1222,7 @@ from
 	t2_mpp_24563 t2 where value = 7) foo;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Window  (cost=1.02..2.12 rows=1 width=8)
+ WindowAgg  (cost=1.02..2.12 rows=1 width=8)
    Order By: t2.seq
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=1.02..1.05 rows=1 width=8)
          Merge Key: t2.seq
@@ -1279,7 +1279,7 @@ explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                            ->  Append  (cost=0.00..1134.00 rows=31134 width=28)
                                  ->  Seq Scan on t_mpp_20470_ptr1 b  (cost=0.00..567.00 rows=15567 width=28)
                                  ->  Seq Scan on t_mpp_20470_ptr2 b  (cost=0.00..567.00 rows=15567 width=28)
-   ->  Window  (cost=4029.40..4154.80 rows=93400 width=28)
+   ->  WindowAgg  (cost=4029.40..4154.80 rows=93400 width=28)
          ->  Shared Scan (share slice:id 0:0)  (cost=4029.40..4154.80 rows=93400 width=28)
    SubPlan 1
      ->  Aggregate  (cost=1371.47..1371.48 rows=1 width=8)

@@ -27,6 +27,7 @@
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
+#include "utils/snapmgr.h"
 
 /*
  * The following structure along with BMTIDBuffer are used to buffer

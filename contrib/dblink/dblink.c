@@ -8,7 +8,7 @@
  * Darko Prenosil <Darko.Prenosil@finteh.hr>
  * Shridhar Daithankar <shridhar_daithankar@persistent.co.in>
  *
- * $PostgreSQL: pgsql/contrib/dblink/dblink.c,v 1.69.2.8 2010/06/15 19:04:28 tgl Exp $
+ * $PostgreSQL: pgsql/contrib/dblink/dblink.c,v 1.73 2008/04/04 17:02:56 momjian Exp $
  * Copyright (c) 2001-2008, PostgreSQL Global Development Group
  * ALL RIGHTS RESERVED;
  *
@@ -37,7 +37,6 @@
 #include "libpq-fe.h"
 #include "fmgr.h"
 #include "funcapi.h"
-#include "miscadmin.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/tupdesc.h"
@@ -48,12 +47,12 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "lib/stringinfo.h"
+#include "miscadmin.h"
 #include "nodes/execnodes.h"
 #include "nodes/nodes.h"
 #include "nodes/pg_list.h"
 #include "parser/parse_type.h"
 #include "parser/scansup.h"
-#include "tcop/tcopprot.h"
 #include "utils/acl.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
@@ -61,8 +60,9 @@
 #include "utils/fmgroids.h"
 #include "utils/hsearch.h"
 #include "utils/lsyscache.h"
-#include "utils/syscache.h"
 #include "utils/memutils.h"
+#include "utils/syscache.h"
+#include "utils/tqual.h"
 
 #include "dblink.h"
 
@@ -123,8 +123,6 @@ typedef struct remoteConnHashEnt
 #define NUMCONN 16
 
 /* general utility */
-#define GET_TEXT(cstrp) DatumGetTextP(DirectFunctionCall1(textin, CStringGetDatum((char*)cstrp)))
-#define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 #define xpfree(var_) \
 	do { \
 		if (var_ != NULL) \
@@ -186,7 +184,7 @@ typedef struct remoteConnHashEnt
 
 #define DBLINK_GET_CONN \
 	do { \
-			char *conname_or_str = GET_STR(PG_GETARG_TEXT_P(0)); \
+			char *conname_or_str = text_to_cstring(PG_GETARG_TEXT_PP(0)); \
 			rconn = getConnectionByName(conname_or_str); \
 			if(rconn) \
 			{ \
@@ -213,7 +211,7 @@ typedef struct remoteConnHashEnt
 
 #define DBLINK_GET_NAMED_CONN \
 	do { \
-			char *conname = GET_STR(PG_GETARG_TEXT_P(0)); \
+			char *conname = text_to_cstring(PG_GETARG_TEXT_PP(0)); \
 			rconn = getConnectionByName(conname); \
 			if(rconn) \
 				conn = rconn->conn; \
@@ -249,11 +247,11 @@ dblink_connect(PG_FUNCTION_ARGS)
 
 	if (PG_NARGS() == 2)
 	{
-		connstr = GET_STR(PG_GETARG_TEXT_P(1));
-		connname = GET_STR(PG_GETARG_TEXT_P(0));
+		connstr = text_to_cstring(PG_GETARG_TEXT_PP(1));
+		connname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 	}
-	else
-		connstr = GET_STR(PG_GETARG_TEXT_P(0));
+	else if (PG_NARGS() == 1)
+		connstr = text_to_cstring(PG_GETARG_TEXT_PP(0));
 
 	if (connname)
 		rconn = (remoteConn *) MemoryContextAlloc(TopMemoryContext,
@@ -287,7 +285,7 @@ dblink_connect(PG_FUNCTION_ARGS)
 	else
 		pconn->conn = conn;
 
-	PG_RETURN_TEXT_P(GET_TEXT("OK"));
+	PG_RETURN_TEXT_P(cstring_to_text("OK"));
 }
 
 /*
@@ -305,7 +303,7 @@ dblink_disconnect(PG_FUNCTION_ARGS)
 
 	if (PG_NARGS() == 1)
 	{
-		conname = GET_STR(PG_GETARG_TEXT_P(0));
+		conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 		rconn = getConnectionByName(conname);
 		if (rconn)
 			conn = rconn->conn;
@@ -325,7 +323,7 @@ dblink_disconnect(PG_FUNCTION_ARGS)
 	else
 		pconn->conn = NULL;
 
-	PG_RETURN_TEXT_P(GET_TEXT("OK"));
+	PG_RETURN_TEXT_P(cstring_to_text("OK"));
 }
 
 /*
@@ -351,8 +349,8 @@ dblink_open(PG_FUNCTION_ARGS)
 	if (PG_NARGS() == 2)
 	{
 		/* text,text */
-		curname = GET_STR(PG_GETARG_TEXT_P(0));
-		sql = GET_STR(PG_GETARG_TEXT_P(1));
+		curname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+		sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 		rconn = pconn;
 	}
 	else if (PG_NARGS() == 3)
@@ -360,25 +358,25 @@ dblink_open(PG_FUNCTION_ARGS)
 		/* might be text,text,text or text,text,bool */
 		if (get_fn_expr_argtype(fcinfo->flinfo, 2) == BOOLOID)
 		{
-			curname = GET_STR(PG_GETARG_TEXT_P(0));
-			sql = GET_STR(PG_GETARG_TEXT_P(1));
+			curname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+			sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 			fail = PG_GETARG_BOOL(2);
 			rconn = pconn;
 		}
 		else
 		{
-			conname = GET_STR(PG_GETARG_TEXT_P(0));
-			curname = GET_STR(PG_GETARG_TEXT_P(1));
-			sql = GET_STR(PG_GETARG_TEXT_P(2));
+			conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+			curname = text_to_cstring(PG_GETARG_TEXT_PP(1));
+			sql = text_to_cstring(PG_GETARG_TEXT_PP(2));
 			rconn = getConnectionByName(conname);
 		}
 	}
 	else if (PG_NARGS() == 4)
 	{
 		/* text,text,text,bool */
-		conname = GET_STR(PG_GETARG_TEXT_P(0));
-		curname = GET_STR(PG_GETARG_TEXT_P(1));
-		sql = GET_STR(PG_GETARG_TEXT_P(2));
+		conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+		curname = text_to_cstring(PG_GETARG_TEXT_PP(1));
+		sql = text_to_cstring(PG_GETARG_TEXT_PP(2));
 		fail = PG_GETARG_BOOL(3);
 		rconn = getConnectionByName(conname);
 	}
@@ -418,12 +416,12 @@ dblink_open(PG_FUNCTION_ARGS)
 		else
 		{
 			DBLINK_RES_ERROR_AS_NOTICE("sql error");
-			PG_RETURN_TEXT_P(GET_TEXT("ERROR"));
+			PG_RETURN_TEXT_P(cstring_to_text("ERROR"));
 		}
 	}
 
 	PQclear(res);
-	PG_RETURN_TEXT_P(GET_TEXT("OK"));
+	PG_RETURN_TEXT_P(cstring_to_text("OK"));
 }
 
 /*
@@ -448,7 +446,7 @@ dblink_close(PG_FUNCTION_ARGS)
 	if (PG_NARGS() == 1)
 	{
 		/* text */
-		curname = GET_STR(PG_GETARG_TEXT_P(0));
+		curname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 		rconn = pconn;
 	}
 	else if (PG_NARGS() == 2)
@@ -456,22 +454,22 @@ dblink_close(PG_FUNCTION_ARGS)
 		/* might be text,text or text,bool */
 		if (get_fn_expr_argtype(fcinfo->flinfo, 1) == BOOLOID)
 		{
-			curname = GET_STR(PG_GETARG_TEXT_P(0));
+			curname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 			fail = PG_GETARG_BOOL(1);
 			rconn = pconn;
 		}
 		else
 		{
-			conname = GET_STR(PG_GETARG_TEXT_P(0));
-			curname = GET_STR(PG_GETARG_TEXT_P(1));
+			conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+			curname = text_to_cstring(PG_GETARG_TEXT_PP(1));
 			rconn = getConnectionByName(conname);
 		}
 	}
 	if (PG_NARGS() == 3)
 	{
 		/* text,text,bool */
-		conname = GET_STR(PG_GETARG_TEXT_P(0));
-		curname = GET_STR(PG_GETARG_TEXT_P(1));
+		conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+		curname = text_to_cstring(PG_GETARG_TEXT_PP(1));
 		fail = PG_GETARG_BOOL(2);
 		rconn = getConnectionByName(conname);
 	}
@@ -492,7 +490,7 @@ dblink_close(PG_FUNCTION_ARGS)
 		else
 		{
 			DBLINK_RES_ERROR_AS_NOTICE("sql error");
-			PG_RETURN_TEXT_P(GET_TEXT("ERROR"));
+			PG_RETURN_TEXT_P(cstring_to_text("ERROR"));
 		}
 	}
 
@@ -515,7 +513,7 @@ dblink_close(PG_FUNCTION_ARGS)
 		}
 	}
 
-	PG_RETURN_TEXT_P(GET_TEXT("OK"));
+	PG_RETURN_TEXT_P(cstring_to_text("OK"));
 }
 
 /*
@@ -550,8 +548,8 @@ dblink_fetch(PG_FUNCTION_ARGS)
 		if (PG_NARGS() == 4)
 		{
 			/* text,text,int,bool */
-			conname = GET_STR(PG_GETARG_TEXT_P(0));
-			curname = GET_STR(PG_GETARG_TEXT_P(1));
+			conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+			curname = text_to_cstring(PG_GETARG_TEXT_PP(1));
 			howmany = PG_GETARG_INT32(2);
 			fail = PG_GETARG_BOOL(3);
 
@@ -564,15 +562,15 @@ dblink_fetch(PG_FUNCTION_ARGS)
 			/* text,text,int or text,int,bool */
 			if (get_fn_expr_argtype(fcinfo->flinfo, 2) == BOOLOID)
 			{
-				curname = GET_STR(PG_GETARG_TEXT_P(0));
+				curname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 				howmany = PG_GETARG_INT32(1);
 				fail = PG_GETARG_BOOL(2);
 				conn = pconn->conn;
 			}
 			else
 			{
-				conname = GET_STR(PG_GETARG_TEXT_P(0));
-				curname = GET_STR(PG_GETARG_TEXT_P(1));
+				conname = text_to_cstring(PG_GETARG_TEXT_PP(0));
+				curname = text_to_cstring(PG_GETARG_TEXT_PP(1));
 				howmany = PG_GETARG_INT32(2);
 
 				rconn = getConnectionByName(conname);
@@ -583,7 +581,7 @@ dblink_fetch(PG_FUNCTION_ARGS)
 		else if (PG_NARGS() == 2)
 		{
 			/* text,int */
-			curname = GET_STR(PG_GETARG_TEXT_P(0));
+			curname = text_to_cstring(PG_GETARG_TEXT_PP(0));
 			howmany = PG_GETARG_INT32(1);
 			conn = pconn->conn;
 		}
@@ -792,7 +790,7 @@ dblink_record_internal(FunctionCallInfo fcinfo, bool is_async, bool do_get)
 			{
 				/* text,text,bool */
 				DBLINK_GET_CONN;
-				sql = GET_STR(PG_GETARG_TEXT_P(1));
+				sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 				fail = PG_GETARG_BOOL(2);
 			}
 			else if (PG_NARGS() == 2)
@@ -801,20 +799,20 @@ dblink_record_internal(FunctionCallInfo fcinfo, bool is_async, bool do_get)
 				if (get_fn_expr_argtype(fcinfo->flinfo, 1) == BOOLOID)
 				{
 					conn = pconn->conn;
-					sql = GET_STR(PG_GETARG_TEXT_P(0));
+					sql = text_to_cstring(PG_GETARG_TEXT_PP(0));
 					fail = PG_GETARG_BOOL(1);
 				}
 				else
 				{
 					DBLINK_GET_CONN;
-					sql = GET_STR(PG_GETARG_TEXT_P(1));
+					sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 				}
 			}
 			else if (PG_NARGS() == 1)
 			{
 				/* text */
 				conn = pconn->conn;
-				sql = GET_STR(PG_GETARG_TEXT_P(0));
+				sql = text_to_cstring(PG_GETARG_TEXT_PP(0));
 			}
 			else
 				/* shouldn't happen */
@@ -844,7 +842,7 @@ dblink_record_internal(FunctionCallInfo fcinfo, bool is_async, bool do_get)
 			if (PG_NARGS() == 2)
 			{
 				DBLINK_GET_CONN;
-				sql = GET_STR(PG_GETARG_TEXT_P(1));
+				sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 			}
 			else
 				/* shouldn't happen */
@@ -1047,7 +1045,7 @@ dblink_get_connections(PG_FUNCTION_ARGS)
 		{
 			/* stash away current value */
 			astate = accumArrayResult(astate,
-									  PointerGetDatum(GET_TEXT(hentry->name)),
+									  CStringGetTextDatum(hentry->name),
 									  false, TEXTOID, CurrentMemoryContext);
 		}
 	}
@@ -1110,9 +1108,9 @@ dblink_cancel_query(PG_FUNCTION_ARGS)
 	PQfreeCancel(cancel);
 
 	if (res == 1)
-		PG_RETURN_TEXT_P(GET_TEXT("OK"));
+		PG_RETURN_TEXT_P(cstring_to_text("OK"));
 	else
-		PG_RETURN_TEXT_P(GET_TEXT(errbuf));
+		PG_RETURN_TEXT_P(cstring_to_text(errbuf));
 }
 
 
@@ -1139,9 +1137,9 @@ dblink_error_message(PG_FUNCTION_ARGS)
 
 	msg = PQerrorMessage(conn);
 	if (msg == NULL || msg[0] == '\0')
-		PG_RETURN_TEXT_P(GET_TEXT("OK"));
+		PG_RETURN_TEXT_P(cstring_to_text("OK"));
 	else
-		PG_RETURN_TEXT_P(GET_TEXT(msg));
+		PG_RETURN_TEXT_P(cstring_to_text(msg));
 }
 
 /*
@@ -1172,7 +1170,7 @@ dblink_exec(PG_FUNCTION_ARGS)
 	{
 		/* must be text,text,bool */
 		DBLINK_GET_CONN;
-		sql = GET_STR(PG_GETARG_TEXT_P(1));
+		sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 		fail = PG_GETARG_BOOL(2);
 	}
 	else if (PG_NARGS() == 2)
@@ -1181,20 +1179,20 @@ dblink_exec(PG_FUNCTION_ARGS)
 		if (get_fn_expr_argtype(fcinfo->flinfo, 1) == BOOLOID)
 		{
 			conn = pconn->conn;
-			sql = GET_STR(PG_GETARG_TEXT_P(0));
+			sql = text_to_cstring(PG_GETARG_TEXT_PP(0));
 			fail = PG_GETARG_BOOL(1);
 		}
 		else
 		{
 			DBLINK_GET_CONN;
-			sql = GET_STR(PG_GETARG_TEXT_P(1));
+			sql = text_to_cstring(PG_GETARG_TEXT_PP(1));
 		}
 	}
 	else if (PG_NARGS() == 1)
 	{
 		/* must be single text argument */
 		conn = pconn->conn;
-		sql = GET_STR(PG_GETARG_TEXT_P(0));
+		sql = text_to_cstring(PG_GETARG_TEXT_PP(0));
 	}
 	else
 		/* shouldn't happen */
@@ -1222,7 +1220,7 @@ dblink_exec(PG_FUNCTION_ARGS)
 		 * and save a copy of the command status string to return as our
 		 * result tuple
 		 */
-		sql_cmd_status = GET_TEXT("ERROR");
+		sql_cmd_status = cstring_to_text("ERROR");
 
 	}
 	else if (PQresultStatus(res) == PGRES_COMMAND_OK)
@@ -1236,7 +1234,7 @@ dblink_exec(PG_FUNCTION_ARGS)
 		 * and save a copy of the command status string to return as our
 		 * result tuple
 		 */
-		sql_cmd_status = GET_TEXT(PQcmdStatus(res));
+		sql_cmd_status = cstring_to_text(PQcmdStatus(res));
 		PQclear(res);
 	}
 	else
@@ -1469,7 +1467,7 @@ dblink_build_sql_insert(PG_FUNCTION_ARGS)
 	/*
 	 * And send it
 	 */
-	PG_RETURN_TEXT_P(GET_TEXT(sql));
+	PG_RETURN_TEXT_P(cstring_to_text(sql));
 }
 
 
@@ -1542,7 +1540,7 @@ dblink_build_sql_delete(PG_FUNCTION_ARGS)
 	/*
 	 * And send it
 	 */
-	PG_RETURN_TEXT_P(GET_TEXT(sql));
+	PG_RETURN_TEXT_P(cstring_to_text(sql));
 }
 
 
@@ -1637,7 +1635,7 @@ dblink_build_sql_update(PG_FUNCTION_ARGS)
 	/*
 	 * And send it
 	 */
-	PG_RETURN_TEXT_P(GET_TEXT(sql));
+	PG_RETURN_TEXT_P(cstring_to_text(sql));
 }
 
 /*************************************************************
@@ -1742,8 +1740,7 @@ get_text_array_contents(ArrayType *array, int *numitems)
 		}
 		else
 		{
-			values[i] = DatumGetCString(DirectFunctionCall1(textout,
-													  PointerGetDatum(ptr)));
+			values[i] = TextDatumGetCString(PointerGetDatum(ptr));
 			ptr = att_addlength_pointer(ptr, typlen, ptr);
 			ptr = (char *) att_align_nominal(ptr, typalign);
 		}
@@ -1972,9 +1969,10 @@ quote_literal_cstr(char *rawstr)
 	text	   *result_text;
 	char	   *result;
 
-	rawstr_text = DatumGetTextP(DirectFunctionCall1(textin, CStringGetDatum(rawstr)));
-	result_text = DatumGetTextP(DirectFunctionCall1(quote_literal, PointerGetDatum(rawstr_text)));
-	result = DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(result_text)));
+	rawstr_text = cstring_to_text(rawstr);
+	result_text = DatumGetTextP(DirectFunctionCall1(quote_literal,
+													PointerGetDatum(rawstr_text)));
+	result = text_to_cstring(result_text);
 
 	return result;
 }
@@ -1990,9 +1988,10 @@ quote_ident_cstr(char *rawstr)
 	text	   *result_text;
 	char	   *result;
 
-	rawstr_text = DatumGetTextP(DirectFunctionCall1(textin, CStringGetDatum(rawstr)));
-	result_text = DatumGetTextP(DirectFunctionCall1(quote_ident, PointerGetDatum(rawstr_text)));
-	result = DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(result_text)));
+	rawstr_text = cstring_to_text(rawstr);
+	result_text = DatumGetTextP(DirectFunctionCall1(quote_ident,
+													PointerGetDatum(rawstr_text)));
+	result = text_to_cstring(result_text);
 
 	return result;
 }

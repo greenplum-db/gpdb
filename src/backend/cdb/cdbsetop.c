@@ -103,7 +103,8 @@ GpSetOpType choose_setop_type(List *planlist)
 }
 
 
-void adjust_setop_arguments(List *planlist, GpSetOpType setop_type)
+void
+adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type)
 {
 	ListCell *cell;
 	Plan *subplan;
@@ -160,12 +161,12 @@ void adjust_setop_arguments(List *planlist, GpSetOpType setop_type)
 				case CdbLocusType_HashedOJ:
 				case CdbLocusType_Strewn:
 					Assert( subplanflow->flotype == FLOW_PARTITIONED );
-					adjusted_plan = (Plan*)make_motion_gather_to_QD(subplan, false);				
+					adjusted_plan = (Plan*)make_motion_gather_to_QD(root, subplan, false);
 					break;
 					
 				case CdbLocusType_SingleQE:
 					Assert( subplanflow->flotype == FLOW_SINGLETON && subplanflow->segindex == 0 );
-					adjusted_plan = (Plan*)make_motion_gather_to_QD(subplan, false);				
+					adjusted_plan = (Plan*)make_motion_gather_to_QD(root, subplan, false);
 					break;
 
 				case CdbLocusType_Entry:
@@ -190,7 +191,7 @@ void adjust_setop_arguments(List *planlist, GpSetOpType setop_type)
 				case CdbLocusType_Strewn:
 					Assert( subplanflow->flotype == FLOW_PARTITIONED );
 					/* Gather to QE.  No need to keep ordering. */
-					adjusted_plan = (Plan*)make_motion_gather_to_QE(subplan, false);				
+					adjusted_plan = (Plan*)make_motion_gather_to_QE(root, subplan, false);
 					break;
 					
 				case CdbLocusType_SingleQE:
@@ -276,24 +277,6 @@ Flow *copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 		return NULL;
 	}
 
-	/* Propogate sort attributes, if wanted and available. */
-	if (withSort && model_flow->numSortCols > 0)
-	{
-		new_flow->numSortCols = model_flow->numSortCols;
-		ARRAYCOPY(
-			new_flow->sortColIdx,
-			model_flow->sortColIdx,
-			model_flow->numSortCols * sizeof(AttrNumber) );
-		ARRAYCOPY(
-			new_flow->sortOperators,
-			model_flow->sortOperators,
-			model_flow->numSortCols * sizeof(Oid) );
-		ARRAYCOPY(
-			new_flow->nullsFirst,
-			model_flow->nullsFirst,
-			model_flow->numSortCols * sizeof(bool) );
-	}
-
 	return new_flow;
 }
 
@@ -305,9 +288,9 @@ Flow *copyFlow(Flow *model_flow, bool withExprs, bool withSort)
  *      a non-replicated, non-root subplan.
  */
 Motion *
-make_motion_gather_to_QD(Plan *subplan, bool keep_ordering)
+make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
-	return make_motion_gather(subplan, -1, keep_ordering);
+	return make_motion_gather(root, subplan, -1, sortPathKeys);
 }
 
 /*
@@ -317,9 +300,9 @@ make_motion_gather_to_QD(Plan *subplan, bool keep_ordering)
  *      subplan.
  */
 Motion *
-make_motion_gather_to_QE(Plan *subplan, bool keep_ordering)
+make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
-	return make_motion_gather(subplan, gp_singleton_segindex, keep_ordering);
+	return make_motion_gather(root, subplan, gp_singleton_segindex, sortPathKeys);
 }	
 
 /*
@@ -329,7 +312,7 @@ make_motion_gather_to_QE(Plan *subplan, bool keep_ordering)
  *      subplan.
  */
 Motion *
-make_motion_gather(Plan *subplan, int segindex, bool keep_ordering)
+make_motion_gather(PlannerInfo *root, Plan *subplan, int segindex, List *sortPathKeys)
 {
 	Motion *motion;
 
@@ -337,17 +320,12 @@ make_motion_gather(Plan *subplan, int segindex, bool keep_ordering)
 	Assert(subplan->flow->flotype == FLOW_PARTITIONED ||
 		   (subplan->flow->flotype == FLOW_SINGLETON && subplan->flow->segindex == 0));
 
-	if ( keep_ordering && subplan->flow->numSortCols > 0 )
+	if (sortPathKeys)
 	{
-		Flow *flow = subplan->flow;
-			
-		motion = make_sorted_union_motion(
+		motion = make_sorted_union_motion(root,
 			subplan,
 			segindex,
-			flow->numSortCols, /* Motion and Flow can share arrays. */
-			flow->sortColIdx,
-			flow->sortOperators,
-			flow->nullsFirst,
+			sortPathKeys,
 			false /* useExecutorVarFormat */);
 	}
 	else
@@ -499,7 +477,7 @@ void mark_passthru_locus(Plan *plan, bool with_hash, bool with_sort)
 
 void mark_sort_locus(Plan *plan)
 {
-	plan->flow = pull_up_Flow(plan, plan->lefttree, true);
+	plan->flow = pull_up_Flow(plan, plan->lefttree);
 }	
 
 void mark_plan_general(Plan* plan)

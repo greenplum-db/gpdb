@@ -1,7 +1,7 @@
 /*
  * this is a small part of c.h since we don't want to leak all postgres
  * definitions into ecpg programs
- * $PostgreSQL: pgsql/src/interfaces/ecpg/include/ecpglib.h,v 1.75 2008/02/14 12:22:36 meskes Exp $
+ * $PostgreSQL: pgsql/src/interfaces/ecpg/include/ecpglib.h,v 1.76 2008/03/20 16:29:45 meskes Exp $
  */
 
 #ifndef _ECPGLIB_H
@@ -61,7 +61,7 @@ char	   *ECPGprepared_statement(const char *, const char *, int);
 PGconn	   *ECPGget_PGconn(const char *);
 
 
-char	   *ECPGerrmsg(void);
+char		*ECPGerrmsg(void);
 
  /* print an error message */
 void		sqlprint(void);
@@ -77,13 +77,13 @@ bool		ECPGdo_descriptor(int, const char *, const char *, const char *);
 bool		ECPGdeallocate_desc(int, const char *);
 bool		ECPGallocate_desc(int, const char *);
 bool		ECPGget_desc_header(int, const char *, int *);
-bool		ECPGget_desc(int, const char *, int,...);
+bool		ECPGget_desc(int, const char *, int, ...);
 bool		ECPGset_desc_header(int, const char *, int);
-bool		ECPGset_desc(int, const char *, int,...);
+bool		ECPGset_desc(int, const char *, int, ...);
 
 void		ECPGset_noind_null(enum ECPGttype, void *);
 bool		ECPGis_noind_null(enum ECPGttype, void *);
-bool		ECPGdescribe(int, bool, const char *,...);
+bool		ECPGdescribe(int, bool, const char *, ...);
 
 /* dynamic result allocation */
 void		ECPGfree_auto_mem(void);

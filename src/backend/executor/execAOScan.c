@@ -17,6 +17,7 @@
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "cdb/cdbappendonlyam.h"
+#include "utils/snapmgr.h"
 
 TupleTableSlot *
 AppendOnlyScanNext(ScanState *scanState)

@@ -81,6 +81,7 @@ typedef struct AggStatePerAggData
 	/* deconstructed sorting information (arrays of length numSortCols) */
 	AttrNumber *sortColIdx;
 	Oid		   *sortOperators;
+	bool	   *sortNullsFirst;
 
 	/* --- Ordered Aggregate Additions ) --- */
 

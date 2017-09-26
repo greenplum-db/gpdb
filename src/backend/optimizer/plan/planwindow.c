@@ -71,7 +71,7 @@ typedef struct Coplan
 } Coplan;
 
 /* WindowInfo represents a set of coplans in the final plan for a window 
- * query.  The set contains at least one of a coplan for a Window node 
+ * query.  The set contains at least one of a coplan for a WindowAgg node
  * and a coplan for an Agg node.
  *
  * Each WindowInfo controls an array of SpecInfos all of which have the same
@@ -92,10 +92,19 @@ typedef struct WindowInfo
 	bool	needpartkey;
 	bool	needauxcount;
 	
+	/* PARTITION BY */
 	AttrNumber *partkey_attrs;
 	Oid		   *partkey_operators;		/* array of equality operators */
-	List	   *key_list;
-	
+
+	/* ORDER BY and framing */
+	int			ordNumCols;		/* number of columns in ordering clause */
+	AttrNumber *ordColIdx;		/* their indexes in the target list */
+	Oid		   *ordOperators;	/* equality operators for ordering columns */
+	bool	   *nullsFirst;
+	int			frameOptions;	/* frame_clause options, see WindowDef */
+	Node	   *startOffset;	/* expression for starting bound, if any */
+	Node	   *endOffset;		/* expression for ending bound, if any */
+
 	/* coplan assembly */
 	
 	struct Coplan  *window_coplan;
@@ -103,14 +112,14 @@ typedef struct WindowInfo
 } WindowInfo;
 
 
-/* RefInfo holds a WindowRef and describes it in the context of the overall
- * query.  During planning, the contained WindowRef refers back to the
+/* RefInfo holds a WindowFunc reference and describes it in the context of the overall
+ * query.  During planning, the contained WindowFunc refers back to the
  * RefInfo via winindex - the position (counting from 0) of the RefInfo in
  * the WindowContext's list, refinfos.
  */
 typedef struct RefInfo
 {
-	WindowRef  *ref;
+	WindowFunc *ref;
 	Bitmapset  *varset;
 	Index		specindex; /* index of parent SpecInfo */
 	bool		isagg;
@@ -166,8 +175,7 @@ typedef struct SpecInfo
 	Node	   *endOffset;
 
 	Bitmapset	   *refset;			/* indices of referencing RefInfo */
-	Index			windowindex;	/* index of assigned Window node */
-	int				keylevel;		/* key level of spec in Window node */
+	Index			windowindex;	/* index of assigned WindowAgg node */
 	List		   *partkey;		/* PARTITION BY clause - transient */
 	/*
 	 * Remaining SortClauses after removing keys that are
@@ -272,7 +280,7 @@ static Plan *assure_collocation_and_order(PlannerInfo *root, Plan *input_plan, L
 		int partkey_len, AttrNumber *partkey_attrs, List *sortclause, 
 		CdbPathLocus input_locus, CdbPathLocus *output_locus, List **pathkeys_ptr);
 static AttrNumber addTargetToCoplan(Node *target, Coplan *coplan, WindowContext *context);
-static Aggref* makeWindowAggref(WindowRef *winref);
+static Aggref* makeWindowAggref(WindowFunc *winref);
 static Aggref* makeAuxCountAggref(void);
 static List *translate_upper_tlist_parallel(List *orig_tlist, WindowContext *context);
 static Node *translate_upper_vars_sequential(Node *node, WindowContext *context);
@@ -286,7 +294,7 @@ static Plan *add_join_to_wrapper(PlannerInfo *root, Plan *plan, Query *query, Li
 static Query *copy_common_subquery(Query *original, List *targetList);
 static char *get_function_name(Oid proid, const char *dflt);
 
-static void lead_lag_frame_maker(WindowRef *wref, char winkind, SpecInfo *sinfo);
+static void lead_lag_frame_maker(WindowFunc *wref, char winkind, SpecInfo *sinfo);
 
 Plan *
 window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
@@ -305,8 +313,8 @@ window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
 	Assert(parse->havingQual == NULL);
 	
 #ifdef CDB_WINDOW_DISPLAY	
-	elog_node_display(NOTICE, "Window  query target list", parse->targetList, true);
-	elog_node_display(NOTICE, "Window  query window  clause", parse->windowClause, true);
+	elog_node_display(NOTICE, "WindowAgg query target list", parse->targetList, true);
+	elog_node_display(NOTICE, "WindowAgg query window clause", parse->windowClause, true);
 #endif
 	
 	/* Create a map: (varno,varattno)  <--> (integer) for use in recording
@@ -323,7 +331,7 @@ window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
 	context->orig_tlist = parse->targetList;
 	
 	/* Create a copy of the input target list for our use.  Save pointers
-	 * to the contained WindowRef nodes on the side in a array of RefInfo
+	 * to the contained WindowFunc nodes on the side in a array of RefInfo
 	 * structures.
 	 */
 	preprocess_window_tlist(parse->targetList, context);
@@ -341,7 +349,7 @@ window_planner(PlannerInfo *root, double tuple_fraction, List **pathkeys_ptr)
 	make_lower_targetlist(root->parse, context);
 	
 	/* Divide the SpecInfos into (contiguous) groups to be handled by a
-	 * single Window node and associated auxiliary stuff (in other words,
+	 * single WindowAgg node and associated auxiliary stuff (in other words,
 	 * by a single sort of the input) and assign a WindowInfo to represent
 	 * each group.
 	 */
@@ -613,11 +621,11 @@ check_ntile_argument(List *args, WindowClause *wc, List *tlist)
  *
  *	upper_tlist		the deep copy
  *
- *	upper_var_set	Vars used outside of WindowRef nodes
+ *	upper_var_set	Vars used outside of WindowFunc nodes
  *
- *	ref_infos		per WindowRef list of RefInfo containing
- *		ref		the WindowRef in upper_tlist
- *		varset	Vars used in the WindowRefs explicit arguments
+ *	ref_infos		per WindowFunc list of RefInfo containing
+ *		ref		the WindowFunc in upper_tlist
+ *		varset	Vars used in the WindowFuncs explicit arguments
  */
 static void preprocess_window_tlist(List *orig_tlist, WindowContext *context)
 {
@@ -634,7 +642,7 @@ static void preprocess_window_tlist(List *orig_tlist, WindowContext *context)
  *
  * Deep copy the given expression (presumed to be a part of the parse tree
  * target list for a window query) while checking validity of and recording
- * information about contained WindowRef nodes.
+ * information about contained WindowFunc nodes.
  */
 static Node * window_tlist_mutator(Node *node, WindowContext *context)
 {
@@ -646,7 +654,7 @@ static Node * window_tlist_mutator(Node *node, WindowContext *context)
 		Var *var = (Var *)node;
 		int idx = index_of_var(var, context);
 		
-		if ( context->cur_refinfo == NULL ) /* above all WindowRef */
+		if ( context->cur_refinfo == NULL ) /* above all WindowFunc */
 		{
 			if ( var->varlevelsup == 0 )
 			{
@@ -654,7 +662,7 @@ static Node * window_tlist_mutator(Node *node, WindowContext *context)
 					bms_add_member(context->upper_var_set, idx);
 			}
 		}
-		else /* below a WindowRef */
+		else /* below a WindowFunc */
 		{
 			if ( var->varlevelsup == 0 )
 			{
@@ -688,12 +696,12 @@ static Node * window_tlist_mutator(Node *node, WindowContext *context)
 		}
 	}
 	
-	else if ( IsA(node, WindowRef) )
+	else if ( IsA(node, WindowFunc) )
 	{
-		WindowRef *window_ref = (WindowRef *)node;
-		WindowRef *new_ref = NULL;
+		WindowFunc *window_ref = (WindowFunc *)node;
+		WindowFunc *new_ref = NULL;
 		
-		if ( context->cur_refinfo == NULL ) /* top-level WindowRef */
+		if ( context->cur_refinfo == NULL ) /* top-level WindowFunc */
 		{
 			new_ref = copyObject(window_ref);
 
@@ -717,7 +725,7 @@ static Node * window_tlist_mutator(Node *node, WindowContext *context)
 				check_ntile_argument(new_ref->args, wc, context->orig_tlist);
 			}
 
-			/* Record the WindowRef and its Vars referenced set. */
+			/* Record the WindowFunc and its Vars referenced set. */
 			new_ref->winindex = list_length(context->refinfos);
 			context->refinfos = lappend(context->refinfos, context->cur_refinfo);
 			
@@ -730,7 +738,7 @@ static Node * window_tlist_mutator(Node *node, WindowContext *context)
 		{
 			ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Window function calls may not be nested.")));
+				 errmsg("window function calls may not be nested.")));
 		}
 	}
 	
@@ -742,8 +750,8 @@ static Node * window_tlist_mutator(Node *node, WindowContext *context)
  * 
  * Take inventory of the supplied list of WindowSpecs in the given context. 
  * Add an array of distinct SpecInfo to the context.  Exclude SpecInfos that
- * are not referenced by any WindowRefs.  Afterward, the specindex field of
- * a RefInfo identifies the parent SpecInfo of its WindowRef.
+ * are not referenced by any WindowFuncs.  Afterward, the specindex field of
+ * a RefInfo identifies the parent SpecInfo of its WindowFunc.
  *
  * Note that preprocess_window_tlist() must already have run in order to
  * fill in the list refinfos list in context.
@@ -797,7 +805,6 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 		specinfos[i].endOffset = spec->endOffset;
 		specinfos[i].refset = NULL;
 		specinfos[i].windowindex = 0;
-		specinfos[i].keylevel = 0;
 		specinfos[i].partkey = spec->partitionClause;
 
 		/* Construct unique_order for each SpecInfo by removing
@@ -826,8 +833,8 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 		i++;
 	}
 	
-	/* Note which WindowRefs each WindowSpec covers by saving the indexes
-	 * of their RefInfos.  Redirect WindowRefs with special framing needs
+	/* Note which WindowFuncs each WindowDef covers by saving the indexes
+	 * of their RefInfos.  Redirect WindowFuncs with special framing needs
 	 * to one of the extra SpecInfos allocated above.  In addition, note 
 	 * in the context any occurence of a window function that requires an 
 	 * auxiliary aggregate coplan. 
@@ -836,7 +843,7 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 	foreach ( lcr, context->refinfos )
 	{
 		RefInfo *rinfo = (RefInfo *)lfirst(lcr);
-		WindowRef *ref = rinfo->ref;
+		WindowFunc *ref = rinfo->ref;
 		int			sindex = ref->winref - 1;
 		SpecInfo *sinfo = &specinfos[sindex];
 
@@ -958,17 +965,17 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
  * the context. The groups will be contiguous in array context->specinfos
  * due to the sort order established by inventory_window_specs.
  *
- * Ultimately each WindowInfo will correspond to a Window node and the
- * notion of "compatible" is based on the requirements of Window nodes.
+ * Ultimately each WindowInfo will correspond to a WindowAgg node and the
+ * notion of "compatible" is based on the requirements of WindowAgg nodes.
  */
 static void assign_window_info(WindowContext *context)
 {
 	int i, j, k, n;
 	Index current;
 	ListCell *lc;
-	
+
 	Assert( context->nspecinfos > 0 );
-	
+
 	/* First divide the previously produced, sorted list of distinct
 	 * SpecInfo into groups with matching partitioning requirements 
 	 * and so that each group member's ordering key is a prefix of 
@@ -977,15 +984,18 @@ static void assign_window_info(WindowContext *context)
 	context->specinfos[0].windowindex = current = 0;	
 	for ( i = 1, j = 0; i < context->nspecinfos; j = i, i++ )
 	{
-		if ( ! bms_equal(context->specinfos[j].partset, context->specinfos[i].partset) 
-			 || ! is_order_prefix_of(context->specinfos[j].unique_order, context->specinfos[i].unique_order) )
+		if (!bms_equal(context->specinfos[j].partset, context->specinfos[i].partset)
+			|| !equal(context->specinfos[j].unique_order, context->specinfos[i].unique_order)
+			|| context->specinfos[j].frameOptions != context->specinfos[i].frameOptions
+			|| !equal(context->specinfos[j].startOffset, context->specinfos[i].startOffset)
+			|| !equal(context->specinfos[j].endOffset, context->specinfos[i].endOffset))
 		{
 			current++;
 		}
 		context->specinfos[i].windowindex = current;
 	}
 	n = current + 1;
-	
+
 	/* Next allocate a WindowInfo for each group and setup its requirements.
 	 */
 	context->nwindowinfos = n;
@@ -997,16 +1007,16 @@ static void assign_window_info(WindowContext *context)
 		int sortgroupref = 0;
 		
 		j = k; /* j indexes first SpecInfo in this WindowInfo */
-		
+
 		for ( ; k < context->nspecinfos; k++ )
 		{
 			SpecInfo *sinfo = &context->specinfos[k];
-			
+
 			if ( sinfo->windowindex != i )
 				break; /* k indexes first SpecInfo in next WindowInfo */
 			final_sinfo = sinfo; /* has longest sort key so far */
 		}
-		
+
 		Assert( final_sinfo != NULL );
 
 		winfo->firstspecindex = j;
@@ -1048,30 +1058,24 @@ static void assign_window_info(WindowContext *context)
 	{	
 		set_window_keys(context, i);
 	}
-	
+
 	foreach ( lc, context->refinfos )
 	{
-		RefInfo *rinfo = (RefInfo*)lfirst(lc);
+		RefInfo *rinfo = (RefInfo*) lfirst(lc);
 		SpecInfo *sinfo = &context->specinfos[rinfo->specindex];
 		WindowInfo *winfo = &context->windowinfos[sinfo->windowindex];
-		
-		if ( sinfo->keylevel < 0 )
+
+		if ( sinfo->order == NIL )
 		{
 			/* Unordered */
-			Assert( sinfo->order == NIL );
-			
-			rinfo->ref->winlevel = list_length (winfo->key_list);
 			if ( rinfo->isagg )
 				winfo->needpartkey = true; /* unordered aggregation */
 		}
 		else
 		{
 			/* Ordered */
-			Assert( sinfo->order != NIL );
-			
-			rinfo->ref->winlevel = sinfo->keylevel;
 		}
-		
+
 		/* Check for window function in need of auxiliary count. */
 		if ( !rinfo->isagg && rinfo->needcount )
 		{
@@ -1082,13 +1086,15 @@ static void assign_window_info(WindowContext *context)
 }
 
 
-static bool is_order_prefix_of(List *sca, List *scb)
+static bool
+is_order_prefix_of(List *sca, List *scb)
 {
-	ListCell *lca, *lcb;
-	
+	ListCell   *lca,
+			   *lcb;
+
 	if ( list_length(sca) > list_length(scb) )
 		return false;
-	
+
 	forboth(lca, sca, lcb, scb)
 	{
 		if ( !equal(lfirst(lca),lfirst(lcb)) )
@@ -1096,7 +1102,6 @@ static bool is_order_prefix_of(List *sca, List *scb)
 	}
 	return true;
 }
-
 
 
 /*
@@ -1202,7 +1207,7 @@ static int compare_order(List *a, List* b)
  *		SELECT a+b,SUM(c+d) OVER (ORDER BY a+b) FROM table;
  * we want to pass this targetlist to the subplan:
  *		a,b,c,d,a+b
- * where the a+b target will be used by the Sort/Window step, and the
+ * where the a+b target will be used by the Sort/WindowAgg step, and the
  * other targets will be used for computing the final results.	(In the
  * above example we could theoretically suppress the a and b targets and
  * pass down only c,d,a+b, but it's not really worth the trouble to
@@ -1339,12 +1344,11 @@ set_window_keys(WindowContext *context, int wind_index)
 	AttrNumber *sortattrs = NULL;
 	Oid		   *sortops = NULL;
 	bool	   *nullsFirstFlags = NULL;
-	
+
 	/* results  */
 	int			partkey_len = 0;
 	AttrNumber *partkey_attrs = NULL;
 	Oid		   *partkey_operators = NULL;
-	List	   *window_keys = NIL;
 	
 	Assert( 0 <= wind_index && wind_index < context->nwindowinfos );
 	
@@ -1383,82 +1387,87 @@ set_window_keys(WindowContext *context, int wind_index)
 					 sortops[i]);
 		}
 	}
-	
+
 	/* Careful.  Within sort key, partition key may overlap order keys. */
 	nextsk = skoffset = winfo->orderkeys_offset;
-	
-	/* Make a WindowKey per SpecInfo. */
+
+	/* Make a WindowKey for these  SpecInfos. */
+	SpecInfo *firstOrderedSinfo;
+
+	firstOrderedSinfo = NULL;
 	for ( i = 0; i < winfo->numspecindex; i++ )
 	{
-		WindowKey *wkey;
 		SpecInfo *sinfo = &context->specinfos[winfo->firstspecindex + i];
-		int keylen = list_length(sinfo->order);
-		
-		if ( keylen == 0 )
+		if ( sinfo->order == NIL )
 		{
-			if ( sinfo->frameOptions != FRAMEOPTION_DEFAULTS )
-			{
+			if (sinfo->frameOptions != FRAMEOPTION_DEFAULTS )
 				ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("invalid window specification"),
-					 errhint("Only ordered windows may specify ROWS or RANGE framing.")));
-			}
-
-			sinfo->keylevel = -1;  /* No ordering key, just partition key. */
-			continue;
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("invalid window specification"),
+						 errhint("Only ordered windows may specify ROWS or RANGE framing.")));
 		}
-
-		keylen = list_length(sinfo->unique_order);
-
-		wkey = makeNode(WindowKey);
-		wkey->numSortCols = (keylen + skoffset) - nextsk;
-		
-		Assert( wkey->numSortCols >= 0 );
-		
-		if (  wkey->numSortCols > 0 )
+		else
 		{
-			wkey->sortColIdx = (AttrNumber*)palloc(wkey->numSortCols * sizeof(AttrNumber));
-			wkey->sortOperators = (Oid*)palloc(wkey->numSortCols * sizeof(Oid));
-			wkey->nullsFirst = (bool *) palloc(wkey->numSortCols * sizeof(bool));
+			firstOrderedSinfo = sinfo;
+			break;
+		}
+	}
 
-			for ( j = 0; j < wkey->numSortCols; j++ )
+	if (firstOrderedSinfo)
+	{
+		int keylen = list_length(firstOrderedSinfo->unique_order);
+
+		winfo->ordNumCols = (keylen + skoffset) - nextsk;
+
+		Assert( winfo->ordNumCols >= 0 );
+
+		if (  winfo->ordNumCols > 0 )
+		{
+			winfo->ordColIdx = (AttrNumber*)palloc(winfo->ordNumCols * sizeof(AttrNumber));
+			winfo->ordOperators = (Oid*)palloc(winfo->ordNumCols * sizeof(Oid));
+			winfo->nullsFirst = (bool *) palloc(winfo->ordNumCols * sizeof(bool));
+
+			for ( j = 0; j < winfo->ordNumCols; j++ )
 			{
-				wkey->sortColIdx[j] = sortattrs[nextsk];
-				wkey->sortOperators[j] = sortops[nextsk]; /* TODO SET THIS CORRECTLY!!! */
-				wkey->nullsFirst[j] = nullsFirstFlags[nextsk];
+				winfo->ordColIdx[j] = sortattrs[nextsk];
+				winfo->ordOperators[j] = sortops[nextsk]; /* TODO SET THIS CORRECTLY!!! */
+				winfo->nullsFirst[j] = nullsFirstFlags[nextsk];
 				nextsk++;
 			}
 		}
-
 		else
 		{
 			SortClause *sc;
-			
+
 			/* Copy the first ORDER BY key into SortCols. */
-			wkey->numSortCols = 1;
-			wkey->sortColIdx = (AttrNumber *)palloc(sizeof(AttrNumber));
-			wkey->sortOperators = (Oid*)palloc(sizeof(Oid));
-			wkey->nullsFirst = (bool *) palloc(sizeof(bool));
-			sc = (SortClause *)linitial(sinfo->order);
-			wkey->sortColIdx[0] = context->sortref_resno[sc->tleSortGroupRef];
-			wkey->sortOperators[0] = sc->sortop;
-			wkey->nullsFirst[0] = sc->nulls_first;
+			winfo->ordNumCols = 1;
+			winfo->ordColIdx = (AttrNumber *)palloc(sizeof(AttrNumber));
+			winfo->ordOperators = (Oid*)palloc(sizeof(Oid));
+			winfo->nullsFirst = (bool *) palloc(sizeof(bool));
+			sc = (SortClause *)linitial(firstOrderedSinfo->order);
+			winfo->ordColIdx[0] = context->sortref_resno[sc->tleSortGroupRef];
+			winfo->ordOperators[0] = sc->sortop;
+			winfo->nullsFirst[0] = sc->nulls_first;
 		}
 
-		wkey->frameOptions = sinfo->frameOptions;
-		wkey->startOffset = copyObject(sinfo->startOffset);
-		wkey->endOffset = copyObject(sinfo->endOffset);
-		sinfo->keylevel = list_length(window_keys); /* WindowKey position. */
-		window_keys = lappend(window_keys,  wkey);
+		winfo->frameOptions = firstOrderedSinfo->frameOptions;
+		winfo->startOffset = copyObject(firstOrderedSinfo->startOffset);
+		winfo->endOffset = copyObject(firstOrderedSinfo->endOffset);
 	}
-	
+	else
+	{
+		Assert(context->specinfos[winfo->firstspecindex].frameOptions == FRAMEOPTION_DEFAULTS);
+		winfo->frameOptions = FRAMEOPTION_DEFAULTS;
+		winfo->startOffset = NULL;
+		winfo->endOffset = NULL;
+	}
+
 	winfo->partkey_attrs = partkey_attrs;
 	winfo->partkey_operators = partkey_operators;
-	winfo->key_list = window_keys;
 }
 
 /* Fill in the fields of the given RefInfo that characterize the window 
- * function represented by its WindowRef. 
+ * function represented by its WindowFunc.
  */
 static void
 lookup_window_function(RefInfo *rinfo)
@@ -1658,6 +1667,10 @@ Plan *assure_collocation_and_order(
 			if(!pathkeys_contained_in(sort_pathkeys, *pathkeys_ptr))
 			{
 				result_plan = (Plan *) make_sort_from_sortclauses(root, sortclause, result_plan);
+
+				/* re-phrase the pathkeys in terms of the sort node's target list. */
+				sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, result_plan->targetlist, true);
+
 				*pathkeys_ptr = sort_pathkeys;
 				mark_sort_locus(result_plan);
 			}
@@ -1666,7 +1679,7 @@ Plan *assure_collocation_and_order(
 		/* bring to single locus */
 		if( CdbPathLocus_IsPartitioned(input_locus))
 		{
-			result_plan = (Plan *) make_motion_gather_to_QE(result_plan, (*pathkeys_ptr != NULL));
+			result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, *pathkeys_ptr);
 			result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 		}
 
@@ -1717,9 +1730,13 @@ Plan *assure_collocation_and_order(
 
 		if(sortclause != NIL)
 		{
-			if(! pathkeys_contained_in(sort_pathkeys, *pathkeys_ptr))
+			if(!pathkeys_contained_in(sort_pathkeys, *pathkeys_ptr))
 			{
 				result_plan = (Plan *) make_sort_from_sortclauses(root, sortclause, result_plan);
+
+				/* re-phrase the pathkeys in terms of the sort node's target list. */
+				sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, result_plan->targetlist, true);
+
 				*pathkeys_ptr = sort_pathkeys;
 				mark_sort_locus(result_plan);
 			}
@@ -1771,7 +1788,7 @@ Plan *assure_order(
 
 /* Plan a window query that can be implemented without any joins or 
  * input sharing, i.e., it involves one scan of the input plan result
- * and a single Window node.
+ * and a single WindowAgg node.
  *
  * Returns plan and, implicitly, pathkeys.
  */
@@ -1809,11 +1826,12 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 											   NULL,
 											   &pathkeys);
 	
-	/* Add the single Window node. */
-	result_plan = (Plan*) make_window(root, context->upper_tlist, 
-									  winfo->partkey_len, winfo->partkey_attrs, winfo->partkey_operators,
-									  winfo->key_list, /* XXX copy? */
-									  result_plan);
+	/* Add the single WindowAgg node. */
+	result_plan = (Plan *) make_windowagg(root, context->upper_tlist,
+										  winfo->partkey_len, winfo->partkey_attrs, winfo->partkey_operators,
+										  winfo->ordNumCols, winfo->ordColIdx, winfo->ordOperators,
+										  winfo->frameOptions, winfo->startOffset, winfo->endOffset,
+										  result_plan);
 	
 	/* 
 	 * Add a Flow node to the top node, if it doesn't have one yet.
@@ -1821,9 +1839,7 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 	 * must have a Flow node.
 	 */
 	if (!result_plan->flow)
-		result_plan->flow = pull_up_Flow(result_plan, 
-										 result_plan->lefttree, 
-										 (pathkeys != NIL));
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
 	/* TODO Check our API.
 	 *
@@ -2013,20 +2029,20 @@ static Plan *plan_sequential_window_query(PlannerInfo *root, WindowContext *cont
  * same PARTITION BY specification.  They are represented by contiguous
  * WindowInfo structures (from lo_windex to hi_windex) in the WindowContext.
  *
- * A stage comprises a chain of Window nodes (with an initial motion and 
+ * A stage comprises a chain of WindowAgg nodes (with an initial motion and
  * intervening sorts as required) and, if needed, an Agg node which is 
- * merge-joined to the head of the Window node chain on the common partition 
+ * merge-joined to the head of the WindowAgg node chain on the common partition
  * key.  By construction, this key is the high-order term of any sorts.
  *
  * Thus a simple (no Agg) stage looks like
  *
- *   input->Motion->Sort->Window->...->Sort->Window->
+ *   input->Motion->Sort->WindowAgg->...->Sort->WindowAgg->
  * 
  * With aggregation, this becomes
  *
- *   input->Motion->Sort->Share->Window->...->Sort->Window-+->Join->
- *                            |                            |
- *                            +------------>Agg------------+
+ *   input->Motion->Sort->Share->WindowAgg->...->Sort->WindowAgg-+->Join->
+ *                            |                                  |
+ *                            +--------------->Agg---------------+
  *
  * The input plan is the window plan to date.  Some invariants are
  * - the lower target list is a prefix of the input plan target list
@@ -2044,13 +2060,14 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 	Plan *window_plan;
 	Plan *agg_plan = NULL;
 	WindowInfo *winfo;
+	WindowInfo *sortwinfo;
 	int i;
 	ListCell *lc;
 	Index win_varno = 1;
 	Index agg_varno = 2;
 	AttrNumber aux_attrno = 0;
 	AttrNumber agg_attrno = 0;
-	List * win_names = NIL; /* for Window sub-query RTEs */
+	List * win_names = NIL; /* for WindowAgg sub-query RTEs */
 	List * agg_names = NIL; /* for Agg sub-query RTE */
 	List * join_tlist = NIL;
 	Query *agg_subquery;
@@ -2077,7 +2094,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 		}
 	}
 	
-	/* Derive names for the targets in the initial Window subquery and,
+	/* Derive names for the targets in the initial WindowAgg subquery and,
 	 * if we'll use a join, set up the beginning of the join targetlist. 
 	 */
 	i = 1;
@@ -2117,15 +2134,38 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 
 	/*
 	 * Assure collocation on the partition key and ordering for the first
-	 * WindowInfo in the stage.
+	 * WindowInfo in the stage. But also look ahead to the next WindowInfos.
+	 * If ordering of the next WindowInfo is the same as the first one's
+	 * but with extra columns, then sort directly to the order required
+	 * by the next WindowInfo. For example, if the first WindowInfo's
+	 * ordering is (a, b), and the next WindowInfo's ordering is (a, b, c),
+	 * sort directly to (a, b, c). Otherwise we would need an extra sort
+	 * between the first and second WindowInfos.
+	 *
+	 * XXX: This is needed, because the WindowInfos were originally sort from
+	 * the shortest ORDER BY to the longest one. It would seem that we could
+	 * avoid this extra step if we sorted them from longest to shortest one,
+	 * instead. But I could not make that work, I got "variable not found in
+	 * subplan target lists" errors from regression tests when I tried. I
+	 * couldn't figure out why, but this works, too.
 	 */
 	winfo = &context->windowinfos[lo_windex];
+
+	sortwinfo = winfo;
+	for (i = lo_windex + 1; i <= hi_windex; i++)
+	{
+		if (!is_order_prefix_of(sortwinfo->sortclause, context->windowinfos[i].sortclause))
+			break;
+
+		sortwinfo = &context->windowinfos[i];
+	}
+
 	window_plan = assure_collocation_and_order(root,
 											   input_plan,
 											   context->lower_tlist,
 											   winfo->partkey_len,
 											   winfo->partkey_attrs,
-											   winfo->sortclause,
+											   sortwinfo->sortclause,
 											   input_locus,
 											   locus_ptr,
 											   &pathkeys);
@@ -2142,7 +2182,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 
 		/* Since we'll be encountering some Agg targets.  Prepare for that 
 		 * by sharing the input window plan locally (within the slice) so
-		 * we can develop an Agg and a Window chain within the stage. 
+		 * we can develop an Agg and a WindowAgg chain within the stage.
 		 */
 		share_partners = share_plan(root, window_plan, 2);
 		window_plan = list_nth(share_partners, 0);
@@ -2201,7 +2241,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 			}			
 		}
 		
-		/* If any WindowRefs need a partition count (auxiliary aggregate)
+		/* If any WindowFunc need a partition count (auxiliary aggregate)
 		 * add a target for it and remember where it is.
 		 */
 		if ( hasaux )
@@ -2236,10 +2276,10 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					agg_plan /* now just the shared input */
 					);
 
-		agg_plan->flow = pull_up_Flow(agg_plan, agg_plan->lefttree, true);
+		agg_plan->flow = pull_up_Flow(agg_plan, agg_plan->lefttree);
 		
 		/* Later we'll package this Agg plan as the second sub-query RTE
-		 * in a fake Query representing a two-way join of Window sub-query 
+		 * in a fake Query representing a two-way join of WindowAgg sub-query
 		 * to Agg sub-query. We keep track of the attribute number (resno) 
 		 * of the next Aggref target we'll add to the Agg plan.
 		 */
@@ -2250,7 +2290,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 		agg_subquery = NULL; /* tidy */
 	}
 	
-	/* Put Window node (and any required Sort) atop the Window plan for each
+	/* Put WindowAgg node (and any required Sort) atop the WindowAgg plan for each
 	 * WindowInfo in the stage.
 	 */
 	for ( i = lo_windex; i <= hi_windex; i++ )
@@ -2267,20 +2307,36 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 			 *
 			 * XXX If we had a partitioned Sort operator, we could use
 			 *     it here on a partitioned window plan.
+			 *
+			 * Like when doing the initial sort, before this loop, look
+			 * ahead at the following WindowInfos, to see if we can avoid
+			 * a Sort step by sorting directly to the order needed by the
+			 * next WindowInfo.
 			 */
+
+			sortwinfo = winfo;
+			for (j = i + 1; j <= hi_windex; j++)
+			{
+				if (!is_order_prefix_of(sortwinfo->sortclause, context->windowinfos[j].sortclause))
+					break;
+
+				sortwinfo = &context->windowinfos[j];
+			}
+
 			window_plan = assure_order(root,
 									   window_plan,
-									   winfo->sortclause,
+									   sortwinfo->sortclause,
 									   &pathkeys);
 		}
 		 
-		/* Initialize a Window node for this WindowInfo. 
+		/*
+		 * Initialize a WindowAgg node for this WindowInfo.
 		 */
 		{
 			AttrNumber *partkey = NULL;
 			Oid		   *partkey_operators = NULL;
 			
-			/* elog(NOTICE, "Fn plan_sequential_stage(): Adding Window node."); */
+			/* elog(NOTICE, "Fn plan_sequential_stage(): Adding WindowAgg node."); */
 
 			if ( winfo->partkey_len > 0 )
 			{
@@ -2295,15 +2351,17 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 				memcpy(partkey_operators, winfo->partkey_operators, sz);
 			}
 
-			window_plan = (Plan *)make_window(
-							root,
-							copyObject(window_plan->targetlist),
-							winfo->partkey_len,
-							partkey, partkey_operators,
-							(List*) translate_upper_vars_sequential((Node*)winfo->key_list, context), /* XXX mutate windowKeys to translate any Var nodes in frame vals. */
-							window_plan);
-							
-			window_plan->flow = pull_up_Flow(window_plan, window_plan->lefttree, true);
+			window_plan = (Plan *)
+				make_windowagg(root, copyObject(window_plan->targetlist),
+							   winfo->partkey_len, partkey, partkey_operators,
+							   winfo->ordNumCols, winfo->ordColIdx, winfo->ordOperators,
+							   winfo->frameOptions,
+							   /* XXX mutate windowKeys to translate any Var nodes in frame vals. */
+							   translate_upper_vars_sequential(winfo->startOffset, context),
+							   translate_upper_vars_sequential(winfo->endOffset, context),
+							   window_plan);
+
+			window_plan->flow = pull_up_Flow(window_plan, window_plan->lefttree);
 		}
 
 		
@@ -2319,7 +2377,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 			/* Per RefInfo */
 			foreach ( lc, context->refinfos )
 			{
-				WindowRef *ref;
+				WindowFunc *ref;
 				Aggref *aggref;
 				AttrNumber win_resno;
 				Var *var;
@@ -2329,7 +2387,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 				if ( rinfo->specindex != sinfo->specindex )
 					continue;
 					
-				ref = (WindowRef*)translate_upper_vars_sequential((Node*)rinfo->ref, context); /* XXX mutate ref's args to translate any Vars */
+				ref = (WindowFunc*) translate_upper_vars_sequential((Node*)rinfo->ref, context); /* XXX mutate ref's args to translate any Vars */
 				win_resno = 1 + list_length(window_plan->targetlist);
 				rinfo->resno = win_resno;
 
@@ -2342,7 +2400,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					AttrNumber agg_resno = agg_attrno++;
 					
 					/* Add target to window plan. */
-					tle = makeTargetEntry((Expr*)makeNullConst(ref->restype, -1),
+					tle = makeTargetEntry((Expr*)makeNullConst(ref->wintype, -1),
 										  win_resno, 
 										  pstrdup("dummy"), 
 										  false);
@@ -2362,7 +2420,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					Assert( agg_resno == list_length(agg_plan->targetlist) );
 					
 					/* Result is reference to joined aggregate value. */
-					var = makeVar(agg_varno, agg_resno, ref->restype, -1, false);
+					var = makeVar(agg_varno, agg_resno, ref->wintype, -1, false);
 					tle = makeTargetEntry((Expr *)var, win_resno, 
 										   get_function_name(ref->winfnoid, "window_function"), 
 										   false);
@@ -2375,11 +2433,11 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					Var *win_var;
 					Var *aux_var;
 					Oid counttype = 20; /* TODO count(*) type in pg_proc */
-					Oid restype = ref->restype;
+					Oid restype = ref->wintype;
 					
-					/* Adjust WindowRef */
+					/* Adjust WindowFunc */
 					ref->winstage = WINSTAGE_PRELIMINARY;
-					ref->restype = rinfo->winpretype;
+					ref->wintype = rinfo->winpretype;
 					
 					/* Add target to window plan. */
 					tle = makeTargetEntry((Expr*)ref, 
@@ -2390,7 +2448,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					win_names = lappend(win_names, get_tle_name(tle, context->subquery->rtable, NULL));
 					
 					/* Result is finalization of partial window with joined auxiliary count. */
-					win_var = makeVar(win_varno, win_resno, ref->restype, -1, false);					
+					win_var = makeVar(win_varno, win_resno, ref->wintype, -1, false);
 					aux_var = makeVar(agg_varno, aux_attrno, counttype , -1, false);
 					func = makeFuncExpr(rinfo->winfinfunc, restype, list_make2(win_var, aux_var), COERCE_DONTCARE);
 					tle = makeTargetEntry((Expr*)func, win_resno,
@@ -2404,7 +2462,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					/* Plan immediate window function or ordered window agg) */
 					Var *win_var;
 					
-					/* Adjust WindowRef */
+					/* Adjust WindowFunc */
 					ref->winstage = WINSTAGE_IMMEDIATE;
 
 					/* Add target to window plan. */
@@ -2418,7 +2476,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 					/* If the stage has a join, add a join target. */
 					if ( hasagg )
 					{
-						win_var = makeVar(win_varno, win_resno, ref->restype, -1, false);
+						win_var = makeVar(win_varno, win_resno, ref->wintype, -1, false);
 						tle = makeTargetEntry((Expr*)win_var, win_resno,
 											  get_function_name(ref->winfnoid, "window_function"),
 											  false);
@@ -2428,7 +2486,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 			}
 		}
 		
-		/* Now the next Window node in this stage's chain is ready. 
+		/* Now the next WindowAgg node in this stage's chain is ready.
 		 * Package it as a subquery RTE for use in the phony query we'll 
 		 * produce as the next level in the stage.  This will be either 
 		 * a simple select from one subquery (in the case of an intermediate
@@ -2529,7 +2587,7 @@ static Plan *plan_sequential_stage(PlannerInfo *root,
 		join_plan->total_cost = agg_plan->total_cost + window_plan->total_cost;
 		join_plan->total_cost += cpu_tuple_cost * join_plan->plan_rows;
 		
-		join_plan->flow = pull_up_Flow(join_plan, join_plan->righttree, true);
+		join_plan->flow = pull_up_Flow(join_plan, join_plan->righttree);
 		window_plan = join_plan;
 	}	
 
@@ -2593,14 +2651,13 @@ static Plan *plan_parallel_window_query(PlannerInfo *root, WindowContext *contex
 		lower_tlist = list_concat(lower_tlist, rowkey_tlist);
 		context->keyed_lower_tlist = lower_tlist;
 		
-		subplan = (Plan*) make_window(root, lower_tlist, 
-									  0, NULL, NULL, /* No partitioning */
-									  NIL, /* No ordering */
-									  subplan);
+		subplan = (Plan *) make_windowagg(root, lower_tlist,
+										  0, NULL, NULL, /* No partitioning */
+										  0, NULL, NULL, /* No ordering */
+										  0, NULL, NULL, /* No frame */
+										  subplan);
 		if (!subplan->flow)
-			subplan->flow = pull_up_Flow(subplan, 
-											 subplan->lefttree, 
-											 (pathkeys != NIL));
+			subplan->flow = pull_up_Flow(subplan, subplan->lefttree);
 	}
 	else
 	{
@@ -2793,7 +2850,7 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 	else
 	{
 		/* Later window coplans are all similar and need contain only 
-		 * targets specifically used by this WindowInfo's WindowRefs. */			
+		 * targets specifically used by this WindowInfo's WindowFunc. */
 		
 		/* Include input key, if any. */
 		if ( context->rowkey_len > 0 )
@@ -2845,7 +2902,7 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 	 */
 	foreach ( lc, context->refinfos )
 	{
-		WindowRef *ref;
+		WindowFunc *ref;
 		AttrNumber resno;
 		RefInfo *rinfo = (RefInfo *)lfirst(lc);
 		SpecInfo *sinfo = &context->specinfos[rinfo->specindex];
@@ -2865,7 +2922,7 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 			resno = addTargetToCoplan((Node*)aggref, agg_coplan, context);
 			
 			/* Add result expr to ref */
-			var = makeVar(agg_coplan->varno, resno, ref->restype, -1, false);
+			var = makeVar(agg_coplan->varno, resno, ref->wintype, -1, false);
 			rinfo->resultexpr = (Expr*)var;
 		}
 		else if ( RefInfo_WindowDeferred(rinfo, context) ) // ( !rinfo->isagg && rinfo->needcount )
@@ -2874,13 +2931,13 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 			FuncExpr *func;
 			Var *arg1, *arg2;
 			Oid counttype = 20; /* TODO count(*) type in pg_proc */
-			Oid restype = ref->restype;
+			Oid restype = ref->wintype;
 			
 			ref->winstage = WINSTAGE_PRELIMINARY;
-			ref->restype = rinfo->winpretype;
+			ref->wintype = rinfo->winpretype;
 
 			resno = addTargetToCoplan((Node*)ref, window_coplan, context);			
-			arg1 = makeVar(window_coplan->varno, resno, ref->restype, -1, false);
+			arg1 = makeVar(window_coplan->varno, resno, ref->wintype, -1, false);
 			
 			resno = addTargetToCoplan((Node*)makeAuxCountAggref(), agg_coplan, context);
 			arg2 = makeVar(agg_coplan->varno, resno, counttype , -1, false);
@@ -2897,7 +2954,7 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 			resno = addTargetToCoplan((Node*)ref, window_coplan, context);
 			
 			/* Add result expr to ref */
-			rinfo->resultexpr = (Expr*)makeVar(window_coplan->varno, resno, ref->restype, -1, false);
+			rinfo->resultexpr = (Expr*)makeVar(window_coplan->varno, resno, ref->wintype, -1, false);
 		}
 		else
 		{
@@ -2917,7 +2974,7 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 /* Return a target list to use as the join key for the separate window
  * coplans generated by a non-trivial window query.  The key consists
  * of a segment number and row number and must be evaluated within a
- * Window node.  
+ * WindowAgg node.
  *
  * The caller is responsible for assigning appropriate resno values 
  * in the targets.  (They are initialized, here, to zero!).
@@ -2925,21 +2982,20 @@ static void plan_windowinfo_coplans(PlannerInfo *root, WindowContext *context, i
 static List *make_rowkey_targets()
 {
 	FuncExpr *seg;
-	WindowRef *row;
+	WindowFunc *row;
 
 	seg = makeFuncExpr(MPP_EXECUTION_SEGMENT_OID, 
 					   MPP_EXECUTION_SEGMENT_TYPE, 
 					   NIL, 
 					   COERCE_DONTCARE);
 
-	row = makeNode(WindowRef);
+	row = makeNode(WindowFunc);
 	row->winfnoid = ROW_NUMBER_OID;
-	row->restype = ROW_NUMBER_TYPE;
+	row->wintype = ROW_NUMBER_TYPE;
 	row->args = NIL;
 	row->winref = 1;
 	row->winindex = 0;
 	row->winstage = WINSTAGE_ROWKEY; /* so setrefs doesn't get confused  */
-	row->winlevel = 0;
 	row->location = -1;
 
 	return list_make2(
@@ -3008,17 +3064,18 @@ static AttrNumber addTargetToCoplan(Node *target, Coplan *coplan, WindowContext 
 }
 
 
-static Aggref* makeWindowAggref(WindowRef *winref)
+static Aggref* makeWindowAggref(WindowFunc *winref)
 {
 	Aggref *aggref = makeNode(Aggref);
 
 	aggref->aggfnoid = winref->winfnoid;
-	aggref->aggtype = winref->restype;
+	aggref->aggtype = winref->wintype;
 	aggref->args = copyObject(winref->args);
 	aggref->agglevelsup = 0;
 	aggref->aggstar = false; /* at this point in processing, doesn't matter */
 	aggref->aggdistinct = winref->windistinct;
 	aggref->aggstage = AGGSTAGE_NORMAL;
+	aggref->aggfilter = winref->aggfilter;
 	aggref->location = -1;
 
 	return aggref;
@@ -3077,11 +3134,12 @@ static RangeTblEntry *rte_for_coplan(
 	switch ( coplan->type )
 	{
 		case COPLAN_WINDOW:
-			new_plan = (Plan*) 
-				make_window(root, coplan->targetlist, 
-							winfo->partkey_len, winfo->partkey_attrs, winfo->partkey_operators,
-							winfo->key_list, /* XXX copy? */
-							new_plan);
+			new_plan = (Plan *)
+				make_windowagg(root, coplan->targetlist,
+							   winfo->partkey_len, winfo->partkey_attrs, winfo->partkey_operators,
+							   winfo->ordNumCols, winfo->ordColIdx, winfo->ordOperators,
+							   winfo->frameOptions, winfo->startOffset, winfo->endOffset,
+							   new_plan);
 		break;
 	case COPLAN_AGG:
 		if ( coplan->partkey_len > 0 )
@@ -3125,9 +3183,7 @@ static RangeTblEntry *rte_for_coplan(
 	}
 
 	if (!new_plan->flow)
-		new_plan->flow = pull_up_Flow(new_plan, 
-				new_plan->lefttree, 
-				(subplan_pathkeys != NIL));
+		new_plan->flow = pull_up_Flow(new_plan, new_plan->lefttree);
 
 	/* Need to specify eref for messages. */
 	new_eref = makeNode(Alias);
@@ -3498,7 +3554,7 @@ static Node * translate_upper_tlist_parallel_mutator(Node *node, WindowContext *
 		Var *new_var;
 		Var *var = (Var *)node;
 		
-		/* We don't descend into WindowRefs, so Var isn't in one. */
+		/* We don't descend into WindowFuncs, so Var isn't in one. */
 		if ( var->varlevelsup == 0 )
 		{
 			int idx = index_of_var(var, context);
@@ -3515,9 +3571,9 @@ static Node * translate_upper_tlist_parallel_mutator(Node *node, WindowContext *
 
 		return (Node *) new_var;
 	}
-	else if ( IsA(node, WindowRef) )
+	else if ( IsA(node, WindowFunc) )
 	{
-		WindowRef *ref = (WindowRef *)node;
+		WindowFunc *ref = (WindowFunc *) node;
 		RefInfo *rinfo = (RefInfo *)list_nth(context->refinfos, ref->winindex);
 		return copyObject(rinfo->resultexpr); /* XXX why copy? */
 	}
@@ -3558,7 +3614,7 @@ static Node * translate_upper_tlist_sequential_mutator(Node *node, xut_context *
 		Var *new_var;
 		Var *var = (Var *)node;
 		
-		/* We don't descend into WindowRefs, so Var isn't in one. */
+		/* We don't descend into WindowFuncs, so Var isn't in one. */
 		if ( var->varlevelsup == 0 )
 		{
 			int idx = index_of_var(var, context);
@@ -3575,9 +3631,9 @@ static Node * translate_upper_tlist_sequential_mutator(Node *node, xut_context *
 
 		return (Node *) new_var;
 	}
-	else if ( IsA(node, WindowRef) )
+	else if ( IsA(node, WindowFunc) )
 	{
-		WindowRef *ref = (WindowRef *)node;
+		WindowFunc *ref = (WindowFunc *) node;
 		RefInfo *rinfo = (RefInfo *)list_nth(context->refinfos, ref->winindex);
 		TargetEntry *tle = get_tle_by_resno(ctxt->window_tlist, rinfo->resno);
 		return copyObject(tle->expr);
@@ -3605,7 +3661,7 @@ static List *translate_upper_tlist_sequential(List *orig_tlist, List *window_tli
 
 
 /* This translator is specific to sequential window plans. It converts Vars
- * the given tree (including top-level WindowRef node args, and WindowFrameEdge 
+ * the given tree (including top-level WindowFunc node args, and WindowFrameEdge
  * vals from the input range to the intermediate range used in sequential
  * planning.
  */
@@ -3627,7 +3683,7 @@ static Node * translate_upper_vars_sequential_mutator(Node *node, xuv_context *c
 		Var *new_var;
 		Var *var = (Var *)node;
 		
-		/* We don't descend into WindowRefs, so Var isn't in one. */
+		/* We don't descend into WindowFuncs, so Var isn't in one. */
 		if ( var->varlevelsup == 0 )
 		{
 			int idx = index_of_var(var, context);
@@ -3644,62 +3700,27 @@ static Node * translate_upper_vars_sequential_mutator(Node *node, xuv_context *c
 
 		return (Node *) new_var;
 	}
-	else if ( IsA(node, WindowRef) )
+	else if ( IsA(node, WindowFunc) )
 	{
 		/* XXX We violate the spirit of the thing here by actually modifying
-		 *     and returning the WindowRef itself.  We can't copy it because
+		 *     and returning the WindowFunc itself.  We can't copy it because
 		 *     its RefInfo's link must still find it.
 		 */
-		WindowRef *ref = (WindowRef *)node;
+		WindowFunc *ref = (WindowFunc *)node;
 		
 		if ( ! ctxt->is_top_level )
 			elog(ERROR, "nested window reference invalid");		
 		ctxt->is_top_level = false;
-		
-		ref->args = (List*)expression_tree_mutator((Node*)ref->args, translate_upper_vars_sequential_mutator, (void*) ctxt);
-		
+
+		ref->args = (List *)expression_tree_mutator((Node *) ref->args,
+													translate_upper_vars_sequential_mutator,
+													ctxt);
+		ref->aggfilter = (Expr *) expression_tree_mutator((Node *) ref->aggfilter,
+														  translate_upper_vars_sequential_mutator,
+														  ctxt);
+
 		ctxt->is_top_level = true;
 		return (Node*)ref;
-	}
-	else if( IsA(node, WindowKey) )
-	{
-		WindowKey *key = (WindowKey*)node;
-		WindowKey *newkey;
-		
-		if ( ! ctxt->is_top_level )
-			elog(ERROR, "nested window key invalid");		
-		ctxt->is_top_level = false;
-		
-		newkey = makeNode(WindowKey);
-		memcpy(newkey, key, sizeof(WindowKey));
-		if ( key->numSortCols > 0 )
-		{
-			size_t sz;
-			
-			sz = key->numSortCols * sizeof(AttrNumber);
-			newkey->sortColIdx = (AttrNumber*)palloc(sz);
-			memcpy(newkey->sortColIdx, key->sortColIdx, sz);
-			
-			sz = key->numSortCols * sizeof(Oid);
-			newkey->sortOperators = (Oid*)palloc(sz);
-			memcpy(newkey->sortOperators, key->sortOperators, sz);
-
-			sz = key->numSortCols * sizeof(bool);
-			newkey->nullsFirst = (bool *) palloc(sz);
-			memcpy(newkey->nullsFirst, key->nullsFirst, sz);
-		}
-		
-		newkey->startOffset = expression_tree_mutator(
-										(Node*) key->startOffset,
-										translate_upper_vars_sequential_mutator,
-										(void*) ctxt);
-		newkey->endOffset = expression_tree_mutator(
-										(Node*) key->endOffset,
-										translate_upper_vars_sequential_mutator,
-										(void*) ctxt);
-		
-		ctxt->is_top_level = true;
-		return (Node*)newkey;
 	}
 	
 	return expression_tree_mutator(node, translate_upper_vars_sequential_mutator, (void*) ctxt);
@@ -3767,10 +3788,10 @@ Value *get_tle_name(TargetEntry *tle, List *rtable, const char *default_name)
 		RangeTblEntry *rte = rt_fetch(var->varno, rtable);
 		name = pstrdup(get_rte_attribute_name(rte, var->varattno));
 	}
-	else if ( IsA(tle->expr, WindowRef) )
+	else if ( IsA(tle->expr, WindowFunc) )
 	{
 		if ( default_name == NULL ) default_name = "window_func";
-		name = get_function_name(((WindowRef*)expr)->winfnoid, default_name);
+		name = get_function_name(((WindowFunc *)expr)->winfnoid, default_name);
 	}
 	else if ( IsA(tle->expr, Aggref) )
 	{
@@ -4027,7 +4048,7 @@ Query *copy_common_subquery(Query *original, List *targetList)
  * a helper function for lead and lag to make frame.
  */
 static void
-lead_lag_frame_maker(WindowRef *wref, char winkind, SpecInfo *sinfo)
+lead_lag_frame_maker(WindowFunc *wref, char winkind, SpecInfo *sinfo)
 {
 	Node	   *offset;
 

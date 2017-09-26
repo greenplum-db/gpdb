@@ -28,7 +28,7 @@ IndexScan_BeginIndexScan(IndexScanState *indexScanState, MemoryContext partition
 
 extern bool
 IndexScan_BeginIndexPartition(IndexScanState *indexScanState, MemoryContext partitionContext, bool initQual,
-		bool initTargetList, bool supportsArrayKeys, bool isMultiScan);
+		bool initTargetList, bool supportsArrayKeys);
 
 extern void
 IndexScan_EndIndexPartition(IndexScanState *indexScanState);

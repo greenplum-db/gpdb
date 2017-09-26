@@ -8,20 +8,20 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.101.2.1 2008/09/11 14:01:35 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.104 2008/03/26 21:10:37 alvherre Exp $
  *
  * INTERFACE ROUTINES
  *		index_open		- open an index relation by relation OID
  *		index_close		- close an index relation
  *		index_beginscan - start a scan of an index with amgettuple
- *		index_beginscan_multi - start a scan of an index with amgetmulti
+ *		index_beginscan_bitmap - start a scan of an index with amgetbitmap
  *		index_rescan	- restart a scan of an index
  *		index_endscan	- end a scan
  *		index_insert	- insert an index tuple into a relation
  *		index_markpos	- mark a scan position
  *		index_restrpos	- restore a scan position
  *		index_getnext	- get the next tuple from a scan
- *		index_getmulti	- get the next bitmap from a scan
+ *		index_getbitmap	- get the next bitmap from a scan
  *		index_bulk_delete	- bulk deletion of index tuples
  *		index_vacuum_cleanup	- post-deletion cleanup of an index
  *		index_getprocid - get a support procedure OID
@@ -67,6 +67,8 @@
 #include "access/transam.h"
 #include "pgstat.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
+#include "utils/tqual.h"
 
 
 /* ----------------------------------------------------------------
@@ -218,36 +220,12 @@ index_insert(Relation indexRelation,
  * index_beginscan - start a scan of an index with amgettuple
  *
  * Caller must be holding suitable locks on the heap and the index.
- *
- * Note: heapRelation may be NULL if there is no intention of calling
- * index_getnext on this scan; index_getnext_indexitem will not use the
- * heapRelation link (nor the snapshot).  However, the caller had better
- * be holding some kind of lock on the heap relation in any case, to ensure
- * no one deletes it (or the index) out from under us.	Caller must also
- * be holding a lock on the index.
  */
 IndexScanDesc
 index_beginscan(Relation heapRelation,
 				Relation indexRelation,
 				Snapshot snapshot,
 				int nkeys, ScanKey key)
-{
-	return index_beginscan_generic(heapRelation, indexRelation,
-			snapshot, nkeys, key, false /* isMultiscan */);
-}
-
-/*
- * index_beginscan_generic - start a scan of an index
- * 							with amgetmulti
- *
- * As above, caller had better be holding some lock on the parent heap
- * relation, even though it's not explicitly mentioned here.
- */
-IndexScanDesc
-index_beginscan_generic(Relation heapRelation,
-						Relation indexRelation,
-						Snapshot snapshot,
-						int nkeys, ScanKey key, bool isMultiscan)
 {
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
 
@@ -258,10 +236,9 @@ index_beginscan_generic(Relation heapRelation,
 	scan = index_beginscan_internal(indexRelation, nkeys, key);
 
 	/*
-	 * Save additional parameters into the scandesc.  Everything else was
-	 * set up by RelationGetIndexScan.
+	 * Save additional parameters into the scandesc.  Everything else was set
+	 * up by RelationGetIndexScan.
 	 */
-	scan->is_multiscan = isMultiscan;
 	scan->heapRelation = heapRelation;
 	scan->xs_snapshot = snapshot;
 
@@ -704,7 +681,7 @@ index_getnext_indexitem(IndexScanDesc scan,
 }
 
 /* ----------------
- *		index_getmulti - get the next bitmap from an index scan.
+ *		index_getbitmap - get the next bitmap from an index scan.
  *
  *		it invokes am's getmulti function to get a bitmap. If am is an on-disk
  *		bitmap index access method (see bitmap.h), then a StreamBitmap is
@@ -714,22 +691,21 @@ index_getnext_indexitem(IndexScanDesc scan,
  * ----------------
  */
 Node *
-index_getmulti(IndexScanDesc scan, Node *bitmap)
+index_getbitmap(IndexScanDesc scan, Node *bitmap)
 {
 	FmgrInfo   *procedure;
 	Node		*bm;
 
 	SCAN_CHECKS;
-	GET_SCAN_PROCEDURE(amgetmulti);
+	GET_SCAN_PROCEDURE(amgetbitmap);
 
 	/* just make sure this is false... */
 	scan->kill_prior_tuple = false;
 
 	/*
-	 * have the am's getmulti proc do all the work.
-	 * index_beginscan_multi already set up fn_getmulti.
+	 * have the am's getbitmap proc do all the work.
 	 */
-	bm = (Node *)DatumGetPointer(FunctionCall2(procedure,
+	bm = (Node *) DatumGetPointer(FunctionCall2(procedure,
 									  PointerGetDatum(scan),
 									  PointerGetDatum(bitmap)));
 

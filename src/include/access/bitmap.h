@@ -756,7 +756,7 @@ extern Datum bmbuild(PG_FUNCTION_ARGS);
 extern Datum bminsert(PG_FUNCTION_ARGS);
 extern Datum bmbeginscan(PG_FUNCTION_ARGS);
 extern Datum bmgettuple(PG_FUNCTION_ARGS);
-extern Datum bmgetmulti(PG_FUNCTION_ARGS);
+extern Datum bmgetbitmap(PG_FUNCTION_ARGS);
 extern Datum bmrescan(PG_FUNCTION_ARGS);
 extern Datum bmendscan(PG_FUNCTION_ARGS);
 extern Datum bmmarkpos(PG_FUNCTION_ARGS);

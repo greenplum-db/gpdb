@@ -58,9 +58,9 @@
 Node *
 MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 {
-	IndexScanState *scanState = (IndexScanState*)node;
-
-	Node 		*bitmap = NULL;
+	IndexScanState *scanState = (IndexScanState*) node;
+	Node 		   *bitmap = NULL;
+	bool			partitionIsReady;
 
 	/* Make sure we are not leaking a previous bitmap */
 	Assert(NULL == node->bitmap);
@@ -70,9 +70,12 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	{
 		InstrStartNode(scanState->ss.ps.instrument);
 	}
-	bool partitionIsReady = IndexScan_BeginIndexPartition(scanState, node->partitionMemoryContext, false /* initQual */,
-			false /* initTargetList */, true /* supportsArrayKeys */,
-			true /* isMultiScan */);
+
+	partitionIsReady = IndexScan_BeginIndexPartition(scanState,
+													 node->partitionMemoryContext,
+													 false /* initQual */,
+													 false /* initTargetList */,
+													 true /* supportsArrayKeys */);
 
 	Assert(partitionIsReady);
 
@@ -85,7 +88,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 		/* Get bitmap from index */
 		while (doscan)
 		{
-			bitmap = index_getmulti(scandesc, node->bitmap);
+			bitmap = index_getbitmap(scandesc, node->bitmap);
 
 			if ((NULL != bitmap) &&
 				!(IsA(bitmap, HashBitmap) || IsA(bitmap, StreamBitmap)))
@@ -100,22 +103,15 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 
 	        /* CDB: If EXPLAIN ANALYZE, let bitmap share our Instrumentation. */
 	        if (scanState->ss.ps.instrument)
-	        {
 	            tbm_bitmap_set_instrument(bitmap, scanState->ss.ps.instrument);
-	        }
 
-			if(node->bitmap == NULL)
-			{
-				node->bitmap = (Node *)bitmap;
-			}
+			if (node->bitmap == NULL)
+				node->bitmap = (Node *) bitmap;
 
 			doscan = ExecIndexAdvanceArrayKeys(scanState->iss_ArrayKeys,
-												   scanState->iss_NumArrayKeys);
-			if (doscan)
-			{
-				/* reset index scan */
+											   scanState->iss_NumArrayKeys);
+			if (doscan)				/* reset index scan */
 				index_rescan(scanState->iss_ScanDesc, scanState->iss_ScanKeys);
-			}
 		}
 	}
 

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.95.2.2 2009/12/29 17:41:18 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.97 2008/04/06 23:43:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -80,6 +80,7 @@ enum PLpgSQL_stmt_types
 	PLPGSQL_STMT_WHILE,
 	PLPGSQL_STMT_FORI,
 	PLPGSQL_STMT_FORS,
+	PLPGSQL_STMT_FORC,
 	PLPGSQL_STMT_EXIT,
 	PLPGSQL_STMT_RETURN,
 	PLPGSQL_STMT_RETURN_NEXT,
@@ -412,6 +413,21 @@ typedef struct
 } PLpgSQL_stmt_fori;
 
 
+/*
+ * PLpgSQL_stmt_forq represents a FOR statement running over a SQL query.
+ * It is the common supertype of PLpgSQL_stmt_fors, PLpgSQL_stmt_forc
+ * and PLpgSQL_dynfors.
+ */
+typedef struct
+{
+	int			cmd_type;
+	int			lineno;
+	char	   *label;
+	PLpgSQL_rec *rec;
+	PLpgSQL_row *row;
+	List	   *body;			/* List of statements */
+} PLpgSQL_stmt_forq;
+
 typedef struct
 {								/* FOR statement running over SELECT	*/
 	int			cmd_type;
@@ -419,10 +435,23 @@ typedef struct
 	char	   *label;
 	PLpgSQL_rec *rec;
 	PLpgSQL_row *row;
-	PLpgSQL_expr *query;
 	List	   *body;			/* List of statements */
+	/* end of fields that must match PLpgSQL_stmt_forq */
+	PLpgSQL_expr *query;
 } PLpgSQL_stmt_fors;
 
+typedef struct
+{								/* FOR statement running over cursor	*/
+	int			cmd_type;
+	int			lineno;
+	char	   *label;
+	PLpgSQL_rec *rec;
+	PLpgSQL_row *row;
+	List	   *body;			/* List of statements */
+	/* end of fields that must match PLpgSQL_stmt_forq */
+	int			curvar;
+	PLpgSQL_expr *argquery;		/* cursor arguments if any */
+} PLpgSQL_stmt_forc;
 
 typedef struct
 {								/* FOR statement running over EXECUTE	*/
@@ -431,8 +460,10 @@ typedef struct
 	char	   *label;
 	PLpgSQL_rec *rec;
 	PLpgSQL_row *row;
-	PLpgSQL_expr *query;
 	List	   *body;			/* List of statements */
+	/* end of fields that must match PLpgSQL_stmt_forq */
+	PLpgSQL_expr *query;
+	List	   *params;			/* USING expressions */
 } PLpgSQL_stmt_dynfors;
 
 
@@ -537,6 +568,7 @@ typedef struct
 	bool		strict;			/* INTO STRICT flag */
 	PLpgSQL_rec *rec;			/* INTO target, if record */
 	PLpgSQL_row *row;			/* INTO target, if row */
+	List	   *params;			/* USING expressions */
 } PLpgSQL_stmt_dynexecute;
 
 
@@ -746,6 +778,8 @@ extern PLpgSQL_type *plpgsql_build_datatype(Oid typeOid, int32 typmod);
 extern PLpgSQL_variable *plpgsql_build_variable(const char *refname, int lineno,
 					   PLpgSQL_type *dtype,
 					   bool add2namespace);
+extern PLpgSQL_rec *plpgsql_build_record(const char *refname, int lineno,
+										 bool add2namespace);
 extern PLpgSQL_condition *plpgsql_parse_err_condition(char *condname);
 extern void plpgsql_adddatum(PLpgSQL_datum *new);
 extern int	plpgsql_add_initdatums(int **varnos);

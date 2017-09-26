@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.61 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/fd.h,v 1.62 2008/03/10 20:06:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -89,10 +89,6 @@ extern int64 FileDiskSize(File file);
 /* Operations that allow use of regular stdio --- USE WITH CAUTION */
 extern FILE *AllocateFile(const char *name, const char *mode);
 extern int	FreeFile(FILE *file);
-
-/* Operations that allow use of pipe streams (popen/pclose) */
-extern FILE *OpenPipeStream(const char *command, const char *mode);
-extern int	ClosePipeStream(FILE *file);
 
 /* Operations to allow use of the <dirent.h> library routines */
 extern DIR *AllocateDir(const char *dirname);

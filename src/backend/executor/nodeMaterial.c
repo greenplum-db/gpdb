@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMaterial.c,v 1.61 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMaterial.c,v 1.62 2008/03/23 00:54:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -240,12 +240,11 @@ ExecMaterial(MaterialState *node)
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
 
 		/*
-		 * And return a copy of the tuple.	(XXX couldn't we just return the
-		 * outerslot?)
+		 * We can just return the subplan's returned tuple, without copying.
 		 */
 		Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
 		CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		return ExecCopySlot(slot, outerslot);
+		return outerslot;
 	}
 
 

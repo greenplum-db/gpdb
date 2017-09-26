@@ -289,15 +289,6 @@ namespace gpdxl
 				DrgPdxltrctx *pdrgpdxltrctxPrevSiblings // translation contexts of previous siblings
 				);
 
-			// translate the DXL window frame into GPDB window frame node
-			WindowKey *PwindowKey
-				(
-				const CDXLWindowKey *pdxlwindowkey,
-				const CDXLTranslateContext *pdxltrctxChild,
-				CDXLTranslateContext *pdxltrctxOut,
-				Plan *pplan
-				);
-
 			// translate DXL sort node into GPDB Sort plan node
 			Plan *PsortFromDXLSort
 				(

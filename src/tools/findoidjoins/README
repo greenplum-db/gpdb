@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/tools/findoidjoins/README,v 1.6 2008/10/13 12:59:57 tgl Exp $
+$PostgreSQL: pgsql/src/tools/findoidjoins/README,v 1.5 2008/03/21 13:23:29 momjian Exp $
 
 findoidjoins
 ============

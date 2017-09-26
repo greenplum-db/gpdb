@@ -207,12 +207,12 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
         # get the newly added segment's content id
         # MPP-12393 et al WARNING: there is an unusual side effect going on here.  
-        # Although gp_add_segment() executed by __callSegmentAdd() above returns 
+        # Although gp_add_segment_primary() executed by __callSegmentAdd() above returns
         # the dbId of the new row in gp_segment_configuration, the following
         # select from gp_segment_configuration can return 0 rows if the updates
         # done by __updateSegmentModeStatus() and/or __updateSegmentReplicationPort()
         # are not done first.  Don't change the order of these operations unless you 
-        # understand why gp_add_segment() behaves as it does.
+        # understand why gp_add_segment_primary() behaves as it does.
         sql = "select content from pg_catalog.gp_segment_configuration where dbId = %s" % self.__toSqlIntValue(seg.getSegmentDbId())
         logger.debug(sql)
         sqlResult = self.__fetchSingleOutputRow(conn, sql)
@@ -291,13 +291,13 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
 
     def __callSegmentAdd(self, conn, gpArray, seg):
         """
-        Call gp_add_segment() to add the primary.
+        Call gp_add_segment_primary() to add the primary.
         Return the new segment's dbid.
         """
         logger.debug('callSegmentAdd %s' % repr(seg))
         filespaceMapStr = self.__toSqlFilespaceMapStr(gpArray, seg)
 
-        sql = "SELECT gp_add_segment(%s, %s, %s, %s)" \
+        sql = "SELECT gp_add_segment_primary(%s, %s, %s, %s)" \
             % (
                 self.__toSqlTextValue(seg.getSegmentHostName()), 
                 self.__toSqlTextValue(seg.getSegmentAddress()), 

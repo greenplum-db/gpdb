@@ -108,7 +108,7 @@ ROLLBACK;</codeblock></note>
       the execution of an <codeph>EXPLAIN ANALYZE</codeph> command is excluded from Greenplum
       Database resource queues.<p>For more information about query profiling, see "Query Profiling"
         in the <cite>Greenplum Database Administrator Guide</cite>. For more information about
-        resource queues, see "Workload Management with Resource Queues" in the <cite>Greenplum
+        resource queues, see "Resource Management with Resource Queues" in the <cite>Greenplum
           Database Administrator Guide</cite>.</p></section>
     <section id="section6">
       <title>Examples</title>

@@ -23,7 +23,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.40.2.2 2009/07/29 15:57:23 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.43 2008/03/26 18:48:59 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -39,16 +39,17 @@
 #include "miscadmin.h"
 #include "storage/procarray.h"
 #include "utils/combocid.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
-#include "cdb/cdbtm.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "utils/faultinjector.h"
-#include "utils/sharedsnapshot.h"
 
 #include "access/xact.h"		/* setting the shared xid */
 
+#include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"
+#include "utils/faultinjector.h"
+#include "utils/sharedsnapshot.h"
 
 /* Our shared memory area */
 typedef struct ProcArrayStruct
@@ -70,6 +71,7 @@ static ProcArrayStruct *procArray;
 
 /* counters for XidCache measurement */
 static long xc_by_recent_xmin = 0;
+static long xc_by_known_xact = 0;
 static long xc_by_my_xact = 0;
 static long xc_by_latest_xid = 0;
 static long xc_by_main_xid = 0;
@@ -78,6 +80,7 @@ static long xc_no_overflow = 0;
 static long xc_slow_answer = 0;
 
 #define xc_by_recent_xmin_inc()		(xc_by_recent_xmin++)
+#define xc_by_known_xact_inc()		(xc_by_known_xact++)
 #define xc_by_my_xact_inc()			(xc_by_my_xact++)
 #define xc_by_latest_xid_inc()		(xc_by_latest_xid++)
 #define xc_by_main_xid_inc()		(xc_by_main_xid++)
@@ -89,6 +92,7 @@ static void DisplayXidCache(void);
 #else							/* !XIDCACHE_DEBUG */
 
 #define xc_by_recent_xmin_inc()		((void) 0)
+#define xc_by_known_xact_inc()		((void) 0)
 #define xc_by_my_xact_inc()			((void) 0)
 #define xc_by_latest_xid_inc()		((void) 0)
 #define xc_by_main_xid_inc()		((void) 0)
@@ -456,6 +460,17 @@ TransactionIdIsInProgress(TransactionId xid)
 	if (TransactionIdPrecedes(xid, RecentXmin))
 	{
 		xc_by_recent_xmin_inc();
+		return false;
+	}
+
+	/*
+	 * We may have just checked the status of this transaction, so if it is
+	 * already known to be completed, we can fall out without any access to
+	 * shared memory.
+	 */
+	if (TransactionIdIsKnownCompleted(xid))
+	{
+		xc_by_known_xact_inc();
 		return false;
 	}
 
@@ -2124,8 +2139,9 @@ static void
 DisplayXidCache(void)
 {
 	fprintf(stderr,
-			"XidCache: xmin: %ld, myxact: %ld, latest: %ld, mainxid: %ld, childxid: %ld, nooflo: %ld, slow: %ld\n",
+			"XidCache: xmin: %ld, known: %ld, myxact: %ld, latest: %ld, mainxid: %ld, childxid: %ld, nooflo: %ld, slow: %ld\n",
 			xc_by_recent_xmin,
+			xc_by_known_xact,
 			xc_by_my_xact,
 			xc_by_latest_xid,
 			xc_by_main_xid,

@@ -253,6 +253,7 @@ typedef struct Aggref
 	Index		agglevelsup;	/* > 0 if agg belongs to outer query */
 	bool		aggstar;		/* TRUE if argument list was really '*' */
 	bool		aggdistinct;	/* TRUE if it's agg(DISTINCT ...) */
+	Expr	   *aggfilter;		/* FILTER expression, if any */
 	AggStage	aggstage;		/* MPP: 2-stage? If so, which stage */
     AggOrder   *aggorder;       /* Ordered aggregate definition */
 	int			location;		/* token location, or -1 if unknown */
@@ -322,21 +323,21 @@ typedef enum WinStage
 	WINSTAGE_PRELIMINARY, /* Evaluate preliminary function. */
 	WINSTAGE_ROWKEY /* WINSTAGE_IMMEDIATE for row key generation. */
 } WinStage;
- 
+
 /*
- * WindowRef: describes a window function call
+ * WindowFunc: describes a window function call
  *
- * In a query tree, a WindowRef corresponds to a SQL window function
+ * In a query tree, a WindowFunc corresponds to a SQL window function
  * call.  In a plan tree, a WindowRef is an expression the corresponds
  * to some or all of the calculation of the window function result.
- * 
  */
-typedef struct WindowRef
+typedef struct WindowFunc
 {
 	Expr		xpr;
-	Oid			winfnoid;		/* pg_proc Oid of the window function */
-	Oid			restype;		/* type Oid of result of the window function */
-	List	   *args;			/* arguments */	
+	Oid			winfnoid;		/* pg_proc Oid of the function */
+	Oid			wintype;		/* type Oid of result of the window function */
+	List	   *args;			/* arguments to the window function */
+	Expr	   *aggfilter;		/* FILTER expression, if any */
 	Index		winref;			/* index of associated WindowClause */
 	bool		winstar;		/* TRUE if argument list was really '*' */
 	bool		winagg;			/* is function a simple aggregate? */
@@ -345,10 +346,8 @@ typedef struct WindowRef
 	/* Following fields are significant only in a Plan tree. */
 	Index		winindex;		/* RefInfo index during planning. */
 	WinStage	winstage;		/* Stage of execution. */
-	Index		winlevel;		/* Position of corresponding WindowKey in
-								 * the Window node. */
 	int			location;		/* token location, or -1 if unknown */
-} WindowRef;
+} WindowFunc;
 
 
 /* ----------------
@@ -1350,15 +1349,7 @@ typedef struct Flow
 	 * the desired segment for the resulting singleton flow.
 	 */
 	int			segindex;		/* Segment index of singleton flow. */
-	
-	/* Sort specifications. */
-	int			numSortCols;		/* number of sort key columns */
-	AttrNumber	*sortColIdx;		/* their indexes in target list */
-	Oid			*sortOperators;		/* OID of operators to sort them by */
-	bool		*nullsFirst;
 
-	int			numOrderbyCols;		/* number of explicit order-by columns */
-	
 	/* If req_move is MOVEMENT_REPARTITION, these express the desired 
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
      * this is the partitioning key.  Otherwise NIL. 
@@ -1380,31 +1371,6 @@ typedef enum GroupingType
 	GROUPINGTYPE_CUBE,           /* CUBE grouping extension */
 	GROUPINGTYPE_GROUPING_SETS   /* GROUPING SETS grouping extension */
 } GroupingType;
-
-
-/* ---------------
- * WindowKey is an auxiliary node of the Window node (a Plan node).  It 
- * represents one level of the potentially multi-level ordering key of 
- * the Window node.  The ORDER BY key of the Nth WindowKey of a Window
- * is the concatenation of the sort keys from WindowKeys 0 thru N.
- *
- * Note that, since a window key represents partial sort key, it may be 
- * empty.  For example (ORDER BY a,b ROWS x) and (ORDER BY a,b ROWS y) 
- * would be represented by partial key (a,b) with framing ROWS x followed
- * by partial key () with framing ROWS y.
- * ---------------
- */
-typedef struct WindowKey
-{
-	NodeTag			type;
-	int				numSortCols; /* may be zero, see note */
-	AttrNumber	   *sortColIdx;
-	Oid			   *sortOperators;
-	bool		   *nullsFirst;
-	int			frameOptions;
-	Node	   *startOffset;
-	Node	   *endOffset;
-} WindowKey;
 
 /*
  * PercKind

@@ -271,6 +271,7 @@ bool cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 	Gang	    *gp;
 	PGresult   *res;
 	int			nbytes;
+	bool    	first_error = true;
 
 	/* clean err message */
 	c->err_msg.len = 0;
@@ -350,11 +351,12 @@ bool cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 				while (NULL != (res = PQgetResult(q->conn)))
 				{
 					/* if the COPY command had an error */
-					if (PQresultStatus(res) == PGRES_FATAL_ERROR)
+					if (PQresultStatus(res) == PGRES_FATAL_ERROR && first_error)
 					{
 						appendStringInfo(&(c->err_msg), "Error from segment %d: %s\n",
 										 source_seg, PQresultErrorMessage(res));
 						c->remote_data_err = true;
+						first_error = false;
 					}
 
 					if (res->numCompleted > 0)

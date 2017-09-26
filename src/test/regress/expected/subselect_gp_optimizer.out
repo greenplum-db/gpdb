@@ -1204,7 +1204,7 @@ from
                                                             QUERY PLAN                                                            
 ----------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..862.00 rows=1 width=16)
-   ->  Window  (cost=0.00..862.00 rows=1 width=16)
+   ->  WindowAgg  (cost=0.00..862.00 rows=1 width=16)
          Order By: t2_mpp_24563.seq
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=12)
                Merge Key: t2_mpp_24563.seq
@@ -1257,7 +1257,7 @@ FROM t_mpp_20470 b;
 explain SELECT  cc, sum(nn) over() FROM v1_mpp_20470;
                                                                                  QUERY PLAN                                                                                  
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Window  (cost=0.00..862.00 rows=1 width=16)
+ WindowAgg  (cost=0.00..862.00 rows=1 width=16)
    ->  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..862.00 rows=2 width=12)
          ->  Result  (cost=0.00..862.00 rows=1 width=12)
                ->  Result  (cost=0.00..862.00 rows=1 width=16)

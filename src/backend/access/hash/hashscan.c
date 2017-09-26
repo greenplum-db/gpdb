@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hashscan.c,v 1.43.2.1 2008/03/07 15:59:09 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hashscan.c,v 1.44 2008/03/07 15:59:03 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

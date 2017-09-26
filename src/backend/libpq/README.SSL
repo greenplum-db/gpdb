@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/libpq/README.SSL,v 1.7 2008/10/24 11:48:29 mha Exp $
+$PostgreSQL: pgsql/src/backend/libpq/README.SSL,v 1.6 2008/03/21 13:23:28 momjian Exp $
 
 SSL
 ===

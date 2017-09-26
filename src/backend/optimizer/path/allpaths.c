@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.174 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.170 2008/04/01 00:48:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -709,6 +709,7 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 		/* Generate the plan for the subquery */
 		config = CopyPlannerConfig(root->config);
+		config->honor_order_by = false;		/* partial order is enough */
 
 		rel->subplan = subquery_planner(root->glob, subquery,
 									root,
@@ -785,7 +786,7 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 static void
 set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
-	PlannerConfig *config = CopyPlannerConfig(root->config);
+	PlannerConfig *config;
 	PlannerInfo *subroot = NULL;
 	FuncExpr   *fexpr = (FuncExpr *) rte->funcexpr;
 	ListCell   *arg;
@@ -793,6 +794,9 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	/* Cannot be a preplanned subquery from window_planner. */
 	Assert(!rte->subquery_plan);
 	Assert(fexpr && IsA(fexpr, FuncExpr));
+
+	config = CopyPlannerConfig(root->config);
+	config->honor_order_by = false;		/* partial order is enough */
 
 	/* Plan input subquery */
 	rel->subplan = subquery_planner(root->glob, rte->subquery, root,
@@ -968,6 +972,8 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		 */
 		config->gp_cte_sharing = false;
 
+		config->honor_order_by = false;
+
 		if (!cte->cterecursive)
 		{
 			/*
@@ -1020,6 +1026,8 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			 * disallow sharing of ctes at lower levels.
 			 */
 			config->gp_cte_sharing = false;
+
+			config->honor_order_by = false;
 
 			subplan = subquery_planner(cteroot->glob, subquery, cteroot, cte->cterecursive,
 									   tuple_fraction, &subroot, config);

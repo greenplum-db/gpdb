@@ -23,19 +23,20 @@
 #include "access/aocssegfiles.h"                  /* AOCS */
 #include "access/heapam.h"			  /* heap_open            */
 #include "access/transam.h"			  /* InvalidTransactionId */
+#include "access/xact.h"
 #include "catalog/pg_appendonly_fn.h"
 #include "catalog/pg_authid.h"
 #include "gp-libpq-fe.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/snapmgr.h"
 
 #include "cdb/cdbvars.h"			  /* Gp_role              */
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbtm.h"
 #include "cdb/cdbutil.h"
-#include "utils/tqual.h"
 #include "pg_config.h"
 
 /*

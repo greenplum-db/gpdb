@@ -25,6 +25,7 @@
 #include "storage/lmgr.h"
 #include "utils/memutils.h"
 #include "utils/lsyscache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 /* 

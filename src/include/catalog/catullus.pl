@@ -298,6 +298,9 @@ sub get_fnoptlist
 		'security\s+definer|security\s+invoker|' .
 		'cost\s+(\d+)|' .
 		'rows\s+(\d+)|' .
+		'execute\s+on\s+any|' .
+		'execute\s+on\s+master|' .
+		'execute\s+on\s+all\s+segments|' .
 		'no\s+sql|contains\s+sql|reads\s+sql\s+data|modifies\s+sql\s+data|' .
 		'language\s+\S+|' .
 		'as\s+\\\'\S+\\\'(?:\s*,\s*\\\'\S+\\\')*';
@@ -341,6 +344,7 @@ sub make_opt
 	my $proisstrict = 0;
 	my $prosecdef	= 0;
 	my $prodataaccess;
+	my $proexeclocation;
 	my $prosrc;
 	my $func_as;
 
@@ -384,6 +388,28 @@ sub make_opt
 				# prodataaccess is first char of option ([n]o sql, [c]ontains sql,
 				# [r]eads sql data, [m]odifies sql data).
 				$prodataaccess = lc(substr($opt, 0, 1));
+			}
+
+			if ($opt =~ m/^execute\s+on\s+any/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proexeclocation));
+
+				$proexeclocation = 'a';
+			}
+			if ($opt =~ m/^execute\s+on\s+master/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proexeclocation));
+
+				$proexeclocation = 'm';
+			}
+			if ($opt =~ m/^execute\s+on\s+all\s+segments/i)
+			{
+				die ("conflicting or redundant options: $opt")
+					if (defined($proexeclocation));
+
+				$proexeclocation = 's';
 			}
 
 			if ($opt =~ m/^AS\s+\'.*\'$/)
@@ -448,7 +474,8 @@ sub make_opt
 #			proallargtypes
 #			proargmodes
 #			proargnames
-			prodataaccess	=> $prodataaccess
+			prodataaccess	=> $prodataaccess,
+			proexeclocation	=> $proexeclocation
 		};
 
 		if (defined($func_as) && defined($prolang))
@@ -867,6 +894,7 @@ sub printfndef
 		($tup->{proacl} ? $tup->{proacl} : "_null_") . " " . 
 		($tup->{proconfig} ? $tup->{proconfig} : "_null_") . " " . 
 		$tup->{prodataaccess} . " " .
+		($tup->{proexeclocation} ? $tup->{proexeclocation} : "a" ) . " " .
 		"));\n";
 	$bigstr .= "DESCR(" . $fndef->{with}->{description} . ");\n"
 		if (exists($fndef->{with}->{description}));

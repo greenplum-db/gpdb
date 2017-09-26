@@ -12,11 +12,17 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "storage/fd.h"
 #include "storage/relfilenode.h"
 
+#include "access/genam.h"
+#include "access/heapam.h"
+#include "access/persistentfilesysobjname.h"
+#include "access/transam.h"
+#include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_authid.h"
@@ -24,24 +30,20 @@
 #include "catalog/pg_database.h"
 #include "catalog/gp_persistent.h"
 #include "cdb/cdbsharedoidsearch.h"
-#include "access/persistentfilesysobjname.h"
 #include "cdb/cdbdirectopen.h"
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbpersistenttablespace.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentrelation.h"
-#include "storage/itemptr.h"
-#include "utils/hsearch.h"
-#include "storage/shmem.h"
-#include "access/genam.h"
-#include "access/heapam.h"
-#include "access/transam.h"
-#include "utils/guc.h"
-#include "storage/smgr.h"
 #include "storage/ipc.h"
+#include "storage/itemptr.h"
+#include "storage/shmem.h"
+#include "storage/smgr.h"
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
+#include "utils/guc.h"
+#include "utils/hsearch.h"
 
 
 /*

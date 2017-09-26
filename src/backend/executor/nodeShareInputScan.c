@@ -27,6 +27,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "cdb/cdbvars.h"
 #include "executor/executor.h"
 #include "executor/nodeShareInputScan.h"

@@ -114,6 +114,8 @@ LANGUAGE 'plpgsql';
 -- Prepare resource groups and roles and tables
 create table rg_test_foo as select i as c1, i as c2 from generate_series(1,1000) i;
 create table rg_test_bar as select i as c1, i as c2 from generate_series(1,1000) i;
+grant all on rg_test_foo to public;
+grant all on rg_test_bar to public;
 
 -- start_ignore
 select dblink_connect('dblink_rg_test', 'dbname=isolation2resgrouptest');
@@ -159,19 +161,19 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 --
 -- start a new session to alter concurrency randomly
 31: select dblink_connect('dblink_rg_test31', 'dbname=isolation2resgrouptest');
-31>: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', '', '', 1000, '1-6', '1-5', true);
+31>: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '0-5', true);
 
 -- start a new session to alter cpu_rate_limit randomly
 32: select dblink_connect('dblink_rg_test32', 'dbname=isolation2resgrouptest');
-32>: select exec_commands_n('dblink_rg_test32', 'alter resource group rg_test_g% set cpu_rate_limit #', '', '', 1000, '1-6', '1-6', true);
+32>: select exec_commands_n('dblink_rg_test32', 'alter resource group rg_test_g% set cpu_rate_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-6', true);
 
 -- start a new session to alter memory_limit randomly
 33: select dblink_connect('dblink_rg_test33', 'dbname=isolation2resgrouptest');
-33>: select exec_commands_n('dblink_rg_test33', 'alter resource group rg_test_g% set memory_limit #', '', '', 1000, '1-6', '1-7', true);
+33>: select exec_commands_n('dblink_rg_test33', 'alter resource group rg_test_g% set memory_limit #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-7', true);
 
 -- start a new session to alter memory_shared_quota randomly
 34: select dblink_connect('dblink_rg_test34', 'dbname=isolation2resgrouptest');
-34>: select exec_commands_n('dblink_rg_test34', 'alter resource group rg_test_g% set memory_shared_quota #', '', '', 1000, '1-6', '1-80', true);
+34>: select exec_commands_n('dblink_rg_test34', 'alter resource group rg_test_g% set memory_shared_quota #', 'select 1 from pg_sleep(0.1)', '', 1000, '1-6', '1-80', true);
 
 --
 -- 4* : CREATE/DROP tables & groups
@@ -184,8 +186,8 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 42: select dblink_connect('dblink_rg_test42', 'dbname=isolation2resgrouptest');
 42>: select exec_commands_n('dblink_rg_test42', 'create resource group rg_test_g7 with (cpu_rate_limit=1, memory_limit=1)', 'drop resource group rg_test_g7', '', 1000, '', '', true);
 
--- start a new session to drop a resource group with running queries, it will failed because a role is associated with the resource group. 
-43>: drop resource group rg_test_g3;
+31<:
+31: select exec_commands_n('dblink_rg_test31', 'alter resource group rg_test_g% set concurrency #', 'select 1 from pg_sleep(0.1)', '', 6, '1-6', '1-5', true);
 
 -- start a new session to acquire the status of resource groups
 44: select dblink_connect('dblink_rg_test44', 'dbname=isolation2resgrouptest');
@@ -198,13 +200,11 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 24<:
 25<:
 26<:
-31<:
 32<:
 33<:
 34<:
 41<:
 42<:
-43<:
 44<:
 
 21: select dblink_disconnect('dblink_rg_test21');
@@ -233,7 +233,6 @@ select groupname, concurrency, cpu_rate_limit from gp_toolkit.gp_resgroup_config
 34q:
 41q:
 42q:
-43q:
 
 select groupname, concurrency::int < 7, cpu_rate_limit::int < 7 from gp_toolkit.gp_resgroup_config where groupname like 'rg_test_g%' order by groupname;
 
@@ -245,7 +244,7 @@ with t_1 as
 (
 	select rsgname, row_to_json(json_each(memory_usage::json)) as j from gp_toolkit.gp_resgroup_status where rsgname like 'rg_test_g%' order by rsgname
 )
-select rsgname, sum((j->'value')::text::int) from t_1 group by rsgname ;
+select rsgname, sum(((j->'value')->>'used')::int) from t_1 group by rsgname ;
 
 -- start_ignore
 drop table rg_test_foo;

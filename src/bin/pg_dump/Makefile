@@ -47,7 +47,7 @@ pg_dumpall: pg_dumpall.o dumputils.o $(KEYWRDOBJS) $(libpq_builddir)/libpq.a
 submake-cdb:
 ifneq ($(PORTNAME), aix)
 	$(MAKE) -C cdb all
-    endif
+endif
 
 install: all installdirs
 	$(INSTALL_PROGRAM) pg_dump$(X) '$(DESTDIR)$(bindir)'/pg_dump$(X)

@@ -12,7 +12,7 @@
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.563 2010/07/20 00:34:44 rhaas Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.446 2008/04/04 17:25:23 tgl Exp $
  *
  *--------------------------------------------------------------------
  */
@@ -60,6 +60,7 @@
 #include "replication/walsender.h"
 #include "replication/walreceiver.h"
 #include "postmaster/walwriter.h"
+#include "regex/regex.h"
 #include "storage/fd.h"
 #include "storage/freespace.h"
 #include "tcop/tcopprot.h"
@@ -146,28 +147,14 @@ static const char *assign_wal_consistency_checking(const char *newval,
 #ifdef HAVE_SYSLOG
 static int	syslog_facility = LOG_LOCAL0;
 
-static const char *assign_syslog_facility(const char *facility,
-					   bool doit, GucSource source);
+static bool assign_syslog_facility(int newval,
+				    bool doit, GucSource source);
 static const char *assign_syslog_ident(const char *ident,
 					bool doit, GucSource source);
 #endif
 
-static const char *assign_defaultxactisolevel(const char *newval, bool doit,
-						   GucSource source);
-static const char *assign_session_replication_role(const char *newval, bool doit,
+static bool assign_session_replication_role(int newval, bool doit,
 								GucSource source);
-static const char *assign_log_min_messages(const char *newval, bool doit,
-						GucSource source);
-static const char *assign_client_min_messages(const char *newval,
-						   bool doit, GucSource source);
-static const char *assign_min_error_statement(const char *newval, bool doit,
-						   GucSource source);
-static const char *assign_IntervalStyle(const char *newval, bool doit,
-						   GucSource source);
-static const char *assign_log_error_verbosity(const char *newval, bool doit,
-						   GucSource source);
-static const char *assign_log_statement(const char *newval, bool doit,
-					 GucSource source);
 static const char *show_num_temp_buffers(void);
 static bool assign_phony_autocommit(bool newval, bool doit, GucSource source);
 static const char *assign_custom_variable_classes(const char *newval, bool doit,
@@ -179,16 +166,12 @@ static bool assign_log_stats(bool newval, bool doit, GucSource source);
 static bool assign_transaction_read_only(bool newval, bool doit, GucSource source);
 
 static const char *assign_canonical_path(const char *newval, bool doit, GucSource source);
-static const char *assign_backslash_quote(const char *newval, bool doit, GucSource source);
 static const char *assign_timezone_abbreviations(const char *newval, bool doit, GucSource source);
-static const char *assign_xmlbinary(const char *newval, bool doit, GucSource source);
-static const char *assign_xmloption(const char *newval, bool doit, GucSource source);
 static const char *show_archive_command(void);
 static bool assign_tcp_keepalives_idle(int newval, bool doit, GucSource source);
 static bool assign_tcp_keepalives_interval(int newval, bool doit, GucSource source);
 static bool assign_tcp_keepalives_count(int newval, bool doit, GucSource source);
 static const char *assign_pgstat_temp_directory(const char *newval, bool doit, GucSource source);
-static const char *show_IntervalStyle(void);
 static const char *show_tcp_keepalives_idle(void);
 static const char *show_tcp_keepalives_interval(void);
 static const char *show_tcp_keepalives_count(void);
@@ -196,14 +179,130 @@ static bool assign_autovacuum_max_workers(int newval, bool doit, GucSource sourc
 static bool assign_maxconnections(int newval, bool doit, GucSource source);
 
 static const char *assign_application_name(const char *newval, bool doit, GucSource source);
-static const char *assign_bytea(const char *newval, bool doit, GucSource source);
-
-/* hack until enum configs */
-static char *bytea_output_temp="escape";
 
 static int	defunct_int = 0;
 static bool	defunct_bool = false;
 static double defunct_double = 0;
+
+static char *config_enum_get_options(struct config_enum *record, 
+									 const char *prefix, const char *suffix);
+
+
+
+/*
+ * Options for enum values defined in this module.
+ */
+
+static const struct config_enum_entry bytea_output_options[] = {
+	{"escape", BYTEA_OUTPUT_ESCAPE},
+	{"hex", BYTEA_OUTPUT_HEX},
+	{NULL, 0}
+};
+
+const struct config_enum_entry message_level_options[] = {
+	{"debug", DEBUG2},
+	{"debug5", DEBUG5},
+	{"debug4", DEBUG4},
+	{"debug3", DEBUG3},
+	{"debug2", DEBUG2},
+	{"debug1", DEBUG1},
+	{"log", LOG},
+	{"info", INFO},
+	{"notice", NOTICE},
+	{"warning", WARNING},
+	{"error", ERROR},
+	{"fatal", FATAL},
+	{"panic", PANIC},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry intervalstyle_options[] = {
+	{"postgres", INTSTYLE_POSTGRES},
+	{"postgres_verbose", INTSTYLE_POSTGRES_VERBOSE},
+	{"sql_standard", INTSTYLE_SQL_STANDARD},
+	{"iso_8601", INTSTYLE_ISO_8601},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry log_error_verbosity_options[] = {
+	{"default", PGERROR_DEFAULT},
+	{"terse", PGERROR_TERSE},
+	{"verbose", PGERROR_VERBOSE},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry log_statement_options[] = {
+	{"none", LOGSTMT_NONE},
+	{"ddl", LOGSTMT_DDL},
+	{"mod", LOGSTMT_MOD},
+	{"all", LOGSTMT_ALL},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry regex_flavor_options[] = {
+    {"advanced", REG_ADVANCED},
+    {"extended", REG_EXTENDED},
+    {"basic", REG_BASIC},
+    {NULL, 0}
+};
+
+static const struct config_enum_entry isolation_level_options[] = {
+	{"serializable", XACT_SERIALIZABLE},
+	{"repeatable read", XACT_REPEATABLE_READ},
+	{"read committed", XACT_READ_COMMITTED},
+	{"read uncommitted", XACT_READ_UNCOMMITTED},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry session_replication_role_options[] = {
+	{"origin", SESSION_REPLICATION_ROLE_ORIGIN},
+	{"replica", SESSION_REPLICATION_ROLE_REPLICA},
+	{"local", SESSION_REPLICATION_ROLE_LOCAL},
+	{NULL, 0}
+};
+
+#ifdef HAVE_SYSLOG
+static const struct config_enum_entry syslog_facility_options[] = {
+	{"local0", LOG_LOCAL0},
+	{"local1", LOG_LOCAL1},
+	{"local2", LOG_LOCAL2},
+	{"local3", LOG_LOCAL3},
+	{"local4", LOG_LOCAL4},
+	{"local5", LOG_LOCAL5},
+	{"local6", LOG_LOCAL6},
+	{"local7", LOG_LOCAL7},
+	{NULL, 0}
+};
+#endif
+
+static const struct config_enum_entry xmlbinary_options[] = {
+	{"base64", XMLBINARY_BASE64},
+	{"hex", XMLBINARY_HEX},
+	{NULL, 0}
+};
+
+static const struct config_enum_entry xmloption_options[] = {
+	{"content", XMLOPTION_CONTENT},
+	{"document", XMLOPTION_DOCUMENT},
+	{NULL, 0}
+};
+
+/*
+ * Although only "on", "off", and "safe_encoding" are documented, we
+ * accept all the likely variants of "on" and "off".
+ */
+static const struct config_enum_entry backslash_quote_options[] = {
+	{"safe_encoding", BACKSLASH_QUOTE_SAFE_ENCODING},
+	{"on", BACKSLASH_QUOTE_ON},
+	{"off", BACKSLASH_QUOTE_OFF},
+	{"true", BACKSLASH_QUOTE_ON},
+	{"false", BACKSLASH_QUOTE_OFF},
+	{"yes", BACKSLASH_QUOTE_ON},
+	{"no", BACKSLASH_QUOTE_OFF},
+	{"1", BACKSLASH_QUOTE_ON},
+	{"0", BACKSLASH_QUOTE_OFF},
+	{NULL, 0}
+};
 
 /*
  * GUC option variables that are exported from this module
@@ -259,28 +358,17 @@ int			tcp_keepalives_count;
  * cases provide the value for SHOW to display.  The real state is elsewhere
  * and is kept in sync by assign_hooks.
  */
-static char *client_min_messages_str;
-static char *log_min_messages_str;
-static char *log_error_verbosity_str;
-static char *log_statement_str;
-static char *log_min_error_statement_str;
 static char *log_destination_string;
 
 #ifdef HAVE_SYSLOG
-static char *syslog_facility_str;
 static char *syslog_ident_str;
 #endif
 static bool phony_autocommit;
 static bool session_auth_is_superuser;
 static double phony_random_seed;
-static char *backslash_quote_string;
 static char *client_encoding_string;
-static char *IntervalStyle_string;
 static char *datestyle_string;
-static char *default_iso_level_string;
-static char *session_replication_role_string;
 static char *locale_ctype;
-static char *regex_flavor_string;
 static char *server_encoding_string;
 static char *server_version_string;
 static int	server_version_num;
@@ -289,8 +377,6 @@ static char *log_timezone_string;
 static char *timezone_abbreviations_string;
 static char *XactIsoLevel_string;
 static char *custom_variable_classes;
-static char *xmlbinary_string;
-static char *xmloption_string;
 static int	max_function_args;
 static int	max_index_keys;
 static int	max_identifier_length;
@@ -464,7 +550,8 @@ const char *const config_type_names[] =
 	 /* PGC_BOOL */ "bool",
 	 /* PGC_INT */ "integer",
 	 /* PGC_REAL */ "real",
-	 /* PGC_STRING */ "string"
+	 /* PGC_STRING */ "string",
+	 /* PGC_ENUM */ "enum"
 };
 
 
@@ -1310,16 +1397,10 @@ static struct config_int ConfigureNamesInt[] =
 	},
 
 	/*
-	 * Note: There is some postprocessing done in PostmasterMain() to make
-	 * sure the buffers are at least twice the number of backends, so the
-	 * constraints here are partially unused. Similarly, the superuser
-	 * reserved number is checked to ensure it is less than the max backends
-	 * number.
-	 *
-	 * MaxBackends is limited to INT_MAX/4 because some places compute
-	 * 4*MaxBackends without any overflow check.  This check is made on
+	 * Note: MaxBackends is limited to INT_MAX/4 because some places compute
+	 * 4*MaxBackends without any overflow check.  This check is made in
 	 * assign_maxconnections, since MaxBackends is computed as MaxConnections
-	 * + autovacuum_max_workers.
+	 * plus autovacuum_max_workers.
 	 *
 	 * Likewise we have to limit NBuffers to INT_MAX/2.
 	 */
@@ -2025,7 +2106,7 @@ static struct config_real ConfigureNamesReal[] =
 	},
 	{
 		{"bgwriter_lru_multiplier", PGC_SIGHUP, RESOURCES,
-			gettext_noop("Background writer multiplier on average buffers to scan per round."),
+			gettext_noop("Multiple of the average buffer usage to free per round."),
 			NULL,
 			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
 		},
@@ -2040,7 +2121,7 @@ static struct config_real ConfigureNamesReal[] =
 			GUC_NO_SHOW_ALL | GUC_NO_RESET_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&phony_random_seed,
-		0.5, 0.0, 1.0, assign_random_seed, show_random_seed
+		0.0, -1.0, 1.0, assign_random_seed, show_random_seed
 	},
 
 	{
@@ -2101,15 +2182,6 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-		{"backslash_quote", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Sets whether \"\\'\" is allowed in string literals."),
-			gettext_noop("Valid values are ON, OFF, and SAFE_ENCODING.")
-		},
-		&backslash_quote_string,
-		"safe_encoding", assign_backslash_quote, NULL
-	},
-
-	{
 		{"client_encoding", PGC_USERSET, CLIENT_CONN_LOCALE,
 			gettext_noop("Sets the client's character set encoding."),
 			NULL,
@@ -2117,70 +2189,6 @@ static struct config_string ConfigureNamesString[] =
 		},
 		&client_encoding_string,
 		"SQL_ASCII", assign_client_encoding, NULL
-	},
-
-	{
-		{"client_min_messages", PGC_USERSET, LOGGING_WHEN,
-			gettext_noop("Sets the message levels that are sent to the client."),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, "
-						 "DEBUG1, LOG, NOTICE, WARNING, and ERROR. Each level includes all the "
-						 "levels that follow it. The later the level, the fewer messages are "
-						 "sent."),
-			GUC_GPDB_ADDOPT
-		},
-		&client_min_messages_str,
-		"notice", assign_client_min_messages, NULL
-	},
-
-	{
-		{"log_min_messages", PGC_SUSET, LOGGING_WHEN,
-			gettext_noop("Sets the message levels that are logged."),
-			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
-			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
-						 "includes all the levels that follow it."),
-			GUC_GPDB_ADDOPT
-		},
-		&log_min_messages_str,
-		"warning", assign_log_min_messages, NULL
-	},
-
-	{
-		{"IntervalStyle", PGC_USERSET, CLIENT_CONN_LOCALE,
-			gettext_noop("Sets the display format for interval values."),
-			NULL,
-			GUC_REPORT | GUC_GPDB_ADDOPT
-		},
-		&IntervalStyle_string,
-		"postgres", assign_IntervalStyle, show_IntervalStyle
-	},
-
-	{
-		{"log_error_verbosity", PGC_SUSET, LOGGING_WHEN,
-			gettext_noop("Sets the verbosity of logged messages."),
-			gettext_noop("Valid values are \"terse\", \"default\", and \"verbose\"."),
-			GUC_GPDB_ADDOPT
-		},
-		&log_error_verbosity_str,
-		"default", assign_log_error_verbosity, NULL
-	},
-	{
-		{"log_statement", PGC_SUSET, LOGGING_WHAT,
-			gettext_noop("Sets the type of statements logged."),
-			gettext_noop("Valid values are \"none\", \"ddl\", \"mod\", and \"all\".")
-		},
-		&log_statement_str,
-		"none", assign_log_statement, NULL
-	},
-
-	{
-		{"log_min_error_statement", PGC_SUSET, LOGGING_WHEN,
-			gettext_noop("Causes all statements generating error at or above this level to be logged."),
-			gettext_noop("All SQL statements that cause an error of the "
-						 "specified level or a higher level are logged."),
-			GUC_GPDB_ADDOPT
-		},
-		&log_min_error_statement_str,
-		"error", assign_min_error_statement, NULL
 	},
 
 	{
@@ -2239,26 +2247,6 @@ static struct config_string ConfigureNamesString[] =
 		"", assign_temp_tablespaces, NULL
 	},
 #endif
-	{
-		{"default_transaction_isolation", PGC_USERSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("Sets the transaction isolation level of each new transaction."),
-			gettext_noop("Each SQL transaction has an isolation level, which "
-						 "can be either \"read uncommitted\", \"read committed\", \"repeatable read\", or \"serializable\".")
-		},
-		&default_iso_level_string,
-		"read committed", assign_defaultxactisolevel, NULL
-	},
-
-	{
-		{"session_replication_role", PGC_SUSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("Sets the session's behavior for triggers and rewrite rules."),
-			gettext_noop("Each session can be either"
-						 " \"origin\", \"replica\", or \"local\".")
-		},
-		&session_replication_role_string,
-		"origin", assign_session_replication_role, NULL
-	},
-
 	{
 		{"dynamic_library_path", PGC_SUSET, CLIENT_CONN_OTHER,
 			gettext_noop("Sets the path for dynamically loadable modules."),
@@ -2381,15 +2369,6 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-		{"regex_flavor", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Sets the regular expression \"flavor\"."),
-			gettext_noop("This can be set to advanced, extended, or basic.")
-		},
-		&regex_flavor_string,
-		"advanced", assign_regex_flavor, NULL
-	},
-
-	{
 		{"search_path", PGC_USERSET, CLIENT_CONN_STATEMENT,
 			gettext_noop("Sets the schema search order for names that are not schema-qualified."),
 			NULL,
@@ -2475,16 +2454,6 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 #ifdef HAVE_SYSLOG
-	{
-		{"syslog_facility", PGC_SIGHUP, DEFUNCT_OPTIONS,
-			gettext_noop("Sets the syslog \"facility\" to be used when syslog enabled."),
-			gettext_noop("Valid values are LOCAL0, LOCAL1, LOCAL2, LOCAL3, "
-						 "LOCAL4, LOCAL5, LOCAL6, LOCAL7."),
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&syslog_facility_str,
-		"LOCAL0", assign_syslog_facility, NULL
-	},
 	{
 		{"syslog_ident", PGC_SIGHUP, DEFUNCT_OPTIONS,
 			gettext_noop("Sets the program name used to identify PostgreSQL "
@@ -2616,22 +2585,13 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-		{"xmlbinary", PGC_USERSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("Sets how binary values are to be encoded in XML."),
-			gettext_noop("Valid values are BASE64 and HEX.")
+		{"external_pid_file", PGC_POSTMASTER, FILE_LOCATIONS,
+			gettext_noop("Writes the postmaster PID to the specified file."),
+			NULL,
+			GUC_SUPERUSER_ONLY
 		},
-		&xmlbinary_string,
-		"base64", assign_xmlbinary, NULL
-	},
-
-	{
-		{"xmloption", PGC_USERSET, CLIENT_CONN_STATEMENT,
-			gettext_noop("Sets whether XML data in implicit parsing and serialization "
-						 "operations is to be considered as documents or content fragments."),
-			gettext_noop("Valid values are DOCUMENT and CONTENT.")
-		},
-		&xmloption_string,
-		"content", assign_xmloption, NULL
+		&external_pid_file,
+		NULL, assign_canonical_path, NULL
 	},
 
 	{
@@ -2696,16 +2656,6 @@ static struct config_string ConfigureNamesString[] =
 		NULL, assign_canonical_path, NULL
 	},
 
-	/* placed here as a temporary hack until we get guc enums */
-		{
-			{"bytea_output", PGC_USERSET, CLIENT_CONN_STATEMENT,
-				gettext_noop("Sets the output format for bytea."),
-				gettext_noop("Valid values are HEX and ESCAPE.")
-			},
-			&bytea_output_temp,
-			"escape", assign_bytea, NULL, NULL
-		},
-
 	{
 		{"wal_consistency_checking", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("Sets the WAL resource managers for which WAL consistency checks are done."),
@@ -2723,6 +2673,161 @@ static struct config_string ConfigureNamesString[] =
 	}
 };
 
+
+static struct config_enum ConfigureNamesEnum[] =
+{
+	{
+		{"backslash_quote", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Sets whether \"\\'\" is allowed in string literals."),
+			gettext_noop("Valid values are ON, OFF, and SAFE_ENCODING.")
+		},
+		&backslash_quote,
+		BACKSLASH_QUOTE_SAFE_ENCODING, backslash_quote_options, NULL, NULL
+	},
+
+	{
+		{"bytea_output", PGC_USERSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets the output format for bytea."),
+			NULL
+		},
+		&bytea_output,
+		BYTEA_OUTPUT_ESCAPE, bytea_output_options, NULL, NULL
+	},
+
+	{
+
+		{"client_min_messages", PGC_USERSET, LOGGING_WHEN,
+			gettext_noop("Sets the message levels that are sent to the client."),
+			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, "
+						 "DEBUG1, LOG, NOTICE, WARNING, and ERROR. Each level includes all the "
+						 "levels that follow it. The later the level, the fewer messages are "
+						 "sent."),
+			GUC_GPDB_ADDOPT
+		},
+		&client_min_messages,
+		NOTICE, message_level_options,NULL, NULL
+	},
+
+	{
+		{"default_transaction_isolation", PGC_USERSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets the transaction isolation level of each new transaction."),
+			gettext_noop("Each SQL transaction has an isolation level, which "
+						 "can be either \"read uncommitted\", \"read committed\", \"repeatable read\", or \"serializable\".")
+		},
+		&DefaultXactIsoLevel,
+		XACT_READ_COMMITTED, isolation_level_options, NULL, NULL
+	},
+
+	{
+		{"IntervalStyle", PGC_USERSET, CLIENT_CONN_LOCALE,
+			gettext_noop("Sets the display format for interval values."),
+			NULL,
+			GUC_REPORT | GUC_GPDB_ADDOPT
+		},
+		&IntervalStyle,
+		INTSTYLE_POSTGRES, intervalstyle_options, NULL, NULL
+	},
+
+	{
+		{"log_error_verbosity", PGC_SUSET, LOGGING_WHEN,
+			gettext_noop("Sets the verbosity of logged messages."),
+			gettext_noop("Valid values are \"terse\", \"default\", and \"verbose\"."),
+			GUC_GPDB_ADDOPT
+		},
+		&Log_error_verbosity,
+		PGERROR_DEFAULT, log_error_verbosity_options, NULL, NULL
+	},
+
+	{
+		{"log_min_messages", PGC_SUSET, LOGGING_WHEN,
+			gettext_noop("Sets the message levels that are logged."),
+			gettext_noop("Valid values are DEBUG5, DEBUG4, DEBUG3, DEBUG2, DEBUG1, "
+			"INFO, NOTICE, WARNING, ERROR, LOG, FATAL, and PANIC. Each level "
+						 "includes all the levels that follow it."),
+			GUC_GPDB_ADDOPT
+		},
+		&log_min_messages,
+		WARNING, message_level_options, NULL, NULL
+	},
+
+	{
+		{"log_min_error_statement", PGC_SUSET, LOGGING_WHEN,
+			gettext_noop("Causes all statements generating error at or above this level to be logged."),
+			gettext_noop("All SQL statements that cause an error of the "
+						 "specified level or a higher level are logged."),
+			GUC_GPDB_ADDOPT
+		},
+		&log_min_error_statement,
+		ERROR, message_level_options, NULL, NULL
+	},
+
+	{
+		{"log_statement", PGC_SUSET, LOGGING_WHAT,
+			gettext_noop("Sets the type of statements logged."),
+			gettext_noop("Valid values are \"none\", \"ddl\", \"mod\", and \"all\".")
+		},
+		&log_statement,
+		LOGSTMT_NONE, log_statement_options, NULL, NULL
+	},
+
+#ifdef HAVE_SYSLOG
+	{
+		{"syslog_facility", PGC_SIGHUP, DEFUNCT_OPTIONS,
+			gettext_noop("Sets the syslog \"facility\" to be used when syslog enabled."),
+			gettext_noop("Valid values are LOCAL0, LOCAL1, LOCAL2, LOCAL3, "
+						 "LOCAL4, LOCAL5, LOCAL6, LOCAL7."),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&syslog_facility,
+		LOG_LOCAL0, syslog_facility_options, assign_syslog_facility, NULL
+	},
+#endif
+
+	{
+		{"regex_flavor", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("Sets the regular expression \"flavor\"."),
+			gettext_noop("This can be set to advanced, extended, or basic.")
+		},
+		&regex_flavor,
+		REG_ADVANCED, regex_flavor_options, NULL, NULL
+	},
+
+	{
+		{"session_replication_role", PGC_SUSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets the session's behavior for triggers and rewrite rules."),
+			gettext_noop("Each session can be either"
+						 " \"origin\", \"replica\", or \"local\".")
+		},
+		&SessionReplicationRole,
+		SESSION_REPLICATION_ROLE_ORIGIN, session_replication_role_options,
+		assign_session_replication_role, NULL
+	},
+
+	{
+		{"xmlbinary", PGC_USERSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets how binary values are to be encoded in XML."),
+			gettext_noop("Valid values are BASE64 and HEX.")
+		},
+		&xmlbinary,
+		XMLBINARY_BASE64, xmlbinary_options, NULL, NULL
+	},
+
+	{
+		{"xmloption", PGC_USERSET, CLIENT_CONN_STATEMENT,
+			gettext_noop("Sets whether XML data in implicit parsing and serialization "
+						 "operations is to be considered as documents or content fragments."),
+			gettext_noop("Valid values are DOCUMENT and CONTENT.")
+		},
+		&xmloption,
+		XMLOPTION_CONTENT, xmloption_options, NULL, NULL
+	},
+
+
+	/* End-of-list marker */
+	{
+		{NULL, 0, 0, NULL, NULL}, NULL, 0, NULL, NULL, NULL
+	}
+};
 
 /******** end of options list ********/
 
@@ -2891,6 +2996,10 @@ set_stack_value(struct config_generic * gconf, union config_var_value * val)
 							 &(val->stringval),
 							 *((struct config_string *) gconf)->variable);
 			break;
+		case PGC_ENUM:
+			val->enumval = 
+				*((struct config_enum *) gconf)->variable;
+			break;
 	}
 }
 
@@ -2905,6 +3014,7 @@ discard_stack_value(struct config_generic * gconf, union config_var_value * val)
 		case PGC_BOOL:
 		case PGC_INT:
 		case PGC_REAL:
+		case PGC_ENUM:
 			/* no need to do anything */
 			break;
 		case PGC_STRING:
@@ -3112,6 +3222,22 @@ build_guc_variables(void)
 		num_vars++;
 	}
 
+	for (i = 0; ConfigureNamesEnum[i].gen.name; i++)
+	{
+		struct config_enum *conf = &ConfigureNamesEnum[i];
+
+		conf->gen.vartype = PGC_ENUM;
+		num_vars++;
+	}
+
+	for (i = 0; ConfigureNamesEnum_gp[i].gen.name; i++)
+	{
+		struct config_enum *conf = &ConfigureNamesEnum_gp[i];
+
+		conf->gen.vartype = PGC_ENUM;
+		num_vars++;
+	}
+
 	/*
 	 * Create table with 20% slack
 	 */
@@ -3145,6 +3271,12 @@ build_guc_variables(void)
 
 	for (i = 0; ConfigureNamesString_gp[i].gen.name; i++)
 		guc_vars[num_vars++] = &ConfigureNamesString_gp[i].gen;
+
+	for (i = 0; ConfigureNamesEnum[i].gen.name; i++)
+		guc_vars[num_vars++] = &ConfigureNamesEnum[i].gen;
+
+	for (i = 0; ConfigureNamesEnum_gp[i].gen.name; i++)
+		guc_vars[num_vars++] = &ConfigureNamesEnum_gp[i].gen;
 
 	if (guc_variables)
 		free(guc_variables);
@@ -3501,6 +3633,19 @@ InitializeGUCOptions(void)
 					*conf->variable = str;
 					break;
 				}
+			case PGC_ENUM:
+				{
+					struct config_enum *conf = (struct config_enum *) gconf;
+
+					if (conf->assign_hook)
+						if (!(*conf->assign_hook) (conf->boot_val, true,
+												   PGC_S_DEFAULT))
+							elog(FATAL, "failed to initialize %s to %s",
+								 conf->gen.name, 
+								 config_enum_lookup_by_value(conf, conf->boot_val));
+					*conf->variable = conf->reset_val = conf->boot_val;
+					break;
+				}
 		}
 	}
 
@@ -3612,9 +3757,11 @@ SelectConfigFiles(const char *userDoption, const char *progname)
 	SetConfigOption("config_file", fname, PGC_POSTMASTER, PGC_S_OVERRIDE);
 	free(fname);
 
+#ifdef USE_SEGWALREP
 	/* Perform similar processes for Greenplum-specific configuration files. */
 	if (!select_gp_replication_config_files(configdir, progname))
 		return false;
+#endif
 
 	/*
 	 * Now read the config file for the first time.
@@ -3806,6 +3953,18 @@ ResetAllOptions(void)
 					}
 
 					set_string_field(conf, conf->variable, str);
+					conf->gen.source = conf->gen.reset_source;
+					break;
+				}
+			case PGC_ENUM:
+				{
+					struct config_enum *conf = (struct config_enum *) gconf;
+
+					if (conf->assign_hook)
+						if (!(*conf->assign_hook) (conf->reset_val, true,
+												   PGC_S_SESSION))
+							elog(ERROR, "failed to reset %s", conf->gen.name);
+					*conf->variable = conf->reset_val;
 					conf->gen.source = conf->gen.reset_source;
 					break;
 				}
@@ -4165,6 +4324,23 @@ AtEOXact_GUC(bool isCommit, int nestLevel)
 							set_string_field(conf, &stack->masked.stringval, NULL);
 							break;
 						}
+					case PGC_ENUM:
+						{
+							struct config_enum *conf = (struct config_enum *) gconf;
+							int newval = newvalue.enumval;
+
+							if (*conf->variable != newval)
+							{
+								if (conf->assign_hook)
+									if (!(*conf->assign_hook) (newval,
+															   true, PGC_S_OVERRIDE))
+										elog(LOG, "failed to commit %s",
+											 conf->gen.name);
+								*conf->variable = newval;
+								changed = true;
+							}
+							break;
+						}
 				}
 
 				gconf->source = newsource;
@@ -4484,6 +4660,100 @@ parse_real(const char *value, double *result)
 	if (result)
 		*result = val;
 	return true;
+}
+
+
+/*
+ * Lookup the name for an enum option with the selected value.
+ * Should only ever be called with known-valid values, so throws
+ * an elog(ERROR) if the enum option is not found.
+ *
+ * The returned string is a pointer to static data and not
+ * allocated for modification.
+ */
+const char *
+config_enum_lookup_by_value(struct config_enum *record, int val)
+{
+	const struct config_enum_entry *entry = record->options;
+	while (entry && entry->name)
+	{
+		if (entry->val == val)
+			return entry->name;
+		entry++;
+	}
+	elog(ERROR, "could not find enum option %d for %s",
+		 val, record->gen.name);
+	return NULL; /* silence compiler */
+}
+
+
+/*
+ * Lookup the value for an enum option with the selected name
+ * (case-insensitive).
+ * If the enum option is found, sets the retval value and returns
+ * true. If it's not found, return FALSE and retval is set to 0.
+ *
+ */
+bool
+config_enum_lookup_by_name(struct config_enum *record, const char *value, int *retval)
+{
+	const struct config_enum_entry *entry = record->options;
+	
+	if (retval)
+		*retval = 0;			/* suppress compiler warning */
+	
+	while (entry && entry->name)
+	{
+		if (pg_strcasecmp(value, entry->name) == 0)
+		{
+			*retval = entry->val;
+			return TRUE;
+		}
+		entry++;
+	}
+	return FALSE;
+}
+
+
+/*
+ * Return a list of all available options for an enum, separated
+ * by ", " (comma-space).
+ * If prefix is non-NULL, it is added before the first enum value.
+ * If suffix is non-NULL, it is added to the end of the string.
+ */
+static char *
+config_enum_get_options(struct config_enum *record, const char *prefix, const char *suffix)
+{
+	const struct config_enum_entry *entry = record->options;
+	int		len = 0;
+	char   *hintmsg;
+
+	if (!entry || !entry->name)
+		return NULL;					/* Should not happen */
+	
+	while (entry && entry->name)
+	{
+		len += strlen(entry->name) + 2; /* string and ", " */
+		entry++;
+	}
+
+	hintmsg = palloc(len + strlen(prefix) + strlen(suffix) + 2);
+
+	strcpy(hintmsg, prefix);
+	
+	entry = record->options;
+	while (entry && entry->name)
+	{
+		strcat(hintmsg, entry->name);
+		strcat(hintmsg, ", ");
+		entry++;
+	}
+
+	/* Replace final comma/space */
+	hintmsg[strlen(hintmsg)-2] = '\0';
+	strcat(hintmsg, suffix);
+
+	return hintmsg;
 }
 
 
@@ -5159,6 +5429,78 @@ set_config_option(const char *name, const char *value,
 					free(newval);
 				break;
 			}
+		case PGC_ENUM:
+			{
+				struct config_enum *conf = (struct config_enum *) record;
+				int			newval;
+
+				if (value)
+				{
+					if (!config_enum_lookup_by_name(conf, value, &newval))
+					{
+						char *hintmsg = config_enum_get_options(conf, "Available values: ", ".");
+
+						ereport(elevel,
+								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+								 errmsg("invalid value for parameter \"%s\": \"%s\"",
+										name, value),
+								 hintmsg ? errhint("%s", hintmsg) : 0));
+
+						if (hintmsg)
+							pfree(hintmsg);
+						return false;
+					}
+				}
+				else if (source == PGC_S_DEFAULT)
+					newval = conf->boot_val;
+				else
+				{
+					newval = conf->reset_val;
+					source = conf->gen.reset_source;
+				}
+
+				if (conf->assign_hook)
+					if (!(*conf->assign_hook) (newval, changeVal, source))
+					{
+						ereport(elevel,
+								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+								 errmsg("invalid value for parameter \"%s\": \"%s\"",
+										name, 
+										config_enum_lookup_by_value(conf, newval))));
+						return false;
+					}
+
+				if (changeVal || makeDefault)
+				{
+					/* Save old value to support transaction abort */
+					if (!makeDefault)
+						push_old_value(&conf->gen, action);
+					if (changeVal)
+					{
+						*conf->variable = newval;
+						conf->gen.source = source;
+					}
+					if (makeDefault)
+					{
+						GucStack   *stack;
+
+						if (conf->gen.reset_source <= source)
+						{
+							conf->reset_val = newval;
+							conf->gen.reset_source = source;
+						}
+						for (stack = conf->gen.stack; stack; stack = stack->prev)
+						{
+							if (stack->source <= source)
+							{
+								stack->prior.enumval = newval;
+								stack->source = source;
+							}
+						}
+					}
+				}
+				break;
+			}
 	}
 
 	if (changeVal && (record->flags & GUC_REPORT))
@@ -5223,6 +5565,10 @@ GetConfigOption(const char *name)
 
 		case PGC_STRING:
 			return *((struct config_string *) record)->variable;
+
+		case PGC_ENUM:
+			return config_enum_lookup_by_value((struct config_enum *) record,
+											*((struct config_enum *) record)->variable);
 	}
 	return NULL;
 }
@@ -5267,6 +5613,10 @@ GetConfigOptionResetString(const char *name)
 
 		case PGC_STRING:
 			return ((struct config_string *) record)->reset_val;
+
+		case PGC_ENUM:
+			return config_enum_lookup_by_value((struct config_enum *) record,
+										    ((struct config_enum *) record)->reset_val);
 	}
 	return NULL;
 }
@@ -5679,7 +6029,6 @@ set_config_by_name(PG_FUNCTION_ARGS)
 	char	   *value;
 	char	   *new_value;
 	bool		is_local;
-	text	   *result_text;
 
 	if (PG_ARGISNULL(0))
 		ereport(ERROR,
@@ -5687,13 +6036,13 @@ set_config_by_name(PG_FUNCTION_ARGS)
 				 errmsg("SET requires parameter name")));
 
 	/* Get the GUC variable name */
-	name = DatumGetCString(DirectFunctionCall1(textout, PG_GETARG_DATUM(0)));
+	name = TextDatumGetCString(PG_GETARG_DATUM(0));
 
 	/* Get the desired value or set to NULL for a reset request */
 	if (PG_ARGISNULL(1))
 		value = NULL;
 	else
-		value = DatumGetCString(DirectFunctionCall1(textout, PG_GETARG_DATUM(1)));
+		value = TextDatumGetCString(PG_GETARG_DATUM(1));
 
 	/*
 	 * Get the desired state of is_local. Default to false if provided value
@@ -5729,10 +6078,7 @@ set_config_by_name(PG_FUNCTION_ARGS)
 	new_value = GetConfigOptionByName(name, NULL);
 
 	/* Convert return string to text */
-	result_text = DatumGetTextP(DirectFunctionCall1(textin, CStringGetDatum(new_value)));
-
-	/* return it */
-	PG_RETURN_TEXT_P(result_text);
+	PG_RETURN_TEXT_P(cstring_to_text(new_value));
 }
 
 
@@ -5922,6 +6268,30 @@ DefineCustomStringVariable(const char *name,
 	/* we could probably do without strdup, but keep it like normal case */
 	if (var->boot_val)
 		var->reset_val = guc_strdup(ERROR, var->boot_val);
+	var->assign_hook = assign_hook;
+	var->show_hook = show_hook;
+	define_custom_variable(&var->gen);
+}
+
+void
+DefineCustomEnumVariable(const char *name,
+						 const char *short_desc,
+						 const char *long_desc,
+						 int *valueAddr,
+						 const struct config_enum_entry *options,
+						 GucContext context,
+						 GucEnumAssignHook assign_hook,
+						 GucShowHook show_hook)
+{
+	struct config_enum *var;
+
+	var = (struct config_enum *)
+		init_custom_variable(name, short_desc, long_desc, context,
+							 PGC_ENUM, sizeof(struct config_enum));
+	var->variable = valueAddr;
+	var->boot_val = *valueAddr;
+	var->reset_val = *valueAddr;
+	var->options = options;
 	var->assign_hook = assign_hook;
 	var->show_hook = show_hook;
 	define_custom_variable(&var->gen);
@@ -6194,6 +6564,9 @@ GetConfigOptionByNum(int varnum, const char **values, bool *noshow)
 
 				/* max_val */
 				values[10] = NULL;
+
+				/* enumvals */
+				values[11] = NULL;
 			}
 			break;
 
@@ -6208,6 +6581,9 @@ GetConfigOptionByNum(int varnum, const char **values, bool *noshow)
 				/* max_val */
 				snprintf(buffer, sizeof(buffer), "%d", lconf->max);
 				values[10] = pstrdup(buffer);
+
+				/* enumvals */
+				values[11] = NULL;
 			}
 			break;
 
@@ -6222,6 +6598,9 @@ GetConfigOptionByNum(int varnum, const char **values, bool *noshow)
 				/* max_val */
 				snprintf(buffer, sizeof(buffer), "%g", lconf->max);
 				values[10] = pstrdup(buffer);
+
+				/* enumvals */
+				values[11] = NULL;
 			}
 			break;
 
@@ -6232,6 +6611,22 @@ GetConfigOptionByNum(int varnum, const char **values, bool *noshow)
 
 				/* max_val */
 				values[10] = NULL;
+
+				/* enumvals */
+				values[11] = NULL;
+			}
+			break;
+
+		case PGC_ENUM:
+			{
+				/* min_val */
+				values[9] = NULL;
+
+				/* max_val */
+				values[10] = NULL;
+
+				/* enumvals */
+				values[11] = config_enum_get_options((struct config_enum *) conf, "", "");
 			}
 			break;
 
@@ -6246,6 +6641,9 @@ GetConfigOptionByNum(int varnum, const char **values, bool *noshow)
 
 				/* max_val */
 				values[10] = NULL;
+
+				/* enumvals */
+				values[11] = NULL;
 			}
 			break;
 	}
@@ -6269,26 +6667,22 @@ show_config_by_name(PG_FUNCTION_ARGS)
 {
 	char	   *varname;
 	char	   *varval;
-	text	   *result_text;
 
 	/* Get the GUC variable name */
-	varname = DatumGetCString(DirectFunctionCall1(textout, PG_GETARG_DATUM(0)));
+	varname = TextDatumGetCString(PG_GETARG_DATUM(0));
 
 	/* Get the value */
 	varval = GetConfigOptionByName(varname, NULL);
 
 	/* Convert to text */
-	result_text = DatumGetTextP(DirectFunctionCall1(textin, CStringGetDatum(varval)));
-
-	/* return it */
-	PG_RETURN_TEXT_P(result_text);
+	PG_RETURN_TEXT_P(cstring_to_text(varval));
 }
 
 /*
  * show_all_settings - equiv to SHOW ALL command but implemented as
  * a Table Function.
  */
-#define NUM_PG_SETTINGS_ATTS	11
+#define NUM_PG_SETTINGS_ATTS	12
 
 Datum
 show_all_settings(PG_FUNCTION_ARGS)
@@ -6337,6 +6731,8 @@ show_all_settings(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 10, "min_val",
 						   TEXTOID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 11, "max_val",
+						   TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "enumvals",
 						   TEXTOID, -1, 0);
 
 		/*
@@ -6577,6 +6973,17 @@ _ShowOption(struct config_generic * record, bool use_units)
 			}
 			break;
 
+		case PGC_ENUM:
+			{
+				struct config_enum *conf = (struct config_enum *) record;
+
+				if(conf->show_hook)
+					val = (*conf->show_hook) ();
+				else
+					val = config_enum_lookup_by_value(conf, *conf->variable);
+			}
+			break;
+
 		default:
 			/* just to keep compiler quiet */
 			val = "???";
@@ -6632,6 +7039,15 @@ is_newvalue_equal(struct config_generic * record, const char *newvalue)
 
 				return *conf->variable != NULL &&
 					strcmp(*conf->variable, newvalue) == 0;
+			}
+
+		case PGC_ENUM:
+			{
+				struct config_enum *conf = (struct config_enum *) record;
+				int			newval;
+
+				return config_enum_lookup_by_name(conf, newvalue, &newval)
+					&& *conf->variable == newval;
 			}
 	}
 
@@ -6717,6 +7133,14 @@ write_nondefault_variables(GucContext context)
 						struct config_string *conf = (struct config_string *) gconf;
 
 						fprintf(fp, "%s", *conf->variable);
+					}
+					break;
+
+				case PGC_ENUM:
+					{
+						struct config_enum *conf = (struct config_enum *) gconf;
+						
+						fprintf(fp, "%s", config_enum_lookup_by_value(conf, *conf->variable));
 					}
 					break;
 			}
@@ -6903,7 +7327,7 @@ ProcessGUCArray(ArrayType *array,
 		if (isnull)
 			continue;
 
-		s = DatumGetCString(DirectFunctionCall1(textout, d));
+		s = TextDatumGetCString(d);
 
 		ParseLongOption(s, &name, &value);
 		if (!value)
@@ -6952,7 +7376,7 @@ GUCArrayAdd(ArrayType *array, const char *name, const char *value)
 
 	newval = palloc(strlen(name) + 1 + strlen(value) + 1);
 	sprintf(newval, "%s=%s", name, value);
-	datum = DirectFunctionCall1(textin, CStringGetDatum(newval));
+	datum = CStringGetTextDatum(newval);
 
 	if (array)
 	{
@@ -6979,7 +7403,7 @@ GUCArrayAdd(ArrayType *array, const char *name, const char *value)
 						  &isnull);
 			if (isnull)
 				continue;
-			current = DatumGetCString(DirectFunctionCall1(textout, d));
+			current = TextDatumGetCString(d);
 			if (strncmp(current, newval, strlen(name) + 1) == 0)
 			{
 				index = i;
@@ -7049,7 +7473,7 @@ GUCArrayDelete(ArrayType *array, const char *name)
 					  &isnull);
 		if (isnull)
 			continue;
-		val = DatumGetCString(DirectFunctionCall1(textout, d));
+		val = TextDatumGetCString(d);
 
 		/* ignore entry if it's what we want to delete */
 		if (strncmp(val, name, strlen(name)) == 0
@@ -7225,38 +7649,14 @@ assign_log_destination(const char *value, bool doit, GucSource source)
 
 #ifdef HAVE_SYSLOG
 
-static const char *
-assign_syslog_facility(const char *facility, bool doit, GucSource source)
+static bool
+assign_syslog_facility(int newval, bool doit, GucSource source)
 {
-	int			syslog_fac;
-
-	if (pg_strcasecmp(facility, "LOCAL0") == 0)
-		syslog_fac = LOG_LOCAL0;
-	else if (pg_strcasecmp(facility, "LOCAL1") == 0)
-		syslog_fac = LOG_LOCAL1;
-	else if (pg_strcasecmp(facility, "LOCAL2") == 0)
-		syslog_fac = LOG_LOCAL2;
-	else if (pg_strcasecmp(facility, "LOCAL3") == 0)
-		syslog_fac = LOG_LOCAL3;
-	else if (pg_strcasecmp(facility, "LOCAL4") == 0)
-		syslog_fac = LOG_LOCAL4;
-	else if (pg_strcasecmp(facility, "LOCAL5") == 0)
-		syslog_fac = LOG_LOCAL5;
-	else if (pg_strcasecmp(facility, "LOCAL6") == 0)
-		syslog_fac = LOG_LOCAL6;
-	else if (pg_strcasecmp(facility, "LOCAL7") == 0)
-		syslog_fac = LOG_LOCAL7;
-	else
-		return NULL;			/* reject */
-
 	if (doit)
-	{
-		syslog_facility = syslog_fac;
 		set_syslog_parameters(syslog_ident_str ? syslog_ident_str : "postgres",
-							  syslog_facility);
-	}
+							  newval);
 
-	return facility;
+	return true;
 }
 
 static const char *
@@ -7270,156 +7670,19 @@ assign_syslog_ident(const char *ident, bool doit, GucSource source)
 #endif   /* HAVE_SYSLOG */
 
 
-static const char *
-assign_defaultxactisolevel(const char *newval, bool doit, GucSource source)
+static bool
+assign_session_replication_role(int newval, bool doit, GucSource source)
 {
-	if (pg_strcasecmp(newval, "serializable") == 0)
-	{
-		if (doit)
-			DefaultXactIsoLevel = XACT_SERIALIZABLE;
-	}
-	else if (pg_strcasecmp(newval, "repeatable read") == 0)
-	{
-		if (doit)
-			DefaultXactIsoLevel = XACT_REPEATABLE_READ;
-	}
-	else if (pg_strcasecmp(newval, "read committed") == 0)
-	{
-		if (doit)
-			DefaultXactIsoLevel = XACT_READ_COMMITTED;
-	}
-	else if (pg_strcasecmp(newval, "read uncommitted") == 0)
-	{
-		if (doit)
-			DefaultXactIsoLevel = XACT_READ_UNCOMMITTED;
-	}
-	else
-		return NULL;
-	return newval;
-}
-
-static const char *
-assign_session_replication_role(const char *newval, bool doit, GucSource source)
-{
-	int			newrole;
-
-	if (pg_strcasecmp(newval, "origin") == 0)
-		newrole = SESSION_REPLICATION_ROLE_ORIGIN;
-	else if (pg_strcasecmp(newval, "replica") == 0)
-		newrole = SESSION_REPLICATION_ROLE_REPLICA;
-	else if (pg_strcasecmp(newval, "local") == 0)
-		newrole = SESSION_REPLICATION_ROLE_LOCAL;
-	else
-		return NULL;
-
 	/*
 	 * Must flush the plan cache when changing replication role; but don't
 	 * flush unnecessarily.
 	 */
-	if (doit && SessionReplicationRole != newrole)
+	if (doit && SessionReplicationRole != newval)
 	{
 		ResetPlanCache();
-		SessionReplicationRole = newrole;
 	}
 
-	return newval;
-}
-
-static const char *
-assign_log_min_messages(const char *newval, bool doit, GucSource source)
-{
-	return (assign_msglvl(&log_min_messages, newval, doit, source));
-}
-
-static const char *
-assign_client_min_messages(const char *newval, bool doit, GucSource source)
-{
-	return (assign_msglvl(&client_min_messages, newval, doit, source));
-}
-
-static const char *
-assign_min_error_statement(const char *newval, bool doit, GucSource source)
-{
-	return (assign_msglvl(&log_min_error_statement, newval, doit, source));
-}
-
-const char *
-assign_msglvl(int *var, const char *newval, bool doit, GucSource source)
-{
-	if (pg_strcasecmp(newval, "debug") == 0)
-	{
-		if (doit)
-			(*var) = DEBUG2;
-	}
-	else if (pg_strcasecmp(newval, "debug5") == 0)
-	{
-		if (doit)
-			(*var) = DEBUG5;
-	}
-	else if (pg_strcasecmp(newval, "debug4") == 0)
-	{
-		if (doit)
-			(*var) = DEBUG4;
-	}
-	else if (pg_strcasecmp(newval, "debug3") == 0)
-	{
-		if (doit)
-			(*var) = DEBUG3;
-	}
-	else if (pg_strcasecmp(newval, "debug2") == 0)
-	{
-		if (doit)
-			(*var) = DEBUG2;
-	}
-	else if (pg_strcasecmp(newval, "debug1") == 0)
-	{
-		if (doit)
-			(*var) = DEBUG1;
-	}
-	else if (pg_strcasecmp(newval, "log") == 0)
-	{
-		if (doit)
-			(*var) = LOG;
-	}
-
-	/*
-	 * Client_min_messages always prints 'info', but we allow it as a value
-	 * anyway.
-	 */
-	else if (pg_strcasecmp(newval, "info") == 0)
-	{
-		if (doit)
-			(*var) = INFO;
-	}
-	else if (pg_strcasecmp(newval, "notice") == 0)
-	{
-		if (doit)
-			(*var) = NOTICE;
-	}
-	else if (pg_strcasecmp(newval, "warning") == 0)
-	{
-		if (doit)
-			(*var) = WARNING;
-	}
-	else if (pg_strcasecmp(newval, "error") == 0)
-	{
-		if (doit)
-			(*var) = ERROR;
-	}
-	/* We allow FATAL/PANIC for client-side messages too. */
-	else if (pg_strcasecmp(newval, "fatal") == 0)
-	{
-		if (doit)
-			(*var) = FATAL;
-	}
-	else if (pg_strcasecmp(newval, "panic") == 0)
-	{
-		if (doit)
-			(*var) = PANIC;
-	}
-	else
-		return NULL;			/* fail */
-	return newval;				/* OK */
+	return true;
 }
 
 /*
@@ -7510,100 +7773,6 @@ assign_wal_consistency_checking(const char *newval, bool doit, GucSource source)
 	}
 
 	return newval;
-}
-
-static const char *
-assign_IntervalStyle(const char *newval, bool doit, GucSource source)
-{
-	if (pg_strcasecmp(newval, "postgres")==0)
-	{
-		if (doit)
-			IntervalStyle = INTSTYLE_POSTGRES;
-	}
-	else if (pg_strcasecmp(newval, "postgres_verbose")==0)
-	{
-		if (doit)
-			IntervalStyle = INTSTYLE_POSTGRES_VERBOSE;
-	}
-	else if (pg_strcasecmp(newval, "sql_standard")==0)
-	{
-		if (doit)
-			IntervalStyle = INTSTYLE_SQL_STANDARD;
-	}
-	else if (pg_strcasecmp(newval, "ISO_8601")==0)
-	{
-		if (doit)
-			IntervalStyle = INTSTYLE_ISO_8601;
-	}
-	else
-		return NULL;
-	return newval;
-
-}
-
-static const char *
-show_IntervalStyle(void)
-{
-	switch(IntervalStyle)
-	{
-	case INTSTYLE_POSTGRES:  return "postgres";
-	case INTSTYLE_POSTGRES_VERBOSE:  return "postgres_verbose";
-	case INTSTYLE_SQL_STANDARD:  return "sql_standard";
-	case INTSTYLE_ISO_8601:  return "ISO_8601";
-	};
-	return NULL;
-
-}
-
-static const char *
-assign_log_error_verbosity(const char *newval, bool doit, GucSource source)
-{
-	if (pg_strcasecmp(newval, "terse") == 0)
-	{
-		if (doit)
-			Log_error_verbosity = PGERROR_TERSE;
-	}
-	else if (pg_strcasecmp(newval, "default") == 0)
-	{
-		if (doit)
-			Log_error_verbosity = PGERROR_DEFAULT;
-	}
-	else if (pg_strcasecmp(newval, "verbose") == 0)
-	{
-		if (doit)
-			Log_error_verbosity = PGERROR_VERBOSE;
-	}
-	else
-		return NULL;			/* fail */
-	return newval;				/* OK */
-}
-
-static const char *
-assign_log_statement(const char *newval, bool doit, GucSource source)
-{
-	if (pg_strcasecmp(newval, "none") == 0)
-	{
-		if (doit)
-			log_statement = LOGSTMT_NONE;
-	}
-	else if (pg_strcasecmp(newval, "ddl") == 0)
-	{
-		if (doit)
-			log_statement = LOGSTMT_DDL;
-	}
-	else if (pg_strcasecmp(newval, "mod") == 0)
-	{
-		if (doit)
-			log_statement = LOGSTMT_MOD;
-	}
-	else if (pg_strcasecmp(newval, "all") == 0)
-	{
-		if (doit)
-			log_statement = LOGSTMT_ALL;
-	}
-	else
-		return NULL;			/* fail */
-	return newval;				/* OK */
 }
 
 static const char *
@@ -7770,31 +7939,6 @@ assign_transaction_read_only(bool newval, bool doit, GucSource source)
 	return true;
 }
 
-/*
- * until we get enum config this is a hack
- * to set an int value through a string
- *
- */
-
-static const char *
-assign_bytea( const char * newval, bool doit, GucSource source )
-{
-	int bo;
-
-	if (pg_strcasecmp(newval, "hex") == 0)
-		bo = BYTEA_OUTPUT_HEX;
-	else if (pg_strcasecmp(newval, "escape") == 0)
-		bo = BYTEA_OUTPUT_ESCAPE;
-	else
-		return NULL;
-
-	if (doit)
-	{
-		bytea_output = bo;
-	}
-	return newval;
-}
-
 static const char *
 assign_canonical_path(const char *newval, bool doit, GucSource source)
 {
@@ -7807,31 +7951,6 @@ assign_canonical_path(const char *newval, bool doit, GucSource source)
 	}
 	else
 		return newval;
-}
-
-static const char *
-assign_backslash_quote(const char *newval, bool doit, GucSource source)
-{
-	BackslashQuoteType bq;
-	bool		bqbool;
-
-	/*
-	 * Although only "on", "off", and "safe_encoding" are documented, we use
-	 * parse_bool so we can accept all the likely variants of "on" and "off".
-	 */
-	if (pg_strcasecmp(newval, "safe_encoding") == 0)
-		bq = BACKSLASH_QUOTE_SAFE_ENCODING;
-	else if (parse_bool(newval, &bqbool))
-	{
-		bq = bqbool ? BACKSLASH_QUOTE_ON : BACKSLASH_QUOTE_OFF;
-	}
-	else
-		return NULL;			/* reject */
-
-	if (doit)
-		backslash_quote = bq;
-
-	return newval;
 }
 
 static const char *
@@ -7890,42 +8009,6 @@ pg_timezone_abbrev_initialize(void)
 		SetConfigOption("timezone_abbreviations", "Default",
 						PGC_POSTMASTER, PGC_S_ARGV);
 	}
-}
-
-static const char *
-assign_xmlbinary(const char *newval, bool doit, GucSource source)
-{
-	XmlBinaryType xb;
-
-	if (pg_strcasecmp(newval, "base64") == 0)
-		xb = XMLBINARY_BASE64;
-	else if (pg_strcasecmp(newval, "hex") == 0)
-		xb = XMLBINARY_HEX;
-	else
-		return NULL;			/* reject */
-
-	if (doit)
-		xmlbinary = xb;
-
-	return newval;
-}
-
-static const char *
-assign_xmloption(const char *newval, bool doit, GucSource source)
-{
-	XmlOptionType xo;
-
-	if (pg_strcasecmp(newval, "document") == 0)
-		xo = XMLOPTION_DOCUMENT;
-	else if (pg_strcasecmp(newval, "content") == 0)
-		xo = XMLOPTION_CONTENT;
-	else
-		return NULL;			/* reject */
-
-	if (doit)
-		xmloption = xo;
-
-	return newval;
 }
 
 static const char *

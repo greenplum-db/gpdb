@@ -12,13 +12,14 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
 #include "cdb/cdbdistributedsnapshot.h"
 #include "cdb/cdblocaldistribxact.h"
 #include "access/distributedlog.h"
 #include "miscadmin.h"
 #include "access/transam.h"
 #include "cdb/cdbvars.h"
-#include "utils/tqual.h"
+#include "utils/snapmgr.h"
 
 /*
  * Purpose of this function is on pretty same lines as

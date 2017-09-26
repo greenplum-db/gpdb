@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.226.2.4 2010/08/26 18:54:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.228 2008/03/25 22:42:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -77,9 +77,9 @@ static Datum ExecEvalGrouping(ExprState *gstate,
 static Datum ExecEvalGroupId(ExprState *gstate,
 							 ExprContext *econtext,
 							 bool *isNull, ExprDoneCond *isDone);
-static Datum ExecEvalWindowRef(WindowRefExprState *winref,
-			   ExprContext *econtext,
-			   bool *isNull, ExprDoneCond *isDone);
+static Datum ExecEvalWindowFunc(WindowFuncExprState *wfunc,
+				   ExprContext *econtext,
+				   bool *isNull, ExprDoneCond *isDone);
 static Datum ExecEvalScalarVar(ExprState *exprstate, ExprContext *econtext,
 				  bool *isNull, ExprDoneCond *isDone);
 static Datum ExecEvalScalarVarFast(ExprState *exprstate, ExprContext *econtext,
@@ -646,29 +646,29 @@ ExecEvalGroupId(ExprState *gstate, ExprContext *econtext,
 }
 
 /* ----------------------------------------------------------------
- *		ExecEvalWindowRef
+ *		ExecEvalWindowFunc
  *
- *		Returns a Datum whose value is the value of the window
- *		function with respect to the given context.
+ *		Returns a Datum whose value is the value of the precomputed
+ *		window function found in the given expression context.
  *
  * XXX	Note that this routine is essentially the same as
  *		ExecEvalAggref since we use the same buffers. However,
- *		since the state structures for WindowRef and Aggref 
+ *		since the state structures for WindowFunc and Aggref
  *		are different, we separate the execution routines, too.
  * ----------------------------------------------------------------
  */
 static Datum
-ExecEvalWindowRef(WindowRefExprState *winref, ExprContext *econtext,
-				  bool *isNull, ExprDoneCond *isDone)
+ExecEvalWindowFunc(WindowFuncExprState *wfunc, ExprContext *econtext,
+				   bool *isNull, ExprDoneCond *isDone)
 {
 	if (isDone)
 		*isDone = ExprSingleResult;
-	
+
 	if (econtext->ecxt_aggvalues == NULL)		/* safety check */
 		elog(ERROR, "no window functions in this expression context");
 
-	*isNull = econtext->ecxt_aggnulls[winref->funcno];
-	return econtext->ecxt_aggvalues[winref->funcno];
+	*isNull = econtext->ecxt_aggnulls[wfunc->funcno];
+	return econtext->ecxt_aggvalues[wfunc->funcno];
 
 }
 
@@ -2284,13 +2284,14 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 
 				heap_deform_tuple(&tmptup, tupdesc, pd, pn);
 				tuple = memtuple_form_to(mt_bind, pd, pn, NULL, NULL, false);
+
+				tuplestore_puttuple(tupstore, (HeapTuple) tuple);
 			}
 			else
 			{
-				tuple = memtuple_form_to(mt_bind, &result, &fcinfo.isnull, NULL, NULL, false);
+				tuplestore_putvalues(tupstore, tupdesc, &result, &fcinfo.isnull);
 			}
-
-			tuplestore_puttuple(tupstore, (HeapTuple) tuple);
+			MemoryContextSwitchTo(oldcontext);
 
 			/*
 			 * Are we done?
@@ -2334,16 +2335,13 @@ no_function_result:
 			int			natts = expectedDesc->natts;
 			Datum	   *nulldatums;
 			bool	   *nullflags;
-			HeapTuple	tuple;
 
 			MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 			nulldatums = (Datum *) palloc0(natts * sizeof(Datum));
 			nullflags = (bool *) palloc(natts * sizeof(bool));
 			MemSetAligned(nullflags, true, natts * sizeof(bool));
-			tuple = heap_form_tuple(expectedDesc, nulldatums, nullflags);
 			MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
-
-			tuplestore_puttuple(tupstore, tuple);
+			tuplestore_putvalues(tupstore, expectedDesc, nulldatums, nullflags);
 		}
 	}
 
@@ -5226,6 +5224,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 			state->evalfunc = ExecEvalCaseTestExpr;
 			break;
 		case T_Aggref:
+
 			{
 				Aggref	   *aggref = (Aggref *) node;
 				AggrefExprState *astate = makeNode(AggrefExprState);
@@ -5251,6 +5250,8 @@ ExecInitExpr(Expr *node, PlanState *parent)
 							combineAggrefArgs(aggref, &astate->inputSortClauses);
 					astate->args = (List *) ExecInitExpr((Expr *) astate->inputTargets,
 														 parent);
+					astate->aggfilter = ExecInitExpr(aggref->aggfilter,
+													 parent);
 
 					/*
 					 * Complain if the aggregate's arguments contain any
@@ -5296,31 +5297,41 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				state = (ExprState *) gstate;
 			}
 			break;
-		case T_WindowRef:
+		case T_WindowFunc:
 			{
-				WindowRef *windowref = (WindowRef *)node;
-				WindowRefExprState *wrstate = makeNode(WindowRefExprState);
-				int numrefs;
-				WindowState   *winstate = (WindowState *) parent;
+				WindowFunc *wfunc = (WindowFunc *) node;
+				WindowFuncExprState *wfstate = makeNode(WindowFuncExprState);
+				int			numrefs;
+				WindowState *winstate = (WindowState *) parent;
 				
-				wrstate->xprstate.evalfunc = 
-					(ExprStateEvalFunc) ExecEvalWindowRef;
-				
-				Insist(parent && IsA(parent, WindowState));
+				wfstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalWindowFunc;
+				if (parent && IsA(parent, WindowState))
+				{
+					winstate->wfxstates = lcons(wfstate, winstate->wfxstates);
+					numrefs = list_length(winstate->wfxstates);
 
-				winstate->wrxstates = lcons(wrstate, winstate->wrxstates);
-				numrefs = list_length(winstate->wrxstates);
-
-				wrstate->args = (List *) ExecInitExpr((Expr *) windowref->args,
+					wfstate->args = (List *) ExecInitExpr((Expr *) wfunc->args,
+														  parent);
+					wfstate->aggfilter = ExecInitExpr(wfunc->aggfilter,
 													  parent);
-				/* 
-				 * Nested window functions are invalid and should not have 
-				 * reached this point in processing.
-				 */
-				if (numrefs != list_length(winstate->wrxstates))
-					elog(ERRCODE_INTERNAL_ERROR, "nested windowref calls "
-						 "found in Window plan node");
-				state = (ExprState *) wrstate;
+
+					/*
+					 * Complain if the windowfunc's arguments contain any
+					 * windowfuncs; nested window functions are semantically
+					 * nonsensical.  (This should have been caught earlier,
+					 * but we defend against it here anyway.)
+					 */
+					if (numrefs != list_length(winstate->wfxstates))
+						ereport(ERROR,
+								(errcode(ERRCODE_WINDOWING_ERROR),
+						  errmsg("window function calls cannot be nested")));
+				}
+				else
+				{
+					/* planner messed up */
+					elog(ERROR, "WindowFunc found in non-WindowAgg plan node");
+				}
+				state = (ExprState *) wfstate;
 			}
 			break;
 		case T_ArrayRef:

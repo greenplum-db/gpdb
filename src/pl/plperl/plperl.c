@@ -1574,10 +1574,8 @@ plperl_trigger_build_args(FunctionCallInfo fcinfo)
 												   tupdesc));
 		}
 	}
-#if 0 /* GPDB_84_MERGE_FIXME: re-enable this when we merge with 8.4 */
 	else if (TRIGGER_FIRED_BY_TRUNCATE(tdata->tg_event))
 		event = "TRUNCATE";
-#endif
 	else
 		event = "UNKNOWN";
 
@@ -2352,10 +2350,8 @@ plperl_trigger_handler(PG_FUNCTION_ARGS)
 			retval = (Datum) trigdata->tg_newtuple;
 		else if (TRIGGER_FIRED_BY_DELETE(trigdata->tg_event))
 			retval = (Datum) trigdata->tg_trigtuple;
-#if 0 /* GPDB_84_MERGE_FIXME: re-enable when we merge with 8.4 */
 		else if (TRIGGER_FIRED_BY_TRUNCATE(trigdata->tg_event))
 			retval = (Datum) trigdata->tg_trigtuple;
-#endif
 		else
 			retval = (Datum) 0; /* can this happen? */
 	}

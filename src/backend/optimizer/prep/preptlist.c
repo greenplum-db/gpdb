@@ -43,9 +43,8 @@
 
 static List *expand_targetlist(List *tlist, int command_type,
 				  Index result_relation, List *range_table);
-static List *supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt,
-													 List *range_table,
-													 List *tlist);
+static List *supplement_simply_updatable_targetlist(List *range_table,
+													List *tlist);
 
 
 /*
@@ -142,15 +141,8 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	} 
 
 	/* simply updatable cursors */
-	if (command_type == CMD_SELECT && 
-		parse->utilityStmt &&
-		IsA(parse->utilityStmt, DeclareCursorStmt) &&
-		((DeclareCursorStmt *) parse->utilityStmt)->is_simply_updatable)
-	{
-		tlist = supplement_simply_updatable_targetlist((DeclareCursorStmt *) parse->utilityStmt, 
-													   range_table,
-													   tlist);
-	}
+	if (root->glob->simplyUpdatable)
+		tlist = supplement_simply_updatable_targetlist(range_table, tlist);
 
 	/*
 	 * Add TID targets for rels selected FOR UPDATE/SHARE.	The executor uses
@@ -443,9 +435,8 @@ expand_targetlist(List *tlist, int command_type,
  * available in the tuple itself.
  */
 static List *
-supplement_simply_updatable_targetlist(DeclareCursorStmt *stmt, List *range_table, List *tlist) 
+supplement_simply_updatable_targetlist(List *range_table, List *tlist)
 {
-	Assert(stmt->is_simply_updatable);
 	Index varno = extractSimplyUpdatableRTEIndex(range_table);
 
 	/* ctid */

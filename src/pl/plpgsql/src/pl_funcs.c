@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_funcs.c,v 1.67.2.1 2010/02/17 01:48:58 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_funcs.c,v 1.69 2008/04/06 23:43:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -483,6 +483,8 @@ plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 			return _("FOR with integer loop variable");
 		case PLPGSQL_STMT_FORS:
 			return _("FOR over SELECT rows");
+		case PLPGSQL_STMT_FORC:
+			return _("FOR over cursor");
 		case PLPGSQL_STMT_EXIT:
 			return "EXIT";
 		case PLPGSQL_STMT_RETURN:
@@ -531,6 +533,7 @@ static void free_loop(PLpgSQL_stmt_loop *stmt);
 static void free_while(PLpgSQL_stmt_while *stmt);
 static void free_fori(PLpgSQL_stmt_fori *stmt);
 static void free_fors(PLpgSQL_stmt_fors *stmt);
+static void free_forc(PLpgSQL_stmt_forc *stmt);
 static void free_exit(PLpgSQL_stmt_exit *stmt);
 static void free_return(PLpgSQL_stmt_return *stmt);
 static void free_return_next(PLpgSQL_stmt_return_next *stmt);
@@ -572,6 +575,9 @@ free_stmt(PLpgSQL_stmt *stmt)
 			break;
 		case PLPGSQL_STMT_FORS:
 			free_fors((PLpgSQL_stmt_fors *) stmt);
+			break;
+		case PLPGSQL_STMT_FORC:
+			free_forc((PLpgSQL_stmt_forc *) stmt);
 			break;
 		case PLPGSQL_STMT_EXIT:
 			free_exit((PLpgSQL_stmt_exit *) stmt);
@@ -687,6 +693,13 @@ free_fors(PLpgSQL_stmt_fors *stmt)
 {
 	free_stmts(stmt->body);
 	free_expr(stmt->query);
+}
+
+static void
+free_forc(PLpgSQL_stmt_forc *stmt)
+{
+	free_stmts(stmt->body);
+	free_expr(stmt->argquery);
 }
 
 static void
@@ -850,6 +863,7 @@ static void dump_loop(PLpgSQL_stmt_loop *stmt);
 static void dump_while(PLpgSQL_stmt_while *stmt);
 static void dump_fori(PLpgSQL_stmt_fori *stmt);
 static void dump_fors(PLpgSQL_stmt_fors *stmt);
+static void dump_forc(PLpgSQL_stmt_forc *stmt);
 static void dump_exit(PLpgSQL_stmt_exit *stmt);
 static void dump_return(PLpgSQL_stmt_return *stmt);
 static void dump_return_next(PLpgSQL_stmt_return_next *stmt);
@@ -902,6 +916,9 @@ dump_stmt(PLpgSQL_stmt *stmt)
 			break;
 		case PLPGSQL_STMT_FORS:
 			dump_fors((PLpgSQL_stmt_fors *) stmt);
+			break;
+		case PLPGSQL_STMT_FORC:
+			dump_forc((PLpgSQL_stmt_forc *) stmt);
 			break;
 		case PLPGSQL_STMT_EXIT:
 			dump_exit((PLpgSQL_stmt_exit *) stmt);
@@ -1098,6 +1115,29 @@ dump_fors(PLpgSQL_stmt_fors *stmt)
 
 	dump_ind();
 	printf("    ENDFORS\n");
+}
+
+static void
+dump_forc(PLpgSQL_stmt_forc *stmt)
+{
+	dump_ind();
+	printf("FORC %s ",  stmt->rec->refname);
+	printf("curvar=%d\n", stmt->curvar);
+
+	dump_indent += 2;
+	if (stmt->argquery != NULL)
+	{
+		dump_ind();
+		printf("  arguments = ");
+		dump_expr(stmt->argquery);
+		printf("\n");
+	}
+	dump_indent -= 2;
+
+	dump_stmts(stmt->body);
+
+	dump_ind();
+	printf("    ENDFORC\n");
 }
 
 static void
@@ -1332,6 +1372,24 @@ dump_dynexecute(PLpgSQL_stmt_dynexecute *stmt)
 			   stmt->strict ? " STRICT" : "",
 			   stmt->row->rowno, stmt->row->refname);
 	}
+	if (stmt->params != NIL)
+	{
+		ListCell   *lc;
+		int			i;
+
+		dump_ind();
+		printf("    USING\n");
+		dump_indent += 2;
+		i = 1;
+		foreach(lc, stmt->params)
+		{
+			dump_ind();
+			printf("    parameter %d: ", i++);
+			dump_expr((PLpgSQL_expr *) lfirst(lc));
+			printf("\n");
+		}
+		dump_indent -= 2;
+	}
 	dump_indent -= 2;
 }
 
@@ -1339,12 +1397,30 @@ static void
 dump_dynfors(PLpgSQL_stmt_dynfors *stmt)
 {
 	dump_ind();
-	printf("FORS %s EXECUTE ", (stmt->rec != NULL) ? stmt->rec->refname : stmt->row->refname);
+	printf("FORS %s EXECUTE ",
+		   (stmt->rec != NULL) ? stmt->rec->refname : stmt->row->refname);
 	dump_expr(stmt->query);
 	printf("\n");
+	if (stmt->params != NIL)
+	{
+		ListCell   *lc;
+		int			i;
 
+		dump_indent += 2;
+		dump_ind();
+		printf("    USING\n");
+		dump_indent += 2;
+		i = 1;
+		foreach(lc, stmt->params)
+		{
+			dump_ind();
+			printf("    parameter $%d: ", i++);
+			dump_expr((PLpgSQL_expr *) lfirst(lc));
+			printf("\n");
+		}
+		dump_indent -= 4;
+	}
 	dump_stmts(stmt->body);
-
 	dump_ind();
 	printf("    ENDFORS\n");
 }

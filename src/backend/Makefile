@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/backend/Makefile,v 1.127 2008/02/26 14:42:27 petere Exp $
+# $PostgreSQL: pgsql/src/backend/Makefile,v 1.128 2008/03/17 19:44:40 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -35,13 +35,13 @@ endif
 
 include $(srcdir)/common.mk
 
-# As of 9/2009:
-# * The probes.o file is necessary for dtrace support on Solaris.
-# * OS X's dtrace doesn't use it and doesn't even recognize the -G option.
-# * Systemtap's dtrace will take -G, but it produces a useless empty file.
-# So, build probes.o only on Solaris.
-# This will likely need adjustment as other platforms add dtrace support.
-ifeq ($(PORTNAME), solaris)
+# As of 1/2010:
+# The probes.o file is necessary for dtrace support on Solaris, and on recent
+# versions of systemtap.  (Older systemtap releases just produce an empty
+# file, but that's okay.)  However, OS X's dtrace doesn't use it and doesn't
+# even recognize the -G option.  So, build probes.o except on Darwin.
+# This might need adjustment as other platforms add dtrace support.
+ifneq ($(PORTNAME), darwin)
 ifeq ($(enable_dtrace), yes)
 LOCALOBJS += utils/probes.o
 endif

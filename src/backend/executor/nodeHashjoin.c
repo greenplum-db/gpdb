@@ -41,7 +41,7 @@ static bool isNotDistinctJoin(List *qualList);
 static void ReleaseHashTable(HashJoinState *node);
 static bool isHashtableEmpty(HashJoinTable hashtable);
 
-static void SpillFirstBatch(HashJoinState *node);
+static void SpillCurrentBatch(HashJoinState *node);
 static bool ExecHashJoinReloadHashTable(HashJoinState *hjstate);
 
 /* ----------------------------------------------------------------
@@ -858,13 +858,22 @@ start_over:
 	}
 
 	/*
-	 * For first time write, we need to spill batch 0 (in-memory batch)
-	 * if we have more than 1 batch
+	 * If we want to keep the hash table around, for re-scan, then write
+	 * the current batch's state to disk before moving to the next one.
+	 * It's possible that we increase the number of batches later, so that
+	 * by the time we reload this file, some of the tuples we wrote here
+	 * will logically belong to a later file. ExecHashJoinReloadHashTable
+	 * will move such tuples when the file is reloaded.
+	 *
+	 * If we have already re-scanned, we might still have the old file
+	 * around, in which case there's no need to write it again.
+	 * XXX: Currently, we actually always re-create it, see comments in
+	 * ExecHashJoinReloadHashTable.
 	 */
-	if (curbatch == 0 && nbatch > 1 &&
-			hjstate->reuse_hashtable && hashtable->first_pass)
+	if (nbatch > 1 && hjstate->reuse_hashtable &&
+		hashtable->batches[curbatch]->innerside.workfile == NULL)
 	{
-		SpillFirstBatch(hjstate);
+		SpillCurrentBatch(hjstate);
 	}
 
 	/*
@@ -1196,7 +1205,7 @@ ReleaseHashTable(HashJoinState *node)
 {
 	if (node->hj_HashTable)
 	{
-		HashState  *hashState = (HashState *) innerPlanState(node);
+		HashState *hashState = (HashState *) innerPlanState(node);
 
 		/* This hashtable should not have been released already! */
 		Assert(!node->hj_HashTable->eagerlyReleased);
@@ -1301,23 +1310,20 @@ isHashtableEmpty(HashJoinTable hashtable)
 
 /*
  * In our hybrid hash join we either spill when we increase number of batches
- * or when we re-spill. However, the first batch is entirely processed in memory;
- * i.e., it never gets spilled. As we read the outer tuples and finish joining for
- * the first batch before we start loading the second batch, this works perfectly.
- * However, losing first batch in a rescan scenario is not workable as we will
- * see more outer tuples from later rescans that did not yet join with the first
- * batch, even after we throw out the first batch. Therefore, we need to save the
- * first batch separately if we need to support rescanning (e.g., recursive CTE).
+ * or when we re-spill. As we go, we normally destroy the batch file of the
+ * batch that we have already processed. But if we need to support re-scanning
+ * of the outer tuples, without also re-scanning the inner side, we need to
+ * save the current hash for the next re-scan, instead.
  */
 static void
-SpillFirstBatch(HashJoinState *node)
+SpillCurrentBatch(HashJoinState *node)
 {
 	HashJoinTable hashtable = node->hj_HashTable;
 	HashJoinBatchData *fullbatch = hashtable->batches[hashtable->curbatch];
 	HashJoinTuple tuple;
 	int			i;
 
-	Assert(hashtable->curbatch == 0 && fullbatch->innerside.workfile == NULL);
+	Assert(fullbatch->innerside.workfile == NULL);
 
 	for (i = 0; i < hashtable->nbuckets; i++)
 	{
@@ -1344,6 +1350,10 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 	uint32		hashvalue;
 	int curbatch = hashtable->curbatch;
 	HashJoinBatchData *batch = hashtable->batches[curbatch];
+	int			nmoved = 0;
+#if 0
+	int			orignbatch = hashtable->nbatch;
+#endif
 
 	/*
 	 * Reload the hash table with the new inner batch (which could be empty)
@@ -1379,8 +1389,8 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 			 * NOTE: some tuples may be sent to future batches.  Also, it is
 			 * possible for hashtable->nbatch to be increased here!
 			 */
-			ExecHashTableInsert(hashState, hashtable, slot, hashvalue);
-			hashtable->totalTuples += 1;
+			if (!ExecHashTableInsert(hashState, hashtable, slot, hashvalue))
+				nmoved++;
 		}
 
 		/*
@@ -1396,7 +1406,20 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 
 		SIMPLE_FAULT_INJECTOR(WorkfileHashJoinFailure);
 
-		if (!hjstate->reuse_hashtable)
+		/*
+		 * If we want to re-use the hash table after a re-scan, don't
+		 * delete it yet. But if we did not load the batch file into memory as is,
+		 * because some tuples were sent to later batches, then delete it now, so
+		 * that it will be recreated with just the remaining tuples, after processing
+		 * this batch.
+		 *
+		 * XXX: Currently, we actually always close the file, and recreate it
+		 * afterwards, even if there are no changes. That's because the workfile
+		 * API doesn't support appending to a file that's already been read from.
+		 */
+#if 0
+		if (!hjstate->reuse_hashtable || nmoved > 0 || hashtable->nbatch != orignbatch)
+#endif
 		{
 			workfile_mgr_close_file(hashtable->work_set, batch->innerside.workfile);
 			batch->innerside.workfile = NULL;

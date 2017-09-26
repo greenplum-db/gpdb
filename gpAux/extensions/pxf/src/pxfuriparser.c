@@ -28,7 +28,6 @@ static const int EMPTY_VALUE_LEN = 2;
 
 /* helper function declarations */
 static void GPHDUri_parse_protocol(GPHDUri *uri, char **cursor);
-static void GPHDUri_parse_cluster(GPHDUri *uri, char **cursor);
 static void GPHDUri_parse_data(GPHDUri *uri, char **cursor);
 static void GPHDUri_parse_options(GPHDUri *uri, char **cursor);
 static List *GPHDUri_parse_option(char *pair, GPHDUri *uri);
@@ -41,12 +40,11 @@ static void GPHDUri_free_fragments(GPHDUri *uri);
  * verifying valid structure given a specific target protocol.
  *
  * URI format:
- *     <protocol name>://<cluster>/<data>?<option>&<option>&<...>
+ *     <protocol name>://<data resource>?<option>&<option>&<...>
  *
  *
  * protocol name    - must be 'pxf'
- * cluster          - cluster name
- * data             - data path (directory name/table name/etc., depending on target)
+ * data resource    - data resource (directory name/table name/etc., depending on target)
  * options          - valid options are dependent on the protocol. Each
  *                    option is a key value pair.
  *
@@ -77,7 +75,6 @@ parseGPHDUriHostPort(const char *uri_str, const char *host, const int port)
 	char	   *cursor = uri->uri;
 
 	GPHDUri_parse_protocol(uri, &cursor);
-	GPHDUri_parse_cluster(uri, &cursor);
 	GPHDUri_parse_data(uri, &cursor);
 	GPHDUri_parse_options(uri, &cursor);
 
@@ -92,8 +89,6 @@ freeGPHDUri(GPHDUri *uri)
 {
 	if (uri->protocol)
 		pfree(uri->protocol);
-	if (uri->cluster)
-		pfree(uri->cluster);
 	if (uri->host)
 		pfree(uri->host);
 	if (uri->port)
@@ -136,30 +131,6 @@ GPHDUri_parse_protocol(GPHDUri *uri, char **cursor)
 
 	/* set cursor to new position and return */
 	*cursor = post_ptc + strlen(PTC_SEP);
-}
-
-/*
- * GPHDUri_parse_cluster
- *
- * Parse the cluster section of the URI which is passed down
- * in 'cursor', having 'cursor' point at the current string
- * location.
- *
- * See parseGPHDUri header for URI structure description.
- */
-static void
-GPHDUri_parse_cluster(GPHDUri *uri, char **cursor)
-{
-	char	   *start = *cursor;
-	char	   *end = strchr(start, '/');
-
-	if (*start == '/' || !end)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: missing cluster section", uri->uri)));
-
-	uri->cluster = pnstrdup(start, end - start);
-	*cursor = ++end;
 }
 
 /*
@@ -417,17 +388,4 @@ GPHDUri_verify_core_options_exist(GPHDUri *uri, List *coreOptions)
 				 errmsg("Invalid URI %s: %s option(s) missing", uri->uri, missing.data)));
 	}
 	pfree(missing.data);
-}
-
-/*
- * GPHDUri_verify_cluster_exist
- * This function is given the name of the cluster to verify their existence.
- */
-void
-GPHDUri_verify_cluster_exists(GPHDUri *uri, char *cluster)
-{
-	if (pg_strcasecmp(uri->cluster, cluster) != 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: CLUSTER NAME %s not found", uri->uri, cluster)));
 }

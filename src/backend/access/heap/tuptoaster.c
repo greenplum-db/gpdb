@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.83 2008/02/29 17:47:41 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/tuptoaster.c,v 1.85 2008/03/26 21:10:37 alvherre Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -39,6 +39,7 @@
 #include "utils/pg_lzcompress.h"
 #include "utils/rel.h"
 #include "utils/typcache.h"
+#include "utils/tqual.h"
 
 
 #undef TOAST_DEBUG
@@ -780,7 +781,7 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 				continue;		/* can't happen, toast_action would be 'p' */
 			if (VARATT_IS_COMPRESSED(toast_values[i]))
 				continue;
-			if (att[i]->attstorage != 'x')
+			if (att[i]->attstorage != 'x' && att[i]->attstorage != 'e')
 				continue;
 			if (toast_sizes[i] > biggest_size)
 			{
@@ -796,26 +797,54 @@ toast_insert_or_update(Relation rel, HeapTuple newtup, HeapTuple oldtup,
 		 * Attempt to compress it inline, if it has attstorage 'x'
 		 */
 		i = biggest_attno;
-		old_value = toast_values[i];
-		new_value = toast_compress_datum(old_value);
-
-		if (DatumGetPointer(new_value) != NULL)
+		if (att[i]->attstorage == 'x')
 		{
-			/* successful compression */
-			if (toast_free[i])
-				pfree(DatumGetPointer(old_value));
-			toast_values[i] = new_value;
-			toast_free[i] = true;
-			toast_sizes[i] = VARSIZE(toast_values[i]);
-			need_change = true;
-			need_free = true;
+			old_value = toast_values[i];
+			new_value = toast_compress_datum(old_value);
+
+			if (DatumGetPointer(new_value) != NULL)
+			{
+				/* successful compression */
+				if (toast_free[i])
+					pfree(DatumGetPointer(old_value));
+				toast_values[i] = new_value;
+				toast_free[i] = true;
+				toast_sizes[i] = VARSIZE(toast_values[i]);
+				need_change = true;
+				need_free = true;
+			}
+			else
+			{
+				/* incompressible, ignore on subsequent compression passes */
+				toast_action[i] = 'x';
+			}
 		}
 		else
 		{
-			/*
-			 * incompressible data, ignore on subsequent compression passes
-			 */
+			/* has attstorage 'e', ignore on subsequent compression passes */
 			toast_action[i] = 'x';
+		}
+
+		/*
+		 * If this value is by itself more than maxDataLen (after compression
+		 * if any), push it out to the toast table immediately, if possible.
+		 * This avoids uselessly compressing other fields in the common case
+		 * where we have one long field and several short ones.
+		 *
+		 * XXX maybe the threshold should be less than maxDataLen?
+		 */
+		if (toast_sizes[i] > maxDataLen &&
+			rel->rd_rel->reltoastrelid != InvalidOid)
+		{
+			old_value = toast_values[i];
+			toast_action[i] = 'p';
+			toast_values[i] = toast_save_datum(rel, toast_values[i], isFrozen,
+											   use_wal, use_fsm);
+			if (toast_free[i])
+				pfree(DatumGetPointer(old_value));
+			toast_free[i] = true;
+			need_change = true;
+			need_free = true;
 		}
 	}
 
@@ -1316,16 +1345,28 @@ toast_compress_datum(Datum value)
 	Assert(!VARATT_IS_COMPRESSED(value));
 
 	/*
-	 * No point in wasting a palloc cycle if value is too short for
-	 * compression
+	 * No point in wasting a palloc cycle if value size is out of the
+	 * allowed range for compression
 	 */
-	if (valsize < PGLZ_strategy_default->min_input_size)
+	if (valsize < PGLZ_strategy_default->min_input_size ||
+		valsize > PGLZ_strategy_default->max_input_size)
 		return PointerGetDatum(NULL);
 
 	tmp = (struct varlena *) palloc(PGLZ_MAX_OUTPUT(valsize));
+
+	/*
+	 * We recheck the actual size even if pglz_compress() reports success,
+	 * because it might be satisfied with having saved as little as one byte
+	 * in the compressed data --- which could turn into a net loss once you
+	 * consider header and alignment padding.  Worst case, the compressed
+	 * format might require three padding bytes (plus header, which is included
+	 * in VARSIZE(tmp)), whereas the uncompressed format would take only one
+	 * header byte and no padding if the value is short enough.  So we insist
+	 * on a savings of more than 2 bytes to ensure we have a gain.
+	 */
 	if (pglz_compress(VARDATA_ANY(value), valsize,
 					  (PGLZ_Header *) tmp, PGLZ_strategy_default) &&
-		VARSIZE(tmp) < VARSIZE_ANY(value))
+		VARSIZE(tmp) < valsize - 2)
 	{
 		/* successful compression */
 		return PointerGetDatum(tmp);

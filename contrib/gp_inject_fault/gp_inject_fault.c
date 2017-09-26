@@ -11,6 +11,7 @@
 #include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
+#include "utils/snapmgr.h"
 
 PG_MODULE_MAGIC;
 

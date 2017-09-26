@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.292.2.3 2009/12/09 21:58:16 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.296 2008/03/26 21:10:37 alvherre Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -62,7 +62,8 @@
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
-#include "utils/faultinjector.h"
+#include "utils/snapmgr.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
@@ -70,6 +71,7 @@
 #include "cdb/cdboidsync.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbpersistentfilesysobj.h"
+#include "utils/faultinjector.h"
 
 /* state info for validate_index bulkdelete callback */
 typedef struct

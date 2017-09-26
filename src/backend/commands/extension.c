@@ -51,6 +51,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/acl.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
 #include "cdb/cdbdisp_query.h"

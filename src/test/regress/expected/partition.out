@@ -355,7 +355,7 @@ HINT:  drop the invalid constraints and retry
 -- message can print that correctly.
 create table bar_c(i int check (i > 1000), j int check (j > 1000)) distributed by (i);
 alter table foo_p exchange partition for(rank(2)) with table bar_c;
-ERROR:  invalid constraint(s) found on "bar_c": "bar_c_i_check", "bar_c_j_check"
+ERROR:  invalid constraint(s) found on "bar_c": "bar_c_j_check", "bar_c_i_check"
 HINT:  drop the invalid constraints and retry
 -- Shouldn't fail: check constraint matches partition rule.
 -- Note this test is slightly different from prior versions to get

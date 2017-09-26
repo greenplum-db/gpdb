@@ -13,7 +13,9 @@ REGRESS = setup walreceiver
 # walsender-walreceiver connection only
 ifeq ($(enable_segwalrep), yes)
 ifeq ($(WITH_MIRRORS), false)
-REGRESS += generate_ao_xlog generate_aoco_xlog
+REGRESS += generate_ao_xlog generate_aoco_xlog replication_views_mirrorless
+else
+REGRESS += replication_views_mirrored
 endif
 endif
 REGRESS_OPTS = --dbname="walrep_regression"

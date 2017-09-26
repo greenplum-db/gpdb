@@ -540,7 +540,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 				/* note: could try to peek into the building slice to get its direct dispatch values but we don't */
 				DisableTargetedDispatch(&dispatchInfo);
 				break;
-			case T_Window:
+			case T_WindowAgg:
 			case T_TableFunctionScan:
 			case T_Repeat:
 			case T_RecursiveUnion:

@@ -849,6 +849,8 @@ enable_profiling
 enable_coverage
 enable_dtrace
 enable_tap_tests
+with_blocksize
+with_segsize
 with_CC
 enable_depend
 enable_cassert
@@ -1559,7 +1561,9 @@ Optional Packages:
   --with-includes=DIRS    look for additional header files in DIRS
   --with-libraries=DIRS   look for additional libraries in DIRS
   --with-libs=DIRS        alternative spelling of --with-libraries
-  --with-pgport=PORTNUM   change default port number [5432]
+  --with-pgport=PORTNUM   set default port number [5432]
+  --with-blocksize=BLOCKSIZE  set block size in kB [32]
+  --with-segsize=SEGSIZE  set segment size in GB [1]
   --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang
   --with-tcl              build Tcl modules (PL/Tcl)
   --with-tclconfig=DIR    tclConfig.sh is in DIR
@@ -3913,6 +3917,94 @@ else
 fi
 
 
+
+
+#
+# Block size
+#
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for block size" >&5
+$as_echo_n "checking for block size... " >&6; }
+
+pgac_args="$pgac_args with_blocksize"
+
+
+# Check whether --with-blocksize was given.
+if test "${with_blocksize+set}" = set; then :
+  withval=$with_blocksize;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-blocksize option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-blocksize option" "$LINENO" 5
+      ;;
+    *)
+      blocksize=$withval
+      ;;
+  esac
+
+else
+  blocksize=32
+fi
+
+
+case ${blocksize} in
+  1) BLCKSZ=1024;;
+  2) BLCKSZ=2048;;
+  4) BLCKSZ=4096;;
+  8) BLCKSZ=8192;;
+ 16) BLCKSZ=16384;;
+ 32) BLCKSZ=32768;;
+  *) as_fn_error $? "Invalid block size. Allowed values are 1,2,4,8,16,32." "$LINENO" 5
+esac
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${blocksize}kB" >&5
+$as_echo "${blocksize}kB" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define BLCKSZ ${BLCKSZ}
+_ACEOF
+
+
+#
+# File segment size
+#
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for segment size" >&5
+$as_echo_n "checking for segment size... " >&6; }
+
+pgac_args="$pgac_args with_segsize"
+
+
+# Check whether --with-segsize was given.
+if test "${with_segsize+set}" = set; then :
+  withval=$with_segsize;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-segsize option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-segsize option" "$LINENO" 5
+      ;;
+    *)
+      segsize=$withval
+      ;;
+  esac
+
+else
+  segsize=1
+fi
+
+
+# this expression is set up to avoid unnecessary integer overflow
+RELSEG_SIZE=`expr '(' 1024 '*' ${segsize} / ${blocksize} ')' '*' 1024`
+test $? -eq 0 || exit 1
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${segsize}GB" >&5
+$as_echo "${segsize}GB" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define RELSEG_SIZE ${RELSEG_SIZE}
+_ACEOF
 
 
 #
@@ -7923,7 +8015,7 @@ fi
 
 
 #
-# libcurl. Used for external table support
+# libcurl. Used for external table support and the PXF extension
 #
 
 pgac_args="$pgac_args with_libcurl"
@@ -7951,6 +8043,10 @@ fi
 
 
 
+
+if test "$with_libcurl" = "no" && test "$enable_pxf" = "yes"; then
+  as_fn_error $? "libcurl is required by PXF" "$LINENO" 5
+fi
 
 #
 # libapr. Used for gpfdist and gpperfmon

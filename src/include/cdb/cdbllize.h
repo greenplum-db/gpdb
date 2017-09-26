@@ -32,7 +32,7 @@ extern bool is_plan_node(Node *node);
 
 extern Flow *makeFlow(FlowType flotype);
 
-extern Flow *pull_up_Flow(Plan *plan, Plan *subplan, bool withSort);
+extern Flow *pull_up_Flow(Plan *plan, Plan *subplan);
 
 extern bool focusPlan(Plan *plan, bool stable, bool rescannable);
 extern bool repartitionPlan(Plan *plan, bool stable, bool rescannable, List *hashExpr);

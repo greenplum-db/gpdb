@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.376 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.361 2008/03/21 22:41:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -123,6 +123,7 @@ typedef struct Query
 	bool		hasWindowFuncs; /* has window functions in tlist */
 	bool		hasSubLinks;	/* has subquery SubLink */
 	bool        hasDynamicFunctions; /* has functions with unstable return types */
+	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON MASTER or ALL SEGMENTS */
 
 	List	   *rtable;			/* list of range table entries */
 	FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
@@ -156,6 +157,7 @@ typedef struct Query
 	List	   *sortClause;		/* a list of SortGroupClause's */
 
 	List	   *scatterClause;	/* a list of tle's */
+	bool		isTableValueSelect; /* GPDB: Is this a TABLE (...) subquery argument? */
 
 	List	   *cteList;		/* a list of CommonTableExprs in WITH clause */
 	bool		hasRecursive;	/* Whether this query has a recursive WITH
@@ -308,8 +310,8 @@ typedef struct TypeCast
  * agg_star indicates we saw a 'foo(*)' construct, while agg_distinct
  * indicates we saw 'foo(DISTINCT ...)'.  In either case, the construct
  * *must* be an aggregate call.  Otherwise, it might be either an
- * aggregate or some other kind of function.  However, if OVER is present
- * it had better be an aggregate or window function.
+ * aggregate or some other kind of function.  However, if FILTER or OVER is
+ * present it had better be an aggregate or window function.
  */
 typedef struct FuncCall
 {
@@ -2199,13 +2201,18 @@ typedef struct CommentStmt
 #define CURSOR_OPT_HOLD			0x0010	/* WITH HOLD */
 #define CURSOR_OPT_FAST_PLAN	0x0020	/* prefer fast-start plan */
 
+/*
+ * This is used to request the planner to create a plan that's updatable with
+ * CURRENT OF. It can be passed to SPI_prepare_cursor.
+ */
+#define CURSOR_OPT_UPDATABLE	0x0040	/* updateable with CURRENT OF, if possible */
+
 typedef struct DeclareCursorStmt
 {
 	NodeTag		type;
 	char	   *portalname;		/* name of the portal (cursor) */
 	int			options;		/* bitmask of options (see above) */
 	Node	   *query;			/* the raw SELECT query */
-	bool		is_simply_updatable;
 } DeclareCursorStmt;
 
 /* ----------------------

@@ -43,6 +43,18 @@ static void DatumStreamBlock_IntegrityCheckDense(
 							 int (*errcontextCallback) (void *errcontextArg),
 									 void *errcontextArg);
 
+/* Proper align with zero padding */
+static inline char *
+att_align_zero(char *data, char alignchar)
+{
+    size_t  misalignment = (size_t)att_align_nominal(1, alignchar) - 1;
+
+    while ((size_t)data & misalignment)
+		*(data++) = 0;
+
+	return data;
+}
+
 /*
  * DatumStreamBlockRead.
  */

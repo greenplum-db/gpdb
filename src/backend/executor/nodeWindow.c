@@ -15,7 +15,6 @@
  */
 
 #include "postgres.h"
-#include "miscadmin.h"
 
 /* XXX include list is speculative -- bhagenbuch */
 #include "access/heapam.h"
@@ -39,8 +38,6 @@
 #include "utils/array.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
-#include "utils/debugutils.h"
-#include "utils/int8.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/numeric.h"
@@ -51,7 +48,7 @@
  * but not inverse preliminary functions or preliminary functions.
  */
 #define HAS_ONLY_TRANS_FUNC(funcstate) \
-	(funcstate->isAgg && \
+	(funcstate->plain_agg && \
 	 !OidIsValid(funcstate->invprelimfn_oid) && \
 	 !OidIsValid(funcstate->prelimfn_oid) && \
 	 OidIsValid(funcstate->transfn_oid))
@@ -102,7 +99,6 @@ typedef struct FrameBufferEntry
  */
 typedef struct WindowStatePerLevelData
 {
-	Index		level;			/* index of WindowKey for this level */
 	FmgrInfo   *eqfunctions;	/* equality fns for partial key */
 	FmgrInfo   *ltfunctions;	/* less-than functions for partial key */
 	bool		need_peercount;
@@ -126,9 +122,6 @@ typedef struct WindowStatePerLevelData
 
 	/* Indicate if all functions have trivial frames. */
 	bool		trivial_frames_only;
-
-	/* if the user didn't specify a frame, we use the default */
-	bool		default_frame;
 
 	/*
 	 * Indicate if the frame clause for this level has an edge of DELAY_BOUND
@@ -244,10 +237,9 @@ typedef struct WindowStatePerLevelData
  */
 typedef struct WindowStatePerFunctionData
 {
-	WindowRefExprState *wrxstate;
-	WindowRef  *wref;
-	WindowStatePerLevelData *wlevel;
-	bool		isAgg;
+	/* Links to WindowFunc expr and state nodes this working state is for */
+	WindowFuncExprState *wfuncstate;
+	WindowFunc *wfunc;
 	bool		allowframe;
 
 	/* Indicate if this function requires a range cumulative frame. */
@@ -259,11 +251,12 @@ typedef struct WindowStatePerFunctionData
 	int16		resulttypeLen;
 	bool		resulttypeByVal;
 
+	bool		plain_agg;		/* is it just a plain aggregate function? */
+
 	/* Ordinary window function */
 	Datum		win_value;
 	bool		win_value_is_null;
-	Oid			windowfn_oid;
-	FmgrInfo	windowfn;
+	FmgrInfo	flinfo;
 
 	/* Aggregate-derived window function */
 	Oid			transfn_oid;
@@ -570,11 +563,14 @@ static void windowBufferEndScan(WindowBufferCursor cursor);
 
 
 /* the functions for the Window node */
-static WindowState *makeWindowState(Window * window, EState *estate);
+static void initialize_peragg(WindowState *winstate, WindowFunc *wfunc,
+							  WindowStatePerFunction funcstate);
+
+static WindowState *makeWindowState(WindowAgg *window, EState *estate);
 static void initializePartition(WindowState * wstate);
 static bool checkOutputReady(WindowState * wstate);
 static TupleTableSlot *fetchTupleSlotThroughBuf(WindowState * wstate);
-static int initFcinfo(WindowRefExprState * wrxstate, FunctionCallInfoData *fcinfo,
+static int initFcinfo(WindowFuncExprState *wfxstate, FunctionCallInfoData *fcinfo,
 		   WindowStatePerFunction funcstate, ExprContext *econtext,
 		   bool check_nulls);
 static void adjustEdges(WindowFrameBuffer buffer, WindowState * wstate);
@@ -589,7 +585,7 @@ static bool cmp_deformed_tuple(Datum *a, bool *a_nulls, Datum *b, bool *b_nulls,
 				   FmgrInfo *ltfuncs, FmgrInfo *eqfuncs,
 				   MemoryContext evalContext, bool is_equal);
 static FmgrInfo *get_ltfuncs(int numCols, Oid *ltOperators);
-static void advanceKeyLevelState(WindowState * wstate, int min_level);
+static void advanceKeyLevelState(WindowState *wstate);
 static void init_frames(WindowState * wstate);
 static void deform_window_tuple(TupleTableSlot * slot, int nattrs, AttrNumber *attnums,
 					Datum *values, bool *nulls, WindowState * wstate);
@@ -597,8 +593,8 @@ static void add_tuple_to_trans(WindowStatePerFunction funcstate, WindowState * w
 				   ExprContext *econtext, bool check_nulls);
 static bool hasTuplesInFrame(WindowStatePerLevel level_state,
 				 WindowState * wstate);
-static Datum last_value_internal(WindowRefExprState * wrxstate, bool *isnull);
-static Datum first_value_internal(WindowRefExprState * wrxstate, bool *isnull);
+static Datum last_value_internal(WindowFuncExprState *wfxstate, bool *isnull);
+static Datum first_value_internal(WindowFuncExprState *wfxstate, bool *isnull);
 static FrameBufferEntry *createFrameBufferEntry(WindowStatePerLevel level_state);
 static void freeFrameBufferEntry(FrameBufferEntry *entry);
 static void advanceEdgeForRange(WindowStatePerLevel level_state,
@@ -687,39 +683,35 @@ createRowsFrameBuffer(int64 trail_rows, int64 lead_rows, int64 bytes)
  * a given WindowState.
  */
 static void
-createFrameBuffers(WindowState * wstate)
+createFrameBuffers(WindowState *wstate)
 {
-	int			level;
 	int64		bytes;
 
-	if (wstate->numlevels <= 0)
+	if (wstate->trivial_frame)
 		return;
 
-	bytes = ((PlanStateOperatorMemKB((PlanState *) wstate) * 1024L) / 2) / wstate->numlevels;
+	bytes = ((PlanStateOperatorMemKB((PlanState *) wstate) * 1024L) / 2);
 
-	for (level = 0; level < wstate->numlevels; level++)
-	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+	WindowStatePerLevel level_state = wstate->level_state;
 
-		Assert(level_state->frame_buffer == NULL);
-		if (EDGE_IS_ROWS(level_state))
-			level_state->frame_buffer =
-				createRowsFrameBuffer(level_state->trail_rows,
-									  level_state->lead_rows,
-									  bytes);
-		else
-			level_state->frame_buffer =
-				createRangeFrameBuffer(level_state->trail_range,
-									   level_state->lead_range,
-									   bytes);
+	Assert(level_state->frame_buffer == NULL);
+	if (EDGE_IS_ROWS(level_state))
+		level_state->frame_buffer =
+			createRowsFrameBuffer(level_state->trail_rows,
+								  level_state->lead_rows,
+								  bytes);
+	else
+		level_state->frame_buffer =
+			createRangeFrameBuffer(level_state->trail_range,
+								   level_state->lead_range,
+								   bytes);
 
-		level_state->trail_reader =
-			ntuplestore_create_accessor(level_state->frame_buffer->tuplestore, false);
-		level_state->lead_reader =
-			ntuplestore_create_accessor(level_state->frame_buffer->tuplestore, false);
+	level_state->trail_reader =
+		ntuplestore_create_accessor(level_state->frame_buffer->tuplestore, false);
+	level_state->lead_reader =
+		ntuplestore_create_accessor(level_state->frame_buffer->tuplestore, false);
 
-		level_state->frame_buffer->level_state = level_state;
-	}
+	level_state->frame_buffer->level_state = level_state;
 }
 
 /*
@@ -760,13 +752,11 @@ resetFrameBuffer(WindowFrameBuffer buffer)
  * resetFrameBuffers -- reset all frame buffers in a WindowState.
  */
 static void
-resetFrameBuffers(WindowState * wstate)
+resetFrameBuffers(WindowState *wstate)
 {
-	int			level;
-
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		if (level_state->frame_buffer)
 		{
@@ -812,13 +802,11 @@ freeFrameBuffer(WindowFrameBuffer buffer)
  * freeFrameBuffers -- release the space for all frame buffers.
  */
 static void
-freeFrameBuffers(WindowState * wstate)
+freeFrameBuffers(WindowState *wstate)
 {
-	int			level;
-
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		if (level_state->frame_buffer)
 		{
@@ -906,21 +894,21 @@ serializeFuncs(WindowStatePerLevel level_state,
 						   byvalue, typelen,
 						   serial_buf);
 		}
-		else if (IS_LEAD_LAG(funcstate->wrxstate->winkind) ||
-				 IS_FIRST_LAST(funcstate->wrxstate->winkind))
+		else if (IS_LEAD_LAG(funcstate->wfuncstate->winkind) ||
+				 IS_FIRST_LAST(funcstate->wfuncstate->winkind))
 		{
-			WindowRefExprState *wrxstate;
+			WindowFuncExprState *wfxstate;
 			int			nargs;
 			int			argno = 1;
 
-			wrxstate = funcstate->wrxstate;
-			nargs = list_length(wrxstate->args);
+			wfxstate = funcstate->wfuncstate;
+			nargs = list_length(wfxstate->args);
 			Assert(2 <= nargs && nargs <= 4);
 
 			serializeValue(funcstate->aggTransValue,
 						   funcstate->aggTransValueIsNull,
-						   wrxstate->argtypbyval[argno],
-						   wrxstate->argtyplen[argno],
+						   wfxstate->argtypbyval[argno],
+						   wfxstate->argtyplen[argno],
 						   serial_buf);
 		}
 
@@ -947,7 +935,7 @@ serializeFuncs(WindowStatePerLevel level_state,
 		else
 		{
 			/* the general case */
-			WindowRefExprState *winref_state = funcstate->wrxstate;
+			WindowFuncExprState *winref_state = funcstate->wfuncstate;
 			ListCell   *ref_lc;
 			Oid			typid;
 			bool		byval;
@@ -1063,21 +1051,21 @@ deserializeFuncs(WindowStatePerLevel level_state,
 			value = list_nth(func_values, funcstate->serial_index);
 			read_pos = deserializeValue(read_pos, value, byvalue, typelen);
 		}
-		else if (IS_LEAD_LAG(funcstate->wrxstate->winkind) ||
-				 IS_FIRST_LAST(funcstate->wrxstate->winkind))
+		else if (IS_LEAD_LAG(funcstate->wfuncstate->winkind) ||
+				 IS_FIRST_LAST(funcstate->wfuncstate->winkind))
 		{
-			WindowRefExprState *wrxstate;
+			WindowFuncExprState *wfxstate;
 			int			nargs;
 			int			argno = 1;
 
-			wrxstate = funcstate->wrxstate;
-			nargs = list_length(wrxstate->args);
+			wfxstate = funcstate->wfuncstate;
+			nargs = list_length(wfxstate->args);
 			Assert(2 <= nargs && nargs <= 4);
 
 			value = list_nth(func_values, funcstate->serial_index);
 			read_pos = deserializeValue(read_pos, value,
-										wrxstate->argtypbyval[argno],
-										wrxstate->argtyplen[argno]);
+										wfxstate->argtypbyval[argno],
+										wfxstate->argtyplen[argno]);
 		}
 		else if (OidIsValid(funcstate->invprelimfn_oid) ||
 				 OidIsValid(funcstate->prelimfn_oid))
@@ -1104,7 +1092,7 @@ deserializeFuncs(WindowStatePerLevel level_state,
 		else
 		{
 			/* the general case */
-			WindowRefExprState *winref_state = funcstate->wrxstate;
+			WindowFuncExprState *winref_state = funcstate->wfuncstate;
 			ListCell   *ref_lc;
 			Oid			typid;
 			bool		byval;
@@ -1463,8 +1451,10 @@ incrementCurrentRow(WindowFrameBuffer buffer,
 	}
 
 	if (!buffer->level_state->trivial_frames_only)
+	{
 		/* Adjust all leading and trailig edges */
 		adjustEdges(buffer, wstate);
+	}
 
 	/* Set the trim_reader, and trim the buffer */
 	if (!level_state->has_delay_bound)
@@ -1570,8 +1560,8 @@ createFrameBufferEntry(WindowStatePerLevel level_state)
 			continue;
 
 		else if (funcstate->winpeercount ||
-				 (IS_LEAD_LAG(funcstate->wrxstate->winkind) ||
-				  IS_FIRST_LAST(funcstate->wrxstate->winkind)) ||
+				 (IS_LEAD_LAG(funcstate->wfuncstate->winkind) ||
+				  IS_FIRST_LAST(funcstate->wfuncstate->winkind)) ||
 				 (OidIsValid(funcstate->invprelimfn_oid) ||
 				  OidIsValid(funcstate->prelimfn_oid)))
 		{
@@ -1581,7 +1571,7 @@ createFrameBufferEntry(WindowStatePerLevel level_state)
 
 		else
 		{
-			WindowRefExprState *winref_state = funcstate->wrxstate;
+			WindowFuncExprState *winref_state = funcstate->wfuncstate;
 			int			argno;
 
 			for (argno = 0; argno < list_length(winref_state->args); argno++)
@@ -1864,8 +1854,8 @@ computeTransValuesThroughScan(WindowStatePerLevel level_state,
 		 */
 		if (funcstate->trivial_frame ||
 			funcstate->winpeercount ||
-			(funcstate->isAgg && OidIsValid(funcstate->invprelimfn_oid)) ||
-			!funcstate->isAgg)
+			(funcstate->plain_agg && OidIsValid(funcstate->invprelimfn_oid)) ||
+			!funcstate->plain_agg)
 			continue;
 
 		freeTransValue(&funcstate->final_aggTransValue,
@@ -1912,9 +1902,9 @@ computeTransValuesThroughScan(WindowStatePerLevel level_state,
 				 */
 				if (funcstate->trivial_frame ||
 					funcstate->winpeercount ||
-					(funcstate->isAgg &&
+					(funcstate->plain_agg &&
 					 OidIsValid(funcstate->invprelimfn_oid)) ||
-					!funcstate->isAgg)
+					!funcstate->plain_agg)
 					continue;
 
 				if (OidIsValid(funcstate->prelimfn_oid))
@@ -1989,8 +1979,8 @@ computeTransValuesThroughScan(WindowStatePerLevel level_state,
 				 */
 				if (funcstate->trivial_frame ||
 					funcstate->winpeercount ||
-					(funcstate->isAgg && OidIsValid(funcstate->invprelimfn_oid)) ||
-					!funcstate->isAgg)
+					(funcstate->plain_agg && OidIsValid(funcstate->invprelimfn_oid)) ||
+					!funcstate->plain_agg)
 					continue;
 
 				if (OidIsValid(funcstate->prelimfn_oid))
@@ -2124,7 +2114,7 @@ computeFrameValue(WindowStatePerLevel level_state,
 		}
 
 		/* Aggregate functions with inverse preliminary functions. */
-		else if (funcstate->isAgg && OidIsValid(funcstate->invprelimfn_oid))
+		else if (funcstate->plain_agg && OidIsValid(funcstate->invprelimfn_oid))
 		{
 			uint64		trail_num_not_nulls = 0;
 			uint64		lead_num_not_nulls = 0;
@@ -2298,7 +2288,7 @@ computeFrameValue(WindowStatePerLevel level_state,
 				}
 			}
 		}
-		else if (funcstate->isAgg && OidIsValid(funcstate->prelimfn_oid))
+		else if (funcstate->plain_agg && OidIsValid(funcstate->prelimfn_oid))
 		{
 			require_scanning = true;
 		}
@@ -2312,18 +2302,18 @@ computeFrameValue(WindowStatePerLevel level_state,
 			 * we pass the frame buffer to its function handler to generate
 			 * the output.
 			 */
-			if (!funcstate->isAgg)
+			if (!funcstate->plain_agg)
 			{
 				int			argno;
 				FunctionCallInfoData fcinfo;
 
-				argno = initFcinfo(funcstate->wrxstate, &fcinfo, funcstate,
+				argno = initFcinfo(funcstate->wfuncstate, &fcinfo, funcstate,
 								   econtext, false);
 
 				InitFunctionCallInfoData(fcinfo,
-										 &funcstate->windowfn,
+										 &funcstate->flinfo,
 										 argno,
-										 (void *)funcstate->wrxstate,
+										 (void *)funcstate->wfuncstate,
 										 NULL);
 
 				funcstate->win_value = FunctionCallInvoke(&fcinfo);
@@ -2347,59 +2337,56 @@ computeFrameValue(WindowStatePerLevel level_state,
  * Initialize function state for each function in the Window node.
  */
 static void
-initWindowFuncState(WindowState * wstate, Window * node)
+initWindowFuncState(WindowState * wstate, WindowAgg *node)
 {
 	int			numrefs;
 	int			refno;
 	ListCell   *lc;
 
-	if (wstate->wrxstates == NULL)
+	if (wstate->wfxstates == NULL)
 		return;
 
 	wstate->numfuncs = 0;
-	numrefs = list_length(wstate->wrxstates);
+	numrefs = list_length(wstate->wfxstates);
 	Insist(numrefs > 0);
 
 	wstate->func_state = palloc0(sizeof(WindowStatePerFunctionData) * numrefs);
 
 	/* Initialize per window ref (both ordinary and aggregate derived). */
 	refno = -1;
-	foreach(lc, wstate->wrxstates)
+	foreach(lc, wstate->wfxstates)
 	{
-		WindowRefExprState *wrxstate = (WindowRefExprState *) lfirst(lc);
-		WindowRef  *winref = (WindowRef *) wrxstate->xprstate.expr;
-		WindowStatePerFunction funcstate;
+		WindowFuncExprState *wfuncstate = (WindowFuncExprState *) lfirst(lc);
+		WindowFunc *wfunc = (WindowFunc *) wfuncstate->xprstate.expr;
+		WindowStatePerFunction perfuncstate;
 		Oid			inputTypes[FUNC_MAX_ARGS];
 		Form_pg_proc proform;
 		HeapTuple	heap_tuple;
 		ListCell   *lcarg;
 		int			i  ,
 					funcno;
-		Oid			winOwner,
-					winResType;
 		bool		isAgg,
-					isWin ,
-					isSet;
+					isWin;
 		AclResult	aclresult;
 
 		refno++;				/* First one is 0 */
 
 		/* Register the parent window state with the window ref state node. */
-		wrxstate->windowstate = wstate;
+		wfuncstate->windowstate = wstate;
 
 		/* Look for a previous duplicate window function */
 		for (funcno = 0; funcno < refno; funcno++)
 		{
-			WindowRef  *w = wstate->func_state[funcno].wref;
+			WindowFunc  *w = wstate->func_state[funcno].wfunc;
 
-			if (equal(winref, w) &&
+			if (equal(wfunc, w) &&
 				!contain_volatile_functions((Node *) w))
 				break;
 		}
 		if (funcno < refno)
 		{
 			/* Found a match to an existing entry, so just mark it */
-			wrxstate->funcno = funcno;
+			wfuncstate->funcno = funcno;
 			continue;
 		}
 
@@ -2407,22 +2394,15 @@ initWindowFuncState(WindowState * wstate, Window * node)
 		 * No match so this window ref represents a new function and we need
 		 * to fill in its function state.
 		 */
-		funcstate = &wstate->func_state[funcno];
-		funcstate->wrxstate = wrxstate;
-		funcstate->wref = winref;
+		perfuncstate = &wstate->func_state[funcno];
+		perfuncstate->wfuncstate = wfuncstate;
+		perfuncstate->wfunc = wfunc;
 
-		funcstate->serial_index = -1;
+		perfuncstate->serial_index = -1;
 
-		if (winref->winlevel >= wstate->numlevels)
+		if (!wstate->trivial_frame)
 		{
-			funcstate->trivial_frame = true;
-			funcstate->wlevel = NULL;
-		}
-
-		else
-		{
-			WindowStatePerLevel level_state =
-			&wstate->level_state[winref->winlevel];
+			WindowStatePerLevel level_state = wstate->level_state;
 
 			/*
 			 * When this level has the range frame, this frame may not always
@@ -2435,51 +2415,44 @@ initWindowFuncState(WindowState * wstate, Window * node)
 			 * row_number in this key level.
 			 */
 			if (!EDGE_IS_ROWS(level_state) &&
-				winref->winfnoid == ROW_NUMBER_OID)
+				wfunc->winfnoid == ROW_NUMBER_OID)
 			{
-				funcstate->wlevel = NULL;
-				funcstate->trivial_frame = true;
+				perfuncstate->trivial_frame = true;
 			}
 			else
 			{
-				funcstate->wlevel = level_state;
 				level_state->level_funcs = lappend(level_state->level_funcs,
-												   funcstate);
+												   perfuncstate);
 			}
 		}
+		else
+			perfuncstate->trivial_frame = true;
 
-		wrxstate->funcno = funcno;
+		/* Mark WindowFunc state node with assigned index in the result array */
+		wfuncstate->funcno = funcno;
 		wstate->numfuncs = funcno + 1;
 
-		/*
-		 * May we call the function?  Initially all window functions are
-		 * built-in, however, at this point we haven't learned whether we're
-		 * working on an ordinary window function or an aggregate.
-		 */
-		aclresult = pg_proc_aclcheck(winref->winfnoid, GetUserId(),
+		/* Check permission to call window function */
+		aclresult = pg_proc_aclcheck(wfunc->winfnoid, GetUserId(),
 									 ACL_EXECUTE);
 		if (aclresult != ACLCHECK_OK)
 			aclcheck_error(aclresult, ACL_KIND_PROC,
-						   get_func_name(winref->winfnoid));
+						   get_func_name(wfunc->winfnoid));
 
 		/* Collect information about the window function's pg_proc entry. */
-		heap_tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(winref->winfnoid));
+		heap_tuple = SearchSysCache1(PROCOID, ObjectIdGetDatum(wfunc->winfnoid));
 		if (!HeapTupleIsValid(heap_tuple))
 			elog(ERROR, "cache lookup failed for window function proc %u",
-				 winref->winfnoid);
+				 wfunc->winfnoid);
 		proform = (Form_pg_proc) GETSTRUCT(heap_tuple);
 
 		isAgg = proform->proisagg;
 		isWin = proform->proiswindow;
-		isSet = proform->proretset;
-		winResType = proform->prorettype;
-		winOwner = proform->proowner;
-
+		Assert(!proform->proretset);
 		ReleaseSysCache(heap_tuple);
 
 		Assert(isAgg != isWin);
-		Assert(isAgg == winref->winagg);
-		Assert(!isSet);
+		Assert(isAgg == wfunc->winagg);
 
 		/*
 		 * Get actual datatypes of the inputs.	These could be different from
@@ -2487,148 +2460,20 @@ initWindowFuncState(WindowState * wstate, Window * node)
 		 * or ANYELEMENT.
 		 */
 		i = 0;
-		foreach(lcarg, winref->args)
+		foreach(lcarg, wfunc->args)
 		{
 			inputTypes[i++] = exprType((Node *) lfirst(lcarg));
 		}
-		funcstate->numargs = list_length(winref->args);
+		perfuncstate->numargs = list_length(wfunc->args);
 
-		funcstate->isAgg = isAgg;
-
+		perfuncstate->plain_agg = isAgg;
 
 		/* The rest depends on the type (agg-derived or ordinary). */
 		if (isAgg)
 		{
-			HeapTuple	agg_tuple;
-			Form_pg_aggregate aggform;
-
-#define NUM_AGG_FNS_TO_CHECK 5
-			int			c;
-			Oid			to_check[NUM_AGG_FNS_TO_CHECK];
-			Oid			aggtranstype;
-			Expr	   *transfnexpr,
-					   *finalfnexpr,
-					   *invtransfnexpr,
-					   *invprelimfnexpr,
-					   *prelimfnexpr;
-			Datum		textInitVal;
-
-			Insist(winref->winlevel < wstate->numlevels);
-
-			agg_tuple = SearchSysCache1(AGGFNOID, ObjectIdGetDatum(winref->winfnoid));
-			if (!HeapTupleIsValid(agg_tuple))
-				elog(ERROR, "cache lookup failed for aggregate %u",
-					 winref->winfnoid);
-			aggform = (Form_pg_aggregate)GETSTRUCT(agg_tuple);
-
-			/*
-			 * Get the implementation functions and related information we
-			 * need to handle aggregate-derived functions.
-			 *
-			 * TODO - Omit ones we're not interested in.
-			 */
-			to_check[0] = funcstate->transfn_oid = aggform->aggtransfn;
-			to_check[1] = funcstate->finalfn_oid = aggform->aggfinalfn;
-			to_check[2] = funcstate->invtransfn_oid = aggform->agginvtransfn;
-			to_check[3] = funcstate->invprelimfn_oid = aggform->agginvprelimfn;
-			to_check[4] = funcstate->prelimfn_oid = aggform->aggprelimfn;
-
-
-			/* Check that the aggregate owner has needed permissions. */
-			for (c = 0; c < NUM_AGG_FNS_TO_CHECK; c++)
-			{
-				if (!OidIsValid(to_check[c]))
-					continue;
-				aclresult = pg_proc_aclcheck(to_check[c], winOwner, ACL_EXECUTE);
-				if (aclresult != ACLCHECK_OK)
-					aclcheck_error(aclresult, ACL_KIND_PROC,
-								   get_func_name(to_check[c]));
-			}
-
-			aggtranstype = resolve_polymorphic_transtype(aggform->aggtranstype,
-														 winref->winfnoid,
-														 inputTypes);
-
-			/*
-			 * Build expression trees using actual argument & result types.
-			 * c.f., ExecInitAgg(). We should really reduce this to a few
-			 * common functions.
-			 */
-			build_aggregate_fnexprs(inputTypes, funcstate->numargs,
-									aggtranstype, winref->restype,
-									funcstate->transfn_oid,
-									funcstate->finalfn_oid,
-									funcstate->prelimfn_oid,
-									funcstate->invtransfn_oid,
-									funcstate->invprelimfn_oid,
-									&transfnexpr, &finalfnexpr, &prelimfnexpr,
-									&invtransfnexpr, &invprelimfnexpr);
-
-			fmgr_info(funcstate->transfn_oid, &funcstate->transfn);
-			funcstate->transfn.fn_expr = (Node *) transfnexpr;
-
-			if (OidIsValid(funcstate->finalfn_oid))
-			{
-				fmgr_info(funcstate->finalfn_oid, &funcstate->finalfn);
-				funcstate->finalfn.fn_expr = (Node *) finalfnexpr;
-			}
-			if (OidIsValid(funcstate->invtransfn_oid))
-			{
-				fmgr_info(funcstate->invtransfn_oid, &funcstate->invtransfn);
-				funcstate->invtransfn.fn_expr = (Node *) invtransfnexpr;
-			}
-			if (OidIsValid(funcstate->prelimfn_oid))
-			{
-				fmgr_info(funcstate->prelimfn_oid, &funcstate->prelimfn);
-				funcstate->prelimfn.fn_expr = (Node *) prelimfnexpr;
-			}
-			if (OidIsValid(funcstate->invprelimfn_oid))
-			{
-				fmgr_info(funcstate->invprelimfn_oid, &funcstate->invprelimfn);
-				funcstate->invprelimfn.fn_expr = (Node *) invprelimfnexpr;
-			}
-
-			get_typlenbyval(winref->restype,
-							&funcstate->resulttypeLen,
-							&funcstate->resulttypeByVal);
-			get_typlenbyval(aggtranstype,
-							&funcstate->aggTranstypeLen,
-							&funcstate->aggTranstypeByVal);
-
-			/*
-			 * initval is potentially null, so don't try to access it as a
-			 * struct field. Must do it the hard way with SysCacheGetAttr
-			 */
-			textInitVal = SysCacheGetAttr(AGGFNOID, agg_tuple,
-										  Anum_pg_aggregate_agginitval,
-										  &funcstate->aggInitValueIsNull);
-
-			if (funcstate->aggInitValueIsNull)
-				funcstate->aggInitValue = (Datum)0;
-			else
-				funcstate->aggInitValue = GetAggInitVal(textInitVal,
-														aggtranstype);
-
-			/*
-			 * If the transfn is strict and the initval is NULL, make sure
-			 * input type and transtype are the same (or at least
-			 * binary-compatible), so that it's OK to use the first input
-			 * value as the initial aggTransValue.	This should have been
-			 * checked at agg definition time, but just in case...
-			 */
-			if (funcstate->transfn.fn_strict && funcstate->aggInitValueIsNull)
-			{
-				if (funcstate->numargs < 1 ||
-					!IsBinaryCoercible(inputTypes[0], aggtranstype))
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-							 errmsg("aggregate %u needs to have compatible "
-									"input type and transition type",
-									winref->winfnoid)));
-			}
-			ReleaseSysCache(agg_tuple);
-
-			wrxstate->winkind = WINKIND_AGGREGATE;
+			Insist(!wstate->trivial_frame);
+			initialize_peragg(wstate, wfunc, perfuncstate);
+			wfuncstate->winkind = WINKIND_AGGREGATE;
 		}
 		else if (isWin)
 		{
@@ -2638,17 +2483,17 @@ initWindowFuncState(WindowState * wstate, Window * node)
 			Const	   *refptr;
 			ExprState  *xtrastate;
 
-			win_tuple = SearchSysCache1(WINFNOID, ObjectIdGetDatum(winref->winfnoid));
+			win_tuple = SearchSysCache1(WINFNOID, ObjectIdGetDatum(wfunc->winfnoid));
 			if (!HeapTupleIsValid(win_tuple))
 				elog(ERROR, "cache lookup failed for window function %u",
-					 winref->winfnoid);
+					 wfunc->winfnoid);
 
 			winform = (Form_pg_window)GETSTRUCT(win_tuple);
 
 			/*
 			 * Lookup ordinary window implementation function info.
 			 */
-			switch (winref->winstage)
+			switch (wfunc->winstage)
 			{
 				case WINSTAGE_IMMEDIATE:
 				case WINSTAGE_ROWKEY:
@@ -2659,62 +2504,59 @@ initWindowFuncState(WindowState * wstate, Window * node)
 					break;
 			}
 
-			wrxstate->winkind = winform->winkind;
+			wfuncstate->winkind = winform->winkind;
 
 			Assert(OidIsValid(windowfn_oid));
 
 			/*
-			 * Check that window function owner has permission to call the
-			 * implementation function.
+			 * Check that the user has permission to call the implementation function.
 			 *
 			 * XXX initially all implementation functions are builtin and anyone
 			 * can call them, but good to follow form.
 			 */
-			aclresult = pg_proc_aclcheck(windowfn_oid,
-										 winOwner,
+			aclresult = pg_proc_aclcheck(windowfn_oid, GetUserId(),
 										 ACL_EXECUTE);
 			if (aclresult != ACLCHECK_OK)
 				aclcheck_error(aclresult, ACL_KIND_PROC,
 							   get_func_name(windowfn_oid));
 
-			funcstate->windowfn_oid = windowfn_oid;
-			funcstate->allowframe = winform->winallowframe;
+			perfuncstate->allowframe = winform->winallowframe;
 
 			/* Inject extra argument. */
 			refptr = makeNode(Const);
 			refptr->consttype = INTERNALOID;
 			refptr->constlen = 4;
-			refptr->constvalue = PointerGetDatum(wrxstate);
+			refptr->constvalue = PointerGetDatum(wfuncstate);
 			refptr->constisnull = false;
 			refptr->constbyval = true;
 
 			xtrastate = ExecInitExpr((Expr *)refptr, (PlanState *) wstate);
 
-			wrxstate->args = lcons(xtrastate, wrxstate->args);
-			fmgr_info(funcstate->windowfn_oid, &funcstate->windowfn);
+			wfuncstate->args = lcons(xtrastate, wfuncstate->args);
+			fmgr_info(windowfn_oid, &perfuncstate->flinfo);
 
 			/*
 			 * Initialize byval and typlen for framed funcs. Of course we're
 			 * creating an entry here for the inserted refptr but we do so for
 			 * consistency.
 			 */
-			if (funcstate->allowframe || IS_LEAD_LAG(wrxstate->winkind) ||
-				IS_FIRST_LAST(wrxstate->winkind))
+			if (perfuncstate->allowframe || IS_LEAD_LAG(wfuncstate->winkind) ||
+				IS_FIRST_LAST(wfuncstate->winkind))
 			{
 				ListCell   *lc;
-				int			numargs = list_length(wrxstate->args);
+				int			numargs = list_length(wfuncstate->args);
 				int			argno = 0;
 
-				wrxstate->argtypbyval = palloc(sizeof(bool) * numargs);
-				wrxstate->argtyplen = palloc(sizeof(int16) * numargs);
+				wfuncstate->argtypbyval = palloc(sizeof(bool) * numargs);
+				wfuncstate->argtyplen = palloc(sizeof(int16) * numargs);
 
-				foreach(lc, wrxstate->args)
+				foreach(lc, wfuncstate->args)
 				{
 					if (argno == 0)
 					{
 						/* internal arg */
-						wrxstate->argtypbyval[argno] = true;
-						wrxstate->argtyplen[argno] = INTERNALOID;
+						wfuncstate->argtypbyval[argno] = true;
+						wfuncstate->argtyplen[argno] = INTERNALOID;
 					}
 					else
 					{
@@ -2723,8 +2565,8 @@ initWindowFuncState(WindowState * wstate, Window * node)
 						bool		byval;
 
 						get_typlenbyval(typid, &len, &byval);
-						wrxstate->argtypbyval[argno] = byval;
-						wrxstate->argtyplen[argno] = len;
+						wfuncstate->argtypbyval[argno] = byval;
+						wfuncstate->argtyplen[argno] = len;
 					}
 					argno++;
 				}
@@ -2735,15 +2577,15 @@ initWindowFuncState(WindowState * wstate, Window * node)
 			 * key level and if the peer count is required. This ensures that
 			 * subsequent iterations do not overwrite the peer count flag.
 			 */
-			if (PointerIsValid(funcstate->wlevel) && winform->winpeercount)
+			if (!perfuncstate->trivial_frame && winform->winpeercount)
 			{
-				funcstate->wlevel->need_peercount = winform->winpeercount;
-				funcstate->winpeercount = winform->winpeercount;
+				wstate->level_state->need_peercount = winform->winpeercount;
+				perfuncstate->winpeercount = winform->winpeercount;
 				wstate->need_peercount = winform->winpeercount;
 			}
 
-			funcstate->win_value = 0;
-			funcstate->win_value_is_null = true;
+			perfuncstate->win_value = 0;
+			perfuncstate->win_value_is_null = true;
 
 			ReleaseSysCache(win_tuple);
 		}
@@ -2752,7 +2594,6 @@ initWindowFuncState(WindowState * wstate, Window * node)
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("inappropriate use of function as window function")));
-
 		}
 	}
 }
@@ -2761,87 +2602,66 @@ initWindowFuncState(WindowState * wstate, Window * node)
  * Initialize WindowStatePerLevel in the Window node.
  */
 static void
-initWindowStatePerLevel(WindowState * wstate, Window * node)
+initWindowStatePerLevel(WindowState * wstate, WindowAgg *node)
 {
-	ListCell   *lc;
-	int			level_no = 0;
-	WindowKey  *prev_key = NULL;
 	TupleDesc	desc;
 	int			col_no;
+	WindowStatePerLevel lvl = wstate->level_state;
+	Oid		   *eqOperators;
+	int			i;
 
 	desc = ExecGetResultType(wstate->ps.lefttree);
 
-	foreach(lc, node->windowKeys)
+	lvl->has_delay_bound = false;
+	lvl->has_delay_trail = false;
+	lvl->has_delay_lead = false;
+	lvl->has_only_trans_funcs = false;
+
+	/*
+	 * Copy the sort columns for this level. If the window key contains an
+	 * empty list of sort columns, we copy the previous non-empty list of
+	 * sort columns here. This makes it easier to find keys to be stored
+	 * in the frame buffer later.
+	 */
+	lvl->numSortCols = node->ordNumCols;
+	lvl->sortColIdx = (AttrNumber *)palloc0(lvl->numSortCols * sizeof(AttrNumber));
+	lvl->sortOperators = (Oid *) palloc0(lvl->numSortCols * sizeof(Oid));
+
+	memcpy(lvl->sortColIdx,
+		   node->ordColIdx,
+		   node->ordNumCols * sizeof(AttrNumber));
+	memcpy(lvl->sortOperators,
+		   node->ordOperators,
+		   node->ordNumCols * sizeof(Oid));
+
+	/* Find comparison functions */
+	eqOperators = (Oid *) palloc(lvl->numSortCols * sizeof(Oid));
+	for (i = 0; i < lvl->numSortCols; i++)
 	{
-		WindowKey  *key = (WindowKey *) lfirst(lc);
-		WindowStatePerLevel lvl = &wstate->level_state[level_no++];
-		Oid		   *eqOperators;
-		int			i;
+		eqOperators[i] = get_equality_op_for_ordering_op(lvl->sortOperators[i]);
+	}
+	lvl->eqfunctions = execTuplesMatchPrepare(lvl->numSortCols,
+											  eqOperators);
+	lvl->ltfunctions = get_ltfuncs(lvl->numSortCols,
+								   lvl->sortOperators);
+	pfree(eqOperators);
 
-		lvl->has_delay_bound = false;
-		lvl->has_delay_trail = false;
-		lvl->has_delay_lead = false;
-		lvl->has_only_trans_funcs = false;
+	lvl->frameOptions = node->frameOptions;
+	lvl->startOffset = node->startOffset;
+	lvl->endOffset = node->endOffset;
 
-		/*
-		 * Copy the sort columns for this level. If the window key contains an
-		 * empty list of sort columns, we copy the previous non-empty list of
-		 * sort columns here. This makes it easier to find keys to be stored
-		 * in the frame buffer later.
-		 */
-		lvl->numSortCols = key->numSortCols;
-		if (lvl->numSortCols == 0 && prev_key != NULL)
-			lvl->numSortCols += prev_key->numSortCols;
-		lvl->sortColIdx = (AttrNumber *)palloc0(lvl->numSortCols * sizeof(AttrNumber));
-		lvl->sortOperators = (Oid *) palloc0(lvl->numSortCols * sizeof(Oid));
+	lvl->col_types = palloc(sizeof(Oid) * lvl->numSortCols);
+	lvl->col_typlens = palloc(sizeof(int2) * lvl->numSortCols);
+	lvl->col_typbyvals = palloc(sizeof(bool) * lvl->numSortCols);
 
-		if (lvl->numSortCols > key->numSortCols)
-		{
-			memcpy(lvl->sortColIdx, prev_key->sortColIdx,
-				   prev_key->numSortCols * sizeof(AttrNumber));
-			memcpy(lvl->sortOperators, prev_key->sortOperators,
-				   prev_key->numSortCols * sizeof(Oid));
-		}
+	for (col_no = 0; col_no < lvl->numSortCols; col_no++)
+	{
+		AttrNumber	attnum = lvl->sortColIdx[col_no];
+		Form_pg_attribute attr = desc->attrs[attnum - 1];
 
-		memcpy(lvl->sortColIdx + (lvl->numSortCols - key->numSortCols),
-			   key->sortColIdx,
-			   key->numSortCols * sizeof(AttrNumber));
-		memcpy(lvl->sortOperators + (lvl->numSortCols - key->numSortCols),
-			   key->sortOperators,
-			   key->numSortCols * sizeof(Oid));
-
-		if (key->numSortCols > 0)
-			prev_key = key;
-
-		/* Find comparison functions */
-		eqOperators = (Oid *) palloc(lvl->numSortCols * sizeof(Oid));
-		for (i = 0; i < lvl->numSortCols; i++)
-		{
-			eqOperators[i] = get_equality_op_for_ordering_op(lvl->sortOperators[i]);
-		}
-		lvl->eqfunctions = execTuplesMatchPrepare(lvl->numSortCols,
-												  eqOperators);
-		lvl->ltfunctions = get_ltfuncs(lvl->numSortCols,
-									   lvl->sortOperators);
-		pfree(eqOperators);
-
-		lvl->frameOptions = key->frameOptions;
-		lvl->startOffset = key->startOffset;
-		lvl->endOffset = key->endOffset;
-
-		lvl->col_types = palloc(sizeof(Oid) * lvl->numSortCols);
-		lvl->col_typlens = palloc(sizeof(int2) * lvl->numSortCols);
-		lvl->col_typbyvals = palloc(sizeof(bool) * lvl->numSortCols);
-
-		for (col_no = 0; col_no < lvl->numSortCols; col_no++)
-		{
-			AttrNumber	attnum = lvl->sortColIdx[col_no];
-			Form_pg_attribute attr = desc->attrs[attnum - 1];
-
-			lvl->col_types[col_no] = attr->atttypid;
-			lvl->col_typlens[col_no] = attr->attlen;
-			lvl->col_typbyvals[col_no] = attr->attbyval;
-		}
+		lvl->col_types[col_no] = attr->atttypid;
+		lvl->col_typlens[col_no] = attr->attlen;
+		lvl->col_typbyvals[col_no] = attr->attbyval;
 	}
 }
 
@@ -2849,38 +2669,35 @@ initWindowStatePerLevel(WindowState * wstate, Window * node)
 /* WindowState constructor.
  */
 static WindowState *
-makeWindowState(Window * window, EState *estate)
+makeWindowState(WindowAgg *window, EState *estate)
 {
-	int			numlevels;
 	WindowState *wstate = makeNode(WindowState);
 
 	wstate->ps.plan = (Plan *) window;
 	wstate->ps.state = estate;
 
-	wstate->wrxstates = NIL;
+	wstate->wfxstates = NIL;
 	wstate->eqfunctions = NULL;
 	wstate->numfuncs = 0;
 	wstate->func_state = NULL;
 
 	wstate->row_index = 0;
-	wstate->level_state = NULL;
 
-	numlevels = list_length(window->windowKeys);
-	wstate->numlevels = numlevels;
-
-	if (numlevels > 0)
+	if (window->ordNumCols > 0 || window->frameOptions != FRAMEOPTION_DEFAULTS ||
+		window->startOffset || window->endOffset)
 	{
 		wstate->level_state = (WindowStatePerLevel)
-			palloc0(wstate->numlevels * sizeof(WindowStatePerLevelData));
+			palloc0(sizeof(WindowStatePerLevelData));
 
-		for (int level = 0; level < wstate->numlevels; level++)
-		{
-			WindowStatePerLevel level_state = &wstate->level_state[level];
-			initStringInfo(&level_state->serial_buf);
-		}
+		initStringInfo(&wstate->level_state->serial_buf);
+
+		wstate->trivial_frame = false;
 	}
 	else
+	{
 		wstate->level_state = NULL;
+		wstate->trivial_frame = true;
+	}
 
 	wstate->transcontext = AllocSetContextCreate(CurrentMemoryContext,
 												 "TransContext",
@@ -2901,8 +2718,6 @@ makeWindowState(Window * window, EState *estate)
 static void
 initializePartition(WindowState * wstate)
 {
-	int			level;
-
 	/*
 	 * Reset partition primitive values. Note row_index is -1 to flag "before
 	 * first row of partition" and so that it increments to 0.
@@ -2912,9 +2727,9 @@ initializePartition(WindowState * wstate)
 	/*
 	 * Reset key-level primitive values.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		level_state->group_index = 0;
 		level_state->prior_non_peer_count = 0;
@@ -2959,7 +2774,6 @@ trimInputBuffer(WindowInputBuffer buffer)
 static void
 resetInputBuffer(WindowState * wstate)
 {
-	int			level;
 	bool		save_firsttuple = false;
 
 	if (wstate->input_buffer)
@@ -2987,7 +2801,7 @@ resetInputBuffer(WindowState * wstate)
 
 		wstate->cur_slot_is_new = false;
 		wstate->cur_slot_part_break = false;
-		wstate->cur_slot_key_break = wstate->numlevels;
+		wstate->cur_slot_key_break = wstate->trivial_frame ? 0 : 1;
 
 		resetFrameBuffers(wstate);
 	}
@@ -3003,9 +2817,9 @@ resetInputBuffer(WindowState * wstate)
 	 * Reset transition values.  This has to be done even if we are creating
 	 * new buffer because the trans values might remain in case of rescanning.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		resetTransValues(level_state, wstate);
 	}
@@ -3046,15 +2860,11 @@ freeInputBuffer(WindowState * wstate)
  * Advance values related to computing peer count.
  */
 static void
-advancePeerCount(WindowStatePerLevel level_state,
-				 int curr_level, int min_level)
+advancePeerCount(WindowStatePerLevel level_state)
 {
-	if (curr_level >= min_level && min_level != -1)
-	{
-		level_state->prior_non_peer_count += level_state->peer_count + 1;
-		level_state->peer_index = 0;
-		level_state->peer_count = 0;
-	}
+	level_state->prior_non_peer_count += level_state->peer_count + 1;
+	level_state->peer_index = 0;
+	level_state->peer_count = 0;
 }
 
 
@@ -3075,39 +2885,32 @@ advancePeerCount(WindowStatePerLevel level_state,
  */
 
 static void
-advanceKeyLevelState(WindowState * wstate, int min_level)
+advanceKeyLevelState(WindowState * wstate)
 {
 	WindowStatePerLevel level_state;
 	int64		cur_row_index;
-	int			i;
 
-	Assert(-1 <= min_level && min_level < wstate->numlevels);
+	Assert(!wstate->trivial_frame);
 
 	cur_row_index = wstate->row_index;
 
-	for (i = 0; i < wstate->numlevels; i++)
-	{
-		level_state = &wstate->level_state[i];
+	level_state = wstate->level_state;
 
-		if (i >= min_level && min_level != -1)
-		{
-			/*
-			 * The level data is still set for the previous row. Remember the
-			 * rank and dense_rank values.
-			 */
-			level_state->prior_rank = level_state->rank;
-			level_state->prior_dense_rank = level_state->dense_rank;
+	/*
+	 * The level data is still set for the previous row. Remember the
+	 * rank and dense_rank values.
+	 */
+	level_state->prior_rank = level_state->rank;
+	level_state->prior_dense_rank = level_state->dense_rank;
 
-			/* Advance level data for first peer in next group. */
-			level_state->group_index++;
-			level_state->rank = 1 + cur_row_index;
-			level_state->dense_rank = 1 + level_state->group_index;
-		}
-	}
+	/* Advance level data for first peer in next group. */
+	level_state->group_index++;
+	level_state->rank = 1 + cur_row_index;
+	level_state->dense_rank = 1 + level_state->group_index;
 }
 
 static int
-initFcinfo(WindowRefExprState * wrxstate, FunctionCallInfoData *fcinfo,
+initFcinfo(WindowFuncExprState *wfxstate, FunctionCallInfoData *fcinfo,
 		   WindowStatePerFunction funcstate, ExprContext *econtext,
 		   bool check_nulls)
 {
@@ -3117,7 +2920,7 @@ initFcinfo(WindowRefExprState * wrxstate, FunctionCallInfoData *fcinfo,
 	MemoryContext oldctx;
 
 	/* If this is an agg, the first arg will be the trans value */
-	if (funcstate->isAgg)
+	if (funcstate->plain_agg)
 		argno = 1;
 	else
 		argno = 0;
@@ -3125,7 +2928,7 @@ initFcinfo(WindowRefExprState * wrxstate, FunctionCallInfoData *fcinfo,
 	/* Switch memory context just once for all args */
 	oldctx = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 
-	foreach(lcarg, wrxstate->args)
+	foreach(lcarg, wfxstate->args)
 	{
 		ExprState  *argstate = (ExprState *)lfirst(lcarg);
 
@@ -3149,11 +2952,24 @@ add_tuple_to_trans(WindowStatePerFunction funcstate, WindowState * wstate,
 {
 	int			argno;
 	FunctionCallInfoData fcinfo;
+	ExprState  *filter = funcstate->wfuncstate->aggfilter;
+
+	/* Skip anything FILTERed out */
+	if (filter)
+	{
+		bool		isnull;
+		Datum		res;
+
+		res = ExecEvalExprSwitchContext(filter, econtext,
+										&isnull, NULL);
+		if (isnull || !DatumGetBool(res))
+			return;
+	}
 
 	/* Evaluate function arguments, save in fcinfo. */
-	argno = initFcinfo(funcstate->wrxstate, &fcinfo, funcstate, econtext, check_nulls);
+	argno = initFcinfo(funcstate->wfuncstate, &fcinfo, funcstate, econtext, check_nulls);
 
-	if (funcstate->isAgg)
+	if (funcstate->plain_agg)
 	{
 		funcstate->aggTransValue =
 			invoke_agg_trans_func(&(funcstate->transfn),
@@ -3170,21 +2986,21 @@ add_tuple_to_trans(WindowStatePerFunction funcstate, WindowState * wstate,
 	else	/* ordinary window function */
 	{
 		InitFunctionCallInfoData(fcinfo,
-								 &funcstate->windowfn,
+								 &funcstate->flinfo,
 								 argno,
-								 (void *)funcstate->wrxstate,
+								 (void *) funcstate->wfuncstate,
 								 NULL);
-		if (IS_LEAD_LAG(funcstate->wrxstate->winkind) ||
-			IS_LAST_VALUE(funcstate->wrxstate->winkind) ||
-			(IS_FIRST_VALUE(funcstate->wrxstate->winkind) &&
+		if (IS_LEAD_LAG(funcstate->wfuncstate->winkind) ||
+			IS_LAST_VALUE(funcstate->wfuncstate->winkind) ||
+			(IS_FIRST_VALUE(funcstate->wfuncstate->winkind) &&
 			 funcstate->aggNoTransValue))
 		{
 			int			argno = 1;
 
 			funcstate->aggTransValue =
 				datumCopyWithMemManager(0, fcinfo.arg[argno],
-									 funcstate->wrxstate->argtypbyval[argno],
-										funcstate->wrxstate->argtyplen[argno],
+									 funcstate->wfuncstate->argtypbyval[argno],
+										funcstate->wfuncstate->argtyplen[argno],
 										&(wstate->mem_manager));
 			funcstate->aggTransValueIsNull = fcinfo.argnull[argno];
 			funcstate->aggNoTransValue = false;
@@ -3206,20 +3022,20 @@ add_tuple_to_trans(WindowStatePerFunction funcstate, WindowState * wstate,
 static void
 invokeTrivialFuncs(WindowState * wstate, bool *found)
 {
+	WindowStatePerLevel level_state = wstate->level_state;
 	int			funcno;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
 
 	for (funcno = 0; funcno < wstate->numfuncs; funcno++)
 	{
 		WindowStatePerFunction funcstate = &wstate->func_state[funcno];
-		WindowStatePerLevel level_state = funcstate->wlevel;
 
 		if (funcstate->trivial_frame)
 		{
 			econtext->ecxt_outertuple = wstate->curslot;
 			add_tuple_to_trans(funcstate, wstate, econtext, false);
 
-			if (funcstate->isAgg)
+			if (funcstate->plain_agg)
 			{
 				funcstate->final_aggTransValue = funcstate->aggTransValue;
 				funcstate->final_aggTransValueIsNull = funcstate->aggTransValueIsNull;
@@ -3707,13 +3523,11 @@ adjustEdges(WindowFrameBuffer buffer,
  * non-trivial window functions.
  */
 static void
-invokeNonTrivialFuncs(WindowState * wstate)
+invokeNonTrivialFuncs(WindowState *wstate)
 {
-	int			level;
-
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		computeFrameValue(level_state,
 						  wstate,
@@ -3740,7 +3554,7 @@ finaliseFuncs(WindowState * wstate)
 
 		/* Evaluate function arguments, save in fcinfo. */
 
-		if (funcstate->isAgg)
+		if (funcstate->plain_agg)
 		{
 			Datum	   *vals = econtext->ecxt_aggvalues;
 			bool	   *isnulls = econtext->ecxt_aggnulls;
@@ -4377,10 +4191,9 @@ fetchCurrentRow(WindowState * wstate)
 {
 	bool		found = false;
 	WindowInputBuffer buffer = wstate->input_buffer;
-	Window	   *window = (Window *) wstate->ps.plan;
+	WindowAgg  *window = (WindowAgg *) wstate->ps.plan;
 	bool		has_prior_tuple = false;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
-	int			level;
 
 	if (buffer != NULL)
 	{
@@ -4418,7 +4231,7 @@ fetchCurrentRow(WindowState * wstate)
 		if (buffer == NULL)
 		{
 			/* The first tuple will not break any keys. */
-			wstate->cur_slot_key_break = wstate->numlevels;
+			wstate->cur_slot_key_break = wstate->trivial_frame ? 0 : 1;
 			ntuplestore_acc_seek_first(wstate->input_buffer->current_row_reader);
 			ntuplestore_acc_seek_first(wstate->input_buffer->reader);
 		}
@@ -4455,25 +4268,24 @@ fetchCurrentRow(WindowState * wstate)
 	if (has_prior_tuple)
 	{
 		wstate->cur_slot_part_break =
-			(window->numPartCols &&
+			(window->partNumCols &&
 			 (!execTuplesMatch(wstate->curslot, wstate->priorslot,
-							   window->numPartCols, window->partColIdx,
+							   window->partNumCols, window->partColIdx,
 							   wstate->eqfunctions,
 							   econtext->ecxt_per_tuple_memory)));
 		if (wstate->cur_slot_part_break)
 			wstate->input_buffer->part_break = true;
 		else
 		{
-			int			level = 0;
 			bool		match = true;
 
 			/*
 			 * Process ordering partial key that breaks. We also increment the
 			 * peer_count.
 			 */
-			for (level = 0; level < wstate->numlevels; level++)
+			if (!wstate->trivial_frame)
 			{
-				WindowStatePerLevel lvl = &wstate->level_state[level];
+				WindowStatePerLevel lvl = wstate->level_state;
 
 				match = execTuplesMatch(wstate->curslot, wstate->priorslot,
 										lvl->numSortCols,
@@ -4481,19 +4293,17 @@ fetchCurrentRow(WindowState * wstate)
 										lvl->eqfunctions,
 										econtext->ecxt_per_tuple_memory);
 				if (!match)
-				{
-					wstate->cur_slot_key_break = level;
-					break;
-				}
-				lvl->peer_index++;
+					wstate->cur_slot_key_break = 0;
+				else
+					lvl->peer_index++;
 			}
 		}
 	}
 
 	wstate->row_index++;
-	if (wstate->cur_slot_key_break != -1 &&
-		wstate->cur_slot_key_break < wstate->numlevels)
-		advanceKeyLevelState(wstate, wstate->cur_slot_key_break);
+	if (wstate->cur_slot_key_break == 0 &&
+		!wstate->trivial_frame)
+		advanceKeyLevelState(wstate);
 
 	/*
 	 * If this tuple breaks the partition key, re-initialize the state.
@@ -4510,9 +4320,9 @@ fetchCurrentRow(WindowState * wstate)
 	 * We also adjust the trailing edge and the leading edge to the frame buffer
 	 * based on these new edge values.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		if (level_state->has_delay_lead)
 		{
@@ -4570,7 +4380,7 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 {
 	WindowInputBuffer buffer = wstate->input_buffer;
 	bool		found = false;
-	Window	   *window = (Window *) wstate->ps.plan;
+	WindowAgg  *window = (WindowAgg *) wstate->ps.plan;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
 	bool		has_prior_tuple = false;
 
@@ -4619,9 +4429,9 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 	if (!TupIsNull(wstate->priorslot))
 	{
 		wstate->cur_slot_part_break =
-			(window->numPartCols &&
+			(window->partNumCols &&
 			 (!execTuplesMatch(wstate->spare, wstate->priorslot,
-							   window->numPartCols, window->partColIdx,
+							   window->partNumCols, window->partColIdx,
 							   wstate->eqfunctions,
 							   econtext->ecxt_per_tuple_memory)));
 
@@ -4630,16 +4440,15 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 
 		else
 		{
-			int			level = 0;
 			bool		match;
 
 			/*
 			 * Process ordering partial key that breaks. We also increment the
 			 * peer_index.
 			 */
-			for (level = 0; level < wstate->numlevels; level++)
+			if (!wstate->trivial_frame)
 			{
-				WindowStatePerLevel lvl = &wstate->level_state[level];
+				WindowStatePerLevel lvl = wstate->level_state;
 
 				match = execTuplesMatch(wstate->spare, wstate->priorslot,
 										lvl->numSortCols,
@@ -4647,12 +4456,9 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 										lvl->eqfunctions,
 										econtext->ecxt_per_tuple_memory);
 				if (!match)
-				{
-					wstate->cur_slot_key_break = level;
-					break;
-				}
-
-				lvl->peer_count++;
+					wstate->cur_slot_key_break = 0;
+				else
+					lvl->peer_count++;
 			}
 		}
 	}
@@ -4671,7 +4477,6 @@ ExecWindow(WindowState * wstate)
 	TupleTableSlot *next_tupleslot;
 	TupleTableSlot *resultSlot;
 	ExprContext *econtext;
-	int			level;
 	ExprDoneCond isDone;
 	bool		last_peer = false;
 
@@ -4697,20 +4502,21 @@ ExecWindow(WindowState * wstate)
 	/*
 	 * Increment the current_row in the frame buffer for each key level.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		if (level_state->empty_frame &&
 			!level_state->has_delay_bound)
-			continue;
-
-		if (!level_state->trivial_frames_only)
+		{
+			/* do nothing */
+		}
+		else if (!level_state->trivial_frames_only)
 		{
 			if ((wstate->input_buffer->num_tuples > 1) &&
 				(EDGE_IS_ROWS(level_state) ||
 				 (wstate->cur_slot_key_break != -1 &&
-				  level >= wstate->cur_slot_key_break)))
+				  0 >= wstate->cur_slot_key_break)))
 			{
 				econtext->ecxt_outertuple = wstate->curslot;
 				incrementCurrentRow(level_state->frame_buffer, wstate);
@@ -4769,7 +4575,7 @@ static void
 resetTransValue(WindowStatePerFunction funcstate,
 				WindowState * wstate)
 {
-	if (funcstate->isAgg)
+	if (funcstate->plain_agg)
 	{
 		freeTransValue(&funcstate->aggTransValue,
 					   funcstate->aggTranstypeByVal,
@@ -4798,11 +4604,11 @@ resetTransValue(WindowStatePerFunction funcstate,
 	else
 	{
 		int			argno = 1;
-		WindowRefExprState *wrxstate = funcstate->wrxstate;
+		WindowFuncExprState *wfxstate = funcstate->wfuncstate;
 
-		if (wrxstate->argtypbyval)
+		if (wfxstate->argtypbyval)
 			freeTransValue(&funcstate->aggTransValue,
-						   wrxstate->argtypbyval[argno],
+						   wfxstate->argtypbyval[argno],
 						   &funcstate->aggTransValueIsNull,
 						   &funcstate->aggNoTransValue,
 						   true);
@@ -4847,146 +4653,146 @@ resetTransValues(WindowStatePerLevel level_state,
 static void
 processTupleSlot(WindowState * wstate, TupleTableSlot * slot, bool last_peer)
 {
-	int			level;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
+	WindowStatePerLevel level_state = wstate->level_state;
+	ListCell   *lc;
+	bool		adv_peercount = false;
 
-	for (level = 0; level < wstate->numlevels; level++)
+	if (wstate->trivial_frame)
+		return;
+
+	/*
+	 * For non-delayed frames, we can simply ignore this level. However,
+	 * for delayed frames, we still need to store the intermediate results
+	 * because they may be needed later.
+	 */
+	if (level_state->empty_frame &&
+		!level_state->has_delay_bound)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
-		ListCell   *lc;
-		bool		adv_peercount = false;
+		/* do nothing */
+		return;
+	}
 
+	if (level_state->trivial_frames_only)
+		return;
+
+	bool		write_pre_value = false;
+
+	if (wstate->input_buffer->num_tuples > 1 &&
+		wstate->cur_slot_is_new)
+	{
+		if (EDGE_IS_ROWS(level_state) || level_state->has_only_trans_funcs)
+			write_pre_value = true;
+		else if (wstate->cur_slot_part_break || TupIsNull(slot))
+			write_pre_value = true;
+		else if ((wstate->cur_slot_key_break != -1 &&
+				  0 >= wstate->cur_slot_key_break))
+			write_pre_value = true;
+	}
+
+	/*
+	 * If this tuple breaks the order by key in this level, we write
+	 * out previous aggregate values if any.
+	 */
+	if (write_pre_value)
+	{
 		/*
-		 * For non-delayed frames, we can simply ignore this level. However,
-		 * for delayed frames, we still need to store the intermediate results
-		 * because they may be needed later.
+		 * If there is a function that requires peer counts, we need
+		 * to compute its preliminary value before appending it to the
+		 * frame buffer.
 		 */
-		if (level_state->empty_frame &&
-			!level_state->has_delay_bound)
-			continue;
-
-		if (!level_state->trivial_frames_only)
+		if (level_state->need_peercount)
 		{
-			bool		write_pre_value = false;
-
-			if (wstate->input_buffer->num_tuples > 1 &&
-				wstate->cur_slot_is_new)
-			{
-				if (EDGE_IS_ROWS(level_state) || level_state->has_only_trans_funcs)
-					write_pre_value = true;
-				else if (wstate->cur_slot_part_break || TupIsNull(slot))
-					write_pre_value = true;
-				else if ((wstate->cur_slot_key_break != -1 &&
-						  level >= wstate->cur_slot_key_break))
-					write_pre_value = true;
-			}
-
-			/*
-			 * If this tuple breaks the order by key in this level, we write
-			 * out previous aggregate values if any.
-			 */
-			if (write_pre_value)
-			{
-				/*
-				 * If there is a function that requires peer counts, we need
-				 * to compute its preliminary value before appending it to the
-				 * frame buffer.
-				 */
-				if (level_state->need_peercount)
-				{
-					foreach(lc, level_state->level_funcs)
-					{
-						WindowStatePerFunction funcstate =
-						(WindowStatePerFunction) lfirst(lc);
-
-						if (funcstate->winpeercount)
-							add_tuple_to_trans(funcstate, wstate, econtext, false);
-					}
-				}
-
-				/*
-				 * Set econtext->ecxt_outertuple because the range frame needs
-				 * this for order keys.
-				 */
-				econtext->ecxt_outertuple = wstate->priorslot;
-				appendToFrameBuffer(level_state, wstate, last_peer);
-
-				/*
-				 * Reset the transition value for those functions which has
-				 * preliminary functions, but not inverse preliminary
-				 * functions.
-				 */
-				foreach(lc, level_state->level_funcs)
-				{
-					WindowStatePerFunction funcstate = (WindowStatePerFunction) lfirst(lc);
-
-					if (funcstate->isAgg &&
-						!funcstate->cumul_frame &&
-						!OidIsValid(funcstate->invprelimfn_oid) &&
-						OidIsValid(funcstate->prelimfn_oid))
-					{
-						resetTransValue(funcstate, wstate);
-					}
-					else if ((IS_LEAD_LAG(funcstate->wrxstate->winkind) ||
-							  IS_FIRST_LAST(funcstate->wrxstate->winkind)) &&
-							 !last_peer)
-					{
-						resetTransValue(funcstate, wstate);
-					}
-				}
-			}
-
-			/*
-			 * If this slot causes the partition key to break, we don't add
-			 * this tuple to the transition value.
-			 */
-			if (wstate->cur_slot_part_break || TupIsNull(slot))
-			{
-				if (write_pre_value)
-					level_state->agg_filled = false;
-
-				continue;
-			}
-
 			foreach(lc, level_state->level_funcs)
 			{
 				WindowStatePerFunction funcstate =
-				(WindowStatePerFunction) lfirst(lc);
-				ExprContext *econtext = wstate->ps.ps_ExprContext;
+					(WindowStatePerFunction) lfirst(lc);
 
-				if (funcstate->trivial_frame)
-					continue;
-
-				if (HAS_ONLY_TRANS_FUNC(funcstate))
-					continue;
-
-				/*
-				 * Increment the values for peer counts. There may be more
-				 * than one such function in one key level. We should catch
-				 * this in the earlier stage, but in case we didn't, we only
-				 * do this once.
-				 */
-				if (!adv_peercount && funcstate->winpeercount)
-				{
-					if (wstate->cur_slot_is_new &&
-						wstate->cur_slot_key_break != -1 &&
-						wstate->cur_slot_key_break < wstate->numlevels)
-					{
-						advancePeerCount(level_state, level, wstate->cur_slot_key_break);
-					}
-
-					adv_peercount = true;
-				}
-				else
-				{
-					/* Add this tuple to its transition value */
-					econtext->ecxt_outertuple = slot;
-
-					add_tuple_to_trans(funcstate, wstate, econtext, true);
-
-					level_state->agg_filled = true;
-				}
+				if (funcstate->winpeercount)
+					add_tuple_to_trans(funcstate, wstate, econtext, false);
 			}
+		}
+
+		/*
+		 * Set econtext->ecxt_outertuple because the range frame needs
+		 * this for order keys.
+		 */
+		econtext->ecxt_outertuple = wstate->priorslot;
+		appendToFrameBuffer(level_state, wstate, last_peer);
+
+		/*
+		 * Reset the transition value for those functions which has
+		 * preliminary functions, but not inverse preliminary
+		 * functions.
+		 */
+		foreach(lc, level_state->level_funcs)
+		{
+			WindowStatePerFunction funcstate = (WindowStatePerFunction) lfirst(lc);
+
+			if (funcstate->plain_agg &&
+				!funcstate->cumul_frame &&
+				!OidIsValid(funcstate->invprelimfn_oid) &&
+				OidIsValid(funcstate->prelimfn_oid))
+			{
+				resetTransValue(funcstate, wstate);
+			}
+			else if ((IS_LEAD_LAG(funcstate->wfuncstate->winkind) ||
+					  IS_FIRST_LAST(funcstate->wfuncstate->winkind)) &&
+					 !last_peer)
+			{
+				resetTransValue(funcstate, wstate);
+			}
+		}
+	}
+
+	/*
+	 * If this slot causes the partition key to break, we don't add
+	 * this tuple to the transition value.
+	 */
+	if (wstate->cur_slot_part_break || TupIsNull(slot))
+	{
+		if (write_pre_value)
+			level_state->agg_filled = false;
+
+		return;
+	}
+
+	foreach(lc, level_state->level_funcs)
+	{
+		WindowStatePerFunction funcstate =
+			(WindowStatePerFunction) lfirst(lc);
+		ExprContext *econtext = wstate->ps.ps_ExprContext;
+
+		if (funcstate->trivial_frame)
+			continue;
+
+		if (HAS_ONLY_TRANS_FUNC(funcstate))
+			continue;
+
+		/*
+		 * Increment the values for peer counts. There may be more
+		 * than one such function in one key level. We should catch
+		 * this in the earlier stage, but in case we didn't, we only
+		 * do this once.
+		 */
+		if (!adv_peercount && funcstate->winpeercount)
+		{
+			if (wstate->cur_slot_is_new &&
+				wstate->cur_slot_key_break == 0)
+			{
+				advancePeerCount(level_state);
+			}
+
+			adv_peercount = true;
+		}
+		else
+		{
+			/* Add this tuple to its transition value */
+			econtext->ecxt_outertuple = slot;
+
+			add_tuple_to_trans(funcstate, wstate, econtext, true);
+
+			level_state->agg_filled = true;
 		}
 	}
 }
@@ -5000,7 +4806,6 @@ processTupleSlot(WindowState * wstate, TupleTableSlot * slot, bool last_peer)
 static bool
 checkOutputReady(WindowState * wstate)
 {
-	int			level;
 	ExprContext *econtext = wstate->ps.ps_ExprContext;
 
 	econtext->ecxt_outertuple = wstate->curslot;
@@ -5008,12 +4813,12 @@ checkOutputReady(WindowState * wstate)
 	if (wstate->input_buffer->part_break)
 		return true;
 
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		if (level_state->trivial_frames_only)
-			continue;
+			return true;
 
 		if (EDGE_IS_ROWS(level_state))
 		{
@@ -5388,15 +5193,14 @@ setEmptyFrame(WindowStatePerLevel level_state,
  */
 
 static void
-init_frames(WindowState * wstate)
+init_frames(WindowState *wstate)
 {
-	int			level;
 	ListCell   *lc;
 	int			col_no;
 
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 		int			ncols;
 
 		foreach(lc, level_state->level_funcs)
@@ -5404,8 +5208,8 @@ init_frames(WindowState * wstate)
 			WindowStatePerFunction funcstate =
 				(WindowStatePerFunction) lfirst(lc);
 
-			if (!funcstate->isAgg && !funcstate->allowframe &&
-				!IS_LEAD_LAG(funcstate->wrxstate->winkind) &&
+			if (!funcstate->plain_agg && !funcstate->allowframe &&
+				!IS_LEAD_LAG(funcstate->wfuncstate->winkind) &&
 				!funcstate->winpeercount)
 			{
 				funcstate->trivial_frame = true;
@@ -5416,7 +5220,7 @@ init_frames(WindowState * wstate)
 			 * with no exclusion clause OR it is a window function without a
 			 * frame.
 			 */
-			if (funcstate->isAgg &&
+			if (funcstate->plain_agg &&
 				(level_state->frameOptions & FRAMEOPTION_START_UNBOUNDED_PRECEDING) != 0 &&
 				(level_state->frameOptions & FRAMEOPTION_END_CURRENT_ROW) != 0)
 			{
@@ -5583,15 +5387,15 @@ init_frames(WindowState * wstate)
 	 *
 	 * Also initialize the transition values for functions in this level.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
 		bool		trivial_frames_only = true;
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		foreach(lc, level_state->level_funcs)
 		{
 			WindowStatePerFunction funcstate = (WindowStatePerFunction)
-			lfirst(lc);
+				lfirst(lc);
 
 			if (!funcstate->trivial_frame)
 			{
@@ -5599,6 +5403,7 @@ init_frames(WindowState * wstate)
 				break;
 			}
 		}
+
 		level_state->trivial_frames_only = trivial_frames_only;
 
 		resetTransValues(level_state, wstate);
@@ -5609,9 +5414,9 @@ init_frames(WindowState * wstate)
 	 * level are aggregate functions that have no preliminary functions or
 	 * inverse preliminary functions.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 		bool		has_only_trans_funcs = false;
 		int			funcno = 0;
 
@@ -5648,9 +5453,9 @@ init_frames(WindowState * wstate)
 	 * don't need to do pallocs/pfrees every time we read an entry from the
 	 * frame buffer.
 	 */
-	for (level = 0; level < wstate->numlevels; level++)
+	if (!wstate->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &wstate->level_state[level];
+		WindowStatePerLevel level_state = wstate->level_state;
 
 		level_state->curr_entry_buf = createFrameBufferEntry(level_state);
 		level_state->trail_entry_buf = createFrameBufferEntry(level_state);
@@ -5939,7 +5744,7 @@ windowBufferEndScan(WindowBufferCursor cursor)
  * -----------------
  */
 WindowState *
-ExecInitWindow(Window * node, EState *estate, int eflags)
+ExecInitWindow(WindowAgg * node, EState *estate, int eflags)
 {
 	WindowState *wstate;
 	Plan	   *outerPlan;
@@ -5968,13 +5773,13 @@ ExecInitWindow(Window * node, EState *estate, int eflags)
 	/*
 	 * Initialize child expressions.
 	 *
-	 * ExecInitExpr adds WindowRefExprState nodes it encounters to the wrxstates
+	 * ExecInitExpr adds WindowFuncExprState nodes it encounters to the wfxstates
 	 * list.
 	 */
 	wstate->ps.targetlist = (List *)
 		ExecInitExpr((Expr *)node->plan.targetlist,
 					 (PlanState *) wstate);
-	numrefs = list_length(wstate->wrxstates);
+	numrefs = list_length(wstate->wfxstates);
 
 	/* Initialize child nodes. */
 	outerPlan = outerPlan(node);
@@ -5988,16 +5793,17 @@ ExecInitWindow(Window * node, EState *estate, int eflags)
 	desc = ExecGetResultType(wstate->ps.lefttree);
 
 	/* Precompute fmgr lookup data for partition key equality function. */
-	if (node->numPartCols > 0)
+	if (node->partNumCols > 0)
 	{
 		wstate->eqfunctions =
-			execTuplesMatchPrepare(node->numPartCols,
+			execTuplesMatchPrepare(node->partNumCols,
 								   node->partOperators);
 	}
 	else
 		wstate->eqfunctions = NULL;
 
-	initWindowStatePerLevel(wstate, node);
+	if (!wstate->trivial_frame)
+		initWindowStatePerLevel(wstate, node);
 
 	/*
 	 * Allocate result storage and working storage per window ref. (Later we
@@ -6027,7 +5833,7 @@ ExecInitWindow(Window * node, EState *estate, int eflags)
 
 
 int
-ExecCountSlotsWindow(Window * node)
+ExecCountSlotsWindow(WindowAgg *node)
 {
 	return ExecCountSlotsNode(outerPlan(node)) +
 		ExecCountSlotsNode(innerPlan(node)) +
@@ -6037,11 +5843,9 @@ ExecCountSlotsWindow(Window * node)
 void
 ExecEndWindow(WindowState * node)
 {
-	int			level = 0;
-
-	for (level = 0; level < node->numlevels; level++)
+	if (!node->trivial_frame)
 	{
-		WindowStatePerLevel level_state = &node->level_state[level];
+		WindowStatePerLevel level_state = node->level_state;
 
 		freeFrameBufferEntry(level_state->curr_entry_buf);
 		level_state->curr_entry_buf = NULL;
@@ -6076,7 +5880,7 @@ ExecEndWindow(WindowState * node)
 	if (node->cmpcontext != NULL)
 		MemoryContextDelete(node->cmpcontext);
 
-	if (node->numlevels > 0)
+	if (!node->trivial_frame)
 		pfree(node->level_state);
 	if (node->func_state != NULL)
 		pfree(node->func_state);
@@ -6108,6 +5912,177 @@ ExecReScanWindow(WindowState * node, ExprContext *exprCtxt)
 
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
+
+/*
+ * initialize_peragg
+ *
+ * Almost same as in nodeAgg.c, except we don't support DISTINCT currently.
+ */
+static void
+initialize_peragg(WindowState *winstate, WindowFunc *wfunc,
+				  WindowStatePerFunction funcstate)
+{
+	Oid			inputTypes[FUNC_MAX_ARGS];
+	int			numArguments;
+	HeapTuple	aggTuple;
+	Form_pg_aggregate aggform;
+	Oid			aggtranstype;
+	AclResult	aclresult;
+	Oid			transfn_oid,
+				finalfn_oid,
+				invtransfn_oid,
+				invprelimfn_oid,
+				prelimfn_oid;
+	Expr	   *transfnexpr,
+			   *finalfnexpr,
+			   *invtransfnexpr,
+			   *invprelimfnexpr,
+			   *prelimfnexpr;
+	Datum		textInitVal;
+	int			i;
+	ListCell   *lc;
+
+	numArguments = list_length(wfunc->args);
+
+	i = 0;
+	foreach(lc, wfunc->args)
+	{
+		inputTypes[i++] = exprType((Node *) lfirst(lc));
+	}
+
+	aggTuple = SearchSysCache(AGGFNOID,
+							  ObjectIdGetDatum(wfunc->winfnoid),
+							  0, 0, 0);
+	if (!HeapTupleIsValid(aggTuple))
+		elog(ERROR, "cache lookup failed for aggregate %u",
+			 wfunc->winfnoid);
+	aggform = (Form_pg_aggregate) GETSTRUCT(aggTuple);
+
+	/*
+	 * ExecInitWindowAgg already checked permission to call aggregate function
+	 * ... but we still need to check the component functions
+	 */
+
+	funcstate->transfn_oid = transfn_oid = aggform->aggtransfn;
+	funcstate->finalfn_oid = finalfn_oid = aggform->aggfinalfn;
+	funcstate->invtransfn_oid = invtransfn_oid = aggform->agginvtransfn;
+	funcstate->invprelimfn_oid = invprelimfn_oid = aggform->agginvprelimfn;
+	funcstate->prelimfn_oid = prelimfn_oid = aggform->aggprelimfn;
+
+	/* Check that aggregate owner has permission to call component fns */
+	{
+		Oid			to_check[] = {transfn_oid,
+								  finalfn_oid,
+								  invtransfn_oid,
+								  invprelimfn_oid,
+								  prelimfn_oid};
+		HeapTuple	procTuple;
+		Oid			aggOwner;
+
+		procTuple = SearchSysCache1(PROCOID,
+									ObjectIdGetDatum(wfunc->winfnoid));
+		if (!HeapTupleIsValid(procTuple))
+			elog(ERROR, "cache lookup failed for function %u",
+				 wfunc->winfnoid);
+		aggOwner = ((Form_pg_proc) GETSTRUCT(procTuple))->proowner;
+		ReleaseSysCache(procTuple);
+
+		for (i = 0; i < lengthof(to_check); i++)
+		{
+			if (!OidIsValid(to_check[i]))
+				continue;
+			aclresult = pg_proc_aclcheck(to_check[i], aggOwner,
+										 ACL_EXECUTE);
+			if (aclresult != ACLCHECK_OK)
+				aclcheck_error(aclresult, ACL_KIND_PROC,
+							   get_func_name(to_check[i]));
+		}
+	}
+
+	aggtranstype = resolve_polymorphic_transtype(aggform->aggtranstype,
+												 wfunc->winfnoid,
+												 inputTypes);
+
+	/* build expression trees using actual argument & result types */
+	build_aggregate_fnexprs(inputTypes,
+							numArguments,
+							aggtranstype,
+							wfunc->wintype,
+							transfn_oid,
+							finalfn_oid,
+							prelimfn_oid,
+							invtransfn_oid,
+							invprelimfn_oid,
+							&transfnexpr,
+							&finalfnexpr,
+							&prelimfnexpr,
+							&invtransfnexpr,
+							&invprelimfnexpr);
+
+	fmgr_info(funcstate->transfn_oid, &funcstate->transfn);
+	funcstate->transfn.fn_expr = (Node *) transfnexpr;
+
+	if (OidIsValid(finalfn_oid))
+	{
+		fmgr_info(finalfn_oid, &funcstate->finalfn);
+		funcstate->finalfn.fn_expr = (Node *) finalfnexpr;
+	}
+	if (OidIsValid(invtransfn_oid))
+	{
+		fmgr_info(invtransfn_oid, &funcstate->invtransfn);
+		funcstate->invtransfn.fn_expr = (Node *) invtransfnexpr;
+	}
+	if (OidIsValid(prelimfn_oid))
+	{
+		fmgr_info(prelimfn_oid, &funcstate->prelimfn);
+		funcstate->prelimfn.fn_expr = (Node *) prelimfnexpr;
+	}
+	if (OidIsValid(invprelimfn_oid))
+	{
+		fmgr_info(invprelimfn_oid, &funcstate->invprelimfn);
+		funcstate->invprelimfn.fn_expr = (Node *) invprelimfnexpr;
+	}
+
+	get_typlenbyval(wfunc->wintype,
+					&funcstate->resulttypeLen,
+					&funcstate->resulttypeByVal);
+	get_typlenbyval(aggtranstype,
+					&funcstate->aggTranstypeLen,
+					&funcstate->aggTranstypeByVal);
+
+	/*
+	 * initval is potentially null, so don't try to access it as a struct
+	 * field. Must do it the hard way with SysCacheGetAttr.
+	 */
+	textInitVal = SysCacheGetAttr(AGGFNOID, aggTuple,
+								  Anum_pg_aggregate_agginitval,
+								  &funcstate->aggInitValueIsNull);
+
+	if (funcstate->aggInitValueIsNull)
+		funcstate->aggInitValue = (Datum) 0;
+	else
+		funcstate->aggInitValue = GetAggInitVal(textInitVal,
+												aggtranstype);
+
+	/*
+	 * If the transfn is strict and the initval is NULL, make sure input type
+	 * and transtype are the same (or at least binary-compatible), so that
+	 * it's OK to use the first input value as the initial transValue.  This
+	 * should have been checked at agg definition time, but just in case...
+	 */
+	if (funcstate->transfn.fn_strict && funcstate->aggInitValueIsNull)
+	{
+		if (numArguments < 1 ||
+			!IsBinaryCoercible(inputTypes[0], aggtranstype))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+					 errmsg("aggregate %u needs to have compatible input type and transition type",
+							wfunc->winfnoid)));
+	}
+
+	ReleaseSysCache(aggTuple);
+}
+
 
 /*
  * window_dummy - dummy execution routine for window functions
@@ -6159,7 +6134,7 @@ gp_execution_dbid(PG_FUNCTION_ARGS)
 Datum
 row_number_immed(PG_FUNCTION_ARGS)
 {
-	WindowRefExprState *ref_state = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *ref_state = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 
 	int64		result = 1 + ref_state->windowstate->row_index;
 
@@ -6170,7 +6145,7 @@ row_number_immed(PG_FUNCTION_ARGS)
 /*
  *	RANK() OVER (... ORDER BY s) --> BIGINT
  *
- * Implement RANK for the given WindowRefExprState.
+ * Implement RANK for the given WindowFuncExprState.
  *
  * rank_immed(internal) --> bigint
  */
@@ -6178,10 +6153,9 @@ Datum
 rank_immed(PG_FUNCTION_ARGS)
 {
 	int64		result;
-	WindowRefExprState *ref_state = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *ref_state = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 	WindowState *window_state = ref_state->windowstate;
-	WindowRef  *ref = (WindowRef *) ref_state->xprstate.expr;
-	WindowStatePerLevel level_state = &window_state->level_state[ref->winlevel];
+	WindowStatePerLevel level_state = window_state->level_state;
 
 	/* Don't advance prior_rank here, let the framework do this. */
 
@@ -6194,7 +6168,7 @@ rank_immed(PG_FUNCTION_ARGS)
 /*
  *	DENSE_RANK() OVER (... ORDER BY s) --> BIGINT
  *
- * Implement DENSE_RANK for the given WindowRefExprState.
+ * Implement DENSE_RANK for the given WindowFuncExprState.
  *
  * dense_rank_immed(internal) --> bigint
  */
@@ -6202,10 +6176,9 @@ Datum
 dense_rank_immed(PG_FUNCTION_ARGS)
 {
 	int64		result;
-	WindowRefExprState *ref_state = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *ref_state = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 	WindowState *window_state = ref_state->windowstate;
-	WindowRef  *ref = (WindowRef *) ref_state->xprstate.expr;
-	WindowStatePerLevel level_state = &window_state->level_state[ref->winlevel];
+	WindowStatePerLevel level_state = window_state->level_state;
 
 	/* Don't advance prior_dense_rank here, let the framework do this. */
 
@@ -6218,7 +6191,7 @@ dense_rank_immed(PG_FUNCTION_ARGS)
 /*
  * PERCENT_RANK() OVER (... ORDER BY s) -- FLOAT8
  *
- * Implement rank for the given WindowRefExprState.
+ * Implement rank for the given WindowFuncExprState.
  *
  * rank_immed(internal) --> bigint
  * percent_rank_final(bigint,bigint) --> float8
@@ -6261,7 +6234,7 @@ percent_rank_final(PG_FUNCTION_ARGS)
 /*
  *	CUME_DIST() OVER (... ORDER BY s) --> FLOAT8
  *
- * Implement CUME_DIST for the given WindowRefExprState.
+ * Implement CUME_DIST for the given WindowFuncExprState.
  *
  * cume_dist_prelim(internal) --> bigint
  * cume_dist_final(bigint,bigint) --> float8
@@ -6270,10 +6243,9 @@ Datum
 cume_dist_prelim(PG_FUNCTION_ARGS)
 {
 	int64		result;
-	WindowRefExprState *ref_state = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *ref_state = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 	WindowState *window_state = ref_state->windowstate;
-	WindowRef  *ref = (WindowRef *) ref_state->xprstate.expr;
-	WindowStatePerLevel level_state = &window_state->level_state[ref->winlevel];
+	WindowStatePerLevel level_state = window_state->level_state;
 
 	result = level_state->prior_non_peer_count + (level_state->peer_count + 1);
 
@@ -6320,7 +6292,7 @@ cume_dist_final(PG_FUNCTION_ARGS)
 /*
  *	NTILE(BIGINT) OVER (... ORDER BY s) --> BIGINT
  *
- * Implement NTILE for the given WindowRefExprState.
+ * Implement NTILE for the given WindowFuncExprState.
  *
  * ntile_prelim_int(internal,int) --> bigint[]
  * ntile_prelim_bigint(internal,bigint) --> bigint[]
@@ -6330,7 +6302,7 @@ cume_dist_final(PG_FUNCTION_ARGS)
 
 /* Helper. */
 static ArrayType *
-do_ntile_prelim(WindowRefExprState * ref_state, int64 num_tiles)
+do_ntile_prelim(WindowFuncExprState * ref_state, int64 num_tiles)
 {
 	/*
 	 * Pack row_index from state and the argument num_tiles into a two-element
@@ -6356,7 +6328,7 @@ do_ntile_prelim(WindowRefExprState * ref_state, int64 num_tiles)
 Datum
 ntile_prelim_int(PG_FUNCTION_ARGS)
 {
-	WindowRefExprState *rstate = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *rstate = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 	int64		ntile_arg = (int64) PG_GETARG_INT32(1);
 
 	PG_RETURN_ARRAYTYPE_P(do_ntile_prelim(rstate, ntile_arg));
@@ -6365,7 +6337,7 @@ ntile_prelim_int(PG_FUNCTION_ARGS)
 Datum
 ntile_prelim_bigint(PG_FUNCTION_ARGS)
 {
-	WindowRefExprState *rstate = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *rstate = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 	int64		ntile_arg = PG_GETARG_INT64(1);
 
 	PG_RETURN_ARRAYTYPE_P(do_ntile_prelim(rstate, ntile_arg));
@@ -6375,7 +6347,7 @@ Datum
 ntile_prelim_numeric(PG_FUNCTION_ARGS)
 {
 	int64		num_tiles;
-	WindowRefExprState *rstate = (WindowRefExprState *) PG_GETARG_POINTER(0);
+	WindowFuncExprState *rstate = (WindowFuncExprState *) PG_GETARG_POINTER(0);
 	Numeric		ntile_arg = PG_GETARG_NUMERIC(1);
 
 	/* Truncate ntile_arg to int8, put in num_tiles. */
@@ -6485,11 +6457,11 @@ check_lead_lag_offset(int64 value, bool isnull, bool is_lead)
 static Datum
 lead_lag_internal(PG_FUNCTION_ARGS, bool is_lead, bool *isnull)
 {
-	WindowRefExprState *wrxstate =
-	(WindowRefExprState *) PG_GETARG_POINTER(0);
-	WindowState *wstate = wrxstate->windowstate;
-	WindowStatePerFunction funcstate = &wstate->func_state[wrxstate->funcno];
-	WindowStatePerLevel level_state = funcstate->wlevel;
+	WindowFuncExprState *wfxstate =
+		(WindowFuncExprState *) PG_GETARG_POINTER(0);
+	WindowState *wstate = wfxstate->windowstate;
+	WindowStatePerFunction funcstate = &wstate->func_state[wfxstate->funcno];
+	WindowStatePerLevel level_state = wstate->level_state;
 	WindowBufferCursor cursor;
 	List	   *func_values;
 
@@ -6590,11 +6562,11 @@ lag_generic(PG_FUNCTION_ARGS)
 }
 
 static Datum
-last_value_internal(WindowRefExprState * wrxstate, bool *isnull)
+last_value_internal(WindowFuncExprState *wfxstate, bool *isnull)
 {
-	WindowState *wstate = wrxstate->windowstate;
-	WindowStatePerFunction funcstate = &wstate->func_state[wrxstate->funcno];
-	WindowStatePerLevel level_state = funcstate->wlevel;
+	WindowState *wstate = wfxstate->windowstate;
+	WindowStatePerFunction funcstate = &wstate->func_state[wfxstate->funcno];
+	WindowStatePerLevel level_state = wstate->level_state;
 	FrameBufferEntry *lead_entry = level_state->lead_entry_buf;
 	bool		has_lead_entry = false;
 	WindowValue *lead_value = NULL;
@@ -6674,7 +6646,7 @@ last_value_generic(PG_FUNCTION_ARGS)
 	Datum		d;
 	bool		isnull = false;
 
-	d = last_value_internal((WindowRefExprState *) PG_GETARG_POINTER(0),
+	d = last_value_internal((WindowFuncExprState *) PG_GETARG_POINTER(0),
 							&isnull);
 
 	if (isnull)
@@ -6684,11 +6656,11 @@ last_value_generic(PG_FUNCTION_ARGS)
 }
 
 static Datum
-first_value_internal(WindowRefExprState * wrxstate, bool *isnull)
+first_value_internal(WindowFuncExprState *wfxstate, bool *isnull)
 {
-	WindowState *wstate = wrxstate->windowstate;
-	WindowStatePerFunction funcstate = &wstate->func_state[wrxstate->funcno];
-	WindowStatePerLevel level_state = funcstate->wlevel;
+	WindowState *wstate = wfxstate->windowstate;
+	WindowStatePerFunction funcstate = &wstate->func_state[wfxstate->funcno];
+	WindowStatePerLevel level_state = wstate->level_state;
 	FrameBufferEntry *trail_entry = level_state->trail_entry_buf;
 	bool		has_trail_entry = false;
 	WindowValue *trail_value = NULL;
@@ -6785,7 +6757,7 @@ first_value_generic(PG_FUNCTION_ARGS)
 	Datum		d;
 	bool		isnull = false;
 
-	d = first_value_internal((WindowRefExprState *) PG_GETARG_POINTER(0),
+	d = first_value_internal((WindowFuncExprState *) PG_GETARG_POINTER(0),
 							 &isnull);
 
 	if (isnull)
@@ -6797,7 +6769,7 @@ first_value_generic(PG_FUNCTION_ARGS)
 void
 initGpmonPktForWindow(Plan * planNode, gpmon_packet_t * gpmon_pkt, EState *estate)
 {
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Window));
+	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, WindowAgg));
 
 	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

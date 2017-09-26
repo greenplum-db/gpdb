@@ -217,7 +217,7 @@ CTranslatorScalarToDXL::PdxlnScOpFromExpr
 		{T_MinMaxExpr, &CTranslatorScalarToDXL::PdxlnScMinMaxFromExpr},
 		{T_FuncExpr, &CTranslatorScalarToDXL::PdxlnScFuncExprFromFuncExpr},
 		{T_Aggref, &CTranslatorScalarToDXL::PdxlnScAggrefFromAggref},
-		{T_WindowRef, &CTranslatorScalarToDXL::PdxlnScWindowref},
+		{T_WindowFunc, &CTranslatorScalarToDXL::PdxlnScWindowFunc},
 		{T_NullTest, &CTranslatorScalarToDXL::PdxlnScNullTestFromNullTest},
 		{T_NullIfExpr, &CTranslatorScalarToDXL::PdxlnScNullIfFromExpr},
 		{T_RelabelType, &CTranslatorScalarToDXL::PdxlnScCastFromRelabelType},
@@ -1340,6 +1340,12 @@ CTranslatorScalarToDXL::PdxlnScAggrefFromAggref
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError, GPOS_WSZ_LIT("Aggregate functions with outer references"));
 	}
 
+	// ORCA doesn't support the FILTER clause yet.
+	if (paggref->aggfilter)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Aggregate functions with FILTER"));
+	}
+
 	IMDId *pmdidRetType = CScalarAggFunc::PmdidLookupReturnType(pmdidAgg, (EdxlaggstageNormal == edxlaggstage), m_pmda);
 	IMDId *pmdidResolvedRetType = NULL;
 	if (m_pmda->Pmdtype(pmdidRetType)->FAmbiguous())
@@ -1490,22 +1496,22 @@ CTranslatorScalarToDXL::PdxlnWindowFrameEdgeVal
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorScalarToDXL::PdxlnScWindowref
+//		CTranslatorScalarToDXL::PdxlnScWindowFunc
 //
 //	@doc:
-//		Create a DXL node for a scalar window ref from a GPDB WindowRef
+//		Create a DXL node for a scalar window ref from a GPDB WindowFunc
 //
 //---------------------------------------------------------------------------
 CDXLNode *
-CTranslatorScalarToDXL::PdxlnScWindowref
+CTranslatorScalarToDXL::PdxlnScWindowFunc
 	(
 	const Expr *pexpr,
 	const CMappingVarColId* pmapvarcolid
 	)
 {
-	GPOS_ASSERT(IsA(pexpr, WindowRef));
+	GPOS_ASSERT(IsA(pexpr, WindowFunc));
 
-	const WindowRef *pwindowref = (WindowRef *) pexpr;
+	const WindowFunc *pwindowfunc = (WindowFunc *) pexpr;
 
 	static ULONG rgrgulMapping[][2] =
 		{
@@ -1514,23 +1520,29 @@ CTranslatorScalarToDXL::PdxlnScWindowref
 		{WINSTAGE_ROWKEY, EdxlwinstageRowKey},
 		};
 
+	// ORCA doesn't support the FILTER clause yet.
+	if (pwindowfunc->aggfilter)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Aggregate functions with FILTER"));
+	}
+
 	const ULONG ulArity = GPOS_ARRAY_SIZE(rgrgulMapping);
 	EdxlWinStage edxlwinstage = EdxlwinstageSentinel;
 
 	for (ULONG ul = 0; ul < ulArity; ul++)
 	{
 		ULONG *pulElem = rgrgulMapping[ul];
-		if ((ULONG) pwindowref->winstage == pulElem[0])
+		if ((ULONG) pwindowfunc->winstage == pulElem[0])
 		{
 			edxlwinstage = (EdxlWinStage) pulElem[1];
 			break;
 		}
 	}
 
-	ULONG ulWinSpecPos = (ULONG) pwindowref->winlevel;
+	ULONG ulWinSpecPos = (ULONG) 0;
 	if (m_fQuery)
 	{
-		ulWinSpecPos = (ULONG) pwindowref->winref - 1;
+		ulWinSpecPos = (ULONG) pwindowfunc->winref - 1;
 	}
 
 	GPOS_ASSERT(EdxlwinstageSentinel != edxlwinstage && "Invalid window stage");
@@ -1544,11 +1556,11 @@ CTranslatorScalarToDXL::PdxlnScWindowref
 	CDXLScalarWindowRef *pdxlopWinref = GPOS_NEW(m_pmp) CDXLScalarWindowRef
 													(
 													m_pmp,
-													GPOS_NEW(m_pmp) CMDIdGPDB(pwindowref->winfnoid),
-													GPOS_NEW(m_pmp) CMDIdGPDB(pwindowref->restype),
-													pwindowref->windistinct,
-													pwindowref->winstar,
-													pwindowref->winagg,
+													GPOS_NEW(m_pmp) CMDIdGPDB(pwindowfunc->winfnoid),
+													GPOS_NEW(m_pmp) CMDIdGPDB(pwindowfunc->wintype),
+													pwindowfunc->windistinct,
+													pwindowfunc->winstar,
+													pwindowfunc->winagg,
 													edxlwinstage,
 													ulWinSpecPos
 													);
@@ -1556,7 +1568,7 @@ CTranslatorScalarToDXL::PdxlnScWindowref
 	// create the DXL node holding the scalar aggref
 	CDXLNode *pdxln = GPOS_NEW(m_pmp) CDXLNode(m_pmp, pdxlopWinref);
 
-	TranslateScalarChildren(pdxln, pwindowref->args, pmapvarcolid);
+	TranslateScalarChildren(pdxln, pwindowfunc->args, pmapvarcolid);
 
 	return pdxln;
 }

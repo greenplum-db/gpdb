@@ -26,9 +26,9 @@
  *		typedef struct FormData_pg_proc_callback
  * ----------------
  */
-#define ProcCallbackRelationId	3124
+#define ProcCallbackRelationId	7176
 
-CATALOG(pg_proc_callback,3124) BKI_WITHOUT_OIDS
+CATALOG(pg_proc_callback,7176) BKI_WITHOUT_OIDS
 {
 	regproc	profnoid;		/* oid of the main function */
 	regproc	procallback;	/* oid of the callback function */

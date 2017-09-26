@@ -231,6 +231,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_BOOL_FIELD(hasDynamicFunctions);
+	READ_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(jointree);
 	READ_NODE_FIELD(targetList);
@@ -241,6 +242,7 @@ _readQuery(void)
 	READ_NODE_FIELD(distinctClause);
 	READ_NODE_FIELD(sortClause);
 	READ_NODE_FIELD(scatterClause);
+	READ_BOOL_FIELD(isTableValueSelect);
 	READ_NODE_FIELD(cteList);
 	READ_BOOL_FIELD(hasRecursive);
 	READ_NODE_FIELD(limitOffset);
@@ -260,8 +262,9 @@ _readCurrentOfExpr(void)
 {
 	READ_LOCALS(CurrentOfExpr);
 
-	READ_STRING_FIELD(cursor_name);
 	READ_UINT_FIELD(cvarno);
+	READ_STRING_FIELD(cursor_name);
+	READ_INT_FIELD(cursor_param);
 	READ_OID_FIELD(target_relid);
 
 	READ_DONE();
@@ -799,6 +802,7 @@ _readAggref(void)
 	READ_UINT_FIELD(agglevelsup);
 	READ_BOOL_FIELD(aggstar);
 	READ_BOOL_FIELD(aggdistinct);
+	READ_NODE_FIELD(aggfilter);
 	READ_ENUM_FIELD(aggstage, AggStage);
     READ_NODE_FIELD(aggorder);
 
@@ -1428,6 +1432,7 @@ _readPlannedStmt(void)
 	READ_BOOL_FIELD(canSetTag);
 	READ_BOOL_FIELD(transientPlan);
 	READ_BOOL_FIELD(oneoffPlan);
+	READ_BOOL_FIELD(simplyUpdatable);
 	READ_NODE_FIELD(planTree);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(resultRelations);
@@ -1960,37 +1965,25 @@ _readAgg(void)
 }
 
 /*
- * _readWindowKey
+ * _readWindowAgg
  */
-static WindowKey *
-_readWindowKey(void)
+static WindowAgg *
+_readWindowAgg(void)
 {
-	READ_LOCALS(WindowKey);
-
-	READ_INT_FIELD(numSortCols);
-	READ_INT_ARRAY(sortColIdx, local_node->numSortCols, AttrNumber);
-	READ_OID_ARRAY(sortOperators, local_node->numSortCols);
-	READ_INT_FIELD(frameOptions);
-	READ_NODE_FIELD(startOffset);
-	READ_NODE_FIELD(endOffset);
-
-	READ_DONE();
-}
-
-/*
- * _readWindow
- */
-static Window *
-_readWindow(void)
-{
-	READ_LOCALS(Window);
+	READ_LOCALS(WindowAgg);
 
 	readPlanInfo((Plan *)local_node);
 
-	READ_INT_FIELD(numPartCols);
-	READ_INT_ARRAY(partColIdx, local_node->numPartCols, AttrNumber);
-	READ_OID_ARRAY(partOperators, local_node->numPartCols);
-	READ_NODE_FIELD(windowKeys);
+	READ_INT_FIELD(partNumCols);
+	READ_INT_ARRAY(partColIdx, local_node->partNumCols, AttrNumber);
+	READ_OID_ARRAY(partOperators, local_node->partNumCols);
+
+	READ_INT_FIELD(ordNumCols);
+	READ_INT_ARRAY(ordColIdx, local_node->ordNumCols, AttrNumber);
+	READ_OID_ARRAY(ordOperators, local_node->ordNumCols);
+	READ_INT_FIELD(frameOptions);
+	READ_NODE_FIELD(startOffset);
+	READ_NODE_FIELD(endOffset);
 
 	READ_DONE();
 }
@@ -2154,13 +2147,6 @@ _readFlow(void)
 	READ_ENUM_FIELD(req_move, Movement);
 	READ_ENUM_FIELD(locustype, CdbLocusType);
 	READ_INT_FIELD(segindex);
-
-	READ_INT_FIELD(numSortCols);
-	READ_INT_ARRAY(sortColIdx, local_node->numSortCols, AttrNumber);
-	READ_OID_ARRAY(sortOperators, local_node->numSortCols);
-	READ_BOOL_ARRAY(nullsFirst, local_node->numSortCols);
-
-	READ_INT_FIELD(numOrderbyCols);
 
 	READ_NODE_FIELD(hashExpr);
 	READ_NODE_FIELD(flow_before_req_move);
@@ -2840,11 +2826,8 @@ readNodeBinary(void)
 			case T_Agg:
 				return_value = _readAgg();
 				break;
-			case T_WindowKey:
-				return_value = _readWindowKey();
-				break;
-			case T_Window:
-				return_value = _readWindow();
+			case T_WindowAgg:
+				return_value = _readWindowAgg();
 				break;
 			case T_TableFunctionScan:
 				return_value = _readTableFunctionScan();
@@ -2912,8 +2895,8 @@ readNodeBinary(void)
 			case T_AggOrder:
 				return_value = _readAggOrder();
 				break;
-			case T_WindowRef:
-				return_value = _readWindowRef();
+			case T_WindowFunc:
+				return_value = _readWindowFunc();
 				break;
 			case T_ArrayRef:
 				return_value = _readArrayRef();

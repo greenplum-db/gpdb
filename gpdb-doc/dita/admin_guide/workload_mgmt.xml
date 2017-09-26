@@ -289,31 +289,31 @@
   </topic>
 
   <topic id="topic8" xml:lang="en">
-    <title id="iz153124">Steps to Enable Workload Management</title>
+    <title id="iz153124">Steps to Enable Resource Management</title>
     <body>
-      <p>Enabling and using workload management in Greenplum Database involves the following
+      <p>Enabling and using resource management in Greenplum Database involves the following
         high-level tasks:</p>
       <ol id="ol_ec5_4dy_wq">
-        <li>Configure workload managment. See <xref href="#topic9" format="dita"/>.</li>
+        <li>Configure resource managment. See <xref href="#topic9" format="dita"/>.</li>
         <li id="iz153167">Create the resource queues and set limits on them. See <xref
             href="#topic10" type="topic" format="dita"/> and <xref href="#topic19" format="dita"
           />.</li>
         <li id="iz153172">Assign a queue to one or more user roles. See <xref href="#topic17"
             type="topic" format="dita"/>.</li>
-        <li id="iz153188">Use the workload management system views to monitor and manage the
+        <li id="iz153188">Use the resource management system views to monitor and manage the
           resource queues. See <xref href="#topic22" type="topic" format="dita"/>.</li>
       </ol>
     </body>
   </topic>
   <topic id="topic9" xml:lang="en">
-    <title id="iz139711">Configuring Workload Management</title>
+    <title id="iz139711">Configuring Resource Management</title>
     <body>
       <p>Resource scheduling is enabled by default when you install Greenplum Database, and is
         required for all roles. The default resource queue, <codeph>pg_default</codeph>, has an
         active statement limit of 20, no memory limit, and a medium priority setting. Create
         resource queues for the various types of workloads.</p>
       <section id="iz169600">
-        <title>To configure workload management</title>
+        <title>To configure resource management</title>
         <ol>
           <li id="iz169263">The following parameters are for the general configuration of resource
               queues:<ul id="ul_gln_v3c_34">
@@ -395,7 +395,7 @@
                   available to the operating system is included in the number of CPU cores. For
                   example, virtual CPU cores are included in the number of CPU cores.</p></li>
             </ul></li>
-          <li id="iz171977">If you wish to view or change any of the workload management parameter
+          <li id="iz171977">If you wish to view or change any of the resource management parameter
             values, you can use the <codeph>gpconfig</codeph> utility. </li>
           <li id="iz169849">For example, to see the setting of a particular parameter:<p>
               <codeblock>$ gpconfig --show gp_vmem_protect_limit
@@ -625,7 +625,7 @@ MEMORY_LIMIT='2000MB');
       <title id="iz151568">Viewing Queued Statements and Resource Queue Status</title>
       <body>
         <p>The <codeph>gp_toolkit.gp_resqueue_status</codeph> view allows administrators to see
-          status and activity for a workload management resource queue. It shows how many queries
+          status and activity for a resource queue. It shows how many queries
           are waiting to run and how many queries are currently active in the system from a
           particular resource queue. To see the resource queues created in the system, their limit
           attributes, and their current status:</p>

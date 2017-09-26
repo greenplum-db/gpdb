@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/executor/execCurrent.c,v 1.5 2008/01/01 19:45:49 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/executor/execCurrent.c,v 1.6 2008/03/25 22:42:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -90,7 +90,7 @@ execCurrentOf(CurrentOfExpr *cexpr,
 	else
 	{
 		getCurrentOf(cexpr, econtext, table_oid, current_tid,
-					 &current_gp_segment_id, &current_table_oid);
+					 &current_gp_segment_id, &current_table_oid, NULL);
 	}
 
 	/*
@@ -120,7 +120,8 @@ getCurrentOf(CurrentOfExpr *cexpr,
 			 Oid table_oid,
 			 ItemPointer current_tid,
 			 int *current_gp_segment_id,
-			 Oid *current_table_oid)
+			 Oid *current_table_oid,
+			 char **p_cursor_name)
 {
 	char	   *cursor_name;
 	char	   *table_name;
@@ -146,7 +147,7 @@ getCurrentOf(CurrentOfExpr *cexpr,
 		cursor_name = cexpr->cursor_name;
 	else
 	{
-		if (!econtext)
+		if (!econtext->ecxt_param_list_info)
 			elog(ERROR, "no cursor name information found");
 
 		cursor_name = fetch_param_value(econtext, cexpr->cursor_param);
@@ -186,7 +187,7 @@ getCurrentOf(CurrentOfExpr *cexpr,
 	 * cursor. This flag assures us that gp_segment_id, ctid, and tableoid (if necessary)
 	 * will be available as junk metadata, courtesy of preprocess_targetlist.
 	 */
-	if (!portal->is_simply_updatable)
+	if (!queryDesc->plannedstmt->simplyUpdatable)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_CURSOR_STATE),
 				 errmsg("cursor \"%s\" is not a simply updatable scan of table \"%s\"",
@@ -283,6 +284,9 @@ getCurrentOf(CurrentOfExpr *cexpr,
 					 errmsg("%s is not updatable",
 							get_rel_name_partition(*current_table_oid))));
 	}
+
+	if (p_cursor_name)
+		*p_cursor_name = pstrdup(cursor_name);
 }
 
 /*
@@ -304,8 +308,7 @@ fetch_param_value(ExprContext *econtext, int paramId)
 		{
 			Assert(prm->ptype == REFCURSOROID);
 			/* We know that refcursor uses text's I/O routines */
-			return DatumGetCString(DirectFunctionCall1(textout,
-													   prm->value));
+			return TextDatumGetCString(prm->value);
 		}
 	}
 

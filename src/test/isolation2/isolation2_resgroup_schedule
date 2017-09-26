@@ -14,10 +14,10 @@ test: resgroup/resgroup_alter_memory
 test: resgroup/resgroup_cpu_rate_limit
 test: resgroup/resgroup_alter_memory_spill_ratio
 test: resgroup/resgroup_set_memory_spill_ratio
-test: resgroup/resgroup_func_concurrency
+test: resgroup/resgroup_unlimit_memory_spill_ratio
+test: resgroup/resgroup_cancel_terminate_concurrency
 
 # memory spill tests
-test: resgroup/resgroup_zero_workmem
 #test: resgroup/resgroup_memory_hashagg_spill
 #test: resgroup/resgroup_memory_hashjoin_spill
 test: resgroup/resgroup_memory_materialize_spill

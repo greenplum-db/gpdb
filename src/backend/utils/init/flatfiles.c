@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.30 2008/01/01 19:45:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.32 2008/03/26 21:10:39 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -56,6 +56,7 @@
 #include "utils/guc.h"
 #include "utils/relcache.h"
 #include "utils/resowner.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbmirroredflatfile.h"
 
@@ -461,13 +462,14 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 			 * it is, ignore it, since we can't handle that in startup mode.
 			 *
 			 * It is entirely likely that it's 1-byte format not 4-byte, and
-			 * theoretically possible that it's compressed inline, but textout
-			 * should be able to handle those cases even in startup mode.
+			 * theoretically possible that it's compressed inline, but
+			 * text_to_cstring should be able to handle those cases even in
+			 * startup mode.
 			 */
 			if (VARATT_IS_EXTERNAL(DatumGetPointer(datum)))
 				auth_info[curr_role].rolpassword = pstrdup("");
 			else
-				auth_info[curr_role].rolpassword = DatumGetCString(DirectFunctionCall1(textout, datum));
+				auth_info[curr_role].rolpassword = TextDatumGetCString(datum);
 
 			/* assume passwd has attlen -1 */
 			off = att_addlength_pointer(off, -1, tp + off);

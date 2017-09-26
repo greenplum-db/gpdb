@@ -557,8 +557,8 @@ plannode_type(Plan *p)
 			return "SORT";
 		case T_Agg:
 			return "AGG";
-		case T_Window:
-			return "WINDOW";
+		case T_WindowAgg:
+			return "WINDOWAGG";
 		case T_TableFunctionScan:
 			return "TABLEFUNCTIONSCAN";
 		case T_Unique:

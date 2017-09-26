@@ -159,6 +159,8 @@ expression_tree_walker(Node *node,
 				if (expression_tree_walker((Node *) expr->aggorder,
 										   walker, context))
 					return true;
+				if (walker((Node *) expr->aggfilter, context))
+					return true;
 			}
 			break;
 		case T_AggOrder:
@@ -174,13 +176,15 @@ expression_tree_walker(Node *node,
 					return true;
 			}
 			break;
-		case T_WindowRef:
+		case T_WindowFunc:
 			{
-				WindowRef	   *expr = (WindowRef *) node;
+				WindowFunc   *expr = (WindowFunc *) node;
 
 				/* recurse directly on explicit arg List */
 				if (expression_tree_walker((Node *) expr->args,
 										   walker, context))
+					return true;
+				if (walker((Node *) expr->aggfilter, context))
 					return true;
 				/* don't recurse on implicit args under winspec */
 			}
@@ -499,16 +503,6 @@ expression_tree_walker(Node *node,
 				if (walker((Node *) wc->endOffset, context))
 					return true;
 				return false;
-			}
-			break;
-		case T_WindowKey:
-			{
-				WindowKey *wk = (WindowKey *) node;
-
-				if (walker((Node *) wk->startOffset, context))
-					return true;
-				if (walker((Node *) wk->endOffset, context))
-					return true;
 			}
 			break;
 		case T_PercentileExpr:
@@ -1016,10 +1010,12 @@ plan_tree_walker(Node *node,
 			/* Other fields are simple items and lists of simple items. */
 			break;
 
-		case T_Window:
+		case T_WindowAgg:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
-			if (walker(((Window *) node)->windowKeys, context))
+			if (walker(((WindowAgg *) node)->startOffset, context))
+				return true;
+			if (walker(((WindowAgg *) node)->endOffset, context))
 				return true;
 			break;
 
@@ -1637,6 +1633,8 @@ raw_expression_tree_walker(Node *node, bool (*walker) (), void *context)
 				FuncCall *fcall = (FuncCall *) node;
 
 				if (walker(fcall->args, context))
+					return true;
+				if (walker(fcall->agg_filter, context))
 					return true;
 				/* function name is deemed uninteresting */
 			}

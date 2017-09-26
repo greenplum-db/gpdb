@@ -10,7 +10,7 @@
  *	Win32 (NT4 and newer).
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/dirmod.c,v 1.51.2.5 2009/09/13 18:32:27 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/port/dirmod.c,v 1.52 2008/04/10 16:58:51 mha Exp $
  *
  *-------------------------------------------------------------------------
  */

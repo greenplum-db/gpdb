@@ -14,10 +14,14 @@ class dummy(object):
 
 
 def detectCgroupMountPoint():
-    for dp_info in psutil.disk_partitions(all=True):
-        if dp_info.fstype == 'cgroup':
-            mountpoint = os.path.dirname(dp_info.mountpoint)
-            return mountpoint
+    proc_mounts_path = "/proc/self/mounts"
+    if os.path.exists(proc_mounts_path):
+        with open(proc_mounts_path) as f:
+            for line in f:
+                mntent = line.split()
+                if mntent[2] != "cgroup": continue
+                mount_point = os.path.dirname(mntent[1])
+                return mount_point
     return ""
 
 class cgroup(object):

@@ -171,6 +171,22 @@ SELECT pg_terminate_backend(procpid) FROM pg_stat_activity WHERE waiting_reason=
 DROP ROLE role_concurrency_test;
 DROP RESOURCE GROUP rg_concurrency_test;
 
+-- test8: create a resgroup with concurrency=0
+DROP ROLE IF EXISTS role_concurrency_test;
+-- start_ignore
+DROP RESOURCE GROUP rg_concurrency_test;
+-- end_ignore
+
+CREATE RESOURCE GROUP rg_concurrency_test WITH (concurrency=0, cpu_rate_limit=20, memory_limit=20);
+CREATE ROLE role_concurrency_test RESOURCE GROUP rg_concurrency_test;
+61:SET ROLE role_concurrency_test;
+61&:BEGIN;
+SELECT pg_cancel_backend(procpid) FROM pg_stat_activity WHERE waiting_reason='resgroup' AND rsgname='rg_concurrency_test';
+61<:
+61q:
+DROP ROLE role_concurrency_test;
+DROP RESOURCE GROUP rg_concurrency_test;
+
 --
 -- Test cursors, pl/* functions only take one slot.
 --

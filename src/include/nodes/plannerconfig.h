@@ -52,6 +52,8 @@ typedef struct PlannerConfig
 
 	bool		gp_cte_sharing; /* Indicate whether sharing is to be disabled on any CTEs */
 
+	bool		honor_order_by;
+
 	/* These ones are tricky */
 	//GpRoleValue	Gp_role; // TODO: this one is tricky
 	//int			gp_singleton_segindex; // TODO: change this.

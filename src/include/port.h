@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/port.h,v 1.118 2008/02/29 15:31:33 mha Exp $
+ * $PostgreSQL: pgsql/src/include/port.h,v 1.119 2008/04/10 16:58:51 mha Exp $
  *
  *-------------------------------------------------------------------------
  */

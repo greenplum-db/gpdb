@@ -443,8 +443,10 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <codeph>COPY</codeph> commands:<ul id="ul_bf3_2pk_zs">
           <li><codeph>COPY FROM</codeph> command where the source is <codeph>stdin</codeph></li>
           <li><codeph>COPY TO</codeph> command where the destination is <codeph>stdout</codeph></li>
-        </ul></p><p>For information about resource queues, see "Workload Management with Resource
-        Queues" in the <cite>Greenplum Database Administrator Guide</cite>.</p></section>
+        </ul></p>
+      <p>For information about resource queues, see "Resource Management with Resource Queues" in
+        the <cite>Greenplum Database Administrator Guide</cite>.</p>
+    </section>
     <section id="section7">
       <title>File Formats</title>
       <p> File formats supported by <codeph>COPY</codeph>.</p>

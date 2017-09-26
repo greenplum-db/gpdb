@@ -206,6 +206,9 @@ namespace gpdb {
 	// data access property of given function
 	char CFuncDataAccess(Oid funcid);
 
+	// exec location property of given function
+	char CFuncExecLocation(Oid funcid);
+
 	// trigger name
 	char *SzTriggerName(Oid triggerid);
 
@@ -631,6 +634,11 @@ namespace gpdb {
 	// Does the metadata cache need to be reset (because of a catalog
 	// table has been changed?)
 	bool FMDCacheNeedsReset(void);
+
+	// functions for tracking ORCA memory consumption
+	void *OptimizerAlloc(size_t size);
+
+	void OptimizerFree(void *ptr);
 
 } //namespace gpdb
 

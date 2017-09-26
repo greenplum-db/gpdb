@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_proc.h,v 1.482 2008/01/01 19:45:57 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_proc.h,v 1.487 2008/04/04 18:45:36 tgl Exp $
  *
  * NOTES
  *	  The script catalog/genbki.sh reads this file and generates .bki
@@ -26,7 +26,6 @@
 #define PG_PROC_H
 
 #include "catalog/genbki.h"
-#include "nodes/pg_list.h"
 
 /* ----------------
  *		pg_proc definition.  cpp turns this into
@@ -66,6 +65,7 @@ CATALOG(pg_proc,1255) BKI_BOOTSTRAP
 	text		proconfig[1];	/* procedure-local GUC settings */
 	aclitem		proacl[1];		/* access permissions */
 	char		prodataaccess;	/* data access indicator */
+	char		proexeclocation; /* EXECUTE ON ANY or SEGMENTS */
 } FormData_pg_proc;
 
 /* GPDB added foreign key definitions for gpcheckcat. */
@@ -87,7 +87,7 @@ typedef FormData_pg_proc *Form_pg_proc;
  *		compiler constants for pg_proc
  * ----------------
  */
-#define Natts_pg_proc					26
+#define Natts_pg_proc					27
 #define Anum_pg_proc_proname			1
 #define Anum_pg_proc_pronamespace		2
 #define Anum_pg_proc_proowner			3
@@ -119,6 +119,8 @@ GPDB_COLUMN_DEFAULT(pg_proc_proargdefaults, _null_);
 #define Anum_pg_proc_proacl				25
 #define Anum_pg_proc_prodataaccess		26
 GPDB_COLUMN_DEFAULT(pg_proc_prodataaccess, n);
+#define Anum_pg_proc_proexeclocation	27
+GPDB_COLUMN_DEFAULT(pg_proc_proexeclocation, a);
 /*
  * TODO: It would be nice if we could default prodataaccess to 'c' for all
  * SQL-language functions. But the process_col_defaults.pl script isn't
@@ -687,7 +689,7 @@ DESCR("convert float4 to int4");
 
 DATA(insert OID = 330 (  btgettuple		   PGNSP PGUID 12 1 0 f f t f v 2 16 "2281 2281" _null_ _null_ _null_  btgettuple - _null_ _null_ ));
 DESCR("btree(internal)");
-DATA(insert OID = 636 (  btgetmulti		   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ btgetmulti - _null_ _null_ ));
+DATA(insert OID = 636 (  btgetbitmap		   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ btgetbitmap - _null_ _null_ ));
 DESCR("btree(internal)");
 DATA(insert OID = 331 (  btinsert		   PGNSP PGUID 12 1 0 f f t f v 6 16 "2281 2281 2281 2281 2281 2281" _null_ _null_ _null_	btinsert - _null_ _null_ ));
 DESCR("btree(internal)");
@@ -806,7 +808,7 @@ DESCR("convert char(n) to name");
 
 DATA(insert OID = 440 (  hashgettuple	   PGNSP PGUID 12 1 0 f f t f v 2 16 "2281 2281" _null_ _null_ _null_  hashgettuple - _null_ _null_ ));
 DESCR("hash(internal)");
-DATA(insert OID = 637 (  hashgetmulti	   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ hashgetmulti - _null_ _null_ ));
+DATA(insert OID = 637 (  hashgetbitmap	   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ hashgetbitmap - _null_ _null_ ));
 DESCR("hash(internal)");
 DATA(insert OID = 441 (  hashinsert		   PGNSP PGUID 12 1 0 f f t f v 6 16 "2281 2281 2281 2281 2281 2281" _null_ _null_ _null_	hashinsert - _null_ _null_ ));
 DESCR("hash(internal)");
@@ -1072,6 +1074,8 @@ DESCR("storage manager");
 
 DATA(insert OID = 764 (  lo_import		   PGNSP PGUID 12 1 0 f f t f v 1 26 "25" _null_ _null_ _null_	lo_import - _null_ _null_ ));
 DESCR("large object import");
+DATA(insert OID = 767 (  lo_import		   PGNSP PGUID 12 1 0 f f t f v 2 26 "25 26" _null_ _null_ _null_	lo_import_with_oid - _null_ _null_ ));
+DESCR("large object import");
 DATA(insert OID = 765 (  lo_export		   PGNSP PGUID 12 1 0 f f t f v 2 23 "26 25" _null_ _null_ _null_ lo_export - _null_ _null_ ));
 DESCR("large object export");
 
@@ -1088,7 +1092,7 @@ DESCR("smaller of two");
 
 DATA(insert OID = 774 (  gistgettuple	   PGNSP PGUID 12 1 0 f f t f v 2 16 "2281 2281" _null_ _null_ _null_  gistgettuple - _null_ _null_ ));
 DESCR("gist(internal)");
-DATA(insert OID = 638 (  gistgetmulti	   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ gistgetmulti - _null_ _null_ ));
+DATA(insert OID = 638 (  gistgetbitmap	   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_ gistgetbitmap - _null_ _null_ ));
 DESCR("gist(internal)");
 DATA(insert OID = 775 (  gistinsert		   PGNSP PGUID 12 1 0 f f t f v 6 16 "2281 2281 2281 2281 2281 2281" _null_ _null_ _null_	gistinsert - _null_ _null_ ));
 DESCR("gist(internal)");
@@ -1163,8 +1167,10 @@ DESCR("does not match LIKE expression");
 DATA(insert OID =  860 (  bpchar		   PGNSP PGUID 12 1 0 f f t f i 1 1042 "18" _null_ _null_ _null_	char_bpchar - _null_ _null_ ));
 DESCR("convert char to char()");
 
-DATA(insert OID = 861 ( current_database	   PGNSP PGUID 12 1 0 f f t f i 0 19 "" _null_ _null_ _null_ current_database - _null_ _null_ ));
+DATA(insert OID = 861 ( current_database	   PGNSP PGUID 12 1 0 f f t f s 0 19 "" _null_ _null_ _null_ current_database - _null_ _null_ ));
 DESCR("returns the current database");
+DATA(insert OID = 817 (  current_query        PGNSP PGUID 12 1 0 f f f f v 0 25  "" _null_ _null_ _null_  current_query - _null_ _null_ ));
+DESCR("returns the currently executing query");
 
 DATA(insert OID =  862 (  int4_mul_cash		   PGNSP PGUID 12 1 0 f f t f i 2 790 "23 790" _null_ _null_ _null_ int4_mul_cash - _null_ _null_ ));
 DESCR("multiply");
@@ -2658,6 +2664,10 @@ DATA(insert OID = 1745 ( float4					PGNSP PGUID 12 1 0 f f t f i 1 700 "1700" _n
 DESCR("(internal)");
 DATA(insert OID = 1746 ( float8					PGNSP PGUID 12 1 0 f f t f i 1 701 "1700" _null_ _null_ _null_	numeric_float8 - _null_ _null_ ));
 DESCR("(internal)");
+DATA(insert OID = 1973 ( div					PGNSP PGUID 12 1 0 f f t f i 2 1700 "1700 1700" _null_ _null_ _null_	numeric_div_trunc - _null_ _null_ ));
+DESCR("trunc(x/y)");
+DATA(insert OID = 1980 ( numeric_div_trunc		PGNSP PGUID 12 1 0 f f t f i 2 1700 "1700 1700" _null_ _null_ _null_	numeric_div_trunc - _null_ _null_ ));
+DESCR("trunc(x/y)");
 DATA(insert OID = 2170 ( width_bucket			PGNSP PGUID 12 1 0 f f t f i 4 23 "1700 1700 1700 23" _null_ _null_ _null_	width_bucket_numeric - _null_ _null_ ));
 DESCR("bucket number of operand in equidepth histogram");
 
@@ -2721,6 +2731,10 @@ DATA(insert OID =  1283 ( quote_literal    PGNSP PGUID 12 1 0 f f t f i 1 25 "25
 DESCR("quote a literal for usage in a querystring");
 DATA(insert OID =  1285 ( quote_literal    PGNSP PGUID 14 1 0 f f t f v 1 25 "2283" _null_ _null_ _null_ "select pg_catalog.quote_literal($1::pg_catalog.text)" - _null_ _null_ ));
 DESCR("quote a data value for usage in a querystring");
+DATA(insert OID =  1289 ( quote_nullable   PGNSP PGUID 12 1 0 f f f f i 1 25 "25" _null_ _null_ _null_ quote_nullable - _null_ _null_ ));
+DESCR("quote a possibly-null literal for usage in a querystring");
+DATA(insert OID =  1290 ( quote_nullable   PGNSP PGUID 14 1 0 f f f f v 1 25 "2283" _null_ _null_ _null_ "select pg_catalog.quote_nullable($1::pg_catalog.text)" - _null_ _null_ ));
+DESCR("quote a possibly-null data value for usage in a querystring");
 
 DATA(insert OID = 1798 (  oidin			   PGNSP PGUID 12 1 0 f f t f i 1 26 "2275" _null_ _null_ _null_ oidin - _null_ _null_ ));
 DESCR("I/O");
@@ -4066,7 +4080,7 @@ DESCR("GiST support");
 /* GIN */
 DATA(insert OID = 2730 (  gingettuple	   PGNSP PGUID 12 1 0 f f t f v 2 16 "2281 2281" _null_ _null_ _null_  gingettuple - _null_ _null_ ));
 DESCR("gin(internal)");
-DATA(insert OID = 2731 (  gingetmulti	   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_	gingetmulti - _null_ _null_ ));
+DATA(insert OID = 2731 (  gingetbitmap	   PGNSP PGUID 12 1 0 f f t f v 2 2281 "2281 2281" _null_ _null_ _null_	gingetbitmap - _null_ _null_ ));
 DESCR("gin(internal)");
 DATA(insert OID = 2732 (  gininsert		   PGNSP PGUID 12 1 0 f f t f v 6 16 "2281 2281 2281 2281 2281 2281" _null_ _null_ _null_	gininsert - _null_ _null_ ));
 DESCR("gin(internal)");
@@ -4219,11 +4233,11 @@ DATA(insert OID = 3949 (  json_array_element        PGNSP PGUID 12 1 0  f f t f 
 DESCR("get json array element");
 DATA(insert OID = 3950 (  json_array_element_text   PGNSP PGUID 12 1 0  f f t f i  2 25  "114 23" _null_ _null_ "{from_json,element_index}" json_array_element_text - _null_ _null_ ));
 DESCR("get json array element as text");
-DATA(insert OID = 3951 (  json_extract_path	        PGNSP PGUID 12 1 0 25 f f f t f i  2 0 114 "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path - _null_ _null_ n ));
+DATA(insert OID = 3951 (  json_extract_path	        PGNSP PGUID 12 1 0 25 f f f t f i  2 0 114 "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path - _null_ _null_ n a ));
 DESCR("get value from json with path elements");
 DATA(insert OID = 3952 (  json_extract_path_op      PGNSP PGUID 12 1 0 f f t f i  2 114 "114 1009" _null_ _null_  "{from_json,path_elems}" json_extract_path - _null_ _null_ ));
 DESCR("get value from json with path elements");
-DATA(insert OID = 3953 (  json_extract_path_text	PGNSP PGUID 12 1 0 25 f f f t f i  2 0 25 "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path_text - _null_ _null_ n ));
+DATA(insert OID = 3953 (  json_extract_path_text	PGNSP PGUID 12 1 0 25 f f f t f i  2 0 25 "114 1009" "{114,1009}" "{i,v}" "{from_json,path_elems}" _null_ json_extract_path_text - _null_ _null_ n a ));
 DESCR("get value from json as text with path elements");
 DATA(insert OID = 3954 (  json_extract_path_text_op PGNSP PGUID 12 1 0  f f t f i  2 25 "114 1009" _null_ _null_  "{from_json,path_elems}" json_extract_path_text - _null_ _null_ ));
 DESCR("get value from json as text with path elements");
@@ -4579,13 +4593,13 @@ DATA(insert OID = 2948 (  txid_visible_in_snapshot	PGNSP PGUID 12 1  0 f f t f i
 DESCR("is txid visible in snapshot?");
 
 /* Extensions */
-DATA(insert OID = 3082 (  pg_available_extensions		PGNSP PGUID 12 10 100 0 f f f t t s 0 0 2249 "" "{19,25,25}" "{o,o,o}" "{name,default_version,comment}" _null_ pg_available_extensions _null_ _null_ _null_ n ));
+DATA(insert OID = 3082 (  pg_available_extensions		PGNSP PGUID 12 10 100 0 f f f t t s 0 0 2249 "" "{19,25,25}" "{o,o,o}" "{name,default_version,comment}" _null_ pg_available_extensions _null_ _null_ _null_ n a ));
 DESCR("list available extensions");
-DATA(insert OID = 3083 (  pg_available_extension_versions	PGNSP PGUID 12 10 100 0 f f f t t s 0 0 2249 "" "{19,25,16,16,19,1003,25}" "{o,o,o,o,o,o,o}" "{name,version,superuser,relocatable,schema,requires,comment}" _null_ pg_available_extension_versions _null_ _null_ _null_ n ));
+DATA(insert OID = 3083 (  pg_available_extension_versions	PGNSP PGUID 12 10 100 0 f f f t t s 0 0 2249 "" "{19,25,16,16,19,1003,25}" "{o,o,o,o,o,o,o}" "{name,version,superuser,relocatable,schema,requires,comment}" _null_ pg_available_extension_versions _null_ _null_ _null_ n a ));
 DESCR("list available extension versions");
-DATA(insert OID = 3084 (  pg_extension_update_paths		PGNSP PGUID 12 10 100 0 f f f t t s 1 0 2249 "19" "{19,25,25,25}" "{i,o,o,o}" "{name,source,target,path}" _null_ pg_extension_update_paths _null_ _null_ _null_ n ));
+DATA(insert OID = 3084 (  pg_extension_update_paths		PGNSP PGUID 12 10 100 0 f f f t t s 1 0 2249 "19" "{19,25,25,25}" "{i,o,o,o}" "{name,source,target,path}" _null_ pg_extension_update_paths _null_ _null_ _null_ n a ));
 DESCR("list an extension's version update paths");
-DATA(insert OID = 3086 (  pg_extension_config_dump		PGNSP PGUID 12 1 0 0 f f f t f v 2 0 2278 "2205 25" _null_ _null_ _null_ _null_ pg_extension_config_dump _null_ _null_ _null_ n));
+DATA(insert OID = 3086 (  pg_extension_config_dump		PGNSP PGUID 12 1 0 0 f f f t f v 2 0 2278 "2205 25" _null_ _null_ _null_ _null_ pg_extension_config_dump _null_ _null_ _null_ n a));
 DESCR("flag an extension's table contents to be emitted by pg_dump");
 
 /*
@@ -4594,20 +4608,6 @@ DESCR("flag an extension's table contents to be emitted by pg_dump");
  * easier.
  */
 #include "catalog/pg_proc_gp.h"
-
-/*
- * Ideally this function definition should be in pg_proc.sql and should be
- * generated by running catullus.pl script. But since we cannot specify the
- * PRODATAACCESS column of pg_proc as SEGMENT ('s') using the CREATE FUNCTION
- * syntax, we need to create the DATA statement manually and place it here.
- */
-/* gp_read_error_log(IN exttable text, OUT cmdtime timestamptz, OUT relname text, OUT filename text, OUT linenum int4, OUT bytenum int4, OUT errmsg text, OUT rawdata text, OUT rawbytes bytea) => SETOF record */ 
-DATA(insert OID = 3000 ( gp_read_error_log  PGNSP PGUID 12 1 1000 0 f f f t t v 1 0 2249 "25" "{25,1184,25,25,23,23,25,25,17}" "{i,o,o,o,o,o,o,o,o}" "{exttable,cmdtime,relname,filename,linenum,bytenum,errmsg,rawdata,rawbytes}" _null_ gp_read_error_log _null_ _null_ _null_ s ));
-DESCR("read the error log for the specified external table");
-
-/* gp_truncate_error_log(text) => bool */ 
-DATA(insert OID = 3069 ( gp_truncate_error_log  PGNSP PGUID 12 1 0 0 f f f t f v 1 0 16 "25" _null_ _null_ _null_ _null_ gp_truncate_error_log _null_ _null_ _null_ m ));
-DESCR("truncate the error log for the specified external table");
 
 /*
  * Symbolic values for provolatile column: these indicate whether the result
@@ -4640,37 +4640,9 @@ DESCR("truncate the error log for the specified external table");
 #define PRODATAACCESS_CONTAINS	'c'
 #define PRODATAACCESS_READS		'r'
 #define PRODATAACCESS_MODIFIES	'm'
-/* This is an internal-only data access property. */
-#define PRODATAACCESS_SEGMENT	's'
 
-/*
- * prototypes for functions in pg_proc.c
- */
-extern Oid ProcedureCreate(const char *procedureName,
-				Oid procNamespace,
-				bool replace,
-				bool returnsSet,
-				Oid returnType,
-				Oid languageObjectId,
-				Oid languageValidator,
-				Oid describeFuncOid,
-				const char *prosrc,
-				const char *probin,
-				bool isAgg,
-				bool isWin,
-				bool security_definer,
-				bool isStrict,
-				char volatility,
-				const oidvector *parameterTypes,
-				Datum allParameterTypes,
-				Datum parameterModes,
-				Datum parameterNames,
-				List *parameterDefaults,
-				Datum proconfig,
-				float4 procost,
-				float4 prorows,
-				char prodataaccess);
-
-extern bool function_parse_error_transpose(const char *prosrc);
+#define PROEXECLOCATION_ANY		'a'
+#define PROEXECLOCATION_MASTER	'm'
+#define PROEXECLOCATION_ALL_SEGMENTS 's'
 
 #endif   /* PG_PROC_H */

@@ -265,7 +265,8 @@ tbm_set_instrument(HashBitmap *tbm, struct Instrumentation *instr)
  * tbm_add_tuples - add some tuple IDs to a HashBitmap
  */
 void
-tbm_add_tuples(HashBitmap *tbm, const ItemPointer tids, int ntids)
+tbm_add_tuples(HashBitmap *tbm, const ItemPointer tids, int ntids,
+			   bool recheck)
 {
 	int			i;
 
@@ -303,6 +304,7 @@ tbm_add_tuples(HashBitmap *tbm, const ItemPointer tids, int ntids)
 			bitnum = BITNUM(off - 1);
 		}
 		page->words[wordnum] |= ((tbm_bitmapword) 1 << bitnum);
+		page->recheck |= recheck;
 
 		if (tbm->nentries > tbm->maxentries)
 			tbm_lossify(tbm);
@@ -497,22 +499,12 @@ tbm_intersect_page(HashBitmap *a, PagetableEntry *apage, const HashBitmap *b)
 	else if (tbm_page_is_lossy(b, apage->blockno))
 	{
 		/*
-		 * When the page is lossy in b, we have to mark it lossy in a too. We
-		 * know that no bits need be set in bitmap a, but we do not know which
-		 * ones should be cleared, and we have no API for "at most these
-		 * tuples need be checked".  (Perhaps it's worth adding that?)
+		 * Some of the tuples in 'a' might not satisfy the quals for 'b', but
+		 * because the page 'b' is lossy, we don't know which ones. Therefore
+		 * we mark 'a' as requiring rechecks, to indicate that at most those
+		 * tuples set in 'a' are matches.
 		 */
-		tbm_mark_page_lossy(a, apage->blockno);
-
-		/*
-		 * Note: tbm_mark_page_lossy will have removed apage from a, and may
-		 * have inserted a new lossy chunk instead.  We can continue the same
-		 * seq_search scan at the caller level, because it does not matter
-		 * whether we visit such a new chunk or not: it will have only the bit
-		 * for apage->blockno set, which is correct.
-		 *
-		 * We must return false here since apage was already deleted.
-		 */
+		apage->recheck = true;
 		return false;
 	}
 	else
@@ -530,7 +522,9 @@ tbm_intersect_page(HashBitmap *a, PagetableEntry *apage, const HashBitmap *b)
 				if (apage->words[wordnum] != 0)
 					candelete = false;
 			}
+			apage->recheck |= bpage->recheck;
 		}
+		/* If there is no matching b page, we can just delete the a page */
 		return candelete;
 	}
 }
@@ -773,6 +767,7 @@ tbm_next_page(HashBitmap *tbm, bool *more)
 			nextpage = (PagetableEntry *) palloc(sizeof(PagetableEntry));
 			nextpage->ischunk = true;
 			nextpage->blockno = chunk_blockno;
+			nextpage->recheck = true;
 			tbm->schunkbit++;
 			return nextpage;
 		}

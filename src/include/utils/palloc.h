@@ -64,7 +64,6 @@
 #define CDB_PALLOC_CALLER_ID
 #endif
 
-#include "pg_trace.h"
 #include "utils/memaccounting.h"
 
 /*

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/acl.c,v 1.139 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/acl.c,v 1.140 2008/03/25 22:42:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1344,10 +1344,7 @@ makeaclitem(PG_FUNCTION_ARGS)
 static AclMode
 convert_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	if (pg_strcasecmp(priv_type, "SELECT") == 0)
 		return ACL_SELECT;
@@ -1603,10 +1600,7 @@ try_convert_table_name(text *tablename)
 static AclMode
 convert_table_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string
@@ -1845,10 +1839,7 @@ convert_database_name(text *databasename)
 static AclMode
 convert_database_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string
@@ -2055,11 +2046,8 @@ has_function_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_function_name(text *functionname)
 {
-	char	   *funcname;
+	char	   *funcname = text_to_cstring(functionname);
 	Oid			oid;
-
-	funcname = DatumGetCString(DirectFunctionCall1(textout,
-											 PointerGetDatum(functionname)));
 
 	oid = DatumGetObjectId(DirectFunctionCall1(regprocedurein,
 											   CStringGetDatum(funcname)));
@@ -2079,10 +2067,7 @@ convert_function_name(text *functionname)
 static AclMode
 convert_function_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string
@@ -2274,11 +2259,8 @@ has_language_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_language_name(text *languagename)
 {
-	char	   *langname;
+	char	   *langname = text_to_cstring(languagename);
 	Oid			oid;
-
-	langname = DatumGetCString(DirectFunctionCall1(textout,
-											 PointerGetDatum(languagename)));
 
 	oid = GetSysCacheOid(LANGNAME,
 						 CStringGetDatum(langname),
@@ -2298,10 +2280,7 @@ convert_language_name(text *languagename)
 static AclMode
 convert_language_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string
@@ -2493,11 +2472,8 @@ has_schema_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_schema_name(text *schemaname)
 {
-	char	   *nspname;
+	char	   *nspname = text_to_cstring(schemaname);
 	Oid			oid;
-
-	nspname = DatumGetCString(DirectFunctionCall1(textout,
-											   PointerGetDatum(schemaname)));
 
 	oid = GetSysCacheOid(NAMESPACENAME,
 						 CStringGetDatum(nspname),
@@ -2517,10 +2493,7 @@ convert_schema_name(text *schemaname)
 static AclMode
 convert_schema_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string
@@ -2701,14 +2674,9 @@ has_tablespace_privilege_id_id(PG_FUNCTION_ARGS)
 static Oid
 convert_tablespace_name(text *tablespacename)
 {
-	char	   *spcname;
-	Oid			oid;
+	char	   *spcname = text_to_cstring(tablespacename);
 
-	spcname = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(tablespacename)));
-	oid = get_tablespace_oid(spcname, false);
-
-	return oid;
+	return get_tablespace_oid(spcname, false);
 }
 
 /*
@@ -2718,10 +2686,7 @@ convert_tablespace_name(text *tablespacename)
 static AclMode
 convert_tablespace_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string
@@ -2904,10 +2869,7 @@ pg_has_role_id_id(PG_FUNCTION_ARGS)
 static AclMode
 convert_role_priv_string(text *priv_type_text)
 {
-	char	   *priv_type;
-
-	priv_type = DatumGetCString(DirectFunctionCall1(textout,
-										   PointerGetDatum(priv_type_text)));
+	char	   *priv_type = text_to_cstring(priv_type_text);
 
 	/*
 	 * Return mode from priv_type string

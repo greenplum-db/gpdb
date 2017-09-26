@@ -1093,7 +1093,7 @@ master_standby_dbid(void)
 
 	/*
 	 * SELECT * FROM gp_segment_configuration
-	 *  WHERE content = -1 AND role = 'm'
+	 *  WHERE content = -1 AND role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR
 	 */
 	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
 	ScanKeyInit(&scankey[0],
@@ -1103,7 +1103,7 @@ master_standby_dbid(void)
 	ScanKeyInit(&scankey[1],
 				Anum_gp_segment_configuration_role,
 				BTEqualStrategyNumber, F_CHAREQ,
-				CharGetDatum('m'));
+				CharGetDatum(GP_SEGMENT_CONFIGURATION_ROLE_MIRROR));
 	/* no index */
 	scan = systable_beginscan(rel, InvalidOid, false,
 							  SnapshotNow, 2, scankey);

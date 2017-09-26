@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/postgres.c,v 1.543 2008/02/17 04:21:05 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/postgres.c,v 1.548 2008/04/02 18:31:50 tgl Exp $
  *
  * NOTES
  *	  this is the "main" module of the postgres backend and
@@ -39,6 +39,8 @@
 #ifndef HAVE_GETRUSAGE
 #include "rusagestub.h"
 #endif
+
+#include <pthread.h>
 
 #include "access/distributedlog.h"
 #include "access/printtup.h"
@@ -79,8 +81,7 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/datum.h"
-#include "utils/debugbreak.h"
-#include "utils/session_state.h"
+#include "utils/snapmgr.h"
 #include "mb/pg_wchar.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbsrlz.h"
@@ -93,12 +94,14 @@
 #include "utils/guc.h"
 #include "access/twophase.h"
 #include "postmaster/backoff.h"
-#include <pthread.h>
 #include "utils/resource_manager.h"
 #include "pgstat.h"
 #include "executor/nodeFunctionscan.h"
+
 #include "cdb/cdbfilerep.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "utils/debugbreak.h"
+#include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
 
 extern int	optind;
@@ -116,7 +119,7 @@ CommandDest whereToSendOutput = DestDebug;
 /* flag for logging end of session */
 bool		Log_disconnections = false;
 
-LogStmtLevel log_statement = LOGSTMT_NONE;
+int			log_statement = LOGSTMT_NONE;
 
 /* GUC variable for maximum stack depth (measured in kilobytes) */
 int			max_stack_depth = 100;
@@ -2359,6 +2362,25 @@ exec_bind_message(StringInfo input_message)
 		mySnapshot = CopySnapshot(GetTransactionSnapshot());
 		ActiveSnapshot = mySnapshot;
 	}
+
+	/*
+	 * Prepare to copy stuff into the portal's memory context.  We do all this
+	 * copying first, because it could possibly fail (out-of-memory) and we
+	 * don't want a failure to occur between RevalidateCachedPlan and
+	 * PortalDefineQuery; that would result in leaking our plancache refcount.
+	 */
+	oldContext = MemoryContextSwitchTo(PortalGetHeapMemory(portal));
+
+	/* Copy the plan's query string, if available, into the portal */
+	query_string = psrc->query_string;
+	if (query_string)
+		query_string = pstrdup(query_string);
+
+	/* Likewise make a copy of the statement name, unless it's unnamed */
+	if (stmt_name[0])
+		saved_stmt_name = pstrdup(stmt_name);
+	else
+		saved_stmt_name = NULL;
 
 	/*
 	 * Fetch parameters, if any, and store in the portal's memory context.

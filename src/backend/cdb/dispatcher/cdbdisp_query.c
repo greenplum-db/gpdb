@@ -15,6 +15,8 @@
  */
 
 #include "postgres.h"
+
+#include "access/xact.h"
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
 #include "cdb/cdbconn.h"
@@ -249,7 +251,7 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
 		memcpy(stmt, queryDesc->plannedstmt, sizeof(PlannedStmt));
 		stmt->subplans = list_copy(stmt->subplans);
 
-		stmt->planTree = (Plan *) exec_make_plan_constant(stmt, is_SRI, &cursors);
+		stmt->planTree = (Plan *) exec_make_plan_constant(stmt, queryDesc->estate, is_SRI, &cursors);
 		queryDesc->plannedstmt = stmt;
 
 		queryDesc->ddesc->cursorPositions = (List *) copyObject(cursors);

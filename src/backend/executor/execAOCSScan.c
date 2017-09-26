@@ -14,6 +14,7 @@
  */
 #include "postgres.h"
 
+#include "utils/snapmgr.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "cdb/cdbaocsam.h"

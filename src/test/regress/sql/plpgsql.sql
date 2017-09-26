@@ -2582,6 +2582,94 @@ $$ language plpgsql;
 
 select * from ret_query2(8);
 
+-- test EXECUTE USING
+create function exc_using(int, text) returns int as $$
+declare i int;
+begin
+  for i in execute 'select * from generate_series(1,$1)' using $1+1 loop
+    raise notice '%', i;
+  end loop;
+  execute 'select $2 + $2*3 + length($1)' into i using $2,$1;
+  return i;
+end
+$$ language plpgsql;
+
+select exc_using(5, 'foobar');
+
+-- test FOR-over-cursor
+
+create or replace function forc01() returns void as $$
+declare
+  c cursor(r1 integer, r2 integer)
+       for select * from generate_series(r1,r2) i;
+  c2 cursor
+       for select * from generate_series(41,43) i;
+begin
+  for r in c(5,7) loop
+    raise notice '% from %', r.i, c;
+  end loop;
+  -- again, to test if cursor was closed properly
+  for r in c(9,10) loop
+    raise notice '% from %', r.i, c;
+  end loop;
+  -- and test a parameterless cursor
+  for r in c2 loop
+    raise notice '% from %', r.i, c2;
+  end loop;
+  -- and try it with a hand-assigned name
+  raise notice 'after loop, c2 = %', c2;
+  c2 := 'special_name';
+  for r in c2 loop
+    raise notice '% from %', r.i, c2;
+  end loop;
+  raise notice 'after loop, c2 = %', c2;
+  -- and try it with a generated name
+  -- (which we can't show in the output because it's variable)
+  c2 := null;
+  for r in c2 loop
+    raise notice '%', r.i;
+  end loop;
+  raise notice 'after loop, c2 = %', c2;
+  return;
+end;
+$$ language plpgsql;
+
+select forc01();
+
+-- try updating the cursor's current row
+
+create temp table forc_test as
+  select 1 as distkey, n as i, n as j from generate_series(1,10) n distributed by (distkey);
+
+create or replace function forc01() returns void as $$
+declare
+  c cursor for select * from forc_test;
+begin
+  for r in c loop
+    raise notice '%, %', r.i, r.j;
+    update forc_test set i = i * 100, j = r.j * 2 where current of c;
+  end loop;
+end;
+$$ language plpgsql;
+
+select forc01();
+
+select i, j from forc_test;
+
+drop function forc01();
+
+-- fail because cursor has no query bound to it
+
+create or replace function forc_bad() returns void as $$
+declare
+  c refcursor;
+begin
+  for r in c loop
+    raise notice '%', r.i;
+  end loop;
+end;
+$$ language plpgsql;
+
 -- Test for appropriate cleanup of non-simple expression evaluations
 -- (bug in all versions prior to August 2010)
 

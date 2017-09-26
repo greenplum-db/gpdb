@@ -27,7 +27,6 @@
 #include "cdb/cdbgroup.h"					/* cdbpathlocus_collocates() */
 #include "cdb/cdbpath.h"
 #include "cdb/cdbsetop.h"					/* make_motion... routines */
-#include "cdb/cdbmutate.h" 					/* add_slice_to_motion */
 #include "cdb/cdbvars.h"
 
 int get_plan_share_id(Plan *p)

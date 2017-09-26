@@ -800,27 +800,34 @@ set_plan_refs(PlannerGlobal *glob, Plan *plan, int rtoffset)
 		case T_Agg:
 			set_upper_references(glob, plan, rtoffset);
 			break;
-		case T_Window:
-			set_upper_references(glob, plan, rtoffset);
-			if ( plan->targetlist == NIL )
-				set_dummy_tlist_references(plan, rtoffset);
+		case T_WindowAgg:
 			{
-				indexed_tlist  *subplan_itlist =
-					build_tlist_index(plan->lefttree->targetlist);
+				WindowAgg  *wplan = (WindowAgg *) plan;
+				indexed_tlist  *subplan_itlist;
 
-				/* Fix frame edges */
-				foreach(l, ((Window *) plan)->windowKeys)
+				set_upper_references(glob, plan, rtoffset);
+
+				if ( plan->targetlist == NIL )
+					set_dummy_tlist_references(plan, rtoffset);
+
+				/*
+				 * Fix frame edges. PostgreSQL uses fix_scan_expr here, but
+				 * in GPDB, we allow the ROWS/RANGE expressions to contain
+				 * references to the subplan, so we have to use fix_upper_expr.
+				 */
+				if (wplan->startOffset || wplan->endOffset)
 				{
-					WindowKey *win_key = (WindowKey *)lfirst(l);
+					subplan_itlist =
+						build_tlist_index(plan->lefttree->targetlist);
 
-					win_key->startOffset =
-						fix_upper_expr(glob, win_key->startOffset,
+					wplan->startOffset =
+						fix_upper_expr(glob, wplan->startOffset,
 									   subplan_itlist, rtoffset);
-					win_key->endOffset =
-						fix_upper_expr(glob, win_key->endOffset,
+					wplan->endOffset =
+						fix_upper_expr(glob, wplan->endOffset,
 									   subplan_itlist, rtoffset);
+					pfree(subplan_itlist);
 				}
-				pfree(subplan_itlist);
 			}
 			break;
 		case T_Result:
@@ -1125,10 +1132,10 @@ fix_expr_common(PlannerGlobal *glob, Node *node)
 		record_plan_function_dependency(glob,
 										((Aggref *) node)->aggfnoid);
 	}
-	else if (IsA(node, WindowRef))
+	else if (IsA(node, WindowFunc))
 	{
 		record_plan_function_dependency(glob,
-										((WindowRef *) node)->winfnoid);
+										((WindowFunc *) node)->winfnoid);
 	}
 	else if (IsA(node, FuncExpr))
 	{

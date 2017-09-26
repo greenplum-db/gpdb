@@ -41,7 +41,7 @@ CREATE VIEW memory_result AS
 	FROM(
 		SELECT rsgname,
 		       CASE (j->'key')::text WHEN '"-1"'::text THEN 1 ELSE 0 END AS ismaster,
-		       (j->'value')::text::int AS memory_usage
+		       ((j->'value')->>'used')::int AS memory_usage
 		FROM(
 			SELECT rsgname, row_to_json(json_each(memory_usage::json)) AS j FROM
 			gp_toolkit.gp_resgroup_status

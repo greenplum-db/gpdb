@@ -25,8 +25,8 @@ probe memctxt__alloc(int, int, int, int, int);
 probe memctxt__free(int, int, int, int, int);
 probe memctxt__realloc(int, int, int, int, int);
 
-probe execprocnode__enter(int, int, int, int, int);
-probe execprocnode__exit(int, int, int, int, int);
+probe execprocnode__enter(int, int, int, int);
+probe execprocnode__exit(int, int, int, int);
 
 probe tuplesort__begin(int, int, int);
 probe tuplesort__end(int, int);

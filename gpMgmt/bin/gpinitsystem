@@ -53,7 +53,7 @@ GP_USER=$USER_NAME
 # System table names
 GP_TBL=gp_id
 GP_CONFIG_TBL=gp_segment_configuration
-PG_SYSTEM_FILESPACE=3052
+PG_SYSTEM_FILESPACE_NAME="pg_system"
 unset PG_CONF_ADD_FILE
 #unset QD_PRIMARY_ARRAY QE_PRIMARY_ARRAY QE_MIRROR_ARRAY
 EXIT_STATUS=0
@@ -1346,13 +1346,9 @@ UPDATE_GPCONFIG () {
 		CHK_COUNT=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -A -t -c "SELECT count(*) FROM $GP_CONFIG_TBL WHERE content=${U_CONTENT} AND preferred_role='${U_ROLE}';" 2>/dev/null` >> $LOG_FILE 2>&1
 		ERROR_CHK $? "obtain psql count Master $GP_CONFIG_TBL" 2
 		if [ $CHK_COUNT -eq 0 ]; then
-				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME $U_DIR to system configuration table"
-				env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "INSERT INTO $GP_CONFIG_TBL (dbid, content, role, preferred_role, mode, status, hostname, address, port, replication_port) VALUES (${U_DBID}, ${U_CONTENT}, '${U_ROLE}', '${U_ROLE}', 's', 'u', '${U_HOSTNAME}', '${U_ADDRESS}', ${U_PORT}, ${U_REPLICATION_PORT});" >> $LOG_FILE 2>&1
-				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME to Master gp_segment_configuration" 2
-
-				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME $U_DIR to Master gp_filespace_entry"
-				env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "insert into pg_filespace_entry (fsefsoid, fsedbid, fselocation) values (${PG_SYSTEM_FILESPACE}, ${U_DBID}, '${U_DIR}');" >> $LOG_FILE 2>&1
-				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME $U_DIR to Master pg_filespace_entry" 2
+				LOG_MSG "[INFO]:-Adding $U_CONTENT on $U_HOSTNAME to Master gp_segment_configuration and $U_DIR to gp_filespace_entry"
+				env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "$U_DB" -c "SELECT pg_catalog.gp_add_segment(${U_DBID}::int2, ${U_CONTENT}::int2, '${U_ROLE}', '${U_ROLE}', 's', 'u', ${U_PORT}, '${U_HOSTNAME}', '${U_ADDRESS}', ${U_REPLICATION_PORT}, '{${PG_SYSTEM_FILESPACE_NAME}, ${U_DIR}}');" >> $LOG_FILE 2>&1
+				ERROR_CHK $? "add $U_CONTENT on $U_HOSTNAME to Master gp_segment_configuration and $U_DIR to pg_filespace_entry" 2
 		else
 				LOG_MSG "[INFO]:-Content $U_CONTENT already exists in gp_segment_configuration system table"
 		fi

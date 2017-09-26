@@ -1788,6 +1788,10 @@ CTranslatorRelcacheToDXL::LookupFuncProps
 	CHAR cFuncDataAccess = gpdb::CFuncDataAccess(oidFunc);
 	*pefda = EFuncDataAccess(cFuncDataAccess);
 
+	CHAR cFuncExecLocation = gpdb::CFuncExecLocation(oidFunc);
+	if (cFuncExecLocation != PROEXECLOCATION_ANY)
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("unsupported exec location"));
+
 	*fReturnsSet = gpdb::FFuncRetset(oidFunc);
 	*fStrict = gpdb::FFuncStrict(oidFunc);
 }

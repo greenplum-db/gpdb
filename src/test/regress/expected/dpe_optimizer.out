@@ -335,7 +335,7 @@ select count(*) from t, pt where tid = ptid;
 explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Window  (cost=0.00..485.02 rows=6 width=64)
+ WindowAgg  (cost=0.00..485.02 rows=6 width=64)
    Order By: pt.ptid, pt.pt1
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..485.02 rows=18 width=50)
          Merge Key: pt.ptid, pt.pt1
@@ -1915,7 +1915,7 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Hash Join  (cost=0.00..862.00 rows=1 width=20)
    Hash Cond: jpat.b = pat.b
-   ->  Window  (cost=0.00..431.00 rows=1 width=16)
+   ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
          Order By: jpat.a
          ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                Merge Key: jpat.a

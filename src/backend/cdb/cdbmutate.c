@@ -15,6 +15,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "parser/analyze.h"		/* for createRandomDistribution() */
 #include "parser/parsetree.h"	/* for rt_fetch() */
 #include "parser/parse_expr.h"	/* for expr_type() */
@@ -73,9 +74,12 @@ typedef struct ApplyMotionState
 typedef struct
 {
 	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	bool single_row_insert;
+	EState	   *estate;
+	bool		single_row_insert;
 	List	   *cursorPositions;
 } pre_dispatch_function_evaluation_context;
+
+static Node *planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI);
 
 static Node *
 pre_dispatch_function_evaluation_mutator(Node *node,
@@ -87,16 +91,11 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 static void assignMotionID(Node *newnode, ApplyMotionState * context, Node *oldnode);
 
 static int *makeDefaultSegIdxArray(int numSegs);
-
-static Motion *
-make_motion(Plan       *lefttree,
-            bool        sendSorted,
-            int         numSortCols,
-            AttrNumber *sortColIdx,
-            Oid        *sortOperators,
-			bool	   *nullsFirst,
-            bool		useExecutorVarFormat);
 	
+static void add_slice_to_motion(Motion *motion,
+								MotionType motionType, List *hashExpr, List *sortPathKeys,
+								int numOutputSegs, int *outputSegIdx);
+
 static Node *apply_motion_mutator(Node *node, ApplyMotionState * context);
 
 static void request_explicit_motion(Plan *plan, Index resultRelationIdx, List *rtable);
@@ -461,19 +460,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
                  * degenerate (on constant exprs) or the result is known to
                  * have at most one row. 
                  */
-                if (query->sortClause &&
-                    plan->flow->numSortCols > 0)
+                if (query->sortClause)
                 {
-                    if (plan->flow->numSortCols > list_length(query->sortClause))
-                        plan->flow->numSortCols = list_length(query->sortClause);
-
-                    Insist(focusPlan(plan, true, false));
-                }
-                else if (plan->flow->numOrderbyCols > 0 && plan->flow->numSortCols > 0)
-                {
-                    if (plan->flow->numSortCols > plan->flow->numOrderbyCols)
-                        plan->flow->numSortCols = plan->flow->numOrderbyCols;
-
                     Insist(focusPlan(plan, true, false));
                 }
 
@@ -827,6 +815,9 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
     int     saveNextMotionID;
     int     saveNumInitPlans;
     int     saveSliceDepth;
+	PlannerInfo *root = (PlannerInfo *) context->base.node;
+
+	Assert(root && IsA(root, PlannerInfo));
 
 	if (node == NULL)
 		return NULL;
@@ -887,7 +878,6 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
 
         foreach(cell, plan->initPlan)
         {
-        	PlannerInfo *root = (PlannerInfo *) context->base.node;
             subplan = (SubPlan *)lfirst(cell);
             Assert(IsA(subplan, SubPlan));
             Assert(root);
@@ -898,16 +888,21 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
     }
 
     /* Pre-existing Motion nodes must be renumbered. */
+	if (IsA(newnode, Motion) && flow->req_move != MOVEMENT_NONE)
+	{
+		plan = ((Motion *) newnode)->plan.lefttree;
+		flow = plan->flow;
+		newnode = (Node *) plan;
+	}
+
     if (IsA(newnode, Motion))
     {
-        Motion *motion = (Motion *)newnode;
+        Motion *motion = (Motion *) newnode;
 
-#ifdef USE_ASSERT_CHECKING
 		/* Sanity check */
 		/* Sub plan must have flow */
         Assert(flow && motion->plan.lefttree->flow);
 		Assert(flow->req_move == MOVEMENT_NONE && !flow->flow_before_req_move);
-#endif
 
         /* Assign unique node number to the new node. */
         assignMotionID(newnode, context, node);
@@ -946,22 +941,9 @@ apply_motion_mutator(Node *node, ApplyMotionState * context)
             else if (flow->segindex >= 0)
                 flow->segindex = gp_singleton_segindex;
 
-            if (flow->numSortCols > 0)
-            {
-                newnode = (Node *)make_sorted_union_motion(plan,
-                                                           flow->segindex,
-                                                           flow->numSortCols,
-                                                           flow->sortColIdx,
-                                                           flow->sortOperators,
-                                                           flow->nullsFirst,
-                                                           true /* useExecutorVarFormat */);
-            }
-            else
-            {
-                newnode = (Node *)make_union_motion(plan,
-                                                    flow->segindex,
-                                                    true /* useExecutorVarFormat */);
-            }
+			newnode = (Node *)make_union_motion(plan,
+												flow->segindex,
+												true /* useExecutorVarFormat */);
             break;
 
         case MOVEMENT_BROADCAST:
@@ -1080,66 +1062,10 @@ assignMotionID(Node *newnode, ApplyMotionState * context, Node *oldnode)
 	}
 }
 
-
-/* --------------------------------------------------------------------
- * make_motion -- creates a Motion node.
- * Caller must have built the pHashDefn, pFixedDefn,
- * and pSortDefn structs already.
- * useExecutorVarFormat is true if make_motion is called after setrefs
- * This call only make a motion node, without filling in flow info
- * After calling this function, caller need to call add_slice_to_motion
- * --------------------------------------------------------------------
- */
-Motion *
-make_motion(Plan       *lefttree,
-            bool        sendSorted,
-			int         numSortCols,
-            AttrNumber *sortColIdx,
-            Oid        *sortOperators,
-			bool	   *nullsFirst,
-            bool        useExecutorVarFormat)
-{
-    Motion *node = makeNode(Motion);
-    Plan   *plan = &node->plan;
-
-	Assert(lefttree);
-	Assert(!IsA(lefttree, Motion));
-	AssertImply(sendSorted, (numSortCols > 0 && sortColIdx != NULL && sortOperators != NULL));
-	AssertImply(!sendSorted, (numSortCols == 0 && sortColIdx == NULL && sortOperators == NULL));
-
-	plan->startup_cost = lefttree->startup_cost;
-	plan->total_cost = lefttree->total_cost;
-	plan->plan_rows = lefttree->plan_rows;
-	plan->plan_width = lefttree->plan_width;
-
-	plan->targetlist = cdbpullup_targetlist(lefttree, useExecutorVarFormat);
-	plan->qual = NIL;
-	plan->lefttree = lefttree;
-	plan->righttree = NULL;
-	plan->dispatch = DISPATCH_PARALLEL;
-
-	node->sendSorted = sendSorted;
-
-	node->numSortCols = numSortCols;
-	node->sortColIdx = sortColIdx;
-	node->sortOperators = sortOperators;
-	node->nullsFirst = nullsFirst;
-	Assert(numSortCols == 0 || nullsFirst);
-
-	plan->extParam = bms_copy(lefttree->extParam);
-	plan->allParam = bms_copy(lefttree->allParam);
-
-	plan->flow = NULL;
-
-	node->outputSegIdx = NULL;
-	node->numOutputSegs = 0;
-	
-	return node;
-}
-
-void add_slice_to_motion(Motion *motion,
-		MotionType motionType, List *hashExpr,
-		int numOutputSegs, int *outputSegIdx)
+static void
+add_slice_to_motion(Motion *motion,
+					MotionType motionType, List *hashExpr, List *sortPathKeys,
+					int numOutputSegs, int *outputSegIdx)
 {
 	/* sanity checks */
 	/* check numOutputSegs and outputSegIdx are in sync.  */
@@ -1240,23 +1166,6 @@ void add_slice_to_motion(Motion *motion,
 	}
 
 	Assert(motion->plan.flow);
-
-	/* if the motion has a sort order, preserve it in each route */
-	if(motion->sendSorted && motion->numSortCols > 0)
-	{
-		int i, n;
-		n = motion->numSortCols;
-		motion->plan.flow->numSortCols = n;
-		motion->plan.flow->sortColIdx = palloc(n * sizeof(AttrNumber));
-		motion->plan.flow->sortOperators = palloc (n * sizeof(Oid));
-		motion->plan.flow->nullsFirst = palloc (n * sizeof(bool));
-		for ( i = 0; i < n; i++ )
-		{
-			motion->plan.flow->sortColIdx[i] = motion->sortColIdx[i];
-			motion->plan.flow->sortOperators[i] = motion->sortOperators[i];
-			motion->plan.flow->nullsFirst[i] = motion->nullsFirst[i];
-		}
-	}
 }
 
 Motion *
@@ -1266,30 +1175,24 @@ make_union_motion(Plan *lefttree, int destSegIndex, bool useExecutorVarFormat)
 	int		*outSegIdx = (int *) palloc(sizeof(int)); 
 	outSegIdx[0] = destSegIndex; 
 
-	motion = make_motion(lefttree, false,
-						 0, NULL, NULL, NULL, /* numSortCols, sortColIdx, sortOperators, nullsFirst */
-						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, 
-			NULL, 1, outSegIdx);
+	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, NIL, 1, outSegIdx);
 	return motion;
 }
 
 Motion *
-make_sorted_union_motion(Plan *lefttree,
+make_sorted_union_motion(PlannerInfo *root,
+						 Plan *lefttree,
                          int destSegIndex,
-						 int numSortCols, AttrNumber *sortColIdx,
-						 Oid *sortOperators, bool *nullsFirst,
+						 List *sortPathKeys,
 						 bool useExecutorVarFormat)
 {
 	Motion 	*motion;
 	int		*outSegIdx = (int *) palloc(sizeof(int)); 
 	outSegIdx[0] = destSegIndex; 
 
-	motion = make_motion(lefttree, true,
-						 numSortCols, sortColIdx, sortOperators, nullsFirst,
-						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED,
-			NULL, 1, outSegIdx); 
+	motion = make_motion(root, lefttree, sortPathKeys, useExecutorVarFormat);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, sortPathKeys, 1, outSegIdx);
 	return motion;
 }
 
@@ -1299,11 +1202,8 @@ make_hashed_motion(Plan *lefttree,
 {
 	Motion *motion;
 
-	motion = make_motion(lefttree, false,
-						 0, NULL, NULL, NULL, useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_HASH, 
-			hashExpr,
-			0, NULL);
+	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
+	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, NIL, 0, NULL);
 	return motion;
 }
 
@@ -1312,12 +1212,9 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat)
 {
 	Motion *motion;
 
-	motion = make_motion(lefttree, false,
-						 0, NULL, NULL, NULL,
-						 useExecutorVarFormat);
+	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
 
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED,
-			NULL, 0, NULL);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, NIL, 0, NULL);
 	return motion;
 }
 
@@ -1326,16 +1223,13 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 {
 	Motion *motion;
 
-	motion = make_motion(lefttree, false,
-						 0, NULL, NULL, NULL, /* numSortCols, sortColIdx, sortOperators, nullsFirst */
-						 useExecutorVarFormat);
+	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
 
 	Assert(segidColIdx > 0 && segidColIdx <= list_length(lefttree->targetlist));
 	
 	motion->segidColIdx = segidColIdx;
 	
-	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT,
-			NULL, 0, NULL); /* hashExpr, numOutputSegs, outputSegIdx */
+	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT, NULL, NIL, 0, NULL);
 	return motion;
 }
 
@@ -3064,13 +2958,15 @@ remove_unused_subplans(PlannerInfo *root, SubPlanWalkerContext *context)
 	}
 }
 
-Node *
+static Node *
 planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI)
 {
 	pre_dispatch_function_evaluation_context pcontext;
 
 	planner_init_plan_tree_base(&pcontext.base, root);
 	pcontext.single_row_insert = is_SRI;
+	pcontext.cursorPositions = NIL;
+	pcontext.estate = NULL;
 
 	return plan_tree_mutator(n, pre_dispatch_function_evaluation_mutator, &pcontext);
 }
@@ -3079,7 +2975,8 @@ planner_make_plan_constant(struct PlannerInfo *root, Node *n, bool is_SRI)
  * Evaluate functions to constants.
  */
 Node *
-exec_make_plan_constant(struct PlannedStmt *stmt, bool is_SRI, List **cursorPositions)
+exec_make_plan_constant(struct PlannedStmt *stmt, EState *estate, bool is_SRI,
+						List **cursorPositions)
 {
 	pre_dispatch_function_evaluation_context pcontext;
 	Node	   *result;
@@ -3088,6 +2985,7 @@ exec_make_plan_constant(struct PlannedStmt *stmt, bool is_SRI, List **cursorPosi
 	exec_init_plan_tree_base(&pcontext.base, stmt);
 	pcontext.single_row_insert = is_SRI;
 	pcontext.cursorPositions = NIL;
+	pcontext.estate = estate;
 
 	result = pre_dispatch_function_evaluation_mutator((Node *) stmt->planTree, &pcontext);
 
@@ -3368,25 +3266,28 @@ pre_dispatch_function_evaluation_mutator(Node *node,
 		 * During constant folding, we collect the current position of
 		 * each cursor mentioned in the plan into a list, and dispatch
 		 * them to the QEs.
+		 *
+		 * We should not get here if called from planner_make_plan_constant().
+		 * That is only used for simple Result plans, which should not contain
+		 * CURRENT OF expressions.
 		 */
-		CurrentOfExpr *expr = (CurrentOfExpr *) node;
-		CursorPosInfo *cpos;
+		if (context->estate)
+		{
+			CurrentOfExpr *expr = (CurrentOfExpr *) node;
+			CursorPosInfo *cpos;
 
-		cpos = makeNode(CursorPosInfo);
-		cpos->cursor_name = expr->cursor_name;
+			cpos = makeNode(CursorPosInfo);
 
-		/*
-		 * Passing a NULL econtext is Ok in this instance since getCurrentOf()
-		 * will pull out the cursor name from the CurrentOfExpr node.
-		 */
-		getCurrentOf(expr,
-					 NULL /* econtext */,
-					 expr->target_relid,
-					 &cpos->ctid,
-					 &cpos->gp_segment_id,
-					 &cpos->table_oid);
+			getCurrentOf(expr,
+						 GetPerTupleExprContext(context->estate),
+						 expr->target_relid,
+						 &cpos->ctid,
+						 &cpos->gp_segment_id,
+						 &cpos->table_oid,
+						 &cpos->cursor_name);
 
-		context->cursorPositions = lappend(context->cursorPositions, cpos);
+			context->cursorPositions = lappend(context->cursorPositions, cpos);
+		}
 	}
 
 	/*

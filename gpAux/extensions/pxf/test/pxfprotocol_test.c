@@ -54,10 +54,6 @@ test_pxfprotocol_validate_urls(void **state)
 	expect_string(parseGPHDUri, uri_str, uri_no_profile);
 	will_return(parseGPHDUri, gphd_uri);
 
-	expect_value(GPHDUri_verify_cluster_exists, uri, gphd_uri);
-	expect_string(GPHDUri_verify_cluster_exists, cluster, PXF_CLUSTER);
-	will_be_called(GPHDUri_verify_cluster_exists);
-
 	expect_value(GPHDUri_verify_no_duplicate_options, uri, gphd_uri);
 	will_be_called(GPHDUri_verify_no_duplicate_options);
 

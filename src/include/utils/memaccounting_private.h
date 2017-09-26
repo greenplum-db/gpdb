@@ -35,6 +35,16 @@ typedef struct MemoryAccount {
 	 */
 	uint64 maxLimit;
 
+	/*
+	 * Amount of memory relinquished
+	 */
+	uint64 relinquishedMemory;
+
+	/*
+	 * Amount of memory acquired from relinquished pool
+	 */
+	uint64 acquiredMemory;
+
 	MemoryAccountIdType id;
 	MemoryAccountIdType parentId;
 } MemoryAccount;

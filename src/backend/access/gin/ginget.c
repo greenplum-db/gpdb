@@ -457,35 +457,41 @@ scanGetItem(IndexScanDesc scan, ItemPointerData *item)
 #define GinIsVoidRes(s)		( ((GinScanOpaque) scan->opaque)->isVoidRes == true )
 
 Datum
-gingetmulti(PG_FUNCTION_ARGS)
+gingetbitmap(PG_FUNCTION_ARGS)
 {
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
 	Node 		   *n = (Node *) PG_GETARG_POINTER(1);
-	HashBitmap	   *hashBitmap;
+	HashBitmap	   *tbm;
+	int64			ntids;
 
 	if (n == NULL)
 		/* XXX should we use less than work_mem for this? */
-		hashBitmap = tbm_create(work_mem * 1024L);
+		tbm = tbm_create(work_mem * 1024L);
 	else if (!IsA(n, HashBitmap))
 		elog(ERROR, "non hash bitmap");
 	else
-		hashBitmap = (HashBitmap *)n;
+		tbm = (HashBitmap *)n;
  
 	if (GinIsNewKey(scan))
 		newScanKey(scan);
 
 	startScan(scan);
 
-	while (true)
+	ntids = 0;
+	for (;;)
 	{
-		ItemPointerData	tid;
-		if (scanGetItem(scan,&tid))
-			tbm_add_tuples(hashBitmap, &tid, 1);
- 		else
- 			break;
+		ItemPointerData	iptr;
+
+		CHECK_FOR_INTERRUPTS();
+
+		if (!scanGetItem(scan, &iptr))
+			break;
+
+		tbm_add_tuples(tbm, &iptr, 1, false);
+		ntids++;
 	}	
 
-	PG_RETURN_POINTER(hashBitmap);
+	PG_RETURN_POINTER(tbm);
 }
 
 Datum

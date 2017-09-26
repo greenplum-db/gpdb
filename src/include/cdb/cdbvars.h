@@ -1065,7 +1065,11 @@ extern void increment_command_count(void);
 /*
  * switch to control inverse distribution function strategy.
  */
-extern char *gp_idf_deduplicate_str;
+extern int gp_idf_deduplicate;
+
+#define IDF_DEDUPLICATE_AUTO	0
+#define IDF_DEDUPLICATE_NONE	1
+#define IDF_DEDUPLICATE_FORCE	2
 
 /* default to RANDOM distribution for CREATE TABLE without DISTRIBUTED BY */
 extern bool gp_create_table_random_default_distribution;

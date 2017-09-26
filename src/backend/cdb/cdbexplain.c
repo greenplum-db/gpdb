@@ -2168,6 +2168,10 @@ cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 	{
 		appendStringInfoString(str, "Statement statistics:\n");
 		appendStringInfo(str, "  Memory used: %.0fK bytes", ceil((double) stmt->query_mem / 1024.0));
+		if (optimizer && explain_memory_verbosity == EXPLAIN_MEMORY_VERBOSITY_SUMMARY )
+		{
+			MemoryAccounting_ExplainAppendCurrentOptimizerAccountInfo(str);
+		}
 
 		if (showstatctx->workmemwanted_max > 0)
 		{

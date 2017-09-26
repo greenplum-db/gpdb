@@ -5,7 +5,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.48 2008/01/01 19:45:48 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.49 2008/03/10 12:55:13 mha Exp $
  */
 
 CREATE VIEW pg_roles AS 
@@ -196,7 +196,7 @@ CREATE VIEW pg_settings AS
     SELECT * 
     FROM pg_show_all_settings() AS A 
     (name text, setting text, unit text, category text, short_desc text, extra_desc text,
-     context text, vartype text, source text, min_val text, max_val text);
+     context text, vartype text, source text, min_val text, max_val text, enumvals text);
 
 CREATE RULE pg_settings_u AS 
     ON UPDATE TO pg_settings 
@@ -406,6 +406,35 @@ CREATE VIEW pg_stat_replication AS
             pg_stat_get_wal_senders() AS W
     WHERE S.usesysid = U.oid AND
             S.procpid = W.pid;
+
+CREATE FUNCTION pg_stat_get_master_replication() RETURNS SETOF RECORD AS
+$$
+    SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
+    FROM pg_catalog.pg_stat_replication
+$$
+LANGUAGE SQL EXECUTE ON MASTER;
+
+CREATE FUNCTION pg_stat_get_segment_replication() RETURNS SETOF RECORD AS
+$$
+    SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
+    FROM pg_catalog.pg_stat_replication
+$$
+LANGUAGE SQL EXECUTE ON ALL SEGMENTS;
+
+CREATE VIEW gp_stat_replication AS
+    SELECT * FROM pg_stat_get_master_replication() AS R
+    (gp_segment_id integer, procpid integer, usesysid oid,
+     usename name, application_name text, client_addr inet,
+     client_port integer, backend_start timestamptz, state text,
+     sent_location text, write_location text, flush_location text,
+     replay_location text, sync_priority integer, sync_state text)
+    UNION ALL
+    SELECT * FROM pg_stat_get_segment_replication() AS R
+    (gp_segment_id integer, procpid integer, usesysid oid,
+     usename name, application_name text, client_addr inet,
+     client_port integer, backend_start timestamptz, state text,
+     sent_location text, write_location text, flush_location text,
+     replay_location text, sync_priority integer, sync_state text);
 
 CREATE VIEW pg_stat_database AS 
     SELECT 

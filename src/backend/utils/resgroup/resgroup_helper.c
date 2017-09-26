@@ -151,8 +151,8 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 					Datum d = ResGroupGetStat(groupId, RES_GROUP_STAT_MEM_USAGE);
 
 					row->groupId = groupId;
-					appendStringInfo(row->memUsage, "{\"%d\":%d",
-									 GpIdentity.segindex, DatumGetInt32(d));
+					appendStringInfo(row->memUsage, "{\"%d\":%s",
+									 GpIdentity.segindex, DatumGetCString(d));
 
 					appendStringInfo(row->cpuUsage, "{");
 					calcCpuUsage(row->cpuUsage, ncores, usages[j], timestamps[j],
@@ -186,8 +186,8 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 			Oid groupId = DatumGetObjectId(row->groupId);
 			Datum d = ResGroupGetStat(groupId, RES_GROUP_STAT_MEM_USAGE);
 
-			appendStringInfo(row->memUsage, "\"%d\":%d",
-							 GpIdentity.segindex, DatumGetInt32(d));
+			appendStringInfo(row->memUsage, "\"%d\":%s",
+							 GpIdentity.segindex, DatumGetCString(d));
 
 			calcCpuUsage(row->cpuUsage, ncores, usages[j], timestamps[j],
 						 ResGroupOps_GetCpuUsage(groupId),

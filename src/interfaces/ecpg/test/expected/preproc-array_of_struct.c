@@ -111,10 +111,10 @@ int main()
  } custs4 ;
  
 #line 44 "array_of_struct.pgc"
- int r ;
+ int  r    ;
  
 #line 45 "array_of_struct.pgc"
-  struct varchar_onlyname_45  { int len; char arr[ 50 ]; }  onlyname [2] ;
+   struct varchar_onlyname_45  { int len; char arr[ 50 ]; }  onlyname [2]   ;
 /* exec sql end declare section */
 #line 46 "array_of_struct.pgc"
 
@@ -135,22 +135,22 @@ if (sqlca.sqlcode < 0) sqlprint();}
 #line 52 "array_of_struct.pgc"
 
 if (sqlca.sqlwarn[0] == 'W') sqlprint();
-#line 52 "array_of_struct.pgc"
+#line 53 "array_of_struct.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 52 "array_of_struct.pgc"
+#line 53 "array_of_struct.pgc"
 
     { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into customers values ( 'John Doe' , '12345' )", ECPGt_EOIT, ECPGt_EORT);
 #line 53 "array_of_struct.pgc"
 
 if (sqlca.sqlcode == ECPG_NOT_FOUND) sqlprint();
-#line 53 "array_of_struct.pgc"
+#line 54 "array_of_struct.pgc"
 
 if (sqlca.sqlwarn[0] == 'W') sqlprint();
-#line 53 "array_of_struct.pgc"
+#line 54 "array_of_struct.pgc"
 
 if (sqlca.sqlcode < 0) sqlprint();}
-#line 53 "array_of_struct.pgc"
+#line 54 "array_of_struct.pgc"
 
     { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "insert into customers values ( 'Jane Doe' , '67890' )", ECPGt_EOIT, ECPGt_EORT);
 #line 54 "array_of_struct.pgc"

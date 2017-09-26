@@ -43,6 +43,7 @@ static bool listOneExtensionContents(const char *extname, const char *oid);
 static bool isGPDB(void);
 static bool isGPDB4200OrLater(void);
 static bool isGPDB5000OrLater(void);
+static bool isGPDB6000OrLater(void);
 
 /* GPDB 3.2 used PG version 8.2.10, and we've moved the minor number up since then for each release,  4.1 = 8.2.15 */
 /* Allow for a couple of future releases.  If the version isn't in this range, we are talking to PostgreSQL, not GPDB */
@@ -148,6 +149,15 @@ static bool isGPDB5000OrLater(void)
 	return retValue;
 }
 
+static bool
+isGPDB6000OrLater(void)
+{
+	if (!isGPDB())
+		return false;		/* Not Greenplum at all. */
+
+	/* GPDB 6 is based on PostgreSQL 8.4 */
+	return pset.sversion >= 80400;
+}
 
 /*----------------
  * Handlers for various slash commands displaying some sort of list
@@ -471,6 +481,17 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  gettext_noop("reads sql data"),
 						  gettext_noop("modifies sql data"),
 						  gettext_noop("Data access"));
+		if (isGPDB6000OrLater())
+			appendPQExpBuffer(&buf,
+						  ",\n CASE\n"
+						  "  WHEN p.proexeclocation = 'a' THEN '%s'\n"
+						  "  WHEN p.proexeclocation = 'm' THEN '%s'\n"
+						  "  WHEN p.proexeclocation = 's' THEN '%s'\n"
+						  "END as \"%s\"",
+						  gettext_noop("any"),
+						  gettext_noop("master"),
+						  gettext_noop("all segments"),
+						  gettext_noop("Execute on"));
 		appendPQExpBuffer(&buf,
 						  ",\n CASE\n"
 						  "  WHEN p.provolatile = 'i' THEN '%s'\n"

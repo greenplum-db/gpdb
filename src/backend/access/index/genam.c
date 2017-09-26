@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/index/genam.c,v 1.76 2009/08/01 20:59:17 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/index/genam.c,v 1.65 2008/03/26 21:10:37 alvherre Exp $
  *
  * NOTES
  *	  many of the old access method routines have been turned into
@@ -26,6 +26,7 @@
 #include "pgstat.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
+#include "utils/tqual.h"
 
 
 /* ----------------------------------------------------------------
@@ -89,7 +90,6 @@ RelationGetIndexScan(Relation indexRelation,
 	else
 		scan->keyData = NULL;
 
-	scan->is_multiscan = false; /* caller may change this */
 	scan->kill_prior_tuple = false;
 	scan->ignore_killed_tuples = true;	/* default setting */
 

@@ -24,7 +24,9 @@
 
 static OffsetNumber gistfindnext(IndexScanDesc scan, OffsetNumber n,
 			 ScanDirection dir);
-static int	gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids, int maxtids, bool ignore_killed_tuples);
+static int64 gistnext(IndexScanDesc scan, ScanDirection dir,
+					  ItemPointer tids, HashBitmap *tbm,
+					  bool ignore_killed_tuples);
 static bool gistindex_keytest(IndexTuple tuple, IndexScanDesc scan,
 				  OffsetNumber offset);
 
@@ -101,34 +103,29 @@ gistgettuple(PG_FUNCTION_ARGS)
 	 * tuples, continue looping until we find a non-killed tuple that matches
 	 * the search key.
 	 */
-	res = (gistnext(scan, dir, &tid, 1, scan->ignore_killed_tuples)) ? true : false;
+	res = (gistnext(scan, dir, &tid, NULL, scan->ignore_killed_tuples) > 0) ? true : false;
 
 	PG_RETURN_BOOL(res);
 }
 
 Datum
-gistgetmulti(PG_FUNCTION_ARGS)
+gistgetbitmap(PG_FUNCTION_ARGS)
 {
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
 	Node		   *n = (Node *) PG_GETARG_POINTER(1);
-	HashBitmap	   *hashBitmap;
-	ItemPointer tids;
-	int ntids;
+	HashBitmap	   *tbm;
+	int64			ntids;
 
 	if (n == NULL)
-		hashBitmap = tbm_create(work_mem * 1024L);
+		tbm = tbm_create(work_mem * 1024L);
 	else if (!IsA(n, HashBitmap))
 		elog(ERROR, "non hash bitmap");
 	else
-		hashBitmap = (HashBitmap *)n;
+		tbm = (HashBitmap *) n;
 
-#define MAX_TIDS 1024
-	tids = (ItemPointer)palloc0(MAX_TIDS * sizeof(ItemPointerData));
+	ntids = gistnext(scan, ForwardScanDirection, NULL, tbm, false);
 
-	while ((ntids = gistnext(scan, ForwardScanDirection, tids, MAX_TIDS, false)) > 0)
-		tbm_add_tuples(hashBitmap, tids, ntids);
-
-	PG_RETURN_POINTER(hashBitmap);
+	PG_RETURN_POINTER(tbm);
 }
 
 /*
@@ -136,9 +133,10 @@ gistgetmulti(PG_FUNCTION_ARGS)
  * either to fetch the first such tuple or subsequent matching
  * tuples. Returns true iff a matching tuple was found.
  */
-static int
-gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
-		 int maxtids, bool ignore_killed_tuples)
+static int64
+gistnext(IndexScanDesc scan, ScanDirection dir,
+		 ItemPointer tid, HashBitmap *tbm,
+		 bool ignore_killed_tuples)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
@@ -148,7 +146,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 	GISTSearchStack *stk;
 	IndexTuple	it;
 	GISTPageOpaque opaque;
-	int			ntids = 0;
+	int64		ntids = 0;
 
 	so = (GISTScanOpaque) scan->opaque;
 
@@ -156,24 +154,6 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 	MIRROREDLOCK_BUFMGR_LOCK;
 
 	if ( so->qual_ok == false )
-		return 0;
-
-	if (ItemPointerIsValid(&so->curpos) == false)
-	{
-		/* Being asked to fetch the first entry, so start at the root */
-		Assert(so->curbuf == InvalidBuffer);
-		Assert(so->stack == NULL);
-
-		so->curbuf = ReadBuffer(scan->indexRelation, GIST_ROOT_BLKNO);
-
-		stk = so->stack = (GISTSearchStack *) palloc0(sizeof(GISTSearchStack));
-
-		stk->next = NULL;
-		stk->block = GIST_ROOT_BLKNO;
-
-		pgstat_count_index_scan(scan->indexRelation);
-	}
-	else if (so->curbuf == InvalidBuffer)
 	{
 		MIRROREDLOCK_BUFMGR_UNLOCK;
 		// -------- MirroredLock ----------
@@ -181,57 +161,90 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 		return 0;
 	}
 
+	if (so->curbuf == InvalidBuffer)
+	{
+		if (ItemPointerIsValid(&so->curpos) == false)
+		{
+			/* Being asked to fetch the first entry, so start at the root */
+			Assert(so->curbuf == InvalidBuffer);
+			Assert(so->stack == NULL);
+
+			so->curbuf = ReadBuffer(scan->indexRelation, GIST_ROOT_BLKNO);
+
+			stk = so->stack = (GISTSearchStack *) palloc0(sizeof(GISTSearchStack));
+
+			stk->next = NULL;
+			stk->block = GIST_ROOT_BLKNO;
+
+			pgstat_count_index_scan(scan->indexRelation);
+		}
+		else
+		{
+			MIRROREDLOCK_BUFMGR_UNLOCK;
+			// -------- MirroredLock ----------
+
+			/* scan is finished */
+			return 0;
+		}
+	}
+
 	/*
 	 * check stored pointers from last visit 
 	 */
 	if ( so->nPageData > 0 ) 
 	{
-		while( ntids < maxtids && so->curPageData < so->nPageData )
+		/*
+		 * gistgetbitmap never should go here
+		 */
+		Assert(tbm == NULL);
+
+		if ( so->curPageData < so->nPageData )
 		{
-			tids[ ntids ] = scan->xs_ctup.t_self = so->pageData[ so->curPageData ].heapPtr;
+			scan->xs_ctup.t_self = so->pageData[so->curPageData].heapPtr;
+
 			ItemPointerSet(&(so->curpos),
-							   BufferGetBlockNumber(so->curbuf), 
-							   so->pageData[ so->curPageData ].pageOffset);
+						   BufferGetBlockNumber(so->curbuf),
+						   so->pageData[ so->curPageData ].pageOffset);
 
 				
-			so->curPageData ++;
-			ntids++;
-		}
-
-		if ( ntids == maxtids )
-		{
-			MIRROREDLOCK_BUFMGR_UNLOCK;
-			// -------- MirroredLock ----------
-
-			return ntids;
-		}
-		
-		/*
-		 * Go to the next page
-		 */
-		stk = so->stack->next;
-		pfree(so->stack);
-		so->stack = stk;
-
-		/* If we're out of stack entries, we're done */
-		if (so->stack == NULL)
-		{
-			ReleaseBuffer(so->curbuf);
-			so->curbuf = InvalidBuffer;
+			so->curPageData++;
 
 			MIRROREDLOCK_BUFMGR_UNLOCK;
 			// -------- MirroredLock ----------
 
-			return ntids;
+			return 1;
 		}
+		else
+		{
+			/*
+			 * Go to the next page
+			 */
+			stk = so->stack->next;
+			pfree(so->stack);
+			so->stack = stk;
 
-		so->curbuf = ReleaseAndReadBuffer(so->curbuf,
-										  scan->indexRelation,
-										  stk->block);
+			/* If we're out of stack entries, we're done */
+			if (so->stack == NULL)
+			{
+				ReleaseBuffer(so->curbuf);
+				so->curbuf = InvalidBuffer;
+
+				MIRROREDLOCK_BUFMGR_UNLOCK;
+				// -------- MirroredLock ----------
+
+				return ntids;
+			}
+
+			so->curbuf = ReleaseAndReadBuffer(so->curbuf,
+											  scan->indexRelation,
+											  stk->block);
+		}
 	}
 
 	for (;;)
 	{
+		CHECK_FOR_INTERRUPTS();
+
 		/* First of all, we need lock buffer */
 		Assert(so->curbuf != InvalidBuffer);
 		LockBuffer(so->curbuf, GIST_SHARE);
@@ -297,11 +310,17 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 
 			if (!OffsetNumberIsValid(n))
 			{
-				while( ntids < maxtids && so->curPageData < so->nPageData )
+				if (!tbm && so->nPageData)
 				{
-					tids[ ntids ] = scan->xs_ctup.t_self = 
-						so->pageData[ so->curPageData ].heapPtr;
-				
+					LockBuffer(so->curbuf, GIST_UNLOCK);
+					MIRROREDLOCK_BUFMGR_UNLOCK;
+
+					return gistnext(scan, dir, tid, NULL, ignore_killed_tuples);
+				}
+
+#if 0
+				while( so->curPageData < so->nPageData )
+				{
 					ItemPointerSet(&(so->curpos),
 								   BufferGetBlockNumber(so->curbuf), 
 								   so->pageData[ so->curPageData ].pageOffset);
@@ -309,16 +328,7 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 					so->curPageData ++;
 					ntids++;
 				}
-
-				if ( ntids == maxtids )
-				{
-					LockBuffer(so->curbuf, GIST_UNLOCK);
-					
-					MIRROREDLOCK_BUFMGR_UNLOCK;
-					// -------- MirroredLock ----------
-					
-					return ntids;
-				}
+#endif
 
 				/*
 				 * We ran out of matching index entries on the current page,
@@ -361,9 +371,15 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 				if (!(ignore_killed_tuples && ItemIdIsDead(PageGetItemId(p, n))))
 				{
 					it = (IndexTuple) PageGetItem(p, PageGetItemId(p, n));
-					so->pageData[ so->nPageData ].heapPtr = it->t_tid;
-					so->pageData[ so->nPageData ].pageOffset = n;
-					so->nPageData ++;
+					ntids++;
+					if (tbm != NULL)
+						tbm_add_tuples(tbm, &it->t_tid, 1, false);
+					else
+					{
+						so->pageData[ so->nPageData ].heapPtr = it->t_tid;
+						so->pageData[ so->nPageData ].pageOffset = n;
+						so->nPageData ++;
+					}
 				}
 			}
 			else
@@ -372,7 +388,6 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 				 * We've found an entry in an internal node whose key is
 				 * consistent with the search key, so push it to stack
 				 */
-
 				stk = (GISTSearchStack *) palloc(sizeof(GISTSearchStack));
 
 				it = (IndexTuple) PageGetItem(p, PageGetItemId(p, n));
@@ -382,7 +397,6 @@ gistnext(IndexScanDesc scan, ScanDirection dir, ItemPointer tids,
 
 				stk->next = so->stack->next;
 				so->stack->next = stk;
-
 			}
 
 			if (ScanDirectionIsBackward(dir))

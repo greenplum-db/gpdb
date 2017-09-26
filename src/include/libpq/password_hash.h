@@ -26,6 +26,6 @@ typedef enum
 	PASSWORD_HASH_SHA_256
 } PasswdHashAlg;
 
-extern PasswdHashAlg password_hash_algorithm;
+extern int password_hash_algorithm;
 
 #endif

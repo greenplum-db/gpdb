@@ -385,6 +385,8 @@ static Cost incremental_agg_cost(double rows, int width, AggStrategy strategy,
 						  int numAggs, int transSpace);
 static Cost incremental_motion_cost(double sendrows, double recvrows);
 
+static bool contain_aggfilters(Node *node);
+
 /*---------------------------------------------
  * WITHIN/Percentile stuff
  *---------------------------------------------*/
@@ -711,7 +713,16 @@ cdb_grouping_planner(PlannerInfo* root,
 		
 		if ( ! root->config->gp_enable_dqa_pruning )
 			allowed_agg &= ~ AGG_3PHASE;
-		
+
+		/*
+		 * GPDB_84_MERGE_FIXME: Don't do three-phase aggregation if any of
+		 * the aggregates use FILTERs. We used to do it, with the old,
+		 * hacky, FILTER implementation, but it doesn't work with the new
+		 * one without some extra work.
+		 */
+		if (contain_aggfilters((Node *) group_context->tlist))
+			allowed_agg &= ~ AGG_3PHASE;
+
 		possible_agg = AGG_SINGLEPHASE;
 		
 		if(gp_hash_safe_grouping(root))
@@ -1050,14 +1061,14 @@ make_one_stage_agg_plan(PlannerInfo *root,
 			break;
 			
 	case MPP_GRP_PREP_FOCUS_QE:
-			result_plan = (Plan*)make_motion_gather_to_QE(result_plan, (current_pathkeys != NIL));
+			result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, current_pathkeys);
 			result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows, 
 										result_plan->plan_rows * root->config->cdbpath_segments);
 			break;
 			
 	case MPP_GRP_PREP_FOCUS_QD:
-			result_plan = (Plan*)make_motion_gather_to_QD(result_plan, (current_pathkeys != NIL));	
+			result_plan = (Plan*)make_motion_gather_to_QD(root, result_plan, current_pathkeys);
 			result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows, 
 										result_plan->plan_rows * root->config->cdbpath_segments);
@@ -1189,8 +1200,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 	{
 		Assert(!IsA(result_plan, Motion));
 		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 (current_pathkeys != NIL));
+										 result_plan->lefttree);
 	}
 
 	/* Marshal implicit results. Return explicit result. */
@@ -1476,7 +1486,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		break;
 			
 	case MPP_GRP_TYPE_PLAIN_2STAGE:
-		result_plan = (Plan*)make_motion_gather_to_QE(result_plan, false);
+		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, false);
 		result_plan->total_cost += 
 			incremental_motion_cost(result_plan->plan_rows,
 									result_plan->plan_rows * root->config->cdbpath_segments);
@@ -1764,9 +1774,7 @@ make_three_stage_agg_plan(PlannerInfo *root, MppGroupContext *ctx)
 		 * Reconstruct the flow since the targetlist for the result_plan may have
 		 * changed.
 		 */
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 		
 		/* Need to adjust root.  Is this enuf?  I think so. */
 		root->parse->rtable = rtable;
@@ -2066,7 +2074,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	
 	dqaduphazard = (aggstrategy == AGG_HASHED && stream_bottom_agg);
 
-	result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree, (aggstrategy == AGG_SORTED));
+	result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 	
 	current_pathkeys = NIL;
 	
@@ -2245,7 +2253,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		Assert(ctx->numGroupCols == 0); /* No grouping columns */
 		Assert(n == 1);
 
-		result_plan = (Plan*)make_motion_gather_to_QE(result_plan, false);
+		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, false);
 		result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows,
 						result_plan->plan_rows * root->config->cdbpath_segments);
@@ -2490,7 +2498,7 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 	join_plan->total_cost = outer->total_cost + inner->total_cost;
 	join_plan->total_cost += cpu_tuple_cost * join_plan->plan_rows;
 	
-	join_plan->flow = pull_up_Flow(join_plan, join_plan->lefttree, true);
+	join_plan->flow = pull_up_Flow(join_plan, join_plan->lefttree);
 	
 	return join_plan;
 }
@@ -3002,6 +3010,7 @@ void generate_three_tlists(List *tlist,
 			new_aggref->aggtype = aggref->aggtype;
 			new_aggref->args =
 				list_make1((Expr*)makeVar(middle_varno, tle->resno, aggref->aggtype, -1, 0));
+			/* FILTER is evaluated at the PARTIAL stage. */
 			new_aggref->agglevelsup = 0;
 			new_aggref->aggstar = false;
 			new_aggref->aggdistinct = false; /* handled in preliminary aggregation */
@@ -3487,9 +3496,14 @@ Node* deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 	/* If the given expression is a grouping expression, replace it with
 	 * a Var node referring to the (lower) preliminary aggregation's
 	 * target list.
+	 *
+	 * While building subplan targetlist we flatten (deduplicate) the
+	 * targetlist ignoring RelabelType node.
+	 * Including RelabelType will cause inconsistent top level target list
+	 * and final target list for aggregation plans.
 	 */
-	tle = tlist_member(node, ctx->grps_tlist);
-	if ( tle != NULL )
+	tle = tlist_member_ignore_relabel(node, ctx->grps_tlist);
+	if( tle != NULL )
 	{
 		return  (Node*) makeVar(grp_varno, tle->resno,
 								exprType((Node*)tle->expr),
@@ -3638,7 +3652,8 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			if ( aggref->aggfnoid == ref->aggfnoid
 				&& aggref->aggstar == ref->aggstar
 				&& aggref->aggdistinct == ref->aggdistinct
-				&& equal(aggref->args, ref->args) )
+				&& equal(aggref->args, ref->args)
+				&& equal(aggref->aggfilter, ref->aggfilter) )
 			{
 				prelim_tle = tle;
 				transtype = ref->aggtype;
@@ -3684,6 +3699,7 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 				iref->aggfnoid = pref->aggfnoid;
 				iref->aggtype = transtype;
 				iref->args = list_make1((Expr*)copyObject(args));
+				/* FILTER is evaluated at the PARTIAL stage. */
 				iref->agglevelsup = 0;
 				iref->aggstar = false;
 				iref->aggdistinct = false;
@@ -3701,6 +3717,7 @@ Node *split_aggref(Aggref *aggref, MppGroupContext *ctx)
 			fref->aggfnoid = aggref->aggfnoid;
 			fref->aggtype = aggref->aggtype;
 			fref->args = list_make1((Expr*)args);
+			/* FILTER is evaluated at the PARTIAL stage. */
 			fref->agglevelsup = 0;
 			fref->aggstar = false;
 			fref->aggdistinct = false; /* handled in preliminary aggregation */
@@ -4068,10 +4085,7 @@ add_second_stage_agg(PlannerInfo *root,
 	/*
 	 * Agg will not change the sort order unless it is hashed.
 	 */
-	agg_node->flow = pull_up_Flow(agg_node, 
-								  agg_node->lefttree, 
-								  (*p_current_pathkeys != NIL)
-								   && aggstrategy != AGG_HASHED );
+	agg_node->flow = pull_up_Flow(agg_node, agg_node->lefttree);
 
 	/* 
 	 * Since the rtable has changed, we had better recreate a RelOptInfo entry
@@ -5130,9 +5144,9 @@ choose_deduplicate(PlannerInfo *root, List *sortExprs,
 		*numGroups = num_distinct;
 
 	/* we need some calculates above even if the flag is off */
-	if (pg_strcasecmp(gp_idf_deduplicate_str, "force") == 0)
+	if (gp_idf_deduplicate == IDF_DEDUPLICATE_FORCE)
 		return true;
-	if (pg_strcasecmp(gp_idf_deduplicate_str, "none") == 0)
+	if (gp_idf_deduplicate == IDF_DEDUPLICATE_NONE)
 		return false;
 
 	return dedup_cost < naive_cost;
@@ -5860,7 +5874,7 @@ within_agg_add_outer_sort(PlannerInfo *root,
 		}
 		if (outer_plan->flow->flotype != FLOW_SINGLETON)
 		{
-			outer_plan = (Plan *) make_motion_gather_to_QE(outer_plan, true);
+			outer_plan = (Plan *) make_motion_gather_to_QE(root, outer_plan, wag_context->current_pathkeys);
 			outer_plan->total_cost +=
 				incremental_motion_cost(outer_plan->plan_rows,
 							outer_plan->plan_rows * root->config->cdbpath_segments);
@@ -6964,9 +6978,7 @@ within_agg_planner(PlannerInfo *root,
 		 * Reconstruct the flow since the targetlist for the result_plan may have
 		 * changed.
 		 */
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 		/* Need to adjust root->parse for upper plan. */
 		root->parse->rtable = rtable;
 		root->parse->targetList = copyObject(result_plan->targetlist);
@@ -7008,3 +7020,25 @@ Plan *add_motion_to_dqa_child(Plan *plan, PlannerInfo *root, bool *motion_added)
 	return result;
 }
 
+
+static bool
+contain_aggfilters_walker(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Aggref))
+	{
+		Aggref	   *aggref = (Aggref *) node;
+
+		if (aggref->aggfilter)
+			return true;
+	}
+	return expression_tree_walker(node, contain_aggfilters_walker, NULL);
+}
+
+static bool
+contain_aggfilters(Node *node)
+{
+	return contain_aggfilters_walker(node, NULL);
+}

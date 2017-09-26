@@ -75,7 +75,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.156.2.1 2008/10/16 19:25:58 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.157 2008/03/25 22:42:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -249,20 +249,19 @@ initialize_aggregates(AggState *aggstate,
 					peraggstate->sortstate =
 						tuplesort_begin_datum_mk(&aggstate->ss,
 												 peraggstate->evaldesc->attrs[0]->atttypid,
-												 peraggstate->sortOperators[0], false,
+												 peraggstate->sortOperators[0],
+												 peraggstate->sortNullsFirst[0],
 												 PlanStateOperatorMemKB((PlanState *) aggstate), false);
 				}
 				else
 				{
-					bool	   *nullsFirstFlags = palloc0(peraggstate->numSortCols * sizeof(bool));
-
 					peraggstate->sortstate =
 						tuplesort_begin_heap_mk(&aggstate->ss,
 												peraggstate->evaldesc,
 												peraggstate->numSortCols, peraggstate->sortColIdx,
-												peraggstate->sortOperators, nullsFirstFlags,
+												peraggstate->sortOperators,
+												peraggstate->sortNullsFirst,
 												PlanStateOperatorMemKB((PlanState *) aggstate), false);
-					pfree(nullsFirstFlags);
 				}
 
 				/* 
@@ -288,17 +287,17 @@ initialize_aggregates(AggState *aggstate,
 				{
 					peraggstate->sortstate =
 						tuplesort_begin_datum(peraggstate->evaldesc->attrs[0]->atttypid,
-											  peraggstate->sortOperators[0], false,
+											  peraggstate->sortOperators[0],
+											  peraggstate->sortNullsFirst[0],
 											  PlanStateOperatorMemKB((PlanState *) aggstate), false);
 				}
 				else
 				{
-					bool	   *nullsFirstFlags = palloc0(peraggstate->numSortCols * sizeof(bool));
-
 					peraggstate->sortstate =
 						tuplesort_begin_heap(peraggstate->evaldesc,
 											 peraggstate->numSortCols, peraggstate->sortColIdx,
-											 peraggstate->sortOperators, nullsFirstFlags,
+											 peraggstate->sortOperators,
+											 peraggstate->sortNullsFirst,
 											 PlanStateOperatorMemKB((PlanState *) aggstate), false);
 				}
 
@@ -519,11 +518,24 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 		bool isnull;
 		AggStatePerAgg peraggstate = &aggstate->peragg[aggno];
 		AggStatePerGroup pergroupstate = &pergroup[aggno];
+		ExprState  *filter = peraggstate->aggrefstate ? peraggstate->aggrefstate->aggfilter : NULL;
 		int			nargs;
 		Aggref	   *aggref = peraggstate->aggref;
 		PercentileExpr *perc = peraggstate->perc;
 		int			i;
 		TupleTableSlot *slot;
+
+		/* Skip anything FILTERed out */
+		if (filter)
+		{
+			bool		isnull;
+			Datum		res;
+
+			res = ExecEvalExprSwitchContext(filter, aggstate->tmpcontext,
+											&isnull, NULL);
+			if (isnull || !DatumGetBool(res))
+				continue;
+		}
 
 		if (aggref)
 			nargs = list_length(aggref->args);
@@ -2193,6 +2205,8 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 				(AttrNumber *) palloc(numSortCols * sizeof(AttrNumber));
 			peraggstate->sortOperators =
 				(Oid *) palloc(numSortCols * sizeof(Oid));
+			peraggstate->sortNullsFirst =
+				(bool *) palloc(numSortCols * sizeof(bool));
 
 			i = 0;
 			foreach(lc, sortlist)
@@ -2206,6 +2220,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 				peraggstate->sortColIdx[i] = tle->resno;
 				peraggstate->sortOperators[i] = sortcl->sortop;
+				peraggstate->sortNullsFirst[i] = sortcl->nulls_first;
 				i++;
 			}
 			Assert(i == numSortCols);
@@ -2429,7 +2444,7 @@ GetAggInitVal(Datum textInitVal, Oid transtype)
 	Datum		initVal;
 
 	getTypeInputInfo(transtype, &typinput, &typioparam);
-	strInitVal = DatumGetCString(DirectFunctionCall1(textout, textInitVal));
+	strInitVal = TextDatumGetCString(textInitVal);
 	initVal = OidInputFunctionCall(typinput, strInitVal,
 								   typioparam, -1);
 	pfree(strInitVal);

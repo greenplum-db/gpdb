@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.152 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.145 2008/04/01 00:48:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,9 +22,9 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
-#include "catalog/pg_appendonly_fn.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_inherits.h"
-#include "catalog/pg_exttable.h"
+#include "miscadmin.h"
 #include "commands/tablecmds.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
@@ -38,11 +38,14 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "catalog/catalog.h"
-#include "miscadmin.h"
+#include "utils/tqual.h"
+
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbrelsize.h"
+#include "catalog/pg_appendonly_fn.h"
+#include "catalog/pg_exttable.h"
 
 
 /* GUC parameter */

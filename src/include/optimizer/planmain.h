@@ -141,16 +141,15 @@ extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
 extern Sort *make_sort_from_groupcols(PlannerInfo *root, List *groupcls,
 									  AttrNumber *grpColIdx, bool appendGrouping,
 									  Plan *lefttree);
-extern Sort *make_sort_from_reordered_groupcols(PlannerInfo *root,
-												List *groupcls,
-												AttrNumber *orig_grpColIdx,
-												AttrNumber *new_grpColIdx,
-												TargetEntry *grouping,
-												TargetEntry *groupid,
-												int req_ngrpkeys,
-												Plan *lefttree);
+extern Sort *make_sort_from_pathkeys_and_groupingcol(PlannerInfo *root,
+										Plan *lefttree,
+										List *pathkeys,
+										TargetEntry *grouping,
+										TargetEntry *groupid);
 extern List *reconstruct_group_clause(List *orig_groupClause, List *tlist,
 						 AttrNumber *grpColIdx, int numcols);
+
+extern Motion *make_motion(PlannerInfo *root, Plan *lefttree, List *sortPathKeys, bool useExecutorVarFormat);
 
 extern Agg *make_agg(PlannerInfo *root, List *tlist, List *qual,
 					 AggStrategy aggstrategy, bool streaming,
@@ -178,9 +177,11 @@ extern MergeJoin *make_mergejoin(List *tlist,
 			   bool *mergenullsfirst,
 			   Plan *lefttree, Plan *righttree,
 			   JoinType jointype);
-extern Window *make_window(PlannerInfo *root, List *tlist,
-			int numPartCols, AttrNumber *partColIdx, Oid *partOperators,
-			List *windowKeys, Plan *lefttree);
+extern WindowAgg *make_windowagg(PlannerInfo *root, List *tlist,
+			   int partNumCols, AttrNumber *partColIdx, Oid *partOperators,
+			   int ordNumCols, AttrNumber *ordColIdx, Oid *ordOperators,
+			   int frameOptions, Node *startOffset, Node *endOffset,
+			   Plan *lefttree);
 extern Material *make_material(Plan *lefttree);
 extern Plan *materialize_finished_plan(PlannerInfo *root, Plan *subplan);
 extern Unique *make_unique(Plan *lefttree, List *distinctList);

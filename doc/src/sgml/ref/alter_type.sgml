@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/alter_type.sgml,v 1.4 2006/09/16 00:30:16 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/alter_type.sgml,v 1.5 2008/03/19 18:38:29 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -24,6 +24,10 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
   <synopsis>
+<!--
+     GPDB_84_MERGE_FIXME: Upstream has documentation on "RENAME TO"
+     that we didn't take. Should we add that?
+-->
 ALTER TYPE <replaceable class="PARAMETER">name</replaceable> 
    SET DEFAULT ENCODING ( storage_directive )
      OWNER TO <replaceable class="PARAMETER">new_owner</replaceable> 
@@ -36,8 +40,6 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
 
   <para>
    <command>ALTER TYPE</command> changes the definition of an existing type.
-   The only currently available capabilities are changing the owner and schema
-   of a type.
   </para>
 
   <para>
@@ -63,6 +65,15 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
        <para>
         The name (possibly schema-qualified) of an existing type to
         alter.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><replaceable class="PARAMETER">new_name</replaceable></term>
+      <listitem>
+       <para>
+        The new name for the type.
        </para>
       </listitem>
      </varlistentry>
@@ -110,7 +121,14 @@ ALTER TYPE <replaceable class="PARAMETER">name</replaceable>
   <title>Examples</title>
 
   <para> 
-   To change the owner of the user-defined type <literal>email</literal>
+   To rename a data type:
+   <programlisting>
+ALTER TYPE electronic_mail RENAME TO email;
+   </programlisting>
+  </para>
+
+  <para> 
+   To change the owner of the type <literal>email</literal>
    to <literal>joe</literal>:
    <programlisting>
 ALTER TYPE email OWNER TO joe;
@@ -118,7 +136,7 @@ ALTER TYPE email OWNER TO joe;
   </para>
 
   <para>
-   To change the schema of the user-defined type <literal>email</literal>
+   To change the schema of the type <literal>email</literal>
    to <literal>customers</literal>:
    <programlisting>
 ALTER TYPE email SET SCHEMA customers;

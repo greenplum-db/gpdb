@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.135.2.1 2008/04/18 06:48:50 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.136 2008/03/10 20:06:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -69,7 +69,7 @@
  *	system's file size limit (often 2GBytes).  In order to do that,
  *	we break relations up into "segment" files that are each shorter than
  *	the OS file size limit.  The segment size is set by the RELSEG_SIZE
- *	configuration constant in pg_config_manual.h.
+ *	configuration constant in pg_config.h.
  *
  *	On disk, a relation must consist of consecutively numbered segment
  *	files in the pattern
@@ -101,10 +101,6 @@
  *	segment, we assume that any subsequent segments are inactive.
  *
  *	All MdfdVec objects are palloc'd in the MdCxt memory context.
- *
- *	Defining LET_OS_MANAGE_FILESIZE disables the segmentation logic,
- *	for use on machines that support large files.  Beware that that
- *	code has not been tested in a long time and is probably bit-rotted.
  */
 
 typedef struct _MdMirVec
@@ -112,9 +108,7 @@ typedef struct _MdMirVec
 	MirroredBufferPoolOpen		mdmir_open;
 
 	BlockNumber mdmir_segno;		/* segment number, from 0 */
-#ifndef LET_OS_MANAGE_FILESIZE	/* for large relations */
 	struct _MdMirVec *mdmir_chain;	/* next segment, or NULL */
-#endif
 } MdMirVec;
 
 static MemoryContext MdCxt;		/* context for all md.c allocations */
@@ -175,10 +169,8 @@ static void register_dirty_segment(SMgrRelation reln, MdMirVec *seg);
 static void register_unlink(RelFileNode rnode);
 static MdMirVec *_mirvec_alloc(void);
 
-#ifndef LET_OS_MANAGE_FILESIZE
 static MdMirVec *_mdmir_openseg(SMgrRelation reln, BlockNumber segno,
 			  bool createIfDoesntExist);
-#endif
 static MdMirVec *_mdmir_getseg(SMgrRelation reln, BlockNumber blkno,
 			  bool isTemp, ExtensionBehavior behavior);
 static BlockNumber _mdnblocks(SMgrRelation reln, MdMirVec *seg);
@@ -793,9 +785,7 @@ mdcreate(
 
 	reln->md_mirvec->mdmir_open = mirroredOpen;
 	reln->md_mirvec->mdmir_segno = 0;
-#ifndef LET_OS_MANAGE_FILESIZE
 	reln->md_mirvec->mdmir_chain = NULL;
-#endif
 }
 
 /*
@@ -1306,7 +1296,7 @@ mdrmdbdir(
 void
 mdextend(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 {
-	long		seekpos;
+	off_t		seekpos;
 #ifdef suppress
 	int			nbytes;
 #endif
@@ -1333,12 +1323,9 @@ mdextend(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 
 	v = _mdmir_getseg(reln, blocknum, isTemp, EXTENSION_CREATE);
 
-#ifndef LET_OS_MANAGE_FILESIZE
-	seekpos = (long) (BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE)));
-	Assert(seekpos < BLCKSZ * RELSEG_SIZE);
-#else
-	seekpos = (long) (BLCKSZ * (blocknum));
-#endif
+	seekpos = (off_t) BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE));
+
+	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
 	/*
 	 * Note: because caller usually obtained blocknum by calling mdnblocks,
@@ -1399,9 +1386,7 @@ mdextend(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 	if (!isTemp)
 		register_dirty_segment(reln, v);
 
-#ifndef LET_OS_MANAGE_FILESIZE
 	Assert(_mdnblocks(reln, v) <= ((BlockNumber) RELSEG_SIZE));
-#endif
 }
 
 /*
@@ -1483,10 +1468,8 @@ mdopen(SMgrRelation reln, ExtensionBehavior behavior)
 
 	v->mdmir_open = mirroredOpen;
 	v->mdmir_segno = 0;
-#ifndef LET_OS_MANAGE_FILESIZE
 	v->mdmir_chain = NULL;
 	Assert(_mdnblocks(reln, v) <= ((BlockNumber) RELSEG_SIZE));
-#endif
 
 	return v;
 }
@@ -1505,7 +1488,6 @@ mdclose(SMgrRelation reln)
 
 	reln->md_mirvec = NULL;			/* prevent dangling pointer after error */
 
-#ifndef LET_OS_MANAGE_FILESIZE
 	while (v != NULL)
 	{
 		MdMirVec    *ov = v;
@@ -1517,11 +1499,6 @@ mdclose(SMgrRelation reln)
 		v = v->mdmir_chain;
 		pfree(ov);
 	}
-#else
-	if (MirroredBufferPool_IsActive(&v->mdmir_open))
-		MirroredBufferPool_Close(&v->mdmir_open);
-	pfree(v);
-#endif
 }
 
 /*
@@ -1530,18 +1507,14 @@ mdclose(SMgrRelation reln)
 void
 mdread(SMgrRelation reln, BlockNumber blocknum, char *buffer)
 {
-	long		seekpos;
+	off_t		seekpos;
 	int			nbytes;
 	MdMirVec    *v;
 
 	v = _mdmir_getseg(reln, blocknum, false, EXTENSION_FAIL);
 
-#ifndef LET_OS_MANAGE_FILESIZE
-	seekpos = (long) (BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE)));
-	Assert(seekpos < BLCKSZ * RELSEG_SIZE);
-#else
-	seekpos = (long) (BLCKSZ * (blocknum));
-#endif
+	seekpos = (off_t) BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE));
+	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
 	if (MirroredBufferPool_SeekSet(&v->mdmir_open, seekpos) != seekpos)
 		ereport(ERROR,
@@ -1599,7 +1572,7 @@ mdread(SMgrRelation reln, BlockNumber blocknum, char *buffer)
 void
 mdwrite(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 {
-	long		seekpos;
+	off_t		seekpos;
 	MdMirVec    *v;
 
 	/* This assert is too expensive to have on normally ... */
@@ -1609,12 +1582,9 @@ mdwrite(SMgrRelation reln, BlockNumber blocknum, char *buffer, bool isTemp)
 
 	v = _mdmir_getseg(reln, blocknum, isTemp, EXTENSION_FAIL);
 
-#ifndef LET_OS_MANAGE_FILESIZE
-	seekpos = (long) (BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE)));
-	Assert(seekpos < BLCKSZ * RELSEG_SIZE);
-#else
-	seekpos = (long) (BLCKSZ * (blocknum));
-#endif
+	seekpos = (off_t) BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE));
+
+	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
 	if (!MirroredBufferPool_Write(
 							&v->mdmir_open,
@@ -1645,8 +1615,6 @@ BlockNumber
 mdnblocks(SMgrRelation reln)
 {
 	MdMirVec    *v = mdopen(reln, EXTENSION_FAIL);
-
-#ifndef LET_OS_MANAGE_FILESIZE
 	BlockNumber nblocks;
 	BlockNumber segno = 0;
 
@@ -1704,9 +1672,6 @@ mdnblocks(SMgrRelation reln)
 
 		v = v->mdmir_chain;
 	}
-#else
-	return _mdnblocks(reln, v);
-#endif
 }
 
 /*
@@ -1717,10 +1682,7 @@ mdtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool allowNotFou
 {
 	MdMirVec    *v;
 	BlockNumber curnblk;
-
-#ifndef LET_OS_MANAGE_FILESIZE
 	BlockNumber priorblocks;
-#endif
 
 	if (allowNotFound)
 	{
@@ -1755,7 +1717,6 @@ mdtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool allowNotFou
 
 	v = mdopen(reln, EXTENSION_FAIL);
 
-#ifndef LET_OS_MANAGE_FILESIZE
 	priorblocks = 0;
 	
 	while (v != NULL)
@@ -1795,7 +1756,7 @@ mdtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool allowNotFou
 			 */
 			BlockNumber lastsegblocks = nblocks - priorblocks;
 
-			if (!MirroredBufferPool_Truncate(&v->mdmir_open, lastsegblocks * BLCKSZ))
+			if (!MirroredBufferPool_Truncate(&v->mdmir_open, (off_t) lastsegblocks * BLCKSZ))
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not truncate relation %u/%u/%u to %u blocks: %m",
@@ -1818,18 +1779,6 @@ mdtruncate(SMgrRelation reln, BlockNumber nblocks, bool isTemp, bool allowNotFou
 		}
 		priorblocks += RELSEG_SIZE;
 	}
-#else
-	if (!MirroredBufferPool_Truncate(&v->mdmir_open, nblocks * BLCKSZ))
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not truncate relation %u/%u/%u to %u blocks: %m",
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode,
-						nblocks)));
-	if (!isTemp)
-		register_dirty_segment(reln, v);
-#endif
 }
 
 /*
@@ -1851,7 +1800,6 @@ mdimmedsync(SMgrRelation reln)
 	curnblk = mdnblocks(reln);
 	v = mdopen(reln, EXTENSION_FAIL);
 
-#ifndef LET_OS_MANAGE_FILESIZE
 	while (v != NULL)
 	{
 		if (!MirroredBufferPool_Flush(&v->mdmir_open))
@@ -1864,16 +1812,6 @@ mdimmedsync(SMgrRelation reln)
 					   reln->smgr_rnode.relNode)));
 		v = v->mdmir_chain;
 	}
-#else
-	if (!MirroredBufferPool_Flush(&v->mdmir_open) < 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not fsync segment %u of relation %u/%u/%u: %m",
-						v->mdfd_segno,
-						reln->smgr_rnode.spcNode,
-						reln->smgr_rnode.dbNode,
-						reln->smgr_rnode.relNode)));
-#endif
 }
 
 /*
@@ -2445,8 +2383,6 @@ _mirvec_alloc(void)
 	return (MdMirVec *) MemoryContextAllocZero(MdCxt, sizeof(MdMirVec));
 }
 
-#ifndef LET_OS_MANAGE_FILESIZE
-
 /*
  * Open the specified segment of the relation,
  * and make a MdfdVec object for it.  Returns NULL on failure.
@@ -2512,7 +2448,6 @@ _mdmir_openseg(SMgrRelation reln, BlockNumber segno, bool createIfDoesntExist)
 	/* all done */
 	return v;
 }
-#endif   /* LET_OS_MANAGE_FILESIZE */
 
 /*
  *	_mdfd_getseg() -- Find the segment of the relation holding the
@@ -2527,8 +2462,6 @@ _mdmir_getseg(SMgrRelation reln, BlockNumber blkno, bool isTemp,
 			  ExtensionBehavior behavior)
 {
 	MdMirVec    *v = mdopen(reln, behavior);
-
-#ifndef LET_OS_MANAGE_FILESIZE
 	BlockNumber targetseg;
 	BlockNumber nextsegno;
 
@@ -2597,7 +2530,6 @@ _mdmir_getseg(SMgrRelation reln, BlockNumber blkno, bool isTemp,
 		}
 		v = v->mdmir_chain;
 	}
-#endif
 
 	return v;
 }
@@ -2608,7 +2540,7 @@ _mdmir_getseg(SMgrRelation reln, BlockNumber blkno, bool isTemp,
 static BlockNumber
 _mdnblocks(SMgrRelation reln, MdMirVec *seg)
 {
-	long		len;
+	off_t		len;
 
 	Assert(MirroredBufferPool_IsActive(&seg->mdmir_open));
 

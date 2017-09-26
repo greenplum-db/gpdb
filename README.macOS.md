@@ -3,6 +3,13 @@
 We've confirmed that these steps work on a brand new installation of macOS Sierra or a 
 brand new installation of macOS Sierra with [Pivotal's workstation-setup](https://github.com/pivotal/workstation-setup)
 
+## Step: Disable System Integrity Protection
+
+Note that you may need to disable System Integrity Protection in order to bring
+up the gpdemo cluster. Without doing this, psql commands run in child processes
+spawned by gpinitsystem may have the DYLD_* environment variables removed from
+their environments.
+
 ## Step: install needed dependencies. This will install homebrew if missing
 ```
 ./README.macOS.bash

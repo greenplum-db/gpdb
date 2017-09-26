@@ -1276,7 +1276,7 @@ explain select C.j from C where not exists (select rank() over (order by B.i) fr
                      Filter: (subplan)
                      SubPlan 1
                        ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                             ->  Window  (cost=0.00..431.00 rows=1 width=4)
+                             ->  WindowAgg  (cost=0.00..431.00 rows=1 width=4)
                                    Order By: b.i
                                    ->  Sort  (cost=0.00..431.00 rows=1 width=4)
                                          Sort Key: b.i

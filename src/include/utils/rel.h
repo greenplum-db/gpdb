@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.104 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.105 2008/03/28 00:21:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -105,7 +105,7 @@ typedef struct RelationAmInfo
 	FmgrInfo	aminsert;
 	FmgrInfo	ambeginscan;
 	FmgrInfo	amgettuple;
-	FmgrInfo	amgetmulti;
+	FmgrInfo	amgetbitmap;
 	FmgrInfo	amrescan;
 	FmgrInfo	amendscan;
 	FmgrInfo	ammarkpos;

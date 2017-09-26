@@ -570,12 +570,21 @@ find_minimum_var_level_cbAggref(Aggref *aggref,
 	}
 
     /* visit aggregate's args */
-	return cdb_walk_vars((Node *)aggref->args,
-                         find_minimum_var_level_cbVar,
-                         find_minimum_var_level_cbAggref,
-                         NULL,
-                         ctx,
-                         sublevelsup);
+	if (cdb_walk_vars((Node *)aggref->args,
+					  find_minimum_var_level_cbVar,
+					  find_minimum_var_level_cbAggref,
+					  NULL,
+					  ctx,
+					  sublevelsup))
+		return true;
+	if (cdb_walk_vars((Node *)aggref->aggfilter,
+					  find_minimum_var_level_cbVar,
+					  find_minimum_var_level_cbAggref,
+					  NULL,
+					  ctx,
+					  sublevelsup))
+		return true;
+	return false;
 }
 
 int

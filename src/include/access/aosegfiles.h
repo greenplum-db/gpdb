@@ -16,9 +16,10 @@
 #ifndef AOSEGFILES_H
 #define AOSEGFILES_H
 
-#include "utils/rel.h"
-#include "utils/tqual.h"
 #include "catalog/pg_appendonly.h"
+#include "utils/rel.h"
+#include "utils/snapshot.h"
+#include "utils/visibility_summary.h"
 
 #define Natts_pg_aoseg					8
 #define Anum_pg_aoseg_segno				1

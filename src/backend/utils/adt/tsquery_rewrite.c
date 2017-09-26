@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_rewrite.c,v 1.11.2.1 2009/07/28 09:32:45 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsquery_rewrite.c,v 1.12 2008/03/25 22:42:44 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -273,7 +273,7 @@ tsquery_rewrite_query(PG_FUNCTION_ARGS)
 	QTNTernary(tree);
 	QTNSort(tree);
 
-	buf = TextPGetCString(in);
+	buf = text_to_cstring(in);
 
 	SPI_connect();
 

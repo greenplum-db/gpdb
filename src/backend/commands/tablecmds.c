@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablecmds.c,v 1.273 2008/12/13 19:13:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablecmds.c,v 1.250 2008/03/31 03:34:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,8 +40,9 @@
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_trigger.h"
-#include "catalog/pg_type.h"
 #include "catalog/pg_tablespace.h"
+#include "catalog/pg_type.h"
+#include "catalog/pg_type_fn.h"
 #include "catalog/pg_partition.h"
 #include "catalog/pg_partition_rule.h"
 #include "catalog/toasting.h"
@@ -88,7 +89,9 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_query.h"
@@ -1079,6 +1082,9 @@ ExecuteTruncate(TruncateStmt *stmt)
 	List	   *rels = NIL;
 	List	   *relids = NIL;
 	List	   *meta_relids = NIL;
+	EState	   *estate;
+	ResultRelInfo *resultRelInfos;
+	ResultRelInfo *resultRelInfo;
 	ListCell   *cell;
     int partcheck = 2;
 	List *partList = NIL;
@@ -1219,6 +1225,45 @@ ExecuteTruncate(TruncateStmt *stmt)
 		heap_truncate_check_FKs(rels, false);
 #endif
 
+	/* Prepare to catch AFTER triggers. */
+	AfterTriggerBeginQuery();
+
+	/*
+	 * To fire triggers, we'll need an EState as well as a ResultRelInfo
+	 * for each relation.
+	 */
+	estate = CreateExecutorState();
+	resultRelInfos = (ResultRelInfo *)
+		palloc(list_length(rels) * sizeof(ResultRelInfo));
+	resultRelInfo = resultRelInfos;
+	foreach(cell, rels)
+	{
+		Relation	rel = (Relation) lfirst(cell);
+
+		InitResultRelInfo(resultRelInfo,
+						  rel,
+						  0,			/* dummy rangetable index */
+						  CMD_DELETE,	/* don't need any index info */
+						  false);
+		resultRelInfo++;
+	}
+	estate->es_result_relations = resultRelInfos;
+	estate->es_num_result_relations = list_length(rels);
+
+	/*
+	 * Process all BEFORE STATEMENT TRUNCATE triggers before we begin
+	 * truncating (this is because one of them might throw an error).
+	 * Also, if we were to allow them to prevent statement execution,
+	 * that would need to be handled here.
+	 */
+	resultRelInfo = resultRelInfos;
+	foreach(cell, rels)
+	{
+		estate->es_result_relation_info = resultRelInfo;
+		ExecBSTruncateTriggers(estate, resultRelInfo);
+		resultRelInfo++;
+	}
+
 	/*
 	 * OK, truncate each table.
 	 */
@@ -1228,12 +1273,13 @@ ExecuteTruncate(TruncateStmt *stmt)
 	foreach(cell, rels)
 	{
 		Relation	rel = (Relation) lfirst(cell);
+
 		TruncateRelfiles(rel);
+
 		/*
 		 * Reconstruct the indexes to match, and we're done.
 		 */
 		reindex_relation(RelationGetRelid(rel), true);
-		heap_close(rel, NoLock);
 	}
 
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -1263,6 +1309,31 @@ ExecuteTruncate(TruncateStmt *stmt)
 							   "TRUNCATE", "");
 		}
 
+	}
+
+	/*
+	 * Process all AFTER STATEMENT TRUNCATE triggers.
+	 */
+	resultRelInfo = resultRelInfos;
+	foreach(cell, rels)
+	{
+		estate->es_result_relation_info = resultRelInfo;
+		ExecASTruncateTriggers(estate, resultRelInfo);
+		resultRelInfo++;
+	}
+
+	/* Handle queued AFTER triggers */
+	AfterTriggerEndQuery(estate);
+
+	/* We can clean up the EState now */
+	FreeExecutorState(estate);
+
+	/* And close the rels (can't do this while EState still holds refs) */
+	foreach(cell, rels)
+	{
+		Relation	rel = (Relation) lfirst(cell);
+
+		heap_close(rel, NoLock);
 	}
 }
 
@@ -2217,27 +2288,52 @@ renameatt(Oid myrelid,
 }
 
 /*
- *		renamerel		- change the name of a relation
+ * A helper function for RenameRelation, to createa a very minimal, fake,
+ * RelationData struct for a relation. This is used in
+ * gp_allow_rename_relation_without_lock mode, in place of opening the
+ * relcache entry for real.
  *
- *		XXX - When renaming sequences, we don't bother to modify the
- *			  sequence name that is stored within the sequence itself
- *			  (this would cause problems with MVCC). In the future,
- *			  the sequence name should probably be removed from the
- *			  sequence, AFAIK there's no need for it to be there.
+ * RenameRelation only needs the rd_rel field to be filled in, so that's
+ * all we fetch.
+ */
+static Relation
+fake_relation_open(Oid myrelid)
+{
+	Relation	relrelation;	/* for RELATION relation */
+	Relation	fakerel;
+	HeapTuple	reltup;
+
+	fakerel = palloc0(sizeof(RelationData));
+
+	/*
+	 * Find relation's pg_class tuple, and make sure newrelname isn't in use.
+	 */
+	relrelation = heap_open(RelationRelationId, RowExclusiveLock);
+
+	reltup = SearchSysCacheCopy(RELOID,
+								ObjectIdGetDatum(myrelid),
+								0, 0, 0);
+	if (!HeapTupleIsValid(reltup))		/* shouldn't happen */
+		elog(ERROR, "cache lookup failed for relation %u", myrelid);
+	fakerel->rd_rel = (Form_pg_class) GETSTRUCT(reltup);
+
+	heap_close(relrelation, RowExclusiveLock);
+
+	return fakerel;
+}
+
+/*
+ * Execute ALTER TABLE/INDEX/SEQUENCE/VIEW RENAME
+ *
+ * Caller has already done permissions checks.
  */
 void
-renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *stmt)
+RenameRelation(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *stmt)
 {
 	Relation	targetrelation;
-	Relation	relrelation;	/* for RELATION relation */
-	HeapTuple	reltup;
-	Form_pg_class relform;
-	Oid			typeId;
 	Oid			namespaceId;
-	char	   *oldrelname;
 	char		relkind;
-	bool		relhastriggers;
-	bool		isSystemRelation;
+	char	   *oldrelname;
 
 	/*
 	 * In Postgres, grab an exclusive lock on the target table, index, sequence
@@ -2248,7 +2344,9 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 	 * catalogs. This will change transaction isolation behaviors, however, this
 	 * won't cause any data corruption.
 	 */
-	if (!gp_allow_rename_relation_without_lock)
+	if (gp_allow_rename_relation_without_lock)
+		targetrelation = fake_relation_open(myrelid);
+	else
 		targetrelation = relation_open(myrelid, AccessExclusiveLock);
 
 	/* if this is a child table of a partitioning configuration, complain */
@@ -2268,23 +2366,9 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 						get_rel_name(master), pretty ? pretty : "" )));
 	}
 
-	/*
-	 * Find relation's pg_class tuple, and make sure newrelname isn't in use.
-	 */
-	relrelation = heap_open(RelationRelationId, RowExclusiveLock);
-
-	reltup = SearchSysCacheCopy(RELOID,
-								ObjectIdGetDatum(myrelid),
-								0, 0, 0);
-	if (!HeapTupleIsValid(reltup))		/* shouldn't happen */
-		elog(ERROR, "cache lookup failed for relation %u", myrelid);
-	relform = (Form_pg_class) GETSTRUCT(reltup);
-
-	relkind = relform->relkind;
-	namespaceId = relform->relnamespace;
-	relhastriggers = relform->reltriggers;
-	typeId = relform->reltype;
-	oldrelname = pstrdup(NameStr(relform->relname));
+	namespaceId = RelationGetNamespace(targetrelation);
+	relkind = targetrelation->rd_rel->relkind;
+	oldrelname = RelationGetRelationName(targetrelation);
 
 	/*
 	 * For compatibility with prior releases, we don't complain if ALTER TABLE
@@ -2294,70 +2378,27 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a sequence",
-						oldrelname)));
+						RelationGetRelationName(targetrelation))));
 
 	if (reltype == OBJECT_VIEW && relkind != RELKIND_VIEW)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a view",
-						oldrelname)));
+						RelationGetRelationName(targetrelation))));
 
-	if (get_relname_relid(newrelname, namespaceId) != InvalidOid)
+	/*
+	 * Don't allow ALTER TABLE on composite types.
+	 * We want people to use ALTER TYPE for that.
+	 */
+	if (relkind == RELKIND_COMPOSITE_TYPE)
 		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_TABLE),
-				 errmsg("relation \"%s\" already exists",
-						newrelname)));
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is a composite type",
+						RelationGetRelationName(targetrelation)),
+				 errhint("Use ALTER TYPE instead.")));
 
-
-	isSystemRelation = IsSystemNamespace(namespaceId) ||
-					   IsToastNamespace(namespaceId) ||
-					   IsAoSegmentNamespace(namespaceId);
-
-	Assert (allowSystemTableModsDDL || !isSystemRelation);
-
-	if (get_relname_relid(newrelname, namespaceId) != InvalidOid)
-		ereport(ERROR,
-				(errcode(ERRCODE_DUPLICATE_TABLE),
-				 errmsg("relation \"%s\" already exists",
-						newrelname)));
-
-	/*
-	 * Update pg_class tuple with new relname.	(Scribbling on reltup is OK
-	 * because it's a copy...)
-	 */
-	namestrcpy(&(relform->relname), newrelname);
-
-	simple_heap_update(relrelation, &reltup->t_self, reltup);
-
-	/* keep the system catalog indexes current */
-	CatalogUpdateIndexes(relrelation, reltup);
-
-	heap_freetuple(reltup);
-	heap_close(relrelation, NoLock);
-
-	/*
-	 * Also rename the associated type, if any.
-	 */
-	if (OidIsValid(typeId))
-	{
-		if (!TypeTupleExists(typeId))
-			ereport(WARNING,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("type \"%s\" does not exist", oldrelname)));
-		else
-			TypeRename(typeId, newrelname, namespaceId);
-	}
-
-	/*
-	 * Also rename the associated constraint, if any.
-	 */
-	if (relkind == RELKIND_INDEX)
-	{
-		Oid			constraintId = get_index_constraint(myrelid);
-
-		if (OidIsValid(constraintId))
-			RenameConstraintById(constraintId, newrelname);
-	}
+	/* Do the work */
+	RenameRelationInternal(myrelid, newrelname, namespaceId);
 
 	/* MPP-3059: recursive rename of partitioned table */
 	/* Note: the top-level RENAME has bAllowPartn=FALSE, while the
@@ -2369,6 +2410,7 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 		(Gp_role == GP_ROLE_DISPATCH))
 	{
 		PartitionNode *pNode;
+
 		pNode = RelationBuildPartitionDescByOid(myrelid, false);
 
 		if (pNode)
@@ -2425,6 +2467,110 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 		}
 	}
 
+	/*
+	 * Close rel, but keep exclusive lock!
+	 */
+	if (!gp_allow_rename_relation_without_lock)
+		relation_close(targetrelation, NoLock);
+}
+
+/*
+ *		RenameRelationInternal - change the name of a relation
+ *
+ *		XXX - When renaming sequences, we don't bother to modify the
+ *			  sequence name that is stored within the sequence itself
+ *			  (this would cause problems with MVCC). In the future,
+ *			  the sequence name should probably be removed from the
+ *			  sequence, AFAIK there's no need for it to be there.
+ */
+void
+RenameRelationInternal(Oid myrelid, const char *newrelname, Oid namespaceId)
+{
+	Relation	targetrelation;
+	Relation	relrelation;	/* for RELATION relation */
+	HeapTuple	reltup;
+	Form_pg_class relform;
+	bool		isSystemRelation;
+
+	/*
+	 * In Postgres:
+	 * Grab an exclusive lock on the target table, index, sequence or view,
+	 * which we will NOT release until end of transaction.
+	 *
+	 * In GPDB, added supportability feature under GUC to allow rename table
+	 * without AccessExclusiveLock for scenarios like directly modifying system
+	 * catalogs. This will change transaction isolation behaviors, however, this
+	 * won't cause any data corruption.
+	 */
+	if (gp_allow_rename_relation_without_lock)
+		targetrelation = fake_relation_open(myrelid);
+	else
+		targetrelation = relation_open(myrelid, AccessExclusiveLock);
+
+	isSystemRelation = IsSystemNamespace(namespaceId) ||
+					   IsToastNamespace(namespaceId) ||
+					   IsAoSegmentNamespace(namespaceId);
+
+	Assert (allowSystemTableModsDDL || !isSystemRelation);
+
+	/*
+	 * Find relation's pg_class tuple, and make sure newrelname isn't in use.
+	 */
+	relrelation = heap_open(RelationRelationId, RowExclusiveLock);
+
+	reltup = SearchSysCacheCopy(RELOID,
+								ObjectIdGetDatum(myrelid),
+								0, 0, 0);
+	if (!HeapTupleIsValid(reltup))		/* shouldn't happen */
+		elog(ERROR, "cache lookup failed for relation %u", myrelid);
+	relform = (Form_pg_class) GETSTRUCT(reltup);
+
+	if (get_relname_relid(newrelname, namespaceId) != InvalidOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_DUPLICATE_TABLE),
+				 errmsg("relation \"%s\" already exists",
+						newrelname)));
+
+	/*
+	 * Update pg_class tuple with new relname.	(Scribbling on reltup is OK
+	 * because it's a copy...)
+	 */
+	namestrcpy(&(relform->relname), newrelname);
+
+	simple_heap_update(relrelation, &reltup->t_self, reltup);
+
+	/* keep the system catalog indexes current */
+	CatalogUpdateIndexes(relrelation, reltup);
+
+	heap_freetuple(reltup);
+	heap_close(relrelation, NoLock);
+
+	/*
+	 * Also rename the associated type, if any.
+	 */
+	if (OidIsValid(targetrelation->rd_rel->reltype))
+	{
+		if (!TypeTupleExists(targetrelation->rd_rel->reltype))
+			ereport(WARNING,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+					 errmsg("type \"%s\" does not exist",
+							RelationGetRelationName(targetrelation))));
+		else
+			RenameTypeInternal(targetrelation->rd_rel->reltype,
+						   newrelname, namespaceId);
+	}
+
+	/*
+	 * Also rename the associated constraint, if any.
+	 */
+	if (targetrelation->rd_rel->relkind == RELKIND_INDEX)
+	{
+		Oid			constraintId = get_index_constraint(myrelid);
+
+		if (OidIsValid(constraintId))
+			RenameConstraintById(constraintId, newrelname);
+	}
+
 	/* MPP-6929: metadata tracking */
 	if ((Gp_role == GP_ROLE_DISPATCH)
 		&&
@@ -2432,7 +2578,7 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 		 * if modifying system tables (eg during upgrade)
 		 */
 		( ! ( (PG_CATALOG_NAMESPACE == namespaceId) && (allowSystemTableModsDDL)))
-		&& (   MetaTrackValidRelkind(relkind)
+		&& (   MetaTrackValidRelkind(targetrelation->rd_rel->relkind)
 			&& METATRACK_VALIDNAMESPACE(namespaceId)
 			   && (!(isAnyTempNamespace(namespaceId)))
 				))
@@ -2443,9 +2589,7 @@ renamerel(Oid myrelid, const char *newrelname, ObjectType reltype, RenameStmt *s
 				);
 
 	/*
-	 * In Postgres, close rel, but keep exclusive lock!
-	 *
-	 * In GPDB, skip this under GUC. Same reason as relation_open().
+	 * Close rel, but keep exclusive lock!
 	 */
 	if (!gp_allow_rename_relation_without_lock)
 		relation_close(targetrelation, NoLock);
@@ -10630,7 +10774,7 @@ decompile_conbin(HeapTuple contup, TupleDesc tupdesc)
 
 	expr = DirectFunctionCall2(pg_get_expr, attr,
 							   ObjectIdGetDatum(con->conrelid));
-	return DatumGetCString(DirectFunctionCall1(textout, expr));
+	return TextDatumGetCString(expr);
 }
 
 /*
@@ -13289,8 +13433,8 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		heap_close(newrel, NoLock);
 		heap_close(oldrel, NoLock);
 
-		/* rename rel renames the type too */
-		renamerel(oldrelid, tmpname1, OBJECT_TABLE, NULL);
+		/* RenameRelation renames the type too */
+		RenameRelation(oldrelid, tmpname1, OBJECT_TABLE, NULL);
 		CommandCounterIncrement();
 		RelationForgetRelation(oldrelid);
 
@@ -13313,7 +13457,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 			 * collision.  It would be nice to have an atomic
 			 * operation to rename and renamespace a relation... 
 			 */
-			renamerel(newrelid, tmpname2, OBJECT_TABLE, NULL);
+			RenameRelation(newrelid, tmpname2, OBJECT_TABLE, NULL);
 			CommandCounterIncrement();
 			RelationForgetRelation(newrelid);
 
@@ -13326,11 +13470,11 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 			free_object_addresses(objsMoved);
 		}
 
-		renamerel(newrelid, oldname, OBJECT_TABLE, NULL);
+		RenameRelation(newrelid, oldname, OBJECT_TABLE, NULL);
 		CommandCounterIncrement();
 		RelationForgetRelation(newrelid);
 
-		renamerel(oldrelid, newname, OBJECT_TABLE, NULL);
+		RenameRelation(oldrelid, newname, OBJECT_TABLE, NULL);
 		CommandCounterIncrement();
 		RelationForgetRelation(oldrelid);
 

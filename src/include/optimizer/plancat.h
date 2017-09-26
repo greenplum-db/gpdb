@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/plancat.h,v 1.47.2.1 2008/04/01 00:48:44 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/plancat.h,v 1.49 2008/04/01 00:48:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 
 #include "nodes/relation.h"
 #include "utils/relcache.h"
+#include "utils/rel.h"
 
 /* Hook for plugins to get control in get_relation_info() */
 typedef void (*get_relation_info_hook_type) (PlannerInfo *root,
@@ -31,7 +32,7 @@ extern void get_relation_info(PlannerInfo *root, Oid relationObjectId,
 				  bool inhparent, RelOptInfo *rel);
 
 extern void estimate_rel_size(Relation rel, int32 *attr_widths,
-				  BlockNumber *pages, double *tuples);
+							  BlockNumber *pages, double *tuples);
 
 extern bool relation_excluded_by_constraints(PlannerInfo *root,
 								 RelOptInfo *rel, RangeTblEntry *rte);

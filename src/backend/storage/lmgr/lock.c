@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.181.2.2 2009/03/11 00:08:06 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.183 2008/03/17 19:44:41 petere Exp $
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When
@@ -41,12 +41,10 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
-#include "utils/testutils.h"
-#include "executor/execdesc.h"
-#include "utils/resscheduler.h"
-#include "storage/procarray.h"
 
 #include "cdb/cdbvars.h"
+#include "storage/procarray.h"
+#include "utils/resscheduler.h"
 
 /* This configuration variable is used to set the lock table size */
 int			max_locks_per_xact; /* set by guc.c */
@@ -965,11 +963,11 @@ LockAcquire(const LOCKTAG *locktag,
 		 * Sleep till someone wakes me up.
 		 */
 
-		PG_TRACE2(lock__startwait, locktag->locktag_field2, lockmode);
+		TRACE_POSTGRESQL_LOCK_STARTWAIT(locktag->locktag_field2, lockmode);
 
 		WaitOnLock(locallock, owner);
 
-		PG_TRACE2(lock__endwait, locktag->locktag_field2, lockmode);
+		TRACE_POSTGRESQL_LOCK_ENDWAIT(locktag->locktag_field2, lockmode);
 
 		/*
 		 * NOTE: do not do any material change of state between here and

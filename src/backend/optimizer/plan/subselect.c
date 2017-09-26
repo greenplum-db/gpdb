@@ -448,6 +448,17 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 				 subLinkType == EXISTS_SUBLINK);
 	}
 
+	/*
+	 * Strictly speaking, the order of rows in a subquery doesn't matter.
+	 * Consider e.g. "WHERE IN (SELECT ...)". But in case of
+	 * "ARRAY(SELECT foo ORDER BY bar)", we'd like to honor the ORDER BY,
+	 * and construct the array in that order.
+	 */
+	if (subLinkType == ARRAY_SUBLINK)
+		config->honor_order_by = true;
+	else
+		config->honor_order_by = false;
+
 	PlannerInfo *subroot = NULL;
 
 	Plan *plan = subquery_planner(root->glob, subquery,
@@ -1524,6 +1535,18 @@ SS_finalize_plan(PlannerInfo *root, Plan *plan, bool attach_initplans)
 	 */
 	if (attach_initplans)
 	{
+		/*
+		 * If the topmost plan is a Motion, attach the InitPlan to the node
+		 * below it, instead. The executor machinery that executes InitPlans
+		 * in the QD node, and sends the resulting exec parameters to the QE
+		 * nodes, gets confused if the InitPlan is attached to the Motion
+		 * node, and fails to deliver the exec parameter value to where it's
+		 * needed. I'm not sure why that fails, but historically the InitPlans
+		 * have always been attached to the node below the Motion, so let's
+		 * just keep that behavior for now.
+		 */
+		if (IsA(plan, Motion))
+			plan = plan->lefttree;
 
 		Insist(!plan->initPlan);
 		plan->initPlan = root->init_plans;
@@ -1793,7 +1816,7 @@ finalize_plan(PlannerInfo *root, Plan *plan, Bitmapset *valid_params)
 		case T_RecursiveUnion:
 		case T_Hash:
 		case T_Agg:
-		case T_Window:
+		case T_WindowAgg:
 		case T_SeqScan:
 		case T_AppendOnlyScan:
 		case T_AOCSScan: 

@@ -1558,13 +1558,13 @@ CTranslatorQueryToDXL::PdxlnWindow
 		CDXLNode *pdxlnPrEl =  PdxlnPrEFromGPDBExpr(pte->expr, pte->resname);
 		ULONG ulColId = CDXLScalarProjElem::PdxlopConvert(pdxlnPrEl->Pdxlop())->UlId();
 
-		if (IsA(pte->expr, WindowRef))
+		if (IsA(pte->expr, WindowFunc))
 		{
 			CTranslatorUtils::CheckAggregateWindowFn((Node*) pte->expr);
 		}
 		if (!pte->resjunk)
 		{
-			if (IsA(pte->expr, Var) || IsA(pte->expr, WindowRef))
+			if (IsA(pte->expr, Var) || IsA(pte->expr, WindowFunc))
 			{
 				// add window functions and non-computed columns to the project list of the window operator
 				pdxlnPrL->AddChild(pdxlnPrEl);
@@ -1617,7 +1617,7 @@ CTranslatorQueryToDXL::PdxlnWindow
 				pdxlnPrEl->Release();
 			}
 		}
-		else if (IsA(pte->expr, WindowRef))
+		else if (IsA(pte->expr, WindowFunc))
 		{
 			// computed columns used in the order by clause
 			pdxlnPrL->AddChild(pdxlnPrEl);

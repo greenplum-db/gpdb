@@ -18,8 +18,8 @@
 
 #include "nodes/execnodes.h"
 
-extern int	ExecCountSlotsWindow(Window *node);
-extern WindowState *ExecInitWindow(Window *node, EState *estate, int eflags);
+extern int	ExecCountSlotsWindow(WindowAgg *node);
+extern WindowState *ExecInitWindow(WindowAgg *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecWindow(WindowState *node);
 extern void ExecEndWindow(WindowState *node);
 extern void ExecReScanWindow(WindowState *node, ExprContext *exprCtxt);

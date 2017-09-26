@@ -12,6 +12,11 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
+#include "access/genam.h"
+#include "access/heapam.h"
+#include "access/transam.h"
+#include "access/xact.h"
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "utils/palloc.h"
@@ -34,9 +39,6 @@
 #include "storage/itemptr.h"
 #include "utils/hsearch.h"
 #include "storage/shmem.h"
-#include "access/genam.h"
-#include "access/heapam.h"
-#include "access/transam.h"
 #include "utils/guc.h"
 #include "storage/smgr.h"
 #include "storage/ipc.h"

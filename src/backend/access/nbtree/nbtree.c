@@ -274,8 +274,27 @@ _bt_validate_vacuum(Relation irel, Relation hrel, TransactionId oldest_xmin)
 				 * also allow validating if a heap tid appears twice
 				 * in a unique index.
 				 */
-				if (!heap_release_fetch(hrel, SnapshotAny, &htup,
-										&hbuf, true, NULL))
+				/* GPDB_84_MERGE_FIXME:
+				 * This used to use the heap_release_fetch() function, but it
+				 * was removed in the upstream, as there were no remaining
+				 * calls to it in the upstream. I replaced it with
+				 * ReleaseBuffer() + heap_fetch(). That's functionally the
+				 * same, but it loses the performance advantage of the
+				 * combined heap_release_fetch() call. If you're running with
+				 * gp_indexcheck_vacuum, I hope you're not in a hurry!
+				 *
+				 * But it might be prudent to check how significant the
+				 * performance hit is in practice, and refactor if needed.
+				 * I wonder if we really need to use heap_fetch() here.
+				 * I think a simple ReadBuffer() + PageGetItem() would be
+				 * appropriate here.
+				 *
+				 * Or we could do the TID bitmap thing mentioned in above TODO
+				 * comment.
+				 */
+				if (hbuf != InvalidBuffer)
+					ReleaseBuffer(hbuf);
+				if (!heap_fetch(hrel, SnapshotAny, &htup, &hbuf, true, NULL))
 				{
 					elog(ERROR, "btvalidatevacuum: tid (%d,%d) from index %s "
 						 "not found in heap %s",
@@ -543,26 +562,26 @@ btgettuple(PG_FUNCTION_ARGS)
 }
 
 /*
- * btgetmulti() -- construct a HashBitmap.
+ * btgetbitmap() -- construct a HashBitmap.
  */
 Datum
-btgetmulti(PG_FUNCTION_ARGS)
+btgetbitmap(PG_FUNCTION_ARGS)
 {
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
 
 	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
 	Node *n = (Node *)PG_GETARG_POINTER(1);
-	HashBitmap	*hashBitmap;
-
+	HashBitmap	*tbm;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
-	bool		res = true;
+	int64		ntids = 0;
+	ItemPointer heapTid;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
 	if (n == NULL)
 	{
 		/* XXX should we use less than work_mem for this? */
-		hashBitmap = tbm_create(work_mem * 1024L);
+		tbm = tbm_create(work_mem * 1024L);
 	}
 	else if (!IsA(n, HashBitmap))
 	{
@@ -570,42 +589,52 @@ btgetmulti(PG_FUNCTION_ARGS)
 	}
 	else
 	{
-		hashBitmap = (HashBitmap *)n;
+		tbm = (HashBitmap *)n;
 	}
+
 	/* If we haven't started the scan yet, fetch the first page & tuple. */
 	if (!BTScanPosIsValid(so->currPos))
 	{
-		res = _bt_first(scan, ForwardScanDirection);
-		if (res)
+		/* Fetch the first page & tuple. */
+		if (_bt_first(scan, ForwardScanDirection))
 		{
 			/* Save tuple ID, and continue scanning */
-			tbm_add_tuples(hashBitmap, &(scan->xs_ctup.t_self), 1);
+			heapTid = &scan->xs_ctup.t_self;
+			tbm_add_tuples(tbm, heapTid, 1, false);
+			ntids++;
+		}
+		else
+		{
+			MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
+
+			PG_RETURN_POINTER(tbm);
 		}
 	}
 
-	while (res)
+	for (;;)
 	{
 		/*
-		 * Advance to next tuple within page.  This is the same as the
-		 * easy case in _bt_next().
+		 * Advance to next tuple within page.  This is the same as the easy
+		 * case in _bt_next().
 		 */
 		if (++so->currPos.itemIndex > so->currPos.lastItem)
 		{
+			CHECK_FOR_INTERRUPTS();
+
 			/* let _bt_next do the heavy lifting */
-			res = _bt_next(scan, ForwardScanDirection);
-			if (!res)
+			if (!_bt_next(scan, ForwardScanDirection))
 				break;
 		}
 
 		/* Save tuple ID, and continue scanning */
-		tbm_add_tuples(hashBitmap,
-					   &(so->currPos.items[so->currPos.itemIndex].heapTid),
-					   1);
+		heapTid = &so->currPos.items[so->currPos.itemIndex].heapTid;
+		tbm_add_tuples(tbm, heapTid, 1, false);
+		ntids++;
 	}
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_EXIT;
 
-	PG_RETURN_POINTER(hashBitmap);
+	PG_RETURN_POINTER(tbm);
 }
 
 /*

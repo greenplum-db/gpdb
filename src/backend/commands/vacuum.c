@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.365 2008/02/20 14:31:35 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.371 2008/03/26 21:10:38 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -58,6 +58,7 @@
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"             /* pq_beginmessage() etc. */
 #include "miscadmin.h"
+#include "pgstat.h"
 #include "postmaster/autovacuum.h"
 #include "storage/freespace.h"
 #include "storage/proc.h"
@@ -73,12 +74,15 @@
 #include "utils/memutils.h"
 #include "utils/pg_rusage.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "pgstat.h"
+#include "utils/tqual.h"
+
 #include "access/distributedlog.h"
-#include "nodes/makefuncs.h"     /* makeRangeVar */
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
+#include "nodes/makefuncs.h"     /* makeRangeVar */
+#include "pgstat.h"
 
 
 /*
@@ -604,15 +608,6 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 			setupRegularDtxContext();
 		}
 		StartTransactionCommand();
-
-		/*
-		 * Re-establish the transaction snapshot.  This is wasted effort when
-		 * we are called as a normal utility command, because the new
-		 * transaction will be dropped immediately by PostgresMain(); but it's
-		 * necessary if we are called from autovacuum because autovacuum might
-		 * continue on to do an ANALYZE-only call.
-		 */
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
 	}
 
 	if (vacstmt->vacuum && !IsAutoVacuumWorkerProcess())
@@ -5002,7 +4997,7 @@ vac_update_fsm(Relation onerel, VacPageList fraged_pages,
 	int			nPages = fraged_pages->num_pages;
 	VacPage    *pagedesc = fraged_pages->pagedesc;
 	Size		threshold;
-	PageFreeSpaceInfo *pageSpaces;
+	FSMPageData *pageSpaces;
 	int			outPages;
 	int			i;
 
@@ -5018,8 +5013,7 @@ vac_update_fsm(Relation onerel, VacPageList fraged_pages,
 	 */
 	threshold = GetAvgFSMRequestSize(&onerel->rd_node);
 
-	pageSpaces = (PageFreeSpaceInfo *)
-		palloc(nPages * sizeof(PageFreeSpaceInfo));
+	pageSpaces = (FSMPageData *) palloc(nPages * sizeof(FSMPageData));
 	outPages = 0;
 
 	for (i = 0; i < nPages; i++)
@@ -5034,8 +5028,8 @@ vac_update_fsm(Relation onerel, VacPageList fraged_pages,
 
 		if (pagedesc[i]->free >= threshold)
 		{
-			pageSpaces[outPages].blkno = pagedesc[i]->blkno;
-			pageSpaces[outPages].avail = pagedesc[i]->free;
+			FSMPageSetPageNum(&pageSpaces[outPages], pagedesc[i]->blkno);
+			FSMPageSetSpace(&pageSpaces[outPages], pagedesc[i]->free);
 			outPages++;
 		}
 	}

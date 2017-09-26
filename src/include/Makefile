@@ -4,7 +4,7 @@
 #
 # 'make install' installs whole contents of src/include.
 #
-# $PostgreSQL: pgsql/src/include/Makefile,v 1.23.2.1 2009/07/20 20:38:58 alvherre Exp $
+# $PostgreSQL: pgsql/src/include/Makefile,v 1.24 2008/03/17 19:44:41 petere Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ install: all installdirs
 	  chmod $(INSTALL_DATA_MODE) '$(DESTDIR)$(includedir_server)'/$$dir/*.h  || exit; \
 	done
 ifeq ($(vpath_build),yes)
-	for file in dynloader.h parser/parse.h; do \
+	for file in dynloader.h parser/parse.h utils/probes.h; do \
 	  cp $$file '$(DESTDIR)$(includedir_server)'/$$file || exit; \
 	  chmod $(INSTALL_DATA_MODE) '$(DESTDIR)$(includedir_server)'/$$file || exit; \
 	done

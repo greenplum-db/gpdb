@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.108.2.1 2009/02/02 20:25:43 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.110 2008/04/06 23:43:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,11 +34,15 @@
 
 static PLpgSQL_expr		*read_sql_construct(int until,
 											int until2,
+											int until3,
 											const char *expected,
 											const char *sqlstart,
 											bool isexpression,
 											bool valid_sql,
 											int *endtoken);
+static PLpgSQL_expr		*read_sql_expression2(int until, int until2,
+											  const char *expected,
+											  int *endtoken);
 static	PLpgSQL_expr	*read_sql_stmt(const char *sqlstart);
 static	PLpgSQL_type	*read_datatype(int tok);
 static	PLpgSQL_stmt	*make_execsql_stmt(const char *sqlstart, int lineno);
@@ -59,6 +63,8 @@ static	void			 plpgsql_sql_error_callback(void *arg);
 static	char			*check_label(const char *yytxt);
 static	void			 check_labels(const char *start_label,
 									  const char *end_label);
+static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
+										  int until, const char *expected);
 
 %}
 
@@ -214,6 +220,7 @@ static	void			 check_labels(const char *start_label,
 %token	K_THEN
 %token	K_TO
 %token	K_TYPE
+%token	K_USING
 %token	K_WARNING
 %token	K_WHEN
 %token	K_WHILE
@@ -866,21 +873,15 @@ stmt_for		: opt_block_label K_FOR for_control loop_body
 							new->body	  = $4.stmts;
 							$$ = (PLpgSQL_stmt *) new;
 						}
-						else if ($3->cmd_type == PLPGSQL_STMT_FORS)
-						{
-							PLpgSQL_stmt_fors		*new;
-
-							new = (PLpgSQL_stmt_fors *) $3;
-							new->label	  = $1;
-							new->body	  = $4.stmts;
-							$$ = (PLpgSQL_stmt *) new;
-						}
 						else
 						{
-							PLpgSQL_stmt_dynfors	*new;
+							PLpgSQL_stmt_forq		*new;
 
-							Assert($3->cmd_type == PLPGSQL_STMT_DYNFORS);
-							new = (PLpgSQL_stmt_dynfors *) $3;
+							Assert($3->cmd_type == PLPGSQL_STMT_FORS ||
+								   $3->cmd_type == PLPGSQL_STMT_FORC ||
+								   $3->cmd_type == PLPGSQL_STMT_DYNFORS);
+							/* forq is the common supertype of all three */
+							new = (PLpgSQL_stmt_forq *) $3;
 							new->label	  = $1;
 							new->body	  = $4.stmts;
 							$$ = (PLpgSQL_stmt *) new;
@@ -897,13 +898,16 @@ for_control		:
 					{
 						int			tok = yylex();
 
-						/* Simple case: EXECUTE is a dynamic FOR loop */
 						if (tok == K_EXECUTE)
 						{
+							/* EXECUTE means it's a dynamic FOR loop */
 							PLpgSQL_stmt_dynfors	*new;
 							PLpgSQL_expr			*expr;
+							int						term;
 
-							expr = plpgsql_read_expression(K_LOOP, "LOOP");
+							expr = read_sql_expression2(K_LOOP, K_USING,
+														"LOOP or USING",
+														&term);
 
 							new = palloc0(sizeof(PLpgSQL_stmt_dynfors));
 							new->cmd_type = PLPGSQL_STMT_DYNFORS;
@@ -930,6 +934,58 @@ for_control		:
 								yyerror("loop variable of loop over rows must be a record or row variable or list of scalar variables");
 							}
 							new->query = expr;
+
+							if (term == K_USING)
+							{
+								do
+								{
+									expr = read_sql_expression2(',', K_LOOP,
+																", or LOOP",
+																&term);
+									new->params = lappend(new->params, expr);
+								} while (term == ',');
+							}
+
+							$$ = (PLpgSQL_stmt *) new;
+						}
+						else if (tok == T_SCALAR &&
+								 yylval.scalar->dtype == PLPGSQL_DTYPE_VAR &&
+								 ((PLpgSQL_var *) yylval.scalar)->datatype->typoid == REFCURSOROID)
+						{
+							/* It's FOR var IN cursor */
+							PLpgSQL_stmt_forc	*new;
+							PLpgSQL_var			*cursor = (PLpgSQL_var *) yylval.scalar;
+							char				*varname;
+
+							new = (PLpgSQL_stmt_forc *) palloc0(sizeof(PLpgSQL_stmt_forc));
+							new->cmd_type = PLPGSQL_STMT_FORC;
+							new->lineno = $1;
+
+							new->curvar = cursor->varno;
+
+							/* Should have had a single variable name */
+							plpgsql_error_lineno = $2.lineno;
+							if ($2.scalar && $2.row)
+								ereport(ERROR,
+										(errcode(ERRCODE_SYNTAX_ERROR),
+										 errmsg("cursor FOR loop must have just one target variable")));
+
+							/* create loop's private RECORD variable */
+							plpgsql_convert_ident($2.name, &varname, 1);
+							new->rec = plpgsql_build_record(varname,
+															$2.lineno,
+															true);
+
+							/* can't use an unbound cursor this way */
+							if (cursor->cursor_explicit_expr == NULL)
+								ereport(ERROR,
+										(errcode(ERRCODE_SYNTAX_ERROR),
+										 errmsg("cursor FOR loop must use a bound cursor variable")));
+
+							/* collect cursor's parameters if any */
+							new->argquery = read_cursor_args(cursor,
+															 K_LOOP,
+															 "LOOP");
 
 							$$ = (PLpgSQL_stmt *) new;
 						}
@@ -964,6 +1020,7 @@ for_control		:
 							 */
 							expr1 = read_sql_construct(K_DOTDOT,
 													   K_LOOP,
+													   0,
 													   "LOOP",
 													   "SELECT ",
 													   true,
@@ -983,17 +1040,14 @@ for_control		:
 								check_sql_expr(expr1->query);
 
 								/* Read and check the second one */
-								expr2 = read_sql_construct(K_LOOP,
-														   K_BY,
-														   "LOOP",
-														   "SELECT ",
-														   true,
-														   true,
-														   &tok);
+								expr2 = read_sql_expression2(K_LOOP, K_BY,
+															 "LOOP",
+															 &tok);
 
 								/* Get the BY clause if any */
 								if (tok == K_BY)
-									expr_by = plpgsql_read_expression(K_LOOP, "LOOP");
+									expr_by = plpgsql_read_expression(K_LOOP,
+																	  "LOOP");
 								else
 									expr_by = NULL;
 
@@ -1227,18 +1281,15 @@ stmt_raise		: K_RAISE lno raise_level raise_msg
 
 						if (tok == ',')
 						{
-							PLpgSQL_expr *expr;
-							int term;
-
-							for (;;)
+							do
 							{
-								expr = read_sql_construct(',', ';', ", or ;",
-														  "SELECT ",
-														  true, true, &term);
+								PLpgSQL_expr *expr;
+
+								expr = read_sql_expression2(',', ';',
+															", or ;",
+															&tok);
 								new->params = lappend(new->params, expr);
-								if (term == ';')
-									break;
-							}
+							} while (tok == ',');
 						}
 
 						$$ = (PLpgSQL_stmt *)new;
@@ -1305,7 +1356,8 @@ stmt_dynexecute : K_EXECUTE lno
 						PLpgSQL_expr *expr;
 						int endtoken;
 
-						expr = read_sql_construct(K_INTO, ';', "INTO|;",
+						expr = read_sql_construct(K_INTO, K_USING, ';',
+												  "INTO or USING or ;",
 												  "SELECT ",
 												  true, true, &endtoken);
 
@@ -1317,14 +1369,28 @@ stmt_dynexecute : K_EXECUTE lno
 						new->strict = false;
 						new->rec = NULL;
 						new->row = NULL;
+						new->params = NIL;
 
 						/* If we found "INTO", collect the argument */
 						if (endtoken == K_INTO)
 						{
 							new->into = true;
 							read_into_target(&new->rec, &new->row, &new->strict);
-							if (yylex() != ';')
+							endtoken = yylex();
+							if (endtoken != ';' && endtoken != K_USING)
 								yyerror("syntax error");
+						}
+
+						/* If we found "USING", collect the argument(s) */
+						if (endtoken == K_USING)
+						{
+							do
+							{
+								expr = read_sql_expression2(',', ';',
+															", or ;",
+															&endtoken);
+								new->params = lappend(new->params, expr);
+							} while (endtoken == ',');
 						}
 
 						$$ = (PLpgSQL_stmt *)new;
@@ -1381,81 +1447,8 @@ stmt_open		: K_OPEN lno cursor_variable
 						}
 						else
 						{
-							if ($3->cursor_explicit_argrow >= 0)
-							{
-								char   *cp;
-
-								tok = yylex();
-								if (tok != '(')
-								{
-									plpgsql_error_lineno = plpgsql_scanner_lineno();
-									ereport(ERROR,
-											(errcode(ERRCODE_SYNTAX_ERROR),
-											 errmsg("cursor \"%s\" has arguments",
-													$3->refname)));
-								}
-
-								/*
-								 * Push back the '(', else read_sql_stmt
-								 * will complain about unbalanced parens.
-								 */
-								plpgsql_push_back_token(tok);
-
-								new->argquery = read_sql_stmt("SELECT ");
-
-								/*
-								 * Now remove the leading and trailing parens,
-								 * because we want "select 1, 2", not
-								 * "select (1, 2)".
-								 */
-								cp = new->argquery->query;
-
-								if (strncmp(cp, "SELECT", 6) != 0)
-								{
-									plpgsql_error_lineno = plpgsql_scanner_lineno();
-									/* internal error */
-									elog(ERROR, "expected \"SELECT (\", got \"%s\"",
-										 new->argquery->query);
-								}
-								cp += 6;
-								while (*cp == ' ') /* could be more than 1 space here */
-									cp++;
-								if (*cp != '(')
-								{
-									plpgsql_error_lineno = plpgsql_scanner_lineno();
-									/* internal error */
-									elog(ERROR, "expected \"SELECT (\", got \"%s\"",
-										 new->argquery->query);
-								}
-								*cp = ' ';
-
-								cp += strlen(cp) - 1;
-
-								if (*cp != ')')
-									yyerror("expected \")\"");
-								*cp = '\0';
-							}
-							else
-							{
-								tok = yylex();
-								if (tok == '(')
-								{
-									plpgsql_error_lineno = plpgsql_scanner_lineno();
-									ereport(ERROR,
-											(errcode(ERRCODE_SYNTAX_ERROR),
-											 errmsg("cursor \"%s\" has no arguments",
-													$3->refname)));
-								}
-
-								if (tok != ';')
-								{
-									plpgsql_error_lineno = plpgsql_scanner_lineno();
-									ereport(ERROR,
-											(errcode(ERRCODE_SYNTAX_ERROR),
-											 errmsg("syntax error at \"%s\"",
-													yytext)));
-								}
-							}
+							/* predefined cursor query, so read args */
+							new->argquery = read_cursor_args($3, ';', ";");
 						}
 
 						$$ = (PLpgSQL_stmt *)new;
@@ -1483,7 +1476,7 @@ stmt_fetch		: K_FETCH lno opt_fetch_direction cursor_variable K_INTO
 						$$ = (PLpgSQL_stmt *)fetch;
 					}
 				;
-				
+
 stmt_move		: K_MOVE lno opt_fetch_direction cursor_variable ';'
 					{
 						PLpgSQL_stmt_fetch *fetch = $3;
@@ -1728,16 +1721,29 @@ assign_expr_param(int dno, int *params, int *nparams)
 }
 
 
+/* Convenience routine to read an expression with one possible terminator */
 PLpgSQL_expr *
 plpgsql_read_expression(int until, const char *expected)
 {
-	return read_sql_construct(until, 0, expected, "SELECT ", true, true, NULL);
+	return read_sql_construct(until, 0, 0, expected,
+							  "SELECT ", true, true, NULL);
 }
 
+/* Convenience routine to read an expression with two possible terminators */
+static PLpgSQL_expr *
+read_sql_expression2(int until, int until2, const char *expected,
+					 int *endtoken)
+{
+	return read_sql_construct(until, until2, 0, expected,
+							  "SELECT ", true, true, endtoken);
+}
+
+/* Convenience routine to read a SQL statement that must end with ';' */
 static PLpgSQL_expr *
 read_sql_stmt(const char *sqlstart)
 {
-	return read_sql_construct(';', 0, ";", sqlstart, false, true, NULL);
+	return read_sql_construct(';', 0, 0, ";",
+							  sqlstart, false, true, NULL);
 }
 
 /*
@@ -1745,16 +1751,18 @@ read_sql_stmt(const char *sqlstart)
  *
  * until:		token code for expected terminator
  * until2:		token code for alternate terminator (pass 0 if none)
+ * until3:		token code for another alternate terminator (pass 0 if none)
  * expected:	text to use in complaining that terminator was not found
  * sqlstart:	text to prefix to the accumulated SQL text
  * isexpression: whether to say we're reading an "expression" or a "statement"
  * valid_sql:   whether to check the syntax of the expr (prefixed with sqlstart)
  * endtoken:	if not NULL, ending token is stored at *endtoken
- *				(this is only interesting if until2 isn't zero)
+ *				(this is only interesting if until2 or until3 isn't zero)
  */
 static PLpgSQL_expr *
 read_sql_construct(int until,
 				   int until2,
+				   int until3,
 				   const char *expected,
 				   const char *sqlstart,
 				   bool isexpression,
@@ -1780,6 +1788,8 @@ read_sql_construct(int until,
 		if (tok == until && parenlevel == 0)
 			break;
 		if (tok == until2 && parenlevel == 0)
+			break;
+		if (tok == until3 && parenlevel == 0)
 			break;
 		if (tok == '(' || tok == '[')
 			parenlevel++;
@@ -2085,15 +2095,17 @@ read_fetch_direction(void)
 	else if (pg_strcasecmp(yytext, "absolute") == 0)
 	{
 		fetch->direction = FETCH_ABSOLUTE;
-		fetch->expr = read_sql_construct(K_FROM, K_IN, "FROM or IN",
-										 "SELECT ", true, true, NULL);
+		fetch->expr = read_sql_expression2(K_FROM, K_IN,
+										   "FROM or IN",
+										   NULL);
 		check_FROM = false;
 	}
 	else if (pg_strcasecmp(yytext, "relative") == 0)
 	{
 		fetch->direction = FETCH_RELATIVE;
-		fetch->expr = read_sql_construct(K_FROM, K_IN, "FROM or IN",
-										 "SELECT ", true, true, NULL);
+		fetch->expr = read_sql_expression2(K_FROM, K_IN,
+										   "FROM or IN",
+										   NULL);
 		check_FROM = false;
 	}
 	else if (pg_strcasecmp(yytext, "forward") == 0)
@@ -2107,8 +2119,9 @@ read_fetch_direction(void)
 	else if (tok != T_SCALAR)
 	{
 		plpgsql_push_back_token(tok);
-		fetch->expr = read_sql_construct(K_FROM, K_IN, "FROM or IN",
-										 "SELECT ", true, true, NULL);
+		fetch->expr = read_sql_expression2(K_FROM, K_IN,
+										   "FROM or IN",
+										   NULL);
 		check_FROM = false;
 	}
 	else
@@ -2252,7 +2265,7 @@ make_return_query_stmt(int lineno)
 	new = palloc0(sizeof(PLpgSQL_stmt_return_query));
 	new->cmd_type = PLPGSQL_STMT_RETURN_QUERY;
 	new->lineno = lineno;
-	new->query = read_sql_construct(';', 0, ")", "", false, true, NULL);
+	new->query = read_sql_stmt("");
 
 	return (PLpgSQL_stmt *) new;
 }
@@ -2547,6 +2560,97 @@ check_labels(const char *start_label, const char *end_label)
 		}
 	}
 }
+
+/*
+ * Read the arguments (if any) for a cursor, followed by the until token
+ *
+ * If cursor has no args, just swallow the until token and return NULL.
+ * If it does have args, we expect to see "( expr [, expr ...] )" followed
+ * by the until token.  Consume all that and return a SELECT query that
+ * evaluates the expression(s) (without the outer parens).
+ */
+static PLpgSQL_expr *
+read_cursor_args(PLpgSQL_var *cursor, int until, const char *expected)
+{
+	PLpgSQL_expr *expr;
+	int			tok;
+	char	   *cp;
+
+	tok = yylex();
+	if (cursor->cursor_explicit_argrow < 0)
+	{
+		/* No arguments expected */
+		if (tok == '(')
+		{
+			plpgsql_error_lineno = plpgsql_scanner_lineno();
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("cursor \"%s\" has no arguments",
+							cursor->refname)));
+		}
+
+		if (tok != until)
+		{
+			plpgsql_error_lineno = plpgsql_scanner_lineno();
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("syntax error at \"%s\"",
+							yytext)));
+		}
+
+		return NULL;
+	}
+
+	/* Else better provide arguments */
+	if (tok != '(')
+	{
+		plpgsql_error_lineno = plpgsql_scanner_lineno();
+		ereport(ERROR,
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("cursor \"%s\" has arguments",
+						cursor->refname)));
+	}
+
+	/*
+	 * Push back the '(', else plpgsql_read_expression
+	 * will complain about unbalanced parens.
+	 */
+	plpgsql_push_back_token(tok);
+
+	expr = plpgsql_read_expression(until, expected);
+
+	/*
+	 * Now remove the leading and trailing parens,
+	 * because we want "SELECT 1, 2", not "SELECT (1, 2)".
+	 */
+	cp = expr->query;
+
+	if (strncmp(cp, "SELECT", 6) != 0)
+	{
+		plpgsql_error_lineno = plpgsql_scanner_lineno();
+		/* internal error */
+		elog(ERROR, "expected \"SELECT (\", got \"%s\"", expr->query);
+	}
+	cp += 6;
+	while (*cp == ' ')			/* could be more than 1 space here */
+		cp++;
+	if (*cp != '(')
+	{
+		plpgsql_error_lineno = plpgsql_scanner_lineno();
+		/* internal error */
+		elog(ERROR, "expected \"SELECT (\", got \"%s\"", expr->query);
+	}
+	*cp = ' ';
+
+	cp += strlen(cp) - 1;
+
+	if (*cp != ')')
+		yyerror("expected \")\"");
+	*cp = '\0';
+
+	return expr;
+}
+
 
 /* Needed to avoid conflict between different prefix settings: */
 #undef yylex

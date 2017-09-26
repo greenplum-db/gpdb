@@ -1,18 +1,21 @@
-CREATE OR REPLACE FUNCTION gp_workfile_mgr_test(testname text)
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_master(testname text)
 RETURNS setof bool
-LANGUAGE C IMMUTABLE NO SQL AS '@abs_builddir@/regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
-CREATE FUNCTION gp_workfile_mgr_test_allsegs(testname text)
+LANGUAGE C VOLATILE EXECUTE ON MASTER AS '@abs_builddir@/regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+CREATE OR REPLACE FUNCTION gp_workfile_mgr_test_on_segments(testname text)
+RETURNS setof bool
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS AS '@abs_builddir@/regress@DLSUFFIX@', 'gp_workfile_mgr_test_harness';
+CREATE FUNCTION gp_workfile_mgr_test(testname text)
 RETURNS SETOF BOOL
 AS
 $$
-	SELECT C.* FROM gp_toolkit.__gp_localid, gp_workfile_mgr_test($1) as C
-		UNION ALL
-	SELECT C.* FROM gp_toolkit.__gp_masterid, gp_workfile_mgr_test($1) as C;
+	SELECT C.* FROM gp_workfile_mgr_test_on_master($1) as C
+	UNION ALL
+	SELECT C.* FROM gp_workfile_mgr_test_on_segments($1) as C;
 $$
 LANGUAGE SQL;
-SELECT gp_workfile_mgr_test_allsegs('workfile_queryspace');
- gp_workfile_mgr_test_allsegs
-------------------------------
+SELECT gp_workfile_mgr_test('workfile_queryspace');
+ gp_workfile_mgr_test 
+----------------------
  t
  t
  t

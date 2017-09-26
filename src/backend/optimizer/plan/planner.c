@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.244 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planner.c,v 1.231 2008/04/01 00:48:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,11 +42,13 @@
 #endif
 #include "parser/parse_expr.h"
 #include "parser/parse_oper.h"
+#include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 #include "utils/syscache.h"
 
+#include "catalog/pg_proc.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"		/* apply_shareinput */
 #include "cdb/cdbpartition.h"
@@ -120,6 +122,8 @@ static void sort_canonical_gs_list(List *gs, int *p_nsets, Bitmapset ***p_sets);
 
 static Plan *pushdown_preliminary_limit(Plan *plan, Node *limitCount, int64 count_est, Node *limitOffset, int64 offset_est);
 static bool is_dummy_plan(Plan *plan);
+
+static bool isSimplyUpdatableQuery(Query *query);
 
 
 /*****************************************************************************
@@ -223,7 +227,12 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	/* Cursor options may come from caller or from DECLARE CURSOR stmt */
 	if (parse->utilityStmt &&
 		IsA(parse->utilityStmt, DeclareCursorStmt))
+	{
 		cursorOptions |= ((DeclareCursorStmt *) parse->utilityStmt)->options;
+
+		/* Also try to make any cursor declared with DECLARE CURSOR updatable. */
+		cursorOptions |= CURSOR_OPT_UPDATABLE;
+	}
 
 	/*
 	 * Set up global state for this planner invocation.  This data is needed
@@ -251,6 +260,11 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	glob->share.qdShares = NIL;
 	glob->share.qdSlices = NIL;
 	glob->share.nextPlanId = 0;
+
+	if ((cursorOptions & CURSOR_OPT_UPDATABLE) != 0)
+		glob->simplyUpdatable = isSimplyUpdatableQuery(parse);
+	else
+		glob->simplyUpdatable = false;
 
 	/* Determine what fraction of the plan is likely to be scanned */
 	if (cursorOptions & CURSOR_OPT_FAST_PLAN)
@@ -415,6 +429,8 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->queryPartsMetadata = NIL;
 	result->numSelectorsPerScanId = NIL;
 
+	result->simplyUpdatable = glob->simplyUpdatable;
+
 	{
 		ListCell *lc;
 
@@ -557,11 +573,18 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	/*
 	 * Look for IN clauses at the top level of WHERE, and transform them into
 	 * joins.  Note that this step only handles IN clauses originally at top
-	 * level of WHERE; if we pull up any subqueries in the next step, their
-	 * INs are processed just before pulling them up.
+	 * level of WHERE; if we pull up any subqueries below, their INs are
+	 * processed just before pulling them up.
 	 */
 	if (parse->hasSubLinks)
 		cdbsubselect_flatten_sublinks(root, (Node *) parse);
+
+	/*
+	 * Scan the rangetable for set-returning functions, and inline them
+	 * if possible (producing subqueries that might get pulled up next).
+	 * Recursion issues here are handled in the same way as for IN clauses.
+	 */
+	inline_set_returning_functions(root);
 
 	/*
 	 * Check to see if any subqueries in the rangetable can be merged into
@@ -763,37 +786,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 		plan = grouping_planner(root, tuple_fraction);
 
 	/*
-	 * Deal with explicit redistribution requirements for TableValueExpr
-	 * subplans with explicit distribitution
-	 */
-	if (parse->scatterClause)
-	{
-		bool		r;
-		List	   *exprList;
-
-
-		/* Deal with the special case of SCATTER RANDOMLY */
-		if (list_length(parse->scatterClause) == 1 && linitial(parse->scatterClause) == NULL)
-			exprList = NIL;
-		else
-			exprList = parse->scatterClause;
-
-		/*
-		 * Repartition the subquery plan based on our distribution
-		 * requirements
-		 */
-		r = repartitionPlan(plan, false, false, exprList);
-		if (!r)
-		{
-			/*
-			 * This should not be possible, repartitionPlan should never fail
-			 * when both stable and rescannable are false.
-			 */
-			elog(ERROR, "failure repartitioning plan");
-		}
-	}
-
-	/*
 	 * If any subplans were generated, or if we're inside a subplan, build
 	 * initPlan list and extParam/allParam sets for plan nodes, and attach the
 	 * initPlans to the top plan node.
@@ -838,6 +830,35 @@ preprocess_expression(PlannerInfo *root, Node *expr, int kind)
 	 */
 	if (root->hasJoinRTEs && kind != EXPRKIND_VALUES)
 		expr = flatten_join_alias_vars(root, expr);
+
+	if (root->parse->hasFuncsWithExecRestrictions)
+	{
+		if (kind == EXPRKIND_RTFUNC)
+		{
+			/* allowed */
+		}
+		else if (kind == EXPRKIND_TARGET)
+		{
+			/*
+			 * Allowed in simple cases with no range table. For example,
+			 * "SELECT func()" is allowed, but "SELECT func() FROM foo" is not.
+			 */
+			if (root->parse->rtable &&
+				check_execute_on_functions((Node *) root->parse->targetList) != PROEXECLOCATION_ANY)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM")));
+			}
+		}
+		else
+		{
+			if (check_execute_on_functions((Node *) root->parse->targetList) != PROEXECLOCATION_ANY)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("function with EXECUTE ON restrictions cannot be used here")));
+		}
+	}
 
 	/*
 	 * Simplify constant expressions.
@@ -1603,15 +1624,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				}
 			}
 
-			if (result_plan != NULL && result_plan->flow->numSortCols == 0)
-			{
-				/*
-				 * cdb_grouping_planner generated the full plan, with the the
-				 * right tlist.  And it has no sort order
-				 */
-				current_pathkeys = NIL;
-			}
-
 			if (result_plan != NULL && querynode_changed)
 			{
 				/*
@@ -1755,9 +1767,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					canonical_grpsets->grpset_counts != NULL &&
 					canonical_grpsets->grpset_counts[0] > 1)
 				{
-					result_plan->flow = pull_up_Flow(result_plan,
-													 result_plan->lefttree,
-												  (current_pathkeys != NIL));
+					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 					result_plan = add_repeat_node(result_plan,
 										 canonical_grpsets->grpset_counts[0],
 												  0);
@@ -1824,9 +1834,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					canonical_grpsets->grpset_counts != NULL &&
 					canonical_grpsets->grpset_counts[0] > 1)
 				{
-					result_plan->flow = pull_up_Flow(result_plan,
-													 result_plan->lefttree,
-												  (current_pathkeys != NIL));
+					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 					result_plan = add_repeat_node(result_plan,
 										 canonical_grpsets->grpset_counts[0],
 												  0);
@@ -1922,9 +1930,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	 * which we can obtain the distribution info.)
 	 */
 	if (!result_plan->flow)
-		result_plan->flow = pull_up_Flow(result_plan,
-										 getAnySubplan(result_plan),
-										 (current_pathkeys != NIL));
+		result_plan->flow = pull_up_Flow(result_plan, getAnySubplan(result_plan));
 
 	/*
 	 * MPP: If there's a DISTINCT clause and we're not collocated on the
@@ -1991,9 +1997,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 
 					result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
 
-					result_plan->flow = pull_up_Flow(result_plan,
-													 result_plan->lefttree,
-													 true);
+					result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
 					result_plan->plan_rows = numDistinct;
 
@@ -2053,10 +2057,32 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		}
 
 		/*
-		 * Update numOrderbyCols to length of sort_pathkeys. For cdb: decide
-		 * which sort attribute should be preserved by merge gather motion
+		 * An ORDER BY doesn't make much sense, unless we bring all the data
+		 * to a single node. Otherwise it's just a partial order. (If there's
+		 * a LIMIT or OFFSET clause, we'll take care of this below, after
+		 * inserting the Limit node).
+		 *
+		 * In a subquery, though, a partial order is OK. In fact, we could
+		 * probably not bother with the sort at all, unless there's a LIMIT
+		 * or OFFSET, because it's not going to make any difference to the
+		 * overall query's result. For example, in "WHERE x IN (SELECT ...
+		 * ORDER BY foo)", the ORDER BY in the subquery will make no
+		 * difference. PostgreSQL honors the sort, though, and historically,
+		 * GPDB has also done a partial sort, separately on each node. So
+		 * keep that behavior for now.
+		 *
+		 * In a TABLE function's input subquery, a partial order is the
+		 * documented behavior, so in that case that's definitely what we
+		 * want.
 		 */
-		result_plan->flow->numOrderbyCols = list_length(sort_pathkeys);
+		if (result_plan->flow->flotype != FLOW_SINGLETON &&
+			(root->config->honor_order_by || !root->parent_root) &&
+			!parse->isTableValueSelect &&
+			!parse->limitCount && !parse->limitOffset)
+		{
+			result_plan = (Plan *) make_motion_gather(root, result_plan, -1,
+													  sort_pathkeys);
+		}
 	}
 
 	/*
@@ -2067,9 +2093,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		if (IsA(result_plan, Sort) &&gp_enable_sort_distinct)
 			((Sort *) result_plan)->noduplicates = true;
 		result_plan = (Plan *) make_unique(result_plan, parse->distinctClause);
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 
 		/*
 		 * If there was grouping or aggregation, leave plan_rows as-is (ie,
@@ -2091,7 +2115,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
 			
 			/* Focus on QE [merge to preserve order], prior to final LIMIT. */
-			result_plan = (Plan *) make_motion_gather_to_QE(result_plan, current_pathkeys != NIL);
+			result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, current_pathkeys);
 			result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 		}
 			
@@ -2110,9 +2134,37 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 										  parse->limitCount,
 										  offset_est,
 										  count_est);
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
+	}
+
+	/*
+	 * Deal with explicit redistribution requirements for TableValueExpr
+	 * subplans with explicit distribitution
+	 */
+	if (parse->scatterClause)
+	{
+		bool		r;
+		List	   *exprList;
+
+		/* Deal with the special case of SCATTER RANDOMLY */
+		if (list_length(parse->scatterClause) == 1 && linitial(parse->scatterClause) == NULL)
+			exprList = NIL;
+		else
+			exprList = parse->scatterClause;
+
+		/*
+		 * Repartition the subquery plan based on our distribution
+		 * requirements
+		 */
+		r = repartitionPlan(result_plan, false, false, exprList);
+		if (!r)
+		{
+			/*
+			 * This should not be possible, repartitionPlan should never fail
+			 * when both stable and rescannable are false.
+			 */
+			elog(ERROR, "failure repartitioning plan");
+		}
 	}
 
 	Insist(result_plan->flow);
@@ -3657,10 +3709,44 @@ pushdown_preliminary_limit(Plan *plan, Node *limitCount, int64 count_est, Node *
 										  0,
 										  precount_est);
 
-		result_plan->flow = pull_up_Flow(result_plan,
-										 result_plan->lefttree,
-										 true);
+		result_plan->flow = pull_up_Flow(result_plan, result_plan->lefttree);
 	}
 
 	return result_plan;
+}
+
+
+/*
+ * isSimplyUpdatableQuery -
+ *  determine whether a query is a simply updatable scan of a relation
+ *
+ * A query is simply updatable if, and only if, it...
+ * - has no window clauses
+ * - has no sort clauses
+ * - has no grouping, having, distinct clauses, or simple aggregates
+ * - has no subqueries
+ * - has no LIMIT/OFFSET
+ * - references only one range table (i.e. no joins, self-joins)
+ *   - this range table must itself be updatable
+ */
+static bool
+isSimplyUpdatableQuery(Query *query)
+{
+	if (query->commandType == CMD_SELECT &&
+		query->windowClause == NIL &&
+		query->sortClause == NIL &&
+		query->groupClause == NIL &&
+		query->havingQual == NULL &&
+		query->distinctClause == NIL &&
+		!query->hasAggs &&
+		!query->hasSubLinks &&
+		query->limitCount == NULL &&
+		query->limitOffset == NULL &&
+		list_length(query->rtable) == 1)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) linitial(query->rtable);
+		if (isSimplyUpdatableRelation(rte->relid, true))
+			return true;
+	}
+	return false;
 }

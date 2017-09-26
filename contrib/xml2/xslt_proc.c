@@ -40,7 +40,9 @@ Datum		xslt_process(PG_FUNCTION_ARGS);
 #ifdef USE_LIBXSLT
 
 /* declarations to come from xpath.c */
+extern void elog_error(int level, char *explain, int force);
 extern void pgxml_parser_init(void);
+extern xmlChar *pgxml_texttoxmlchar(text *textstring);
 
 /* local defs */
 static void parse_params(const char **params, text *paramstr);

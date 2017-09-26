@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.154 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.155 2008/03/26 21:10:38 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,9 +53,8 @@
 #include "parser/parsetree.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
-#include "utils/workfile_mgr.h"
+#include "utils/tqual.h"
 
-#include "cdb/cdbvars.h"
 #include "nodes/primnodes.h"
 #include "nodes/execnodes.h"
 
@@ -73,6 +72,9 @@
 #include "nodes/makefuncs.h"
 #include "storage/ipc.h"
 #include "cdb/cdbllize.h"
+#include "utils/workfile_mgr.h"
+
+#include "cdb/memquota.h"
 
 static void ShutdownExprContext(ExprContext *econtext);
 
@@ -2170,7 +2172,12 @@ uint64 PlanStateOperatorMemKB(const PlanState *ps)
 	}
 	else
 	{
-		result = ps->plan->operatorMemKB;
+		if (IsA(ps, AggState))
+		{
+			result = ps->plan->operatorMemKB + MemoryAccounting_RequestQuotaIncrease();
+		}
+		else
+			result = ps->plan->operatorMemKB;
 	}
 	
 	return result;

@@ -77,7 +77,7 @@ CREATE READABLE EXTERNAL TABLE all_gphdfs (
     nullcol_text       TEXT
 ) LOCATION ('gphdfs://%localhost%:%gpfdistPort%/plaintext/all_20.txt') FORMAT 'TEXT';
 CREATE READABLE EXTERNAL TABLE all_pxf (LIKE all_gphdfs)
-  LOCATION ('pxf://default/plaintext/all_20.txt?PROFILE=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER=E'\t');
+  LOCATION ('pxf://plaintext/all_20.txt?PROFILE=HdfsTextSimple') FORMAT 'TEXT' (DELIMITER=E'\t');
 SELECT COUNT(*) FROM all_gphdfs;
  count  
 --------

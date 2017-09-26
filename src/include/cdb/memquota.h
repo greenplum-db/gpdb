@@ -57,6 +57,11 @@ extern uint64 PolicyAutoStatementMemForNoSpillKB(PlannedStmt *stmt, uint64 minOp
  */
 extern bool IsResultMemoryIntesive(Result *res);
 
+/**
+ * Is operator memory intensive
+ */
+extern bool IsMemoryIntensiveOperator(Node *node, PlannedStmt *stmt);
+
 /*
  * Calculate the amount of memory reserved for the query
  */

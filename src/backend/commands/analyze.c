@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.115 2008/02/20 14:31:35 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.117 2008/04/03 16:27:25 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -50,6 +50,7 @@
 #include "utils/syscache.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
+#include "utils/tqual.h"
 
 /*
  * To avoid consuming too much memory during analysis and/or too much space
@@ -1079,21 +1080,6 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 			ItemId		itemid;
 			HeapTupleData targtuple;
 			bool		sample_it = false;
-
-			itemid = PageGetItemId(targpage, targoffset);
-
-			/*
-			 * We ignore unused and redirect line pointers.  DEAD line
-			 * pointers should be counted as dead, because we need vacuum
-			 * to run to get rid of them.  Note that this rule agrees with
-			 * the way that heap_page_prune() counts things.
-			 */
-			if (!ItemIdIsNormal(itemid))
-			{
-				if (ItemIdIsDead(itemid))
-					deadrows += 1;
-				continue;
-			}
 
 			itemid = PageGetItemId(targpage, targoffset);
 

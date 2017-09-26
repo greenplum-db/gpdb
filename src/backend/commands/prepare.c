@@ -10,7 +10,7 @@
  * Copyright (c) 2002-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.80.2.2 2009/12/29 17:41:18 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.85 2008/04/02 18:31:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,6 +34,7 @@
 #include "tcop/utility.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 
 /*
  * The hash table in which prepared queries are stored. This is
@@ -285,6 +286,10 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 		plan_list = cplan->stmt_list;
 	}
 
+	/*
+	 * Note: we don't bother to copy the source query string into the portal.
+	 * Any errors it might be useful for will already have been reported.
+	 */
 	PortalDefineQuery(portal,
 					  NULL,
 					  query_string,
@@ -809,28 +814,24 @@ pg_prepared_statement(PG_FUNCTION_ARGS)
 		hash_seq_init(&hash_seq, prepared_queries);
 		while ((prep_stmt = hash_seq_search(&hash_seq)) != NULL)
 		{
-			HeapTuple	tuple;
 			Datum		values[5];
 			bool		nulls[5];
 
 			MemSet(nulls, 0, sizeof(nulls));
 
-			values[0] = DirectFunctionCall1(textin,
-									  CStringGetDatum(prep_stmt->stmt_name));
+			values[0] = CStringGetTextDatum(prep_stmt->stmt_name);
 
 			if (prep_stmt->plansource->query_string == NULL)
 				nulls[1] = true;
 			else
-				values[1] = DirectFunctionCall1(textin,
-					   CStringGetDatum(prep_stmt->plansource->query_string));
+				values[1] = CStringGetTextDatum(prep_stmt->plansource->query_string);
 
 			values[2] = TimestampTzGetDatum(prep_stmt->prepare_time);
 			values[3] = build_regtype_array(prep_stmt->plansource->param_types,
 										  prep_stmt->plansource->num_params);
 			values[4] = BoolGetDatum(prep_stmt->from_sql);
 
-			tuple = heap_form_tuple(tupdesc, values, nulls);
-			tuplestore_puttuple(tupstore, tuple);
+			tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 		}
 	}
 

@@ -2433,11 +2433,11 @@ CTranslatorUtils::CheckAggregateWindowFn
 	)
 {
 	GPOS_ASSERT(NULL != pnode);
-	GPOS_ASSERT(IsA(pnode, WindowRef));
+	GPOS_ASSERT(IsA(pnode, WindowFunc));
 
-	WindowRef *pwinref = (WindowRef*) pnode;
+	WindowFunc *pwinfunc = (WindowFunc *) pnode;
 
-	if (gpdb::FAggregateExists(pwinref->winfnoid) && !gpdb::FAggHasPrelimOrInvPrelimFunc(pwinref->winfnoid))
+	if (gpdb::FAggregateExists(pwinfunc->winfnoid) && !gpdb::FAggHasPrelimOrInvPrelimFunc(pwinfunc->winfnoid))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT("Aggregate window function without prelim or inverse prelim function"));

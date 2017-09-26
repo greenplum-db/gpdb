@@ -1,7 +1,7 @@
 #
 # PostgreSQL top level makefile
 #
-# $PostgreSQL: pgsql/GNUmakefile.in,v 1.46 2007/02/09 15:55:57 petere Exp $
+# $PostgreSQL: pgsql/GNUmakefile.in,v 1.47 2008/03/18 16:24:50 petere Exp $
 #
 
 subdir =
@@ -127,14 +127,14 @@ clean:
 # Important: distclean `src' last, otherwise Makefile.global
 # will be gone too soon.
 distclean maintainer-clean:
-#	-$(MAKE) -C doc $@
-	-$(MAKE) -C gpAux/extensions $@
-	-$(MAKE) -C gpAux/gpperfmon $@
-	-$(MAKE) -C gpAux/platform $@
-	-$(MAKE) -C contrib $@
-	-$(MAKE) -C config $@
-	-$(MAKE) -C src $@
-	-rm -f config.cache config.log config.status GNUmakefile
+#	$(MAKE) -C doc $@
+	$(MAKE) -C gpAux/extensions $@
+	$(MAKE) -C gpAux/gpperfmon $@
+	$(MAKE) -C gpAux/platform $@
+	$(MAKE) -C contrib $@
+	$(MAKE) -C config $@
+	$(MAKE) -C src $@
+	rm -f config.cache config.log config.status GNUmakefile
 # Garbage from autoconf:
 	@rm -rf autom4te.cache/
 
@@ -214,7 +214,7 @@ ifeq ($(split-dist), yes)
 dist: postgresql-base-$(VERSION).tar.gz postgresql-docs-$(VERSION).tar.gz postgresql-opt-$(VERSION).tar.gz postgresql-test-$(VERSION).tar.gz 
 endif
 dist:
-	-rm -rf $(distdir)
+	rm -rf $(distdir)
 
 $(distdir).tar: distdir
 	$(TAR) chf $@ $(distdir)
@@ -241,7 +241,7 @@ postgresql-test-$(VERSION).tar: distdir
 	$(TAR) cf $@ $(distdir)/src/test
 
 distdir:
-	-rm -rf $(distdir)* $(dummy)
+	rm -rf $(distdir)* $(dummy)
 	for x in `cd $(top_srcdir) && find . \( -name CVS -prune \) -o \( -name .git -prune \) -o -print`; do \
 	  file=`expr X$$x : 'X\./\(.*\)'`; \
 	  if test -d "$(top_srcdir)/$$file" ; then \
@@ -260,7 +260,7 @@ distdir:
 	#rm -f $(distdir)/README.git
 
 distcheck: dist
-	-rm -rf $(dummy)
+	rm -rf $(dummy)
 	mkdir $(dummy)
 	$(GZIP) -d -c $(distdir).tar.gz | $(TAR) xf -
 	install_prefix=`cd $(dummy) && pwd`; \
@@ -275,7 +275,7 @@ distcheck: dist
 	$(MAKE) -C $(distdir) dist
 # Room for improvement: Check here whether this distribution tarball
 # is sufficiently similar to the original one.
-	-rm -rf $(distdir) $(dummy)
+	rm -rf $(distdir) $(dummy)
 	@echo "Distribution integrity checks out."
 
 .PHONY: dist distdir distcheck

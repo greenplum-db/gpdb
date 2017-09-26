@@ -132,3 +132,91 @@ drop function func3();
 drop function func4(int, int);
 drop function func5(int);
 drop function func1_mod_int_stb(int);
+
+
+-- Test EXECUTE ON [ANY | MASTER | ALL SEGMENTS ]
+
+CREATE TABLE srf_testtab (t text) DISTRIBUTED BY (t);
+INSERT INTO srf_testtab VALUES ('foo 0');
+INSERT INTO srf_testtab VALUES ('foo 1');
+INSERT INTO srf_testtab VALUES ('foo -1');
+
+create function srf_on_master () returns setof text as $$
+begin
+  return next 'foo ' || current_setting('gp_segment');
+  return next 'bar ' || current_setting('gp_segment');
+end;
+$$ language plpgsql EXECUTE ON MASTER;
+
+-- A function with ON MASTER or ON ALL SEGMENTS is only allowed in the target list
+-- in the simple case with no FROM.
+select srf_on_master();
+select srf_on_master() FROM srf_testtab;
+
+-- In both these cases, the function should run on master and hence return
+-- ('foo -1'), ('bar -1')
+select * from srf_on_master();
+select * from srf_testtab, srf_on_master();
+
+-- Should run on master, even when used in a join. (With EXECUTE ON ANY,
+-- it would be pushed to segments.)
+select * from srf_testtab, srf_on_master() where srf_on_master = srf_testtab.t;
+
+-- Repeat, with EXECUTE ON ALL SEGMENTS
+
+create function srf_on_all_segments () returns setof text as $$
+begin
+
+  -- To make the output reproducible, regardless of the number of segments in
+  -- the cluster, only return rows on segments 0 and 1
+  if current_setting('gp_segment')::integer < 2 then
+    return next 'foo ' || current_setting('gp_segment');
+    return next 'bar ' || current_setting('gp_segment');
+  end if;
+end;
+$$ language plpgsql EXECUTE ON ALL SEGMENTS;
+
+select srf_on_all_segments();
+select srf_on_all_segments() FROM srf_testtab;
+select * from srf_on_all_segments();
+select * from srf_testtab, srf_on_all_segments();
+
+select * from srf_testtab, srf_on_all_segments() where srf_on_all_segments = srf_testtab.t;
+
+-- And with EXEUCTE ON ANY.
+
+create function test_srf () returns setof text as $$
+begin
+  return next 'foo';
+end;
+$$ language plpgsql EXECUTE ON ANY IMMUTABLE;
+
+-- Set the owner, to make the output of the \df+ tests below repeatable,
+-- regardless of the name of the current user.
+CREATE ROLE srftestuser;
+ALTER FUNCTION test_srf() OWNER TO srftestuser;
+
+select test_srf();
+select test_srf() FROM srf_testtab;
+select * from test_srf();
+
+-- Since the function is marked as EXECUTE ON ANY, and IMMUTABLE, the planner
+-- can choose to run it anywhere.
+explain select * from srf_testtab, test_srf();
+explain select * from srf_testtab, test_srf() where test_srf = srf_testtab.t;
+
+-- Test ALTER FUNCTION, and that \df displays the EXECUTE ON correctly
+
+\df+ test_srf
+
+alter function test_srf() EXECUTE ON MASTER;
+\df+ test_srf
+
+alter function test_srf() EXECUTE ON ALL SEGMENTS;
+\df+ test_srf
+
+alter function test_srf() EXECUTE ON ANY;
+\df+ test_srf
+
+DROP FUNCTION test_srf();
+DROP ROLE srftestuser;

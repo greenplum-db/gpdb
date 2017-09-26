@@ -1483,6 +1483,7 @@ setup_config(void)
 
 	free(conflines);
 
+#ifdef USE_SEGWALREP
 	/*
 	 * GPDB_94_MERGE_FIXME: once merged ALTER SYSTEM introduced by upstream
 	 * commit 65d6e4cb5c62371dae6c236a7e709d503ae6ddf8,
@@ -1502,6 +1503,7 @@ setup_config(void)
 	chmod(path, 0600);
 
 	free(conflines);
+#endif
 
 	check_ok();
 }
@@ -3625,7 +3627,11 @@ main(int argc, char *argv[])
 
 	/* Select suitable configuration settings */
 	set_null_conf("postgresql.conf");
+
+#ifdef USE_SEGWALREP
 	set_null_conf(GP_REPLICATION_CONFIG_FILENAME);
+#endif
+
 	test_config_settings();
 
 	/* Now create all the text config files */

@@ -1,6 +1,2 @@
 [requires]
-orca/v2.40.2@gpdb/stable
-
-[imports]
-include, * -> /usr/local/include
-lib, * -> /usr/local/lib
+orca/v2.46.2@gpdb/stable

@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.12.2.1 2008/04/08 18:20:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector_op.c,v 1.15 2008/04/08 18:20:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -537,7 +537,7 @@ tsvector_concat(PG_FUNCTION_ARGS)
 	if (dataoff > MAXSTRPOS)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("string is too long for tsvector")));
+				 errmsg("string is too long for tsvector (%d bytes, max %d bytes)", dataoff, MAXSTRPOS)));
 
 	/*
 	 * Adjust sizes (asserting that we didn't overrun the original estimates)
@@ -1139,7 +1139,7 @@ ts_process_call(FuncCallContext *funcctx)
 static tsstat *
 ts_stat_sql(text *txt, text *ws)
 {
-	char	   *query = TextPGetCString(txt);
+	char	   *query = text_to_cstring(txt);
 	int			i;
 	tsstat	   *newstat,
 			   *stat;

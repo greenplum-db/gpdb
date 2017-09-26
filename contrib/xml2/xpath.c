@@ -494,11 +494,11 @@ Datum
 xpath_table(PG_FUNCTION_ARGS)
 {
 	/* Function parameters */
-	char	   *pkeyfield = GET_STR(PG_GETARG_TEXT_P(0));
-	char	   *xmlfield = GET_STR(PG_GETARG_TEXT_P(1));
-	char	   *relname = GET_STR(PG_GETARG_TEXT_P(2));
-	char	   *xpathset = GET_STR(PG_GETARG_TEXT_P(3));
-	char	   *condition = GET_STR(PG_GETARG_TEXT_P(4));
+	char	   *pkeyfield = text_to_cstring(PG_GETARG_TEXT_PP(0));
+	char	   *xmlfield = text_to_cstring(PG_GETARG_TEXT_PP(1));
+	char	   *relname = text_to_cstring(PG_GETARG_TEXT_PP(2));
+	char	   *xpathset = text_to_cstring(PG_GETARG_TEXT_PP(3));
+	char	   *condition = text_to_cstring(PG_GETARG_TEXT_PP(4));
 
 	/* SPI (input tuple) support */
 	SPITupleTable *tuptable;
@@ -684,7 +684,7 @@ xpath_table(PG_FUNCTION_ARGS)
 		/* Parse the document */
 		if (xmldoc)
 			doctree = xmlParseMemory(xmldoc, strlen(xmldoc));
-		else	/* treat NULL as not well-formed */
+		else					/* treat NULL as not well-formed */
 			doctree = NULL;
 
 		if (doctree == NULL)

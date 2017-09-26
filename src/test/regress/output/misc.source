@@ -506,10 +506,8 @@ SELECT user_relns() AS user_relns
  __gp_aovisimap_hidden_t
  __gp_fullname
  __gp_is_append_only
- __gp_localid
  __gp_log_master_ext
  __gp_log_segment_ext
- __gp_masterid
  __gp_number_of_segments
  __gp_user_data_tables
  __gp_user_data_tables_readable
@@ -661,7 +659,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(158 rows)
+(156 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/portalmem.c,v 1.106.2.5 2010/07/13 09:02:46 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/portalmem.c,v 1.109 2008/04/02 18:31:50 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1093,7 +1093,6 @@ pg_cursor(PG_FUNCTION_ARGS)
 	while ((hentry = hash_seq_search(&hash_seq)) != NULL)
 	{
 		Portal		portal = hentry->portal;
-		HeapTuple	tuple;
 		Datum		values[6];
 		bool		nulls[6];
 
@@ -1101,22 +1100,19 @@ pg_cursor(PG_FUNCTION_ARGS)
 		if (!portal->visible)
 			continue;
 
-		MemSet(nulls, false, sizeof(nulls));
+		MemSet(nulls, 0, sizeof(nulls));
 
-		values[0] = DirectFunctionCall1(textin, CStringGetDatum((char *) portal->name));
+		values[0] = CStringGetTextDatum(portal->name);
 		if (!portal->sourceText)
 			nulls[1] = true;
 		else
-			values[1] = DirectFunctionCall1(textin,
-										CStringGetDatum((char *) portal->sourceText));
+			values[1] = CStringGetTextDatum(portal->sourceText);
 		values[2] = BoolGetDatum(portal->cursorOptions & CURSOR_OPT_HOLD);
 		values[3] = BoolGetDatum(portal->cursorOptions & CURSOR_OPT_BINARY);
 		values[4] = BoolGetDatum(portal->cursorOptions & CURSOR_OPT_SCROLL);
 		values[5] = TimestampTzGetDatum(portal->creation_time);
 
-		tuple = heap_form_tuple(tupdesc, values, nulls);
-
-		tuplestore_puttuple(tupstore, tuple);
+		tuplestore_putvalues(tupstore, tupdesc, values, nulls);
 	}
 
 	/* clean up and return the tuplestore */

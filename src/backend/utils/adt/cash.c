@@ -13,7 +13,7 @@
  * this version handles 64 bit numbers and so can hold values up to
  * $92,233,720,368,547,758.07.
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/cash.c,v 1.77.2.2 2009/06/10 16:31:38 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/cash.c,v 1.78 2008/03/25 22:42:43 tgl Exp $
  */
 
 #include "postgres.h"
@@ -24,6 +24,7 @@
 #include <locale.h>
 
 #include "libpq/pqformat.h"
+#include "utils/builtins.h"
 #include "utils/cash.h"
 #include "utils/pg_locale.h"
 
@@ -807,7 +808,6 @@ cash_words(PG_FUNCTION_ARGS)
 	Cash		m4;
 	Cash		m5;
 	Cash		m6;
-	text	   *result;
 
 	/* work with positive numbers */
 	if (value < 0)
@@ -873,10 +873,6 @@ cash_words(PG_FUNCTION_ARGS)
 	/* capitalize output */
 	buf[0] = pg_toupper((unsigned char) buf[0]);
 
-	/* make a text type for output */
-	result = (text *) palloc(strlen(buf) + VARHDRSZ);
-	SET_VARSIZE(result, strlen(buf) + VARHDRSZ);
-	memcpy(VARDATA(result), buf, strlen(buf));
-
-	PG_RETURN_TEXT_P(result);
+	/* return as text datum */
+	PG_RETURN_TEXT_P(cstring_to_text(buf));
 }

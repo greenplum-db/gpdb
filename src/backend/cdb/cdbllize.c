@@ -253,20 +253,21 @@ cdbparallelize(PlannerInfo *root,
 	 * information in the profile stucture.
 	 */
 	prescan(plan, context);
-	
+
 	if ( context->dispatchParallel )
 	{
-		
-		/* From this point on, since part of plan is parallel, we have to
-		 * regard the whole plan as parallel. */
-		plan->dispatch = DISPATCH_PARALLEL;
-
 		/*
 		 * Implement the parallelizing directions in the Flow nodes attached
 		 * to the root plan node of each root slice of the plan.
 		 */
 		Assert(root->parse == query);
 		plan = apply_motion(root, plan, query);
+
+		/*
+		 * From this point on, since part of plan is parallel, we have to
+		 * regard the whole plan as parallel.
+		 */
+		plan->dispatch = DISPATCH_PARALLEL;
 	}
 
 	if (gp_enable_motion_deadlock_sanity)
@@ -404,14 +405,14 @@ ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
 	switch (nodeTag(node))
 	{
 		case T_Agg:
-		case T_Window:
+		case T_WindowAgg:
 		case T_Sort:
 		case T_Material:
 		case T_Limit:
 		case T_Result:
 		{
 			if(((Plan *)node)->lefttree && ((Plan *)node)->lefttree->flow)
-				((Plan *)node)->flow = pull_up_Flow((Plan *)node, ((Plan *)node)->lefttree, true);
+				((Plan *)node)->flow = pull_up_Flow((Plan *)node, ((Plan *)node)->lefttree);
 			break;
 		}
 		case T_Append:
@@ -421,8 +422,7 @@ ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node)
 				break;
 			Plan *first_append = (Plan *) (lfirst(list_head(append_list)));
 			Assert(first_append && first_append->flow);
-			bool with_sort = list_length(append_list) == 1 ? true : false;
-			((Plan *)node)->flow = pull_up_Flow((Plan *)node, first_append, with_sort);
+			((Plan *)node)->flow = pull_up_Flow((Plan *)node, first_append);
 			break;
 		}
 		default:
@@ -607,7 +607,7 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		((Plan *) res)->extParam = saveExtParam;
 
 		Assert(((Plan *) res)->lefttree && ((Plan *) res)->lefttree->flow);
-		((Plan *) res)->flow = pull_up_Flow((Plan *) res, ((Plan *)res)->lefttree, true);
+		((Plan *) res)->flow = pull_up_Flow((Plan *) res, ((Plan *)res)->lefttree);
 
 		/**
 		 * It is possible that there is an additional level of correlation in the result node.
@@ -901,7 +901,7 @@ makeFlow(FlowType flotype)
  * want to use mark_passthru_locus (after make_subqueryscan) instead.
  */
 Flow *
-pull_up_Flow(Plan *plan, Plan *subplan, bool withSort)
+pull_up_Flow(Plan *plan, Plan *subplan)
 {
 	Flow	   *model_flow = NULL;
 	Flow	   *new_flow = NULL;
@@ -936,72 +936,6 @@ pull_up_Flow(Plan *plan, Plan *subplan, bool withSort)
                                                 plan->targetlist))
             new_flow->hashExpr = copyObject(model_flow->hashExpr);
 	}
-
-	/* Pull up sort key info if requested. */
-    if (withSort)
-	{
-        if (IsA(plan, Sort))
-        {
-	        Sort   *sort = (Sort *)plan;
-       	
-	        new_flow->numSortCols = sort->numCols;
-	        ARRAYCOPY(new_flow->sortColIdx, sort->sortColIdx, sort->numCols);
-	        ARRAYCOPY(new_flow->sortOperators, sort->sortOperators, sort->numCols);
-	        ARRAYCOPY(new_flow->nullsFirst, sort->nullsFirst, sort->numCols);
-        }
-        else if (model_flow->numSortCols == 0)
-            new_flow->numSortCols = 0;
-        else if (is_projection_capable_plan(plan))
-	    {
-		    /*
-             * Try to derive a sortColIdx to align with projected targetlist.
-             * It might be shorter than the subplan's sortColIdx, maybe even
-             * empty, if not all of the subplan's sort cols are projected.
-             */
-		    new_flow->numSortCols = cdbpullup_colIdx(plan,
-                                                     subplan,
-                                                     model_flow->numSortCols,
-                                                     model_flow->sortColIdx,
-                                                     &new_flow->sortColIdx);
-
-			/* preserve subplan sort attributes*/
-			if (new_flow->numSortCols < model_flow->numOrderbyCols)
-			{
-				new_flow->numOrderbyCols = new_flow->numSortCols;
-			}
-			else
-			{
-				new_flow->numOrderbyCols = model_flow->numOrderbyCols;
-			}
-
-		    if (new_flow->numSortCols > 0)
-			{
-                ARRAYCOPY(new_flow->sortOperators,
-                          model_flow->sortOperators,
-                          new_flow->numSortCols);
-                ARRAYCOPY(new_flow->nullsFirst,
-                          model_flow->nullsFirst,
-                          new_flow->numSortCols);
-			}
-	    }
-	    else
-	    {
-		    /* Non-projecting so sort attributes are the same. */
-            new_flow->numSortCols = model_flow->numSortCols;
-		    ARRAYCOPY(new_flow->sortColIdx,
-                      model_flow->sortColIdx,
-                      new_flow->numSortCols);
-            ARRAYCOPY(new_flow->sortOperators,
-                      model_flow->sortOperators,
-                      new_flow->numSortCols);
-            ARRAYCOPY(new_flow->nullsFirst,
-                      model_flow->nullsFirst,
-                      new_flow->numSortCols);
-
-			/* preserve subplan sort attributes*/
-            new_flow->numOrderbyCols = model_flow->numOrderbyCols;
-	    }
-	}   /* withSort */
 
 	new_flow->locustype = model_flow->locustype;
 	
@@ -1251,15 +1185,6 @@ adjustPlanFlow(Plan        *plan,
         flow->hashExpr = copyObject(kidflow->hashExpr);
 		plan->dispatch = plan->lefttree->dispatch;
 
-        /* Zap sort cols if motion has destroyed the ordering. */
-        if (disorder && !reorder)
-        {
-            flow->numSortCols = 0;
-            flow->sortColIdx = NULL;
-            flow->sortOperators = NULL;
-			flow->nullsFirst = NULL;
-        }
-
 		return true;  /* success */
 	}
 
@@ -1328,15 +1253,6 @@ adjustPlanFlow(Plan        *plan,
             Assert(0);
     }
 
-    /* Discard ordering info if the motion will disturb the order. */
-    if (disorder)
-    {
-        flow->numSortCols = 0;
-        flow->sortColIdx = NULL;
-        flow->sortOperators = NULL;
-		flow->nullsFirst = NULL;
-    }
-	
 	/* Since we added Motion, dispatch must be parallel. */
 	plan->dispatch = DISPATCH_PARALLEL;
 
@@ -1433,7 +1349,7 @@ motion_sanity_walker(Node *node, sanity_result_t *result)
 	switch (nodeTag(node))
 	{
 		case T_Result:
-		case T_Window:
+		case T_WindowAgg:
 		case T_TableFunctionScan:
 		case T_ShareInputScan:
 		case T_Append:

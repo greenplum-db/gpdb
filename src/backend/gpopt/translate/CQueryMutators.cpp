@@ -1601,7 +1601,7 @@ CQueryMutators::FNeedsWindowPrLNormalization
 	{
 		TargetEntry *pte  = (TargetEntry*) lfirst(plc);
 
-		if (!CTranslatorUtils::FWindowSpec( (Node *) pte->expr, pquery->windowClause, pquery->targetList) && !IsA(pte->expr, WindowRef) && !IsA(pte->expr, Var))
+		if (!CTranslatorUtils::FWindowSpec( (Node *) pte->expr, pquery->windowClause, pquery->targetList) && !IsA(pte->expr, WindowFunc) && !IsA(pte->expr, Var))
 		{
 			// computed columns in the target list that is not
 			// used in the order by or partition by of the window specification(s)
@@ -1737,14 +1737,14 @@ CQueryMutators::PnodeWindowPrLMutator
 	SContextGrpbyPlMutator *pctxWindowPrLMutator = (SContextGrpbyPlMutator *) pctx;
 	const ULONG ulResNo = gpdb::UlListLength(pctxWindowPrLMutator->m_plTENewGroupByQuery) + 1;
 
-	if (IsA(pnode, WindowRef))
+	if (IsA(pnode, WindowFunc))
 	{
 		// insert window operator into the derived table
         // and refer to it in the top-level query's target list
-		WindowRef *pwindowref = (WindowRef*) gpdb::PvCopyObject(pnode);
+		WindowFunc *pwindowfunc = (WindowFunc *) gpdb::PvCopyObject(pnode);
 
 		// get the function name and add it to the target list
-		CMDIdGPDB *pmdidFunc = GPOS_NEW(pctxWindowPrLMutator->m_pmp) CMDIdGPDB(pwindowref->winfnoid);
+		CMDIdGPDB *pmdidFunc = GPOS_NEW(pctxWindowPrLMutator->m_pmp) CMDIdGPDB(pwindowfunc->winfnoid);
 		const CWStringConst *pstr = CMDAccessorUtils::PstrWindowFuncName(pctxWindowPrLMutator->m_pmda, pmdidFunc);
 		pmdidFunc->Release();
 

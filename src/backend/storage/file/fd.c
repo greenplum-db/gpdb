@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.143.2.1 2009/12/03 11:03:44 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.144 2008/03/10 20:06:27 tgl Exp $
  *
  * NOTES:
  *
@@ -41,13 +41,13 @@
  * for a long time, like relation files. It is the caller's responsibility
  * to close them, there is no automatic mechanism in fd.c for that.
  *
- * AllocateFile, AllocateDir, OpenPipeStream and OpenTransientFile are
- * wrappers around fopen(3), opendir(3), popen(3) and open(2), respectively.
- * They behave like the corresponding native functions, except that the handle
- * is registered with the current subtransaction, and will be automatically
- * closed at abort. These are intended for short operations like reading a
- * configuration file, and there is a fixed limit on the number of files that
- * can be opened using these functions at any one time.
+ * AllocateFile, AllocateDir and OpenTransientFile are wrappers around
+ * fopen(3), opendir(3), and open(2), respectively. They behave like the
+ * corresponding native functions, except that the handle is registered with
+ * the current subtransaction, and will be automatically closed at abort.
+ * These are intended for short operations like reading a configuration file.
+ * and there is a fixed limit on the number files that can be open using these
+ * functions at any one time.
  *
  * Finally, BasicOpenFile is a just thin wrapper around open() that can
  * release file descriptors in use by the virtual file descriptors if
@@ -151,7 +151,7 @@ static int	max_safe_fds = 32;	/* default if not changed */
 
 typedef struct vfd
 {
-	int fd;			/* current FD, or VFD_CLOSED if none */
+	int			fd;				/* current FD, or VFD_CLOSED if none */
 	unsigned short fdstate;		/* bitflags for VFD's state */
 	ResourceOwner resowner;		/* owner, for automatic cleanup */
 	File		nextFree;		/* link to next free VFD, if in freelist */
@@ -190,7 +190,6 @@ static int	nfile = 0;
 typedef enum
 {
 	AllocateDescFile,
-	AllocateDescPipe,
 	AllocateDescDir,
 	AllocateDescRawFD
 } AllocateDescKind;
@@ -1186,7 +1185,8 @@ FileRead(File file, char *buffer, int amount)
 
 	DO_DB(elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
 			   file, VfdCache[file].fileName,
-			   VfdCache[file].seekPos, amount, buffer));
+			   (int64) VfdCache[file].seekPos,
+			   amount, buffer));
 
 	if (Debug_filerep_print)
 		elog(LOG, "FileRead: %d (%s) " INT64_FORMAT " %d %p",
@@ -1245,7 +1245,8 @@ FileWrite(File file, char *buffer, int amount)
 
 	DO_DB(elog(LOG, "FileWrite: %d (%s) " INT64_FORMAT " %d %p",
 			   file, VfdCache[file].fileName,
-			   VfdCache[file].seekPos, amount, buffer));
+			   (int64) VfdCache[file].seekPos,
+			   amount, buffer));
 
 	returnCode = FileAccess(file);
 	if (returnCode < 0)
@@ -1346,7 +1347,8 @@ FileSeek(File file, int64 offset, int whence)
 
 	DO_DB(elog(LOG, "FileSeek: %d (%s) " INT64_FORMAT " " INT64_FORMAT " %d",
 			   file, VfdCache[file].fileName,
-			   VfdCache[file].seekPos, offset, whence));
+			   (int64) VfdCache[file].seekPos,
+			   (int64) offset, whence));
 
 	if (FileIsNotOpen(file))
 	{
@@ -1354,7 +1356,8 @@ FileSeek(File file, int64 offset, int whence)
 		{
 			case SEEK_SET:
 				if (offset < 0)
-					elog(ERROR, "invalid seek offset: %ld", offset);
+					elog(ERROR, "invalid seek offset: " INT64_FORMAT,
+						 (int64) offset);
 				VfdCache[file].seekPos = offset;
 				break;
 			case SEEK_CUR:
@@ -1603,61 +1606,6 @@ OpenTransientFile(FileName fileName, int fileFlags, int fileMode)
 }
 
 /*
- * Routines that want to initiate a pipe stream should use OpenPipeStream
- * rather than plain popen().  This lets fd.c deal with freeing FDs if
- * necessary.  When done, call ClosePipeStream rather than pclose.
- */
-FILE *
-OpenPipeStream(const char *command, const char *mode)
-{
-	FILE	   *file;
-
-	DO_DB(elog(LOG, "OpenPipeStream: Allocated %d (%s)",
-			   numAllocatedDescs, command));
-
-	/*
-	 * The test against MAX_ALLOCATED_DESCS prevents us from overflowing
-	 * allocatedFiles[]; the test against max_safe_fds prevents AllocateFile
-	 * from hogging every one of the available FDs, which'd lead to infinite
-	 * looping.
-	 */
-	if (numAllocatedDescs >= MAX_ALLOCATED_DESCS ||
-		numAllocatedDescs >= max_safe_fds - 1)
-		elog(ERROR, "exceeded MAX_ALLOCATED_DESCS while trying to execute command \"%s\"",
-			 command);
-
-TryAgain:
-	fflush(stdout);
-	fflush(stderr);
-	errno = 0;
-	if ((file = popen(command, mode)) != NULL)
-	{
-		AllocateDesc *desc = &allocatedDescs[numAllocatedDescs];
-
-		desc->kind = AllocateDescPipe;
-		desc->desc.file = file;
-		desc->create_subid = GetCurrentSubTransactionId();
-		numAllocatedDescs++;
-		return desc->desc.file;
-	}
-
-	if (errno == EMFILE || errno == ENFILE)
-	{
-		int			save_errno = errno;
-
-		ereport(LOG,
-				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("out of file descriptors: %m; release and retry")));
-		errno = 0;
-		if (ReleaseLruFile())
-			goto TryAgain;
-		errno = save_errno;
-	}
-
-	return NULL;
-}
-
-/*
  * Free an AllocateDesc of any type.
  *
  * The argument *must* point into the allocatedDescs[] array.
@@ -1672,9 +1620,6 @@ FreeDesc(AllocateDesc *desc)
 	{
 		case AllocateDescFile:
 			result = fclose(desc->desc.file);
-			break;
-		case AllocateDescPipe:
-			result = pclose(desc->desc.file);
 			break;
 		case AllocateDescDir:
 			result = closedir(desc->desc.dir);
@@ -1889,30 +1834,6 @@ FreeDir(DIR *dir)
 	return closedir(dir);
 }
 
-/*
- * Close a pipe stream returned by OpenPipeStream.
- */
-int
-ClosePipeStream(FILE *file)
-{
-	int			i;
-
-	DO_DB(elog(LOG, "ClosePipeStream: Allocated %d", numAllocatedDescs));
-
-	/* Remove file from list of allocated files, if it's present */
-	for (i = numAllocatedDescs; --i >= 0;)
-	{
-		AllocateDesc *desc = &allocatedDescs[i];
-
-		if (desc->kind == AllocateDescPipe && desc->desc.file == file)
-			return FreeDesc(desc);
-	}
-
-	/* Only get here if someone passes us a file not in allocatedDescs */
-	elog(WARNING, "file passed to ClosePipeStream was not obtained from OpenPipeStream");
-
-	return pclose(file);
-}
 
 /*
  * closeAllVfds

@@ -45,6 +45,7 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 #include "catalog/pg_authid.h"
@@ -406,13 +407,13 @@ readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
 		if (SEGMENT_IS_ACTIVE_PRIMARY(segInfo))
 			segStatus |= FTS_STATUS_PRIMARY;
 
-		if (segInfo->preferred_role == 'p')
+		if (segInfo->preferred_role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			segStatus |= FTS_STATUS_DEFINEDPRIMARY;
 
-		if (segInfo->mode == 's')
+		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC)
 			segStatus |= FTS_STATUS_SYNCHRONIZED;
 
-		if (segInfo->mode == 'c')
+		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING)
 			segStatus |= FTS_STATUS_CHANGELOGGING;
 
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
@@ -854,7 +855,7 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 				 "FTS: content %d fault marking status %s%s role %c",
 				 change->segindex, valid ? "UP" : "DOWN",
 				 (changelogging) ? " mode: change-tracking" : "",
-				 primary ? 'p' : 'm');
+				 primary ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR);
 		histvals[Anum_gp_configuration_history_desc-1] =
 					CStringGetTextDatum(desc);
 
@@ -878,15 +879,15 @@ probeUpdateConfig(FtsSegmentStatusChange *changes, int changeCount)
 				 RelationGetRelationName(configrel));
 		}
 		configvals[Anum_gp_segment_configuration_role-1] =
-				CharGetDatum(primary ? 'p' : 'm');
+				CharGetDatum(primary ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR);
 		repls[Anum_gp_segment_configuration_role-1] = true;
 		configvals[Anum_gp_segment_configuration_status-1] =
-				CharGetDatum(valid ? 'u' : 'd');
+				CharGetDatum(valid ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN);
 		repls[Anum_gp_segment_configuration_status-1] = true;
 		if (changelogging)
 		{
 			configvals[Anum_gp_segment_configuration_mode-1] =
-					CharGetDatum('c');
+					CharGetDatum(GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING);
 		}
 		repls[Anum_gp_segment_configuration_mode-1] = changelogging;
 
@@ -957,10 +958,10 @@ FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries)
 		elog(LOG, "FTS: change state for segment (dbid=%d, content=%d) from ('%c','%c') to ('%c','%c')",
 			 changes[i].dbid,
 			 changes[i].segindex,
-			 (old_alive ? 'u' : 'd'),
-			 (old_pri ? 'p' : 'm'),
-			 (new_alive ? 'u' : 'd'),
-			 (new_pri ? 'p' : 'm'));
+			 (old_alive ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN),
+			 (old_pri ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR),
+			 (new_alive ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN),
+			 (new_pri ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR));
 	}
 }
 
@@ -1037,7 +1038,7 @@ FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInf
 		elog(ERROR,"FTS cannot find dbid (%d, %d) in %s", primary->dbid,
 			 mirror->dbid, RelationGetRelationName(configrel));
 	}
-	configvals[Anum_gp_segment_configuration_mode-1] = CharGetDatum('s');
+	configvals[Anum_gp_segment_configuration_mode-1] = CharGetDatum(GP_SEGMENT_CONFIGURATION_MODE_INSYNC);
 	repls[Anum_gp_segment_configuration_mode-1] = true;
 	newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
 								 configvals, confignulls, repls);

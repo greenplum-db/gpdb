@@ -63,6 +63,7 @@
 #include "catalog/pg_type.h"
 #include "access/tuptoaster.h"
 #include "port/atomics.h"
+#include "pg_trace.h"
 
 extern bool gp_debug_resqueue_priority;
 
@@ -514,7 +515,7 @@ BackoffBackend()
 	Assert(se->weight > 0);
 
 	/* Provide tracing information */
-	PG_TRACE1(backoff__localcheck, MyBackendId);
+	TRACE_POSTGRESQL_BACKOFF_LOCALCHECK(MyBackendId);
 
 	if (gettimeofday(&currentTime, NULL) < 0)
 	{
@@ -740,7 +741,7 @@ BackoffSweeper()
 
 	backoffSingleton->sweeperInProgress = true;
 
-	PG_TRACE(backoff__globalcheck);
+	TRACE_POSTGRESQL_BACKOFF_GLOBALCHECK();
 
 	/* Reset status for all the backend entries */
 	for (i = 0; i < backoffSingleton->numEntries; i++)

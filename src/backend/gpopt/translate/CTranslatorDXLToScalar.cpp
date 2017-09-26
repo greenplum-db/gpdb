@@ -511,15 +511,14 @@ CTranslatorDXLToScalar::PwindowrefFromDXLNodeScWindowRef
 	GPOS_ASSERT(NULL != pdxlnWinref);
 	CDXLScalarWindowRef *pdxlop = CDXLScalarWindowRef::PdxlopConvert(pdxlnWinref->Pdxlop());
 
-	WindowRef *pwindowref = MakeNode(WindowRef);
-	pwindowref->winfnoid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidFunc())->OidObjectId();
-	pwindowref->windistinct = pdxlop->FDistinct();
-	pwindowref->location = -1;
-	pwindowref->winlevel = 0;
-	pwindowref->winref = pdxlop->UlWinSpecPos() + 1;
-	pwindowref->restype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidRetType())->OidObjectId();
-	pwindowref->winstar = pdxlop->FStarArg();
-	pwindowref->winagg = pdxlop->FSimpleAgg();
+	WindowFunc *pwindowfunc = MakeNode(WindowFunc);
+	pwindowfunc->winfnoid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidFunc())->OidObjectId();
+	pwindowfunc->windistinct = pdxlop->FDistinct();
+	pwindowfunc->location = -1;
+	pwindowfunc->winref = pdxlop->UlWinSpecPos() + 1;
+	pwindowfunc->wintype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidRetType())->OidObjectId();
+	pwindowfunc->winstar = pdxlop->FStarArg();
+	pwindowfunc->winagg = pdxlop->FSimpleAgg();
 
 	EdxlWinStage edxlwinstage = pdxlop->Edxlwinstage();
 	GPOS_ASSERT(edxlwinstage != EdxlwinstageSentinel);
@@ -537,15 +536,15 @@ CTranslatorDXLToScalar::PwindowrefFromDXLNodeScWindowRef
 		ULONG *pulElem = rgrgulMapping[ul];
 		if ((ULONG) edxlwinstage == pulElem[1])
 		{
-			pwindowref->winstage = (WinStage) pulElem[0];
+			pwindowfunc->winstage = (WinStage) pulElem[0];
 			break;
 		}
 	}
 
 	// translate the arguments of the window function
-	pwindowref->args = PlistTranslateScalarChildren(pwindowref->args, pdxlnWinref, pmapcidvar);
+	pwindowfunc->args = PlistTranslateScalarChildren(pwindowfunc->args, pdxlnWinref, pmapcidvar);
 
-	return (Expr *) pwindowref;
+	return (Expr *) pwindowfunc;
 }
 
 //---------------------------------------------------------------------------

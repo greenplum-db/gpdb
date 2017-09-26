@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.213 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/nodes.h,v 1.206 2008/03/20 21:42:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -91,13 +91,13 @@ typedef enum NodeTag
 	T_Material,
 	T_Sort,
 	T_Agg,
+	T_WindowAgg,
 	T_Unique,
 	T_Hash,
 	T_SetOp,
 	T_Limit,
 	T_Motion,
 	T_ShareInputScan,
-	T_Window,
 	T_Repeat,
 	T_DML,
 	T_SplitUpdate,
@@ -176,7 +176,7 @@ typedef enum NodeTag
 	T_Const,
 	T_Param,
 	T_Aggref,
-	T_WindowRef,
+	T_WindowFunc,
 	T_ArrayRef,
 	T_FuncExpr,
 	T_OpExpr,
@@ -237,6 +237,7 @@ typedef enum NodeTag
 	T_ExprState = 400,
 	T_GenericExprState,
 	T_AggrefExprState,
+	T_WindowFuncExprState,
 	T_ArrayRefExprState,
 	T_FuncExprState,
 	T_ScalarArrayOpExprState,
@@ -259,7 +260,6 @@ typedef enum NodeTag
 	T_CoerceToDomainState,
 	T_DomainConstraintState,
 	T_WholeRowVarExprState,		/* will be in a more natural position in 9.3 */
-	T_WindowRefExprState,
 	T_GroupingFuncExprState,
 	T_PercentileExprState,
 	T_PartSelectedExprState,

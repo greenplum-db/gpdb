@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.120 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.122 2008/03/26 18:48:59 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,26 +20,19 @@
 #include "access/xact.h"
 #include "commands/prepare.h"
 #include "commands/trigger.h"
-#include "cdb/cdbvars.h"
-#include "executor/executor.h"          /* ExecutorStart, ExecutorRun, etc */
 #include "miscadmin.h"
 #include "tcop/pquery.h"
 #include "tcop/tcopprot.h"
 #include "tcop/utility.h"
 #include "utils/memutils.h"
-#include "utils/resscheduler.h"
-#include "commands/vacuum.h"
-#include "commands/tablecmds.h"
+#include "utils/snapmgr.h"
+
+#include "cdb/ml_ipc.h"
 #include "commands/queue.h"
-#include "utils/lsyscache.h"
-#include "nodes/makefuncs.h"
-#include "utils/acl.h"
-#include "catalog/catalog.h"
+#include "executor/spi.h"
 #include "postmaster/autostats.h"
 #include "postmaster/backoff.h"
-#include "cdb/ml_ipc.h"
-#include "cdb/memquota.h"
-#include "executor/spi.h"
+#include "utils/resscheduler.h"
 
 
 /*

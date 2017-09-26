@@ -2,16 +2,23 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="iz173472">Managing Workload and Resources</title>
-  <shortdesc>Greenplum Database workload management helps you prioritize and allocate resources to
+  <title id="iz173472">Managing Resources</title>
+  <shortdesc>Greenplum Database provides features to help you prioritize and allocate resources to
     queries according to business requirements and to prevent queries from starting when resources
     are unavailable.</shortdesc>
   <body>
-    <p>Using workload management, you can limit the number of concurrent queries, the amount of memory used to execute a query, and the relative amount of CPU devoted to processing a query. Greenplum Database provides two schemes to manage workload and resources - Resource Queues and Resource Groups.</p>
-      <note type="warning">Resource group-based workload management is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
-    <p>Either resource queue-based or resource group-based workload management is active in Greenplum Database; both schemes can not be active at the same time.</p>
-    <p>Resource queue-based workload management is enabled by default when you install your Greenplum Database cluster. While you can create and assign resource groups when resource queues are active,
-    you must explicitly enable resource groups to start using that workload management scheme.</p>
+    <p>You can use resource management features to limit the number of concurrent queries, the
+      amount of memory used to execute a query, and the relative amount of CPU devoted to processing
+      a query. Greenplum Database provides two schemes to manage resources - Resource Queues and
+      Resource Groups.</p>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+      in a production environment. Experimental features are subject to change without notice in
+      future releases.</note>
+    <p>Either the resource queue or the resource group management scheme can be active in Greenplum
+      Database; both schemes cannot be active at the same time.</p>
+    <p>Resource queues are enabled by default when you install your Greenplum Database cluster.
+      While you can create and assign resource groups when resource queues are active, you must
+      explicitly enable resource groups to start using that management scheme.</p>
 
     <p>The following table summarizes some of the differences between Resource Queues and Resource Groups.</p>
      <table id="queue_group_compare">

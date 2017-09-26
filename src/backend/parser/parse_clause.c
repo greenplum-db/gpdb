@@ -172,9 +172,9 @@ winref_checkspec_walker(Node *node, void *ctx)
 
 	if (!node)
 		return false;
-	else if (IsA(node, WindowRef))
+	else if (IsA(node, WindowFunc))
 	{
-		WindowRef *winref = (WindowRef *)node;
+		WindowFunc *winref = (WindowFunc *) node;
 
 		/*
 		 * Look at functions pointing to the interesting spec only.
@@ -240,7 +240,7 @@ winref_checkspec_walker(Node *node, void *ctx)
 /*
  * winref_checkspec
  *
- * See if any WindowRefs using this spec are DISTINCT qualified.
+ * See if any WindowFuncss using this spec are DISTINCT qualified.
  *
  * In addition, we're going to check winrequireorder / winallowframe.
  * You might want to do it in ParseFuncOrColumn,

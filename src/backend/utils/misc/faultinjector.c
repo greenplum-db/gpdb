@@ -927,8 +927,8 @@ FaultInjector_LookupHashEntry(
 	
 	if (entry == NULL) {
 		ereport(DEBUG5,
-				(errmsg("FaultInjector_LookupHashEntry() could not find fault injection hash entry identifier:'%d' ",
-						FaultInjectorIdentifierStringToEnum(faultName))));
+				(errmsg("FaultInjector_LookupHashEntry() could not find fault injection hash entry:'%s' ",
+						faultName)));
 	} 
 	
 	return entry;

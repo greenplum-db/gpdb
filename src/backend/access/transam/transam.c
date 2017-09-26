@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/transam.c,v 1.73 2008/01/01 19:45:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/transam.c,v 1.76 2008/03/26 18:48:59 alvherre Exp $
  *
  * NOTES
  *	  This file contains the high level access-method interface to the
@@ -22,7 +22,7 @@
 #include "access/clog.h"
 #include "access/subtrans.h"
 #include "access/transam.h"
-#include "utils/tqual.h"
+#include "utils/snapmgr.h"
 
 
 /*
@@ -37,6 +37,11 @@ static XLogRecPtr cachedCommitLSN;
 
 /* Handy constant for an invalid xlog recptr */
 static const XLogRecPtr InvalidXLogRecPtr = {0, 0};
+
+/* Local functions */
+static XidStatus TransactionLogFetch(TransactionId transactionId);
+static void TransactionLogUpdate(TransactionId transactionId,
+					 XidStatus status, XLogRecPtr lsn);
 
 
 /* ----------------------------------------------------------------
@@ -95,12 +100,11 @@ TransactionLogFetch(TransactionId transactionId)
 	return xidstatus;
 }
 
-/* --------------------------------
+/*
  *		TransactionLogUpdate
  *
  * Store the new status of a transaction.  The commit record LSN must be
  * passed when recording an async commit; else it should be InvalidXLogRecPtr.
- * --------------------------------
  */
 static inline void
 TransactionLogUpdate(TransactionId transactionId,
@@ -130,30 +134,25 @@ TransactionLogMultiUpdate(int nxids, TransactionId *xids,
 		TransactionIdSetStatus(xids[i], status, lsn);
 }
 
+
 /* ----------------------------------------------------------------
  *						Interface functions
  *
- *		TransactionId DidCommit
- *		TransactionId DidAbort
- *		TransactionId IsInProgress
+ *		TransactionIdDidCommit
+ *		TransactionIdDidAbort
  *		========
  *		   these functions test the transaction status of
  *		   a specified transaction id.
  *
- *		TransactionId Commit
- *		TransactionId Abort
+ *		TransactionIdCommit
+ *		TransactionIdAbort
  *		========
  *		   these functions set the transaction status
  *		   of the specified xid.
  *
+ * See also TransactionIdIsInProgress, which once was in this module
+ * but now lives in procarray.c.
  * ----------------------------------------------------------------
- */
-
-/* --------------------------------
- *		TransactionId DidCommit
- *		TransactionId DidAbort
- *		TransactionId IsInProgress
- * --------------------------------
  */
 
 /*
@@ -261,11 +260,33 @@ TransactionIdDidAbort(TransactionId transactionId)
 	return false;
 }
 
-/* --------------------------------
- *		TransactionId Commit
- *		TransactionId Abort
- * --------------------------------
+/*
+ * TransactionIdIsKnownCompleted
+ *		True iff transaction associated with the identifier is currently
+ *		known to have either committed or aborted.
+ *
+ * This does NOT look into pg_clog but merely probes our local cache
+ * (and so it's not named TransactionIdDidComplete, which would be the
+ * appropriate name for a function that worked that way).  The intended
+ * use is just to short-circuit TransactionIdIsInProgress calls when doing
+ * repeated tqual.c checks for the same XID.  If this isn't extremely fast
+ * then it will be counterproductive.
+ *
+ * Note:
+ *		Assumes transaction identifier is valid.
  */
+bool
+TransactionIdIsKnownCompleted(TransactionId transactionId)
+{
+	if (TransactionIdEquals(transactionId, cachedFetchXid))
+	{
+		/* If it's in the cache at all, it must be completed. */
+		return true;
+	}
+
+	return false;
+}
+
 
 /*
  * TransactionIdCommit
@@ -290,7 +311,6 @@ TransactionIdAsyncCommit(TransactionId transactionId, XLogRecPtr lsn)
 {
 	TransactionLogUpdate(transactionId, TRANSACTION_STATUS_COMMITTED, lsn);
 }
-
 
 /*
  * TransactionIdAbort
@@ -351,7 +371,6 @@ TransactionIdAsyncCommitTree(int nxids, TransactionId *xids, XLogRecPtr lsn)
 								  lsn);
 }
 
-
 /*
  * TransactionIdAbortTree
  *		Marks all the given transaction ids as aborted.
@@ -366,6 +385,7 @@ TransactionIdAbortTree(int nxids, TransactionId *xids)
 		TransactionLogMultiUpdate(nxids, xids, TRANSACTION_STATUS_ABORTED,
 								  InvalidXLogRecPtr);
 }
+
 
 /*
  * TransactionIdPrecedes --- is id1 logically < id2?

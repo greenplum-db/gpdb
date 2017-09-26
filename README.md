@@ -39,27 +39,10 @@ Follow [these linux steps](README.linux.md) for getting your system ready for GP
 
 <a name="buildOrca"></a>
 ### Build the optimizer
-#### Manually
-Currently GPDB assumes ORCA libraries and headers are available in the targeted
-system and tries to build with ORCA by default.  For your convenience, here are
-the steps of how to build the optimizer. For the most up-to-date way of
-building, see the README in the
-[ORCA repository](https://github.com/greenplum-db/gporca).
+#### Automatically with Conan dependency manager
 
-    ```
-    git clone https://github.com/greenplum-db/gporca
-    mkdir gporca/build
-    cd gporca/build
-    cmake ../
-    make
-    make install
-    cd ../..
-    ```
-    **Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
-    ```
-    checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
-    ```
-#### Using conan dependency manager
+**Note**: Conan may fail to install xerces on a fresh install of Mac OS. If you
+are using a Mac, we recommend the manual build steps in the next section.
 
 1. cd gpdb/depends
 2. conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
@@ -68,6 +51,27 @@ building, see the README in the
    * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory.
      In case, the files should be copied elsewhere, please change the location.
 
+#### Manually
+Currently GPDB assumes ORCA libraries and headers are available in the targeted
+system and tries to build with ORCA by default.  For your convenience, here are
+the steps of how to build the optimizer. For the most up-to-date way of
+building, see the README in the
+[ORCA repository](https://github.com/greenplum-db/gporca).
+
+
+    git clone https://github.com/greenplum-db/gporca
+    mkdir gporca/build
+    cd gporca/build
+    cmake ../
+    make
+    make install
+    cd ../..
+
+**Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
+
+    checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
+
+
 ### Build the database
 Note: If you are using CentOS, first make sure that you add `/usr/local/lib` and `/usr/local/lib64` to `/etc/ld.so.conf`, run command `ldconfig`.
 ```
@@ -75,23 +79,16 @@ Note: If you are using CentOS, first make sure that you add `/usr/local/lib` and
 ./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
 
 # Compile and install
-make
-make install
+make -j8
+make -j8 install
 
 # Bring in greenplum environment into your running shell
 source /usr/local/gpdb/greenplum_path.sh
 
-# Start demo cluster (gpdemo-env.sh is created which contain
-# __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
-cd gpAux/gpdemo
+# Start demo cluster
 make create-demo-cluster
-source gpdemo-env.sh
-```
-
-Compilation can be sped up with parallelization. Instead of `make`, consider:
-
-```
-make -j8
+# (gpdemo-env.sh contains __PGPORT__ and __MASTER_DATA_DIRECTORY__ values)
+source gpAux/gpdemo/gpdemo-env.sh
 ```
 
 The directory and the TCP ports for the demo cluster can be changed on the fly.

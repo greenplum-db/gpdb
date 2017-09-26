@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.257.2.8 2010/07/23 00:43:26 rhaas Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.262 2008/03/26 18:48:59 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,9 +25,6 @@
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/twophase.h"
-#include "cdb/cdblocaldistribxact.h"
-#include "cdb/cdbdistributedsnapshot.h"
-#include "cdb/cdbtm.h"
 #include "access/xlogutils.h"
 #include "access/fileam.h"
 #include "catalog/namespace.h"
@@ -58,14 +55,18 @@
 #include "utils/relcache.h"
 #include "utils/resource_manager.h"
 #include "utils/sharedsnapshot.h"
-#include "access/distributedlog.h"
 #include "access/clog.h"
-#include "utils/vmem_tracker.h"
+#include "utils/snapmgr.h"
+#include "pg_trace.h"
 
+#include "access/distributedlog.h"
+#include "cdb/cdbdistributedsnapshot.h"
 #include "cdb/cdbgang.h"
-#include "cdb/cdbvars.h" /* Gp_role, Gp_is_writer, interconnect_setup_timeout */
-
+#include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbpersistentstore.h"
+#include "cdb/cdbtm.h"
+#include "cdb/cdbvars.h" /* Gp_role, Gp_is_writer, interconnect_setup_timeout */
+#include "utils/vmem_tracker.h"
 
 /*
  *	User-tweakable parameters
@@ -80,14 +81,16 @@ bool		XactSyncCommit = true;
 
 int			CommitDelay = 0;	/* precommit delay in microseconds */
 int			CommitSiblings = 5; /* # concurrent xacts needed to sleep */
-#if 0 /* Upstream code not applicable to GPDB */
+
 /*
  * MyXactAccessedTempRel is set when a temporary relation is accessed.
  * We don't allow PREPARE TRANSACTION in that case.  (This is global
  * so that it can be set from heapam.c.)
+ *
+ * Not used in GPDB, see comments in PrepareTransaction()
  */
 bool		MyXactAccessedTempRel = false;
-#endif
+
 int32 gp_subtrans_warn_limit = 16777216; /* 16 million */
 
 /* gp-specific
@@ -1466,8 +1469,6 @@ cleanup:
 
 	if (persistentCommitBuffer != NULL)
 		pfree(persistentCommitBuffer);
-	if (children)
-		pfree(children);
 
 	return latestXid;
 }
@@ -2270,9 +2271,7 @@ StartTransaction(void)
 	XactIsoLevel = DefaultXactIsoLevel;
 	XactReadOnly = DefaultXactReadOnly;
 	forceSyncCommit = false;
-#if 0 /* Upstream code not applicable to GPDB */
 	MyXactAccessedTempRel = false;
-#endif
 	seqXlogWrite = false;
 
 	/* set read only by fts, if any fts action is read only */
@@ -2472,7 +2471,7 @@ StartTransaction(void)
 	Assert(MyProc->backendId == vxid.backendId);
 	MyProc->lxid = vxid.localTransactionId;
 
-	PG_TRACE1(transaction__start, vxid.localTransactionId);
+	TRACE_POSTGRESQL_TRANSACTION_START(vxid.localTransactionId);
 
 	/*
 	 * set transaction_timestamp() (a/k/a now()).  We want this to be the same
@@ -2683,7 +2682,7 @@ CommitTransaction(void)
 	 */
 	latestXid = RecordTransactionCommit();
 
-	PG_TRACE1(transaction__commit, MyProc->lxid);
+	TRACE_POSTGRESQL_TRANSACTION_COMMIT(MyProc->lxid);
 
 	/*
 	 * Let others know about no transaction in progress by me. Note that this
@@ -3253,7 +3252,7 @@ AbortTransaction(void)
 	 */
 	latestXid = RecordTransactionAbort(false);
 
-	PG_TRACE1(transaction__abort, MyProc->lxid);
+	TRACE_POSTGRESQL_TRANSACTION_ABORT(MyProc->lxid);
 
 	/*
 	 * Let others know about no transaction in progress by me. Note that this

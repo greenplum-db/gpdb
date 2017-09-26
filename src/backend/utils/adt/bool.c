@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/bool.c,v 1.42 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/bool.c,v 1.43 2008/03/25 22:42:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

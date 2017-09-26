@@ -20,7 +20,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/buffile.h,v 1.23 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/buffile.h,v 1.24 2008/03/10 20:06:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,11 +42,10 @@ extern BufFile *BufFileCreateTemp(const char *filePrefix, bool interXact);
 extern BufFile *BufFileCreateTemp_ReaderWriter(const char *fileName, bool isWriter,
 							   bool interXact);
 extern void BufFileClose(BufFile *file);
-
 extern Size BufFileRead(BufFile *file, void *ptr, Size size);
 extern Size BufFileWrite(BufFile *file, const void *ptr, Size size);
 
-extern int BufFileSeek(BufFile *file, int fileno, off_t offset, int whence);
+extern int	BufFileSeek(BufFile *file, int fileno, off_t offset, int whence);
 extern void BufFileTell(BufFile *file, int *fileno, off_t *offset);
 extern int	BufFileSeekBlock(BufFile *file, int64 blknum);
 extern void BufFileFlush(BufFile *file);

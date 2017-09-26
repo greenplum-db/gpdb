@@ -17,6 +17,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
 #include "executor/execWorkfile.h"

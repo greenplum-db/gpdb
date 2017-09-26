@@ -300,7 +300,7 @@ extern XLogRecPtr gistxlogInsertCompletion(RelFileNode node, ItemPointerData *ke
 
 /* gistget.c */
 extern Datum gistgettuple(PG_FUNCTION_ARGS);
-extern Datum gistgetmulti(PG_FUNCTION_ARGS);
+extern Datum gistgetbitmap(PG_FUNCTION_ARGS);
 
 /* gistutil.c */
 

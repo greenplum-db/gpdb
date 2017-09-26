@@ -325,6 +325,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
 	READ_BOOL_FIELD(hasDynamicFunctions);
+	READ_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	READ_NODE_FIELD(rtable);
 	READ_NODE_FIELD(jointree);
 	READ_NODE_FIELD(targetList);
@@ -335,6 +336,7 @@ _readQuery(void)
 	READ_NODE_FIELD(distinctClause);
 	READ_NODE_FIELD(sortClause);
 	READ_NODE_FIELD(scatterClause);
+	READ_BOOL_FIELD(isTableValueSelect);
 	READ_NODE_FIELD(cteList);
 	READ_BOOL_FIELD(hasRecursive);
 	READ_NODE_FIELD(limitOffset);
@@ -372,7 +374,6 @@ _readDeclareCursorStmt(void)
 	READ_STRING_FIELD(portalname);
 	READ_INT_FIELD(options);
 	READ_NODE_FIELD(query);
-	READ_BOOL_FIELD(is_simply_updatable);
 
 	READ_DONE();
 }
@@ -386,9 +387,9 @@ _readCurrentOfExpr(void)
 {
 	READ_LOCALS(CurrentOfExpr);
 
+	READ_INT_FIELD(cvarno);
 	READ_STRING_FIELD(cursor_name);
 	READ_INT_FIELD(cursor_param);
-	READ_INT_FIELD(cvarno);
 	READ_OID_FIELD(target_relid);
 
 	/* some attributes omitted as they're bound only just before executor dispatch */
@@ -1291,6 +1292,7 @@ _readAggref(void)
 	READ_UINT_FIELD(agglevelsup);
 	READ_BOOL_FIELD(aggstar);
 	READ_BOOL_FIELD(aggdistinct);
+	READ_NODE_FIELD(aggfilter);
 	READ_ENUM_FIELD(aggstage, AggStage);
 	READ_NODE_FIELD(aggorder);
 
@@ -1313,25 +1315,24 @@ _readAggOrder(void)
     READ_DONE();
 }
 
-
 /*
- * _readWindowRef
+ * _readWindowFunc
  */
-static WindowRef *
-_readWindowRef(void)
+static WindowFunc *
+_readWindowFunc(void)
 {
-	READ_LOCALS(WindowRef);
+	READ_LOCALS(WindowFunc);
 
 	READ_OID_FIELD(winfnoid);
-	READ_OID_FIELD(restype);
+	READ_OID_FIELD(wintype);
 	READ_NODE_FIELD(args);
+	READ_NODE_FIELD(aggfilter);
 	READ_UINT_FIELD(winref);
 	READ_BOOL_FIELD(winstar);
 	READ_BOOL_FIELD(winagg);
 	READ_BOOL_FIELD(windistinct);
 	READ_UINT_FIELD(winindex);
 	READ_ENUM_FIELD(winstage, WinStage);
-	READ_UINT_FIELD(winlevel);
 	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
@@ -1647,7 +1648,7 @@ _readA_ArrayExpr(void)
 	READ_LOCALS(A_ArrayExpr);
 
 	READ_NODE_FIELD(elements);
-/*	READ_LOCATION_FIELD(location); */
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1947,7 +1948,6 @@ _readTypeName(void)
 
 	READ_NODE_FIELD(names);
 	READ_OID_FIELD(typid);
-	READ_BOOL_FIELD(timezone);
 	READ_BOOL_FIELD(setof);
 	READ_BOOL_FIELD(pct_type);
 	READ_NODE_FIELD(typmods);
@@ -2653,26 +2653,6 @@ _readConstraintsSetStmt(void)
 	READ_DONE();
 }
 
-#ifndef COMPILING_BINARY_FUNCS
-/*
- * _readWindowKey
- */
-static WindowKey *
-_readWindowKey(void)
-{
-	READ_LOCALS(WindowKey);
-
-	READ_INT_FIELD(numSortCols);
-	READ_INT_ARRAY_OR_NULL(sortColIdx, numSortCols, AttrNumber);
-	READ_OID_ARRAY(sortOperators, numSortCols);
-	READ_INT_FIELD(frameOptions);
-	READ_NODE_FIELD(startOffset);
-	READ_NODE_FIELD(endOffset);
-
-	READ_DONE();
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
 /*
  * _readVacuumStmt
  */
@@ -2882,6 +2862,8 @@ parseNodeString(void)
 		return_value = _readParam();
 	else if (MATCH("AGGREF", 6))
 		return_value = _readAggref();
+	else if (MATCH("WINDOWFUNC", 10))
+		return_value = _readWindowFunc();
 	else if (MATCH("ARRAYREF", 8))
 		return_value = _readArrayRef();
 	else if (MATCH("FUNCEXPR", 8))
@@ -3140,10 +3122,6 @@ parseNodeString(void)
 		return_value = _readVariableSetStmt();
 	else if (MATCHX("VIEWSTMT"))
 		return_value = _readViewStmt();
-	else if (MATCHX("WINDOWKEY"))
-		return_value = _readWindowKey();
-	else if (MATCHX("WINDOWREF"))
-		return_value = _readWindowRef();
 	else if (MATCHX("WITHCLAUSE"))
 		return_value = _readWithClause();
 	else

@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/quote.c,v 1.23 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/quote.c,v 1.25 2008/03/25 22:42:44 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,26 +23,13 @@
 Datum
 quote_ident(PG_FUNCTION_ARGS)
 {
-	text	   *t = PG_GETARG_TEXT_P(0);
-	text	   *result;
+	text	   *t = PG_GETARG_TEXT_PP(0);
 	const char *qstr;
 	char	   *str;
-	int			len;
 
-	/* We have to convert to a C string to use quote_identifier */
-	len = VARSIZE(t) - VARHDRSZ;
-	str = (char *) palloc(len + 1);
-	memcpy(str, VARDATA(t), len);
-	str[len] = '\0';
-
+	str = text_to_cstring(t);
 	qstr = quote_identifier(str);
-
-	len = strlen(qstr);
-	result = (text *) palloc(len + VARHDRSZ);
-	SET_VARSIZE(result, len + VARHDRSZ);
-	memcpy(VARDATA(result), qstr, len);
-
-	PG_RETURN_TEXT_P(result);
+	PG_RETURN_TEXT_P(cstring_to_text(qstr));
 }
 
 /*
@@ -82,8 +69,8 @@ quote_literal(PG_FUNCTION_ARGS)
 
 /*
  * quote_nullable -
- *	  Returns a properly quoted literal, with null values returned
- *	  as the text string 'NULL'.
+ *    Returns a properly quoted literal, with null values returned
+ *    as the text string 'NULL'.
  */
 Datum
 quote_nullable(PG_FUNCTION_ARGS)

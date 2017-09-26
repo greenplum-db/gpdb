@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.340 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.324 2008/03/21 22:41:48 tgl Exp $
  *
  * NOTES
  *	  Every node type that can appear in stored rules' parsetrees *must*
@@ -294,6 +294,7 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_BOOL_FIELD(canSetTag);
 	WRITE_BOOL_FIELD(transientPlan);
 	WRITE_BOOL_FIELD(oneoffPlan);
+	WRITE_BOOL_FIELD(simplyUpdatable);
 	WRITE_NODE_FIELD(planTree);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(resultRelations);
@@ -816,48 +817,37 @@ _outAgg(StringInfo str, Agg *node)
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
-_outWindowKey(StringInfo str, WindowKey *node)
+_outWindowAgg(StringInfo str, WindowAgg *node)
 {
 	int			i;
 
-	WRITE_NODE_TYPE("WINDOWKEY");
-	WRITE_INT_FIELD(numSortCols);
+	WRITE_NODE_TYPE("WINDOWAGG");
 
-	appendStringInfoLiteral(str, " :sortColIdx");
-	for (i = 0; i < node->numSortCols; i++)
-		appendStringInfo(str, " %d", node->sortColIdx[i]);
+	_outPlanInfo(str, (Plan *) node);
 
-	appendStringInfoLiteral(str, " :sortOperators");
-	for (i = 0; i < node->numSortCols; i++)
-		appendStringInfo(str, " %u", node->sortOperators[i]);
+	WRITE_INT_FIELD(partNumCols);
+
+	appendStringInfoLiteral(str, " :partColIdx");
+	for (i = 0; i < node->partNumCols; i++)
+		appendStringInfo(str, " %d", node->partColIdx[i]);
+
+	appendStringInfoLiteral(str, " :partOperators");
+	for (i = 0; i < node->partNumCols; i++)
+		appendStringInfo(str, " %u", node->partOperators[i]);
+
+	WRITE_INT_FIELD(ordNumCols);
+
+	appendStringInfoString(str, " :ordColIdx");
+	for (i = 0; i < node->ordNumCols; i++)
+		appendStringInfo(str, " %d", node->ordColIdx[i]);
+
+	appendStringInfoString(str, " :ordOperations");
+	for (i = 0; i < node->ordNumCols; i++)
+		appendStringInfo(str, " %u", node->ordOperators[i]);
 
 	WRITE_INT_FIELD(frameOptions);
 	WRITE_NODE_FIELD(startOffset);
 	WRITE_NODE_FIELD(endOffset);
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
-#ifndef COMPILING_BINARY_FUNCS
-static void
-_outWindow(StringInfo str, Window *node)
-{
-	int			i;
-
-	WRITE_NODE_TYPE("WINDOW");
-
-	_outPlanInfo(str, (Plan *) node);
-
-	WRITE_INT_FIELD(numPartCols);
-
-	appendStringInfoLiteral(str, " :partColIdx");
-	for (i = 0; i < node->numPartCols; i++)
-		appendStringInfo(str, " %d", node->partColIdx[i]);
-
-	appendStringInfoLiteral(str, " :partOperators");
-	for (i = 0; i < node->numPartCols; i++)
-		appendStringInfo(str, " %u", node->partOperators[i]);
-
-	WRITE_NODE_FIELD(windowKeys);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1237,6 +1227,7 @@ _outAggref(StringInfo str, Aggref *node)
 	WRITE_UINT_FIELD(agglevelsup);
 	WRITE_BOOL_FIELD(aggstar);
 	WRITE_BOOL_FIELD(aggdistinct);
+	WRITE_NODE_FIELD(aggfilter);
 	WRITE_ENUM_FIELD(aggstage, AggStage);
 	WRITE_NODE_FIELD(aggorder);
 }
@@ -1253,20 +1244,20 @@ _outAggOrder(StringInfo str, AggOrder *node)
 }
 
 static void
-_outWindowRef(StringInfo str, WindowRef *node)
+_outWindowFunc(StringInfo str, WindowFunc *node)
 {
-	WRITE_NODE_TYPE("WINDOWREF");
+	WRITE_NODE_TYPE("WINDOWFUNC");
 
 	WRITE_OID_FIELD(winfnoid);
-	WRITE_OID_FIELD(restype);
+	WRITE_OID_FIELD(wintype);
 	WRITE_NODE_FIELD(args);
+	WRITE_NODE_FIELD(aggfilter);
 	WRITE_UINT_FIELD(winref);
 	WRITE_BOOL_FIELD(winstar);
 	WRITE_BOOL_FIELD(winagg);
 	WRITE_BOOL_FIELD(windistinct);
 	WRITE_UINT_FIELD(winindex);
 	WRITE_ENUM_FIELD(winstage, WinStage);
-	WRITE_UINT_FIELD(winlevel);
 	WRITE_LOCATION_FIELD(location);
 }
 
@@ -1631,8 +1622,9 @@ _outCurrentOfExpr(StringInfo str, CurrentOfExpr *node)
 {
 	WRITE_NODE_TYPE("CURRENTOFEXPR");
 
-	WRITE_STRING_FIELD(cursor_name);
 	WRITE_INT_FIELD(cvarno);
+	WRITE_STRING_FIELD(cursor_name);
+	WRITE_INT_FIELD(cursor_param);
 	WRITE_OID_FIELD(target_relid);
 
 	/* some attributes omitted as they're bound only just before executor dispatch */
@@ -1689,12 +1681,9 @@ _outFromExpr(StringInfo str, FromExpr *node)
 	WRITE_NODE_FIELD(quals);
 }
 
-#ifndef COMPILING_BINARY_FUNCS
 static void
 _outFlow(StringInfo str, Flow *node)
 {
-	int i;
-
 	WRITE_NODE_TYPE("FLOW");
 
 	WRITE_ENUM_FIELD(flotype, FlowType);
@@ -1702,33 +1691,10 @@ _outFlow(StringInfo str, Flow *node)
 	WRITE_ENUM_FIELD(locustype, CdbLocusType);
 	WRITE_INT_FIELD(segindex);
 
-	/* This array format as in Group and Sort nodes. */
-	WRITE_INT_FIELD(numSortCols);
-	if(node->numSortCols > 0)
-	{
-		appendStringInfoLiteral(str, " :sortColIdx");
-		if(node->sortColIdx == NULL)
-			appendStringInfoString(str, " <>");
-		else {
-			for ( i = 0; i < node->numSortCols; i++ )
-				appendStringInfo(str, " %d", node->sortColIdx[i]);
-		}
-
-		appendStringInfoLiteral(str, " :sortOperators");
-		if(node->sortOperators == NULL)
-			appendStringInfoString(str, " <>");
-		else {
-			for ( i = 0; i < node->numSortCols; i++ )
-				appendStringInfo(str, " %u", node->sortOperators[i]);
-		}
-	}
-	WRITE_INT_FIELD(numOrderbyCols);
-
 	WRITE_NODE_FIELD(hashExpr);
 
 	WRITE_NODE_FIELD(flow_before_req_move);
 }
-#endif /* COMPILING_BINARY_FUNCS */
 
 /*****************************************************************************
  *
@@ -3045,7 +3011,6 @@ _outDeclareCursorStmt(StringInfo str, DeclareCursorStmt *node)
 	WRITE_STRING_FIELD(portalname);
 	WRITE_INT_FIELD(options);
 	WRITE_NODE_FIELD(query);
-	WRITE_BOOL_FIELD(is_simply_updatable);
 }
 
 static void
@@ -3353,7 +3318,6 @@ _outTypeName(StringInfo str, TypeName *node)
 
 	WRITE_NODE_FIELD(names);
 	WRITE_OID_FIELD_AS(typid, typeid);
-	WRITE_BOOL_FIELD(timezone);
 	WRITE_BOOL_FIELD(setof);
 	WRITE_BOOL_FIELD(pct_type);
 	WRITE_NODE_FIELD(typmods);
@@ -3495,6 +3459,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasWindowFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
 	WRITE_BOOL_FIELD(hasDynamicFunctions);
+	WRITE_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	WRITE_NODE_FIELD(rtable);
 	WRITE_NODE_FIELD(jointree);
 	WRITE_NODE_FIELD(targetList);
@@ -3505,6 +3470,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(distinctClause);
 	WRITE_NODE_FIELD(sortClause);
 	WRITE_NODE_FIELD(scatterClause);
+	WRITE_BOOL_FIELD(isTableValueSelect);
 	WRITE_NODE_FIELD(cteList);
 	WRITE_BOOL_FIELD(hasRecursive);
 	WRITE_NODE_FIELD(limitOffset);
@@ -3880,7 +3846,7 @@ _outA_ArrayExpr(StringInfo str, A_ArrayExpr *node)
 	WRITE_NODE_TYPE("A_ARRAYEXPR");
 
 	WRITE_NODE_FIELD(elements);
-/*	WRITE_LOCATION_FIELD(location); */
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -4454,11 +4420,8 @@ _outNode(StringInfo str, void *obj)
 			case T_Agg:
 				_outAgg(str, obj);
 				break;
-			case T_WindowKey:
-				_outWindowKey(str, obj);
-				break;
-			case T_Window:
-				_outWindow(str, obj);
+			case T_WindowAgg:
+				_outWindowAgg(str, obj);
 				break;
 			case T_TableFunctionScan:
 				_outTableFunctionScan(str, obj);
@@ -4529,8 +4492,8 @@ _outNode(StringInfo str, void *obj)
 			case T_AggOrder:
 				_outAggOrder(str, obj);
 				break;
-			case T_WindowRef:
-				_outWindowRef(str, obj);
+			case T_WindowFunc:
+				_outWindowFunc(str, obj);
 				break;
 			case T_ArrayRef:
 				_outArrayRef(str, obj);

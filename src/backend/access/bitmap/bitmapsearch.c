@@ -23,6 +23,7 @@
 #include "storage/lmgr.h"
 #include "parser/parse_oper.h"
 #include "utils/lsyscache.h"
+#include "utils/snapmgr.h"
 
 typedef struct ItemPos
 {

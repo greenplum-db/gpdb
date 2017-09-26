@@ -27,6 +27,7 @@
 #include <pthread.h>
 
 #include "access/transam.h"
+#include "access/xact.h"
 #include "nodes/execnodes.h"
 #include "nodes/pg_list.h"
 #include "nodes/print.h"

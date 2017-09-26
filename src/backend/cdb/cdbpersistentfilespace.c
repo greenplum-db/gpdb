@@ -12,6 +12,7 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "utils/palloc.h"
@@ -22,6 +23,7 @@
 #include "access/heapam.h"
 #include "access/persistentfilesysobjname.h"
 #include "access/transam.h"
+#include "access/xact.h"
 #include "access/xlogmm.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_namespace.h"

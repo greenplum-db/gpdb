@@ -48,6 +48,7 @@
 #include "utils/faultinjector.h"
 #include "utils/fmgroids.h"
 #include "utils/sharedsnapshot.h"
+#include "utils/snapmgr.h"
 
 extern bool Test_print_direct_dispatch_info;
 extern struct Port *MyProcPort;

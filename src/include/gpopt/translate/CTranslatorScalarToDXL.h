@@ -271,8 +271,8 @@ namespace gpdxl
 				const CMappingVarColId* pmapvarcolid
 				);
 
-			// create a DXL scalar Windowref node from a GPDB expression
-			CDXLNode *PdxlnScWindowref
+			// create a DXL scalar WindowFunc node from a GPDB expression
+			CDXLNode *PdxlnScWindowFunc
 				(
 				const Expr *pexpr,
 				const CMappingVarColId* pmapvarcolid

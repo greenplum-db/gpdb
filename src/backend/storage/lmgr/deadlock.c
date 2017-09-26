@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/deadlock.c,v 1.51 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/deadlock.c,v 1.53 2008/03/24 18:22:36 tgl Exp $
  *
  *	Interface:
  *
@@ -26,6 +26,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
+#include "pgstat.h"
 #include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "utils/memutils.h"
@@ -891,13 +892,16 @@ PrintLockQueue(LOCK *lock, const char *info)
 void
 DeadLockReport(void)
 {
-	StringInfoData buf;
-	StringInfoData buf2;
+	StringInfoData clientbuf;	/* errdetail for client */
+	StringInfoData logbuf;		/* errdetail for server log */
+	StringInfoData locktagbuf;
 	int			i;
 
-	initStringInfo(&buf);
-	initStringInfo(&buf2);
+	initStringInfo(&clientbuf);
+	initStringInfo(&logbuf);
+	initStringInfo(&locktagbuf);
 
+	/* Generate the "waits for" lines sent to the client */
 	for (i = 0; i < nDeadlockDetails; i++)
 	{
 		DEADLOCK_INFO *info = &deadlockDetails[i];
@@ -909,26 +913,45 @@ DeadLockReport(void)
 		else
 			nextpid = deadlockDetails[0].pid;
 
+		/* reset locktagbuf to hold next object description */
+		resetStringInfo(&locktagbuf);
+
+		DescribeLockTag(&locktagbuf, &info->locktag);
+
 		if (i > 0)
-			appendStringInfoChar(&buf, '\n');
+			appendStringInfoChar(&clientbuf, '\n');
 
-		/* reset buf2 to hold next object description */
-		resetStringInfo(&buf2);
-
-		DescribeLockTag(&buf2, &info->locktag);
-
-		appendStringInfo(&buf,
+		appendStringInfo(&clientbuf,
 				  _("Process %d waits for %s on %s; blocked by process %d."),
 						 info->pid,
 						 GetLockmodeName(info->locktag.locktag_lockmethodid,
 										 info->lockmode),
-						 buf2.data,
+						 locktagbuf.data,
 						 nextpid);
 	}
+
+	/* Duplicate all the above for the server ... */
+	appendStringInfoString(&logbuf, clientbuf.data);
+
+	/* ... and add info about query strings */
+	for (i = 0; i < nDeadlockDetails; i++)
+	{
+		DEADLOCK_INFO *info = &deadlockDetails[i];
+
+		appendStringInfoChar(&logbuf, '\n');
+
+		appendStringInfo(&logbuf,
+						 _("Process %d: %s"),
+						 info->pid,
+						 pgstat_get_backend_current_activity(info->pid, false));
+	}
+
 	ereport(ERROR,
 			(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
 			 errmsg("deadlock detected"),
-			 errdetail("%s", buf.data)));
+			 errdetail("%s", clientbuf.data),
+			 errdetail_log("%s", logbuf.data),
+			 errhint("See server log for query details.")));
 }
 
 /*

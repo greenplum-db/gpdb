@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tsearchcmds.c,v 1.9 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tsearchcmds.c,v 1.11 2008/03/26 21:10:38 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -45,6 +45,7 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
@@ -2085,7 +2086,7 @@ serialize_deflist(List *deflist)
 			appendStringInfo(&buf, ", ");
 	}
 
-	result = CStringGetTextP(buf.data);
+	result = cstring_to_text_with_len(buf.data, buf.len);
 	pfree(buf.data);
 	return result;
 }
@@ -2185,7 +2186,7 @@ deserialize_deflist(Datum txt)
 					ereport(ERROR,
 							(errcode(ERRCODE_SYNTAX_ERROR),
 							 errmsg("invalid parameter list format: \"%s\"",
-									TextPGetCString(in))));
+									text_to_cstring(in))));
 				break;
 			case CS_WAITVALUE:
 				if (*ptr == '\'')
@@ -2296,7 +2297,7 @@ deserialize_deflist(Datum txt)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("invalid parameter list format: \"%s\"",
-						TextPGetCString(in))));
+						text_to_cstring(in))));
 
 	pfree(workspace);
 

@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/indxpath.c,v 1.227.2.2 2009/04/16 20:42:28 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/indxpath.c,v 1.228 2008/03/25 22:42:43 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2820,8 +2820,7 @@ prefix_quals(Node *leftop, Oid opfamily,
 		switch (prefix_const->consttype)
 		{
 			case TEXTOID:
-				prefix = DatumGetCString(DirectFunctionCall1(textout,
-												  prefix_const->constvalue));
+				prefix = TextDatumGetCString(prefix_const->constvalue);
 				break;
 			case BYTEAOID:
 				prefix = DatumGetCString(DirectFunctionCall1(byteaout,
@@ -2975,15 +2974,15 @@ static Datum
 string_to_datum(const char *str, Oid datatype)
 {
 	/*
-	 * We cheat a little by assuming that textin() will do for bpchar and
-	 * varchar constants too...
+	 * We cheat a little by assuming that CStringGetTextDatum() will do for
+	 * bpchar and varchar constants too...
 	 */
 	if (datatype == NAMEOID)
 		return DirectFunctionCall1(namein, CStringGetDatum(str));
 	else if (datatype == BYTEAOID)
 		return DirectFunctionCall1(byteain, CStringGetDatum(str));
 	else
-		return DirectFunctionCall1(textin, CStringGetDatum(str));
+		return CStringGetTextDatum(str);
 }
 
 /*

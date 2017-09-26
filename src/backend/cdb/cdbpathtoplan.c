@@ -72,25 +72,6 @@ cdbpathtoplan_create_flow(PlannerInfo  *root,
         flow = makeFlow(FLOW_PARTITIONED);
     else
         Insist(0);
-	
-    /*
-     * Describe the ordering of the result rows.  The ordering info will be
-     * truncated upon encountering an expr which is not already present in the
-     * plan's targetlist.  Duplicate cols and constant cols will be omitted.
-     */
-    if (pathkeys)
-    {
-        Sort   *sort = make_sort_from_pathkeys(root, plan, pathkeys, -1.0, false);
-
-        if (sort)
-        {
-            flow->numSortCols = sort->numCols;
-            flow->sortColIdx = sort->sortColIdx;
-            flow->sortOperators = sort->sortOperators;
-			flow->nullsFirst = sort->nullsFirst;
-			Assert(flow->nullsFirst);
-        }
-    }
 
     flow->req_move = MOVEMENT_NONE;
 	flow->locustype = locus.locustype;
@@ -135,12 +116,10 @@ cdbpathtoplan_create_motion_plan(PlannerInfo   *root,
             {
                 /* Result node might have been added below the Sort */
                 subplan = sort->plan.lefttree; 
-                motion = make_sorted_union_motion(subplan,
+                motion = make_sorted_union_motion(root,
+												  subplan,
                                                   destSegIndex,
-                                                  sort->numCols,
-                                                  sort->sortColIdx,
-                                                  sort->sortOperators,
-												  sort->nullsFirst,
+												  path->path.pathkeys,
                                                   false /* useExecutorVarFormat */
                                                   );
             }

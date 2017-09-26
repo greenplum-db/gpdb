@@ -31,6 +31,7 @@
 #include "utils/guc.h"
 #include "utils/fmgroids.h"
 #include "utils/faultinjector.h"
+#include "utils/snapmgr.h"
 #include "storage/smgr.h"
 #include "storage/ipc.h"
 #include "cdb/cdbglobalsequence.h"

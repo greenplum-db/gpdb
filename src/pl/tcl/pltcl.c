@@ -2,7 +2,7 @@
  * pltcl.c		- PostgreSQL support for Tcl as
  *				  procedural language (PL)
  *
- *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.117.2.3 2010/05/13 18:29:25 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.119 2008/03/28 00:21:56 tgl Exp $
  *
  **********************************************************************/
 
@@ -958,6 +958,8 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, bool pltrusted)
 				Tcl_DStringAppendElement(&tcl_cmd, "DELETE");
 			else if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
 				Tcl_DStringAppendElement(&tcl_cmd, "UPDATE");
+			else if (TRIGGER_FIRED_BY_TRUNCATE(trigdata->tg_event))
+				Tcl_DStringAppendElement(&tcl_cmd, "TRUNCATE");
 			else
 				elog(ERROR, "unrecognized OP tg_event: %u", trigdata->tg_event);
 
@@ -1454,8 +1456,7 @@ compile_pltcl_function(Oid fn_oid, Oid tgreloid, bool pltrusted)
 									  Anum_pg_proc_prosrc, &isnull);
 		if (isnull)
 			elog(ERROR, "null prosrc");
-		proc_source = DatumGetCString(DirectFunctionCall1(textout,
-														  prosrcdatum));
+		proc_source = TextDatumGetCString(prosrcdatum);
 		UTF_BEGIN;
 		Tcl_DStringAppend(&proc_internal_body, UTF_E2U(proc_source), -1);
 		UTF_END;

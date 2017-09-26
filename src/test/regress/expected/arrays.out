@@ -869,7 +869,7 @@ select '{
 (1 row)
 
 select array[]::text[];
- array
+ array 
 -------
  {}
 (1 row)

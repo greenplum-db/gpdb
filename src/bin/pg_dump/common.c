@@ -11,16 +11,25 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.102 2008/01/01 19:45:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/common.c,v 1.103 2008/03/27 03:57:33 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres_fe.h"
 
+/*
+ * GPDB_84_MERGE_FIXME: need to clean up these header includes. Some are
+ * gpdb-specific, others appear to have been taken from older postgres versions,
+ * some are duplicated.
+ */
 #include <ctype.h>
 #include <time.h>
 #include "dumputils.h"
 #include "postgres.h"
+#include "catalog/pg_class.h"
+
+#include "pg_backup_archiver.h"
+
 #include "catalog/pg_class.h"
 
 #include "pg_backup_archiver.h"

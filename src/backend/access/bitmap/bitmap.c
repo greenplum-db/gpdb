@@ -181,10 +181,10 @@ bmgettuple(PG_FUNCTION_ARGS)
 }
 
 /*
- * bmgetmulti() -- return a stream bitmap.
+ * bmgetbitmap() -- return a stream bitmap.
  */
 Datum
-bmgetmulti(PG_FUNCTION_ARGS)
+bmgetbitmap(PG_FUNCTION_ARGS)
 {
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_DECLARE;
 

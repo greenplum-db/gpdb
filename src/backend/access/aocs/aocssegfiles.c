@@ -54,6 +54,7 @@
 #include "access/heapam.h"
 #include "catalog/pg_type.h"
 #include "utils/builtins.h"
+#include "utils/visibility_summary.h"
 
 static void PrintPgaocssegAndGprelationNodeEntries(AOCSFileSegInfo **allseginfo,
 												int totalsegs,

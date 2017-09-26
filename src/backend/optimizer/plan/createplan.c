@@ -4890,102 +4890,33 @@ make_sort_from_groupcols(PlannerInfo *root,
  *	  into the sorting list.
  */
 Sort *
-make_sort_from_reordered_groupcols(PlannerInfo *root,
-								   List *groupcls,
-								   AttrNumber *orig_grpColIdx,
-								   AttrNumber *new_grpColIdx,
-								   TargetEntry *grouping,
-								   TargetEntry *groupid,
-								   int req_ngrpkeys,
-								   Plan *lefttree)
+make_sort_from_pathkeys_and_groupingcol(PlannerInfo *root,
+										Plan *lefttree,
+										List *pathkeys,
+										TargetEntry *grouping,
+										TargetEntry *groupid)
 {
-	List	   *sub_tlist = lefttree->targetlist;
-	int			grpno = 0;
-	int			numgrpkeys,
-				numsortkeys;
-	AttrNumber *sortColIdx;
-	Oid		   *sortOperators;
-	bool	   *nullsFirst;
-	List	   *flat_groupcls;
+	Sort	   *sort;
+	Oid			sort_op;
 
-	/*
-	 * We will need at most list_length(groupcls) sort columns; possibly less
-	 */
-	numgrpkeys = num_distcols_in_grouplist(groupcls);
+	sort = make_sort_from_pathkeys(root, lefttree, pathkeys, -1, false);
 
-	Assert(req_ngrpkeys <= numgrpkeys);
+	sort->sortColIdx = repalloc(sort->sortColIdx, (sort->numCols + 2) * sizeof(AttrNumber));
+	sort->sortOperators = repalloc(sort->sortOperators, (sort->numCols + 2) * sizeof(Oid));
+	sort->nullsFirst = repalloc(sort->nullsFirst, (sort->numCols + 2) * sizeof(bool));
 
-	if (grouping != NULL)
-	{
-		Assert(groupid != NULL);
+	sort_op = ordering_oper_opid(exprType((Node *) grouping->expr));
 
-		sortColIdx = (AttrNumber *) palloc((numgrpkeys + 2) * sizeof(AttrNumber));
-		sortOperators = (Oid *) palloc((numgrpkeys + 2) * sizeof(Oid));
-		nullsFirst = (bool *) palloc((numgrpkeys + 2) * sizeof(bool));
-	}
-	else
-	{
-		sortColIdx = (AttrNumber *) palloc(numgrpkeys * sizeof(AttrNumber));
-		sortOperators = (Oid *) palloc(numgrpkeys * sizeof(Oid));
-		nullsFirst = (bool *) palloc(numgrpkeys * sizeof(bool));
-	}
+	sort->numCols = add_sort_column(grouping->resno, sort_op, false,
+								  sort->numCols,
+								  sort->sortColIdx, sort->sortOperators, sort->nullsFirst);
 
-	numsortkeys = 0;
+	sort_op = ordering_oper_opid(exprType((Node *) groupid->expr));
 
-	flat_groupcls = flatten_grouping_list(groupcls);
-
-	for (grpno = 0; grpno < req_ngrpkeys; grpno++)
-	{
-		GroupClause *grpcl;
-		TargetEntry *tle;
-		int			pos;
-
-		/*
-		 * Find the index position in orig_grpColIdx, in which the element is
-		 * equal to new_grpColIdx[grpno]. This index position points to the
-		 * place that the corresponding GroupClause in flat_groupcls.
-		 */
-		for (pos = 0; pos < numgrpkeys; pos++)
-		{
-			if (orig_grpColIdx[pos] == new_grpColIdx[grpno])
-				break;
-		}
-
-		Assert(pos < numgrpkeys);
-
-		grpcl = (GroupClause *) list_nth(flat_groupcls, pos);
-		tle = get_tle_by_resno(sub_tlist, new_grpColIdx[grpno]);
-
-		/*
-		 * Check for the possibility of duplicate group-by clauses --- the
-		 * parser should have removed 'em, but no point in sorting
-		 * redundantly.
-		 */
-		numsortkeys = add_sort_column(tle->resno, grpcl->sortop, false,
-									  numsortkeys,
-									  sortColIdx, sortOperators, nullsFirst);
-	}
-
-	if (grouping != NULL)
-	{
-		Oid			sort_op = ordering_oper_opid(exprType((Node *) grouping->expr));
-
-		numsortkeys = add_sort_column(grouping->resno, sort_op, false,
-									  numsortkeys,
-									  sortColIdx, sortOperators, nullsFirst);
-
-		sort_op = ordering_oper_opid(exprType((Node *) groupid->expr));
-
-		numsortkeys = add_sort_column(groupid->resno, sort_op, false,
-									  numsortkeys,
-									  sortColIdx, sortOperators, nullsFirst);
-	}
-
-
-	Assert(numsortkeys > 0);
-
-	return make_sort(root, lefttree, numsortkeys,
-					 sortColIdx, sortOperators, nullsFirst, -1.0);
+	sort->numCols = add_sort_column(groupid->resno, sort_op, false,
+								  sort->numCols,
+								  sort->sortColIdx, sort->sortOperators, sort->nullsFirst);
+	return sort;
 }
 
 /*
@@ -5023,6 +4954,75 @@ reconstruct_group_clause(List *orig_groupClause, List *tlist, AttrNumber *grpCol
 	}
 
 	return new_groupClause;
+}
+
+/* --------------------------------------------------------------------
+ * make_motion -- creates a Motion node.
+ * Caller must have built the pHashDefn, pFixedDefn,
+ * and pSortDefn structs already.
+ * useExecutorVarFormat is true if make_motion is called after setrefs
+ * This call only make a motion node, without filling in flow info
+ * After calling this function, caller need to call add_slice_to_motion
+ * --------------------------------------------------------------------
+ */
+Motion *
+make_motion(PlannerInfo *root, Plan *lefttree, List *sortPathKeys, bool useExecutorVarFormat)
+{
+    Motion *node = makeNode(Motion);
+    Plan   *plan = &node->plan;
+
+	Assert(lefttree);
+	Assert(!IsA(lefttree, Motion));
+
+	plan->startup_cost = lefttree->startup_cost;
+	plan->total_cost = lefttree->total_cost;
+	plan->plan_rows = lefttree->plan_rows;
+	plan->plan_width = lefttree->plan_width;
+
+	plan->targetlist = cdbpullup_targetlist(lefttree, useExecutorVarFormat);
+	plan->qual = NIL;
+	plan->lefttree = lefttree;
+	plan->righttree = NULL;
+	plan->dispatch = DISPATCH_PARALLEL;
+
+	if (sortPathKeys)
+	{
+		Sort *sort;
+
+		/* FIXME: add_keys_to_targetlist, or not? */
+		sort = make_sort_from_pathkeys(root, lefttree, sortPathKeys, -1, true);
+
+		node->numSortCols = sort->numCols;
+		node->sortColIdx = sort->sortColIdx;
+		node->sortOperators = sort->sortOperators;
+		node->nullsFirst = sort->nullsFirst;
+
+#ifdef USE_ASSERT_CHECKING
+		/*
+		 * If the child node was a Sort, then surely the order the caller gave us
+		 * must match that of the underlying sort.
+		 */
+		if (IsA(lefttree, Sort))
+		{
+			Sort	   *childsort = (Sort *) lefttree;
+			Assert(childsort->numCols >= node->numSortCols);
+			Assert(memcmp(childsort->sortColIdx, node->sortColIdx, node->numSortCols * sizeof(AttrNumber)) == 0);
+			Assert(memcmp(childsort->sortOperators, node->sortOperators, node->numSortCols * sizeof(Oid)) == 0);
+			Assert(memcmp(childsort->nullsFirst, node->nullsFirst, node->numSortCols * sizeof(bool)) == 0);
+		}
+#endif
+	}
+	node->sendSorted = (node->numSortCols > 0);
+
+	plan->extParam = bms_copy(lefttree->extParam);
+	plan->allParam = bms_copy(lefttree->allParam);
+
+	plan->flow = NULL;
+
+	node->outputSegIdx = NULL;
+	node->numOutputSegs = 0;
+
+	return node;
 }
 
 Material *
@@ -5240,35 +5240,31 @@ add_agg_cost(PlannerInfo *root, Plan *plan,
 	return plan;
 }
 
-Window *
-make_window(PlannerInfo *root, List *tlist,
-			int numPartCols, AttrNumber *partColIdx, Oid *partOperators, List *windowKeys,
-			Plan *lefttree)
+WindowAgg *
+make_windowagg(PlannerInfo *root, List *tlist,
+			   int partNumCols, AttrNumber *partColIdx, Oid *partOperators,
+			   int ordNumCols, AttrNumber *ordColIdx, Oid *ordOperators,
+			   int frameOptions, Node *startOffset, Node *endOffset,
+			   Plan *lefttree)
 {
-	Window	   *node = makeNode(Window);
+	WindowAgg  *node = makeNode(WindowAgg);
 	Plan	   *plan = &node->plan;
 	Path		window_path;	/* dummy for result of cost_window */
 	QualCost	qual_cost;
-	int			numOrderCols;
-	ListCell   *cell;
 
-	node->numPartCols = numPartCols;
+	node->partNumCols = partNumCols;
 	node->partColIdx = partColIdx;
 	node->partOperators = partOperators;
-	node->windowKeys = windowKeys;
-
-	numOrderCols = numPartCols;
-	foreach(cell, windowKeys)
-	{
-		/* TODO Shouldn't we copy? */
-		WindowKey  *key = (WindowKey *) lfirst(cell);
-
-		numOrderCols += key->numSortCols;
-	}
+	node->ordNumCols = ordNumCols;
+	node->ordColIdx = ordColIdx;
+	node->ordOperators = ordOperators;
+	node->frameOptions = frameOptions;
+	node->startOffset = startOffset;
+	node->endOffset = endOffset;
 
 	copy_plan_costsize(plan, lefttree); /* only care about copying size */
 	cost_window(&window_path, root,
-			   numOrderCols,
+			   ordNumCols,
 			   lefttree->startup_cost,
 			   lefttree->total_cost,
 			   lefttree->plan_rows);
@@ -5658,7 +5654,7 @@ plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist)
 		/* Fix up annotation of plan's distribution and ordering properties. */
 		if (plan->flow)
 			plan->flow = pull_up_Flow((Plan *) make_result(root, tlist, NULL, plan),
-									  plan, true);
+									  plan);
 
 		/* Install the new targetlist. */
 		plan->targetlist = tlist;
@@ -5670,9 +5666,9 @@ plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist)
 		/* Insert a Result node to evaluate the targetlist. */
 		plan = (Plan *) make_result(root, tlist, NULL, subplan);
 
-		/* Propagate the subplan's distribution and ordering properties. */
+		/* Propagate the subplan's distribution. */
 		if (subplan->flow)
-			plan->flow = pull_up_Flow(plan, subplan, true);
+			plan->flow = pull_up_Flow(plan, subplan);
 	}
 	return plan;
 }	/* plan_pushdown_tlist */

@@ -24,7 +24,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.332 2008/10/04 21:56:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.320 2008/03/21 22:41:48 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -203,11 +203,13 @@ _equalAggref(Aggref *a, Aggref *b)
 	COMPARE_SCALAR_FIELD(aggfnoid);
 	COMPARE_SCALAR_FIELD(aggtype);
 	COMPARE_NODE_FIELD(args);
-	COMPARE_SCALAR_FIELD(agglevelsup);
-	COMPARE_SCALAR_FIELD(aggstar);
+	COMPARE_NODE_FIELD(aggorder);
 	COMPARE_SCALAR_FIELD(aggdistinct);
+	COMPARE_NODE_FIELD(aggfilter);
+	COMPARE_SCALAR_FIELD(aggstar);
 	COMPARE_SCALAR_FIELD(aggstage);
-    COMPARE_NODE_FIELD(aggorder);
+	COMPARE_SCALAR_FIELD(agglevelsup);
+	COMPARE_LOCATION_FIELD(location);
 
 	return true;
 }
@@ -223,18 +225,18 @@ _equalAggOrder(AggOrder *a, AggOrder *b)
 }
 
 static bool
-_equalWindowRef(WindowRef *a, WindowRef *b)
+_equalWindowFunc(WindowFunc *a, WindowFunc *b)
 {
 	COMPARE_SCALAR_FIELD(winfnoid);
-	COMPARE_SCALAR_FIELD(restype);
+	COMPARE_SCALAR_FIELD(wintype);
 	COMPARE_NODE_FIELD(args);
+	COMPARE_NODE_FIELD(aggfilter);
 	COMPARE_SCALAR_FIELD(winref);
 	COMPARE_SCALAR_FIELD(winstar);
 	COMPARE_SCALAR_FIELD(winagg);
 	COMPARE_SCALAR_FIELD(windistinct);
 	COMPARE_SCALAR_FIELD(winindex);
 	COMPARE_SCALAR_FIELD(winstage);
-	COMPARE_SCALAR_FIELD(winlevel);
 	COMPARE_LOCATION_FIELD(location);
 
 	return true;
@@ -671,9 +673,9 @@ _equalSetToDefault(SetToDefault *a, SetToDefault *b)
 static bool
 _equalCurrentOfExpr(CurrentOfExpr *a, CurrentOfExpr *b)
 {
+	COMPARE_SCALAR_FIELD(cvarno);
 	COMPARE_STRING_FIELD(cursor_name);
 	COMPARE_SCALAR_FIELD(cursor_param);
-	COMPARE_SCALAR_FIELD(cvarno);
 	COMPARE_SCALAR_FIELD(target_relid);
 
 	/* some attributes omitted as they're bound only just before executor dispatch */
@@ -734,9 +736,6 @@ _equalFlow(Flow *a, Flow *b)
 	COMPARE_SCALAR_FIELD(req_move);
 	COMPARE_SCALAR_FIELD(locustype);
 	COMPARE_SCALAR_FIELD(segindex);
-	COMPARE_SCALAR_FIELD(numSortCols);
-	COMPARE_POINTER_FIELD(sortColIdx, a->numSortCols*sizeof(AttrNumber));
-	COMPARE_POINTER_FIELD(sortOperators, a->numSortCols*sizeof(Oid));
 	COMPARE_NODE_FIELD(hashExpr);
 
 	return true;
@@ -846,6 +845,7 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_SCALAR_FIELD(hasWindowFuncs);
 	COMPARE_SCALAR_FIELD(hasSubLinks);
 	COMPARE_SCALAR_FIELD(hasDynamicFunctions);
+	COMPARE_SCALAR_FIELD(hasFuncsWithExecRestrictions);
 	COMPARE_NODE_FIELD(rtable);
 	COMPARE_NODE_FIELD(jointree);
 	COMPARE_NODE_FIELD(targetList);
@@ -856,6 +856,7 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_NODE_FIELD(distinctClause);
 	COMPARE_NODE_FIELD(sortClause);
 	COMPARE_NODE_FIELD(scatterClause);
+	COMPARE_SCALAR_FIELD(isTableValueSelect);
 	COMPARE_NODE_FIELD(cteList);
 	COMPARE_SCALAR_FIELD(hasRecursive);
 	COMPARE_NODE_FIELD(limitOffset);
@@ -1107,7 +1108,6 @@ _equalDeclareCursorStmt(DeclareCursorStmt *a, DeclareCursorStmt *b)
 	COMPARE_STRING_FIELD(portalname);
 	COMPARE_SCALAR_FIELD(options);
 	COMPARE_NODE_FIELD(query);
-	COMPARE_SCALAR_FIELD(is_simply_updatable);
 
 	return true;
 }
@@ -2120,7 +2120,6 @@ _equalTypeName(TypeName *a, TypeName *b)
 {
 	COMPARE_NODE_FIELD(names);
 	COMPARE_SCALAR_FIELD(typid);
-	COMPARE_SCALAR_FIELD(timezone);
 	COMPARE_SCALAR_FIELD(setof);
 	COMPARE_SCALAR_FIELD(pct_type);
 	COMPARE_NODE_FIELD(typmods);
@@ -2574,8 +2573,8 @@ equal(void *a, void *b)
 		case T_AggOrder:
 			retval = _equalAggOrder(a, b);
 			break;
-		case T_WindowRef:
-			retval = _equalWindowRef(a, b);
+		case T_WindowFunc:
+			retval = _equalWindowFunc(a, b);
 			break;
 		case T_ArrayRef:
 			retval = _equalArrayRef(a, b);

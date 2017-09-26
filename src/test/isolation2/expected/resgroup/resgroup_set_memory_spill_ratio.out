@@ -46,13 +46,13 @@ SELECT 1;
 1       
 (1 row)
 
--- negative set to session level
+-- positive set to session level
 SET MEMORY_SPILL_RATIO TO 0;
-ERROR:  0 is outside the valid range for parameter "memory_spill_ratio" (1 .. 100)
+SET
 SHOW MEMORY_SPILL_RATIO;
 memory_spill_ratio
 ------------------
-70                
+0                 
 (1 row)
 SELECT 1;
 ?column?
@@ -62,11 +62,11 @@ SELECT 1;
 
 -- negative set to session level
 SET MEMORY_SPILL_RATIO TO 101;
-ERROR:  101 is outside the valid range for parameter "memory_spill_ratio" (1 .. 100)
+ERROR:  101 is outside the valid range for parameter "memory_spill_ratio" (0 .. 100)
 SHOW MEMORY_SPILL_RATIO;
 memory_spill_ratio
 ------------------
-70                
+0                 
 (1 row)
 SELECT 1;
 ?column?
@@ -74,7 +74,7 @@ SELECT 1;
 1       
 (1 row)
 
--- negative set to session level
+-- positive set to session level
 SET MEMORY_SPILL_RATIO TO 90;
 SET
 SHOW MEMORY_SPILL_RATIO;
@@ -83,7 +83,10 @@ memory_spill_ratio
 90                
 (1 row)
 SELECT 1;
-ERROR:  The sum of memory_shared_quota (20) and memory_spill_ratio (90) exceeds 100
+?column?
+--------
+1       
+(1 row)
 
 -- positive set to session level
 SET MEMORY_SPILL_RATIO TO 20;
@@ -127,7 +130,7 @@ SELECT 1;
 1       
 (1 row)
 
--- change role, negative for session level
+-- change role, positive for session level
 SET ROLE role2_spill_test;
 SET
 SHOW MEMORY_SPILL_RATIO;
@@ -136,7 +139,10 @@ memory_spill_ratio
 60                
 (1 row)
 SELECT 1;
-ERROR:  The sum of memory_shared_quota (50) and memory_spill_ratio (60) exceeds 100
+?column?
+--------
+1       
+(1 row)
 
 -- positive set to session level
 SET MEMORY_SPILL_RATIO TO 20;

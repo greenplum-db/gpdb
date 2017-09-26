@@ -14,4 +14,7 @@ s/group [0-9]+ was/group OID was/
 
 m/^ERROR:  Out of memory  (seg\d slice\d \d+.\d+.\d+.\d+:\d+ pid=\d+)$/
 s/(seg\d+ slice\d+ \d+.\d+.\d+.\d+:\d+ pid=\d+)/(SEG SLICE ADDR:PORT pid=PID)/
+
+m/^ERROR:  Role with Oid \d+ was dropped$/
+s/Oid \d+ was/Oid OID was/
 -- end_matchsubs

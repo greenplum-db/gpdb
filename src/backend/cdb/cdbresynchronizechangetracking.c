@@ -36,6 +36,7 @@
 #include "utils/palloc.h"
 #include "utils/faultinjector.h"
 #include "utils/pg_crc.h"
+#include "utils/snapmgr.h"
 
 #include "cdb/cdbfilerep.h"
 #include "cdb/cdbfilerepresyncmanager.h"

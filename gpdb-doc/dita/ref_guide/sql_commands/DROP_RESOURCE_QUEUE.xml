@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="dc20941">DROP RESOURCE QUEUE</title><body><p id="sql_command_desc">Removes a resource queue.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP RESOURCE QUEUE <varname>queue_name</varname></codeblock></section><section id="section3"><title>Description</title><p>This command removes a workload management resource queue from Greenplum
+<topic id="topic1"><title id="dc20941">DROP RESOURCE QUEUE</title><body><p id="sql_command_desc">Removes a resource queue.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP RESOURCE QUEUE <varname>queue_name</varname></codeblock></section><section id="section3"><title>Description</title><p>This command removes a resource queue from Greenplum
 Database. To drop a resource queue, the queue cannot have any roles assigned
 to it, nor can it have any statements waiting in the queue. Only a superuser
 can drop a resource queue.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>queue_name</varname></pt><pd>The name of a resource queue to remove.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Use <codeph><xref href="ALTER_ROLE.xml#topic1" type="topic" format="dita"/></codeph> to remove a

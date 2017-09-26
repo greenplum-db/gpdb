@@ -429,7 +429,7 @@ extern PGDLLIMPORT int GinFuzzySearchLimit;
 #define ItemPointerSetMin(p)	ItemPointerSet( (p), (BlockNumber)0, (OffsetNumber)0)
 #define ItemPointerIsMin(p) ( GinItemPointerGetBlockNumber(p) == (BlockNumber)0 && GinItemPointerGetOffsetNumber(p) == (OffsetNumber)0 )
 
-extern Datum gingetmulti(PG_FUNCTION_ARGS);
+extern Datum gingetbitmap(PG_FUNCTION_ARGS);
 extern Datum gingettuple(PG_FUNCTION_ARGS);
 
 /* ginvacuum.c */

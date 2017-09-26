@@ -27,18 +27,11 @@
  *	http://archives.postgresql.org/pgsql-bugs/2010-02/msg00187.php
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.c,v 1.546 2009/08/04 19:46:51 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.c,v 1.486 2008/03/28 00:21:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
-/*
- * Although this is not a backend module, we must include postgres.h anyway
- * so that we can include a bunch of backend include files.  pg_dump has
- * never pretended to be very independent of the backend anyhow ...
- * Is this still true?  PG 9 doesn't include this.
- */
-#include "postgres.h"
 #include "postgres_fe.h"
 
 #include <unistd.h>
@@ -56,12 +49,12 @@
 int			optreset;
 #endif
 
+#include "access/attnum.h"
 #include "access/htup.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_trigger.h"
 #include "catalog/pg_type.h"
-#include "commands/sequence.h"
 #include "libpq/libpq-fs.h"
 
 #include "pg_backup_archiver.h"
@@ -254,6 +247,7 @@ static void addDistributedBy(PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
 static bool isGPDB4300OrLater(void);
 static bool isGPDB(void);
 static bool isGPDB5000OrLater(void);
+static bool isGPDB6000OrLater(void);
 
 /* END MPP ADDITION */
 
@@ -366,6 +360,17 @@ isGPDB5000OrLater(void)
 	return retValue;
 }
 
+
+static bool
+isGPDB6000OrLater(void)
+{
+	if (!isGPDB())
+		return false;		/* Not Greenplum at all. */
+
+	/* GPDB 6 is based on PostgreSQL 8.4 */
+	return g_fout->remoteVersion >= 80400;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -392,6 +397,9 @@ main(int argc, char **argv)
 	bool		outputBlobs = false;
 	int			outputNoOwner = 0;
 	char	   *outputSuperuser = NULL;
+	static int	disable_triggers = 0;
+	static int  outputNoTablespaces = 0;
+	static int	use_setsessauth = 0;
 
 	/*
 	 * The default value for gp_syntax_option depends upon whether or not the
@@ -403,10 +411,6 @@ main(int argc, char **argv)
 	}			gp_syntax_option = GPS_NOT_SPECIFIED;
 
 	RestoreOptions *ropt;
-
-	static int	disable_triggers = 0;
-	/* static int	outputNoTablespaces = 0; */
-	static int	use_setsessauth = 0;
 
 	struct option long_options[] = {
 		{"binary-upgrade", no_argument, &binary_upgrade, 1},	/* not documented */
@@ -447,6 +451,7 @@ main(int argc, char **argv)
 		{"disable-dollar-quoting", no_argument, &disable_dollar_quoting, 1},
 		{"disable-triggers", no_argument, &disable_triggers, 1},
 		{"inserts", no_argument, &dump_inserts, 1},
+		{"no-tablespaces", no_argument, &outputNoTablespaces, 1},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
 
 		/* START MPP ADDITION */
@@ -623,6 +628,8 @@ main(int argc, char **argv)
 					disable_dollar_quoting = 1;
 				else if (strcmp(optarg, "disable-triggers") == 0)
 					disable_triggers = 1;
+				else if (strcmp(optarg, "no-tablespaces") == 0)
+					outputNoTablespaces = 1;
 				else if (strcmp(optarg, "use-set-session-authorization") == 0)
 					use_setsessauth = 1;
 				else
@@ -985,6 +992,7 @@ main(int argc, char **argv)
 		ropt->superuser = outputSuperuser;
 		ropt->createDB = outputCreateDB;
 		ropt->noOwner = outputNoOwner;
+		ropt->noTablespace = outputNoTablespaces;
 		ropt->disable_triggers = disable_triggers;
 		ropt->use_setsessauth = use_setsessauth;
 		ropt->dataOnly = dataOnly;
@@ -1017,8 +1025,7 @@ help(const char *progname)
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -f, --file=FILENAME      output file name\n"));
 	printf(_("  -F, --format=c|t|p       output file format (custom, tar, plain text)\n"));
-	printf(_("  -i, --ignore-version     proceed even when server version mismatches\n"
-			 "                           pg_dump version\n"));
+	printf(_("  -i, --ignore-version     ignore server version mismatch\n"));
 	printf(_("  -v, --verbose            verbose mode\n"));
 	printf(_("  -Z, --compress=0-9       compression level for compressed formats\n"));
 	printf(_("  --help                   show this help, then exit\n"));
@@ -1045,6 +1052,7 @@ help(const char *progname)
 	printf(_("  -x, --no-privileges         do not dump privileges (grant/revoke)\n"));
 	printf(_("  --disable-dollar-quoting    disable dollar quoting, use SQL standard quoting\n"));
 	printf(_("  --disable-triggers          disable triggers during data-only restore\n"));
+	printf(_("  --no-tablespaces            do not dump tablespace assignments\n"));
 	printf(_("  --use-set-session-authorization\n"
 			 "                              use SESSION AUTHORIZATION commands instead of\n"
 	"                              ALTER OWNER commands to set ownership\n"));
@@ -7242,6 +7250,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	   *prorows;
 	char	   *lanname;
 	char	   *prodataaccess;
+	char	   *proexeclocation;
 	char	   *rettypename;
 	int			nallargs;
 	char	  **allargtypes = NULL;
@@ -7249,6 +7258,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	char	  **argnames = NULL;
 	bool		isGE43 = isGPDB4300OrLater();
 	bool		isGE50 = isGPDB5000OrLater();
+	bool		isGE60 = isGPDB6000OrLater();
 	char	  **configitems = NULL;
 	int			nconfigitems = 0;
 	int			i;
@@ -7268,7 +7278,22 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 
 	/* Fetch function-specific details */
 
-	if (isGE50)
+	if (isGE60)
+	{
+		appendPQExpBuffer(query,
+						  "SELECT proretset, prosrc, probin, "
+						  "pg_catalog.pg_get_function_arguments(oid) as funcargs, "
+						  "pg_catalog.pg_get_function_identity_arguments(oid) as funciargs, "
+						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
+						  "provolatile, proisstrict, prosecdef, "
+						  "proconfig, procost, prorows, prodataaccess, "
+						  "proexeclocation, "
+						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
+						  "FROM pg_catalog.pg_proc "
+						  "WHERE oid = '%u'::pg_catalog.oid",
+						  finfo->dobj.catId.oid);
+	}
+	else if (isGE50)
 	{
 		/*
 		 * In GPDB 5.0 and up we rely on pg_get_function_arguments and
@@ -7281,6 +7306,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 						  "pg_catalog.pg_get_function_result(oid) as funcresult, "
 						  "provolatile, proisstrict, prosecdef, "
 						  "proconfig, procost, prorows, prodataaccess, "
+						  "'a' as proexeclocation, "
 						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
 						  "FROM pg_catalog.pg_proc "
 						  "WHERE oid = '%u'::pg_catalog.oid",
@@ -7293,6 +7319,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 						  "proallargtypes, proargmodes, proargnames, "
 						  "provolatile, proisstrict, prosecdef, "
 						  "null as proconfig, 0 as procost, 0 as prorows, %s"
+						  "'a' as proexeclocation, "
 						  "(SELECT lanname FROM pg_catalog.pg_language WHERE oid = prolang) as lanname "
 						  "FROM pg_catalog.pg_proc "
 						  "WHERE oid = '%u'::pg_catalog.oid",
@@ -7337,6 +7364,7 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 	prorows = PQgetvalue(res, 0, PQfnumber(res, "prorows"));
 	lanname = PQgetvalue(res, 0, PQfnumber(res, "lanname"));
 	prodataaccess = PQgetvalue(res, 0, PQfnumber(res, "prodataaccess"));
+	proexeclocation = PQgetvalue(res, 0, PQfnumber(res, "proexeclocation"));
 
 	/*
 	 * See backend/commands/define.c for details of how the 'AS' clause is
@@ -7537,6 +7565,20 @@ dumpFunc(Archive *fout, FuncInfo *finfo)
 		appendPQExpBuffer(q, " READS SQL DATA");
 	else if (prodataaccess[0] == PRODATAACCESS_MODIFIES)
 		appendPQExpBuffer(q, " MODIFIES SQL DATA");
+
+	if (proexeclocation[0] == PROEXECLOCATION_ANY)
+	{
+		/* the default, omit */
+	}
+	else if (proexeclocation[0] == PROEXECLOCATION_MASTER)
+		appendPQExpBuffer(q, " EXECUTE ON MASTER");
+	else if (proexeclocation[0] == PROEXECLOCATION_ALL_SEGMENTS)
+		appendPQExpBuffer(q, " EXECUTE ON ALL SEGMENTS");
+	else
+	{
+		write_msg(NULL, "unrecognized proexeclocation value: %c\n", proexeclocation[0]);
+		exit_nicely();
+	}
 
 	for (i = 0; i < nconfigitems; i++)
 	{
@@ -11270,6 +11312,13 @@ dumpTrigger(Archive *fout, TriggerInfo *tginfo)
 			appendPQExpBuffer(query, " OR UPDATE");
 		else
 			appendPQExpBuffer(query, " UPDATE");
+	}
+	if (TRIGGER_FOR_TRUNCATE(tginfo->tgtype))
+	{
+		if (findx > 0)
+			appendPQExpBuffer(query, " OR TRUNCATE");
+		else
+			appendPQExpBuffer(query, " TRUNCATE");
 	}
 	appendPQExpBuffer(query, " ON %s\n",
 					  fmtId(tbinfo->dobj.name));

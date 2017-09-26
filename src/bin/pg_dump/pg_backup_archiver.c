@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.152.2.1 2009/01/13 11:45:03 mha Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.153 2008/03/20 17:36:57 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2442,6 +2442,10 @@ _selectTablespace(ArchiveHandle *AH, const char *tablespace)
 	PQExpBuffer qry;
 	const char *want,
 			   *have;
+
+	/* do nothing in --no-tablespaces mode */
+	if (AH->ropt->noTablespace)
+		return;
 
 	have = AH->currTablespace;
 	want = tablespace;

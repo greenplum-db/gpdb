@@ -224,7 +224,8 @@ WHERE pronargs > 8 and prolang = 12 AND
 					'gp_add_persistent_database_node_entry',
 					'gp_add_persistent_tablespace_node_entry',
 					'gp_update_persistent_database_node_entry',
-					'gp_update_persistent_tablespace_node_entry') AND
+					'gp_update_persistent_tablespace_node_entry',
+					'gp_add_segment') AND
     NOT proisagg AND 
     NOT proiswindow;
 

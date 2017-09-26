@@ -70,8 +70,7 @@
 
 #max_connections = 200			# (change requires restart)
 # Note:  Increasing max_connections costs ~400 bytes of shared memory per 
-# connection slot, plus lock space (see max_locks_per_transaction).  You might
-# also need to raise shared_buffers to support more connections.
+# connection slot, plus lock space (see max_locks_per_transaction).
 #superuser_reserved_connections = 3	# (change requires restart)
 #unix_socket_directory = ''		# (change requires restart)
 #unix_socket_group = ''			# (change requires restart)
@@ -112,7 +111,7 @@
 
 # - Memory -
 
-#shared_buffers = 128MB			# min 128kB or max_connections*16kB
+#shared_buffers = 128MB			# min 128kB
 					# (change requires restart)
 #temp_buffers = 8MB			# min 800kB
 max_prepared_transactions = 250		# can be 0 or more
@@ -236,7 +235,7 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					#   warning
 					#   error
 
-#log_min_messages = warning		# Values in order of decreasing detail:
+#log_min_messages = warning		# values in order of decreasing detail:
 					#   debug5
 					#   debug4
 					#   debug3

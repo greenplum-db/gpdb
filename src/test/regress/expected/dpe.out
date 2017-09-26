@@ -457,7 +457,7 @@ select count(*) from t, pt where tid = ptid;
 explain select *, rank() over (order by ptid,pt1) from t, pt where tid = ptid;
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Window  (cost=22.17..23.65 rows=54 width=50)
+ WindowAgg  (cost=22.17..23.65 rows=54 width=50)
    Order By: dpe_single.pt.ptid, dpe_single.pt.pt1
    ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=22.17..23.38 rows=54 width=50)
          Merge Key: dpe_single.pt.ptid, dpe_single.pt.pt1
@@ -2498,7 +2498,7 @@ explain select * from (select count(*) over (order by a rows between 1 preceding
                      Filter: jpat.b
                      ->  Broadcast Motion 1:3  (slice2; segments: 1)  (cost=1.02..1.09 rows=2 width=16)
                            ->  Subquery Scan jpat  (cost=1.02..1.06 rows=1 width=16)
-                                 ->  Window  (cost=1.02..1.05 rows=1 width=8)
+                                 ->  WindowAgg  (cost=1.02..1.05 rows=1 width=8)
                                        Order By: dpe_bugs.jpat.a
                                        ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..1.04 rows=1 width=8)
                                              Merge Key: dpe_bugs.jpat.a

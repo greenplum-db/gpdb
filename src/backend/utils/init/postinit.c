@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.180.2.1 2008/09/11 14:01:35 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.182 2008/03/26 21:10:39 alvherre Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -56,10 +56,13 @@
 #include "utils/relcache.h"
 #include "utils/resscheduler.h"
 #include "utils/sharedsnapshot.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "pgstat.h"
+#include "utils/tqual.h"
+
 #include "utils/session_state.h"
 #include "codegen/codegen_wrapper.h"
+
 
 static HeapTuple GetDatabaseTuple(const char *dbname);
 static HeapTuple GetDatabaseTupleByOid(Oid dboid);
@@ -598,7 +601,11 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 
 #ifdef USE_ORCA
 	/* Initialize GPOPT */
-	InitGPOPT();
+	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
+	{
+		InitGPOPT();
+	}
+	END_MEMORY_ACCOUNT();
 #endif
 
 	/*
@@ -1100,7 +1107,11 @@ ShutdownPostgres(int code, Datum arg)
 	ReportOOMConsumption();
 
 #ifdef USE_ORCA
-  TerminateGPOPT();
+	START_MEMORY_ACCOUNT(MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer));
+	{
+		TerminateGPOPT();
+	}
+	END_MEMORY_ACCOUNT();
 #endif
 
 	/* Disable memory protection */

@@ -73,6 +73,8 @@ typedef struct PlannedStmt
 	bool		transientPlan;	/* redo plan when TransactionXmin changes? */
 	bool		oneoffPlan;		/* redo plan on every execution? */
 
+	bool		simplyUpdatable; /* can be used with CURRENT OF? */
+
 	struct Plan *planTree;		/* tree of Plan nodes */
 
 	List	   *rtable;			/* list of RangeTblEntry nodes */
@@ -970,10 +972,10 @@ typedef struct Agg
 	bool 		streaming;
 } Agg;
 
-/* ---------------
- *		window node
+/* ----------------
+ *		window aggregate node
  *
- * A Window node implements window functions over zero or more
+ * A WindowAgg node implements window functions over zero or more
  * ordering/framing specifications within a partition specification on
  * appropriately ordered input.
  *
@@ -988,37 +990,29 @@ typedef struct Agg
  *
  * A Window node contains no direct information about the window
  * functions it computes.  Those functions are found by scanning
- * the node's targetlist for WindowRef nodes during executor startup.
+ * the node's targetlist for WindowFunc nodes during executor startup.
  * There need not be any, but there's no good reason for the planner
- * to construct a Window node without at least one WindowRef.
+ * to construct a WindowAgg node without at least one WindowFunc.
  *
- * A WindowRef is related to its Window node by the fact that it is
- * contained by it.  It may also be related to a particular WindowKey
- * node in the windowKeys list.  The WindowRef field winlevel is the
- * position (counting from 0) of its WindowKey.  If winlevel equals
- * the length of the windowKeys list, than it has not WindowKey an
- * applied to the unordered partition as a whole.
+ * A WindowFunc is related to its WindowAgg node by the fact that it is
+ * contained by it.
  *
- * A WindowKey specifies a partial ordering key.  It may optionally
- * specify framing.  The actual ordering key at a given level is the
- * concatenation of the partial ordering keys prior to and including
- * that level.
- *
- * For example, the ordering key for the WindowKey in position 2 of
- * the windowKeys list is the concatenation of the partial keys found
- * in positions 0 through 2. *
- * ---------------
+ * ----------------
  */
-typedef struct Window
+typedef struct WindowAgg
 {
 	Plan		plan;
-	int			numPartCols;	/* number of partitioning columns */
-	AttrNumber *partColIdx;		/* their indexes in the target list
-								 * of the window's outer plan.  */
-	Oid		   *partOperators;	/* equality operators */
-	List       *windowKeys;		/* list of WindowKey nodes */
-} Window;
-
+	int			partNumCols;	/* number of columns in partition clause */
+	AttrNumber *partColIdx;		/* their indexes in the target list */
+	Oid		   *partOperators;	/* equality operators for partition columns */
+	int			ordNumCols;		/* number of columns in ordering clause */
+	AttrNumber *ordColIdx;		/* their indexes in the target list */
+	Oid		   *ordOperators;	/* equality operators for ordering columns */
+	bool	   *nullsFirst;
+	int			frameOptions;	/* frame_clause options, see WindowDef */
+	Node	   *startOffset;	/* expression for starting bound, if any */
+	Node	   *endOffset;		/* expression for ending bound, if any */
+} WindowAgg;
 
 /* ----------------
  *		unique node

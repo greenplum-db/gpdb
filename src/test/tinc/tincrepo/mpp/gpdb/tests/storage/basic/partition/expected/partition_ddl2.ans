@@ -1017,16 +1017,16 @@ select * from hashtest order by 1,2;
 select * from hashtest_1_prt_1 order by 1,2;
  i | j 
 ---+---
- 1 | 1
- 1 |  
    | 1
    |  
-(4 rows)
+(2 rows)
 
 select * from hashtest_1_prt_2 order by 1,2;
  i | j 
 ---+---
-(0 rows)
+ 1 | 1
+ 1 |  
+(2 rows)
 
 drop table hashtest;
 DROP TABLE

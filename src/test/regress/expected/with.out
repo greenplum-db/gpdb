@@ -788,3 +788,20 @@ from int4_tbl;
  -2147483647
 (5 rows)
 
+--
+-- test Nested CTE
+--
+WITH outermost(x) AS (
+  SELECT 1
+  UNION (WITH innermost as (SELECT 2)
+         SELECT * FROM innermost
+         UNION SELECT 3)
+)
+SELECT * FROM outermost;
+x
+---
+ 1
+ 2
+ 3
+(3 rows)
+

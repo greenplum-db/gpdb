@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/gram.y,v 2.607 2008/02/15 22:17:06 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/gram.y,v 2.611 2008/03/28 00:21:55 tgl Exp $
  *
  * HISTORY
  *	  AUTHOR			DATE			MAJOR EVENT
@@ -615,7 +615,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	RANDOMLY RANGE READABLE READS REF REJECT_P RESOURCE
 	ROLLUP ROOTPARTITION
 
-	SCATTER SEGMENT SETS SPLIT SQL SUBPARTITION SUBPARTITIONS
+	SCATTER SEGMENT SEGMENTS SETS SPLIT SQL SUBPARTITION SUBPARTITIONS
 
 	THRESHOLD TIES
 
@@ -877,6 +877,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc SECOND_P
 			%nonassoc SECURITY
 			%nonassoc SEGMENT
+			%nonassoc SEGMENTS
 			%nonassoc SEQUENCE
 			%nonassoc SERIALIZABLE
 			%nonassoc SESSION
@@ -5620,6 +5621,7 @@ TriggerOneEvent:
 			INSERT									{ $$ = 'i'; }
 			| DELETE_P								{ $$ = 'd'; }
 			| UPDATE								{ $$ = 'u'; }
+			| TRUNCATE								{ $$ = 't'; }
 		;
 
 TriggerForSpec:
@@ -7316,6 +7318,18 @@ common_func_opt_item:
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("modifies"));
 				}
+			| EXECUTE ON ANY
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("any"));
+				}
+			| EXECUTE ON MASTER
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("master"));
+				}
+			| EXECUTE ON ALL SEGMENTS
+				{
+					$$ = makeDefElem("exec_location", (Node *)makeString("all_segments"));
+				}
 		;
 
 createfunc_opt_item:
@@ -7848,6 +7862,14 @@ RenameStmt: ALTER AGGREGATE func_name aggr_args RENAME TO name
 					n->renameType = OBJECT_TSCONFIGURATION;
 					n->object = $5;
 					n->newname = $8;
+					$$ = (Node *)n;
+				}
+			| ALTER TYPE_P any_name RENAME TO name
+				{
+					RenameStmt *n = makeNode(RenameStmt);
+					n->renameType = OBJECT_TYPE;
+					n->object = $3;
+					n->newname = $6;
 					$$ = (Node *)n;
 				}
 			| ALTER PROTOCOL name RENAME TO name
@@ -10569,10 +10591,6 @@ ConstDatetime:
 						$$ = SystemTypeName("timestamptz");
 					else
 						$$ = SystemTypeName("timestamp");
-					/* XXX the timezone field seems to be unused
-					 * - thomas 2001-09-06
-					 */
-					$$->timezone = $5;
 					$$->typmods = list_make1(makeIntConst($3, @3));
 					$$->location = @1;
 				}
@@ -10582,10 +10600,6 @@ ConstDatetime:
 						$$ = SystemTypeName("timestamptz");
 					else
 						$$ = SystemTypeName("timestamp");
-					/* XXX the timezone field seems to be unused
-					 * - thomas 2001-09-06
-					 */
-					$$->timezone = $2;
 					$$->location = @1;
 				}
 			| TIME '(' Iconst ')' opt_timezone
@@ -12435,7 +12449,6 @@ extract_list:
 					n->val.type = T_String;
 					n->val.val.str = $1;
 					n->location = @1;
-
 					$$ = list_make2((Node *) n, $3);
 				}
 			| /*EMPTY*/								{ $$ = NIL; }
@@ -12444,7 +12457,6 @@ extract_list:
 /* Allow delimited string SCONST in extract_arg as an SQL extension.
  * - thomas 2001-04-12
  */
-
 extract_arg:
 			IDENT									{ $$ = $1; }
 			| YEAR_P								{ $$ = "year"; }
@@ -13313,6 +13325,7 @@ unreserved_keyword:
 			| SECOND_P
 			| SECURITY
 			| SEGMENT
+			| SEGMENTS
 			| SEQUENCE
 			| SERIALIZABLE
 			| SESSION
@@ -13594,6 +13607,7 @@ PartitionIdentKeyword: ABORT_P
 			| SEARCH
 			| SECURITY
 			| SEGMENT
+			| SEGMENTS
 			| SEQUENCE
 			| SERIALIZABLE
 			| SESSION

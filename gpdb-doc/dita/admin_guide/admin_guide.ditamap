@@ -50,12 +50,12 @@
             <topicref href="perf_intro.xml" navtitle="Defining Database Performance" id="perf_intro"/>
             <topicref href="perf_issues.xml" navtitle="Common Causes of Performance Issues"
                 id="perf_issues"/>
-            <topicref href="wlmgmt_intro.xml" navtitle="Workload Management Resource Overview"
+            <topicref href="wlmgmt_intro.xml" navtitle="Resource Management Overview"
                 id="wlmgmt_intro"/>
-            <topicref href="wlmgmt.xml" navtitle="Managing Workload and Resources" id="wlmgmt">
-                <topicref href="workload_mgmt.xml" navtitle="Managing Workloads with Resource Queues"
+            <topicref href="wlmgmt.xml" navtitle="Managing Resources" id="wlmgmt">
+                <topicref href="workload_mgmt.xml" navtitle="Managing Resources with Resource Queues"
                 id="workload_mgmt"/>
-                <topicref href="workload_mgmt_resgroups.xml" navtitle="Managing Workloads with Resource Groups"
+                <topicref href="workload_mgmt_resgroups.xml" navtitle="Managing Resources with Resource Groups"
                 id="workload_mgmt_resgroups"/>
             </topicref>
             <topicref href="perf_troubleshoot.xml" navtitle="Investigating a Performance Problem"

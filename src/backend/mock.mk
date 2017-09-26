@@ -38,11 +38,7 @@ EXCL_OBJS+=\
 	src/backend/access/gist/%.o \
 	src/backend/access/gin/%.o \
 	src/backend/access/hash/hash.o \
-	src/backend/access/hash/hashinsert.o \
-	src/backend/access/hash/hashovfl.o \
-	src/backend/access/hash/hashpage.o \
 	src/backend/access/hash/hashsearch.o \
-	src/backend/access/hash/hashutil.o \
 	\
 	src/backend/utils/adt/ascii.o \
 	src/backend/utils/adt/cash.o \

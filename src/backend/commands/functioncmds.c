@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.88.2.1 2009/02/24 01:38:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.91 2008/03/27 03:57:33 tgl Exp $
  *
  * DESCRIPTION
  *	  These routines take the parse tree and pick out the
@@ -43,7 +43,9 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_proc_callback.h"
+#include "catalog/pg_proc_fn.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_type_fn.h"
 #include "commands/defrem.h"
 #include "commands/proclang.h"
 #include "miscadmin.h"
@@ -58,6 +60,8 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/tqual.h"
+
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 
@@ -449,7 +453,8 @@ compute_common_attribute(DefElem *defel,
 						 List **set_items,
 						 DefElem **cost_item,
 						 DefElem **rows_item,
-						 DefElem **data_access_item)
+						 DefElem **data_access_item,
+						 DefElem **exec_location_item)
 {
 	if (strcmp(defel->defname, "volatility") == 0)
 	{
@@ -496,6 +501,13 @@ compute_common_attribute(DefElem *defel,
 			goto duplicate_error;
 
 		*data_access_item = defel;
+	}
+	else if (strcmp(defel->defname, "exec_location") == 0)
+	{
+		if (*exec_location_item)
+			goto duplicate_error;
+
+		*exec_location_item = defel;
 	}
 	else
 		return false;
@@ -584,6 +596,57 @@ validate_sql_data_access(char data_access, char volatility, Oid languageOid)
 				 errhint("A SQL function cannot specify NO SQL.")));
 }
 
+static char
+interpret_exec_location(DefElem *defel)
+{
+	char	   *str = strVal(defel->arg);
+	char		exec_location;
+
+	if (strcmp(str, "any") == 0)
+		exec_location = PROEXECLOCATION_ANY;
+	else if (strcmp(str, "master") == 0)
+		exec_location = PROEXECLOCATION_MASTER;
+	else if (strcmp(str, "all_segments") == 0)
+		exec_location = PROEXECLOCATION_ALL_SEGMENTS;
+	else
+		elog(ERROR, "invalid data access \"%s\"", str);
+
+	return exec_location;
+}
+
+
+static void
+validate_sql_exec_location(char exec_location, bool proretset)
+{
+	/*
+	 * ON MASTER and ON ALL SEGMENTS are only supported for set-returning
+	 * functions.
+	 */
+	switch (exec_location)
+	{
+		case PROEXECLOCATION_ANY:
+			/* ok */
+			break;
+
+		case PROEXECLOCATION_MASTER:
+			if (!proretset)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("EXECUTE ON MASTER is only supported for set-returning functions")));
+			break;
+
+		case PROEXECLOCATION_ALL_SEGMENTS:
+			if (!proretset)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("EXECUTE ON ALL SEGMENTS is only supported for set-returning functions")));
+			break;
+
+		default:
+			elog(ERROR, "unrecognized EXECUTE ON type '%c'", exec_location);
+	}
+}
+
 /*
  * Update a proconfig value according to a list of VariableSetStmt items.
  *
@@ -630,7 +693,8 @@ compute_attributes_sql_style(List *options,
 							 ArrayType **proconfig,
 							 float4 *procost,
 							 float4 *prorows,
-							 char *data_access)
+							 char *data_access,
+							 char *exec_location)
 {
 	ListCell   *option;
 	DefElem    *as_item = NULL;
@@ -642,6 +706,7 @@ compute_attributes_sql_style(List *options,
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
 	DefElem    *data_access_item = NULL;
+	DefElem    *exec_location_item = NULL;
 
 	foreach(option, options)
 	{
@@ -670,7 +735,8 @@ compute_attributes_sql_style(List *options,
 										  &set_items,
 										  &cost_item,
 										  &rows_item,
-										  &data_access_item))
+										  &data_access_item,
+										  &exec_location_item))
 		{
 			/* recognized common option */
 			continue;
@@ -729,6 +795,8 @@ compute_attributes_sql_style(List *options,
 
 	if (data_access_item)
 		*data_access = interpret_data_access(data_access_item);
+	if (exec_location_item)
+		*exec_location = interpret_exec_location(exec_location_item);
 }
 
 
@@ -1000,6 +1068,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	List       *describeQualName = NIL;
 	Oid         describeFuncOid  = InvalidOid;
 	char		dataAccess;
+	char		execLocation;
 	Oid			funcOid;
 
 	/* Convert list of names to a name and namespace */
@@ -1019,14 +1088,15 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	proconfig = NULL;
 	procost = -1;				/* indicates not set */
 	prorows = -1;				/* indicates not set */
-	dataAccess = -1;			/* indicates not set */
+	dataAccess = '\0';			/* indicates not set */
+	execLocation = '\0';		/* indicates not set */
 
 	/* override attributes from explicit list */
 	compute_attributes_sql_style(stmt->options,
 								 &as_clause, &language,
 								 &volatility, &isStrict, &security,
 								 &proconfig, &procost, &prorows,
-								 &dataAccess);
+								 &dataAccess, &execLocation);
 
 	/* Convert language name to canonical case */
 	languageName = case_translate_language_name(language);
@@ -1046,8 +1116,12 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	languageStruct = (Form_pg_language) GETSTRUCT(languageTuple);
 
 	/* If prodataaccess indicator not specified, fill in default. */
-	if (dataAccess == -1)
+	if (dataAccess == '\0')
 		dataAccess = getDefaultDataAccess(languageOid);
+
+	/* If proexeclocation indicator not specified, fill in default. */
+	if (execLocation == '\0')
+		execLocation = PROEXECLOCATION_ANY;
 
 	if (languageStruct->lanpltrusted)
 	{
@@ -1186,7 +1260,8 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					PointerGetDatum(proconfig),
 					procost,
 					prorows,
-					dataAccess);
+					dataAccess,
+					execLocation);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -1568,8 +1643,10 @@ AlterFunction(AlterFunctionStmt *stmt)
 	DefElem    *cost_item = NULL;
 	DefElem    *rows_item = NULL;
 	DefElem    *data_access_item = NULL;
+	DefElem    *exec_location_item = NULL;
 	bool		isnull;
 	char		data_access;
+	char		exec_location;
 
 	rel = heap_open(ProcedureRelationId, RowExclusiveLock);
 
@@ -1611,7 +1688,8 @@ AlterFunction(AlterFunctionStmt *stmt)
 									 &set_items,
 									 &cost_item,
 									 &rows_item,
-									 &data_access_item) == false)
+									 &data_access_item,
+									 &exec_location_item) == false)
 			elog(ERROR, "option \"%s\" not recognized", defel->defname);
 	}
 
@@ -1690,15 +1768,36 @@ AlterFunction(AlterFunctionStmt *stmt)
 		tup = heap_modify_tuple(tup, RelationGetDescr(rel),
 								repl_val, repl_null, repl_repl);
 	}
+	if (exec_location_item)
+	{
+		Datum		repl_val[Natts_pg_proc];
+		bool		repl_null[Natts_pg_proc];
+		bool		repl_repl[Natts_pg_proc];
+
+		MemSet(repl_null, 0, sizeof(repl_null));
+		MemSet(repl_repl, 0, sizeof(repl_repl));
+		repl_repl[Anum_pg_proc_proexeclocation - 1] = true;
+		repl_val[Anum_pg_proc_proexeclocation - 1] =
+			CharGetDatum(interpret_exec_location(exec_location_item));
+
+		tup = heap_modify_tuple(tup, RelationGetDescr(rel),
+								repl_val, repl_null, repl_repl);
+	}
 
 	data_access = DatumGetChar(
-			heap_getattr(tup, Anum_pg_proc_prodataaccess,
-						 RelationGetDescr(rel), &isnull));
+		heap_getattr(tup, Anum_pg_proc_prodataaccess,
+					 RelationGetDescr(rel), &isnull));
+	Assert(!isnull);
+	exec_location = DatumGetChar(
+		heap_getattr(tup, Anum_pg_proc_proexeclocation,
+					 RelationGetDescr(rel), &isnull));
 	Assert(!isnull);
 	/* Cross check for various properties. */
 	validate_sql_data_access(data_access,
 							 procForm->provolatile,
 							 procForm->prolang);
+	validate_sql_exec_location(exec_location,
+							   procForm->proretset);
 
 	/* Do the update */
 	simple_heap_update(rel, &tup->t_self, tup);

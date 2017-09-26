@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varlena.c,v 1.162.2.1 2008/03/13 18:32:02 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varlena.c,v 1.164 2008/03/25 22:42:44 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,13 +53,6 @@ typedef struct
 #define PG_GETARG_UNKNOWN_P_COPY(n) DatumGetUnknownPCopy(PG_GETARG_DATUM(n))
 #define PG_RETURN_UNKNOWN_P(x)		PG_RETURN_POINTER(x)
 
-#define PG_TEXTARG_GET_STR(arg_) \
-	DatumGetCString(DirectFunctionCall1(textout, PG_GETARG_DATUM(arg_)))
-#define PG_TEXT_GET_STR(textp_) \
-	DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp_)))
-#define PG_STR_GET_TEXT(str_) \
-	DatumGetTextP(DirectFunctionCall1(textin, CStringGetDatum(str_)))
-
 /*
  * Max considered sub-string size is set to MaxAllocSize - 4MB).
  * The 4MB is saved aside for memory allocation overhead such
@@ -67,9 +60,17 @@ typedef struct
  */
 #define MAX_STRING_BYTES	((Size) (MaxAllocSize - 0x400000))
 
+/*
+ * GPDB_84_MERGE_FIXME: these functions are forked from the upstream's
+ * text_position() and text_position_setup(), which are no longer used. Might be
+ * good to have some extra eyes here to ensure this file was fully merged
+ * correctly.
+ */
 static int	text_position_ptr_len(char* p1, int len1, char *p2, int len2); 
 static void text_position_setup_ptr_len(char* p1, int len1, char* p2, int len2, TextPositionState *state);
 
+static int	text_cmp(text *arg1, text *arg2);
+static int32 text_length(Datum str);
 static int	text_position_next(int start_pos, TextPositionState *state);
 static void text_position_cleanup(TextPositionState *state);
 static text *text_substring(Datum str,
@@ -166,7 +167,7 @@ text_to_cstring_buffer(const text *src, char *dst, size_t dst_len)
 		dst_len--;
 		if (dst_len >= src_len)
 			dst_len = src_len;
-		else	/* ensure truncation is encoding-safe */
+		else					/* ensure truncation is encoding-safe */
 			dst_len = pg_mbcliplen(VARDATA_ANY(srcunpacked), src_len, dst_len);
 		memcpy(dst, VARDATA_ANY(srcunpacked), dst_len);
 		dst[dst_len] = '\0';
@@ -396,16 +397,8 @@ Datum
 textin(PG_FUNCTION_ARGS)
 {
 	char	   *inputText = PG_GETARG_CSTRING(0);
-	text	   *result;
-	int			len;
 
-	len = strlen(inputText);
-	result = (text *) palloc(len + VARHDRSZ);
-	SET_VARSIZE(result, len + VARHDRSZ);
-
-	memcpy(VARDATA(result), inputText, len);
-
-	PG_RETURN_TEXT_P(result);
+	PG_RETURN_TEXT_P(cstring_to_text(inputText));
 }
 
 /*
@@ -414,16 +407,9 @@ textin(PG_FUNCTION_ARGS)
 Datum
 textout(PG_FUNCTION_ARGS)
 {
-	text	   *t = PG_GETARG_TEXT_PP(0);
-	int			len;
-	char	   *result;
+	Datum		txt = PG_GETARG_DATUM(0);
 
-	len = VARSIZE_ANY_EXHDR(t);
-	result = (char *) palloc(len + 1);
-	memcpy(result, VARDATA_ANY(t), len);
-	result[len] = '\0';
-
-	PG_RETURN_CSTRING(result);
+	PG_RETURN_CSTRING(TextDatumGetCString(txt));
 }
 
 /*
@@ -439,9 +425,7 @@ textrecv(PG_FUNCTION_ARGS)
 
 	str = pq_getmsgtext(buf, buf->len - buf->cursor, &nbytes);
 
-	result = (text *) palloc(nbytes + VARHDRSZ);
-	SET_VARSIZE(result, nbytes + VARHDRSZ);
-	memcpy(VARDATA(result), str, nbytes);
+	result = cstring_to_text_with_len(str, nbytes);
 	pfree(str);
 	PG_RETURN_TEXT_P(result);
 }
@@ -1970,16 +1954,8 @@ Datum
 name_text(PG_FUNCTION_ARGS)
 {
 	Name		s = PG_GETARG_NAME(0);
-	text	   *result;
-	int			len;
 
-	len = strlen(NameStr(*s));
-
-	result = palloc(VARHDRSZ + len);
-	SET_VARSIZE(result, VARHDRSZ + len);
-	memcpy(VARDATA(result), NameStr(*s), len);
-
-	PG_RETURN_TEXT_P(result);
+	PG_RETURN_TEXT_P(cstring_to_text(NameStr(*s)));
 }
 
 
@@ -2313,7 +2289,7 @@ byteacmp(PG_FUNCTION_ARGS)
  * appendStringInfoText
  *
  * Append a text to str.
- * Like appendStringInfoString(str, PG_TEXT_GET_STR(s)) but faster.
+ * Like appendStringInfoString(str, text_to_cstring(t)) but faster.
  */
 static void
 appendStringInfoText(StringInfo str, const text *t)
@@ -2443,7 +2419,7 @@ replace_text(PG_FUNCTION_ARGS)
 
 	text_position_cleanup(&state);
 
-	ret_text = PG_STR_GET_TEXT(str.data);
+	ret_text = cstring_to_text_with_len(str.data, str.len);
 	pfree(str.data);
 	if(tofree0)
 		pfree(tofree0);
@@ -2785,7 +2761,8 @@ split_text(PG_FUNCTION_ARGS)
 		if(tofree1)
 			pfree(tofree1);
 
-		PG_RETURN_TEXT_P(PG_STR_GET_TEXT(""));
+		text_position_cleanup(&state);
+		PG_RETURN_TEXT_P(cstring_to_text(""));
 	}
 
 	/* empty field separator */
@@ -2800,7 +2777,7 @@ split_text(PG_FUNCTION_ARGS)
 		if (fldnum == 1)
 			return d0;
 		else
-			PG_RETURN_TEXT_P(PG_STR_GET_TEXT(""));
+			PG_RETURN_TEXT_P(cstring_to_text(""));
 	}
 
 	text_position_setup_ptr_len(p0, len0, p1, len1, &state);

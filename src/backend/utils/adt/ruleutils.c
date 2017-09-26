@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.287 2008/10/06 20:29:38 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.272 2008/03/28 00:21:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,6 +52,7 @@
 #include "rewrite/rewriteSupport.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/tqual.h"
 #include "utils/typcache.h"
 #include "utils/xml.h"
 
@@ -201,7 +202,7 @@ static void get_groupingfunc_expr(GroupingFunc *grpfunc,
 static void get_agg_expr(Aggref *aggref, deparse_context *context);
 static void get_sortlist_expr(List *l, List *targetList, bool force_colno,
                               deparse_context *context, char *keyword_clause);
-static void get_windowref_expr(WindowRef *wref, deparse_context *context);
+static void get_windowfunc_expr(WindowFunc *wfunc, deparse_context *context);
 static void get_coercion_expr(Node *arg, deparse_context *context,
 				  Oid resulttype, int32 resulttypmod,
 				  Node *parentNode);
@@ -534,6 +535,13 @@ pg_get_triggerdef(PG_FUNCTION_ARGS)
 			appendStringInfo(&buf, " OR UPDATE");
 		else
 			appendStringInfo(&buf, " UPDATE");
+	}
+	if (TRIGGER_FOR_TRUNCATE(trigrec->tgtype))
+	{
+		if (findx > 0)
+			appendStringInfo(&buf, " OR TRUNCATE");
+		else
+			appendStringInfo(&buf, " TRUNCATE");
 	}
 	appendStringInfo(&buf, " ON %s ",
 					 generate_relation_name(trigrec->tgrelid, NIL));
@@ -1152,7 +1160,7 @@ pg_get_constraintdef_worker(Oid constraintId, bool fullCommand,
 					elog(ERROR, "null conbin for constraint %u",
 						 constraintId);
 
-				conbin = DatumGetCString(DirectFunctionCall1(textout, val));
+				conbin = TextDatumGetCString(val);
 				expr = stringToNode(conbin);
 
 				/* Set up deparsing context for Var nodes in constraint */
@@ -1352,7 +1360,7 @@ Datum
 pg_get_serial_sequence(PG_FUNCTION_ARGS)
 {
 	text	   *tablename = PG_GETARG_TEXT_P(0);
-	text	   *columnname = PG_GETARG_TEXT_P(1);
+	text	   *columnname = PG_GETARG_TEXT_PP(1);
 	RangeVar   *tablerv;
 	Oid			tableOid;
 	char	   *column;
@@ -4305,8 +4313,8 @@ get_rule_expr(Node *node, deparse_context *context,
 			get_agg_expr((Aggref *) node, context);
 			break;
 
-		case T_WindowRef:
-			get_windowref_expr((WindowRef *)node, context);
+		case T_WindowFunc:
+			get_windowfunc_expr((WindowFunc *) node, context);
 			break;
 
 		case T_ArrayRef:
@@ -5413,6 +5421,13 @@ get_agg_expr(Aggref *aggref, deparse_context *context)
                           context, 
                           " ORDER BY ");
     }
+
+	if (aggref->aggfilter != NULL)
+	{
+		appendStringInfoString(buf, ") FILTER (WHERE ");
+		get_rule_expr((Node *) aggref->aggfilter, context, false);
+	}
+
 	appendStringInfoChar(buf, ')');
 }
 
@@ -5471,42 +5486,49 @@ get_sortlist_expr(List *l, List *targetList, bool force_colno,
 }
 
 /*
- * get_windowref_expr			- Parse back a WindowRef node
+ * get_windowfunc_expr	- Parse back a WindowFunc node
  */
 static void
-get_windowref_expr(WindowRef *wref, deparse_context *context)
+get_windowfunc_expr(WindowFunc *wfunc, deparse_context *context)
 {
 	StringInfo	buf = context->buf;
 	Oid			argtypes[FUNC_MAX_ARGS];
 	int			nargs;
 	ListCell   *l;
 
-	if (list_length(wref->args) >= FUNC_MAX_ARGS)
+	if (list_length(wfunc->args) >= FUNC_MAX_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
 				 errmsg("too many arguments")));
 	nargs = 0;
-	foreach(l, wref->args)
+	foreach(l, wfunc->args)
 	{
 		argtypes[nargs] = exprType((Node *) lfirst(l));
 		nargs++;
 	}
 
 	appendStringInfo(buf, "%s(%s",
-					 generate_function_name(wref->winfnoid,
+					 generate_function_name(wfunc->winfnoid,
 											nargs, argtypes, NULL), "");
 	/* winstar can be set only in zero-argument aggregates */
-	if (wref->winstar)
+	if (wfunc->winstar)
 		appendStringInfoChar(buf, '*');
 	else
-		get_rule_expr((Node *) wref->args, context, true);
+		get_rule_expr((Node *) wfunc->args, context, true);
+
+	if (wfunc->aggfilter != NULL)
+	{
+		appendStringInfoString(buf, ") FILTER (WHERE ");
+		get_rule_expr((Node *) wfunc->aggfilter, context, false);
+	}
+
 	appendStringInfoString(buf, ") OVER ");
 
 	foreach(l, context->windowClause)
 	{
 		WindowClause *wc = (WindowClause *) lfirst(l);
 
-		if (wc->winref == wref->winref)
+		if (wc->winref == wfunc->winref)
 		{
 			if (wc->name)
 				appendStringInfoString(buf, quote_identifier(wc->name));
@@ -5519,7 +5541,7 @@ get_windowref_expr(WindowRef *wref, deparse_context *context)
 	{
 		if (context->windowClause)
 			elog(ERROR, "could not find window clause for winref %u",
-				 wref->winref);
+				 wfunc->winref);
 
 		/*
 		 * In EXPLAIN, we don't have window context information available, so
@@ -6737,16 +6759,9 @@ static text *
 string_to_text(char *str)
 {
 	text	   *result;
-	int			slen = strlen(str);
-	int			tlen;
 
-	tlen = slen + VARHDRSZ;
-	result = (text *) palloc(tlen);
-	SET_VARSIZE(result, tlen);
-	memcpy(VARDATA(result), str, slen);
-
+	result = cstring_to_text(str);
 	pfree(str);
-
 	return result;
 }
 

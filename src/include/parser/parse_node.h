@@ -100,6 +100,7 @@ typedef struct ParseState
 	struct HTAB *p_namecache;  /* parse state object name cache */
 	bool        p_hasTblValueExpr;
 	bool        p_hasDynamicFunction; /* function w/unstable return type */
+	bool		p_hasFuncsWithExecRestrictions; /* funcion with EXECUTE ON MASTER / ALL SEGMENTS */
 
 	List	   *p_grp_tles;
 } ParseState;

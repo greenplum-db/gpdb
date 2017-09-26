@@ -26,6 +26,19 @@
 #define MASTER_CONTENT_ID (-1)
 #define InvalidDbid 0
 
+#define GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY 'p'
+#define GP_SEGMENT_CONFIGURATION_ROLE_MIRROR 'm'
+
+#define GP_SEGMENT_CONFIGURATION_STATUS_UP 'u'
+#define GP_SEGMENT_CONFIGURATION_STATUS_DOWN 'd'
+
+#define GP_SEGMENT_CONFIGURATION_MODE_INSYNC 's'
+#define GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC 'n'
+
+#define GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING 'c'
+#define GP_SEGMENT_CONFIGURATION_MODE_RESYNC 'r'
+
+
 /* ----------------
  *		gp_segment_configuration definition.  cpp turns this into
  *		typedef struct FormData_gp_segment_configuration

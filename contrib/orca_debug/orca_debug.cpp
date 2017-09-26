@@ -6,11 +6,15 @@
 //		API for invoking optimizer using GPDB udfs
 //---------------------------------------------------------------------------
 
+#include "postgres.h"
+
 #include <sys/stat.h>
+
 #include "gpopt/utils/CCatalogUtils.h"
 #include "gpopt/utils/COptTasks.h"
 #include "gpopt/mdcache/CMDCache.h"
 #include "utils/guc.h"
+#include "utils/snapmgr.h"
 
 #include "gpos/_api.h"
 #include "gpos/io/CFileReader.h"
@@ -929,7 +933,7 @@ RestoreQueryFromFile(PG_FUNCTION_ARGS)
 	CFileReader fr;
 	fr.Open(szFilename);
 	ULLONG ullSize = fr.UllSize();
-	elog(NOTICE, "(RestoreFromFile) Filesize is %llu", ullSize);
+	elog(NOTICE, "(RestoreFromFile) Filesize is " UINT64_FORMAT, (uint64) ullSize);
 
 	char *pcBuf = (char*) gpdb::GPDBAlloc(ullSize);
 	fr.UlpRead((BYTE*)pcBuf, ullSize);

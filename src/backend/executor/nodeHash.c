@@ -147,6 +147,7 @@ MultiExecHash(HashState *node)
 			}
 		}
 	}
+	MemoryAccounting_DeclareDone();
 
 	/* Now we have set up all the initial batches & primary overflow batches. */
 	hashtable->nbatch_outstart = hashtable->nbatch;
@@ -929,8 +930,12 @@ ExecHashTableReallocBatchData(HashJoinTable hashtable, int new_nbatch)
  * tuples from batch files.  We could save some cycles in the regular-tuple
  * case by not forcing the slot contents into minimal form; not clear if it's
  * worth the messiness required.
+ *
+ * Returns true if the tuple belonged to this batch and was inserted to
+ * the in-memory hash table, or false if it belonged to a later batch and
+ * was pushed to a temp file.
  */
-void
+bool
 ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 					TupleTableSlot *slot,
 					uint32 hashvalue)
@@ -994,17 +999,10 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 			}
 		}
 	}
-	else if (hashtable->first_pass)
+	else
 	{
 		/*
-		 * Put the tuple into a temp file for later batches.
-		 *
-		 * For rescannable hash join, we may see the same tuples many times
-		 * during rescans. However, only the first pass (before rescanning) requires
-		 * us to save the tuples to their corresponding batch files. The later passes
-		 * just read those tuples from batch files. As the tuples are already spilled
-		 * during first pass we no longer need to worry about saving those tuples in
-		 * batch files.
+		 * put the tuple into a temp file for later batches
 		 */
 		Assert(batchno > hashtable->curbatch);
 		ExecHashJoinSaveTuple(ps, tuple,
@@ -1013,6 +1011,8 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	}
 	}
 	END_MEMORY_ACCOUNT();
+
+	return (batchno == hashtable->curbatch);
 }
 
 /*

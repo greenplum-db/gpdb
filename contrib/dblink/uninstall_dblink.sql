@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/contrib/dblink/uninstall_dblink.sql,v 1.5.2.1 2010/06/07 15:15:03 teodor Exp $ */
+/* $PostgreSQL: pgsql/contrib/dblink/uninstall_dblink.sql,v 1.7 2008/04/05 02:26:14 momjian Exp $ */
 
 -- Adjust this setting to control where the objects get dropped.
 SET search_path = public;

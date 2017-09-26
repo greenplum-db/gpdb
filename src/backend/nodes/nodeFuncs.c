@@ -75,9 +75,9 @@ exprLocation(Node *expr)
 			/* function name should always be the first thing */
 			loc = ((Aggref *) expr)->location;
 			break;
-		case T_WindowRef:
+		case T_WindowFunc:
 			/* function name should always be the first thing */
-			loc = ((WindowRef *) expr)->location;
+			loc = ((WindowFunc *) expr)->location;
 			break;
 		case T_ArrayRef:
 			/* just use array argument's location */

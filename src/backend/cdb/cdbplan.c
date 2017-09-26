@@ -602,34 +602,23 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_Window:
+		case T_WindowAgg:
 			{
-				Window	   *window = (Window *) node;
-				Window	   *newwindow;
+				WindowAgg  *window = (WindowAgg *) node;
+				WindowAgg  *newwindow;
 
-				FLATCOPY(newwindow, window, Window);
+				FLATCOPY(newwindow, window, WindowAgg);
 				PLANMUTATE(newwindow, window);
 				
-				COPYARRAY(newwindow, window, numPartCols, partColIdx);
-				COPYARRAY(newwindow, window, numPartCols, partOperators);
-				MUTATE(newwindow->windowKeys, window->windowKeys, List *);
+				COPYARRAY(newwindow, window, partNumCols, partColIdx);
+				COPYARRAY(newwindow, window, partNumCols, partOperators);
+
+				COPYARRAY(newwindow, window, ordNumCols, ordColIdx);
+				COPYARRAY(newwindow, window, ordNumCols, ordOperators);
+				MUTATE(newwindow->startOffset, window->startOffset, Node *);
+				MUTATE(newwindow->endOffset, window->endOffset, Node *);
 				
 				return (Node *) newwindow;
-			}
-			break;
-		
-		case T_WindowKey:
-			{
-				WindowKey	*key = (WindowKey *)node;
-				WindowKey	*newkey;
-				
-				FLATCOPY(newkey, key, WindowKey);
-				COPYARRAY(newkey, key, numSortCols, sortColIdx);
-				COPYARRAY(newkey, key, numSortCols, sortOperators);
-				MUTATE(newkey->startOffset, key->startOffset, Node *);
-				MUTATE(newkey->endOffset, key->endOffset, Node *);
-				
-				return (Node *) newkey;
 			}
 			break;
 
@@ -708,9 +697,6 @@ plan_tree_mutator(Node *node,
 
 				FLATCOPY(newflow, flow, Flow);
 				MUTATE(newflow->hashExpr, flow->hashExpr, List *);
-				COPYARRAY(newflow, flow, numSortCols, sortColIdx);
-				COPYARRAY(newflow, flow, numSortCols, sortOperators);
-				COPYARRAY(newflow, flow, numSortCols, nullsFirst);
 				return (Node *) newflow;
 			}
 			break;
@@ -839,7 +825,7 @@ plan_tree_mutator(Node *node,
 		case T_RangeTblRef:
 		case T_Aggref:
 		case T_AggOrder:
-		case T_WindowRef:
+		case T_WindowFunc:
 		case T_ArrayRef:
 		case T_FuncExpr:
 		case T_OpExpr:

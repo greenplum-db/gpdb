@@ -19,6 +19,7 @@
 #include "storage/relfilenode.h"
 
 #include "access/persistentfilesysobjname.h"
+#include "access/xact.h"
 #include "access/xlogmm.h"
 #include "catalog/catalog.h"
 #include "catalog/gp_persistent.h"

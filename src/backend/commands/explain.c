@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.180 2008/10/06 20:29:38 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.171 2008/03/26 18:48:59 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,9 +37,10 @@
 #include "utils/json.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"             /* AllocSetContextCreate() */
-#include "utils/resscheduler.h"
+#include "utils/snapmgr.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
+
 #include "cdb/cdbdisp.h"                /* CheckDispatchResult() */
 #include "cdb/cdbexplain.h"             /* cdbexplain_recvExecStats */
 #include "cdb/cdbpartition.h"
@@ -49,6 +50,7 @@
 #include "cdb/cdbpathlocus.h"
 #include "cdb/memquota.h"
 #include "miscadmin.h"
+#include "utils/resscheduler.h"
 
 #ifdef USE_ORCA
 extern char *SzDXLPlan(Query *parse);
@@ -1120,8 +1122,8 @@ explain_outNode(StringInfo str,
 					break;
 			}
 			break;
-		case T_Window:
-			pname = "Window";
+		case T_WindowAgg:
+			pname = "WindowAgg";
 			break;
 		case T_TableFunctionScan:
 			pname = "Table Function Scan";
@@ -1594,44 +1596,24 @@ explain_outNode(StringInfo str,
 						       "Group By",
 						       str, indent, es);
 			break;
-		case T_Window:
+		case T_WindowAgg:
 			{
-				Window *window = (Window *)plan;
-				ListCell *cell;
-				char orderKeyStr[32]; /* XXX big enough */
-				int i;
+				WindowAgg *window = (WindowAgg *) plan;
 
-				if ( window->numPartCols > 0 )
+				if ( window->partNumCols > 0 )
 				{
 					show_grouping_keys(plan,
-									   window->numPartCols,
+									   window->partNumCols,
 									   window->partColIdx,
 									   "Partition By",
 									   str, indent, es);
 				}
 
-				if (list_length(window->windowKeys) > 1)
-					i = 0;
-				else
-					i = -1;
-
-				foreach(cell, window->windowKeys)
-				{
-					WindowKey *key = (WindowKey *) lfirst(cell);
-
-					if ( i < 0 )
-						sprintf(orderKeyStr, "Order By");
-					else
-					{
-						sprintf(orderKeyStr, "Order By (level %d)", ++i);
-					}
-
-					show_sort_keys(outerPlan(plan),
-								   key->numSortCols,
-								   key->sortColIdx,
-								   orderKeyStr,
-								   str, indent, es);
-				}
+				show_sort_keys(outerPlan(plan),
+							   window->ordNumCols,
+							   window->ordColIdx,
+							   "Order By",
+							   str, indent, es);
 				/* XXX don't show framing for now */
 			}
 			break;
