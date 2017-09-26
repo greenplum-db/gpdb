@@ -1486,7 +1486,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		break;
 			
 	case MPP_GRP_TYPE_PLAIN_2STAGE:
-		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, false);
+		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, NULL);
 		result_plan->total_cost += 
 			incremental_motion_cost(result_plan->plan_rows,
 									result_plan->plan_rows * root->config->cdbpath_segments);
@@ -2253,7 +2253,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		Assert(ctx->numGroupCols == 0); /* No grouping columns */
 		Assert(n == 1);
 
-		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, false);
+		result_plan = (Plan*)make_motion_gather_to_QE(root, result_plan, NULL);
 		result_plan->total_cost += 
 				incremental_motion_cost(result_plan->plan_rows,
 						result_plan->plan_rows * root->config->cdbpath_segments);

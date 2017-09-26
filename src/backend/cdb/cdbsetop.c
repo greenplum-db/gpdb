@@ -161,12 +161,12 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 				case CdbLocusType_HashedOJ:
 				case CdbLocusType_Strewn:
 					Assert( subplanflow->flotype == FLOW_PARTITIONED );
-					adjusted_plan = (Plan*)make_motion_gather_to_QD(root, subplan, false);
+					adjusted_plan = (Plan*)make_motion_gather_to_QD(root, subplan, NULL);
 					break;
 					
 				case CdbLocusType_SingleQE:
 					Assert( subplanflow->flotype == FLOW_SINGLETON && subplanflow->segindex == 0 );
-					adjusted_plan = (Plan*)make_motion_gather_to_QD(root, subplan, false);
+					adjusted_plan = (Plan*)make_motion_gather_to_QD(root, subplan, NULL);
 					break;
 
 				case CdbLocusType_Entry:
@@ -191,7 +191,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 				case CdbLocusType_Strewn:
 					Assert( subplanflow->flotype == FLOW_PARTITIONED );
 					/* Gather to QE.  No need to keep ordering. */
-					adjusted_plan = (Plan*)make_motion_gather_to_QE(root, subplan, false);
+					adjusted_plan = (Plan*)make_motion_gather_to_QE(root, subplan, NULL);
 					break;
 					
 				case CdbLocusType_SingleQE:
