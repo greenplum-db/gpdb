@@ -564,6 +564,31 @@ create index part_table13_4_idx on part_table13_1_prt_p4 using bitmap(c);
 select 'part_table13', partCons, defaultLevels, indType from gp_build_logical_index('part_table13'::regclass)
 as index(logicalIndexOid Oid, nColumns smallint, indKey text, indUnique bool, indPred text, indExprs text, partCons text, defaultLevels text, indType int2);
 
+--
+-- ************************************************************
+-- * Scenario 10
+-- * 	- multi-levels partition exchange with external table
+-- *
+-- ************************************************************
+--
+create table exchange_sub_partition (a int,b int)
+distributed by (a)
+partition by range (a)
+subpartition by range (b)
+subpartition template
+(start(1) end(3) every(1))
+(start(1) end(3) every(1));
+
+create external web table exchange_external_table(like exchange_sub_partition_1_prt_1_2_prt_1)
+execute 'printf "2,2\n1,1\n"' on host
+format 'csv';
+
+alter table exchange_sub_partition
+alter partition for (integer '2')
+exchange partition for (integer '2') with table exchange_external_table without validation;
+
+select * from exchange_sub_partition;
+
 -- cleanup
 drop function gp_build_logical_index(oid);
 drop function gp_get_physical_index_relid(oid, oid, int[], text, text, bool);
@@ -582,3 +607,5 @@ drop table part_table10;
 drop table part_table11;
 drop table part_table12;
 drop table part_table13;
+drop table exchange_sub_partition;
+drop table exchange_external_table;

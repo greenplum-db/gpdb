@@ -13257,7 +13257,6 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		RangeVar		   *oldrelrv;
 		PartitionNode 	   *pn;
 		Relation			oldrel;
-		Relation			newrel;
 
 		pn = RelationBuildPartitionDesc(rel, false);
 		pcols = get_partition_attrs(pn);
@@ -13277,18 +13276,6 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 
 		newrelid = RangeVarGetRelid(newrelrv, false);
 		Assert(OidIsValid(newrelid));
-		newrel = heap_open(newrelid, NoLock);
-		if (RelationIsExternal(newrel))
-		{
-			if (prule && prule->topRule && prule->topRule->parparentoid)
-			{
-				heap_close(newrel, NoLock);
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("cannot exchange sub partition with external table")));
-			}
-		}
-		heap_close(newrel, NoLock);
 
 		orig_pid_type = pid->idtype;
 		orig_prule = prule;
