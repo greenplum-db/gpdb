@@ -17,7 +17,8 @@ test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 	AppendOnlyVisiMapDeleteData val;
 	AppendOnlyVisimapDelete visiMapDelete;
 	AppendOnlyVisimap visiMap;
-	bool found;
+	bool		found;
+
 	visiMapDelete.visiMap = &visiMap;
 	visiMap.visimapEntry.segmentFileNum = 2;
 	visiMap.visimapEntry.firstRowNum = 32768;
@@ -32,9 +33,9 @@ test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 	will_return(AppendOnlyVisimapEntry_HasChanged, true);
 
 #ifdef USE_ASSERT_CHECKING
+
 	/*
-	 * AppendOnlyVisimap_Store calls
-	 * Assert(AppendOnlyVisimapEntry_IsValid)
+	 * AppendOnlyVisimap_Store calls Assert(AppendOnlyVisimapEntry_IsValid)
 	 */
 	expect_any(AppendOnlyVisimapEntry_IsValid, visiMapEntry);
 	will_return(AppendOnlyVisimapEntry_IsValid, true);
@@ -65,13 +66,13 @@ test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 }
 
 
-int 
-main(int argc, char* argv[]) 
+int
+main(int argc, char *argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
-	const UnitTest tests[] = {
-			unit_test(test__AppendOnlyVisimapDelete_Finish_outoforder)
+	const		UnitTest tests[] = {
+		unit_test(test__AppendOnlyVisimapDelete_Finish_outoforder)
 	};
 
 	MemoryContextInit();

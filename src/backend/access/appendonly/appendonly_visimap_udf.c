@@ -24,41 +24,38 @@
 #include "utils/builtins.h"
 
 
-extern Datum
-gp_aovisimap(PG_FUNCTION_ARGS);
-extern Datum
-gp_aovisimap_name(PG_FUNCTION_ARGS);
+extern Datum gp_aovisimap(PG_FUNCTION_ARGS);
+extern Datum gp_aovisimap_name(PG_FUNCTION_ARGS);
 
 static Datum
 gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 {
 	Datum		values[3];
 	bool		nulls[3];
-	HeapTuple tuple;
-	Datum result;
+	HeapTuple	tuple;
+	Datum		result;
 
 	typedef struct Context
 	{
-		Relation aorel;
+		Relation	aorel;
 		AppendOnlyVisimapScan visiMapScan;
-		AOTupleId aoTupleId;
-		
+		AOTupleId	aoTupleId;
+
 	} Context;
-	
+
 	FuncCallContext *funcctx;
-	Context *context;
+	Context    *context;
 
 	if (SRF_IS_FIRSTCALL())
 	{
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
-		
+
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		/*
-		 * switch to memory context appropriate for multiple function
-		 * calls
+		 * switch to memory context appropriate for multiple function calls
 		 */
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
@@ -88,10 +85,10 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		}
 
 		AppendOnlyVisimapScan_Init(&context->visiMapScan,
-				context->aorel->rd_appendonly->visimaprelid,
-				context->aorel->rd_appendonly->visimapidxid,
-				AccessShareLock,
-				SnapshotNow);
+								   context->aorel->rd_appendonly->visimaprelid,
+								   context->aorel->rd_appendonly->visimapidxid,
+								   AccessShareLock,
+								   SnapshotNow);
 		AOTupleIdInit_Init(&context->aoTupleId);
 
 		funcctx->user_fctx = (void *) context;
@@ -105,14 +102,14 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 	while (true)
 	{
 		if (!AppendOnlyVisimapScan_GetNextInvisible(
-				&context->visiMapScan,
-				&context->aoTupleId))
+													&context->visiMapScan,
+													&context->aoTupleId))
 		{
 			break;
 		}
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, false, sizeof(nulls));
-		values[0] = ItemPointerGetDatum((ItemPointer)&context->aoTupleId);
+		values[0] = ItemPointerGetDatum((ItemPointer) &context->aoTupleId);
 		values[1] = Int32GetDatum(AOTupleIdGet_segmentFileNum(&context->aoTupleId));
 		values[2] = Int64GetDatum(AOTupleIdGet_rowNum(&context->aoTupleId));
 
@@ -121,7 +118,7 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 
 		SRF_RETURN_NEXT(funcctx, result);
 	}
-	
+
 	AppendOnlyVisimapScan_Finish(&context->visiMapScan, AccessShareLock);
 	heap_close(context->aorel, AccessShareLock);
 	pfree(context);
@@ -132,8 +129,8 @@ gp_aovisimap_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 Datum
 gp_aovisimap(PG_FUNCTION_ARGS)
 {
-	Oid relid;
-	
+	Oid			relid;
+
 	relid = PG_GETARG_OID(0);
 	return gp_aovisimap_internal(fcinfo, relid);
 }
@@ -141,9 +138,9 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 Datum
 gp_aovisimap_name(PG_FUNCTION_ARGS)
 {
-	RangeVar		*parentrv;
-	text	   		*relname = PG_GETARG_TEXT_P(0);
-	Oid				relid;
+	RangeVar   *parentrv;
+	text	   *relname = PG_GETARG_TEXT_P(0);
+	Oid			relid;
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	relid = RangeVarGetRelid(parentrv, false);
@@ -151,35 +148,33 @@ gp_aovisimap_name(PG_FUNCTION_ARGS)
 	return gp_aovisimap_internal(fcinfo, relid);
 }
 
- 
-extern Datum
-gp_aovisimap_hidden_info(PG_FUNCTION_ARGS);
-extern Datum
-gp_aovisimap_hidden_info_name(PG_FUNCTION_ARGS);
+
+extern Datum gp_aovisimap_hidden_info(PG_FUNCTION_ARGS);
+extern Datum gp_aovisimap_hidden_info_name(PG_FUNCTION_ARGS);
 
 static Datum
 gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 {
 	Datum		values[3];
 	bool		nulls[3];
-	HeapTuple tuple;
-	Datum result;
+	HeapTuple	tuple;
+	Datum		result;
 
 	typedef struct Context
 	{
 		AppendOnlyVisimap visiMap;
 
-		Relation parentRelation;
+		Relation	parentRelation;
 
 		FileSegInfo **appendonlySegfileInfo;
 		AOCSFileSegInfo **aocsSegfileInfo;
-		int segfile_info_total;
+		int			segfile_info_total;
 
-		int i;
+		int			i;
 	} Context;
-	
+
 	FuncCallContext *funcctx;
-	Context *context;
+	Context    *context;
 
 	if (SRF_IS_FIRSTCALL())
 	{
@@ -190,8 +185,7 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		/*
-		 * switch to memory context appropriate for multiple function
-		 * calls
+		 * switch to memory context appropriate for multiple function calls
 		 */
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
@@ -223,23 +217,23 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		if (RelationIsAoRows(context->parentRelation))
 		{
 			context->appendonlySegfileInfo = GetAllFileSegInfo(
-				context->parentRelation,
-				SnapshotNow,
-				&context->segfile_info_total);
+															   context->parentRelation,
+															   SnapshotNow,
+															   &context->segfile_info_total);
 		}
 		else
 		{
 			Assert(RelationIsAoCols(context->parentRelation));
 			context->aocsSegfileInfo = GetAllAOCSFileSegInfo(context->parentRelation,
-					SnapshotNow, &context->segfile_info_total);
+															 SnapshotNow, &context->segfile_info_total);
 		}
 		context->i = 0;
 
 		AppendOnlyVisimap_Init(&context->visiMap,
-				context->parentRelation->rd_appendonly->visimaprelid,
-				context->parentRelation->rd_appendonly->visimapidxid,
-				AccessShareLock,
-				SnapshotNow);
+							   context->parentRelation->rd_appendonly->visimaprelid,
+							   context->parentRelation->rd_appendonly->visimapidxid,
+							   AccessShareLock,
+							   SnapshotNow);
 
 		funcctx->user_fctx = (void *) context;
 
@@ -251,17 +245,20 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 
 	while (context->i < context->segfile_info_total)
 	{
-		int64 tupcount;
-		int segno;
+		int64		tupcount;
+		int			segno;
+
 		if (context->appendonlySegfileInfo)
 		{
 			FileSegInfo *fsinfo = context->appendonlySegfileInfo[context->i];
+
 			tupcount = fsinfo->total_tupcount;
 			segno = fsinfo->segno;
 		}
 		else if (context->aocsSegfileInfo)
 		{
 			AOCSFileSegInfo *fsinfo = context->aocsSegfileInfo[context->i];
+
 			tupcount = fsinfo->total_tupcount;
 			segno = fsinfo->segno;
 		}
@@ -274,7 +271,7 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		MemSet(nulls, false, sizeof(nulls));
 		values[0] = Int32GetDatum(segno);
 		values[1] = Int64GetDatum(AppendOnlyVisimap_GetSegmentFileHiddenTupleCount(
-					&context->visiMap, segno));
+																				   &context->visiMap, segno));
 		values[2] = Int64GetDatum(tupcount);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
@@ -283,7 +280,7 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		context->i++;
 		SRF_RETURN_NEXT(funcctx, result);
 	}
-	
+
 	AppendOnlyVisimap_Finish(&context->visiMap, AccessShareLock);
 	if (context->appendonlySegfileInfo)
 	{
@@ -308,16 +305,17 @@ gp_aovisimap_hidden_info_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 Datum
 gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 {
-	Oid aoRelOid = PG_GETARG_OID(0);
+	Oid			aoRelOid = PG_GETARG_OID(0);
+
 	return gp_aovisimap_hidden_info_internal(fcinfo, aoRelOid);
 }
 
 Datum
 gp_aovisimap_hidden_info_name(PG_FUNCTION_ARGS)
 {
-	RangeVar		*parentrv;
-	text	   		*relname = PG_GETARG_TEXT_P(0);
-	Oid				relid;
+	RangeVar   *parentrv;
+	text	   *relname = PG_GETARG_TEXT_P(0);
+	Oid			relid;
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	relid = RangeVarGetRelid(parentrv, false);
@@ -325,16 +323,14 @@ gp_aovisimap_hidden_info_name(PG_FUNCTION_ARGS)
 	return gp_aovisimap_hidden_info_internal(fcinfo, relid);
 }
 
-extern Datum
-gp_aovisimap_entry(PG_FUNCTION_ARGS);
-extern Datum
-gp_aovisimap_entry_name(PG_FUNCTION_ARGS);
+extern Datum gp_aovisimap_entry(PG_FUNCTION_ARGS);
+extern Datum gp_aovisimap_entry_name(PG_FUNCTION_ARGS);
 
 static void
-gp_aovisimap_encode_bitmap(char* bitmapBuffer, Bitmapset *bms)
+gp_aovisimap_encode_bitmap(char *bitmapBuffer, Bitmapset *bms)
 {
-	int i;
-	int last = -1;
+	int			i;
+	int			last = -1;
 
 	Assert(bitmapBuffer);
 
@@ -357,34 +353,33 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 {
 	Datum		values[4];
 	bool		nulls[4];
-	HeapTuple tuple;
-	Datum result;
+	HeapTuple	tuple;
+	Datum		result;
 
 	typedef struct Context
 	{
 		AppendOnlyVisimap visiMap;
 
-		Relation parentRelation;
+		Relation	parentRelation;
 
 		IndexScanDesc indexScan;
 
-		text *bitmapBuffer;
+		text	   *bitmapBuffer;
 	} Context;
-	
+
 	FuncCallContext *funcctx;
-	Context *context;
+	Context    *context;
 
 	if (SRF_IS_FIRSTCALL())
 	{
 		TupleDesc	tupdesc;
 		MemoryContext oldcontext;
-		
+
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
 
 		/*
-		 * switch to memory context appropriate for multiple function
-		 * calls
+		 * switch to memory context appropriate for multiple function calls
 		 */
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
@@ -416,13 +411,13 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		}
 
 		AppendOnlyVisimap_Init(&context->visiMap,
-				context->parentRelation->rd_appendonly->visimaprelid,
-				context->parentRelation->rd_appendonly->visimapidxid,
-				AccessShareLock,
-				SnapshotNow);
+							   context->parentRelation->rd_appendonly->visimaprelid,
+							   context->parentRelation->rd_appendonly->visimapidxid,
+							   AccessShareLock,
+							   SnapshotNow);
 
 		context->indexScan = AppendOnlyVisimapStore_BeginScan(&
-			context->visiMap.visimapStore, 0, NULL);
+															  context->visiMap.visimapStore, 0, NULL);
 
 		context->bitmapBuffer = palloc0(VARHDRSZ + APPENDONLY_VISIMAP_MAX_RANGE + 1);
 
@@ -435,10 +430,10 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 	context = (Context *) funcctx->user_fctx;
 
 	if (AppendOnlyVisimapStore_GetNext(&context->visiMap.visimapStore,
-				context->indexScan,
-				ForwardScanDirection,
-				&context->visiMap.visimapEntry,
-				NULL))
+									   context->indexScan,
+									   ForwardScanDirection,
+									   &context->visiMap.visimapEntry,
+									   NULL))
 	{
 		AppendOnlyVisimapEntry *visimapEntry = &context->visiMap.visimapEntry;
 
@@ -447,10 +442,10 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 		values[0] = Int32GetDatum(visimapEntry->segmentFileNum);
 		values[1] = Int64GetDatum(visimapEntry->firstRowNum);
 		values[2] = Int32GetDatum(
-				(int32)AppendOnlyVisimapEntry_GetHiddenTupleCount(visimapEntry));
-		
-		gp_aovisimap_encode_bitmap(VARDATA(context->bitmapBuffer), 
-				visimapEntry->bitmap);
+								  (int32) AppendOnlyVisimapEntry_GetHiddenTupleCount(visimapEntry));
+
+		gp_aovisimap_encode_bitmap(VARDATA(context->bitmapBuffer),
+								   visimapEntry->bitmap);
 		SET_VARSIZE(context->bitmapBuffer, APPENDONLY_VISIMAP_MAX_RANGE);
 		values[3] = PointerGetDatum(context->bitmapBuffer);
 
@@ -459,9 +454,9 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 
 		SRF_RETURN_NEXT(funcctx, result);
 	}
-	
+
 	AppendOnlyVisimapStore_EndScan(&context->visiMap.visimapStore,
-			context->indexScan);
+								   context->indexScan);
 	AppendOnlyVisimap_Finish(&context->visiMap, AccessShareLock);
 	heap_close(context->parentRelation, AccessShareLock);
 
@@ -475,16 +470,17 @@ gp_aovisimap_entry_internal(PG_FUNCTION_ARGS, Oid aoRelOid)
 Datum
 gp_aovisimap_entry(PG_FUNCTION_ARGS)
 {
-	Oid aoRelOid = PG_GETARG_OID(0);
+	Oid			aoRelOid = PG_GETARG_OID(0);
+
 	return gp_aovisimap_entry_internal(fcinfo, aoRelOid);
 }
 
 Datum
 gp_aovisimap_entry_name(PG_FUNCTION_ARGS)
 {
-	RangeVar		*parentrv;
-	text	   		*relname = PG_GETARG_TEXT_P(0);
-	Oid				relid;
+	RangeVar   *parentrv;
+	text	   *relname = PG_GETARG_TEXT_P(0);
+	Oid			relid;
 
 	parentrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	relid = RangeVarGetRelid(parentrv, false);

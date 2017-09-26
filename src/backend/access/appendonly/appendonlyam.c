@@ -1763,8 +1763,8 @@ appendonly_beginrangescan(Relation relation,
 
 	for (i = 0; i < segfile_count; i++)
 	{
-		seginfo[i] = GetFileSegInfo(relation, appendOnlyMetaDataSnapshot,
-									segfile_no_arr[i]);
+		seginfo[	i] = GetFileSegInfo(relation, appendOnlyMetaDataSnapshot,
+										segfile_no_arr[i]);
 	}
 	return appendonly_beginrangescan_internal(relation,
 											  snapshot,
@@ -1975,7 +1975,7 @@ static bool
 fetchNextBlock(AppendOnlyFetchDesc aoFetchDesc)
 {
 	AppendOnlyExecutorReadBlock *executorReadBlock =
-		&aoFetchDesc->executorReadBlock;
+	&aoFetchDesc->executorReadBlock;
 
 	/*
 	 * Try to read next block.

@@ -50,8 +50,8 @@ gpaotidin(PG_FUNCTION_ARGS)
 	char	   *p,
 			   *coord[NAOTIDARGS];
 	int			i;
-	AOTupleId	*result;
-	unsigned int	segmentFileNum;
+	AOTupleId  *result;
+	unsigned int segmentFileNum;
 	int64		rowNum;
 	char	   *badp;
 
@@ -65,7 +65,7 @@ gpaotidin(PG_FUNCTION_ARGS)
 				 errmsg("invalid input syntax for type gpaotid: \"%s\"",
 						str)));
 
-// UNDONE: Move
+/*  UNDONE: Move */
 #define AOTupleId_MaxSegmentFileNum            127
 
 	errno = 0;
@@ -85,11 +85,11 @@ gpaotidin(PG_FUNCTION_ARGS)
 				 errmsg("invalid input syntax for type gpaotid: \"%s\"",
 						str)));
 
-	result = (AOTupleId*) palloc(sizeof(AOTupleId));
+	result = (AOTupleId *) palloc(sizeof(AOTupleId));
 
 	AOTupleIdInit_Init(result);
-	AOTupleIdInit_segmentFileNum(result,segmentFileNum);
-	AOTupleIdInit_rowNum(result,rowNum);
+	AOTupleIdInit_segmentFileNum(result, segmentFileNum);
+	AOTupleIdInit_rowNum(result, rowNum);
 
 	PG_RETURN_AOTID(result);
 }
@@ -101,9 +101,9 @@ gpaotidin(PG_FUNCTION_ARGS)
 Datum
 gpaotidout(PG_FUNCTION_ARGS)
 {
-	AOTupleId *aoTupleId = PG_GETARG_AOTID(0);
-	unsigned int 	segmentFileNum;
-	int64 	rowNum;
+	AOTupleId  *aoTupleId = PG_GETARG_AOTID(0);
+	unsigned int segmentFileNum;
+	int64		rowNum;
 	char		buf[32];
 
 	segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
@@ -122,19 +122,19 @@ Datum
 gpaotidrecv(PG_FUNCTION_ARGS)
 {
 	StringInfo	buf = (StringInfo) PG_GETARG_POINTER(0);
-	AOTupleId	*result;
-	unsigned int		segmentFileNum;
+	AOTupleId  *result;
+	unsigned int segmentFileNum;
 	int64		rowNum;
 
 	segmentFileNum = pq_getmsgint(buf, sizeof(segmentFileNum));
-	// UNDONE: pg_getmsgint doesn't handle 8 byte integers...
+	/* UNDONE: pg_getmsgint doesn't handle 8 byte integers... */
 	rowNum = pq_getmsgint(buf, sizeof(rowNum));
 
-	result = (AOTupleId*) palloc(sizeof(ItemPointerData));
+	result = (AOTupleId *) palloc(sizeof(ItemPointerData));
 
 	AOTupleIdInit_Init(result);
-	AOTupleIdInit_segmentFileNum(result,segmentFileNum);
-	AOTupleIdInit_rowNum(result,rowNum);
+	AOTupleIdInit_segmentFileNum(result, segmentFileNum);
+	AOTupleIdInit_rowNum(result, rowNum);
 
 	PG_RETURN_AOTID(result);
 }
@@ -145,9 +145,9 @@ gpaotidrecv(PG_FUNCTION_ARGS)
 Datum
 gpaotidsend(PG_FUNCTION_ARGS)
 {
-	AOTupleId *aoTupleId = PG_GETARG_AOTID(0);
-	unsigned int 	segmentFileNum;
-	int64 	rowNum;
+	AOTupleId  *aoTupleId = PG_GETARG_AOTID(0);
+	unsigned int segmentFileNum;
+	int64		rowNum;
 	StringInfoData buf;
 
 	segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
@@ -155,7 +155,7 @@ gpaotidsend(PG_FUNCTION_ARGS)
 
 	pq_begintypsend(&buf);
 	pq_sendint(&buf, segmentFileNum, sizeof(segmentFileNum));
-	// UNDONE: pq_sendint doesn't handle 8 byte integers...
+	/* UNDONE: pq_sendint doesn't handle 8 byte integers... */
 	pq_sendint(&buf, rowNum, sizeof(rowNum));
 	PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
@@ -163,15 +163,16 @@ gpaotidsend(PG_FUNCTION_ARGS)
 #define MAX_AO_TUPLE_ID_BUFFER 25
 static char AOTupleIdBuffer[MAX_AO_TUPLE_ID_BUFFER];
 
-char* AOTupleIdToString(AOTupleId * aoTupleId)
+char *
+AOTupleIdToString(AOTupleId *aoTupleId)
 {
-	int segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
-	int64 rowNum = AOTupleIdGet_rowNum(aoTupleId);
-	int snprintfResult;
+	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
+	int			snprintfResult;
 
 	snprintfResult =
 		snprintf(AOTupleIdBuffer, MAX_AO_TUPLE_ID_BUFFER, "(%d," INT64_FORMAT ")",
-		    segmentFileNum, rowNum);
+				 segmentFileNum, rowNum);
 
 	Assert(snprintfResult >= 0);
 	Assert(snprintfResult < MAX_AO_TUPLE_ID_BUFFER);
