@@ -207,10 +207,11 @@
             <sectiondiv><b>Validating Table Data with SHA-256</b>
                 <p>Validating table data with SHA-256 (specifying the option
                         <codeph>--validate=sha256</codeph>) requires the Greenplum Database pgcrypto
-                    extension. The extension is included with Pivotal Greenplum 5.x. The extension
-                    package must be installed on supported Pivotal Greenplum 4.3.x systems. Support
-                    for pgcrypto functions in a Greenplum 4.3.x database is not
-                required.</p></sectiondiv>
+                    extension. The extension is included with Pivotal Greenplum 5.x. When copying
+                    data from a supported Pivotal Greenplum 4.3.x system, the extension package must
+                    be installed on the 4.3.x system. You do not need to run
+                        <codeph>pgcrypto.sql</codeph> to install the pgcrypto functions in a
+                    Greenplum 4.3.x database.</p></sectiondiv>
         </section>
         <section id="section6">
             <title>Options</title>
@@ -732,18 +733,22 @@ sdw4,192.0.2.4</codeblock>
                 </plentry>
                 <plentry>
                     <pt>--validate=<varname>type</varname></pt>
-                    <pd>Perform data validation on table data. These are the supported types of
-                        validation.</pd>
+                    <pd>Perform data validation on table data. The default is no validation. These
+                        are the supported types of validation.</pd>
                     <pd><codeph>count</codeph> - Specify this value to compare row counts between
                         source and destination table data.</pd>
                     <pd><codeph>md5</codeph> - Specify this value to compare MD5 values between
                         source and destination table data. </pd>
                     <pd><codeph>sha256</codeph> - Specify this value to compare SHA-256 values
-                        between source and destination table data. <p>On a Greenplum Database system
-                            with FIPS enabled, the option <codeph>md5</codeph> is not available. Use
-                            the option <codeph>sha256</codeph> to validate table data. For more
-                            information, see <xref href="#topic1/section4" format="dita"
-                                >Notes</xref>.</p></pd>
+                        between source and destination table data. For more information about using
+                            <codeph>sha256</codeph>, see <xref href="#topic1/section4" format="dita"
+                            >Notes</xref>.</pd>
+                    <pd>
+                        <note>On a Greenplum Database system with FIPS enabled, the option
+                                <codeph>md5</codeph> is not available. Use the
+                                <codeph>count</codeph> or <codeph>sha256</codeph> option to validate
+                            table data. </note>
+                    </pd>
                     <pd>If validation for a table fails, <codeph>gptransfer</codeph> displays the
                         name of the table and writes the file name to the text file
                             <codeph>failed_migrated_tables_</codeph><varname>yyyymmdd_hhmmss</varname><codeph>.txt</codeph>.
