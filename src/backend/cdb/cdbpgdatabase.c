@@ -107,17 +107,28 @@ gp_pgdatabase__(PG_FUNCTION_ARGS)
 		values[2] = UInt16GetDatum(db->segindex);
 
 		values[3] = BoolGetDatum(false);
-		if (db->status == 'u')
+		if (db->status == GP_SEGMENT_CONFIGURATION_STATUS_UP)
 		{
-			if (db->mode == 's' || db->mode == 'c')
-			{
-				values[3] = BoolGetDatum(true);
-			} else if (db->mode == 'r' && db->role == 'p')
+#ifdef USE_SEGWALREP
+			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
+				db->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC)
 			{
 				values[3] = BoolGetDatum(true);
 			}
+#else
+			if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ||
+				db->mode == GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING)
+			{
+				values[3] = BoolGetDatum(true);
+			} else if (db->mode == GP_SEGMENT_CONFIGURATION_MODE_RESYNC &&
+					   db->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+			{
+				values[3] = BoolGetDatum(true);
+			}
+#endif
 		}
-		values[4] = BoolGetDatum(db->preferred_role == 'p');
+		values[4] = BoolGetDatum(db->preferred_role ==
+								 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 		result = HeapTupleGetDatum(tuple);
