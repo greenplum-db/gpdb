@@ -216,7 +216,11 @@ $(BEHAVE_BIN):
 	@cd $(PYLIB_SRC_EXT)/$(SETUP_TOOLS_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
 	@cd $(PYLIB_SRC_EXT)/$(PARSE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
 	@cd $(PYLIB_SRC_EXT)/$(ARG_PARSE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
-	@cd $(PYLIB_SRC_EXT)/$(BEHAVE_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
+	# We're forcing a change in the requirements since we're in python
+	# 2.7.12. There's a new syntax in the python requirements for
+	# parse_type 0.4.2 which breaks if you're under 2.7.13
+	@cd $(PYLIB_SRC_EXT)/$(BEHAVE_DIR)/ && sed -i 's/parse_type>=0.3.4/parse_type==0.4.1/' setup.py \
+		&& PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
 	@echo "--- behave done"
 
 PYTHON_FILES=`grep -l --exclude=Makefile --exclude=gplogfilter "/bin/env python" *`\
