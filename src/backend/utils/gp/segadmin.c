@@ -964,10 +964,11 @@ gp_add_segment_mirror(PG_FUNCTION_ARGS)
 	new.db.dbid = get_availableDbId();
 #ifdef USE_SEGWALREP
 	new.db.mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
+	new.db.status = GP_SEGMENT_CONFIGURATION_STATUS_DOWN;
 #else
 	new.db.mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
-#endif
 	new.db.status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
+#endif
 	new.db.role = SEGMENT_ROLE_MIRROR;
 	new.db.preferred_role = SEGMENT_ROLE_MIRROR;
 
