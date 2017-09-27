@@ -330,6 +330,19 @@ WITH RECURSIVE x(n) AS (
 	SELECT level+1, c FROM x, bar GROUP BY 1,2)
   SELECT * FROM x LIMIT 10;
 
+-- self-reference inside nested non-recursive CTE is not allowed
+WITH RECURSIVE r AS (
+  SELECT 1 AS a
+  UNION ALL
+  (
+    WITH w AS (
+      SELECT * FROM r
+    )
+    SELECT * FROM w
+  )
+)
+SELECT * FROM r;
+
 WITH RECURSIVE x(n) AS (
 	SELECT 1,2
 	UNION ALL

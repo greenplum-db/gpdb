@@ -30,7 +30,8 @@ typedef enum
 	RECURSION_SUBLINK,			/* inside a sublink */
 	RECURSION_OUTERJOIN,		/* inside nullable side of an outer join */
 	RECURSION_INTERSECT,		/* underneath INTERSECT (ALL) */
-	RECURSION_EXCEPT			/* underneath EXCEPT (ALL) */
+	RECURSION_EXCEPT,			/* underneath EXCEPT (ALL) */
+	RECURSION_NONRECURSIVE_CTE
 } RecursionContext;
 
 /* Associated error messages --- each must have one %s for CTE name */
@@ -46,7 +47,9 @@ static const char *const recursion_errormsgs[] = {
 	/* RECURSION_INTERSECT */
 	gettext_noop("recursive reference to query \"%s\" must not appear within INTERSECT"),
 	/* RECURSION_EXCEPT */
-	gettext_noop("recursive reference to query \"%s\" must not appear within EXCEPT")
+	gettext_noop("recursive reference to query \"%s\" must not appear within EXCEPT"),
+	/* RECURSION_NONRECURSIVE_CTE */
+	gettext_noop("self-reference to \"%s\" in a non-recursive CTE is not implemented")
 };
 
 /*
@@ -94,6 +97,8 @@ static void checkWellFormedSelectStmt(SelectStmt *stmt, CteState *cstate);
 
 static void checkSelfRefInRangeSubSelect(SelectStmt *stmt, CteState *cstate);
 static void checkWindowFuncInRecursiveTerm(SelectStmt *stmt, CteState *cstate);
+
+static void checkSelfRefInNonRecursiveCTE(SelectStmt *stmt, CteState *cstate);
 
 /*
  * transformWithClause -
@@ -828,6 +833,7 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
 					CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
 
 					(void) checkWellFormedRecursionWalker(cte->ctequery, cstate);
+					checkSelfRefInNonRecursiveCTE((SelectStmt *) cte->ctequery, cstate);
 					lfirst(cell1) = lappend((List *) lfirst(cell1), cte);
 				}
 				checkWellFormedSelectStmt(stmt, cstate);
@@ -940,6 +946,15 @@ checkWellFormedRecursionWalker(Node *node, CteState *cstate)
 	return raw_expression_tree_walker(node,
 									  checkWellFormedRecursionWalker,
 									  (void *) cstate);
+}
+
+static void checkSelfRefInNonRecursiveCTE(SelectStmt *stmt, CteState *cstate)
+{
+	RecursionContext cxt = cstate->context;
+
+	cstate->context = RECURSION_NONRECURSIVE_CTE;
+	checkWellFormedSelectStmt(stmt, cstate);
+	cstate->context = cxt;
 }
 
 /*
