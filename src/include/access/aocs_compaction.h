@@ -18,10 +18,10 @@
 #include "utils/rel.h"
 
 extern void AOCSDrop(Relation aorel,
-		List* compaction_segno);
-extern void AOCSCompact(Relation aorel, 
-		List *compaction_segno_list,
-		int insert_segno,
-		bool isFull);
+		 List *compaction_segno);
+extern void AOCSCompact(Relation aorel,
+			List *compaction_segno_list,
+			int insert_segno,
+			bool isFull);
 extern void AOCSTruncateToEOF(Relation aorel);
 #endif

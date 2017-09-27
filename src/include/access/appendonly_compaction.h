@@ -23,18 +23,18 @@
 #define APPENDONLY_COMPACTION_SEGNO_INVALID (-1)
 
 extern void AppendOnlyDrop(Relation aorel,
-		List *compaction_segno);
-extern void AppendOnlyCompact(Relation aorel, 
-		List *compaction_segno_list,
-		int insert_segno,
-		bool isFull);
+			   List *compaction_segno);
+extern void AppendOnlyCompact(Relation aorel,
+				  List *compaction_segno_list,
+				  int insert_segno,
+				  bool isFull);
 extern bool AppendOnlyCompaction_ShouldCompact(
-	Relation aoRelation,
-	int segno,
-	int64 segmentTotalTupcount,
-	bool isFull);
+								   Relation aoRelation,
+								   int segno,
+								   int64 segmentTotalTupcount,
+								   bool isFull);
 extern void AppendOnlyThrowAwayTuple(Relation rel, MemTuple tuple,
-		TupleTableSlot	*slot, MemTupleBinding *mt_bind);
+						 TupleTableSlot *slot, MemTupleBinding *mt_bind);
 extern void AppendOnlyTruncateToEOF(Relation aorel);
 extern bool HasLockForSegmentFileDrop(Relation aorel);
 extern bool AppendOnlyCompaction_IsRelationEmpty(Relation aorel);
