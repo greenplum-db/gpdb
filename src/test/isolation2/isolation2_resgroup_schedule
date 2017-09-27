@@ -24,7 +24,7 @@ test: resgroup/resgroup_memory_materialize_spill
 test: resgroup/resgroup_memory_sisc_mat_sort
 #test: resgroup/resgroup_memory_sisc_sort_spill
 test: resgroup/resgroup_memory_sort_spill
-test: resgroup/resgroup_memory_spilltodisk
+#test: resgroup/resgroup_memory_spilltodisk
 
 # regression tests
 test: resgroup/resgroup_recreate

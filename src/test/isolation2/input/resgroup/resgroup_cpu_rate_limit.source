@@ -16,7 +16,7 @@ DROP RESOURCE GROUP rg2_cpu_test;
 
 CREATE TABLE bigtable AS
     SELECT i AS c1, 'abc' AS c2
-    FROM generate_series(1,100000) i;
+    FROM generate_series(1,50000) i;
 
 -- the cpu usage limitation has an error rate about +-7.5%,
 -- and also we want to satisfy the 0.1:0.2 rate under 90% overall limitation
