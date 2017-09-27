@@ -72,7 +72,8 @@ groups:
 ################################
   - gate_nightly_start
   - DPM_backup_43_restore_5
-  - MM_gpexpand
+  - MM_gpexpand_1
+  - MM_gpexpand_2
   - DPM_gptransfer-43x-to-5x
   - cs_aoco_compression_large_01
   - cs_aoco_compression_large_02
@@ -109,7 +110,6 @@ groups:
 - name: Remaining Pulse
   jobs:
   - MM_gpcheckcat
-  - MM_gpexpand
   - mpp_interconnect
 
 - name: Adopted CCP
@@ -145,6 +145,8 @@ groups:
   - DPM_gptransfer-43x-to-5x
   - DPM_gptransfer-5x-to-5x
   - MM_gpcheckcat
+  - MM_gpexpand_1
+  - MM_gpexpand_2
   - MM_gppkg
   - MM_gprecoverseg
   - DPM_backup_43_restore_5
@@ -230,7 +232,8 @@ groups:
   jobs:
   - gate_nightly_start
   - DPM_backup_43_restore_5
-  - MM_gpexpand
+  - MM_gpexpand_1
+  - MM_gpexpand_2
   - DPM_gptransfer-43x-to-5x
   - cs_aoco_compression_large_01
   - cs_aoco_compression_large_02
@@ -2655,42 +2658,84 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
-- name: MM_gpexpand
+- name: MM_gpexpand_1
   plan:
   - get: nightly-trigger
-    trigger: ((nightly-trigger-flag))
-  - aggregate: &post_packaging_gets_trigger_based_on_flag
+    trigger: {{nightly-trigger-flag}}
+  - aggregate:
     - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
       passed: [gate_nightly_start]
-      trigger: ((reduced-frequency-trigger-flag))
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
       passed: [gate_nightly_start]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-    - get: gpdb_src_behave_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 5
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: gpdb5-pipeline-dynamic-terraform
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: gpexpand_1
+      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
+      PRE_TEST_SCRIPT: bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@$i "sudo chmod 777 /usr/local"; done'
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: MM_gpexpand_2
+  plan:
+  - get: nightly-trigger
+    trigger: {{nightly-trigger-flag}}
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_nightly_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_nightly_start]
+      trigger: true
+    - get: ccp_src
+    - get: centos-gpdb-dev-6
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 5
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: gpdb5-pipeline-dynamic-terraform
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: gpexpand_2
+      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
+      PRE_TEST_SCRIPT: bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@$i "sudo chmod 777 /usr/local"; done'
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 - name: DPM_gptransfer-43x-to-5x
   plan:
   - get: nightly-trigger
@@ -2931,7 +2976,8 @@ jobs:
       trigger: true
       passed:
       - DPM_backup_43_restore_5
-      - MM_gpexpand
+      - MM_gpexpand_1
+      - MM_gpexpand_2
       - cs_aoco_compression_large_01
       - cs_aoco_compression_large_02
       - cs_aoco_compression_large_03
@@ -3478,7 +3524,8 @@ jobs:
     - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg
-    - MM_gpexpand
+    - MM_gpexpand_1
+    - MM_gpexpand_2
     - MM_gpinitstandby
     - DPM_gptransfer-43x-to-5x
     - DPM_gptransfer-5x-to-5x

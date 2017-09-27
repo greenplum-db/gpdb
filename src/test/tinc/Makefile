@@ -271,3 +271,14 @@ memory_accounting:
 	$(TESTER) \
 		resource_management.memory_accounting.test_oom.OOMTestCase \
 		resource_management.memory_accounting.too_many_exec_accounts.test_exec_accounts
+
+# gpexpand test
+gpexpand_1:
+	$(TESTER) $(DISCOVER) \
+	-s mpp/gpdb/tests/utilities/gpexpand \
+	-q tags=part1
+
+gpexpand_2:
+	$(TESTER) $(DISCOVER) \
+	-s mpp/gpdb/tests/utilities/gpexpand \
+	-q tags=part2

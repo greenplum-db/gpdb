@@ -9,4 +9,7 @@ run:
   - |
     set -ex
     ccp_src/aws/setup_ssh_to_cluster.sh
-    ssh -t mdw "bash /home/gpadmin/gpdb_src/concourse/scripts/run_tinc_test.sh \"$TINC_TARGET\""
+    if [ -n "$PRE_TEST_SCRIPT" ]; then
+      ssh -t mdw "$CUSTOM_ENV $PRE_TEST_SCRIPT"
+    fi
+    ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_tinc_test.sh \"$TINC_TARGET\""
