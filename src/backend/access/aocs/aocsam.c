@@ -69,7 +69,7 @@ static void
 open_datumstreamread_segfile(
 							 char *basepath, RelFileNode node,
 							 AOCSFileSegInfo *segInfo,
-							 DatumStreamRead * ds,
+							 DatumStreamRead *ds,
 							 int colNo)
 {
 	int			segNo = segInfo->segno;
@@ -98,7 +98,7 @@ open_datumstreamread_segfile(
 static void
 open_all_datumstreamread_segfiles(Relation rel,
 								  AOCSFileSegInfo *segInfo,
-								  DatumStreamRead * *ds,
+								  DatumStreamRead **ds,
 								  int *proj_atts,
 								  int num_proj_atts,
 								  AppendOnlyBlockDirectory *blockDirectory)
@@ -177,7 +177,7 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
  * means all columns.
  */
 static void
-open_ds_read(Relation rel, DatumStreamRead * *ds, TupleDesc relationTupleDesc,
+open_ds_read(Relation rel, DatumStreamRead **ds, TupleDesc relationTupleDesc,
 			 int *proj_atts, int num_proj_atts, bool checksum)
 {
 	int			nvp = relationTupleDesc->natts;
@@ -219,16 +219,18 @@ open_ds_read(Relation rel, DatumStreamRead * *ds, TupleDesc relationTupleDesc,
 		ds[attno] = create_datumstreamread(ct,
 										   clvl,
 										   checksum,
-										   /* safeFSWriteSize */ false, /* UNDONE:Need to wire down pg_appendonly column */
+										    /* safeFSWriteSize */ false,	/* UNDONE:Need to wire
+																			 * down pg_appendonly
+																			 * column */
 										   blksz,
 										   attr,
 										   RelationGetRelationName(rel),
-										   /* title */ titleBuf.data);
+										    /* title */ titleBuf.data);
 	}
 }
 
 static void
-close_ds_read(DatumStreamRead * *ds, int nvp)
+close_ds_read(DatumStreamRead **ds, int nvp)
 {
 	int			i;
 
@@ -243,7 +245,7 @@ close_ds_read(DatumStreamRead * *ds, int nvp)
 }
 
 static void
-close_ds_write(DatumStreamWrite * *ds, int nvp)
+close_ds_write(DatumStreamWrite **ds, int nvp)
 {
 	int			i;
 
@@ -284,7 +286,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 
 		if (curSegInfo->total_tupcount > 0)
 		{
-            bool		emptySeg = false;
+			bool		emptySeg = false;
 
 			/*
 			 * If the segment is entirely empty, nothing to do.
@@ -297,7 +299,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 			{
 				AOCSVPInfoEntry *e = getAOCSVPEntry(curSegInfo, scan->proj_atts[0]);
 
-				if (e->eof == 0  || curSegInfo->state == AOSEG_STATE_AWAITING_DROP)
+				if (e->eof == 0 || curSegInfo->state == AOSEG_STATE_AWAITING_DROP)
 					emptySeg = true;
 			}
 
@@ -475,11 +477,11 @@ aocs_beginscan_internal(Relation relation,
 	scan->relationTupleDesc = relationTupleDesc;
 
 	/*
-	 * We get an array of booleans to indicate which columns are needed. But if
-	 * you have a very wide table, and you only select a few columns from it,
-	 * just scanning the boolean array to figure out which columns are needed
-	 * can incur a noticeable overhead in aocs_getnext. So convert it into an
-	 * array of the attribute numbers of the required columns.
+	 * We get an array of booleans to indicate which columns are needed. But
+	 * if you have a very wide table, and you only select a few columns from
+	 * it, just scanning the boolean array to figure out which columns are
+	 * needed can incur a noticeable overhead in aocs_getnext. So convert it
+	 * into an array of the attribute numbers of the required columns.
 	 */
 	Assert(proj);
 	scan->proj_atts = palloc(scan->relationTupleDesc->natts * sizeof(int));
@@ -491,7 +493,7 @@ aocs_beginscan_internal(Relation relation,
 			scan->proj_atts[scan->num_proj_atts++] = i;
 	}
 
-	scan->ds = (DatumStreamRead * *) palloc0(sizeof(DatumStreamRead *) * nvp);
+	scan->ds = (DatumStreamRead **) palloc0(sizeof(DatumStreamRead *) * nvp);
 
 	aocs_initscan(scan);
 
@@ -589,10 +591,10 @@ ReadNext:
 			if (err == 0)
 			{
 				err = datumstreamread_block(scan->ds[attno], scan->blockDirectory, attno);
-				if(err < 0)
+				if (err < 0)
 				{
-					/* Ha, cannot read next block,
-					 * we need to go to next seg
+					/*
+					 * Ha, cannot read next block, we need to go to next seg
 					 */
 					close_cur_scan_seg(scan);
 					goto ReadNext;
@@ -603,8 +605,8 @@ ReadNext:
 			}
 
 			/*
-			 * Get the column's datum right here since the data structures should still
-			 * be hot in CPU data cache memory.
+			 * Get the column's datum right here since the data structures
+			 * should still be hot in CPU data cache memory.
 			 */
 			datumstreamread_get(scan->ds[attno], &d[attno], &null[attno]);
 
@@ -665,7 +667,7 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 	int			nvp = tupdesc->natts;
 	int			i;
 
-	desc->ds = (DatumStreamWrite * *) palloc0(sizeof(DatumStreamWrite *) * nvp);
+	desc->ds = (DatumStreamWrite **) palloc0(sizeof(DatumStreamWrite *) * nvp);
 
 	/*
 	 * In order to append to this file segment entry we must first acquire the
@@ -752,7 +754,7 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 }
 
 static inline void
-SetBlockFirstRowNums(DatumStreamWrite * *datumStreams,
+SetBlockFirstRowNums(DatumStreamWrite **datumStreams,
 					 int numDatumStreams,
 					 int64 blockFirstRowNum)
 {
@@ -1132,7 +1134,7 @@ openFetchSegmentFile(AOCSFetchDesc aocsFetchDesc,
 }
 
 static void
-resetCurrentBlockInfo(CurrentBlock * currentBlock)
+resetCurrentBlockInfo(CurrentBlock *currentBlock)
 {
 	currentBlock->have = false;
 	currentBlock->firstRowNum = 0;
@@ -1502,7 +1504,7 @@ typedef struct AOCSUpdateDescData
 	 */
 	AppendOnlyVisimapDelete visiMapDelete;
 
-} AOCSUpdateDescData;
+}			AOCSUpdateDescData;
 
 AOCSUpdateDesc
 aocs_update_init(Relation rel, int segno)
@@ -1543,7 +1545,7 @@ HTSU_Result
 aocs_update(AOCSUpdateDesc desc, TupleTableSlot *slot,
 			AOTupleId *oldTupleId, AOTupleId *newTupleId)
 {
-	Oid			oid;
+	Oid oid;
 	HTSU_Result result;
 
 	Assert(desc);
@@ -1601,7 +1603,7 @@ typedef struct AOCSDeleteDescData
 	 */
 	AppendOnlyVisimapDelete visiMapDelete;
 
-} AOCSDeleteDescData;
+}			AOCSDeleteDescData;
 
 
 /*
