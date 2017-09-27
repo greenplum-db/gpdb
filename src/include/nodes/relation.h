@@ -232,7 +232,7 @@ typedef struct PlannerInfo
 	List	   *full_join_clauses;		/* list of RestrictInfos for
 										 * mergejoinable full join clauses */
 
-	List	   *join_info_list; /* list of SpecialJoinInfos */
+	List	   *join_info_list;     /* list of SpecialJoinInfos */
 
 	List	   *append_rel_list;	/* list of AppendRelInfos */
 	

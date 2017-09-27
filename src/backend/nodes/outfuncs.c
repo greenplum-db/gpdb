@@ -2227,6 +2227,8 @@ _outSpecialJoinInfo(StringInfo str, SpecialJoinInfo *node)
 	WRITE_NODE_FIELD(join_quals);
 	WRITE_BOOL_FIELD(try_join_unique);	/*CDB*/
 	WRITE_BOOL_FIELD(consider_dedup);	/*CDB*/
+	WRITE_NODE_FIELD(semi_operators);
+	WRITE_NODE_FIELD(semi_rhs_exprs);
 }
 
 static void
