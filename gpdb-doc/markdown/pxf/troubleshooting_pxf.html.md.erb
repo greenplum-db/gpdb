@@ -1,0 +1,110 @@
+---
+title: Troubleshooting PXF
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+
+## <a id="pxf-errors"></a>PXF Errors
+The following table describes some errors you may encounter while using PXF:
+
+| Error Message                 | Discussion                     |
+|-------------------------------|---------------------------------|
+| Protocol "pxf" does not exist | **Cause**: The `pxf` protocol was not registered.<br>**Remedy**: Create (enable) the PXF extension for the database as described in the PXF [Enable Procedure](using_pxf.html#enable-pxf-ext).|
+| Invalid URI pxf://\<path-to-data\>: missing options section | **Cause**: The `LOCATION` URI does not include the profile or other required options.<br>**Remedy**: Provide the profile and required options in the URI. |
+| org.apache.hadoop.mapred.InvalidInputException: Input path does not exist: hdfs://\<namenode\>:8020/\<path-to-file\> | **Cause**: The HDFS file you specified in \<path-to-file\> does not exit. <br>**Remedy**: Provide the path to an existing HDFS file. |
+| NoSuchObjectException(message:\<schema\>.\<hivetable\> table not found) | **Cause**: The Hive table you specified with \<schema\>.\<hivetable\> does not exist. <br>**Remedy**: Provide the name of an existing Hive table. |
+| Failed to connect to \<segment-host\> port 51200: Connection refused (libchurl.c:944)  (\<segment-id\> slice\<N\> \<segment-host\>:40000 pid=\<process-id\>)<br> ... |**Cause**: PXF is not running on \<segment-host\>.<br>**Remedy**: Restart PXF on \<segment-host\>. |
+| *ERROR*: failed to acquire resources on one or more segments<br>*DETAIL*:  could not connect to server: Connection refused<br>&nbsp;&nbsp;&nbsp;&nbsp;Is the server running on host "\<segment-host\>" and accepting<br>&nbsp;&nbsp;&nbsp;&nbsp;TCP/IP connections on port 40000?(seg\<N\> \<segment-host\>:40000) | **Cause**: The Greenplum Database segment host \<segment-host\> is down.
+
+## <a id="pxf-logging"></a>PXF Logging
+Enabling more verbose logging may aid PXF troubleshooting efforts. PXF provides two categories of message logging - service-level and database-level.
+
+### <a id="pxfsvclogmsg"></a>Service-Level Logging
+
+PXF utilizes `log4j` for service-level logging. PXF-service-related log messages are captured in a log file specified by PXF's `log4j` properties file, `$GPHOME/pxf/conf/pxf-log4j.properties`. The default PXF logging configuration will write `INFO` and more severe level logs to `$GPHOME/pxf/logs/pxf-service.log`. You can configure the logging level and log file location.
+
+PXF provides more detailed logging when the `DEBUG` level is enabled.  To configure PXF `DEBUG` logging, uncomment the following line in `pxf-log4j.properties`:
+
+``` shell
+#log4j.logger.org.apache.hawq.pxf=DEBUG
+```
+
+Copy the `pxf-log4j.properties` file to each segment host and restart the PXF service on *each* Greenplum Database segment host. For example:
+
+``` shell
+gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-log4j.properties :=/usr/local/greenplum-db/pxf/conf/pxf-log4j.properties
+gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
+```
+
+With `DEBUG` level logging now enabled, perform your PXF operations; for example, create and query an external table. (Make note of the time; this will direct you to the relevant log messages in `$GPHOME/pxf/logs/pxf-service.log`.)
+
+``` shell
+$ date
+Wed Oct  4 09:30:06 MDT 2017
+$ psql -d <dbname>
+```
+
+``` sql
+dbname=> CREATE EXTERNAL TABLE hdfstest(id int, newid int)
+    LOCATION ('pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple')
+    FORMAT 'TEXT' (delimiter='E',');
+dbname=> SELECT * FROM hdfstest;
+<select output>
+```
+
+Examine/collect the log messages from `pxf-service.log`.
+
+**Note**: `DEBUG` logging is quite verbose and has a performance impact.  Remember to turn off PXF service `DEBUG` logging after you have collected the desired information.
+ 
+
+### <a id="pxfdblogmsg"></a>Client-Level Logging
+
+Database-level client logging may provide insight into internal PXF service operations.
+
+Enable Greenplum Database and PXF debug message logging during operations on PXF external tables by setting the `client_min_messages` server configuration parameter to `DEBUG2` in your `psql` session.
+
+``` shell
+$ psql -d <dbname>
+```
+
+``` sql
+dbname=# SET client_min_messages=DEBUG2
+dbname=# SELECT * FROM hdfstest;
+...
+DEBUG2:  churl http header: cell #19: X-GP-URL-HOST: seghost1  (seg0 slice1 127.0.0.1:40000 pid=3981)
+CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
+DEBUG2:  churl http header: cell #20: X-GP-URL-PORT: 51200  (seg0 slice1 127.0.0.1:40000 pid=3981)
+CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
+DEBUG2:  churl http header: cell #21: X-GP-DATA-DIR: data/dir/hdfsfile  (seg0 slice1 127.0.0.1:40000 pid=3981)
+CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
+DEBUG2:  churl http header: cell #22: X-GP-PROFILE: HdfsTextSimple  (seg0 slice1 127.0.0.1:40000 pid=3981)
+CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
+DEBUG2:  churl http header: cell #23: X-GP-URI: pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple  (seg0 slice1 127.0.0.1:40000 pid=3981)
+CONTEXT:  External table hdfstest, file pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple
+```
+
+Examine/collect the log messages from `stdout`.
+
+**Note**: `DEBUG2` database session logging has a performance impact.  Remember to turn off `DEBUG2` logging after you have collected the desired information.
+
+``` sql
+dbname=# SET client_min_messages=NOTICE
+```

@@ -1,0 +1,61 @@
+---
+title: Writing HDFS File Data with PXF
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+The PXF HDFS connector supports writable external tables using the `HdfsTextSimple` and `SequenceWritable` profiles. You might create a writable table to export data from a Greenplum Database internal table to binary or text HDFS files.
+
+Use the `HdfsTextSimple` profile when writing text data. Use the `SequenceWritable` profile when dealing with binary data.
+
+This section describes how to use these PXF profiles to write data to HDFS.
+
+Note: Tables that you create with writable profiles can only be used for `INSERT` operations. If you want to query inserted data, you must create a separate external readable table that references the new HDFS file, specifying the equivalent readable profile.
+
+## <a id="hdfswrite_prereq"></a>Prerequisites
+
+Before working with HDFS file data using PXF, ensure that:
+
+-  You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
+- You have initialized and started PXF on your Greenplum Database segment hosts. See [Configuring, Initializing, and Starting PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
+- You have granted the `gpadmin` user read and write permission to the appropriate directories in your HDFS file system.
+
+
+## <a id="hdfswrite_writeextdata"></a>Writing to PXF External Tables
+The PXF HDFS connector supports two writable profiles: `HdfsTextSimple` and `SequenceWritable`.
+
+## <a id="hdfswrite_options"></a>Writing to PXF External Tables
+
+## <a id="profile_options"></a>Custom Options
+
+## <a id="profile_write_hdfstextsimple"></a>HdfsTextSimple Profile
+
+### <a id="profile_write_hdfstextsimple_example"></a>Example: Writing Data Using the HdfsTextSimple Profile
+
+
+## <a id="profile_write_sequencewritable"></a>SequenceWritable Profile
+
+### <a id="profile_write_sequencewritable_example"></a>Example: Writing Data Using the SequenceWritable Profile
+
+
+# <a id="read_recordkey"></a>Reading the Record Key
+
+### <a id="read_recordkey_example"></a>Example: Using Record Keys
+

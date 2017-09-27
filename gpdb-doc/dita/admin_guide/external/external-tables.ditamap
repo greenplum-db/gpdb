@@ -8,6 +8,7 @@
       <topicref href="g-gpfdist-protocol.xml"/>
       <topicref href="g-gpfdists-protocol.xml"/>
       <topicref href="g-gphdfs-protocol.xml"/>
+      <topicref href="g-pxf-protocol.xml"/>
       <topicref href="g-s3-protocol.xml"/>
       <topicref href="g-accessing-ext-files-custom-protocol.xml"/>
       <topicref href="g-handling-errors-ext-table-data.xml"/>
@@ -26,16 +27,17 @@
     type="topic"/>
       </topicref>
    </topicref>
+  <topicref href="pxf-overview.xml" navtitle="Using PXF with HDFS and Hive Data"/>
   <topicref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic">
-  <topicref href="g-one-time-hdfs-protocol-installation.xml" type="topic"/>
-  <topicref href="g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>
-  <topicref href="g-specify-hdfs-data-in-an-external-table-definition.xml" type="topic"/>
-  <topicref href="g-hdfs-avro-format.xml"/>
-  <topicref href="g-hdfs-parquet-format.xml"/>
-  <topicref href="g-hdfs-readable-and-writable-external-table-examples.xml" type="topic"/>
-  <topicref href="g-reading-and-writing-custom-formatted-hdfs-data.xml" type="topic"/>
-  <topicref href="g-hdfs-emr-config.xml"/>
- </topicref>
+      <topicref href="g-one-time-hdfs-protocol-installation.xml" type="topic"/>
+      <topicref href="g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>
+      <topicref href="g-specify-hdfs-data-in-an-external-table-definition.xml" type="topic"/>
+      <topicref href="g-hdfs-avro-format.xml"/>
+      <topicref href="g-hdfs-parquet-format.xml"/>
+      <topicref href="g-hdfs-readable-and-writable-external-table-examples.xml" type="topic"/>
+      <topicref href="g-reading-and-writing-custom-formatted-hdfs-data.xml" type="topic"/>
+      <topicref href="g-hdfs-emr-config.xml"/>
+   </topicref>
   <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
   </topicref>
 </map>

@@ -1,0 +1,165 @@
+---
+title: Using PXF to Read and Write External Data
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+The PXF Extension Framework implements a protocol named `pxf` that you can use to create an external table that references data in an external data store. The PXF Extension Framework protocol and Java service are packaged as a Greenplum Database extension.
+
+You must enable the PXF extension in each database in which you plan to use the framework to access external data. You must also explicitly `GRANT` permission to the `pxf` protocol to those users/roles who require access.
+
+After the extension is registered and privileges are assigned, you can use the `CREATE EXTERNAL TABLE` command to create an external table using the `pxf` protocol. PXF provides built-in HDFS and Hive connectors. These connectors define profiles that support different file formats. You specify the profile name in the `CREATE EXTERNAL TABLE` command `LOCATION` URI.
+
+
+## <a id="enable-pxf-ext"></a>Enabling/Disabling PXF
+
+You must explicitly enable the PXF extension in each Greenplum Database in which you plan to use the extension.
+
+**Note**: You must have Greenplum Database administrator privileges to create an extension.
+
+ 
+### <a id="enable-pxf-steps"></a>Enable Procedure
+
+Perform the following procedure for **_each_** database in which you want to use PXF:
+
+1. Connect to the database as the `gpadmin` user:
+
+    ``` shell
+    gpadmin@gpmaster$ psql -d <database-name> -U gpadmin
+    ```
+
+2. Create the PXF extension. You must have Greenplum Database administrator privileges to create an extension. For example:
+
+    ``` sql
+    database-name=# CREATE EXTENSION pxf;
+    ```
+    
+    Creating the `pxf` extension registers the `pxf` protocol and the call handlers required for PXF to access external data.
+
+### <a id="disable-pxf-steps"></a>Disable Procedure
+  
+When you no longer want to use PXF on a specific database, you must explicitly disable the PXF extension for that database:
+
+1. Connect to the database as the `gpadmin` user:
+
+    ``` shell
+    gpadmin@gpmaster$ psql -d <database-name> -U gpadmin
+    ```
+    
+2. Drop the PXF extension:
+
+    ``` sql
+    database-name=# DROP EXTENSION pxf;
+    ```
+    
+    The `DROP` command fails if there are any currently defined external tables using the `pxf` protocol. Add the `CASCADE` option if you choose to forcibly remove these external tables.
+
+
+## <a id="access_pxf"></a>Granting Access to PXF
+
+To access external data with PXF, you create an external table with the `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant access to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. 
+
+To grant a specific role access to the `pxf` protocol, use the `GRANT` command. For example, to grant the role named `bill` read access to data referenced by an external table created with the `pxf` protocol:
+
+``` sql
+GRANT SELECT ON PROTOCOL pxf TO bill; 
+```
+
+**Note**: The `pxf` protocol supports only read access at this time.
+
+
+## <a id="built-inprofiles"></a> PXF Profiles
+
+PXF is installed with HDFS and Hive connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
+
+PXF provides the following built-in profiles:
+
+| Data Source | Data Format | Profile Name(s) | Description |
+|-------|---------|------------|----------------|
+| HDFS | Text | HdfsTextSimple | Delimited single line records from plain text files on HDFS.|
+| HDFS | Text | HdfsTextMulti | Delimited single or multi-line records with quoted linefeeds from plain text files on HDFS. |
+| HDFS | Avro | Avro | Avro format binary files (\<filename\>.avro). |
+| Hive | TextFile | Hive, HiveText | Data in comma-, tab-, or space-separated value format or JSON notation. |
+| Hive | RCFile | Hive, HiveRC | Record columnar data consisting of binary key/value pairs. |
+| Hive | SequenceFile | Hive | Data consisting of binary key/value pairs. |
+| Hive | ORC | Hive, HiveORC, HiveVectorizedORC | Optimized row columnar data with stripe, footer, and postscript sections. |
+| Hive | Parquet | Hive | Compressed columnar data representation. |
+
+A PXF profile definition includes the name of the profile, a description, and the Java classes that implement parsing and reading external data for the profile. Built-in PXF profiles are defined in the `$GPHOME/pxf/conf/pxf-profiles-default.xml` configuration file. The built-in `HdfsTextSimple` profile definition is reproduced below:
+
+``` xml
+<profile>
+    <name>HdfsTextSimple</name>
+    <description>This profile is suitable for using when reading 
+        delimited single line records from plain text files on HDFS
+    </description>
+    <plugins>
+        <fragmenter>org.apache.hawq.pxf.plugins.hdfs.HdfsDataFragmenter</fragmenter>
+        <accessor>org.apache.hawq.pxf.plugins.hdfs.LineBreakAccessor</accessor>
+        <resolver>org.apache.hawq.pxf.plugins.hdfs.StringPassResolver</resolver>
+    </plugins>
+</profile>
+```
+
+**Note**: Profile `plugins` identify the Java classes that PXF uses to parse and access the external data. The typical PXF user need not concern themselves with the profile `plugins`.
+
+
+## <a id="profile-dependencies"></a>PXF JAR Dependencies
+
+You use the PXF Extension Framework to access data stored on external systems. Depending upon the external data source, this access may require that you install and/or configure additional components or services. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
+
+PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` and `$GPHOME/pxf/conf/pxf-public.classpath` configuration files identify PXF JAR dependencies. PXF manages the `pxf-private.classpath` file, adding entries as necessary based on options that you provide to the `pxf init` command. 
+
+Should you need to add additional JAR dependencies for PXF, you must add them to the `pxf-public.classpath` file on each segment host, and then restart PXF on each host.
+
+
+## <a id="creatinganexternaltable"></a>Creating an External Table using PXF
+
+The syntax for a `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol is as follows:
+
+``` sql
+CREATE [READABLE] EXTERNAL TABLE <table_name>
+        ( <column_name> <data_type> [, ...] | LIKE <other_table> )
+LOCATION('pxf://<path-to-data>?PROFILE[&<custom-option>=<value>[...]]')
+FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
+```
+**Note**: PXF does not currently support writable external tables.
+
+The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI that identifies the path to, or other information describing, the location of the external data. For example, if the external data source is HDFS, the \<path-to-data\> would identify the full file system path to a specific HDFS file. If the external data source is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
+
+Use the query portion of the URI, introduced by the question mark (?), to identify the PXF profile name. 
+
+You will provide profile-specific information using the optional &\<custom-option\>=\<value\> component of the `LOCATION` string and formatting information via the \<formatting-properties\> component of the string. The custom options and formatting properties supported by a specific profile are identified later in usage documentation.  
+
+Greenplum Database passes the parameters in the `LOCATION` string as headers to the PXF Java service. 
+
+<caption><span class="tablecap">Table 1. Create External Table Parameter Values and Descriptions</span></caption>
+
+<a id="creatinganexternaltable__table_pfy_htz_4p"></a>
+
+| Keyword               | Value and Description                                                                                                                                                                                                                                                          |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| \<path\-to\-data\>        | A directory, file name, wildcard pattern, table name, etc. The syntax of \<path-to-data\> is dependent upon the profile currently in use.                                                                                                                                                                                                                    |
+| PROFILE              | The profile PXF uses to access the data. PXF supports HDFS and Hive connectors that expose profiles named `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, and `HiveVectorizedORC`.                                                                                                                                                                                   |
+| \<custom-option\>=\<value\> | Additional options and values supported by the profile.                                                                  |
+| FORMAT  \<value\>| PXF profiles support the '`TEXT`', '`CSV`', and '`CUSTOM`' `FORMAT`s.  |
+| \<formatting-properties\> | Formatting properties supported by the profile; for example, the `formatter` or `delimiter`.                                                                   |
+
+**Note:** When you create a PXF external table, you cannot use the `HEADER` option in your `FORMAT` specification.

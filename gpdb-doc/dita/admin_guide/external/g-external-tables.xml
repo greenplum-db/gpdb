@@ -3,8 +3,8 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic3">
    <title>Defining External Tables</title>
-   <shortdesc>External tables enable accessing external files as if they are regular database
-      tables. They are often used to move data into and out of a Greenplum database.</shortdesc>
+   <shortdesc>External tables enable accessing external data as if it were a regular database
+      table. They are often used to move data into and out of a Greenplum database.</shortdesc>
    <body>
       <p>To create an external table definition, you specify the format of your input files and the
          location of your external data sources. For information input file formats, see <xref
@@ -25,6 +25,8 @@
                      href="g-hdfs-emr-config.xml#amazon-emr"/>.</p></li>
             <li><codeph>s3://</codeph> accesses files in an Amazon S3 bucket. See <xref
                   href="g-s3-protocol.xml#amazon-emr"/>.</li>
+
+            <li>The <codeph>pxf://</codeph> protocol accesses external HDFS files and Hive tables using the PXF Extension Framework. See <xref href="g-pxf-protocol.xml"></xref>.</li>
          </ul></p>
       <p>External tables access external files from within the database as if they are regular
          database tables. External tables defined with the
