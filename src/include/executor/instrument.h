@@ -19,9 +19,19 @@
 
 struct CdbExplain_NodeSummary;          /* private def in cdb/cdbexplain.c */
 
+/* Flag bits included in InstrAlloc's instrument_options bitmask */
+typedef enum InstrumentOption
+{
+	INSTRUMENT_TIMER = 1 << 0,	/* needs timer (and row counts) */
+	INSTRUMENT_BUFFERS = 1 << 1,	/* needs buffer usage (not implemented yet) */
+	INSTRUMENT_ROWS = 1 << 2,	/* needs row count */
+	INSTRUMENT_ALL = PG_INT32_MAX
+} InstrumentOption;
 
 typedef struct Instrumentation
 {
+	/* Parameters set at node creation: */
+	bool		need_timer;	    /* TRUE if we need timer data */
 	/* Info about current plan cycle: */
 	bool		running;		/* TRUE if we've completed first tuple */
 	instr_time	starttime;		/* Start time of current iteration of node */
@@ -45,7 +55,7 @@ typedef struct Instrumentation
     struct CdbExplain_NodeSummary  *cdbNodeSummary; /* stats from all qExecs */
 } Instrumentation;
 
-extern Instrumentation *InstrAlloc(int n);
+extern Instrumentation *InstrAlloc(int n, int instrument_options);
 extern void InstrStartNode(Instrumentation *instr);
 extern void InstrStopNode(Instrumentation *instr, double nTuples);
 extern void InstrEndLoop(Instrumentation *instr);

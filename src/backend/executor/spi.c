@@ -1891,7 +1891,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 											ActiveSnapshot,
 											crosscheck_snapshot,
 											dest,
-											paramLI, false);
+											paramLI, 0);
 
                     if (gp_enable_gpperfmon 
                     		&& Gp_role == GP_ROLE_DISPATCH 

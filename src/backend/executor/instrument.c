@@ -22,9 +22,21 @@
 
 /* Allocate new instrumentation structure(s) */
 Instrumentation *
-InstrAlloc(int n)
+InstrAlloc(int n, int instrument_options)
 {
-	Instrumentation *instr = palloc0(n * sizeof(Instrumentation));
+	Instrumentation *instr;
+
+	/* initialize all fields to zeroes, then modify as needed */
+	instr = palloc0(n * sizeof(Instrumentation));
+	if (instrument_options & INSTRUMENT_TIMER)
+	{
+		int			i;
+
+		for (i = 0; i < n; i++)
+		{
+			instr[i].need_timer = true;
+		}
+	}
 
 	/* we don't need to do any initialization except zero 'em */
 	instr->numPartScanned = 0;
@@ -36,7 +48,7 @@ InstrAlloc(int n)
 void
 InstrStartNode(Instrumentation *instr)
 {
-	if (INSTR_TIME_IS_ZERO(instr->starttime))
+	if (instr->need_timer && INSTR_TIME_IS_ZERO(instr->starttime))
 		INSTR_TIME_SET_CURRENT(instr->starttime);
 	else
 		elog(DEBUG2, "InstrStartNode called twice in a row");
@@ -51,14 +63,21 @@ InstrStopNode(Instrumentation *instr, double nTuples)
 	/* count the returned tuples */
 	instr->tuplecount += nTuples;
 
-	if (INSTR_TIME_IS_ZERO(instr->starttime))
+	/* let's update the time only if the timer was requested */
+	if (instr->need_timer)
 	{
-		elog(DEBUG2, "InstrStopNode called without start");
-		return;
-	}
 
-	INSTR_TIME_SET_CURRENT(endtime);
-	INSTR_TIME_ACCUM_DIFF(instr->counter, endtime, instr->starttime);
+		if (INSTR_TIME_IS_ZERO(instr->starttime))
+		{
+			elog(DEBUG2, "InstrStopNode called without start");
+			return;
+		}
+
+		INSTR_TIME_SET_CURRENT(endtime);
+		INSTR_TIME_ACCUM_DIFF(instr->counter, endtime, instr->starttime);
+
+		INSTR_TIME_SET_ZERO(instr->starttime);
+	}
 
 	/* Is this the first tuple of this cycle? */
 	if (!instr->running)
@@ -68,8 +87,6 @@ InstrStopNode(Instrumentation *instr, double nTuples)
 		/* CDB: save this start time as the first start */
 		instr->firststart = instr->starttime;
 	}
-
-	INSTR_TIME_SET_ZERO(instr->starttime);
 }
 
 /* Finish a run cycle for a plan node */

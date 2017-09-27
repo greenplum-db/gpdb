@@ -79,7 +79,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 				Snapshot crosscheck_snapshot,
 				DestReceiver *dest,
 				ParamListInfo params,
-				bool doInstrument)
+				int instrument_options)
 {
 	QueryDesc  *qd = (QueryDesc *) palloc(sizeof(QueryDesc));
 
@@ -91,7 +91,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->crosscheck_snapshot = crosscheck_snapshot;		/* RI check snapshot */
 	qd->dest = dest;			/* output dest */
 	qd->params = params;		/* parameter values passed into query */
-	qd->doInstrument = doInstrument;	/* instrumentation wanted? */
+	qd->instrument_options = instrument_options;	/* instrumentation wanted? */
 
 	/* null these fields until set by ExecutorStart */
 	qd->tupDesc = NULL;
@@ -145,7 +145,7 @@ CreateUtilityQueryDesc(Node *utilitystmt,
 	qd->crosscheck_snapshot = InvalidSnapshot;	/* RI check snapshot */
 	qd->dest = dest;			/* output dest */
 	qd->params = params;		/* parameter values passed into query */
-	qd->doInstrument = false;	/* uninteresting for utilities */
+	qd->instrument_options = 0;	/* uninteresting for utilities */
 
 	/* null these fields until set by ExecutorStart */
 	qd->tupDesc = NULL;
@@ -219,11 +219,11 @@ ProcessQuery(Portal portal,
 	if (portal->sourceTag == T_SelectStmt && gp_select_invisible)
 		queryDesc = CreateQueryDesc(stmt, portal->sourceText,
 									SnapshotAny, InvalidSnapshot,
-									dest, params, false);
+									dest, params, 0);
 	else
 		queryDesc = CreateQueryDesc(stmt, portal->sourceText,
 									ActiveSnapshot, InvalidSnapshot,
-									dest, params, false);
+									dest, params, 0);
 	queryDesc->ddesc = portal->ddesc;
 
 	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
@@ -638,7 +638,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 											InvalidSnapshot,
 											None_Receiver,
 											params,
-											false);
+											0);
 				queryDesc->ddesc = ddesc;
 				
 				if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
