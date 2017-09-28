@@ -144,6 +144,7 @@ void		churl_cleanup(CHURL_HANDLE handle, bool after_error);
  */
 void		print_http_headers(CHURL_HEADERS headers);
 
+#define PxfServerPort 51200
 #define PxfServiceAddress "localhost:51200"
 #define LocalhostIpV4Entry ":127.0.0.1"
 #define LocalhostIpV4 "localhost"

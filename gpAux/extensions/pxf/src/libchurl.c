@@ -636,9 +636,9 @@ get_dest_address(CURL *curl_handle)
 	char	   *dest_url = NULL;
 
 	/* add dest url, if any, and curl was nice to tell us */
-	if (CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_EFFECTIVE_URL, &dest_url) && dest_url)
+	if (CURLE_OK == curl_easy_getinfo(curl_handle, CURLINFO_PRIMARY_IP, &dest_url) && dest_url)
 	{
-		return psprintf("'%s'", dest_url);
+		return psprintf("'%s:%d'", dest_url, PxfServerPort);
 	}
 	return dest_url;
 }
