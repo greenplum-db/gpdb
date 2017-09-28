@@ -1,0 +1,280 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+DROP TABLE IF EXISTS public.spi64bittest;
+NOTICE:  table "spi64bittest" does not exist, skipping
+-- use a sequence as primary key, so we can update the data later on
+CREATE TABLE public.spi64bittest (id BIGSERIAL PRIMARY KEY, data BIGINT);
+NOTICE:  CREATE TABLE will create implicit sequence "spi64bittest_id_seq" for serial column "spi64bittest.id"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "spi64bittest_pkey" for table "spi64bittest"
+-- general test case first, user test case afterwards
+-- Pretend that the INSERT below inserted more than 4 billion rows in a plpgsql function
+--
+-- Use type 'skip', because we don't want to throw an ERROR or worse. There
+-- is special handling at the code that checks for this fault, to bump up
+-- the row counter regardless of the fault type.
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+-- insert enough rows to trigger the fault injector
+SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+DO $$
+declare
+  num_rows int8;
+begin
+
+  INSERT INTO public.spi64bittest (data)
+  SELECT g
+    FROM generate_series(1, 30000) g;
+  GET DIAGNOSTICS num_rows = ROW_COUNT;
+
+  RAISE NOTICE 'Inserted % rows', num_rows;
+end;
+$$;
+NOTICE:  Inserted 4294987269 rows
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+SELECT COUNT(*) AS count
+  FROM public.spi64bittest;
+ count 
+-------
+ 30000
+(1 row)
+
+-- update all rows, and trigger the fault injector
+SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+DO $$
+declare
+  num_rows int8;
+begin
+
+  UPDATE public.spi64bittest
+     SET data = data + 1;
+  GET DIAGNOSTICS num_rows = ROW_COUNT;
+
+  RAISE NOTICE 'Updated % rows', num_rows;
+end;
+$$;
+NOTICE:  Updated 4294987269 rows
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+SELECT COUNT(*) AS count
+  FROM public.spi64bittest;
+ count 
+-------
+ 30000
+(1 row)
+
+-- delete all rows, and trigger the fault injector
+SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+DO $$
+declare
+  num_rows int8;
+begin
+
+  DELETE FROM public.spi64bittest;
+  GET DIAGNOSTICS num_rows = ROW_COUNT;
+
+  RAISE NOTICE 'Deleted % rows', num_rows;
+end;
+$$;
+NOTICE:  Deleted 4294987269 rows
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+SELECT COUNT(*) AS count
+  FROM public.spi64bittest;
+ count 
+-------
+     0
+(1 row)
+
+DROP TABLE public.spi64bittest;
+-- user test case
+-- create a function which executes SQL statements and processes the number of touched rows
+CREATE OR REPLACE FUNCTION sql_exec_stmt(sql_stmt TEXT)
+    RETURNS BIGINT AS $$
+DECLARE
+    num_rows BIGINT;
+BEGIN
+
+    EXECUTE sql_stmt;
+
+    GET DIAGNOSTICS num_rows := ROW_COUNT;
+
+    RETURN (num_rows);
+END
+$$
+LANGUAGE 'plpgsql' VOLATILE;
+SELECT sql_exec_stmt('SELECT 1');
+ sql_exec_stmt 
+---------------
+             1
+(1 row)
+
+DROP TABLE IF EXISTS public.spi64bittest_2;
+NOTICE:  table "spi64bittest_2" does not exist, skipping
+CREATE TABLE public.spi64bittest_2 (id BIGINT);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- insert some data
+SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT generate_series(1,5000)');
+ sql_exec_stmt 
+---------------
+          5000
+(1 row)
+
+-- activate fault injector
+SELECT gp_inject_fault('executor_run_high_processed', 'skip', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+-- double the data
+SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM public.spi64bittest_2');
+ sql_exec_stmt 
+---------------
+          5000
+(1 row)
+
+SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM public.spi64bittest_2');
+ sql_exec_stmt 
+---------------
+         10000
+(1 row)
+
+SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM public.spi64bittest_2');
+ sql_exec_stmt 
+---------------
+         20000
+(1 row)
+
+SELECT sql_exec_stmt('INSERT INTO public.spi64bittest_2 (id) SELECT id FROM public.spi64bittest_2');
+ sql_exec_stmt 
+---------------
+   12884901855
+(1 row)
+
+SELECT gp_inject_fault('executor_run_high_processed', 'reset', '', '', '', 0, 0, dbid)
+  FROM pg_catalog.gp_segment_configuration
+ WHERE role = 'p';
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+ t
+(4 rows)
+
+SELECT COUNT(*) AS count
+  FROM public.spi64bittest_2;
+ count 
+-------
+ 80000
+(1 row)
+
+DROP TABLE public.spi64bittest_2;

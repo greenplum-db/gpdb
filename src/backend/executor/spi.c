@@ -33,6 +33,7 @@
 #include "utils/typcache.h"
 #include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
+#include "utils/faultinjector.h"
 
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
@@ -2204,8 +2205,17 @@ _SPI_pquery(QueryDesc *queryDesc, bool fire_triggers, int64 tcount)
 		if ((res == SPI_OK_SELECT || queryDesc->plannedstmt->returningLists) &&
 			queryDesc->dest->mydest == DestSPI)
 		{
-			if (_SPI_checktuples())
-				insist_log(false, "consistency check on SPI tuple count failed");
+			/*
+			 * only check number tuples if the SPI 64 bit test is NOT running
+			 */
+			if (!FaultInjector_InjectFaultIfSet(ExecutorRunHighProcessed,
+										   DDLNotSpecified,
+										   "" /* databaseName */,
+										   "" /* tableName */))
+			{
+				if (_SPI_checktuples())
+					insist_log(false, "consistency check on SPI tuple count failed");
+			}
 		}
 		
 		if (!cdbpathlocus_querysegmentcatalogs)
