@@ -207,11 +207,11 @@
             <sectiondiv><b>Validating Table Data with SHA-256</b>
                 <p>Validating table data with SHA-256 (specifying the option
                         <codeph>--validate=sha256</codeph>) requires the Greenplum Database pgcrypto
-                    extension. <ph otherprops="pivotal">The extension is included with Pivotal Greenplum 5.x. </ph>When copying
+                    extension. <ph otherprops="pivotal">The extension is included with Pivotal Greenplum 5.x. When copying
                     data from a supported Pivotal Greenplum 4.3.x system, the extension package must
                     be installed on the 4.3.x system. You do not need to run
                         <codeph>pgcrypto.sql</codeph> to install the pgcrypto functions in a
-                    Greenplum 4.3.x database.</p></sectiondiv>
+                    Greenplum 4.3.x database.</ph></p></sectiondiv>
         </section>
         <section id="section6">
             <title>Options</title>
