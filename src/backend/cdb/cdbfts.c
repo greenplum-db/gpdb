@@ -144,11 +144,7 @@ FtsNotifyProber(void)
 	/* sit and spin */
 	while (ftsProbeInfo->fts_probeScanRequested == ftsProbeInfo->fts_statusVersion)
 	{
-		struct timeval tv;
-
-		tv.tv_usec = 50000;
-		tv.tv_sec = 0;
-		select(0, NULL, NULL, NULL, &tv);	/* don't care about return value. */
+		pg_usleep(50000);
 
 		CHECK_FOR_INTERRUPTS();
 	}
