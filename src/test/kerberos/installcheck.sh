@@ -37,7 +37,8 @@ cp ${MASTER_DATA_DIRECTORY}/postgresql.conf ./postgresql.conf.orig
 ###
 # Check that krb5kdc is in $PATH.
 if ! command -v krb5kdc > /dev/null; then
-    echo "Kerberos utility 'krb5kdc' not found. Is /usr/sbin or /usr/local/sbin in your PATH?"
+    echo "Kerberos utility 'krb5kdc' not found in \$PATH:"
+    echo "$PATH"
     exit 1
 fi
 

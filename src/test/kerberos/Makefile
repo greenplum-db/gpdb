@@ -9,7 +9,7 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 installcheck:
-	bash installcheck.sh
+	PATH=/usr/sbin:/usr/local/sbin:$(PATH) bash installcheck.sh
 
 # Stop the test KDC server, if it's running.
 .PHONY: stop-kdc
