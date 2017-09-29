@@ -78,7 +78,7 @@ typedef struct ArrayRemapInfo
 	int16		typlen;			/* array element type's storage properties */
 	bool		typbyval;
 	char		typalign;
-	TupleRemapInfo *element_remap;		/* array element type's remap info */
+	TupleRemapInfo *element_remap;	/* array element type's remap info */
 } ArrayRemapInfo;
 
 typedef struct RangeRemapInfo
@@ -96,7 +96,7 @@ typedef struct RecordRemapInfo
 	int32		localtypmod;
 	/* If no fields of the record require remapping, these are NULL: */
 	TupleDesc	tupledesc;		/* copy of record's tupdesc */
-	TupleRemapInfo **field_remap;		/* each field's remap info */
+	TupleRemapInfo **field_remap;	/* each field's remap info */
 } RecordRemapInfo;
 
 struct TupleRemapInfo
@@ -107,7 +107,7 @@ struct TupleRemapInfo
 		ArrayRemapInfo arr;
 		RangeRemapInfo rng;
 		RecordRemapInfo rec;
-	} u;
+	}			u;
 };
 
 /*
@@ -217,9 +217,9 @@ TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, HeapTuple tuple)
 void
 TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 {
-	int j;
-	ListCell *cell;
-	int mapsize = remapper->typmodmapsize + list_length(typelist);
+	int			j;
+	ListCell   *cell;
+	int			mapsize = remapper->typmodmapsize + list_length(typelist);
 
 	if (remapper->typmodmap)
 		remapper->typmodmap = repalloc(remapper->typmodmap, mapsize * sizeof(int32));
@@ -233,11 +233,14 @@ TRHandleTypeLists(TupleRemapper *remapper, List *typelist)
 
 	foreach(cell, typelist)
 	{
-		int32 local_typmod;
-		TupleDescNode * descnode = (TupleDescNode *) lfirst(cell);
-		int32 remote_typmod = descnode->tuple->tdtypmod;
+		int32		local_typmod;
+		TupleDescNode *descnode = (TupleDescNode *) lfirst(cell);
+		int32		remote_typmod = descnode->tuple->tdtypmod;
 
-		/* assign_record_type_typmod() will update tdtypmod to the local typmod */
+		/*
+		 * assign_record_type_typmod() will update tdtypmod to the local
+		 * typmod
+		 */
 		assign_record_type_typmod(descnode->tuple);
 
 		local_typmod = descnode->tuple->tdtypmod;
@@ -282,6 +285,7 @@ TRRemapTuple(TupleRemapper *remapper,
 	if (is_heaptuple_memtuple(tuple))
 	{
 		MemTupleBinding *pbind = create_memtuple_binding(tupledesc);
+
 		memtuple_deform((MemTuple) tuple, pbind, values, isnull);
 	}
 	else
@@ -376,7 +380,7 @@ TRRemapArray(TupleRemapper *remapper, ArrayRemapInfo *remapinfo,
 		/* Reconstruct and return the array.  */
 		*changed = true;
 		arr = construct_md_array(elem_values, elem_nulls,
-							   ARR_NDIM(arr), ARR_DIMS(arr), ARR_LBOUND(arr),
+								 ARR_NDIM(arr), ARR_DIMS(arr), ARR_LBOUND(arr),
 								 typid, remapinfo->typlen,
 								 remapinfo->typbyval, remapinfo->typalign);
 		return PointerGetDatum(arr);

@@ -101,7 +101,7 @@ htfifo_cleanup(htup_fifo htf)
 
 	while (htf->freelist)
 	{
-		htf_entry trash = htf->freelist;
+		htf_entry	trash = htf->freelist;
 
 		htf->freelist = trash->p_next;
 
@@ -124,8 +124,8 @@ void
 htfifo_destroy(htup_fifo htf)
 {
 	/*
-	 * MPP-3910: race with cancel -- if we haven't been initialized,
-	 * there is nothing to do.
+	 * MPP-3910: race with cancel -- if we haven't been initialized, there is
+	 * nothing to do.
 	 */
 	if (htf == NULL)
 		return;
@@ -157,7 +157,8 @@ htfifo_addtuple(htup_fifo htf, HeapTuple htup)
 		p_ent = htf->freelist;
 		htf->freelist = p_ent->p_next;
 		htf->freelist_count = htf->freelist_count - 1;
-	} else
+	}
+	else
 	{
 		p_ent = (htf_entry) palloc(sizeof(htf_entry_data));
 	}

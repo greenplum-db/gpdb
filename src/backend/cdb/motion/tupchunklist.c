@@ -43,7 +43,7 @@ appendChunkToTCList(TupleChunkList tcList, TupleChunkListItem tcItem)
 	}
 }
 
-static int gp_interconnect_chunk_cache=10;
+static int	gp_interconnect_chunk_cache = 10;
 
 TupleChunkListItem
 getChunkFromCache(TupleChunkListCache *cache)
@@ -110,4 +110,3 @@ clearTCList(TupleChunkListCache *cache, TupleChunkList tcList)
 	tcList->num_chunks = 0;
 	tcList->serialized_data_length = 0;
 }
-

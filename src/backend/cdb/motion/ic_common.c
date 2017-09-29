@@ -15,7 +15,7 @@
 
 #include "postgres.h"
 
-#include "nodes/execnodes.h"            /* Slice, SliceTable */
+#include "nodes/execnodes.h"	/* Slice, SliceTable */
 #include "miscadmin.h"
 #include "libpq/libpq-be.h"
 #include "libpq/ip.h"
@@ -58,8 +58,8 @@
  */
 
 /* Socket file descriptor for the listener. */
-int		TCP_listenerFd;
-int		UDP_listenerFd;
+int			TCP_listenerFd;
+int			UDP_listenerFd;
 
 /* Socket file descriptor for the sequence server. */
 static int	savedSeqServerFd = -1;
@@ -73,8 +73,8 @@ static uint16 savedSeqServerPort = 0;
 static void setupSeqServerConnection(char *hostname, uint16 port);
 
 #ifdef AMS_VERBOSE_LOGGING
-static void	dumpEntryConnections(int elevel, ChunkTransportStateEntry *pEntry);
-static void	print_connection(ChunkTransportState *transportStates, int fd, const char *msg);
+static void dumpEntryConnections(int elevel, ChunkTransportStateEntry *pEntry);
+static void print_connection(ChunkTransportState *transportStates, int fd, const char *msg);
 #endif
 
 static void
@@ -85,7 +85,7 @@ logChunkParseDetails(MotionConn *conn)
 	Assert(conn != NULL);
 	Assert(conn->pBuff != NULL);
 
-	pkt = (struct icpkthdr *)conn->pBuff;
+	pkt = (struct icpkthdr *) conn->pBuff;
 
 	elog(LOG, "Interconnect parse details: pkt->len %d pkt->seq %d pkt->flags 0x%x conn->active %d conn->stopRequest %d pkt->icId %d my_icId %d",
 		 pkt->len, pkt->seq, pkt->flags, conn->stillActive, conn->stopRequested, pkt->icId, gp_interconnect_id);
@@ -139,8 +139,10 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		/* sanity check */
 		if (tcSize > Gp_max_packet_size)
 		{
-			/* see MPP-720: it is possible that our message got messed
-			 * up by a cancellation ? */
+			/*
+			 * see MPP-720: it is possible that our message got messed up by a
+			 * cancellation ?
+			 */
 			ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
 			/*
@@ -161,13 +163,18 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		}
 
 
-		/* we only check for interrupts here when we don't have a guaranteed full-message */
+		/*
+		 * we only check for interrupts here when we don't have a guaranteed
+		 * full-message
+		 */
 		if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
 		{
 			if (tcSize >= conn->msgSize)
 			{
-				/* see MPP-720: it is possible that our message got
-				 * messed up by a cancellation ? */
+				/*
+				 * see MPP-720: it is possible that our message got messed up
+				 * by a cancellation ?
+				 */
 				ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 
 				logChunkParseDetails(conn);
@@ -188,7 +195,7 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		tcItem->chunk_length = tcSize;
 		tcItem->inplace = (char *) (conn->msgPos + bytesProcessed);
 
-		bytesProcessed += TYPEALIGN(TUPLE_CHUNK_ALIGN,tcSize);
+		bytesProcessed += TYPEALIGN(TUPLE_CHUNK_ALIGN, tcSize);
 
 		if (firstTcItem == NULL)
 		{
@@ -224,10 +231,10 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 void
 InitMotionLayerIPC(void)
 {
-	uint16 tcp_listener = 0;
-	uint16 udp_listener = 0;
+	uint16		tcp_listener = 0;
+	uint16		udp_listener = 0;
 
-	/*activated = false;*/
+	/* activated = false; */
 	savedSeqServerFd = -1;
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
@@ -235,7 +242,7 @@ InitMotionLayerIPC(void)
 	else if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 		InitMotionUDPIFC(&UDP_listenerFd, &udp_listener);
 
-	Gp_listener_port = (udp_listener<<16) | tcp_listener;
+	Gp_listener_port = (udp_listener << 16) | tcp_listener;
 
 	elog(DEBUG1, "Interconnect listening on tcp port %d udp port %d (0x%x)", tcp_listener, udp_listener, Gp_listener_port);
 }
@@ -245,7 +252,7 @@ void
 CleanUpMotionLayerIPC(void)
 {
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-    	elog(DEBUG3, "Cleaning Up Motion Layer IPC...");
+		elog(DEBUG3, "Cleaning Up Motion Layer IPC...");
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP)
 		CleanupMotionTCP();
@@ -253,8 +260,8 @@ CleanUpMotionLayerIPC(void)
 		CleanupMotionUDPIFC();
 
 	/* close down the Interconnect listener socket. */
-    if (TCP_listenerFd >= 0)
-        closesocket(TCP_listenerFd);
+	if (TCP_listenerFd >= 0)
+		closesocket(TCP_listenerFd);
 
 	if (UDP_listenerFd >= 0)
 		closesocket(UDP_listenerFd);
@@ -274,7 +281,7 @@ SendTupleChunkToAMS(MotionLayerState *mlStates,
 					TupleChunkListItem tcItem)
 {
 	int			i,
-		recount = 0;
+				recount = 0;
 	ChunkTransportStateEntry *pEntry = NULL;
 	MotionConn *conn;
 	TupleChunkListItem currItem;
@@ -449,9 +456,9 @@ putTransportDirectBuffer(ChunkTransportState *transportStates,
  */
 void
 DeregisterReadInterest(ChunkTransportState *transportStates,
-                       int		motNodeID,
-                       int		srcRoute,
-                       const char		*reason)
+					   int motNodeID,
+					   int srcRoute,
+					   const char *reason)
 {
 	ChunkTransportStateEntry *pEntry = NULL;
 	MotionConn *conn;
@@ -467,17 +474,17 @@ DeregisterReadInterest(ChunkTransportState *transportStates,
 	getChunkTransportState(transportStates, motNodeID, &pEntry);
 	conn = pEntry->conns + srcRoute;
 
-    if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-    {
-        elog(DEBUG3, "Interconnect finished receiving "
-             "from seg%d slice%d %s pid=%d sockfd=%d; %s",
-             conn->remoteContentId,
-             pEntry->sendSlice->sliceIndex,
-             conn->remoteHostAndPort,
-             conn->cdbProc->pid,
-             conn->sockfd,
-             reason);
-    }
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+	{
+		elog(DEBUG3, "Interconnect finished receiving "
+			 "from seg%d slice%d %s pid=%d sockfd=%d; %s",
+			 conn->remoteContentId,
+			 pEntry->sendSlice->sliceIndex,
+			 conn->remoteHostAndPort,
+			 conn->cdbProc->pid,
+			 conn->sockfd,
+			 reason);
+	}
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
 	{
@@ -489,12 +496,12 @@ DeregisterReadInterest(ChunkTransportState *transportStates,
 	else
 	{
 		/*
-		 * we also mark the connection as "done." The way synchronization works is
-		 * strange. On QDs the "teardown" doesn't get called until all segments
-		 * are finished, which means that we need some way for the QEs to know
-		 * that Teardown should complete, otherwise we deadlock the entire query
-		 * (QEs wait in their Teardown calls, while the QD waits for them to
-		 * finish)
+		 * we also mark the connection as "done." The way synchronization
+		 * works is strange. On QDs the "teardown" doesn't get called until
+		 * all segments are finished, which means that we need some way for
+		 * the QEs to know that Teardown should complete, otherwise we
+		 * deadlock the entire query (QEs wait in their Teardown calls, while
+		 * the QD waits for them to finish)
 		 */
 		shutdown(conn->sockfd, SHUT_WR);
 
@@ -546,8 +553,8 @@ SetupSequenceServer(const char *host, int port)
 			}
 
 			/*
-			 * Don't use MemoryContexts -- they make error handling
-			 * difficult here.
+			 * Don't use MemoryContexts -- they make error handling difficult
+			 * here.
 			 */
 			savedSeqServerHost = strdup(host);
 
@@ -570,8 +577,8 @@ TeardownSequenceServer(void)
 	 */
 	if (savedSeqServerFd != -1)
 	{
-	    if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-		    elog(DEBUG3, "tearing down seqserver connection");
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+			elog(DEBUG3, "tearing down seqserver connection");
 
 		shutdown(savedSeqServerFd, SHUT_RDWR);
 		closesocket(savedSeqServerFd);
@@ -579,36 +586,39 @@ TeardownSequenceServer(void)
 	}
 
 	/*
-	 * Note, we are not releasing the savedSeqServerHost here (MPP-25193). This may result
-	 * in a small memory leak. However, we still free this during SetupSequenceServer call.
-	 * Therefore, in the worse case there would be only one savedSeqServerHost instance
-	 * leaking, irrespective of how many portals we have, which is rather unnoticeable.
+	 * Note, we are not releasing the savedSeqServerHost here (MPP-25193).
+	 * This may result in a small memory leak. However, we still free this
+	 * during SetupSequenceServer call. Therefore, in the worse case there
+	 * would be only one savedSeqServerHost instance leaking, irrespective of
+	 * how many portals we have, which is rather unnoticeable.
 	 */
 }
 
 static void
 setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
 {
-	int 		n;
-	int 		ret;
-	char 		portNumberStr[32];
-	char 	   *service;
+	int			n;
+	int			ret;
+	char		portNumberStr[32];
+	char	   *service;
 	struct addrinfo *addrs = NULL;
 	struct addrinfo hint;
+
 	/*
-	 * We get the IP address (IPv4 or IPv6) of the sequence server,
-	 * not it's name, so we can tell getaddrinfo to skip any attempt at
-	 * name resolution.
+	 * We get the IP address (IPv4 or IPv6) of the sequence server, not it's
+	 * name, so we can tell getaddrinfo to skip any attempt at name
+	 * resolution.
 	 */
 
 	/* Initialize hint structure */
 	MemSet(&hint, 0, sizeof(hint));
 	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC;		/* Allow for IPv4 or IPv6  */
+	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
 #ifdef AI_NUMERICSERV
-	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;  /* Never do name resolution */
+	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;	/* Never do name
+														 * resolution */
 #else
-	hint.ai_flags = AI_NUMERICHOST;  /* Never do name resolution */
+	hint.ai_flags = AI_NUMERICHOST; /* Never do name resolution */
 #endif
 
 
@@ -628,14 +638,14 @@ setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
 	}
 
 	if ((savedSeqServerFd = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol)) < 0)
-		elog(ERROR,"socket() call failed: %m");
+		elog(ERROR, "socket() call failed: %m");
 
 	if ((n = connect(savedSeqServerFd, addrs->ai_addr, addrs->ai_addrlen)) < 0)
 	{
 		pg_freeaddrinfo_all(hint.ai_family, addrs);
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect Error: Could not connect to seqserver (connection: %d, host: %s, port: %d).", savedSeqServerFd, seqServerHost, seqServerPort),
-		                errdetail("%s: %m", "connect"), errprintstack(true)));
+						errdetail("%s: %m", "connect"), errprintstack(true)));
 	}
 
 	pg_freeaddrinfo_all(hint.ai_family, addrs);
@@ -644,8 +654,8 @@ setupSeqServerConnection(char *seqServerHost, uint16 seqServerPort)
 	if (!pg_set_noblock(savedSeqServerFd))
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						errmsg("Interconnect Error: Could not set seqserver socket"
-						       "to non-blocking mode."),
-			            errdetail("%s sockfd=%d: %m", "fcntl", savedSeqServerFd)));
+							   "to non-blocking mode."),
+						errdetail("%s sockfd=%d: %m", "fcntl", savedSeqServerFd)));
 }
 
 void
@@ -662,9 +672,9 @@ SetupInterconnect(EState *estate)
  * tons of stuff volatile in TeardownInterconnect().
  */
 void
-forceEosToPeers(MotionLayerState       *mlStates,
-				ChunkTransportState    *transportStates,
-				int                     motNodeID)
+forceEosToPeers(MotionLayerState *mlStates,
+				ChunkTransportState *transportStates,
+				int motNodeID)
 {
 	if (!transportStates)
 	{
@@ -726,18 +736,18 @@ createChunkTransportState(ChunkTransportState *transportStates,
 						  int numPrimaryConns)
 {
 	ChunkTransportStateEntry *pEntry;
-    int         motNodeID;
+	int			motNodeID;
 	int			i;
 
-    Assert(recvSlice &&
-           IsA(recvSlice, Slice) &&
-           recvSlice->sliceIndex >= 0);
-    Assert(sendSlice &&
-           IsA(sendSlice, Slice) &&
-           sendSlice->sliceIndex > 0);
+	Assert(recvSlice &&
+		   IsA(recvSlice, Slice) &&
+		   recvSlice->sliceIndex >= 0);
+	Assert(sendSlice &&
+		   IsA(sendSlice, Slice) &&
+		   sendSlice->sliceIndex > 0);
 
-    motNodeID = sendSlice->sliceIndex;
-    if (motNodeID > transportStates->size)
+	motNodeID = sendSlice->sliceIndex;
+	if (motNodeID > transportStates->size)
 	{
 		/* increase size of our table */
 		ChunkTransportStateEntry *newTable;
@@ -761,30 +771,30 @@ createChunkTransportState(ChunkTransportState *transportStates,
 	pEntry->valid = true;
 
 	pEntry->motNodeId = motNodeID;
-    pEntry->numConns = numPrimaryConns;
+	pEntry->numConns = numPrimaryConns;
 	pEntry->numPrimaryConns = numPrimaryConns;
-    pEntry->scanStart = 0;
-    pEntry->sendSlice = sendSlice;
-    pEntry->recvSlice = recvSlice;
+	pEntry->scanStart = 0;
+	pEntry->sendSlice = sendSlice;
+	pEntry->recvSlice = recvSlice;
 
 	pEntry->conns = palloc0(pEntry->numConns * sizeof(pEntry->conns[0]));
 
 	for (i = 0; i < pEntry->numConns; i++)
-    {
-        MotionConn *conn = &pEntry->conns[i];
+	{
+		MotionConn *conn = &pEntry->conns[i];
 
-        /* Initialize MotionConn entry. */
-        conn->state = mcsNull;
-        conn->sockfd = -1;
-        conn->msgSize = 0;
-        conn->tupleCount = 0;
-        conn->stillActive = false;
-        conn->stopRequested = false;
-        conn->wakeup_ms = 0;
-        conn->cdbProc = NULL;
-        conn->sent_record_typmod = 0;
-        conn->remapper = NULL;
-    }
+		/* Initialize MotionConn entry. */
+		conn->state = mcsNull;
+		conn->sockfd = -1;
+		conn->msgSize = 0;
+		conn->tupleCount = 0;
+		conn->stillActive = false;
+		conn->stopRequested = false;
+		conn->wakeup_ms = 0;
+		conn->cdbProc = NULL;
+		conn->sent_record_typmod = 0;
+		conn->remapper = NULL;
+	}
 
 	return pEntry;
 }
@@ -836,17 +846,17 @@ void
 dumpEntryConnections(int elevel, ChunkTransportStateEntry *pEntry)
 {
 	int			i;
-    MotionConn *conn;
+	MotionConn *conn;
 
-    for (i = 0; i < pEntry->numConns; i++)
+	for (i = 0; i < pEntry->numConns; i++)
 	{
 		conn = &pEntry->conns[i];
-        if (conn->sockfd == -1 &&
-            conn->state == mcsNull)
-            elog(elevel, "... motNodeId=%d conns[%d]:         not connected",
+		if (conn->sockfd == -1 &&
+			conn->state == mcsNull)
+			elog(elevel, "... motNodeId=%d conns[%d]:         not connected",
 				 pEntry->motNodeId, i);
-        else
-            elog(elevel, "... motNodeId=%d conns[%d]:  "
+		else
+			elog(elevel, "... motNodeId=%d conns[%d]:  "
 				 "%s%d pid=%d sockfd=%d remote=%s local=%s",
 				 pEntry->motNodeId, i,
 				 (i < pEntry->numPrimaryConns) ? "seg" : "mir",
@@ -867,12 +877,14 @@ dumpEntryConnections(int elevel, ChunkTransportStateEntry *pEntry)
  * when the master can not be reached by segments through
  * the network interface recorded in the catalog.
  */
-void adjustMasterRouting(Slice *recvSlice)
+void
+adjustMasterRouting(Slice *recvSlice)
 {
-	ListCell *lc = NULL;
+	ListCell   *lc = NULL;
+
 	foreach(lc, recvSlice->primaryProcesses)
 	{
-		CdbProcess *cdbProc = (CdbProcess *)lfirst(lc);
+		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
 
 		if (cdbProc)
 		{
