@@ -21,7 +21,7 @@
 #include "storage/smgr.h"
 #include "utils/memutils.h"
 #include "catalog/pg_authid.h"
-#include "utils/fmgroids.h"	/* include this before pg_am.h, for Am_btree */
+#include "utils/fmgroids.h"		/* include this before pg_am.h, for Am_btree */
 #include "catalog/pg_am.h"
 #include "catalog/pg_class.h"
 #include "catalog/pg_index.h"
@@ -34,133 +34,133 @@
 /*
  * pg_class.
  */
-static FormData_pg_class 
-			DatabaseInfo_PgClassPgClass = 
-						{Class_pg_class};
+static FormData_pg_class
+			DatabaseInfo_PgClassPgClass =
+{Class_pg_class};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			DatabaseInfo_PgClassAttrArray[Natts_pg_class] =
-							{Schema_pg_class};
+{Schema_pg_class};
 
-DirectOpenDefineStatic(DirectOpen_PgClass,\
-DatabaseInfo_PgClassPgClass,\
-DatabaseInfo_PgClassAttrArray,\
-true);
+DirectOpenDefineStatic(DirectOpen_PgClass, \
+					   DatabaseInfo_PgClassPgClass, \
+					   DatabaseInfo_PgClassAttrArray, \
+					   true);
 
 /*
  * gp_relation_node.
  */
-	
-static FormData_pg_class 
-			DatabaseInfo_GpRelationNodePgClass = 
-						{Class_gp_relation_node};
 
-static FormData_pg_attribute 
+static FormData_pg_class
+			DatabaseInfo_GpRelationNodePgClass =
+{Class_gp_relation_node};
+
+static FormData_pg_attribute
 			DatabaseInfo_GpRelationNodeAttrArray[Natts_gp_relation_node] =
-							{Schema_gp_relation_node};
+{Schema_gp_relation_node};
 
-DirectOpenDefineStatic(DirectOpen_GpRelationNode,\
-DatabaseInfo_GpRelationNodePgClass,\
-DatabaseInfo_GpRelationNodeAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_GpRelationNode, \
+					   DatabaseInfo_GpRelationNodePgClass, \
+					   DatabaseInfo_GpRelationNodeAttrArray, \
+					   false);
 
-	
+
 /*
  * pg_appendonly.
  */
-static FormData_pg_class 
-			DatabaseInfo_PgAppendOnlyPgClass = 
-						{Class_pg_appendonly};
+static FormData_pg_class
+			DatabaseInfo_PgAppendOnlyPgClass =
+{Class_pg_appendonly};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			DatabaseInfo_PgAppendOnlyAttrArray[Natts_pg_appendonly] =
-							{Schema_pg_appendonly};
+{Schema_pg_appendonly};
 
-DirectOpenDefineStatic(DirectOpen_PgAppendOnly,\
-DatabaseInfo_PgAppendOnlyPgClass,\
-DatabaseInfo_PgAppendOnlyAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_PgAppendOnly, \
+					   DatabaseInfo_PgAppendOnlyPgClass, \
+					   DatabaseInfo_PgAppendOnlyAttrArray, \
+					   false);
 
 /*
  * pg_aogseg.
  */
-static FormData_pg_class 
-			DatabaseInfo_PgAoSegPgClass = 
-						{Class_pg_aoseg};
+static FormData_pg_class
+			DatabaseInfo_PgAoSegPgClass =
+{Class_pg_aoseg};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			DatabaseInfo_PgAoSegAttrArray[Natts_pg_aoseg] =
-							{Schema_pg_aoseg};
+{Schema_pg_aoseg};
 
-DirectOpenDefineStatic(DirectOpen_PgAoSeg,\
-DatabaseInfo_PgAoSegPgClass,\
-DatabaseInfo_PgAoSegAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_PgAoSeg, \
+					   DatabaseInfo_PgAoSegPgClass, \
+					   DatabaseInfo_PgAoSegAttrArray, \
+					   false);
 
 /*
  * pg_aocsseg.
  */
-static FormData_pg_class 
-			DatabaseInfo_PgAoCsSegPgClass = 
-						{Class_pg_aocsseg};
+static FormData_pg_class
+			DatabaseInfo_PgAoCsSegPgClass =
+{Class_pg_aocsseg};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			DatabaseInfo_PgAoCsSegAttrArray[Natts_pg_aocsseg] =
-							{Schema_pg_aocsseg};
+{Schema_pg_aocsseg};
 
-DirectOpenDefineStatic(DirectOpen_PgAoCsSeg,\
-DatabaseInfo_PgAoCsSegPgClass,\
-DatabaseInfo_PgAoCsSegAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_PgAoCsSeg, \
+					   DatabaseInfo_PgAoCsSegPgClass, \
+					   DatabaseInfo_PgAoCsSegAttrArray, \
+					   false);
 
 /*
  * gp_global_sequence.
  */
-static FormData_pg_class 
-			GlobalSequence_PgClass = 
-							{Class_gp_global_sequence};
+static FormData_pg_class
+			GlobalSequence_PgClass =
+{Class_gp_global_sequence};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			GlobalSequence_AttrArray[Natts_gp_global_sequence] =
-							{Schema_gp_global_sequence};
+{Schema_gp_global_sequence};
 
-DirectOpenDefineStatic(DirectOpen_GpGlobalSequence,\
-GlobalSequence_PgClass,\
-GlobalSequence_AttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_GpGlobalSequence, \
+					   GlobalSequence_PgClass, \
+					   GlobalSequence_AttrArray, \
+					   false);
 
 /*
  * gp_persistent_relation_node.
  */
-static FormData_pg_class 
-			PersistentFileSysObj_RelationPgClass = 
-							{Class_gp_persistent_relation_node};
+static FormData_pg_class
+			PersistentFileSysObj_RelationPgClass =
+{Class_gp_persistent_relation_node};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			PersistentFileSysObj_RelationAttrArray[Natts_gp_persistent_relation_node] =
-							{Schema_gp_persistent_relation_node};
+{Schema_gp_persistent_relation_node};
 
-DirectOpenDefineStatic(DirectOpen_GpPersistentRelationNode,\
-PersistentFileSysObj_RelationPgClass,\
-PersistentFileSysObj_RelationAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_GpPersistentRelationNode, \
+					   PersistentFileSysObj_RelationPgClass, \
+					   PersistentFileSysObj_RelationAttrArray, \
+					   false);
 
 
 /*
  * gp_persistent_database_node.
  */
-static FormData_pg_class 
-			PersistentFileSysObj_DatabasePgClass = 
-							{Class_gp_persistent_database_node};
+static FormData_pg_class
+			PersistentFileSysObj_DatabasePgClass =
+{Class_gp_persistent_database_node};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			PersistentFileSysObj_DatabaseAttrArray[Natts_gp_persistent_database_node] =
-							{Schema_gp_persistent_database_node};
+{Schema_gp_persistent_database_node};
 
-DirectOpenDefineStatic(DirectOpen_GpPersistentDatabaseNode,\
-PersistentFileSysObj_DatabasePgClass,\
-PersistentFileSysObj_DatabaseAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_GpPersistentDatabaseNode, \
+					   PersistentFileSysObj_DatabasePgClass, \
+					   PersistentFileSysObj_DatabaseAttrArray, \
+					   false);
 
 /*
  * This HUGE MAGIC DEFINE expands into module globals and two routines:
@@ -168,18 +168,18 @@ false);
  *     PersistentFileSysObj_TablespaceClose
  * It allows for opening the relation without going through pg_class, etc.
  */
-static FormData_pg_class 
-			PersistentFileSysObj_TablespacePgClass = 
-							{Class_gp_persistent_tablespace_node};
+static FormData_pg_class
+			PersistentFileSysObj_TablespacePgClass =
+{Class_gp_persistent_tablespace_node};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			PersistentFileSysObj_TablespaceAttrArray[Natts_gp_persistent_tablespace_node] =
-							{Schema_gp_persistent_tablespace_node};
+{Schema_gp_persistent_tablespace_node};
 
-DirectOpenDefineStatic(DirectOpen_GpPersistentTableSpaceNode,\
-PersistentFileSysObj_TablespacePgClass,\
-PersistentFileSysObj_TablespaceAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_GpPersistentTableSpaceNode, \
+					   PersistentFileSysObj_TablespacePgClass, \
+					   PersistentFileSysObj_TablespaceAttrArray, \
+					   false);
 
 
 /*
@@ -188,93 +188,95 @@ false);
  *     PersistentFileSysObj_FilespaceClose
  * It allows for opening the relation without going through pg_class, etc.
  */
-static FormData_pg_class 
-			PersistentFileSysObj_FilespacePgClass = 
-							{Class_gp_persistent_filespace_node};
+static FormData_pg_class
+			PersistentFileSysObj_FilespacePgClass =
+{Class_gp_persistent_filespace_node};
 
-static FormData_pg_attribute 
+static FormData_pg_attribute
 			PersistentFileSysObj_FilespaceAttrArray[Natts_gp_persistent_filespace_node] =
-							{Schema_gp_persistent_filespace_node};
+{Schema_gp_persistent_filespace_node};
 
-DirectOpenDefineStatic(DirectOpen_GpPersistentFileSpaceNode,\
-PersistentFileSysObj_FilespacePgClass,\
-PersistentFileSysObj_FilespaceAttrArray,\
-false);
+DirectOpenDefineStatic(DirectOpen_GpPersistentFileSpaceNode, \
+					   PersistentFileSysObj_FilespacePgClass, \
+					   PersistentFileSysObj_FilespaceAttrArray, \
+					   false);
 
-// INDEX Variants
+/*  INDEX Variants */
 
 
 /*
  * gp_relation_node_index.
  */
-	
-static FormData_pg_class 
-			DatabaseInfo_GpRelationNodeIndexPgClass = 
-						{Class_gp_relation_node_index};
 
-static FormData_pg_attribute 
+static FormData_pg_class
+			DatabaseInfo_GpRelationNodeIndexPgClass =
+{Class_gp_relation_node_index};
+
+static FormData_pg_attribute
 			DatabaseInfo_GpRelationNodeIndexAttrArray[Natts_gp_relation_node_index] =
-							{Schema_gp_relation_node_index};
+{Schema_gp_relation_node_index};
 
-static FormData_pg_am 
+static FormData_pg_am
 			DatabaseInfo_GpRelationNodeIndexPgAm =
-						{Am_gp_relation_node_index};
+{Am_gp_relation_node_index};
 
-static FormData_pg_index 
+static FormData_pg_index
 			DatabaseInfo_GpRelationNodeIndexPgIndex =
-						{Index_gp_relation_node_index};
+{Index_gp_relation_node_index};
 
 static int2 DatabaseInfo_GpRelationNodeIndexIndKeyArray[Natts_gp_relation_node_index] =
-			{IndKey_gp_relation_node_index};
+{IndKey_gp_relation_node_index};
 
-static Oid DatabaseInfo_GpRelationNodeIndexIndClassArray[Natts_gp_relation_node_index] =
-			{IndClass_gp_relation_node_index};
+static Oid	DatabaseInfo_GpRelationNodeIndexIndClassArray[Natts_gp_relation_node_index] =
+{IndClass_gp_relation_node_index};
 
-DirectOpenIndexDefineStatic(DirectOpen_GpRelationNodeIndex,\
-DatabaseInfo_GpRelationNodeIndexPgClass,\
-DatabaseInfo_GpRelationNodeIndexAttrArray,\
-DatabaseInfo_GpRelationNodeIndexPgAm,\
-DatabaseInfo_GpRelationNodeIndexPgIndex,\
-DatabaseInfo_GpRelationNodeIndexIndKeyArray,\
-DatabaseInfo_GpRelationNodeIndexIndClassArray,\
-false);
+DirectOpenIndexDefineStatic(DirectOpen_GpRelationNodeIndex, \
+							DatabaseInfo_GpRelationNodeIndexPgClass, \
+							DatabaseInfo_GpRelationNodeIndexAttrArray, \
+							DatabaseInfo_GpRelationNodeIndexPgAm, \
+							DatabaseInfo_GpRelationNodeIndexPgIndex, \
+							DatabaseInfo_GpRelationNodeIndexIndKeyArray, \
+							DatabaseInfo_GpRelationNodeIndexIndClassArray, \
+							false);
 
 
-Relation DirectOpen_Open(
-	DirectOpen *direct,
+Relation
+DirectOpen_Open(
+				DirectOpen *direct,
 
-	Oid relationId,
+				Oid relationId,
 
-	Oid tablespace,
+				Oid tablespace,
 
-	Oid database,
+				Oid database,
 
-	Oid relfilenode,
+				Oid relfilenode,
 
-	FormData_pg_class *pgClass,
+				FormData_pg_class *pgClass,
 
-	FormData_pg_attribute *attrArray,
+				FormData_pg_attribute *attrArray,
 
-	FormData_pg_am *pgAm,
+				FormData_pg_am *pgAm,
 
-	FormData_pg_index *pgIndex,
+				FormData_pg_index *pgIndex,
 
-	int2 *indKeyArray,
+				int2 *indKeyArray,
 
-	Oid *indClassArray,
+				Oid *indClassArray,
 
-	bool relHasOid)
+				bool relHasOid)
 {
-	int natts;
-	int i;
+	int			natts;
+	int			i;
 
 	Assert(pgClass != NULL);
 	natts = pgClass->relnatts;
 
 	if (relationId == -1)
-		relationId = pgClass->relfilenode;		// Assume it is ok to use the relfilenode as the relationId in our limited usage.
+		relationId = pgClass->relfilenode;
+	/* Assume it is ok to use the relfilenode as the relationId in our limited usage. */
 
-	if (relfilenode == -1)
+		if (relfilenode == -1)
 		relfilenode = pgClass->relfilenode;
 
 	if (!direct->isInit)
@@ -293,15 +295,15 @@ Relation DirectOpen_Open(
 
 		if (pgIndex != NULL)
 		{
-			int pgIndexFixedLen = offsetof(FormData_pg_index, indkey);
-			int indKeyVectorLen = Int2VectorSize(natts);
+			int			pgIndexFixedLen = offsetof(FormData_pg_index, indkey);
+			int			indKeyVectorLen = Int2VectorSize(natts);
 			int2vector *indKeyVector;
 			oidvector  *indClassVector;
 
 			uint16		amstrategies;
 			uint16		amsupport;
 
-			Oid 	   *operator;
+			Oid		   *operator;
 			RegProcedure *support;
 			FmgrInfo   *supportinfo;
 
@@ -310,21 +312,21 @@ Relation DirectOpen_Open(
 			Assert(indClassArray != NULL);
 
 			/*
-			 * Allocate Formdata_pg_index with fields through indkey
-			 * where indkey is a variable length int2vector with indKeyArray values.
+			 * Allocate Formdata_pg_index with fields through indkey where
+			 * indkey is a variable length int2vector with indKeyArray values.
 			 */
-			direct->relationData.rd_index = 
-						(FormData_pg_index*)palloc(
-								pgIndexFixedLen + indKeyVectorLen);
+			direct->relationData.rd_index =
+				(FormData_pg_index *) palloc(
+											 pgIndexFixedLen + indKeyVectorLen);
 			memcpy(direct->relationData.rd_index, pgIndex, pgIndexFixedLen);
 
 			indKeyVector = buildint2vector(
-									indKeyArray,
-									natts);
+										   indKeyArray,
+										   natts);
 			memcpy(
-				&direct->relationData.rd_index->indkey, 
-				indKeyVector, 
-				indKeyVectorLen);
+				   &direct->relationData.rd_index->indkey,
+				   indKeyVector,
+				   indKeyVectorLen);
 
 			pfree(indKeyVector);
 
@@ -379,10 +381,11 @@ Relation DirectOpen_Open(
 			 * Create oidvector in rd_indclass with values from indClassArray.
 			 */
 			indClassVector = buildoidvector(indClassArray, natts);
- 
+
 			/*
 			 * Fill the operator and support procedure OID arrays.	(aminfo and
-			 * supportinfo are left as zeroes, and are filled on-the-fly when used)
+			 * supportinfo are left as zeroes, and are filled on-the-fly when
+			 * used)
 			 */
 			IndexSupportInitialize(indClassVector,
 								   operator, support,
@@ -395,10 +398,10 @@ Relation DirectOpen_Open(
 			 */
 			direct->relationData.rd_indexprs = NIL;
 			direct->relationData.rd_indpred = NIL;
-			direct->relationData.rd_amcache = NULL;		
+			direct->relationData.rd_amcache = NULL;
 		}
 
-		// Not much in terms of contraints.
+		/* Not much in terms of contraints. */
 		direct->constrData.has_not_null = true;
 
 		/*
@@ -406,24 +409,24 @@ Relation DirectOpen_Open(
 		 */
 		direct->descData.natts = pgClass->relnatts;
 
-		// Make the array of pointers.
-		direct->descData.attrs = 
-				(Form_pg_attribute*)
-						MemoryContextAllocZero(
-									TopMemoryContext, 
-									sizeof(Form_pg_attribute*) * pgClass->relnatts);
+		/* Make the array of pointers. */
+		direct->descData.attrs =
+			(Form_pg_attribute *)
+			MemoryContextAllocZero(
+								   TopMemoryContext,
+								   sizeof(Form_pg_attribute *) * pgClass->relnatts);
 
 		for (i = 0; i < pgClass->relnatts; i++)
 		{
-			direct->descData.attrs[i] = 
-						(Form_pg_attribute)
-								MemoryContextAllocZero(
-											TopMemoryContext, 
-											sizeof(FormData_pg_attribute));
+			direct->descData.attrs[i] =
+				(Form_pg_attribute)
+				MemoryContextAllocZero(
+									   TopMemoryContext,
+									   sizeof(FormData_pg_attribute));
 
 			memcpy(direct->descData.attrs[i], &(attrArray[i]), sizeof(FormData_pg_attribute));
 
-			// Patch up relation id.
+			/* Patch up relation id. */
 			direct->descData.attrs[i]->attrelid = relationId;
 		}
 
@@ -445,9 +448,12 @@ Relation DirectOpen_Open(
 
 		direct->isInit = true;
 	}
-	
-	// UNDONE: Should verify for NON-SHARED relations we don't open relations in different databases / or
-	// UNDONE: open different relations in same database at same time !!!
+
+	/*
+	 * UNDONE: Should verify for NON-SHARED relations we don't open relations
+	 * in different databases or open different relations in same database at
+	 * same time !!!
+	 */
 	direct->relationData.rd_node.spcNode = tablespace;
 	direct->relationData.rd_node.dbNode = database;
 	direct->relationData.rd_node.relNode = relfilenode;
@@ -457,8 +463,8 @@ Relation DirectOpen_Open(
 	for (i = 0; i < direct->relationData.rd_rel->relnatts; i++)
 	{
 		Assert(direct->descData.attrs[i] != NULL);
-		
-		// Patch up relation id.
+
+		/* Patch up relation id. */
 		direct->descData.attrs[i]->attrelid = direct->relationData.rd_id;
 	}
 
@@ -469,12 +475,13 @@ Relation DirectOpen_Open(
 	return &direct->relationData;
 }
 
-void DirectOpen_Close(
-	DirectOpen 	*direct,
-	Relation	rel)
+void
+DirectOpen_Close(
+				 DirectOpen *direct,
+				 Relation rel)
 {
 	Assert(rel == &direct->relationData);
-	Assert (direct->isInit);
+	Assert(direct->isInit);
 
 	RelationCloseSmgr(&direct->relationData);
 

@@ -13,26 +13,25 @@
  */
 #include "postgres.h"
 
-#include "catalog/gp_policy.h"         /* GpPolicy */
-#include "cdb/cdbdef.h"         /* CdbSwap() */
-#include "cdb/cdbpullup.h"      /* cdbpullup_missing_var_walker() */
-#include "nodes/makefuncs.h"    /* makeVar() */
+#include "catalog/gp_policy.h"	/* GpPolicy */
+#include "cdb/cdbdef.h"			/* CdbSwap() */
+#include "cdb/cdbpullup.h"		/* cdbpullup_missing_var_walker() */
+#include "nodes/makefuncs.h"	/* makeVar() */
 #include "nodes/nodeFuncs.h"
-#include "nodes/plannodes.h"    /* Plan */
-#include "nodes/relation.h"     /* RelOptInfo */
+#include "nodes/plannodes.h"	/* Plan */
+#include "nodes/relation.h"		/* RelOptInfo */
 #include "optimizer/pathnode.h" /* Path */
-#include "optimizer/paths.h"    /* cdb_build_distribution_pathkeys() */
-#include "optimizer/tlist.h"    /* tlist_member() */
-#include "parser/parse_expr.h"  /* exprType() and exprTypmod() */
+#include "optimizer/paths.h"	/* cdb_build_distribution_pathkeys() */
+#include "optimizer/tlist.h"	/* tlist_member() */
+#include "parser/parse_expr.h"	/* exprType() and exprTypmod() */
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbpathlocus.h"   /* me */
+#include "cdb/cdbpathlocus.h"	/* me */
 
-static List *
-cdb_build_distribution_pathkeys(PlannerInfo      *root,
-					            RelOptInfo *rel,
-                                int         nattrs,
-                                AttrNumber *attrs);
+static List *cdb_build_distribution_pathkeys(PlannerInfo *root,
+								RelOptInfo *rel,
+								int nattrs,
+								AttrNumber *attrs);
 
 
 /*
@@ -44,7 +43,7 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
  * To use it, simply set it to true before running a catalog query, then set
  * it back to false.
  */
-bool cdbpathlocus_querysegmentcatalogs = false;
+bool		cdbpathlocus_querysegmentcatalogs = false;
 
 /*
  * Are two pathkeys equal?
@@ -61,8 +60,8 @@ pathkeys_equal(List *apathkey, List *bpathkey)
 
 	forboth(acell, apathkey, bcell, bpathkey)
 	{
-		PathKey   *apathkey = (PathKey *) lfirst(acell);
-		PathKey   *bpathkey = (PathKey *) lfirst(bcell);
+		PathKey    *apathkey = (PathKey *) lfirst(acell);
+		PathKey    *bpathkey = (PathKey *) lfirst(bcell);
 
 		Assert(IsA(apathkey, PathKey));
 		Assert(IsA(bpathkey, PathKey));
@@ -114,105 +113,105 @@ list_contains_pathkey(List *list, List *pathkey)
  *    - Returns false otherwise.
  */
 bool
-cdbpathlocus_compare(CdbPathLocus_Comparison    op,
-                     CdbPathLocus               a,
-                     CdbPathLocus               b)
+cdbpathlocus_compare(CdbPathLocus_Comparison op,
+					 CdbPathLocus a,
+					 CdbPathLocus b)
 {
-    ListCell   *acell;
-    ListCell   *bcell;
-    ListCell   *aequivpathkeycell;
-    ListCell   *bequivpathkeycell;
+	ListCell   *acell;
+	ListCell   *bcell;
+	ListCell   *aequivpathkeycell;
+	ListCell   *bequivpathkeycell;
 
-    Assert(op == CdbPathLocus_Comparison_Equal ||
-           op == CdbPathLocus_Comparison_Contains);
+	Assert(op == CdbPathLocus_Comparison_Equal ||
+		   op == CdbPathLocus_Comparison_Contains);
 
-    if (CdbPathLocus_IsStrewn(a) ||
-        CdbPathLocus_IsStrewn(b))
-        return false;
+	if (CdbPathLocus_IsStrewn(a) ||
+		CdbPathLocus_IsStrewn(b))
+		return false;
 
-    if (CdbPathLocus_IsEqual(a, b))
-        return true;
+	if (CdbPathLocus_IsEqual(a, b))
+		return true;
 
-    if (CdbPathLocus_Degree(a) == 0 ||
+	if (CdbPathLocus_Degree(a) == 0 ||
 		CdbPathLocus_Degree(b) == 0 ||
-        CdbPathLocus_Degree(a) != CdbPathLocus_Degree(b))
-        return false;
+		CdbPathLocus_Degree(a) != CdbPathLocus_Degree(b))
+		return false;
 
-    if (a.locustype == b.locustype)
-    {
-        if (CdbPathLocus_IsHashed(a))
+	if (a.locustype == b.locustype)
+	{
+		if (CdbPathLocus_IsHashed(a))
 			return pathkeys_equal(a.partkey_h, b.partkey_h);
 
-        if (CdbPathLocus_IsHashedOJ(a))
-        {
-            forboth(acell, a.partkey_oj, bcell, b.partkey_oj)
-            {
-                List	   *aequivpathkeylist = (List *) lfirst(acell);
-                List	   *bequivpathkeylist = (List *) lfirst(bcell);
+		if (CdbPathLocus_IsHashedOJ(a))
+		{
+			forboth(acell, a.partkey_oj, bcell, b.partkey_oj)
+			{
+				List	   *aequivpathkeylist = (List *) lfirst(acell);
+				List	   *bequivpathkeylist = (List *) lfirst(bcell);
 
-                foreach(bequivpathkeycell, bequivpathkeylist)
-                {
-                    List   *bpathkey = (List *)lfirst(bequivpathkeycell);
+				foreach(bequivpathkeycell, bequivpathkeylist)
+				{
+					List	   *bpathkey = (List *) lfirst(bequivpathkeycell);
 
-                    if (!list_contains_pathkey(aequivpathkeylist, bpathkey))
-                        return false;
-                }
-                if (op == CdbPathLocus_Comparison_Equal)
-                {
-                    foreach(aequivpathkeycell, aequivpathkeylist)
-                    {
-                        List   *apathkey = (List *)lfirst(aequivpathkeycell);
+					if (!list_contains_pathkey(aequivpathkeylist, bpathkey))
+						return false;
+				}
+				if (op == CdbPathLocus_Comparison_Equal)
+				{
+					foreach(aequivpathkeycell, aequivpathkeylist)
+					{
+						List	   *apathkey = (List *) lfirst(aequivpathkeycell);
 
-                        if (!list_contains_pathkey(bequivpathkeylist, apathkey))
-                            return false;
-                    }
-                }
-            }
-            return true;
-        }
-    }
+						if (!list_contains_pathkey(bequivpathkeylist, apathkey))
+							return false;
+					}
+				}
+			}
+			return true;
+		}
+	}
 
-    if (CdbPathLocus_IsHashedOJ(a) &&
-        CdbPathLocus_IsHashed(b))
-    {
-        if (op == CdbPathLocus_Comparison_Equal)
-            CdbSwap(CdbPathLocus, a, b);
-        else
-        {
-            forboth(acell, a.partkey_oj, bcell, b.partkey_h)
-            {
-                List   *aequivpathkeylist = (List *)lfirst(acell);
-                List   *bpathkey = (List *)lfirst(bcell);
+	if (CdbPathLocus_IsHashedOJ(a) &&
+		CdbPathLocus_IsHashed(b))
+	{
+		if (op == CdbPathLocus_Comparison_Equal)
+			CdbSwap(CdbPathLocus, a, b);
+		else
+		{
+			forboth(acell, a.partkey_oj, bcell, b.partkey_h)
+			{
+				List	   *aequivpathkeylist = (List *) lfirst(acell);
+				List	   *bpathkey = (List *) lfirst(bcell);
 
-                if (!list_member_ptr(aequivpathkeylist, bpathkey))
-                    return false;
-            }
-            return true;
-        }
-    }
+				if (!list_member_ptr(aequivpathkeylist, bpathkey))
+					return false;
+			}
+			return true;
+		}
+	}
 
-    if (CdbPathLocus_IsHashed(a) &&
-        CdbPathLocus_IsHashedOJ(b))
-    {
-        forboth(acell, a.partkey_h, bcell, b.partkey_oj)
-        {
-            List   *apathkey = (List *)lfirst(acell);
-            List   *bequivpathkeylist = (List *)lfirst(bcell);
+	if (CdbPathLocus_IsHashed(a) &&
+		CdbPathLocus_IsHashedOJ(b))
+	{
+		forboth(acell, a.partkey_h, bcell, b.partkey_oj)
+		{
+			List	   *apathkey = (List *) lfirst(acell);
+			List	   *bequivpathkeylist = (List *) lfirst(bcell);
 
-            foreach(bequivpathkeycell, bequivpathkeylist)
-            {
-                List   *bpathkey = (List *)lfirst(bequivpathkeycell);
+			foreach(bequivpathkeycell, bequivpathkeylist)
+			{
+				List	   *bpathkey = (List *) lfirst(bequivpathkeycell);
 
-                if (apathkey != bpathkey)
-                    return false;
-            }
-        }
-        return true;
-    }
+				if (apathkey != bpathkey)
+					return false;
+			}
+		}
+		return true;
+	}
 
-    Assert(false);
-    return false;
-}                               /* cdbpathlocus_compare */
+	Assert(false);
+	return false;
+}								/* cdbpathlocus_compare */
 
 /*
  * cdb_build_distribution_pathkeys
@@ -229,70 +228,74 @@ cdbpathlocus_compare(CdbPathLocus_Comparison    op,
  *    other contexts.
  */
 static List *
-cdb_build_distribution_pathkeys(PlannerInfo      *root,
-					            RelOptInfo *rel,
-                                int         nattrs,
-                                AttrNumber *attrs)
+cdb_build_distribution_pathkeys(PlannerInfo *root,
+								RelOptInfo *rel,
+								int nattrs,
+								AttrNumber *attrs)
 {
-	List   *retval = NIL;
-    List   *eq = list_make1(makeString("="));
-    int     i;
-    bool	isAppendChildRelation = false;
-    
-    isAppendChildRelation = (rel->reloptkind == RELOPT_OTHER_MEMBER_REL);
-    
-    for (i = 0; i < nattrs; ++i)
-    {
-		PathKey   *cpathkey;
-    	
-        /* Find or create a Var node that references the specified column. */
-        Var    *expr = find_indexkey_var(root, rel, attrs[i]);
-        Assert(expr);
+	List	   *retval = NIL;
+	List	   *eq = list_make1(makeString("="));
+	int			i;
+	bool		isAppendChildRelation = false;
 
-        /* 
-         * Find or create a pathkey. We distinguish two cases for performance reasons:
-         * 1) If the relation in question is a child relation under an append node, we don't care
-         * about ensuring that we return a canonicalized version of its pathkey item. 
-         * Co-location of joins/group-bys happens at the append relation level.
-         * In create_append_path(), the call to cdbpathlocus_pull_above_projection() ensures
-         * that canonicalized pathkeys are created at the append relation level.
-         * (see MPP-3536).
-         * 
-         * 2) For regular relations, we create a canonical pathkey so that we may identify 
-         * co-location for joins/group-bys.
-         */
-        if (isAppendChildRelation)
-        {
-        	/**
+	isAppendChildRelation = (rel->reloptkind == RELOPT_OTHER_MEMBER_REL);
+
+	for (i = 0; i < nattrs; ++i)
+	{
+		PathKey    *cpathkey;
+
+		/* Find or create a Var node that references the specified column. */
+		Var		   *expr = find_indexkey_var(root, rel, attrs[i]);
+
+		Assert(expr);
+
+		/*
+		 * Find or create a pathkey. We distinguish two cases for performance
+		 * reasons: 1) If the relation in question is a child relation under
+		 * an append node, we don't care about ensuring that we return a
+		 * canonicalized version of its pathkey item. Co-location of
+		 * joins/group-bys happens at the append relation level. In
+		 * create_append_path(), the call to
+		 * cdbpathlocus_pull_above_projection() ensures that canonicalized
+		 * pathkeys are created at the append relation level. (see MPP-3536).
+		 *
+		 * 2) For regular relations, we create a canonical pathkey so that we
+		 * may identify co-location for joins/group-bys.
+		 */
+		if (isAppendChildRelation)
+		{
+			/**
         	 * Append child relation.
         	 */
 #ifdef DISTRIBUTION_PATHKEYS_DEBUG
-			PathKey   *canonicalPathKeyList = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, true);
-            /* 
-             * This assert ensures that we should not really find any equivalent keys
-             * during canonicalization for append child relations.
-             */
-            Assert(list_length(canonicalPathKeyList) == 1);
+			PathKey    *canonicalPathKeyList = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, true);
+
+			/*
+			 * This assert ensures that we should not really find any
+			 * equivalent keys during canonicalization for append child
+			 * relations.
+			 */
+			Assert(list_length(canonicalPathKeyList) == 1);
 #endif
-            cpathkey = cdb_make_pathkey_for_expr(root, (Node *)expr, eq, false);
-            Assert(cpathkey);
-        }
-        else
-        {
-        	/**
-        	 * Regular relation. 
+			cpathkey = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, false);
+			Assert(cpathkey);
+		}
+		else
+		{
+			/**
+        	 * Regular relation.
         	 */
 			cpathkey = cdb_make_pathkey_for_expr(root, (Node *) expr, eq, true);
-        }
-        Assert(cpathkey);
+		}
+		Assert(cpathkey);
 
-        /* Append to list of pathkeys. */
-        retval = lappend(retval, cpathkey);
-    }
+		/* Append to list of pathkeys. */
+		retval = lappend(retval, cpathkey);
+	}
 
 	list_free_deep(eq);
 	return retval;
-}                               /* cdb_build_distribution_pathkeys */
+}								/* cdb_build_distribution_pathkeys */
 
 /*
  * cdbpathlocus_from_baserel
@@ -300,46 +303,47 @@ cdb_build_distribution_pathkeys(PlannerInfo      *root,
  * Returns a locus describing the distribution of a base relation.
  */
 CdbPathLocus
-cdbpathlocus_from_baserel(struct PlannerInfo   *root,
-                          struct RelOptInfo    *rel)
+cdbpathlocus_from_baserel(struct PlannerInfo *root,
+						  struct RelOptInfo *rel)
 {
-    CdbPathLocus result;
-    GpPolicy   *policy = rel->cdbpolicy;
-	
-	if ( Gp_role != GP_ROLE_DISPATCH )
+	CdbPathLocus result;
+	GpPolicy   *policy = rel->cdbpolicy;
+
+	if (Gp_role != GP_ROLE_DISPATCH)
 	{
 		CdbPathLocus_MakeEntry(&result);
 		return result;
 	}
 
-    if (policy &&
-        policy->ptype == POLICYTYPE_PARTITIONED)
-    {
-        /* Are the rows distributed by hashing on specified columns? */
-        if (policy->nattrs > 0)
-        {
-	        List *partkey = cdb_build_distribution_pathkeys(root,
-	                                                        rel,
-	                                                        policy->nattrs,
-	                                                        policy->attrs);
-	        CdbPathLocus_MakeHashed(&result, partkey);
-        }
+	if (policy &&
+		policy->ptype == POLICYTYPE_PARTITIONED)
+	{
+		/* Are the rows distributed by hashing on specified columns? */
+		if (policy->nattrs > 0)
+		{
+			List	   *partkey = cdb_build_distribution_pathkeys(root,
+																  rel,
+																  policy->nattrs,
+																  policy->attrs);
 
-        /* Rows are distributed on an unknown criterion (uniformly, we hope!) */
-        else
-            CdbPathLocus_MakeStrewn(&result);
-    }
+			CdbPathLocus_MakeHashed(&result, partkey);
+		}
 
-    /* Kludge used internally for querying catalogs on segment dbs */
-    else if (cdbpathlocus_querysegmentcatalogs)
-        CdbPathLocus_MakeStrewn(&result);
+		/* Rows are distributed on an unknown criterion (uniformly, we hope!) */
+		else
+			CdbPathLocus_MakeStrewn(&result);
+	}
 
-    /* Normal catalog access */
-    else
-        CdbPathLocus_MakeEntry(&result);
+	/* Kludge used internally for querying catalogs on segment dbs */
+	else if (cdbpathlocus_querysegmentcatalogs)
+		CdbPathLocus_MakeStrewn(&result);
 
-    return result;
-}                               /* cdbpathlocus_from_baserel */
+	/* Normal catalog access */
+	else
+		CdbPathLocus_MakeEntry(&result);
+
+	return result;
+}								/* cdbpathlocus_from_baserel */
 
 
 /*
@@ -349,26 +353,26 @@ cdbpathlocus_from_baserel(struct PlannerInfo   *root,
  */
 CdbPathLocus
 cdbpathlocus_from_exprs(struct PlannerInfo *root,
-                        List               *hash_on_exprs)
+						List *hash_on_exprs)
 {
-    CdbPathLocus    locus;
-    List           *partkey = NIL;
-    List           *eq = list_make1(makeString("="));
-    ListCell       *cell;
+	CdbPathLocus locus;
+	List	   *partkey = NIL;
+	List	   *eq = list_make1(makeString("="));
+	ListCell   *cell;
 
-    foreach(cell, hash_on_exprs)
-    {
-        Node           *expr = (Node *)lfirst(cell);
-        PathKey        *pathkey;
+	foreach(cell, hash_on_exprs)
+	{
+		Node	   *expr = (Node *) lfirst(cell);
+		PathKey    *pathkey;
 
-        pathkey = cdb_make_pathkey_for_expr(root, expr, eq, true);
-        partkey = lappend(partkey, pathkey);
-    }
+		pathkey = cdb_make_pathkey_for_expr(root, expr, eq, true);
+		partkey = lappend(partkey, pathkey);
+	}
 
-    CdbPathLocus_MakeHashed(&locus, partkey);
-    list_free_deep(eq);
-    return locus;
-}                               /* cdbpathlocus_from_exprs */
+	CdbPathLocus_MakeHashed(&locus, partkey);
+	list_free_deep(eq);
+	return locus;
+}								/* cdbpathlocus_from_exprs */
 
 
 /*
@@ -382,67 +386,71 @@ cdbpathlocus_from_exprs(struct PlannerInfo *root,
  *      building Var nodes that reference the subquery's result columns.
  */
 CdbPathLocus
-cdbpathlocus_from_subquery(struct PlannerInfo  *root,
-                           struct Plan         *subqplan,
-                           Index                subqrelid)
+cdbpathlocus_from_subquery(struct PlannerInfo *root,
+						   struct Plan *subqplan,
+						   Index subqrelid)
 {
-    CdbPathLocus    locus;
-    Flow           *flow = subqplan->flow;
+	CdbPathLocus locus;
+	Flow	   *flow = subqplan->flow;
 
-    Insist(flow);
+	Insist(flow);
 
-    /* Flow node was made from CdbPathLocus by cdbpathtoplan_create_flow() */
-    switch (flow->flotype)
-    {
-        case FLOW_SINGLETON:
-            if (flow->segindex == -1)
-                CdbPathLocus_MakeEntry(&locus);
-            else
-                CdbPathLocus_MakeSingleQE(&locus);
-            break;
-        case FLOW_REPLICATED:
-            CdbPathLocus_MakeReplicated(&locus);
-            break;
-        case FLOW_PARTITIONED:
-        {
-            List       *partkey = NIL;
-            ListCell   *hashexprcell;
-            List       *eq = list_make1(makeString("="));
-            foreach(hashexprcell, flow->hashExpr)
-            {
-                Node	   *expr = (Node *) lfirst(hashexprcell);
-                TargetEntry    *tle;
-                Var            *var;
-                PathKey        *pathkey;
+	/* Flow node was made from CdbPathLocus by cdbpathtoplan_create_flow() */
+	switch (flow->flotype)
+	{
+		case FLOW_SINGLETON:
+			if (flow->segindex == -1)
+				CdbPathLocus_MakeEntry(&locus);
+			else
+				CdbPathLocus_MakeSingleQE(&locus);
+			break;
+		case FLOW_REPLICATED:
+			CdbPathLocus_MakeReplicated(&locus);
+			break;
+		case FLOW_PARTITIONED:
+			{
+				List	   *partkey = NIL;
+				ListCell   *hashexprcell;
+				List	   *eq = list_make1(makeString("="));
 
-                /* Look for hash key expr among the subquery result columns. */
-                tle = tlist_member_ignore_relabel(expr, subqplan->targetlist);
-                if (!tle)
-                    break;
+				foreach(hashexprcell, flow->hashExpr)
+				{
+					Node	   *expr = (Node *) lfirst(hashexprcell);
+					TargetEntry *tle;
+					Var		   *var;
+					PathKey    *pathkey;
 
-				Assert(tle->resno >= 1);
-                var = makeVar(subqrelid,
-                              tle->resno,
-                              exprType((Node *) tle->expr),
-                              exprTypmod((Node *) tle->expr),
-                              0);
-                pathkey = cdb_make_pathkey_for_expr(root, (Node *)var, eq, true);
-                partkey = lappend(partkey, pathkey);
-            }
-            if (partkey &&
-                !hashexprcell)
-                CdbPathLocus_MakeHashed(&locus, partkey);
-            else
-                CdbPathLocus_MakeStrewn(&locus);
-            list_free_deep(eq);
-            break;
-        }
-        default:
-            CdbPathLocus_MakeNull(&locus);
-            Insist(0);
-    }
-    return locus;
-}                               /* cdbpathlocus_from_subquery */
+					/*
+					 * Look for hash key expr among the subquery result
+					 * columns.
+					 */
+					tle = tlist_member_ignore_relabel(expr, subqplan->targetlist);
+					if (!tle)
+						break;
+
+					Assert(tle->resno >= 1);
+					var = makeVar(subqrelid,
+								  tle->resno,
+								  exprType((Node *) tle->expr),
+								  exprTypmod((Node *) tle->expr),
+								  0);
+					pathkey = cdb_make_pathkey_for_expr(root, (Node *) var, eq, true);
+					partkey = lappend(partkey, pathkey);
+				}
+				if (partkey &&
+					!hashexprcell)
+					CdbPathLocus_MakeHashed(&locus, partkey);
+				else
+					CdbPathLocus_MakeStrewn(&locus);
+				list_free_deep(eq);
+				break;
+			}
+		default:
+			CdbPathLocus_MakeNull(&locus);
+			Insist(0);
+	}
+	return locus;
+}								/* cdbpathlocus_from_subquery */
 
 
 /*
@@ -454,14 +462,14 @@ cdbpathlocus_from_subquery(struct PlannerInfo  *root,
  * partkey cannot be expressed in terms of the given relids and targetlist.
  */
 List *
-cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
-                               Bitmapset       *relids,
-                               List            *targetlist)
+cdbpathlocus_get_partkey_exprs(CdbPathLocus locus,
+							   Bitmapset *relids,
+							   List *targetlist)
 {
-    List       *result = NIL;
-    ListCell   *partkeycell;
+	List	   *result = NIL;
+	ListCell   *partkeycell;
 
-    Assert(cdbpathlocus_is_valid(locus));
+	Assert(cdbpathlocus_is_valid(locus));
 
 	if (CdbPathLocus_IsHashed(locus))
 	{
@@ -472,25 +480,28 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 
 			item = cdbpullup_findPathKeyExprInTargetList(pathkey, targetlist);
 
-			/* Fail if can't evaluate partkey in the context of this targetlist. */
+			/*
+			 * Fail if can't evaluate partkey in the context of this
+			 * targetlist.
+			 */
 			if (!item)
 				return NIL;
 
 			result = lappend(result, item);
 		}
 		return result;
-    }
+	}
 	else if (CdbPathLocus_IsHashedOJ(locus))
 	{
 		foreach(partkeycell, locus.partkey_oj)
 		{
-			List       *pathkeylist = (List *)lfirst(partkeycell);
+			List	   *pathkeylist = (List *) lfirst(partkeycell);
 			ListCell   *pathkeylistcell;
 			Expr	   *item = NULL;
 
 			foreach(pathkeylistcell, pathkeylist)
 			{
-				PathKey	   *pathkey = (PathKey *) lfirst(pathkeylistcell);
+				PathKey    *pathkey = (PathKey *) lfirst(pathkeylistcell);
 
 				item = cdbpullup_findPathKeyExprInTargetList(pathkey, targetlist);
 
@@ -507,7 +518,7 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
 	}
 	else
 		return NIL;
-}                               /* cdbpathlocus_get_partkey_exprs */
+}								/* cdbpathlocus_get_partkey_exprs */
 
 
 /*
@@ -529,25 +540,25 @@ cdbpathlocus_get_partkey_exprs(CdbPathLocus     locus,
  *      Ignored if 'newvarlist' is specified.
  */
 CdbPathLocus
-cdbpathlocus_pull_above_projection(struct PlannerInfo  *root,
-                                   CdbPathLocus         locus,
-                                   Bitmapset           *relids,
-                                   List                *targetlist,
-                                   List                *newvarlist,
-                                   Index                newrelid)
+cdbpathlocus_pull_above_projection(struct PlannerInfo *root,
+								   CdbPathLocus locus,
+								   Bitmapset *relids,
+								   List *targetlist,
+								   List *newvarlist,
+								   Index newrelid)
 {
-    CdbPathLocus    newlocus;
-    ListCell       *partkeycell;
-    List           *newpartkey = NIL;
+	CdbPathLocus newlocus;
+	ListCell   *partkeycell;
+	List	   *newpartkey = NIL;
 
-    Assert(cdbpathlocus_is_valid(locus));
+	Assert(cdbpathlocus_is_valid(locus));
 
 	if (CdbPathLocus_IsHashed(locus))
 	{
 		foreach(partkeycell, locus.partkey_h)
 		{
-			PathKey   *oldpathkey;
-			PathKey   *newpathkey = NULL;
+			PathKey    *oldpathkey;
+			PathKey    *newpathkey = NULL;
 
 			/* Get pathkey for key expr rewritten in terms of projection cols. */
 			oldpathkey = (PathKey *) lfirst(partkeycell);
@@ -558,7 +569,10 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo  *root,
 											 newvarlist,
 											 newrelid);
 
-			/* Fail if can't evaluate partkey in the context of this targetlist. */
+			/*
+			 * Fail if can't evaluate partkey in the context of this
+			 * targetlist.
+			 */
 			if (!newpathkey)
 			{
 				CdbPathLocus_MakeStrewn(&newlocus);
@@ -578,35 +592,39 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo  *root,
 		/* For each column of the partitioning key... */
 		foreach(partkeycell, locus.partkey_oj)
 		{
-			PathKey   *oldpathkey;
-			PathKey   *newpathkey = NULL;
+			PathKey    *oldpathkey;
+			PathKey    *newpathkey = NULL;
 
 			/* Get pathkey for key expr rewritten in terms of projection cols. */
-			List       *pathkeylist = (List *)lfirst(partkeycell);
+			List	   *pathkeylist = (List *) lfirst(partkeycell);
 			ListCell   *pathkeylistcell;
 
 			foreach(pathkeylistcell, pathkeylist)
-            {
-                oldpathkey = (PathKey *) lfirst(pathkeylistcell);
-                newpathkey = cdb_pull_up_pathkey(root,
-                                                 oldpathkey,
-                                                 relids,
-                                                 targetlist,
-                                                 newvarlist,
-                                                 newrelid);
-                if (newpathkey)
-                    break;
-            }
-            /*
-             * NB: Targetlist might include columns from both sides of
-             * outer join "=" comparison, in which case cdb_pull_up_pathkey
-             * might succeed on pathkeys from more than one pathkeylist.
-             * The pulled-up locus could then be a HashedOJ locus, perhaps
-             * saving a Motion when an outer join is followed by UNION ALL
-             * followed by a join or aggregate.  For now, don't bother.
-             */
+			{
+				oldpathkey = (PathKey *) lfirst(pathkeylistcell);
+				newpathkey = cdb_pull_up_pathkey(root,
+												 oldpathkey,
+												 relids,
+												 targetlist,
+												 newvarlist,
+												 newrelid);
+				if (newpathkey)
+					break;
+			}
 
-			/* Fail if can't evaluate partkey in the context of this targetlist. */
+			/*
+			 * NB: Targetlist might include columns from both sides of outer
+			 * join "=" comparison, in which case cdb_pull_up_pathkey might
+			 * succeed on pathkeys from more than one pathkeylist. The
+			 * pulled-up locus could then be a HashedOJ locus, perhaps saving
+			 * a Motion when an outer join is followed by UNION ALL followed
+			 * by a join or aggregate.  For now, don't bother.
+			 */
+
+			/*
+			 * Fail if can't evaluate partkey in the context of this
+			 * targetlist.
+			 */
 			if (!newpathkey)
 			{
 				CdbPathLocus_MakeStrewn(&newlocus);
@@ -623,7 +641,7 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo  *root,
 	}
 	else
 		return locus;
-}                               /* cdbpathlocus_pull_above_projection */
+}								/* cdbpathlocus_pull_above_projection */
 
 
 /*
@@ -635,41 +653,41 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo  *root,
 CdbPathLocus
 cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
 {
-    ListCell       *acell;
-    ListCell       *bcell;
-    List           *equivpathkeylist;
-    CdbPathLocus    ojlocus = {0};
+	ListCell   *acell;
+	ListCell   *bcell;
+	List	   *equivpathkeylist;
+	CdbPathLocus ojlocus = {0};
 
 	Assert(cdbpathlocus_is_valid(a));
 	Assert(cdbpathlocus_is_valid(b));
 
-    /* Do both input rels have same locus? */
-    if (cdbpathlocus_compare(CdbPathLocus_Comparison_Equal, a, b))
-        return a;
+	/* Do both input rels have same locus? */
+	if (cdbpathlocus_compare(CdbPathLocus_Comparison_Equal, a, b))
+		return a;
 
-    /* If one rel is general or replicated, result stays with the other rel. */
-    if (CdbPathLocus_IsGeneral(a) ||
-        CdbPathLocus_IsReplicated(a))
-        return b;
-    if (CdbPathLocus_IsGeneral(b) ||
-        CdbPathLocus_IsReplicated(b))
-        return a;
+	/* If one rel is general or replicated, result stays with the other rel. */
+	if (CdbPathLocus_IsGeneral(a) ||
+		CdbPathLocus_IsReplicated(a))
+		return b;
+	if (CdbPathLocus_IsGeneral(b) ||
+		CdbPathLocus_IsReplicated(b))
+		return a;
 
-    /* This is an outer join, or one or both inputs are outer join results. */
+	/* This is an outer join, or one or both inputs are outer join results. */
 
-    Assert(CdbPathLocus_Degree(a) > 0 &&
-           CdbPathLocus_Degree(a) == CdbPathLocus_Degree(b));
+	Assert(CdbPathLocus_Degree(a) > 0 &&
+		   CdbPathLocus_Degree(a) == CdbPathLocus_Degree(b));
 
-    if (CdbPathLocus_IsHashed(a) &&
-        CdbPathLocus_IsHashed(b))
-    {
-        /* Zip the two pathkey lists together to make a HashedOJ locus. */
+	if (CdbPathLocus_IsHashed(a) &&
+		CdbPathLocus_IsHashed(b))
+	{
+		/* Zip the two pathkey lists together to make a HashedOJ locus. */
 		List	   *partkey_oj = NIL;
 
 		forboth(acell, a.partkey_h, bcell, b.partkey_h)
-        {
-			PathKey   *apathkey = (PathKey *) lfirst(acell);
-			PathKey   *bpathkey = (PathKey *)lfirst(bcell);
+		{
+			PathKey    *apathkey = (PathKey *) lfirst(acell);
+			PathKey    *bpathkey = (PathKey *) lfirst(bcell);
 
 			equivpathkeylist = list_make2(apathkey, bpathkey);
 			partkey_oj = lappend(partkey_oj, equivpathkeylist);
@@ -677,14 +695,14 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
 		CdbPathLocus_MakeHashedOJ(&ojlocus, partkey_oj);
 		Assert(cdbpathlocus_is_valid(ojlocus));
 		return ojlocus;
-    }
+	}
 
-    if (!CdbPathLocus_IsHashedOJ(a))
-        CdbSwap(CdbPathLocus, a, b);
+	if (!CdbPathLocus_IsHashedOJ(a))
+		CdbSwap(CdbPathLocus, a, b);
 
-    Assert(CdbPathLocus_IsHashedOJ(a));
-    Assert(CdbPathLocus_IsHashed(b) ||
-           CdbPathLocus_IsHashedOJ(b));
+	Assert(CdbPathLocus_IsHashedOJ(a));
+	Assert(CdbPathLocus_IsHashed(b) ||
+		   CdbPathLocus_IsHashedOJ(b));
 
 	if (CdbPathLocus_IsHashed(b))
 	{
@@ -693,11 +711,11 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
 		forboth(acell, a.partkey_oj, bcell, b.partkey_h)
 		{
 			List	   *aequivpathkeylist = (List *) lfirst(acell);
-            PathKey	   *bpathkey = (PathKey *) lfirst(bcell);
+			PathKey    *bpathkey = (PathKey *) lfirst(bcell);
 
-            equivpathkeylist = lappend(list_copy(aequivpathkeylist), bpathkey);
+			equivpathkeylist = lappend(list_copy(aequivpathkeylist), bpathkey);
 			partkey_oj = lappend(partkey_oj, equivpathkeylist);
-        }
+		}
 		CdbPathLocus_MakeHashedOJ(&ojlocus, partkey_oj);
 	}
 	else if (CdbPathLocus_IsHashedOJ(b))
@@ -706,18 +724,18 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
 
 		forboth(acell, a.partkey_oj, bcell, b.partkey_oj)
 		{
-			List   *aequivpathkeylist = (List *) lfirst(acell);
-            List   *bequivpathkeylist = (List *) lfirst(bcell);
+			List	   *aequivpathkeylist = (List *) lfirst(acell);
+			List	   *bequivpathkeylist = (List *) lfirst(bcell);
 
-            equivpathkeylist = list_union_ptr(aequivpathkeylist,
-                                              bequivpathkeylist);
+			equivpathkeylist = list_union_ptr(aequivpathkeylist,
+											  bequivpathkeylist);
 			partkey_oj = lappend(partkey_oj, equivpathkeylist);
 		}
 		CdbPathLocus_MakeHashedOJ(&ojlocus, partkey_oj);
-    }
-    Assert(cdbpathlocus_is_valid(ojlocus));
-    return ojlocus;
-}                               /* cdbpathlocus_join */
+	}
+	Assert(cdbpathlocus_is_valid(ojlocus));
+	return ojlocus;
+}								/* cdbpathlocus_join */
 
 /*
  * cdbpathlocus_is_hashed_on_exprs
@@ -731,9 +749,9 @@ cdbpathlocus_join(CdbPathLocus a, CdbPathLocus b)
 bool
 cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 {
-    ListCell       *partkeycell;
+	ListCell   *partkeycell;
 
-    Assert(cdbpathlocus_is_valid(locus));
+	Assert(cdbpathlocus_is_valid(locus));
 
 	if (CdbPathLocus_IsHashed(locus))
 	{
@@ -742,14 +760,15 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 			bool		found = false;
 			ListCell   *i;
 
-            /* Does pathkey have an expr that is equal() to one in exprlist? */
-            PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
+			/* Does pathkey have an expr that is equal() to one in exprlist? */
+			PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 
 			Assert(IsA(pathkey, PathKey));
 
 			foreach(i, pathkey->pk_eclass->ec_members)
 			{
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+
 				if (list_member(exprlist, em->em_expr))
 				{
 					found = true;
@@ -758,7 +777,7 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 			}
 			if (!found)
 				return false;
-        }
+		}
 		/* Every column of the partkey contains an expr in exprlist. */
 		return true;
 	}
@@ -766,38 +785,40 @@ cdbpathlocus_is_hashed_on_exprs(CdbPathLocus locus, List *exprlist)
 	{
 		foreach(partkeycell, locus.partkey_oj)
 		{
-            List       *pathkeylist = (List *) lfirst(partkeycell);
-            ListCell   *pathkeylistcell;
+			List	   *pathkeylist = (List *) lfirst(partkeycell);
+			ListCell   *pathkeylistcell;
 			bool		found = false;
-            foreach(pathkeylistcell, pathkeylist)
-            {
-                /* Does some expr in pathkey match some item in exprlist? */
-				PathKey *item = (PathKey *) lfirst(pathkeylistcell);
-				ListCell *i;
+
+			foreach(pathkeylistcell, pathkeylist)
+			{
+				/* Does some expr in pathkey match some item in exprlist? */
+				PathKey    *item = (PathKey *) lfirst(pathkeylistcell);
+				ListCell   *i;
 
 				Assert(IsA(item, PathKey));
 
 				foreach(i, item->pk_eclass->ec_members)
 				{
 					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
+
 					if (list_member(exprlist, em->em_expr))
 					{
 						found = true;
 						break;
 					}
-                }
+				}
 				if (found)
 					break;
-            }
-            if (!found)
-                return false;
-        }
+			}
+			if (!found)
+				return false;
+		}
 		/* Every column of the partkey contains an expr in exprlist. */
 		return true;
 	}
 	else
 		return !CdbPathLocus_IsStrewn(locus);
-}                               /* cdbpathlocus_is_hashed_on_exprs */
+}								/* cdbpathlocus_is_hashed_on_exprs */
 
 /*
  * cdbpathlocus_is_hashed_on_eclasses
@@ -823,7 +844,7 @@ cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses,
 	{
 		foreach(partkeycell, locus.partkey_h)
 		{
-			PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
+			PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 			bool		found = false;
 			EquivalenceClass *pk_ec;
 
@@ -866,7 +887,7 @@ cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses,
 
 			foreach(pathkeylistcell, pathkeylist)
 			{
-				PathKey	   *pathkey = (PathKey *) lfirst(pathkeylistcell);
+				PathKey    *pathkey = (PathKey *) lfirst(pathkeylistcell);
 				EquivalenceClass *pk_ec;
 
 				/* Does pathkey have an eclass that's not in 'eclasses'? */
@@ -903,7 +924,7 @@ cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses,
 	}
 	else
 		return !CdbPathLocus_IsStrewn(locus);
-}                               /* cdbpathlocus_is_hashed_on_exprs */
+}								/* cdbpathlocus_is_hashed_on_exprs */
 
 
 /*
@@ -925,10 +946,10 @@ cdbpathlocus_is_hashed_on_eclasses(CdbPathLocus locus, List *eclasses,
 bool
 cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 {
-    ListCell       *partkeycell;
-    ListCell       *pathkeycell;
+	ListCell   *partkeycell;
+	ListCell   *pathkeycell;
 
-    Assert(cdbpathlocus_is_valid(locus));
+	Assert(cdbpathlocus_is_valid(locus));
 
 	if (CdbPathLocus_IsHashed(locus))
 	{
@@ -936,44 +957,51 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 		{
 			bool		found = false;
 
-            /* Does pathkey contain a Var whose varno is in relids? */
-            PathKey	   *pathkey = (PathKey *) lfirst(partkeycell);
+			/* Does pathkey contain a Var whose varno is in relids? */
+			PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
 
 			Assert(IsA(pathkey, PathKey));
-            foreach(pathkeycell, pathkey->pk_eclass->ec_members)
-            {
+			foreach(pathkeycell, pathkey->pk_eclass->ec_members)
+			{
 				EquivalenceMember *em = (EquivalenceMember *) lfirst(pathkeycell);
-				if (IsA(em->em_expr, Var) && bms_is_subset(em->em_relids, relids))
+
+				if (IsA(em->em_expr, Var) &&bms_is_subset(em->em_relids, relids))
 				{
 					found = true;
 					break;
 				}
-            }
+			}
 			if (!found)
 				return false;
-        }
-		/* Every column of the partkey contains a Var whose varno is in relids. */
+		}
+
+		/*
+		 * Every column of the partkey contains a Var whose varno is in
+		 * relids.
+		 */
 		return true;
 	}
 	else if (CdbPathLocus_IsHashedOJ(locus))
 	{
-	    foreach(partkeycell, locus.partkey_oj)
+		foreach(partkeycell, locus.partkey_oj)
 		{
 			bool		found = false;
-            List       *pathkeylist = (List *) lfirst(partkeycell);
-            ListCell   *pathkeylistcell;
-            foreach(pathkeylistcell, pathkeylist)
-            {
-                /* Does pathkey contain a Var whose varno is in relids? */
-				PathKey        *item = (PathKey *)lfirst(pathkeylistcell);
-				ListCell *i;
+			List	   *pathkeylist = (List *) lfirst(partkeycell);
+			ListCell   *pathkeylistcell;
+
+			foreach(pathkeylistcell, pathkeylist)
+			{
+				/* Does pathkey contain a Var whose varno is in relids? */
+				PathKey    *item = (PathKey *) lfirst(pathkeylistcell);
+				ListCell   *i;
 
 				Assert(IsA(item, PathKey));
 
 				foreach(i, item->pk_eclass->ec_members)
 				{
 					EquivalenceMember *em = (EquivalenceMember *) lfirst(i);
-					if (IsA(em->em_expr, Var) && bms_is_subset(em->em_relids, relids))
+
+					if (IsA(em->em_expr, Var) &&bms_is_subset(em->em_relids, relids))
 					{
 						found = true;
 						break;
@@ -981,16 +1009,20 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 				}
 				if (found)
 					break;
-            }
-            if (!found)
-                return false;
-        }
-		/* Every column of the partkey contains a Var whose varno is in relids. */
+			}
+			if (!found)
+				return false;
+		}
+
+		/*
+		 * Every column of the partkey contains a Var whose varno is in
+		 * relids.
+		 */
 		return true;
-    }
+	}
 	else
 		return !CdbPathLocus_IsStrewn(locus);
-}                               /* cdbpathlocus_is_hashed_on_relids */
+}								/* cdbpathlocus_is_hashed_on_relids */
 
 
 /*
@@ -1001,14 +1033,14 @@ cdbpathlocus_is_hashed_on_relids(CdbPathLocus locus, Bitmapset *relids)
 bool
 cdbpathlocus_is_valid(CdbPathLocus locus)
 {
-    ListCell       *partkeycell;
+	ListCell   *partkeycell;
 
 	if (!CdbLocusType_IsValid(locus.locustype))
 		goto bad;
 
-    if (!CdbPathLocus_IsHashed(locus) && locus.partkey_h != NIL)
+	if (!CdbPathLocus_IsHashed(locus) && locus.partkey_h != NIL)
 		goto bad;
-    if (!CdbPathLocus_IsHashedOJ(locus) && locus.partkey_oj != NIL)
+	if (!CdbPathLocus_IsHashedOJ(locus) && locus.partkey_oj != NIL)
 		goto bad;
 
 	if (CdbPathLocus_IsHashed(locus))
@@ -1019,7 +1051,8 @@ cdbpathlocus_is_valid(CdbPathLocus locus)
 			goto bad;
 		foreach(partkeycell, locus.partkey_h)
 		{
-			PathKey	   *item = (PathKey *) lfirst(partkeycell);
+			PathKey    *item = (PathKey *) lfirst(partkeycell);
+
 			if (!item || !IsA(item, PathKey))
 				goto bad;
 		}
@@ -1033,13 +1066,13 @@ cdbpathlocus_is_valid(CdbPathLocus locus)
 		foreach(partkeycell, locus.partkey_oj)
 		{
 			List	   *item = (List *) lfirst(partkeycell);
+
 			if (!item || !IsA(item, List))
 				goto bad;
 		}
 	}
-    return true;
+	return true;
 
 bad:
-    return false;
-}                               /* cdbpathlocus_is_valid */
-
+	return false;
+}								/* cdbpathlocus_is_valid */

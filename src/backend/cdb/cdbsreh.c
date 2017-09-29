@@ -43,7 +43,7 @@
 #include "utils/builtins.h"
 #include "utils/bytea.h"
 
-static int  GetNextSegid(CdbSreh *cdbsreh);
+static int	GetNextSegid(CdbSreh *cdbsreh);
 static void PreprocessByteaData(char *src);
 static void ErrorLogWrite(CdbSreh *cdbsreh);
 
@@ -56,8 +56,8 @@ static void ErrorLogWrite(CdbSreh *cdbsreh);
  */
 typedef struct ReadErrorLogContext
 {
-	FILE	   *fp;					/* file pointer to the error log */
-	char		filename[MAXPGPATH];/* filename of fp */
+	FILE	   *fp;				/* file pointer to the error log */
+	char		filename[MAXPGPATH];	/* filename of fp */
 } ReadErrorLogContext;
 
 typedef enum RejectLimitCode
@@ -68,7 +68,7 @@ typedef enum RejectLimitCode
 	REJECT_UNPARSABLE_CSV,
 } RejectLimitCode;
 
-int gp_initial_bad_row_limit = 1000;
+int			gp_initial_bad_row_limit = 1000;
 
 /*
  * makeCdbSreh
@@ -82,10 +82,10 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 			char *filename, char *relname,
 			bool log_to_file)
 {
-	CdbSreh	*h;
+	CdbSreh    *h;
 
 	h = palloc(sizeof(CdbSreh));
-	
+
 	h->errmsg = NULL;
 	h->rawdata = NULL;
 	h->linenumber = 0;
@@ -110,21 +110,21 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	 * anyway.
 	 */
 	h->badrowcontext = AllocSetContextCreate(CurrentMemoryContext,
-											   "SrehMemCtxt",
-											   ALLOCSET_DEFAULT_MINSIZE,
-											   ALLOCSET_DEFAULT_INITSIZE,
-											   ALLOCSET_DEFAULT_MAXSIZE);
-	
+											 "SrehMemCtxt",
+											 ALLOCSET_DEFAULT_MINSIZE,
+											 ALLOCSET_DEFAULT_INITSIZE,
+											 ALLOCSET_DEFAULT_MAXSIZE);
+
 	return h;
 }
 
 void
 destroyCdbSreh(CdbSreh *cdbsreh)
 {
-	
+
 	/* delete the bad row context */
-    MemoryContextDelete(cdbsreh->badrowcontext);
-	
+	MemoryContextDelete(cdbsreh->badrowcontext);
+
 	pfree(cdbsreh);
 }
 
@@ -140,24 +140,24 @@ destroyCdbSreh(CdbSreh *cdbsreh)
  *  - If QD COPY send the bad row to the QE COPY to deal with.
  *
  */
-void HandleSingleRowError(CdbSreh *cdbsreh)
+void
+HandleSingleRowError(CdbSreh *cdbsreh)
 {
-	
-	/* increment total number of errors for this segment */ 
+
+	/* increment total number of errors for this segment */
 	cdbsreh->rejectcount++;
-	
-	/* 
-	 * if reached the segment reject limit don't do anything.
-	 * (this will get checked and handled later on by the caller).
+
+	/*
+	 * if reached the segment reject limit don't do anything. (this will get
+	 * checked and handled later on by the caller).
 	 */
-	if(IsRejectLimitReached(cdbsreh))
+	if (IsRejectLimitReached(cdbsreh))
 		return;
 
 	/*
-	 * If not specified table or file, do nothing.  Otherwise,
-	 * record the error:
-	 *   QD - send the bad data row to a random QE (via roundrobin).
-	 *   QE - log the error in the error log file.
+	 * If not specified table or file, do nothing.  Otherwise, record the
+	 * error: QD - send the bad data row to a random QE (via roundrobin). QE -
+	 * log the error in the error log file.
 	 */
 	if (cdbsreh->log_to_file)
 	{
@@ -167,16 +167,16 @@ void HandleSingleRowError(CdbSreh *cdbsreh)
 							GetNextSegid(cdbsreh),
 							cdbsreh->rawdata,
 							strlen(cdbsreh->rawdata));
-			
+
 		}
 		else
 		{
 			ErrorLogWrite(cdbsreh);
 		}
-		
+
 	}
-	
-	return; /* OK */
+
+	return;						/* OK */
 }
 
 /*
@@ -193,7 +193,7 @@ GetErrorTupleDesc(void)
 	 */
 	if (tupdesc == NULL)
 	{
-		TupleDesc tmp;
+		TupleDesc	tmp;
 		MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
 
 		tmp = CreateTemplateTupleDesc(NUM_ERRORTABLE_ATTR, false);
@@ -220,17 +220,17 @@ FormErrorTuple(CdbSreh *cdbsreh)
 	bool		nulls[NUM_ERRORTABLE_ATTR];
 	Datum		values[NUM_ERRORTABLE_ATTR];
 	MemoryContext oldcontext;
-					
+
 	oldcontext = MemoryContextSwitchTo(cdbsreh->badrowcontext);
-	
+
 	/* Initialize all values for row to NULL */
 	MemSet(values, 0, NUM_ERRORTABLE_ATTR * sizeof(Datum));
 	MemSet(nulls, true, NUM_ERRORTABLE_ATTR * sizeof(bool));
-	
+
 	/* command start time */
 	values[errtable_cmdtime - 1] = TimestampTzGetDatum(GetCurrentStatementStartTimestamp());
 	nulls[errtable_cmdtime - 1] = false;
-		
+
 	/* line number */
 	if (cdbsreh->linenumber > 0)
 	{
@@ -238,7 +238,7 @@ FormErrorTuple(CdbSreh *cdbsreh)
 		nulls[errtable_linenum - 1] = false;
 	}
 
-	if(cdbsreh->is_server_enc)
+	if (cdbsreh->is_server_enc)
 	{
 		/* raw data */
 		values[errtable_rawdata - 1] = CStringGetTextDatum(cdbsreh->rawdata);
@@ -259,35 +259,36 @@ FormErrorTuple(CdbSreh *cdbsreh)
 	/* relation name */
 	values[errtable_relname - 1] = CStringGetTextDatum(cdbsreh->relname);
 	nulls[errtable_relname - 1] = false;
-	
+
 	/* error message */
 	values[errtable_errmsg - 1] = CStringGetTextDatum(cdbsreh->errmsg);
 	nulls[errtable_errmsg - 1] = false;
-	
-	
+
+
 	MemoryContextSwitchTo(oldcontext);
-	
+
 	/*
 	 * And now we can form the input tuple.
 	 */
 	return heap_form_tuple(GetErrorTupleDesc(), values, nulls);
 }
 
-/* 
+/*
  * ReportSrehResults
  *
  * When necessary emit a NOTICE that describes the end result of the
  * SREH operations. Information includes the total number of rejected
  * rows, and whether rows were ignored or logged into an error log file.
  */
-void ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
+void
+ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
 {
-	if(total_rejected > 0)
+	if (total_rejected > 0)
 	{
 		ereport(NOTICE,
-			(errmsg("Found %d data formatting errors (%d or more "
-			"input rows). Rejected related input data.",
-			total_rejected, total_rejected)));
+				(errmsg("Found %d data formatting errors (%d or more "
+						"input rows). Rejected related input data.",
+						total_rejected, total_rejected)));
 	}
 }
 
@@ -295,15 +296,16 @@ static void
 sendnumrows_internal(int numrejected, int numcompleted)
 {
 	StringInfoData buf;
-	
+
 	if (Gp_role != GP_ROLE_EXECUTE)
 		elog(FATAL, "SendNumRows: called outside of execute context.");
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
 	pq_sendint(&buf, numrejected, 4);
-	if (numcompleted > 0) /* optional send completed num for COPY FROM ON SEGMENT */
+	if (numcompleted > 0)		/* optional send completed num for COPY FROM
+								 * ON SEGMENT */
 		pq_sendint(&buf, numcompleted, 4);
-	pq_endmessage(&buf);	
+	pq_endmessage(&buf);
 }
 
 /*
@@ -315,7 +317,7 @@ sendnumrows_internal(int numrejected, int numcompleted)
 void
 SendNumRowsRejected(int numrejected)
 {
-    sendnumrows_internal(numrejected, 0);
+	sendnumrows_internal(numrejected, 0);
 }
 
 /*
@@ -327,7 +329,7 @@ SendNumRowsRejected(int numrejected)
 void
 SendNumRows(int numrejected, int numcompleted)
 {
-    sendnumrows_internal(numrejected, numcompleted);
+	sendnumrows_internal(numrejected, numcompleted);
 }
 
 /* Identify the reject limit type */
@@ -341,11 +343,11 @@ GetRejectLimitCode(CdbSreh *cdbsreh)
 		return REJECT_FIRST_BAD_LIMIT;
 
 	/* special case: check for un-parsable csv format errors */
-	if(CSV_IS_UNPARSABLE(cdbsreh))
+	if (CSV_IS_UNPARSABLE(cdbsreh))
 		return REJECT_UNPARSABLE_CSV;
 
 	/* now check if actual reject limit is reached */
-	if(cdbsreh->is_limit_in_rows)
+	if (cdbsreh->is_limit_in_rows)
 	{
 		/* limit is in ROWS */
 		if (cdbsreh->rejectcount >= cdbsreh->rejectlimit)
@@ -354,11 +356,11 @@ GetRejectLimitCode(CdbSreh *cdbsreh)
 	else
 	{
 		/* limit is in PERCENT */
-		
+
 		/* calculate the percent only if threshold is satisfied */
-		if(cdbsreh->processed > gp_reject_percent_threshold)
+		if (cdbsreh->processed > gp_reject_percent_threshold)
 		{
-			if( (cdbsreh->rejectcount * 100) / cdbsreh->processed >= cdbsreh->rejectlimit)
+			if ((cdbsreh->rejectcount * 100) / cdbsreh->processed >= cdbsreh->rejectlimit)
 				code = REJECT_LIMIT_REACHED;
 		}
 	}
@@ -373,7 +375,7 @@ GetRejectLimitCode(CdbSreh *cdbsreh)
 void
 ErrorIfRejectLimitReached(CdbSreh *cdbsreh, CdbCopy *cdbCopy)
 {
-	RejectLimitCode		code;
+	RejectLimitCode code;
 
 	code = GetRejectLimitCode(cdbsreh);
 
@@ -458,13 +460,14 @@ IsRejectLimitReached(CdbSreh *cdbsreh)
  * Return the next sequential segment id of available segids (roundrobin).
  */
 static
-int GetNextSegid(CdbSreh *cdbsreh)
+int
+GetNextSegid(CdbSreh *cdbsreh)
 {
-	int total_segs = cdbsreh->cdbcopy->total_segs;
-	
-	if(cdbsreh->lastsegid == total_segs)
+	int			total_segs = cdbsreh->cdbcopy->total_segs;
+
+	if (cdbsreh->lastsegid == total_segs)
 		cdbsreh->lastsegid = 0; /* start over from first segid */
-	
+
 	return (cdbsreh->lastsegid++ % total_segs);
 }
 
@@ -486,10 +489,11 @@ int GetNextSegid(CdbSreh *cdbsreh)
  * NOTE: code is copied from esc_dec_len() in encode.c and slightly modified.
  */
 static
-void PreprocessByteaData(char *src)
+void
+PreprocessByteaData(char *src)
 {
 	const char *end = src + strlen(src);
-	
+
 	while (src < end)
 	{
 		if (src[0] != '\\')
@@ -520,23 +524,24 @@ void PreprocessByteaData(char *src)
 			 */
 			src[0] = ' ';
 			src++;
-		}		
+		}
 	}
-	
+
 }
 
 /*
  * IsRejectLimitValid
- * 
+ *
  * verify that the the reject limit specified by the user is within the
  * allowed values for ROWS or PERCENT.
  */
-void VerifyRejectLimit(char rejectlimittype, int rejectlimit)
+void
+VerifyRejectLimit(char rejectlimittype, int rejectlimit)
 {
-	if(rejectlimittype == 'r')
+	if (rejectlimittype == 'r')
 	{
 		/* ROWS */
-		if(rejectlimit < 2)
+		if (rejectlimit < 2)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 					 errmsg("Segment reject limit in ROWS "
@@ -594,10 +599,7 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 		ereport(ERROR, (errmsg("could not open \"%s\": %m", filename)));
 
 	/*
-	 * format:
-	 *     0-4: length
-	 *     5-8: crc
-	 *     9-n: tuple data
+	 * format: 0-4: length 5-8: crc 9-n: tuple data
 	 */
 	if (fwrite(&tuple->t_len, 1, sizeof(tuple->t_len), fp) != sizeof(tuple->t_len))
 		elog(ERROR, "could not write tuple length: %m");
@@ -630,8 +632,8 @@ ErrorLogRead(FILE *fp, pg_crc32 *crc)
 			break;
 
 		/*
-		 * The tuple is "in-memory" format of HeapTuple.  Allocate
-		 * the whole chunk consecutively.
+		 * The tuple is "in-memory" format of HeapTuple.  Allocate the whole
+		 * chunk consecutively.
 		 */
 		tuple = palloc(HEAPTUPLESIZE + t_len);
 		tuple->t_len = t_len;
@@ -650,7 +652,7 @@ ErrorLogRead(FILE *fp, pg_crc32 *crc)
 			tuple = NULL;
 			break;
 		}
-	} while(0);
+	} while (0);
 
 	LWLockRelease(ErrorLogLock);
 
@@ -672,8 +674,8 @@ ResultToDatum(PGresult *result, int row, AttrNumber attnum, PGFunction func, boo
 	{
 		*isnull = false;
 		return DirectFunctionCall3(func,
-				CStringGetDatum(PQgetvalue(result, row, attnum)),
-				ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
+								   CStringGetDatum(PQgetvalue(result, row, attnum)),
+								   ObjectIdGetDatum(InvalidOid), Int32GetDatum(-1));
 	}
 }
 
@@ -691,10 +693,10 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 	Datum		result;
 
 	/*
-	 * This function is marked as EXECUTE ON ALL SEGMENTS, so we
-	 * should not get here in the dispatcher.
+	 * This function is marked as EXECUTE ON ALL SEGMENTS, so we should not
+	 * get here in the dispatcher.
 	 */
-	Assert (Gp_role != GP_ROLE_DISPATCH);
+	Assert(Gp_role != GP_ROLE_DISPATCH);
 
 	/*
 	 * First call setup
@@ -748,7 +750,9 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 	 */
 	if (context->fp)
 	{
-		pg_crc32	crc, written_crc;
+		pg_crc32	crc,
+					written_crc;
+
 		tuple = ErrorLogRead(context->fp, &written_crc);
 
 		/*
@@ -763,20 +767,20 @@ gp_read_error_log(PG_FUNCTION_ARGS)
 			if (!EQ_CRC32C(crc, written_crc))
 			{
 				elog(LOG, "incorrect checksum in error log %s",
-						  context->filename);
+					 context->filename);
 				tuple = NULL;
 			}
 		}
 
 		/*
-		 * If we found a valid tuple, return it.  Otherwise, fall through
-		 * in the DONE routine.
+		 * If we found a valid tuple, return it.  Otherwise, fall through in
+		 * the DONE routine.
 		 */
 		if (HeapTupleIsValid(tuple))
 		{
 			/*
-			 * We need to set typmod for the executor to understand
-			 * its type we just blessed.
+			 * We need to set typmod for the executor to understand its type
+			 * we just blessed.
 			 */
 			HeapTupleHeaderSetTypMod(tuple->t_data,
 									 funcctx->tuple_desc->tdtypmod);
@@ -811,19 +815,19 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 
 	if (!OidIsValid(relationId))
 	{
-		DIR			   *dir;
-		struct dirent  *de;
-		char   		   *dirpath = ErrorLogDir;
-		char			prefix[MAXPGPATH];
-		int				len;
+		DIR		   *dir;
+		struct dirent *de;
+		char	   *dirpath = ErrorLogDir;
+		char		prefix[MAXPGPATH];
+		int			len;
 
 		if (OidIsValid(databaseId))
 			snprintf(prefix, sizeof(prefix), "%u_", databaseId);
 		dir = AllocateDir(dirpath);
 
 		/*
-		 * If we cannot open the directory, most likely it does not exist.
-		 * Do nothing.
+		 * If we cannot open the directory, most likely it does not exist. Do
+		 * nothing.
 		 */
 		if (dir == NULL)
 			return false;
@@ -844,9 +848,9 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 				if (len >= (MAXPGPATH - 1))
 				{
 					ereport(WARNING,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
-						(errmsg("log filename truncation on \"%s\", unable to delete error log",
-								de->d_name))));
+							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							 (errmsg("log filename truncation on \"%s\", unable to delete error log",
+									 de->d_name))));
 					continue;
 				}
 				LWLockAcquire(ErrorLogLock, LW_EXCLUSIVE);
@@ -860,11 +864,13 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 			 */
 			if (strncmp(de->d_name, prefix, strlen(prefix)) == 0)
 			{
-				int		res;
-				Oid		dummyDbId, relid;
+				int			res;
+				Oid			dummyDbId,
+							relid;
 
 				res = sscanf(de->d_name, "%u_%u", &dummyDbId, &relid);
 				Assert(dummyDbId == databaseId);
+
 				/*
 				 * Recursively delete the file.
 				 */
@@ -896,8 +902,8 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 {
 	text	   *relname;
 	char	   *relname_str;
-	RangeVar	   *relrv;
-	Oid				relid;
+	RangeVar   *relrv;
+	Oid			relid;
 	bool		allResults = true;
 
 	relname = PG_GETARG_TEXT_P(0);
@@ -911,7 +917,7 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 		if (!superuser())
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					(errmsg("must be superuser to delete all error log files"))));
+					 (errmsg("must be superuser to delete all error log files"))));
 
 		ErrorLogDelete(InvalidOid, InvalidOid);
 	}
@@ -954,7 +960,7 @@ gp_truncate_error_log(PG_FUNCTION_ARGS)
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		int			i = 0;
-		StringInfoData	sql;
+		StringInfoData sql;
 		CdbPgResults cdb_pgresults = {NULL, 0};
 
 		initStringInfo(&sql);

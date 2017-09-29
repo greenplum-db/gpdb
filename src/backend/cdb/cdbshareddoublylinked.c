@@ -18,10 +18,10 @@
 
 void
 SharedListBase_Init(
-	SharedListBase		*base,
-	void				*data,
-	int					size,
-	int					offsetToDoubleLinks)
+					SharedListBase *base,
+					void *data,
+					int size,
+					int offsetToDoubleLinks)
 {
 	base->data = data;
 	base->size = size;
@@ -30,7 +30,7 @@ SharedListBase_Init(
 
 void
 SharedDoublyLinkedHead_Init(
-	SharedDoublyLinkedHead	*head)
+							SharedDoublyLinkedHead *head)
 {
 	head->count = 0;
 	head->first = -1;
@@ -39,47 +39,47 @@ SharedDoublyLinkedHead_Init(
 
 void
 SharedDoubleLinks_Init(
-	SharedDoubleLinks	*doubleLinks,
-	int					index)
+					   SharedDoubleLinks *doubleLinks,
+					   int index)
 {
 	doubleLinks->index = index;
 	doubleLinks->prev = -1;
 	doubleLinks->next = -1;
 }
 
-SharedDoubleLinks*
-SharedDoubleLinks_FromElement(	
-	SharedListBase				*base,
-	void						*current)
+SharedDoubleLinks *
+SharedDoubleLinks_FromElement(
+							  SharedListBase *base,
+							  void *current)
 {
-	uint8 *uint8Current = (uint8*)current;
+	uint8	   *uint8Current = (uint8 *) current;
 
-	return (SharedDoubleLinks*)(uint8Current + base->offsetToDoubleLinks);
+	return (SharedDoubleLinks *) (uint8Current + base->offsetToDoubleLinks);
 }
 
-void*
-SharedListBase_ToElement(	
-	SharedListBase		*base,
-	int					index)
+void *
+SharedListBase_ToElement(
+						 SharedListBase *base,
+						 int index)
 {
 	Assert(base != NULL);
 	Assert(index >= 0);
-	
+
 	return base->data + (index * base->size);
 }
 
-void*
+void *
 SharedDoublyLinkedHead_First(
-	SharedListBase				*base,
-	SharedDoublyLinkedHead		*head)
+							 SharedListBase *base,
+							 SharedDoublyLinkedHead *head)
 {
 	Assert(base != NULL);
 	Assert(head != NULL);
 
 	if (head->first != -1)
 	{
-		void *firstEle;
-		SharedDoubleLinks	*firstDoubleLinks;
+		void	   *firstEle;
+		SharedDoubleLinks *firstDoubleLinks;
 
 		Assert(head->first >= 0);
 		firstEle = SharedListBase_ToElement(base, head->first);
@@ -92,32 +92,32 @@ SharedDoublyLinkedHead_First(
 		return NULL;
 }
 
-SharedDoubleLinks*
-SharedListBase_ToDoubleLinks(	
-	SharedListBase		*base,
-	int					index)
+SharedDoubleLinks *
+SharedListBase_ToDoubleLinks(
+							 SharedListBase *base,
+							 int index)
 {
 	SharedDoubleLinks *sharedDoubleLinks;
-	
+
 	Assert(base != NULL);
 	Assert(index >= 0);
-	
+
 	sharedDoubleLinks =
-		(SharedDoubleLinks*)
-				(base->data + (index * base->size) + base->offsetToDoubleLinks);
+		(SharedDoubleLinks *)
+		(base->data + (index * base->size) + base->offsetToDoubleLinks);
 	Assert(sharedDoubleLinks->index == index);
 
 	return sharedDoubleLinks;
 }
 
-void*
+void *
 SharedDoubleLinks_Next(
-	SharedListBase				*base,
-	SharedDoublyLinkedHead		*head,
-	void						*currentEle)
+					   SharedListBase *base,
+					   SharedDoublyLinkedHead *head,
+					   void *currentEle)
 {
-	SharedDoubleLinks	*currentDoubleLinks;
-	
+	SharedDoubleLinks *currentDoubleLinks;
+
 	Assert(base != NULL);
 	Assert(head != NULL);
 	Assert(currentEle != NULL);
@@ -131,9 +131,9 @@ SharedDoubleLinks_Next(
 	}
 	else
 	{
-		void *nextEle;
-		SharedDoubleLinks	*nextDoubleLinks;
-		
+		void	   *nextEle;
+		SharedDoubleLinks *nextDoubleLinks;
+
 		Assert(currentDoubleLinks->next >= 0);
 		nextEle = SharedListBase_ToElement(base, currentDoubleLinks->next);
 		nextDoubleLinks = SharedDoubleLinks_FromElement(base, nextEle);
@@ -146,20 +146,20 @@ SharedDoubleLinks_Next(
 
 void
 SharedDoubleLinks_Remove(
-	SharedListBase				*base,
-	SharedDoublyLinkedHead		*head,
-	void						*removeEle)
+						 SharedListBase *base,
+						 SharedDoublyLinkedHead *head,
+						 void *removeEle)
 {
-	SharedDoubleLinks	*removeDoubleLinks;
-	int					index;
-	SharedDoubleLinks	*prevDoubleLinks = NULL;
-	SharedDoubleLinks	*nextDoubleLinks = NULL;
+	SharedDoubleLinks *removeDoubleLinks;
+	int			index;
+	SharedDoubleLinks *prevDoubleLinks = NULL;
+	SharedDoubleLinks *nextDoubleLinks = NULL;
 
-	
+
 	Assert(base != NULL);
 	Assert(head != NULL);
 	Assert(removeEle != NULL);
-	
+
 	removeDoubleLinks = SharedDoubleLinks_FromElement(base, removeEle);
 	index = removeDoubleLinks->index;
 
@@ -181,26 +181,26 @@ SharedDoubleLinks_Remove(
 		 * Removing the first element.
 		 */
 		Assert(head->first == index);
-		
-		nextDoubleLinks = 
+
+		nextDoubleLinks =
 			SharedListBase_ToDoubleLinks(base, removeDoubleLinks->next);
 		Assert(nextDoubleLinks->prev == index);
 		nextDoubleLinks->prev = -1;
-		
+
 		head->first = nextDoubleLinks->index;
 	}
 	else if (removeDoubleLinks->next == -1)
 	{
 		Assert(head->last == index);
-		
+
 		/*
 		 * Removing the last element.
 		 */
-		prevDoubleLinks = 
+		prevDoubleLinks =
 			SharedListBase_ToDoubleLinks(base, removeDoubleLinks->prev);
 		Assert(prevDoubleLinks->next == index);
 		prevDoubleLinks->next = -1;
-		
+
 		head->last = prevDoubleLinks->index;
 	}
 	else
@@ -208,12 +208,12 @@ SharedDoubleLinks_Remove(
 		/*
 		 * Removing a middle element.
 		 */
-		nextDoubleLinks = 
+		nextDoubleLinks =
 			SharedListBase_ToDoubleLinks(base, removeDoubleLinks->next);
 		Assert(nextDoubleLinks->prev == index);
 		nextDoubleLinks->prev = removeDoubleLinks->prev;
 
-		prevDoubleLinks = 
+		prevDoubleLinks =
 			SharedListBase_ToDoubleLinks(base, removeDoubleLinks->prev);
 		Assert(prevDoubleLinks->next == index);
 		prevDoubleLinks->next = removeDoubleLinks->next;
@@ -221,19 +221,19 @@ SharedDoubleLinks_Remove(
 
 	Assert(head->count >= 1);
 	head->count--;
-	
+
 	removeDoubleLinks->prev = -1;
 	removeDoubleLinks->next = -1;
 }
 
 void
 SharedDoublyLinkedHead_AddFirst(
-	SharedListBase				*base,
-	SharedDoublyLinkedHead		*head,
-	void						*ele)
+								SharedListBase *base,
+								SharedDoublyLinkedHead *head,
+								void *ele)
 {
-	SharedDoubleLinks	*eleDoubleLinks;
-	
+	SharedDoubleLinks *eleDoubleLinks;
+
 	Assert(base != NULL);
 	Assert(head != NULL);
 	Assert(ele != NULL);
@@ -249,10 +249,10 @@ SharedDoublyLinkedHead_AddFirst(
 	}
 	else
 	{
-		SharedDoubleLinks	*firstDoubleLinks;
-		
+		SharedDoubleLinks *firstDoubleLinks;
+
 		Assert(head->count > 0);
-		firstDoubleLinks = 
+		firstDoubleLinks =
 			SharedListBase_ToDoubleLinks(base, head->first);
 		Assert(firstDoubleLinks->prev == -1);
 
@@ -260,18 +260,18 @@ SharedDoublyLinkedHead_AddFirst(
 		head->first = eleDoubleLinks->index;
 		firstDoubleLinks->prev = eleDoubleLinks->index;
 	}
-	
+
 	head->count++;
 }
 
 void
 SharedDoublyLinkedHead_AddLast(
-	SharedListBase				*base,
-	SharedDoublyLinkedHead		*head,
-	void						*ele)
+							   SharedListBase *base,
+							   SharedDoublyLinkedHead *head,
+							   void *ele)
 {
-	SharedDoubleLinks	*eleDoubleLinks;
-	
+	SharedDoubleLinks *eleDoubleLinks;
+
 	Assert(base != NULL);
 	Assert(head != NULL);
 	Assert(ele != NULL);
@@ -287,13 +287,13 @@ SharedDoublyLinkedHead_AddLast(
 	}
 	else
 	{
-		SharedDoubleLinks	*lastDoubleLinks;
-		
+		SharedDoubleLinks *lastDoubleLinks;
+
 		Assert(head->count > 0);
 		Assert(head->first >= 0);
 		Assert(head->last >= 0);
-		
-		lastDoubleLinks = 
+
+		lastDoubleLinks =
 			SharedListBase_ToDoubleLinks(base, head->last);
 		Assert(lastDoubleLinks->next == -1);
 
@@ -301,39 +301,38 @@ SharedDoublyLinkedHead_AddLast(
 		head->last = eleDoubleLinks->index;
 		lastDoubleLinks->next = eleDoubleLinks->index;
 	}
-	
+
 	head->count++;
 }
 
-void*
+void *
 SharedDoublyLinkedHead_RemoveFirst(
-	SharedListBase				*base,
-	SharedDoublyLinkedHead		*head)
+								   SharedListBase *base,
+								   SharedDoublyLinkedHead *head)
 {
-	void* firstEle;
-	SharedDoubleLinks	*firstDoubleLinks;
-	
+	void	   *firstEle;
+	SharedDoubleLinks *firstDoubleLinks;
+
 	Assert(base != NULL);
 	Assert(head != NULL);
-	
+
 	if (head->first == -1)
 	{
 		Assert(head->count == 0);
 		return NULL;
 	}
-	
+
 	Assert(head->first >= 0);
 	firstEle = SharedListBase_ToElement(base, head->first);
 	firstDoubleLinks = SharedDoubleLinks_FromElement(base, firstEle);
 	Assert(firstDoubleLinks->index == head->first);
 
 	SharedDoubleLinks_Remove(
-						base,
-						head,
-						firstEle);
+							 base,
+							 head,
+							 firstEle);
 
 	return firstEle;
 }
 
-//******************************************************************************
-
+/* ****************************************************************************** */

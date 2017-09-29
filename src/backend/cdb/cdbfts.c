@@ -42,16 +42,16 @@
 /* segment id for the master */
 #define MASTER_SEGMENT_ID -1
 
-FtsProbeInfo *ftsProbeInfo = NULL; /* Probe process updates this structure */
-volatile bool	*ftsEnabled;
-volatile bool	*ftsShutdownMaster;
-static LWLockId	ftsControlLock;
+FtsProbeInfo *ftsProbeInfo = NULL;	/* Probe process updates this structure */
+volatile bool *ftsEnabled;
+volatile bool *ftsShutdownMaster;
+static LWLockId ftsControlLock;
 
-static volatile bool	*ftsReadOnlyFlag;
-static volatile bool	*ftsAdminRequestedRO;
+static volatile bool *ftsReadOnlyFlag;
+static volatile bool *ftsAdminRequestedRO;
 
-static bool		local_fts_status_initialized=false;
-static uint64	local_fts_statusVersion;
+static bool local_fts_status_initialized = false;
+static uint64 local_fts_statusVersion;
 
 /*
  * get fts share memory size
@@ -60,8 +60,7 @@ int
 FtsShmemSize(void)
 {
 	/*
-	 * this shared memory block doesn't even need to *exist* on the
-	 * QEs!
+	 * this shared memory block doesn't even need to *exist* on the QEs!
 	 */
 	if ((Gp_role != GP_ROLE_DISPATCH) && (Gp_role != GP_ROLE_UTILITY))
 		return 0;
@@ -75,7 +74,7 @@ FtsShmemInit(void)
 	bool		found;
 	FtsControlBlock *shared;
 
-	shared = (FtsControlBlock *)ShmemInitStruct("Fault Tolerance manager", FtsShmemSize(), &found);
+	shared = (FtsControlBlock *) ShmemInitStruct("Fault Tolerance manager", FtsShmemSize(), &found);
 	if (!shared)
 		elog(FATAL, "FTS: could not initialize fault tolerance manager share memory");
 
@@ -87,7 +86,9 @@ FtsShmemInit(void)
 
 	ftsReadOnlyFlag = &shared->ftsReadOnlyFlag; /* global RO state */
 
-	ftsAdminRequestedRO = &shared->ftsAdminRequestedRO; /* Admin request -- guc-controlled RO state */
+	ftsAdminRequestedRO = &shared->ftsAdminRequestedRO; /* Admin request --
+														 * guc-controlled RO
+														 * state */
 
 	ftsProbeInfo = &shared->fts_probe_info;
 
@@ -105,7 +106,7 @@ FtsShmemInit(void)
 		shared->fts_probe_info.fts_discardResults = false;
 		shared->fts_probe_info.fts_statusVersion = 0;
 
-		shared->ftsEnabled = true; /* ??? */
+		shared->ftsEnabled = true;	/* ??? */
 		shared->ftsShutdownMaster = false;
 	}
 }
@@ -129,9 +130,11 @@ FtsNotifyProber(void)
 
 	if (ftsProbeInfo->fts_probePid == 0)
 		return;
+
 	/*
-	 * This is a full-scan request. We set the request-flag == to the bitmap version flag.
-	 * When the version has been bumped, we know that the request has been filled.
+	 * This is a full-scan request. We set the request-flag == to the bitmap
+	 * version flag. When the version has been bumped, we know that the
+	 * request has been filled.
 	 */
 	ftsProbeInfo->fts_probeScanRequested = ftsProbeInfo->fts_statusVersion;
 
@@ -145,7 +148,7 @@ FtsNotifyProber(void)
 
 		tv.tv_usec = 50000;
 		tv.tv_sec = 0;
-		select(0, NULL, NULL, NULL, &tv); /* don't care about return value. */
+		select(0, NULL, NULL, NULL, &tv);	/* don't care about return value. */
 
 		CHECK_FOR_INTERRUPTS();
 	}
@@ -155,7 +158,8 @@ FtsNotifyProber(void)
 /*
  * Check if master needs to shut down
  */
-bool FtsMasterShutdownRequested()
+bool
+FtsMasterShutdownRequested()
 {
 	return *ftsShutdownMaster;
 }
@@ -164,15 +168,17 @@ bool FtsMasterShutdownRequested()
 /*
  * Set flag indicating that master needs to shut down
  */
-void FtsRequestMasterShutdown()
+void
+FtsRequestMasterShutdown()
 {
 #ifdef USE_ASSERT_CHECKING
 	Assert(!*ftsShutdownMaster);
 
 	PrimaryMirrorMode pm_mode;
+
 	getPrimaryMirrorStatusCodes(&pm_mode, NULL, NULL, NULL);
 	Assert(pm_mode == PMModeMaster);
-#endif /*USE_ASSERT_CHECKING*/
+#endif							/* USE_ASSERT_CHECKING */
 
 	*ftsShutdownMaster = true;
 }
@@ -217,7 +223,7 @@ FtsReConfigureMPP(bool create_new_gangs)
 	local_fts_statusVersion = ftsProbeInfo->fts_statusVersion;
 
 	ereport(LOG, (errmsg_internal("FTS: reconfiguration is in progress"),
-			errSendAlert(true)));
+				  errSendAlert(true)));
 	DisconnectAndDestroyAllGangs(true);
 
 	/* Caller should throw an error. */
@@ -225,14 +231,14 @@ FtsReConfigureMPP(bool create_new_gangs)
 }
 
 void
-FtsHandleNetFailure(SegmentDatabaseDescriptor ** segDB, int numOfFailed)
+FtsHandleNetFailure(SegmentDatabaseDescriptor **segDB, int numOfFailed)
 {
 	elog(LOG, "FtsHandleNetFailure: numOfFailed %d", numOfFailed);
 
 	FtsReConfigureMPP(true);
 
 	ereport(ERROR, (errmsg_internal("MPP detected %d segment failures, system is reconnected", numOfFailed),
-			errSendAlert(true)));
+					errSendAlert(true)));
 }
 
 /*
@@ -241,10 +247,10 @@ FtsHandleNetFailure(SegmentDatabaseDescriptor ** segDB, int numOfFailed)
  * returns true if any segment DB is down.
  */
 bool
-FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor * segdbDesc, int size)
+FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
 {
-	int i = 0;
-	bool forceRescan = true;
+	int			i = 0;
+	bool		forceRescan = true;
 
 	Assert(isFTSEnabled());
 
@@ -257,7 +263,7 @@ FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor * segdbDesc, int size)
 		if (!FtsTestConnection(segInfo, forceRescan))
 		{
 			ereport(LOG, (errmsg_internal("FTS: found fault with segment dbid %d. "
-					"Reconfiguration is in progress", segInfo->dbid)));
+										  "Reconfiguration is in progress", segInfo->dbid)));
 			return true;
 		}
 
@@ -302,7 +308,8 @@ isFtsReadOnlySet(void)
 	return *ftsReadOnlyFlag;
 }
 
-uint64 getFtsVersion(void)
+uint64
+getFtsVersion(void)
 {
 	return ftsProbeInfo->fts_statusVersion;
 }

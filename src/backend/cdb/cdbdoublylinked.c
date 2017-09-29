@@ -11,26 +11,26 @@
  *
  *-------------------------------------------------------------------------
  */
- 
+
 #include "postgres.h"
 #include "cdb/cdbdoublylinked.h"
 
 void
 DoublyLinkedHead_Init(
-	DoublyLinkedHead		*head)
+					  DoublyLinkedHead *head)
 {
 	head->first = NULL;
 	head->last = NULL;
 	head->count = 0;
 }
 
-void*
+void *
 DoublyLinkedHead_First(
-	int						offsetToDoubleLinks,
-	DoublyLinkedHead		*head)
+					   int offsetToDoubleLinks,
+					   DoublyLinkedHead *head)
 {
-	DoubleLinks		*doubleLinks;
-	
+	DoubleLinks *doubleLinks;
+
 	if (head->first == NULL)
 	{
 		Assert(head->last == NULL);
@@ -43,16 +43,16 @@ DoublyLinkedHead_First(
 	doubleLinks = head->first;
 	Assert(doubleLinks->prev == NULL);
 
-	return ((uint8*)doubleLinks) - offsetToDoubleLinks;
+	return ((uint8 *) doubleLinks) - offsetToDoubleLinks;
 }
 
-void*
+void *
 DoublyLinkedHead_Last(
-	int						offsetToDoubleLinks,
-	DoublyLinkedHead		*head)
+					  int offsetToDoubleLinks,
+					  DoublyLinkedHead *head)
 {
-	DoubleLinks		*doubleLinks;
-	
+	DoubleLinks *doubleLinks;
+
 	if (head->last == NULL)
 	{
 		Assert(head->first == NULL);
@@ -65,18 +65,18 @@ DoublyLinkedHead_Last(
 	doubleLinks = head->last;
 	Assert(doubleLinks->next == NULL);
 
-	return ((uint8*)doubleLinks) - offsetToDoubleLinks;
+	return ((uint8 *) doubleLinks) - offsetToDoubleLinks;
 }
 
-void*
+void *
 DoublyLinkedHead_Next(
-	int						offsetToDoubleLinks,
-	DoublyLinkedHead		*head,
-	void					*ele)
+					  int offsetToDoubleLinks,
+					  DoublyLinkedHead *head,
+					  void *ele)
 {
-	DoubleLinks		*doubleLinks;
+	DoubleLinks *doubleLinks;
 
-	doubleLinks = (DoubleLinks*)(((uint8*)ele) + offsetToDoubleLinks);
+	doubleLinks = (DoubleLinks *) (((uint8 *) ele) + offsetToDoubleLinks);
 
 	if (head->last == doubleLinks)
 	{
@@ -97,19 +97,19 @@ DoublyLinkedHead_Next(
 
 	doubleLinks = doubleLinks->next;
 	Assert(doubleLinks != NULL);
-		
-	return ((uint8*)doubleLinks) - offsetToDoubleLinks;
+
+	return ((uint8 *) doubleLinks) - offsetToDoubleLinks;
 }
 
 void
 DoublyLinkedHead_AddFirst(
-	int						offsetToDoubleLinks,
-	DoublyLinkedHead		*head,
-	void					*ele)
+						  int offsetToDoubleLinks,
+						  DoublyLinkedHead *head,
+						  void *ele)
 {
-	DoubleLinks		*doubleLinks;
+	DoubleLinks *doubleLinks;
 
-	doubleLinks = (DoubleLinks*)(((uint8*)ele) + offsetToDoubleLinks);
+	doubleLinks = (DoubleLinks *) (((uint8 *) ele) + offsetToDoubleLinks);
 
 	Assert(doubleLinks->prev == NULL);
 	Assert(doubleLinks->next == NULL);
@@ -131,16 +131,16 @@ DoublyLinkedHead_AddFirst(
 	}
 
 	head->count++;
-		
+
 }
 
-void*
+void *
 DoublyLinkedHead_RemoveLast(
-	int						offsetToDoubleLinks,
-	DoublyLinkedHead		*head)
+							int offsetToDoubleLinks,
+							DoublyLinkedHead *head)
 {
-	DoubleLinks		*doubleLinks;
-	
+	DoubleLinks *doubleLinks;
+
 	if (head->last == NULL)
 	{
 		Assert(head->first == NULL);
@@ -166,12 +166,12 @@ DoublyLinkedHead_RemoveLast(
 	head->count--;
 	Assert(head->count >= 0);
 
-	return ((uint8*)doubleLinks) - offsetToDoubleLinks;
+	return ((uint8 *) doubleLinks) - offsetToDoubleLinks;
 }
 
 void
 DoubleLinks_Init(
-	DoubleLinks		*doubleLinks)
+				 DoubleLinks *doubleLinks)
 {
 	doubleLinks->next = NULL;
 	doubleLinks->prev = NULL;
@@ -179,13 +179,13 @@ DoubleLinks_Init(
 
 void
 DoubleLinks_Remove(
-	int						offsetToDoubleLinks,
-	DoublyLinkedHead		*head,
-	void					*ele)
+				   int offsetToDoubleLinks,
+				   DoublyLinkedHead *head,
+				   void *ele)
 {
-	DoubleLinks		*removeDoubleLinks;
+	DoubleLinks *removeDoubleLinks;
 
-	removeDoubleLinks = (DoubleLinks*)(((uint8*)ele) + offsetToDoubleLinks);
+	removeDoubleLinks = (DoubleLinks *) (((uint8 *) ele) + offsetToDoubleLinks);
 
 	if (removeDoubleLinks->prev == NULL &&
 		removeDoubleLinks->next == NULL)
@@ -204,22 +204,22 @@ DoubleLinks_Remove(
 		 * Removing the first element.
 		 */
 		Assert(head->first == removeDoubleLinks);
-		
+
 		Assert(removeDoubleLinks->next->prev == removeDoubleLinks);
 		removeDoubleLinks->next->prev = NULL;
-		
+
 		head->first = removeDoubleLinks->next;
 	}
 	else if (removeDoubleLinks->next == NULL)
 	{
 		Assert(head->last == removeDoubleLinks);
-		
+
 		/*
 		 * Removing the last element.
 		 */
 		Assert(removeDoubleLinks->prev->next == removeDoubleLinks);
 		removeDoubleLinks->prev->next = NULL;
-		
+
 		head->last = removeDoubleLinks->prev;
 	}
 	else
