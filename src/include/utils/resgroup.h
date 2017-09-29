@@ -121,7 +121,6 @@ extern void ResGroupControlInit(void);
 extern void	InitResGroups(void);
 
 extern void AllocResGroupEntry(Oid groupId, const ResGroupOpts *opts);
-extern void FreeResGroupEntry(Oid groupId);
 
 extern void SerializeResGroupInfo(StringInfo str);
 extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
@@ -148,10 +147,11 @@ extern bool ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool 
 /* Update the memory usage of resource group */
 extern void ResGroupReleaseMemory(int32 memoryChunks);
 
+extern void ResGroupDropFinish(Oid groupId, bool isCommit);
+extern void ResGroupCreateOnAbort(Oid groupId);
 extern void ResGroupAlterOnCommit(Oid groupId,
 								  ResGroupLimitType limittype,
 								  const ResGroupCaps *caps);
-extern void ResGroupDropCheckForWakeup(Oid groupId, bool isCommit);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
 extern void ResGroupDecideMemoryCaps(int groupId,
 									 ResGroupCaps *caps,
