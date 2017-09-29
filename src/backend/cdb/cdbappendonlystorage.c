@@ -19,12 +19,13 @@
 
 #ifdef USE_SEGWALREP
 #include "cdb/cdbappendonlyam.h"
-#endif		/* USE_SEGWALREP */
+#endif							/* USE_SEGWALREP */
 
 
-int32 AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)
+int32
+AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)
 {
-	int32 result;
+	int32		result;
 
 	if (configBlockSize > AOSmallContentHeader_MaxLength)
 		result = AOSmallContentHeader_MaxLength;
@@ -35,7 +36,7 @@ int32 AppendOnlyStorage_GetUsableBlockSize(int32 configBlockSize)
 	 * Round down to 32-bit boundary.
 	 */
 	result = (result / sizeof(uint32)) * sizeof(uint32);
-	
+
 	return result;
 }
 
@@ -44,9 +45,9 @@ void
 appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	/*
-	 * Perform redo of AO XLOG records only for standby mode.  We do
-	 * not need to replay AO XLOG records in normal mode because fsync
-	 * is performed on file close.
+	 * Perform redo of AO XLOG records only for standby mode.  We do not need
+	 * to replay AO XLOG records in normal mode because fsync is performed on
+	 * file close.
 	 */
 	if (IsStandbyMode())
 		ao_xlog_insert(record);
@@ -55,9 +56,9 @@ appendonly_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 void
 appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 {
-	xl_ao_insert *xlrec = (xl_ao_insert *)XLogRecGetData(record);
-	uint8		  xl_info = record->xl_info;
-	uint8		  info = xl_info & ~XLR_INFO_MASK;
+	xl_ao_insert *xlrec = (xl_ao_insert *) XLogRecGetData(record);
+	uint8		xl_info = record->xl_info;
+	uint8		info = xl_info & ~XLR_INFO_MASK;
 
 	if (info == XLOG_APPENDONLY_INSERT)
 	{
@@ -69,4 +70,4 @@ appendonly_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record)
 	else
 		appendStringInfo(buf, "UNKNOWN");
 }
-#endif		/* USE_SEGWALREP */
+#endif							/* USE_SEGWALREP */

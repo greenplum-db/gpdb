@@ -42,7 +42,8 @@ static pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef WIN32
 static void
-write_eventlog(int level, const char *line);
+			write_eventlog(int level, const char *line);
+
 /*
  * Write a message line to the windows event log
  */
@@ -72,7 +73,7 @@ write_eventlog(int level, const char *line)
 				&line,
 				NULL);
 }
-#endif   /* WIN32 */
+#endif							/* WIN32 */
 
 static void
 get_timestamp(char *strfbuf, int length)
@@ -112,7 +113,7 @@ write_log(const char *fmt,...)
 
 	if (Logging_collector && gp_log_format == 1)
 	{
-		char		errbuf[2048]; /* Arbitrary size? */
+		char		errbuf[2048];	/* Arbitrary size? */
 
 		vsnprintf(errbuf, sizeof(errbuf), fmt, ap);
 
@@ -133,7 +134,11 @@ write_log(const char *fmt,...)
 									0,
 									0,
 									true,
-									/* This is a real hack... We want to send alerts on these errors, but we aren't using ereport() */
+
+		/*
+		 * This is a real hack... We want to send alerts on these errors, but
+		 * we aren't using ereport()
+		 */
 									strstr(errbuf, "Master unable to connect") != NULL ||
 									strstr(errbuf, "Found a fault with a segment") != NULL,
 									NULL,
@@ -144,16 +149,17 @@ write_log(const char *fmt,...)
 	}
 
 	get_timestamp(logprefix, sizeof(logprefix));
-	strcat(logprefix,"|");
+	strcat(logprefix, "|");
 	if (MyProcPort)
 	{
 		const char *username = MyProcPort->user_name;
+
 		if (username == NULL || *username == '\0')
 			username = "";
-		strcat(logprefix,username); /* user */
+		strcat(logprefix, username);	/* user */
 	}
 
-	strcat(logprefix,"|");
+	strcat(logprefix, "|");
 	if (MyProcPort)
 	{
 		const char *dbname = MyProcPort->database_name;
@@ -162,40 +168,40 @@ write_log(const char *fmt,...)
 			dbname = "";
 		strcat(logprefix, dbname);
 	}
-	strcat(logprefix,"|");
-	sprintf(tempbuf,"%d",MyProcPid);
-	strcat(logprefix,tempbuf); /* pid */
-	strcat(logprefix,"|");
-	sprintf(tempbuf,"con%d cmd%d",gp_session_id,gp_command_count);
-	strcat(logprefix,tempbuf);
+	strcat(logprefix, "|");
+	sprintf(tempbuf, "%d", MyProcPid);
+	strcat(logprefix, tempbuf); /* pid */
+	strcat(logprefix, "|");
+	sprintf(tempbuf, "con%d cmd%d", gp_session_id, gp_command_count);
+	strcat(logprefix, tempbuf);
 
-	strcat(logprefix,"|");
-	strcat(logprefix,":-THREAD ");
+	strcat(logprefix, "|");
+	strcat(logprefix, ":-THREAD ");
 	if (pthread_equal(main_tid, pthread_self()))
-		strcat(logprefix,"MAIN");
+		strcat(logprefix, "MAIN");
 	else
 	{
-		sprintf(tempbuf,"%lu",mythread());
-		strcat(logprefix,tempbuf);
+		sprintf(tempbuf, "%lu", mythread());
+		strcat(logprefix, tempbuf);
 	}
-	strcat(logprefix,":  ");
+	strcat(logprefix, ":  ");
 
-	strcat(logprefix,fmt);
+	strcat(logprefix, fmt);
 
-	if (fmt[strlen(fmt)-1]!='\n')
-		strcat(logprefix,"\n");
+	if (fmt[strlen(fmt) - 1] != '\n')
+		strcat(logprefix, "\n");
 
 	/*
-	 * We don't trust that vfprintf won't get confused if it
-	 * is being run by two threads at the same time, which could
-	 * cause interleaved messages.  Let's play it safe, and
-	 * make sure only one thread is doing this at a time.
+	 * We don't trust that vfprintf won't get confused if it is being run by
+	 * two threads at the same time, which could cause interleaved messages.
+	 * Let's play it safe, and make sure only one thread is doing this at a
+	 * time.
 	 */
 	pthread_mutex_lock(&send_mutex);
 #ifndef WIN32
 	/* On Unix, we just fprintf to stderr */
 	vfprintf(stderr, logprefix, ap);
-    fflush(stderr);
+	fflush(stderr);
 #else
 
 	/*
@@ -204,18 +210,18 @@ write_log(const char *fmt,...)
 	 */
 	if (pgwin32_is_service())	/* Running as a service */
 	{
-		char		errbuf[2048];		/* Arbitrary size? */
+		char		errbuf[2048];	/* Arbitrary size? */
 
 		vsnprintf(errbuf, sizeof(errbuf), logprefix, ap);
 
 		write_eventlog(EVENTLOG_ERROR_TYPE, errbuf);
 	}
 	else
-    {
-        /* Not running as service, write to stderr */
-        vfprintf(stderr, logprefix, ap);
-        fflush(stderr);
-    }
+	{
+		/* Not running as service, write to stderr */
+		vfprintf(stderr, logprefix, ap);
+		fflush(stderr);
+	}
 #endif
 	pthread_mutex_unlock(&send_mutex);
 	va_end(ap);

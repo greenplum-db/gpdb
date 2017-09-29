@@ -55,15 +55,15 @@
  */
 
 /* This value is the gp_max_tablespaces * gp_max_databases. */
-int		MaxPersistentDatabaseDirectories = 0;
+int			MaxPersistentDatabaseDirectories = 0;
 
 typedef struct PersistentDatabaseSharedData
 {
-	
-	PersistentFileSysObjSharedData		fileSysObjSharedData;
-	
-	SharedOidSearchTable	databaseDirSearchTable;
-							/* Variable length -- MUST BE LAST */
+
+	PersistentFileSysObjSharedData fileSysObjSharedData;
+
+	SharedOidSearchTable databaseDirSearchTable;
+	/* Variable length -- MUST BE LAST */
 
 } PersistentDatabaseSharedData;
 
@@ -72,18 +72,19 @@ typedef struct PersistentDatabaseSharedData
 typedef struct PersistentDatabaseData
 {
 
-	PersistentFileSysObjData		fileSysObjData;
+	PersistentFileSysObjData fileSysObjData;
 
 } PersistentDatabaseData;
 
 /*
  * Global Variables
  */
-PersistentDatabaseSharedData	*persistentDatabaseSharedData = NULL;
+PersistentDatabaseSharedData *persistentDatabaseSharedData = NULL;
 
-PersistentDatabaseData	persistentDatabaseData = PersistentDatabaseData_StaticInit;
+PersistentDatabaseData persistentDatabaseData = PersistentDatabaseData_StaticInit;
 
-static void PersistentDatabase_VerifyInitScan(void)
+static void
+PersistentDatabase_VerifyInitScan(void)
 {
 	if (persistentDatabaseSharedData == NULL)
 		elog(PANIC, "Persistent database information shared-memory not setup");
@@ -91,56 +92,57 @@ static void PersistentDatabase_VerifyInitScan(void)
 	PersistentFileSysObj_VerifyInitScan();
 }
 
-// -----------------------------------------------------------------------------
-// Scan 
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Scan  */
+/* ----------------------------------------------------------------------------- */
 
-static bool PersistentDatabase_ScanTupleCallback(
-	ItemPointer 			persistentTid,
-	int64					persistentSerialNum,
-	Datum					*values)
+static bool
+PersistentDatabase_ScanTupleCallback(
+									 ItemPointer persistentTid,
+									 int64 persistentSerialNum,
+									 Datum *values)
 {
-	DbDirNode		dbDirNode;
-	
-	PersistentFileSysState	state;
+	DbDirNode	dbDirNode;
 
-	int64			createMirrorDataLossTrackingSessionNum;
+	PersistentFileSysState state;
 
-	MirroredObjectExistenceState		mirrorExistenceState;
+	int64		createMirrorDataLossTrackingSessionNum;
 
-	int32					reserved;
-	TransactionId			parentXid;
-	int64					serialNum;
-	
+	MirroredObjectExistenceState mirrorExistenceState;
+
+	int32		reserved;
+	TransactionId parentXid;
+	int64		serialNum;
+
 	SharedOidSearchAddResult addResult;
 	DatabaseDirEntry databaseDirEntry;
 
 	GpPersistentDatabaseNode_GetValues(
-									values,
-									&dbDirNode.tablespace,
-									&dbDirNode.database,
-									&state,
-									&createMirrorDataLossTrackingSessionNum,
-									&mirrorExistenceState,
-									&reserved,
-									&parentXid,
-									&serialNum);
+									   values,
+									   &dbDirNode.tablespace,
+									   &dbDirNode.database,
+									   &state,
+									   &createMirrorDataLossTrackingSessionNum,
+									   &mirrorExistenceState,
+									   &reserved,
+									   &parentXid,
+									   &serialNum);
 
 	addResult =
-			SharedOidSearch_Add(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					dbDirNode.database,
-					dbDirNode.tablespace,
-					(SharedOidSearchObjHeader**)&databaseDirEntry);
+		SharedOidSearch_Add(
+							&persistentDatabaseSharedData->databaseDirSearchTable,
+							dbDirNode.database,
+							dbDirNode.tablespace,
+							(SharedOidSearchObjHeader **) &databaseDirEntry);
 	if (addResult == SharedOidSearchAddResult_NoMemory)
 		elog(ERROR, "Out of shared-memory for persistent relations");
 	else if (addResult == SharedOidSearchAddResult_Exists)
-		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'", 
+		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'",
 			 GetDatabasePath(dbDirNode.database, dbDirNode.tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 	else
 		Assert(addResult == SharedOidSearchAddResult_Ok);
-	
+
 	databaseDirEntry->state = state;
 	databaseDirEntry->persistentSerialNum = serialNum;
 	databaseDirEntry->persistentTid = *persistentTid;
@@ -148,7 +150,7 @@ static bool PersistentDatabase_ScanTupleCallback(
 	databaseDirEntry->iteratorRefCount = 0;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
+		elog(Persistent_DebugPrintLevel(),
 			 "PersistentDatabase_ScanTupleCallback: database %u, tablespace %u, state %s, TID %s, serial number " INT64_FORMAT,
 			 dbDirNode.database,
 			 dbDirNode.tablespace,
@@ -156,19 +158,21 @@ static bool PersistentDatabase_ScanTupleCallback(
 			 ItemPointerToString2(persistentTid),
 			 persistentSerialNum);
 
-	return true;	// Continue.
+	return true;
+	/* Continue. */
 }
 
-// -----------------------------------------------------------------------------
-// Iterate	
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Iterate	 */
+/* ----------------------------------------------------------------------------- */
 
 static bool iterateOnShmemExitArmed = false;
 
 static DatabaseDirEntry dirIterateDatabaseDirEntry = NULL;
 
-static void PersistentDatabase_DirIterateMoveAway(
-	DatabaseDirEntry prevDatabaseDirEntry)
+static void
+PersistentDatabase_DirIterateMoveAway(
+									  DatabaseDirEntry prevDatabaseDirEntry)
 {
 	if (prevDatabaseDirEntry == NULL)
 		return;
@@ -182,36 +186,39 @@ static void PersistentDatabase_DirIterateMoveAway(
 		 * Our job is to actually free the entry.
 		 */
 		SharedOidSearch_Delete(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					&prevDatabaseDirEntry->header);
+							   &persistentDatabaseSharedData->databaseDirSearchTable,
+							   &prevDatabaseDirEntry->header);
 	}
 }
 
-static void PersistentDatabase_ReleaseDirIterator(void)
+static void
+PersistentDatabase_ReleaseDirIterator(void)
 {
 
 	if (dirIterateDatabaseDirEntry != NULL)
 	{
 		SharedOidSearch_ReleaseIterator(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					(SharedOidSearchObjHeader**)&dirIterateDatabaseDirEntry);
+										&persistentDatabaseSharedData->databaseDirSearchTable,
+										(SharedOidSearchObjHeader **) &dirIterateDatabaseDirEntry);
 		Assert(dirIterateDatabaseDirEntry == NULL);
 	}
-	
+
 	PersistentDatabase_DirIterateMoveAway(dirIterateDatabaseDirEntry);
 }
 
-static void AtProcExit_PersistentDatabase(int code, Datum arg)
+static void
+AtProcExit_PersistentDatabase(int code, Datum arg)
 {
 	PersistentDatabase_ReleaseDirIterator();
 }
 
-void PersistentDatabase_DirIterateInit(void)
+void
+PersistentDatabase_DirIterateInit(void)
 {
 	READ_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	Assert(persistentDatabaseSharedData != NULL);
-	
+
 	PersistentDatabase_VerifyInitScan();
 
 	PersistentDatabase_ReleaseDirIterator();
@@ -225,26 +232,27 @@ void PersistentDatabase_DirIterateInit(void)
 	}
 
 	dirIterateDatabaseDirEntry = NULL;
-	
+
 	READ_PERSISTENT_STATE_ORDERED_UNLOCK;
 }
 
 
-bool PersistentDatabase_DirIterateNext(
-	DbDirNode				*dbDirNode,
+bool
+PersistentDatabase_DirIterateNext(
+								  DbDirNode *dbDirNode,
 
-	PersistentFileSysState	*state,
+								  PersistentFileSysState *state,
 
-	ItemPointer				persistentTid,
+								  ItemPointer persistentTid,
 
-	int64					*persistentSerialNum)
+								  int64 *persistentSerialNum)
 {
 	READ_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	DatabaseDirEntry prevDatabaseDirEntry;
 
 	Assert(persistentDatabaseSharedData != NULL);
-	
+
 	PersistentDatabase_VerifyInitScan();
 
 	MemSet(dbDirNode, 0, sizeof(DbDirNode));
@@ -255,8 +263,8 @@ bool PersistentDatabase_DirIterateNext(
 	{
 		prevDatabaseDirEntry = dirIterateDatabaseDirEntry;
 		SharedOidSearch_Iterate(
-						&persistentDatabaseSharedData->databaseDirSearchTable,
-						(SharedOidSearchObjHeader**)&dirIterateDatabaseDirEntry);
+								&persistentDatabaseSharedData->databaseDirSearchTable,
+								(SharedOidSearchObjHeader **) &dirIterateDatabaseDirEntry);
 
 		PersistentDatabase_DirIterateMoveAway(prevDatabaseDirEntry);
 
@@ -269,11 +277,11 @@ bool PersistentDatabase_DirIterateNext(
 		*state = dirIterateDatabaseDirEntry->state;
 		if (*state == PersistentFileSysState_Free)
 		{
-			// UNDONE: Or, PinCount > 1
+			/* UNDONE: Or, PinCount > 1 */
 			Assert(dirIterateDatabaseDirEntry->iteratorRefCount > 0);
 			continue;
 		}
-		
+
 		dbDirNode->tablespace = dirIterateDatabaseDirEntry->header.oid2;
 		dbDirNode->database = dirIterateDatabaseDirEntry->header.oid1;
 
@@ -289,7 +297,8 @@ bool PersistentDatabase_DirIterateNext(
 	return true;
 }
 
-void PersistentDatabase_DirIterateClose(void)
+void
+PersistentDatabase_DirIterateClose(void)
 {
 	READ_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
@@ -305,50 +314,52 @@ void PersistentDatabase_DirIterateClose(void)
 }
 
 
-bool PersistentDatabase_DbDirExistsUnderLock(
-	DbDirNode				*dbDirNode)
+bool
+PersistentDatabase_DbDirExistsUnderLock(
+										DbDirNode *dbDirNode)
 {
 	DatabaseDirEntry databaseDirEntry;
-	
+
 	PersistentDatabase_VerifyInitScan();
 
 	databaseDirEntry =
-			(DatabaseDirEntry)
-				    SharedOidSearch_Find(
-				    		&persistentDatabaseSharedData->databaseDirSearchTable,
-				    		dbDirNode->database,
-				    		dbDirNode->tablespace);
-	
+		(DatabaseDirEntry)
+		SharedOidSearch_Find(
+							 &persistentDatabaseSharedData->databaseDirSearchTable,
+							 dbDirNode->database,
+							 dbDirNode->tablespace);
+
 	return (databaseDirEntry != NULL);
 }
 
 
-extern void PersistentDatabase_Reset(void)
+extern void
+PersistentDatabase_Reset(void)
 {
 	DatabaseDirEntry databaseDirEntry;
 
 	databaseDirEntry = NULL;
 	SharedOidSearch_Iterate(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					(SharedOidSearchObjHeader**)&databaseDirEntry);
+							&persistentDatabaseSharedData->databaseDirSearchTable,
+							(SharedOidSearchObjHeader **) &databaseDirEntry);
 	while (true)
 	{
 		PersistentFileSysObjName fsObjName;
 
 		DatabaseDirEntry nextDatabaseDirEntry;
-		
+
 		if (databaseDirEntry == NULL)
 		{
 			break;
 		}
 
 		PersistentFileSysObjName_SetDatabaseDir(
-										&fsObjName,
-										/* tablespaceOid */ databaseDirEntry->header.oid2,
-										/* databaseOid */ databaseDirEntry->header.oid1);
+												&fsObjName,
+												 /* tablespaceOid */ databaseDirEntry->header.oid2,
+												 /* databaseOid */ databaseDirEntry->header.oid1);
 
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Persistent database directory: Resetting '%s' serial number " INT64_FORMAT " at TID %s",
 				 PersistentFileSysObjName_ObjectName(&fsObjName),
 				 databaseDirEntry->persistentSerialNum,
@@ -356,12 +367,12 @@ extern void PersistentDatabase_Reset(void)
 
 		nextDatabaseDirEntry = databaseDirEntry;
 		SharedOidSearch_Iterate(
-						&persistentDatabaseSharedData->databaseDirSearchTable,
-						(SharedOidSearchObjHeader**)&nextDatabaseDirEntry);
+								&persistentDatabaseSharedData->databaseDirSearchTable,
+								(SharedOidSearchObjHeader **) &nextDatabaseDirEntry);
 
 		SharedOidSearch_Delete(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					&databaseDirEntry->header);
+							   &persistentDatabaseSharedData->databaseDirSearchTable,
+							   &databaseDirEntry->header);
 
 		databaseDirEntry = nextDatabaseDirEntry;
 	}
@@ -369,26 +380,27 @@ extern void PersistentDatabase_Reset(void)
 
 
 
-// -----------------------------------------------------------------------------
-// Helpers 
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Helpers  */
+/* ----------------------------------------------------------------------------- */
 
-static void PersistentDatabase_LookupExistingDbDir(
-	DbDirNode				*dbDirNode,
+static void
+PersistentDatabase_LookupExistingDbDir(
+									   DbDirNode *dbDirNode,
 
-	DatabaseDirEntry 	    *databaseDirEntry)
+									   DatabaseDirEntry *databaseDirEntry)
 {
-	
+
 	PersistentDatabase_VerifyInitScan();
 
 	*databaseDirEntry =
-			(DatabaseDirEntry)
-				    SharedOidSearch_Find(
-				    		&persistentDatabaseSharedData->databaseDirSearchTable,
-				    		dbDirNode->database,
-				    		dbDirNode->tablespace);
+		(DatabaseDirEntry)
+		SharedOidSearch_Find(
+							 &persistentDatabaseSharedData->databaseDirSearchTable,
+							 dbDirNode->database,
+							 dbDirNode->tablespace);
 	if (*databaseDirEntry == NULL)
-		elog(ERROR, "Persistent database entry '%s' expected to exist", 
+		elog(ERROR, "Persistent database entry '%s' expected to exist",
 			 GetDatabasePath(dbDirNode->database, dbDirNode->tablespace));
 }
 
@@ -396,47 +408,49 @@ static void PersistentDatabase_LookupExistingDbDir(
  * We pass in changable columns like mirrorExistenceState, parentXid, etc instead
  * of keep them in our DatabaseDirEntry to avoid stale data.
  */
-static void PersistentDatabase_AddTuple(
-	DatabaseDirEntry databaseDirEntry,
+static void
+PersistentDatabase_AddTuple(
+							DatabaseDirEntry databaseDirEntry,
 
-	int64			createMirrorDataLossTrackingSessionNum,
+							int64 createMirrorDataLossTrackingSessionNum,
 
-	MirroredObjectExistenceState mirrorExistenceState,
+							MirroredObjectExistenceState mirrorExistenceState,
 
-	int32			reserved,
+							int32 reserved,
 
-	TransactionId 	parentXid,
+							TransactionId parentXid,
 
-	bool			flushToXLog)
-				/* When true, the XLOG record for this change will be flushed to disk. */
+							bool flushToXLog)
+ /* When true, the XLOG record for this change will be flushed to disk. */
 {
-	Oid tablespaceOid = databaseDirEntry->header.oid2;
-	Oid databaseOid = databaseDirEntry->header.oid1;
+	Oid			tablespaceOid = databaseDirEntry->header.oid2;
+	Oid			databaseOid = databaseDirEntry->header.oid1;
 
-	Datum values[Natts_gp_persistent_database_node];
+	Datum		values[Natts_gp_persistent_database_node];
 
 	GpPersistentDatabaseNode_SetDatumValues(
-								values,
-								tablespaceOid,
-								databaseOid,
-								databaseDirEntry->state,
-								createMirrorDataLossTrackingSessionNum,
-								mirrorExistenceState,
-								reserved,
-								parentXid,
-								/* persistentSerialNum */ 0);	// This will be set by PersistentFileSysObj_AddTuple.
+											values,
+											tablespaceOid,
+											databaseOid,
+											databaseDirEntry->state,
+											createMirrorDataLossTrackingSessionNum,
+											mirrorExistenceState,
+											reserved,
+											parentXid,
+											 /* persistentSerialNum */ 0);
+	/* This will be set by PersistentFileSysObj_AddTuple. */
 
 	PersistentFileSysObj_AddTuple(
-							PersistentFsObjType_DatabaseDir,
-							values,
-							flushToXLog,
-							&databaseDirEntry->persistentTid,
-							&databaseDirEntry->persistentSerialNum);
+								  PersistentFsObjType_DatabaseDir,
+								  values,
+								  flushToXLog,
+								  &databaseDirEntry->persistentTid,
+								  &databaseDirEntry->persistentSerialNum);
 }
 
-// -----------------------------------------------------------------------------
-// State Change 
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  State Change  */
+/* ----------------------------------------------------------------------------- */
 
 /*
  * Indicate we intend to create a relation file as part of the current transaction.
@@ -448,19 +462,20 @@ static void PersistentDatabase_AddTuple(
  * to be created, call ~_DoPendingCreates to do the actual file-system creates.  (See its
  * note on XLOG flushing).
  */
-void PersistentDatabase_MarkCreatePending(
-	DbDirNode 		*dbDirNode,
-				/* The tablespace and database OIDs for the create. */
+void
+PersistentDatabase_MarkCreatePending(
+									 DbDirNode *dbDirNode,
+ /* The tablespace and database OIDs for the create. */
 
-	MirroredObjectExistenceState mirrorExistenceState,
+									 MirroredObjectExistenceState mirrorExistenceState,
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_database_node tuple for the rel file */
-				
-	int64			*persistentSerialNum,
+									 ItemPointer persistentTid,
+ /* TID of the gp_persistent_database_node tuple for the rel file */
 
-	bool			flushToXLog)
-				/* When true, the XLOG record for this change will be flushed to disk. */
+									 int64 *persistentSerialNum,
+
+									 bool flushToXLog)
+ /* When true, the XLOG record for this change will be flushed to disk. */
 
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
@@ -472,16 +487,17 @@ void PersistentDatabase_MarkCreatePending(
 	TransactionId topXid;
 
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
+
 		/*
-		 * The initdb process will load the persistent table once we 
-		 * out of bootstrap mode.
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
 		 */
 		return;
 	}
@@ -489,41 +505,41 @@ void PersistentDatabase_MarkCreatePending(
 	PersistentDatabase_VerifyInitScan();
 
 	PersistentFileSysObjName_SetDatabaseDir(
-									&fsObjName,
-									dbDirNode->tablespace,
-									dbDirNode->database);
+											&fsObjName,
+											dbDirNode->tablespace,
+											dbDirNode->database);
 
 	topXid = GetTopTransactionId();
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	databaseDirEntry =
-			(DatabaseDirEntry)
-				    SharedOidSearch_Find(
-				    		&persistentDatabaseSharedData->databaseDirSearchTable,
-				    		dbDirNode->database,
-				    		dbDirNode->tablespace);
+		(DatabaseDirEntry)
+		SharedOidSearch_Find(
+							 &persistentDatabaseSharedData->databaseDirSearchTable,
+							 dbDirNode->database,
+							 dbDirNode->tablespace);
 	if (databaseDirEntry != NULL)
-		elog(ERROR, "Persistent database entry '%s' already exists in state '%s'", 
+		elog(ERROR, "Persistent database entry '%s' already exists in state '%s'",
 			 GetDatabasePath(
-				   dbDirNode->database, 
-				   dbDirNode->tablespace),
-		     PersistentFileSysObjState_Name(databaseDirEntry->state));
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
+			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	addResult =
-		    SharedOidSearch_Add(
-		    		&persistentDatabaseSharedData->databaseDirSearchTable,
-		    		dbDirNode->database,
-		    		dbDirNode->tablespace,
-		    		(SharedOidSearchObjHeader**)&databaseDirEntry);
+		SharedOidSearch_Add(
+							&persistentDatabaseSharedData->databaseDirSearchTable,
+							dbDirNode->database,
+							dbDirNode->tablespace,
+							(SharedOidSearchObjHeader **) &databaseDirEntry);
 	if (addResult == SharedOidSearchAddResult_NoMemory)
 		elog(ERROR, "Out of shared-memory for persistent databaseS");
 	else if (addResult == SharedOidSearchAddResult_Exists)
-		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'", 
-		     GetDatabasePath(
-		     		dbDirNode->database, 
-		     		dbDirNode->tablespace),
-		     PersistentFileSysObjState_Name(databaseDirEntry->state));
+		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'",
+			 GetDatabasePath(
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
+			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 	else
 		Assert(addResult == SharedOidSearchAddResult_Ok);
 
@@ -532,49 +548,49 @@ void PersistentDatabase_MarkCreatePending(
 	databaseDirEntry->iteratorRefCount = 0;
 
 	PersistentDatabase_AddTuple(
-							databaseDirEntry,
-							/* createMirrorDataLossTrackingSessionNum */ 0,
-							mirrorExistenceState,
-							/* reserved */ 0,
-							/* parentXid */ topXid,
-							flushToXLog);
+								databaseDirEntry,
+								 /* createMirrorDataLossTrackingSessionNum */ 0,
+								mirrorExistenceState,
+								 /* reserved */ 0,
+								 /* parentXid */ topXid,
+								flushToXLog);
 
 	*persistentTid = databaseDirEntry->persistentTid;
 	*persistentSerialNum = databaseDirEntry->persistentSerialNum;
-	
+
 	/*
 	 * This XLOG must be generated under the persistent write-lock.
 	 */
 #ifdef MASTER_MIRROR_SYNC
-	mmxlog_log_create_database(dbDirNode->tablespace, dbDirNode->database); 
+	mmxlog_log_create_database(dbDirNode->tablespace, dbDirNode->database);
 #endif
 
 	SIMPLE_FAULT_INJECTOR(FaultBeforePendingDeleteDatabaseEntry);
 
 	/*
-	 * MPP-18228
-	 * To make adding 'Create Pending' entry to persistent table and adding
-	 * to the PendingDelete list atomic
+	 * MPP-18228 To make adding 'Create Pending' entry to persistent table and
+	 * adding to the PendingDelete list atomic
 	 */
 	PendingDelete_AddCreatePendingEntryWrapper(
-					&fsObjName,
-					persistentTid,
-					*persistentSerialNum);
+											   &fsObjName,
+											   persistentTid,
+											   *persistentSerialNum);
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 }
 
-void PersistentDatabase_AddCreated(
-	DbDirNode 		*dbDirNode,
-				/* The tablespace and database OIDs for the create. */
+void
+PersistentDatabase_AddCreated(
+							  DbDirNode *dbDirNode,
+ /* The tablespace and database OIDs for the create. */
 
-	MirroredObjectExistenceState mirrorExistenceState,
+							  MirroredObjectExistenceState mirrorExistenceState,
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+							  ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	bool			flushToXLog)
-				/* When true, the XLOG record for this change will be flushed to disk. */
+							  bool flushToXLog)
+ /* When true, the XLOG record for this change will be flushed to disk. */
 
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
@@ -584,45 +600,45 @@ void PersistentDatabase_AddCreated(
 	DatabaseDirEntry databaseDirEntry;
 	SharedOidSearchAddResult addResult;
 
-	int64 persistentSerialNum;
+	int64		persistentSerialNum;
 
 	if (!Persistent_BeforePersistenceWork())
 		elog(ERROR, "We can only add to persistent meta-data when special states");
 
-	// Verify PersistentFileSysObj_BuildInitScan has been called.
+	/* Verify PersistentFileSysObj_BuildInitScan has been called. */
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	databaseDirEntry =
-			(DatabaseDirEntry)
-				    SharedOidSearch_Find(
-				    		&persistentDatabaseSharedData->databaseDirSearchTable,
-				    		dbDirNode->database,
-				    		dbDirNode->tablespace);
+		(DatabaseDirEntry)
+		SharedOidSearch_Find(
+							 &persistentDatabaseSharedData->databaseDirSearchTable,
+							 dbDirNode->database,
+							 dbDirNode->tablespace);
 	if (databaseDirEntry != NULL)
-		elog(ERROR, "Persistent database entry '%s' already exists in state '%s'", 
+		elog(ERROR, "Persistent database entry '%s' already exists in state '%s'",
 			 GetDatabasePath(
-				   dbDirNode->database, 
-				   dbDirNode->tablespace),
-		     PersistentFileSysObjState_Name(databaseDirEntry->state));
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
+			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	addResult =
-		    SharedOidSearch_Add(
-		    		&persistentDatabaseSharedData->databaseDirSearchTable,
-		    		dbDirNode->database,
-		    		dbDirNode->tablespace,
-		    		(SharedOidSearchObjHeader**)&databaseDirEntry);
+		SharedOidSearch_Add(
+							&persistentDatabaseSharedData->databaseDirSearchTable,
+							dbDirNode->database,
+							dbDirNode->tablespace,
+							(SharedOidSearchObjHeader **) &databaseDirEntry);
 	if (addResult == SharedOidSearchAddResult_NoMemory)
 		elog(ERROR, "Out of shared-memory for persistent databaseS");
 	else if (addResult == SharedOidSearchAddResult_Exists)
-		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'", 
-		     GetDatabasePath(
-		     		dbDirNode->database, 
-		     		dbDirNode->tablespace),
-		     PersistentFileSysObjState_Name(databaseDirEntry->state));
+		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'",
+			 GetDatabasePath(
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
+			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 	else
 		Assert(addResult == SharedOidSearchAddResult_Ok);
 
@@ -631,12 +647,12 @@ void PersistentDatabase_AddCreated(
 	databaseDirEntry->iteratorRefCount = 0;
 
 	PersistentDatabase_AddTuple(
-							databaseDirEntry,
-							/* createMirrorDataLossTrackingSessionNum */ 0,
-							mirrorExistenceState,
-							/* reserved */ 0,
-							InvalidTransactionId,
-							flushToXLog);
+								databaseDirEntry,
+								 /* createMirrorDataLossTrackingSessionNum */ 0,
+								mirrorExistenceState,
+								 /* reserved */ 0,
+								InvalidTransactionId,
+								flushToXLog);
 
 	*persistentTid = databaseDirEntry->persistentTid;
 	persistentSerialNum = databaseDirEntry->persistentSerialNum;
@@ -644,8 +660,8 @@ void PersistentDatabase_AddCreated(
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: Add '%s' in state 'Created', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: Add '%s' in state 'Created', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 MirroredObjectExistenceState_Name(mirrorExistenceState),
 			 persistentSerialNum,
@@ -657,6 +673,7 @@ xlog_create_database(DbDirNode *db)
 {
 	DatabaseDirEntry dbe;
 	SharedOidSearchAddResult addResult;
+
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	PersistentDatabase_VerifyInitScan();
@@ -664,32 +681,32 @@ xlog_create_database(DbDirNode *db)
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	dbe = (DatabaseDirEntry) SharedOidSearch_Find(
-				    	&persistentDatabaseSharedData->databaseDirSearchTable,
-				    							  db->database,
-				    							  db->tablespace);
+												  &persistentDatabaseSharedData->databaseDirSearchTable,
+												  db->database,
+												  db->tablespace);
 	if (dbe != NULL)
 		elog(ERROR, "persistent database entry '%s' already exists "
-			 		"in state '%s'", 
+			 "in state '%s'",
 			 GetDatabasePath(
-				   db->database, 
-				   db->tablespace),
-		     PersistentFileSysObjState_Name(dbe->state));
+							 db->database,
+							 db->tablespace),
+			 PersistentFileSysObjState_Name(dbe->state));
 
 	addResult = SharedOidSearch_Add(
-		    		&persistentDatabaseSharedData->databaseDirSearchTable,
-		    		db->database,
-		    		db->tablespace,
-		    		(SharedOidSearchObjHeader**)&dbe);
+									&persistentDatabaseSharedData->databaseDirSearchTable,
+									db->database,
+									db->tablespace,
+									(SharedOidSearchObjHeader **) &dbe);
 
 	if (addResult == SharedOidSearchAddResult_NoMemory)
 		elog(ERROR, "out of shared-memory for persistent databases");
 	else if (addResult == SharedOidSearchAddResult_Exists)
 		elog(PANIC, "persistent database entry '%s' already exists in "
-			 		"state '%s'", 
-		     GetDatabasePath(
-		     		db->database, 
-		     		db->tablespace),
-		     PersistentFileSysObjState_Name(dbe->state));
+			 "state '%s'",
+			 GetDatabasePath(
+							 db->database,
+							 db->tablespace),
+			 PersistentFileSysObjState_Name(dbe->state));
 	else
 		Insist(addResult == SharedOidSearchAddResult_Ok);
 
@@ -701,24 +718,25 @@ xlog_create_database(DbDirNode *db)
 }
 
 
-// -----------------------------------------------------------------------------
-// Transaction End  
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Transaction End   */
+/* ----------------------------------------------------------------------------- */
 
 /*
  * Indicate the transaction commited and the relation is officially created.
  */
-void PersistentDatabase_Created(
-	DbDirNode 		*dbDirNode,
-				/* The tablespace and database OIDs for the created relation. */
+void
+PersistentDatabase_Created(
+						   DbDirNode *dbDirNode,
+ /* The tablespace and database OIDs for the created relation. */
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+						   ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	int64			persistentSerialNum,
-				/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+						   int64 persistentSerialNum,
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
-	bool			retryPossible)
+						   bool retryPossible)
 
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
@@ -730,52 +748,57 @@ void PersistentDatabase_Created(
 	PersistentFileSysObjStateChangeResult stateChangeResult;
 
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	PersistentDatabase_LookupExistingDbDir(
-									dbDirNode,
-									&databaseDirEntry);
+										   dbDirNode,
+										   &databaseDirEntry);
 
 	if (databaseDirEntry->state != PersistentFileSysState_CreatePending)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' state (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' state (actual state '%s')",
 			 GetDatabasePath(
-			 		dbDirNode->database, 
-			 		dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	stateChangeResult =
 		PersistentFileSysObj_StateChange(
-								&fsObjName,
-								persistentTid,
-								persistentSerialNum,
-								PersistentFileSysState_Created,
-								retryPossible,
-								/* flushToXlog */ false,
-								/* oldState */ NULL,
-								/* verifiedActionCallback */ NULL);
+										 &fsObjName,
+										 persistentTid,
+										 persistentSerialNum,
+										 PersistentFileSysState_Created,
+										 retryPossible,
+										  /* flushToXlog */ false,
+										  /* oldState */ NULL,
+										  /* verifiedActionCallback */ NULL);
 
 	databaseDirEntry->state = PersistentFileSysState_Created;
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: '%s' changed state from 'Create Pending' to 'Created', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: '%s' changed state from 'Create Pending' to 'Created', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid),
@@ -789,9 +812,10 @@ void PersistentDatabase_Created(
 void
 PersistentDatabase_RemoveSegment(int16 dbid, bool ismirror)
 {
-	Relation rel;
+	Relation	rel;
 	HeapScanDesc scandesc;
-	HeapTuple tuple;
+	HeapTuple	tuple;
+
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	if (Persistent_BeforePersistenceWork())
@@ -808,14 +832,14 @@ PersistentDatabase_RemoveSegment(int16 dbid, bool ismirror)
 	while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 	{
 		Form_gp_persistent_database_node form =
-			(Form_gp_persistent_database_node)GETSTRUCT(tuple);
-		Oid tblspcoid = form->tablespace_oid;
-		Oid dboid = form->database_oid;
-		int64 serial = form->persistent_serial_num;
+		(Form_gp_persistent_database_node) GETSTRUCT(tuple);
+		Oid			tblspcoid = form->tablespace_oid;
+		Oid			dboid = form->database_oid;
+		int64		serial = form->persistent_serial_num;
 
 		PersistentFileSysObjName fsObjName;
 
-		/* 
+		/*
 		 * We need to perform this table for all (database, tablespace) pairs
 		 * that are defined in the persistent table.
 		 */
@@ -823,12 +847,12 @@ PersistentDatabase_RemoveSegment(int16 dbid, bool ismirror)
 												tblspcoid,
 												dboid);
 
-	    PersistentFileSysObj_RemoveSegment(&fsObjName,
+		PersistentFileSysObj_RemoveSegment(&fsObjName,
 										   &tuple->t_self,
 										   serial,
 										   dbid,
 										   ismirror,
-										   /* flushToXlog */ false);
+										    /* flushToXlog */ false);
 	}
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
@@ -840,9 +864,10 @@ PersistentDatabase_RemoveSegment(int16 dbid, bool ismirror)
 void
 PersistentDatabase_ActivateStandby(int16 newmaster, int16 oldmaster)
 {
-	Relation rel;
+	Relation	rel;
 	HeapScanDesc scandesc;
-	HeapTuple tuple;
+	HeapTuple	tuple;
+
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	if (Persistent_BeforePersistenceWork())
@@ -859,14 +884,14 @@ PersistentDatabase_ActivateStandby(int16 newmaster, int16 oldmaster)
 	while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 	{
 		Form_gp_persistent_database_node form =
-			(Form_gp_persistent_database_node)GETSTRUCT(tuple);
-		Oid tblspcoid = form->tablespace_oid;
-		Oid dboid = form->database_oid;
-		int64 serial = form->persistent_serial_num;
+		(Form_gp_persistent_database_node) GETSTRUCT(tuple);
+		Oid			tblspcoid = form->tablespace_oid;
+		Oid			dboid = form->database_oid;
+		int64		serial = form->persistent_serial_num;
 
 		PersistentFileSysObjName fsObjName;
 
-		/* 
+		/*
 		 * We need to perform this table for all (database, tablespace) pairs
 		 * that are defined in the persistent table.
 		 */
@@ -874,12 +899,12 @@ PersistentDatabase_ActivateStandby(int16 newmaster, int16 oldmaster)
 												tblspcoid,
 												dboid);
 
-	    PersistentFileSysObj_ActivateStandby(&fsObjName,
+		PersistentFileSysObj_ActivateStandby(&fsObjName,
 											 &tuple->t_self,
 											 serial,
 											 newmaster,
 											 oldmaster,
-											 /* flushToXlog */ false);
+											  /* flushToXlog */ false);
 	}
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
@@ -890,18 +915,19 @@ PersistentDatabase_ActivateStandby(int16 newmaster, int16 oldmaster)
 
 void
 PersistentDatabase_AddMirrorAll(
-	int16			pridbid,
-	int16			mirdbid)
+								int16 pridbid,
+								int16 mirdbid)
 {
-	Relation rel;
+	Relation	rel;
 	HeapScanDesc scandesc;
-	HeapTuple tuple;
+	HeapTuple	tuple;
+
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "skipping persistent database mirror addition");
 
 		return;
@@ -918,10 +944,10 @@ PersistentDatabase_AddMirrorAll(
 	while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 	{
 		Form_gp_persistent_database_node form =
-			(Form_gp_persistent_database_node)GETSTRUCT(tuple);
-		Oid tblspcoid = form->tablespace_oid;
-		Oid dboid = form->database_oid;
-		int64 serial = form->persistent_serial_num;
+		(Form_gp_persistent_database_node) GETSTRUCT(tuple);
+		Oid			tblspcoid = form->tablespace_oid;
+		Oid			dboid = form->database_oid;
+		int64		serial = form->persistent_serial_num;
 
 		PersistentFileSysObjName fsObjName;
 
@@ -929,14 +955,14 @@ PersistentDatabase_AddMirrorAll(
 												tblspcoid,
 												dboid);
 
-	    PersistentFileSysObj_AddMirror(&fsObjName,
+		PersistentFileSysObj_AddMirror(&fsObjName,
 									   &tuple->t_self,
 									   serial,
 									   pridbid,
-           	        	               mirdbid,
+									   mirdbid,
 									   NULL,
 									   true,
-                   	        	       /* flushToXlog */ false);
+									    /* flushToXlog */ false);
 	}
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
@@ -944,27 +970,29 @@ PersistentDatabase_AddMirrorAll(
 	heap_endscan(scandesc);
 	heap_close(rel, NoLock);
 }
+
 /*
  * Indicate we intend to drop a relation file as part of the current transaction.
  *
- * This relation file to drop will be listed inside a commit, distributed commit, a distributed 
+ * This relation file to drop will be listed inside a commit, distributed commit, a distributed
  * prepared, and distributed commit prepared XOG records.
  *
  * For any of the commit type records, once that XLOG record is flushed then the actual
  * file-system delete will occur.  The flush guarantees the action will be retried after system
  * crash.
  */
-PersistentFileSysObjStateChangeResult PersistentDatabase_MarkDropPending(
-	DbDirNode 		*dbDirNode,
-				/* The tablespace and database OIDs for the drop. */
+PersistentFileSysObjStateChangeResult
+PersistentDatabase_MarkDropPending(
+								   DbDirNode *dbDirNode,
+ /* The tablespace and database OIDs for the drop. */
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+								   ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	int64			persistentSerialNum,
-				/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+								   int64 persistentSerialNum,
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
-	bool			retryPossible)
+								   bool retryPossible)
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
@@ -975,53 +1003,58 @@ PersistentFileSysObjStateChangeResult PersistentDatabase_MarkDropPending(
 	PersistentFileSysObjStateChangeResult stateChangeResult;
 
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return false;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return false;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	PersistentDatabase_LookupExistingDbDir(
-									dbDirNode,
-									&databaseDirEntry);
+										   dbDirNode,
+										   &databaseDirEntry);
 
 	if (databaseDirEntry->state != PersistentFileSysState_CreatePending &&
 		databaseDirEntry->state != PersistentFileSysState_Created)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' or 'Created' state (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' or 'Created' state (actual state '%s')",
 			 GetDatabasePath(
-				   dbDirNode->database, 
-				   dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	stateChangeResult =
 		PersistentFileSysObj_StateChange(
-								&fsObjName,
-								persistentTid,
-								persistentSerialNum,
-								PersistentFileSysState_DropPending,
-								retryPossible,
-								/* flushToXlog */ false,
-								/* oldState */ NULL,
-								/* verifiedActionCallback */ NULL);
+										 &fsObjName,
+										 persistentTid,
+										 persistentSerialNum,
+										 PersistentFileSysState_DropPending,
+										 retryPossible,
+										  /* flushToXlog */ false,
+										  /* oldState */ NULL,
+										  /* verifiedActionCallback */ NULL);
 
 	databaseDirEntry->state = PersistentFileSysState_DropPending;
-	
+
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: '%s' changed state from 'Create Pending' to 'Aborting Create', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: '%s' changed state from 'Create Pending' to 'Aborting Create', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid),
@@ -1035,17 +1068,18 @@ PersistentFileSysObjStateChangeResult PersistentDatabase_MarkDropPending(
  *
  * This state will make sure the relation gets dropped after a system crash.
  */
-PersistentFileSysObjStateChangeResult PersistentDatabase_MarkAbortingCreate(
-	DbDirNode 		*dbDirNode,
-				/* The tablespace and database OIDs for the aborting create. */
+PersistentFileSysObjStateChangeResult
+PersistentDatabase_MarkAbortingCreate(
+									  DbDirNode *dbDirNode,
+ /* The tablespace and database OIDs for the aborting create. */
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+									  ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	int64			persistentSerialNum,
-				/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+									  int64 persistentSerialNum,
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
-	bool			retryPossible)
+									  bool retryPossible)
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
@@ -1054,55 +1088,60 @@ PersistentFileSysObjStateChangeResult PersistentDatabase_MarkAbortingCreate(
 	DatabaseDirEntry databaseDirEntry;
 
 	PersistentFileSysObjStateChangeResult stateChangeResult;
-	
+
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return false;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return false;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	PersistentDatabase_LookupExistingDbDir(
-								dbDirNode,
-								&databaseDirEntry);
+										   dbDirNode,
+										   &databaseDirEntry);
 
 	if (databaseDirEntry->state != PersistentFileSysState_CreatePending)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' (actual state '%s')",
 			 GetDatabasePath(
-				   dbDirNode->database, 
-				   dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 
 	stateChangeResult =
 		PersistentFileSysObj_StateChange(
-								&fsObjName,
-								persistentTid,
-								persistentSerialNum,
-								PersistentFileSysState_AbortingCreate,
-								retryPossible,
-								/* flushToXlog */ false,
-								/* oldState */ NULL,
-								/* verifiedActionCallback */ NULL);
+										 &fsObjName,
+										 persistentTid,
+										 persistentSerialNum,
+										 PersistentFileSysState_AbortingCreate,
+										 retryPossible,
+										  /* flushToXlog */ false,
+										  /* oldState */ NULL,
+										  /* verifiedActionCallback */ NULL);
 
 	databaseDirEntry->state = PersistentFileSysState_AbortingCreate;
-		
+
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: '%s' changed state from 'Create Pending' to 'Aborting Create', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: '%s' changed state from 'Create Pending' to 'Aborting Create', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid),
@@ -1113,53 +1152,55 @@ PersistentFileSysObjStateChangeResult PersistentDatabase_MarkAbortingCreate(
 
 static void
 PersistentDatabase_DroppedVerifiedActionCallback(
-	PersistentFileSysObjName 	*fsObjName,
+												 PersistentFileSysObjName *fsObjName,
 
-	ItemPointer 				persistentTid,
-			/* TID of the gp_persistent_rel_files tuple for the relation. */
+												 ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the relation. */
 
-	int64						persistentSerialNum,
-			/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+												 int64 persistentSerialNum,
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
-	PersistentFileSysObjVerifyExpectedResult verifyExpectedResult)
+												 PersistentFileSysObjVerifyExpectedResult verifyExpectedResult)
 {
-	DbDirNode *dbDirNode = PersistentFileSysObjName_GetDbDirNodePtr(fsObjName);
+	DbDirNode  *dbDirNode = PersistentFileSysObjName_GetDbDirNodePtr(fsObjName);
 
 	switch (verifyExpectedResult)
 	{
-	case PersistentFileSysObjVerifyExpectedResult_DeleteUnnecessary:
-	case PersistentFileSysObjVerifyExpectedResult_StateChangeAlreadyDone:
-	case PersistentFileSysObjVerifyExpectedResult_ErrorSuppressed:
-		break;
-	
-	case PersistentFileSysObjVerifyExpectedResult_StateChangeNeeded:
-		/*
-		 * This XLOG must be generated under the persistent write-lock.
-		 */
+		case PersistentFileSysObjVerifyExpectedResult_DeleteUnnecessary:
+		case PersistentFileSysObjVerifyExpectedResult_StateChangeAlreadyDone:
+		case PersistentFileSysObjVerifyExpectedResult_ErrorSuppressed:
+			break;
+
+		case PersistentFileSysObjVerifyExpectedResult_StateChangeNeeded:
+
+			/*
+			 * This XLOG must be generated under the persistent write-lock.
+			 */
 #ifdef MASTER_MIRROR_SYNC
-		mmxlog_log_remove_database(dbDirNode->tablespace, dbDirNode->database);
+			mmxlog_log_remove_database(dbDirNode->tablespace, dbDirNode->database);
 #endif
-				
-		break;
-	
-	default:
-		elog(ERROR, "Unexpected persistent object verify expected result: %d",
-			 verifyExpectedResult);
+
+			break;
+
+		default:
+			elog(ERROR, "Unexpected persistent object verify expected result: %d",
+				 verifyExpectedResult);
 	}
 }
 
 /*
  * Indicate we physically removed the relation file.
  */
-void PersistentDatabase_Dropped(
-	DbDirNode 		*dbDirNode,
-				/* The tablespace and database OIDs for the dropped relation. */
+void
+PersistentDatabase_Dropped(
+						   DbDirNode *dbDirNode,
+ /* The tablespace and database OIDs for the dropped relation. */
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+						   ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	int64			persistentSerialNum)
-				/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+						   int64 persistentSerialNum)
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
@@ -1171,60 +1212,65 @@ void PersistentDatabase_Dropped(
 	PersistentFileSysState oldState;
 
 	PersistentFileSysObjStateChangeResult stateChangeResult;
-	
+
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	PersistentDatabase_LookupExistingDbDir(
-								dbDirNode,
-								&databaseDirEntry);
+										   dbDirNode,
+										   &databaseDirEntry);
 
 	if (databaseDirEntry->state != PersistentFileSysState_DropPending &&
 		databaseDirEntry->state != PersistentFileSysState_AbortingCreate)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Drop Pending' or 'Aborting Create' (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Drop Pending' or 'Aborting Create' (actual state '%s')",
 			 GetDatabasePath(
-				  dbDirNode->database, 
-				  dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	stateChangeResult =
 		PersistentFileSysObj_StateChange(
-								&fsObjName,
-								persistentTid,
-								persistentSerialNum,
-								PersistentFileSysState_Free,
-								/* retryPossible */ false,
-								/* flushToXlog */ false,
-								&oldState,
-								PersistentDatabase_DroppedVerifiedActionCallback);
+										 &fsObjName,
+										 persistentTid,
+										 persistentSerialNum,
+										 PersistentFileSysState_Free,
+										  /* retryPossible */ false,
+										  /* flushToXlog */ false,
+										 &oldState,
+										 PersistentDatabase_DroppedVerifiedActionCallback);
 
 	databaseDirEntry->state = PersistentFileSysState_Free;
 
 	if (databaseDirEntry->iteratorRefCount == 0)
 		SharedOidSearch_Delete(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					&databaseDirEntry->header);
+							   &persistentDatabaseSharedData->databaseDirSearchTable,
+							   &databaseDirEntry->header);
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: '%s' changed state from '%s' to (Free), serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: '%s' changed state from '%s' to (Free), serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 PersistentFileSysObjState_Name(oldState),
 			 persistentSerialNum,
@@ -1232,24 +1278,25 @@ void PersistentDatabase_Dropped(
 			 PersistentFileSysObjStateChangeResult_Name(stateChangeResult));
 }
 
-bool 
+bool
 PersistentDatabase_DirIsCreated(DbDirNode *dbDirNode)
 {
 	READ_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
 	DatabaseDirEntry databaseDirEntry;
-	bool result;
+	bool		result;
 
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before "
 				 "persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
-		/* 
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
+
+		/*
 		 * The initdb process will load the persistent table once we out of
 		 * bootstrap mode.
 		 */
@@ -1261,36 +1308,37 @@ PersistentDatabase_DirIsCreated(DbDirNode *dbDirNode)
 	READ_PERSISTENT_STATE_ORDERED_LOCK;
 
 	databaseDirEntry =
-			(DatabaseDirEntry)
-				    SharedOidSearch_Find(
-				    		&persistentDatabaseSharedData->databaseDirSearchTable,
-				    		dbDirNode->database,
-				    		dbDirNode->tablespace);
+		(DatabaseDirEntry)
+		SharedOidSearch_Find(
+							 &persistentDatabaseSharedData->databaseDirSearchTable,
+							 dbDirNode->database,
+							 dbDirNode->tablespace);
 	result = (databaseDirEntry != NULL);
 	if (result &&
 		databaseDirEntry->state != PersistentFileSysState_Created &&
 		databaseDirEntry->state != PersistentFileSysState_CreatePending)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' or 'Created' (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Create Pending' or 'Created' (actual state '%s')",
 			 GetDatabasePath(
-				  dbDirNode->database, 
-				  dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	READ_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	return result;
 }
-		
-void PersistentDatabase_MarkJustInTimeCreatePending(
-	DbDirNode		*dbDirNode,
 
-	MirroredObjectExistenceState 	mirrorExistenceState,
+void
+PersistentDatabase_MarkJustInTimeCreatePending(
+											   DbDirNode *dbDirNode,
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_database_node tuple for the rel file */
-				
-	int64			*persistentSerialNum)
-				
+											   MirroredObjectExistenceState mirrorExistenceState,
+
+											   ItemPointer persistentTid,
+ /* TID of the gp_persistent_database_node tuple for the rel file */
+
+											   int64 *persistentSerialNum)
+
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
 
@@ -1301,54 +1349,60 @@ void PersistentDatabase_MarkJustInTimeCreatePending(
 	SharedOidSearchAddResult addResult;
 
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	databaseDirEntry =
-			(DatabaseDirEntry)
-				    SharedOidSearch_Find(
-				    		&persistentDatabaseSharedData->databaseDirSearchTable,
-				    		dbDirNode->database,
-				    		dbDirNode->tablespace);
+		(DatabaseDirEntry)
+		SharedOidSearch_Find(
+							 &persistentDatabaseSharedData->databaseDirSearchTable,
+							 dbDirNode->database,
+							 dbDirNode->tablespace);
 	if (databaseDirEntry != NULL)
 	{
 		/*
-		 * An existence check should have been done before calling this routine.
+		 * An existence check should have been done before calling this
+		 * routine.
 		 */
-		elog(ERROR, "Persistent database entry '%s' already exists in state '%s'", 
+		elog(ERROR, "Persistent database entry '%s' already exists in state '%s'",
 			 GetDatabasePath(
-				   dbDirNode->database, 
-				   dbDirNode->tablespace),
-		     PersistentFileSysObjState_Name(databaseDirEntry->state));
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
+			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 	}
 
 	addResult =
-			SharedOidSearch_Add(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					dbDirNode->database,
-					dbDirNode->tablespace,
-					(SharedOidSearchObjHeader**)&databaseDirEntry);
+		SharedOidSearch_Add(
+							&persistentDatabaseSharedData->databaseDirSearchTable,
+							dbDirNode->database,
+							dbDirNode->tablespace,
+							(SharedOidSearchObjHeader **) &databaseDirEntry);
 	if (addResult == SharedOidSearchAddResult_NoMemory)
 		elog(ERROR, "Out of shared-memory for persistent databases");
 	else if (addResult == SharedOidSearchAddResult_Exists)
-		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'", 
+		elog(PANIC, "Persistent database entry '%s' already exists in state '%s'",
 			 GetDatabasePath(
-					dbDirNode->database, 
-					dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 	else
 		Assert(addResult == SharedOidSearchAddResult_Ok);
@@ -1356,12 +1410,12 @@ void PersistentDatabase_MarkJustInTimeCreatePending(
 	databaseDirEntry->state = PersistentFileSysState_JustInTimeCreatePending;
 
 	PersistentDatabase_AddTuple(
-							databaseDirEntry,
-							/* createMirrorDataLossTrackingSessionNum */ 0,
-							mirrorExistenceState,
-							/* reserved */ 0,
-							/* parentXid */ InvalidTransactionId,
-							/* flushToXLog */ true);
+								databaseDirEntry,
+								 /* createMirrorDataLossTrackingSessionNum */ 0,
+								mirrorExistenceState,
+								 /* reserved */ 0,
+								 /* parentXid */ InvalidTransactionId,
+								 /* flushToXLog */ true);
 
 
 	*persistentTid = databaseDirEntry->persistentTid;
@@ -1370,19 +1424,19 @@ void PersistentDatabase_MarkJustInTimeCreatePending(
 	/*
 	 * This XLOG must be generated under the persistent write-lock.
 	 *
-	 * UNDONE: Just-in-time creation is a strange case.  What if we can't create
-	 * the directory??
+	 * UNDONE: Just-in-time creation is a strange case.  What if we can't
+	 * create the directory??
 	 */
 #ifdef MASTER_MIRROR_SYNC
 	mmxlog_log_create_database(dbDirNode->tablespace,
-							   dbDirNode->database);	
+							   dbDirNode->database);
 #endif
-	
+
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: Add '%s' in state 'Just-In-Time Create Pending', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: Add '%s' in state 'Just-In-Time Create Pending', mirror existence state '%s', serial number " INT64_FORMAT " at TID %s",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 MirroredObjectExistenceState_Name(mirrorExistenceState),
 			 *persistentSerialNum,
@@ -1392,14 +1446,15 @@ void PersistentDatabase_MarkJustInTimeCreatePending(
 /*
  * Indicate the non-transaction just-in-time database create was successful.
  */
-void PersistentDatabase_JustInTimeCreated(
-	DbDirNode 		*dbDirNode,
+void
+PersistentDatabase_JustInTimeCreated(
+									 DbDirNode *dbDirNode,
 
-	ItemPointer		persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+									 ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	int64			persistentSerialNum)
-				/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+									 int64 persistentSerialNum)
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
@@ -1409,54 +1464,59 @@ void PersistentDatabase_JustInTimeCreated(
 	DatabaseDirEntry databaseDirEntry;
 
 	PersistentFileSysObjStateChangeResult stateChangeResult;
-	
+
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	PersistentDatabase_LookupExistingDbDir(
-								dbDirNode,
-								&databaseDirEntry);
+										   dbDirNode,
+										   &databaseDirEntry);
 
 	if (databaseDirEntry->state != PersistentFileSysState_JustInTimeCreatePending)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Just-In-Time Create Pending' state (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Just-In-Time Create Pending' state (actual state '%s')",
 			 GetDatabasePath(
-			 		dbDirNode->database, 
-			 		dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	stateChangeResult =
 		PersistentFileSysObj_StateChange(
-								&fsObjName,
-								persistentTid,
-								persistentSerialNum,
-								PersistentFileSysState_Created,
-								/* retryPossible */ false,
-								/* flushToXlog */ false,
-								/* oldState */ NULL,
-								/* verifiedActionCallback */ NULL);
+										 &fsObjName,
+										 persistentTid,
+										 persistentSerialNum,
+										 PersistentFileSysState_Created,
+										  /* retryPossible */ false,
+										  /* flushToXlog */ false,
+										  /* oldState */ NULL,
+										  /* verifiedActionCallback */ NULL);
 
 	databaseDirEntry->state = PersistentFileSysState_Created;
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: '%s' changed state from 'Just-In-Time Create Pending' to 'Created', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: '%s' changed state from 'Just-In-Time Create Pending' to 'Created', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid),
@@ -1466,14 +1526,15 @@ void PersistentDatabase_JustInTimeCreated(
 /*
  * Indicate the non-transaction just-in-time database create was NOT successful.
  */
-void PersistentDatabase_AbandonJustInTimeCreatePending(
-	DbDirNode 		*dbDirNode,
+void
+PersistentDatabase_AbandonJustInTimeCreatePending(
+												  DbDirNode *dbDirNode,
 
-	ItemPointer 	persistentTid,
-				/* TID of the gp_persistent_rel_files tuple for the rel file */
+												  ItemPointer persistentTid,
+ /* TID of the gp_persistent_rel_files tuple for the rel file */
 
-	int64			persistentSerialNum)
-				/* Serial number for the relation.	Distinquishes the uses of the tuple. */
+												  int64 persistentSerialNum)
+ /* Serial number for the relation.	Distinquishes the uses of the tuple. */
 
 {
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK_DECLARE;
@@ -1483,59 +1544,64 @@ void PersistentDatabase_AbandonJustInTimeCreatePending(
 	DatabaseDirEntry databaseDirEntry;
 
 	PersistentFileSysObjStateChangeResult stateChangeResult;
-	
+
 	if (Persistent_BeforePersistenceWork())
-	{	
+	{
 		if (Debug_persistent_print)
-			elog(Persistent_DebugPrintLevel(), 
+			elog(Persistent_DebugPrintLevel(),
 				 "Skipping persistent database '%s' because we are before persistence work",
 				 GetDatabasePath(
-					  dbDirNode->database, 
-					  dbDirNode->tablespace));
+								 dbDirNode->database,
+								 dbDirNode->tablespace));
 
-		return;	// The initdb process will load the persistent table once we out of bootstrap mode.
+		return;
+
+		/*
+		 * The initdb process will load the persistent table once we out of
+		 * bootstrap mode.
+		 */
 	}
 
 	PersistentDatabase_VerifyInitScan();
 
-	PersistentFileSysObjName_SetDatabaseDir(&fsObjName,dbDirNode->tablespace,dbDirNode->database);
+	PersistentFileSysObjName_SetDatabaseDir(&fsObjName, dbDirNode->tablespace, dbDirNode->database);
 
 	WRITE_PERSISTENT_STATE_ORDERED_LOCK;
 
 	PersistentDatabase_LookupExistingDbDir(
-								dbDirNode,
-								&databaseDirEntry);
+										   dbDirNode,
+										   &databaseDirEntry);
 
 	if (databaseDirEntry->state != PersistentFileSysState_JustInTimeCreatePending)
-		elog(ERROR, "Persistent database entry %s expected to be in 'Just-In-Time Create Pending' state (actual state '%s')", 
+		elog(ERROR, "Persistent database entry %s expected to be in 'Just-In-Time Create Pending' state (actual state '%s')",
 			 GetDatabasePath(
-			 		dbDirNode->database, 
-			 		dbDirNode->tablespace),
+							 dbDirNode->database,
+							 dbDirNode->tablespace),
 			 PersistentFileSysObjState_Name(databaseDirEntry->state));
 
 	stateChangeResult =
 		PersistentFileSysObj_StateChange(
-								&fsObjName,
-								persistentTid,
-								persistentSerialNum,
-								PersistentFileSysState_Free,
-								/* retryPossible */ false,
-								/* flushToXlog */ false,
-								/* oldState */ NULL,
-								/* verifiedActionCallback */ NULL);
+										 &fsObjName,
+										 persistentTid,
+										 persistentSerialNum,
+										 PersistentFileSysState_Free,
+										  /* retryPossible */ false,
+										  /* flushToXlog */ false,
+										  /* oldState */ NULL,
+										  /* verifiedActionCallback */ NULL);
 
 	databaseDirEntry->state = PersistentFileSysState_Free;
 
 	if (databaseDirEntry->iteratorRefCount == 0)
 		SharedOidSearch_Delete(
-					&persistentDatabaseSharedData->databaseDirSearchTable,
-					&databaseDirEntry->header);
+							   &persistentDatabaseSharedData->databaseDirSearchTable,
+							   &databaseDirEntry->header);
 
 	WRITE_PERSISTENT_STATE_ORDERED_UNLOCK;
 
 	if (Debug_persistent_print)
-		elog(Persistent_DebugPrintLevel(), 
-		     "Persistent database directory: Abandon '%s' in state 'Just-In-Time Create Pending', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
+		elog(Persistent_DebugPrintLevel(),
+			 "Persistent database directory: Abandon '%s' in state 'Just-In-Time Create Pending', serial number " INT64_FORMAT " at TID %s (State-Change result '%s')",
 			 PersistentFileSysObjName_ObjectName(&fsObjName),
 			 persistentSerialNum,
 			 ItemPointerToString(persistentTid),
@@ -1543,24 +1609,26 @@ void PersistentDatabase_AbandonJustInTimeCreatePending(
 }
 
 
-// -----------------------------------------------------------------------------
-// Shmem
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Shmem */
+/* ----------------------------------------------------------------------------- */
 
-static Size PersistentDatabase_SharedDataSize(void)
+static Size
+PersistentDatabase_SharedDataSize(void)
 {
 	return MAXALIGN(
-				offsetof(PersistentDatabaseSharedData,databaseDirSearchTable)) +
-		   SharedOidSearch_TableLen(
-					/* hashSize */ 127,
-					/* freeObjectCount */ MaxPersistentDatabaseDirectories,
-					/* objectLen */ sizeof(DatabaseDirEntryData));
+					offsetof(PersistentDatabaseSharedData, databaseDirSearchTable)) +
+		SharedOidSearch_TableLen(
+								  /* hashSize */ 127,
+								  /* freeObjectCount */ MaxPersistentDatabaseDirectories,
+								  /* objectLen */ sizeof(DatabaseDirEntryData));
 }
 
 /*
  * Return the required shared-memory size for this module.
  */
-Size PersistentDatabase_ShmemSize(void)
+Size
+PersistentDatabase_ShmemSize(void)
 {
 	if (MaxPersistentDatabaseDirectories == 0)
 		MaxPersistentDatabaseDirectories = gp_max_databases * gp_max_tablespaces;
@@ -1572,34 +1640,35 @@ Size PersistentDatabase_ShmemSize(void)
 /*
  * Initialize the shared-memory for this module.
  */
-void PersistentDatabase_ShmemInit(void)
+void
+PersistentDatabase_ShmemInit(void)
 {
-	bool found;
+	bool		found;
 
 	/* Create the shared-memory structure. */
-	persistentDatabaseSharedData = 
+	persistentDatabaseSharedData =
 		(PersistentDatabaseSharedData *)
-						ShmemInitStruct("Persistent Database Data",
-										PersistentDatabase_SharedDataSize(),
-										&found);
+		ShmemInitStruct("Persistent Database Data",
+						PersistentDatabase_SharedDataSize(),
+						&found);
 
 	if (!found)
 	{
 		PersistentFileSysObj_InitShared(
-						&persistentDatabaseSharedData->fileSysObjSharedData);
+										&persistentDatabaseSharedData->fileSysObjSharedData);
 
 		SharedOidSearch_InitTable(
-						&persistentDatabaseSharedData->databaseDirSearchTable,
-						127,
-						MaxPersistentDatabaseDirectories,
-						sizeof(DatabaseDirEntryData));
+								  &persistentDatabaseSharedData->databaseDirSearchTable,
+								  127,
+								  MaxPersistentDatabaseDirectories,
+								  sizeof(DatabaseDirEntryData));
 	}
 
 	PersistentFileSysObj_Init(
-						&persistentDatabaseData.fileSysObjData,
-						&persistentDatabaseSharedData->fileSysObjSharedData,
-						PersistentFsObjType_DatabaseDir,
-						PersistentDatabase_ScanTupleCallback);
+							  &persistentDatabaseData.fileSysObjData,
+							  &persistentDatabaseSharedData->fileSysObjSharedData,
+							  PersistentFsObjType_DatabaseDir,
+							  PersistentDatabase_ScanTupleCallback);
 
 
 	Assert(persistentDatabaseSharedData != NULL);
@@ -1609,13 +1678,14 @@ void PersistentDatabase_ShmemInit(void)
  * Pass shared data back to the caller. See add_tablespace_data() for why we do
  * it like this.
  */
-#ifdef MASTER_MIRROR_SYNC /* annotation to show that this is just for mmsync */
+#ifdef MASTER_MIRROR_SYNC		/* annotation to show that this is just for
+								 * mmsync */
 void
 get_database_data(dbdir_agg_state **das, char *caller)
 {
 	DatabaseDirEntry databaseDirEntry;
 
-	int maxCount;
+	int			maxCount;
 
 	Assert(*das == NULL);
 
@@ -1625,19 +1695,18 @@ get_database_data(dbdir_agg_state **das, char *caller)
 	while (true)
 	{
 		SharedOidSearch_Iterate(
-						&persistentDatabaseSharedData->databaseDirSearchTable,
-						(SharedOidSearchObjHeader**)&databaseDirEntry);
+								&persistentDatabaseSharedData->databaseDirSearchTable,
+								(SharedOidSearchObjHeader **) &databaseDirEntry);
 		if (databaseDirEntry == NULL)
 		{
 			break;
 		}
-		
+
 		mmxlog_add_database(
-				 das, &maxCount, 
-				 /* databaseoid */ databaseDirEntry->header.oid1, 
-				 /* tablespaceoid */ databaseDirEntry->header.oid2,
-				 caller);
+							das, &maxCount,
+							 /* databaseoid */ databaseDirEntry->header.oid1,
+							 /* tablespaceoid */ databaseDirEntry->header.oid2,
+							caller);
 	}
 }
 #endif
-

@@ -25,7 +25,7 @@
 #include "optimizer/var.h"		/* contain_vars_of_level_or_above() */
 #include "parser/parse_oper.h"	/* make_op() */
 #include "parser/parse_expr.h"
-#include "parser/parse_relation.h"		/* addRangeTableEntryForSubquery() */
+#include "parser/parse_relation.h"	/* addRangeTableEntryForSubquery() */
 #include "parser/parsetree.h"	/* rt_fetch() */
 #include "rewrite/rewriteManip.h"
 #include "utils/lsyscache.h"	/* get_op_btree_interpretation() */
@@ -64,8 +64,8 @@ typedef struct ConvertSubqueryToJoinContext
 	Node	   *joinQual;		/* Qual to employ to join subquery */
 	Node	   *innerQual;		/* Qual to leave behind in subquery */
 	List	   *targetList;		/* targetlist for subquery */
-	bool		extractGrouping;/* extract grouping information based on join
-								 * conditions */
+	bool		extractGrouping;	/* extract grouping information based on
+									 * join conditions */
 	List	   *groupClause;	/* grouping clause for subquery */
 } ConvertSubqueryToJoinContext;
 
@@ -100,7 +100,7 @@ cdbsubselect_drop_distinct(Query *subselect)
 			subselect->havingQual == NULL)
 			subselect->groupClause = NIL;
 	}
-}	/* cdbsubselect_drop_distinct */
+}								/* cdbsubselect_drop_distinct */
 
 
 /*
@@ -119,7 +119,7 @@ cdbsubselect_drop_orderby(Query *subselect)
 		/* Delete ORDER BY. */
 		subselect->sortClause = NIL;
 	}
-}	/* cdbsubselect_drop_orderby */
+}								/* cdbsubselect_drop_orderby */
 
 
 /**
@@ -417,7 +417,7 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 		{
 
 			TargetEntry *tle = makeTargetEntry(copyObject(innerExpr),
-										list_length(context->targetList) + 1,
+											   list_length(context->targetList) + 1,
 											   NULL,
 											   false);
 
@@ -543,7 +543,7 @@ safe_to_convert_EXPR(SubLink *sublink, ConvertSubqueryToJoinContext *ctx1)
  *
  * Method attempts to convert an EXPR_SUBLINK of the form select * from T where a > (select 10*avg(x) from R where T.b=R.y)
  */
-JoinExpr*
+JoinExpr *
 convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 {
 	Assert(root);
@@ -627,8 +627,8 @@ convert_EXPR_to_join(PlannerInfo *root, OpExpr *opexp)
 		 */
 		Var		   *aggVar = (Var *) makeVar(rteIndex,
 											 subselectAggTLE->resno,
-									exprType((Node *) subselectAggTLE->expr),
-								  exprTypmod((Node *) subselectAggTLE->expr),
+											 exprType((Node *) subselectAggTLE->expr),
+											 exprTypmod((Node *) subselectAggTLE->expr),
 											 0);
 
 		list_nth_replace(opexp->args, 1, aggVar);
@@ -784,7 +784,7 @@ add_notin_subquery_rte(Query *parse, Query *subselect)
 	int			subq_indx;
 
 	subselect->targetList = mutate_targetlist(subselect->targetList);
-	subq_rte = addRangeTableEntryForSubquery(NULL,		/* pstate */
+	subq_rte = addRangeTableEntryForSubquery(NULL,	/* pstate */
 											 subselect,
 											 makeAlias("NotIn_SUBQUERY", NIL),
 											 false /* inFromClause */ );
@@ -826,7 +826,7 @@ add_expr_subquery_rte(Query *parse, Query *subselect)
 		teNum++;
 	}
 
-	subq_rte = addRangeTableEntryForSubquery(NULL,		/* pstate */
+	subq_rte = addRangeTableEntryForSubquery(NULL,	/* pstate */
 											 subselect,
 											 makeAlias("Expr_SUBQUERY", NIL),
 											 false /* inFromClause */ );
@@ -1167,8 +1167,10 @@ find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 			}
 		case T_PlaceHolderVar:
 			{
-				/* GPDB_84_MERGE_FIXME: Confirm if we need to do special handling
-				 * for PlaceHolderVar. Currently we are just fall through the mutator.
+				/*
+				 * GPDB_84_MERGE_FIXME: Confirm if we need to do special
+				 * handling for PlaceHolderVar. Currently we are just fall
+				 * through the mutator.
 				 */
 				break;
 			}
@@ -1285,9 +1287,9 @@ is_targetlist_nullable(Query *subq)
  * The current implementation assumes that the sublink expression occurs
  * in a top-level where clause (or through a series of inner joins).
  */
-JoinExpr*
+JoinExpr *
 convert_IN_to_antijoin(PlannerInfo *root, SubLink *sublink,
-						Relids available_rels)
+					   Relids available_rels)
 {
 	Query	   *parse = root->parse;
 	Query	   *subselect = (Query *) sublink->subselect;

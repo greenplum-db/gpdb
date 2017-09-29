@@ -38,11 +38,11 @@
 void
 resetTimers(struct itimers *otimers)
 {
-	int err;
-	struct itimerval xtimer;				/* Zero timer for disabling */
-	struct itimerval *p_rtimer = NULL;		/* ITIMER_REAL */
-	struct itimerval *p_vtimer = NULL;		/* ITIMER_VIRTUAL */
-	struct itimerval *p_ptimer = NULL;		/* ITIMER_PROF */
+	int			err;
+	struct itimerval xtimer;	/* Zero timer for disabling */
+	struct itimerval *p_rtimer = NULL;	/* ITIMER_REAL */
+	struct itimerval *p_vtimer = NULL;	/* ITIMER_VIRTUAL */
+	struct itimerval *p_ptimer = NULL;	/* ITIMER_PROF */
 
 	if (otimers != NULL)
 	{
@@ -57,8 +57,8 @@ resetTimers(struct itimers *otimers)
 	PG_SETMASK(&BlockSig);
 
 	/*
-	 * Disable all process interval timers preserving the old
-	 * values if requested.
+	 * Disable all process interval timers preserving the old values if
+	 * requested.
 	 */
 	timerclear(&xtimer.it_interval);
 	timerclear(&xtimer.it_value);
@@ -94,12 +94,12 @@ resetTimers(struct itimers *otimers)
 void
 restoreTimers(struct itimers *timers)
 {
-	int err;
+	int			err;
 
 	if (timers == NULL)
 	{
 		/* Coding error! */
-		elog( FATAL, "Old timer values not provided" );
+		elog(FATAL, "Old timer values not provided");
 	}
 
 	/*
@@ -121,4 +121,3 @@ restoreTimers(struct itimers *timers)
 		Assert(err == 0);
 	}
 }
-
