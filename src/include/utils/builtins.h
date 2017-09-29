@@ -1146,6 +1146,8 @@ extern Datum gp_prep_new_segment(PG_FUNCTION_ARGS);
 extern Datum gp_add_segment_persistent_entries(PG_FUNCTION_ARGS);
 extern Datum gp_remove_segment_persistent_entries(PG_FUNCTION_ARGS);
 
+extern Datum gp_request_fts_probe_scan(PG_FUNCTION_ARGS);
+
 /* utils/gp/persistentutil.c */
 extern Datum gp_add_persistent_filespace_node_entry(PG_FUNCTION_ARGS);
 extern Datum gp_add_persistent_tablespace_node_entry(PG_FUNCTION_ARGS);

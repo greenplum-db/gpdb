@@ -15,6 +15,9 @@
 #include "postgres.h"
 #include "miscadmin.h"
 
+#include "gp-libpq-fe.h"
+#include "pqexpbuffer.h"
+
 #include "access/xlog.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_filespace.h"
@@ -28,6 +31,7 @@
 #include "cdb/cdbpersistenttablespace.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbfts.h"
 #include "commands/filespace.h"
 #include "executor/spi.h"
 #include "lib/stringinfo.h"
@@ -1485,6 +1489,20 @@ gp_remove_segment_persistent_entries(PG_FUNCTION_ARGS)
 	seg.db.role = SEGMENT_ROLE_MIRROR;
 
 	remove_segment_persistent_entries(dbid, &seg);
+
+	PG_RETURN_BOOL(true);
+}
+
+Datum
+gp_request_fts_probe_scan(PG_FUNCTION_ARGS)
+{
+	if (Gp_role != GP_ROLE_DISPATCH)
+	{
+		ereport(ERROR, (errmsg("This function can only be called by master (without utility mode).")));
+		PG_RETURN_BOOL(false);
+	}
+
+	FtsNotifyProber();
 
 	PG_RETURN_BOOL(true);
 }
