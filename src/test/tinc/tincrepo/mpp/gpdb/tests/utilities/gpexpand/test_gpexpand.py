@@ -85,7 +85,7 @@ class GpSegInstall(Command):
         run_shell_command('gpssh-exkeys -f %s' %self.hostfile, 'gpssh-exkeys', res)
 
         if res['rc'] > 0:
-            raise Exception("Failed to do gpssh-exkeys: %s" %res[stderr])
+            raise Exception("Failed to do gpssh-exkeys: %s" %res['stderr'])
 
         res = {'rc':0, 'stderr':'', 'stdout':''}
         run_shell_command("gpssh -f %s -e 'mkdir -p %s'" %(self.hostfile, self.gphome), 'gpssh-exkeys', res)
