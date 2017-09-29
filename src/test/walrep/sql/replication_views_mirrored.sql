@@ -1,5 +1,9 @@
--- Check how many WAL replication mirrors are up and synced
-SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode='s';
+-- Check how many WAL replication mirrors are up
+SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and status='u';
+
+-- Check how many WAL replication mirrors are up and not-in-sync
+-- FIXME: mode should be 's', pending FTS changes
+SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode='n';
 
 -- Check pg_stat_replication view (this assumes standby master has not been created)
 SELECT * FROM pg_stat_replication;
