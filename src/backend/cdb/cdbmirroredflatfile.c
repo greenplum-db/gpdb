@@ -38,7 +38,7 @@
 
 /* Aligning xlog mirrored buffer */
 static int32 writeBufLen = 0;
-static char	*writeBuf = NULL;
+static char *writeBuf = NULL;
 static char *writeBufAligned = NULL;
 
 
@@ -79,30 +79,32 @@ XLogInitMirroredAlignedBuffer(int32 bufferLen)
 /*
  * Open a relation for mirrored write.
  */
-int MirroredFlatFile_Open(
-	MirroredFlatFileOpen *open,
-				/* The resulting open struct. */
+int
+MirroredFlatFile_Open(
+					  MirroredFlatFileOpen *open,
+ /* The resulting open struct. */
 
-	char 			*subDirectory,
+					  char *subDirectory,
 
-	char			*simpleFileName,
-				/* The simple file name. */
+					  char *simpleFileName,
+ /* The simple file name. */
 
-	int 			fileFlags,
+					  int fileFlags,
 
-	int 			fileMode,
+					  int fileMode,
 
-	bool			suppressError,
+					  bool suppressError,
 
-	bool			atomic_op,
+					  bool atomic_op,
 
-	bool			isMirrorRecovery)
+					  bool isMirrorRecovery)
 /* NOTE do we need to consider supressError on mirror */
 
 {
-	int save_errno = 0;
+	int			save_errno = 0;
 
-	char *dir = NULL, *mirrorDir = NULL;
+	char	   *dir = NULL,
+			   *mirrorDir = NULL;
 
 	Assert(open != NULL);
 
@@ -116,13 +118,13 @@ int MirroredFlatFile_Open(
 
 	if (atomic_op)
 	{
-		char *tmp_filename;
+		char	   *tmp_filename;
 
-		tmp_filename = (char*)palloc(MAXPGPATH + 1);
+		tmp_filename = (char *) palloc(MAXPGPATH + 1);
 
 		open->atomicSimpleFileName = MemoryContextStrdup(TopMemoryContext, simpleFileName);
 		sprintf(tmp_filename, "%s.%i",
-				 simpleFileName, MyProcPid);
+				simpleFileName, MyProcPid);
 		open->simpleFileName = MemoryContextStrdup(TopMemoryContext, tmp_filename);
 
 		pfree(tmp_filename);
@@ -136,10 +138,11 @@ int MirroredFlatFile_Open(
 	open->usingDbDirNode = false;
 
 	/*
-	 * Now that the transaction filespace is configurable, the subdirectory is not always
-	 * relative to the data directory. If we have configured the transaction files to be on
-	 * the non-default filespace, then we need the absolute path for the sub directory
-         */
+	 * Now that the transaction filespace is configurable, the subdirectory is
+	 * not always relative to the data directory. If we have configured the
+	 * transaction files to be on the non-default filespace, then we need the
+	 * absolute path for the sub directory
+	 */
 	if (isTxnDir(subDirectory))
 	{
 		dir = makeRelativeToTxnFilespace(subDirectory);
@@ -163,14 +166,14 @@ int MirroredFlatFile_Open(
 	}
 
 	if (FileRepPrimary_MirrorOpen(
-				  FileRep_GetFlatFileIdentifier(
-								open->subDirectory,
-								open->simpleFileName),
-				  FileRepRelationTypeFlatFile,
-				  FILEREP_OFFSET_UNDEFINED,
-				  fileFlags,
-				  fileMode,
-				  suppressError) != 0)
+								  FileRep_GetFlatFileIdentifier(
+																open->subDirectory,
+																open->simpleFileName),
+								  FileRepRelationTypeFlatFile,
+								  FILEREP_OFFSET_UNDEFINED,
+								  fileFlags,
+								  fileMode,
+								  suppressError) != 0)
 		ereport(LOG,
 				(errmsg("could not sent open file to mirror \"%s\" open file flags:'%x' ",
 						open->path,
@@ -178,7 +181,8 @@ int MirroredFlatFile_Open(
 
 	errno = 0;
 
-	if (! open->isMirrorRecovery) {
+	if (!open->isMirrorRecovery)
+	{
 		open->primaryFile = PathNameOpenFile(open->path, fileFlags, fileMode);
 		save_errno = errno;
 
@@ -225,29 +229,30 @@ int MirroredFlatFile_Open(
 /*
  * Open a relation for mirrored write.
  */
-int MirroredFlatFile_OpenInDbDir(
-	MirroredFlatFileOpen *open,
-				/* The resulting open struct. */
+int
+MirroredFlatFile_OpenInDbDir(
+							 MirroredFlatFileOpen *open,
+ /* The resulting open struct. */
 
-	DbDirNode 		*dbDirNode,
+							 DbDirNode *dbDirNode,
 
-	char			*simpleFileName,
-				/* The simple file name. */
+							 char *simpleFileName,
+ /* The simple file name. */
 
-	int 			fileFlags,
+							 int fileFlags,
 
-	int 			fileMode,
+							 int fileMode,
 
-	bool			suppressError)
+							 bool suppressError)
 
 {
-	int save_errno = 0;
+	int			save_errno = 0;
 
-	char *primaryFilespaceLocation = NULL;
-	char *mirrorFilespaceLocation = NULL;
+	char	   *primaryFilespaceLocation = NULL;
+	char	   *mirrorFilespaceLocation = NULL;
 
-	char *subDirectoryPrimary;
-	char *subDirectoryMirror;
+	char	   *subDirectoryPrimary;
+	char	   *subDirectoryMirror;
 
 	Assert(open != NULL);
 
@@ -256,8 +261,8 @@ int MirroredFlatFile_OpenInDbDir(
 	open->usingDbDirNode = true;
 	open->dbDirNode = *dbDirNode;
 
-	subDirectoryPrimary = (char*)palloc(MAXPGPATH + 1);
-	subDirectoryMirror = (char*)palloc(MAXPGPATH + 1);
+	subDirectoryPrimary = (char *) palloc(MAXPGPATH + 1);
+	subDirectoryMirror = (char *) palloc(MAXPGPATH + 1);
 
 	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
 													   dbDirNode->tablespace,
@@ -294,14 +299,14 @@ int MirroredFlatFile_OpenInDbDir(
 	sprintf(open->path, "%s/%s", subDirectoryPrimary, simpleFileName);
 
 	if (FileRepPrimary_MirrorOpen(
-					  FileRep_GetFlatFileIdentifier(
-							open->subDirectory,
-							open->simpleFileName),
-					  FileRepRelationTypeFlatFile,
-					  FILEREP_OFFSET_UNDEFINED,
-					  fileFlags,
-					  fileMode,
-					  suppressError) != 0)
+								  FileRep_GetFlatFileIdentifier(
+																open->subDirectory,
+																open->simpleFileName),
+								  FileRepRelationTypeFlatFile,
+								  FILEREP_OFFSET_UNDEFINED,
+								  fileFlags,
+								  fileMode,
+								  suppressError) != 0)
 		ereport(LOG,
 				(errmsg("could not sent open file to mirror '%s/%s' open file flags:'%x' ",
 						open->subDirectory,
@@ -352,9 +357,10 @@ int MirroredFlatFile_OpenInDbDir(
 }
 
 
-extern bool MirroredFlatFile_IsActive(
-	MirroredFlatFileOpen *open)
-				/* The open struct. */
+extern bool
+MirroredFlatFile_IsActive(
+						  MirroredFlatFileOpen *open)
+ /* The open struct. */
 {
 	return open->isActive;
 }
@@ -363,24 +369,26 @@ extern bool MirroredFlatFile_IsActive(
  * Flush a flat file.
  *
  */
-int MirroredFlatFile_Flush(
-	MirroredFlatFileOpen *open,
-				/* The open struct. */
+int
+MirroredFlatFile_Flush(
+					   MirroredFlatFileOpen *open,
+ /* The open struct. */
 
-	bool				suppressError)
+					   bool suppressError)
 
 {
-	bool	mirrorFlush = TRUE;
-	int		save_errno = 0;
+	bool		mirrorFlush = TRUE;
+	int			save_errno = 0;
 
 	Assert(open != NULL);
 	Assert(open->isActive);
 
 	if (FileRepPrimary_MirrorFlush(
-			   FileRep_GetFlatFileIdentifier(
-							 open->subDirectory,
-							 open->simpleFileName),
-			   FileRepRelationTypeFlatFile) != 0) {
+								   FileRep_GetFlatFileIdentifier(
+																 open->subDirectory,
+																 open->simpleFileName),
+								   FileRepRelationTypeFlatFile) != 0)
+	{
 
 		mirrorFlush = FALSE;
 		ereport(LOG,
@@ -389,7 +397,8 @@ int MirroredFlatFile_Flush(
 						open->simpleFileName)));
 	}
 
-	if (! open->isMirrorRecovery) {
+	if (!open->isMirrorRecovery)
+	{
 		errno = 0;
 		if (FileSync(open->primaryFile) != 0)
 			ereport(ERROR,
@@ -399,14 +408,16 @@ int MirroredFlatFile_Flush(
 		save_errno = errno;
 	}
 
-	if (mirrorFlush) {
+	if (mirrorFlush)
+	{
 		if (FileRepPrimary_IsOperationCompleted(
-					   FileRep_GetFlatFileIdentifier(
-								 open->subDirectory,
-								 open->simpleFileName),
-					   FileRepRelationTypeFlatFile) == FALSE){
+												FileRep_GetFlatFileIdentifier(
+																			  open->subDirectory,
+																			  open->simpleFileName),
+												FileRepRelationTypeFlatFile) == FALSE)
+		{
 			ereport(LOG,
-				    (errmsg("could not fsync file on mirror '%s/%s' ",
+					(errmsg("could not fsync file on mirror '%s/%s' ",
 							open->subDirectory,
 							open->simpleFileName)));
 		}
@@ -419,9 +430,10 @@ int MirroredFlatFile_Flush(
  * Close a bulk relation file.
  *
  */
-void MirroredFlatFile_Close(
-	MirroredFlatFileOpen *open)
-				/* The open struct. */
+void
+MirroredFlatFile_Close(
+					   MirroredFlatFileOpen *open)
+ /* The open struct. */
 
 {
 	Assert(open != NULL);
@@ -429,14 +441,15 @@ void MirroredFlatFile_Close(
 
 
 	if (FileRepPrimary_MirrorClose(
-				   FileRep_GetFlatFileIdentifier(
-							 open->subDirectory,
-							 open->simpleFileName),
-				   FileRepRelationTypeFlatFile) != 0)
+								   FileRep_GetFlatFileIdentifier(
+																 open->subDirectory,
+																 open->simpleFileName),
+								   FileRepRelationTypeFlatFile) != 0)
 		ereport(LOG,
 				(errmsg("could not sent close file to mirror \"%s\"", open->path)));
 
-	if (! open->isMirrorRecovery) {
+	if (!open->isMirrorRecovery)
+	{
 		errno = 0;
 		FileClose(open->primaryFile);
 	}
@@ -470,30 +483,32 @@ void MirroredFlatFile_Close(
  * Rename a flat file.
  *
  */
-int MirroredFlatFile_Rename(
-							char 			*subDirectory,
+int
+MirroredFlatFile_Rename(
+						char *subDirectory,
 
-							char			*oldSimpleFileName,
-								/* The simple file name. */
+						char *oldSimpleFileName,
+ /* The simple file name. */
 
-							char			*newSimpleFileName,
-								/* The simple file name. */
+						char *newSimpleFileName,
+ /* The simple file name. */
 
-							bool			new_can_exist,
+						bool new_can_exist,
 
-							bool			isMirrorRecovery)
-					/* if TRUE then request is not performed on primary */
+						bool isMirrorRecovery)
+ /* if TRUE then request is not performed on primary */
 {
-	char *oldPath;
-	char *newPath;
-	bool mirrorRename = TRUE;
-	int	 save_errno = 0;
+	char	   *oldPath;
+	char	   *newPath;
+	bool		mirrorRename = TRUE;
+	int			save_errno = 0;
 	struct stat buf;
 
-	char *dir = NULL, *mirrorDir = NULL;
+	char	   *dir = NULL,
+			   *mirrorDir = NULL;
 
-	oldPath = (char*)palloc(MAXPGPATH + 1);
-	newPath = (char*)palloc(MAXPGPATH + 1);
+	oldPath = (char *) palloc(MAXPGPATH + 1);
+	newPath = (char *) palloc(MAXPGPATH + 1);
 
 	if (isTxnDir(subDirectory))
 	{
@@ -524,13 +539,14 @@ int MirroredFlatFile_Rename(
 	}
 
 	if (FileRepPrimary_MirrorRename(
-								   FileRep_GetFlatFileIdentifier(
-												mirrorDir,
-												oldSimpleFileName),
 									FileRep_GetFlatFileIdentifier(
-											  mirrorDir,
-											  newSimpleFileName),
-									FileRepRelationTypeFlatFile) != 0) {
+																  mirrorDir,
+																  oldSimpleFileName),
+									FileRep_GetFlatFileIdentifier(
+																  mirrorDir,
+																  newSimpleFileName),
+									FileRepRelationTypeFlatFile) != 0)
+	{
 
 		mirrorRename = FALSE;
 		ereport(LOG,
@@ -553,9 +569,9 @@ int MirroredFlatFile_Rename(
 	if (mirrorRename)
 	{
 		if (FileRepPrimary_IsOperationCompleted(
-							FileRep_GetFlatFileIdentifier(mirrorDir,
-														  oldSimpleFileName),
-							FileRepRelationTypeFlatFile) == FALSE)
+												FileRep_GetFlatFileIdentifier(mirrorDir,
+																			  oldSimpleFileName),
+												FileRepRelationTypeFlatFile) == FALSE)
 			ereport(LOG,
 					(errmsg("could not rename file on mirror from \"%s\" to \"%s\" ",
 							oldPath, newPath)));
@@ -571,46 +587,48 @@ int MirroredFlatFile_Rename(
 }
 
 
-// -----------------------------------------------------------------------------
-// Append
-// -----------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------- */
+/*  Append */
+/* ----------------------------------------------------------------------------- */
 
 /*
  * Write a mirrored flat file.
  */
-int MirroredFlatFile_Append(
-	MirroredFlatFileOpen *open,
-				/* The open struct. */
+int
+MirroredFlatFile_Append(
+						MirroredFlatFileOpen *open,
+ /* The open struct. */
 
-	void		*buffer,
-				/* Pointer to the buffer. */
+						void *buffer,
+ /* Pointer to the buffer. */
 
-	int32		bufferLen,
-				/* Byte length of buffer. */
+						int32 bufferLen,
+ /* Byte length of buffer. */
 
-	bool		suppressError)
+						bool suppressError)
 
 {
-	int save_errno = 0;
+	int			save_errno = 0;
 
 	Assert(open != NULL);
 	Assert(open->isActive);
 
 	if (FileRepPrimary_MirrorWrite(
-				   FileRep_GetFlatFileIdentifier(
-								 open->subDirectory,
-								 open->simpleFileName),
-				   FileRepRelationTypeFlatFile,
-				   FILEREP_OFFSET_UNDEFINED,
-				   buffer,
-				   bufferLen,
-				   FileRep_GetXLogRecPtrUndefined())	!= 0)
+								   FileRep_GetFlatFileIdentifier(
+																 open->subDirectory,
+																 open->simpleFileName),
+								   FileRepRelationTypeFlatFile,
+								   FILEREP_OFFSET_UNDEFINED,
+								   buffer,
+								   bufferLen,
+								   FileRep_GetXLogRecPtrUndefined()) != 0)
 		ereport(LOG,
 				(errmsg("could not sent write to mirror '%s/%s' ",
 						open->subDirectory,
 						open->simpleFileName)));
 
-	if (! open->isMirrorRecovery) {
+	if (!open->isMirrorRecovery)
+	{
 		errno = 0;
 		if ((int) FileWrite(open->primaryFile, buffer, bufferLen) != bufferLen)
 		{
@@ -634,24 +652,25 @@ int MirroredFlatFile_Append(
 /*
  * Write a mirrored flat file.
  */
-int MirroredFlatFile_Write(
-	MirroredFlatFileOpen *open,
-				/* The open struct. */
+int
+MirroredFlatFile_Write(
+					   MirroredFlatFileOpen *open,
+ /* The open struct. */
 
-	int32		position,
-				/* The position to write the data. */
+					   int32 position,
+ /* The position to write the data. */
 
-	void		*buffer,
-				/* Pointer to the buffer. */
+					   void *buffer,
+ /* Pointer to the buffer. */
 
-	int32		bufferLen,
-				/* Byte length of buffer. */
+					   int32 bufferLen,
+ /* Byte length of buffer. */
 
-	bool		suppressError)
+					   bool suppressError)
 
 {
-	int64	seekResult;
-	int		save_errno = 0;
+	int64		seekResult;
+	int			save_errno = 0;
 
 	Assert(open != NULL);
 	Assert(open->isActive);
@@ -665,20 +684,21 @@ int MirroredFlatFile_Write(
 	memcpy(writeBufAligned, buffer, bufferLen);
 
 	if (FileRepPrimary_MirrorWrite(
-				   FileRep_GetFlatFileIdentifier(
-								 open->subDirectory,
-								 open->simpleFileName),
-				   FileRepRelationTypeFlatFile,
-				   position,
-				   writeBufAligned,
-				   bufferLen,
-				   FileRep_GetXLogRecPtrUndefined())	!= 0)
+								   FileRep_GetFlatFileIdentifier(
+																 open->subDirectory,
+																 open->simpleFileName),
+								   FileRepRelationTypeFlatFile,
+								   position,
+								   writeBufAligned,
+								   bufferLen,
+								   FileRep_GetXLogRecPtrUndefined()) != 0)
 		ereport(LOG,
 				(errmsg("could not sent seek and write to mirror '%s/%s' ",
 						open->subDirectory,
 						open->simpleFileName)));
 
-	if (! open->isMirrorRecovery) {
+	if (!open->isMirrorRecovery)
+	{
 		errno = 0;
 		seekResult = FileSeek(open->primaryFile, position, SEEK_SET);
 		if (seekResult != position)
@@ -709,20 +729,21 @@ int MirroredFlatFile_Write(
 /*
  * Open a relation on primary
  */
-int MirroredFlatFile_OpenPrimary(
-						  MirroredFlatFileOpen *open,
-						  /* The resulting open struct. */
+int
+MirroredFlatFile_OpenPrimary(
+							 MirroredFlatFileOpen *open,
+ /* The resulting open struct. */
 
-						  char 			*subDirectory,
+							 char *subDirectory,
 
-						  char			*simpleFileName,
-						  /* The simple file name. */
+							 char *simpleFileName,
+ /* The simple file name. */
 
-						  int 			fileFlags,
+							 int fileFlags,
 
-						  int 			fileMode,
+							 int fileMode,
 
-						  bool			suppressError)
+							 bool suppressError)
 /* NOTE do we need to consider supressError on mirror */
 
 {
@@ -773,8 +794,9 @@ int MirroredFlatFile_OpenPrimary(
  * Close a bulk relation file.
  *
  */
-void MirroredFlatFile_ClosePrimary(
-							MirroredFlatFileOpen *open)
+void
+MirroredFlatFile_ClosePrimary(
+							  MirroredFlatFileOpen *open)
 /* The open struct. */
 
 {
@@ -802,21 +824,22 @@ void MirroredFlatFile_ClosePrimary(
 /*
  * Read a local flat file.
  */
-int MirroredFlatFile_Read(
-	MirroredFlatFileOpen *open,
-				/* The open struct. */
+int
+MirroredFlatFile_Read(
+					  MirroredFlatFileOpen *open,
+ /* The open struct. */
 
-	int32		position,
-				/* The position to write the data. */
+					  int32 position,
+ /* The position to write the data. */
 
-	void		*buffer,
-				/* Pointer to the buffer. */
+					  void *buffer,
+ /* Pointer to the buffer. */
 
-	int32		bufferLen)
-				/* Byte length of buffer. */
+					  int32 bufferLen)
+ /* Byte length of buffer. */
 
 {
-	int64 seekResult;
+	int64		seekResult;
 
 	Assert(open != NULL);
 	Assert(buffer != NULL);
@@ -830,8 +853,8 @@ int MirroredFlatFile_Read(
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not seek in file to position %d in file \"%s\": %m",
-				        position,
-				        open->path)));
+						position,
+						open->path)));
 	}
 
 	return FileRead(open->primaryFile, buffer, bufferLen);
@@ -840,11 +863,12 @@ int MirroredFlatFile_Read(
 /*
  * Seek in local flat file
  */
-int64 MirroredFlatFile_SeekSet(
-	MirroredFlatFileOpen *open,
-				/* The open struct. */
+int64
+MirroredFlatFile_SeekSet(
+						 MirroredFlatFileOpen *open,
+ /* The open struct. */
 
-	int32		position)
+						 int32 position)
 {
 	errno = 0;
 	return FileSeek(open->primaryFile, position, SEEK_SET);
@@ -853,9 +877,10 @@ int64 MirroredFlatFile_SeekSet(
 /*
  * Seek to the end of local flat file
  */
-int64 MirroredFlatFile_SeekEnd(
-							   MirroredFlatFileOpen *open)
-							   /* The open struct. */
+int64
+MirroredFlatFile_SeekEnd(
+						 MirroredFlatFileOpen *open)
+ /* The open struct. */
 {
 	errno = 0;
 	return FileSeek(open->primaryFile, 0, SEEK_END);
@@ -865,22 +890,24 @@ int64 MirroredFlatFile_SeekEnd(
 /*
  * Mirrored drop.
  */
-int MirroredFlatFile_Drop(
-	char 			*subDirectory,
+int
+MirroredFlatFile_Drop(
+					  char *subDirectory,
 
-	char			*simpleFileName,
-		/* The simple file name. */
+					  char *simpleFileName,
+ /* The simple file name. */
 
-	bool			suppressError,
+					  bool suppressError,
 
-	bool			isMirrorRecovery)
-		/* if TRUE then request is not performed on primary */
+					  bool isMirrorRecovery)
+ /* if TRUE then request is not performed on primary */
 {
-	char *path;
-	bool mirrorDrop = TRUE;
-	int	 save_errno = 0;
-	int	return_value = 0;
-	char *dir = NULL, *mirrorDir = NULL;
+	char	   *path;
+	bool		mirrorDrop = TRUE;
+	int			save_errno = 0;
+	int			return_value = 0;
+	char	   *dir = NULL,
+			   *mirrorDir = NULL;
 
 	if (isTxnDir(subDirectory))
 	{
@@ -893,7 +920,7 @@ int MirroredFlatFile_Drop(
 		mirrorDir = MemoryContextStrdup(TopMemoryContext, subDirectory);
 	}
 
-	path = (char*)palloc(MAXPGPATH + 1);
+	path = (char *) palloc(MAXPGPATH + 1);
 
 	if (snprintf(path, MAXPGPATH, "%s/%s", dir, simpleFileName) > MAXPGPATH)
 	{
@@ -901,20 +928,23 @@ int MirroredFlatFile_Drop(
 	}
 
 	if (FileRepPrimary_MirrorDrop(
-				   FileRep_GetFlatFileIdentifier(
-							 mirrorDir,
-							 simpleFileName),
-				   FileRepRelationTypeFlatFile) != 0) {
+								  FileRep_GetFlatFileIdentifier(
+																mirrorDir,
+																simpleFileName),
+								  FileRepRelationTypeFlatFile) != 0)
+	{
 
 		mirrorDrop = FALSE;
 		ereport(LOG,
 				(errmsg("could not sent drop file to mirror \"%s\"", path)));
 	}
 
-	if (! isMirrorRecovery) {
+	if (!isMirrorRecovery)
+	{
 		errno = 0;
 		return_value = unlink(path);
-		if (return_value < 0 && !suppressError){
+		if (return_value < 0 && !suppressError)
+		{
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not unlink file \"%s\": %m", path)));
@@ -922,12 +952,13 @@ int MirroredFlatFile_Drop(
 		save_errno = errno;
 	}
 
-	if (mirrorDrop) {
+	if (mirrorDrop)
+	{
 		if (FileRepPrimary_IsOperationCompleted(
-					   FileRep_GetFlatFileIdentifier(
-								 mirrorDir,
-								 simpleFileName),
-					   FileRepRelationTypeFlatFile) == FALSE)
+												FileRep_GetFlatFileIdentifier(
+																			  mirrorDir,
+																			  simpleFileName),
+												FileRepRelationTypeFlatFile) == FALSE)
 			ereport(LOG,
 					(errmsg("could not drop file on mirror \"%s\"", path)));
 	}
@@ -946,24 +977,26 @@ int MirroredFlatFile_Drop(
  *		xlog gets truncated to the same EOF on primary and mirror.
  *		Truncated area is set to zero.
  */
-int MirroredFlatFile_ReconcileXLogEof(
-							  char 			*subDirectory,
+int
+MirroredFlatFile_ReconcileXLogEof(
+								  char *subDirectory,
 
-							  char			*simpleFileName,
+								  char *simpleFileName,
 
-							  XLogRecPtr	primaryXLogEof,
+								  XLogRecPtr primaryXLogEof,
 
-							  XLogRecPtr	*mirrorXLogEof)
+								  XLogRecPtr *mirrorXLogEof)
 {
-	bool	mirrorReconcile = TRUE;
-	int		status = STATUS_OK;
+	bool		mirrorReconcile = TRUE;
+	int			status = STATUS_OK;
 
 	if (FileRepPrimary_ReconcileXLogEof(
-						FileRep_GetFlatFileIdentifier(
-											  subDirectory,
-											  simpleFileName),
-						FileRepRelationTypeFlatFile,
-						primaryXLogEof) != 0) {
+										FileRep_GetFlatFileIdentifier(
+																	  subDirectory,
+																	  simpleFileName),
+										FileRepRelationTypeFlatFile,
+										primaryXLogEof) != 0)
+	{
 
 		mirrorReconcile = FALSE;
 		ereport(LOG,
@@ -971,20 +1004,25 @@ int MirroredFlatFile_ReconcileXLogEof(
 		status = STATUS_ERROR;
 	}
 
-	if (mirrorReconcile) {
+	if (mirrorReconcile)
+	{
 		if (FileRepPrimary_IsOperationCompleted(
-								FileRep_GetFlatFileIdentifier(
-													  subDirectory,
-													  simpleFileName),
-								FileRepRelationTypeFlatFile) == FALSE) {
+												FileRep_GetFlatFileIdentifier(
+																			  subDirectory,
+																			  simpleFileName),
+												FileRepRelationTypeFlatFile) == FALSE)
+		{
 			ereport(LOG,
 					(errmsg("could not reconcile Xlog EOF on mirror")));
 			status = STATUS_ERROR;
 
-		} else {
+		}
+		else
+		{
 
 			*mirrorXLogEof = FileRepPrimary_GetMirrorXLogEof();
-			if (mirrorXLogEof->xlogid == 0 && mirrorXLogEof->xrecoff == 0) {
+			if (mirrorXLogEof->xlogid == 0 && mirrorXLogEof->xrecoff == 0)
+			{
 				ereport(LOG,
 						(errmsg("could not get Xlog EOF from mirror")));
 				status = STATUS_ERROR;
@@ -1000,17 +1038,18 @@ int MirroredFlatFile_ReconcileXLogEof(
  */
 int
 MirrorFlatFile(
-			   char 		*subDirectory,
-			   char			*simpleFileName)
+			   char *subDirectory,
+			   char *simpleFileName)
 {
-	MirroredFlatFileOpen	mirroredOpen;
-	MirroredFlatFileOpen	primaryOpen;
-	char					*buffer = NULL;
-	int32					endOffset = 0;
-	int32					startOffset = 0;
-	int32					bufferLen = 0;
-	int						retval = 0;
-	char 			*dir = NULL, *mirrorDir = NULL;
+	MirroredFlatFileOpen mirroredOpen;
+	MirroredFlatFileOpen primaryOpen;
+	char	   *buffer = NULL;
+	int32		endOffset = 0;
+	int32		startOffset = 0;
+	int32		bufferLen = 0;
+	int			retval = 0;
+	char	   *dir = NULL,
+			   *mirrorDir = NULL;
 
 	errno = 0;
 
@@ -1031,7 +1070,8 @@ MirrorFlatFile(
 		mirrorDir = MemoryContextStrdup(TopMemoryContext, subDirectory);
 	}
 
-	while (1) {
+	while (1)
+	{
 
 		retval = MirroredFlatFile_OpenPrimary(
 											  &primaryOpen,
@@ -1039,7 +1079,7 @@ MirrorFlatFile(
 											  simpleFileName,
 											  O_RDONLY | PG_BINARY,
 											  S_IRUSR | S_IWUSR,
-											  /* suppressError */ false);
+											   /* suppressError */ false);
 		if (retval != 0)
 			break;
 
@@ -1047,7 +1087,8 @@ MirrorFlatFile(
 		 * Determine the end.
 		 */
 		endOffset = MirroredFlatFile_SeekEnd(&primaryOpen);
-		if (endOffset < 0) {
+		if (endOffset < 0)
+		{
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not seek to end of file \"%s\" : %m",
@@ -1058,8 +1099,8 @@ MirrorFlatFile(
 		retval = MirroredFlatFile_Drop(
 									   subDirectory,
 									   simpleFileName,
-									   /* suppressError */ false,
-									   /*isMirrorRecovery */ TRUE);
+									    /* suppressError */ false,
+									    /* isMirrorRecovery */ TRUE);
 		if (retval != 0)
 			break;
 
@@ -1069,19 +1110,20 @@ MirrorFlatFile(
 									   simpleFileName,
 									   O_CREAT | O_EXCL | O_RDWR | PG_BINARY,
 									   S_IRUSR | S_IWUSR,
-									   /* suppressError */ false,
-									   /* atomic write/ */ false,
-									   /*isMirrorRecovery */ TRUE);
+									    /* suppressError */ false,
+									    /* atomic write/ */ false,
+									    /* isMirrorRecovery */ TRUE);
 
 		if (retval != 0)
 			break;
 
 		bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
-		buffer = (char*) palloc(bufferLen);
+		buffer = (char *) palloc(bufferLen);
 
 		MemSet(buffer, 0, bufferLen);
 
-		while (startOffset < endOffset) {
+		while (startOffset < endOffset)
+		{
 
 			retval = MirroredFlatFile_Read(
 										   &primaryOpen,
@@ -1089,7 +1131,8 @@ MirrorFlatFile(
 										   buffer,
 										   bufferLen);
 
-			if (retval != bufferLen) {
+			if (retval != bufferLen)
+			{
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not read from position:%d in file \"%s\" : %m",
@@ -1102,7 +1145,7 @@ MirrorFlatFile(
 											 &mirroredOpen,
 											 buffer,
 											 bufferLen,
-											 /* suppressError */ false);
+											  /* suppressError */ false);
 
 			if (retval != 0)
 				break;
@@ -1110,30 +1153,33 @@ MirrorFlatFile(
 			startOffset += bufferLen;
 
 			bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
-		} // while
+		} //while
 
-		if (retval != 0)
+			if (retval != 0)
 			break;
 
 		retval = MirroredFlatFile_Flush(
 										&mirroredOpen,
-										/* suppressError */ FALSE);
+										 /* suppressError */ FALSE);
 		if (retval != 0)
 			break;
 
 		break;
-	} // while(1)
+	} //while (1)
 
-	if (buffer) {
-		pfree(buffer);
-		buffer = NULL;
-	}
+		if (buffer)
+		{
+			pfree(buffer);
+			buffer = NULL;
+		}
 
-	if (MirroredFlatFile_IsActive(&mirroredOpen)) {
+	if (MirroredFlatFile_IsActive(&mirroredOpen))
+	{
 		MirroredFlatFile_Close(&mirroredOpen);
 	}
 
-	if (MirroredFlatFile_IsActive(&primaryOpen)) {
+	if (MirroredFlatFile_IsActive(&primaryOpen))
+	{
 		MirroredFlatFile_ClosePrimary(&primaryOpen);
 	}
 
@@ -1146,45 +1192,45 @@ MirrorFlatFile(
 void
 MirroredFlatFile_DropFilesFromDir(void)
 {
-	char *mirrorXLogDir = makeRelativeToPeerTxnFilespace(XLOGDIR);
-	char *mirrorCLogDir = makeRelativeToPeerTxnFilespace(CLOG_DIR);
-	char *mirrorDistributedLogDir = makeRelativeToPeerTxnFilespace(DISTRIBUTEDLOG_DIR);
-	char *mirrorDistributedXidMapDir = makeRelativeToPeerTxnFilespace(DISTRIBUTEDXIDMAP_DIR);
-	char *mirrorMultiXactMemberDir = makeRelativeToPeerTxnFilespace(MULTIXACT_MEMBERS_DIR);
-	char *mirrorMultiXactOffsetDir = makeRelativeToPeerTxnFilespace(MULTIXACT_OFFSETS_DIR);
-	char *mirrorSubxactDir = makeRelativeToPeerTxnFilespace(SUBTRANS_DIR);
+	char	   *mirrorXLogDir = makeRelativeToPeerTxnFilespace(XLOGDIR);
+	char	   *mirrorCLogDir = makeRelativeToPeerTxnFilespace(CLOG_DIR);
+	char	   *mirrorDistributedLogDir = makeRelativeToPeerTxnFilespace(DISTRIBUTEDLOG_DIR);
+	char	   *mirrorDistributedXidMapDir = makeRelativeToPeerTxnFilespace(DISTRIBUTEDXIDMAP_DIR);
+	char	   *mirrorMultiXactMemberDir = makeRelativeToPeerTxnFilespace(MULTIXACT_MEMBERS_DIR);
+	char	   *mirrorMultiXactOffsetDir = makeRelativeToPeerTxnFilespace(MULTIXACT_OFFSETS_DIR);
+	char	   *mirrorSubxactDir = makeRelativeToPeerTxnFilespace(SUBTRANS_DIR);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(TWOPHASE_DIR, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(TWOPHASE_DIR, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorCLogDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorCLogDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorDistributedLogDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorDistributedLogDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorDistributedXidMapDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorDistributedXidMapDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorMultiXactMemberDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorMultiXactMemberDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorMultiXactOffsetDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorMultiXactOffsetDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorSubxactDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorSubxactDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	FileRepPrimary_MirrorDropFilesFromDir(
-										 FileRep_GetFlatFileIdentifier(mirrorXLogDir, ""),
-										 FileRepRelationTypeFlatFile);
+										  FileRep_GetFlatFileIdentifier(mirrorXLogDir, ""),
+										  FileRepRelationTypeFlatFile);
 
 	pfree(mirrorSubxactDir);
 	pfree(mirrorMultiXactOffsetDir);
@@ -1203,9 +1249,9 @@ void
 MirroredFlatFile_DropTemporaryFiles(void)
 {
 
-	DIR             *global_dir;
-	struct dirent   *de;
-	char			path[MAXPGPATH+1];
+	DIR		   *global_dir;
+	struct dirent *de;
+	char		path[MAXPGPATH + 1];
 
 	global_dir = AllocateDir("global");
 
@@ -1220,7 +1266,7 @@ MirroredFlatFile_DropTemporaryFiles(void)
 			errno = 0;
 			if (unlink(path))
 			{
-				char	tmpBuf[FILEREP_MAX_LOG_DESCRIPTION_LEN];
+				char		tmpBuf[FILEREP_MAX_LOG_DESCRIPTION_LEN];
 
 				snprintf(tmpBuf, sizeof(tmpBuf), "unlink failed identifier '%s' errno '%d' ",
 						 de->d_name,
@@ -1283,33 +1329,33 @@ MirroredFlatFile_MirrorDropTemporaryFiles(void)
 int
 PgVersionRecoverMirror(void)
 {
-	DbDirNode dbDirNode;
+	DbDirNode	dbDirNode;
 	PersistentFileSysState state;
 
 	ItemPointerData persistentTid;
-	int64 persistentSerialNum;
+	int64		persistentSerialNum;
 
-	char *primaryFilespaceLocation = NULL;
-	char *mirrorFilespaceLocation = NULL;
+	char	   *primaryFilespaceLocation = NULL;
+	char	   *mirrorFilespaceLocation = NULL;
 
-	char *subDirectoryPrimary;
-	char *subDirectoryMirror;
+	char	   *subDirectoryPrimary;
+	char	   *subDirectoryMirror;
 
-	MirroredFlatFileOpen	mirroredOpen;
-	MirroredFlatFileOpen	primaryOpen;
-	char					*buffer = NULL;
-	int32					endOffset = 0;
-	int32					startOffset = 0;
-	int32					bufferLen = 0;
-	int						retval = 0;
-	int						status = STATUS_OK;
+	MirroredFlatFileOpen mirroredOpen;
+	MirroredFlatFileOpen primaryOpen;
+	char	   *buffer = NULL;
+	int32		endOffset = 0;
+	int32		startOffset = 0;
+	int32		bufferLen = 0;
+	int			retval = 0;
+	int			status = STATUS_OK;
 
 	/*
-	 * PgVersion is recovered only on mirror segment and not on master standby.
+	 * PgVersion is recovered only on mirror segment and not on master
+	 * standby.
 	 *
-	 * Attention
-	 * =========
-	 * Remove the check when master mirroring will be replaced with filerep.
+	 * Attention ========= Remove the check when master mirroring will be
+	 * replaced with filerep.
 	 */
 	getFileRepRoleAndState(&fileRepRole, NULL, NULL, NULL, NULL);
 
@@ -1318,8 +1364,8 @@ PgVersionRecoverMirror(void)
 		return status;
 	}
 
-	subDirectoryPrimary = (char*)palloc(MAXPGPATH + 1);
-	subDirectoryMirror = (char*)palloc(MAXPGPATH + 1);
+	subDirectoryPrimary = (char *) palloc(MAXPGPATH + 1);
+	subDirectoryMirror = (char *) palloc(MAXPGPATH + 1);
 
 	PersistentDatabase_DirIterateInit();
 
@@ -1351,7 +1397,8 @@ PgVersionRecoverMirror(void)
 
 		errno = 0;
 
-		while (1) {
+		while (1)
+		{
 
 			retval = MirroredFlatFile_OpenPrimary(
 												  &primaryOpen,
@@ -1359,9 +1406,10 @@ PgVersionRecoverMirror(void)
 												  PGVERSION,
 												  O_RDONLY | PG_BINARY,
 												  S_IRUSR | S_IWUSR,
-												  /* suppressError */ true);
+												   /* suppressError */ true);
 
-			if (! MirroredFlatFile_IsActive(&primaryOpen) || retval != 0) {
+			if (!MirroredFlatFile_IsActive(&primaryOpen) || retval != 0)
+			{
 
 				/* it is expected that PG_VERSION may not exist */
 				if (retval != ENOENT)
@@ -1371,10 +1419,10 @@ PgVersionRecoverMirror(void)
 					ereport(WARNING,
 							(errcode_for_file_access(),
 							 errmsg("mirror failure, "
-									 "could not open file '%s' : %m "
-									 "failover requested",
-									 (primaryOpen.path == NULL) ? "<null>" : primaryOpen.path),
-							  FileRep_errcontext()));
+									"could not open file '%s' : %m "
+									"failover requested",
+									(primaryOpen.path == NULL) ? "<null>" : primaryOpen.path),
+							 FileRep_errcontext()));
 				}
 				break;
 			}
@@ -1390,34 +1438,34 @@ PgVersionRecoverMirror(void)
 				ereport(WARNING,
 						(errcode_for_file_access(),
 						 errmsg("mirror failure, "
-								 "could not seek to end of file '%s' : %m "
-								 "failover requested",
-								 (primaryOpen.path == NULL) ? "<null>" : primaryOpen.path),
-						  FileRep_errcontext()));
+								"could not seek to end of file '%s' : %m "
+								"failover requested",
+								(primaryOpen.path == NULL) ? "<null>" : primaryOpen.path),
+						 FileRep_errcontext()));
 
 				break;
 			}
 
 			MirroredFlatFile_Drop(
-								   subDirectoryMirror,
-								   PGVERSION,
+								  subDirectoryMirror,
+								  PGVERSION,
 								   /* suppressError */ false,
-								   /*isMirrorRecovery */ TRUE);
+								   /* isMirrorRecovery */ TRUE);
 
 			MirroredFlatFile_Open(
-								   &mirroredOpen,
-								   subDirectoryMirror,
-								   PGVERSION,
-								   O_CREAT | O_EXCL | O_RDWR | PG_BINARY,
-								   S_IRUSR | S_IWUSR,
+								  &mirroredOpen,
+								  subDirectoryMirror,
+								  PGVERSION,
+								  O_CREAT | O_EXCL | O_RDWR | PG_BINARY,
+								  S_IRUSR | S_IWUSR,
 								   /* suppressError */ false,
 								   /* atomic? */ false,
-								   /*isMirrorRecovery */ TRUE);
+								   /* isMirrorRecovery */ TRUE);
 
 			Assert(MirroredFlatFile_IsActive(&mirroredOpen));
 
 			bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
-			buffer = (char*) palloc(bufferLen);
+			buffer = (char *) palloc(bufferLen);
 			MemSet(buffer, 0, bufferLen);
 
 			while (startOffset < endOffset)
@@ -1436,11 +1484,11 @@ PgVersionRecoverMirror(void)
 					ereport(WARNING,
 							(errcode_for_file_access(),
 							 errmsg("mirror failure, "
-									 "could not read from position '%d' file '%s' : %m "
-									 "failover requested",
-									 startOffset,
-									 (primaryOpen.path == NULL) ? "<null>" : primaryOpen.path),
-							  FileRep_errcontext()));
+									"could not read from position '%d' file '%s' : %m "
+									"failover requested",
+									startOffset,
+									(primaryOpen.path == NULL) ? "<null>" : primaryOpen.path),
+							 FileRep_errcontext()));
 
 					break;
 				}
@@ -1449,30 +1497,32 @@ PgVersionRecoverMirror(void)
 										&mirroredOpen,
 										buffer,
 										bufferLen,
-										/* suppressError */ false);
+										 /* suppressError */ false);
 
 				startOffset += bufferLen;
 
 				bufferLen = (Size) Min(BLCKSZ, endOffset - startOffset);
-			} // while
+			} //while
 
-			if (status != STATUS_OK)
+				if (status != STATUS_OK)
 				break;
 
 			MirroredFlatFile_Flush(
-									&mirroredOpen,
-									/* suppressError */ false);
+								   &mirroredOpen,
+								    /* suppressError */ false);
 
 			break;
-		} // while(1)
+		} //while (1)
 
-		startOffset = 0;
+			startOffset = 0;
 
-		if (MirroredFlatFile_IsActive(&mirroredOpen)) {
+		if (MirroredFlatFile_IsActive(&mirroredOpen))
+		{
 			MirroredFlatFile_Close(&mirroredOpen);
 		}
 
-		if (MirroredFlatFile_IsActive(&primaryOpen)) {
+		if (MirroredFlatFile_IsActive(&primaryOpen))
+		{
 			MirroredFlatFile_ClosePrimary(&primaryOpen);
 		}
 
@@ -1488,7 +1538,8 @@ PgVersionRecoverMirror(void)
 			mirrorFilespaceLocation = NULL;
 		}
 
-		if (buffer) {
+		if (buffer)
+		{
 			pfree(buffer);
 			buffer = NULL;
 		}
@@ -1502,4 +1553,3 @@ PgVersionRecoverMirror(void)
 
 	return status;
 }
-

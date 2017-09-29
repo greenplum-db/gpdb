@@ -35,8 +35,8 @@
 int64
 cdbRelMaxSegSize(Relation rel)
 {
-	int64 size = 0;
-	int i;
+	int64		size = 0;
+	int			i;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 	StringInfoData buffer;
 
@@ -55,17 +55,19 @@ cdbRelMaxSegSize(Relation rel)
 
 	for (i = 0; i < cdb_pgresults.numResults; i++)
 	{
-		struct pg_result * pgresult = cdb_pgresults.pg_results[i];
+		struct pg_result *pgresult = cdb_pgresults.pg_results[i];
+
 		if (PQresultStatus(pgresult) != PGRES_TUPLES_OK)
 		{
 			cdbdisp_clearCdbPgResults(&cdb_pgresults);
-			elog(ERROR,"cdbRelMaxSegSize: resultStatus not tuples_Ok: %s %s",
-				 PQresStatus(PQresultStatus(pgresult)),PQresultErrorMessage(pgresult));
+			elog(ERROR, "cdbRelMaxSegSize: resultStatus not tuples_Ok: %s %s",
+				 PQresStatus(PQresultStatus(pgresult)), PQresultErrorMessage(pgresult));
 		}
 		else
 		{
 			Assert(PQntuples(pgresult) == 1);
-			int64 tempsize = 0;
+			int64		tempsize = 0;
+
 			(void) scanint8(PQgetvalue(pgresult, 0, 0), false, &tempsize);
 			if (tempsize > size)
 				size = tempsize;

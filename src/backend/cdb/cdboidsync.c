@@ -30,11 +30,11 @@ get_max_oid_from_segDBs(void)
 {
 
 	Oid oid = 0;
-	Oid tempoid = 0;
-	int i;
+	Oid			tempoid = 0;
+	int			i;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
-	const char* cmd = "select pg_highest_oid()";
+	const char *cmd = "select pg_highest_oid()";
 
 	CdbDispatchCommand(cmd, DF_WITH_SNAPSHOT, &cdb_pgresults);
 
@@ -43,7 +43,7 @@ get_max_oid_from_segDBs(void)
 		if (PQresultStatus(cdb_pgresults.pg_results[i]) != PGRES_TUPLES_OK)
 		{
 			cdbdisp_clearCdbPgResults(&cdb_pgresults);
-			elog(ERROR,"dboid: resultStatus not tuples_Ok");
+			elog(ERROR, "dboid: resultStatus not tuples_Ok");
 		}
 		else
 		{
@@ -62,8 +62,8 @@ get_max_oid_from_segDBs(void)
 Datum
 pg_highest_oid(PG_FUNCTION_ARGS __attribute__((unused)))
 {
-	Oid result;
-	Oid max_from_segdbs;
+	Oid			result;
+	Oid			max_from_segdbs;
 
 	result = ShmemVariableCache->nextOid;
 
@@ -83,10 +83,10 @@ cdb_sync_oid_to_segments(void)
 {
 	if (Gp_role == GP_ROLE_DISPATCH && IsNormalProcessingMode())
 	{
-		Oid max_oid = get_max_oid_from_segDBs();
+		Oid			max_oid = get_max_oid_from_segDBs();
 
 		/* Move our oid counter ahead of QEs */
-		while(GetNewObjectId() <= max_oid);
+		while (GetNewObjectId() <= max_oid);
 
 		/* Burn a few extra just for safety */
 		for (int i = 0; i < 10; i++)

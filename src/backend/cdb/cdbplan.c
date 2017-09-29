@@ -107,8 +107,8 @@ plan_tree_mutator(Node *node,
 				  void *context)
 {
 	/*
-	 * The mutator has already decided not to modify the current node, but
-	 * we must call the mutator for any sub-nodes.
+	 * The mutator has already decided not to modify the current node, but we
+	 * must call the mutator for any sub-nodes.
 	 */
 
 #define FLATCOPY(newnode, node, nodetype)  \
@@ -186,7 +186,7 @@ plan_tree_mutator(Node *node,
 
 				FLATCOPY(newrepeat, repeat, Repeat);
 				PLANMUTATE(newrepeat, repeat);
-				return (Node *)newrepeat;
+				return (Node *) newrepeat;
 			}
 			break;
 
@@ -205,8 +205,8 @@ plan_tree_mutator(Node *node,
 
 		case T_RecursiveUnion:
 			{
-				RecursiveUnion	   *ru = (RecursiveUnion *) node;
-				RecursiveUnion	   *newru;
+				RecursiveUnion *ru = (RecursiveUnion *) node;
+				RecursiveUnion *newru;
 
 				FLATCOPY(newru, ru, RecursiveUnion);
 				PLANMUTATE(newru, ru);
@@ -215,8 +215,8 @@ plan_tree_mutator(Node *node,
 
 		case T_Sequence:
 			{
-				Sequence *sequence = (Sequence *) node;
-				Sequence *newSequence = NULL;
+				Sequence   *sequence = (Sequence *) node;
+				Sequence   *newSequence = NULL;
 
 				FLATCOPY(newSequence, sequence, Sequence);
 				PLANMUTATE(newSequence, sequence);
@@ -224,11 +224,11 @@ plan_tree_mutator(Node *node,
 
 				return (Node *) newSequence;
 			}
-			
+
 		case T_AssertOp:
 			{
-				AssertOp *assert = (AssertOp *) node;
-				AssertOp *newAssert = NULL;
+				AssertOp   *assert = (AssertOp *) node;
+				AssertOp   *newAssert = NULL;
 
 				FLATCOPY(newAssert, assert, AssertOp);
 				PLANMUTATE(newAssert, assert);
@@ -262,25 +262,25 @@ plan_tree_mutator(Node *node,
 		case T_BitmapAnd:
 			{
 				BitmapAnd  *old = (BitmapAnd *) node;
-                BitmapAnd  *mut;
+				BitmapAnd  *mut;
 
 				FLATCOPY(mut, old, BitmapAnd);
 				PLANMUTATE(mut, old);
 				MUTATE(mut->bitmapplans, old->bitmapplans, List *);
-				return (Node *)mut;
+				return (Node *) mut;
 			}
 			break;
-        case T_BitmapOr:
-            {
-                BitmapOr   *old = (BitmapOr *) node;
-                BitmapOr   *mut;
+		case T_BitmapOr:
+			{
+				BitmapOr   *old = (BitmapOr *) node;
+				BitmapOr   *mut;
 
-                FLATCOPY(mut, old, BitmapOr);
-                PLANMUTATE(mut, old);
-                MUTATE(mut->bitmapplans, old->bitmapplans, List *);
-                return (Node *)mut;
-            }
-            break;
+				FLATCOPY(mut, old, BitmapOr);
+				PLANMUTATE(mut, old);
+				MUTATE(mut->bitmapplans, old->bitmapplans, List *);
+				return (Node *) mut;
+			}
+			break;
 
 		case T_Scan:
 			/* Abstract: Should see only subclasses. */
@@ -300,33 +300,37 @@ plan_tree_mutator(Node *node,
 
 		case T_AppendOnlyScan:
 			{
-				AppendOnlyScan    *appendonlyscan = (AppendOnlyScan *) node;
-				AppendOnlyScan    *newappendonlyscan;
-				
+				AppendOnlyScan *appendonlyscan = (AppendOnlyScan *) node;
+				AppendOnlyScan *newappendonlyscan;
+
 				FLATCOPY(newappendonlyscan, appendonlyscan, AppendOnlyScan);
 				SCANMUTATE(newappendonlyscan, appendonlyscan);
-				/* (for now) A AppendOnlyScan is really just a Scan, so we're done. */
+
+				/*
+				 * (for now) A AppendOnlyScan is really just a Scan, so we're
+				 * done.
+				 */
 				return (Node *) newappendonlyscan;
 			}
 			break;
-	
+
 		case T_AOCSScan:
 			{
-				AOCSScan    *aocs = (AOCSScan *) node;
-				AOCSScan    *newaocs; 
-				
+				AOCSScan   *aocs = (AOCSScan *) node;
+				AOCSScan   *newaocs;
+
 				FLATCOPY(newaocs, aocs, AOCSScan);
 				SCANMUTATE(newaocs, aocs);
 				/* (for now) A AOCSScan is really just a Scan, so we're done. */
 				return (Node *) newaocs;
 			}
 			break;
-				
+
 		case T_TableScan:
 			{
-				TableScan *tableScan = (TableScan *) node;
-				TableScan *newTableScan = NULL; 
-				
+				TableScan  *tableScan = (TableScan *) node;
+				TableScan  *newTableScan = NULL;
+
 				FLATCOPY(newTableScan, tableScan, TableScan);
 				SCANMUTATE(newTableScan, tableScan);
 
@@ -338,7 +342,7 @@ plan_tree_mutator(Node *node,
 			{
 				DynamicTableScan *tableScan = (DynamicTableScan *) node;
 				DynamicTableScan *newTableScan = NULL;
-				
+
 				FLATCOPY(newTableScan, tableScan, DynamicTableScan);
 				SCANMUTATE(newTableScan, tableScan);
 				newTableScan->partIndex = tableScan->partIndex;
@@ -346,24 +350,24 @@ plan_tree_mutator(Node *node,
 				return (Node *) newTableScan;
 			}
 			break;
-				
+
 		case T_ExternalScan:
 			{
-				ExternalScan    *extscan = (ExternalScan *) node;
-				ExternalScan    *newextscan;
-				
+				ExternalScan *extscan = (ExternalScan *) node;
+				ExternalScan *newextscan;
+
 				FLATCOPY(newextscan, extscan, ExternalScan);
 				SCANMUTATE(newextscan, extscan);
-				
+
 				MUTATE(newextscan->uriList, extscan->uriList, List *);
 				MUTATE(newextscan->fmtOpts, extscan->fmtOpts, List *);
 				newextscan->fmtType = extscan->fmtType;
 				newextscan->isMasterOnly = extscan->isMasterOnly;
-				
+
 				return (Node *) newextscan;
 			}
 			break;
-			
+
 		case T_IndexScan:
 			{
 				IndexScan  *idxscan = (IndexScan *) node;
@@ -372,7 +376,7 @@ plan_tree_mutator(Node *node,
 				FLATCOPY(newidxscan, idxscan, IndexScan);
 				SCANMUTATE(newidxscan, idxscan);
 				newidxscan->indexid = idxscan->indexid;
-				//MUTATE(newidxscan->indexid, idxscan->indexid, List *);
+				/* MUTATE(newidxscan->indexid, idxscan->indexid, List *); */
 				MUTATE(newidxscan->indexqual, idxscan->indexqual, List *);
 				MUTATE(newidxscan->indexqualorig, idxscan->indexqualorig, List *);
 				MUTATE(newidxscan->indexstrategy, idxscan->indexstrategy, List *);
@@ -381,11 +385,11 @@ plan_tree_mutator(Node *node,
 				return (Node *) newidxscan;
 			}
 			break;
-			
+
 		case T_BitmapIndexScan:
 			{
-				BitmapIndexScan  *idxscan = (BitmapIndexScan *) node;
-				BitmapIndexScan  *newidxscan;
+				BitmapIndexScan *idxscan = (BitmapIndexScan *) node;
+				BitmapIndexScan *newidxscan;
 
 				FLATCOPY(newidxscan, idxscan, BitmapIndexScan);
 				SCANMUTATE(newidxscan, idxscan);
@@ -399,40 +403,40 @@ plan_tree_mutator(Node *node,
 				return (Node *) newidxscan;
 			}
 			break;
-			
+
 		case T_BitmapHeapScan:
 			{
-				BitmapHeapScan  *bmheapscan = (BitmapHeapScan *) node;
-				BitmapHeapScan  *newbmheapscan;
+				BitmapHeapScan *bmheapscan = (BitmapHeapScan *) node;
+				BitmapHeapScan *newbmheapscan;
 
 				FLATCOPY(newbmheapscan, bmheapscan, BitmapHeapScan);
 				SCANMUTATE(newbmheapscan, bmheapscan);
-				
+
 				MUTATE(newbmheapscan->bitmapqualorig, bmheapscan->bitmapqualorig, List *);
-	
+
 				return (Node *) newbmheapscan;
 			}
 			break;
-		
+
 
 		case T_BitmapAppendOnlyScan:
 			{
-				BitmapAppendOnlyScan  *bmappendonlyscan = (BitmapAppendOnlyScan *) node;
-				BitmapAppendOnlyScan  *newbmappendonlyscan;
+				BitmapAppendOnlyScan *bmappendonlyscan = (BitmapAppendOnlyScan *) node;
+				BitmapAppendOnlyScan *newbmappendonlyscan;
 
 				FLATCOPY(newbmappendonlyscan, bmappendonlyscan, BitmapAppendOnlyScan);
 				SCANMUTATE(newbmappendonlyscan, bmappendonlyscan);
-				
+
 				MUTATE(newbmappendonlyscan->bitmapqualorig, bmappendonlyscan->bitmapqualorig, List *);
-	
+
 				return (Node *) newbmappendonlyscan;
 			}
 			break;
-		
+
 		case T_BitmapTableScan:
 			{
-				BitmapTableScan  *bmtablescan = (BitmapTableScan *) node;
-				BitmapTableScan  *newbmtablescan = NULL;
+				BitmapTableScan *bmtablescan = (BitmapTableScan *) node;
+				BitmapTableScan *newbmtablescan = NULL;
 
 				FLATCOPY(newbmtablescan, bmtablescan, BitmapTableScan);
 				SCANMUTATE(newbmtablescan, bmtablescan);
@@ -482,7 +486,7 @@ plan_tree_mutator(Node *node,
 
 		case T_ValuesScan:
 			{
-				ValuesScan *scan = (ValuesScan *)node;
+				ValuesScan *scan = (ValuesScan *) node;
 				ValuesScan *newscan;
 
 				FLATCOPY(newscan, scan, ValuesScan);
@@ -593,8 +597,8 @@ plan_tree_mutator(Node *node,
 
 		case T_TableFunctionScan:
 			{
-				TableFunctionScan		*tabfunc = (TableFunctionScan *) node;
-				TableFunctionScan		*newtabfunc;
+				TableFunctionScan *tabfunc = (TableFunctionScan *) node;
+				TableFunctionScan *newtabfunc;
 
 				FLATCOPY(newtabfunc, tabfunc, TableFunctionScan);
 				PLANMUTATE(newtabfunc, tabfunc);
@@ -609,7 +613,7 @@ plan_tree_mutator(Node *node,
 
 				FLATCOPY(newwindow, window, WindowAgg);
 				PLANMUTATE(newwindow, window);
-				
+
 				COPYARRAY(newwindow, window, partNumCols, partColIdx);
 				COPYARRAY(newwindow, window, partNumCols, partOperators);
 
@@ -617,7 +621,7 @@ plan_tree_mutator(Node *node,
 				COPYARRAY(newwindow, window, ordNumCols, ordOperators);
 				MUTATE(newwindow->startOffset, window->startOffset, Node *);
 				MUTATE(newwindow->endOffset, window->endOffset, Node *);
-				
+
 				return (Node *) newwindow;
 			}
 			break;
@@ -739,12 +743,12 @@ plan_tree_mutator(Node *node,
 				MUTATE(newsubplan_plan, subplan_plan, Plan *);
 				MUTATE(newnode->args, subplan->args, List *);
 
-                /* An IntList isn't interesting to mutate; just copy. */
-				newnode->paramIds = (List *)copyObject(subplan->paramIds);
-				newnode->setParam = (List *)copyObject(subplan->setParam);
-				newnode->parParam = (List *)copyObject(subplan->parParam);
-				newnode->extParam = (List *)copyObject(subplan->extParam);
-				
+				/* An IntList isn't interesting to mutate; just copy. */
+				newnode->paramIds = (List *) copyObject(subplan->paramIds);
+				newnode->setParam = (List *) copyObject(subplan->setParam);
+				newnode->parParam = (List *) copyObject(subplan->parParam);
+				newnode->extParam = (List *) copyObject(subplan->extParam);
+
 				if (newsubplan_plan != subplan_plan)
 					plan_tree_base_subplan_put_plan(context, newnode, newsubplan_plan);
 
@@ -770,14 +774,14 @@ plan_tree_mutator(Node *node,
 				{
 					case RTE_RELATION:	/* ordinary relation reference */
 					case RTE_SPECIAL:	/* special rule relation (NEW or OLD) */
-                    case RTE_VOID:      /* deleted entry */
+					case RTE_VOID:	/* deleted entry */
 						/* No extras. */
 						break;
 
 					case RTE_SUBQUERY:	/* subquery in FROM */
 						newrte->subquery = copyObject(rte->subquery);
 						break;
-						
+
 					case RTE_CTE:
 						newrte->ctename = pstrdup(rte->ctename);
 						newrte->ctelevelsup = rte->ctelevelsup;
@@ -785,14 +789,18 @@ plan_tree_mutator(Node *node,
 						MUTATE(newrte->ctecoltypes, rte->ctecoltypes, List *);
 						MUTATE(newrte->ctecoltypmods, rte->ctecoltypmods, List *);
 						break;
-						
-					case RTE_JOIN:		/* join */
+
+					case RTE_JOIN:	/* join */
 						newrte->joinaliasvars = copyObject(rte->joinaliasvars);
 						break;
 
 					case RTE_FUNCTION:	/* function in FROM */
 						MUTATE(newrte->funcexpr, rte->funcexpr, Node *);
-						// TODO is this right? //newrte->coldeflist = (List *) copyObject(rte->coldeflist);
+
+						/*
+						 * TODO is this right? //newrte->coldeflist = (List *)
+						 * copyObject(rte->coldeflist);
+						 */
 						break;
 
 					case RTE_TABLEFUNCTION:
@@ -800,9 +808,9 @@ plan_tree_mutator(Node *node,
 						MUTATE(newrte->funcexpr, rte->funcexpr, Node *);
 						break;
 
-                    case RTE_VALUES:
-				        MUTATE(newrte->values_lists, rte->values_lists, List *);
-				        break;
+					case RTE_VALUES:
+						MUTATE(newrte->values_lists, rte->values_lists, List *);
+						break;
 				}
 				return (Node *) newrte;
 			}
@@ -813,8 +821,9 @@ plan_tree_mutator(Node *node,
 			 * addition, we let expression_tree_mutator handle unrecognized
 			 * nodes.
 			 *
-			 * TODO: Identify node types that should never appear in plan trees
-			 * and disallow them here by issuing an error or asserting false.
+			 * TODO: Identify node types that should never appear in plan
+			 * trees and disallow them here by issuing an error or asserting
+			 * false.
 			 */
 		case T_Var:
 		case T_Const:

@@ -20,11 +20,11 @@
 #include "miscadmin.h"
 
 static void BufferedReadIo(
-    BufferedRead        *bufferedRead);
+			   BufferedRead *bufferedRead);
 static uint8 *BufferedReadUseBeforeBuffer(
-    BufferedRead       *bufferedRead,
-    int32              maxReadAheadLen,
-    int32              *nextBufferLen);
+							BufferedRead *bufferedRead,
+							int32 maxReadAheadLen,
+							int32 *nextBufferLen);
 
 
 /*
@@ -32,14 +32,15 @@ static uint8 *BufferedReadUseBeforeBuffer(
  * BufferedRead given the desired buffer and
  * large write lengths.
  */
-int32 BufferedReadMemoryLen(
-    int32                maxBufferLen,
-    int32                maxLargeReadLen)
+int32
+BufferedReadMemoryLen(
+					  int32 maxBufferLen,
+					  int32 maxLargeReadLen)
 {
 	Assert(maxBufferLen > 0);
 	Assert(maxLargeReadLen >= maxBufferLen);
 
-	// Adjacent before memory for 1 buffer and large read memory.
+	/* Adjacent before memory for 1 buffer and large read memory. */
 	return (maxBufferLen + maxLargeReadLen);
 }
 
@@ -49,22 +50,23 @@ int32 BufferedReadMemoryLen(
  * Use the BufferedReadMemoryLen procedure to
  * determine the amount of memory to supply.
  */
-void BufferedReadInit(
-    BufferedRead         *bufferedRead,
-    uint8                *memory,
-    int32                memoryLen,
-    int32                maxBufferLen,
-    int32                maxLargeReadLen,
-    char				 *relationName)
+void
+BufferedReadInit(
+				 BufferedRead *bufferedRead,
+				 uint8 *memory,
+				 int32 memoryLen,
+				 int32 maxBufferLen,
+				 int32 maxLargeReadLen,
+				 char *relationName)
 {
-	int		relationNameLen;
+	int			relationNameLen;
 
 	Assert(bufferedRead != NULL);
 	Assert(memory != NULL);
 	Assert(maxBufferLen > 0);
 	Assert(maxLargeReadLen >= maxBufferLen);
 	Assert(memoryLen >= BufferedReadMemoryLen(maxBufferLen, maxLargeReadLen));
-	
+
 	memset(bufferedRead, 0, sizeof(BufferedRead));
 
 	/*
@@ -78,21 +80,21 @@ void BufferedReadInit(
 	 * Large-read memory level members.
 	 */
 	bufferedRead->maxBufferLen = maxBufferLen;
-    bufferedRead->maxLargeReadLen = maxLargeReadLen;
+	bufferedRead->maxLargeReadLen = maxLargeReadLen;
 
 	bufferedRead->memory = memory;
-    bufferedRead->memoryLen = memoryLen;
+	bufferedRead->memoryLen = memoryLen;
 
-    bufferedRead->beforeBufferMemory = memory;
+	bufferedRead->beforeBufferMemory = memory;
 	bufferedRead->largeReadMemory =
-						&memory[maxBufferLen];
+		&memory[maxBufferLen];
 
 	bufferedRead->largeReadPosition = 0;
 	bufferedRead->largeReadLen = 0;
-	
+
 	/*
 	 * Buffer level members.
-	 */	
+	 */
 	bufferedRead->bufferOffset = 0;
 	bufferedRead->bufferLen = 0;
 
@@ -100,7 +102,7 @@ void BufferedReadInit(
 	 * File level members.
 	 */
 	bufferedRead->file = -1;
-    bufferedRead->fileLen = 0;
+	bufferedRead->fileLen = 0;
 
 	/*
 	 * Temporary limit support for random reading.
@@ -112,29 +114,30 @@ void BufferedReadInit(
 /*
  * Takes an open file handle for the next file.
  */
-void BufferedReadSetFile(
-    BufferedRead       *bufferedRead,
-    File 				file,
-    char				*filePathName,
-    int64               fileLen)
+void
+BufferedReadSetFile(
+					BufferedRead *bufferedRead,
+					File file,
+					char *filePathName,
+					int64 fileLen)
 {
 	Assert(bufferedRead != NULL);
-	
+
 	Assert(bufferedRead->file == -1);
 	Assert(bufferedRead->fileLen == 0);
-		
-    Assert(bufferedRead->largeReadPosition == 0);
-    Assert(bufferedRead->largeReadLen == 0);
 
-    Assert(bufferedRead->bufferOffset == 0);
-    Assert(bufferedRead->bufferLen == 0);
+	Assert(bufferedRead->largeReadPosition == 0);
+	Assert(bufferedRead->largeReadLen == 0);
+
+	Assert(bufferedRead->bufferOffset == 0);
+	Assert(bufferedRead->bufferLen == 0);
 
 	Assert(file >= 0);
 	Assert(fileLen >= 0);
-	
+
 	bufferedRead->file = file;
-    bufferedRead->filePathName = filePathName;
-    bufferedRead->fileLen = fileLen;
+	bufferedRead->filePathName = filePathName;
+	bufferedRead->fileLen = fileLen;
 
 	bufferedRead->haveTemporaryLimitInEffect = false;
 	bufferedRead->temporaryLimitFileLen = 0;
@@ -147,7 +150,7 @@ void BufferedReadSetFile(
 		if (fileLen > bufferedRead->maxLargeReadLen)
 			bufferedRead->largeReadLen = bufferedRead->maxLargeReadLen;
 		else
-			bufferedRead->largeReadLen = (int32)fileLen;
+			bufferedRead->largeReadLen = (int32) fileLen;
 		BufferedReadIo(bufferedRead);
 	}
 }
@@ -155,12 +158,13 @@ void BufferedReadSetFile(
 /*
  * Perform a large read i/o.
  */
-static void BufferedReadIo(
-    BufferedRead        *bufferedRead)
+static void
+BufferedReadIo(
+			   BufferedRead *bufferedRead)
 {
-	int32 largeReadLen;
-	uint8 *largeReadMemory;
-	int32 offset;
+	int32		largeReadLen;
+	uint8	   *largeReadMemory;
+	int32		offset;
 
 	largeReadLen = bufferedRead->largeReadLen;
 	Assert(bufferedRead->largeReadLen > 0);
@@ -168,15 +172,15 @@ static void BufferedReadIo(
 
 #ifdef USE_ASSERT_CHECKING
 	{
-		int64 currentReadPosition; 
-		
+		int64		currentReadPosition;
+
 		currentReadPosition = FileNonVirtualCurSeek(bufferedRead->file);
 		if (currentReadPosition < 0)
 			ereport(ERROR, (errcode_for_file_access(),
 							errmsg("unable to get current position for table \"%s\" in file \"%s\": %m",
 								   bufferedRead->relationName,
-							       bufferedRead->filePathName)));
-			
+								   bufferedRead->filePathName)));
+
 		if (currentReadPosition != bufferedRead->largeReadPosition)
 		{
 			ereport(ERROR, (errcode_for_file_access(),
@@ -190,47 +194,47 @@ static void BufferedReadIo(
 #endif
 
 	offset = 0;
-	while (largeReadLen > 0) 
+	while (largeReadLen > 0)
 	{
-		int actualLen = FileRead(
-							bufferedRead->file,
-							(char*)largeReadMemory,
-							largeReadLen);
+		int			actualLen = FileRead(
+										 bufferedRead->file,
+										 (char *) largeReadMemory,
+										 largeReadLen);
 
-		if (actualLen == 0) 
+		if (actualLen == 0)
 			ereport(ERROR, (errcode_for_file_access(),
 							errmsg("read beyond eof in table \"%s\" file \"%s\", "
-								"read position " INT64_FORMAT " (small offset %d), "
-								"actual read length %d (large read length %d)",
-								bufferedRead->relationName,
-								bufferedRead->filePathName,
-								bufferedRead->largeReadPosition,
-								offset,
-								actualLen,
-								bufferedRead->largeReadLen)));
+								   "read position " INT64_FORMAT " (small offset %d), "
+								   "actual read length %d (large read length %d)",
+								   bufferedRead->relationName,
+								   bufferedRead->filePathName,
+								   bufferedRead->largeReadPosition,
+								   offset,
+								   actualLen,
+								   bufferedRead->largeReadLen)));
 		else if (actualLen < 0)
 			ereport(ERROR, (errcode_for_file_access(),
 							errmsg("unable to read table \"%s\" file \"%s\", "
-								"read position " INT64_FORMAT " (small offset %d), "
-								"actual read length %d (large read length %d): %m",
-								bufferedRead->relationName,
-								bufferedRead->filePathName,
-								bufferedRead->largeReadPosition,
-								offset,
-								actualLen,
-								bufferedRead->largeReadLen)));
-		
+								   "read position " INT64_FORMAT " (small offset %d), "
+								   "actual read length %d (large read length %d): %m",
+								   bufferedRead->relationName,
+								   bufferedRead->filePathName,
+								   bufferedRead->largeReadPosition,
+								   offset,
+								   actualLen,
+								   bufferedRead->largeReadLen)));
+
 		elogif(Debug_appendonly_print_read_block, LOG,
-				 "Append-Only storage read: table \"%s\", segment file \"%s\", read position " INT64_FORMAT " (small offset %d), "
-				 "actual read length %d (equals large read length %d is %s)",
-				 bufferedRead->relationName,
-				 bufferedRead->filePathName,
-				 bufferedRead->largeReadPosition,
-				 offset,
-				 actualLen,
-				 bufferedRead->largeReadLen,
-				 (actualLen == bufferedRead->largeReadLen ? "true" : "false"));
-		
+			   "Append-Only storage read: table \"%s\", segment file \"%s\", read position " INT64_FORMAT " (small offset %d), "
+			   "actual read length %d (equals large read length %d is %s)",
+			   bufferedRead->relationName,
+			   bufferedRead->filePathName,
+			   bufferedRead->largeReadPosition,
+			   offset,
+			   actualLen,
+			   bufferedRead->largeReadLen,
+			   (actualLen == bufferedRead->largeReadLen ? "true" : "false"));
+
 		largeReadLen -= actualLen;
 		largeReadMemory += actualLen;
 		offset += actualLen;
@@ -240,21 +244,22 @@ static void BufferedReadIo(
 		VacuumCostBalance += VacuumCostPageMiss;
 }
 
-static uint8 *BufferedReadUseBeforeBuffer(
-    BufferedRead       *bufferedRead,
-    int32              maxReadAheadLen,
-    int32              *nextBufferLen)
+static uint8 *
+BufferedReadUseBeforeBuffer(
+							BufferedRead *bufferedRead,
+							int32 maxReadAheadLen,
+							int32 *nextBufferLen)
 {
-	int64 inEffectFileLen;
-	int64 nextPosition;
-	int64 remainingFileLen;
-	int32 nextReadLen;
-	int32 beforeLen;
-	int32 beforeOffset;
-	int32 extraLen;
+	int64		inEffectFileLen;
+	int64		nextPosition;
+	int64		remainingFileLen;
+	int32		nextReadLen;
+	int32		beforeLen;
+	int32		beforeOffset;
+	int32		extraLen;
 
 	Assert(bufferedRead->largeReadLen - bufferedRead->bufferOffset > 0);
-	
+
 	if (bufferedRead->haveTemporaryLimitInEffect)
 		inEffectFileLen = bufferedRead->temporaryLimitFileLen;
 	else
@@ -262,77 +267,77 @@ static uint8 *BufferedReadUseBeforeBuffer(
 
 	/*
 	 * Requesting more data than in the current read.
-	 */		
+	 */
 	nextPosition = bufferedRead->largeReadPosition + bufferedRead->largeReadLen;
-	
+
 	if (nextPosition == inEffectFileLen)
 	{
 		/*
 		 * No more file to read.
 		 */
 		bufferedRead->bufferLen = bufferedRead->largeReadLen -
-								  bufferedRead->bufferOffset;
+			bufferedRead->bufferOffset;
 		Assert(bufferedRead->bufferLen > 0);
-		
+
 		*nextBufferLen = bufferedRead->bufferLen;
 		return &bufferedRead->largeReadMemory[bufferedRead->bufferOffset];
 	}
 
-	remainingFileLen = inEffectFileLen - 
-	                   nextPosition;
+	remainingFileLen = inEffectFileLen -
+		nextPosition;
 	if (remainingFileLen > bufferedRead->maxLargeReadLen)
 		nextReadLen = bufferedRead->maxLargeReadLen;
 	else
-		nextReadLen = (int32)remainingFileLen;
-	
+		nextReadLen = (int32) remainingFileLen;
+
 	Assert(nextReadLen >= 0);
 
 	beforeLen = bufferedRead->maxLargeReadLen - bufferedRead->bufferOffset;
 	beforeOffset = bufferedRead->maxBufferLen - beforeLen;
-	
+
 	/*
 	 * Copy data from the current large-read buffer into the before memory.
 	 */
 	memcpy(&bufferedRead->beforeBufferMemory[beforeOffset],
-	       &bufferedRead->largeReadMemory[bufferedRead->bufferOffset],
-	       beforeLen);
+		   &bufferedRead->largeReadMemory[bufferedRead->bufferOffset],
+		   beforeLen);
 
 	/*
 	 * Do the next read.
 	 */
 	bufferedRead->largeReadPosition = nextPosition;
 	bufferedRead->largeReadLen = nextReadLen;
-	
+
 	/*
-	 * MPP-17061: nextReadLen should never be 0, since the code will return above
-	 * if inEffectFileLen is equal to nextPosition.
+	 * MPP-17061: nextReadLen should never be 0, since the code will return
+	 * above if inEffectFileLen is equal to nextPosition.
 	 */
 	if (nextReadLen == 0)
 	{
 		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-				errmsg("Unexpected internal error,"
-				" largeReadLen is set to 0 before calling BufferedReadIo." 
-				" remainingFileLen is " INT64_FORMAT 
-				" inEffectFileLen is " INT64_FORMAT 
-				" nextPosition is " INT64_FORMAT, 
-				remainingFileLen, inEffectFileLen, nextPosition)));
+						errmsg("Unexpected internal error,"
+							   " largeReadLen is set to 0 before calling BufferedReadIo."
+							   " remainingFileLen is " INT64_FORMAT
+							   " inEffectFileLen is " INT64_FORMAT
+							   " nextPosition is " INT64_FORMAT,
+							   remainingFileLen, inEffectFileLen, nextPosition)));
 	}
-	
+
 	BufferedReadIo(bufferedRead);
 
 	extraLen = maxReadAheadLen - beforeLen;
 	Assert(extraLen > 0);
 	if (extraLen > nextReadLen)
-		extraLen = (int32)nextReadLen;
+		extraLen = (int32) nextReadLen;
 
 	/*
-	 * Return a buffer using a negative offset that starts in the
-	 * before memory and goes into the large-read memory.
+	 * Return a buffer using a negative offset that starts in the before
+	 * memory and goes into the large-read memory.
 	 */
 	bufferedRead->bufferOffset = -beforeLen;
 	bufferedRead->bufferLen = beforeLen + extraLen;
 	Assert(bufferedRead->bufferLen > 0);
-	
+
 	*nextBufferLen = bufferedRead->bufferLen;
 
 	return &bufferedRead->beforeBufferMemory[beforeOffset];
@@ -349,13 +354,14 @@ static uint8 *BufferedReadUseBeforeBuffer(
  *
  * When a read returns false (no more blocks), the temporary read range is forgotten.
  */
-void BufferedReadSetTemporaryRange(
-    BufferedRead         *bufferedRead,
-	int64				  beginFileOffset,
-	int64				  afterFileOffset)
+void
+BufferedReadSetTemporaryRange(
+							  BufferedRead *bufferedRead,
+							  int64 beginFileOffset,
+							  int64 afterFileOffset)
 {
-	bool	newReadNeeded;
-	int64	largeReadAfterPos;
+	bool		newReadNeeded;
+	int64		largeReadAfterPos;
 
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
@@ -367,24 +373,24 @@ void BufferedReadSetTemporaryRange(
 
 	newReadNeeded = false;
 	largeReadAfterPos = bufferedRead->largeReadPosition +
-						bufferedRead->largeReadLen;
+		bufferedRead->largeReadLen;
 	if (bufferedRead->bufferOffset < 0)
 	{
-		int64	virtualLargeReadBeginPos;
-		
+		int64		virtualLargeReadBeginPos;
+
 		virtualLargeReadBeginPos = bufferedRead->largeReadPosition +
-								   bufferedRead->bufferOffset;
+			bufferedRead->bufferOffset;
 
 		if (beginFileOffset >= virtualLargeReadBeginPos &&
 			beginFileOffset < largeReadAfterPos)
 		{
 			/*
-			 * Our temporary read begin position is within our before buffer and
-			 * current read.
+			 * Our temporary read begin position is within our before buffer
+			 * and current read.
 			 */
-			bufferedRead->bufferOffset = 
-								(int32)(beginFileOffset -
-										bufferedRead->largeReadPosition);
+			bufferedRead->bufferOffset =
+				(int32) (beginFileOffset -
+						 bufferedRead->largeReadPosition);
 		}
 		else
 			newReadNeeded = true;
@@ -397,9 +403,9 @@ void BufferedReadSetTemporaryRange(
 			/*
 			 * Our temporary read begin position is within our current read.
 			 */
-			bufferedRead->bufferOffset = 
-								(int32)(beginFileOffset -
-										bufferedRead->largeReadPosition);
+			bufferedRead->bufferOffset =
+				(int32) (beginFileOffset -
+						 bufferedRead->largeReadPosition);
 		}
 		else
 		{
@@ -409,17 +415,18 @@ void BufferedReadSetTemporaryRange(
 
 	if (newReadNeeded)
 	{
-		int64	remainingFileLen;
+		int64		remainingFileLen;
 
-		/* 
-		 * Seek to the requested beginning position. 
-		 * MPP-17061: allow seeking backward (negative offset) in file,
-		 * this could happen during index scan, if we do lookup for a
-		 * block directory entry at the end of the segment file, followed
-		 * by a lookup for a block directory entry at the beginning of file.
+		/*
+		 * Seek to the requested beginning position. MPP-17061: allow seeking
+		 * backward (negative offset) in file, this could happen during index
+		 * scan, if we do lookup for a block directory entry at the end of the
+		 * segment file, followed by a lookup for a block directory entry at
+		 * the beginning of file.
 		 */
-		int64 seekOffset = beginFileOffset - largeReadAfterPos;
-		int64 seekPos = FileSeek(bufferedRead->file, seekOffset, SEEK_CUR);
+		int64		seekOffset = beginFileOffset - largeReadAfterPos;
+		int64		seekPos = FileSeek(bufferedRead->file, seekOffset, SEEK_CUR);
+
 		if (seekPos != beginFileOffset)
 			ereport(ERROR, (errcode_for_file_access(),
 							errmsg("unable to seek to position for table \"%s\" in file \"%s\": %m",
@@ -432,7 +439,7 @@ void BufferedReadSetTemporaryRange(
 		if (remainingFileLen > bufferedRead->maxLargeReadLen)
 			bufferedRead->largeReadLen = bufferedRead->maxLargeReadLen;
 		else
-			bufferedRead->largeReadLen = (int32)remainingFileLen;
+			bufferedRead->largeReadLen = (int32) remainingFileLen;
 
 		bufferedRead->largeReadPosition = beginFileOffset;
 
@@ -442,27 +449,26 @@ void BufferedReadSetTemporaryRange(
 
 	bufferedRead->haveTemporaryLimitInEffect = true;
 	bufferedRead->temporaryLimitFileLen = afterFileOffset;
-	
+
 }
 
 /*
  * Return the position of the next read in bytes.
  */
-int64 
+int64
 BufferedReadNextBufferPosition(
-    BufferedRead       *bufferedRead)
+							   BufferedRead *bufferedRead)
 {
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
 
 	/*
-	 * Note that the bufferOffset can be negative when we are using the
-	 * before buffer, but that is ok.  We should get an accurate
-	 * next position.
+	 * Note that the bufferOffset can be negative when we are using the before
+	 * buffer, but that is ok.  We should get an accurate next position.
 	 */
-	return bufferedRead->largeReadPosition + 
-		   bufferedRead->bufferOffset + 
-		   bufferedRead->bufferLen;
+	return bufferedRead->largeReadPosition +
+		bufferedRead->bufferOffset +
+		bufferedRead->bufferLen;
 }
 
 /*
@@ -471,12 +477,13 @@ BufferedReadNextBufferPosition(
  *
  * Returns NULL when the current file has been completely read.
  */
-uint8 *BufferedReadGetNextBuffer(
-    BufferedRead       *bufferedRead,
-    int32              maxReadAheadLen,
-    int32              *nextBufferLen)
+uint8 *
+BufferedReadGetNextBuffer(
+						  BufferedRead *bufferedRead,
+						  int32 maxReadAheadLen,
+						  int32 *nextBufferLen)
 {
-	int64	inEffectFileLen;
+	int64		inEffectFileLen;
 
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
@@ -485,9 +492,9 @@ uint8 *BufferedReadGetNextBuffer(
 	if (maxReadAheadLen > bufferedRead->maxBufferLen)
 	{
 		Assert(maxReadAheadLen <= bufferedRead->maxBufferLen);
-		
+
 		elog(ERROR, "Read ahead length %d is greater than maximum buffer length %d",
-		     maxReadAheadLen, bufferedRead->maxBufferLen);
+			 maxReadAheadLen, bufferedRead->maxBufferLen);
 	}
 
 	if (bufferedRead->haveTemporaryLimitInEffect)
@@ -510,26 +517,26 @@ uint8 *BufferedReadGetNextBuffer(
 		bufferedRead->haveTemporaryLimitInEffect = false;
 		return NULL;
 	}
-	
+
 	/*
 	 * Any more left in current read?
 	 */
 	if (bufferedRead->bufferOffset == bufferedRead->largeReadLen)
 	{
-		int64 remainingFileLen;
-	
+		int64		remainingFileLen;
+
 		/*
 		 * Used exactly all of it.  Attempt read more.
 		 */
 		bufferedRead->largeReadPosition += bufferedRead->largeReadLen;
 		bufferedRead->bufferOffset = 0;
-		
-		remainingFileLen = inEffectFileLen - 
-		                   bufferedRead->largeReadPosition;
+
+		remainingFileLen = inEffectFileLen -
+			bufferedRead->largeReadPosition;
 		if (remainingFileLen > bufferedRead->maxLargeReadLen)
 			bufferedRead->largeReadLen = bufferedRead->maxLargeReadLen;
 		else
-			bufferedRead->largeReadLen = (int32)remainingFileLen;
+			bufferedRead->largeReadLen = (int32) remainingFileLen;
 		if (bufferedRead->largeReadLen == 0)
 		{
 			/*
@@ -560,17 +567,17 @@ uint8 *BufferedReadGetNextBuffer(
 		 * Odd boundary.  Use before memory to carry us over.
 		 */
 		Assert(bufferedRead->largeReadLen - bufferedRead->bufferOffset > 0);
-	
+
 		return BufferedReadUseBeforeBuffer(
-									bufferedRead, 
-									maxReadAheadLen,
-									nextBufferLen);
+										   bufferedRead,
+										   maxReadAheadLen,
+										   nextBufferLen);
 	}
 
 	/*
 	 * We can satisify request from current read.
 	 */
-	bufferedRead->bufferLen = maxReadAheadLen;	
+	bufferedRead->bufferLen = maxReadAheadLen;
 	Assert(bufferedRead->bufferLen > 0);
 
 	*nextBufferLen = bufferedRead->bufferLen;
@@ -582,18 +589,19 @@ uint8 *BufferedReadGetNextBuffer(
  *
  * Returns NULL when the current file has been completely read.
  */
-uint8 *BufferedReadGetMaxBuffer(
-    BufferedRead       *bufferedRead,
-    int32              *nextBufferLen)
+uint8 *
+BufferedReadGetMaxBuffer(
+						 BufferedRead *bufferedRead,
+						 int32 *nextBufferLen)
 {
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
 	Assert(nextBufferLen != NULL);
 
 	return BufferedReadGetNextBuffer(
-							bufferedRead,
-							bufferedRead->maxBufferLen,
-							nextBufferLen);
+									 bufferedRead,
+									 bufferedRead->maxBufferLen,
+									 nextBufferLen);
 }
 
 /*
@@ -606,12 +614,13 @@ uint8 *BufferedReadGetMaxBuffer(
  * If the current file has been completely read, bufferLen will remain
  * the current value.
  */
-uint8 *BufferedReadGrowBuffer(
-    BufferedRead       *bufferedRead,
-    int32              newMaxReadAheadLen,
-    int32              *growBufferLen)
+uint8 *
+BufferedReadGrowBuffer(
+					   BufferedRead *bufferedRead,
+					   int32 newMaxReadAheadLen,
+					   int32 *growBufferLen)
 {
-	int32 newNextOffset;
+	int32		newNextOffset;
 
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
@@ -620,17 +629,17 @@ uint8 *BufferedReadGrowBuffer(
 	Assert(growBufferLen != NULL);
 
 	newNextOffset = bufferedRead->bufferOffset + newMaxReadAheadLen;
-    if (newNextOffset > bufferedRead->largeReadLen)
+	if (newNextOffset > bufferedRead->largeReadLen)
 	{
 		/*
 		 * Odd boundary.  Use before memory to carry us over.
 		 */
 		Assert(bufferedRead->largeReadLen - bufferedRead->bufferOffset > 0);
-	
+
 		return BufferedReadUseBeforeBuffer(
-									bufferedRead, 
-									newMaxReadAheadLen,
-									growBufferLen);
+										   bufferedRead,
+										   newMaxReadAheadLen,
+										   growBufferLen);
 	}
 
 	/*
@@ -638,7 +647,7 @@ uint8 *BufferedReadGrowBuffer(
 	 */
 	bufferedRead->bufferLen = newMaxReadAheadLen;
 	Assert(bufferedRead->bufferLen > 0);
-	
+
 	*growBufferLen = bufferedRead->bufferLen;
 	return &bufferedRead->largeReadMemory[bufferedRead->bufferOffset];
 }
@@ -646,20 +655,22 @@ uint8 *BufferedReadGrowBuffer(
 /*
  * Return the address of the current read buffer.
  */
-uint8 *BufferedReadGetCurrentBuffer(
-    BufferedRead       *bufferedRead)
+uint8 *
+BufferedReadGetCurrentBuffer(
+							 BufferedRead *bufferedRead)
 {
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
-	
+
 	return &bufferedRead->largeReadMemory[bufferedRead->bufferOffset];
 }
 
 /*
  * Return the current buffer's start position.
  */
-int64 BufferedReadCurrentPosition(
-    BufferedRead       *bufferedRead)
+int64
+BufferedReadCurrentPosition(
+							BufferedRead *bufferedRead)
 {
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
@@ -671,8 +682,9 @@ int64 BufferedReadCurrentPosition(
  * Flushes the current file for append.  Caller is responsible for closing
  * the file afterwards.
  */
-void BufferedReadCompleteFile(
-    BufferedRead       *bufferedRead)
+void
+BufferedReadCompleteFile(
+						 BufferedRead *bufferedRead)
 {
 	Assert(bufferedRead != NULL);
 	Assert(bufferedRead->file >= 0);
@@ -692,21 +704,22 @@ void BufferedReadCompleteFile(
 /*
  * Finish with reading all together.
  */
-void BufferedReadFinish(BufferedRead *bufferedRead)
+void
+BufferedReadFinish(BufferedRead *bufferedRead)
 {
 	Assert(bufferedRead != NULL);
 
-	//Assert(bufferedRead->file == -1);
+	/* Assert(bufferedRead->file == -1); */
 	Assert(bufferedRead->fileLen == 0);
 
 	Assert(bufferedRead->bufferOffset == 0);
-	Assert(bufferedRead->bufferLen == 0);	
+	Assert(bufferedRead->bufferLen == 0);
 
-	if(bufferedRead->memory)
+	if (bufferedRead->memory)
 	{
 		pfree(bufferedRead->memory);
 		bufferedRead->memory = NULL;
-		bufferedRead->memoryLen = 0; 
+		bufferedRead->memoryLen = 0;
 	}
 
 	if (bufferedRead->relationName != NULL)

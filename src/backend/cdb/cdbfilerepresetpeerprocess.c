@@ -80,16 +80,18 @@ extern void FileRepResetPeer_Main(void);
   */
 #define RESET_STATUS_IS_STARTING_OR_STOPPING "resetStatusServerIsStartingOrStopping"
 
-static bool strequals(char *left, char *right)
+static bool
+strequals(char *left, char *right)
 {
 	return strcmp(left, right) == 0;
 }
 
 static bool
-determineTargetHost( struct addrinfo **addrList, char *host, char *port)
+determineTargetHost(struct addrinfo **addrList, char *host, char *port)
 {
 	/*
-	 * I should make this function exported by primary_mirror_transition_client.h ?
+	 * I should make this function exported by
+	 * primary_mirror_transition_client.h ?
 	 */
 	struct addrinfo hint;
 	int			ret;
@@ -106,7 +108,7 @@ determineTargetHost( struct addrinfo **addrList, char *host, char *port)
 
 	/* Use pg_getaddrinfo_all() to resolve the address */
 	ret = pg_getaddrinfo_all(host, port, &hint, addrList);
-	if (ret || ! *addrList)
+	if (ret || !*addrList)
 	{
 		elog(WARNING, "could not translate host name \"%s\" to address: %s\n", host, gai_strerror(ret));
 		return false;
@@ -151,9 +153,9 @@ resetPeer_receivedDataCallbackFunction(char *buf)
 }
 
 static void
-sendMessageToPeerAndExitIfProblem( struct addrinfo *addrList, char *msgBody,
-		char messageFromPeerOut[MESSAGE_FROM_PEER_BUF_SIZE],
-		char resetNumberFromPeerOut[MESSAGE_FROM_PEER_BUF_SIZE])
+sendMessageToPeerAndExitIfProblem(struct addrinfo *addrList, char *msgBody,
+								  char messageFromPeerOut[MESSAGE_FROM_PEER_BUF_SIZE],
+								  char resetNumberFromPeerOut[MESSAGE_FROM_PEER_BUF_SIZE])
 {
 	elog(DEBUG1, "peer reset: sending message to primary/mirror peer: %s", msgBody);
 
@@ -164,42 +166,50 @@ sendMessageToPeerAndExitIfProblem( struct addrinfo *addrList, char *msgBody,
 
 	/* make the call and check results */
 	PrimaryMirrorTransitionClientInfo client;
+
 	client.receivedDataCallbackFn = resetPeer_receivedDataCallbackFunction;
 	client.errorLogFn = resetPeer_errorLogFunction;
 	client.checkForNeedToExitFn = resetPeer_checkForNeedToExitFunction;
-	int resultCode = sendTransitionMessage(&client, addrList, msgBody, strlen(msgBody),
-							10 /* numRetries */, 3600 /* transition_timeout */);
+	int			resultCode = sendTransitionMessage(&client, addrList, msgBody, strlen(msgBody),
+												   10 /* numRetries */ , 3600 /* transition_timeout */ );
 
 	if (resultCode != TRANS_ERRCODE_SUCCESS)
 	{
 		elog(WARNING, "during reset, unable to contact primary/mirror peer to coordinate reset; "
-						"will transition to fault state.  Error code %d and message '%s'",
-						resultCode, gErrorLogBuf);
+			 "will transition to fault state.  Error code %d and message '%s'",
+			 resultCode, gErrorLogBuf);
 		proc_exit(EXIT_CODE_SHOULD_ENTER_FAULT);
 	}
 
-	/* extract the two fields into messageFromPeerOut and resetNumberFromPeerOut, skipping the first Success: line
+	/*
+	 * extract the two fields into messageFromPeerOut and
+	 * resetNumberFromPeerOut, skipping the first Success: line
 	 *
 	 * is there a way to make this simple string parser easier?
 	 *
-	 * The result will look like Success:\nLineToKeep1\nLineToKeep2
-	 * This pulls LineToKeep1 and LineToKeep2 out into messageFromPeerOut and resetNumberFromPeerIndex
+	 * The result will look like Success:\nLineToKeep1\nLineToKeep2 This pulls
+	 * LineToKeep1 and LineToKeep2 out into messageFromPeerOut and
+	 * resetNumberFromPeerIndex
 	 *
-	 * Note that because gResultDataBuf is limited to MESSAGE_FROM_PEER_BUF_SIZE, we don't technically need
-	 *   to check overflow here.
+	 * Note that because gResultDataBuf is limited to
+	 * MESSAGE_FROM_PEER_BUF_SIZE, we don't technically need to check overflow
+	 * here.
 	 */
-	int resetNumberFromPeerIndex = 0, messageFromPeerIndex = 0, whichLine = 0;
-	char *buf = gResultDataBuf;
+	int			resetNumberFromPeerIndex = 0,
+				messageFromPeerIndex = 0,
+				whichLine = 0;
+	char	   *buf = gResultDataBuf;
+
 	while (*buf)
 	{
-		if ( *buf == '\n')
+		if (*buf == '\n')
 		{
 			whichLine++;
-			if ( whichLine == 3)
+			if (whichLine == 3)
 			{
 				elog(WARNING, "during reset, invalid message contacting primary/mirror peer to coordinate reset; "
-						"will transition to fault state.  Message received: %s",
-						gResultDataBuf);
+					 "will transition to fault state.  Message received: %s",
+					 gResultDataBuf);
 				proc_exit(EXIT_CODE_SHOULD_ENTER_FAULT);
 			}
 		}
@@ -210,7 +220,7 @@ sendMessageToPeerAndExitIfProblem( struct addrinfo *addrList, char *msgBody,
 				messageFromPeerOut[messageFromPeerIndex] = *buf;
 				messageFromPeerIndex++;
 
-				 /* see comments above about why this is not strictly needed */
+				/* see comments above about why this is not strictly needed */
 				Insist(messageFromPeerIndex < MESSAGE_FROM_PEER_BUF_SIZE);
 			}
 			else if (whichLine == 2)
@@ -218,7 +228,7 @@ sendMessageToPeerAndExitIfProblem( struct addrinfo *addrList, char *msgBody,
 				resetNumberFromPeerOut[resetNumberFromPeerIndex] = *buf;
 				resetNumberFromPeerIndex++;
 
-				 /* see comments above about why this is not strictly needed */
+				/* see comments above about why this is not strictly needed */
 				Insist(resetNumberFromPeerIndex < MESSAGE_FROM_PEER_BUF_SIZE);
 			}
 		}
@@ -228,11 +238,11 @@ sendMessageToPeerAndExitIfProblem( struct addrinfo *addrList, char *msgBody,
 	messageFromPeerOut[messageFromPeerIndex] = '\0';
 	resetNumberFromPeerOut[resetNumberFromPeerIndex] = '\0';
 
-	if ( whichLine != 2 )
+	if (whichLine != 2)
 	{
 		elog(WARNING, "during reset, invalid message contacting primary/mirror peer to coordinate reset; "
-				"will transition to fault state.  Message received: %s",
-				gResultDataBuf);
+			 "will transition to fault state.  Message received: %s",
+			 gResultDataBuf);
 		proc_exit(EXIT_CODE_SHOULD_ENTER_FAULT);
 	}
 }
@@ -246,7 +256,7 @@ FileRepReset_ShutdownHandler(SIGNAL_ARGS)
 static void
 FileRepReset_HandleCrash(SIGNAL_ARGS)
 {
-    StandardHandlerForSigillSigsegvSigbus_OnMainThread("filerep reset process", PASS_SIGNAL_ARGS);
+	StandardHandlerForSigillSigsegvSigbus_OnMainThread("filerep reset process", PASS_SIGNAL_ARGS);
 }
 
 static void
@@ -283,7 +293,8 @@ FileRepReset_ConfigureSignals(void)
 	pqsignal(SIGWINCH, SIG_DFL);
 }
 
-void FileRepResetPeer_Main(void)
+void
+FileRepResetPeer_Main(void)
 {
 	/* BASIC PROCESS SETUP */
 
@@ -292,10 +303,11 @@ void FileRepResetPeer_Main(void)
 	/*
 	 * If an exception is encountered, processing resumes here.
 	 *
-	 * See notes in postgres.c about the design of this coding and comments about how the error
-	 * handling works.
+	 * See notes in postgres.c about the design of this coding and comments
+	 * about how the error handling works.
 	 */
-	sigjmp_buf		local_sigjmp_buf;
+	sigjmp_buf	local_sigjmp_buf;
+
 	if (sigsetjmp(local_sigjmp_buf, 1) != 0)
 	{
 		HOLD_INTERRUPTS();
@@ -307,31 +319,32 @@ void FileRepResetPeer_Main(void)
 	PG_SETMASK(&UnBlockSig);
 
 
-	/** NOW DO THE ACTUAL WORK */ 
-	char messageFromPeer[MESSAGE_FROM_PEER_BUF_SIZE];
-	char resetNumberFromPeer[MESSAGE_FROM_PEER_BUF_SIZE];
-	char resetNumberThatIndicatesResetComplete[MESSAGE_FROM_PEER_BUF_SIZE];
+	/** NOW DO THE ACTUAL WORK */
+	char		messageFromPeer[MESSAGE_FROM_PEER_BUF_SIZE];
+	char		resetNumberFromPeer[MESSAGE_FROM_PEER_BUF_SIZE];
+	char		resetNumberThatIndicatesResetComplete[MESSAGE_FROM_PEER_BUF_SIZE];
 	struct addrinfo *addrList = NULL;
-	char portStr[100];
+	char		portStr[100];
 
 	PrimaryMirrorModeTransitionArguments args = primaryMirrorGetArgumentsFromLocalMemory();
+
 	Assert(args.mode == PMModePrimarySegment || args.mode == PMModeMirrorSegment);
 
 	snprintf(portStr, sizeof(portStr), "%d", args.peerPostmasterPort);
-	if (! determineTargetHost(&addrList, args.peerAddress, portStr))
+	if (!determineTargetHost(&addrList, args.peerAddress, portStr))
 	{
 		elog(WARNING, "during reset, unable to look up address for peer host to coordinate reset; "
-				"will transition to fault state.");
+			 "will transition to fault state.");
 		proc_exit(EXIT_CODE_SHOULD_ENTER_FAULT);
 	}
 
 	sendMessageToPeerAndExitIfProblem(addrList, "beginPostmasterReset", messageFromPeer,
-		resetNumberThatIndicatesResetComplete);
+									  resetNumberThatIndicatesResetComplete);
 
-	for ( ;; )
+	for (;;)
 	{
-		pg_usleep(10 * 1000L); /* 10 ms */
-		sendMessageToPeerAndExitIfProblem(addrList, "getPostmasterResetStatus", messageFromPeer, resetNumberFromPeer );
+		pg_usleep(10 * 1000L);	/* 10 ms */
+		sendMessageToPeerAndExitIfProblem(addrList, "getPostmasterResetStatus", messageFromPeer, resetNumberFromPeer);
 		if (strequals(messageFromPeer, RESET_STATUS_IS_IN_RESET_PIVOT_POINT))
 		{
 			if (args.mode == PMModeMirrorSegment)
@@ -350,7 +363,7 @@ void FileRepResetPeer_Main(void)
 		else if (strequals(messageFromPeer, RESET_STATUS_IS_RUNNING))
 		{
 			/** it's running -- is it >= than the reset number that indicates reset complete one */
-			if (strcmp( resetNumberFromPeer, resetNumberThatIndicatesResetComplete) >= 0)
+			if (strcmp(resetNumberFromPeer, resetNumberThatIndicatesResetComplete) >= 0)
 			{
 				/** yes, the reset is complete and so we can quit and do a restart */
 				elog(DEBUG1, "peer reset: mirror peer reset is complete");
