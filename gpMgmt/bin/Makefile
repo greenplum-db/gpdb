@@ -85,7 +85,7 @@ paramiko:
 	@echo "--- paramiko"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(PARAMIKO_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/ && python setup.py build
-	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib/paramiko  $(PYLIB_DIR)/
+	cp -r $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)/build/lib*/paramiko $(PYLIB_DIR)/
 
 #
 # LOCKFILE
@@ -96,15 +96,15 @@ paramiko:
 #
 LOCKFILE_VERSION=0.9.1
 LOCKFILE_DIR=lockfile-$(LOCKFILE_VERSION)
-LOCKFILE_SRC=$(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)/build/lib/lockfile
+LOCKFILE_SRC=$(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)/build/lib*/lockfile
 LOCKFILE_DST=$(PYLIB_DIR)/lockfile
 lockfile:
 	@echo "--- lockfile"
 	cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(LOCKFILE_DIR).tar.gz
 	cd $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)/ && python setup.py build
-	mkdir -p $(PYLIB_DIR)/lockfile
-	awk 'BEGIN{print "# pylint: disable-all"} /^if hasattr/ {exit} { print }' < $(LOCKFILE_SRC)/__init__.py    > $(LOCKFILE_DST)/__init__.py
-	awk 'BEGIN{print "# pylint: disable-all"} { print }'                      < $(LOCKFILE_SRC)/pidlockfile.py > $(LOCKFILE_DST)/pidlockfile.py
+	mkdir -p $(LOCKFILE_DST)
+	awk 'BEGIN{print "# pylint: disable-all"} /^if hasattr/ {exit} { print }' < `echo $(LOCKFILE_SRC)/__init__.py`    > $(LOCKFILE_DST)/__init__.py
+	awk 'BEGIN{print "# pylint: disable-all"} { print }'                      < `echo $(LOCKFILE_SRC)/pidlockfile.py` > $(LOCKFILE_DST)/pidlockfile.py
 
 subprocess32:
 	@echo "--- subprocess32, Linux only"
