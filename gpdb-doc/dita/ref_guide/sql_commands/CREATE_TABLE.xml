@@ -640,9 +640,10 @@
             <li>
               <cmdname>ORIENTATION</cmdname>
             </li>
-          </ul><p>The defaults can be set for a database, schema, and user. For information about
-            setting storage options, see the server configuration parameter
-              <codeph>gp_default_storage_options</codeph>.</p></li>
+          </ul><p>The defaults can be set for a system,  database, and user. For information about
+            setting storage options, see the server configuration parameter <codeph><xref
+              href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
+          >gp_default_storage_options</xref></codeph>.</p></li>
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
