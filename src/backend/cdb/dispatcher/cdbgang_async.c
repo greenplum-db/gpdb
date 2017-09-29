@@ -34,7 +34,7 @@
 #include "miscadmin.h"
 #include "utils/resowner.h"
 
-static int getPollTimeout(const struct timeval* startTS);
+static int	getPollTimeout(const struct timeval *startTS);
 static Gang *createGang_async(GangType type, int gang_id, int size, int content);
 
 CreateGangFunc pCreateGangFuncAsync = createGang_async;
@@ -45,24 +45,28 @@ CreateGangFunc pCreateGangFuncAsync = createGang_async;
  * call this function in GangContext memory context.
  * elog ERROR or return a non-NULL gang.
  */
-static Gang*
+static Gang *
 createGang_async(GangType type, int gang_id, int size, int content)
 {
-	Gang *newGangDefinition;
+	Gang	   *newGangDefinition;
 	SegmentDatabaseDescriptor *segdbDesc = NULL;
-	int i = 0;
-	int create_gang_retry_counter = 0;
-	int in_recovery_mode_count = 0;
-	int successful_connections = 0;
-	bool retry = false;
-	int poll_timeout = 0;
+	int			i = 0;
+	int			create_gang_retry_counter = 0;
+	int			in_recovery_mode_count = 0;
+	int			successful_connections = 0;
+	bool		retry = false;
+	int			poll_timeout = 0;
 	struct timeval startTS;
 	PostgresPollingStatusType *pollingStatus = NULL;
-	/* true means connection status is confirmed, either established or in recovery mode */
-	bool *connStatusDone = NULL;
+
+	/*
+	 * true means connection status is confirmed, either established or in
+	 * recovery mode
+	 */
+	bool	   *connStatusDone = NULL;
 
 	ELOG_DISPATCHER_DEBUG("createGang type = %d, gang_id = %d, size = %d, content = %d",
-			type, gang_id, size, content);
+						  type, gang_id, size, content);
 
 	/* check arguments */
 	Assert(size == 1 || size == getgpsegmentCount());
@@ -90,7 +94,10 @@ create_gang_retry:
 	Assert(newGangDefinition->perGangContext != NULL);
 	MemoryContextSwitchTo(newGangDefinition->perGangContext);
 
-	/* allocate memory within perGangContext and will be freed automatically when gang is destroyed */
+	/*
+	 * allocate memory within perGangContext and will be freed automatically
+	 * when gang is destroyed
+	 */
 	pollingStatus = palloc(sizeof(PostgresPollingStatusType) * size);
 	connStatusDone = palloc(sizeof(bool) * size);
 
@@ -100,20 +107,20 @@ create_gang_retry:
 	{
 		for (i = 0; i < size; i++)
 		{
-			char gpqeid[100];
-			char *options;
+			char		gpqeid[100];
+			char	   *options;
 
 			/*
 			 * Create the connection requests.	If we find a segment without a
-			 * valid segdb we error out.  Also, if this segdb is invalid, we must
-			 * fail the connection.
+			 * valid segdb we error out.  Also, if this segdb is invalid, we
+			 * must fail the connection.
 			 */
 			segdbDesc = &newGangDefinition->db_descriptors[i];
 
 			/*
 			 * Build the connection string.  Writer-ness needs to be processed
-			 * early enough now some locks are taken before command line options
-			 * are recognized.
+			 * early enough now some locks are taken before command line
+			 * options are recognized.
 			 */
 			build_gpqeid_param(gpqeid, sizeof(gpqeid),
 							   segdbDesc->segindex,
@@ -126,15 +133,17 @@ create_gang_retry:
 			/* start connection in asynchronous way */
 			cdbconn_doConnectStart(segdbDesc, gpqeid, options);
 
-			if(cdbconn_isBadConnection(segdbDesc))
+			if (cdbconn_isBadConnection(segdbDesc))
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-										errmsg("failed to acquire resources on one or more segments"),
-										errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
+								errmsg("failed to acquire resources on one or more segments"),
+								errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
 
 			connStatusDone[i] = false;
+
 			/*
-			 * If connection status is not CONNECTION_BAD after PQconnectStart(), we must
-			 * act as if the PQconnectPoll() had returned PGRES_POLLING_WRITING
+			 * If connection status is not CONNECTION_BAD after
+			 * PQconnectStart(), we must act as if the PQconnectPoll() had
+			 * returned PGRES_POLLING_WRITING
 			 */
 			pollingStatus[i] = PGRES_POLLING_WRITING;
 		}
@@ -147,10 +156,10 @@ create_gang_retry:
 		gettimeofday(&startTS, NULL);
 		fds = (struct pollfd *) palloc0(sizeof(struct pollfd) * size);
 
-		for(;;)
+		for (;;)
 		{
-			int nready;
-			int nfds = 0;
+			int			nready;
+			int			nfds = 0;
 
 			poll_timeout = getPollTimeout(&startTS);
 
@@ -158,7 +167,10 @@ create_gang_retry:
 			{
 				segdbDesc = &newGangDefinition->db_descriptors[i];
 
-				/* Skip established connections and in-recovery-mode connections*/
+				/*
+				 * Skip established connections and in-recovery-mode
+				 * connections
+				 */
 				if (connStatusDone[i])
 					continue;
 
@@ -168,8 +180,8 @@ create_gang_retry:
 						cdbconn_doConnectComplete(segdbDesc);
 						if (segdbDesc->motionListener == 0)
 							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-									errmsg("failed to acquire resources on one or more segments"),
-									errdetail("Internal error: No motion listener port (%s)", segdbDesc->whoami)));
+											errmsg("failed to acquire resources on one or more segments"),
+											errdetail("Internal error: No motion listener port (%s)", segdbDesc->whoami)));
 						successful_connections++;
 						connStatusDone[i] = true;
 						continue;
@@ -202,16 +214,16 @@ create_gang_retry:
 						break;
 
 					default:
-							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 										errmsg("failed to acquire resources on one or more segments"),
 										errdetail("unknow pollstatus (%s)", segdbDesc->whoami)));
 						break;
 				}
 
 				if (poll_timeout == 0)
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-										errmsg("failed to acquire resources on one or more segments"),
-										errdetail("timeout expired\n (%s)", segdbDesc->whoami)));
+					ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+									errmsg("failed to acquire resources on one or more segments"),
+									errdetail("timeout expired\n (%s)", segdbDesc->whoami)));
 			}
 
 			if (nfds == 0)
@@ -224,7 +236,8 @@ create_gang_retry:
 
 			if (nready < 0)
 			{
-				int	sock_errno = SOCK_ERRNO;
+				int			sock_errno = SOCK_ERRNO;
+
 				if (sock_errno == EINTR)
 					continue;
 
@@ -234,7 +247,8 @@ create_gang_retry:
 			}
 			else if (nready > 0)
 			{
-				int currentFdNumber = 0;
+				int			currentFdNumber = 0;
+
 				for (i = 0; i < size; i++)
 				{
 					segdbDesc = &newGangDefinition->db_descriptors[i];
@@ -255,16 +269,16 @@ create_gang_retry:
 		}
 
 		ELOG_DISPATCHER_DEBUG("createGang: %d processes requested; %d successful connections %d in recovery",
-				size, successful_connections, in_recovery_mode_count);
+							  size, successful_connections, in_recovery_mode_count);
 
 		MemoryContextSwitchTo(GangContext);
 
-		/* some segments are in recovery mode*/
+		/* some segments are in recovery mode */
 		if (successful_connections != size)
 		{
 			Assert(successful_connections + in_recovery_mode_count == size);
 
-			if ( gp_gang_creation_retry_count <= 0 ||
+			if (gp_gang_creation_retry_count <= 0 ||
 				create_gang_retry_counter++ >= gp_gang_creation_retry_count ||
 				type != GANGTYPE_PRIMARY_WRITER)
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
@@ -331,11 +345,12 @@ create_gang_retry:
 	return newGangDefinition;
 }
 
-static int getPollTimeout(const struct timeval* startTS)
+static int
+getPollTimeout(const struct timeval *startTS)
 {
 	struct timeval now;
-	int timeout = 0;
-	int64 diff_us;
+	int			timeout = 0;
+	int64		diff_us;
 
 	gettimeofday(&now, NULL);
 

@@ -35,13 +35,13 @@
  */
 typedef struct DispatchCommandDtxProtocolParms
 {
-	DtxProtocolCommand	dtxProtocolCommand;
-	int	flags;
-	char *dtxProtocolCommandLoggingStr;
-	char gid[TMGIDSIZE];
+	DtxProtocolCommand dtxProtocolCommand;
+	int			flags;
+	char	   *dtxProtocolCommandLoggingStr;
+	char		gid[TMGIDSIZE];
 	DistributedTransactionId gxid;
-	char *serializedDtxContextInfo;
-	int serializedDtxContextInfoLen;
+	char	   *serializedDtxContextInfo;
+	int			serializedDtxContextInfoLen;
 } DispatchCommandDtxProtocolParms;
 
 /*
@@ -52,9 +52,8 @@ typedef struct DispatchCommandDtxProtocolParms
  */
 static DtxContextInfo TempQDDtxContextInfo = DtxContextInfo_StaticInit;
 
-static char *
-buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
-						  DispatchCommandDtxProtocolParms * pDtxProtocolParms,
+static char *buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
+						  DispatchCommandDtxProtocolParms *pDtxProtocolParms,
 						  int *finalLen);
 
 /*
@@ -71,26 +70,26 @@ buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
  */
 struct pg_result **
 CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
-								   int flags,
-								   char *dtxProtocolCommandLoggingStr,
-								   char *gid,
-								   DistributedTransactionId gxid,
-								   StringInfo errmsgbuf,
-								   int *numresults,
-								   bool *badGangs,
-								   CdbDispatchDirectDesc *direct,
-								   char *serializedDtxContextInfo,
-								   int serializedDtxContextInfoLen)
+							  int flags,
+							  char *dtxProtocolCommandLoggingStr,
+							  char *gid,
+							  DistributedTransactionId gxid,
+							  StringInfo errmsgbuf,
+							  int *numresults,
+							  bool *badGangs,
+							  CdbDispatchDirectDesc *direct,
+							  char *serializedDtxContextInfo,
+							  int serializedDtxContextInfoLen)
 {
 	CdbDispatcherState ds = {NULL, NULL, NULL};
 
-	CdbDispatchResults* pr = NULL;
+	CdbDispatchResults *pr = NULL;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
 	DispatchCommandDtxProtocolParms dtxProtocolParms;
-	Gang *primaryGang;
-	char *queryText = NULL;
-	int queryTextLen = 0;
+	Gang	   *primaryGang;
+	char	   *queryText = NULL;
+	int			queryTextLen = 0;
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "CdbDispatchDtxProtocolCommand: %s for gid = %s, direct content #: %d",
@@ -150,9 +149,10 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 		{
 			*badGangs = true;
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-					"CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
-					dtxProtocolCommandLoggingStr, gid);
+				 "CdbDispatchDtxProtocolCommand: Bad gang from dispatch of %s for gid = %s",
+				 dtxProtocolCommandLoggingStr, gid);
 		}
+
 		/*
 		 * No errors happens in QEs
 		 */
@@ -179,23 +179,23 @@ char *
 qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 						  int txnOptions, char *debugCaller)
 {
-	char *serializedDtxContextInfo;
+	char	   *serializedDtxContextInfo;
 
-	Snapshot snapshot = NULL;
-	int	serializedLen;
+	Snapshot	snapshot = NULL;
+	int			serializedLen;
 	DtxContextInfo *pDtxContextInfo = NULL;
 
-	/*
-	 * If we already have a LatestSnapshot set then no reason to try
-	 * and get a new one. just use that one. But... there is one important
-	 * reason why this HAS to be here. ROLLBACK stmts get dispatched to QEs
-	 * in the abort transaction code. This code tears down enough stuff such
-	 * that you can't call GetTransactionSnapshot() within that code. So we
-	 * need to use the LatestSnapshot since we can't re-gen a new one.
+	/*------------------------------------------------------------------------
+	 * If we already have a LatestSnapshot set then no reason to try and get a
+	 * new one. just use that one. But... there is one important reason why
+	 * this HAS to be here. ROLLBACK stmts get dispatched to QEs in the abort
+	 * transaction code. This code tears down enough stuff such that you can't
+	 * call GetTransactionSnapshot() within that code. So we need to use the
+	 * LatestSnapshot since we can't re-gen a new one.
 	 *
 	 * It is also very possible that for a single user statement which may
-	 * only generate a single snapshot that we will dispatch multiple statements
-	 * to our qExecs. Something like:
+	 * only generate a single snapshot that we will dispatch multiple
+	 * statements to our qExecs. Something like:
 	 *
 	 *    					  QD			  QEs
 	 *    					  |				  |
@@ -215,6 +215,7 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 	 *
 	 * NOTE: This will be a problem if we ever need to dispatch more than one
 	 * statement to the qExecs and more than one needs a snapshot!
+	 *------------------------------------------------------------------------
 	 */
 	*size = 0;
 
@@ -225,12 +226,14 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 			SerializableSnapshot == NULL && !IsAbortInProgress())
 		{
 			/*
-			 * unfortunately, the dtm issues a select for prepared xacts at the
-			 * beginning and this is before a snapshot has been set up, so we need
-			 * one for that but not for when we don't have a valid XID.
+			 * unfortunately, the dtm issues a select for prepared xacts at
+			 * the beginning and this is before a snapshot has been set up, so
+			 * we need one for that but not for when we don't have a valid
+			 * XID.
 			 *
-			 * but we CAN'T do this if an ABORT is in progress... instead we'll send
-			 * a NONE since the qExecs don't need the information to do a ROLLBACK.
+			 * but we CAN'T do this if an ABORT is in progress... instead
+			 * we'll send a NONE since the qExecs don't need the information
+			 * to do a ROLLBACK.
 			 */
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),
 				 "qdSerializeDtxContextInfo calling GetTransactionSnapshot to make snapshot");
@@ -322,35 +325,35 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
  */
 static char *
 buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
-						  DispatchCommandDtxProtocolParms * pDtxProtocolParms,
+						  DispatchCommandDtxProtocolParms *pDtxProtocolParms,
 						  int *finalLen)
 {
-	int	dtxProtocolCommand = (int) pDtxProtocolParms->dtxProtocolCommand;
-	int	flags = pDtxProtocolParms->flags;
-	char *dtxProtocolCommandLoggingStr = pDtxProtocolParms->dtxProtocolCommandLoggingStr;
-	char *gid = pDtxProtocolParms->gid;
-	int	gxid = pDtxProtocolParms->gxid;
-	char *serializedDtxContextInfo = pDtxProtocolParms->serializedDtxContextInfo;
-	int	serializedDtxContextInfoLen = pDtxProtocolParms->serializedDtxContextInfoLen;
-	int	tmp = 0;
-	int	len = 0;
+	int			dtxProtocolCommand = (int) pDtxProtocolParms->dtxProtocolCommand;
+	int			flags = pDtxProtocolParms->flags;
+	char	   *dtxProtocolCommandLoggingStr = pDtxProtocolParms->dtxProtocolCommandLoggingStr;
+	char	   *gid = pDtxProtocolParms->gid;
+	int			gxid = pDtxProtocolParms->gxid;
+	char	   *serializedDtxContextInfo = pDtxProtocolParms->serializedDtxContextInfo;
+	int			serializedDtxContextInfoLen = pDtxProtocolParms->serializedDtxContextInfoLen;
+	int			tmp = 0;
+	int			len = 0;
 
-	int	loggingStrLen = strlen(dtxProtocolCommandLoggingStr) + 1;
-	int	gidLen = strlen(gid) + 1;
-	int	total_query_len = 1 /* 'T' */ +
-		sizeof(len) +
-		sizeof(dtxProtocolCommand) +
-		sizeof(flags) +
-		sizeof(loggingStrLen) +
-		loggingStrLen +
-		sizeof(gidLen) +
-		gidLen +
-		sizeof(gxid) +
-		sizeof(serializedDtxContextInfoLen) +
-		serializedDtxContextInfoLen;
+	int			loggingStrLen = strlen(dtxProtocolCommandLoggingStr) + 1;
+	int			gidLen = strlen(gid) + 1;
+	int			total_query_len = 1 /* 'T' */ +
+	sizeof(len) +
+	sizeof(dtxProtocolCommand) +
+	sizeof(flags) +
+	sizeof(loggingStrLen) +
+	loggingStrLen +
+	sizeof(gidLen) +
+	gidLen +
+	sizeof(gxid) +
+	sizeof(serializedDtxContextInfoLen) +
+	serializedDtxContextInfoLen;
 
-	char *shared_query = NULL;
-	char *pos = NULL;
+	char	   *shared_query = NULL;
+	char	   *pos = NULL;
 
 	if (ds->dispatchStateContext == NULL)
 		ds->dispatchStateContext = AllocSetContextCreate(TopMemoryContext,
@@ -364,7 +367,7 @@ buildGpDtxProtocolCommand(struct CdbDispatcherState *ds,
 
 	*pos++ = 'T';
 
-	pos += sizeof(len); /* placeholder for message length */
+	pos += sizeof(len);			/* placeholder for message length */
 
 	tmp = htonl(dtxProtocolCommand);
 	memcpy(pos, &tmp, sizeof(tmp));
