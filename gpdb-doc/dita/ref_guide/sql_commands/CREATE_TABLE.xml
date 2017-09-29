@@ -640,7 +640,7 @@
             <li>
               <cmdname>ORIENTATION</cmdname>
             </li>
-          </ul><p>The defaults can be set for a system,  database, and user. For information about
+          </ul><p>The defaults can be set for the system, a database, or a user. For information about
             setting storage options, see the server configuration parameter <codeph><xref
               href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
           >gp_default_storage_options</xref></codeph>.</p></li>
