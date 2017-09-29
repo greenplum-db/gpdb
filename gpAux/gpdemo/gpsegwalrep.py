@@ -31,6 +31,7 @@ import sys
 import subprocess
 import threading
 import datetime
+import time
 from gppylib.db import dbconn
 
 PRINT_LOCK = threading.Lock()
@@ -71,10 +72,10 @@ class InitMirrors():
 
     def initThread(self, segconfig, user):
         commands = []
-        primary_port = segconfig[2]
-        primary_dir = segconfig[3]
-        mirror_contentid = segconfig[1]
-        mirror_dir = segconfig[3].replace('dbfast', 'dbfast_mirror')
+        primary_port = segconfig.port
+        primary_dir = segconfig.fselocation
+        mirror_contentid = segconfig.content
+        mirror_dir = segconfig.fselocation.replace('dbfast', 'dbfast_mirror')
         mirror_port = primary_port + 10000
 
         commands.append("echo 'host  replication  %s  samenet  trust' >> %s/pg_hba.conf" % (user, primary_dir))
@@ -108,7 +109,7 @@ class InitMirrors():
 
         initThreads = []
         for segconfig in self.segconfigs:
-            if segconfig[4] == 'p' and segconfig[1] != -1:
+            if segconfig.preferred_role == GpSegmentConfiguration.ROLE_PRIMARY and segconfig.content != GpSegmentConfiguration.MASTER_CONTENT_ID:
                 thread = threading.Thread(target=self.initThread, args=(segconfig, user))
                 thread.start()
                 initThreads.append(thread)
@@ -129,10 +130,10 @@ class StartInstances():
     def startThread(self, segconfig):
         commands = []
         waitstring = ''
-        dbid = segconfig[0]
-        contentid = segconfig[1]
-        segment_port = segconfig[2]
-        segment_dir = segconfig[3]
+        dbid = segconfig.dbid
+        contentid = segconfig.content
+        segment_port = segconfig.port
+        segment_dir = segconfig.fselocation
         segment_role = StartInstances.getRole(contentid)
 
         # Need to set the dbid to 0 on segments to prevent use in mmxlog records
@@ -157,7 +158,7 @@ class StartInstances():
 
         if contentid == -1:
             segment_label = 'master'
-        elif segconfig[4] == 'p':
+        elif segconfig.preferred_role == GpSegmentConfiguration.ROLE_PRIMARY:
             segment_label = 'primary'
         else:
             segment_label = 'mirror'
@@ -168,7 +169,7 @@ class StartInstances():
 
     @staticmethod
     def getRole(contentid):
-        if contentid == -1:
+        if contentid == GpSegmentConfiguration.MASTER_CONTENT_ID:
             return 'master'
         else:
             return 'mirrorless'
@@ -176,7 +177,7 @@ class StartInstances():
     def run(self):
         startThreads = []
         for segconfig in self.segconfigs:
-            if self.segment_type == 'all' or segconfig[4] == self.segment_type:
+            if self.segment_type == 'all' or segconfig.preferred_role == self.segment_type:
                 thread = threading.Thread(target=self.startThread, args=(segconfig,))
                 thread.start()
                 startThreads.append(thread)
@@ -194,12 +195,12 @@ class StopInstances():
 
     def stopThread(self, segconfig):
         commands = []
-        segment_contentid = segconfig[1]
-        segment_dir = segconfig[3]
+        segment_contentid = segconfig.content
+        segment_dir = segconfig.fselocation
 
-        if segment_contentid == -1:
+        if segment_contentid == GpSegmentConfiguration.MASTER_CONTENT_ID:
             segment_type = 'master'
-        elif segconfig[4] == 'p':
+        elif segconfig.preferred_role == GpSegmentConfiguration.ROLE_PRIMARY:
             segment_type = 'primary'
         else:
             segment_type = 'mirror'
@@ -214,10 +215,10 @@ class StopInstances():
         if self.segment_type == 'all':
             return True
 
-        if self.segment_type == 'master' and segconfig[1] == -1:
+        if self.segment_type == 'master' and segconfig.content == GpSegmentConfiguration.MASTER_CONTENT_ID:
             return True
 
-        if segconfig[4] == self.segment_type:
+        if segconfig.preferred_role == self.segment_type:
             return True
 
         return False
@@ -242,8 +243,8 @@ class DestroyMirrors():
 
     def destroyThread(self, segconfig):
         commands = []
-        mirror_contentid = segconfig[1]
-        mirror_dir = segconfig[3]
+        mirror_contentid = segconfig.content
+        mirror_dir = segconfig.fselocation
 
         commands.append("pg_ctl -D %s stop" % mirror_dir)
         commands.append("rm -rf %s" % mirror_dir)
@@ -258,7 +259,7 @@ class DestroyMirrors():
     def run(self):
         destroyThreads = []
         for segconfig in self.segconfigs:
-            if segconfig[4] == 'm':
+            if segconfig.preferred_role == GpSegmentConfiguration.ROLE_MIRROR:
                 thread = threading.Thread(target=self.destroyThread, args=(segconfig,))
                 thread.start()
                 destroyThreads.append(thread)
@@ -277,27 +278,29 @@ class DestroyMirrors():
         commands.append("gpstop -u");
         runcommands(commands, "Main Mirror Destroy", "Notified primaries of mirror removal")
 
+class GpSegmentConfiguration():
+    ROLE_PRIMARY = 'p'
+    ROLE_MIRROR = 'm'
+    MIRROR_DOWN = 'd'
+    MIRROR_UP = 'u'
+    MASTER_CONTENT_ID = -1
+
+    def __init__(self, dbid, content, port, fselocation, preferred_role, status):
+        self.dbid = dbid
+        self.content = content
+        self.port = port
+        self.fselocation = fselocation
+        self.preferred_role = preferred_role
+        self.status = status
+
 class ClusterConfiguration():
     ''' Cluster configuration '''
 
     def __init__(self, hostname, port, dbname):
-        query = "SELECT dbid, content, port, fselocation, preferred_role FROM gp_segment_configuration s, pg_filespace_entry f WHERE s.dbid = fsedbid"
-        print '%s: fetching cluster configuration' % (datetime.datetime.now())
-        dburl = dbconn.DbURL(hostname, port, dbname)
-        print '%s: fetched cluster configuration' % (datetime.datetime.now())
-
-        try:
-            with dbconn.connect(dburl, utility=True) as conn:
-                self.seg_configs = dbconn.execSQL(conn, query).fetchall()
-        except Exception, e:
-            print e
-            sys.exit(1)
-
-        self.num_contents = 0;
-        for seg_config in self.seg_configs:
-            # Count primary segments
-            if seg_config[4] == 'p' and seg_config[1] != -1:
-                self.num_contents += 1
+        self.hostname = hostname
+        self.port = port
+        self.dbname = dbname
+        self.refresh()
 
     def get_num_contents(self):
         return self.num_contents;
@@ -305,16 +308,46 @@ class ClusterConfiguration():
     def get_seg_configs(self):
         return self.seg_configs;
 
+    def refresh(self):
+        query = "SELECT dbid, content, port, fselocation, preferred_role, status FROM gp_segment_configuration s, pg_filespace_entry f WHERE s.dbid = fsedbid"
+        print '%s: fetching cluster configuration' % (datetime.datetime.now())
+        dburl = dbconn.DbURL(self.hostname, self.port, self.dbname)
+        print '%s: fetched cluster configuration' % (datetime.datetime.now())
+
+        try:
+            with dbconn.connect(dburl, utility=True) as conn:
+               resultsets  = dbconn.execSQL(conn, query).fetchall()
+        except Exception, e:
+            print e
+            sys.exit(1)
+
+        self.seg_configs = []
+        self.num_contents = 0
+        for result in resultsets:
+            seg_config = GpSegmentConfiguration(result[0], result[1], result[2], result[3], result[4], result[5])
+            self.seg_configs.append(seg_config)
+
+            # Count primary segments
+            if seg_config.preferred_role == GpSegmentConfiguration.ROLE_PRIMARY and seg_config.content  != GpSegmentConfiguration.MASTER_CONTENT_ID:
+                self.num_contents += 1
+
+    def check_mirror_status(self, expected_mirror_status):
+        ''' Check if all the mirror reached the expected_mirror_state '''
+
+        for seg_config in self.seg_configs:
+            if seg_config.preferred_role == GpSegmentConfiguration.ROLE_MIRROR and seg_config.status != expected_mirror_status:
+                return False
+
+        return True
+
 class ColdMasterClusterConfiguration(ClusterConfiguration):
 
     # this constructor is only used for ColdStartMaster
     def __init__(self, port, master_directory):
-        self.seg_configs = [[0]*5]
-        self.seg_configs[0][0] = 1  # dbid
-        self.seg_configs[0][1] = -1 # content
-        self.seg_configs[0][2] = port
-        self.seg_configs[0][3] = master_directory
-        self.seg_configs[0][4] = 'p' # preferred role
+        self.seg_configs = []
+
+        master_seg_config = GpSegmentConfiguration(1, -1, port, master_directory, GpSegmentConfiguration.ROLE_PRIMARY)
+        self.seg_configs.append(master_seg_config)
 
         self.num_contents = 1 # need to be > 1 to avoid assert failure
 
@@ -332,6 +365,26 @@ def defargs():
 
     return parser.parse_args()
 
+def ForceFTSProbeScan(cluster_configuration, expected_mirror_status = None):
+    '''Force FTS probe scan to reflect primary and mirror status in catalog.'''
+
+    commands = []
+    commands.append("psql postgres -c \"SELECT gp_request_fts_probe_scan()\"")
+
+    # if the expected_mirror_status is not None, we wait until the mirror status is updated
+    while(True):
+        runcommands(commands, "Force FTS probe scan", "FTS probe refreshed catalog")
+
+        if (expected_mirror_status == None):
+            return
+
+        cluster_configuration.refresh()
+
+        if (cluster_configuration.check_mirror_status(expected_mirror_status)):
+            return
+
+        time.sleep(0.1)
+
 if __name__ == "__main__":
     # Get parsed args
     args = defargs()
@@ -339,7 +392,7 @@ if __name__ == "__main__":
     # If we are starting the cluster, we need to start the master before we get the segment info
     if args.operation == 'clusterstart':
         cold_master_cluster_config = ColdMasterClusterConfiguration(int(args.port), args.master_directory)
-        StartInstances(cold_master_cluster_config, args.host, segment_type='p', wait=True).run()
+        StartInstances(cold_master_cluster_config, args.host, segment_type=GpSegmentConfiguration.ROLE_PRIMARY, wait=True).run()
 
     # Get information on all segments
     cluster_config = ClusterConfiguration(args.host, args.port, args.database)
@@ -350,11 +403,15 @@ if __name__ == "__main__":
     # Execute the chosen operation
     if args.operation == 'init':
         InitMirrors(cluster_config, args.host).run()
+        ForceFTSProbeScan(cluster_config, GpSegmentConfiguration.MIRROR_DOWN)
     elif args.operation == 'clusterstart':
         StartInstances(cluster_config, args.host).run()
+        ForceFTSProbeScan(cluster_config)
     elif args.operation == 'start':
-        StartInstances(cluster_config, args.host, segment_type='m').run()
+        StartInstances(cluster_config, args.host, segment_type=GpSegmentConfiguration.ROLE_MIRROR).run()
+        ForceFTSProbeScan(cluster_config, GpSegmentConfiguration.MIRROR_UP)
     elif args.operation == 'stop':
-        StopInstances(cluster_config, segment_type='m').run()
+        StopInstances(cluster_config, segment_type=GpSegmentConfiguration.ROLE_MIRROR).run()
+        ForceFTSProbeScan(cluster_config, GpSegmentConfiguration.MIRROR_DOWN)
     elif args.operation == 'destroy':
         DestroyMirrors(cluster_config).run()
