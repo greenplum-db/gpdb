@@ -29,7 +29,7 @@ include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
 installcheck: test_gpdb.sh all
-	$(SHELL) $< -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
+	bash $< -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 
 check: test_gpdb.sh all
-	$(SHELL) $< -C -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
+	bash $< -C -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
