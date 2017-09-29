@@ -12,7 +12,7 @@
  *-------------------------------------------------------------------------
  */
 
-/*
+/*------------------------------------------------------------------------------
  * INVARIANCES
  *
  *		*) Change Tracking
@@ -73,10 +73,10 @@
  *				*) If mirror segment goes down then Change Tracking is turned ON on the 
  *				   primary. No disruption to IO on primary segment.
  *				*) During resynchronization WAL and flat files are excluded from mirroring.
- *
+ *------------------------------------------------------------------------------
  */
 
-/*
+/*------------------------------------------------------------------------------
  *	The following steps are performed during dataState == DataStateResynchronizing 
  *		*) FULL Copy
  *			*) Transition Segment State 
@@ -92,10 +92,10 @@
  *				*) Ready Segment State
  *					*) Scan Change Tracking to get all relations to be marked 
  *					   in persistent file system object
- *
+ *------------------------------------------------------------------------------
  */
 
-/*
+/*------------------------------------------------------------------------------
  Transition from Change Tracking to InResync on primary segment
  ==============================================================
  1)	Shutdown FileRep Main process 
@@ -142,7 +142,7 @@
 	ResyncManager set
 		*) dataState == DataStateInSync 
 		*) segmentState = SegmentStateReady
- 
+------------------------------------------------------------------------------
 */ 
 
 #include "postgres.h"
@@ -1739,7 +1739,7 @@ FileRepPrimary_GetResyncEntry(ChangeTrackingRequest **request)
 								
 				break;
 			}
-		}  // while()
+		}
 		
 		if (NumberOfRelations > 0)
 		{
@@ -1812,9 +1812,8 @@ FileRepPrimary_GetResyncEntry(ChangeTrackingRequest **request)
 			Insist(requestLocal->count == NumberOfRelations);
 			*request = requestLocal;
 						
-		} // if (NumberOfRelations > 0)
-		
-	} // if (fileRepResyncShmem->writeCount > 0)
+		}
+	}
 		
 	FileRepResync_LockRelease();
 	

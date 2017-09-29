@@ -1960,7 +1960,8 @@ static void MirroredAppendOnly_DoDrop(
 									mirrorOnly,
 									/* copyToMirror */ false,
 									/* traceOpenFlags */ false,
-									/* treatNonConfiguredAsMirrorDataLoss */ false,	// Don't go into "Only Mirror Drop Remains" state on DROP.
+									/* Don't go into "Only Mirror Drop Remains" state on DROP. */
+									/* treatNonConfiguredAsMirrorDataLoss */ false,
 									/* fileFlags */ 0,
 									/* fileMode */ 0,
 									&mirrorMode,

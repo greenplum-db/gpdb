@@ -808,8 +808,10 @@ static void DatabaseInfo_AddFile(
 
 	itemCount = sscanf(name, "%u.%u", &relfilenode, &segmentFileNum);
 
-	// UNDONE: sscanf is a rather poor scanner.
-	// UNDONE: For right now, just assume properly named files....
+	/* 
+	 * UNDONE: sscanf is a rather poor scanner. For right now, just assume
+	 * properly named files.
+	 */
 	if (itemCount == 0)
 	{
 		DatabaseInfo_AddMiscEntry(info, tablespace, false, name);

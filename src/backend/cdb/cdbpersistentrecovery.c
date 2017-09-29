@@ -1952,7 +1952,7 @@ PersistentRecovery_DropType(
 			PersistentFileSysObj_DropObject(
 							&fsObjEntry->fsObjName,
 							fsObjEntry->relStorageMgr,
-							/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
+							/* relationName, as don't know here */ NULL,
 							&fsObjEntry->key.persistentTid,
 							fsObjEntry->persistentSerialNum,
 							/* ignoreNonExistence */ true,

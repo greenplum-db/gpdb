@@ -119,12 +119,10 @@ FileRepPrimary_StartRecoveryInSync(void)
 		status = FileRepPrimary_RunRecoveryInSync();
 
 		
-	} // while(1)	
-
+	}
 }
 
-/*
- * 
+/*-----------------------------------------
  * FileRepPrimary_RunRecoveryInSync()
  *		
  *		1) Recover Flat Files
@@ -140,7 +138,7 @@ FileRepPrimary_StartRecoveryInSync(void)
  *					*) pg_subtrans
  *
  *		2) Reconcile xlog EOF
- *
+ *-----------------------------------------
  */
 static int 
 FileRepPrimary_RunRecoveryInSync(void)
@@ -303,7 +301,7 @@ FileRepPrimary_StartRecoveryInChangeTracking(void)
 		
 		break;
 		
-	} // while(1)	
+	}
 }
 
 /*
@@ -347,11 +345,12 @@ FileRepPrimary_RunChangeTrackingCompacting(void)
 	if (segmentState != SegmentStateChangeTrackingDisabled)
 		ChangeTracking_DoFullCompactingRoundIfNeeded();
 
-	/*
+	/*---------------------------------------------------------------------
 	 * Periodically check if compacting is required. 
 	 * Periodic compacting is required in order to
 	 *		a) reduce space for change tracking log file
 	 *		b) reduce time for transition from Change Tracking to Resync
+	 *---------------------------------------------------------------------
 	 */
 	if (segmentState != SegmentStateChangeTrackingDisabled)
 		FileRep_InsertConfigLogEntry("run change tracking compacting");
@@ -450,5 +449,5 @@ FileRepPrimary_RunHeartBeat(void)
 			FileRepPrimary_MirrorHeartBeat(FileRepMessageTypeAO01);
 			retry = 0;
 		}
-	} // while(1)	
+	}
 }

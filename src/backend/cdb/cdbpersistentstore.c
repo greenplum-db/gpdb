@@ -206,7 +206,8 @@ void PersistentStore_InitScanUnderLock(
 {
 	if (!storeSharedData->needToScanIntoSharedMemory)
 	{
-		return;	// Someone else got in first.
+		/* Someone else got in first. */
+		return;
 	}
 
 	PersistentStore_DoInitScan(

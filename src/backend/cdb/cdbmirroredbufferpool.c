@@ -158,17 +158,18 @@ static void MirroredBufferPool_RecheckMirrorAccess(
 	MirroredBufferPool_SetUpMirrorAccess(
 							&open->relFileNode,
 							open->segmentFileNum,
-							/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
+							/* relationName, don't know the name here */ NULL,
 							mirrorDataLossTrackingState,
 							mirrorDataLossTrackingSessionNum,
 							/* primaryOnly */ false,
 							open->mirrorOnly,
 							&open->mirrorMode,
 							&open->mirrorDataLossOccurred);
-	/*
+	/*---------------------------------------------------------------------
 	 * mirror filespace location has to be populated for
 	 *			a) adding mirror with filespaces
 	 *			b) resynchronization with filespaces and full copy to new location
+	 *---------------------------------------------------------------------
 	 */
 	if (open->relFileNode.spcNode != GLOBALTABLESPACE_OID &&
 		open->relFileNode.spcNode != DEFAULTTABLESPACE_OID &&
@@ -522,7 +523,7 @@ void MirroredBufferPool_MirrorReCreate(
 					&mirroredOpen,
 					relFileNode,
 					segmentFileNum,
-					/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
+					/* relationName, don't know here */ NULL,
 					mirrorDataLossTrackingState,
 					mirrorDataLossTrackingSessionNum,
 					/* create */ true,

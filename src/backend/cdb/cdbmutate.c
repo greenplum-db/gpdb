@@ -216,9 +216,9 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 	}
 }
 
-/* ------------------------------------------------------------------------- *
- * Function apply_motion() and apply_motion_mutator() add motion nodes to
- * a top-level Plan tree as directed by the Flow nodes in the plan.
+/* -------------------------------------------------------------------------
+ * Function apply_motion() and apply_motion_mutator() add motion nodes to a
+ * top-level Plan tree as directed by the Flow nodes in the plan.
  *
  * In addition, if the argument Plan produces a partitioned flow, a Motion
  * appropriate to the command is added to the top. For example, to consolidate
@@ -229,7 +229,7 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
  * nodes.
  *
  * TODO Maybe add more context to argument list!
- * ------------------------------------------------------------------------- *
+ * -------------------------------------------------------------------------
  */
 Plan *
 apply_motion(PlannerInfo *root, Plan *plan, Query *query)

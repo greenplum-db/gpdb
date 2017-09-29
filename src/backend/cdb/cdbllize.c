@@ -1120,12 +1120,13 @@ adjustPlanFlow(Plan        *plan,
 		case T_Sort:
             if (!stable)
             {
-                /*
+                /*---------------------------------------------------------
                  * Q: If order doesn't matter, why is there a Sort here?
                  * A: Could be INSERT...SELECT...ORDER BY; each QE in the
                  * inserting gang will sort its own partition locally.  Weird,
                  * but could be used for clustering.  But note it in the debug
                  * log; some caller might specify stable = false by mistake.
+				 *---------------------------------------------------------
                  */
                 ereport(DEBUG4, (errmsg("adjustPlanFlow stable=false applied "
                                         "to Sort operator; req_move=%d",

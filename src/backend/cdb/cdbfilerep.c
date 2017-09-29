@@ -445,7 +445,7 @@ FileRepIpcShmem_s	*fileRepIpcArray[FILEREP_MAX_IPC_ARRAY];
 int
 FileRepSemas(void)
 {
-	/*
+	/*---------------------------------------------------------------------
 	 *	PRIMARY
 	 *		1) backend and sender (FileRepShmem_s = 2)
 	 *		2) Receiver Ack and Consumer Ack (FileRepAckShmem_s = 2)
@@ -459,10 +459,9 @@ FileRepSemas(void)
 	 *		3) receiver and consumer Append Only 1 (FileRepShmem_s = 2)
 	 *		4) receiver and consumer Append Only 2 (FileRepShmem_s = 2)
 	 *		5) consumers and sender ack (FileRepAckShmem_s = 2)
-	 *
+	 *---------------------------------------------------------------------
 	 */
-
-	/*
+	/*---------------------------------------------------------------------
 	 *	FileRep_IpcSignal() and reference count are protected by the following locks
 	 *
 	 *  PRIMARY
@@ -477,6 +476,7 @@ FileRepSemas(void)
 	 *		3) LWLockAcquire(FileRepShmemLock, LW_EXCLUSIVE);
 	 *		4) LWLockAcquire(FileRepShmemLock, LW_EXCLUSIVE);
 	 *		5) LWLockAcquire(FileRepAckShmemLock, LW_EXCLUSIVE);
+	 *---------------------------------------------------------------------
 	 */
 
 	return(FILEREP_MAX_SEMAPHORES);
@@ -2006,7 +2006,7 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 	if (WIFEXITED(exitstatus))
 		ereport(lev,
 
-				/*------
+				/*
 		 translator: %s is a noun phrase describing a child process, such as
 		 "server process" */
 				(errmsg("%s (PID %d) exited with exit code %d",
@@ -2016,7 +2016,7 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 #if defined(WIN32)
 		ereport(lev,
 
-				/*------
+				/*
 		 translator: %s is a noun phrase describing a child process, such as
 		 "server process" */
 				(errmsg("%s (PID %d) was terminated by exception 0x%X",
@@ -2026,11 +2026,14 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 #elif defined(HAVE_DECL_SYS_SIGLIST) && HAVE_DECL_SYS_SIGLIST
 	ereport(lev,
 
-			/*------
-	 translator: %s is a noun phrase describing a child process, such as
-	 "server process" */
-			// strsignal() is preferred over the deprecated use of sys_siglist, on platforms that support it.
-			// Solaris and Linux do support it, but I think MAC OSX doesn't?
+			/*
+			 * translator: %s is a noun phrase describing a child process,
+			 * such as "server process".
+			 *
+			 * strsignal() is preferred over the deprecated use of
+			 * sys_siglist, on platforms that support it.  Solaris and Linux
+			 * do support it, but I think MAC OSX doesn't?
+			 */
 			(errmsg("%s (PID %d) was terminated by signal %d: %s",
 					procname,
 					pid, WTERMSIG(exitstatus),
@@ -2083,7 +2086,7 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 
 		ereport(lev,
 
-				/*------
+				/*
 		 translator: %s is a noun phrase describing a child process, such as
 		 "server process" */
 			    (errmsg("%s (PID %d) was terminated by signal %d: %s",
@@ -2094,7 +2097,7 @@ LogChildExit(int lev, const char *procname, int pid, int exitstatus)
 	else
 		ereport(lev,
 
-				/*------
+				/*
 		 translator: %s is a noun phrase describing a child process, such as
 		 "server process" */
 				(errmsg("%s (PID %d) exited with unrecognized status %d",

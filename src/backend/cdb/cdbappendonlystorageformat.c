@@ -975,10 +975,10 @@ AppendOnlyStorageFormat_MakeNonBulkDenseContentHeader(
 	/*
 	 * Add the optional firstRowNum.
 	 *
-	 * NOTE: This is not part of the 8-byte (64-bit) header because it is so big.
-	 * NOTE: And, it is not covered by the header checksum because in order to
-	 * NOTE: determine if we should checksum more data we would need to examine
-	 * NOTE: the header data not verified by checksum yet...
+	 * NOTE: This is not part of the 8-byte (64-bit) header because it is so
+	 * big. And, it is not covered by the header checksum because in order to
+	 * determine if we should checksum more data we would need to examine the
+	 * header data not verified by checksum yet.
 	 *
 	 * So, the firstRowNum is extra data between the header (and checksums) and
 	 * the content.  We must add it before computing the checksum.
@@ -1071,10 +1071,10 @@ AppendOnlyStorageFormat_MakeBulkDenseContentHeader(
 	/*
 	 * Add the optional firstRowNum.
 	 *
-	 * NOTE: This is not part of the 8-byte (64-bit) header because it is so big.
-	 * NOTE: And, it is not covered by the header checksum because in order to
-	 * NOTE: determine if we should checksum more data we would need to examine
-	 * NOTE: the header data not verified by checksum yet...
+	 * NOTE: This is not part of the 8-byte (64-bit) header because it is so
+	 * big. And, it is not covered by the header checksum because in order to
+	 * determine if we should checksum more data we would need to examine the
+	 * header data not verified by checksum yet.
 	 *
 	 * So, the firstRowNum is extra data between the header (and checksums) and
 	 * the content.  We must add it before computing the checksum.

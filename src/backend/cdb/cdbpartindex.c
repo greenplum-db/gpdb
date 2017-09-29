@@ -136,7 +136,7 @@ key_string_copy(void *dest, const void *src, Size keysize)
 	return NULL; /* not used */
 }
 
-/*
+/*-------------------------------------------------------------------------
  * BuildLogicalIndexInfo
  *   Returns an array of "logical indexes" on partitioned
  *   tables.
@@ -146,7 +146,7 @@ key_string_copy(void *dest, const void *src, Size keysize)
  *   If input relid does not represent a partitioned table, the function
  *   returns NULL.
  * 
- *   This function does the following
+ *  This function does the following
  *	1) Builds a PartitionIndexNode tree representing the partitioned
  *	   table hierarchy.
  * 	2) Builds 2 hash tables -
@@ -206,6 +206,7 @@ key_string_copy(void *dest, const void *src, Size keysize)
  * 	I1'		..	  ..	     ..	     ..	       ..           -						0
  * 	I3		..	  ..	     ..	     ..	       ..           -						0,1
  * 	I4		..	  ..	     ..	     ..	       ..           pk2=B1	 				0
+ *-------------------------------------------------------------------------
  */
 LogicalIndexes *
 BuildLogicalIndexInfo(Oid relid)

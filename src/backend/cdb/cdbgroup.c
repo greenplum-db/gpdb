@@ -2351,13 +2351,15 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 	Index varno = 1;
 	int i, ng, nd;
 	
-	/* Make the target list for this join.  The outer and inner target lists
+	/*---------------------------------------------------------------------
+	 * Make the target list for this join.  The outer and inner target lists
 	 * will look like
 	 *		(<g'> <D0'> ... <Dn-1'> <F'>) and (<g'> <Dn>)
 	 * or
 	 *		(<g'> <D0> <F>) and (<g'> <Dn>)
 	 * The join target list should look like
 	 *		(<g'> <D0'> ... <Dn'> <F'>)
+	 *---------------------------------------------------------------------
 	 */
 	/* Use varno 1 for grouping key. */
 	join_tlist = make_vars_tlist(ctx->grps_tlist, varno, 0);
@@ -3295,8 +3297,9 @@ void deconstruct_agg_info(MppGroupContext *ctx)
 	ctx->outer_varno = OUTER;
 	ctx->inner_varno = INNER;
 	
-	/* Target lists used in multi-phase planning at or above the level
-	 * of individual DQA coplans have one of the forms
+	/*---------------------------------------------------------------------
+	 * Target lists used in multi-phase planning at or above the level of
+	 * individual DQA coplans have one of the forms
 	 *
 	 *   [G][D0...Dn][R]
 	 * where
@@ -3305,9 +3308,10 @@ void deconstruct_agg_info(MppGroupContext *ctx)
 	 *      unique DQA argument (if any)
 	 *   R represents the results of regular aggregate functions (if any)
 	 *
-	 * The offset at index position i is the number of attributes that
-	 * precede the first for the i-th DQA (index origin 0).  The last
-	 * is the offset of the first attribute following the DQA attributes.
+	 * The offset at index position i is the number of attributes that precede
+	 * the first for the i-th DQA (index origin 0). The last is the offset of
+	 * the first attribute following the DQA attributes.
+	 *---------------------------------------------------------------------
 	 */
 	ctx->dqa_offsets = palloc(sizeof(int) * (1 + ctx->numDistinctCols));
 	ctx->dqa_offsets[0] = ctx->numGroupCols;

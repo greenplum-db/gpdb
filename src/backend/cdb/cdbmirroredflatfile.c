@@ -1493,7 +1493,7 @@ PgVersionRecoverMirror(void)
 			buffer = NULL;
 		}
 
-	} // while (PersistentDatabase_DirIterateNext
+	}
 
 	PersistentDatabase_DirIterateClose();
 

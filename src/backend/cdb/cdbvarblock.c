@@ -492,7 +492,7 @@ VarBlockCheckError VarBlockIsValid(
 			    itemLenSum, 
 			    bufferLen, 
 			    header->bytes_0_3, header->bytes_4_7);
-		return VarBlockCheckItemSumLenBad1;		// #1
+		return VarBlockCheckItemSumLenBad1;
 	}
 
 	offsetToOffsetArray = VARBLOCK_HEADER_LEN +
@@ -504,7 +504,7 @@ VarBlockCheckError VarBlockIsValid(
 			    offsetToOffsetArray, 
 			    bufferLen, 
 			    header->bytes_0_3, header->bytes_4_7);
-		return VarBlockCheckItemSumLenBad2;		// #2
+		return VarBlockCheckItemSumLenBad2;
 	}
 	
 	/*
@@ -519,7 +519,7 @@ VarBlockCheckError VarBlockIsValid(
 					"Bad zero pad at offset %d between items and offset array (bytes_0_3 0x%08x, bytes_4_7 0x%08x)",
 				    z, 
 				    header->bytes_0_3, header->bytes_4_7);
-			return VarBlockCheckZeroPadBad1;		// #1
+			return VarBlockCheckZeroPadBad1;
 		}
 	}
 	
@@ -533,7 +533,7 @@ VarBlockCheckError VarBlockIsValid(
 				    offsetToOffsetArray, 
 				    bufferLen, 
 				    header->bytes_0_3, header->bytes_4_7);
-			return VarBlockCheckItemCountBad1;		// #1
+			return VarBlockCheckItemCountBad1;
 		}
 	}
 	else
@@ -569,7 +569,7 @@ VarBlockCheckError VarBlockIsValid(
 				    calculatedOffsetArrayLenRounded, 
 				    itemCount,
 				    header->bytes_0_3, header->bytes_4_7);
-			return VarBlockCheckItemCountBad2;		// #2
+			return VarBlockCheckItemCountBad2;
 		}
 
 		/*
@@ -583,7 +583,7 @@ VarBlockCheckError VarBlockIsValid(
 				    offset,
 				    headerLen,
 				    header->bytes_0_3, header->bytes_4_7);
-			return VarBlockCheckOffsetBad1;		// #1
+			return VarBlockCheckOffsetBad1;
 		}
 		
 		for (i = 1; i < itemCount; i++)
@@ -598,7 +598,7 @@ VarBlockCheckError VarBlockIsValid(
 					    i,
 					    prevOffset,
 					    header->bytes_0_3, header->bytes_4_7);
-				return VarBlockCheckOffsetBad2;		// #2
+				return VarBlockCheckOffsetBad2;
 			}
 			if (offset > itemLenSum + VARBLOCK_HEADER_LEN)
 			{
@@ -608,7 +608,7 @@ VarBlockCheckError VarBlockIsValid(
 					    i,
 					    itemLenSum + headerLen,
 					    header->bytes_0_3, header->bytes_4_7);
-				return VarBlockCheckOffsetBad3;		// #3
+				return VarBlockCheckOffsetBad3;
 			}
 		}
 		
@@ -626,7 +626,7 @@ VarBlockCheckError VarBlockIsValid(
 						"Bad zero pad at offset %d between last offset and the rounded-up end of buffer (bytes_0_3 0x%08x, bytes_4_7 0x%08x)",
 					    z, 
 					    header->bytes_0_3, header->bytes_4_7);
-				return VarBlockCheckZeroPadBad2;		// #2
+				return VarBlockCheckZeroPadBad2;
 			}
 		}
 	
@@ -659,16 +659,6 @@ VarBlockByteLen VarBlockLenFromHeader(
 		exit(1);
 	}
 	Assert(peekLen >= VARBLOCK_HEADER_LEN);
-
-//#ifdef DEBUG
-//	if(!VarBlockHeaderIsValid(buffer, peekLen))
-//	{
-//		// UNDONE: Use elog.
-//		fprintf(stderr, "VarBlockHeaderIsValid not ok (detail = '%s')",
-//			    VarBlockCheckErrorStr);
-//		exit(1);
-//	}
-//#endif
 
 	header = (VarBlockHeader*)buffer;
 	
@@ -717,15 +707,6 @@ void VarBlockReaderInit(
 	Assert(varBlockReader != NULL);
 	Assert(buffer != NULL);								// UNDONE: And ALIGN(4)
 	Assert(bufferLen >= VARBLOCK_HEADER_LEN);			// UNDONE: And even.
-//#ifdef DEBUG
-//	if(VarBlockIsValid(buffer, bufferLen) != VarBlockCheckOk)
-//	{
-//		// UNDONE: Use elog.
-//		fprintf(stderr, "VarBlockIsValid not ok (detail = '%s')",
-//			    VarBlockCheckErrorStr);
-//		exit(1);
-//	}
-//#endif
 	
 	header = (VarBlockHeader*)buffer;
 	

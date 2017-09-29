@@ -117,8 +117,7 @@ FileRepPrimary_StartResyncWorker(void)
 		
 		break;
 		
-	} // while(1)	
-		
+	}
 }
 
 /*
@@ -769,14 +768,12 @@ FileRepPrimary_ResyncBufferPoolIncrementalWrite(ChangeTrackingRequest *request)
 				}
 				else
 					count++;
-			}  // for (ii = 0; ii < result->count; ii++)
-			
-		} // if ((result = ChangeTracking_GetChanges(request)) != NULL) 
-		
+			}
+		}
 		FileRepResync_ResetReadBufferRequest();
 		if (result == NULL || result->ask_for_more == false)
 			break;
-	} // while(1) 
+	}
 		
 	ChangeTracking_FreeRequest(request);
 	ChangeTracking_FreeResult(result);
