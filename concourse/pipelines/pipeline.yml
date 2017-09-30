@@ -25,6 +25,7 @@ groups:
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
+  - icw_planner_ubuntu16
   - icw_planner_ictcp_centos6
   - icw_gporca_centos6_gpos_memory
   - fts
@@ -354,6 +355,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: compiled_bits_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{compiled_bits_ubuntu16_versioned_file}}
 
 - name: binary_swap_gpdb_centos6
   type: s3
@@ -750,6 +760,24 @@ jobs:
     - put: installer_rhel7_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip
+
+- name: compile_gpdb_ubuntu16
+  plan:
+  - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: {{reduced-frequency-trigger-flag}}
+    - get: gpdb_src
+      trigger: {{gpdb_src-trigger-flag}}
+    - get: ubuntu-gpdb-dev-16
+  - task: compile_gpdb
+    image: ubuntu-gpdb-dev-16
+    file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
+    params:
+      CONFIGURE_FLAGS: {{configure_flags}}
+  - put: compiled_bits_ubuntu16
+    params:
+      file: compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
+
 - name: compile_gpdb_sles11
   plan:
   - aggregate:
@@ -1179,7 +1207,22 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: sles
       CONFIGURE_FLAGS: {{configure_flags}}
-- name: icw_gporca_centos6_gpos_memory
+
+- name: icw_planner_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_ubuntu16]
+    - get: compiled_bits_ubuntu16
+      passed: [compile_gpdb_ubuntu16]
+      trigger: true
+    - get: ubuntu-gpdb-dev-16
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
+    image: ubuntu-gpdb-dev-16
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      CONFIGURE_FLAGS: {{configure_flags}}- name: icw_gporca_centos6_gpos_memory
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2640,6 +2683,7 @@ jobs:
     - icw_gporca_centos6
     - icw_gporca_centos7
     - icw_gporca_sles11
+    - icw_planner_ubuntu16
     - icw_planner_ictcp_centos6
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6
