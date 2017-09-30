@@ -25,6 +25,7 @@ groups:
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
+  - icw_planner_ubuntu16
   - icw_planner_ictcp_centos6
   - fts
   - storage
@@ -458,6 +459,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: compiled_bits_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{compiled_bits_ubuntu16_versioned_file}}
 
 - name: binary_swap_gpdb_centos6
   type: s3
@@ -1002,6 +1012,9 @@ jobs:
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
     params:
       CONFIGURE_FLAGS: {{configure_flags}}
+  - put: compiled_bits_ubuntu16
+    params:
+      file: compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
 
 - name: compile_gpdb_sles11
   plan:
@@ -1453,6 +1466,39 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: sles
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_ubuntu16]
+    - get: compiled_bits_ubuntu16
+      passed: [compile_gpdb_ubuntu16]
+      trigger: true
+    - get: ubuntu-gpdb-dev-16
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
+    image: ubuntu-gpdb-dev-16
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      CONFIGURE_FLAGS: {{configure_flags}}- name: icw_gporca_centos6_gpos_memory
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off | optimizer_use_gpdb_allocators=on"
+      TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 - name: icw_planner_ictcp_centos6
   plan:
@@ -3960,6 +4006,7 @@ jobs:
     - icw_gporca_centos6
     - icw_gporca_centos7
     - icw_gporca_sles11
+    - icw_planner_ubuntu16
     - icw_planner_ictcp_centos6
     - mpp_resource_group
     - client_loader_remote_test_aix
