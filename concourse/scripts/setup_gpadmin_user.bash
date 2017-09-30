@@ -114,10 +114,15 @@ determine_os() {
   exit 1
 }
 
+workaround_before_concourse_stops_stripping_suid_bits() {
+  chmod u+s /bin/ping
+}
+
 _main() {
   TEST_OS=$(determine_os)
   setup_gpadmin_user
   setup_sshd
+  workaround_before_concourse_stops_stripping_suid_bits
 }
 
 _main "$@"
