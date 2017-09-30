@@ -1059,8 +1059,14 @@ DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_TOW_DSITKEY;
 NOTICE:  table "copy_on_segment_check_tow_dsitkey" does not exist, skipping
 DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
 NOTICE:  table "copy_on_segment_check_distkey_partioned" does not exist, skipping
+DROP TABLE IF EXISTS COPY_FROM_PARTITION_TABLE;
+NOTICE:  table "copy_from_partition_table" does not exist, skipping
 DROP TABLE IF EXISTS COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION;
 NOTICE:  table "copy_on_segment_check_distkey_subpartition" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_DIST_RANDOMLY;
+NOTICE:  table "copy_on_segment_dist_randomly" does not exist, skipping
+DROP TABLE IF EXISTS COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY;
+NOTICE:  table "copy_on_segment_partion_dist_randomly" does not exist, skipping
 -- end_ignore
 CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY(a int)DISTRIBUTED BY(a);
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY SELECT generate_series(0,10);
@@ -1079,6 +1085,9 @@ COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY to '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKE
 COPY COPY_ON_SEGMENT_CHECK_TOW_DSITKEY FROM '/tmp/COPY_ON_SEGMENT_CHECK_TOW_DSITKEY<SEGID>.csv' ON SEGMENT CSV;
 ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_tow_dsitkey, line 1: "0,0"
+-- COPY FRON ON SEGMENT DISTRIBUTED RANDOMLY
+CREATE TABLE COPY_ON_SEGMENT_DIST_RANDOMLY(a int) DISTRIBUTED RANDOMLY;
+COPY COPY_ON_SEGMENT_DIST_RANDOMLY FROM PROGRAM 'echo <SEGID>' ON SEGMENT;
 -- COPY FROM ON SEGMENT partitoned table
 CREATE TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED(a int) DISTRIBUTED BY (a) PARTITION BY range(a) ( START (0) END (10) EVERY (5));
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SELECT generate_series(0,9);
@@ -1110,6 +1119,11 @@ COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DI
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
+-- COPY FROM ON SEGMENT partitoned table distributed randomly
+CREATE TABLE COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY (a int) DISTRIBUTED RANDOMLY PARTITION BY range(a) ( START (0) END (10) EVERY (5));
+NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_1" for table "copy_on_segment_partion_dist_randomly"
+NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_2" for table "copy_on_segment_partion_dist_randomly"
+COPY COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY FROM PROGRAM 'echo <SEGID>' ON SEGMENT;
 -- COPY FROM partitoned table
 TRUNCATE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
 INSERT INTO COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SELECT generate_series(0,9);
