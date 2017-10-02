@@ -55,7 +55,7 @@ jobs:
 
     - aggregate:
       - task: compile_gpdb_open_source_centos6
-        file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_centos.yml
+        file: gpdb_pr/concourse/tasks/compile_gpdb_open_source.yml
         image: centos-gpdb-dev-6
         input_mapping:
           gpdb_src: gpdb_pr

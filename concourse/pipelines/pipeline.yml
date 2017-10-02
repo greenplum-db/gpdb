@@ -6,7 +6,6 @@ groups:
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_centos7
   - compile_gpdb_sles11
-  - compile_gpdb_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
   - icw_planner_centos6
@@ -188,12 +187,6 @@ resources:
   source:
     repository: pivotaldata/sles-gpdb-dev
     tag: 11-beta
-
-- name: ubuntu-gpdb-dev-16
-  type: docker-image
-  source:
-    repository: pivotaldata/ubuntu-gpdb-dev
-    tag: '16.04'
 
 - name: centos-mingw
   type: docker-image
@@ -589,7 +582,7 @@ jobs:
     - get: centos-gpdb-dev-6
   - task: compile_gpdb
     image: centos-gpdb-dev-6
-    file: gpdb_src/concourse/tasks/compile_gpdb_open_source_centos.yml
+    file: gpdb_src/concourse/tasks/compile_gpdb_open_source.yml
     params:
         CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -626,20 +619,6 @@ jobs:
     - put: installer_rhel7_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip
-
-- name: compile_gpdb_ubuntu16
-  plan:
-  - aggregate:
-    - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
-    - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
-    - get: ubuntu-gpdb-dev-16
-  - task: compile_gpdb
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
-    params:
-      CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: compile_gpdb_sles11
   plan:
@@ -1928,7 +1907,6 @@ jobs:
     - compile_gpdb_open_source_centos6
     - compile_gpdb_centos7
     - compile_gpdb_sles11
-    - compile_gpdb_ubuntu16
     - compile_gpdb_windows_cl
     - compile_gpdb_aix7_remote
     - icw_planner_centos6
