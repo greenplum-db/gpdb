@@ -68,9 +68,9 @@
       <p>If you specify an option to back up schemas, such as <codeph>-s</codeph>, or
           <codeph>-S</codeph>, all procedural languages that are defined in the database are also
         backed up even though they are not schema specific. The languages are backed up to support
-        any functions that might be backed up.  External items such as shared libraries that are
-        used by a language are not backed up. Also, languages are not backed up if you specify an
-        option to back up tables, such as <codeph>-t</codeph>, <codeph>-T</codeph>. </p>
+        any functions that might be backed up. External items such as shared libraries that are used
+        by a language are not backed up. Also, languages are not backed up if you specify an option
+        to back up only tables, such as <codeph>-t</codeph>, <codeph>-T</codeph>. </p>
       <p>After a backup operation completes, the utility checks the <codeph>gpcrondump</codeph>
         status file for SQL execution errors and displays a warning if an error is found. The
         default location of the backup status files are in the
