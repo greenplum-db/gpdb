@@ -208,16 +208,30 @@ def dump_tuple_count(cur, oid_str, f_out):
         updateStmt = templateStmt.format(E(',\n'.join(lines)), E(vals[0]), E(vals[1]))
         f_out.writelines(updateStmt)
 
+# When dumping the stats, we need to determine if the table is a partitioned table --
+# Otherwise we will only be dumping the root partition, and not the child partitions.
+# Create a temporary recurisve function and execute the query...
+
 def dump_stats(cur, oid_str, f_out):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
+    query = 'CREATE OR REPLACE FUNCTION pg_temp.find_children(oid) RETURNS SETOF oid as $$ ' \
+        'SELECT i.inhrelid FROM pg_catalog.pg_inherits i WHERE i.inhparent = $1 ' \
+        'UNION ' \
+        'SELECT pg_temp.find_children(i.inhrelid) FROM pg_catalog.pg_inherits i WHERE i.inhparent = $1; ' \
+        '$$ LANGUAGE \'sql\' STABLE; ' \
+	      '' \
+        'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
         'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
-        'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) and pgn.nspname NOT IN %s ' \
+        'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (' \
+        'SELECT (%s) ' \
+        'UNION ' \
+        '( SELECT pg_temp.find_children(i.inhrelid) FROM pg_catalog.pg_inherits i WHERE i.inhparent = %s ) ' \
+        ') and pgn.nspname NOT IN %s ' \
         'and pgn.nspname NOT LIKE \'pg_temp_%%\' ' \
         'and pgc.oid = pgs.starelid ' \
         'and pga.attrelid = pgc.oid ' \
         'and pga.attnum = pgs.staattnum ' \
         'and pga.atttypid = pgt.oid ' \
-        'ORDER BY pgc.relname, pgs.staattnum' % (oid_str, sysnslist)
+        'ORDER BY pgc.relname, pgs.staattnum' % (oid_str, oid_str, sysnslist)
 
     pstring = '--\n' \
         '-- Table: {0}, Attribute: {1}\n' \
