@@ -101,7 +101,7 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
-    tag_filter: 1.0.0-beta.1
+    tag_filter: 1.0.0
 
 - name: terraform
   type: terraform
@@ -874,6 +874,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     input_mapping:
       gpdb_binary: bin_gpdb
     on_failure:
@@ -1001,6 +1007,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -1033,6 +1045,13 @@ jobs:
     params:
       <<: *ccp_create_params
   - task: setup_gpdb4
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
+      platform: centos6
     config:
       platform: linux
       image_resource:
@@ -1053,11 +1072,13 @@ jobs:
         - -c
         - |
           set -ex
-          source ccp_src/aws/generate_env_files.sh
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          ccp_src/aws/preinstall_gpdb.sh
-          ccp_src/aws/install_gpdb.sh gpdb4_binary
-          ccp_src/aws/run_inspec.sh
+          ccp_src/aws/setup_software.sh
+          ccp_src/aws/download_tf_state.sh
+          ccp_src/aws/generate_env_files.sh 2 || exit 1
+          ccp_src/aws/generate_ssh_files.sh 2 || exit 1
+          ccp_src/aws/preinstall_gpdb.sh 2 || exit 1
+          ccp_src/aws/install_gpdb.sh 2 gpdb4_binary
+          ccp_src/aws/run_inspec.sh 2
     on_failure:
       <<: *ccp_destroy
   - task: run_backup_tests
@@ -1068,6 +1089,13 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - task: setup_gpdb5
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
+      platform: centos6
     config:
       platform: linux
       image_resource:
@@ -1087,11 +1115,12 @@ jobs:
         - -c
         - |
           set -ex
+          ccp_src/aws/setup_software.sh
           ccp_src/aws/setup_ssh_to_cluster.sh
           scp cluster_env_files/hostfile_all mdw:/home/gpadmin/hostfile_all
           ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; copy_backup_files"
           ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; destroy_gpdb"
-          ccp_src/aws/install_gpdb.sh gpdb_binary
+          ccp_src/aws/install_gpdb.sh 2 gpdb_binary
           ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; restore_backup_files"
     on_failure:
       <<: *debug_sleep
@@ -1123,6 +1152,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     on_failure:
       <<: *ccp_destroy
   - task: setup_gppkg_second_install
@@ -1280,6 +1315,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -1307,6 +1348,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -1617,6 +1664,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -1647,6 +1700,12 @@ jobs:
       <<: *ccp_create_params
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
