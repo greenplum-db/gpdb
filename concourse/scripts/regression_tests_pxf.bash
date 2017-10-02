@@ -47,8 +47,10 @@ function run_pxf_automation() {
 	source ${GPHOME}/greenplum_path.sh
 	source \${1}/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 
+	# set variables needed by PXF Automation and Parot to run in GPDB mode with SingleCluster and standalone PXF
 	export PG_MODE=GPDB
 	export GPHD_ROOT=\${1}/singlecluster
+	export PXF_HOME=${PXF_HOME}
 
 	# Copy PSI package from system python to GPDB as automation test requires it
 	psi_dir=\$(find /usr/lib64 -name psi | sort -r | head -1)
