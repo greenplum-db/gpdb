@@ -1272,13 +1272,13 @@ sub atmsort_bigloop
             }
 
             # Note: \d is for the psql "describe"
-            if ($ini =~ m/(?:insert|update|delete|select|\\d|copy)/i)
+            if ($ini =~ m/(?:insert|update|delete|select|\\d|copy|execute)/i)
             {
                 $copy_to_stdout_result = 0;
                 $has_order = 0;
                 $sql_statement = "";
 
-                if ($ini =~ m/explain.*(?:insert|update|delete|select)/i)
+                if ($ini =~ m/explain.*(?:insert|update|delete|select|execute)/i)
                 {
                     $directive->{explain} = 'normal';
                 }
