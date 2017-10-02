@@ -1,1 +1,1 @@
-concourse/tasks/compile_gpdb_open_source_centos.yml
+compile_gpdb_open_source_centos.yml
