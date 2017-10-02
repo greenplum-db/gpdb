@@ -15,8 +15,8 @@ psql:/path/sql_file:1: NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit 
 CREATE TABLE
 ALTER TABLE users_dur_pkey set TABLESPACE test_ts;
 ALTER TABLE
-INSERT INTO users_dur_pkey select i, 'name'||i, i%50+1 from generate_series(1,10000000) i;
-INSERT 0 10000000
+INSERT INTO users_dur_pkey select i, 'name'||i, i%50+1 from generate_series(1,100000) i;
+INSERT 0 100000
 DROP TABLE IF EXISTS users_duration_4;
 psql:/path/sql_file:1: NOTICE:  table "users_duration_4" does not exist, skipping
 DROP TABLE
@@ -30,8 +30,8 @@ distributed by (a);
 CREATE TABLE
 INSERT INTO users_duration_4  
 SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
-FROM generate_series(1, 10000000)i;
-INSERT 0 10000000
+FROM generate_series(1, 100000)i;
+INSERT 0 100000
 DROP TABLE IF EXISTS users_duration_5;
 psql:/path/sql_file:1: NOTICE:  table "users_duration_5" does not exist, skipping
 DROP TABLE
@@ -45,8 +45,8 @@ distributed by (a);
 CREATE TABLE
 INSERT INTO users_duration_5  
 SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
-FROM generate_series(1, 10000000)i;
-INSERT 0 10000000
+FROM generate_series(1, 100000)i;
+INSERT 0 100000
 DROP TABLE IF EXISTS users_duration_6;
 psql:/path/sql_file:1: NOTICE:  table "users_duration_6" does not exist, skipping
 DROP TABLE
@@ -60,6 +60,6 @@ distributed by (a);
 CREATE TABLE
 INSERT INTO users_duration_6  
 SELECT i, (i * 10) % 100, i::text, '2013-09-01 03:04:05'
-FROM generate_series(1, 10000000)i;
-INSERT 0 10000000
+FROM generate_series(1, 100000)i;
+INSERT 0 100000
 
