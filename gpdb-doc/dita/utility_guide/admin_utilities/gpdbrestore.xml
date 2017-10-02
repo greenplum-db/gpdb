@@ -358,6 +358,9 @@
             the backup set of the database being restored. To replace the data in the schema tables
             with the data from backup, you can specify the <codeph>--truncate</codeph> option. The
             schema tables are truncated before the data is restored.</pd>
+          <pd>To support functions that might be restored, all procedural languages that are in the
+            backup are also restored even though they are not schema specific. External items such
+            as shared libraries that are used by a language are not included in a backup.</pd>
           <pd>The <codeph>-S</codeph> option cannot be specified with the
               <codeph>--change-schema</codeph> option.</pd>
         </plentry>
