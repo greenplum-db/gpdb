@@ -3254,12 +3254,12 @@ class GpTransfer(object):
 
         if self._options.validator == 'sha256':
             cmdStr = 'test -e `pg_config  --pkglibdir`/pgcrypto.so'
-            cmd = Command('test pgcrypto on source', cmdStr, LOCAL, self._options.source_host)
+            cmd = Command('test pgcrypto on source', cmdStr, REMOTE, self._options.source_host)
             cmd.run()
             if cmd.get_results().rc != 0:
                 raise Exception('Source system must have pgcrypto installed when using sha256 validator')
 
-            cmd = Command('test pgcrypto on destination', cmdStr, LOCAL, self._options.dest_host)
+            cmd = Command('test pgcrypto on destination', cmdStr, REMOTE, self._options.dest_host)
             cmd.run()
             if cmd.get_results().rc != 0:
                 raise Exception('Destination system must have pgcrypto installed when using sha256 validator')

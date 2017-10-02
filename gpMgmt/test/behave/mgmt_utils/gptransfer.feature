@@ -41,6 +41,14 @@ Feature: gptransfer tests
         And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
         And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
 
+    @skip_source_5
+    Scenario: gptransfer sha256 validator should fail when the source cluster does not have pgcrypto installed
+        Given the gptransfer test is initialized
+        And the user runs "gptransfer --full --delimiter '\010' --format text --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --batch-size=10"
+        Then gptransfer should return a return code of 2
+        And gptransfer should print "Source system must have pgcrypto installed when using sha256 validator" to stdout
+
+    @skip_source_43
     Scenario: gptransfer full sha256 validator in TEXT format with '\010' delimiter
         Given the gptransfer test is initialized
         And the user runs "gptransfer --full --delimiter '\010' --format text --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --batch-size=10"
@@ -80,6 +88,7 @@ Feature: gptransfer tests
         And verify that table "one_row_table" in "gptransfer_testdb4" has "1" rows
         And verify that table "wide_rows" in "gptransfer_testdb5" has "10" rows
 
+    @skip_source_43
     Scenario: gptransfer full sha256 validator in CSV format
         Given the gptransfer test is initialized
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --format=csv --batch-size=10"
@@ -282,6 +291,7 @@ Feature: gptransfer tests
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
         And verify that table "t0" in "gptransfer_testdb3" has "700" rows
 
+    @skip_source_43
     Scenario: gptransfer single database with sha256 validation
         Given the gptransfer test is initialized
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "CREATE TABLE my_random_dist_table(i int) DISTRIBUTED RANDOMLY;" -d gptransfer_testdb1"
@@ -295,6 +305,7 @@ Feature: gptransfer tests
         And the user runs "psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -c "DROP TABLE my_random_dist_table;" -d gptransfer_testdb1"
 
     @T339951
+    @skip_source_43
     Scenario: gptransfer single table with sha256 validation
         Given the gptransfer test is initialized
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 --batch-size=10"
@@ -302,6 +313,7 @@ Feature: gptransfer tests
         And verify that table "t0" in "gptransfer_testdb1" has "100" rows
 
     @T339952
+    @skip_source_43
     Scenario: gptransfer input file with sha256 validation
         Given the gptransfer test is initialized
         And the user runs "gptransfer --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --validate sha256 -f test/behave/mgmt_utils/steps/data/gptransfer_infile --batch-size=1"
