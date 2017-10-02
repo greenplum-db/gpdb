@@ -8315,8 +8315,7 @@ insert into foo select i,i,i,i from generate_series(1, 10) i;
 -- Check that the planner can spot ORDER BYs that are supersets of each
 -- other, and sort directly to the longest sort order. This query can
 -- be satisfied with just two Sorts.
-explain
-SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
+EXPLAIN SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
        count(*) over (PARTITION BY a ORDER BY b, c) as count2,
        count(*) over (PARTITION BY a ORDER BY b) as count3,
        count(*) over (PARTITION BY a ORDER BY c) as count1,
