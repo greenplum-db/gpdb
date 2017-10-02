@@ -586,7 +586,7 @@ jobs:
   plan:
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"] # We use specific workers that have access to our Data Domain
+      tags: ["gpdb4_ccp_external_worker_in_gpdb5"] # We use a specific worker that has access to our Data Domain
     - get: gpdb_src
       tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
       passed: [compile_gpdb_centos6]
