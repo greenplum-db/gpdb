@@ -556,7 +556,9 @@ static int	BackendStartup(Port *port);
 static int	ProcessStartupPacket(Port *port, bool SSLdone);
 static void processCancelRequest(Port *port, void *pkt, MsgType code);
 static void processPrimaryMirrorTransitionRequest(Port *port, void *pkt);
+#ifndef USE_SEGWALREP
 static void processPrimaryMirrorTransitionQuery(Port *port, void *pkt);
+#endif
 static int	initMasks(fd_set *rmask);
 static void report_fork_failure_to_client(Port *port, int errnum);
 static enum CAC_state canAcceptConnections(void);
@@ -3577,6 +3579,7 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
 	}
 }
 
+#ifndef USE_SEGWALREP
 static void
 sendPrimaryMirrorTransitionQuery(uint32 mode, uint32 segstate, uint32 datastate, uint32 faulttype)
 {
@@ -3687,6 +3690,7 @@ processPrimaryMirrorTransitionQuery(Port *port, void *pkt)
 
 	return;
 }
+#endif
 
 /*
  * The client has sent a cancel request packet, not a normal

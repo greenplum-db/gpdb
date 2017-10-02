@@ -94,6 +94,8 @@ enum probe_transition_e
 #define IS_VALID_TRANSITION(trans) \
 	(trans == TRANS_D_D || trans == TRANS_D_U || trans == TRANS_U_D || trans == TRANS_U_U)
 
+/* buffer size for SQL command */
+#define SQL_CMD_BUF_SIZE     1024
 
 /*
  * STRUCTURES
@@ -129,16 +131,11 @@ extern int ftsprobe_start(void);
  */
 extern void FtsProbeSegments(CdbComponentDatabases *dbs, uint8 *scan_status);
 
-#ifdef USE_SEGWALREP
-extern void FtsWalRepProbeSegments(probe_context *context);
-#endif
-
 /*
  * Interface for segment state checking
  */
 extern bool FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo);
 extern CdbComponentDatabaseInfo *FtsGetPeerSegment(int content, int dbid);
-extern void FtsMarkSegmentsInSync(CdbComponentDatabaseInfo *primary, CdbComponentDatabaseInfo *mirror);
 extern void FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries);
 
 /*
@@ -151,7 +148,9 @@ extern bool FtsIsActive(void);
  * Interface for WALREP specific checking
  */
 extern void HandleFtsWalRepProbe(void);
-#endif
+extern void FtsWalRepProbeSegments(probe_context *context);
+#else
+extern bool probePublishUpdate(CdbComponentDatabases *dbs, uint8 *probe_results);
 
 /*
  * Interface for FireRep-specific segment state machine and transitions
@@ -162,7 +161,7 @@ extern void FtsResolveStateFilerep(FtsSegmentPairState *pairState);
 
 extern void FtsPreprocessProbeResultsFilerep(CdbComponentDatabases *dbs, uint8 *probe_results);
 extern void FtsFailoverFilerep(FtsSegmentStatusChange *changes, int changeCount);
-
+#endif
 
 /*
  * Interface for requesting master to shut down
