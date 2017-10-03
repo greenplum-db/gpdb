@@ -1,5 +1,29 @@
 --
--- This test suite tests COPY code that is unique to greenplum db. 
+-- This test suite tests COPY code that is unique to greenplum db.
+--
+-- start_matchignore
+--
+-- # in assertions that errors are correctly thrown if the user tries to
+-- # COPY FROM a program with bad arguments, ignore extra information that
+-- # Debian (vs RedHat) emits on stderr
+--
+-- m/DETAIL:.*sh.*Illegal number.*/i
+--
+-- end_matchignore
+--
+-- start_matchsubs
+--
+-- # in assertions that errors are correctly thrown if the user tries to
+-- # COPY FROM a non-existent program, ignore slight differences in how
+-- # Debian vs RedHat emits the message to the user
+--
+-- m/(ERROR\:\s+.*)?sh\:.*ttt.*not found/i
+-- s/sh: 1: /sh: /
+--
+-- m/(ERROR\:\s+.*)?sh\:.*ttt.*not found/i
+-- s/ ttt:.*not found/ ttt: NOT FOUND/
+--
+-- end_matchsubs
 --
 -- ######################################################
 -- different distribution columns and distribution types
@@ -1255,8 +1279,8 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 (1 row)
 
 SET gp_enable_segment_copy_checking=off;
-COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo -e "$GP_SEGMENT_ID\n<SEGID>"' on segment;
-COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo -e "$GP_SEGMENT_I\n<SEGID>"' on segment;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM $quote$bash -c "echo -e '$GP_SEGMENT_ID\n<SEGID>'"$quote$ on segment;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM $quote$bash -c "echo -e '$GP_SEGMENT_I\n<SEGID>'"$quote$ on segment;
 ERROR:  invalid input syntax for integer: ""  (seg0 172.17.0.2:40000 pid=27935)
 CONTEXT:  COPY copy_from_program_error, line 1, column 
 SET gp_enable_segment_copy_checking=on;
