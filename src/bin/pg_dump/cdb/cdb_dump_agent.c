@@ -3297,10 +3297,10 @@ dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
 /*
  * Determine whether we want to dump definitions for procedural languages.
  * Since the languages themselves don't have schemas, we can't rely on
- * the normal schema-based selection mechanism.  We choose to dump them
- * whenever neither --schema nor --table was given.  (Before 8.1, we used
- * the dump flag of the PL's call handler function, but in 8.1 this will
- * probably always be false since call handlers are created in pg_catalog.)
+ * the normal schema-based selection mechanism.  We choose not to dump them
+ * if --table was given.  We still want to dump then when --schema was
+ * given, as there may be functions in the schema that require a procedural
+ * language.
  *
  * For some backwards compatibility with the older behavior, we forcibly
  * dump a PL if its handler function (and validator if any) are in a
@@ -3309,7 +3309,9 @@ dumpShellType(Archive *fout, ShellTypeInfo *stinfo)
 static bool
 shouldDumpProcLangs(void)
 {
-	if (!include_everything)
+	/* If we have a table filter, don't dump languages */
+	if (table_include_patterns.head != NULL || table_include_patterns.tail != NULL
+		|| table_exclude_patterns.head != NULL || table_exclude_patterns.tail != NULL)
 		return false;
 	/* And they're schema not data */
 	if (dataOnly)
