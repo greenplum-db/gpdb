@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="jj138244">Validating Your Systems</title>
+  <shortdesc>Validate your operating system settings, hardware, and network.</shortdesc>
+  <body>
+    <p>Greenplum provides the following utilities to validate the configuration and performance of
+      your systems: </p>
+    <ul>
+      <li id="jj161657"><codeph><xref href="../utility_guide/admin_utilities/gpcheck.xml" type="topic" format="dita"
+            scope="peer">gpcheck</xref></codeph></li>
+      <li id="jj161668"><codeph><xref href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic" format="dita"
+            scope="peer">gpcheckperf</xref></codeph></li>
+    </ul>
+    <p>These utilities can be found in <codeph>$GPHOME/bin</codeph> of your Greenplum
+      installation.</p>
+    <p>The following tests should be run prior to initializing your Greenplum Database system. </p>
+  </body>
+  <topic id="topic2" xml:lang="en">
+    <title id="jj161684">Validating OS Settings</title>
+    <body>
+      <p>Greenplum provides a utility called <codeph><xref href="../utility_guide/admin_utilities/gpcheck.xml"
+            type="topic" format="dita" scope="peer">gpcheck</xref></codeph> that can be used to
+        verify that all hosts in your array have the recommended OS settings for running a
+        production Greenplum Database system. To run <codeph>gpcheck</codeph>:</p>
+      <ol>
+        <li id="jj161449">Log in on the master host as the <codeph>gpadmin</codeph> user.</li>
+        <li id="jj167683">Source the <codeph>greenplum_path.sh</codeph> path file from your
+          Greenplum installation. For
+          example:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
+        <li id="jj161454">Create a file called <codeph>hostfile_gpcheck</codeph> that has the
+          machine-configured host names of each Greenplum host (master, standby master and
+          segments), one host name per line. Make sure there are no blank lines or extra spaces.
+          This file should just have a <i>single</i> host name per host. For
+          example:<codeblock>mdw
+smdw
+sdw1
+sdw2
+sdw3</codeblock></li>
+        <li id="jj161459">Run the <codeph><xref href="../utility_guide/admin_utilities/gpcheck.xml" type="topic"
+              format="dita" scope="peer">gpcheck</xref></codeph> utility using the host file you
+          just created. For
+          example:<codeblock>$ gpcheck -f hostfile_gpcheck -m mdw -s smdw</codeblock></li>
+        <li id="jj167249">After <codeph><xref href="../utility_guide/admin_utilities/gpcheck.xml" type="topic"
+              format="dita" scope="peer">gpcheck</xref></codeph> finishes verifying OS
+          parameters on all hosts (masters and segments), you might be prompted to modify certain OS
+          parameters before initializing your Greenplum Database system.</li>
+      </ol>
+    </body>
+  </topic>
+  <topic id="topic3" xml:lang="en">
+    <title id="jj163212">Validating Hardware Performance</title>
+    <body>
+      <p>Greenplum provides a management utility called <codeph><xref
+            href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic" format="dita" scope="peer"
+            >gpcheckperf</xref></codeph>, which can be used to identify hardware and system-level
+        issues on the machines in your Greenplum Database array. <codeph><xref
+            href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic" format="dita" scope="peer"
+            >gpcheckperf</xref></codeph> starts a session on the specified hosts and runs the
+        following performance tests:</p>
+      <ul>
+        <li id="jj165025">Network Performance (<codeph>gpnetbench*</codeph>)</li>
+        <li id="jj165034">Disk I/O Performance (<codeph>dd</codeph> test)</li>
+        <li id="jj165035">Memory Bandwidth (<codeph>stream</codeph> test)</li>
+      </ul>
+      <p>Before using <codeph>gpcheckperf</codeph>, you must have a trusted host setup between the
+        hosts involved in the performance test. You can use the utility <codeph><xref
+            href="../utility_guide/admin_utilities/gpssh-exkeys.xml" type="topic" format="dita" scope="peer"
+            >gpssh-exkeys</xref></codeph> to update the known host files and exchange public keys
+        between hosts if you have not done so already. Note that <codeph>gpcheckperf</codeph> calls
+        to <codeph><xref href="../utility_guide/admin_utilities/gpssh.xml" type="topic" format="dita" scope="peer"
+            >gpssh</xref></codeph> and <codeph><xref href="../utility_guide/admin_utilities/gpscp.xml" type="topic"
+            format="dita" scope="peer">gpscp</xref></codeph>, so these Greenplum utilities must
+        be in your <codeph>$PATH</codeph>.</p>
+    </body>
+    <topic id="topic4" xml:lang="en">
+      <title>Validating Network Performance</title>
+      <body>
+        <p>To test network performance, run <codeph><xref href="../utility_guide/admin_utilities/gpcheckperf.xml"
+              type="topic" format="dita" scope="peer">gpcheckperf</xref></codeph> with one of
+          the network test run options: parallel pair test (<codeph>-r N</codeph>), serial pair test
+            (<codeph>-r n</codeph>), or full matrix test (<codeph>-r M</codeph>). The utility runs a
+          network benchmark program that transfers a 5 second stream of data from the current host
+          to each remote host included in the test. By default, the data is transferred in parallel
+          to each remote host and the minimum, maximum, average and median network transfer rates
+          are reported in megabytes (MB) per second. If the summary transfer rate is slower than
+          expected (less than 100 MB/s), you can run the network test serially using the <codeph>-r
+            n</codeph> option to obtain per-host results. To run a full-matrix bandwidth test, you
+          can specify <codeph>-r M</codeph> which will cause every host to send and receive data
+          from every other host specified. This test is best used to validate if the switch fabric
+          can tolerate a full-matrix workload.</p>
+        <p>Most systems in a Greenplum Database array are configured with multiple network interface
+          cards (NICs), each NIC on its own subnet. When testing network performance, it is
+          important to test each subnet individually. For example, considering the following network
+          configuration of two NICs per host:</p>
+        <table id="jj165255">
+          <title>Example Network Interface Configuration</title>
+          <tgroup cols="3">
+            <colspec colnum="1" colname="col1" colwidth="139pt"/>
+            <colspec colnum="2" colname="col2" colwidth="118pt"/>
+            <colspec colnum="3" colname="col3" colwidth="118pt"/>
+            <thead>
+              <row>
+                <entry colname="col1">Greenplum Host</entry>
+                <entry colname="col2">Subnet1 NICs</entry>
+                <entry colname="col3">Subnet2 NICs</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">Segment 1</entry>
+                <entry colname="col2">sdw1-1</entry>
+                <entry colname="col3">sdw1-2</entry>
+              </row>
+              <row>
+                <entry colname="col1">Segment 2</entry>
+                <entry colname="col2">sdw2-1</entry>
+                <entry colname="col3">sdw2-2</entry>
+              </row>
+              <row>
+                <entry colname="col1">Segment 3</entry>
+                <entry colname="col2">sdw3-1</entry>
+                <entry colname="col3">sdw3-2</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <p>You would create four distinct host files for use with the <codeph><xref
+              href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic" format="dita" scope="peer"
+              >gpcheckperf</xref></codeph> network test:</p>
+        <table id="jj165603">
+          <title>Example Network Test Host File Contents</title>
+          <tgroup cols="2">
+            <colspec colnum="1" colname="col1" colwidth="188pt"/>
+            <colspec colnum="2" colname="col2" colwidth="188pt"/>
+            <thead>
+              <row>
+                <entry colname="col1">hostfile_gpchecknet_ic1</entry>
+                <entry colname="col2">hostfile_gpchecknet_ic2</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1">sdw1-1</entry>
+                <entry colname="col2">sdw1-2</entry>
+              </row>
+              <row>
+                <entry colname="col1">sdw2-1</entry>
+                <entry colname="col2">sdw2-2</entry>
+              </row>
+              <row>
+                <entry colname="col1">sdw3-1</entry>
+                <entry colname="col2">sdw3-2</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <p>You would then run <codeph><xref href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic"
+              format="dita" scope="peer">gpcheckperf</xref></codeph> once per subnet. For
+          example (if testing an <i>even</i> number of hosts, run in parallel pairs test mode):</p>
+        <codeblock>$ gpcheckperf -f hostfile_gpchecknet_ic1 -r N -d /tmp &gt; subnet1.out
+$ gpcheckperf -f hostfile_gpchecknet_ic2 -r N -d /tmp &gt; subnet2.out</codeblock>
+        <p>If you have an <i>odd</i> number of hosts to test, you can run in serial test mode
+            (<codeph>-r n</codeph>).</p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic5" xml:lang="en">
+    <title id="jj164897">Validating Disk I/O and Memory Bandwidth</title>
+    <body>
+      <p>To test disk and memory bandwidth performance, run <codeph><xref
+            href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic" format="dita" scope="peer"
+            >gpcheckperf</xref></codeph> with the disk and stream test run options (<codeph>-r
+          ds</codeph>). The disk test uses the <codeph>dd</codeph> command (a standard UNIX utility)
+        to test the sequential throughput performance of a logical disk or file system. The memory
+        test uses the STREAM benchmark program to measure sustainable memory bandwidth. Results are
+        reported in MB per second (MB/s).</p>
+      <section id="jj161569">
+        <title>To run the disk and stream tests</title>
+        <ol>
+          <li id="jj167791">Log in on the master host as the <codeph>gpadmin</codeph> user.</li>
+          <li id="jj167824">Source the <codeph>greenplum_path.sh</codeph> path file from your
+            Greenplum installation. For
+            example:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
+          <li id="jj167777">Create a host file named <codeph>hostfile_gpcheckperf</codeph> that has
+            one host name per segment host. Do not include the master host. For
+            example:<codeblock>sdw1
+sdw2
+sdw3
+sdw4</codeblock></li>
+          <li id="jj162990">Run the <codeph>gpcheckperf</codeph> utility using the
+              <codeph>hostfile_gpcheckperf</codeph> file you just created. Use the
+              <codeph>-d</codeph> option to specify the file systems you want to test on each host
+            (you must have write access to these directories). You will want to test all primary and
+            mirror segment data directory locations. For
+            example:<codeblock>$ gpcheckperf -f hostfile_gpcheckperf -r ds -D \
+  -d /data1/primary -d  /data2/primary \
+  -d /data1/mirror -d  /data2/mirror</codeblock></li>
+          <li id="jj163241">The utility may take a while to perform the tests as it is copying very
+            large files between the hosts. When it is finished you will see the summary results for
+            the Disk Write, Disk Read, and Stream tests.</li>
+        </ol>
+      </section>
+    </body>
+  </topic>
+</topic>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="jn135496">Installation Management Utilities</title>
+  <shortdesc>References for the command-line management utilities used to install and initialize a
+    Greenplum Database system. </shortdesc>
+  <body>
+    <p>For a full reference of all Greenplum Database utilities, see the <i>Greenplum Database
+        Utility Guide</i>.</p>
+    <p>The following Greenplum Database management utilities are located in
+        <codeph>$GPHOME/bin</codeph>.<simpletable id="jn163810">
+        <strow>
+          <stentry>
+            <ul id="ul_vsx_zwn_r4">
+              <li>
+                <codeph>
+                  <xref href="../utility_guide/admin_utilities/gpactivatestandby.xml" type="topic" format="dita"
+                    scope="peer">gpactivatestandby</xref>
+                </codeph>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpaddmirrors.xml" type="topic" format="dita"
+                      scope="peer">gpaddmirrors</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpcheck.xml" type="topic" format="dita"
+                      scope="peer">gpcheck</xref></codeph> (deprecated)</p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpcheckperf.xml" type="topic" format="dita"
+                      scope="peer">gpcheckperf</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpdeletesystem.xml" type="topic" format="dita"
+                      scope="peer">gpdeletesystem</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpinitstandby.xml" type="topic" format="dita"
+                      scope="peer">gpinitstandby</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpinitsystem.xml" type="topic" format="dita"
+                      scope="peer">gpinitsystem</xref>
+                  </codeph>
+                </p>
+              </li>
+            </ul>
+          </stentry>
+          <stentry>
+            <ul id="ul_zy5_fxn_r4">
+              <li>
+                <codeph>
+                  <xref href="../utility_guide/admin_utilities/gppkg.xml" type="topic" format="dita"
+                    scope="peer">gppkg</xref>
+                </codeph>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpscp.xml" type="topic" format="dita"
+                      scope="peer">gpscp</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpseginstall.xml" type="topic" format="dita" scope="peer"
+                      >gpseginstall</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpssh.xml" type="topic" format="dita"
+                      scope="peer">gpssh</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpssh-exkeys.xml" type="topic" format="dita"
+                      scope="peer">gpssh-exkeys</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpstart.xml" type="topic" format="dita"
+                      scope="peer">gpstart</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gpstop.xml" type="topic" format="dita"
+                      scope="peer">gpstop</xref>
+                  </codeph>
+                </p>
+              </li>
+              <li>
+                <p>
+                  <codeph>
+                    <xref href="../utility_guide/admin_utilities/gptransfer.xml" type="topic" format="dita" scope="peer"
+                      >gptransfer</xref>
+                  </codeph>
+                </p>
+              </li>
+            </ul>
+          </stentry>
+        </strow>
+      </simpletable></p>
+  </body>
+</topic>

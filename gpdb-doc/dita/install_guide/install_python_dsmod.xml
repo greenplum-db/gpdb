@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="pw216155">Python Data Science Module Package</title>
+  <body>
+    <p>Greenplum Database provides a collection of data science-related Python modules that can be
+      used with the Greenplum Database PL/Python language. You can download these modules in
+        <codeph>.gppkg</codeph> format from <xref
+        href="https://network.pivotal.io/products/pivotal-gpdb" format="html" scope="external"
+        >Pivotal Network</xref>.</p>
+    <p>This section contains the following information:</p>
+    <ul>
+      <li id="pw22228177">
+        <xref href="#topic_pydatascimod" type="topic" format="dita"/>
+      </li>
+      <li id="pw22228178">
+        <xref href="#topic_instpdsm" type="topic" format="dita"/>
+      </li>
+      <li id="pw22228179">
+        <xref href="#topic_removepdsm" type="topic" format="dita"/>
+      </li>
+    </ul>
+    <p>For information about the Greenplum Database PL/Python Language, see <xref scope="peer"
+        type="topic" format="dita" href="../ref_guide/extensions/pl_python.xml#topic1">Greenplum
+        PL/Python Language Extension</xref>.</p>
+  </body>
+  <topic id="topic_pydatascimod">
+    <title>Python Data Science Modules</title>
+    <body>
+      <p>Modules provided in the Python Data Science package include: <table id="iq1395577">
+          <title>Data Science Modules</title>
+          <tgroup cols="2">
+            <colspec colnum="1" colname="col1" colwidth="1*"/>
+            <colspec colnum="2" colname="col2" colwidth="2*"/>
+            <thead>
+              <row>
+                <entry colname="col1">Module Name</entry>
+                <entry colname="col2">Description/Used For</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1"> Beautiful Soup </entry>
+                <entry colname="col2">Navigating HTML and XML</entry>
+              </row>
+              <row>
+                <entry colname="col1"> Gensim </entry>
+                <entry colname="col2">Topic modeling and document indexing</entry>
+              </row>
+              <row>
+                <entry colname="col1"> Keras (RHEL/CentOS 7 only) </entry>
+                <entry colname="col2">Deep learning</entry>
+              </row>
+              <row>
+                <entry colname="col1"> Lifelines </entry>
+                <entry colname="col2">Survival analysis</entry>
+              </row>
+              <row>
+                <entry colname="col1"> lxml </entry>
+                <entry colname="col2">XML and HTML processing</entry>
+              </row>
+              <row>
+                <entry colname="col1"> NLTK </entry>
+                <entry colname="col2">Natural language toolkit</entry>
+              </row>
+              <row>
+                <entry colname="col1"> NumPy </entry>
+                <entry colname="col2">Scientific computing</entry>
+              </row>
+              <row>
+                <entry colname="col1"> Pandas </entry>
+                <entry colname="col2">Data analysis</entry>
+              </row>
+              <row>
+                <entry colname="col1"> Pattern-en </entry>
+                <entry colname="col2">Part-of-speech tagging</entry>
+              </row>
+              <row>
+                <entry colname="col1"> pyLDAvis </entry>
+                <entry colname="col2">Interactive topic model visualization</entry>
+              </row>
+              <row>
+                <entry colname="col1"> PyMC3 </entry>
+                <entry colname="col2">Statistical modeling and probabilistic machine
+                  learning</entry>
+              </row>
+              <row>
+                <entry colname="col1"> scikit-learn </entry>
+                <entry colname="col2">Machine learning data mining and analysis</entry>
+              </row>
+              <row>
+                <entry colname="col1"> SciPy </entry>
+                <entry colname="col2">Scientific computing</entry>
+              </row>
+              <row>
+                <entry colname="col1"> spaCy </entry>
+                <entry colname="col2">Large scale natural language processing</entry>
+              </row>
+              <row>
+                <entry colname="col1"> StatsModels </entry>
+                <entry colname="col2">Statistical modeling</entry>
+              </row>
+              <row>
+                <entry colname="col1"> Tensorflow (RHEL/CentOS 7 only) </entry>
+                <entry colname="col2">Numerical computation using data flow graphs</entry>
+              </row>
+              <row>
+                <entry colname="col1"> XGBoost </entry>
+                <entry colname="col2">Gradient boosting, classifying, ranking </entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table></p>
+    </body>
+  </topic>
+  <topic id="topic_instpdsm" xml:lang="en">
+    <title>Installing the Python Data Science Module Package</title>
+    <body>
+      <p>Before you install the Python Data Science Module package, make sure that your Greenplum
+        Database is running, you have sourced <codeph>greenplum_path.sh</codeph>, and that the
+          <codeph>$MASTER_DATA_DIRECTORY</codeph> and <codeph>$GPHOME</codeph> environment variables
+        are set.</p>
+      <note>The <codeph>PyMC3</codeph> module depends on <codeph>Tk</codeph>. If you want to use
+          <codeph>PyMC3</codeph>, you must install the <codeph>tk</codeph> OS package on every node
+        in your cluster. For example: <codeblock>$ yum install tk
+</codeblock></note>
+      <ol>
+        <li>Locate the Python Data Science module package that you built or downloaded.<p>The file
+            name format of the package is
+              <codeph>DataSciencePython-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeph>.</p></li>
+        <li>Copy the package to the Greenplum Database master host.</li>
+        <li>Use the <codeph>gppkg</codeph> command to install the package. For
+              example:<codeblock>$ gppkg -i DataSciencePython-&lt;version&gt;-relhel&lt;N&gt;-x86_64.gppkg</codeblock><p><codeph>gppkg</codeph>
+            installs the Python Data Science modules on all nodes in your Greenplum Database
+            cluster. The command also updates the <codeph>PYTHONPATH</codeph>,
+            <codeph>PATH</codeph>, and <codeph>LD_LIBRARY_PATH</codeph> environment variables in
+            your <codeph>greenplum_path.sh</codeph> file.</p></li>
+        <li>Restart Greenplum Database. You must re-source <codeph>greenplum_path.sh</codeph> before
+          restarting your Greenplum
+          cluster:<codeblock>$ source /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r</codeblock></li>
+      </ol>
+      <p>The Greenplum Database Python Data Science Modules are installed in the following
+        directory:</p>
+      <codeblock>$GPHOME/ext/DataSciencePython/lib/python2.7/site-packages/</codeblock>
+    </body>
+  </topic>
+  <topic id="topic_removepdsm" xml:lang="en">
+    <title>Uninstalling the Python Data Science Module Package</title>
+    <body>
+      <p>Use the <codeph>gppkg</codeph> utility to uninstall the Python Data Science Module package.
+        You must include the version number in the package name you provide to
+          <codeph>gppkg</codeph>.</p>
+      <p> To determine your Python Data Science Module package version number and remove this
+        package:</p>
+      <codeblock>$ gppkg -q --all | grep DataSciencePython
+DataSciencePython-&lt;version&gt;
+$ gppkg -r DataSciencePython-&lt;version&gt;</codeblock>
+      <p>The command removes the Python Data Science modules from your Greenplum Database cluster.
+        It also updates the <codeph>PYTHONPATH</codeph>, <codeph>PATH</codeph>, and
+          <codeph>LD_LIBRARY_PATH</codeph> environment variables in your
+          <codeph>greenplum_path.sh</codeph> file to their pre-installation values.</p>
+      <p>Re-source <codeph>greenplum_path.sh</codeph> and restart Greenplum Database after you
+        remove the Python Data Science Module package:</p>
+      <codeblock>$ . /usr/local/greenplum-db/greenplum_path.sh
+$ gpstop -r </codeblock>
+      <note>When you uninstall the Python Data Science Module package from your Greenplum Database
+        cluster, any UDFs that you have created that import Python modules installed with this
+        package will return an error.</note>
+    </body>
+  </topic>
+</topic>

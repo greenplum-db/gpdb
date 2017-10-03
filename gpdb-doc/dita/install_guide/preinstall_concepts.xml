@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="jg138244">Introduction to Greenplum</title>
+  <shortdesc>High-level overview of the Greenplum Database system architecture.</shortdesc>
+  <body>
+    <p>Greenplum Database stores and processes large amounts of data by distributing the load across
+      several servers or <i>hosts</i>. A logical database in Greenplum is an <i>array</i> of
+      individual PostgreSQL databases working together to present a single database image. The
+        <i>master</i> is the entry point to the Greenplum Database system. It is the database
+      instance to which users connect and submit SQL statements. The master coordinates the workload
+      across the other database instances in the system, called <i>segments</i>, which handle data
+      processing and storage. The segments communicate with each other and the master over the
+        <i>interconnect</i>, the networking layer of Greenplum Database.</p>
+    <image href="graphics/highlevel_arch.jpg" placement="break" width="389px" height="309px"/>
+    <p>Greenplum Database is a software-only solution; the hardware and database software are not
+      coupled. Greenplum Database runs on a variety of commodity server platforms from
+      Greenplum-certified hardware vendors. Performance depends on the hardware on which it is
+      installed. Because the database is distributed across multiple machines in a Greenplum
+      Database system, proper selection and configuration of hardware is vital to achieving the best
+      possible performance.</p>
+    <p>This chapter describes the major components of a Greenplum Database system and the hardware
+      considerations and concepts associated with each component: <xref href="#topic2" type="topic"
+        format="dita"/>, <xref href="#topic4" type="topic" format="dita"/> and <xref href="#topic9"
+        type="topic" format="dita"/>. Additionally, a system may have optional <xref href="#topic13"
+        type="topic" format="dita"/> and the <xref href="#topic_ln5_xhm_kbb" type="topic"
+        format="dita"/> for monitoring query workload and performance.</p>
+  </body>
+  <topic id="topic2" xml:lang="en">
+    <title id="jg160172">The Greenplum Master</title>
+    <body>
+      <p>The <i>master</i> is the entry point to the Greenplum Database system. It is the database
+        server process that accepts client connections and processes the SQL commands that system
+        users issue. Users connect to Greenplum Database through the master using a
+        PostgreSQL-compatible client program such as <codeph>psql</codeph> or ODBC.</p>
+      <p>The master maintains the <i>system catalog</i> (a set of system tables that contain
+        metadata about the Greenplum Database system itself), however the master does not contain
+        any user data. Data resides only on the <i>segments</i>. The master authenticates client
+        connections, processes incoming SQL commands, distributes the work load between segments,
+        coordinates the results returned by each segment, and presents the final results to the
+        client program.</p>
+      <p>Because the master does not contain any user data, it has very little disk load. The master
+        needs a fast, dedicated CPU for data loading, connection handling, and query planning
+        because extra space is often necessary for landing load files and backup files, especially
+        in production environments. Customers may decide to also run ETL and reporting tools on the
+        master, which requires more disk space and processing power.</p>
+    </body>
+    <topic id="topic3" xml:lang="en">
+      <title>Master Redundancy</title>
+      <body>
+        <p>You may optionally deploy a <i>backup</i> or <i>mirror</i> of the master instance. A
+          backup master host serves as a <i>warm standby</i> if the primary master host becomes
+          nonoperational. You can deploy the standby master on a designated redundant master host or
+          on one of the segment hosts. </p>
+        <p>The standby master is kept up to date by a transaction log replication process, which
+          runs on the standby master host and synchronizes the data between the primary and standby
+          master hosts. If the primary master fails, the log replication process shuts down, and an
+          administrator can activate the standby master in its place. When an the standby master is
+          active, the replicated logs are used to reconstruct the state of the master host at the
+          time of the last successfully committed transaction.</p>
+        <p>Since the master does not contain any user data, only the system catalog tables need to
+          be synchronized between the primary and backup copies. When these tables are updated,
+          changes automatically copy over to the standby master so it is always synchronized with
+          the primary.</p>
+        <fig id="jg163382">
+          <title>Master Mirroring in Greenplum Database</title>
+          <image href="graphics/standby_master.jpg" placement="break" width="271px"
+            height="165px"/>
+        </fig>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic4" xml:lang="en">
+    <title id="jg161809">The Segments</title>
+    <body>
+      <p>In Greenplum Database, the <i>segments</i> are where data is stored and where most query
+        processing occurs. User-defined tables and their indexes are distributed across the
+        available segments in the Greenplum Database system; each segment contains a distinct
+        portion of the data. Segment instances are the database server processes that serve
+        segments. Users do not interact directly with the segments in a Greenplum Database system,
+        but do so through the master. </p>
+      <p>In the reference Greenplum Database hardware configurations, the number of segment
+        instances per segment host is determined by the number of effective CPUs or CPU core. For
+        example, if your segment hosts have two dual-core processors, you may have two or four
+        primary segments per host. If your segment hosts have three quad-core processors, you may
+        have three, six or twelve segments per host. Performance testing will help decide the best
+        number of segments for a chosen hardware platform.</p>
+    </body>
+    <topic id="topic5" xml:lang="en">
+      <title>Segment Redundancy</title>
+      <body>
+        <p>When you deploy your Greenplum Database system, you have the option to configure
+            <i>mirror</i> segments. Mirror segments allow database queries to fail over to a backup
+          segment if the primary segment becomes unavailable. </p>
+        <p>A mirror segment must always reside on a different host than its primary segment. Mirror
+          segments can be arranged across the hosts in the system in one of two standard
+          configurations, or in a custom configuration you design. The default configuration, called
+            <i>group</i> mirroring, places the mirror segments for all primary segments on a host on
+          one other host. Another option, called <i>spread</i> mirroring, spreads mirrors for each
+          host's primary segments over the remaining hosts. Spread mirroring requires that there be
+          more hosts in the system than there are primary segments on the host. On hosts with
+          multiple network interfaces, the primary and mirror segments are distributed equally among
+          the interfaces. <xref href="#topic5/jg163134" type="fig" format="dita"/> shows how table
+          data is distributed across the segments when the default group mirroring option is
+          configured. </p>
+        <fig id="jg163134">
+          <title>Data Mirroring in Greenplum Database</title>
+          <image href="graphics/group-mirroring.png" placement="break"/>
+        </fig>
+      </body>
+      <topic id="topic6" xml:lang="en">
+        <title>Segment Failover and Recovery</title>
+        <body>
+          <p>When mirroring is enabled in a Greenplum Database system, the system automatically
+            fails over to the mirror copy if a primary copy becomes unavailable. A Greenplum
+            Database system can remain operational if a segment instance or host goes down only if
+            all portions of data are available on the remaining active segments. </p>
+          <p>If the master cannot connect to a segment instance, it marks that segment instance as
+              <i>invalid</i> in the Greenplum Database system catalog. The segment instance remains
+            invalid and out of operation until an administrator brings that segment back online. An
+            administrator can recover a failed segment while the system is up and running. The
+            recovery process copies over only the changes that were missed while the segment was
+            nonoperational.</p>
+          <p>If you do not have mirroring enabled and a segment becomes invalid, the system
+            automatically shuts down. An administrator must recover all failed segments before
+            operations can continue.</p>
+        </body>
+      </topic>
+    </topic>
+    <topic id="topic7" xml:lang="en">
+      <title>Example Segment Host Hardware Stack</title>
+      <body>
+        <p>Regardless of the hardware platform you choose, a production Greenplum Database
+          processing node (a segment host) is typically configured as described in this section. </p>
+        <p>The segment hosts do the majority of database processing, so the segment host servers are
+          configured in order to achieve the best performance possible from your Greenplum Database
+          system. Greenplum Database's performance will be as fast as the slowest segment server in
+          the array. Therefore, it is important to ensure that the underlying hardware and operating
+          systems that are running Greenplum Database are all running at their optimal performance
+          level. It is also advised that all segment hosts in a Greenplum Database array have
+          identical hardware resources and configurations. </p>
+        <p>Segment hosts should also be dedicated to Greenplum Database operations only. To get the
+          best query performance, you do not want Greenplum Database competing with other
+          applications for machine or network resources.</p>
+        <p>The following diagram shows an example Greenplum Database segment host hardware stack.
+          The number of effective CPUs on a host is the basis for determining how many primary
+          Greenplum Database segment instances to deploy per segment host. This example shows a host
+          with two effective CPUs (one dual-core CPU). Note that there is one primary segment
+          instance (or primary/mirror pair if using mirroring) per CPU core. </p>
+        <fig id="jg161984">
+          <title>Example Greenplum Database Segment Host Configuration</title>
+          <image href="graphics/hardware_stack.jpg" placement="break" width="416px"
+            height="305px"/>
+        </fig>
+      </body>
+    </topic>
+    <topic id="topic8" xml:lang="en">
+      <title>Example Segment Disk Layout</title>
+      <body>
+        <p>Each CPU is typically mapped to a logical disk. A logical disk consists of one primary
+          file system (and optionally a mirror file system) accessing a pool of physical disks
+          through an I/O channel or disk controller. The logical disk and file system are provided
+          by the operating system. Most operating systems provide the ability for a logical disk
+          drive to use groups of physical disks arranged in RAID arrays.</p>
+        <fig id="jg163832">
+          <title>Logical Disk Layout in Greenplum Database</title>
+          <image href="graphics/disk_raid.jpg" placement="break" width="413px" height="155px"/>
+        </fig>
+        <p>Depending on the hardware platform you choose, different RAID configurations offer
+          different performance and capacity levels.</p>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic9" xml:lang="en">
+    <title id="jg160214">The Interconnect</title>
+    <body>
+      <p>The <i>interconnect</i> is the networking layer of Greenplum Database. When a user connects
+        to a database and issues a query, processes are created on each of the segments to handle
+        the work of that query. The <i>interconnect</i> refers to the inter-process communication
+        between the segments, as well as the network infrastructure on which this communication
+        relies. The interconnect uses a standard 10 Gigabit Ethernet switching fabric.</p>
+      <p>By default, Greeplum Database interconnect uses UDP (User Datagram Protocol) with flow
+        control for interconnect traffic to send messages over the network. The Greenplum software
+        does the additional packet verification and checking not performed by UDP, so the
+        reliability is equivalent to TCP (Transmission Control Protocol), and the performance and
+        scalability exceeds that of TCP. For information about the types of interconnect compatible
+        with Greeplum Database, see server configuration parameter
+          <codeph>gp_interconnect_type</codeph> in the <cite>Greenplum Database Reference
+          Guide</cite>.</p>
+    </body>
+    <topic id="topic10" xml:lang="en">
+      <title>Interconnect Redundancy</title>
+      <body>
+        <p>A highly available interconnect can be achieved by deploying dual 10 Gigabit Ethernet
+          switches on your network, and redundant 10 Gigabit connections to the Greenplum Database
+          master and segment host servers.</p>
+      </body>
+    </topic>
+    <topic id="topic11" xml:lang="en">
+      <title id="jg161518">Network Interface Configuration</title>
+      <body>
+        <p>A segment host typically has multiple network interfaces designated to Greenplum
+          interconnect traffic. The master host typically has additional external network interfaces
+          in addition to the interfaces used for interconnect traffic. </p>
+        <p>Depending on the number of interfaces available, you will want to distribute interconnect
+          network traffic across the number of available interfaces. This is done by assigning
+          segment instances to a particular network interface and ensuring that the primary segments
+          are evenly balanced over the number of available interfaces.</p>
+        <p>This is done by creating separate host address names for each network interface. For
+          example, if a host has four network interfaces, then it would have four corresponding host
+          addresses, each of which maps to one or more primary segment instances. The
+            <codeph>/etc/hosts</codeph> file should be configured to contain not only the host name
+          of each machine, but also all interface host addresses for all of the Greenplum Database
+          hosts (master, standby master, segments, and ETL hosts). </p>
+        <p>With this configuration, the operating system automatically selects the best path to the
+          destination. Greenplum Database automatically balances the network destinations to
+          maximize parallelism. </p>
+        <fig id="jg161452">
+          <title>Example Network Interface Architecture</title>
+          <image href="graphics/multi_nic_arch.jpg" placement="break" width="438px"
+            height="437px"/>
+        </fig>
+      </body>
+    </topic>
+    <topic id="topic12" xml:lang="en">
+      <title>Switch Configuration</title>
+      <body>
+        <p>When using multiple 10 Gigabit Ethernet switches within your Greenplum Database array,
+          evenly divide the number of subnets between each switch. In this example configuration, if
+          we had two switches, NICs 1 and 2 on each host would use switch 1 and NICs 3 and 4 on each
+          host would use switch 2. For the master host, the host name bound to NIC 1 (and therefore
+          using switch 1) is the effective master host name for the array. Therefore, if deploying a
+          warm standby master for redundancy purposes, the standby master should map to a NIC that
+          uses a different switch than the primary master. </p>
+        <fig id="jg161465">
+          <title>Example Switch Configuration</title>
+          <image href="graphics/multi_switch_arch.jpg" placement="break" width="417px"
+            height="292px"/>
+        </fig>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic13" xml:lang="en">
+    <title id="jg160310">ETL Hosts for Data Loading</title>
+    <body>
+      <p>Greenplum supports fast, parallel data loading with its external tables feature. By using
+        external tables in conjunction with Greenplum Database's parallel file server
+          (<codeph>gpfdist</codeph>), administrators can achieve maximum parallelism and load
+        bandwidth from their Greenplum Database system. Many production systems deploy designated
+        ETL servers for data loading purposes. These machines run the Greenplum parallel file server
+          (<codeph>gpfdist</codeph>), but not Greenplum Database instances.</p>
+      <p>One advantage of using the <codeph>gpfdist</codeph> file server program is that it ensures
+        that all of the segments in your Greenplum Database system are fully utilized when reading
+        from external table data files. </p>
+      <p>The <codeph>gpfdist</codeph> program can serve data to the segment instances at an average
+        rate of about 350 MB/s for delimited text formatted files and 200 MB/s for CSV formatted
+        files. Therefore, you should consider the following options when running
+          <codeph>gpfdist</codeph> in order to maximize the network bandwidth of your ETL
+        systems:</p>
+      <ul>
+        <li id="jg164745">If your ETL machine is configured with multiple network interface cards
+          (NICs) as described in <xref href="#topic11" type="topic" format="dita"/>, run one
+          instance of <codeph>gpfdist</codeph> on your ETL host and then define your external table
+          definition so that the host name of each NIC is declared in the <codeph>LOCATION</codeph>
+          clause (see <codeph>CREATE EXTERNAL TABLE</codeph> in the <i>Greenplum Database Reference
+            Guide</i>). This allows network traffic between your Greenplum segment hosts and your
+          ETL host to use all NICs simultaneously.</li>
+      </ul>
+      <fig id="jg164760">
+        <title>External Table Using Single gpfdist Instance with Multiple NICs</title>
+        <image href="graphics/ext_tables_multinic.jpg" placement="break" width="452px"
+          height="243px"/>
+      </fig>
+      <ul>
+        <li id="jg164761">Run multiple <codeph>gpfdist</codeph> instances on your ETL host and
+          divide your external data files equally between each instance. For example, if you have an
+          ETL system with two network interface cards (NICs), then you could run two
+            <codeph>gpfdist</codeph> instances on that machine to maximize your load performance.
+          You would then divide the external table data files evenly between the two
+            <codeph>gpfdist</codeph> programs.</li>
+      </ul>
+      <fig id="jg164770">
+        <title>External Tables Using Multiple gpfdist Instances with Multiple NICs</title>
+        <image href="graphics/ext_tables.jpg" placement="break" width="436px" height="264px"/>
+      </fig>
+    </body>
+  </topic>
+  <topic xml:lang="en" id="topic_ln5_xhm_kbb">
+    <title>Greenplum Performance Monitoring</title>
+    <body>
+      <p>Greenplum Database includes a dedicated system monitoring and management database, named
+        gpperfmon, that administrators can install and enable. When this database is enabled, data
+        collection agents on each segment host collect query status and system metrics. At regular
+        intervals (typically every 15 seconds), an agent on the Greenplum master requests the data
+        from the segment agents and updates the gpperfmon database. Users can query the gpperfmon
+        database to see the stored query and system metrics. For more information see the "gpperfmon
+        Database Reference" in the <cite>Greenplum Database Reference Guide</cite>.</p>
+      <p otherprops="pivotal">Greenplum Command Center is an optional web-based performance
+        monitoring and management tool for Greenplum Database, based on the gpperfmon database.
+        Administrators can install Command Center separately from Greenplum Database.<fig
+          id="fig_mn5_xhm_kbb">
+          <title>Greenplum Performance Monitoring Architecture</title>
+          <image href="graphics/cc_arch_gpdb.png" placement="break" width="299px" height="304px"
+            id="image_nn5_xhm_kbb"/>
+        </fig></p>
+    </body>
+  </topic>
+</topic>

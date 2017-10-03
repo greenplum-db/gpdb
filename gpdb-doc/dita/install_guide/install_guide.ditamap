@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map>
+    <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
+        format="html" otherprops="pivotal"/> 
+    <topicref href="install_guide.xml" navtitle="Installation Guide">
+        <topicref href="preinstall_concepts.xml">
+            <topicref href="preinstall_concepts.xml#topic2"/>
+            <topicref href="preinstall_concepts.xml#topic4"/>
+            <topicref href="preinstall_concepts.xml#topic9"/>
+            <topicref href="preinstall_concepts.xml#topic13"/>
+            <topicref href="preinstall_concepts.xml#topic_ln5_xhm_kbb"/>
+        </topicref>
+        <topicref href="capacity_planning.xml" navtitle="Estimating Storage Capacity">
+            <topicref href="capacity_planning.xml#topic2" navtitle="Calculating Usable Disk
+                Capacity"/>
+            <topicref href="capacity_planning.xml#topic3" navtitle="Calculating User Data Size"/>
+            <topicref href="capacity_planning.xml#topic4" navtitle="Calculating Space Requirements
+                for Metadata and Logs"/>
+        </topicref>
+        <topicref href="prep_os_install_gpdb.xml" navtitle="Configuring Your Systems and
+            Installing Greenplum">
+            <topicref href="prep_os_install_gpdb.xml#topic2" navtitle="System Requirements"/>
+            <topicref href="prep_os_install_gpdb.xml#topic3"                 navtitle="Setting the Greenplum Recommended OS
+                Parameters"/>
+            <topicref href="prep_os_install_gpdb.xml#topic_ylh_b53_c1b"/>
+            <topicref href="prep_os_install_gpdb.xml#topic8" navtitle="Installing and Configuring
+                Greenplum on all Hosts"/>
+            <topicref href="prep_os_install_gpdb.xml#topic11" navtitle="Installing Oracle
+                Compatibility Functions"/>
+            <topicref href="prep_os_install_gpdb.xml#topic_sqb_bsw_2z"/>
+            <topicref href="prep_os_install_gpdb.xml#topic12" navtitle="Installing Greenplum
+                Database Extensions"/>
+            <topicref href="prep_os_install_gpdb.xml#topic13" navtitle="Creating the Data Storage
+                Areas">
+                <topicref href="prep_os_install_gpdb.xml#topic_wqb_1lc_wp"
+ navtitle="Creating the Data Storage Areas - Master"/>
+                <topicref href="prep_os_install_gpdb.xml#topic_pgz_qkc_wp"
+ navtitle="Creating the Data Storage Areas - Segments"/>
+            </topicref>
+            <topicref href="prep_os_install_gpdb.xml#topic_qst_s5t_wy" navtitle="Synchronizing System Clocks"/>
+            <topicref href="prep_os_install_gpdb.xml#topic15" navtitle="Enabling iptables"/>
+            <topicref href="prep_os_install_gpdb.xml#ec2_config" navtitle="Amazon EC2 Configuration"/>
+            <topicref href="prep_os_install_gpdb.xml#topic19" navtitle="Next Steps"/>
+        </topicref>
+        <topicref href="data_sci_pkgs.ditamap" format="ditamap" otherprops="pivotal" />
+        <topicref href="validate.xml" navtitle="Validating Your Systems">
+            <topicref href="validate.xml#topic2" navtitle="Validating Your Systems"/>
+            <topicref href="validate.xml#topic3" navtitle="Validating Your Systems">
+                <topicref href="validate.xml#topic4" navtitle="Validating Your Systems"/>
+            </topicref>
+            <topicref href="validate.xml#topic5" navtitle="Validating Your Systems"/>
+        </topicref>
+        <topicref href="localization.xml" navtitle="Configuring Localization Settings"/>
+        <topicref href="init_gpdb.xml" navtitle="Initializing a Greenplum Database System"/>
+        <topicref href="apx_mgmt_utils.xml" navtitle="Installation Management Utilities"/>
+        <topicref href="env_var_ref.xml" navtitle="Greenplum Environment Variables">
+            <topicref href="env_var_ref.xml#topic2" navtitle="Required Environment Variables"/>
+            <topicref href="env_var_ref.xml#topic7" navtitle="Optional Environment Variables"/>
+        </topicref>
+    </topicref>
+</map>

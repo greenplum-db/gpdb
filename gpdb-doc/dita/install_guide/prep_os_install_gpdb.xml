@@ -1,0 +1,1320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="ji162018">Configuring Your Systems and Installing Greenplum</title>
+  <shortdesc>Describes how to prepare your operating system environment for Greenplum Database and
+    install the Greenplum Database software binaries on all of the hosts that will comprise your
+    Greenplum Database system. </shortdesc>
+  <body>
+    <p>Perform the following tasks in order:</p>
+    <ol>
+      <li id="ji162035">Make sure your systems meet the <xref href="#topic2" type="topic"
+          format="dita"/></li>
+      <li id="ji162039">
+        <xref href="#topic3" type="topic" format="dita"/>
+      </li>
+      <li id="ji162043">(master only) <xref href="#topic7" type="topic" format="dita"/></li>
+      <li id="ji162047">
+        <xref href="#topic8" type="topic" format="dita"/>
+      </li>
+      <li id="ji162051">(Optional) <xref href="#topic11" type="topic" format="dita"/></li>
+      <li>(Optional) <xref href="#topic_sqb_bsw_2z" format="dita"/></li>
+      <li id="ji162055">(Optional) <xref href="#topic12" type="topic" format="dita"/></li>
+      <li id="ji162059">
+        <xref href="#topic13" type="topic" format="dita"/>
+      </li>
+      <li id="ji162063">
+        <xref href="#topic_qst_s5t_wy" type="topic" format="dita"/>
+      </li>
+      <li id="ji162067">
+        <xref href="#topic19" type="topic" format="dita"/>
+      </li>
+    </ol>
+    <p>Unless noted, these tasks should be performed for <i>all</i> hosts in your Greenplum Database
+      array (master, standby master and segments). </p>
+    <p>You can install and configure Greenplum Database on virtual servers provided by the Amazon
+      Elastic Compute Cloud (Amazon EC2) web service. For information about using Greenplum Database
+      in an Amazon EC2 environment, see <xref href="#ec2_config" format="dita">Amazon EC2
+        Configuration</xref>.</p>
+    <note type="important"> When data loss is not acceptable for a Greenplum Database cluster,
+      master and segment mirroring must be enabled. Without mirroring, system and data availability
+      is not guaranteed. For information about master and segment mirroring, see <xref
+        href="../admin_guide/intro/about_ha.xml" type="topic" format="dita" scope="peer">About
+        Redundancy and Failover</xref> in the <i>Greenplum Database Administrator Guide</i>.</note>
+    <note type="note">For information about upgrading Greenplum Database from a previous version,
+      see the <cite>Greenplum Database Release Notes</cite> for the release that you are
+      installing.</note>
+  </body>
+  <topic id="topic2" xml:lang="en">
+    <title id="ji162781">System Requirements</title>
+    <body>
+      <p>The following table lists minimum recommended specifications for servers intended to run
+        Greenplum Database on Linux systems in a production environment. <ph
+          otherprops="pivotal">Pivotal also provides hardware build guides for its certified
+          hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to
+          review your anticipated environment to ensure an appropriate hardware configuration for
+          Greenplum Database.</ph></p>
+      <table id="ji162790">
+        <title>System Prerequisites for Greenplum Database 5.0</title>
+        <tgroup cols="2">
+          <colspec colnum="1" colname="col1" colwidth="120pt"/>
+          <colspec colnum="2" colname="col2" colwidth="255pt"/>
+          <tbody>
+            <row>
+              <entry colname="col1">Operating System</entry>
+              <entry colname="col2">SUSE Linux Enterprise Server 64-bit 11 SP4<p>CentOS 64-bit 6.x
+                  or 7.x</p><p>Red Hat Enterprise Linux (RHEL) 64-bit 6.x or 7.x</p><note>See the
+                    <cite otherprops="pivotal">Greenplum Database Release Notes</cite> for current
+                  supported platform information.</note></entry>
+            </row>
+            <row>
+              <entry colname="col1">File Systems</entry>
+              <entry colname="col2">
+                <ul id="ul_byf_znn_r4">
+                  <li>xfs required for data storage on SUSE Linux and Red Hat (ext3 supported for
+                    root file system)</li>
+                </ul>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Minimum CPU</entry>
+              <entry colname="col2">Pentium Pro compatible (P3/Athlon and above)</entry>
+            </row>
+            <row>
+              <entry colname="col1">Minimum Memory</entry>
+              <entry colname="col2">16 GB RAM per server</entry>
+            </row>
+            <row>
+              <entry colname="col1">Disk Requirements</entry>
+              <entry colname="col2">
+                <ul id="ul_us1_b4n_r4">
+                  <li>150MB per host for Greenplum installation</li>
+                  <li>Approximately 300MB per segment instance for meta data</li>
+                  <li>Appropriate free space for data with disks at no more than 70% capacity</li>
+                  <li>High-speed, local storage</li>
+                </ul>
+              </entry>
+            </row>
+            <row>
+              <entry colname="col1">Network Requirements</entry>
+              <entry colname="col2">10 Gigabit Ethernet within the array<p>Dedicated, non-blocking
+                  switch</p><p>NIC bonding is recommended when multiple interfaces are
+                present</p></entry>
+            </row>
+            <row>
+              <entry colname="col1">Software and Utilities</entry>
+              <entry colname="col2">zlib compression libraries<p>bash shell</p><p>GNU tars</p><p>GNU
+                  zip</p><p>GNU sed (used by Greenplum Database
+                <codeph>gpinitsystem</codeph>)</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <note type="important">SSL is supported only on the Greenplum Database master host system. It
+        is not supported on the segment host systems.</note>
+      <note type="important">For all Greenplum Database host systems, the SELinux must be disabled.
+        You should also disable firewall software such as <codeph>iptables</codeph> (on systems such
+        as RHEL 6.x and CentOS 6.x ) or <codeph>firewalld</codeph> (on systems such as RHEL 7.x and
+        CentOS 7.x). You can enable firewall software if it is required for security purposes. For
+        information about enabling and configuring <codeph>iptables</codeph>, see <xref
+          href="#topic15" type="topic" format="dita"/>. For information about enabling and
+        configuring <codeph>firewalld</codeph> see the list of instructions here: <ul
+          id="ul_oz3_2tr_w5">
+          <li>
+            <p>This command checks the status of SELinux when run as root:</p>
+            <codeblock># sestatus
+SELinuxstatus: disabled</codeblock>
+            <p>You can disable SELinux by editing the <codeph>/etc/selinux/config</codeph> file. As
+              root, change the value of the <codeph>SELINUX</codeph> parameter in the
+                <codeph>config</codeph> file and reboot the system:</p>
+            <codeblock>SELINUX=disabled</codeblock>
+            <p>For information about disabling firewall software, see the documentation for the
+              firewall or your operating system. For information about disabling SELinux, see the
+              SELinux documentation.</p>
+          </li>
+          <li>This command checks the status of <codeph>iptables</codeph> when run as
+              root:<codeblock># /sbin/chkconfig --list iptables</codeblock><p>This is the output if
+                <codeph>iptables</codeph> is
+              disabled.</p><codeblock>iptables 0:off 1:off 2:off 3:off 4:off 5:off 6:off</codeblock><p>One
+              method of disabling <codeph>iptables</codeph> is to become root, run this command, and
+              then reboot the system:</p><codeblock>/sbin/chkconfig iptables off</codeblock></li>
+          <li>
+            <p>This command checks the status of <codeph>firewalld</codeph> when run as root:</p>
+            <codeblock># systemctl status firewalld</codeblock>
+            <p>This is the output if <codeph>firewalld</codeph> is disabled.</p>
+            <codeblock>* firewalld.service - firewalld - dynamic firewall daemon
+   Loaded: loaded (/usr/lib/systemd/system/firewalld.service; disabled; vendor preset: enabled)
+   Active: inactive (dead)</codeblock>
+            <p>These commands disable <codeph>firewalld</codeph> when run as root:</p>
+            <codeblock># systemctl stop firewalld.service
+# systemctl disable firewalld.service</codeblock>
+          </li>
+        </ul></note>
+    </body>
+  </topic>
+  <topic id="topic3" xml:lang="en">
+    <title id="ji162171">Setting the Greenplum Recommended OS Parameters</title>
+    <body>
+      <p>Greenplum requires the certain Linux operating system (OS) parameters be set on all hosts
+        in your Greenplum Database system (masters and segments). </p>
+      <p>In general, the following categories of system parameters need to be altered: </p>
+      <ul>
+        <li id="ji162186"><b>Shared Memory</b> - A Greenplum Database instance will not work unless
+          the shared memory segment for your kernel is properly sized. Most default OS installations
+          have the shared memory values set too low for Greenplum Database. On Linux systems, you
+          must also disable the OOM (out of memory) killer. For information about Greenplum Database
+          shared memory requirements, see the Greenplum Database server configuration parameter
+            <codeph>shared_buffers</codeph> in the <cite>Greenplum Database Reference
+          Guide</cite>.</li>
+        <li id="ji162187"><b>Network</b> - On high-volume Greenplum Database systems, certain
+          network-related tuning parameters must be set to optimize network connections made by the
+          Greenplum interconnect. </li>
+        <li id="ji162188"><b>User Limits</b> - User limits control the resources available to
+          processes started by a user's shell. Greenplum Database requires a higher limit on the
+          allowed number of file descriptors that a single process can have open. The default
+          settings may cause some Greenplum Database queries to fail because they will run out of
+          file descriptors needed to process the query. </li>
+      </ul>
+    </body>
+    <topic id="topic4" xml:lang="en">
+      <title id="ji162190">Linux System Settings</title>
+      <body>
+        <ul>
+          <li id="ji162238">Edit the <codeph>/etc/hosts</codeph> file and make sure that it includes
+            the host names and all interface address names for every machine participating in your
+            Greenplum Database system.</li>
+          <li id="ji162191">Set the following parameters in the <codeph>/etc/sysctl.conf</codeph>
+            file and reboot:
+              <codeblock>kernel.shmmax = 500000000
+kernel.shmmni = 4096
+kernel.shmall = 4000000000
+kernel.sem = 250 512000 100 2048
+kernel.sysrq = 1
+kernel.core_uses_pid = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.msgmni = 2048
+net.ipv4.tcp_syncookies = 1
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv4.tcp_tw_recycle = 1
+net.ipv4.tcp_max_syn_backlog = 4096
+net.ipv4.conf.all.arp_filter = 1
+net.ipv4.ip_local_port_range = 10000 65535
+net.core.netdev_max_backlog = 10000
+net.core.rmem_max = 2097152
+net.core.wmem_max = 2097152
+vm.overcommit_memory = 2</codeblock><note>
+              When <codeph>vm.overcommit_memory</codeph> is 2, you specify a value for
+                <codeph>vm.overcommit_ratio</codeph>. For information about calculating the value
+              for <codeph>vm.overcommit_ratio</codeph>, see the Greenplum Database server
+              configuration parameter <codeph>gp_vmem_protect_limit</codeph> in the <cite>Greenplum
+                Database Reference Guide</cite>.<p>To avoid port conflicts between Greenplum
+                Database and other applications, when initializing Greenplum Database, do not
+                specify Greenplum Database ports in the range specified by the operating system
+                parameter <codeph>net.ipv4.ip_local_port_range</codeph>. For example, if
+                  <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, you could set the
+                Greenplum Database base port numbers to these values.</p><p>
+                <codeblock>PORT_BASE = 6000
+MIRROR_PORT_BASE = 7000
+REPLICATION_PORT_BASE = 8000
+MIRROR_REPLICATION_PORT_BASE = 9000</codeblock>
+              </p><p>For information about port ranges that are used by Greenplum Database, see
+                  <xref href="../utility_guide/admin_utilities/gpinitsystem.xml" format="dita"
+                  scope="peer" type="topic">gpinitsystem</xref>.</p></note></li>
+          <li id="ji162213">Set the following parameters in the
+              <codeph>/etc/security/limits.conf</codeph> file:
+              <codeblock>* soft nofile 65536
+* hard nofile 65536
+* soft nproc 131072
+* hard nproc 131072</codeblock><p>For
+              Red Hat Enterprise Linux (RHEL) 6.x and CentOS 6.x, parameter values in the
+                <codeph>/etc/security/limits.d/90-nproc.conf</codeph> file override the values in
+              the <codeph>limits.conf</codeph> file. If a parameter value is set in both
+                <codeph>conf</codeph> files, ensure that the parameter is set properly in the
+                <codeph>90-nproc.conf</codeph> file. The Linux module pam_limits sets user limits by
+              reading the values from the <codeph>limits.conf</codeph> file and then from the
+                <codeph>90-nproc.conf</codeph> file. For information about PAM and user limits, see
+              the documentation on PAM and pam_limits. </p></li>
+          <li id="ji162219">XFS is the preferred file system on Linux platforms for data storage.
+            The following XFS mount options are
+              recommended:<codeblock>rw,nodev,noatime,nobarrier,inode64</codeblock><p>See the manual
+              page (man) for the <codeph>mount</codeph> command for more information about using
+              that command (<codeph>man mount</codeph> opens the man page).</p><p>The XFS options
+              can also be set in the <codeph>/etc/fstab</codeph> file. This example entry from an
+                <codeph>fstab</codeph> file specifies the XFS
+            options.</p><codeblock>/dev/data /data xfs nodev,noatime,nobarrier,inode64 0 0</codeblock></li>
+          <li>Each disk device file should have a read-ahead (<codeph>blockdev</codeph>) value of
+              16384.<p>To verify the read-ahead value of a disk
+              device:</p><codeblock># /sbin/blockdev --getra <varname>devname</varname></codeblock><p>For
+              example:</p><codeblock># /sbin/blockdev --getra /dev/sdb</codeblock><p>To set blockdev
+              (read-ahead) on a
+              device:</p><codeblock># /sbin/blockdev --setra <varname>bytes</varname> <varname>devname</varname></codeblock><p>For
+              example:</p><codeblock># /sbin/blockdev --setra 16384 /dev/sdb</codeblock><p>See the
+              manual page (man) for the <codeph>blockdev</codeph> command for more information about
+              using that command (<codeph>man blockdev</codeph> opens the man page).</p></li>
+          <li id="ji162222">The Linux disk I/O scheduler for disk access supports different
+            policies, such as <codeph>CFQ</codeph>, <codeph>AS</codeph>, and
+              <codeph>deadline</codeph>.<p>The <codeph>deadline</codeph> scheduler option is
+              recommended. To specify a scheduler until the next system reboot, run the
+              following:</p><codeblock># echo <varname>schedulername</varname> &gt; /sys/block/<varname>devname</varname>/queue/scheduler</codeblock><p>For
+              example:</p><codeblock># echo deadline &gt; /sys/block/sbd/queue/scheduler</codeblock><p>You
+              can specify the I/O scheduler at boot time with the <codeph>elevator</codeph> kernel
+              parameter. Add the parameter <codeph>elevator=deadline</codeph> to the
+                <cmdname>kernel</cmdname> command in the file <codeph>/boot/grub/grub.conf</codeph>,
+              the GRUB boot loader configuration file. This is an example <cmdname>kernel</cmdname>
+              command from a <codeph>grub.conf</codeph> file on RHEL 6.x or CentOS 6.x. The command
+              is on multiple lines for
+              readability.</p><codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
+    <b>elevator=deadline</b> crashkernel=128M@16M  quiet console=tty1
+    console=ttyS1,115200 panic=30 transparent_hugepage=never 
+    initrd /initrd-2.6.18-274.3.1.el5.img</codeblock><p>To
+              specify the I/O scheduler at boot time on systems that use <codeph>grub2</codeph> such
+              as RHEL 7.x or CentOS 7.x, use the system utility <codeph>grubby</codeph>. This
+              command adds the parameter when run as
+              root.<codeblock># grubby --update-kernel=ALL --args="elevator=deadline"</codeblock></p><p>After
+              adding the parameter, reboot the system.</p><p>This <codeph>grubby</codeph> command
+              displays kernel parameter
+              settings.<codeblock># grubby --info=ALL</codeblock></p><p>For more information about
+              the <codeph>grubby</codeph> utility, see your operating system documentation. If the
+                <codeph>grubby</codeph> command does not update the kernels, see the <xref
+                href="#topic4/grubby_note" format="dita">Note</xref> at the end of the
+            section.</p></li>
+          <li>Disable Transparent Huge Pages (THP). RHEL 6.0 or higher enables THP by default. THP
+            degrades Greenplum Database performance. One way to disable THP on RHEL 6.x is by adding
+            the parameter <codeph>transparent_hugepage=never</codeph> to the
+              <cmdname>kernel</cmdname> command in the file <codeph>/boot/grub/grub.conf</codeph>,
+            the GRUB boot loader configuration file. This is an example <cmdname>kernel</cmdname>
+            command from a <codeph>grub.conf</codeph> file. The command is on multiple lines for
+              readability:<codeblock>kernel /vmlinuz-2.6.18-274.3.1.el5 ro root=LABEL=/
+    elevator=deadline crashkernel=128M@16M  quiet console=tty1
+    console=ttyS1,115200 panic=30 <b>transparent_hugepage=never</b> 
+    initrd /initrd-2.6.18-274.3.1.el5.img</codeblock><p>On
+              systems that use <codeph>grub2</codeph> such as RHEL 7.x or CentOS 7.x, use the system
+              utility <codeph>grubby</codeph>. This command adds the parameter when run as
+              root.<codeblock># grubby --update-kernel=ALL --args="transparent_hugepage=never"</codeblock></p><p>After
+              adding the parameter, reboot the system.</p><p>This <cmdname>cat</cmdname> command
+              checks the state of THP. The output indicates that THP is
+              disabled.<codeblock>$ cat /sys/kernel/mm/*transparent_hugepage/enabled
+always [never]</codeblock></p><p>For
+              more information about Transparent Huge Pages or the <codeph>grubby</codeph> utility,
+              see your operating system documentation. If the <codeph>grubby</codeph> command does
+              not update the kernels, see the <xref href="#topic4/grubby_note" format="dita"
+                >Note</xref> at the end of the section.</p></li>
+          <li>Disable IPC object removal for RHEL 7.2 or CentOS 7.2. The default
+              <codeph>systemd</codeph> setting <codeph>RemoveIPC=yes</codeph> removes IPC
+            connections when non-system users log out. This causes the Greenplum Database utility
+              <codeph>gpinitsystem</codeph> to fail with semaphore errors. Perform one of the
+            following to avoid this issue.<ul id="ul_l21_t2v_q5">
+              <li>Create the <codeph>gpadmin</codeph> user as a system account. For the
+                  <codeph>useradd</codeph> command, the <codeph>-r</codeph> option creates a user as
+                a system user and the <codeph>-m</codeph> option creates a home directory for the
+                user. <note>When you run the <codeph>gpseginstall</codeph> utility as the
+                    <codeph>root</codeph> user to install Greenplum Database on host systems, the
+                  utility creates the <codeph>gpadmin</codeph> user as a system account on the
+                  hosts. See <xref href="#topic8" type="topic" format="dita"/></note></li>
+              <li> Disable <codeph>RemoveIPC</codeph>. Set this parameter in
+                  <codeph>/etc/systemd/logind.conf</codeph> on the Greenplum Database host systems.
+                  <codeblock>RemoveIPC=no</codeblock><p>The setting takes effect after restarting
+                  the <codeph>systemd-login</codeph> service or rebooting the system. To restart the
+                  service, run this command as the root
+                user.</p><codeblock>service systemd-logind restart</codeblock></li>
+            </ul></li>
+          <li>On some SUSE Linux Enterprise Server platforms, the Greenplum Database utility
+              <codeph>gpssh</codeph> fails with the error message <codeph>out of pty
+              devices</codeph>. A workaround is to add Greenplum Database users, for example
+              <codeph>gpadmin</codeph>, to the tty group. On SUSE systems, tty is required to run
+              <codeph>gpssh</codeph></li>
+        </ul>
+        <note id="grubby_note">If the <codeph>grubby</codeph> command does not update the kernels of
+          a RHEL 7.x or CentOS 7.x system, you can manually update all kernels on the system. For
+          example, to add the parameter <codeph>transparent_hugepage=never</codeph> to all kernels
+          on a system.<ol id="ol_bxf_g3x_j1b">
+            <li>Add the parameter to the <codeph>GRUB_CMDLINE_LINUX</codeph> line in the file
+              parameter in
+              <codeph>/etc/default/grub</codeph>.<codeblock>GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
+GRUB_DEFAULT=saved
+GRUB_DISABLE_SUBMENU=true
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_CMDLINE_LINUX="crashkernel=auto rd.lvm.lv=cl/root rd.lvm.lv=cl/swap rhgb quiet <b>transparent_hugepage=never</b>"
+GRUB_DISABLE_RECOVERY="true"</codeblock></li>
+            <li>As root, run the <codeph>grub2-mkconfig</codeph> command to update the
+              kernels.<codeblock># grub2-mkconfig -o /boot/grub2/grub.cfg</codeblock></li>
+            <li>Reboot the system.</li>
+          </ol></note>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic_ylh_b53_c1b">
+    <title>Installing the Greenplum Database Software</title>
+    <body>
+      <p>To configure your systems for Greenplum Database, the master host machine required the
+        utilities found in <codeph>$GPHOME/bin</codeph> of the Greenplum Database software
+        installation. <ph otherprops="pivotal">Pivotal distributes the Greenplum Database software
+          both as a downloadable RPM file and as a binary installer. You can use either distribution
+          method to install the software on the master host machine.</ph></p>
+      <p>If you do not have root access on the master host machine, run the binary installer as the
+          <codeph>gpadmin</codeph> user and install the software into a directory in which you have
+        write permission.</p>
+    </body>
+    <topic id="topic_hky_v53_c1b">
+      <title>Installing the RPM Distribution</title>
+      <body>
+        <ol id="ol_oks_hv3_c1b">
+          <li>Log in as <codeph>root</codeph> on the machine that will become the Greenplum Database
+            master host.</li>
+          <li>Download or copy the RPM distribution file to the master host machine. The RPM
+            distribution filename has the format
+              <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> where
+              <codeph>&lt;platform></codeph> is either <codeph>RHEL6-x86_64</codeph> (Red Hat
+            64-bit) or <codeph>SuSE11-x86_64</codeph> (SuSe Linux 64 bit).</li>
+          <li>Install the local RPM
+              file:<codeblock># rpm -Uvh ./greenplum-db-&lt;version>-&lt;platform>.rpm
+Preparing...                ########################################### [100%]
+   1:greenplum-db           ########################################### [100%]</codeblock><p>The
+              RPM installation copies the Greenplum Database software into a version-specific
+              directory, <codeph>/usr/local/greenplum-db-&lt;version></codeph>.</p></li>
+          <li>Change the ownership and group of the installed files to
+            <codeph>gpadmin</codeph>:<codeblock># chown -R gpadmin /usr/local/greenplum*
+# chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
+          <li>To perform additional required system configuration tasks and to install Greenplum
+            Database on other hosts, go to the next task <xref href="#topic8" type="topic"
+              format="dita"/>.</li>
+        </ol>
+      </body>
+    </topic>
+    <topic id="topic7" xml:lang="en" otherprops="pivotal">
+      <title id="ji162286">Installing the Binary Distribution</title>
+      <body>
+        <ol id="ol_vhj_rw3_c1b">
+          <li>Log in as <codeph>root</codeph> on the machine that will become the Greenplum Database
+            master host.<p>If you do not have root access on the master host machine, run the binary
+              installer as the <codeph>gpadmin</codeph> user and install the software into a
+              directory in which you have write permission.</p></li>
+          <li id="ji162300">Download or copy the Binary Installation distribution file to the master
+            host machine. The Binary Installer distribution filename has the format
+              <codeph>greenplum-db-&lt;version>-&lt;platform>.zip</codeph> where
+              <codeph>&lt;platform></codeph> is either <codeph>RHEL6-x86_64</codeph> (Red Hat
+            64-bit) or <codeph>SuSE11-x86_64</codeph> (SuSe Linux 64 bit).</li>
+          <li id="ji162305">Unzip the installer
+            file:<codeblock># unzip greenplum-db-&lt;version>-&lt;platform>.zip</codeblock></li>
+          <li id="ji162310">Launch the installer using
+            <codeph>bash</codeph>:<codeblock># /bin/bash greenplum-db-&lt;version>-&lt;platform>.bin</codeblock></li>
+          <li id="ji162318">The installer prompts you to accept the Greenplum Database license
+            agreement. Type <codeph>yes</codeph> to accept the license agreement.</li>
+          <li id="ji162319">The installer prompts you to provide an installation path. Press
+              <codeph>ENTER</codeph> to accept the default install path
+              (<codeph>/usr/local/greenplum-db-&lt;version></codeph>), or enter an absolute path to
+            a custom install location. You must have write permission to the location you specify. </li>
+          <li id="ji162335">The installer installs the Greenplum Database software and creates a
+              <codeph>greenplum-db</codeph> symbolic link one directory level above the
+            version-specific installation directory. The symbolic link is used to facilitate patch
+            maintenance and upgrades between versions. The installed location is referred to as
+              <codeph>$GPHOME</codeph>.</li>
+          <li>If you installed as <codeph>root</codeph>, change the ownership and group of the
+            installed files to
+            <codeph>gpadmin</codeph>:<codeblock># chown -R gpadmin /usr/local/greenplum*
+# chgrp -R gpadmin /usr/local/greenplum*</codeblock></li>
+          <li id="ji162342">To perform additional required system configuration tasks and to install
+            Greenplum Database on other hosts, go to the next task <xref href="#topic8" type="topic"
+              format="dita"/>.</li>
+        </ol>
+      </body>
+    </topic>
+    <topic id="id_nkj_c1d_fbb">
+      <title>About Your Greenplum Database Installation</title>
+      <body>
+        <ul id="ul_rmj_c1d_fbb">
+          <li id="ji162356"><codeph>greenplum_path.sh</codeph> — This file contains the environment
+            variables for Greenplum Database. See <xref href="./init_gpdb.xml#topic8" type="topic"
+              format="dita"/>.</li>
+          <li id="ji162367"><b>bin</b> — This directory contains the Greenplum Database management
+            utilities. This directory also contains the PostgreSQL client and server programs, most
+            of which are also used in Greenplum Database.</li>
+          <li id="ji162379"><b>docs/cli_help</b> — This directory contains help files for Greenplum
+            Database command-line utilities. </li>
+          <li><b>docs/cli_help/gpconfigs</b> — This directory contains sample
+              <codeph>gpinitsystem</codeph> configuration files and host files that can be modified
+            and used when installing and initializing a Greenplum Database system.</li>
+          <li><b>docs/javadoc</b> — This directory contains javadocs for the gNet extension (gphdfs
+            protocol). The jar files for the gNet extension are installed in the
+              <codeph>$GPHOME/lib/hadoop</codeph> directory.</li>
+          <li id="ji162380"><b>etc</b> — Sample configuration file for OpenSSL and a sample
+            configuration file to be used with the <codeph>gpcheck</codeph> management utility.</li>
+          <li id="ji162382"><b>ext</b> — Bundled programs (such as Python) used by some Greenplum
+            Database utilities.</li>
+          <li id="ji162386"><b>include</b> — The C header files for Greenplum Database.</li>
+          <li id="ji162390"><b>lib</b> — Greenplum Database and PostgreSQL library files.</li>
+          <li id="ji162391"><b>sbin</b> — Supporting/Internal scripts and programs.</li>
+          <li id="ji162396"><b>share</b> — Shared files for Greenplum Database.</li>
+        </ul>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic8" xml:lang="en">
+    <title id="ji162401">Installing and Configuring Greenplum on all Hosts</title>
+    <body>
+      <p>When run as <codeph>root</codeph>, <codeph><xref
+            href="../utility_guide/admin_utilities/gpseginstall.xml" format="dita" scope="peer"
+            >gpseginstall</xref></codeph> copies the Greenplum Database installation from the
+        current host and installs it on a list of specified hosts, creates the Greenplum system user
+          (<codeph>gpadmin</codeph>), sets the system user's password (default is
+          <codeph>changeme</codeph>), sets the ownership of the Greenplum Database installation
+        directory, and exchanges ssh keys between all specified host address names (both as
+          <codeph>root</codeph> and as the specified system user). </p>
+    </body>
+    <topic id="topic9" xml:lang="en">
+      <title>About gpadmin</title>
+      <body>
+        <p>When a Greenplum Database system is first initialized, the system contains one predefined
+          superuser role (also referred to as the system user), <codeph>gpadmin</codeph>. This is
+          the user who owns and administers the Greenplum Database.</p>
+        <note type="note">If you are setting up a single node system, you can still use
+              <codeph><xref href="../utility_guide/admin_utilities/gpseginstall.xml" format="dita"
+              scope="peer" type="topic">gpseginstall</xref></codeph> to perform the required system
+          configuration tasks on the current host. In this case, the
+            <codeph>hostfile_exkeys</codeph> should have only the current host name.</note>
+        <section id="ji162427">
+          <title>To install and configure Greenplum Database on all specified hosts</title>
+          <ol>
+            <li id="ji162428">Log in to the master host as
+              <codeph>root</codeph>:<codeblock>$ su -</codeblock></li>
+            <li id="ji162433">Source the path file from your master host's Greenplum Database
+              installation
+              directory:<codeblock># source /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
+            <li id="ji162441">Create a file called <codeph>hostfile_exkeys</codeph> that has the
+              machine configured host names and host addresses (interface names) for each host in
+              your Greenplum system (master, standby master and segments). Make sure there are no
+              blank lines or extra spaces. For example, if you have a master, standby master and
+              three segments with two unbonded network interfaces per host, your file would look
+              something like
+                this:<codeblock>mdw
+mdw-1
+mdw-2
+smdw
+smdw-1
+smdw-2
+sdw1
+sdw1-1
+sdw1-2
+sdw2
+sdw2-1
+sdw2-2
+sdw3
+sdw3-1
+sdw3-2</codeblock><p>Check
+                the <codeph>/etc/hosts</codeph> file on your systems for the correct host names to
+                use for your environment.</p><p>The Greenplum Database segment host naming
+                convention is <varname>sdwN</varname> where <varname>sdw</varname> is a prefix and
+                  <varname>N</varname> is an integer. For example, segment host names would be
+                  <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on. NIC bonding is recommended
+                for hosts with multiple interfaces, but when the interfaces are not bonded, the
+                convention is to append a dash (<codeph>-</codeph>) and number to the host name. For
+                example, <codeph>sdw1-1</codeph> and <codeph>sdw1-2</codeph> are the two interface
+                names for host <codeph>sdw1</codeph>. </p></li>
+            <li id="ji162464">Run the <codeph><xref
+                  href="../utility_guide/admin_utilities/gpseginstall.xml" format="dita"
+                  scope="peer" type="topic">gpseginstall</xref></codeph> utility referencing the
+                <codeph>hostfile_exkeys</codeph> file you just created. This example runs the
+              utility as <codeph>root</codeph>. The utility creates the Greenplum system user
+                <codeph>gpadmin</codeph> on all hosts and sets the password as
+                <codeph>changeme</codeph> for that user on all
+                hosts.<codeblock># gpseginstall -f hostfile_exkeys</codeblock><p>Use the
+                  <codeph>-u</codeph> and <codeph>-p</codeph> options to specify a different system
+                user and password. See <codeph><xref
+                    href="../utility_guide/admin_utilities/gpseginstall.xml" format="dita"
+                    scope="peer" type="topic">gpseginstall</xref></codeph> for option information
+                and running the utility as a non-root user.</p></li>
+          </ol>
+          <p>Recommended security best practices:<ul id="ul_lc1_zq5_3bb">
+              <li id="ji162477">Do not use the default password option for production
+                environments.</li>
+              <li id="ji162478">Change the password immediately after installation.</li>
+            </ul></p>
+        </section>
+      </body>
+    </topic>
+    <topic id="topic10" xml:lang="en">
+      <title>Confirming Your Installation</title>
+      <body>
+        <p>To make sure the Greenplum software was installed and configured correctly, run the
+          following confirmation steps from your Greenplum master host. If necessary, correct any
+          problems before continuing on to the next task.</p>
+        <ol>
+          <li id="ji162490">Log in to the master host as
+            <codeph>gpadmin</codeph>:<codeblock>$ su - <varname>gpadmin</varname></codeblock></li>
+          <li id="ji162498">Source the path file from Greenplum Database installation
+            directory:<codeblock># source /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
+          <li id="ji162506">Use the <codeph>gpssh</codeph> utility to see if you can login to all
+            hosts without a password prompt, and to confirm that the Greenplum software was
+            installed on all hosts. Use the <codeph>hostfile_exkeys</codeph> file you used for
+            installation. For
+              example:<codeblock>$ gpssh -f hostfile_exkeys -e ls -l $GPHOME</codeblock><p>If the
+              installation was successful, you should be able to log in to all hosts without a
+              password prompt. All hosts should show that they have the same contents in their
+              installation directories, and that the directories are owned by the
+                <codeph>gpadmin</codeph> user.</p><p>If you are prompted for a password, run the
+              following command to redo the ssh key
+            exchange:</p><codeblock>$ gpssh-exkeys -f hostfile_exkeys</codeblock></li>
+        </ol>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic11" xml:lang="en">
+    <title id="ji162518">Installing Oracle Compatibility Functions</title>
+    <body>
+      <p><i>Optional.</i> Many Oracle Compatibility SQL functions are available in Greenplum
+        Database. These functions target PostgreSQL.</p>
+      <p>Before using any Oracle Compatibility Functions, you need to run the installation script
+          <codeph>$GPHOME/share/postgresql/contrib/orafunc.sql</codeph> once for each database. For
+        example, to install the functions in database <codeph>testdb</codeph>, use the command </p>
+      <codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/orafunc.sql</codeblock>
+      <p>To uninstall Oracle Compatibility Functions, use the script:</p>
+      <codeblock>$GPHOME/share/postgresql/contrib/uninstall_orafunc.sql</codeblock>
+      <note>The following functions are available by default and can be accessed without running the
+        Oracle Compatibility installer: <codeph>sinh</codeph>, <codeph>tanh</codeph>,
+          <codeph>cosh</codeph> and <codeph>decode</codeph>.</note>
+      <p>For more information about Greenplum's Oracle compatibility functions, see "Oracle
+        Compatibility Functions" in the <i>Greenplum Database Utility Guide</i>.</p>
+    </body>
+  </topic>
+  <topic id="topic_sqb_bsw_2z">
+    <title>Installing Optional Modules</title>
+    <topic id="topic_mjj_drd_yz">
+      <title>dblink</title>
+      <body>
+        <p>The PostgreSQL <codeph>dblink</codeph> module provides simple connections to other
+          databases either on the same database host, or on a remote host. Greenplum Database
+          provides <codeph>dblink</codeph> support for database users to perform short ad hoc
+          queries in other databases. It is not intended as a replacement for external tables or
+          administrative tools such as <codeph>gptransfer</codeph>.</p>
+        <p>Before you can use <codeph>dblink</codeph> functions, run the installation script
+            <codeph>$GPHOME/share/postgresql/contrib/dblink.sql</codeph> in each database where you
+          want the ability to query other
+          databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/dblink.sql</codeblock></p>
+        <p>See <xref href="../utility_guide/dblink.html" format="dita" scope="peer" type="topic"
+            >dblink Functions</xref> for basic information about using <codeph>dblink</codeph> to
+          query other databases. See <xref
+            href="https://www.postgresql.org/docs/8.3/static/dblink.html" format="html"
+            scope="external">dblink</xref> in the PostgreSQL documentation for more information
+          about individual functions.</p>
+      </body>
+    </topic>
+    <topic id="topic_qml_2rd_yz">
+      <title>pgcrypto</title>
+      <body>
+        <p>Greenplum Database includes an optional package of encryption/decryption functions called
+            <codeph>pgcrypto</codeph>. The <codeph>pgcrypto</codeph> functions allow database
+          administrators to store certain columns of data in encrypted form. This adds an extra
+          layer of protection for sensitive data, as data stored in Greenplum Database in encrypted
+          form cannot be read by anyone who does not have the encryption key, nor can it be read
+          directly from the disks. </p>
+        <note>The <codeph>pgcrypto</codeph> functions run inside the database server, which means
+          that all the data and passwords move between <codeph>pgcrypto</codeph> and the client
+          application in clear-text. For optimal security, consider also using SSL connections
+          between the client and the Greenplum master server.<p>Before you can use
+              <codeph>pgcrypto</codeph> functions, run the installation script
+              <codeph>$GPHOME/share/postgresql/contrib/pgcrypto.sql</codeph> in each database where
+            you want the ability to query other
+            databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></p><p>See
+              <xref href="https://www.postgresql.org/docs/8.3/static/pgcrypto.html" format="html"
+              scope="external">pgcrypto</xref> in the PostgreSQL documentation for more information
+            about individual functions.</p></note>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic12" xml:lang="en" otherprops="pivotal">
+    <title id="ji162527">Installing Greenplum Database Extensions</title>
+    <body>
+      <p><i>Optional.</i> Use the Greenplum package manager (<codeph>gppkg</codeph>) to install
+        Greenplum Database extensions such as PL/Java, PL/R, PostGIS, and MADlib, along with their
+        dependencies, across an entire cluster. The package manager also integrates with existing
+        scripts so that any packages are automatically installed on any new hosts introduced into
+        the system following cluster expansion or segment host recovery.</p>
+      <p>See <codeph><xref href="../utility_guide/admin_utilities/gppkg.xml" format="dita"
+            scope="peer" type="topic">gppkg</xref></codeph> for more information, including
+        usage.</p>
+      <p>Extension packages can be downloaded from the Greenplum Database page on <xref
+          href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
+          class="- topic/xref ">Pivotal Network</xref>. The extension documentation in the <i><xref
+            format="dita" scope="peer" type="topic" href="../ref_guide/ref_guide.xml">Greenplum
+            Database Reference Guide</xref></i> contains information about installing extension
+        packages and using extensions.<ul id="ul_i5j_hrl_dbb">
+          <li><xref format="dita" scope="peer" type="topic"
+              href="../ref_guide/extensions/pl_r.xml#topic1">Greenplum PL/R Language
+              Extension</xref></li>
+          <li><xref format="dita" scope="peer" type="topic"
+              href="../ref_guide/extensions/pl_java.xml#topic1">Greenplum PL/Java Language
+              Extension</xref></li>
+          <li><xref format="dita" scope="peer" type="topic"
+              href="../ref_guide/extensions/madlib.xml#topic1">Greenplum MADlib Extension for
+              Analytics</xref></li>
+          <li><xref format="dita" scope="peer" type="topic"
+              href="../ref_guide/extensions/postGIS.xml#topic1">Greenplum PostGIS
+            Extension</xref></li>
+        </ul></p>
+      <note type="important">If you intend to use an extension package with Greenplum Database 5.0.0
+        you must install and use a Greenplum Database extension package (gppkg files and contrib
+        modules) that is built for Greenplum Database 5.0.0. Any custom modules that were used with
+        earlier versions must be rebuilt for use with Greenplum Database 5.0.0.</note>
+    </body>
+  </topic>
+  <topic id="topic13" xml:lang="en">
+    <title id="ji162534">Creating the Data Storage Areas</title>
+    <body>
+      <p>Every Greenplum Database master and segment instance has a designated storage area on disk
+        that is called the <i>data directory</i> location. This is the file system location where
+        the directories that store segment instance data will be created. The master host needs a
+        data storage location for the master data directory. Each segment host needs a data
+        directory storage location for its primary segments, and another for its mirror
+        segments.</p>
+    </body>
+    <topic id="topic_wqb_1lc_wp">
+      <title>Creating a Data Storage Area on the Master Host</title>
+      <body>
+        <p>A data storage area is required on the Greenplum Database master host to store Greenplum
+          Database system data such as catalog data and other system metadata. </p>
+        <section id="topic_ix1_x1n_tp">
+          <title>To create the data directory location on the master</title>
+          <p>The data directory location on the master is different than those on the segments. The
+            master does not store any user data, only the system catalog tables and system metadata
+            are stored on the master instance, therefore you do not need to designate as much
+            storage space as on the segments.</p>
+          <ol id="ol_x3b_clc_wp">
+            <li id="ji162541">Create or choose a directory that will serve as your master data
+              storage area. This directory should have sufficient disk space for your data and be
+              owned by the <codeph>gpadmin</codeph> user and group. For example, run the following
+              commands as <codeph>root</codeph>:<codeblock># mkdir /data/master</codeblock></li>
+            <li id="ji162549">Change ownership of this directory to the <codeph>gpadmin</codeph>
+              user. For example:<codeblock># chown gpadmin /data/master</codeblock></li>
+            <li id="ji162557">Using <codeph><xref href="../utility_guide/admin_utilities/gpssh.xml"
+                  format="dita" scope="peer" type="topic">gpssh</xref></codeph>, create the master
+              data directory location on your standby master as well. For
+              example:<codeblock># source /usr/local/greenplum-db-5.0.<varname>x.x</varname>/greenplum_path.sh 
+# gpssh -h smdw -e 'mkdir /data/master'
+# gpssh -h smdw -e 'chown gpadmin /data/master'</codeblock></li>
+          </ol>
+        </section>
+      </body>
+    </topic>
+    <topic id="topic_pgz_qkc_wp">
+      <title>Creating Data Storage Areas on Segment Hosts</title>
+      <body>
+        <p>Data storage areas are required on the Greenplum Database segment hosts for primary
+          segments. Separate storage areas are required for mirror segments. </p>
+        <section id="topic_tnb_v1n_tp">
+          <title>To create the data directory locations on all segment hosts</title>
+          <ol id="ol_otk_xkc_wp">
+            <li id="ji162571">On the master host, log in as
+              <codeph>root</codeph>:<codeblock># su</codeblock></li>
+            <li id="ji162573">Create a file called <codeph>hostfile_gpssh_segonly</codeph>. This
+              file should have only one machine configured host name for each segment host. For
+              example, if you have three segment hosts:<codeblock>sdw1
+sdw2
+sdw3</codeblock></li>
+            <li id="ji162580">Using <codeph><xref href="../utility_guide/admin_utilities/gpssh.xml"
+                  format="dita" scope="peer">gpssh</xref></codeph>, create the primary and mirror
+              data directory locations on all segment hosts at once using the
+                <codeph>hostfile_gpssh_segonly</codeph> file you just created. For
+              example:<codeblock># source /usr/local/greenplum-db-5.0.<varname>x.x</varname>/greenplum_path.sh 
+# gpssh -f hostfile_gpssh_segonly -e 'mkdir /data/primary'
+# gpssh -f hostfile_gpssh_segonly -e 'mkdir /data/mirror'
+# gpssh -f hostfile_gpssh_segonly -e 'chown gpadmin /data/primary'
+# gpssh -f hostfile_gpssh_segonly -e 'chown gpadmin /data/mirror'</codeblock></li>
+          </ol>
+        </section>
+      </body>
+    </topic>
+  </topic>
+  <topic xml:lang="en" id="topic_qst_s5t_wy">
+    <title id="ji162593">Synchronizing System Clocks </title>
+    <body>
+      <p>You should use NTP (Network Time Protocol) to synchronize the system clocks on all hosts
+        that comprise your Greenplum Database system. See <xref href="http://www.ntp.org"
+          scope="external" format="html">www.ntp.org</xref> for more information about NTP. </p>
+      <p>NTP on the segment hosts should be configured to use the master host as the primary time
+        source, and the standby master as the secondary time source. On the master and standby
+        master hosts, configure NTP to point to your preferred time server.</p>
+      <section id="ji162603">
+        <title>To configure NTP</title>
+        <ol>
+          <li id="ji162604">On the master host, log in as root and edit the
+              <codeph>/etc/ntp.conf</codeph> file. Set the <codeph>server</codeph> parameter to
+            point to your data center's NTP time server. For example (if
+              <codeph>10.6.220.20</codeph> was the IP address of your data center's NTP
+            server):<codeblock>server 10.6.220.20</codeblock></li>
+          <li id="ji162606">On each segment host, log in as root and edit the
+              <codeph>/etc/ntp.conf</codeph> file. Set the first <codeph>server</codeph> parameter
+            to point to the master host, and the second server parameter to point to the standby
+            master host. For example:<codeblock>server mdw prefer
+server smdw</codeblock></li>
+          <li id="ji162609">On the standby master host, log in as root and edit the
+              <codeph>/etc/ntp.conf</codeph> file. Set the first <codeph>server</codeph> parameter
+            to point to the primary master host, and the second server parameter to point to your
+            data center's NTP time server. For
+            example:<codeblock>server mdw prefer
+server 10.6.220.20</codeblock></li>
+          <li id="ji162612">On the master host, use the NTP daemon synchronize the system clocks on
+            all Greenplum hosts. For example, using <codeph><xref
+                href="../utility_guide/admin_utilities/gpssh.xml" format="dita" scope="peer"
+                type="topic"
+            >gpssh</xref></codeph>:<codeblock># gpssh -f hostfile_gpssh_allhosts -v -e 'ntpd'</codeblock></li>
+        </ol>
+      </section>
+    </body>
+  </topic>
+  <topic id="topic15" xml:lang="en">
+    <title id="ji163114">Enabling iptables</title>
+    <body>
+      <p>On Linux systems, you can configure and enable the <codeph>iptables</codeph> firewall to
+        work with Greenplum Database. </p>
+      <note type="note">Greenplum Database performance might be impacted when
+          <codeph>iptables</codeph> is enabled. You should test the performance of your application
+        with <codeph>iptables</codeph> enabled to ensure that performance is acceptable.</note>
+      <p>For more information about <codeph>iptables</codeph> see the <codeph>iptables</codeph> and
+        firewall documentation for your operating system. </p>
+      <section id="ji163124">
+        <title>How to Enable iptables </title>
+        <ol>
+          <li id="ji163128">As gpadmin, the Greenplum Database administrator, run this command on
+            the Greenplum Database master host to stop Greenplum
+            Database:<codeblock>$ gpstop -a</codeblock></li>
+          <li id="ji163139">On the Greenplum Database hosts:<ol>
+              <li id="ji163142">Update the file <codeph>/etc/sysconfig/iptables</codeph> based on
+                the <xref href="#topic16" type="topic" format="dita"/>. </li>
+              <li id="ji163144">As root user, run these commands to enable
+                <codeph>iptables</codeph>:<codeblock># chkconfig iptables on
+# service iptables start</codeblock></li>
+            </ol></li>
+          <li id="ji163149">As gpadmin, run this command on the Greenplum Database master host to
+            start Greenplum Database:<codeblock>$ gpstart -a</codeblock></li>
+        </ol>
+        <note type="warning">After enabling <codeph>iptables</codeph>, this error in the
+            <codeph>/var/log/messages</codeph> file indicates that the setting for the
+            <codeph>iptables</codeph> table is too low and needs to be
+            increased.<codeblock>ip_conntrack: table full, dropping packet.</codeblock><p>As root
+            user, run this command to view the <codeph>iptables</codeph> table
+            value:</p><codeblock># sysctl net.ipv4.netfilter.ip_conntrack_max</codeblock><p>The
+            following is the recommended setting to ensure that the Greenplum Database workload does
+            not overflow the <codeph>iptables</codeph> table. The value might need to be adjusted
+            for your hosts: <codeph>net.ipv4.netfilter.ip_conntrack_max=6553600</codeph></p><p>You
+            can update <codeph>/etc/sysctl.conf</codeph> file with the value. For setting values in
+            the file, see <xref href="#topic3" type="topic" format="dita"/>.</p><p>To set the value
+            until the next reboots run this command as
+          root.</p><codeblock># sysctl net.ipv4.netfilter.ip_conntrack_max=6553600</codeblock></note>
+      </section>
+    </body>
+    <topic id="topic16" xml:lang="en">
+      <title id="ji163171">Example iptables Rules</title>
+      <body>
+        <p>When <codeph>iptables</codeph> is enabled, <codeph>iptables</codeph> manages the IP
+          communication on the host system based on configuration settings (rules). The example
+          rules are used to configure <codeph>iptables</codeph> for Greenplum Database master host,
+          standby master host, and segment hosts. </p>
+        <ul>
+          <li id="ji163179">
+            <xref href="#topic17" type="topic" format="dita"/>
+          </li>
+          <li id="ji163183">
+            <xref href="#topic18" type="topic" format="dita"/>
+          </li>
+        </ul>
+        <p>The two sets of rules account for the different types of communication Greenplum Database
+          expects on the master (primary and standby) and segment hosts. The rules should be added
+          to the <codeph>/etc/sysconfig/iptables</codeph> file of the Greenplum Database hosts. For
+          Greenplum Database, <codeph>iptables</codeph> rules should allow the following
+          communication: </p>
+        <ul>
+          <li id="ji163197">For customer facing communication with the Greenplum Database master,
+            allow at least <codeph>postgres</codeph> and <codeph>28080</codeph>
+              (<codeph>eth1</codeph> interface in the example). </li>
+          <li id="ji163201">For Greenplum Database system interconnect, allow communication using
+              <codeph>tcp</codeph>, <codeph>udp</codeph>, and <codeph>icmp</codeph> protocols
+              (<codeph>eth4</codeph> and <codeph>eth5</codeph> interfaces in the example).<p>The
+              network interfaces that you specify in the <codeph>iptables</codeph> settings are the
+              interfaces for the Greenplum Database hosts that you list in the
+                <varname>hostfile_gpinitsystem</varname> file. You specify the file when you run the
+                <codeph>gpinitsystem</codeph> command to intialize a Greenplum Database system. See
+                <xref href="./init_gpdb.xml#topic1" type="topic" format="dita"/> for information
+              about the <varname>hostfile_gpinitsystem</varname> file and the
+                <codeph>gpinitsystem</codeph> command. </p></li>
+          <li id="ji163212" otherprops="dca">For the administration network on a Greenplum DCA,
+            allow communication using <codeph>ssh</codeph>, <codeph>snmp</codeph>,
+              <codeph>ntp</codeph>, and <codeph>icmp</codeph> protocols. (<codeph>eth0</codeph>
+            interface in the example).</li>
+        </ul>
+        <p>In the <codeph>iptables</codeph> file, each append rule command (lines starting with
+            <codeph>-A</codeph>) is a single line.</p>
+        <p>The example rules should be adjusted for your configuration. For example:</p>
+        <ul>
+          <li id="ji163215">The append command, the <codeph>-A</codeph> lines and connection
+            parameter <codeph>-i</codeph> should match the connectors for your hosts.</li>
+          <li id="ji163216">the CIDR network mask information for the source parameter
+              <codeph>-s</codeph> should match the IP addresses for your network.</li>
+        </ul>
+      </body>
+      <topic id="topic17" xml:lang="en">
+        <title id="ji163218">Example Master and Standby Master iptables Rules</title>
+        <body>
+          <p>Example <codeph>iptables</codeph> rules with comments for the
+              <codeph>/etc/sysconfig/iptables</codeph> file on the Greenplum Database master host
+            and standby master host.</p>
+          <codeblock>*filter
+# Following 3 are default rules. If the packet passes through
+# the rule set it gets these rule.
+# Drop all inbound packets by default.
+# Drop all forwarded (routed) packets.
+# Let anything outbound go through.
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+# Accept anything on the loopback interface.
+-A INPUT -i lo -j ACCEPT
+# If a connection has already been established allow the
+# remote host packets for the connection to pass through.
+-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+# These rules let all tcp and udp through on the standard
+# interconnect IP addresses and on the interconnect interfaces.
+# NOTE: gpsyncmaster uses random tcp ports in the range 1025 to 65535
+# and Greenplum Database uses random udp ports in the range 1025 to 65535.
+-A INPUT -i eth4 -p udp -s 192.0.2.0/22 -j ACCEPT
+-A INPUT -i eth5 -p udp -s 198.51.100.0/22 -j ACCEPT
+-A INPUT -i eth4 -p tcp -s 192.0.2.0/22 -j ACCEPT --syn -m state --state NEW
+-A INPUT -i eth5 -p tcp -s 198.51.100.0/22 -j ACCEPT --syn -m state --state NEW<ph otherprops="dca">
+# Allow snmp connections on the admin network on Greenplum DCA.
+-A INPUT -i eth0 -p udp --dport snmp -s 203.0.113.0/21 -j ACCEPT
+-A INPUT -i eth0 -p tcp --dport snmp -s 203.0.113.0/21 -j ACCEPT --syn -m state --state NEW
+# Allow udp/tcp ntp connections on the admin network on Greenplum DCA.
+-A INPUT -i eth0 -p udp --dport ntp -s 203.0.113.0/21 -j ACCEPT
+-A INPUT -i eth0 -p tcp --dport ntp -s 203.0.113.0/21 -j ACCEPT --syn -m state --state NEW</ph>
+# Allow ssh on all networks (This rule can be more strict).
+-A INPUT -p tcp --dport ssh -j ACCEPT --syn -m state --state NEW
+# Allow Greenplum Database on all networks.
+-A INPUT -p tcp --dport postgres -j ACCEPT --syn -m state --state NEW
+# Allow Greenplum Command Center on the customer facing network.
+-A INPUT -i eth1 -p tcp --dport 28080 -j ACCEPT --syn -m state --state NEW
+# Allow ping and any other icmp traffic on the interconnect networks.
+-A INPUT -i eth4 -p icmp -s 192.0.2.0/22 -j ACCEPT
+-A INPUT -i eth5 -p icmp -s 198.51.100.0/22 -j ACCEPT<ph otherprops="dca">
+# Allow ping only on the admin network on Greenplum DCA.
+-A INPUT -i eth0 -p icmp --icmp-type echo-request -s 203.0.113.0/21 -j ACCEPT</ph>
+# Log an error if a packet passes through the rules to the default
+# INPUT rule (a DROP).
+-A INPUT -m limit --limit 5/min -j LOG --log-prefix "iptables denied: " --log-level 7
+COMMIT</codeblock>
+        </body>
+      </topic>
+      <topic id="topic18" xml:lang="en">
+        <title id="ji163239">Example Segment Host iptables Rules</title>
+        <body>
+          <p>Example <codeph>iptables</codeph> rules for the
+              <codeph>/etc/sysconfig/iptables</codeph> file on the Greenplum Database segment hosts.
+            The rules for segment hosts are similar to the master rules with fewer interfaces and
+            fewer <codeph>udp</codeph> and <codeph>tcp</codeph> services. </p>
+          <codeblock>*filter
+:INPUT DROP
+:FORWARD DROP
+:OUTPUT ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+-A INPUT -i eth2 -p udp -s 192.0.2.0/22 -j ACCEPT
+-A INPUT -i eth3 -p udp -s 198.51.100.0/22 -j ACCEPT
+-A INPUT -i eth2 -p tcp -s 192.0.2.0/22 -j ACCEPT --syn -m state --state NEW
+-A INPUT -i eth3 -p tcp -s 198.51.100.0/22 -j ACCEPT --syn -m state --state NEW
+-A INPUT -i eth0 -p udp --dport snmp -s 203.0.113.0/21 -j ACCEPT
+-A INPUT -i eth0 -p tcp --dport snmp -j ACCEPT --syn -m state --state NEW
+-A INPUT -p tcp --dport ssh -j ACCEPT --syn -m state --state NEW
+-A INPUT -i eth2 -p icmp -s 192.0.2.0/22 -j ACCEPT
+-A INPUT -i eth3 -p icmp -s 198.51.100.0/22 -j ACCEPT
+-A INPUT -i eth0 -p icmp --icmp-type echo-request -s 203.0.113.0/21 -j ACCEPT
+-A INPUT -m limit --limit 5/min -j LOG --log-prefix "iptables denied: " --log-level 7
+COMMIT</codeblock>
+        </body>
+      </topic>
+    </topic>
+  </topic>
+  <topic id="ec2_config" xml:lang="en">
+    <title id="id135496">Amazon EC2 Configuration (Amazon Web Services)</title>
+    <body>
+      <p>You can install and configure Greenplum Database on virtual servers provided by the Amazon
+        Elastic Compute Cloud (Amazon EC2) web service. Amazon EC2 is a service provided by Amazon
+        Web Services (AWS). The following overview information describes how to install Greenplum
+        Database in an Amazon EC2 environment.</p>
+    </body>
+    <topic id="topic_wqv_yfx_y5">
+      <title>About Amazon EC2</title>
+      <body>
+        <p>You can use Amazon EC2 to launch as many virtual servers as you need, configure security
+          and networking, and manage storage. An EC2 <i>instance</i> is a virtual server in the AWS
+          cloud virtual computing environment. </p>
+        <p>EC2 instances are manged by AWS. AWS isolates your EC2 instances from other users in a
+          virtual private cloud (VPC) and lets you control access to the instances. You can
+          configure instance features such as operating system, network connectivity (network ports
+          and protocols, IP address access), access to the to the Internet, and size and type of
+          disk storage. </p>
+        <p>When you launch an instance, you use a preconfigured template for your instance, known as
+          an Amazon Machine Image (AMI). The AMI packages the bits you need for your server
+          (including the operating system and additional software). You can use images supplied by
+          Amazon or use customized images. You launch instances in an Availability Zone of an AWS
+          region. An <i>Availability Zone</i> is distinct location within a region that are
+          engineered to be insulated from failures in other Availability Zones. </p>
+        <p>For information about Amazon EC2, see <xref
+            href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html" format="html"
+            scope="external"
+          >http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/concepts.html</xref></p>
+      </body>
+      <topic id="topic_nhk_df4_2v">
+        <title>Launching EC2 Instances with the EC2 Console</title>
+        <body>
+          <p>You can launch instances, configure, start, stop, and terminate (delete) virtual
+            servers, with the Amazon EC2 Console. When you launch instances, you select these
+            features.</p>
+          <parml>
+            <plentry>
+              <pt>Amazon Machine Image (AMI)</pt>
+              <pd>An AMI is a template that contains the software configuration (operating system,
+                application server, and applications). </pd>
+              <pd><b>For Greenplum Database</b> - Select an AMI that runs a supported operating
+                system. See the <cite>Greenplum Database Release Notes</cite> for the release that
+                you are installing. </pd>
+              <pd>
+                <note>You create and launch a customized AMI, see <xref href="#topic_n3y_4gx_y5"
+                    format="dita"/></note>
+              </pd>
+            </plentry>
+            <plentry>
+              <pt>EC2 Instance Type</pt>
+              <pd>A predefined set performance characteristics. Instance types comprise varying
+                combinations of CPU, memory, default storage, and networking capacity. You can
+                modify storage options when you add storage.</pd>
+              <pd><b>For Greenplum Database</b> - The instance type must be an EBS-Optimized
+                instance type when using Amazon EBS storage for Greenplum Database. See <xref
+                  href="#topic_nhk_df4_2v/gpdb_storage" format="dita">Configure storage</xref> for
+                information about Greenplum Database storage requirements. For information about
+                EBS-Optimized instances, see the Amazon documentation about <xref
+                  href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSOptimized.html"
+                  format="html" scope="external">EBS-Optimized instances</xref>.</pd>
+              <pd>For sufficient network performance, the instance type must also support EC2
+                enhanced networking. For information about EC2 enhanced networking, see the Amazon
+                documentation about <xref
+                  href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html"
+                  format="html" scope="external">Enhanced Networking on Linux Instances</xref>.</pd>
+              <pd>The instances should be in a single VPC and subnet. Instances are always assigned
+                a VPC internal IP address and can be assigned a public IP address for external and
+                Internet access.</pd>
+              <pd>The internal IP address is used for Greenplum Database communication between
+                hosts. You can also use the internal IP address to access an instance from another
+                instance within the EC2 VPC. For information about configuring launched instances to
+                communicate with each other, see <xref href="#topic_mj4_524_2v" format="dita"
+                />.</pd>
+              <pd>A public IP address for the instance and an Internet gateway configured for the
+                EC2 VPC are required for accessing the instance from an external source and for the
+                instance to access the Internet. Internet access is required when installing Linux
+                packages. When you launch a set of instances, you can enable or disable the
+                automatic assignment of public IP addresses when the instances are started. </pd>
+              <pd>If automatic assignment of public IP addresses is enabled, instances are always
+                assigned a public IP address when the instance starts. If automatic assignment of
+                public IP addresses is disabled, you can associate a public IP address with the EC2
+                elastic IP, and temporarily associate public IP addresses to an instance to connect
+                and configure the instance.</pd>
+              <pd>To control whether a public IP is assigned when launching an instance, see the
+                Amazon documentation about <xref
+                  href="https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/vpc-ip-addressing.html#subnet-public-ip"
+                  format="html" scope="external">Subnet Public IP Addressing</xref>.</pd>
+            </plentry>
+            <plentry>
+              <pt>EC2 Instance Details</pt>
+              <pd>Information about starting, running, and stopping EC2 instances, such as such as
+                number of instances of the same AMI, network information, and EC2 VPC and subnet
+                membership.</pd>
+            </plentry>
+            <plentry id="gpdb_storage">
+              <pt>Configure storage</pt>
+              <pd>Adjust and add storage. For example, you can change the size of root volume and
+                add volumes.</pd>
+              <pd><b>For Greenplum Database</b> - Greenplum Database supports either EC2 instance
+                store or Amazon EBS storage in a production environment. </pd>
+              <pd>
+                <ul id="ul_fys_vn4_4v">
+                  <li>EC2 <i>instance store</i> provides temporary block-level storage. This storage
+                    is located on disks that are physically attached to the host computer. With
+                    instance store, powering off the instance causes data loss. Soft reboots
+                    preserve instance store data. However, EC2 instance store can provide higher and
+                    more consistent I/O performance.</li>
+                  <li><i>EBS storage</i> provides block level storage volumes with long-term
+                    persistence. EBS storage must be mounted with the XFS file system. <ph
+                      otherprops="pivotal">All other file systems are explicitly not supported by
+                      Pivotal.</ph><p>There are several classes of EBS. For Greenplum Database,
+                      select the EBS volume type <codeph>gp2</codeph> for root and swap partitions
+                      and <codeph>st1</codeph> for data. See the Amazon documentation about <xref
+                        href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html"
+                        format="html" scope="external">Block Device Mapping</xref>.</p></li>
+                </ul>
+                <p>For more information about the Amazon storage types, see <xref
+                    href="#topic_kwk_ygx_y5" format="dita"/>.</p>
+              </pd>
+            </plentry>
+            <plentry>
+              <pt>Create Tag</pt>
+              <pd>An optional label that consists of a case-sensitive key-value pair that is used
+                for organizing searching a large number of EC2 resources.</pd>
+            </plentry>
+            <plentry>
+              <pt>Security Group</pt>
+              <pd>A set of firewall rules that control the network traffic for instances.</pd>
+              <pd>For external access to an instance with <codeph>ssh</codeph>, create a rule that
+                enables <codeph>ssh</codeph> for inbound network traffic.</pd>
+            </plentry>
+          </parml>
+        </body>
+      </topic>
+    </topic>
+    <topic id="topic_mj4_524_2v">
+      <title>Working with EC2 Instances</title>
+      <body>
+        <p>After the EC2 instances have started, you connect to and configure the instances. The
+            <uicontrol>Instances</uicontrol> page of the EC2 Console lists the running instances and
+          network information. If the instance does not have a public IP address, you can create an
+          Elastic IP and associate it with the instance. See <xref href="#task_yd3_sd4_2v"
+            format="dita"/>.</p>
+        <p>To access EC2 instances, AWS uses public-key cryptography to secure the login information
+          for your instance. A Linux instance has no password; you use a key pair to log in to your
+          instance securely. You specify the name of the key pair when you launch your instance,
+          then provide the private key when you log in using SSH. See the Amazon documentation about
+            <xref href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html"
+            format="html" scope="external">EC2 Key Pairs</xref>.</p>
+        <p>A key pair consists of a <i>public key</i> that AWS stores, and a <i>private key file</i>
+          that you store. Together, they allow you to connect to your instance securely. </p>
+        <p>This example logs into an into EC2 instance from an external location with the private
+          key file <codeph>my-test.pem</codeph> and user <codeph>ec2-user</codeph>. The user
+            <codeph>ec2-user</codeph> is the default user for some Linux AMI templates. This example
+          assumes that the instance is configured with a public IP address
+            <codeph>192.0.2.82</codeph> and that the <codeph>pem</codeph> file is the private key
+          file that is used to access the instance.</p>
+        <p>
+          <codeblock>ssh -i my-test.pem ec2-user@192.0.2.82</codeblock>
+        </p>
+        <p>You can also copy the private key file to your home <codeph>.ssh</codeph> directory as
+          the <codeph>id_rsa</codeph> file. This example, creates and configures the
+            <codeph>id_rsa</codeph>
+          file.<codeblock>cp my-test.pem ~/.ssh/id_rsa
+chmod 400 .ssh/id_rsa</codeblock></p>
+        <p>You can also copy the <codeph>id_rsa</codeph> to your EC2 instances. This
+            <codeph>scp</codeph> command copies the file to the <codeph>.ssh</codeph> directory of
+          the
+          <codeph>ec2-user</codeph>.<codeblock>scp ~/.ssh/id_rsa ec2-user@192.0.2.86:~/.ssh/id_rsa</codeblock></p>
+        <note><codeph>gpssh-extkey</codeph> is not used with Greenplum Database hosts that are EC2
+          instances. You must copy the private key file to the <codeph>.ssh</codeph> directory in
+          the user home directory for each instance.</note>
+        <p>This example logs into an into EC2 instance using the <codeph>id_rsa</codeph> file. </p>
+        <p>
+          <codeblock>ssh ec2-user@192.0.2.82</codeblock>
+        </p>
+        <p>After the key file is installed on all Greenplum Database hosts you can use Greenplum
+          Database utilities such as <codeph>gpseginstall</codeph>, <codeph>gpssh</codeph>, and
+            <codeph>gpscp</codeph> that access multiple Greenplum Database hosts.</p>
+        <p>Before installing Greenplum Database, you configure the EC2 instances as you would a
+          local host server machines. Configure the host operating system, configure host network
+          information (for example, update the <codeph>/etc/hosts</codeph> file), set operating
+          system parameters, and install operating system packages. For information about how to
+          prepare your operating system environment for Greenplum Database, see <xref href="#topic1"
+            format="dita"/>.</p>
+        <p>These example commands use yum to install the Linux packages <codeph>zlib</codeph>,
+            <codeph>sed</codeph>, <codeph>unzip</codeph>, and
+          <codeph>vim</codeph>.<codeblock>sudo yum install -y zlib
+sudo yum install -y sed
+sudo yum install -y unzip
+sudo yum install -y vim</codeblock></p>
+        <p>This example uploads Greenplum Database install file to an EC2 instance to the
+            <codeph>ec2-user</codeph> home directory.
+          <codeblock>scp greenplum-db-5.0.0-build-1-RHEL6-x86_64.zip ec2-user@192.0.2.82:~/.</codeblock></p>
+        <p>These example commands log into the instance and run the Greenplum Database install file
+          that is in <codeph>ec2-user</codeph> home directory as the as
+          <codeph>ec2-user</codeph>.<codeblock>ssh ec2-user@192.0.2.82
+unzip greenplum-db-5.0.0-build-1-RHEL6-x86_64.zip
+./greenplum-db-5.0.0-build-1-RHEL6-x86_64.bin</codeblock></p>
+        <p>This example command runs the <codeph>gpseginstall</codeph> utility that specifies the
+          user as <codeph>ec2-user</codeph>. This example assumes the file <codeph>my-hosts</codeph>
+          contains the instances that are used as Greenplum Database segment hosts and that the
+          instances have been prepared for Greenplum
+          Database.<codeblock>gpseginstall -u ec2-user -f my-hosts</codeblock></p>
+        <note>During the Greenplum Database installation process, you might see <codeph>ssh</codeph>
+          messages to confirm the authenticity of host connections. Enter <codeph>yes</codeph> to
+          confirm the authenticity.</note>
+      </body>
+    </topic>
+    <topic id="topic_n3y_4gx_y5">
+      <title>About Amazon Machine Image (AMI)</title>
+      <body>
+        <p>An Amazon Machine Image (AMI) is a template that contains a software configuration (for
+          example, an operating system, an application server, and applications). From an AMI, you
+          launch an <i>instance</i>, which is a copy of the AMI running as a virtual server in the
+          cloud. You can launch multiple instances of an AMI.</p>
+        <p>After you launch an instance, it acts like a traditional host, and you can interact with
+          it as you would any computer. You have complete control of your instances; you can use
+            <codeph>sudo</codeph> to run commands that require root privileges.</p>
+        <p>You can create a customized Amazon EBS-backed Linux AMI from an instance that you've
+          launched from an existing Amazon EBS-backed Linux AMI. After you've customized the
+          instance to suit your needs, create and register a new AMI, which you can use to launch
+          new instances with these customizations.</p>
+        <p>For information about AMI, see the Amazon documentation about <xref
+            href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html" format="html"
+            scope="external">AMIs</xref>.</p>
+      </body>
+    </topic>
+    <topic id="task_yd3_sd4_2v">
+      <title>About Amazon Elastic IP Addresses</title>
+      <body>
+        <p>An EC2 Elastic IP address is a public IP address that you can allocate (create) for your
+          account. You can associate it to and disassociate it from instances as you require, and
+          it's allocated to your account until you choose to release it. </p>
+        <p>Your default VPC is configured with an Internet gateway. When you allocate an EC2 Elastic
+          IP address, AWS configures the VPC to allow internet access to the IP address using the
+          gateway.</p>
+        <p>To enable an instance in your VPC to communicate with the Internet, it must have a public
+          IP address or an EC2 Elastic IP address that's associated with a private IP address on
+          your instance. </p>
+        <p>To ensure that your instances can communicate with the Internet, you must also attach an
+          Internet gateway to your EC2 VPC. For information about VPC Internet Gateways, see the
+          Amazon documentation about <xref
+            href="https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Internet_Gateway.html"
+            format="html" scope="external">Internet gateways</xref>.</p>
+        <p>For information about EC2 Elastic IP addresses and how to use them, see see the Amazon
+          documentation about <xref
+            href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html"
+            format="html" scope="external">Elastic IP Addresses</xref>.</p>
+      </body>
+    </topic>
+    <topic id="topic_kwk_ygx_y5">
+      <title>Notes</title>
+      <body>
+        <ul id="ul_tsx_mq4_4v">
+          <li>The Greenplum Database utility <codeph>gpssh-extkey</codeph> is not used with
+            Greenplum Database hosts that are EC2 instances. You must copy the private key file to
+            the <codeph>.ssh</codeph> directory in the user home directory for each instance.</li>
+          <li>When you use Amazon EBS storage for Greenplum Database storage, the storage must be
+            mounted with the XFS file system. <p>For information about EBS storage, see the Amazon
+              documentation about <xref
+                href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AmazonEBS.html"
+                format="html" scope="external">Amazon EBS</xref>. Also, see the Amazon EC2
+              documentation for configuring the Amazon EBS volumes and managing storage and file
+              systems used with EC2 instances. </p></li>
+          <li>For an EC2 instance with instance store, the virtual devices for instance store
+            volumes are <codeph>ephemeral<varname>N</varname></codeph> (n is between 0 and 23). On
+            an instance running CentOS the instance store block device names appear as
+                <codeph>/dev/xvd<varname>letter</varname></codeph>. A RAID0 configuration is
+            recommended with ephemeral disks because there are more disks than segments on each
+            host. <p>An example of an EC2 instance type that is configured with instance store and
+              that showed acceptable performance is the <codeph>d2.8xlarge</codeph> instance type
+              configured with four <codeph>raid0</codeph> volumes of 6 disks each.</p><p>For
+              information about EC2 instance store, see the Amazon documentation about <xref
+                href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html"
+                format="html" scope="external">EC2 Instance Store</xref>.</p></li>
+          <li>These are default ports in a Greenplum Database environment. These ports need to be
+            open in the security group to allow access from a source external to a VPC.<table
+              frame="all" rowsep="1" colsep="1" id="table_ond_tq4_4v">
+              <tgroup cols="2">
+                <colspec colname="c1" colnum="1" colwidth="100px"/>
+                <colspec colname="c2" colnum="2" colwidth="300px"/>
+                <thead>
+                  <row>
+                    <entry>Port</entry>
+                    <entry>Used by this application</entry>
+                  </row>
+                </thead>
+                <tbody>
+                  <row>
+                    <entry>22</entry>
+                    <entry>ssh - connect to host with ssh</entry>
+                  </row>
+                  <row>
+                    <entry>5432</entry>
+                    <entry>Greenplum Database (master)</entry>
+                  </row>
+                  <row>
+                    <entry>28080</entry>
+                    <entry>Greenplum Command Center</entry>
+                  </row>
+                </tbody>
+              </tgroup>
+            </table></li>
+          <li>For a non-default VPC you can configure the VPC with an internet gateway for the VPC
+            and allocate Elastic IP address for the VPC. AWS will automatically configure the
+            Elastic IP for internet access. For information about EC2 internet gateways, see the
+            Amazon documentation about <xref
+              href="https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Internet_Gateway.html"
+              format="html" scope="external">Internet Gateways</xref>.</li>
+          <li>A <i>placement group</i> is a logical grouping of instances within a single
+            Availability Zone. Using placement groups enables applications to participate in a
+            low-latency, 10 Gbps network. Placement groups are recommended for applications that
+            benefit from low network latency, high network throughput, or both. <p>Placement Groups
+              provide the ability for EC2 instances to separated from other instances. However,
+              configuring instances are in different placement groups can improve performance but
+              might create a configuration where an instance in a placement group cannot be
+              replaced.</p><p>See the Amazon documentation about <xref
+                href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html"
+                format="html" scope="external">Placement Groups</xref>.</p></li>
+          <li>Amazon EC2 provides enhanced networking capabilities using single root I/O
+            virtualization (SR-IOV) on some instance types. Enabling enhanced networking on your
+            instance results in higher performance (packets per second), lower latency, and lower
+            jitter. <p>To enable enhanced networking on your Red Hat and CentOS RHEL/CentOS
+              instance, you must ensure that the kernel has the ixgbevf module version 2.14.2 or
+              higher is installed and that the sriovNetSupport attribute is set.</p><p>For
+              information about EC2 enhanced networking, see the Amazon documentation about <xref
+                href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html"
+                format="html" scope="external">Enhanced Networking on Linux
+            Instances</xref>.</p></li>
+        </ul>
+      </body>
+    </topic>
+    <topic id="topic_hgz_zwy_bv">
+      <title>References</title>
+      <body>
+        <p>References to AWS and EC2 features and related information.</p>
+        <ul id="ol_br2_mwy_bv">
+          <li>AWS - <xref href="https://aws.amazon.com/" format="html" scope="external"
+              >https://aws.amazon.com/</xref>.</li>
+          <li>Connecting to an EC2 instance - <xref
+              href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AccessingInstancesLinux.html"
+              format="html" scope="external"
+              >http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AccessingInstancesLinux.html</xref>.</li>
+          <li>Amazon VPC - <xref
+              href="https://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Introduction.html"
+              format="html" scope="external"
+              >http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Introduction.html</xref>.</li>
+          <li>Amazon EC2 best practices - <xref
+              href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-best-practices.html"
+              format="html" scope="external"
+              >https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-best-practices.html</xref></li>
+          <li>Amazon EC2 and VPC command line interface (CLI) - <xref
+              href="https://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/Welcome.html"
+              format="html" scope="external"
+              >http://docs.aws.amazon.com/AWSEC2/latest/CommandLineReference/Welcome.html</xref>.</li>
+          <li>Amazon S3 (secure, durable, scalable object storage) - <xref
+              href="https://aws.amazon.com/s3/" format="html" scope="external"
+              >https://aws.amazon.com/s3/</xref>. </li>
+          <li>AWS CloudFormation - <xref href="https://aws.amazon.com/cloudformation/" format="html"
+              scope="external">https://aws.amazon.com/cloudformation/</xref>. <p>With AWS
+              CloudFormation, you can create templates to simplify provisioning and management of
+              related AWS resources.</p></li>
+        </ul>
+      </body>
+    </topic>
+  </topic>
+  <topic id="topic19" xml:lang="en">
+    <title id="ji162621">Next Steps</title>
+    <body>
+      <p>After you have configured the operating system environment and installed the Greenplum
+        Database software on all of the hosts in the system, the next steps are:</p>
+      <ul>
+        <li id="ji162626">
+          <xref href="./validate.xml#topic1" type="topic" format="dita"/>
+        </li>
+        <li id="ji162630">
+          <xref href="./init_gpdb.xml#topic1" type="topic" format="dita"/>
+        </li>
+      </ul>
+    </body>
+  </topic>
+</topic>

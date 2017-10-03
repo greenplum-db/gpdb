@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="jh138244">Estimating Storage Capacity</title>
+  <shortdesc>To estimate how much data your Greenplum Database system can accommodate, use these
+    measurements as guidelines. Also keep in mind that you may want to have extra space for landing
+    backup files and data load files on each segment host. </shortdesc>
+  <topic id="topic2" xml:lang="en">
+    <title id="jh159441">Calculating Usable Disk Capacity</title>
+    <body>
+      <p>To calculate how much data a Greenplum Database system can hold, you determine the usable
+        disk capacity per segment host and then multiply that by the number of segment hosts in your
+        Greenplum Database array. Start with the raw capacity of the physical disks on a segment
+        host that are available for data storage (<varname>raw_capacity</varname>), which is:</p>
+      <codeblock><varname>disk_size</varname> * <varname>number_of_disks</varname></codeblock>
+      <p>Account for file system formatting overhead (roughly 10 percent) and the RAID level you are
+        using. For example, if using RAID-10, the calculation would be:</p>
+      <codeblock>(<varname>raw_capacity</varname> * 0.9) / 2 = <varname>formatted_disk_space</varname></codeblock>
+      <p>For optimal performance, do not completely fill your disks to
+        capacity, but run at 70% or lower. So with this in mind, calculate the usable disk space as
+        follows:</p>
+      <codeblock><varname>formatted_disk_space</varname> * 0.7 = <varname>usable_disk_space</varname></codeblock>
+      <p>Once you have formatted RAID disk arrays and accounted for the maximum recommended capacity
+          (<varname>usable_disk_space</varname>), you will need to calculate how much storage is
+        actually available for user data (<codeph>U</codeph>). If using Greenplum Database mirrors
+        for data redundancy, this would then double the size of your user data (<codeph>2 *
+          U</codeph>). Greenplum Database also requires some space be reserved as a working area for
+        active queries. The work space should be approximately one third the size of your user data
+        (work space =
+        <codeph>U/3</codeph>):<codeblock><b>With mirrors:</b> (2 * U) + U/3 = <varname>usable_disk_space</varname>
+
+<b>Without mirrors:</b> U + U/3 = <varname>usable_disk_space</varname></codeblock></p>
+      <p>Guidelines for temporary file space and user data space assume a typical analytic workload.
+        Highly concurrent workloads or workloads with queries that require very large amounts of
+        temporary space can benefit from reserving a larger working area. Typically, overall system
+        throughput can be increased while decreasing work area usage through proper workload
+        management. Additionally, temporary space and user space can be isolated from each other by
+        specifying that they reside on different tablespaces.</p>
+      <p>In the <i>Greenplum Database Administrator Guide</i>, see these topics:</p>
+      <ul>
+        <li id="jh161458">"Managing Workload and Resources" for information about workload
+          management </li>
+        <li id="jh161469">"Creating and Managing Tablespaces" for information about moving the
+          location of temporary files </li>
+        <li id="jh161162">"Monitoring System State" for information about monitoring Greenplum
+          Database disk space usage</li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic3" xml:lang="en">
+    <title id="jh159695">Calculating User Data Size</title>
+    <body>
+      <p>As with all databases, the size of your raw data will be slightly larger once it is loaded
+        into the database. On average, raw data will be about 1.4 times larger on disk after it is
+        loaded into the database, but could be smaller or larger depending on the data types you are
+        using, table storage type, in-database compression, and so on.</p>
+      <ul>
+        <li id="jh157686">Page Overhead - When your data is loaded into Greenplum Database, it is
+          divided into pages of 32KB each. Each page has 20 bytes of page overhead.</li>
+        <li id="jh157687">Row Overhead - In a regular 'heap' storage table, each row of data has 24
+          bytes of row overhead. An 'append-optimized' storage table has only 4 bytes of row
+          overhead.</li>
+        <li id="jh157688">Attribute Overhead - For the data values itself, the size associated with
+          each attribute value is dependent upon the data type chosen. As a general rule, you want
+          to use the smallest data type possible to store your data (assuming you know the possible
+          values a column will have).</li>
+        <li id="jh157689">Indexes - In Greenplum Database, indexes are distributed across the
+          segment hosts as is table data. The default index type in Greenplum Database is B-tree.
+          Because index size depends on the number of unique values in the index and the data to be
+          inserted, precalculating the exact size of an index is impossible. However, you can
+          roughly estimate the size of an index using these
+          formulas.<codeblock><b>B-tree:</b> <varname>unique_values</varname> * (<varname>data_type_size</varname> + 24 bytes)
+
+<b>Bitmap:</b> (<varname>unique_values</varname> * <varname>number_of_rows</varname> * 1 bit * <varname>compression_ratio</varname> / 8) + (<varname>unique_values</varname> * 32)</codeblock></li>
+      </ul>
+    </body>
+  </topic>
+  <topic id="topic4" xml:lang="en">
+    <title id="jh159741">Calculating Space Requirements for Metadata and Logs</title>
+    <body>
+      <p>On each segment host, you will also want to account for space for Greenplum Database log
+        files and metadata:</p>
+      <ul>
+        <li id="jh159754"><b>System Metadata</b> — For each Greenplum Database segment instance
+          (primary or mirror) or master instance running on a host, estimate approximately 20 MB for
+          the system catalogs and metadata. </li>
+        <li id="jh159758"><b>Write Ahead Log</b> — For each Greenplum Database segment (primary or
+          mirror) or master instance running on a host, allocate space for the write ahead log
+          (WAL). The WAL is divided into segment files of 64 MB each. At most, the number of WAL
+          files will be: <codeblock>2 * <varname>checkpoint_segments</varname> + 1</codeblock><p>You
+            can use this to estimate space requirements for WAL. The default
+              <varname>checkpoint_segments</varname> setting for a Greenplum Database instance is 8,
+            meaning 1088 MB WAL space allocated for each segment or master instance on a
+          host.</p></li>
+        <li id="jh159765"><b>Greenplum Database Log Files</b> — Each segment instance and the master
+          instance generates database log files, which will grow over time. Sufficient space should
+          be allocated for these log files, and some type of log rotation facility should be used to
+          ensure that to log files do not grow too large. </li>
+        <li id="jh160818"><b>Command Center Data</b> — The data collection agents utilized by
+          Command Center run on the same set of hosts as your Greenplum Database instance and
+          utilize the system resources of those hosts. The resource consumption of the data
+          collection agent processes on these hosts is minimal and should not significantly impact
+          database performance. Historical data collected by the collection agents is stored in its
+          own Command Center database (named <codeph>gpperfmon</codeph>) within your Greenplum
+          Database system. Collected data is distributed just like regular database data, so you
+          will need to account for disk space in the data directory locations of your Greenplum
+          segment instances. The amount of space required depends on the amount of historical data
+          you would like to keep. Historical data is not automatically truncated. Database
+          administrators must set up a truncation policy to maintain the size of the Command Center
+          database.</li>
+      </ul>
+    </body>
+  </topic>
+</topic>
