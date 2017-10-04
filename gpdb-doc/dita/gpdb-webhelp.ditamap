@@ -2,6 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map><title>Greenplum Database</title>
 	<topicref href="common/gpdb-features.xml" format="dita"/>
+	<topicref href="install_guide/install_guide.ditamap" format="ditamap"/>
 	<topicref href="best_practices/best-practices.ditamap" format="ditamap"/>
 	<topicref href="security-guide/security-guide.ditamap" format="ditamap"/>
 	<topicref href="admin_guide/admin_guide.ditamap" format="ditamap"/>
