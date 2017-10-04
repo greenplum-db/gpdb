@@ -365,12 +365,13 @@ def defargs():
 
     return parser.parse_args()
 
-def ForceFTSProbeScan(cluster_configuration, expected_mirror_status = None):
+def ForceFTSProbeScan(cluster_configuration, expected_mirror_status = None, max_probes=2000):
     '''Force FTS probe scan to reflect primary and mirror status in catalog.'''
 
     commands = []
     commands.append("psql postgres -c \"SELECT gp_request_fts_probe_scan()\"")
 
+    probe_count = 1
     # if the expected_mirror_status is not None, we wait until the mirror status is updated
     while(True):
         runcommands(commands, "Force FTS probe scan", "FTS probe refreshed catalog")
@@ -382,6 +383,13 @@ def ForceFTSProbeScan(cluster_configuration, expected_mirror_status = None):
 
         if (cluster_configuration.check_mirror_status(expected_mirror_status)):
             return
+
+        if probe_count >= max_probes:
+            print("ERROR: Server did not trasition to expected_mirror_status %s within %d probe attempts"
+                        % (expected_mirror_status, probe_count))
+            sys.exit(1)
+
+        probe_count += 1
 
         time.sleep(0.1)
 
