@@ -31,7 +31,7 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
-    tag_filter: 1.0.0-beta.2
+    tag_filter: 1.0.0
 
 - name: terraform
   type: terraform
@@ -290,6 +290,13 @@ ccp_destroy_anchor: &ccp_destroy
       aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
   get_params:
     action: destroy
+
+ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
+  AWS_ACCESS_KEY_ID: {{gpdb4-tf-machine-access-key-id}}
+  AWS_SECRET_ACCESS_KEY: {{gpdb4-tf-machine-secret-access-key}}
+  AWS_DEFAULT_REGION: {{aws-region}}
+  BUCKET_PATH: {{tf-bucket-path}}
+  BUCKET_NAME: pivotal-pa-toolsmiths-pipeline-dynamic-terraform
 
 debug_sleep_anchor: &debug_sleep
   do:
@@ -606,6 +613,8 @@ jobs:
   - task: gen_cluster
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -644,6 +653,8 @@ jobs:
   - task: gen_cluster
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -682,6 +693,8 @@ jobs:
   - task: gen_cluster
     tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
     file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
