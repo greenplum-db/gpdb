@@ -6,13 +6,10 @@ image_resource:
   type: docker-image
 
 inputs:
-- name: installer_aix7_gpdb_clients
-- name: installer_aix7_gpdb_loaders
-- name: bin_gpdb
 - name: gpdb_src
+- name: session_id
 
 outputs:
-- name: session_id
 
 params:
   BLD_TARGETS:
@@ -22,4 +19,4 @@ params:
   REMOTE_KEY:
 
 run:
-  path: gpdb_src/concourse/scripts/ic_gpdb_remote.bash
+  path: gpdb_src/concourse/scripts/aix_remote_cleanup.bash

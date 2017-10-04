@@ -132,6 +132,14 @@ resources:
       ###########################################################
       bucket_path: {{tf-bucket-path}}
 
+- name: aix_environments
+  type: pool
+  source:
+    uri: {{concourse-resource-pools-git-remote}}
+    branch: master
+    pool: client_loader_remote_aix
+    private_key: {{concourse-resource-pools-git-key}}
+
 - name: gpdb_src
   type: git
   source:
@@ -900,6 +908,8 @@ jobs:
       passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
+    - put: aix_environments
+      params: {acquire: true}
   - task: ic_gpdb_cl
     file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
     image: centos-gpdb-dev-6
@@ -909,6 +919,18 @@ jobs:
       REMOTE_PORT: {{remote_port}}
       REMOTE_USER: {{remote_user}}
       REMOTE_KEY: {{remote_key}}
+    ensure:
+      do:
+      - task: cleanup_aix
+        file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
+        image: centos-gpdb-dev-6
+        params:
+          REMOTE_HOST: {{remote_host}}
+          REMOTE_PORT: {{remote_port}}
+          REMOTE_USER: {{remote_user}}
+          REMOTE_KEY: {{remote_key}}
+      - put: aix_environments
+        params: {release: aix_environments}
 
 - name: mpp_resource_group_centos6
   plan:

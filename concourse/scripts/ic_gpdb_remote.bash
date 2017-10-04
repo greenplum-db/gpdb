@@ -83,6 +83,11 @@ function run_remote_test() {
     # Get a session id for different commit builds.
     SESSION_ID=`ssh -T -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST 'echo \$\$'`
 
+    # Save the session ID for next task in the job
+    #  this dir/file is a volume to be exported
+    #  from the task
+    echo $SESSION_ID > session_id/session_id
+
     # Create working directory on remote machine.
     ssh -T -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST > dir <<-EOF
     mkdir -p gpdb-compile/$SESSION_ID
@@ -95,14 +100,6 @@ EOF
     run_loaders_test
 }
 
-# Since we are cloning and building on remote machine,
-# files won't be deleted as concourse container destroys.
-# We have to clean everything for success build.
-function cleanup() {
-    ssh -T -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST <<- EOF
-    rm -rf $GPDB_DIR
-EOF
-}
 function _main() {
 
     if [ -z "$REMOTE_PORT" ]; then
@@ -115,7 +112,6 @@ function _main() {
     time make_cluster
     time import_remote_key
     time run_remote_test
-    time cleanup
 }
 
 _main "$@"
