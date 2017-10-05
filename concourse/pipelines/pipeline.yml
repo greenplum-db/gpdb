@@ -14,6 +14,8 @@ groups:
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_ubuntu16
+  - build_orca_using_conan_ubuntu16
+  - build_gpdb_using_conan_orca_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
   - gpdb_rc_packaging_centos
@@ -26,6 +28,7 @@ groups:
   - icw_gporca_centos7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
+  - gpdb_icg_with_orca_conan_artifact
   - icw_planner_ictcp_centos6
   - icw_gporca_centos6_gpos_memory
   - fts
@@ -348,6 +351,24 @@ resources:
   source:
     repository: pivotaldata/centos-mingw
 
+- name: orca_compiled_bits_from_conan_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{orca_compiled_bits_from_conan_ubuntu16_versioned_file}}
+
+- name: gpdb_compiled_bits_with_orca_conan_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{gpdb_compiled_bits_with_orca_conan_ubuntu16_versioned_file}}
+
 - name: bin_gpdb_centos6
   type: s3
   source:
@@ -653,6 +674,74 @@ jobs:
     - get: centos-gpdb-dev-7
     - get: centos-mingw
     - get: ubuntu-gpdb-dev-16
+
+- name: build_orca_using_conan_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      params:
+        submodules: none
+    - get: ubuntu-gpdb-dev-16
+  - task: build_orca
+    image: ubuntu-gpdb-dev-16
+    file: gpdb_src/concourse/tasks/build_orca_using_conan.yml
+    params:
+      BINTRAY_REMOTE: {{bintray_remote}}
+      BINTRAY_REMOTE_URL: {{bintray_remote_url}}
+  - put: orca_compiled_bits_from_conan_ubuntu16
+    params:
+      file: bin_orca/bin_orca_conan.tar.gz
+- name: build_gpdb_using_conan_orca_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - build_orca_using_conan_ubuntu16
+    - get: bin_orca
+      resource: orca_compiled_bits_from_conan_ubuntu16
+      passed:
+      - build_orca_using_conan_ubuntu16
+      params:
+        globs: bin_orca_conan.tar.gz
+      trigger: true
+    - get: ubuntu-gpdb-dev-16
+  - task: build_with_orca
+    image: ubuntu-gpdb-dev-16
+    file: gpdb_src/concourse/tasks/build_gpdb_with_orca_gen_by_conan.yml
+  - task: package_tarball
+    image: ubuntu-gpdb-dev-16
+    file: gpdb_src/concourse/tasks/package_tarball.yml
+  - put: gpdb_compiled_bits_with_orca_conan_ubuntu16
+    params:
+      file: package_tarball/bin_gpdb.tar.gz
+- name: gpdb_icg_with_orca_conan_artifact
+  plan:
+  - aggregate:
+    - get: bin_orca
+      passed:
+      - build_gpdb_using_conan_orca_ubuntu16
+      resource: orca_compiled_bits_from_conan_ubuntu16
+      params:
+        globs:
+        - bin_orca_conan.tar.gz
+    - get: bin_gpdb
+      passed:
+      - build_gpdb_using_conan_orca_ubuntu16
+      resource: gpdb_compiled_bits_with_orca_conan_ubuntu16
+      params:
+        globs:
+        - bin_gpdb.tar.gz
+      trigger: true
+    - get: gpdb_src
+      params:
+        submodules: none
+      passed:
+      - build_gpdb_using_conan_orca_ubuntu16
+    - get: ubuntu-gpdb-dev-16
+  - task: icg_with_orca
+    image: ubuntu-gpdb-dev-16
+    file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
@@ -2899,6 +2988,9 @@ jobs:
   - get: gpdb_src
     trigger: true
     passed:
+    - build_orca_using_conan_ubuntu16
+    - build_gpdb_using_conan_orca_ubuntu16
+    - gpdb_icg_with_orca_conan_artifact
     - compile_gpdb_centos6
     - compile_gpdb_open_source_centos6
     - compile_gpdb_centos7
