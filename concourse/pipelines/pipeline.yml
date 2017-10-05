@@ -1143,6 +1143,8 @@ jobs:
       <<: *debug_sleep
   - task: setup_gpdb5
     file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
     image: centos-gpdb-dev-6
     on_failure:
       <<: *debug_sleep
