@@ -1127,36 +1127,11 @@ jobs:
       vars:
         <<: *ccp_default_vars
   - task: setup_gpdb4
+    file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-      platform: centos6
-    config:
-      platform: linux
-      image_resource:
-        type: docker-image
-        source:
-          repository: centos
-          tag: "7"
-      inputs:
-      - name: terraform
-      - name: gpdb4_binary
-      - name: ccp_src
-      - name: gpdb_src
-      outputs:
-      - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_software.sh
-          ccp_src/aws/download_tf_state.sh
-          ccp_src/aws/generate_env_files.sh 2 || exit 1
-          ccp_src/aws/generate_ssh_files.sh 2 || exit 1
-          ccp_src/aws/preinstall_gpdb.sh 2 || exit 1
-          ccp_src/aws/install_gpdb.sh 2 gpdb4_binary
-          ccp_src/aws/run_inspec.sh 2
+    input_mapping:
+      gpdb_binary: gpdb4_binary
     on_failure:
       <<: *ccp_destroy
   - task: run_backup_tests
