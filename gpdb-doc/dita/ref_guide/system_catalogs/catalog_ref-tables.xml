@@ -7,13 +7,11 @@
   <body>
     <ul>
       <li id="eu150153">gp_configuration (Deprecated. See <xref
-        href="./gp_segment_configuration.xml#topic1" type="topic" format="dita"/>.)</li>
+          href="./gp_segment_configuration.xml#topic1" type="topic" format="dita"/>.)</li>
       <li id="eu150554">
         <xref href="./gp_configuration_history.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150176">
-        <xref href="gp_db_interfaces.xml" type="topic" format="dita"/>
-      </li>
+      <li id="eu150176"> gp_db_interfaces (Deprecated. Not used.)</li>
       <li id="eu150300">
         <xref href="./gp_distribution_policy.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -29,11 +27,9 @@
       <li id="eu150476">
         <xref href="./gp_id.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="eu150180">
-        <xref href="./gp_interfaces.xml#topic1" type="topic" format="dita"/>
-      </li>
+      <li id="eu150180"> gp_interfaces  (Deprecated. Not used.)</li>
       <li id="eu152757">gp_master_mirroring (Deprecated. See <xref
-        href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>.)</li>
+          href="./pg_stat_replication.xml#topic1" type="topic" format="dita"/>.)</li>
       <li id="eu150169">
         <xref href="./gp_persistent_database_node.xml#topic1" type="topic" format="dita"/>
       </li>

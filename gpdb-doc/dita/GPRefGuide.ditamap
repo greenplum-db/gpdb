@@ -204,7 +204,6 @@
 		<topicref navtitle="System Catalog Definitions"
 			href="ref_guide/system_catalogs/catalog_ref-html.xml">
 			<topicref href="ref_guide/system_catalogs/gp_configuration_history.xml"/>
-			<topicref href="ref_guide/system_catalogs/gp_db_interfaces.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_distributed_log.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_distributed_xacts.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_distribution_policy.xml"/>
@@ -215,7 +214,6 @@
 			<topicref href="ref_guide/system_catalogs/gp_fault_strategy.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_global_sequence.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_id.xml"/>
-			<topicref href="ref_guide/system_catalogs/gp_interfaces.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_persistent_database_node.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_persistent_filespace_node.xml"/>
 			<topicref href="ref_guide/system_catalogs/gp_persistent_relation_node.xml"/>
@@ -327,8 +325,8 @@
 		navtitle="Greenplum PL/Python Language Extension" id="pl_python"/>
 	<chapter href="ref_guide/extensions/pl_java.xml" navtitle="Greenplum PL/Java Language Extension"
 		id="pl_java"/>
-	<chapter href="ref_guide/extensions/pl_perl.xml"
-		navtitle="Greenplum PL/Perl Language Extension" id="pl_perl"/>
+	<chapter href="ref_guide/extensions/pl_perl.xml" navtitle="Greenplum PL/Perl Language Extension"
+		id="pl_perl"/>
 	<chapter href="ref_guide/extensions/madlib.xml"
 		navtitle="Greenplum MADlib Extension for Analytics" id="madlib"/>
 	<chapter href="ref_guide/extensions/fuzzystrmatch.xml"
