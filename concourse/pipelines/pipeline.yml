@@ -188,7 +188,7 @@ resources:
   type: git
   source:
     branch: {{pxf_automation-git-branch}}
-    private_key: {{pxf-git-key}}
+    private_key: {{pxf_automation-git-key}}
     uri: {{pxf_automation-git-remote}}
 
 - name: centos-gpdb-dev-6
