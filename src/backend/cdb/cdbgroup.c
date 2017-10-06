@@ -3507,9 +3507,25 @@ Node* deconstruct_expr_mutator(Node *node, MppGroupContext *ctx)
 	tle = tlist_member_ignore_relabel(node, ctx->grps_tlist);
 	if( tle != NULL )
 	{
-		return  (Node*) makeVar(grp_varno, tle->resno,
-								exprType((Node*)tle->expr),
-								exprTypmod((Node*)tle->expr), 0);
+		Var *var = makeVar(grp_varno, tle->resno,
+							exprType((Node*)tle->expr),
+							exprTypmod((Node*)tle->expr), 0);
+
+		/* 
+		 * If a target list entry is found under a relabeltype node, the newly created
+		 * var node should be nested inside the relabeltype node if the vartype
+		 * of the var node is different than the resulttype of the relabeltype node.
+		 * Otherwise, the cast information is lost and executor will complain type mismatch
+		 */
+		if (IsA(node, RelabelType) && exprType(node) != exprType((Node*)tle->expr))
+		{
+			RelabelType *relabeltypeNode = (RelabelType *) node;
+			return (Node *) makeRelabelType((Expr *) var,
+										relabeltypeNode->resulttype,
+										relabeltypeNode->resulttypmod,
+										relabeltypeNode->relabelformat);
+		}
+		return (Node*) var;
 	}
 
 	return expression_tree_mutator(node, deconstruct_expr_mutator, (void*)ctx);
