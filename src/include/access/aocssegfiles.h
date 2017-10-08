@@ -178,7 +178,8 @@ extern void FreeAllAOCSSegFileInfo(AOCSFileSegInfo **allAOCSSegInfo, int totalSe
 
 extern int64 GetAOCSTotalBytes(
 				  Relation parentrel,
-				  Snapshot appendOnlyMetaDataSnapshot);
+				  Snapshot appendOnlyMetaDataSnapshot,
+				  bool compressed);
 extern FileSegTotals *GetAOCSSSegFilesTotals(Relation parentrel,
 					   Snapshot appendOnlyMetaDataSnapshot);
 

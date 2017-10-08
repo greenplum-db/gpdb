@@ -523,38 +523,19 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 			if(RelationIsExternal(rel))
 				break;
 			
-			if(RelationIsAoRows(rel))
+			if (RelationIsAoRows(rel))
 			{
-				/* MPP-7629 */
-				FileSegTotals	*fstotal = GetSegFilesTotals(rel, SnapshotNow);
-				
-				Assert(fstotal);
-				curpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
-				pfree(fstotal);
+				int64		totalbytes;
+
+				totalbytes = GetAOTotalBytes(rel, SnapshotNow);
+				curpages = RelationGuessNumberOfBlocks(totalbytes);
 			}
 			else if (RelationIsAoCols(rel))
 			{
-				/* TODO: largely copied from gp_statistics_estimate_reltuples_relpages_ao_cs
-				 * but there really should be a CO equivalent to GetSegFilesTotals, this is
-				 * a little ugly */
-				
-				int					nsegs, i , j;
-				double				totalBytes = 0;
-				AOCSFileSegInfo**	aocsInfo = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nsegs);
-				
-			    if (aocsInfo)
-			    {
-			    	for(i = 0; i < nsegs; i++)
-			    	{
-			    		for(j = 0; j < RelationGetNumberOfAttributes(rel); j++)
-			    		{
-			    			AOCSVPInfoEntry *e = getAOCSVPEntry(aocsInfo[i], j);
-			    			Assert(e);
-			    			totalBytes += e->eof_uncompressed;
-			    		}
-			    	}
-			    }
-			    curpages = RelationGuessNumberOfBlocks(totalBytes);
+				int64		totalbytes;
+
+				totalbytes = GetAOCSTotalBytes(rel, SnapshotNow, false);
+				curpages = RelationGuessNumberOfBlocks(totalbytes);
 			}
 			else
 			{

@@ -2027,13 +2027,15 @@ RelationGetNumberOfBlocks(Relation relation)
 	 */
 	if (RelationIsAoRows(relation))
 	{
-		FileSegTotals *fstotal = GetSegFilesTotals(relation, SnapshotNow);
-		return ((BlockNumber)RelationGuessNumberOfBlocks(fstotal->totalbytes));
+		int64		totalbytes;
+
+		totalbytes = GetAOTotalBytes(relation, SnapshotNow);
+		return ((BlockNumber) RelationGuessNumberOfBlocks(totalbytes));
 	}
 	
 	if (RelationIsAoCols(relation))
 	{
-		int64 totalBytes = GetAOCSTotalBytes(relation, SnapshotNow);
+		int64 totalBytes = GetAOCSTotalBytes(relation, SnapshotNow, true);
 		return ((BlockNumber)RelationGuessNumberOfBlocks(totalBytes));
   	}
 	

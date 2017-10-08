@@ -455,29 +455,32 @@ GetAOCSSSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 /*
  * GetAOCSTotalBytes
  *
- * Get the total bytes for a specific AOCS table from the pg_aocsseg table on this local segdb.
+ * Get the total bytes for a specific AOCS table from the pg_aocsseg table on
+ * this local segdb.
  */
 int64
-GetAOCSTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
+GetAOCSTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot,
+				  bool compressed)
 {
-	AOCSFileSegInfo **allseg;
-	int			totalseg;
-	int64		result;
-	int			s;
-	AOCSVPInfo *vpinfo;
+	AOCSFileSegInfo	  **allseg;
+	int64				result;
+	int					totalseg;
+	int					s;
+	int					e;
 
 	result = 0;
 	allseg = GetAllAOCSFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, &totalseg);
 	for (s = 0; s < totalseg; s++)
 	{
-		int32		nEntry;
-		int			e;
+		for (e = 0; e < RelationGetNumberOfAttributes(parentrel); e++)
+		{
+			AOCSVPInfoEntry		*entry = getAOCSVPEntry(allseg[s], e);
 
-		vpinfo = &((allseg[s])->vpinfo);
-		nEntry = vpinfo->nEntry;
-
-		for (e = 0; e < nEntry; e++)
-			result += vpinfo->entry[e].eof;
+			if (compressed)
+				result += entry->eof;
+			else
+				result += entry->eof_uncompressed;
+		}
 	}
 
 	if (allseg)
