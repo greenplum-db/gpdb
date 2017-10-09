@@ -16,6 +16,7 @@
        <b>-x</b> <varname>col1</varname>[, <varname>col2</varname>, ...] ] } |
      { <b>-f</b> | <b>--file</b>} <varname>config-file</varname> }
    [ <b>-l</b> | <b>--list</b> ]
+   [ { <b>-m </b> | <b>--statement_mem</b> } <varname>memory-units</varname> ]
    [ <b>-p</b> <varname>parallel-level</varname> ]
    [ <b>--full</b> ]
 <ph>   [ <b>--skip_root_stats</b> ]
@@ -155,6 +156,12 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
               <cmdname>ANALYZE</cmdname> operations are not performed.</pd>
         </plentry>
         <plentry>
+          <pt>-m <varname>memory-units</varname> | --statement_mem <varname>memory-units</varname></pt>
+          <pd>Optional. Uses <varname>memory-units</varname> as the statement_mem environment
+              setting when submitting queries to the database. Default is the system setting for
+              statement_mem.</pd>
+        </plentry>
+        <plentry>
           <pt>-p <varname>parallel-level</varname></pt>
           <pd>The number of tables that are analyzed in parallel. <varname>parallel level</varname>
             can be an integer between 1 and 10, inclusive. Default value is 5. </pd>
@@ -238,6 +245,9 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
         the specified database. This command refreshes table statistics on the system catalog tables
         and user-defined tables in the database <codeph>mytest</codeph>.</p>
       <codeblock>analyzedb -d mytest</codeblock>
+      <p>An example that specifies the statement memory for the analyze commands. This flag uses
+        memory units such as MB, as would be specified for the statement_mem GUC.</p>
+      <codeblock>analyzedb -d mytest -t public.foo -m 250MB</codeblock>
       <p>You can create a PL/Python function to run the <codeph>analyzedb</codeph> utility as a
         Greenplum Database function. This example <codeph>CREATE FUNCTION</codeph> command creates a
         user defined PL/Python function that runs the <codeph>analyzedb</codeph> utility and
