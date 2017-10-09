@@ -448,3 +448,42 @@ select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d
 (1 row)
 
 drop table foo, bar;
+--
+-- subqueries with unnest in projectlist
+--
+-- start_ignore
+DROP TABLE IF EXISTS A;
+NOTICE:  table "a" does not exist, skipping
+CREATE TABLE A AS SELECT ARRAY[1,2,3] AS X;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+INSERT INTO A VALUES(NULL::int4[]);
+-- end_ignore
+SELECT (NOT EXISTS (SELECT UNNEST(X))) AS B FROM A;
+ b 
+---
+ f
+ t
+(2 rows)
+
+SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
+ b 
+---
+ t
+ f
+(2 rows)
+
+EXPLAIN SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882690.51 rows=1 width=1)
+   ->  Result  (cost=0.00..882690.51 rows=1 width=1)
+         ->  Table Scan on a  (cost=0.00..882690.51 rows=334 width=1)
+         SubPlan 1
+           ->  Result  (cost=0.00..0.00 rows=1 width=6)
+                 ->  Result  (cost=0.00..0.00 rows=1 width=6)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
+ Settings:  optimizer=on
+ Optimizer status: PQO version 2.46.3
+(9 rows)
+
+DROP TABLE A;
