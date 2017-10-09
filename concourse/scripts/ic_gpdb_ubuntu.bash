@@ -25,7 +25,7 @@ function make_cluster() {
   source "${GREENPLUM_INSTALL_DIR}/greenplum_path.sh"
   export DEFAULT_QD_MAX_CONNECT=150
   pushd gpdb_src/gpAux/gpdemo
-    su gpadmin -c "make create-demo-cluster"
+    su gpadmin -c "source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh && make create-demo-cluster"
   popd
 }
 
