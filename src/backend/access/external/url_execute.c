@@ -404,8 +404,10 @@ url_execute_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
 
     size_t n;
     /* ensure all data in buffer is send out to pipe*/
-    while((n = pipewrite(fd,p,size - offset)) < size - offset)
+    while(size > offset)
     {
+        n = pipewrite(fd,p,size - offset);
+
         if(n == -1) return -1;
 
         if(n == 0) break;
