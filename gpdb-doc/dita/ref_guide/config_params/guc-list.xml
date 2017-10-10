@@ -398,6 +398,9 @@
               <xref href="#gp_reraise_signal"/>
             </li>
             <li>
+              <xref href="#gp_resgroup_memory_policy"/>
+            </li>
+            <li>
               <xref href="#gp_resource_group_cpu_limit"/>
             </li>
             <li>
@@ -4869,6 +4872,38 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_resgroup_memory_policy">
+    <title>gp_resgroup_memory_policy</title>
+    <body>
+      <note type="warning">Resource groups are an experimental feature and
+        are not intended for use in a production environment. Experimental features are subject to
+        change without notice in future releases.</note>
+      <p>Used by a resource group to manage memory allocation to query operators.</p>
+      <p>When set to <codeph>auto</codeph>, Greenplum Database uses resource group memory limits to distribute memory across query operators, allocating a fixed size of memory to non-memory-intensive operators and the rest to memory-intensive operators.</p>
+      <p>When you specify <codeph>eager_free</codeph>, Greenplum Database distributes memory among operators more optimally by re-allocating memory released by operators that have completed their processing to operators in a later query stage.</p>
+      <table id="gp_resgroup_memory_policy_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">auto, eager_free</entry>
+              <entry colname="col2">eager_free</entry>
+              <entry colname="col3">local<p>system</p><p>superuser</p><p>restart/reload</p></entry>
             </row>
           </tbody>
         </tgroup>

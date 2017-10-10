@@ -44,7 +44,7 @@
           </tbody>
         </tgroup>
       </table>
-
+      <note>Resource limits are not enforced on <codeph>SET</codeph> and <codeph>SHOW</codeph> commands.</note>
   </body>
 
   <topic id="topic8339717179" xml:lang="en">
@@ -89,7 +89,9 @@
       <p>When a query's memory usage exceeds the fixed per-transaction memory usage amount, Greenplum Database allocates available resource group shared memory to the query. The maximum amount of resource group memory available to a specific transaction slot is the sum of the transaction's fixed memory and the full resource group shared memory allotment.</p>
 
     <section id="topic833sp" xml:lang="en">
-     <title>Spill to Disk</title>
+     <title>Query Operator Memory</title>
+      <p>Most query operators are non-memory-intensive; that is, during processing, Greenplum Database can hold their data in allocated memory. When memory-intensive query operators such as join and sort process more data than can be held in memory, data is spilled to disk.</p>
+      <p>The <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_resgroup_memory_policy" type="section"/></codeph> server configuration parameter governs the memory allocation and distribution algorithm for all query operators. Greenplum Database supports <codeph>eager-free</codeph> (the default) and <codeph>auto</codeph> memory policies for resource groups. When you specify the <codeph>auto</codeph> policy, Greenplum Database uses resource group memory limits to distribute memory across query operators, allocating a fixed size of memory to non-memory-intensive operators and the rest to memory-intensive operators. When the <codeph>eager_free</codeph> policy is in place, Greenplum Database distributes memory among operators more optimally by re-allocating memory released by operators that have completed their processing to operators in a later query stage.</p>
       <p><codeph>MEMORY_SPILL_RATIO</codeph> identifies the memory usage threshold for memory-intensive operators in a transaction. When the transaction reaches this memory threshold, it spills to disk. Greenplum Database uses the <codeph>MEMORY_SPILL_RATIO</codeph> to determine the initial memory to allocate to a transaction.</p>
       <p> The minimum <codeph>MEMORY_SPILL_RATIO</codeph> percentage you can specify for a resource group is 0. The maximum is 100. The default <codeph>MEMORY_SPILL_RATIO</codeph> is 20.</p>
       <p>You define the <codeph>MEMORY_SPILL_RATIO</codeph> when you create a resource group. You can selectively set this limit on a per-query basis at the session level with the <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio" type="section"/></codeph> server configuration parameter.</p>

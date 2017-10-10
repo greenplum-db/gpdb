@@ -1201,6 +1201,10 @@
         <strow>
           <stentry>
             <p>
+              <xref href="guc-list.xml#gp_resgroup_memory_policy" type="section"
+                >gp_resgroup_memory_policy</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#gp_resource_group_cpu_limit" type="section"
                 >gp_resource_group_cpu_limit</xref>
             </p>
