@@ -131,6 +131,7 @@
 #include "pg_trace.h"
 #include "tcop/tcopprot.h"
 #include "utils/debugbreak.h"
+#include "utils/metrics_utils.h"
 
 #ifdef CDB_TRACE_EXECUTOR
 #include "nodes/print.h"
@@ -862,6 +863,14 @@ ExecProcNode(PlanState *node)
 
 	if(!node->fHadSentGpmon)
 		CheckSendPlanStateGpmonPkt(node);
+
+	if(!node->fHadSentNodeStart)
+	{
+		/* GPDB hook for collecting query info */
+		if (query_info_collect_hook)
+			(*query_info_collect_hook)(METRICS_PLAN_NODE_EXECUTING, node);
+		node->fHadSentNodeStart = true;
+	}
 
 	switch (nodeTag(node))
 	{
@@ -1646,6 +1655,9 @@ ExecEndNode(PlanState *node)
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			break;
 	}
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_PLAN_NODE_FINISHED, node);
 
 	estate->currentSliceIdInPlan = origSliceIdInPlan;
 	estate->currentExecutingSliceId = origExecutingSliceId;

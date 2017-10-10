@@ -38,6 +38,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"             /* AllocSetContextCreate() */
 #include "utils/resscheduler.h"
+#include "utils/metrics_utils.h"
 #include "utils/tuplesort.h"
 #include "utils/tuplesort_mk.h"
 #include "cdb/cdbdisp.h"                /* CheckDispatchResult() */
@@ -378,6 +379,10 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 				GetResqueueName(GetResQueueId()),
 				GetResqueuePriority(GetResQueueId()));
 	}
+
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, queryDesc);
 
 	/* Initialize ExplainState structure. */
 	es = (ExplainState *) palloc0(sizeof(ExplainState));

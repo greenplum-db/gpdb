@@ -43,6 +43,7 @@
 #include "utils/memutils.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
+#include "utils/metrics_utils.h"
 
 /*
  * GUC variables.
@@ -704,6 +705,10 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 
 				/* If we had acquired the resource queue lock, release it and clean up */	
 				ResLockRelease(&tag, portal->portalId);
+			
+				/* GPDB hook for collecting query info */
+				if (query_info_collect_hook)
+					(*query_info_collect_hook)(METRICS_QUERY_ERROR, qDesc);
 
 				/*
 				 * Perfmon related stuff: clean up if we got cancelled

@@ -74,6 +74,7 @@
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/metrics_utils.h"
 #include "utils/ps_status.h"
 #include "utils/typcache.h"
 #include "utils/workfile_mgr.h"
@@ -280,6 +281,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	{
 		gpmon_qlog_query_start(queryDesc->gpmon_pkt);
 	}
+
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_QUERY_START, queryDesc);
 
 	/**
 	 * Distribute memory to operators.
@@ -1106,6 +1111,10 @@ ExecutorEnd(QueryDesc *queryDesc)
 		queryDesc->gpmon_pkt = NULL;
 	}
 
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_QUERY_DONE, queryDesc);
+
 	/* Reset queryDesc fields that no longer point to anything */
 	queryDesc->tupDesc = NULL;
 	queryDesc->estate = NULL;
@@ -1886,6 +1895,10 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	queryDesc->planstate = planstate;
 
 	Assert(queryDesc->planstate);
+
+	/* GPDB hook for collecting query info */
+	if (query_info_collect_hook)
+		(*query_info_collect_hook)(METRICS_PLAN_NODE_INITIALIZE, queryDesc);
 
 	if (RootSliceIndex(estate) != LocallyExecutingSliceIndex(estate))
 		return;

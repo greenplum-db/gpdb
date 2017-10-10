@@ -35,3 +35,4 @@ session_level_memory_consumption.sql
 transient_types.sql
 hooktest.sql
 gpcopy.sql
+query_info_hook_test.sql

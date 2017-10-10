@@ -140,6 +140,9 @@ test: qp_olap_group qp_olap_group2
 
 test: hooktest
 
+# Test query_info_collect_hook are called in expected sequence on normal query, query error/abort
+test: query_info_hook_test
+
 ignore: tpch500GB_orca
 
 # Tests for "compaction", i.e. VACUUM, of updatable append-only tables

@@ -31,6 +31,7 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/typcache.h"
+#include "utils/metrics_utils.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_namespace.h"
 #include "cdb/cdbvars.h"
@@ -445,6 +446,10 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 								 None_Receiver,
 								 fcache->paramLI,
 								 GP_INSTRUMENT_OPTS);
+
+		/* GPDB hook for collecting query info */
+		if (query_info_collect_hook)
+			(*query_info_collect_hook)(METRICS_QUERY_SUBMIT, es->qd);
 
 		if (gp_enable_gpperfmon 
 			&& Gp_role == GP_ROLE_DISPATCH 

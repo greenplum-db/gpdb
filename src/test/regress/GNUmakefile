@@ -141,7 +141,7 @@ endif
 
 # And finally some extra C modules...
 
-all: all-spi tablespace-setup includecheck hooktest
+all: all-spi tablespace-setup includecheck hooktest query_info_hook_test
 
 .PHONY: all-spi
 all-spi:
@@ -160,6 +160,10 @@ includecheck:
 
 .PHONY: hooktest
 hooktest:
+	$(MAKE) -C $< $@
+
+.PHONY: query_info_hook_test
+query_info_hook_test:
 	$(MAKE) -C $< $@
 
 ##
@@ -181,7 +185,7 @@ check: all
 installcheck: all
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/serial_schedule --srcdir=$(abs_srcdir)
 
-installcheck-good: all twophase_pqexecparams hooktest
+installcheck-good: all twophase_pqexecparams hooktest query_info_hook_test
 	if [ -z "$(INSTALLCHECK_GOOD_KERBEROS)" ]; then \
 	$(pg_regress_call)  --psqldir=$(PSQLDIR) --schedule=$(srcdir)/parallel_schedule --schedule=$(srcdir)/greenplum_schedule --srcdir=$(abs_srcdir) --ao-dir=uao; \
 	else \
@@ -218,6 +222,7 @@ clean distclean maintainer-clean: clean-lib
 	rm -f $(NAME)$(DLSUFFIX) $(OBJS)
 	$(MAKE) -C $(contribdir)/spi clean
 	$(MAKE) -C hooktest/ clean
+	$(MAKE) -C query_info_hook_test/ clean
 	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
 # things created by dynamic configs
 	find sql -type l | xargs rm -f

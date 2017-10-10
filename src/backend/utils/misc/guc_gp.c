@@ -1984,10 +1984,9 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_query_metrics", PGC_USERSET, UNGROUPED,
-			gettext_noop("Enable query execution metrics collection."),
-			NULL,
-			GUC_GPDB_ADDOPT
+		{"gp_enable_query_metrics", PGC_POSTMASTER, UNGROUPED,
+			gettext_noop("Enable all query metrics collection."),
+			NULL	
 		},
 		&gp_enable_query_metrics,
 		false, NULL, NULL

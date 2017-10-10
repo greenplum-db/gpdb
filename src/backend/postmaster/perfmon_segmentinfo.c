@@ -32,6 +32,7 @@
 #include "storage/backendid.h"
 #include "storage/pmsignal.h"			/* PostmasterIsAlive */
 
+#include "utils/metrics_utils.h"
 #include "utils/resowner.h"
 #include "utils/ps_status.h"
 
@@ -56,6 +57,12 @@ static gpmon_packet_t seginfopkt;
 /* GpmonPkt-related routines */
 static void InitSegmentInfoGpmonPkt(gpmon_packet_t *gpmon_pkt);
 static void UpdateSegmentInfoGpmonPkt(gpmon_packet_t *gpmon_pkt);
+
+/*
+ * query info collector hook
+ * Use this hook to collect real-time query information and status data.
+ */
+query_info_collect_hook_type query_info_collect_hook = NULL;
 
 /**
  * Main entry point for segment info process. This forks off a sender process
