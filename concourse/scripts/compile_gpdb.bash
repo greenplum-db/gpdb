@@ -164,7 +164,6 @@ function _main() {
         ;;
   esac
 
-  generate_build_number
   make_sync_tools
   case "$TARGET_OS" in
     sles) link_tools_for_sles ;;
