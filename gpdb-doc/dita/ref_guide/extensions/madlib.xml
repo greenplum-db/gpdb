@@ -24,6 +24,7 @@
         SQL-based algorithms for machine learning, data mining and statistics that run at scale
         within a database engine, with no need for transferring data between Greenplum Database and
         other tools. </p>
+      <p>MADlib requires the <codeph>m4</codeph> macro processor version 1.4.13 or later.</p>
       <p>MADlib can be used with PivotalR, an R package that enables users to interact with data
         resident in Greenplum Database using the R client. See <xref href="#topic_dxp_vq2_sv"
           format="dita"/>.</p>
