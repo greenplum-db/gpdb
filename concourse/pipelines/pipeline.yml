@@ -142,6 +142,7 @@ groups:
   jobs:
   - gate_icw_start
   - icw_planner_centos6
+  - icw_planner_ubuntu16
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
@@ -340,7 +341,7 @@ resources:
   type: docker-image
   source:
     repository: pivotaldata/ubuntu-gpdb-dev
-    tag: '16.04'
+    tag: '16.04_gcc_6_3'
 
 - name: centos-mingw
   type: docker-image
@@ -769,6 +770,7 @@ jobs:
     - get: gpdb_src
       trigger: {{gpdb_src-trigger-flag}}
     - get: ubuntu-gpdb-dev-16
+      passed: [gate_compile_start]
   - task: compile_gpdb
     image: ubuntu-gpdb-dev-16
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
@@ -809,20 +811,7 @@ jobs:
   - put: installer_sles11_gpdb_loaders
     params:
       file: gpdb_artifacts/greenplum-loaders-*-sles11-x86_64.zip
-- name: compile_gpdb_ubuntu16
-  plan:
-  - aggregate:
-    - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
-    - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
-    - get: ubuntu-gpdb-dev-16
-      passed: [gate_compile_start]
-  - task: compile_gpdb
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
-    params:
-      CONFIGURE_FLAGS: {{configure_flags}}
+
 - name: compile_gpdb_windows_cl
   plan:
   - aggregate:
@@ -1095,6 +1084,9 @@ jobs:
     - get: gpdb_src_behave_tarball
       passed:
       - gpdb_rc_packaging_centos
+    - get: compiled_bits_ubuntu16
+      passed:
+      - compile_gpdb_ubuntu16
 ################# Compile Group End
 
 ################# ICW Group
@@ -1126,6 +1118,9 @@ jobs:
       passed:
       - gate_compile_end
     - get: gpdb_src_behave_tarball
+      passed:
+      - gate_compile_end
+    - get: compiled_bits_ubuntu16
       passed:
       - gate_compile_end
 - name: icw_planner_centos6
@@ -1212,9 +1207,9 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [compile_gpdb_ubuntu16]
+      passed: [gate_icw_start]
     - get: compiled_bits_ubuntu16
-      passed: [compile_gpdb_ubuntu16]
+      passed: [gate_icw_start]
       trigger: true
     - get: ubuntu-gpdb-dev-16
   - task: ic_gpdb
@@ -1222,7 +1217,9 @@ jobs:
     image: ubuntu-gpdb-dev-16
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-      CONFIGURE_FLAGS: {{configure_flags}}- name: icw_gporca_centos6_gpos_memory
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_gporca_centos6_gpos_memory
   plan:
   - aggregate:
     - get: gpdb_src
