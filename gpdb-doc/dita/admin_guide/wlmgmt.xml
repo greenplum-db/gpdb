@@ -16,8 +16,8 @@
         releases.<p>Significant <ph otherprops="pivotal">Pivotal </ph>Greenplum Database performance
         degradation has been observed when enabling resource group-based workload management on <ph
           otherprops="pivotal">supported versions of </ph>RedHat 6.x, CentOS 6.x, and SuSE 11
-        systems. The issue is due to a Linux cgroup kernel bug. The kernel bug has fixed on CentOS
-        7.x and Red Hat 7.x systems. </p></note>
+        systems. The issue is due to a Linux cgroup kernel bug. The kernel bug has been fixed on
+        CentOS 7.x and Red Hat 7.x systems. </p></note>
     <p>Either the resource queue or the resource group management scheme can be active in Greenplum
       Database; both schemes cannot be active at the same time.</p>
     <p>Resource queues are enabled by default when you install your Greenplum Database cluster.
