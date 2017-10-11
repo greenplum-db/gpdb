@@ -74,7 +74,7 @@ When you no longer want to use PXF on a specific database, you must explicitly d
 
 ## <a id="access_pxf"></a>Granting Access to PXF
 
-To access external data with PXF, you create an external table with the `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant access to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. 
+To access external data with PXF, you create an external table with the `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant `SELECT` permission to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. 
 
 To grant a specific role access to the `pxf` protocol, use the `GRANT` command. For example, to grant the role named `bill` read access to data referenced by an external table created with the `pxf` protocol:
 

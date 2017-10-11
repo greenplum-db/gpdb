@@ -2,20 +2,23 @@
 title: Installing and Configuring the Hadoop Client for PXF
 ---
 
-You use the PXF HDFS connector to access HDFS file data. PXF requires a Hadoop client installation on each Greenplum Database segment node. The Hadoop client must be installed from a tarball.
+You use the PXF HDFS connector to access HDFS file data. PXF requires a Hadoop client installation on each Greenplum Database segment host. The Hadoop client must be installed from a tarball.
 
-This topic describes how to install and configure the HDFS client for PXF access. 
+This topic describes how to install and configure the Hadoop client for PXF access. 
 
 ## <a id="hadoop-pxf-prereq"></a>Prerequisites
 
-Ensure that you:
+Compatible Hadoop clients for PXF include Cloudera, Hortonworks Data Platform and generic Apache Hadoop.
+
+Before setting up the Hadoop Client for PXF, ensure that you:
 
 - Have access to a running Hadoop cluster.
 - Identify and note the URI location of your HDFS NameNode. You can locate this information in the `core-site.xml` file on your NameNode host.
+- Have access to or permission to install Java version 1.7 or 1.8 on each segment host.
 
 
 ## <a id="hadoop-pxf-config-steps"></a>Procedure
-Perform the following procedure to install and configure the Hadoop client for PXF on each segment node in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
+Perform the following procedure to install and configure the Hadoop client for PXF on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
 
 1. Log in to your Greenplum Database master node and set up the environment:
 
@@ -32,7 +35,7 @@ Perform the following procedure to install and configure the Hadoop client for P
     seghost3
     ```
     
-2. Install Java 1.8 on each Greenplum Database segment host.
+2. If not already present, install Java on each Greenplum Database segment host. For example:
 
     ``` shell
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile sudo yum -y install java-1.8.0-openjdk-1.8.0*
@@ -44,7 +47,7 @@ Perform the following procedure to install and configure the Hadoop client for P
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.144-0.b01.el7_4.x86_64/jre' >> /home/gpadmin/.bash_profile"
     ```
 
-4. Download a compatible Hadoop client and install on **each** Greenplum Database segment host. You must install the same Hadoop client distribution in the same file system location on each host.
+4. Download a compatible Hadoop client and install it on **each** Greenplum Database segment host. You must install the same Hadoop client distribution in the same file system location on each host.
 
     If you are running Cloudera Hadoop:
     
@@ -66,7 +69,11 @@ Perform the following procedure to install and configure the Hadoop client for P
         gpadmin@master$ gpssh -e -v -f seghostfile "tar zxf /home/gpadmin/hadoop-2.6.0-cdh5.10.2.tar.gz"
         ```
 
-    5. Ensure that the `gpadmin` user has read and execute permissions on all Hadoop client libraries on **each** segment host.
+    5. Ensure that the `gpadmin` user has read and execute permission on all Hadoop client libraries on each segment host. For example:
+
+        ``` shell
+        gpadmin@master$ gpssh -e -v -f seghostfile "chmod -R 755 /home/gpadmin/hadoop-2.6.0-cdh5.10.2"
+        ```
 
 5. Locate the base install directory of the Hadoop client. Edit the `gpadmin` user's `.bash_profile` file on each segment host to include this `$PXF_HADOOP_HOME` setting. For example: 
 

@@ -2,13 +2,15 @@
 title: Installing and Configuring the Hive Client for PXF
 ---
 
-You use the PXF Hive connector to access Hive table data. The PXF Hive connector requires a Hive client installation on each Greenplum Database segment node. You must install the Hive client from a tarball.
+You use the PXF Hive connector to access Hive table data. The PXF Hive connector requires a Hive client installation on each Greenplum Database segment host. You must install the Hive client from a tarball.
 
 This topic describes how to install and configure the Hive client for PXF access. 
 
 ## <a id="hive-pxf-prereq"></a>Prerequisites
 
-Ensure that you:
+Compatible Hive clients for PXF are Cloudera and Hortonworks Data Platform Hive.
+
+Before setting up the Hive Client for PXF, ensure that you:
 
 - Have access to a running Hadoop cluster with the Hive service installed.
 - Have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
@@ -16,7 +18,7 @@ Ensure that you:
 
 
 ## <a id="hive-pxf-config-steps"></a>Procedure
-Perform the following procedure to install and configure the Hive client for PXF on each segment node in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
+Perform the following procedure to install and configure the Hive client for PXF on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
 
 1. Create a text file that lists your Greenplum Database segment hosts, one host name per line. Ensure that there are no blank lines or extra spaces in the file. For example, a file named `seghostfile` may include:
 
@@ -48,7 +50,12 @@ Perform the following procedure to install and configure the Hive client for PXF
         gpadmin@master$ gpssh -e -v -f seghostfile "tar zxf /home/gpadmin/hive-1.1.0-cdh5.10.2.tar.gz"
         ```
 
-    4. Ensure that the `gpadmin` user has read and execute permissions on all Hive client libraries on **each** segment host.
+    4. Ensure that the `gpadmin` user has read and execute permission on all Hive client libraries on each segment host. For example:
+
+    
+        ``` shell
+        gpadmin@master$ gpssh -e -v -f seghostfile "chmod -R 755 /home/gpadmin/hive-1.1.0-cdh5.10.2"
+        ```
 
 3. Locate the base install directory of the Hive client. Edit the `gpadmin` user's `.bash_profile` file on each segment host to include this `$PXF_HIVE_HOME` setting. For example: 
 

@@ -47,32 +47,22 @@ The following PXF files and directories are installed in your Greenplum Database
 | `pxf/tomcat-templates` | Tomcat templates for PXF.                                                                          |
 
 
-## <a id="external_instcfg"></a>Configuring Hadoop Components for PXF
-
-If you plan to use the PXF HDFS connector, you must:
-
-- Install a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
-- Grant the `gpadmin` operating system user read permission on the relevant portions of your HDFS file system.
-
-If you plan to use the PXF Hive connector, you must:
-
-- Install a Hive client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hive Client for PXF](hiveclient_instcfg.html) for instructions.
-
-
 ## <a id="init_pxf"></a>Initializing PXF
 
 You must explicitly initialize the PXF service instance. This one-time initialization creates the PXF service web application. It also updates PXF configuration files to include information specific to your Hadoop cluster configuration.
 
 ### <a id="init-pxf-prereq"></a>Prerequisites
 
-Before initializing PXF in your Greenplum Database cluster, ensure that:
+Before initializing PXF in your Greenplum Database cluster, ensure that you have:
 
-- You have installed and configured the required Hadoop and Hive clients on each Greenplum Database segment host.
-- You have located and noted the full file system path to the base install directory of the Hadoop and Hive clients, `$PXF_HADOOP_HOME` and `$PXF_HIVE_HOME`.
+- Installed and configured the required Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
+- Granted the `gpadmin` operating system user read permission on the relevant portions of your HDFS file system.
+- Installed and configured the required Hive client on each Greenplum Database segment host if you plan to use the PXF Hive connector. Refer to [Installing and Configuring the Hive Client for PXF](hiveclient_instcfg.html) for instructions.
+- Located and noted the full file system path to the base install directory of the Hadoop and Hive clients, `$PXF_HADOOP_HOME` and `$PXF_HIVE_HOME`.
  
 ### <a id="init-pxf-steps"></a>Procedure
 
-Perform the following procedure to initialize PXF on each node in your Greenplum Database cluster. You will use the `gpssh` utility to run a command on multiple hosts.
+Perform the following procedure to initialize PXF on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility to run a command on multiple hosts.
 
 1. Log in to the Greenplum Database master node and set up your environment:
 
@@ -104,23 +94,11 @@ Perform the following procedure to initialize PXF on each node in your Greenplum
     The `init` command creates and initializes the PXF web application. It also updates the `pxf-private.classpath` file to include entries for your Hadoop distribution JAR files.
 
 
-### <a id="init-pxf-other"></a>Other Considerations
-PXF requires that you run Tomcat on the host machine. Tomcat reserves ports 8005, 8080, and 8009. If you have other services configured on your Greenplum Database segment hosts, ensure that they do not use these port numbers. This helps to prevent port conflict errors from occurring when you start the PXF service.
-
-
 ## <a id="start_pxf"></a>Starting PXF
 
-After initializing PXF, you must explicitly start PXF on each segment host in your Greenplum Database cluster.
+After initializing PXF, you must explicitly start PXF on each segment host in your Greenplum Database cluster. The PXF service, once started, runs as the `gpadmin` user on default port 51200. Only the `gpadmin` user can start and stop the PXF service.
 
-The PXF service runs as the `gpadmin` user on default port 51200.
-
-### <a id="init-pxf-prereq"></a>Prerequisites
-
-Before starting PXF in your Greenplum Database cluster, ensure that you have configured and initialized PXF as described above.
-
-Only the `gpadmin` user can start and stop the PXF service.
- 
-### <a id="init-pxf-steps"></a>Procedure
+**Note**: PXF requires that you run Tomcat on the host machine. Tomcat reserves ports 8005, 8080, and 8009. If you have other services configured on your Greenplum Database segment hosts, ensure that they do not use these port numbers. This helps to prevent port conflict errors from occurring when you start the PXF service.
 
 Perform the following procedure to start PXF on each segment host in your Greenplum Database cluster.  You will use the `gpssh` command and a `seghostfile` to run the command on multiple hosts.
 
@@ -136,6 +114,7 @@ Perform the following procedure to start PXF on each segment host in your Greenp
     ```shell
     $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf start"
     ```
+
 
 ## <a id="pxf_svc_mgmt"></a>PXF Service Management
 
