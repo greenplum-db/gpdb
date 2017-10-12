@@ -27,15 +27,15 @@ The following table describes some errors you may encounter while using PXF:
 
 | Error Message                 | Discussion                     |
 |-------------------------------|---------------------------------|
-| Protocol "pxf" does not exist | **Cause**: The `pxf` protocol was not registered.<br>**Remedy**: Create (enable) the PXF extension for the database as described in the PXF [Enable Procedure](using_pxf.html#enable-pxf-ext).|
+| Protocol "pxf" does not exist | **Cause**: The `pxf` extension was not registered.<br>**Remedy**: Create (enable) the PXF extension for the database as described in the PXF [Enable Procedure](using_pxf.html#enable-pxf-ext).|
 | Invalid URI pxf://\<path-to-data\>: missing options section | **Cause**: The `LOCATION` URI does not include the profile or other required options.<br>**Remedy**: Provide the profile and required options in the URI. |
-| org.apache.hadoop.mapred.InvalidInputException: Input path does not exist: hdfs://\<namenode\>:8020/\<path-to-file\> | **Cause**: The HDFS file you specified in \<path-to-file\> does not exit. <br>**Remedy**: Provide the path to an existing HDFS file. |
+| org.apache.hadoop.mapred.InvalidInputException: Input path does not exist: hdfs://\<namenode\>:8020/\<path-to-file\> | **Cause**: The HDFS file you specified in \<path-to-file\> does not exist. <br>**Remedy**: Provide the path to an existing HDFS file. |
 | NoSuchObjectException(message:\<schema\>.\<hivetable\> table not found) | **Cause**: The Hive table you specified with \<schema\>.\<hivetable\> does not exist. <br>**Remedy**: Provide the name of an existing Hive table. |
 | Failed to connect to \<segment-host\> port 51200: Connection refused (libchurl.c:944)  (\<segment-id\> slice\<N\> \<segment-host\>:40000 pid=\<process-id\>)<br> ... |**Cause**: PXF is not running on \<segment-host\>.<br>**Remedy**: Restart PXF on \<segment-host\>. |
 | *ERROR*: failed to acquire resources on one or more segments<br>*DETAIL*:  could not connect to server: Connection refused<br>&nbsp;&nbsp;&nbsp;&nbsp;Is the server running on host "\<segment-host\>" and accepting<br>&nbsp;&nbsp;&nbsp;&nbsp;TCP/IP connections on port 40000?(seg\<N\> \<segment-host\>:40000) | **Cause**: The Greenplum Database segment host \<segment-host\> is down.
 
 ## <a id="pxf-logging"></a>PXF Logging
-Enabling more verbose logging may aid PXF troubleshooting efforts. PXF provides two categories of message logging - service-level and database-level.
+Enabling more verbose logging may aid PXF troubleshooting efforts. PXF provides two categories of message logging: service-level and client-level.
 
 ### <a id="pxfsvclogmsg"></a>Service-Level Logging
 

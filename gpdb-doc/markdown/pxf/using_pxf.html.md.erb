@@ -123,7 +123,7 @@ A PXF profile definition includes the name of the profile, a description, and th
 
 ## <a id="profile-dependencies"></a>PXF JAR Dependencies
 
-You use the PXF Extension Framework to access data stored on external systems. Depending upon the external data source, this access may require that you install and/or configure additional components or services. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
+You use the PXF Extension Framework to access data stored on external systems. Depending upon the external data source, this access may require that you install and/or configure additional components or services for the external data source. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
 
 PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` and `$GPHOME/pxf/conf/pxf-public.classpath` configuration files identify PXF JAR dependencies. PXF manages the `pxf-private.classpath` file, adding entries as necessary based on options that you provide to the `pxf init` command. 
 

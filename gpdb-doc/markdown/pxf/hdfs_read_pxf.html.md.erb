@@ -56,7 +56,7 @@ Hadoop includes command-line tools that interact directly with your HDFS file sy
 
 The HDFS file system command syntax is `hdfs dfs <options> [<file>]`. Invoked with no options, `hdfs dfs` lists the file system options supported by the tool.
 
-The user invoking the `hdfs dfs` command must have sufficient privileges to the HDFS data store to perform the HDFS file system operation. Specifically, the user must have read permission to HDFS to list and view file contents, and write permission to HDFS to create directories and files.
+The user invoking the `hdfs dfs` command must have read privileges on the HDFS data store to list and view file contents, and write permission to create directories and files.
 
 The `hdfs dfs` options used in this topic are:
 
@@ -107,9 +107,8 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 | \<path-to-hdfs-file\>    | The the full file system path to the file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, or `Avro`. |
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
-| FORMAT 'TEXT' | Use '`TEXT`' `FORMAT` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references a plain text delimited file.  |
-| FORMAT 'CSV' | Use '`CSV`' `FORMAT` with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value file.  |
-| FORMAT 'CUSTOM' | Use the '`CUSTOM`' `FORMAT` with  the `Avro` profile. The `Avro` '`CUSTOM`' `FORMAT` supports only the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
+| FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references a plain text delimited file.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value file.  |
+| FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with  the `Avro` profile. The `Avro` `'CUSTOM'` `FORMAT` requires the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
  \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
@@ -120,9 +119,9 @@ Use the `HdfsTextSimple` profile when you read a plain text delimited or .csv fi
 
 \<formatting-properties\> supported by the `HdfsTextSimple` profile include:
 
-| Keyword  | Value |
-|-------|-------------------------------------|
-| delimiter    | The delimiter character in the file. The default value is a comma `,`.|
+| Keyword  | Syntax, Example(s) | Description |
+|-------|--------------|-----------------------|
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the file. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
 ### <a id="profile_hdfstextsimple_query" class="no-quick-link"></a>Example: Using the HdfsTextSimple Profile
 
@@ -169,6 +168,11 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_hdfs_simple.txt
     postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textsimple(location text, month text, num_orders int, total_sales float8)
                 LOCATION ('pxf://data/pxf_examples/pxf_hdfs_simple.txt?PROFILE=HdfsTextSimple')
               FORMAT 'TEXT' (delimiter=E',');
+    ```
+              
+2. Query the external table:
+
+    ``` sql
     postgres=# SELECT * FROM pxf_hdfs_textsimple;          
     ```
 
@@ -199,9 +203,9 @@ Use the `HdfsTextMulti` profile to read plain text files with delimited single- 
 
 \<formatting-properties\> supported by the `HdfsTextMulti` profile include:
 
-| Keyword  | Value |
-|-------|-------------------------------------|
-| delimiter    | The delimiter character in the file. |
+| Keyword  | Syntax, Example(s) | Value |
+|-------|--------------|-----------------------|
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the file. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
 ### <a id="profile_hdfstextmulti_query" class="no-quick-link"></a>Example: Using the HdfsTextMulti Profile
 
@@ -241,8 +245,10 @@ Perform the following steps to create a sample text file, copy the file to HDFS,
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textmulti(address text, month text, year int)
                 LOCATION ('pxf://data/pxf_examples/pxf_hdfs_multi.txt?PROFILE=HdfsTextMulti')
-              FORMAT 'CSV' (delimiter=E':');
+              FORMAT 'CSV' (delimiter ':');
     ```
+    
+    Notice the alternate syntax for specifying the `delimiter`.
     
 2. Query the `pxf_hdfs_textmulti` table:
 
@@ -295,7 +301,7 @@ The following table summarizes external mapping rules for Avro data.
 | Complex type: Fixed                                               | bytea                                                                                                                                                                                               |
 | Union                                                             | Follows the above conventions for primitive or complex data types, depending on the union; supports Null values.                                                                     |
 
-### <a id="profile_hdfsavroptipns" class="no-quick-link"></a>Avro-Specific Custom Options
+### <a id="profile_hdfsavroptipns" class="no-quick-link"></a>Avro-Specific Options
 
 For complex types, the PXF `Avro` profile inserts default delimiters between collection items and values. You can use non-default delimiter characters by identifying values for specific `Avro` custom options in the `CREATE EXTERNAL TABLE` command. 
 
@@ -306,6 +312,12 @@ The `Avro` profile supports the following \<custom-option\>s:
 | COLLECTION_DELIM | The delimiter character(s) to place between entries in a top-level array, map, or record field when PXF maps an Avro complex data type to a text column. The default is the comma `,` character. |
 | MAPKEY_DELIM | The delimiter character(s) to place between the key and value of a map entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. |
 | RECORDKEY_DELIM | The delimiter character(s) to place between the field name and value of a record entry when PXF maps an Avro complex data type to a text column. The default is the colon `:` character. |
+
+The \<formatting-properties\> supported by the `Avro` profile include:
+
+| Keyword  | Syntax, Example | Description |
+|-------|--------------|-----------------------|
+| formatter    | `(formatter='pxfwritable_import')` | Must identify `pxfwritable_import`.|
 
 
 ### <a id="topic_tr3_dpg_ts__section_m2p_ztg_ts" class="no-quick-link"></a>Avro Schemas and Data
