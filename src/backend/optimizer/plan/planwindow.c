@@ -1657,8 +1657,6 @@ Plan *assure_collocation_and_order(
 	if ( sortclause != NIL )
 	{
 		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, lower_tlist, true);
-		if ( root != NULL )
-			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 	}
 	
 	if ( partkey_len == 0 ) /* Plan for single process locus. */
@@ -1702,9 +1700,7 @@ Plan *assure_collocation_and_order(
 			dist_keys = lappend(dist_keys, lfirst(lc));
 		}
 		dist_pathkeys = make_pathkeys_for_sortclauses(root, dist_keys, lower_tlist, true);
-		if ( root != NULL )
-			dist_pathkeys = canonicalize_pathkeys(root, dist_pathkeys);
-		
+
 		/* Assure the required distribution. */
 		if ( ! cdbpathlocus_collocates(root, input_locus, dist_pathkeys, false /*exact_match*/) )
 		{
@@ -1771,8 +1767,6 @@ Plan *assure_order(
 	if ( sortclause != NIL )
 	{
 		sort_pathkeys = make_pathkeys_for_sortclauses(root, sortclause, input_plan->targetlist, true);
-		if ( root != NULL )
-			sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 	}
 
 	if(sort_pathkeys != NIL)
@@ -1801,8 +1795,7 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 	List *lower_tlist = context->lower_tlist;
 	CdbPathLocus input_locus, output_locus;
 	List *pathkeys = NIL;
-	List *window_pathkeys = NIL;	
-	
+
 	Assert ( pathkeys_ptr );
 	Assert (context->nwindowinfos == 1);
 	winfo = context->windowinfos;
@@ -1812,11 +1805,7 @@ static Plan *plan_trivial_window_query(PlannerInfo *root, WindowContext *context
 								  winfo->sortclause, /* order hint */
 								  &input_locus,
 								  &pathkeys);
-								  
-	
-	window_pathkeys = make_pathkeys_for_sortclauses(root, winfo->sortclause, lower_tlist, true);
-	window_pathkeys = canonicalize_pathkeys(root, window_pathkeys);
-	
+
 	/* Assure needed colocation and order. */
 	result_plan = assure_collocation_and_order(root,
 											   result_plan,
