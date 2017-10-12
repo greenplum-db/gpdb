@@ -2661,7 +2661,7 @@ jobs:
 - name: MM_gpexpand_1
   plan:
   - get: nightly-trigger
-    trigger: {{nightly-trigger-flag}}
+    trigger: ((nightly-trigger-flag))
   - aggregate:
     - get: gpdb_src
       passed: [gate_nightly_start]
@@ -2696,7 +2696,7 @@ jobs:
 - name: MM_gpexpand_2
   plan:
   - get: nightly-trigger
-    trigger: {{nightly-trigger-flag}}
+    trigger: ((nightly-trigger-flag))
   - aggregate:
     - get: gpdb_src
       passed: [gate_nightly_start]
