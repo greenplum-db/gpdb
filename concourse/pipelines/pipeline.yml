@@ -2680,11 +2680,7 @@ jobs:
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      AWS_DEFAULT_REGION: {{aws-region}}
-      BUCKET_PATH: {{tf-bucket-path}}
-      BUCKET_NAME: gpdb5-pipeline-dynamic-terraform
+      <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
@@ -2719,11 +2715,7 @@ jobs:
   - task: gen_cluster
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      AWS_DEFAULT_REGION: {{aws-region}}
-      BUCKET_PATH: {{tf-bucket-path}}
-      BUCKET_NAME: gpdb5-pipeline-dynamic-terraform
+      <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
