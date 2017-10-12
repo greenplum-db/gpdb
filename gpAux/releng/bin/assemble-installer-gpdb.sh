@@ -375,7 +375,7 @@ generate-applicance-installer-header(){
 	cat <<-EOF_HEADER
 		#!/bin/sh
 
-		installPath=/usr/local/GP-$VERSION-${BUILD_NUMBER}
+		installPath=/usr/local/GP-$VERSION
 		install_log=\$( pwd )/install-\$( date +%d%m%y-%H%M%S ).log
 
 		cat > \${install_log} <<-EOF
@@ -386,7 +386,6 @@ generate-applicance-installer-header(){
 			Timestamp ......... : \$( date )
 			Product Installer.. : $INSTALLER_NAME
 			Product Version ... : $VERSION
-			Build Number ...... : ${BUILD_NUMBER}
 			Install Dir ....... : \${installPath}
 			Install Log file .. : \${install_log}
 			======================================================================

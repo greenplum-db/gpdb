@@ -424,7 +424,6 @@ generate_applicance_installer_header(){
 			Timestamp ......... : \$( date )
 			Product Installer.. : $INSTALLER_NAME
 			Product Version ... : $VERSION
-			Build Number ...... : ${BUILD_NUMBER}
 			Install Dir ....... : \${installPath}
 			Install Log file .. : \${install_log}
 			======================================================================
