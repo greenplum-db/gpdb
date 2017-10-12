@@ -36,6 +36,7 @@
 #include <arpa/inet.h>
 #endif
 
+#include "gp-libpq-use.h"
 
 /*
  * This macro lists the backend message types that could be "long" (more

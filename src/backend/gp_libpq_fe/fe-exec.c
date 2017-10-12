@@ -33,6 +33,8 @@
 #include <unistd.h>
 #endif
 
+#include "gp-libpq-use.h"
+
 #ifndef libpq_gettext
 #define libpq_gettext(x) gettext(x)
 #endif

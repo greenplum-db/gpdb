@@ -67,6 +67,8 @@
 #include "libpq/ip.h"
 #include "mb/pg_wchar.h"
 
+#include "gp-libpq-use.h"
+
 #ifndef FD_CLOEXEC
 #define FD_CLOEXEC 1
 #endif

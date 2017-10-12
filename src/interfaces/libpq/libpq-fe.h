@@ -28,6 +28,10 @@ extern		"C"
  */
 #include "postgres_ext.h"
 
+#ifdef GP_LIBPQ_USE_H
+#include "../../backend/gp_libpq_fe/gp-libpq-unuse.h"
+#endif
+
 /*
  * Option flags for PQcopyResult
  */
