@@ -1339,6 +1339,10 @@ agg_retrieve_direct(AggState *aggstate)
 			if (!node->lastAgg && is_middle_rollup_agg)
 				return outerslot;
 
+			/* At this point we are done scanning the agg state because a null outerslot was produced above */
+			if(aggstate->agg_done)
+				return NULL;
+
 			/*
 			 * For the top-level of a rollup, we need to finalize
 			 * the aggregate value. First, we reset the context,
