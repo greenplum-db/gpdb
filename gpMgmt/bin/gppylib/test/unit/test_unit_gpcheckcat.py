@@ -2,14 +2,11 @@ import imp
 import logging
 import os
 import sys
-import json
 
 from mock import *
 
 from gp_unittest import *
 from gppylib.gpcatalog import GPCatalogTable
-from gppylib.db import dbconn
-
 
 class GpCheckCatTestCase(GpTestCase):
     def setUp(self):
@@ -19,7 +16,7 @@ class GpCheckCatTestCase(GpTestCase):
         #   self.subject = gpcheckcat
         gpcheckcat_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpcheckcat")
         self.subject = imp.load_source('gpcheckcat', gpcheckcat_file)
-        self.original_env = dict(**os.environ)
+
         self.db_connection = Mock(spec=['close', 'query'])
         self.unique_index_violation_check = Mock(spec=['runCheck'])
         self.foreign_key_check = Mock(spec=['runCheck', 'checkTableForeignKey'])
@@ -328,26 +325,6 @@ class GpCheckCatTestCase(GpTestCase):
         report_cfg = self.subject.getReportConfiguration()
         self.assertEqual("content -1", report_cfg[-1]['segname'])
 
-    def test_TableMainColumn_tablenames_exist(self):
-        is_database_down = True
-        dburl = None
-        try:
-            dburl = dbconn.DbURL(hostname=self._get_env('HOSTNAME', 'localhost'), port=self._get_env('PGPORT', 5432),
-                                 dbname=self._get_env('PGDATABASE', 'postgres'))
-            conn = dbconn.connect(dburl)
-            is_database_down = False
-        except:
-            pass
-        table_query = "select count(*) from pg_class where relname='{table_name}'"
-        if is_database_down:
-            self.skipTest('Database not up - skipping catalog table verification. Tried connecting to %s' % dburl)
-        # 5.json has an incomplete list of catalog tables
-        # src/backend/catalog has .h files for some catalog tables
-        # gpdb-doc/dita/ref_guide/system_catalogs/ has .xml files for almost all catalog tables
-        for key in self.subject.TableMainColumn.keys():
-            cursor = dbconn.execSQL(conn, table_query.format(table_name=key))
-            self.assertTrue(cursor.rowcount == 1, "%s not found in catalog dir" % key)
-
     ####################### PRIVATE METHODS #######################
 
     def _run_batch_size_experiment(self, num_primaries):
@@ -382,11 +359,6 @@ class GpCheckCatTestCase(GpTestCase):
             self.assertTrue(self.num_batches > 0)
             if self.is_remainder_case:
                 self.assertTrue(self.num_joins < BATCH_SIZE)
-
-    def _get_env(self, key, default_value):
-        # We've patched os.environ at the top. We saved the original environment to access the environment variables
-        # for checking database connection.
-        return self.original_env[key] if key in self.original_env else default_value
 
 if __name__ == '__main__':
     run_tests()
