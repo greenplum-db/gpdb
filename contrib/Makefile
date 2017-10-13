@@ -21,6 +21,7 @@ WANTED_DIRS = \
 		hstore		\
 		intarray \
 		pageinspect \
+		passwordcheck \
 		pg_upgrade \
 		pg_upgrade_support \
 		test_parser \
