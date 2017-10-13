@@ -56,7 +56,10 @@ def main():
     status = create_gpadmin_user()
     if status:
         return status
-    status = ciCommon.icg()
+    if os.getenv("TEST_SUITE", "icg") == 'icw':
+      status = ciCommon.icw()
+    else:
+      status = ciCommon.icg()
     if status:
         copy_output()
     return status

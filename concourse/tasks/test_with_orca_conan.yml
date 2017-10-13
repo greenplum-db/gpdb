@@ -18,3 +18,4 @@ run:
     - bin_orca
 params:
   BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+  TEST_SUITE: "icg"

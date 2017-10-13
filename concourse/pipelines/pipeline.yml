@@ -742,6 +742,8 @@ jobs:
   - task: icg_with_orca
     image: ubuntu-gpdb-dev-16
     file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
+    params:
+      TEST_SUITE: "icw"
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
