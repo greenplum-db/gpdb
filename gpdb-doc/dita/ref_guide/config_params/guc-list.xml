@@ -631,6 +631,9 @@
               <xref href="#max_resource_portals_per_transaction"/>
             </li>
             <li>
+              <xref href="#max_resource_groups"/>
+            </li>
+            <li>
               <xref href="#max_resource_queues"/>
             </li>
             <li>
@@ -669,6 +672,9 @@
             <li>
               <xref href="#optimizer_force_three_stage_scalar_dqa" type="section"
                 >optimizer_force_three_stage_scalar_dqa</xref>
+            </li>
+            <li><xref href="#optimizer_join_arity_for_associativity_commutativity" type="section"
+                >optimizer_join_arity_for_associativity_commutativity</xref>
             </li>
             <li>
               <xref href="#optimizer_join_order_threshold" type="section"
@@ -4878,9 +4884,9 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
-      <note type="warning">Resource groups are an experimental feature and
-        are not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+        in a production environment. Experimental features are subject to change without notice in
+        future releases.</note>
       <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
         each Greenplum Database segment node.</p>
       <table id="gp_resource_group_cpu_limit_table">
@@ -4909,9 +4915,9 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
-      <note type="warning">Resource groups are an experimental feature and
-        are not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+        in a production environment. Experimental features are subject to change without notice in
+        future releases.</note>
       <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
         on each Greenplum Database segment node.</p>
       <table id="gp_resource_group_memory_limit_table">
@@ -4940,9 +4946,9 @@
   <topic id="gp_resource_manager">
     <title>gp_resource_manager</title>
     <body>
-      <note type="warning">Resource groups are an experimental feature and
-        are not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+        in a production environment. Experimental features are subject to change without notice in
+        future releases.</note>
       <p>Identifies the resource management scheme currently enabled in the Greenplum Database
         cluster. The default scheme is to use resource queues.</p>
       <table id="gp_resource_manager_table">
@@ -7216,13 +7222,44 @@
       </table>
     </body>
   </topic>
+  <topic id="max_resource_groups">
+    <title>max_resource_groups</title>
+    <body>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+        in a production environment. Experimental features are subject to change without notice in
+        future releases.</note>
+      <p>Sets the maximum number of resource groups that you can create in a Greenplum Database
+        system. Resource groups are defined system-wide.</p>
+      <table id="max_resource_queues_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">0 - INT_MAX</entry>
+              <entry colname="col2">9</entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
   <topic id="max_resource_queues">
     <title>max_resource_queues</title>
     <body>
       <p>Sets the maximum number of resource queues that can be created in a Greenplum Database
         system. Note that resource queues are system-wide (as are roles) so they apply to all
         databases in the system.</p>
-      <table id="max_resource_queues_table">
+      <table id="max_resource_groups_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>
@@ -7318,12 +7355,18 @@
   <topic id="memory_spill_ratio">
     <title>memory_spill_ratio</title>
     <body>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
-      <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When a transaction reaches this threshold, it spills to disk.</p>
-      <p>The default <codeph>memory_spill_ratio</codeph> is the value defined for the resource group assigned to the currently active role. You can set <codeph>memory_spill_ratio</codeph> at the session level to selectively set this limit on a per-query basis. For example, if you have a specific query that spills to disk and requires more memory, you may choose to set a larger <codeph>memory_spill_ratio</codeph> to increase the initial memory allocation.</p>
-      <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, 
-       Greenplum Database does not perform semantic validation on the new value until 
-       you next perform a query.</p>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+        in a production environment. Experimental features are subject to change without notice in
+        future releases.</note>
+      <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When a
+        transaction reaches this threshold, it spills to disk.</p>
+      <p>The default <codeph>memory_spill_ratio</codeph> is the value defined for the resource group
+        assigned to the currently active role. You can set <codeph>memory_spill_ratio</codeph> at
+        the session level to selectively set this limit on a per-query basis. For example, if you
+        have a specific query that spills to disk and requires more memory, you may choose to set a
+        larger <codeph>memory_spill_ratio</codeph> to increase the initial memory allocation.</p>
+      <p>When you set <codeph>memory_spill_ratio</codeph> at the session level, Greenplum Database
+        does not perform semantic validation on the new value until you next perform a query.</p>
       <table id="memory_spill_ratio_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -7617,6 +7660,43 @@
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">true</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_join_arity_for_associativity_commutativity">
+    <title>optimizer_join_arity_for_associativity_commutativity</title>
+    <body>
+      <p>The value is an optimization hint to limit the number of join associativity and join
+        commutativity transformations explored during query optimization. The limit controls the
+        alternative plans that GPORCA considers during query optimization. For example, the default
+        value is 7 is a optimization hint for GPORCA to stop exploring join associativity and join
+        commutativity transformations when an n-ary join operator has more than 7 children during
+        optimization.</p>
+      <p>For a query with a large number of joins, specifying a lower value improves query
+        performance by limiting the number of alternate query plans that GPORCA evaluates. However,
+        setting the value too low might cause GPORCA to generate a query plan that performs
+        sub-optimally.</p>
+      <p>This parameter can be set for a database system or a session.</p>
+      <table id="table_lfq_3zg_nbb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">integer > 0</entry>
+              <entry colname="col2">7</entry>
+              <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

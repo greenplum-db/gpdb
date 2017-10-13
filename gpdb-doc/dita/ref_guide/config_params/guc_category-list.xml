@@ -355,6 +355,8 @@
                 >optimizer_force_three_stage_scalar_dqa</xref></p>
           </stentry>
           <stentry>
+            <p><xref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"
+                type="section">optimizer_join_arity_for_associativity_commutativity</xref></p>
             <p><xref href="guc-list.xml#optimizer_join_order_threshold" format="dita"
                 >optimizer_join_order_threshold</xref></p>
             <p><xref href="guc-list.xml#optimizer_mdcache_size" type="section"
@@ -1194,7 +1196,9 @@
   <topic id="topic444" xml:lang="en">
     <title id="kh1550694">Resource Management Parameters (Resource Groups)</title>
     <body>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
+      <note type="warning">Resource groups are an experimental feature and are not intended for use
+        in a production environment. Experimental features are subject to change without notice in
+        future releases.</note>
       <p>The following parameters configure the Greenplum Database resource group workload
         management feature. </p>
       <simpletable id="kh1571613" frame="none">
@@ -1215,8 +1219,11 @@
                 >gp_resource_manager</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#memory_spill_ratio" type="section"
-                >memory_spill_ratio</xref>
+              <xref href="guc-list.xml#max_resource_groups" type="section"
+                >max_resource_groups</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#memory_spill_ratio" type="section">memory_spill_ratio</xref>
             </p>
           </stentry>
         </strow>
