@@ -105,7 +105,7 @@ family of functions qualify as stable, since their values do not change
 within a transaction.</pd><pd><codeph>VOLATILE</codeph> indicates that the function value can change
 even within a single table scan, so no optimizations can be made. Relatively
 few database functions are volatile in this sense; some examples are
-<codeph>random()</codeph>, <codeph>currval()</codeph>, <codeph>timeofday()</codeph>.
+<codeph>random()</codeph>, <codeph>timeofday()</codeph>.
 But note that any function that has side-effects must be classified volatile,
 even if its result is quite predictable, to prevent calls from being
 optimized away; an example is <codeph>setval()</codeph>.</pd></plentry><plentry><pt>CALLED ON NULL INPUT</pt><pt>RETURNS NULL ON NULL INPUT</pt><pt>STRICT</pt><pd><codeph>CALLED ON NULL INPUT</codeph> (the default) indicates that

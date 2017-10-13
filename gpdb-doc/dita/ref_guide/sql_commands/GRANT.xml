@@ -79,14 +79,13 @@ is created, you can specify which other users can access it with the
             protocol<codeblock>GRANT SELECT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li><li id="ds157705">To allow a user to create a writable external table with a trusted
             protocol<codeblock>GRANT INSERT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li><li id="ds157707">To allow a user to create both readable and writable external table with a trusted
             protocol<codeblock>GRANT ALL ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li></ul></sectiondiv></section><section id="section7"><title>Parameters</title><parml><plentry><pt>SELECT</pt><pd>Allows <codeph>SELECT</codeph> from any column of the specified table,
-view, or sequence. Also allows the use of <codeph>COPY TO</codeph>. For
-sequences, this privilege also allows the use of the <codeph>currval</codeph>
-function.</pd></plentry><plentry><pt>INSERT</pt><pd>Allows <codeph>INSERT</codeph> of a new row into the specified table.
+view, or sequence. Also allows the use of <codeph>COPY TO</codeph>.</pd> 
+</plentry><plentry><pt>INSERT</pt><pd>Allows <codeph>INSERT</codeph> of a new row into the specified table.
 Also allows <codeph>COPY FROM</codeph>.</pd></plentry><plentry><pt>UPDATE</pt><pd>Allows <codeph>UPDATE</codeph> of any column of the specified table.
 <codeph>SELECT ... FOR UPDATE</codeph> and <codeph>SELECT ... FOR SHARE</codeph>
 also require this privilege (as well as the <codeph>SELECT</codeph> privilege).
-For sequences, this privilege allows the use of the <codeph>nextval</codeph>
-and <codeph>setval</codeph> functions.</pd></plentry><plentry><pt>DELETE</pt><pd>Allows <codeph>DELETE</codeph> of a row from the specified table.
+For sequences, this privilege allows the use of the <codeph>nextval()</codeph>
+and <codeph>setval()</codeph> functions.</pd></plentry><plentry><pt>DELETE</pt><pd>Allows <codeph>DELETE</codeph> of a row from the specified table.
 </pd></plentry><plentry><pt>REFERENCES</pt><pd>This keyword is accepted, although foreign key constraints are currently
 not supported in Greenplum Database. To create a foreign key constraint,
 it is necessary to have this privilege on both the referencing and referenced
@@ -112,8 +111,8 @@ for the creation of functions in that language. This is the only type
 of privilege that is applicable to procedural languages.</pd><pd>For schemas, allows access to objects contained in the specified
 schema (assuming that the objects' own privilege requirements are also
 met). Essentially this allows the grantee to look up objects within the
-schema.</pd><pd>For sequences, this privilege allows the use of the <codeph>currval</codeph>
-and <codeph>nextval</codeph> functions. </pd></plentry><plentry><pt>ALL PRIVILEGES</pt><pd>Grant all of the available privileges at once. The <codeph>PRIVILEGES</codeph>
+schema.</pd><pd>For sequences, this privilege allows the use of the 
+<codeph>nextval()</codeph> function. </pd></plentry><plentry><pt>ALL PRIVILEGES</pt><pd>Grant all of the available privileges at once. The <codeph>PRIVILEGES</codeph>
 key word is optional in Greenplum Database, though it is required by
 strict SQL. </pd></plentry><plentry><pt>PUBLIC</pt><pd>A special group-level role that denotes that the privileges are to
 be granted to all roles, including those that may be created later. </pd></plentry><plentry><pt>WITH GRANT OPTION</pt><pd>The recipient of the privilege may in turn grant it to others.</pd></plentry><plentry><pt>WITH ADMIN OPTION</pt><pd>The member of a role may in turn grant membership in the role to

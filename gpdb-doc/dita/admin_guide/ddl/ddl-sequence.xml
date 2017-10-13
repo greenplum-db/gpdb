@@ -3,73 +3,118 @@
 <topic id="topic_eys_3wy_sp">
   <title id="im148803">Creating and Using Sequences</title>
   <body>
-    <p>You can use sequences to auto-increment unique ID columns of a table whenever a record is
-      added. Sequences are often used to assign unique identification numbers to rows added to a
-      table. You can declare an identifier column of type <codeph>SERIAL</codeph> to implicitly
-      create a sequence for use with a column.</p>
+    <p>A Greenplum Database sequence object is a special single row table that functions as a
+      number generator. You can use sequences to generate unique integer identifiers for rows
+      you add to a table.  Declaring a column of type <codeph>SERIAL</codeph> implicitly
+      creates a sequence counter for use in that table column.
+    </p>
+   <p>Sequence attributes include the name of the sequence, its increment value, and the last, minimum, and
+     maximum values of the sequence counter. Sequences also have a special boolean attribute
+     named <codeph>is_called</codeph>. This attribute governs the auto-increment behavior of
+     operations on the sequence counter.</p>
   </body>
   <topic id="topic87" xml:lang="en">
     <title>Creating a Sequence</title>
     <body>
-      <p>The <codeph>CREATE SEQUENCE </codeph>command creates and initializes a special single-row
-        sequence generator table with the given sequence name. The sequence name must be distinct
+      <p>The <codeph><xref href="../../ref_guide/sql_commands/CREATE_SEQUENCE.xml#topic1"/></codeph>
+        command creates and initializes a sequence with the given sequence name
+        and optional start value. The sequence name must be distinct
         from the name of any other sequence, table, index, or view in the same schema. For
         example:</p>
       <p>
         <codeblock>CREATE SEQUENCE myserial START 101;
 </codeblock>
       </p>
+      <p>Greenplum Database sets <codeph>is_called</codeph> to <codeph>false</codeph> 
+         when it first creates a sequence. The last and next value of a newly-created sequence is the sequence start value.</p>
     </body>
   </topic>
   <topic id="topic88" xml:lang="en">
     <title>Using a Sequence</title>
     <body>
-      <p>After you create a sequence generator table using <codeph>CREATE SEQUENCE</codeph>, you can
-        use the <codeph>nextval</codeph> function to operate on the sequence. For example, to insert
-        a row into a table that gets the next value of a sequence:</p>
-      <p>
-        <codeblock>INSERT INTO vendors VALUES (nextval('myserial'), 'acme');
-</codeblock>
-      </p>
-      <p>You can also use the <codeph>setval</codeph> function to reset a sequence's counter value.
-        For example:</p>
-      <p>
-        <codeblock>SELECT setval('myserial', 201);
-</codeblock>
-      </p>
-      <p>A <codeph>nextval</codeph> operation is never rolled back. Afetched value is considered
-        used, even if the transaction that performed the <codeph>nextval</codeph> fails. This means
-        that failed transactions can leave unused holes in the sequence of assigned values.
-          <codeph>setval</codeph> operations are never rolled back. </p>
-      <p>Note that the <codeph>nextval</codeph> function is not allowed in <codeph>UPDATE</codeph>
-        or <codeph>DELETE</codeph> statements if mirroring is enabled, and the
-          <codeph>currval</codeph> and <codeph>lastval</codeph> functions are not supported in
-        Greenplum Database.</p>
-      <p>To examine the current settings of a sequence, query the sequence table:</p>
+      <p>After you create a sequence with the <codeph>CREATE SEQUENCE</codeph> command, you can
+        examine and use the sequence. Greenplum Database provides the <codeph>nextval()</codeph>
+        and <codeph>setval()</codeph> built-in functions to return the next value of and set the sequence counter.</p>
+      <note>The <codeph>currval()</codeph> and <codeph>lastval()</codeph> sequence functions are not supported in Greenplum Database.</note>
+     <section>
+       <title>Examining Sequence Attributes</title>
+      <p>To examine the current attributes of a sequence, query the sequence directly. For example, to examine a sequence named <codeph>myserial</codeph>:</p>
       <p>
         <codeblock>SELECT * FROM myserial;
 </codeblock>
       </p>
+     </section>
+     <section>
+       <title>Returning the Next Sequence Counter Value</title>
+      <p>You can invoke the <codeph>nextval()</codeph> built-in function to return and use
+        the next value in a sequence. The following command inserts the next value of the sequence
+         named <codeph>myserial</codeph>
+         into the first column of a table named <codeph>vendors</codeph>: </p>
+      <p>
+        <codeblock>INSERT INTO vendors VALUES (nextval('myserial'), 'acme');
+</codeblock>
+      </p>
+      <p> <codeph>nextval()</codeph> uses the sequence's
+        <codeph>is_called</codeph> attribute value to determine whether or not to increment
+        the sequence counter before returning the value. <codeph>nextval()</codeph> advances
+        the counter when <codeph>is_called</codeph> is <codeph>true</codeph>.</p>
+      <p>A <codeph>nextval()</codeph> operation is never rolled back. A fetched value is considered
+        used, even if the transaction that performed the <codeph>nextval()</codeph> fails. This means
+        that failed transactions can leave unused holes in the sequence of assigned values.</p>
+      <note>You cannot use the <codeph>nextval()</codeph> function in <codeph>UPDATE</codeph>
+        or <codeph>DELETE</codeph> statements if mirroring is enabled in
+        Greenplum Database.</note>
+     </section>
+     <section>
+       <title>Setting the Sequence Counter Value</title>
+      <p>You can use the Greenplum Database <codeph>setval()</codeph> built-in function to 
+        set the counter value for a sequence. For example, the following command sets the counter value of the sequence named <codeph>myserial</codeph> to <codeph>201</codeph>:</p>
+      <p>
+        <codeblock>SELECT setval('myserial', 201);
+</codeblock>
+      </p>
+      <p>When you invoke <codeph>setval()</codeph> with sequence name and start value arguments,
+        Greenplum Database sets the sequence counter to the specified start value and sets
+        the sequence's <codeph>is_called</codeph> attribute value to <codeph>true</codeph>.
+        A <codeph>nextval()</codeph> invoked
+        after a <codeph>setval()</codeph> advances the sequence counter before returning the value.
+        If you do not want the sequence counter advanced on the next <codeph>nextval()</codeph> call,
+        invoke <codeph>setval()</codeph> with an additional argument set to <codeph>false</codeph>:</p>
+      <p>
+        <codeblock>SELECT setval('myserial', 201, false);
+</codeblock>
+      </p>
+      <p><codeph>setval()</codeph> operations are never rolled back.</p>
+     </section>
     </body>
   </topic>
   <topic id="topic89" xml:lang="en">
     <title>Altering a Sequence</title>
     <body>
-      <p>The <codeph>ALTER SEQUENCE</codeph> command changes the parameters of an existing sequence
-        generator. For example:</p>
+      <p>The <codeph><xref href="../../ref_guide/sql_commands/ALTER_SEQUENCE.xml#topic1"/></codeph>
+        command changes the attributes of an existing sequence. You can alter the sequence
+        minimum, maximum, and increment values. You can also restart the sequence at a specific
+        value.</p>
+      <p>Any parameters not set in the <codeph>ALTER SEQUENCE</codeph> command retain their prior
+        settings.</p>
+      <p>The following command restarts the sequence named <codeph>myserial</codeph> at value
+        <codeph>105</codeph>:</p>
       <p>
         <codeblock>ALTER SEQUENCE myserial RESTART WITH 105;
 </codeblock>
       </p>
-      <p>Any parameters not set in the <codeph>ALTER SEQUENCE</codeph> command retain their prior
-        settings.</p>
+      <p>When you alter a sequence start value with the <codeph>ALTER SEQUENCE</codeph> command, Greenplum Database sets the sequence's
+        <codeph>is_called</codeph> attribute to <codeph>false</codeph>. A
+        <codeph>nextval()</codeph> invoked after restarting a sequence does not advance the
+        sequence counter, but returns the sequence restart value.
+      </p>
     </body>
   </topic>
   <topic id="topic90" xml:lang="en">
     <title>Dropping a Sequence</title>
     <body>
-      <p>The <codeph>DROP SEQUENCE</codeph> command removes a sequence generator table. For
-        example:</p>
+      <p>The <codeph><xref href="../../ref_guide/sql_commands/DROP_SEQUENCE.xml#topic1"/></codeph>
+        command removes a sequence. For example, the following command removes the sequence named <codeph>myserial</codeph>:</p>
       <p>
         <codeblock>DROP SEQUENCE myserial;
 </codeblock>
@@ -77,33 +122,32 @@
     </body>
   </topic>
   <topic id="topic91" xml:lang="en">
-    <title>Making a Sequence the Default Value for a Column</title>
+    <title>Specifying a Sequence as the Default Value for a Column</title>
     <body>
-      <p>A sequence can be used in the <codeph>CREATE TABLE</codeph> command (instead of the
-          <codeph>SERIAL</codeph> or <codeph>BIGSERIAL</codeph> type):</p>
+      <p>You can reference a sequence directly in the
+        <codeph><xref href="../../ref_guide/sql_commands/CREATE_TABLE.xml#topic1"/></codeph>
+        command in addition to using the <codeph>SERIAL</codeph> or <codeph>BIGSERIAL</codeph> types. For example:</p>
       <p>
-        <codeblock>CREATE TABLE ... (
-            id INT4 DEFAULT nextval('myserial')
-            );
+        <codeblock>CREATE TABLE tablename ( id INT4 DEFAULT nextval('myserial'), name text );
 </codeblock>
       </p>
-      <p>Alternatively, a column can be altered and a sequence can be added as default value:</p>
-        <codeblock>ALTER TABLE ... ALTER COLUMN id SET DEFAULT nextval('myserial');
+      <p>You can also alter a table column to set its default value to a sequence counter:</p>
+        <codeblock>ALTER TABLE tablename ALTER COLUMN id SET DEFAULT nextval('myserial');
 </codeblock>
     </body>
   </topic>
   <topic id="topic92" xml:lang="en">
     <title>Sequence Wraparound</title>
     <body>
-      <p>By default, a sequence does not wrap around. That is, when the sequence reaches the max value
+      <p>By default, a sequence does not wrap around. That is, when a sequence reaches the max value
           (<codeph>+32767</codeph> for <codeph>SMALLSERIAL</codeph>, <codeph>+2147483647</codeph>
           for <codeph>SERIAL</codeph>, <codeph>+9223372036854775807</codeph> for
-          <codeph>BIGSERIAL</codeph>), every <codeph>nextval()</codeph> call produces an error.
-          Alter the sequence to make it cycle around and start at <codeph>1</codeph> again:</p>
+          <codeph>BIGSERIAL</codeph>), every subsequent <codeph>nextval()</codeph> call produces an error.
+          You can alter a sequence to make it cycle around and start at <codeph>1</codeph> again:</p>
       <p>
         <codeblock>ALTER SEQUENCE myserial CYCLE;</codeblock>
       </p>
-      <p>The wraparound behaviour can also specified when a sequence is created manually:</p>
+      <p>You can also specify the wraparound behaviour when you create the sequence:</p>
       <p>
         <codeblock>CREATE SEQUENCE myserial CYCLE;</codeblock>
       </p>

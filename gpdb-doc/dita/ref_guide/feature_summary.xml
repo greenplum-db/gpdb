@@ -527,9 +527,9 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE SEQUENCE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Limitations:</b><p>The <codeph>lastval</codeph> and
-                    <codeph>currval</codeph> functions are not supported.</p><p>The
-                    <codeph>setval</codeph> function is only allowed in queries that do not operate
+              <entry colname="col3"><b>Limitations:</b><p>The <codeph>lastval()</codeph> and
+                    <codeph>currval()</codeph> functions are not supported.</p><p>The
+                    <codeph>setval()</codeph> function is only allowed in queries that do not operate
                   on distributed data.</p></entry>
             </row>
             <row>

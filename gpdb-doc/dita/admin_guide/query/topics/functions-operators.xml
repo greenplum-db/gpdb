@@ -66,7 +66,6 @@
                             <entry colname="col2">Restricted</entry>
                             <entry colname="col3">Function values can change within a single table
                                 scan. For example: <codeph>random()</codeph>,
-                                    <codeph>currval()</codeph>,
                                 <codeph>timeofday()</codeph>.</entry>
                             <entry colname="col4">Any function with side effects is volatile, even
                                 if its result is predictable. For example:
@@ -324,8 +323,7 @@ SELECT foo();
                                     <ph>Sequence Manipulation Functions</ph>
                                 </xref>
                             </entry>
-                            <entry colname="col2"
-                                >currval<p>lastval</p><p>nextval</p><p>setval</p></entry>
+                            <entry colname="col2">nextval()<p>setval()</p></entry>
                             <entry colname="col3"/>
                             <entry colname="col4"/>
                         </row>

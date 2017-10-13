@@ -24,8 +24,8 @@ automatically.</p></section><section id="section4"><title>Parameters</title><par
             neither option is specified, the current minimum value will be maintained. </pd></plentry><plentry><pt><varname>maxvalue</varname></pt><pt>NO MAXVALUE</pt><pd>The optional clause <codeph>MAXVALUE <varname>maxvalue</varname></codeph> determines the maximum value for
             the sequence. If <codeph>NO MAXVALUE</codeph> is specified, the defaults are 263-1 and
             -1 for ascending and descending sequences, respectively, will be used. If neither option
-            is specified, the current maximum value will be maintained.</pd></plentry><plentry><pt><varname>start</varname></pt><pd>The optional clause <codeph>RESTART WITH</codeph> start changes the
-current value of the sequence. </pd></plentry><plentry><pt><varname>cache</varname></pt><pd>The clause <codeph>CACHE <varname>cache</varname></codeph> enables sequence numbers to be preallocated and
+            is specified, the current maximum value will be maintained.</pd></plentry><plentry><pt><varname>start</varname></pt><pd>The optional clause <codeph>RESTART WITH</codeph> <varname>start</varname> changes the
+current value of the sequence. Altering the sequence in this manner is equivalent to calling the <codeph>setval()</codeph> function with <codeph>is_called = false</codeph>: the next call to <codeph>nextval()</codeph> does not increment the sequence and will return <varname>start</varname>.</pd></plentry><plentry><pt><varname>cache</varname></pt><pd>The clause <codeph>CACHE <varname>cache</varname></codeph> enables sequence numbers to be preallocated and
             stored in memory for faster access. The minimum value is 1 (only one value can be
             generated at a time, i.e., no cache). If unspecified, the old cache value will be
             maintained.</pd></plentry><plentry><pt>CYCLE</pt><pd>The optional <codeph>CYCLE</codeph> key word may be used to enable
@@ -33,7 +33,7 @@ the sequence to wrap around when the <varname>maxvalue</varname> or <varname>min
 has been reached by an ascending or descending sequence. If the limit
 is reached, the next number generated will be the respective <varname>minvalue</varname>
 or <varname>maxvalue</varname>. </pd></plentry><plentry><pt>NO CYCLE</pt><pd>If the optional <codeph>NO CYCLE</codeph> key word is specified,
-any calls to <codeph>nextval</codeph> after the sequence has reached
+any calls to <codeph>nextval()</codeph> after the sequence has reached
 its maximum value will return an error. If neither <codeph>CYCLE</codeph>
 or <codeph>NO CYCLE</codeph> are specified, the old cycle behavior will
 be maintained.</pd></plentry><plentry><pt>OWNED BY <varname>table.column</varname></pt><pt>OWNED BY NONE</pt><pd>The <codeph>OWNED BY</codeph> option causes the sequence to be associated
@@ -50,7 +50,7 @@ removes any existing table column association.</pd></plentry>
           <codeph>ALTER SEQUENCE</codeph>'s effects on the sequence generation parameters are never
         rolled back; those changes take effect immediately and are not reversible. However, the
           <codeph>OWNED BY</codeph>, <codeph>RENAME TO</codeph>, and <codeph>SET SCHEMA</codeph>
-        clauses are ordinary catalog updates and can be rolled back.</p><p><codeph>ALTER SEQUENCE</codeph> will not immediately affect <codeph>nextval</codeph>
+        clauses are ordinary catalog updates and can be rolled back.</p><p><codeph>ALTER SEQUENCE</codeph> will not immediately affect <codeph>nextval()</codeph>
 results in sessions, other than the current one, that have preallocated
 (cached) sequence values. They will use up all cached values prior to
 noticing the changed sequence generation parameters. The current session
