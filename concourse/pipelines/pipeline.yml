@@ -72,6 +72,13 @@ groups:
   - DPM_backup-restore_ddboost_part3
   - gate_nightly_end
 ################################
+  - gate_advanced_analytics_start
+  - MADlib_Test_gppkg_Orca_centos6
+  - MADlib_Test_gppkg_Planner_centos6
+  - MADlib_Test_gppkg_Orca_centos7
+  - MADlib_Test_gppkg7_Planner_centos7
+  - gate_advanced_analytics_end
+################################
   - gate_general_misc_start
   - MM_gpcheckcat
   - QP_runaway-query
@@ -209,6 +216,15 @@ groups:
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
   - gate_nightly_end
+
+- name: G:AdvancedAnalytics
+  jobs:
+  - gate_advanced_analytics_start
+  - MADlib_Test_gppkg_Orca_centos6
+  - MADlib_Test_gppkg_Planner_centos6
+  - MADlib_Test_gppkg_Orca_centos7
+  - MADlib_Test_gppkg7_Planner_centos7
+  - gate_advanced_analytics_end
 
 - name: G:General
   jobs:
@@ -574,6 +590,22 @@ resources:
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
     start: 8:00 AM
     stop: 9:00 AM
+
+- name: madlib_ci
+  type: git
+  source:
+    branch: {{madlib-ci-git-branch}}
+    uri: {{madlib-ci-git-remote}}
+    private_key: {{madlib-ci-git-key}}
+
+- name: madlib_gppkg
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{madlib-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{madlib-gppkg-versioned-file}}
 
 ## ======================================================================
 ## reusable anchors
@@ -2532,6 +2564,126 @@ jobs:
     - DPM_backup-restore_ddboost_part2
     - DPM_backup-restore_ddboost_part3
 ############### Nightly End
+
+############### Advanced Analytics Start
+- name: gate_advanced_analytics_start
+  plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
+  - get: gpdb_src
+    passed:
+    - gate_icw_end
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - gate_icw_end
+  - get: bin_gpdb_centos7
+    passed:
+    - gate_icw_end
+
+- name: MADlib_Test_gppkg_Orca_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+      trigger: true
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: true
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-6
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+      ORCA: "on"
+
+- name: MADlib_Test_gppkg_Planner_centos6
+  plan:
+  - aggregate:
+    - get: madlib_ci
+      trigger: true
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      trigger: true
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-6
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+      ORCA: "off"
+
+- name: MADlib_Test_gppkg_Orca_centos7
+  plan:
+  - aggregate:
+    - get: madlib_ci
+      trigger: true
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: true
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-7
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-7
+    params:
+      TEST_OS: centos
+      ORCA: "on"
+
+- name: MADlib_Test_gppkg7_Planner_centos7
+  plan:
+  - aggregate:
+    - get: madlib_ci
+      trigger: true
+    - get: gpdb_src
+      passed:
+      - gate_advanced_analytics_start
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      trigger: true
+      passed:
+      - gate_advanced_analytics_start
+    - get: centos-gpdb-dev-7
+    - get: madlib_gppkg
+  - task: MADlib_Test_gppkg
+    file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
+    image: centos-gpdb-dev-7
+    params:
+      TEST_OS: centos
+      ORCA: "off"
+
+- name: gate_advanced_analytics_end
+  plan:
+  - get: gpdb_src
+    trigger: true
+    passed:
+    - MADlib_Test_gppkg_Orca_centos6
+    - MADlib_Test_gppkg_Planner_centos6
+    - MADlib_Test_gppkg_Orca_centos7
+    - MADlib_Test_gppkg7_Planner_centos7
+
+############### Advanced Analytics End
 
 ################ General Misc Start
 - name: gate_general_misc_start
