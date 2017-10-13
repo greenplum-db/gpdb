@@ -14,8 +14,7 @@ groups:
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_ubuntu16
-  - build_orca_using_conan_ubuntu16
-  - build_gpdb_using_conan_orca_ubuntu16
+  - compile_gpdb_and_orca_conan_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
   - gpdb_rc_packaging_centos
@@ -28,7 +27,7 @@ groups:
   - icw_gporca_centos7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
-  - gpdb_icg_with_orca_conan_artifact
+  - icw_gporca_conan_ubuntu16
   - icw_planner_ictcp_centos6
   - icw_gporca_centos6_gpos_memory
   - fts
@@ -138,6 +137,7 @@ groups:
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_ubuntu16
+  - compile_gpdb_and_orca_conan_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
   - gpdb_rc_packaging_centos
@@ -149,6 +149,7 @@ groups:
   - gate_icw_start
   - icw_planner_centos6
   - icw_planner_ubuntu16
+  - icw_gporca_conan_ubuntu16
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
@@ -351,23 +352,23 @@ resources:
   source:
     repository: pivotaldata/centos-mingw
 
-- name: orca_compiled_bits_from_conan_ubuntu16
+- name: compiled_bits_orca_with_conan_ubuntu16
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{orca_compiled_bits_from_conan_ubuntu16_versioned_file}}
+    versioned_file: {{compiled_bits_orca_with_conan_ubuntu16_versioned_file}}
 
-- name: gpdb_compiled_bits_with_orca_conan_ubuntu16
+- name: compiled_bits_gpdb_with_orca_conan_ubuntu16
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{gpdb_compiled_bits_with_orca_conan_ubuntu16_versioned_file}}
+    versioned_file: {{compiled_bits_gpdb_with_orca_conan_ubuntu16_versioned_file}}
 
 - name: bin_gpdb_centos6
   type: s3
@@ -675,75 +676,26 @@ jobs:
     - get: centos-mingw
     - get: ubuntu-gpdb-dev-16
 
-- name: build_orca_using_conan_ubuntu16
+- name: compile_gpdb_and_orca_conan_ubuntu16
   plan:
   - aggregate:
+    - get: reduced-frequency-trigger
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: true
-      params:
-        submodules: none
+      trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
-  - task: build_orca
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/build_orca_using_conan.yml
+      passed: [gate_compile_start]
+  - task: compile_gpdb_and_orca
+    file: gpdb_src/concourse/tasks/compile_gpdb_and_orca_with_conan.yml
     params:
       BINTRAY_REMOTE: {{bintray_remote}}
       BINTRAY_REMOTE_URL: {{bintray_remote_url}}
-  - put: orca_compiled_bits_from_conan_ubuntu16
+  - put: compiled_bits_gpdb_with_orca_conan_ubuntu16
     params:
-      file: bin_orca/bin_orca_conan.tar.gz
-- name: build_gpdb_using_conan_orca_ubuntu16
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - build_orca_using_conan_ubuntu16
-    - get: bin_orca
-      resource: orca_compiled_bits_from_conan_ubuntu16
-      passed:
-      - build_orca_using_conan_ubuntu16
-      params:
-        globs: bin_orca_conan.tar.gz
-      trigger: true
-    - get: ubuntu-gpdb-dev-16
-  - task: build_with_orca
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/build_gpdb_with_orca_gen_by_conan.yml
-  - task: package_tarball
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/package_tarball.yml
-  - put: gpdb_compiled_bits_with_orca_conan_ubuntu16
+      file: {{compiled_bits_gpdb_with_orca_conan_ubuntu16_versioned_file}}
+  - put: compiled_bits_orca_with_conan_ubuntu16
     params:
-      file: package_tarball/bin_gpdb.tar.gz
-- name: gpdb_icg_with_orca_conan_artifact
-  plan:
-  - aggregate:
-    - get: bin_orca
-      passed:
-      - build_gpdb_using_conan_orca_ubuntu16
-      resource: orca_compiled_bits_from_conan_ubuntu16
-      params:
-        globs:
-        - bin_orca_conan.tar.gz
-    - get: bin_gpdb
-      passed:
-      - build_gpdb_using_conan_orca_ubuntu16
-      resource: gpdb_compiled_bits_with_orca_conan_ubuntu16
-      params:
-        globs:
-        - bin_gpdb.tar.gz
-      trigger: true
-    - get: gpdb_src
-      params:
-        submodules: none
-      passed:
-      - build_gpdb_using_conan_orca_ubuntu16
-    - get: ubuntu-gpdb-dev-16
-  - task: icg_with_orca
-    image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
-    params:
-      TEST_SUITE: "icw"
+      file: {{compiled_bits_orca_with_conan_ubuntu16_versioned_file}}
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
@@ -913,7 +865,6 @@ jobs:
   - put: installer_sles11_gpdb_loaders
     params:
       file: gpdb_artifacts/greenplum-loaders-*-sles11-x86_64.zip
-
 - name: compile_gpdb_windows_cl
   plan:
   - aggregate:
@@ -1167,6 +1118,7 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       - compile_gpdb_ubuntu16
+      - compile_gpdb_and_orca_conan_ubuntu16
       - compile_gpdb_windows_cl
       - gpdb_rc_packaging_centos
       trigger: true
@@ -1197,6 +1149,12 @@ jobs:
     - get: compiled_bits_ubuntu16
       passed:
       - compile_gpdb_ubuntu16
+    - get: compiled_bits_gpdb_with_orca_conan_ubuntu16
+      passed:
+      - compile_gpdb_and_orca_conan_ubuntu16
+    - get: compiled_bits_orca_with_conan_ubuntu16
+      passed:
+      - compile_gpdb_and_orca_conan_ubuntu16
 ################# Compile Group End
 
 ################# ICW Group
@@ -1231,6 +1189,12 @@ jobs:
       passed:
       - gate_compile_end
     - get: compiled_bits_ubuntu16
+      passed:
+      - gate_compile_end
+    - get: compiled_bits_gpdb_with_orca_conan_ubuntu16
+      passed:
+      - gate_compile_end
+    - get: compiled_bits_orca_with_conan_ubuntu16
       passed:
       - gate_compile_end
 - name: icw_planner_centos6
@@ -1310,7 +1274,6 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: sles
       CONFIGURE_FLAGS: {{configure_flags}}
-
 - name: icw_planner_ubuntu16
   plan:
   - aggregate:
@@ -1326,7 +1289,27 @@ jobs:
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       CONFIGURE_FLAGS: {{configure_flags}}
-
+- name: icw_gporca_conan_ubuntu16
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules: none
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      passed: [gate_icw_start]
+      resource: compiled_bits_gpdb_with_orca_conan_ubuntu16
+      trigger: true
+    - get: bin_orca
+      passed: [gate_icw_start]
+      resource: compiled_bits_orca_with_conan_ubuntu16
+      trigger: true
+    - get: ubuntu-gpdb-dev-16
+  - task: icw_with_orca
+    image: ubuntu-gpdb-dev-16
+    file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
+    params:
+      TEST_SUITE: "icw"
 - name: icw_gporca_centos6_gpos_memory
   plan:
   - aggregate:
@@ -2990,14 +2973,12 @@ jobs:
   - get: gpdb_src
     trigger: true
     passed:
-    - build_orca_using_conan_ubuntu16
-    - build_gpdb_using_conan_orca_ubuntu16
-    - gpdb_icg_with_orca_conan_artifact
     - compile_gpdb_centos6
     - compile_gpdb_open_source_centos6
     - compile_gpdb_centos7
     - compile_gpdb_sles11
     - compile_gpdb_ubuntu16
+    - compile_gpdb_and_orca_conan_ubuntu16
     - compile_gpdb_windows_cl
     - compile_gpdb_aix7_remote
     - icw_planner_centos6
@@ -3005,6 +2986,7 @@ jobs:
     - icw_gporca_centos7
     - icw_gporca_sles11
     - icw_planner_ubuntu16
+    - icw_gporca_conan_ubuntu16
     - icw_planner_ictcp_centos6
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6

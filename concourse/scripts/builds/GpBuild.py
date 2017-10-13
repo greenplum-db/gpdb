@@ -1,6 +1,4 @@
-import os
 import subprocess
-import sys
 from GpdbBuildBase import GpdbBuildBase
 
 class GpBuild(GpdbBuildBase):
