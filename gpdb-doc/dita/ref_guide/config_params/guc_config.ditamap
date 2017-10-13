@@ -220,6 +220,7 @@
             <topicref href="guc-list.xml#optimizer_enable_master_only_queries"/>
             <topicref href="guc-list.xml#optimizer_force_multistage_agg"/>
             <topicref href="guc-list.xml#optimizer_force_three_stage_scalar_dqa"/>
+            <topicref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"/>
             <topicref href="guc-list.xml#optimizer_join_order_threshold"/>
             <topicref href="guc-list.xml#optimizer_mdcache_size"/>
             <topicref href="guc-list.xml#optimizer_metadata_caching"/>

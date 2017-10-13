@@ -213,6 +213,15 @@ on
 T1.a=T2.g and T1.c=T2.f;
 
 
+-- This produced a "could not find pathkey item to sort" error at one point.
+-- The problem was that we stripped out column b from the SubqueryScan's
+-- target list, as it's not needed in the final result, but we tried to
+-- maintain the ordering (a,b) in the Gather Motion node, which would have
+-- required column b to be present, at least as a junk column.
+create table bfv_planner_t3 (a int4, b int4);
+select a from (select * from bfv_planner_t3 order by a, b) as x limit 1;
+
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;

@@ -7,28 +7,27 @@
       <simpletable id="kh171216">
          <strow>
             <stentry>
-               <p>
-                  <codeph>optimizer</codeph></p>
-               <p><codeph>optimizer_analyze_root_partition</codeph>
+               <p><codeph>optimizer</codeph>
                </p>
-               <p><codeph>optimizer_array_expansion_threshold</codeph>
-               </p>
-               <p>
-                  <codeph>optimizer_control</codeph>
-               </p>
+               <p><codeph>optimizer_analyze_root_partition</codeph></p>
+               <p><codeph>optimizer_array_expansion_threshold</codeph></p>
                <p><codeph>optimizer_cte_inlining_bound</codeph></p>
-               <p><codeph>optimizer_enable_master_only_queries</codeph>
-               </p>
+               <p><codeph>optimizer_control optimizer_enable_master_only_queries</codeph></p>
                <p><codeph>optimizer_force_multistage_agg</codeph></p>
                <p><codeph>optimizer_force_three_stage_scalar_dqa</codeph></p>
             </stentry>
             <stentry>
-               <p><codeph>optimizer_mdcache_size</codeph></p>
-               <p><codeph>optimizer_metadata_caching</codeph></p>
-               <p><codeph>optimizer_nestloop_factor</codeph></p>
+               <p><codeph>optimizer_join_arity_for_associativity_commutativity</codeph></p>
+               <p><codeph>optimizer_join_order_threshold</codeph></p>
+               <p><codeph>optimizer_mdcache_size</codeph>
+               </p>
+               <p><codeph>optimizer_metadata_caching</codeph>
+               </p>
                <p><codeph>optimizer_parallel_union</codeph></p>
-               <p><codeph>optimizer_print_missing_stats</codeph></p>
-               <p><codeph>optimizer_print_optimization_stats</codeph></p>
+               <p><codeph>optimizer_print_missing_stats</codeph>
+               </p>
+               <p><codeph>optimizer_print_optimization_stats</codeph>
+               </p>
                <p><codeph>optimizer_sort_factor</codeph></p>
             </stentry>
          </strow>

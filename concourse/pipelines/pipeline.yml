@@ -1,6 +1,13 @@
+## ======================================================================
+## groups
+## ======================================================================
+
 groups:
 - name: all
   jobs:
+  - validate_pipeline
+################################
+  - gate_compile_start
   - compile_gpdb_centos6
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
@@ -9,30 +16,25 @@ groups:
   - compile_gpdb_ubuntu16
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
+  - gpdb_rc_packaging_centos
+  - client_loader_remote_test_aix
+  - gate_compile_end
+################################
+  - gate_icw_start
   - icw_planner_centos6
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
+  - icw_planner_ubuntu16
   - icw_planner_ictcp_centos6
-  - client_loader_remote_test_aix
-  - mpp_resource_group_centos6
-  - MU_check_centos
-  - MM_gpperfmon
-  - MM_gpcheck
-  - MM_analyzedb
-  - DPM_backup-restore
-  - MM_gppkg
-  - MM_gpinitsystem
-  - MM_gpinitstandby
-  - MM_pt-rebuild
+  - icw_gporca_centos6_gpos_memory
   - fts
   - storage
+  - gate_icw_end
+################################
+  - gate_cs_misc_start
   - cs_walrep_1
   - cs_walrep_2
-  - cs_filerep_e2e_full_primary
-  - cs_filerep_e2e_incr_primary
-  - cs_filerep_e2e_full_mirror
-  - cs_filerep_e2e_incr_mirror
   - cs_pg_twophase_01_10
   - cs_pg_twophase_11_20
   - cs_pg_twophase_21_30
@@ -41,24 +43,54 @@ groups:
   - cs_pg_twophase_switch_01_12
   - cs_pg_twophase_switch_13_24
   - cs_pg_twophase_switch_25_33
-  - QP_memory-accounting
-  - regression_tests_gpcloud_centos
-  - regression_tests_gphdfs_centos
-  - regression_tests_pxf_centos
-  - gpdb_rc_packaging_centos
-  - gpdb_rc_packaging_sles
-  - DPM_backup_43_restore_5
-  - MM_gpcheckcat
-  - MM_gprecoverseg
-  - MM_gpexpand
-  - DPM_gptransfer-43x-to-5x
+  - gate_cs_misc_end
+################################
+  - gate_cluster_start
+  - mpp_interconnect
   - DPM_gptransfer-5x-to-5x
   - cs-filerep-schema-topology-crashrecov
+  - DPM_backup-restore
+  - gate_cluster_end
+################################
+  - gate_mm_misc_start
+  - MM_gppkg
+  - MM_gprecoverseg
+  - MM_gpcheck
+  - MM_analyzedb
+  - MM_gpperfmon
+  - MM_pt-rebuild
+  - MM_gpinitsystem
+  - MU_check_centos
+  - MM_gpinitstandby
+  - gate_mm_misc_end
+################################
+  - gate_nightly_start
+  - DPM_backup_43_restore_5
+  - MM_gpexpand
   - cs-aoco-compression
-  - mpp_interconnect
+  - DPM_gptransfer-43x-to-5x
+  - gate_nightly_end
+################################
+  - gate_general_misc_start
+  - MM_gpcheckcat
   - QP_runaway-query
+  - QP_memory-accounting
   - QP_optimizer-functional
-  - validate_pipeline
+  - regression_tests_pxf_hdp
+  - regression_tests_pxf_cdh
+  - regression_tests_gphdfs_centos
+  - regression_tests_gpcloud_centos
+  - mpp_resource_group_centos6
+  - mpp_resource_group_centos7
+  - gate_general_misc_end
+################################
+  - gate_filerep_start
+  - cs_filerep_e2e_full_mirror
+  - cs_filerep_e2e_incr_mirror
+  - cs_filerep_e2e_full_primary
+  - cs_filerep_e2e_incr_primary
+  - gate_filerep_end
+################################
 
 - name: Release
   jobs:
@@ -79,6 +111,7 @@ groups:
   - cs_walrep_1
   - cs_walrep_2
   - mpp_resource_group_centos6
+  - mpp_resource_group_centos7
   - cs_filerep_e2e_full_primary
   - cs_filerep_e2e_incr_primary
   - cs_filerep_e2e_full_mirror
@@ -92,6 +125,106 @@ groups:
 - name: Experimental Tests
   jobs:
   - icw_gporca_centos6_gpos_memory
+
+- name: G:Compile
+  jobs:
+  - gate_compile_start
+  - compile_gpdb_centos6
+  - compile_gpdb_open_source_centos6
+  - compile_gpdb_binary_swap_centos6
+  - compile_gpdb_centos7
+  - compile_gpdb_sles11
+  - compile_gpdb_ubuntu16
+  - compile_gpdb_windows_cl
+  - compile_gpdb_aix7_remote
+  - gpdb_rc_packaging_centos
+  - client_loader_remote_test_aix
+  - gate_compile_end
+
+- name: G:ICW
+  jobs:
+  - gate_icw_start
+  - icw_planner_centos6
+  - icw_planner_ubuntu16
+  - icw_gporca_centos6
+  - icw_gporca_centos7
+  - icw_gporca_sles11
+  - icw_planner_ictcp_centos6
+  - icw_gporca_centos6_gpos_memory
+  - fts
+  - storage
+  - gate_icw_end
+
+- name: G:CS_Misc
+  jobs:
+  - gate_cs_misc_start
+  - cs_walrep_1
+  - cs_walrep_2
+  - cs_pg_twophase_01_10
+  - cs_pg_twophase_11_20
+  - cs_pg_twophase_21_30
+  - cs_pg_twophase_31_40
+  - cs_pg_twophase_41_49
+  - cs_pg_twophase_switch_01_12
+  - cs_pg_twophase_switch_13_24
+  - cs_pg_twophase_switch_25_33
+  - gate_cs_misc_end
+
+- name: G:Cluster
+  jobs:
+  - gate_cluster_start
+  - mpp_interconnect
+  - DPM_gptransfer-5x-to-5x
+  - cs-filerep-schema-topology-crashrecov
+  - DPM_backup-restore
+  - gate_cluster_end
+
+- name: G:MM_Misc
+  jobs:
+  - gate_mm_misc_start
+  - MM_gppkg
+  - MM_gprecoverseg
+  - MM_gpcheck
+  - MM_analyzedb
+  - MM_gpperfmon
+  - MM_pt-rebuild
+  - MM_gpinitsystem
+  - MU_check_centos
+  - MM_gpinitstandby
+  - gate_mm_misc_end
+
+- name: G:Nightly
+  jobs:
+  - gate_nightly_start
+  - DPM_backup_43_restore_5
+  - MM_gpexpand
+  - cs-aoco-compression
+  - DPM_gptransfer-43x-to-5x
+  - gate_nightly_end
+
+- name: G:General
+  jobs:
+  - gate_general_misc_start
+  - MM_gpcheckcat
+  - QP_runaway-query
+  - QP_memory-accounting
+  - QP_optimizer-functional
+  - regression_tests_pxf_hdp
+  - regression_tests_pxf_cdh
+  - regression_tests_gphdfs_centos
+  - regression_tests_gpcloud_centos
+  - mpp_resource_group_centos6
+  - mpp_resource_group_centos7
+  - gate_general_misc_end
+
+- name: G:FileRep
+  jobs:
+  - gate_filerep_start
+  - cs_filerep_e2e_full_mirror
+  - cs_filerep_e2e_incr_mirror
+  - cs_filerep_e2e_full_primary
+  - cs_filerep_e2e_incr_primary
+  - gate_filerep_end
 
 ## ======================================================================
 ## resource types
@@ -114,7 +247,7 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
-    tag_filter: 1.0.0
+    tag_filter: 1.0.1
 
 - name: terraform
   type: terraform
@@ -181,6 +314,7 @@ resources:
   type: git
   source:
     branch: {{pxf-git-branch}}
+    tag_filter: {{pxf-git-filter}}
     private_key: {{pxf-git-key}}
     uri: {{pxf-git-remote}}
 
@@ -188,7 +322,7 @@ resources:
   type: git
   source:
     branch: {{pxf_automation-git-branch}}
-    private_key: {{pxf-git-key}}
+    private_key: {{pxf_automation-git-key}}
     uri: {{pxf_automation-git-remote}}
 
 - name: centos-gpdb-dev-6
@@ -203,17 +337,11 @@ resources:
     repository: pivotaldata/centos-gpdb-dev
     tag: 7-gcc6.2-llvm3.7
 
-- name: sles-gpdb-dev-11-beta
-  type: docker-image
-  source:
-    repository: pivotaldata/sles-gpdb-dev
-    tag: 11-beta
-
 - name: ubuntu-gpdb-dev-16
   type: docker-image
   source:
     repository: pivotaldata/ubuntu-gpdb-dev
-    tag: '16.04'
+    tag: '16.04_gcc_6_3'
 
 - name: centos-mingw
   type: docker-image
@@ -228,6 +356,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: compiled_bits_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{compiled_bits_ubuntu16_versioned_file}}
 
 - name: binary_swap_gpdb_centos6
   type: s3
@@ -292,69 +429,6 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel6-x86_64.zip
 
-- name: installer_rhel6_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel6-x86_64.zip.sha256
-
-- name: installer_rhel7_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel7-x86_64.zip
-
-- name: installer_rhel7_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel7-x86_64.zip.sha256
-
-- name: installer_sles11_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-sles11-x86_64.zip
-
-- name: installer_sles11_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-sles11-x86_64.zip.sha256
-
-- name: installer_appliance_rhel6_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel6-x86_64.zip
-
-- name: installer_appliance_rhel6_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel6-x86_64.zip.sha256
-
 - name: installer_rhel6_gpdb_clients
   type: s3
   source:
@@ -372,24 +446,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip
-
-- name: installer_appliance_rhel7_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel7-x86_64.zip
-
-- name: installer_appliance_rhel7_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel7-x86_64.zip.sha256
 
 - name: installer_rhel7_gpdb_clients
   type: s3
@@ -436,25 +492,6 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: deliverables/QAUtils-rhel6-x86_64.tar.gz
 
-- name: qautils_rhel7_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: deliverables/QAUtils-rhel7-x86_64.tar.gz
-
-- name: qautils_sles11_tarball
-  type: s3
-  source:
-    private: true
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: deliverables/QAUtils-sles11-x86_64.tar.gz
-
 - name: installer_sles11_gpdb_clients
   type: s3
   source:
@@ -500,6 +537,15 @@ resources:
     region_name: {{aws-region}}
     versioned_file: singlecluster-without-pxf/singlecluster-HDP.tar.gz
 
+- name: singlecluster-CDH
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    secret_access_key: {{bucket-secret-access-key}}
+    bucket: {{pxf-aws-bucket-name}}
+    region_name: {{aws-region}}
+    versioned_file: singlecluster-without-pxf/singlecluster-CDH.tar.gz
+
 - name: nightly-trigger
   type: time
   source:
@@ -519,6 +565,7 @@ resources:
 ## ======================================================================
 ## reusable anchors
 ## ======================================================================
+
 ccp_create_params_anchor: &ccp_default_params
   action: create
   delete_on_failure: true
@@ -532,6 +579,7 @@ ccp_vars_anchor: &ccp_default_vars
 
 ccp_destroy_anchor: &ccp_destroy
   put: terraform
+  tags: ["gpdb5_ccp_external_worker"]
   params:
     action: destroy
     env_name_file: terraform/name
@@ -552,6 +600,7 @@ ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
 debug_sleep_anchor: &debug_sleep
   do:
   - task: debug_sleep
+    tags: ["gpdb5_ccp_external_worker"]
     config:
       platform: linux
       image_resource:
@@ -565,6 +614,11 @@ debug_sleep_anchor: &debug_sleep
     ensure:
       <<: *ccp_destroy
 
+pulse_properties_anchor: &pulse_properties
+      PULSE_URL: {{pulse_url}}
+      PULSE_USERNAME: {{pulse_username}}
+      PULSE_PASSWORD: {{pulse_password}}
+
 ## ======================================================================
 ## jobs
 ## ======================================================================
@@ -573,17 +627,46 @@ debug_sleep_anchor: &debug_sleep
 
 jobs:
 
+- name: validate_pipeline
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: validate_pipeline
+    file: gpdb_src/concourse/tasks/validate_pipeline.yml
+    image: centos-gpdb-dev-6
+
+################# Compile Group
+- name: gate_compile_start
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+    - get: gpaddon_src
+      trigger: true
+    - get: pxf_src
+      trigger: true
+    - get: gpdb_src_binary_swap
+      trigger: true
+    - get: centos-gpdb-dev-6
+    - get: centos-gpdb-dev-7
+    - get: centos-mingw
+    - get: ubuntu-gpdb-dev-16
 - name: compile_gpdb_centos6
   plan:
   - aggregate:
-    - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
+    - get: reduced-frequency-trigger
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
+      passed: [gate_compile_start]
     - get: pxf_src
       trigger: true
+      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
+      passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-gpdb-dev-6
@@ -606,33 +689,67 @@ jobs:
     - put: installer_rhel6_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip
-
 - name: compile_gpdb_open_source_centos6
   public: true
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: centos-gpdb-dev-6
+      passed: [gate_compile_start]
   - task: compile_gpdb
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source_centos.yml
     params:
         CONFIGURE_FLAGS: {{configure_flags}}
-
+- name: compile_gpdb_binary_swap_centos6
+  plan:
+  # This acts like a cache as this job will only be run once to get a
+  # binary to use for our binary swap compatibility tests. Setting a new
+  # tag or branch for the gpdb_src_binary_swap resource via set-pipeline
+  # will replace the cached binary.
+  - aggregate:
+    - get: gpdb_src
+      resource: gpdb_src_binary_swap
+      trigger: true
+      passed: [gate_compile_start]
+    - get: gpaddon_src
+      passed: [gate_compile_start]
+    - get: pxf_src
+      passed: [gate_compile_start]
+    - get: centos-gpdb-dev-6
+      passed: [gate_compile_start]
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+  - aggregate:
+    - put: binary_swap_gpdb_centos6
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
 - name: compile_gpdb_centos7
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
+      passed: [gate_compile_start]
     - get: gpaddon_src
+      passed: [gate_compile_start]
     - get: pxf_src
+      passed: [gate_compile_start]
       trigger: true
     - get: centos-gpdb-dev-7
+      passed: [gate_compile_start]
   - task: compile_gpdb
     image: centos-gpdb-dev-7
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
@@ -660,25 +777,31 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
+      passed: [gate_compile_start]
   - task: compile_gpdb
     image: ubuntu-gpdb-dev-16
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
     params:
       CONFIGURE_FLAGS: {{configure_flags}}
+  - put: compiled_bits_ubuntu16
+    params:
+      file: compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
 
 - name: compile_gpdb_sles11
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
+      passed: [gate_compile_start]
     - get: pxf_src
+      passed: [gate_compile_start]
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb_sles11.yml
     params:
@@ -704,13 +827,22 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
+      tags: ["gpdb5_wix_external_worker"]
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
+      tags: ["gpdb5_wix_external_worker"]
     - get: gpaddon_src
+      passed: [gate_compile_start]
+      tags: ["gpdb5_wix_external_worker"]
     - get: pxf_src
+      passed: [gate_compile_start]
+      tags: ["gpdb5_wix_external_worker"]
     - get: centos-mingw
+      passed: [gate_compile_start]
+      tags: ["gpdb5_wix_external_worker"]
   - task: compile_gpdb
+    tags: ["gpdb5_wix_external_worker"]
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: centos-mingw
     params:
@@ -723,24 +855,28 @@ jobs:
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
   - aggregate:
     - put: bin_gpdb_windows_clients
+      tags: ["gpdb5_wix_external_worker"]
       params:
         file: gpdb_artifacts/greenplum-clients-*-WinXP-x86_32.msi
     - put: bin_gpdb_windows_loaders
+      tags: ["gpdb5_wix_external_worker"]
       params:
         file: gpdb_artifacts/greenplum-loaders-*-WinXP-x86_32.msi
-
-# Compile gpdb on a remote AIX machine, triggered by concourse.
-# We need to serialize this job to avoid overwhelming workload
-# on remote machine.
 - name: compile_gpdb_aix7_remote
   serial: true
   plan:
+  # Compile gpdb on a remote AIX machine, triggered by concourse.
+  # We need to serialize this job to avoid overwhelming workload
+  # on remote machine.
   - aggregate:
     - get: nightly-trigger
       trigger: true
     - get: gpdb_src
+      passed: [gate_compile_start]
     - get: gpaddon_src
+      passed: [gate_compile_start]
     - get: centos-gpdb-dev-6
+      passed: [gate_compile_start]
   - task: compile_gpdb_aix7_remote
     file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
     image: centos-gpdb-dev-6
@@ -763,1102 +899,29 @@ jobs:
     - put: installer_aix7_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-aix7_ppc_64.zip
-
-# This acts like a cache as this job will only be run once to get a
-# binary to use for our binary swap compatibility tests. Setting a new
-# tag or branch for the gpdb_src_binary_swap resource via set-pipeline
-# will replace the cached binary.
-- name: compile_gpdb_binary_swap_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      resource: gpdb_src_binary_swap
-      trigger: true
-    - get: gpaddon_src
-    - get: pxf_src
-    - get: centos-gpdb-dev-6
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-  - aggregate:
-    - put: binary_swap_gpdb_centos6
-      params:
-        file: gpdb_artifacts/bin_gpdb.tar.gz
-
-# Stage 2a: Run regression tests against binaries (make installcheck-world and similar)
-
-- name: icw_planner_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: binary_swap_gpdb
-      resource: binary_swap_gpdb_centos6
-      passed: [compile_gpdb_binary_swap_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      TEST_BINARY_SWAP: false
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_centos6_gpos_memory
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off | optimizer_use_gpdb_allocators=on"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_centos7
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos7]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos7
-      passed: [compile_gpdb_centos7]
-      trigger: true
-    - get: centos-gpdb-dev-7
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-7
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_gporca_sles11
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_sles11]
-    - get: bin_gpdb
-      resource: bin_gpdb_sles11
-      passed: [compile_gpdb_sles11]
-      trigger: true
-    - get: sles-gpdb-dev-11-beta
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: sles-gpdb-dev-11-beta
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: sles
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: icw_planner_ictcp_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
-      TEST_OS: centos
-
-- name: client_loader_remote_test_aix
-  serial: true
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_aix7_remote]
-    - get: installer_aix7_gpdb_clients
-      passed: [compile_gpdb_aix7_remote]
-    - get: installer_aix7_gpdb_loaders
-      passed: [compile_gpdb_aix7_remote]
-      trigger: true
-    - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-    - put: aix_environments
-      params: {acquire: true}
-  - task: ic_gpdb_cl
-    file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
-    image: centos-gpdb-dev-6
-    params:
-      BLD_TARGETS: "clients loaders"
-      REMOTE_HOST: {{remote_host}}
-      REMOTE_PORT: {{remote_port}}
-      REMOTE_USER: {{remote_user}}
-      REMOTE_KEY: {{remote_key}}
-    ensure:
-      do:
-      - task: cleanup_aix
-        file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
-        image: centos-gpdb-dev-6
-        params:
-          REMOTE_HOST: {{remote_host}}
-          REMOTE_PORT: {{remote_port}}
-          REMOTE_USER: {{remote_user}}
-          REMOTE_KEY: {{remote_key}}
-      - put: aix_environments
-        params: {release: aix_environments}
-
-- name: mpp_resource_group_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    input_mapping:
-      gpdb_binary: bin_gpdb
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos-gpdb-dev-6
-    params:
-      TEST_OS: centos6
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: MU_check_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: MU_check_centos
-    file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      TEST_OS: centos
-
-- name: regression_tests_gpcloud_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_gpcloud
-    file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-    image: centos-gpdb-dev-6
-    params:
-      gpcloud_access_key_id: {{gpcloud-access-key-id}}
-      gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
-      overwrite_gpcloud: false
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: regression_tests_pxf_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: singlecluster
-      resource: singlecluster-HDP
-      trigger: true
-    - get: pxf_automation_src
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: gpdb
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: MM_gpperfmon
-  plan:
-  - aggregate: &gets_for_behave
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: gpperfmon
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_TAGS: gpperfmon
-
-- name: MM_gpcheck
-  plan:
-  - aggregate: *gets_for_behave
-  - task: gpcheck_as_gpadmin
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_TAGS: gpcheck_as_gpadmin
-      GPCHECK_SETUP: true
-
-- name: MM_analyzedb
-  plan:
-  - aggregate: *gets_for_behave
-  - task: analyzedb
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_TAGS: analyzedb
-
-- name: DPM_backup-restore
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: DPM_backup_43_restore_5
-  plan:
-  - get: nightly-trigger
-    trigger: {{nightly-trigger-flag}}
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: {{reduced-frequency-trigger-flag}}
-    - get: gpdb4_binary
-      resource: bin_gpdb4_centos6
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: setup_gpdb4
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    input_mapping:
-      gpdb_binary: gpdb4_binary
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_backup_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - task: setup_gpdb5
-    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    image: centos-gpdb-dev-6
-    on_failure:
-      <<: *debug_sleep
-  - task: run_restore_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: MM_gppkg
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: setup_gppkg_second_install
-    file: gpdb_src/concourse/tasks/gppkg_behave.yml
-    params:
-      SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=gppkg
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: MM_gpinitsystem
-  plan:
-  - aggregate: *gets_for_behave
-  - task: gpinitsystem
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_TAGS: gpinitsystem
-
-- name: MM_gpinitstandby
-  plan:
-  - aggregate: *gets_for_behave
-  - task: gpinitstandby
-    file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_TAGS: gpinitstandby
-
-- name: MM_pt-rebuild
-  plan:
-  - aggregate: *gets_for_behave
-  - aggregate:
-    - task: persistent_table_rebuild
-      file: gpdb_src/concourse/tasks/behave_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        BEHAVE_TAGS: persistent_rebuild
-    - task: persistent_table_rebuild_crash_recovery
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        MAKE_TEST_COMMAND: persistent_table_rebuild
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: fts
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: fts_transitions_part01
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        MAKE_TEST_COMMAND: fts_transitions_part01
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-    - task: fts_transitions_part02
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        MAKE_TEST_COMMAND: fts_transitions_part02
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-    - task: fts_transitions_part03
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      image: centos-gpdb-dev-6
-      params:
-        MAKE_TEST_COMMAND: fts_transitions_part03
-        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: storage
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params: {submodules: none}
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: aocoalter_catalog_loaders
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: aocoalter_catalog_loaders
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-    - task: storage_persistent_accessmethods_and_vacuum
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_persistent_accessmethods_and_vacuum
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-    - task: storage_filerep
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_filerep
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-    - task: storage_uao_transactionmanagement
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_uao_and_transactionmanagement
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-    - task: storage_vacuum_xidlimits
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_vacuum_xidlimits
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
-
-- name: cs_walrep_1
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: walrep_1
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_walrep_2
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: walrep_2
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_filerep_e2e_full_primary
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws-nvme-block-device/
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: i3.xlarge
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: filerep_end_to_end_full_primary
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_filerep_e2e_incr_primary
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws-nvme-block-device/
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: i3.xlarge
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: filerep_end_to_end_incr_primary
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_filerep_e2e_full_mirror
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws-nvme-block-device/
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: i3.xlarge
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: filerep_end_to_end_full_mirror
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_filerep_e2e_incr_mirror
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      terraform_source: ccp_src/aws-nvme-block-device/
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: i3.xlarge
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: filerep_end_to_end_incr_mirror
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_01_10
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_pg_twophase_01_10
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_11_20
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_pg_twophase_11_20
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_21_30
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_pg_twophase_21_30
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_31_40
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_pg_twophase_31_40
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_41_49
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_pg_twophase_41_49
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_switch_01_12
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_switch_01_12
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_switch_13_24
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_switch_13_24
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_switch_25_33
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_switch_25_33
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: QP_memory-accounting
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: memory-accounting
-    timeout: 3h
-    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: memory_accounting
-      TEST_OS: "centos"
-      CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: regression_tests_gphdfs_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
-      trigger: true
-      resource: bin_gpdb_centos6
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_gphdfs
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: centos-gpdb-dev-6
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-# Stage 2b: Packaging
-
 - name: gpdb_rc_packaging_centos
   plan:
   - aggregate:
     - get: gpdb_src
       passed:
+      - gate_compile_start
       - compile_gpdb_centos6
       - compile_gpdb_centos7
     - get: gpaddon_src
-      passed: [compile_gpdb_centos6]
+      passed:
+      - compile_gpdb_centos6
+      - gate_compile_start
     - get: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
+      passed:
+      - compile_gpdb_centos6
       trigger: true
     - get: bin_gpdb_centos7
       passed: [compile_gpdb_centos7]
       trigger: true
     - get: centos-gpdb-dev-6
+      passed: [gate_compile_start]
     - get: centos-gpdb-dev-7
+      passed: [gate_compile_start]
   - task: separate_qautils_files_for_rc_centos6
     file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
     image: centos-gpdb-dev-6
@@ -1944,175 +1007,890 @@ jobs:
         INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
         INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-rhel7-x86_64.zip
   - aggregate:
-    # RHEL 6
     - put: installer_rhel6_gpdb_rc
       params:
         file: packaged_gpdb_rc_centos6/greenplum-db-*-rhel6-x86_64.zip
-    - put: installer_rhel6_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_rc_centos6/greenplum-db-*-rhel6-x86_64.zip.sha256
-    - put: installer_appliance_rhel6_gpdb_rc
-      params:
-        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-rhel6-x86_64.zip
-    - put: installer_appliance_rhel6_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-rhel6-x86_64.zip.sha256
     - put: qautils_rhel6_tarball
       params:
         file: rc_bin_gpdb_rhel6/QAUtils-rhel6-x86_64.tar.gz
-
-    # RHEL 7
-    - put: installer_rhel7_gpdb_rc
-      params:
-        file: packaged_gpdb_rc_centos7/greenplum-db-*-rhel7-x86_64.zip
-    - put: installer_rhel7_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_rc_centos7/greenplum-db-*-rhel7-x86_64.zip.sha256
-    - put: installer_appliance_rhel7_gpdb_rc
-      params:
-        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-rhel7-x86_64.zip
-    - put: installer_appliance_rhel7_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-rhel7-x86_64.zip.sha256
-    - put: qautils_rhel7_tarball
-      params:
-        file: rc_bin_gpdb_rhel7/QAUtils-rhel7-x86_64.tar.gz
-
-    # Source
     - put: gpdb_src_tinc_tarball
       params:
         file: packaged_gpdb_src_tinc/greenplum-db-*-src.tar.gz
     - put: gpdb_src_behave_tarball
       params:
         file: packaged_gpdb_src_behave/greenplum-db-*-behave.tar.gz
-
-- name: gpdb_rc_packaging_sles
+- name: client_loader_remote_test_aix
+  serial: true
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [compile_gpdb_sles11]
-    - get: gpaddon_src
-      passed: [compile_gpdb_sles11]
+      passed:
+      - gate_compile_start
+      - compile_gpdb_aix7_remote
+      - compile_gpdb_centos6
+    - get: installer_aix7_gpdb_clients
+      passed:
+      - compile_gpdb_aix7_remote
+    - get: installer_aix7_gpdb_loaders
+      passed:
+      - compile_gpdb_aix7_remote
+      trigger: true
+    - get: bin_gpdb
+      passed:
+      - compile_gpdb_centos6
+      resource: bin_gpdb_centos6
+    - get: centos-gpdb-dev-6
+      passed:
+      - gate_compile_start
+    - put: aix_environments
+      params: {acquire: true}
+  - task: ic_gpdb_cl
+    file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
+    image: centos-gpdb-dev-6
+    params:
+      BLD_TARGETS: "clients loaders"
+      REMOTE_HOST: {{remote_host}}
+      REMOTE_PORT: {{remote_port}}
+      REMOTE_USER: {{remote_user}}
+      REMOTE_KEY: {{remote_key}}
+    ensure:
+      do:
+      - task: cleanup_aix
+        file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
+        image: centos-gpdb-dev-6
+        params:
+          REMOTE_HOST: {{remote_host}}
+          REMOTE_PORT: {{remote_port}}
+          REMOTE_USER: {{remote_user}}
+          REMOTE_KEY: {{remote_key}}
+      - put: aix_environments
+        params: {release: aix_environments}
+- name: gate_compile_end
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_compile_start
+      - compile_gpdb_centos6
+      - compile_gpdb_open_source_centos6
+      - compile_gpdb_centos7
+      - compile_gpdb_sles11
+      - compile_gpdb_ubuntu16
+      - compile_gpdb_windows_cl
+      - gpdb_rc_packaging_centos
+      trigger: true
+    - get: bin_gpdb_sles11
+      passed:
+      - compile_gpdb_sles11
+    - get: binary_swap_gpdb_centos6
+      passed:
+      - compile_gpdb_binary_swap_centos6
+    - get: bin_gpdb_centos7
+      passed:
+      - compile_gpdb_centos7
+    - get: bin_gpdb_centos6
+      passed:
+      - compile_gpdb_centos6
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gpdb_rc_packaging_centos
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gpdb_rc_packaging_centos
+    - get: qautils_rhel6_tarball
+      passed:
+      - gpdb_rc_packaging_centos
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gpdb_rc_packaging_centos
+    - get: compiled_bits_ubuntu16
+      passed:
+      - compile_gpdb_ubuntu16
+################# Compile Group End
+
+################# ICW Group
+- name: gate_icw_start
+  plan:
+    - get: gpdb_src
+      passed:
+      - gate_compile_end
+      trigger: true
+    - get: bin_gpdb_sles11
+      passed:
+      - gate_compile_end
+    - get: binary_swap_gpdb_centos6
+      passed:
+      - gate_compile_end
+    - get: bin_gpdb_centos7
+      passed:
+      - gate_compile_end
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_compile_end
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gate_compile_end
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gate_compile_end
+    - get: qautils_rhel6_tarball
+      passed:
+      - gate_compile_end
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gate_compile_end
+    - get: compiled_bits_ubuntu16
+      passed:
+      - gate_compile_end
+- name: icw_planner_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      passed: [gate_icw_start]
+      resource: bin_gpdb_centos6
+      trigger: true
+    - get: binary_swap_gpdb
+      passed: [gate_icw_start]
+      resource: binary_swap_gpdb_centos6
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
+      CONFIGURE_FLAGS: {{configure_flags}}
+- name: icw_gporca_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+- name: icw_gporca_centos7
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-7
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+- name: icw_gporca_sles11
+  serial: true
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
     - get: bin_gpdb
       resource: bin_gpdb_sles11
-      passed: [compile_gpdb_sles11]
+      passed: [gate_icw_start]
       trigger: true
-    - get: sles-gpdb-dev-11-beta
-  - task: separate_qautils_files_for_rc
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
-    image: sles-gpdb-dev-11-beta
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_sles11.yml
     params:
-      QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-sles11-x86_64.tar.gz
-  - task: gpdb_rc_packaging_sles
-    file: gpdb_src/concourse/tasks/gpdb_packaging.yml
-    image: sles-gpdb-dev-11-beta
-    input_mapping:
-      bin_gpdb: rc_bin_gpdb
-    params:
-      INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-sles-gpdb.sh
-      INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-sles11-x86_64.zip
-      ADD_README_INSTALL: true
-  - put: installer_sles11_gpdb_rc
-    params:
-      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip
-  - put: installer_sles11_gpdb_rc_sha256
-    params:
-      file: packaged_gpdb/greenplum-db-*-sles11-x86_64.zip.sha256
-  - put: qautils_sles11_tarball
-    params:
-      file: rc_bin_gpdb/QAUtils-sles11-x86_64.tar.gz
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: sles
+      CONFIGURE_FLAGS: {{configure_flags}}
 
-- name: MM_gpcheckcat
+- name: icw_planner_ubuntu16
   plan:
   - aggregate:
     - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
+      passed: [gate_icw_start]
+    - get: compiled_bits_ubuntu16
+      passed: [gate_icw_start]
+      trigger: true
+    - get: ubuntu-gpdb-dev-16
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
+    image: ubuntu-gpdb-dev-16
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_gporca_centos6_gpos_memory
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off | optimizer_use_gpdb_allocators=on"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: {{configure_flags}}
+- name: icw_planner_ictcp_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+- name: fts
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params: {submodules: none}
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - aggregate:
+    - task: fts_transitions_part01
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      image: centos-gpdb-dev-6
+      params:
+        MAKE_TEST_COMMAND: fts_transitions_part01
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+    - task: fts_transitions_part02
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      image: centos-gpdb-dev-6
+      params:
+        MAKE_TEST_COMMAND: fts_transitions_part02
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+    - task: fts_transitions_part03
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      image: centos-gpdb-dev-6
+      params:
+        MAKE_TEST_COMMAND: fts_transitions_part03
+        BLDWRAP_POSTGRES_CONF_ADDONS: gp_segment_connect_timeout=35 gp_fts_probe_interval=20
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+- name: storage
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params: {submodules: none}
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - aggregate:
+    - task: aocoalter_catalog_loaders
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      params:
+        MAKE_TEST_COMMAND: aocoalter_catalog_loaders
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+      image: centos-gpdb-dev-6
+    - task: storage_persistent_accessmethods_and_vacuum
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      params:
+        MAKE_TEST_COMMAND: storage_persistent_accessmethods_and_vacuum
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+      image: centos-gpdb-dev-6
+      timeout: 3h
+    - task: storage_filerep
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      params:
+        MAKE_TEST_COMMAND: storage_filerep
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+      image: centos-gpdb-dev-6
+      timeout: 3h
+    - task: storage_uao_transactionmanagement
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      params:
+        MAKE_TEST_COMMAND: storage_uao_and_transactionmanagement
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+      image: centos-gpdb-dev-6
+      timeout: 3h
+    - task: storage_vacuum_xidlimits
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      params:
+        MAKE_TEST_COMMAND: storage_vacuum_xidlimits
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+      image: centos-gpdb-dev-6
+      timeout: 3h
+- name: gate_icw_end
+  plan:
+  - get: gpdb_src
+    passed:
+    - icw_planner_centos6
+    - icw_gporca_centos6
+    - icw_gporca_centos7
+    - icw_gporca_sles11
+    - icw_planner_ictcp_centos6
+    - fts
+    - storage
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - icw_planner_centos6
+    - icw_gporca_centos6
+    - icw_planner_ictcp_centos6
+  - get: bin_gpdb_centos7
+    passed:
+    - icw_gporca_centos7
+  - get: bin_gpdb_sles11
+    passed:
+    - icw_gporca_sles11
+  # Not used by icw group, but is passed through
+  - get: gpdb_src_tinc_tarball
+    passed:
+    - gate_icw_start
+  - get: installer_rhel6_gpdb_rc
+    passed:
+    - gate_icw_start
+  - get: qautils_rhel6_tarball
+    passed:
+    - gate_icw_start
+  - get: gpdb_src_behave_tarball
+    passed:
+    - gate_icw_start
+################# ICW Group End
+
+############## CS Misc Start
+- name: gate_cs_misc_start
+  plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_compile_end
+      trigger: true
+    - get: bin_gpdb_sles11
+      passed:
+      - gate_compile_end
+    - get: binary_swap_gpdb_centos6
+      passed:
+      - gate_compile_end
+    - get: bin_gpdb_centos7
+      passed:
+      - gate_compile_end
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_compile_end
+- name: cs_walrep_1
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
     - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
   - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_FLAGS: --tags=gpcheckcat
+      TINC_TARGET: walrep_1
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
-
-- name: MM_gprecoverseg
+- name: cs_walrep_2
   plan:
   - aggregate:
     - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [compile_gpdb_centos6]
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
     - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
       resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
+      passed: [gate_cs_misc_start]
       trigger: true
     - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
     - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
   - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
   - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_FLAGS: --tags=gprecoverseg
+      TINC_TARGET: walrep_2
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
-
-# Stage 3: Trigger jobs that rely on packaging
-- name: MM_gpexpand
+- name: cs_pg_twophase_01_10
   plan:
-  - get: nightly-trigger
-    trigger: {{nightly-trigger-flag}}
-  - aggregate: &post_packaging_gets_trigger_based_on_flag
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_pg_twophase_01_10
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_11_20
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_pg_twophase_11_20
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_21_30
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_pg_twophase_21_30
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_31_40
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_pg_twophase_31_40
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_41_49
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_pg_twophase_41_49
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_switch_01_12
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_switch_01_12
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_switch_13_24
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_switch_13_24
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_pg_twophase_switch_25_33
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_cs_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cs_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: m4.large
+        aws_ebs_volume_type: gp2
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: test_switch_25_33
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: gate_cs_misc_end
+  plan:
+  - get: gpdb_src
+    passed: &gate_cs_misc_passed
+    - cs_walrep_1
+    - cs_walrep_2
+    - cs_pg_twophase_01_10
+    - cs_pg_twophase_11_20
+    - cs_pg_twophase_21_30
+    - cs_pg_twophase_31_40
+    - cs_pg_twophase_41_49
+    - cs_pg_twophase_switch_01_12
+    - cs_pg_twophase_switch_13_24
+    - cs_pg_twophase_switch_25_33
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed: *gate_cs_misc_passed
+############## CS Misc End
+
+############### Cluster Start
+- name: gate_cluster_start
+  plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
+  - get: gpdb_src
+    passed:
+    - gate_mm_misc_end
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - gate_mm_misc_end
+  - get: gpdb_src_tinc_tarball
+    passed:
+    - gate_mm_misc_end
+  - get: qautils_rhel6_tarball
+    passed:
+    - gate_mm_misc_end
+  - get: gpdb_src_behave_tarball
+    passed:
+    - gate_mm_misc_end
+  - get: installer_rhel6_gpdb_rc
+    passed:
+    - gate_mm_misc_end
+- name: mpp_interconnect
+  plan:
+  - aggregate: &post_packaging_gets_trigger_true
     - get: gpdb_src
       params: {submodules: none}
       tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: {{reduced-frequency-trigger-flag}}
+      passed: [gate_cluster_start]
+      trigger: true
     - get: gpdb_src_tinc_tarball
       tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
+      passed: [gate_cluster_start]
     - get: installer_rhel6_gpdb_rc
       tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
+      passed: [gate_cluster_start]
     - get: qautils_rhel6_tarball
       tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
+      passed: [gate_cluster_start]
     - get: gpdb_src_behave_tarball
       tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
+      passed: [gate_cluster_start]
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -2121,57 +1899,19 @@ jobs:
       installer_gpdb_rc: installer_rhel6_gpdb_rc
       qautils_tarball: qautils_rhel6_tarball
       gpdb_src_behave_tarball: gpdb_src_behave_tarball
-    params: &pulse_properties
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params: *pulse_properties
-
-- name: DPM_gptransfer-43x-to-5x
-  plan:
-  - get: nightly-trigger
-    trigger: {{nightly-trigger-flag}}
-  - aggregate: *post_packaging_gets_trigger_based_on_flag
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+      PULSE_PROJECT_NAME: "mpp-interconnect"
   - task: monitor_pulse
     attempts: 2
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
-
+      PULSE_PROJECT_NAME: "mpp-interconnect"
 - name: DPM_gptransfer-5x-to-5x
   plan:
-  - aggregate: &post_packaging_gets_trigger_true
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: gpdb_src_behave_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
+  - aggregate: *post_packaging_gets_trigger_true
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
@@ -2186,7 +1926,6 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
-
 - name: cs-filerep-schema-topology-crashrecov
   plan:
   - aggregate: *post_packaging_gets_trigger_true
@@ -2204,11 +1943,434 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "cs-filerep-schema-topology-crashrecov"
+- name: DPM_backup-restore
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_cluster_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_cluster_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=backups,backup_and_restore_backups,backup_and_restore_restores,restores --tags=-nbuonly --tags=-ddonly
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: gate_cluster_end
+  plan:
+  - get: gpdb_src
+    passed:
+    - DPM_gptransfer-5x-to-5x
+    - DPM_backup-restore
+    - mpp_interconnect
+    - cs-filerep-schema-topology-crashrecov
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - DPM_backup-restore
+############### Cluster End
 
+################# MM Misc Start
+- name: gate_mm_misc_start
+  plan:
+  - get: gpdb_src
+    passed:
+    - gate_icw_end
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - gate_icw_end
+  - get: bin_gpdb_centos7
+    passed:
+    - gate_icw_end
+  - get: bin_gpdb_sles11
+    passed:
+    - gate_icw_end
+  # Not used by icw group, but is passed through
+  - get: gpdb_src_tinc_tarball
+    passed:
+    - gate_icw_end
+  - get: installer_rhel6_gpdb_rc
+    passed:
+    - gate_icw_end
+  - get: qautils_rhel6_tarball
+    passed:
+    - gate_icw_end
+  - get: gpdb_src_behave_tarball
+    passed:
+    - gate_icw_end
+- name: MM_gppkg
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: setup_gppkg_second_install
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/gppkg_behave.yml
+    params:
+      SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=gppkg
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: MM_gprecoverseg
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=gprecoverseg
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: MM_gpcheck
+  plan:
+  - aggregate: &gets_for_behave
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: gpcheck_as_gpadmin
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpcheck_as_gpadmin
+      GPCHECK_SETUP: true
+- name: MM_analyzedb
+  plan:
+  - aggregate: *gets_for_behave
+  - task: analyzedb
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: analyzedb
+- name: MM_gpperfmon
+  plan:
+  - aggregate: *gets_for_behave
+  - task: gpperfmon
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpperfmon
+- name: MM_pt-rebuild
+  plan:
+  - aggregate: *gets_for_behave
+  - aggregate:
+    - task: persistent_table_rebuild
+      file: gpdb_src/concourse/tasks/behave_gpdb.yml
+      image: centos-gpdb-dev-6
+      params:
+        BEHAVE_TAGS: persistent_rebuild
+    - task: persistent_table_rebuild_crash_recovery
+      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+      image: centos-gpdb-dev-6
+      params:
+        MAKE_TEST_COMMAND: persistent_table_rebuild
+        TEST_OS: centos
+        CONFIGURE_FLAGS: {{configure_flags}}
+- name: MM_gpinitsystem
+  plan:
+  - aggregate: *gets_for_behave
+  - task: gpinitsystem
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpinitsystem
+- name: MU_check_centos
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_mm_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: MU_check_centos
+    file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos
+- name: MM_gpinitstandby
+  plan:
+  - aggregate: *gets_for_behave
+  - task: gpinitstandby
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_TAGS: gpinitstandby
+- name: gate_mm_misc_end
+  plan:
+  - get: gpdb_src
+    passed:
+    - MU_check_centos
+    - MM_analyzedb
+    - MM_gpinitsystem
+    - MM_gpperfmon
+    - MM_gpcheck
+    - MM_pt-rebuild
+    - MM_gpinitstandby
+    - MM_gppkg
+    - MM_gprecoverseg
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - MU_check_centos
+    - MM_analyzedb
+    - MM_gpinitsystem
+    - MM_gpperfmon
+    - MM_gpcheck
+    - MM_pt-rebuild
+    - MM_gpinitstandby
+    - MM_gppkg
+    - MM_gprecoverseg
+  # Not used by icw group, but is passed through
+  - get: gpdb_src_tinc_tarball
+    passed:
+    - gate_mm_misc_start
+  - get: installer_rhel6_gpdb_rc
+    passed:
+    - gate_mm_misc_start
+  - get: qautils_rhel6_tarball
+    passed:
+    - gate_mm_misc_start
+  - get: gpdb_src_behave_tarball
+    passed:
+    - gate_mm_misc_start
+################# MM Misc End
+
+############### Nightly Start
+- name: gate_nightly_start
+  plan:
+  - task: sleep_before_starting
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: alpine
+      run:
+        path: 'sh'
+        args: ['-c', 'sleep 300']
+  - get: gpdb_src
+    passed:
+    - gate_icw_end
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - gate_icw_end
+  - get: gpdb_src_tinc_tarball
+    passed:
+    - gate_icw_end
+  - get: installer_rhel6_gpdb_rc
+    passed:
+    - gate_icw_end
+  - get: qautils_rhel6_tarball
+    passed:
+    - gate_icw_end
+  - get: gpdb_src_behave_tarball
+    passed:
+    - gate_icw_end
+- name: DPM_backup_43_restore_5
+  plan:
+  - get: nightly-trigger
+    tags: ["gpdb5_ccp_external_worker"]
+    trigger: ((nightly-trigger-flag))
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_nightly_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_nightly_start]
+      trigger: ((reduced-frequency-trigger-flag))
+    - get: gpdb4_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb4_centos6
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: setup_gpdb4
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    input_mapping:
+      gpdb_binary: gpdb4_binary
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_backup_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
+    on_failure:
+      <<: *debug_sleep
+  - task: setup_gpdb5
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    image: centos-gpdb-dev-6
+    on_failure:
+      <<: *debug_sleep
+  - task: run_restore_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: MM_gpexpand
+  plan:
+  - get: nightly-trigger
+    trigger: ((nightly-trigger-flag))
+  - aggregate: &post_packaging_gets_trigger_based_on_flag
+    - get: gpdb_src
+      params: {submodules: none}
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gate_nightly_start]
+      trigger: ((reduced-frequency-trigger-flag))
+    - get: gpdb_src_tinc_tarball
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gate_nightly_start]
+    - get: installer_rhel6_gpdb_rc
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gate_nightly_start]
+    - get: qautils_rhel6_tarball
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gate_nightly_start]
+    - get: gpdb_src_behave_tarball
+      tags: ["gpdb5-pulse-worker"]
+      passed: [gate_nightly_start]
+  - task: trigger_pulse
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
+    input_mapping: *input_mappings
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
+  - task: monitor_pulse
+    attempts: 2
+    tags: ["gpdb5-pulse-worker"]
+    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+    params:
+      <<: *pulse_properties
+      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
 - name: cs-aoco-compression
   plan:
   - get: nightly-trigger
-    trigger: {{nightly-trigger-flag}}
+    trigger: ((nightly-trigger-flag))
   - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
@@ -2224,33 +2386,94 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "cs-aoco-compression"
-
-- name: mpp_interconnect
+- name: DPM_gptransfer-43x-to-5x
   plan:
-  - aggregate: *post_packaging_gets_trigger_true
+  - get: nightly-trigger
+    trigger: ((nightly-trigger-flag))
+  - aggregate: *post_packaging_gets_trigger_based_on_flag
   - task: trigger_pulse
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/trigger_pulse.yml
     input_mapping: *input_mappings
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "mpp-interconnect"
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
   - task: monitor_pulse
     attempts: 2
     tags: ["gpdb5-pulse-worker"]
     file: gpdb_src/ci/pulse/api/monitor_pulse.yml
     params:
       <<: *pulse_properties
-      PULSE_PROJECT_NAME: "mpp-interconnect"
+      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+- name: gate_nightly_end
+  plan:
+  - get: gpdb_src
+    trigger: true
+    passed:
+    - DPM_backup_43_restore_5
+    - MM_gpexpand
+    - cs-aoco-compression
+    - DPM_gptransfer-43x-to-5x
+############### Nightly End
 
+################ General Misc Start
+- name: gate_general_misc_start
+  plan:
+  - get: gpdb_src
+    passed:
+    - gate_mm_misc_end
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - gate_mm_misc_end
+- name: MM_gpcheckcat
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_general_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=gpcheckcat
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 - name: QP_runaway-query
   plan:
   - aggregate:
     - get: gpdb_src
-      passed: [compile_gpdb_centos6]
+      passed: [gate_general_misc_start]
       trigger: true
     - get: bin_gpdb
-      passed: [compile_gpdb_centos6]
+      passed: [gate_general_misc_start]
       resource: bin_gpdb_centos6
     - get: centos-gpdb-dev-6
   - task: runaway-query
@@ -2261,16 +2484,33 @@ jobs:
       MAKE_TEST_COMMAND: runaway_query
       TEST_OS: "centos"
       CONFIGURE_FLAGS: {{configure_flags}}
-
+- name: QP_memory-accounting
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: bin_gpdb
+      passed: [gate_general_misc_start]
+      resource: bin_gpdb_centos6
+    - get: centos-gpdb-dev-6
+  - task: memory-accounting
+    timeout: 3h
+    file: gpdb_src/concourse/tasks/tinc_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: memory_accounting
+      TEST_OS: "centos"
+      CONFIGURE_FLAGS: {{configure_flags}}
 - name: QP_optimizer-functional
   plan:
   - aggregate:
     - get: gpdb_src
       params: {submodules: none}
-      passed: [compile_gpdb_centos6]
+      passed: [gate_general_misc_start]
     - get: bin_gpdb
       resource: bin_gpdb_centos6
-      passed: [compile_gpdb_centos6]
+      passed: [gate_general_misc_start]
       trigger: true
     - get: centos-gpdb-dev-6
   - aggregate:
@@ -2292,16 +2532,367 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
-
-- name: validate_pipeline
+- name: regression_tests_pxf_hdp
   plan:
   - aggregate:
     - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-HDP
+      trigger: true
+    - get: pxf_automation_src
       trigger: true
     - get: centos-gpdb-dev-6
-  - task: validate_pipeline
-    file: gpdb_src/concourse/tasks/validate_pipeline.yml
+  - aggregate:
+    - task: regression_tests_pxf
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+- name: regression_tests_pxf_cdh
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-CDH
+      trigger: true
+    - get: pxf_automation_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_pxf
+    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
+    params:
+      GROUP: gpdb
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+- name: regression_tests_gphdfs_centos
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      passed: [gate_general_misc_start]
+      trigger: true
+      resource: bin_gpdb_centos6
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_gphdfs
+    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
+    image: centos-gpdb-dev-6
+    params:
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+- name: regression_tests_gpcloud_centos
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_gpcloud
+    file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
+    image: centos-gpdb-dev-6
+    params:
+      gpcloud_access_key_id: {{gpcloud-access-key-id}}
+      gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+      overwrite_gpcloud: false
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+- name: mpp_resource_group_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    input_mapping:
+      gpdb_binary: bin_gpdb
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
+    image: centos-gpdb-dev-6
+    params:
+      TEST_OS: centos6
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: mpp_resource_group_centos7
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos7
+    - get: ccp_src
+    - get: centos-gpdb-dev-7
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        platform: centos7
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    input_mapping:
+      gpdb_binary: bin_gpdb
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
+    image: centos-gpdb-dev-7
+    params:
+      TEST_OS: centos7
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: gate_general_misc_end
+  plan:
+  - get: gpdb_src
+    passed:
+    - QP_memory-accounting
+    - regression_tests_gpcloud_centos
+    - regression_tests_gphdfs_centos
+    - regression_tests_pxf_hdp
+    - regression_tests_pxf_cdh
+    - QP_runaway-query
+    - QP_optimizer-functional
+    - MM_gpcheckcat
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - QP_memory-accounting
+    - regression_tests_gpcloud_centos
+    - regression_tests_gphdfs_centos
+    - regression_tests_pxf_hdp
+    - regression_tests_pxf_cdh
+    - QP_runaway-query
+    - QP_optimizer-functional
+    - MM_gpcheckcat
+    trigger: true
+################ General Misc End
+
+################ FileRep Start
+- name: gate_filerep_start
+  plan:
+  - get: gpdb_src
+    passed:
+    - gate_general_misc_end
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - gate_general_misc_end
+- name: cs_filerep_e2e_full_mirror
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_filerep_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_filerep_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-nvme-block-device/
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: i3.xlarge
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: filerep_end_to_end_full_mirror
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_filerep_e2e_incr_mirror
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_filerep_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_filerep_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-nvme-block-device/
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: i3.xlarge
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: filerep_end_to_end_incr_mirror
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_filerep_e2e_full_primary
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_filerep_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_filerep_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-nvme-block-device/
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: i3.xlarge
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: filerep_end_to_end_full_primary
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: cs_filerep_e2e_incr_primary
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      tags: ["gpdb5_ccp_external_worker"]
+      passed: [gate_filerep_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_filerep_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-nvme-block-device/
+      vars:
+        <<: *ccp_default_vars
+        aws_instance-node-instance_type: i3.xlarge
+        number_of_nodes: 1
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
+    params:
+      TINC_TARGET: filerep_end_to_end_incr_primary
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: gate_filerep_end
+  plan:
+  - get: gpdb_src
+    passed:
+    - cs_filerep_e2e_full_mirror
+    - cs_filerep_e2e_incr_mirror
+    - cs_filerep_e2e_full_primary
+    - cs_filerep_e2e_incr_primary
+    trigger: true
+  - get: bin_gpdb_centos6
+    passed:
+    - cs_filerep_e2e_full_mirror
+    - cs_filerep_e2e_incr_mirror
+    - cs_filerep_e2e_full_primary
+    - cs_filerep_e2e_incr_primary
+################ FileRep End
 
 - name: Release_Candidate
   plan:
@@ -2319,9 +2910,11 @@ jobs:
     - icw_gporca_centos6
     - icw_gporca_centos7
     - icw_gporca_sles11
+    - icw_planner_ubuntu16
     - icw_planner_ictcp_centos6
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6
+    - mpp_resource_group_centos7
     - MU_check_centos
     - MM_analyzedb
     - MM_gpinitsystem
@@ -2349,9 +2942,9 @@ jobs:
     - QP_memory-accounting
     - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
-    - regression_tests_pxf_centos
+    - regression_tests_pxf_hdp
+    - regression_tests_pxf_cdh
     - gpdb_rc_packaging_centos
-    - gpdb_rc_packaging_sles
     - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg

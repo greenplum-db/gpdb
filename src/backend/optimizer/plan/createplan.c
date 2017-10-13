@@ -166,9 +166,6 @@ static WorkTableScan *make_worktablescan(List *qptlist, List *qpqual,
 										 Index scanrelid, int wtParam);
 static BitmapAnd *make_bitmap_and(List *bitmapplans);
 static BitmapOr *make_bitmap_or(List *bitmapplans);
-static Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
-		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
-		  double limit_tuples);
 static List *flatten_grouping_list(List *groupcls);
 
 
@@ -4434,7 +4431,7 @@ make_mergejoin(List *tlist,
  * arrays already.	limit_tuples is as for cost_sort (in particular, pass
  * -1 if no limit)
  */
-static Sort *
+Sort *
 make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
 		  double limit_tuples)
@@ -4882,48 +4879,6 @@ make_sort_from_groupcols(PlannerInfo *root,
 
 	return make_sort(root, lefttree, numsortkeys,
 					 sortColIdx, sortOperators, nullsFirst, -1.0);
-}
-
-
-/*
- * make_sort_from_reordered_groupcols
- *	  Create sort plan to sort based on re-ordered grouping columns.
- *
- * 'groupcls' is the list of GroupClauses
- * 'orig_groupColIdx' is the original columns numbers for groupcls
- * 'new_grpColIdx' gives the re-ordered column numbers to use
- * 'grouping' represents the target entry for the Grouping column.
- *	  If this value is not NULL, "Grouping" column will be added
- *	  into the sorting list.
- */
-Sort *
-make_sort_from_pathkeys_and_groupingcol(PlannerInfo *root,
-										Plan *lefttree,
-										List *pathkeys,
-										TargetEntry *grouping,
-										TargetEntry *groupid)
-{
-	Sort	   *sort;
-	Oid			sort_op;
-
-	sort = make_sort_from_pathkeys(root, lefttree, pathkeys, -1, false);
-
-	sort->sortColIdx = repalloc(sort->sortColIdx, (sort->numCols + 2) * sizeof(AttrNumber));
-	sort->sortOperators = repalloc(sort->sortOperators, (sort->numCols + 2) * sizeof(Oid));
-	sort->nullsFirst = repalloc(sort->nullsFirst, (sort->numCols + 2) * sizeof(bool));
-
-	sort_op = ordering_oper_opid(exprType((Node *) grouping->expr));
-
-	sort->numCols = add_sort_column(grouping->resno, sort_op, false,
-								  sort->numCols,
-								  sort->sortColIdx, sort->sortOperators, sort->nullsFirst);
-
-	sort_op = ordering_oper_opid(exprType((Node *) groupid->expr));
-
-	sort->numCols = add_sort_column(groupid->resno, sort_op, false,
-								  sort->numCols,
-								  sort->sortColIdx, sort->sortOperators, sort->nullsFirst);
-	return sort;
 }
 
 /*

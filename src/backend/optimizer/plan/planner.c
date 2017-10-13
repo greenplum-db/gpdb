@@ -1379,7 +1379,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 */
 		sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
 											  result_plan->targetlist, true);
-		sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 	}
 	else
 	{
@@ -1618,7 +1617,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				 */
 				sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
 											  result_plan->targetlist, true);
-				sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 			}
 		}
 		else	/* Not GP_ROLE_DISPATCH */
@@ -1875,7 +1873,6 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					 */
 					sort_pathkeys = make_pathkeys_for_sortclauses(root, parse->sortClause,
 											  result_plan->targetlist, true);
-					sort_pathkeys = canonicalize_pathkeys(root, sort_pathkeys);
 					CdbPathLocus_MakeNull(&current_locus);
 				}
 			}
@@ -2098,8 +2095,24 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			/* pushdown the first phase of multi-phase limit (which takes offset into account) */
 			result_plan = pushdown_preliminary_limit(result_plan, parse->limitCount, count_est, parse->limitOffset, offset_est);
 			
-			/* Focus on QE [merge to preserve order], prior to final LIMIT. */
-			result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, current_pathkeys);
+			/*
+			 * Focus on QE [merge to preserve order], prior to final LIMIT.
+			 *
+			 * If there is an ORDER BY, the input should be in the required
+			 * order now, and we must preserve the order in the merge. But if
+			 * there is no ORDER BY, don't try to maintain the current input
+			 * order. In that case, current_pathkeys might contain unneeded
+			 * columns that have been eliminated from the final target list,
+			 * and we cannot maintain such an order in the Motion anymore.
+			 */
+			if (parse->sortClause)
+			{
+				if (!pathkeys_contained_in(sort_pathkeys, current_pathkeys))
+					elog(ERROR, "invalid result order generated for ORDER BY + LIMIT");
+				result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, sort_pathkeys);
+			}
+			else
+				result_plan = (Plan *) make_motion_gather_to_QE(root, result_plan, NIL);
 			result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 		}
 			

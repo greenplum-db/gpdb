@@ -81,6 +81,7 @@ resources:
   type: git
   source:
     branch: {{pxf-git-branch}}
+    tag_filter: {{pxf-git-filter}}
     private_key: {{pxf-git-key}}
     uri: {{pxf-git-remote}}
 

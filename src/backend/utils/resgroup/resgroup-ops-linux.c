@@ -66,6 +66,7 @@ static void getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw);
 static int getOvercommitRatio(void);
 static void detectCgroupMountPoint(void);
 
+static Oid currentGroupIdInCGroup = InvalidOid;
 static int cpucores = 0;
 static char cgdir[MAX_PATH_LEN];
 
@@ -716,8 +717,13 @@ ResGroupOps_DestroyGroup(Oid group)
 void
 ResGroupOps_AssignGroup(Oid group, int pid)
 {
+	if (group == currentGroupIdInCGroup)
+		return;
+
 	writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
 	writeInt64(group, NULL, "cpuacct", "cgroup.procs", pid);
+
+	currentGroupIdInCGroup = group;
 }
 
 /*

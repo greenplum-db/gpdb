@@ -40,14 +40,9 @@ function make_cluster() {
   # require max_connections of at least 129.
   export DEFAULT_QD_MAX_CONNECT=150
   export STATEMENT_MEM=250MB
-  workaround_before_concourse_stops_stripping_suid_bits
   pushd gpdb_src/gpAux/gpdemo
   su gpadmin -c "make create-demo-cluster"
   popd
-}
-
-workaround_before_concourse_stops_stripping_suid_bits() {
-  chmod u+s /bin/ping
 }
 
 function run_test() {

@@ -667,9 +667,9 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 			/* Add sort node if needed, and set AggStrategy */
 			if (root->parse->groupClause)
 			{
-				group_pathkeys =  reorder_pathkeys(root, root->group_pathkeys,
-												   orig_grpColIdx,
-												   groupColIdx);
+				group_pathkeys = reorder_pathkeys(root, root->group_pathkeys,
+												  orig_grpColIdx,
+												  groupColIdx);
 				if (!pathkeys_contained_in(group_pathkeys,
 										   context->current_pathkeys))
 				{
@@ -890,36 +890,23 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		/* Add a sort node */
 		if (context->aggstrategy == AGG_SORTED)
 		{
-			AttrNumber *orig_prelimGroupColIdx =
-				(AttrNumber *)palloc0(context->numGroupCols * sizeof(AttrNumber));
-			int attno;
-			TargetEntry *grouping_entry;
-			TargetEntry *groupid_entry;
+			Oid		   *cmpOperators = palloc(context->numGroupCols * sizeof(Oid));
+			bool	   *nullsFirst = palloc(context->numGroupCols * sizeof(bool));
+			int			i;
 
-			/* Create a group column index array that maps columns in
-			 * prelimGroupColIdx to the position in the original GROUP
-			 * BY clause.
-			 */
-			for (attno=0; attno<context->numGroupCols -1; attno++)
-				orig_prelimGroupColIdx[attno] = attno+1;
+			for (i = 0; i < context->numGroupCols; i++)
+			{
+				cmpOperators[i] = get_ordering_op_for_equality_op(prelimGroupOperators[i], false);
+				nullsFirst[i] = false;
+			}
 
-			group_pathkeys =  reorder_pathkeys(root, root->group_pathkeys,
-											   orig_prelimGroupColIdx,
-											   prelimGroupColIdx);
-
-			grouping_entry =
-				get_tle_by_resno(agg_node->targetlist,
-								 prelimGroupColIdx[context->numGroupCols - 2]);
-			groupid_entry =
-				get_tle_by_resno(agg_node->targetlist,
-								 prelimGroupColIdx[context->numGroupCols - 1]);
-			agg_node = (Plan *)
-				make_sort_from_pathkeys_and_groupingcol(root, agg_node, group_pathkeys,
-														grouping_entry, groupid_entry);
-			pfree(orig_prelimGroupColIdx);
+			agg_node = (Plan *) make_sort(root, agg_node, context->numGroupCols,
+										  prelimGroupColIdx,
+										  cmpOperators,
+										  nullsFirst, -1.0);
 			mark_sort_locus(agg_node);
 		}
-		
+
 		/* Convert # groups to long int --- but 'ware overflow! */
 		lNumGroups = (long) Min(*context->p_dNumGroups, (double) LONG_MAX);
 

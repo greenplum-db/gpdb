@@ -141,15 +141,13 @@ extern Sort *make_sort_from_sortclauses(PlannerInfo *root, List *sortcls,
 extern Sort *make_sort_from_groupcols(PlannerInfo *root, List *groupcls,
 									  AttrNumber *grpColIdx, bool appendGrouping,
 									  Plan *lefttree);
-extern Sort *make_sort_from_pathkeys_and_groupingcol(PlannerInfo *root,
-										Plan *lefttree,
-										List *pathkeys,
-										TargetEntry *grouping,
-										TargetEntry *groupid);
 extern List *reconstruct_group_clause(List *orig_groupClause, List *tlist,
 						 AttrNumber *grpColIdx, int numcols);
 
 extern Motion *make_motion(PlannerInfo *root, Plan *lefttree, List *sortPathKeys, bool useExecutorVarFormat);
+extern Sort *make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
+		  AttrNumber *sortColIdx, Oid *sortOperators, bool *nullsFirst,
+		  double limit_tuples);
 
 extern Agg *make_agg(PlannerInfo *root, List *tlist, List *qual,
 					 AggStrategy aggstrategy, bool streaming,
