@@ -101,8 +101,6 @@ groups:
   jobs:
   - MM_gpcheckcat
   - MM_gpexpand
-  - DPM_gptransfer-43x-to-5x
-  - DPM_gptransfer-5x-to-5x
   - cs-filerep-schema-topology-crashrecov
   - cs-aoco-compression
   - mpp_interconnect
@@ -118,6 +116,8 @@ groups:
   - cs_filerep_e2e_full_mirror
   - cs_filerep_e2e_incr_mirror
   - DPM_backup-restore
+  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer-5x-to-5x
   - MM_gpcheckcat
   - MM_gppkg
   - MM_gprecoverseg
@@ -277,6 +277,19 @@ resources:
       #     bucket_path: dev/[Team Name]/                       #
       #                                                         #
       ###########################################################
+      bucket_path: {{tf-bucket-path}}
+
+- name: terraform2
+  type: terraform
+  source:
+    env:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+    storage:
+      access_key_id: {{tf-machine-access-key-id}}
+      secret_access_key: {{tf-machine-secret-access-key}}
+      region_name: {{aws-region}}
+      bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: {{tf-bucket-path}}
 
 - name: aix_environments
@@ -610,6 +623,21 @@ ccp_destroy_anchor: &ccp_destroy
   get_params:
     action: destroy
 
+ccp_destroy_2_cluster_anchor: &ccp_destroy_2_cluster
+  do:
+  - *ccp_destroy
+  - put: terraform2
+    params:
+      action: destroy
+      env_name_file: terraform2/name
+      terraform_source: ccp_src/aws/
+      vars:
+        platform: centos6
+        aws_instance-node-instance_type: t2.micro
+        cluster_suffix: "-2"
+    get_params:
+      action: destroy
+
 ccp_gen_cluster_default_params_anchor: &ccp_gen_cluster_default_params
   AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
   AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
@@ -635,9 +663,9 @@ debug_sleep_anchor: &debug_sleep
       <<: *ccp_destroy
 
 pulse_properties_anchor: &pulse_properties
-      PULSE_URL: {{pulse_url}}
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
+  PULSE_URL: {{pulse_url}}
+  PULSE_USERNAME: {{pulse_username}}
+  PULSE_PASSWORD: {{pulse_password}}
 
 ## ======================================================================
 ## jobs
@@ -1988,21 +2016,85 @@ jobs:
       PULSE_PROJECT_NAME: "mpp-interconnect"
 - name: DPM_gptransfer-5x-to-5x
   plan:
-  - aggregate: *post_packaging_gets_trigger_true
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: ccp_src
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: true
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: centos-gpdb-dev-6
+  # The separate clusters can be created in parallel with the aggregate and do blocks
+  #  The terraform put and gen cluster that correspond must still happen serially
+  - aggregate:
+    - do:
+      - put: terraform
+        params:
+          <<: *ccp_default_params
+          vars:
+            <<: *ccp_default_vars
+      - task: gen_cluster1
+        file: ccp_src/ci/tasks/gen_cluster.yml
+        params:
+          <<: *ccp_gen_cluster_default_params
+        on_failure:
+          <<: *ccp_destroy
+    - do:
+      - put: terraform2
+        params:
+          <<: *ccp_default_params
+          vars:
+            <<: *ccp_default_vars
+            cluster_suffix: "-2"
+      - task: gen_cluster2
+        file: ccp_src/ci/tasks/gen_cluster.yml
+        params:
+          <<: *ccp_gen_cluster_default_params
+        input_mapping:
+          terraform: terraform2
+        output_mapping:
+          cluster_env_files: cluster_env_files2
+        on_failure:
+          put: terraform2
+          params:
+            action: destroy
+            env_name_file: terraform2/name
+            terraform_source: ccp_src/aws/
+            vars:
+              <<: *ccp_default_vars
+              cluster_suffix: "-2"
+          get_params:
+            action: destroy
+  - task: exchange_keys
+    file: gpdb_src/concourse/tasks/exchange_keys.yml
+    image: centos-gpdb-dev-6
+    on_failure:
+      <<: *ccp_destroy_2_cluster
+  - task: run_gptransfer_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_5x_to_5x"
+      BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
+      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
+      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file  && ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t mdw-2 \"source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; allow_connections_from_all_hosts\""
+    on_failure:
+      do:
+      - task: debug_sleep_2_cluster
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: alpine
+              tag: latest
+          run:
+            path: 'sh'
+            args: ['-c', 'sleep 6h']
+        ensure:
+          <<: *ccp_destroy_2_cluster
+  # Similar to the on_failure blocks, the final cleanup needs to be both clusters as well
+  - *ccp_destroy_2_cluster
 - name: cs-filerep-schema-topology-crashrecov
   plan:
   - aggregate: *post_packaging_gets_trigger_true
@@ -2465,23 +2557,88 @@ jobs:
       PULSE_PROJECT_NAME: "cs-aoco-compression"
 - name: DPM_gptransfer-43x-to-5x
   plan:
-  - get: nightly-trigger
-    trigger: ((nightly-trigger-flag))
-  - aggregate: *post_packaging_gets_trigger_based_on_flag
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: ccp_src
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: ((reduced-frequency-trigger-flag))
+    - get: gpdb4_binary
+      resource: bin_gpdb4_centos6
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: centos-gpdb-dev-6
+  # The separate clusters can be created in parallel with the aggregate and do blocks
+  #  The terraform put and gen cluster that correspond must still happen serially
+  - aggregate:
+    - do:
+      - put: terraform
+        params:
+          <<: *ccp_default_params
+          vars:
+            <<: *ccp_default_vars
+      - task: gen_cluster1
+        file: ccp_src/ci/tasks/gen_cluster.yml
+        params:
+          <<: *ccp_gen_cluster_default_params
+        on_failure:
+          <<: *ccp_destroy
+    - do:
+      - put: terraform2
+        params:
+          <<: *ccp_default_params
+          vars:
+            <<: *ccp_default_vars
+            cluster_suffix: "-2"
+      - task: gen_cluster2
+        file: ccp_src/ci/tasks/gen_cluster.yml
+        params:
+          <<: *ccp_gen_cluster_default_params
+        input_mapping:
+          terraform: terraform2
+          gpdb_binary: gpdb4_binary
+        output_mapping:
+          cluster_env_files: cluster_env_files2
+        on_failure:
+          put: terraform2
+          params:
+            action: destroy
+            env_name_file: terraform2/name
+            terraform_source: ccp_src/aws/
+            vars:
+              <<: *ccp_default_vars
+              cluster_suffix: "-2"
+          get_params:
+            action: destroy
+  - task: exchange_keys
+    file: gpdb_src/concourse/tasks/exchange_keys.yml
+    image: centos-gpdb-dev-6
+    on_failure:
+      <<: *ccp_destroy_2_cluster
+  - task: run_gptransfer_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-behave_gptransfer_43x_to_5x"
+      BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_43
+      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
+      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file  && ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t mdw-2 \"source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; allow_connections_from_all_hosts\""
+    on_failure:
+      do:
+      - task: debug_sleep_2_cluster
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: alpine
+              tag: latest
+          run:
+            path: 'sh'
+            args: ['-c', 'sleep 6h']
+        ensure:
+          <<: *ccp_destroy_2_cluster
+  # Similar to the on_failure blocks, the final cleanup needs to be both clusters as well
+  - *ccp_destroy_2_cluster
 - name: gate_nightly_end
   plan:
   - get: gpdb_src

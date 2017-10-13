@@ -762,13 +762,6 @@ Feature: gptransfer tests
         Then gptransfer should return a return code of 0
         And verify that there is a "heap" table "public.t0" in "gptransfer_testdb1"
 
-    @T339876
-    Scenario: gptransfer with invalid dest user
-        Given the gptransfer test is initialized
-        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user non_existent_user --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
-        Then gptransfer should return a return code of 2
-        And gptransfer should print "FATAL:  role "non_existent_user" does not exist" to stdout
-
     @T339878
     Scenario: gptransfer with parallelism 25
         Given the gptransfer test is initialized

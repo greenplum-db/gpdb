@@ -4220,17 +4220,10 @@ def _get_gpAdminLogs_directory():
     return "%s/gpAdminLogs" % os.path.expanduser("~")
 
 
-# Read in a full map file, remove the first host, print it to a new file
 @given('an incomplete map file is created')
 def impl(context):
-    map_file = os.environ['GPTRANSFER_MAP_FILE']
-    contents = []
-    with open(map_file, 'r') as fd:
-        contents = fd.readlines()
-
     with open('/tmp/incomplete_map_file', 'w') as fd:
-        for line in contents[1:]:
-            fd.write(line)
+        fd.write('nonexistent_host,nonexistent_host')
 
 
 @given(

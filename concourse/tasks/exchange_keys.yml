@@ -1,0 +1,27 @@
+platform: linux
+inputs:
+  - name: cluster_env_files
+  - name: cluster_env_files2
+  - name: ccp_src
+image_resource:
+  type: docker-image
+  source:
+    repository: centos
+    tag: '6'
+run:
+  path: sh
+  args:
+  - -exc
+  - |
+    yum install -y -d1 openssh openssh-clients
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem cluster_env_files/private_key.pem gpadmin@$(cat cluster_env_files/etc_hostfile | awk 'NR==1{print $1}'):~/.ssh/
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem cluster_env_files/private_key.pem gpadmin@$(cat cluster_env_files/etc_hostfile | awk 'NR==2{print $1}'):~/.ssh/
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files2/private_key.pem cluster_env_files2/private_key.pem gpadmin@$(cat cluster_env_files2/etc_hostfile | awk 'NR==1{print $1}'):~/.ssh/
+    scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files2/private_key.pem cluster_env_files2/private_key.pem gpadmin@$(cat cluster_env_files2/etc_hostfile | awk 'NR==2{print $1}'):~/.ssh/
+    cat cluster_env_files/public_key.openssh | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files2/private_key.pem gpadmin@$(cat cluster_env_files2/etc_hostfile | awk 'NR==1{print $1}') "cat - >> .ssh/authorized_keys"
+    cat cluster_env_files/public_key.openssh | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files2/private_key.pem gpadmin@$(cat cluster_env_files2/etc_hostfile | awk 'NR==2{print $1}') "cat - >> .ssh/authorized_keys"
+    cat cluster_env_files2/public_key.openssh | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem gpadmin@$(cat cluster_env_files/etc_hostfile | awk 'NR==1{print $1}') "cat - >> .ssh/authorized_keys"
+    cat cluster_env_files2/public_key.openssh | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem gpadmin@$(cat cluster_env_files/etc_hostfile | awk 'NR==2{print $1}') "cat - >> .ssh/authorized_keys"
+    cat cluster_env_files2/etc_hostfile | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files/private_key.pem centos@$(cat cluster_env_files/etc_hostfile | awk 'NR==1{print $1}') "cat - | sudo tee -a /etc/hosts"
+    cat cluster_env_files/etc_hostfile | ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i cluster_env_files2/private_key.pem centos@$(cat cluster_env_files2/etc_hostfile | awk 'NR==2{print $1}') "cat - | sudo tee -a /etc/hosts"
+
