@@ -7672,7 +7672,7 @@
       <p>The value is an optimization hint to limit the number of join associativity and join
         commutativity transformations explored during query optimization. The limit controls the
         alternative plans that GPORCA considers during query optimization. For example, the default
-        value is 7 is a optimization hint for GPORCA to stop exploring join associativity and join
+        value of 7 is a optimization hint for GPORCA to stop exploring join associativity and join
         commutativity transformations when an n-ary join operator has more than 7 children during
         optimization.</p>
       <p>For a query with a large number of joins, specifying a lower value improves query
