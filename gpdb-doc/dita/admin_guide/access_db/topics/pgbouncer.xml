@@ -76,11 +76,13 @@
           manage PgBouncer using SQL-like commands. Configuration parameters can be changed without
           having to restart PgBouncer, and the configuration file can be reloaded to pick up
           changes.</p>
-        <p>PgBouncer does not yet support SSL connections. If you want to encrypt traffic between
-          clients and PgBouncer, you can use <xref href="https://www.stunnel.org" format="html"
-            scope="external">stunnel</xref>, a free software utility that creates TLS-encrypted
-          tunnels using the OpenSSL cryptography library. See <xref href="#topic_nfn_tvd_5s"
-            format="dita"/> for directions.</p>
+        <p>PgBouncer does support TLS connections. Details how to configure TLS are available on th
+            <xref href="https://pgbouncer.github.io/config.html#tls-settings" format="html"
+            scope="external">PgBouncer</xref> website.</p>
+        <p>As an alternative, you can encrypt traffic between clients and PgBouncer using
+            <xref href="https://www.stunnel.org" format="html" scope="external">stunnel</xref>,
+            a free software utility that creates TLS-encrypted tunnels using the OpenSSL
+            cryptography library. See <xref href="#topic_nfn_tvd_5s" format="dita"/> for directions.</p>
       </body>
     </topic>
     <topic id="pgb_config">
