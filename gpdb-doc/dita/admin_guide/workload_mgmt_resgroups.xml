@@ -10,7 +10,7 @@
     <p>You can use resource groups to manage the number of active queries that may execute
       concurrently in your Greenplum Database cluster. With resource groups, you can also manage the
       amount of CPU and memory resources Greenplum allocates to each query.</p>
-    <p>When the user executes a query, Greenplum Database evaluates the query against a set o
+    <p>When the user executes a query, Greenplum Database evaluates the query against a set of
       limits defined for the resource group. Greenplum Database executes the query immediately if
       the group's resource limits have not yet been reached and the query does not cause the group
       to exceed the concurrent transaction limit. If these conditions are not met, Greenplum
