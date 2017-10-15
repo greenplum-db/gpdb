@@ -41,7 +41,6 @@ struct StringInfoData;                  /* #include "lib/stringinfo.h" */
 struct MemTupleBinding;
 struct MemTupleData;
 struct HeapScanDescData;
-struct IndexScanDescData;
 struct FileScanDescData;
 struct MirroredBufferPoolBulkLoadInfo;
 struct SliceTable;
@@ -1690,12 +1689,10 @@ typedef struct IndexScanState
 	int			iss_NumScanKeys;
 	IndexRuntimeKeyInfo *iss_RuntimeKeys;
 	int			iss_NumRuntimeKeys;
-	IndexArrayKeyInfo *iss_ArrayKeys;
-	int			iss_NumArrayKeys;
 	bool		iss_RuntimeKeysReady;
 	ExprContext *iss_RuntimeContext;
 	Relation	iss_RelationDesc;
-	struct IndexScanDescData *iss_ScanDesc;
+	IndexScanDesc iss_ScanDesc;
 
 	/*
 	 * tableOid is the oid of the partition or relation on which our current
@@ -1709,7 +1706,12 @@ typedef struct IndexScanState
  */
 typedef struct DynamicIndexScanState
 {
-	IndexScanState indexScanState;
+	ScanState	ss;
+
+	int			eflags;
+	IndexScanState *indexScanState;
+	List	   *tuptable;
+	ExprContext *outer_exprContext;
 
 	/*
 	* Partition id index that mantains all unique partition ids for the
@@ -1738,17 +1740,59 @@ typedef struct DynamicIndexScanState
 	Oid columnLayoutOid;
 } DynamicIndexScanState;
 
-
 /* ----------------
  *	 BitmapIndexScanState information
+ *
+ *		result			   bitmap to return output into, or NULL
+ *		ScanKeys		   Skey structures to scan index rel
+ *		NumScanKeys		   number of Skey structs
+ *		RuntimeKeys		   info about Skeys that must be evaluated at runtime
+ *		NumRuntimeKeys	   number of RuntimeKeys structs
+ *		ArrayKeys		   info about Skeys that come from ScalarArrayOpExprs
+ *		NumArrayKeys	   number of ArrayKeys structs
+ *		RuntimeKeysReady   true if runtime Skeys have been computed
+ *		RuntimeContext	   expr context for evaling runtime Skeys
+ *		RelationDesc	   index relation descriptor
+ *		ScanDesc		   index scan descriptor
  * ----------------
  */
 typedef struct BitmapIndexScanState
 {
-	IndexScanState indexScanState;		/* pseudo inheritance */
-	Node            *bitmap;			/* output bitmap */
-	MemoryContext partitionMemoryContext;
+	ScanState	ss;				/* its first field is NodeTag */
+	Node       *biss_result;	/* output bitmap */
+	ScanKey		biss_ScanKeys;
+	int			biss_NumScanKeys;
+	IndexRuntimeKeyInfo *biss_RuntimeKeys;
+	int			biss_NumRuntimeKeys;
+	IndexArrayKeyInfo *biss_ArrayKeys;
+	int			biss_NumArrayKeys;
+	bool		biss_RuntimeKeysReady;
+	ExprContext *biss_RuntimeContext;
+	Relation	biss_RelationDesc;
+	IndexScanDesc biss_ScanDesc;
 } BitmapIndexScanState;
+
+/*
+ * DynamicBitmapIndexScanState
+ */
+typedef struct DynamicBitmapIndexScanState
+{
+	ScanState	ss;
+
+	int			eflags;
+	BitmapIndexScanState *bitmapIndexScanState;
+	ExprContext *outer_exprContext;
+
+	/*
+	 * We will create a new copy of logicalIndexInfo in this memory context for
+	 * each partition. This memory context will be reset per-partition to free
+	 * up previous partition's logicalIndexInfo memory
+	 */
+	MemoryContext partitionMemoryContext;
+
+	/* The partition oid for which the current varnos are mapped */
+	Oid			columnLayoutOid;
+} DynamicBitmapIndexScanState;
 
 /* ----------------
  *	 BitmapHeapScanState information

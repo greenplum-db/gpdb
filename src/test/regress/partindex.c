@@ -2,8 +2,8 @@
 
 #include "funcapi.h"
 #include "cdb/cdbpartition.h"
+#include "executor/nodeDynamicIndexscan.h"
 #include "executor/spi.h"
-#include "executor/execDynamicIndexScan.h"
 #include "optimizer/prep.h"
 #include "optimizer/planmain.h"
 #include "utils/lsyscache.h"

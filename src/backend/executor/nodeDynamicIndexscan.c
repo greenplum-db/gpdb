@@ -1,12 +1,12 @@
 /*-------------------------------------------------------------------------
  *
- * nodeDynamicIndexscan.c 
+ * nodeDynamicIndexscan.c
  *	  Support routines for scanning one or more indexes that are
  *	  determined at runtime.
  *
- *	DynamicIndexScan node scans each index one after the other.
- *	For each index, it opens the index, scans the index, and returns
- *	relevant tuples.
+ * DynamicIndexScan node scans each index one after the other. For each
+ * index, it creates a regular IndexScan executor node, scans, and returns
+ * the relevant tuples.
  *
  * Portions Copyright (c) 2013 - present, EMC/Greenplum
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -20,25 +20,17 @@
 
 #include "postgres.h"
 
+#include "cdb/cdbpartition.h"
+#include "cdb/cdbvars.h"
+#include "cdb/partitionselection.h"
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "nodes/execnodes.h"
-#include "executor/execIndexscan.h"
 #include "executor/nodeIndexscan.h"
-#include "executor/execDynamicIndexScan.h"
 #include "executor/nodeDynamicIndexscan.h"
-#include "cdb/cdbpartition.h"
-#include "parser/parsetree.h"
 #include "access/genam.h"
 #include "nodes/nodeFuncs.h"
 #include "utils/memutils.h"
-#include "cdb/cdbvars.h"
-
-/*
- * Free resources from a partition.
- */
-static inline void
-CleanupOnePartition(IndexScanState *indexState);
 
 /*
  * Account for the number of tuple slots required for DynamicIndexScan
@@ -46,7 +38,7 @@ CleanupOnePartition(IndexScanState *indexState);
  * XXX: We have backported the PostgreSQL patch that made these functions
  * obsolete. The returned value isn't used for anything, so just return 0.
  */
-int 
+int
 ExecCountSlotsDynamicIndexScan(DynamicIndexScan *node)
 {
 	return 0;
@@ -58,13 +50,43 @@ ExecCountSlotsDynamicIndexScan(DynamicIndexScan *node)
 DynamicIndexScanState *
 ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags)
 {
+	DynamicIndexScanState *dynamicIndexScanState;
+
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_BACKWARD | EXEC_FLAG_MARK)));
 
-	DynamicIndexScanState *dynamicIndexScanState = makeNode(DynamicIndexScanState);
+	dynamicIndexScanState = makeNode(DynamicIndexScanState);
+	dynamicIndexScanState->ss.ps.plan = (Plan *) node;
+	dynamicIndexScanState->ss.ps.state = estate;
+	dynamicIndexScanState->eflags = eflags;
 
-	dynamicIndexScanState->indexScanState.ss.scan_state = SCAN_INIT;
+	dynamicIndexScanState->ss.scan_state = SCAN_INIT;
 
+	/*
+	 * Initialize child expressions
+	 *
+	 * These are not used for anything, we rely on the child IndexScan node
+	 * to do all evaluation for us. But I think this is still needed to
+	 * find and process any SubPlans. See comment in ExecInitIndexScan.
+	 */
+	dynamicIndexScanState->ss.ps.targetlist = (List *)
+		ExecInitExpr((Expr *) node->scan.plan.targetlist,
+					 (PlanState *) dynamicIndexScanState);
+	dynamicIndexScanState->ss.ps.qual = (List *)
+		ExecInitExpr((Expr *) node->scan.plan.qual,
+					 (PlanState *) dynamicIndexScanState);
+	(void) ExecInitExpr((Expr *) node->indexqualorig,
+						(PlanState *) dynamicIndexScanState);
+
+	/*
+	 * tuple table initialization
+	 */
+	ExecInitResultTupleSlot(estate, &dynamicIndexScanState->ss.ps);
+
+	/*
+	 * Initialize result tuple type and projection info.
+	 */
+	ExecAssignResultTypeFromTL(&dynamicIndexScanState->ss.ps);
 
 	/*
 	 * This context will be reset per-partition to free up per-partition
@@ -76,69 +98,111 @@ ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags)
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
 
-	IndexScanState *indexState = &(dynamicIndexScanState->indexScanState);
-
-	InitCommonIndexScanState((IndexScanState *)dynamicIndexScanState, (IndexScan *)node, estate, eflags);
-	/* We don't support eager free in DynamicIndexScan */
-	indexState->ss.ps.delayEagerFree = true;
-
-	InitRuntimeKeysContext(indexState);
-
 	return dynamicIndexScanState;
 }
 
-static bool
-DynamicIndexScan_ReMapColumns(DynamicIndexScanState *scanState, Oid newOid)
+static void
+DynamicIndexScan_ReMapColumns(DynamicIndexScan *indexScan, Oid oldOid, Oid newOid)
 {
+	AttrNumber *attMap;
+
 	Assert(OidIsValid(newOid));
-
-	IndexScan *indexScan = (IndexScan *) scanState->indexScanState.ss.ps.plan;
-
-	if (!isDynamicScan(&indexScan->scan))
-	{
-		return false;
-	}
-
-	Oid oldOid = scanState->columnLayoutOid;
-
-	if (!OidIsValid(oldOid))
-	{
-		/* Very first partition */
-
-		oldOid = rel_partition_get_root(newOid);
-	}
-
-	Assert(OidIsValid(oldOid));
 
 	if (oldOid == newOid)
 	{
 		/*
-		 * If we have only one partition and we are rescanning
-		 * then we can have this scenario.
+		 * If we have only one partition and we are rescanning then we can
+		 * have this scenario.
 		 */
-
-		return false;
+		return;
 	}
 
-	AttrNumber	*attMap = IndexScan_GetColumnMapping(oldOid, newOid);
-
-	scanState->columnLayoutOid = newOid;
+	attMap = IndexScan_GetColumnMapping(oldOid, newOid);
 
 	if (attMap)
 	{
-		IndexScan_MapLogicalIndexInfo(indexScan->logicalIndexInfo, attMap, indexScan->scan.scanrelid);
-		change_varattnos_of_a_varno((Node*)indexScan->scan.plan.targetlist, attMap, indexScan->scan.scanrelid);
-		change_varattnos_of_a_varno((Node*)indexScan->scan.plan.qual, attMap, indexScan->scan.scanrelid);
-		change_varattnos_of_a_varno((Node*)indexScan->indexqual, attMap, indexScan->scan.scanrelid);
+		LogicalIndexInfo *logicalIndexInfo = indexScan->logicalIndexInfo;
+
+		IndexScan_MapLogicalIndexInfo(logicalIndexInfo, attMap, indexScan->scan.scanrelid);
+
+		/* Also map attrnos in targetlist and quals */
+		change_varattnos_of_a_varno((Node *) indexScan->scan.plan.targetlist,
+									attMap, indexScan->scan.scanrelid);
+		change_varattnos_of_a_varno((Node *) indexScan->scan.plan.qual,
+									attMap, indexScan->scan.scanrelid);
+		change_varattnos_of_a_varno((Node *) indexScan->indexqual,
+									attMap, indexScan->scan.scanrelid);
+		change_varattnos_of_a_varno((Node *) indexScan->indexqualorig,
+									attMap, indexScan->scan.scanrelid);
 
 		pfree(attMap);
+	}
+}
 
-		return true;
-	}
-	else
+/*
+ * Find the correct index in the given partition, and create a IndexScan executor
+ * node to scan it.
+ */
+static void
+beginCurrentIndexScan(DynamicIndexScanState *node, EState *estate,
+					  Oid tableOid)
+{
+	DynamicIndexScan *dynamicIndexScan = (DynamicIndexScan *) node->ss.ps.plan;
+	Relation	currentRelation;
+	Oid			indexOid;
+	List	   *save_tupletable;
+	MemoryContext oldCxt;
+
+	/*
+	 * open the base relation and acquire appropriate lock on it.
+	 */
+	currentRelation = OpenScanRelationByOid(tableOid);
+
+	save_tupletable = estate->es_tupleTable;
+	estate->es_tupleTable = NIL;
+	oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
+
+	/*
+	 * Re-map the index columns, per the new partition, and find the correct
+	 * index.
+	 */
+	if (!OidIsValid(node->columnLayoutOid))
 	{
-		return false;
+		/* Very first partition */
+		node->columnLayoutOid = rel_partition_get_root(tableOid);
 	}
+	DynamicIndexScan_ReMapColumns(dynamicIndexScan,
+								  node->columnLayoutOid, tableOid);
+	node->columnLayoutOid = tableOid;
+
+	indexOid = getPhysicalIndexRelid(currentRelation, dynamicIndexScan->logicalIndexInfo);
+	if (!OidIsValid(indexOid))
+		elog(ERROR, "failed to find index for partition \"%s\" in dynamic index scan",
+			 RelationGetRelationName(currentRelation));
+
+	node->indexScanState = ExecInitIndexScanForPartition((IndexScan *) dynamicIndexScan, estate,
+														 node->eflags,
+														 currentRelation, indexOid);
+	/* The IndexScan node takes ownership of currentRelation, and will close it when done */
+	node->tuptable = estate->es_tupleTable;
+	estate->es_tupleTable = save_tupletable;
+	MemoryContextSwitchTo(oldCxt);
+
+	if (node->outer_exprContext)
+		ExecIndexReScan(node->indexScanState, node->outer_exprContext);
+}
+
+static void
+endCurrentIndexScan(DynamicIndexScanState *node)
+{
+	if (node->indexScanState)
+	{
+		ExecEndIndexScan(node->indexScanState);
+		node->indexScanState = NULL;
+	}
+	ExecResetTupleTable(node->tuptable, true);
+	node->tuptable = NIL;
+	MemoryContextReset(node->partitionMemoryContext);
 }
 
 /*
@@ -147,96 +211,34 @@ DynamicIndexScan_ReMapColumns(DynamicIndexScanState *scanState, Oid newOid)
 static bool
 initNextIndexToScan(DynamicIndexScanState *node)
 {
-	IndexScanState *indexState = &(node->indexScanState);
-	DynamicIndexScan *dynamicIndexScan = (DynamicIndexScan *)node->indexScanState.ss.ps.plan;
-	EState *estate = indexState->ss.ps.state;
+	EState *estate = node->ss.ps.state;
 
 	/* Load new index when the scanning of the previous index is done. */
-	if (indexState->ss.scan_state == SCAN_INIT ||
-		indexState->ss.scan_state == SCAN_DONE)
+	if (node->ss.scan_state == SCAN_INIT ||
+		node->ss.scan_state == SCAN_DONE)
 	{
 		/* This is the oid of a partition of the table (*not* index) */
-		Oid *pid = hash_seq_search(&node->pidxStatus);
+		Oid			tableOid;
+		Oid		   *pid;
+
+		pid = hash_seq_search(&node->pidxStatus);
 		if (pid == NULL)
 		{
 			/* Return if all parts have been scanned. */
 			node->shouldCallHashSeqTerm = false;
 			return false;
 		}
+		tableOid = *pid;
 
 		/* Collect number of partitions scanned in EXPLAIN ANALYZE */
-		if(NULL != indexState->ss.ps.instrument)
-		{
-			Instrumentation *instr = indexState->ss.ps.instrument;
-			instr->numPartScanned ++;
-		}
+		if (node->ss.ps.instrument)
+			node->ss.ps.instrument->numPartScanned ++;
 
-		DynamicIndexScan_ReMapColumns(node, *pid);
+		endCurrentIndexScan(node);
 
-		/*
-		 * The is the oid of the partition of an *index*. Note: a partitioned table
-		 * has a root and a set of partitions (may be multi-level). An index
-		 * on a partitioned table also has a root and a set of index partitions.
-		 * We started at table level, and now we are fetching the oid of an index
-		 * partition.
-		 */
-		Relation currentRelation = OpenScanRelationByOid(*pid);
-		indexState->ss.ss_currentRelation = currentRelation;
+		beginCurrentIndexScan(node, estate, tableOid);
 
-		indexState->ss.ss_ScanTupleSlot->tts_tableOid = *pid;
-
-		ExecAssignScanType(&indexState->ss, RelationGetDescr(currentRelation));
-
-		/*
-		 * Initialize result tuple type and projection info.
-		 */
-		ExecAssignResultTypeFromTL(&indexState->ss.ps);
-		ExecAssignScanProjectionInfo(&indexState->ss);
-
-		MemoryContextReset(node->partitionMemoryContext);
-		MemoryContext oldCxt = MemoryContextSwitchTo(node->partitionMemoryContext);
-
-		/* Initialize child expressions */
-		indexState->ss.ps.qual = (List *) ExecInitExpr((Expr *) indexState->ss.ps.plan->qual, (PlanState *) indexState);
-		indexState->ss.ps.targetlist = (List *) ExecInitExpr((Expr *) indexState->ss.ps.plan->targetlist, (PlanState *) indexState);
-
-		Oid pindex = getPhysicalIndexRelid(currentRelation, dynamicIndexScan->logicalIndexInfo);
-
-		Assert(OidIsValid(pindex));
-
-		indexState->iss_RelationDesc =
-			OpenIndexRelation(estate, pindex, *pid);
-
-		/*
-		 * build the index scan keys from the index qualification
-		 */
-		ExecIndexBuildScanKeys((PlanState *) indexState,
-						   indexState->iss_RelationDesc,
-						   dynamicIndexScan->indexqual,
-						   &indexState->iss_ScanKeys,
-						   &indexState->iss_NumScanKeys,
-						   &indexState->iss_RuntimeKeys,
-						   &indexState->iss_NumRuntimeKeys,
-						   NULL,
-						   NULL);
-
-		MemoryContextSwitchTo(oldCxt);
-
-		if (indexState->iss_NumRuntimeKeys != 0)
-		{
-			ExecIndexEvalRuntimeKeys(indexState->iss_RuntimeContext,
-									 indexState->iss_RuntimeKeys,
-									 indexState->iss_NumRuntimeKeys);
-		}
-		indexState->iss_RuntimeKeysReady = true;
-
-		indexState->iss_ScanDesc = index_beginscan(currentRelation,
-				indexState->iss_RelationDesc,
-				estate->es_snapshot,
-				indexState->iss_NumScanKeys,
-				indexState->iss_ScanKeys);
-
-		indexState->ss.scan_state = SCAN_SCAN;
+		node->ss.scan_state = SCAN_SCAN;
 	}
 
 	return true;
@@ -250,7 +252,7 @@ static void
 setPidIndex(DynamicIndexScanState *node)
 {
 	Assert(node->pidxIndex == NULL);
-	
+
 	IndexScanState *indexState = (IndexScanState *)node;
 	EState *estate = indexState->ss.ps.state;
 	DynamicIndexScan *plan = (DynamicIndexScan *)indexState->ss.ps.plan;
@@ -274,12 +276,8 @@ setPidIndex(DynamicIndexScanState *node)
 TupleTableSlot *
 ExecDynamicIndexScan(DynamicIndexScanState *node)
 {
-	Assert(node);
-
-	IndexScanState *indexState = &(node->indexScanState);
-
 	TupleTableSlot *slot = NULL;
-	
+
 	/*
 	 * If this is called the first time, find the pid index that contains all unique
 	 * partition pids for this node to scan.
@@ -288,7 +286,7 @@ ExecDynamicIndexScan(DynamicIndexScanState *node)
 	{
 		setPidIndex(node);
 		Assert(node->pidxIndex != NULL);
-		
+
 		hash_seq_init(&node->pidxStatus, node->pidxIndex);
 		node->shouldCallHashSeqTerm = true;
 	}
@@ -300,76 +298,35 @@ ExecDynamicIndexScan(DynamicIndexScanState *node)
 	while (TupIsNull(slot) &&
 		   initNextIndexToScan(node))
 	{
-		slot = ExecScan(&indexState->ss, (ExecScanAccessMtd) IndexNext);
+		slot = ExecIndexScan(node->indexScanState);
 
 		if (TupIsNull(slot))
-			CleanupOnePartition(indexState);
+		{
+			endCurrentIndexScan(node);
+
+			node->ss.scan_state = SCAN_INIT;
+		}
 	}
 	return slot;
 }
 
 /*
- * Release resources for one part (this includes closing the index and
- * the relation).
+ * Release resources of DynamicIndexScan
  */
-static inline void
-CleanupOnePartition(IndexScanState *indexState)
+void
+ExecEndDynamicIndexScan(DynamicIndexScanState *node)
 {
-	Assert(NULL != indexState);
+	endCurrentIndexScan(node);
 
-	/* Reset index state and release locks. */
-	ExecClearTuple(indexState->ss.ps.ps_ResultTupleSlot);
-	ExecClearTuple(indexState->ss.ss_ScanTupleSlot);
-
-	if ((indexState->ss.scan_state & SCAN_SCAN) != 0)
-	{
-		Assert(indexState->iss_ScanDesc != NULL);
-		Assert(indexState->iss_RelationDesc != NULL);
-		Assert(indexState->ss.ss_currentRelation != NULL);
-
-		index_endscan(indexState->iss_ScanDesc);
-		indexState->iss_ScanDesc = NULL;
-
-		index_close(indexState->iss_RelationDesc, NoLock);
-		indexState->iss_RelationDesc = NULL;
-
-		ExecCloseScanRelation(indexState->ss.ss_currentRelation);
-		indexState->ss.ss_currentRelation = NULL;
-	}
-
-	indexState->ss.scan_state = SCAN_INIT;
-}
-
-/*
- * Ends current scan by closing relations, and ending hash
- * iteration
- */
-static void
-DynamicIndexScanEndCurrentScan(DynamicIndexScanState *node)
-{
-	IndexScanState *indexState = &(node->indexScanState);
-
-	CleanupOnePartition(indexState);
+	node->ss.scan_state = SCAN_END;
 
 	if (node->shouldCallHashSeqTerm)
 	{
 		hash_seq_term(&node->pidxStatus);
 		node->shouldCallHashSeqTerm = false;
 	}
-}
 
-/*
- * Release resources of DynamicIndexScan
- */
-void 
-ExecEndDynamicIndexScan(DynamicIndexScanState *node)
-{
-	DynamicIndexScanEndCurrentScan(node);
-
-	IndexScanState *indexState = &(node->indexScanState);
-
-	FreeRuntimeKeysContext((IndexScanState *) node);
-	EndPlanStateGpmonPkt(&indexState->ss.ps);
+	EndPlanStateGpmonPkt(&node->ss.ps);
 
 	MemoryContextDelete(node->partitionMemoryContext);
 }
@@ -377,36 +334,92 @@ ExecEndDynamicIndexScan(DynamicIndexScanState *node)
 /*
  * Allow rescanning an index.
  */
-void 
+void
 ExecDynamicIndexReScan(DynamicIndexScanState *node, ExprContext *exprCtxt)
 {
-	DynamicIndexScanEndCurrentScan(node);
+	if (node->indexScanState)
+	{
+		ExecEndIndexScan(node->indexScanState);
+		node->indexScanState = NULL;
+	}
+	node->ss.scan_state = SCAN_INIT;
+
+	if (node->shouldCallHashSeqTerm)
+	{
+		hash_seq_term(&node->pidxStatus);
+		node->shouldCallHashSeqTerm = false;
+	}
+
+	/*
+	 * If we are being passed an outer tuple, save it so that we can
+	 * pass it on to the underlying Index Scan when we create it.
+	 */
+	if (exprCtxt)
+		node->outer_exprContext = exprCtxt;
 
 	/* Force reloading the hash table */
 	node->pidxIndex = NULL;
 
-	/* Context for runtime keys */
-	ExprContext *econtext = node->indexScanState.iss_RuntimeContext;
+	CheckSendPlanStateGpmonPkt(&node->ss.ps);
+}
 
-	if (econtext)
+
+/*
+ * IndexScan_MapLogicalIndexInfo
+ *             Remaps the columns of the expressions of a provided logicalIndexInfo
+ *             using attMap for a given varno.
+ *
+ *             Returns true if mapping was done.
+ */
+bool
+IndexScan_MapLogicalIndexInfo(LogicalIndexInfo *logicalIndexInfo, AttrNumber *attMap, Index varno)
+{
+	if (NULL == attMap)
 	{
-		/*
-		 * If we are being passed an outer tuple, save it for runtime key
-		 * calc.  We also need to link it into the "regular" per-tuple
-		 * econtext, so it can be used during indexqualorig evaluations.
-		 */
-		if (exprCtxt != NULL)
-		{
-			econtext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-			ExprContext *stdecontext = node->indexScanState.ss.ps.ps_ExprContext;
-			stdecontext->ecxt_outertuple = exprCtxt->ecxt_outertuple;
-		}
-
-		/*
-		 * Reset the runtime-key context so we don't leak memory as each outer
-		 * tuple is scanned.  Note this assumes that we will recalculate *all*
-		 * runtime keys on each call.
-		 */
-		ResetExprContext(econtext);
+		/* Columns are already aligned, and therefore, no mapping is necessary */
+		return false;
 	}
+	/* map the attrnos if necessary */
+	for (int i = 0; i < logicalIndexInfo->nColumns; i++)
+	{
+		if (logicalIndexInfo->indexKeys[i] != 0)
+		{
+			logicalIndexInfo->indexKeys[i] = attMap[(logicalIndexInfo->indexKeys[i]) - 1];
+		}
+	}
+
+	/* map the attrnos in the indExprs and indPred */
+	change_varattnos_of_a_varno((Node *)logicalIndexInfo->indPred, attMap, varno);
+	change_varattnos_of_a_varno((Node *)logicalIndexInfo->indExprs, attMap, varno);
+
+	return true;
+}
+
+/*
+ * IndexScan_GetColumnMapping
+ *             Returns the mapping of columns between two relation Oids because of
+ *             dropped attributes.
+ *
+ *             Returns NULL for identical mapping.
+ */
+AttrNumber*
+IndexScan_GetColumnMapping(Oid oldOid, Oid newOid)
+{
+	if (oldOid == newOid)
+		return NULL;
+
+	AttrNumber      *attMap;
+
+	Relation oldRel = heap_open(oldOid, AccessShareLock);
+	Relation newRel = heap_open(newOid, AccessShareLock);
+
+	TupleDesc oldTupDesc = oldRel->rd_att;
+	TupleDesc newTupDesc = newRel->rd_att;
+
+	attMap = varattnos_map(oldTupDesc, newTupDesc);
+
+	heap_close(oldRel, AccessShareLock);
+	heap_close(newRel, AccessShareLock);
+
+	return attMap;
 }

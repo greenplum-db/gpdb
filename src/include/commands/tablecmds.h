@@ -103,9 +103,6 @@ extern void find_composite_type_dependencies(Oid typeOid,
 								 const char *origTblName,
 								 const char *origTypeName);
 
-extern void change_varattnos_of_a_varno(Node *node, const AttrNumber *newattno, Index varno);
-
-
 extern void register_on_commit_action(Oid relid, OnCommitAction action);
 extern void remove_on_commit_action(Oid relid);
 

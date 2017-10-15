@@ -22,9 +22,12 @@ extern TupleTableSlot *ExecDynamicIndexScan(DynamicIndexScanState *node);
 extern void ExecEndDynamicIndexScan(DynamicIndexScanState *node);
 extern void ExecDynamicIndexReScan(DynamicIndexScanState *node, ExprContext *exprCtxt);
 
+extern bool IndexScan_MapLogicalIndexInfo(LogicalIndexInfo *logicalIndexInfo, AttrNumber *attMap, Index varno);
+extern AttrNumber *IndexScan_GetColumnMapping(Oid oldOid, Oid newOid);
+
 static inline gpmon_packet_t * GpmonPktFromDynamicIndexScanState(DynamicIndexScanState *node)
 {
-	return &node->indexScanState.ss.ps.gpmon_pkt;
+	return &node->indexScanState->ss.ps.gpmon_pkt;
 }
 #endif
 

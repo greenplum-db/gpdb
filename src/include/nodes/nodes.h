@@ -135,6 +135,7 @@ typedef enum NodeTag
 	T_IndexScanState,
 	T_DynamicIndexScanState,
 	T_BitmapIndexScanState,
+	T_DynamicBitmapIndexScanState,
 	T_BitmapHeapScanState,
 	T_BitmapAppendOnlyScanState,
 	T_BitmapTableScanState,

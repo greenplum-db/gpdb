@@ -30,49 +30,11 @@
 #include "access/relscan.h"
 #include "executor/execdebug.h"
 #include "executor/nodeIndexscan.h"
-#include "executor/execIndexscan.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "utils/array.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
-
-
-/*
- * Initialize the index scan descriptor if it is not initialized.
- */
-static inline void
-initScanDesc(IndexScanState *indexstate)
-{
-	Relation currentRelation = indexstate->ss.ss_currentRelation;
-	EState *estate = indexstate->ss.ps.state;
-	
-	if (indexstate->iss_ScanDesc == NULL)
-	{
-		/*
-		 * Initialize scan descriptor.
-		 */
-		indexstate->iss_ScanDesc = index_beginscan(currentRelation,
-												   indexstate->iss_RelationDesc,
-												   estate->es_snapshot,
-												   indexstate->iss_NumScanKeys,
-												   indexstate->iss_ScanKeys);
-	}
-}
-	
-/*
- * Free the index scan descriptor.
- */
-static inline void
-freeScanDesc(IndexScanState *indexstate)
-{
-	if (indexstate->iss_ScanDesc != NULL)
-	{
-		index_endscan(indexstate->iss_ScanDesc);
-		indexstate->iss_ScanDesc = NULL;
-	}
-}
-
 
 /* ----------------------------------------------------------------
  *		IndexNext
@@ -97,9 +59,6 @@ IndexNext(IndexScanState *node)
 	 */
 	estate = node->ss.ps.state;
 	direction = estate->es_direction;
-
-	initScanDesc(node);
-
 	/* flip direction if this is an overall backward scan */
 	if (ScanDirectionIsBackward(((IndexScan *) node->ss.ps.plan)->indexorderdir))
 	{
@@ -232,8 +191,6 @@ ExecIndexReScan(IndexScanState *node, ExprContext *exprCtxt)
 	EState	   *estate;
 	ExprContext *econtext;
 	Index		scanrelid;
-
-	initScanDesc(node);
 
 	estate = node->ss.ps.state;
 	econtext = node->iss_RuntimeContext;		/* context for runtime keys */
@@ -478,8 +435,11 @@ ExecEndIndexScan(IndexScanState *node)
 
 	/*
 	 * Free the exprcontext(s) ... now dead code, see ExecFreeExprContext
+	 *
+	 * GPDB: This is not dead code in GPDB, because we don't want to leak
+	 * exprcontexts in a dynamic index scan.
 	 */
-#ifdef NOT_USED
+#if 1
 	ExecFreeExprContext(&node->ss.ps);
 	if (node->iss_RuntimeContext)
 		FreeExprContext(node->iss_RuntimeContext);
@@ -503,7 +463,6 @@ ExecEndIndexScan(IndexScanState *node)
 	 */
 	ExecCloseScanRelation(relation);
 
-	FreeRuntimeKeysContext(node);
 	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
@@ -541,8 +500,22 @@ ExecIndexRestrPos(IndexScanState *node)
 IndexScanState *
 ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 {
-	IndexScanState *indexstate;
 	Relation	currentRelation;
+
+	/*
+	 * open the base relation and acquire appropriate lock on it.
+	 */
+	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid);
+
+	return ExecInitIndexScanForPartition(node, estate, eflags,
+										 currentRelation, node->indexid);
+}
+
+IndexScanState *
+ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
+							  Relation currentRelation, Oid indexid)
+{
+	IndexScanState *indexstate;
 	bool		relistarget;
 
 	/*
@@ -588,11 +561,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	ExecInitResultTupleSlot(estate, &indexstate->ss.ps);
 	ExecInitScanTupleSlot(estate, &indexstate->ss);
 
-	/*
-	 * open the base relation and acquire appropriate lock on it.
-	 */
-	currentRelation = ExecOpenScanRelation(estate, node->scan.scanrelid);
-
 	indexstate->ss.ss_currentRelation = currentRelation;
 
 	/*
@@ -622,8 +590,13 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 * taking another lock here.  Otherwise we need a normal reader's lock.
 	 */
 	relistarget = ExecRelationIsTargetRelation(estate, node->scan.scanrelid);
-	indexstate->iss_RelationDesc = index_open(node->indexid,
+	indexstate->iss_RelationDesc = index_open(indexid,
 									 relistarget ? NoLock : AccessShareLock);
+
+	/*
+	 * Initialize index-specific scan state
+	 */
+	indexstate->iss_RuntimeKeysReady = false;
 
 	/*
 	 * build the index scan keys from the index qualification
@@ -638,13 +611,38 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 						   NULL,	/* no ArrayKeys */
 						   NULL);
 
-	InitRuntimeKeysContext(indexstate);
-	Assert(NULL != indexstate->iss_RuntimeContext);
+	/*
+	 * If we have runtime keys, we need an ExprContext to evaluate them. The
+	 * node's standard context won't do because we want to reset that context
+	 * for every tuple.  So, build another context just like the other one...
+	 * -tgl 7/11/00
+	 */
+	/*
+	 * GPDB_84_MERGE_FIXME: For some reason, in GPDB we need the runtime key
+	 * context even when there are no runtime keys. I tried removing this,
+	 * but got a crash from the 'dpe' regression test.
+	 */
+	if (indexstate->iss_NumRuntimeKeys != 0 || TRUE)
+	{
+		ExprContext *stdecontext = indexstate->ss.ps.ps_ExprContext;
+
+		ExecAssignExprContext(estate, &indexstate->ss.ps);
+		indexstate->iss_RuntimeContext = indexstate->ss.ps.ps_ExprContext;
+		indexstate->ss.ps.ps_ExprContext = stdecontext;
+	}
+	else
+	{
+		indexstate->iss_RuntimeContext = NULL;
+	}
 
 	/*
-	 * Initialize index-specific scan state
+	 * Initialize scan descriptor.
 	 */
-	indexstate->iss_RuntimeKeysReady = false;
+	indexstate->iss_ScanDesc = index_beginscan(currentRelation,
+											   indexstate->iss_RelationDesc,
+											   estate->es_snapshot,
+											   indexstate->iss_NumScanKeys,
+											   indexstate->iss_ScanKeys);
 
 	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
@@ -1103,5 +1101,9 @@ ExecCountSlotsIndexScan(IndexScan *node)
 void
 ExecEagerFreeIndexScan(IndexScanState *node)
 {
-	freeScanDesc(node);
+	if (node->iss_ScanDesc != NULL)
+	{
+		index_endscan(node->iss_ScanDesc);
+		node->iss_ScanDesc = NULL;
+	}
 }

@@ -19,6 +19,7 @@
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeBitmapIndexscan.h"
+#include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
 #include "executor/nodeFunctionscan.h"
 #include "executor/nodeHash.h"
@@ -181,6 +182,10 @@ ExecReScan(PlanState *node, ExprContext *exprCtxt)
 
 		case T_BitmapIndexScanState:
 			ExecBitmapIndexReScan((BitmapIndexScanState *) node, exprCtxt);
+			break;
+
+		case T_DynamicBitmapIndexScanState:
+			ExecDynamicBitmapIndexReScan((DynamicBitmapIndexScanState *) node, exprCtxt);
 			break;
 
 		case T_BitmapHeapScanState:
@@ -555,6 +560,7 @@ ExecEagerFree(PlanState *node)
 		case T_BitmapAndState:
 		case T_BitmapOrState:
 		case T_BitmapIndexScanState:
+		case T_DynamicBitmapIndexScanState:
 		case T_LimitState:
 		case T_MotionState:
 		case T_NestLoopState:

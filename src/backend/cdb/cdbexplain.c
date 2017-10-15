@@ -1552,6 +1552,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 		case T_BitmapAndState:
 		case T_BitmapOrState:
 		case T_BitmapIndexScanState:
+		case T_DynamicBitmapIndexScanState:
 			s_row = "";
 			if (ns->ntuples.vcnt > 1)
 				appendStringInfo(str,

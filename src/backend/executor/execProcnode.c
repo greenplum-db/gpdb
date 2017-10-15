@@ -87,6 +87,7 @@
 #include "executor/nodeBitmapAnd.h"
 #include "executor/nodeBitmapHeapscan.h"
 #include "executor/nodeBitmapIndexscan.h"
+#include "executor/nodeDynamicBitmapIndexscan.h"
 #include "executor/nodeBitmapOr.h"
 #include "executor/nodeCtescan.h"
 #include "executor/nodeFunctionscan.h"
@@ -448,8 +449,12 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 			START_MEMORY_ACCOUNT(curMemoryAccountId);
 			{
-			result = (PlanState *) ExecInitBitmapIndexScan((BitmapIndexScan *) node,
-														   estate, eflags);
+				if (isDynamicScan((Scan *) node))
+					result = (PlanState *) ExecInitDynamicBitmapIndexScan((BitmapIndexScan *) node,
+																   estate, eflags);
+				else
+					result = (PlanState *) ExecInitBitmapIndexScan((BitmapIndexScan *) node,
+																   estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
 			break;
@@ -1295,6 +1300,10 @@ MultiExecProcNode(PlanState *node)
 			result = MultiExecBitmapIndexScan((BitmapIndexScanState *) node);
 			break;
 
+		case T_DynamicBitmapIndexScanState:
+			result = MultiExecDynamicBitmapIndexScan((DynamicBitmapIndexScanState *) node);
+			break;
+
 		case T_BitmapAndState:
 			result = MultiExecBitmapAnd((BitmapAndState *) node);
 			break;
@@ -1687,6 +1696,10 @@ ExecEndNode(PlanState *node)
 
 		case T_BitmapIndexScanState:
 			ExecEndBitmapIndexScan((BitmapIndexScanState *) node);
+			break;
+
+		case T_DynamicBitmapIndexScanState:
+			ExecEndDynamicBitmapIndexScan((DynamicBitmapIndexScanState *) node);
 			break;
 
 		case T_BitmapHeapScanState:

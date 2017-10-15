@@ -248,6 +248,29 @@ index_beginscan(Relation heapRelation,
 	return scan;
 }
 
+/*
+ * index_beginscan_bitmap - start a scan of an index with amgetbitmap
+ *
+ * As above, caller had better be holding some lock on the parent heap
+ * relation, even though it's not explicitly mentioned here.
+ */
+IndexScanDesc
+index_beginscan_bitmap(Relation indexRelation,
+					   Snapshot snapshot,
+					   int nkeys, ScanKey key)
+{
+	IndexScanDesc scan;
+
+	scan = index_beginscan_internal(indexRelation, nkeys, key);
+
+	/*
+	 * Save additional parameters into the scandesc.  Everything else was set
+	 * up by RelationGetIndexScan.
+	 */
+	scan->xs_snapshot = snapshot;
+
+	return scan;
+}
 
 /*
  * index_beginscan_internal --- common code for index_beginscan variants
