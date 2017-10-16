@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_u14_wtd_dbb">
-  <title>Using PXF with HDFS and Hive Data </title>
+  <title>Accessing HDFS and Hive Data with PXF </title>
   <shortdesc>Data managed by your organization may already reside in external sources. The Greenplum Database PXF Extension Framework (PXF) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition.</shortdesc>
   <body>
     <p>PXF is installed with HDFS and Hive connectors. These connectors enable you to read external HDFS file system and Hive table data stored in text, Avro, RCFile, Parquet, SequenceFile, and ORC formats.</p>

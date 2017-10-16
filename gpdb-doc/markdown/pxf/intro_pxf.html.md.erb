@@ -1,15 +1,6 @@
 ---
-title: Introducing the PXF Extension Framework
+title: PXF Architecture
 ---
-
-
-Data managed by your organization may already reside in external sources. The Greenplum Database PXF Extension Framework (PXF) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition. 
-
-PXF is installed with HDFS and Hive connectors. These connectors enable you to read external HDFS file system and Hive table data in text, Avro, RCFile, Parquet, SequenceFile, and ORC formats.
-
-The Greenplum Database PXF Extension Framework is based on [Apache HAWQ PXF](https://cwiki.apache.org/confluence/display/HAWQ/PXF). 
-
-## <a id="intro_pxf_arch"></a>Architecture
     
 The PXF Extension Framework is composed of a Greenplum Database protocol and associated C client library plus a Java service. These components work together to provide you access to data stored in sources external to your Greenplum Database deployment. 
 
