@@ -27,6 +27,7 @@
 #include "access/heapam.h"			  /* heap_open            */
 #include "access/transam.h"
 #include "access/xact.h"
+#include "cdb/cdbvars.h"
 #include "utils/snapmgr.h"
 
 /*
@@ -242,8 +243,17 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 			continue;
 
 		/*
-		 * If we have already used this segment in this transaction, no need to look
-		 * further. We can continue to use it
+		 * Historically, segment 0 was only used in utility mode. There is no
+		 * particular reason we couldn't use segment 0 these days, but keep
+		 * that behavior to avoid surprising external tools and*regression
+		 * tests that rely on that.
+		 */
+		if (Gp_role != GP_ROLE_UTILITY && segno == 0)
+			continue;
+
+		/*
+		 * If we have already used this segment in this transaction, no need
+		 * to look further. We can continue to use it.
 		 *
 		 * If we already picked a segno for a previous statement
 		 * in this very same transaction we are still in (explicit txn) we
@@ -301,6 +311,10 @@ SetSegnoInternal(Relation rel, List *avoid_segnos, bool for_compaction)
 		/* No segment found. Try to create a new one. */
 		for (segno = 0; segno < MAX_AOREL_CONCURRENCY; segno++)
 		{
+			/* Only choose seg 0 in utility mode. See above. */
+			if (Gp_role != GP_ROLE_UTILITY && segno == 0)
+				continue;
+
 			if (!used[segno] && !list_member_int(avoid_segnos, segno))
 			{
 				chosen_segno = segno;
