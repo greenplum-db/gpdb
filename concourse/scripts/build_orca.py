@@ -8,9 +8,9 @@ import argparse
 def add_orca_conan_remote(bintrayRemote, bintrayRemoteURL):
     return subprocess.call(["conan", "remote", "add", bintrayRemote, bintrayRemoteURL])
 
-def build_install_orca(build_type, destdir=None):
+def build_install_orca(build_type, destdir=None, env_additions=""):
     # by default conan will install the files under /usr/local
-    environ = "env PATH=/root/cmake-3.8.2-Linux-x86_64/bin/:$PATH CONAN_CMAKE_GENERATOR=Ninja " 
+    environ = "env PATH=/root/cmake-3.8.2-Linux-x86_64/bin/:$PATH CONAN_CMAKE_GENERATOR=Ninja "+ env_additions + " "
     if destdir:
 	environ += "DESTDIR={0}".format(destdir)
 
@@ -23,7 +23,8 @@ def package_orca(base_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Main driver to build and install ORCA using conan')
-    required_arguments = parser.add_argument('--build_type', help='Build type, i.e Release or Debug', type=str, default='Release')
+    parser.add_argument('--env_additions', help='Additional env settings', type=str, default="")
+    parser.add_argument('--build_type', help='Build type, i.e Release or Debug', type=str, default='Release')
     required_arguments = parser.add_argument_group('required arguments')
     required_arguments.add_argument('--bintrayRemote', help='Name of conan remote refering to bintray', type=str)
     required_arguments.add_argument('--bintrayRemoteURL', help='Conan remote URL pointing to bintray repo', type=str)
@@ -33,7 +34,8 @@ def main():
     if status:
 	return status
 
-    status = build_install_orca(args.build_type, os.path.join(os.getcwd(), 'bin_orca'))
+    status = build_install_orca(args.build_type, os.path.join(os.getcwd(), 'bin_orca'),
+                                env_additions=args.env_additions)
     if status:
 	return status
 

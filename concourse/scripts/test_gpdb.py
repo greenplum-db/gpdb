@@ -57,9 +57,9 @@ def main():
     if status:
         return status
     if os.getenv("TEST_SUITE", "icg") == 'icw':
-      status = ciCommon.icw()
+      status = ciCommon.install_check('world')
     else:
-      status = ciCommon.icg()
+      status = ciCommon.install_check()
     if status:
         copy_output()
     return status
