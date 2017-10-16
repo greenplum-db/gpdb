@@ -1841,8 +1841,9 @@ AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_history_wrapper'
 LANGUAGE C STRICT;
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg_history(oid) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aocsseg(oid)
-RETURNS TABLE(gp_tid tid,
+CREATE TYPE gp_toolkit.__gp_aocsseg_return_type AS (
+    segment_id integer,
+    gp_tid tid,
     segno integer,
     column_num smallint,
     physical_segno integer,
@@ -1851,25 +1852,30 @@ RETURNS TABLE(gp_tid tid,
     eof_uncompressed bigint,
     modcount bigint,
     formatversion smallint,
-    state smallint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aocsseg_wrapper'
-LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg(oid) TO public;
+    state smallint);
 
-CREATE FUNCTION gp_toolkit.__gp_aocsseg_name(text)
-RETURNS TABLE (gp_tid tid,
-    segno integer,
-    column_num smallint,
-    physical_segno integer,
-    tupcount bigint,
-    eof bigint,
-    eof_uncompressed bigint,
-    modcount bigint,
-    formatversion smallint,
-    state smallint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aocsseg_name_wrapper'
-LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg_name(text) TO public;
+CREATE or replace FUNCTION gp_toolkit.__gp_aocsseg(relid regclass)
+RETURNS SETOF gp_toolkit.__gp_aocsseg_return_type
+AS
+$$
+declare
+  r gp_toolkit.__gp_aocsseg_return_type;
+begin
+  for r in execute 'select gp_segment_id, ctid, segno, NULL, NULL, tupcount, NULL, NULL, modcount from gp_dist_random(''pg_aoseg.pg_aocsseg_' || relid::oid || ''')' loop
+    return next r;
+  end loop;
+end;
+$$
+LANGUAGE plpgsql STRICT;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg(regclass) TO public;
+
+update pg_proc set prodataaccess = 's' where oid = 'gp_toolkit.__gp_aocsseg'::regproc;
+
+CREATE FUNCTION gp_toolkit.__gp_aocsseg_name(regclass)
+RETURNS SETOF gp_toolkit.__gp_aocsseg_return_type
+AS 'select gp_toolkit.__gp_aocsseg($1)'
+LANGUAGE sql STRICT;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg_name(regclass) TO public;
 
 CREATE FUNCTION gp_toolkit.__gp_aocsseg_history(oid)
 RETURNS TABLE(gp_tid tid,
@@ -1945,17 +1951,32 @@ RETURNS TABLE(segno integer,
 AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_entry_name_wrapper' LANGUAGE C STRICT;
 GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_entry_name(text) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aoseg_name(text)
-RETURNS TABLE (segno integer, eof bigint,
-    tupcount bigint,
-    varblockcount bigint,
-    eof_uncompressed bigint,
-    modcount bigint,
-    formatversion smallint,
-    state smallint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_name_wrapper'
-LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg_name(text) TO public;
+CREATE TYPE gp_toolkit.__gp_aoseg_return_type AS (
+       segment_id integer,
+       segno integer,
+       eof bigint,
+       tupcount bigint,
+       varblockcount bigint,
+       eof_uncompressed bigint,
+       modcount bigint,
+       state smallint);
+
+CREATE or replace FUNCTION gp_toolkit.__gp_aoseg_name(relid regclass)
+RETURNS SETOF gp_toolkit.__gp_aoseg_return_type
+AS
+$$
+declare
+  r gp_toolkit.__gp_aoseg_return_type;
+begin
+  for r in execute 'select gp_segment_id, * from gp_dist_random(''pg_aoseg.pg_aoseg_' || relid::oid || ''')' loop
+    return next r;
+  end loop;
+end;
+$$
+LANGUAGE plpgsql STRICT;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg_name(regclass) TO public;
+
+update pg_proc set prodataaccess = 's' where oid = 'gp_toolkit.__gp_aoseg_name'::regproc;
 
 CREATE TYPE gp_toolkit.__gp_aovisimap_hidden_t AS (seg int, hidden bigint, total bigint);
 CREATE FUNCTION gp_toolkit.__gp_aovisimap_hidden_typed(oid)

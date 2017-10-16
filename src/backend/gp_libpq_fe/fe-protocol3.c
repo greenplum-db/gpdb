@@ -226,37 +226,6 @@ pqParseInput3(PGconn *conn)
 					conn->asyncStatus = PGASYNC_READY;
 
 					break;
-				case 'o':
-				{
-					int i;
-					PQaoRelTupCount *ao;
-
-					/* row count for AO partitioned tables */
-					if (conn->result == NULL)
-					{
-						conn->result = PQmakeEmptyPGresult(conn, PGRES_COMMAND_OK);
-						if (!conn->result)
-							return;
-					}
-							
-					if (pqGetInt(&(conn->result->naotupcounts), 4, conn))
-						return;
-							
-					/* now just loop through */
-					conn->result->aotupcounts = 
-						malloc(sizeof(PQaoRelTupCount) * conn->result->naotupcounts);
-					ao = conn->result->aotupcounts;
-					for (i = 0; i < conn->result->naotupcounts; i++)
-					{
-						if (pqGetInt((int *)&(ao->aorelid), 4, conn))
-							return;
-						if (pqGetInt64(&(ao->tupcount), conn))
-							return;
-
-						ao++;
-					}
-				}
-				break;
 				case 'E':		/* error return */
 					if (pqGetErrorNotice3(conn, true))
 						return;

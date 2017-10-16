@@ -305,7 +305,6 @@ _outPlannedStmt(StringInfo str, PlannedStmt *node)
 	WRITE_NODE_FIELD(returningLists);
 
 	WRITE_NODE_FIELD(result_partitions);
-	WRITE_NODE_FIELD(result_aosegnos);
 	WRITE_NODE_FIELD(queryPartOids);
 	WRITE_NODE_FIELD(queryPartsMetadata);
 	WRITE_NODE_FIELD(numSelectorsPerScanId);
@@ -3061,7 +3060,6 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(options);
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
-	WRITE_NODE_FIELD(ao_segnos);
 	WRITE_INT_FIELD(nattrs);
 	WRITE_ENUM_FIELD(ptype, GpPolicyType);
 	appendStringInfoLiteral(str, " :distribution_attrs");
@@ -3069,7 +3067,6 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	{
 		appendStringInfo(str, " %d", node->distribution_attrs[i]);
 	}
-
 }
 #endif/* COMPILING_BINARY_FUNCS */
 
@@ -4049,11 +4046,6 @@ _outVacuumStmt(StringInfo str, VacuumStmt *node)
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(va_cols);
 	WRITE_NODE_FIELD(expanded_relids);
-	WRITE_NODE_FIELD(appendonly_compaction_segno);
-	WRITE_NODE_FIELD(appendonly_compaction_insert_segno);
-	WRITE_BOOL_FIELD(appendonly_compaction_vacuum_cleanup);
-	WRITE_BOOL_FIELD(appendonly_compaction_vacuum_prepare);
-	WRITE_BOOL_FIELD(heap_truncate);
 }
 
 static void

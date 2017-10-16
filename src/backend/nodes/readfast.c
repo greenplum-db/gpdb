@@ -1389,13 +1389,13 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(options);
 	READ_NODE_FIELD(sreh);
 	READ_NODE_FIELD(partitions);
-	READ_NODE_FIELD(ao_segnos);
 	READ_INT_FIELD(nattrs);
 	READ_ENUM_FIELD(ptype, GpPolicyType);
 	READ_INT_ARRAY(distribution_attrs, local_node->nattrs, AttrNumber);
-	READ_DONE();
 
+	READ_DONE();
 }
+
 static GrantStmt *
 _readGrantStmt(void)
 {
@@ -1459,7 +1459,6 @@ _readPlannedStmt(void)
 	READ_BITMAPSET_FIELD(rewindPlanIDs);
 	READ_NODE_FIELD(returningLists);
 	READ_NODE_FIELD(result_partitions);
-	READ_NODE_FIELD(result_aosegnos);
 	READ_NODE_FIELD(queryPartOids);
 	READ_NODE_FIELD(queryPartsMetadata);
 	READ_NODE_FIELD(numSelectorsPerScanId);

@@ -42,6 +42,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "access/appendonlywriter.h"
 #include "access/heapam.h"
 #include "access/xlogmm.h"
 #include "access/subtrans.h"
@@ -584,8 +585,6 @@ MarkAsPreparing(TransactionId xid,
 	gxact->proc.roleId = owner;
 	gxact->proc.inCommit = false;
 	gxact->proc.vacuumFlags = 0;
-	gxact->proc.serializableIsoLevel = false;
-	gxact->proc.inDropTransaction = false;
 	gxact->proc.lwWaiting = false;
 	gxact->proc.lwExclusive = false;
 	gxact->proc.lwWaitLink = NULL;
@@ -1627,6 +1626,13 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 		ProcessRecords(bufptr, xid, twophase_postcommit_callbacks);
 	else
 		ProcessRecords(bufptr, xid, twophase_postabort_callbacks);
+
+	/* XXX these should perhaps be registered as a callback */
+	if (isCommit)
+		AtCommit_AppendOnly(xid);
+	else
+		AtAbort_AppendOnly(xid);
+	AtEOXact_AppendOnly(xid);
 
 	/* Count the prepared xact as committed or aborted */
 	AtEOXact_PgStat(isCommit);

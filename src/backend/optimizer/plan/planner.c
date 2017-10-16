@@ -416,7 +416,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	result->rewindPlanIDs = glob->rewindPlanIDs;
 	result->returningLists = root->returningLists;
 	result->result_partitions = root->result_partitions;
-	result->result_aosegnos = root->result_aosegnos;
 	result->rowMarks = parse->rowMarks;
 	result->relationOids = glob->relationOids;
 	result->invalItems = glob->invalItems;

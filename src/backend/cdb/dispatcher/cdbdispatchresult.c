@@ -719,36 +719,6 @@ cdbdisp_sumRejectedRows(CdbDispatchResults *results)
 }
 
 /*
- * sum tuple counts that were added into a partitioned AO table
- */
-HTAB *
-cdbdisp_sumAoPartTupCount(PartitionNode *parts, CdbDispatchResults *results)
-{
-	int			i;
-	HTAB	   *ht = NULL;
-
-	if (!parts)
-		return NULL;
-
-	for (i = 0; i < results->resultCount; ++i)
-	{
-		CdbDispatchResult *dispatchResult = &results->resultArray[i];
-		int			nres = cdbdisp_numPGresult(dispatchResult);
-		int			ires;
-
-		for (ires = 0; ires < nres; ++ires)
-		{
-			PGresult   *pgresult = cdbdisp_getPGresult(dispatchResult, ires);
-
-			ht = PQprocessAoTupCounts(parts, ht, (void *) pgresult->aotupcounts,
-									  pgresult->naotupcounts);
-		}
-	}
-
-	return ht;
-}
-
-/*
  * Find the max of the lastOid values returned from the QEs
  */
 Oid

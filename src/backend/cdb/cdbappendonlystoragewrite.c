@@ -268,8 +268,8 @@ AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrit
 {
 	Relation	gp_relation_node;
 
-	Assert(segmentFileNum > 0);
-	Assert(logicalEof == 0);
+
+	Assert (logicalEof == 0);
 
 	/*
 	 * We may or may not have a gp_relation_node entry when the EOF is 0.

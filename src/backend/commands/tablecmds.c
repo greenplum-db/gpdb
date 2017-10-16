@@ -4721,14 +4721,12 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 	int i;
 	AOCSVPInfoEntry *vpe;
 	int64 min_eof = 0;
-	List *drop_segno_list = NIL;
 
 	for (segi = 0; segi < nseg; ++segi)
 	{
 		/*
-		 * Append to drop_segno_list and skip if state is in
-		 * AOSEG_STATE_AWAITING_DROP. At the end of the loop, we will
-		 * try to drop the segfiles since we currently have the
+		 * Skip if state is in AOSEG_STATE_AWAITING_DROP. But
+		 * try to drop the segfile first, since we currently have the
 		 * AccessExclusiveLock. If we don't do this, aocssegfiles in
 		 * this state will have vpinfo size containing info for less
 		 * number of columns compared to the relation's relnatts in
@@ -4736,7 +4734,7 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 		 */
 		if (segInfos[segi]->state == AOSEG_STATE_AWAITING_DROP)
 		{
-			drop_segno_list = lappend_int(drop_segno_list, segInfos[segi]->segno);
+			AOCSDrop(aocsrel, segInfos[segi]->segno);
 			continue;
 		}
 
@@ -4756,9 +4754,6 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 			}
 		}
 	}
-
-	if (list_length(drop_segno_list) > 0 && Gp_role != GP_ROLE_DISPATCH)
-		AOCSDrop(aocsrel, drop_segno_list);
 
 	return scancol;
 }

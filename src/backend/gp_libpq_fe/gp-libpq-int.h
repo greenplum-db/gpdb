@@ -196,9 +196,6 @@ struct pg_result
 	int			numRejected;
 	/* GPDB: number of rows completed when COPY FROM ON SEGMENT */
 	int			numCompleted;
-	/* GPDB: number of processed tuples for each AO partition */
-	int			naotupcounts;
-	PQaoRelTupCount *aotupcounts;
 };
 
 /* PGAsyncStatusType defines the state of the query-execution state machine */

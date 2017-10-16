@@ -156,10 +156,6 @@ extern void PrintFreeSpaceMapStatistics(int elevel);
 extern void DumpFreeSpaceMap(int code, Datum arg);
 extern void LoadFreeSpaceMap(void);
 
-extern List *AppendRelToVacuumRels(Relation rel);
-extern void ResetVacuumRels(void);
-extern void ClearFreeSpaceForVacuumRels(void);
-
 #ifdef FREESPACE_DEBUG
 extern void DumpFreeSpace(void);
 #endif

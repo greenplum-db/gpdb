@@ -113,7 +113,6 @@ _copyPlannedStmt(PlannedStmt *from)
 	COPY_NODE_FIELD(returningLists);
 
 	COPY_NODE_FIELD(result_partitions);
-	COPY_NODE_FIELD(result_aosegnos);
 	COPY_NODE_FIELD(queryPartOids);
 	COPY_NODE_FIELD(queryPartsMetadata);
 	COPY_NODE_FIELD(numSelectorsPerScanId);
@@ -3867,12 +3866,6 @@ _copyVacuumStmt(VacuumStmt *from)
 	COPY_NODE_FIELD(va_cols);
 
 	COPY_NODE_FIELD(expanded_relids);
-	COPY_NODE_FIELD(appendonly_compaction_segno);
-	COPY_NODE_FIELD(appendonly_compaction_insert_segno);
-	COPY_SCALAR_FIELD(appendonly_compaction_vacuum_cleanup);
-	COPY_SCALAR_FIELD(appendonly_compaction_vacuum_prepare);
-	COPY_SCALAR_FIELD(appendonly_relation_empty);
-	COPY_SCALAR_FIELD(heap_truncate);
 
 	return newnode;
 }

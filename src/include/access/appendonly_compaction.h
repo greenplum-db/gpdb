@@ -22,12 +22,11 @@
 
 #define APPENDONLY_COMPACTION_SEGNO_INVALID (-1)
 
-extern void AppendOnlyDrop(Relation aorel,
-			   List *compaction_segno);
-extern void AppendOnlyCompact(Relation aorel,
-				  List *compaction_segno_list,
-				  int insert_segno,
-				  bool isFull);
+extern void AppendOnlyDrop(Relation aorel, int compaction_segno);
+extern void AppendOnlyCompact(Relation aorel, 
+		int compaction_segno,
+		int insert_segno,
+		bool isFull);
 extern bool AppendOnlyCompaction_ShouldCompact(
 								   Relation aoRelation,
 								   int segno,

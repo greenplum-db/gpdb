@@ -299,9 +299,6 @@ cdbdisp_sumCmdTuples(CdbDispatchResults *results, int sliceIndex);
 void
 cdbdisp_sumRejectedRows(CdbDispatchResults *results);
 
-HTAB *
-cdbdisp_sumAoPartTupCount(PartitionNode *parts, CdbDispatchResults *results);
-
 /*
  * max of the lastOid values returned from the QEs
  */

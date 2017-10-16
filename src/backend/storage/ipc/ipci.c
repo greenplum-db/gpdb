@@ -139,6 +139,8 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 		size = add_size(size, BufferShmemSize());
 		size = add_size(size, LockShmemSize());
 		size = add_size(size, workfile_mgr_shmem_size());
+		size = add_size(size, AppendOnlyWriterShmemSize());
+
 		if (Gp_role == GP_ROLE_DISPATCH)
 			size = add_size(size, AppendOnlyWriterShmemSize());
 

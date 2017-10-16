@@ -98,11 +98,8 @@ extern int	MaxAppendOnlyTables;	/* Max # of concurrently used AO rels */
  * 5 -> 1 (drop transaction committed)
  * 5 -> 2 (drop transaction aborted)
  * 6 -> 5 (drop transaction started)
- * 6 -> 7 (pseudo compaction transaction started)
- * 6 -> 8 (drop transaction skipped)
  * 7 -> 6 (pseudo compaction committed)
  * 7 -> 2 (pseudo compaction aborted)
- * 8 -> 2 (drop transaction skipped (commit or aborted))
  */
 typedef enum AOSegfileState
 {
@@ -112,8 +109,7 @@ typedef enum AOSegfileState
 	COMPACTION_USE = 4,
 	DROP_USE = 5,
 	COMPACTED_AWAITING_DROP = 6,
-	PSEUDO_COMPACTION_USE = 7,
-	COMPACTED_DROP_SKIPPED = 8
+	PSEUDO_COMPACTION_USE = 7
 } AOSegfileState;
 
 /*
@@ -121,11 +117,10 @@ typedef enum AOSegfileState
  * AO relation.
  *
  * This information is kept in a hash table and kept up to date. It represents
- * the global status of this segment number accross the whole array, for example
- * 'tupcount' for segno #4 will show the total rows in all file segments with
- * number 4 for this specific table.
- *
- * This data structure is accessible by the master node and it is used to make
+ * the global status of this segment number in this QE, for example 'tupcount'
+ * for segno #4 will show the rows in segment 4 for this specific table.
+ * 
+ * This data structure is accessible in the QEs, and it is used to make
  * decisions regarding file segment allocations for data writes. Note that it
  * is not used for reads. Durind reads each segdb scanner reads its local
  * catalog.
@@ -133,8 +128,6 @@ typedef enum AOSegfileState
  * Note that 'isfull' tries to guess if any of the file segments is full. Since
  * there may be some skew in the data we use a threshold that is a bit lower
  * than the max tuples allowed per segment.
- *
-
  */
 typedef struct AOSegfileStatus
 {
@@ -158,7 +151,7 @@ typedef struct AOSegfileStatus
 	/*
 	 * the latest committed inserting transaction id
 	 */
-	DistributedTransactionId latestWriteXid;
+	TransactionId	latestWriteXid;
 
 	AOSegfileState state;
 
@@ -166,7 +159,6 @@ typedef struct AOSegfileStatus
 
 	/* if true - never insert into this segno anymore */
 	bool		isfull;
-
 
 	/*
 	 * Flag to indicate if the current transaction has been aborted. It is set
@@ -179,10 +171,9 @@ typedef struct AOSegfileStatus
 
 /*
  * Describes the status of all file segments of an AO relation in the system.
- * This data structure is kept in a hash table on the master and kept up to
- * date.
- *
- * 'relid' stands for the AO relation this entry serves.
+ * This data structure is kept in a hash table on QEs and kept up to date.
+ * 
+ * 'dbid' and 'relid' identify the AO relation this entry serves.
  * 'txns_using_rel' stands for the number of transactions that are currently
  * inserting into this relation. if equals zero it is safe to remove this
  * entry from the hash table (when needed).
@@ -210,26 +201,19 @@ extern AppendOnlyWriterData *AppendOnlyWriter;
 extern Size AppendOnlyWriterShmemSize(void);
 extern void InitAppendOnlyWriter(void);
 extern Size AppendOnlyWriterShmemSize(void);
-extern int	SetSegnoForWrite(Relation rel, int existingsegno);
-extern void RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList);
+extern int	SetSegnoForWrite(Relation rel);
+extern void RegisterSegnoForCompactionDrop(Oid relid, int compacted_segno);
 extern void DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList);
-extern List *SetSegnoForCompaction(Relation rel, List *compactedSegmentFileList,
+extern int SetSegnoForCompaction(Relation rel, List *compactedSegmentFileList,
 					  List *insertedSegmentFileList, bool *isdrop);
-extern int SetSegnoForCompactionInsert(Relation rel, List *compacted_segno,
+extern int SetSegnoForCompactionInsert(Relation rel, int compacted_segno,
 							List *compactedSegmentFileList,
 							List *insertedSegmentFileList);
-extern List *assignPerRelSegno(List *all_rels);
-extern void UpdateMasterAosegTotals(Relation parentrel,
-						int segno,
-						int64 tupcount,
-						int64 modcount_added);
-extern void UpdateMasterAosegTotalsFromSegments(Relation parentrel,
-									Snapshot appendOnlyMetaDataSnapshot, List *segmentNumList,
-									int64 modcount_added);
+extern void AORelIncrementModCount(Relation parentrel);
 extern bool AORelRemoveHashEntry(Oid relid);
-extern void AtCommit_AppendOnly(void);
-extern void AtAbort_AppendOnly(void);
-extern void AtEOXact_AppendOnly(void);
+extern void AtCommit_AppendOnly(TransactionId xid);
+extern void AtAbort_AppendOnly(TransactionId xid);
+extern void AtEOXact_AppendOnly(TransactionId xid);
 
 extern void ValidateAppendOnlyMetaDataSnapshot(
 								   Snapshot *appendOnlyMetaDataSnapshot);

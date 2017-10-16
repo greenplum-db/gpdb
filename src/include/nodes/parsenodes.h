@@ -1494,7 +1494,6 @@ typedef struct CopyStmt
 	Node	   *sreh;			/* Single row error handling info */
 	/* Convenient location for dispatch of misc meta data */
 	PartitionNode *partitions;
-	List		*ao_segnos;		/* AO segno map */
 	int			nattrs;
 	GpPolicyType	ptype;
 	AttrNumber	*distribution_attrs;
@@ -2625,46 +2624,6 @@ typedef struct VacuumStmt
 
 	/* Object IDs for relations which expand from partition definitions */
 	List	   *expanded_relids;
-
-	/*
-	 * AO segment file num to compact (integer).
-	 */
-	List *appendonly_compaction_segno;
-
-	/*
-	 * AO table meta data from the dispatcher.
-	 * Used during compaction.
-	 *
-	 * Unless appendonly_compaction_vacuum_cleanup is specified, it should
-	 * only contain a single entry. If the entry is
-	 * APPENDONLY_COMPACTION_SEGNO_INVALID, it is a pseudo compaction
-	 * transaction. If the list has no entries, it is a drop transaction.
-	 */
-	List *appendonly_compaction_insert_segno;
-
-	/*
-	 * Iff true, the vacuum run is the cleanup phase of an append-only compaction.
-	 * In the cleanup phase, the following operations are performed
-	 * - Vacuum of append-only auxility relations
-	 * - Update of pg_class statistics of append-only relation
-	 */
-	bool appendonly_compaction_vacuum_cleanup;
-
-	/*
-	 * Iff true, the vacuum runs the prepare phase of an append-only compaction.
-	 * In the prepare phase, the following operations are performed
-	 * - Vacuum of indexes on append-only relation based on visimap.
-	 */
-	bool appendonly_compaction_vacuum_prepare;
-
-	/*
-	 * MPP-24168: If the appendonly table is empty, we should vacuum
-	 * auxiliary tables in prepare phase itself.  Othewise, age of
-	 * auxiliary heap relations never gets updated.
-	 */
-	bool appendonly_relation_empty;
-
-	bool heap_truncate;			/* true in the 2nd pass for heap vacuum full */
 } VacuumStmt;
 
 /* ----------------------

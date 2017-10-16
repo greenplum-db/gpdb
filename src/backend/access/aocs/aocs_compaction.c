@@ -423,13 +423,11 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 /*
  * Performs a compaction of an append-only AOCS relation.
  *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code.
- *
+ * The compaction segment file should be marked as in-use/in-compaction
+ * in the appendonlywriter.c code.
  */
 void
-AOCSDrop(Relation aorel,
-		 List *compaction_segno)
+AOCSDrop(Relation aorel, int compacted_segno)
 {
 	const char *relname;
 	int			total_segfiles;
@@ -454,10 +452,9 @@ AOCSDrop(Relation aorel,
 	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
-		{
+
+		if (compacted_segno != segno)
 			continue;
-		}
 
 		/*
 		 * Try to get the transaction write-lock for the Append-Only segment
@@ -506,10 +503,9 @@ AOCSDrop(Relation aorel,
 /*
  * Performs a compaction of an append-only relation in column-orientation.
  *
- * In non-utility mode, all compaction segment files should be
- * marked as in-use/in-compaction in the appendonlywriter.c code. If
- * set, the insert_segno should also be marked as in-use.
-  * When the insert segno is negative, only truncate to eof operations
+ * The compaction segment file should be marked as in-use/in-compaction in the
+ * appendonlywriter.c code. If set, the insert_segno should also be marked as
+ * in-use. When the insert segno is negative, only truncate to eof operations
  * can be executed.
  *
  * The caller is required to hold either an AccessExclusiveLock (vacuum full)
@@ -517,7 +513,7 @@ AOCSDrop(Relation aorel,
  */
 void
 AOCSCompact(Relation aorel,
-			List *compaction_segno,
+			int compaction_segno,
 			int insert_segno,
 			bool isFull)
 {
@@ -533,6 +529,9 @@ AOCSCompact(Relation aorel,
 	Assert(RelationIsAoCols(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(insert_segno >= 0);
+
+	/* We cannot compact the segment file we are inserting to. */
+	Assert(compaction_segno != insert_segno);
 
 	relname = RelationGetRelationName(aorel);
 
@@ -550,15 +549,9 @@ AOCSCompact(Relation aorel,
 	for (i = 0; i < total_segfiles; i++)
 	{
 		segno = segfile_array[i]->segno;
-		if (!list_member_int(compaction_segno, segno))
-		{
+
+		if (compaction_segno != segno)
 			continue;
-		}
-		if (segno == insert_segno)
-		{
-			/* We cannot compact the segment file we are inserting to. */
-			continue;
-		}
 
 		/*
 		 * Try to get the transaction write-lock for the Append-Only segment

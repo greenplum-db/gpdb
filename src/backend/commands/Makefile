@@ -19,7 +19,7 @@ OBJS = aggregatecmds.o alter.o analyze.o async.o cluster.o comment.o  \
 	indexcmds.o lockcmds.o operatorcmds.o opclasscmds.o \
 	portalcmds.o prepare.o proclang.o \
 	schemacmds.o sequence.o tablecmds.o tablespace.o trigger.o \
-	tsearchcmds.o typecmds.o user.o vacuum.o vacuumlazy.o \
+	tsearchcmds.o typecmds.o user.o vacuum.o vacuum_ao.o vacuumlazy.o \
 	variable.o view.o
 
 OBJS += analyzefuncs.o extprotocolcmds.o exttablecmds.o filespace.o queue.o

@@ -2377,6 +2377,21 @@ StartTransaction(void)
 			{
 				currentDistribXid = QEDtxContextInfo.distributedXid;
 
+				/*
+				 * Establish a local snapshot immediately. This establishes our MyProc->xmin,
+				 * which prevents e.g. VACUUM from removing tuples that we might still need to
+				 * see.
+				 *
+				 * XXX: This isn't quite good enough: Even though the QD will send the
+				 * BEGIN ISOLATION LEVEL SERIALIZABLE command to all QEs as soon as the
+				 * transaction begins, there is a delay between QD sending that command and
+				 * getting here, where e.g. VACUUM might remove a tuple that should still be
+				 * visible to the distributed snapshot that the QD calculated already, and
+				 * but that is no longer visible to the new local snapshot we calculate
+				 * here.
+				 */
+				//GetTransactionSnapshot();
+
 				Assert(QEDtxContextInfo.distributedTimeStamp != 0);
 				Assert(QEDtxContextInfo.distributedXid != InvalidDistributedTransactionId);
 
@@ -2586,7 +2601,7 @@ CommitTransaction(void)
 		AtCommit_ResScheduler();
 
 	/* Perform any AO table commit processing */
-	AtCommit_AppendOnly();
+	AtCommit_AppendOnly(GetTopTransactionIdIfAny());
 
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
@@ -2740,9 +2755,6 @@ CommitTransaction(void)
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
 
-	/* All relations that are in the vacuum process are being commited now. */
-	ResetVacuumRels();
-
 	/* Process resource group related callbacks */
 	AtEOXact_ResGroup(true);
 
@@ -2792,7 +2804,7 @@ CommitTransaction(void)
 	/* Check we've released all catcache entries */
 	AtEOXact_CatCache(true);
 
-	AtEOXact_AppendOnly();
+	AtEOXact_AppendOnly(s->transactionId);
 	AtEOXact_GUC(true, 1);
 	AtEOXact_SPI(true);
 	AtEOXact_on_commit_actions(true);
@@ -3198,12 +3210,6 @@ AbortTransaction(void)
 	SetUserIdAndSecContext(s->prevUser, s->prevSecContext);
 
 	/*
-	 * Clear the freespace map entries for any relations that
-	 * are in the vacuum process.
-	 */
-	ClearFreeSpaceForVacuumRels();
-
-	/*
 	 * do abort processing
 	 */
 	AfterTriggerEndXact(false);
@@ -3216,7 +3222,7 @@ AbortTransaction(void)
 		AtAbort_ResScheduler();
 		
 	/* Perform any AO table abort processing */
-	AtAbort_AppendOnly();
+	AtAbort_AppendOnly(localXid);
 
 	AtEOXact_DispatchOids(false);
 
@@ -3295,7 +3301,7 @@ AbortTransaction(void)
 							 false, true);
 		AtEOXact_CatCache(false);
 
-		AtEOXact_AppendOnly();
+		AtEOXact_AppendOnly(s->transactionId);
 		AtEOXact_GUC(false, 1);
 		AtEOXact_SPI(false);
 		AtEOXact_on_commit_actions(false);

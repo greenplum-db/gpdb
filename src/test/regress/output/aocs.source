@@ -9,7 +9,7 @@ begin
 
   execute 'select relname from pg_class where oid=(select segrelid from pg_class, pg_appendonly where relname=''' || relname || ''' and relid = pg_class.oid)' into aosegname;
   if aosegname is not null then
-	  execute 'select tupcount from pg_aoseg.' || aosegname into tupcount;
+         execute 'select sum(tupcount) from gp_dist_random(''pg_aoseg.' || aosegname || ''')' into tupcount;
   end if;
   return tupcount;
 end; $$ language plpgsql volatile READS SQL DATA;

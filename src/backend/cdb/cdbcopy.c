@@ -53,14 +53,12 @@ makeCdbCopy(bool is_copy_in)
 	c->skip_ext_partition = false;
 	c->outseglist = NIL;
 	c->partitions = NULL;
-	c->ao_segnos = NIL;
 	initStringInfo(&(c->err_msg));
 	initStringInfo(&(c->err_context));
 	initStringInfo(&(c->copy_out_buf));
 
 	/* init total_segs */
 	c->total_segs = getgpsegmentCount();
-	c->aotupcounts = NULL;
 
 	Assert(c->total_segs >= 0);
 
@@ -165,9 +163,6 @@ cdbCopyStart(CdbCopy *c, char *copyCmd, struct GpPolicy *policy)
 
 	/* add in partitions for dispatch */
 	((CopyStmt *) q->utilityStmt)->partitions = c->partitions;
-
-	/* add in AO segno map for dispatch */
-	((CopyStmt *) q->utilityStmt)->ao_segnos = c->ao_segnos;
 
 	((CopyStmt *) q->utilityStmt)->skip_ext_partition = c->skip_ext_partition;
 
@@ -612,8 +607,6 @@ processCopyEndResults(CdbCopy *c,
 			if (res->numCompleted > 0)
 				segment_rows_completed = res->numCompleted;
 
-			/* Get AO tuple counts */
-			c->aotupcounts = PQprocessAoTupCounts(c->partitions, c->aotupcounts, res->aotupcounts, res->naotupcounts);
 			/* free the PGresult object */
 			PQclear(res);
 		}

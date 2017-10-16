@@ -248,7 +248,6 @@ typedef struct CopyStateData
 	int			num_consec_csv_err; /* # of consecutive csv invalid format errs */
 
 	PartitionNode *partitions; /* partitioning meta data from dispatcher */
-	List		  *ao_segnos;  /* AO table meta data from dispatcher */
 	bool          skip_ext_partition;  /* skip external partition */
 
 	bool		on_segment; /* QE save data files locally */

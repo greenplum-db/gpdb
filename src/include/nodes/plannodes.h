@@ -111,8 +111,6 @@ typedef struct PlannedStmt
 	 */
 	struct PartitionNode *result_partitions;
 
-	List	   *result_aosegnos; /* AO file 'seg' numbers for resultRels to use */
-
 	/*
 	 * Relation oids and partitioning metadata for all partitions
 	 * that are involved in a query.

@@ -154,12 +154,6 @@ static int	fsm_current_chunks(FSMRelation *fsmrel);
 static int	fsm_current_allocation(FSMRelation *fsmrel);
 
 /*
- * List of relations that are in the vacuum process and have not been
- * commited.
- */
-static List *vacuumRels = NIL;
-
-/*
  * Exported routines
  */
 
@@ -1810,68 +1804,6 @@ GetFreeSpaceMap(void)
 {
 
 	return FreeSpaceMap;
-}
-
-/*
- * Append relations that are in the vacuum process to the vacuumRels list.
- *
- * Only support non-index relations.
- */
-List *
-AppendRelToVacuumRels(Relation rel)
-{
-	RelFileNode *relfilenode = palloc(sizeof(RelFileNode));
-
-	/* This relation should not be an index. */
-	Assert(!OidIsValid(rel->rd_rel->relam));
-
-	relfilenode->spcNode = (rel->rd_node).spcNode;
-	relfilenode->dbNode = (rel->rd_node).dbNode;
-	relfilenode->relNode = (rel->rd_node).relNode;
-	vacuumRels = lappend(vacuumRels, relfilenode);
-
-	elog(DEBUG2, "Add relation %d/%d/%d to VacuumRels",
-		 relfilenode->spcNode, relfilenode->dbNode, relfilenode->relNode);
-
-	return vacuumRels;
-}
-
-/*
- * Remove all relations in the vacuumRels list. This should be called during
- * commit.
- */
-void
-ResetVacuumRels()
-{
-	if (vacuumRels == NULL)
-		return;
-	
-	list_free_deep(vacuumRels);
-	vacuumRels = NIL;
-	elog(DEBUG2, "Reset VacuumRels");
-}
-
-/*
- * Clear the freespace map entries for relations that are in vacuumRels.
- */
-void
-ClearFreeSpaceForVacuumRels()
-{
-	ListCell *lc;
-
-	if (vacuumRels == NULL)
-		return;
-	
-	foreach (lc, vacuumRels)
-	{
-		RelFileNode *relfilenode = (RelFileNode *)lfirst(lc);
-		RecordRelationFreeSpace(relfilenode, 0, 0, NULL);
-
-		elog(DEBUG2, "Clear the freespace map entry for relation %d/%d/%d in VacuumRels",
-			 relfilenode->spcNode, relfilenode->dbNode, relfilenode->relNode);
-	}
-
-	ResetVacuumRels();
 }
 
 #ifdef FREESPACE_DEBUG
