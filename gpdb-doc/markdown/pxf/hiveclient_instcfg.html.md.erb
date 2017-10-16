@@ -71,12 +71,12 @@ Perform the following procedure to install and configure the Hive client for PXF
     </property>
     ```
     
-    Complete the PXF Hive client configuration by copying Hive configuration from your Hadoop cluster to each Greenplum Database segment host
+    Complete the PXF Hive client configuration by copying Hive configuration from your Hadoop cluster to each Greenplum Database segment host.
     
     1. Copy the `hive-site.xml` Hive configuration files from your Hadoop cluster NameNode host to the current host. For example:
 
         ``` shell
-        gpadmin@gpmaster$ scp hdfsuser@namenode:/usr/local/hive/conf/hive-site.xml .
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hive/conf/hive-site.xml .
         ```
 
     2. Next, copy the `hive-site.xml` configuration file to each Greenplum Database segment host. For example:
@@ -84,3 +84,5 @@ Perform the following procedure to install and configure the Hive client for PXF
         ``` shell
         gpadmin@gpmaster$ gpscp -v -f seghostfile hive-site.xml =:\$PXF_HIVE_HOME/conf/hive-site.xml
         ```
+
+**Note**: If you update your Hive configuration while the PXF service is running, you must copy the updated `hive-site.xml` file to each Greenplum Database segment host and restart PXF.

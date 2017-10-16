@@ -98,8 +98,6 @@ Perform the following procedure to initialize PXF on each segment host in your G
 
 After initializing PXF, you must explicitly start PXF on each segment host in your Greenplum Database cluster. The PXF service, once started, runs as the `gpadmin` user on default port 51200. Only the `gpadmin` user can start and stop the PXF service.
 
-**Note**: PXF requires that you run Tomcat on the host machine. Tomcat reserves ports 8005, 8080, and 8009. If you have other services configured on your Greenplum Database segment hosts, ensure that they do not use these port numbers. This helps to prevent port conflict errors from occurring when you start the PXF service.
-
 Perform the following procedure to start PXF on each segment host in your Greenplum Database cluster.  You will use the `gpssh` command and a `seghostfile` to run the command on multiple hosts.
 
 1. Log in to the Greenplum Database master node and set up your environment:
@@ -119,3 +117,5 @@ Perform the following procedure to start PXF on each segment host in your Greenp
 ## <a id="pxf_svc_mgmt"></a>PXF Service Management
 
 The `pxf` command supports `stop`, `restart`, and `status` operations in addition to `init` and `start`. These operations run locally. That is, if you want to start or stop the PXF agent on a specific segment host, you can log in to the host and run the command. If you want to start or stop the PXF agent on multiple segment hosts, use the `gpssh` utility as shown above, or individually log in to each segment host and run the command.
+
+**Note**: If you update your Hadoop or Hive configuration while the PXF service is running, you must copy any updated configuration files to each Greenplum Database segment host and restart PXF on each host.

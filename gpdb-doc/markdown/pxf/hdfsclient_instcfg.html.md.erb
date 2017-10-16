@@ -8,7 +8,7 @@ This topic describes how to install and configure the Hadoop client for PXF acce
 
 ## <a id="hadoop-pxf-prereq"></a>Prerequisites
 
-Compatible Hadoop clients for PXF include Cloudera, Hortonworks Data Platform and generic Apache Hadoop.
+Compatible Hadoop clients for PXF include Cloudera, Hortonworks Data Platform, and generic Apache Hadoop.
 
 Before setting up the Hadoop Client for PXF, ensure that you:
 
@@ -94,8 +94,8 @@ Perform the following procedure to install and configure the Hadoop client for P
     1. Copy the `core-site.xml` and `hdfs-site.xml` Hadoop configuration files from your Hadoop cluster NameNode host to the current host. For example:
 
         ``` shell
-        gpadmin@gpmaster$ scp hdfsuser@namenode:/usr/local/hadoop/etc/hadoop/core-site.xml .
-        gpadmin@gpmaster$ scp hdfsuser@namenode:/usr/local/hadoop/etc/hadoop/hdfs-site.xml .
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/core-site.xml .
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/hdfs-site.xml .
         ```
         
     2. Next, copy these Hadoop configuration files to each Greenplum Database segment host. For example:
@@ -118,3 +118,5 @@ Perform the following procedure to install and configure the Hadoop client for P
         ``` shell
         gpadmin@gpmaster$ gpscp -v -f seghostfile avro-mapred-*.jar =:\$PXF_HADOOP_HOME/share/hadoop/common/lib
         ```
+
+**Note**: If you update your Hadoop configuration while the PXF service is running, you must copy the updated `core-site.xml` and `hdfs-site.xml` files to each Greenplum Database segment host and restart PXF.
