@@ -35,12 +35,16 @@ SELECT * FROM rg_activity_status;
 21<:
 22<:
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_activity_status;
 
 21:END;
 22:END;
 21q:
 22q:
+
+SELECT pg_sleep(0.5);
 
 SELECT * FROM rg_activity_status;
 
@@ -67,12 +71,16 @@ SELECT * FROM rg_activity_status;
 21<:
 22<:
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_activity_status;
 
 21:END;
 22:END;
 21q:
 22q:
+
+SELECT pg_sleep(0.5);
 
 SELECT * FROM rg_activity_status;
 
@@ -105,12 +113,16 @@ SELECT * FROM rg_activity_status;
 11q:
 22<:
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_activity_status;
 
 21:END;
 22:END;
 21q:
 22q:
+
+SELECT pg_sleep(0.5);
 
 SELECT * FROM rg_activity_status;
 
@@ -138,12 +150,16 @@ SELECT * FROM rg_activity_status;
 11q:
 22<:
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_activity_status;
 
 21:END;
 22:END;
 21q:
 22q:
+
+SELECT pg_sleep(0.5);
 
 SELECT * FROM rg_activity_status;
 
@@ -188,12 +204,16 @@ SELECT * FROM rg_activity_status;
 11q:
 22<:
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_activity_status;
 
 21:END;
 22:END;
 21q:
 22q:
+
+SELECT pg_sleep(0.5);
 
 SELECT * FROM rg_activity_status;
 
@@ -234,12 +254,16 @@ SELECT * FROM rg_activity_status;
 11q:
 22<:
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_activity_status;
 
 21:END;
 22:END;
 21q:
 22q:
+
+SELECT pg_sleep(0.5);
 
 SELECT * FROM rg_activity_status;
 

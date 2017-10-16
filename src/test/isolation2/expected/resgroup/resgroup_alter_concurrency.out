@@ -51,6 +51,12 @@ BEGIN
 22<:  <... completed>
 BEGIN
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_activity_status;
 rsgname            |waiting_reason|current_query        
 -------------------+--------------+---------------------
@@ -64,6 +70,12 @@ END
 END
 21q: ... <quitting>
 22q: ... <quitting>
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query
@@ -108,6 +120,12 @@ BEGIN
 22<:  <... completed>
 BEGIN
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_activity_status;
 rsgname            |waiting_reason|current_query        
 -------------------+--------------+---------------------
@@ -121,6 +139,12 @@ END
 END
 21q: ... <quitting>
 22q: ... <quitting>
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query
@@ -179,6 +203,12 @@ END
 22<:  <... completed>
 BEGIN
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_activity_status;
 rsgname            |waiting_reason|current_query        
 -------------------+--------------+---------------------
@@ -192,6 +222,12 @@ END
 END
 21q: ... <quitting>
 22q: ... <quitting>
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query
@@ -239,6 +275,12 @@ END
 22<:  <... completed>
 BEGIN
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_activity_status;
 rsgname            |waiting_reason|current_query        
 -------------------+--------------+---------------------
@@ -252,6 +294,12 @@ END
 END
 21q: ... <quitting>
 22q: ... <quitting>
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query
@@ -330,6 +378,12 @@ END
 22<:  <... completed>
 BEGIN
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_activity_status;
 rsgname            |waiting_reason|current_query        
 -------------------+--------------+---------------------
@@ -343,6 +397,12 @@ END
 END
 21q: ... <quitting>
 22q: ... <quitting>
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query
@@ -408,6 +468,12 @@ END
 22<:  <... completed>
 BEGIN
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_activity_status;
 rsgname            |waiting_reason|current_query        
 -------------------+--------------+---------------------
@@ -421,6 +487,12 @@ END
 END
 21q: ... <quitting>
 22q: ... <quitting>
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 SELECT * FROM rg_activity_status;
 rsgname|waiting_reason|current_query

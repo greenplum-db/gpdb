@@ -263,6 +263,8 @@ SELECT * FROM rg_activity_status;
 12q:
 -- proc12 ends, 10%-5%=5% quota is returned to sys
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
 
@@ -330,12 +332,16 @@ SELECT * FROM rg_activity_status;
 11q:
 -- proc11 ends, 10%-5%=5% quota is returned to sys
 
+SELECT pg_sleep(0.5);
+
 SELECT * FROM rg_mem_status;
 SELECT * FROM rg_activity_status;
 
 12: END;
 12q:
 -- proc12 ends, 10%-5%=5% quota is returned to sys
+
+SELECT pg_sleep(0.5);
 
 -- now rg2 can get 10% free quota from sys
 -- so proc22 can get enough quota and get executed
@@ -474,6 +480,8 @@ SELECT * FROM rg_activity_status;
 -- so rg2 gets 8.8% new quota
 -- now rg2 has 40% quota, free quota is 10%
 -- so proc24 shall be waken up
+
+SELECT pg_sleep(0.5);
 
 24<:
 SELECT * FROM rg_mem_status;

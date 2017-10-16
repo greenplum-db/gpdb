@@ -424,6 +424,12 @@ rg2_memory_test|              |<IDLE> in transaction
 12q: ... <quitting>
 -- proc12 ends, 10%-5%=5% quota is returned to sys
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
@@ -550,6 +556,12 @@ END
 11q: ... <quitting>
 -- proc11 ends, 10%-5%=5% quota is returned to sys
 
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
+
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
@@ -569,6 +581,12 @@ rg2_memory_test|resgroup      |BEGIN;
 END
 12q: ... <quitting>
 -- proc12 ends, 10%-5%=5% quota is returned to sys
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 -- now rg2 can get 10% free quota from sys
 -- so proc22 can get enough quota and get executed
@@ -824,6 +842,12 @@ rg2_memory_test|resgroup      |BEGIN;
 -- so rg2 gets 8.8% new quota
 -- now rg2 has 40% quota, free quota is 10%
 -- so proc24 shall be waken up
+
+SELECT pg_sleep(0.5);
+pg_sleep
+--------
+        
+(1 row)
 
 24<:  <... completed>
 BEGIN
