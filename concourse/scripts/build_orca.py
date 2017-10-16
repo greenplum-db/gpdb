@@ -1,25 +1,30 @@
 #!/usr/bin/python2
 
+import argparse
+import os
 import subprocess
 import sys
-import os
-import argparse
 
-def add_orca_conan_remote(bintrayRemote, bintrayRemoteURL):
-    return subprocess.call(["conan", "remote", "add", bintrayRemote, bintrayRemoteURL])
+
+def add_orca_conan_remote(bintray_remote, bintray_remote_URL):
+    return subprocess.call(["conan", "remote", "add", bintray_remote, bintray_remote_URL])
+
 
 def build_install_orca(build_type, destdir=None, env_additions=""):
     # by default conan will install the files under /usr/local
-    environ = "env PATH=/root/cmake-3.8.2-Linux-x86_64/bin/:$PATH CONAN_CMAKE_GENERATOR=Ninja "+ env_additions + " "
+    environ = "env PATH=/root/cmake-3.8.2-Linux-x86_64/bin/:$PATH CONAN_CMAKE_GENERATOR=Ninja " + env_additions + " "
     if destdir:
-	environ += "DESTDIR={0}".format(destdir)
+        environ += "DESTDIR={0}".format(destdir)
 
     return subprocess.call(["{0} conan install -s build_type={1} --build".format(environ, build_type)],
-				    shell=True,
-				    cwd="gpdb_src/depends")
+                           shell=True,
+                           cwd="gpdb_src/depends")
+
 
 def package_orca(base_dir):
-    return subprocess.call(["tar -czf {0}/bin_orca/bin_orca_conan.tar.gz ./include ./lib".format(base_dir)], shell=True, cwd="bin_orca/usr/local")
+    return subprocess.call(["tar -czf {0}/bin_orca/bin_orca_conan.tar.gz ./include ./lib".format(base_dir)],
+                           shell=True, cwd="bin_orca/usr/local")
+
 
 def main():
     parser = argparse.ArgumentParser(description='Main driver to build and install ORCA using conan')
@@ -32,16 +37,17 @@ def main():
 
     status = add_orca_conan_remote(args.bintrayRemote, args.bintrayRemoteURL)
     if status:
-	return status
+        return status
 
     status = build_install_orca(args.build_type, os.path.join(os.getcwd(), 'bin_orca'),
                                 env_additions=args.env_additions)
     if status:
-	return status
+        return status
 
     status = package_orca(os.getcwd())
     if status:
-	return status
+        return status
+
 
 if __name__ == "__main__":
     sys.exit(main())
