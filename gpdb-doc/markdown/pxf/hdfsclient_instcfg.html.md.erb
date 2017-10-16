@@ -12,8 +12,7 @@ Compatible Hadoop clients for PXF include Cloudera, Hortonworks Data Platform an
 
 Before setting up the Hadoop Client for PXF, ensure that you:
 
-- Have access to a running Hadoop cluster.
-- Identify and note the URI location of your HDFS NameNode. You can locate this information in the `core-site.xml` file on your NameNode host.
+- Have `scp` access to the HDFS NameNode host on a running Hadoop cluster.
 - Have access to or permission to install Java version 1.7 or 1.8 on each segment host.
 
 
@@ -81,34 +80,29 @@ Perform the following procedure to install and configure the Hadoop client for P
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export PXF_HADOOP_HOME=/home/gpadmin/hadoop-2.6.0-cdh5.10.2' >> /home/gpadmin/.bash_profile"
     ```
 
-6. Manually configure the HDFS NameNode URI on a segment host and copy the configuration to the other segment hosts:
+6. The Hadoop `core-site.xml` configuration file `fs.defaultFS` property value identifies the HDFS NameNode URI. PXF requires this information to access the Hadoop cluster. A sample `fs.defaultFS` setting follows:
 
-    1. Log in to a segment host:
-
-        ``` shell
-        $ ssh gpadmin@<seg-host>
-        gpadmin@seg-host$ 
-        ```
-
-    2. Edit the `$PXF_HADOOP_HOME/etc/hadoop/core-site.xml` Hadoop configuration file:
-
-        ``` shell
-        gpadmin@seg-host$ vi $PXF_HADOOP_HOME/etc/hadoop/core-site.xml
-        ```
+    ``` xml
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://namenode.domain:8020</value>
+    </property>
+    ```
     
-    3. Add or update the `fs.defaultFS` property in `core-site.xml`. The `ds.defaultFS` property value must identify the URI location of your HDFS NameNode. For example:
+    Complete the PXF Hadoop client configuration by copying configuration files from your Hadoop cluster to each Greenplum Database segment host.
 
-        ``` xml
-        <property>
-            <name>fs.defaultFS</name>
-            <value>hdfs://namenode.domain:8020</value>
-        </property>
+    1. Copy the `core-site.xml` and `hdfs-site.xml` Hadoop configuration files from your Hadoop cluster NameNode host to the current host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/usr/local/hadoop/etc/hadoop/core-site.xml .
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/usr/local/hadoop/etc/hadoop/hdfs-site.xml .
         ```
         
-    4. Copy the `core-site.xml` file to the other Greenplum Database segment hosts. For example, if `otherseghostfile` lists the remaining segment hosts:
+    2. Next, copy these Hadoop configuration files to each Greenplum Database segment host. For example:
 
         ``` shell
-        gpadmin@gpmaster$ gpscp -v -f otherseghostfile $PXF_HADOOP_HOME/etc/hadoop/core-site.xml =:\$PXF_HADOOP_HOME/etc/hadoop/core-site.xml
+        gpadmin@gpmaster$ gpscp -v -f seghostfile core-site.xml =:\$PXF_HADOOP_HOME/etc/hadoop/core-site.xml
+        gpadmin@gpmaster$ gpscp -v -f seghostfile hdfs-site.xml =:\$PXF_HADOOP_HOME/etc/hadoop/hdfs-site.xml
         ```
 
 7. The PXF HDFS connector supports the Avro file format. If you plan to access Avro format files, you must download a required JAR file and copy the JAR to each Greenplum Database segment host.

@@ -10,7 +10,7 @@ Your Greenplum Database deployment consists of a master node and multiple segmen
 
 <img src="graphics/pxfarch.png" class="image" />
 
-When a user or application performs a query on a PXF external table that references an HDFS file, the Greenplum Database master node dispatches the query to one or more segment instances. Each segment instance contacts the PXF agent running on its host. When it receives the request from a segment instance, the PXF agent:
+When a user or application performs a query on a PXF external table that references an HDFS file, the Greenplum Database master node dispatches the query to all segment hosts. Each segment instance contacts the PXF agent running on its host. When it receives the request from a segment instance, the PXF agent:
 
 1. Spawns a thread for the segment instance.
 2. Invokes the HDFS Java API to request metadata information for the HDFS file from the HDFS NameNode. 

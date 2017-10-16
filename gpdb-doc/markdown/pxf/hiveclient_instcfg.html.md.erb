@@ -12,9 +12,8 @@ Compatible Hive clients for PXF are Cloudera and Hortonworks Data Platform Hive.
 
 Before setting up the Hive Client for PXF, ensure that you:
 
-- Have access to a running Hadoop cluster with the Hive service installed.
+- Have `scp` access to a running Hadoop cluster with the Hive Metastore service.
 - Have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
-- Identify and note the URI location of your Hive Metastore. You can locate this information in the `hive-site.xml` file on your Metastore host.
 
 
 ## <a id="hive-pxf-config-steps"></a>Procedure
@@ -63,32 +62,25 @@ Perform the following procedure to install and configure the Hive client for PXF
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export PXF_HIVE_HOME=/home/gpadmin/hive-1.1.0-cdh5.10.2' >> /home/gpadmin/.bash_profile"
     ```
 
-4. Manually configure the Hive Metastore URI on a segment host and copy the configuration to the other segment hosts:
+4. The Hive `hive-site.xml` configuration file `hive.metastore.uris` property value identifies the Hive Metastore URI. PXF requires this information to access the Hive service. A sample `hive.metastore.uris` setting follows:
 
-    1. Log in to the segment host:
-
-        ``` shell
-        $ ssh gpadmin@<seg-host>
-        gpadmin@seg-host$ 
-        ```
-
-    2. Edit the `$PXF_HIVE_HOME/conf/hive-site.xml` Hive configuration file:
-
-        ``` shell
-        gpadmin@seg-host$ vi $PXF_HIVE_HOME/conf/hive-site.xml
-        ```
+    ``` xml
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://metastorehost.domain:9083</value>
+    </property>
+    ```
     
-    3. Add or update the `hive.metastore.uris` property in `hive-site.xml`. The `hive.metastore.uris` property value must identify the URI location of your Hive Metastore. For example:
-
-        ``` xml
-        <property>
-            <name>hive.metastore.uris</name>
-            <value>thrift://metastorehost.domain:9083</value>
-        </property>
-        ```
-
-    4. Copy the `hive-site.xml` file to the other Greenplum Database segment hosts. For example, if `otherseghostfile` lists the remaining segment hosts:
+    Complete the PXF Hive client configuration by copying Hive configuration from your Hadoop cluster to each Greenplum Database segment host
+    
+    1. Copy the `hive-site.xml` Hive configuration files from your Hadoop cluster NameNode host to the current host. For example:
 
         ``` shell
-        gpadmin@gpmaster$ gpscp -v -f otherseghostfile $PXF_HIVE_HOME/conf/hive-site.xml =:\$PXF_HIVE_HOME/conf/core-site.xml
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/usr/local/hive/conf/hive-site.xml .
+        ```
+
+    2. Next, copy the `hive-site.xml` configuration file to each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ gpscp -v -f seghostfile hive-site.xml =:\$PXF_HIVE_HOME/conf/hive-site.xml
         ```
