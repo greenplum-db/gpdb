@@ -57,7 +57,7 @@ Follow the directions in the [ORCA README](https://github.com/greenplum-db/gporc
 
 ```
 # Configure build environment to install at /usr/local/gpdb
-./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=/usr/local/gpdb
 
 # Compile and install
 make -j8
