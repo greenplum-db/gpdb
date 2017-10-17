@@ -1,6 +1,6 @@
 -- @product_version gpdb: [4.3.4.0 -],4.3.4.0O2
 -- @Description Ensures that a reindex table during alter tab add partition  operations is ok
--- 
+--
 
 DELETE FROM reindex_crtabforadd_part_ao_btree  WHERE id < 12;
 1: BEGIN;
@@ -10,7 +10,7 @@ DELETE FROM reindex_crtabforadd_part_ao_btree  WHERE id < 12;
 1: COMMIT;
 2<:
 2: COMMIT;
-3: Insert into reindex_crtabforadd_part_ao_btree values(9,'2013-05-22',14.22); 
+3: Insert into reindex_crtabforadd_part_ao_btree values(9,'2013-05-22',14.22);
 3: select count(*) from reindex_crtabforadd_part_ao_btree where id = 29;
 3: set enable_seqscan=false;
 3: set enable_indexscan=true;
