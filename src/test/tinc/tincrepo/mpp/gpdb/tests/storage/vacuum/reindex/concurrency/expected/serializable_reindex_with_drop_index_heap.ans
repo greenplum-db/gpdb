@@ -1,3 +1,7 @@
+-- start_ignore
+SET gp_create_table_random_default_distribution=off;
+SET
+-- end_ignore
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -8,10 +12,21 @@ SET
 DROP
 1: COMMIT;
 COMMIT
+-- Remember index relfilenodes from master and segments before
+-- reindex.
+2: create temp table old_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_dropindex_serialize_tab_heap' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname like 'idx%_reindex_dropindex_serialize_tab_heap');
+CREATE 21
 2: reindex table reindex_dropindex_serialize_tab_heap;
 REINDEX
 2: COMMIT;
 COMMIT
+-- Validate that reindex changed all index relfilenodes on master as well as
+-- segments.  The following query should return 0 tuples.
+2: select oldrels.* from old_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_dropindex_serialize_tab_heap' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname like 'idx%_reindex_dropindex_serialize_tab_heap') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
+dbid|relfilenode|oid|relname
+----+-----------+---+-------
+(0 rows)
+
 3: select count(*) from  reindex_dropindex_serialize_tab_heap where a = 1;
 count
 -----
@@ -26,26 +41,6 @@ count
 -----
 4000 
 (1 row)
-
--- expect to have all the segments update relfilenode by 'reindex table'
--- by exposing the invisible rows, we can see the historical updates to the relfilenode of given index
--- aggregate by gp_segment_id and oid can verify total number of updates
--- finally compare total number of segments + master to ensure all segments and master got reindexed
-3: set gp_select_invisible=on;
-SET
-3: select relname, sum(relfilenode_updated_count)::int/(select count(*) from gp_segment_configuration where role='p' and xmax=0) as all_segs_reindexed_count from (select oid, relname, (count(relfilenode)-1) as relfilenode_updated_count from (select gp_segment_id, oid, relfilenode, relname from pg_class union all select gp_segment_id, oid, relfilenode, relname from gp_dist_random('pg_class')) all_pg_class where relname like 'idx%_reindex_dropindex_serialize_tab_heap' group by gp_segment_id, oid, relname) per_seg_filenode_updated group by oid, relname;
-relname                                  |all_segs_reindexed_count
------------------------------------------+------------------------
-idxb_reindex_dropindex_serialize_tab_heap|1                       
-idxd_reindex_dropindex_serialize_tab_heap|1                       
-idxe_reindex_dropindex_serialize_tab_heap|1                       
-idxg_reindex_dropindex_serialize_tab_heap|0                       
-idxc_reindex_dropindex_serialize_tab_heap|1                       
-idxa_reindex_dropindex_serialize_tab_heap|1                       
-idxf_reindex_dropindex_serialize_tab_heap|1                       
-(7 rows)
-3: set gp_select_invisible=off;
-SET
 
 -- expect index to be dropped
 3: select 1-count(*) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'idxg_reindex_dropindex_serialize_tab_heap';
