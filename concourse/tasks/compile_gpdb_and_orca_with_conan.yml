@@ -1,0 +1,18 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/ubuntu-gpdb-dev
+    tag: '16.04_gcc_6_3'
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: compiled_bits_gpdb_with_orca_conan_ubuntu16
+  - name: compiled_bits_orca_with_conan_ubuntu16
+run:
+  path: gpdb_src/concourse/scripts/compile_gpdb_and_orca_with_conan_ubuntu16.bash
+params:
+  BINARY_USER: required
+  BINARY_REMOTE_URL: required
+  GPDB_DST_TARBALL: compiled_bits_gpdb_with_orca_conan_ubuntu16/compiled_bits_gpdb_orca_ubuntu16.tar.gz
+  ORCA_DST_TARBALL: compiled_bits_orca_with_conan_ubuntu16/compiled_bits_orca_with_conan_ubuntu16.tar.gz

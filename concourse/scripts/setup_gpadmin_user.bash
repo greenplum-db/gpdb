@@ -63,7 +63,7 @@ setup_gpadmin_user() {
       /usr/sbin/useradd -G supergroup,tty gpadmin
       ;;
     ubuntu)
-      /usr/sbin/useradd -G supergroup,tty gpadmin
+      /usr/sbin/useradd -G supergroup,tty gpadmin -s /bin/bash
       ;;
     *) echo "Unknown OS: $TEST_OS"; exit 1 ;;
   esac
