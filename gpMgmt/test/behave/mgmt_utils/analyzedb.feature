@@ -1770,3 +1770,9 @@ Feature: Incrementally analyze the database
         Then analyzedb should return a return code of 0
         And analyzedb should print "There are no tables or partitions to be analyzed. Exiting" to stdout
         And "3" analyze directories exist for database "incr_analyze"
+
+    @analyzedb_statement_mem
+    Scenario: Run analyzedb with -m flag and confirm that statement_mem was set to custom value
+        Given the count for "set statement_mem="1MB"; analyze pg_catalog.pg_class" in pglog is stored
+        And the user runs "analyzedb -a -d incr_analyze -t pg_catalog.pg_class -m 1MB"
+        Then the count for "set statement_mem="1MB"; analyze pg_catalog.pg_class" in pglog is incremented by "2"

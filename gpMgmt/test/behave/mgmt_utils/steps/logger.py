@@ -33,7 +33,30 @@ def gp_fts_log_in_segment_log_count():
     result = execute_sql_singleton('template1', COUNT_SQL)
     return result
 
+def get_latest_pglog_message_containing(msg):
+    MSG_SQL = """
+        SELECT count(*) FROM gp_toolkit.gp_log_system WHERE logmessage LIKE '%{0}%'
+        """
+    # MSG_SQL = """
+    #     SELECT count(*) FROM gp_toolkit.gp_log_system
+    #     """
+    result = execute_sql_singleton('template1', MSG_SQL.format(msg))
+    return result
+
 QUERY_PLAN_SIZE_STRING = 'Query plan size to dispatch:'
+
+@given(u'the count for "{msg}" in pglog is stored')
+def impl(context, msg):
+    if 'pglog_count' not in context:
+        context.pglog_count = {}
+    context.pglog_count[msg] = get_latest_pglog_message_containing(msg)
+
+@then(u'the count for "{msg}" in pglog is incremented by "{count}"')
+def impl(context, msg, count):
+    prev_count = context.pglog_count[msg]
+    curr_count = get_latest_pglog_message_containing(msg)
+    if curr_count != prev_count + int(count):
+        raise Exception("msg count didn't increase as much as expected")
 
 @then(u'the count of query plan logs in pg_log is stored')
 def impl(context):
