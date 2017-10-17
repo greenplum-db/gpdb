@@ -46,7 +46,7 @@ Perform the following procedure to install and configure the Hadoop client for P
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.144-0.b01.el7_4.x86_64/jre' >> /home/gpadmin/.bash_profile"
     ```
 
-4. Download a compatible Hadoop client and install it on **each** Greenplum Database segment host. You must install the same Hadoop client distribution in the same file system location on each host.
+4. Download a compatible Hadoop client and install it on **each** Greenplum Database segment host. The Hadoop client must be a tarball distribution. You must install the same Hadoop client distribution in the same file system location on each host.
 
     If you are running Cloudera Hadoop:
     
