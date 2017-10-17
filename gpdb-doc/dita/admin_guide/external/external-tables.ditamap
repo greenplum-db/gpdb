@@ -36,6 +36,8 @@
   <topicref href="g-reading-and-writing-custom-formatted-hdfs-data.xml" type="topic"/>
   <topicref href="g-hdfs-emr-config.xml"/>
  </topicref>
-  <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
+  <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml">
+    <topicref href="g-transforming-xml-with-gpfdist.xml"/>
+    </topicref>
   </topicref>
 </map>

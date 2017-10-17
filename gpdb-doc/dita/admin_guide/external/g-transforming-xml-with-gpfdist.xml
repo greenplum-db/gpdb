@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic75">
+   <title>Transforming XML Data with gpfdist</title>
+   <body>
+      <p>The Greenplum Database data loader <i>gpfdist</i> provides transformation
+         features to load XML data into a table and to write data from the Greenplum Database to XML files. The following diagram shows <i>gpfdist</i>
+         performing an XML transform.</p>
+      <fig id="du185408">
+         <title>External Tables using XML Transformations</title>
+         <image placement="break" href="../graphics/ext-tables-xml.png" id="image_kc5_bny_mbb"/>
+      </fig>
+      <p>Use these steps to load or extract XML data. Keep in mind that the first three steps
+         comprise most of the development effort. The last two steps are straightforward and
+         repeatable, suitable for production.</p>
+      <section>Determine the Transformation Schema</section>
+      <p>To prepare for the transformation project:</p>
+      <ol id="ol_dkw_kvq_mbb">
+         <li>
+            <ph>Determine the goal of the project, such as indexing data, analyzing data, combining
+               data, and so on.</ph>
+         </li>
+         <li>
+            <ph>Examine the XML file and note the file structure and element names. </ph>
+         </li>
+         <li>
+            <ph>Choose the elements to import and decide if any other limits are appropriate. </ph>
+         </li>
+      </ol>
+      <p>For example, the following XML file,<i> prices.xml</i>, is a simple, short file that
+         contains price records. Each price record contains two fields: an item number and a
+         price.</p>
+      <codeblock>&lt;?xml version="1.0" encoding="ISO-8859-1" ?&gt;
+&lt;prices&gt;
+  &lt;pricerecord&gt;
+    &lt;itemnumber&gt;708421&lt;/itemnumber&gt;
+    &lt;price&gt;19.99&lt;/price&gt;
+  &lt;/pricerecord&gt;
+  &lt;pricerecord&gt;
+    &lt;itemnumber&gt;708466&lt;/itemnumber&gt;
+    &lt;price&gt;59.25&lt;/price&gt;
+  &lt;/pricerecord&gt;
+  &lt;pricerecord&gt;
+    &lt;itemnumber&gt;711121&lt;/itemnumber&gt;
+    &lt;price&gt;24.99&lt;/price&gt;
+  &lt;/pricerecord&gt;
+&lt;/prices&gt;
+</codeblock>
+      <p>The goal is to import all the data into a Greenplum Database table with an integer
+            <codeph>itemnumber</codeph> column and a decimal <codeph>price</codeph> column.</p>
+      <section>Write a Transform</section>
+      <p>The transform specifies what to extract from the data. You can use any authoring
+         environment and language appropriate for your project. For XML transformations choose a
+         technology such as XSLT, Joost (STX), Java, Python, or Perl, based on the goals and scope
+         of the project.</p>
+      <p>In the price example, the next step is to transform the XML data into a simple two-column
+         delimited format.</p>
+      <p>
+         <codeblock>708421|19.99
+708466|59.25
+711121|24.99
+</codeblock>
+      </p>
+      <p>The following STX transform, called <i>input_transform.stx</i>, completes the data
+         transformation.</p>
+      <codeblock>&lt;?xml version="1.0"?&gt;
+&lt;stx:transform version="1.0"
+   xmlns:stx="http://stx.sourceforge.net/2002/ns"
+   pass-through="none"&gt;
+  &lt;!-- declare variables --&gt;
+  &lt;stx:variable name="itemnumber"/&gt;
+  &lt;stx:variable name="price"/&gt;
+  &lt;!-- match and output prices as columns delimited by | --&gt;
+  &lt;stx:template match="/prices/pricerecord"&gt;
+    &lt;stx:process-children/&gt;
+    &lt;stx:value-of select="$itemnumber"/&gt;    
+&lt;stx:text&gt;|&lt;/stx:text&gt;
+    &lt;stx:value-of select="$price"/&gt;      &lt;stx:text&gt;
+&lt;/stx:text&gt;
+  &lt;/stx:template&gt;
+  &lt;stx:template match="itemnumber"&gt;
+    &lt;stx:assign name="itemnumber" select="."/&gt;
+  &lt;/stx:template&gt;
+  &lt;stx:template match="price"&gt;
+    &lt;stx:assign name="price" select="."/&gt;
+  &lt;/stx:template&gt;
+&lt;/stx:transform&gt;
+</codeblock>
+      <p>This STX transform declares two temporary variables, <codeph>itemnumber</codeph> and
+            <codeph>price</codeph>, and the following rules. </p>
+      <ol id="ol_utr_rvq_mbb">
+         <li>When an element that satisfies the XPath expression
+               <codeph>/prices/pricerecord</codeph> is found, examine the child elements and
+            generate output that contains the value of the <codeph>itemnumber</codeph> variable, a
+               <codeph>|</codeph> character, the value of the price variable, and a newline.</li>
+         <li>When an <codeph>&lt;itemnumber&gt;</codeph> element is found, store the content of that
+            element in the variable <codeph>itemnumber</codeph>.</li>
+         <li>When a &lt;price&gt; element is found, store the content of that element in the
+            variable <codeph>price</codeph>.</li>
+      </ol>
+      <section>Write the gpfdist Configuration</section>
+      <p>The <cmdname>gpfdist</cmdname> configuration is specified as a YAML 1.1 document. It
+         specifies rules that <cmdname>gpfdist</cmdname> uses to select a Transform to apply when
+         loading or extracting data. </p>
+      <p>This example <cmdname>gpfdist</cmdname> configuration contains the following items:</p>
+      <ul id="ul_qp5_vvq_mbb">
+         <li>the <codeph>config.yaml</codeph> file defining <codeph>TRANSFORMATIONS</codeph>
+         </li>
+         <li>the <codeph>input_transform.sh</codeph> wrapper script, referenced in the
+               <codeph>config.yaml</codeph> file</li>
+         <li>the <codeph>input_transform.stx</codeph> joost transformation, called from
+               <codeph>input_transform.sh</codeph>
+         </li>
+      </ul>
+      <p>Aside from the ordinary YAML rules, such as starting the document with three dashes
+            (<codeph>---</codeph>), a <cmdname>gpfdist</cmdname> configuration must conform to the
+         following restrictions:</p>
+      <ol id="ol_rp5_vvq_mbb">
+         <li>a <codeph>VERSION</codeph> setting must be present with the value
+               <codeph>1.0.0.1</codeph>.</li>
+         <li>a <codeph>TRANSFORMATIONS</codeph> setting must be present and contain one or more
+            mappings.</li>
+         <li>Each mapping in the <codeph>TRANSFORMATION</codeph> must contain:<ul
+               id="ul_sp5_vvq_mbb">
+               <li>a <codeph>TYPE</codeph> with the value 'input' or 'output'</li>
+               <li>a <codeph>COMMAND</codeph> indicating how the transform is run.</li>
+            </ul>
+         </li>
+         <li>Each mapping in the <codeph>TRANSFORMATION</codeph> can contain optional
+               <codeph>CONTENT</codeph>, <codeph>SAFE</codeph>, and <codeph>STDERR</codeph>
+            settings.</li>
+      </ol>
+      <p>The following <cmdname>gpfdist</cmdname> configuration called <codeph>config.YAML</codeph>
+         applies to the prices example. The initial indentation on each line is significant and
+         reflects the hierarchical nature of the specification. The name
+            <codeph>prices_input</codeph> in the following example will be referenced later when
+         creating the table in SQL.</p>
+      <codeblock>---
+VERSION: 1.0.0.1
+TRANSFORMATIONS:
+  prices_input:
+    TYPE:     input
+    COMMAND:  /bin/bash input_transform.sh %filename%
+</codeblock>
+      <p>The <codeph>COMMAND</codeph> setting uses a wrapper script called
+            <codeph>input_transform.sh</codeph> with a <codeph>%filename%</codeph> placeholder. When
+            <cmdname>gpfdist</cmdname> runs the <codeph>prices_input</codeph> transform, it invokes
+            <codeph>input_transform.sh</codeph> with <codeph>/bin/bash</codeph> and replaces the
+            <codeph>%filename%</codeph> placeholder with the path to the input file to transform.
+         The wrapper script called <codeph>input_transform.sh</codeph> contains the logic to invoke
+         the STX transformation and return the output.</p>
+      <p>If Joost is used, the Joost STX engine must be installed.</p>
+      <codeblock>#!/bin/bash
+# input_transform.sh - sample input transformation, 
+# demonstrating use of Java and Joost STX to convert XML into
+# text to load into Greenplum Database.
+# java arguments:
+#   -jar joost.jar         joost STX engine
+#   -nodecl                  don't generate a &lt;?xml?&gt; declaration
+#   $1                        filename to process
+#   input_transform.stx    the STX transformation
+#
+# the AWK step eliminates a blank line joost emits at the end
+java \
+    -jar joost.jar \
+    -nodecl \
+    $1 \
+    input_transform.stx \
+ | awk 'NF&gt;0
+</codeblock>
+      <p>The <codeph>input_transform.sh</codeph> file uses the Joost STX engine with the AWK
+         interpreter. The following diagram shows the process flow as <cmdname>gpfdist</cmdname>
+         runs the transformation.</p>
+      <image placement="break" href="../graphics/02-pipeline.png"  id="image_ew5_mny_mbb"/>
+      <section>Load the Data</section>
+      <p>Create the tables with SQL statements based on the appropriate schema.</p>
+      <p>There are no special requirements for the Greenplum Database tables that hold loaded data.
+         In the prices example, the following command creates the appropriate table.</p>
+      <codeblock>CREATE TABLE prices (
+  itemnumber integer,       
+  price       decimal        
+) 
+DISTRIBUTED BY (itemnumber);
+</codeblock>
+   </body>
+</topic>
