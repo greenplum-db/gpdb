@@ -68,7 +68,7 @@
         <codeph>is_called</codeph> attribute value to determine whether or not to increment
         the sequence counter before returning the value. <codeph>nextval()</codeph> advances
         the counter when <codeph>is_called</codeph> is <codeph>true</codeph>.
-        <codeph>netxval()</codeph> sets the sequence <codeph>is_called</codeph> attribute to
+        <codeph>nextval()</codeph> sets the sequence <codeph>is_called</codeph> attribute to
         <codeph>true</codeph> before returning.</p>
       <p>A <codeph>nextval()</codeph> operation is never rolled back. A fetched value is considered
         used, even if the transaction that performed the <codeph>nextval()</codeph> fails. This means
@@ -116,7 +116,7 @@
 </codeblock>
       </p>
       <p>When you alter a sequence start value with the <codeph>ALTER SEQUENCE</codeph> command, Greenplum Database sets the sequence's
-        <codeph>is_called</codeph> attribute to <codeph>false</codeph>. A
+        <codeph>is_called</codeph> attribute to <codeph>false</codeph>. The first
         <codeph>nextval()</codeph> invoked after restarting a sequence does not advance the
         sequence counter, and returns the sequence restart value.
       </p>
