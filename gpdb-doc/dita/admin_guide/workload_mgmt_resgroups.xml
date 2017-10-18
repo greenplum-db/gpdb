@@ -195,8 +195,9 @@
       <note type="warning">Significant <ph otherprops="pivotal">Pivotal </ph>Greenplum Database
         performance degradation has been observed when enabling resource group-based workload
         management on <ph otherprops="pivotal">supported versions of </ph>RedHat 6.x, CentOS 6.x,
-        and SuSE 11 systems. The issue is due to a Linux cgroup kernel bug. The kernel bug has been
-        fixed on CentOS 7.x and Red Hat 7.x systems. </note>
+        and SuSE 11 systems. The issue is due to a Linux cgroup kernel bug. The bug has been fixed
+        in supported versions of CentOS 7 and Red Hat 7.x systems, and in Red Hat 6 with kernel
+        version 2.6.32-696 or higher.</note>
       <section id="topic833" xml:lang="en">
         <title>Prerequisite</title>
         <p>Greenplum Database resource groups use Linux Control Groups (cgroups) to manage CPU
