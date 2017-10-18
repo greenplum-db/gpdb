@@ -1,0 +1,24 @@
+platform: linux
+inputs:
+ - name: netbackup_installer
+ - name: gpdb_src
+ - name: ccp_src
+ - name: cluster_env_files
+run:
+  path: bash
+  args:
+  - -c
+  - |
+    set -ex
+    ccp_src/aws/setup_ssh_to_cluster.sh
+    scp netbackup_installer/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz gpadmin@mdw:/data/gpdata
+    scp netbackup_installer/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz gpadmin@sdw1:/data/gpdata
+    eval $CUSTOM_ENV
+    source ./gpdb_src/concourse/scripts/backup_utils.sh
+    setup_netbackup_key
+    netbackup_add_policy $(cat cluster_env_files/etc_hostfile | awk 'NR==1{print $1}')
+    netbackup_add_policy $(cat cluster_env_files/etc_hostfile | awk 'NR==2{print $1}')
+    ssh -t mdw "export NETBACKUP_SERVER=$NETBACKUP_SERVER; source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; install_netbackup_client"
+    ssh -t centos@mdw "echo \"$NETBACKUP_SERVER netbackup-service\" | sudo tee -a /etc/hosts"
+    ssh -t centos@sdw1 "echo \"$NETBACKUP_SERVER netbackup-service\" | sudo tee -a /etc/hosts"
+

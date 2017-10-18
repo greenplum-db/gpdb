@@ -64,12 +64,14 @@ groups:
   - gate_nightly_start
   - DPM_backup_43_restore_5
   - MM_gpexpand
-  - DPM_netbackup77
   - cs-aoco-compression
   - DPM_gptransfer-43x-to-5x
   - DPM_backup-restore_ddboost_part1
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
+  - DPM_backup-restore_netbackup_part1
+  - DPM_backup-restore_netbackup_part2
+  - DPM_backup-restore_netbackup_part3
   - gate_nightly_end
 ################################
   - gate_advanced_analytics_start
@@ -108,7 +110,6 @@ groups:
 
 - name: Remaining Pulse
   jobs:
-  - DPM_netbackup77
   - MM_gpcheckcat
   - MM_gpexpand
   - cs-filerep-schema-topology-crashrecov
@@ -142,6 +143,9 @@ groups:
   - DPM_backup-restore_ddboost_part1
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
+  - DPM_backup-restore_netbackup_part1
+  - DPM_backup-restore_netbackup_part2
+  - DPM_backup-restore_netbackup_part3
 
 - name: G:Compile
   jobs:
@@ -212,12 +216,14 @@ groups:
   - gate_nightly_start
   - DPM_backup_43_restore_5
   - MM_gpexpand
-  - DPM_netbackup77
   - cs-aoco-compression
   - DPM_gptransfer-43x-to-5x
   - DPM_backup-restore_ddboost_part1
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
+  - DPM_backup-restore_netbackup_part1
+  - DPM_backup-restore_netbackup_part2
+  - DPM_backup-restore_netbackup_part3
   - gate_nightly_end
 
 - name: G:AdvancedAnalytics
@@ -658,6 +664,16 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: release/gpdb5/postgis-2.1.5-gp5-rhel7-x86_64.gppkg
+
+# Resource used for Netbackup test
+- name: netbackup-client-installer
+  type: s3
+  source:
+    access_key_id: {{gpdb4-bucket-access-key-id}}
+    bucket: {{gpdb4-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{gpdb4-bucket-secret-access-key}}
+    versioned_file: netbackup-installation/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz
 
 ## ======================================================================
 ## reusable anchors
@@ -2512,25 +2528,162 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-- name: DPM_netbackup77
+- name: DPM_backup-restore_netbackup_part1
   plan:
   - get: nightly-trigger
+    tags: ["gpdb4_ccp_external_worker"]
     trigger: true
-  - aggregate: *post_packaging_gets_trigger_false
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker"]
+      passed: [gate_nightly_start]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_nightly_start]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: netbackup_installer
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: netbackup-client-installer
+  - put: terraform_for_dpm
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker"]
+  - task: gen_cluster
+    input_mapping:
+      terraform: terraform_for_dpm
+    tags: ["gpdb4_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
+      <<: *ccp_gpdb4_gen_cluster_default_params
+    on_failure:
+      <<: *dpm_ccp_destroy
+  - task: setup_netbackup
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_netbackup.yml
+    image: centos-gpdb-dev-6
+    params:
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=nbusetup77,nbupartI
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
+    on_failure:
+      <<: *dpm_debug_sleep
+  - *dpm_ccp_destroy
+- name: DPM_backup-restore_netbackup_part2
+  plan:
+  - get: nightly-trigger
+    tags: ["gpdb4_ccp_external_worker"]
+    trigger: true
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker"]
+      passed: [gate_nightly_start]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_nightly_start]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: netbackup_installer
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: netbackup-client-installer
+  - put: terraform_for_dpm
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker"]
+  - task: gen_cluster
+    input_mapping:
+      terraform: terraform_for_dpm
+    tags: ["gpdb4_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gpdb4_gen_cluster_default_params
+    on_failure:
+      <<: *dpm_ccp_destroy
+  - task: setup_netbackup
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_netbackup.yml
+    image: centos-gpdb-dev-6
+    params:
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=nbusetup77,nbupartII
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
+    on_failure:
+      <<: *dpm_debug_sleep
+  - *dpm_ccp_destroy
+- name: DPM_backup-restore_netbackup_part3
+  plan:
+  - get: nightly-trigger
+    tags: ["gpdb4_ccp_external_worker"]
+    trigger: true
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker"]
+      passed: [gate_nightly_start]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_nightly_start]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: netbackup_installer
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: netbackup-client-installer
+  - put: terraform_for_dpm
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker"]
+  - task: gen_cluster
+    input_mapping:
+      terraform: terraform_for_dpm
+    tags: ["gpdb4_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gpdb4_gen_cluster_default_params
+    on_failure:
+      <<: *dpm_ccp_destroy
+  - task: setup_netbackup
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_netbackup.yml
+    image: centos-gpdb-dev-6
+    params:
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=nbusetup77,nbupartIII
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
+    on_failure:
+      <<: *dpm_debug_sleep
+  - *dpm_ccp_destroy
 - name: cs-aoco-compression
   plan:
   - get: nightly-trigger
@@ -2785,12 +2938,14 @@ jobs:
     passed:
     - DPM_backup_43_restore_5
     - MM_gpexpand
-    - DPM_netbackup77
     - cs-aoco-compression
     - DPM_gptransfer-43x-to-5x
     - DPM_backup-restore_ddboost_part1
     - DPM_backup-restore_ddboost_part2
     - DPM_backup-restore_ddboost_part3
+    - DPM_backup-restore_netbackup_part1
+    - DPM_backup-restore_netbackup_part2
+    - DPM_backup-restore_netbackup_part3
 ############### Nightly End
 
 ############### Advanced Analytics Start
@@ -3503,10 +3658,12 @@ jobs:
     - regression_tests_pxf_hdp
     - regression_tests_pxf_cdh
     - gpdb_rc_packaging_centos
-    - DPM_netbackup77
     - DPM_backup-restore_ddboost_part1
     - DPM_backup-restore_ddboost_part2
     - DPM_backup-restore_ddboost_part3
+    - DPM_backup-restore_netbackup_part1
+    - DPM_backup-restore_netbackup_part2
+    - DPM_backup-restore_netbackup_part3
     - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg
