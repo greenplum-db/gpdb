@@ -45,4 +45,4 @@ ALTER TABLE mpp6979_parent.ad_impsn_fact_XnewX EXCHANGE PARTITION p1 WITH TABLE 
 ALTER TABLE mpp6979_child.ad_impsn_fact2_c_d_1_m_1_1610396_month  INHERIT mpp6979_parent.ad_impsn_fact ;
 
 select * from pg_partitions where schemaname like 'mpp6979%';
-select schemaname, tablename from pg_tables where schemaname like 'mpp6979%' order by 1;
+select schemaname, tablename from pg_tables where schemaname like 'mpp6979%' order by 1, 2;

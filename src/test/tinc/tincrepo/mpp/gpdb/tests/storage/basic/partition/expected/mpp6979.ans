@@ -65,12 +65,12 @@ select * from pg_partitions where schemaname like 'mpp6979%';
  mpp6979_parent | ad_impsn_fact_xnewx | mpp6979_parent      | ad_impsn_fact_xnewx_1_prt_p1 | p1            |                          |                     | range         |              0 |             1 |                 1 |                     | '2007-10-01 00:00:00'::timestamp without time zone | t                       | '2007-11-01 00:00:00'::timestamp without time zone | f                     |                      | f                  | PARTITION p1 START ('2007-10-01 00:00:00'::timestamp without time zone) END ('2007-11-01 00:00:00'::timestamp without time zone) | pg_default       | pg_default
 (1 row)
 
-select schemaname, tablename from pg_tables where schemaname like 'mpp6979%' order by 1;
+select schemaname, tablename from pg_tables where schemaname like 'mpp6979%' order by 1, 2;
    schemaname   |               tablename                
 ----------------+----------------------------------------
  mpp6979_child  | ad_impsn_fact2_c_d_1_m_1_1610396_month
+ mpp6979_parent | ad_impsn_fact
  mpp6979_parent | ad_impsn_fact_xnewx
  mpp6979_parent | ad_impsn_fact_xnewx_1_prt_p1
- mpp6979_parent | ad_impsn_fact
 (4 rows)
 
