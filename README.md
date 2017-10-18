@@ -56,6 +56,15 @@ ssh <hostname of your machine>  # e.g., ssh briarwood
 
 <a name="buildOrca"></a>
 ### Build the optimizer
+#### Automatically with Conan dependency manager
+
+```bash
+cd depends
+conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
+conan install --build
+cd ..
+```
+
 #### Manually
 Currently GPDB assumes ORCA libraries and headers are available in the targeted
 system and tries to build with ORCA by default.  For your convenience, here are
@@ -107,7 +116,7 @@ building, see the README at the following repositories:
 
 ```
 # Configure build environment to install at /usr/local/gpdb
-./configure --with-perl --with-python --with-libxml --prefix=/usr/local/gpdb
+./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=/usr/local/gpdb
 
 # Compile and install
 make
