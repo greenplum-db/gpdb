@@ -18,6 +18,12 @@ resources:
       - gpdb-doc/*
       - README*
 
+  - name: ubuntu-gpdb-dev-16
+    type: docker-image
+    source:
+      repository: pivotaldata/ubuntu-gpdb-dev
+      tag: '16.04_gcc_6_3'
+
   - name: centos-gpdb-dev-6
     type: docker-image
     source:
@@ -48,6 +54,7 @@ jobs:
       - get: gpdb_pr
         trigger: true
         version: every
+      - get: ubuntu-gpdb-dev-16
       - get: centos-gpdb-dev-6
       - get: gpaddon_src
       - get: pxf_src
@@ -88,6 +95,17 @@ jobs:
           TARGET_OS_VERSION: 6
           BLD_TARGETS: "clients loaders"
 
+      - task: compile_gpdb_and_orca_conan_ubuntu16
+        file: gpdb_pr/concourse/tasks/compile_gpdb_and_orca_with_conan.yml
+        image: ubuntu-gpdb-dev-16
+        input_mapping:
+          gpdb_src: gpdb_pr
+        on_failure: *pr_failure
+        timeout: 30m
+        params:
+          BINTRAY_REMOTE: {{bintray_remote}}
+          BINTRAY_REMOTE_URL: {{bintray_remote_url}}
+
       - task: validate_pipeline
         file: gpdb_pr/concourse/tasks/validate_pipeline.yml
         image: centos-gpdb-dev-6
@@ -121,6 +139,18 @@ jobs:
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
+        timeout: 2h30m
+        on_failure: *pr_failure
+
+      - task: icw_gporca_conan_ubuntu16
+        image: ubuntu-gpdb-dev-16
+        file: gpdb_pr/concourse/tasks/test_with_orca_conan.yml
+        input_mapping:
+          gpdb_src: gpdb_pr
+          bin_gpdb: compiled_bits_gpdb_with_orca_conan_ubuntu16
+          bin_orca: compiled_bits_orca_with_conan_ubuntu16
+        params:
+          TEST_SUITE: "icw"
         timeout: 2h30m
         on_failure: *pr_failure
 
