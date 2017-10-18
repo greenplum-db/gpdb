@@ -53,18 +53,12 @@ class AOCOCompressionTestCase(ScenarioTestCase):
 
 @tinctest.dataProvider('test_types_large')
 def test_data_provider():
-    data = {'test_05_3_co_create_with_column_large':['co_create_with_column_large_2G_zlib'],
-            'test_05_4_co_create_with_column_large':['co_create_with_column_large_2G_quick_rle'],
-            'test_05_6_co_create_with_column_large':['co_create_with_column_large_2G_zlib_2'],
-            'test_06_1_ao_create_with_row_part_large':['ao_create_with_row_part_large_1G_zlib'],
-            'test_06_2_ao_create_with_row_part_large':['ao_create_with_row_part_large_1G_quick_rle'],
-            'test_06_5_ao_create_with_row_part_large':['ao_create_with_row_part_large_1G_zlib_2'],
-            'test_07_1_co_create_column_reference_column_part_large':['co_create_column_reference_column_part_large_1G_zlib'],
-            'test_07_2_co_create_column_reference_column_part_large':['co_create_column_reference_column_part_large_1G_quick_rle'],
-            'test_07_3_co_create_column_reference_column_part_large':['co_create_column_reference_column_part_large_1G_zlib_2'],
-            'test_08_1_co_create_with_column_part_large':['co_create_with_column_part_large_1G_zlib'],
-            'test_08_2_co_create_with_column_part_large':['co_create_with_column_part_large_1G_quick_rle'],
-            'test_08_3_co_create_with_column_part_large':['co_create_with_column_part_large_1G_zlib_2'],
+    data = {'test_01_1_ao_create_with_row_part_large':['ao_create_with_row_part_large_2G_zlib'],
+            'test_01_2_ao_create_with_row_part_large':['ao_create_with_row_part_large_2G_quick_rle'],
+            'test_01_3_ao_create_with_row_part_large':['ao_create_with_row_part_large_2G_zlib_2'],
+            'test_03_1_co_create_with_column_part_large':['co_create_with_column_part_large_2G_zlib'],
+            'test_03_2_co_create_with_column_part_large':['co_create_with_column_part_large_2G_quick_rle'],
+            'test_03_3_co_create_with_column_part_large':['co_create_with_column_part_large_2G_zlib_2'],
            }
     return data
 
