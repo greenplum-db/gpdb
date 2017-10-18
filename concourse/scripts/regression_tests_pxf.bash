@@ -79,13 +79,15 @@ function setup_singlecluster() {
 	./start-hdfs.sh
 	./start-yarn.sh
 	./start-hive.sh
+	./start-zookeeper.sh
+	./start-hbase.sh
 	popd
 }
 
 function start_pxf() {
 	local hdfsrepo=$1
 	pushd ${PXF_HOME} > /dev/null
-	su gpadmin -c "bash ./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop --hive-home ${hdfsrepo}/hive"
+	su gpadmin -c "bash ./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop --hive-home ${hdfsrepo}/hive --hbase-home ${hdfsrepo}/hbase"
 	su gpadmin -c "bash ./bin/pxf start"
 	popd > /dev/null
 }
