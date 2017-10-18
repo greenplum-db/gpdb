@@ -2725,7 +2725,7 @@ _readSliceTable(void)
 	READ_INT_FIELD(nInitPlans);
 	READ_INT_FIELD(localSlice);
 	READ_NODE_FIELD(slices); /* List of Slice* */
-    READ_BOOL_FIELD(doInstrument);
+	READ_INT_FIELD(instrument_options);
 	READ_INT_FIELD(ic_instance_id);
 
 	READ_DONE();

@@ -737,7 +737,7 @@ execute_sql_string(const char *sql, const char *filename)
 				qdesc = CreateQueryDesc((PlannedStmt *) stmt,
 										sql,
 										ActiveSnapshot, NULL,
-										dest, NULL, false);
+										dest, NULL, 0);
 
 				ExecutorStart(qdesc, 0);
 				ExecutorRun(qdesc, ForwardScanDirection, 0);

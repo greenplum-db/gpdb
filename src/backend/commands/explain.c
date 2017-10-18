@@ -376,6 +376,10 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	int			eflags;
 	char	   *settings;
 	MemoryContext explaincxt = CurrentMemoryContext;
+	int			instrument_option = 0;
+
+	if (stmt->analyze)
+		instrument_option |= INSTRUMENT_TIMER;
 
 	/*
 	 * Update snapshot command ID to ensure this query sees results of any
@@ -391,7 +395,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 								queryString,
 								ActiveSnapshot, InvalidSnapshot,
 								None_Receiver, params,
-								stmt->analyze);
+								instrument_option);
 
 	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 	{
