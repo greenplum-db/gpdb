@@ -4,14 +4,24 @@
   <title id="im148803">Creating and Using Sequences</title>
   <body>
     <p>A Greenplum Database sequence object is a special single row table that functions as a
-      number generator. You can use sequences to generate unique integer identifiers for rows
-      you add to a table.  Declaring a column of type <codeph>SERIAL</codeph> implicitly
+      number generator. You can use a sequence to generate unique integer identifiers for a row
+      that you add to a table.  Declaring a column of type <codeph>SERIAL</codeph> implicitly
       creates a sequence counter for use in that table column.
     </p>
-   <p>Sequence attributes include the name of the sequence, its increment value, and the last, minimum, and
+    <p>Greenplum Database provides commands to create, alter, and drop a squence. Greenplum Database
+       also provides built-in functions to return the next value in the
+       sequence (<codeph>nextval()</codeph>) or to set the sequence to a specific start
+       value (<codeph>setval()</codeph>).</p>
+    <note>The PostgreSQL <codeph>currval()</codeph> and <codeph>lastval()</codeph> sequence
+       functions are not supported in Greenplum Database.</note>
+   <p>Attributes of a sequence object include the name of the sequence, its increment value, and the last, minimum, and
      maximum values of the sequence counter. Sequences also have a special boolean attribute
-     named <codeph>is_called</codeph>. This attribute governs the auto-increment behavior of
-     operations on the sequence counter.</p>
+     named <codeph>is_called</codeph> that governs the auto-increment behavior of
+     a <codeph>nextval()</codeph> operation on the sequence counter. When a sequence's 
+     <codeph>is_called</codeph> attribute is <codeph>true</codeph>, <codeph>nextval()</codeph>
+     increments the sequence counter before returning the value. When the
+     <codeph>is_called</codeph> attribute value of a sequence is <codeph>false</codeph>,
+      <codeph>nextval()</codeph> does not increment the counter before returning the value.</p>
   </body>
   <topic id="topic87" xml:lang="en">
     <title>Creating a Sequence</title>
@@ -25,17 +35,17 @@
         <codeblock>CREATE SEQUENCE myserial START 101;
 </codeblock>
       </p>
-      <p>Greenplum Database sets <codeph>is_called</codeph> to <codeph>false</codeph> 
-         when it first creates a sequence. The last and next value of a newly-created sequence is the sequence start value.</p>
+      <p>When you create a new sequence, Greenplum Database sets the sequence
+         <codeph>is_called</codeph> attribute to <codeph>false</codeph>.
+         Invoking <codeph>nextval()</codeph> on a newly-created sequence does not increment
+         the sequence counter and returns the sequence start value.</p>
     </body>
   </topic>
   <topic id="topic88" xml:lang="en">
     <title>Using a Sequence</title>
     <body>
       <p>After you create a sequence with the <codeph>CREATE SEQUENCE</codeph> command, you can
-        examine and use the sequence. Greenplum Database provides the <codeph>nextval()</codeph>
-        and <codeph>setval()</codeph> built-in functions to return the next value of and set the sequence counter.</p>
-      <note>The <codeph>currval()</codeph> and <codeph>lastval()</codeph> sequence functions are not supported in Greenplum Database.</note>
+        examine the sequence and use the sequence built-in functions. </p>
      <section>
        <title>Examining Sequence Attributes</title>
       <p>To examine the current attributes of a sequence, query the sequence directly. For example, to examine a sequence named <codeph>myserial</codeph>:</p>
@@ -57,7 +67,9 @@
       <p> <codeph>nextval()</codeph> uses the sequence's
         <codeph>is_called</codeph> attribute value to determine whether or not to increment
         the sequence counter before returning the value. <codeph>nextval()</codeph> advances
-        the counter when <codeph>is_called</codeph> is <codeph>true</codeph>.</p>
+        the counter when <codeph>is_called</codeph> is <codeph>true</codeph>.
+        <codeph>netxval()</codeph> sets the sequence <codeph>is_called</codeph> attribute to
+        <codeph>true</codeph> before returning.</p>
       <p>A <codeph>nextval()</codeph> operation is never rolled back. A fetched value is considered
         used, even if the transaction that performed the <codeph>nextval()</codeph> fails. This means
         that failed transactions can leave unused holes in the sequence of assigned values.</p>
@@ -73,13 +85,13 @@
         <codeblock>SELECT setval('myserial', 201);
 </codeblock>
       </p>
-      <p>When you invoke <codeph>setval()</codeph> with sequence name and start value arguments,
-        Greenplum Database sets the sequence counter to the specified start value and sets
-        the sequence's <codeph>is_called</codeph> attribute value to <codeph>true</codeph>.
-        A <codeph>nextval()</codeph> invoked
-        after a <codeph>setval()</codeph> advances the sequence counter before returning the value.
-        If you do not want the sequence counter advanced on the next <codeph>nextval()</codeph> call,
-        invoke <codeph>setval()</codeph> with an additional argument set to <codeph>false</codeph>:</p>
+      <p><codeph>setval()</codeph> has two function signatures: <codeph>setval(sequence, start_val)</codeph>
+        and <codeph>setval(sequence, start_val, is_called)</codeph>. The default behaviour of
+        <codeph>setval( sequence, start_val)</codeph> sets the sequence <codeph>is_called</codeph>
+        attribute value to <codeph>true</codeph>.
+      </p>
+      <p>If you do not want the sequence counter advanced on the next <codeph>nextval()</codeph> call,
+        use the <codeph>setval( sequence, start_val, is_called)</codeph> function signature, passing a <codeph>false</codeph> argument:</p>
       <p>
         <codeblock>SELECT setval('myserial', 201, false);
 </codeblock>
@@ -106,7 +118,7 @@
       <p>When you alter a sequence start value with the <codeph>ALTER SEQUENCE</codeph> command, Greenplum Database sets the sequence's
         <codeph>is_called</codeph> attribute to <codeph>false</codeph>. A
         <codeph>nextval()</codeph> invoked after restarting a sequence does not advance the
-        sequence counter, but returns the sequence restart value.
+        sequence counter, and returns the sequence restart value.
       </p>
     </body>
   </topic>
