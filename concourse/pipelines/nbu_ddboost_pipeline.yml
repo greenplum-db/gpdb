@@ -2,13 +2,12 @@ groups:
 - name: all
   jobs:
   - compile_gpdb_centos6
-  - compile_gpdb_centos7
-  - MU_check_centos
-  - gpdb_rc_packaging_centos
-  - DPM_netbackup77
   - DPM_backup-restore_ddboost_part1
   - DPM_backup-restore_ddboost_part2
   - DPM_backup-restore_ddboost_part3
+  - DPM_backup-restore_netbackup_part1
+  - DPM_backup-restore_netbackup_part2
+  - DPM_backup-restore_netbackup_part3
 
 ## ======================================================================
 ## resource types
@@ -91,12 +90,6 @@ resources:
     repository: pivotaldata/centos-gpdb-dev
     tag: '6-gcc6.2-llvm3.7'
 
-- name: centos-gpdb-dev-7
-  type: docker-image
-  source:
-    repository: pivotaldata/centos-gpdb-dev
-    tag: 7-gcc6.2-llvm3.7
-
 - name: bin_gpdb_centos6
   type: s3
   source:
@@ -106,159 +99,6 @@ resources:
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{bin_gpdb_centos_versioned_file}}
 
-- name: bin_gpdb_centos7
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{bin_gpdb_centos7_versioned_file}}
-
-- name: installer_rhel6_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel6-x86_64.zip
-
-- name: installer_rhel6_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel6-x86_64.zip.sha256
-
-- name: installer_rhel7_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel7-x86_64.zip
-
-- name: installer_rhel7_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/software_only_installer/greenplum-db-(.*)-rhel7-x86_64.zip.sha256
-
-- name: installer_appliance_rhel6_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel6-x86_64.zip
-
-- name: installer_appliance_rhel6_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel6-x86_64.zip.sha256
-
-- name: installer_rhel6_gpdb_clients
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-5.(.*)-rhel6-x86_64.zip
-
-- name: installer_rhel6_gpdb_loaders
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip
-
-- name: installer_appliance_rhel7_gpdb_rc
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel7-x86_64.zip
-
-- name: installer_appliance_rhel7_gpdb_rc_sha256
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/appliance_installer/greenplum-db-appliance-(.*)-rhel7-x86_64.zip.sha256
-
-- name: installer_rhel7_gpdb_clients
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-5.(.*)-rhel7-x86_64.zip
-
-- name: installer_rhel7_gpdb_loaders
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
-
-- name: qautils_rhel6_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: deliverables/QAUtils-rhel6-x86_64.tar.gz
-
-- name: qautils_rhel7_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: deliverables/QAUtils-rhel7-x86_64.tar.gz
-
-- name: gpdb_src_tinc_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-(.*)-src.tar.gz
-
-- name: gpdb_src_behave_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-db-(.*)-behave.tar.gz
-
 - name: nightly-trigger
   type: time
   source:
@@ -266,6 +106,16 @@ resources:
     days: [Sunday, Monday, Tuesday, Wednesday, Thursday, Friday]
     start: 6:00 AM
     stop: 7:00 AM
+
+# Resource used for Netbackup test
+- name: netbackup-client-installer
+  type: s3
+  source:
+    access_key_id: {{gpdb4-bucket-access-key-id}}
+    bucket: {{netbackup_installer_bucket}}
+    region_name: {{aws-region}}
+    secret_access_key: {{gpdb4-bucket-secret-access-key}}
+    versioned_file: netbackup-installation/NetBackup_7.7.3_CLIENTS_RHEL_2.6.18.tar.gz
 
 ## ======================================================================
 ## reusable anchors
@@ -348,278 +198,184 @@ jobs:
     - put: bin_gpdb_centos6
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
-    - put: installer_rhel6_gpdb_clients
-      params:
-        file: gpdb_artifacts/greenplum-clients-*-rhel6-x86_64.zip
-    - put: installer_rhel6_gpdb_loaders
-      params:
-        file: gpdb_artifacts/greenplum-loaders-*-rhel6-x86_64.zip
 
-- name: compile_gpdb_centos7
+- name: DPM_backup-restore_netbackup_part1
   plan:
   - aggregate:
-    - get: nightly-trigger
-      trigger: true
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker"]
     - get: gpdb_src
-    - get: gpaddon_src
-    - get: pxf_src
-    - get: centos-gpdb-dev-7
-  - task: compile_gpdb
-    image: centos-gpdb-dev-7
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      CONFIGURE_FLAGS: {{configure_flags}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 7
-      BLD_TARGETS: "clients loaders"
-  - aggregate:
-    - put: bin_gpdb_centos7
-      params:
-        file: gpdb_artifacts/bin_gpdb.tar.gz
-    - put: installer_rhel7_gpdb_clients
-      params:
-        file: gpdb_artifacts/greenplum-clients-*-rhel7-x86_64.zip
-    - put: installer_rhel7_gpdb_loaders
-      params:
-        file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip
-
-- name: MU_check_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
+      tags: ["gpdb4_ccp_external_worker"]
       passed: [compile_gpdb_centos6]
-    - get: bin_gpdb
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker"]
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
-  - task: MU_check_centos
-    file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: netbackup_installer
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: netbackup-client-installer
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker"]
+  - task: gen_cluster
+    tags: ["gpdb4_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: setup_netbackup
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
     params:
-      TEST_OS: centos
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=nbusetup77,nbupartI
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
-# Stage 2b: Packaging
-
-- name: gpdb_rc_packaging_centos
+- name: DPM_backup-restore_netbackup_part2
   plan:
   - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker"]
     - get: gpdb_src
-      passed:
-      - compile_gpdb_centos6
-      - compile_gpdb_centos7
-    - get: gpaddon_src
+      tags: ["gpdb4_ccp_external_worker"]
       passed: [compile_gpdb_centos6]
-    - get: bin_gpdb_centos6
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
-      trigger: true
-    - get: bin_gpdb_centos7
-      passed: [compile_gpdb_centos7]
       trigger: true
     - get: centos-gpdb-dev-6
-    - get: centos-gpdb-dev-7
-  - task: separate_qautils_files_for_rc_centos6
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: netbackup_installer
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: netbackup-client-installer
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker"]
+  - task: gen_cluster
+    tags: ["gpdb4_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: setup_netbackup
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
-    input_mapping:
-      bin_gpdb: bin_gpdb_centos6
-    output_mapping:
-      rc_bin_gpdb: rc_bin_gpdb_rhel6
     params:
-      QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel6-x86_64.tar.gz
-
-  - task: separate_qautils_files_for_rc_centos7
-    file: gpdb_src/concourse/tasks/separate_qautils_files_for_rc.yml
-    image: centos-gpdb-dev-7
-    input_mapping:
-      bin_gpdb: bin_gpdb_centos7
-    output_mapping:
-      rc_bin_gpdb: rc_bin_gpdb_rhel7
-    params:
-      QAUTILS_TARBALL: rc_bin_gpdb/QAUtils-rhel7-x86_64.tar.gz
-
-  - task: gpdb_src_tinc_packaging
-    file: gpdb_src/concourse/tasks/gpdb_src_tinc_packaging.yml
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
-    input_mapping:
-      bin_gpdb: bin_gpdb_centos6
-    output_mapping:
-      rc_bin_gpdb: packaged_gpdb_src_tinc
     params:
-      GPDB_SRC_TAR_GZ: rc_bin_gpdb/greenplum-db-@GP_VERSION@-src.tar.gz
+      BEHAVE_FLAGS: --tags=nbusetup77,nbupartII
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
-  - task: gpdb_src_behave_packaging
-    file: gpdb_src/concourse/tasks/gpdb_src_behave_packaging.yml
-    image: centos-gpdb-dev-6
-    input_mapping:
-      bin_gpdb: bin_gpdb_centos6
-    output_mapping:
-      rc_bin_gpdb: packaged_gpdb_src_behave
-    params:
-      GPDB_SRC_TAR_GZ: rc_bin_gpdb/greenplum-db-@GP_VERSION@-behave.tar.gz
-
-  - aggregate:
-    - task: gpdb_rc_packaging_centos6
-      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
-      image: centos-gpdb-dev-6
-      input_mapping:
-        bin_gpdb: rc_bin_gpdb_rhel6
-      output_mapping:
-        packaged_gpdb: packaged_gpdb_rc_centos6
-      params:
-        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-rhel6-x86_64.zip
-        ADD_README_INSTALL: true
-    - task: gpdb_appliance_rhel6_rc_packaging
-      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
-      image: centos-gpdb-dev-6
-      input_mapping:
-        bin_gpdb: rc_bin_gpdb_rhel6
-      output_mapping:
-        packaged_gpdb: packaged_gpdb_appliance_rc_centos6
-      params:
-        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-rhel6-x86_64.zip
-
-    - task: gpdb_rc_packaging_centos7
-      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
-      image: centos-gpdb-dev-7
-      input_mapping:
-        bin_gpdb: rc_bin_gpdb_rhel7
-      output_mapping:
-        packaged_gpdb: packaged_gpdb_rc_centos7
-      params:
-        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-@GP_VERSION@-rhel7-x86_64.zip
-        ADD_README_INSTALL: true
-    - task: gpdb_appliance_rhel7_rc_packaging
-      file: gpdb_src/concourse/tasks/gpdb_packaging.yml
-      image: centos-gpdb-dev-7
-      input_mapping:
-        bin_gpdb: rc_bin_gpdb_rhel7
-      output_mapping:
-        packaged_gpdb: packaged_gpdb_appliance_rc_centos7
-      params:
-        INSTALL_SCRIPT_SRC: gpdb_src/gpAux/addon/license/installer-appliance-header-rhel-gpdb.sh
-        INSTALLER_ZIP: packaged_gpdb/greenplum-db-appliance-@GP_VERSION@-rhel7-x86_64.zip
-  - aggregate:
-    # RHEL 6
-    - put: installer_rhel6_gpdb_rc
-      params:
-        file: packaged_gpdb_rc_centos6/greenplum-db-*-rhel6-x86_64.zip
-    - put: installer_rhel6_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_rc_centos6/greenplum-db-*-rhel6-x86_64.zip.sha256
-    - put: installer_appliance_rhel6_gpdb_rc
-      params:
-        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-rhel6-x86_64.zip
-    - put: installer_appliance_rhel6_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_appliance_rc_centos6/greenplum-db-appliance-*-rhel6-x86_64.zip.sha256
-    - put: qautils_rhel6_tarball
-      params:
-        file: rc_bin_gpdb_rhel6/QAUtils-rhel6-x86_64.tar.gz
-
-    # RHEL 7
-    - put: installer_rhel7_gpdb_rc
-      params:
-        file: packaged_gpdb_rc_centos7/greenplum-db-*-rhel7-x86_64.zip
-    - put: installer_rhel7_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_rc_centos7/greenplum-db-*-rhel7-x86_64.zip.sha256
-    - put: installer_appliance_rhel7_gpdb_rc
-      params:
-        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-rhel7-x86_64.zip
-    - put: installer_appliance_rhel7_gpdb_rc_sha256
-      params:
-        file: packaged_gpdb_appliance_rc_centos7/greenplum-db-appliance-*-rhel7-x86_64.zip.sha256
-    - put: qautils_rhel7_tarball
-      params:
-        file: rc_bin_gpdb_rhel7/QAUtils-rhel7-x86_64.tar.gz
-
-    # Source
-    - put: gpdb_src_tinc_tarball
-      params:
-        file: packaged_gpdb_src_tinc/greenplum-db-*-src.tar.gz
-    - put: gpdb_src_behave_tarball
-      params:
-        file: packaged_gpdb_src_behave/greenplum-db-*-behave.tar.gz
-
-# Stage 3: Trigger jobs that rely on packaging
-
-- name: DPM_netbackup77
+- name: DPM_backup-restore_netbackup_part3
   plan:
-  - aggregate: &post_packaging_gets_trigger_true
+  - aggregate:
+    - get: ccp_src
+      tags: ["gpdb4_ccp_external_worker"]
     - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
+      tags: ["gpdb4_ccp_external_worker"]
+      passed: [compile_gpdb_centos6]
+    - get: gpdb_binary
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
       trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-    - get: gpdb_src_behave_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gpdb_rc_packaging_centos]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: &input_mappings
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-      gpdb_src_behave_tarball: gpdb_src_behave_tarball
-    params: &pulse_properties
-      PULSE_URL: {{pulse_url}}
-      PULSE_PROJECT_NAME: "GPDB-BehaveNetBackup77"
-      PULSE_USERNAME: {{pulse_username}}
-      PULSE_PASSWORD: {{pulse_password}}
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params: *pulse_properties
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb4_ccp_external_worker"]
+    - get: netbackup_installer
+      tags: ["gpdb4_ccp_external_worker"]
+      resource: netbackup-client-installer
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      terraform_source: ccp_src/aws-pivotal-pa-toolsmiths/
+      vars:
+        <<: *ccp_default_vars
+    tags: ["gpdb4_ccp_external_worker"]
+  - task: gen_cluster
+    tags: ["gpdb4_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: setup_netbackup
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/setup_netbackup.yml
+    image: centos-gpdb-dev-6
+    params:
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
+  - task: run_tests
+    tags: ["gpdb4_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: centos-gpdb-dev-6
+    params:
+      BEHAVE_FLAGS: --tags=nbusetup77,nbupartIII
+      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}};
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
 
 - name: DPM_backup-restore_ddboost_part1
   plan:
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"] # We use a specific worker that has access to our Data Domain
+      tags: ["gpdb4_ccp_external_worker"] # We use a specific worker that has access to our Data Domain
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
       passed: [compile_gpdb_centos6]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
   - put: terraform
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
   - task: gen_cluster
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -634,32 +390,32 @@ jobs:
   plan:
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"] # We use a specific worker that has access to our Data Domain
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
       passed: [compile_gpdb_centos6]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
   - put: terraform
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
   - task: gen_cluster
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
@@ -674,32 +430,32 @@ jobs:
   plan:
   - aggregate:
     - get: ccp_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"] # We use a specific worker that has access to our Data Domain
     - get: gpdb_src
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
       passed: [compile_gpdb_centos6]
     - get: gpdb_binary
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: true
     - get: centos-gpdb-dev-6
-      tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+      tags: ["gpdb4_ccp_external_worker"]
   - put: terraform
     params:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
   - task: gen_cluster
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
   - task: run_tests
-    tags: ["gpdb4_ccp_external_worker_in_gpdb5"]
+    tags: ["gpdb4_ccp_external_worker"]
     file: gpdb_src/concourse/tasks/run_behave.yml
     image: centos-gpdb-dev-6
     params:
