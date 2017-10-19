@@ -326,6 +326,8 @@ bool		gp_debug_resqueue_priority = false;
 double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 
+char		*gp_query_tags;
+
 /* Perfmon segment GUCs */
 int			gp_perfmon_segment_interval;
 static char *gpperfmon_log_alert_level_str;
@@ -5366,6 +5368,16 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&gp_server_version_string,
 		GP_VERSION, NULL, NULL
+	},
+
+	{
+		{"gp_query_tags", PGC_USERSET, LOGGING_WHAT,
+			gettext_noop("Sets the query tags for queries in this session."),
+			gettext_noop("See the Greenplum Database documentation for details."),
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_query_tags,
+		"", NULL, NULL
 	},
 
 	/* End-of-list marker */
