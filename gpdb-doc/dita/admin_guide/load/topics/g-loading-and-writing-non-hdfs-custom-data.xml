@@ -4,11 +4,12 @@
 <topic id="topic35">
    <title>Loading and Writing Non-HDFS Custom Data</title>
    <body>
-      <p>Greenplum supports <codeph>TEXT</codeph> and
-            <codeph>CSV</codeph> formats for importing and exporting data. You can load and write
-         the data in other formats by defining and using a custom format or custom protocol.</p>
+      <p>Greenplum Database supports <codeph>TEXT</codeph> and <codeph>CSV</codeph> formats for
+         importing and exporting data through external tables. You can load and save data in other
+         formats by defining a custom format or custom protocol or by setting up a transformation
+         with the <codeph>gpfdist</codeph> parallel file server.</p>
       <p>For information about importing custom data from HDFS, see <xref
-            href="../../external/g-reading-and-writing-custom-formatted-hdfs-data.xml#topic25"
-         />.</p>
+            href="../../external/g-reading-and-writing-custom-formatted-hdfs-data.xml#topic25"/>.
+      </p>
    </body>
 </topic>

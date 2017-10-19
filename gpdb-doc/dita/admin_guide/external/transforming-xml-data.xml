@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic75">
+   <title>Transforming External Data with gpfdist and gpload</title>
+   <shortdesc>The <codeph>gpfdist</codeph> parallel file server allows you to set up transformations
+      that enable Greenplum Database external tables to read and write files in formats that are not
+      supported with the <codeph>CREATE EXTERNAL TABLE</codeph> command's <codeph>FORMAT</codeph>
+      clause. An <i>input</i> transformation reads a file in the foreign data format and outputs
+      rows to <codeph>gpfdist</codeph> in the CSV or other text format specified in the external
+      table's <codeph>FORMAT</codeph> clause. An <i>output</i> transformation receives rows from
+         <codeph>gpfdist</codeph> in text format and converts them to the foreign data
+      format.</shortdesc>
+   <body>
+      <p>This topic describes the tasks to set up data transformations that work with
+            <codeph>gpfdist</codeph> to read or write external data files with formats that
+         Greenplum Database does not support. </p>
+      <ul id="ul_xlm_13m_pbb">
+         <li><xref href="#topic_mdl_thm_pbb" format="dita"/></li>
+         <li><xref href="#topic_el5_k12_pbb" format="dita"/></li>
+         <li><xref href="#topic77" format="dita"/></li>
+         <li><xref href="#topic78" format="dita"/></li>
+         <li><xref href="#topic80" format="dita"/></li>
+         <li><xref href="#topic83" format="dita"/></li>
+         <li><xref href="#topic91" format="dita"/></li>
+      </ul>
+   </body>
+   <topic id="topic_mdl_thm_pbb">
+      <title>About gpfdist Transformations</title>
+      <body>
+         <p>To set up a transformation for a data format, you provide an executable command that
+               <codeph>gpfdist</codeph> can call with the name of the file containing data. For
+            example, you could write a shell script that runs an XSLT transformation on an XML file
+            to output rows with columns delimited with a vertical bar (<codeph>|</codeph>) character
+            and rows delimited with linefeeds. </p>
+         <p>Transformations are configured in a YAML-formatted configuration file passed to
+               <codeph>gpfdist</codeph> on the command line. </p>
+         <p>If you want to load the external data into a table in the Greenplum database, you can
+            use the <codeph>gpload</codeph> utility to automate the tasks to create an external
+            table, run <codeph>gpfdist</codeph>, and load the transformed data into the database
+            table.</p>
+         <p>The following diagram shows <i>gpfdist</i> performing an XML transformation.</p>
+         <fig id="du185408">
+            <title>External Tables using XML Transformations</title>
+            <image href="../graphics/ext-tables-xml.png" placement="break" id="image_xbp_whm_pbb"/>
+         </fig>
+         <p>Follow these steps to load XML data into a Greenplum Database readable external table. </p>
+         <ol id="ol_d4f_4wf_pbb">
+            <li><xref href="#topic_el5_k12_pbb" format="dita">Determine the transformation
+                  schema</xref>.</li>
+            <li><xref href="#topic77" format="dita">Write a transformation</xref>.</li>
+            <li><xref href="#topic78" format="dita">Write the gpfdist configuration
+               file</xref>.</li>
+            <li><xref href="#topic80" format="dita">Transfer the data</xref>.</li>
+         </ol>
+      </body>
+   </topic>
+   <topic id="topic_el5_k12_pbb">
+      <title>Determine the Transformation Schema</title>
+      <body>
+         <p>To prepare for the transformation project:</p>
+         <ol id="ol_fl5_k12_pbb">
+            <li> Determine the goal of the project, such as indexing data, analyzing data, combining
+               data, and so on. </li>
+            <li> Examine the XML file and note the file structure and element names.</li>
+            <li> Choose the elements to import and decide if any other limits are appropriate.</li>
+         </ol>
+         <p>For example, the following XML file, <i>prices.xml</i>, is a simple XML file that
+            contains price records. Each price record contains two fields: an item number and a
+            price.</p>
+         <codeblock>&lt;?xml version="1.0" encoding="ISO-8859-1" ?&gt;
+&lt;prices&gt;
+  &lt;pricerecord&gt;
+    &lt;itemnumber&gt;708421&lt;/itemnumber&gt;
+    &lt;price&gt;19.99&lt;/price&gt;
+  &lt;/pricerecord&gt;
+  &lt;pricerecord&gt;
+    &lt;itemnumber&gt;708466&lt;/itemnumber&gt;
+    &lt;price&gt;59.25&lt;/price&gt;
+  &lt;/pricerecord&gt;
+  &lt;pricerecord&gt;
+    &lt;itemnumber&gt;711121&lt;/itemnumber&gt;
+    &lt;price&gt;24.99&lt;/price&gt;
+  &lt;/pricerecord&gt;
+&lt;/prices&gt;
+</codeblock>
+         <p>The goal of this transformation is to import all the data into a Greenplum Database
+            readable external table with an integer <codeph>itemnumber</codeph> column and a decimal
+               <codeph>price</codeph> column.</p>
+      </body>
+   </topic>
+   <topic id="topic77">
+      <title>Write a Transformation</title>
+      <body>
+         <p>The transformation specifies what to extract from the data. You can use any authoring
+            environment and language appropriate for your project. For XML transformations choose
+            from technologies such as XSLT, Joost (STX), Java, Python, or Perl, based on the goals
+            and scope of the project.</p>
+         <p>In the price example, the next step is to transform the XML data into a two-column
+            delimited text format.</p>
+         <p>
+            <codeblock>708421|19.99
+708466|59.25
+711121|24.99
+</codeblock>
+         </p>
+         <p>The following STX transform, called <i>input_transform.stx</i>, performs the data
+            transformation.</p>
+         <codeblock>&lt;?xml version="1.0"?&gt;
+&lt;stx:transform version="1.0"
+   xmlns:stx="http://stx.sourceforge.net/2002/ns"
+   pass-through="none"&gt;
+  &lt;!-- declare variables --&gt;
+  &lt;stx:variable name="itemnumber"/&gt;
+  &lt;stx:variable name="price"/&gt;
+  &lt;!-- match and output prices as columns delimited by | --&gt;
+  &lt;stx:template match="/prices/pricerecord"&gt;
+    &lt;stx:process-children/&gt;
+    &lt;stx:value-of select="$itemnumber"/&gt;    
+&lt;stx:text&gt;|&lt;/stx:text&gt;
+    &lt;stx:value-of select="$price"/&gt;      &lt;stx:text&gt;
+&lt;/stx:text&gt;
+  &lt;/stx:template&gt;
+  &lt;stx:template match="itemnumber"&gt;
+    &lt;stx:assign name="itemnumber" select="."/&gt;
+  &lt;/stx:template&gt;
+  &lt;stx:template match="price"&gt;
+    &lt;stx:assign name="price" select="."/&gt;
+  &lt;/stx:template&gt;
+&lt;/stx:transform&gt;
+</codeblock>
+         <p>This STX transform declares two temporary variables, <codeph>itemnumber</codeph> and
+               <codeph>price</codeph>, and the following rules. </p>
+         <ol id="ol_u5s_l12_pbb">
+            <li id="du186530">When an element that satisfies the XPath expression
+                  <codeph>/prices/pricerecord</codeph> is found, examine the child elements and
+               generate output that contains the value of the <codeph>itemnumber</codeph> variable,
+               a <codeph>|</codeph> character, the value of the price variable, and a newline.</li>
+            <li id="du186531">When an <codeph>&lt;itemnumber&gt;</codeph> element is found, store
+               the content of that element in the variable <codeph>itemnumber</codeph>.</li>
+            <li id="du186677">When a &lt;price&gt; element is found, store the content of that
+               element in the variable <codeph>price</codeph>.</li>
+         </ol>
+      </body>
+   </topic>
+   <topic id="topic78">
+      <title>Write the gpfdist Configuration File</title>
+      <body>
+         <p>The <cmdname>gpfdist</cmdname> configuration is specified as a YAML 1.1 document. It
+            contains rules that <cmdname>gpfdist</cmdname> uses to select a transformation to apply
+            when loading or extracting data. </p>
+         <p>This example <cmdname>gpfdist</cmdname> configuration contains the following items:</p>
+         <ul id="ul_lct_m12_pbb">
+            <li id="du219363">the <codeph>config.yaml</codeph> file defining
+                  <codeph>TRANSFORMATIONS</codeph>
+            </li>
+            <li id="du219364">the <codeph>input_transform.sh</codeph> wrapper script, referenced in
+               the <codeph>config.yaml</codeph> file</li>
+            <li id="du219365">the <codeph>input_transform.stx</codeph> joost transformation, called
+               from <codeph>input_transform.sh</codeph></li>
+         </ul>
+         <p>Aside from the ordinary YAML rules, such as starting the document with three dashes
+               (<codeph>---</codeph>), a <cmdname>gpfdist</cmdname> configuration must conform to
+            the following restrictions:</p>
+         <ol id="ol_mct_m12_pbb">
+            <li id="du186770">A <codeph>VERSION</codeph> setting must be present with the value
+                  <codeph>1.0.0.1</codeph>.</li>
+            <li id="du186771">A <codeph>TRANSFORMATIONS</codeph> setting must be present and contain
+               one or more mappings.</li>
+            <li id="du186772">Each mapping in the <codeph>TRANSFORMATION</codeph> must contain:<ul
+                  id="ul_ass_j31_34">
+                  <li id="du186773">a <codeph>TYPE</codeph> with the value 'input' or 'output'</li>
+                  <li id="du186774">a <codeph>COMMAND</codeph> indicating how the transformation is
+                     run.</li>
+               </ul>
+            </li>
+            <li id="du186775">Each mapping in the <codeph>TRANSFORMATION</codeph> can contain
+               optional <codeph>CONTENT</codeph>, <codeph>SAFE</codeph>, and <codeph>STDERR</codeph>
+               settings.</li>
+         </ol>
+         <p>The following <cmdname>gpfdist</cmdname> configuration, called
+               <codeph>config.YAML</codeph>, applies to the prices example. The initial indentation
+            on each line is significant and reflects the hierarchical nature of the specification.
+            The transformation name <codeph>prices_input</codeph> in the following example will be
+            referenced later when creating the table in SQL.</p>
+         <codeblock>---
+VERSION: 1.0.0.1
+TRANSFORMATIONS:
+  prices_input:
+    TYPE:     input
+    COMMAND:  /bin/bash input_transform.sh %filename%
+</codeblock>
+         <p>The <codeph>COMMAND</codeph> setting uses a wrapper script called
+               <codeph>input_transform.sh</codeph> with a <codeph>%filename%</codeph> placeholder.
+            When <cmdname>gpfdist</cmdname> runs the <codeph>prices_input</codeph> transform, it
+            invokes <codeph>input_transform.sh</codeph> with <codeph>/bin/bash</codeph> and replaces
+            the <codeph>%filename%</codeph> placeholder with the path to the input file to
+            transform. The wrapper script called <codeph>input_transform.sh</codeph> contains the
+            logic to invoke the STX transformation and return the output.</p>
+         <p>If Joost is used, the Joost STX engine must be installed.</p>
+         <codeblock>#!/bin/bash
+# input_transform.sh - sample input transformation, 
+# demonstrating use of Java and Joost STX to convert XML into
+# text to load into Greenplum Database.
+# java arguments:
+#   -jar joost.jar         joost STX engine
+#   -nodecl                  don't generate a &lt;?xml?&gt; declaration
+#   $1                        filename to process
+#   input_transform.stx    the STX transformation
+#
+# the AWK step eliminates a blank line joost emits at the end
+java \
+    -jar joost.jar \
+    -nodecl \
+    $1 \
+    input_transform.stx \
+ | awk 'NF&gt;0
+</codeblock>
+         <p>The <codeph>input_transform.sh</codeph> file uses the Joost STX engine with the AWK
+            interpreter. The following diagram shows the process flow as <cmdname>gpfdist</cmdname>
+            runs the transformation.</p>
+         <image href="../graphics/02-pipeline.png" placement="break" width="462px" height="190px"
+            id="image_nct_m12_pbb"/>
+      </body>
+   </topic>
+   <topic id="topic80">
+      <title>Transfer the Data</title>
+      <body>
+         <p>Create the target database tables with SQL statements based on the appropriate
+            schema.</p>
+         <p>There are no special requirements for Greenplum Database tables that hold loaded data.
+            In the prices example, the following command creates the <codeph>prices</codeph> table,
+            where the data is to be loaded.</p>
+         <codeblock>CREATE TABLE prices (
+  itemnumber integer,       
+  price       decimal        
+) 
+DISTRIBUTED BY (itemnumber);
+</codeblock>
+         <p>Next, use one of the following approaches to transform the data with
+               <cmdname>gpfdist</cmdname>.</p>
+         <ul id="ul_jfr_h32_pbb">
+            <li id="du224442">
+               <codeph>gpload</codeph> supports only input transformations, but in many cases is
+               easier to implement. </li>
+            <li id="du224443">
+               <codeph>gpfdist</codeph> with <codeph>INSERT INTO SELECT FROM</codeph> supports both
+               input and output transformations, but exposes details that <codeph>gpload</codeph>
+               automates for you.</li>
+         </ul>
+      </body>
+      <topic id="topic81">
+         <title>Transforming with gpload</title>
+         <body>
+            <p>The Greenplum Database <codeph>gpload</codeph> utility orchestrates a data load
+               operation using the <codeph>gpfdist</codeph> parallel file server and a
+               YAML-formatted configuration file. <codeph>gpload</codeph> automates these tasks:</p>
+            <ul id="ul_rt1_jnk_pbb">
+               <li>Creates a readable external table in the database.</li>
+               <li>Starts <codeph>gpfdist</codeph> instances with the configuration file that
+                  contains the transformation. </li>
+               <li>Runs <codeph>INSERT INTO <varname>table_name</varname> SELECT FROM
+                        <varname>external_table</varname></codeph> to load the data.</li>
+               <li>Removes the external table definition.</li>
+            </ul>
+            <p>Transforming data with <codeph>gpload</codeph> requires that the settings
+                  <codeph>TRANSFORM</codeph> and <codeph>TRANSFORM_CONFIG</codeph> appear in the
+                  <codeph>INPUT</codeph> section of the <codeph>gpload</codeph> control file.</p>
+            <p>For more information about the syntax and placement of these settings in the
+                  <codeph>gpload</codeph> control file, see the <i>Greenplum Database Reference
+                  Guide</i>.</p>
+            <ul id="ul_sy3_l32_pbb">
+               <li id="du187470">
+                  <codeph>TRANSFORM_CONFIG</codeph> specifies the name of the
+                     <cmdname>gpfdist</cmdname> configuration file.</li>
+               <li id="du200069">The <codeph>TRANSFORM</codeph> setting indicates the name of the
+                  transformation that is described in the file named in
+                     <codeph>TRANSFORM_CONFIG</codeph>.</li>
+            </ul>
+            <codeblock>---
+VERSION: 1.0.0.1
+DATABASE: ops
+USER: gpadmin
+GPLOAD:
+  INPUT:
+    - TRANSFORM_CONFIG: config.yaml
+    - TRANSFORM: prices_input
+    - SOURCE:
+        FILE: prices.xml</codeblock>
+            <p>The transformation name must appear in two places: in the <codeph>TRANSFORM</codeph>
+               setting of the <cmdname>gpfdist</cmdname> configuration file and in the
+                  <codeph>TRANSFORMATIONS</codeph> section of the file named in the
+                  <codeph>TRANSFORM_CONFIG</codeph> section.</p>
+            <p>In the <codeph>gpload</codeph> control file, the optional parameter
+                  <codeph>MAX_LINE_LENGTH</codeph> specifies the maximum length of a line in the XML
+               transformation data that is passed to <codeph>gpload</codeph>.</p>
+            <p>The following diagram shows the relationships between the <codeph>gpload</codeph>
+               control file, the <cmdname>gpfdist</cmdname> configuration file, and the XML data
+               file.</p>
+            <image href="../graphics/03-gpload-files.jpg" placement="break" width="415px"
+               height="258px" id="image_ty3_l32_pbb"/>
+         </body>
+      </topic>
+      <topic id="topic82">
+         <title>Transforming with gpfdist and INSERT INTO SELECT FROM</title>
+         <body>
+            <p>With this load method, you perform each of the tasks that <codeph>gpload</codeph>
+               automates. You start <codeph>gpfdist</codeph>, create an external table, load the
+               data, and clean up by dropping the table and stopping <codeph>gpfdist</codeph>.</p>
+            <p>Specify the transformation in the <codeph>CREATE EXTERNAL TABLE</codeph> definition's
+                  <codeph>LOCATION</codeph> clause. For example, the transform is shown in bold in
+               the following command. (Run <cmdname>gpfdist</cmdname> first, using the command
+                  <codeph>gpfdist -c config.yaml</codeph>).</p>
+            <codeblock>CREATE READABLE EXTERNAL TABLE prices_readable (LIKE prices)
+   LOCATION ('gpfdist://hostname:8080/prices.xml<b>#transform=prices_input</b>')
+   FORMAT 'TEXT' (DELIMITER '|')
+   LOG ERRORS SEGMENT REJECT LIMIT 10;
+</codeblock>
+            <p>In the command above, change <codeph>hostname</codeph> to your hostname.
+                  <codeph>prices_input</codeph> comes from the <codeph>gpfdist</codeph>
+               configuration file.</p>
+            <p>The following query then loads the data into the <codeph>prices</codeph> table.</p>
+            <codeblock>INSERT INTO prices SELECT * FROM prices_readable;</codeblock>
+         </body>
+      </topic>
+      <topic id="topic83">
+         <title>Configuration File Format</title>
+         <body>
+            <p>The <cmdname>gpfdist</cmdname> configuration file uses the YAML 1.1 document format
+               and implements a schema for defining the transformation parameters. The configuration
+               file must be a valid YAML document.</p>
+            <p>The <cmdname>gpfdist</cmdname> program processes the document in order and uses
+               indentation (spaces) to determine the document hierarchy and relationships of the
+               sections to one another. The use of white space is significant. Do not use white
+               space for formatting and do not use tabs.</p>
+            <p>The following is the basic structure of a configuration file.</p>
+            <codeblock>---
+VERSION:   1.0.0.1
+TRANSFORMATIONS: 
+  transformation_name1:
+    TYPE:      input | output
+    COMMAND:   command
+    CONTENT:   data | paths
+    SAFE:      posix-regex
+    STDERR:    server | console
+  transformation_name2:
+    TYPE:      input | output
+    COMMAND:   command 
+...</codeblock>
+            <parml>
+               <plentry id="p_version">
+                  <pt>VERSION</pt>
+                  <pd>Required. The version of the <cmdname>gpfdist</cmdname> configuration file
+                     schema. The current version is 1.0.0.1.</pd>
+               </plentry>
+               <plentry id="p_transformations">
+                  <pt>TRANSFORMATIONS</pt>
+                  <pd>Required. Begins the transformation specification section. A configuration
+                     file must have at least one transformation. When <cmdname>gpfdist</cmdname>
+                     receives a transformation request, it looks in this section for an entry with
+                     the matching transformation name. </pd>
+               </plentry>
+               <plentry id="p_type">
+                  <pt>TYPE</pt>
+                  <pd>Required. Specifies the direction of transformation. Values are
+                        <codeph>input</codeph> or <codeph>output</codeph>. <ul id="ul_f3p_j3q_34">
+                        <li id="du198814">
+                           <codeph>input</codeph>: <cmdname>gpfdist</cmdname> treats the standard
+                           output of the transformation process as a stream of records to load into
+                           Greenplum Database.</li>
+                        <li id="du198815">
+                           <codeph>output</codeph>
+                           <ph>: </ph>
+                           <cmdname>gpfdist</cmdname> treats the standard input of the
+                           transformation process as a stream of records from Greenplum Database to
+                           transform and write to the appropriate output.</li>
+                     </ul>
+                  </pd>
+               </plentry>
+               <plentry id="p_command">
+                  <pt>COMMAND</pt>
+                  <pd>
+                     <p>Required. Specifies the command <cmdname>gpfdist</cmdname> will execute to
+                        perform the transformation. </p>
+                     <p>For input transformations, <cmdname>gpfdist</cmdname> invokes the command
+                        specified in the <codeph>CONTENT</codeph> setting. The command is expected
+                        to open the underlying file(s) as appropriate and produce one line of
+                           <codeph>TEXT</codeph> for each row to load into Greenplum Database. The
+                        input transform determines whether the entire content should be converted to
+                        one row or to multiple rows.</p>
+                     <p>For output transformations, <cmdname>gpfdist</cmdname> invokes this command
+                        as specified in the <codeph>CONTENT</codeph> setting. The output command is
+                        expected to open and write to the underlying file(s) as appropriate. The
+                        output transformation determines the final placement of the converted
+                        output.</p>
+                  </pd>
+               </plentry>
+               <plentry id="p_content">
+                  <pt>CONTENT</pt>
+                  <pd>
+                     <p>Optional. The values are <codeph>data</codeph> and <codeph>paths</codeph>.
+                        The default value is <codeph>data</codeph>.</p>
+                     <ul id="ul_wzg_43q_34">
+                        <li id="du219653">When <codeph>CONTENT</codeph> specifies
+                              <codeph>data</codeph>, the text <codeph>%filename%</codeph> in the
+                              <codeph>COMMAND</codeph> section is replaced by the path to the file
+                           to read or write. </li>
+                        <li id="du199214">When <codeph>CONTENT</codeph> specifies
+                              <codeph>paths</codeph>, the text <codeph>%filename%</codeph> in the
+                              <codeph>COMMAND</codeph> section is replaced by the path to the
+                           temporary file that contains the list of files to read or write. </li>
+                     </ul>
+                     <p>The following is an example of a <codeph>COMMAND</codeph> section showing
+                        the text <codeph>%filename%</codeph> that is replaced.</p>
+                     <p>
+                        <codeblock>COMMAND: /bin/bash input_transform.sh %filename%</codeblock>
+                     </p>
+                  </pd>
+               </plentry>
+               <plentry id="p_safe">
+                  <pt>SAFE</pt>
+                  <pd>
+                     <p>Optional. A <codeph>POSIX</codeph> regular expression that the paths must
+                        match to be passed to the transformation. Specify <codeph>SAFE</codeph> when
+                        there is a concern about injection or improper interpretation of paths
+                        passed to the command. The default is no restriction on paths.</p>
+                  </pd>
+               </plentry>
+               <plentry id="p_stderr">
+                  <pt>STDERR</pt>
+                  <pd>
+                     <p>Optional. The values are <codeph>server</codeph> and
+                           <codeph>console</codeph>.</p>
+                     <p>This setting specifies how to handle standard error output from the
+                        transformation. The default, <codeph>server</codeph>, specifies that
+                           <cmdname>gpfdist</cmdname> will capture the standard error output from
+                        the transformation in a temporary file and send the first 8k of that file to
+                        Greenplum Database as an error message. The error message will appear as an
+                        SQL error. <codeph>Console</codeph> specifies that
+                           <cmdname>gpfdist</cmdname> does not redirect or transmit the standard
+                        error output from the transformation. </p>
+                  </pd>
+               </plentry>
+            </parml>
+         </body>
+      </topic>
+   </topic>
+   <topic id="topic91">
+      <title>XML Transformation Examples</title>
+      <body>
+         <p>The following examples demonstrate the complete process for different types of XML data
+            and STX transformations. Files and detailed instructions associated with these examples
+            are in the GitHub repo <codeph>github.com://greenplum-db/gpdb</codeph> in the
+                  <codeph><xref
+                  href="https://github.com/greenplum-db/gpdb/blob/master/gpMgmt/demo/gpfdist_transform"
+                  format="html" scope="external">gpMgmt/demo/gpfdist_transform</xref></codeph>
+            directory. Read the README file in the <i>Before You Begin</i> section before you run
+            the examples. The README file explains how to download the example data file used in the
+            examples.</p>
+      </body>
+      <topic id="topic32">
+         <title>Command-based External Web Tables</title>
+         <body>
+            <p>The output of a shell command or script defines command-based web table data. Specify
+               the command in the <codeph>EXECUTE</codeph> clause of <codeph>CREATE EXTERNAL WEB
+                  TABLE</codeph>. The data is current as of the time the command runs. The
+                  <codeph>EXECUTE</codeph> clause runs the shell command or script on the specified
+               master, and/or segment host or hosts. The command or script must reside on the hosts
+               corresponding to the host(s) defined in the <codeph>EXECUTE</codeph> clause.</p>
+            <p>By default, the command is run on segment hosts when active segments have output rows
+               to process. For example, if each segment host runs four primary segment instances
+               that have output rows to process, the command runs four times per segment host. You
+               can optionally limit the number of segment instances that execute the web table
+               command. All segments included in the web table definition in the <codeph>ON</codeph>
+               clause run the command in parallel.</p>
+            <p>The command that you specify in the external table definition executes from the
+               database and cannot access environment variables from <codeph>.bashrc</codeph> or
+                  <codeph>.profile</codeph>. Set environment variables in the
+                  <codeph>EXECUTE</codeph> clause. For example:</p>
+            <p>
+               <codeblock>=# CREATE EXTERNAL WEB TABLE output (output text)
+    EXECUTE 'PATH=/home/gpadmin/programs; export PATH; myprogram.sh' 
+    FORMAT 'TEXT';
+</codeblock>
+            </p>
+            <p>Scripts must be executable by the <codeph>gpadmin</codeph> user and reside in the
+               same location on the master or segment hosts.</p>
+            <p>The following command defines a web table that runs a script. The script runs on each
+               segment host where a segment has output rows to process. </p>
+            <p>
+               <codeblock>=# CREATE EXTERNAL WEB TABLE log_output 
+    (linenum int, message text) 
+    EXECUTE '/var/load_scripts/get_log_data.sh' ON HOST 
+    FORMAT 'TEXT' (DELIMITER '|');
+</codeblock>
+            </p>
+         </body>
+      </topic>
+      <topic id="topic93">
+         <title>IRS MeF XML Files (In demo Directory)</title>
+         <body>
+            <p>This example demonstrates loading a sample IRS Modernized eFile tax return using a
+               Joost STX transformation. The data is in the form of a complex XML file.</p>
+            <p>The U.S. Internal Revenue Service (IRS) made a significant commitment to XML and
+               specifies its use in its Modernized e-File (MeF) system. In MeF, each tax return is
+               an XML document with a deep hierarchical structure that closely reflects the
+               particular form of the underlying tax code. </p>
+            <p>XML, XML Schema and stylesheets play a role in their data representation and business
+               workflow. The actual XML data is extracted from a ZIP file attached to a MIME
+               "transmission file" message. For more information about MeF, see <xref
+                  href="https://www.irs.gov/uac/modernized-e-file-overview" scope="external"
+                  format="html">Modernized e-File (Overview)</xref> on the IRS web site.</p>
+            <p>The sample XML document, <i>RET990EZ_2006.xml</i>, is about 350KB in size with two
+               elements:</p>
+            <ul id="ul_egs_y42_pbb">
+               <li id="du202262">ReturnHeader</li>
+               <li id="du202263">ReturnData</li>
+            </ul>
+            <p>The &lt;ReturnHeader&gt; element contains general details about the tax return such
+               as the taxpayer's name, the tax year of the return, and the preparer. The
+               &lt;ReturnData&gt; element contains multiple sections with specific details about the
+               tax return and associated schedules. </p>
+            <p>The following is an abridged sample of the XML file.</p>
+            <codeblock>&lt;?xml version="1.0" encoding="UTF-8"?&gt; 
+&lt;Return returnVersion="2006v2.0"
+   xmlns="https://www.irs.gov/efile" 
+   xmlns:efile="https://www.irs.gov/efile"
+   xsi:schemaLocation="https://www.irs.gov/efile"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt; 
+   &lt;ReturnHeader binaryAttachmentCount="1"&gt;
+     &lt;ReturnId&gt;AAAAAAAAAAAAAAAAAAAA&lt;/ReturnId&gt;
+     &lt;Timestamp&gt;1999-05-30T12:01:01+05:01&lt;/Timestamp&gt;
+     &lt;ReturnType&gt;990EZ&lt;/ReturnType&gt;
+     &lt;TaxPeriodBeginDate&gt;2005-01-01&lt;/TaxPeriodBeginDate&gt;
+     &lt;TaxPeriodEndDate&gt;2005-12-31&lt;/TaxPeriodEndDate&gt;
+     &lt;Filer&gt;
+       &lt;EIN&gt;011248772&lt;/EIN&gt;
+       ... more data ...
+     &lt;/Filer&gt;
+     &lt;Preparer&gt;
+       &lt;Name&gt;Percy Polar&lt;/Name&gt;
+       ... more data ...
+     &lt;/Preparer&gt;
+     &lt;TaxYear&gt;2005&lt;/TaxYear&gt;
+   &lt;/ReturnHeader&gt;
+   ... more data ..
+</codeblock>
+            <p>The goal is to import all the data into a Greenplum database. First, convert the XML
+               document into text with newlines "escaped", with two columns:
+                  <codeph>ReturnId</codeph> and a single column on the end for the entire MeF tax
+               return. For example:</p>
+            <p>
+               <codeblock>AAAAAAAAAAAAAAAAAAAA|&lt;Return returnVersion="2006v2.0"... 
+</codeblock>
+            </p>
+            <p>Load the data into Greenplum Database.</p>
+         </body>
+      </topic>
+      <topic id="topic94">
+         <title>WITSML™ Files (In demo Directory)</title>
+         <body>
+            <p>This example demonstrates loading sample data describing an oil rig using a Joost STX
+               transformation. The data is in the form of a complex XML file downloaded from
+               energistics.org.</p>
+            <p>The Wellsite Information Transfer Standard Markup Language (WITSML™) is an oil
+               industry initiative to provide open, non-proprietary, standard interfaces for
+               technology and software to share information among oil companies, service companies,
+               drilling contractors, application vendors, and regulatory agencies. For more
+               information about WITSML™, see <xref href="http://www.energistics.org/"
+                  scope="external" format="html">http://www.energistics.org/</xref>.</p>
+            <p>The oil rig information consists of a top level <codeph>&lt;rigs&gt;</codeph> element
+               with multiple child elements such as <codeph>&lt;documentInfo&gt;,
+                  &lt;rig&gt;</codeph>, and so on. The following excerpt from the file shows the
+               type of information in the <codeph>&lt;rig&gt;</codeph> tag.</p>
+            <codeblock>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;?xml-stylesheet href="../stylesheets/rig.xsl" type="text/xsl" media="screen"?&gt;
+&lt;rigs 
+ xmlns="http://www.energistics.org/schemas/131" 
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+ xsi:schemaLocation="http://www.energistics.org/schemas/131 ../obj_rig.xsd" 
+ version="1.3.1.1"&gt;
+ &lt;documentInfo&gt;
+ ... misc data ...
+ &lt;/documentInfo&gt;
+ &lt;rig uidWell="W-12" uidWellbore="B-01" uid="xr31"&gt;
+     &lt;nameWell&gt;6507/7-A-42&lt;/nameWell&gt;
+     &lt;nameWellbore&gt;A-42&lt;/nameWellbore&gt;
+     &lt;name&gt;Deep Drill #5&lt;/name&gt;
+     &lt;owner&gt;Deep Drilling Co.&lt;/owner&gt;
+     &lt;typeRig&gt;floater&lt;/typeRig&gt;
+     &lt;manufacturer&gt;Fitsui Engineering&lt;/manufacturer&gt;
+     &lt;yearEntService&gt;1980&lt;/yearEntService&gt;
+     &lt;classRig&gt;ABS Class A1 M CSDU AMS ACCU&lt;/classRig&gt;
+     &lt;approvals&gt;DNV&lt;/approvals&gt;
+ ... more data ...</codeblock>
+            <p>The goal is to import the information for this rig into Greenplum Database. </p>
+            <p>The sample document, <i>rig.xml</i>, is about 11KB in size. The input does not
+               contain tabs so the relevant information can be converted into records delimited with
+               a pipe (|).</p>
+            <p>
+               <codeph>W-12|6507/7-A-42|xr31|Deep Drill #5|Deep Drilling Co.|John
+                  Doe|John.Doe@example.com|</codeph>
+            </p>
+            <p>With the columns:</p>
+            <ul id="ul_ids_bp2_pbb">
+               <li>
+                  <codeph>well_uid text</codeph>, -- e.g. W-12 </li>
+               <li>
+                  <codeph>well_name text</codeph>, -- e.g. 6507/7-A-42 </li>
+               <li>
+                  <codeph>rig_uid text</codeph>, -- e.g. xr31 </li>
+               <li>
+                  <codeph>rig_name text</codeph>, -- e.g. Deep Drill #5 </li>
+               <li>
+                  <codeph>rig_owner text</codeph>, -- e.g. Deep Drilling Co. </li>
+               <li>
+                  <codeph>rig_contact text</codeph>, -- e.g. John Doe </li>
+               <li>
+                  <codeph>rig_email text</codeph>, -- e.g. John.Doe@example.com </li>
+               <li>
+                  <codeph>doc xml</codeph>
+               </li>
+            </ul>
+            <p>Then, load the data into Greenplum Database.</p>
+         </body>
+      </topic>
+   </topic>
+</topic>

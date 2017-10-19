@@ -19,9 +19,9 @@
                   href="g-gpfdist-protocol.xml#topic_sny_yph_kr"/>.</li>
             <li><codeph>gpfdists://</codeph> is the secure version of <codeph>gpfdist</codeph>. See
                   <xref href="g-gpfdists-protocol.xml#topic_sny_yph_kr"/>.</li>
-            <li><codeph>gphdfs://</codeph> accesses files on a Hadoop Distributed
-               File System (HDFS). See <xref href="g-gphdfs-protocol.xml#topic_z5g_l5h_kr"/>.<p>The
-                  files can be stored on an Amazon EMR instance HDFS. See <xref
+            <li><codeph>gphdfs://</codeph> accesses files on a Hadoop Distributed File System
+               (HDFS). See <xref href="g-gphdfs-protocol.xml#topic_z5g_l5h_kr"/>.<p>The files can be
+                  stored on an Amazon EMR instance HDFS. See <xref
                      href="g-hdfs-emr-config.xml#amazon-emr"/>.</p></li>
             <li><codeph>s3://</codeph> accesses files in an Amazon S3 bucket. See <xref
                   href="g-s3-protocol.xml#amazon-emr"/>.</li>

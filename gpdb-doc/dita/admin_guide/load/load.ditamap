@@ -36,23 +36,6 @@
          <topicref href="topics/g-unloading-data-using-a-writable-external-table.xml" type="topic"/>
          <topicref href="topics/g-unloading-data-using-copy.xml" type="topic"/>
       </topicref>
-      <topicref href="topics/g-transforming-xml-data.xml" type="topic">
-         <topicref href="topics/g-determine-the-transformation-schema.xml" type="topic"/>
-         <topicref href="topics/g-write-a-transform.xml" type="topic"/>
-         <topicref href="topics/g-write-the-gpfdist-configuration.xml" type="topic"/>
-         <topicref href="topics/g-load-the-data.xml" type="topic"/>
-         <topicref href="topics/g-transfer-and-store-the-data.xml" type="topic">
-            <topicref href="topics/g-transforming-with-gpload.xml" type="topic"/>
-            <topicref href="topics/g-transforming-with-insert-into-select-from.xml" type="topic"/>
-            <topicref href="topics/g-configuration-file-format.xml" type="topic"/>
-         </topicref>
-         <topicref href="topics/g-xml-transformation-examples.xml" type="topic">
-            <topicref href="topics/g-example-1-dblp-database-publications-in-demo-directory.xml"
-               type="topic"/>
-            <topicref href="topics/g-example-2-irs-mef-xml-files-in-demo-directory.xml" type="topic"/>
-            <topicref href="topics/g-example-3-witsml-files-in-demo-directory.xml" type="topic"/>
-         </topicref>
-      </topicref>
       <topicref href="topics/g-formatting-data-files.xml" type="topic">
          <topicref href="topics/g-formatting-rows.xml" type="topic"/>
          <topicref href="topics/g-formatting-columns.xml" type="topic"/>

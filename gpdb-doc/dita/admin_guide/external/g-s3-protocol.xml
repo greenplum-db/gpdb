@@ -259,7 +259,8 @@ s3://s3-us-west-2.amazonaws.com/test1/abcdefff</codeblock>
                Database <codeph>s3</codeph> protocol, you must set the
                   <codeph>server_side_encryption</codeph> configuration parameter in your
                   <codeph>s3</codeph> configuration file to the value <codeph>sse-s3</codeph>:</p>
-            <p><codeblock>
+            <p>
+               <codeblock>
 server_side_encryption = sse-s3
 </codeblock>
             </p>
@@ -287,8 +288,8 @@ server_side_encryption = sse-s3
             with the <codeph>s3</codeph> protocol configuration parameter <codeph>proxy</codeph> or
             an environment variable. If the configuration parameter is set, the environment
             variables are ignored. </p>
-         <p>To specify proxy with an environment variable, you set the environment variable based
-            on the protocol: <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
+         <p>To specify proxy with an environment variable, you set the environment variable based on
+            the protocol: <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
                <codeph>socks_proxy</codeph>. You can specify a different URL for each protocol by
             setting the appropriate environment variable. S3 supports these environment
                variables.<ul id="ul_cy3_km2_r1b">
