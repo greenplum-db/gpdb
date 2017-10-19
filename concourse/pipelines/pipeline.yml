@@ -219,6 +219,8 @@ groups:
   - gate_mm_misc_start
   - MM_gppkg
   - MM_gprecoverseg
+  - MM_gpexpand_1
+  - MM_gpexpand_2
   - MM_gpcheck
   - MM_analyzedb
   - MM_gpperfmon
