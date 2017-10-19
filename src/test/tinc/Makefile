@@ -105,12 +105,6 @@ aoco_compression_large_01:
 aoco_compression_large_02:
 	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_02
 
-aoco_compression_large_03:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_03
-
-aoco_compression_large_04:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_04
-
 aoco_compression_small:
 	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_small
 
