@@ -182,7 +182,11 @@ See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
 
 gpperfmon is dependent on several libraries like apr, apu, and libsigar
 
-## Development with Docker
+## Development with Native Docker Client
+
+See [README.docker.md](README.docker.md).
+
+## Development with Docker Machine
 
 We provide a docker image with all dependencies required to compile and test
 GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
