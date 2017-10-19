@@ -4,7 +4,6 @@
 <topic id="topic1">
   <title id="by20941">CREATE RESOURCE GROUP</title>
   <body>
-    <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
     <p id="sql_command_desc">Defines a new resource group.</p>
     <section id="section2">
       <title>Synopsis</title>

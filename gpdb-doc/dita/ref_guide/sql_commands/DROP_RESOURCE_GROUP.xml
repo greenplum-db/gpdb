@@ -2,7 +2,6 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="dc20941">DROP RESOURCE GROUP</title><body>
-    <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note>
     <p id="sql_command_desc">Removes a resource group.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">DROP RESOURCE GROUP <varname>group_name</varname></codeblock></section><section id="section3"><title>Description</title><p>This command removes a resource group from Greenplum
 Database. Only a superuser
 can drop a resource group.</p><p>To drop a resource group, the group cannot be assigned to any roles,
