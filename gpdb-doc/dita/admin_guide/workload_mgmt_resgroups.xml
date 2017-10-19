@@ -90,11 +90,15 @@
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system CPU resources to allocate to resource groups on each Greenplum Database
         segment node. The remaining CPU resources are used for the OS kernel and the Greenplum
-        Database daemon processes. The default <codeph>gp_resource_group_cpu_limit</codeph> value is
-        .9 (90%).</p>
+        Database auxiliary daemon processes. The default
+        <codeph>gp_resource_group_cpu_limit</codeph> value is .9 (90%).</p>
       <note>The default <codeph>gp_resource_group_cpu_limit</codeph> value may not leave sufficient
         CPU resources if you are running other workloads on your Greenplum Database cluster nodes,
         so be sure to adjust this server configuration parameter accordingly.</note>
+      <note type="warning">Do not set <codeph>gp_resource_group_cpu_limit</codeph> to a value
+         very close to, or equal, to <codeph>1</codeph>. Doing so may result in high workload
+         queries taking near all CPU resources, potentially starving Greenplum
+         Database auxiliary processes.</note>
       <p>The Greenplum Database node CPU percentage is further divided equally among each segment on
         the Greenplum node. Each resource group reserves a percentage of the segment CPU for
         resource management. You identify this percentage via the <codeph>CPU_RATE_LIMIT</codeph>
