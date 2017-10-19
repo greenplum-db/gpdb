@@ -84,10 +84,21 @@ function setup_singlecluster() {
 	popd
 }
 
+function setup_hadoop_client() {
+	local hdfsrepo=$1
+	# TAR-based setup, edit the properties in pxf-env.sh to correct value
+	sed -i -e "s|^[[:blank:]]HADOOP_DISTRO=.*$|HADOOP_DISTRO=TAR|g" ${PXF_HOME}/conf/pxf-env.sh
+	sed -i -e "s|^[[:blank:]]HADOOP_HOME=.*$|HADOOP_HOME=${hdfsrepo}/hadoop|g" ${PXF_HOME}/conf/pxf-env.sh
+	sed -i -e "s|^[[:blank:]]HIVE_HOME=.*$|HIVE_HOME=${hdfsrepo}/hive|g" ${PXF_HOME}/conf/pxf-env.sh
+	sed -i -e "s|^[[:blank:]]HBASE_HOME=.*$|HBASE_HOME=${hdfsrepo}/hbase|g" ${PXF_HOME}/conf/pxf-env.sh
+	echo "Updated ${PXF_HOME}/conf/pxf-env.sh"
+	cat ${PXF_HOME}/conf/pxf-env.sh
+}
+
 function start_pxf() {
 	local hdfsrepo=$1
 	pushd ${PXF_HOME} > /dev/null
-	su gpadmin -c "bash ./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop --hive-home ${hdfsrepo}/hive --hbase-home ${hdfsrepo}/hbase"
+	su gpadmin -c "bash ./bin/pxf init"
 	su gpadmin -c "bash ./bin/pxf start"
 	popd > /dev/null
 }
@@ -110,6 +121,7 @@ function _main() {
 	time make_cluster
 
 	time setup_singlecluster
+	time setup_hadoop_client $(pwd)/singlecluster
 	time start_pxf $(pwd)/singlecluster
 	chown -R gpadmin:gpadmin $(pwd)
 	time run_regression_test
