@@ -192,6 +192,9 @@ struct ResGroupControl
 	ResGroupData	groups[1];
 };
 
+/* hooks */
+resgroup_assign_hook_type resgroup_assign_hook = NULL;
+
 /* static variables */
 
 static ResGroupControl *pResGroupControl = NULL;
@@ -250,6 +253,7 @@ static void slotpoolPushSlot(ResGroupSlotData *slot);
 static ResGroupSlotData *slotpoolPopSlot(void);
 static ResGroupSlotData *groupGetSlot(ResGroupData *group);
 static void groupPutSlot(ResGroupData *group, ResGroupSlotData *slot);
+static Oid decideResGroupId(void);
 static ResGroupData *decideResGroup(void);
 static ResGroupSlotData *groupAcquireSlot(ResGroupData *group);
 static void groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot);
@@ -1523,6 +1527,23 @@ groupReleaseMemQuota(ResGroupData *group, ResGroupSlotData *slot)
 }
 
 /*
+ * Pick a resource group for the current transaction.
+ */
+static Oid
+decideResGroupId(void)
+{
+	Oid groupId = InvalidOid;
+
+	if (resgroup_assign_hook)
+		groupId = resgroup_assign_hook();
+
+	if (groupId == InvalidOid)
+		groupId = GetResGroupIdForRole(GetUserId());
+
+	return groupId;
+}
+
+/*
  * Decide the proper resource group for current role.
  *
  * An exception is thrown if current role is invalid.
@@ -1539,25 +1560,18 @@ decideResGroup(void)
 	Assert(!selfIsAssigned());
 
 	/* always find out the up-to-date resgroup id */
-	groupId = GetResGroupIdForRole(GetUserId());
-	if (groupId == InvalidOid)
-		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
+	groupId = decideResGroupId();
 
 	LWLockAcquire(ResGroupLock, LW_EXCLUSIVE);
 	group = ResGroupHashFind(groupId, false);
+
 	if (!group)
 	{
-		/*
-		 * this function is called before the transaction is started,
-		 * so we have to explicitly release the LWLock before error out.
-		 */
-		LWLockRelease(ResGroupLock);
-		Assert(selfIsUnassigned());
-
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("cannot find a valid resource group for current role")));
+		groupId = superuser() ? ADMINRESGROUP_OID : DEFAULTRESGROUP_OID;
+		group = ResGroupHashFind(groupId, false);
 	}
+
+	Assert(group != NULL);
 
 	selfSetGroup(group);
 	LWLockRelease(ResGroupLock);

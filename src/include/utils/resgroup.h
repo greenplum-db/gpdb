@@ -100,7 +100,16 @@ extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
 
-/* Type of statistic infomation */
+/*
+ * Resource Group assignment hook.
+ *
+ * This hook can be set by an extension to control how queries are assigned to
+ * a resource group.
+ */
+typedef Oid (*resgroup_assign_hook_type)(void);
+extern PGDLLIMPORT resgroup_assign_hook_type resgroup_assign_hook;
+
+/* Type of statistic information */
 typedef enum
 {
 	RES_GROUP_STAT_UNKNOWN = -1,
