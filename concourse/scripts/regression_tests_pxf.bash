@@ -111,7 +111,8 @@ function setup_hadoop_client() {
 			sed -i -e "s|^[[:blank:]]*export HBASE_HOME=.*$|export HBASE_HOME=${hdfsrepo}/hbase|g" ${PXF_HOME}/conf/pxf-env.sh
 			;;
 		*)
-			fail "Unknown HADOOP_CLIENT=${HADOOP_CLIENT} parameter value"
+			echo "FATAL: Unknown HADOOP_CLIENT=${HADOOP_CLIENT} parameter value"
+			exit 1
 			;;
 	esac
 
