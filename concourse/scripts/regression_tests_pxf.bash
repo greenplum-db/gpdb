@@ -143,10 +143,12 @@ function _main() {
 	time configure
 	time install_gpdb
 	time setup_gpadmin_user
-	time make_cluster
 
+	# setup hadoop before making GPDB cluster to use system python for yum install
 	time setup_singlecluster
 	time setup_hadoop_client $(pwd)/singlecluster
+
+	time make_cluster
 	time start_pxf $(pwd)/singlecluster
 	chown -R gpadmin:gpadmin $(pwd)
 	time run_regression_test
