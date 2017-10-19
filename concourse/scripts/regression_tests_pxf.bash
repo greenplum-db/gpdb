@@ -85,11 +85,24 @@ function setup_singlecluster() {
 }
 
 function install_hadoop_client_rpms() {
+	local hdfsrepo=$1
+	local yum_repofile_url=$2
+
 	pushd /etc/yum.repos.d > /dev/null
-	wget $1
+	# download yum repo definition file for the vendor stack
+	wget ${yum_repofile_url}
+	# install required RPMs
 	yum install -y hadoop-client
 	yum install -y hive
 	yum install -y hbase
+	# copy cluster configuration files from single cluster
+	mkdir -p /etc/hadoop/conf
+	cp ${hdfsrepo}/hadoop/etc/hadoop/core-site.xml /etc/hadoop/conf/
+	cp ${hdfsrepo}/hadoop/etc/hadoop/hdfs-site.xml /etc/hadoop/conf/
+	mkdir -p /etc/hive/conf
+	cp ${hdfsrepo}/hive/conf/hive-site.xml /etc/hive/conf
+	mkdir -p /etc/hbase/conf
+	cp ${hdfsrepo}/hbase/conf/hbase-site.xml /etc/hbase/conf
 	popd
 }
 
@@ -98,10 +111,10 @@ function setup_hadoop_client() {
 
 	case ${HADOOP_CLIENT} in
 		CDH)
-			install_hadoop_client_rpms "https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo"
+			install_hadoop_client_rpms ${hdfsrepo} "https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo"
 			;;
 		HDP)
-			install_hadoop_client_rpms "http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo"
+			install_hadoop_client_rpms ${hdfsrepo} "http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo"
 			;;
 		TAR)
 			# TAR-based setup, edit the properties in pxf-env.sh to correct value
