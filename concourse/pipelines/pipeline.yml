@@ -2100,6 +2100,7 @@ jobs:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
+            aws_instance-node-instance_type: m4.large
       - task: gen_cluster1
         tags: ["gpdb5_ccp_external_worker"]
         file: ccp_src/ci/tasks/gen_cluster.yml
@@ -2114,6 +2115,7 @@ jobs:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
+            aws_instance-node-instance_type: m4.large
             cluster_suffix: "-2"
       - task: gen_cluster2
         tags: ["gpdb5_ccp_external_worker"]
@@ -2705,6 +2707,7 @@ jobs:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
+            aws_instance-node-instance_type: m4.large
       - task: gen_cluster1
         tags: ["gpdb5_ccp_external_worker"]
         file: ccp_src/ci/tasks/gen_cluster.yml
@@ -2719,6 +2722,7 @@ jobs:
           <<: *ccp_default_params
           vars:
             <<: *ccp_default_vars
+            aws_instance-node-instance_type: m4.large
             cluster_suffix: "-2"
       - task: gen_cluster2
         tags: ["gpdb5_ccp_external_worker"]
