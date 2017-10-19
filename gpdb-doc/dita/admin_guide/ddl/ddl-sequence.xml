@@ -38,7 +38,8 @@
       <p>When you create a new sequence, Greenplum Database sets the sequence
          <codeph>is_called</codeph> attribute to <codeph>false</codeph>.
          Invoking <codeph>nextval()</codeph> on a newly-created sequence does not increment
-         the sequence counter and returns the sequence start value.</p>
+         the sequence counter, but returns the sequence start value and sets
+         <codeph>is_called</codeph> to <codeph>true</codeph>.</p>
     </body>
   </topic>
   <topic id="topic88" xml:lang="en">
@@ -118,7 +119,8 @@
       <p>When you alter a sequence start value with the <codeph>ALTER SEQUENCE</codeph> command, Greenplum Database sets the sequence's
         <codeph>is_called</codeph> attribute to <codeph>false</codeph>. The first
         <codeph>nextval()</codeph> invoked after restarting a sequence does not advance the
-        sequence counter, and returns the sequence restart value.
+        sequence counter, but returns the sequence restart value and sets
+         <codeph>is_called</codeph> to <codeph>true</codeph>.
       </p>
     </body>
   </topic>
