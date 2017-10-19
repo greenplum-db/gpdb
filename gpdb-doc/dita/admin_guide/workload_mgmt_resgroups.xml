@@ -4,9 +4,6 @@
 <topic id="topic1" xml:lang="en">
   <title id="iz173472">Using Resource Groups</title>
   <body>
-    <note type="warning">Resource groups are an experimental feature and are not intended for use in
-      a production environment. Experimental features are subject to change without notice in future
-      releases.</note>
     <p>You can use resource groups to manage the number of active queries that may execute
       concurrently in your Greenplum Database cluster. With resource groups, you can also manage the
       amount of CPU and memory resources Greenplum allocates to each query.</p>
@@ -195,9 +192,11 @@
       <note type="warning">Significant <ph otherprops="pivotal">Pivotal </ph>Greenplum Database
         performance degradation has been observed when enabling resource group-based workload
         management on <ph otherprops="pivotal">supported versions of </ph>RedHat 6.x, CentOS 6.x,
-        and SuSE 11 systems. The issue is due to a Linux cgroup kernel bug. The bug has been fixed
-        in supported versions of CentOS 7.x and Red Hat 7.x systems, and in Red Hat 6 with kernel
-        version 2.6.32-696 or higher.</note>
+        and SuSE 11 systems. This issue is caused by a Linux cgroup kernel bug. The bug has been
+        fixed in <ph otherprops="pivotal">supported versions of </ph>CentOS 7.x and Red Hat 7.x
+        systems, and in Red Hat 6 with kernel version 2.6.32-696 or higher. <ph otherprops="pivotal"
+          >Pivotal does not support the resource groups feature on SuSE 11 for production use, due
+          to the available kernel version. </ph></note>
       <section id="topic833" xml:lang="en">
         <title>Prerequisite</title>
         <p>Greenplum Database resource groups use Linux Control Groups (cgroups) to manage CPU
