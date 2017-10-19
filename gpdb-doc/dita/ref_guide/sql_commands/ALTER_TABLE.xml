@@ -625,13 +625,14 @@ ALTER TABLE <varname>name</varname>
                                 </plentry>
                                 <plentry>
                                         <pt>SPLIT DEFAULT PARTITION</pt>
-                                        <pd>Splits a default partition. In a multi-level partition
-                                                design, you can only split the lowest level default
-                                                partitions (those that contain data). Splitting a
-                                                default partition creates a new partition containing
-                                                the values specified and leaves the default
-                                                partition containing any values that do not match to
-                                                an existing partition.</pd>
+                                        <pd>Splits a default partition. Only a range partition can
+                                                be split, not a list partition. In a multi-level
+                                                partition design, you can only split the lowest
+                                                level default partitions (those that contain data).
+                                                Splitting a default partition creates a new
+                                                partition containing the values specified and leaves
+                                                the default partition containing any values that do
+                                                not match to an existing partition.</pd>
                                         <pd><b>AT</b> - For list partitioned tables, specifies a
                                                 single list value that should be used as the
                                                 criteria for the split. </pd>

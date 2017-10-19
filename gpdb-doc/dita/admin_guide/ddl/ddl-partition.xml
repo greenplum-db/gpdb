@@ -113,10 +113,11 @@
         eliminated. See <xref href="../query/topics/query-profiling.xml#topic39"/> for more about
         partition elimination.</p>
       <note type="warning">Be very careful with multi-level partitioning because the number of
-        partition files can grow very quickly. For example, if a table is partitioned by both day and
-        city, and there are 1,000 days of data and 1,000 cities, the total number of partitions is one
-        million. Column-oriented tables store each column in a physical table, so if this table has
-        100 columns, the system would be required to manage 100 million files for the table.</note>
+        partition files can grow very quickly. For example, if a table is partitioned by both day
+        and city, and there are 1,000 days of data and 1,000 cities, the total number of partitions
+        is one million. Column-oriented tables store each column in a physical table, so if this
+        table has 100 columns, the system would be required to manage 100 million files for the
+        table.</note>
       <p>Before settling on a multi-level partitioning strategy, consider a single level partition
         with bitmap indexes. Indexes slow down data loads, so performance testing with your data and
         schema is recommended to decide on the best strategy. </p>
@@ -714,8 +715,8 @@ WITH TABLE jan12;
             default partition, is valid for the default partition. For example, the data in the new
             default partition must not contain data that would be valid in other leaf child
             partitions of the partitioned table. Otherwise, queries against the partitioned table
-            with the exchanged default partition that are executed by GPORCA
-            might return incorrect results.</note></p>
+            with the exchanged default partition that are executed by GPORCA might return incorrect
+            results.</note></p>
       </body>
     </topic>
     <topic id="topic84" xml:lang="en">
@@ -723,8 +724,9 @@ WITH TABLE jan12;
       <body>
         <p>Splitting a partition divides a partition into two partitions. You can split a partition
           using the <codeph>ALTER TABLE</codeph> command. You can split partitions only at the
-          lowest level of your partition hierarchy and only range partitions can be split, not list
-          partitions. The split value you specify goes into the <i>latter</i> partition. </p>
+          lowest level of your partition hierarchy (partitions that contain data) and only range
+          partitions can be split, not list partitions. The split value you specify goes into the
+            <i>latter</i> partition. </p>
         <p>For example, to split a monthly partition into two with the first partition containing
           dates January 1-15 and the second partition containing dates January 16-31:</p>
         <p>
