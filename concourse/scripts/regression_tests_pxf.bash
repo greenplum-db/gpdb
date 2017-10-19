@@ -84,14 +84,38 @@ function setup_singlecluster() {
 	popd
 }
 
+function install_hadoop_client_rpms() {
+	pushd /etc/yum.repos.d > /dev/null
+	wget $1
+	yum install -y hadoop-client
+	yum install -y hive
+	yum install -y hbase
+	popd
+}
+
 function setup_hadoop_client() {
 	local hdfsrepo=$1
-	# TAR-based setup, edit the properties in pxf-env.sh to correct value
-	sed -i -e "s|^[[:blank:]]*export HADOOP_DISTRO=.*$|export HADOOP_DISTRO=TAR|g" ${PXF_HOME}/conf/pxf-env.sh
-	sed -i -e "s|^[[:blank:]]*export HADOOP_HOME=.*$|export HADOOP_HOME=${hdfsrepo}/hadoop|g" ${PXF_HOME}/conf/pxf-env.sh
-	sed -i -e "s|^[[:blank:]]*export HIVE_HOME=.*$|export HIVE_HOME=${hdfsrepo}/hive|g" ${PXF_HOME}/conf/pxf-env.sh
-	sed -i -e "s|^[[:blank:]]*export HBASE_HOME=.*$|export HBASE_HOME=${hdfsrepo}/hbase|g" ${PXF_HOME}/conf/pxf-env.sh
-	echo "Updated ${PXF_HOME}/conf/pxf-env.sh"
+
+	case ${HADOOP_CLIENT} in
+		CDH)
+			install_hadoop_client_rpms "https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo"
+			;;
+		HDP)
+			install_hadoop_client_rpms "http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo"
+			;;
+		TAR)
+			# TAR-based setup, edit the properties in pxf-env.sh to correct value
+			sed -i -e "s|^[[:blank:]]*export HADOOP_DISTRO=.*$|export HADOOP_DISTRO=TAR|g" ${PXF_HOME}/conf/pxf-env.sh
+			sed -i -e "s|^[[:blank:]]*export HADOOP_HOME=.*$|export HADOOP_HOME=${hdfsrepo}/hadoop|g" ${PXF_HOME}/conf/pxf-env.sh
+			sed -i -e "s|^[[:blank:]]*export HIVE_HOME=.*$|export HIVE_HOME=${hdfsrepo}/hive|g" ${PXF_HOME}/conf/pxf-env.sh
+			sed -i -e "s|^[[:blank:]]*export HBASE_HOME=.*$|export HBASE_HOME=${hdfsrepo}/hbase|g" ${PXF_HOME}/conf/pxf-env.sh
+			;;
+		*)
+			fail "Unknown HADOOP_CLIENT=${HADOOP_CLIENT} parameter value"
+			;;
+	esac
+
+	echo "Contents of ${PXF_HOME}/conf/pxf-env.sh :"
 	cat ${PXF_HOME}/conf/pxf-env.sh
 }
 
