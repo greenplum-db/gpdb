@@ -2,6 +2,7 @@
 #
 # Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
+import sys
 
 from gppylib.commands.base import ExecutionError
 from gppylib.operations.utils import RemoteOperation, ParallelOperation
@@ -15,6 +16,13 @@ class UtilsTestCase(GpTestCase):
     """
     Requires GPHOME set. Does actual ssh to localhost.
     """
+
+    def setUp(self):
+        self.old_sys_argv = sys.argv
+        sys.argv = ['utils.py']
+
+    def tearDown(self):
+        sys.argv = self.old_sys_argv
 
     def test_Remote_basic(self):
         """ Basic RemoteOperation test """

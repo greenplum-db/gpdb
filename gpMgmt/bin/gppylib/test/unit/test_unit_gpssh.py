@@ -17,7 +17,11 @@ class GpSshTestCase(GpTestCase):
         gpssh_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpssh")
         self.subject = imp.load_source('gpssh', gpssh_file)
 
+        self.old_sys_argv = sys.argv
         sys.argv = []
+
+    def tearDown(self):
+        sys.argv = self.old_sys_argv
 
     @patch('sys.exit')
     def test_when_run_without_args_prints_help_text(self, sys_exit_mock):
