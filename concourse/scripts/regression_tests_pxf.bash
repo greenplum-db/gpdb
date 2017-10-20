@@ -117,11 +117,8 @@ function setup_hadoop_client() {
 			install_hadoop_client_rpms ${hdfsrepo} "http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo"
 			;;
 		TAR)
-			# TAR-based setup, edit the properties in pxf-env.sh to correct value
-			sed -i -e "s|^[[:blank:]]*export HADOOP_DISTRO=.*$|export HADOOP_DISTRO=TAR|g" ${PXF_HOME}/conf/pxf-env.sh
-			sed -i -e "s|^[[:blank:]]*export HADOOP_HOME=.*$|export HADOOP_HOME=${hdfsrepo}/hadoop|g" ${PXF_HOME}/conf/pxf-env.sh
-			sed -i -e "s|^[[:blank:]]*export HIVE_HOME=.*$|export HIVE_HOME=${hdfsrepo}/hive|g" ${PXF_HOME}/conf/pxf-env.sh
-			sed -i -e "s|^[[:blank:]]*export HBASE_HOME=.*$|export HBASE_HOME=${hdfsrepo}/hbase|g" ${PXF_HOME}/conf/pxf-env.sh
+			# TAR-based setup, edit the properties in pxf-env.sh to specify HADOOP_ROOT value
+			sed -i -e "s|^[[:blank:]]*export HADOOP_ROOT=.*$|export HADOOP_ROOT=${hdfsrepo}|g" ${PXF_HOME}/conf/pxf-env.sh
 			;;
 		*)
 			echo "FATAL: Unknown HADOOP_CLIENT=${HADOOP_CLIENT} parameter value"
