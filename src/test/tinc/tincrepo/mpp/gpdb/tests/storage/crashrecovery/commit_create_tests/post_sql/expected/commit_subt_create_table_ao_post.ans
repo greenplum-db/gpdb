@@ -1,7 +1,7 @@
 -- start_ignore
 -- end_ignore
-analyze;
-ANALYZE
+set optimizer_print_missing_stats=off;
+SET
 select count (*) from commit_subt_tab_distby_ao1 ;
  count 
 -------
