@@ -916,7 +916,7 @@ agg_hash_initial_pass(AggState *aggstate)
 				break;
 			}
 
-			if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+			if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 			{
 				/* Update in-memory hash table statistics before spilling. */
 				agg_hash_table_stat_upd(hashtable);
@@ -983,7 +983,7 @@ agg_hash_initial_pass(AggState *aggstate)
 		}
 	}
 
-	if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+	if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 	{
 		/* Update in-memory hash table statistics if not already done when spilling */
 		agg_hash_table_stat_upd(hashtable);
@@ -1771,7 +1771,7 @@ agg_hash_reload(AggState *aggstate)
 
 			elog(gp_workfile_caching_loglevel, "HashAgg: respill occurring in agg_hash_reload while loading batch data");
 
-			if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+			if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 			{
 				/* Update in-memory hash table statistics before spilling. */
 				agg_hash_table_stat_upd(hashtable);
@@ -1858,7 +1858,7 @@ agg_hash_reload(AggState *aggstate)
 			 GET_BUFFER_SIZE(hashtable));
 	}
 
-	if (!hashtable->is_spilling && aggstate->ss.ps.instrument)
+	if (!hashtable->is_spilling && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 	{
 		/* Update in-memory hash table statistics if not already done when spilling */
 		agg_hash_table_stat_upd(hashtable);
@@ -2057,7 +2057,7 @@ agg_hash_next_pass(AggState *aggstate)
 	}
 	
 	/* Report statistics for EXPLAIN ANALYZE. */
-	if (!more && aggstate->ss.ps.instrument)
+	if (!more && aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 	{
 		Instrumentation    *instr = aggstate->ss.ps.instrument;
 

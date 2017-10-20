@@ -157,7 +157,7 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 
 	ExecAssignProjectionInfo(planState, tupDesc);
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 	        assertOpState->ps.cdbexplainbuf = makeStringInfo();
 

@@ -268,7 +268,7 @@ initialize_aggregates(AggState *aggstate,
 				 * CDB: If EXPLAIN ANALYZE, let all of our tuplesort operations
 				 * share our Instrumentation object and message buffer.
 				 */
-				if (aggstate->ss.ps.instrument)
+				if (aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 					tuplesort_set_instrument_mk((Tuplesortstate_mk *) peraggstate->sortstate,
 							aggstate->ss.ps.instrument,
 							aggstate->ss.ps.cdbexplainbuf);
@@ -305,7 +305,7 @@ initialize_aggregates(AggState *aggstate,
 				 * CDB: If EXPLAIN ANALYZE, let all of our tuplesort operations
 				 * share our Instrumentation object and message buffer.
 				 */
-				if (aggstate->ss.ps.instrument)
+				if (aggstate->ss.ps.instrument && aggstate->ss.ps.instrument->need_cdb)
 					tuplesort_set_instrument((Tuplesortstate *) peraggstate->sortstate,
 							aggstate->ss.ps.instrument,
 							aggstate->ss.ps.cdbexplainbuf);
@@ -1061,7 +1061,7 @@ ExecAgg(AggState *node)
 				case HASHAGG_END_OF_PASSES:
 					node->agg_done = true;
 					/* Append stats before destroying the htable for EXPLAIN ANALYZE */
-					if (node->ss.ps.instrument)
+					if (node->ss.ps.instrument && (node->ss.ps.instrument)->need_cdb)
 					{
 						agg_hash_explain(node);
 					}
@@ -1764,7 +1764,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	/*
 	 * CDB: Offer extra info for EXPLAIN ANALYZE.
 	 */
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 		/* Allocate string buffer. */
 		aggstate->ss.ps.cdbexplainbuf = makeStringInfo();

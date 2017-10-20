@@ -443,7 +443,8 @@ postquel_start(execution_state *es, SQLFunctionCachePtr fcache)
 								 fcache->src,
 								 snapshot, InvalidSnapshot,
 								 None_Receiver,
-								 fcache->paramLI, false);
+								 fcache->paramLI,
+								 GP_INSTRUMENT_OPTS);
 
 		if (gp_enable_gpperfmon 
 			&& Gp_role == GP_ROLE_DISPATCH 

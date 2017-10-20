@@ -1,0 +1,114 @@
+-- start_ignore
+-- Isolation test for instrumentation in shmem
+-- One session executing a query then another session
+-- try to cancel/terminate the query, instrumentation
+-- slots in shmem should be recycled correctly.
+
+DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE;
+DROP
+CREATE SCHEMA QUERY_METRICS;
+CREATE
+SET SEARCH_PATH=QUERY_METRICS;
+SET
+
+CREATE EXTERNAL WEB TABLE __gp_localid ( localid    int ) EXECUTE E'echo $GP_SEGMENT_ID' FORMAT 'TEXT';
+CREATE
+GRANT SELECT ON TABLE __gp_localid TO public;
+GRANT
+
+CREATE EXTERNAL WEB TABLE __gp_masterid ( masterid    int ) EXECUTE E'echo $GP_SEGMENT_ID' ON MASTER FORMAT 'TEXT';
+CREATE
+GRANT SELECT ON TABLE __gp_masterid TO public;
+GRANT
+
+CREATE FUNCTION gp_instrument_shmem_detail_f() RETURNS SETOF RECORD AS '$libdir/gp_instrument_shmem', 'gp_instrument_shmem_detail' LANGUAGE C IMMUTABLE;
+CREATE
+GRANT EXECUTE ON FUNCTION gp_instrument_shmem_detail_f() TO public;
+GRANT
+
+CREATE VIEW gp_instrument_shmem_detail AS WITH all_entries AS ( SELECT C.* FROM __gp_localid, gp_instrument_shmem_detail_f() as C ( tmid int4,ssid int4,ccnt int2,segid int2,pid int4 ,nid int2,tuplecount int8,nloops int8,ntuples int8 ) UNION ALL SELECT C.* FROM __gp_masterid, gp_instrument_shmem_detail_f() as C ( tmid int4,ssid int4,ccnt int2,segid int2,pid int4 ,nid int2,tuplecount int8,nloops int8,ntuples int8 )) SELECT tmid, ssid, ccnt,segid, pid, nid, tuplecount, nloops, ntuples FROM all_entries ORDER BY segid;
+CREATE
+GRANT SELECT ON gp_instrument_shmem_details TO public;
+ERROR:  relation "gp_instrument_shmem_details" does not exist
+
+CREATE TABLE a (id int) DISTRIBUTED BY (id);
+CREATE
+INSERT INTO a SELECT * FROM generate_series(1, 50);
+INSERT 50
+SET OPTIMIZER=OFF;
+SET
+ANALYZE a;
+ANALYZE
+-- end_ignore
+
+-- only this query in instrument slots, expected 1
+SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, ccnt) t;
+count
+-----
+1    
+(1 row)
+
+CREATE TABLE foo AS SELECT i a, i b FROM generate_series(1, 10) i;
+CREATE 10
+
+-- expect this query terminated by 'test pg_terminate_backend'
+1&:EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(20) IS NULL;  <waiting ...>
+-- extract the pid for the previous query
+SELECT pg_terminate_backend(procpid, 'test pg_terminate_backend') FROM pg_stat_activity WHERE current_query LIKE 'EXPLAIN ANALYZE CREATE TEMP TABLE t1 AS SELECT%' ORDER BY procpid LIMIT 1;
+pg_terminate_backend
+--------------------
+t                   
+(1 row)
+1<:  <... completed>
+FATAL:  terminating connection due to administrator command: "test pg_terminate_backend"
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+1q: ... <quitting>
+
+-- query backend to ensure no PANIC on postmaster
+SELECT count(*) FROM foo;
+count
+-----
+10   
+(1 row)
+
+-- Expected result is 1 row, means only current query in instrument slots,
+-- If more than one row returned, means previous test has leaked slots.
+SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, ccnt) t;
+count
+-----
+1    
+(1 row)
+
+-- expect this query cancelled by 'test pg_cancel_backend'
+2&:EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT count(*) FROM QUERY_METRICS.foo WHERE pg_sleep(20) IS NULL;  <waiting ...>
+-- extract the pid for the previous query
+SELECT pg_cancel_backend(procpid, 'test pg_cancel_backend') FROM pg_stat_activity WHERE current_query LIKE 'EXPLAIN ANALYZE CREATE TEMP TABLE t2 AS SELECT%' ORDER BY procpid LIMIT 1;
+pg_cancel_backend
+-----------------
+t                
+(1 row)
+2<:  <... completed>
+
+2q: ... <quitting>
+
+-- query backend to ensure no PANIC on postmaster
+SELECT count(*) FROM foo;
+count
+-----
+10   
+(1 row)
+
+-- Expected result is 1 row, means only current query in instrument slots,
+-- If more than one row returned, means previous test has leaked slots.
+SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, ccnt) t;
+count
+-----
+1    
+(1 row)
+
+-- start_ignore
+DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE;
+DROP
+-- end_ignore

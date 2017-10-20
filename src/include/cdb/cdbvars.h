@@ -910,6 +910,8 @@ extern bool gpvars_assign_gp_enable_gpperfmon(bool newval, bool doit, GucSource 
 extern bool gpvars_assign_gp_gpperfmon_send_interval(int newval, bool doit, GucSource source);
 extern bool gp_enable_gpperfmon;
 extern int gp_gpperfmon_send_interval;
+extern bool gp_enable_query_metrics;
+extern int gp_instrument_shmem_size;
 extern bool force_bitmap_table_scan;
 
 extern bool dml_ignore_target_partition_check;

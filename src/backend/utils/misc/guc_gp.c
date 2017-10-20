@@ -578,6 +578,10 @@ bool		optimizer_analyze_midlevel_partition;
 static int	gp_server_version_num;
 static char *gp_server_version_string;
 
+/* Query Metrics */
+bool		gp_enable_query_metrics = false;
+int			gp_instrument_shmem_size = 5120;
+
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
 
@@ -1977,6 +1981,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_enable_gpperfmon,
 		false, gpvars_assign_gp_enable_gpperfmon, NULL
+	},
+
+	{
+		{"gp_enable_query_metrics", PGC_USERSET, UNGROUPED,
+			gettext_noop("Enable query execution metrics collection."),
+			NULL,
+			GUC_GPDB_ADDOPT
+		},
+		&gp_enable_query_metrics,
+		false, NULL, NULL
 	},
 
 	{
@@ -4188,6 +4202,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gpperfmon_port,
 		8888, 1024, 65535, NULL, NULL
+	},
+
+	{
+		{"gp_instrument_shmem_size", PGC_POSTMASTER, UNGROUPED,
+			gettext_noop("Sets the size of shmem allocated for instrumentation."),
+			NULL,
+			GUC_UNIT_KB
+		},
+		&gp_instrument_shmem_size,
+		5120, 0, 131072, NULL, NULL
 	},
 
 	{

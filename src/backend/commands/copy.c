@@ -1603,7 +1603,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		/* Create a QueryDesc requesting no output */
 		cstate->queryDesc = CreateQueryDesc(plan, queryString,
 											ActiveSnapshot, InvalidSnapshot,
-											dest, NULL, false);
+											dest, NULL,
+											GP_INSTRUMENT_OPTS);
 
 		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 		{

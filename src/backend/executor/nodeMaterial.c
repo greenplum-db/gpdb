@@ -112,7 +112,7 @@ ExecMaterial(MaterialState *node)
 		node->ts_pos = (void *) tsa;
 
         /* CDB: Offer extra info for EXPLAIN ANALYZE. */
-        if (node->ss.ps.instrument)
+        if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
         {
             /* Let the tuplestore share our Instrumentation object. */
 			ntuplestore_setinstrument(ts, node->ss.ps.instrument);

@@ -99,7 +99,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 				break;
 
 	        /* CDB: If EXPLAIN ANALYZE, let bitmap share our Instrumentation. */
-	        if (scanState->ss.ps.instrument)
+	        if (scanState->ss.ps.instrument && (scanState->ss.ps.instrument)->need_cdb)
 	        {
 	            tbm_bitmap_set_instrument(bitmap, scanState->ss.ps.instrument);
 	        }

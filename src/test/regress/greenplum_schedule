@@ -24,6 +24,11 @@ test: indexjoin as_alias regex_gp gpparams with_clause transient_types gp_rules
 # dispatch should always run seperately from other cases.
 test: dispatch
 
+# enable query metrics cluster GUC
+test: instr_in_shmem_setup
+# run separately - because slot counter may influenced by other parallel queries
+test: instr_in_shmem
+
 # deadlock tests run separately - because we don't know which one gets stuck.
 test: deadlock
 
@@ -32,6 +37,9 @@ test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill 
 # test workfiles compressed using zlib
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
+
+# Check for shmem leak for instrumentation slots before gpdb restart
+test: instr_in_shmem_verify
 
 # This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
 # It will also use faultinjector - so it needs to be in a group by itself.
@@ -188,5 +196,8 @@ test: metadata_track
 test: workfile_mgr_test
 
 test: psql_gp_commands pg_resetxlog
+
+# Check for shmem leak for instrumentation slots
+test: instr_in_shmem_verify
 
 # end of tests

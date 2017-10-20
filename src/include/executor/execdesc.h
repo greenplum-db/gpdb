@@ -132,7 +132,7 @@ typedef struct SliceTable
 	int			nInitPlans;		/* The number of initplan slices allocated */
 	int			localSlice;		/* Index of the slice to execute. */
 	List	   *slices;			/* List of slices */
-	bool		doInstrument;	/* true => collect stats for EXPLAIN ANALYZE */
+	int			instrument_options;	/* OR of InstrumentOption flags */
 	uint32		ic_instance_id;
 } SliceTable;
 
@@ -242,7 +242,7 @@ typedef struct QueryDesc
 	Snapshot	crosscheck_snapshot;	/* crosscheck for RI update/delete */
 	DestReceiver *dest;			/* the destination for tuple output */
 	ParamListInfo params;		/* param values being passed in */
-	bool		doInstrument;	/* TRUE requests runtime instrumentation */
+	int			instrument_options;		/* OR of InstrumentOption flags */
 
 	/* These fields are set by ExecutorStart */
 	TupleDesc	tupDesc;		/* descriptor for result tuples */
@@ -275,7 +275,7 @@ extern QueryDesc *CreateQueryDesc(PlannedStmt *plannedstmt,
 				Snapshot crosscheck_snapshot,
 				DestReceiver *dest,
 				ParamListInfo params,
-				bool doInstrument);
+				int instrument_options);
 
 extern QueryDesc *CreateUtilityQueryDesc(Node *utilitystmt,
 										 const char *sourceText,

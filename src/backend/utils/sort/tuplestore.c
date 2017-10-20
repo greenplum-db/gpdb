@@ -465,7 +465,7 @@ tuplestore_end(Tuplestorestate *state)
 	/*
 	 * CDB: Report statistics to EXPLAIN ANALYZE.
 	 */
-	if (state->instrument)
+	if (state->instrument && state->instrument->need_cdb)
 	{
 		double  nbytes;
 

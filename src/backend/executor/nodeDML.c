@@ -189,7 +189,7 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	ReleaseTupleDesc(dmlstate->junkfilter->jf_cleanTupType);
 	dmlstate->junkfilter->jf_cleanTupType = cleanTupType;
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 	        dmlstate->ps.cdbexplainbuf = makeStringInfo();
 

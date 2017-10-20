@@ -192,7 +192,7 @@ ExecInitSplitUpdate(SplitUpdate *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&splitupdatestate->ps);
 	ExecAssignProjectionInfo(&splitupdatestate->ps, NULL);
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 			splitupdatestate->ps.cdbexplainbuf = makeStringInfo();
 
