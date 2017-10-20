@@ -15,6 +15,27 @@ their environments.
 ./README.macOS.bash
 ```
 
+## Step: Workaround for libreadline / libxml2 on OSX 10.11 (El Capitan)
+
+Symptoms:
+* Running `./configure`,
+* You see output
+  `configure: error: readline library not found`, and
+* in `config.log` you see
+  `ld: file not found: /usr/lib/system/libsystem_symptoms.dylib for architecture x86_64`
+
+There is an issue with Xcode 8.1 on El Capitan. Here's a workaround:
+
+```
+brew install libxml2
+brew link libxml2 --force
+```
+
+Other workarounds may include downgrading to Xcode 7.3, or installing the CLT
+package from Xcode 7.3.
+
+For more info, [this seems to be the best thread](https://github.com/Homebrew/brew/issues/972)
+
 ## Step: verify that you can ssh to your machine name without a password
 ```
 ssh <hostname of your machine>  # e.g., ssh briarwood
