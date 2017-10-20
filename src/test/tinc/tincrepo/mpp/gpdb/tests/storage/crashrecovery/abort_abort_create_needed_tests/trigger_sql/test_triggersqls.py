@@ -22,7 +22,7 @@ Trigger sqls for create_commit tests
 class TestTriggerSQLClass(SQLTestCase):
     '''
     This class contains all the sqls that are part of the trigger phase
-    @gucs gp_create_table_random_default_distribution=off
+    @gucs gp_create_table_random_default_distribution=off;optimizer_print_missing_stats=off
     The sqls in here will get suspended by one of the faults that are triggered in the main run
 
     @gpdiff False

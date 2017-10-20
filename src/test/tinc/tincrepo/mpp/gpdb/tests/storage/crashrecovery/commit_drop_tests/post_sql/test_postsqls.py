@@ -21,7 +21,7 @@ Post sqls for commit_create tests
 '''
 class TestPostSQLClass(SQLTestCase):
     """
-    @gucs gp_create_table_random_default_distribution=off
+    @gucs gp_create_table_random_default_distribution=off;optimizer_print_missing_stats=off
     """
 
     sql_dir = 'sql/'

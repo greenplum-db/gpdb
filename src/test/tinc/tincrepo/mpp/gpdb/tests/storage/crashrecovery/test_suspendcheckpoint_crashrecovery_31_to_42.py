@@ -27,7 +27,7 @@ from mpp.lib.filerep_util import Filerepe2e_Util
 class SuspendcheckpointCrashrecoveryTestCase(ScenarioTestCase):
     '''
     Testing state of prepared transactions upon crash-recovery
-    @gucs gp_create_table_random_default_distribution=off
+    @gucs gp_create_table_random_default_distribution=off;optimizer_print_missing_stats=off
     '''
 
     def __init__(self, methodName):

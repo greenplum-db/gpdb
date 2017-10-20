@@ -1,4 +1,3 @@
-analyze;
 select count (*) from commit_subt_tab_distby_ao1 ;
 select count (*) from commit_subt_tab_distby_ao2 ;
 select count (*) from commit_subt_tab_distby_ao3 ;
