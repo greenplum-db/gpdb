@@ -99,6 +99,8 @@ function install_hadoop_client_rpms() {
 	mkdir -p /etc/hadoop/conf
 	cp ${hdfsrepo}/hadoop/etc/hadoop/core-site.xml /etc/hadoop/conf/
 	cp ${hdfsrepo}/hadoop/etc/hadoop/hdfs-site.xml /etc/hadoop/conf/
+	# mapred below is needed for test for mapreduce.input.fileinputformat.input.dir.recursive to be set to true
+	cp ${hdfsrepo}/hadoop/etc/hadoop/mapred-site.xml /etc/hadoop/conf/
 	mkdir -p /etc/hive/conf
 	cp ${hdfsrepo}/hive/conf/hive-site.xml /etc/hive/conf
 	mkdir -p /etc/hbase/conf
