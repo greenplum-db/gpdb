@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 
 from gppylib.commands.base import ExecutionError
@@ -71,7 +71,7 @@ class UtilsTestCase(GpTestCase):
         except ExecutionError, e:
             self.assertTrue(e.cmd.get_results().stderr.strip().endswith("raise pg.DatabaseError()"))
         else:
-            self.fail("""A pg.DatabaseError should have been raised remotely, and because it cannot 
+            self.fail("""A pg.DatabaseError should have been raised remotely, and because it cannot
                          be pickled cleanly (due to a strange import in pickle.py),
                          an ExecutionError should have ultimately been caused.""")
             # TODO: Check logs on disk. With gplogfilter?
