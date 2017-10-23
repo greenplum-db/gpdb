@@ -83,7 +83,9 @@ fileset = {
     'machine/sys/inline.h':  [],
     # snowball/libstemmer/header.h includes "api.h", without specifying
     # a path. Don't be alarmed by that.
-    'api.h': []
+    'api.h': [],
+    # check src/backend/gp_libpq_fe/README
+    '../../backend/gp_libpq_fe/gp-libpq-unuse.h':  []
 }
 
 

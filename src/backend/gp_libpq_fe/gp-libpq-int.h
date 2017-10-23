@@ -45,6 +45,8 @@
 /* include stuff found in fe only */
 #include "pqexpbuffer.h"
 
+#include "gp-libpq-use.h"
+
 /*
  * POSTGRES backend dependent Constants.
  */

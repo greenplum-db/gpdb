@@ -65,6 +65,8 @@
 #include "nodes/pg_list.h"
 #include "cdb/cdbpartition.h"
 
+#include "gp-libpq-use.h"
+
 static int pqPutMsgBytes(const void *buf, size_t len, PGconn *conn);
 static int pqSendSome(PGconn *conn, int len);
 static int pqSocketCheck(PGconn *conn, int forRead, int forWrite, time_t end_time);

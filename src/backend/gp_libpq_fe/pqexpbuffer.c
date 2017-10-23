@@ -38,6 +38,7 @@
 #include "win32.h"
 #endif
 
+#include "gp-libpq-use.h"
 
 /* All "broken" PQExpBuffers point to this string. */
 static const char oom_buffer[1] = "";

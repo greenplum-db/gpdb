@@ -19,7 +19,11 @@
 #include "gp-libpq-fe.h"
 #include "gp-libpq-int.h"
 
+#include "gp-libpq-use.h"
+
 extern int	pg_fe_sendauth(AuthRequest areq, PGconn *conn);
 extern char *pg_fe_getauthname(PQExpBuffer errorMessage);
+
+#include "gp-libpq-unuse.h"
 
 #endif   /* FE_AUTH_H */

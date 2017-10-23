@@ -49,6 +49,7 @@
 #include "gp-fe-auth.h"
 #include "libpq/md5.h"
 
+#include "gp-libpq-use.h"
 
 /*
  * Respond to AUTH_REQ_SCM_CREDS challenge.

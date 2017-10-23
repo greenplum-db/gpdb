@@ -115,25 +115,25 @@ mockLibpq(PGconn *pgConn, uint32 motionListener, int qePid)
 
 	snprintf(motionListener_str, sizeof(motionListener_str), "%u", motionListener);
 
-	expect_any_count(PQconnectdbParams, keywords, -1);
-	expect_any_count(PQconnectdbParams, values, -1);
-	expect_any_count(PQconnectdbParams, expand_dbname, -1);
-	will_return_count(PQconnectdbParams, pgConn, TOTOAL_SEGMENTS);
+	expect_any_count(gp_PQconnectdbParams, keywords, -1);
+	expect_any_count(gp_PQconnectdbParams, values, -1);
+	expect_any_count(gp_PQconnectdbParams, expand_dbname, -1);
+	will_return_count(gp_PQconnectdbParams, pgConn, TOTOAL_SEGMENTS);
 
-	expect_value_count(PQstatus, conn, pgConn, -1);
-	will_return_count(PQstatus, CONNECTION_OK, -1);
+	expect_value_count(gp_PQstatus, conn, pgConn, -1);
+	will_return_count(gp_PQstatus, CONNECTION_OK, -1);
 
-	expect_value_count(PQsetNoticeReceiver, conn, pgConn, -1);
-	expect_any_count(PQsetNoticeReceiver, proc, -1);
-	expect_any_count(PQsetNoticeReceiver, arg, -1);
-	will_return_count(PQsetNoticeReceiver, CONNECTION_OK, -1);
+	expect_value_count(gp_PQsetNoticeReceiver, conn, pgConn, -1);
+	expect_any_count(gp_PQsetNoticeReceiver, proc, -1);
+	expect_any_count(gp_PQsetNoticeReceiver, arg, -1);
+	will_return_count(gp_PQsetNoticeReceiver, CONNECTION_OK, -1);
 
-	expect_value_count(PQparameterStatus, conn, pgConn, -1);
-	expect_string_count(PQparameterStatus, paramName, "qe_listener_port", -1);
-	will_return_count(PQparameterStatus, motionListener_str, -1);
+	expect_value_count(gp_PQparameterStatus, conn, pgConn, -1);
+	expect_string_count(gp_PQparameterStatus, paramName, "qe_listener_port", -1);
+	will_return_count(gp_PQparameterStatus, motionListener_str, -1);
 
-	expect_value_count(PQbackendPID, conn, pgConn, -1);
-	will_return_count(PQbackendPID, qePid, -1);
+	expect_value_count(gp_PQbackendPID, conn, pgConn, -1);
+	will_return_count(gp_PQbackendPID, qePid, -1);
 }
 
 static void

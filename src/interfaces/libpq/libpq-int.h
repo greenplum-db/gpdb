@@ -45,6 +45,10 @@
 /* include stuff found in fe only */
 #include "pqexpbuffer.h"
 
+#ifdef GP_LIBPQ_USE_H
+#include "../../backend/gp_libpq_fe/gp-libpq-unuse.h"
+#endif
+
 #ifdef ENABLE_GSS
 #if defined(HAVE_GSSAPI_H)
 #include <gssapi.h>

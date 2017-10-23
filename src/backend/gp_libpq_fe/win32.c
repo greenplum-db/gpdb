@@ -32,6 +32,8 @@
 
 #include "win32.h"
 
+#include "gp-libpq-use.h"
+
 /* Declared here to avoid pulling in all includes, which causes name collissions */
 #ifdef ENABLE_NLS
 extern char *

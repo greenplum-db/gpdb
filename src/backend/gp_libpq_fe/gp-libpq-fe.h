@@ -32,6 +32,8 @@ extern		"C"
  */
 #include "postgres_ext.h"
 
+#include "gp-libpq-use.h"
+
 /*
  * Option flags for PQcopyResult
  */

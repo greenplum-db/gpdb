@@ -4,6 +4,8 @@
 #ifndef __win32_h_included
 #define __win32_h_included
 
+#include "gp-libpq-use.h"
+
 /*
  * Some compatibility functions
  */
@@ -33,5 +35,7 @@
  * support for handling Windows Socket errors
  */
 extern const char *winsock_strerror(int err, char *strerrbuf, size_t buflen);
+
+#include "gp-libpq-unuse.h"
 
 #endif

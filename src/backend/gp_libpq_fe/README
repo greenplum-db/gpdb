@@ -1,0 +1,26 @@
+What is gp-libpq-fe?
+
+It's Greenplum modified libpq-fe.
+
+
+Why it's needed?
+
+Greenplum is a MPP system unlike PostgreSQL, it has communications between QD
+and QEs other than clients to server. This requires libpq to carry more
+information, and ignore some workflows such as authentication via unix domain
+socket connection. And at the same time we must keep the standard libpq for
+clients. So we have libpq-fe and gp-libpq-fe at the same time.
+
+
+How this works?
+
+1, gp-libpq-fe is built in server, libpq-fe is in the libpq.so.
+2, we use gp-libpq-use.h and gp-libpq-unuse.h to rename structs, typedefs and
+functions in this directory, which keeps tracks with upstream libpq and allows
+using libpq and gp-libpq in the same process (think about dblink).
+
+
+Please note:
+
+List all the libpq-fe structs, typedefs and functions in gp-libpq-use.h and
+gp-libpq-unuse.h, otherwise you will get warnings / errors while linking.
