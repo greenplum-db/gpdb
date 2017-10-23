@@ -2189,9 +2189,6 @@ ERROR:  Cannot parallelize an UPDATE statement that updates the distribution col
 -- test4: Negative test - Update moving tuple across partition .also violates the check constraint
 UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a ; 
 ERROR:  moving tuple from partition "dml_heap_check_s_1_prt_2" to partition "dml_heap_check_s_1_prt_def" not supported  (seg0 127.0.0.1:40000 pid=18972)
--- test5: Negative test - Update violates multiple check constraint
-UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a, b = NULL  FROM dml_heap_check_r WHERE dml_heap_check_r.b = dml_heap_check_s.b;
-ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
 -- test4: Delete with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_s;

@@ -969,9 +969,6 @@ UPDATE dml_heap_check_s SET b = NULL FROM dml_heap_check_r WHERE dml_heap_check_
 -- test4: Negative test - Update moving tuple across partition .also violates the check constraint
 UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a;
 
--- test5: Negative test - Update violates multiple check constraint
-UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a, b = NULL  FROM dml_heap_check_r WHERE dml_heap_check_r.b = dml_heap_check_s.b;
-
 -- test4: Delete with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
