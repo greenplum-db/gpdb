@@ -10,7 +10,7 @@
             <codeph>TEXT</codeph> and <codeph>CSV</codeph>, or a custom data format with custom
          protocols.</p>
       <p>You can create a custom protocol whenever the available built-in protocols do not suffice
-         for a particular need. For example, could connect Greenplum Database in parallel to another
+         for a particular need. For example, you could connect Greenplum Database in parallel to another
          system directly, and stream data from one to the other without the need to materialize the
          data on disk or use an intermediate process such as <cmdname>gpfdist</cmdname>. </p>
       <ol>
