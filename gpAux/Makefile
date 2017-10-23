@@ -685,12 +685,10 @@ endif
 
 	# ---- Updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(CLIENTINSTLOC)
-	cd client/install/src/unix/ && \
-	$(MAKE) TAR=$(TAR) PRODUCT=Clients PACKAGE=greenplum-clients README=GPClientToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(CLIENTINSTLOC) INSTALL_DIR=../../../..
 
 ifneq "$(findstring win,$(BLD_ARCH))" "win"
 	cd client/install/src/unix/ && \
-	  $(MAKE) TAR=$(TAR) PRODUCT=Clients PACKAGE=greenplum-clients README=GPClientToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(CLIENTINSTLOC) INSTALL_DIR=../../../..
+	  $(MAKE) TAR=$(TAR) PRODUCT=Clients PACKAGE=greenplum-clients README=GPClientToolsUnix VERSION=$(VERSION_SHORT) INSTALL_SRC=$(CLIENTINSTLOC) INSTALL_DIR=../../../..
 else
 	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
 	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
@@ -759,12 +757,10 @@ endif
 
 	# ---- updating the version in required packages ----
 	@$(MAKE) set_scripts_version INSTLOC=$(LOADERSINSTLOC)
-	cd client/install/src/unix/ && \
-	$(MAKE) TAR=$(TAR) PRODUCT=Loaders PACKAGE=greenplum-loaders README=GPLoadToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(LOADERSINSTLOC) INSTALL_DIR=../../../..
 
 ifneq "$(findstring win,$(BLD_ARCH))" "win"
 	cd client/install/src/unix/ && \
-	  $(MAKE) TAR=$(TAR) PRODUCT=Loaders PACKAGE=greenplum-loaders README=GPLoadToolsUnix VERSION=`perl -pe 's, ,-,g' ../../../../../VERSION` INSTALL_SRC=$(LOADERSINSTLOC) INSTALL_DIR=../../../..
+	  $(MAKE) TAR=$(TAR) PRODUCT=Loaders PACKAGE=greenplum-loaders README=GPLoadToolsUnix VERSION=$(VERSION_SHORT) INSTALL_SRC=$(LOADERSINSTLOC) INSTALL_DIR=../../../..
 else
 	if [ "$(BLD_PACKAGING_PID)" = "" ]; then \
 	    echo "ERROR: BLD_PACKAGING_PID must have a value for Windows packaging operations; check your Makefile"; \
