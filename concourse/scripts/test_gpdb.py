@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 from builds.GpBuild import GpBuild
+from subprocess import check_output
 
 def install_gpdb(dependency_name):
     status = subprocess.call("mkdir -p /usr/local/gpdb", shell=True)
@@ -26,8 +27,13 @@ def create_gpadmin_user():
 
 
 def copy_output():
-    shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
-    shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
+    diff_files = check_output("find gpdb_src/ -name regression.diffs", shell=True).splitlines()
+    for diff_file in diff_files:
+        print(  "======================================================================\n" +
+                "DIFF FILE: " + diff_file+"\n" +
+                "----------------------------------------------------------------------")
+        with open(diff_file, 'r') as fin:
+            print fin.read()
 
 def main():
     parser = optparse.OptionParser()
