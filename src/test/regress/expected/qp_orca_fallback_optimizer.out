@@ -17,16 +17,16 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 set optimizer_enable_dml_constraints=on;
 explain insert into constr_tab values (1,2,3);
-                                                QUERY PLAN                                                
-----------------------------------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Insert  (cost=0.00..0.03 rows=1 width=12)
-   ->  Result  (cost=0.00..0.00 rows=1 width=24)
-         ->  Assert  (cost=0.00..0.00 rows=1 width=24)
-               Assert Cond: (((1) + (2)) > 5) IS DISTINCT FROM false AND ((1) > 0) IS DISTINCT FROM false
-               ->  Result  (cost=0.00..0.00 rows=1 width=24)
-                     ->  Result  (cost=0.00..0.00 rows=1 width=1)
+   ->  Result  (cost=0.00..0.00 rows=1 width=20)
+         ->  Result  (cost=0.00..0.00 rows=1 width=16)
+               ->  Result  (cost=0.00..0.00 rows=1 width=16)
+                     ->  Result  (cost=0.00..0.00 rows=1 width=16)
+                           ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.7.0
+ Optimizer status: PQO version 2.48.0
 (8 rows)
 
 -- The remaining tests require a row in the table.
@@ -47,18 +47,16 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 set optimizer_enable_dml_constraints=on;
 explain update constr_tab set b = 10;
-                                                                QUERY PLAN                                                                 
--------------------------------------------------------------------------------------------------------------------------------------------
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
  Update  (cost=0.00..431.09 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=34)
-         ->  Assert  (cost=0.00..431.00 rows=1 width=30)
-               Assert Cond: ((public.constr_tab.a + (10)) > 5) IS DISTINCT FROM false AND (public.constr_tab.a > 0) IS DISTINCT FROM false
-               ->  Split  (cost=0.00..431.00 rows=1 width=30)
-                     ->  Result  (cost=0.00..431.00 rows=1 width=30)
-                           ->  Table Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
+         ->  Split  (cost=0.00..431.00 rows=1 width=30)
+               ->  Result  (cost=0.00..431.00 rows=1 width=30)
+                     ->  Table Scan on constr_tab  (cost=0.00..431.00 rows=1 width=26)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.7.0
-(9 rows)
+ Optimizer status: PQO version 2.48.0
+(7 rows)
 
 -- Same, with NOT NULL constraint.
 DROP TABLE IF EXISTS constr_tab;
