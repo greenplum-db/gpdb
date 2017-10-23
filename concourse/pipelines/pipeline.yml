@@ -972,9 +972,9 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: pxf_src
@@ -1009,9 +1009,9 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
   - task: compile_gpdb
@@ -1023,9 +1023,9 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: pxf_src
@@ -1078,9 +1078,9 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
     - get: pxf_src
@@ -1109,9 +1109,11 @@ jobs:
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
-      trigger: {{reduced-frequency-trigger-flag}}
+      trigger: ((reduced-frequency-trigger-flag))
+      tags: ["gpdb5_wix_external_worker"]
     - get: gpdb_src
-      trigger: {{gpdb_src-trigger-flag}}
+      trigger: ((gpdb_src-trigger-flag))
+      tags: ["gpdb5_wix_external_worker"]
     - get: gpaddon_src
       tags: ["gpdb5_wix_external_worker"]
       passed: [gate_compile_start]
@@ -1582,24 +1584,6 @@ jobs:
     file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
     params:
       TEST_SUITE: "icw"
-- name: icw_gporca_centos6_gpos_memory
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_icw_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_icw_start]
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-dev-6
-    params:
-      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
-      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off | optimizer_use_gpdb_allocators=on"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
 - name: icw_planner_ictcp_centos6
   plan:
   - aggregate:
