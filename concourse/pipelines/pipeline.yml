@@ -109,7 +109,6 @@ groups:
 
 - name: Remaining Pulse
   jobs:
-  - MM_gpcheckcat
   - mpp_interconnect
 
 - name: Adopted CCP
