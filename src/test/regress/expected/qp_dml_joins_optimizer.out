@@ -254,7 +254,7 @@ INSERT INTO dml_heap_pt_p VALUES(NULL,1,'pn',NULL),(1,NULL,'pn',0),(NULL,NULL,'p
 INSERT INTO dml_heap_pt_s SELECT generate_series(1,100), generate_series(1,100) * 3,'s', generate_series(1,100) % 6;
 INSERT INTO dml_heap_pt_s VALUES(generate_series(1,10),NULL,'sn',NULL);
 INSERT INTO dml_heap_pt_s VALUES(NULL,1,'sn',NULL),(1,NULL,'sn',0),(NULL,NULL,'sn',0),(0,1,'sn',NULL),(NULL,NULL,'sn',NULL);
--- test1: Insert data that satisfy the check constraints
+--Insert data that satisfy the check constraints
 begin;
 SELECT COUNT(*) FROM dml_ao_check_s;
  count 
@@ -276,7 +276,7 @@ SELECT COUNT(*) FROM dml_ao_check_s;
 (1 row)
 
 rollback;
--- test2: Negative test - Insert default value violates check constraint
+--Negative test - Insert default value violates check constraint
 SELECT COUNT(*) FROM dml_ao_check_p;
  count 
 -------
@@ -284,14 +284,14 @@ SELECT COUNT(*) FROM dml_ao_check_p;
 (1 row)
 
 INSERT INTO dml_ao_check_p select generate_series(1,100),'p', generate_series(1,100);
-ERROR:  new row for relation "dml_ao_check_p" violates check constraint "dml_ao_check_p_check"
+ERROR:  new row for relation "dml_ao_check_p" violates check constraint "dml_ao_check_p_check"  (seg0 127.0.0.1:25432 pid=87948)
 SELECT COUNT(*) FROM dml_ao_check_p;
  count 
 -------
    105
 (1 row)
 
--- test3: Negative test - Insert default value violates NOT NULL constraint
+--Negative test - Insert default value violates NOT NULL constraint
 SELECT COUNT(*) FROM dml_ao_check_s;
  count 
 -------
@@ -306,28 +306,7 @@ SELECT COUNT(*) FROM dml_ao_check_s;
    105
 (1 row)
 
--- test4: Negative test - Insert with joins where the result tuples violate the user defined check constraint
-SELECT COUNT(*) FROM dml_ao_check_r;
- count 
--------
-   105
-(1 row)
-
-SELECT COUNT(*) FROM (SELECT dml_ao_check_r.a + 110 , dml_ao_check_r.b, dml_ao_check_r.c, dml_ao_check_r.d FROM dml_ao_check_r, dml_ao_check_s WHERE dml_ao_check_r.a = dml_ao_check_s.a)foo;
- count 
--------
-   107
-(1 row)
-
-INSERT INTO dml_ao_check_r SELECT dml_ao_check_r.a + 110 , dml_ao_check_r.b, dml_ao_check_r.c, dml_ao_check_r.d FROM dml_ao_check_r, dml_ao_check_s WHERE dml_ao_check_r.a = dml_ao_check_s.a AND dml_ao_check_r.b > 10;
-ERROR:  new row for relation "dml_ao_check_r_1_prt_def" violates check constraint "dml_ao_check_r_a_check"
-SELECT COUNT(*) FROM dml_ao_check_r;
- count 
--------
-   105
-(1 row)
-
--- test5: Insert with joins where the result tuples violate violates multiple check constraints
+--Insert with joins where the result tuples violate violates multiple check constraints
 SELECT COUNT(*) FROM dml_ao_check_r;
  count 
 -------
@@ -348,7 +327,7 @@ SELECT COUNT(*) FROM dml_ao_check_r;
    105
 (1 row)
 
--- test4: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -370,7 +349,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test5: Insert with generate_series and NULL
+--Insert with generate_series and NULL
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -404,7 +383,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test6: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -442,7 +421,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test7: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -464,7 +443,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test8: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -480,7 +459,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test9: Join on the non-distribution key of target table
+--Join on the non-distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -502,7 +481,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test10: Join on the distribution key of target table
+--Join on the distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_s;
  count 
@@ -524,7 +503,7 @@ SELECT COUNT(*) FROM dml_ao_pt_s;
 (1 row)
 
 rollback;
--- test11: Join on distribution key of target table
+--Join on distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -546,7 +525,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test12: Join on the distribution key of target table. Insert Large number of rows
+--Join on the distribution key of target table. Insert Large number of rows
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_s;
  count 
@@ -568,7 +547,7 @@ SELECT COUNT(*) FROM dml_ao_pt_s;
 (1 row)
 
 rollback;
--- test13: Join with different column order 
+--Join with different column order 
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -590,7 +569,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test14: Join with Aggregate
+--Join with Aggregate
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -613,7 +592,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test15: Join with DISTINCT
+--Join with DISTINCT
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_s;
  count 
@@ -635,7 +614,7 @@ SELECT COUNT(*) FROM dml_ao_pt_s;
 (1 row)
 
 rollback;
--- test16: Insert NULL with Joins
+--Insert NULL with Joins
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -657,7 +636,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test18: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -671,7 +650,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
    100
 (1 row)
 
--- test19: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -685,7 +664,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
    100
 (1 row)
 
--- test20: Negative tests Insert column of different data type
+--Negative tests Insert column of different data type
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -706,7 +685,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
    100
 (1 row)
 
--- test21: Negative test case. INSERT has more expressions than target columns
+--Negative test case. INSERT has more expressions than target columns
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_s;
  count 
@@ -728,7 +707,7 @@ SELECT COUNT(*) FROM dml_ao_pt_s;
 (1 row)
 
 rollback;
--- test22: Insert with join on the partition key
+--Insert with join on the partition key
 begin;
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
@@ -750,7 +729,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
 (1 row)
 
 rollback;
--- test24: Negative test - Insert NULL value to a table without default partition
+--Negative test - Insert NULL value to a table without default partition
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -771,7 +750,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
    100
 (1 row)
 
--- test25: Negative test - Insert out of partition range values for table without default partition
+--Negative test - Insert out of partition range values for table without default partition
 SELECT COUNT(*) FROM dml_ao_pt_r;
  count 
 -------
@@ -792,7 +771,7 @@ SELECT COUNT(*) FROM dml_ao_pt_r;
    100
 (1 row)
 
--- test4: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -814,7 +793,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test5: Insert with generate_series and NULL
+--Insert with generate_series and NULL
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -845,7 +824,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test6: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -877,7 +856,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test7: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -899,7 +878,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test8: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -915,7 +894,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test9: Join on the non-distribution key of target table
+--Join on the non-distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -937,7 +916,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test10: Join on the distribution key of target table
+--Join on the distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_ao_s;
  count 
@@ -959,7 +938,7 @@ SELECT COUNT(*) FROM dml_ao_s;
 (1 row)
 
 rollback;
--- test11: Join on distribution key of target table
+--Join on distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -981,7 +960,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test12: Join on the distribution key of target table. Insert Large number of rows
+--Join on the distribution key of target table. Insert Large number of rows
 begin;
 SELECT COUNT(*) FROM dml_ao_s;
  count 
@@ -1003,7 +982,7 @@ SELECT COUNT(*) FROM dml_ao_s;
 (1 row)
 
 rollback;
--- test13: Join with different column order 
+--Join with different column order 
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -1025,7 +1004,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test14: Join with Aggregate
+--Join with Aggregate
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -1047,7 +1026,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test15: Join with DISTINCT
+--Join with DISTINCT
 begin;
 SELECT COUNT(*) FROM dml_ao_s;
  count 
@@ -1069,7 +1048,7 @@ SELECT COUNT(*) FROM dml_ao_s;
 (1 row)
 
 rollback;
--- test16: Insert NULL with Joins
+--Insert NULL with Joins
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -1091,7 +1070,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test17: Insert and CASE
+--Insert and CASE
 begin;
 SELECT COUNT(*) FROM dml_ao_r;
  count 
@@ -1113,7 +1092,7 @@ SELECT COUNT(*) FROM dml_ao_r;
 (1 row)
 
 rollback;
--- test18: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_ao_r;
  count 
 -------
@@ -1127,7 +1106,7 @@ SELECT COUNT(*) FROM dml_ao_r;
    113
 (1 row)
 
--- test19: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_ao_r;
  count 
 -------
@@ -1141,7 +1120,7 @@ SELECT COUNT(*) FROM dml_ao_r;
    113
 (1 row)
 
--- test21: Negative test case. INSERT has more expressions than target columns
+--Negative test case. INSERT has more expressions than target columns
 SELECT COUNT(*) FROM dml_ao_s;
  count 
 -------
@@ -1162,7 +1141,7 @@ SELECT COUNT(*) FROM dml_ao_s;
    113
 (1 row)
 
--- test1: Insert data that satisfy the check constraints 
+--Insert data that satisfy the check constraints 
 begin;
 SELECT COUNT(*) FROM dml_co_check_s;
  count 
@@ -1184,7 +1163,7 @@ SELECT COUNT(*) FROM dml_co_check_s;
 (1 row)
 
 rollback;
--- test2: Negative test - Insert default value violates check constraint
+--Negative test - Insert default value violates check constraint
 SELECT COUNT(*) FROM dml_co_check_p;
  count 
 -------
@@ -1199,7 +1178,7 @@ SELECT COUNT(*) FROM dml_co_check_p;
    105
 (1 row)
 
--- test3: Negative test - Insert default value violates NOT NULL constraint
+--Negative test - Insert default value violates NOT NULL constraint
 SELECT COUNT(*) FROM dml_co_check_s;
  count 
 -------
@@ -1214,7 +1193,7 @@ SELECT COUNT(*) FROM dml_co_check_s;
    105
 (1 row)
 
--- test4: Negative test - Insert with joins where the result tuples violate the user defined check constraint
+--Negative test - Insert with joins where the result tuples violate the user defined check constraint
 SELECT COUNT(*) FROM dml_co_check_r;
  count 
 -------
@@ -1235,7 +1214,7 @@ SELECT COUNT(*) FROM dml_co_check_r;
    105
 (1 row)
 
--- test5: Insert with joins where the result tuples violate violates multiple check constraints
+--Insert with joins where the result tuples violate violates multiple check constraints
 SELECT COUNT(*) FROM dml_co_check_r;
  count 
 -------
@@ -1256,7 +1235,7 @@ SELECT COUNT(*) FROM dml_co_check_r;
    105
 (1 row)
 
--- test4: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1278,7 +1257,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test5: Insert with generate_series and NULL
+--Insert with generate_series and NULL
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1312,7 +1291,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test6: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1350,7 +1329,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test7: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1372,7 +1351,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test8: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1388,7 +1367,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test9: Join on the non-distribution key of target table
+--Join on the non-distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1410,7 +1389,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test10: Join on the distribution key of target table
+--Join on the distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_co_pt_s;
  count 
@@ -1432,7 +1411,7 @@ SELECT COUNT(*) FROM dml_co_pt_s;
 (1 row)
 
 rollback;
--- test11: Join on distribution key of target table
+--Join on distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1454,7 +1433,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test12: Join on the distribution key of target table. Insert Large number of rows
+--Join on the distribution key of target table. Insert Large number of rows
 begin;
 SELECT COUNT(*) FROM dml_co_pt_s;
  count 
@@ -1476,7 +1455,7 @@ SELECT COUNT(*) FROM dml_co_pt_s;
 (1 row)
 
 rollback;
--- test13: Join with different column order 
+--Join with different column order 
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1498,7 +1477,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test14: Join with Aggregate
+--Join with Aggregate
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1521,7 +1500,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test15: Join with DISTINCT
+--Join with DISTINCT
 begin;
 SELECT COUNT(*) FROM dml_co_pt_s;
  count 
@@ -1543,7 +1522,7 @@ SELECT COUNT(*) FROM dml_co_pt_s;
 (1 row)
 
 rollback;
--- test16: Insert NULL with Joins
+--Insert NULL with Joins
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1565,7 +1544,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test18: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -1579,7 +1558,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
    100
 (1 row)
 
--- test19: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -1593,7 +1572,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
    100
 (1 row)
 
--- test21: Negative test case. INSERT has more expressions than target columns
+--Negative test case. INSERT has more expressions than target columns
 begin;
 SELECT COUNT(*) FROM dml_co_pt_s;
  count 
@@ -1615,7 +1594,7 @@ SELECT COUNT(*) FROM dml_co_pt_s;
 (1 row)
 
 rollback;
--- test22: Insert with join on the partition key
+--Insert with join on the partition key
 begin;
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
@@ -1637,7 +1616,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
 (1 row)
 
 rollback;
--- test24: Negative test - Insert NULL value to a table without default partition
+--Negative test - Insert NULL value to a table without default partition
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -1658,7 +1637,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
    100
 (1 row)
 
--- test25: Negative test - Insert out of partition range values for table without default partition
+--Negative test - Insert out of partition range values for table without default partition
 SELECT COUNT(*) FROM dml_co_pt_r;
  count 
 -------
@@ -1673,7 +1652,7 @@ SELECT COUNT(*) FROM dml_co_pt_r;
    100
 (1 row)
 
--- test4: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1695,7 +1674,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test5: Insert with generate_series and NULL
+--Insert with generate_series and NULL
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1726,7 +1705,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test6: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1764,7 +1743,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test7: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1786,7 +1765,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test8: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1802,7 +1781,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test9: Join on the non-distribution key of target table
+--Join on the non-distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1824,7 +1803,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test10: Join on the distribution key of target table
+--Join on the distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_co_s;
  count 
@@ -1846,7 +1825,7 @@ SELECT COUNT(*) FROM dml_co_s;
 (1 row)
 
 rollback;
--- test11: Join on distribution key of target table
+--Join on distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1868,7 +1847,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test12: Join on the distribution key of target table. Insert Large number of rows
+--Join on the distribution key of target table. Insert Large number of rows
 begin;
 SELECT COUNT(*) FROM dml_co_s;
  count 
@@ -1890,7 +1869,7 @@ SELECT COUNT(*) FROM dml_co_s;
 (1 row)
 
 rollback;
--- test13: Join with different column order 
+--Join with different column order 
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1912,7 +1891,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test14: Join with Aggregate
+--Join with Aggregate
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1934,7 +1913,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test15: Join with DISTINCT
+--Join with DISTINCT
 begin;
 SELECT COUNT(*) FROM dml_co_s;
  count 
@@ -1956,7 +1935,7 @@ SELECT COUNT(*) FROM dml_co_s;
 (1 row)
 
 rollback;
--- test16: Insert NULL with Joins
+--Insert NULL with Joins
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -1978,7 +1957,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test17: Insert and CASE
+--Insert and CASE
 begin;
 SELECT COUNT(*) FROM dml_co_r;
  count 
@@ -2000,7 +1979,7 @@ SELECT COUNT(*) FROM dml_co_r;
 (1 row)
 
 rollback;
--- test18: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_co_r;
  count 
 -------
@@ -2014,7 +1993,7 @@ SELECT COUNT(*) FROM dml_co_r;
    113
 (1 row)
 
--- test19: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_co_r;
  count 
 -------
@@ -2028,7 +2007,7 @@ SELECT COUNT(*) FROM dml_co_r;
    113
 (1 row)
 
--- test20: Negative tests Insert column of different data type
+--Negative tests Insert column of different data type
 SELECT COUNT(*) FROM dml_co_r;
  count 
 -------
@@ -2049,7 +2028,7 @@ SELECT COUNT(*) FROM dml_co_r;
    113
 (1 row)
 
--- test21: Negative test case. INSERT has more expressions than target columns
+--Negative test case. INSERT has more expressions than target columns
 SELECT COUNT(*) FROM dml_co_s;
  count 
 -------
@@ -2070,7 +2049,7 @@ SELECT COUNT(*) FROM dml_co_s;
    113
 (1 row)
 
--- test1: Insert data that satisfy the check constraints 
+--Insert data that satisfy the check constraints 
 begin;
 SELECT COUNT(*) FROM dml_heap_check_s;
  count 
@@ -2092,7 +2071,7 @@ SELECT COUNT(*) FROM dml_heap_check_s;
 (1 row)
 
 rollback;
--- test2: Negative test - Insert default value violates check constraint
+--Negative test - Insert default value violates check constraint
 SELECT COUNT(*) FROM dml_heap_check_p;
  count 
 -------
@@ -2107,7 +2086,7 @@ SELECT COUNT(*) FROM dml_heap_check_p;
    105
 (1 row)
 
--- test3: Negative test - Insert default value violates NOT NULL constraint
+--Negative test - Insert default value violates NOT NULL constraint
 SELECT COUNT(*) FROM dml_heap_check_s;
  count 
 -------
@@ -2122,7 +2101,7 @@ SELECT COUNT(*) FROM dml_heap_check_s;
    105
 (1 row)
 
--- test4: Negative test - Insert with joins where the result tuples violate the user defined check constraint
+--Negative test - Insert with joins where the result tuples violate the user defined check constraint
 SELECT COUNT(*) FROM dml_heap_check_r;
  count 
 -------
@@ -2143,7 +2122,7 @@ SELECT COUNT(*) FROM dml_heap_check_r;
    105
 (1 row)
 
--- test5: Insert with joins where the result tuples violate violates multiple check constraints
+--Insert with joins where the result tuples violate violates multiple check constraints
 SELECT COUNT(*) FROM dml_heap_check_r;
  count 
 -------
@@ -2164,7 +2143,7 @@ SELECT COUNT(*) FROM dml_heap_check_r;
    105
 (1 row)
 
--- test1: Update data that satisfy the check constraints 
+--Update data that satisfy the check constraints 
 begin;
 SELECT SUM(d) FROM dml_heap_check_s;
  sum 
@@ -2180,16 +2159,16 @@ SELECT SUM(d) FROM dml_heap_check_s;
 (1 row)
 
 rollback;
--- test2: Negative test: Update data that does not satisfy the check constraints
+--Negative test: Update data that does not satisfy the check constraints
 UPDATE dml_heap_check_s SET a = 100 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a AND dml_heap_check_s.a = 99;
 ERROR:  new row for relation "dml_heap_check_s_1_prt_def" violates check constraint "dml_heap_check_s_a_check"
--- test3: Negative test - Update violates check constraint(not NULL constraint)
+--Negative test - Update violates check constraint(not NULL constraint)
 UPDATE dml_heap_check_s SET b = NULL FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.b and dml_heap_check_s.b = 99;
 ERROR:  new row for relation "dml_heap_check_s_1_prt_5" violates check constraint "scheck_b"
--- test4: Negative test - Update moving tuple across partition .also violates the check constraint
+--Negative test - Update moving tuple across partition .also violates the check constraint
 UPDATE dml_heap_check_s SET a = 110 + dml_heap_check_s.a FROM dml_heap_check_r WHERE dml_heap_check_r.a = dml_heap_check_s.a;
 ERROR:  new row for relation "dml_heap_check_s_1_prt_def" violates check constraint "dml_heap_check_s_a_check"
--- test4: Delete with generate_series
+--Delete with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
  count 
@@ -2205,7 +2184,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
--- test5: Delete with join on distcol
+--Delete with join on distcol
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2221,7 +2200,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test6: Delete with join on non-distribution column
+--Delete with join on non-distribution column
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2237,7 +2216,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test7: Delete with join on non-distribution column
+--Delete with join on non-distribution column
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
  count 
@@ -2253,7 +2232,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
--- test8: Delete and using  
+--Delete and using  
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2269,7 +2248,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test9: Delete and using (with no rows)
+--Delete and using (with no rows)
 begin;
 TRUNCATE TABLE dml_heap_s;
 SELECT COUNT(*) FROM dml_heap_r;
@@ -2286,7 +2265,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test10: Delete with join in using
+--Delete with join in using
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2302,7 +2281,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test11: Delete with join in USING (Delete all rows )
+--Delete with join in USING (Delete all rows )
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2318,7 +2297,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test12: Delete with join in using
+--Delete with join in using
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2334,7 +2313,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test13: Delete with multiple joins
+--Delete with multiple joins
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -2350,7 +2329,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test14: Delete on table with composite distcol
+--Delete on table with composite distcol
 begin;
 SELECT COUNT(*) FROM dml_heap_p;
  count 
@@ -2366,7 +2345,7 @@ SELECT COUNT(*) FROM dml_heap_p;
 (1 row)
 
 rollback;
--- test15: Delete with PREPARE plan
+--Delete with PREPARE plan
 begin;
 SELECT COUNT(*) FROM (SELECT dml_heap_r.b FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b) foo;
  count 
@@ -2389,7 +2368,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test16: Delete with PREPARE plan
+--Delete with PREPARE plan
 begin;
 SELECT COUNT(*) FROM (SELECT dml_heap_r.b FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a)foo;
  count 
@@ -2412,7 +2391,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
--- test17: Delete with sub-query
+--Delete with sub-query
 SELECT COUNT(*) FROM dml_heap_s;
  count 
 -------
@@ -2428,7 +2407,7 @@ SELECT COUNT(*) FROM dml_heap_s;
    113
 (1 row)
 
--- test1: Delete from table
+--Delete from table
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s; 
  count 
@@ -2444,7 +2423,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test2: Delete with predicate
+--Delete with predicate
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -2472,7 +2451,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s WHERE a > 100;
 (1 row)
 
 rollback;
--- test3: Delete with predicate
+--Delete with predicate
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -2494,7 +2473,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test4: Delete with generate_series
+--Delete with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -2510,7 +2489,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test5: Delete with join on distcol
+--Delete with join on distcol
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2526,7 +2505,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test6: Delete with join on non-distribution column
+--Delete with join on non-distribution column
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2542,7 +2521,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test7: Delete with join on non-distribution column
+--Delete with join on non-distribution column
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -2558,7 +2537,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test8: Delete and using  
+--Delete and using  
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2574,7 +2553,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test9: Delete and using (with no rows)
+--Delete and using (with no rows)
 begin;
 TRUNCATE TABLE dml_heap_pt_s;
 SELECT COUNT(*) FROM dml_heap_pt_r;
@@ -2591,7 +2570,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test10: Delete with join in using
+--Delete with join in using
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2607,7 +2586,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test11: Delete with join in USING (Delete all rows )
+--Delete with join in USING (Delete all rows )
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2623,7 +2602,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test12: Delete with join in using
+--Delete with join in using
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2639,7 +2618,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test13: Delete with multiple joins
+--Delete with multiple joins
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2655,7 +2634,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test14: Delete on table with composite distcol
+--Delete on table with composite distcol
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_p;
  count 
@@ -2671,7 +2650,7 @@ SELECT COUNT(*) FROM dml_heap_pt_p;
 (1 row)
 
 rollback;
--- test15: Delete with PREPARE plan
+--Delete with PREPARE plan
 begin;
 SELECT COUNT(*) FROM (SELECT dml_heap_pt_r.b FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.b) foo;
  count 
@@ -2694,7 +2673,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test16: Delete with PREPARE plan
+--Delete with PREPARE plan
 begin;
 SELECT COUNT(*) FROM (SELECT dml_heap_pt_r.b FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a)foo;
  count 
@@ -2717,7 +2696,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test17: Delete with sub-query
+--Delete with sub-query
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
 -------
@@ -2733,7 +2712,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
    115
 (1 row)
 
--- test4: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2755,7 +2734,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test5: Insert with generate_series and NULL
+--Insert with generate_series and NULL
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2789,7 +2768,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test6: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2827,7 +2806,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test7: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2849,7 +2828,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test8: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2865,7 +2844,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test9: Join on the non-distribution key of target table
+--Join on the non-distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2887,7 +2866,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test10: Join on the distribution key of target table
+--Join on the distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -2909,7 +2888,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test11: Join on distribution key of target table
+--Join on distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2931,7 +2910,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test12: Join on the distribution key of target table. Insert Large number of rows
+--Join on the distribution key of target table. Insert Large number of rows
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -2953,7 +2932,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test13: Join with different column order 
+--Join with different column order 
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -2975,7 +2954,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test14: Join with Aggregate
+--Join with Aggregate
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -3000,7 +2979,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 ALTER TABLE dml_heap_pt_r DROP DEFAULT partition;
 NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
 rollback;
--- test15: Join with DISTINCT
+--Join with DISTINCT
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -3022,7 +3001,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test16: Insert NULL with Joins
+--Insert NULL with Joins
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -3044,7 +3023,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test18: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3058,7 +3037,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
--- test19: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3072,7 +3051,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
--- test20: Negative tests Insert column of different data type
+--Negative tests Insert column of different data type
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3093,7 +3072,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
--- test21: Negative test case. INSERT has more expressions than target columns
+--Negative test case. INSERT has more expressions than target columns
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -3115,7 +3094,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test22: Insert with join on the partition key
+--Insert with join on the partition key
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
@@ -3137,7 +3116,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- test24: Negative test - Insert NULL value to a table without default partition
+--Negative test - Insert NULL value to a table without default partition
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3152,7 +3131,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
--- test25: Negative test - Insert out of partition range values for table without default partition
+--Negative test - Insert out of partition range values for table without default partition
 SELECT COUNT(*) FROM dml_heap_pt_r;
  count 
 -------
@@ -3167,7 +3146,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r;
    100
 (1 row)
 
--- update_test1: Update to constant value
+--Update to constant value
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='text';
  count 
@@ -3183,7 +3162,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE c ='text';
 (1 row)
 
 rollback;
--- update_test2: Update and set distribution key to constant
+--Update and set distribution key to constant
 begin;
 SELECT COUNT(*) FROM (SELECT DISTINCT(b) FROM dml_heap_pt_s)foo;
  count 
@@ -3199,7 +3178,7 @@ SELECT COUNT(*) FROM (SELECT DISTINCT(b) FROM dml_heap_pt_s)foo;
 (1 row)
 
 rollback;
--- update_test3: Update to default value
+--Update to default value
 begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
@@ -3215,7 +3194,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- update_test4: Update to default value
+--Update to default value
 begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
@@ -3244,7 +3223,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 (1 row)
 
 rollback;
--- update_test5: Update and reset the value
+--Update and reset the value
 begin;
 SELECT COUNT(*) FROM (SELECT DISTINCT(a) FROM dml_heap_pt_r)foo;
  count 
@@ -3260,7 +3239,7 @@ SELECT COUNT(*) FROM (SELECT DISTINCT(a) FROM dml_heap_pt_r)foo;
 (1 row)
 
 rollback;
--- update_test6: Update and generate_series
+--Update and generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
  count 
@@ -3281,7 +3260,7 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test7: Update distcol where join on target table non dist key
+--Update distcol where join on target table non dist key
 begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
@@ -3294,7 +3273,7 @@ ERROR:  multiple updates to a row by the same query is not allowed
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test8: Update and from values
+--Update and from values
 begin;
 SELECT * FROM dml_heap_pt_r WHERE b = 20 ORDER BY 1;
  a | b | c | d 
@@ -3308,7 +3287,7 @@ SELECT * FROM dml_heap_pt_r WHERE b = 20 ORDER BY 1;
 (0 rows)
 
 rollback;
--- update_test9: Update with Joins and set to constant value
+--Update with Joins and set to constant value
 SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = 10;
  count 
 -------
@@ -3322,11 +3301,11 @@ SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = 10;
     36
 (1 row)
 
--- update_test10: Update distcol with predicate in subquery
+--Update distcol with predicate in subquery
 begin;
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_r.a + 1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a and dml_heap_pt_s.b in (SELECT dml_heap_pt_s.b + dml_heap_pt_r.a FROM dml_heap_pt_s,dml_heap_pt_r WHERE dml_heap_pt_r.a > 10);
 rollback;
--- update_test11: Update with aggregate in subquery
+--Update with aggregate in subquery
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = (SELECT COUNT(*) FROM dml_heap_pt_s);
  count 
@@ -3348,7 +3327,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s WHERE b = (SELECT COUNT(*) FROM dml_heap_pt_s
 (1 row)
 
 rollback;
--- update_test12: Update and limit in subquery
+--Update and limit in subquery
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
  count 
 -------
@@ -3369,7 +3348,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 1;
      1
 (1 row)
 
--- update_test13: Update multiple columns
+--Update multiple columns
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE b is NULL;
  count 
@@ -3399,7 +3378,7 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 ALTER TABLE dml_heap_pt_r DROP DEFAULT partition;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test14: Update multiple columns
+--Update multiple columns
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE c='z';
  count 
 -------
@@ -3428,13 +3407,13 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE c='z';
 
 ALTER TABLE dml_heap_pt_r DROP DEFAULT partition;
 NOTICE:  dropped partition "def" for relation "dml_heap_pt_r"
--- update_test15: Update with prepare plans
+--Update with prepare plans
 begin;
 PREPARE plan_upd as UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a +1 FROM dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.b ;
 EXECUTE plan_upd;
 ERROR:  multiple updates to a row by the same query is not allowed
 rollback;
--- update_test16: Update and case
+--Update and case
 begin;
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 20 ;
  count 
@@ -3450,7 +3429,7 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE a = 20 ;
 (1 row)
 
 rollback;
--- update_test17: Negative test - Update with sub-query returning more than one row
+--Negative test - Update with sub-query returning more than one row
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
 ------
@@ -3466,7 +3445,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
  5050
 (1 row)
 
--- update_test18: Negative test - Update with sub-query returning more than one row
+--Negative test - Update with sub-query returning more than one row
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------
@@ -3482,7 +3461,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
  15150
 (1 row)
 
--- update_test20: Negative test - Update WHERE join returns more than one tuple with different values.
+--Negative test - Update WHERE join returns more than one tuple with different values.
 CREATE TABLE dml_heap_pt_u as SELECT i as a, i as b  FROM generate_series(1,10)i;
 CREATE TABLE dml_heap_pt_v as SELECT i as a, i as b FROM generate_series(1,10)i;
 SELECT SUM(a) FROM dml_heap_pt_v;
@@ -3498,7 +3477,7 @@ SELECT SUM(a) FROM dml_heap_pt_v;
   55
 (1 row)
 
--- update_test21: Update with joins on multiple table
+--Update with joins on multiple table
 begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
@@ -3511,7 +3490,7 @@ ERROR:  Cannot parallelize an UPDATE statement that updates the distribution col
 SELECT SUM(a) FROM dml_heap_pt_r;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test22: Update on table with composite distribution key
+--Update on table with composite distribution key
 -- This currently falls back to planner, even if ORCA is enabled. And planner can't
 -- produce plans that update distribution key columns.
 SELECT SUM(a) FROM dml_heap_pt_r;
@@ -3528,7 +3507,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
  5050
 (1 row)
 
--- update_test23: Update on table with composite distribution key
+--Update on table with composite distribution key
 begin;
 SELECT SUM(b) FROM dml_heap_pt_p;
   sum  
@@ -3541,7 +3520,7 @@ ERROR:  Cannot parallelize an UPDATE statement that updates the distribution col
 SELECT SUM(b) FROM dml_heap_pt_p;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- test24: Update the partition key and move tuples across partitions( moving tuple to default partition)
+--Update the partition key and move tuples across partitions( moving tuple to default partition)
 begin;
 SELECT SUM(a) FROM dml_heap_pt_s;
  sum  
@@ -3557,7 +3536,7 @@ SELECT SUM(a) FROM dml_heap_pt_s;
 (1 row)
 
 rollback;
--- test25: Negative test update partition key (no default partition)
+--Negative test update partition key (no default partition)
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
 -------
@@ -3572,7 +3551,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
  15150
 (1 row)
 
--- test4: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3594,7 +3573,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test5: Insert with generate_series and NULL
+--Insert with generate_series and NULL
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3625,7 +3604,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test6: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3663,7 +3642,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test7: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3685,7 +3664,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test8: Insert with generate_series
+--Insert with generate_series
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3701,7 +3680,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test9: Join on the non-distribution key of target table
+--Join on the non-distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3723,7 +3702,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test10: Join on the distribution key of target table
+--Join on the distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
  count 
@@ -3745,7 +3724,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
--- test11: Join on distribution key of target table
+--Join on distribution key of target table
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3767,7 +3746,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test12: Join on the distribution key of target table. Insert Large number of rows
+--Join on the distribution key of target table. Insert Large number of rows
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
  count 
@@ -3789,7 +3768,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
--- test13: Join with different column order 
+--Join with different column order 
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3811,7 +3790,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test14: Join with Aggregate
+--Join with Aggregate
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3833,7 +3812,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test15: Join with DISTINCT
+--Join with DISTINCT
 begin;
 SELECT COUNT(*) FROM dml_heap_s;
  count 
@@ -3855,7 +3834,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 rollback;
--- test16: Insert NULL with Joins
+--Insert NULL with Joins
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3877,7 +3856,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test17: Insert and CASE
+--Insert and CASE
 begin;
 SELECT COUNT(*) FROM dml_heap_r;
  count 
@@ -3899,7 +3878,7 @@ SELECT COUNT(*) FROM dml_heap_r;
 (1 row)
 
 rollback;
--- test18: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -3913,7 +3892,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
--- test19: Insert 0 rows
+--Insert 0 rows
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -3927,7 +3906,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
--- test20: Negative tests Insert column of different data type
+--Negative tests Insert column of different data type
 SELECT COUNT(*) FROM dml_heap_r;
  count 
 -------
@@ -3948,7 +3927,7 @@ SELECT COUNT(*) FROM dml_heap_r;
    113
 (1 row)
 
--- test21: Negative test case. INSERT has more expressions than target columns
+--Negative test case. INSERT has more expressions than target columns
 SELECT COUNT(*) FROM dml_heap_s;
  count 
 -------
@@ -3969,7 +3948,7 @@ SELECT COUNT(*) FROM dml_heap_s;
    113
 (1 row)
 
--- update_test6: Update and generate_series
+--Update and generate_series
 begin;
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
  sum 
@@ -3990,7 +3969,7 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test7: Update distcol where join on target table non dist key
+--Update distcol where join on target table non dist key
 begin;
 SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
  sum 
@@ -4006,7 +3985,7 @@ SELECT SUM(a) FROM dml_heap_r WHERE a = 1;
 (1 row)
 
 rollback;
--- update_test8: Update and from values
+--Update and from values
 begin;
 SELECT SUM(b) FROM dml_heap_r WHERE b = 20;
  sum 
@@ -4022,7 +4001,7 @@ SELECT SUM(b) FROM dml_heap_r WHERE b = 20;
 (1 row)
 
 rollback;
--- update_test9: Update with Joins and set to constant value
+--Update with Joins and set to constant value
 begin;
 SELECT COUNT(*) FROM dml_heap_s WHERE b = 10;
  count 
@@ -4038,11 +4017,11 @@ SELECT COUNT(*) FROM dml_heap_s WHERE b = 10;
 (1 row)
 
 rollback;
--- update_test10: Update distcol with predicate in subquery
+--Update distcol with predicate in subquery
 begin;
 UPDATE dml_heap_r SET a = dml_heap_r.a + 1 FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a and dml_heap_s.b in (SELECT dml_heap_s.b + dml_heap_r.a FROM dml_heap_s,dml_heap_r WHERE dml_heap_r.a > 10);
 rollback;
--- update_test11: Update with aggregate in subquery
+--Update with aggregate in subquery
 begin;
 SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
  count 
@@ -4055,7 +4034,7 @@ ERROR:  multiple updates to a row by the same query is not allowed
 SELECT COUNT(*) FROM dml_heap_s WHERE b = (SELECT COUNT(*) FROM dml_heap_s);
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test12: Update and limit in subquery
+--Update and limit in subquery
 begin;
 SELECT COUNT(*) FROM dml_heap_r WHERE a = 1;
  count 
@@ -4071,7 +4050,7 @@ SELECT COUNT(*) FROM dml_heap_r WHERE a = 1;
 (1 row)
 
 rollback;
--- update_test13: Update multiple columns
+--Update multiple columns
 begin;
 SELECT COUNT(*) FROM dml_heap_r WHERE b is NULL;
  count 
@@ -4105,7 +4084,7 @@ SELECT COUNT(*) FROM dml_heap_r WHERE b is NULL;
 (1 row)
 
 rollback;
--- update_test14: Update multiple columns
+--Update multiple columns
 begin;
 SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
  count 
@@ -4126,13 +4105,13 @@ ERROR:  current transaction is aborted, commands ignored until end of transactio
 SELECT COUNT(*) FROM dml_heap_r WHERE c='z';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 rollback;
--- update_test15: Update with prepare plans
+--Update with prepare plans
 begin;
 PREPARE plan_upd_2 as UPDATE dml_heap_r SET a = dml_heap_s.a +1 FROM dml_heap_s WHERE dml_heap_r.a = dml_heap_s.b ;
 EXECUTE plan_upd_2;
 ERROR:  multiple updates to a row by the same query is not allowed
 rollback;
--- update_test16: Update and case
+--Update and case
 begin;
 SELECT COUNT(*) FROM dml_heap_r WHERE a = 100 ;
  count 
@@ -4148,7 +4127,7 @@ SELECT COUNT(*) FROM dml_heap_r WHERE a = 100 ;
 (1 row)
 
 rollback;
--- update_test17: Negative test - Update with sub-query returning more than one row
+--Negative test - Update with sub-query returning more than one row
 SELECT SUM(a) FROM dml_heap_r;
  sum  
 ------
@@ -4164,7 +4143,7 @@ SELECT SUM(a) FROM dml_heap_r;
  5106
 (1 row)
 
--- update_test18: Negative test - Update with sub-query returning more than one row
+--Negative test - Update with sub-query returning more than one row
 SELECT SUM(b) FROM dml_heap_r;
  sum  
 ------
@@ -4180,7 +4159,7 @@ SELECT SUM(b) FROM dml_heap_r;
  5050
 (1 row)
 
--- update_test19: Negative test - Update with aggregates 
+--Negative test - Update with aggregates 
 SELECT SUM(b) FROM dml_heap_r;
  sum  
 ------
@@ -4197,7 +4176,7 @@ SELECT SUM(b) FROM dml_heap_r;
  5050
 (1 row)
 
--- update_test20: Negative test - Update WHERE join returns more than one tuple with different values.
+--Negative test - Update WHERE join returns more than one tuple with different values.
 CREATE TABLE dml_heap_u as SELECT i as a, 1 as b  FROM generate_series(1,10)i;
 CREATE TABLE dml_heap_v as SELECT i as a ,i as b FROM generate_series(1,10)i;
 SELECT SUM(a) FROM dml_heap_v;
@@ -4214,10 +4193,10 @@ SELECT SUM(a) FROM dml_heap_v;
   55
 (1 row)
 
--- update_test21: Update with joins on multiple table
+--Update with joins on multiple table
 UPDATE dml_heap_r SET a = dml_heap_r.b+1 FROM dml_heap_p,dml_heap_s WHERE dml_heap_r.b = dml_heap_s.b and dml_heap_r.a = dml_heap_p.b+1;
 ERROR:  multiple updates to a row by the same query is not allowed
--- update_test22: Update on table with composite distribution key
+--Update on table with composite distribution key
 UPDATE dml_heap_p SET a = dml_heap_p.b % 2 FROM dml_heap_r WHERE dml_heap_p.b::int = dml_heap_r.b::int and dml_heap_p.a = dml_heap_r.a;
--- update_test23: Update on table with composite distribution key
+--Update on table with composite distribution key
 UPDATE dml_heap_p SET b = (dml_heap_p.b * 1.1)::int FROM dml_heap_r WHERE dml_heap_p.b = dml_heap_r.a and dml_heap_p.b = dml_heap_r.b;
