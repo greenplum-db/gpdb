@@ -970,3 +970,50 @@ cdbdisp_snatchPGresults(CdbDispatchResult *dispatchResult,
 
 	return nresults;
 }
+
+struct HTAB *
+PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
+					 void *aotupcounts, int naotupcounts)
+{
+	PQaoRelTupCount *ao = (PQaoRelTupCount *) aotupcounts;
+
+	if (naotupcounts)
+	{
+		int	j;
+
+		for (j = 0; j < naotupcounts; j++)
+		{
+			if (OidIsValid(ao->aorelid))
+			{
+				bool found;
+				PQaoRelTupCount *entry;
+
+				if (!ht)
+				{
+					HASHCTL	ctl;
+
+					/*
+					 * reasonable assumption?
+					 */
+					long num_buckets = list_length(all_partition_relids(parts));
+					num_buckets /= num_partition_levels(parts);
+
+					ctl.keysize = sizeof(Oid);
+					ctl.entrysize = sizeof(*entry);
+					ht = hash_create("AO hash map", num_buckets, &ctl, HASH_ELEM);
+				}
+
+				entry = hash_search(ht, &(ao->aorelid), HASH_ENTER, &found);
+
+				if (found)
+					entry->tupcount += ao->tupcount;
+				else
+					entry->tupcount = ao->tupcount;
+
+			}
+			ao++;
+		}
+	}
+
+	return ht;
+}

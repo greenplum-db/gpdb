@@ -296,13 +296,6 @@ throughout the codebase, but a few larger additions worth noting:
   between the DXL format used by ORCA, and the PostgreSQL internal
   representation.
 
-* __src/backend/gp_libpq_fe/__
-
-  A slightly modified copy of libpq. The master node uses this to
-  connect to segments, and to send fragments of a query plan to
-  segments for execution. It is linked directly into the backend, it
-  is not a shared library like libpq.
-
 * __src/backend/fts/__
 
   FTS is a process that runs in the master node, and periodically

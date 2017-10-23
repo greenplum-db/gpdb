@@ -14,6 +14,7 @@
  * a usable vsnprintf(), then a copy of our own implementation of it will
  * be linked into libpq.
  *
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -284,8 +285,31 @@ void
 appendPQExpBuffer(PQExpBuffer str, const char *fmt,...)
 {
 	va_list		args;
+
+	va_start(args, fmt);
+    appendPQExpBufferVA(str, fmt, args);
+	va_end(args);
+}
+
+/*
+ * appendPQExpBufferVA
+ *
+ * A version of appendPQExpBuffer() that takes a va_list instead of '...'.
+ * The caller must do va_start(args, x) before calling, and va_end(args)
+ * afterwards.
+ */
+void
+appendPQExpBufferVA(PQExpBuffer str, const char *fmt, va_list args)
+{
+    va_list     saveargs;
 	size_t		avail;
 	int			nprinted;
+
+#ifdef __va_copy
+    __va_copy(saveargs, args);
+#else
+    saveargs = args;
+#endif
 
 	if (PQExpBufferBroken(str))
 		return;					/* already failed */
@@ -300,10 +324,8 @@ appendPQExpBuffer(PQExpBuffer str, const char *fmt,...)
 		if (str->maxlen > str->len + 16)
 		{
 			avail = str->maxlen - str->len - 1;
-			va_start(args, fmt);
 			nprinted = vsnprintf(str->data + str->len, avail,
 								 fmt, args);
-			va_end(args);
 
 			/*
 			 * Note: some versions of vsnprintf return the number of chars
@@ -320,7 +342,14 @@ appendPQExpBuffer(PQExpBuffer str, const char *fmt,...)
 		/* Double the buffer size and try again. */
 		if (!enlargePQExpBuffer(str, str->maxlen))
 			return;				/* oops, out of memory */
-	}
+
+#ifdef __va_copy
+        __va_copy(args, saveargs);
+#else
+        args = saveargs;
+#endif
+
+    }
 }
 
 /*

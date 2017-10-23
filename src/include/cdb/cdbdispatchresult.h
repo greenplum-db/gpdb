@@ -342,4 +342,8 @@ cdbdisp_makeDispatchResults(int sliceCapacity,
 void
 cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
 
+extern struct HTAB *
+PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
+					 void *aotupcounts, int naotupcounts);
+
 #endif   /* CDBDISPATCHRESULT_H */

@@ -21,8 +21,8 @@ include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile
 endif
 
 SUBDIRS = access bootstrap catalog parser commands executor \
-	fts lib libpq gp_libpq_fe main nodes optimizer port postmaster regex \
-	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb\
+	fts lib libpq main nodes optimizer port postmaster regex \
+	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb \
 	$(ADDON_SUBDIR)
 
 ifeq ($(enable_orca),yes)
@@ -66,6 +66,9 @@ endif
 
 # Greenplum uses threads in the backend
 LIBS := $(LIBS) -lpthread
+
+# Greenplum uses libpq to communicate between QD and QEs
+OBJS := $(OBJS) $(addprefix $(top_builddir)/src/interfaces/libpq/,fe-protocol3_for_backend.o fe-connect_for_backend.o fe-exec.o pqexpbuffer.o fe-auth.o fe-misc.o fe-protocol2.o fe-secure.o getpeereid.o)
 
 ##########################################################################
 

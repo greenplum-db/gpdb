@@ -15,6 +15,7 @@
  * a usable vsnprintf(), then a copy of our own implementation of it will
  * be linked into libpq.
  *
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -162,6 +163,15 @@ extern void
 appendPQExpBuffer(PQExpBuffer str, const char *fmt,...)
 /* This extension allows gcc to check the format string */
 __attribute__((format(printf, 2, 3)));
+
+/*------------------------
+ * appendPQExpBufferVA
+ * A version of appendPQExpBuffer() that takes a variable arguments list
+ * (va_list) instead of '...', like vsnprintf().  Caller must do
+ * va_start(args, x) before calling, and va_end(args) upon return.
+ */
+void
+appendPQExpBufferVA(PQExpBuffer str, const char *fmt, va_list args);
 
 /*------------------------
  * appendPQExpBufferStr

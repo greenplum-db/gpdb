@@ -35,6 +35,7 @@
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbpq.h"
 #include "miscadmin.h"
 
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
