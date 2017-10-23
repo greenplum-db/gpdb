@@ -6,18 +6,16 @@ create table update_pk_test (a int primary key, b int) distributed by (a);
 NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "update_pk_test_pkey" for table "update_pk_test"
 insert into update_pk_test values(1,1);
 explain update update_pk_test set b = 5;
-                                           QUERY PLAN                                            
--------------------------------------------------------------------------------------------------
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
  Update  (cost=0.00..431.07 rows=1 width=1)
    ->  Result  (cost=0.00..431.00 rows=1 width=26)
-         ->  Assert  (cost=0.00..431.00 rows=1 width=22)
-               Assert Cond: NOT public.update_pk_test.a IS NULL
-               ->  Split  (cost=0.00..431.00 rows=1 width=22)
-                     ->  Result  (cost=0.00..431.00 rows=1 width=22)
-                           ->  Table Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
+         ->  Split  (cost=0.00..431.00 rows=1 width=22)
+               ->  Result  (cost=0.00..431.00 rows=1 width=22)
+                     ->  Table Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
-(9 rows)
+ Optimizer status: PQO version 2.48.0
+(7 rows)
 
 update update_pk_test set b = 5;
 select * from update_pk_test order by 1,2;
@@ -35,14 +33,13 @@ explain update update_pk_test set a = 5;
                Sort Key: (DMLAction)
                ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=22)
                      Hash Key: "outer".a
-                     ->  Assert  (cost=0.00..431.00 rows=1 width=22)
-                           Assert Cond: NOT "outer".a IS NULL
+                     ->  Result  (cost=0.00..431.00 rows=1 width=22)
                            ->  Split  (cost=0.00..431.00 rows=1 width=22)
                                  ->  Result  (cost=0.00..431.00 rows=1 width=22)
                                        ->  Table Scan on update_pk_test  (cost=0.00..431.00 rows=1 width=18)
  Settings:  optimizer=on
- Optimizer status: PQO version 2.47.1
-(13 rows)
+ Optimizer status: PQO version 2.48.0
+(12 rows)
 
 update update_pk_test set a = 5;
 select * from update_pk_test order by 1,2;

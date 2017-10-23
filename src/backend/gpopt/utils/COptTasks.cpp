@@ -803,7 +803,9 @@ COptTasks::PoconfCreate
 								ulJoinArityForAssociativityCommutativity,
 								ulArrayExpansionThreshold,
 								ulJoinOrderThreshold,
-								ulBroadcastThreshold
+								ulBroadcastThreshold,
+								false /* don't create Assert nodes for constraints, we'll
+								      * enforce them ourselves in the executor */
 								)
 						);
 }
