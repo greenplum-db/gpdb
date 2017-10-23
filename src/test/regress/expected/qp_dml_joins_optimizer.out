@@ -319,7 +319,7 @@ SELECT COUNT(*) FROM (SELECT dml_ao_check_r.a + 110 , dml_ao_check_r.b, dml_ao_c
    107
 (1 row)
 
-INSERT INTO dml_ao_check_r SELECT dml_ao_check_r.a + 110 , dml_ao_check_r.b, dml_ao_check_r.c, dml_ao_check_r.d FROM dml_ao_check_r, dml_ao_check_s WHERE dml_ao_check_r.a = dml_ao_check_s.a;
+INSERT INTO dml_ao_check_r SELECT dml_ao_check_r.a + 110 , dml_ao_check_r.b, dml_ao_check_r.c, dml_ao_check_r.d FROM dml_ao_check_r, dml_ao_check_s WHERE dml_ao_check_r.a = dml_ao_check_s.a AND dml_ao_check_r.b > 10;
 ERROR:  new row for relation "dml_ao_check_r_1_prt_def" violates check constraint "dml_ao_check_r_a_check"
 SELECT COUNT(*) FROM dml_ao_check_r;
  count 
