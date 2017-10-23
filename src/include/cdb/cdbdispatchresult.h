@@ -19,7 +19,7 @@
 #include "commands/tablecmds.h"
 #include "utils/hsearch.h"
 
-struct pg_result;                   /* PGresult ... #include "gp-libpq-fe.h" */
+struct pg_result;                   /* PGresult ... #include "libpq-fe.h" */
 struct SegmentDatabaseDescriptor;   /* #include "cdb/cdbconn.h" */
 struct StringInfoData;              /* #include "lib/stringinfo.h" */
 struct PQExpBufferData;             /* #include "libpq-int.h" */

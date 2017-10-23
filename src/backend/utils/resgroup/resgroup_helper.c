@@ -11,7 +11,7 @@
 #include "postgres.h"
 
 #include "funcapi.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "miscadmin.h"
 #include "access/genam.h"
 #include "catalog/pg_resgroup.h"

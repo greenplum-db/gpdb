@@ -64,8 +64,6 @@ class case(GPLibPQTestCase):
         """
 
         with PGconn("") as conn:
-            # gp_libpq_fe doesn't use PGHOST env var, so without giving
-            # explicit hostname, it should use unix domain socket.
             res = conn.execute("SELECT test_connect('')")
             self.assertEqual(res.status(), PGRES_TUPLES_OK)
 

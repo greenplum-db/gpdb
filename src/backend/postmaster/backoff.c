@@ -45,7 +45,7 @@
 #include "miscadmin.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include <unistd.h>
 
 #include <signal.h>

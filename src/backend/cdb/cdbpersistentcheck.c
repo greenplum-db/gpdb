@@ -15,7 +15,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "utils/palloc.h"
-#include "../gp_libpq_fe/gp-libpq-fe.h"
+#include "libpq-fe.h"
 
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentcheck.h"

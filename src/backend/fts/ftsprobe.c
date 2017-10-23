@@ -20,8 +20,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 
 #include "cdb/cdbgang.h"		/* gp_pthread_create */
 #include "libpq/ip.h"

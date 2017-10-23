@@ -25,8 +25,8 @@
 #include "cdb/cdbvars.h"
 
 #include "cdb/cdbfilerepconnclient.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfilerepservice.h"
 
 static PGconn *filerep_conn = NULL;

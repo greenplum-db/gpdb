@@ -21,7 +21,7 @@
   * These macros are needed to let error-handling code be portable between
   * Unix and Windows.  (ugh)
   *
-  * macros taken from gp-libpq-int.h
+  * macros taken from libpq-int.h
   */
  #ifdef WIN32
  #define SOCK_ERRNO (WSAGetLastError())

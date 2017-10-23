@@ -15,8 +15,8 @@
 #include <pthread.h>
 #include "postmaster/fts.h"
 #include "postmaster/ftsprobe.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 
 typedef struct threadWorkerInfo
 {

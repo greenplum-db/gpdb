@@ -14,7 +14,7 @@
 #include "postgres.h"
 
 #include "funcapi.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/xact.h"

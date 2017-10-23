@@ -7,7 +7,7 @@
 subdir = src/backend/utils/adt
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe  $(CPPFLAGS)
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 # seems to be required for some date/time stuff 1999/07/22 bjm
 ifeq "$(findstring alpha,$(host_cpu))" "alpha"
