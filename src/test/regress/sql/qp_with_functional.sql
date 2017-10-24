@@ -225,6 +225,40 @@ SELECT v1.a, v2.b
 FROM v AS v1, v AS v2
 WHERE v1.a < v2.a ORDER BY 1,2;
 
+-- @description test15d: CTE with a user-defined function [STABLE MODIFIES SQL DATA]
+CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
+LANGUAGE plpgsql
+STABLE MODIFIES SQL DATA
+AS $$
+BEGIN
+UPDATE foobar SET d = d+1 WHERE c = $1;
+RETURN $1 + 1;
+END
+$$;
+
+WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
+SELECT v1.a, v2.b
+FROM v AS v1, v AS v2
+WHERE v1.a < v2.a ORDER BY 1,2;
+
+-- @description test15e: CTE with a user-defined function [STABLE READS SQL DATA]
+CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int
+LANGUAGE plpgsql
+STABLE READS SQL DATA
+AS $$
+DECLARE
+    r int;
+BEGIN
+    SELECT d FROM foobar WHERE c = $1 LIMIT 1 INTO r;
+    RETURN r;
+END
+$$;
+
+WITH v(a, b) AS (SELECT cte_func1(a), b FROM foo WHERE b < 5)
+SELECT v1.a, v2.b
+FROM v AS v1, v AS v2
+WHERE v1.a < v2.a ORDER BY 1,2;
+
 -- @description test15g: CTE with a user-defined function [VOLATILE NO SQL]
 CREATE OR REPLACE FUNCTION cte_func1(a int) RETURNS int 
 LANGUAGE plpgsql
