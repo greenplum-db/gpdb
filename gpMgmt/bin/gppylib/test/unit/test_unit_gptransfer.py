@@ -885,7 +885,7 @@ class GpTransfer(GpTestCase):
         self.assertEqual(escaped_query, validator._src_sql)
         self.assertEqual(escaped_query, validator._dest_sql)
 
-    def test__validate_good_range_partition_from_43x_to_5x(self):
+    def test__validate_good_range_partition_from_4_to_X(self):
         options = self.setup_partition_validation()
 
         singleton_side_effect = SingletonSideEffect()
@@ -914,7 +914,7 @@ class GpTransfer(GpTestCase):
         self.assertIn("Validating partition table transfer set...", self.get_info_messages())
 
 
-    def test__validate_good_list_partition_from_43x_to_5x(self):
+    def test__validate_good_list_partition_from_4_to_X(self):
         options = self.setup_partition_validation()
 
         singleton_side_effect = SingletonSideEffect()
@@ -939,7 +939,7 @@ class GpTransfer(GpTestCase):
 
         self.assertIn("Validating partition table transfer set...", self.get_info_messages())
 
-    def test__validate_good_multi_column_list_partition_from_43x_to_5x(self):
+    def test__validate_good_multi_column_list_partition_from_4_to_X(self):
         options = self.setup_partition_validation()
 
         singleton_side_effect = SingletonSideEffect()
@@ -965,7 +965,7 @@ class GpTransfer(GpTestCase):
 
         self.assertIn("Validating partition table transfer set...", self.get_info_messages())
 
-    def test__validate_good_multi_column_swapped_column_ordering_list_partition_from_5x_to_5x(self):
+    def test__validate_good_multi_column_swapped_column_ordering_list_partition_with_same_version(self):
         options = self.setup_partition_validation()
 
         singleton_side_effect = SingletonSideEffect()
@@ -991,7 +991,7 @@ class GpTransfer(GpTestCase):
 
         self.subject.GpTransfer(Mock(**options), [])
 
-    def test__validate_good_multi_column_swapped_column_ordering_list_partition_from_43x_to_5x(self):
+    def test__validate_good_multi_column_swapped_column_ordering_list_partition_from_4_to_X(self):
         options = self.setup_partition_validation()
 
         singleton_side_effect = SingletonSideEffect()
