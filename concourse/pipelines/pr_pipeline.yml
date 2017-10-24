@@ -125,7 +125,7 @@ jobs:
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
-        timeout: 1h
+        timeout: 2h
         on_failure: *pr_failure
 
       - task: icw_gporca_orca_centos6
@@ -139,7 +139,7 @@ jobs:
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
-        timeout: 2h30m
+        timeout: 5h
         on_failure: *pr_failure
 
       - task: icw_gporca_conan_ubuntu16
@@ -162,7 +162,7 @@ jobs:
           bin_gpdb: gpdb_artifacts
         params:
           TEST_OS: centos
-        timeout: 10m
+        timeout: 20m
         on_failure: *pr_failure
 
     - task: separate_qautils_files_for_rc
