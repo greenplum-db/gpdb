@@ -41,6 +41,5 @@
       <topicref href="g-hdfs-emr-config.xml"/>
     </topicref>
     <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
-    <topicref href="transforming-xml-data.xml" type="topic"/>
   </topicref>
 </map>

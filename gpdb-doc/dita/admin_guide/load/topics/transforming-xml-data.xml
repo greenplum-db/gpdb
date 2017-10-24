@@ -39,12 +39,15 @@
             use the <codeph>gpload</codeph> utility to automate the tasks to create an external
             table, run <codeph>gpfdist</codeph>, and load the transformed data into the database
             table.</p>
-         <p>The following diagram shows <i>gpfdist</i> performing an XML transformation.</p>
+         <p>Accessing data in external XML files from within the database is a common example
+            requiring transformation. The following diagram shows <i>gpfdist</i> performing a
+            transformation on XML files on an ETL server.</p>
          <fig id="du185408">
             <title>External Tables using XML Transformations</title>
-            <image href="../graphics/ext-tables-xml.png" placement="break" id="image_xbp_whm_pbb"/>
+            <image href="../../graphics/ext-tables-xml.png" placement="break" id="image_xbp_whm_pbb"/>
          </fig>
-         <p>Follow these steps to load XML data into a Greenplum Database readable external table. </p>
+         <p>Following are the high-level steps to set up a <codeph>gpfdist</codeph> transformation
+            for external data files. The process is illustrated with an XML example. </p>
          <ol id="ol_d4f_4wf_pbb">
             <li><xref href="#topic_el5_k12_pbb" format="dita">Determine the transformation
                   schema</xref>.</li>
@@ -62,7 +65,7 @@
          <ol id="ol_fl5_k12_pbb">
             <li> Determine the goal of the project, such as indexing data, analyzing data, combining
                data, and so on. </li>
-            <li> Examine the XML file and note the file structure and element names.</li>
+            <li> Examine the source files and note the file structure and element names.</li>
             <li> Choose the elements to import and decide if any other limits are appropriate.</li>
          </ol>
          <p>For example, the following XML file, <i>prices.xml</i>, is a simple XML file that
@@ -149,7 +152,8 @@
          <p>The <cmdname>gpfdist</cmdname> configuration is specified as a YAML 1.1 document. It
             contains rules that <cmdname>gpfdist</cmdname> uses to select a transformation to apply
             when loading or extracting data. </p>
-         <p>This example <cmdname>gpfdist</cmdname> configuration contains the following items:</p>
+         <p>This example <cmdname>gpfdist</cmdname> configuration contains the following items that
+            are required for the <i>prices.xml</i> transformation scenario:</p>
          <ul id="ul_lct_m12_pbb">
             <li id="du219363">the <codeph>config.yaml</codeph> file defining
                   <codeph>TRANSFORMATIONS</codeph>
@@ -179,7 +183,7 @@
                settings.</li>
          </ol>
          <p>The following <cmdname>gpfdist</cmdname> configuration, called
-               <codeph>config.YAML</codeph>, applies to the prices example. The initial indentation
+               <codeph>config.yaml</codeph>, applies to the prices example. The initial indentation
             on each line is significant and reflects the hierarchical nature of the specification.
             The transformation name <codeph>prices_input</codeph> in the following example will be
             referenced later when creating the table in SQL.</p>
@@ -219,7 +223,7 @@ java \
          <p>The <codeph>input_transform.sh</codeph> file uses the Joost STX engine with the AWK
             interpreter. The following diagram shows the process flow as <cmdname>gpfdist</cmdname>
             runs the transformation.</p>
-         <image href="../graphics/02-pipeline.png" placement="break" width="462px" height="190px"
+         <image href="../../graphics/02-pipeline.png" placement="break" width="462px" height="190px"
             id="image_nct_m12_pbb"/>
       </body>
    </topic>
@@ -297,7 +301,7 @@ GPLOAD:
             <p>The following diagram shows the relationships between the <codeph>gpload</codeph>
                control file, the <cmdname>gpfdist</cmdname> configuration file, and the XML data
                file.</p>
-            <image href="../graphics/03-gpload-files.jpg" placement="break" width="415px"
+            <image href="../../graphics/03-gpload-files.jpg" placement="break" width="415px"
                height="258px" id="image_ty3_l32_pbb"/>
          </body>
       </topic>

@@ -20,6 +20,7 @@
          <topicref href="topics/g-moving-data-between-tables.xml"/>
       </topicref>
       <topicref href="topics/g-loading-data-with-gpload.xml"/>
+      <topicref href="topics/transforming-xml-data.xml"/>
       <topicref href="topics/g-loading-data-with-copy.xml"/>
       <topicref href="topics/g-running-copy-in-single-row-error-isolation-mode.xml"/>
       <topicref href="topics/g-optimizing-data-load-and-query-performance.xml"/>
