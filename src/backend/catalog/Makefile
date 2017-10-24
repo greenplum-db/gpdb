@@ -85,8 +85,8 @@ postgres.shdescription: postgres.bki ;
 postgres_bki_srcs: process_col_defaults.pl $(POSTGRES_BKI_SRCS)
 	cat $(POSTGRES_BKI_SRCS) | $(PERL) process_col_defaults.pl > postgres_bki_srcs
 
-5.0.json: process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h
-	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > 5.0.json
+6.json: process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h
+	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > 6.json
 
 postgres.bki: genbki.sh postgres_bki_srcs $(top_srcdir)/src/include/pg_config_manual.h
 	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(PG_VERSION) -o postgres postgres_bki_srcs
