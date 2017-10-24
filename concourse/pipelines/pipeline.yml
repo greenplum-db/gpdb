@@ -49,7 +49,7 @@ groups:
 ################################
   - gate_cluster_start
   - mpp_interconnect
-  - DPM_gptransfer-5x-to-5x
+  - DPM_gptransfer
   - cs_crash_recovery_schema_topology
   - cs_crash_recovery_04_10
   - cs_crash_recovery_11_20
@@ -71,10 +71,9 @@ groups:
   - gate_mm_misc_end
 ################################
   - gate_nightly_start
-  - DPM_backup_43_restore_5
   - MM_gpexpand_1
   - MM_gpexpand_2
-  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer_43x_to_master
   - cs_aoco_compression_large_01
   - cs_aoco_compression_large_02
   - cs_aoco_compression_large_03
@@ -142,14 +141,13 @@ groups:
   - cs_aoco_compression_small
   - cs_aoco_compression_small_serial
   - DPM_backup-restore
-  - DPM_gptransfer-43x-to-5x
-  - DPM_gptransfer-5x-to-5x
+  - DPM_gptransfer_43x_to_master
+  - DPM_gptransfer
   - MM_gpcheckcat
   - MM_gpexpand_1
   - MM_gpexpand_2
   - MM_gppkg
   - MM_gprecoverseg
-  - DPM_backup_43_restore_5
 
 - name: Experimental Tests
   jobs:
@@ -205,7 +203,7 @@ groups:
   jobs:
   - gate_cluster_start
   - mpp_interconnect
-  - DPM_gptransfer-5x-to-5x
+  - DPM_gptransfer
   - DPM_backup-restore
   - cs_crash_recovery_schema_topology
   - cs_crash_recovery_04_10
@@ -233,10 +231,9 @@ groups:
 - name: G:Nightly
   jobs:
   - gate_nightly_start
-  - DPM_backup_43_restore_5
   - MM_gpexpand_1
   - MM_gpexpand_2
-  - DPM_gptransfer-43x-to-5x
+  - DPM_gptransfer_43x_to_master
   - cs_aoco_compression_large_01
   - cs_aoco_compression_large_02
   - cs_aoco_compression_large_03
@@ -2110,7 +2107,7 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "mpp-interconnect"
-- name: DPM_gptransfer-5x-to-5x
+- name: DPM_gptransfer
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2309,7 +2306,7 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - DPM_gptransfer-5x-to-5x
+      - DPM_gptransfer
       - DPM_backup-restore
       - mpp_interconnect
       - cs_crash_recovery_schema_topology
@@ -2596,70 +2593,6 @@ jobs:
     - get: gpdb_src_behave_tarball
       passed:
       - gate_icw_end
-- name: DPM_backup_43_restore_5
-  plan:
-  - get: nightly-trigger
-    tags: ["gpdb5_ccp_external_worker"]
-    trigger: ((nightly-trigger-flag))
-  - aggregate:
-    - get: gpdb_src
-      tags: ["gpdb5_ccp_external_worker"]
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_nightly_start]
-    - get: gpdb_binary
-      tags: ["gpdb5_ccp_external_worker"]
-      resource: bin_gpdb_centos6
-      passed: [gate_nightly_start]
-      trigger: ((reduced-frequency-trigger-flag))
-    - get: gpdb4_binary
-      tags: ["gpdb5_ccp_external_worker"]
-      resource: bin_gpdb4_centos6
-    - get: ccp_src
-      tags: ["gpdb5_ccp_external_worker"]
-    - get: centos-gpdb-dev-6
-      tags: ["gpdb5_ccp_external_worker"]
-  - put: terraform
-    tags: ["gpdb5_ccp_external_worker"]
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: setup_gpdb4
-    tags: ["gpdb5_ccp_external_worker"]
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    input_mapping:
-      gpdb_binary: gpdb4_binary
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_backup_tests
-    tags: ["gpdb5_ccp_external_worker"]
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - task: setup_gpdb5
-    tags: ["gpdb5_ccp_external_worker"]
-    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    image: centos-gpdb-dev-6
-    on_failure:
-      <<: *debug_sleep
-  - task: run_restore_tests
-    tags: ["gpdb5_ccp_external_worker"]
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
 - name: MM_gpexpand_1
   plan:
   - aggregate:
@@ -2746,7 +2679,7 @@ jobs:
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
-- name: DPM_gptransfer-43x-to-5x
+- name: DPM_gptransfer_43x_to_master
   plan:
   - get: nightly-trigger
     tags: ["gpdb5_ccp_external_worker"]
@@ -2985,7 +2918,6 @@ jobs:
     - get: gpdb_src
       trigger: true
       passed:
-      - DPM_backup_43_restore_5
       - MM_gpexpand_1
       - MM_gpexpand_2
       - cs_aoco_compression_large_01
@@ -2994,7 +2926,7 @@ jobs:
       - cs_aoco_compression_large_04
       - cs_aoco_compression_small
       - cs_aoco_compression_small_serial
-      - DPM_gptransfer-43x-to-5x
+      - DPM_gptransfer_43x_to_master
 ############### Nightly End
 
 ################ General Misc Start
@@ -3531,14 +3463,13 @@ jobs:
     - regression_tests_pxf_hdp
     - regression_tests_pxf_cdh
     - gpdb_rc_packaging_centos
-    - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg
     - MM_gpexpand_1
     - MM_gpexpand_2
     - MM_gpinitstandby
-    - DPM_gptransfer-43x-to-5x
-    - DPM_gptransfer-5x-to-5x
+    - DPM_gptransfer_43x_to_master
+    - DPM_gptransfer
     - mpp_interconnect
     - QP_optimizer-functional
     - validate_pipeline
