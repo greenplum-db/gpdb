@@ -204,6 +204,24 @@ def impl(context):
     dbconn.execSQL(context.long_lived_conn, 'ROLLBACK;')
 
 
+@then('the latest state file should have a mod count of {mod_count} for table "{table}" in "{schema}" schema for database "{dbname}"')
+def impl(context, mod_count, table, schema, dbname):
+    mod_count_in_state_file = get_mod_count_in_state_file(dbname, schema, table)
+    if mod_count_in_state_file != mod_count:
+        raise Exception(
+            "mod_count %s does not match mod_count %s in state file for %s.%s" %
+             (mod_count, mod_count_in_state_file, schema, table))
+
+
+def get_mod_count_in_state_file(dbname, schema, table):
+    file = get_latest_aostate_file(dbname)
+    comma_name = ','.join([schema, table])
+    for line in get_lines_from_file(file):
+        if comma_name in line:
+            return line.split(',')[2]
+    return -1
+
+
 def create_long_lived_conn(context, dbname):
     context.long_lived_conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
 
