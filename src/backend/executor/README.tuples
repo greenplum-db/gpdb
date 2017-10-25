@@ -1,0 +1,126 @@
+Tuple Representations
+=====================
+
+What is a tuple representation?
+-------------------------------
+
+Tuples are passed around in generic TupleTableSlot objects. Interested parties
+need to be able to decode the data and see the values. The current tuple
+representation provides information on how to decode the data into typed
+attributes
+
+Why do we need more than one tuple representation?
+---------------------------------------------------
+
+Data comes from disk in a disk-oriented representation, serialized in a buffer
+and includes MVCC columns for heap tables.  That is sub-optimal for fast
+processing.  The execution engine does not usually need system columns, so it
+can drop the MVCC info.  Some operators don’t need all the attributes (they
+execute projections), but creating a new tuple means copying all the columns
+into a new buffer.  Variable length attributes make non-sequential accessing of
+attributes slow.  We have different in-memory representation of tuples that can
+improve performance for these cases.
+
+
+What different representations do we have?
+------------------------------------------
+
+ * HeapTuple
+   - in a buffer or
+   - palloc'ed
+
+ * MinimalTuple
+   - same as HeapTuple, but no system columns
+
+ * VirtualTuple
+   - optimization to avoid copying data for projections, etc.
+
+ * MemTuple
+   - Greenplum addition: similar to MinimalTuple but "CPU" optimized
+
+TupleTableSlot
+--------------
+
+A TupleTableSlot is a very central data structure used to store tuples.  Most
+important fields:
+
+ * TupleDesc: tuple descriptor that contains the schema.
+
+ * HeapTuple: if available, physical representation of the tuple.  This is
+   usually just a pointer to a buffer and a length.
+
+ * MemTuple: if available, memtuple representation of the tuple.
+
+ * Datum *values: Array of the values (datums) for all the attributes.  Might
+   not be available.
+
+ * bool *is_null: Array of booleans, is a particular attribute null.  Might not
+   be available.
+
+ * nvalid: How many of the attributes we have extracted in (values, is_null)
+   arrays.
+
+Tuple Representations Stored in a TupleTableSlot
+------------------------------------------------
+
+HeapTuple
+
+This is identical to the on-disk representation in a heap table.  It's a
+serialized (or "materialized") tuple, stored either in a buffer that belongs to
+the buffer manager, or allocated with palloc onto the process' heap.  Where a
+heap tuple is stored is important for resource management as shared buffers
+need to be correctly pinned.
+
+MinimalTuple
+
+It's similar to a palloc'ed HeapTuple, but the system columns are
+stripped.  This means there's no useless MVCC information carried around in the
+executor.
+
+VirtualTuple
+
+A "virtual" tuple is an optimization used to minimize physical data copying in
+between plan nodes.  Any pass-by-reference Datums in the tuple point to storage
+that is not directly associated with the TupleTableSlot.  They can point to (1)
+part of a tuple stored in a lower plan node's output TupleTableSlot or (2) a
+function result constructed in a plan node's per-tuple econtext.  It is the
+responsibility of the generating plan node to be sure these resources are not
+released for as long as the virtual tuple needs to be valid.
+
+Tuples that need to be copied anywhere (e.g. Motion, or DML) must be
+"materialized" into physical tuples.
+
+MemTuple
+
+In Greenplum, MemTuple replaces the MinimalTuple.  MemTuple is also a
+serialized tuple format.  The main design goal is to reduce CPU usage so that
+getting to a certain column does not require decoding of the columns preceding
+it.
+
+Non-sequential accessing attributes (columns) of HeapTuple and MinimalTuple is
+done using slot_getsomeattrs or slot_getallattrs to populate some or all of the
+Datum* value pointers.  Accessing the M-th attribute involves iterating through
+the first M-1 attributes, calculating their actual length (fixed or variable,
+null or not), the adding to an offset.
+
+MemTuple is an optimized representation which speeds-up non-sequential access
+of the At query start time, for each slot (or each place we use MemTuple), we
+compute a binding data structure from the schema (TupleDesc).  For each
+attribute in the tuple, the binding structure contains information that
+determines where the attribute is located in the MemTuple.  It consists of the
+following:
+
+ 1. The physical attribute number.  Physical attr numbers may differ from
+    schema because we reorder attributes as follows.  8 bytes aligned attrs go
+    first, then 4 bytes aligned, then 2, then 1, and last variable length
+    field.
+
+ 2. The offset where the attribute starts and the length of the attributes.
+
+ 3. Information to adjust the offset if there are null columns before (in
+    physical order) the attribute.
+
+There are many functions to convert the tuple stored in a TupleTableSlot from
+one representation to another.  Refer to access/memtup.h and
+executor/tuptable.h for more details.
+
