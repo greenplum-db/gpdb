@@ -11,17 +11,14 @@
 <b>gpreload</b> <b>-h</b> 
 
 <b>gpreload</b> <b>--version</b></codeblock></section>
-    <section id="section3"><title>Description</title><p>The <codeph>gpreload</codeph> utility
-        reloads table data with column data sorted. For tables that were created with the table
-        storage option <codeph>APPENDONLY=TRUE</codeph> and compression enabled, reloading the data
-        with sorted data can improve table compression. You specify a list of tables to be reloaded
-        the table column to be sorted in a text file. </p><p>Compression is improved by sorting data
+    <section id="section3"><title>Description</title><p>The <codeph>gpreload</codeph> utility reloads table data with column data sorted. For tables that
+        were created with the table storage option <codeph>APPENDONLY=TRUE</codeph> and compression
+        enabled, reloading the data with sorted data can improve table compression. You specify a
+        list of tables to be reloaded and the table columns to be sorted in a text file. </p><p>Compression is improved by sorting data
         when the data in the column has a relatively low number of distinct values when compared to
-        the total number of rows.</p><p>For a table being reloaded, the order of the columns to be
-        sorted might affect compression. The columns with fewest distinct values should be listed
-        first. For example, listing state then city would generally result in better compression
-        than listing city then state.
-        </p><codeblock>public.cust_table: state, city
+        the total number of rows.</p><p>For a table being reloaded, the order of the columns to be sorted might affect compression. The
+        columns with the fewest distinct values should be listed first. For example, listing state
+        then city would generally result in better compression than listing city then state. </p><codeblock>public.cust_table: state, city
 public.cust_table: city, state</codeblock><p>For
         information about the format of the file used with <codeph>gpreload</codeph>, see the
           <codeph>--table-file</codeph> option.</p></section>
