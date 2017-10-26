@@ -1355,7 +1355,6 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 - name: icw_gporca_centos7
-  serial: true
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1374,7 +1373,6 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 - name: icw_gporca_sles11
-  serial: true
   plan:
   - aggregate:
     - get: gpdb_src
