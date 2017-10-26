@@ -2071,42 +2071,16 @@ jobs:
       - gate_mm_misc_end
 - name: mpp_interconnect
   plan:
-  - aggregate: &post_packaging_gets_trigger_true
-    - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_cluster_start]
-      trigger: true
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_cluster_start]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_cluster_start]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_cluster_start]
-    - get: gpdb_src_behave_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_cluster_start]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: &input_mappings
-      gpdb_src_archive: gpdb_src_tinc_tarball
-      installer_gpdb_rc: installer_rhel6_gpdb_rc
-      qautils_tarball: qautils_rhel6_tarball
-      gpdb_src_behave_tarball: gpdb_src_behave_tarball
+  - aggregate: *cs_ccp_aggregate_cluster_start
+  - put: terraform
+    <<: *cs_ccp_terraform_params
+  - task: gen_cluster
+    <<: *cs_ccp_gen_cluster_params
+  - task: run_tests
+    <<: *cs_ccp_run_tests_params
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "mpp-interconnect"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "mpp-interconnect"
+      TINC_TARGET: mpp_interconnect
+  - *ccp_destroy
 - name: DPM_gptransfer
   plan:
   - aggregate:
