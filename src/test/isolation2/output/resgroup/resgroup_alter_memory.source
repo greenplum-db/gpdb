@@ -862,3 +862,113 @@ DROP RESOURCE GROUP rg1_memory_test;
 DROP
 DROP RESOURCE GROUP rg2_memory_test;
 DROP
+
+--
+-- Test PrepareTransaction report an error
+--
+CREATE OR REPLACE FUNCTION getSelfRGCapability(cstring) RETURNS int AS '@abs_builddir@/../regress/regress@DLSUFFIX@', 'getSelfRGCapability' LANGUAGE C READS SQL DATA;
+CREATE
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE
+CREATE ROLE rg_test_role RESOURCE GROUP rg_test_group;
+CREATE
+
+SET debug_dtm_action = "fail_begin_command";
+SET
+SET debug_dtm_action_target = "protocol";
+SET
+SET debug_dtm_action_protocol = "prepare";
+SET
+SET debug_dtm_action_segment = 0;
+SET
+
+-- ALTER should fail and the memory_limit in both catalog and share memory are
+-- still 5%
+ALTER RESOURCE GROUP rg_test_group set memory_limit 1;
+ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid = 1509599543-0000000983. (cdbtm.c:698)
+
+RESET debug_dtm_action;
+RESET
+RESET debug_dtm_action_target;
+RESET
+RESET debug_dtm_action_protocol;
+RESET
+RESET debug_dtm_action_segment;
+RESET
+
+-- should still be 5% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+memory_limit
+------------
+5           
+(1 row)
+SET ROLE rg_test_role;
+SET
+select getSelfRGCapability('memory_limit');
+getselfrgcapability
+-------------------
+5                 
+(1 row)
+select getSelfRGCapability('memory_limit') from gp_dist_random('gp_id');
+getselfrgcapability
+-------------------
+5                 
+5                 
+5                 
+(3 rows)
+
+SET ROLE none;
+SET
+
+--
+-- Test error happen on commit_prepare, DDL success after retry
+--
+SET debug_dtm_action = "fail_begin_command";
+SET
+SET debug_dtm_action_target = "protocol";
+SET
+SET debug_dtm_action_protocol = "commit_prepared";
+SET
+SET debug_dtm_action_segment = 0;
+SET
+
+-- ALTER should success
+ALTER RESOURCE GROUP rg_test_group set memory_limit 4;
+ALTER
+
+RESET debug_dtm_action;
+RESET
+RESET debug_dtm_action_target;
+RESET
+RESET debug_dtm_action_protocol;
+RESET
+RESET debug_dtm_action_segment;
+RESET
+
+-- should still be 4% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+memory_limit
+------------
+4           
+(1 row)
+SET ROLE rg_test_role;
+SET
+select getSelfRGCapability('memory_limit');
+getselfrgcapability
+-------------------
+4                 
+(1 row)
+select getSelfRGCapability('memory_limit') from gp_dist_random('gp_id');
+getselfrgcapability
+-------------------
+4                 
+4                 
+4                 
+(3 rows)
+
+SET ROLE none;
+SET
+DROP ROLE rg_test_role;
+DROP
+DROP RESOURCE GROUP rg_test_group;
+DROP

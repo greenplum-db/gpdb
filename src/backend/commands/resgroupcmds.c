@@ -109,7 +109,7 @@ static void registerResourceGroupCallback(ResourceGroupCallback callback, void *
  * Note the callback functions would be removed as being processed.
  */
 void
-AtEOXact_ResGroup(bool isCommit)
+HandleResGroupDDLCallbacks(bool isCommit)
 {
 	if (ResourceGroup_callback.callback == NULL)
 		return;

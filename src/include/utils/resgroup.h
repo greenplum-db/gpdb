@@ -95,6 +95,8 @@ typedef enum
 /*
  * Functions in resgroup.c
  */
+extern void AtEOXact_ResGroup(bool isCommit);
+extern void AtPrepare_ResGroup(void);
 
 /* Shared memory and semaphores */
 extern Size ResGroupShmemSize(void);
@@ -140,6 +142,7 @@ extern int32 ResGroupGetMaxChunksPerQuery(void);
 
 /* test helper function */
 extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
+extern int64 ResGroupGetSelfCapability(const char *prop);
 
 extern int64 ResourceGroupGetQueryMemoryLimit(void);
 

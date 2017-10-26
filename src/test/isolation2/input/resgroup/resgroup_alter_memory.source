@@ -495,3 +495,60 @@ DROP ROLE role1_memory_test;
 DROP ROLE role2_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 DROP RESOURCE GROUP rg2_memory_test;
+
+--
+-- Test PrepareTransaction report an error
+--
+CREATE OR REPLACE FUNCTION getSelfRGCapability(cstring) RETURNS int AS
+'@abs_builddir@/../regress/regress@DLSUFFIX@', 'getSelfRGCapability'
+LANGUAGE C READS SQL DATA;
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE ROLE rg_test_role RESOURCE GROUP rg_test_group;
+
+SET debug_dtm_action = "fail_begin_command";
+SET debug_dtm_action_target = "protocol";
+SET debug_dtm_action_protocol = "prepare";
+SET debug_dtm_action_segment = 0;
+
+-- ALTER should fail and the memory_limit in both catalog and share memory are
+-- still 5%
+ALTER RESOURCE GROUP rg_test_group set memory_limit 1;
+
+RESET debug_dtm_action;
+RESET debug_dtm_action_target;
+RESET debug_dtm_action_protocol;
+RESET debug_dtm_action_segment;
+
+-- should still be 5% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+SET ROLE rg_test_role;
+select getSelfRGCapability('memory_limit');
+select getSelfRGCapability('memory_limit') from gp_dist_random('gp_id');
+
+SET ROLE none;
+
+--
+-- Test error happen on commit_prepare, DDL success after retry
+--
+SET debug_dtm_action = "fail_begin_command";
+SET debug_dtm_action_target = "protocol";
+SET debug_dtm_action_protocol = "commit_prepared";
+SET debug_dtm_action_segment = 0;
+
+-- ALTER should success
+ALTER RESOURCE GROUP rg_test_group set memory_limit 4;
+
+RESET debug_dtm_action;
+RESET debug_dtm_action_target;
+RESET debug_dtm_action_protocol;
+RESET debug_dtm_action_segment;
+
+-- should still be 4% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+SET ROLE rg_test_role;
+select getSelfRGCapability('memory_limit');
+select getSelfRGCapability('memory_limit') from gp_dist_random('gp_id');
+
+SET ROLE none;
+DROP ROLE rg_test_role;
+DROP RESOURCE GROUP rg_test_group;

@@ -403,6 +403,24 @@ AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps)
 	LWLockRelease(ResGroupLock);
 }
 
+void
+AtEOXact_ResGroup(bool isCommit)
+{
+	HandleResGroupDDLCallbacks(isCommit);
+
+	/* Release resource group slot at the end of a transaction */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
+}
+
+void
+AtPrepare_ResGroup(void)
+{
+	/* Release resource group slot */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
+}
+
 /*
  * Load the resource groups in shared memory. Note this
  * can only be done after enough setup has been done. This uses
@@ -2519,6 +2537,24 @@ ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota)
 	*memLimit = groupGetMemExpected(caps);
 	*slotQuota = caps->concurrency ? slotGetMemQuotaExpected(caps) : -1;
 	*sharedQuota = groupGetMemSharedExpected(caps);
+}
+
+int64
+ResGroupGetSelfCapability(const char *prop)
+{
+	if (!strcmp(prop, "memory_limit"))
+		return self->caps.memLimit;
+	if (!strcmp(prop, "concurrency"))
+		return self->caps.concurrency;
+	if (!strcmp(prop, "cpu_rate_limit"))
+		return self->caps.cpuRateLimit;
+	if (!strcmp(prop, "memory_shared_quota"))
+		return self->caps.memSharedQuota;
+	if (!strcmp(prop, "memory_spill_ratio"))
+		return self->caps.memSpillRatio;
+
+	elog(ERROR, "unknow property %s", prop);
+	return -1;
 }
 
 /*
