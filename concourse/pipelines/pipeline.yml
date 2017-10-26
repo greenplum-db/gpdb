@@ -86,8 +86,10 @@ groups:
   - MM_gpcheckcat
   - QP_memory-accounting
   - QP_optimizer-functional
-  - regression_tests_pxf_hdp
-  - regression_tests_pxf_cdh
+  - regression_tests_pxf_hdp_rpm
+  - regression_tests_pxf_hdp_tar
+  - regression_tests_pxf_cdh_rpm
+  - regression_tests_pxf_cdh_tar
   - regression_tests_gphdfs_centos
   - regression_tests_gpcloud_centos
   - mpp_resource_group_centos6
@@ -248,8 +250,10 @@ groups:
   - MM_gpcheckcat
   - QP_memory-accounting
   - QP_optimizer-functional
-  - regression_tests_pxf_hdp
-  - regression_tests_pxf_cdh
+  - regression_tests_pxf_hdp_rpm
+  - regression_tests_pxf_hdp_tar
+  - regression_tests_pxf_cdh_rpm
+  - regression_tests_pxf_cdh_tar
   - regression_tests_gphdfs_centos
   - regression_tests_gpcloud_centos
   - mpp_resource_group_centos6
@@ -3250,8 +3254,10 @@ jobs:
       - QP_memory-accounting
       - regression_tests_gpcloud_centos
       - regression_tests_gphdfs_centos
-      - regression_tests_pxf_hdp
-      - regression_tests_pxf_cdh
+      - regression_tests_pxf_hdp_rpm
+      - regression_tests_pxf_hdp_tar
+      - regression_tests_pxf_cdh_rpm
+      - regression_tests_pxf_cdh_tar
       - QP_optimizer-functional
       - MM_gpcheckcat
       trigger: true
@@ -3260,8 +3266,10 @@ jobs:
       - QP_memory-accounting
       - regression_tests_gpcloud_centos
       - regression_tests_gphdfs_centos
-      - regression_tests_pxf_hdp
-      - regression_tests_pxf_cdh
+      - regression_tests_pxf_hdp_rpm
+      - regression_tests_pxf_hdp_tar
+      - regression_tests_pxf_cdh_rpm
+      - regression_tests_pxf_cdh_tar
       - QP_optimizer-functional
       - MM_gpcheckcat
       trigger: true
@@ -3516,8 +3524,10 @@ jobs:
     - QP_memory-accounting
     - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
-    - regression_tests_pxf_hdp
-    - regression_tests_pxf_cdh
+    - regression_tests_pxf_hdp_rpm
+    - regression_tests_pxf_hdp_tar
+    - regression_tests_pxf_cdh_rpm
+    - regression_tests_pxf_cdh_tar
     - gpdb_rc_packaging_centos
     - MM_gpcheckcat
     - MM_gprecoverseg
