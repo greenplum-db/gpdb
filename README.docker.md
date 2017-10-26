@@ -2,7 +2,7 @@
 
 This guide shows how to use native Docker for Mac to compile GPDB5 with your Mac’s folders mounted into a CentOS container. Although compiling GPDB5 on Mac is supported, Linux is required for some GPDB5 features like resource groups.
 
-Do note that these instructions should be applicable to any Docker host OS, not only Mac.
+These instructions should be applicable to any Docker host OS. We have seen it work on Mac OS X El Capitan and Ubuntu.
 
 ## Installing Docker for Mac OS X
 
