@@ -2585,6 +2585,10 @@ CommitTransaction(void)
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtCommit_ResScheduler();
 
+	/* Process resource group commit processing */
+	AtEOXact_ResGroup(true);
+
+
 	/* Perform any AO table commit processing */
 	AtCommit_AppendOnly();
 
@@ -2743,9 +2747,6 @@ CommitTransaction(void)
 	/* All relations that are in the vacuum process are being commited now. */
 	ResetVacuumRels();
 
-	/* Process resource group related callbacks */
-	AtEOXact_ResGroup(true);
-
 	/* Check we've released all buffer pins */
 	AtEOXact_Buffers(true);
 
@@ -2839,10 +2840,6 @@ CommitTransaction(void)
 	RESUME_INTERRUPTS();
 
 	freeGangsForPortal(NULL);
-
-	/* Release resource group slot at the end of a transaction */
-	if (ShouldUnassignResGroup())
-		UnassignResGroup();
 }
 
 
@@ -2900,6 +2897,9 @@ PrepareTransaction(void)
 	AtCommit_Portals();
 
 	AtEOXact_SharedSnapshot();
+
+	/* Process resource group commit processing */
+	AtEOXact_ResGroup(true);
 
 	/*
 	 * Let ON COMMIT management do its thing (must happen after closing
@@ -3047,9 +3047,6 @@ PrepareTransaction(void)
 	ResourceOwnerRelease(TopTransactionResourceOwner,
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
-
-	/* Process resource group related callbacks */
-	AtEOXact_ResGroup(true);
 
 	/* Check we've released all buffer pins */
 	AtEOXact_Buffers(true);
@@ -3215,6 +3212,9 @@ AbortTransaction(void)
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtAbort_ResScheduler();
 		
+	/* Perform any Resource Group abort processing. */
+	AtEOXact_ResGroup(false);
+
 	/* Perform any AO table abort processing */
 	AtAbort_AppendOnly();
 
@@ -3274,7 +3274,6 @@ AbortTransaction(void)
 		ResourceOwnerRelease(TopTransactionResourceOwner,
 							 RESOURCE_RELEASE_BEFORE_LOCKS,
 							 false, true);
-		AtEOXact_ResGroup(false);
 		AtEOXact_Buffers(false);
 		AtEOXact_RelationCache(false);
 		AtEOXact_Inval(false);
@@ -3392,10 +3391,6 @@ CleanupTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	finishDistributedTransactionContext("CleanupTransaction", true);
-
-	/* Release resource group slot at the end of a transaction */
-	if (ShouldUnassignResGroup())
-		UnassignResGroup();
 }
 
 /*

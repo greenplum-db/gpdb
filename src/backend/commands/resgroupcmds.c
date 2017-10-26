@@ -135,7 +135,7 @@ registerResourceGroupCallback(ResourceGroupCallback callback, void *arg)
  * Note the callback functions would be removed as being processed.
  */
 void
-AtEOXact_ResGroup(bool isCommit)
+HandleResGroupDDLCallbacks(bool isCommit)
 {
 	ResourceGroupCallbackItem *current =
 		isCommit ? ResourceGroup_callbacks->next : ResourceGroup_callbacks->prev;

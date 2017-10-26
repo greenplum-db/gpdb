@@ -410,6 +410,16 @@ AllocResGroupEntry(Oid groupId, const ResGroupOpts *opts)
 	LWLockRelease(ResGroupLock);
 }
 
+void
+AtEOXact_ResGroup(bool isCommit)
+{
+	HandleResGroupDDLCallbacks(isCommit);
+
+	/* Release resource group slot at the end of a transaction */
+	if (ShouldUnassignResGroup())
+		UnassignResGroup();
+}
+
 /*
  * Load the resource groups in shared memory. Note this
  * can only be done after enough setup has been done. This uses

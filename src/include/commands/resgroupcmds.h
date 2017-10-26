@@ -28,6 +28,6 @@ extern Oid GetResGroupIdForName(char *name, LOCKMODE lockmode);
 extern char *GetResGroupNameForId(Oid oid, LOCKMODE lockmode);
 extern Oid GetResGroupIdForRole(Oid roleid);
 extern void GetResGroupCapabilities(Oid groupId, ResGroupCaps *resgroupCaps);
-extern void AtEOXact_ResGroup(bool isCommit);
+extern void HandleResGroupDDLCallbacks(bool isCommit);
 
 #endif   /* RESGROUPCMDS_H */
