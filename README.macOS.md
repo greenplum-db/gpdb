@@ -13,6 +13,7 @@ their environments.
 ## Step: install needed dependencies. This will install homebrew if missing
 ```
 ./README.macOS.bash
+source ~/.bash_profile
 ```
 
 ## Step: Workaround for libreadline / libxml2 on OSX 10.11 (El Capitan)
