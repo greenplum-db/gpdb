@@ -76,10 +76,11 @@ function setup_singlecluster() {
 	pushd singlecluster/bin
 	export SLAVES=1
 	./init-gphd.sh
+	# zookeeper required for HBase
+	./start-zookeeper.sh
 	./start-hdfs.sh
 	./start-yarn.sh
 	./start-hive.sh
-	./start-zookeeper.sh
 	./start-hbase.sh
 	popd
 }

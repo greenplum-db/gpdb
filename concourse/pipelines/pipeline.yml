@@ -3034,7 +3034,7 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
-- name: regression_tests_pxf_hdp
+- name: regression_tests_pxf_hdp_rpm
   plan:
   - aggregate:
     - get: gpdb_src
@@ -3055,9 +3055,34 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         GROUP: gpdb
+        HADOOP_CLIENT: HDP
         TARGET_OS: centos
         TARGET_OS_VERSION: 6
-- name: regression_tests_pxf_cdh
+- name: regression_tests_pxf_hdp_tar
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-HDP
+      trigger: true
+    - get: pxf_automation_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - aggregate:
+    - task: regression_tests_pxf
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: TAR
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+- name: regression_tests_pxf_cdh_rpm
   plan:
   - aggregate:
     - get: gpdb_src
@@ -3077,6 +3102,30 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       GROUP: gpdb
+      HADOOP_CLIENT: CDH
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+- name: regression_tests_pxf_cdh_tar
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-CDH
+      trigger: true
+    - get: pxf_automation_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_pxf
+    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+    image: centos-gpdb-dev-6
+    params:
+      GROUP: gpdb
+      HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 - name: regression_tests_gphdfs_centos
