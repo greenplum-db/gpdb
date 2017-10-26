@@ -124,3 +124,10 @@ There are many functions to convert the tuple stored in a TupleTableSlot from
 one representation to another.  Refer to access/memtup.h and
 executor/tuptable.h for more details.
 
+Toasted attributes
+------------------
+
+Values that are too large to fit into a heap tuple in-line are stored
+externally in a toast table.  A large value is broken down into smaller fixed
+sized chunks.  Each chunk is stored as a tuple in the toast table.  More
+details can be found in access/tuptoaster.c.
