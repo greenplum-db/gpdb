@@ -2080,6 +2080,7 @@ jobs:
     <<: *cs_ccp_run_tests_params
     params:
       TINC_TARGET: mpp_interconnect
+      PRE_TEST_SCRIPT: sudo yum -y install "kernel-devel-uname-r == $(uname -r)"
   - *ccp_destroy
 - name: DPM_gptransfer
   plan:
