@@ -2088,6 +2088,7 @@ rowtype_field_matches(Oid rowtypeid, int fieldnum,
 Query *
 fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size max_size)
 {
+	Query *query;
 	eval_const_expressions_context context;
 
 	context.glob = glob;
@@ -2100,12 +2101,13 @@ fold_constants(PlannerGlobal *glob, Query *q, ParamListInfo boundParams, Size ma
 
 	context.max_size = max_size;
 	
+	query = (Query *) copyObject(q);
 	return (Query *) query_or_expression_tree_mutator
 						(
-						(Node *) q,
+						(Node *) query,
 						eval_const_expressions_mutator,
 						&context,
-						0
+						QTW_DONT_COPY_QUERY
 						);
 }
 
