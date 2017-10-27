@@ -137,20 +137,20 @@ kernel.shmall = 4000000000</codeblock>
     </section>
     <section id="statement_mem_config">
       <title>Statement Memory Configuration</title>
-      <p>The <codeph>gp_statement_mem</codeph> server configuration parameter is the amount of
+      <p>The <codeph>statement_mem</codeph> server configuration parameter is the amount of
         memory to be allocated to any single query in a segment database. If a statement requires
         additional memory it will spill to disk. Calculate the value for
-          <codeph>gp_statement_mem</codeph> with the following formula: </p>
+          <codeph>statement_mem</codeph> with the following formula: </p>
       <p>
         <codeph>(gp_vmem_protect_limit * .9) / max_expected_concurrent_queries </codeph>
       </p>
       <p>For example, for 40 concurrent queries with <codeph>gp_vmem_protect_limit</codeph> set to
-        8GB (8192MB), the calculation for <codeph>gp_statement_mem</codeph> would be: </p>
+        8GB (8192MB), the calculation for <codeph>statement_mem</codeph> would be: </p>
       <p>
         <codeph>(8192MB * .9) / 40 = 184MB</codeph>
       </p>
       <p>Each query would be allowed 184MB of memory before it must spill to disk. </p>
-      <p>To increase <codeph>gp_statement_mem</codeph> safely you must either increase
+      <p>To increase <codeph>statement_mem</codeph> safely you must either increase
           <codeph>gp_vmem_protect_limit</codeph> or reduce the number of concurrent queries. To
         increase <codeph>gp_vmem_protect_limit</codeph>, you must add physical RAM and/or swap
         space, or reduce the number of segments per host.</p>
