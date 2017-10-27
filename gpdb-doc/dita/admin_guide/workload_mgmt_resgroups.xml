@@ -64,7 +64,7 @@
         </tbody>
       </tgroup>
     </table>
-    <note>Resource limits are not enforced on <codeph>SET</codeph> and <codeph>SHOW</codeph> commands.</note>
+    <note>Resource limits are not enforced on <codeph>SET</codeph>, <codeph>RESET</codeph>, and <codeph>SHOW</codeph> commands.</note>
   </body>
 
   <topic id="topic8339717179" xml:lang="en">
