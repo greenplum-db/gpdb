@@ -282,3 +282,9 @@ gpexpand_2:
 	$(TESTER) $(DISCOVER) \
 	-s mpp/gpdb/tests/utilities/gpexpand \
 	-q tags=part2
+
+# mpp interconnect test
+mpp_interconnect:
+	make -C tincrepo/mpp/gpdb/tests/dispatch/interconnect/ickm all distribute
+	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
+	-s dispatch/interconnect
