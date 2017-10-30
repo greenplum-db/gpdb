@@ -4903,7 +4903,7 @@ struct config_real ConfigureNamesReal_gp[] =
 			NULL
 		},
 		&gp_resource_group_memory_limit,
-		0.9, 0.0001, 1.0, NULL, NULL
+		0.7, 0.0001, 1.0, NULL, NULL
 	},
 
 	{
