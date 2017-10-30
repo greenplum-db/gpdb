@@ -38,7 +38,7 @@ The following PXF files and directories are installed in your Greenplum Database
 | `pxf`                 | The PXF installation directory.  |
 | `pxf/apache-tomcat`      | The PXF tomcat directory.  |
 | `pxf/bin`                 | The PXF script and executable directory.                                                                                                                                                                                                                       |
-| `pxf/conf`                | The PXF configuration directory. This directory contains the `pxf-private.classpath` and `pxf-profiles.xml` configuration files. |
+| `pxf/conf`                | The PXF configuration directory. This directory contains the `pxf-env.sh`, `pxf-private.classpath` and `pxf-profiles.xml` configuration files. |
 | `pxf/conf-templates`                | Configuration templates for PXF. |
 | `pxf/lib`                 | The PXF library directory.                                                                                                                                                                                                                       |
 | `pxf/logs`, | The PXF log file directory. Includes `pxf-service.log` and Tomcat-related logs including `catalina.out`. The log directory and log files are readable only by the `gpadmin` user.
@@ -55,10 +55,8 @@ You must explicitly initialize the PXF service instance. This one-time initializ
 
 Before initializing PXF in your Greenplum Database cluster, ensure that you have:
 
-- Installed and configured the required Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
+- Installed and configured the required Hadoop clients on each Greenplum Database segment host. Refer to [Installing and Configuring Clients for PXF](client_instcfg.html) for instructions.
 - Granted the `gpadmin` operating system user read permission on the relevant portions of your HDFS file system.
-- Installed and configured the required Hive client on each Greenplum Database segment host if you plan to use the PXF Hive connector. Refer to [Installing and Configuring the Hive Client for PXF](hiveclient_instcfg.html) for instructions.
-- Located and noted the full file system path to the base install directory of the Hadoop and Hive clients, `$PXF_HADOOP_HOME` and `$PXF_HIVE_HOME`.
  
 ### <a id="init-pxf-steps"></a>Procedure
 
@@ -85,10 +83,10 @@ Perform the following procedure to initialize PXF on each segment host in your G
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "sudo yum -y install unzip"
     ```
 
-4. Run the `pxf init` command to initialize the PXF service on each segment host. Provide your Hadoop base install directory in the `--hadoop-home` option value. If you plan to use the PXF Hive connector, also provide a `--hive-home` option and value. For example:
+4. Run the `pxf init` command to initialize the PXF service on each segment host. For example:
 
     ``` shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf init --hadoop-home \$PXF_HADOOP_HOME --hive-home \$PXF_HIVE_HOME"
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf init"
     ```
     
     The `init` command creates and initializes the PXF web application. It also updates the `pxf-private.classpath` file to include entries for your Hadoop distribution JAR files.
@@ -118,4 +116,4 @@ Perform the following procedure to start PXF on each segment host in your Greenp
 
 The `pxf` command supports `stop`, `restart`, and `status` operations in addition to `init` and `start`. These operations run locally. That is, if you want to start or stop the PXF agent on a specific segment host, you can log in to the host and run the command. If you want to start or stop the PXF agent on multiple segment hosts, use the `gpssh` utility as shown above, or individually log in to each segment host and run the command.
 
-**Note**: If you update your Hadoop or Hive configuration while the PXF service is running, you must copy any updated configuration files to each Greenplum Database segment host and restart PXF on each host.
+**Note**: If you update your Hadoop configuration while the PXF service is running, you must copy any updated configuration files to each Greenplum Database segment host and restart PXF on each host.

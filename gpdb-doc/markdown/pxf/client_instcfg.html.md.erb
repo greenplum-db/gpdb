@@ -1,0 +1,197 @@
+---
+title: Installing and Configuring Clients for PXF
+---
+
+You use PXF connectors to access external data sources. PXF requires a client installation on each Greenplum Database segment host when reading external data from the following sources:
+
+- Hadoop
+- Hive
+- HBase
+
+Compatible Hadoop, Hive, and HBase clients for PXF include Cloudera, Hortonworks Data Platform, and generic Apache distributions.
+
+This topic describes how to install and configure Hadoop, Hive, and HBase client RPM distributions for PXF. When you install these clients via RPMs, PXF auto-detects your Hadoop distribution and optional Hive and HBase installations and sets certain configuration and class paths accordingly.
+
+If your Hadoop, Hive, and HBase installation is a custom or tarball distribution, refer to [Installing Tarball and Custom Clients](#client-install-custom) for instructions.
+
+## <a id="client-pxf-prereq"></a>Prerequisites
+
+Before setting up the Hadoop, Hive, and HBase clients for PXF, ensure that you have:
+
+- `scp` access to hosts running the HDFS, Hive, and HBase services in your Hadoop cluster.
+- Superuser permissions to add `yum` repository files and install RPM packages on each Greenplum Database segment host.
+- Access to, or superuser permissions to install, Java version 1.7 or 1.8 on each Greenplum Database segment host.
+
+
+## <a id="client-pxf-config-steps"></a>Procedure
+Perform the following procedure to install and configure the appropriate clients for PXF on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
+
+1. Log in to your Greenplum Database master node and set up the environment:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    ```
+
+2. Create a text file that lists your Greenplum Database segment hosts, one host name per line. Ensure that there are no blank lines or extra spaces in the file. For example, a file named `seghostfile` may include:
+
+    ``` pre
+    seghost1
+    seghost2
+    seghost3
+    ```
+    
+3. If not already present, install Java on each Greenplum Database segment host. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile sudo yum -y install java-1.8.0-openjdk-1.8.0*
+    ```
+
+4. Identify the Java base install directory. Update the `gpadmin` user's `.bash_profile` file on each segment host to include this `$JAVA_HOME` setting if it is not already present. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.144-0.b01.el7_4.x86_64/jre' >> /home/gpadmin/.bash_profile"
+    ```
+
+5. Set up a `yum` repository for your desired Hadoop distribution on each segment host.
+
+    1. Download the `.repo` file for your Hadoop distribution. For example:
+
+        For Cloudera distributions:
+
+        ``` shell
+        gpadmin@gpmaster$ wget https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo
+        ```
+
+        For Hortonworks Data Platform distributions:
+
+        ``` shell
+        gpadmin@gpmaster$ wget http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo
+        ```
+        
+    2. Copy the `.repo` file to each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ gpscp -v -f seghostfile <hadoop-dist>.repo =:/etc/yum.repos.d
+        ```
+
+    With the `.repo` file is in place, you can use the `yum` utility to install client RPM packages.
+
+6. Install the Hadoop client on each Greenplum Database segment host. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile sudo yum -y install hadoop-client
+    ```
+    
+7. If you plan to use the PXF Hive connector to access Hive table data, install the Hive client on each Greenplum Database segment host. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile sudo yum -y install hive
+    ```
+    
+8. If you plan to use the PXF HBase connector to access HBase table data, install the HBase client on each Greenplum Database segment host. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile sudo yum -y install hbase
+    ```
+
+You have installed the desired client packages on each segment host in your Greenplum Database cluster. Copy relevant HDFS, Hive, and HBase configuration from your Hadoop cluster to each Greenplum Database segment host. You will use the `gpscp` utility to copy files to multiple hosts.
+
+1. The Hadoop `core-site.xml` configuration file `fs.defaultFS` property value identifies the HDFS NameNode URI. PXF requires this information to access your Hadoop cluster. A sample `fs.defaultFS` setting follows:
+
+    ``` xml
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://namenode.domain:8020</value>
+    </property>
+    ```
+    
+    PXF requires information from `core-site.xml` and other Hadoop configuration files. Copy these files from your Hadoop cluster to each Greenplum Database segment host.
+
+    1. Copy the `core-site.xml`, `hdfs-site.xml`, and `mapred-site.xml` Hadoop configuration files from your Hadoop cluster NameNode host to the current host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/core-site.xml .
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/hdfs-site.xml .
+        gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/mapred-site.xml .
+        ```
+        
+    2. Next, copy these Hadoop configuration files to each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ gpscp -v -f seghostfile core-site.xml =:/etc/hadoop/conf/core-site.xml
+        gpadmin@gpmaster$ gpscp -v -f seghostfile hdfs-site.xml =:/etc/hadoop/conf/hdfs-site.xml
+        gpadmin@gpmaster$ gpscp -v -f seghostfile mapred-site.xml =:/etc/hadoop/conf/mapred-site.xml
+        ```
+
+2. The Hive `hive-site.xml` configuration file `hive.metastore.uris` property value identifies the Hive Metastore URI. PXF requires this information to access the Hive service. A sample `hive.metastore.uris` setting follows:
+
+    ``` xml
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://metastorehost.domain:9083</value>
+    </property>
+    ```
+    
+    If you plan to use the PXF Hive connector to access Hive table data, copy Hive configuration to each Greenplum Database segment host.
+    
+    1. Copy the `hive-site.xml` Hive configuration file from one of the hosts on which your Hive service is running to the current host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ scp hiveuser@hivehost:/etc/hive/conf/hive-site.xml .
+        ```
+
+    2. Next, copy the `hive-site.xml` configuration file to each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ gpscp -v -f seghostfile hive-site.xml =:/etc/hive/conf/hive-site.xml
+
+3. The HBase `hbase-site.xml` configuration file `hbase.rootdir` property value identifies the location of the HBase data directory. PXF requires this information to access the HBase service. A sample `hbase.rootdir` setting follows:
+
+    ``` xml
+    <property>
+        <name>hbase.rootdir</name>
+        <value>hdfs://hbasehost.domain:8020/apps/hbase/data</value>
+    </property>
+    ```
+    
+    If you plan to use the PXF HBase connector to access HBase table data, copy HBase configuration to each Greenplum Database segment host.
+    
+    1. Copy the `hbase-site.xml` HBase configuration file from one of the hosts on which your HBase service is running to the current host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ scp hbaseuser@hbasehost:/etc/hive/conf/hbase-site.xml .
+        ```
+
+    2. Next, copy the `hbase-site.xml` configuration file to each Greenplum Database segment host. For example:
+
+        ``` shell
+        gpadmin@gpmaster$ gpscp -v -f seghostfile hive-site.xml =:/etc/hbase/conf/hbase-site.xml
+
+
+## <a id="client-cfg-update"></a>Updating Hadoop Configuration
+
+If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated `.xml` file(s) to each Greenplum Database segment host and restart PXF.
+
+
+## <a id="client-install-custom"></a>Installing Tarball and Custom Clients
+
+If you did/can not install your Hadoop, Hive, and HBase clients via RPMs, you have a custom installation.
+
+Use the `HADOOP_ROOT` and `HADOOP_DISTRO` environment variables to provide additional configuration information to PXF for tarball and custom client Hadoop distributions. As specified below, you must set the relevant environment variable on the command line or in the PXF `$GPHOME/pxf/conf/pxf-env.sh` configuration file prior to initializing PXF.
+
+If you must install your Hadoop and optional Hive and HBase client distributions from a *tarball*:
+
+- You must install the Hadoop and optional Hive and HBase clients in peer directories that are all children of a Hadoop root directory. These client directories must simply-named as `hadoop`, `hive`, and `hbase`.
+
+- You must identify the full file system path to the Hadoop root directory in the `HADOOP_ROOT` environment variable setting.
+
+- The directory `$HADOOP_ROOT/hadoop/share/hadoop/common/lib` must exist.
+
+If the requirements above are not applicable to your Hadoop distribution, you are installing a *custom* tarball distribution:
+
+- You must set the `HADOOP_DISTRO` environment variable to the value `CUSTOM`.
+
+- After you initialize PXF, you must manually edit the `$GPHOME/pxf/conf/pxf-private.classpath` file to identify full file system paths to the Hadoop, Hive, and HBase JAR and configuration files. You must edit this file *before* you start PXF.
+
+**Note**: After you install a tarball or custom client distribution, you must copy Hadoop, Hive, and HBase configuration as described in the procedure above.
