@@ -17,4 +17,6 @@
 -- s/started gpfdist -p \d* -P \d* -f .*/ports/
 -- m/data_file.tbl/
 -- s/(").*data_file.tbl(")/data/
+-- m/cmdtime/
+-- s/cmdtime.*$/CONDITION/
 -- end_matchsubs

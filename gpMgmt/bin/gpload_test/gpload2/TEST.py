@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False'):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0'):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -130,6 +130,9 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n           - s_n9: text")
     if format:
         f.write("\n    - FORMAT: "+format)
+    if log_errors:
+        f.write("\n    - LOG_ERRORS: true")
+        f.write("\n    - ERROR_LIMIT: " + error_limit)
     if delimiter:
         f.write("\n    - DELIMITER: "+delimiter)
     if escape:
@@ -414,7 +417,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,22):
+        for num in range(1,23):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -559,6 +562,21 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_01.txt','data_file.txt')
         write_config_file(reuse_flag='true',formatOpts='text',file='data_file.txt',table='texttable',escape="E'\\\\'")
         self.doTest(21)
+    def test_22_gpload_error_count(self):
+        "22  gpload error count"
+        f = open(mkpath('query22.sql'),'a')
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+        f.close()
+        f = open(mkpath('data/large_file.csv'),'w')
+        for i in range(0, 10000):
+            if i % 2 == 0:
+                f.write('1997,Ford,E350,"ac, abs, moon",3000.00,a\n')
+            else:
+                f.write('1997,Ford,E350,"ac, abs, moon",3000.00\n')
+        f.close()
+        copy_data('large_file.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='90000000')
+        self.doTest(22)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)
