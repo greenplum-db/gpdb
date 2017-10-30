@@ -592,15 +592,9 @@ ALTER TABLE <varname>name</varname>
                                                 table validation against the <codeph>CHECK</codeph>
                                                 constraint of the partition you are exchanging.</pd>
                                         <pd>Exchanging a leaf child partition with an external table
-                                                is not supported in these cases:<ul
-                                                  id="ul_xfz_ckw_yt">
-                                                  <li>The partitioned table is created with the
-                                                  <codeph>SUBPARTITION</codeph> clause or if a
-                                                  partition has a subpartition.</li>
-                                                  <li>The partitioned table contains a column with a
-                                                  check constraint or a <codeph>NOT NULL</codeph>
-                                                  constraint.</li>
-                                                </ul></pd>
+                                                is not supported if the partitioned table contains a
+                                                column with a check constraint or a <codeph>NOT
+                                                  NULL</codeph> constraint.</pd>
                                         <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
                                                 the data in the table matches the
                                                   <codeph>CHECK</codeph> constraint of the partition
