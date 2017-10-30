@@ -1,8 +1,10 @@
 DROP ROLE IF EXISTS role_dumpinfo_test;
 DROP
+DROP ROLE IF EXISTS role_permission;
+DROP
 -- start_ignore
 DROP RESOURCE GROUP rg_dumpinfo_test;
-DROP
+ERROR:  resource group "rg_dumpinfo_test" does not exist
 -- end_ignore
 
 CREATE LANGUAGE plpythonu;
@@ -51,7 +53,19 @@ END
 3q: ... <quitting>
 4q: ... <quitting>
 
+CREATE ROLE role_permission;
+CREATE
+SET ROLE role_permission;
+SET
+select value from pg_resgroup_get_status_kv('dump');
+ERROR:  Only superusers can call this function.
+
+SET ROLE gpadmin;
+SET
+
 DROP ROLE role_dumpinfo_test;
+DROP
+DROP ROLE role_permission;
 DROP
 DROP RESOURCE GROUP rg_dumpinfo_test;
 DROP

@@ -356,6 +356,14 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 	
 	if (do_dump)
 	{
+		/* Only super user can call this function with para=dump. */
+		if (!superuser())
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+					 errmsg("Only superusers can call this function.")));
+		}
+		
 		initStringInfo(&str);
 		/* dump info in QD and collect info from QEs to form str.*/
 		dumpResGroupInfo(&str);
