@@ -711,19 +711,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 		int count = 0;
 		apr_hash_t* query_cpu_table = NULL;
 
-		for (hi = apr_hash_first(0, querysegtab); hi; hi = apr_hash_next(hi))
-		{
- 			void* vptr;
-			apr_hash_this(hi, 0, 0, &vptr);
-			ppkt = vptr;
-			if (ppkt->header.pkttype != GPMON_PKTTYPE_QUERYSEG)
-				continue;
-
-			TR2(("sending magic %x, pkttype %d\n", ppkt->header.magic, ppkt->header.pkttype));
-			send_smon_to_mon_pkt(sock, ppkt);
-			count++;
-		}
-
 		for (hi = apr_hash_first(0, segtab); hi; hi = apr_hash_next(hi))
 		{
  			void* vptr;
@@ -741,7 +728,6 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 			count++;
 		}
 
-
 		for (hi = apr_hash_first(0, qdtab); hi; hi = apr_hash_next(hi))
 		{
  			void* vptr;
@@ -749,6 +735,23 @@ static void gx_gettcpcmd(SOCKET sock, short event, void* arg)
 			ppkt = vptr;
 			if (ppkt->header.pkttype != GPMON_PKTTYPE_QLOG)
 				continue;
+			TR2(("sending magic %x, pkttype %d\n", ppkt->header.magic, ppkt->header.pkttype));
+			send_smon_to_mon_pkt(sock, ppkt);
+			count++;
+		}
+
+		/*
+		 * QUERYSEG packets must be sent after QLOG packets so that gpmmon can
+		 * correctly populate its query_seginfo_hash.
+		 */
+		for (hi = apr_hash_first(0, querysegtab); hi; hi = apr_hash_next(hi))
+		{
+ 			void* vptr;
+			apr_hash_this(hi, 0, 0, &vptr);
+			ppkt = vptr;
+			if (ppkt->header.pkttype != GPMON_PKTTYPE_QUERYSEG)
+				continue;
+
 			TR2(("sending magic %x, pkttype %d\n", ppkt->header.magic, ppkt->header.pkttype));
 			send_smon_to_mon_pkt(sock, ppkt);
 			count++;
