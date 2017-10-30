@@ -187,6 +187,10 @@
               <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
               type="section"/></codeph> server configuration parameter.</p>
       </section>
+      <section id="topic833cons" xml:lang="en">
+        <title>Other Memory Considerations</title>
+        <p>Resource groups track all Greenplum Database memory allocated via the <codeph>palloc()</codeph> function. Memory that you allocate using the Linux <codeph>malloc()</codeph> function is not managed by resource groups. To ensure that resource groups are accurately tracking memory usage, avoid <codeph>malloc()</codeph>ing large amounts of memory in custom Greenplum Database user-defined functions.</p>
+      </section>
     </body>
   </topic>
 
