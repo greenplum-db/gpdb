@@ -79,8 +79,8 @@
 #include "utils/tqual.h"
 
 #include "access/distributedlog.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "nodes/makefuncs.h"     /* makeRangeVar */
 #include "pgstat.h"
 

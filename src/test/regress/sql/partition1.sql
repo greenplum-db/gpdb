@@ -1756,6 +1756,30 @@ select tablename,partitiontablename, partitionname from pg_partitions where tabl
 alter table mpp14613_list alter partition others split partition subothers at (10) into (partition b1, partition b2);
 alter table mpp14613_range alter partition others split partition subothers at (10) into (partition b1, partition b2);
 
+-- ALTER TABLE ... ALTER PARTITION ... SPLIT DEFAULT PARTITION
+create table foo(
+  a int,
+  b int,
+  c int,
+  d int)
+  partition by range(b)
+  subpartition by list(c)
+  subpartition template
+ (
+    default subpartition subothers,
+    subpartition s1 values(1,2,3),
+    subpartition s2 values(4,5,6)
+ )
+ (
+    default partition others,
+    start(1) end(5) every(1)
+ );
+
+alter table foo alter partition others split partition subothers at (10) into (partition b1, default partition);
+alter table foo alter partition others split partition subothers at (10) into (partition b1, partition subothers);
+alter table foo alter partition others split default partition at (10) into (partition b1, default partition);
+drop table foo;
+
 -- Drop table as gpcheckcat will complaint of not having constraint for newly
 -- created tables due to split.
 drop table mpp14613_list;

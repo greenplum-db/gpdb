@@ -84,7 +84,7 @@
             <entry colname="col1">Limit Bypass</entry>
             <entry colname="col2">Limits are not enforced for <codeph>SUPERUSER</codeph> roles and
               certain operators and functions</entry>
-            <entry colname="col3">Limits are not enforced on <codeph>SET</codeph> and <codeph>SHOW</codeph> commands</entry>
+            <entry colname="col3">Limits are not enforced on <codeph>SET</codeph>, <codeph>RESET</codeph>, and <codeph>SHOW</codeph> commands</entry>
           </row>
         </tbody>
       </tgroup>

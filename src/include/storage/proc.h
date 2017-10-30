@@ -170,8 +170,8 @@ struct PGPROC
 	 * Information for resource group
 	 */
 	bool		resWaiting;	/* true if waiting for an Resource Group lock */
-	int			resSlotId;	/* the resource group slot id granted.
-   							 * InvalidSlotId indicates the resource group is
+	void		*resSlot;	/* the resource group slot granted.
+   							 * NULL indicates the resource group is
 							 * locked for drop. */
 };
 

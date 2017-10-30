@@ -22,6 +22,7 @@
 #include "port/atomics.h"
 #include "utils/vmem_tracker.h"
 #include "utils/session_state.h"
+#include "utils/resource_manager.h"
 
 /* External dependencies within the runaway cleanup framework */
 extern bool vmemTrackerInited;
@@ -109,8 +110,11 @@ RedZoneHandler_ShmemInit()
 			redZoneChunks = VmemTracker_ConvertVmemMBToChunks(gp_vmem_protect_limit * (((float) runaway_detector_activation_percent) / 100.0));
 		}
 
-		/* 0 means disable red-zone completely */
-		if (redZoneChunks == 0)
+		/*
+		 * 0 means disable red-zone completely
+		 * we also disable red-zone for resource group
+		 */
+		if (redZoneChunks == 0 || IsResGroupEnabled())
 		{
 			redZoneChunks = INT32_MAX;
 		}
@@ -291,6 +295,18 @@ RedZoneHandler_FlagTopConsumer()
 void
 RedZoneHandler_DetectRunawaySession()
 {
+	/*
+	 * Runaway system pick one session who consumed the most memories and
+	 * notify it to clean up once red-zone is hit, meanwhile, memories are
+	 * isolated between groups in resource group which means one query in
+	 * a resource group may cancel queries within another resource group.
+	 *
+	 * To avoid this, we do not do runaway detection when resource group
+	 * is enabled.
+	 */
+	if (IsResGroupEnabled())
+		return;
+
 	/*
 	 * InterruptHoldoffCount > 0 indicates we are in a sensitive code path that doesn't
 	 * like a control flow disruption as may happen from a pending die/cancel interrupt.

@@ -911,6 +911,65 @@ SELECT DISTINCT relname, reloptions FROM gp_dist_random('pg_class') WHERE relnam
 (1 row)
 
 RESET gp_vmem_idle_resource_timeout;
+-- Make sure ALTER TABLE REORGANIZE does not change the table type due
+-- to gp_default_storage_options GUC
+set gp_default_storage_options='appendonly=false,blocksize=32768';
+create table alter_table_reorg_heap (a int, b text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_heap';
+        relname         | relstorage | reloptions 
+------------------------+------------+------------
+ alter_table_reorg_heap | h          | 
+(1 row)
+
+set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+alter table alter_table_reorg_heap set with (reorganize=true);
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_heap';
+        relname         | relstorage | reloptions 
+------------------------+------------+------------
+ alter_table_reorg_heap | h          | 
+(1 row)
+
+set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+create table alter_table_reorg_aoco (a int, b text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_aoco';
+        relname         | relstorage |              reloptions              
+------------------------+------------+--------------------------------------
+ alter_table_reorg_aoco | c          | {appendonly=true,orientation=column}
+(1 row)
+
+set gp_default_storage_options='appendonly=false,blocksize=32768';
+alter table alter_table_reorg_aoco set with (reorganize=true);
+select relname, relstorage, reloptions from pg_class where relname='alter_table_reorg_aoco';
+        relname         | relstorage |              reloptions              
+------------------------+------------+--------------------------------------
+ alter_table_reorg_aoco | c          | {appendonly=true,orientation=column}
+(1 row)
+
+-- Make sure SELECT INTO uses gp_default_storage_options GUC
+create table select_into_heap_from (a int, b text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into select_into_heap_from select i, 'aaa' from generate_series(1,50)i;
+set gp_default_storage_options='appendonly=true,blocksize=32768,orientation=column';
+select * into select_into_heap_to from select_into_heap_from;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select relname, relstorage, reloptions from pg_class where relname='select_into_heap_to';
+       relname       | relstorage |              reloptions              
+---------------------+------------+--------------------------------------
+ select_into_heap_to | c          | {appendonly=true,orientation=column}
+(1 row)
+
+select count(*) from select_into_heap_to;
+ count
+-------
+   50
+(1 row)
+
 -- cleanup
 \c postgres
 drop database dsp1;

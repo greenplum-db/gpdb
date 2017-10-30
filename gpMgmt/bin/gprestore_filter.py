@@ -15,7 +15,7 @@ copy_expr = 'COPY '
 copy_start = 'C'
 copy_expr_end = 'FROM stdin;\n'
 len_copy_expr = len(copy_expr)
-copy_end_expr = '\\.'
+copy_end_expr = '\\.\n'
 copy_end_start = '\\'
 set_expr = 'SET '
 drop_start = 'D'
@@ -25,6 +25,7 @@ drop_external_table_expr = 'DROP EXTERNAL TABLE '
 alter_table_only_expr = 'ALTER TABLE ONLY '
 alter_table_expr = 'ALTER TABLE '
 
+line_end_expr = ';\n'
 comment_start_expr = '--'
 comment_expr = '-- Name: '
 type_expr = '; Type: '
@@ -143,8 +144,7 @@ def _handle_set_statement(state, line, arguments):
     change_schema = arguments.change_schema_name
     schemas_in_schema_file = arguments.schemas_in_schema_file
 
-    if (line[0] == set_start) and line.startswith(search_path_expr):
-
+    if (line[0] == set_start) and line.startswith(search_path_expr) and line.endswith(line_end_expr):
         # NOTE: The goal is to output the correct mapping to the search path
         # for the schema
 
@@ -381,9 +381,17 @@ def process_data(arguments, fdin, fdout):
 
     schema, table, schema_wo_escaping = None, None, None
     output = False
+    in_copy = False
     #PYTHON PERFORMANCE IS TRICKY .... THIS CODE IS LIKE THIS BECAUSE ITS FAST
     for line in fdin:
-        if (line[0] == set_start) and line.startswith(search_path_expr):
+        if output and (line[0] == copy_end_start) and line.startswith(copy_end_expr):
+            table = None
+            output = False
+            in_copy = False
+            fdout.write(line)
+        elif in_copy:
+            pass
+        elif (line[0] == set_start) and line.startswith(search_path_expr) and line.endswith(line_end_expr):
             schema = extract_schema(line)
             schema_wo_escaping = removeEscapingDoubleQuoteInSQLString(schema, False)
             if ((schemas_in_table_file and schema_wo_escaping in schemas_in_table_file) or
@@ -404,10 +412,7 @@ def process_data(arguments, fdin, fdout):
             table = removeEscapingDoubleQuoteInSQLString(table, False)
             if (schemas_in_schema_file and schema_wo_escaping in schemas_in_schema_file) or (tables_in_table_file and (schema_wo_escaping, table) in tables_in_table_file):
                 output = True
-        elif output and (line[0] == copy_end_start) and line.startswith(copy_end_expr):
-            table = None
-            output = False
-            fdout.write(line)
+                in_copy = True
 
         if output:
             fdout.write(line)

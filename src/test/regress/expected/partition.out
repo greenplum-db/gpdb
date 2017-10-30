@@ -193,6 +193,23 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  relation "bar_p" must have the same column names and column order as "foo_p"
 drop table foo_p;
 drop table bar_p;
+-- still different schema, but more than one level partitioning
+CREATE TABLE two_level_pt(a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+      SUBPARTITION BY RANGE (c)
+      SUBPARTITION TEMPLATE (
+      START (11) END (12) EVERY (1))
+      ( START (1) END (2) EVERY (1));
+NOTICE:  CREATE TABLE will create partition "two_level_pt_1_prt_1" for table "two_level_pt"
+NOTICE:  CREATE TABLE will create partition "two_level_pt_1_prt_1_2_prt_1" for table "two_level_pt_1_prt_1"
+CREATE TABLE candidate_for_leaf(a int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- should fail
+ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
+      EXCHANGE PARTITION FOR (11) WITH TABLE candidate_for_leaf;
+ERROR:  relation "candidate_for_leaf" must have the same column names and column order as "two_level_pt"
 -- different owner 
 create role part_role;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
@@ -3337,6 +3354,26 @@ select * from pg_partition_templates where tablename like 'rank_settemp%';
  public     | rank_settemp | def2          | range         |              1 |             1 |                 1 |                     |                     | f                       |                   | f                     |                      | t                  | DEFAULT SUBPARTITION def2 
 (1 row)
 
+alter table rank_settemp set subpartition template (start (date '2006-01-01') with (appendonly=true));
+NOTICE:  replacing level 1 subpartition template specification for relation "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template_2_prt_1" for table "rank_settemp_1_prt_subpartition_template"
+alter table rank_settemp add partition f1 values ('N');
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f1" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f1_2_prt_1" for table "rank_settemp_1_prt_f1"
+alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
+NOTICE:  replacing level 1 subpartition template specification for relation "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_subpartition_template_2_prt_1" for table "rank_settemp_1_prt_subpartition_template"
+alter table rank_settemp add partition f2 values ('C');
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f2" for table "rank_settemp"
+NOTICE:  CREATE TABLE will create partition "rank_settemp_1_prt_f2_2_prt_1" for table "rank_settemp_1_prt_f2"
+select * from pg_partition_templates where tablename like 'rank_settemp%';
+ schemaname |  tablename   | partitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault |                         partitionboundary                          
+------------+--------------+---------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+--------------------------------------------------------------------
+ public     | rank_settemp |               | range         |              1 |             1 |                 1 |                     | '01-01-2007'::date  | t                       |                   | f                     |                      | f                  | START ('01-01-2007'::date) WITH (appendonly=true, compresslevel=5)
+(1 row)
+
 drop table rank_settemp;
 -- MPP-5397
 -- should be able to add partition after dropped a col
@@ -3434,6 +3471,18 @@ NOTICE:  exchanged partition "st_default" of relation "sg_cal_event_silvertail_h
 NOTICE:  dropped partition "st_default" for relation "sg_cal_event_silvertail_hour"
 NOTICE:  CREATE TABLE will create partition "sg_cal_event_silvertail_hour_1_prt_p2009042907" for table "sg_cal_event_silvertail_hour"
 NOTICE:  CREATE TABLE will create partition "sg_cal_event_silvertail_hour_1_prt_st_default" for table "sg_cal_event_silvertail_hour"
+select pg_get_partition_def('sg_cal_event_silvertail_hour'::regclass, true);
+                                                                                              pg_get_partition_def                                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ PARTITION BY RANGE(transactiontime)                                                                                                                                                                             
+           (                                                                                                                                                                                                     
+           PARTITION "P2009041607" START ('Thu Apr 16 07:00:00 2009'::timestamp(2) without time zone) END ('Thu Apr 16 08:00:00 2009'::timestamp(2) without time zone) WITH (appendonly=true, compresslevel=5),  
+           PARTITION "P2009041608" START ('Thu Apr 16 08:00:00 2009'::timestamp(2) without time zone) END ('Thu Apr 16 09:00:00 2009'::timestamp(2) without time zone) WITH (appendonly=true, compresslevel=5),  
+           PARTITION p2009042907 START ('Wed Apr 29 07:00:00 2009'::timestamp(2) without time zone) END ('Wed Apr 29 08:00:00 2009'::timestamp(2) without time zone) WITH (appendonly=true, compresslevel=5),    
+           DEFAULT PARTITION st_default  WITH (appendonly=true, compresslevel=5)                                                                                                                                 
+           )
+(1 row)
+
 drop table sg_cal_event_silvertail_hour;
 -- Make sure we inherit master's storage settings
 create table foo_p (i int, j int, k text)
@@ -3523,21 +3572,35 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "mpp5878_1_prt_1" for table "mpp5878"
 NOTICE:  CREATE TABLE will create partition "mpp5878_1_prt_2" for table "mpp5878"
-select partitionlistvalues from pg_partitions where tablename like 'mpp5878%';
-                            partitionlistvalues                             
-----------------------------------------------------------------------------
- 'a'::character(1), 'b'::character(1), 'c'::character(1), 'd'::character(1)
- 'e'::character(1), 'f'::character(1), 'g'::character(1), 'h'::character(1)
-(2 rows)
+create table mpp5878a (a int, b character(1), d character(1))
+partition by list (b,d)
+(
+values (('a','b'),('c','d')),
+values (('e','f'),('g','h'))
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "mpp5878a_1_prt_1" for table "mpp5878a"
+NOTICE:  CREATE TABLE will create partition "mpp5878a_1_prt_2" for table "mpp5878a"
+select tablename, partitionlistvalues from pg_partitions where tablename like 'mpp5878%';
+ tablename |                            partitionlistvalues                             
+-----------+----------------------------------------------------------------------------
+ mpp5878   | 'a'::character(1), 'b'::character(1), 'c'::character(1), 'd'::character(1)
+ mpp5878   | 'e'::character(1), 'f'::character(1), 'g'::character(1), 'h'::character(1)
+ mpp5878a  | 'a'::character(1), 'b'::character(1), 'c'::character(1), 'd'::character(1)
+ mpp5878a  | 'e'::character(1), 'f'::character(1), 'g'::character(1), 'h'::character(1)
+(4 rows)
 
-select partitionboundary from pg_partitions where tablename like 'mpp5878%';
-        partitionboundary         
-----------------------------------
- VALUES( ('a', 'b'),  ('c', 'd'))
- VALUES( ('e', 'f'),  ('g', 'h'))
-(2 rows)
+select tablename, partitionboundary from pg_partitions where tablename like 'mpp5878%';
+ tablename |        partitionboundary         
+-----------+----------------------------------
+ mpp5878   | VALUES( ('a', 'b'),  ('c', 'd'))
+ mpp5878   | VALUES( ('e', 'f'),  ('g', 'h'))
+ mpp5878a  | VALUES( ('a', 'b'),  ('c', 'd'))
+ mpp5878a  | VALUES( ('e', 'f'),  ('g', 'h'))
+(4 rows)
 
-drop table mpp5878;
+drop table mpp5878, mpp5878a;
 -- MPP-5941: work with many levels of templates
 CREATE TABLE mpp5941 (a int, b date, c char, 
 	   		 		 d char(4), e varchar(20), f timestamp)

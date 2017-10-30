@@ -181,9 +181,8 @@ CopySnapshot(Snapshot snapshot)
 			   snapshot->distribSnapshotWithLocalMapping.ds.count *
 			   sizeof(DistributedTransactionId));
 
-		/* Update the maxCount as memory was only allocated equal to count */
-		newsnap->distribSnapshotWithLocalMapping.ds.maxCount =
-			snapshot->distribSnapshotWithLocalMapping.ds.count;
+		/* Store -1 as the maxCount, to indicate that the array was not malloc'd */
+		newsnap->distribSnapshotWithLocalMapping.ds.maxCount = -1;
 
 		/*
 		 * Increment offset to point to next chunk of memory allocated for

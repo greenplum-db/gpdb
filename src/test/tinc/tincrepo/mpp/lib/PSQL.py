@@ -549,7 +549,7 @@ class PSQL(Command):
         return False
 
     @staticmethod
-    def wait_for_database_up():
+    def wait_for_database_up(dbname = None, host = None, port = None, username = None, password = None):
         '''
         Wait till the system is up, as master may take some time
         to come back after FI crash.
@@ -571,7 +571,9 @@ class PSQL(Command):
         time.sleep(30)
         for i in range(60):
             time.sleep(1)
-            res = PSQL.run_sql_command('select count(*) from gp_dist_random(\'gp_id\');', results=results)
+            res = PSQL.run_sql_command('select count(*) from gp_dist_random(\'gp_id\');',
+                                dbname=dbname, host=host, port=port, username = username,
+                                password=password, results=results)
             if results['rc'] == 0:
                 down = False
                 break

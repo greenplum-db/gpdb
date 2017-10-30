@@ -66,7 +66,7 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
  * gangs, both reader and writer
  */
 void
-CdbDispatchSetCommand(const char *strCommand, bool cancelOnError, bool needTwoPhase);
+CdbDispatchSetCommand(const char *strCommand, bool cancelOnError);
 
 /*
  * CdbDispatchCommand

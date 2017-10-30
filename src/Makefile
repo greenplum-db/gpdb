@@ -14,6 +14,7 @@ include Makefile.global
 
 
 all install installdirs uninstall distprep:
+	$(MAKE) -C interfaces/libpq $@
 	$(MAKE) -C port $@
 	$(MAKE) -C timezone $@
 	$(MAKE) -C backend $@

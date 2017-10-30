@@ -91,32 +91,6 @@ walrep_2:
 	-q "class!=DDLTestCase" \
 	-q "class!=DMLTestCase"
 
-
-# cs-aoco-compression
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/cs-aoco-compression
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-aoco_compression_large_01:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_01
-
-aoco_compression_large_02:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_02
-
-aoco_compression_large_03:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_03
-
-aoco_compression_large_04:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_large_04
-
-aoco_compression_small:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_small
-
-aoco_compression_small_serial:
-	$(TESTER) mpp.gpdb.tests.storage.aoco_compression.test_func_aococompression_small_serial
-
 # cs-filerep-end-to-end
 # The following targets are pulled from:
 # http://pulse-cloud.gopivotal.com/admin/projects/cs-filerep-end-to-end
@@ -271,3 +245,14 @@ memory_accounting:
 	$(TESTER) \
 		resource_management.memory_accounting.test_oom.OOMTestCase \
 		resource_management.memory_accounting.too_many_exec_accounts.test_exec_accounts
+
+# gpexpand test
+gpexpand_1:
+	$(TESTER) $(DISCOVER) \
+	-s mpp/gpdb/tests/utilities/gpexpand \
+	-q tags=part1
+
+gpexpand_2:
+	$(TESTER) $(DISCOVER) \
+	-s mpp/gpdb/tests/utilities/gpexpand \
+	-q tags=part2

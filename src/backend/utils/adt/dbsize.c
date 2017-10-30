@@ -425,7 +425,7 @@ calculate_relation_size(Relation rel)
 	else if (RelationIsAoRows(rel))
 		totalsize = GetAOTotalBytes(rel, SnapshotNow);
 	else if (RelationIsAoCols(rel))
-		totalsize = GetAOCSTotalBytes(rel, SnapshotNow, false);
+		totalsize = GetAOCSTotalBytes(rel, SnapshotNow, true);
            
     /* RELSTORAGE_VIRTUAL has no space usage */
     return totalsize;

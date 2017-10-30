@@ -302,8 +302,7 @@ DtxContextInfo_Copy(
 	target->cursorContext = source->cursorContext;
 
 	if (source->haveDistributedSnapshot)
-		DistributedSnapshot_Copy(
-								 &target->distributedSnapshot,
+		DistributedSnapshot_Copy(&target->distributedSnapshot,
 								 &source->distributedSnapshot);
 
 	target->distributedTxnOptions = source->distributedTxnOptions;

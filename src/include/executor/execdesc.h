@@ -186,6 +186,16 @@ typedef struct QueryDispatchDesc
 	SliceTable *sliceTable;
 
 	List	   *cursorPositions;
+
+	/*
+	 * Set to true for CTAS and SELECT INTO. Set to false for ALTER TABLE
+	 * REORGANIZE. This is mainly used to track if the dispatched query is
+	 * meant for internal rewrite on QE segments or just for holding data from
+	 * a SELECT for a new relation. If DestIntoRel is set in the QD's
+	 * queryDesc->dest, use the original table's reloptions. If DestRemote is
+	 * set, use default reloptions + gp_default_storage_options.
+	 */
+	bool validate_reloptions;
 } QueryDispatchDesc;
 
 /*

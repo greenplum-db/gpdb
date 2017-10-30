@@ -19,6 +19,7 @@ class GpExpand(GpTestCase):
         #   self.subject = gpexpand
         gpexpand_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpexpand")
         self.subject = imp.load_source('gpexpand', gpexpand_file)
+        self.old_sys_argv = sys.argv
         sys.argv = []  # We need to do this otherwise, the parser will read the command line as the default arguments.
         self.options, self.args, self.parser = self.subject.parseargs()
 
@@ -64,6 +65,7 @@ class GpExpand(GpTestCase):
 
     def tearDown(self):
         os.environ['MASTER_DATA_DIRECTORY'] = self.previous_master_data_directory
+        sys.argv = self.old_sys_argv
         super(GpExpand, self).tearDown()
 
     def test_PrepFileSpaces_issues_correct_postgres_command(self):

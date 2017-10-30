@@ -206,6 +206,16 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
+      <term><option>--resource-groups</option></term>
+      <listitem>
+       <para>
+        Dump <literal>resource groups</literal> and <literal>role</literal>
+        to <literal>resource groups</literal> associations.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
       <term><option>--no-tablespaces</option></term>
       <listitem>
        <para>

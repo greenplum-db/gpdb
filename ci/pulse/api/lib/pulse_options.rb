@@ -5,7 +5,7 @@ class PulseOptions
   DEFAULT_POLLING_TIME_IN_SECONDS = 60
   DEFAULT_TOKEN_REFRESH_TIME_IN_SECONDS = 1200
   DEFAULT_BUILD_REQUEST_TIME_IN_SECONDS = 60 * 20
-  CONCOURSE_URL = "https://gpdb.ci.pivotalci.info/"
+  CONCOURSE_URL = "https://gpdb.data.pivotal.ci/"
 
   attr_reader :url, :project_name, :username, :password, :input_dir, :output_dir, :build_artifact_url,
               :build_src_code_url, :qautil_url, :gpdb_src_behave_url, :start_time

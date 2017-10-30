@@ -6038,3 +6038,12 @@ EXECUTE p(2);
     2 | 52 | 2
 (5 rows)
 
+-- ###### Queries involving CUBE with HAVING CLAUSE ###### --
+WITH src AS (SELECT 1 AS a, 1 AS b)
+SELECT 1 FROM src GROUP BY CUBE(a, b) HAVING a IS NOT NULL;
+ ?column? 
+----------
+        1
+        1
+(2 rows)
+

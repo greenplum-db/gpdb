@@ -179,6 +179,10 @@
                         <pd>Dump resource queue definitions.</pd>
                     </plentry>
                     <plentry>
+                        <pt>--resource-groups</pt>
+                        <pd>Dump resource group definitions.</pd>
+                    </plentry>
+                    <plentry>
                         <pt>--roles-only</pt>
                         <pd>Dump only roles, not databases, tablespaces, or filespaces.</pd>
                     </plentry>

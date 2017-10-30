@@ -76,16 +76,67 @@ function setup_singlecluster() {
 	pushd singlecluster/bin
 	export SLAVES=1
 	./init-gphd.sh
+	# zookeeper required for HBase
+	./start-zookeeper.sh
 	./start-hdfs.sh
 	./start-yarn.sh
 	./start-hive.sh
+	./start-hbase.sh
 	popd
+}
+
+function install_hadoop_client_rpms() {
+	local hdfsrepo=$1
+	local yum_repofile_url=$2
+
+	pushd /etc/yum.repos.d > /dev/null
+	# download yum repo definition file for the vendor stack
+	wget ${yum_repofile_url}
+	# install required RPMs
+	yum install -y hadoop-client
+	yum install -y hive
+	yum install -y hbase
+	# copy cluster configuration files from single cluster
+	mkdir -p /etc/hadoop/conf
+	cp ${hdfsrepo}/hadoop/etc/hadoop/core-site.xml /etc/hadoop/conf/
+	cp ${hdfsrepo}/hadoop/etc/hadoop/hdfs-site.xml /etc/hadoop/conf/
+	# mapred below is needed for test for mapreduce.input.fileinputformat.input.dir.recursive to be set to true
+	cp ${hdfsrepo}/hadoop/etc/hadoop/mapred-site.xml /etc/hadoop/conf/
+	mkdir -p /etc/hive/conf
+	cp ${hdfsrepo}/hive/conf/hive-site.xml /etc/hive/conf
+	mkdir -p /etc/hbase/conf
+	cp ${hdfsrepo}/hbase/conf/hbase-site.xml /etc/hbase/conf
+	popd
+}
+
+function setup_hadoop_client() {
+	local hdfsrepo=$1
+
+	case ${HADOOP_CLIENT} in
+		CDH)
+			install_hadoop_client_rpms ${hdfsrepo} "https://archive.cloudera.com/cdh5/redhat/6/x86_64/cdh/cloudera-cdh5.repo"
+			;;
+		HDP)
+			install_hadoop_client_rpms ${hdfsrepo} "http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.6.2.0/hdp.repo"
+			;;
+		TAR)
+			# TAR-based setup, edit the properties in pxf-env.sh to specify HADOOP_ROOT value
+			sed -i -e "s|^[[:blank:]]*export HADOOP_ROOT=.*$|export HADOOP_ROOT=${hdfsrepo}|g" ${PXF_HOME}/conf/pxf-env.sh
+			;;
+		*)
+			echo "FATAL: Unknown HADOOP_CLIENT=${HADOOP_CLIENT} parameter value"
+			exit 1
+			;;
+	esac
+
+	echo "Contents of ${PXF_HOME}/conf/pxf-env.sh :"
+	cat ${PXF_HOME}/conf/pxf-env.sh
 }
 
 function start_pxf() {
 	local hdfsrepo=$1
 	pushd ${PXF_HOME} > /dev/null
-	su gpadmin -c "bash ./bin/pxf init --hadoop-home ${hdfsrepo}/hadoop --hive-home ${hdfsrepo}/hive"
+	su gpadmin -c "bash ./bin/pxf init"
 	su gpadmin -c "bash ./bin/pxf start"
 	popd > /dev/null
 }
@@ -105,9 +156,12 @@ function _main() {
 	time configure
 	time install_gpdb
 	time setup_gpadmin_user
-	time make_cluster
 
+	# setup hadoop before making GPDB cluster to use system python for yum install
 	time setup_singlecluster
+	time setup_hadoop_client $(pwd)/singlecluster
+
+	time make_cluster
 	time start_pxf $(pwd)/singlecluster
 	chown -R gpadmin:gpadmin $(pwd)
 	time run_regression_test

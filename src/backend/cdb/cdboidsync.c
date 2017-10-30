@@ -19,7 +19,7 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"

@@ -16,6 +16,8 @@
 
 #include "nodes/nodes.h"
 
+#define BITS_IN_MB 20
+
 /*
  * The cleanupCountdown in the SessionState determines how many
  * processes we need to cleanup to declare a session clean. If it
@@ -72,5 +74,6 @@ extern void RedZoneHandler_LogVmemUsageOfAllSessions(void);
 
 extern void IdleTracker_ActivateProcess(void);
 extern void IdleTracker_DeactivateProcess(void);
+extern bool VmemTrackerIsActivated(void);
 
 #endif   /* VMEMTRACKER_H */

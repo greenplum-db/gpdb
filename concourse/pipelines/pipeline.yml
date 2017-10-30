@@ -49,7 +49,7 @@ groups:
 ################################
   - gate_cluster_start
   - mpp_interconnect
-  - DPM_gptransfer-5x-to-5x
+  - DPM_gptransfer
   - cs_crash_recovery_schema_topology
   - cs_crash_recovery_04_10
   - cs_crash_recovery_11_20
@@ -71,18 +71,19 @@ groups:
   - gate_mm_misc_end
 ################################
   - gate_nightly_start
-  - DPM_backup_43_restore_5
-  - MM_gpexpand
-  - cs-aoco-compression
-  - DPM_gptransfer-43x-to-5x
+  - MM_gpexpand_1
+  - MM_gpexpand_2
+  - DPM_gptransfer_43x_to_master
   - gate_nightly_end
 ################################
   - gate_general_misc_start
   - MM_gpcheckcat
   - QP_memory-accounting
   - QP_optimizer-functional
-  - regression_tests_pxf_hdp
-  - regression_tests_pxf_cdh
+  - regression_tests_pxf_hdp_rpm
+  - regression_tests_pxf_hdp_tar
+  - regression_tests_pxf_cdh_rpm
+  - regression_tests_pxf_cdh_tar
   - regression_tests_gphdfs_centos
   - regression_tests_gpcloud_centos
   - mpp_resource_group_centos6
@@ -103,9 +104,6 @@ groups:
 
 - name: Remaining Pulse
   jobs:
-  - MM_gpcheckcat
-  - MM_gpexpand
-  - cs-aoco-compression
   - mpp_interconnect
 
 - name: Adopted CCP
@@ -132,12 +130,13 @@ groups:
   - cs_crash_recovery_21_30
   - cs_crash_recovery_31_42
   - DPM_backup-restore
-  - DPM_gptransfer-43x-to-5x
-  - DPM_gptransfer-5x-to-5x
+  - DPM_gptransfer_43x_to_master
+  - DPM_gptransfer
   - MM_gpcheckcat
+  - MM_gpexpand_1
+  - MM_gpexpand_2
   - MM_gppkg
   - MM_gprecoverseg
-  - DPM_backup_43_restore_5
 
 - name: Experimental Tests
   jobs:
@@ -193,7 +192,7 @@ groups:
   jobs:
   - gate_cluster_start
   - mpp_interconnect
-  - DPM_gptransfer-5x-to-5x
+  - DPM_gptransfer
   - DPM_backup-restore
   - cs_crash_recovery_schema_topology
   - cs_crash_recovery_04_10
@@ -207,6 +206,8 @@ groups:
   - gate_mm_misc_start
   - MM_gppkg
   - MM_gprecoverseg
+  - MM_gpexpand_1
+  - MM_gpexpand_2
   - MM_gpcheck
   - MM_analyzedb
   - MM_gpperfmon
@@ -219,10 +220,9 @@ groups:
 - name: G:Nightly
   jobs:
   - gate_nightly_start
-  - DPM_backup_43_restore_5
-  - MM_gpexpand
-  - cs-aoco-compression
-  - DPM_gptransfer-43x-to-5x
+  - MM_gpexpand_1
+  - MM_gpexpand_2
+  - DPM_gptransfer_43x_to_master
   - gate_nightly_end
 
 - name: G:General
@@ -231,8 +231,10 @@ groups:
   - MM_gpcheckcat
   - QP_memory-accounting
   - QP_optimizer-functional
-  - regression_tests_pxf_hdp
-  - regression_tests_pxf_cdh
+  - regression_tests_pxf_hdp_rpm
+  - regression_tests_pxf_hdp_tar
+  - regression_tests_pxf_cdh_rpm
+  - regression_tests_pxf_cdh_tar
   - regression_tests_gphdfs_centos
   - regression_tests_gpcloud_centos
   - mpp_resource_group_centos6
@@ -269,7 +271,7 @@ resources:
     branch: {{ccp-git-branch}}
     private_key: {{ccp-git-key}}
     uri: {{ccp-git-remote}}
-    tag_filter: 1.0.1
+    tag_filter: 1.0.4
 
 - name: terraform
   type: terraform
@@ -453,7 +455,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: windows-cl/greenplum-clients-5.(.*)-WinXP-x86_32.msi
+    regexp: windows-cl/greenplum-clients-(.*)-WinXP-x86_32.msi
 
 - name: bin_gpdb_windows_loaders
   type: s3
@@ -462,7 +464,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: windows-cl/greenplum-loaders-5.(.*)-WinXP-x86_32.msi
+    regexp: windows-cl/greenplum-loaders-(.*)-WinXP-x86_32.msi
 
 - name: bin_gpdb4_centos6
   type: s3
@@ -489,7 +491,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-5.(.*)-rhel6-x86_64.zip
+    regexp: deliverables/greenplum-clients-(.*)-rhel6-x86_64.zip
 
 - name: installer_rhel6_gpdb_loaders
   type: s3
@@ -498,7 +500,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-5.(.*)-rhel6-x86_64.zip
+    regexp: deliverables/greenplum-loaders-(.*)-rhel6-x86_64.zip
 
 - name: installer_rhel7_gpdb_clients
   type: s3
@@ -507,7 +509,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-5.(.*)-rhel7-x86_64.zip
+    regexp: deliverables/greenplum-clients-(.*)-rhel7-x86_64.zip
 
 - name: installer_rhel7_gpdb_loaders
   type: s3
@@ -516,7 +518,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-5.(.*)-rhel7-x86_64.zip
+    regexp: deliverables/greenplum-loaders-(.*)-rhel7-x86_64.zip
 
 - name: installer_aix7_gpdb_clients
   type: s3
@@ -525,7 +527,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-5.(.*)-aix7_ppc_64.zip
+    regexp: deliverables/greenplum-clients-(.*)-aix7_ppc_64.zip
 
 - name: installer_aix7_gpdb_loaders
   type: s3
@@ -534,7 +536,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-5.(.*)-aix7_ppc_64.zip
+    regexp: deliverables/greenplum-loaders-(.*)-aix7_ppc_64.zip
 
 - name: qautils_rhel6_tarball
   type: s3
@@ -552,7 +554,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-5.(.*)-sles11-x86_64.zip
+    regexp: deliverables/greenplum-clients-(.*)-sles11-x86_64.zip
 
 - name: installer_sles11_gpdb_loaders
   type: s3
@@ -561,7 +563,7 @@ resources:
     bucket: {{bucket-name}}
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-5.(.*)-sles11-x86_64.zip
+    regexp: deliverables/greenplum-loaders-(.*)-sles11-x86_64.zip
 
 - name: gpdb_src_tinc_tarball
   type: s3
@@ -687,6 +689,20 @@ pulse_properties_anchor: &pulse_properties
   PULSE_USERNAME: {{pulse_username}}
   PULSE_PASSWORD: {{pulse_password}}
 
+cs_ccp_aggregate_nightly_start_anchor: &cs_ccp_aggregate_nightly_start
+  - get: gpdb_src
+    tags: ["gpdb5_ccp_external_worker"]
+    passed: [gate_nightly_start]
+  - get: gpdb_binary
+    tags: ["gpdb5_ccp_external_worker"]
+    resource: bin_gpdb_centos6
+    passed: [gate_nightly_start]
+    trigger: ((reduced-frequency-trigger-flag))
+  - get: ccp_src
+    tags: ["gpdb5_ccp_external_worker"]
+  - get: centos-gpdb-dev-6
+    tags: ["gpdb5_ccp_external_worker"]
+
 cs_ccp_aggregate_cluster_start_anchor: &cs_ccp_aggregate_cluster_start
   - get: gpdb_src
     tags: ["gpdb5_ccp_external_worker"]
@@ -762,7 +778,6 @@ jobs:
     - get: centos-gpdb-dev-7
     - get: centos-mingw
     - get: ubuntu-gpdb-dev-16
-
 - name: compile_gpdb_and_orca_conan_ubuntu16
   plan:
   - aggregate:
@@ -902,7 +917,6 @@ jobs:
     - put: installer_rhel7_gpdb_loaders
       params:
         file: gpdb_artifacts/greenplum-loaders-*-rhel7-x86_64.zip
-
 - name: compile_gpdb_ubuntu16
   plan:
   - aggregate:
@@ -920,7 +934,6 @@ jobs:
   - put: compiled_bits_ubuntu16
     params:
       file: compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
-
 - name: compile_gpdb_sles11
   plan:
   - aggregate:
@@ -1247,43 +1260,44 @@ jobs:
 ################# ICW Group
 - name: gate_icw_start
   plan:
-    - get: gpdb_src
-      passed:
-      - gate_compile_end
-      trigger: true
-    - get: bin_gpdb_sles11
-      passed:
-      - gate_compile_end
-    - get: binary_swap_gpdb_centos6
-      passed:
-      - gate_compile_end
-    - get: bin_gpdb_centos7
-      passed:
-      - gate_compile_end
-    - get: bin_gpdb_centos6
-      passed:
-      - gate_compile_end
-    - get: gpdb_src_tinc_tarball
-      passed:
-      - gate_compile_end
-    - get: installer_rhel6_gpdb_rc
-      passed:
-      - gate_compile_end
-    - get: qautils_rhel6_tarball
-      passed:
-      - gate_compile_end
-    - get: gpdb_src_behave_tarball
-      passed:
-      - gate_compile_end
-    - get: compiled_bits_ubuntu16
-      passed:
-      - gate_compile_end
-    - get: compiled_bits_gpdb_with_orca_conan_ubuntu16
-      passed:
-      - gate_compile_end
-    - get: compiled_bits_orca_with_conan_ubuntu16
-      passed:
-      - gate_compile_end
+    - aggregate:
+      - get: gpdb_src
+        passed:
+        - gate_compile_end
+        trigger: true
+      - get: bin_gpdb_sles11
+        passed:
+        - gate_compile_end
+      - get: binary_swap_gpdb_centos6
+        passed:
+        - gate_compile_end
+      - get: bin_gpdb_centos7
+        passed:
+        - gate_compile_end
+      - get: bin_gpdb_centos6
+        passed:
+        - gate_compile_end
+      - get: gpdb_src_tinc_tarball
+        passed:
+        - gate_compile_end
+      - get: installer_rhel6_gpdb_rc
+        passed:
+        - gate_compile_end
+      - get: qautils_rhel6_tarball
+        passed:
+        - gate_compile_end
+      - get: gpdb_src_behave_tarball
+        passed:
+        - gate_compile_end
+      - get: compiled_bits_ubuntu16
+        passed:
+        - gate_compile_end
+      - get: compiled_bits_gpdb_with_orca_conan_ubuntu16
+        passed:
+        - gate_compile_end
+      - get: compiled_bits_orca_with_conan_ubuntu16
+        passed:
+        - gate_compile_end
 - name: icw_planner_centos6
   plan:
   - aggregate:
@@ -1326,7 +1340,6 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 - name: icw_gporca_centos7
-  serial: true
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1345,7 +1358,6 @@ jobs:
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 - name: icw_gporca_sles11
-  serial: true
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1526,40 +1538,41 @@ jobs:
       timeout: 3h
 - name: gate_icw_end
   plan:
-  - get: gpdb_src
-    passed:
-    - icw_planner_centos6
-    - icw_gporca_centos6
-    - icw_gporca_centos7
-    - icw_gporca_sles11
-    - icw_planner_ictcp_centos6
-    - fts
-    - storage
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - icw_planner_centos6
-    - icw_gporca_centos6
-    - icw_planner_ictcp_centos6
-  - get: bin_gpdb_centos7
-    passed:
-    - icw_gporca_centos7
-  - get: bin_gpdb_sles11
-    passed:
-    - icw_gporca_sles11
-  # Not used by icw group, but is passed through
-  - get: gpdb_src_tinc_tarball
-    passed:
-    - gate_icw_start
-  - get: installer_rhel6_gpdb_rc
-    passed:
-    - gate_icw_start
-  - get: qautils_rhel6_tarball
-    passed:
-    - gate_icw_start
-  - get: gpdb_src_behave_tarball
-    passed:
-    - gate_icw_start
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_gporca_centos7
+      - icw_gporca_sles11
+      - icw_planner_ictcp_centos6
+      - fts
+      - storage
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - icw_planner_centos6
+      - icw_gporca_centos6
+      - icw_planner_ictcp_centos6
+    - get: bin_gpdb_centos7
+      passed:
+      - icw_gporca_centos7
+    - get: bin_gpdb_sles11
+      passed:
+      - icw_gporca_sles11
+    # Not used by icw group, but is passed through
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gate_icw_start
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gate_icw_start
+    - get: qautils_rhel6_tarball
+      passed:
+      - gate_icw_start
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gate_icw_start
 ################# ICW Group End
 
 ############## CS Misc Start
@@ -1988,21 +2001,22 @@ jobs:
   - *ccp_destroy
 - name: gate_cs_misc_end
   plan:
-  - get: gpdb_src
-    passed: &gate_cs_misc_passed
-    - cs_walrep_1
-    - cs_walrep_2
-    - cs_pg_twophase_01_10
-    - cs_pg_twophase_11_20
-    - cs_pg_twophase_21_30
-    - cs_pg_twophase_31_40
-    - cs_pg_twophase_41_49
-    - cs_pg_twophase_switch_01_12
-    - cs_pg_twophase_switch_13_24
-    - cs_pg_twophase_switch_25_33
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed: *gate_cs_misc_passed
+  - aggregate:
+    - get: gpdb_src
+      passed: &gate_cs_misc_passed
+      - cs_walrep_1
+      - cs_walrep_2
+      - cs_pg_twophase_01_10
+      - cs_pg_twophase_11_20
+      - cs_pg_twophase_21_30
+      - cs_pg_twophase_31_40
+      - cs_pg_twophase_41_49
+      - cs_pg_twophase_switch_01_12
+      - cs_pg_twophase_switch_13_24
+      - cs_pg_twophase_switch_25_33
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed: *gate_cs_misc_passed
 ############## CS Misc End
 
 ############### Cluster Start
@@ -2018,25 +2032,26 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep 300']
-  - get: gpdb_src
-    passed:
-    - gate_mm_misc_end
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - gate_mm_misc_end
-  - get: gpdb_src_tinc_tarball
-    passed:
-    - gate_mm_misc_end
-  - get: qautils_rhel6_tarball
-    passed:
-    - gate_mm_misc_end
-  - get: gpdb_src_behave_tarball
-    passed:
-    - gate_mm_misc_end
-  - get: installer_rhel6_gpdb_rc
-    passed:
-    - gate_mm_misc_end
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_mm_misc_end
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_mm_misc_end
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gate_mm_misc_end
+    - get: qautils_rhel6_tarball
+      passed:
+      - gate_mm_misc_end
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gate_mm_misc_end
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gate_mm_misc_end
 - name: mpp_interconnect
   plan:
   - aggregate: &post_packaging_gets_trigger_true
@@ -2075,7 +2090,7 @@ jobs:
     params:
       <<: *pulse_properties
       PULSE_PROJECT_NAME: "mpp-interconnect"
-- name: DPM_gptransfer-5x-to-5x
+- name: DPM_gptransfer
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2271,51 +2286,53 @@ jobs:
   - *ccp_destroy
 - name: gate_cluster_end
   plan:
-  - get: gpdb_src
-    passed:
-    - DPM_gptransfer-5x-to-5x
-    - DPM_backup-restore
-    - mpp_interconnect
-    - cs_crash_recovery_schema_topology
-    - cs_crash_recovery_04_10
-    - cs_crash_recovery_11_20
-    - cs_crash_recovery_21_30
-    - cs_crash_recovery_31_42
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - DPM_backup-restore
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - DPM_gptransfer
+      - DPM_backup-restore
+      - mpp_interconnect
+      - cs_crash_recovery_schema_topology
+      - cs_crash_recovery_04_10
+      - cs_crash_recovery_11_20
+      - cs_crash_recovery_21_30
+      - cs_crash_recovery_31_42
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - DPM_backup-restore
 ############### Cluster End
 
 ################# MM Misc Start
 - name: gate_mm_misc_start
   plan:
-  - get: gpdb_src
-    passed:
-    - gate_icw_end
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - gate_icw_end
-  - get: bin_gpdb_centos7
-    passed:
-    - gate_icw_end
-  - get: bin_gpdb_sles11
-    passed:
-    - gate_icw_end
-  # Not used by icw group, but is passed through
-  - get: gpdb_src_tinc_tarball
-    passed:
-    - gate_icw_end
-  - get: installer_rhel6_gpdb_rc
-    passed:
-    - gate_icw_end
-  - get: qautils_rhel6_tarball
-    passed:
-    - gate_icw_end
-  - get: gpdb_src_behave_tarball
-    passed:
-    - gate_icw_end
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_icw_end
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_icw_end
+    - get: bin_gpdb_centos7
+      passed:
+      - gate_icw_end
+    - get: bin_gpdb_sles11
+      passed:
+      - gate_icw_end
+    # Not used by icw group, but is passed through
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gate_icw_end
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gate_icw_end
+    - get: qautils_rhel6_tarball
+      passed:
+      - gate_icw_end
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gate_icw_end
 - name: MM_gppkg
   plan:
   - aggregate:
@@ -2487,42 +2504,46 @@ jobs:
       BEHAVE_TAGS: gpinitstandby
 - name: gate_mm_misc_end
   plan:
-  - get: gpdb_src
-    passed:
-    - MU_check_centos
-    - MM_analyzedb
-    - MM_gpinitsystem
-    - MM_gpperfmon
-    - MM_gpcheck
-    - MM_pt-rebuild
-    - MM_gpinitstandby
-    - MM_gppkg
-    - MM_gprecoverseg
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - MU_check_centos
-    - MM_analyzedb
-    - MM_gpinitsystem
-    - MM_gpperfmon
-    - MM_gpcheck
-    - MM_pt-rebuild
-    - MM_gpinitstandby
-    - MM_gppkg
-    - MM_gprecoverseg
-  # Not used by icw group, but is passed through
-  - get: gpdb_src_tinc_tarball
-    passed:
-    - gate_mm_misc_start
-  - get: installer_rhel6_gpdb_rc
-    passed:
-    - gate_mm_misc_start
-  - get: qautils_rhel6_tarball
-    passed:
-    - gate_mm_misc_start
-  - get: gpdb_src_behave_tarball
-    passed:
-    - gate_mm_misc_start
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - MU_check_centos
+      - MM_analyzedb
+      - MM_gpinitsystem
+      - MM_gpperfmon
+      - MM_gpcheck
+      - MM_pt-rebuild
+      - MM_gpinitstandby
+      - MM_gppkg
+      - MM_gprecoverseg
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - MU_check_centos
+      - MM_analyzedb
+      - MM_gpinitsystem
+      - MM_gpperfmon
+      - MM_gpcheck
+      - MM_pt-rebuild
+      - MM_gpinitstandby
+      - MM_gppkg
+      - MM_gprecoverseg
+    # Not used by icw group, but is passed through
+    - get: bin_gpdb_centos7
+      passed:
+      - gate_mm_misc_start
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gate_mm_misc_start
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gate_mm_misc_start
+    - get: qautils_rhel6_tarball
+      passed:
+      - gate_mm_misc_start
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gate_mm_misc_start
 ################# MM Misc End
 
 ############### Nightly Start
@@ -2538,45 +2559,40 @@ jobs:
       run:
         path: 'sh'
         args: ['-c', 'sleep 300']
-  - get: gpdb_src
-    passed:
-    - gate_icw_end
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - gate_icw_end
-  - get: gpdb_src_tinc_tarball
-    passed:
-    - gate_icw_end
-  - get: installer_rhel6_gpdb_rc
-    passed:
-    - gate_icw_end
-  - get: qautils_rhel6_tarball
-    passed:
-    - gate_icw_end
-  - get: gpdb_src_behave_tarball
-    passed:
-    - gate_icw_end
-- name: DPM_backup_43_restore_5
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_icw_end
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_icw_end
+    - get: gpdb_src_tinc_tarball
+      passed:
+      - gate_icw_end
+    - get: installer_rhel6_gpdb_rc
+      passed:
+      - gate_icw_end
+    - get: qautils_rhel6_tarball
+      passed:
+      - gate_icw_end
+    - get: gpdb_src_behave_tarball
+      passed:
+      - gate_icw_end
+- name: MM_gpexpand_1
   plan:
-  - get: nightly-trigger
-    tags: ["gpdb5_ccp_external_worker"]
-    trigger: ((nightly-trigger-flag))
   - aggregate:
     - get: gpdb_src
       tags: ["gpdb5_ccp_external_worker"]
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_nightly_start]
+      passed: [gate_mm_misc_start]
     - get: gpdb_binary
       tags: ["gpdb5_ccp_external_worker"]
       resource: bin_gpdb_centos6
-      passed: [gate_nightly_start]
-      trigger: ((reduced-frequency-trigger-flag))
-    - get: gpdb4_binary
-      tags: ["gpdb5_ccp_external_worker"]
-      resource: bin_gpdb4_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
     - get: ccp_src
       tags: ["gpdb5_ccp_external_worker"]
     - get: centos-gpdb-dev-6
@@ -2587,96 +2603,69 @@ jobs:
       <<: *ccp_default_params
       vars:
         <<: *ccp_default_vars
-  - task: setup_gpdb4
+        number_of_nodes: 5
+  - task: gen_cluster
     tags: ["gpdb5_ccp_external_worker"]
     file: ccp_src/ci/tasks/gen_cluster.yml
     params:
       <<: *ccp_gen_cluster_default_params
-    input_mapping:
-      gpdb_binary: gpdb4_binary
     on_failure:
       <<: *ccp_destroy
-  - task: run_backup_tests
+  - task: run_tests
     tags: ["gpdb5_ccp_external_worker"]
-    file: gpdb_src/concourse/tasks/run_behave.yml
+    file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
     params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_backups --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
-    on_failure:
-      <<: *debug_sleep
-  - task: setup_gpdb5
-    tags: ["gpdb5_ccp_external_worker"]
-    file: gpdb_src/concourse/tasks/setup_new_gpdb_for_backup_restore.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    image: centos-gpdb-dev-6
-    on_failure:
-      <<: *debug_sleep
-  - task: run_restore_tests
-    tags: ["gpdb5_ccp_external_worker"]
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-dev-6
-    params:
-      BEHAVE_FLAGS: --tags=backup_and_restore_restores --tags=-nbuonly --tags=-ddonly --tags=-skip_for_gpdb_43
+      TINC_TARGET: gpexpand_1
+      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
+      PRE_TEST_SCRIPT: bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@$i "sudo chmod 777 /usr/local"; done'
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
-- name: MM_gpexpand
+- name: MM_gpexpand_2
   plan:
-  - get: nightly-trigger
-    trigger: ((nightly-trigger-flag))
-  - aggregate: &post_packaging_gets_trigger_based_on_flag
+  - aggregate:
     - get: gpdb_src
-      params: {submodules: none}
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-      trigger: ((reduced-frequency-trigger-flag))
-    - get: gpdb_src_tinc_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-    - get: installer_rhel6_gpdb_rc
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-    - get: qautils_rhel6_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-    - get: gpdb_src_behave_tarball
-      tags: ["gpdb5-pulse-worker"]
-      passed: [gate_nightly_start]
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+      tags: ["gpdb5_ccp_external_worker"]
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_mm_misc_start]
+    - get: gpdb_binary
+      tags: ["gpdb5_ccp_external_worker"]
+      resource: bin_gpdb_centos6
+      passed: [gate_mm_misc_start]
+      trigger: true
+    - get: ccp_src
+      tags: ["gpdb5_ccp_external_worker"]
+    - get: centos-gpdb-dev-6
+      tags: ["gpdb5_ccp_external_worker"]
+  - put: terraform
+    tags: ["gpdb5_ccp_external_worker"]
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 5
+  - task: gen_cluster
+    tags: ["gpdb5_ccp_external_worker"]
+    file: ccp_src/ci/tasks/gen_cluster.yml
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "GPDB-gpexpand-parallel"
-- name: cs-aoco-compression
-  plan:
-  - get: nightly-trigger
-    trigger: ((nightly-trigger-flag))
-  - aggregate: *post_packaging_gets_trigger_based_on_flag
-  - task: trigger_pulse
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/trigger_pulse.yml
-    input_mapping: *input_mappings
+      <<: *ccp_gen_cluster_default_params
+    on_failure:
+      <<: *ccp_destroy
+  - task: run_tests
+    tags: ["gpdb5_ccp_external_worker"]
+    file: gpdb_src/concourse/tasks/run_tinc.yml
+    image: centos-gpdb-dev-6
     params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "cs-aoco-compression"
-  - task: monitor_pulse
-    attempts: 2
-    tags: ["gpdb5-pulse-worker"]
-    file: gpdb_src/ci/pulse/api/monitor_pulse.yml
-    params:
-      <<: *pulse_properties
-      PULSE_PROJECT_NAME: "cs-aoco-compression"
-- name: DPM_gptransfer-43x-to-5x
+      TINC_TARGET: gpexpand_2
+      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
+      PRE_TEST_SCRIPT: bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@$i "sudo chmod 777 /usr/local"; done'
+    on_failure:
+      <<: *debug_sleep
+  - *ccp_destroy
+- name: DPM_gptransfer_43x_to_master
   plan:
   - get: nightly-trigger
     tags: ["gpdb5_ccp_external_worker"]
@@ -2779,25 +2768,29 @@ jobs:
   - *ccp_destroy_2_cluster
 - name: gate_nightly_end
   plan:
-  - get: gpdb_src
-    trigger: true
-    passed:
-    - DPM_backup_43_restore_5
-    - MM_gpexpand
-    - cs-aoco-compression
-    - DPM_gptransfer-43x-to-5x
+  - aggregate:
+    - get: gpdb_src
+      trigger: true
+      passed:
+      - MM_gpexpand_1
+      - MM_gpexpand_2
+      - DPM_gptransfer_43x_to_master
 ############### Nightly End
 
 ################ General Misc Start
 - name: gate_general_misc_start
   plan:
-  - get: gpdb_src
-    passed:
-    - gate_mm_misc_end
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - gate_mm_misc_end
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_mm_misc_end
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_mm_misc_end
+    - get: bin_gpdb_centos7
+      passed:
+      - gate_mm_misc_end
 - name: MM_gpcheckcat
   plan:
   - aggregate:
@@ -2886,7 +2879,7 @@ jobs:
         BLDWRAP_POSTGRES_CONF_ADDONS: fsync=off optimizer_print_missing_stats=off
         TEST_OS: centos
         CONFIGURE_FLAGS: {{configure_flags}}
-- name: regression_tests_pxf_hdp
+- name: regression_tests_pxf_hdp_rpm
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2907,9 +2900,34 @@ jobs:
       image: centos-gpdb-dev-6
       params:
         GROUP: gpdb
+        HADOOP_CLIENT: HDP
         TARGET_OS: centos
         TARGET_OS_VERSION: 6
-- name: regression_tests_pxf_cdh
+- name: regression_tests_pxf_hdp_tar
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-HDP
+      trigger: true
+    - get: pxf_automation_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - aggregate:
+    - task: regression_tests_pxf
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: TAR
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+- name: regression_tests_pxf_cdh_rpm
   plan:
   - aggregate:
     - get: gpdb_src
@@ -2929,6 +2947,30 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       GROUP: gpdb
+      HADOOP_CLIENT: CDH
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+- name: regression_tests_pxf_cdh_tar
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_general_misc_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [gate_general_misc_start]
+      trigger: true
+    - get: singlecluster
+      resource: singlecluster-CDH
+      trigger: true
+    - get: pxf_automation_src
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: regression_tests_pxf
+    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+    image: centos-gpdb-dev-6
+    params:
+      GROUP: gpdb
+      HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
 - name: regression_tests_gphdfs_centos
@@ -3014,6 +3056,7 @@ jobs:
     - get: bin_gpdb
       tags: ["gpdb5_ccp_external_worker"]
       resource: bin_gpdb_centos7
+      passed: [gate_general_misc_start]
       trigger: true
     - get: ccp_src
       tags: ["gpdb5_ccp_external_worker"]
@@ -3046,38 +3089,44 @@ jobs:
   - *ccp_destroy
 - name: gate_general_misc_end
   plan:
-  - get: gpdb_src
-    passed:
-    - QP_memory-accounting
-    - regression_tests_gpcloud_centos
-    - regression_tests_gphdfs_centos
-    - regression_tests_pxf_hdp
-    - regression_tests_pxf_cdh
-    - QP_optimizer-functional
-    - MM_gpcheckcat
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - QP_memory-accounting
-    - regression_tests_gpcloud_centos
-    - regression_tests_gphdfs_centos
-    - regression_tests_pxf_hdp
-    - regression_tests_pxf_cdh
-    - QP_optimizer-functional
-    - MM_gpcheckcat
-    trigger: true
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - QP_memory-accounting
+      - regression_tests_gpcloud_centos
+      - regression_tests_gphdfs_centos
+      - regression_tests_pxf_hdp_rpm
+      - regression_tests_pxf_hdp_tar
+      - regression_tests_pxf_cdh_rpm
+      - regression_tests_pxf_cdh_tar
+      - QP_optimizer-functional
+      - MM_gpcheckcat
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - QP_memory-accounting
+      - regression_tests_gpcloud_centos
+      - regression_tests_gphdfs_centos
+      - regression_tests_pxf_hdp_rpm
+      - regression_tests_pxf_hdp_tar
+      - regression_tests_pxf_cdh_rpm
+      - regression_tests_pxf_cdh_tar
+      - QP_optimizer-functional
+      - MM_gpcheckcat
+      trigger: true
 ################ General Misc End
 
 ################ FileRep Start
 - name: gate_filerep_start
   plan:
-  - get: gpdb_src
-    passed:
-    - gate_general_misc_end
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - gate_general_misc_end
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_general_misc_end
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - gate_general_misc_end
 - name: cs_filerep_e2e_full_mirror
   plan:
   - aggregate:
@@ -3239,19 +3288,20 @@ jobs:
   - *ccp_destroy
 - name: gate_filerep_end
   plan:
-  - get: gpdb_src
-    passed:
-    - cs_filerep_e2e_full_mirror
-    - cs_filerep_e2e_incr_mirror
-    - cs_filerep_e2e_full_primary
-    - cs_filerep_e2e_incr_primary
-    trigger: true
-  - get: bin_gpdb_centos6
-    passed:
-    - cs_filerep_e2e_full_mirror
-    - cs_filerep_e2e_incr_mirror
-    - cs_filerep_e2e_full_primary
-    - cs_filerep_e2e_incr_primary
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - cs_filerep_e2e_full_mirror
+      - cs_filerep_e2e_incr_mirror
+      - cs_filerep_e2e_full_primary
+      - cs_filerep_e2e_incr_primary
+      trigger: true
+    - get: bin_gpdb_centos6
+      passed:
+      - cs_filerep_e2e_full_mirror
+      - cs_filerep_e2e_incr_mirror
+      - cs_filerep_e2e_full_primary
+      - cs_filerep_e2e_incr_primary
 ################ FileRep End
 
 - name: Release_Candidate
@@ -3309,17 +3359,18 @@ jobs:
     - QP_memory-accounting
     - regression_tests_gpcloud_centos
     - regression_tests_gphdfs_centos
-    - regression_tests_pxf_hdp
-    - regression_tests_pxf_cdh
+    - regression_tests_pxf_hdp_rpm
+    - regression_tests_pxf_hdp_tar
+    - regression_tests_pxf_cdh_rpm
+    - regression_tests_pxf_cdh_tar
     - gpdb_rc_packaging_centos
-    - DPM_backup_43_restore_5
     - MM_gpcheckcat
     - MM_gprecoverseg
-    - MM_gpexpand
+    - MM_gpexpand_1
+    - MM_gpexpand_2
     - MM_gpinitstandby
-    - DPM_gptransfer-43x-to-5x
-    - DPM_gptransfer-5x-to-5x
-    - cs-aoco-compression
+    - DPM_gptransfer_43x_to_master
+    - DPM_gptransfer
     - mpp_interconnect
     - QP_optimizer-functional
     - validate_pipeline

@@ -70,7 +70,10 @@ endif
 
 SHLIB_EXPORTS = exports.txt
 
-all: all-lib
+all: all-lib fe-protocol3_for_backend.o fe-connect_for_backend.o
+
+%_for_backend.o: %.c
+	$(CC) -c $(filter-out -DFRONTEND, $(CPPFLAGS)) $< -o $@
 
 # Shared library stuff
 include $(top_srcdir)/src/Makefile.shlib
@@ -127,7 +130,7 @@ uninstall: uninstall-lib
 	rm -f '$(DESTDIR)$(datadir)/pg_service.conf.sample'
 
 clean distclean: clean-lib
-	rm -f $(OBJS) pg_config_paths.h crypt.c getaddrinfo.c getpeereid.c inet_aton.c inet_net_ntop.c noblock.c open.c pgstrcasecmp.c snprintf.c strerror.c strlcpy.c thread.c md5.c ip.c encnames.c wchar.c win32error.c pgsleep.c pthread.h libpq.rc exports.list
+	rm -f *.o pg_config_paths.h crypt.c getaddrinfo.c getpeereid.c inet_aton.c inet_net_ntop.c noblock.c open.c pgstrcasecmp.c snprintf.c strerror.c strlcpy.c thread.c md5.c ip.c encnames.c wchar.c win32error.c pgsleep.c pthread.h libpq.rc exports.list
 # Might be left over from a Win32 client-only build
 	rm -f pg_config_paths.h
 

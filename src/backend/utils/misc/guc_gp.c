@@ -323,6 +323,7 @@ char	   *gp_resqueue_priority_default_value;
 bool		gp_debug_resqueue_priority = false;
 
 /* Resource group GUCs */
+int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 
@@ -3541,6 +3542,15 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&memory_spill_ratio,
 		20, 0, 100, NULL, NULL
+	},
+
+	{
+		{"gp_resource_group_cpu_priority", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Sets the cpu priority for postgres processes when resource group is enabled."),
+			NULL
+		},
+		&gp_resource_group_cpu_priority,
+		10, 1, 256, NULL, NULL
 	},
 
 	{

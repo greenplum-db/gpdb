@@ -1297,9 +1297,6 @@ select C.j from C where not exists (select rank() over (order by B.i) from B  wh
  62
 (4 rows)
 
--- start_ignore
--- FIXME: ORCA produces the wrong plan and results for subselects with a grouping clause
--- end_ignore
 explain select * from A where not exists (select sum(C.i) from C where C.i = A.i group by a.i);
                    QUERY PLAN                   
 ------------------------------------------------

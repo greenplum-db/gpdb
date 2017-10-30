@@ -5170,10 +5170,6 @@ PostgresMain(int argc, char *argv[],
 					if (ouid > 0 && ouid != GetSessionUserId())
 						SetCurrentRoleId(ouid, ouid_is_super); /* Set the outer UserId */
 
-					// UNDONE: Make this more official...
-					if (TempDtxContextInfo.distributedSnapshot.maxCount == 0)
-						TempDtxContextInfo.distributedSnapshot.maxCount = max_prepared_xacts;
-
 					setupQEDtxContext(&TempDtxContextInfo);
 
 					if (cuid > 0)

@@ -45,14 +45,14 @@ CREATE
 -- check gpdb cgroup configuration
 --
 -- cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
--- shares := 1024 * ncores
+-- shares := 1024 * gp_resource_group_cpu_priority
 --
 
 ! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.cfs_quota_us) == int($(cat @cgroup_mnt_point@/cpu/gpdb/cpu.cfs_period_us) * $(nproc) * $(psql -d isolation2resgrouptest -Aqtc "SHOW gp_resource_group_cpu_limit"))";
 True
 
 
-! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) == 1024 * 256";
+! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) == 1024 * $(psql -d isolation2resgrouptest -Aqtc "SHOW gp_resource_group_cpu_priority")";
 True
 
 

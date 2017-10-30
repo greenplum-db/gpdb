@@ -20,7 +20,7 @@ m4_pattern_forbid(^PGAC_)dnl to catch undefined macros
 dnl The PACKAGE_VERSION from upstream PostgreSQL is maintained in the
 dnl PG_PACKAGE_VERSION variable, when merging make sure to update this
 dnl variable with the merge conflict from the AC_INIT() statement.
-AC_INIT([Greenplum Database], [5.0.0-beta.6], [support@greenplum.org])
+AC_INIT([Greenplum Database], [6.0.0-alpha.0], [support@greenplum.org])
 [PG_PACKAGE_VERSION=8.4devel]
 AC_SUBST(PG_PACKAGE_VERSION)
 

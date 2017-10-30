@@ -14,6 +14,10 @@ cat > ~/gpdb-env.sh << EOF
 EOF
 source ~/gpdb-env.sh
 
+# make fsync by default off to improve test stability
+gpconfig --skipvalidation -c fsync -v off
+gpstop -u
+
 createdb gptest
 createdb gpadmin
 cd ${TINC_DIR}

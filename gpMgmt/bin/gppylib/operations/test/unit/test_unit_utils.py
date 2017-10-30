@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
+import sys
 
 from gppylib.commands.base import ExecutionError
 from gppylib.operations.utils import RemoteOperation, ParallelOperation
@@ -15,6 +16,13 @@ class UtilsTestCase(GpTestCase):
     """
     Requires GPHOME set. Does actual ssh to localhost.
     """
+
+    def setUp(self):
+        self.old_sys_argv = sys.argv
+        sys.argv = ['utils.py']
+
+    def tearDown(self):
+        sys.argv = self.old_sys_argv
 
     def test_Remote_basic(self):
         """ Basic RemoteOperation test """
@@ -71,7 +79,7 @@ class UtilsTestCase(GpTestCase):
         except ExecutionError, e:
             self.assertTrue(e.cmd.get_results().stderr.strip().endswith("raise pg.DatabaseError()"))
         else:
-            self.fail("""A pg.DatabaseError should have been raised remotely, and because it cannot 
+            self.fail("""A pg.DatabaseError should have been raised remotely, and because it cannot
                          be pickled cleanly (due to a strange import in pickle.py),
                          an ExecutionError should have ultimately been caused.""")
             # TODO: Check logs on disk. With gplogfilter?

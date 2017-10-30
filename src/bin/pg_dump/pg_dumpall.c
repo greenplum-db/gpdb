@@ -41,6 +41,7 @@ static const char *progname;
 static void help(void);
 
 static void dumpResQueues(PGconn *conn);
+static void dumpResGroups(PGconn *conn);
 static void dumpRoles(PGconn *conn);
 static void dumpRoleMembership(PGconn *conn);
 static void dumpRoleConstraints(PGconn *conn);
@@ -69,6 +70,7 @@ static bool ignoreVersion = false;
 static bool filespaces = false;
 
 static int	resource_queues = 0;
+static int	resource_groups = 0;
 static int	roles_only = 0;
 static int	disable_dollar_quoting = 0;
 static int	disable_triggers = 0;
@@ -133,6 +135,7 @@ main(int argc, char *argv[])
 		{"disable-dollar-quoting", no_argument, &disable_dollar_quoting, 1},
 		{"disable-triggers", no_argument, &disable_triggers, 1},
 		{"resource-queues", no_argument, &resource_queues, 1},
+		{"resource-groups", no_argument, &resource_groups, 1},
 		{"roles-only", no_argument, &roles_only, 1},
 		{"no-tablespaces", no_argument, &no_tablespaces, 1},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
@@ -347,6 +350,7 @@ main(int argc, char *argv[])
 				appendPQExpBuffer(pgdumpopts, " --gp-syntax");
 				gp_syntax = true;
 				resource_queues = 1; /* --resource-queues is implied by --gp-syntax */
+				resource_groups = 1; /* --resource-groups is implied by --gp-syntax */
 				break;
 			case 2:
 				/* no-gp-format */
@@ -505,6 +509,10 @@ main(int argc, char *argv[])
 			if (resource_queues)
 				dumpResQueues(conn);
 
+			/* Dump Resource Groups */
+			if (resource_groups)
+				dumpResGroups(conn);
+
 			/* Dump roles (users) */
 			dumpRoles(conn);
 
@@ -576,6 +584,7 @@ help(void)
 			 "                           disable dollar quoting, use SQL standard quoting\n"));
 	printf(_("  --disable-triggers       disable triggers during data-only restore\n"));
 	printf(_("  --resource-queues        dump resource queue data\n"));
+	printf(_("  --resource-groups        dump resource group data\n"));
 	printf(_("  --roles-only             dump only roles, no databases or tablespaces\n"));
 	printf(_("  --no-tablespaces         do not dump tablespace assignments\n"));
 	printf(_("  --use-set-session-authorization\n"
@@ -612,6 +621,118 @@ buildWithClause(const char *resname, const char *ressetting, PQExpBuffer buf)
 		appendPQExpBuffer(buf, " %s=%s", resname, ressetting);
 }
 
+/*
+ * Dump resource group
+ */
+static void
+dumpResGroups(PGconn *conn)
+{
+	PQExpBuffer buf = createPQExpBuffer();
+	PGresult   *res;
+	int		i;
+	int		i_groupname,
+			i_cpu_rate_limit,
+			i_concurrency,
+			i_memory_limit,
+			i_memory_shared_quota,
+			i_memory_spill_ratio;
+
+	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
+					  "t1.proposed AS concurrency, "
+					  "t2.proposed AS cpu_rate_limit, "
+					  "t3.proposed AS memory_limit, "
+					  "t4.proposed AS memory_shared_quota, "
+					  "t5.proposed AS memory_spill_ratio "
+					  "FROM pg_resgroup g, "
+					  "pg_resgroupcapability t1, "
+					  "pg_resgroupcapability t2, "
+					  "pg_resgroupcapability t3, "
+					  "pg_resgroupcapability t4, "
+					  "pg_resgroupcapability t5 "
+					  "WHERE g.oid = t1.resgroupid AND "
+					  "g.oid = t2.resgroupid AND "
+					  "g.oid = t3.resgroupid AND "
+					  "g.oid = t4.resgroupid AND "
+					  "g.oid = t5.resgroupid AND "
+					  "t1.reslimittype = 1 AND "
+					  "t2.reslimittype = 2 AND "
+					  "t3.reslimittype = 3 AND "
+					  "t4.reslimittype = 4 AND "
+					  "t5.reslimittype = 5;");
+
+	res = executeQuery(conn, buf->data);
+
+	i_groupname = PQfnumber(res, "groupname");
+	i_cpu_rate_limit = PQfnumber(res, "cpu_rate_limit");
+	i_concurrency = PQfnumber(res, "concurrency");
+	i_memory_limit = PQfnumber(res, "memory_limit");
+	i_memory_shared_quota = PQfnumber(res, "memory_shared_quota");
+	i_memory_spill_ratio = PQfnumber(res, "memory_spill_ratio");
+
+	if (PQntuples(res) > 0)
+		fprintf(OPF, "--\n-- Resource Group\n--\n\n");
+
+	/*
+	 * total cpu_rate_limit and memory_limit should less than 100, so clean
+	 * them before we seting new memory_limit and cpu_rate_limit.
+	 */
+	fprintf(OPF, "ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP default_group SET cpu_rate_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP admin_group SET memory_limit 1;\n");
+	fprintf(OPF, "ALTER RESOURCE GROUP default_group SET memory_limit 1;\n");
+
+	for (i = 0; i < PQntuples(res); i++)
+	{
+		const char *groupname;
+		const char *cpu_rate_limit;
+		const char *concurrency;
+		const char *memory_limit;
+		const char *memory_shared_quota;
+		const char *memory_spill_ratio;
+
+		groupname = fmtId(PQgetvalue(res, i, i_groupname));
+		cpu_rate_limit = PQgetvalue(res, i, i_cpu_rate_limit);
+		concurrency = PQgetvalue(res, i, i_concurrency);
+		memory_limit = PQgetvalue(res, i, i_memory_limit);
+		memory_shared_quota = PQgetvalue(res, i, i_memory_shared_quota);
+		memory_spill_ratio = PQgetvalue(res, i, i_memory_spill_ratio);
+
+		resetPQExpBuffer(buf);
+
+		/* DROP or CREATE default group, so ALTER it  */
+		if (0 == strcmp(groupname, "default_group") || 0 == strcmp(groupname, "admin_group"))
+		{
+			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET concurrency %s;\n",
+							  groupname, concurrency);
+			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_rate_limit %s;\n",
+							  groupname, cpu_rate_limit);
+			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_limit %s;\n",
+							  groupname, memory_limit);
+			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_shared_quota %s;\n",
+							  groupname, memory_shared_quota);
+			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET memory_spill_ratio %s;\n",
+							  groupname, memory_spill_ratio);
+		}
+		else
+		{
+			printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
+							  "concurrency=%s, cpu_rate_limit=%s, "
+							  "memory_limit=%s, memory_shared_quota=%s, "
+							  "memory_spill_ratio=%s);\n",
+							  groupname, concurrency, cpu_rate_limit,
+							  memory_limit, memory_shared_quota,
+							  memory_spill_ratio);
+		}
+
+		fprintf(OPF, "%s", buf->data);
+	}
+
+	PQclear(res);
+
+	destroyPQExpBuffer(buf);
+
+	fprintf(OPF, "\n\n");
+}
 
 /*
  * Dump resource queues
@@ -693,12 +814,10 @@ dumpResQueues(PGconn *conn)
 		const char *rsqname;
 		const char *resname;
 		const char *ressetting;
-		Oid			rqoid;
 
 		rsqname = PQgetvalue(res, i, i_rsqname);
 		resname = PQgetvalue(res, i, i_resname);
 		ressetting = PQgetvalue(res, i, i_ressetting);
-		rqoid = atooid(PQgetvalue(res, i, i_rqoid));
 
 		/* if first CREATE statement, or name changed... */
 		if (!prev_rsqname || (0 != strcmp(rsqname, prev_rsqname)))
@@ -818,6 +937,7 @@ dumpRoles(PGconn *conn)
 				i_rolcomment,
 				i_oid,
 				i_rolqueuename = -1,	/* keep compiler quiet */
+				i_rolgroupname = -1,	/* keep compiler quiet */
 				i_rolcreaterextgpfd = -1,
 				i_rolcreaterexthttp = -1,
 				i_rolcreatewextgpfd = -1,
@@ -828,6 +948,8 @@ dumpRoles(PGconn *conn)
 	bool		hdfs_auth = (server_version >= 80215);
 	char	   *resq_col = resource_queues ? ", (SELECT rsqname FROM pg_resqueue WHERE "
 	"  pg_resqueue.oid = rolresqueue) AS rolqueuename " : "";
+	char	   *resgroup_col = resource_groups ? ", (SELECT rsgname FROM pg_resgroup WHERE "
+	"  pg_resgroup.oid = rolresgroup) AS rolgroupname " : "";
 	char	   *extauth_col = exttab_auth ? ", rolcreaterextgpfd, rolcreaterexthttp, rolcreatewextgpfd" : "";
 	char	   *hdfs_col = hdfs_auth ? ", rolcreaterexthdfs, rolcreatewexthdfs " : "";
 
@@ -843,10 +965,10 @@ dumpRoles(PGconn *conn)
 					  "rolcanlogin, rolconnlimit, rolpassword, "
 					  "rolvaliduntil, "
 					  "pg_catalog.shobj_description(oid, 'pg_authid') as rolcomment "
-					  " %s %s %s"
+					  " %s %s %s %s"
 					  "FROM pg_authid "
 					  "ORDER BY 1",
-					  resq_col, extauth_col, hdfs_col);
+					  resq_col, resgroup_col, extauth_col, hdfs_col);
 
 	res = executeQuery(conn, buf->data);
 
@@ -865,6 +987,9 @@ dumpRoles(PGconn *conn)
 
 	if (resource_queues)
 		i_rolqueuename = PQfnumber(res, "rolqueuename");
+
+	if (resource_groups)
+		i_rolgroupname = PQfnumber(res, "rolgroupname");
 
 	if (exttab_auth)
 	{
@@ -947,6 +1072,13 @@ dumpRoles(PGconn *conn)
 			if (!PQgetisnull(res, i, i_rolqueuename))
 				appendPQExpBuffer(buf, " RESOURCE QUEUE %s",
 								  PQgetvalue(res, i, i_rolqueuename));
+		}
+
+		if (resource_groups)
+		{
+			if (!PQgetisnull(res, i, i_rolgroupname))
+				appendPQExpBuffer(buf, " RESOURCE GROUP %s",
+								  PQgetvalue(res, i, i_rolgroupname));
 		}
 
 		if (exttab_auth)

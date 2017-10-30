@@ -103,6 +103,7 @@ static int
 
 static void parruleord_open_gap(Oid partid, int2 level, Oid parent,
 					int2 ruleord, int stopkey, bool closegap);
+static bool has_external_partition(List *rules);
 
 /*
  * Hash keys are null-terminated C strings assumed to be stably
@@ -479,28 +480,13 @@ rel_partition_keys_kinds_ordered(Oid relid, List **pkeys, List **pkinds)
 bool
 rel_has_external_partition(Oid relid)
 {
-	ListCell   *lc = NULL;
 	PartitionNode *n = get_parts(relid, 0 /* level */ ,
-								 0 /* parent */ , false /* inctemplate */ , false /* includesubparts */ );
+								 0 /* parent */ , false /* inctemplate */ , true /* includesubparts */ );
 
 	if (n == NULL || n->rules == NULL)
 		return false;
 
-	foreach(lc, n->rules)
-	{
-		PartitionRule *rule = lfirst(lc);
-		Relation	rel = heap_open(rule->parchildrelid, NoLock);
-
-		if (RelationIsExternal(rel))
-		{
-			heap_close(rel, NoLock);
-			return true;
-		}
-
-		heap_close(rel, NoLock);
-	}
-
-	return false;
+	return has_external_partition(n->rules);
 }
 
 /*
@@ -9576,4 +9562,39 @@ findPartitionNodeEntry(PartitionNode *partitionNode, Oid partOid)
 	}
 
 	return childNode;
+}
+
+/*
+ * check parition rule if contains
+ * external partition table
+ */
+static bool
+has_external_partition(List *rules) {
+	if (rules == NULL)
+	{
+		return false;
+	}
+
+	ListCell *lc = NULL;
+	foreach(lc, rules)
+	{
+		PartitionRule *rule = lfirst(lc);
+		Relation rel = heap_open(rule->parchildrelid, NoLock);
+
+		if (RelationIsExternal(rel))
+		{
+			heap_close(rel, NoLock);
+			return true;
+		}
+		else
+		{
+			heap_close(rel, NoLock);
+			if (rule->children && has_external_partition(rule->children->rules))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
 }

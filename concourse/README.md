@@ -2,7 +2,7 @@
 
 This directory contains pipelines, task files, and scripts to run various sets
 of builds and tests on
-[our Concourse continuous integration server](http://gpdb.ci.pivotalci.info/).
+[our Concourse continuous integration server](http://gpdb.data.pivotal.ci/).
 
 [Learn more about Concourse overall](http://concourse.ci/)
 
@@ -70,7 +70,7 @@ Please do not create any more exceptions, and remove these as the occasion arise
 
 ### The Concourse Deployment
 There is a `gpdb` team in the
-[Concourse instance](http://gpdb.ci.pivotalci.info/).
+[Concourse instance](http://gpdb.data.pivotal.ci/).
 Use this team to create any pipelines instead of the `main` team.
 
 ### Creating Your Own Pipeline

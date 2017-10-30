@@ -246,7 +246,7 @@ BEGIN
 DROP ROLE role_concurrency_test;
 DROP
 DROP RESOURCE GROUP rg_concurrency_test;
-ERROR:  Cannot drop resource group "rg_concurrency_test"
+ERROR:  cannot drop resource group "rg_concurrency_test"
 HINT:   The resource group is currently managing 1 query(ies) and cannot be dropped.
 	Terminate the queries first or try dropping the group later.
 	The view pg_stat_activity tracks the queries managed by resource groups.

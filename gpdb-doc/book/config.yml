@@ -2,12 +2,54 @@ book_repo: greenplum-db/gpdb-docs/book
 
 public_host: localhost:9292
 
+sections:
+- repository:
+    name: markdown
+    at_path: common
+  directory: docs/600/common
+  subnav_template: gpdb-landing-subnav
+
+- repository:
+    name: markdown
+    at_path: pxf
+  directory: docs/600/pxf
+  subnav_template: pxf-subnav
+
 dita_sections:
 - repository:
     name: dita
-  directory: docs
-  ditamap_location: gpdb-webhelp.ditamap
-  ditaval_location: gpdb-webhelp.ditaval
+    at_path: admin_guide
+  directory: docs/600/admin_guide
+  ditamap_location: admin_guide.ditamap
+  ditaval_location: ../gpdb-webhelp.ditaval
+
+- repository:
+    name: dita
+    at_path: security-guide
+  directory: docs/600/security-guide
+  ditamap_location: security-guide.ditamap
+  ditaval_location: ../gpdb-webhelp.ditaval
+
+- repository:
+    name: dita
+    at_path: best_practices
+  directory: docs/600/best_practices
+  ditamap_location: best-practices.ditamap
+  ditaval_location: ../gpdb-webhelp.ditaval
+
+- repository:
+    name: dita
+    at_path: utility_guide
+  directory: docs/600/utility_guide
+  ditamap_location: utility_guide.ditamap
+  ditaval_location: ../gpdb-webhelp.ditaval
+
+- repository:
+    name: dita
+    at_path: ref_guide
+  directory: docs/600/ref_guide
+  ditamap_location: ref_guide.ditamap
+  ditaval_location: ../gpdb-webhelp.ditaval
 
 template_variables:
   book_title: Greenplum Database Documentation

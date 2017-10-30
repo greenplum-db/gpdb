@@ -23,7 +23,7 @@
 #include "port/atomics.h"
 #include "utils/faultinjection.h"
 #include "utils/vmem_tracker.h"
-#include "utils/resgroup.h"
+#include "utils/resource_manager.h"
 #include "utils/session_state.h"
 
 /* External dependencies within the runaway cleanup framework */
@@ -35,13 +35,12 @@ extern void IdleTracker_Init(void);
 extern void IdleTracker_Shutdown(void);
 
 /* Number of bits in one MB of memory */
-#define BITS_IN_MB 20
 #define SHMEM_AVAILABLE_VMEM "available vmem on the segment"
 
-#define CHUNKS_TO_MB(chunks) ((chunks) << (chunkSizeInBits - BITS_IN_MB))
-#define MB_TO_CHUNKS(mb) ((mb) >> (chunkSizeInBits - BITS_IN_MB))
-#define CHUNKS_TO_BYTES(chunks) (((int64)chunks) << chunkSizeInBits)
-#define BYTES_TO_CHUNKS(bytes) ((bytes) >> chunkSizeInBits)
+#define CHUNKS_TO_MB(chunks) ((chunks) << (VmemTracker_GetChunkSizeInBits() - BITS_IN_MB))
+#define MB_TO_CHUNKS(mb) ((mb) >> (VmemTracker_GetChunkSizeInBits() - BITS_IN_MB))
+#define CHUNKS_TO_BYTES(chunks) (((int64)chunks) << VmemTracker_GetChunkSizeInBits())
+#define BYTES_TO_CHUNKS(bytes) ((bytes) >> VmemTracker_GetChunkSizeInBits())
 #define BYTES_TO_MB(bytes) ((bytes) >> BITS_IN_MB)
 
 /* Number of Vmem chunks tracked by this process */
@@ -52,7 +51,7 @@ static int32 maxVmemChunksTracked = 0;
 static int64 trackedBytes = 0;
 
 /* Vmem quota in chunk unit */
-static int32 vmemChunksQuota;
+static int32 vmemChunksQuota = 0;
 /*
  * Chunk size in bits. By default a chunk is 1MB, but it can be larger
  * depending on the vmem quota.
@@ -79,6 +78,7 @@ static int32 waivedChunks = 0;
 volatile int32 *segmentVmemChunks = NULL;
 
 static void ReleaseAllVmemChunks(void);
+static int32 VmemTracker_GetMaxChunksPerQuery(void);
 
 /*
  * Initializes the shared memory states of the vmem tracker. This
@@ -221,10 +221,12 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 	 * For non-QE processes and processes in critical section, we don't enforce
 	 * VMEM, but we do track the usage.
 	 */
-	if (maxChunksPerQuery != 0 && total > maxChunksPerQuery &&
+	int32 memLimitPerQuery = VmemTracker_GetMaxChunksPerQuery();
+
+	if (memLimitPerQuery != 0 && total > memLimitPerQuery &&
 			Gp_role == GP_ROLE_EXECUTE && CritSectionCount == 0)
 	{
-		if (total > maxChunksPerQuery + waivedChunks)
+		if (total > memLimitPerQuery + waivedChunks)
 		{
 			/* Revert the reserved space, but don't revert the prev_alloc as we have already set the firstTime to false */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
@@ -237,16 +239,17 @@ VmemTracker_ReserveVmemChunks(int32 numChunksToReserve)
 
 	/* Now reserve vmem at segment level */
 	int32 new_vmem = pg_atomic_add_fetch_u32((pg_atomic_uint32 *)segmentVmemChunks, numChunksToReserve);
+	int32 vmemLimitChunks = VmemTracker_GetVmemLimitChunks();
 
 	/*
 	 * If segment vmem is exhausted, rollback query level reservation. For non-QE
 	 * processes and processes in critical section, we don't enforce VMEM, but we
 	 * do track the usage.
 	 */
-	if (new_vmem > vmemChunksQuota &&
+	if (new_vmem > vmemLimitChunks &&
 			Gp_role == GP_ROLE_EXECUTE && CritSectionCount == 0)
 	{
-		if (new_vmem > vmemChunksQuota + waivedChunks)
+		if (new_vmem > vmemLimitChunks + waivedChunks)
 		{
 			/* Revert query memory reservation */
 			pg_atomic_sub_fetch_u32((pg_atomic_uint32 *)&MySessionState->sessionVmem, numChunksToReserve);
@@ -316,9 +319,10 @@ static int32
 VmemTracker_GetNonNegativeAvailableVmemChunks()
 {
 	int32 usedChunks = *segmentVmemChunks;
-	if (vmemTrackerInited && vmemChunksQuota > usedChunks)
+	int32 vmemLimitChunks = VmemTracker_GetVmemLimitChunks();
+	if (vmemLimitChunks > usedChunks)
 	{
-		return vmemChunksQuota - usedChunks;
+		return vmemLimitChunks - usedChunks;
 	}
 	else
 	{
@@ -334,9 +338,10 @@ static int32
 VmemTracker_GetNonNegativeAvailableQueryChunks()
 {
 	int32 curSessionVmem = MySessionState->sessionVmem;
-	if (vmemTrackerInited && maxChunksPerQuery > curSessionVmem)
+	int32 memLimitPerQuery = VmemTracker_GetMaxChunksPerQuery();
+	if (memLimitPerQuery > curSessionVmem)
 	{
-		return maxChunksPerQuery - curSessionVmem;
+		return memLimitPerQuery - curSessionVmem;
 	}
 	else
 	{
@@ -401,7 +406,7 @@ VmemTracker_GetMaxReservedVmemBytes(void)
 int64
 VmemTracker_GetVmemLimitBytes(void)
 {
-	return CHUNKS_TO_BYTES(vmemChunksQuota);
+	return CHUNKS_TO_BYTES(VmemTracker_GetVmemLimitChunks());
 }
 
 /*
@@ -410,7 +415,17 @@ VmemTracker_GetVmemLimitBytes(void)
 int32
 VmemTracker_GetVmemLimitChunks(void)
 {
-	return vmemChunksQuota;
+	/*
+	 * For backend who has vmem tracker initialized and resource
+	 * group enabled, the vmem limit is not expected to be used
+	 * until resource group is activated, otherwise, there might
+	 * be an inconsistency about the vmem limit.
+	 */
+	AssertImply(vmemTrackerInited && IsResGroupEnabled(),
+				IsResGroupActivated());
+
+	return IsResGroupEnabled() ?
+		ResGroupGetVmemLimitChunks() : vmemChunksQuota;
 }
 
 /*
@@ -419,7 +434,27 @@ VmemTracker_GetVmemLimitChunks(void)
 int32
 VmemTracker_GetChunkSizeInBits(void)
 {
-	return chunkSizeInBits;
+	/*
+	 * For backend who has vmem tracker initialized and resource
+	 * group enabled, the chunk size is not expected to be used
+	 * until resource group is activated, otherwise, there might
+	 * be an inconsistency about the chunk size.
+	 */
+	AssertImply(vmemTrackerInited && IsResGroupEnabled(),
+				IsResGroupActivated());
+
+	return IsResGroupEnabled() ?
+		ResGroupGetVmemChunkSizeInBits() : chunkSizeInBits;
+}
+
+/*
+ * Returns the vmem  in "chunks" unit.
+ */
+static int32
+VmemTracker_GetMaxChunksPerQuery(void)
+{
+	return IsResGroupEnabled() ?
+		ResGroupGetMaxChunksPerQuery() : maxChunksPerQuery;
 }
 
 /*
@@ -446,14 +481,7 @@ VmemTracker_GetReservedVmemBytes(void)
 int64
 VmemTracker_GetAvailableVmemBytes()
 {
-	if (vmemTrackerInited)
-	{
-		return CHUNKS_TO_BYTES(VmemTracker_GetNonNegativeAvailableVmemChunks());
-	}
-	else
-	{
-		return 0;
-	}
+	return CHUNKS_TO_BYTES(VmemTracker_GetNonNegativeAvailableVmemChunks());
 }
 
 /*
@@ -462,14 +490,7 @@ VmemTracker_GetAvailableVmemBytes()
 int32
 VmemTracker_GetAvailableVmemMB()
 {
-	if (vmemTrackerInited)
-	{
-		return CHUNKS_TO_MB(VmemTracker_GetNonNegativeAvailableVmemChunks());
-	}
-	else
-	{
-		return 0;
-	}
+	return CHUNKS_TO_MB(VmemTracker_GetNonNegativeAvailableVmemChunks());
 }
 
 /*
@@ -478,14 +499,7 @@ VmemTracker_GetAvailableVmemMB()
 int32
 VmemTracker_GetAvailableQueryVmemMB()
 {
-	if (vmemTrackerInited)
-	{
-		return CHUNKS_TO_MB(VmemTracker_GetNonNegativeAvailableQueryChunks());
-	}
-	else
-	{
-		return 0;
-	}
+	return CHUNKS_TO_MB(VmemTracker_GetNonNegativeAvailableQueryChunks());
 }
 
 /*
@@ -498,7 +512,7 @@ VmemTracker_GetAvailableQueryVmemMB()
 MemoryAllocationStatus
 VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 {
-	if (!vmemTrackerInited)
+	if (!VmemTrackerIsActivated())
 	{
 		Assert(0 == trackedVmemChunks);
 		return MemoryAllocation_Success;
@@ -509,7 +523,7 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 
 	trackedBytes += newlyRequestedBytes;
 
-	int32 newszChunk = trackedBytes >> chunkSizeInBits;
+	int32 newszChunk = trackedBytes >> VmemTracker_GetChunkSizeInBits();
 
 	MemoryAllocationStatus status = MemoryAllocation_Success;
 
@@ -578,7 +592,9 @@ VmemTracker_ReserveVmem(int64 newlyRequestedBytes)
 void
 VmemTracker_ReleaseVmem(int64 toBeFreedRequested)
 {
-	if (!vmemTrackerInited)
+	if (!vmemTrackerInited ||
+	   (IsResGroupEnabled() &&
+		!IsResGroupActivated()))
 	{
 		Assert(0 == trackedVmemChunks);
 		return;
@@ -600,7 +616,7 @@ VmemTracker_ReleaseVmem(int64 toBeFreedRequested)
 
 	trackedBytes -= toBeFreed;
 
-	int newszChunk = trackedBytes >> chunkSizeInBits;
+	int newszChunk = trackedBytes >> VmemTracker_GetChunkSizeInBits();
 
 	if (newszChunk < trackedVmemChunks)
 	{
@@ -679,4 +695,24 @@ VmemTracker_Fault(int32 reason, int64 arg)
 	}
 
 	return -1;
+}
+
+bool
+VmemTrackerIsActivated(void)
+{
+	/*
+	 * If resource group is enabled, the segment vmem limit
+	 * and chunk size are undetermined until resource group
+	 * is activated, so before that, the vmem tracker should
+	 * stay unactivated.
+	 */
+	if (IsResGroupEnabled())
+	{
+		return vmemTrackerInited &&
+			IsResGroupActivated();	
+	}
+	else
+	{
+		return vmemTrackerInited;
+	}
 }

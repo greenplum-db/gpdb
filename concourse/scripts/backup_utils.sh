@@ -24,6 +24,7 @@ destroy_gpdb() {
 
     yes|gpdeletesystem -f -d $MASTER_DATA_DIRECTORY
     rm -rf $GPHOME/*
+    rm -rf /home/gpadmin/gpdb_src/gpMgmt/bin/pythonSrc/ext/install
 }
 
 setup_ddboost() {

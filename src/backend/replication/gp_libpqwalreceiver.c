@@ -4,9 +4,6 @@
  *
  * This file contains the libpq-specific parts of walreceiver.
  *
- * GPDB uses gp_libpq_fe instead of plain libpq library.
- *
- *
  * Portions Copyright (c) 2010-2012, PostgreSQL Global Development Group
  *
  *
@@ -20,7 +17,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "access/xlog.h"
 #include "miscadmin.h"
 #include "replication/walreceiver.h"

@@ -32,7 +32,7 @@ void setup(TmControlBlock *controlBlock, TMGXACT *gxact_array)
 }
 
 void
-test__createDtxSnapshot(void **state)
+test__CreateDistributedSnapshot(void **state)
 {
 	TMGXACT gxact_array[5];
 	TmControlBlock controlBlock;
@@ -66,7 +66,7 @@ test__createDtxSnapshot(void **state)
 	 * Basic case, no other in progress transaction in system
 	 */
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	createDtxSnapshot(&distribSnapshotWithLocalMapping);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 20);
@@ -92,7 +92,7 @@ test__createDtxSnapshot(void **state)
 	(*shmNumGxacts)++;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	createDtxSnapshot(&distribSnapshotWithLocalMapping);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 5);
@@ -116,7 +116,7 @@ test__createDtxSnapshot(void **state)
 	(*shmNumGxacts)++;
 
 	memset(ds->inProgressXidArray, 0, SIZE_OF_IN_PROGRESS_ARRAY);
-	createDtxSnapshot(&distribSnapshotWithLocalMapping);
+	CreateDistributedSnapshot(&distribSnapshotWithLocalMapping);
 
 	/* perform all the validations */
 	assert_true(ds->xminAllDistributedSnapshots == 5);
@@ -141,7 +141,7 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] =
 	{
-		unit_test(test__createDtxSnapshot)
+		unit_test(test__CreateDistributedSnapshot)
 	};
 
 	MemoryContextInit();

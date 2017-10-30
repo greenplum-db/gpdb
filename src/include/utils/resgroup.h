@@ -96,6 +96,7 @@ extern int						gp_resgroup_memory_policy_auto_fixed_mem;
 extern bool						gp_resgroup_print_operator_memory_limits;
 extern int						memory_spill_ratio;
 
+extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
 
@@ -125,7 +126,6 @@ extern void ResGroupControlInit(void);
 extern void	InitResGroups(void);
 
 extern void AllocResGroupEntry(Oid groupId, const ResGroupOpts *opts);
-extern void FreeResGroupEntry(Oid groupId);
 
 extern void SerializeResGroupInfo(StringInfo str);
 extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
@@ -152,10 +152,11 @@ extern bool ResGroupReserveMemory(int32 memoryChunks, int32 overuseChunks, bool 
 /* Update the memory usage of resource group */
 extern void ResGroupReleaseMemory(int32 memoryChunks);
 
+extern void ResGroupDropFinish(Oid groupId, bool isCommit);
+extern void ResGroupCreateOnAbort(Oid groupId);
 extern void ResGroupAlterOnCommit(Oid groupId,
 								  ResGroupLimitType limittype,
 								  const ResGroupCaps *caps);
-extern void ResGroupDropCheckForWakeup(Oid groupId, bool isCommit);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
 extern void ResGroupDecideMemoryCaps(int groupId,
 									 ResGroupCaps *caps,
@@ -164,10 +165,16 @@ extern void ResGroupDecideConcurrencyCaps(Oid groupId,
 										  ResGroupCaps *caps,
 										  const ResGroupOpts *opts);
 
+extern int32 ResGroupGetVmemLimitChunks(void);
+extern int32 ResGroupGetVmemChunkSizeInBits(void);
+extern int32 ResGroupGetMaxChunksPerQuery(void);
+
 /* test helper function */
 extern void ResGroupGetMemInfo(int *memLimit, int *slotQuota, int *sharedQuota);
 
 extern int64 ResourceGroupGetQueryMemoryLimit(void);
+
+extern void ResGroupDumpInfo(StringInfo str);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

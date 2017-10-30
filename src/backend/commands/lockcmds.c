@@ -80,7 +80,6 @@ LockTableCommand(LockStmt *lockstmt)
 	{
 		CdbDispatchUtilityStatement((Node *) lockstmt,
 									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
 									NIL,
 									NULL);

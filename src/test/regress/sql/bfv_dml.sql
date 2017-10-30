@@ -116,3 +116,19 @@ select * from update_pk_test order by 1,2;
 explain update update_pk_test set a = 5;
 update update_pk_test set a = 5;
 select * from update_pk_test order by 1,2;
+
+
+-- MPP-22599 DML queries that fallback to planner don't check for updates on
+-- the distribution key.
+--
+-- So the bug was that if ORCA fell back to the planner, then the usual
+-- check that prohibits updating the distribution key columns was not
+-- performed like it should. So the idea of this test is to have an UPDATE
+-- on distribution key column, with some features in the table or the query,
+-- such that ORCA cannot produce a plan and it falls back to the Postgres
+-- planner.
+set optimizer_trace_fallback = on;
+
+-- Subquery that returns a row rather than a single scalar isn't supported
+-- in ORCA currently, so we can use that to trigger fallback.
+update update_pk_test set a=1 where row(1,2) = (SELECT 1, 2);

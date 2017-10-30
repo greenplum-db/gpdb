@@ -933,6 +933,10 @@ GetDistributedSnapshotMaxCount(void)
 	return 0;
 }
 
+/*
+ * Fill in the array of in-progress distributed XIDS in 'snapshot' from the
+ * information that the QE sent us (if any).
+ */
 static void
 FillInDistributedSnapshot(Snapshot snapshot)
 {
@@ -954,14 +958,11 @@ FillInDistributedSnapshot(Snapshot snapshot)
 
 	case DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE:
 		/*
-		 * Create distributed snapshot since we are the master (QD).
+		 * GetSnapshotData() should've acquired the distributed snapshot
+		 * while holding ProcArrayLock, not here.
 		 */
-		Assert(snapshot->distribSnapshotWithLocalMapping.ds.inProgressXidArray != NULL);
-		snapshot->haveDistribSnapshot = createDtxSnapshot(&snapshot->distribSnapshotWithLocalMapping);
-		
-		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-				(errmsg("Got distributed snapshot from DistributedSnapshotWithLocalXids_Create = %s",
-						(snapshot->haveDistribSnapshot ? "true" : "false"))));
+		elog(ERROR, "FillInDistributedSnapshot called in context '%s'",
+			 DtxContextToString(DistributedTransactionContext));
 		break;
 
 	case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
@@ -982,7 +983,6 @@ FillInDistributedSnapshot(Snapshot snapshot)
 				Assert(ds->xminAllDistributedSnapshots);
 				Assert(ds->xminAllDistributedSnapshots <= ds->xmin);
 
-				Assert(snapshot->distribSnapshotWithLocalMapping.ds.maxCount > 0);
 				DistributedSnapshot_Copy(&snapshot->distribSnapshotWithLocalMapping.ds, ds);
 			}
 			else
@@ -992,12 +992,12 @@ FillInDistributedSnapshot(Snapshot snapshot)
 			}
 		}
 		break;
-	
+
 	case DTX_CONTEXT_QE_PREPARED:
 		elog(FATAL, "Unexpected segment distribute transaction context: '%s'",
 			 DtxContextToString(DistributedTransactionContext));
 		break;
-	
+
 	default:
 		elog(FATAL, "Unrecognized DTX transaction context: %d",
 			(int) DistributedTransactionContext);
@@ -1008,9 +1008,7 @@ FillInDistributedSnapshot(Snapshot snapshot)
 	 * Nice that we may have collected it, but turn it off...
 	 */
 	if (Debug_disable_distributed_snapshot)
-	{
 		snapshot->haveDistribSnapshot = false;
-	}
 }
 
 /*
@@ -1413,7 +1411,18 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	 * including distributed transactions in the local snapshot via their
 	 * local xids.
 	 */
-	FillInDistributedSnapshot(snapshot);
+	if (DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
+	{
+		snapshot->haveDistribSnapshot = CreateDistributedSnapshot(&snapshot->distribSnapshotWithLocalMapping);
+
+		ereport((Debug_print_full_dtm ? LOG : DEBUG5),
+				(errmsg("Got distributed snapshot from DistributedSnapshotWithLocalXids_Create = %s",
+						(snapshot->haveDistribSnapshot ? "true" : "false"))));
+
+		/* Nice that we may have collected it, but turn it off... */
+		if (Debug_disable_distributed_snapshot)
+			snapshot->haveDistribSnapshot = false;
+	}
 
 	/*
 	 * Spin over procArray checking xid, xmin, and subxids.  The goal is to
@@ -1508,6 +1517,16 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	}
 
 	LWLockRelease(ProcArrayLock);
+
+	/*
+	 * Fill in the distributed snapshot information we received from the the QD.
+	 * Unless we are the QD, in which case we already created a new distributed
+	 * snapshot above.
+	 *
+	 * (We do this after releasing ProcArrayLock, reduce contention.)
+	 */
+	if (DistributedTransactionContext != DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
+		FillInDistributedSnapshot(snapshot);
 
 	/*
 	 * Update globalxmin to include actual process xids.  This is a slightly

@@ -614,8 +614,7 @@ SELECT COUNT(*) FROM ( SELECT * FROM (SELECT * FROM dml_union_r EXCEPT SELECT * 
 (1 row)
 
 INSERT INTO dml_union_s SELECT * FROM (SELECT * FROM dml_union_r EXCEPT SELECT * FROM dml_union_s) foo WHERE c='text';
-ERROR:  One or more assertions failed  (seg0 antova-mbp.local:40010 pid=41271)
-DETAIL:  Not null constraint for column b of table dml_union_s was violated
+ERROR:  null value in column "b" violates not-null constraint
 --SELECT COUNT(*) FROM dml_union_r;
 -- @description union_test28: Negative tests MORE THAN ONE ROW RETURNED
 SELECT COUNT(*) FROM dml_union_r;
@@ -1693,8 +1692,7 @@ SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 (1 row)
 
 UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
-ERROR:  One or more assertions failed  (seg0 slice3 antova-mbp.local:40010 pid=42174)
-DETAIL:  Not null constraint for column b of table dml_union_s was violated
+ERROR:  null value in column "b" violates not-null constraint
 --SELECT COUNT(DISTINCT(b)) FROM dml_union_s;
 --SELECT DISTINCT(b) FROM dml_union_s;
 -- @description union_update_test30: Negative Tests  more than one row returned by a sub-query used as an expression
@@ -1706,8 +1704,8 @@ DETAIL:  Not null constraint for column b of table dml_union_s was violated
 --
 -- like with the Postgres planner, or you get:
 --
---  ERROR:  One or more assertions failed
---  DETAIL:  Not null constraint for column b of table dml_union_s was violated
+--   ERROR:  One or more assertions failed
+--   DETAIL:  Expected no more than one row to be returned by expression
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
 set optimizer_segments=2;

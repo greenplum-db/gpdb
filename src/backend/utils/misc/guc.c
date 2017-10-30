@@ -5896,7 +5896,7 @@ ExecSetVariableStmt(VariableSetStmt *stmt)
 			else
 				appendStringInfo(&buffer, "RESET %s", stmt->name);
 
-			CdbDispatchCommand(buffer.data, DF_WITH_SNAPSHOT, NULL);
+			CdbDispatchCommand(buffer.data, 0, NULL);
 		}
 	}
 }
@@ -6016,7 +6016,7 @@ DispatchSetPGVariable(const char *name, List *args, bool is_local)
 		}
 	}
 
-	CdbDispatchSetCommand( buffer.data, false, /*no txn*/ false );
+	CdbDispatchSetCommand(buffer.data, false);
 }
 
 /*
@@ -6069,9 +6069,7 @@ set_config_by_name(PG_FUNCTION_ARGS)
 			if (is_local)
 					appendStringInfo(&buffer, "LOCAL ");
 			appendStringInfo(&buffer, "%s TO '%s'", name, value);
-			CdbDispatchSetCommand(buffer.data,
-								   false /* cancelOnError */,
-								   false /* no two phase commit */);
+			CdbDispatchSetCommand(buffer.data, false /* cancelOnError */);
     }
 
 	/* get the new current value */

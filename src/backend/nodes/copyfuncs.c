@@ -144,6 +144,7 @@ _copyQueryDispatchDesc(QueryDispatchDesc *from)
 	COPY_NODE_FIELD(sliceTable);
 	COPY_NODE_FIELD(oidAssignments);
 	COPY_NODE_FIELD(cursorPositions);
+	COPY_SCALAR_FIELD(validate_reloptions);
 
 	return newnode;
 }

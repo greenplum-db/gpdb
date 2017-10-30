@@ -3036,44 +3036,38 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
     # =================
     #  Missing / Extra
     # =================
-    #   Cross product
-    #       (all unique {primary_key} present on any segment)
-    #       (all unique segment_ids in the system)
-    #   Left join
-    #       (actual ({primary_key}, segment_id) present in the catalog)
     #
-    #   Count number not null vs number null in the join:
-    #     If the nulls are <= 1/2 the result report those segments as "missing"
-    #     If the non-nulls are <= 1/2 the result report those segments as "extra"
+    # (Fetch all the entries from segments. For each entry, collect the
+    #  segment IDs of all the segments where the entry is present, in an array)
+    #
+    # Full outer join
+    #
+    # (Fetch all entries in master)
+    #
+    #
+    # The WHERE clause at the bottom filters out all the boring rows, leaving
+    # only rows that are missing from one of the segments, or from the master.
 
     catalog_exclude = MISSING_ENTRY_EXCLUDE.get(catname, "")
-    qry = """
-          SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 
-          -- distribute catalog table from master, so that we can avoid to gather
-          CREATE TEMPORARY TABLE _tmp_master ON COMMIT DROP AS
-              SELECT gp_segment_id segid, {primary_key} FROM {catalog} {catalog_exclude};
-          SELECT {oidcasted_pk}, exists, array_agg(segid order by segid) as segids
+    qry = """
+          SELECT {primary_key},
+                 case when master is null then segids
+                      when segids is null then array[master.segid]
+                      else master.segid || segids end as segids
           FROM
           (
-            SELECT ideal.*,
-                   case when actual.segid is null then 'missing' else 'extra' end as exists,
-                   count(*) over (partition by {primary_key}, actual.segid is null) as subcount
-            FROM (
-                 SELECT segid, {primary_key}
-                 FROM(  SELECT distinct {primary_key} FROM _tmp_master
-                        UNION
-                        SELECT distinct {primary_key} FROM gp_dist_random('{catalog}') ) all_pks,
-                      ( SELECT distinct content as segid from gp_segment_configuration) all_segs
-               ) ideal
-               LEFT OUTER JOIN
-               ( SELECT segid, {primary_key} FROM _tmp_master
-                 UNION ALL
-                 SELECT gp_segment_id as segid, {primary_key} FROM gp_dist_random('{catalog}') {catalog_exclude}
-               ) actual USING (segid, {primary_key})
-          ) missing_extra
-          WHERE subcount <= ({max_content}+2)/2.0
-          GROUP BY {oidcasted_pk}, exists;
+            SELECT {primary_key}, array_agg(gp_segment_id order by gp_segment_id) as segids
+            FROM gp_dist_random('{catalog}') {catalog_exclude} GROUP BY {primary_key}
+          ) as seg
+          FULL OUTER JOIN
+          (
+            SELECT gp_segment_id as segid, {primary_key} FROM {catalog} {catalog_exclude}
+          ) as master
+          USING ({primary_key})
+          WHERE master.segid is null
+             OR segids is null
+             OR NOT segids @> (select array_agg(content::int4) from gp_segment_configuration WHERE content >= 0)
           """.format(oidcasted_pk=','.join(castedPkey),
                      primary_key=','.join(pkey),
                      catalog=catname,
@@ -4003,10 +3997,10 @@ def getResourceTypeOid(oid):
 def processMissingDuplicateEntryResult(catname, colname, allValues, type):
     # type = {"missing" | "duplicate"}
     '''
-    colname:       proname | pronamespace | proargtypes | exists  | segids
-    allValues:         add | 2200         | 23 23       | extra   | {2,3}
-                     scube | 2200         | 1700        | missing | {2}
-               scube_accum | 2200         | 1700 1700   | missing | {2}
+    colname:       proname | pronamespace | proargtypes | segids
+    allValues:         add | 2200         | 23 23       | {2,3}
+                     scube | 2200         | 1700        | {-1,0,1,3}
+               scube_accum | 2200         | 1700 1700   | {-1,0,1,3}
 
     colname:        oid | total | segids
     allValues:    18853 | 2     | {-1,1}
@@ -4014,7 +4008,7 @@ def processMissingDuplicateEntryResult(catname, colname, allValues, type):
     '''
     gpObjName = catname
     gpColName = None
-    pknames = [i for i in colname[:-2]]  # Everything except the last two columns
+    pknames = [i for i in colname[:-1]]  # Everything except the last column
 
     # This catname may not be a GPObject (e.g. pg_attribute)
     # If these catnames have oids, they are known to be inconsistent
@@ -4048,8 +4042,32 @@ def processMissingDuplicateEntryResult(catname, colname, allValues, type):
         gpObj = getGPObject(oid, rowObjName)
 
         if type == "missing":
-            issue = CatMissingIssue(catname, pkeys, segids, row[-2])
-            gpObj.addMissingIssue(issue)
+
+            # In how many segments (counting master as segment -1) was the
+            # entry present?
+            #
+            # If it was present in half or more, then report the ones that
+            # it was *not* present as 'missing'. If it was present in half
+            # or less, then report the ones that it was present as 'extra'
+            # Note that if it was present in exactly half of the segments,
+            # we will report it as both missing and extra.
+
+            ids = [int(i) for i in segids[1:-1].split(',')]
+
+            if len(ids) <= (GV.max_content + 2) / 2:
+                issue = CatMissingIssue(catname, pkeys, segids, 'extra')
+                gpObj.addMissingIssue(issue)
+
+            if len(ids) >= (GV.max_content + 2) / 2:
+                allids = [int(i) for i in range(-1, GV.max_content+1)]
+                diffids = set(allids) - set(ids)
+                # convert the difference set back into a string that looks
+                # like a PostgreSQL array.
+                segids = ",".join(str(x) for x in diffids)
+                segids = "{%s}" % (segids)
+                issue = CatMissingIssue(catname, pkeys, segids, 'missing')
+                gpObj.addMissingIssue(issue)
+
         else:
             assert (type == "duplicate")
             issue = CatDuplicateIssue(catname, pkeys, segids, row[-2])

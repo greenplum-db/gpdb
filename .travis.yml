@@ -57,8 +57,8 @@ install:
 ## ----------------------------------------------------------------------
 
 env:
-  - APR=apr-1.6.2
-    APR_UTIL=apr-util-1.6.0
+  - APR=apr-1.6.3
+    APR_UTIL=apr-util-1.6.1
 
 before_script:
   - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH

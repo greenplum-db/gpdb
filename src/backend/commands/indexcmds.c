@@ -63,7 +63,7 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "utils/faultinjector.h"
 
 /* non-export function prototypes */

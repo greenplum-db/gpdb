@@ -1,4 +1,4 @@
-**Concourse Pipeline** [![Concourse Build Status](https://gpdb.ci.pivotalci.info/api/v1/teams/gpdb/pipelines/gpdb_master/jobs/gpdb_rc_packaging_centos/badge)](https://gpdb.ci.pivotalci.info/teams/gpdb) |
+**Concourse Pipeline** [![Concourse Build Status](https://gpdb.data.pivotal.ci/api/v1/teams/gpdb/pipelines/gpdb_master/jobs/gpdb_rc_packaging_centos/badge)](https://gpdb.data.pivotal.ci/teams/gpdb) |
 **Travis Build** [![Travis Build Status](https://travis-ci.org/greenplum-db/gpdb.svg?branch=master)](https://travis-ci.org/greenplum-db/gpdb)
 
 ----------------------------------------------------------------------
@@ -182,7 +182,11 @@ See [more information about gpperfmon here](gpAux/gpperfmon/README.md)
 
 gpperfmon is dependent on several libraries like apr, apu, and libsigar
 
-## Development with Docker
+## Development with Native Docker Client
+
+See [README.docker.md](README.docker.md).
+
+## Development with Docker Machine
 
 We provide a docker image with all dependencies required to compile and test
 GPDB. You can view the dependency dockerfile at `./src/tools/docker/base/Dockerfile`.
@@ -295,13 +299,6 @@ throughout the codebase, but a few larger additions worth noting:
   code, and contains glue code for translating plans and queries
   between the DXL format used by ORCA, and the PostgreSQL internal
   representation.
-
-* __src/backend/gp_libpq_fe/__
-
-  A slightly modified copy of libpq. The master node uses this to
-  connect to segments, and to send fragments of a query plan to
-  segments for execution. It is linked directly into the backend, it
-  is not a shared library like libpq.
 
 * __src/backend/fts/__
 

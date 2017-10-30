@@ -41,6 +41,6 @@ void
 #else
 char
 #endif
-probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo probeInfo);
+probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo *probeInfo);
 
 #endif

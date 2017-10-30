@@ -23,6 +23,7 @@
 #error  cgroup is only available on linux
 #endif
 
+#include <fcntl.h>
 #include <unistd.h>
 #include <sched.h>
 #include <sys/file.h>
@@ -48,7 +49,6 @@
 
 #define PROC_MOUNTS "/proc/self/mounts"
 #define MAX_INT_STRING_LEN 20
-#define MAX_PATH_LEN 256
 
 static char * buildPath(Oid group, const char *base, const char *comp, const char *prop, char *path, size_t pathsize);
 static int lockDir(const char *path, bool block);
@@ -68,7 +68,7 @@ static void detectCgroupMountPoint(void);
 
 static Oid currentGroupIdInCGroup = InvalidOid;
 static int cpucores = 0;
-static char cgdir[MAX_PATH_LEN];
+static char cgdir[MAXPGPATH];
 
 /*
  * Build path string with parameters.
@@ -109,7 +109,7 @@ buildPath(Oid group,
 static void
 unassignGroup(Oid group, const char *comp, int fddir)
 {
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 	char *buf;
 	size_t bufsize;
@@ -226,7 +226,7 @@ lockDir(const char *path, bool block)
 {
 	int fddir;
 
-	fddir = open(path, O_RDONLY | O_DIRECTORY);
+	fddir = open(path, O_RDONLY);
 	if (fddir < 0)
 	{
 		if (errno == ENOENT)
@@ -320,7 +320,7 @@ createDir(Oid group, const char *comp)
 static bool
 removeDir(Oid group, const char *comp, bool unassign)
 {
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 	int fddir;
 
@@ -452,7 +452,7 @@ readInt64(Oid group, const char *base, const char *comp, const char *prop)
 	int64 x;
 	char data[MAX_INT_STRING_LEN];
 	size_t datasize = sizeof(data);
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 
 	buildPath(group, base, comp, prop, path, pathsize);
@@ -473,7 +473,7 @@ writeInt64(Oid group, const char *base, const char *comp, const char *prop, int6
 {
 	char data[MAX_INT_STRING_LEN];
 	size_t datasize = sizeof(data);
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 
 	buildPath(group, base, comp, prop, path, pathsize);
@@ -491,7 +491,7 @@ writeInt64(Oid group, const char *base, const char *comp, const char *prop, int6
 static bool
 checkPermission(Oid group, bool report)
 {
-	char path[128];
+	char path[MAXPGPATH];
 	size_t pathsize = sizeof(path);
 	const char *comp;
 
@@ -620,16 +620,41 @@ ResGroupOps_Name(void)
 void
 ResGroupOps_Bless(void)
 {
+	/*
+	 * We only have to do these checks and initialization once on each host,
+	 * so only let postmaster do the job.
+	 */
+	if (IsUnderPostmaster)
+		return;
+
 	detectCgroupMountPoint();
 	checkPermission(0, true);
+
+	/*
+	 * Put postmaster and all the children processes into the gpdb cgroup,
+	 * otherwise auxiliary processes might get too low priority when
+	 * gp_resource_group_cpu_priority is set to a large value
+	 */
+	ResGroupOps_AssignGroup(InvalidOid, PostmasterPid);
 }
 
 /* Initialize the OS group */
 void
 ResGroupOps_Init(void)
 {
-	/* cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit */
-	/* shares := 1024 * 256 (max possible value) */
+	/*
+	 * cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
+	 * shares := 1024 * 1 (default value)
+	 *
+	 * We used to set a larger shares (like 1024 * 256, the maximum possible
+	 * value), it has very bad effect on overall system performance,
+	 * especially on 1-core or 2-core low-end systems.
+	 * Processes in a cold cgroup get launched and scheduled with large
+	 * latency (a simple `cat a.txt` may executes for more than 100s).
+	 * Here a cold cgroup is a cgroup that doesn't have active running
+	 * processes, this includes not only the toplevel system cgroup,
+	 * but also the inactive gpdb resgroups.
+	 */
 
 	int64 cfs_period_us;
 	int ncores = getCpuCores();
@@ -638,7 +663,8 @@ ResGroupOps_Init(void)
 	cfs_period_us = readInt64(0, NULL, comp, "cpu.cfs_period_us");
 	writeInt64(0, NULL, comp, "cpu.cfs_quota_us",
 			   cfs_period_us * ncores * gp_resource_group_cpu_limit);
-	writeInt64(0, NULL, comp, "cpu.shares", 1024 * 256);
+	writeInt64(0, NULL, comp, "cpu.shares",
+			   1024 * gp_resource_group_cpu_priority);
 }
 
 /* Adjust GUCs for this OS group implementation */
@@ -717,7 +743,7 @@ ResGroupOps_DestroyGroup(Oid group)
 void
 ResGroupOps_AssignGroup(Oid group, int pid)
 {
-	if (group == currentGroupIdInCGroup)
+	if (IsUnderPostmaster && group == currentGroupIdInCGroup)
 		return;
 
 	writeInt64(group, NULL, "cpu", "cgroup.procs", pid);
@@ -797,7 +823,7 @@ ResGroupOps_GetCpuCores(void)
 }
 
 /*
- * Get the total memory on the system.
+ * Get the total memory on the system in MB.
  * Read from sysinfo and cgroup to get correct ram and swap.
  * (total RAM * overcommit_ratio + total Swap)
  */
@@ -829,5 +855,5 @@ ResGroupOps_GetTotalMemory(void)
 	 * memoery outside and the memsw of the container.
 	 */
 	total = Min(outTotal, swap + ram); 
-	return total >> VmemTracker_GetChunkSizeInBits();
+	return total >> BITS_IN_MB;
 }
