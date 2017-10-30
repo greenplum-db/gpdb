@@ -128,7 +128,7 @@
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system memory resources to allocate to resource groups on each Greenplum
         Database segment node. The default <codeph>gp_resource_group_memory_limit</codeph> value is
-        .9 (90%).</p>
+        .7 (70%).</p>
       <p>The memory resource available on a Greenplum Database node is further divided equally among
         each segment on the node. Each resource group reserves a percentage of the segment memory
         for resource management. You identify this percentage via the <codeph>MEMORY_LIMIT</codeph>
