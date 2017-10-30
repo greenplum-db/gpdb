@@ -304,9 +304,9 @@ insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 f
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 set allow_system_table_mods=dml;
-update pg_class set reltuples = 100000000, relpages = 10000000 where relname like 'bar';
-update pg_class set reltuples = 1, relpages = 1 where relname like 'foo_p_1_prt_other';
-update pg_class set reltuples = 1, relpages = 1 where relname like 'foo_p_1_prt_2';
+update pg_class set reltuples = 100000000, relpages = 10000000 where relname = 'bar' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
+update pg_class set reltuples = 1, relpages = 1 where relname = 'foo_p_1_prt_other' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
+update pg_class set reltuples = 1, relpages = 1 where relname = 'foo_p_1_prt_2' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 select foo_p.b, foo_p.t from foo_p left outer join bar on foo_p.a = bar.a  where foo_p.p =3 and foo_p.a = 6 order by 1, 2 desc limit 10;
  b |            t             
 ---+--------------------------
@@ -393,8 +393,8 @@ insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 f
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 insert into foo_p select 6, i % 10, i , 1 || 'SOME NUMBER SOME NUMBER', i % 10 from generate_series(1, 1000) i;
 set allow_system_table_mods=dml;
-update pg_class set reltuples = 100000000, relpages = 10000000 where relname like 'b';
-update pg_class set reltuples = 1, relpages = 1 where relname like 'abbp%';
+update pg_class set reltuples = 100000000, relpages = 10000000 where relname = 'b' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
+update pg_class set reltuples = 1, relpages = 1 where relname like 'abbp%' and relnamespace = (select oid from pg_namespace where nspname = 'qp_query_execution');
 select abbp.b, abbp.t from abbp join (select abbp.* from b, abbp where abbp.a = b.k and abbp.a = '6SOME NUMBER') FOO on abbp.a = FOO.a  where abbp.t is not null order by 1, 2 desc limit 10;
   b  | t 
 -----+---
