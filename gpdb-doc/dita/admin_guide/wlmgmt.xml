@@ -11,14 +11,14 @@
       amount of memory used to execute a query, and the relative amount of CPU devoted to processing
       a query. Greenplum Database provides two schemes to manage resources - Resource Queues and
       Resource Groups.</p>
-    <note type="warning">Resource groups are an experimental feature and are not intended for use in
-      a production environment. Experimental features are subject to change without notice in future
-        releases.<p>Significant Greenplum Database performance degradation has been observed when
-        enabling resource group-based workload management on RedHat 6.x, CentOS 6.x, and SuSE 11
-        systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed
-        in CentOS 7.x and Red Hat 7.x systems. The performance problem is mitigated in Red Hat 6
-        systems that use kernel version 2.6.32-696 or higher. SuSE 11 does not have a kernel version
-        that resolves this issue.</p></note>
+    <note type="warning">Significant Greenplum Database performance degradation has been observed
+      when enabling resource group-based workload management on RedHat 6.x, CentOS 6.x, and SuSE 11
+      systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed in
+      CentOS 7.x and Red Hat 7.x systems. The performance problem is mitigated in Red Hat 6 systems
+      that use kernel version 2.6.32-696 or higher. <p>SuSE 11 does not have a kernel version that
+        resolves this issue; resource groups are considered to be an experimental feature on this platform. <ph
+          otherprops="pivotal">Resource groups are not supported on SuSE 11 for production
+        use.</ph></p></note>
     <p>Either the resource queue or the resource group management scheme can be active in Greenplum
       Database; both schemes cannot be active at the same time.</p>
     <p>Resource queues are enabled by default when you install your Greenplum Database cluster.
