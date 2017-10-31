@@ -147,7 +147,7 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
             performing any <codeph>ANALYZE</codeph> operations. If other options specify tables or a
             schema, the utility updates the snapshot information only for the specified tables.</pd>
           <pd>Specify this option if the <codeph>ANALYZE</codeph> command was run on database tables
-            and you want update the <codeph>analyzedb</codeph> snapshot for the tables. </pd>
+            and you want to update the <codeph>analyzedb</codeph> snapshot for the tables. </pd>
         </plentry>
         <plentry>
           <pt>-i <varname>col1</varname>, <varname>col2</varname>, ...</pt>
