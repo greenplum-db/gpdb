@@ -108,7 +108,9 @@
           identifies the amount of memory to allocate to
           each segment. This value is estimated by calculating the memory available for all Greenplum
           Database processes and dividing by the maximum number of primary segments during a
-          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can fail.</p>
+          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can fail.
+          <varname>gp_vmem_protect_limit</varname> does not affect segment memory when using 
+          resource groups for Greenplum Database resource management.</p>
         <p>When resource group-based resource management is active, the amount of memory allocated
            to each segment is the memory available to Greenplum Database multiplied by the
            <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter and
