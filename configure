@@ -12538,7 +12538,7 @@ int
 main ()
 {
 
-return strncmp("2.47.", GPORCA_VERSION_STRING, 5);
+return strncmp("2.48.", GPORCA_VERSION_STRING, 5);
 
   ;
   return 0;
@@ -12548,7 +12548,7 @@ if ac_fn_cxx_try_run "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
 else
-  as_fn_error $? "Your ORCA version is expected to be 2.47.XXX" "$LINENO" 5
+  as_fn_error $? "Your ORCA version is expected to be 2.48.XXX" "$LINENO" 5
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \

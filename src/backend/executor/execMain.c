@@ -3220,14 +3220,13 @@ ExecInsert(TupleTableSlot *slot,
 			}
 		}
 	}
+
 	/*
 	 * Check the constraints of the tuple
 	 */
-	if (resultRelationDesc->rd_att->constr &&
-			planGen == PLANGEN_PLANNER)
-	{
+	if (resultRelationDesc->rd_att->constr)
 		ExecConstraints(resultRelInfo, partslot, estate);
-	}
+
 	/*
 	 * insert the tuple
 	 *
