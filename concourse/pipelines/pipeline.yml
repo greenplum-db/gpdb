@@ -2619,6 +2619,7 @@ jobs:
       passed:
       - gate_compile_end
 
+## PXF Regression Test Start
 - name: regression_tests_pxf_hdp_rpm
   plan:
   - aggregate:
@@ -2634,15 +2635,14 @@ jobs:
     - get: pxf_automation_src
       trigger: true
     - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: regression_tests_pxf
-      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-      image: centos-gpdb-dev-6
-      params:
-        GROUP: gpdb
-        HADOOP_CLIENT: HDP
-        TARGET_OS: centos
-        TARGET_OS_VERSION: 6
+  - task: regression_tests_pxf
+    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+    image: centos-gpdb-dev-6
+    params:
+      GROUP: {{pxf_automation_test_group}}
+      HADOOP_CLIENT: HDP
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
 
 - name: regression_tests_pxf_hdp_tar
   plan:
@@ -2659,15 +2659,14 @@ jobs:
     - get: pxf_automation_src
       trigger: true
     - get: centos-gpdb-dev-6
-  - aggregate:
-    - task: regression_tests_pxf
-      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-      image: centos-gpdb-dev-6
-      params:
-        GROUP: gpdb
-        HADOOP_CLIENT: TAR
-        TARGET_OS: centos
-        TARGET_OS_VERSION: 6
+  - task: regression_tests_pxf
+    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+    image: centos-gpdb-dev-6
+    params:
+      GROUP: {{pxf_automation_test_group}}
+      HADOOP_CLIENT: TAR
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
 
 - name: regression_tests_pxf_cdh_rpm
   plan:
@@ -2688,7 +2687,7 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: gpdb
+      GROUP: {{pxf_automation_test_group}}
       HADOOP_CLIENT: CDH
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -2712,10 +2711,11 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: gpdb
+      GROUP: {{pxf_automation_test_group}}
       HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
+## PXF Regression Tests End
 
 - name: regression_tests_gphdfs_centos
   plan:
