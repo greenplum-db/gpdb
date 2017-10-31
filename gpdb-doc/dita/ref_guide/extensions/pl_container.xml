@@ -26,38 +26,36 @@
   <topic id="topic2" xml:lang="en">
     <title id="pz217886">About the PL/Container Extension</title>
     <body>
-      <p dir="ltr" id="docs-internal-guid-13c0efc0-0765-d3c9-ee59-fcf9998c6b5d">The Greenplum
+      <p id="docs-internal-guid-13c0efc0-0765-d3c9-ee59-fcf9998c6b5d">The Greenplum
         Database PL/Container extension is an interface that allows Greenplum Database to interact
         with a Docker container to execute a user-defined function (UDF) in the container. Docker
-        containers ensure the user code is not able to access the file system of the source host.
-        Also, containers are started with limited network access and cannot connect back to
-        Greenplum Database or open any other external connections. For information about available
-        UDF languages, see <xref href="#topic_tcm_htd_gw" format="dita"/></p>
-      <p>Generally speaking, a Docker <i>container</i> is a Linux process running in a managed way
-        by applying specific Linux kernel features such as cgroups, namespaces and union file
-        systems. A Docker <i>image</i> is the basis of a container. A Docker container is a running
-        instance of a Docker image. When you start a Docker container you specify a Docker image. A
-        Docker image is the collection of root filesystem changes and execution parameters that are
-        used when you run a Docker container on the host system. An image does not have state and
-        never changes. For information about Docker, see the Docker web site <xref
-          href="https://www.docker.com/" format="html" scope="external"
-          >https://www.docker.com/</xref>. </p>
-      <p dir="ltr">Starting the container is invoked only on the first call to a specific container
-        in specific function. Imagine that you are making a select from billion-row table, applying
-        transformation to the data using PL/Container function. Staring would be executed only once
-        for each of the segments, after that the container would be contacted directly by the
-        executor to receive results in the fastest possible way.</p>
-      <p dir="ltr">After starting a full cycle of a query execution. The executor sends a call to
-        the container. The container might answer with SPI - SQL query executed by the container to
-        get some data back from the database, returning result to the query executor. For
+        containers ensure the user code cannot access the file system of the source host. Also,
+        containers are started with limited network access and cannot connect back to Greenplum
+        Database or open any other external connections. For information about available UDF
+        languages, see <xref href="#topic_tcm_htd_gw" format="dita"/></p>
+      <p>Generally speaking, a Docker <i>container</i> is a Linux process that runs in a managed way
+        by using Linux kernel features such as cgroups, namespaces and union file systems. A Docker
+          <i>image</i> is the basis of a container. A Docker container is a running instance of a
+        Docker image. When you start a Docker container you specify a Docker image. A Docker image
+        is the collection of root filesystem changes and execution parameters that are used when you
+        run a Docker container on the host system. An image does not have state and never changes.
+        For information about Docker, see the Docker web site <xref href="https://www.docker.com/"
+          format="html" scope="external">https://www.docker.com/</xref>. </p>
+      <p>Greenplum Database starts a container only on the first call to a function in that
+        container. For example, consider a query that selects table data using all available
+        segments, and applies a transformation to the data using a PL/Container function. In this
+        case, Greenplum Database would start the Docker container only once on each segment, and
+        then contact the running container to obtain the results.</p>
+      <p>After starting a full cycle of a query execution. The executor sends a call to
+        the container. The container might respond with an SPI - SQL query executed by the container
+        to get some data back from the database, returning the result to the query executor. For
         set-returning functions these steps might be executed many times.</p>
-      <p>The container shuts down when the connection to it is closed, and connection to the
-        container is closed when you close the Greenplum Database session. A container running in
-        standby mode has almost no consumption of CPU resources as it is waiting on the socket.
-        PL/Container memory consumption depends on the amount of data you cache in global
-        dictionaries.</p>
-      <p>The PL/Container is available as an open source module. For information about the module,
-        see the README file in the GitHub repository at <xref
+      <p>The container shuts down when the connection to it is closed. This occurs when you close
+        the Greenplum Database session that started the container. A container running in standby
+        mode has almost no consumption of CPU resources as it is waiting on the socket. PL/Container
+        memory consumption depends on the amount of data you cache in global dictionaries.</p>
+      <p>The PL/Container extension is available as an open source module. For information about the
+        module, see the README file in the GitHub repository at <xref
           href="https://github.com/greenplum-db/plcontainer" format="html" scope="external"
           >https://github.com/greenplum-db/plcontainer</xref>.</p>
     </body>
@@ -65,43 +63,43 @@
   <topic id="topic_tcm_htd_gw">
     <title>PL/Container Language Docker Images</title>
     <body>
-      <p dir="ltr" id="docs-internal-guid-4161f135-5423-45af-5502-4c3686f389ac">Pivotal provides 2
-        Docker images for customers, a Python image and a R images. The Docker images are available
+      <p id="docs-internal-guid-4161f135-5423-45af-5502-4c3686f389ac">Pivotal provides 2
+        Docker images for customers, a Python image and an R image. The Docker images are available
         under <codeph>pivotaldata</codeph> organization in Docker Hub (<xref
           href="https://hub.docker.com/r/pivotaldata/" format="html" scope="external"
           >https://hub.docker.com/r/pivotaldata/</xref>):</p>
       <ul id="ul_epg_t2v_qbb">
-        <li dir="ltr"><codeph>plc_python_shared</codeph> - Docker image with Python 2.7.12
+        <li><codeph>plc_python_shared</codeph> - Docker image with Python 2.7.12
             installed.<p>The Python Data Science Module is also installed. The module contains a set
             python libraries related to data science. For information about the module, see <xref
-              href="../../install_guide/install_python_dsmod.xml" format="dita">Python Data Science
-              Module Package</xref>.</p></li>
+              href="../../install_guide/install_python_dsmod.xml" format="dita" scope="peer">Python
+              Data Science Module Package</xref>.</p></li>
       </ul>
       <ul id="ul_fpg_t2v_qbb">
-        <li dir="ltr"><codeph>plc_r_shared</codeph> - A Docker image with container with R-3.3.3
+        <li><codeph>plc_r_shared</codeph> - A Docker image with container with R-3.3.3
           installed. <p>The R Data Science package is also installed. The package contains a set of
             R libraries related to data science. For information about the module, see <xref
-              href="../../install_guide/install_r_dslib.xml" format="dita">R Data Science Library
-              Package</xref>.</p></li>
+              href="../../install_guide/install_r_dslib.xml" format="dita" scope="peer">R Data
+              Science Library Package</xref>.</p></li>
       </ul>
-      <p dir="ltr">The Docker container tag represents the PL/Container extension release version
+      <p>The Docker container tag represents the PL/Container extension release version
         (for example, 1.0.0). For example, the full container name for
           <codeph>plc_python_shared</codeph> is similar to
           <codeph>pivotaldata/plc_python_shared:1.0.0, version 1.0.0</codeph>. This is the name that
-        is referred to in the default Pl/Container configuration. Also, users can use their own
-        custom docker images and adding the image to the PL/Container configuration. </p>
+        is referred to in the default PL/Container configuration. Also, You can also create custom
+        Docker images and add the image to the PL/Container configuration. </p>
     </body>
   </topic>
   <topic id="topic_i31_3tr_dw">
     <title>Prerequisites</title>
     <body>
-      <p dir="ltr" id="docs-internal-guid-13c0efc0-076c-448b-776a-91f4c270abac">Ensure your
+      <p id="docs-internal-guid-13c0efc0-076c-448b-776a-91f4c270abac">Ensure your
         Greenplum Database system meets the following prerequisites:</p>
       <ul id="ul_ztj_kzp_dw">
         <li>PL/Container is supported on <ph otherprops="pivotal">Pivotal </ph>Greenplum Database
-          5.2 on Red Hat Enterprise Linus (RHEL) 7.x or 6.6+ (or higher) and CentOS 7.x or 6.6+ (or
-          higher).</li>
-        <li dir="ltr">These are Docker host operating system prerequisites.<p>RHEL or CentOS 7.x -
+          5.2.x on Red Hat Enterprise Linux (RHEL) 7.x or 6.6+ (or later) and CentOS 7.x or 6.6+ (or
+          later).</li>
+        <li>These are Docker host operating system prerequisites.<p>RHEL or CentOS 7.x -
             Minimum supported Linux OS kernel version is 3.10. RHEL 7.x and CentOS 7.x use this
             kernel version.</p><p>RHEL or CentOS 6.6+ - Minimum supported Linux OS kernel version
             2.6.32-431</p><p>You can check your kernel version with the command <codeph>uname
@@ -112,55 +110,66 @@
             systemd.</note></li>
       </ul>
       <ul id="ul_b5j_kzp_dw">
-        <li dir="ltr">Docker is installed on Greenplum Database hosts (master, primary and all
+        <li>Docker is installed on Greenplum Database hosts (master, primary and all
           standby hosts)<ul id="ul_z2t_bxd_rbb">
             <li>For RHEL or CentOS 7.x - Docker 17.05</li>
             <li>RHEL or CentOS 6.6+ - Docker 1.7</li>
           </ul><p>See <xref href="#topic_ydt_rtc_rbb" format="dita"/>.</p></li>
-        <li dir="ltr">On each Greenplum Database host the <codeph>gpadmin</codeph> user should be
+        <li>On each Greenplum Database host the <codeph>gpadmin</codeph> user should be
           part of the <codeph>docker</codeph> group for the user to be able to manage Docker images
           and containers.</li>
       </ul>
     </body>
   </topic>
-  <topic id="topic3" xml:lang="en" otherprops="pivotal">
+  <topic id="topic3" xml:lang="en">
     <title id="pz214493">Installing the PL/Container Extension</title>
     <body>
       <p>To use PL/Container languages, install PL/Container, install Docker images, and configure
-        PL/Container to use the images.<ol id="ol_byz_fvr_dw">
+        PL/Container to use the images.<ol id="ol_uw5_xdn_sbb">
           <li>Ensure the Greenplum Database hosts meet the prerequisites, see <xref
               href="#topic_i31_3tr_dw" format="dita"/>.</li>
-          <li>Install the PL/Container extension, see <xref href="#topic_ifk_2tr_dw" format="dita"
-            />.</li>
+          <li otherprops="pivotal">Install the PL/Container extension, see <xref
+              href="#topic_ifk_2tr_dw" format="dita"/>.</li>
+          <li otherprops="oss-only">Build and Install the PL/Container extension from source, see
+              <xref href="#topic_i2t_v2n_sbb" format="dita"/>.</li>
           <li>Install Docker images and configure PL/Container, see <xref href="#topic_qcr_bfk_rbb"
               format="dita"/>.</li>
         </ol></p>
     </body>
-    <topic id="topic_ifk_2tr_dw">
+    <topic id="topic_ifk_2tr_dw" otherprops="pivotal">
       <title>Installing the PL/Container Extension Package</title>
       <body>
-        <p dir="ltr" id="docs-internal-guid-13c0efc0-076d-1ac7-c9eb-be85acde0d67">Install the
-          PL/Container extension with the Greenplum Database<codeph>gppkg</codeph> utility.</p>
+        <p id="docs-internal-guid-13c0efc0-076d-1ac7-c9eb-be85acde0d67">Install the PL/Container
+          extension with the Greenplum Database <codeph>gppkg</codeph> utility.</p>
         <ol id="ul_w5b_nzp_dw">
-          <li dir="ltr">Copy the PL/Container extension package to the Greenplum Database master
-            host as the <codeph>gpadmin</codeph> user.</li>
-          <li dir="ltr">Make sure Greenplum Database is up and running. If not, bring it up with
-            this command.<codeblock dir="ltr">gpstart -a</codeblock></li>
-          <li dir="ltr">Run the package installation
-            command.<codeblock dir="ltr">gppkg -i plcontainer-1.0.0-rhel7-x86_64.gppkg</codeblock></li>
-          <li dir="ltr">Source the file
-            <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock dir="ltr">source $GPHOME/greenplum_path.sh</codeblock></li>
-          <li dir="ltr">Restart Greenplum Database.<codeblock dir="ltr">gpstop -ra</codeblock></li>
-          <li dir="ltr">Enable PL/Container for specific databases by
-              running<codeblock dir="ltr">psql -d <codeph>your_database</codeph> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
+          <li>Copy the PL/Container extension package to the Greenplum Database master host as the
+              <codeph>gpadmin</codeph> user.</li>
+          <li>Make sure Greenplum Database is up and running. If not, bring it up with this
+            command.<codeblock>gpstart -a</codeblock></li>
+          <li>Run the package installation
+            command.<codeblock>gppkg -i plcontainer-1.0.0-rhel7-x86_64.gppkg</codeblock></li>
+          <li>Source the file
+            <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
+          <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
+          <li>Enable PL/Container for specific databases by
+              running<codeblock>psql -d <codeph>your_database</codeph> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
               SQL script registers the language <codeph>plcontainer</codeph> in the database creates
               PL/Container specific UDFs.</p></li>
-          <li dir="ltr">Initialize PL/Container configuration on the Greenplum Database hosts by
-            running the <codeph>plcontainer configure</codeph>
-              command.<codeblock dir="ltr">plcontainer configure --reset</codeblock><p>The
+          <li>Initialize PL/Container configuration on the Greenplum Database hosts by running the
+              <codeph>plcontainer configure</codeph>
+              command.<codeblock>plcontainer configure --reset</codeblock><p>The
                 <codeph>plcontainer</codeph> utility is included with the PL/Container
               extension.</p></li>
         </ol>
+      </body>
+    </topic>
+    <topic id="topic_i2t_v2n_sbb" otherprops="oss-only">
+      <title>Building and Installing the PL/Container Extension</title>
+      <body>
+        <p>The PL/Container extension is available as an open source module. For information about
+          the building and installing the module as part of Greenplum Database, see the README file
+          in the GitHub repository at <xref href="https://github.com/greenplum-db/plcontainer"
+            format="html" scope="external">https://github.com/greenplum-db/plcontainer</xref>.</p>
       </body>
     </topic>
   </topic>
@@ -173,7 +182,7 @@
         configuration information on all the hosts. For information about
           <codeph>plcontainer</codeph>, see <xref href="#topic_rw3_52s_dw" format="dita"/>.</p>
       <p>These examples use the <codeph>plcontainer</codeph> utility to install Docker images for
-        Python and R and adds the images to the PL/Container configuration. </p>
+        Python and R and add the images to the PL/Container configuration. </p>
       <p>This example runs <codeph>plcontainer</codeph> to install the Docker image for PL/Python
         and add the image to the PL/Container configuration.
         <codeblock>plcontainer install -n plc_python_shared -i pivotaldata/plc_python_shared:latest \
@@ -189,7 +198,7 @@
         Docker images.</p>
       <p>You can view the updated the PL/Container configuration file with the <codeph>plcontainer
           configure -s</codeph> command. A container element in the configuration XML file with the
-        name specified with the <codeph>-n</codeph> options appears in the file. </p>
+        name specified with the <codeph>-n</codeph> option appears in the file. </p>
     </body>
   </topic>
   <topic id="topic6" xml:lang="en">
@@ -205,7 +214,7 @@
           PL/Container. Run the <codeph>plcontainer_uninstall.sql</codeph> script as the
             <codeph>gpadmin</codeph> user. For example, this command removes the
             <codeph>plcontainer</codeph> language in the <codeph>mytest</codeph> database. </p>
-        <codeblock dir="ltr">psql -d mytest -f $GPHOME/share/postgresql/plcontainer/plcontainer_uninstall.sql</codeblock>
+        <codeblock>psql -d mytest -f $GPHOME/share/postgresql/plcontainer/plcontainer_uninstall.sql</codeblock>
         <p>The script drops the <codeph>plcontainer</codeph> language with <codeph>CASCADE</codeph>
           to drop functions that depend on the language.</p>
       </body>
@@ -222,8 +231,8 @@
               system:<codeblock>$ gppkg -r plcontainer-1.0.0-rhel7</codeblock><p>You can run the
                 <codeph>gppkg</codeph> utility with the options <codeph>-q --all</codeph> to list
               the installed extensions and their versions.</p></li>
-          <li dir="ltr">Reload
-            <codeph>greenplum_path.sh</codeph>.<codeblock dir="ltr">$ source $GPHOME/greenplum_path.sh</codeblock></li>
+          <li>Reload
+            <codeph>greenplum_path.sh</codeph>.<codeblock>$ source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Restart the database.<codeblock>$ gpstop -ra</codeblock></li>
         </ol>
       </body>
@@ -245,130 +254,131 @@
   <topic id="topic_rh3_p3q_dw">
     <title>Using PL/Container Languages</title>
     <body>
-      <p>When you have the enabled the <codeph>plcontainer</codeph> language, you can create and run
-        user-defined functions in the procedural languages supported by the PL/Container extension.
-        To create a UDF that uses PL/Container, the UDF must have the these items.</p>
+      <p>When you have enabled the <codeph>plcontainer</codeph> language, you can create and run
+        user-defined functions in the procedural languages supported by the PL/Container Docker
+        images. To create a UDF that uses PL/Container, the UDF must have the these items.</p>
       <ul id="ul_z2m_1kj_kw">
         <li>The first line of the UDF must be <codeph># container:
-            <varname>container_id</varname></codeph></li>
+          <varname>name</varname></codeph></li>
         <li>The <codeph>LANGUAGE</codeph> attribute must be <codeph>plcontainer</codeph></li>
       </ul>
-      <p dir="ltr" id="docs-internal-guid-4161f135-546c-abef-0992-3d4c2ce592db">The
-          <varname>container_id</varname> is the name that PL/Container uses to identify the Docker
-        container to run the UDF. There should be a corresponding entry in the
-          <codeph>plcontainer_configuration.xml</codeph> indicates the detail information. See <xref
+      <p id="docs-internal-guid-4161f135-546c-abef-0992-3d4c2ce592db">The
+          <varname>name</varname> is the name that PL/Container uses to identify the Docker
+        container that runs the UDF. in the XML configuration file
+          <codeph>plcontainer_configuration.xml</codeph>, there should be a
+          <codeph>container</codeph> XML element with a corresponding <codeph>name</codeph> XML
+        element that specifies the detail Docker container information. See <xref
           href="#topic_sk1_gdq_dw" format="dita"/> for information about how PL/Container maps the
-          <varname>container_id</varname> to a Docker container.</p>
-      <p dir="ltr" id="docs-internal-guid-13c0efc0-0767-c789-571f-1b8ffc520eaf">The PL/Container
+          <varname>name</varname> to a Docker container.</p>
+      <p id="docs-internal-guid-13c0efc0-0767-c789-571f-1b8ffc520eaf">The PL/Container
         configuration file is read only on the first invocation of a PL/Container function in each
         Greenplum Database session that runs PL/Container functions. You can force the configuration
         file to be re-read by calling the function <codeph>plcontainer_refresh_config()</codeph>
         during the session. For example, this <codeph>SELECT</codeph> command forces a the
         configuration file to be read.</p>
       <codeblock>select * from plcontainer_refresh_config();</codeblock>
-      <p dir="ltr">Also, you can show all the configurations in the session by calling the function
-          <codeph>plcontainer_show_config;</codeph>. For example, this <codeph>SELECT</codeph>
+      <p>Also, you can show all the configurations in the session by calling the function
+          <codeph>plcontainer_show_config();</codeph>. For example, this <codeph>SELECT</codeph>
         command returns the PL/Container configurations. </p>
       <codeblock>select * from plcontainer_show_config();</codeblock>
     </body>
     <topic id="topic9" xml:lang="en">
       <title id="pz215232">Examples</title>
       <body>
-        <p dir="ltr">This is an example of PL/Python function that runs using the
+        <p>This is an example of PL/Python function that runs using the
             <codeph>plc_python_shared</codeph>
           container:<codeblock>CREATE OR REPLACE FUNCTION pylog100() RETURNS double precision AS $$
 # container: plc_python_shared
 import math
 return math.log10(100)
 $$ LANGUAGE plcontainer;</codeblock></p>
-        <p dir="ltr">This is an example of a similar function using the
-            <codeph>plc_r_shared</codeph>
+        <p>This is an example of a similar function using the <codeph>plc_r_shared</codeph>
           container:<codeblock>CREATE OR REPLACE FUNCTION rlog100() RETURNS text AS $$
 # container: plc_r_shared
 return(log10(100))
 $$ LANGUAGE plcontainer;</codeblock></p>
-        <p dir="ltr">The PL/Container language you specify, <codeph>plc_python_shared</codeph> and
-            <codeph>plc_r_shared</codeph> in the examples, are the names defined in
-            <codeph>plcontainer_config.xml</codeph> file, and they are mapped to the
-            <codeph>name</codeph> to be started using Docker. Removing a specific
-            <codeph>container</codeph> entry from the configuration file makes it impossible for end
-          users to start the container. </p>
+        <p>The PL/Container Docker container that you specify, <codeph>plc_python_shared</codeph>
+          and <codeph>plc_r_shared</codeph> in the examples, are the <codeph>name</codeph> elements
+          defined in <codeph>plcontainer_config.xml</codeph> file, and they are mapped to the
+            <codeph>image</codeph> XML element that specifies the Docker image to be started.
+          Removing a specific <codeph>container</codeph> XML element from the configuration file
+          makes it impossible for end users to start the container. </p>
       </body>
     </topic>
   </topic>
   <topic id="topic_ehl_r3q_dw">
     <title>About PL/Container Running PL/Python </title>
     <body>
-      <p dir="ltr">In the Python language container, the module <codeph>plpy</codeph> is
-        implemented. The module contains these methods:</p>
+      <p>In the Python language container, the module <codeph>plpy</codeph> is implemented. The
+        module contains these methods:</p>
       <ul id="ul_qfd_mdq_dw">
-        <li dir="ltr"><codeph>plpy.execute(stmt)</codeph> - executes the query string
+        <li><codeph>plpy.execute(stmt)</codeph> - Executes the query string
             <codeph>stmt</codeph> and returns query result in a list of dictionary objects. To be
-          able to access the result fields make sure your query returns named fields</li>
-        <li><codeph>plpy.prepare(stmt,[, argtypes])</codeph> - prepares the execution plan for a
+          able to access the result fields ensure your query returns named fields.</li>
+        <li><codeph>plpy.prepare(stmt,[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types, if you have
-          parameter references in the query </li>
-        <li><codeph>plpy.execute(plan, ,[, argtypes])</codeph> - execute a prepared plan.</li>
-        <li dir="ltr"><codeph>plpy.debug(msg)</codeph> - send DEBUG2 message to the Greenplum
-          Database log </li>
-        <li dir="ltr"><codeph>plpy.log(msg)</codeph> - send LOG message to the Greenplum Database
-          log</li>
-        <li dir="ltr"><codeph>plpy.info(msg)</codeph> - send INFO message to the Greenplum Database
-          log</li>
-        <li dir="ltr"><codeph>plpy.notice(msg)</codeph> - send NOTICE message to the Greenplum
-          Database log</li>
-        <li dir="ltr"><codeph>plpy.warning(msg)</codeph> - send WARNING message to the Greenplum
-          Database log</li>
-        <li dir="ltr"><codeph>plpy.error(msg)</codeph> - send ERROR message to the Greenplum
-          Database log. ERROR message raise in Greenplum Database causes execution process to stop
-          and transaction to rollback</li>
-        <li dir="ltr"><codeph>plpy.fatal(msg)</codeph> - send FATAL message to the Greenplum
-          Database log. FATAL causes Greenplum Database session to be closed and transaction to be
-          rolled back</li>
+          parameter references in the query.</li>
+        <li><codeph>plpy.execute(plan, ,[, argtypes])</codeph> - Executes a prepared plan.</li>
+        <li><codeph>plpy.debug(msg)</codeph> - Send a DEBUG2 message to the Greenplum
+          Database log.</li>
+        <li><codeph>plpy.log(msg)</codeph> - Send a LOG message to the Greenplum Database
+          log.</li>
+        <li><codeph>plpy.info(msg)</codeph> - Send an INFO message to the Greenplum
+          Database log.</li>
+        <li><codeph>plpy.notice(msg)</codeph> - Send a NOTICE message to the Greenplum
+          Database log.</li>
+        <li><codeph>plpy.warning(msg)</codeph> - Send a WARNING message to the Greenplum
+          Database log.</li>
+        <li><codeph>plpy.error(msg)</codeph> - Send an ERROR message to the Greenplum
+          Database log. An ERROR message raised in Greenplum Database causes the query execution
+          process to stop and the transaction to rollback.</li>
+        <li><codeph>plpy.fatal(msg)</codeph> - Send a FATAL message to the Greenplum
+          Database log. A FATAL message causes Greenplum Database session to be closed and
+          transaction to be rolled back.</li>
       </ul>
-      <p dir="ltr">Also, the Python module has two global dictionary objects that retain the data
-        between function calls. They are named GD and SD. GD is used to share the data between all
-        the function running within the same container, while SD is used for sharing the data
-        between multiple calls of each separate function. Be aware that accessing the data is
-        possible only within the same session, when the container process lives on a segment or
-        master. Be aware that for idle sessions Greenplum Database terminates segment processes,
-        which means the related containers would be shut down and the data from GD and SD lost.</p>
+      <p>Also, the Python module has two global dictionary objects that retain the data between
+        function calls. They are named GD and SD. GD is used to share the data between all the
+        function running within the same container, while SD is used for sharing the data between
+        multiple calls of each separate function. Be aware that accessing the data is possible only
+        within the same session, when the container process lives on a segment or master. Be aware
+        that for idle sessions Greenplum Database terminates segment processes, which means the
+        related containers would be shut down and the data from GD and SD lost.</p>
       <p>For information about PL/Python, see <xref href="pl_python.xml#topic1"/>. </p>
       <p>For information about the <codeph>plpy</codeph> methods, see <xref
           href="https://www.postgresql.org/docs/8.4/static/plpython-database.html" format="html"
-          scope="external"
-        >https://www.postgresql.org/docs/8.4/static/plpython-database.htm</xref>.</p>
+          scope="external">https://www.postgresql.org/docs/8.4/static/plpython-database.htm</xref>.
+      </p>
     </body>
   </topic>
   <topic id="topic_lqz_t3q_dw">
     <title>About PL/Container Running PL/R</title>
     <body>
-      <p dir="ltr">In the R language container, the module <codeph>pg.spi</codeph> is implemented.
+      <p>In the R language container, the module <codeph>pg.spi</codeph> is implemented.
         The module contains these methods:</p>
       <ul id="ul_mqz_t3q_dw">
-        <li dir="ltr"><codeph>pg.spi.exec(stmt)</codeph> - executes the query string
+        <li><codeph>pg.spi.exec(stmt)</codeph> - Executes the query string
             <codeph>stmt</codeph> and returns query result in R data.frame. To be able to access the
-          result fields make sure your query returns named fields</li>
-        <li><codeph>pg.spi.prepare(stmt,[, argtypes])</codeph> - prepares the execution plan for a
+          result fields make sure your query returns named fields.</li>
+        <li><codeph>pg.spi.prepare(stmt,[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types if you have
           parameter references in the query.</li>
-        <li><codeph>pg.spi.execp(plan, ,[, argtypes])</codeph> - execute a prepared plan.</li>
-        <li dir="ltr"><codeph>pg.spi.debug(msg)</codeph> - send DEBUG2 message to the Greenplum
-          Database log</li>
-        <li dir="ltr"><codeph>pg.spi.log(msg)</codeph> - send LOG message to the Greenplum Database
-          log</li>
-        <li dir="ltr"><codeph>pg.spi.info(msg)</codeph> - send INFO message to the Greenplum
-          Database log</li>
-        <li dir="ltr"><codeph>pg.spi.notice(msg)</codeph> - send NOTICE message to the Greenplum
-          Database log</li>
-        <li dir="ltr"><codeph>pg.spi.warning(msg)</codeph> - send WARNING message to the Greenplum
-          Database log</li>
-        <li dir="ltr"><codeph>pg.spi.error(msg)</codeph> - send ERROR message to the Greenplum
-          Database log. ERROR message raise in Greenplum Database causes execution process to stop
-          and transaction to rollback</li>
-        <li dir="ltr"><codeph>pg.spi.fatal(msg)</codeph> - send FATAL message to the Greenplum
-          Database log. FATAL causes Greenplum Database session to be closed and transaction to be
-          rolled back</li>
+        <li><codeph>pg.spi.execp(plan, ,[, argtypes])</codeph> - Execute a prepared plan.</li>
+        <li><codeph>pg.spi.debug(msg)</codeph> - Send a DEBUG2 message to the Greenplum
+          Database log.</li>
+        <li><codeph>pg.spi.log(msg)</codeph> - Send a LOG message to the Greenplum
+          Database log.</li>
+        <li><codeph>pg.spi.info(msg)</codeph> - Send an INFO message to the Greenplum
+          Database log.</li>
+        <li><codeph>pg.spi.notice(msg)</codeph> - Send a NOTICE message to the Greenplum
+          Database log.</li>
+        <li><codeph>pg.spi.warning(msg)</codeph> - Send a WARNING message to the Greenplum
+          Database log.</li>
+        <li><codeph>pg.spi.error(msg)</codeph> - Send an ERROR message to the Greenplum
+          Database log. An ERROR message raised in Greenplum Database causes the query execution
+          process to stop and the transaction to rollback.</li>
+        <li><codeph>pg.spi.fatal(msg)</codeph> - sSend a FATAL message to the Greenplum
+          Database log. A FATAL message causes Greenplum Database session to be closed and
+          transaction to be rolled back.</li>
       </ul>
       <p>For information about PL/R, see <xref href="pl_r.xml#topic1"/>.</p>
       <p>For information about the <codeph>pg.spi</codeph> methods, see <xref
@@ -380,7 +390,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
   <topic id="topic_sk1_gdq_dw">
     <title>Configuring PL/Container</title>
     <body>
-      <p dir="ltr" id="docs-internal-guid-4c1ff10e-0788-463d-0721-75b683aa15de">The Greenplum
+      <p id="docs-internal-guid-4c1ff10e-0788-463d-0721-75b683aa15de">The Greenplum
         Database utility <codeph>plcontainer</codeph> manages the PL/Container configuration files
         in a Greenplum Database system. The utility ensures that the configuration files are
         consistent across the Greenplum Database master and segment hosts.</p>
@@ -391,9 +401,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         Greenplum Database segments. However, PL/Container configurations of currently running
         sessions use the configuration that existed during session start up. To update the
         PL/Container configuration in a running session, execute this command in the session.</p>
-      <codeblock>select * from plcontainer_refresh_config;</codeblock>
-      <p dir="ltr">When you change the <codeph>plcontainer_configuration.xml</codeph> configuration
-        file with the<codeph>plcontainer</codeph> utility, the utility creates a back up of the
+      <codeblock>select * from plcontainer_refresh_config();</codeblock>
+      <p>When you change the <codeph>plcontainer_configuration.xml</codeph> configuration
+        file with the <codeph>plcontainer</codeph> utility, the utility creates a back up of the
         original configuration file in the same directory. The backup file name is
             <codeph>plcontainer_configuration.xml.bak<varname>YYYYMMDD</varname>_<varname>hhmmss</varname></codeph>.
         The timestamp of the change is appended to the file name. Using the <codeph>plcontainer
@@ -407,13 +417,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           PL/Container configuration. The utility consists of two commands.</p>
         <ul id="ul_kxp_byw_qbb">
           <li><codeph>plcontainer configure</codeph> - Manages the PL/Container configuration file
-            on the hosts. You can add Docker image information to the Pl/Container configuration
+            on the hosts. You can add Docker image information to the PL/Container configuration
             file including the image name, location, and shared folder information. You can also
             edit the configuration file.</li>
           <li><codeph>plcontainer install</codeph> - Install a Docker image in Docker repository and
             add the image information to the PL/Container configuration file on each host.</li>
         </ul>
-        <p dir="ltr">The <codeph>plcontainer</codeph> utility
+        <p>The <codeph>plcontainer</codeph> utility
           syntax:<codeblock><b>plcontainer configure</b> {{<b>-n</b> | <b>--name</b>} <varname>container-name</varname>
                {<b>-i</b> | <b>--image</b>} <varname>image-location</varname>
                {<b>-l</b> | <b>--language</b>} <varname>language</varname>
@@ -452,7 +462,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             <plentry>
               <pt>{-f | --file} <varname>config-file</varname></pt>
               <pd>
-                <p dir="ltr">The utility replaces the existing PL/Container configuration file with
+                <p>The utility replaces the existing PL/Container configuration file with
                   the specified file. Specify the absolute path to a configuration file. The
                   configuration file is replaced on all Greenplum Database hosts.</p>
               </pd>
@@ -474,7 +484,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             <plentry>
               <pt>{-l | --language} <varname>language</varname></pt>
               <pd>
-                <p dir="ltr"> Configure PL/Container language type, supported values are
+                <p> Configure PL/Container language type, supported values are
                     <codeph>python</codeph> (PL/Python) and <codeph>r</codeph> (PL/R).</p>
               </pd>
             </plentry>
@@ -532,49 +542,49 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         </section>
         <section>
           <title>Examples</title>
-          <p dir="ltr">The most common commands you would run are the following:</p>
+          <p>The most common commands you would run are the following:</p>
           <ul id="ul_fn5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Initialize the Greenplum Database installation with default configuration
+            <li>
+              <p>Initialize the Greenplum Database installation with default configuration
                 file after installing a PL/Container
-                package:<codeblock dir="ltr">plcontainer configure --reset</codeblock></p>
+                package:<codeblock>plcontainer configure --reset</codeblock></p>
             </li>
           </ul>
           <ul id="ul_gn5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Edit the configuration in interactive editor of your
-                choice:<codeblock dir="ltr">plcontainer configure -e vim</codeblock></p>
+            <li>
+              <p>Edit the configuration in interactive editor of your
+                choice:<codeblock>plcontainer configure -e vim</codeblock></p>
             </li>
           </ul>
           <ul id="ul_hn5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Show the current
-                configuration:<codeblock dir="ltr">plcontainer configure --show</codeblock></p>
+            <li>
+              <p>Show the current
+                configuration:<codeblock>plcontainer configure --show</codeblock></p>
             </li>
           </ul>
           <ul id="ul_in5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Restore previous configuration from the
-                backup:<codeblock dir="ltr">plcontainer configure --restore</codeblock></p>
+            <li>
+              <p>Restore previous configuration from the
+                backup:<codeblock>plcontainer configure --restore</codeblock></p>
             </li>
           </ul>
           <ul id="ul_jn5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Overwrite plcontainer configurations with xml file directly
-                :<codeblock dir="ltr">plcontainer configure -f new_plcontainer_configuration.xml </codeblock></p>
+            <li>
+              <p>Overwrite plcontainer configurations with xml file directly
+                :<codeblock>plcontainer configure -f new_plcontainer_configuration.xml </codeblock></p>
             </li>
           </ul>
           <ul id="ul_kn5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Configure new container entry to plcontainer
-                configurations<codeblock dir="ltr">plcontainer configure -n plc_python_newpy -l python
+            <li>
+              <p>Configure new container entry to plcontainer
+                configurations<codeblock>plcontainer configure -n plc_python_newpy -l python
   -i pivotaldata/plc_python_newimage:latest -v /tmp:/clientdir:rw</codeblock></p>
             </li>
           </ul>
           <ul id="ul_ln5_1bw_qbb">
-            <li dir="ltr">
-              <p dir="ltr">Install new docker image and configure it to plcontainer
-                configurations.<codeblock dir="ltr">plcontainer install -n plc_r_newr -i plc_newr.tar.gz -c pivotaldata/plc_r_newr:latest 
+            <li>
+              <p>Install new docker image and configure it to plcontainer
+                configurations.<codeblock>plcontainer install -n plc_r_newr -i plc_newr.tar.gz -c pivotaldata/plc_r_newr:latest 
   -l r -v /tmp:/clientdir:rw</codeblock></p>
             </li>
           </ul>
@@ -584,7 +594,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
     <topic id="topic_ojn_r2s_dw">
       <title>PL/Container Configuration File</title>
       <body>
-        <p dir="ltr">The default PL/Container configuration file is in
+        <p>The default PL/Container configuration file is in
             <codeph>$GPHOME/share/postgresql/plcontainer/plcontainer_configuration.xml</codeph> of
           each host. The PL/Container configuration file is an XML file. In the XML file, the root
           element <codeph>configuration</codeph> contains a one or more <codeph>container</codeph>
@@ -608,7 +618,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       &lt;shared_directory access="rw" container="/plc_log" host="/tmp/plc_log"/>
    &lt;/container>
 &lt;/configuration></codeblock></p>
-        <p dir="ltr">These are the XML elements and attributes in a PL/Container configuration
+        <p>These are the XML elements and attributes in a PL/Container configuration
           file.</p>
         <parml>
           <plentry>
@@ -632,12 +642,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                 <plentry>
                   <pt>container_id</pt>
                   <pd>
-                    <p dir="ltr" id="docs-internal-guid-4161f135-54cf-fb80-c0d2-109fd6ac9a40"
+                    <p id="docs-internal-guid-4161f135-54cf-fb80-c0d2-109fd6ac9a40"
                       >Required. The value is the full Docker image name, including image tag. The
                       same way you specify them for starting this container in Docker. Configuration
                       allows to have many container objects referencing the same image name, this
                       way in Docker they would be represented by identical containers. </p>
-                    <p dir="ltr">For example, you might have two containers named
+                    <p>For example, you might have two containers named
                         <codeph>plc_python_128</codeph> and <codeph>plc_python_256</codeph>, both
                       referencing the Docker image
                         <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>, but first one with
@@ -686,7 +696,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                 <plentry>
                   <pt>use_network</pt>
                   <pd>
-                    <p dir="ltr" id="docs-internal-guid-f130ab1d-54c6-0fcd-087f-2a46dd22ff96"
+                    <p id="docs-internal-guid-f130ab1d-54c6-0fcd-087f-2a46dd22ff96"
                       >Optional. The value can be either <codeph>yes</codeph> or <codeph>no</codeph>
                       to specify whether use <codeph>TCP</codeph> or <codeph>IPC</codeph> for
                       communication between the Greenplum Database process and the Docker container
@@ -702,13 +712,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
     <topic id="topic_v3s_qv3_kw">
       <title>Updating the PL/Container Configuration</title>
       <body>
-        <p dir="ltr" id="docs-internal-guid-4161f135-54d3-f98b-802e-5764c1e408a2">You can add a
+        <p id="docs-internal-guid-4161f135-54d3-f98b-802e-5764c1e408a2">You can add a
             <codeph>container</codeph> element to the PL/Container configuration file with the
             <codeph>plcontainer configure</codeph> command specifying options with options that
           specify values such as the name, Docker image, command, and shared directory. You can use
           the <codeph>plcontainer configure</codeph> command with the -e option to edit the
           configuration file. The utility updates the configuration file on all hosts.</p>
-        <p dir="ltr">The PL/Container configuration file can contain multiple
+        <p>The PL/Container configuration file can contain multiple
             <codeph>container</codeph> elements that reference the same Docker image specified by
           the XML element <codeph>image</codeph>. In the example configuration file, the
             <codeph>image</codeph> specifies contains <codeph>container</codeph> elements named
@@ -765,41 +775,41 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           >https://docs.docker.com/engine/reference/run/</xref>.</p>
       <section>
         <title>Installing Docker on CentOS 7</title>
-        <p dir="ltr">These steps install the docker package and start the docker service as a user
+        <p>These steps install the docker package and start the docker service as a user
           with sudo privileges.</p>
         <ol id="ol_e4g_sb2_rbb">
           <li>Install dependencies required for
-            Docker<codeblock dir="ltr">sudo yum install -y yum-utils device-mapper-persistent-data lvm2</codeblock></li>
+            Docker<codeblock>sudo yum install -y yum-utils device-mapper-persistent-data lvm2</codeblock></li>
           <li>Add the Docker
-            repo<codeblock dir="ltr">sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo</codeblock></li>
-          <li>Update yum cache<codeblock dir="ltr">sudo yum makecache fast</codeblock></li>
-          <li>Install Docker<codeblock dir="ltr">sudo yum -y install docker-ce</codeblock></li>
-          <li>Start Docker daemon.<codeblock dir="ltr">sudo systemctl start docker</codeblock></li>
+            repo<codeblock>sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo</codeblock></li>
+          <li>Update yum cache<codeblock>sudo yum makecache fast</codeblock></li>
+          <li>Install Docker<codeblock>sudo yum -y install docker-ce</codeblock></li>
+          <li>Start Docker daemon.<codeblock>sudo systemctl start docker</codeblock></li>
           <li>To give access to the Docker daemon and docker commands, assign the Greenplum Database
             administrator (gpadmin) to the group
-            <codeph>docker</codeph>.<codeblock dir="ltr">sudo usermod -aG docker gpadmin</codeblock></li>
+            <codeph>docker</codeph>.<codeblock>sudo usermod -aG docker gpadmin</codeblock></li>
           <li>Exit the session and login again to update the privileges.</li>
           <li>Run a Docker command Run to the Docker installation.
-            <codeblock dir="ltr">docker ps</codeblock></li>
+            <codeblock>docker ps</codeblock></li>
         </ol>
         <p>To configure Docker to start when the server
           starts.<codeblock>sudo systemctl start  docker.service</codeblock></p>
       </section>
       <section>
         <title>Installing Docker on CentOS 6</title>
-        <p dir="ltr">These steps install the Docker package and start the docker service as a user
+        <p>These steps install the Docker package and start the docker service as a user
           with sudo privileges.</p>
         <ol id="ol_lrx_zb2_rbb">
           <li>Install EPEL
-            package<codeblock dir="ltr">sudo yum -y install epel-release</codeblock></li>
-          <li>Install Docker<codeblock dir="ltr">sudo yum -y install docker-io</codeblock></li>
-          <li>Start Docker<codeblock dir="ltr">sudo service docker start</codeblock></li>
+            package<codeblock>sudo yum -y install epel-release</codeblock></li>
+          <li>Install Docker<codeblock>sudo yum -y install docker-io</codeblock></li>
+          <li>Start Docker<codeblock>sudo service docker start</codeblock></li>
           <li>To give access to the Docker daemon and docker commands, assign the Greenplum Database
             administrator (gpadmin) to the group
-            <codeph>docker</codeph>.<codeblock dir="ltr">sudo usermod -aG docker gpadmin</codeblock></li>
+            <codeph>docker</codeph>.<codeblock>sudo usermod -aG docker gpadmin</codeblock></li>
           <li>Exit the session and login again to active </li>
           <li>Run a docker command. This command lists the currently running Docker containers.
-            <codeblock dir="ltr">docker ps</codeblock></li>
+            <codeblock>docker ps</codeblock></li>
         </ol>
         <p>To configure Docker to start when the server
           starts.<codeblock>sudo chkconfig docker on</codeblock></p>
