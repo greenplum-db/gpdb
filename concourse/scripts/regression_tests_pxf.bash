@@ -157,6 +157,9 @@ function _main() {
 	time install_gpdb
 	time setup_gpadmin_user
 
+	# Reserve port 51200 for PXF service
+	echo "pxf             51200/tcp               # PXF Service" >> /etc/services
+
 	# setup hadoop before making GPDB cluster to use system python for yum install
 	time setup_singlecluster
 	time setup_hadoop_client $(pwd)/singlecluster
