@@ -261,12 +261,12 @@ static bool selfIsAssignedDroppedGroup(void);
 static bool selfIsAssignedValidGroup(void);
 #ifdef USE_ASSERT_CHECKING
 static bool selfIsAssigned(void);
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 static bool selfIsUnassigned(void);
 static void selfUnassignDroppedGroup(void);
 #ifdef USE_ASSERT_CHECKING
 static bool selfHasSlot(void);
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 static bool selfHasGroup(void);
 static void selfSetGroup(ResGroupData *group);
 static void selfUnsetGroup(void);
@@ -279,13 +279,13 @@ static void slotValidate(const ResGroupSlotData *slot);
 static void slotValidateOwnership(const ResGroupSlotData *slot);
 #ifdef USE_ASSERT_CHECKING
 static bool slotIsInUse(const ResGroupSlotData *slot);
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 static ResGroupSlotData * slotById(int slotId);
 static int slotGetId(const ResGroupSlotData *slot);
 static bool slotIdIsValid(int slotId);
 #ifdef USE_ASSERT_CHECKING
 static bool groupIsNotDropped(const ResGroupData *group);
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 static void groupWaitQueueValidate(const ResGroupData *group);
 static void groupWaitQueuePush(ResGroupData *group, PGPROC *proc);
 static PGPROC * groupWaitQueuePop(ResGroupData *group);
@@ -2791,7 +2791,7 @@ selfIsAssigned(void)
 
 	return self->groupId != InvalidOid;
 }
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 
 /*
  * Check whether self is unassigned.
@@ -2848,7 +2848,7 @@ selfHasSlot(void)
 
 	return self->slotId != InvalidSlotId;
 }
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 
 /*
  * Check whether self has been set a resgroup.
@@ -3044,7 +3044,7 @@ slotIsInUse(const ResGroupSlotData *slot)
 
 	return slot->groupId != InvalidOid;
 }
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 
 /*
  * Get a slot by slotId.
@@ -3133,7 +3133,7 @@ groupIsNotDropped(const ResGroupData *group)
 	return group
 		&& group->groupId != InvalidOid;
 }
-#endif//USE_ASSERT_CHECKING
+#endif/* USE_ASSERT_CHECKING */
 
 /*
  * Validate the consistency of the resgroup wait queue.
@@ -3304,6 +3304,12 @@ ResGroupDumpInfo(StringInfo str)
 	verifyGpIdentityIsSet();
 
 	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
+	/* dump fields in pResGroupControl. */
+	appendStringInfo(str, "\"segmentsOnMaster\":%d,", pResGroupControl->segmentsOnMaster);
+	appendStringInfo(str, "\"loaded\":%s,", pResGroupControl->loaded ? "true" : "false");
+	appendStringInfo(str, "\"totalChunks\":%d,", pResGroupControl->totalChunks);
+	appendStringInfo(str, "\"freeChunks\":%d,", pResGroupControl->freeChunks);
+	appendStringInfo(str, "\"chunkSizeInBits\":%d,", pResGroupControl->chunkSizeInBits);
 	
 	/* dump each group */
 	appendStringInfo(str, "\"groups\":[");
@@ -3399,9 +3405,6 @@ resgroupDumpSlots(StringInfo str)
 {
 	int               i;
 	ResGroupSlotData* slot;
-	ResGroupSlotData* root;
-
-	root = &pResGroupControl->freeSlot;
 	
 	appendStringInfo(str, "\"slots\":[");
 

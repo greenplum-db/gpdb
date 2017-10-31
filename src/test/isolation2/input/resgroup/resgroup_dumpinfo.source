@@ -16,11 +16,26 @@ def validate(json_obj, segnum):
    if len(array) != segnum:
       return False
    qd_info = [j for j in array if j["segid"] == -1][0]
+   #validate keys
+   keys = ["segid", "segmentsOnMaster", "loaded", "totalChunks",
+   		   "freeChunks", "chunkSizeInBits", "groups"]
+   for key in keys:
+       if key not in qd_info:
+           return False
+
    groups = [g for g in qd_info["groups"] if g["group_id"] > 6438]
    #validate user created group
    if len(groups) != 1:
       return False
    group = groups[0]
+   #validate group keys
+   keys = ["group_id", "nRunning", "locked_for_drop", "memExpected",
+   		   "memQuotaGranted", "memSharedGranted", "memQuotaUsed",
+   		   "memUsage", "memSharedUsage"]
+   for key in keys:
+      if key not in group:
+	 return False
+
    #validate waitqueue
    wait_queue = group["wait_queue"]
    if wait_queue["wait_queue_size"] != 1:
@@ -42,6 +57,7 @@ json_text =  r.getresult()[0][0]
 json_obj = json.loads(json_text)
 
 return validate(json_obj, n)
+
 $$ LANGUAGE plpythonu;
 
 CREATE RESOURCE GROUP rg_dumpinfo_test WITH (concurrency=2, cpu_rate_limit=20, memory_limit=20);
