@@ -70,10 +70,16 @@ endif
 
 SHLIB_EXPORTS = exports.txt
 
-all: all-lib fe-protocol3_for_backend.o fe-connect_for_backend.o
+all: all-lib libpq_srv.a
 
-%_for_backend.o: %.c
-	$(CC) -c $(filter-out -DFRONTEND, $(CPPFLAGS)) $< -o $@
+# foo_srv.o and foo.o are both built from foo.c, but only foo.o has -DFRONTEND
+OBJS_SRV = $(OBJS:%.o=%_srv.o)
+
+libpq_srv.a: $(OBJS_SRV)
+	$(AR) $(AROPT) $@ $^
+
+%_srv.o: %.c
+	$(CC) $(CFLAGS) $(subst -DFRONTEND,, $(CPPFLAGS)) -c $< -o $@
 
 # Shared library stuff
 include $(top_srcdir)/src/Makefile.shlib
@@ -133,6 +139,7 @@ clean distclean: clean-lib
 	rm -f *.o pg_config_paths.h crypt.c getaddrinfo.c getpeereid.c inet_aton.c inet_net_ntop.c noblock.c open.c pgstrcasecmp.c snprintf.c strerror.c strlcpy.c thread.c md5.c ip.c encnames.c wchar.c win32error.c pgsleep.c pthread.h libpq.rc exports.list
 # Might be left over from a Win32 client-only build
 	rm -f pg_config_paths.h
+	rm -f libpq_srv.a $(OBJS_SRV)
 
 maintainer-clean: distclean maintainer-clean-lib
 	rm -f libpq-dist.rc
