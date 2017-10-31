@@ -16,9 +16,9 @@
         releases.<p>Significant Greenplum Database performance degradation has been observed when
         enabling resource group-based workload management on RedHat 6.x, CentOS 6.x, and SuSE 11
         systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been fixed
-        in CentOS 7.x and Red Hat 7.x systems, and in Red Hat 6 systems that use kernel version
-        2.6.32-696 or higher. SuSE 11 does not have a kernel version that resolves this
-      issue.</p></note>
+        in CentOS 7.x and Red Hat 7.x systems. The performance problem is mitigated in Red Hat 6
+        systems that use kernel version 2.6.32-696 or higher. SuSE 11 does not have a kernel version
+        that resolves this issue.</p></note>
     <p>Either the resource queue or the resource group management scheme can be active in Greenplum
       Database; both schemes cannot be active at the same time.</p>
     <p>Resource queues are enabled by default when you install your Greenplum Database cluster.
