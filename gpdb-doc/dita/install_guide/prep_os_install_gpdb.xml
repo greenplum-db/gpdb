@@ -209,9 +209,9 @@ net.core.wmem_max = 2097152
 vm.overcommit_memory = 2</codeblock><note>
               When <codeph>vm.overcommit_memory</codeph> is 2, you specify a value for
                 <codeph>vm.overcommit_ratio</codeph>. For information about calculating the value
-              for <codeph>vm.overcommit_ratio</codeph>, see the Greenplum Database server
+              for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management is active, see the Greenplum Database server
               configuration parameter <codeph>gp_vmem_protect_limit</codeph> in the <cite>Greenplum
-                Database Reference Guide</cite>.<p>To avoid port conflicts between Greenplum
+                Database Reference Guide</cite>. When resource group-based resource management is active, the operating system <codeph>vm.overcomit_ratio</codeph> default value is a good starting point.<p>To avoid port conflicts between Greenplum
                 Database and other applications, when initializing Greenplum Database, do not
                 specify Greenplum Database ports in the range specified by the operating system
                 parameter <codeph>net.ipv4.ip_local_port_range</codeph>. For example, if

@@ -99,7 +99,7 @@ kernel.shmall = 4000000000</codeblock>
         </ul></p>
     </section>
     <section id="segment_mem_config">
-      <title>Segment Memory Configuration</title>
+      <title>Resource Queue Segment Memory Configuration</title>
       <p>The <codeph>gp_vmem_protect_limit</codeph> server configuration parameter specifies the
         amount of memory that all active postgres processes for a single segment can consume at any
         given time. Queries that exceed this amount will fail. Use the following calculations to
@@ -136,7 +136,7 @@ kernel.shmall = 4000000000</codeblock>
       <p>See also <xref href="workloads.xml#topic_hhc_z5w_r4"/>.</p>
     </section>
     <section id="statement_mem_config">
-      <title>Statement Memory Configuration</title>
+      <title>Resource Queue Statement Memory Configuration</title>
       <p>The <codeph>statement_mem</codeph> server configuration parameter is the amount of
         memory to be allocated to any single query in a segment database. If a statement requires
         additional memory it will spill to disk. Calculate the value for
@@ -162,7 +162,7 @@ kernel.shmall = 4000000000</codeblock>
         practices for managing query memory using resource queues.</p>
     </section>
     <section id="spill_files">
-      <title>Spill File Configuration</title>
+      <title>Resource Queue Spill File Configuration</title>
       <p>Greenplum Database creates <i>spill files</i> (also called <i>workfiles</i>) on disk if a
         query is allocated insufficient memory to execute in memory. A single query can create no
         more than 100,000 spill files, by default, which is sufficient for the majority of queries. </p>

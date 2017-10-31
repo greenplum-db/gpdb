@@ -78,14 +78,14 @@
           complexity of queries you can run at the same time by reducing the amount of memory available to
           Greenplum Database. When increasing <codeph>vm.overcommit_ratio</codeph>, it is important
           to remember to always reserve some memory for operating system activities.</p>
-        <p>To calculate a safe value for <codeph>vm.overcommit_ratio</codeph>, first determine the
-          total memory available to Greenplum Database processes, called <codeph>gp_vmem</codeph>,
+        <p>To calculate a safe value for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management is active, first determine the
+          total memory available to Greenplum Database processes, called <codeph>gp_vmem_rq</codeph>,
           with this
-          formula:<codeblock>gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7</codeblock></p>
+          formula:<codeblock>gp_vmem_rq = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7</codeblock></p>
         <p>where <codeph>SWAP</codeph> is the swap space on the host in GB, and <codeph>RAM</codeph>
-          is the number of GB of RAM installed on the host. </p>
-        <p>Calculate the <codeph>vm.overcommit_ratio</codeph> value with this
-          formula:<codeblock>vm.overcommit_ratio = (RAM - 0.026 * gp_vmem) / RAM</codeblock></p>
+          is the number of GB of RAM installed on the host. When resource queue-based resource management is active, use <codeph>gp_vmem_rq</codeph> to calculate the <codeph>vm.overcommit_ratio</codeph> value with this
+          formula:<codeblock>vm.overcommit_ratio = (RAM - 0.026 * gp_vmem_rq) / RAM</codeblock></p>
+        <p>When resource group-based resource management is active, the operating system <codeph>vm.overcommit_ratio</codeph> default value is a good starting point. Tune as necessary. If your memory utilization is too low, increase the value; if your memory or swap usage is too high, decrease the setting.</p>
       </section>
       <section id="section_nfn_q5r_bs">
         <title>Configuring Greenplum Database Memory</title>
@@ -104,20 +104,15 @@
           primary segments per host, a single host failure would cause other hosts in the block to
           have a maximum of 11 active primaries, compared to 16 for the default grouping mirror
           configuration.</p>
-        <p>The <varname>gp_vmem_protect_limit</varname> server configuration parameter value 
+        <p>When resource queue-based resource management is active, the <varname>gp_vmem_protect_limit</varname> server configuration parameter value 
           identifies the amount of memory to allocate to
           each segment. This value is estimated by calculating the memory available for all Greenplum
           Database processes and dividing by the maximum number of primary segments during a
-          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can fail.
-          Use the following formula to calculate a safe value for
-            <varname>gp_vmem_protect_limit</varname>. Provide the <codeph>gp_vmem</codeph> value
-          you calculated earlier.<codeblock>gp_vmem_protect_limit = gp_vmem / max_acting_primary_segments</codeblock></p>
-        <p>where <codeph>max_acting_primary_segments</codeph> is the maximum number of primary
-          segments that could be running on a host when mirror segments are activated due to a host
-          or segment failure. </p>
-        <note>The resource management scheme currently active (resource queues or resource
-          groups) for your Greenplum Database cluster may impose additional considerations
-          on <varname>gp_vmem_protect_limit</varname>.</note> 
+          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can fail.</p>
+        <p>When resource group-based resource management is active, the amount of memory allocated
+           to each segment is the memory available to Greenplum Database multiplied by the
+           <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter and
+           dividing by the number of segments.</p>
         <p>Resource queues and resource groups support additional configuration parameters that
            enable you to further control and refine the amount of memory allocated for queries.</p>
       </section>

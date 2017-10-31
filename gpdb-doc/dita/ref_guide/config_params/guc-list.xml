@@ -5574,6 +5574,7 @@
   <topic id="gp_vmem_protect_limit">
     <title>gp_vmem_protect_limit</title>
     <body>
+      <note>The <codeph>gp_vmem_protect_limit</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the amount of memory (in number of MBs) that all postgres processes of an active
         segment instance can consume. If a query causes this limit to be exceeded, memory will not
         be allocated and the query will fail. Note that this is a local parameter and must be set
@@ -7351,6 +7352,7 @@
   <topic id="max_statement_mem">
     <title>max_statement_mem</title>
     <body>
+      <note>The <codeph>max_statement_mem</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the maximum memory limit for a query. Helps avoid out-of-memory errors on a segment
         host during query processing as a result of setting <codeph><xref href="#statement_mem"
             format="dita"/>
@@ -8571,6 +8573,7 @@
   <topic id="runaway_detector_activation_percent">
     <title>runaway_detector_activation_percent</title>
     <body>
+      <note>The <codeph>runaway_detector_activation_percent</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the percentage of Greenplum Database vmem memory that triggers the termination of
         queries. If the percentage of vmem memory that is utilized for a Greenplum Database segment
         exceeds the specified value, Greenplum Database terminates queries based on memory usage,
@@ -8929,6 +8932,7 @@
   <topic id="statement_mem">
     <title>statement_mem</title>
     <body>
+      <note>The <codeph>statement_mem</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Allocates segment host memory per query. The amount of memory allocated with this parameter
         cannot exceed <codeph><xref href="#max_statement_mem" format="dita"/></codeph> or the memory
         limit on the resource queue through which the query was submitted. When <codeph><xref
