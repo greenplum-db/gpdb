@@ -2126,10 +2126,26 @@ jobs:
               cluster_suffix: "-2"
           get_params:
             action: destroy
-  - task: exchange_keys
+  - task: gptransfer_pre_test_setup
     tags: ["ccp"]
-    file: gpdb_src/concourse/tasks/exchange_keys.yml
-    image: centos-gpdb-dev-6
+    config:
+      platform: linux
+      inputs:
+        - name: cluster_env_files
+        - name: cluster_env_files2
+        - name: ccp_src
+        - name: gpdb_src
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: '6'
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
     on_failure:
       <<: *ccp_destroy_2_cluster
   - task: run_gptransfer_tests
@@ -2139,7 +2155,6 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
-      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file  && ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t mdw-2 \"source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; allow_connections_from_all_hosts\""
     on_failure:
       do:
       - task: debug_sleep_2_cluster
@@ -2708,10 +2723,26 @@ jobs:
               cluster_suffix: "-2"
           get_params:
             action: destroy
-  - task: exchange_keys
+  - task: gptransfer_pre_test_setup
     tags: ["ccp"]
-    file: gpdb_src/concourse/tasks/exchange_keys.yml
-    image: centos-gpdb-dev-6
+    config:
+      platform: linux
+      inputs:
+        - name: cluster_env_files
+        - name: cluster_env_files2
+        - name: ccp_src
+        - name: gpdb_src
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: '6'
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
     on_failure:
       <<: *ccp_destroy_2_cluster
   - task: run_gptransfer_tests
@@ -2721,7 +2752,6 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_43
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
-      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file  && ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -t mdw-2 \"source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; allow_connections_from_all_hosts\""
     on_failure:
       do:
       - task: debug_sleep_2_cluster
