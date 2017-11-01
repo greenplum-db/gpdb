@@ -68,18 +68,10 @@ cat <<EOF
 PATH=${GP_BIN_PATH}:\$PATH
 EOF
 
-if [ "${PLAT}" != "Darwin" ] ; then
-    cat <<EOF
+cat <<EOF
 LD_LIBRARY_PATH=${GP_LIB_PATH}:\${LD_LIBRARY_PATH-}
 export LD_LIBRARY_PATH
 EOF
-else
-# OSX does not have LD_LIBRARY_PATH
-cat <<EOF
-DYLD_LIBRARY_PATH=${GP_LIB_PATH}:\${DYLD_LIBRARY_PATH-}
-export DYLD_LIBRARY_PATH
-EOF
-fi
 
 # AIX uses yet another library path variable
 # Also, Python on AIX requires special copies of some libraries.  Hence, lib/pware.
