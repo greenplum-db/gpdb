@@ -117,6 +117,7 @@ typedef enum
 /*
  * Functions in resgroup.c
  */
+extern void AtEOXact_ResGroup(bool isCommit);
 
 /* Shared memory and semaphores */
 extern Size ResGroupShmemSize(void);
