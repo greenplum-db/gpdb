@@ -67,13 +67,6 @@ endif
 # Greenplum uses threads in the backend
 LIBS := $(LIBS) -lpthread
 
-# Greenplum uses libpq to communicate between QD and QEs
-OBJS += $(addprefix $(top_builddir)/src/interfaces/libpq/,fe-protocol3_for_backend.o fe-connect_for_backend.o fe-exec.o pqexpbuffer.o fe-auth.o fe-misc.o fe-protocol2.o fe-secure.o)
-
-ifneq ($(filter getpeereid.o,$(LIBOBJS)),)
-OBJS += $(addprefix $(top_builddir)/src/interfaces/libpq/,getpeereid.o)
-endif
-
 ##########################################################################
 
 all: submake-libpgport postgres $(POSTGRES_IMP)

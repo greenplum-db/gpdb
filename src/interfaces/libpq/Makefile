@@ -70,10 +70,7 @@ endif
 
 SHLIB_EXPORTS = exports.txt
 
-all: all-lib fe-protocol3_for_backend.o fe-connect_for_backend.o
-
-%_for_backend.o: %.c
-	$(CC) -c $(filter-out -DFRONTEND, $(CPPFLAGS)) $< -o $@
+all: all-lib
 
 # Shared library stuff
 include $(top_srcdir)/src/Makefile.shlib
