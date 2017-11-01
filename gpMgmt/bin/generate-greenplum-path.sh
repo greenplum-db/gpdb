@@ -57,28 +57,27 @@ cat <<EOF
 PYTHONPATH=${PYTHONPATH}
 EOF
 
-TEMP_PATH_STR=\$GPHOME/bin
-TEMP_LIB_STR=\$GPHOME/lib
+GP_BIN_PATH=\$GPHOME/bin
+GP_LIB_PATH=\$GPHOME/lib
 
 if [ -n "$PYTHONHOME" ]; then
-    TEMP_PATH_STR=${TEMP_PATH_STR}:\$PYTHONHOME/bin
-    TEMP_LIB_STR=${TEMP_LIB_STR}:\$PYTHONHOME/lib
+    GP_BIN_PATH=${GP_BIN_PATH}:\$PYTHONHOME/bin
+    GP_LIB_PATH=${GP_LIB_PATH}:\$PYTHONHOME/lib
 fi
 cat <<EOF
-PATH=${TEMP_PATH_STR}:\$PATH
+PATH=${GP_BIN_PATH}:\$PATH
 EOF
 
-# OSX does not need JAVA_HOME
-if [ "${PLAT}" = "Darwin" ] ; then
-cat << EOF
-DYLD_LIBRARY_PATH=${TEMP_LIB_STR}:\${DYLD_LIBRARY_PATH-}
-EOF
-fi
-
-# OSX does not have LD_LIBRARY_PATH
 if [ "${PLAT}" != "Darwin" ] ; then
     cat <<EOF
-LD_LIBRARY_PATH=${TEMP_LIB_STR}:\${LD_LIBRARY_PATH-}
+LD_LIBRARY_PATH=${GP_LIB_PATH}:\${LD_LIBRARY_PATH-}
+export LD_LIBRARY_PATH
+EOF
+else
+# OSX does not have LD_LIBRARY_PATH
+cat <<EOF
+DYLD_LIBRARY_PATH=${GP_LIB_PATH}:\${DYLD_LIBRARY_PATH-}
+export DYLD_LIBRARY_PATH
 EOF
 fi
 
@@ -103,16 +102,6 @@ cat <<EOF
 export GPHOME
 export PATH
 EOF
-
-if [ "${PLAT}" != "Darwin" ] ; then
-cat <<EOF
-export LD_LIBRARY_PATH
-EOF
-else
-cat <<EOF
-export DYLD_LIBRARY_PATH
-EOF
-fi
 
 cat <<EOF
 export PYTHONPATH
