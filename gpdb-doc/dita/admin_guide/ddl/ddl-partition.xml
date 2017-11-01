@@ -724,9 +724,9 @@ WITH TABLE jan12;
       <body>
         <p>Splitting a partition divides a partition into two partitions. You can split a partition
           using the <codeph>ALTER TABLE</codeph> command. You can split partitions only at the
-          lowest level of your partition hierarchy (partitions that contain data) and only range
-          partitions can be split, not list partitions. The split value you specify goes into the
-            <i>latter</i> partition. </p>
+          lowest level of your partition hierarchy (partitions that contain data). For a multi-level
+          partition design, only range partitions can be split, not list partitions. The split value
+          you specify goes into the <i>latter</i> partition. </p>
         <p>For example, to split a monthly partition into two with the first partition containing
           dates January 1-15 and the second partition containing dates January 16-31:</p>
         <p>
