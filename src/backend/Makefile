@@ -49,6 +49,11 @@ endif
 
 OBJS = $(SUBDIROBJS) $(LOCALOBJS) $(top_builddir)/src/port/libpgport_srv.a
 
+# Greenplum uses libpq to communicate between QD and QEs
+LIBS += $(libpq_builddir)/libpq_srv.a
+
+postgres: | submake-libpq
+
 ifeq ($(PORTNAME), darwin)
 LDOPTS = -Z
 endif
@@ -66,9 +71,6 @@ endif
 
 # Greenplum uses threads in the backend
 LIBS := $(LIBS) -lpthread
-
-# Greenplum uses libpq to communicate between QD and QEs
-OBJS := $(OBJS) $(addprefix $(top_builddir)/src/interfaces/libpq/,fe-protocol3_for_backend.o fe-connect_for_backend.o fe-exec.o pqexpbuffer.o fe-auth.o fe-misc.o fe-protocol2.o fe-secure.o getpeereid.o)
 
 ##########################################################################
 
