@@ -125,7 +125,7 @@ ALL_OBJS=$(addprefix $(top_srcdir)/, \
 # in a test program.
 #
 # The argument is a list of backend object files that should *not* be included
-BACKEND_OBJS=$(filter-out $(1), $(subst _for_backend,,$(ALL_OBJS)))
+BACKEND_OBJS=$(filter-out $(1), $(ALL_OBJS))
 
 # If we are using linker's wrap feature in unit test, add wrap flags for
 # those mocked functions
