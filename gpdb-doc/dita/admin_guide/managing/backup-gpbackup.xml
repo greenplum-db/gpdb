@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_yrr_hqw_sbb">
+  <title>Parallel Backup with gpbackup and gprestore</title>
+  <body>
+    <p><codeph>gpbackup</codeph> uses a more flexible locking model that enables you to run multiple
+      backup operations simultaneously, and does not prevent <codeph>CREATE TABLE</codeph> or
+        <codeph>ALTER TABLE</codeph> operations during the backup. <codeph>gpbackup</codeph> also
+      separates database object DDL operations from </p>
+  </body>
+</topic>
