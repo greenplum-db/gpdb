@@ -65,12 +65,6 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 	elog(DEBUG2, "pxfprotocol_validate_urls: uri %s", uri_string);
 	GPHDUri    *uri = parseGPHDUri(uri_string);
 
-	/* Test that Fragmenter or Profile was specified in the URI */
-	if (!GPHDUri_opt_exists(uri, FRAGMENTER) && !GPHDUri_opt_exists(uri, PXF_PROFILE))
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("FRAGMENTER or PROFILE option must exist in %s", uri->uri)));
-
 	/* No duplicate options. */
 	GPHDUri_verify_no_duplicate_options(uri);
 
@@ -78,9 +72,9 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 	if (!GPHDUri_opt_exists(uri, PXF_PROFILE))
 	{
 		List	   *coreOptions = list_make2(ACCESSOR, RESOLVER);
-
-		if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
+        if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
 			coreOptions = lcons(FRAGMENTER, coreOptions);
+
 		GPHDUri_verify_core_options_exist(uri, coreOptions);
 		list_free(coreOptions);
 	}
@@ -111,7 +105,7 @@ pxfprotocol_export(PG_FUNCTION_ARGS)
 	/* first call -- do any desired init */
 	if (context == NULL)
 	{
-		context = create_context(fcinfo, true);
+		context = create_context(fcinfo, false);
 		EXTPROTOCOL_SET_USER_CTX(fcinfo, context);
 		gpbridge_export_start(context);
 	}
