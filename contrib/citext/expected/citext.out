@@ -91,30 +91,6 @@ SELECT 'A'::text  <> 'a'::citext AS t;
  t
 (1 row)
 
-SELECT 'B'::citext <  'a'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
-SELECT 'B'::citext <= 'a'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >  'B'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >= 'B'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
 -- Test implicit casting. citext casts to varchar, but not vice-versa.
 SELECT 'a'::citext = 'a'::varchar   AS t;
  t 
@@ -123,30 +99,6 @@ SELECT 'a'::citext = 'a'::varchar   AS t;
 (1 row)
 
 SELECT 'A'::varchar  <> 'a'::citext AS t;
- t 
----
- t
-(1 row)
-
-SELECT 'B'::citext <  'a'::varchar AS t;  -- varchar wins.
- t 
----
- t
-(1 row)
-
-SELECT 'B'::citext <= 'a'::varchar AS t;  -- varchar wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >  'B'::varchar AS t;  -- varchar wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >= 'B'::varchar AS t;  -- varchar wins.
  t 
 ---
  t

@@ -28,21 +28,9 @@ SELECT 'a'::citext <= 'B'::citext AS t;
 SELECT 'a'::citext = 'a'::text   AS t;
 SELECT 'A'::text  <> 'a'::citext AS t;
 
-SELECT 'B'::citext <  'a'::text AS t;  -- text wins.
-SELECT 'B'::citext <= 'a'::text AS t;  -- text wins.
-
-SELECT 'a'::citext >  'B'::text AS t;  -- text wins.
-SELECT 'a'::citext >= 'B'::text AS t;  -- text wins.
-
 -- Test implicit casting. citext casts to varchar, but not vice-versa.
 SELECT 'a'::citext = 'a'::varchar   AS t;
 SELECT 'A'::varchar  <> 'a'::citext AS t;
-
-SELECT 'B'::citext <  'a'::varchar AS t;  -- varchar wins.
-SELECT 'B'::citext <= 'a'::varchar AS t;  -- varchar wins.
-
-SELECT 'a'::citext >  'B'::varchar AS t;  -- varchar wins.
-SELECT 'a'::citext >= 'B'::varchar AS t;  -- varchar wins.
 
 -- A couple of longer examples to ensure that we don't get any issues with bad
 -- conversions to char[] in the c code. Yes, I did do this.
