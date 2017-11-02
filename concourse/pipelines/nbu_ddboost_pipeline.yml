@@ -231,7 +231,7 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
-  - task: setup_netbackup
+  - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
@@ -280,7 +280,7 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
-  - task: setup_netbackup
+  - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
@@ -329,7 +329,7 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
-  - task: setup_netbackup
+  - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
@@ -374,6 +374,31 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
+  - task: ddboost_pre_test_setup
+    tags: ["ddboost"]
+    config:
+      platform: linux
+      inputs:
+       - name: ccp_src
+       - name: gpdb_src
+       - name: cluster_env_files
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: '6'
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -ex
+          ccp_src/aws/setup_ssh_to_cluster.sh
+          scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
+          export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
+          source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
+    on_failure:
+      <<: *ccp_destroy
   - task: run_tests
     tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -381,7 +406,6 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=ddboostsetup,ddpartI
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
-      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
@@ -414,6 +438,31 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
+  - task: ddboost_pre_test_setup
+    tags: ["ddboost"]
+    config:
+      platform: linux
+      inputs:
+       - name: ccp_src
+       - name: gpdb_src
+       - name: cluster_env_files
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: '6'
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -ex
+          ccp_src/aws/setup_ssh_to_cluster.sh
+          scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
+          export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
+          source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
+    on_failure:
+      <<: *ccp_destroy
   - task: run_tests
     tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -421,7 +470,6 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=ddboostsetup,ddpartII
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
-      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
@@ -454,6 +502,31 @@ jobs:
       <<: *ccp_gen_cluster_default_params
     on_failure:
       <<: *ccp_destroy
+  - task: ddboost_pre_test_setup
+    tags: ["ddboost"]
+    config:
+      platform: linux
+      inputs:
+       - name: ccp_src
+       - name: gpdb_src
+       - name: cluster_env_files
+      image_resource:
+        type: docker-image
+        source:
+          repository: centos
+          tag: '6'
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          set -ex
+          ccp_src/aws/setup_ssh_to_cluster.sh
+          scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
+          export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}};
+          source gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost
+    on_failure:
+      <<: *ccp_destroy
   - task: run_tests
     tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -461,7 +534,6 @@ jobs:
     params:
       BEHAVE_FLAGS: --tags=ddboostsetup,ddpartIII
       CUSTOM_ENV: export DD_SOURCE_HOST={{datadomain_source_host}}; export DD_DEST_HOST={{datadomain_dest_host}}; export DD_USER={{datadomain_user}}; export DD_PASSWORD={{datadomain_password}};
-      PRE_TEST_SCRIPT: "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; setup_ddboost"
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
