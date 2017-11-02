@@ -2,18 +2,35 @@ create schema qp_dml_oids;
 set search_path='qp_dml_oids';
 
 DROP TABLE IF EXISTS dml_ao;
-CREATE TABLE dml_ao (a int , b int default -1, c text) WITH (appendonly = true, oids = true) DISTRIBUTED BY (a);
-INSERT INTO dml_ao VALUES(generate_series(1,2),generate_series(1,2),'r');
 
-INSERT INTO dml_ao VALUES(NULL,NULL,NULL);
+-- Create a table with OIDS, with a few rows
+--
+-- GPDB doesn't guarantee that OIDs on a user table are unique across nodes. So to
+-- make sure that the OIDs are unique in this test, all the rows have the same
+-- distribution key.
+CREATE TABLE dml_ao (a int , b int default -1, c text) WITH (appendonly = true, oids = true) DISTRIBUTED BY (a);
+INSERT INTO dml_ao VALUES(1, 1, 'r');
+INSERT INTO dml_ao VALUES(1, 2, 'r');
+INSERT INTO dml_ao VALUES(1,NULL,NULL);
 
 --
--- DDL on AO/CO tables with OIDS(Negative Test)
+-- Check that UPDATE doesn't change the OIDs of existing rows.
 --
 DROP TABLE IF EXISTS tempoid;
 CREATE TABLE tempoid as SELECT oid,a FROM dml_ao ORDER BY 1;
 UPDATE dml_ao SET a = 100;
-SELECT * FROM ( (SELECT COUNT(*) FROM dml_ao) UNION (SELECT COUNT(*) FROM tempoid, dml_ao WHERE tempoid.oid = dml_ao.oid AND tempoid.gp_segment_id = dml_ao.gp_segment_id))foo;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+
+-- Repeat the test a few times, just to make sure that at least one of these
+-- UPDATEs moved the tuples across segments. To make sure that that doesn't
+-- change the OIDs either.
+UPDATE dml_ao SET a = 101;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+
+UPDATE dml_ao SET a = 102;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+
+
 
 DROP TABLE IF EXISTS dml_heap_check_r;
 CREATE TABLE dml_heap_check_r (
