@@ -4,7 +4,7 @@ MODULES = citext
 
 EXTENSION = citext
 DATA = citext--1.0.sql citext--1.1.sql citext--1.0--1.1.sql \
-       citext--1.1--1.0.sql citext--unpackaged--1.0.sql
+       citext--1.1--1.0.sql
 PGFILEDESC = "citext - case-insensitive character string data type"
 
 REGRESS = citext
