@@ -154,8 +154,8 @@ When populating the `pxflookup` HBase table, add rows to the table such that the
 For example, to use indirect mapping with the `order_info` table, add these entries to the `pxflookup` table:
 
 ``` pre
-hbase(main):> put 'pxflookup', 'order_id', 'mapping:pname', 'product:name'
-hbase(main):> put 'pxflookup', 'order_id', 'mapping:zip', 'shipping_info:zipcode'
+hbase(main):> put 'pxflookup', 'order_info', 'mapping:pname', 'product:name'
+hbase(main):> put 'pxflookup', 'order_info', 'mapping:zip', 'shipping_info:zipcode'
 ```
 
 and create a Greenplum Database external table using the following `CREATE EXTERNAL TABLE` syntax:
