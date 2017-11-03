@@ -53,7 +53,7 @@
         to <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph>. <codeph>gpbackup</codeph>
         uses a more flexible locking scheme than <codeph>gpcrondump</codeph>, which enables you to
         run multiple backup tasks simultaneously and does not prohibit <codeph>CREATE</codeph> or
-          <codeph>ALTER TABLE</codeph> operations during the backup. Backup artificats created with
+          <codeph>ALTER TABLE</codeph> operations during the backup. Backup files created with
           <codeph>gpbackup</codeph> are designed to provide future capabilities for restoring
         individual database objects along with their dependencies, such as functions and required
         user-defined datatypes. See <xref href="backup-gpbackup.xml#topic_yrr_hqw_sbb"/> for more
