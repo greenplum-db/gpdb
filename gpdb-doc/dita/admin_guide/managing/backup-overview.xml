@@ -50,7 +50,14 @@
         change without notice in future releases.</note>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are new utilities that are
         designed to improve the performance, functionality, and reliability of backups as compared
-        to <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph>. </p>
+        to <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph>. <codeph>gpbackup</codeph>
+        uses a more flexible locking scheme than <codeph>gpcrondump</codeph>, which enables you to
+        run multiple backup tasks simultaneously and does not prohibit <codeph>CREATE</codeph> or
+          <codeph>ALTER TABLE</codeph> operations during the backup. Backup artificats created with
+          <codeph>gpbackup</codeph> are designed to provide future capabilities for restoring
+        individual database objects along with their dependencies, such as functions and required
+        user-defined datatypes. See <xref href="backup-gpbackup.xml#topic_yrr_hqw_sbb"/> for more
+        information.</p>
     </section>
     <section>
       <title id="kk155276">Non-Parallel Backup with pg_dump</title>
