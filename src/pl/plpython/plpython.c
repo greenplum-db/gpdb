@@ -2904,6 +2904,7 @@ static Datum
 PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 {
 	char	   *str;
+	Datum		rv;
 
 	Assert(plrv != Py_None);
 
@@ -2949,10 +2950,12 @@ PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 					 errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g. \"[('foo')]\"")));
 	}
 
-	return InputFunctionCall(&arg->typfunc,
-							 str,
-							 arg->typioparam,
-							 typmod);
+	rv = InputFunctionCall(&arg->typfunc,
+						   str,
+						   arg->typioparam,
+						   typmod);
+	pfree(str);
+	return rv;
 }
 
 static Datum
