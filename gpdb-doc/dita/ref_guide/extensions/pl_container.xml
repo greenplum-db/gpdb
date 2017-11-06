@@ -177,12 +177,19 @@
         configuration. The utility adds the Docker image to all Greenplum Database hosts and updates
         configuration information on all the hosts. For information about
           <codeph>plcontainer</codeph>, see <xref href="#topic_rw3_52s_dw" format="dita"/>.</p>
-      <p>Download the <codeph>tar.gz</codeph> file that contain the Docker images from <xref
-          href="https://network.pivotal.io/products/pivotal-gpdb" scope="external" format="html"
-          class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
+      <!--Pivotal conent-->
+      <p otherprops="pivotal">Download the <codeph>tar.gz</codeph> file that contain the Docker
+        images from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
+          format="html" class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
           <li><codeph>plcontainer-python-images-0.9.3.tar.gz</codeph></li>
           <li><codeph>plcontainer-r-images-0.9.3.tar.gz</codeph></li>
         </ul></p>
+      <!--oss only conent-->
+      <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
+        Docker images that can be used with PL/Container. You can build a Docker image to run
+        PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub
+        repository at <xref href="https://github.com/greenplum-db/plcontainer" format="html"
+          scope="external">https://github.com/greenplum-db/plcontainer</xref>.</p>
       <p>Install the Docker images on the Greenplum Database hosts. These examples use the
           <codeph>plcontainer</codeph> utility to install Docker images for Python and R and add the
         images to the PL/Container configuration. The utility installs the images and configures all
