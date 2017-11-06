@@ -329,16 +329,4 @@ NOTICE:  Success:
 -- Clean up. We don't want to leave the corrupt tables lying around!
 reset search_path;
 DROP SCHEMA corrupt_heap_checksum CASCADE;
-NOTICE:  drop cascades to table corrupt_heap_checksum.trigger_recovery_on_primaries
-NOTICE:  drop cascades to table corrupt_heap_checksum.flush_xlog_page_to_disk
-NOTICE:  drop cascades to table corrupt_heap_checksum.mark_buffer_dirty_hint
-NOTICE:  drop cascades to table corrupt_heap_checksum.corrupt_bitmap_index
-NOTICE:  drop cascades to table corrupt_heap_checksum.corrupt_btree_index
-NOTICE:  drop cascades to table corrupt_heap_checksum.corrupt_toast_table
-NOTICE:  drop cascades to table corrupt_heap_checksum.corrupt_table
-NOTICE:  drop cascades to function corrupt_heap_checksum.invalidate_buffers_for_rel(text)
-NOTICE:  drop cascades to function corrupt_heap_checksum.corrupt_file(text,integer)
-NOTICE:  drop cascades to function corrupt_heap_checksum.get_index_path(regclass)
-NOTICE:  drop cascades to function corrupt_heap_checksum.get_toast_name(regclass)
-NOTICE:  drop cascades to function corrupt_heap_checksum.get_toast_path(regclass)
-NOTICE:  drop cascades to function corrupt_heap_checksum.get_relation_path(regclass)
+NOTICE:  drop cascades to 13 other objects

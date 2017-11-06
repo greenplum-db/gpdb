@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.105 2008/03/28 00:21:56 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.107 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,6 +27,7 @@
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 #include "utils/relcache.h"
+
 #include "catalog/gp_persistent.h"
 
 

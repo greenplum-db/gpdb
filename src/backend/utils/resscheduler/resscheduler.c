@@ -35,6 +35,7 @@
 #include "rewrite/rewriteHandler.h"
 #include "storage/ipc.h"
 #include "storage/proc.h"
+#include "storage/lmgr.h"
 #include "tcop/tcopprot.h"
 #include "tcop/pquery.h"
 #include "tcop/utility.h"

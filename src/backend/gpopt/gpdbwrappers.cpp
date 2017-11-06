@@ -2779,8 +2779,7 @@ gpdb::IndexOpProperties
 	Oid opno,
 	Oid opfamily,
 	int *strategy,
-	Oid *subtype,
-	bool *recheck
+	Oid *subtype
 	)
 {
 	GP_WRAP_START;
@@ -2791,7 +2790,7 @@ gpdb::IndexOpProperties
 		// type is simply ignored.
 		Oid	lefttype;
 
-		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype, recheck);
+		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype);
 		return;
 	}
 	GP_WRAP_END;

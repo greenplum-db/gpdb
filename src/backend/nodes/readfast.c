@@ -35,6 +35,7 @@
 #include "nodes/readfuncs.h"
 #include "nodes/relation.h"
 #include "catalog/pg_class.h"
+#include "catalog/heap.h"
 #include "cdb/cdbgang.h"
 
 
@@ -408,7 +409,7 @@ _readResTarget(void)
 	READ_STRING_FIELD(name);
 	READ_NODE_FIELD(indirection);
 	READ_NODE_FIELD(val);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -700,9 +701,7 @@ _readAConst(void)
 	 		break;
 	}
 
-	local_node->typeName = NULL;
-	READ_NODE_FIELD(typeName);
-    READ_INT_FIELD(location);   /*CDB*/
+    READ_LOCATION_FIELD(location);   /*CDB*/
 	READ_DONE();
 }
 
@@ -783,7 +782,7 @@ _readAExpr(void)
 
 	READ_NODE_FIELD(lexpr);
 	READ_NODE_FIELD(rexpr);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -916,7 +915,7 @@ _readSubLink(void)
 	READ_ENUM_FIELD(subLinkType, SubLinkType);
 	READ_NODE_FIELD(testexpr);
 	READ_NODE_FIELD(operName);
-	READ_INT_FIELD(location);   /*CDB*/
+	READ_LOCATION_FIELD(location);   /*CDB*/
 	READ_NODE_FIELD(subselect);
 
 	READ_DONE();
@@ -1730,8 +1729,6 @@ readIndexScanFields(IndexScan *local_node)
 	READ_OID_FIELD(indexid);
 	READ_NODE_FIELD(indexqual);
 	READ_NODE_FIELD(indexqualorig);
-	READ_NODE_FIELD(indexstrategy);
-	READ_NODE_FIELD(indexsubtype);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
 
 	if (isDynamicScan(&local_node->scan))
@@ -1770,8 +1767,17 @@ _readBitmapIndexScan(void)
 {
 	READ_LOCALS(BitmapIndexScan);
 
-	/* BitmapIndexScan has some content from IndexScan. */
-	readIndexScanFields((IndexScan *)local_node);
+	readScanInfo((Scan *)local_node);
+
+	READ_OID_FIELD(indexid);
+	READ_NODE_FIELD(indexqual);
+	READ_NODE_FIELD(indexqualorig);
+
+	if (isDynamicScan(&local_node->scan))
+	{
+		ALLOCATE_LOCAL(local_node->logicalIndexInfo, LogicalIndexInfo, 1 /* single node allocation  */);
+		readLogicalIndexInfo(local_node->logicalIndexInfo);
+	}
 
 	READ_DONE();
 }
@@ -2450,6 +2456,16 @@ _readFileSpaceEntry(void)
 	READ_DONE();
 }
 
+static DropFileSpaceStmt *
+_readDropFileSpaceStmt(void)
+{
+	READ_LOCALS(DropFileSpaceStmt);
+
+	READ_STRING_FIELD(filespacename);
+	READ_BOOL_FIELD(missing_ok);
+
+	READ_DONE();
+}
 
 static CreateTableSpaceStmt *
 _readCreateTableSpaceStmt(void)
@@ -2459,6 +2475,17 @@ _readCreateTableSpaceStmt(void)
 	READ_STRING_FIELD(tablespacename);
 	READ_STRING_FIELD(owner);
 	READ_STRING_FIELD(filespacename);
+
+	READ_DONE();
+}
+
+static DropTableSpaceStmt *
+_readDropTableSpaceStmt(void)
+{
+	READ_LOCALS(DropTableSpaceStmt);
+
+	READ_STRING_FIELD(tablespacename);
+	READ_BOOL_FIELD(missing_ok);
 
 	READ_DONE();
 }
@@ -2647,6 +2674,21 @@ _readPlaceHolderInfo(void)
 	READ_BITMAPSET_FIELD(ph_may_need);
 	READ_INT_FIELD(ph_width);
 	
+	READ_DONE();
+}
+
+static CookedConstraint *
+_readCookedConstraint(void)
+{
+	READ_LOCALS(CookedConstraint);
+
+	READ_ENUM_FIELD(contype,ConstrType);
+	READ_STRING_FIELD(name);
+	READ_INT_FIELD(attnum);
+	READ_NODE_FIELD(expr);
+	READ_BOOL_FIELD(is_local);
+	READ_INT_FIELD(inhcount);
+
 	READ_DONE();
 }
 
@@ -3443,13 +3485,19 @@ readNodeBinary(void)
 			case T_CreateFileSpaceStmt:
 				return_value = _readCreateFileSpaceStmt();
 				break;
-
 			case T_FileSpaceEntry:
 				return_value = _readFileSpaceEntry();
+				break;
+			case T_DropFileSpaceStmt:
+				return_value = _readDropFileSpaceStmt();
 				break;
 
 			case T_CreateTableSpaceStmt:
 				return_value = _readCreateTableSpaceStmt();
+				break;
+
+			case T_DropTableSpaceStmt:
+				return_value = _readDropTableSpaceStmt();
 				break;
 
 			case T_CreateQueueStmt:
@@ -3510,6 +3558,10 @@ readNodeBinary(void)
 				break;
 			case T_PlaceHolderInfo:
 				return_value = _readPlaceHolderInfo();
+				break;
+
+			case T_CookedConstraint:
+				return_value = _readCookedConstraint();
 				break;
 
 

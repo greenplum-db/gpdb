@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_utils.c,v 1.9.2.2 2008/06/19 16:52:31 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/ts_utils.c,v 1.12 2008/06/19 16:52:24 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -398,7 +398,7 @@ drop table dep_priv_test;
 
 -- clean up
 
-\c regression
+\c
 
 DROP FUNCTION testfunc2(int);
 DROP FUNCTION testfunc4(boolean);

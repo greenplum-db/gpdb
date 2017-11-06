@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.97 2008/04/06 23:43:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.100 2008/05/15 22:39:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -76,6 +76,7 @@ enum PLpgSQL_stmt_types
 	PLPGSQL_STMT_BLOCK,
 	PLPGSQL_STMT_ASSIGN,
 	PLPGSQL_STMT_IF,
+	PLPGSQL_STMT_CASE,
 	PLPGSQL_STMT_LOOP,
 	PLPGSQL_STMT_WHILE,
 	PLPGSQL_STMT_FORI,
@@ -106,7 +107,8 @@ enum
 	PLPGSQL_RC_OK,
 	PLPGSQL_RC_EXIT,
 	PLPGSQL_RC_RETURN,
-	PLPGSQL_RC_CONTINUE
+	PLPGSQL_RC_CONTINUE,
+	PLPGSQL_RC_RERAISE
 };
 
 /* ----------
@@ -117,6 +119,18 @@ enum
 {
 	PLPGSQL_GETDIAG_ROW_COUNT,
 	PLPGSQL_GETDIAG_RESULT_OID
+};
+
+/* --------
+ * RAISE statement options
+ * --------
+ */
+enum
+{
+	PLPGSQL_RAISEOPTION_ERRCODE,
+	PLPGSQL_RAISEOPTION_MESSAGE,
+	PLPGSQL_RAISEOPTION_DETAIL,
+	PLPGSQL_RAISEOPTION_HINT
 };
 
 
@@ -380,6 +394,25 @@ typedef struct
 } PLpgSQL_stmt_if;
 
 
+typedef struct					/* CASE statement */
+{
+	int			cmd_type;
+	int			lineno;
+	PLpgSQL_expr *t_expr;		/* test expression, or NULL if none */
+	int			t_varno;		/* var to store test expression value into */
+	List	   *case_when_list;	/* List of PLpgSQL_case_when structs */
+	bool		have_else;		/* flag needed because list could be empty */
+	List	   *else_stmts;		/* List of statements */
+} PLpgSQL_stmt_case;
+
+typedef struct					/* one arm of CASE statement */
+{
+	int			lineno;
+	PLpgSQL_expr *expr;			/* boolean expression for this case */
+	List	   *stmts;			/* List of statements */
+} PLpgSQL_case_when;
+
+
 typedef struct
 {								/* Unconditional LOOP statement		*/
 	int			cmd_type;
@@ -532,7 +565,9 @@ typedef struct
 {								/* RETURN QUERY statement */
 	int			cmd_type;
 	int			lineno;
-	PLpgSQL_expr *query;
+	PLpgSQL_expr *query;		/* if static query */
+	PLpgSQL_expr *dynquery;		/* if dynamic query (RETURN QUERY EXECUTE) */
+	List	   *params;			/* USING arguments for dynamic query */
 } PLpgSQL_stmt_return_query;
 
 typedef struct
@@ -540,9 +575,17 @@ typedef struct
 	int			cmd_type;
 	int			lineno;
 	int			elog_level;
-	char	   *message;
-	List	   *params;			/* list of expressions */
+	char	   *condname;		/* condition name, SQLSTATE, or NULL */
+	char	   *message;		/* old-style message format literal, or NULL */
+	List	   *params;			/* list of expressions for old-style message */
+	List	   *options;		/* list of PLpgSQL_raise_option */
 } PLpgSQL_stmt_raise;
+
+typedef struct
+{								/* RAISE statement option */
+	int 		opt_type;
+	PLpgSQL_expr *expr;
+} PLpgSQL_raise_option;
 
 
 typedef struct
@@ -780,6 +823,8 @@ extern PLpgSQL_variable *plpgsql_build_variable(const char *refname, int lineno,
 					   bool add2namespace);
 extern PLpgSQL_rec *plpgsql_build_record(const char *refname, int lineno,
 										 bool add2namespace);
+extern int	plpgsql_recognize_err_condition(const char *condname,
+											bool allow_sqlstate);
 extern PLpgSQL_condition *plpgsql_parse_err_condition(char *condname);
 extern void plpgsql_adddatum(PLpgSQL_datum *new);
 extern int	plpgsql_add_initdatums(int **varnos);

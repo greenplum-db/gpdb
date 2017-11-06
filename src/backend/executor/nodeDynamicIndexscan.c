@@ -213,8 +213,6 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		ExecIndexBuildScanKeys((PlanState *) indexState,
 						   indexState->iss_RelationDesc,
 						   dynamicIndexScan->indexqual,
-						   dynamicIndexScan->indexstrategy,
-						   dynamicIndexScan->indexsubtype,
 						   &indexState->iss_ScanKeys,
 						   &indexState->iss_NumScanKeys,
 						   &indexState->iss_RuntimeKeys,

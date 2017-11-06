@@ -8,16 +8,17 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/hio.c,v 1.68 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/hio.c,v 1.72 2008/07/13 20:45:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/hio.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
+#include "storage/lmgr.h"
 
 
 /*
@@ -106,7 +107,7 @@ RelationGetBufferForTuple(Relation relation, Size len,
 						  Buffer otherBuffer, bool use_fsm)
 {
 	Buffer		buffer = InvalidBuffer;
-	Page		pageHeader;
+	Page		page;
 	Size		pageFreeSpace,
 				saveFreeSpace;
 	BlockNumber targetBlock,
@@ -219,8 +220,8 @@ RelationGetBufferForTuple(Relation relation, Size len,
 		 * Now we can check to see if there's enough free space here. If so,
 		 * we're done.
 		 */
-		pageHeader = (Page) BufferGetPage(buffer);
-		pageFreeSpace = PageGetHeapFreeSpace(pageHeader);
+		page = BufferGetPage(buffer);
+		pageFreeSpace = PageGetHeapFreeSpace(page);
 		if (len + saveFreeSpace <= pageFreeSpace)
 		{
 			/* use this page as future insert target, too */
@@ -304,16 +305,16 @@ RelationGetBufferForTuple(Relation relation, Size len,
 	 * is empty (this should never happen, but if it does we don't want to
 	 * risk wiping out valid data).
 	 */
-	pageHeader = (Page) BufferGetPage(buffer);
+	page = BufferGetPage(buffer);
 
-	if (!PageIsNew((PageHeader) pageHeader))
+	if (!PageIsNew(page))
 		elog(ERROR, "page %u of relation \"%s\" should be empty but is not",
 			 BufferGetBlockNumber(buffer),
 			 RelationGetRelationName(relation));
 
-	PageInit(pageHeader, BufferGetPageSize(buffer), 0);
+	PageInit(page, BufferGetPageSize(buffer), 0);
 
-	if (len > PageGetHeapFreeSpace(pageHeader))
+	if (len > PageGetHeapFreeSpace(page))
 	{
 		/* We should not get here given the test at the top */
 		elog(PANIC, "tuple is too big: size %lu", (unsigned long) len);

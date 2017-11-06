@@ -55,6 +55,14 @@ WHERE p1.prolang = 0 OR p1.prorettype = 0 OR
 -----+---------
 (0 rows)
 
+-- prosrc should never be null or empty
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1
+WHERE prosrc IS NULL OR prosrc = '' OR prosrc = '-';
+ oid | proname 
+-----+---------
+(0 rows)
+
 -- pronargdefaults should be 0 iff proargdefaults is null
 SELECT p1.oid, p1.proname
 FROM pg_proc AS p1
@@ -62,6 +70,21 @@ WHERE (pronargdefaults <> 0) != (proargdefaults IS NOT NULL);
  oid | proname 
  -----+---------
  (0 rows)
+
+-- probin should be non-empty for C functions, null everywhere else
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1
+WHERE prolang = 13 AND (probin IS NULL OR probin = '' OR probin = '-');
+ oid | proname 
+-----+---------
+(0 rows)
+
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1
+WHERE prolang != 13 AND probin IS NOT NULL;
+ oid | proname 
+-----+---------
+(0 rows)
 
 -- Look for conflicting proc definitions (same names and input datatypes).
 -- (This test should be dead code now that we have the unique index
@@ -175,7 +198,6 @@ WHERE p1.oid != p2.oid AND
          proargtypes         |       proargtypes        
 -----------------------------+--------------------------
  integer                     | xid
- text                        | character
  smallint[]                  | integer[]
  smallint[]                  | bigint[]
  smallint[]                  | double precision[]
@@ -185,7 +207,7 @@ WHERE p1.oid != p2.oid AND
  timestamp without time zone | timestamp with time zone
  bit                         | bit varying
  anyarray                    | anyelement
-(11 rows)
+(10 rows)
 
 SELECT DISTINCT p1.proargtypes[2]::regtype, p2.proargtypes[2]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -851,7 +873,6 @@ ORDER BY 1, 2, 3;
         403 |            2 | <=
         403 |            2 | ~<=~
         403 |            3 | =
-        403 |            3 | ~=~
         403 |            4 | >=
         403 |            4 | >>=
         403 |            4 | ~>=~
@@ -859,7 +880,6 @@ ORDER BY 1, 2, 3;
         403 |            5 | >>
         403 |            5 | ~>~
         405 |            1 | =
-        405 |            1 | ~=~
         783 |            1 | <<
         783 |            1 | @@
         783 |            2 | &<
@@ -886,12 +906,11 @@ ORDER BY 1, 2, 3;
        3013 |            2 | <=
        3013 |            2 | ~<=~
        3013 |            3 | =
-       3013 |            3 | ~=~
        3013 |            4 | >=
        3013 |            4 | ~>=~
        3013 |            5 | >
        3013 |            5 | ~>~
-(47 rows)
+(44 rows)
 
 -- Check that all operators linked to by opclass entries have selectivity
 -- estimators.  This is not absolutely required, but it seems a reasonable
@@ -1024,9 +1043,11 @@ WHERE p1.amprocfamily = p3.oid AND p3.opfmethod = p2.oid AND
 
 -- Detect missing pg_amproc entries: should have as many support functions
 -- as AM expects for each datatype combination supported by the opfamily.
+-- GIN is a special case because it has an optional support function.
 SELECT p1.amname, p2.opfname, p3.amproclefttype, p3.amprocrighttype
 FROM pg_am AS p1, pg_opfamily AS p2, pg_amproc AS p3
 WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
+    p1.amname <> 'gin' AND
     p1.amsupport != (SELECT count(*) FROM pg_amproc AS p4
                      WHERE p4.amprocfamily = p2.oid AND
                            p4.amproclefttype = p3.amproclefttype AND
@@ -1035,15 +1056,40 @@ WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
 --------+---------+----------------+-----------------
 (0 rows)
 
+-- Similar check for GIN, allowing one optional proc
+SELECT p1.amname, p2.opfname, p3.amproclefttype, p3.amprocrighttype
+FROM pg_am AS p1, pg_opfamily AS p2, pg_amproc AS p3
+WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
+    p1.amname = 'gin' AND
+    p1.amsupport - 1 >  (SELECT count(*) FROM pg_amproc AS p4
+                         WHERE p4.amprocfamily = p2.oid AND
+                           p4.amproclefttype = p3.amproclefttype AND
+                           p4.amprocrighttype = p3.amprocrighttype);
+ amname | opfname | amproclefttype | amprocrighttype 
+--------+---------+----------------+-----------------
+(0 rows)
+
 -- Also, check if there are any pg_opclass entries that don't seem to have
--- pg_amproc support.
+-- pg_amproc support.  Again, GIN has to be checked separately.
 SELECT amname, opcname, count(*)
 FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
      LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
          amproclefttype = amprocrighttype AND amproclefttype = opcintype
+WHERE am.amname <> 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) != amsupport OR amprocfamily IS NULL;
- amname |   opcname    | count 
+amname | opcname | count 
+--------+---------+-------
+(0 rows)
+
+SELECT amname, opcname, count(*)
+FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
+     LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
+         amproclefttype = amprocrighttype AND amproclefttype = opcintype
+WHERE am.amname = 'gin'
+GROUP BY amname, amsupport, opcname, amprocfamily
+HAVING count(*) < amsupport - 1 OR amprocfamily IS NULL;
+  amname |   opcname    | count 
 --------+--------------+-------
  gin    | _complex_ops |     1
 (1 row)
@@ -1104,17 +1150,15 @@ WHERE p3.opfmethod = (SELECT oid FROM pg_am WHERE amname = 'hash')
      OR NOT physically_coercible(amproclefttype, proargtypes[0])
      OR amproclefttype != amprocrighttype)
 ORDER BY 1;
- amprocfamily | amprocnum |    proname     |      opfname       
---------------+-----------+----------------+--------------------
+ amprocfamily | amprocnum |    proname     |     opfname     
+--------------+-----------+----------------+-----------------
           435 |         1 | hashint4       | date_ops
          1999 |         1 | timestamp_hash | timestamptz_ops
          2222 |         1 | hashchar       | bool_ops
          2223 |         1 | hashvarlena    | bytea_ops
          2225 |         1 | hashint4       | xid_ops
          2226 |         1 | hashint4       | cid_ops
-         2229 |         1 | hashvarlena    | text_pattern_ops
-         2231 |         1 | hashvarlena    | bpchar_pattern_ops
-(8 rows)
+(6 rows)
 
 -- Support routines that are primary members of opfamilies must be immutable
 -- (else it suggests that the index ordering isn't fixed).  But cross-type

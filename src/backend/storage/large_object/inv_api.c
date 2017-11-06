@@ -24,7 +24,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/large_object/inv_api.c,v 1.131 2008/03/26 21:10:38 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/large_object/inv_api.c,v 1.134 2008/06/19 00:46:05 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -202,7 +202,8 @@ inv_create(Oid lobjId)
 	{
 		open_lo_relation();
 
-		lobjId = GetNewOidWithIndex(lo_heap_r, lo_index_r);
+		lobjId = GetNewOidWithIndex(lo_heap_r, LargeObjectLoidPagenoIndexId,
+									Anum_pg_largeobject_loid);
 	}
 
 	/*
@@ -246,12 +247,8 @@ inv_open(Oid lobjId, int flags, MemoryContext mcxt)
 	}
 	else if (flags & INV_READ)
 	{
-		/* be sure to copy snap into mcxt */
-		MemoryContext oldContext = MemoryContextSwitchTo(mcxt);
-
-		retval->snapshot = CopySnapshot(ActiveSnapshot);
+		retval->snapshot = RegisterSnapshot(GetActiveSnapshot());
 		retval->flags = IFS_RDLOCK;
-		MemoryContextSwitchTo(oldContext);
 	}
 	else
 		elog(ERROR, "invalid flags: %d", flags);
@@ -274,7 +271,7 @@ inv_close(LargeObjectDesc *obj_desc)
 {
 	Assert(PointerIsValid(obj_desc));
 	if (obj_desc->snapshot != SnapshotNow)
-		FreeSnapshot(obj_desc->snapshot);
+		UnregisterSnapshot(obj_desc->snapshot);
 	pfree(obj_desc);
 }
 
@@ -312,7 +309,7 @@ inv_getsize(LargeObjectDesc *obj_desc)
 	bool		found = false;
 	uint32		lastbyte = 0;
 	ScanKeyData skey[1];
-	IndexScanDesc sd;
+	SysScanDesc sd;
 	HeapTuple	tuple;
 
 	Assert(PointerIsValid(obj_desc));
@@ -324,8 +321,8 @@ inv_getsize(LargeObjectDesc *obj_desc)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(obj_desc->id));
 
-	sd = index_beginscan(lo_heap_r, lo_index_r,
-						 obj_desc->snapshot, 1, skey);
+	sd = systable_beginscan_ordered(lo_heap_r, lo_index_r,
+									obj_desc->snapshot, 1, skey);
 
 	/*
 	 * Because the pg_largeobject index is on both loid and pageno, but we
@@ -333,7 +330,7 @@ inv_getsize(LargeObjectDesc *obj_desc)
 	 * large object in reverse pageno order.  So, it's sufficient to examine
 	 * the first valid tuple (== last valid page).
 	 */
-	while ((tuple = index_getnext(sd, BackwardScanDirection)) != NULL)
+	while ((tuple = systable_getnext_ordered(sd, BackwardScanDirection)) != NULL)
 	{
 		Form_pg_largeobject data;
 		bytea	   *datafield;
@@ -357,7 +354,7 @@ inv_getsize(LargeObjectDesc *obj_desc)
 		break;
 	}
 
-	index_endscan(sd);
+	systable_endscan_ordered(sd);
 
 	if (!found)
 		ereport(ERROR,
@@ -416,7 +413,7 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 	int32		pageno = (int32) (obj_desc->offset / LOBLKSIZE);
 	uint32		pageoff;
 	ScanKeyData skey[2];
-	IndexScanDesc sd;
+	SysScanDesc sd;
 	HeapTuple	tuple;
 
 	Assert(PointerIsValid(obj_desc));
@@ -437,10 +434,10 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 				BTGreaterEqualStrategyNumber, F_INT4GE,
 				Int32GetDatum(pageno));
 
-	sd = index_beginscan(lo_heap_r, lo_index_r,
-						 obj_desc->snapshot, 2, skey);
+	sd = systable_beginscan_ordered(lo_heap_r, lo_index_r,
+									obj_desc->snapshot, 2, skey);
 
-	while ((tuple = index_getnext(sd, ForwardScanDirection)) != NULL)
+	while ((tuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 	{
 		Form_pg_largeobject data;
 		bytea	   *datafield;
@@ -451,7 +448,7 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 		data = (Form_pg_largeobject) GETSTRUCT(tuple);
 
 		/*
-		 * We assume the indexscan will deliver pages in order.  However,
+		 * We expect the indexscan will deliver pages in order.  However,
 		 * there may be missing pages if the LO contains unwritten "holes". We
 		 * want missing sections to read out as zeroes.
 		 */
@@ -496,7 +493,7 @@ inv_read(LargeObjectDesc *obj_desc, char *buf, int nbytes)
 			break;
 	}
 
-	index_endscan(sd);
+	systable_endscan_ordered(sd);
 
 	return nread;
 }
@@ -510,7 +507,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 	int			len;
 	int32		pageno = (int32) (obj_desc->offset / LOBLKSIZE);
 	ScanKeyData skey[2];
-	IndexScanDesc sd;
+	SysScanDesc sd;
 	HeapTuple	oldtuple;
 	Form_pg_largeobject olddata;
 	bool		neednextpage;
@@ -556,8 +553,8 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 				BTGreaterEqualStrategyNumber, F_INT4GE,
 				Int32GetDatum(pageno));
 
-	sd = index_beginscan(lo_heap_r, lo_index_r,
-						 obj_desc->snapshot, 2, skey);
+	sd = systable_beginscan_ordered(lo_heap_r, lo_index_r,
+									obj_desc->snapshot, 2, skey);
 
 	oldtuple = NULL;
 	olddata = NULL;
@@ -566,12 +563,12 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 	while (nwritten < nbytes)
 	{
 		/*
-		 * If possible, get next pre-existing page of the LO.  We assume the
+		 * If possible, get next pre-existing page of the LO.  We expect the
 		 * indexscan will deliver these in order --- but there may be holes.
 		 */
 		if (neednextpage)
 		{
-			if ((oldtuple = index_getnext(sd, ForwardScanDirection)) != NULL)
+			if ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 			{
 				if (HeapTupleHasNulls(oldtuple))		/* paranoia */
 					elog(ERROR, "null field found in pg_largeobject");
@@ -686,7 +683,7 @@ inv_write(LargeObjectDesc *obj_desc, const char *buf, int nbytes)
 		pageno++;
 	}
 
-	index_endscan(sd);
+	systable_endscan_ordered(sd);
 
 	CatalogCloseIndexes(indstate);
 
@@ -705,7 +702,7 @@ inv_truncate(LargeObjectDesc *obj_desc, int len)
 	int32		pageno = (int32) (len / LOBLKSIZE);
 	int			off;
 	ScanKeyData skey[2];
-	IndexScanDesc sd;
+	SysScanDesc sd;
 	HeapTuple	oldtuple;
 	Form_pg_largeobject olddata;
 	struct
@@ -744,15 +741,15 @@ inv_truncate(LargeObjectDesc *obj_desc, int len)
 				BTGreaterEqualStrategyNumber, F_INT4GE,
 				Int32GetDatum(pageno));
 
-	sd = index_beginscan(lo_heap_r, lo_index_r,
-						 obj_desc->snapshot, 2, skey);
+	sd = systable_beginscan_ordered(lo_heap_r, lo_index_r,
+									obj_desc->snapshot, 2, skey);
 
 	/*
 	 * If possible, get the page the truncation point is in. The truncation
 	 * point may be beyond the end of the LO or in a hole.
 	 */
 	olddata = NULL;
-	if ((oldtuple = index_getnext(sd, ForwardScanDirection)) != NULL)
+	if ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 	{
 		if (HeapTupleHasNulls(oldtuple))		/* paranoia */
 			elog(ERROR, "null field found in pg_largeobject");
@@ -847,12 +844,12 @@ inv_truncate(LargeObjectDesc *obj_desc, int len)
 	/*
 	 * Delete any pages after the truncation point
 	 */
-	while ((oldtuple = index_getnext(sd, ForwardScanDirection)) != NULL)
+	while ((oldtuple = systable_getnext_ordered(sd, ForwardScanDirection)) != NULL)
 	{
 		simple_heap_delete(lo_heap_r, &oldtuple->t_self);
 	}
 
-	index_endscan(sd);
+	systable_endscan_ordered(sd);
 
 	CatalogCloseIndexes(indstate);
 

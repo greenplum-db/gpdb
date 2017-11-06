@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/float.c,v 1.154 2008/03/10 12:39:22 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/float.c,v 1.157 2008/05/09 21:31:23 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2181,7 +2181,7 @@ float8_regr_accum(PG_FUNCTION_ARGS)
 
 		result = construct_array(transdatums, 6,
 								 FLOAT8OID,
-								 sizeof(float8), true /* float8 byval */, 'd');
+								 sizeof(float8), FLOAT8PASSBYVAL, 'd');
 
 		PG_RETURN_ARRAYTYPE_P(result);
 	}

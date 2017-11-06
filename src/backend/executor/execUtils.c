@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.155 2008/03/26 21:10:38 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execUtils.c,v 1.156 2008/07/26 19:15:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -143,13 +143,6 @@ CreateExecutorState(void)
 
 	estate->es_trig_target_relations = NIL;
 	estate->es_trig_tuple_slot = NULL;
-
-	estate->es_into_relation_descriptor = NULL;
-	estate->es_into_relation_is_bulkload = false;
-
-	MemSet(&estate->es_into_relation_last_heap_tid, 0, sizeof(ItemPointerData));
-	
-	estate->es_into_relation_bulkloadinfo = (struct MirroredBufferPoolBulkLoadInfo *) palloc0(sizeof (MirroredBufferPoolBulkLoadInfo));
 
 	estate->es_param_list_info = NULL;
 	estate->es_param_exec_vals = NULL;

@@ -36,7 +36,7 @@ typedef struct xl_tblspc_drop_rec
 
 
 extern void CreateTableSpace(CreateTableSpaceStmt *stmt);
-extern void RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok);
+extern void DropTableSpace(DropTableSpaceStmt *stmt);
 extern void RenameTableSpace(const char *oldname, const char *newname);
 extern void AlterTableSpaceOwner(const char *name, Oid newOwnerId);
 

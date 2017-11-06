@@ -711,8 +711,10 @@ CTranslatorDXLToPlStmt::PisFromDXLIndexScan
 
 	pis->indexqual = plIndexConditions;
 	pis->indexqualorig = plIndexOrigConditions;
-	pis->indexstrategy = plIndexStratgey;
-	pis->indexsubtype = plIndexSubtype;
+	/*
+	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
+	 * available or needed in IndexScan. Ignore them.
+	 */
 	SetParamIds(pplan);
 
 	return (Plan *) pis;
@@ -864,14 +866,12 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions
 		// retrieve index strategy and subtype
 		INT iSN = 0;
 		OID oidIndexSubtype = InvalidOid;
-		BOOL fRecheck = false;
 		
 		OID oidCmpOperator = CTranslatorUtils::OidCmpOperator(pexprIndexCond);
 		GPOS_ASSERT(InvalidOid != oidCmpOperator);
 		OID oidOpFamily = CTranslatorUtils::OidIndexQualOpFamily(iAttno, CMDIdGPDB::PmdidConvert(pmdindex->Pmdid())->OidObjectId());
 		GPOS_ASSERT(InvalidOid != oidOpFamily);
-		gpdb::IndexOpProperties(oidCmpOperator, oidOpFamily, &iSN, &oidIndexSubtype, &fRecheck);
-		GPOS_ASSERT(!fRecheck);
+		gpdb::IndexOpProperties(oidCmpOperator, oidOpFamily, &iSN, &oidIndexSubtype);
 		
 		// create index qual
 		pdrgpindexqualinfo->Append(GPOS_NEW(m_pmp) CIndexQualInfo(iAttno, pexprIndexCond, pexprOrigIndexCond, (StrategyNumber) iSN, oidIndexSubtype));
@@ -3629,8 +3629,10 @@ CTranslatorDXLToPlStmt::PplanDIS
 
 	pdis->indexqual = plIndexConditions;
 	pdis->indexqualorig = plIndexOrigConditions;
-	pdis->indexstrategy = plIndexStratgey;
-	pdis->indexsubtype = plIndexSubtype;
+	/*
+	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
+	 * available or needed in IndexScan. Ignore them.
+	 */
 	SetParamIds(pplan);
 
 	return (Plan *) pdis;
@@ -5451,8 +5453,10 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 
 	pbis->indexqual = plIndexConditions;
 	pbis->indexqualorig = plIndexOrigConditions;
-	pbis->indexstrategy = plIndexStratgey;
-	pbis->indexsubtype = plIndexSubtype;
+	/*
+	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
+	 * available or needed in IndexScan. Ignore them.
+	 */
 	SetParamIds(pplan);
 
 	return pplan;

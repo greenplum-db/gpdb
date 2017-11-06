@@ -44,7 +44,8 @@ aocoalter_catalog_loaders:
 	-s storage/aoco_alter \
 	-s catalog/mpp25256 \
 	-s catalog/oid_inconsistency \
-	-s catalog/udf_exception_handling
+	-s catalog/udf_exception_handling \
+	-s storage/loaders
 
 storage_uao_and_transactionmanagement:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \

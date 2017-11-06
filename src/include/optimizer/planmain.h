@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.113 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/planmain.h,v 1.108 2008/05/02 21:26:10 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,10 +20,6 @@
 #include "nodes/relation.h"
 #include "optimizer/clauses.h" /* AggClauseCounts */
 #include "utils/uri.h"
-
-/* GUC parameters */
-#define DEFAULT_CURSOR_TUPLE_FRACTION 1.0 /* assume all rows will be fetched */
-extern double cursor_tuple_fraction;
 
 /*
  * A structure that contains information for planning GROUP BY 
@@ -67,6 +63,10 @@ typedef struct GroupContext
 	List **pcurrent_pathkeys;
 	bool *querynode_changed;
 } GroupContext;
+
+/* GUC parameters */
+#define DEFAULT_CURSOR_TUPLE_FRACTION 1.0 /* assume all rows will be fetched */
+extern double cursor_tuple_fraction;
 
 /*
  * prototypes for plan/planmain.c

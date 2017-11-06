@@ -182,6 +182,11 @@ RESET SESSION AUTHORIZATION;
 REVOKE ALL PRIVILEGES ON PROTOCOL demoprot FROM extprotu;
 DROP ROLE IF EXISTS extprotu;
 
+-- Test multi-object DROP
+CREATE PROTOCOL demoprot_droptest1 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+CREATE PROTOCOL demoprot_droptest2 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+DROP PROTOCOL demoprot_droptest1, demoprot_droptest2;
+
 --
 -- WET tests
 --

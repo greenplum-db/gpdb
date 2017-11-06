@@ -2986,33 +2986,35 @@ drop function if exists find_operator(query text, operator_name text);
 -- Check catalog table pg_type for new type anytable
     \x
     select * from pg_type where typname='anytable';
--[ RECORD 1 ]-+-------------
-typname       | anytable
-typnamespace  | 11
-typowner      | 10
-typlen        | -1
-typbyval      | f
-typtype       | p
-typisdefined  | t
-typdelim      | ,
-typrelid      | 0
-typelem       | 0
-typarray      | 0
-typinput      | anytable_in
-typoutput     | anytable_out
-typreceive    | -
-typsend       | -
-typmodin      | -
-typmodout     | -
-typanalyze    | -
-typalign      | d
-typstorage    | x
-typnotnull    | f
-typbasetype   | 0
-typtypmod     | -1
-typndims      | 0
-typdefaultbin | 
-typdefault    | 
+-[ RECORD 1 ]--+-------------
+typname        | anytable
+typnamespace   | 11
+typowner       | 10
+typlen         | -1
+typbyval       | f
+typtype        | p
+typcategory    | P
+typispreferred | f
+typisdefined   | t
+typdelim       | ,
+typrelid       | 0
+typelem        | 0
+typarray       | 0
+typinput       | anytable_in
+typoutput      | anytable_out
+typreceive     | -
+typsend        | -
+typmodin       | -
+typmodout      | -
+typanalyze     | -
+typalign       | d
+typstorage     | x
+typnotnull     | f
+typbasetype    | 0
+typtypmod      | -1
+typndims       | 0
+typdefaultbin  | 
+typdefault     | 
 
 -- Verify pg_proc catalog table for specific columns:
 -- # prorettype
@@ -3798,8 +3800,8 @@ LINE 1: ... SELECT * FROM project( TABLE( SELECT * FROM history ), $1);
     -- Cannot drop describe (callback) function 
     -- while there is dyr table function (project) is using it
     DROP FUNCTION project_desc(internal);
-NOTICE:  function project(anytable,integer) depends on function project_desc(internal)
 ERROR:  cannot drop function project_desc(internal) because other objects depend on it
+DETAIL:  function project(anytable,integer) depends on function project_desc(internal)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
     --start_ignore
     -- Drop dyr table function first

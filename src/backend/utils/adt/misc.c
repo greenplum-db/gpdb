@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/misc.c,v 1.59 2008/04/04 16:57:21 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/misc.c,v 1.63 2008/07/03 20:58:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -423,7 +423,7 @@ pg_get_keywords(PG_FUNCTION_ARGS)
 		tupdesc = CreateTemplateTupleDesc(3, false);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 1, "word",
 						   TEXTOID, -1, 0);
-		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "catcode",
+  		TupleDescInitEntry(tupdesc, (AttrNumber) 2, "catcode",
 						   CHAROID, -1, 0);
 		TupleDescInitEntry(tupdesc, (AttrNumber) 3, "catdesc",
 						   TEXTOID, -1, 0);

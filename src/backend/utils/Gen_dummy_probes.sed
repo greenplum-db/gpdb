@@ -3,7 +3,7 @@
 #
 # Copyright (c) 2008-2009, PostgreSQL Global Development Group
 #
-# $PostgreSQL: pgsql/src/backend/utils/Gen_dummy_probes.sed,v 1.4 2009/01/01 17:23:48 momjian Exp $
+# $PostgreSQL: pgsql/src/backend/utils/Gen_dummy_probes.sed,v 1.2 2008/08/01 13:16:09 alvherre Exp $
 #-------------------------------------------------------------------------
 
 /^[ 	]*probe /!d

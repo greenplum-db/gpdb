@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/grant.sgml,v 1.67.2.1 2008/05/28 00:45:47 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/grant.sgml,v 1.70 2008/07/03 15:59:55 petere Exp $
 PostgreSQL documentation
 -->
 
@@ -170,8 +170,8 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
       <para>
        Allows <xref linkend="sql-update" endterm="sql-update-title"> of any
        column of the specified table.
-       (In practice, any nontrivial <command>UPDATE</command> command will require
-       <literal>SELECT</literal> privilege as well, since it must reference table
+       (In practice, any nontrivial <command>UPDATE</> command will require
+       <literal>SELECT</> privilege as well, since it must reference table
        columns to determine which rows to update, and/or to compute new
        values for columns.)
        <literal>SELECT ... FOR UPDATE</literal>
@@ -190,8 +190,8 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
       <para>
        Allows <xref linkend="sql-delete" endterm="sql-delete-title"> of a row
        from the specified table.
-       (In practice, any nontrivial <command>DELETE</command> command will require
-       <literal>SELECT</literal> privilege as well, since it must reference table
+       (In practice, any nontrivial <command>DELETE</> command will require
+       <literal>SELECT</> privilege as well, since it must reference table
        columns to determine which rows to delete.)
       </para>
      </listitem>
@@ -463,10 +463,12 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
     to obtain information about existing privileges, for example:
 <programlisting>
 =&gt; \z mytable
-                  Access privileges for database "lusitania"
- Schema |  Name   | Type  |                 Access privileges                 
---------+---------+-------+---------------------------------------------------
- public | mytable | table | {miriam=arwdxt/miriam,=r/miriam,admin=arw/miriam}
+                Access privileges
+ Schema |  Name   | Type  |  Access privileges   
+--------+---------+-------+----------------------
+ public | mytable | table | miriam=arwdxt/miriam
+                          : =r/miriam
+                          : admin=arw/miriam
 (1 row)
 </programlisting>
     The entries shown by <command>\z</command> are interpreted thus:

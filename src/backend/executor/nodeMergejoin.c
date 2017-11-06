@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.92 2008/08/14 18:47:58 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.91 2008/04/13 20:51:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -201,7 +201,6 @@ MJExamineQuals(List *mergeclauses,
 		int			op_strategy;
 		Oid			op_lefttype;
 		Oid			op_righttype;
-		bool		op_recheck;
 		RegProcedure cmpproc;
 		AclResult	aclresult;
 
@@ -235,12 +234,10 @@ MJExamineQuals(List *mergeclauses,
 		get_op_opfamily_properties(qual->opno, opfamily,
 								   &op_strategy,
 								   &op_lefttype,
-								   &op_righttype,
-								   &op_recheck);
+								   &op_righttype);
 		if (op_strategy != BTEqualStrategyNumber)		/* should not happen */
 			elog(ERROR, "cannot merge using non-equality operator %u",
 				 qual->opno);
-		Assert(!op_recheck);	/* never true for btree */
 
 		/* And get the matching support procedure (comparison function) */
 		cmpproc = get_opfamily_proc(opfamily,

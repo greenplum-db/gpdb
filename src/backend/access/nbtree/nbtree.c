@@ -12,7 +12,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtree.c,v 1.156.2.2 2008/11/13 17:42:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtree.c,v 1.161 2008/06/19 00:46:03 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,9 +20,12 @@
 
 #include "access/genam.h"
 #include "access/nbtree.h"
+#include "access/relscan.h"
 #include "catalog/index.h"
 #include "catalog/pg_namespace.h"
 #include "commands/vacuum.h"
+#include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
 #include "storage/lmgr.h"
@@ -520,6 +523,8 @@ btgettuple(PG_FUNCTION_ARGS)
 	bool		res;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
+	/* btree indexes are never lossy */
+	scan->xs_recheck = false;
 
 	/*
 	 * If we've already initialized this scan, we can just advance it in the

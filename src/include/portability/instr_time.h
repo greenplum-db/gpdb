@@ -153,6 +153,7 @@ GetTimerFrequency(void)
 	QueryPerformanceFrequency(&f);
 	return (double) f.QuadPart;
 }
+
 #endif   /* WIN32 */
 
 #endif   /* INSTR_TIME_H */

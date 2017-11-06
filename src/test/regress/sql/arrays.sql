@@ -356,12 +356,12 @@ select f1 from t1;
 update t1 set f1[5].q2 = 43;
 select f1 from t1;
 
-create or replace function unnest1(anyarray)
+create or replace function unnest1(anyarray) 
 returns setof anyelement as $$
 select $1[s] from generate_subscripts($1,1) g(s);
 $$ language sql immutable;
 
-create or replace function unnest2(anyarray)
+create or replace function unnest2(anyarray) 
 returns setof anyelement as $$
 select $1[s1][s2] from generate_subscripts($1,1) g1(s1),
                    generate_subscripts($1,2) g2(s2);

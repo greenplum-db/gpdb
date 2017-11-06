@@ -1086,7 +1086,6 @@ INFO:  Dispatch command to SINGLE content
 -- joins with function scans
 select * from  dd_singlecol_1 t1, generate_series(1,10) g where t1.a=g.g and t1.a=1 limit 10;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
  a | b | g 
 ---+---+---
  1 | 1 | 1

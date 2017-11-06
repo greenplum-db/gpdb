@@ -48,6 +48,7 @@
 #include "access/appendonlywriter.h"
 #include "cdb/cdbaocsam.h"
 #include "executor/executor.h"
+#include "storage/lmgr.h"
 
 #include "utils/debugbreak.h"
 #include "funcapi.h"

@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/opclasscmds.c,v 1.59 2008/03/26 21:10:37 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/opclasscmds.c,v 1.62 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,6 +19,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/oid_dispatch.h"
@@ -40,6 +41,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
@@ -57,7 +59,6 @@ typedef struct
 	int			number;			/* strategy or support proc number */
 	Oid			lefttype;		/* lefttype */
 	Oid			righttype;		/* righttype */
-	bool		recheck;		/* oper recheck flag (unused for proc) */
 } OpFamilyMember;
 
 
@@ -520,7 +521,6 @@ DefineOpClass(CreateOpClassStmt *stmt)
 				member = (OpFamilyMember *) palloc0(sizeof(OpFamilyMember));
 				member->object = operOid;
 				member->number = item->number;
-				member->recheck = item->recheck;
 				assignOperTypes(member, amoid, typeoid);
 				addFamilyMember(&operators, member, false);
 				break;
@@ -1003,7 +1003,6 @@ AlterOpFamilyAdd(List *opfamilyname, Oid amoid, Oid opfamilyoid,
 				member = (OpFamilyMember *) palloc0(sizeof(OpFamilyMember));
 				member->object = operOid;
 				member->number = item->number;
-				member->recheck = item->recheck;
 				assignOperTypes(member, amoid, InvalidOid);
 				addFamilyMember(&operators, member, false);
 				break;
@@ -1374,7 +1373,6 @@ storeOperators(List *opfamilyname, Oid amoid,
 		values[Anum_pg_amop_amoplefttype - 1] = ObjectIdGetDatum(op->lefttype);
 		values[Anum_pg_amop_amoprighttype - 1] = ObjectIdGetDatum(op->righttype);
 		values[Anum_pg_amop_amopstrategy - 1] = Int16GetDatum(op->number);
-		values[Anum_pg_amop_amopreqcheck - 1] = BoolGetDatum(op->recheck);
 		values[Anum_pg_amop_amopopr - 1] = ObjectIdGetDatum(op->object);
 		values[Anum_pg_amop_amopmethod - 1] = ObjectIdGetDatum(amoid);
 

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/src/bin/psql/mbprint.h,v 1.15 2009/11/25 20:26:31 tgl Exp $ */
+/* $PostgreSQL: pgsql/src/bin/psql/mbprint.h,v 1.12 2008/05/09 05:25:04 tgl Exp $ */
 #ifndef MBPRINT_H
 #define MBPRINT_H
 

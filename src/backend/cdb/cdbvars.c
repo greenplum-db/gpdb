@@ -115,11 +115,6 @@ int			gp_max_csv_line_length; /* max allowed len for csv data line in
 bool		gp_select_invisible = false;	/* debug mode to allow select to
 											 * see "invisible" rows */
 
-int			pgstat_track_activity_query_size = INT_MAX; /* max allowed len for
-														 * displaying the query
-														 * in pg_stat_activity
-														 * table */
-
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take
  * longer than our old hard-coded version -- so here is a tuneable version.

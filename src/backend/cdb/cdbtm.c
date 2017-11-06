@@ -3403,12 +3403,14 @@ assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source __attri
 	{
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
-			ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+			PushActiveSnapshot(GetTransactionSnapshot());
 
 			if (Gp_is_writer)
 			{
 				dumpSharedLocalSnapshot_forCursor();
 			}
+
+			PopActiveSnapshot();
 		}
 	}
 

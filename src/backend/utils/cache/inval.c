@@ -80,7 +80,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.84 2008/03/13 18:00:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/inval.c,v 1.86 2008/06/19 21:32:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,6 +96,7 @@
 #include "storage/smgr.h"
 #include "utils/inval.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/relcache.h"
 #include "utils/simex.h"
 #include "utils/syscache.h"
@@ -218,7 +219,7 @@ AddInvalidationMessage(InvalidationChunk **listHdr,
 	if (chunk == NULL)
 	{
 		/* First time through; create initial chunk */
-#define FIRSTCHUNKSIZE 16
+#define FIRSTCHUNKSIZE 32
 		chunk = (InvalidationChunk *)
 			MemoryContextAlloc(CurTransactionContext,
 							   sizeof(InvalidationChunk) +

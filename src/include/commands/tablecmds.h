@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.38 2008/03/19 18:38:30 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/commands/tablecmds.h,v 1.41 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,8 +53,7 @@ extern void	DefinePartitionedRelation(CreateStmt *stmt, Oid reloid);
 
 extern void EvaluateDeferredStatements(List *deferredStmts);
 
-extern bool RemoveRelation(const RangeVar *relation, DropBehavior behavior,
-						   DropStmt *stmt /* MPP */, char relkind);
+extern void RemoveRelations(DropStmt *drop);
 
 extern bool RelationToRemoveIsTemp(const RangeVar *relation, DropBehavior behavior);
 
@@ -64,7 +63,8 @@ extern void ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing);
 
 extern void AlterTableInternal(Oid relid, List *cmds, bool recurse);
 
-extern void AlterTableNamespace(RangeVar *relation, const char *newschema);
+extern void AlterTableNamespace(RangeVar *relation, const char *newschema,
+								ObjectType stmttype);
 
 extern void AlterTableNamespaceInternal(Relation rel, Oid oldNspOid,
 							Oid nspOid, ObjectAddresses *objsMoved);
@@ -120,9 +120,9 @@ extern Oid  rel_partition_get_master(Oid relid);
 
 extern Oid get_settable_tablespace_oid(char *tablespacename);
 
-extern List *
-MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
-				List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
+extern List * MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
+			List **supOids, List **supconstr, int *supOidCount, GpPolicy *policy);
+
 extern List *make_dist_clause(Relation rel);
 
 extern Oid transformFkeyCheckAttrs(Relation pkrel,

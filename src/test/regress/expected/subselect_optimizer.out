@@ -395,7 +395,6 @@ SELECT * FROM orders_view ORDER BY 1,2,5;
 (11 rows)
 
 DROP TABLE orderstest cascade;
-NOTICE:  drop cascades to rule _RETURN on view orders_view
 NOTICE:  drop cascades to view orders_view
 --
 -- Test cases to catch situations where rule rewriter fails to propagate

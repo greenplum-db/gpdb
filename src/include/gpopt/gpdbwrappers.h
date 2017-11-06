@@ -598,7 +598,7 @@ namespace gpdb {
 	void CheckRTPermissions(List *plRangeTable);
 	
 	// get index operator family properties
-	void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *subtype, bool *recheck);
+	void IndexOpProperties(Oid opno, Oid opfamily, int *strategy, Oid *subtype);
 	
 	// get oids of families this operator belongs to
 	List *PlScOpOpFamilies(Oid opno);

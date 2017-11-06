@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/initsplan.c,v 1.148 2009/02/25 03:30:37 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/initsplan.c,v 1.140 2008/06/27 20:54:37 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

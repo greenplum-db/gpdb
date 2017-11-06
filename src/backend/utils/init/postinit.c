@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.182 2008/03/26 21:10:39 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.184 2008/05/12 00:00:52 alvherre Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -38,8 +38,10 @@
 #include "postmaster/postmaster.h"
 #include "replication/walsender.h"
 #include "storage/backendid.h"
+#include "storage/bufmgr.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
+#include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
@@ -724,6 +726,16 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to connect in binary upgrade mode")));
 	}
+
+	/*
+	 * If we're trying to shut down, only superusers can connect.
+	 */
+	if (!am_superuser &&
+		MyProcPort != NULL &&
+		MyProcPort->canAcceptConnections == CAC_WAITBACKUP)
+		ereport(FATAL,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be superuser to connect during database shutdown")));
 
 	/*
 	 * Check a normal user hasn't connected to a superuser reserved slot.

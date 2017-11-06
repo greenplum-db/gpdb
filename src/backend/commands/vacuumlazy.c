@@ -38,7 +38,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.106 2008/03/26 21:10:38 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.107 2008/05/12 00:00:48 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -66,7 +66,9 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
+#include "storage/lmgr.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/pg_rusage.h"
@@ -404,7 +406,7 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 		elogif(Debug_appendonly_print_compaction, LOG,
 			   "Vacuum cleanup phase %s", RelationGetRelationName(onerel));
 
-		vacuum_appendonly_fill_stats(onerel, ActiveSnapshot,
+		vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
 									 &vacrelstats->rel_pages,
 									 &vacrelstats->rel_tuples,
 									 &vacrelstats->hasindex);

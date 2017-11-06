@@ -31,6 +31,7 @@
 #include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
+#include "storage/lmgr.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"

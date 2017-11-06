@@ -1101,7 +1101,9 @@ HINT:  Must be superuser to create a filespace.
 \c -
 -- bad name
 drop tablespace funky.regressionts1;
-ERROR:  tablespace name may not be qualified
+ERROR:  syntax error at or near "."
+LINE 1: drop tablespace funky.regressionts1;
+                             ^
 -- don't do this!
 drop filespace pg_system;
 ERROR:  cannot drop filespace pg_system because it is required by the database system

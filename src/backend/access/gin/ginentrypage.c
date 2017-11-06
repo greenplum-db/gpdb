@@ -8,13 +8,16 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			$PostgreSQL: pgsql/src/backend/access/gin/ginentrypage.c,v 1.12 2008/01/01 19:45:46 momjian Exp $
+ *			$PostgreSQL: pgsql/src/backend/access/gin/ginentrypage.c,v 1.17 2008/07/11 21:06:29 tgl Exp $
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
+
 #include "access/gin.h"
 #include "access/tuptoaster.h"
+#include "storage/bufmgr.h"
+#include "utils/rel.h"
 
 /*
  * forms tuple for entry tree. On leaf page, Index tuple has
@@ -35,14 +38,27 @@
  *		- ItemPointerGetBlockNumber(&itup->t_tid) contains block number of
  *		  root of posting tree
  *		- ItemPointerGetOffsetNumber(&itup->t_tid) contains magic number GIN_TREE_POSTING
+ *
+ * Storage of attributes of tuple are different for single and multicolumn index.
+ * For single-column index tuple stores only value to be indexed and for
+ * multicolumn variant it stores two attributes: column number of value and value. 
  */
 IndexTuple
-GinFormTuple(GinState *ginstate, Datum key, ItemPointerData *ipd, uint32 nipd)
+GinFormTuple(GinState *ginstate, OffsetNumber attnum, Datum key, ItemPointerData *ipd, uint32 nipd)
 {
-	bool		isnull = FALSE;
+	bool		isnull[2] = {FALSE,FALSE};
 	IndexTuple	itup;
 
-	itup = index_form_tuple(ginstate->tupdesc, &key, &isnull);
+	if ( ginstate->oneCol )
+		itup = index_form_tuple(ginstate->origTupdesc, &key, isnull);
+	else
+	{
+		Datum 	datums[2];
+
+		datums[0] = UInt16GetDatum(attnum);
+		datums[1] = key;
+		itup = index_form_tuple(ginstate->tupdesc[attnum-1], datums, isnull); 
+	}
 
 	GinSetOrigSizePosting(itup, IndexTupleSize(itup));
 
@@ -85,28 +101,20 @@ getRightMostTuple(Page page)
 	return (IndexTuple) PageGetItem(page, PageGetItemId(page, maxoff));
 }
 
-Datum
-ginGetHighKey(GinState *ginstate, Page page)
-{
-	IndexTuple	itup;
-	bool		isnull;
-
-	itup = getRightMostTuple(page);
-
-	return index_getattr(itup, FirstOffsetNumber, ginstate->tupdesc, &isnull);
-}
-
 static bool
 entryIsMoveRight(GinBtree btree, Page page)
 {
-	Datum		highkey;
+	IndexTuple	itup;
 
 	if (GinPageRightMost(page))
 		return FALSE;
 
-	highkey = ginGetHighKey(btree->ginstate, page);
+	itup = getRightMostTuple(page);	
 
-	if (compareEntries(btree->ginstate, btree->entryValue, highkey) > 0)
+	if (compareAttEntries(btree->ginstate,
+					btree->entryAttnum, btree->entryValue,
+					gintuple_get_attrnum(btree->ginstate, itup),
+					gin_index_getattr(btree->ginstate, itup)) > 0)
 		return TRUE;
 
 	return FALSE;
@@ -151,11 +159,11 @@ entryLocateEntry(GinBtree btree, GinBtreeStack *stack)
 			result = -1;
 		else
 		{
-			bool		isnull;
-
 			itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, mid));
-			result = compareEntries(btree->ginstate, btree->entryValue,
-									index_getattr(itup, FirstOffsetNumber, btree->ginstate->tupdesc, &isnull));
+			result = compareAttEntries(btree->ginstate, 
+									btree->entryAttnum, btree->entryValue,
+									gintuple_get_attrnum(btree->ginstate, itup),
+									gin_index_getattr(btree->ginstate, itup));
 		}
 
 		if (result == 0)
@@ -214,13 +222,13 @@ entryLocateLeafEntry(GinBtree btree, GinBtreeStack *stack)
 	while (high > low)
 	{
 		OffsetNumber mid = low + ((high - low) / 2);
-		bool		isnull;
 		int			result;
 
 		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, mid));
-		result = compareEntries(btree->ginstate, btree->entryValue,
-								index_getattr(itup, FirstOffsetNumber, btree->ginstate->tupdesc, &isnull));
-
+		result = compareAttEntries(btree->ginstate, 
+								btree->entryAttnum, btree->entryValue,
+								gintuple_get_attrnum(btree->ginstate, itup),
+								gin_index_getattr(btree->ginstate, itup));
 		if (result == 0)
 		{
 			stack->off = mid;
@@ -584,7 +592,7 @@ entryFillRoot(GinBtree btree __attribute__((unused)), Buffer root, Buffer lbuf, 
 }
 
 void
-prepareEntryScan(GinBtree btree, Relation index, Datum value, GinState *ginstate)
+prepareEntryScan(GinBtree btree, Relation index, OffsetNumber attnum, Datum value, GinState *ginstate)
 {
 	memset(btree, 0, sizeof(GinBtreeData));
 
@@ -600,6 +608,7 @@ prepareEntryScan(GinBtree btree, Relation index, Datum value, GinState *ginstate
 
 	btree->index = index;
 	btree->ginstate = ginstate;
+	btree->entryAttnum = attnum;
 	btree->entryValue = value;
 
 	btree->isDelete = FALSE;

@@ -34,7 +34,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.87 2008/03/26 14:32:22 momjian Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.88 2008/04/13 03:49:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -390,7 +390,6 @@ usage(const char *progname)
 	printf(_("  -d, --dbname=NAME        connect to database name\n"));
 	printf(_("  -f, --file=FILENAME      output file name\n"));
 	printf(_("  -F, --format=c|t         specify backup file format\n"));
-	printf(_("  -i, --ignore-version     ignore server version mismatch\n"));
 	printf(_("  -l, --list               print summarized TOC of the archive\n"));
 	printf(_("  -v, --verbose            verbose mode\n"));
 	printf(_("  --help                   show this help, then exit\n"));

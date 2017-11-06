@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.297 2009/04/05 19:59:40 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/ruleutils.c,v 1.278 2008/07/18 03:32:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1516,54 +1516,6 @@ pg_get_function_identity_arguments(PG_FUNCTION_ARGS)
 }
 
 /*
- * pg_get_function_result
- *		Get a nicely-formatted version of the result type of a function.
- *		This is what would appear after RETURNS in CREATE FUNCTION.
- */
-Datum
-pg_get_function_result(PG_FUNCTION_ARGS)
-{
-	Oid			funcid = PG_GETARG_OID(0);
-	StringInfoData buf;
-	StringInfoData argbuf;
-	HeapTuple	proctup;
-	Form_pg_proc procform;
-	int			ntabargs = 0;
-
-	initStringInfo(&buf);
-	initStringInfo(&argbuf);
-
-	proctup = SearchSysCache(PROCOID,
-							 ObjectIdGetDatum(funcid),
-							 0, 0, 0);
-
-	if (!HeapTupleIsValid(proctup))
-		elog(ERROR, "cache lookup failed for function %u", funcid);
-	procform = (Form_pg_proc) GETSTRUCT(proctup);
-
-	ntabargs = print_function_arguments(&argbuf, proctup, true, true);
-
-	/* We have 3 cases: table function, setof function and others */
-	if (ntabargs > 0)
-	{
-		appendStringInfoString(&buf, "TABLE(");
-		appendStringInfoString(&buf, argbuf.data);
-		appendStringInfoString(&buf, ")");
-	}
-	else if (procform->proretset)
-	{
-		appendStringInfoString(&buf, "SETOF ");
-		appendStringInfoString(&buf, format_type_be(procform->prorettype));
-	}
-	else
-		appendStringInfoString(&buf, format_type_be(procform->prorettype));
-
-	ReleaseSysCache(proctup);
-
-	PG_RETURN_TEXT_P(string_to_text(buf.data));
-}
-
-/*
  * Common code for pg_get_function_arguments and pg_get_function_result:
  * append the desired subset of arguments to buf.  We print only TABLE
  * arguments when print_table_args is true, and all the others when it's false.
@@ -1677,6 +1629,56 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 	}
 
 	return argsprinted;
+}
+
+/* GPDB_84_MERGE_FIXME: this function was duplicated during the 8.4 merge; we
+ * replaced our version entirely with the one that was in 8.4, since it appeared
+ * to be more modern. Check this. */
+/*
+ * pg_get_function_result
+ *		Get a nicely-formatted version of the result type of a function.
+ *		This is what would appear after RETURNS in CREATE FUNCTION.
+ */
+Datum
+pg_get_function_result(PG_FUNCTION_ARGS)
+{
+	Oid			funcid = PG_GETARG_OID(0);
+	StringInfoData buf;
+	HeapTuple	proctup;
+	Form_pg_proc procform;
+	int			ntabargs = 0;
+
+	initStringInfo(&buf);
+
+	proctup = SearchSysCache(PROCOID,
+							 ObjectIdGetDatum(funcid),
+							 0, 0, 0);
+	if (!HeapTupleIsValid(proctup))
+		elog(ERROR, "cache lookup failed for function %u", funcid);
+	procform = (Form_pg_proc) GETSTRUCT(proctup);
+
+	if (procform->proretset)
+	{
+		/* It might be a table function; try to print the arguments */
+		appendStringInfoString(&buf, "TABLE(");
+		ntabargs = print_function_arguments(&buf, proctup, true, false);
+		if (ntabargs > 0)
+			appendStringInfoString(&buf, ")");
+		else
+			resetStringInfo(&buf);
+	}
+
+	if (ntabargs == 0)
+	{
+		/* Not a table function, so do the normal thing */
+		if (procform->proretset)
+			appendStringInfoString(&buf, "SETOF ");
+		appendStringInfoString(&buf, format_type_be(procform->prorettype));
+	}
+
+	ReleaseSysCache(proctup);
+
+	PG_RETURN_TEXT_P(string_to_text(buf.data));
 }
 
 
@@ -6640,7 +6642,8 @@ generate_relation_name(Oid relid, List *namespaces)
  *		given that it is being called with the specified actual arg types.
  *		(Arg types matter because of ambiguous-function resolution rules.)
  *
- * The result includes all necessary quoting and schema-prefixing.
+ * The result includes all necessary quoting and schema-prefixing.  We can
+ * also pass back an indication of whether the function is variadic.
  */
 static char *
 generate_function_name(Oid funcid, int nargs, Oid *argtypes,
@@ -6696,6 +6699,17 @@ generate_function_name(Oid funcid, int nargs, Oid *argtypes,
 
 		/* "any" variadics are not treated as variadics for listing */
 		if (OidIsValid(varOid) && varOid != ANYOID)
+			*is_variadic = true;
+		else
+			*is_variadic = false;
+	}
+
+	/* Check variadic-ness if caller cares */
+	if (is_variadic)
+	{
+		/* "any" variadics are not treated as variadics for listing */
+		if (OidIsValid(procform->provariadic) &&
+			procform->provariadic != ANYOID)
 			*is_variadic = true;
 		else
 			*is_variadic = false;
