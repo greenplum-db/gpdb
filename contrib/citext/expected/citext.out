@@ -1,0 +1,461 @@
+--
+--  Test citext datatype
+--
+CREATE EXTENSION citext;
+-- Test the operators and indexing functions
+-- Test = and <>.
+SELECT 'a'::citext = 'a'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'a'::citext = 'A'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'a'::citext = 'A'::text AS f;        -- text wins the discussion
+ f 
+---
+ f
+(1 row)
+
+SELECT 'a'::citext = 'b'::citext AS f;
+ f 
+---
+ f
+(1 row)
+
+SELECT 'a'::citext = 'ab'::citext AS f;
+ f 
+---
+ f
+(1 row)
+
+SELECT 'a'::citext <> 'ab'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+-- Test > and >=
+SELECT 'B'::citext > 'a'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'b'::citext >  'A'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'B'::citext >  'b'::citext AS f;
+ f 
+---
+ f
+(1 row)
+
+SELECT 'B'::citext >= 'b'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+-- Test < and <=
+SELECT 'a'::citext <  'B'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'a'::citext <= 'B'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+-- Test implicit casting. citext casts to text, but not vice-versa.
+SELECT 'a'::citext = 'a'::text   AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'A'::text  <> 'a'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+-- Test implicit casting. citext casts to varchar, but not vice-versa.
+SELECT 'a'::citext = 'a'::varchar   AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'A'::varchar  <> 'a'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+-- A couple of longer examples to ensure that we don't get any issues with bad
+-- conversions to char[] in the c code. Yes, I did do this.
+SELECT 'aardvark'::citext = 'aardvark'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT 'aardvark'::citext = 'aardVark'::citext AS t;
+ t 
+---
+ t
+(1 row)
+
+-- Check the citext_cmp() function explicitly.
+SELECT citext_cmp('aardvark'::citext, 'aardvark'::citext) AS zero;
+ zero 
+------
+    0
+(1 row)
+
+SELECT citext_cmp('aardvark'::citext, 'aardVark'::citext) AS zero;
+ zero 
+------
+    0
+(1 row)
+
+SELECT citext_cmp('AARDVARK'::citext, 'AARDVARK'::citext) AS zero;
+ zero 
+------
+    0
+(1 row)
+
+SELECT citext_cmp('B'::citext, 'a'::citext) > 0 AS true;
+ true 
+------
+ t
+(1 row)
+
+-- Do some tests using a table and index.
+CREATE TEMP TABLE try (
+   id serial,
+   name citext
+);
+NOTICE:  CREATE TABLE will create implicit sequence "try_id_seq" for serial column "try.id"
+INSERT INTO try (name)
+VALUES ('a'), ('ab'), ('â'), ('aba'), ('b'), ('ba'), ('bab'), ('AZ');
+SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â';
+ name | eq_a 
+------+------
+ a    | t
+ ab   | f
+ aba  | f
+ b    | f
+ ba   | f
+ bab  | f
+ AZ   | f
+(7 rows)
+
+SELECT name, 'a' = name AS t      FROM try where name = 'a';
+ name | t 
+------+---
+ a    | t
+(1 row)
+
+SELECT name, 'A' = name AS "eq_A" FROM try WHERE name <> 'â';
+ name | eq_A 
+------+------
+ a    | t
+ ab   | f
+ aba  | f
+ b    | f
+ ba   | f
+ bab  | f
+ AZ   | f
+(7 rows)
+
+SELECT name, 'A' = name AS t      FROM try where name = 'A';
+ name | t 
+------+---
+ a    | t
+(1 row)
+
+SELECT name, 'A' = name AS t      FROM try where name = 'A';
+ name | t 
+------+---
+ a    | t
+(1 row)
+
+-- Make sure that citext_smaller() and citext_larger() work properly.
+SELECT citext_smaller( 'ab'::citext, 'ac'::citext ) = 'ab' AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT citext_smaller( 'ABC'::citext, 'bbbb'::citext ) = 'ABC' AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT citext_smaller( 'aardvark'::citext, 'Aaba'::citext ) = 'Aaba' AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT citext_smaller( 'aardvark'::citext, 'AARDVARK'::citext ) = 'AARDVARK' AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT citext_larger( 'ab'::citext, 'ac'::citext ) = 'ac' AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT citext_larger( 'ABC'::citext, 'bbbb'::citext ) = 'bbbb' AS t;
+ t 
+---
+ t
+(1 row)
+
+SELECT citext_larger( 'aardvark'::citext, 'Aaba'::citext ) = 'aardvark' AS t;
+ t 
+---
+ t
+(1 row)
+
+-- Test aggregate functions and sort ordering
+CREATE TEMP TABLE srt (
+   id serial,
+   name CITEXT
+);
+NOTICE:  CREATE TABLE will create implicit sequence "srt_id_seq" for serial column "srt.id"
+INSERT INTO srt (name)
+VALUES ('abb'),
+       ('ABA'),
+       ('ABC'),
+       ('abd');
+-- Check the min() and max() aggregates, with and without index.
+set enable_seqscan = off;
+SELECT MIN(name) AS "ABA" FROM srt;
+ ABA 
+-----
+ ABA
+(1 row)
+
+SELECT MAX(name) AS abd FROM srt;
+ abd 
+-----
+ abd
+(1 row)
+
+reset enable_seqscan;
+set enable_indexscan = off;
+SELECT MIN(name) AS "ABA" FROM srt;
+ ABA 
+-----
+ ABA
+(1 row)
+
+SELECT MAX(name) AS abd FROM srt;
+ abd 
+-----
+ abd
+(1 row)
+
+reset enable_indexscan;
+-- Check sorting likewise
+set enable_seqscan = off;
+SELECT name FROM srt ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+reset enable_seqscan;
+set enable_indexscan = off;
+SELECT name FROM srt ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+reset enable_indexscan;
+-- Test assignment casts.
+SELECT LOWER(name) as aba FROM srt WHERE name = 'ABA'::text;
+ aba 
+-----
+ aba
+(1 row)
+
+SELECT LOWER(name) as aba FROM srt WHERE name = 'ABA'::varchar;
+ aba 
+-----
+ aba
+(1 row)
+
+SELECT LOWER(name) as aba FROM srt WHERE name = 'ABA'::bpchar;
+ aba 
+-----
+ aba
+(1 row)
+
+SELECT LOWER(name) as aba FROM srt WHERE name = 'ABA';
+ aba 
+-----
+ aba
+(1 row)
+
+SELECT LOWER(name) as aba FROM srt WHERE name = 'ABA'::citext;
+ aba 
+-----
+ aba
+(1 row)
+
+-- LIKE should be case-insensitive
+SELECT name FROM srt WHERE name     LIKE '%a%' ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+SELECT name FROM srt WHERE name NOT LIKE '%b%' ORDER BY name;
+ name 
+------
+(0 rows)
+
+SELECT name FROM srt WHERE name     LIKE '%A%' ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+SELECT name FROM srt WHERE name NOT LIKE '%B%' ORDER BY name;
+ name 
+------
+(0 rows)
+
+-- ~~ should be case-insensitive
+SELECT name FROM srt WHERE name ~~  '%a%' ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+SELECT name FROM srt WHERE name !~~ '%b%' ORDER BY name;
+ name 
+------
+(0 rows)
+
+SELECT name FROM srt WHERE name ~~  '%A%' ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+SELECT name FROM srt WHERE name !~~ '%B%' ORDER BY name;
+ name 
+------
+(0 rows)
+
+-- ~ should be case-insensitive
+SELECT name FROM srt WHERE name ~  '^a' ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+SELECT name FROM srt WHERE name !~ 'a$' ORDER BY name;
+ name 
+------
+ abb
+ ABC
+ abd
+(3 rows)
+
+SELECT name FROM srt WHERE name ~  '^A' ORDER BY name;
+ name 
+------
+ ABA
+ abb
+ ABC
+ abd
+(4 rows)
+
+SELECT name FROM srt WHERE name !~ 'A$' ORDER BY name;
+ name 
+------
+ abb
+ ABC
+ abd
+(3 rows)
+
+-- SIMILAR TO should be case-insensitive.
+SELECT name FROM srt WHERE name SIMILAR TO '%a.*';
+ name 
+------
+ ABA
+(1 row)
+
+SELECT name FROM srt WHERE name SIMILAR TO '%A.*';
+ name 
+------
+ ABA
+(1 row)
+
+-- EXTENSION UPDATE
+ALTER EXTENSION citext UPDATE TO '1.1';
+-- ALTER EXTENSION SCHMEA
+CREATE SCHEMA s1;
+ALTER EXTENSION citext SET SCHEMA s1;
+\dx
+                         List of installed extensions
+  Name  | Version | Schema |                   Description                    
+--------+---------+--------+--------------------------------------------------
+ citext | 1.1     | s1     | data type for case-insensitive character strings
+(1 row)
+
+ALTER EXTENSION citext SET SCHEMA public;
+SELECT name FROM srt WHERE name = 'ABB';
+ name 
+------
+ abb
+(1 row)
+
+-- DROP EXTENSION
+DROP EXTENSION citext CASCADE;
+NOTICE:  drop cascades to table srt column name
+NOTICE:  drop cascades to table try column name

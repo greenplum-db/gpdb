@@ -19,6 +19,7 @@ all:
 	$(MAKE) -C contrib/formatter_fixedwidth all
 	$(MAKE) -C contrib/fuzzystrmatch all
 	$(MAKE) -C contrib/extprotocol all	
+	$(MAKE) -C contrib/citext all
 	$(MAKE) -C contrib/dblink all
 	$(MAKE) -C contrib/gp_sparse_vector all
 	$(MAKE) -C contrib/gp_distribution_policy all
@@ -45,6 +46,7 @@ install:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/citext $@
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
@@ -72,6 +74,7 @@ installdirs uninstall:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/citext $@
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
@@ -103,6 +106,7 @@ clean:
 	$(MAKE) -C contrib/formatter_fixedwidth $@
 	$(MAKE) -C contrib/fuzzystrmatch $@
 	$(MAKE) -C contrib/extprotocol $@
+	$(MAKE) -C contrib/citext $@
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/gp_sparse_vector $@
 	$(MAKE) -C contrib/gp_distribution_policy $@
@@ -152,6 +156,7 @@ installcheck-world:
 	#$(MAKE) -C contrib installcheck
 	$(MAKE) -C contrib/formatter_fixedwidth installcheck
 	$(MAKE) -C contrib/extprotocol installcheck
+	$(MAKE) -C contrib/citext installcheck
 	$(MAKE) -C contrib/dblink installcheck
 	$(MAKE) -C contrib/indexscan installcheck
 	$(MAKE) -C contrib/hstore installcheck
