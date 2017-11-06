@@ -895,9 +895,17 @@ internal_bpchar_pattern_compare(BpChar *arg1, BpChar *arg2)
 	int			len1,
 				len2;
 
-	/* GPDB_84_MERGE_FIXME: why have we changed these from bcTruelen()? */
-	len1 = VARSIZE_ANY_EXHDR(arg1);
-	len2 = VARSIZE_ANY_EXHDR(arg2);
+	/*
+	 * Before we use VARDATA_SIZE, but we change it to use bcTruelen to
+	 * keep same bahavior with upstream. This bug doesn't exist before in
+	 * GPDB since IndexScan is not used for following query:
+	 * create table tbl(id int4, v char(10));
+	 * create index tbl_v_idx_bpchar on tbl using btree(v bpchar_pattern_ops);
+	 * insert into tbl values (1, 'abc');
+	 * select * from tbl where v = 'abc '::char(20);
+	 */
+	len1 = bcTruelen(arg1);
+	len2 = bcTruelen(arg2);
 
 	result = strncmp(VARDATA_ANY(arg1), VARDATA_ANY(arg2), Min(len1, len2));
 	if (result != 0)

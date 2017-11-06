@@ -246,3 +246,14 @@ explain select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2
 select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
 
 drop table nestloop_x, nestloop_y;
+
+SET enable_seqscan = OFF;
+SET enable_indexscan = ON;
+
+DROP TABLE IF EXISTS bpchar_ops;
+CREATE TABLE bpchar_ops(id INT8, v char(10)) DISTRIBUTED BY(id);
+CREATE INDEX bpchar_ops_btree_idx ON bpchar_ops USING btree(v bpchar_pattern_ops);
+INSERT INTO bpchar_ops VALUES (0, 'row');
+SELECT * FROM bpchar_ops WHERE v = 'row '::char(20);
+
+DROP TABLE bpchar_ops;
