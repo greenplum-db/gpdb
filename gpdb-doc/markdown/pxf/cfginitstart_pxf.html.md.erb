@@ -1,5 +1,5 @@
 ---
-title: Configuring, Initializing, and Starting PXF
+title: Configuring, Initializing, and Managing PXF
 ---
 
 <!--
@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF Extension Framework is composed of a Greenplum Database protocol and a Java service that map an external data source to a table definition. This topic describes how to configure, initialize, and start the PXF Extension Framework. 
+The PXF Extension Framework is composed of a Greenplum Database protocol and a Java service that map an external data source to a table definition. This topic describes how to configure, initialize, and manage the PXF Extension Framework. 
 
 ## <a id="install_info"></a>Installing PXF
 
@@ -79,7 +79,7 @@ Perform the following procedure to initialize PXF on each segment host in your G
     seghost3
     ```
 
-3. Install the `unzip` package on each segment host:
+3. If not already present, install the `unzip` package on each Greenplum Database segment host:
 
     ``` shell
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "sudo yum -y install unzip"
@@ -107,15 +107,33 @@ Perform the following procedure to start PXF on each segment host in your Greenp
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-3. Run the `pxf start` command to start PXF on each segment host. For example:
+3. Run the `pxf start` command to start PXF on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
 
     ```shell
     $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf start"
     ```
 
+## <a id="stop_pxf"></a>Stopping PXF
+
+You must explicitly stop PXF on each segment host in your Greenplum Database cluster when you upgrade PXF. Only the `gpadmin` user can stop the PXF service.
+
+Perform the following procedure to stop PXF on each segment host in your Greenplum Database cluster.  You will use the `gpssh` command and a `seghostfile` to run the command on multiple hosts.
+
+1. Log in to the Greenplum Database master node and set up your environment:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    ```
+
+3. Run the `pxf start` command to start PXF on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+
+    ```shell
+    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf start"
+    ```
 
 ## <a id="pxf_svc_mgmt"></a>PXF Service Management
 
-The `pxf` command supports `stop`, `restart`, and `status` operations in addition to `init` and `start`. These operations run locally. That is, if you want to start or stop the PXF agent on a specific segment host, you can log in to the host and run the command. If you want to start or stop the PXF agent on multiple segment hosts, use the `gpssh` utility as shown above, or individually log in to each segment host and run the command.
+The `pxf` command supports `init`, `start`, `stop`, `restart`, and `status` operations. These operations run locally. That is, if you want to start or stop the PXF agent on a specific segment host, you can log in to the host and run the command. If you want to start or stop the PXF agent on multiple segment hosts, use the `gpssh` utility as shown above, or individually log in to each segment host and run the command.
 
 **Note**: If you update your Hadoop or Hive configuration while the PXF service is running, you must copy any updated configuration files to each Greenplum Database segment host and restart PXF on each host.
