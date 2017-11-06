@@ -1,0 +1,73 @@
+-- start_ignore
+DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE; 
+NOTICE:  schema "query_metrics" does not exist, skipping
+CREATE SCHEMA QUERY_METRICS;
+SET SEARCH_PATH=QUERY_METRICS;
+CREATE EXTERNAL WEB TABLE __gp_localid
+(
+    localid    int
+)
+EXECUTE E'echo $GP_SEGMENT_ID' FORMAT 'TEXT';
+GRANT SELECT ON TABLE __gp_localid TO public;
+CREATE EXTERNAL WEB TABLE __gp_masterid
+(
+    masterid    int
+)
+EXECUTE E'echo $GP_SEGMENT_ID' ON MASTER FORMAT 'TEXT';
+GRANT SELECT ON TABLE __gp_masterid TO public;
+CREATE FUNCTION gp_instrument_shmem_summary_f()
+RETURNS SETOF RECORD
+AS '$libdir/gp_instrument_shmem', 'gp_instrument_shmem_summary'
+LANGUAGE C IMMUTABLE;
+GRANT EXECUTE ON FUNCTION gp_instrument_shmem_summary_f() TO public;
+CREATE VIEW gp_instrument_shmem_summary AS
+WITH all_entries AS (
+  SELECT C.*
+    FROM __gp_localid, gp_instrument_shmem_summary_f() as C (
+      segid int, num_free bigint, num_used bigint
+    )
+  UNION ALL
+  SELECT C.*
+    FROM __gp_masterid, gp_instrument_shmem_summary_f() as C (
+      segid int, num_free bigint, num_used bigint
+    ))
+SELECT segid, num_free, num_used
+FROM all_entries
+ORDER BY segid;
+GRANT SELECT ON gp_instrument_shmem_summary TO public;
+SET OPTIMIZER=OFF;
+-- end_ignore
+select count(*) from pg_stat_activity;
+ count 
+-------
+     1
+(1 row)
+
+set gp_enable_query_metrics=off;
+SELECT * FROM gp_instrument_shmem_summary WHERE segid = -1;
+ segid | num_free | num_used 
+-------+----------+----------
+    -1 |    30000 |        0
+(1 row)
+
+SELECT * FROM gp_instrument_shmem_summary WHERE segid = 0;
+ segid | num_free | num_used 
+-------+----------+----------
+     0 |    30000 |        0
+(1 row)
+
+SELECT * FROM gp_instrument_shmem_summary WHERE segid = 1;
+ segid | num_free | num_used 
+-------+----------+----------
+     1 |    30000 |        0
+(1 row)
+
+set gp_enable_query_metrics=on;
+-- start_ignore
+DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE; 
+NOTICE:  drop cascades to view gp_instrument_shmem_summary
+NOTICE:  drop cascades to rule _RETURN on view gp_instrument_shmem_summary
+NOTICE:  drop cascades to function gp_instrument_shmem_summary_f()
+NOTICE:  drop cascades to external table __gp_masterid
+NOTICE:  drop cascades to external table __gp_localid
+-- end_ignore

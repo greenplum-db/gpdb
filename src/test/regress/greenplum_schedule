@@ -189,4 +189,6 @@ test: workfile_mgr_test
 
 test: psql_gp_commands pg_resetxlog
 
+test: check_instr_in_shmem
+
 # end of tests
