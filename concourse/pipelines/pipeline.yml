@@ -2707,12 +2707,6 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
-  - task: netbackup_pre_test_setup
-    tags: ["netbackup"]
-    file: gpdb_src/concourse/tasks/setup_netbackup.yml
-    image: centos-gpdb-dev-6
-    params:
-      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
   - task: run_tests
     tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2758,12 +2752,6 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
-  - task: netbackup_pre_test_setup
-    tags: ["netbackup"]
-    file: gpdb_src/concourse/tasks/setup_netbackup.yml
-    image: centos-gpdb-dev-6
-    params:
-      CUSTOM_ENV: export NETBACKUP_SERVER={{netbackup_host}}; export NETBACKUP_KEY={{netbackup_key}};
   - task: run_tests
     tags: ["ddboost"]
     file: gpdb_src/concourse/tasks/run_behave.yml
@@ -2858,7 +2846,7 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
-  - task: setup_netbackup
+  - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
@@ -2912,7 +2900,7 @@ jobs:
       <<: *ccp_gpdb4_gen_cluster_default_params
     on_failure:
       <<: *dpm_ccp_destroy
-  - task: setup_netbackup
+  - task: netbackup_pre_test_setup
     tags: ["netbackup"]
     file: gpdb_src/concourse/tasks/setup_netbackup.yml
     image: centos-gpdb-dev-6
