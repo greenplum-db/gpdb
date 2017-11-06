@@ -8,7 +8,7 @@
      s1='10',s2='10', s3='10', col_empty='5', col_null='5');
 
  -- query ext table can return correct results
- select * from tbl_ext_fixedwidth order by s1;
+ select * from tbl_ext_fixedwidth;
 
  -- When field length of s1 is 10, which is greater than its defined column length char(5)
  DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
