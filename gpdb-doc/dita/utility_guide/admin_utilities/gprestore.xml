@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_phj_g5j_tbb">
+  <title>gprestore</title>
+  <body>
+    <p>Restore a Greenplum Database backup that was created using <codeph>gpbackup</codeph> utility.
+      By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files located in
+      the Greenplum Database master data directory, with table data stored locally on segment hosts
+      in CSV data files.</p>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
+      are not intended for use in a production environment. Experimental features are subject to
+      change without notice in future releases.</note>
+    <section>
+      <title>Synopsis</title>
+      <codeblock><b>gprestore -timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
+   [<b>-backupdir</b> <varname>directory</varname>]
+   [<b>-createdb</b>]
+   [<b>-debug</b>]
+   [<b>-globals</b>]
+   [<b>-quiet</b>]
+   [<b>-redirect</b> <varname>database_name</varname>]
+   [<b>-verbose</b>]
+   [<b>-version</b>]
+   [<b>-with-stats</b>]</codeblock>
+    </section>
+    <section>
+      <title>Description</title>
+      <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must include the
+          <codeph>-timestamp</codeph> option to specify the exact timestamp value
+          (<codeph>YYYYMMDDHHMMSS</codeph>) of the backup set to restore. If you specified a custom
+          <codeph>-backupdir</codeph> to consolidate the backup files, include the same
+          <codeph>-backupdir</codeph> option with <codeph>gprestore</codeph>.</p>
+      <p>Include the <codeph>-createdb</codeph> option if the database does not exist in the
+        cluster. You can optionally restore a backup set to a different database by using the
+          <codeph>-redirect</codeph> option.</p>
+      <p>If global Greenplum Database system objects or query plan statistics are available in the
+        backup set, you can restore those objects with the <codeph>-globals</codeph> and
+          <codeph>-with-stats</codeph> options, respectively. By default, only the database objects
+        in the backup set are restored.</p>
+      <p><codeph>gprestore</codeph> does not currently support filtering the database objects that
+        are restored from a backup set. </p>
+    </section>
+    <section>
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt><b>-timestamp</b>
+            <varname>YYYYMMDDHHMMSS</varname></pt>
+          <pd>Required. Specifies the timestamp of the <codeph>gpbackup</codeph> backup set to
+            restore. By default, <codeph>gprestore</codeph> looks for files </pd>
+        </plentry>
+      </parml>
+    </section>
+  </body>
+</topic>

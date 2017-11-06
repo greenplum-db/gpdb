@@ -138,12 +138,12 @@ Tables backed up:  2 / 2 [======================================================
 20171103:15:26:00 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup completed successfully</codeblock></p>
       <p>The above command creates global and database-specific metadata files on the Greenplum
         Database master host in the default directory,
-          <codeph>$MASTER_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDhhmmss>/</codeph>. For
+          <codeph>$MASTER_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>. For
         example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20171103/20171103152558/</b>
 gpbackup_20171103152558_config.yaml  gpbackup_20171103152558_postdata.sql  gpbackup_20171103152558_report
 gpbackup_20171103152558_global.sql   gpbackup_20171103152558_predata.sql   gpbackup_20171103152558_toc.yaml</codeblock></p>
       <p>By default, each segment stores table data for the backup in compressed CSV files in
-          <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDhhmmss>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20171103/20171103152558/
+          <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20171103/20171103152558/
 </b>gpbackup_0_20171103152558_16524.gz  gpbackup_0_20171103152558_16543.gz</codeblock></p>
       <p>To consolidate all backup files into a single directory, include the
           <codeph>-backupdir</codeph>
@@ -167,7 +167,7 @@ $ <b>find /home/gpadmin/backups/ -type f</b>
       </section>
       <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must use the
           <codeph>-timestamp</codeph> option to specify the exact timestamp value
-          (<codeph>YYYYMMDDhhmmss</codeph>) to restore. Include the <codeph>-createdb</codeph>
+          (<codeph>YYYYMMDDHHMMSS</codeph>) to restore. Include the <codeph>-createdb</codeph>
         option if the database does not exist in the cluster. For
         example:<codeblock>$ <b>dropdb demo</b>
 $ <b>gprestore -timestamp 20171103152558 -createdb</b>
@@ -251,7 +251,7 @@ water.tonic</codeblock></p>
         was created.</p>
       <p>By default, metadata and supporting files are stored on the Greenplum Database master host
         in the directory
-          <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>. If you
+          <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you
         specify a custom backup directory, this same file path is created as a subdirectory of the
         backup directory.  The following table describes the names and contents of the metadata and
         supporting files.<table frame="all" rowsep="1" colsep="1" id="table_nrz_4gj_tbb">
@@ -267,7 +267,7 @@ water.tonic</codeblock></p>
             </thead>
             <tbody>
               <row>
-                <entry><filepath>gpbackup_&lt;YYYYMMDDhhmmss>_global.sql</filepath></entry>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_global.sql</filepath></entry>
                 <entry>This file is created only if you include the -globals option to
                     <codeph>gpbackup</codeph>. It contains DDL for objects that are global to the
                   Greenplum Cluster, and not owned by a specific database within the cluster. These
@@ -282,7 +282,7 @@ water.tonic</codeblock></p>
                   </ul></entry>
               </row>
               <row>
-                <entry><filepath>gpbackup_&lt;YYYYMMDDhhmmss>_predata.sql</filepath></entry>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_predata.sql</filepath></entry>
                 <entry>Contains DDL for objects in the backed-up database (specified with
                     <codeph>-dbname)</codeph> that must be created <i>prior</i> to restoring the
                   actual data. These objects include:<ul id="ul_s35_nhj_tbb">
@@ -303,7 +303,7 @@ water.tonic</codeblock></p>
                   </ul></entry>
               </row>
               <row>
-                <entry><filepath>gpbackup_&lt;YYYYMMDDhhmmss>_postdata.sql</filepath></entry>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_postdata.sql</filepath></entry>
                 <entry>Contains DDL for objects in the backed-up database (specified with
                     <codeph>-dbname)</codeph> that must be created <i>after</i> restoring the data.
                   These objects include:<ul id="ul_zyg_tgj_tbb">
@@ -314,7 +314,7 @@ water.tonic</codeblock></p>
                   </ul></entry>
               </row>
               <row>
-                <entry><filepath>gpbackup_&lt;YYYYMMDDhhmmss>_toc.yaml</filepath></entry>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_toc.yaml</filepath></entry>
                 <entry>Contains metadata for locating object DDL in the
                     <filepath>_predata.sql</filepath> and <filepath>_postdata.sql</filepath> files.
                   This file also contains the table names and OIDs used for locating the
@@ -322,7 +322,7 @@ water.tonic</codeblock></p>
                     <xref href="#topic_xnj_b4c_tbb/section_oys_cpj_tbb" format="dita"/>.</entry>
               </row>
               <row>
-                <entry><filepath>gpbackup_&lt;YYYYMMDDhhmmss>_report</filepath></entry>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_report</filepath></entry>
                 <entry>Contains information about the backup operation that is used to populate the
                   email notice (if configured) that is sent after the backup completes. This file
                   contains information such as:<ul id="ul_bjr_2kj_tbb">
@@ -333,7 +333,7 @@ water.tonic</codeblock></p>
                   </ul>See <xref href="#topic_qwd_d5d_tbb" format="dita"/>.</entry>
               </row>
               <row>
-                <entry><filepath>gpbackup_&lt;YYYYMMDDhhmmss>_config.yaml</filepath></entry>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_config.yaml</filepath></entry>
                 <entry>Contains metadata about the execution of the particular backup task,
                   including: <ul id="ul_ids_vgj_tbb">
                     <li dir="ltr"><codeph>gpbackup</codeph> version</li>
@@ -351,17 +351,17 @@ water.tonic</codeblock></p>
         <title>Segment Data Files</title>
         <p>By default, each segment creates one compressed CSV file for each table that is backed up
           on the segment. The files are stored in
-            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>. If you specify a
+            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you specify a
           custom backup directory, segment data files are copied to this same file path as a
           subdirectory of the backup directory. </p>
         <p>Each data file uses the file name format
-            <filepath>gpbackup_&lt;content_id>_&lt;YYYYMMDDhhmmss>_&lt;oid>.gz</filepath> where:<ul
+            <filepath>gpbackup_&lt;content_id>_&lt;YYYYMMDDHHMMSS>_&lt;oid>.gz</filepath> where:<ul
             id="ul_cdb_jpj_tbb">
             <li><filepath>&lt;content_id></filepath> is the content ID of the segment.</li>
-            <li><filepath>&lt;YYYYMMDDhhmmss></filepath> is the timestamp of the
+            <li><filepath>&lt;YYYYMMDDHHMMSS></filepath> is the timestamp of the
                 <codeph>gpbackup</codeph> operation.</li>
             <li><filepath>&lt;oid></filepath> is the object ID of the table. The metadata file
-                <filepath>gpbackup_&lt;YYYYMMDDhhmmss>_toc.yaml</filepath> references this
+                <filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_toc.yaml</filepath> references this
                 <filepath>&lt;oid></filepath> to locate the data for a specific table in a
               schema.</li>
           </ul></p>
