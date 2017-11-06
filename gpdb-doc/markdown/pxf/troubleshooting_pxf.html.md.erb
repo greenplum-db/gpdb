@@ -108,3 +108,93 @@ Examine/collect the log messages from `stdout`.
 ``` sql
 dbname=# SET client_min_messages=NOTICE
 ```
+
+## <a id="pxf-memcfg"></a>Addressing PXF Memory Issues
+
+The Java heap size can be a limiting factor in PXF’s ability to serve many concurrent requests or to run queries against large tables.
+
+You may run into situations where a query will hang or fail with an Out of Memory exception (OOM). This typically occurs when many threads are reading different data fragments from an external table and insufficient heap space exists to open all fragments at the same time. To avert or remedy this situation, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration.
+
+**Note**: The configuration changes described in this topic require modifying config files on *each* segment node in your Greenplum Database cluster. After you perform the updates, be sure to verify that the configuration on all PXF nodes is the same.
+
+You will need to re-apply these configuration changes after any PXF version upgrades.
+
+### <a id="pxf-heapcfg"></a>Increasing the JVM Memory for PXF
+
+Each PXF agent running on a segment host is configured with a default maximum Java heap size of 2GB and an initial heap size of 1GB. If the segment hosts in your Greenplum Database cluster have an ample amount of memory, try increasing the maximum heap size to a value between 3-4GB. Set the initial and maximum heap size to the same value if possible.
+
+Perform the following procedure to increase the heap size for the PXF agent running on each segment host in your Greenplum Database cluster.
+
+1. Log in to your Greenplum Database master node and set up the environment:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    ```
+
+2. Edit the `$GPHOME/pxf/conf/pxf-env.sh` file. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ vi $GPHOME/pxf/conf/pxf-env.sh
+    ```
+
+3. Locate the `PXF_JVM_OPTS` setting in the `pxf-env.sh` file, and update the `-Xmx` and/or `-Xms` options to the desired value. For example:
+
+    ``` shell
+    PXF_JVM_OPTS="-Xmx3g -Xms3g"
+    ```
+
+4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+
+    ``` shell
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-env.sh =:/usr/local/greenplum-db/pxf/conf/pxf-env.sh
+    ```
+
+5. Restart PXF on each Greenplum Database segment host. For example:
+
+    ``` shell
+    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
+    ```
+
+### <a id="pxf-threadcfg"></a>Another Option for Resource-Constrained PXF Segment Hosts
+
+If increasing the maximum heap size is not suitable for your Greenplum Database deployment, try decreasing the number of concurrent working threads configured for PXF's underlying Tomcat web application. A decrease in the number of running threads will prevent any PXF node from exhausting its memory, while ensuring that current queries run to completion (albeit a bit slower). As Tomcat's default behavior is to queue requests until a thread is free, decreasing this value will not result in denied requests.
+
+The Tomcat default maximum number of threads is 300. Decrease the maximum number of threads to a value that works optimally for your Greenplum Database deployment. (If you plan to run large workloads on a large number of files in an external Hive data store, specify an even lower value.)
+
+Perform the following procedure to decrease the maximum number of Tomcat threads for the PXF agent running on each segment host in your Greenplum Database deployment.
+
+1. Log in to your Greenplum Database master node and set up the environment:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    ```
+
+2. Edit the `$GPHOME/pxf/pxf-service/conf/server.xml` file. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ vi $GPHOME/pxf/pxf-service/conf/server.xml
+    ```
+
+3. Locate the `Catalina` `Executor` block and update the `maxThreads` setting to the desired value. For example:
+
+    ``` xml
+    <Executor maxThreads="100"
+              minSpareThreads="50"
+              name="tomcatThreadPool"
+              namePrefix="tomcat-http--"/>
+    ```
+
+4. Copy the updated `server.xml` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+
+    ``` shell
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/pxf-service/conf/server.xml =:/usr/local/greenplum-db/pxf/pxf-service/conf/server.xml
+    ```
+
+5. Restart PXF on each Greenplum Database segment host. For example:
+
+    ``` shell
+    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
+    ```
+
