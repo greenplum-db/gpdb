@@ -126,7 +126,7 @@ InstrEndLoop(Instrumentation *instr)
 Size
 InstrShmemSize(void)
 {
-	Size size = 0;
+	Size		size = 0;
 
 	/* If start in utility mode, disallow Instrumentation on Shmem */
 	if (Gp_role != GP_ROLE_UTILITY && gp_max_shmem_instruments > 0)
@@ -142,17 +142,17 @@ InstrShmemSize(void)
 void
 InstrShmemInit(void)
 {
-	Size size;
+	Size		size;
 	InstrumentationSlot *slot;
 	InstrumentationHeader *header;
-	int i;
+	int			i;
 
 	size = InstrShmemSize();
 	if (size <= 0)
 		return;
 
 	/* Allocate space from Shmem */
-	header = (InstrumentationHeader*)ShmemAlloc(size);
+	header = (InstrumentationHeader *) ShmemAlloc(size);
 	if (!header)
 		ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of shared memory")));
 
@@ -160,7 +160,7 @@ InstrShmemInit(void)
 	MemSet(header, 0x00, size);
 
 	/* pointer to the first Instrumentation slot */
-	slot = (InstrumentationSlot*)(header + 1);
+	slot = (InstrumentationSlot *) (header + 1);
 
 	/* header points to the first slot */
 	header->head = slot;
@@ -183,7 +183,7 @@ InstrShmemInit(void)
  * this function will try to fetch a free slot from reserved Instrumentation
  * slots in Shmem. Otherwise it will allocte it in local memory.
  * Instrumentation returned by this function require to call InstrShmemRecycle
- * to recycle the slot back to the free list on ExecEndNode. On query abort 
+ * to recycle the slot back to the free list on ExecEndNode. On query abort
  * or error, should also ensure it is recycled.
  */
 Instrumentation *
@@ -191,6 +191,7 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
 {
 	Instrumentation *instr = NULL;
 	InstrumentationSlot *slot = NULL;
+	MemoryContext contextSave;
 
 	if (gp_enable_query_metrics && NULL != InstrumentGlobal && Gp_session_role != GP_ROLE_UTILITY)
 	{
@@ -209,7 +210,8 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
 
 		SpinLockRelease(&InstrumentGlobal->lock);
 
-		if (NULL != slot) {
+		if (NULL != slot)
+		{
 			/* initialize the picked slot */
 			GetInstrumentNext(slot) = NULL;
 			instr = &(slot->data);
@@ -222,9 +224,9 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
 			slot->eflags = eflags;
 			slot->nid = plan->plan_node_id;
 
-            MemoryContext contextSave = MemoryContextSwitchTo(TopMemoryContext);
-            slotsOccupied = lappend(slotsOccupied, slot);
-            MemoryContextSwitchTo(contextSave);
+			contextSave = MemoryContextSwitchTo(TopMemoryContext);
+			slotsOccupied = lappend(slotsOccupied, slot);
+			MemoryContextSwitchTo(contextSave);
 		}
 	}
 
@@ -232,7 +234,7 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
 	{
 		/*
 		 * Alloc Instrumentation in local memory when gp_enable_query_metrics
-		 * is off or failed to pick a slot allocte Instrumentation in local 
+		 * is off or failed to pick a slot allocte Instrumentation in local
 		 * memory and return it.
 		 */
 		instr = palloc0(sizeof(Instrumentation));
@@ -247,13 +249,14 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
 	return instr;
 }
 
-/* 
+/*
  * Recycle the Instrumentation back to Shmem free list
  *  - Node finished normally, should recycle in ExecEndNode
  *  - Query abort or error, should recycle in mppExecutorCleanup
  *  - Fatal error should recycle in proc_exit_prepare
  */
-static Instrumentation *InstrShmemRecycle(Instrumentation *instr)
+static Instrumentation *
+InstrShmemRecycle(Instrumentation *instr)
 {
 	InstrumentationSlot *slot;
 	Instrumentation *clone = NULL;
@@ -262,16 +265,16 @@ static Instrumentation *InstrShmemRecycle(Instrumentation *instr)
 		return instr;
 
 	/* Recycle Instrumentation slot back to the free list */
-	slot = (InstrumentationSlot*) instr;
+	slot = (InstrumentationSlot *) instr;
 
 	if (slot->eflags & EXEC_FLAG_EXPLAIN_ANALYZE)
 	{
 		/*
 		 * When EXPLAIN ANALYZE encontered an error, we can't set instrument
-		 * to NULL because it is needed in ExplainOnePlan, so migrate it to 
+		 * to NULL because it is needed in ExplainOnePlan, so migrate it to
 		 * local memory and recycle the slot on Shmem
 		 */
-		clone = (Instrumentation*)palloc0(sizeof(Instrumentation));
+		clone = (Instrumentation *) palloc0(sizeof(Instrumentation));
 		memcpy(clone, instr, sizeof(Instrumentation));
 		clone->in_shmem = false;
 	}
@@ -289,20 +292,21 @@ static Instrumentation *InstrShmemRecycle(Instrumentation *instr)
 
 	return clone;
 }
+
 /*
  * Recycle instrumentation in shmem on each backend exit or abort
  */
 void
 InstrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel, void *arg)
 {
-    ListCell   *cell;
+	ListCell   *cell;
 
-    foreach(cell, slotsOccupied)
-    {
-        InstrumentationSlot *slot = lfirst(cell);
+	foreach(cell, slotsOccupied)
+	{
+		InstrumentationSlot *slot = lfirst(cell);
 
-        InstrShmemRecycle(&(slot->data));
-    }
-    list_free(slotsOccupied);
-    slotsOccupied = NIL;
+		InstrShmemRecycle(&(slot->data));
+	}
+	list_free(slotsOccupied);
+	slotsOccupied = NIL;
 }

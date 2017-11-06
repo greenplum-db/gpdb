@@ -28,27 +28,32 @@
 
 metrics_conn conn = {-1};
 
-void metrics_init(void)
+void
+metrics_init(void)
 {
-	pid_t pid = getpid();
-	int sock;
+	pid_t		pid = getpid();
+	int			sock;
 
-	if (pid == conn.pid) {
+	if (pid == conn.pid)
+	{
 		return;
 	}
-	close(conn.mcsock); 
+	close(conn.mcsock);
 	conn.mcsock = -1;
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock == -1) {
+	if (sock == -1)
+	{
 		elog(WARNING, "metrics: cannot create socket (%m)");
 	}
-    if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1) {
-        elog(WARNING, "fcntl(F_SETFL, O_NONBLOCK) failed");
-    }
-    if (fcntl(sock, F_SETFD, 1) == -1) {
-        elog(WARNING, "fcntl(F_SETFD) failed");
-    }
+	if (fcntl(sock, F_SETFL, O_NONBLOCK) == -1)
+	{
+		elog(WARNING, "fcntl(F_SETFL, O_NONBLOCK) failed");
+	}
+	if (fcntl(sock, F_SETFD, 1) == -1)
+	{
+		elog(WARNING, "fcntl(F_SETFD) failed");
+	}
 	conn.mcsock = sock;
 	memset(&conn.mcaddr, 0, sizeof(conn.mcaddr));
 	conn.mcaddr.sin_family = AF_INET;
@@ -57,24 +62,28 @@ void metrics_init(void)
 	conn.pid = pid;
 }
 
-void metrics_send(metrics_packet_t* p)
+void
+metrics_send(metrics_packet_t *p)
 {
-	int n;
+	int			n;
 
-	if (conn.mcsock >= 0) {
+	if (conn.mcsock >= 0)
+	{
 		n = sizeof(*p);
-		if (n != sendto(conn.mcsock, (const char *)p, n, 0, 
-						(struct sockaddr*) &conn.mcaddr, 
-						sizeof(conn.mcaddr))) {
+		if (n != sendto(conn.mcsock, (const char *) p, n, 0,
+						(struct sockaddr *) &conn.mcaddr,
+						sizeof(conn.mcaddr)))
+		{
 			elog(LOG, "metrics: cannot send (%m socket %d)", conn.mcsock);
 		}
 	}
 }
 
 /* Node info */
-static void MakeMetricsNodeInfo(metrics_packet_t *pkt, Plan *plan, gpmon_packet_t *gpmon_pkt, MetricsNodeStatus status)
+static void
+MakeMetricsNodeInfo(metrics_packet_t *pkt, Plan *plan, gpmon_packet_t *gpmon_pkt, MetricsNodeStatus status)
 {
-	instr_time curr;
+	instr_time	curr;
 
 	memset(pkt, 0x00, sizeof(metrics_packet_t));
 
@@ -83,14 +92,14 @@ static void MakeMetricsNodeInfo(metrics_packet_t *pkt, Plan *plan, gpmon_packet_
 
 	if (gpmon_pkt && gpmon_pkt->pkttype == GPMON_PKTTYPE_QLOG)
 	{
-		// Copy query identities from parent QLog
+		/* Copy query identities from parent QLog */
 		pkt->u.node.qid.tmid = gpmon_pkt->u.qlog.key.tmid;
 		pkt->u.node.qid.ssid = gpmon_pkt->u.qlog.key.ssid;
 		pkt->u.node.qid.ccnt = gpmon_pkt->u.qlog.key.ccnt;
 	}
 	else if (gpmon_pkt && gpmon_pkt->pkttype == GPMON_PKTTYPE_QEXEC)
 	{
-		// Copy query identities from parent QExec
+		/* Copy query identities from parent QExec */
 		pkt->u.node.qid.tmid = gpmon_pkt->u.qexec.key.tmid;
 		pkt->u.node.qid.ssid = gpmon_pkt->u.qexec.key.ssid;
 		pkt->u.node.qid.ccnt = gpmon_pkt->u.qexec.key.ccnt;
@@ -116,35 +125,39 @@ static void MakeMetricsNodeInfo(metrics_packet_t *pkt, Plan *plan, gpmon_packet_
 	pkt->u.node.plan_rows = plan->plan_rows;
 }
 
-static void SendPlanNodeMetricsPkt(Plan *plan, gpmon_packet_t *gpmon_pkt, MetricsNodeStatus status)
+static void
+SendPlanNodeMetricsPkt(Plan *plan, gpmon_packet_t *gpmon_pkt, MetricsNodeStatus status)
 {
 	metrics_packet_t pkt;
 
-	if(!plan)
+	if (!plan)
 		return;
 
-	if(!gp_enable_query_metrics)
+	if (!gp_enable_query_metrics)
 		return;
 
 	MakeMetricsNodeInfo(&pkt, plan, gpmon_pkt, status);
 	metrics_send(&pkt);
 }
 
-void InitNodeMetricsInfoPkt(Plan *plan, QueryDesc *qd)
+void
+InitNodeMetricsInfoPkt(Plan *plan, QueryDesc *qd)
 {
 	SendPlanNodeMetricsPkt(plan, qd->gpmon_pkt, METRICS_NODE_INITIALIZE);
 }
 
-void UpdateNodeMetricsInfoPkt(PlanState *ps, MetricsNodeStatus status)
+void
+UpdateNodeMetricsInfoPkt(PlanState *ps, MetricsNodeStatus status)
 {
-	if(!ps || !ps->state || LocallyExecutingSliceIndex(ps->state) != currentSliceId)
+	if (!ps || !ps->state || LocallyExecutingSliceIndex(ps->state) != currentSliceId)
 		return;
 
 	SendPlanNodeMetricsPkt(ps->plan, &(ps->gpmon_pkt), status);
 }
 
 /* Query info */
-void metrics_send_query_info(QueryDesc *qd, MetricsQueryStatus status)
+void
+metrics_send_query_info(QueryDesc *qd, MetricsQueryStatus status)
 {
 	metrics_packet_t pkt;
 	gpmon_qlog_t *qlog;
