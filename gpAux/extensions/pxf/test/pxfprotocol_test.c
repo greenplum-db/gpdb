@@ -40,8 +40,8 @@ void
 test_pxfprotocol_validate_urls(void **state)
 {
 	/* setup call info with no call context */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolValidatorData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolValidatorData));
 	fcinfo->context->type = T_ExtProtocolValidatorData;
 	Value	   *v = makeString(uri_no_profile);
 	List	   *list = list_make1(v);
@@ -82,8 +82,8 @@ void
 test_pxfprotocol_import_first_call(void **state)
 {
 	/* setup call info with no call context */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolData));
 	fcinfo->context->type = T_ExtProtocolData;
 	EXTPROTOCOL_GET_DATALEN(fcinfo) = 100;
 	EXTPROTOCOL_GET_DATABUF(fcinfo) = palloc0(EXTPROTOCOL_GET_DATALEN(fcinfo));
@@ -151,8 +151,8 @@ void
 test_pxfprotocol_import_second_call(void **state)
 {
 	/* setup call info with call context */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolData));
 	fcinfo->context->type = T_ExtProtocolData;
 	EXTPROTOCOL_GET_DATALEN(fcinfo) = 100;
 	EXTPROTOCOL_GET_DATABUF(fcinfo) = palloc0(EXTPROTOCOL_GET_DATALEN(fcinfo));
@@ -188,10 +188,10 @@ void
 test_pxfprotocol_import_last_call(void **state)
 {
 	/* setup call info with a call context and last call indicator */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolData));
 	fcinfo->context->type = T_ExtProtocolData;
-	gphadoop_context *call_context = palloc(sizeof(gphadoop_context));
+	gphadoop_context *call_context = palloc0(sizeof(gphadoop_context));
 
 	EXTPROTOCOL_SET_USER_CTX(fcinfo, call_context);
 	EXTPROTOCOL_SET_LAST_CALL(fcinfo);
@@ -220,8 +220,8 @@ void
 test_pxfprotocol_export_first_call(void **state)
 {
 	/* setup call info with no call context */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolData));
 	fcinfo->context->type = T_ExtProtocolData;
 	EXTPROTOCOL_GET_DATALEN(fcinfo) = 100;
 	EXTPROTOCOL_GET_DATABUF(fcinfo) = palloc0(EXTPROTOCOL_GET_DATALEN(fcinfo));
@@ -282,8 +282,8 @@ void
 test_pxfprotocol_export_second_call(void **state)
 {
 	/* setup call info with call context */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolData));
 	fcinfo->context->type = T_ExtProtocolData;
 	EXTPROTOCOL_GET_DATALEN(fcinfo) = 100;
 	EXTPROTOCOL_GET_DATABUF(fcinfo) = palloc0(EXTPROTOCOL_GET_DATALEN(fcinfo));
@@ -319,10 +319,10 @@ void
 test_pxfprotocol_export_last_call(void **state)
 {
 	/* setup call info with a call context and last call indicator */
-	PG_FUNCTION_ARGS = palloc(sizeof(FunctionCallInfoData));
-	fcinfo->context = palloc(sizeof(ExtProtocolData));
+	PG_FUNCTION_ARGS = palloc0(sizeof(FunctionCallInfoData));
+	fcinfo->context = palloc0(sizeof(ExtProtocolData));
 	fcinfo->context->type = T_ExtProtocolData;
-	gphadoop_context *call_context = palloc(sizeof(gphadoop_context));
+	gphadoop_context *call_context = palloc0(sizeof(gphadoop_context));
 
 	EXTPROTOCOL_SET_USER_CTX(fcinfo, call_context);
 	EXTPROTOCOL_SET_LAST_CALL(fcinfo);
