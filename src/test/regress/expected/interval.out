@@ -53,6 +53,8 @@ SELECT INTERVAL '10 years -11 month -12 days +13:14' AS "9 years...";
 (1 row)
 
 CREATE TABLE INTERVAL_TBL (f1 interval);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO INTERVAL_TBL (f1) VALUES ('@ 1 minute');
 INSERT INTO INTERVAL_TBL (f1) VALUES ('@ 5 hour');
 INSERT INTO INTERVAL_TBL (f1) VALUES ('@ 10 day');
@@ -215,6 +217,8 @@ SELECT '' AS fortyfive, r1.*, r2.*
 -- some time components be greater than 23:59:59 due to how intervals are 
 -- stored internally.
 CREATE TABLE INTERVAL_MULDIV_TBL (span interval);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'span' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 COPY INTERVAL_MULDIV_TBL FROM STDIN;
 SELECT span * 0.3 AS product
 FROM INTERVAL_MULDIV_TBL ORDER BY 1;
@@ -376,5 +380,259 @@ select interval_hash('30 days'::interval) = interval_hash('1 month'::interval) a
  t 
 ---
  t
+(1 row)
+
+SELECT interval '1-2';  -- SQL year-month literal
+   interval    
+---------------
+ 1 year 2 mons
+(1 row)
+
+-- test SQL-spec syntaxes for restricted field sets
+SELECT interval '1' year;
+ interval 
+----------
+ 1 year
+(1 row)
+
+SELECT interval '2' month;
+ interval 
+----------
+ 2 mons
+(1 row)
+
+SELECT interval '3' day;
+ interval 
+----------
+ 3 days
+(1 row)
+
+SELECT interval '4' hour;
+ interval 
+----------
+ 04:00:00
+(1 row)
+
+SELECT interval '5' minute;
+ interval 
+----------
+ 00:05:00
+(1 row)
+
+SELECT interval '6' second;
+ interval 
+----------
+ 00:00:06
+(1 row)
+
+SELECT interval '1' year to month;
+ interval 
+----------
+ 1 mon
+(1 row)
+
+SELECT interval '1-2' year to month;
+   interval    
+---------------
+ 1 year 2 mons
+(1 row)
+
+SELECT interval '1 2' day to hour;
+    interval    
+----------------
+ 1 day 02:00:00
+(1 row)
+
+SELECT interval '1 2:03' day to hour;
+    interval    
+----------------
+ 1 day 02:00:00
+(1 row)
+
+SELECT interval '1 2:03:04' day to hour;
+    interval    
+----------------
+ 1 day 02:00:00
+(1 row)
+
+SELECT interval '1 2' day to minute;
+    interval    
+----------------
+ 1 day 02:00:00
+(1 row)
+
+SELECT interval '1 2:03' day to minute;
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2:03:04' day to minute;
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2' day to second;
+    interval    
+----------------
+ 1 day 02:00:00
+(1 row)
+
+SELECT interval '1 2:03' day to second;
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2:03:04' day to second;
+    interval    
+----------------
+ 1 day 02:03:04
+(1 row)
+
+SELECT interval '1 2' hour to minute;
+ERROR:  invalid input syntax for type interval: "1 2"
+LINE 1: SELECT interval '1 2' hour to minute;
+                        ^
+SELECT interval '1 2:03' hour to minute;
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2:03:04' hour to minute;
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2' hour to second;
+ERROR:  invalid input syntax for type interval: "1 2"
+LINE 1: SELECT interval '1 2' hour to second;
+                        ^
+SELECT interval '1 2:03' hour to second;
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2:03:04' hour to second;
+    interval    
+----------------
+ 1 day 02:03:04
+(1 row)
+
+SELECT interval '1 2' minute to second;
+ERROR:  invalid input syntax for type interval: "1 2"
+LINE 1: SELECT interval '1 2' minute to second;
+                        ^
+SELECT interval '1 2:03' minute to second;
+    interval    
+----------------
+ 1 day 00:02:03
+(1 row)
+
+SELECT interval '1 2:03:04' minute to second;
+    interval    
+----------------
+ 1 day 02:03:04
+(1 row)
+
+-- test syntaxes for restricted precision
+SELECT interval(0) '1 day 01:23:45.6789';
+    interval    
+----------------
+ 1 day 01:23:46
+(1 row)
+
+SELECT interval(2) '1 day 01:23:45.6789';
+     interval      
+-------------------
+ 1 day 01:23:45.68
+(1 row)
+
+SELECT interval '12:34.5678' minute to second(2);  -- per SQL spec
+  interval   
+-------------
+ 00:12:34.57
+(1 row)
+
+SELECT interval(2) '12:34.5678' minute to second;  -- historical PG
+  interval   
+-------------
+ 00:12:34.57
+(1 row)
+
+SELECT interval(2) '12:34.5678' minute to second(2);  -- syntax error
+ERROR:  interval precision specified twice
+LINE 1: SELECT interval(2) '12:34.5678' minute to second(2);
+               ^
+SELECT interval '1.234' second;
+   interval   
+--------------
+ 00:00:01.234
+(1 row)
+
+SELECT interval '1.234' second(2);
+  interval   
+-------------
+ 00:00:01.23
+(1 row)
+
+SELECT interval '1 2.345' day to second(2);
+    interval    
+----------------
+ 1 day 02:20:42
+(1 row)
+
+SELECT interval '1 2:03' day to second(2);
+    interval    
+----------------
+ 1 day 02:03:00
+(1 row)
+
+SELECT interval '1 2:03.4567' day to second(2);
+     interval      
+-------------------
+ 1 day 00:02:03.46
+(1 row)
+
+SELECT interval '1 2:03:04.5678' day to second(2);
+     interval      
+-------------------
+ 1 day 02:03:04.57
+(1 row)
+
+SELECT interval '1 2.345' hour to second(2);
+ERROR:  invalid input syntax for type interval: "1 2.345"
+LINE 1: SELECT interval '1 2.345' hour to second(2);
+                        ^
+SELECT interval '1 2:03.45678' hour to second(2);
+     interval      
+-------------------
+ 1 day 00:02:03.46
+(1 row)
+
+SELECT interval '1 2:03:04.5678' hour to second(2);
+     interval      
+-------------------
+ 1 day 02:03:04.57
+(1 row)
+
+SELECT interval '1 2.3456' minute to second(2);
+ERROR:  invalid input syntax for type interval: "1 2.3456"
+LINE 1: SELECT interval '1 2.3456' minute to second(2);
+                        ^
+SELECT interval '1 2:03.5678' minute to second(2);
+     interval      
+-------------------
+ 1 day 00:02:03.57
+(1 row)
+
+SELECT interval '1 2:03:04.5678' minute to second(2);
+     interval      
+-------------------
+ 1 day 02:03:04.57
 (1 row)
 

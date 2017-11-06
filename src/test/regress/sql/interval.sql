@@ -136,3 +136,51 @@ SELECT '1:20:05 5 microseconds'::interval;          -- error
 -- check that '30 days' equals '1 month' according to the hash function
 select '30 days'::interval = '1 month'::interval as t;
 select interval_hash('30 days'::interval) = interval_hash('1 month'::interval) as t;
+SELECT interval '1-2';  -- SQL year-month literal
+
+-- test SQL-spec syntaxes for restricted field sets
+SELECT interval '1' year;
+SELECT interval '2' month;
+SELECT interval '3' day;
+SELECT interval '4' hour;
+SELECT interval '5' minute;
+SELECT interval '6' second;
+SELECT interval '1' year to month;
+SELECT interval '1-2' year to month;
+SELECT interval '1 2' day to hour;
+SELECT interval '1 2:03' day to hour;
+SELECT interval '1 2:03:04' day to hour;
+SELECT interval '1 2' day to minute;
+SELECT interval '1 2:03' day to minute;
+SELECT interval '1 2:03:04' day to minute;
+SELECT interval '1 2' day to second;
+SELECT interval '1 2:03' day to second;
+SELECT interval '1 2:03:04' day to second;
+SELECT interval '1 2' hour to minute;
+SELECT interval '1 2:03' hour to minute;
+SELECT interval '1 2:03:04' hour to minute;
+SELECT interval '1 2' hour to second;
+SELECT interval '1 2:03' hour to second;
+SELECT interval '1 2:03:04' hour to second;
+SELECT interval '1 2' minute to second;
+SELECT interval '1 2:03' minute to second;
+SELECT interval '1 2:03:04' minute to second;
+
+-- test syntaxes for restricted precision
+SELECT interval(0) '1 day 01:23:45.6789';
+SELECT interval(2) '1 day 01:23:45.6789';
+SELECT interval '12:34.5678' minute to second(2);  -- per SQL spec
+SELECT interval(2) '12:34.5678' minute to second;  -- historical PG
+SELECT interval(2) '12:34.5678' minute to second(2);  -- syntax error
+SELECT interval '1.234' second;
+SELECT interval '1.234' second(2);
+SELECT interval '1 2.345' day to second(2);
+SELECT interval '1 2:03' day to second(2);
+SELECT interval '1 2:03.4567' day to second(2);
+SELECT interval '1 2:03:04.5678' day to second(2);
+SELECT interval '1 2.345' hour to second(2);
+SELECT interval '1 2:03.45678' hour to second(2);
+SELECT interval '1 2:03:04.5678' hour to second(2);
+SELECT interval '1 2.3456' minute to second(2);
+SELECT interval '1 2:03.5678' minute to second(2);
+SELECT interval '1 2:03:04.5678' minute to second(2);
