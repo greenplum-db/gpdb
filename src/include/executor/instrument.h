@@ -18,6 +18,7 @@
 #include "executor/executor.h"
 #include "nodes/plannodes.h"
 #include "portability/instr_time.h"
+#include "utils/resowner.h"
 
 struct CdbExplain_NodeSummary;          /* private def in cdb/cdbexplain.c */
 
@@ -122,8 +123,7 @@ extern int scan_node_counter;
 extern Size InstrShmemSize(void);
 extern void InstrShmemInit(void);
 extern Instrumentation *InstrShmemPick(Plan *plan, int eflags, int instrument_options);
-extern Instrumentation *InstrShmemRecycle(Instrumentation *instr);
-extern void InstrShmemCleanupPid(pid_t pid);
+extern void InstrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel, void *arg);
 #define GetInstrumentNext(ptr) (*((InstrumentationSlot **)(ptr+1) - 1))
 #define MAX_SCAN_ON_SHMEM 300
 

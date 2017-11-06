@@ -23,6 +23,7 @@
 
 InstrumentationHeader *InstrumentGlobal = NULL;
 int scan_node_counter = 0;
+List	   *slotsOccupied = NIL;
 
 /* Allocate new instrumentation structure(s) */
 Instrumentation *
@@ -220,6 +221,10 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
 			slot->ccnt = gp_command_count;
 			slot->eflags = eflags;
 			slot->nid = plan->plan_node_id;
+
+            MemoryContext contextSave = MemoryContextSwitchTo(TopMemoryContext);
+            slotsOccupied = lappend(slotsOccupied, slot);
+            MemoryContextSwitchTo(contextSave);
 		}
 	}
 
@@ -248,8 +253,7 @@ InstrShmemPick(Plan *plan, int eflags, int instrument_options)
  *  - Query abort or error, should recycle in mppExecutorCleanup
  *  - Fatal error should recycle in proc_exit_prepare
  */
-Instrumentation *
-InstrShmemRecycle(Instrumentation *instr)
+static Instrumentation *InstrShmemRecycle(Instrumentation *instr)
 {
 	InstrumentationSlot *slot;
 	Instrumentation *clone = NULL;
@@ -285,34 +289,20 @@ InstrShmemRecycle(Instrumentation *instr)
 
 	return clone;
 }
-
-/* 
- * Cleanup all instrument slots occupied by process
- * On backend exit with FATAL, no chance to recycle
- * slots by walking PlanState tree. proc_exit should
- * call this function as the final chance to recycle.
+/*
+ * Recycle instrumentation in shmem on each backend exit or abort
  */
 void
-InstrShmemCleanupPid(pid_t pid)
+InstrShmemRecycleCallback(ResourceReleasePhase phase, bool isCommit, bool isTopLevel, void *arg)
 {
-	int i;
-	InstrumentationSlot *current;
-	Instrumentation *instr;
+    ListCell   *cell;
 
-	if (InstrumentGlobal == NULL)
-		return;
+    foreach(cell, slotsOccupied)
+    {
+        InstrumentationSlot *slot = lfirst(cell);
 
-	current = (InstrumentationSlot*)(InstrumentGlobal + 1);
-	for (i = 0; i < gp_max_shmem_instruments; i++, current++)
-	{
-		instr = &current->data;
-
-		/* If this slot is empty, continue to next one */
-		if (!instr->in_shmem)
-			continue;
-
-		if (current->pid == pid) {
-			InstrShmemRecycle(instr);	
-		}
-	}	
+        InstrShmemRecycle(&(slot->data));
+    }
+    list_free(slotsOccupied);
+    slotsOccupied = NIL;
 }

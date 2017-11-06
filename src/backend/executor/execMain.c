@@ -1878,6 +1878,9 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	/* Extract all precomputed parameters from init plans */
 	ExtractParamsFromInitPlans(plannedstmt, plannedstmt->planTree, estate);
 
+	/*Register a callback function in ResourceOwner to recycle Inster in shmem*/
+	RegisterResourceReleaseCallback(InstrShmemRecycleCallback, NULL);
+
 	/*
 	 * Initialize the private state information for all the nodes in the query
 	 * tree.  This opens files, allocates storage and leaves us ready to start
