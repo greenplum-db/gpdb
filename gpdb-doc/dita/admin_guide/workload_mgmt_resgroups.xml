@@ -7,6 +7,42 @@
     <p>You can use resource groups to manage the number of active queries that may execute
       concurrently in your Greenplum Database cluster. With resource groups, you can also manage the
       amount of CPU and memory resources Greenplum allocates to each query.</p>
+    <p>This topic includes the following subtopics:</p>
+    <ul id="ul_wjf_1wy_sp">
+      <li id="im168064">
+        <xref href="#topic8339intro" type="topic" format="dita"/>
+      </li>
+      <li id="im16806a">
+        <xref href="#topic8339717179" type="topic" format="dita"/>
+      </li>
+      <li id="im16806b">
+        <xref href="#topic833971717" type="topic" format="dita"/>
+      </li>
+      <li id="im16806c">
+        <xref href="#topic8339717" type="topic" format="dita"/>
+      </li>
+      <li id="im16806d">
+        <xref href="#topic71717999" type="topic" format="dita"/>
+        <ul id="ul_wjf_1wy_spXX">
+          <li id="im16806e">
+            <xref href="#topic8" type="topic" format="dita"/>
+          </li>
+          <li id="im16806f">
+            <xref href="#topic10" type="topic" format="dita"/>
+          </li>
+          <li id="im16806g">
+            <xref href="#topic17" type="topic" format="dita"/>
+          </li>
+          <li id="im16806h">
+            <xref href="#topic22" type="topic" format="dita"/>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </body>
+  <topic id="topic8339intro" xml:lang="en">
+    <title>Introduction</title>
+    <body>
     <p>When the user executes a query, Greenplum Database evaluates the query against a set of
       limits defined for the resource group. Greenplum Database executes the query immediately if
       the group's resource limits have not yet been reached and the query does not cause the group
@@ -62,7 +98,8 @@
       </tgroup>
     </table>
     <note>Resource limits are not enforced on <codeph>SET</codeph>, <codeph>RESET</codeph>, and <codeph>SHOW</codeph> commands.</note>
-  </body>
+    </body>
+  </topic>
 
   <topic id="topic8339717179" xml:lang="en">
     <title>Transaction Concurrency Limit</title>
@@ -583,5 +620,4 @@ gpstart
     </topic>
 
   </topic>
-
 </topic>
