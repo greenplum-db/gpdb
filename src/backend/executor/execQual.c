@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.233 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.231 2008/05/15 00:17:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,7 +36,6 @@
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/nbtree.h"
 #include "access/tuptoaster.h"
 #include "catalog/pg_type.h"
@@ -51,6 +50,8 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/planmain.h"
+#include "parser/parse_expr.h"
+#include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -1666,6 +1667,7 @@ ExecMakeFunctionResult(FuncExprState *fcache,
 {
 	Datum		result;
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	ReturnSetInfo rsinfo;		/* for functions returning sets */
 	ExprDoneCond argDone;
 	bool		hasSetArg;
@@ -1812,11 +1814,16 @@ restart:
 
 			if (callit)
 			{
+				pgstat_init_function_usage(&fcinfo, &fcusage);
+
 				fcinfo.isnull = false;
 				rsinfo.isDone = ExprSingleResult;
 				result = FunctionCallInvoke(&fcinfo);
 				*isNull = fcinfo.isnull;
 				*isDone = rsinfo.isDone;
+
+				pgstat_end_function_usage(&fcusage,
+										  rsinfo.isDone != ExprMultipleResult);
 			}
 			else
 			{
@@ -1941,9 +1948,14 @@ restart:
 				}
 			}
 		}
+
+		pgstat_init_function_usage(&fcinfo, &fcusage);
+
 		fcinfo.isnull = false;
 		result = FunctionCallInvoke(&fcinfo);
 		*isNull = fcinfo.isnull;
+
+		pgstat_end_function_usage(&fcusage, true);
 	}
 
 	return result;
@@ -1964,6 +1976,7 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 	ListCell   *arg;
 	Datum		result;
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	int			i;
 
 	/* Guard against stack overflow due to overly complex expressions */
@@ -2002,9 +2015,14 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 			}
 		}
 	}
+
+	pgstat_init_function_usage(&fcinfo, &fcusage);
+
 	/* fcinfo.isnull = false; */	/* handled by InitFunctionCallInfoData */
 	result = FunctionCallInvoke(&fcinfo);
 	*isNull = fcinfo.isnull;
+
+	pgstat_end_function_usage(&fcusage, true);
 
 	return result;
 }
@@ -2029,6 +2047,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 	bool		returnsTuple;
 	bool		returnsSet = false;
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	ReturnSetInfo rsinfo;
 	HeapTupleData tmptup;
 	MemoryContext callerContext;
@@ -2159,9 +2178,14 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 		/* Call the function or expression one time */
 		if (direct_function_call)
 		{
+			pgstat_init_function_usage(&fcinfo, &fcusage);
+
 			fcinfo.isnull = false;
 			rsinfo.isDone = ExprSingleResult;
 			result = FunctionCallInvoke(&fcinfo);
+
+			pgstat_end_function_usage(&fcusage,
+									  rsinfo.isDone != ExprMultipleResult);
 		}
 		else
 		{
@@ -5705,14 +5729,12 @@ ExecInitExpr(Expr *node, PlanState *parent)
 					int			strategy;
 					Oid			lefttype;
 					Oid			righttype;
-					bool		recheck;
 					Oid			proc;
 
 					get_op_opfamily_properties(opno, opfamily,
 											   &strategy,
 											   &lefttype,
-											   &righttype,
-											   &recheck);
+											   &righttype);
 					proc = get_opfamily_proc(opfamily,
 											 lefttype,
 											 righttype,

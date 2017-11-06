@@ -19,7 +19,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/analyze.c,v 1.380 2008/10/04 21:56:54 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/analyze.c,v 1.374 2008/07/31 22:47:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -46,6 +46,7 @@
 #include "parser/parse_target.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/rel.h"
 
 #include "cdb/cdbvars.h"
 #include "catalog/gp_policy.h"
@@ -134,9 +135,6 @@ static List*generate_alternate_vars(Var *var, grouped_window_ctx *ctx);
  * parse_analyze
  *		Analyze a raw parse tree and transform it to Query form.
  *
- * If available, pass the source text from which the raw parse tree was
- * generated; it's OK to pass NULL if this is not available.
- *
  * Optionally, information about $n parameter types can be supplied.
  * References to $n indexes not defined by paramTypes[] are disallowed.
  *
@@ -150,6 +148,8 @@ parse_analyze(Node *parseTree, const char *sourceText,
 {
 	ParseState *pstate = make_parsestate(NULL);
 	Query	   *query;
+
+	Assert(sourceText != NULL);				/* required as of 8.4 */
 
 	pstate->p_sourcetext = sourceText;
 	pstate->p_paramtypes = paramTypes;
@@ -176,6 +176,8 @@ parse_analyze_varparams(Node *parseTree, const char *sourceText,
 {
 	ParseState *pstate = make_parsestate(NULL);
 	Query	   *query;
+
+	Assert(sourceText != NULL);				/* required as of 8.4 */
 
 	pstate->p_sourcetext = sourceText;
 	pstate->p_paramtypes = *paramTypes;
@@ -1563,9 +1565,10 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	qry->distinctClause = transformDistinctClause(pstate,
 												  stmt->distinctClause,
 												  &qry->targetList,
-												  &qry->sortClause,
+												  qry->sortClause,
 												  &qry->groupClause);
 
+	/* transform LIMIT */
 	qry->limitOffset = transformLimitClause(pstate, stmt->limitOffset,
 											"OFFSET");
 	qry->limitCount = transformLimitClause(pstate, stmt->limitCount,
@@ -2196,7 +2199,7 @@ transformSetOperationTree(ParseState *pstate, SelectStmt *stmt)
 			 * This might be removed when we are ready to change view definition.
 			 */
 			if (ntype != UNKNOWNOID &&
-				STRING_TYPE != TypeCategory(getBaseType(ntype)))
+				TYPCATEGORY_STRING != TypeCategory(getBaseType(ntype)))
 				hasnontext = true;
 		}
 

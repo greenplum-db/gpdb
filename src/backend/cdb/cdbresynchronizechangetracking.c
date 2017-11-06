@@ -1417,7 +1417,7 @@ ChangeTracking_GetIncrementalChangeList(void)
 
 		/* must be in a transaction in order to use SPI */
 		StartTransactionCommand();
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+		PushActiveSnapshot(GetTransactionSnapshot());
 		SetSessionUserId(BOOTSTRAP_SUPERUSERID, true);
 
 		if (SPI_OK_CONNECT != SPI_connect())
@@ -1496,6 +1496,7 @@ ChangeTracking_GetIncrementalChangeList(void)
 		connected = false;
 		SPI_finish();
 
+		PopActiveSnapshot();
 		CommitTransactionCommand();
 	}
 
@@ -1505,6 +1506,7 @@ ChangeTracking_GetIncrementalChangeList(void)
 		if (connected)
 			SPI_finish();
 
+		PopActiveSnapshot();
 		AbortCurrentTransaction();
 
 		/* Carry on with error handling. */
@@ -1710,7 +1712,7 @@ ChangeTracking_GetChanges(ChangeTrackingRequest *request)
 	{
 		/* must be in a transaction in order to use SPI */
 		StartTransactionCommand();
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+		PushActiveSnapshot(GetTransactionSnapshot());
 		SetSessionUserId(BOOTSTRAP_SUPERUSERID, true);
 
 		if (SPI_OK_CONNECT != SPI_connect())
@@ -1845,6 +1847,7 @@ ChangeTracking_GetChanges(ChangeTrackingRequest *request)
 		connected = false;
 		SPI_finish();
 
+		PopActiveSnapshot();
 		CommitTransactionCommand();
 		enable_groupagg = old_enable_groupagg;
 	}
@@ -1855,6 +1858,7 @@ ChangeTracking_GetChanges(ChangeTrackingRequest *request)
 		if (connected)
 			SPI_finish();
 
+		PopActiveSnapshot();
 		AbortCurrentTransaction();
 
 		enable_groupagg = old_enable_groupagg;
@@ -3221,7 +3225,7 @@ ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr *uptolsn)
 
 		/* must be in a transaction in order to use SPI */
 		StartTransactionCommand();
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+		PushActiveSnapshot(GetTransactionSnapshot());
 		SetSessionUserId(BOOTSTRAP_SUPERUSERID, true);
 
 		if (SPI_OK_CONNECT != SPI_connect())
@@ -3307,6 +3311,7 @@ ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr *uptolsn)
 		connected = false;
 		SPI_finish();
 
+		PopActiveSnapshot();
 		CommitTransactionCommand();
 	}
 
@@ -3316,6 +3321,7 @@ ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr *uptolsn)
 		if (connected)
 			SPI_finish();
 
+		PopActiveSnapshot();
 		AbortCurrentTransaction();
 
 		/* Carry on with error handling. */

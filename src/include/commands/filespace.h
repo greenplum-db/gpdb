@@ -22,7 +22,7 @@
 extern void CreateFileSpace(CreateFileSpaceStmt *stmt);
 
 /* DROP FILESPACE */
-extern void RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok);
+extern void DropFileSpace(DropFileSpaceStmt *stmt);
 extern void RemoveFileSpaceById(Oid fsoid);
 
 /* ALTER FILESPACE ... OWNER TO ... */

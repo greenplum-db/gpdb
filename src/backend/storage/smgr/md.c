@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.136 2008/03/10 20:06:27 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.138 2008/05/02 01:08:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -718,8 +718,6 @@ mdcreatedbdir(
 void
 mdcreate(
 	SMgrRelation 				reln,
-
-	bool 						isLocalBuf, 
 
 	char						*relationName,
 					/* For tracing only.  Can be NULL in some execution paths. */

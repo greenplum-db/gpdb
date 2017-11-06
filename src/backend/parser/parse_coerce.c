@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.164 2008/08/25 22:42:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_coerce.c,v 2.163 2008/07/30 21:23:17 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1417,7 +1417,8 @@ Oid
 select_common_type(List *typeids, const char *context)
 {
 	Oid			ptype;
-	CATEGORY	pcategory;
+	TYPCATEGORY	pcategory;
+	bool		pispreferred;
 	ListCell   *type_item;
 
 	Assert(typeids != NIL);
@@ -1443,7 +1444,7 @@ select_common_type(List *typeids, const char *context)
 
 	/* Nope, so set up for the full algorithm */
 	ptype = getBaseType(ptype);
-	pcategory = TypeCategory(ptype);
+	get_type_category_preferred(ptype, &pcategory, &pispreferred);
 
 	for_each_cell(type_item, lnext(list_head(typeids)))
 	{
@@ -1452,13 +1453,18 @@ select_common_type(List *typeids, const char *context)
 		/* move on to next one if no new information... */
 		if (ntype != UNKNOWNOID && ntype != ptype)
 		{
+			TYPCATEGORY	ncategory;
+			bool		nispreferred;
+
+			get_type_category_preferred(ntype, &ncategory, &nispreferred);
 			if (ptype == UNKNOWNOID)
 			{
 				/* so far, only unknowns so take anything... */
 				ptype = ntype;
-				pcategory = TypeCategory(ptype);
+				pcategory = ncategory;
+				pispreferred = nispreferred;
 			}
-			else if (TypeCategory(ntype) != pcategory)
+			else if (ncategory != pcategory)
 			{
 				/*
 				 * both types in different categories? then not much hope...
@@ -1475,7 +1481,7 @@ select_common_type(List *typeids, const char *context)
 								format_type_be(ptype),
 								format_type_be(ntype))));
 			}
-			else if (!IsPreferredType(pcategory, ptype) &&
+			else if (!pispreferred &&
 					 can_coerce_type(1, &ptype, &ntype, COERCION_IMPLICIT) &&
 					 !can_coerce_type(1, &ntype, &ptype, COERCION_IMPLICIT))
 			{
@@ -1484,7 +1490,8 @@ select_common_type(List *typeids, const char *context)
 				 * other way; but if we have a preferred type, stay on it.
 				 */
 				ptype = ntype;
-				pcategory = TypeCategory(ptype);
+				pcategory = ncategory;
+				pispreferred = nispreferred;
 			}
 		}
 	}
@@ -2021,203 +2028,39 @@ resolve_generic_type(Oid declared_type,
 /* TypeCategory()
  *		Assign a category to the specified type OID.
  *
- * NB: this must not return INVALID_TYPE.
- *
- * XXX This should be moved to system catalog lookups
- * to allow for better type extensibility.
- * - thomas 2001-09-30
+ * NB: this must not return TYPCATEGORY_INVALID.
  */
-CATEGORY
-TypeCategory(Oid inType)
+TYPCATEGORY
+TypeCategory(Oid type)
 {
-	CATEGORY	result;
+	char		typcategory;
+	bool		typispreferred;
 
-	switch (inType)
-	{
-		case (BOOLOID):
-			result = BOOLEAN_TYPE;
-			break;
-
-		case (CHAROID):
-		case (NAMEOID):
-		case (BPCHAROID):
-		case (VARCHAROID):
-		case (TEXTOID):
-			result = STRING_TYPE;
-			break;
-
-		case (BITOID):
-		case (VARBITOID):
-			result = BITSTRING_TYPE;
-			break;
-
-		case (OIDOID):
-		case (REGPROCOID):
-		case (REGPROCEDUREOID):
-		case (REGOPEROID):
-		case (REGOPERATOROID):
-		case (REGCLASSOID):
-		case (REGTYPEOID):
-		case (REGCONFIGOID):
-		case (REGDICTIONARYOID):
-		case (INT2OID):
-		case (INT4OID):
-		case (INT8OID):
-		case (FLOAT4OID):
-		case (FLOAT8OID):
-		case (NUMERICOID):
-		case (CASHOID):
-		case (COMPLEXOID):
-			result = NUMERIC_TYPE;
-			break;
-
-		case (DATEOID):
-		case (TIMEOID):
-		case (TIMETZOID):
-		case (ABSTIMEOID):
-		case (TIMESTAMPOID):
-		case (TIMESTAMPTZOID):
-			result = DATETIME_TYPE;
-			break;
-
-		case (RELTIMEOID):
-		case (TINTERVALOID):
-		case (INTERVALOID):
-			result = TIMESPAN_TYPE;
-			break;
-
-		case (POINTOID):
-		case (LSEGOID):
-		case (PATHOID):
-		case (BOXOID):
-		case (POLYGONOID):
-		case (LINEOID):
-		case (CIRCLEOID):
-			result = GEOMETRIC_TYPE;
-			break;
-
-		case (INETOID):
-		case (CIDROID):
-			result = NETWORK_TYPE;
-			break;
-
-		case (UNKNOWNOID):
-		case (InvalidOid):
-			result = UNKNOWN_TYPE;
-			break;
-
-		case (RECORDOID):
-		case (CSTRINGOID):
-		case (ANYOID):
-		case (ANYARRAYOID):
-		case (VOIDOID):
-		case (TRIGGEROID):
-		case (LANGUAGE_HANDLEROID):
-		case (INTERNALOID):
-		case (OPAQUEOID):
-		case (ANYELEMENTOID):
-		case (ANYNONARRAYOID):
-		case (ANYENUMOID):
-			result = GENERIC_TYPE;
-			break;
-
-		default:
-			result = USER_TYPE;
-			break;
-	}
-	return result;
-}	/* TypeCategory() */
+	get_type_category_preferred(type, &typcategory, &typispreferred);
+	Assert(typcategory != TYPCATEGORY_INVALID);
+	return (TYPCATEGORY) typcategory;
+}
 
 
 /* IsPreferredType()
  *		Check if this type is a preferred type for the given category.
  *
- * If category is INVALID_TYPE, then we'll return TRUE for preferred types
- * of any category; otherwise, only for preferred types of that category.
- *
- * XXX This should be moved to system catalog lookups
- * to allow for better type extensibility.
- * - thomas 2001-09-30
+ * If category is TYPCATEGORY_INVALID, then we'll return TRUE for preferred
+ * types of any category; otherwise, only for preferred types of that
+ * category.
  */
 bool
-IsPreferredType(CATEGORY category, Oid type)
+IsPreferredType(TYPCATEGORY category, Oid type)
 {
-	Oid			preftype;
+	char		typcategory;
+	bool		typispreferred;
 
-	if (category == INVALID_TYPE)
-		category = TypeCategory(type);
-	else if (category != TypeCategory(type))
+	get_type_category_preferred(type, &typcategory, &typispreferred);
+	if (category == typcategory || category == TYPCATEGORY_INVALID)
+		return typispreferred;
+	else
 		return false;
-
-	/*
-	 * This switch should agree with TypeCategory(), above.  Note that at this
-	 * point, category certainly matches the type.
-	 */
-	switch (category)
-	{
-		case (UNKNOWN_TYPE):
-		case (GENERIC_TYPE):
-			preftype = UNKNOWNOID;
-			break;
-
-		case (BOOLEAN_TYPE):
-			preftype = BOOLOID;
-			break;
-
-		case (STRING_TYPE):
-			preftype = TEXTOID;
-			break;
-
-		case (BITSTRING_TYPE):
-			preftype = VARBITOID;
-			break;
-
-		case (NUMERIC_TYPE):
-			if (type == OIDOID ||
-				type == REGPROCOID ||
-				type == REGPROCEDUREOID ||
-				type == REGOPEROID ||
-				type == REGOPERATOROID ||
-				type == REGCLASSOID ||
-				type == REGTYPEOID ||
-				type == REGCONFIGOID ||
-				type == REGDICTIONARYOID)
-				preftype = OIDOID;
-			else
-				preftype = FLOAT8OID;
-			break;
-
-		case (DATETIME_TYPE):
-			if (type == DATEOID)
-				preftype = TIMESTAMPOID;
-			else
-				preftype = TIMESTAMPTZOID;
-			break;
-
-		case (TIMESPAN_TYPE):
-			preftype = INTERVALOID;
-			break;
-
-		case (GEOMETRIC_TYPE):
-			preftype = type;
-			break;
-
-		case (NETWORK_TYPE):
-			preftype = INETOID;
-			break;
-
-		case (USER_TYPE):
-			preftype = type;
-			break;
-
-		default:
-			elog(ERROR, "unrecognized type category: %d", (int) category);
-			preftype = UNKNOWNOID;
-			break;
-	}
-
-	return (type == preftype);
-}	/* IsPreferredType() */
+}
 
 
 /* IsBinaryCoercible()
@@ -2436,8 +2279,8 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 
 		/*
 		 * If we still haven't found a possibility, consider automatic casting
-		 * using I/O functions.  We allow assignment casts to textual types
-		 * and explicit casts from textual types to be handled this way. (The
+		 * using I/O functions.  We allow assignment casts to string types
+		 * and explicit casts from string types to be handled this way. (The
 		 * CoerceViaIO mechanism is a lot more general than that, but this is
 		 * all we want to allow in the absence of a pg_cast entry.) It would
 		 * probably be better to insist on explicit casts in both directions,
@@ -2447,14 +2290,10 @@ find_coercion_pathway(Oid targetTypeId, Oid sourceTypeId,
 		if (result == COERCION_PATH_NONE)
 		{
 			if (ccontext >= COERCION_ASSIGNMENT &&
-				(targetTypeId == TEXTOID ||
-				 targetTypeId == VARCHAROID ||
-				 targetTypeId == BPCHAROID))
+				TypeCategory(targetTypeId) == TYPCATEGORY_STRING)
 				result = COERCION_PATH_COERCEVIAIO;
 			else if (ccontext >= COERCION_EXPLICIT &&
-					 (sourceTypeId == TEXTOID ||
-					  sourceTypeId == VARCHAROID ||
-					  sourceTypeId == BPCHAROID))
+					 TypeCategory(sourceTypeId) == TYPCATEGORY_STRING)
 				result = COERCION_PATH_COERCEVIAIO;
 		}
 	}

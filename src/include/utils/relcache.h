@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.61 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/relcache.h,v 1.62 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,8 +32,6 @@ typedef struct RelationData *Relation;
  * ----------------
  */
 typedef Relation *RelationPtr;
-
-struct SysScanDescData; /* defined in access/genam.h */
 
 /*
  * Routines to open (lookup) and close a relcache entry

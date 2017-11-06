@@ -1113,9 +1113,9 @@ SELECT COMPLEX(5,3)^COMPLEX(3,5) = power(COMPLEX(5,3), COMPLEX(3,5)) AS tr;
 (1 row)
 
 SELECT (-1)^0.5 AS wrong;
-ERROR:  invalid argument for power function
+ERROR:  a negative number raised to a non-integer power yields a complex result
 SELECT power(-1, 0.5) AS wrong;
-ERROR:  invalid argument for power function
+ERROR:  a negative number raised to a non-integer power yields a complex result
 SELECT complex_dp_eq(power(-1::COMPLEX, 0.5), COMPLEX(0, -1), 1e-6) AS tr;
  tr 
 ----

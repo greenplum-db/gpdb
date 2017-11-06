@@ -5,7 +5,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 1996-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.49 2008/03/10 12:55:13 mha Exp $
+ * $PostgreSQL: pgsql/src/backend/catalog/system_views.sql,v 1.53 2008/07/14 00:51:45 tgl Exp $
  */
 
 CREATE VIEW pg_roles AS 
@@ -119,30 +119,30 @@ CREATE VIEW pg_stats AS
         stanullfrac AS null_frac, 
         stawidth AS avg_width, 
         stadistinct AS n_distinct, 
-        CASE 1 
-            WHEN stakind1 THEN stavalues1 
-            WHEN stakind2 THEN stavalues2 
-            WHEN stakind3 THEN stavalues3 
-            WHEN stakind4 THEN stavalues4 
-        END AS most_common_vals, 
-        CASE 1 
-            WHEN stakind1 THEN stanumbers1 
-            WHEN stakind2 THEN stanumbers2 
-            WHEN stakind3 THEN stanumbers3 
-            WHEN stakind4 THEN stanumbers4 
-        END AS most_common_freqs, 
-        CASE 2 
-            WHEN stakind1 THEN stavalues1 
-            WHEN stakind2 THEN stavalues2 
-            WHEN stakind3 THEN stavalues3 
-            WHEN stakind4 THEN stavalues4 
-        END AS histogram_bounds, 
-        CASE 3 
-            WHEN stakind1 THEN stanumbers1[1] 
-            WHEN stakind2 THEN stanumbers2[1] 
-            WHEN stakind3 THEN stanumbers3[1] 
-            WHEN stakind4 THEN stanumbers4[1] 
-        END AS correlation 
+        CASE
+            WHEN stakind1 IN (1, 4) THEN stavalues1
+            WHEN stakind2 IN (1, 4) THEN stavalues2
+            WHEN stakind3 IN (1, 4) THEN stavalues3
+            WHEN stakind4 IN (1, 4) THEN stavalues4
+        END AS most_common_vals,
+        CASE
+            WHEN stakind1 IN (1, 4) THEN stanumbers1
+            WHEN stakind2 IN (1, 4) THEN stanumbers2
+            WHEN stakind3 IN (1, 4) THEN stanumbers3
+            WHEN stakind4 IN (1, 4) THEN stanumbers4
+        END AS most_common_freqs,
+        CASE
+            WHEN stakind1 = 2 THEN stavalues1
+            WHEN stakind2 = 2 THEN stavalues2
+            WHEN stakind3 = 2 THEN stavalues3
+            WHEN stakind4 = 2 THEN stavalues4
+        END AS histogram_bounds,
+        CASE
+            WHEN stakind1 = 3 THEN stanumbers1[1]
+            WHEN stakind2 = 3 THEN stanumbers2[1]
+            WHEN stakind3 = 3 THEN stanumbers3[1]
+            WHEN stakind4 = 3 THEN stanumbers4[1]
+        END AS correlation
     FROM pg_statistic s JOIN pg_class c ON (c.oid = s.starelid) 
          JOIN pg_attribute a ON (c.oid = attrelid AND attnum = s.staattnum) 
          LEFT JOIN pg_namespace n ON (n.oid = c.relnamespace) 
@@ -370,14 +370,15 @@ CREATE VIEW pg_stat_activity AS
             S.sess_id,
             S.usesysid,
             U.rolname AS usename,
+            S.application_name,
             S.current_query,
             S.waiting,
+            S.xact_start,
             S.query_start,
             S.backend_start,
             S.client_addr,
             S.client_port,
-            S.application_name,
-            S.xact_start,
+
             S.waiting_reason,
             S.rsgid,
             S.rsgname,
@@ -903,6 +904,18 @@ pg_resqueuecapability rc WHERE
 rq.oid=rc.resqueueid AND rc.restypid = rt.restypid
 ORDER BY rsqname, restypid
 ;
+
+CREATE VIEW pg_stat_user_functions AS 
+    SELECT
+            P.oid AS funcid, 
+            N.nspname AS schemaname,
+            P.proname AS funcname,
+            pg_stat_get_function_calls(P.oid) AS calls,
+            pg_stat_get_function_time(P.oid) / 1000 AS total_time,
+            pg_stat_get_function_self_time(P.oid) / 1000 AS self_time
+    FROM pg_proc P LEFT JOIN pg_namespace N ON (N.oid = P.pronamespace)
+    WHERE P.prolang != 12  -- fast check to eliminate built-in functions   
+          AND pg_stat_get_function_calls(P.oid) IS NOT NULL;
 
 CREATE VIEW pg_stat_bgwriter AS
     SELECT

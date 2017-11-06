@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.371 2008/03/26 21:10:38 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.375 2008/06/05 15:47:32 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -60,7 +60,9 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
+#include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
@@ -266,7 +268,8 @@ static int VacFullInitialStatsSize = 0;
 static BufferAccessStrategy vac_strategy;
 
 /* non-export function prototypes */
-static List *get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum);
+static List *get_rel_oids(Oid relid, VacuumStmt *vacstmt,
+			 const char *stmttype);
 static void vac_truncate_clog(TransactionId frozenXID);
 static void vacuum_rel(Relation onerel, VacuumStmt *vacstmt, LOCKMODE lmode, List *updated_stats,
 		   bool for_wraparound);
@@ -336,9 +339,9 @@ static void vacuum_appendonly_index(Relation indexRelation,
 /*
  * Primary entry point for VACUUM and ANALYZE commands.
  *
- * relids is normally NIL; if it is not, then it provides the list of
- * relation OIDs to be processed, and vacstmt->relation is ignored.
- * (The non-NIL case is currently only used by autovacuum.)
+ * relid is normally InvalidOid; if it is not, then it provides the relation
+ * OID to be processed, and vacstmt->relation is ignored.  (The non-invalid
+ * case is currently only used by autovacuum.)
  *
  * for_wraparound is used by autovacuum to let us know when it's forcing
  * a vacuum for wraparound, which should not be auto-cancelled.
@@ -348,12 +351,12 @@ static void vacuum_appendonly_index(Relation indexRelation,
  *
  * isTopLevel should be passed down from ProcessUtility.
  *
- * It is the caller's responsibility that vacstmt, relids, and bstrategy
+ * It is the caller's responsibility that vacstmt and bstrategy
  * (if given) be allocated in a memory context that won't disappear
  * at transaction commit.
  */
 void
-vacuum(VacuumStmt *vacstmt, List *relids,
+vacuum(VacuumStmt *vacstmt, Oid relid,
 	   BufferAccessStrategy bstrategy, bool for_wraparound, bool isTopLevel)
 {
 	const char *stmttype = vacstmt->vacuum ? "VACUUM" : "ANALYZE";
@@ -433,22 +436,25 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 	vac_strategy = bstrategy;
 
 	/* Remember whether we are processing everything in the DB */
-	all_rels = (relids == NIL && vacstmt->relation == NULL);
+	all_rels = (!OidIsValid(relid) && vacstmt->relation == NULL);
 
 	/*
 	 * Build list of relations to process, unless caller gave us one. (If we
 	 * build one, we put it in vac_context for safekeeping.)
-	 * Analyze on midlevel partition is not allowed directly so vacuum_relations
-	 * and analyze_relations may be different.
-	 * In case of partitioned tables, vacuum_relation will contain all OIDs of the
-	 * partitions of a partitioned table. However, analyze_relation will contain all the OIDs
-	 * of partition of a partitioned table except midlevel partition unless
-	 * GUC optimizer_analyze_midlevel_partition is set to on.
+	 */
+
+	/*
+	 * Analyze on midlevel partition is not allowed directly so
+	 * vacuum_relations and analyze_relations may be different.  In case of
+	 * partitioned tables, vacuum_relation will contain all OIDs of the
+	 * partitions of a partitioned table. However, analyze_relation will
+	 * contain all the OIDs of partition of a partitioned table except midlevel
+	 * partition unless GUC optimizer_analyze_midlevel_partition is set to on.
 	 */
 	if (vacstmt->vacuum)
-		vacuum_relations = get_rel_oids(relids, vacstmt, true /* Requesting relations for VACUUM */);
+		vacuum_relations = get_rel_oids(relid, vacstmt, stmttype);
 	if (vacstmt->analyze)
-		analyze_relations = get_rel_oids(relids, vacstmt, false /* Requesting relations for ANALYZE */);
+		analyze_relations = get_rel_oids(relid, vacstmt, stmttype);
 
 	/*
 	 * Decide whether we need to start/commit our own transactions.
@@ -500,6 +506,10 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 	 */
 	if (use_own_xacts)
 	{
+		/* ActiveSnapshot is not set by autovacuum */
+		if (ActiveSnapshotSet())
+			PopActiveSnapshot();
+
 		/* matches the StartTransaction in PostgresMain() */
 		if (Gp_role != GP_ROLE_EXECUTE)
 			CommitTransactionCommand();
@@ -524,7 +534,8 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 		if (vacstmt->vacuum)
 		{
 			/*
-			 * Loop to process each selected relation which needs to be vacuumed.
+			 * Loop to process each selected relation which needs to be
+			 * vacuumed.
 			 */
 			foreach(cur, vacuum_relations)
 			{
@@ -536,8 +547,9 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 		if (vacstmt->analyze)
 		{
 			/*
-			 * If there are no partition tables in the database and ANALYZE ROOTPARTITION ALL
-			 * is executed report a WARNING as no root partitions are there to be analyzed
+			 * If there are no partition tables in the database and ANALYZE
+			 * ROOTPARTITION ALL is executed, report a WARNING as no root
+			 * partitions are there to be analyzed
 			 */
 			if (vacstmt->rootonly && NIL == analyze_relations && !vacstmt->relation)
 			{
@@ -564,7 +576,7 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 				{
 					StartTransactionCommand();
 					/* functions in indexes may want a snapshot set */
-					ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+					PushActiveSnapshot(GetTransactionSnapshot());
 				}
 				else
 					old_context = MemoryContextSwitchTo(anl_context);
@@ -572,7 +584,10 @@ vacuum(VacuumStmt *vacstmt, List *relids,
 				analyze_rel(relid, vacstmt, vac_strategy);
 
 				if (use_own_xacts)
+				{
+					PopActiveSnapshot();
 					CommitTransactionCommand();
+				}
 				else
 				{
 					MemoryContextSwitchTo(old_context);
@@ -1035,7 +1050,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		 * Functions in indexes may want a snapshot set. Also, setting
 		 * a snapshot ensures that RecentGlobalXmin is kept truly recent.
 		 */
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+		PushActiveSnapshot(GetTransactionSnapshot());
 
 		if (!vacstmt->full)
 		{
@@ -1113,11 +1128,11 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 
 			if (onerel == NULL)
 			{
+				PopActiveSnapshot();
 				CommitTransactionCommand();
 				continue;
 			}
 		}
-
 
 		vacuumStatement_AssignRelation(vacstmt, relid, relations);
 
@@ -1204,6 +1219,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 							MemoryContextSwitchTo(oldctx);
 							/* Nothing left to do for this relation */
 							relation_close(onerel, NoLock);
+							PopActiveSnapshot();
 							CommitTransactionCommand();
 							/* don't dispatch this iteration */
 							continue;
@@ -1399,6 +1415,8 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 		}
 		vacstmt->appendonly_compaction_vacuum_prepare = false;
 
+		PopActiveSnapshot();
+
 		/*
 		 * Transaction commit is always executed on QD.
 		 */
@@ -1447,18 +1465,21 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
  * per-relation transactions.
  */
 static List *
-get_rel_oids(List *relids, VacuumStmt *vacstmt, bool isVacuum)
+get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
 {
 	List	   *oid_list = NIL;
 	MemoryContext oldcontext;
 
-	/* List supplied by VACUUM's caller? */
-	if (relids)
-		return relids;
-
-	if (vacstmt->relation)
+	/* OID supplied by VACUUM's caller? */
+	if (OidIsValid(relid))
 	{
-		if (isVacuum)
+		oldcontext = MemoryContextSwitchTo(vac_context);
+		oid_list = lappend_oid(oid_list, relid);
+		MemoryContextSwitchTo(oldcontext);
+	}
+	else if (vacstmt->relation)
+	{
+		if (strcmp(stmttype, "VACUUM") == 0)
 		{
 			/* Process a specific relation */
 			Oid			relid;
@@ -2131,6 +2152,16 @@ vacuum_rel(Relation onerel, VacuumStmt *vacstmt, LOCKMODE lmode, List *updated_s
 	/* Restore userid and security context */
 	SetUserIdAndSecContext(save_userid, save_sec_context);
 
+	/*
+	 * Complete the transaction and free all temporary memory used.
+	 * NOT in GPDB, though! The caller still needs to have the relation open.
+	 */
+#if 0
+	if (vacstmt->full)
+		PopActiveSnapshot();
+	CommitTransactionCommand();
+#endif
+
 	/* now we can allow interrupts again, if disabled */
 	if (heldoff)
 		RESUME_INTERRUPTS();
@@ -2614,7 +2645,7 @@ full_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 		{
 			elogif(Debug_appendonly_print_compaction, LOG,
 					"Vacuum full cleanup phase %s", RelationGetRelationName(onerel));
-			vacuum_appendonly_fill_stats(onerel, ActiveSnapshot,
+			vacuum_appendonly_fill_stats(onerel, GetActiveSnapshot(),
 										 &vacrelstats->rel_pages,
 										 &vacrelstats->rel_tuples,
 										 &vacrelstats->hasindex);

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.74 2008/03/26 16:20:46 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.77 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include "access/genam.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
@@ -58,7 +59,7 @@
 #include "miscadmin.h"
 #include "storage/fd.h"
 #include "utils/fmgroids.h"
-#include "utils/relcache.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
 #include "cdb/cdbpersistenttablespace.h"
@@ -731,7 +732,6 @@ GetNewOid(Relation relation)
 {
 	Oid			newOid;
 	Oid			oidIndex;
-	Relation	indexrel;
 
 	/* If relation doesn't have OIDs at all, caller is confused */
 	Assert(relation->rd_rel->relhasoids);
@@ -759,11 +759,9 @@ GetNewOid(Relation relation)
 	}
 
 	/* Otherwise, use the index to find a nonconflicting OID */
-	indexrel = index_open(oidIndex, AccessShareLock);
 	do {
-		newOid = GetNewOidWithIndex(relation, indexrel);
+		newOid = GetNewOidWithIndex(relation, oidIndex, ObjectIdAttributeNumber);
 	} while(!IsOidAcceptable(newOid));
-	index_close(indexrel, AccessShareLock);
 
 	/*
 	 * Most catalog objects need to have the same OID in the master and all
@@ -788,16 +786,17 @@ GetNewOid(Relation relation)
  * an index that will not be recognized by RelationGetOidIndex: TOAST tables
  * and pg_largeobject have indexes that are usable, but have multiple columns
  * and are on ordinary columns rather than a true OID column.  This code
- * will work anyway, so long as the OID is the index's first column.
+ * will work anyway, so long as the OID is the index's first column.  The
+ * caller must pass in the actual heap attnum of the OID column, however.
  *
  * Caller must have a suitable lock on the relation.
  */
 Oid
-GetNewOidWithIndex(Relation relation, Relation indexrel)
+GetNewOidWithIndex(Relation relation, Oid indexId, AttrNumber oidcolumn)
 {
 	Oid			newOid;
 	SnapshotData SnapshotDirty;
-	IndexScanDesc scan;
+	SysScanDesc	scan;
 	ScanKeyData key;
 	bool		collides;
 
@@ -811,17 +810,17 @@ GetNewOidWithIndex(Relation relation, Relation indexrel)
 		newOid = GetNewObjectId();
 
 		ScanKeyInit(&key,
-					(AttrNumber) 1,
+					oidcolumn,
 					BTEqualStrategyNumber, F_OIDEQ,
 					ObjectIdGetDatum(newOid));
 
 		/* see notes above about using SnapshotDirty */
-		scan = index_beginscan(relation, indexrel,
-							   &SnapshotDirty, 1, &key);
+		scan = systable_beginscan(relation, indexId, true,
+								  &SnapshotDirty, 1, &key);
 
-		collides = HeapTupleIsValid(index_getnext(scan, ForwardScanDirection));
+		collides = HeapTupleIsValid(systable_getnext(scan));
 
-		index_endscan(scan);
+		systable_endscan(scan);
 	} while (collides);
 
 	return newOid;

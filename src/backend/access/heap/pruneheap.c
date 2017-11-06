@@ -8,17 +8,21 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/pruneheap.c,v 1.9 2008/03/26 21:10:37 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/pruneheap.c,v 1.16 2008/07/13 20:45:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "access/htup.h"
 #include "access/transam.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "storage/bufmgr.h"
+#include "storage/off.h"
 #include "utils/inval.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
 
@@ -68,7 +72,7 @@ static void heap_prune_record_unused(PruneState *prstate, OffsetNumber offnum);
 void
 heap_page_prune_opt(Relation relation, Buffer buffer, TransactionId OldestXmin)
 {
-	PageHeader	dp = (PageHeader) BufferGetPage(buffer);
+	Page		page = BufferGetPage(buffer);
 	Size		minfree;
 
 	/*
@@ -84,7 +88,7 @@ heap_page_prune_opt(Relation relation, Buffer buffer, TransactionId OldestXmin)
 	 * Forget it if page is not hinted to contain something prunable that's
 	 * older than OldestXmin.
 	 */
-	if (!PageIsPrunable(dp, OldestXmin))
+	if (!PageIsPrunable(page, OldestXmin))
 		return;
 
 	/*
@@ -103,7 +107,7 @@ heap_page_prune_opt(Relation relation, Buffer buffer, TransactionId OldestXmin)
 											 HEAP_DEFAULT_FILLFACTOR);
 	minfree = Max(minfree, BLCKSZ / 10);
 
-	if (PageIsFull(dp) || PageGetHeapFreeSpace((Page) dp) < minfree)
+	if (PageIsFull(page) || PageGetHeapFreeSpace(page) < minfree)
 	{
 		/*
 		 * Check if we have gp_persistent_relation_node information, to be
@@ -123,7 +127,7 @@ heap_page_prune_opt(Relation relation, Buffer buffer, TransactionId OldestXmin)
 		 * prune. (We needn't recheck PageIsPrunable, since no one else could
 		 * have pruned while we hold pin.)
 		 */
-		if (PageIsFull(dp) || PageGetHeapFreeSpace((Page) dp) < minfree)
+		if (PageIsFull(page) || PageGetHeapFreeSpace(page) < minfree)
 		{
 			/* OK to prune (though not to remove redirects) */
 			(void) heap_page_prune(relation, buffer, OldestXmin, false, true);
@@ -237,7 +241,7 @@ heap_page_prune(Relation relation, Buffer buffer, TransactionId OldestXmin,
 		 * and update the page's hint bit about whether it has free line
 		 * pointers.
 		 */
-		heap_page_prune_execute(relation, buffer,
+		heap_page_prune_execute(buffer,
 								prstate.redirected, prstate.nredirected,
 								prstate.nowdead, prstate.ndead,
 								prstate.nowunused, prstate.nunused,
@@ -706,7 +710,7 @@ heap_prune_record_unused(PruneState *prstate, OffsetNumber offnum)
  * arguments are identical to those of log_heap_clean().
  */
 void
-heap_page_prune_execute(Relation reln, Buffer buffer,
+heap_page_prune_execute(Buffer buffer,
 						OffsetNumber *redirected, int nredirected,
 						OffsetNumber *nowdead, int ndead,
 						OffsetNumber *nowunused, int nunused,
@@ -802,7 +806,7 @@ heap_get_root_tuples(Page page, OffsetNumber *root_offsets)
 	MemSet(root_offsets, 0, MaxHeapTuplesPerPage * sizeof(OffsetNumber));
 
 	maxoff = PageGetMaxOffsetNumber(page);
-	for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum++)
+	for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum = OffsetNumberNext(offnum))
 	{
 		ItemId		lp = PageGetItemId(page, offnum);
 		HeapTupleHeader htup;

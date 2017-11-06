@@ -291,10 +291,11 @@ ERROR:  hash indexes are not supported
 -- ----------------------------------------------------------------------
 -- start_ignore
 drop schema qp_gist_indexes3 cascade;
-NOTICE:  drop cascades to table gisttable14
-NOTICE:  drop cascades to table gisttable_pktest
-NOTICE:  drop cascades to function insertmanyintogisttable3(integer,integer)
-NOTICE:  drop cascades to function insertintogisttable3(integer)
-NOTICE:  drop cascades to function to_box(text)
-NOTICE:  drop cascades to table gisttable3
+NOTICE:  drop cascades to 6 other objects
+DETAIL:  drop cascades to table gisttable3
+drop cascades to function to_box(text)
+drop cascades to function insertintogisttable3(integer)
+drop cascades to function insertmanyintogisttable3(integer,integer)
+drop cascades to table gisttable_pktest
+drop cascades to table gisttable14
 -- end_ignore

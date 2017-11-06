@@ -15,7 +15,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_multicol_1 select g, g%2 from generate_series(1, 100) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_multicol_1 values(null, null);
@@ -36,7 +35,6 @@ CONTEXT:  SQL statement "select sum(gp_statistics_estimate_reltuples_relpages_oi
 INFO:  Dispatch command to ALL contents
 CONTEXT:  SQL statement "select Ta.a, Ta.b from public.dd_multicol_1 as Ta  limit 7500 "
 insert into dd_multicol_2 select g, g%2 from generate_series(1, 100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents

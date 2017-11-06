@@ -309,6 +309,24 @@ SELECT SUM(a) FROM dml_heap_r;
 (1 row)
 
 --
+-- Check that a row gets a new OID, even when inserting an otherwise identical row
+-- to it (see commit 3d02cae310).
+--
+-- Note: GPDB doesn't guarantee OIDS to be unique across segments! So if you change
+-- this to DISTRIBUTED RANDOMLY, it can fail.
+--
+create table dml_heap_with_oids(id int4) with oids distributed by (id);
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+insert into dml_heap_with_oids values (1);
+insert into dml_heap_with_oids select * from dml_heap_with_oids;
+insert into dml_heap_with_oids select * from dml_heap_with_oids;
+select count(*), count(distinct oid) from dml_heap_with_oids;
+ count | count 
+-------+-------
+     4 |     4
+(1 row)
+
+--
 -- Check that a tuple gets an OID, even if it's toasted (there used to
 -- be a bug, where toasting a tuple cleared its just-assigned OID)
 --

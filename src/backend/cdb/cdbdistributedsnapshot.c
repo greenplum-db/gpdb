@@ -50,7 +50,8 @@
 bool
 localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 {
-	DistributedSnapshotCommitted distributedSnapshotCommitted;
+	DistributedSnapshotWithLocalMapping *dslm;
+
 
 	Assert(TransactionIdIsNormal(localXid));
 
@@ -61,21 +62,13 @@ localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 	if (!IsUnderPostmaster || !IsNormalProcessingMode())
 		return false;
 
-	/*
-	 * If don't have snapshot, can't check the global visibility and hence
-	 * return not to perform clean the tuple.
-	 */
-	if (NULL == SerializableSnapshot)
-		return true;
+	dslm = GetCurrentDistributedSnapshotWithLocalMapping();
 
 	/* Only if we have distributed snapshot, evaluate against it */
-	if (SerializableSnapshot->haveDistribSnapshot)
+	if (dslm)
 	{
-		distributedSnapshotCommitted =
-			DistributedSnapshotWithLocalMapping_CommittedTest(
-															  &SerializableSnapshot->distribSnapshotWithLocalMapping,
-															  localXid,
-															  true);
+		DistributedSnapshotCommitted distributedSnapshotCommitted =
+			DistributedSnapshotWithLocalMapping_CommittedTest(dslm, localXid, true);
 
 		switch (distributedSnapshotCommitted)
 		{
@@ -94,8 +87,8 @@ localXidSatisfiesAnyDistributedSnapshot(TransactionId localXid)
 	}
 
 	/*
-	 * If don't have distributed snapshot to check, return it can be seen and
-	 * hence not to be cleaned-up.
+	 * If don't have snapshot or distributed snapshot, can't check the global
+	 * visibility and hence convey not to clean-up the tuple.
 	 */
 	return true;
 }

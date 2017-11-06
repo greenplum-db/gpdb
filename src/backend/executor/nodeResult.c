@@ -267,6 +267,9 @@ static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlo
 		Assert(resultNode->hashFilter);
 		ListCell	*cell = NULL;
 
+		// GPDB_84_MERGE_FIXME: Disabled this assertion temporarily. See
+		// https://github.com/greenplum-db/gpdb/issues/3527
+		//Assert(list_length(resultNode->hashList) <= resultSlot->tts_tupleDescriptor->natts);
 
 		CdbHash *hash = makeCdbHash(GpIdentity.numsegments);
 		cdbhashinit(hash);

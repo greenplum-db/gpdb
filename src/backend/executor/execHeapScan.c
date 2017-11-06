@@ -14,6 +14,7 @@
  */
 #include "postgres.h"
 
+#include "access/relscan.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "executor/nodeTableScan.h"

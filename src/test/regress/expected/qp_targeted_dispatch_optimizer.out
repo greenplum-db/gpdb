@@ -717,7 +717,6 @@ insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 5) i;
 set test_print_direct_dispatch_info=on;
 insert into mpp7638 select i, i+1, i+2, i+3 from generate_series(1, 6) i;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 select count(*) from mpp7638 where a =1;

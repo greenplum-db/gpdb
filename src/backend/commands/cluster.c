@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.172 2008/03/26 21:10:37 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.177 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/relscan.h"
 #include "access/rewriteheap.h"
 #include "access/transam.h"
 #include "access/xact.h"
@@ -43,6 +44,8 @@
 #include "commands/trigger.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
 #include "utils/fmgroids.h"
@@ -234,19 +237,20 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 		rvs = get_tables_to_cluster(cluster_context);
 
 		/* Commit to get out of starting transaction */
+		PopActiveSnapshot();
 		CommitTransactionCommand();
 
 		/* Ok, now that we've got them all, cluster them one by one */
 		foreach(rv, rvs)
 		{
 			RelToCluster *rvtc = (RelToCluster *) lfirst(rv);
+			bool		dispatch;
 
 			/* Start a new transaction for each relation. */
 			StartTransactionCommand();
 			/* functions in indexes may want a snapshot set */
-			ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
-
-			bool dispatch = cluster_rel(rvtc, true, stmt, false);
+			PushActiveSnapshot(GetTransactionSnapshot());
+			dispatch = cluster_rel(rvtc, true, stmt, false);
 
 			if (Gp_role == GP_ROLE_DISPATCH && dispatch)
 			{
@@ -259,6 +263,8 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 											GetAssignedOidsForDispatch(),
 											NULL);
 			}
+
+			PopActiveSnapshot();
 			CommitTransactionCommand();
 		}
 
@@ -285,8 +291,8 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
  * them incrementally while we load the table.
  *
  * Note that we don't support clustering on an AO table. If printError is true,
- * this function errors out when the relation is an AO table. Otherwise,
- * this functions prints out a warning message when the relation is an AO table.
+ * this function errors out when the relation is an AO table. Otherwise, this
+ * functions prints out a warning message when the relation is an AO table.
  */
 static bool
 cluster_rel(RelToCluster *rvtc, bool recheck, ClusterStmt *stmt, bool printError)
@@ -309,9 +315,10 @@ cluster_rel(RelToCluster *rvtc, bool recheck, ClusterStmt *stmt, bool printError
 	{
 		return false;
 	}
+
 	/*
-	 * We don't support cluster on an AO table. We print out
-	 * a warning/error to the user, and simply return.
+	 * We don't support cluster on an AO table. We print out a warning/error to
+	 * the user, and simply return.
 	 */
 	if (RelationIsAoRows(OldHeap) || RelationIsAoCols(OldHeap))
 	{
@@ -720,9 +727,12 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 
 	/*
 	 * Need to make a copy of the tuple descriptor, since
-	 * heap_create_with_catalog modifies it.
+	 * heap_create_with_catalog modifies it.  Note that the NewHeap will
+	 * not receive any of the defaults or constraints associated with the
+	 * OldHeap; we don't need 'em, and there's no reason to spend cycles
+	 * inserting them into the catalogs only to delete them.
 	 */
-	tupdesc = CreateTupleDescCopyConstr(OldHeapDesc);
+	tupdesc = CreateTupleDescCopy(OldHeapDesc);
 
 	/*
 	 * Use options of the old heap for new heap.
@@ -743,6 +753,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 										  InvalidOid,
 										  OldHeap->rd_rel->relowner,
 										  tupdesc,
+										  NIL,
 										  OldHeap->rd_rel->relam,
 										  OldHeap->rd_rel->relkind,
 										  OldHeap->rd_rel->relstorage,
@@ -895,6 +906,9 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex)
 
 		/* -------- MirroredLock ---------- */
 		MIRROREDLOCK_BUFMGR_LOCK;
+		/* Since we used no scan keys, should never need to recheck */
+		if (scan->xs_recheck)
+			elog(ERROR, "CLUSTER does not support lossy index conditions");
 
 		LockBuffer(scan->xs_cbuf, BUFFER_LOCK_SHARE);
 

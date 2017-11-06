@@ -165,7 +165,6 @@ EXECUTE PROCEDURE bfv_dml_error_func();
 UPDATE bfv_dml_trigger_test SET t = 'bar';
 UPDATE bfv_dml_trigger_test SET id = id + 1;
 
-
 --
 -- Verify that ExecInsert doesn't scribble on the old tuple, when the new
 -- tuple comes directly from the old table.

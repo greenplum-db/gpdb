@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/trigger.c,v 1.231 2008/03/28 00:21:55 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/trigger.c,v 1.236 2008/07/18 20:26:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -15,6 +15,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
@@ -32,6 +33,8 @@
 #include "nodes/execnodes.h"
 #include "nodes/makefuncs.h"
 #include "parser/parse_func.h"
+#include "pgstat.h"
+#include "storage/bufmgr.h"
 #include "tcop/utility.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -770,7 +773,8 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 
 		/* ... and execute it */
 		ProcessUtility((Node *) atstmt,
-					   NULL, NULL, false, None_Receiver, NULL);
+					   "(generated ALTER TABLE ADD FOREIGN KEY command)",
+					   NULL, false, None_Receiver, NULL);
 
 		/* Remove the matched item from the list */
 		info_list = list_delete_ptr(info_list, info);
@@ -1662,6 +1666,7 @@ ExecCallTriggerFunc(TriggerData *trigdata,
 					MemoryContext per_tuple_context)
 {
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	Datum		result;
 	MemoryContext oldContext;
 
@@ -1695,7 +1700,11 @@ ExecCallTriggerFunc(TriggerData *trigdata,
 	 */
 	InitFunctionCallInfoData(fcinfo, finfo, 0, (Node *) trigdata, NULL);
 
+	pgstat_init_function_usage(&fcinfo, &fcusage);
+
 	result = FunctionCallInvoke(&fcinfo);
+
+	pgstat_end_function_usage(&fcusage, true);
 
 	MemoryContextSwitchTo(oldContext);
 
@@ -2364,7 +2373,7 @@ ltrmark:;
 	}
 	else
 	{
-		PageHeader	dp;
+		Page		page;
 		ItemId		lp;
 		
 		// -------- MirroredLock ----------
@@ -2382,12 +2391,12 @@ ltrmark:;
 		 */
 		LockBuffer(buffer, BUFFER_LOCK_SHARE);
 
-		dp = (PageHeader) BufferGetPage(buffer);
-		lp = PageGetItemId(dp, ItemPointerGetOffsetNumber(tid));
+		page = BufferGetPage(buffer);
+		lp = PageGetItemId(page, ItemPointerGetOffsetNumber(tid));
 
 		Assert(ItemIdIsNormal(lp));
 
-		tuple.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
+		tuple.t_data = (HeapTupleHeader) PageGetItem(page, lp);
 		tuple.t_len = ItemIdGetLength(lp);
 		tuple.t_self = *tid;
 
@@ -3168,6 +3177,7 @@ void
 AfterTriggerFireDeferred(void)
 {
 	AfterTriggerEventList *events;
+	bool		snap_pushed = false;
 
 	/* Must be inside a transaction */
 	Assert(afterTriggers != NULL);
@@ -3182,7 +3192,10 @@ AfterTriggerFireDeferred(void)
 	 */
 	events = &afterTriggers->events;
 	if (events->head != NULL)
-		ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+	{
+		PushActiveSnapshot(GetTransactionSnapshot());
+		snap_pushed = true;
+	}
 
 	/*
 	 * Run all the remaining triggers.	Loop until they are all gone, in case
@@ -3194,6 +3207,9 @@ AfterTriggerFireDeferred(void)
 
 		afterTriggerInvokeEvents(-1, firing_id, NULL, true);
 	}
+
+	if (snap_pushed)
+		PopActiveSnapshot();
 
 	Assert(events->head == NULL);
 }
@@ -3754,62 +3770,38 @@ AfterTriggerSetState(ConstraintsSetStmt *stmt)
 	if (!stmt->deferred)
 	{
 		AfterTriggerEventList *events = &afterTriggers->events;
-		Snapshot	saveActiveSnapshot = ActiveSnapshot;
+		bool		snapshot_set = false;
 
-		/* PG_TRY to ensure previous ActiveSnapshot is restored on error */
-		PG_TRY();
+		while (afterTriggerMarkEvents(events, NULL, true))
 		{
-			Snapshot	mySnapshot = NULL;
+			CommandId	firing_id = afterTriggers->firing_counter++;
 
-			while (afterTriggerMarkEvents(events, NULL, true))
+			/*
+			 * Make sure a snapshot has been established in case trigger
+			 * functions need one.  Note that we avoid setting a snapshot
+			 * if we don't find at least one trigger that has to be fired
+			 * now.  This is so that BEGIN; SET CONSTRAINTS ...; SET
+			 * TRANSACTION ISOLATION LEVEL SERIALIZABLE; ... works
+			 * properly.  (If we are at the start of a transaction it's
+			 * not possible for any trigger events to be queued yet.)
+			 */
+			if (!snapshot_set)
 			{
-				CommandId	firing_id = afterTriggers->firing_counter++;
-
-				/*
-				 * Make sure a snapshot has been established in case trigger
-				 * functions need one.  Note that we avoid setting a snapshot
-				 * if we don't find at least one trigger that has to be fired
-				 * now.  This is so that BEGIN; SET CONSTRAINTS ...; SET
-				 * TRANSACTION ISOLATION LEVEL SERIALIZABLE; ... works
-				 * properly.  (If we are at the start of a transaction it's
-				 * not possible for any trigger events to be queued yet.)
-				 */
-				if (mySnapshot == NULL)
-				{
-					mySnapshot = CopySnapshot(GetTransactionSnapshot());
-					ActiveSnapshot = mySnapshot;
-				}
-
-				/*
-				 * We can delete fired events if we are at top transaction level,
-				 * but we'd better not if inside a subtransaction, since the
-				 * subtransaction could later get rolled back.
-				 */
-				afterTriggerInvokeEvents(-1, firing_id, NULL,
-										 !IsSubTransaction());
+				PushActiveSnapshot(GetTransactionSnapshot());
+				snapshot_set = true;
 			}
 
-			/* Dispatch with the same snapshot */
-			if (Gp_role == GP_ROLE_DISPATCH)
-			{
-				CdbDispatchUtilityStatement((Node *) stmt,
-											DF_CANCEL_ON_ERROR|
-											(mySnapshot ? DF_WITH_SNAPSHOT : 0 )|
-											DF_NEED_TWO_PHASE,
-											NIL,
-											NULL);
-			}
+			/*
+			 * We can delete fired events if we are at top transaction level,
+			 * but we'd better not if inside a subtransaction, since the
+			 * subtransaction could later get rolled back.
+			 */
+			afterTriggerInvokeEvents(-1, firing_id, NULL,
+									 !IsSubTransaction());
+		}
 
-			if (mySnapshot)
-				FreeSnapshot(mySnapshot);
-		}
-		PG_CATCH();
-		{
-			ActiveSnapshot = saveActiveSnapshot;
-			PG_RE_THROW();
-		}
-		PG_END_TRY();
-		ActiveSnapshot = saveActiveSnapshot;
+		if (snapshot_set)
+			PopActiveSnapshot();
 	}
 	else
 	{

@@ -262,6 +262,24 @@ DROP FUNCTION dup(anyelement);
 CREATE FUNCTION bad (f1 int, out f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
 
+--
+-- table functions
+--
+
+CREATE OR REPLACE FUNCTION foo()
+RETURNS TABLE(a int)
+AS $$ SELECT a FROM generate_series(1,5) a(a) $$ LANGUAGE sql;
+SELECT * FROM foo();
+DROP FUNCTION foo();
+
+CREATE OR REPLACE FUNCTION foo(int)
+RETURNS TABLE(a int, b int)
+AS $$ SELECT a, b
+         FROM generate_series(1,$1) a(a),
+              generate_series(1,$1) b(b) $$ LANGUAGE sql;
+SELECT * FROM foo(3);
+DROP FUNCTION foo(int);
+
 -- test case for a whole-row-variable bug
 create function foo1(n integer, out a text, out b text)
   returns setof record

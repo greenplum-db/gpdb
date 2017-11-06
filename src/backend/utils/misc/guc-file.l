@@ -4,7 +4,7 @@
  *
  * Copyright (c) 2000-2008, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/misc/guc-file.l,v 1.53 2008/01/01 19:45:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/misc/guc-file.l,v 1.55 2008/05/09 15:36:31 petere Exp $
  */
 
 %{
@@ -332,6 +332,9 @@ ProcessConfigFile(GucContext context)
 		set_config_option(item->name, item->value, context,
 						  PGC_S_FILE, GUC_ACTION_SET, true);
 	}
+
+	/* Remember when we last successfully loaded the config file. */
+	PgReloadTime = GetCurrentTimestamp();
 
  cleanup_list:
 	free_name_value_list(head);

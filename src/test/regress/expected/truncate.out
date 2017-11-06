@@ -152,10 +152,6 @@ SELECT * FROM trunc_e;
 (0 rows)
 
 DROP TABLE truncate_a,trunc_c,trunc_b,trunc_d,trunc_e CASCADE;
-NOTICE:  drop cascades to constraint trunc_e_a_fkey on table trunc_e
-NOTICE:  drop cascades to constraint trunc_b_a_fkey on table trunc_b
-NOTICE:  drop cascades to constraint trunc_e_b_fkey on table trunc_e
-NOTICE:  drop cascades to constraint trunc_d_a_fkey on table trunc_d
 -- Test ON TRUNCATE triggers
 CREATE TABLE trunc_trigger_test (f1 int, f2 text, f3 text);
 CREATE TABLE trunc_trigger_log (tgop text, tglevel text, tgwhen text,
@@ -234,3 +230,43 @@ SELECT * FROM trunc_trigger_log;
 DROP TABLE trunc_trigger_test;
 DROP TABLE trunc_trigger_log;
 DROP FUNCTION trunctrigger();
+-- test TRUNCATE ... RESTART IDENTITY
+CREATE SEQUENCE truncate_a_id1 START WITH 33;
+CREATE TABLE truncate_a (id serial,
+                         id1 integer default nextval('truncate_a_id1'));
+NOTICE:  CREATE TABLE will create implicit sequence "truncate_a_id_seq" for serial column "truncate_a.id"
+ALTER SEQUENCE truncate_a_id1 OWNED BY truncate_a.id1;
+INSERT INTO truncate_a DEFAULT VALUES;
+INSERT INTO truncate_a DEFAULT VALUES;
+SELECT * FROM truncate_a;
+ id | id1 
+----+-----
+  1 |  33
+  2 |  34
+(2 rows)
+
+TRUNCATE truncate_a;
+INSERT INTO truncate_a DEFAULT VALUES;
+INSERT INTO truncate_a DEFAULT VALUES;
+SELECT * FROM truncate_a;
+ id | id1 
+----+-----
+  3 |  35
+  4 |  36
+(2 rows)
+
+TRUNCATE truncate_a RESTART IDENTITY;
+INSERT INTO truncate_a DEFAULT VALUES;
+INSERT INTO truncate_a DEFAULT VALUES;
+SELECT * FROM truncate_a;
+ id | id1 
+----+-----
+  1 |  33
+  2 |  34
+(2 rows)
+
+DROP TABLE truncate_a;
+SELECT nextval('truncate_a_id1'); -- fail, seq should have been dropped
+ERROR:  relation "truncate_a_id1" does not exist
+LINE 1: SELECT nextval('truncate_a_id1');
+                       ^

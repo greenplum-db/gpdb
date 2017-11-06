@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/port/exec.c,v 1.59 2008/03/31 01:31:43 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/port/exec.c,v 1.60 2008/04/16 22:16:00 adunstan Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -625,7 +625,6 @@ AddUserToTokenDacl(HANDLE hToken)
 	DWORD		dwNewAclSize;
 	DWORD		dwSize = 0;
 	DWORD		dwTokenInfoLength = 0;
-	DWORD		dwResult = 0;
 	PACL		pacl = NULL;
 	PSID		psidUser = NULL;
 	TOKEN_DEFAULT_DACL tddNew;

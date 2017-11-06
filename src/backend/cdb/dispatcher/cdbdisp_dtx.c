@@ -193,9 +193,9 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 
 	if (wantSnapshot)
 	{
-		if (ActiveSnapshot == NULL)
+		if (!ActiveSnapshotSet())
 			elog(ERROR, "could not serialize current snapshot, ActiveSnapshot not set");
-		snapshot = ActiveSnapshot;
+		snapshot = GetActiveSnapshot();
 	}
 
 	switch (DistributedTransactionContext)

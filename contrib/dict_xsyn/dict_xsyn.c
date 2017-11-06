@@ -6,7 +6,7 @@
  * Copyright (c) 2007-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/dict_xsyn/dict_xsyn.c,v 1.4.2.1 2008/06/18 20:55:49 tgl Exp $
+ *	  $PostgreSQL: pgsql/contrib/dict_xsyn/dict_xsyn.c,v 1.5 2008/06/18 20:55:42 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

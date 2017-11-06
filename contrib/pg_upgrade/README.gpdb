@@ -80,6 +80,16 @@ synchronization.
   to the upgrade.
 
 
+Upgrading from 5.0 to 6.0
+-------------------------
+
+The name_pattern_ops and pattern equality operators were removed in 6.0 and
+text equality is treated like bitwise equality. This will cause internal sort
+order in bpchar_pattern_ops which is now trailing-blank-insensitive. This means
+that indexes must be dropped and recreated as part of the upgrade to ensure
+correct results.
+
+
 Testing Greenplum pg_upgrade
 ----------------------------
 

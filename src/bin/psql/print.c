@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * src/bin/psql/print.c
+ * $PostgreSQL: pgsql/src/bin/psql/print.c,v 1.128 2010/07/06 19:19:00 momjian Exp $
  */
 #include "postgres_fe.h"
 
@@ -670,7 +670,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout)
 		 * Optional optimized word wrap. Shrink columns with a high max/avg
 		 * ratio.  Slighly bias against wider columns. (Increases chance a
 		 * narrow column will fit in its cell.)  If available columns is
-		 * positive...	and greater than the width of the unshrinkable column
+		 * positive...  and greater than the width of the unshrinkable column
 		 * headers
 		 */
 		if (output_columns > 0 && output_columns >= total_header_width)
@@ -1052,16 +1052,15 @@ print_aligned_text(const printTableContent *cont, FILE *fout)
 
 
 static void
-print_aligned_vertical_line(const printTableContent *cont,
+print_aligned_vertical_line(const printTextFormat *format,
+							const unsigned short opt_border,
 							unsigned long record,
 							unsigned int hwidth,
 							unsigned int dwidth,
 							printTextRule pos,
 							FILE *fout)
 {
-	const printTextFormat *format = get_line_style(cont->opt);
 	const printTextLineFormat *lformat = &format->lrule[pos];
-	unsigned short opt_border = cont->opt->border;
 	unsigned int i;
 	int			reclen = 0;
 
@@ -1179,8 +1178,8 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout)
 	 * We now have all the information we need to setup the formatting
 	 * structures
 	 */
-	dlineptr = pg_local_malloc(sizeof(*dlineptr) * (1+dheight));
-	hlineptr = pg_local_malloc(sizeof(*hlineptr) * (1+hheight));
+	dlineptr = pg_local_malloc((sizeof(*dlineptr)) * (dheight + 1));
+	hlineptr = pg_local_malloc((sizeof(*hlineptr)) * (hheight + 1));
 
 	dlineptr->ptr = pg_local_malloc(dformatsize);
 	hlineptr->ptr = pg_local_malloc(hformatsize);
@@ -1213,11 +1212,11 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout)
 		if (i % cont->ncolumns == 0)
 		{
 			if (!opt_tuples_only)
-				print_aligned_vertical_line(cont, record++, hwidth, dwidth,
-											pos, fout);
+				print_aligned_vertical_line(format, opt_border, record++,
+											hwidth, dwidth, pos, fout);
 			else if (i != 0 || !cont->opt->start_table || opt_border == 2)
-				print_aligned_vertical_line(cont, 0, hwidth, dwidth,
-											pos, fout);
+				print_aligned_vertical_line(format, opt_border, 0, hwidth,
+											dwidth, pos, fout);
 		}
 
 		/* Format the header */
@@ -1276,7 +1275,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout)
 	if (cont->opt->stop_table)
 	{
 		if (opt_border == 2 && !cancel_pressed)
-			print_aligned_vertical_line(cont, 0, hwidth, dwidth,
+			print_aligned_vertical_line(format, opt_border, 0, hwidth, dwidth,
 										PRINT_RULE_BOTTOM, fout);
 
 		/* print footers */
@@ -2169,7 +2168,7 @@ printTableAddCell(printTableContent *const content, const char *cell,
  * strdup'd, so there is no need to keep the original footer string around.
  *
  * Footers are never translated by the function.  If you want the footer
- * translated you must do so yourself, before calling printTableAddFooter.	The
+ * translated you must do so yourself, before calling printTableAddFooter.  The
  * reason this works differently to headers and cells is that footers tend to
  * be made of up individually translated components, rather than being
  * translated as a whole.
@@ -2517,7 +2516,7 @@ get_line_style(const printTableOpt *opt)
 
 /*
  * Compute the byte distance to the end of the string or *target_width
- * display character positions, whichever comes first.	Update *target_width
+ * display character positions, whichever comes first.  Update *target_width
  * to be the number of display character positions actually filled.
  */
 static int

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/bufmgr.h,v 1.111 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/bufmgr.h,v 1.114 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,13 +16,13 @@
 
 #include "cdb/cdbfilerepprimary.h"
 #include "miscadmin.h"
+#include "storage/block.h"
 #include "storage/buf.h"
 #include "storage/buf_internals.h"
 #include "storage/bufpage.h"
 #include "storage/relfilenode.h"
 #include "storage/smgr.h"
 #include "utils/relcache.h"
-#include "utils/rel.h"
 
 typedef void *Block;
 
@@ -290,6 +290,29 @@ typedef struct MirroredLockBufMgrLocalVars
 #endif
 
 /*
+ * BufferGetPageSize
+ *		Returns the page size within a buffer.
+ *
+ * Notes:
+ *		Assumes buffer is valid.
+ *
+ *		The buffer can be a raw disk block and need not contain a valid
+ *		(formatted) disk page.
+ */
+/* XXX should dig out of buffer descriptor */
+#define BufferGetPageSize(buffer) \
+( \
+	AssertMacro(BufferIsValid(buffer)), \
+	(Size)BLCKSZ \
+)
+
+/*
+ * BufferGetPage
+ *		Returns the page associated with a buffer.
+ */
+#define BufferGetPage(buffer) ((Page)BufferGetBlock(buffer))
+
+/*
  * prototypes for functions in bufmgr.c
  */
 extern Buffer ReadBuffer(Relation reln, BlockNumber blockNum);
@@ -297,7 +320,8 @@ extern Buffer ReadBufferWithStrategy(Relation reln, BlockNumber blockNum,
 					   BufferAccessStrategy strategy);
 extern Buffer ReadOrZeroBuffer(Relation reln, BlockNumber blockNum);
 extern Buffer ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum);
-
+extern Buffer ReadBufferWithoutRelcache(RelFileNode rnode, bool isLocalBuf,
+							 bool isTemp, BlockNumber blockNum, bool zeroPage);
 extern void ReleaseBuffer(Buffer buffer);
 extern void UnlockReleaseBuffer(Buffer buffer);
 extern void MarkBufferDirty(Buffer buffer);

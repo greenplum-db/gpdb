@@ -10,13 +10,12 @@
  * Copyright (c) 2002-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.90 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/prepare.c,v 1.89 2008/07/21 15:26:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/gp_policy.h"
 #include "catalog/pg_type.h"
@@ -287,10 +286,6 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 		plan_list = cplan->stmt_list;
 	}
 
-	/*
-	 * Note: we don't bother to copy the source query string into the portal.
-	 * Any errors it might be useful for will already have been reported.
-	 */
 	PortalDefineQuery(portal,
 					  NULL,
 					  query_string,
@@ -302,7 +297,7 @@ ExecuteQuery(ExecuteStmt *stmt, const char *queryString,
 	/*
 	 * Run the portal to completion.
 	 */
-	PortalStart(portal, paramLI, ActiveSnapshot, NULL);
+	PortalStart(portal, paramLI, GetActiveSnapshot(), NULL);
 
 	(void) PortalRun(portal, FETCH_ALL, false, dest, dest, completionTag);
 
@@ -821,12 +816,7 @@ pg_prepared_statement(PG_FUNCTION_ARGS)
 			MemSet(nulls, 0, sizeof(nulls));
 
 			values[0] = CStringGetTextDatum(prep_stmt->stmt_name);
-
-			if (prep_stmt->plansource->query_string == NULL)
-				nulls[1] = true;
-			else
-				values[1] = CStringGetTextDatum(prep_stmt->plansource->query_string);
-
+			values[1] = CStringGetTextDatum(prep_stmt->plansource->query_string);
 			values[2] = TimestampTzGetDatum(prep_stmt->prepare_time);
 			values[3] = build_regtype_array(prep_stmt->plansource->param_types,
 										  prep_stmt->plansource->num_params);

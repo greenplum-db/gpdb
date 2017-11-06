@@ -129,6 +129,7 @@ select count(*) from (select i, count(*) from aggspill group by i,j,t having cou
 (1 row)
 
 drop schema hashagg_spill cascade;
-NOTICE:  drop cascades to function hashagg_spill.num_hashagg_overflows(text)
-NOTICE:  drop cascades to table hashagg_spill.testhagg
-NOTICE:  drop cascades to function hashagg_spill.is_workfile_created(text)
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to function hashagg_spill.is_workfile_created(text)
+drop cascades to table hashagg_spill.testhagg
+drop cascades to function hashagg_spill.num_hashagg_overflows(text)

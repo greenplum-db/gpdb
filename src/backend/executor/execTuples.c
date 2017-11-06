@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.102 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.101 2008/05/12 00:00:49 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -94,8 +94,10 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "executor/executor.h"
+#include "parser/parse_expr.h"
 #include "parser/parsetree.h"               /* rt_fetch() */
 #include "nodes/nodeFuncs.h"
+#include "storage/bufmgr.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 

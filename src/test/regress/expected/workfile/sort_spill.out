@@ -72,5 +72,6 @@ select * from sort_spill.is_workfile_created('explain analyze select i1,i2 from 
 (1 row)
 
 drop schema sort_spill cascade;
-NOTICE:  drop cascades to table testsort
-NOTICE:  drop cascades to function is_workfile_created(text)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function is_workfile_created(text)
+drop cascades to table testsort

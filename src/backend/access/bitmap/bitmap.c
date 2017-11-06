@@ -146,6 +146,9 @@ bmgettuple(PG_FUNCTION_ARGS)
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
+	/* This implementation of a bitmap index is never lossy */
+	scan->xs_recheck = false;
+
 	/* 
 	 * If we have already begun our scan, continue in the same direction.
 	 * Otherwise, start up the scan.

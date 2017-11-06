@@ -59,10 +59,24 @@ WHERE p1.prolang = 0 OR p1.prorettype = 0 OR
        procost <= 0 OR
        CASE WHEN proretset THEN prorows <= 0 ELSE prorows != 0 END;
 
+-- prosrc should never be null or empty
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1
+WHERE prosrc IS NULL OR prosrc = '' OR prosrc = '-';
+
 -- pronargdefaults should be 0 iff proargdefaults is null
 SELECT p1.oid, p1.proname
 FROM pg_proc AS p1
 WHERE (pronargdefaults <> 0) != (proargdefaults IS NOT NULL);
+
+-- probin should be non-empty for C functions, null everywhere else
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1
+WHERE prolang = 13 AND (probin IS NULL OR probin = '' OR probin = '-');
+
+SELECT p1.oid, p1.proname
+FROM pg_proc as p1
+WHERE prolang != 13 AND probin IS NOT NULL;
 
 -- Look for conflicting proc definitions (same names and input datatypes).
 -- (This test should be dead code now that we have the unique index
@@ -803,24 +817,46 @@ WHERE p1.amprocfamily = p3.oid AND p3.opfmethod = p2.oid AND
 
 -- Detect missing pg_amproc entries: should have as many support functions
 -- as AM expects for each datatype combination supported by the opfamily.
+-- GIN is a special case because it has an optional support function.
 
 SELECT p1.amname, p2.opfname, p3.amproclefttype, p3.amprocrighttype
 FROM pg_am AS p1, pg_opfamily AS p2, pg_amproc AS p3
 WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
+    p1.amname <> 'gin' AND
     p1.amsupport != (SELECT count(*) FROM pg_amproc AS p4
                      WHERE p4.amprocfamily = p2.oid AND
                            p4.amproclefttype = p3.amproclefttype AND
                            p4.amprocrighttype = p3.amprocrighttype);
 
+-- Similar check for GIN, allowing one optional proc
+
+SELECT p1.amname, p2.opfname, p3.amproclefttype, p3.amprocrighttype
+FROM pg_am AS p1, pg_opfamily AS p2, pg_amproc AS p3
+WHERE p2.opfmethod = p1.oid AND p3.amprocfamily = p2.oid AND
+    p1.amname = 'gin' AND
+    p1.amsupport - 1 >  (SELECT count(*) FROM pg_amproc AS p4
+                         WHERE p4.amprocfamily = p2.oid AND
+                           p4.amproclefttype = p3.amproclefttype AND
+                           p4.amprocrighttype = p3.amprocrighttype);
+
 -- Also, check if there are any pg_opclass entries that don't seem to have
--- pg_amproc support.
+-- pg_amproc support.  Again, GIN has to be checked separately.
 
 SELECT amname, opcname, count(*)
 FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
      LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
          amproclefttype = amprocrighttype AND amproclefttype = opcintype
+WHERE am.amname <> 'gin'
 GROUP BY amname, amsupport, opcname, amprocfamily
 HAVING count(*) != amsupport OR amprocfamily IS NULL;
+
+SELECT amname, opcname, count(*)
+FROM pg_am am JOIN pg_opclass op ON opcmethod = am.oid
+     LEFT JOIN pg_amproc p ON amprocfamily = opcfamily AND
+         amproclefttype = amprocrighttype AND amproclefttype = opcintype
+WHERE am.amname = 'gin'
+GROUP BY amname, amsupport, opcname, amprocfamily
+HAVING count(*) < amsupport - 1 OR amprocfamily IS NULL;
 
 -- Unfortunately, we can't check the amproc link very well because the
 -- signature of the function may be different for different support routines
