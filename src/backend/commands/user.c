@@ -57,7 +57,7 @@ typedef struct genericPair
 	char* val1;
 	char* key2;
 	char* val2;
-	
+
 } genericPair;
 
 typedef struct extAuthPair
@@ -69,6 +69,9 @@ typedef struct extAuthPair
 
 extern bool Password_encryption;
 
+/* Hook to check passwords in CreateRole() and AlterRole() */
+check_password_hook_type check_password_hook = NULL;
+
 static List *roleNamesToIds(List *memberNames);
 static void AddRoleMems(const char *rolename, Oid roleid,
 			List *memberNames, List *memberIds,
@@ -76,9 +79,9 @@ static void AddRoleMems(const char *rolename, Oid roleid,
 static void DelRoleMems(const char *rolename, Oid roleid,
 			List *memberNames, List *memberIds,
 			bool admin_opt);
-static void TransformExttabAuthClause(DefElem *defel, 
+static void TransformExttabAuthClause(DefElem *defel,
 			extAuthPair *extauth);
-static void SetCreateExtTableForRole(List* allow, 
+static void SetCreateExtTableForRole(List* allow,
 			List* disallow, bool* createrextgpfd,
 			bool* createrexthttp, bool* createwextgpfd,
 			bool* createrexthdfs, bool* createwexthdfs);
@@ -89,8 +92,8 @@ static int16 ExtractAuthInterpretDay(Value * day);
 static void ExtractAuthIntervalClause(DefElem *defel,
 			authInterval *authInterval);
 static void AddRoleDenials(const char *rolename, Oid roleid,
-			List *addintervals); 
-static void DelRoleDenials(const char *rolename, Oid roleid, 
+			List *addintervals);
+static void DelRoleDenials(const char *rolename, Oid roleid,
 			List *dropintervals);
 
 /* Check if current user has createrole privileges */
@@ -150,6 +153,8 @@ CreateRole(CreateRoleStmt *stmt)
 	List	   *exttabcreate = NIL;		/* external table create privileges being added  */
 	List	   *exttabnocreate = NIL;	/* external table create privileges being removed */
 	char	   *validUntil = NULL;		/* time the login is valid until */
+    Datum        validUntil_datum;        /* same, as timestamptz Datum */
+    bool        validUntil_null;
 	char	   *resqueue = NULL;		/* resource queue for this role */
 	char	   *resgroup = NULL;		/* resource group for this role */
 	List	   *addintervals = NIL;	/* list of time intervals for which login should be denied */
@@ -304,22 +309,22 @@ CreateRole(CreateRoleStmt *stmt)
 		else if (strcmp(defel->defname, "exttabauth") == 0)
 		{
 			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
-			
+
 			TransformExttabAuthClause(defel, extauth);
-			
+
 			/* now actually append our transformed key value pairs to the list */
-			exttabcreate = lappend(exttabcreate, extauth);			
-		}			  
+			exttabcreate = lappend(exttabcreate, extauth);
+		}
 		else if (strcmp(defel->defname, "exttabnoauth") == 0)
 		{
 			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
-			
+
 			TransformExttabAuthClause(defel, extauth);
-			
+
 			/* now actually append our transformed key value pairs to the list */
 			exttabnocreate = lappend(exttabnocreate, extauth);
 		}
-		else if (strcmp(defel->defname, "deny") == 0) 
+		else if (strcmp(defel->defname, "deny") == 0)
 		{
 			authInterval *interval = (authInterval *) palloc0(sizeof(authInterval));
 
@@ -398,6 +403,33 @@ CreateRole(CreateRoleStmt *stmt)
 				 errmsg("role \"%s\" already exists",
 						stmt->role)));
 
+    /* Convert validuntil to internal form */
+    if (validUntil)
+    {
+        validUntil_datum = DirectFunctionCall3(timestamptz_in,
+                CStringGetDatum(validUntil),
+                ObjectIdGetDatum(InvalidOid),
+                Int32GetDatum(-1));
+        validUntil_null = false;
+
+    }
+    else
+    {
+        validUntil_datum = (Datum) 0;
+        validUntil_null = true;
+
+    }
+
+    /*
+     *   * Call the password checking hook if there is one defined
+     *       */
+    if (check_password_hook && password)
+        (*check_password_hook) (stmt->role,
+                password,
+                isMD5(password) ? PASSWORD_TYPE_MD5 : PASSWORD_TYPE_PLAINTEXT,
+                validUntil_datum,
+                validUntil_null);
+
 	/*
 	 * Build a tuple to insert
 	 */
@@ -427,7 +459,7 @@ CreateRole(CreateRoleStmt *stmt)
 	new_record[Anum_pg_authid_rolcreatewextgpfd - 1] = BoolGetDatum(createwextgpfd);
 	new_record[Anum_pg_authid_rolcreaterexthdfs - 1] = BoolGetDatum(createrexthdfs);
 	new_record[Anum_pg_authid_rolcreatewexthdfs - 1] = BoolGetDatum(createwexthdfs);
-	
+
 	if (password)
 	{
 		if (!encrypt_password || isHashedPasswd(password))
@@ -448,15 +480,9 @@ CreateRole(CreateRoleStmt *stmt)
 	else
 		new_record_nulls[Anum_pg_authid_rolpassword - 1] = true;
 
-	if (validUntil)
-		new_record[Anum_pg_authid_rolvaliduntil - 1] =
-			DirectFunctionCall3(timestamptz_in,
-								CStringGetDatum(validUntil),
-								ObjectIdGetDatum(InvalidOid),
-								Int32GetDatum(-1));
 
-	else
-		new_record_nulls[Anum_pg_authid_rolvaliduntil - 1] = true;
+    new_record[Anum_pg_authid_rolvaliduntil - 1] = validUntil_datum;
+    new_record_nulls[Anum_pg_authid_rolvaliduntil - 1] = validUntil_null;
 
 	if (resqueue)
 	{
@@ -475,7 +501,7 @@ CreateRole(CreateRoleStmt *stmt)
 					 errmsg("resource queue \"%s\" does not exist",
 							resqueue)));
 
-		new_record[Anum_pg_authid_rolresqueue - 1] = 
+		new_record[Anum_pg_authid_rolresqueue - 1] =
 		ObjectIdGetDatum(queueid);
 
 		/*
@@ -590,7 +616,7 @@ CreateRole(CreateRoleStmt *stmt)
 				GetUserId(), false);
 
 	/*
-	 * Populate pg_auth_time_constraint with intervals for which this 
+	 * Populate pg_auth_time_constraint with intervals for which this
 	 * particular role should be denied access.
 	 */
 	if (addintervals)
@@ -667,6 +693,8 @@ AlterRole(AlterRoleStmt *stmt)
 	List	   *exttabcreate = NIL;	/* external table create privileges being added  */
 	List	   *exttabnocreate = NIL;	/* external table create privileges being removed */
 	char	   *validUntil = NULL;		/* time the login is valid until */
+    Datum        validUntil_datum;        /* same, as timestamptz Datum */
+    bool        validUntil_null;
 	DefElem    *dpassword = NULL;
 	DefElem    *dresqueue = NULL;
 	DefElem    *dresgroup = NULL;
@@ -822,23 +850,23 @@ AlterRole(AlterRoleStmt *stmt)
 		else if (strcmp(defel->defname, "exttabauth") == 0)
 		{
 			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
-			
+
 			TransformExttabAuthClause(defel, extauth);
-			
+
 			/* now actually append our transformed key value pairs to the list */
-			exttabcreate = lappend(exttabcreate, extauth);	
-			
+			exttabcreate = lappend(exttabcreate, extauth);
+
 			if (1 == numopts) alter_subtype = "CREATEEXTTABLE";
-		}			  
+		}
 		else if (strcmp(defel->defname, "exttabnoauth") == 0)
 		{
 			extAuthPair *extauth = (extAuthPair *) palloc0 (2 * sizeof(char *));
-			
+
 			TransformExttabAuthClause(defel, extauth);
-			
+
 			/* now actually append our transformed key value pairs to the list */
 			exttabnocreate = lappend(exttabnocreate, extauth);
-			
+
 			if (1 == numopts) alter_subtype = "NO CREATEEXTTABLE";
 		}
 		else if (strcmp(defel->defname, "deny") == 0)
@@ -852,9 +880,9 @@ AlterRole(AlterRoleStmt *stmt)
 		else if (strcmp(defel->defname, "drop_deny") == 0)
 		{
 			authInterval *interval = (authInterval *) palloc0(sizeof(authInterval));
-		
+
 			ExtractAuthIntervalClause(defel, interval);
-	
+
 			dropintervals = lappend(dropintervals, interval);
 		}
 		else
@@ -933,6 +961,35 @@ AlterRole(AlterRoleStmt *stmt)
 					 errmsg("permission denied")));
 	}
 
+    /* Convert validuntil to internal form */
+    if (validUntil)
+    {
+        validUntil_datum = DirectFunctionCall3(timestamptz_in,
+                CStringGetDatum(validUntil),
+                ObjectIdGetDatum(InvalidOid),
+                Int32GetDatum(-1));
+        validUntil_null = false;
+
+    }
+    else
+    {
+        /* fetch existing setting in case hook needs it */
+        validUntil_datum = SysCacheGetAttr(AUTHNAME, tuple,
+                Anum_pg_authid_rolvaliduntil,
+                &validUntil_null);
+
+    }
+
+    /*
+     *      * Call the password checking hook if there is one defined
+     *           */
+    if (check_password_hook && password)
+        (*check_password_hook) (stmt->role,
+                password,
+                isMD5(password) ? PASSWORD_TYPE_MD5 : PASSWORD_TYPE_PLAINTEXT,
+                validUntil_datum,
+                validUntil_null);
+
 	/*
 	 * Build an updated tuple, perusing the information just obtained
 	 */
@@ -997,7 +1054,7 @@ AlterRole(AlterRoleStmt *stmt)
 				CStringGetTextDatum(password);
 		else
 		{
-			
+
 			if (!hash_password(password, stmt->role, strlen(stmt->role),
 							   encrypted_password))
 				elog(ERROR, "password encryption failed");
@@ -1016,17 +1073,11 @@ AlterRole(AlterRoleStmt *stmt)
 	}
 
 	/* valid until */
-	if (validUntil)
-	{
-		new_record[Anum_pg_authid_rolvaliduntil - 1] =
-			DirectFunctionCall3(timestamptz_in,
-								CStringGetDatum(validUntil),
-								ObjectIdGetDatum(InvalidOid),
-								Int32GetDatum(-1));
-		new_record_repl[Anum_pg_authid_rolvaliduntil - 1] = true;
-	}
+    new_record[Anum_pg_authid_rolvaliduntil - 1] = validUntil_datum;
+    new_record_nulls[Anum_pg_authid_rolvaliduntil - 1] = validUntil_null;
+    new_record_repl[Anum_pg_authid_rolvaliduntil - 1] = true;
 
-	/* Set the CREATE EXTERNAL TABLE permissions for this role, if specified in ALTER */	
+	/* Set the CREATE EXTERNAL TABLE permissions for this role, if specified in ALTER */
 	if (exttabcreate || exttabnocreate)
 	{
 		bool	isnull;
@@ -1036,7 +1087,7 @@ AlterRole(AlterRoleStmt *stmt)
 		Datum 	dcreaterexthdfs;
 		Datum 	dcreatewexthdfs;
 
-		/* 
+		/*
 		 * get bool values from catalog. we don't ever expect a NULL value, but just
 		 * in case it is there (perhaps after an upgrade) we treat it as 'false'.
 		 */
@@ -1050,7 +1101,7 @@ AlterRole(AlterRoleStmt *stmt)
 		createrexthdfs = (isnull ? false : DatumGetBool(dcreaterexthdfs));
 		dcreatewexthdfs = heap_getattr(tuple, Anum_pg_authid_rolcreatewexthdfs, pg_authid_dsc, &isnull);
 		createwexthdfs = (isnull ? false : DatumGetBool(dcreatewexthdfs));
-		
+
 		SetCreateExtTableForRole(exttabcreate, exttabnocreate, &createrextgpfd,
 								 &createrexthttp, &createwextgpfd,
 								 &createrexthdfs, &createwexthdfs);
@@ -1077,7 +1128,7 @@ AlterRole(AlterRoleStmt *stmt)
 		{
 			/*
 			 * Don't complain if you ALTER a superuser,
-			 * who doesn't use the queue 
+			 * who doesn't use the queue
 			 */
 			if (!bWas_super && IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
 			{
@@ -1087,7 +1138,7 @@ AlterRole(AlterRoleStmt *stmt)
 								"using default resource queue \"%s\"",
 								GP_DEFAULT_RESOURCE_QUEUE_NAME)));
 			}
-			
+
 			resqueue = pstrdup(GP_DEFAULT_RESOURCE_QUEUE_NAME);
 		}
 
@@ -1105,7 +1156,7 @@ AlterRole(AlterRoleStmt *stmt)
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("resource queue \"%s\" does not exist",
 							resqueue)));
-			new_record[Anum_pg_authid_rolresqueue - 1] = 
+			new_record[Anum_pg_authid_rolresqueue - 1] =
 				ObjectIdGetDatum(queueid);
 		}
 		new_record_repl[Anum_pg_authid_rolresqueue - 1] = true;
@@ -1114,7 +1165,7 @@ AlterRole(AlterRoleStmt *stmt)
 		{
 			/*
 			 * Don't complain if you ALTER a superuser,
-			 * who doesn't use the queue 
+			 * who doesn't use the queue
 			 */
 			ereport(WARNING,
 					(errmsg("resource queue is disabled"),
@@ -1215,7 +1266,7 @@ AlterRole(AlterRoleStmt *stmt)
 	 * e.g. consider "ALTER ROLE foo DENY DAY 0 DROP DENY FOR DAY 1 DENY DAY 1 DENY DAY 2"
 	 * In the manner that this is currently coded, because all DENY fragments are interpreted
 	 * first, this actually becomes equivalent to you "ALTER ROLE foo DENY DAY 0 DENY DAY 2".
-	 * 
+	 *
 	 * Instead, we could honor the order in which the fragments are presented, but still that
 	 * allows users to contradict themselves, as in the example given.
 	 */
@@ -1226,14 +1277,14 @@ AlterRole(AlterRoleStmt *stmt)
 				 errhint("DENY and DROP DENY cannot be used in the same ALTER ROLE statement.")));
 
 	/*
-	 * Populate pg_auth_time_constraint with the new intervals for which this 
+	 * Populate pg_auth_time_constraint with the new intervals for which this
 	 * particular role should be denied access.
 	 */
 	if (addintervals)
 		AddRoleDenials(stmt->role, roleid, addintervals);
 
 	/*
-	 * Remove pg_auth_time_constraint entries that overlap with the 
+	 * Remove pg_auth_time_constraint entries that overlap with the
 	 * intervals given by the user.
 	 */
 	if (dropintervals)
@@ -1770,7 +1821,7 @@ GrantRole(GrantRoleStmt *stmt)
 				MetaTrackUpdObject(AuthIdRelationId,
 								   roleid,
 								   GetUserId(),
-								   "PRIVILEGE", 
+								   "PRIVILEGE",
 								   (stmt->is_grant) ? "GRANT" : "REVOKE"
 						);
 
@@ -1818,7 +1869,7 @@ DropOwnedObjects(DropOwnedStmt *stmt)
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 					 errmsg("permission denied to drop objects")));
 	}
-	
+
 	if (Gp_role == GP_ROLE_DISPATCH)
     {
 		CdbDispatchUtilityStatement((Node *) stmt,
@@ -1828,7 +1879,7 @@ DropOwnedObjects(DropOwnedStmt *stmt)
 									NIL,
 									NULL);
     }
-    
+
 	/* Ok, do it */
 	shdepDropOwned(role_ids, stmt->behavior);
 }
@@ -1863,7 +1914,7 @@ ReassignOwnedObjects(ReassignOwnedStmt *stmt)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied to reassign objects")));
-				 
+
 	if (Gp_role == GP_ROLE_DISPATCH)
     {
 		CdbDispatchUtilityStatement((Node *) stmt,
@@ -2053,30 +2104,30 @@ AddRoleMems(const char *rolename, Oid roleid,
 
 /*
  * CheckKeywordIsValid
- * 
+ *
  * check that string in 'keyword' is included in set of strings in 'arr'
  */
 static void CheckKeywordIsValid(char *keyword, const char **arr, const int arrsize)
 {
 	int 	i = 0;
 	bool	ok = false;
-	
+
 	for(i = 0 ; i < arrsize ; i++)
 	{
 		if(strcasecmp(keyword, arr[i]) == 0)
 			ok = true;
 	}
-	
+
 	if(!ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("invalid [NO]CREATEEXTTABLE option \"%s\"", keyword)));				
+				 errmsg("invalid [NO]CREATEEXTTABLE option \"%s\"", keyword)));
 
 }
 
 /*
  * CheckValueBelongsToKey
- * 
+ *
  * check that value (e.g 'gpfdist') belogs to the key it was defined for (e.g 'protocol').
  * error out otherwise (for example, [protocol='writable'] includes valid keywords, but makes
  * no sense.
@@ -2085,12 +2136,12 @@ static void CheckValueBelongsToKey(char *key, char *val, const char **keys, cons
 {
 	if(strcasecmp(key, keys[0]) == 0)
 	{
-		if(strcasecmp(val, vals[0]) != 0 && 
+		if(strcasecmp(val, vals[0]) != 0 &&
 		   strcasecmp(val, vals[1]) != 0)
-			
+
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("invalid %s value \"%s\"", key, val)));	
+					 errmsg("invalid %s value \"%s\"", key, val)));
 	}
 	else /* keys[1] */
 	{
@@ -2099,7 +2150,7 @@ static void CheckValueBelongsToKey(char *key, char *val, const char **keys, cons
 					(errmsg("GRANT/REVOKE on gphdfs is deprecated"),
 					 errhint("Issue the GRANT or REVOKE on the protocol itself")));
 
-		if(strcasecmp(val, "gpfdist") != 0 && 
+		if(strcasecmp(val, "gpfdist") != 0 &&
 		   strcasecmp(val, "gpfdists") != 0 &&
 		   strcasecmp(val, "http") != 0 &&
 		   strcasecmp(val, "gphdfs") != 0)
@@ -2107,50 +2158,50 @@ static void CheckValueBelongsToKey(char *key, char *val, const char **keys, cons
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("invalid %s value \"%s\"", key, val)));
 	}
-	
+
 }
 
 /*
  * TransformExttabAuthClause
- * 
+ *
  * Given a set of key value pairs, take them apart, fill in any default
  * values, and validate that pairs are legal and make sense.
- * 
- * defaults are: 
- *   - 'readable' when no type defined, 
+ *
+ * defaults are:
+ *   - 'readable' when no type defined,
  *   - 'gpfdist' when no protocol defined,
  *   - 'readable' + ' gpfdist' if both type and protocol aren't defined.
- * 
+ *
  */
 static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
 {
 	ListCell   	*lc;
 	List	   	*l = (List *) defel->arg;
-	DefElem 	*d1 = NULL, 
+	DefElem 	*d1 = NULL,
 				*d2 = NULL;
 	genericPair *genpair = (genericPair *) palloc0 (4 * sizeof(char *));
-	
+
 	const int	numkeys = 2;
 	const int	numvals = 6;
 	const char *keys[] = { "type", "protocol"};	 /* order matters for validation. don't change! */
-	const char *vals[] = { /* types     */ "readable", "writable", 
+	const char *vals[] = { /* types     */ "readable", "writable",
 						   /* protocols */ "gpfdist", "gpfdists" , "http", "gphdfs"};
 
 	if(list_length(l) > 2)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("invalid [NO]CREATEEXTTABLE specification. too many values")));				
+				 errmsg("invalid [NO]CREATEEXTTABLE specification. too many values")));
 
-		
+
 	if(list_length(l) == 2)
 	{
 		/* both a protocol and type specification */
-		
-		lc = list_head(l); 
+
+		lc = list_head(l);
 		d1 = (DefElem *) lfirst(lc);
 		genpair->key1 = pstrdup(d1->defname);
 		genpair->val1 = pstrdup(strVal(d1->arg));
-		
+
 		lc = lnext(lc);
 		d2 = (DefElem *) lfirst(lc);
 		genpair->key2 = pstrdup(d2->defname);
@@ -2159,12 +2210,12 @@ static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
 	else if(list_length(l) == 1)
 	{
 		/* either a protocol or type specification */
-		
-		lc = list_head(l); 
+
+		lc = list_head(l);
 		d1 = (DefElem *) lfirst(lc);
 		genpair->key1 = pstrdup(d1->defname);
 		genpair->val1 = pstrdup(strVal(d1->arg));
-		
+
 		if(strcasecmp(genpair->key1, "type") == 0)
 		{
 			/* default value for missing protocol */
@@ -2181,19 +2232,19 @@ static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
 	else
 	{
 		/* none specified. use global default */
-		
+
 		genpair->key1 = pstrdup("protocol");
 		genpair->val1 = pstrdup("gpfdist");
 		genpair->key2 = pstrdup("type");
 		genpair->val2 = pstrdup("readable");
 	}
-	
+
 	/* check all keys and values are legal */
 	CheckKeywordIsValid(genpair->key1, keys, numkeys);
 	CheckKeywordIsValid(genpair->key2, keys, numkeys);
 	CheckKeywordIsValid(genpair->val1, vals, numvals);
 	CheckKeywordIsValid(genpair->val2, vals, numvals);
-		
+
 	/* check all values are of the proper key */
 	CheckValueBelongsToKey(genpair->key1, genpair->val1, keys, vals);
 	CheckValueBelongsToKey(genpair->key2, genpair->val2, keys, vals);
@@ -2202,7 +2253,7 @@ static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("redundant option for \"%s\"", genpair->key1)));
-	
+
 	/* now set values in extauth, which is the result returned */
 	if(strcasecmp(genpair->key1, "protocol") == 0)
 	{
@@ -2214,7 +2265,7 @@ static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
 		extauth->protocol = pstrdup(genpair->val2);
 		extauth->type = pstrdup(genpair->val1);
 	}
-	
+
 	pfree(genpair->key1);
 	pfree(genpair->key2);
 	pfree(genpair->val1);
@@ -2224,17 +2275,17 @@ static void TransformExttabAuthClause(DefElem *defel, extAuthPair *extauth)
 
 /*
  * SetCreateExtTableForRole
- * 
+ *
  * Given the allow list (permissions to add) and disallow (permissions
  * to take away) consolidate this information into the 3 catalog
  * boolean columns that will need to get updated. While at it we check
  * that all the options are valid and don't conflict with each other.
- * 
+ *
  */
-static void SetCreateExtTableForRole(List* allow, 
+static void SetCreateExtTableForRole(List* allow,
 									 List* disallow,
 									 bool* createrextgpfd,
-									 bool* createrexthttp, 
+									 bool* createrexthttp,
 									 bool* createwextgpfd,
 									 bool* createrexthdfs,
 									 bool* createwexthdfs)
@@ -2245,14 +2296,14 @@ static void SetCreateExtTableForRole(List* allow,
 	bool		createrexthttp_specified = false;
 	bool		createrexthdfs_specified = false;
 	bool		createwexthdfs_specified = false;
-	
+
 	if(list_length(allow) > 0)
 	{
 		/* examine key value pairs */
 		foreach(lc, allow)
 		{
 			extAuthPair* extauth = (extAuthPair*) lfirst(lc);
-			
+
 			/* we use the same privilege for gpfdist and gpfdists */
 			if ((strcasecmp(extauth->protocol, "gpfdist") == 0) ||
 			    (strcasecmp(extauth->protocol, "gpfdists") == 0))
@@ -2260,7 +2311,7 @@ static void SetCreateExtTableForRole(List* allow,
 				if(strcasecmp(extauth->type, "readable") == 0)
 				{
 					*createrextgpfd = true;
-					createrextgpfd_specified = true; 
+					createrextgpfd_specified = true;
 				}
 				else
 				{
@@ -2294,25 +2345,25 @@ static void SetCreateExtTableForRole(List* allow,
 							(errcode(ERRCODE_SYNTAX_ERROR),
 							 errmsg("invalid CREATEEXTTABLE specification. writable http external tables do not exist")));
 				}
-			}			
+			}
 		}
-	}	
-	
+	}
+
 	/*
 	 * go over the disallow list.
-	 * if we're in CREATE ROLE, check that we don't negate something from the 
-	 * allow list. error out with conflicting options if we do. 
+	 * if we're in CREATE ROLE, check that we don't negate something from the
+	 * allow list. error out with conflicting options if we do.
 	 * if we're in ALTER ROLE, just set the flags accordingly.
 	 */
 	if(list_length(disallow) > 0)
 	{
 		bool conflict = false;
-		
+
 		/* examine key value pairs */
 		foreach(lc, disallow)
 		{
 			extAuthPair* extauth = (extAuthPair*) lfirst(lc);
-			
+
 			/* we use the same privilege for gpfdist and gpfdists */
 			if ((strcasecmp(extauth->protocol, "gpfdist") == 0) ||
 				(strcasecmp(extauth->protocol, "gpfdists") == 0))
@@ -2321,7 +2372,7 @@ static void SetCreateExtTableForRole(List* allow,
 				{
 					if(createrextgpfd_specified)
 						conflict = true;
-						
+
 					*createrextgpfd = false;
 				}
 				else
@@ -2364,15 +2415,15 @@ static void SetCreateExtTableForRole(List* allow,
 							(errcode(ERRCODE_SYNTAX_ERROR),
 							 errmsg("invalid NOCREATEEXTTABLE specification. writable http external tables do not exist")));
 				}
-			}			
+			}
 		}
-		
+
 		if(conflict)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE")));
-			
-	}	
+
+	}
 
 }
 
@@ -2491,10 +2542,10 @@ DelRoleMems(const char *rolename, Oid roleid,
 
 /*
  * ExtractAuthIntervalClause
- * 
+ *
  * Build an authInterval struct (defined above) from given input
  */
-static void 
+static void
 ExtractAuthIntervalClause(DefElem *defel, authInterval *interval)
 {
 	DenyLoginPoint *start = NULL, *end = NULL;
@@ -2504,8 +2555,8 @@ ExtractAuthIntervalClause(DefElem *defel, authInterval *interval)
 		DenyLoginInterval *span = (DenyLoginInterval *)defel->arg;
 		start = span->start;
 		end = span->end;
-	} 
-	else 
+	}
+	else
 	{
 		Assert(IsA(defel->arg, DenyLoginPoint));
 		start = (DenyLoginPoint *)defel->arg;
@@ -2520,33 +2571,33 @@ ExtractAuthIntervalClause(DefElem *defel, authInterval *interval)
 	if (point_cmp(&interval->start, &interval->end) > 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("time interval must not wrap around"))); 
+				 errmsg("time interval must not wrap around")));
 }
 
 /*
  * TransferAuthInterpretDay -- Interpret day of week from parse node
  *
  * day: node which dictates a day of week;
- *		may be either an integer in [0, 6] 
+ *		may be either an integer in [0, 6]
  *		or a string giving name of day in English
  */
-static int16 
-ExtractAuthInterpretDay(Value * day) 
+static int16
+ExtractAuthInterpretDay(Value * day)
 {
 	int16   ret;
-	if (day->type == T_Integer) 
+	if (day->type == T_Integer)
 	{
 		ret = intVal(day);
 		if (ret < 0 || ret > 6)
 			ereport(ERROR,
 					 (errcode(ERRCODE_SYNTAX_ERROR),
 					  errmsg("numeric day of week must be between 0 and 6")));
-	} 
-	else 
+	}
+	else
 	{
 		int16		 elems = 7;
 		char		*target = strVal(day);
-		for (ret = 0; ret < elems; ret++) 
+		for (ret = 0; ret < elems; ret++)
 			if (strcasecmp(target, daysofweek[ret]) == 0)
 				break;
 		if (ret == elems)
@@ -2596,7 +2647,7 @@ AddRoleDenials(const char *rolename, Oid roleid, List *addintervals)
 		new_record[Anum_pg_auth_time_constraint_end_time - 1] = TimeADTGetDatum(interval->end.time);
 
 		tuple = heap_form_tuple(pg_auth_time_dsc, new_record, new_record_nulls);
-		
+
 		/* Insert tuple into the relation */
 		simple_heap_insert(pg_auth_time_rel, tuple);
 		CatalogUpdateIndexes(pg_auth_time_rel, tuple);
@@ -2628,13 +2679,13 @@ AddRoleDenials(const char *rolename, Oid roleid, List *addintervals)
  * Note: caller is reponsible for checking permissions to edit the given role.
  */
 static void
-DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals) 
+DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 {
 	Relation    pg_auth_time_rel;
 	ScanKeyData scankey;
 	SysScanDesc sscan;
 	ListCell	*intervalitem;
-	bool		dropped_matching_interval = false; 
+	bool		dropped_matching_interval = false;
 
 	HeapTuple 	tmp_tuple;
 
@@ -2649,7 +2700,7 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 
 	while (HeapTupleIsValid(tmp_tuple = systable_getnext(sscan)))
 	{
-		if (dropintervals != NIL) 
+		if (dropintervals != NIL)
 		{
 			Form_pg_auth_time_constraint obj = (Form_pg_auth_time_constraint) GETSTRUCT(tmp_tuple);
 			authInterval *interval, *existing = (authInterval *) palloc0(sizeof(authInterval));
@@ -2657,7 +2708,7 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 			existing->start.time = obj->start_time;
 			existing->end.day = obj->end_day;
 			existing->end.time = obj->end_time;
-			foreach(intervalitem, dropintervals) 
+			foreach(intervalitem, dropintervals)
 			{
 				interval = (authInterval *)lfirst(intervalitem);
 				if (interval_overlap(existing, interval))
@@ -2665,7 +2716,7 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 					if (Gp_role == GP_ROLE_DISPATCH)
 						ereport(NOTICE,
 								(errmsg("dropping DENY rule for \"%s\" between %s %s and %s %s",
-										rolename, 
+										rolename,
 										daysofweek[existing->start.day],
 										DatumGetCString(DirectFunctionCall1(time_out, TimeADTGetDatum(existing->start.time))),
 										daysofweek[existing->end.day],
@@ -2675,14 +2726,14 @@ DelRoleDenials(const char *rolename, Oid roleid, List *dropintervals)
 					break;
 				}
 			}
-		} 
+		}
 		else
 			simple_heap_delete(pg_auth_time_rel, &tmp_tuple->t_self);
 	}
 
 	/* if intervals were specified and none was found, raise error */
 	if (dropintervals && !dropped_matching_interval)
-		ereport(ERROR, 
+		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("cannot find matching DENY rules for \"%s\"", rolename)));
 
