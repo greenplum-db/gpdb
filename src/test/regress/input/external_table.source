@@ -53,6 +53,45 @@ DROP EXTERNAL TABLE EXT_REGION;
 -- --------------------------------------
 -- check platform
 -- --------------------------------------
+DROP TABLE IF EXISTS REG_REGION;
+DROP TABLE IF EXISTS tableless_heap;
+DROP TABLE IF EXISTS errlog_save;
+DROP TABLE IF EXISTS exttab_insert_1;
+DROP TABLE IF EXISTS exttab_ctas_1;
+DROP TABLE IF EXISTS exttab_constraints_insert_1;
+
+DROP EXTERNAL TABLE IF EXISTS tableless_ext;
+DROP EXTERNAL TABLE IF EXISTS ret_too_many_uris;
+DROP EXTERNAL TABLE IF EXISTS wet_too_many_uris;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_3;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_4;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_5;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_6;
+DROP EXTERNAL TABLE IF EXISTS exttab_basic_7;
+DROP EXTERNAL TABLE IF EXISTS exttab_constraints_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_cte_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_cte_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_cursor_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_cursor_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_permissions_3;
+DROP EXTERNAL TABLE IF EXISTS exttab_subq_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_subq_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_subtxs_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_subtxs_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_txs_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_txs_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_udfs_1;
+DROP EXTERNAL TABLE IF EXISTS exttab_udfs_2;
+DROP EXTERNAL TABLE IF EXISTS exttab_views_3;
+
+DROP VIEW IF EXISTS exttab_views_3;
+
+DROP PROTOCOL IF EXISTS demoprot_untrusted;
+
 drop external web table if exists check_ps;
 CREATE EXTERNAL WEB TABLE check_ps (x text)
 execute E'( (ps -ef || ps -aux) | grep gpfdist | grep -v grep)'

@@ -522,7 +522,7 @@ create external table ret_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
 ) format 'text';
 select * from ret_too_many_uris;
-ERROR:  There are more external files (URLs) than primary segments that can read them. Found 20 URLs and 3 primary segments.
+ERROR:  There are more external files (URLs) than primary segments that can read them.
 create writable external table wet_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/wet.out1',  'gpfdist://foo.invalid:7070/wet.out2',
   'gpfdist://foo.invalid:7070/wet.out3',  'gpfdist://foo.invalid:7070/wet.out4',
