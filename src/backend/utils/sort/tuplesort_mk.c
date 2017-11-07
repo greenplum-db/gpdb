@@ -1064,7 +1064,7 @@ tuplesort_end_mk(Tuplesortstate_mk *state)
 void
 tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 {
-	if (state->instrument && !state->statsFinalized)
+	if (state->instrument && state->instrument->need_cdb && !state->statsFinalized)
 	{
 		Size		maxSpaceUsedOnSort = MemoryContextGetPeakSpace(state->sortcontext);
 

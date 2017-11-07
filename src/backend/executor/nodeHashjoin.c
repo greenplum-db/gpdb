@@ -176,7 +176,7 @@ ExecHashJoin(HashJoinState *node)
 		/*
 		 * CDB: Offer extra info for EXPLAIN ANALYZE.
 		 */
-		if (estate->es_instrument)
+		if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 			ExecHashTableExplainInit(hashNode, node, hashtable);
 
 
@@ -1367,7 +1367,7 @@ ExecHashJoinReloadHashTable(HashJoinState *hjstate)
 		 * after we build the hash table, the inner batch file is no longer
 		 * needed
 		 */
-		if (hjstate->js.ps.instrument)
+		if (hjstate->js.ps.instrument && hjstate->js.ps.instrument->need_cdb)
 		{
 			Assert(hashtable->stats);
 			hashtable->stats->batchstats[curbatch].innerfilesize =

@@ -467,7 +467,7 @@ static NTupleStorePage *nts_get_free_page(NTupleStore *nts)
 	init_page(page);
 	++nts->page_cnt;
 
-	if(nts->instrument)
+	if(nts->instrument && nts->instrument->need_cdb)
 	{
 		nts->instrument->workmemused = Max(nts->instrument->workmemused, nts->page_cnt * BLCKSZ); 
 		if(nts->last_page)

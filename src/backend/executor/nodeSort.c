@@ -153,7 +153,7 @@ ExecSort(SortState *node)
 		}
 
 		/* If EXPLAIN ANALYZE, share our Instrumentation object with sort. */
-		if (node->ss.ps.instrument)
+		if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
 			tuplesort_set_instrument(tuplesortstate,
 									 node->ss.ps.instrument,
 									 node->ss.ps.cdbexplainbuf);
@@ -326,7 +326,7 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	/* 
 	 * CDB: Offer extra info for EXPLAIN ANALYZE.
 	 */
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 		/* Allocate string buffer. */
 		sortstate->ss.ps.cdbexplainbuf = makeStringInfo();

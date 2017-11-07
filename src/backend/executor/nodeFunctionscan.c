@@ -33,6 +33,7 @@
 #include "utils/lsyscache.h"
 #include "cdb/memquota.h"
 #include "executor/spi.h"
+#include "executor/instrument.h"
 
 static TupleTableSlot *FunctionNext(FunctionScanState *node);
 static void ExecFunctionScanExplainEnd(PlanState *planstate, struct StringInfoData *buf);
@@ -78,7 +79,7 @@ FunctionNext(FunctionScanState *node)
 										PlanStateOperatorMemKB( (PlanState *) node));
 
 		/* CDB: Offer extra info for EXPLAIN ANALYZE. */
-		if (node->ss.ps.instrument)
+		if (node->ss.ps.instrument && node->ss.ps.instrument->need_cdb)
 		{
 			/* Let the tuplestore share our Instrumentation object. */
 			tuplestore_set_instrument(tuplestorestate, node->ss.ps.instrument);

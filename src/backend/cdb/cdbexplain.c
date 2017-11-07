@@ -1647,7 +1647,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 
 	/* Number of rescans */
 	if (instr->nloops > 1)
-		appendStringInfo(str, " of %.0f scans", instr->nloops);
+		appendStringInfo(str, " of %ld scans", instr->nloops);
 
 	/* Time from start of query on qDisp to this worker's first result row */
 	if (!(INSTR_TIME_IS_ZERO(instr->firststart)))
@@ -1838,7 +1838,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 					double		totalPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
 
 					appendStringInfo(str,
-									 "Partitions scanned:  %.0f (out of %d) %s of %.0f scans.\n",
+									 "Partitions scanned:  %.0f (out of %d) %s of %ld scans.\n",
 									 totalPartTableScannedPerRescan,
 									 numTotalLeafParts,
 									 segbuf,
@@ -1862,7 +1862,7 @@ cdbexplain_showExecStats(struct PlanState *planstate,
 					double		maxPartTableScannedPerRescan = ns->totalPartTableScanned.vmax / instr->nloops;
 
 					appendStringInfo(str,
-									 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %.0f scans."
+									 "Partitions scanned:  Avg %.1f (out of %d) x %d workers of %ld scans."
 									 "  Max %.0f parts%s.\n",
 									 totalPartTableScannedPerRescan,
 									 numTotalLeafParts,

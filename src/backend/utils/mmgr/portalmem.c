@@ -25,6 +25,7 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/query_metrics.h"
 #include "utils/resscheduler.h"
 
 #include "cdb/ml_ipc.h"
@@ -257,6 +258,10 @@ CreatePortal(const char *name, bool allowDup, bool dupSilent)
 	gpmon_init();
 
 	/* End Gpmon */
+
+	/* GPDB init connection for sending query metrics packets */
+	if (gp_enable_query_metrics)
+		metrics_init();
 
 	return portal;
 }

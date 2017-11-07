@@ -68,7 +68,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	/* must provide our own instrumentation support */
 	if (scanState->ss.ps.instrument)
 	{
-		InstrStartNode(scanState->ss.ps.instrument);
+		INSTR_START_NODE(scanState->ss.ps.instrument);
 	}
 
 	partitionIsReady = IndexScan_BeginIndexPartition(scanState,
@@ -102,7 +102,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 				break;
 
 	        /* CDB: If EXPLAIN ANALYZE, let bitmap share our Instrumentation. */
-	        if (scanState->ss.ps.instrument)
+	        if (scanState->ss.ps.instrument && (scanState->ss.ps.instrument)->need_cdb)
 	            tbm_bitmap_set_instrument(bitmap, scanState->ss.ps.instrument);
 
 			if (node->bitmap == NULL)
@@ -120,7 +120,7 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 	/* must provide our own instrumentation support */
 	if (scanState->ss.ps.instrument)
 	{
-		InstrStopNode(scanState->ss.ps.instrument, 1 /* nTuples */);
+		INSTR_STOP_NODE(scanState->ss.ps.instrument, 1 /* nTuples */);
 	}
 
 	return (Node *) bitmap;

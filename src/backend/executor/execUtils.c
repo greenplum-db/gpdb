@@ -66,12 +66,14 @@
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/memquota.h"
+#include "executor/instrument.h"
 #include "executor/spi.h"
 #include "utils/elog.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "storage/ipc.h"
 #include "cdb/cdbllize.h"
+#include "utils/query_metrics.h"
 #include "utils/workfile_mgr.h"
 
 #include "cdb/memquota.h"
@@ -1371,7 +1373,7 @@ InitSliceTable(EState *estate, int nMotions, int nSubplans)
 	table->nMotions = nMotions;
 	table->nInitPlans = nSubplans;
 	table->slices = NIL;
-    table->doInstrument = false;
+    table->instrument_options = 0;
 
 	/* Each slice table has a unique-id. */
 	table->ic_instance_id = ++gp_interconnect_id;
@@ -2062,12 +2064,13 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	 * If this query is being canceled, record that when the gpperfmon
 	 * is enabled.
 	 */
-	if (gp_enable_gpperfmon &&
+	if ((gp_enable_gpperfmon || gp_enable_query_metrics) &&
 		Gp_role == GP_ROLE_DISPATCH &&
 		queryDesc->gpmon_pkt &&
 		QueryCancelCleanup)
 	{			
 		gpmon_qlog_query_canceling(queryDesc->gpmon_pkt);
+		metrics_send_query_info(queryDesc, METRICS_QUERY_CANCELING);
 
 		if (gp_cancel_query_print_log)
 		{
@@ -2116,11 +2119,12 @@ void mppExecutorCleanup(QueryDesc *queryDesc)
 	/**
 	 * Perfmon related stuff.
 	 */
-	if (gp_enable_gpperfmon 
+	if ((gp_enable_gpperfmon || gp_enable_query_metrics)
 			&& Gp_role == GP_ROLE_DISPATCH
 			&& queryDesc->gpmon_pkt)
 	{			
 		gpmon_qlog_query_error(queryDesc->gpmon_pkt);
+		metrics_send_query_info(queryDesc, METRICS_QUERY_ERROR);
 		pfree(queryDesc->gpmon_pkt);
 		queryDesc->gpmon_pkt = NULL;
 	}
