@@ -1,0 +1,53 @@
+#!/usr/bin/make -f
+
+DH_VERBOSE = 1
+PWD=`pwd`
+# see EXAMPLES in dpkg-buildflags(1) and read /usr/share/dpkg/*
+DPKG_EXPORT_BUILDFLAGS = 1
+DEB_BUILD_OPTIONS += parallel=6
+VERSION := $(shell ./getversion | tr " " ".")
+PACKAGE := $(shell cat debian/control | egrep "^Package: " | cut -d " " -f 2)
+
+include /usr/share/dpkg/default.mk
+
+orca:
+	# ubuntu pip is ancient and problematic to install/upgrade during PPA builds
+	# instead, download it and install it using python
+	wget https://bootstrap.pypa.io/get-pip.py
+	python get-pip.py
+	pip install conan
+	debian/set_conan_remote.bash
+	cd depends && conan install --build
+
+override_dh_auto_configure: orca
+	./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=${PWD}/debian/tmp
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	make install
+	# the staging directory for creating a debian is NOT the right GPHOME.
+	# change GPHOME to point to the post-install target install directory.
+	sed -i "s#GPHOME=.*#GPHOME=/opt/gpdb#g" debian/tmp/greenplum_path.sh
+	mkdir -p debian/tmp/usr/lib/
+	cp /usr/local/lib/lib*.so.* debian/tmp/lib/
+	# remove bundled python from open-source package
+	rm -rf debian/tmp/lib/python/Crypto
+	rm -rf debian/tmp/lib/python/lockfile
+	rm -rf debian/tmp/lib/python/paramiko
+	rm -rf debian/tmp/lib/python/psutil
+	rm -rf debian/tmp/lib/python/yaml
+	# TODO Remove fault injector and other packages
+
+override_dh_auto_clean:
+    # since we need orca to build before configuring, and configuring happens before dh_auto_clean,
+    # we can either add a make dependency here, which will cause and orca/configure to happen multiple times,
+    # or, since we assume that this build is happening in concourse on a brand new container,
+    # we can  make this step into a no-op: the container is clean to begin with.
+	echo "Skipping clean"
+	# Do nothing
+
+override_dh_gencontrol:
+	echo "using version $(VERSION) for binary"
+	dpkg-gencontrol -v$(VERSION) -Pdebian/$(PACKAGE)
