@@ -27,7 +27,7 @@ function run_regression_test() {
 
 	# verify files written by PXF
 	ls -al /tmp/pxf-write
-	local num_files=\$(ls -l /tmp/pxf-write | wc -l)
+	num_files=\$(ls -1 /tmp/pxf-write | wc -l)
 	if [ "\$num_files" != "3" ]; then
 	    echo "ERROR: Unexpected number of files written by PXF = \$num_files"
 	    exit 1
@@ -35,12 +35,12 @@ function run_regression_test() {
 
 	# verify data written by PXF
 	cat /tmp/pxf-write/* | sort
-	local num_rows=\$(cat /tmp/pxf-wrtie/* | wc -l)
+	num_rows=\$(cat /tmp/pxf-wrtie/* | wc -l)
 	if [ "\$num_rows" != "100" ]; then
 	    echo "ERROR: Unexpected number of rows written by PXF = \$num_rows"
 	    exit 1
 	fi
-	
+
 	exit 0
 	EOF
 
