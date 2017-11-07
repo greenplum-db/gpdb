@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/arrayfuncs.c,v 1.142 2008/03/25 22:42:43 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/arrayfuncs.c,v 1.147 2008/07/21 04:47:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -98,10 +98,10 @@ static void array_insert_slice(ArrayType *destArray, ArrayType *origArray,
 				   int typlen, bool typbyval, char typalign);
 static int	array_cmp(FunctionCallInfo fcinfo);
 static ArrayType *create_array_envelope(int ndims, int *dimv, int *lbv, int nbytes,
-					  Oid elmtype, int dataoffset);
+			    Oid elmtype, int dataoffset);
 static ArrayType *array_fill_internal(ArrayType *dims, ArrayType *lbs,
-					Datum value, bool isnull, Oid elmtype,
-					FunctionCallInfo fcinfo);
+									  Datum value, bool isnull, Oid elmtype,
+									  FunctionCallInfo fcinfo);
 
 
 /*
@@ -4395,9 +4395,9 @@ array_smaller(PG_FUNCTION_ARGS)
 
 typedef struct generate_subscripts_fctx
 {
-	int4		lower;
-	int4		upper;
-	bool		reverse;
+        int4    lower;
+        int4    upper;
+        bool    reverse;
 } generate_subscripts_fctx;
 
 /*
@@ -4414,10 +4414,10 @@ generate_subscripts(PG_FUNCTION_ARGS)
 	/* stuff done only on the first call of the function */
 	if (SRF_IS_FIRSTCALL())
 	{
-		ArrayType  *v = PG_GETARG_ARRAYTYPE_P(0);
-		int			reqdim = PG_GETARG_INT32(1);
-		int		   *lb,
-				   *dimv;
+		ArrayType *v = PG_GETARG_ARRAYTYPE_P(0);
+		int		reqdim = PG_GETARG_INT32(1);
+		int    *lb,
+			   *dimv;
 
 		/* create a function context for cross-call persistence */
 		funcctx = SRF_FIRSTCALL_INIT();
@@ -4482,20 +4482,20 @@ generate_subscripts_nodir(PG_FUNCTION_ARGS)
 Datum
 array_fill_with_lower_bounds(PG_FUNCTION_ARGS)
 {
-	ArrayType  *dims;
-	ArrayType  *lbs;
-	ArrayType  *result;
+	ArrayType	*dims;
+	ArrayType	*lbs;
+	ArrayType		*result;
 	Oid			elmtype;
-	Datum		value;
-	bool		isnull;
+	Datum 	value;
+	bool	isnull;
 
 	if (PG_ARGISNULL(1) || PG_ARGISNULL(2))
 		ereport(ERROR,
-				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-			   errmsg("dimension array or low bound array cannot be NULL")));
+			    (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+			     errmsg("dimension array or low bound array cannot be NULL")));
 
 	dims = PG_GETARG_ARRAYTYPE_P(1);
-	lbs = PG_GETARG_ARRAYTYPE_P(2);
+	lbs  = PG_GETARG_ARRAYTYPE_P(2);
 
 	if (!PG_ARGISNULL(0))
 	{
@@ -4523,16 +4523,16 @@ array_fill_with_lower_bounds(PG_FUNCTION_ARGS)
 Datum
 array_fill(PG_FUNCTION_ARGS)
 {
-	ArrayType  *dims;
-	ArrayType  *result;
+	ArrayType	*dims;
+	ArrayType		*result;
 	Oid			elmtype;
-	Datum		value;
-	bool		isnull;
+	Datum 	value;
+	bool	isnull;
 
 	if (PG_ARGISNULL(1))
 		ereport(ERROR,
-				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-			   errmsg("dimension array or low bound array cannot be NULL")));
+			    (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+			     errmsg("dimension array or low bound array cannot be NULL")));
 
 	dims = PG_GETARG_ARRAYTYPE_P(1);
 
@@ -4559,7 +4559,7 @@ static ArrayType *
 create_array_envelope(int ndims, int *dimv, int *lbsv, int nbytes,
 					  Oid elmtype, int dataoffset)
 {
-	ArrayType  *result;
+	ArrayType *result;
 
 	result = (ArrayType *) palloc0(nbytes);
 	SET_VARSIZE(result, nbytes);
@@ -4577,16 +4577,16 @@ array_fill_internal(ArrayType *dims, ArrayType *lbs,
 					Datum value, bool isnull, Oid elmtype,
 					FunctionCallInfo fcinfo)
 {
-	ArrayType  *result;
-	int		   *dimv;
-	int		   *lbsv;
-	int			ndims;
-	int			nitems;
-	int			deflbs[MAXDIM];
-	int16		elmlen;
-	bool		elmbyval;
-	char		elmalign;
-	ArrayMetaState *my_extra;
+	ArrayType	*result;
+	int	*dimv;
+	int	*lbsv;
+	int	ndims;
+	int	nitems;
+	int 		deflbs[MAXDIM];
+	int16 elmlen;
+	bool elmbyval;
+	char elmalign;
+	ArrayMetaState 		*my_extra;
 
 	/*
 	 * Params checks
@@ -4650,7 +4650,7 @@ array_fill_internal(ArrayType *dims, ArrayType *lbs,
 	}
 	else
 	{
-		int			i;
+		int	i;
 
 		for (i = 0; i < MAXDIM; i++)
 			deflbs[i] = 1;
@@ -4694,8 +4694,8 @@ array_fill_internal(ArrayType *dims, ArrayType *lbs,
 	/* compute required space */
 	if (!isnull)
 	{
-		int			i;
-		char	   *p;
+		int 	i;
+		char		*p;
 		int			nbytes;
 		int			totbytes;
 
@@ -4732,8 +4732,8 @@ array_fill_internal(ArrayType *dims, ArrayType *lbs,
 	}
 	else
 	{
-		int			nbytes;
-		int			dataoffset;
+		int	nbytes;
+		int	dataoffset;
 
 		dataoffset = ARR_OVERHEAD_WITHNULLS(ndims, nitems);
 		nbytes = dataoffset;

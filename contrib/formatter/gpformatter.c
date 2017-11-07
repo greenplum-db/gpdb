@@ -338,7 +338,7 @@ formatter_import(PG_FUNCTION_ARGS)
 
 					if (len < 0)
 						elog(ERROR, "invalid length of varlen datatype: %d",
-							 len);
+									len);
 				}
 
 				/* if len or data bytes don't exist in this buffer, return */

@@ -31,8 +31,7 @@ FreeRuntimeKeysContext(IndexScanState *indexstate);
 
 extern void
 ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
-					List *quals, List *strategies, List *subtypes,
-					ScanKey *scanKeys, int *numScanKeys,
+					List *quals, ScanKey *scanKeys, int *numScanKeys,
 					IndexRuntimeKeyInfo **runtimeKeys, int *numRuntimeKeys,
 					IndexArrayKeyInfo **arrayKeys, int *numArrayKeys);
 

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_funcs.c,v 1.69 2008/04/06 23:43:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_funcs.c,v 1.72 2008/05/15 22:39:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -467,7 +467,7 @@ plpgsql_convert_ident(const char *s, char **output, int numidents)
 const char *
 plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 {
-	switch (stmt->cmd_type)
+	switch ((enum PLpgSQL_stmt_types) stmt->cmd_type)
 	{
 		case PLPGSQL_STMT_BLOCK:
 			return _("statement block");
@@ -475,6 +475,8 @@ plpgsql_stmt_typename(PLpgSQL_stmt *stmt)
 			return _("assignment");
 		case PLPGSQL_STMT_IF:
 			return "IF";
+		case PLPGSQL_STMT_CASE:
+			return "CASE";
 		case PLPGSQL_STMT_LOOP:
 			return "LOOP";
 		case PLPGSQL_STMT_WHILE:
@@ -529,6 +531,7 @@ static void free_stmt(PLpgSQL_stmt *stmt);
 static void free_block(PLpgSQL_stmt_block *block);
 static void free_assign(PLpgSQL_stmt_assign *stmt);
 static void free_if(PLpgSQL_stmt_if *stmt);
+static void free_case(PLpgSQL_stmt_case *stmt);
 static void free_loop(PLpgSQL_stmt_loop *stmt);
 static void free_while(PLpgSQL_stmt_while *stmt);
 static void free_fori(PLpgSQL_stmt_fori *stmt);
@@ -563,6 +566,9 @@ free_stmt(PLpgSQL_stmt *stmt)
 			break;
 		case PLPGSQL_STMT_IF:
 			free_if((PLpgSQL_stmt_if *) stmt);
+			break;
+		case PLPGSQL_STMT_CASE:
+			free_case((PLpgSQL_stmt_case *) stmt);
 			break;
 		case PLPGSQL_STMT_LOOP:
 			free_loop((PLpgSQL_stmt_loop *) stmt);
@@ -667,6 +673,22 @@ free_if(PLpgSQL_stmt_if *stmt)
 }
 
 static void
+free_case(PLpgSQL_stmt_case *stmt)
+{
+	ListCell   *l;
+
+	free_expr(stmt->t_expr);
+	foreach(l, stmt->case_when_list)
+	{
+		PLpgSQL_case_when *cwt = (PLpgSQL_case_when *) lfirst(l);
+
+		free_expr(cwt->expr);
+		free_stmts(cwt->stmts);
+	}
+	free_stmts(stmt->else_stmts);
+}
+
+static void
 free_loop(PLpgSQL_stmt_loop *stmt)
 {
 	free_stmts(stmt->body);
@@ -713,6 +735,7 @@ free_open(PLpgSQL_stmt_open *stmt)
 static void
 free_fetch(PLpgSQL_stmt_fetch *stmt)
 {
+	free_expr(stmt->expr);
 }
 
 static void
@@ -747,7 +770,14 @@ free_return_next(PLpgSQL_stmt_return_next *stmt)
 static void
 free_return_query(PLpgSQL_stmt_return_query *stmt)
 {
+	ListCell   *lc;
+
 	free_expr(stmt->query);
+	free_expr(stmt->dynquery);
+	foreach(lc, stmt->params)
+	{
+		free_expr((PLpgSQL_expr *) lfirst(lc));
+	}
 }
 
 static void
@@ -859,6 +889,7 @@ static void dump_stmt(PLpgSQL_stmt *stmt);
 static void dump_block(PLpgSQL_stmt_block *block);
 static void dump_assign(PLpgSQL_stmt_assign *stmt);
 static void dump_if(PLpgSQL_stmt_if *stmt);
+static void dump_case(PLpgSQL_stmt_case *stmt);
 static void dump_loop(PLpgSQL_stmt_loop *stmt);
 static void dump_while(PLpgSQL_stmt_while *stmt);
 static void dump_fori(PLpgSQL_stmt_fori *stmt);
@@ -894,7 +925,7 @@ static void
 dump_stmt(PLpgSQL_stmt *stmt)
 {
 	printf("%3d:", stmt->lineno);
-	switch (stmt->cmd_type)
+	switch ((enum PLpgSQL_stmt_types) stmt->cmd_type)
 	{
 		case PLPGSQL_STMT_BLOCK:
 			dump_block((PLpgSQL_stmt_block *) stmt);
@@ -904,6 +935,9 @@ dump_stmt(PLpgSQL_stmt *stmt)
 			break;
 		case PLPGSQL_STMT_IF:
 			dump_if((PLpgSQL_stmt_if *) stmt);
+			break;
+		case PLPGSQL_STMT_CASE:
+			dump_case((PLpgSQL_stmt_case *) stmt);
 			break;
 		case PLPGSQL_STMT_LOOP:
 			dump_loop((PLpgSQL_stmt_loop *) stmt);
@@ -1045,6 +1079,44 @@ dump_if(PLpgSQL_stmt_if *stmt)
 
 	dump_ind();
 	printf("    ENDIF\n");
+}
+
+static void
+dump_case(PLpgSQL_stmt_case *stmt)
+{
+	ListCell	*l;
+
+	dump_ind();
+	printf("CASE %d ", stmt->t_varno);
+	if (stmt->t_expr)
+		dump_expr(stmt->t_expr);
+	printf("\n");
+	dump_indent += 6;
+	foreach(l, stmt->case_when_list)
+	{
+		PLpgSQL_case_when *cwt = (PLpgSQL_case_when *) lfirst(l);
+
+		dump_ind();
+		printf("WHEN ");
+		dump_expr(cwt->expr);
+		printf("\n");
+		dump_ind();
+		printf("THEN\n");
+		dump_indent += 2;
+		dump_stmts(cwt->stmts);
+		dump_indent -= 2;
+	}
+	if (stmt->have_else)
+	{
+		dump_ind();
+		printf("ELSE\n");
+		dump_indent += 2;
+		dump_stmts(stmt->else_stmts);
+		dump_indent -= 2;
+	}
+	dump_indent -= 6;
+	dump_ind();
+	printf("    ENDCASE\n");
 }
 
 static void
@@ -1299,9 +1371,37 @@ static void
 dump_return_query(PLpgSQL_stmt_return_query *stmt)
 {
 	dump_ind();
-	printf("RETURN QUERY ");
-	dump_expr(stmt->query);
-	printf("\n");
+	if (stmt->query)
+	{
+		printf("RETURN QUERY ");
+		dump_expr(stmt->query);
+		printf("\n");
+	}
+	else
+	{
+		printf("RETURN QUERY EXECUTE ");
+		dump_expr(stmt->dynquery);
+		printf("\n");
+		if (stmt->params != NIL)
+		{
+			ListCell   *lc;
+			int			i;
+
+			dump_indent += 2;
+			dump_ind();
+			printf("    USING\n");
+			dump_indent += 2;
+			i = 1;
+			foreach(lc, stmt->params)
+			{
+				dump_ind();
+				printf("    parameter $%d: ", i++);
+				dump_expr((PLpgSQL_expr *) lfirst(lc));
+				printf("\n");
+			}
+			dump_indent -= 4;
+		}
+	}
 }
 
 static void
@@ -1311,7 +1411,12 @@ dump_raise(PLpgSQL_stmt_raise *stmt)
 	int			i = 0;
 
 	dump_ind();
-	printf("RAISE '%s'\n", stmt->message);
+	printf("RAISE level=%d", stmt->elog_level);
+	if (stmt->condname)
+		printf(" condname='%s'", stmt->condname);
+	if (stmt->message)
+		printf(" message='%s'", stmt->message);
+	printf("\n");
 	dump_indent += 2;
 	foreach(lc, stmt->params)
 	{
@@ -1319,6 +1424,36 @@ dump_raise(PLpgSQL_stmt_raise *stmt)
 		printf("    parameter %d: ", i++);
 		dump_expr((PLpgSQL_expr *) lfirst(lc));
 		printf("\n");
+	}
+	if (stmt->options)
+	{
+		dump_ind();
+		printf("    USING\n");
+		dump_indent += 2;
+		foreach(lc, stmt->options)
+		{
+			PLpgSQL_raise_option *opt = (PLpgSQL_raise_option *) lfirst(lc);
+
+			dump_ind();
+			switch (opt->opt_type)
+			{
+				case PLPGSQL_RAISEOPTION_ERRCODE:
+					printf("    ERRCODE = ");
+					break;
+				case PLPGSQL_RAISEOPTION_MESSAGE:
+					printf("    MESSAGE = ");
+					break;
+				case PLPGSQL_RAISEOPTION_DETAIL:
+					printf("    DETAIL = ");
+					break;
+				case PLPGSQL_RAISEOPTION_HINT:
+					printf("    HINT = ");
+					break;
+			}
+			dump_expr(opt->expr);
+			printf("\n");
+		}
+		dump_indent -= 2;
 	}
 	dump_indent -= 2;
 }

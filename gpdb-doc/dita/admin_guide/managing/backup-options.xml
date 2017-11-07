@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_edj_hrv_ft">
+  <title>Backup and Restore Options</title>
+  <body>
+    <p>The Greenplum Database backup and restore utilities support various locations for backup
+      files:</p>
+    <ul id="ul_gy1_tzc_gt">
+      <li>With the <codeph>gpcrondump</codeph> utility, backup files may be saved in the default
+        location, the <codeph>db_dumps</codeph> subdirectory of the master and each segment, or
+        saved to a different directory specified with the <codeph>gpcrondump -u</codeph>
+        option.</li>
+      <li>Both the <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph> utilities have
+        integrated support for Dell EMC Data Domain Boost and Veritas NetBackup systems.</li>
+      <li>Backup files can be saved through named pipes to any network accessible location.</li>
+      <li>Backup files saved to the default location may be moved to an archive server on the
+        network. This allows performing the backup at the highest transfer rates (when segments
+        write the backup data to fast local disk arrays) and then freeing up disk space by moving
+        the files to remote storage. </li>
+    </ul>
+    <p>You can create dumps containing selected database objects:<ul id="ul_tzq_5zc_gt">
+        <li>You can backup tables belonging to one or more schema you specify on the command line or
+          in a text file. </li>
+        <li>You can specify schema to exclude from the backup, as command-line options or in a list
+          provided in a text file. </li>
+        <li>You can backup a specified set of tables listed on the command line or in a text file.
+          The table and schema options cannot be used together in a single backup.</li>
+        <li>In addition to database objects, <codeph>gpcrondump</codeph> can backup the
+          configuration files <codeph>pg_hba.conf</codeph>, <codeph>pg_ident.conf</codeph>, and
+            <codeph>postgresql.conf</codeph>, and global database objects, such as roles and
+          tablespaces.</li>
+      </ul></p>
+    <p>You can create incremental backups:</p>
+    <ul id="ul_h3g_fxz_qt">
+      <li>An incremental backup contains only append-optimized and column-oriented tables that have
+        changed since the most recent incremental or full backup.</li>
+      <li>For partitioned append-optimized tables, only changed append-optimized/column-oriented
+        table partitions are backed up. </li>
+      <li>Incremental backups include all heap tables.</li>
+      <li>Use the <codeph>gpcrondump</codeph>
+        <codeph>--incremental</codeph> flag to specify an incremental backup.</li>
+      <li>Restoring an incremental backup requires a full backup and all subsequent incremental
+        backups, up to the backup you are restoring.</li>
+    </ul>
+    <p>The <codeph>gpdbrestore</codeph> utility offers many options:<ul id="ul_djz_g1d_gt">
+        <li>By default, <codeph>gpdbrestore</codeph> restores data to the database it was backed up
+          from. </li>
+        <li>The <codeph>--redirect</codeph> flag allows you to restore a backup to a different
+          database. </li>
+        <li>The restored database can be dropped and recreated, but the default is to restore into
+          an existing database.</li>
+        <li>Selected tables can be restored from a backup by listing the tables on the command line
+          or by listing them in a text file and specifying the text file on the command line.</li>
+        <li>You can restore a database from backup files moved to an archive server. The backup
+          files are copied back into place on the master host and each segment host and then
+          restored to the database.</li>
+      </ul></p>
+  </body>
+</topic>

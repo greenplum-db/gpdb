@@ -557,7 +557,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			break;
 
 		case CASHOID:			/* cash is stored in int64 internally */
-			cash_buf = (*(Cash *) DatumGetPointer(datum));
+			cash_buf = DatumGetCash(datum);
 			len = sizeof(Cash);
 			buf = &cash_buf;
 			break;

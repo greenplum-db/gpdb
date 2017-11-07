@@ -57,7 +57,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.115 2008/03/16 23:15:08 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtsort.c,v 1.116 2008/06/19 00:46:03 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,6 +68,7 @@
 #include "access/nbtree.h"
 #include "miscadmin.h"
 #include "storage/smgr.h"
+#include "utils/rel.h"
 #include "utils/tuplesort.h"
 
 #include "cdb/cdbvars.h"
@@ -209,10 +210,10 @@ _bt_leafbuild(BTSpool *btspool, BTSpool *btspool2)
 	wstate.index = btspool->index;
 
 	/*
-	 * We need to log index creation in WAL iff WAL archiving is enabled AND
-	 * it's not a temp index.
+	 * We need to log index creation in WAL iff WAL archiving/streaming is
+	 * enabled AND it's not a temp index.
 	 */
-	wstate.btws_use_wal = !XLog_UnconvertedCanBypassWal() && !wstate.index->rd_istemp;
+	wstate.btws_use_wal = XLogIsNeeded() && !wstate.index->rd_istemp;
 
 	/* reserve the metapage */
 	wstate.btws_pages_alloced = BTREE_METAPAGE + 1;

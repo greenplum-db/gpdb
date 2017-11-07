@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.109 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.110 2008/06/12 09:12:31 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -802,8 +802,6 @@ void
 smgrcreate(
 	SMgrRelation 				reln,
 
-	bool 						isLocalBuf,
-
 	char						*relationName,
 					/* For tracing only.  Can be NULL in some execution paths. */
 
@@ -815,9 +813,19 @@ smgrcreate(
 
 	bool						*mirrorDataLossOccurred) /* FIXME: is this arg still needed? */
 {
+	/* GPDB_84_MERGE_FIXME: the following performance tweak came in from 8.4; is
+	 * it still applicable to our system here? */
+#if 0
+	/*
+	 * Exit quickly in WAL replay mode if we've already opened the file. 
+	 * If it's open, it surely must exist.
+	 */ 
+	if (isRedo && reln->md_fd != NULL)
+		return;
+#endif
+
 	mdcreate(
 			reln,
-			isLocalBuf,
 			relationName,
 			mirrorDataLossTrackingState,
 			mirrorDataLossTrackingSessionNum,
@@ -3122,7 +3130,6 @@ smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 													&mirrorDataLossTrackingSessionNum);
 		smgrcreate(
 				reln,
-				/* isLocalBuf */ false,
 				/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
 				mirrorDataLossTrackingState,
 				mirrorDataLossTrackingSessionNum,
@@ -3150,7 +3157,6 @@ smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 													&mirrorDataLossTrackingSessionNum);
 		smgrcreate(
 				reln,
-				/* isLocalBuf */ false,
 				/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
 				mirrorDataLossTrackingState,
 				mirrorDataLossTrackingSessionNum,

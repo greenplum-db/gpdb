@@ -14,13 +14,14 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef FRONTEND
-#ifndef WIN32
-#include "postgres.h"
-#endif
-#else
-#include "postgres_fe.h"
-#endif
+/*
+ * This file is compiled with both frontend and backend codes, symlinked by
+ * src/backend/Makefile, and use macro FRONTEND to switch.
+ *
+ * Include "c.h" to adopt Greenplum C types. Don't include "postgres_fe.h",
+ * which only defines FRONTEND besides including "c.h"
+ */
+#include "c.h"
 
 #ifndef WIN32
 #include <poll.h>

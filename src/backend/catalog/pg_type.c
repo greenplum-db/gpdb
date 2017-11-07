@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.118 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.120 2008/07/30 17:05:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,6 +31,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
@@ -126,6 +127,8 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
 	values[i++] = Int16GetDatum(sizeof(int4));	/* typlen */
 	values[i++] = BoolGetDatum(true);	/* typbyval */
 	values[i++] = CharGetDatum(TYPTYPE_PSEUDO); /* typtype */
+	values[i++] = CharGetDatum(TYPCATEGORY_PSEUDOTYPE); /* typcategory */
+	values[i++] = BoolGetDatum(false);	/* typispreferred */
 	values[i++] = BoolGetDatum(false);	/* typisdefined */
 	values[i++] = CharGetDatum(DEFAULT_TYPDELIM);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typrelid */
@@ -209,6 +212,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 		   Oid ownerId,
 		   int16 internalSize,
 		   char typeType,
+		   char typeCategory,
+		   bool typePreferred,
 		   char typDelim,
 		   Oid inputProcedure,
 		   Oid outputProcedure,
@@ -290,6 +295,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 	values[i++] = Int16GetDatum(internalSize);	/* typlen */
 	values[i++] = BoolGetDatum(passedByValue);	/* typbyval */
 	values[i++] = CharGetDatum(typeType);		/* typtype */
+	values[i++] = CharGetDatum(typeCategory);	/* typcategory */
+	values[i++] = BoolGetDatum(typePreferred);	/* typispreferred */
 	values[i++] = BoolGetDatum(true);	/* typisdefined */
 	values[i++] = CharGetDatum(typDelim);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(relationOid);		/* typrelid */
@@ -437,6 +444,8 @@ TypeCreate(Oid newTypeOid,
 		   Oid ownerId,
 		   int16 internalSize,
 		   char typeType,
+		   char typeCategory,
+		   bool typePreferred,
 		   char typDelim,
 		   Oid inputProcedure,
 		   Oid outputProcedure,
@@ -466,6 +475,8 @@ TypeCreate(Oid newTypeOid,
 		   ownerId,
 		   internalSize,
 		   typeType,
+		   typeCategory,
+		   typePreferred,
 		   typDelim,
 		   inputProcedure,
 		   outputProcedure,

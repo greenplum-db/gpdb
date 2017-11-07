@@ -117,12 +117,8 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 	cluster->controldata.lc_collate = NULL;
 	cluster->controldata.lc_ctype = NULL;
 
-// GPDB_84_MERGE_FIXME: We haven't merged the float8 pass-by-val flag yet.
-// Re-enable this test when we do.
-#if 0
 	/* Only in <= 8.3 */
 	if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
-#endif
 	{
 		cluster->controldata.float8_pass_by_value = false;
 		got_float8_pass_by_value = true;

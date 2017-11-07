@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.205 2008/03/26 21:10:37 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.209 2008/05/12 00:00:47 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -28,11 +28,12 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/heap.h"
-#include "access/xact.h"
 #include "access/transam.h"				/* InvalidTransactionId */
+#include "access/xact.h"
+#include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
+#include "catalog/heap.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_authid.h"
@@ -47,6 +48,8 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/bgwriter.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
@@ -629,8 +632,10 @@ createdb(CreatedbStmt *stmt)
 	Snapshot	snapshot;
 
 	if (shouldDispatch)
+	{
 		if (Persistent_BeforePersistenceWork())
 			elog(NOTICE, " Create database dispatch before persistence work!");
+	}
 
 	/* Extract options from the statement node tree */
 	foreach(option, stmt->options)
@@ -1043,7 +1048,7 @@ createdb(CreatedbStmt *stmt)
 	 * trouble here than anywhere else.  XXX this code should be changed
 	 * whenever a generic fix is implemented.
 	 */
-	snapshot = CopySnapshot(GetLatestSnapshot());
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
 
 	/*
 	 * Once we start copying subdirectories, we need to be able to clean 'em
@@ -1170,7 +1175,7 @@ createdb(CreatedbStmt *stmt)
 				PersistentFileSysRelStorageMgr localRelStorageMgr;
 				PersistentFileSysRelBufpoolKind relBufpoolKind;
 				
-				useWal = !XLog_CanBypassWal();
+				useWal = XLogIsNeeded();
 				
 				GpPersistentRelationNode_GetRelationInfo(
 													dbInfoRel->relkind,
@@ -1314,7 +1319,11 @@ createdb(CreatedbStmt *stmt)
 	}
 	PG_END_ENSURE_ERROR_CLEANUP(createdb_failure_callback,
 								PointerGetDatum(&fparms));
+
+	/* Free our snapshot */
+	UnregisterSnapshot(snapshot);
 }
+
 
 /* Error cleanup callback for createdb */
 static void
@@ -1333,7 +1342,6 @@ createdb_failure_callback(int code, Datum arg)
 	/* Throw away any successfully copied subdirectories */
 	remove_dbtablespaces(fparms->dest_dboid);
 #endif
-
 }
 
 /*
@@ -2445,7 +2453,7 @@ check_db_file_conflict(Oid db_id)
 	 *
 	 * XXX change this when a generic fix for SnapshotNow races is implemented
 	 */
-	snapshot = CopySnapshot(GetLatestSnapshot());
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
 
 	rel = heap_open(TableSpaceRelationId, AccessShareLock);
 	scan = heap_beginscan(rel, snapshot, 0, NULL);
@@ -2474,6 +2482,8 @@ check_db_file_conflict(Oid db_id)
 
 	heap_endscan(scan);
 	heap_close(rel, AccessShareLock);
+	UnregisterSnapshot(snapshot);
+
 	return result;
 }
 

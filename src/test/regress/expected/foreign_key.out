@@ -238,8 +238,8 @@ SELECT * FROM FKTABLE ORDER BY 1,2,3;
 
 -- this should fail for lack of CASCADE
 DROP TABLE PKTABLE;
-NOTICE:  constraint constrname2 on table fktable depends on table pktable
 ERROR:  cannot drop table pktable because other objects depend on it
+DETAIL:  constraint constrname2 on table fktable depends on table pktable
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 DROP TABLE PKTABLE CASCADE;
 NOTICE:  drop cascades to constraint constrname2 on table fktable
@@ -1060,8 +1060,7 @@ INSERT INTO fktable VALUES (100, 200);
 COMMIT;
 ERROR:  insert or update on table "fktable" violates foreign key constraint "fktable_fk_fkey"
 DETAIL:  Key (fk)=(200) is not present in table "pktable".
-DROP TABLE pktable, fktable CASCADE;
-NOTICE:  drop cascades to constraint fktable_fk_fkey on table fktable
+DROP TABLE pktable, fktable;
 -- test notice about expensive referential integrity checks,
 -- where the index cannot be used because of type incompatibilities.
 CREATE TEMP TABLE pktable (
@@ -1132,16 +1131,7 @@ ALTER TABLE fktable ADD CONSTRAINT fk_241_132
 FOREIGN KEY (x2,x4,x1) REFERENCES pktable(id1,id3,id2);
 ERROR:  foreign key constraint "fk_241_132" cannot be implemented
 DETAIL:  Key columns "x2" and "id1" are of incompatible types: character varying and integer.
-DROP TABLE pktable, fktable CASCADE;
-NOTICE:  drop cascades to constraint fk_253_213 on table fktable
-NOTICE:  drop cascades to constraint fk_213_213 on table fktable
-NOTICE:  drop cascades to constraint fk_123_123 on table fktable
-NOTICE:  drop cascades to constraint fk_5_1 on table fktable
-NOTICE:  drop cascades to constraint fktable_x1_fkey on table fktable
-NOTICE:  drop cascades to constraint fk_4_2 on table fktable
-NOTICE:  drop cascades to constraint fktable_x2_fkey on table fktable
-NOTICE:  drop cascades to constraint fk_1_3 on table fktable
-NOTICE:  drop cascades to constraint fktable_x3_fkey on table fktable
+DROP TABLE pktable, fktable;
 -- test a tricky case: we can elide firing the FK check trigger during
 -- an UPDATE if the UPDATE did not change the foreign key
 -- field. However, we can't do this if our transaction was the one that

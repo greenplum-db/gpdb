@@ -62,8 +62,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists sync1_int_zlib_7 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function sync1_int_zlib_7_in(cstring)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function sync1_int_zlib_7_out(sync1_int_zlib_7)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function sync1_int_zlib_7_in(cstring)
+drop cascades to function sync1_int_zlib_7_out(sync1_int_zlib_7)
 DROP TYPE
  
 --ck_sync1
@@ -77,8 +78,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists ck_sync1_int_zlib_6 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ck_sync1_int_zlib_6_in(cstring)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ck_sync1_int_zlib_6_out(ck_sync1_int_zlib_6)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function ck_sync1_int_zlib_6_in(cstring)
+drop cascades to function ck_sync1_int_zlib_6_out(ck_sync1_int_zlib_6)
 DROP TYPE
 --ct
  
@@ -91,8 +93,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists ct_int_zlib_4 cascade; 
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ct_int_zlib_4_out(ct_int_zlib_4)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ct_int_zlib_4_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function ct_int_zlib_4_in(cstring)
+drop cascades to function ct_int_zlib_4_out(ct_int_zlib_4)
 DROP TYPE
  
 --resync
@@ -106,8 +109,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists resync_int_zlib_2 cascade; 
-psql:/path/sql_file:1: NOTICE:  drop cascades to function resync_int_zlib_2_out(resync_int_zlib_2)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function resync_int_zlib_2_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function resync_int_zlib_2_in(cstring)
+drop cascades to function resync_int_zlib_2_out(resync_int_zlib_2)
 DROP TYPE
 --sync2
  
@@ -120,6 +124,7 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists sync2_int_zlib_1 cascade; 
-psql:/path/sql_file:1: NOTICE:  drop cascades to function sync2_int_zlib_1_out(sync2_int_zlib_1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function sync2_int_zlib_1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function sync2_int_zlib_1_in(cstring)
+drop cascades to function sync2_int_zlib_1_out(sync2_int_zlib_1)
 DROP TYPE

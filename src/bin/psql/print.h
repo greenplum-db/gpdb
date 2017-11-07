@@ -100,7 +100,7 @@ typedef struct printTableOpt
  */
 typedef struct printTableFooter
 {
-	char	   *data;
+	char *data;
 	struct printTableFooter *next;
 } printTableFooter;
 

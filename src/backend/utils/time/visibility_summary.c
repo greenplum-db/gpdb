@@ -23,6 +23,7 @@
 #include "lib/stringinfo.h"
 #include "utils/builtins.h"
 #include "utils/tqual.h"
+#include "utils/visibility_summary.h"
 
 static char *
 TupleTransactionStatus_Name(TupleTransactionStatus status)

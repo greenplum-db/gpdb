@@ -98,7 +98,7 @@ This comparison is designed to ignore certain Greenplum-specific
 informational messages, as well as handle the cases where query output
 order may differ for a multi-segment Greenplum database versus a
 single PostgreSQL instance.  Type "atmsort.pl --man" for more details.
-gpdiff is invoked by pg_regress as part of "make install-check".
+gpdiff is invoked by pg_regress as part of "make installcheck-world".
 In this case the diff options are something like:
 
  "-w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE:".

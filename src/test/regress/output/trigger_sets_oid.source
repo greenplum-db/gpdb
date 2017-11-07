@@ -1,0 +1,42 @@
+--
+-- Test setting the OID of a tuple in a BEFORE ROW INSERT trigger.
+--
+-- There's a comment in ExecInsert that says that that should work, although there
+-- is no code in PostgreSQL to test that. So let's test it.
+--
+CREATE OR REPLACE FUNCTION trigger_return_new_oid()
+RETURNS trigger
+LANGUAGE C VOLATILE EXECUTE ON MASTER AS '@abs_builddir@/regress@DLSUFFIX@', 'trigger_udf_return_new_oid';
+-- Heap table
+CREATE TABLE trigger_oid_tab(id int8, v text) WITH (oids = true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+CREATE TRIGGER t BEFORE INSERT ON trigger_oid_tab
+FOR EACH ROW EXECUTE PROCEDURE trigger_return_new_oid(12345);
+INSERT INTO trigger_oid_tab values (1, 'foo');
+NOTICE:  trigger_udf_return_new_oid assigned OID 12345 to the new tuple  (seg0 127.0.0.1:40000 pid=25965)
+SELECT oid, * FROM trigger_oid_tab;
+  oid  | id |  v  
+-------+----+-----
+ 12345 |  1 | foo
+(1 row)
+
+DROP TABLE trigger_oid_tab;
+-- AO table
+CREATE TABLE trigger_oid_tab(id int8, v text) WITH (oids = true, appendonly = true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+CREATE TRIGGER t BEFORE INSERT ON trigger_oid_tab
+FOR EACH ROW EXECUTE PROCEDURE trigger_return_new_oid(12345);
+INSERT INTO trigger_oid_tab values (1, 'foo');
+NOTICE:  trigger_udf_return_new_oid assigned OID 12345 to the new tuple  (seg0 127.0.0.1:40000 pid=25965)
+SELECT oid, * FROM trigger_oid_tab;
+  oid  | id |  v  
+-------+----+-----
+ 12345 |  1 | foo
+(1 row)
+
+DROP TABLE trigger_oid_tab;
+-- Column-oriented AO tables don't support OIDs, so no need to test that.

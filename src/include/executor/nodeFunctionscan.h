@@ -23,9 +23,4 @@ extern void ExecEndFunctionScan(FunctionScanState *node);
 extern void ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeFunctionScan(FunctionScanState *node);
 
-static inline gpmon_packet_t * GpmonPktFromFuncScanState(FunctionScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEFUNCTIONSCAN_H */

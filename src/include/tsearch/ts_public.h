@@ -6,7 +6,7 @@
  *
  * Copyright (c) 1998-2008, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/tsearch/ts_public.h,v 1.8.2.1 2009/01/15 17:06:03 teodor Exp $
+ * $PostgreSQL: pgsql/src/include/tsearch/ts_public.h,v 1.10 2008/06/18 18:42:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -98,6 +98,7 @@ typedef struct
 } TSLexeme;
 
 #define TSL_ADDPOS		0x01
+#define TSL_PREFIX		0x02
 
 /*
  * Struct for supporting complex dictionaries like thesaurus.

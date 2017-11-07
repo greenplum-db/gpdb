@@ -26,6 +26,7 @@
 #include "commands/copy.h"
 #include "commands/defrem.h"
 #include "commands/tablecmds.h"
+#include "mb/pg_wchar.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/inval.h"

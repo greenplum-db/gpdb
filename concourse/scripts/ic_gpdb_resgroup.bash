@@ -65,6 +65,7 @@ run_resgroup_test() {
         ssh sdw1 \"mkdir -p /home/gpadmin/gpdb_src/src/test/isolation2\";\
         scp /home/gpadmin/gpdb_src/src/test/regress/regress.so gpadmin@sdw1:/home/gpadmin/gpdb_src/src/test/regress/ ; \
         cd /home/gpadmin/gpdb_src; \
+        trap \"find src/test/isolation2 -name regression.diffs | xargs cat\" ERR; \
         make installcheck-resgroup; \
     )'"
 }

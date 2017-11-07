@@ -12,7 +12,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_1 select g, g%15 from generate_series(1,100) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_1 values(null, null);
@@ -179,7 +178,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_part_singlecol select g, g*2, g*3 from generate_series(1,49) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_part_singlecol values (NULL, NULL);
@@ -307,7 +305,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_idx values(null, null);
@@ -321,7 +318,6 @@ create index sc_idx_a on dd_singlecol_idx2(a);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_idx2 select g, g%5,g%5 from generate_series(1,100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
@@ -385,7 +381,6 @@ create index sc_bitmap_idx_c on dd_singlecol_bitmap_idx using bitmap (c);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_bitmap_idx select g, g%5,g%5 from generate_series(1,100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
@@ -483,7 +478,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_part_bitmap_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_part_bitmap_idx values(null, null);
@@ -564,7 +558,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_multicol_idx
 select g, g%5, g%5 from generate_series(1,100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
@@ -690,7 +683,6 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_part_idx select g, g%5,g%5 from generate_series(1,100) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_part_idx values(null, null);
@@ -719,7 +711,6 @@ NOTICE:  building index for child partition "dd_singlecol_part_idx2_1_prt_6"
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_part_idx2 select g, g%5,g%5 from generate_series(1,100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
@@ -835,12 +826,10 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 insert into dd_singlecol_2
 select g, g%10 from generate_series(1,100) g;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_singlecol_dropped
 select g, g%5 from generate_series(1,100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
@@ -1081,7 +1070,6 @@ INFO:  Dispatch command to ALL contents
 -- joins with function scans
 select * from  dd_singlecol_1 t1, generate_series(1,10) g where t1.a=g.g and t1.a=1 limit 10;
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
  a | b | g 
 ---+---+---
  1 | 1 | 1
@@ -1134,7 +1122,6 @@ create table dd_random(a int, b int) distributed randomly;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 insert into dd_random select g, g%15 from generate_series(1, 100) g;
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents

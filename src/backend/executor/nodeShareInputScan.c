@@ -196,9 +196,6 @@ ShareInputNext(ShareInputScanState *node)
 		if(!gotOK)
 			return NULL;
 
-		Gpmon_Incr_Rows_Out(GpmonPktFromShareInputState(node));
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
-
 		SIMPLE_FAULT_INJECTOR(ExecShareInputNext);
 
 		return slot;
@@ -285,8 +282,6 @@ ExecInitShareInputScan(ShareInputScan *node, EState *estate, int eflags)
 		ShareNodeEntry *snEntry = ExecGetShareNodeEntry(estate, node->share_id, true);
 		snEntry->refcount++;
 	}
-
-	initGpmonPktForShareInputScan((Plan *)node, &sisstate->ss.ps.gpmon_pkt, estate);
 	
 	return sisstate;
 }
@@ -378,8 +373,6 @@ void ExecShareInputScanReScan(ShareInputScanState *node, ExprContext *exprCtxt)
 	{
 		Assert(!"ExecShareInputScanReScan: invalid share type ");
 	}
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /*************************************************************************
@@ -889,14 +882,6 @@ shareinput_writer_waitdone(void *ctxt, int share_id, int nsharer_xslice)
 
 	shareinput_clean_lk_ctxt(ctxt);
 	UnregisterXactCallbackOnce(XCallBack_ShareInput_FIFO, (void *) ctxt);
-}
-
-void
-initGpmonPktForShareInputScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, ShareInputScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /*

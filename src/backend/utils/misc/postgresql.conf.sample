@@ -189,6 +189,7 @@ max_prepared_transactions = 250		# can be 0 or more
 
 # - Other Planner Options -
 
+#cursor_tuple_fraction = 0.1		# range 0.0-1.0
 #from_collapse_limit = 20
 #join_collapse_limit = 20		# 1 disables collapsing of explicit
 					# JOIN clauses
@@ -371,6 +372,8 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #track_activities = on
 #track_counts = off
+#track_functions = none			# none, pl, all
+#track_activity_query_size = 1024
 #update_process_title = on
 
 #stats_queue_level = off

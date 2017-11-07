@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/view.c,v 1.107 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/view.c,v 1.106 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,7 +18,6 @@
 
 #include "access/heapam.h"
 #include "access/xact.h"
-#include "catalog/dependency.h"
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_depend.h"
@@ -35,6 +34,7 @@
 #include "rewrite/rewriteSupport.h"
 #include "utils/acl.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 
 
 #include "cdb/cdbdisp_query.h"
@@ -489,34 +489,4 @@ DefineView(ViewStmt *stmt, const char *queryString)
 									GetAssignedOidsForDispatch(),
 									NULL);
 	}
-}
-
-/*
- * RemoveView
- *
- * Remove a view given its name
- *
- * We just have to drop the relation; the associated rules will be
- * cleaned up automatically.
- */
-void
-RemoveView(const RangeVar *view, DropBehavior behavior)
-{
-	Oid			viewOid;
-	ObjectAddress object;
-
-	viewOid = RangeVarGetRelid(view, false);
-
-	object.classId = RelationRelationId;
-	object.objectId = viewOid;
-	object.objectSubId = 0;
-
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		LockRelationOid(RelationRelationId, RowExclusiveLock);
-		LockRelationOid(TypeRelationId, RowExclusiveLock);
-		LockRelationOid(DependRelationId, RowExclusiveLock);
-	}
-
-	performDeletion(&object, behavior);
 }

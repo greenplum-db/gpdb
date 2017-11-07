@@ -92,5 +92,6 @@ select * from hashjoin_spill.is_workfile_created('explain analyze SELECT t1.* FR
 (1 row)
 
 drop schema hashjoin_spill cascade;
-NOTICE:  drop cascades to table test_hj_spill
-NOTICE:  drop cascades to function is_workfile_created(text)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function is_workfile_created(text)
+drop cascades to table test_hj_spill

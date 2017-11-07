@@ -24,8 +24,4 @@ extern void ExecValuesMarkPos(ValuesScanState *node);
 extern void ExecValuesRestrPos(ValuesScanState *node);
 extern void ExecValuesReScan(ValuesScanState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromValueScanState(ValuesScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 #endif   /* NODEVALUESSCAN_H */

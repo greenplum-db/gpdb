@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_exec.c,v 1.217 2008/08/25 22:42:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_exec.c,v 1.225 2008/11/20 15:36:22 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,7 +18,6 @@
 
 #include <ctype.h>
 
-#include "access/heapam.h"
 #include "access/transam.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
@@ -95,6 +94,8 @@ static int exec_stmt_getdiag(PLpgSQL_execstate *estate,
 				  PLpgSQL_stmt_getdiag *stmt);
 static int exec_stmt_if(PLpgSQL_execstate *estate,
 			 PLpgSQL_stmt_if *stmt);
+static int exec_stmt_case(PLpgSQL_execstate *estate,
+						  PLpgSQL_stmt_case *stmt);
 static int exec_stmt_loop(PLpgSQL_execstate *estate,
 			   PLpgSQL_stmt_loop *stmt);
 static int exec_stmt_while(PLpgSQL_execstate *estate,
@@ -200,6 +201,8 @@ static void assign_text_var(PLpgSQL_var *var, const char *str);
 static PreparedParamsData *exec_eval_using_params(PLpgSQL_execstate *estate,
 												  List *params);
 static void free_params_data(PreparedParamsData *ppd);
+static Portal exec_dynquery_with_params(PLpgSQL_execstate *estate,
+										PLpgSQL_expr *query, List *params);
 
 
 /* ----------
@@ -326,6 +329,10 @@ plpgsql_exec_function(PLpgSQL_function *func, FunctionCallInfo fcinfo)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("CONTINUE cannot be used outside a loop")));
+		else if (rc == PLPGSQL_RC_RERAISE)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("RAISE without parameters cannot be used outside an exception handler")));
 		else
 			ereport(ERROR,
 			   (errcode(ERRCODE_S_R_E_FUNCTION_EXECUTED_NO_RETURN_STATEMENT),
@@ -674,6 +681,10 @@ plpgsql_exec_trigger(PLpgSQL_function *func,
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("CONTINUE cannot be used outside a loop")));
+		else if (rc == PLPGSQL_RC_RERAISE)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("RAISE without parameters cannot be used outside an exception handler")));
 		else
 			ereport(ERROR,
 			   (errcode(ERRCODE_S_R_E_FUNCTION_EXECUTED_NO_RETURN_STATEMENT),
@@ -1117,6 +1128,11 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 					free_var(errm_var);
 					errm_var->value = (Datum) 0;
 					errm_var->isnull = true;
+
+					/* re-throw error if requested by handler */
+					if (rc == PLPGSQL_RC_RERAISE)
+						ReThrowError(edata);
+
 					break;
 				}
 			}
@@ -1147,8 +1163,9 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 	switch (rc)
 	{
 		case PLPGSQL_RC_OK:
-		case PLPGSQL_RC_CONTINUE:
 		case PLPGSQL_RC_RETURN:
+		case PLPGSQL_RC_CONTINUE:
+		case PLPGSQL_RC_RERAISE:
 			return rc;
 
 		case PLPGSQL_RC_EXIT:
@@ -1223,7 +1240,7 @@ exec_stmt(PLpgSQL_execstate *estate, PLpgSQL_stmt *stmt)
 
 	CHECK_FOR_INTERRUPTS();
 
-	switch (stmt->cmd_type)
+	switch ((enum PLpgSQL_stmt_types) stmt->cmd_type)
 	{
 		case PLPGSQL_STMT_BLOCK:
 			rc = exec_stmt_block(estate, (PLpgSQL_stmt_block *) stmt);
@@ -1243,6 +1260,10 @@ exec_stmt(PLpgSQL_execstate *estate, PLpgSQL_stmt *stmt)
 
 		case PLPGSQL_STMT_IF:
 			rc = exec_stmt_if(estate, (PLpgSQL_stmt_if *) stmt);
+			break;
+
+		case PLPGSQL_STMT_CASE:
+			rc = exec_stmt_case(estate, (PLpgSQL_stmt_case *) stmt);
 			break;
 
 		case PLPGSQL_STMT_LOOP:
@@ -1428,6 +1449,91 @@ exec_stmt_if(PLpgSQL_execstate *estate, PLpgSQL_stmt_if *stmt)
 }
 
 
+/*-----------
+ * exec_stmt_case
+ *-----------
+ */
+static int
+exec_stmt_case(PLpgSQL_execstate *estate, PLpgSQL_stmt_case *stmt)
+{
+	PLpgSQL_var *t_var = NULL;
+	bool		isnull;
+	ListCell   *l;
+
+	if (stmt->t_expr != NULL)
+	{
+		/* simple case */
+		Datum	t_val;
+		Oid		t_oid;
+
+		t_val = exec_eval_expr(estate, stmt->t_expr, &isnull, &t_oid);
+
+		t_var = (PLpgSQL_var *) estate->datums[stmt->t_varno];
+
+		/*
+		 * When expected datatype is different from real, change it.
+		 * Note that what we're modifying here is an execution copy
+		 * of the datum, so this doesn't affect the originally stored
+		 * function parse tree.
+		 */
+		if (t_var->datatype->typoid != t_oid)
+			t_var->datatype = plpgsql_build_datatype(t_oid, -1);
+
+		/* now we can assign to the variable */
+		exec_assign_value(estate,
+						  (PLpgSQL_datum *) t_var,
+						  t_val,
+						  t_oid,
+						  &isnull);
+
+		exec_eval_cleanup(estate);
+	}
+
+	/* Now search for a successful WHEN clause */
+	foreach(l, stmt->case_when_list)
+	{
+		PLpgSQL_case_when *cwt = (PLpgSQL_case_when *) lfirst(l);
+		bool	value;
+
+		value = exec_eval_boolean(estate, cwt->expr, &isnull);
+		exec_eval_cleanup(estate);
+		if (!isnull && value)
+		{
+			/* Found it */
+
+			/* We can now discard any value we had for the temp variable */
+			if (t_var != NULL)
+			{
+				free_var(t_var);
+				t_var->value = (Datum) 0;
+				t_var->isnull = true;
+			}
+
+			/* Evaluate the statement(s), and we're done */
+			return exec_stmts(estate, cwt->stmts);
+		}
+	}
+
+	/* We can now discard any value we had for the temp variable */
+	if (t_var != NULL)
+	{
+		free_var(t_var);
+		t_var->value = (Datum) 0;
+		t_var->isnull = true;
+	}
+
+	/* SQL2003 mandates this error if there was no ELSE clause */
+	if (!stmt->have_else)
+		ereport(ERROR,
+				(errcode(ERRCODE_CASE_NOT_FOUND),
+				 errmsg("case not found"),
+				 errhint("CASE statement is missing ELSE part.")));
+
+	/* Evaluate the ELSE statements, and we're done */
+	return exec_stmts(estate, stmt->else_stmts);
+}
+
+
 /* ----------
  * exec_stmt_loop			Loop over statements until
  *					an exit occurs.
@@ -1469,7 +1575,8 @@ exec_stmt_loop(PLpgSQL_execstate *estate, PLpgSQL_stmt_loop *stmt)
 				break;
 
 			case PLPGSQL_RC_RETURN:
-				return PLPGSQL_RC_RETURN;
+			case PLPGSQL_RC_RERAISE:
+				return rc;
 
 			default:
 				elog(ERROR, "unrecognized rc: %d", rc);
@@ -1532,7 +1639,8 @@ exec_stmt_while(PLpgSQL_execstate *estate, PLpgSQL_stmt_while *stmt)
 				break;
 
 			case PLPGSQL_RC_RETURN:
-				return PLPGSQL_RC_RETURN;
+			case PLPGSQL_RC_RERAISE:
+				return rc;
 
 			default:
 				elog(ERROR, "unrecognized rc: %d", rc);
@@ -1650,8 +1758,9 @@ exec_stmt_fori(PLpgSQL_execstate *estate, PLpgSQL_stmt_fori *stmt)
 		 */
 		rc = exec_stmts(estate, stmt->body);
 
-		if (rc == PLPGSQL_RC_RETURN)
-			break;				/* return from function */
+		if (rc == PLPGSQL_RC_RETURN ||
+			rc == PLPGSQL_RC_RERAISE)
+			break;				/* break out of the loop */
 		else if (rc == PLPGSQL_RC_EXIT)
 		{
 			if (estate->exitlabel == NULL)
@@ -1971,9 +2080,10 @@ exec_stmt_return(PLpgSQL_execstate *estate, PLpgSQL_stmt_return *stmt)
 					PLpgSQL_row *row = (PLpgSQL_row *) retvar;
 
 					Assert(row->rowtupdesc);
-					estate->retval = PointerGetDatum(make_tuple_from_row(estate, row,
+					estate->retval =
+						PointerGetDatum(make_tuple_from_row(estate, row,
 															row->rowtupdesc));
-					if (estate->retval == 0) /* should not happen */
+					if (DatumGetPointer(estate->retval) == NULL) /* should not happen */
 						elog(ERROR, "row not compatible with its own tupdesc");
 					estate->rettupdesc = row->rowtupdesc;
 					estate->retisnull = false;
@@ -2189,7 +2299,18 @@ exec_stmt_return_query(PLpgSQL_execstate *estate,
 	if (estate->tuple_store == NULL)
 		exec_init_tuple_store(estate);
 
-	exec_run_select(estate, stmt->query, 0, &portal);
+	if (stmt->query != NULL)
+	{
+		/* static query */
+		exec_run_select(estate, stmt->query, 0, &portal);
+	}
+	else
+	{
+		/* RETURN QUERY EXECUTE */
+		Assert(stmt->dynquery != NULL);
+		portal = exec_dynquery_with_params(estate, stmt->dynquery,
+										   stmt->params);
+	}
 
 	if (!compatible_tupdesc(estate->rettupdesc, portal->tupDesc))
 		ereport(ERROR,
@@ -2266,66 +2387,165 @@ exec_init_tuple_store(PLpgSQL_execstate *estate)
 static int
 exec_stmt_raise(PLpgSQL_execstate *estate, PLpgSQL_stmt_raise *stmt)
 {
-	char	   *cp;
-	PLpgSQL_dstring ds;
-	ListCell   *current_param;
+	int			err_code = 0;
+	char	   *condname = NULL;
+	char	   *err_message = NULL;
+	char	   *err_detail = NULL;
+	char	   *err_hint = NULL;
+	ListCell   *lc;
 
-	plpgsql_dstring_init(&ds);
-	current_param = list_head(stmt->params);
+	/* RAISE with no parameters: re-throw current exception */
+	if (stmt->condname == NULL && stmt->message == NULL &&
+		stmt->options == NIL)
+		return PLPGSQL_RC_RERAISE;
 
-	for (cp = stmt->message; *cp; cp++)
+	if (stmt->condname)
 	{
-		/*
-		 * Occurrences of a single % are replaced by the next parameter's
-		 * external representation. Double %'s are converted to one %.
-		 */
-		if (cp[0] == '%')
-		{
-			Oid			paramtypeid;
-			Datum		paramvalue;
-			bool		paramisnull;
-			char	   *extval;
-
-			if (cp[1] == '%')
-			{
-				plpgsql_dstring_append_char(&ds, cp[1]);
-				cp++;
-				continue;
-			}
-
-			if (current_param == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("too few parameters specified for RAISE")));
-
-			paramvalue = exec_eval_expr(estate,
-									  (PLpgSQL_expr *) lfirst(current_param),
-										&paramisnull,
-										&paramtypeid);
-
-			if (paramisnull)
-				extval = "<NULL>";
-			else
-				extval = convert_value_to_string(estate,
-												 paramvalue,
-												 paramtypeid);
-			plpgsql_dstring_append(&ds, extval);
-			current_param = lnext(current_param);
-			exec_eval_cleanup(estate);
-			continue;
-		}
-
-		plpgsql_dstring_append_char(&ds, cp[0]);
+		err_code = plpgsql_recognize_err_condition(stmt->condname, true);
+		condname = pstrdup(stmt->condname);
 	}
 
-	/*
-	 * If more parameters were specified than were required to process the
-	 * format string, throw an error
-	 */
-	if (current_param != NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("too many parameters specified for RAISE")));
+	if (stmt->message)
+	{
+		PLpgSQL_dstring ds;
+		ListCell   *current_param;
+		char	   *cp;
+
+		plpgsql_dstring_init(&ds);
+		current_param = list_head(stmt->params);
+
+		for (cp = stmt->message; *cp; cp++)
+		{
+			/*
+			 * Occurrences of a single % are replaced by the next parameter's
+			 * external representation. Double %'s are converted to one %.
+			 */
+			if (cp[0] == '%')
+			{
+				Oid			paramtypeid;
+				Datum		paramvalue;
+				bool		paramisnull;
+				char	   *extval;
+
+				if (cp[1] == '%')
+				{
+					plpgsql_dstring_append_char(&ds, cp[1]);
+					cp++;
+					continue;
+				}
+
+				if (current_param == NULL)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("too few parameters specified for RAISE")));
+
+				paramvalue = exec_eval_expr(estate,
+											(PLpgSQL_expr *) lfirst(current_param),
+											&paramisnull,
+											&paramtypeid);
+
+				if (paramisnull)
+					extval = "<NULL>";
+				else
+					extval = convert_value_to_string(estate,
+													 paramvalue,
+													 paramtypeid);
+				plpgsql_dstring_append(&ds, extval);
+				current_param = lnext(current_param);
+				exec_eval_cleanup(estate);
+			}
+			else
+				plpgsql_dstring_append_char(&ds, cp[0]);
+		}
+
+		/*
+		 * If more parameters were specified than were required to process the
+		 * format string, throw an error
+		 */
+		if (current_param != NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("too many parameters specified for RAISE")));
+
+		err_message = plpgsql_dstring_get(&ds);
+		/* No dstring_free here, the pfree(err_message) does it */
+	}
+
+	foreach(lc, stmt->options)
+	{
+		PLpgSQL_raise_option *opt = (PLpgSQL_raise_option *) lfirst(lc);
+		Datum		optionvalue;
+		bool		optionisnull;
+		Oid			optiontypeid;
+		char	   *extval;
+
+		optionvalue = exec_eval_expr(estate, opt->expr,
+									 &optionisnull,
+									 &optiontypeid);
+		if (optionisnull)
+			ereport(ERROR,
+					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+					 errmsg("RAISE statement option cannot be NULL")));
+
+		extval = convert_value_to_string(estate, optionvalue, optiontypeid);
+
+		switch (opt->opt_type)
+		{
+			case PLPGSQL_RAISEOPTION_ERRCODE:
+				if (err_code)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("RAISE option already specified: %s",
+									"ERRCODE")));
+				err_code = plpgsql_recognize_err_condition(extval, true);
+				condname = pstrdup(extval);
+				break;
+			case PLPGSQL_RAISEOPTION_MESSAGE:
+				if (err_message)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("RAISE option already specified: %s",
+									"MESSAGE")));
+				err_message = pstrdup(extval);
+				break;
+			case PLPGSQL_RAISEOPTION_DETAIL:
+				if (err_detail)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("RAISE option already specified: %s",
+									"DETAIL")));
+				err_detail = pstrdup(extval);
+				break;
+			case PLPGSQL_RAISEOPTION_HINT:
+				if (err_hint)
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("RAISE option already specified: %s",
+									"HINT")));
+				err_hint = pstrdup(extval);
+				break;
+			default:
+				elog(ERROR, "unrecognized raise option: %d", opt->opt_type);
+		}
+
+		exec_eval_cleanup(estate);
+	}
+
+	/* Default code if nothing specified */
+	if (err_code == 0 && stmt->elog_level >= ERROR)
+		err_code = ERRCODE_RAISE_EXCEPTION;
+
+	/* Default error message if nothing specified */
+	if (err_message == NULL)
+	{
+		if (condname)
+		{
+			err_message = condname;
+			condname = NULL;
+		}
+		else
+			err_message = pstrdup(unpack_sql_state(err_code));
+	}
 
 	/*
 	 * Throw the error (may or may not come back)
@@ -2333,12 +2553,21 @@ exec_stmt_raise(PLpgSQL_execstate *estate, PLpgSQL_stmt_raise *stmt)
 	estate->err_text = raise_skip_msg;	/* suppress traceback of raise */
 
 	ereport(stmt->elog_level,
-		 ((stmt->elog_level >= ERROR) ? errcode(ERRCODE_RAISE_EXCEPTION) : 0,
-		  errmsg_internal("%s", plpgsql_dstring_get(&ds))));
+			(err_code ? errcode(err_code) : 0,
+			 errmsg_internal("%s", err_message),
+			 (err_detail != NULL) ? errdetail("%s", err_detail) : 0,
+			 (err_hint != NULL) ? errhint("%s", err_hint) : 0));
 
 	estate->err_text = NULL;	/* un-suppress... */
 
-	plpgsql_dstring_free(&ds);
+	if (condname != NULL)
+		pfree(condname);
+	if (err_message != NULL)
+		pfree(err_message);
+	if (err_detail != NULL)
+		pfree(err_detail);
+	if (err_hint != NULL)
+		pfree(err_hint);
 
 	return PLPGSQL_RC_OK;
 }
@@ -2901,61 +3130,10 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 static int
 exec_stmt_dynfors(PLpgSQL_execstate *estate, PLpgSQL_stmt_dynfors *stmt)
 {
-	Datum		query;
-	bool		isnull;
-	Oid			restype;
-	char	   *querystr;
 	Portal		portal;
 	int			rc;
 
-	/*
-	 * Evaluate the string expression after the EXECUTE keyword. It's result
-	 * is the querystring we have to execute.
-	 */
-	query = exec_eval_expr(estate, stmt->query, &isnull, &restype);
-	if (isnull)
-		ereport(ERROR,
-				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("cannot EXECUTE a null querystring")));
-
-	/* Get the C-String representation */
-	querystr = convert_value_to_string(estate, query, restype);
-
-	/* copy it out of the temporary context before we clean up */
-	querystr = pstrdup(querystr);
-
-	exec_eval_cleanup(estate);
-
-	/*
-	 * Open an implicit cursor for the query.  We use SPI_cursor_open_with_args
-	 * even when there are no params, because this avoids making and freeing
-	 * one copy of the plan.
-	 */
-	if (stmt->params)
-	{
-		PreparedParamsData *ppd;
-
-		ppd = exec_eval_using_params(estate, stmt->params);
-		portal = SPI_cursor_open_with_args(NULL,
-										   querystr,
-										   ppd->nargs, ppd->types,
-										   ppd->values, ppd->nulls,
-										   estate->readonly_func, 0);
-		free_params_data(ppd);
-	}
-	else
-	{
-		portal = SPI_cursor_open_with_args(NULL,
-										   querystr,
-										   0, NULL,
-										   NULL, NULL,
-										   estate->readonly_func, 0);
-	}
-
-	if (portal == NULL)
-		elog(ERROR, "could not open implicit cursor for query \"%s\": %s",
-			 querystr, SPI_result_code_string(SPI_result));
-	pfree(querystr);
+	portal = exec_dynquery_with_params(estate, stmt->query, stmt->params);
 
 	/*
 	 * Execute the loop
@@ -3957,7 +4135,7 @@ exec_eval_expr(PLpgSQL_execstate *estate,
 			   bool *isNull,
 			   Oid *rettype)
 {
-	Datum		result;
+	Datum		result = 0;
 	int			rc;
 
 	/*
@@ -4266,7 +4444,7 @@ exec_eval_simple_expr(PLpgSQL_execstate *estate,
 	CachedPlan *cplan;
 	ParamListInfo paramLI;
 	int			i;
-	Snapshot	saveActiveSnapshot;
+	MemoryContext oldcontext;
 
 	/*
 	 * Forget it if expression wasn't simple before.
@@ -4363,46 +4541,35 @@ exec_eval_simple_expr(PLpgSQL_execstate *estate,
 	 * updates made so far by our own function.
 	 */
 	SPI_push();
-	saveActiveSnapshot = ActiveSnapshot;
 
-	PG_TRY();
+	oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
+	if (!estate->readonly_func)
 	{
-		MemoryContext oldcontext;
-
-		oldcontext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
-		if (!estate->readonly_func)
-		{
-			CommandCounterIncrement();
-			ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
-		}
-
-		/*
-		 * Mark expression as busy for the duration of the ExecEvalExpr call.
-		 */
-		expr->expr_simple_in_use = true;
-
-		/*
-		 * Finally we can call the executor to evaluate the expression
-		 */
-		*result = ExecEvalExpr(expr->expr_simple_state,
-							   econtext,
-							   isNull,
-							   NULL);
-
-		/* Assorted cleanup */
-		expr->expr_simple_in_use = false;
-		MemoryContextSwitchTo(oldcontext);
+		CommandCounterIncrement();
+		PushActiveSnapshot(GetTransactionSnapshot());
 	}
-	PG_CATCH();
-	{
-		/* Restore global vars and propagate error */
-		/* note we intentionally don't reset expr_simple_in_use here */
-		ActiveSnapshot = saveActiveSnapshot;
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
 
-	ActiveSnapshot = saveActiveSnapshot;
+	/*
+	 * Mark expression as busy for the duration of the ExecEvalExpr call.
+	 */
+	expr->expr_simple_in_use = true;
+
+	/*
+	 * Finally we can call the executor to evaluate the expression
+	 */
+	*result = ExecEvalExpr(expr->expr_simple_state,
+						   econtext,
+						   isNull,
+						   NULL);
+
+	/* Assorted cleanup */
+	expr->expr_simple_in_use = false;
+
+	MemoryContextSwitchTo(oldcontext);
+
+	if (!estate->readonly_func)
+		PopActiveSnapshot();
+
 	SPI_pop();
 
 	/*
@@ -5157,7 +5324,7 @@ exec_set_found(PLpgSQL_execstate *estate, bool state)
 	PLpgSQL_var *var;
 
 	var = (PLpgSQL_var *) (estate->datums[estate->found_varno]);
-	var->value = (Datum) state;
+	var->value = PointerGetDatum(state);
 	var->isnull = false;
 }
 
@@ -5367,4 +5534,69 @@ free_params_data(PreparedParamsData *ppd)
 	pfree(ppd->freevals);
 
 	pfree(ppd);
+}
+
+/*
+ * Open portal for dynamic query
+ */
+static Portal
+exec_dynquery_with_params(PLpgSQL_execstate *estate, PLpgSQL_expr *dynquery,
+						  List *params)
+{
+	Portal		portal;
+	Datum		query;
+	bool		isnull;
+	Oid			restype;
+	char	   *querystr;
+
+	/*
+	 * Evaluate the string expression after the EXECUTE keyword. Its result
+	 * is the querystring we have to execute.
+	 */
+	query = exec_eval_expr(estate, dynquery, &isnull, &restype);
+	if (isnull)
+		ereport(ERROR,
+				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
+				 errmsg("cannot EXECUTE a null querystring")));
+
+	/* Get the C-String representation */
+	querystr = convert_value_to_string(estate, query, restype);
+
+	/* copy it out of the temporary context before we clean up */
+	querystr = pstrdup(querystr);
+
+	exec_eval_cleanup(estate);
+
+	/*
+	 * Open an implicit cursor for the query.  We use SPI_cursor_open_with_args
+	 * even when there are no params, because this avoids making and freeing
+	 * one copy of the plan.
+	 */
+	if (params)
+	{
+		PreparedParamsData *ppd;
+
+		ppd = exec_eval_using_params(estate, params);
+		portal = SPI_cursor_open_with_args(NULL,
+										   querystr,
+										   ppd->nargs, ppd->types,
+										   ppd->values, ppd->nulls,
+										   estate->readonly_func, 0);
+		free_params_data(ppd);
+	}
+	else
+	{
+		portal = SPI_cursor_open_with_args(NULL,
+										   querystr,
+										   0, NULL,
+										   NULL, NULL,
+										   estate->readonly_func, 0);
+	}
+
+	if (portal == NULL)
+		elog(ERROR, "could not open implicit cursor for query \"%s\": %s",
+			 querystr, SPI_result_code_string(SPI_result));
+	pfree(querystr);
+
+	return portal;
 }

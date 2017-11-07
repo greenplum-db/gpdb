@@ -237,7 +237,6 @@ select * from v_sto_uao_7 order by did;
 (2 rows)
 
 Drop table sto_uao_7 cascade;
-NOTICE:  drop cascades to rule _RETURN on view v_sto_uao_7
 NOTICE:  drop cascades to view v_sto_uao_7
 -- Create table as select (CTAS)
 create table sto_uao_8 with (appendonly=true) as select * from sto_uao_1

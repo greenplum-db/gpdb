@@ -32,8 +32,9 @@ CREATE TYPE int_type1(
 CREATE TYPE
 --Drop and recreate the data type 
  Drop type if exists int_type1 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function int_type1_out(int_type1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function int_type1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function int_type1_in(cstring)
+drop cascades to function int_type1_out(int_type1)
 DROP TYPE
 CREATE FUNCTION int_type1_in(cstring) 
  RETURNS int_type1
@@ -93,8 +94,9 @@ CREATE TYPE char_type1(
 CREATE TYPE
 --Drop and recreate the data type 
  Drop type if exists char_type1 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function char_type1_out(char_type1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function char_type1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function char_type1_in(cstring)
+drop cascades to function char_type1_out(char_type1)
 DROP TYPE
 CREATE FUNCTION char_type1_in(cstring) 
  RETURNS char_type1
@@ -153,8 +155,9 @@ CREATE TYPE text_type1(
 CREATE TYPE
 --Drop and recreate the data type 
  Drop type if exists text_type1 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function text_type1_out(text_type1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function text_type1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function text_type1_in(cstring)
+drop cascades to function text_type1_out(text_type1)
 DROP TYPE
 CREATE FUNCTION text_type1_in(cstring) 
  RETURNS text_type1
@@ -212,8 +215,9 @@ CREATE TYPE varchar_type1(
 CREATE TYPE
 --Drop and recreate the data type 
  Drop type if exists varchar_type1 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function varchar_type1_out(varchar_type1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function varchar_type1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function varchar_type1_in(cstring)
+drop cascades to function varchar_type1_out(varchar_type1)
 DROP TYPE
 CREATE FUNCTION varchar_type1_in(cstring) 
  RETURNS varchar_type1
@@ -272,8 +276,9 @@ CREATE TYPE date_type1(
 CREATE TYPE
 --Drop and recreate the data type 
  Drop type if exists date_type1 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function date_type1_out(date_type1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function date_type1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function date_type1_in(cstring)
+drop cascades to function date_type1_out(date_type1)
 DROP TYPE
 CREATE FUNCTION date_type1_in(cstring) 
  RETURNS date_type1
@@ -333,8 +338,9 @@ CREATE TYPE timestamp_type1(
 CREATE TYPE
 --Drop and recreate the data type 
  Drop type if exists timestamp_type1 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function timestamp_type1_out(timestamp_type1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function timestamp_type1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function timestamp_type1_in(cstring)
+drop cascades to function timestamp_type1_out(timestamp_type1)
 DROP TYPE
 CREATE FUNCTION timestamp_type1_in(cstring) 
  RETURNS timestamp_type1

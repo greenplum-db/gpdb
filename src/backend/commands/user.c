@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/commands/user.c,v 1.181 2008/03/26 21:10:38 alvherre Exp $
+ * $PostgreSQL: pgsql/src/backend/commands/user.c,v 1.182 2008/05/12 00:00:48 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -34,6 +34,7 @@
 #include "libpq/md5.h"
 #include "libpq/pg_sha2.h"
 #include "miscadmin.h"
+#include "storage/lmgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/date.h"

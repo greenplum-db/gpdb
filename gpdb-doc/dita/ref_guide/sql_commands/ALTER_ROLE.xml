@@ -67,8 +67,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
           would then be subject to the concurrent transaction, memory, and CPU limits configured for
           the resource group. You can assign a single resource group to one or more roles. See
               <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-            /></codeph> for additional information.
-            <note type="warning">Resource groups are an experimental feature and are not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</note> </li>
+            /></codeph> for additional information.  </li>
         <li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role
           attributes that can be specified in <codeph><xref href="./CREATE_ROLE.xml#topic1"
               type="topic" format="dita"/></codeph>. Attributes not mentioned in the command retain

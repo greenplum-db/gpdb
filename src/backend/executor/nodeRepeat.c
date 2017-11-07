@@ -70,8 +70,6 @@ ExecRepeat(RepeatState *repeatstate)
 				/* Check the qual until we find one output tuple. */
 				if (ExecQual(repeatstate->ps.qual, econtext, false))
 				{
-					Gpmon_Incr_Rows_Out(GpmonPktFromRepeatState(repeatstate));
-					CheckSendPlanStateGpmonPkt(&repeatstate->ps);
 					return ExecProject(repeatstate->ps.ps_ProjInfo, NULL);
 				}
 			} while (repeatstate->repeat_count > 0);
@@ -121,8 +119,6 @@ ExecRepeat(RepeatState *repeatstate)
 			/* Check the qual until we find one output tuple. */
 			if (ExecQual(repeatstate->ps.qual, econtext, false))
 			{
-				Gpmon_Incr_Rows_Out(GpmonPktFromRepeatState(repeatstate));
-				CheckSendPlanStateGpmonPkt(&repeatstate->ps);
 				return ExecProject(repeatstate->ps.ps_ProjInfo, NULL);
 			}
 		} while (repeatstate->repeat_count > 0);
@@ -174,9 +170,7 @@ ExecInitRepeat(Repeat *node, EState *estate, int eflags)
 	ExecAssignProjectionInfo(&repeatstate->ps, NULL);
 
 	init_RepeatState(repeatstate);
-	
-	initGpmonPktForRepeat((Plan *)node, &repeatstate->ps.gpmon_pkt, estate);
-	
+
 	return repeatstate;
 }
 
@@ -226,12 +220,4 @@ init_RepeatState(RepeatState *repeatstate)
 	repeatstate->repeat_done = false;
 	repeatstate->slot = NULL;
 	repeatstate->repeat_count = 0;
-}
-
-void
-initGpmonPktForRepeat(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Repeat));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

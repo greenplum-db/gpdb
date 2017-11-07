@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/port.h,v 1.119 2008/04/10 16:58:51 mha Exp $
+ * $PostgreSQL: pgsql/src/include/port.h,v 1.122 2008/04/18 17:05:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -312,8 +312,7 @@ extern bool rmtree(const char *path, bool rmtopdir);
  */
 #if defined(WIN32) && !defined(__CYGWIN__) && !defined(UNSAFE_STAT_OK)
 #include <sys/stat.h>
-extern int	pgwin32_safestat(const char *path, struct stat * buf);
-
+extern int	pgwin32_safestat(const char *path, struct stat *buf);
 #define stat(a,b) pgwin32_safestat(a,b)
 #endif
 

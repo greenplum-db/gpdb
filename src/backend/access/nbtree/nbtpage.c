@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.108 2008/03/26 18:48:59 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtpage.c,v 1.110 2008/07/13 20:45:47 tgl Exp $
  *
  *	NOTES
  *	   Postgres btree pages look like ordinary relation pages.	The opaque
@@ -26,6 +26,7 @@
 #include "access/nbtree.h"
 #include "access/transam.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
 #include "storage/lmgr.h"
 #include "utils/inval.h"
@@ -441,8 +442,7 @@ _bt_checkpage(Relation rel, Buffer buf)
 	/*
 	 * Additionally check that the special area looks sane.
 	 */
-	if (((PageHeader) (page))->pd_special !=
-		(BLCKSZ - MAXALIGN(sizeof(BTPageOpaqueData))))
+	if (PageGetSpecialSize(page) != MAXALIGN(sizeof(BTPageOpaqueData)))
 		ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
 				 errmsg("index \"%s\" contains corrupted page at block %u",
@@ -563,7 +563,7 @@ _bt_getbuf(Relation rel, BlockNumber blkno, int access)
 
 		/* Initialize the new page before returning it */
 		page = BufferGetPage(buf);
-		Assert(PageIsNew((PageHeader) page));
+		Assert(PageIsNew(page));
 		_bt_pageinit(page, BufferGetPageSize(buf));
 	}
 

@@ -91,8 +91,8 @@ Feature: gpperfmon
     To run all the other scenarios and omit this test on MacOS, use:
     $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_skew_cpu_and_cpu_elapsed
     """
-    @gpperfmon_skew_cpu_and_cpu_elapsed
-    Scenario: gpperfmon records skew_cpu and cpu_elapsed
+    @gpperfmon_queries_history_metrics
+    Scenario: gpperfmon records cpu_elapsed, skew_cpu, skew_rows and rows_out
         Given gpperfmon is configured and running in qamode
         Given the user truncates "queries_history" tables in "gpperfmon"
         Given database "gptest" is dropped and recreated
@@ -108,11 +108,12 @@ Feature: gpperfmon
         """
         When below sql is executed in "gptest" db
         """
-        select count(*),sum(pow(amt,2)) from sales;
+        select gp_segment_id, count(*),sum(pow(amt,2)) from sales group by gp_segment_id;
         """
-        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 1 and query_text like 'select count(*)%'" is "true"
+        Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where cpu_elapsed > 1 and query_text like 'select gp_segment_id, count(*)%'" is "true"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_cpu > 0.05 and db = 'gptest'" is "true"
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM queries_history where skew_rows > 0 and db = 'gptest'" is "true"
+        Then wait until the results from boolean sql "SELECT rows_out = count(distinct content) from queries_history, gp_segment_configuration where query_text like 'select gp_segment_id, count(*)%' and db = 'gptest' and content != -1 group by rows_out" is "true"
 
     @gpperfmon_partition
     Scenario: gpperfmon keeps all partitions upon restart if partition_age not set, drops excess partitions otherwise

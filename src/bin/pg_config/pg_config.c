@@ -233,15 +233,6 @@ show_pgxs(bool all)
 static void
 show_configure(bool all)
 {
-    /*
-     * we don't show our configure line -- it refers to many paths that are from the build machines, and doesn't make
-	 * _that_ much sense for the customers  to view as they take the builds that we produce
-	 */
-    if ( all )
-        return;
-    fprintf( stderr, _("CONFIGURE value not available\n"));
-    exit(1);
-
 #ifdef VAL_CONFIGURE
 	if (all)
 		printf("CONFIGURE = ");

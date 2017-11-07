@@ -1108,7 +1108,7 @@ _readFuncCall(void)
 	READ_BOOL_FIELD(agg_distinct);
 	READ_BOOL_FIELD(func_variadic);
 	READ_NODE_FIELD(over);
-    READ_INT_FIELD(location);
+    READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1183,9 +1183,6 @@ _readAConst(void)
 		}
 	}
 
-	local_node->typeName = NULL;
-	READ_NODE_FIELD(typeName);
-
     /* CDB: 'location' field is not serialized */
     local_node->location = -1;
 
@@ -1255,7 +1252,7 @@ _readAExpr(void)
 
 	READ_NODE_FIELD(lexpr);
 	READ_NODE_FIELD(rexpr);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1936,7 +1933,7 @@ _readColumnRef(void)
 	READ_LOCALS(ColumnRef);
 
 	READ_NODE_FIELD(fields);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1953,7 +1950,7 @@ _readTypeName(void)
 	READ_NODE_FIELD(typmods);
 	READ_INT_FIELD(typemod);
 	READ_NODE_FIELD(arrayBounds);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -2507,7 +2504,7 @@ _readCreateOpClassItem(void)
 	READ_NODE_FIELD(name);
 	READ_NODE_FIELD(args);
 	READ_INT_FIELD(number);
-	READ_BOOL_FIELD(recheck);
+	READ_NODE_FIELD(class_args);
 	READ_NODE_FIELD(storedtype);
 
 	READ_DONE();

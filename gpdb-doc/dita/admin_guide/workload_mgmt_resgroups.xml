@@ -4,9 +4,6 @@
 <topic id="topic1" xml:lang="en">
   <title id="iz173472">Using Resource Groups</title>
   <body>
-    <note type="warning">Resource groups are an experimental feature and are not intended for use in
-      a production environment. Experimental features are subject to change without notice in future
-      releases.</note>
     <p>You can use resource groups to manage the number of active queries that may execute
       concurrently in your Greenplum Database cluster. With resource groups, you can also manage the
       amount of CPU and memory resources Greenplum allocates to each query.</p>
@@ -128,7 +125,7 @@
             type="section"/></codeph> server configuration parameter identifies the maximum
         percentage of system memory resources to allocate to resource groups on each Greenplum
         Database segment node. The default <codeph>gp_resource_group_memory_limit</codeph> value is
-        .9 (90%).</p>
+        .7 (70%).</p>
       <p>The memory resource available on a Greenplum Database node is further divided equally among
         each segment on the node. Each resource group reserves a percentage of the segment memory
         for resource management. You identify this percentage via the <codeph>MEMORY_LIMIT</codeph>
@@ -190,18 +187,26 @@
               <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
               type="section"/></codeph> server configuration parameter.</p>
       </section>
+      <section id="topic833cons" xml:lang="en">
+        <title>Other Memory Considerations</title>
+        <p>Resource groups track all Greenplum Database memory allocated via the <codeph>palloc()</codeph> function. Memory that you allocate using the Linux <codeph>malloc()</codeph> function is not managed by resource groups. To ensure that resource groups are accurately tracking memory usage, avoid <codeph>malloc()</codeph>ing large amounts of memory in custom Greenplum Database user-defined functions.</p>
+      </section>
     </body>
   </topic>
 
   <topic id="topic71717999" xml:lang="en">
     <title>Using Resource Groups</title>
     <body>
-      <note type="warning">Significant Greenplum Database performance degradation has been observed
-        when enabling resource group-based workload management on RedHat 6.x, CentOS 6.x, and SuSE
-        11 systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has been
-        fixed in CentOS 7.x and Red Hat 7.x systems, and in Red Hat 6 systems that use kernel
-        version 2.6.32-696 or higher. SuSE 11 does not have a kernel version that resolves this
-        issue.</note>
+      <note type="important">Significant Greenplum Database performance degradation has been
+        observed when enabling resource group-based workload management on RedHat 6.x, CentOS 6.x,
+        and SuSE 11 systems. This issue is caused by a Linux cgroup kernel bug. This kernel bug has
+        been fixed in CentOS 7.x and Red Hat 7.x systems. <p>If you use RedHat 6 and the performance
+          with resource groups is acceptable for your use case, upgrade your kernel to version
+          2.6.32-696 or higher to benefit from other fixes to the cgroups implementation.
+          </p><p>SuSE 11 does not have a kernel version that resolves this issue; resource groups
+          are still considered to be an experimental feature on this platform. <ph
+            otherprops="pivotal">Resource groups are not supported on SuSE 11 for production
+            use.</ph></p></note>
       <section id="topic833" xml:lang="en">
         <title>Prerequisite</title>
         <p>Greenplum Database resource groups use Linux Control Groups (cgroups) to manage CPU

@@ -1,4 +1,4 @@
-<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/pg_restore.sgml,v 1.74 2008/03/26 16:34:47 tgl Exp $ -->
+<!-- $PostgreSQL: pgsql/doc/src/sgml/ref/pg_restore.sgml,v 1.75 2008/04/13 03:49:21 tgl Exp $ -->
 
 <refentry id="APP-PGRESTORE">
  <refmeta>
@@ -195,7 +195,7 @@
       <term><option>--ignore-version</option></term>
       <listitem>
        <para>
-        This option has been deprecated.
+        A deprecated option that is now ignored.
        </para>
       </listitem>
      </varlistentry>

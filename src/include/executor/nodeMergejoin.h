@@ -23,8 +23,4 @@ extern void ExecEndMergeJoin(MergeJoinState *node);
 extern void ExecReScanMergeJoin(MergeJoinState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeMergeJoin(MergeJoinState *node);
 
-static inline gpmon_packet_t *GpmonPktFromMergeJoinState(MergeJoinState *node)
-{
-	return &node->js.ps.gpmon_pkt;
-}
 #endif   /* NODEMERGEJOIN_H */

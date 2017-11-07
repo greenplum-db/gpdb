@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.100 2008/03/16 23:15:08 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.104 2008/06/19 00:46:03 alvherre Exp $
  *
  * NOTES
  *	  This file contains only the public interface routines.
@@ -18,12 +18,13 @@
 
 #include "postgres.h"
 
-#include "access/genam.h"
 #include "access/hash.h"
+#include "access/relscan.h"
 #include "catalog/index.h"
 #include "commands/vacuum.h"
 #include "optimizer/cost.h"
 #include "optimizer/plancat.h"
+#include "storage/bufmgr.h"
 
 
 /* Working state for hashbuild and its callback */
@@ -210,6 +211,9 @@ hashgettuple(PG_FUNCTION_ARGS)
 	Page		page;
 	OffsetNumber offnum;
 	bool		res;
+
+	/* Hash indexes are never lossy (at the moment anyway) */
+	scan->xs_recheck = false;
 
 	/*
 	 * We hold pin but not lock on current buffer while outside the hash AM.

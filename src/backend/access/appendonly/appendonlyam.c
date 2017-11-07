@@ -2648,21 +2648,13 @@ appendonly_update(AppendOnlyUpdateDesc aoUpdateDesc,
 	/* tableName */
 #endif
 
-	/*
-	 * We cannot deal with an update tuples with external tuples that may be
-	 * the same as the updated tuple. Compaction would go wild.
-	 */
-	Assert(!MemTupleHasExternal(memTuple, aoUpdateDesc->aoInsertDesc->mt_bind));
-
 	result = AppendOnlyVisimapDelete_Hide(&aoUpdateDesc->visiMapDelete, aoTupleId);
 	if (result != HeapTupleMayBeUpdated)
 		return result;
 
-	Oid			newOid = InvalidOid;	/* new oid should be old oid */
-
 	appendonly_insert(aoUpdateDesc->aoInsertDesc,
 					  memTuple,
-					  &newOid,
+					  InvalidOid,	/* new oid should be old oid */
 					  newAoTupleId);
 
 	return result;
@@ -2898,11 +2890,13 @@ aoInsertDesc->appendOnlyMetaDataSnapshot, //CONCERN:Safe to assume all block dir
   * The output parameter tupleOid is the OID assigned to the tuple (either here or by the
   * caller), or InvalidOid if no OID.  The header fields of *tup are updated
   * to match the stored tuple;
+  *
+  * Unlike heap_insert(), this function doesn't scribble on the input tuple.
   */
-void
+Oid
 appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 				  MemTuple instup,
-				  Oid *tupleOid,
+				  Oid tupleOid,
 				  AOTupleId *aoTupleId)
 {
 	Relation	relation = aoInsertDesc->aoi_rel;
@@ -2925,19 +2919,6 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 #endif
 
 	Insist(RelationIsAoRows(relation));
-	if (relation->rd_rel->relhasoids)
-	{
-		/*
-		 * If the object id of this tuple has already been assigned, trust the
-		 * caller.	There are a couple of ways this can happen.  At initial db
-		 * creation, the backend program sets oids for tuples. When we define
-		 * an index, we set the oid.  Finally, in the future, we may allow
-		 * users to set their own object ids in order to support a persistent
-		 * object store (objects need to contain pointers to one another).
-		 */
-		if (!OidIsValid(MemTupleGetOid(instup, aoInsertDesc->mt_bind)))
-			MemTupleSetOid(instup, aoInsertDesc->mt_bind, GetNewOid(relation));
-	}
 
 	if (aoInsertDesc->useNoToast)
 		need_toast = false;
@@ -2953,13 +2934,39 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 	 * into the relation; instup is the caller's original untoasted data.
 	 */
 	if (need_toast)
-		tup = (MemTuple) toast_insert_or_update(relation, (HeapTuple) instup,
-												NULL, aoInsertDesc->mt_bind,
-												aoInsertDesc->toast_tuple_target,
-												false,	/* errtbl is never AO */
-												true, true);
+		tup = toast_insert_or_update_memtup(relation, instup,
+											NULL, aoInsertDesc->mt_bind,
+											aoInsertDesc->toast_tuple_target,
+											false,	/* errtbl is never AO */
+											true, true);
 	else
 		tup = instup;
+
+	if (relation->rd_rel->relhasoids)
+	{
+		/*
+		 * Don't modify the input tuple, so make a copy unless we already
+		 * made one. I'm not sure if the input tuple can point to any
+		 * permanent storage, so modifying it might be harmless, but better
+		 * safe than sorry. An AO table with OIDs is a weird beast anyway,
+		 * so performance of this case isn't important.
+		 */
+		if (tup == instup)
+			tup = memtuple_copy_to(instup, NULL, NULL);
+
+		/*
+		 * If the object id of this tuple has already been assigned, trust the
+		 * caller.	There are a couple of ways this can happen.  At initial db
+		 * creation, the backend program sets oids for tuples. When we define
+		 * an index, we set the oid.  Finally, in the future, we may allow
+		 * users to set their own object ids in order to support a persistent
+		 * object store (objects need to contain pointers to one another).
+		 */
+		if (!OidIsValid(tupleOid))
+			tupleOid = GetNewOid(relation);
+
+		MemTupleSetOid(tup, aoInsertDesc->mt_bind, tupleOid);
+	}
 
 	/*
 	 * get space to insert our next item (tuple)
@@ -3107,7 +3114,7 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 
 	Assert(aoInsertDesc->numSequences >= 0);
 
-	*tupleOid = MemTupleGetOid(tup, aoInsertDesc->mt_bind);
+	tupleOid = MemTupleGetOid(tup, aoInsertDesc->mt_bind);
 
 	AOTupleIdInit_Init(aoTupleId);
 	AOTupleIdInit_segmentFileNum(aoTupleId, aoInsertDesc->cur_segno);
@@ -3142,6 +3149,8 @@ appendonly_insert(AppendOnlyInsertDesc aoInsertDesc,
 
 	if (tup != instup)
 		pfree(tup);
+
+	return tupleOid;
 }
 
 /*

@@ -961,7 +961,7 @@ Persistent_Pre_ExecuteQuery()
 
 	savedResourceOwner = CurrentResourceOwner;
 	oldMemoryContext = CurrentMemoryContext;
-	ActiveSnapshot = SnapshotNow;
+	PushActiveSnapshot(SnapshotNow);
 
 	if (SPI_OK_CONNECT != SPI_connect())
 	{
@@ -995,7 +995,7 @@ Persistent_ExecuteQuery(char const *query, bool readOnlyQuery)
 	PG_TRY();
 	{
 		/* XXX: Need to set the snapshot here. Reason - Unknown */
-		ActiveSnapshot = SnapshotNow;
+		PushActiveSnapshot(SnapshotNow);
 
 		/* Run the query. */
 		ret = SPI_execute(sqlstmt.data, readOnlyQuery, 0);

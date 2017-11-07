@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.338 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.336 2008/07/30 19:35:13 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -33,6 +33,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/reloptions.h"
 #include "access/xact.h"
@@ -67,6 +68,7 @@
 #include "parser/parse_coerce.h"
 #include "parser/parse_expr.h"
 #include "parser/parse_relation.h"
+#include "storage/bufmgr.h"
 #include "storage/smgr.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
@@ -111,10 +113,14 @@ static Oid AddNewRelationType(const char *typeName,
 				   Oid ownerid,
 				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
-static void StoreRelCheck(Relation rel, char *ccname, char *ccbin);
-static Node* cookConstraint (ParseState *pstate,
-							 Node 		*raw_constraint,
-							 char		*relname);
+static void StoreRelCheck(Relation rel, char *ccname, Node *expr,
+						  bool is_local, int inhcount);
+static void StoreConstraints(Relation rel, List *cooked_constraints);
+static bool MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
+										bool allow_merge, bool is_local);
+static Node *cookConstraint(ParseState *pstate,
+			   Node *raw_constraint,
+			   char *relname);
 static List *insert_ordered_unique_oid(List *list, Oid datum);
 
 /* ----------------------------------------------------------------
@@ -1210,7 +1216,9 @@ AddNewRelationType(const char *typeName,
 				   new_rel_kind,	/* relation kind */
 				   ownerid,		/* owner's ID */
 				   -1,			/* internal size (varlena) */
-				   'c',			/* type-type (complex) */
+				   TYPTYPE_COMPOSITE,	/* type-type (composite) */
+				   TYPCATEGORY_COMPOSITE, /* type-category (ditto) */
+				   false,		/* composite types are never preferred */
 				   DEFAULT_TYPDELIM,	/* default array delimiter */
 				   F_RECORD_IN, /* input procedure */
 				   F_RECORD_OUT,	/* output procedure */
@@ -1401,6 +1409,7 @@ heap_create_with_catalog(const char *relname,
 						 Oid relid,
 						 Oid ownerid,
 						 TupleDesc tupdesc,
+						 List *cooked_constraints,
 						 Oid relam,
 						 char relkind,
 						 char relstorage,
@@ -1707,6 +1716,8 @@ heap_create_with_catalog(const char *relname,
 				   ownerid,		/* owner's ID */
 				   -1,			/* Internal size (varlena) */
 				   TYPTYPE_BASE,	/* Not composite - typelem is */
+				   TYPCATEGORY_ARRAY, /* type-category (array) */
+				   false,		/* array types are never preferred */
 				   DEFAULT_TYPDELIM,	/* default array delimiter */
 				   F_ARRAY_IN,	/* array input proc */
 				   F_ARRAY_OUT, /* array output proc */
@@ -1814,10 +1825,13 @@ heap_create_with_catalog(const char *relname,
 	}
 
 	/*
-	 * We used to store pre-cooked constraints and defaults here.
-	 * We now store them along with raw constraints and defaults to ensure that
-	 * 	we have oid of pg_constraint and pg_attrdef consistent across segments
+	 * Store any supplied constraints and defaults.
+	 *
+	 * NB: this may do a CommandCounterIncrement and rebuild the relcache
+	 * entry, so the relation must be valid and self-consistent at this point.
+	 * In particular, there are not yet constraints and defaults anywhere.
 	 */
+	StoreConstraints(new_rel_desc, cooked_constraints);
 
 	/*
 	 * If there's a special on-commit action, remember it
@@ -2614,27 +2628,27 @@ StoreAttrDefault(Relation rel, AttrNumber attnum, Node *expr)
 
 /*
  * Store a check-constraint expression for the given relation.
- * The expression must be presented as a nodeToString() string.
  *
  * Caller is responsible for updating the count of constraints
  * in the pg_class entry for the relation.
  */
 static void
-StoreRelCheck(Relation rel, char *ccname, char *ccbin)
+StoreRelCheck(Relation rel, char *ccname, Node *expr,
+			  bool is_local, int inhcount)
 {
-	Node	   *expr;
+	char	   *ccbin;
 	char	   *ccsrc;
 	List	   *varList;
 	int			keycount;
 	int16	   *attNos;
 
 	/*
-	 * Convert condition to an expression tree.
+	 * Flatten expression to string form for storage.
 	 */
-	expr = stringToNode(ccbin);
+	ccbin = nodeToString(expr);
 
 	/*
-	 * deparse it
+	 * Also deparse it to form the mostly-obsolete consrc field.
 	 */
 	ccsrc = deparse_expression(expr,
 							deparse_context_for(RelationGetRelationName(rel),
@@ -2642,7 +2656,7 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin)
 							   false, false);
 
 	/*
-	 * Find columns of rel that are used in ccbin
+	 * Find columns of rel that are used in expr
 	 *
 	 * NB: pull_var_clause is okay here only because we don't allow subselects
 	 * in check constraints; it would fail to examine the contents of
@@ -2697,24 +2711,77 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin)
 						  InvalidOid,	/* no associated index */
 						  expr, /* Tree form check constraint */
 						  ccbin,	/* Binary form check constraint */
-						  ccsrc);		/* Source form check constraint */
+						  ccsrc,	/* Source form check constraint */
+						  is_local,	/* conislocal */
+						  inhcount); /* coninhcount */
 
+	pfree(ccbin);
 	pfree(ccsrc);
 }
 
 /*
- * AddRelationConstraints
+ * Store defaults and constraints (passed as a list of CookedConstraint).
  *
- * Add both raw (not-yet-transformed) and cooked column default expressions and/or
- * constraint check expressions to an existing relation. This is defined to do both
- * for efficiency in DefineRelation, but of course you can do just one or
- * the other by passing empty lists.
+ * NOTE: only pre-cooked expressions will be passed this way, which is to
+ * say expressions inherited from an existing relation.  Newly parsed
+ * expressions can be added later, by direct calls to StoreAttrDefault
+ * and StoreRelCheck (see AddRelationNewConstraints()).
+ */
+static void
+StoreConstraints(Relation rel, List *cooked_constraints)
+{
+	int			numchecks = 0;
+	ListCell   *lc;
+
+	if (!cooked_constraints)
+		return;					/* nothing to do */
+
+	/*
+	 * Deparsing of constraint expressions will fail unless the just-created
+	 * pg_attribute tuples for this relation are made visible.  So, bump the
+	 * command counter.  CAUTION: this will cause a relcache entry rebuild.
+	 */
+	CommandCounterIncrement();
+
+	foreach(lc, cooked_constraints)
+	{
+		CookedConstraint *con = (CookedConstraint *) lfirst(lc);
+
+		switch (con->contype)
+		{
+			case CONSTR_DEFAULT:
+				StoreAttrDefault(rel, con->attnum, con->expr);
+				break;
+			case CONSTR_CHECK:
+				StoreRelCheck(rel, con->name, con->expr,
+							  con->is_local, con->inhcount);
+				numchecks++;
+				break;
+			default:
+				elog(ERROR, "unrecognized constraint type: %d",
+					 (int) con->contype);
+		}
+	}
+
+	if (numchecks > 0)
+		SetRelationNumChecks(rel, numchecks);
+}
+
+/*
+ * AddRelationNewConstraints
+ *
+ * Add new column default expressions and/or constraint check expressions
+ * to an existing relation.  This is defined to do both for efficiency in
+ * DefineRelation, but of course you can do just one or the other by passing
+ * empty lists.
  *
  * rel: relation to be modified
- * colDefaults: list of ColumnDef nodes
- * constraints: list of Constraint nodes
+ * newColDefaults: list of RawColumnDefault structures
+ * newConstraints: list of Constraint nodes
+ * allow_merge: TRUE if check constraints may be merged with existing ones
+ * is_local: TRUE if definition is local, FALSE if it's inherited
  *
- * All entries in colDefaults will be processed.  Entries in constraints
+ * All entries in newColDefaults will be processed.  Entries in newConstraints
  * will be processed only if they are CONSTR_CHECK type.
  *
  * Returns a list of CookedConstraint nodes that shows the cooked form of
@@ -2726,9 +2793,11 @@ StoreRelCheck(Relation rel, char *ccname, char *ccbin)
  * tuples visible.
  */
 List *
-AddRelationConstraints(Relation rel,
-						  List *colDefaults,
-						  List *constraints)
+AddRelationNewConstraints(Relation rel,
+						  List *newColDefaults,
+						  List *newConstraints,
+						  bool allow_merge,
+						  bool is_local)
 {
 	List	   *cookedConstraints = NIL;
 	TupleDesc	tupleDesc;
@@ -2767,24 +2836,14 @@ AddRelationConstraints(Relation rel,
 	/*
 	 * Process column default expressions.
 	 */
-	foreach(cell, colDefaults)
+	foreach(cell, newColDefaults)
 	{
-		ColumnDef  *colDef = (ColumnDef *) lfirst(cell);
-
+		RawColumnDefault *colDef = (RawColumnDefault *) lfirst(cell);
 		Form_pg_attribute atp = rel->rd_att->attrs[colDef->attnum - 1];
 
-		if (colDef->raw_default != NULL)
-		{
-			Insist (colDef->cooked_default == NULL);
-			expr = cookDefault(pstate, colDef->raw_default,
-							   atp->atttypid, atp->atttypmod,
-							   NameStr(atp->attname));
-		}
-		else
-		{
-			Insist (colDef->cooked_default != NULL);
-			expr = stringToNode(colDef->cooked_default);
-		}
+		expr = cookDefault(pstate, colDef->raw_default,
+						   atp->atttypid, atp->atttypmod,
+						   NameStr(atp->attname));
 
 		/*
 		 * If the expression is just a NULL constant, we do not bother to make
@@ -2808,6 +2867,8 @@ AddRelationConstraints(Relation rel,
 		cooked->name = NULL;
 		cooked->attnum = colDef->attnum;
 		cooked->expr = expr;
+		cooked->is_local = is_local;
+		cooked->inhcount = is_local ? 0 : 1;
 		cookedConstraints = lappend(cookedConstraints, cooked);
 	}
 
@@ -2816,7 +2877,7 @@ AddRelationConstraints(Relation rel,
 	 */
 	numchecks = numoldchecks;
 	checknames = NIL;
-	foreach(cell, constraints)
+	foreach(cell, newConstraints)
 	{
 		Constraint *cdef = (Constraint *) lfirst(cell);
 		char	   *ccname;
@@ -2854,15 +2915,6 @@ AddRelationConstraints(Relation rel,
 			ListCell   *cell2;
 
 			ccname = cdef->name;
-			/* Check against pre-existing constraints */
-			if (ConstraintNameIsUsed(CONSTRAINT_RELATION,
-									 RelationGetRelid(rel),
-									 RelationGetNamespace(rel),
-									 ccname))
-				ereport(ERROR,
-						(errcode(ERRCODE_DUPLICATE_OBJECT),
-				errmsg("constraint \"%s\" for relation \"%s\" already exists",
-					   ccname, RelationGetRelationName(rel))));
 			/* Check against other new constraints */
 			/* Needed because we don't do CommandCounterIncrement in loop */
 			foreach(cell2, checknames)
@@ -2873,6 +2925,19 @@ AddRelationConstraints(Relation rel,
 							 errmsg("check constraint \"%s\" already exists",
 									ccname)));
 			}
+
+			/* save name for future checks */
+			checknames = lappend(checknames, ccname);
+
+			/*
+			 * Check against pre-existing constraints.  If we are allowed
+			 * to merge with an existing constraint, there's no more to
+			 * do here.  (We omit the duplicate constraint from the result,
+			 * which is what ATAddCheckConstraint wants.)
+			 */
+			if (MergeWithExistingConstraint(rel, ccname, expr,
+											allow_merge, is_local))
+				continue;
 		}
 		else
 		{
@@ -2907,15 +2972,15 @@ AddRelationConstraints(Relation rel,
 										  "check",
 										  RelationGetNamespace(rel),
 										  checknames);
-		}
 
-		/* save name for future checks */
-		checknames = lappend(checknames, ccname);
+			/* save name for future checks */
+			checknames = lappend(checknames, ccname);
+		}
 
 		/*
 		 * OK, store it.
 		 */
-		StoreRelCheck(rel, ccname, nodeToString(expr));
+		StoreRelCheck(rel, ccname, expr, is_local, is_local ? 0 : 1);
 
 		numchecks++;
 
@@ -2924,6 +2989,8 @@ AddRelationConstraints(Relation rel,
 		cooked->name = ccname;
 		cooked->attnum = 0;
 		cooked->expr = expr;
+		cooked->is_local = is_local;
+		cooked->inhcount = is_local ? 0 : 1;
 		cookedConstraints = lappend(cookedConstraints, cooked);
 	}
 
@@ -2943,46 +3010,88 @@ AddRelationConstraints(Relation rel,
 }
 
 /*
- * Transform raw parsetree to executable expression.
+ * Check for a pre-existing check constraint that conflicts with a proposed
+ * new one, and either adjust its conislocal/coninhcount settings or throw
+ * error as needed.
+ *
+ * Returns TRUE if merged (constraint is a duplicate), or FALSE if it's
+ * got a so-far-unique name, or throws error if conflict.
  */
-static Node*
-cookConstraint (ParseState 	*pstate,
-				Node 		*raw_constraint,
-				char		*relname)
+static bool
+MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
+							bool allow_merge, bool is_local)
 {
-	Node	*expr;
+	bool		found;
+	Relation	conDesc;
+	SysScanDesc conscan;
+	ScanKeyData skey[2];
+	HeapTuple	tup;
 
-	/* Transform raw parsetree to executable expression. */
-	expr = transformExpr(pstate, raw_constraint);
+	/* Search for a pg_constraint entry with same name and relation */
+	conDesc = heap_open(ConstraintRelationId, RowExclusiveLock);
 
-	/* Make sure it yields a boolean result. */
-	expr = coerce_to_boolean(pstate, expr, "CHECK");
+	found = false;
 
-	/* Make sure no outside relations are referred to. */
-	if (list_length(pstate->p_rtable) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-		errmsg("only table \"%s\" can be referenced in check constraint",
-			   relname)));
-	/*
-	 * No subplans or aggregates, either...
-	 */
-	if (pstate->p_hasSubLinks)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot use subquery in check constraint")));
-	if (pstate->p_hasAggs)
-		ereport(ERROR,
-				(errcode(ERRCODE_GROUPING_ERROR),
-		   errmsg("cannot use aggregate function in check constraint")));
-	if (pstate->p_hasWindowFuncs)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-		   errmsg("cannot use window function in check constraint")));
+	ScanKeyInit(&skey[0],
+				Anum_pg_constraint_conname,
+				BTEqualStrategyNumber, F_NAMEEQ,
+				CStringGetDatum(ccname));
 
-	return expr;
+	ScanKeyInit(&skey[1],
+				Anum_pg_constraint_connamespace,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(RelationGetNamespace(rel)));
+
+	conscan = systable_beginscan(conDesc, ConstraintNameNspIndexId, true,
+								 SnapshotNow, 2, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(conscan)))
+	{
+		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(tup);
+
+		if (con->conrelid == RelationGetRelid(rel))
+		{
+			/* Found it.  Conflicts if not identical check constraint */
+			if (con->contype == CONSTRAINT_CHECK)
+			{
+				Datum	val;
+				bool	isnull;
+
+				val = fastgetattr(tup,
+								  Anum_pg_constraint_conbin,
+								  conDesc->rd_att, &isnull);
+				if (isnull)
+					elog(ERROR, "null conbin for rel %s",
+						 RelationGetRelationName(rel));
+				if (equal(expr, stringToNode(TextDatumGetCString(val))))
+					found = true;
+			}
+			if (!found || !allow_merge)
+				ereport(ERROR,
+						(errcode(ERRCODE_DUPLICATE_OBJECT),
+				errmsg("constraint \"%s\" for relation \"%s\" already exists",
+					   ccname, RelationGetRelationName(rel))));
+			/* OK to update the tuple */
+			ereport(NOTICE,
+					(errmsg("merging constraint \"%s\" with inherited definition",
+							ccname)));
+			tup = heap_copytuple(tup);
+			con = (Form_pg_constraint) GETSTRUCT(tup);
+			if (is_local)
+				con->conislocal = true;
+			else
+				con->coninhcount++;
+			simple_heap_update(conDesc, &tup->t_self, tup);
+			CatalogUpdateIndexes(conDesc, tup);
+			break;
+		}
+	}
+
+	systable_endscan(conscan);
+	heap_close(conDesc, RowExclusiveLock);
+
+	return found;
 }
-
 
 /*
  * Update the count of constraints in the relation's pg_class tuple.
@@ -3117,63 +3226,56 @@ cookDefault(ParseState *pstate,
 	return expr;
 }
 
-
 /*
- * Removes all constraints on a relation that match the given name.
+ * Take a raw CHECK constraint expression and convert it to a cooked format
+ * ready for storage.
  *
- * It is the responsibility of the calling function to acquire a suitable
- * lock on the relation.
- *
- * Returns: The number of constraints removed.
+ * Parse state must be set up to recognize any vars that might appear
+ * in the expression.
  */
-int
-RemoveRelConstraints(Relation rel, const char *constrName,
-					 DropBehavior behavior)
+static Node *
+cookConstraint(ParseState *pstate,
+			   Node *raw_constraint,
+			   char *relname)
 {
-	int			ndeleted = 0;
-	Relation	conrel;
-	SysScanDesc conscan;
-	ScanKeyData key[1];
-	HeapTuple	contup;
-
-	/* Grab an appropriate lock on the pg_constraint relation */
-	conrel = heap_open(ConstraintRelationId, RowExclusiveLock);
-
-	/* Use the index to scan only constraints of the target relation */
-	ScanKeyInit(&key[0],
-				Anum_pg_constraint_conrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(RelationGetRelid(rel)));
-
-	conscan = systable_beginscan(conrel, ConstraintRelidIndexId, true,
-								 SnapshotNow, 1, key);
+	Node	   *expr;
 
 	/*
-	 * Scan over the result set, removing any matching entries.
+	 * Transform raw parsetree to executable expression.
 	 */
-	while ((contup = systable_getnext(conscan)) != NULL)
-	{
-		Form_pg_constraint con = (Form_pg_constraint) GETSTRUCT(contup);
+	expr = transformExpr(pstate, raw_constraint);
 
-		if (strcmp(NameStr(con->conname), constrName) == 0)
-		{
-			ObjectAddress conobj;
+	/*
+	 * Make sure it yields a boolean result.
+	 */
+	expr = coerce_to_boolean(pstate, expr, "CHECK");
 
-			conobj.classId = ConstraintRelationId;
-			conobj.objectId = HeapTupleGetOid(contup);
-			conobj.objectSubId = 0;
+	/*
+	 * Make sure no outside relations are referred to.
+	 */
+	if (list_length(pstate->p_rtable) != 1)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+			errmsg("only table \"%s\" can be referenced in check constraint",
+				   relname)));
 
-			performDeletion(&conobj, behavior);
+	/*
+	 * No subplans or aggregates, either...
+	 */
+	if (pstate->p_hasSubLinks)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot use subquery in check constraint")));
+	if (pstate->p_hasAggs)
+		ereport(ERROR,
+				(errcode(ERRCODE_GROUPING_ERROR),
+			   errmsg("cannot use aggregate function in check constraint")));
+	if (pstate->p_hasWindowFuncs)
+		ereport(ERROR,
+				(errcode(ERRCODE_WINDOWING_ERROR),
+				 errmsg("cannot use window function in check constraint")));
 
-			ndeleted++;
-		}
-	}
-
-	/* Clean up after the scan */
-	systable_endscan(conscan);
-	heap_close(conrel, RowExclusiveLock);
-
-	return ndeleted;
+	return expr;
 }
 
 

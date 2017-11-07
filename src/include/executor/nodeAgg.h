@@ -195,11 +195,6 @@ extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal,
 									 MemoryManagerContainer *mem_manager);
 extern void ExecEagerFreeAgg(AggState *aggstate);
 
-static inline gpmon_packet_t * GpmonPktFromAggState(AggState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 extern List *combineAggrefArgs(Aggref *aggref, List **sort_clauses);
 extern List *combinePercentileArgs(PercentileExpr *p);
 

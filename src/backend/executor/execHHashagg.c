@@ -869,8 +869,6 @@ agg_hash_initial_pass(AggState *aggstate)
 			break;
 		}
 
-		Gpmon_Incr_Rows_In(GpmonPktFromAggState(aggstate));
-
 		if (aggstate->hashslot->tts_tupleDescriptor == NULL)
 		{
 			int size;

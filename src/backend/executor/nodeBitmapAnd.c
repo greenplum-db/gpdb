@@ -91,8 +91,6 @@ ExecInitBitmapAnd(BitmapAnd *node, EState *estate, int eflags)
 		i++;
 	}
 
-	initGpmonPktForBitmapAnd((Plan *) node, &bitmapandstate->ps.gpmon_pkt, estate);
-
 	return bitmapandstate;
 }
 
@@ -291,12 +289,4 @@ ExecReScanBitmapAnd(BitmapAndState *node, ExprContext *exprCtxt)
 		 */
 		ExecReScan(subnode, exprCtxt);
 	}
-}
-
-void
-initGpmonPktForBitmapAnd(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapAnd));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

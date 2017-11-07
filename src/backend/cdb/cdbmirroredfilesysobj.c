@@ -1013,13 +1013,11 @@ MirroredFileSysObj_TransactionCreateBufferPoolFile(
 	/*
 	 * Synchronous primary and mirror create relation.
 	 */
-	smgrcreate(
-			   smgrOpen,
-			   isLocalBuf,
+	smgrcreate(smgrOpen,
 			   relationName,
 			   mirrorDataLossTrackingState,
 			   mirrorDataLossTrackingSessionNum,
-			    /* ignoreAlreadyExists */ false,
+			   /* ignoreAlreadyExists */ false,
 			   &mirrorDataLossOccurred);
 
 	MirroredFileSysObj_FinishMirroredCreate(

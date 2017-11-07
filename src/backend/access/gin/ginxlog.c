@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *			 $PostgreSQL: pgsql/src/backend/access/gin/ginxlog.c,v 1.5.2.1 2007/06/04 15:59:20 teodor Exp $
+ *			 $PostgreSQL: pgsql/src/backend/access/gin/ginxlog.c,v 1.15 2008/07/11 21:06:29 tgl Exp $
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
@@ -18,7 +18,8 @@
 #include "access/gin.h"
 #include "access/heapam.h"
 #include "access/bufmask.h"
-
+#include "access/xlogutils.h"
+#include "storage/bufmgr.h"
 #include "utils/memutils.h"
 #include "utils/guc.h"
 
@@ -77,16 +78,13 @@ ginRedoCreateIndex(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	RelFileNode *node = (RelFileNode *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
-	reln = XLogOpenRelation(*node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, GIN_ROOT_BLKNO, true);
+	buffer = XLogReadBuffer(*node, GIN_ROOT_BLKNO, true);
 	Assert(BufferIsValid(buffer));
 	page = (Page) BufferGetPage(buffer);
 
@@ -109,16 +107,13 @@ ginRedoCreatePTree(XLogRecPtr lsn, XLogRecord *record)
 
 	ginxlogCreatePostingTree *data = (ginxlogCreatePostingTree *) XLogRecGetData(record);
 	ItemPointerData *items = (ItemPointerData *) (XLogRecGetData(record) + sizeof(ginxlogCreatePostingTree));
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
-	reln = XLogOpenRelation(data->node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, data->blkno, true);
+	buffer = XLogReadBuffer(data->node, data->blkno, true);
 	Assert(BufferIsValid(buffer));
 	page = (Page) BufferGetPage(buffer);
 
@@ -142,7 +137,6 @@ ginRedoInsert(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	ginxlogInsert *data = (ginxlogInsert *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
@@ -177,19 +171,17 @@ ginRedoInsert(XLogRecPtr lsn, XLogRecord *record)
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(data->node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, data->blkno, false);
+	buffer = XLogReadBuffer(data->node, data->blkno, false);
 	if (!BufferIsValid(buffer))
 		return;
 	page = (Page) BufferGetPage(buffer);
 
 	if (!XLByteLE(lsn, PageGetLSN(page)))
 	{
-		REDO_PRINT_LSN_APPLICATION(reln, data->blkno, page, lsn);
+		REDO_PRINT_LSN_APPLICATION(&data->node, data->blkno, page, lsn);
 		if (data->isData)
 		{
 			Assert(GinPageIsData(page));
@@ -229,7 +221,7 @@ ginRedoInsert(XLogRecPtr lsn, XLogRecord *record)
 
 			Assert(!GinPageIsData(page));
 
-			REDO_PRINT_LSN_APPLICATION(reln, data->blkno, page, lsn);
+			REDO_PRINT_LSN_APPLICATION(&data->node, data->blkno, page, lsn);
 			if (data->updateBlkno != InvalidBlockNumber)
 			{
 				/* update link to right page after split */
@@ -271,14 +263,11 @@ ginRedoSplit(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	ginxlogSplit *data = (ginxlogSplit *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		lbuffer,
 				rbuffer;
 	Page		lpage,
 				rpage;
 	uint32		flags = 0;
-
-	reln = XLogOpenRelation(data->node);
 
 	if (data->isLeaf)
 		flags |= GIN_LEAF;
@@ -288,12 +277,12 @@ ginRedoSplit(XLogRecPtr lsn, XLogRecord *record)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	lbuffer = XLogReadBuffer(reln, data->lblkno, true);
+	lbuffer = XLogReadBuffer(data->node, data->lblkno, data->isRootSplit);
 	Assert(BufferIsValid(lbuffer));
 	lpage = (Page) BufferGetPage(lbuffer);
 	GinInitBuffer(lbuffer, flags);
 
-	rbuffer = XLogReadBuffer(reln, data->rblkno, true);
+	rbuffer = XLogReadBuffer(data->node, data->rblkno, true);
 	Assert(BufferIsValid(rbuffer));
 	rpage = (Page) BufferGetPage(rbuffer);
 	GinInitBuffer(rbuffer, flags);
@@ -363,7 +352,7 @@ ginRedoSplit(XLogRecPtr lsn, XLogRecord *record)
 
 	if (data->isRootSplit)
 	{
-		Buffer		rootBuf = XLogReadBuffer(reln, data->rootBlkno, true);
+		Buffer		rootBuf = XLogReadBuffer(data->node, data->rootBlkno, false);
 		Page		rootPage = BufferGetPage(rootBuf);
 
 		GinInitBuffer(rootBuf, flags & ~GIN_LEAF);
@@ -401,7 +390,6 @@ ginRedoVacuumPage(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	ginxlogVacuumPage *data = (ginxlogVacuumPage *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
@@ -409,12 +397,10 @@ ginRedoVacuumPage(XLogRecPtr lsn, XLogRecord *record)
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(data->node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
-	
-	buffer = XLogReadBuffer(reln, data->blkno, false);
+
+	buffer = XLogReadBuffer(data->node, data->blkno, false);
 	if (!BufferIsValid(buffer))
 		return;
 	page = (Page) BufferGetPage(buffer);
@@ -465,18 +451,15 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	ginxlogDeletePage *data = (ginxlogDeletePage *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
-	reln = XLogOpenRelation(data->node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
 	if (!(IsBkpBlockApplied(record, 0)))
 	{
-		buffer = XLogReadBuffer(reln, data->blkno, false);
+		buffer = XLogReadBuffer(data->node, data->blkno, false);
 		if (BufferIsValid(buffer))
 		{
 			page = BufferGetPage(buffer);
@@ -493,7 +476,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 
 	if (!(IsBkpBlockApplied(record, 1)))
 	{
-		buffer = XLogReadBuffer(reln, data->parentBlkno, false);
+		buffer = XLogReadBuffer(data->node, data->parentBlkno, false);
 		if (BufferIsValid(buffer))
 		{
 			page = BufferGetPage(buffer);
@@ -511,7 +494,7 @@ ginRedoDeletePage(XLogRecPtr lsn, XLogRecord *record)
 
 	if (!(IsBkpBlockApplied(record, 2)) && data->leftBlkno != InvalidBlockNumber)
 	{
-		buffer = XLogReadBuffer(reln, data->leftBlkno, false);
+		buffer = XLogReadBuffer(data->node, data->leftBlkno, false);
 		if (BufferIsValid(buffer))
 		{
 			page = BufferGetPage(buffer);
@@ -644,12 +627,13 @@ ginContinueSplit(ginIncompleteSplit *split)
 	 * elog(NOTICE,"ginContinueSplit root:%u l:%u r:%u",  split->rootBlkno,
 	 * split->leftBlkno, split->rightBlkno);
 	 */
-	reln = XLogOpenRelation(split->node);
-	
+
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
-	
-	buffer = XLogReadBuffer(reln, split->leftBlkno, false);
+
+	buffer = XLogReadBuffer(split->node, split->leftBlkno, false);
+
+	reln = CreateFakeRelcacheEntry(split->node);
 
 	/*
 	 * Failure should be impossible here, because we wrote the page earlier.
@@ -660,7 +644,7 @@ ginContinueSplit(ginIncompleteSplit *split)
 
 	if (split->rootBlkno == GIN_ROOT_BLKNO)
 	{
-		prepareEntryScan(&btree, reln, (Datum) 0, NULL);
+		prepareEntryScan(&btree, reln, InvalidOffsetNumber, (Datum) 0, NULL);
 		btree.entry = ginPageGetLinkItup(buffer);
 	}
 	else
@@ -677,6 +661,8 @@ ginContinueSplit(ginIncompleteSplit *split)
 			btree.pitem.key = ((PostingItem *) GinDataPageGetItem(page,
 									   GinPageGetOpaque(page)->maxoff))->key;
 	}
+
+	FreeFakeRelcacheEntry(reln);
 
 	btree.rightblkno = split->rightBlkno;
 

@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/backend/Makefile,v 1.128 2008/03/17 19:44:40 petere Exp $
+# $PostgreSQL: pgsql/src/backend/Makefile,v 1.129 2008/08/01 13:16:08 alvherre Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -66,9 +66,6 @@ endif
 
 # Greenplum uses threads in the backend
 LIBS := $(LIBS) -lpthread
-
-# Greenplum uses libpq to communicate between QD and QEs
-OBJS := $(OBJS) $(addprefix $(top_builddir)/src/interfaces/libpq/,fe-protocol3_for_backend.o fe-connect_for_backend.o fe-exec.o pqexpbuffer.o fe-auth.o fe-misc.o fe-protocol2.o fe-secure.o getpeereid.o)
 
 ##########################################################################
 

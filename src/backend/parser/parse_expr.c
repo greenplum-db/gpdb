@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_expr.c,v 1.231 2008/08/25 22:42:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_expr.c,v 1.229 2008/07/16 01:30:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -138,11 +138,6 @@ transformExpr(ParseState *pstate, Node *expr)
 				Value	   *val = &con->val;
 
 				result = (Node *) make_const(pstate, val, con->location);
-				if (con->typeName != NULL) {
-					con->typeName->location = con->location;
-					result = typecast_expression(pstate, result,
-												 con->typeName);
-				}
 				break;
 			}
 
@@ -749,8 +744,7 @@ exprIsNullConstant(Node *arg)
 	{
 		A_Const    *con = (A_Const *) arg;
 
-		if (con->val.type == T_Null &&
-			con->typeName == NULL)
+		if (con->val.type == T_Null)
 			return true;
 	}
 	return false;
@@ -1143,9 +1137,7 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
 	List	   *targs;
 	ListCell   *args;
 
-	/*
-	 * Transform the list of arguments.
-	 */
+	/* Transform the list of arguments ... */
 	targs = NIL;
 	foreach(args, fn->args)
 	{
@@ -1153,6 +1145,7 @@ transformFuncCall(ParseState *pstate, FuncCall *fn)
 											 (Node *) lfirst(args)));
 	}
 
+	/* ... and hand off to ParseFuncOrColumn */
 	return ParseFuncOrColumn(pstate,
 							 fn->funcname,
 							 targs,

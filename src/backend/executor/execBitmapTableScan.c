@@ -119,7 +119,7 @@ BitmapTableScanPlanQualTuple(BitmapTableScanState *node)
 			return ExecClearTuple(slot);
 		}
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1], slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1], slot, InvalidBuffer, false);
 
 		/* Does the tuple meet the original qual conditions? */
 		econtext->ecxt_scantuple = slot;
@@ -204,17 +204,6 @@ fetchNextBitmapPage(BitmapTableScanState *scanState)
 	}
 
 	return gotBitmapPage;
-}
-
-/*
- * Initializes perfmon details for BitmapTableScan node.
- */
-void
-initGpmonPktForBitmapTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapTableScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /*

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/heap/heapam.c,v 1.255 2008/04/03 17:12:27 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/heap/heapam.c,v 1.261 2008/07/13 20:45:47 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -43,14 +43,19 @@
 #include "access/heapam.h"
 #include "access/hio.h"
 #include "access/multixact.h"
+#include "access/relscan.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/tuptoaster.h"
 #include "access/valid.h"
 #include "access/xact.h"
+#include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/namespace.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"
 #include "utils/datum.h"
@@ -1788,7 +1793,7 @@ heap_fetch(Relation relation,
 	ItemPointer tid = &(tuple->t_self);
 	ItemId		lp;
 	Buffer		buffer;
-	PageHeader	dp;
+	Page		page;
 	OffsetNumber offnum;
 	bool		valid;
 
@@ -1805,14 +1810,14 @@ heap_fetch(Relation relation,
 	 * Need share lock on buffer to examine tuple commit status.
 	 */
 	LockBuffer(buffer, BUFFER_LOCK_SHARE);
-	dp = (PageHeader) BufferGetPage(buffer);
+	page = BufferGetPage(buffer);
 
 	/*
 	 * We'd better check for out-of-range offnum in case of VACUUM since the
 	 * TID was obtained.
 	 */
 	offnum = ItemPointerGetOffsetNumber(tid);
-	if (offnum < FirstOffsetNumber || offnum > PageGetMaxOffsetNumber(dp))
+	if (offnum < FirstOffsetNumber || offnum > PageGetMaxOffsetNumber(page))
 	{
 		LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 		
@@ -1833,7 +1838,7 @@ heap_fetch(Relation relation,
 	/*
 	 * get the item line pointer corresponding to the requested tid
 	 */
-	lp = PageGetItemId(dp, offnum);
+	lp = PageGetItemId(page, offnum);
 
 	/*
 	 * Must check for deleted tuple.
@@ -1859,7 +1864,7 @@ heap_fetch(Relation relation,
 	/*
 	 * fill in *tuple fields
 	 */
-	tuple->t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
+	tuple->t_data = (HeapTupleHeader) PageGetItem(page, lp);
 	tuple->t_len = ItemIdGetLength(lp);
 
 	/*
@@ -2090,7 +2095,7 @@ heap_get_latest_tid(Relation relation,
 	for (;;)
 	{
 		Buffer		buffer;
-		PageHeader	dp;
+		Page		page;
 		OffsetNumber offnum;
 		ItemId		lp;
 		HeapTupleData tp;
@@ -2105,7 +2110,7 @@ heap_get_latest_tid(Relation relation,
 
 		buffer = ReadBuffer(relation, ItemPointerGetBlockNumber(&ctid));
 		LockBuffer(buffer, BUFFER_LOCK_SHARE);
-		dp = (PageHeader) BufferGetPage(buffer);
+		page = BufferGetPage(buffer);
 
 		/*
 		 * Check for bogus item number.  This is not treated as an error
@@ -2113,7 +2118,7 @@ heap_get_latest_tid(Relation relation,
 		 * just assume that the prior tid is OK and return it unchanged.
 		 */
 		offnum = ItemPointerGetOffsetNumber(&ctid);
-		if (offnum < FirstOffsetNumber || offnum > PageGetMaxOffsetNumber(dp))
+		if (offnum < FirstOffsetNumber || offnum > PageGetMaxOffsetNumber(page))
 		{
 			UnlockReleaseBuffer(buffer);
 
@@ -2122,7 +2127,7 @@ heap_get_latest_tid(Relation relation,
 
 			break;
 		}
-		lp = PageGetItemId(dp, offnum);
+		lp = PageGetItemId(page, offnum);
 		if (!ItemIdIsNormal(lp))
 		{
 			UnlockReleaseBuffer(buffer);
@@ -2135,7 +2140,7 @@ heap_get_latest_tid(Relation relation,
 
 		/* OK to access the tuple */
 		tp.t_self = ctid;
-		tp.t_data = (HeapTupleHeader) PageGetItem(dp, lp);
+		tp.t_data = (HeapTupleHeader) PageGetItem(page, lp);
 		tp.t_len = ItemIdGetLength(lp);
 
 		/*
@@ -2315,7 +2320,7 @@ heap_insert(Relation relation, HeapTuple tup, CommandId cid,
 		heaptup = tup;
 	}
 	else if (HeapTupleHasExternal(tup) || tup->t_len > TOAST_TUPLE_THRESHOLD)
-		heaptup = toast_insert_or_update(relation, tup, NULL, NULL,
+		heaptup = toast_insert_or_update(relation, tup, NULL,
 										 TOAST_TUPLE_TARGET, isFrozen,
 										 use_wal, use_fsm);
 	else
@@ -2590,7 +2595,7 @@ heap_delete_xid(Relation relation, ItemPointer tid,
 	HTSU_Result result;
 	ItemId		lp;
 	HeapTupleData tp;
-	PageHeader	dp;
+	Page		page;
 	Buffer		buffer;
 	bool		have_tuple_lock = false;
 	bool		iscombo;
@@ -2607,11 +2612,11 @@ heap_delete_xid(Relation relation, ItemPointer tid,
 	buffer = ReadBuffer(relation, ItemPointerGetBlockNumber(tid));
 	LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
 
-	dp = (PageHeader) BufferGetPage(buffer);
-	lp = PageGetItemId(dp, ItemPointerGetOffsetNumber(tid));
+	page = BufferGetPage(buffer);
+	lp = PageGetItemId(page, ItemPointerGetOffsetNumber(tid));
 	Assert(ItemIdIsNormal(lp));
 
-	tp.t_data = (HeapTupleHeader) PageGetItem(dp, lp);
+	tp.t_data = (HeapTupleHeader) PageGetItem(page, lp);
 	tp.t_len = ItemIdGetLength(lp);
 	tp.t_self = *tid;
 
@@ -2766,7 +2771,7 @@ l1:
 	 * the subsequent page pruning will be a no-op and the hint will be
 	 * cleared.
 	 */
-	PageSetPrunable(dp, xid);
+	PageSetPrunable(page, xid);
 
 	/* store transaction information of xact deleting the tuple */
 	tp.t_data->t_infomask &= ~(HEAP_XMAX_COMMITTED |
@@ -2803,7 +2808,7 @@ l1:
 
 		recptr = XLogInsert_OverrideXid(RM_HEAP_ID, XLOG_HEAP_DELETE, rdata, xid);
 
-		PageSetLSN(dp, recptr);
+		PageSetLSN(page, recptr);
 	}
 
 	END_CRIT_SECTION();
@@ -2825,7 +2830,7 @@ l1:
 		Assert(!HeapTupleHasExternal(&tp));
 	}
 	else if (HeapTupleHasExternal(&tp))
-		toast_delete(relation, &tp, NULL);
+		toast_delete(relation, (GenericTuple) &tp, NULL);
 
 	/*
 	 * Mark tuple for invalidation from system caches at next command
@@ -2947,7 +2952,7 @@ heap_update_internal(Relation relation, ItemPointer otid, HeapTuple newtup,
 	ItemId		lp;
 	HeapTupleData oldtup;
 	HeapTuple	heaptup;
-	PageHeader	dp;
+	Page		page;
 	Buffer		buffer,
 				newbuf;
 	bool		need_toast;
@@ -2983,11 +2988,11 @@ heap_update_internal(Relation relation, ItemPointer otid, HeapTuple newtup,
 	buffer = ReadBuffer(relation, ItemPointerGetBlockNumber(otid));
 	LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
 
-	dp = (PageHeader) BufferGetPage(buffer);
-	lp = PageGetItemId(dp, ItemPointerGetOffsetNumber(otid));
+	page = BufferGetPage(buffer);
+	lp = PageGetItemId(page, ItemPointerGetOffsetNumber(otid));
 	Assert(ItemIdIsNormal(lp));
 
-	oldtup.t_data = (HeapTupleHeader) PageGetItem(dp, lp);
+	oldtup.t_data = (HeapTupleHeader) PageGetItem(page, lp);
 	oldtup.t_len = ItemIdGetLength(lp);
 	oldtup.t_self = *otid;
 
@@ -3194,7 +3199,7 @@ l2:
 					  HeapTupleHasExternal(newtup) ||
 					  newtup->t_len > TOAST_TUPLE_THRESHOLD);
 
-	pagefree = PageGetHeapFreeSpace((Page) dp);
+	pagefree = PageGetHeapFreeSpace(page);
 
 	newtupsize = MAXALIGN(newtup->t_len);
 
@@ -3275,7 +3280,7 @@ l2:
 		if (need_toast)
 		{
 			/* Note we always use WAL and FSM during updates */
-			heaptup = toast_insert_or_update(relation, newtup, &oldtup, NULL,
+			heaptup = toast_insert_or_update(relation, newtup, &oldtup,
 											 TOAST_TUPLE_TARGET, false, true, true);
 			newtupsize = MAXALIGN(heaptup->t_len);
 		}
@@ -3314,7 +3319,7 @@ l2:
 			/* Re-acquire the lock on the old tuple's page. */
 			LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
 			/* Re-check using the up-to-date free space */
-			pagefree = PageGetHeapFreeSpace((Page) dp);
+			pagefree = PageGetHeapFreeSpace(page);
 			if (newtupsize > pagefree)
 			{
 				/*
@@ -3359,7 +3364,7 @@ l2:
 	else
 	{
 		/* Set a hint that the old page could use prune/defrag */
-		PageSetFull(dp);
+		PageSetFull(page);
 	}
 
 	/* NO EREPORT(ERROR) from here till changes are logged */
@@ -3377,7 +3382,7 @@ l2:
 	 * not to optimize for aborts.	Note that heap_xlog_update must be kept in
 	 * sync if this decision changes.
 	 */
-	PageSetPrunable(dp, xid);
+	PageSetPrunable(page, xid);
 
 	if (use_hot_update)
 	{
@@ -3734,7 +3739,7 @@ heap_lock_tuple(Relation relation, HeapTuple tuple, Buffer *buffer,
 	HTSU_Result result;
 	ItemPointer tid = &(tuple->t_self);
 	ItemId		lp;
-	PageHeader	dp;
+	Page		page;
 	TransactionId xid;
 	TransactionId xmax;
 	uint16		old_infomask;
@@ -3753,11 +3758,11 @@ heap_lock_tuple(Relation relation, HeapTuple tuple, Buffer *buffer,
 	*buffer = ReadBuffer(relation, ItemPointerGetBlockNumber(tid));
 	LockBuffer(*buffer, BUFFER_LOCK_EXCLUSIVE);
 
-	dp = (PageHeader) BufferGetPage(*buffer);
-	lp = PageGetItemId(dp, ItemPointerGetOffsetNumber(tid));
+	page = BufferGetPage(*buffer);
+	lp = PageGetItemId(page, ItemPointerGetOffsetNumber(tid));
 	Assert(ItemIdIsNormal(lp));
 
-	tuple->t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
+	tuple->t_data = (HeapTupleHeader) PageGetItem(page, lp);
 	tuple->t_len = ItemIdGetLength(lp);
 
 l3:
@@ -4134,7 +4139,7 @@ l3:
 
 		recptr = XLogInsert(RM_HEAP_ID, XLOG_HEAP_LOCK, rdata);
 
-		PageSetLSN(dp, recptr);
+		PageSetLSN(page, recptr);
 	}
 
 	END_CRIT_SECTION();
@@ -4980,7 +4985,6 @@ heap_xlog_clean(XLogRecPtr lsn, XLogRecord *record, bool clean_move)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_clean *xlrec = (xl_heap_clean *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 	OffsetNumber *end;
@@ -4994,16 +4998,13 @@ heap_xlog_clean(XLogRecPtr lsn, XLogRecord *record, bool clean_move)
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(xlrec->heapnode.node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, xlrec->block, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->block, buffer, lsn);
+	buffer = XLogReadBuffer(xlrec->heapnode.node, xlrec->block, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->heapnode.node, xlrec->block, buffer, lsn);
 	if (!BufferIsValid(buffer))
 	{
-		
 		MIRROREDLOCK_BUFMGR_UNLOCK;
 		// -------- MirroredLock ----------
 		
@@ -5011,7 +5012,7 @@ heap_xlog_clean(XLogRecPtr lsn, XLogRecord *record, bool clean_move)
 	}
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(reln, xlrec->block, page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->heapnode.node, xlrec->block, page, lsn);
 	if (XLByteLE(lsn, PageGetLSN(page)))
 	{
 		UnlockReleaseBuffer(buffer);
@@ -5032,7 +5033,7 @@ heap_xlog_clean(XLogRecPtr lsn, XLogRecord *record, bool clean_move)
 	Assert(nunused >= 0);
 
 	/* Update all item pointers per the record, and repair fragmentation */
-	heap_page_prune_execute(reln, buffer,
+	heap_page_prune_execute(buffer,
 							redirected, nredirected,
 							nowdead, ndead,
 							nowunused, nunused,
@@ -5059,20 +5060,17 @@ heap_xlog_freeze(XLogRecPtr lsn, XLogRecord *record)
 
 	xl_heap_freeze *xlrec = (xl_heap_freeze *) XLogRecGetData(record);
 	TransactionId cutoff_xid = xlrec->cutoff_xid;
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(xlrec->heapnode.node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, xlrec->block, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->block, buffer, lsn);
+	buffer = XLogReadBuffer(xlrec->heapnode.node, xlrec->block, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->heapnode.node, xlrec->block, buffer, lsn);
 	if (!BufferIsValid(buffer))
 	{
 		
@@ -5083,7 +5081,7 @@ heap_xlog_freeze(XLogRecPtr lsn, XLogRecord *record)
 	}
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(reln, xlrec->block, page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->heapnode.node, xlrec->block, page, lsn);
 	if (XLByteLE(lsn, PageGetLSN(page)))
 	{
 		UnlockReleaseBuffer(buffer);
@@ -5128,7 +5126,6 @@ heap_xlog_newpage(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_newpage *xlrec = (xl_heap_newpage *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 
@@ -5136,12 +5133,11 @@ heap_xlog_newpage(XLogRecPtr lsn, XLogRecord *record)
 	 * Note: the NEWPAGE log record is used for both heaps and indexes, so do
 	 * not do anything that assumes we are touching a heap.
 	 */
-	reln = XLogOpenRelation(xlrec->heapnode.node);
 	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln, xlrec->blkno, true);
+	buffer = XLogReadBuffer(xlrec->heapnode.node, xlrec->blkno, true);
 	Assert(BufferIsValid(buffer));
 	page = (Page) BufferGetPage(buffer);
 
@@ -5171,7 +5167,6 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_delete *xlrec = (xl_heap_delete *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 	OffsetNumber offnum;
@@ -5181,15 +5176,13 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(xlrec->target.node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln,
+	buffer = XLogReadBuffer(xlrec->target.node,
 							ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 							false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
 	if (!BufferIsValid(buffer))
 	{
 		
@@ -5200,7 +5193,7 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 	}
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
 
 	if (Debug_print_qd_mirroring)
 		elog(LOG, "heap_xlog_delete: page lsn = (%X,%X)",
@@ -5263,7 +5256,6 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_insert *xlrec = (xl_heap_insert *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 	OffsetNumber offnum;
@@ -5279,14 +5271,12 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(xlrec->target.node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
 	if (record->xl_info & XLOG_HEAP_INIT_PAGE)
 	{
-		buffer = XLogReadBuffer(reln,
+		buffer = XLogReadBuffer(xlrec->target.node,
 							 ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 								true);
 		Assert(BufferIsValid(buffer));
@@ -5296,13 +5286,12 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	}
 	else
 	{
-		buffer = XLogReadBuffer(reln,
+		buffer = XLogReadBuffer(xlrec->target.node,
 							 ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 								false);
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
+		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
 		if (!BufferIsValid(buffer))
 		{
-
 			MIRROREDLOCK_BUFMGR_UNLOCK;
 			// -------- MirroredLock ----------
 
@@ -5311,7 +5300,7 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 
 		page = (Page) BufferGetPage(buffer);
 
-		REDO_PRINT_LSN_APPLICATION(reln,
+		REDO_PRINT_LSN_APPLICATION(&xlrec->target.node,
 					ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
 
 		if (XLByteLE(lsn, PageGetLSN(page)))	/* changes are applied */
@@ -5365,7 +5354,6 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 	
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
-	
 }
 
 /*
@@ -5377,7 +5365,6 @@ heap_xlog_update(XLogRecPtr lsn, XLogRecord *record, bool move, bool hot_update)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_update *xlrec = (xl_heap_update *) XLogRecGetData(record);
-	Relation	reln = XLogOpenRelation(xlrec->target.node);
 	Buffer		buffer;
 	bool		samepage = (ItemPointerGetBlockNumber(&(xlrec->newtid)) ==
 							ItemPointerGetBlockNumber(&(xlrec->target.tid)));
@@ -5410,21 +5397,20 @@ heap_xlog_update(XLogRecPtr lsn, XLogRecord *record, bool move, bool hot_update)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln,
+	buffer = XLogReadBuffer(xlrec->target.node,
 							ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 							false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
 	if (!BufferIsValid(buffer))
 		goto newt;
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
 	if (XLByteLE(lsn, PageGetLSN(page)))		/* changes are applied */
 	{
 		UnlockReleaseBuffer(buffer);
 		if (samepage)
 		{
-
 			MIRROREDLOCK_BUFMGR_UNLOCK;
 			// -------- MirroredLock ----------
 
@@ -5497,7 +5483,7 @@ newt:;
 
 	if (record->xl_info & XLOG_HEAP_INIT_PAGE)
 	{
-		buffer = XLogReadBuffer(reln,
+		buffer = XLogReadBuffer(xlrec->target.node,
 								ItemPointerGetBlockNumber(&(xlrec->newtid)),
 								true);
 		Assert(BufferIsValid(buffer));
@@ -5507,10 +5493,10 @@ newt:;
 	}
 	else
 	{
-		buffer = XLogReadBuffer(reln,
+		buffer = XLogReadBuffer(xlrec->target.node,
 								ItemPointerGetBlockNumber(&(xlrec->newtid)),
 								false);
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, ItemPointerGetBlockNumber(&(xlrec->newtid)), buffer, lsn);
+		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->newtid)), buffer, lsn);
 		if (!BufferIsValid(buffer))
 		{
 			MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -5520,7 +5506,7 @@ newt:;
 		}
 		page = (Page) BufferGetPage(buffer);
 
-		REDO_PRINT_LSN_APPLICATION(reln, ItemPointerGetBlockNumber(&(xlrec->newtid)), page, lsn);
+		REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->newtid)), page, lsn);
 		if (XLByteLE(lsn, PageGetLSN(page)))	/* changes are applied */
 		{
 			UnlockReleaseBuffer(buffer);
@@ -5595,7 +5581,6 @@ heap_xlog_lock(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_lock *xlrec = (xl_heap_lock *) XLogRecGetData(record);
-	Relation	reln;
 	Buffer		buffer;
 	Page		page;
 	OffsetNumber offnum;
@@ -5605,18 +5590,15 @@ heap_xlog_lock(XLogRecPtr lsn, XLogRecord *record)
 	if (IsBkpBlockApplied(record, 0))
 		return;
 
-	reln = XLogOpenRelation(xlrec->target.node);
-	
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln,
+	buffer = XLogReadBuffer(xlrec->target.node,
 							ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 							false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
 	if (!BufferIsValid(buffer))
 	{
-		
 		MIRROREDLOCK_BUFMGR_UNLOCK;
 		// -------- MirroredLock ----------
 		
@@ -5624,7 +5606,7 @@ heap_xlog_lock(XLogRecPtr lsn, XLogRecord *record)
 	}
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
 	if (XLByteLE(lsn, PageGetLSN(page)))		/* changes are applied */
 	{
 		UnlockReleaseBuffer(buffer);
@@ -5675,7 +5657,6 @@ heap_xlog_inplace(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_heap_inplace *xlrec = (xl_heap_inplace *) XLogRecGetData(record);
-	Relation	reln = XLogOpenRelation(xlrec->target.node);
 	Buffer		buffer;
 	Page		page;
 	OffsetNumber offnum;
@@ -5690,13 +5671,12 @@ heap_xlog_inplace(XLogRecPtr lsn, XLogRecord *record)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 	
-	buffer = XLogReadBuffer(reln,
+	buffer = XLogReadBuffer(xlrec->target.node,
 							ItemPointerGetBlockNumber(&(xlrec->target.tid)),
 							false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), buffer, lsn);
 	if (!BufferIsValid(buffer))
 	{
-		
 		MIRROREDLOCK_BUFMGR_UNLOCK;
 		// -------- MirroredLock ----------
 		
@@ -5704,7 +5684,7 @@ heap_xlog_inplace(XLogRecPtr lsn, XLogRecord *record)
 	}
 	page = (Page) BufferGetPage(buffer);
 
-	REDO_PRINT_LSN_APPLICATION(reln, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->target.node, ItemPointerGetBlockNumber(&(xlrec->target.tid)), page, lsn);
 	if (XLByteLE(lsn, PageGetLSN(page)))		/* changes are applied */
 	{
 		UnlockReleaseBuffer(buffer);
@@ -5739,7 +5719,6 @@ heap_xlog_inplace(XLogRecPtr lsn, XLogRecord *record)
 	
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
-	
 }
 
 void
