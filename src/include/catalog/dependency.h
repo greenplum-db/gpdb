@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.34 2008/03/24 19:47:35 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.36 2008/06/08 22:41:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,7 +18,7 @@
 #include "catalog/objectaddress.h"
 
 
-/*----------
+/*
  * Precise semantics of a dependency relationship are specified by the
  * DependencyType code (which is stored in a "char" field in pg_depend,
  * so we assign ASCII-code values to the enumeration members).
@@ -63,7 +63,6 @@
  * contain zeroes.
  *
  * Other dependency flavors may be needed in future.
- *----------
  */
 
 typedef enum DependencyType
@@ -212,6 +211,8 @@ extern long changeDependencyFor(Oid classId, Oid objectId,
 extern bool sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId);
 
 extern void markSequenceUnowned(Oid seqId);
+
+extern List *getOwnedSequences(Oid relid);
 
 extern Oid	get_constraint_index(Oid constraintId);
 

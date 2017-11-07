@@ -4,7 +4,7 @@
  *
  * Portions Copyright (c) 2002-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/pg_locale.c,v 1.49 2009/04/01 09:17:32 heikki Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/pg_locale.c,v 1.41 2008/05/19 18:08:16 tgl Exp $
  *
  *-----------------------------------------------------------------------
  */
@@ -70,6 +70,12 @@ char	   *locale_monetary;
 char	   *locale_numeric;
 char	   *locale_time;
 char       *locale_collate;
+
+/* lc_time localization cache */
+char	   *localized_abbrev_days[7];
+char	   *localized_full_days[7];
+char	   *localized_abbrev_months[12];
+char	   *localized_full_months[12];
 
 /* lc_time localization cache */
 char	   *localized_abbrev_days[7];

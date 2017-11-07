@@ -193,6 +193,23 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  relation "bar_p" must have the same column names and column order as "foo_p"
 drop table foo_p;
 drop table bar_p;
+-- still different schema, but more than one level partitioning
+CREATE TABLE two_level_pt(a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+      SUBPARTITION BY RANGE (c)
+      SUBPARTITION TEMPLATE (
+      START (11) END (12) EVERY (1))
+      ( START (1) END (2) EVERY (1));
+NOTICE:  CREATE TABLE will create partition "two_level_pt_1_prt_1" for table "two_level_pt"
+NOTICE:  CREATE TABLE will create partition "two_level_pt_1_prt_1_2_prt_1" for table "two_level_pt_1_prt_1"
+CREATE TABLE candidate_for_leaf(a int, c int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- should fail
+ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
+      EXCHANGE PARTITION FOR (11) WITH TABLE candidate_for_leaf;
+ERROR:  relation "candidate_for_leaf" must have the same column names and column order as "two_level_pt"
 -- different owner 
 create role part_role;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
@@ -241,7 +258,8 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_6" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
-ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ERROR:  OIDS=TRUE is not allowed on partitioned tables
+HINT:  Use OIDS=FALSE.
 -- but disallow exchange if different oid settings
 create table foo_p (i int, j int) with (oids = false) distributed by (i)
 partition by range(j)
@@ -836,28 +854,28 @@ create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '0.5 days'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '0.5 days'...
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '0....
                                                              ^
 -- should fail
 create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '0.5 days'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '0.5 days'...
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '0....
                                                              ^
 -- should fail
 create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '12 hours'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '12 hours'...
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '12...
                                                              ^
 -- should fail
 create table foo_p (i int, j date) distributed by (i)
 partition by range(j)
 (start ('2007-01-01') end ('2008-01-01') every (interval '1.2 days'));
 ERROR:  EVERY parameter produces ambiguous partition rule
-LINE 3: ...('2007-01-01') end ('2008-01-01') every (interval '1.2 days'...
+LINE 3: (start ('2007-01-01') end ('2008-01-01') every (interval '1....
                                                              ^
 -- should work
 create table foo_p (i int, j timestamp) distributed by (i)
@@ -1172,7 +1190,7 @@ careful');
 copy partsupp from stdin with delimiter '|';
 drop table partsupp;
 --MPP-3285
-CREATE TABLE LINEITEM (
+CREATE TABLE PARTLINEITEM (
                 L_ORDERKEY INT8,
                 L_PARTKEY INTEGER,
                 L_SUPPKEY INTEGER,
@@ -1196,12 +1214,12 @@ partition p1 start('1992-01-31') end('1998-11-01') every(interval '20 months')
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'l_orderkey' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_1" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_2" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_3" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_4" for table "lineitem"
-NOTICE:  CREATE TABLE will create partition "lineitem_1_prt_p1_5" for table "lineitem"
-copy lineitem from stdin with delimiter '|';
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_1" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_2" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_3" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_4" for table "partlineitem"
+NOTICE:  CREATE TABLE will create partition "partlineitem_1_prt_p1_5" for table "partlineitem"
+copy partlineitem from stdin with delimiter '|';
 select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
  start, parrangestartincl,
  pg_get_expr(parrangeend, parchildrelid, false) as end,
@@ -1209,7 +1227,7 @@ select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
   pg_get_expr(parlistvalues, parchildrelid, false) as list from
    pg_partition_rule
     r, pg_partition p where r.paroid = p.oid and p.parlevel = 0 and
-	 p.parrelid = 'lineitem'::regclass order by 1;
+	 p.parrelid = 'partlineitem'::regclass order by 1;
  parname | parruleord |       start        | parrangestartincl |        end         | parrangeendincl | list 
 ---------+------------+--------------------+-------------------+--------------------+-----------------+------
  p1_1    |          1 | '01-31-1992'::date | t                 | '09-30-1993'::date | f               | 
@@ -1219,7 +1237,7 @@ select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
  p1_5    |          5 | '09-30-1998'::date | t                 | '11-01-1998'::date | f               | 
 (5 rows)
 
-drop table lineitem;
+drop table partlineitem;
 -- Make sure ADD creates dependencies
 create table i (i int) partition by range(i) (start (1) end(3) every(1));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
@@ -3388,7 +3406,8 @@ NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_6" for table "ran
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_7" for table "rank_damage"
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_8" for table "rank_damage"
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_9" for table "rank_damage"
-ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ERROR:  OIDS=TRUE is not allowed on partitioned tables
+HINT:  Use OIDS=FALSE.
 -- this works
 create table rank_damage (i int, j int)  partition by range(j) (start(1) end(10)
 every(1));
@@ -3421,7 +3440,8 @@ ERROR:  can't drop a constraint from "rank_damage_1_prt_1"; it is part of a part
 HINT:  You may be able to perform the operation on the partitioned table as a whole.
 alter table rank_damage add partition ppo end (22) with (oids = true);
 NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_ppo" for table "rank_damage"
-ERROR:  OIDS=TRUE is not allowed on partitioned tables. Use OIDS=FALSE
+ERROR:  OIDS=TRUE is not allowed on partitioned tables
+HINT:  Use OIDS=FALSE.
 drop table rank_damage, rank2_damage;
 -- MPP-5831, type cast in SPLIT
 CREATE TABLE sg_cal_event_silvertail_hour (
@@ -4087,7 +4107,65 @@ select schemaname, tablename from pg_tables where schemaname = 'public' and tabl
 (10 rows)
 
 drop table anotherit;
--- test table constraint inheritance
+--
+-- Test table constraint inheritance
+--
+-- with a named UNIQUE constraint
+create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
+NOTICE:  CREATE TABLE will create partition "it_1_prt_1" for table "it"
+NOTICE:  CREATE TABLE will create partition "it_1_prt_2" for table "it"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename | indexname 
+------------+-----------+-----------
+(0 rows)
+
+alter table it add constraint it_unique_i unique (i);
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_i_key" for table "it"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_1_i_key" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD UNIQUE will create implicit index "it_1_prt_2_i_key" for table "it_1_prt_2"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename  |    indexname     
+------------+------------+------------------
+ public     | it         | it_i_key
+ public     | it_1_prt_1 | it_1_prt_1_i_key
+ public     | it_1_prt_2 | it_1_prt_2_i_key
+(3 rows)
+
+alter table it drop constraint it_unique_i;
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename | indexname 
+------------+-----------+-----------
+(0 rows)
+
+drop table it;
+-- with a PRIMARY KEY constraint, without giving it a name explicitly.
+create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
+NOTICE:  CREATE TABLE will create partition "it_1_prt_1" for table "it"
+NOTICE:  CREATE TABLE will create partition "it_1_prt_2" for table "it"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename | indexname 
+------------+-----------+-----------
+(0 rows)
+
+alter table it add primary key(i);
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_pkey" for table "it"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_1_pkey" for table "it_1_prt_1"
+NOTICE:  ALTER TABLE / ADD PRIMARY KEY will create implicit index "it_1_prt_2_pkey" for table "it_1_prt_2"
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+ schemaname | tablename  |    indexname    
+------------+------------+-----------------
+ public     | it         | it_pkey
+ public     | it_1_prt_1 | it_1_prt_1_pkey
+ public     | it_1_prt_2 | it_1_prt_2_pkey
+(3 rows)
+
+-- FIXME: dropping a primary key doesn't currently work correctly. It doesn't
+-- drop the key on the partitions, only the parent. See
+-- https://github.com/greenplum-db/gpdb/issues/3750
+--
+-- alter table it add primary key(i);
+-- select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+drop table it;
 create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
 NOTICE:  CREATE TABLE will create partition "it_1_prt_1" for table "it"
 NOTICE:  CREATE TABLE will create partition "it_1_prt_2" for table "it"

@@ -5,7 +5,7 @@
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/backend/Makefile,v 1.128 2008/03/17 19:44:40 petere Exp $
+# $PostgreSQL: pgsql/src/backend/Makefile,v 1.129 2008/08/01 13:16:08 alvherre Exp $
 #
 #-------------------------------------------------------------------------
 
@@ -21,8 +21,8 @@ include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile
 endif
 
 SUBDIRS = access bootstrap catalog parser commands executor \
-	fts lib libpq gp_libpq_fe main nodes optimizer port postmaster regex \
-	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb\
+	fts lib libpq main nodes optimizer port postmaster regex \
+	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb \
 	$(ADDON_SUBDIR)
 
 ifeq ($(enable_orca),yes)

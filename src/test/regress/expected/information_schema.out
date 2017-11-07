@@ -85,15 +85,16 @@ where ordinal_position = 20;
  pg_catalog         | pg_statistic         | stavalues3         |               20
  pg_catalog         | pg_partitions        | parenttablespace   |               20
  information_schema | attributes           | datetime_precision |               20
- pg_catalog         | pg_type              | typstorage         |               20
+ pg_catalog         | pg_type              | typanalyze         |               20
  pg_catalog         | pg_proc              | proargnames        |               20
  pg_catalog         | pg_class             | relfkeys           |               20
+ pg_catalog         | pg_constraint        | consrc             |               20
  pg_catalog         | pg_am                | amrestrpos         |               20
  information_schema | columns              | collation_catalog  |               20
  information_schema | domains              | udt_catalog        |               20
  information_schema | parameters           | numeric_scale      |               20
  information_schema | routines             | collation_catalog  |               20
-(16 rows)
+(17 rows)
 
 -- MPP-25724
 create table mpp_25724(mpp_25724_col int) distributed by (mpp_25724_col);

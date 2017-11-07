@@ -39,7 +39,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.55 2008/03/26 21:10:38 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/tablespace.c,v 1.57 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -52,7 +52,6 @@
 #include <sys/stat.h>
 
 #include "access/heapam.h"
-#include "catalog/heap.h"
 #include "access/sysattr.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
@@ -74,13 +73,15 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/tqual.h"
 
+#include "access/persistentfilesysobjname.h"
+#include "catalog/heap.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbutil.h"
-#include "access/persistentfilesysobjname.h"
 #include "cdb/cdbpersistentdatabase.h"
 #include "cdb/cdbpersistentrelation.h"
 #include "cdb/cdbmirroredfilesysobj.h"
@@ -289,9 +290,9 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
  * Be careful to check that the tablespace is empty.
  */
 void
-RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
+DropTableSpace(DropTableSpaceStmt *stmt)
 {
-	char	   *tablespacename;
+	char	   *tablespacename = stmt->tablespacename;
 	HeapScanDesc scandesc;
 	Relation	rel;
 	HeapTuple	tuple;
@@ -303,23 +304,6 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	PersistentFileSysState persistentState;
 	ItemPointerData persistentTid;
 	int64		persistentSerialNum;
-
-	/*
-	 * General DROP (object) syntax allows fully qualified names, but
-	 * tablespaces are global objects that do not live in schemas, so
-	 * it is a syntax error if a fully qualified name was given.
-	 */
-	if (list_length(names) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("tablespace name may not be qualified")));
-	tablespacename = strVal(linitial(names));
-
-	/* Disallow CASCADE */
-	if (behavior == DROP_CASCADE)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("syntax at or near \"cascade\"")));
 
 	/*
 	 * Find the target tuple
@@ -335,7 +319,7 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 
 	if (!HeapTupleIsValid(tuple))
 	{
-		if (!missing_ok)
+		if (!stmt->missing_ok)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -482,7 +466,18 @@ RemoveTableSpace(List *names, DropBehavior behavior, bool missing_ok)
 	/* We keep the lock on the row in pg_tablespace until commit */
 	heap_close(rel, NoLock);
 
-	/* Note: no need for dispatch, that is handled in utility.c */
+	/*
+	 * If we are the QD, dispatch this DROP command to all the QEs
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NIL,
+									NULL);
+	}
 	return;
 }
 

@@ -269,10 +269,8 @@ select pg_get_viewdef('dview',true);
 
 -- need drop cascade
 drop function dfunc(int, double precision);
-NOTICE:  rule _RETURN on view dview depends on function dfunc(integer,double precision)
-NOTICE:  view dview depends on rule _RETURN on view dview
 ERROR:  cannot drop function dfunc(integer,double precision) because other objects depend on it
+DETAIL:  view dview depends on function dfunc(integer,double precision)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 drop function dfunc(int, double precision) cascade;
-NOTICE:  drop cascades to rule _RETURN on view dview
 NOTICE:  drop cascades to view dview

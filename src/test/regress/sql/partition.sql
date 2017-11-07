@@ -107,6 +107,22 @@ alter table foo_p exchange partition for(rank(6)) with table bar_p;
 drop table foo_p;
 drop table bar_p;
 
+-- still different schema, but more than one level partitioning
+CREATE TABLE two_level_pt(a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (b)
+      SUBPARTITION BY RANGE (c)
+      SUBPARTITION TEMPLATE (
+      START (11) END (12) EVERY (1))
+      ( START (1) END (2) EVERY (1));
+
+CREATE TABLE candidate_for_leaf(a int, c int);
+
+-- should fail
+ALTER TABLE two_level_pt ALTER PARTITION FOR (1)
+      EXCHANGE PARTITION FOR (11) WITH TABLE candidate_for_leaf;
+
+
 -- different owner 
 create role part_role;
 create table foo_p (i int, j int) distributed by (i)
@@ -617,7 +633,7 @@ copy partsupp from stdin with delimiter '|';
 \.
 drop table partsupp;
 --MPP-3285
-CREATE TABLE LINEITEM (
+CREATE TABLE PARTLINEITEM (
                 L_ORDERKEY INT8,
                 L_PARTKEY INTEGER,
                 L_SUPPKEY INTEGER,
@@ -640,7 +656,7 @@ partition by range (l_commitdate)
 partition p1 start('1992-01-31') end('1998-11-01') every(interval '20 months')
 
 );
-copy lineitem from stdin with delimiter '|';
+copy partlineitem from stdin with delimiter '|';
 18182|5794|3295|4|9|15298.11|0.04|0.01|N|O|1995-07-04|1995-05-30|1995-08-03|DELIVER IN PERSON|RAIL|y special platelets
 \.
 
@@ -651,9 +667,9 @@ select parname, parruleord, pg_get_expr(parrangestart, parchildrelid, false) as
   pg_get_expr(parlistvalues, parchildrelid, false) as list from
    pg_partition_rule
     r, pg_partition p where r.paroid = p.oid and p.parlevel = 0 and
-	 p.parrelid = 'lineitem'::regclass order by 1;
+	 p.parrelid = 'partlineitem'::regclass order by 1;
 
-drop table lineitem;
+drop table partlineitem;
 
 -- Make sure ADD creates dependencies
 create table i (i int) partition by range(i) (start (1) end(3) every(1));
@@ -2056,7 +2072,32 @@ select schemaname, tablename from pg_tables where schemaname = 'public' and tabl
 'anotherit%';
 drop table anotherit;
 
--- test table constraint inheritance
+--
+-- Test table constraint inheritance
+--
+-- with a named UNIQUE constraint
+create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+alter table it add constraint it_unique_i unique (i);
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+alter table it drop constraint it_unique_i;
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+drop table it;
+
+-- with a PRIMARY KEY constraint, without giving it a name explicitly.
+create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+alter table it add primary key(i);
+select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+-- FIXME: dropping a primary key doesn't currently work correctly. It doesn't
+-- drop the key on the partitions, only the parent. See
+-- https://github.com/greenplum-db/gpdb/issues/3750
+--
+-- alter table it add primary key(i);
+-- select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
+drop table it;
+
+
 create table it (i int) distributed by (i) partition by range(i) (start(1) end(3) every(1));
 select schemaname, tablename, indexname from pg_indexes where schemaname = 'public' and tablename like 'it%';
 alter table it add primary key(i);

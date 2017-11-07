@@ -2,18 +2,35 @@ create schema qp_dml_oids;
 set search_path='qp_dml_oids';
 
 DROP TABLE IF EXISTS dml_ao;
-CREATE TABLE dml_ao (a int , b int default -1, c text) WITH (appendonly = true, oids = true) DISTRIBUTED BY (a);
-INSERT INTO dml_ao VALUES(generate_series(1,2),generate_series(1,2),'r');
 
-INSERT INTO dml_ao VALUES(NULL,NULL,NULL);
+-- Create a table with OIDS, with a few rows
+--
+-- GPDB doesn't guarantee that OIDs on a user table are unique across nodes. So to
+-- make sure that the OIDs are unique in this test, all the rows have the same
+-- distribution key.
+CREATE TABLE dml_ao (a int , b int default -1, c text) WITH (appendonly = true, oids = true) DISTRIBUTED BY (a);
+INSERT INTO dml_ao VALUES(1, 1, 'r');
+INSERT INTO dml_ao VALUES(1, 2, 'r');
+INSERT INTO dml_ao VALUES(1,NULL,NULL);
 
 --
--- DDL on AO/CO tables with OIDS(Negative Test)
+-- Check that UPDATE doesn't change the OIDs of existing rows.
 --
 DROP TABLE IF EXISTS tempoid;
 CREATE TABLE tempoid as SELECT oid,a FROM dml_ao ORDER BY 1;
 UPDATE dml_ao SET a = 100;
-SELECT * FROM ( (SELECT COUNT(*) FROM dml_ao) UNION (SELECT COUNT(*) FROM tempoid, dml_ao WHERE tempoid.oid = dml_ao.oid AND tempoid.gp_segment_id = dml_ao.gp_segment_id))foo;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+
+-- Repeat the test a few times, just to make sure that at least one of these
+-- UPDATEs moved the tuples across segments. To make sure that that doesn't
+-- change the OIDs either.
+UPDATE dml_ao SET a = 101;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+
+UPDATE dml_ao SET a = 102;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+
+
 
 DROP TABLE IF EXISTS dml_heap_check_r;
 CREATE TABLE dml_heap_check_r (
@@ -145,11 +162,7 @@ CREATE TABLE tempoid as SELECT oid,col1,a FROM dml_heap_r ORDER BY 1;
 
 SELECT SUM(dml_heap_r.a) FROM dml_heap_p, dml_heap_r WHERE dml_heap_r.b = dml_heap_p.a;
 
--- FIXME: This currently trips an assertion, see
--- https://github.com/greenplum-db/gpdb/issues/3611
--- Re-enable once that's fixed!
-
---UPDATE dml_heap_r SET a = dml_heap_r.a FROM dml_heap_p WHERE dml_heap_r.b = dml_heap_p.a;
+UPDATE dml_heap_r SET a = dml_heap_r.a FROM dml_heap_p WHERE dml_heap_r.b = dml_heap_p.a;
 
 -- The query checks that the tuple oids remain the remain pre and post update .
 -- SELECT COUNT(*) FROM tempoid, dml_heap_r WHERE tempoid.oid = dml_heap_r.oid AND tempoid.col1 = dml_heap_r.col1 is a join on the tuple oids before update and after update. If the oids remain the same the below query should return 1 row which is equivalent to the number of rows in the table
@@ -157,4 +170,34 @@ SELECT * FROM ( (SELECT COUNT(*) FROM dml_heap_r) UNION (SELECT COUNT(*) FROM te
 
 SELECT SUM(a) FROM dml_heap_r;
 
+--
+-- Check that a row gets a new OID, even when inserting an otherwise identical row
+-- to it (see commit 3d02cae310).
+--
+-- Note: GPDB doesn't guarantee OIDS to be unique across segments! So if you change
+-- this to DISTRIBUTED RANDOMLY, it can fail.
+--
+create table dml_heap_with_oids(id int4) with oids distributed by (id);
+insert into dml_heap_with_oids values (1);
+insert into dml_heap_with_oids select * from dml_heap_with_oids;
+insert into dml_heap_with_oids select * from dml_heap_with_oids;
+select count(*), count(distinct oid) from dml_heap_with_oids;
 
+
+--
+-- Check that a tuple gets an OID, even if it's toasted (there used to
+-- be a bug, where toasting a tuple cleared its just-assigned OID)
+--
+INSERT INTO dml_ao (a, b, c) VALUES (10, 1, repeat('x', 50000));
+INSERT INTO dml_ao (a, b, c) VALUES (10, 2, repeat('x', 50000));
+
+SELECT COUNT(distinct oid) FROM dml_ao where a = 10;
+
+--
+-- Check that new OIDs are generated even if the tuple being inserted came from
+-- the same relation and segment.
+--
+INSERT INTO dml_ao VALUES (11, 1, 'foo');
+INSERT INTO dml_ao VALUES (11, 2, 'bar');
+INSERT INTO dml_ao SELECT * FROM dml_ao WHERE a = 11 LIMIT 1;
+SELECT COUNT(DISTINCT oid) FROM dml_ao WHERE a = 11; -- all three rows should have different OID

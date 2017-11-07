@@ -19,8 +19,8 @@
 #include "access/xact.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_dtx.h"
@@ -185,89 +185,17 @@ qdSerializeDtxContextInfo(int *size, bool wantSnapshot, bool inCursor,
 	int			serializedLen;
 	DtxContextInfo *pDtxContextInfo = NULL;
 
-	/*------------------------------------------------------------------------
-	 * If we already have a LatestSnapshot set then no reason to try and get a
-	 * new one. just use that one. But... there is one important reason why
-	 * this HAS to be here. ROLLBACK stmts get dispatched to QEs in the abort
-	 * transaction code. This code tears down enough stuff such that you can't
-	 * call GetTransactionSnapshot() within that code. So we need to use the
-	 * LatestSnapshot since we can't re-gen a new one.
-	 *
-	 * It is also very possible that for a single user statement which may
-	 * only generate a single snapshot that we will dispatch multiple
-	 * statements to our qExecs. Something like:
-	 *
-	 *    					  QD			  QEs
-	 *    					  |				  |
-	 * User SQL Statement --->|		BEGIN	  |
-	 *    					  |-------------->|
-	 *    					  |		STMT	  |
-	 *    					  |-------------->|
-	 *    					  |    PREPARE	  |
-	 *    					  |-------------->|
-	 *    					  |    COMMIT	  |
-	 *    					  |-------------->|
-	 *    					  |				  |
-	 *
-	 * This may seem like a problem because all four of those will dispatch
-	 * the same snapshot with the same curcid. But... this is OK because
-	 * BEGIN, PREPARE, and COMMIT don't need Snapshots on the QEs.
-	 *
-	 * NOTE: This will be a problem if we ever need to dispatch more than one
-	 * statement to the qExecs and more than one needs a snapshot!
-	 *------------------------------------------------------------------------
+	/*
+	 * If 'wantSnapshot' is set, then serialize the ActiveSnapshot. The
+	 * caller better have ActiveSnapshot set.
 	 */
 	*size = 0;
 
 	if (wantSnapshot)
 	{
-
-		if (LatestSnapshot == NULL &&
-			SerializableSnapshot == NULL && !IsAbortInProgress())
-		{
-			/*
-			 * unfortunately, the dtm issues a select for prepared xacts at
-			 * the beginning and this is before a snapshot has been set up, so
-			 * we need one for that but not for when we don't have a valid
-			 * XID.
-			 *
-			 * but we CAN'T do this if an ABORT is in progress... instead
-			 * we'll send a NONE since the qExecs don't need the information
-			 * to do a ROLLBACK.
-			 */
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "qdSerializeDtxContextInfo calling GetTransactionSnapshot to make snapshot");
-
-			GetTransactionSnapshot();
-		}
-
-		if (LatestSnapshot != NULL)
-		{
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "qdSerializeDtxContextInfo using LatestSnapshot");
-
-			snapshot = LatestSnapshot;
-			elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-				 "[Distributed Snapshot #%u] *QD Use Latest* currcid = %d (gxid = %u, '%s')",
-				 LatestSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
-				 LatestSnapshot->curcid,
-				 getDistributedTransactionId(),
-				 DtxContextToString(DistributedTransactionContext));
-		}
-		else if (SerializableSnapshot != NULL)
-		{
-			elog((Debug_print_full_dtm ? LOG : DEBUG5),
-				 "qdSerializeDtxContextInfo using SerializableSnapshot");
-
-			snapshot = SerializableSnapshot;
-			elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-				 "[Distributed Snapshot #%u] *QD Use Serializable* currcid = %d (gxid = %u, '%s')",
-				 SerializableSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId,
-				 SerializableSnapshot->curcid,
-				 getDistributedTransactionId(),
-				 DtxContextToString(DistributedTransactionContext));
-
-		}
+		if (!ActiveSnapshotSet())
+			elog(ERROR, "could not serialize current snapshot, ActiveSnapshot not set");
+		snapshot = GetActiveSnapshot();
 	}
 
 	switch (DistributedTransactionContext)

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.291 2008/03/19 18:38:30 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.295 2008/07/18 20:26:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,226 +68,6 @@
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbvars.h"
 
-/*
- * Error-checking support for DROP commands
- */
-
-struct msgstrings
-{
-	char		kind;
-	int			nonexistent_code;
-	const char *nonexistent_msg;
-	const char *skipping_msg;
-	const char *nota_msg;
-	const char *drophint_msg;
-};
-
-static const struct msgstrings msgstringarray[] = {
-	{RELKIND_RELATION,
-		ERRCODE_UNDEFINED_TABLE,
-		gettext_noop("table \"%s\" does not exist"),
-		gettext_noop("table \"%s\" does not exist, skipping"),
-		gettext_noop("\"%s\" is not a base table"),
-	gettext_noop("Use DROP TABLE to remove a table, DROP EXTERNAL TABLE if external, or DROP FOREIGN TABLE if foreign.")},
-	{RELKIND_SEQUENCE,
-		ERRCODE_UNDEFINED_TABLE,
-		gettext_noop("sequence \"%s\" does not exist"),
-		gettext_noop("sequence \"%s\" does not exist, skipping"),
-		gettext_noop("\"%s\" is not a sequence"),
-	gettext_noop("Use DROP SEQUENCE to remove a sequence.")},
-	{RELKIND_VIEW,
-		ERRCODE_UNDEFINED_TABLE,
-		gettext_noop("view \"%s\" does not exist"),
-		gettext_noop("view \"%s\" does not exist, skipping"),
-		gettext_noop("\"%s\" is not a view"),
-	gettext_noop("Use DROP VIEW to remove a view.")},
-	{RELKIND_INDEX,
-		ERRCODE_UNDEFINED_OBJECT,
-		gettext_noop("index \"%s\" does not exist"),
-		gettext_noop("index \"%s\" does not exist, skipping"),
-		gettext_noop("\"%s\" is not an index"),
-	gettext_noop("Use DROP INDEX to remove an index.")},
-	{RELKIND_COMPOSITE_TYPE,
-		ERRCODE_UNDEFINED_OBJECT,
-		gettext_noop("type \"%s\" does not exist"),
-		gettext_noop("type \"%s\" does not exist, skipping"),
-		gettext_noop("\"%s\" is not a type"),
-	gettext_noop("Use DROP TYPE to remove a type.")},
-	{'\0', 0, NULL, NULL, NULL}
-};
-
-
-/*
- * Emit the right error message for a "DROP" command issued on a
- * relation of the wrong type
- */
-static void
-DropErrorMsgWrongType(char *relname, char wrongkind, char rightkind)
-{
-	const struct msgstrings *rentry;
-	const struct msgstrings *wentry;
-
-	for (rentry = msgstringarray; rentry->kind != '\0'; rentry++)
-		if (rentry->kind == rightkind)
-			break;
-	Assert(rentry->kind != '\0');
-
-	for (wentry = msgstringarray; wentry->kind != '\0'; wentry++)
-		if (wentry->kind == wrongkind)
-			break;
-	/* wrongkind could be something we don't have in our table... */
-
-	ereport(ERROR,
-			(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-			 errmsg(rentry->nota_msg, relname),
-			 (wentry->kind != '\0') ? errhint("%s", wentry->drophint_msg) : 0));
-}
-
-/*
- * Emit the right error message for a "DROP" command issued on a
- * non-existent relation
- */
-void
-DropErrorMsgNonExistent(const RangeVar *rel, char rightkind, bool missing_ok)
-{
-	const struct msgstrings *rentry;
-
-	for (rentry = msgstringarray; rentry->kind != '\0'; rentry++)
-	{
-		if (rentry->kind == rightkind)
-		{
-			if (!missing_ok)
-			{
-				ereport(ERROR,
-						(errcode(rentry->nonexistent_code),
-						 errmsg(rentry->nonexistent_msg, rel->relname)));
-			}
-			else
-			{
-				if (Gp_role != GP_ROLE_EXECUTE)
-					ereport(NOTICE, (errmsg(rentry->skipping_msg, rel->relname)));
-				break;
-			}
-		}
-	}
-
-	Assert(rentry->kind != '\0');		/* Should be impossible */
-}
-
-/*
- * returns false if missing_ok is true and the object does not exist,
- * true if object exists and permissions are OK,
- * errors otherwise
- *
- */
-
-static bool
-CheckDropPermissions(RangeVar *rel, char rightkind, bool missing_ok)
-{
-	Oid			relOid;
-	HeapTuple	tuple;
-	Form_pg_class classform;
-
-	relOid = RangeVarGetRelid(rel, true);
-	if (!OidIsValid(relOid))
-	{
-		DropErrorMsgNonExistent(rel, rightkind, missing_ok);
-		return false;
-	}
-
-	tuple = SearchSysCache(RELOID,
-						   ObjectIdGetDatum(relOid),
-						   0, 0, 0);
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relOid);
-
-	classform = (Form_pg_class) GETSTRUCT(tuple);
-
-	if (classform->relkind != rightkind)
-		DropErrorMsgWrongType(rel->relname, classform->relkind,
-							  rightkind);
-
-	/* Allow DROP to either table owner or schema owner */
-	if (!pg_class_ownercheck(relOid, GetUserId()) &&
-		!pg_namespace_ownercheck(classform->relnamespace, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
-					   rel->relname);
-
-	if (!allowSystemTableModsDDL && IsSystemClass(classform))
-		ereport(ERROR,
-				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 errmsg("permission denied: \"%s\" is a system catalog",
-						rel->relname)));
-
-	ReleaseSysCache(tuple);
-
-	return true;
-}
-
-/*
- * CheckDropRelStorage
- * 
- * Catch a mismatch between the DROP object type requested and the
- * actual object in the catalog. For example, if DROP EXTERNAL TABLE t
- * was issue, verify that t is indeed an external table, error if not.
- */
-static bool
-CheckDropRelStorage(RangeVar *rel, ObjectType removeType)
-{
-	Oid			relOid;
-	HeapTuple	tuple;
-	char		relstorage;
-
-	relOid = RangeVarGetRelid(rel, true);
-	
-	if (!OidIsValid(relOid))
-		return false;
-
-	/* Find out the relstorage */
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relOid));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relOid);
-	relstorage = ((Form_pg_class) GETSTRUCT(tuple))->relstorage;
-	ReleaseSysCache(tuple);
-
-	/* 
-	 * skip the check if it's external partition. 
-	 * 1.remember rel_is_child_partition is only working on QD. 
-	 * 2.we do the check on QD, no need to do it again on QE.
-	 */
-	if (relstorage == RELSTORAGE_EXTERNAL && (Gp_segment != -1 || rel_is_child_partition(relOid)))
-		return true;
-
-	if ((removeType == OBJECT_EXTTABLE && relstorage != RELSTORAGE_EXTERNAL) ||
-		(removeType == OBJECT_TABLE && (relstorage == RELSTORAGE_EXTERNAL ||
-										relstorage == RELSTORAGE_FOREIGN)))
-	{
-		/* we have a mismatch. format an error string and shoot */
-		
-		char *want_type;
-		char *hint;
-		
-		if (removeType == OBJECT_EXTTABLE)
-			want_type = pstrdup("an external");
-		else
-			want_type = pstrdup("a base");
-
-		if (relstorage == RELSTORAGE_EXTERNAL)
-			hint = pstrdup("Use DROP EXTERNAL TABLE to remove an external table");
-		else if (relstorage == RELSTORAGE_FOREIGN)
-			hint = pstrdup("Use DROP FOREIGN TABLE to remove a foreign table");
-		else
-			hint = pstrdup("Use DROP TABLE to remove a base table");
-		
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is not %s table", rel->relname, want_type),
-				 errhint("%s", hint)));
-	}
-	
-
-	return true;
-}
 
 /*
  * Verify user has ownership of specified relation, else ereport.
@@ -469,6 +249,8 @@ check_xact_readonly(Node *parsetree)
 		case T_ViewStmt:
 		case T_DropCastStmt:
 		case T_DropdbStmt:
+		case T_DropTableSpaceStmt:
+		case T_DropFileSpaceStmt:
 		case T_RemoveFuncStmt:
 		case T_DropQueueStmt:
 		case T_DropResourceGroupStmt:
@@ -492,172 +274,6 @@ check_xact_readonly(Node *parsetree)
 			/* do nothing */
 			break;
 	}
-}
-
-
-/*
- * Process one relation in a drop statement.
- */
-static bool
-ProcessDropStatement(DropStmt *stmt)
-{
-	ListCell   *arg;
-	bool		dispatchDrop = true;
-
-	Assert(list_length(stmt->objects) == 1);
-
-	foreach(arg, stmt->objects)
-	{
-		List	   *names = (List *) lfirst(arg);
-		RangeVar   *rel;
-
-		/*
-		 * MPP-2879: We don't yet have locks, if we
-		 * noticed that we don't have permission to drop
-		 * on the QD, we *must* not dispatch -- we may be
-		 * racing other DDL. Multiple creates/drops racing
-		 * each other will produce very bad problems.
-		 */
-		switch (stmt->removeType)
-		{
-			case OBJECT_TABLE:
-			case OBJECT_EXTTABLE:
-				rel = makeRangeVarFromNameList(names);
-				if (CheckDropPermissions(rel, RELKIND_RELATION,
-										 stmt->missing_ok) &&
-						CheckDropRelStorage(rel, stmt->removeType))
-				{
-					/*
-					 * If RemoveRelation fails to find the relation on QD, it
-					 * will return false and we should not dispatch the drop
-					 * to segments as not holding Exclusive Lock.
-					 */
-					dispatchDrop = RemoveRelation(rel, stmt->behavior, stmt,
-												  RELKIND_RELATION);
-				}
-				else
-					dispatchDrop = false;
-				break;
-
-			case OBJECT_SEQUENCE:
-				rel = makeRangeVarFromNameList(names);
-				if (CheckDropPermissions(rel, RELKIND_SEQUENCE,
-										 stmt->missing_ok))
-					dispatchDrop = RemoveRelation(rel, stmt->behavior, stmt,
-												  RELKIND_SEQUENCE);
-				else
-					dispatchDrop = false;
-				break;
-
-			case OBJECT_VIEW:
-				rel = makeRangeVarFromNameList(names);
-				if (CheckDropPermissions(rel, RELKIND_VIEW, stmt->missing_ok))
-					RemoveView(rel, stmt->behavior);
-				else
-					dispatchDrop = false;
-				break;
-
-			case OBJECT_INDEX:
-				rel = makeRangeVarFromNameList(names);
-				if (CheckDropPermissions(rel, RELKIND_INDEX, stmt->missing_ok))
-					RemoveIndex(rel, stmt->behavior);
-				else
-					dispatchDrop = false;
-				break;
-
-			case OBJECT_TYPE:
-				/*
-				 * RemoveType does its own permissions checks
-				 */
-				RemoveType(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_DOMAIN:
-				/*
-				 * RemoveDomain does its own permissions checks
-				 */
-				RemoveDomain(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_CONVERSION:
-				DropConversionCommand(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_SCHEMA:
-				/*
-				 * RemoveSchema does its own permissions checks
-				 */
-				RemoveSchema(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_FILESPACE:
-				/*
-				 * RemoveFileSpace does its own permissions checks
-				 */
-				RemoveFileSpace(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_TABLESPACE:
-				/*
-				 * RemoveTableSpace does its own permissions checks
-				 */
-				RemoveTableSpace(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_EXTPROTOCOL:
-				/*
-				 * RemoveExtProtocol does its own permissions checks
-				 */
-				RemoveExtProtocol(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_TSPARSER:
-				/*
-				 * RemoveTSParser does its own permission checks
-				 */
-				RemoveTSParser(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_TSDICTIONARY:
-				/*
-				 * RemoveTSDictionary does its own permission checks
-				 */
-				RemoveTSDictionary(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_TSTEMPLATE:
-				/*
-				 * RemoveTSTemplate does its own permission checks
-				 */
-				RemoveTSTemplate(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_TSCONFIGURATION:
-				/*
-				 * RemoveTSConfiguration does its own permission checks
-				 */
-				RemoveTSConfiguration(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			case OBJECT_EXTENSION:
-				/*
-				 * RemoveExtension does its own permissions checks
-				 */
-				RemoveExtension(names, stmt->behavior, stmt->missing_ok);
-				break;
-
-			default:
-				elog(ERROR, "unrecognized drop object type: %d",
-					 (int) stmt->removeType);
-				break;
-		}
-
-		/*
-		 * We used to need to do CommandCounterIncrement() here,
-		 * but now it's done inside performDeletion().
-		 */
-	}
-	return dispatchDrop;
 }
 
 /*
@@ -684,7 +300,7 @@ CheckRestrictedOperation(const char *cmdname)
  *		general utility function invoker
  *
  *	parsetree: the parse tree for the utility statement
- *	queryString: original source text of command (NULL if not available)
+ *	queryString: original source text of command
  *	params: parameters to use during execution
  *	isTopLevel: true if executing a "top level" (interactively issued) command
  *	dest: where to send results
@@ -707,7 +323,7 @@ ProcessUtility(Node *parsetree,
 			   DestReceiver *dest,
 			   char *completionTag)
 {
-	Assert(queryString != NULL);	/* required as of 8.4 */
+	Assert(queryString != NULL);				/* required as of 8.4 */
 
 	check_xact_readonly(parsetree);
 
@@ -1073,19 +689,85 @@ ProcessUtility(Node *parsetree,
 			CreateFileSpace((CreateFileSpaceStmt *) parsetree);
 			break;
 
+		case T_DropFileSpaceStmt:
+			/* Note: This is allowed in a transaction */
+			DropFileSpace((DropFileSpaceStmt *) parsetree);
+			break;
+
 		case T_CreateTableSpaceStmt:
 			CreateTableSpace((CreateTableSpaceStmt *) parsetree);
+			break;
+
+		case T_DropTableSpaceStmt:
+			/* In GPDB; this is allowed in a transaction */
+#if 0
+			PreventTransactionChain(isTopLevel, "DROP TABLESPACE");
+#endif
+			DropTableSpace((DropTableSpaceStmt *) parsetree);
 			break;
 
 		case T_DropStmt:
 			{
 				DropStmt   *stmt = (DropStmt *) parsetree;
 				ListCell   *arg;
-				List       *objects;
-				bool       if_exists;
+				List	   *objects;
+				bool		if_exists;
 
 				if_exists = stmt->missing_ok;
 				objects = stmt->objects;
+
+				switch (stmt->removeType)
+				{
+					case OBJECT_EXTTABLE:
+					case OBJECT_TABLE:
+					case OBJECT_SEQUENCE:
+					case OBJECT_VIEW:
+					case OBJECT_INDEX:
+						RemoveRelations(stmt);
+						break;
+
+					case OBJECT_TYPE:
+					case OBJECT_DOMAIN:
+						RemoveTypes(stmt);
+						break;
+
+					case OBJECT_CONVERSION:
+						DropConversionsCommand(stmt);
+						break;
+
+					case OBJECT_SCHEMA:
+						RemoveSchemas(stmt);
+						break;
+
+					case OBJECT_TSPARSER:
+						RemoveTSParsers(stmt);
+						break;
+
+					case OBJECT_TSDICTIONARY:
+						RemoveTSDictionaries(stmt);
+						break;
+
+					case OBJECT_TSTEMPLATE:
+						RemoveTSTemplates(stmt);
+						break;
+
+					case OBJECT_TSCONFIGURATION:
+						RemoveTSConfigurations(stmt);
+						break;
+
+					case OBJECT_EXTENSION:
+						RemoveExtensions(stmt);
+						break;
+
+					case OBJECT_EXTPROTOCOL:
+						RemoveExtProtocols(stmt);
+						break;
+
+					default:
+						elog(ERROR, "unrecognized drop object type: %d",
+							 (int) stmt->removeType);
+						break;
+				}
 
 				/* we modify the object in the loop below, so make a copy */
 				stmt = copyObject(stmt);
@@ -1098,21 +780,17 @@ ProcessUtility(Node *parsetree,
 					stmt->objects = lappend(stmt->objects, list_copy(names));
 					stmt->missing_ok = if_exists;
 
-					if (ProcessDropStatement(stmt))
-					{
-						/*
-						 * If we are the QD, dispatch this DROP command to all the QEs
-						 */
-						if (Gp_role == GP_ROLE_DISPATCH)
-						{
-							CdbDispatchUtilityStatement((Node *) stmt,
-														DF_CANCEL_ON_ERROR|
-														DF_WITH_SNAPSHOT|
-														DF_NEED_TWO_PHASE,
-														NIL,
-														NULL);
-						}
-					}
+					/*
+					 * If we are the QD, dispatch this DROP command to all the
+					 * QEs
+					 */
+					if (Gp_role == GP_ROLE_DISPATCH)
+						CdbDispatchUtilityStatement((Node *) stmt,
+													DF_CANCEL_ON_ERROR|
+													DF_WITH_SNAPSHOT|
+													DF_NEED_TWO_PHASE,
+													NIL,
+													NULL);
 				}
 			}
 			break;
@@ -1553,7 +1231,8 @@ ProcessUtility(Node *parsetree,
 			break;
 
 		case T_VacuumStmt:
-			vacuum((VacuumStmt *) parsetree, NIL, NULL, false, isTopLevel);
+			vacuum((VacuumStmt *) parsetree, InvalidOid, NULL, false,
+				   isTopLevel);
 			break;
 
 		case T_ExplainStmt:
@@ -1737,7 +1416,7 @@ ProcessUtility(Node *parsetree,
 
 			if (Gp_role == GP_ROLE_DISPATCH)
 			{
-				CdbDispatchCommand("CHECKPOINT", DF_WITH_SNAPSHOT, NULL);
+				CdbDispatchCommand("CHECKPOINT", 0, NULL);
 			}
 			RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 			break;
@@ -2062,8 +1741,16 @@ CreateCommandTag(Node *parsetree)
 			tag = "CREATE FILESPACE";
 			break;
 
+		case T_DropFileSpaceStmt:
+			tag = "DROP FILESPACE";
+			break;
+
 		case T_CreateTableSpaceStmt:
 			tag = "CREATE TABLESPACE";
+			break;
+
+		case T_DropTableSpaceStmt:
+			tag = "DROP TABLESPACE";
 			break;
 
 		case T_DropStmt:
@@ -2249,6 +1936,9 @@ CreateCommandTag(Node *parsetree)
 				case OBJECT_TSCONFIGURATION:
 					tag = "ALTER TEXT SEARCH CONFIGURATION";
 					break;
+				case OBJECT_VIEW:
+					tag = "ALTER VIEW";
+					break;
 				default:
 					tag = "???";
 					break;
@@ -2316,6 +2006,7 @@ CreateCommandTag(Node *parsetree)
 			break;
 
 		case T_AlterTableStmt:
+			switch (((AlterTableStmt *) parsetree)->relkind)
 			{
 				AlterTableStmt *stmt = (AlterTableStmt *) parsetree;
 
@@ -2329,8 +2020,21 @@ CreateCommandTag(Node *parsetree)
 					tag = "ALTER INDEX";
 				else if (stmt->relkind == OBJECT_EXTTABLE)
 					tag = "ALTER EXTERNAL TABLE";
-				else
+				case OBJECT_TABLE:
 					tag = "ALTER TABLE";
+					break;
+				case OBJECT_INDEX:
+					tag = "ALTER INDEX";
+					break;
+				case OBJECT_SEQUENCE:
+					tag = "ALTER SEQUENCE";
+					break;
+				case OBJECT_VIEW:
+					tag = "ALTER VIEW";
+					break;
+				default:
+					tag = "???";
+					break;
 			}
 			break;
 
@@ -2868,7 +2572,15 @@ GetCommandLogLevel(Node *parsetree)
 			lev = LOGSTMT_DDL;
 			break;
 
+		case T_DropFileSpaceStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
 		case T_CreateTableSpaceStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
+		case T_DropTableSpaceStmt:
 			lev = LOGSTMT_DDL;
 			break;
 

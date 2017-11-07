@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.164.2.5 2009/10/16 22:08:48 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.167 2008/08/01 11:41:12 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -170,7 +170,7 @@ static int	pg_krb5_initialised;
 static krb5_context pg_krb5_context;
 static krb5_keytab pg_krb5_keytab;
 static krb5_principal pg_krb5_server;
-#endif   /* KRB5 */
+#endif /* KRB5 */
 
 
 /*----------------------------------------------------------------
@@ -2188,7 +2188,6 @@ authident(hbaPort *port)
 
 	return check_usermap(port->hba->usermap, port->user_name, ident_user, false);
 }
-
 
 /*----------------------------------------------------------------
  * PAM authentication system

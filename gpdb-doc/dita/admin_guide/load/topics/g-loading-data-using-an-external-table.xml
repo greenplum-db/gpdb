@@ -7,7 +7,7 @@
       <p>Use SQL commands such as <codeph>INSERT</codeph> and <codeph>SELECT</codeph> to query a
          readable external table, the same way that you query a regular database table. For example,
          to load travel expense data from an external table, <codeph>ext_expenses</codeph>, into a
-         database table,<codeph> expenses_travel</codeph>:</p>
+         database table, <codeph>expenses_travel</codeph>:</p>
       <p>
          <codeblock>=# INSERT INTO expenses_travel 
     SELECT * from ext_expenses where category='travel';

@@ -22,9 +22,4 @@ extern Node *MultiExecBitmapIndexScan(BitmapIndexScanState *node);
 extern void ExecEndBitmapIndexScan(BitmapIndexScanState *node);
 extern void ExecBitmapIndexReScan(BitmapIndexScanState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromBitmapIndexScanState(BitmapIndexScanState *node)
-{
-	return &((IndexScanState*)node)->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEBITMAPINDEXSCAN_H */

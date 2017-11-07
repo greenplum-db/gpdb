@@ -23,9 +23,4 @@ extern int ExecCountSlotsRepeat(Repeat *node);
 extern void ExecEndRepeat(RepeatState *node);
 extern void ExecReScanRepeat(RepeatState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromRepeatState(RepeatState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif

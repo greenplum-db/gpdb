@@ -8,6 +8,11 @@ BEGIN
 BEGIN
 2: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SET
+2: select 'dummy select to establish snapshot';
+?column?                          
+----------------------------------
+dummy select to establish snapshot
+(1 row)
 1: drop index idxg_reindex_dropindex_serialize_tab_heap;
 DROP
 1: COMMIT;

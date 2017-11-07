@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/catcache.h,v 1.73 2010/02/26 02:01:29 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/catcache.h,v 1.67 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */

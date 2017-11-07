@@ -9,15 +9,36 @@
 -- drop them.
 -- start_ignore
 DROP ROLE IF EXISTS role_dump_test1;
+NOTICE:  role "role_dump_test1" does not exist, skipping
 DROP ROLE IF EXISTS role_dump_test2;
+NOTICE:  role "role_dump_test2" does not exist, skipping
 DROP ROLE IF EXISTS role_dump_test3;
+NOTICE:  role "role_dump_test3" does not exist, skipping
 DROP RESOURCE GROUP rg_dump_test1;
+ERROR:  resource group "rg_dump_test1" does not exist
 DROP RESOURCE GROUP rg_dump_test2;
+ERROR:  resource group "rg_dump_test2" does not exist
 DROP RESOURCE GROUP rg_dump_test3;
+ERROR:  resource group "rg_dump_test3" does not exist
 -- end_ignore
 CREATE RESOURCE GROUP rg_dump_test1 WITH (concurrency=2, cpu_rate_limit=5, memory_limit=5);
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group
 CREATE RESOURCE GROUP rg_dump_test2 WITH (concurrency=2, cpu_rate_limit=5, memory_limit=5);
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group
 CREATE RESOURCE GROUP rg_dump_test3 WITH (concurrency=2, cpu_rate_limit=5, memory_limit=5);
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group
 CREATE ROLE role_dump_test1 RESOURCE GROUP rg_dump_test1;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group
 CREATE ROLE role_dump_test2 RESOURCE GROUP rg_dump_test2;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group
 CREATE ROLE role_dump_test3 RESOURCE GROUP rg_dump_test3;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+WARNING:  resource group is disabled
+HINT:  To enable set gp_resource_manager=group

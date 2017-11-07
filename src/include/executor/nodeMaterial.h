@@ -25,9 +25,4 @@ extern void ExecMaterialRestrPos(MaterialState *node);
 extern void ExecMaterialReScan(MaterialState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeMaterial(MaterialState *node);
 
-static inline gpmon_packet_t * GpmonPktFromMaterialState(MaterialState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEMATERIAL_H */

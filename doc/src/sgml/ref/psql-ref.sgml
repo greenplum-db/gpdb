@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.199 2008/03/30 18:10:20 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.209 2008/07/03 03:37:16 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -576,8 +576,8 @@ PostgreSQL documentation
 
     <para>
      An alternative way to specify connection parameters is in a
-     <parameter>conninfo</parameter> string, which is used instead of a 
-     database name. This mechanism give you very wide control over the 
+     <parameter>conninfo</parameter> string, which is used instead of a
+     database name. This mechanism give you very wide control over the
      connection. For example:
 <programlisting>
 $ <userinput>psql "service=myservice sslmode=require"</userinput>
@@ -1243,6 +1243,9 @@ testdb=&gt;
         and tables.  If <literal>+</literal> is
         appended to the command name, each object is listed with its
         physical size on disk and its associated description, if any.
+        </para>
+
+        <para>
         If <replaceable class="parameter">pattern</replaceable> is
         specified, only objects whose names match the pattern are listed.
         By default, only user-created objects are shown; supply a

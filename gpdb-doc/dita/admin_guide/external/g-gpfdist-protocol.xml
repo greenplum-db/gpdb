@@ -8,7 +8,7 @@
     <p>The <codeph>gpfdist</codeph> utility serves external data files from a directory on a file
       host to all Greenplum Database segments in parallel. </p>
     <p><codeph>gpfdist</codeph> is located in the <codeph>$GPHOME/bin</codeph> directory on your
-        Greenplum Database master host and on each segment host. </p>
+      Greenplum Database master host and on each segment host. </p>
     <p>Run <codeph>gpfdist</codeph> on the host where the external data files reside.
         <codeph>gpfdist</codeph> uncompresses <codeph>gzip</codeph> (<codeph>.gz</codeph>) and
         <codeph>bzip2</codeph> (.<codeph>bz2</codeph>) files automatically. You can use the wildcard
@@ -18,8 +18,11 @@
     <p>All primary segments access the external file(s) in parallel, subject to the number of
       segments set in the <codeph>gp_external_max_segments</codeph> server configuration parameter.
       Use multiple <codeph>gpfdist</codeph> data sources in a <codeph>CREATE EXTERNAL TABLE</codeph>
-      statement to scale the external table's scan performance. For more information about
-      configuring <codeph>gpfdist</codeph>, see <xref
+      statement to scale the external table's scan performance. </p>
+    <p><codeph>gpfdist</codeph> supports data transformations. You can write a transformation
+      process to convert external data from or to a format that is not directly supported with
+      Greenplum Database external tables.</p>
+    <p>For more information about configuring <codeph>gpfdist</codeph>, see <xref
         href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml#topic13">Using the Greenplum
         Parallel File Server (gpfdist)</xref>. </p>
     <p>See the <codeph>gpfdist</codeph> reference documentation for more information about using

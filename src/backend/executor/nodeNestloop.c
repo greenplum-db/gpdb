@@ -110,8 +110,6 @@ ExecNestLoop(NestLoopState *node)
 	if (node->prefetch_inner)
 	{
 		innerTupleSlot = ExecProcNode(innerPlan);
-		Gpmon_Incr_Rows_In(GpmonPktFromNLJState(node));
-
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
 
@@ -166,7 +164,6 @@ ExecNestLoop(NestLoopState *node)
 		{
 			ENL1_printf("getting new outer tuple");
 			outerTupleSlot = ExecProcNode(outerPlan);
-			Gpmon_Incr_Rows_In(GpmonPktFromNLJState(node));
 
 			/*
 			 * if there are no more outer tuples, then the join is complete..
@@ -229,7 +226,6 @@ ExecNestLoop(NestLoopState *node)
 		ENL1_printf("getting new inner tuple");
 
 		innerTupleSlot = ExecProcNode(innerPlan);
-		CheckSendPlanStateGpmonPkt(&node->js.ps);
 
 		node->reset_inner = true;
 		econtext->ecxt_innertuple = innerTupleSlot;
@@ -270,8 +266,6 @@ ExecNestLoop(NestLoopState *node)
 					 */
 					ENL1_printf("qualification succeeded, projecting tuple");
 
-					Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
-                          	CheckSendPlanStateGpmonPkt(&node->js.ps);
 					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 				}
 			}
@@ -337,9 +331,6 @@ ExecNestLoop(NestLoopState *node)
 					 */
 					ENL1_printf("qualification succeeded, projecting tuple");
 
-					Gpmon_Incr_Rows_Out(GpmonPktFromNLJState(node));
-
-					CheckSendPlanStateGpmonPkt(&node->js.ps);
 					return ExecProject(node->js.ps.ps_ProjInfo, NULL);
 				}
 			}
@@ -505,8 +496,6 @@ ExecInitNestLoop(NestLoop *node, EState *estate, int eflags)
 
 	NL1_printf("ExecInitNestLoop: %s\n",
 			   "node initialized");
-
-	initGpmonPktForNestLoop((Plan *)node, &nlstate->js.ps.gpmon_pkt, estate);
 	
 	return nlstate;
 }
@@ -578,14 +567,6 @@ ExecReScanNestLoop(NestLoopState *node, ExprContext *exprCtxt)
 	node->nl_MatchedOuter = false;
 	node->nl_innerSideScanned = false;
 	/* CDB: We intentionally leave node->nl_innerSquelchNeeded unchanged on ReScan */
-}
-
-void
-initGpmonPktForNestLoop(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, NestLoop));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 /* ----------------------------------------------------------------

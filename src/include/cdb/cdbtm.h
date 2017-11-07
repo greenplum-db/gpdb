@@ -282,7 +282,7 @@ extern DistributedTransactionId getDistributedTransactionId(void);
 extern bool getDistributedTransactionIdentifier(char *id);
 
 extern void createDtx(DistributedTransactionId	*distribXid);
-extern bool createDtxSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping);
+extern bool CreateDistributedSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping);
 extern void	prepareDtxTransaction(void);
 extern bool isPreparedDtxTransaction(void);
 extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);

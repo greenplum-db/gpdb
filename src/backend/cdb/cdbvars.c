@@ -23,8 +23,8 @@
 #include "utils/guc.h"
 #include "catalog/gp_segment_config.h"
 #include "cdb/cdbvars.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbutil.h"
@@ -114,11 +114,6 @@ int			gp_max_csv_line_length; /* max allowed len for csv data line in
 
 bool		gp_select_invisible = false;	/* debug mode to allow select to
 											 * see "invisible" rows */
-
-int			pgstat_track_activity_query_size = INT_MAX; /* max allowed len for
-														 * displaying the query
-														 * in pg_stat_activity
-														 * table */
 
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take

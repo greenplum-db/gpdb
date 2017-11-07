@@ -20,8 +20,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 
 #include "cdb/cdbgang.h"		/* gp_pthread_create */
 #include "libpq/ip.h"
@@ -124,7 +124,7 @@ void
 #else
 char
 #endif
-probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo probeInfo)
+probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo *probeInfo)
 {
 	/*
 	 * probe segment: open socket -> connect -> send probe msg -> receive response;
@@ -135,34 +135,34 @@ probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo probeIn
 
 	int retryCnt = 0;
 	/* reset timer */
-	gp_set_monotonic_begin_time(&probeInfo.startTime);
+	gp_set_monotonic_begin_time(&probeInfo->startTime);
 	while (retryCnt < gp_fts_probe_retries && FtsIsActive() && (
-			   !probeConnect(dbInfo, &probeInfo) ||
-			   !probePollOut(&probeInfo) ||
-			   !probeSend(&probeInfo) ||
-			   !probePollIn(&probeInfo) ||
-			   !probeReceive(&probeInfo) ||
-			   !probeProcessResponse(&probeInfo)))
+			   !probeConnect(dbInfo, probeInfo) ||
+			   !probePollOut(probeInfo) ||
+			   !probeSend(probeInfo) ||
+			   !probePollIn(probeInfo) ||
+			   !probeReceive(probeInfo) ||
+			   !probeProcessResponse(probeInfo)))
 	{
-		PQfinish(probeInfo.conn);
-		probeInfo.conn = NULL;
+		PQfinish(probeInfo->conn);
+		probeInfo->conn = NULL;
 
 		/* sleep for 1 second to avoid tight loops */
 		pg_usleep(USECS_PER_SEC);
 		retryCnt++;
 
 		write_log("FTS: retry %d to probe segment (content=%d, dbid=%d).",
-				  retryCnt - 1, probeInfo.segmentId, probeInfo.dbId);
+				  retryCnt - 1, probeInfo->segmentId, probeInfo->dbId);
 
 		/* reset timer */
-		gp_set_monotonic_begin_time(&probeInfo.startTime);
+		gp_set_monotonic_begin_time(&probeInfo->startTime);
 	}
 
 	if (!FtsIsActive())
 	{
 		/* the returned value will be ignored */
 #ifndef USE_SEGWALREP
-		probeInfo.segmentStatus = PROBE_ALIVE;
+		probeInfo->segmentStatus = PROBE_ALIVE;
 #endif
 	}
 
@@ -170,16 +170,16 @@ probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo probeIn
 	{
 		write_log("FTS: failed to probe segment (content=%d, dbid=%d) after trying %d time(s), "
 				  "maximum number of retries reached.",
-				  probeInfo.segmentId,
-				  probeInfo.dbId,
+				  probeInfo->segmentId,
+				  probeInfo->dbId,
 				  retryCnt);
 	}
 
-	if (probeInfo.conn)
-		PQfinish(probeInfo.conn);
+	if (probeInfo->conn)
+		PQfinish(probeInfo->conn);
 
 #ifndef USE_SEGWALREP
-	return probeInfo.segmentStatus;
+	return probeInfo->segmentStatus;
 #endif
 }
 
@@ -208,7 +208,7 @@ probeWalRepSegment(probe_response_per_segment *response)
 	probeInfo.mode = segment_db_info->mode;
 	probeInfo.result = &(response->result);
 
-	probeSegmentHelper(segment_db_info, probeInfo);
+	probeSegmentHelper(segment_db_info, &probeInfo);
 }
 
 static void *
@@ -477,7 +477,14 @@ static bool
 probeProcessResponse(ProbeConnectionInfo *probeInfo)
 {
 	int32 responseLen;
-	pqGetInt(&responseLen, sizeof(PacketLen), probeInfo->conn);
+	if (pqGetInt(&responseLen, sizeof(PacketLen), probeInfo->conn))
+	{
+		write_log("FTS: invalid response from segment "
+				  "(content=%d, dbid=%d): %s", probeInfo->segmentId,
+				  probeInfo->dbId, probeInfo->conn->errorMessage.data);
+		return false;
+	}
+
 	if (responseLen != PROBE_RESPONSE_LEN)
 	{
 		write_log("FTS: invalid response length %d from segment "
@@ -503,10 +510,16 @@ probeProcessResponse(ProbeConnectionInfo *probeInfo)
 	int32 mode;
 	int32 fault;
 	
-	pqGetInt(&role, 4, probeInfo->conn);
-	pqGetInt(&state, 4, probeInfo->conn);
-	pqGetInt(&mode, 4, probeInfo->conn);
-	pqGetInt(&fault, 4, probeInfo->conn);
+	if (pqGetInt(&role, 4, probeInfo->conn) ||
+		pqGetInt(&state, 4, probeInfo->conn) ||
+		pqGetInt(&mode, 4, probeInfo->conn) ||
+		pqGetInt(&fault, 4, probeInfo->conn))
+	{
+		write_log("FTS: invalid response from segment "
+				  "(content=%d, dbid=%d): %s", probeInfo->segmentId,
+				  probeInfo->dbId, probeInfo->conn->errorMessage.data);
+		return false;
+	}
 
 	if (gp_log_fts > GPVARS_VERBOSITY_VERBOSE)
 	{

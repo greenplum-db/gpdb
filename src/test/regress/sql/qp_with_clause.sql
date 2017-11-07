@@ -8649,7 +8649,14 @@ ANALYZE COUNTRYLANGUAGE_CO;
 set enable_seqscan=off;
 set enable_indexscan=on;
 
-
+--query1
+with capitals as
+(select country_co.code,id,city_co.name from city_co,country_co
+ where city_co.countrycode = country_co.code AND city_co.id = country_co.capital)
+select * from
+capitals,countrylanguage_co
+where capitals.code = countrylanguage_co.countrycode and isofficial='true'
+order by capitals.code,countrylanguage_co.language;
 
 --query2
 with lang_total as
@@ -8782,6 +8789,58 @@ HAVING count(*)  >=
  )
 order by COUNTRY_CO;
 
+-- query 6
+select count(*) from
+( select r.* from
+  ( with fact as
+     (
+      select country_co.name as COUNTRY_CO,country_co.code,city_co.name as CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,AGG1.region
+      from
+         (select
+         sum(case when (city_co.population >= 0.5 * country_co.population) then country_co.population else city_co.population end) as S_POPULATION,
+         sum(case when (gnp >= gnpold) then gnp else gnpold end) as S_GNP,
+         avg(case when (lifeexpectancy > 60) then 50 else lifeexpectancy end) as AVG_LIFE,country_co.region
+         from country_co,city_co
+         where governmentform != 'Constitutional Monarchy'
+         and country_co.capital = city_co.id
+         and indepyear > 0
+         group by country_co.region) AGG1
+         ,country_co,city_co
+         where country_co.capital = city_co.id
+         and country_co.region = AGG1.region
+      )
+
+     select code,COUNTRY_CO,CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,language as OFFICIALLANGUAGE,region
+     from fact,countrylanguage_co
+     where fact.code = countrylanguage_co.countrycode and isofficial = 'True'
+     and fact.region = 'South America'
+
+     UNION ALL
+
+     select code,COUNTRY_CO,CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,language as OFFICIALLANGUAGE,region
+     from fact,countrylanguage_co
+     where fact.code = countrylanguage_co.countrycode and isofficial = 'True'
+     and fact.region = 'North America'
+
+     UNION ALL
+
+     select code,COUNTRY_CO,CAPITAL,S_POPULATION,S_GNP,AVG_LIFE,language as OFFICIALLANGUAGE,region
+     from fact,countrylanguage_co
+     where fact.code = countrylanguage_co.countrycode and isofficial = 'True'
+     and fact.region = 'Caribbean'
+ ) as r
+ left join
+  (
+   select 'ARG' as CODE UNION ALL
+   select 'BOL' as CODE UNION ALL
+   select 'BRA' as CODE UNION ALL
+   select 'PER' as CODE UNION ALL
+   select 'URY' as CODE UNION ALL
+   select 'IND' as CODE  UNION ALL
+   select 'LCA' as CODE UNION ALL
+   select 'VCT' as CODE
+   ) as r1
+on r.code = r1.code) AS FOO;
 
 -- query7
 with alleuropeanlanguages as 
@@ -8937,6 +8996,69 @@ where longlivingregions.region = denseregions.region and allcountry_costats.code
 and country_co.indepyear > 1900
 order by name
 LIMIT 50;
+
+--query 11
+with allcity_costats as
+( select city_co.name CITY_CO,city_co.id,country_co.name COUNTRY_CO,city_co.district,city_co.population as CITY_CO_POP
+  from
+  city_co,country_co
+  where city_co.countrycode = country_co.code
+),
+alldistrictstats as
+( select allcity_costats.district,allcity_costats.COUNTRY_CO,sum(CITY_CO_POP) DISTRICT_POP,
+  count(CITY_CO) as D_CITY_CO_CNT
+  from allcity_costats
+  group by allcity_costats.district,allcity_costats.COUNTRY_CO
+  order by district,COUNTRY_CO
+),
+allcountry_costats as
+( select alldistrictstats.COUNTRY_CO,country_co.code,sum(D_CITY_CO_CNT) C_CITY_CO_CNT,
+  count(distinct countrylanguage_co.language) C_LANG_CNT
+  from alldistrictstats,country_co,countrylanguage_co
+  where alldistrictstats.COUNTRY_CO = country_co.name
+  and country_co.code = countrylanguage_co.countrycode
+  group by COUNTRY_CO,code
+),
+asian_region_stats as
+(
+select sum(FOO.C_CITY_CO_CNT) REGION_CITY_CO_CNT,sum(FOO.C_LANG_CNT) REGION_LANG_CNT,FOO.region
+FROM
+(
+select allcountry_costats.code,allcountry_costats.COUNTRY_CO,C_CITY_CO_CNT,C_LANG_CNT,country_co.region,city_co.name CAPITAL
+from allcountry_costats,country_co,city_co
+where allcountry_costats.code = country_co.code
+and country_co.capital = city_co.id
+and C_CITY_CO_CNT/C_LANG_CNT > 1
+and country_co.continent = 'Asia') FOO
+,allcountry_costats,country_co
+
+WHERE allcountry_costats.code = country_co.code
+and FOO.region = country_co.region
+group by FOO.region order by FOO.region
+)
+
+select * from
+(
+select REGION_CITY_CO_CNT as CITY_CO_CNT,REGION_LANG_CNT as LANG_CNT, region as IDENTIFIER from asian_region_stats
+UNION ALL
+(
+select sum(FOO.C_CITY_CO_CNT) CITY_CO_CNT,sum(FOO.C_LANG_CNT) LANG_CNT,FOO.region as IDENTIFIER
+FROM
+(
+select allcountry_costats.code,allcountry_costats.COUNTRY_CO,C_CITY_CO_CNT,C_LANG_CNT,country_co.region,allcity_costats.CITY_CO CAPITAL
+from allcountry_costats,country_co,allcity_costats
+where allcountry_costats.code = country_co.code
+and country_co.capital = allcity_costats.id
+and C_CITY_CO_CNT/C_LANG_CNT > 1
+and country_co.continent = 'Europe') FOO
+,allcountry_costats,country_co
+
+WHERE allcountry_costats.code = country_co.code
+and FOO.region = country_co.region
+group by FOO.region order by FOO.region
+)
+) FOO1
+order by FOO1.lang_cnt,FOO1.identifier;
 
 -- Queries using multiple CTEs
 

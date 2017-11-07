@@ -62,9 +62,10 @@ select max(cnt) - min(cnt)  > 20 from t;
 -- Test 4.1: create uni-directional write protocol
 -- create WET using created protocol
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_r
-NOTICE:  drop cascades to external table exttabtest_w
-NOTICE:  drop cascades to external table exttabtest_options_r
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to external table exttabtest_options_r
+drop cascades to external table exttabtest_w
+drop cascades to external table exttabtest_r
     CREATE PROTOCOL demoprot (
         writefunc = write_to_file_stable
     );
@@ -250,11 +251,12 @@ ERROR:  protocol "demoprot_nonexist" does not exist
 -- Test 11: Negative - Using invalid protocol attribute name
 -- attribute names must be readproc, write proc, and validatorproc
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_w_5url
-NOTICE:  drop cascades to external table exttabtest_w_2url
-NOTICE:  drop cascades to external table exttabtest_r_2url
-NOTICE:  drop cascades to external table exttabtest_r_dist
-NOTICE:  drop cascades to external table exttabtest_w_dist
+NOTICE:  drop cascades to 5 other objects
+DETAIL:  drop cascades to external table exttabtest_w_dist
+drop cascades to external table exttabtest_r_dist
+drop cascades to external table exttabtest_r_2url
+drop cascades to external table exttabtest_w_2url
+drop cascades to external table exttabtest_w_5url
     CREATE PROTOCOL demoprot (
         readfunction  = read_from_file, 
         writefunction = write_to_file
@@ -309,9 +311,9 @@ ERROR:  demoprot_import: could not open file "exttabtest_switched.txt" for readi
 -- Test 15: Negative - circular reference
 -- write to WET while selecting from RET, and WET and RET are using the same data source files
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  protocol "demoprot" does not exist, skipping
-NOTICE:  drop cascades to external table exttabtest_r_switched
-NOTICE:  drop cascades to external table exttabtest_w_switched
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to external table exttabtest_w_switched
+drop cascades to external table exttabtest_r_switched
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -540,19 +542,19 @@ NOTICE:  table "exttabtest_r_1m_null" does not exist, skipping
      1
 (1 row)
 
-   -- Try to drop UDF read_from_file_stable() that has protocol demoprot depends on it
+    -- Try to drop UDF read_from_file_stable() that has protocol demoprot depends on it
     drop function read_from_file_stable();
-NOTICE:  protocol demoprot depends on function read_from_file_stable()
-NOTICE:  external table exttabtest_r_1m_null depends on protocol demoprot
-NOTICE:  external table exttabtest_w_1m_null depends on protocol demoprot
-NOTICE:  external table exttabtest_r_1m depends on protocol demoprot
-NOTICE:  external table exttabtest_w_1m depends on protocol demoprot
-NOTICE:  external table exttabtest_r_null depends on protocol demoprot
-NOTICE:  external table exttabtest_w_null depends on protocol demoprot
-NOTICE:  external table exttabtest_w_misspath depends on protocol demoprot
-NOTICE:  external table exttabtest_r_circle depends on protocol demoprot
-NOTICE:  external table exttabtest_w_circle depends on protocol demoprot
 ERROR:  cannot drop function read_from_file_stable() because other objects depend on it
+DETAIL:  protocol demoprot depends on function read_from_file_stable()
+external table exttabtest_w_circle depends on protocol demoprot
+external table exttabtest_r_circle depends on protocol demoprot
+external table exttabtest_w_misspath depends on protocol demoprot
+external table exttabtest_w_null depends on protocol demoprot
+external table exttabtest_r_null depends on protocol demoprot
+external table exttabtest_w_1m depends on protocol demoprot
+external table exttabtest_r_1m depends on protocol demoprot
+external table exttabtest_w_1m_null depends on protocol demoprot
+external table exttabtest_r_1m_null depends on protocol demoprot
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
     -- Check pg_proc catalog table to verify UDF is NOT dropped
     SELECT proname, prolang,proisstrict,provolatile,pronargs,prorettype,prosrc,proacl FROM pg_proc
@@ -568,15 +570,16 @@ HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 -- Test 35: UDF dependency - drop function cascade
     -- Restore (recreate) protocol with the same protocol name demoprot
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_r_1m_null
-NOTICE:  drop cascades to external table exttabtest_w_1m_null
-NOTICE:  drop cascades to external table exttabtest_r_1m
-NOTICE:  drop cascades to external table exttabtest_w_1m
-NOTICE:  drop cascades to external table exttabtest_r_null
-NOTICE:  drop cascades to external table exttabtest_w_null
-NOTICE:  drop cascades to external table exttabtest_w_misspath
-NOTICE:  drop cascades to external table exttabtest_r_circle
-NOTICE:  drop cascades to external table exttabtest_w_circle
+NOTICE:  drop cascades to 9 other objects
+DETAIL:  drop cascades to external table exttabtest_w_circle
+drop cascades to external table exttabtest_r_circle
+drop cascades to external table exttabtest_w_misspath
+drop cascades to external table exttabtest_w_null
+drop cascades to external table exttabtest_r_null
+drop cascades to external table exttabtest_w_1m
+drop cascades to external table exttabtest_r_1m
+drop cascades to external table exttabtest_w_1m_null
+drop cascades to external table exttabtest_r_1m_null
     CREATE PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1478,17 +1481,18 @@ CREATE OR REPLACE FUNCTION url_validator() RETURNS void AS
    '$libdir/gpextprotocol.so', 'demoprot_validate_urls' LANGUAGE C STABLE;
 -- declare the protocol name along with in/out funcs and validator func
 DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table format_r
-NOTICE:  drop cascades to external table format_w
-NOTICE:  drop cascades to external table format_long_r
-NOTICE:  drop cascades to external table format_long_w
-NOTICE:  drop cascades to external table format_r_s2
-NOTICE:  drop cascades to external table format_w_s2
-NOTICE:  drop cascades to external table format_r_s1
-NOTICE:  drop cascades to external table format_w_s1
-NOTICE:  drop cascades to external table exttabtest_w_invalid
-NOTICE:  drop cascades to external table exttabtest_r_invalid
-NOTICE:  drop cascades to external table exttabtest_w
+NOTICE:  drop cascades to 11 other objects
+DETAIL:  drop cascades to external table exttabtest_w
+drop cascades to external table exttabtest_r_invalid
+drop cascades to external table exttabtest_w_invalid
+drop cascades to external table format_w_s1
+drop cascades to external table format_r_s1
+drop cascades to external table format_w_s2
+drop cascades to external table format_r_s2
+drop cascades to external table format_long_w
+drop cascades to external table format_long_r
+drop cascades to external table format_w
+drop cascades to external table format_r
 CREATE PROTOCOL demoprot (
     readfunc  = read_from_file, 
     writefunc = write_to_file,
@@ -1648,10 +1652,11 @@ DETAIL:  External table exttabtest_r_new, file demoprot_new://exttabtest.txt
     -- login as superuser huangh5
     -- create trusted protocol demoprot
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_r_new
-NOTICE:  drop cascades to external table exttabtest_w_new
-NOTICE:  drop cascades to external table exttabtest_r
-NOTICE:  drop cascades to external table exttabtest_w
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to external table exttabtest_w
+drop cascades to external table exttabtest_r
+drop cascades to external table exttabtest_w_new
+drop cascades to external table exttabtest_r_new
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -1740,8 +1745,9 @@ NOTICE:  table "exttabtest_w_new" does not exist, skipping
 
     -- Verified owner (non superuser) can drop the protocol
     DROP PROTOCOL demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_w_new
-NOTICE:  drop cascades to external table exttabtest_r_new
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to external table exttabtest_r_new
+drop cascades to external table exttabtest_w_new
 RESET ROLE;
 -- Test 94: Untrusted protocol - Change ownership
 -- The owner of untrusted protocol (not a superuser) can still create external table
@@ -1993,10 +1999,11 @@ RESET ROLE;
     -- connect as superuser 
     -- create trusted protocol demoprot
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_w
-NOTICE:  drop cascades to external table exttabtest_r
-NOTICE:  drop cascades to external table exttabtest_w_new
-NOTICE:  drop cascades to external table exttabtest_r_new
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to external table exttabtest_r_new
+drop cascades to external table exttabtest_w_new
+drop cascades to external table exttabtest_r
+drop cascades to external table exttabtest_w
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable
@@ -2049,8 +2056,9 @@ RESET ROLE;
     -- connect as superuser 
     -- create trusted protocol demoprot
     DROP PROTOCOL IF EXISTS demoprot CASCADE;
-NOTICE:  drop cascades to external table exttabtest_w_new
-NOTICE:  drop cascades to external table exttabtest_r_new
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to external table exttabtest_r_new
+drop cascades to external table exttabtest_w_new
     CREATE TRUSTED PROTOCOL demoprot (
         readfunc = read_from_file_stable,
         writefunc = write_to_file_stable

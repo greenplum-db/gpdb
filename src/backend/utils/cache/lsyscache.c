@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.156 2008/03/25 22:42:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.158 2008/07/30 17:05:04 tgl Exp $
  *
  * NOTES
  *	  Eventually, the index information should go through here, too.
@@ -96,8 +96,8 @@ get_op_opfamily_strategy(Oid opno, Oid opfamily)
 /*
  * get_op_opfamily_properties
  *
- *		Get the operator's strategy number, input types, and recheck (lossy)
- *		flag within the specified opfamily.
+ *		Get the operator's strategy number and declared input data types
+ *		within the specified opfamily.
  *
  * Caller should already have verified that opno is a member of opfamily,
  * therefore we raise an error if the tuple is not found.
@@ -106,8 +106,7 @@ void
 get_op_opfamily_properties(Oid opno, Oid opfamily,
 						   int *strategy,
 						   Oid *lefttype,
-						   Oid *righttype,
-						   bool *recheck)
+						   Oid *righttype)
 {
 	HeapTuple	tp;
 	Form_pg_amop amop_tup;
@@ -123,7 +122,6 @@ get_op_opfamily_properties(Oid opno, Oid opfamily,
 	*strategy = amop_tup->amopstrategy;
 	*lefttype = amop_tup->amoplefttype;
 	*righttype = amop_tup->amoprighttype;
-	*recheck = amop_tup->amopreqcheck;
 	ReleaseSysCache(tp);
 }
 
@@ -2698,6 +2696,29 @@ bool
 type_is_enum(Oid typid)
 {
 	return (get_typtype(typid) == TYPTYPE_ENUM);
+}
+
+/*
+ * get_type_category_preferred
+ *
+ *		Given the type OID, fetch its category and preferred-type status.
+ *		Throws error on failure.
+ */
+void
+get_type_category_preferred(Oid typid, char *typcategory, bool *typispreferred)
+{
+	HeapTuple	tp;
+	Form_pg_type typtup;
+
+	tp = SearchSysCache(TYPEOID,
+						ObjectIdGetDatum(typid),
+						0, 0, 0);
+	if (!HeapTupleIsValid(tp))
+		elog(ERROR, "cache lookup failed for type %u", typid);
+	typtup = (Form_pg_type) GETSTRUCT(tp);
+	*typcategory = typtup->typcategory;
+	*typispreferred = typtup->typispreferred;
+	ReleaseSysCache(tp);
 }
 
 /*

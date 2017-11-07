@@ -9,7 +9,7 @@
  * Copyright (c) 2000-2008, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
- * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.93 2008/04/02 14:42:56 mha Exp $
+ * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.98 2008/07/23 17:29:53 tgl Exp $
  *--------------------------------------------------------------------
  */
 #ifndef GUC_H
@@ -112,6 +112,7 @@ struct config_enum_entry
 {
 	const char *name;
 	int         val;
+	bool		hidden;
 };
 
 typedef struct name_value_pair
@@ -155,7 +156,7 @@ extern bool Debug_print_plan;
 extern bool Debug_print_parse;
 extern bool Debug_print_rewritten;
 extern bool Debug_pretty_print;
-extern bool Explain_pretty_print;
+
 extern bool	Debug_print_full_dtm;
 extern bool	Debug_print_snapshot_dtm;
 extern bool	Debug_print_qd_mirroring;
@@ -653,6 +654,10 @@ extern int	NewGUCNestLevel(void);
 extern void AtEOXact_GUC(bool isCommit, int nestLevel);
 extern void BeginReportingGUCOptions(void);
 extern void ParseLongOption(const char *string, char **name, char **value);
+extern bool parse_bool(const char *value, bool *result);
+extern bool parse_int(const char *value, int *result, int flags,
+					  const char **hintmsg);
+extern bool parse_real(const char *value, double *result);
 extern bool set_config_option(const char *name, const char *value,
 				  GucContext context, GucSource source,
 				  GucAction action, bool changeVal);
@@ -715,8 +720,8 @@ extern const char *assign_search_path(const char *newval,
 				   bool doit, GucSource source);
 
 /* in access/transam/xlog.c */
-extern const char *assign_xlog_sync_method(const char *method,
-						bool doit, GucSource source);
+extern bool assign_xlog_sync_method(int newval,
+				bool doit, GucSource source);
 
 extern StdRdOptions *defaultStdRdOptions(char relkind);
 

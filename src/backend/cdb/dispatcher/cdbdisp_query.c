@@ -17,8 +17,8 @@
 #include "postgres.h"
 
 #include "access/xact.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbutil.h"
@@ -116,7 +116,6 @@ static void cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 									 char *serializedPlantree,
 									 int serializedPlantreelen,
 									 bool cancelOnError,
-									 bool needTwoPhase,
 									 struct CdbDispatcherState *ds);
 
 static int fillSliceVector(SliceTable *sliceTable,
@@ -286,25 +285,24 @@ CdbDispatchPlan(struct QueryDesc *queryDesc,
  * gangs, both reader and writer
  */
 void
-CdbDispatchSetCommand(const char *strCommand,
-					  bool cancelOnError, bool needTwoPhase)
+CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 {
 	volatile CdbDispatcherState ds = {NULL, NULL, NULL};
-	const bool	withSnapshot = true;
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "CdbDispatchSetCommand for command = '%s', needTwoPhase = %s",
-		 strCommand, (needTwoPhase ? "true" : "false"));
+		 "CdbDispatchSetCommand for command = '%s'",
+		 strCommand);
 
-	dtmPreCommand("CdbDispatchSetCommand", strCommand, NULL, needTwoPhase,
-				  withSnapshot, false /* inCursor */ );
+	dtmPreCommand("CdbDispatchSetCommand", strCommand, NULL,
+				  false /* no two-phase commit needed for SET */,
+				  false, /* no snapshot needed for SET */
+				  false /* inCursor */ );
 
 	PG_TRY();
 	{
 		cdbdisp_dispatchSetCommandToAllGangs(strCommand, NULL, 0, NULL, 0,
-											 cancelOnError, needTwoPhase,
-											 (struct CdbDispatcherState *)
-											 &ds);
+											 cancelOnError,
+											 (CdbDispatcherState *) &ds);
 
 		/*
 		 * Wait for all QEs to finish. If not all of our QEs were successful,
@@ -334,7 +332,7 @@ CdbDispatchSetCommand(const char *strCommand,
  * If one or more QEs got error, throw a Error.
  *
  * -flags:
- *  Is the combination of EUS_NEED_TWO_PHASE, EUS_WITH_SNAPSHOT,EUS_CANCEL_ON_ERROR
+ *  Is the combination of DF_NEED_TWO_PHASE, DF_WITH_SNAPSHOT,DF_CANCEL_ON_ERROR
  *
  */
 void
@@ -1422,7 +1420,6 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 									 char *serializedPlantree,
 									 int serializedPlantreelen,
 									 bool cancelOnError,
-									 bool needTwoPhase,
 									 struct CdbDispatcherState *ds)
 {
 	DispatchCommandQueryParms *pQueryParms;
@@ -1454,9 +1451,9 @@ cdbdisp_dispatchSetCommandToAllGangs(const char *strCommand,
 	 */
 	pQueryParms->serializedDtxContextInfo =
 		qdSerializeDtxContextInfo(&pQueryParms->serializedDtxContextInfolen,
-								  true /* withSnapshot */ ,
+								  false /* withSnapshot */ ,
 								  false /* cursor */ ,
-								  mppTxnOptions(needTwoPhase),
+								  mppTxnOptions(false), /* no two-phase commit needed for SET */
 								  "cdbdisp_dispatchSetCommandToAllGangs");
 
 	idleReaderGangs = getAllIdleReaderGangs();

@@ -38,6 +38,7 @@
 #include "replication/walsender_private.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
+#include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "utils/builtins.h"
 #include "utils/elog.h"

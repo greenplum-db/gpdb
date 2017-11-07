@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
- <title>Working with External Data</title>
- <topicref href="g-working-with-file-based-ext-tables.xml" navtitle="Working with External Data">
-   <topicref href="g-external-tables.xml" navtitle="Working with External Tables">
+  <title>Working with External Data</title>
+  <topicref href="g-working-with-file-based-ext-tables.xml" navtitle="Working with External Data">
+    <topicref href="g-external-tables.xml" navtitle="Working with External Tables">
       <topicref href="g-file-protocol.xml"/>
       <topicref href="g-gpfdist-protocol.xml"/>
       <topicref href="g-gpfdists-protocol.xml"/>
@@ -14,21 +14,23 @@
       <topicref href="g-handling-errors-ext-table-data.xml"/>
       <topicref href="g-creating-and-using-web-external-tables.xml" type="topic"/>
       <topicref href="g-creating-external-tables---examples.xml" type="topic">
-       <topicref href="g-example-1-single-gpfdist-instance-on-single-nic-machine.xml"/>
-       <topicref href="g-example-2-multiple-gpfdist-instances.xml" type="topic"/>
-       <topicref href="g-example-3-multiple-gpfdists-instances.xml" type="topic"/>
-       <topicref href="g-example-4-single-gpfdist-instance-with-error-logging.xml" type="topic"/>
-       <topicref href="g-example-5-text-format-on-a-hadoop-distributed-file-server.xml" type="topic"/>
-       <topicref href="g-example-6-multiple-files-in-csv-format-with-header-rows.xml" type="topic"/>
-       <topicref href="g-example-7-readable-web-external-table-with-script.xml" type="topic"/>
-       <topicref href="g-example-8-writable-external-table-with-gpfdist.xml"/>
-       <topicref href="g-example-9-writable-external-web-table-with-script.xml"/>
-       <topicref href="g-example-10-readable-and-writable-external-tables-with-xml-transformations.xml"
-    type="topic"/>
+        <topicref href="g-example-1-single-gpfdist-instance-on-single-nic-machine.xml"/>
+        <topicref href="g-example-2-multiple-gpfdist-instances.xml" type="topic"/>
+        <topicref href="g-example-3-multiple-gpfdists-instances.xml" type="topic"/>
+        <topicref href="g-example-4-single-gpfdist-instance-with-error-logging.xml" type="topic"/>
+        <topicref href="g-example-5-text-format-on-a-hadoop-distributed-file-server.xml"
+          type="topic"/>
+        <topicref href="g-example-6-multiple-files-in-csv-format-with-header-rows.xml" type="topic"/>
+        <topicref href="g-example-7-readable-web-external-table-with-script.xml" type="topic"/>
+        <topicref href="g-example-8-writable-external-table-with-gpfdist.xml"/>
+        <topicref href="g-example-9-writable-external-web-table-with-script.xml"/>
+        <topicref
+          href="g-example-10-readable-and-writable-external-tables-with-xml-transformations.xml"
+          type="topic"/>
       </topicref>
-   </topicref>
-  <topicref href="pxf-overview.xml" navtitle="Accessing HDFS and Hive Data with PXF"/>
-  <topicref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic">
+    </topicref>
+    <topicref href="pxf-overview.xml" navtitle="Accessing HDFS and Hive Data with PXF"/>
+    <topicref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic">
       <topicref href="g-one-time-hdfs-protocol-installation.xml" type="topic"/>
       <topicref href="g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>
       <topicref href="g-specify-hdfs-data-in-an-external-table-definition.xml" type="topic"/>
@@ -37,7 +39,7 @@
       <topicref href="g-hdfs-readable-and-writable-external-table-examples.xml" type="topic"/>
       <topicref href="g-reading-and-writing-custom-formatted-hdfs-data.xml" type="topic"/>
       <topicref href="g-hdfs-emr-config.xml"/>
-   </topicref>
-  <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
+    </topicref>
+    <topicref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml"/>
   </topicref>
 </map>

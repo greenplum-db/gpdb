@@ -113,17 +113,11 @@ FunctionNext(FunctionScanState *node)
 		}
 	}
 
-	if (!TupIsNull(slot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromFuncScanState(node));
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
-	}
-
-	else if (!node->ss.ps.delayEagerFree)
+	if (TupIsNull(slot) && !node->ss.ps.delayEagerFree)
 	{
 		ExecEagerFreeFunctionScan((FunctionScanState *)(&node->ss.ps));
 	}
-	
+
 	return slot;
 }
 
@@ -267,8 +261,6 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	 */
 	ExecAssignResultTypeFromTL(&scanstate->ss.ps);
 	ExecAssignScanProjectionInfo(&scanstate->ss);
-
-	initGpmonPktForFunctionScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
 	
 	if (!IsResManagerMemoryPolicyNone())
 	{
@@ -358,14 +350,6 @@ ExecFunctionReScan(FunctionScanState *node, ExprContext *exprCtxt)
 	}
 	else
 		tuplestore_rescan(node->tuplestorestate);
-}
-
-void
-initGpmonPktForFunctionScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, FunctionScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -338,7 +338,6 @@ ERROR:  CASE types integer and integer[] cannot be matched
 --
 DROP TABLE mytable CASCADE;
 DROP TABLE products CASCADE;
-NOTICE:  drop cascades to rule _RETURN on view myview
 NOTICE:  drop cascades to view myview
 DROP TABLE calls_to_blip;
 DROP FUNCTION negate(int);

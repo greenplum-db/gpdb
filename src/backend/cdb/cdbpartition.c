@@ -103,7 +103,7 @@ static int
 
 static void parruleord_open_gap(Oid partid, int2 level, Oid parent,
 					int2 ruleord, int stopkey, bool closegap);
-static bool has_external_partition(PartitionRule *rules);
+static bool has_external_partition(List *rules);
 
 /*
  * Hash keys are null-terminated C strings assumed to be stably
@@ -8561,7 +8561,7 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 				Assert(conexpr && conbin && consrc);
 
 				CreateConstraintEntry(NameStr(con->conname),
-									  con->connamespace, //XXX should this be RelationGetNamespace(cand) ?
+									  con->connamespace, // XXX should this be RelationGetNamespace(cand)?
 									  con->contype,
 									  con->condeferrable,
 									  con->condeferred,
@@ -8581,7 +8581,9 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  InvalidOid,
 									  conexpr,
 									  conbin,
-									  consrc);
+									  consrc,
+									  con->conislocal,
+									  con->coninhcount);
 				break;
 			}
 
@@ -8628,9 +8630,11 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 									  con->confdeltype,
 									  con->confmatchtype,
 									  indexoid,
-									  NULL, /* no check constraint */
+									  NULL,		/* no check constraint */
 									  NULL,
-									  NULL);
+									  NULL,
+									  con->conislocal,
+									  con->coninhcount);
 
 				heap_close(frel, AccessExclusiveLock);
 				break;
@@ -9568,8 +9572,8 @@ findPartitionNodeEntry(PartitionNode *partitionNode, Oid partOid)
  * check parition rule if contains
  * external partition table
  */
-static bool 
-has_external_partition(PartitionRule *rules) {
+static bool
+has_external_partition(List *rules) {
 	if (rules == NULL)
 	{
 		return false;

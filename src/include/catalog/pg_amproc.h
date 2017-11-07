@@ -22,7 +22,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_amproc.h,v 1.71 2008/03/27 03:57:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_amproc.h,v 1.73 2008/05/27 00:13:09 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -123,7 +123,6 @@ DATA(insert (	2000   1266 1266 1 1358 ));
 DATA(insert (	2002   1562 1562 1 1672 ));
 DATA(insert (	2095   25 25 1 2166 ));
 DATA(insert (	2097   1042 1042 1 2180 ));
-DATA(insert (	2098   19 19 1 2187 ));
 DATA(insert (	2099   790 790 1  377 ));
 DATA(insert (	2233   703 703 1  380 ));
 DATA(insert (	2234   704 704 1  381 ));
@@ -162,9 +161,8 @@ DATA(insert (	2225   28 28 1 450 ));
 DATA(insert (	2226   29 29 1 450 ));
 DATA(insert (	2227   702 702 1 450 ));
 DATA(insert (	2228   703 703 1 450 ));
-DATA(insert (	2229   25 25 1 456 ));
-DATA(insert (	2231   1042 1042 1 456 ));
-DATA(insert (	2232   19 19 1 455 ));
+DATA(insert (	2229   25 25 1 400 ));
+DATA(insert (	2231   1042 1042 1 1080 ));
 DATA(insert (	2235   1033 1033 1 329 ));
 DATA(insert (	2969   2950 2950 1 2963 ));
 DATA(insert (	3523   3500 3500 1 3515 ));
@@ -329,10 +327,11 @@ DATA(insert (	2745   1025 1025 1 381 ));
 DATA(insert (	2745   1025 1025 2 2743 ));
 DATA(insert (	2745   1025 1025 3 2774 ));
 DATA(insert (	2745   1025 1025 4 2744 ));
-DATA(insert (	3659   3614 3614 1 360 ));
+DATA(insert (	3659   3614 3614 1 3724 ));
 DATA(insert (	3659   3614 3614 2 3656 ));
 DATA(insert (	3659   3614 3614 3 3657 ));
 DATA(insert (	3659   3614 3614 4 3658 ));
+DATA(insert (	3659   3614 3614 5 2700 ));
 DATA(insert (	3626   3614 3614 1 3622 ));
 DATA(insert (	3683   3615 3615 1 3668 ));
 
@@ -381,7 +380,6 @@ DATA(insert (	3041 1114 1082 1 2370 ));	/* timestamp-date */
 DATA(insert (	3041 1114 1184 1 2526 ));	/* timestamp-timestamptz */
 DATA(insert (	3042	 25   25 1 2166 ));	/* text pattern */
 DATA(insert (	3044	1042  1042 1 2180 ));	/* bpchar pattern */
-DATA(insert (	3045	 19   19 1 2187 ));	/* name pattern */
 DATA(insert (	3046	790  790 1  377 ));	/* money */
 DATA(insert (	3047	703  703 1 380 ));		/* reltime */
 DATA(insert (	3048	704  704 1 381 ));		/* tinterval */

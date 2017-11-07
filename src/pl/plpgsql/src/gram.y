@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.110 2008/04/06 23:43:29 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.113 2008/05/15 22:39:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -50,6 +50,8 @@ static	PLpgSQL_stmt_fetch *read_fetch_direction(void);
 static	PLpgSQL_stmt	*make_return_stmt(int lineno);
 static	PLpgSQL_stmt	*make_return_next_stmt(int lineno);
 static	PLpgSQL_stmt	*make_return_query_stmt(int lineno);
+static  PLpgSQL_stmt 	*make_case(int lineno, PLpgSQL_expr *t_expr,
+								   List *case_when_list, List *else_stmts);
 static	void			 check_assignable(PLpgSQL_datum *datum);
 static	void			 read_into_target(PLpgSQL_rec **rec, PLpgSQL_row **row,
 										  bool *strict);
@@ -65,6 +67,7 @@ static	void			 check_labels(const char *start_label,
 									  const char *end_label);
 static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 										  int until, const char *expected);
+static List				*read_raise_options(void);
 
 %}
 
@@ -115,6 +118,7 @@ static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 		PLpgSQL_nsitem			*nsitem;
 		PLpgSQL_diag_item		*diagitem;
 		PLpgSQL_stmt_fetch		*fetch;
+		PLpgSQL_case_when		*casewhen;
 }
 
 %type <declhdr> decl_sect
@@ -129,7 +133,7 @@ static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 %type <str>		decl_stmts decl_stmt
 
 %type <expr>	expr_until_semi expr_until_rightbracket
-%type <expr>	expr_until_then expr_until_loop
+%type <expr>	expr_until_then expr_until_loop opt_expr_until_when
 %type <expr>	opt_exitcond
 
 %type <ival>	assign_var
@@ -148,15 +152,15 @@ static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 %type <stmt>	stmt_return stmt_raise stmt_execsql
 %type <stmt>	stmt_dynexecute stmt_for stmt_perform stmt_getdiag
 %type <stmt>	stmt_open stmt_fetch stmt_move stmt_close stmt_null
+%type <stmt>	stmt_case
 
 %type <list>	proc_exceptions
 %type <exception_block> exception_sect
 %type <exception>	proc_exception
-%type <condition>	proc_conditions
+%type <condition>	proc_conditions proc_condition
 
-
-%type <ival>	raise_level
-%type <str>		raise_msg
+%type <casewhen>	case_when
+%type <list>	case_when_list opt_case_else
 
 %type <list>	getdiag_list
 %type <diagitem> getdiag_list_item
@@ -174,11 +178,11 @@ static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 %token	K_ASSIGN
 %token	K_BEGIN
 %token	K_BY
+%token	K_CASE
 %token	K_CLOSE
 %token	K_CONSTANT
 %token	K_CONTINUE
 %token	K_CURSOR
-%token	K_DEBUG
 %token	K_DECLARE
 %token	K_DEFAULT
 %token	K_DIAGNOSTICS
@@ -195,16 +199,13 @@ static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 %token	K_GET
 %token	K_IF
 %token	K_IN
-%token	K_INFO
 %token	K_INSERT
 %token	K_INTO
 %token	K_IS
-%token	K_LOG
 %token	K_LOOP
 %token	K_MOVE
 %token	K_NOSCROLL
 %token	K_NOT
-%token	K_NOTICE
 %token	K_NULL
 %token	K_OPEN
 %token	K_OR
@@ -221,7 +222,6 @@ static PLpgSQL_expr 	*read_cursor_args(PLpgSQL_var *cursor,
 %token	K_TO
 %token	K_TYPE
 %token	K_USING
-%token	K_WARNING
 %token	K_WHEN
 %token	K_WHILE
 
@@ -630,6 +630,8 @@ proc_stmt		: pl_block ';'
 						{ $$ = $1; }
 				| stmt_if
 						{ $$ = $1; }
+				| stmt_case
+						{ $$ = $1; }
 				| stmt_loop
 						{ $$ = $1; }
 				| stmt_while
@@ -823,6 +825,67 @@ stmt_else		:
 				| K_ELSE proc_sect
 					{
 						$$ = $2;
+					}
+				;
+
+stmt_case		: K_CASE lno opt_expr_until_when case_when_list opt_case_else K_END K_CASE ';'
+					{
+						$$ = make_case($2, $3, $4, $5);
+					}
+				;
+
+opt_expr_until_when	:
+					{
+						PLpgSQL_expr *expr = NULL;
+						int	tok = yylex();
+
+						if (tok != K_WHEN)
+						{
+							plpgsql_push_back_token(tok);
+							expr = plpgsql_read_expression(K_WHEN, "WHEN");
+						}
+						plpgsql_push_back_token(K_WHEN);
+						$$ = expr;
+					}
+			    ;
+
+case_when_list	: case_when_list case_when
+					{
+						$$ = lappend($1, $2);
+					}
+				| case_when
+					{
+						$$ = list_make1($1);
+					}
+				;
+
+case_when		: K_WHEN lno expr_until_then proc_sect
+					{
+						PLpgSQL_case_when *new = palloc(sizeof(PLpgSQL_case_when));
+
+						new->lineno	= $2;
+						new->expr	= $3;
+						new->stmts	= $4;
+						$$ = new;
+					}
+				;
+
+opt_case_else	:
+					{
+						$$ = NIL;
+					}
+				| K_ELSE proc_sect
+					{
+						/*
+						 * proc_sect could return an empty list, but we
+						 * must distinguish that from not having ELSE at all.
+						 * Simplest fix is to return a list with one NULL
+						 * pointer, which make_case() must take care of.
+						 */
+						if ($2 != NIL)
+							$$ = $2;
+						else
+							$$ = list_make1(NULL);
 					}
 				;
 
@@ -1256,7 +1319,7 @@ stmt_return		: K_RETURN lno
 					}
 				;
 
-stmt_raise		: K_RAISE lno raise_level raise_msg
+stmt_raise		: K_RAISE lno
 					{
 						PLpgSQL_stmt_raise		*new;
 						int	tok;
@@ -1265,66 +1328,130 @@ stmt_raise		: K_RAISE lno raise_level raise_msg
 
 						new->cmd_type	= PLPGSQL_STMT_RAISE;
 						new->lineno		= $2;
-						new->elog_level = $3;
-						new->message	= $4;
+						new->elog_level = ERROR;	/* default */
+						new->condname	= NULL;
+						new->message	= NULL;
 						new->params		= NIL;
+						new->options	= NIL;
 
 						tok = yylex();
+						if (tok == 0)
+							yyerror("unexpected end of function definition");
 
 						/*
-						 * We expect either a semi-colon, which
-						 * indicates no parameters, or a comma that
-						 * begins the list of parameter expressions
+						 * We could have just RAISE, meaning to re-throw
+						 * the current error.
 						 */
-						if (tok != ',' && tok != ';')
-							yyerror("syntax error");
-
-						if (tok == ',')
+						if (tok != ';')
 						{
-							do
+							/*
+							 * First is an optional elog severity level.
+							 * Most of these are not plpgsql keywords,
+							 * so we rely on examining yytext.
+							 */
+							if (pg_strcasecmp(yytext, "exception") == 0)
 							{
-								PLpgSQL_expr *expr;
+								new->elog_level = ERROR;
+								tok = yylex();
+							}
+							else if (pg_strcasecmp(yytext, "warning") == 0)
+							{
+								new->elog_level = WARNING;
+								tok = yylex();
+							}
+							else if (pg_strcasecmp(yytext, "notice") == 0)
+							{
+								new->elog_level = NOTICE;
+								tok = yylex();
+							}
+							else if (pg_strcasecmp(yytext, "info") == 0)
+							{
+								new->elog_level = INFO;
+								tok = yylex();
+							}
+							else if (pg_strcasecmp(yytext, "log") == 0)
+							{
+								new->elog_level = LOG;
+								tok = yylex();
+							}
+							else if (pg_strcasecmp(yytext, "debug") == 0)
+							{
+								new->elog_level = DEBUG1;
+								tok = yylex();
+							}
+							if (tok == 0)
+								yyerror("unexpected end of function definition");
 
-								expr = read_sql_expression2(',', ';',
-															", or ;",
-															&tok);
-								new->params = lappend(new->params, expr);
-							} while (tok == ',');
+							/*
+							 * Next we can have a condition name, or
+							 * equivalently SQLSTATE 'xxxxx', or a string
+							 * literal that is the old-style message format,
+							 * or USING to start the option list immediately.
+							 */
+							if (tok == T_STRING)
+							{
+								/* old style message and parameters */
+								new->message = plpgsql_get_string_value();
+								/*
+								 * We expect either a semi-colon, which
+								 * indicates no parameters, or a comma that
+								 * begins the list of parameter expressions,
+								 * or USING to begin the options list.
+								 */
+								tok = yylex();
+								if (tok != ',' && tok != ';' && tok != K_USING)
+									yyerror("syntax error");
+
+								while (tok == ',')
+								{
+									PLpgSQL_expr *expr;
+
+									expr = read_sql_construct(',', ';', K_USING,
+															  ", or ; or USING",
+															  "SELECT ",
+															  true, true, &tok);
+									new->params = lappend(new->params, expr);
+								}
+							}
+							else if (tok != K_USING)
+							{
+								/* must be condition name or SQLSTATE */
+								if (pg_strcasecmp(yytext, "sqlstate") == 0)
+								{
+									/* next token should be a string literal */
+									char   *sqlstatestr;
+
+									if (yylex() != T_STRING)
+										yyerror("syntax error");
+									sqlstatestr = plpgsql_get_string_value();
+
+									if (strlen(sqlstatestr) != 5)
+										yyerror("invalid SQLSTATE code");
+									if (strspn(sqlstatestr, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 5)
+										yyerror("invalid SQLSTATE code");
+									new->condname = sqlstatestr;
+								}
+								else
+								{
+									char   *cname;
+
+									if (tok != T_WORD)
+										yyerror("syntax error");
+									plpgsql_convert_ident(yytext, &cname, 1);
+									plpgsql_recognize_err_condition(cname,
+																	false);
+									new->condname = cname;
+								}
+								tok = yylex();
+								if (tok != ';' && tok != K_USING)
+									yyerror("syntax error");
+							}
+
+							if (tok == K_USING)
+								new->options = read_raise_options();
 						}
 
 						$$ = (PLpgSQL_stmt *)new;
-					}
-				;
-
-raise_msg		: T_STRING
-					{
-						$$ = plpgsql_get_string_value();
-					}
-				;
-
-raise_level		: K_EXCEPTION
-					{
-						$$ = ERROR;
-					}
-				| K_WARNING
-					{
-						$$ = WARNING;
-					}
-				| K_NOTICE
-					{
-						$$ = NOTICE;
-					}
-				| K_INFO
-					{
-						$$ = INFO;
-					}
-				| K_LOG
-					{
-						$$ = LOG;
-					}
-				| K_DEBUG
-					{
-						$$ = DEBUG1;
 					}
 				;
 
@@ -1590,19 +1717,60 @@ proc_exception	: K_WHEN lno proc_conditions K_THEN proc_sect
 					}
 				;
 
-proc_conditions	: proc_conditions K_OR opt_lblname
+proc_conditions	: proc_conditions K_OR proc_condition
 						{
 							PLpgSQL_condition	*old;
 
 							for (old = $1; old->next != NULL; old = old->next)
 								/* skip */ ;
-							old->next = plpgsql_parse_err_condition($3);
-
+							old->next = $3;
 							$$ = $1;
 						}
-				| opt_lblname
+				| proc_condition
+						{
+							$$ = $1;
+						}
+				;
+
+proc_condition	: opt_lblname
 						{
 							$$ = plpgsql_parse_err_condition($1);
+						}
+				| T_SCALAR
+						{
+							/*
+							 * Because we know the special sqlstate variable
+							 * is at the top of the namestack (see the
+							 * exception_sect production), the SQLSTATE
+							 * keyword will always lex as T_SCALAR.  This
+							 * might not be true in other parsing contexts!
+							 */
+							PLpgSQL_condition *new;
+							char   *sqlstatestr;
+
+							if (pg_strcasecmp(yytext, "sqlstate") != 0)
+								yyerror("syntax error");
+
+							/* next token should be a string literal */
+							if (yylex() != T_STRING)
+								yyerror("syntax error");
+							sqlstatestr = plpgsql_get_string_value();
+
+							if (strlen(sqlstatestr) != 5)
+								yyerror("invalid SQLSTATE code");
+							if (strspn(sqlstatestr, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 5)
+								yyerror("invalid SQLSTATE code");
+
+							new = palloc(sizeof(PLpgSQL_condition));
+							new->sqlerrstate = MAKE_SQLSTATE(sqlstatestr[0],
+															 sqlstatestr[1],
+															 sqlstatestr[2],
+															 sqlstatestr[3],
+															 sqlstatestr[4]);
+							new->condname = sqlstatestr;
+							new->next = NULL;
+
+							$$ = new;
 						}
 				;
 
@@ -2258,6 +2426,7 @@ static PLpgSQL_stmt *
 make_return_query_stmt(int lineno)
 {
 	PLpgSQL_stmt_return_query *new;
+	int			tok;
 
 	if (!plpgsql_curr_compile->fn_retset)
 		yyerror("cannot use RETURN QUERY in a non-SETOF function");
@@ -2265,7 +2434,32 @@ make_return_query_stmt(int lineno)
 	new = palloc0(sizeof(PLpgSQL_stmt_return_query));
 	new->cmd_type = PLPGSQL_STMT_RETURN_QUERY;
 	new->lineno = lineno;
-	new->query = read_sql_stmt("");
+
+	/* check for RETURN QUERY EXECUTE */
+	if ((tok = yylex()) != K_EXECUTE)
+	{
+		/* ordinary static query */
+		plpgsql_push_back_token(tok);
+		new->query = read_sql_stmt("");
+	}
+	else
+	{
+		/* dynamic SQL */
+		int		term;
+
+		new->dynquery = read_sql_expression2(';', K_USING, "; or USING",
+											 &term);
+		if (term == K_USING)
+		{
+			do
+			{
+				PLpgSQL_expr *expr;
+
+				expr = read_sql_expression2(',', ';', ", or ;", &term);
+				new->params = lappend(new->params, expr);
+			} while (term == ',');
+		}
+	}
 
 	return (PLpgSQL_stmt *) new;
 }
@@ -2649,6 +2843,152 @@ read_cursor_args(PLpgSQL_var *cursor, int until, const char *expected)
 	*cp = '\0';
 
 	return expr;
+}
+
+/*
+ * Parse RAISE ... USING options
+ */
+static List *
+read_raise_options(void)
+{
+	List	   *result = NIL;
+
+	for (;;)
+	{
+		PLpgSQL_raise_option *opt;
+		int		tok;
+
+		if ((tok = yylex()) == 0)
+			yyerror("unexpected end of function definition");
+
+		opt = (PLpgSQL_raise_option *) palloc(sizeof(PLpgSQL_raise_option));
+
+		if (pg_strcasecmp(yytext, "errcode") == 0)
+			opt->opt_type = PLPGSQL_RAISEOPTION_ERRCODE;
+		else if (pg_strcasecmp(yytext, "message") == 0)
+			opt->opt_type = PLPGSQL_RAISEOPTION_MESSAGE;
+		else if (pg_strcasecmp(yytext, "detail") == 0)
+			opt->opt_type = PLPGSQL_RAISEOPTION_DETAIL;
+		else if (pg_strcasecmp(yytext, "hint") == 0)
+			opt->opt_type = PLPGSQL_RAISEOPTION_HINT;
+		else
+		{
+			plpgsql_error_lineno = plpgsql_scanner_lineno();
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("unrecognized RAISE statement option \"%s\"",
+							yytext)));
+		}
+
+		if (yylex() != K_ASSIGN)
+			yyerror("syntax error, expected \"=\"");
+
+		opt->expr = read_sql_expression2(',', ';', ", or ;", &tok);
+
+		result = lappend(result, opt);
+
+		if (tok == ';')
+			break;
+	}
+
+	return result;
+}
+
+/*
+ * Fix up CASE statement
+ */
+static PLpgSQL_stmt *
+make_case(int lineno, PLpgSQL_expr *t_expr,
+		  List *case_when_list, List *else_stmts)
+{
+	PLpgSQL_stmt_case 	*new;
+
+	new = palloc(sizeof(PLpgSQL_stmt_case));
+	new->cmd_type = PLPGSQL_STMT_CASE;
+	new->lineno = lineno;
+	new->t_expr = t_expr;
+	new->t_varno = 0;
+	new->case_when_list = case_when_list;
+	new->have_else = (else_stmts != NIL);
+	/* Get rid of list-with-NULL hack */
+	if (list_length(else_stmts) == 1 && linitial(else_stmts) == NULL)
+		new->else_stmts = NIL;
+	else
+		new->else_stmts = else_stmts;
+
+	/*
+	 * When test expression is present, we create a var for it and then
+	 * convert all the WHEN expressions to "VAR IN (original_expression)".
+	 * This is a bit klugy, but okay since we haven't yet done more than
+	 * read the expressions as text.  (Note that previous parsing won't
+	 * have complained if the WHEN ... THEN expression contained multiple
+	 * comma-separated values.)
+	 */
+	if (t_expr)
+	{
+		ListCell *l;
+		PLpgSQL_var *t_var;
+		int		t_varno;
+
+		/*
+		 * We don't yet know the result datatype of t_expr.  Build the
+		 * variable as if it were INT4; we'll fix this at runtime if needed.
+		 */
+		t_var = (PLpgSQL_var *)
+			plpgsql_build_variable("*case*", lineno,
+								   plpgsql_build_datatype(INT4OID, -1),
+								   false);
+		t_varno = t_var->varno;
+		new->t_varno = t_varno;
+
+		foreach(l, case_when_list)
+		{
+			PLpgSQL_case_when *cwt = (PLpgSQL_case_when *) lfirst(l);
+			PLpgSQL_expr *expr = cwt->expr;
+			int		nparams = expr->nparams;
+			PLpgSQL_expr *new_expr;
+			PLpgSQL_dstring ds;
+			char	buff[32];
+
+			/* Must add the CASE variable as an extra param to expression */
+			if (nparams >= MAX_EXPR_PARAMS)
+			{
+				plpgsql_error_lineno = cwt->lineno;
+				ereport(ERROR,
+					    (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+					     errmsg("too many variables specified in SQL statement")));
+			}
+
+			new_expr = palloc(sizeof(PLpgSQL_expr) + sizeof(int) * (nparams + 1) - sizeof(int));
+			memcpy(new_expr, expr,
+				   sizeof(PLpgSQL_expr) + sizeof(int) * nparams - sizeof(int));
+			new_expr->nparams = nparams + 1;
+			new_expr->params[nparams] = t_varno;
+
+			/* And do the string hacking */
+			plpgsql_dstring_init(&ds);
+
+			plpgsql_dstring_append(&ds, "SELECT $");
+			snprintf(buff, sizeof(buff), "%d", nparams + 1);
+			plpgsql_dstring_append(&ds, buff);
+			plpgsql_dstring_append(&ds, " IN (");
+
+			/* copy expression query without SELECT keyword */
+			Assert(strncmp(expr->query, "SELECT ", 7) == 0);
+			plpgsql_dstring_append(&ds, expr->query + 7);
+			plpgsql_dstring_append_char(&ds, ')');
+
+			new_expr->query = pstrdup(plpgsql_dstring_get(&ds));
+
+			plpgsql_dstring_free(&ds);
+			pfree(expr->query);
+			pfree(expr);
+
+			cwt->expr = new_expr;
+		}
+	}
+
+	return (PLpgSQL_stmt *) new;
 }
 
 

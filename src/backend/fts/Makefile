@@ -9,7 +9,7 @@
 subdir = src/backend/fts
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 OBJS = fts.o ftsprobe.o
 ifeq ($(enable_segwalrep), yes)

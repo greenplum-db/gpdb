@@ -30,11 +30,12 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdisp_async.h"
 #include "cdb/cdbdispatchresult.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbpq.h"
 #include "miscadmin.h"
 
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
@@ -90,16 +91,16 @@ static void cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 							 struct Gang *gp,
 							 int sliceIndex,
 							 CdbDispatchDirectDesc *dispDirect);
-static void
-			cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
+static void	cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
 
-static bool
-			cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
+static bool	cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
+static int cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds);
 
 DispatcherInternalFuncs DispatcherAsyncFuncs =
 {
 	NULL,
 	cdbdisp_checkForCancel_async,
+	cdbdisp_getWaitSocketFd_async,
 	cdbdisp_makeDispatchParams_async,
 	cdbdisp_checkDispatchResult_async,
 	cdbdisp_dispatchToGang_async,
@@ -141,6 +142,48 @@ cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds)
 
 	checkDispatchResult(ds, false);
 	return cdbdisp_checkResultsErrcode(ds->primaryResults);
+}
+
+/*
+ * Return a FD to wait for, after dispatching.
+ */
+static int
+cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds)
+{
+	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
+	int			i;
+
+	Assert(ds);
+
+	if (proc_exit_inprogress)
+		return PGINVALID_SOCKET;
+
+	/*
+	 * This should match the logic in cdbdisp_checkForCancel_async(). In
+	 * particular, when cdbdisp_checkForCancel_async() is called, it must
+	 * process any incoming data from the socket we return here, or we
+	 * will busy wait.
+	 */
+	for (i = 0; i < pParms->dispatchCount; i++)
+	{
+		CdbDispatchResult *dispatchResult;
+		SegmentDatabaseDescriptor *segdbDesc;
+
+		dispatchResult = pParms->dispatchResultPtrArray[i];
+		segdbDesc = dispatchResult->segdbDesc;
+
+		/*
+		 * Already finished with this QE?
+		 */
+		if (!dispatchResult->stillRunning)
+			continue;
+
+		Assert(!cdbconn_isBadConnection(segdbDesc));
+
+		return PQsocket(segdbDesc->conn);
+	}
+
+	return PGINVALID_SOCKET;
 }
 
 /*

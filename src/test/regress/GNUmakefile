@@ -6,15 +6,13 @@
 # Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
-# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.73 2008/04/07 14:15:58 petere Exp $
+# $PostgreSQL: pgsql/src/test/regress/GNUmakefile,v 1.74 2008/05/30 00:04:32 tgl Exp $
 #
 #-------------------------------------------------------------------------
 
 subdir = src/test/regress
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
-
-contribdir = $(top_builddir)/contrib
 
 # port number for temp-installation test postmaster
 TEMP_PORT = 5$(DEF_PGPORT)
@@ -143,15 +141,27 @@ $(remaining_files_build): $(abs_builddir)/%: $(srcdir)/%
 endif
 
 
-# And finally some extra C modules...
+# Get some extra C modules from contrib/spi...
 
-all: all-spi tablespace-setup includecheck hooktest
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest
 
-.PHONY: all-spi
-all-spi:
-	$(MAKE) -C $(contribdir)/spi refint$(DLSUFFIX) autoinc$(DLSUFFIX)
+refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
+	cp $< $@
+
+autoinc$(DLSUFFIX): $(top_builddir)/contrib/spi/autoinc$(DLSUFFIX)
+	cp $< $@
+
+$(top_builddir)/contrib/spi/refint$(DLSUFFIX): $(top_srcdir)/contrib/spi/refint.c
+	$(MAKE) -C $(top_builddir)/contrib/spi refint$(DLSUFFIX)
+
+$(top_builddir)/contrib/spi/autoinc$(DLSUFFIX): $(top_srcdir)/contrib/spi/autoinc.c
+	$(MAKE) -C $(top_builddir)/contrib/spi autoinc$(DLSUFFIX)
+
 
 # Tablespace setup
+
+all: tablespace-setup
+
 .PHONY: tablespace-setup
 tablespace-setup:
 	rm -rf ./testtablespace
@@ -219,8 +229,8 @@ bkuprestore: all
 
 clean distclean maintainer-clean: clean-lib
 # things built by `all' target
-	rm -f $(OBJS)
-	$(MAKE) -C $(contribdir)/spi clean
+	rm -f $(OBJS) refint$(DLSUFFIX) autoinc$(DLSUFFIX)
+	$(MAKE) -C $(top_builddir)/contrib/spi clean
 	$(MAKE) -C hooktest/ clean
 	rm -f $(output_files) $(input_files) pg_regress_main.o pg_regress.o pg_regress$(X) twophase_pqexecparams
 # things created by dynamic configs

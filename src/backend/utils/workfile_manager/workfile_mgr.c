@@ -70,7 +70,6 @@ workfile_set_free_callback(ResourceReleasePhase phase,
 	if (phase != RESOURCE_RELEASE_AFTER_LOCKS)
 		return;
 
-
 	next = open_workfile_sets;
 	while (next)
 	{
@@ -84,7 +83,6 @@ workfile_set_free_callback(ResourceReleasePhase phase,
 			workfile_mgr_close_set(curr);
 		}
 	}
-	AssertImply(isTopLevel, open_workfile_sets == NULL);
 }
 
 

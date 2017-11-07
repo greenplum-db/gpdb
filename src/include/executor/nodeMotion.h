@@ -27,9 +27,4 @@ extern void ExecStopMotion(MotionState *node);
 
 extern bool isMotionGather(const Motion *m);
 
-static inline gpmon_packet_t * GpmonPktFromMotionState(MotionState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif   /* NODEMOTION_H */

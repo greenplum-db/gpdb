@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.126 2008/04/04 18:00:25 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.129 2008/06/11 10:55:43 heikki Exp $
  */
 #include "postgres_fe.h"
 
@@ -200,11 +200,11 @@ slashUsage(unsigned short int pager)
 	fprintf(output, "\n");
 
 	fprintf(output, _("Input/Output\n"));
-	fprintf(output, _("  \\copy ...              perform SQL COPY with data stream to the client host\n"));
-	fprintf(output, _("  \\echo [STRING]         write string to standard output\n"));
-	fprintf(output, _("  \\i FILE                execute commands from file\n"));
-	fprintf(output, _("  \\o [FILE]              send all query results to file or |pipe\n"));
-	fprintf(output, _("  \\qecho [STRING]        write string to query output stream (see \\o)\n"));
+	fprintf(output, _("  \\copy ...      perform SQL COPY with data stream to the client host\n"));
+	fprintf(output, _("  \\echo [STRING] write string to standard output\n"));
+	fprintf(output, _("  \\i FILE        execute commands from file\n"));
+	fprintf(output, _("  \\o [FILE]      send all query results to file or |pipe\n"));
+	fprintf(output, _("  \\qecho [STRING] write string to query output stream (see \\o)\n"));
 	fprintf(output, "\n");
 
 	fprintf(output, _("Informational\n"));

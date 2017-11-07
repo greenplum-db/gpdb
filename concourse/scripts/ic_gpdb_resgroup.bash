@@ -8,29 +8,31 @@ CLUSTER_NAME=$(cat ./cluster_env_files/terraform/name)
 
 prepare_env() {
     local gpdb_host_alias=$1
+    local pkgs='bzip2-devel'
+
     if [ "$TEST_OS" = "centos7" ]; then
-        ssh -t $gpdb_host_alias "sudo bash -c 'yum install -d1 -y perl-Env perl-Data-Dumper bzip2-devel'"
-    else
-        ssh -t $gpdb_host_alias "sudo bash -c 'yum install -d1 -y bzip2-devel'"
+        pkgs+=' perl-Env perl-Data-Dumper'
     fi
+
+    ssh -t $gpdb_host_alias sudo yum install -d1 -y $pkgs
 }
 
 mount_cgroups() {
     local gpdb_host_alias=$1
     local basedir=/cgroup
     local options=rw,nosuid,nodev,noexec,relatime
-    local groups="hugetlb freezer pids devices cpuset blkio net_prio net_cls cpuacct cpu memory perf_event"
+    local groups="freezer devices cpuset blkio net_prio net_cls cpuacct cpu memory perf_event"
 
     if [ "$TEST_OS" = "centos7" ]; then return; fi
 
-    ssh -t $gpdb_host_alias "sudo bash -c '(\
-        mkdir -p $basedir; \
-        mount -t tmpfs tmpfs $basedir; \
-        for group in $groups; do \
-                mkdir -p $basedir/\$group; \
-                mount -t cgroup -o $options,\$group cgroup $basedir/\$group; \
-        done; \
-    )'"
+    ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+        mkdir -p $basedir
+        mount -t tmpfs tmpfs $basedir
+        for group in $groups; do
+                mkdir -p $basedir/\$group
+                mount -t cgroup -o $options,\$group cgroup $basedir/\$group
+        done
+EOF
 }
 
 make_cgroups_dir() {
@@ -38,35 +40,40 @@ make_cgroups_dir() {
     local basedir=/cgroup
     if [ "$TEST_OS" = "centos7" ]; then basedir=/sys/fs/cgroup; fi
 
-    ssh -t $gpdb_host_alias "sudo bash -c '(\
-        chmod -R 777 $basedir/cpu; \
-        chmod -R 777 $basedir/cpuacct; \
-        mkdir -p $basedir/cpu/gpdb; \
-        chown -R gpadmin:gpadmin $basedir/cpu/gpdb; \
-        chmod -R 777 $basedir/cpu/gpdb; \
-        mkdir -p $basedir/cpuacct/gpdb; \
-        chown -R gpadmin:gpadmin $basedir/cpuacct/gpdb; \
-        chmod -R 777 $basedir/cpuacct/gpdb; \
-    )'"
+    ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+        for comp in cpu cpuacct; do
+            chmod -R 777 $basedir/\$comp
+            mkdir -p $basedir/\$comp/gpdb
+            chown -R gpadmin:gpadmin $basedir/\$comp/gpdb
+            chmod -R 777 $basedir/\$comp/gpdb
+        done
+EOF
 }
 
 run_resgroup_test() {
     local gpdb_master_alias=$1
 
-    ssh $gpdb_master_alias "bash -c '(\
-        source /usr/local/greenplum-db-devel/greenplum_path.sh; \
-        export PGPORT=5432; \
-        export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1; \
+    ssh $gpdb_master_alias bash -ex <<EOF
+        source /usr/local/greenplum-db-devel/greenplum_path.sh
+        export PGPORT=5432
+        export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
 
-        cd /home/gpadmin/gpdb_src; \
-        ./configure --prefix=/usr/local/greenplum-db-devel --without-zlib --without-rt --without-libcurl --without-libedit-preferred --without-docdir --without-readline --disable-gpcloud --disable-gpfdist --disable-orca --disable-pxf ${CONFIGURE_FLAGS}; \
-        cd /home/gpadmin/gpdb_src/src/test/regress && make;\
-        ssh sdw1 \"mkdir -p /home/gpadmin/gpdb_src/src/test/regress\";\
-        ssh sdw1 \"mkdir -p /home/gpadmin/gpdb_src/src/test/isolation2\";\
-        scp /home/gpadmin/gpdb_src/src/test/regress/regress.so gpadmin@sdw1:/home/gpadmin/gpdb_src/src/test/regress/ ; \
-        cd /home/gpadmin/gpdb_src; \
-        make installcheck-resgroup; \
-    )'"
+        cd /home/gpadmin/gpdb_src
+        ./configure --prefix=/usr/local/greenplum-db-devel \
+            --without-zlib --without-rt --without-libcurl \
+            --without-libedit-preferred --without-docdir --without-readline \
+            --disable-gpcloud --disable-gpfdist --disable-orca \
+            --disable-pxf ${CONFIGURE_FLAGS}
+
+        make -C /home/gpadmin/gpdb_src/src/test/regress
+        ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/regress
+        ssh sdw1 mkdir -p /home/gpadmin/gpdb_src/src/test/isolation2
+        scp /home/gpadmin/gpdb_src/src/test/regress/regress.so \
+            gpadmin@sdw1:/home/gpadmin/gpdb_src/src/test/regress/
+
+        trap "find src/test/isolation2 -name regression.diffs | xargs cat" ERR
+        make installcheck-resgroup
+EOF
 }
 
 prepare_env ccp-${CLUSTER_NAME}-0

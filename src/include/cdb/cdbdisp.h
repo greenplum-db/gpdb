@@ -56,6 +56,7 @@ typedef struct DispatcherInternalFuncs
 {
 	void (*procExitCallBack)(void);
 	bool (*checkForCancel)(struct CdbDispatcherState *ds);
+	int (*getWaitSocketFd)(struct CdbDispatcherState *ds);
 	void* (*makeDispatchParams)(int maxSlices, char *queryText, int queryTextLen);
 	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
 	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp,
@@ -187,6 +188,7 @@ cdbdisp_makeDispatcherState(CdbDispatcherState *ds,
 void cdbdisp_destroyDispatcherState(CdbDispatcherState *ds);
 
 bool cdbdisp_checkForCancel(CdbDispatcherState * ds);
+int cdbdisp_getWaitSocketFd(CdbDispatcherState *ds);
 
 void cdbdisp_onProcExit(void);
 

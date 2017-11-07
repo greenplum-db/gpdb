@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.127 2008/03/26 18:48:59 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/variable.c,v 1.128 2008/05/12 20:02:00 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -582,7 +582,7 @@ assign_XactIsoLevel(const char *value, bool doit, GucSource source)
 	if (source != PGC_S_OVERRIDE &&
 			newXactIsoLevel != XactIsoLevel && IsTransactionState())
 	{
-		if (SerializableSnapshot != NULL)
+		if (FirstSnapshotSet)
 		{
 			if (source >= PGC_S_INTERACTIVE)
 				ereport(ERROR,

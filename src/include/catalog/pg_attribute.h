@@ -10,7 +10,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_attribute.h,v 1.135 2008/03/27 03:57:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_attribute.h,v 1.140 2008/07/30 17:05:05 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -242,26 +242,28 @@ typedef FormData_pg_attribute *Form_pg_attribute;
 { 1247, {"typlen"},		   21, -1,	2,	4, 0, -1, -1, true, 'p', 's', true, false, false, true, 0 }, \
 { 1247, {"typbyval"},	   16, -1,	1,	5, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
 { 1247, {"typtype"},	   18, -1,	1,	6, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 1247, {"typisdefined"},  16, -1,	1,	7, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 1247, {"typdelim"},	   18, -1,	1,	8, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 1247, {"typrelid"},	   26, -1,	4,	9, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typelem"},	   26, -1,	4, 10, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typarray"},	   26, -1,	4, 11, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typinput"},	   24, -1,	4, 12, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typoutput"},	   24, -1,	4, 13, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typreceive"},    24, -1,	4, 14, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typsend"},	   24, -1,	4, 15, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typmodin"},	   24, -1,	4, 16, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typmodout"},	   24, -1,	4, 17, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typanalyze"},    24, -1,	4, 18, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typalign"},	   18, -1,	1, 19, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 1247, {"typstorage"},    18, -1,	1, 20, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 1247, {"typnotnull"},    16, -1,	1, 21, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
-{ 1247, {"typbasetype"},   26, -1,	4, 22, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typtypmod"},	   23, -1,	4, 23, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typndims"},	   23, -1,	4, 24, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1247, {"typdefaultbin"}, 25, -1, -1, 25, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
-{ 1247, {"typdefault"},    25, -1, -1, 26, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }
+{ 1247, {"typcategory"},   18, -1,	1,	7, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typispreferred"},16, -1,	1,	8, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typisdefined"},  16, -1,	1,	9, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typdelim"},	   18, -1,	1, 10, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typrelid"},	   26, -1,	4, 11, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typelem"},	   26, -1,	4, 12, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typarray"},	   26, -1,	4, 13, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typinput"},	   24, -1,	4, 14, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typoutput"},	   24, -1,	4, 15, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typreceive"},    24, -1,	4, 16, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typsend"},	   24, -1,	4, 17, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typmodin"},	   24, -1,	4, 18, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typmodout"},	   24, -1,	4, 19, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typanalyze"},    24, -1,	4, 20, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typalign"},	   18, -1,	1, 21, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typstorage"},    18, -1,	1, 22, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typnotnull"},    16, -1,	1, 23, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
+{ 1247, {"typbasetype"},   26, -1,	4, 24, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typtypmod"},	   23, -1,	4, 25, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typndims"},	   23, -1,	4, 26, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1247, {"typdefaultbin"}, 25, -1, -1, 27, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }, \
+{ 1247, {"typdefault"},    25, -1, -1, 28, 0, -1, -1, false, 'x', 'i', false, false, false, true, 0 }
 
 DATA(insert ( 1247 typname			19 -1 NAMEDATALEN	1 0 -1 -1 f p c t f f t 0));
 DATA(insert ( 1247 typnamespace		26 -1 4   2 0 -1 -1 t p i t f f t 0));
@@ -269,26 +271,28 @@ DATA(insert ( 1247 typowner			26 -1 4   3 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1247 typlen			21 -1 2   4 0 -1 -1 t p s t f f t 0));
 DATA(insert ( 1247 typbyval			16 -1 1   5 0 -1 -1 t p c t f f t 0));
 DATA(insert ( 1247 typtype			18 -1 1   6 0 -1 -1 t p c t f f t 0));
-DATA(insert ( 1247 typisdefined		16 -1 1   7 0 -1 -1 t p c t f f t 0));
-DATA(insert ( 1247 typdelim			18 -1 1   8 0 -1 -1 t p c t f f t 0));
-DATA(insert ( 1247 typrelid			26 -1 4   9 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typelem			26 -1 4  10 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typarray			26 -1 4  11 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typinput			24 -1 4  12 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typoutput		24 -1 4  13 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typreceive		24 -1 4  14 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typsend			24 -1 4  15 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typmodin			24 -1 4  16 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typmodout		24 -1 4  17 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typanalyze		24 -1 4  18 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typalign			18 -1 1  19 0 -1 -1 t p c t f f t 0));
-DATA(insert ( 1247 typstorage		18 -1 1  20 0 -1 -1 t p c t f f t 0));
-DATA(insert ( 1247 typnotnull		16 -1 1  21 0 -1 -1 t p c t f f t 0));
-DATA(insert ( 1247 typbasetype		26 -1 4  22 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typtypmod		23 -1 4  23 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typndims			23 -1 4  24 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1247 typdefaultbin	25 -1 -1 25 0 -1 -1 f x i f f f t 0));
-DATA(insert ( 1247 typdefault		25 -1 -1 26 0 -1 -1 f x i f f f t 0));
+DATA(insert ( 1247 typcategory		18 -1 1   7 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typispreferred	16 -1 1   8 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typisdefined		16 -1 1   9 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typdelim			18 -1 1  10 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typrelid			26 -1 4  11 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typelem			26 -1 4  12 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typarray			26 -1 4  13 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typinput			24 -1 4  14 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typoutput		24 -1 4  15 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typreceive		24 -1 4  16 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typsend			24 -1 4  17 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typmodin			24 -1 4  18 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typmodout		24 -1 4  19 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typanalyze		24 -1 4  20 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typalign			18 -1 1  21 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typstorage		18 -1 1  22 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typnotnull		16 -1 1  23 0 -1 -1 t p c t f f t 0));
+DATA(insert ( 1247 typbasetype		26 -1 4  24 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typtypmod		23 -1 4  25 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typndims			23 -1 4  26 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1247 typdefaultbin	25 -1 -1 27 0 -1 -1 f x i f f f t 0));
+DATA(insert ( 1247 typdefault		25 -1 -1 28 0 -1 -1 f x i f f f t 0));
 DATA(insert ( 1247 ctid				27 0  6  -1 0 -1 -1 f p s t f f t 0));
 DATA(insert ( 1247 oid				26 0  4  -2 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1247 xmin				28 0  4  -3 0 -1 -1 t p i t f f t 0));
@@ -307,9 +311,9 @@ DATA(insert ( 1247 gp_segment_id	23 0  4  -8 0 -1 -1 t p i t f f t 0));
 { 1255, {"pronamespace"},		26, -1, 4,	2, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1255, {"proowner"},			26, -1, 4,	3, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1255, {"prolang"},			26, -1, 4,	4, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1255, {"procost"},		   700, -1, 4,	5, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1255, {"prorows"},		   700, -1, 4,	6, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1255, {"provariadic"},        26, -1, 4,  7, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1255, {"procost"},		   700, -1, 4,	5, 0, -1, -1, FLOAT4PASSBYVAL, 'p', 'i', true, false, false, true, 0 }, \
+{ 1255, {"prorows"},		   700, -1, 4,	6, 0, -1, -1, FLOAT4PASSBYVAL, 'p', 'i', true, false, false, true, 0 }, \
+{ 1255, {"provariadic"},		26, -1, 4,	7, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1255, {"proisagg"},			16, -1, 1,	8, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
 { 1255, {"proiswindow"},		16, -1, 1,	9, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
 { 1255, {"prosecdef"},			16, -1, 1, 10, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
@@ -335,9 +339,9 @@ DATA(insert ( 1255 proname			19 -1 NAMEDATALEN	1 0 -1 -1 f p c t f f t 0));
 DATA(insert ( 1255 pronamespace		26 -1 4   2 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1255 proowner			26 -1 4   3 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1255 prolang			26 -1 4   4 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1255 procost		   700 -1 4   5 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1255 prorows		   700 -1 4   6 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1255 provariadic      26 -1 4   7 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1255 procost		   700 -1 4   5 0 -1 -1 FLOAT4PASSBYVAL p i t f f t 0));
+DATA(insert ( 1255 prorows		   700 -1 4   6 0 -1 -1 FLOAT4PASSBYVAL p i t f f t 0));
+DATA(insert ( 1255 provariadic		26 -1 4   7 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1255 proisagg			16 -1 1   8 0 -1 -1 t p c t f f t 0));
 DATA(insert ( 1255 proiswindow		16 -1 1   9 0 -1 -1 t p c t f f t 0));
 DATA(insert ( 1255 prosecdef		16 -1 1  10 0 -1 -1 t p c t f f t 0));
@@ -429,7 +433,7 @@ DATA(insert ( 1249 gp_segment_id   23 0  4  -8 0 -1 -1 t p i t f f t 0));
 { 1259, {"relfilenode"},   26, -1,	4,	6, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1259, {"reltablespace"}, 26, -1,	4,	7, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1259, {"relpages"},	   23, -1,	4,	8, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
-{ 1259, {"reltuples"},	   700, -1, 4,	9, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
+{ 1259, {"reltuples"},	   700, -1, 4,	9, 0, -1, -1, FLOAT4PASSBYVAL, 'p', 'i', true, false, false, true, 0 }, \
 { 1259, {"reltoastrelid"}, 26, -1,	4, 10, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1259, {"reltoastidxid"}, 26, -1,	4, 11, 0, -1, -1, true, 'p', 'i', true, false, false, true, 0 }, \
 { 1259, {"relhasindex"},   16, -1,	1, 12, 0, -1, -1, true, 'p', 'c', true, false, false, true, 0 }, \
@@ -458,7 +462,7 @@ DATA(insert ( 1259 relam			26 -1 4   5 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1259 relfilenode		26 -1 4   6 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1259 reltablespace	26 -1 4   7 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1259 relpages			23 -1 4   8 0 -1 -1 t p i t f f t 0));
-DATA(insert ( 1259 reltuples	   700 -1 4   9 0 -1 -1 t p i t f f t 0));
+DATA(insert ( 1259 reltuples	   700 -1 4   9 0 -1 -1 FLOAT4PASSBYVAL p i t f f t 0));
 DATA(insert ( 1259 reltoastrelid	26 -1 4  10 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1259 reltoastidxid	26 -1 4  11 0 -1 -1 t p i t f f t 0));
 DATA(insert ( 1259 relhasindex		16 -1 1  12 0 -1 -1 t p c t f f t 0));

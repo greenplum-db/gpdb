@@ -19,7 +19,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.11 2008/03/25 22:42:43 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.14 2008/07/16 01:30:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -442,6 +442,7 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		char	   *sname;
 		char	   *qstring;
 		A_Const    *snamenode;
+		TypeCast   *castnode;
 		FuncCall   *funccallnode;
 		CreateSeqStmt *seqstmt;
 		AlterSeqStmt *altseqstmt;
@@ -514,11 +515,14 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		snamenode = makeNode(A_Const);
 		snamenode->val.type = T_String;
 		snamenode->val.val.str = qstring;
-		snamenode->typeName = SystemTypeName("regclass");
-		snamenode->location = -1;					/* CDB */
+		snamenode->location = -1;
+		castnode = makeNode(TypeCast);
+		castnode->typeName = SystemTypeName("regclass");
+		castnode->arg = (Node *) snamenode;
+		castnode->location = -1;
 		funccallnode = makeNode(FuncCall);
 		funccallnode->funcname = SystemFuncName("nextval");
-		funccallnode->args = list_make1(snamenode);
+		funccallnode->args = list_make1(castnode);
 		funccallnode->agg_star = false;
 		funccallnode->agg_distinct = false;
 		funccallnode->func_variadic = false;
@@ -3076,7 +3080,7 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 				{
 					ColumnDef  *def = (ColumnDef *) cmd->def;
 
-					Assert(IsA(cmd->def, ColumnDef));
+					Assert(IsA(def, ColumnDef));
 
 					/*
 					 * Adding a column with a primary key or unique constraint
@@ -3098,33 +3102,14 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 										 errmsg("cannot add column with unique constraint")));
 						}
 					}
-					transformColumnDefinition(pstate, &cxt,
-											  (ColumnDef *) cmd->def);
+					transformColumnDefinition(pstate, &cxt, def);
 
 					/*
 					 * If the column has a non-null default, we can't skip
 					 * validation of foreign keys.
 					 */
-					if (((ColumnDef *) cmd->def)->raw_default != NULL)
+					if (def->raw_default != NULL)
 						skipValidation = false;
-
-					newcmds = lappend(newcmds, cmd);
-
-					/*
-					 * Convert an ADD COLUMN ... NOT NULL constraint to a
-					 * separate command
-					 */
-					if (def->is_not_null)
-					{
-						/* Remove NOT NULL from AddColumn */
-						def->is_not_null = false;
-
-						/* Add as a separate AlterTableCmd */
-						newcmd = makeNode(AlterTableCmd);
-						newcmd->subtype = AT_SetNotNull;
-						newcmd->name = pstrdup(def->colname);
-						newcmds = lappend(newcmds, newcmd);
-					}
 
 					/*
 					 * All constraints are processed in other ways. Remove the
@@ -3132,6 +3117,7 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 					 */
 					def->constraints = NIL;
 
+					newcmds = lappend(newcmds, cmd);
 					break;
 				}
 			case AT_AddConstraint:
@@ -3139,7 +3125,6 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 				/*
 				 * The original AddConstraint cmd node doesn't go to newcmds
 				 */
-
 				if (IsA(cmd->def, Constraint))
 					transformTableConstraint(pstate, &cxt,
 											 (Constraint *) cmd->def);

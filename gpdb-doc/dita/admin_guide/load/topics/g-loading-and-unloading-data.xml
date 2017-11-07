@@ -9,14 +9,16 @@
     <p>Greenplum Database supports high-performance parallel data loading and unloading, and for
       smaller amounts of data, single file, non-parallel data import and export. </p>
     <p>Greenplum Database can read from and write to several types of external data sources,
-      including text files, Hadoop file systems, and web servers. <ul id="ul_umr_mlh_kr">
+      including text files, Hadoop file systems, Amazon S3, and web servers.<ul id="ul_umr_mlh_kr">
         <li>The <codeph>COPY</codeph> SQL command transfers data between an external text file on
-          the master host and a Greenplum Database table.</li>
-        <li>External tables allow you to query data outside of the database directly and in parallel
-          using SQL commands such as <codeph>SELECT</codeph>, <codeph>JOIN</codeph>, or <codeph>SORT
-            EXTERNAL TABLE DATA</codeph>, and you can create views for external tables. External
-          tables are often used to load external data into a regular database table using a command
-          such as <codeph>CREATE TABLE table AS SELECT * FROM ext_table</codeph>. </li>
+          the master host, or multiple text files on segment hosts, and a Greenplum Database
+          table.</li>
+        <li>Readable external tables allow you to query data outside of the database directly and in
+          parallel using SQL commands such as <codeph>SELECT</codeph>, <codeph>JOIN</codeph>, or
+            <codeph>SORT EXTERNAL TABLE DATA</codeph>, and you can create views for external tables.
+          External tables are often used to load external data into a regular database table using a
+          command such as <codeph>CREATE TABLE <varname>table</varname> AS SELECT * FROM
+              <varname>ext_table</varname></codeph>. </li>
         <li>External web tables provide access to dynamic data. They can be backed with data from
           URLs accessed using the HTTP protocol or by the output of an OS script running on one or
           more segments.</li>
@@ -25,20 +27,19 @@
           Greenplum Database segments to load external data in parallel, from multiple file systems.
           You can run multiple instances of <codeph>gpfdist</codeph> on different hosts and network
           interfaces and access them in parallel. </li>
-        <li>The <codeph>gpload</codeph> utility automates the steps of a load task using a
-          YAML-formatted control file. </li>
+        <li>The <codeph>gpload</codeph> utility automates the steps of a load task using
+            <codeph>gpfdist</codeph> and a YAML-formatted control file. </li>
         <li otherprops="pivotal">The GemFire-Greenplum Connector allows the transfer of data between
-          a Pivotal GemFire region and a Greenplum Database table. Pivotal Gemfire is an in-memory
+          a Pivotal GemFire region and a Greenplum Database table. Pivotal GemFire is an in-memory
           data management system that provides reliable asynchronous event notifications and
           guaranteed message delivery. For information about using GemFire-Greenplum Connector, see
             <xref href="http://ggc.docs.pivotal.io/" format="html" scope="external"
-            >http://ggc.docs.pivotal.io/</xref>. For information about Pivotal Gemfire, see <xref
+            >http://ggc.docs.pivotal.io/</xref>. For information about Pivotal GemFire, see <xref
             href="http://gemfire.docs.pivotal.io/" format="html" scope="external"
             >http://gemfire.docs.pivotal.io/</xref>.</li>
-         <li otherprops="pivotal">The Greenplum-Spark Connector provides high speed, parallel data transfer between
-          Pivotal Greenplum Database and Apache Spark.
-          For information about using the Greenplum-Spark Connector, refer to the
-          documentation at <xref
+        <li otherprops="pivotal">The Greenplum-Spark Connector provides high speed, parallel data
+          transfer between Pivotal Greenplum Database and Apache Spark. For information about using
+          the Greenplum-Spark Connector, refer to the documentation at <xref
             href="https://greenplum-spark.docs.pivotal.io/" format="html" scope="external"
             >https://greenplum-spark.docs.pivotal.io/</xref>.</li>
       </ul>The method you choose to load data depends on the characteristics of the source

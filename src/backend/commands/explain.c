@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.185 2009/04/05 19:59:39 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.175 2008/05/14 19:10:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,6 +68,7 @@ explain_get_index_name_hook_type explain_get_index_name_hook = NULL;
 typedef struct ExplainState
 {
 	/* options */
+	bool		printTList;		/* print plan targetlists */
 	bool		printAnalyze;	/* print actual times */
 	/* other states */
 	PlannedStmt *pstmt;			/* top of plan */
@@ -101,6 +102,8 @@ static void explain_outNode(StringInfo str,
 				Plan *plan, PlanState *planstate,
 				Plan *outer_plan, Plan *parentPlan,
 				int indent, ExplainState *es);
+static void show_plan_tlist(Plan *plan,
+							StringInfo str, int indent, ExplainState *es);
 static void show_scan_qual(List *qual, const char *qlabel,
 			   int scanrelid, Plan *scan_plan, Plan *outer_plan,
 			   StringInfo str, int indent, ExplainState *es);
@@ -383,18 +386,15 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 		instrument_option = INSTRUMENT_ALL;
 
 	/*
-	 * Update snapshot command ID to ensure this query sees results of any
-	 * previously executed queries.  (It's a bit cheesy to modify
-	 * ActiveSnapshot without making a copy, but for the limited ways in which
-	 * EXPLAIN can be invoked, I think it's OK, because the active snapshot
-	 * shouldn't be shared with anything else anyway.)
+	 * Use a snapshot with an updated command ID to ensure this query sees
+	 * results of any previously executed queries.
 	 */
-	ActiveSnapshot->curcid = GetCurrentCommandId(false);
+	PushUpdatedSnapshot(GetActiveSnapshot());
 
 	/* Create a QueryDesc requesting no output */
 	queryDesc = CreateQueryDesc(plannedstmt,
 								queryString,
-								ActiveSnapshot, InvalidSnapshot,
+								GetActiveSnapshot(), InvalidSnapshot,
 								None_Receiver, params,
 								instrument_option);
 
@@ -442,7 +442,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 #ifdef USE_CODEGEN
-	if (stmt->codegen && codegen && Gp_segment == -1) {
+	if (stmt->codegen && codegen && Gp_segment == -1)
+	{
 		eflags |= EXEC_FLAG_EXPLAIN_CODEGEN;
 	}
 #endif
@@ -451,7 +452,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	ExecutorStart(queryDesc, eflags);
 
 #ifdef USE_CODEGEN
-	if (stmt->codegen && codegen && Gp_segment == -1) {
+	if (stmt->codegen && codegen && Gp_segment == -1)
+	{
 		ExplainCodegen(queryDesc->planstate, tstate);
 	}
 #endif
@@ -510,42 +512,10 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
                                      es->showstatctx);
 	}
 
+	es->printTList = stmt->verbose;
 	es->printAnalyze = stmt->analyze;
 	es->pstmt = queryDesc->plannedstmt;
 	es->rtable = queryDesc->plannedstmt->rtable;
-
-    if (stmt->verbose)
-	{
-		char	   *s;
-		char	   *f;
-
-		if (queryDesc->plannedstmt->planTree && estate->es_sliceTable)
-		{
-        	Node   *saved_es_sliceTable;
-
-			/* Little two-step to get EXPLAIN VERBOSE to show slice table. */
-			saved_es_sliceTable = queryDesc->plannedstmt->planTree->sliceTable;		/* probably NULL */
-			queryDesc->plannedstmt->planTree->sliceTable = (Node *) queryDesc->estate->es_sliceTable;
-			s = nodeToString(queryDesc->plannedstmt);
-			queryDesc->plannedstmt->planTree->sliceTable = saved_es_sliceTable;
-		}
-		else
-		{
-			s = nodeToString(queryDesc->plannedstmt);
-		}
-
-		if (s)
-		{
-			if (Explain_pretty_print)
-				f = pretty_format_node_dump(s);
-			else
-				f = format_node_dump(s);
-			pfree(s);
-			do_text_output_multiline(tstate, f);
-			pfree(f);
-			do_text_output_oneline(tstate, ""); /* separator line */
-		}
-	}
 
 	initStringInfo(&buf);
 
@@ -676,6 +646,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	}
 #endif
 
+	totaltime += elapsed_time(&starttime);
+
     /*
      * Display final elapsed time.
      */
@@ -689,6 +661,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
      */
     if (buf.len > 0)
         do_text_output_multiline(tstate, buf.data);
+
+	pfree(buf.data);
 
     /*
 	 * Close down the query and free resources.
@@ -731,6 +705,8 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
     }
 
     FreeQueryDesc(queryDesc);
+
+	PopActiveSnapshot();
 
 	/* We need a CCI just in case query expanded to multiple plans */
 	if (stmt->analyze)
@@ -884,8 +860,8 @@ explain_outNode(StringInfo str,
 				Plan *outer_plan, Plan *parentPlan,
 				int indent, ExplainState *es)
 {
-	const char	   *pname = NULL;
     Slice      *currentSlice = es->currentSlice;    /* save */
+	const char *pname;
 	int			i;
 	bool		skip_outer=false;
 	char       *skip_outer_msg = NULL;
@@ -1454,6 +1430,10 @@ explain_outNode(StringInfo str,
 	appendStringInfo(str, "plan->targetlist=%s\n", nodeToString(plan->targetlist));
 #endif
 
+	/* target list */
+	if (es->printTList)
+		show_plan_tlist(plan, str, indent, es);
+
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
@@ -1953,6 +1933,55 @@ explain_outNode(StringInfo str,
 }
 
 /*
+ * Show the targetlist of a plan node
+ */
+static void
+show_plan_tlist(Plan *plan,
+				StringInfo str, int indent, ExplainState *es)
+{
+	List	   *context;
+	bool		useprefix;
+	ListCell   *lc;
+	int			i;
+
+	/* No work if empty tlist (this occurs eg in bitmap indexscans) */
+	if (plan->targetlist == NIL)
+		return;
+	/* The tlist of an Append isn't real helpful, so suppress it */
+	if (IsA(plan, Append))
+		return;
+
+	/* Set up deparsing context */
+	context = deparse_context_for_plan((Node *) plan,
+									   NULL,
+									   es->rtable,
+									   es->pstmt->subplans);
+	useprefix = list_length(es->rtable) > 1;
+
+	/* Emit line prefix */
+	for (i = 0; i < indent; i++)
+		appendStringInfo(str, "  ");
+	appendStringInfo(str, "  Output: ");
+
+	/* Deparse each non-junk result column */
+	i = 0;
+	foreach(lc, plan->targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+		if (tle->resjunk)
+			continue;
+		if (i++ > 0)
+			appendStringInfo(str, ", ");
+		appendStringInfoString(str,
+							   deparse_expression((Node *) tle->expr, context,
+												  useprefix, false));
+	}
+
+	appendStringInfoChar(str, '\n');
+}
+
+/*
  * Show a qualifier expression for a scan plan node
  *
  * Note: outer_plan is the referent for any OUTER vars in the scan qual;
@@ -2186,7 +2215,8 @@ show_motion_keys(Plan *plan, List *hashExpr, int nkeys, AttrNumber *keycols,
 		return;
 
 	/* Set up deparse context */
-	context = deparse_context_for_plan((Node *) plan, (Node *) outerPlan(plan),
+	context = deparse_context_for_plan((Node *) plan,
+									   (Node *) outerPlan(plan),
 									   es->rtable,
 									   es->pstmt->subplans);
 

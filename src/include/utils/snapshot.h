@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/snapshot.h,v 1.2 2008/03/26 21:10:39 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/utils/snapshot.h,v 1.3 2008/05/12 20:02:02 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -60,6 +60,9 @@ typedef struct SnapshotData
 	 * out any that are >= xmax
 	 */
 	CommandId	curcid;			/* in my xact, CID < curcid are visible */
+	uint32		active_count;	/* refcount on ActiveSnapshot stack */
+	uint32		regd_count;		/* refcount on RegisteredSnapshotList */
+	bool		copied;			/* false if it's a static snapshot */
 
 	bool		haveDistribSnapshot; /* True if this snapshot is distributed. */
 
@@ -68,6 +71,7 @@ typedef struct SnapshotData
 	 * distributed transaction, with cached local xids
 	 */
 	DistributedSnapshotWithLocalMapping	distribSnapshotWithLocalMapping;
+
 } SnapshotData;
 
 /*

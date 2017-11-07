@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.147 2008/03/28 00:21:56 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/executor/executor.h,v 1.149 2008/07/26 19:15:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -75,6 +75,13 @@ struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
  * If this is called in QD or utility mode, this will return true.
  */
 
+/* Hook for plugins to get control in ExecutorRun() */
+typedef TupleTableSlot *(*ExecutorRun_hook_type) (QueryDesc *queryDesc,
+												  ScanDirection direction,
+												  long count);
+extern PGDLLIMPORT ExecutorRun_hook_type ExecutorRun_hook;
+
+
 /*
  * prototypes from functions in execAmi.c
  */
@@ -83,7 +90,6 @@ extern void ExecMarkPos(PlanState *node);
 extern void ExecRestrPos(PlanState *node);
 extern bool ExecSupportsMarkRestore(NodeTag plantype);
 extern bool ExecSupportsBackwardScan(Plan *node);
-extern bool ExecMayReturnRawTuples(PlanState *node);
 extern void ExecEagerFree(PlanState *node);
 extern void ExecEagerFreeChildNodes(PlanState *node, bool subplanDone);
 
@@ -225,6 +231,8 @@ typedef struct ScanMethod
 extern void ExecutorStart(QueryDesc *queryDesc, int eflags);
 extern TupleTableSlot *ExecutorRun(QueryDesc *queryDesc,
 			ScanDirection direction, long count);
+extern TupleTableSlot *standard_ExecutorRun(QueryDesc *queryDesc,
+			ScanDirection direction, long count);
 extern void ExecutorEnd(QueryDesc *queryDesc);
 extern void ExecutorRewind(QueryDesc *queryDesc);
 extern void InitResultRelInfo(ResultRelInfo *resultRelInfo,
@@ -240,6 +248,8 @@ extern TupleTableSlot *EvalPlanQual(EState *estate, Index rti,
 			 ItemPointer tid, TransactionId priorXmax);
 extern PlanState *ExecGetActivePlanTree(QueryDesc *queryDesc);
 extern DestReceiver *CreateIntoRelDestReceiver(void);
+
+extern Oid GetIntoRelOid(QueryDesc *queryDesc);
 
 extern AttrMap *makeAttrMap(int base_count, AttrNumber *base_map);
 extern AttrNumber attrMap(AttrMap *map, AttrNumber anum);

@@ -11,7 +11,7 @@
 subdir = src/backend/utils/resgroup
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
-override CPPFLAGS := -I$(top_srcdir)/src/backend/gp_libpq_fe $(CPPFLAGS)
+override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
 OBJS = resgroup.o resgroup_helper.o
 

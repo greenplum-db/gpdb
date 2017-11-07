@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.71 2008/03/26 16:34:47 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/pg_dumpall.sgml,v 1.72 2008/04/13 03:49:21 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -156,7 +156,7 @@ PostgreSQL documentation
       <term><option>--ignore-version</></term>
       <listitem>
        <para>
-	    This option has been deprecated.
+        A deprecated option that is now ignored.
        </para>
       </listitem>
      </varlistentry>

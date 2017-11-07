@@ -33,8 +33,8 @@
 #include "cdb/cdbvars.h"
 #include "access/transam.h"
 #include "access/xact.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "lib/stringinfo.h"
 #include "access/twophase.h"
@@ -2386,8 +2386,7 @@ DistributedSnapshotMappedEntry_Compare(const void *p1, const void *p2)
 }
 
 bool
-createDtxSnapshot(
-				  DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping)
+CreateDistributedSnapshot(DistributedSnapshotWithLocalMapping *distribSnapshotWithLocalMapping)
 {
 	int			globalCount;
 	int			i;
@@ -2403,7 +2402,7 @@ createDtxSnapshot(
 
 	if (currentGxact == NULL)
 	{
-		elog(DTM_DEBUG5, "createDtxSnapshot found currentGxact is NULL");
+		elog(DTM_DEBUG5, "CreateDistributedSnapshot found currentGxact is NULL");
 		return false;
 	}
 
@@ -2519,7 +2518,7 @@ createDtxSnapshot(
 		count++;
 
 		elog(DTM_DEBUG5,
-			 "createDtxSnapshot added inProgressDistributedXid = %u to snapshot",
+			 "CreateDistributedSnapshot added inProgressDistributedXid = %u to snapshot",
 			 ds->inProgressXidArray[count]);
 	}
 
@@ -2559,7 +2558,7 @@ createDtxSnapshot(
 		currentGxact->xminDistributedSnapshot = xmin;
 
 	elog(DTM_DEBUG5,
-		 "createDtxSnapshot distributed snapshot has xmin = %u, count = %u, xmax = %u.",
+		 "CreateDistributedSnapshot distributed snapshot has xmin = %u, count = %u, xmax = %u.",
 		 xmin, count, xmax);
 	elog((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 		 "[Distributed Snapshot #%u] *Create* (gxid = %u, '%s')",
@@ -3404,12 +3403,14 @@ assign_gp_write_shared_snapshot(bool newval, bool doit, GucSource source __attri
 	{
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
-			ActiveSnapshot = CopySnapshot(GetTransactionSnapshot());
+			PushActiveSnapshot(GetTransactionSnapshot());
 
 			if (Gp_is_writer)
 			{
 				dumpSharedLocalSnapshot_forCursor();
 			}
+
+			PopActiveSnapshot();
 		}
 	}
 

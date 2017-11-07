@@ -1561,7 +1561,13 @@ DEFAULT COLUMN ENCODING (COMPRESSTYPE=zlib, compresslevel=5)
 )
 WITH (APPENDONLY=true, ORIENTATION=column, OIDS=FALSE)
 distributed by (col1);
+select pg_size_pretty(pg_relation_size('mpp17012_compress_test2')),
+get_ao_compression_ratio('mpp17012_compress_test2');
 \d+ mpp17012_compress_test2
 insert into mpp17012_compress_test2 values('a',generate_series(1,250),'ksjdhfksdhfksdhfksjhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
 select pg_size_pretty(pg_relation_size('mpp17012_compress_test2')),
 get_ao_compression_ratio('mpp17012_compress_test2');
+
+-- compute compression ratio on empty aorow table
+create table empty_aorow_table (c int) with (appendonly=true) distributed by (c);
+select get_ao_compression_ratio('empty_aorow_table');

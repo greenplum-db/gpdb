@@ -14,7 +14,7 @@
  * Copyright (c) 1998-2008, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.109 2008/04/04 18:45:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.114 2008/05/09 21:31:23 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1910,16 +1910,21 @@ numeric_power(PG_FUNCTION_ARGS)
 	trunc_var(&arg2_trunc, 0);
 
 	/*
-	 * Return special SQLSTATE error codes for a few conditions mandated by
-	 * the standard.
+	 * The SQL spec requires that we emit a particular SQLSTATE error code for
+	 * certain error conditions.  Specifically, we don't return a divide-by-zero
+	 * error code for 0 ^ -1.
 	 */
-	if ((cmp_var(&arg1, &const_zero) == 0 &&
-		 cmp_var(&arg2, &const_zero) < 0) ||
-		(cmp_var(&arg1, &const_zero) < 0 &&
-		 cmp_var(&arg2, &arg2_trunc) != 0))
+	if (cmp_var(&arg1, &const_zero) == 0 &&
+		cmp_var(&arg2, &const_zero) < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_ARGUMENT_FOR_POWER_FUNCTION),
-				 errmsg("invalid argument for power function")));
+				 errmsg("zero raised to a negative power is undefined")));
+
+	if (cmp_var(&arg1, &const_zero) < 0 &&
+		cmp_var(&arg2, &arg2_trunc) != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_ARGUMENT_FOR_POWER_FUNCTION),
+				 errmsg("a negative number raised to a non-integer power yields a complex result")));
 
 	/*
 	 * Call power_var() to compute and return the result; note it handles
@@ -2788,7 +2793,6 @@ Datum
 int2_sum(PG_FUNCTION_ARGS)
 {
 	int64		newval;
-	int64 		oldsum;
 
 	if (PG_ARGISNULL(0))
 	{
@@ -2800,22 +2804,44 @@ int2_sum(PG_FUNCTION_ARGS)
 		PG_RETURN_INT64(newval);
 	}
 
-	oldsum = PG_GETARG_INT64(0);
+	/*
+	 * If we're invoked by nodeAgg, we can cheat and modify our first
+	 * parameter in-place to avoid palloc overhead. If not, we need to return
+	 * the new value of the transition variable.
+	 * (If int8 is pass-by-value, then of course this is useless as well
+	 * as incorrect, so just ifdef it out.)
+	 */
+#ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
+	if (fcinfo->context && IsA(fcinfo->context, AggState))
+	{
+		int64	   *oldsum = (int64 *) PG_GETARG_POINTER(0);
 
-	/* Leave sum unchanged if new input is null. */
-	if (PG_ARGISNULL(1))
-		PG_RETURN_INT64(oldsum);
+		/* Leave the running sum unchanged in the new input is null */
+		if (!PG_ARGISNULL(1))
+			*oldsum = *oldsum + (int64) PG_GETARG_INT16(1);
 
-	/* OK to do the addition. */
-	newval = oldsum + (int64) PG_GETARG_INT16(1);
+		PG_RETURN_POINTER(oldsum);
+	}
+	else
+#endif
+	{
+		int64		oldsum = PG_GETARG_INT64(0);
 
-	PG_RETURN_INT64(newval);
+		/* Leave sum unchanged if new input is null. */
+		if (PG_ARGISNULL(1))
+			PG_RETURN_INT64(oldsum);
+
+		/* OK to do the addition. */
+		newval = oldsum + (int64) PG_GETARG_INT16(1);
+
+		PG_RETURN_INT64(newval);
+	}
 }
 
 Datum
 int4_sum(PG_FUNCTION_ARGS)
 {
-	int64		val;
+	int64		newval;
 
 	if (PG_ARGISNULL(0))
 	{
@@ -2823,20 +2849,42 @@ int4_sum(PG_FUNCTION_ARGS)
 		if (PG_ARGISNULL(1))
 			PG_RETURN_NULL();	/* still no non-null */
 		/* This is the first non-null input. */
-		val = (int64) PG_GETARG_INT32(1);
-		PG_RETURN_INT64(val);
+		newval = (int64) PG_GETARG_INT32(1);
+		PG_RETURN_INT64(newval);
 	}
 
-	val = PG_GETARG_INT64(0);
+	/*
+	 * If we're invoked by nodeAgg, we can cheat and modify our first
+	 * parameter in-place to avoid palloc overhead. If not, we need to return
+	 * the new value of the transition variable.
+	 * (If int8 is pass-by-value, then of course this is useless as well
+	 * as incorrect, so just ifdef it out.)
+	 */
+#ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
+	if (fcinfo->context && IsA(fcinfo->context, AggState))
+	{
+		int64	   *oldsum = (int64 *) PG_GETARG_POINTER(0);
 
-	/* Leave sum unchanged if new input is null. */
-	if (PG_ARGISNULL(1))
-		PG_RETURN_INT64(val); 
+		/* Leave the running sum unchanged in the new input is null */
+		if (!PG_ARGISNULL(1))
+			*oldsum = *oldsum + (int64) PG_GETARG_INT32(1);
 
-	/* OK to do the addition. */
-	val = val + (int64) PG_GETARG_INT32(1);
+		PG_RETURN_POINTER(oldsum);
+	}
+	else
+#endif
+	{
+		int64		oldsum = PG_GETARG_INT64(0);
 
-	PG_RETURN_INT64(val);
+		/* Leave sum unchanged if new input is null. */
+		if (PG_ARGISNULL(1))
+			PG_RETURN_INT64(oldsum);
+
+		/* OK to do the addition. */
+		newval = oldsum + (int64) PG_GETARG_INT32(1);
+
+		PG_RETURN_INT64(newval);
+	}
 }
 
 Datum
@@ -5969,6 +6017,17 @@ power_var(NumericVar *base, NumericVar *exp, NumericVar *result)
 		}
 	}
 
+	/*
+	 *	This avoids log(0) for cases of 0 raised to a non-integer.
+	 *	0 ^ 0 handled by power_var_int().
+	 */
+	if (cmp_var(base, &const_zero) == 0)
+	{
+		set_var_from_var(&const_zero, result);
+		result->dscale = NUMERIC_MIN_SIG_DIGITS;	/* no need to round */
+		return;
+	}
+	
 	quick_init_var(&ln_base);
 	quick_init_var(&ln_num);
 
@@ -6033,15 +6092,15 @@ power_var_int(NumericVar *base, int exp, NumericVar *result, int rscale)
 	NumericVar	base_prod;
 	int			local_rscale;
 
-	/* Detect some special cases, particularly 0^0. */
-
 	switch (exp)
 	{
 		case 0:
-			if (base->ndigits == 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_FLOATING_POINT_EXCEPTION),
-						 errmsg("zero raised to zero is undefined")));
+			/*
+			 *	While 0 ^ 0 can be either 1 or indeterminate (error), we
+			 *	treat it as 1 because most programming languages do this.
+			 *	SQL:2003 also requires a return value of 1.
+			 *	http://en.wikipedia.org/wiki/Exponentiation#Zero_to_the_zero_power
+			 */
 			set_var_from_var(&const_one, result);
 			result->dscale = rscale;	/* no need to round */
 			return;

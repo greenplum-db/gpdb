@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser_def.c,v 1.14.2.6 2009/11/15 13:54:22 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/wparser_def.c,v 1.15 2008/06/17 16:09:06 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -238,7 +238,7 @@ typedef struct TParser
 	/* string and position information */
 	char	   *str;			/* multibyte string */
 	int			lenstr;			/* length of mbstring */
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 	wchar_t    *wstr;			/* wide character string */
 	pg_wchar   *pgwstr;			/* wide character string for C-locale */
 	bool		usewide;
@@ -291,7 +291,7 @@ TParserInit(char *str, int len)
 	prs->str = str;
 	prs->lenstr = len;
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 
 	/*
 	 * Use wide char code only when max encoding length > 1.
@@ -339,7 +339,7 @@ TParserClose(TParser *prs)
 		prs->state = ptr;
 	}
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 	if (prs->wstr)
 		pfree(prs->wstr);
 	if (prs->pgwstr)
@@ -359,7 +359,7 @@ TParserClose(TParser *prs)
  *  - if locale is C the we use pgwstr instead of wstr
  */
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 
 #define p_iswhat(type)														\
 static int																	\
@@ -454,7 +454,7 @@ p_iseq(TParser *prs, char c)
 	Assert(prs->state);
 	return ((prs->state->charlen == 1 && *(prs->str + prs->state->posbyte) == c)) ? 1 : 0;
 }
-#else							/* TS_USE_WIDE */
+#else							/* USE_WIDE_UPPER_LOWER */
 
 #define p_iswhat(type)														\
 static int																	\
@@ -478,7 +478,7 @@ p_iseq(TParser *prs, char c)
 
 p_iswhat(alnum)
 p_iswhat(alpha)
-#endif   /* TS_USE_WIDE */
+#endif   /* USE_WIDE_UPPER_LOWER */
 
 p_iswhat(digit)
 p_iswhat(lower)

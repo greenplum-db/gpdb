@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.105 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/namespace.c,v 1.109 2008/07/16 16:55:23 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -45,6 +45,7 @@
 #include "parser/parse_func.h"
 #include "storage/backendid.h"
 #include "storage/ipc.h"
+#include "storage/lmgr.h"
 #include "storage/sinval.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -53,6 +54,7 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 #include "cdb/cdbvars.h"
 #include "tcop/utility.h"
@@ -932,7 +934,7 @@ FuncnameGetCandidates(List *names, int nargs,
 			   pronargs * sizeof(Oid));
 		if (variadic)
 		{
-			int			i;
+			int		i;
 
 			newResult->nvargs = effective_nargs - pronargs + 1;
 			/* Expand variadic argument into N copies of element type */
@@ -2677,6 +2679,32 @@ isOtherTempNamespace(Oid namespaceId)
 		return false;
 	/* Else, if it's any temp namespace, say "true" */
 	return isAnyTempNamespace(namespaceId);
+}
+
+/*
+ * GetTempNamespaceBackendId - if the given namespace is a temporary-table
+ * namespace (either my own, or another backend's), return the BackendId
+ * that owns it.  Temporary-toast-table namespaces are included, too.
+ * If it isn't a temp namespace, return -1.
+ */
+int
+GetTempNamespaceBackendId(Oid namespaceId)
+{
+	int			result;
+	char	   *nspname;
+
+	/* See if the namespace name starts with "pg_temp_" or "pg_toast_temp_" */
+	nspname = get_namespace_name(namespaceId);
+	if (!nspname)
+		return -1;				/* no such namespace? */
+	if (strncmp(nspname, "pg_temp_", 8) == 0)
+		result = atoi(nspname + 8);
+	else if (strncmp(nspname, "pg_toast_temp_", 14) == 0)
+		result = atoi(nspname + 14);
+	else
+		result = -1;
+	pfree(nspname);
+	return result;
 }
 
 /*

@@ -14,7 +14,7 @@
 #include "postgres.h"
 
 #include "funcapi.h"
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/xact.h"
@@ -744,7 +744,12 @@ GetResGroupCapabilities(Oid groupId, ResGroupCaps *resgroupCaps)
 }
 
 /*
- * Get resource group id for a role in pg_authid
+ * Get resource group id for a role in pg_authid.
+ *
+ * An exception is thrown if the current role is invalid. This can happen if,
+ * for example, a role was logged into psql and that role was dropped by another
+ * psql session. But, normally something like "ERROR:  role 16385 was
+ * concurrently dropped" would happen before the code reaches this function.
  */
 Oid
 GetResGroupIdForRole(Oid roleid)
@@ -1318,7 +1323,14 @@ GetResGroupIdForName(char *name, LOCKMODE lockmode)
 	ScanKeyData scankey;
 	SysScanDesc scan;
 	HeapTuple	tuple;
+	ResourceOwner owner = NULL;
 	Oid			rsgid;
+
+	if (CurrentResourceOwner == NULL)
+	{
+		owner = ResourceOwnerCreate(NULL, "GetResGroupIdForName");
+		CurrentResourceOwner = owner;
+	}
 
 	rel = heap_open(ResGroupRelationId, lockmode);
 
@@ -1338,6 +1350,12 @@ GetResGroupIdForName(char *name, LOCKMODE lockmode)
 
 	systable_endscan(scan);
 	heap_close(rel, lockmode);
+
+	if (owner)
+	{
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
+	}
 
 	return rsgid;
 }

@@ -116,3 +116,85 @@ select * from update_pk_test order by 1,2;
 explain update update_pk_test set a = 5;
 update update_pk_test set a = 5;
 select * from update_pk_test order by 1,2;
+
+
+-- MPP-22599 DML queries that fallback to planner don't check for updates on
+-- the distribution key.
+--
+-- So the bug was that if ORCA fell back to the planner, then the usual
+-- check that prohibits updating the distribution key columns was not
+-- performed like it should. So the idea of this test is to have an UPDATE
+-- on distribution key column, with some features in the table or the query,
+-- such that ORCA cannot produce a plan and it falls back to the Postgres
+-- planner.
+set optimizer_trace_fallback = on;
+
+-- Subquery that returns a row rather than a single scalar isn't supported
+-- in ORCA currently, so we can use that to trigger fallback.
+update update_pk_test set a=1 where row(1,2) = (SELECT 1, 2);
+
+reset optimizer_trace_fallback;
+
+
+--
+-- Check that INSERT and DELETE triggers don't fire on UPDATE.
+--
+-- It may seem weird how that could happen, but with ORCA, UPDATEs are
+-- implemented as a "split update", which is really a DELETE and an INSERT.
+--
+CREATE TABLE bfv_dml_trigger_test (id int4, t text);
+
+INSERT INTO bfv_dml_trigger_test VALUES (1, 'foo');
+
+CREATE OR REPLACE FUNCTION bfv_dml_error_func() RETURNS trigger AS
+$$
+BEGIN
+   RAISE EXCEPTION 'trigger was called!';
+   RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
+
+CREATE TRIGGER before_trigger BEFORE INSERT or DELETE ON bfv_dml_trigger_test
+FOR EACH ROW
+EXECUTE PROCEDURE bfv_dml_error_func();
+
+CREATE TRIGGER after_trigger AFTER INSERT or DELETE ON bfv_dml_trigger_test
+FOR EACH ROW
+EXECUTE PROCEDURE bfv_dml_error_func();
+
+UPDATE bfv_dml_trigger_test SET t = 'bar';
+UPDATE bfv_dml_trigger_test SET id = id + 1;
+
+--
+-- Verify that ExecInsert doesn't scribble on the old tuple, when the new
+-- tuple comes directly from the old table.
+--
+CREATE TABLE execinsert_test (id int4, t text) DISTRIBUTED BY (id);
+
+INSERT INTO execinsert_test values (1, 'foo');
+
+-- Insert another identical tuple, but roll it back. If the insertion
+-- incorrectly modified the xmin on the old tuple, then it will become
+-- invisible when we roll back.
+begin;
+INSERT INTO execinsert_test select * FROM execinsert_test;
+rollback;
+select * from execinsert_test;
+
+drop table execinsert_test;
+
+-- Repeat with a hacked master-only table, just in case the planner decides
+-- to add a Motion node or something that hides the problem otherwise.
+
+CREATE TABLE execinsert_test (id int4, t text) DISTRIBUTED BY (id);
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='execinsert_test'::regclass;
+reset allow_system_table_mods;
+
+INSERT INTO execinsert_test values (1, 'foo');
+begin;
+INSERT INTO execinsert_test select * FROM execinsert_test;
+rollback;
+select * from execinsert_test;
+
+drop table execinsert_test;

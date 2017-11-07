@@ -1,2 +1,2 @@
 [requires]
-orca/v2.48.0@gpdb/stable
+orca/v2.48.2@gpdb/stable

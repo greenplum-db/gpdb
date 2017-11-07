@@ -429,7 +429,7 @@ typedef enum NodeTag
 	T_DeallocateStmt,
 	T_DeclareCursorStmt,
 	T_CreateTableSpaceStmt,
-	T_DropTableSpaceStmt,           /* Removed, See DropStmt */
+	T_DropTableSpaceStmt,
 	T_AlterObjectSchemaStmt,
 	T_AlterOwnerStmt,
 	T_DropOwnedStmt,
@@ -449,6 +449,7 @@ typedef enum NodeTag
 	T_InheritPartitionCmd,
 	T_CreateFileSpaceStmt,
 	T_FileSpaceEntry,
+	T_DropFileSpaceStmt,
 	T_TableValueExpr,
 	T_DenyLoginInterval,
 	T_DenyLoginPoint,
@@ -525,6 +526,7 @@ typedef enum NodeTag
 	T_ExtProtocolData,          /* in access/extprotocol.h */
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
+	T_CookedConstraint,			/* in catalog/heap.h */
 	
     /* CDB: tags for random other stuff */
     T_CdbExplain_StatHdr = 1000,             /* in cdb/cdbexplain.c */

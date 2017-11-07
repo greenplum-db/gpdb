@@ -1,0 +1,35 @@
+--
+-- Test setting the OID of a tuple in a BEFORE ROW INSERT trigger.
+--
+-- There's a comment in ExecInsert that says that that should work, although there
+-- is no code in PostgreSQL to test that. So let's test it.
+--
+
+CREATE OR REPLACE FUNCTION trigger_return_new_oid()
+RETURNS trigger
+LANGUAGE C VOLATILE EXECUTE ON MASTER AS '@abs_builddir@/regress@DLSUFFIX@', 'trigger_udf_return_new_oid';
+
+
+-- Heap table
+CREATE TABLE trigger_oid_tab(id int8, v text) WITH (oids = true);
+
+CREATE TRIGGER t BEFORE INSERT ON trigger_oid_tab
+FOR EACH ROW EXECUTE PROCEDURE trigger_return_new_oid(12345);
+
+INSERT INTO trigger_oid_tab values (1, 'foo');
+SELECT oid, * FROM trigger_oid_tab;
+
+DROP TABLE trigger_oid_tab;
+
+-- AO table
+CREATE TABLE trigger_oid_tab(id int8, v text) WITH (oids = true, appendonly = true);
+
+CREATE TRIGGER t BEFORE INSERT ON trigger_oid_tab
+FOR EACH ROW EXECUTE PROCEDURE trigger_return_new_oid(12345);
+
+INSERT INTO trigger_oid_tab values (1, 'foo');
+SELECT oid, * FROM trigger_oid_tab;
+
+DROP TABLE trigger_oid_tab;
+
+-- Column-oriented AO tables don't support OIDs, so no need to test that.

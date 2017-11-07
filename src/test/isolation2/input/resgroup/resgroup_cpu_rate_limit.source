@@ -25,6 +25,11 @@ CREATE OR REPLACE FUNCTION round_percentage(float) RETURNS text AS $$
     SELECT (round($1/15)*15)::text||'%'
 $$ LANGUAGE sql;
 
+CREATE OR REPLACE VIEW cpu_raw_status AS
+	SELECT rsgname, cpu_usage
+	FROM gp_toolkit.gp_resgroup_status
+	ORDER BY rsgname;
+
 CREATE OR REPLACE VIEW cpu_status AS
     SELECT b.rsgname, round_percentage(avg(b.cpu)) AS cpu
     FROM
@@ -66,12 +71,12 @@ CREATE VIEW cancel_all AS
 -- check gpdb cgroup configuration
 --
 -- cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
--- shares := 1024 * ncores
+-- shares := 1024 * gp_resource_group_cpu_priority
 --
 
 ! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.cfs_quota_us) == int($(cat @cgroup_mnt_point@/cpu/gpdb/cpu.cfs_period_us) * $(nproc) * $(psql -d isolation2resgrouptest -Aqtc "SHOW gp_resource_group_cpu_limit"))";
 
-! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) == 1024 * 256";
+! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) == 1024 * $(psql -d isolation2resgrouptest -Aqtc "SHOW gp_resource_group_cpu_priority")";
 
 --
 -- check default groups configuration
@@ -82,6 +87,9 @@ CREATE VIEW cancel_all AS
 ! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/$(psql -d isolation2resgrouptest -Aqtc "SELECT oid FROM pg_resgroup WHERE rsgname='default_group'")/cpu.shares) == int($(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) * $(psql -d isolation2resgrouptest -Aqtc "SELECT value FROM pg_resgroupcapability c, pg_resgroup g WHERE c.resgroupid=g.oid AND reslimittype=2 AND g.rsgname='default_group'") / 100)";
 
 ! python -c "print $(cat @cgroup_mnt_point@/cpu/gpdb/$(psql -d isolation2resgrouptest -Aqtc "SELECT oid FROM pg_resgroup WHERE rsgname='admin_group'")/cpu.shares) == int($(cat @cgroup_mnt_point@/cpu/gpdb/cpu.shares) * $(psql -d isolation2resgrouptest -Aqtc "SELECT value FROM pg_resgroupcapability c, pg_resgroup g WHERE c.resgroupid=g.oid AND reslimittype=2 AND g.rsgname='admin_group'") / 100)";
+
+-- lower admin_group's cpu_rate_limit to minimize its side effect
+ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 1;
 
 -- create two resource groups
 CREATE RESOURCE GROUP rg1_cpu_test WITH (concurrency=5, cpu_rate_limit=10, memory_limit=20);
@@ -136,10 +144,41 @@ SELECT * FROM cpu_status;
 13&: SELECT * FROM busy;
 14&: SELECT * FROM busy;
 
-SELECT pg_sleep(20);
+-- start_ignore
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+-- end_ignore
+
 SELECT * FROM cpu_status;
 
 -- start_ignore
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+
 SELECT * FROM cancel_all;
 
 10<:
@@ -171,10 +210,41 @@ SELECT * FROM cancel_all;
 23&: SELECT * FROM busy;
 24&: SELECT * FROM busy;
 
-SELECT pg_sleep(20);
+-- start_ignore
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+-- end_ignore
+
 SELECT * FROM cpu_status;
 
 -- start_ignore
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+SELECT pg_sleep(1.7);
+SELECT * FROM cpu_raw_status;
+
 SELECT * FROM cancel_all;
 
 10<:
@@ -189,6 +259,9 @@ SELECT * FROM cancel_all;
 23<:
 24<:
 -- end_ignore
+
+-- restore admin_group's cpu_rate_limit
+ALTER RESOURCE GROUP admin_group SET cpu_rate_limit 10;
 
 -- cleanup
 REVOKE ALL ON busy FROM role1_cpu_test;

@@ -41,14 +41,14 @@ extern Datum pg_options_to_table(PG_FUNCTION_ARGS);
 
 /*
  * InsertExtTableEntry
- * 
+ *
  * Adds an entry into the pg_exttable catalog table. The entry
  * includes the reloid of the external relation that was created
  * in pg_class and a text array of external location URIs among
  * other external table properties.
  */
 void
-InsertExtTableEntry(Oid 	tbloid, 
+InsertExtTableEntry(Oid 	tbloid,
 					bool 	iswritable,
 					bool 	isweb,
 					bool	issreh,
@@ -290,14 +290,14 @@ GetExtTableEntryIfExists(Oid relid)
 	ExtTableEntry *extentry;
 	Datum		urilocations,
 				execlocations,
-				fmtcode, 
-				fmtopts, 
+				fmtcode,
+				fmtopts,
 				options,
-				command, 
-				rejectlimit, 
-				rejectlimittype, 
-				fmterrtbl, 
-				encoding, 
+				command,
+				rejectlimit,
+				rejectlimittype,
+				fmterrtbl,
+				encoding,
 				iswritable;
 	bool		isNull;
 	bool		locationNull = false;
@@ -348,7 +348,7 @@ GetExtTableEntryIfExists(Oid relid)
 		int			nelems;
 		int			i;
 		char*		loc_str = NULL;
-		
+
 		deconstruct_array(DatumGetArrayTypeP(urilocations),
 						  TEXTOID, -1, false, 'i',
 						  &elems, NULL, &nelems);
@@ -360,7 +360,7 @@ GetExtTableEntryIfExists(Oid relid)
 			/* append to a list of Value nodes, size nelems */
 			extentry->urilocations = lappend(extentry->urilocations, makeString(pstrdup(loc_str)));
 		}
-		
+
 		if(loc_str && (IS_FILE_URI(loc_str) || IS_GPFDIST_URI(loc_str) || IS_GPFDISTS_URI(loc_str)))
 			extentry->isweb = false;
 		else
@@ -379,20 +379,20 @@ GetExtTableEntryIfExists(Oid relid)
 		}
 
 	}
-		
+
 	/* get the execute command */
-	command = heap_getattr(tuple, 
-						   Anum_pg_exttable_command, 
-						   RelationGetDescr(pg_exttable_rel), 
+	command = heap_getattr(tuple,
+						   Anum_pg_exttable_command,
+						   RelationGetDescr(pg_exttable_rel),
 						   &isNull);
-	
+
 	if(isNull)
 	{
 		if(locationNull)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("got invalid pg_exttable tuple. location and command are both NULL")));	
-		
+					 errmsg("got invalid pg_exttable tuple. location and command are both NULL")));
+
 		extentry->command = NULL;
 	}
 	else
@@ -401,26 +401,26 @@ GetExtTableEntryIfExists(Oid relid)
 	}
 
 	/* get the format code */
-	fmtcode = heap_getattr(tuple, 
-						   Anum_pg_exttable_fmttype, 
-						   RelationGetDescr(pg_exttable_rel), 
+	fmtcode = heap_getattr(tuple,
+						   Anum_pg_exttable_fmttype,
+						   RelationGetDescr(pg_exttable_rel),
 						   &isNull);
-	
+
 	Insist(!isNull);
 	extentry->fmtcode = DatumGetChar(fmtcode);
-	Insist(extentry->fmtcode == 'c' || extentry->fmtcode == 't' 
+	Insist(extentry->fmtcode == 'c' || extentry->fmtcode == 't'
 		 || extentry->fmtcode == 'b' || extentry->fmtcode == 'a'
 		 || extentry->fmtcode == 'p');
 
 	/* get the format options string */
-	fmtopts = heap_getattr(tuple, 
-						   Anum_pg_exttable_fmtopts, 
-						   RelationGetDescr(pg_exttable_rel), 
+	fmtopts = heap_getattr(tuple,
+						   Anum_pg_exttable_fmtopts,
+						   RelationGetDescr(pg_exttable_rel),
 						   &isNull);
-	
+
 	Insist(!isNull);
 	extentry->fmtopts = TextDatumGetCString(fmtopts);
-	
+
     /* get the external table options string */
     options = heap_getattr(tuple,
                            Anum_pg_exttable_options,
@@ -453,58 +453,58 @@ GetExtTableEntryIfExists(Oid relid)
 	}
 
 	/* get the reject limit */
-	rejectlimit = heap_getattr(tuple, 
-							   Anum_pg_exttable_rejectlimit, 
-							   RelationGetDescr(pg_exttable_rel), 
+	rejectlimit = heap_getattr(tuple,
+							   Anum_pg_exttable_rejectlimit,
+							   RelationGetDescr(pg_exttable_rel),
 							   &isNull);
-	
+
 	if(!isNull)
 		extentry->rejectlimit = DatumGetInt32(rejectlimit);
 	else
 		extentry->rejectlimit = -1; /* mark that no SREH requested */
 
 	/* get the reject limit type */
-	rejectlimittype = heap_getattr(tuple, 
-								   Anum_pg_exttable_rejectlimittype, 
-								   RelationGetDescr(pg_exttable_rel), 
+	rejectlimittype = heap_getattr(tuple,
+								   Anum_pg_exttable_rejectlimittype,
+								   RelationGetDescr(pg_exttable_rel),
 								   &isNull);
-	
+
 	extentry->rejectlimittype = DatumGetChar(rejectlimittype);
 	if(!isNull)
 		Insist(extentry->rejectlimittype == 'r' || extentry->rejectlimittype == 'p');
 	else
 		extentry->rejectlimittype = -1;
-	
+
 	/* get the error table oid */
-	fmterrtbl = heap_getattr(tuple, 
-							 Anum_pg_exttable_fmterrtbl, 
-							 RelationGetDescr(pg_exttable_rel), 
+	fmterrtbl = heap_getattr(tuple,
+							 Anum_pg_exttable_fmterrtbl,
+							 RelationGetDescr(pg_exttable_rel),
 							 &isNull);
-    
+
 	if(isNull)
 		extentry->fmterrtbl = InvalidOid;
 	else
 		extentry->fmterrtbl = DatumGetObjectId(fmterrtbl);
 
 	/* get the table encoding */
-	encoding = heap_getattr(tuple, 
-							Anum_pg_exttable_encoding, 
-							RelationGetDescr(pg_exttable_rel), 
+	encoding = heap_getattr(tuple,
+							Anum_pg_exttable_encoding,
+							RelationGetDescr(pg_exttable_rel),
 							&isNull);
-	
+
 	Insist(!isNull);
 	extentry->encoding = DatumGetInt32(encoding);
 	Insist(PG_VALID_ENCODING(extentry->encoding));
 
 	/* get the table encoding */
-	iswritable = heap_getattr(tuple, 
-							  Anum_pg_exttable_writable, 
-							  RelationGetDescr(pg_exttable_rel), 
+	iswritable = heap_getattr(tuple,
+							  Anum_pg_exttable_writable,
+							  RelationGetDescr(pg_exttable_rel),
 							  &isNull);
 	Insist(!isNull);
 	extentry->iswritable = DatumGetBool(iswritable);
 
-	
+
 	/* Finish up scan and close pg_exttable catalog. */
 	systable_endscan(scan);
 	heap_close(pg_exttable_rel, RowExclusiveLock);
@@ -514,8 +514,8 @@ GetExtTableEntryIfExists(Oid relid)
 
 /*
  * RemoveExtTableEntry
- * 
- * Remove an external table entry from pg_exttable. Caller's 
+ *
+ * Remove an external table entry from pg_exttable. Caller's
  * responsibility to ensure that the relation has such an entry.
  */
 void

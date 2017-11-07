@@ -15,7 +15,7 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "utils/palloc.h"
-#include "../gp_libpq_fe/gp-libpq-fe.h"
+#include "libpq-fe.h"
 
 #include "cdb/cdbpersistentstore.h"
 #include "cdb/cdbpersistentcheck.h"
@@ -961,7 +961,7 @@ Persistent_Pre_ExecuteQuery()
 
 	savedResourceOwner = CurrentResourceOwner;
 	oldMemoryContext = CurrentMemoryContext;
-	ActiveSnapshot = SnapshotNow;
+	PushActiveSnapshot(SnapshotNow);
 
 	if (SPI_OK_CONNECT != SPI_connect())
 	{
@@ -995,7 +995,7 @@ Persistent_ExecuteQuery(char const *query, bool readOnlyQuery)
 	PG_TRY();
 	{
 		/* XXX: Need to set the snapshot here. Reason - Unknown */
-		ActiveSnapshot = SnapshotNow;
+		PushActiveSnapshot(SnapshotNow);
 
 		/* Run the query. */
 		ret = SPI_execute(sqlstmt.data, readOnlyQuery, 0);

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeTidscan.c,v 1.58.2.1 2008/04/30 23:28:37 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeTidscan.c,v 1.60 2008/05/12 00:00:49 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,11 +25,13 @@
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
 #include "executor/execdebug.h"
 #include "executor/nodeTidscan.h"
 #include "optimizer/clauses.h"
+#include "storage/bufmgr.h"
 #include "utils/array.h"
 #include "parser/parsetree.h"
 
@@ -293,15 +295,10 @@ TidNext(TidScanState *node)
 		 * CURRENT OF case it might not match anyway ...
 		 */
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1], slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1], slot, InvalidBuffer, false);
 
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
-          	if (!TupIsNull(slot))
-                {
-          		Gpmon_Incr_Rows_Out(GpmonPktFromTidScanState(node));
-                        CheckSendPlanStateGpmonPkt(&node->ss.ps);
-                }
 		return slot;
 	}
 
@@ -588,8 +585,6 @@ ExecInitTidScan(TidScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&tidstate->ss.ps);
 	ExecAssignScanProjectionInfo(&tidstate->ss);
 
-	initGpmonPktForTidScan((Plan *)node, &tidstate->ss.ps.gpmon_pkt, estate);
-
 	/*
 	 * all done.
 	 */
@@ -601,12 +596,4 @@ ExecCountSlotsTidScan(TidScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + TIDSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForTidScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, TidScan));
-	
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

@@ -323,6 +323,7 @@ char	   *gp_resqueue_priority_default_value;
 bool		gp_debug_resqueue_priority = false;
 
 /* Resource group GUCs */
+int			gp_resource_group_cpu_priority;
 double		gp_resource_group_cpu_limit;
 double		gp_resource_group_memory_limit;
 
@@ -3559,6 +3560,15 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
+		{"gp_resource_group_cpu_priority", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("Sets the cpu priority for postgres processes when resource group is enabled."),
+			NULL
+		},
+		&gp_resource_group_cpu_priority,
+		10, 1, 256, NULL, NULL
+	},
+
+	{
 		{"max_statement_mem", PGC_SUSET, RESOURCES_MEM,
 			gettext_noop("Sets the maximum value for statement_mem setting."),
 			NULL,
@@ -4936,7 +4946,7 @@ struct config_real ConfigureNamesReal_gp[] =
 			NULL
 		},
 		&gp_resource_group_memory_limit,
-		0.9, 0.0001, 1.0, NULL, NULL
+		0.7, 0.0001, 1.0, NULL, NULL
 	},
 
 	{
@@ -5418,7 +5428,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
 		},
 		&Debug_persistent_print_level,
-		DEBUG1, message_level_options, NULL, NULL
+		DEBUG1, server_message_level_options, NULL, NULL
 	},
 
 	{
@@ -5430,7 +5440,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
 		},
 		&Debug_persistent_recovery_print_level,
-		DEBUG1, message_level_options, NULL, NULL
+		DEBUG1, server_message_level_options, NULL, NULL
 	},
 
 	{
@@ -5442,7 +5452,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
 		},
 		&Debug_persistent_store_print_level,
-		DEBUG1, message_level_options, NULL, NULL
+		DEBUG1, server_message_level_options, NULL, NULL
 	},
 
 	{
@@ -5454,7 +5464,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL
 		},
 		&Debug_database_command_print_level,
-		LOG, message_level_options, NULL, NULL
+		LOG, server_message_level_options, NULL, NULL
 	},
 
 		{
@@ -5467,7 +5477,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_workfile_caching_loglevel,
-		DEBUG1, message_level_options, NULL, NULL
+		DEBUG1, server_message_level_options, NULL, NULL
 	},
 
 	{
@@ -5480,7 +5490,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_sessionstate_loglevel,
-		DEBUG1, message_level_options, NULL, NULL
+		DEBUG1, server_message_level_options, NULL, NULL
 	},
 
 	{
@@ -5490,7 +5500,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_test_time_slice_report_level,
-		ERROR, message_level_options, NULL, NULL
+		ERROR, server_message_level_options, NULL, NULL
 	},
 
 	{
@@ -5500,7 +5510,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_test_deadlock_hazard_report_level,
-		ERROR, message_level_options, NULL, NULL
+		ERROR, server_message_level_options, NULL, NULL
 	},
 
 	{

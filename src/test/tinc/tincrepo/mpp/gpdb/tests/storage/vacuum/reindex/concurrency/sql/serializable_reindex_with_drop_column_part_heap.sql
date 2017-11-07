@@ -2,6 +2,7 @@
 1: BEGIN;
 2: BEGIN;
 2: SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+2: select 'dummy select to establish snapshot';
 1: alter table reindex_serialize_tab_heap_part drop column f;
 1: COMMIT;
 -- Remember index relfilenodes from master and segments before

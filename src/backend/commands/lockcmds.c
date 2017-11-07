@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/lockcmds.c,v 1.17 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/lockcmds.c,v 1.18 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,6 +20,7 @@
 #include "miscadmin.h"
 #include "utils/acl.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp_query.h"
 
@@ -80,7 +81,6 @@ LockTableCommand(LockStmt *lockstmt)
 	{
 		CdbDispatchUtilityStatement((Node *) lockstmt,
 									DF_CANCEL_ON_ERROR|
-									DF_WITH_SNAPSHOT|
 									DF_NEED_TWO_PHASE,
 									NIL,
 									NULL);

@@ -185,7 +185,6 @@ ExecSort(SortState *node)
 				break;
 			}
 
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 			tuplesort_puttupleslot(tuplesortstate, slot);
 		}
 
@@ -393,8 +392,6 @@ ExecInitSort(Sort *node, EState *estate, int eflags)
 	SO1_printf("ExecInitSort: %s\n",
 			   "sort node initialized");
 
-	initGpmonPktForSort((Plan *)node, &sortstate->ss.ps.gpmon_pkt, estate);
-
 	return sortstate;
 }
 
@@ -533,14 +530,6 @@ ExecSortExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 	}
 
 }                               /* ExecSortExplainEnd */
-
-void
-initGpmonPktForSort(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Sort));
-	
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
-}
 
 void
 ExecEagerFreeSort(SortState *node)

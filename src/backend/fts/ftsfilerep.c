@@ -23,8 +23,8 @@
 
 #include "cdb/ml_ipc.h" /* gettime_elapsed_ms */
 #include "executor/spi.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "postmaster/fts.h"
 #include "postmaster/primary_mirror_mode.h"
 #include "utils/fmgroids.h"

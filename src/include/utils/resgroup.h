@@ -96,10 +96,20 @@ extern int						gp_resgroup_memory_policy_auto_fixed_mem;
 extern bool						gp_resgroup_print_operator_memory_limits;
 extern int						memory_spill_ratio;
 
+extern int gp_resource_group_cpu_priority;
 extern double gp_resource_group_cpu_limit;
 extern double gp_resource_group_memory_limit;
 
-/* Type of statistic infomation */
+/*
+ * Resource Group assignment hook.
+ *
+ * This hook can be set by an extension to control how queries are assigned to
+ * a resource group.
+ */
+typedef Oid (*resgroup_assign_hook_type)(void);
+extern PGDLLIMPORT resgroup_assign_hook_type resgroup_assign_hook;
+
+/* Type of statistic information */
 typedef enum
 {
 	RES_GROUP_STAT_UNKNOWN = -1,
@@ -129,7 +139,6 @@ extern void AllocResGroupEntry(Oid groupId, const ResGroupOpts *opts);
 extern void SerializeResGroupInfo(StringInfo str);
 extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 									Oid *groupId,
-									int *slotId,
 									const char *buf,
 									int len);
 

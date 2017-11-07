@@ -6,6 +6,6 @@
   <body>
     <p>Greenplum Database can read and write XML data to and from external tables with gpfdist. For
       information about setting up an XML transform, see <xref
-        href="../load/topics/g-transforming-xml-data.xml#topic75"/>. </p>
+        href="../load/topics/transforming-xml-data.xml#topic75"/>. </p>
   </body>
 </topic>

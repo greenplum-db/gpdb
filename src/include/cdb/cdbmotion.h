@@ -105,7 +105,7 @@ extern void CheckAndSendRecordCache(MotionLayerState *mlStates,
 extern SendReturnCode SendTuple(MotionLayerState *mlStates,
 								ChunkTransportState *transportStates,
 								int16 motNodeID,
-								HeapTuple tuple,
+								GenericTuple tuple,
 								int16 targetRoute);
 
 
@@ -134,7 +134,7 @@ SendEndOfStream(MotionLayerState       *mlStates,
 extern ReceiveReturnCode RecvTupleFrom(MotionLayerState *mlStates,
 									   ChunkTransportState *transportStates,
 									   int16 motNodeID,
-									   HeapTuple *tup_i,
+									   GenericTuple *tup_i,
 									   int16 srcRoute);
 
 extern void SendStopMessage(MotionLayerState *mlStates,

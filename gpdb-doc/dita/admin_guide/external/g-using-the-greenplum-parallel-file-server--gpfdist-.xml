@@ -3,13 +3,16 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic13">
    <title>Using the Greenplum Parallel File Server (gpfdist)</title>
-   <shortdesc>The <cmdname>gpfdist</cmdname> protocol provides the best performance and is the
-      easiest to set up. <cmdname>gpfdist</cmdname> ensures optimum use of all segments in your
-      Greenplum Database system for external table reads.</shortdesc>
+   <shortdesc>The <cmdname>gpfdist</cmdname> protocol is used in a <codeph>CREATE EXTERNAL
+         TABLE</codeph> SQL command to access external data served by the Greenplum Database
+         <codeph>gpfdist</codeph> file server utility. When external data is served by
+         <cmdname>gpfdist</cmdname>, all segments in the Greenplum Database system can read or write
+      external table data in parallel.</shortdesc>
    <body>
       <p>This topic describes the setup and management tasks for using <cmdname>gpfdist</cmdname>
          with external tables.</p>
       <ul id="ul_krw_tmg_bbb">
+         <li><xref href="#topic_xkt_vjy_4bb" format="dita"/></li>
          <li><xref href="#topic14" format="dita"/></li>
          <li><xref href="#topic15" format="dita"/></li>
          <li><xref href="#topic16" format="dita"/></li>
@@ -17,15 +20,53 @@
          <li><xref href="#topic18" format="dita"/></li>
       </ul>
    </body>
+   <topic id="topic_xkt_vjy_4bb">
+      <title>About gpfdist and External Tables</title>
+      <body>
+         <p>The <codeph>gpfdist</codeph> file server utility is located in the
+               <codeph>$GPHOME/bin</codeph> directory on your Greenplum Database master host and on
+            each segment host. When you start a <codeph>gpfdist</codeph> instance you specify a
+            listen port and the path to a directory containing files to read or where files are to
+            be written. For example, this command runs <codeph>gpfdist</codeph> in the background,
+            listening on port 8801, and serving files in the
+               <codeph>/home/gpadmin/external_files</codeph> directory:</p>
+         <codeblock>$ gpfdist -p 8801 -d /home/gpadmin/external_files &amp;</codeblock>
+         <p>The <codeph>CREATE EXTERNAL TABLE</codeph> command <codeph>LOCATION</codeph> clause
+            connects an external table definition to one or more <codeph>gpfdist</codeph> instances.
+            If the external table is readable, the <codeph>gpfdist</codeph> server reads data
+            records from files from in specified directory, packs them into a block, and sends the
+            block in a response to a Greenplum Database segment's request. The segments unpack rows
+            they receive and distribute them according to the external table's distribution policy.
+            If the external table is a writable table, segments send blocks of rows in a request to
+            gpfdist and gpfdist writes them to the external file.</p>
+         <p>External data files can contain rows in CSV format or any delimited text format
+            supported by the <codeph>FORMAT</codeph> clause of the <codeph>CREATE EXTERNAL
+               TABLE</codeph> command. In addition, <codeph>gpfdist</codeph> can be configured with
+            a YAML-formatted file to transform external data files between a supported text format
+            and another format, for example XML or JSON. See &lt;ref> for an example that shows how
+            to use <codeph>gpfdist</codeph> to read external XML files into a Greenplum Database
+            readable external table. </p>
+         <p>For readable external tables, <codeph>gpfdist</codeph> uncompresses
+               <codeph>gzip</codeph> (<codeph>.gz</codeph>) and <codeph>bzip2</codeph>
+               (.<codeph>bz2</codeph>) files automatically. You can use the wildcard character (*)
+            or other C-style pattern matching to denote multiple files to read. External files are
+            assumed to be relative to the directory specified when you started the
+               <codeph>gpfdist</codeph> instance. </p>
+      </body>
+   </topic>
    <topic id="topic14">
       <title>About gpfdist Setup and Performance</title>
       <body>
-         <p>Consider the following scenarios for optimizing your ETL network performance.</p>
+         <p>You can run <codeph>gpfdist</codeph> instances on multiple hosts and you can run
+            multiple <codeph>gpfdist</codeph> instances on each host. This allows you to deploy
+               <codeph>gpfdist</codeph> servers strategically so that you can attain fast data load
+            and unload rates by utilizing all of the available network bandwidth and Greenplum
+            Database's parallelism. </p>
          <ul id="ul_rkb_plg_bbb">
-            <li id="du165860">Allow network traffic to use all ETL host Network Interface Cards
-               (NICs) simultaneously. Run one instance of <cmdname>gpfdist</cmdname> on the ETL
-               host, then declare the host name of each NIC in the <codeph>LOCATION</codeph> clause
-               of your external table definition (see <xref
+            <li id="du165860">Allow network traffic to use all ETL host network interfaces
+               simultaneously. Run one instance of <cmdname>gpfdist</cmdname> for each interface on
+               the ETL host, then declare the host name of each NIC in the <codeph>LOCATION</codeph>
+               clause of your external table definition (see <xref
                   href="g-creating-external-tables---examples.xml#topic44"/>).</li>
          </ul>
          <fig id="du165872">
@@ -38,7 +79,7 @@
                   <cmdname>gpfdist</cmdname> instances on the ETL host. For example, on an ETL
                system with two NICs, run two <cmdname>gpfdist</cmdname> instances (one on each NIC)
                to optimize data load performance and divide the external table data files evenly
-               between the two <cmdname>gpfdist</cmdname>s.</li>
+               between the two <cmdname>gpfdist</cmdname> servers.</li>
          </ul>
          <fig id="du165882">
             <title>External Tables Using Multiple gpfdist Instances with Multiple NICs</title>

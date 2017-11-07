@@ -36,7 +36,7 @@ explain select sess_id from pg_stat_activity where current_query = (select curre
 -----------------------------------------------------------------------------------------
  Hash Join  (cost=2.10..17.18 rows=4 width=4)
    Hash Cond: s.usesysid = u.oid
-   InitPlan
+   InitPlan 1 (returns $0)
      ->  Result  (cost=0.00..0.01 rows=1 width=0)
    ->  Hash Join  (cost=1.07..16.11 rows=4 width=8)
          Hash Cond: s.datid = d.oid

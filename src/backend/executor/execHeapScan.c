@@ -14,6 +14,7 @@
  */
 #include "postgres.h"
 
+#include "access/relscan.h"
 #include "executor/executor.h"
 #include "nodes/execnodes.h"
 #include "executor/nodeTableScan.h"
@@ -75,7 +76,7 @@ HeapScanNext(ScanState *scanState)
 			return ExecClearTuple(slot);
 		}
 
-		ExecStoreGenericTuple(estate->es_evTuple[scanrelid - 1], slot, false);
+		ExecStoreHeapTuple(estate->es_evTuple[scanrelid - 1], slot, InvalidBuffer, false);
 
 		/*
 		 * Note that unlike IndexScan, SeqScan never uses keys in

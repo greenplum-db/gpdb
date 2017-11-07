@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.114 2008/01/01 19:45:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/syscache.c,v 1.117 2008/06/19 00:46:05 alvherre Exp $
  *
  * NOTES
  *	  These routines allow the parser/planner/executor to perform
@@ -54,6 +54,7 @@
 #include "catalog/pg_ts_template.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_window.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 

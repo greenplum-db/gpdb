@@ -21,7 +21,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/ipc_test.c,v 1.24 2008/03/24 18:08:47 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/ipc_test.c,v 1.25 2008/04/16 23:59:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

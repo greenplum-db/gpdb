@@ -22,9 +22,4 @@ extern TupleTableSlot *ExecAppend(AppendState *node);
 extern void ExecEndAppend(AppendState *node);
 extern void ExecReScanAppend(AppendState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromAppendState(AppendState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif   /* NODEAPPEND_H */

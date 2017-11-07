@@ -356,7 +356,7 @@ StoreTupleForTrigger(TupleTableSlot *slot, Datum *values, bool *nulls, ListCell 
 void
 ConstructNewTupleTableSlot(HeapTuple newtuple, TupleTableSlot *triggerTuple, ListCell *attr, Datum *values, bool *nulls)
 {
-	ExecStoreGenericTuple(newtuple , triggerTuple, true);
+	ExecStoreHeapTuple(newtuple , triggerTuple, InvalidBuffer, true);
 	slot_getallattrs(triggerTuple);
 
 	Datum *new_values = slot_get_values(triggerTuple);

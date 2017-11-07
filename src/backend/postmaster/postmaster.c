@@ -1186,6 +1186,19 @@ PostmasterMain(int argc, char *argv[])
              )));
 	}
 
+/*
+ * This value of max_wal_senders will be inherited by all the child processes
+ * through fork(). This value is used by XLogIsNeeded().
+ */
+#ifdef USE_SEGWALREP
+		max_wal_senders = 1;
+#else
+	if ( GpIdentity.segindex == MASTER_CONTENT_ID)
+		max_wal_senders = 1;
+	else
+		max_wal_senders = 0;
+#endif
+
 	if ( GpIdentity.numsegments < 0 )
 	{
 	    ereport(FATAL,
@@ -2945,6 +2958,11 @@ retry1:
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 					 errSendAlert(true),
 					 errmsg("sorry, too many clients already")));
+			break;
+		case CAC_WAITBACKUP:
+			/* GPDB_84_MERGE_FIXME: we don't have a WAITBACKUP state. 
+			 * Do we want to just remove this case entirely? */
+			Assert(port->canAcceptConnections != CAC_WAITBACKUP);
 			break;
 		case CAC_OK:
 			break;

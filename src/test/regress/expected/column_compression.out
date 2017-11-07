@@ -1843,8 +1843,9 @@ alter type text set default encoding (compresstype=zlib, compresslevel=100);
 ERROR:  compresslevel=100 is out of range (should be between 0 and 9)
 -- dependency check on drop type
 drop type int42 cascade;
-NOTICE:  drop cascades to function int42_out(int42)
-NOTICE:  drop cascades to function int42_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function int42_in(cstring)
+drop cascades to function int42_out(int42)
 select * from pg_type_encoding;
  typid |                     typoptions                      
 -------+-----------------------------------------------------

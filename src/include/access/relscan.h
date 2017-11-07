@@ -7,21 +7,19 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/relscan.h,v 1.61 2008/03/26 16:20:48 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/access/relscan.h,v 1.66 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef RELSCAN_H
 #define RELSCAN_H
 
+#include "access/genam.h"
+#include "access/heapam.h"
+
 #include "access/formatter.h"
-#include "access/htup.h"
-#include "access/skey.h"
 #include "access/memtup.h"
 #include "access/aosegfiles.h"
-#include "storage/bufpage.h"
-#include "utils/snapshot.h"
-
 
 typedef struct HeapScanDescData
 {
@@ -56,8 +54,6 @@ typedef struct HeapScanDescData
 	OffsetNumber rs_vistuples[MaxHeapTuplesPerPage];	/* their offsets */
 } HeapScanDescData;
 
-typedef HeapScanDescData *HeapScanDesc;
-
 /*
  * We use the same IndexScanDescData structure for both amgettuple-based
  * and amgetbitmap-based index scans.  Some fields are only relevant in
@@ -79,20 +75,17 @@ typedef struct IndexScanDescData
 	/* index access method's private state */
 	void	   *opaque;			/* access-method-specific info */
 
-	/*
-	 * xs_ctup/xs_cbuf are valid after a successful index_getnext. After
-	 * index_getnext_indexitem, xs_ctup.t_self contains the heap tuple TID
-	 * from the index entry, but its other fields are not valid.
-	 */
+	/* xs_ctup/xs_cbuf/xs_recheck are valid after a successful index_getnext */
 	HeapTupleData xs_ctup;		/* current heap tuple, if any */
 	Buffer		xs_cbuf;		/* current heap buffer in scan, if any */
 	/* NB: if xs_cbuf is not InvalidBuffer, we hold a pin on that buffer */
-	TransactionId xs_prev_xmax; /* previous HOT chain member's XMAX, if any */
-	OffsetNumber xs_next_hot;	/* next member of HOT chain, if any */
-	bool		xs_hot_dead;	/* T if all members of HOT chain are dead */
-} IndexScanDescData;
+	bool		xs_recheck;		/* T means scan keys must be rechecked */
 
-typedef IndexScanDescData *IndexScanDesc;
+	/* state data for traversing HOT chains in index_getnext */
+	bool		xs_hot_dead;	/* T if all members of HOT chain are dead */
+	OffsetNumber xs_next_hot;	/* next member of HOT chain, if any */
+	TransactionId xs_prev_xmax; /* previous HOT chain member's XMAX, if any */
+} IndexScanDescData;
 
 /*
  * used for scan of external relations with the file protocol
@@ -135,25 +128,13 @@ typedef struct FileScanDescData
 
 typedef FileScanDescData *FileScanDesc;
 
-/*
- * used for scan of append only relations using BufferedRead and VarBlocks
- * Defined in cdb/cdbappendonlyam.h
- */
-
-/*
-  typedef AppendOnlyScanDescData *AppendOnlyScanDesc;
- */
-
-/*
- * HeapScanIsValid
- *		True iff the heap scan is valid.
- */
-#define HeapScanIsValid(scan) PointerIsValid(scan)
-
-/*
- * IndexScanIsValid
- *		True iff the index scan is valid.
- */
-#define IndexScanIsValid(scan) PointerIsValid(scan)
+/* Struct for heap-or-index scans of system tables */
+typedef struct SysScanDescData
+{
+	Relation	heap_rel;		/* catalog being scanned */
+	Relation	irel;			/* NULL if doing heap scan */
+	HeapScanDesc scan;			/* only valid in heap-scan case */
+	IndexScanDesc iscan;		/* only valid in index-scan case */
+} SysScanDescData;
 
 #endif   /* RELSCAN_H */

@@ -88,6 +88,11 @@ typedef struct SessionState
 	 * next entry would point to the next used entry */
 	struct SessionState *next;
 
+	/*
+	 * Resource group per-session slot information.
+	 */
+	void *resGroupSlot;
+
 #ifdef USE_ASSERT_CHECKING
 	/* If we modify the sessionId in ProcMppSessionId, this field is turned on */
 	bool isModifiedSessionId;

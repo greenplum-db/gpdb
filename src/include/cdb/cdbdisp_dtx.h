@@ -18,7 +18,7 @@
 #include "lib/stringinfo.h"         /* StringInfo */
 #include "cdb/cdbtm.h"
 
-struct pg_result;                   /* #include "gp-libpq-fe.h" */
+struct pg_result;                   /* #include "libpq-fe.h" */
 struct CdbPgResults;
 /*
  * CdbDispatchDtxProtocolCommand:

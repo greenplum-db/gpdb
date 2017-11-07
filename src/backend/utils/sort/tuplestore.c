@@ -49,7 +49,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.38 2008/03/25 19:26:53 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.39 2008/05/12 00:00:53 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -184,6 +184,12 @@ struct Tuplestorestate
 	long		allowedMem;		/* total memory allowed, in bytes */
 	long        availMemMin;    /* availMem low water mark (bytes) */
 	int64       spilledBytes;   /* memory used for spilled tuples */
+
+	/*
+	 * MemTupleBinding used for putvalues of tuplestore.
+	 */
+	 MemTupleBinding	*mt_bind;
+
 };
 
 #define COPYTUP(state,tup)	((*(state)->copytup) (state, tup))
@@ -342,6 +348,7 @@ tuplestore_begin_heap(bool randomAccess, bool interXact, int maxKBytes)
 	state->copytup = copytup_heap;
 	state->writetup = writetup_heap;
 	state->readtup = readtup_heap;
+	state->mt_bind = NULL;
 
 	return state;
 }
@@ -450,6 +457,11 @@ tuplestore_clear(Tuplestorestate *state)
 		readptr->eof_reached = false;
 		readptr->current = 0;
 	}
+
+	if (state->mt_bind)
+		pfree(state->mt_bind);
+
+	state->mt_bind = NULL;
 }
 
 /*
@@ -492,6 +504,8 @@ tuplestore_end(Tuplestorestate *state)
 		pfree(state->memtuples);
 	}
 	pfree(state->readptrs);
+	if (state->mt_bind)
+		pfree(state->mt_bind);
 	pfree(state);
 }
 
@@ -636,8 +650,13 @@ tuplestore_putvalues(Tuplestorestate *state, TupleDesc tdesc,
 {
 	MemoryContext oldcxt = MemoryContextSwitchTo(state->context);
 
-	MemTupleBinding *mt_bind = create_memtuple_binding(tdesc);
-	MemTuple tuple = memtuple_form_to(mt_bind, values, isnull, NULL, NULL, false);
+	if (!state->mt_bind)
+	{
+		state->mt_bind = create_memtuple_binding(tdesc);
+		Assert(state->mt_bind);
+	}
+
+	MemTuple tuple = memtuple_form_to(state->mt_bind, values, isnull, NULL, NULL, false);
 
 	USEMEM(state, GetMemoryChunkSpace(tuple));
 
@@ -796,7 +815,7 @@ tuplestore_puttuple_common(Tuplestorestate *state, void *tuple)
  * Backward scan is only allowed if randomAccess was set true or
  * EXEC_FLAG_BACKWARD was specified to tuplestore_set_eflags().
  */
-static void *
+static GenericTuple
 tuplestore_gettuple(Tuplestorestate *state, bool forward,
 					bool *should_free)
 {
@@ -968,7 +987,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 }
 
 /*
- * tuplestore_gettupleslot - exported function to fetch a MemTuple
+ * tuplestore_gettupleslot - exported function to fetch a tuple into a slot
  *
  * If successful, put tuple in slot and return TRUE; else, clear the slot
  * and return FALSE.
@@ -984,19 +1003,22 @@ bool
 tuplestore_gettupleslot(Tuplestorestate *state, bool forward,
 						bool copy, TupleTableSlot *slot)
 {
-	MemTuple tuple;
+	GenericTuple tuple;
 	bool		should_free;
 
-	tuple = (MemTuple) tuplestore_gettuple(state, forward, &should_free);
+	tuple = tuplestore_gettuple(state, forward, &should_free);
 
 	if (tuple)
 	{
 		if (copy && !should_free)
 		{
-			tuple = memtuple_copy_to(tuple, NULL, NULL);
+			if (is_memtuple(tuple))
+				tuple = (GenericTuple) memtuple_copy_to((MemTuple) tuple, NULL, NULL);
+			else
+				tuple = (GenericTuple) heap_copytuple((HeapTuple) tuple);
 			should_free = true;
 		}
-		ExecStoreMinimalTuple(tuple, slot, should_free);
+		ExecStoreGenericTuple(tuple, slot, should_free);
 		return true;
 	}
 	else
@@ -1324,10 +1346,10 @@ getlen(Tuplestorestate *state, bool eofOK)
 static void *
 copytup_heap(Tuplestorestate *state, void *tup)
 {
-	if(!is_heaptuple_memtuple((HeapTuple) tup))
+	if (!is_memtuple((GenericTuple) tup))
 		return heaptuple_copy_to((HeapTuple) tup, NULL, NULL);
-
-	return memtuple_copy_to((MemTuple) tup, NULL, NULL);
+	else
+		return memtuple_copy_to((MemTuple) tup, NULL, NULL);
 }
 
 static void
@@ -1336,7 +1358,7 @@ writetup_heap(Tuplestorestate *state, void *tup)
 	uint32 tuplen = 0;
 	Size         memsize = 0;
 
-	if(is_heaptuple_memtuple((HeapTuple) tup))
+	if (is_memtuple((GenericTuple) tup))
 		tuplen = memtuple_get_size((MemTuple) tup);
 	else
 	{

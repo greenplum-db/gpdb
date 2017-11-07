@@ -47,7 +47,7 @@ typedef struct mmon_query_seginfo_t
 	gpmon_query_seginfo_key_t	key;
 	apr_int64_t					final_rowsout;
 	apr_uint64_t				sum_cpu_elapsed;
-	apr_uint64_t				sum_measures_rows_in;
+	apr_uint64_t				sum_measures_rows_out;
 } mmon_query_seginfo_t;  //The agg value at segment level for query
 
 typedef struct qdnode_t {
@@ -253,7 +253,7 @@ static apr_status_t agg_put_queryseg(agg_t* agg, const gpmon_query_seginfo_t* me
 	if (rec) {
 		rec->final_rowsout = met->final_rowsout;
 		rec->sum_cpu_elapsed += met->sum_cpu_elapsed;
-		rec->sum_measures_rows_in += met->sum_measures_rows_in;
+		rec->sum_measures_rows_out += met->sum_measures_rows_out;
 	}
 	else {
 		/* not found, make new hash entry */
@@ -265,7 +265,7 @@ static apr_status_t agg_put_queryseg(agg_t* agg, const gpmon_query_seginfo_t* me
 		memcpy(&rec->key, &met->key, sizeof(gpmon_query_seginfo_key_t));
 		rec->final_rowsout = met->final_rowsout;
 		rec->sum_cpu_elapsed = met->sum_cpu_elapsed;
-		rec->sum_measures_rows_in = met->sum_measures_rows_in;
+		rec->sum_measures_rows_out = met->sum_measures_rows_out;
 
 		apr_hash_set(dp->query_seginfo_hash, &rec->key.segid, sizeof(rec->key.segid), rec);
 	}
@@ -1265,7 +1265,7 @@ static double get_row_skew(qdnode_t* qdnode)
 			seg_row_out_sum = apr_palloc(tmp_pool, sizeof(apr_int64_t));
 			*seg_row_out_sum = 0;
 		}
-		*seg_row_out_sum += rec->sum_measures_rows_in;
+		*seg_row_out_sum += rec->sum_measures_rows_out;
 		apr_hash_set(segtab, &rec->key.segid, sizeof(rec->key.segid), seg_row_out_sum);
 	}
 

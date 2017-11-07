@@ -212,13 +212,4 @@ SELECT * FROM appendonly_verify_block_checksums_co;
 -- Clean up. We don't want to leave the corrupt tables lying around!
 reset search_path;
 DROP SCHEMA corrupt_checksums CASCADE;
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.appendonly_verify_block_checksums_co
-NOTICE:  drop cascades to append only table corrupt_checksums.corrupt_content_small_ao
-NOTICE:  drop cascades to append only table corrupt_checksums.corrupt_header_small_ao
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_content_small_co
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_header_small_co
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_content_large_co
-NOTICE:  drop cascades to append only columnar table corrupt_checksums.corrupt_header_large_co
-NOTICE:  drop cascades to function corrupt_checksums.corrupt_file(text,bytea,bytea)
-NOTICE:  drop cascades to function corrupt_checksums.corrupt_file(text,integer)
-NOTICE:  drop cascades to function corrupt_checksums.get_aoseg1_path(regclass)
+NOTICE:  drop cascades to 10 other objects

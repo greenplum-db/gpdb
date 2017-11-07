@@ -17,8 +17,8 @@
 #include "postgres.h"
 
 #include "access/htup.h"
-#include "gp-libpq-fe.h"
-#include "gp-libpq-int.h"
+#include "libpq-fe.h"
+#include "libpq-int.h"
 #include "cdb/cdbconn.h"
 #include "cdb/cdbmotion.h"
 #include "cdb/cdbvars.h"
@@ -87,21 +87,21 @@ static void UpdateSentRecordCache(MotionConn *conn);
 static inline void
 reconstructTuple(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCSEntry, TupleRemapper *remapper)
 {
-	HeapTuple	htup;
+	GenericTuple tup;
 	SerTupInfo *pSerInfo = &pMNEntry->ser_tup_info;
 
 	/*
 	 * Convert the list of chunks into a tuple, then stow it away. This frees
 	 * our TCList as a side-effect
 	 */
-	htup = CvtChunksToHeapTup(&pCSEntry->chunk_list, pSerInfo, remapper);
+	tup = CvtChunksToTup(&pCSEntry->chunk_list, pSerInfo, remapper);
 
-	if (!htup)
+	if (!tup)
 		return;
 
-	htup = TRCheckAndRemap(remapper, pSerInfo->tupdesc, htup);
+	tup = TRCheckAndRemap(remapper, pSerInfo->tupdesc, tup);
 
-	htfifo_addtuple(pCSEntry->ready_tuples, htup);
+	htfifo_addtuple(pCSEntry->ready_tuples, tup);
 
 	/* Stats */
 	statNewTupleArrived(pMNEntry, pCSEntry);
@@ -484,7 +484,7 @@ SendReturnCode
 SendTuple(MotionLayerState *mlStates,
 		  ChunkTransportState *transportStates,
 		  int16 motNodeID,
-		  HeapTuple tuple,
+		  GenericTuple tuple,
 		  int16 targetRoute)
 {
 	MotionNodeEntry *pMNEntry;
@@ -617,7 +617,7 @@ ReceiveReturnCode
 RecvTupleFrom(MotionLayerState *mlStates,
 			  ChunkTransportState *transportStates,
 			  int16 motNodeID,
-			  HeapTuple *tup_i,
+			  GenericTuple *tup_i,
 			  int16 srcRoute)
 {
 	MotionNodeEntry *pMNEntry;

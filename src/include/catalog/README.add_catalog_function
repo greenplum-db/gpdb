@@ -42,8 +42,5 @@ the following steps are needed.
 5. Run make distclean, make, gpinitsystem and you should be able to see your
    newly added function in pg_proc.
 
-6. Make sure you run and possibly repair the upgrade regression test in
-   install-check.
-
-7. Don't forget to "git add" and commit the generated file, pg_proc_gp.h,
+6. Don't forget to "git add" and commit the generated file, pg_proc_gp.h,
    along with any modified files.

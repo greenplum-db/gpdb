@@ -162,3 +162,8 @@ SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, CASE WHEN (vn = 0) THEN
 SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + 1 AS f, 1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (f > 1);
 PREPARE p AS SELECT COUNT(DISTINCT cn) as cn_r, f, g FROM (SELECT cn, vn + $1 AS f, $1 AS g FROM sale) sale_view GROUP BY ROLLUP(f,g) HAVING (g > 1);
 EXECUTE p(2);
+
+-- ###### Queries involving CUBE with HAVING CLAUSE ###### --
+
+WITH src AS (SELECT 1 AS a, 1 AS b)
+SELECT 1 FROM src GROUP BY CUBE(a, b) HAVING a IS NOT NULL;

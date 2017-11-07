@@ -15,7 +15,7 @@
 #include "postgres.h"
 #include "miscadmin.h"
 
-#include "gp-libpq-fe.h"
+#include "libpq-fe.h"
 #include "pqexpbuffer.h"
 
 #include "access/xlog.h"

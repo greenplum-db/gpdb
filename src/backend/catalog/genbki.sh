@@ -11,7 +11,7 @@
 #
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/backend/catalog/genbki.sh,v 1.46 2009/01/01 17:23:36 momjian Exp $
+#    $PostgreSQL: pgsql/src/backend/catalog/genbki.sh,v 1.45 2008/07/19 04:01:29 tgl Exp $
 #
 # NOTES
 #    non-essential whitespace is removed from the generated file.
@@ -112,14 +112,6 @@ trap "rm -f $TMPFILE ${OUTPUT_PREFIX}.bki.$$ ${OUTPUT_PREFIX}.description.$$ ${O
 # anything that could depend on platform or configuration.  (The right place
 # to handle those sorts of things is in initdb.c's bootstrap_template1().)
 
-# Get NAMEDATALEN from pg_config_manual.h
-for dir in $INCLUDE_DIRS; do
-    if [ -f "$dir/pg_config_manual.h" ]; then
-        NAMEDATALEN=`grep '^#define[ 	]*NAMEDATALEN' $dir/pg_config_manual.h | $AWK '{ print $3 }'`
-        break
-    fi
-done
-
 # Get BOOTSTRAP_SUPERUSERID from catalog/pg_authid.h
 for dir in $INCLUDE_DIRS; do
     if [ -f "$dir/catalog/pg_authid.h" ]; then
@@ -170,7 +162,6 @@ sed -e "s/;[ 	]*$//g" \
     -e "s/^TransactionId/xid/g" \
     -e "s/(TransactionId/(xid/g" \
     -e "s/PGUID/$BOOTSTRAP_SUPERUSERID/g" \
-    -e "s/NAMEDATALEN/$NAMEDATALEN/g" \
     -e "s/PGNSP/$PG_CATALOG_NAMESPACE/g" \
     -e "s/TOASTNSP/$PG_TOAST_NAMESPACE/g" \
 | $AWK '

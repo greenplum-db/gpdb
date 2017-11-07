@@ -28,7 +28,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.313 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.311 2008/07/26 19:15:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -68,11 +68,14 @@
 #include "optimizer/clauses.h"
 #include "parser/parse_clause.h"
 #include "parser/parsetree.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/smgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
 #include "utils/ps_status.h"
@@ -109,6 +112,9 @@
 
 extern bool cdbpathlocus_querysegmentcatalogs;
 
+
+/* Hook for plugins to get control in ExecutorRun() */
+ExecutorRun_hook_type ExecutorRun_hook = NULL;
 
 typedef struct evalPlanQual
 {
@@ -373,8 +379,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/*
 	 * Copy other important information into the EState
 	 */
-	estate->es_snapshot = queryDesc->snapshot;
-	estate->es_crosscheck_snapshot = queryDesc->crosscheck_snapshot;
+	estate->es_snapshot = RegisterSnapshot(queryDesc->snapshot);
+	estate->es_crosscheck_snapshot = RegisterSnapshot(queryDesc->crosscheck_snapshot);
 	estate->es_instrument = queryDesc->instrument_options;
 	estate->showstatctx = queryDesc->showstatctx;
 
@@ -777,6 +783,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
  *		Note: count = 0 is interpreted as no portal limit, i.e., run to
  *		completion.
  *
+ *		We provide a function hook variable that lets loadable plugins
+ *		get control when ExecutorRun is called.  Such a plugin would
+ *		normally call standard_ExecutorRun().
+ *
  *		MPP: In here we must ensure to only run the plan and not call
  *		any setup/teardown items (unless in a CATCH block).
  *
@@ -785,6 +795,19 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 TupleTableSlot *
 ExecutorRun(QueryDesc *queryDesc,
 			ScanDirection direction, long count)
+{
+	TupleTableSlot *result;
+
+	if (ExecutorRun_hook)
+		result = (*ExecutorRun_hook) (queryDesc, direction, count);
+	else
+		result = standard_ExecutorRun(queryDesc, direction, count);
+	return result;
+}
+
+TupleTableSlot *
+standard_ExecutorRun(QueryDesc *queryDesc,
+					 ScanDirection direction, long count)
 {
 	EState	   *estate;
 	CmdType		operation;
@@ -1082,6 +1105,10 @@ ExecutorEnd(QueryDesc *queryDesc)
 	 */
 	if (estate->es_select_into)
 		CloseIntoRel(queryDesc);
+
+	/* do away with our snapshots */
+	UnregisterSnapshot(estate->es_snapshot);
+	UnregisterSnapshot(estate->es_crosscheck_snapshot);
 
 	/*
 	 * Must switch out of context before destroying it
@@ -1907,9 +1934,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 	/*
 	 * Initialize the junk filter if needed.  SELECT and INSERT queries need a
-	 * filter if there are any junk attrs in the tlist.  INSERT and SELECT
-	 * INTO also need a filter if the plan may return raw disk tuples (else
-	 * heap_insert will be scribbling on the source relation!). UPDATE and
+	 * filter if there are any junk attrs in the tlist.  UPDATE and
 	 * DELETE always need a filter, since there's always a junk 'ctid'
 	 * attribute present --- no need to look first.
 	 *
@@ -1934,10 +1959,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 						break;
 					}
 				}
-				if (!junk_filter_needed &&
-					(operation == CMD_INSERT || estate->es_select_into) &&
-					ExecMayReturnRawTuples(planstate))
-					junk_filter_needed = true;
 				break;
 			case CMD_UPDATE:
 			case CMD_DELETE:
@@ -3081,18 +3102,16 @@ ExecInsert(TupleTableSlot *slot,
 		   PlanGenerator planGen,
 		   bool isUpdate)
 {
-	void	   *tuple;
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
 	Oid			newId;
-	TupleTableSlot *partslot = NULL;
-
-	AOTupleId	aoTupleId = AOTUPLEID_INIT;
 
 	bool		rel_is_heap = false;
 	bool 		rel_is_aorows = false;
 	bool		rel_is_aocols = false;
 	bool		rel_is_external = false;
+	ItemPointerData lastTid;
+	Oid			tuple_oid = InvalidOid;
 
 	/*
 	 * get information on the (current) result relation
@@ -3157,95 +3176,8 @@ ExecInsert(TupleTableSlot *slot,
 	rel_is_aorows = RelationIsAoRows(resultRelationDesc);
 	rel_is_external = RelationIsExternal(resultRelationDesc);
 
-	partslot = reconstructMatchingTupleSlot(slot, resultRelInfo);
-	if (rel_is_heap)
-	{
-		tuple = ExecFetchSlotHeapTuple(partslot);
-	}
-	else if (rel_is_aorows)
-	{
-		tuple = ExecFetchSlotMemTuple(partslot, false);
-	}
-	else if (rel_is_external) 
-	{
-		if (estate->es_result_partitions && 
-			estate->es_result_partitions->part->parrelid != 0)
-		{
-			ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("Insert into external partitions not supported.")));			
-			return;
-		}
-		else
-		{
-			/*
-			 * Make a modifiable copy, since external_insert() takes the
-			 * liberty to modify the tuple.
-			 */
-			tuple = ExecCopySlotHeapTuple(partslot);
-		}
-	}
-	else
-	{
-		Assert(rel_is_aocols);
-		tuple = ExecFetchSlotMemTuple(partslot, true);
-	}
-
-	Assert(partslot != NULL && tuple != NULL);
-
-	/* Execute triggers in Planner-generated plans */
-	if (planGen == PLANGEN_PLANNER)
-	{
-		/* BEFORE ROW INSERT Triggers */
-		if (resultRelInfo->ri_TrigDesc &&
-			resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_INSERT] > 0)
-		{
-			HeapTuple	newtuple;
-
-			/* NYI */
-			if(rel_is_aocols)
-				elog(ERROR, "triggers are not supported on tables that use column-oriented storage");
-
-			newtuple = ExecBRInsertTriggers(estate, resultRelInfo, tuple);
-
-			if (newtuple == NULL)	/* "do nothing" */
-			{
-				return;
-			}
-
-			if (newtuple != tuple)	/* modified by Trigger(s) */
-			{
-				/*
-				 * Put the modified tuple into a slot for convenience of routines
-				 * below.  We assume the tuple was allocated in per-tuple memory
-				 * context, and therefore will go away by itself. The tuple table
-				 * slot should not try to clear it.
-				 */
-				TupleTableSlot *newslot = estate->es_trig_tuple_slot;
-
-				if (newslot->tts_tupleDescriptor != partslot->tts_tupleDescriptor)
-					ExecSetSlotDescriptor(newslot, partslot->tts_tupleDescriptor);
-				ExecStoreGenericTuple(newtuple, newslot, false);
-				newslot->tts_tableOid = partslot->tts_tableOid; /* for constraints */
-				tuple = newtuple;
-				partslot = newslot;
-			}
-		}
-	}
-
 	/*
-	 * Check the constraints of the tuple
-	 */
-	if (resultRelationDesc->rd_att->constr)
-		ExecConstraints(resultRelInfo, partslot, estate);
-
-	/*
-	 * insert the tuple
-	 *
-	 * Note: heap_insert returns the tid (location) of the new tuple in the
-	 * t_self field.
-	 *
-	 * NOTE: for append-only relations we use the append-only access methods.
+	 * Prepare the right kind of "insert desc".
 	 */
 	if (rel_is_aorows)
 	{
@@ -3258,10 +3190,155 @@ ExecInsert(TupleTableSlot *slot,
 				appendonly_insert_init(resultRelationDesc,
 									   resultRelInfo->ri_aosegno,
 									   false);
+		}
+	}
+	else if (rel_is_aocols)
+	{
+		if (resultRelInfo->ri_aocsInsertDesc == NULL)
+		{
+			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			resultRelInfo->ri_aocsInsertDesc = aocs_insert_init(resultRelationDesc,
+																resultRelInfo->ri_aosegno, false);
+		}
+	}
+	else if (rel_is_external)
+	{
+		if (resultRelInfo->ri_extInsertDesc == NULL)
+			resultRelInfo->ri_extInsertDesc = external_insert_init(resultRelationDesc);
+	}
 
+	/*
+	 * If the result relation has OIDs, force the tuple's OID to zero so that
+	 * heap_insert will assign a fresh OID.  Usually the OID already will be
+	 * zero at this point, but there are corner cases where the plan tree can
+	 * return a tuple extracted literally from some table with the same
+	 * rowtype.
+	 *
+	 * XXX if we ever wanted to allow users to assign their own OIDs to new
+	 * rows, this'd be the place to do it.  For the moment, we make a point
+	 * of doing this before calling triggers, so that a user-supplied trigger
+	 * could hack the OID if desired.
+	 *
+	 * GPDB: In PostgreSQL, here we set the Oid in the HeapTuple, which is a
+	 * local copy at this point. But in GPDB, we don't materialize the tuple
+	 * yet, because we might need a MemTuple or a HeapTuple depending on
+	 * what kind of a table this is (or neither for an AOCS table, since
+	 * aocs_insert() works directly off the slot). So we keep the Oid in a
+	 * local variable for now, and only set it in the tuple just before the
+	 * call to heap/appendonly/external_insert().
+	 */
+	if (resultRelationDesc->rd_rel->relhasoids)
+	{
+		tuple_oid = InvalidOid;
+
+		/*
+		 * But if this is really an UPDATE, try to preserve the old OID.
+		 */
+		if (isUpdate)
+		{
+			GenericTuple gtuple;
+
+			gtuple = ExecFetchSlotGenericTuple(slot, false);
+
+			if (!is_memtuple(gtuple))
+				tuple_oid = HeapTupleGetOid((HeapTuple) gtuple);
+			else
+			{
+				if (resultRelInfo->ri_aoInsertDesc)
+					tuple_oid = MemTupleGetOid((MemTuple) gtuple,
+											   resultRelInfo->ri_aoInsertDesc->mt_bind);
+			}
+		}
+	}
+
+	slot = reconstructMatchingTupleSlot(slot, resultRelInfo);
+
+	if (rel_is_external &&
+		estate->es_result_partitions &&
+		estate->es_result_partitions->part->parrelid != 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("Insert into external partitions not supported.")));
+	}
+
+	Assert(slot != NULL);
+
+	/* BEFORE ROW INSERT Triggers */
+	if (resultRelInfo->ri_TrigDesc &&
+		resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_INSERT] > 0 &&
+		!isUpdate)
+	{
+		HeapTuple	newtuple;
+		HeapTuple	tuple;
+
+		tuple = ExecMaterializeSlot(slot);
+
+		if (resultRelationDesc->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, tuple_oid);
+
+		newtuple = ExecBRInsertTriggers(estate, resultRelInfo, tuple);
+
+		if (newtuple == NULL)	/* "do nothing" */
+			return;
+
+		if (newtuple != tuple)	/* modified by Trigger(s) */
+		{
+			/*
+			 * Put the modified tuple into a slot for convenience of routines
+			 * below.  We assume the tuple was allocated in per-tuple memory
+			 * context, and therefore will go away by itself. The tuple table
+			 * slot should not try to clear it.
+			 */
+			TupleTableSlot *newslot = estate->es_trig_tuple_slot;
+
+			if (newslot->tts_tupleDescriptor != slot->tts_tupleDescriptor)
+				ExecSetSlotDescriptor(newslot, slot->tts_tupleDescriptor);
+			ExecStoreHeapTuple(newtuple, newslot, InvalidBuffer, false);
+			newslot->tts_tableOid = slot->tts_tableOid; /* for constraints */
+			slot = newslot;
+			tuple = newtuple;
+
+			/*
+			 * since we keep the OID in a separate variable, also update that,
+			 * in case the trigger set it.
+			 */
+			if (resultRelationDesc->rd_rel->relhasoids)
+				tuple_oid = HeapTupleGetOid(newtuple);
+		}
+	}
+
+	/*
+	 * Check the constraints of the tuple
+	 */
+	if (resultRelationDesc->rd_att->constr)
+		ExecConstraints(resultRelInfo, slot, estate);
+
+	/*
+	 * insert the tuple
+	 *
+	 * Note: heap_insert returns the tid (location) of the new tuple in the
+	 * t_self field.
+	 *
+	 * NOTE: for append-only relations we use the append-only access methods.
+	 */
+	if (rel_is_aorows)
+	{
+		MemTuple	mtuple;
+
+		if (resultRelInfo->ri_aoInsertDesc == NULL)
+		{
+			/* Set the pre-assigned fileseg number to insert into */
+			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+
+			resultRelInfo->ri_aoInsertDesc =
+				appendonly_insert_init(resultRelationDesc,
+									   resultRelInfo->ri_aosegno,
+									   false);
 		}
 
-		appendonly_insert(resultRelInfo->ri_aoInsertDesc, tuple, &newId, &aoTupleId);
+		mtuple = ExecFetchSlotMemTuple(slot, false);
+		newId = appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, tuple_oid, (AOTupleId *) &lastTid);
 	}
 	else if (rel_is_aocols)
 	{
@@ -3272,60 +3349,72 @@ ExecInsert(TupleTableSlot *slot,
 																resultRelInfo->ri_aosegno, false);
 		}
 
-		newId = aocs_insert(resultRelInfo->ri_aocsInsertDesc, partslot);
-		aoTupleId = *((AOTupleId*)slot_get_ctid(partslot));
+		newId = aocs_insert(resultRelInfo->ri_aocsInsertDesc, slot);
+		lastTid = *slot_get_ctid(slot);
 	}
 	else if (rel_is_external)
 	{
 		/* Writable external table */
+		HeapTuple tuple;
+
 		if (resultRelInfo->ri_extInsertDesc == NULL)
 			resultRelInfo->ri_extInsertDesc = external_insert_init(resultRelationDesc);
 
+		/*
+		 * get the heap tuple out of the tuple table slot, making sure we have a
+		 * writable copy. (external_insert() can scribble on the tuple)
+		 */
+		tuple = ExecMaterializeSlot(slot);
+		if (resultRelationDesc->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, tuple_oid);
+
 		newId = external_insert(resultRelInfo->ri_extInsertDesc, tuple);
+		ItemPointerSetInvalid(&lastTid);
 	}
 	else
 	{
+		HeapTuple tuple;
+
 		Insist(rel_is_heap);
+
+		/*
+		 * get the heap tuple out of the tuple table slot, making sure we have a
+		 * writable copy. (heap_insert() will scribble on the tuple)
+		 */
+		tuple = ExecMaterializeSlot(slot);
+		if (resultRelationDesc->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, tuple_oid);
 
 		newId = heap_insert(resultRelationDesc,
 							tuple,
 							estate->es_output_cid,
 							true, true, GetCurrentTransactionId());
+		lastTid = tuple->t_self;
 	}
 
 	(estate->es_processed)++;
 	(resultRelInfo->ri_aoprocessed)++;
 	estate->es_lastoid = newId;
+	setLastTid(&lastTid);
 
-	partslot->tts_tableOid = RelationGetRelid(resultRelationDesc);
+	slot->tts_tableOid = RelationGetRelid(resultRelationDesc);
 
-	if (rel_is_aorows || rel_is_aocols)
+	/*
+	 * insert index entries for tuple
+	 */
+	if (resultRelInfo->ri_NumIndices > 0)
+		ExecInsertIndexTuples(slot, &lastTid, estate, false);
+
+	/* AFTER ROW INSERT Triggers */
+	if (resultRelInfo->ri_TrigDesc &&
+		resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_INSERT] > 0 &&
+		!isUpdate)
 	{
-		/*
-		 * insert index entries for AO Row-Store tuple
-		 */
-		if (resultRelInfo->ri_NumIndices > 0)
-			ExecInsertIndexTuples(partslot, (ItemPointer)&aoTupleId, estate, false);
-	}
-	else
-	{
-		/* Use parttuple for index update in case this is an indexed heap table. */
-		TupleTableSlot *xslot = partslot;
-		void *xtuple = tuple;
+		HeapTuple tuple = ExecMaterializeSlot(slot);
 
-		setLastTid(&(((HeapTuple) xtuple)->t_self));
+		Assert(planGen == PLANGEN_PLANNER);
 
-		/*
-		 * insert index entries for tuple
-		 */
-		if (resultRelInfo->ri_NumIndices > 0)
-			ExecInsertIndexTuples(xslot, &(((HeapTuple) xtuple)->t_self), estate, false);
-
-		if (planGen == PLANGEN_PLANNER)
-		{
-			/* AFTER ROW INSERT Triggers */
-			ExecARInsertTriggers(estate, resultRelInfo, tuple);
-		}
+		ExecARInsertTriggers(estate, resultRelInfo, tuple);
 	}
 }
 
@@ -3444,7 +3533,7 @@ ldelete:;
 		if (resultRelInfo->ri_deleteDesc == NULL)
 		{
 			resultRelInfo->ri_deleteDesc = 
-				appendonly_delete_init(resultRelationDesc, ActiveSnapshot);
+				appendonly_delete_init(resultRelationDesc, GetActiveSnapshot());
 		}
 
 		AOTupleId* aoTupleId = (AOTupleId*)tupleid;
@@ -3481,7 +3570,7 @@ ldelete:;
 	{
 		case HeapTupleSelfUpdated:
 			/* already deleted by self; nothing to do */
-		
+
 			/*
 			 * In an scenario in which R(a,b) and S(a,b) have 
 			 *        R               S
@@ -3558,7 +3647,6 @@ ldelete:;
 	 * take care of it later.  We can't delete index tuples immediately
 	 * anyway, since the tuple is still visible to other transactions.
 	 */
-
 
 	if (!(isAORowsTable || isAOColsTable) && planGen == PLANGEN_PLANNER)
 	{
@@ -3763,14 +3851,13 @@ ExecUpdate(TupleTableSlot *slot,
 		   DestReceiver *dest,
 		   EState *estate)
 {
-	void*	tuple;
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
 	HTSU_Result result;
 	ItemPointerData update_ctid;
 	TransactionId update_xmax = InvalidTransactionId;
-	AOTupleId	aoTupleId = AOTUPLEID_INIT;
-	TupleTableSlot *partslot = NULL;
+	ItemPointerData lastTid;
+	bool		wasHotUpdate;
 
 	/*
 	 * abort the operation if not running transactions
@@ -3789,16 +3876,22 @@ ExecUpdate(TupleTableSlot *slot,
 	bool		rel_is_aocols = RelationIsAoCols(resultRelationDesc);
 	bool		rel_is_external = RelationIsExternal(resultRelationDesc);
 
+	if (rel_is_external &&
+		estate->es_result_partitions &&
+		estate->es_result_partitions->part->parrelid != 0)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("Update external partitions not supported.")));
+	}
+
 	/*
 	 * get the heap tuple out of the tuple table slot, making sure we have a
 	 * writable copy
 	 */
-	if (rel_is_heap)
-	{
-		partslot = slot;
-		tuple = ExecFetchSlotHeapTuple(partslot);
-	}
-	else if (rel_is_aorows || rel_is_aocols)
+
+
+	if (rel_is_aorows || rel_is_aocols)
 	{
 		/*
 		 * It is necessary to reconstruct a logically compatible tuple to
@@ -3807,38 +3900,12 @@ ExecUpdate(TupleTableSlot *slot,
 		 * columns, and MemTuple cannot deal with cases without converting
 		 * the target list back into the original relation's tuple desc.
 		 */
-		partslot = reconstructMatchingTupleSlot(slot, resultRelInfo);
-
-		/*
-		 * We directly inline toasted columns here as update with toasted columns
-		 * would create two references to the same toasted value.
-		 */
-		tuple = ExecFetchSlotMemTuple(partslot, true);
-	}
-	else if (rel_is_external) 
-	{
-		if (estate->es_result_partitions && 
-			estate->es_result_partitions->part->parrelid != 0)
-		{
-			ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("Update external partitions not supported.")));			
-			return;
-		}
-		else
-		{
-			partslot = slot;
-			tuple = ExecFetchSlotHeapTuple(partslot);
-		}
-	}
-	else 
-	{
-		Insist(false);
+		slot = reconstructMatchingTupleSlot(slot, resultRelInfo);
 	}
 
 	/* see if this update would move the tuple to a different partition */
 	if (estate->es_result_partitions)
-		checkPartitionUpdate(estate, partslot, resultRelInfo);
+		checkPartitionUpdate(estate, slot, resultRelInfo);
 
 	/* BEFORE ROW UPDATE Triggers */
 	if (resultRelInfo->ri_TrigDesc &&
@@ -3849,9 +3916,6 @@ ExecUpdate(TupleTableSlot *slot,
 
 		if (slot == NULL)		/* "do nothing" */
 			return;
-
-		/* trigger might have changed tuple */
-		tuple = ExecFetchSlotHeapTuple(slot);
 	}
 
 	/*
@@ -3865,7 +3929,7 @@ ExecUpdate(TupleTableSlot *slot,
 	 */
 lreplace:;
 	if (resultRelationDesc->rd_att->constr)
-		ExecConstraints(resultRelInfo, partslot, estate);
+		ExecConstraints(resultRelInfo, slot, estate);
 
 	if (!GpPersistent_IsPersistentRelation(resultRelationDesc->rd_id))
 	{
@@ -3883,29 +3947,41 @@ lreplace:;
 		 */
 		if (rel_is_heap)
 		{
+			HeapTuple tuple;
+
+			tuple = ExecMaterializeSlot(slot);
+
 			result = heap_update(resultRelationDesc, tupleid, tuple,
 							 &update_ctid, &update_xmax,
 							 estate->es_output_cid,
 							 estate->es_crosscheck_snapshot,
 							 true /* wait for commit */ );
-		} 
+			lastTid = tuple->t_self;
+			wasHotUpdate = HeapTupleIsHeapOnly(tuple) != 0;
+		}
 		else if (rel_is_aorows)
 		{
+			MemTuple mtuple;
+
 			if (IsXactIsoLevelSerializable)
 			{
 				ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("Updates on append-only tables are not supported in serializable transactions.")));			
+					errmsg("Updates on append-only tables are not supported in serializable transactions.")));
 			}
 
 			if (resultRelInfo->ri_updateDesc == NULL)
 			{
 				ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
 				resultRelInfo->ri_updateDesc = (AppendOnlyUpdateDesc)
-					appendonly_update_init(resultRelationDesc, ActiveSnapshot, resultRelInfo->ri_aosegno);
+					appendonly_update_init(resultRelationDesc, GetActiveSnapshot(), resultRelInfo->ri_aosegno);
 			}
+
+			mtuple = ExecFetchSlotMemTuple(slot, false);
+
 			result = appendonly_update(resultRelInfo->ri_updateDesc,
-								 tuple, (AOTupleId *) tupleid, &aoTupleId);
+									   mtuple, (AOTupleId *) tupleid, (AOTupleId *) &lastTid);
+			wasHotUpdate = false;
 		}
 		else if (rel_is_aocols)
 		{
@@ -3913,7 +3989,7 @@ lreplace:;
 			{
 				ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("Updates on append-only tables are not supported in serializable transactions.")));			
+					errmsg("Updates on append-only tables are not supported in serializable transactions.")));
 			}
 
 			if (resultRelInfo->ri_updateDesc == NULL)
@@ -3923,12 +3999,14 @@ lreplace:;
 					aocs_update_init(resultRelationDesc, resultRelInfo->ri_aosegno);
 			}
 			result = aocs_update(resultRelInfo->ri_updateDesc,
-								 partslot, (AOTupleId *) tupleid, &aoTupleId);
+								 slot, (AOTupleId *) tupleid, (AOTupleId *) &lastTid);
+			wasHotUpdate = false;
 		}
 		else
 		{
-			Assert(!"We should not be here");
+			elog(ERROR, "invalid relation type");
 		}
+
 		switch (result)
 		{
 			case HeapTupleSelfUpdated:
@@ -3956,8 +4034,7 @@ lreplace:;
 					if (!TupIsNull(epqslot))
 					{
 						*tupleid = update_ctid;
-						partslot = ExecFilterJunk(estate->es_junkFilter, epqslot);
-						tuple = ExecFetchSlotHeapTuple(partslot);
+						slot = ExecFilterJunk(estate->es_junkFilter, epqslot);
 						goto lreplace;
 					}
 				}
@@ -3976,12 +4053,11 @@ lreplace:;
 		/*
 		 * Persistent metadata path.
 		 */
-		persistentTuple = heap_copytuple(tuple);
+		persistentTuple = ExecMaterializeSlot(slot);
 		persistentTuple->t_self = *tupleid;
 
 		frozen_heap_inplace_update(resultRelationDesc, persistentTuple);
-
-		heap_freetuple(persistentTuple);
+		wasHotUpdate = false;
 	}
 
 	(estate->es_processed)++;
@@ -4003,17 +4079,16 @@ lreplace:;
 	 *
 	 * If it's a HOT update, we mustn't insert new index entries.
 	 */
-	if (rel_is_aorows || rel_is_aocols)
-	{
-		if (resultRelInfo->ri_NumIndices > 0)
-			ExecInsertIndexTuples(partslot, (ItemPointer)&aoTupleId, estate, false);
-	}
-	else
-	{
-		if (resultRelInfo->ri_NumIndices > 0 && !HeapTupleIsHeapOnly((HeapTuple) tuple))
-			ExecInsertIndexTuples(partslot, &(((HeapTuple) tuple)->t_self), estate, false);
+	if (resultRelInfo->ri_NumIndices > 0 && !wasHotUpdate)
+		ExecInsertIndexTuples(slot, &lastTid, estate, false);
 
-		/* AFTER ROW UPDATE Triggers */
+	/* AFTER ROW UPDATE Triggers */
+	if (resultRelInfo->ri_TrigDesc &&
+		resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_UPDATE] > 0 &&
+		rel_is_heap)
+	{
+		HeapTuple tuple = ExecMaterializeSlot(slot);
+
 		ExecARUpdateTriggers(estate, resultRelInfo, tupleid, tuple);
 	}
 }
@@ -4519,13 +4594,6 @@ EvalPlanQualStart(evalPlanQual *epq, EState *estate, evalPlanQual *priorepq)
 	epqstate->es_result_relation_info = estate->es_result_relation_info;
 	epqstate->es_junkFilter = estate->es_junkFilter;
 	/* es_trig_target_relations must NOT be copied */
-	epqstate->es_into_relation_descriptor = estate->es_into_relation_descriptor;
-	epqstate->es_into_relation_is_bulkload = estate->es_into_relation_is_bulkload;
-	epqstate->es_into_relation_last_heap_tid = estate->es_into_relation_last_heap_tid;
-
-	epqstate->es_into_relation_bulkloadinfo = (struct MirroredBufferPoolBulkLoadInfo *) palloc0(sizeof(MirroredBufferPoolBulkLoadInfo));
-	memcpy(epqstate->es_into_relation_bulkloadinfo, estate->es_into_relation_bulkloadinfo, sizeof(MirroredBufferPoolBulkLoadInfo));
-
 	epqstate->es_param_list_info = estate->es_param_list_info;
 	if (estate->es_plannedstmt->nParamExec > 0)
 		epqstate->es_param_exec_vals = (ParamExecData *)
@@ -4640,7 +4708,6 @@ EvalPlanQualStop(evalPlanQual *epq)
 	epqstate->es_result_relations = NULL;
 	epqstate->es_result_relation_info = NULL;
 	epqstate->es_junkFilter = NULL;
-	epqstate->es_into_relation_descriptor = NULL;
 	epqstate->es_param_list_info = NULL;
 	epqstate->es_rowMarks = NIL;
 	epqstate->es_plannedstmt = NULL;
@@ -4669,23 +4736,29 @@ ExecGetActivePlanTree(QueryDesc *queryDesc)
 		return queryDesc->planstate;
 }
 
-
 /*
  * Support for SELECT INTO (a/k/a CREATE TABLE AS)
  *
  * We implement SELECT INTO by diverting SELECT's normal output with
  * a specialized DestReceiver type.
- *
- * TODO: remove some of the INTO-specific cruft from EState, and keep
- * it in the DestReceiver instead.
  */
 
 typedef struct
 {
 	DestReceiver pub;			/* publicly-known function pointers */
 	EState	   *estate;			/* EState we are working with */
-	AppendOnlyInsertDescData *ao_insertDesc; /* descriptor to AO tables */
-        AOCSInsertDescData *aocs_ins;           /* descriptor for aocs */
+	Relation	rel;			/* Relation to write to */
+	bool		use_wal;		/* do we need to WAL-log our writes? */
+
+	struct AppendOnlyInsertDescData *ao_insertDesc; /* descriptor to AO tables */
+	struct AOCSInsertDescData *aocs_ins;           /* descriptor for aocs */
+
+	bool		is_bulkload;
+
+	ItemPointerData last_heap_tid;
+
+	struct MirroredBufferPoolBulkLoadInfo *bulkloadinfo;
+
 } DR_intorel;
 
 /*
@@ -4829,7 +4902,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	else
 		relstorage = RELSTORAGE_HEAP;
 
-	/* have to copy the actual tupdesc to get rid of any constraints */
+	/* Copy the tupdesc because heap_create_with_catalog modifies it */
 	tupdesc = CreateTupleDescCopy(queryDesc->tupDesc);
 
 	/*
@@ -4840,7 +4913,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 */
 	bufferPoolBulkLoad = 
 		(relstorage_is_buffer_pool(relstorage) ?
-									XLog_CanBypassWal() : false);
+									!XLogIsNeeded() : false);
 
 	/* Now we can actually create the new relation */
 	intoRelationId = heap_create_with_catalog(intoName,
@@ -4849,6 +4922,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 											  InvalidOid,
 											  GetUserId(),
 											  tupdesc,
+											  NIL,
 											  /* relam */ InvalidOid,
 											  relkind,
 											  relstorage,
@@ -4901,31 +4975,46 @@ OpenIntoRel(QueryDesc *queryDesc)
 	AddDefaultRelationAttributeOptions(intoRelationDesc,
 									   into->options);
 
+	/*
+	 * Now replace the query's DestReceiver with one for SELECT INTO
+	 */
+	queryDesc->dest = CreateDestReceiver(DestIntoRel, NULL);
+	myState = (DR_intorel *) queryDesc->dest;
+	Assert(myState->pub.mydest == DestIntoRel);
+	myState->estate = estate;
+
+	/*
+	 * We can skip WAL-logging the insertions, unless PITR is in use.
+	 */
+	myState->use_wal = XLogArchivingActive();
+	myState->rel = intoRelationDesc;
+
 	/* use_wal off requires rd_targblock be initially invalid */
 	Assert(intoRelationDesc->rd_targblock == InvalidBlockNumber);
 
-	estate->es_into_relation_is_bulkload = bufferPoolBulkLoad;
-	estate->es_into_relation_descriptor = intoRelationDesc;
+	myState->is_bulkload = bufferPoolBulkLoad;
+
+	myState->bulkloadinfo = (struct MirroredBufferPoolBulkLoadInfo *) palloc0(sizeof(MirroredBufferPoolBulkLoadInfo));
 
 	relFileNode.spcNode = tablespaceId;
 	relFileNode.dbNode = MyDatabaseId;
 	relFileNode.relNode = intoRelationId;
-	if (estate->es_into_relation_is_bulkload)
+	if (myState->is_bulkload)
 	{
 		MirroredBufferPool_BeginBulkLoad(
 								&relFileNode,
 								&persistentTid,
 								persistentSerialNum,
-								estate->es_into_relation_bulkloadinfo);
+								myState->bulkloadinfo);
 	}
 	else
 	{
 		/*
 		 * Save this information for tracing in CloseIntoRel.
 		 */
-		estate->es_into_relation_bulkloadinfo->relFileNode = relFileNode;
-		estate->es_into_relation_bulkloadinfo->persistentTid = persistentTid;
-		estate->es_into_relation_bulkloadinfo->persistentSerialNum = persistentSerialNum;
+		myState->bulkloadinfo->relFileNode = relFileNode;
+		myState->bulkloadinfo->persistentTid = persistentTid;
+		myState->bulkloadinfo->persistentSerialNum = persistentSerialNum;
 
 		if (Debug_persistent_print)
 		{
@@ -4938,14 +5027,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 				 ItemPointerToString(&persistentTid));
 		}
 	}
-	
-	/*
-	 * Now replace the query's DestReceiver with one for SELECT INTO
-	 */
-	queryDesc->dest = CreateDestReceiver(DestIntoRel, NULL);
-	myState = (DR_intorel *) queryDesc->dest;
-	Assert(myState->pub.mydest == DestIntoRel);
-	myState->estate = estate;
 }
 
 /*
@@ -4954,34 +5035,35 @@ OpenIntoRel(QueryDesc *queryDesc)
 static void
 CloseIntoRel(QueryDesc *queryDesc)
 {
-	EState	   *estate = queryDesc->estate;
-	Relation	rel = estate->es_into_relation_descriptor;
+	DR_intorel *myState = (DR_intorel *) queryDesc->dest;
 
 	/* Partition with SELECT INTO is not supported */
-	Assert(!PointerIsValid(estate->es_result_partitions));
+	Assert(!PointerIsValid(queryDesc->estate->es_result_partitions));
 
 	/* OpenIntoRel might never have gotten called */
-	if (rel)
+	if (myState && myState->pub.mydest == DestIntoRel && myState->rel)
 	{
+		Relation	rel = myState->rel;
+
 		/* APPEND_ONLY is closed in the intorel_shutdown */
 		if (!(RelationIsAoRows(rel) || RelationIsAoCols(rel)))
 		{
 			int32 numOfBlocks;
 
 			/* If we skipped using WAL, must heap_sync before commit */
-			if (estate->es_into_relation_is_bulkload)
+			if (myState->is_bulkload)
 			{
 				FlushRelationBuffers(rel);
 				/* FlushRelationBuffers will have opened rd_smgr */
 				smgrimmedsync(rel->rd_smgr);
 			}
 
-			if (PersistentStore_IsZeroTid(&estate->es_into_relation_last_heap_tid))
+			if (PersistentStore_IsZeroTid(&myState->last_heap_tid))
 				numOfBlocks = 0;
 			else
-				numOfBlocks = ItemPointerGetBlockNumber(&estate->es_into_relation_last_heap_tid) + 1;
+				numOfBlocks = ItemPointerGetBlockNumber(&myState->last_heap_tid) + 1;
 
-			if (estate->es_into_relation_is_bulkload)
+			if (myState->is_bulkload)
 			{
 				bool mirrorDataLossOccurred;
 
@@ -4995,7 +5077,7 @@ CloseIntoRel(QueryDesc *queryDesc)
 
 					bulkLoadFinished = 
 						MirroredBufferPool_EvaluateBulkLoadFinish(
-									estate->es_into_relation_bulkloadinfo);
+									myState->bulkloadinfo);
 
 					if (bulkLoadFinished)
 					{
@@ -5013,12 +5095,12 @@ CloseIntoRel(QueryDesc *queryDesc)
 					 * Copy primary data to mirror and flush.
 					 */
 					MirroredBufferPool_CopyToMirror(
-							&estate->es_into_relation_bulkloadinfo->relFileNode,
-							estate->es_into_relation_descriptor->rd_rel->relname.data,
-							&estate->es_into_relation_bulkloadinfo->persistentTid,
-							estate->es_into_relation_bulkloadinfo->persistentSerialNum,
-							estate->es_into_relation_bulkloadinfo->mirrorDataLossTrackingState,
-							estate->es_into_relation_bulkloadinfo->mirrorDataLossTrackingSessionNum,
+							&myState->bulkloadinfo->relFileNode,
+							rel->rd_rel->relname.data,
+							&myState->bulkloadinfo->persistentTid,
+							myState->bulkloadinfo->persistentSerialNum,
+							myState->bulkloadinfo->mirrorDataLossTrackingState,
+							myState->bulkloadinfo->mirrorDataLossTrackingSessionNum,
 							numOfBlocks,
 							&mirrorDataLossOccurred);
 				}
@@ -5029,11 +5111,11 @@ CloseIntoRel(QueryDesc *queryDesc)
 				{
 					elog(Persistent_DebugPrintLevel(),
 						 "CloseIntoRel %u/%u/%u: did not bypass the WAL -- did not use bulk load, persistent serial num " INT64_FORMAT ", TID %s",
-						 estate->es_into_relation_bulkloadinfo->relFileNode.spcNode,
-						 estate->es_into_relation_bulkloadinfo->relFileNode.dbNode,
-						 estate->es_into_relation_bulkloadinfo->relFileNode.relNode,
-						 estate->es_into_relation_bulkloadinfo->persistentSerialNum,
-						 ItemPointerToString(&estate->es_into_relation_bulkloadinfo->persistentTid));
+						 myState->bulkloadinfo->relFileNode.spcNode,
+						 myState->bulkloadinfo->relFileNode.dbNode,
+						 myState->bulkloadinfo->relFileNode.relNode,
+						 myState->bulkloadinfo->persistentSerialNum,
+						 ItemPointerToString(&myState->bulkloadinfo->persistentTid));
 				}
 			}
 		}
@@ -5041,21 +5123,37 @@ CloseIntoRel(QueryDesc *queryDesc)
 		/* close rel, but keep lock until commit */
 		heap_close(rel, NoLock);
 
-		rel = NULL;
+		myState->rel = NULL;
 	}
+}
+
+/*
+ * Get the OID of the relation created for SELECT INTO or CREATE TABLE AS.
+ *
+ * To be called between ExecutorStart and ExecutorEnd.
+ */
+Oid
+GetIntoRelOid(QueryDesc *queryDesc)
+{
+	DR_intorel *myState = (DR_intorel *) queryDesc->dest;
+
+	if (myState && myState->pub.mydest == DestIntoRel && myState->rel)
+		return RelationGetRelid(myState->rel);
+	else
+		return InvalidOid;
 }
 
 /*
  * CreateIntoRelDestReceiver -- create a suitable DestReceiver object
  *
  * Since CreateDestReceiver doesn't accept the parameters we'd need,
- * we just leave the private fields empty here.  OpenIntoRel will
+ * we just leave the private fields zeroed here.  OpenIntoRel will
  * fill them in.
  */
 DestReceiver *
 CreateIntoRelDestReceiver(void)
 {
-	DR_intorel *self = (DR_intorel *) palloc(sizeof(DR_intorel));
+	DR_intorel *self = (DR_intorel *) palloc0(sizeof(DR_intorel));
 
 	self->pub.receiveSlot = intorel_receive;
 	self->pub.rStartup = intorel_startup;
@@ -5065,7 +5163,7 @@ CreateIntoRelDestReceiver(void)
 
 	self->estate = NULL;
 	self->ao_insertDesc = NULL;
-        self->aocs_ins = NULL;
+	self->aocs_ins = NULL;
 
 	return (DestReceiver *) self;
 }
@@ -5086,21 +5184,19 @@ static void
 intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 {
 	DR_intorel *myState = (DR_intorel *) self;
-	EState	   *estate = myState->estate;
-	Relation	into_rel = estate->es_into_relation_descriptor;
+	Relation	into_rel = myState->rel;
 
-	Assert(estate->es_result_partitions == NULL);
+	Assert(myState->estate->es_result_partitions == NULL);
 
 	if (RelationIsAoRows(into_rel))
 	{
 		MemTuple	tuple = ExecCopySlotMemTuple(slot);
-		Oid			tupleOid;
 		AOTupleId	aoTupleId;
 
 		if (myState->ao_insertDesc == NULL)
 			myState->ao_insertDesc = appendonly_insert_init(into_rel, RESERVED_SEGNO, false);
 
-		appendonly_insert(myState->ao_insertDesc, tuple, &tupleOid, &aoTupleId);
+		appendonly_insert(myState->ao_insertDesc, tuple, InvalidOid, &aoTupleId);
 		pfree(tuple);
 	}
 	else if (RelationIsAoCols(into_rel))
@@ -5112,18 +5208,28 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 	}
 	else
 	{
-		HeapTuple	tuple = ExecCopySlotHeapTuple(slot);
+		HeapTuple	tuple;
+
+		/*
+		 * get the heap tuple out of the tuple table slot, making sure we have a
+		 * writable copy
+		 */
+		tuple = ExecMaterializeSlot(slot);
+
+		/*
+		 * force assignment of new OID (see comments in ExecInsert)
+		 */
+		if (myState->rel->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, InvalidOid);
 
 		heap_insert(into_rel,
 					tuple,
-					estate->es_output_cid,
-					!estate->es_into_relation_is_bulkload,
+					myState->estate->es_output_cid,
+					myState->is_bulkload,
 					false, /* never any point in using FSM */
 					GetCurrentTransactionId());
 
-		estate->es_into_relation_last_heap_tid = tuple->t_self;
-
-		heap_freetuple(tuple);
+		myState->last_heap_tid = tuple->t_self;
 	}
 
 	/* We know this is a newly created relation, so there are no indexes */
@@ -5137,8 +5243,7 @@ intorel_shutdown(DestReceiver *self)
 {
 	/* If target was append only, finalise */
 	DR_intorel *myState = (DR_intorel *) self;
-	EState	   *estate = myState->estate;
-	Relation	into_rel = estate->es_into_relation_descriptor;
+	Relation	into_rel = myState->rel;
 
 
 	if (RelationIsAoRows(into_rel) && myState->ao_insertDesc)

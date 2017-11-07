@@ -135,11 +135,6 @@
 
 #include "codegen/codegen_wrapper.h"
 
-#ifdef CDB_TRACE_EXECUTOR
-#include "nodes/print.h"
-static void ExecCdbTraceNode(PlanState *node, bool entry, TupleTableSlot *result);
-#endif   /* CDB_TRACE_EXECUTOR */
-
  /* flags bits for planstate walker */
 #define PSW_IGNORE_INITPLAN    0x01
 
@@ -856,6 +851,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 		}
 	}
 
+	/* Also set up gpmon counters */
+	InitPlanNodeGpmonPkt(node, &result->gpmon_pkt, estate);
+
 	if (result != NULL)
 	{
 		SAVE_EXECUTOR_MEMORY_ACCOUNT(result, curMemoryAccountId);
@@ -1043,10 +1041,6 @@ ExecProcNode(PlanState *node)
 	 */
 	if (QueryFinishPending && !IsA(node, MotionState))
 		return NULL;
-
-#ifdef CDB_TRACE_EXECUTOR
-	ExecCdbTraceNode(node, true, NULL);
-#endif   /* CDB_TRACE_EXECUTOR */
 
 	if (node->plan)
 		TRACE_POSTGRESQL_EXECPROCNODE_ENTER(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
@@ -1245,15 +1239,17 @@ ExecProcNode(PlanState *node)
 			break;
 	}
 
+	if (!TupIsNull(result))
+	{
+		Gpmon_Incr_Rows_Out(&node->gpmon_pkt);
+		CheckSendPlanStateGpmonPkt(node);
+	}
+
 	if (node->instrument)
 		INSTR_STOP_NODE(node->instrument, TupIsNull(result) ? 0 : 1);
 
 	if (node->plan)
 		TRACE_POSTGRESQL_EXECPROCNODE_EXIT(Gp_segment, currentSliceId, nodeTag(node), node->plan->plan_node_id);
-
-#ifdef CDB_TRACE_EXECUTOR
-	ExecCdbTraceNode(node, false, result);
-#endif   /* CDB_TRACE_EXECUTOR */
 
 	/*
 	 * Eager free and squelch the subplans, unless it's a nested subplan.
@@ -1870,211 +1866,6 @@ ExecEndNode(PlanState *node)
 	estate->currentExecutingSliceId = origExecutingSliceId;
 }
 
-
-#ifdef CDB_TRACE_EXECUTOR
-/* ----------------------------------------------------------------
- *	ExecCdbTraceNode
- *
- *	Trace entry and exit from ExecProcNode on an executor node.
- * ----------------------------------------------------------------
- */
-void
-ExecCdbTraceNode(PlanState *node, bool entry, TupleTableSlot *result)
-{
-	bool		willReScan = FALSE;
-	bool		willReturnTuple = FALSE;
-	Plan	   *plan = NULL;
-	const char *nameTag = NULL;
-	const char *extraTag = "";
-	char		extraTagBuffer[20];
-
-	/*
-	 * Don't trace NULL nodes..
-	 */
-	if (node == NULL)
-		return;
-
-	plan = node->plan;
-	Assert(plan != NULL);
-	Assert(result == NULL || !entry);
-	willReScan = (entry && node->chgParam != NULL);
-	willReturnTuple = (!entry && !TupIsNull(result));
-
-	switch (nodeTag(node))
-	{
-			/*
-			 * control nodes
-			 */
-		case T_ResultState:
-			nameTag = "Result";
-			break;
-
-		case T_AppendState:
-			nameTag = "Append";
-			break;
-
-		case T_SequenceState:
-			nameTag = "Sequence";
-			break;
-
-			/*
-			 * scan nodes
-			 */
-		case T_SeqScanState:
-			nameTag = "SeqScan";
-			break;
-
-		case T_TableScanState:
-			nameTag = "TableScan";
-			break;
-
-		case T_DynamicTableScanState:
-			nameTag = "DynamicTableScan";
-			break;
-
-		case T_IndexScanState:
-			nameTag = "IndexScan";
-			break;
-
-		case T_BitmapIndexScanState:
-			nameTag = "BitmapIndexScan";
-			break;
-
-		case T_BitmapHeapScanState:
-			nameTag = "BitmapHeapScan";
-			break;
-
-		case T_BitmapAppendOnlyScanState:
-			nameTag = "BitmapAppendOnlyScan";
-			break;
-
-		case T_TidScanState:
-			nameTag = "TidScan";
-			break;
-
-		case T_SubqueryScanState:
-			nameTag = "SubqueryScan";
-			break;
-
-		case T_FunctionScanState:
-			nameTag = "FunctionScan";
-			break;
-
-		case T_TableFunctionState:
-			nameTag = "TableFunctionScan";
-			break;
-
-		case T_ValuesScanState:
-			nameTag = "ValuesScan";
-			break;
-
-			/*
-			 * join nodes
-			 */
-		case T_NestLoopState:
-			nameTag = "NestLoop";
-			break;
-
-		case T_MergeJoinState:
-			nameTag = "MergeJoin";
-			break;
-
-		case T_HashJoinState:
-			nameTag = "HashJoin";
-			break;
-
-			/*
-			 * share inpt nodess
-			 */
-		case T_ShareInputScanState:
-			nameTag = "ShareInputScan";
-			break;
-
-			/*
-			 * materialization nodes
-			 */
-		case T_MaterialState:
-			nameTag = "Material";
-			break;
-
-		case T_SortState:
-			nameTag = "Sort";
-			break;
-
-		case T_GroupState:
-			nameTag = "Group";
-			break;
-
-		case T_AggState:
-			nameTag = "Agg";
-			break;
-
-		case T_WindowState:
-			nameTag = "Window";
-			break;
-
-		case T_UniqueState:
-			nameTag = "Unique";
-			break;
-
-		case T_HashState:
-			nameTag = "Hash";
-			break;
-
-		case T_SetOpState:
-			nameTag = "SetOp";
-			break;
-
-		case T_LimitState:
-			nameTag = "Limit";
-			break;
-
-		case T_MotionState:
-			nameTag = "Motion";
-			{
-				snprintf(extraTagBuffer, sizeof extraTagBuffer, " %d", ((Motion *) plan)->motionID);
-				extraTag = &extraTagBuffer[0];
-			}
-			break;
-
-		case T_RepeatState:
-			nameTag = "Repeat";
-			break;
-
-			/*
-			 * DML nodes
-			 */
-		case T_DMLState:
-			ExecEndDML((DMLState *) node);
-			break;
-		case T_SplitUpdateState:
-			nameTag = "SplitUpdate";
-			break;
-		case T_AssertOp:
-			nameTag = "AssertOp";
-			break;
-		case T_RowTriggerState:
-			nameTag = "RowTrigger";
-			break;
-		default:
-			nameTag = "*unknown*";
-			break;
-	}
-
-	if (entry)
-	{
-		elog(DEBUG4, "CDB_TRACE_EXECUTOR: Exec %s%s%s", nameTag, extraTag, willReScan ? " (will ReScan)." : ".");
-	}
-	else
-	{
-		elog(DEBUG4, "CDB_TRACE_EXECUTOR: Return from %s%s with %s tuple.", nameTag, extraTag, willReturnTuple ? "a" : "no");
-		if (willReturnTuple)
-			print_slot(result);
-	}
-
-	return;
-}
-#endif   /* CDB_TRACE_EXECUTOR */
 
 
 /* -----------------------------------------------------------------------
