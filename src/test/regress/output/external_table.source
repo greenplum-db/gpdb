@@ -802,12 +802,6 @@ select count(*) from gp_read_error_log('exttab_cte_2');
      1
 (1 row)
 
-select count(*) from gp_read_error_log('exttab_cte_1');
- count 
--------
-     2
-(1 row)
-
 -- CTE without segment reject limit exceeded
 select gp_truncate_error_log('exttab_cte_1');
  gp_truncate_error_log 
