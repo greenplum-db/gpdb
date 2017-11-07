@@ -127,7 +127,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
-		InstrStartNode(node->ps.instrument);
+		INSTR_START_NODE(node->ps.instrument);
 
 	/*
 	 * get information from the node
@@ -187,7 +187,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 
 	/* must provide our own instrumentation support */
 	if (node->ps.instrument)
-		InstrStopNode(node->ps.instrument, node->bitmap ? 1 : 0);
+		INSTR_STOP_NODE(node->ps.instrument, node->bitmap ? 1 : 0);
 
 	return node->bitmap;
 }

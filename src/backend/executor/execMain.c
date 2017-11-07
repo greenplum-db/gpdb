@@ -79,6 +79,7 @@
 #include "utils/tqual.h"
 
 #include "utils/ps_status.h"
+#include "utils/query_metrics.h"
 #include "utils/snapmgr.h"
 #include "utils/typcache.h"
 #include "utils/workfile_mgr.h"
@@ -150,6 +151,7 @@ static void intorel_shutdown(DestReceiver *self);
 static void intorel_destroy(DestReceiver *self);
 
 static void FillSliceTable(EState *estate, PlannedStmt *stmt);
+static void InitNodeMetrics(QueryDesc *qd);
 
 void ExecCheckRTPerms(List *rangeTable);
 void ExecCheckRTEPerms(RangeTblEntry *rte);
@@ -278,11 +280,12 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/**
 	 * Perfmon related stuff.
 	 */
-	if (gp_enable_gpperfmon
+	if ((gp_enable_gpperfmon || gp_enable_query_metrics)
 		&& Gp_role == GP_ROLE_DISPATCH
 		&& queryDesc->gpmon_pkt)
 	{
 		gpmon_qlog_query_start(queryDesc->gpmon_pkt);
+		metrics_send_query_info(queryDesc, METRICS_QUERY_START);
 	}
 
 	/**
@@ -378,7 +381,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	 */
 	estate->es_snapshot = RegisterSnapshot(queryDesc->snapshot);
 	estate->es_crosscheck_snapshot = RegisterSnapshot(queryDesc->crosscheck_snapshot);
-	estate->es_instrument = queryDesc->doInstrument;
+	estate->es_instrument = queryDesc->instrument_options;
 	estate->showstatctx = queryDesc->showstatctx;
 
 	/*
@@ -442,7 +445,7 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 		}
 
 		/* Pass EXPLAIN ANALYZE flag to qExecs. */
-		estate->es_sliceTable->doInstrument = queryDesc->doInstrument;
+		estate->es_sliceTable->instrument_options = queryDesc->instrument_options;
 
 		/* set our global sliceid variable for elog. */
 		currentSliceId = LocallyExecutingSliceIndex(estate);
@@ -498,8 +501,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 			currentSliceId = LocallyExecutingSliceIndex(estate);
 
 			/* Should we collect statistics for EXPLAIN ANALYZE? */
-			estate->es_instrument = sliceTable->doInstrument;
-			queryDesc->doInstrument = sliceTable->doInstrument;
+			estate->es_instrument = sliceTable->instrument_options;
+			queryDesc->instrument_options = sliceTable->instrument_options;
 		}
 
 		/* InitPlan() will acquire locks by walking the entire plan
@@ -953,7 +956,8 @@ standard_ExecutorRun(QueryDesc *queryDesc,
 	{
         /* If EXPLAIN ANALYZE, let qExec try to return stats to qDisp. */
         if (estate->es_sliceTable &&
-            estate->es_sliceTable->doInstrument &&
+            estate->es_sliceTable->instrument_options &&
+			(estate->es_sliceTable->instrument_options & INSTRUMENT_CDB) &&
             Gp_role == GP_ROLE_EXECUTE)
         {
             PG_TRY();
@@ -1042,7 +1046,8 @@ ExecutorEnd(QueryDesc *queryDesc)
      * If EXPLAIN ANALYZE, qExec returns stats to qDisp now.
      */
     if (estate->es_sliceTable &&
-        estate->es_sliceTable->doInstrument &&
+        estate->es_sliceTable->instrument_options &&
+		(estate->es_sliceTable->instrument_options & INSTRUMENT_CDB) &&
         Gp_role == GP_ROLE_EXECUTE)
         cdbexplain_sendExecStats(queryDesc);
 
@@ -1121,11 +1126,12 @@ ExecutorEnd(QueryDesc *queryDesc)
 	/**
 	 * Perfmon related stuff.
 	 */
-	if (gp_enable_gpperfmon 
+	if ((gp_enable_gpperfmon || gp_enable_query_metrics)
 			&& Gp_role == GP_ROLE_DISPATCH
 			&& queryDesc->gpmon_pkt)
 	{			
 		gpmon_qlog_query_end(queryDesc->gpmon_pkt);
+		metrics_send_query_info(queryDesc, METRICS_QUERY_DONE);
 		queryDesc->gpmon_pkt = NULL;
 	}
 
@@ -1881,7 +1887,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 			 *
 			 * GPDB: We always set the REWIND flag, to delay eagerfree.
 			 */
-			sp_eflags = eflags & EXEC_FLAG_EXPLAIN_ONLY;
+			sp_eflags = eflags & (EXEC_FLAG_EXPLAIN_ONLY | EXEC_FLAG_EXPLAIN_ANALYZE);
 			sp_eflags |= EXEC_FLAG_REWIND;
 
 			Plan	   *subplan = (Plan *) lfirst(l);
@@ -1899,12 +1905,18 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	/* Extract all precomputed parameters from init plans */
 	ExtractParamsFromInitPlans(plannedstmt, plannedstmt->planTree, estate);
 
+	/*Register a callback function in ResourceOwner to recycle Inster in shmem*/
+	RegisterResourceReleaseCallback(InstrShmemRecycleCallback, NULL);
+
 	/*
 	 * Initialize the private state information for all the nodes in the query
 	 * tree.  This opens files, allocates storage and leaves us ready to start
 	 * processing tuples.
 	 */
 	planstate = ExecInitNode(start_plan_node, estate, eflags);
+
+	/* GPDB emit plan node init info */
+	InitNodeMetrics(queryDesc);
 
 	queryDesc->planstate = planstate;
 
@@ -2198,7 +2210,7 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo,
 				  Relation resultRelationDesc,
 				  Index resultRelationIndex,
 				  CmdType operation,
-				  bool doInstrument)
+				  int instrument_options)
 {
 	/*
 	 * Check valid relkind ... parser and/or planner should have noticed this
@@ -2273,10 +2285,8 @@ InitResultRelInfo(ResultRelInfo *resultRelInfo,
 
 		resultRelInfo->ri_TrigFunctions = (FmgrInfo *)
 			palloc0(n * sizeof(FmgrInfo));
-		if (doInstrument)
-			resultRelInfo->ri_TrigInstrument = InstrAlloc(n);
-		else
-			resultRelInfo->ri_TrigInstrument = NULL;
+		if (instrument_options)
+			resultRelInfo->ri_TrigInstrument = InstrAlloc(n, instrument_options);
 	}
 	else
 	{
@@ -5887,3 +5897,60 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 	 */
 	FillSliceTable_walker((Node *) stmt->planTree, &cxt);
 }
+
+typedef struct InitNodeMetricsContext
+{
+	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
+	Plan *parent;
+	QueryDesc *qd;
+} InitNodeMetricsContext;
+
+static bool
+InitNodeMetrics_walker(Node *node, InitNodeMetricsContext *context)
+{
+	Plan *plan;
+	InitNodeMetricsContext *ctx = context;
+
+	Assert(context);
+
+	if (node == NULL)
+		return false;
+
+	if(is_plan_node(node))
+	{
+		ctx = (InitNodeMetricsContext*) palloc0(sizeof(InitNodeMetricsContext));
+		ctx->base = context->base;
+		ctx->qd = context->qd;
+
+		plan = (Plan *) node;
+		ctx->parent = plan;
+
+		if (NULL != context->parent)
+			plan->plan_parent_node_id = context->parent->plan_node_id;
+		else
+			plan->plan_parent_node_id = (-1);
+
+		InitNodeMetricsInfoPkt(plan, ctx->qd);
+	}
+
+	/* Continue walking */
+	return plan_tree_walker((Node*)node, InitNodeMetrics_walker, ctx);
+}
+
+/*
+ * Set up the parent-child relationships of nodes
+ * Send initial Qexec packet to gp_query_metrics_port
+ */
+static void
+InitNodeMetrics(QueryDesc *qd)
+{
+	InitNodeMetricsContext ctx;
+	plan_tree_base_prefix base;
+
+	base.node = (Node*)qd->plannedstmt;
+	ctx.base = base;
+	ctx.qd = qd;
+	ctx.parent = NULL;
+	InitNodeMetrics_walker((Node*)qd->plannedstmt->planTree, &ctx);
+}
+

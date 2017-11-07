@@ -42,6 +42,7 @@
 #include "utils/guc.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/query_metrics.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
 
@@ -710,9 +711,10 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				 * Perfmon related stuff: clean up if we got cancelled
 				 * while waiting.
 				 */
-				if (gp_enable_gpperfmon && qDesc->gpmon_pkt)
+				if ((gp_enable_gpperfmon || gp_enable_query_metrics) && qDesc->gpmon_pkt)
 				{			
 					gpmon_qlog_query_error(qDesc->gpmon_pkt);
+					metrics_send_query_info(qDesc, METRICS_QUERY_ERROR);
 					pfree(qDesc->gpmon_pkt);
 					qDesc->gpmon_pkt = NULL;
 				}

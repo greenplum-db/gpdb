@@ -12108,7 +12108,7 @@ build_ctas_with_dist(Relation rel, List *dist_clause,
 	/* Create a QueryDesc requesting no output */
 	queryDesc = CreateQueryDesc(stmt, pstrdup("(internal SELECT INTO query)"),
 								GetActiveSnapshot(), InvalidSnapshot,
-								dest, NULL, false);
+								dest, NULL, 0);
 
 	PopActiveSnapshot();
 

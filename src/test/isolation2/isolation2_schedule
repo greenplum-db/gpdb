@@ -8,6 +8,7 @@ test: resource_queue
 test: alter_blocks_for_update_and_viceversa
 test: reader_waits_for_lock
 test: drop_rename
+test: query_metrics_terminate
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).

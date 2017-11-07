@@ -1,4 +1,4 @@
-MODULES    = gp_ao_co_diagnostics gp_workfile_mgr gp_session_state_memory_stats
+MODULES    = gp_ao_co_diagnostics gp_workfile_mgr gp_session_state_memory_stats gp_instrument_shmem
 DATA       = gp_session_state.sql uninstall_gp_session_state.sql
 
 PG_CPPFLAGS = -I$(libpq_srcdir)

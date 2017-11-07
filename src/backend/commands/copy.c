@@ -58,6 +58,7 @@
 #include "cdb/cdbcopy.h"
 #include "cdb/cdbsreh.h"
 #include "postmaster/autostats.h"
+#include "utils/query_metrics.h"
 #include "utils/resscheduler.h"
 
 extern int popen_with_stderr(int *rwepipe, const char *exe, bool forwrite);
@@ -151,7 +152,7 @@ GetTargetSeg(GpDistributionData *distData, Datum *baseValues, bool *baseNulls);
 static ProgramPipes *open_program_pipes(char *command, bool forwrite);
 static int close_program_pipes(CopyState cstate);
 
-/* ==========================================================================
+/* =================================
  * The following macros aid in major refactoring of data processing code (in
  * CopyFrom(+Dispatch)). We use macros because in some cases the code must be in
  * line in order to work (for example elog_dismiss() in PG_CATCH) while in
@@ -159,7 +160,7 @@ static int close_program_pipes(CopyState cstate);
  *
  * NOTE that an almost identical set of macros exists in fileam.c. If you make
  * changes here you may want to consider taking a look there as well.
- * ==========================================================================
+ * =================================
  */
 
 #define RESET_LINEBUF \
@@ -1578,9 +1579,10 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		cstate->queryDesc = CreateQueryDesc(plan, queryString,
 											GetActiveSnapshot(),
 											InvalidSnapshot,
-											dest, NULL, false);
+											dest, NULL,
+                      (gp_enable_query_metrics ? INSTRUMENT_ROWS : 0));
 
-		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
+		if ((gp_enable_gpperfmon || gp_enable_query_metrics) && Gp_role == GP_ROLE_DISPATCH)
 		{
 			Assert(queryString);
 			gpmon_qlog_query_submit(cstate->queryDesc->gpmon_pkt);
@@ -1589,6 +1591,7 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					application_name,
 					GetResqueueName(GetResQueueId()),
 					GetResqueuePriority(GetResQueueId()));
+			metrics_send_query_info(cstate->queryDesc, METRICS_QUERY_SUBMIT);
 		}
 
 		/*

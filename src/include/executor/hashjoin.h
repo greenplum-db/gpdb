@@ -163,7 +163,7 @@ typedef struct HashJoinTableData
 
 	bool		growEnabled;	/* flag to shut off nbatch increases */
 
-	double		totalTuples;	/* # tuples obtained from inner plan */
+	uint64		totalTuples;	/* # tuples obtained from inner plan */
 
 	HashJoinBatchData **batches;    /* array [0..nbatch-1] of ptr to HJBD */
 

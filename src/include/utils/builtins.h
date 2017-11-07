@@ -1209,4 +1209,7 @@ extern Datum enable_xform(PG_FUNCTION_ARGS);
 /* Optimizer's version */
 extern Datum gp_opt_version(PG_FUNCTION_ARGS);
 
+/* query_metrics.c */
+extern Datum gp_instrument_shmem_summary(PG_FUNCTION_ARGS);
+
 #endif   /* BUILTINS_H */

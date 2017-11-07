@@ -33,6 +33,7 @@ extern Motion *findSenderMotion(PlannedStmt *plannedstmt, int sliceIndex);
 extern Bitmapset *getLocallyExecutableSubplans(PlannedStmt *plannedstmt, Plan *root);
 extern void ExtractParamsFromInitPlans(PlannedStmt *plannedstmt, Plan *root, EState *estate);
 extern void AssignParentMotionToPlanNodes(PlannedStmt *plannedstmt);
+extern void InstrumentCleanup(PlanState *ps);
 
 #ifdef USE_ASSERT_CHECKING
 struct PlannedStmt;

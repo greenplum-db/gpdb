@@ -558,7 +558,7 @@ typedef struct EState
 	Oid			es_lastoid;		/* last oid processed (by INSERT) */
 	List	   *es_rowMarks;	/* not good place, but there is no other */
 
-	bool		es_instrument;	/* true requests runtime instrumentation */
+	int			es_instrument;	/* OR of InstrumentOption flags */
 	bool		es_select_into; /* true if doing SELECT INTO */
 	bool		es_into_oids;	/* true to generate OIDs in SELECT INTO */
 
@@ -1410,12 +1410,16 @@ typedef struct PlanState
 	 */
 	int		gpmon_plan_tick;
 	gpmon_packet_t gpmon_pkt;
+
+	bool		fHadSentMetrics;
 } PlanState;
 
 /* Gpperfmon helper functions defined in execGpmon.c */
 extern void CheckSendPlanStateGpmonPkt(PlanState *ps);
 extern void EndPlanStateGpmonPkt(PlanState *ps);
 extern void InitPlanNodeGpmonPkt(Plan* plan, gpmon_packet_t *gpmon_pkt, EState *estate);
+extern void InitQexecPacket(Plan *plan, gpmon_packet_t *gpmon_pkt);
+
 
 extern uint64 PlanStateOperatorMemKB(const PlanState *ps);
 

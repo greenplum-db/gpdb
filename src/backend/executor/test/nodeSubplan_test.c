@@ -28,6 +28,8 @@ test__ExecSetParamPlan__Check_Dispatch_Results(void **state)
 	plan->xprstate.expr = makeNode(SubPlanState);
 	plan->planstate = makeNode(SubPlanState);
 	plan->planstate->instrument = (Instrumentation *)palloc(sizeof(Instrumentation));
+	plan->planstate->instrument->need_timer = true;
+	plan->planstate->instrument->need_cdb = true;
 	plan->planstate->plan = makeNode(SubPlanState);
 	
 	EState *estate = CreateExecutorState();

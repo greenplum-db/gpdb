@@ -18,6 +18,7 @@
 #include "postgres.h"
 
 #include "miscadmin.h"
+#include "executor/instrument.h"
 #include "storage/ipc.h"
 #include "storage/spin.h"
 #include "storage/shmem.h"

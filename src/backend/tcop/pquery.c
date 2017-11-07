@@ -33,6 +33,7 @@
 #include "executor/spi.h"
 #include "postmaster/autostats.h"
 #include "postmaster/backoff.h"
+#include "utils/query_metrics.h"
 #include "utils/resscheduler.h"
 
 
@@ -80,7 +81,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 				Snapshot crosscheck_snapshot,
 				DestReceiver *dest,
 				ParamListInfo params,
-				bool doInstrument)
+				int instrument_options)
 {
 	QueryDesc  *qd = (QueryDesc *) palloc(sizeof(QueryDesc));
 
@@ -94,7 +95,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->crosscheck_snapshot = RegisterSnapshot(crosscheck_snapshot);
 	qd->dest = dest;			/* output dest */
 	qd->params = params;		/* parameter values passed into query */
-	qd->doInstrument = doInstrument;	/* instrumentation wanted? */
+	qd->instrument_options = instrument_options;	/* instrumentation wanted? */
 
 	/* null these fields until set by ExecutorStart */
 	qd->tupDesc = NULL;
@@ -119,7 +120,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 		}
 	}
 	
-	if(gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
+	if((gp_enable_gpperfmon || gp_enable_query_metrics) && Gp_role == GP_ROLE_DISPATCH)
 	{
 		qd->gpmon_pkt = (gpmon_packet_t *) palloc0(sizeof(gpmon_packet_t));
 		gpmon_qlog_packet_init(qd->gpmon_pkt);
@@ -148,7 +149,7 @@ CreateUtilityQueryDesc(Node *utilitystmt,
 	qd->crosscheck_snapshot = InvalidSnapshot;	/* RI check snapshot */
 	qd->dest = dest;			/* output dest */
 	qd->params = params;		/* parameter values passed into query */
-	qd->doInstrument = false;	/* uninteresting for utilities */
+	qd->instrument_options = 0;	/* uninteresting for utilities */
 
 	/* null these fields until set by ExecutorStart */
 	qd->tupDesc = NULL;
@@ -227,14 +228,16 @@ ProcessQuery(Portal portal,
 	if (portal->sourceTag == T_SelectStmt && gp_select_invisible)
 		queryDesc = CreateQueryDesc(stmt, portal->sourceText,
 									SnapshotAny, InvalidSnapshot,
-									dest, params, false);
+									dest, params,
+									(gp_enable_query_metrics ? INSTRUMENT_ROWS : 0));
 	else
 		queryDesc = CreateQueryDesc(stmt, portal->sourceText,
 									GetActiveSnapshot(), InvalidSnapshot,
-									dest, params, false);
+									dest, params,
+                  (gp_enable_query_metrics ? INSTRUMENT_ROWS : 0));
 	queryDesc->ddesc = portal->ddesc;
 
-	if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
+	if ((gp_enable_gpperfmon || gp_enable_query_metrics) && Gp_role == GP_ROLE_DISPATCH)
 	{
 		Assert(portal->sourceText);
 		gpmon_qlog_query_submit(queryDesc->gpmon_pkt);
@@ -243,6 +246,7 @@ ProcessQuery(Portal portal,
 				application_name,
 				GetResqueueName(portal->queueId),
 				GetResqueuePriority(portal->queueId));
+		metrics_send_query_info(queryDesc, METRICS_QUERY_SUBMIT);
 	}
 
 	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
@@ -636,10 +640,10 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 											InvalidSnapshot,
 											None_Receiver,
 											params,
-											false);
+											(gp_enable_query_metrics ? INSTRUMENT_ROWS : 0));
 				queryDesc->ddesc = ddesc;
 				
-				if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
+				if ((gp_enable_gpperfmon || gp_enable_query_metrics) && Gp_role == GP_ROLE_DISPATCH)
 				{			
 					Assert(portal->sourceText);
 					gpmon_qlog_query_submit(queryDesc->gpmon_pkt);
@@ -648,6 +652,7 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 							application_name,
 							GetResqueueName(portal->queueId),
 							GetResqueuePriority(portal->queueId));
+					metrics_send_query_info(queryDesc, METRICS_QUERY_SUBMIT);
 				}
 
 				/* 

@@ -4103,7 +4103,7 @@ _outSliceTable(StringInfo str, SliceTable *node)
 	WRITE_INT_FIELD(nInitPlans);
 	WRITE_INT_FIELD(localSlice);
 	WRITE_NODE_FIELD(slices); /* List of int */
-    WRITE_BOOL_FIELD(doInstrument);
+	WRITE_INT_FIELD(instrument_options);
 	WRITE_INT_FIELD(ic_instance_id);
 }
 

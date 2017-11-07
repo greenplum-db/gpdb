@@ -570,7 +570,7 @@ ExecInitRowTrigger(RowTrigger *node, EState *estate, int eflags)
 	ExecSetSlotDescriptor(rowTriggerState->oldTuple, tupDesc);
 	ExecSetSlotDescriptor(rowTriggerState->triggerTuple, tupDesc);
 
-	if (estate->es_instrument)
+	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
 	{
 	        rowTriggerState->ps.cdbexplainbuf = makeStringInfo();
 

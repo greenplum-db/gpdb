@@ -4406,8 +4406,8 @@ _copySliceTable(SliceTable *from)
 	COPY_SCALAR_FIELD(nInitPlans);
 	COPY_SCALAR_FIELD(localSlice);
 	COPY_NODE_FIELD(slices);
-    COPY_SCALAR_FIELD(doInstrument);
-    COPY_SCALAR_FIELD(ic_instance_id);
+	COPY_SCALAR_FIELD(instrument_options);
+	COPY_SCALAR_FIELD(ic_instance_id);
 
 	return newnode;
 }
