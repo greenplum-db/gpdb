@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1" xml:lang="en"><title id="hi141670">pg_resgroup</title><body><p>The <codeph>pg_resgroup</codeph> system catalog table contains information about Greenplum Database resource groups, which are used for managing concurrent statements, CPU, and memory resources.
+<topic id="topic1" xml:lang="en"><title id="hi141670">pg_resgroup</title>
+  <body>
+    <note>The <codeph>pg_resgroup</codeph> system catalog table is valid only when resource group-based resource management is active.</note>
+    <p>The <codeph>pg_resgroup</codeph> system catalog table contains information about Greenplum Database resource groups, which are used for managing concurrent statements, CPU, and memory resources.
       This table, defined in the
         <codeph>pg_global</codeph> tablespace, is globally shared across all databases in
-      the system.</p><table id="hi141982"><title>pg_catalog.pg_resgroup</title><tgroup cols="4"><colspec colnum="1" colname="col1" colwidth="131pt"/><colspec colnum="2" colname="col2" colwidth="86pt"/><colspec colnum="3" colname="col3" colwidth="85pt"/><colspec colnum="4" colname="col4" colwidth="147pt"/><thead><row><entry colname="col1">column</entry><entry colname="col2">type</entry><entry colname="col3">references</entry><entry colname="col4">description</entry></row></thead><tbody><row><entry colname="col1"><codeph>rsgname</codeph></entry><entry colname="col2">name</entry><entry colname="col3"/><entry colname="col4">The name of the resource group.</entry></row><row><entry colname="col1"><codeph>parent</codeph></entry><entry colname="col2">oid</entry><entry colname="col3"/><entry colname="col4">Unused; reserved for future use.</entry></row>
+      the system.</p>
+    <table id="hi141982"><title>pg_catalog.pg_resgroup</title><tgroup cols="4"><colspec colnum="1" colname="col1" colwidth="131pt"/><colspec colnum="2" colname="col2" colwidth="86pt"/><colspec colnum="3" colname="col3" colwidth="85pt"/><colspec colnum="4" colname="col4" colwidth="147pt"/><thead><row><entry colname="col1">column</entry><entry colname="col2">type</entry><entry colname="col3">references</entry><entry colname="col4">description</entry></row></thead><tbody><row><entry colname="col1"><codeph>rsgname</codeph></entry><entry colname="col2">name</entry><entry colname="col3"/><entry colname="col4">The name of the resource group.</entry></row><row><entry colname="col1"><codeph>parent</codeph></entry><entry colname="col2">oid</entry><entry colname="col3"/><entry colname="col4">Unused; reserved for future use.</entry></row>
 </tbody></tgroup></table></body></topic>

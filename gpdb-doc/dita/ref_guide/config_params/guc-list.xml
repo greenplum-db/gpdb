@@ -4887,6 +4887,7 @@
   <topic id="gp_resgroup_memory_policy">
     <title>gp_resgroup_memory_policy</title>
     <body>
+      <note>The <codeph>gp_resgroup_memory_policy</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <note type="warning">Resource groups are an experimental feature and
         are not intended for use in a production environment. Experimental features are subject to
         change without notice in future releases.</note>
@@ -4919,6 +4920,7 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
+      <note>The <codeph>gp_resource_group_cpu_limit</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <note type="warning">Resource groups are an experimental feature and are not intended for use
         in a production environment. Experimental features are subject to change without notice in
         future releases.</note>
@@ -4950,6 +4952,7 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
+      <note>The <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <note type="warning">Resource groups are an experimental feature and are not intended for use
         in a production environment. Experimental features are subject to change without notice in
         future releases.</note>
@@ -5012,6 +5015,7 @@
   <topic id="gp_resqueue_memory_policy">
     <title>gp_resqueue_memory_policy</title>
     <body>
+      <note>The <codeph>gp_resqueue_memory_policy</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Enables Greenplum memory management features. The distribution algorithm
           <codeph>eager_free</codeph> takes advantage of the fact that not all operators execute at
         the same time<ph> (in Greenplum Database 4.2 and later)</ph>. The query plan is divided into
@@ -5047,6 +5051,7 @@
   <topic id="gp_resqueue_priority">
     <title>gp_resqueue_priority</title>
     <body>
+      <note>The <codeph>gp_resqueue_priority</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Enables or disables query prioritization. When this parameter is disabled, existing
         priority settings are not evaluated at query run time.</p>
       <table id="gp_resqueue_priority_table">
@@ -5075,6 +5080,7 @@
   <topic id="gp_resqueue_priority_cpucores_per_segment">
     <title>gp_resqueue_priority_cpucores_per_segment</title>
     <body>
+      <note>The <codeph>gp_resqueue_priority_cpucores_per_segment</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Specifies the number of CPU units allocated per segment instance. For example, if a
         Greenplum Database cluster has 10-core segment hosts that are configured with four segments,
         set the value for the segment instances to 2.5. For the master instance, the value would be
@@ -5110,6 +5116,7 @@
   <topic id="gp_resqueue_priority_sweeper_interval">
     <title>gp_resqueue_priority_sweeper_interval</title>
     <body>
+      <note>The <codeph>gp_resqueue_priority_sweeper_interval</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Specifies the interval at which the sweeper process evaluates current CPU usage. When a new
         statement becomes active, its priority is evaluated and its CPU share determined when the
         next interval is reached.</p>
@@ -7232,6 +7239,7 @@
   <topic id="max_resource_portals_per_transaction">
     <title>max_resource_portals_per_transaction</title>
     <body>
+      <note>The <codeph>max_resource_portals_per_transaction</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the maximum number of simultaneously open user-declared cursors allowed per
         transaction. Note that an open cursor will hold an active query slot in a resource queue.
         Used for resource management.</p>
@@ -7261,6 +7269,7 @@
   <topic id="max_resource_groups">
     <title>max_resource_groups</title>
     <body>
+      <note>The <codeph>max_resource_groups</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <note type="warning">Resource groups are an experimental feature and are not intended for use
         in a production environment. Experimental features are subject to change without notice in
         future releases.</note>
@@ -7292,6 +7301,7 @@
   <topic id="max_resource_queues">
     <title>max_resource_queues</title>
     <body>
+      <note>The <codeph>max_resource_queues</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the maximum number of resource queues that can be created in a Greenplum Database
         system. Note that resource queues are system-wide (as are roles) so they apply to all
         databases in the system.</p>
@@ -7392,6 +7402,7 @@
   <topic id="memory_spill_ratio">
     <title>memory_spill_ratio</title>
     <body>
+      <note>The <codeph>memory_spill_ratio</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <note type="warning">Resource groups are an experimental feature and are not intended for use
         in a production environment. Experimental features are subject to change without notice in
         future releases.</note>
@@ -8514,6 +8525,7 @@
   <topic id="resource_cleanup_gangs_on_wait">
     <title>resource_cleanup_gangs_on_wait</title>
     <body>
+      <note>The <codeph>resource_cleanup_gangs_on_wait</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>If a statement is submitted through a resource queue, clean up any idle query executor
         worker processes before taking a lock on the resource queue.</p>
       <table id="resource_cleanup_gangs_on_wait_table">
@@ -8542,6 +8554,7 @@
   <topic id="resource_select_only">
     <title>resource_select_only</title>
     <body>
+      <note>The <codeph>resource_select_only</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the types of queries managed by resource queues. If set to on, then
           <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>, <codeph>CREATE TABLE AS
           SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> commands are evaluated. If set to off
@@ -9005,6 +9018,7 @@
   <topic id="stats_queue_level">
     <title>stats_queue_level</title>
     <body>
+      <note>The <codeph>stats_queue_level</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Collects resource queue statistics on database activity.</p>
       <table id="stats_queue_level_table">
         <tgroup cols="3">
