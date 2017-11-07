@@ -6618,17 +6618,18 @@ ATExecAddColumn(AlteredTableInfo *tab, Relation rel,
 	}
 
 	/*
-	 * MPP-14367/MPP-19664 - Handling of default NULL for AO/CO tables.
+	 * Handling of default NULL for AO/CO tables.
+	 *
 	 * Currently memtuples cannot deal with the scenario where the number of
 	 * attributes in the tuple data don't match the attnum. We will generate an
 	 * explicit NULL default value and force a rewrite of the table below.
-	 * Note: This is inefficient and there is already another JIRA MPP-5419
-	 * open to track adding columns without default values to AO tables
-	 * efficiently.  When that JIRA is fixed, the following piece of code may
-	 * be removed
 	 *
-	 * GPDB_84_MERGE_FIXME according to Jira 5419 is resolved, can we remove
-	 * this code now?
+	 * At one point there were plans to restructure memtuples so that this
+	 * rewrite did not have to occur. An optimization was added to
+	 * column-oriented tables to avoid the rewrite, but it does not apply to
+	 * row-oriented tables. Eventually it would be nice to remove this
+	 * workaround; see GitHub issue
+	 *     https://github.com/greenplum-db/gpdb/issues/3756
 	 */
 	if (!defval && (RelationIsAoRows(rel) || RelationIsAoCols(rel)))
 		defval = (Expr *) makeNullConst(typeOid, -1);
