@@ -17,6 +17,7 @@
    [<b>-createdb</b>]
    [<b>-debug</b>]
    [<b>-globals</b>]
+   [<b>-jobs</b> <varname>int</varname>]
    [<b>-quiet</b>]
    [<b>-redirect</b> <varname>database_name</varname>]
    [<b>-verbose</b>]
@@ -37,10 +38,16 @@
       <p>Database objects to be restored must not exist in the target database. If the database
         itself is not available in Greenplum Database, include the <codeph>-createdb</codeph> option
         to create it with <codeph>gprestore</codeph>.</p>
-      <p>If global Greenplum Database system objects or query plan statistics are available in the
-        backup set, you can restore those objects with the <codeph>-globals</codeph> and
-          <codeph>-with-stats</codeph> options, respectively. By default, only the database objects
-        in the backup set are restored.</p>
+      <p>Greenplum Database system objects are automatically included in a <codeph>gpbackup</codeph>
+        backup set, but these objects are only restored if you include the <codeph>-globals</codeph>
+        option to <codeph>gprestore</codeph>. Similarly, if you backed up query plan statistics
+        using the <codeph>-with-stats</codeph> option, you can restore those statistics by providing
+          <codeph>-with-stats</codeph> to <codeph>gprestore</codeph>. By default, only database
+        objects in the backup set are restored.</p>
+      <p>Performance of restore operations can be improved by creating multiple parallel connections
+        to restore table data and metadata. By default <codeph>gprestore</codeph> uses 2 parallel
+        connections, but you can increase this number with the the <codeph>-jobs</codeph> option for
+        large restore operations.</p>
       <p><codeph>gprestore</codeph> does not currently support filtering the database objects that
         are restored from a backup set. </p>
     </section>
@@ -51,7 +58,12 @@
           <pt><b>-timestamp</b>
             <varname>YYYYMMDDHHMMSS</varname></pt>
           <pd>Required. Specifies the timestamp of the <codeph>gpbackup</codeph> backup set to
-            restore. By default, <codeph>gprestore</codeph> looks for files </pd>
+            restore. By default <codeph>gprestore</codeph> tries to locate metadata files for the
+            timestamp on the Greenplum Database master host in the
+              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            directory, and CSV data files in the
+              <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory of each
+            segment host.</pd>
         </plentry>
       </parml>
       <parml>
@@ -59,7 +71,8 @@
           <pt><b>-backupdir</b>
             <varname>directory</varname></pt>
           <pd>Optional. Sources all backup files (metadata files and data files) from the specified
-            directory. If you do not supply this option, <codeph>gprestore</codeph> tries to locate
+            directory. You must specify <varname>directory</varname> as an absolute path (not
+            relative). If you do not supply this option, <codeph>gprestore</codeph> tries to locate
             metadata files for the timestamp on the Greenplum Database master host in the
               <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
             directory. CSV data files must be available on each segment in the
@@ -86,6 +99,16 @@
           <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
             database objects. See <xref
               href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-jobs</b>
+            <varname>int</varname></pt>
+          <pd>Optional. Specifies the number of parallel connections to use when restoring table
+            data and post-data metadata. By default, <codeph>gprestore</codeph> uses 2 parallel
+            connections. Increasing this number can improve the speed of restoring data, especially
+            data data uses numerous indexes.</pd>
         </plentry>
       </parml>
       <parml>
@@ -135,8 +158,8 @@ $ gprestore -timestamp 20171103152558 -redirect demo2</codeblock></p>
         database
         objects:<codeblock>$ gprestore -timestamp 20171103152558 -createdb -globals -with-stats</codeblock></p>
       <p>Restore, using backup files that were created in the
-          <filepath>/home/gpadmin/backup</filepath>
-        directory:<codeblock>$ gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb</codeblock></p>
+          <filepath>/home/gpadmin/backup</filepath> directory, creating 8 parallel
+        connections:<codeblock>$ gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb -jobs 8</codeblock></p>
     </section>
     <section id="section9">
       <title>See Also</title>
