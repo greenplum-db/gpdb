@@ -44,7 +44,7 @@
         high-availability/mirroring is achieved in a Greenplum Database instance. Statistics are
         maintained for each primary-mirror pair.</li>
       <li>The <codeph><xref href="db-log-alert.xml#CommandCenterDatabaseReference-log_alert"
-            >log_alert_*</xref></codeph> tables store error and warning messages from pg_log.</li>
+            >log_alert_*</xref></codeph> tables store error and warning messages from <codeph>pg_log</codeph>.</li>
       <li>The <codeph><xref href="db-queries.xml#db-queries">queries_*</xref></codeph> tables store
         high-level query status information.</li>
       <li>The <codeph><xref href="db-segment.xml#db-segment">segment_*</xref></codeph> tables store

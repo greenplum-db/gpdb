@@ -211,14 +211,16 @@
                      <codeph>rsqname</codeph>
                   </entry>
                   <entry>varchar(64)</entry>
-                  <entry>The name of the resource queue.</entry>
+                  <entry>If the resource queue-based resource management scheme is active, the
+                     name of the resource queue.</entry>
                </row>
                <row>
                   <entry>
                      <codeph>rqppriority</codeph>
                   </entry>
                   <entry>varchar(64)</entry>
-                  <entry>The priority of the query -- <codeph>max, high, med, low, or
+                  <entry>If the resource queue-based resource management scheme is active, the
+                     priority of the query -- <codeph>max, high, med, low, or
                      min</codeph>.</entry>
                </row>
             </tbody>
