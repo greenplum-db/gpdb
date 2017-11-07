@@ -35,7 +35,7 @@ function run_regression_test() {
 
 	# verify data written by PXF
 	cat /tmp/pxf-write/* | sort
-	num_rows=\$(cat /tmp/pxf-wrtie/* | wc -l)
+	num_rows=\$(cat /tmp/pxf-write/* | wc -l)
 	if [ "\$num_rows" != "100" ]; then
 	    echo "ERROR: Unexpected number of rows written by PXF = \$num_rows"
 	    exit 1
