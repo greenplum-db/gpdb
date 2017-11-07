@@ -423,7 +423,6 @@ test_gpbridge_write_data(void **state) {
 
 void
 test_gpbridge_write_no_data(void **state) {
-
 	/* init data in context */
 	gphadoop_context *context = (gphadoop_context *) palloc0(sizeof(gphadoop_context));
 

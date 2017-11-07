@@ -23,3 +23,7 @@ SELECT * from pxf_readcustom_test order by a;
  fragment3 row2 | value1 | value2
 (6 rows)
 
+------------------------------------------------------------------
+-- PXF write test
+------------------------------------------------------------------
+INSERT INTO pxf_write_test SELECT * from origin;
