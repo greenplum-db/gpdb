@@ -644,9 +644,9 @@ ResGroupOps_Init(void)
 {
 	/*
 	 * cfs_quota_us := cfs_period_us * ncores * gp_resource_group_cpu_limit
-	 * shares := 1024 * 1 (default value)
+	 * shares := 1024 * gp_resource_group_cpu_priority
 	 *
-	 * We used to set a larger shares (like 1024 * 256, the maximum possible
+	 * We used to set a large shares (like 1024 * 256, the maximum possible
 	 * value), it has very bad effect on overall system performance,
 	 * especially on 1-core or 2-core low-end systems.
 	 * Processes in a cold cgroup get launched and scheduled with large
@@ -664,7 +664,7 @@ ResGroupOps_Init(void)
 	writeInt64(0, NULL, comp, "cpu.cfs_quota_us",
 			   cfs_period_us * ncores * gp_resource_group_cpu_limit);
 	writeInt64(0, NULL, comp, "cpu.shares",
-			   1024 * gp_resource_group_cpu_priority);
+			   1024LL * gp_resource_group_cpu_priority);
 }
 
 /* Adjust GUCs for this OS group implementation */

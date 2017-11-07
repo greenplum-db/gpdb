@@ -93,8 +93,6 @@ ExecSetOp(SetOpState *node)
 				ExecProcNode(outerPlan);
 			if (TupIsNull(node->ps.ps_OuterTupleSlot))
 				node->subplan_done = true;
-			else
-				Gpmon_Incr_Rows_In(GpmonPktFromSetOpState(node));
 		}
 		inputTupleSlot = node->ps.ps_OuterTupleSlot;
 
@@ -205,10 +203,6 @@ ExecSetOp(SetOpState *node)
 	 */
 	Assert(node->numOutput > 0);
 	node->numOutput--;
-
-	Gpmon_Incr_Rows_Out(GpmonPktFromSetOpState(node));
-	CheckSendPlanStateGpmonPkt(&node->ps);
-
 	return resultTupleSlot;
 }
 
@@ -276,8 +270,6 @@ ExecInitSetOp(SetOp *node, EState *estate, int eflags)
 		execTuplesMatchPrepare(node->numCols,
 							   node->dupOperators);
 
-	initGpmonPktForSetOp((Plan *)node, &setopstate->ps.gpmon_pkt, estate);
-
 	return setopstate;
 }
 
@@ -325,12 +317,4 @@ ExecReScanSetOp(SetOpState *node, ExprContext *exprCtxt)
 	 */
 	if (((PlanState *) node)->lefttree->chgParam == NULL)
 		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
-}
-
-void
-initGpmonPktForSetOp(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, SetOp));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

@@ -422,14 +422,12 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 INSERT INTO MPP_22019_a (
  SELECT i, i * i FROM generate_series(1, 10) AS i);
 INFO:  Dispatch command to ALL contents
-INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 CREATE TABLE MPP_22019_b (i INT, j INT) DISTRIBUTED BY (i);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
 INSERT INTO MPP_22019_b (SELECT i, i * i FROM generate_series(1, 10) AS i);
-INFO:  Dispatch command to ALL contents
 INFO:  Dispatch command to ALL contents
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents

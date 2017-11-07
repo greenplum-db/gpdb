@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_yrr_hqw_sbb">
+  <title>Parallel Backup with gpbackup and gprestore</title>
+  <body>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
+      are not intended for use in a production environment. Experimental features are subject to
+      change without notice in future releases.</note>
+    <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are new utilities that provide an
+      improved way of creating and restoring backup sets for Greenplum Database. By default,
+        <codeph>gpbackup</codeph> stores only the object metadata files and DDL files for a backup
+      in the Greenplum Database master data directory. Greenplum Database segments use the
+        <codeph>COPY .. ON SEGMENT</codeph> command to store their data for backed-up tables in
+      compressed CSV data files, located in each segment's <filepath>backups</filepath>
+      directory.</p>
+    <p>The backup metadata files contain all of the information that <codeph>gprestore</codeph>
+      needs to restore a full backup set in parallel. Backup metadata also provides the framework
+      for restoring only individual objects in the data set, along with any dependent objects, in
+      future versions of <codeph>gprestore</codeph>. (See <xref href="#topic_xnj_b4c_tbb"
+        format="dita"/> for more information.) Storing the table data in CSV files also provides
+      opportunities for using other restore utilities, such as <codeph>gpload</codeph>, to load the
+      data either in the same cluster or another cluster. By default, one file is created for each
+      table on the segment. You can specify the <codeph> -leaf-partition-data</codeph> option with
+        <codeph>gpbackup</codeph> to create one data file per leaf partition of a partitioned table,
+      instead of a single file.</p>
+    <p>Each <codeph>gpbackup</codeph> task uses a single transaction in Greenplum Database. During
+      this transaction, metadata is backed up on the master host, and data for each table on each
+      segment host is written to CSV backup files using <codeph>COPY .. ON SEGMENT</codeph> commands
+      in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table
+      that is backed up.</p>
+  </body>
+  <topic id="topic_vh5_1hd_tbb">
+    <title>Requirements and Limitations</title>
+    <body>
+      <p>You can use <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> on Greenplum Database
+        systems that support the <codeph>COPY .. ON SEGMENT</codeph> command (Greenplum Database
+        5.1.0 and later<ph otherprops="pivotal">, or 4.3.17.0 and later</ph>).</p>
+      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental features in this
+        release, and have the following limitations:<ul id="ul_uqh_hhd_tbb">
+          <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
+            requires a distinct timestamp.</li>
+          <li>Database object filtering is currently limited to schemas and tables.</li>
+          <li>Filtering objects with <codeph>gprestore</codeph> is not yet supported.</li>
+          <li>Incremental backups are not supported.</li>
+        </ul></p>
+    </body>
+  </topic>
+  <topic id="topic_x3s_lqj_tbb">
+    <title>Objects Included in a Backup or Restore</title>
+    <body>
+      <p>The following table lists the objects that are backed up and restored with
+          <codeph>gpbackup</codeph> and <codeph>gprestore</codeph>. Database objects are backed up
+        for the database you specify with the <codeph>-dbname</codeph> option. Global objects
+        (Greenplum Database system objects) are also backed up by default, but they are restored
+        only if you include the <codeph>-globals</codeph> option to
+          <codeph>gprestore</codeph>.<table frame="all" rowsep="1" colsep="1" id="table_vqq_3rj_tbb">
+          <title>Objects that are backed up and restored</title>
+          <tgroup cols="2">
+            <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+            <thead>
+              <row>
+                <entry>Database (for database specified with <codeph>-dbname</codeph>)</entry>
+                <entry>Global (requires the <codeph>-globals</codeph> option to restore)</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>
+                  <ul id="ul_kpk_yrj_tbb">
+                    <li>Session-level configuration parameter settings (GUCs)</li>
+                    <li>Schemas</li>
+                    <li>Procedural language extensions</li>
+                    <li>Sequences</li>
+                    <li dir="ltr">Comments</li>
+                    <li dir="ltr">Tables</li>
+                    <li dir="ltr">Owners</li>
+                    <li dir="ltr">Writable External Tables (DDL only) </li>
+                    <li dir="ltr">Readable External Tables (DDL only) </li>
+                    <li dir="ltr">Functions</li>
+                    <li dir="ltr">Aggregates</li>
+                    <li dir="ltr">Casts</li>
+                    <li dir="ltr">Types</li>
+                    <li dir="ltr">Views</li>
+                    <li dir="ltr">Protocols</li>
+                    <li dir="ltr">Triggers. (While Greenplum Database does not support triggers, any
+                      trigger definitions that are present are backed up and restored.)</li>
+                    <li dir="ltr">Rules</li>
+                    <li dir="ltr">Domains</li>
+                    <li dir="ltr">Operators, operator families, and operator classes</li>
+                    <li dir="ltr">Conversions</li>
+                    <li dir="ltr">Text search parsers, dictionaries, templates, and
+                      configurations</li>
+                  </ul>
+                </entry>
+                <entry>
+                  <ul id="ul_d2t_wrj_tbb">
+                    <li>Tablespaces</li>
+                    <li>Databases</li>
+                    <li>Database-wide configuration parameter settings (GUCs)</li>
+                    <li>Resource group definitions</li>
+                    <li>Resource queue definitions</li>
+                    <li>Roles</li>
+                    <li><codeph>GRANT</codeph> assignments of roles to databases</li>
+                  </ul>
+                </entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table></p>
+      <p>See also <xref href="#topic_xnj_b4c_tbb" format="dita"/>.</p>
+    </body>
+  </topic>
+  <topic id="topic_qgj_b3d_tbb">
+    <title>Performing Basic Backup and Restore Operations</title>
+    <body>
+      <p>To perform a complete backup of a database, as well as Greenplum Database system metadata,
+        use the command: <codeblock>$ gpbackup -dbname &lt;database_name></codeblock></p>
+      <p>For
+        example:<codeblock>$ <b>gpbackup -dbname demo</b>
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Starting backup of database demo
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup Timestamp = 20171103152558
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup Database = demo
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup Type = Unfiltered Compressed Full Backup
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Acquiring ACCESS SHARE locks on tables
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Locks acquired
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Gathering table metadata
+20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing global database metadata to /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_global.sql
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Global database metadata backup complete
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing pre-data metadata to /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_predata.sql
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Pre-data metadata backup complete
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing post-data metadata to /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_postdata.sql
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Post-data metadata backup complete
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing data to file
+Tables backed up:  2 / 2 [==============================================================] 100.00% 0s
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Data backup complete
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[WARNING]:-Found neither /usr/local/greenplum-db/./bin/mail_contacts nor /home/gpadmin/mail_contacts
+20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[WARNING]:-Unable to send backup email notification
+20171103:15:26:00 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup completed successfully</codeblock></p>
+      <p>The above command creates global and database-specific metadata files on the Greenplum
+        Database master host in the default directory,
+          <codeph>$MASTER_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>. For
+        example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20171103/20171103152558/</b>
+gpbackup_20171103152558_config.yaml  gpbackup_20171103152558_postdata.sql  gpbackup_20171103152558_report
+gpbackup_20171103152558_global.sql   gpbackup_20171103152558_predata.sql   gpbackup_20171103152558_toc.yaml</codeblock></p>
+      <p>By default, each segment stores table data for the backup in compressed CSV files in
+          <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20171103/20171103152558/
+</b>gpbackup_0_20171103152558_16524.gz  gpbackup_0_20171103152558_16543.gz</codeblock></p>
+      <p>To consolidate all backup files into a single directory, include the
+          <codeph>-backupdir</codeph> option. Note that you must specify an absolute path with this
+        option:<codeblock>$ <b>gpbackup -dbname demo -backupdir /home/gpadmin/backups</b>
+20171103:15:31:56 gpbackup:gpadmin:0ee2f5fb02c9:017586-[INFO]:-Starting backup of database demo
+...
+20171103:15:31:58 gpbackup:gpadmin:0ee2f5fb02c9:017586-[INFO]:-Backup completed successfully
+$ <b>find /home/gpadmin/backups/ -type f</b>
+/home/gpadmin/backups/gpseg0/backups/20171103/20171103153156/gpbackup_0_20171103153156_16543.gz
+/home/gpadmin/backups/gpseg0/backups/20171103/20171103153156/gpbackup_0_20171103153156_16524.gz
+/home/gpadmin/backups/gpseg1/backups/20171103/20171103153156/gpbackup_1_20171103153156_16543.gz
+/home/gpadmin/backups/gpseg1/backups/20171103/20171103153156/gpbackup_1_20171103153156_16524.gz
+/home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_config.yaml
+/home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_predata.sql
+/home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_global.sql
+/home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_postdata.sql
+/home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_report
+/home/gpadmin/backups/gpseg-1/backups/20171103/20171103153156/gpbackup_20171103153156_toc.yaml</codeblock></p>
+      <section>
+        <title>Restoring from Backup</title>
+      </section>
+      <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must use the
+          <codeph>-timestamp</codeph> option to specify the exact timestamp value
+          (<codeph>YYYYMMDDHHMMSS</codeph>) to restore. Include the <codeph>-createdb</codeph>
+        option if the database does not exist in the cluster. For
+        example:<codeblock>$ <b>dropdb demo</b>
+$ <b>gprestore -timestamp 20171103152558 -createdb</b>
+20171103:15:45:30 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Restore Key = 20171103152558
+20171103:15:45:31 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Creating database
+20171103:15:45:44 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Database creation complete
+20171103:15:45:44 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Restoring pre-data metadata from /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_predata.sql
+20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Pre-data metadata restore complete
+20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Restoring data
+20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Data restore complete
+20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Restoring post-data metadata from /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_postdata.sql
+20171103:15:45:45 gprestore:gpadmin:0ee2f5fb02c9:017714-[INFO]:-Post-data metadata restore complete</codeblock></p>
+      <p>If you specified a custom <codeph>-backupdir</codeph> to consolidate the backup files,
+        include the same <codeph>-backupdir</codeph> option when using <codeph>gprestore</codeph> to
+        locate the backup
+        files:<codeblock>$ <b>dropdb demo</b>
+$ <b>gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb</b>
+20171103:15:51:02 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Restore Key = 20171103153156
+...
+20171103:15:51:17 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Post-data metadata restore complete</codeblock></p>
+      <p><codeph>gprestore</codeph> does not attempt to restore global metadata for the Greenplum
+        System by default. If this is required, include the <codeph>-globals</codeph> argument.</p>
+      <p>By default, <codeph>gprestore</codeph> uses 2 parallel connections to restore table data
+        and metadata. If you have a large backup set, especially a large backup that contains
+        numerous indexes, then you can improve performance of the restore option by increasing the
+        number of parallel connections with the <codeph>-jobs</codeph> option. For
+        example:<codeblock>$ <b>gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb -jobs 8</b></codeblock></p>
+      <p>Test the number of parallel connections with your backup set to determine the ideal number
+        for fast data recovery.</p>
+    </body>
+  </topic>
+  <topic id="topic_et4_b5d_tbb">
+    <title>Filtering the Contents of a Backup</title>
+    <body>
+      <p><codeph>gpbackup</codeph> backs up all schemas and tables in the specified database, unless
+        you exclude or include individual schema or table objects. You can filter the database
+        schemas that are backed up by using either the <codeph>-include-schema</codeph> or
+          <codeph>-exclude-schema</codeph> command-line options to <codeph>gpbackup</codeph>. For
+        example, if the "demo" database includes only two schemas, "wikipedia" and "twitter," both
+        of the following commands back up only the "wikipedia"
+        schema:<codeblock>$ <b>gpbackup -dbname demo -include-schema wikipedia</b>
+$ <b>gpbackup -dbname demo -exclude-schema twitter</b></codeblock></p>
+      <p>You can include multiple <codeph>-include-schema</codeph> options in a
+          <codeph>gpbackup</codeph>
+        <i>or</i> multiple <codeph>-exclude-schema</codeph> options. For
+        example:<codeblock>$ <b>gpbackup -dbname demo -include-schema wikipedia -include-schema twitter</b></codeblock></p>
+      <p>To filter the individual tables that are included in a backup set, create a list of
+        qualified table names in a text file to use for including or excluding the tables from a
+        backup. Each line in the text file must define a single table using the format
+          <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
+        lines. For example:<codeblock>wikipedia.articles
+twitter.message</codeblock></p>
+      <p>If a table or schema name uses any character other than a lowercase letter, number, or an
+        underscore character, then you must include that name in double quotes. For
+        example:<codeblock>beer."IPA"
+"Wine".riesling
+"Wine"."sauvignon blanc"
+water.tonic</codeblock></p>
+      <p>After creating the file, you can use it either to include or exclude tables with the
+          <codeph>gpbackup</codeph> options <codeph>-include-table-file</codeph> and
+          <codeph>-exclude-table-file</codeph>. For
+        example:<codeblock>$ <b>gpbackup -dbname demo -include-table-file /home/gpadmin/table-list.txt</b></codeblock></p>
+    </body>
+  </topic>
+  <topic id="topic_qwd_d5d_tbb">
+    <title>Configuring Email Notifications</title>
+    <body>
+      <p><codeph>gpbackup</codeph> will send out status email notifications after a back up
+        operation completes, if you place a file named <filepath>mail_contacts</filepath> in the
+        home directory of the Greenplum database superuser (gpadmin) or in the same directory as the
+          <codeph>gpbackup</codeph> utility (<filepath>$GPHOME/bin</filepath>). </p>
+      <p>This file must contain one email address per line. <codeph>gpbackup</codeph> issues a
+        warning if it cannot locate a <filepath>mail_contacts</filepath> file in either location. If
+        both locations have a <filepath>mail_contacts</filepath> file, then the one in
+          <filepath>$HOME</filepath> takes precedence.</p>
+      <note>The UNIX mail utility must be running on the Greenplum Database host and must be
+        configured to allow the Greenplum superuser (gpadmin) to send email.</note>
+    </body>
+  </topic>
+  <topic id="topic_xnj_b4c_tbb">
+    <title>Understanding Backup Files</title>
+    <body>
+      <note type="warning">All <codeph>gpbackup</codeph> metadata files are created with read-only
+        permissions. Never delete or modify the metadata files for a <codeph>gpbackup</codeph>
+        backup set. Doing so will render the backup files non-functional.</note>
+      <p>A complete backup set for <codeph>gpbackup</codeph> includes multiple metadata files,
+        supporting files, and CSV data files, each designated with the timestamp at which the backup
+        was created.</p>
+      <p>By default, metadata and supporting files are stored on the Greenplum Database master host
+        in the directory
+          <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you
+        specify a custom backup directory, this same file path is created as a subdirectory of the
+        backup directory.  The following table describes the names and contents of the metadata and
+        supporting files.<table frame="all" rowsep="1" colsep="1" id="table_nrz_4gj_tbb">
+          <title>gpbackup Metadata Files (master)</title>
+          <tgroup cols="2">
+            <colspec colname="c1" colnum="1" colwidth="1.0*"/>
+            <colspec colname="c2" colnum="2" colwidth="1.0*"/>
+            <thead>
+              <row>
+                <entry>File name</entry>
+                <entry>Description</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_global.sql</filepath></entry>
+                <entry>Contains DDL for objects that are global to the Greenplum Cluster, and not
+                  owned by a specific database within the cluster. These objects include:<ul
+                    id="ul_f1b_dhj_tbb">
+                    <li>Tablespaces</li>
+                    <li>Databases</li>
+                    <li>Database-wide configuration parameter settings (GUCs)</li>
+                    <li>Resource group definitions</li>
+                    <li>Resource queue definitions</li>
+                    <li>Roles</li>
+                    <li><codeph>GRANT</codeph> assignments of roles to databases</li>
+                  </ul><p>Note that global metadata is not restored by default. You must include the
+                      <codeph>-globals</codeph> options to <codeph>gprestore</codeph> to restore
+                    global metadata.</p></entry>
+              </row>
+              <row>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_predata.sql</filepath></entry>
+                <entry>Contains DDL for objects in the backed-up database (specified with
+                    <codeph>-dbname)</codeph> that must be created <i>prior</i> to restoring the
+                  actual data. These objects include:<ul id="ul_s35_nhj_tbb">
+                    <li>Session-level configuration parameter settings (GUCs)</li>
+                    <li>Schemas</li>
+                    <li>Procedural language extensions</li>
+                    <li>Types</li>
+                    <li>Sequences</li>
+                    <li>Functions</li>
+                    <li>Tables</li>
+                    <li>Protocols</li>
+                    <li>Operators and operator classes</li>
+                    <li>Conversions</li>
+                    <li>Aggregates</li>
+                    <li>Casts</li>
+                    <li>Views</li>
+                    <li>Constraints</li>
+                  </ul></entry>
+              </row>
+              <row>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_postdata.sql</filepath></entry>
+                <entry>Contains DDL for objects in the backed-up database (specified with
+                    <codeph>-dbname)</codeph> that must be created <i>after</i> restoring the data.
+                  These objects include:<ul id="ul_zyg_tgj_tbb">
+                    <li dir="ltr">Indexes</li>
+                    <li dir="ltr">Rules</li>
+                    <li dir="ltr">Triggers. (While Greenplum Database does not support triggers, any
+                      trigger definitions that are present are backed up and restored.)</li>
+                  </ul></entry>
+              </row>
+              <row>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_toc.yaml</filepath></entry>
+                <entry>Contains metadata for locating object DDL in the
+                    <filepath>_predata.sql</filepath> and <filepath>_postdata.sql</filepath> files.
+                  This file also contains the table names and OIDs used for locating the
+                  corresponding table data in CSV data files that are created on each segment. See
+                    <xref href="#topic_xnj_b4c_tbb/section_oys_cpj_tbb" format="dita"/>.</entry>
+              </row>
+              <row>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_report</filepath></entry>
+                <entry>Contains information about the backup operation that is used to populate the
+                  email notice (if configured) that is sent after the backup completes. This file
+                  contains information such as:<ul id="ul_bjr_2kj_tbb">
+                    <li>Command-line options that were provided</li>
+                    <li>Database that was backed up</li>
+                    <li>Database version</li>
+                    <li>Backup type</li>
+                  </ul>See <xref href="#topic_qwd_d5d_tbb" format="dita"/>.</entry>
+              </row>
+              <row>
+                <entry><filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_config.yaml</filepath></entry>
+                <entry>Contains metadata about the execution of the particular backup task,
+                  including: <ul id="ul_ids_vgj_tbb">
+                    <li dir="ltr"><codeph>gpbackup</codeph> version</li>
+                    <li dir="ltr">Database name</li>
+                    <li dir="ltr">Greenplum Database version</li>
+                    <li dir="ltr">Additional option settings such as
+                        <codeph>-no-compression</codeph>, <codeph>-metadata-only</codeph>,
+                        <codeph>-data-only</codeph>, and <codeph>-with-stats</codeph>.</li>
+                  </ul></entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table></p>
+      <section id="section_oys_cpj_tbb">
+        <title>Segment Data Files</title>
+        <p>By default, each segment creates one compressed CSV file for each table that is backed up
+          on the segment. The files are stored in
+            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you specify a
+          custom backup directory, segment data files are copied to this same file path as a
+          subdirectory of the backup directory. If you include the
+            <codeph>-leaf-partition-data</codeph> option, <codeph>gpbackup</codeph> creates one data
+          file for each leaf partition of a partitioned table, instead of just one table for
+          file.</p>
+        <p>Each data file uses the file name format
+            <filepath>gpbackup_&lt;content_id>_&lt;YYYYMMDDHHMMSS>_&lt;oid>.gz</filepath> where:<ul
+            id="ul_cdb_jpj_tbb">
+            <li><filepath>&lt;content_id></filepath> is the content ID of the segment.</li>
+            <li><filepath>&lt;YYYYMMDDHHMMSS></filepath> is the timestamp of the
+                <codeph>gpbackup</codeph> operation.</li>
+            <li><filepath>&lt;oid></filepath> is the object ID of the table. The metadata file
+                <filepath>gpbackup_&lt;YYYYMMDDHHMMSS>_toc.yaml</filepath> references this
+                <filepath>&lt;oid></filepath> to locate the data for a specific table in a
+              schema.</li>
+          </ul></p>
+      </section>
+    </body>
+  </topic>
+</topic>

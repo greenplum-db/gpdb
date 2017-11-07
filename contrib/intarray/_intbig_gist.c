@@ -1,3 +1,11 @@
+/*
+ * $PostgreSQL: pgsql/contrib/intarray/_intbig_gist.c,v 1.19 2008/05/17 01:28:19 adunstan Exp $ 
+ */
+#include "postgres.h"
+
+#include "access/gist.h"
+#include "access/skey.h"
+
 #include "_int.h"
 
 #define GETENTRY(vec,pos) ((GISTTYPE *) DatumGetPointer((vec)->vector[(pos)].key))
@@ -498,7 +506,12 @@ g_intbig_consistent(PG_FUNCTION_ARGS)
 	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
 	ArrayType  *query = (ArrayType *) PG_GETARG_ARRAYTYPE_P(1);
 	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
+	/* Oid		subtype = PG_GETARG_OID(3); */
+	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
 	bool		retval;
+
+	/* All cases served by this function are inexact */
+	*recheck = true;
 
 	if (ISALLTRUE(DatumGetPointer(entry->key)))
 		PG_RETURN_BOOL(true);

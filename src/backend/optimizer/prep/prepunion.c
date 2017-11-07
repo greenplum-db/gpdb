@@ -24,7 +24,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepunion.c,v 1.159 2008/10/21 20:42:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepunion.c,v 1.148 2008/07/31 22:47:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -48,6 +48,7 @@
 #include "parser/parse_coerce.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 
 #include "cdb/cdbllize.h"                   /* pull_up_Flow() */
 #include "cdb/cdbvars.h"
@@ -79,6 +80,7 @@ static List *generate_setop_tlist(List *colTypes, int flag,
 static List *generate_append_tlist(List *colTypes, bool flag,
 					  List *input_plans,
 					  List *refnames_tlist);
+static List *generate_setop_sortlist(List *targetlist);
 static void expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte,
 						 Index rti);
 static void make_inh_translation_lists(Relation oldrelation,
@@ -409,7 +411,7 @@ generate_union_plan(SetOperationStmt *op, PlannerInfo *root,
 	{
 		List	   *sortList;
 
-		sortList = addAllTargetsToSortList(NULL, NIL, tlist, false);
+		sortList = generate_setop_sortlist(tlist);
 		if (sortList)
 		{
 			if ( optype == PSETOP_PARALLEL_PARTITIONED )
@@ -495,7 +497,7 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	 * Sort the child results, then add a SetOp plan node to generate the
 	 * correct output.
 	 */
-	sortList = addAllTargetsToSortList(NULL, NIL, tlist, false);
+	sortList = generate_setop_sortlist(tlist);
 
 	if (sortList == NIL)		/* nothing to sort on? */
 	{
@@ -794,6 +796,39 @@ generate_append_tlist(List *colTypes, bool flag,
 	pfree(colTypmods);
 
 	return tlist;
+}
+
+/*
+ * generate_setop_sortlist
+ *		Build a SortClause list enumerating all the non-resjunk tlist entries,
+ *		using default ordering properties.
+ */
+static List *
+generate_setop_sortlist(List *targetlist)
+{
+	List	   *sortlist = NIL;
+	ListCell   *l;
+
+	foreach(l, targetlist)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(l);
+		SortBy sortby;
+
+		/* GPDB_84_MERGE_FIXME: ensure that this block is deleted in a future
+		 * 8.4 merge iteration. */
+		sortby.type = T_SortBy;
+		sortby.sortby_dir = SORTBY_DEFAULT;
+		sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
+		sortby.useOp = NIL;
+		sortby.location = -1;
+		sortby.node = (Node *) tle->expr;
+
+		if (!tle->resjunk)
+			sortlist = addTargetToSortList(NULL, tle,
+										   sortlist, targetlist,
+										   &sortby, false);
+	}
+	return sortlist;
 }
 
 

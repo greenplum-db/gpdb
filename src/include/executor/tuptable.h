@@ -191,7 +191,6 @@ static inline bool TupHasVirtualTuple(TupleTableSlot *slot)
 static inline HeapTuple TupGetHeapTuple(TupleTableSlot *slot)
 {
 	Assert(TupHasHeapTuple(slot));
-	Assert(!is_heaptuple_memtuple(slot->PRIVATE_tts_heaptuple));
 	return slot->PRIVATE_tts_heaptuple; 
 }
 static inline MemTuple TupGetMemTuple(TupleTableSlot *slot)
@@ -402,31 +401,35 @@ extern MemTuple ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast);
 
 extern Datum ExecFetchSlotTupleDatum(TupleTableSlot *slot);
 
-static inline void *ExecFetchSlotGenericTuple(TupleTableSlot *slot, bool mtup_inline_toast)
+static inline GenericTuple
+ExecFetchSlotGenericTuple(TupleTableSlot *slot, bool mtup_inline_toast)
 {
 	Assert(!TupIsNull(slot));
 	if (slot->PRIVATE_tts_memtuple == NULL && slot->PRIVATE_tts_heaptuple != NULL)
-		return (void *) slot->PRIVATE_tts_heaptuple;
+		return (GenericTuple) slot->PRIVATE_tts_heaptuple;
 
-	return ExecFetchSlotMemTuple(slot, mtup_inline_toast);
+	return (GenericTuple) ExecFetchSlotMemTuple(slot, mtup_inline_toast);
 }
 
-static inline TupleTableSlot *ExecStoreGenericTuple(void *tup, TupleTableSlot *slot, bool shouldFree)
+static inline TupleTableSlot *
+ExecStoreGenericTuple(GenericTuple tup, TupleTableSlot *slot, bool shouldFree)
 {
-	if (is_heaptuple_memtuple((HeapTuple) tup))
+	if (is_memtuple(tup))
 		return ExecStoreMinimalTuple((MemTuple) tup, slot, shouldFree);
 
 	return ExecStoreHeapTuple((HeapTuple) tup, slot, InvalidBuffer, shouldFree);
 }
 
-static inline HeapTuple ExecCopyGenericTuple(TupleTableSlot *slot)
+static inline GenericTuple
+ExecCopyGenericTuple(TupleTableSlot *slot)
 {
 	Assert(!TupIsNull(slot));
 	if(slot->PRIVATE_tts_heaptuple != NULL && slot->PRIVATE_tts_memtuple == NULL)
-		return ExecCopySlotHeapTuple(slot);
-	return (HeapTuple) ExecCopySlotMemTuple(slot);
+		return (GenericTuple) ExecCopySlotHeapTuple(slot);
+	return (GenericTuple) ExecCopySlotMemTuple(slot);
 }
 
+extern HeapTuple ExecMaterializeSlot(TupleTableSlot *slot);
 extern TupleTableSlot *ExecCopySlot(TupleTableSlot *dstslot, TupleTableSlot *srcslot);
 
 extern void ExecModifyMemTuple(TupleTableSlot *slot, Datum *values, bool *isnull, bool *doRepl);

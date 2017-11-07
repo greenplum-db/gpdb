@@ -396,7 +396,7 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
  * This code is based on the printtup_internal_20() function in printtup.c.
  */
 void
-SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo *pSerInfo, TupleChunkList tcList)
+SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkList tcList)
 {
 	TupleChunkListItem tcItem = NULL;
 	MemoryContext oldCtxt;
@@ -405,7 +405,7 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo *pSerInfo, TupleChunkList t
 				natts;
 
 	AssertArg(tcList != NULL);
-	AssertArg(tuple != NULL);
+	AssertArg(gtuple != NULL);
 	AssertArg(pSerInfo != NULL);
 
 	tupdesc = pSerInfo->tupdesc;
@@ -449,19 +449,20 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo *pSerInfo, TupleChunkList t
 
 	AssertState(s_tupSerMemCtxt != NULL);
 
-	if (is_heaptuple_memtuple(tuple))
+	if (is_memtuple(gtuple))
 	{
-		addByteStringToChunkList(tcList, (char *) tuple, memtuple_get_size((MemTuple) tuple), &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size((MemTuple) tuple));
+		MemTuple mtuple = (MemTuple) gtuple;
+		addByteStringToChunkList(tcList, (char *) mtuple, memtuple_get_size(mtuple), &pSerInfo->chunkCache);
+		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size(mtuple));
 	}
 	else
 	{
+		HeapTuple tuple = (HeapTuple) gtuple;
+		HeapTupleHeader t_data = tuple->t_data;
 		TupSerHeader tsh;
 
 		unsigned int datalen;
 		unsigned int nullslen;
-
-		HeapTupleHeader t_data = tuple->t_data;
 
 		datalen = tuple->t_len - t_data->t_hoff;
 		if (HeapTupleHasNulls(tuple))
@@ -621,13 +622,13 @@ SerializeTupleIntoChunks(HeapTuple tuple, SerTupInfo *pSerInfo, TupleChunkList t
  * We're called with at least enough space for a tuple-chunk-header.
  */
 int
-SerializeTupleDirect(HeapTuple tuple, SerTupInfo *pSerInfo, struct directTransportBuffer *b)
+SerializeTupleDirect(GenericTuple gtuple, SerTupInfo *pSerInfo, struct directTransportBuffer *b)
 {
 	int			natts;
 	int			dataSize = TUPLE_CHUNK_HEADER_SIZE;
 	TupleDesc	tupdesc;
 
-	AssertArg(tuple != NULL);
+	AssertArg(gtuple != NULL);
 	AssertArg(pSerInfo != NULL);
 	AssertArg(b != NULL);
 
@@ -646,12 +647,13 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo *pSerInfo, struct directTranspo
 		}
 
 		/* easy case */
-		if (is_heaptuple_memtuple(tuple))
+		if (is_memtuple(gtuple))
 		{
+			MemTuple	tuple = (MemTuple) gtuple;
 			int			tupleSize;
 			int			paddedSize;
 
-			tupleSize = memtuple_get_size((MemTuple) tuple);
+			tupleSize = memtuple_get_size(tuple);
 			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
 
 			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE > b->prilen)
@@ -669,6 +671,7 @@ SerializeTupleDirect(HeapTuple tuple, SerTupInfo *pSerInfo, struct directTranspo
 		}
 		else
 		{
+			HeapTuple	tuple = (HeapTuple) gtuple;
 			TupSerHeader tsh;
 
 			unsigned int datalen;
@@ -845,13 +848,13 @@ DeserializeTuple(SerTupInfo *pSerInfo, StringInfo serialTup)
 	return htup;
 }
 
-HeapTuple
-CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remapper)
+GenericTuple
+CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remapper)
 {
 	StringInfoData serData;
 	TupleChunkListItem tcItem;
 	int			i;
-	HeapTuple	htup;
+	GenericTuple tup;
 	TupleChunkType tcType;
 
 	AssertArg(tcList != NULL);
@@ -872,9 +875,8 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *r
 			 */
 			clearTCList(NULL, tcList);
 
-			htup = heap_form_tuple(pSerInfo->tupdesc, pSerInfo->values, pSerInfo->nulls);
-
-			return htup;
+			return (GenericTuple)
+				heap_form_tuple(pSerInfo->tupdesc, pSerInfo->values, pSerInfo->nulls);
 		}
 	}
 
@@ -985,13 +987,15 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *r
 		{
 			uint32		tuplen = memtuple_size_from_uint32(tshp->tuplen);
 
-			htup = (HeapTuple) palloc(tuplen);
-			memcpy(htup, pos, tuplen);
+			tup = (GenericTuple) palloc(tuplen);
+			memcpy(tup, pos, tuplen);
 
 			pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, tuplen);
 		}
 		else
 		{
+			HeapTuple htup;
+
 			pos += sizeof(TupSerHeader);
 
 			/*
@@ -1002,11 +1006,11 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *r
 			{
 				serData.cursor += sizeof(TupSerHeader);
 
-				htup = DeserializeTuple(pSerInfo, &serData);
+				tup = (GenericTuple) DeserializeTuple(pSerInfo, &serData);
 
 				/* Free up memory we used. */
 				pfree(serData.data);
-				return htup;
+				return tup;
 			}
 
 			/* reconstruct lengths of null bitmap and data part */
@@ -1031,6 +1035,7 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *r
 
 			/* Allocate the space in one chunk, like heap_form_tuple */
 			htup = (HeapTuple) palloc(HEAPTUPLESIZE + hoff + datalen);
+			tup = (GenericTuple) htup;
 
 			t_data = (HeapTupleHeader) ((char *) htup + HEAPTUPLESIZE);
 
@@ -1076,5 +1081,5 @@ CvtChunksToHeapTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *r
 	/* Free up memory we used. */
 	pfree(serData.data);
 
-	return htup;
+	return tup;
 }

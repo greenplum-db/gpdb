@@ -379,8 +379,6 @@ plan_tree_mutator(Node *node,
 				/* MUTATE(newidxscan->indexid, idxscan->indexid, List *); */
 				MUTATE(newidxscan->indexqual, idxscan->indexqual, List *);
 				MUTATE(newidxscan->indexqualorig, idxscan->indexqualorig, List *);
-				MUTATE(newidxscan->indexstrategy, idxscan->indexstrategy, List *);
-				MUTATE(newidxscan->indexsubtype, idxscan->indexsubtype, List *);
 				/* indxorderdir  is  scalar */
 				return (Node *) newidxscan;
 			}
@@ -397,8 +395,6 @@ plan_tree_mutator(Node *node,
 
 				MUTATE(newidxscan->indexqual, idxscan->indexqual, List *);
 				MUTATE(newidxscan->indexqualorig, idxscan->indexqualorig, List *);
-				MUTATE(newidxscan->indexstrategy, idxscan->indexstrategy, List *);
-				MUTATE(newidxscan->indexsubtype, idxscan->indexsubtype, List *);
 
 				return (Node *) newidxscan;
 			}

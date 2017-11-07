@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/vacuum.h,v 1.76 2008/03/14 17:25:59 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/commands/vacuum.h,v 1.79 2008/07/01 10:33:09 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,7 @@
 #include "nodes/parsenodes.h"
 #include "storage/buf.h"
 #include "storage/lock.h"
-#include "utils/rel.h"
+#include "utils/relcache.h"
 #include "utils/tqual.h"
 
 
@@ -96,6 +96,18 @@ typedef struct VacAttrStats
 	Datum	   *stavalues[STATISTIC_NUM_SLOTS];
 
 	/*
+	 * These fields describe the stavalues[n] element types. They will
+	 * be initialized to be the same as the column's that's underlying the
+	 * slot, but a custom typanalyze function might want to store an array of
+	 * something other than the analyzed column's elements. It should then
+	 * overwrite these fields.
+	 */
+	Oid			statypid[STATISTIC_NUM_SLOTS];
+	int2		statyplen[STATISTIC_NUM_SLOTS];
+	bool		statypbyval[STATISTIC_NUM_SLOTS];
+	char		statypalign[STATISTIC_NUM_SLOTS];
+
+	/*
 	 * These fields are private to the main ANALYZE code and should not be
 	 * looked at by type-specific functions.
 	 */
@@ -128,7 +140,7 @@ extern int	vacuum_freeze_min_age;
 
 
 /* in commands/vacuum.c */
-extern void vacuum(VacuumStmt *vacstmt, List *relids,
+extern void vacuum(VacuumStmt *vacstmt, Oid relid,
 	   BufferAccessStrategy bstrategy, bool for_wraparound, bool isTopLevel);
 extern void vac_open_indexes(Relation relation, LOCKMODE lockmode,
 				 int *nindexes, Relation **Irel);

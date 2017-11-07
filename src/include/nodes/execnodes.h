@@ -9,21 +9,26 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/execnodes.h,v 1.189 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/execnodes.h,v 1.185 2008/07/26 19:15:35 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef EXECNODES_H
 #define EXECNODES_H
 
-#include "access/relscan.h"
+#include "access/genam.h"
+#include "access/heapam.h"
+#include "access/skey.h"
 #include "nodes/params.h"
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 #include "nodes/tidbitmap.h"
 #include "utils/hsearch.h"
-#include "gpmon/gpmon.h"                /* gpmon_packet_t */
+#include "utils/rel.h"
+#include "utils/snapshot.h"
 #include "utils/tuplestore.h"
+
+#include "gpmon/gpmon.h"                /* gpmon_packet_t */
 
 /*
  * partition selector ids start from 1. Sometimes we use 0 to initialize variables
@@ -539,15 +544,6 @@ typedef struct EState
 	List	   *es_result_aosegnos;
 
 	TupleTableSlot *es_trig_tuple_slot; /* for trigger output tuples */
-
-	/* Stuff used for SELECT INTO: */
-	Relation	es_into_relation_descriptor;
-	bool		es_into_relation_use_wal;
-	bool		es_into_relation_is_bulkload;
-
-	ItemPointerData es_into_relation_last_heap_tid;
-
-	struct MirroredBufferPoolBulkLoadInfo *es_into_relation_bulkloadinfo;
 
 	/* Parameter info: */
 	ParamListInfo es_param_list_info;	/* values of external params */
@@ -1416,19 +1412,6 @@ typedef struct PlanState
 	gpmon_packet_t gpmon_pkt;
 } PlanState;
 
-typedef struct Gpmon_NameUnit_MaxVal
-{
-	char	   *name;
-	char	   *unit;
-	int64		maxval;
-} Gpmon_NameUnit_MaxVal;
-
-typedef struct Gpmon_NameVal_Text
-{
-	char	   *name;
-	char	   *value;
-} Gpmon_NameVal_Text;
-
 /* Gpperfmon helper functions defined in execGpmon.c */
 extern void CheckSendPlanStateGpmonPkt(PlanState *ps);
 extern void EndPlanStateGpmonPkt(PlanState *ps);
@@ -1436,10 +1419,6 @@ extern void InitPlanNodeGpmonPkt(Plan* plan, gpmon_packet_t *gpmon_pkt, EState *
 
 extern uint64 PlanStateOperatorMemKB(const PlanState *ps);
 
-static inline void Gpmon_Incr_Rows_In(gpmon_packet_t *pkt)
-{
-    ++pkt->u.qexec.rowsin;
-}
 static inline void Gpmon_Incr_Rows_Out(gpmon_packet_t *pkt)
 {
     ++pkt->u.qexec.rowsout;
@@ -2721,40 +2700,5 @@ typedef struct PartitionSelectorState
 	TupleTableSlot *partTabSlot;
 	ProjectionInfo *partTabProj;
 } PartitionSelectorState;
-
-extern void initGpmonPktForResult(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForAppend(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForSequence(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForBitmapAnd(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForBitmapOr(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForDynamicTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForExternalScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForDynamicIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForBitmapIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForBitmapHeapScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForBitmapAppendOnlyScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForTidScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForSubqueryScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForFunctionScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForValuesScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForNestLoop(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForHashJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForMaterial(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForSort(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForGroup(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForAgg(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForUnique(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForHash(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForSetOp(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForLimit(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForMotion(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForShareInputScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForWindow(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForRepeat(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForDML(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
-extern void initGpmonPktForPartitionSelector(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate);
 
 #endif   /* EXECNODES_H */

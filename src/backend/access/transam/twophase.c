@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/backend/access/transam/twophase.c,v 1.41 2008/03/25 22:42:42 tgl Exp $
+ *		$PostgreSQL: pgsql/src/backend/access/transam/twophase.c,v 1.44 2008/08/01 13:16:08 alvherre Exp $
  *
  * NOTES
  *		Each global transaction is associated with a global transaction
@@ -42,19 +42,23 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "access/distributedlog.h"
 #include "access/heapam.h"
-#include "access/xlogmm.h"
+#include "access/htup.h"
 #include "access/subtrans.h"
 #include "access/transam.h"
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "access/xlogmm.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "miscadmin.h"
+#include "pg_trace.h"
 #include "pgstat.h"
 #include "replication/walsender.h"
 #include "replication/syncrep.h"
+#include "storage/backendid.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
@@ -63,8 +67,6 @@
 #include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
-#include "access/distributedlog.h"
-#include "storage/backendid.h"
 
 #include "cdb/cdbtm.h"
 #include "cdb/cdbvars.h"

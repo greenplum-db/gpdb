@@ -1,10 +1,11 @@
 /*
- * $PostgreSQL: pgsql/contrib/hstore/hstore_gist.c,v 1.10 2009/06/11 14:48:51 momjian Exp $
+ * $PostgreSQL: pgsql/contrib/hstore/hstore_gist.c,v 1.9 2008/05/12 00:00:42 alvherre Exp $
  */
 #include "postgres.h"
 
 #include "access/gist.h"
 #include "access/itup.h"
+#include "access/skey.h"
 #include "crc32.h"
 
 #include "hstore.h"
@@ -513,8 +514,13 @@ ghstore_consistent(PG_FUNCTION_ARGS)
 {
 	GISTTYPE   *entry = (GISTTYPE *) DatumGetPointer(((GISTENTRY *) PG_GETARG_POINTER(0))->key);
 	StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2);
+	/* Oid		subtype = PG_GETARG_OID(3); */
+	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
 	bool		res = true;
 	BITVECP		sign;
+
+	/* All cases served by this function are inexact */
+	*recheck = true;
 
 	if (ISALLTRUE(entry))
 		PG_RETURN_BOOL(true);

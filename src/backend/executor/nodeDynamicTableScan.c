@@ -69,8 +69,6 @@ ExecInitDynamicTableScan(DynamicTableScan *node, EState *estate, int eflags)
 									 ALLOCSET_DEFAULT_INITSIZE,
 									 ALLOCSET_DEFAULT_MAXSIZE);
 
-	initGpmonPktForDynamicTableScan((Plan *)node, &state->tableScanState.ss.ps.gpmon_pkt, estate);
-
 	return state;
 }
 
@@ -231,15 +229,8 @@ ExecDynamicTableScan(DynamicTableScanState *node)
 
 		SIMPLE_FAULT_INJECTOR(FaultDuringExecDynamicTableScan);
 
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromDynamicTableScanState(node));
-			CheckSendPlanStateGpmonPkt(&scanState->ps);
-		}
-		else
-		{
+		if (TupIsNull(slot))
 			CleanupOnePartition(scanState);
-		}
 	}
 
 	return slot;
@@ -325,8 +316,6 @@ ExecDynamicTableReScan(DynamicTableScanState *node, ExprContext *exprCtxt)
 		 */
 		ResetExprContext(econtext);
 	}
-
-	CheckSendPlanStateGpmonPkt(&node->tableScanState.ss.ps);
 }
 
 void
@@ -349,12 +338,4 @@ int
 ExecCountSlotsDynamicTableScan(DynamicTableScan *node)
 {
 	return 0;
-}
-
-void
-initGpmonPktForDynamicTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, DynamicTableScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

@@ -4218,8 +4218,6 @@ fetchCurrentRow(WindowState * wstate)
 		if (TupIsNull(slot))
 			return NULL;
 
-		Gpmon_Incr_Rows_In(GpmonPktFromWindowState(wstate));
-		CheckSendPlanStateGpmonPkt(&wstate->ps);
 		if (buffer == NULL)
 		{
 			initializePartition(wstate);
@@ -4410,8 +4408,6 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 			return NULL;
 		}
 
-		Gpmon_Incr_Rows_In(GpmonPktFromWindowState(wstate));
-		CheckSendPlanStateGpmonPkt(&wstate->ps);
 		/* Put the new tuple into the input buffer */
 		ntuplestore_acc_put_tupleslot(buffer->writer, slot);
 		buffer->num_tuples++;
@@ -4553,16 +4549,8 @@ ExecWindow(WindowState * wstate)
 	 */
 	resultSlot = ExecProject(wstate->ps.ps_ProjInfo, &isDone);
 
-	if (!TupIsNull(resultSlot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromWindowState(wstate));
-		CheckSendPlanStateGpmonPkt(&wstate->ps);
-	}
-
-	else
-	{
+	if (TupIsNull(resultSlot))
 		ExecEagerFreeWindow(wstate);
-	}
 
 	return resultSlot;
 }
@@ -5826,8 +5814,6 @@ ExecInitWindow(WindowAgg * node, EState *estate, int eflags)
 	/* Frame initialisation can take place now */
 	init_frames(wstate);
 
-	initGpmonPktForWindow((Plan *) node, &wstate->ps.gpmon_pkt, estate);
-
 	return wstate;
 }
 
@@ -6764,14 +6750,6 @@ first_value_generic(PG_FUNCTION_ARGS)
 		PG_RETURN_NULL();
 
 	return d;
-}
-
-void
-initGpmonPktForWindow(Plan * planNode, gpmon_packet_t * gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, WindowAgg));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -26,8 +26,8 @@
 /* An entry in the HeapTuple FIFO.	Entries are formed into queues. */
 typedef struct htf_entry_data
 {
-	/* The HeapTuple itself. */
-	HeapTuple	htup;
+	/* The tuple itself. */
+	GenericTuple tup;
 
 	/* The next entry in the FIFO. */
 	struct htf_entry_data *p_next;
@@ -71,7 +71,7 @@ extern htup_fifo htfifo_create(int max_mem_kb);
 extern void htfifo_init(htup_fifo htf, int max_mem_kb);
 extern void htfifo_destroy(htup_fifo htf);
 
-extern void htfifo_addtuple(htup_fifo htf, HeapTuple htup);
-extern HeapTuple htfifo_gettuple(htup_fifo htf);
+extern void htfifo_addtuple(htup_fifo htf, GenericTuple htup);
+extern GenericTuple htfifo_gettuple(htup_fifo htf);
 
 #endif   /* HTUPFIFO_H */

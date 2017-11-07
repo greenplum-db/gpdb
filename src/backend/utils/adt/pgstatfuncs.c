@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.49 2008/03/25 22:42:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.52 2008/05/15 00:17:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -44,6 +44,10 @@ extern Datum pg_stat_get_last_vacuum_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_autovacuum_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_analyze_time(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS);
+
+extern Datum pg_stat_get_function_calls(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_function_time(PG_FUNCTION_ARGS);
+extern Datum pg_stat_get_function_self_time(PG_FUNCTION_ARGS);
 
 extern Datum pg_stat_get_backend_idset(PG_FUNCTION_ARGS);
 extern Datum pg_stat_get_activity(PG_FUNCTION_ARGS);
@@ -357,6 +361,39 @@ pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS)
 }
 
 Datum
+pg_stat_get_function_calls(PG_FUNCTION_ARGS)
+{
+	Oid	funcid = PG_GETARG_OID(0);
+	PgStat_StatFuncEntry *funcentry;
+
+	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_numcalls);
+}
+
+Datum
+pg_stat_get_function_time(PG_FUNCTION_ARGS)
+{
+	Oid	funcid = PG_GETARG_OID(0);
+	PgStat_StatFuncEntry *funcentry;
+
+	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_time);
+}
+
+Datum
+pg_stat_get_function_self_time(PG_FUNCTION_ARGS)
+{
+	Oid	funcid = PG_GETARG_OID(0);
+	PgStat_StatFuncEntry *funcentry;
+
+	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
+		PG_RETURN_NULL();
+	PG_RETURN_INT64(funcentry->f_time_self);
+}
+
+Datum
 pg_stat_get_backend_idset(PG_FUNCTION_ARGS)
 {
 	FuncCallContext *funcctx;
@@ -426,7 +463,7 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 		TupleDescInitEntry(tupdesc, (AttrNumber) 12, "sess_id", INT4OID, -1, 0);  /* GPDB */
 
 		if (nattr > 12)
-			TupleDescInitEntry(tupdesc, (AttrNumber) 13, "waiting_for", TEXTOID, -1, 0);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 13, "waiting_reason", TEXTOID, -1, 0);
 
 		if (nattr > 13)
 		{
@@ -571,9 +608,9 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 #ifdef HAVE_IPV6
 					|| beentry->st_clientaddr.addr.ss_family == AF_INET6
 #endif
-					)
+				   )
 				{
-					char		remote_host[NI_MAXHOST];
+					char        remote_host[NI_MAXHOST];
 					char		remote_port[NI_MAXSERV];
 					int			ret;
 

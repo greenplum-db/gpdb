@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/indxpath.c,v 1.234 2008/11/22 22:47:05 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/indxpath.c,v 1.231 2008/05/27 00:13:09 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2297,9 +2297,8 @@ match_special_index_operator(Expr *clause, Oid opfamily,
 		case OID_NAME_ICLIKE_OP:
 		case OID_NAME_REGEXEQ_OP:
 		case OID_NAME_ICREGEXEQ_OP:
-			isIndexable =
-				(opfamily == NAME_PATTERN_BTREE_FAM_OID) ||
-				(opfamily == NAME_BTREE_FAM_OID && lc_collate_is_c());
+			/* name uses locale-insensitive sorting */
+			isIndexable = (opfamily == NAME_BTREE_FAM_OID);
 			break;
 
 		case OID_BYTEA_LIKE_OP:
@@ -2475,7 +2474,10 @@ expand_boolean_index_clause(Node *clause,
  * expand_indexqual_opclause --- expand a single indexqual condition
  *		that is an operator clause
  *
- * The input is a single RestrictInfo, the output a list of RestrictInfos
+ * The input is a single RestrictInfo, the output a list of RestrictInfos.
+ *
+ * In the base case this is just list_make1(), but we have to be prepared to
+ * expand special cases that were accepted by match_special_index_operator().
  */
 static List *
 expand_indexqual_opclause(RestrictInfo *rinfo, Oid opfamily)
@@ -2489,63 +2491,77 @@ expand_indexqual_opclause(RestrictInfo *rinfo, Oid opfamily)
 	Const	   *patt = (Const *) rightop;
 	Const	   *prefix = NULL;
 	Pattern_Prefix_Status pstatus;
-	List	   *result;
 
+	/*
+	 * LIKE and regex operators are not members of any btree index opfamily,
+	 * but they can be members of opfamilies for more exotic index types such
+	 * as GIN.  Therefore, we should only do expansion if the operator is
+	 * actually not in the opfamily.  But checking that requires a syscache
+	 * lookup, so it's best to first see if the operator is one we are
+	 * interested in.
+	 */
 	switch (expr_op)
 	{
-			/*
-			 * LIKE and regex operators are not members of any index opfamily,
-			 * so if we find one in an indexqual list we can assume that it
-			 * was accepted by match_special_index_operator().
-			 */
 		case OID_TEXT_LIKE_OP:
 		case OID_BPCHAR_LIKE_OP:
 		case OID_NAME_LIKE_OP:
 		case OID_BYTEA_LIKE_OP:
-			pstatus = pattern_fixed_prefix(patt, Pattern_Type_Like,
-										   &prefix, NULL);
-			result = prefix_quals(leftop, opfamily, prefix, pstatus);
+			if (!op_in_opfamily(expr_op, opfamily))
+			{
+				pstatus = pattern_fixed_prefix(patt, Pattern_Type_Like,
+											   &prefix, NULL);
+				return prefix_quals(leftop, opfamily, prefix, pstatus);
+			}
 			break;
 
 		case OID_TEXT_ICLIKE_OP:
 		case OID_BPCHAR_ICLIKE_OP:
 		case OID_NAME_ICLIKE_OP:
-			/* the right-hand const is type text for all of these */
-			pstatus = pattern_fixed_prefix(patt, Pattern_Type_Like_IC,
-										   &prefix, NULL);
-			result = prefix_quals(leftop, opfamily, prefix, pstatus);
+			if (!op_in_opfamily(expr_op, opfamily))
+			{
+				/* the right-hand const is type text for all of these */
+				pstatus = pattern_fixed_prefix(patt, Pattern_Type_Like_IC,
+											   &prefix, NULL);
+				return prefix_quals(leftop, opfamily, prefix, pstatus);
+			}
 			break;
 
 		case OID_TEXT_REGEXEQ_OP:
 		case OID_BPCHAR_REGEXEQ_OP:
 		case OID_NAME_REGEXEQ_OP:
-			/* the right-hand const is type text for all of these */
-			pstatus = pattern_fixed_prefix(patt, Pattern_Type_Regex,
-										   &prefix, NULL);
-			result = prefix_quals(leftop, opfamily, prefix, pstatus);
+			if (!op_in_opfamily(expr_op, opfamily))
+			{
+				/* the right-hand const is type text for all of these */
+				pstatus = pattern_fixed_prefix(patt, Pattern_Type_Regex,
+											   &prefix, NULL);
+				return prefix_quals(leftop, opfamily, prefix, pstatus);
+			}
 			break;
 
 		case OID_TEXT_ICREGEXEQ_OP:
 		case OID_BPCHAR_ICREGEXEQ_OP:
 		case OID_NAME_ICREGEXEQ_OP:
-			/* the right-hand const is type text for all of these */
-			pstatus = pattern_fixed_prefix(patt, Pattern_Type_Regex_IC,
-										   &prefix, NULL);
-			result = prefix_quals(leftop, opfamily, prefix, pstatus);
+			if (!op_in_opfamily(expr_op, opfamily))
+			{
+				/* the right-hand const is type text for all of these */
+				pstatus = pattern_fixed_prefix(patt, Pattern_Type_Regex_IC,
+											   &prefix, NULL);
+				return prefix_quals(leftop, opfamily, prefix, pstatus);
+			}
 			break;
 
 		case OID_INET_SUB_OP:
 		case OID_INET_SUBEQ_OP:
-			result = network_prefix_quals(leftop, expr_op, opfamily,
-										  patt->constvalue);
-			break;
-
-		default:
-			result = list_make1(rinfo);
+			if (!op_in_opfamily(expr_op, opfamily))
+			{
+				return network_prefix_quals(leftop, expr_op, opfamily,
+											patt->constvalue);
+			}
 			break;
 	}
 
-	return result;
+	/* Default case: just make a list of the unmodified indexqual */
+	return list_make1(rinfo);
 }
 
 /*
@@ -2575,7 +2591,6 @@ expand_indexqual_rowcompare(RestrictInfo *rinfo,
 	int			op_strategy;
 	Oid			op_lefttype;
 	Oid			op_righttype;
-	bool		op_recheck;
 	int			matching_cols;
 	Oid			expr_op;
 	List	   *opfamilies;
@@ -2598,8 +2613,7 @@ expand_indexqual_rowcompare(RestrictInfo *rinfo,
 	get_op_opfamily_properties(expr_op, index->opfamily[indexcol],
 							   &op_strategy,
 							   &op_lefttype,
-							   &op_righttype,
-							   &op_recheck);
+							   &op_righttype);
 	/* Build lists of the opfamilies and operator datatypes in case needed */
 	opfamilies = list_make1_oid(index->opfamily[indexcol]);
 	lefttypes = list_make1_oid(op_lefttype);
@@ -2667,8 +2681,7 @@ expand_indexqual_rowcompare(RestrictInfo *rinfo,
 		get_op_opfamily_properties(expr_op, index->opfamily[i],
 								   &op_strategy,
 								   &op_lefttype,
-								   &op_righttype,
-								   &op_recheck);
+								   &op_righttype);
 		opfamilies = lappend_oid(opfamilies, index->opfamily[i]);
 		lefttypes = lappend_oid(lefttypes, op_lefttype);
 		righttypes = lappend_oid(righttypes, op_righttype);
@@ -2796,7 +2809,6 @@ prefix_quals(Node *leftop, Oid opfamily,
 			break;
 
 		case NAME_BTREE_FAM_OID:
-		case NAME_PATTERN_BTREE_FAM_OID:
 			datatype = NAMEOID;
 			break;
 

@@ -246,6 +246,8 @@
 		<topicref href="extensions/pl_r.xml" navtitle="Greenplum PL/R Language Extension" id="pl_r"/>
 		<topicref href="extensions/pl_python.xml" navtitle="Greenplum PL/Python Language Extension"
 			id="pl_python"/>
+		<topicref href="extensions/pl_container.xml" navtitle="Greenplum PL/Container Extension"
+			id="pl_container"/>
 		<topicref href="extensions/pl_java.xml" navtitle="Greenplum PL/Java Language Extension"
 			id="pl_java"/>
 		<topicref href="extensions/pl_perl.xml" navtitle="Greenplum PL/Perl Language Extension"

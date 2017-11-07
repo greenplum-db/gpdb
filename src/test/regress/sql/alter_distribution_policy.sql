@@ -448,3 +448,30 @@ ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3); 
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4); 
 
+-- Altering distribution policy for subpartitioned tables
+CREATE TABLE mpp6489
+(
+	id int,
+	rank int,
+	year date,
+	gender char(1)
+)
+DISTRIBUTED BY (id, gender, year)
+partition by list (gender)
+subpartition by range (year)
+subpartition template
+(
+	start (date '2001-01-01'),
+	start (date '2002-01-01'),
+	start (date '2003-01-01'),
+	start (date '2004-01-01'),
+	start (date '2005-01-01')
+)
+(
+	values ('M'),
+	values ('F')
+);
+
+ALTER TABLE mpp6489_1_prt_1_2_prt_5 set distributed randomly;
+ALTER TABLE "mpp6489" ALTER PARTITION FOR('M'::bpchar) alter PARTITION
+FOR(RANK(5)) set distributed by (id, gender, year);

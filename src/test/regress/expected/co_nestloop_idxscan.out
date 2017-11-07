@@ -72,5 +72,6 @@ select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id
 
 set optimizer_enable_hashjoin = on;
 drop schema co_nestloop_idxscan cascade;
-NOTICE:  drop cascades to table co_nestloop_idxscan.bar
-NOTICE:  drop cascades to append only columnar table co_nestloop_idxscan.foo
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to append only columnar table co_nestloop_idxscan.foo
+drop cascades to table co_nestloop_idxscan.bar

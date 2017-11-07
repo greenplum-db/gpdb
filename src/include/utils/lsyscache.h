@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.122 2008/01/01 19:45:59 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.124 2008/07/30 17:05:05 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -46,8 +46,7 @@ extern int	get_op_opfamily_strategy(Oid opno, Oid opfamily);
 extern void get_op_opfamily_properties(Oid opno, Oid opfamily,
 						   int *strategy,
 						   Oid *lefttype,
-						   Oid *righttype,
-						   bool *recheck);
+						   Oid *righttype);
 extern Oid get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
 					int16 strategy);
 extern bool get_ordering_op_properties(Oid opno,
@@ -139,6 +138,9 @@ extern Node *get_typdefault(Oid typid);
 extern char get_typtype(Oid typid);
 extern bool type_is_rowtype(Oid typid);
 extern bool type_is_enum(Oid typid);
+extern void get_type_category_preferred(Oid typid,
+										char *typcategory,
+										bool *typispreferred);
 extern Oid	get_typ_typrelid(Oid typid);
 extern Oid	get_element_type(Oid typid);
 extern Oid	get_array_type(Oid typid);

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/xlogdefs.h,v 1.19 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/xlogdefs.h,v 1.22 2008/05/17 17:24:57 tgl Exp $
  */
 #ifndef XLOG_DEFS_H
 #define XLOG_DEFS_H
@@ -127,21 +127,13 @@ typedef uint32 TimeLineID;
 #endif
 
 #if defined(PLATFORM_DEFAULT_SYNC_METHOD)
-#define DEFAULT_SYNC_METHOD_STR	PLATFORM_DEFAULT_SYNC_METHOD_STR
 #define DEFAULT_SYNC_METHOD		PLATFORM_DEFAULT_SYNC_METHOD
-#define DEFAULT_SYNC_FLAGBIT	PLATFORM_DEFAULT_SYNC_FLAGBIT
 #elif defined(OPEN_DATASYNC_FLAG)
-#define DEFAULT_SYNC_METHOD_STR "open_datasync"
-#define DEFAULT_SYNC_METHOD		SYNC_METHOD_OPEN
-#define DEFAULT_SYNC_FLAGBIT	OPEN_DATASYNC_FLAG
+#define DEFAULT_SYNC_METHOD		SYNC_METHOD_OPEN_DSYNC
 #elif defined(HAVE_FDATASYNC)
-#define DEFAULT_SYNC_METHOD_STR "fdatasync"
 #define DEFAULT_SYNC_METHOD		SYNC_METHOD_FDATASYNC
-#define DEFAULT_SYNC_FLAGBIT	0
 #else
-#define DEFAULT_SYNC_METHOD_STR "fsync"
 #define DEFAULT_SYNC_METHOD		SYNC_METHOD_FSYNC
-#define DEFAULT_SYNC_FLAGBIT	0
 #endif
 
 /*

@@ -161,6 +161,7 @@ DispatcherInternalFuncs DispatcherSyncFuncs =
 {
 	cdbdisp_waitThreads,
 	cdbdisp_shouldCancel,
+	NULL,
 	cdbdisp_makeDispatchThreads,
 	CdbCheckDispatchResult_internal,
 	cdbdisp_dispatchToGang_internal,

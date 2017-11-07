@@ -13,7 +13,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2003-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/utils/errcodes.h,v 1.26 2008/10/04 21:56:55 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/errcodes.h,v 1.25 2008/05/15 22:39:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

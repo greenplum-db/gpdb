@@ -209,3 +209,40 @@ explain select * from tbl_ab where b::oid=1;
 
 drop table tbl_ab;
 drop function count_index_scans(text);
+-- start_ignore
+select enable_xform('CXformGet2TableScan');
+-- end_ignore
+
+--
+-- Check that ORCA can use an index for joins on quals like:
+--
+-- indexkey CMP expr
+-- expr CMP indexkey
+--
+-- where expr is a scalar expression free of index keys and may have outer
+-- references.
+--
+create table nestloop_x (i int, j int) distributed by (i);
+create table nestloop_y (i int, j int) distributed by (i);
+insert into nestloop_x select g, g from generate_series(1, 20) g;
+insert into nestloop_y select g, g from generate_series(1, 7) g;
+create index nestloop_y_idx on nestloop_y (j);
+
+-- Coerce the Postgres planner to produce a similar plan. Nested loop joins
+-- are not enabled by default. And to dissuade it from choosing a sequential
+-- scan, bump up the cost. enable_seqscan=off  won't help, because there is
+-- no other way to scan table 'x', and once the planner chooses a seqscan for
+-- one table, it will happily use a seqscan for other tables as well, despite
+-- enable_seqscan=off. (On PostgreSQL, enable_seqscan works differently, and
+-- just bumps up the cost of a seqscan, so it would work there.)
+set seq_page_cost=10000000;
+set enable_indexscan=on;
+set enable_nestloop=on;
+
+explain select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
+select * from nestloop_x as x, nestloop_y as y where x.i + x.j < y.j;
+
+explain select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
+select * from nestloop_x as x, nestloop_y as y where y.j > x.i + x.j + 2;
+
+drop table nestloop_x, nestloop_y;

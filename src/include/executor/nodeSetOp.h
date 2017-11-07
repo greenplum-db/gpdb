@@ -22,9 +22,4 @@ extern TupleTableSlot *ExecSetOp(SetOpState *node);
 extern void ExecEndSetOp(SetOpState *node);
 extern void ExecReScanSetOp(SetOpState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromSetOpState(SetOpState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif   /* NODESETOP_H */

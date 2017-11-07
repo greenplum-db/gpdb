@@ -3564,8 +3564,9 @@ CREATE TYPE int_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists int_rle_type cascade;
-NOTICE:  drop cascades to function int_rle_type_out(int_rle_type)
-NOTICE:  drop cascades to function int_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function int_rle_type_in(cstring)
+drop cascades to function int_rle_type_out(int_rle_type)
 CREATE FUNCTION int_rle_type_in(cstring) 
  RETURNS int_rle_type
  AS 'int4in' 
@@ -3616,8 +3617,9 @@ CREATE TYPE char_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists char_rle_type cascade;
-NOTICE:  drop cascades to function char_rle_type_out(char_rle_type)
-NOTICE:  drop cascades to function char_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function char_rle_type_in(cstring)
+drop cascades to function char_rle_type_out(char_rle_type)
 CREATE FUNCTION char_rle_type_in(cstring) 
  RETURNS char_rle_type
  AS 'charin' 
@@ -3667,8 +3669,9 @@ CREATE TYPE text_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists text_rle_type cascade;
-NOTICE:  drop cascades to function text_rle_type_out(text_rle_type)
-NOTICE:  drop cascades to function text_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function text_rle_type_in(cstring)
+drop cascades to function text_rle_type_out(text_rle_type)
 CREATE FUNCTION text_rle_type_in(cstring) 
  RETURNS text_rle_type
  AS 'textin' 
@@ -3717,8 +3720,9 @@ CREATE TYPE varchar_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists varchar_rle_type cascade;
-NOTICE:  drop cascades to function varchar_rle_type_out(varchar_rle_type)
-NOTICE:  drop cascades to function varchar_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function varchar_rle_type_in(cstring)
+drop cascades to function varchar_rle_type_out(varchar_rle_type)
 CREATE FUNCTION varchar_rle_type_in(cstring) 
  RETURNS varchar_rle_type
  AS 'varcharin' 
@@ -3768,8 +3772,9 @@ CREATE TYPE date_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists date_rle_type cascade;
-NOTICE:  drop cascades to function date_rle_type_out(date_rle_type)
-NOTICE:  drop cascades to function date_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function date_rle_type_in(cstring)
+drop cascades to function date_rle_type_out(date_rle_type)
 CREATE FUNCTION date_rle_type_in(cstring) 
  RETURNS date_rle_type
  AS 'date_in' 
@@ -3820,8 +3825,9 @@ CREATE TYPE timestamp_rle_type(
  compresslevel=4);
 --Drop and recreate the data type 
  Drop type if exists timestamp_rle_type cascade;
-NOTICE:  drop cascades to function timestamp_rle_type_out(timestamp_rle_type)
-NOTICE:  drop cascades to function timestamp_rle_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function timestamp_rle_type_in(cstring)
+drop cascades to function timestamp_rle_type_out(timestamp_rle_type)
 CREATE FUNCTION timestamp_rle_type_in(cstring) 
  RETURNS timestamp_rle_type
  AS 'timestamp_in' 

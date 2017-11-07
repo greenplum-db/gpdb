@@ -1143,10 +1143,11 @@ select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 > 2;
 
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to table notin.l1
-NOTICE:  drop cascades to table notin.g1
-NOTICE:  drop cascades to table notin.t1n
-NOTICE:  drop cascades to table notin.t4
-NOTICE:  drop cascades to table notin.t3
-NOTICE:  drop cascades to table notin.t2
-NOTICE:  drop cascades to table notin.t1
+NOTICE:  drop cascades to 7 other objects
+DETAIL:  drop cascades to table notin.t1
+drop cascades to table notin.t2
+drop cascades to table notin.t3
+drop cascades to table notin.t4
+drop cascades to table notin.t1n
+drop cascades to table notin.g1
+drop cascades to table notin.l1

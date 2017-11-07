@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gist.c,v 1.149.2.1 2008/11/13 17:42:18 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gist.c,v 1.151 2008/06/12 09:12:29 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 #include "access/gist_private.h"
 #include "catalog/index.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "utils/memutils.h"
 
 /* Working state for gistbuild and its callback */
@@ -473,7 +474,7 @@ gistplacetopage(GISTInsertState *state, GISTSTATE *giststate)
 
 		if (!is_leaf)
 			PageIndexTupleDelete(state->stack->page, state->stack->childoffnum);
-		gistfillbuffer(state->r, state->stack->page, state->itup, state->ituplen, InvalidOffsetNumber);
+		gistfillbuffer(state->stack->page, state->itup, state->ituplen, InvalidOffsetNumber);
 
 		MarkBufferDirty(state->stack->buffer);
 
@@ -1041,7 +1042,7 @@ gistnewroot(Relation r, Buffer buffer, IndexTuple *itup, int len, ItemPointer ke
 	START_CRIT_SECTION();
 
 	GISTInitBuffer(buffer, 0);
-	gistfillbuffer(r, page, itup, len, FirstOffsetNumber);
+	gistfillbuffer(page, itup, len, FirstOffsetNumber);
 
 	MarkBufferDirty(buffer);
 

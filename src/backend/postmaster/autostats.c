@@ -23,6 +23,7 @@
 #include "cdb/cdbpartition.h"
 #include "commands/vacuum.h"
 #include "executor/execdesc.h"
+#include "executor/executor.h"
 #include "nodes/makefuncs.h"
 #include "nodes/plannodes.h"
 #include "parser/parsetree.h"
@@ -72,7 +73,7 @@ autostats_issue_analyze(Oid relationOid)
 	analyzeStmt->rootonly = false;
 	analyzeStmt->relation = relation;	/* not used since we pass relids list */
 	analyzeStmt->va_cols = NIL;
-	vacuum(analyzeStmt, NIL, NULL, false, false);
+	vacuum(analyzeStmt, InvalidOid, NULL, false, false);
 	pfree(analyzeStmt);
 }
 
@@ -203,8 +204,7 @@ autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *pr
 			if (stmt->intoClause != NULL)
 			{
 				/* CTAS */
-				if (queryDesc->estate->es_into_relation_descriptor)
-					relationOid = RelationGetRelid(queryDesc->estate->es_into_relation_descriptor);
+				relationOid = GetIntoRelOid(queryDesc);
 				cmdType = AUTOSTATS_CMDTYPE_CTAS;
 			}
 			break;

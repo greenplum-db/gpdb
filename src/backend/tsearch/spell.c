@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/spell.c,v 1.11.2.3 2009/01/29 16:09:12 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/spell.c,v 1.13 2008/06/19 16:52:24 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

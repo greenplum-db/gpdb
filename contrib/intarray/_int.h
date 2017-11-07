@@ -1,18 +1,10 @@
+/*
+ * $PostgreSQL: pgsql/contrib/intarray/_int.h,v 1.16 2008/05/17 01:28:19 adunstan Exp $ 
+ */
 #ifndef ___INT_H__
 #define ___INT_H__
 
-#include "postgres.h"
-
-#include <float.h>
-
-#include "access/gist.h"
-#include "access/itup.h"
-#include "access/skey.h"
-#include "catalog/pg_type.h"
 #include "utils/array.h"
-#include "utils/builtins.h"
-#include "storage/bufpage.h"
-#include "lib/stringinfo.h"
 
 /* number ranges for compression */
 #define MAXNUMRANGE 100
@@ -180,4 +172,4 @@ int			compDESC(const void *a, const void *b);
 				  (direction) ? compASC : compDESC ); \
 	} while(0)
 
-#endif
+#endif /* ___INT_H__ */

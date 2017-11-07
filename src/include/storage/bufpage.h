@@ -7,18 +7,18 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/bufpage.h,v 1.77 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/bufpage.h,v 1.83 2008/07/14 03:22:32 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef BUFPAGE_H
 #define BUFPAGE_H
 
-#include "storage/bufmgr.h"
+#include "access/xlogdefs.h"
 #include "storage/block.h"
+#include "storage/bufmgr.h"
 #include "storage/item.h"
 #include "storage/off.h"
-#include "access/xlog.h"
 
 /*
  * A postgres disk page is an abstraction layered on top of a postgres
@@ -196,9 +196,9 @@ typedef PageHeaderData *PageHeader;
 #define PageIsValid(page) PointerIsValid(page)
 
 /*
- * line pointer does not count as part of header
+ * line pointer(s) do not count as part of header
  */
-#define SizeOfPageHeaderData (offsetof(PageHeaderData, pd_linp[0]))
+#define SizeOfPageHeaderData (offsetof(PageHeaderData, pd_linp))
 
 /*
  * PageIsEmpty
@@ -223,9 +223,13 @@ typedef PageHeaderData *PageHeader;
 /*
  * PageGetContents
  *		To be used in case the page does not contain item pointers.
+ *
+ * Note: prior to 8.3 this was not guaranteed to yield a MAXALIGN'd result.
+ * Now it is.  Beware of old code that might think the offset to the contents
+ * is just SizeOfPageHeaderData rather than MAXALIGN(SizeOfPageHeaderData).
  */
 #define PageGetContents(page) \
-	((char *) (&((PageHeader) (page))->pd_linp[0]))
+	((char *) (page) + MAXALIGN(SizeOfPageHeaderData))
 
 /*
  * PageGetContentsMaxAligned
@@ -312,29 +316,6 @@ typedef PageHeaderData *PageHeader;
 	AssertMacro(ItemIdHasStorage(itemId)), \
 	(Item)(((char *)(page)) + ItemIdGetOffset(itemId)) \
 )
-
-/*
- * BufferGetPageSize
- *		Returns the page size within a buffer.
- *
- * Notes:
- *		Assumes buffer is valid.
- *
- *		The buffer can be a raw disk block and need not contain a valid
- *		(formatted) disk page.
- */
-/* XXX should dig out of buffer descriptor */
-#define BufferGetPageSize(buffer) \
-( \
-	AssertMacro(BufferIsValid(buffer)), \
-	(Size)BLCKSZ \
-)
-
-/*
- * BufferGetPage
- *		Returns the page associated with a buffer.
- */
-#define BufferGetPage(buffer) ((Page)BufferGetBlock(buffer))
 
 /*
  * PageGetMaxOffsetNumber

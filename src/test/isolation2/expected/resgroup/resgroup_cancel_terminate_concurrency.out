@@ -47,8 +47,7 @@ waiting|waiting_reason|current_query|rsgname
 -------+--------------+-------------+-------------------
 f      |              |<IDLE>       |rg_concurrency_test
 f      |              |<IDLE>       |rg_concurrency_test
-f      |              |<IDLE>       |rg_concurrency_test
-(3 rows)
+(2 rows)
 1q: ... <quitting>
 2q: ... <quitting>
 3q: ... <quitting>
@@ -105,10 +104,9 @@ server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
 SELECT * FROM rg_concurrency_view;
-waiting|waiting_reason|current_query|rsgname            
--------+--------------+-------------+-------------------
-f      |              |<IDLE>       |rg_concurrency_test
-(1 row)
+waiting|waiting_reason|current_query|rsgname
+-------+--------------+-------------+-------
+(0 rows)
 1q: ... <quitting>
 2q: ... <quitting>
 3q: ... <quitting>
@@ -166,11 +164,9 @@ BEGIN
 SELECT * FROM rg_concurrency_view;
 waiting|waiting_reason|current_query        |rsgname            
 -------+--------------+---------------------+-------------------
-f      |              |<IDLE>               |rg_concurrency_test
-f      |              |<IDLE>               |rg_concurrency_test
 f      |              |<IDLE> in transaction|rg_concurrency_test
 f      |              |<IDLE> in transaction|rg_concurrency_test
-(4 rows)
+(2 rows)
 1q: ... <quitting>
 2q: ... <quitting>
 6q: ... <quitting>

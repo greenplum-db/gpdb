@@ -1252,9 +1252,6 @@ puttuple_common(Tuplesortstate_mk *state, MKEntry *e)
 	Assert(is_under_sort_or_exec_ctxt(state));
 	state->totalNumTuples++;
 
-	if (state->gpmon_pkt)
-		Gpmon_Incr_Rows_In(state->gpmon_pkt);
-
 	bool		growSucceed = true;
 
 	switch (state->status)

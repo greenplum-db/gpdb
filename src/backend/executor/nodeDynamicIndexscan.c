@@ -84,8 +84,6 @@ ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags)
 
 	InitRuntimeKeysContext(indexState);
 
-	initGpmonPktForDynamicIndexScan((Plan *)node, &indexState->ss.ps.gpmon_pkt, estate);
-
 	return dynamicIndexScanState;
 }
 
@@ -215,8 +213,6 @@ initNextIndexToScan(DynamicIndexScanState *node)
 		ExecIndexBuildScanKeys((PlanState *) indexState,
 						   indexState->iss_RelationDesc,
 						   dynamicIndexScan->indexqual,
-						   dynamicIndexScan->indexstrategy,
-						   dynamicIndexScan->indexsubtype,
 						   &indexState->iss_ScanKeys,
 						   &indexState->iss_NumScanKeys,
 						   &indexState->iss_RuntimeKeys,
@@ -306,17 +302,8 @@ ExecDynamicIndexScan(DynamicIndexScanState *node)
 	{
 		slot = ExecScan(&indexState->ss, (ExecScanAccessMtd) IndexNext);
 
-		if (!TupIsNull(slot))
-		{
-			/* Report output rows to Gpmon */
-			Gpmon_Incr_Rows_Out(GpmonPktFromDynamicIndexScanState(node));
-			CheckSendPlanStateGpmonPkt(&indexState->ss.ps);
-		}
-		else
-		{
+		if (TupIsNull(slot))
 			CleanupOnePartition(indexState);
-		}
-
 	}
 	return slot;
 }
@@ -422,17 +409,4 @@ ExecDynamicIndexReScan(DynamicIndexScanState *node, ExprContext *exprCtxt)
 		 */
 		ResetExprContext(econtext);
 	}
-
-	CheckSendPlanStateGpmonPkt(&node->indexScanState.ss.ps);
-}
-
-/*
- * Method for reporting DynamicIndexScan progress to gpperfmon
- */
-void
-initGpmonPktForDynamicIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, DynamicIndexScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

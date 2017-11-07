@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/config/programs.m4,v 1.22 2008/02/17 16:36:42 petere Exp $
+# $PostgreSQL: pgsql/config/programs.m4,v 1.23 2008/05/27 22:18:04 tgl Exp $
 
 
 # PGAC_PATH_BISON
@@ -23,6 +23,14 @@ if test "$BISON"; then
 *** Bison version 1.875 or later is required.])
     BISON=""
   fi
+ # Bison >=3.0 issues warnings about %name-prefix="base_yy", instead
+ # of the now preferred %name-prefix "base_yy", but the latter
+ # doesn't work with Bison 2.3 or less.  So for now we silence the
+ # deprecation warnings.
+ if echo "$pgac_bison_version" | $AWK '{ if ([$]4 >= 3) exit 0; else exit 1;}'
+ then
+   BISONFLAGS="$BISONFLAGS -Wno-deprecated"
+ fi
 fi
 
 if test -z "$BISON"; then

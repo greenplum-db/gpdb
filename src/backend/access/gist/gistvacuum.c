@@ -8,18 +8,20 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistvacuum.c,v 1.34 2008/01/01 19:45:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistvacuum.c,v 1.36 2008/06/12 09:12:30 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/genam.h"
-#include "access/gist_private.h"
 #include "access/heapam.h"
+#include "access/gist_private.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "storage/freespace.h"
+#include "storage/lmgr.h"
 #include "utils/memutils.h"
 
 typedef struct GistBulkDeleteResult
@@ -415,7 +417,7 @@ gistVacuumUpdate(GistVacuum *gv, BlockNumber blkno, bool needunion)
 			}
 			else
 				/* enough free space */
-				gistfillbuffer(gv->index, tempPage, addon, curlenaddon, InvalidOffsetNumber);
+				gistfillbuffer(tempPage, addon, curlenaddon, InvalidOffsetNumber);
 		}
 	}
 

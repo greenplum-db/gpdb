@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.298 2008/03/26 18:48:59 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.299 2008/05/12 20:01:59 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1565,13 +1565,10 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		plan = planner(query, 0, NULL);
 
 		/*
-		 * Update snapshot command ID to ensure this query sees results of any
-		 * previously executed queries.  (It's a bit cheesy to modify
-		 * ActiveSnapshot without making a copy, but for the limited ways in
-		 * which COPY can be invoked, I think it's OK, because the active
-		 * snapshot shouldn't be shared with anything else anyway.)
+		 * Use a snapshot with an updated command ID to ensure this query sees
+		 * results of any previously executed queries.
 		 */
-		ActiveSnapshot->curcid = GetCurrentCommandId(false);
+		PushUpdatedSnapshot(GetActiveSnapshot());
 
 		/* Create dest receiver for COPY OUT */
 		dest = CreateDestReceiver(DestCopyOut, NULL);
@@ -1579,7 +1576,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 		/* Create a QueryDesc requesting no output */
 		cstate->queryDesc = CreateQueryDesc(plan, queryString,
-											ActiveSnapshot, InvalidSnapshot,
+											GetActiveSnapshot(),
+											InvalidSnapshot,
 											dest, NULL, false);
 
 		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
@@ -1898,10 +1896,11 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		ExecutorEnd(cstate->queryDesc);
 		FreeQueryDesc(cstate->queryDesc);
 		cstate->queryDesc = NULL;
+		PopActiveSnapshot();
 	}
 
 	/* Clean up single row error handling related memory */
-	if(cstate->cdbsreh)
+	if (cstate->cdbsreh)
 		destroyCdbSreh(cstate->cdbsreh);
 
 	/* Clean up storage (probably not really necessary) */
@@ -1920,15 +1919,13 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				(unsigned int) processed);
 	}
 
-    /* 	 Fix for MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
+    /* Issue automatic ANALYZE if conditions are satisfied (MPP-4082). */
 	if (Gp_role == GP_ROLE_DISPATCH && is_from)
-	{
 		auto_stats(AUTOSTATS_CMDTYPE_COPY, relationOid, processed, false /* inFunction */);
-	} /*end auto-stats block*/
 
-	if(cstate->force_quote_flags)
+	if (cstate->force_quote_flags)
 		pfree(cstate->force_quote_flags);
-	if(cstate->force_notnull_flags)
+	if (cstate->force_notnull_flags)
 		pfree(cstate->force_notnull_flags);
 
 	pfree(cstate->attribute_buf.data);
@@ -2594,7 +2591,7 @@ CopyTo(CopyState cstate)
 			{
 				HeapTuple	tuple;
 
-				scandesc = heap_beginscan(rel, ActiveSnapshot, 0, NULL);
+				scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
 				while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 				{
 					CHECK_FOR_INTERRUPTS();
@@ -2608,13 +2605,14 @@ CopyTo(CopyState cstate)
 
 				heap_endscan(scandesc);
 			}
-			else if(RelationIsAoRows(rel))
+			else if (RelationIsAoRows(rel))
 			{
 				MemTuple		tuple;
 				TupleTableSlot	*slot = MakeSingleTupleTableSlot(tupDesc);
 				MemTupleBinding *mt_bind = create_memtuple_binding(tupDesc);
 
-				aoscandesc = appendonly_beginscan(rel, ActiveSnapshot, ActiveSnapshot, 0, NULL);
+				aoscandesc = appendonly_beginscan(rel, GetActiveSnapshot(),
+												  GetActiveSnapshot(), 0, NULL);
 
 				while ((tuple = appendonly_getnext(aoscandesc, ForwardScanDirection, slot)) != NULL)
 				{
@@ -2633,7 +2631,7 @@ CopyTo(CopyState cstate)
 
 				appendonly_endscan(aoscandesc);
 			}
-			else if(RelationIsAoCols(rel))
+			else if (RelationIsAoCols(rel))
 			{
 				AOCSScanDesc scan = NULL;
 				TupleTableSlot *slot = MakeSingleTupleTableSlot(tupDesc);
@@ -2648,10 +2646,12 @@ CopyTo(CopyState cstate)
 				}
 
 				proj = palloc(sizeof(bool) * nvp);
-				for(i=0; i<nvp; ++i)
+				for(i = 0; i < nvp; ++i)
 				    proj[i] = true;
 
-				scan = aocs_beginscan(rel, ActiveSnapshot, ActiveSnapshot, NULL /* relationTupleDesc */, proj);
+				scan = aocs_beginscan(rel, GetActiveSnapshot(),
+									  GetActiveSnapshot(),
+									  NULL /* relationTupleDesc */, proj);
 				for(;;)
 				{
 				    CHECK_FOR_INTERRUPTS();
@@ -4228,7 +4228,6 @@ CopyFromDispatch(CopyState cstate)
 static void
 CopyFrom(CopyState cstate)
 {
-	void		*tuple;
 	TupleDesc	tupDesc;
 	Form_pg_attribute *attr;
 	AttrNumber	num_phys_attrs,
@@ -4241,12 +4240,8 @@ CopyFrom(CopyState cstate)
 	int			attnum;
 	int			i;
 	Oid			in_func_oid;
-	Datum		*values = NULL;
-	bool		*nulls = NULL;
 	Datum		*partValues = NULL;
 	bool		*partNulls = NULL;
-	Datum		*baseValues = NULL;
-	bool		*baseNulls = NULL;
 	bool		isnull;
 	ResultRelInfo *resultRelInfo;
 	EState	   *estate = CreateExecutorState(); /* for ExecConstraints() */
@@ -4280,7 +4275,7 @@ CopyFrom(CopyState cstate)
 	/*----------
 	 * Check to see if we can avoid writing WAL
 	 *
-	 * If archive logging is not enabled *and* either
+	 * If archive logging/streaming is not enabled *and* either
 	 *	- table was created in same transaction as this COPY
 	 *	- data is being written to relfilenode created in this transaction
 	 * then we can skip writing WAL.  It's safe because if the transaction
@@ -4308,8 +4303,7 @@ CopyFrom(CopyState cstate)
 		cstate->rel->rd_newRelfilenodeSubid != InvalidSubTransactionId)
 	{
 		use_fsm = false;
-		if (!XLogArchivingActive())
-			use_wal = false;
+		use_wal = XLogIsNeeded();
 	}
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
@@ -4408,8 +4402,6 @@ CopyFrom(CopyState cstate)
 		CopyFromProcessDataFileHeader(cstate, cdbCopy, &file_has_oids);
 	}
 
-	baseValues = (Datum *) palloc(num_phys_attrs * sizeof(Datum));
-	baseNulls = (bool *) palloc(num_phys_attrs * sizeof(bool));
 	attr_offsets = (int *) palloc(num_phys_attrs * sizeof(int));
 
 	partValues = (Datum *) palloc(attr_count * sizeof(Datum));
@@ -4504,6 +4496,9 @@ PROCESS_SEGMENT_DATA:
 				bool		skip_tuple;
 				Oid			loaded_oid = InvalidOid;
 				char		relstorage;
+				Datum	   *baseValues;
+				bool	   *baseNulls;
+
 				CHECK_FOR_INTERRUPTS();
 
 				/* Reset the per-tuple exprcontext */
@@ -4513,6 +4508,10 @@ PROCESS_SEGMENT_DATA:
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 
 				/* Initialize all values for row to NULL */
+				ExecClearTuple(baseSlot);
+				baseValues = slot_get_values(baseSlot);
+				baseNulls = slot_get_isnull(baseSlot);
+
 				MemSet(baseValues, 0, num_phys_attrs * sizeof(Datum));
 				MemSet(baseNulls, true, num_phys_attrs * sizeof(bool));
 				/* reset attribute pointers */
@@ -4822,33 +4821,37 @@ PROCESS_SEGMENT_DATA:
 
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 
+				ExecStoreVirtualTuple(baseSlot);
+
 				/*
 				 * And now we can form the input tuple.
+				 *
+				 * The resulting tuple is stored in 'slot'
 				 */
 				if (resultRelInfo->ri_partSlot != NULL)
 				{
 					AttrMap *map = resultRelInfo->ri_partInsertMap;
 					Assert(map != NULL);
 
-
+					slot = resultRelInfo->ri_partSlot;
+					ExecClearTuple(slot);
+					partValues = slot_get_values(resultRelInfo->ri_partSlot);
+					partNulls = slot_get_isnull(resultRelInfo->ri_partSlot);
 					MemSet(partValues, 0, attr_count * sizeof(Datum));
 					MemSet(partNulls, true, attr_count * sizeof(bool));
 
 					reconstructTupleValues(map, baseValues, baseNulls, (int) num_phys_attrs,
 										   partValues, partNulls, (int) attr_count);
-
-					values = partValues;
-					nulls = partNulls;
+					ExecStoreVirtualTuple(slot);
 				}
 				else
 				{
-					values = baseValues;
-					nulls = baseNulls;
+					slot = baseSlot;
 				}
 
 				if (is_check_distkey && distData->p_nattrs > 0)
 				{
-					target_seg = GetTargetSeg(distData, values, nulls);
+					target_seg = GetTargetSeg(distData, slot_get_values(slot), slot_get_isnull(slot));
 					/*check distribution key if COPY FROM ON SEGMENT*/
 					if (GpIdentity.segindex != target_seg)
 						ereport(ERROR,
@@ -4856,31 +4859,6 @@ PROCESS_SEGMENT_DATA:
 								 errmsg("value of distribution key doesn't belong to segment with ID %d, it belongs to segment with ID %d",
 										GpIdentity.segindex, target_seg)));
 				}
-
-				if (relstorage == RELSTORAGE_AOROWS)
-				{
-					/* form a mem tuple */
-					tuple = (MemTuple)
-						memtuple_form_to(resultRelInfo->ri_aoInsertDesc->mt_bind,
-														values, nulls,
-														NULL, NULL, false);
-
-					if (cstate->oids && file_has_oids)
-						MemTupleSetOid(tuple, resultRelInfo->ri_aoInsertDesc->mt_bind, loaded_oid);
-				}
-				else if (relstorage == RELSTORAGE_AOCOLS)
-				{
-                    tuple = NULL;
-				}
-				else
-				{
-					/* form a regular heap tuple */
-					tuple = (HeapTuple) heap_form_tuple(resultRelInfo->ri_RelationDesc->rd_att, values, nulls);
-
-					if (cstate->oids && file_has_oids)
-						HeapTupleSetOid((HeapTuple)tuple, loaded_oid);
-				}
-
 
 				/*
 				 * Triggers and stuff need to be invoked in query context.
@@ -4898,12 +4876,9 @@ PROCESS_SEGMENT_DATA:
 					resultRelInfo->ri_TrigDesc->n_before_row[TRIGGER_EVENT_INSERT] > 0)
 				{
 					HeapTuple	newtuple;
+					HeapTuple	tuple;
 
-					if(relstorage == RELSTORAGE_AOCOLS)
-					{
-						Assert(!tuple);
-						elog(ERROR, "triggers are not supported on tables that use column-oriented storage");
-					}
+					tuple = ExecFetchSlotHeapTuple(slot);
 
 					Assert(resultRelInfo->ri_TrigFunctions != NULL);
 					newtuple = ExecBRInsertTriggers(estate, resultRelInfo, tuple);
@@ -4912,82 +4887,67 @@ PROCESS_SEGMENT_DATA:
 						skip_tuple = true;
 					else if (newtuple != tuple) /* modified by Trigger(s) */
 					{
-						heap_freetuple(tuple);
-						tuple = newtuple;
+						ExecStoreHeapTuple(newtuple, slot, InvalidBuffer, true);
 					}
 				}
 
 				if (!skip_tuple)
 				{
 					char relstorage = RelinfoGetStorage(resultRelInfo);
-					
-					if (resultRelInfo->ri_partSlot != NULL)
-					{
-						Assert(resultRelInfo->ri_partInsertMap != NULL);
-						slot = resultRelInfo->ri_partSlot;
-					}
-					else
-					{
-						slot = baseSlot;
-					}
-
-					if (relstorage != RELSTORAGE_AOCOLS)
-					{
-						/* Place tuple in tuple slot */
-						ExecStoreGenericTuple(tuple, slot, false);
-					}
-
-					else
-					{
-						ExecClearTuple(slot);
-						slot->PRIVATE_tts_values = values;
-						slot->PRIVATE_tts_isnull = nulls;
-						ExecStoreVirtualTuple(slot);
-					}
+					ItemPointerData insertedTid;
 
 					/*
 					 * Check the constraints of the tuple
 					 */
 					if (resultRelInfo->ri_RelationDesc->rd_att->constr)
-							ExecConstraints(resultRelInfo, slot, estate);
+						ExecConstraints(resultRelInfo, slot, estate);
 
 					/*
 					 * OK, store the tuple and create index entries for it
 					 */
 					if (relstorage == RELSTORAGE_AOROWS)
 					{
-						Oid			tupleOid;
-						AOTupleId	aoTupleId;
-						
+						MemTuple	mtuple;
+
+						mtuple = ExecFetchSlotMemTuple(slot, false);
+
 						/* inserting into an append only relation */
-						appendonly_insert(resultRelInfo->ri_aoInsertDesc, tuple, &tupleOid, &aoTupleId);
-						
-						if (resultRelInfo->ri_NumIndices > 0)
-							ExecInsertIndexTuples(slot, (ItemPointer)&aoTupleId, estate, false);
+						appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, InvalidOid, (AOTupleId *) &insertedTid);
 					}
 					else if (relstorage == RELSTORAGE_AOCOLS)
 					{
-						AOTupleId aoTupleId;
-						
-                        aocs_insert_values(resultRelInfo->ri_aocsInsertDesc, values, nulls, &aoTupleId);
-						if (resultRelInfo->ri_NumIndices > 0)
-							ExecInsertIndexTuples(slot, (ItemPointer)&aoTupleId, estate, false);
+                        aocs_insert(resultRelInfo->ri_aocsInsertDesc, slot);
+						insertedTid = *slot_get_ctid(slot);
 					}
 					else if (relstorage == RELSTORAGE_EXTERNAL)
 					{
+						HeapTuple tuple;
+
+						tuple = ExecFetchSlotHeapTuple(slot);
 						external_insert(resultRelInfo->ri_extInsertDesc, tuple);
+						ItemPointerSetInvalid(&insertedTid);
 					}
 					else
 					{
-						heap_insert(resultRelInfo->ri_RelationDesc, tuple, mycid, use_wal, use_fsm, GetCurrentTransactionId());
+						HeapTuple tuple;
 
-						if (resultRelInfo->ri_NumIndices > 0)
-							ExecInsertIndexTuples(slot, &(((HeapTuple)tuple)->t_self), estate, false);
+						tuple = ExecFetchSlotHeapTuple(slot);
+						heap_insert(resultRelInfo->ri_RelationDesc, tuple, mycid, use_wal, use_fsm, GetCurrentTransactionId());
+						insertedTid = tuple->t_self;
 					}
 
+					if (resultRelInfo->ri_NumIndices > 0)
+						ExecInsertIndexTuples(slot, &insertedTid, estate, false);
 
 					/* AFTER ROW INSERT Triggers */
-					ExecARInsertTriggers(estate, resultRelInfo, tuple);
+					if (resultRelInfo->ri_TrigDesc &&
+						resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_INSERT] > 0)
+					{
+						HeapTuple tuple;
+
+						tuple = ExecFetchSlotHeapTuple(slot);
+						ExecARInsertTriggers(estate, resultRelInfo, tuple);
+					}
 
 					/*
 					 * We count only tuples not suppressed by a BEFORE INSERT trigger;

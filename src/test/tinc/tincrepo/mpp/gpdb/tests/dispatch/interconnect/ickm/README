@@ -1,0 +1,18 @@
+Usage of kernel module:
+*** please remember that kernel module should be inserted and removed for each query. ***
+*** We will enhance that in the future. ***
+
+1. Download this directory to your GPDB master
+2. Make sure your linux source code are under /lib/modules/ directory. If not, 
+   please change "Makefile" to use correct build path
+3. run "make", a file named ickm.ko will be built.
+4. Use gpscp to copy .ko file to all hosts  
+   gpscp -f ../gpconfigs/hostfile_seg ickm.ko =:/home/gpadmin/. 
+5. Specify the parameter value you prefer to use and insert kernel module to segment hosts:
+   gpssh -f ../gpconfigs/hostfile_seg -v -e 'sudo insmod ickm.ko ict_type=0x101 seq_array=1,2,3,4,5 drop_times=3'
+6. RUN QUERY YOU WANT TO TEST WITH
+7. remove kernel module from kernel. 
+   gpssh -f ../gpconfigs/hostfile_seg -v -e 'sudo rmmod ickm.ko" 
+
+Note:
+if no source code under /lib/modules/, please install kernel-debel package. yum install kernel-devel

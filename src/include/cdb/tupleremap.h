@@ -20,7 +20,7 @@ typedef struct TupleRemapper TupleRemapper;
 
 extern TupleRemapper *CreateTupleRemapper(void);
 extern void DestroyTupleRemapper(TupleRemapper *remapper);
-extern HeapTuple TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, HeapTuple tuple);
+extern GenericTuple TRCheckAndRemap(TupleRemapper *remapper, TupleDesc tupledesc, GenericTuple tuple);
 extern void TRHandleTypeLists(TupleRemapper *remapper, List *typelist);
 
 #endif   /* TUPLEREMAP_H */

@@ -15,7 +15,6 @@
 
 -- gpdb top group is not created
 ! gpconfig -c gp_resource_manager -v group;
-20170517:11:54:17:011348 gpconfig:nyu-vm-centos:gpadmin-[WARNING]:-Managing queries with resource groups is an experimental feature. A work-in-progress version is enabled.
 20170517:11:54:18:011348 gpconfig:nyu-vm-centos:gpadmin-[CRITICAL]:-new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configured: directory '@cgroup_mnt_point@/cpu/gpdb/' does not exist]
 new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configured: directory '@cgroup_mnt_point@/cpu/gpdb/' does not exist]
 
@@ -31,7 +30,6 @@ new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configure
 
 -- gpdb directory should have rwx permission
 ! gpconfig -c gp_resource_manager -v group;
-20170517:11:54:18:011409 gpconfig:nyu-vm-centos:gpadmin-[WARNING]:-Managing queries with resource groups is an experimental feature. A work-in-progress version is enabled.
 20170517:11:54:18:011409 gpconfig:nyu-vm-centos:gpadmin-[CRITICAL]:-new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configured: directory '@cgroup_mnt_point@/cpu/gpdb/' permission denied: require permission 'rwx']
 new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configured: directory '@cgroup_mnt_point@/cpu/gpdb/' permission denied: require permission 'rwx']
 
@@ -54,7 +52,6 @@ new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configure
 -- cpu.cfs_period_us should have read permission
 -- cpuacct.usage should have read permission
 ! gpconfig -c gp_resource_manager -v group;
-20170517:11:54:18:011466 gpconfig:nyu-vm-centos:gpadmin-[WARNING]:-Managing queries with resource groups is an experimental feature. A work-in-progress version is enabled.
 20170517:11:54:18:011466 gpconfig:nyu-vm-centos:gpadmin-[CRITICAL]:-new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configured: file '@cgroup_mnt_point@/cpu/gpdb/cgroup.procs' permission denied: require permission 'rw']
 new GUC value failed validation: [nyu-vm-centos:cgroup is not properly configured: file '@cgroup_mnt_point@/cpu/gpdb/cgroup.procs' permission denied: require permission 'rw']
 

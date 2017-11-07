@@ -24,9 +24,4 @@ extern void ExecReScanSequence(SequenceState *node, ExprContext *exprCtxt);
 extern void ExecEndSequence(SequenceState *node);
 extern int ExecCountSlotsSequence(Sequence *node);
 
-static inline gpmon_packet_t * GpmonPktFromSequenceState(SequenceState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif

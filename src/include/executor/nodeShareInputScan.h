@@ -26,9 +26,4 @@ extern void ExecEagerFreeShareInputScan(ShareInputScanState *node);
 
 extern void ExecSliceDependencyShareInputScan(ShareInputScanState *node);
 
-static inline gpmon_packet_t * GpmonPktFromShareInputState(ShareInputScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODESHAREINPUTSCAN_H */

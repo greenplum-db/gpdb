@@ -107,6 +107,7 @@ $$) as n;
 (1 row)
 
 drop schema materialize_spill cascade;
-NOTICE:  drop cascades to table test_mat_large
-NOTICE:  drop cascades to table test_mat_small
-NOTICE:  drop cascades to function num_workfiles_created(text)
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to function num_workfiles_created(text)
+drop cascades to table test_mat_small
+drop cascades to table test_mat_large

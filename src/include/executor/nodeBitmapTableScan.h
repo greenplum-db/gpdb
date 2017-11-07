@@ -29,10 +29,4 @@ extern void BitmapTableScanEndPartition(ScanState *node);
 extern void BitmapTableScanReScanPartition(ScanState *node);
 extern TupleTableSlot *BitmapTableScanFetchNext(ScanState *node);
 
-
-static inline gpmon_packet_t * GpmonPktFromBitmapTableScanState(BitmapTableScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEBITMAPTABLESCAN_H */

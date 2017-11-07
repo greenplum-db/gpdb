@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.73 2008/04/02 18:31:50 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/portalcmds.c,v 1.75 2008/07/18 20:26:06 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,7 +96,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	Assert(!(cstmt->options & CURSOR_OPT_SCROLL && cstmt->options & CURSOR_OPT_NO_SCROLL));
 
 	/*
-	 * Create a portal and copy the plan into its memory context.
+	 * Create a portal and copy the plan and queryString into its memory.
 	 */
 	portal = CreatePortal(cstmt->portalname, false, false);
 
@@ -105,8 +105,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	stmt = copyObject(stmt);
 	stmt->utilityStmt = NULL;	/* make it look like plain SELECT */
 
-	if (queryString)			/* copy the source text too for safety */
-		queryString = pstrdup(queryString);
+	queryString = pstrdup(queryString);
 
 	PortalDefineQuery(portal,
 					  NULL,
@@ -160,7 +159,7 @@ PerformCursorOpen(PlannedStmt *stmt, ParamListInfo params,
 	/*
 	 * Start execution, inserting parameters if any.
 	 */
-	PortalStart(portal, params, ActiveSnapshot, NULL);
+	PortalStart(portal, params, GetActiveSnapshot(), NULL);
 
 	Assert(portal->strategy == PORTAL_ONE_SELECT);
 
@@ -377,7 +376,6 @@ PersistHoldablePortal(Portal portal)
 {
 	QueryDesc  *queryDesc = PortalGetQueryDesc(portal);
 	Portal		saveActivePortal;
-	Snapshot	saveActiveSnapshot;
 	ResourceOwner saveResourceOwner;
 	MemoryContext savePortalContext;
 	MemoryContext oldcxt;
@@ -418,18 +416,18 @@ PersistHoldablePortal(Portal portal)
 	 * Set up global portal context pointers.
 	 */
 	saveActivePortal = ActivePortal;
-	saveActiveSnapshot = ActiveSnapshot;
 	saveResourceOwner = CurrentResourceOwner;
 	savePortalContext = PortalContext;
 	PG_TRY();
 	{
 		ActivePortal = portal;
-		ActiveSnapshot = queryDesc->snapshot;
 		if (portal->resowner)
 			CurrentResourceOwner = portal->resowner;
 		PortalContext = PortalGetHeapMemory(portal);
 
 		MemoryContextSwitchTo(PortalContext);
+
+		PushActiveSnapshot(queryDesc->snapshot);
 
 		/*
 		 * Rewind the executor: we need to store the entire result set in the
@@ -518,7 +516,6 @@ PersistHoldablePortal(Portal portal)
 
 		/* Restore global vars and propagate error */
 		ActivePortal = saveActivePortal;
-		ActiveSnapshot = saveActiveSnapshot;
 		CurrentResourceOwner = saveResourceOwner;
 		PortalContext = savePortalContext;
 
@@ -532,9 +529,10 @@ PersistHoldablePortal(Portal portal)
 	portal->status = PORTAL_READY;
 
 	ActivePortal = saveActivePortal;
-	ActiveSnapshot = saveActiveSnapshot;
 	CurrentResourceOwner = saveResourceOwner;
 	PortalContext = savePortalContext;
+
+	PopActiveSnapshot();
 
 	/*
 	 * We can now release any subsidiary memory of the portal's heap context;

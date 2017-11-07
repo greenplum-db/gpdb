@@ -9,9 +9,5 @@ run:
   - |
     set -ex
     ccp_src/aws/setup_ssh_to_cluster.sh
-    scp cluster_env_files/terraform/name mdw:/tmp/terraform_name
     ssh centos@mdw "sudo bash -c \"yum install -y valgrind mailx\""
-    if [ -n "$PRE_TEST_SCRIPT" ]; then
-        ssh -t mdw "$CUSTOM_ENV $PRE_TEST_SCRIPT"
-    fi
     ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""

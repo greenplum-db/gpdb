@@ -10,12 +10,14 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.175 2008/10/21 20:42:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.171 2008/06/27 03:56:55 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
+
+#include <math.h>
 
 #include "nodes/nodeFuncs.h"
 #ifdef OPTIMIZER_DEBUG
@@ -420,6 +422,10 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 {
 	int			parentRTindex = rti;
 	List	   *subpaths = NIL;
+	double		parent_rows;
+	double		parent_size;
+	double	   *parent_attrsizes;
+	int			nattrs;
 	ListCell   *l;
 
 	/* weighted average of widths */
@@ -440,11 +446,23 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	set_baserel_size_estimates(root, rel);
 
 	/*
-	 * Initialize to compute size estimates for whole append relation
+	 * Initialize to compute size estimates for whole append relation.
+	 *
+	 * We handle width estimates by weighting the widths of different
+	 * child rels proportionally to their number of rows.  This is sensible
+	 * because the use of width estimates is mainly to compute the total
+	 * relation "footprint" if we have to sort or hash it.  To do this,
+	 * we sum the total equivalent size (in "double" arithmetic) and then
+	 * divide by the total rowcount estimate.  This is done separately for
+	 * the total rel width and each attribute.
+	 *
+	 * Note: if you consider changing this logic, beware that child rels could
+	 * have zero rows and/or width, if they were excluded by constraints.
 	 */
-	rel->rows = 0;
-	rel->tuples = 0;
-	rel->width = 0;
+	parent_rows = 0;
+	parent_size = 0;
+	nattrs = rel->max_attr - rel->min_attr + 1;
+	parent_attrsizes = (double *) palloc0(nattrs * sizeof(double));
 
 	/*
 	 * Generate access paths for each member relation, and pick the cheapest
@@ -541,44 +559,74 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 			subpaths = lappend(subpaths, childpath);
 
 		/*
-		 * Propagate size information from the child back to the parent. For
-		 * simplicity, we use the largest widths from any child as the parent
-		 * estimates.  (If you want to change this, beware of child
-		 * attr_widths[] entries that haven't been set and are still 0.)
+		 * Accumulate size information from each child.
 		 */
-		rel->tuples += childrel->tuples;
-		rel->rows += cdbpath_rows(root, childrel->cheapest_total_path);
-		width_avg += cdbpath_rows(root, childrel->cheapest_total_path) * childrel->width;
 
-		forboth(parentvars, rel->reltargetlist,
-				childvars, childrel->reltargetlist)
+		if (childrel->rows > 0)
 		{
-			Var		   *parentvar = (Var *) lfirst(parentvars);
-			Var		   *childvar = (Var *) lfirst(childvars);
+			parent_rows += cdbpath_rows(root, childrel->cheapest_total_path);
+			width_avg += cdbpath_rows(root, childrel->cheapest_total_path) * childrel->width;
 
 			/*
 			 * Accumulate per-column estimates too.  Whole-row Vars and
 			 * PlaceHolderVars can be ignored here.
 			 */
-			if (IsA(parentvar, Var) &&
-				IsA(childvar, Var))
+			forboth(parentvars, rel->reltargetlist,
+					childvars, childrel->reltargetlist)
 			{
-				int			pndx = parentvar->varattno - rel->min_attr;
-				int			cndx = childvar->varattno - childrel->min_attr;
+				Var		   *parentvar = (Var *) lfirst(parentvars);
+				Var		   *childvar = (Var *) lfirst(childvars);
 
-				if (childrel->attr_widths[cndx] > rel->attr_widths[pndx])
-					rel->attr_widths[pndx] = childrel->attr_widths[cndx];
+				if (IsA(parentvar, Var) &&
+					IsA(childvar, Var))
+				{
+					int			pndx = parentvar->varattno - rel->min_attr;
+					int			cndx = childvar->varattno - childrel->min_attr;
+
+					parent_attrsizes[pndx] += childrel->attr_widths[cndx] * childrel->rows;
+				}
 			}
 		}
 	}
 
-	rel->width = (int) (width_avg / Max(1.0, rel->rows));
+	/*
+	 * GPDB_84_MERGE_FIXME: review the estimation math here; 8.4 changed the
+	 * logic around. In particular, we capped the minimum parent_rows at 1,
+	 * whereas upstream will divide by any positive number. We also set
+	 * rel->width to width_avg if the parent_rows are zero, whereas upstream
+	 * sets it to zero.
+	 */
+	/*
+	 * Save the finished size estimates.
+	 */
+	rel->rows = parent_rows;
+	if (parent_rows > 0)
+	{
+		int		i;
+
+		rel->width = rint(width_avg / parent_rows);
+		for (i = 0; i < nattrs; i++)
+			rel->attr_widths[i] = rint(parent_attrsizes[i] / parent_rows);
+	}
+	else
+		rel->width = 0;			/* attr_widths should be zero already */
 
 	/* CDB: Just one child (or none)?  Set flag if result is at most 1 row. */
 	if (!subpaths)
 		rel->onerow = true;
 	else if (list_length(subpaths) == 1)
 		rel->onerow = ((Path *) linitial(subpaths))->parent->onerow;
+
+	/*
+	 * GPDB_84_MERGE_FIXME: ensure that this rel->tuples count works for us.
+	 */
+	/*
+	 * Set "raw tuples" count equal to "rows" for the appendrel; needed
+	 * because some places assume rel->tuples is valid for any baserel.
+	 */
+	rel->tuples = parent_rows;
+
+	pfree(parent_attrsizes);
 
 	/*
 	 * Finally, build Append path and install it as the only access path for

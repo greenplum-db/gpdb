@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.169 2008/02/15 17:19:46 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.171 2008/07/31 22:47:56 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -43,6 +43,7 @@
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
+#include "utils/rel.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpartition.h"
@@ -2537,7 +2538,7 @@ transformWindowDefinitions(ParseState *pstate,
  */
 static List *
 transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
-							List **sortClause, List **groupClause)
+							List *sortClause, List **groupClause)
 {
 	List *group_tlist = list_copy(*targetlist);
 
@@ -2547,7 +2548,7 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 	List *group_tlist_remainder = NIL;
 	List *group_clause_list = create_group_clause(group_tlist,
 												*targetlist,
-												*sortClause,
+												sortClause,
 												&group_tlist_remainder);
 
 	if (list_length(group_tlist_remainder) > 0)
@@ -2606,16 +2607,23 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
  * transformDistinctClause -
  *	  transform a DISTINCT or DISTINCT ON clause
  *
- * Since we may need to add items to the query's sortClause list, that list
- * is passed by reference.	Likewise for the targetlist.
+ * Since we may need to add items to the query's targetlist, that list
+ * is passed by reference.
+ *
+ * As with GROUP BY, we absorb the sorting semantics of ORDER BY as much as
+ * possible into the distinctClause.  This avoids a possible need to re-sort,
+ * and allows the user to determine the equality semantics used by DISTINCT,
+ * should she be working with a datatype that has more than one btree equality
+ * operator.
  */
 List *
 transformDistinctClause(ParseState *pstate, List *distinctlist,
-						List **targetlist, List **sortClause, List **groupClause)
+						List **targetlist, List *sortClause, List **groupClause)
 {
 	List	   *result = NIL;
 	ListCell   *slitem;
 	ListCell   *dlitem;
+	ListCell   *tlitem;
 
 	/* No work if there was no DISTINCT clause */
 	if (distinctlist == NIL)
@@ -2637,25 +2645,21 @@ transformDistinctClause(ParseState *pstate, List *distinctlist,
 		}
 
 		/*
-		 * All non-resjunk elements from target list that are not already in
-		 * the sort list should be added to it.  (We don't really care what
-		 * order the DISTINCT fields are checked in, so we can leave the
-		 * user's ORDER BY spec alone, and just add additional sort keys to it
-		 * to ensure that all targetlist items get sorted.)
+		 * The distinctClause should consist of all ORDER BY items followed
+		 * by all other non-resjunk targetlist items.  There must not be any
+		 * resjunk ORDER BY items --- that would imply that we are sorting
+		 * by a value that isn't necessarily unique within a DISTINCT group,
+		 * so the results wouldn't be well-defined.  This construction
+		 * ensures we follow the rule that sortClause and distinctClause match;
+		 * in fact the sortClause will always be a prefix of distinctClause.
+		 *
+		 * Note a corner case: the same TLE could be in the ORDER BY list
+		 * multiple times with different sortops.  We have to include it in
+		 * the distinctClause the same way to preserve the prefix property.
+		 * The net effect will be that the TLE value will be made unique
+		 * according to both sortops.
 		 */
-		*sortClause = addAllTargetsToSortList(pstate,
-											  *sortClause,
-											  *targetlist,
-											  true);
-
-		/*
-		 * Now, DISTINCT list consists of all non-resjunk sortlist items.
-		 * Actually, all the sortlist items had better be non-resjunk!
-		 * Otherwise, user wrote SELECT DISTINCT with an ORDER BY item that
-		 * does not appear anywhere in the SELECT targetlist, and we can't
-		 * implement that with only one sorting pass...
-		 */
-		foreach(slitem, *sortClause)
+		foreach(slitem, sortClause)
 		{
 			SortClause *scl = (SortClause *) lfirst(slitem);
 			TargetEntry *tle = get_sortgroupclause_tle(scl, *targetlist);
@@ -2669,78 +2673,119 @@ transformDistinctClause(ParseState *pstate, List *distinctlist,
 			else
 				result = lappend(result, copyObject(scl));
 		}
+
+		/*
+		 * Now add any remaining non-resjunk tlist items, using default
+		 * sorting semantics for their data types.
+		 */
+		foreach(tlitem, *targetlist)
+		{
+			TargetEntry *tle = (TargetEntry *) lfirst(tlitem);
+
+			if (tle->resjunk)
+				continue;		/* ignore junk */
+			if (targetIsInSortGroupList(tle, InvalidOid, result))
+				continue;		/* already in list (with some semantics) */
+
+			SortBy sortby;
+
+			sortby.type = T_SortBy;
+			sortby.sortby_dir = SORTBY_DEFAULT;
+			sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
+			sortby.useOp = NIL;
+			sortby.location = -1;
+			sortby.node = (Node *) tle->expr;
+
+			result = addTargetToSortList(pstate, tle,
+										 result, *targetlist,
+										 &sortby, true);
+		}
 	}
 	else
 	{
 		/* We had SELECT DISTINCT ON (expr, ...) */
+		Bitmapset  *refnos = NULL;
+		int			sortgroupref;
+		bool		skipped_sortitem;
 
 		/*
-		 * If the user writes both DISTINCT ON and ORDER BY, then the two
-		 * expression lists must match (until one or the other runs out).
-		 * Otherwise the ORDER BY requires a different sort order than the
-		 * DISTINCT does, and we can't implement that with only one sort pass
-		 * (and if we do two passes, the results will be rather
-		 * unpredictable). However, it's OK to have more DISTINCT ON
-		 * expressions than ORDER BY expressions; we can just add the extra
-		 * DISTINCT values to the sort list, much as we did above for ordinary
-		 * DISTINCT fields.
-		 *
-		 * Actually, it'd be OK for the common prefixes of the two lists to
-		 * match in any order, but implementing that check seems like more
-		 * trouble than it's worth.
+		 * Add all the DISTINCT ON expressions to the tlist (if not already
+		 * present, they are added as resjunk items).  Assign sortgroupref
+		 * numbers to them, and form a bitmapset of these numbers.  (A
+		 * bitmapset is convenient here because we don't care about order
+		 * and we can discard duplicates.)
 		 */
-		ListCell   *nextsortlist = list_head(*sortClause);
-
 		foreach(dlitem, distinctlist)
 		{
+			Node   *dexpr = (Node *) lfirst(dlitem);
 			TargetEntry *tle;
 
-			tle = findTargetlistEntrySQL92(pstate, lfirst(dlitem),
+			tle = findTargetlistEntrySQL92(pstate, dexpr,
                                            targetlist, DISTINCT_ON_CLAUSE);
+			sortgroupref = assignSortGroupRef(tle, *targetlist);
+			refnos = bms_add_member(refnos, sortgroupref);
+		}
 
-			if (nextsortlist != NULL)
+		/*
+		 * If the user writes both DISTINCT ON and ORDER BY, adopt the
+		 * sorting semantics from ORDER BY items that match DISTINCT ON
+		 * items, and also adopt their column sort order.  We insist that
+		 * the distinctClause and sortClause match, so throw error if we
+		 * find the need to add any more distinctClause items after we've
+		 * skipped an ORDER BY item that wasn't in DISTINCT ON.
+		 */
+		skipped_sortitem = false;
+		foreach(slitem, sortClause)
+		{
+			SortClause *scl = (SortClause *) lfirst(slitem);
+
+			if (bms_is_member(scl->tleSortGroupRef, refnos))
 			{
-				SortClause *scl = (SortClause *) lfirst(nextsortlist);
-
-				if (tle->ressortgroupref != scl->tleSortGroupRef)
+				if (skipped_sortitem)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-							 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions"),
-							 parser_errposition(pstate, exprLocation((Node *) lfirst(dlitem)))));
-				result = lappend(result, copyObject(scl));
-				nextsortlist = lnext(nextsortlist);
+							 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions")));
+				else
+					result = lappend(result, copyObject(scl));
 			}
 			else
 			{
-				SortBy sortby;
-
-				sortby.type = T_SortBy;
-				sortby.sortby_dir = SORTBY_DEFAULT;
-				sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-				sortby.useOp = NIL;
-				sortby.location = -1;
-				sortby.node = (Node *) tle->expr;
-				*sortClause = addTargetToSortList(pstate, tle,
-												  *sortClause, *targetlist,
-												  &sortby, true);
-
-				/*
-				 * Probably, the tle should always have been added at the end
-				 * of the sort list ... but search to be safe.
-				 */
-				foreach(slitem, *sortClause)
-				{
-					SortClause *scl = (SortClause *) lfirst(slitem);
-
-					if (tle->ressortgroupref == scl->tleSortGroupRef)
-					{
-						result = lappend(result, copyObject(scl));
-						break;
-					}
-				}
-				if (slitem == NULL)		/* should not happen */
-					elog(ERROR, "failed to add DISTINCT ON clause to target list");
+				skipped_sortitem = true;
 			}
+		}
+
+		/*
+		 * Now add any remaining DISTINCT ON items, using default sorting
+		 * semantics for their data types.  (Note: this is pretty
+		 * questionable; if the ORDER BY list doesn't include all the DISTINCT
+		 * ON items and more besides, you certainly aren't using DISTINCT ON
+		 * in the intended way, and you probably aren't going to get
+		 * consistent results.  It might be better to throw an error or warning
+		 * here.  But historically we've allowed it, so keep doing so.)
+		 */
+		while ((sortgroupref = bms_first_member(refnos)) >= 0)
+		{
+			TargetEntry *tle = get_sortgroupref_tle(sortgroupref, *targetlist);
+
+			if (targetIsInSortGroupList(tle, InvalidOid, result))
+				continue;		/* already in list (with some semantics) */
+			if (skipped_sortitem)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+						 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions")));
+
+			SortBy sortby;
+
+			sortby.type = T_SortBy;
+			sortby.sortby_dir = SORTBY_DEFAULT;
+			sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
+			sortby.useOp = NIL;
+			sortby.location = -1;
+			sortby.node = (Node *) tle->expr;
+
+			result = addTargetToSortList(pstate, tle,
+										 result, *targetlist,
+										 &sortby, true);
 		}
 	}
 
@@ -2790,51 +2835,10 @@ transformScatterClause(ParseState *pstate,
 	return outlist;
 }
 
-
-/*
- * addAllTargetsToSortList
- *		Make sure all non-resjunk targets in the targetlist are in the
- *		ORDER BY list, adding the not-yet-sorted ones to the end of the list.
- *		This is typically used to help implement SELECT DISTINCT.
- *
- * See addTargetToSortList for info about pstate and resolveUnknown inputs.
- *
- * Returns the updated ORDER BY list.
- * May modify targetlist in place even when resolveUnknown is FALSE.
- */
-List *
-addAllTargetsToSortList(ParseState *pstate, List *sortlist,
-						List *targetlist, bool resolveUnknown)
-{
-	ListCell   *l;
-
-	foreach(l, targetlist)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(l);
-
-		if (!tle->resjunk)
-		{
-			SortBy		sortby;
-
-			sortby.type = T_SortBy;
-			sortby.sortby_dir = SORTBY_DEFAULT;
-			sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-			sortby.useOp = NIL;
-			sortby.location = -1;
-			sortby.node = (Node *) tle->expr;
-			sortlist = addTargetToSortList(pstate, tle,
-										   sortlist, targetlist,
-										   &sortby, resolveUnknown);
-		}
-	}
-	return sortlist;
-}
-
 /*
  * addTargetToSortList
- *		If the given targetlist entry isn't already in the SortGroupClause
- *		list, add it to the end of the list, using the given sort ordering
- *		info.
+ *		If the given targetlist entry isn't already in the SortClause list,
+ *		add it to the end of the list, using the given sort ordering info.
  *
  * If resolveUnknown is TRUE, convert TLEs of type UNKNOWN to TEXT.  If not,
  * do nothing (which implies the search for a sort operator will fail).

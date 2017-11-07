@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.187 2008/03/25 22:42:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.190 2008/07/07 18:09:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -43,7 +43,6 @@
 
 /* Set at postmaster start */
 TimestampTz PgStartTime;
-
 /* Set at configuration reload */
 TimestampTz PgReloadTime;
 
@@ -1518,13 +1517,6 @@ clock_timestamp(PG_FUNCTION_ARGS)
 
 Datum
 pg_postmaster_start_time(PG_FUNCTION_ARGS)
-{
-	PG_RETURN_TIMESTAMPTZ(PgStartTime);
-}
-
-/* Old version */
-Datum
-pgsql_postmaster_start_time(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_TIMESTAMPTZ(PgStartTime);
 }

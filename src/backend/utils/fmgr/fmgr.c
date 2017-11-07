@@ -8,14 +8,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.122 2008/08/25 22:42:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.121 2008/07/16 16:55:23 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/tuptoaster.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_proc.h"
@@ -24,6 +23,7 @@
 #include "lib/stringinfo.h"
 #include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
+#include "parser/parse_expr.h"
 #include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
@@ -202,7 +202,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 		finfo->fn_nargs = fbp->nargs;
 		finfo->fn_strict = fbp->strict;
 		finfo->fn_retset = fbp->retset;
-		finfo->fn_stats = TRACK_FUNC_ALL;		/* ie, never track */
+		finfo->fn_stats = TRACK_FUNC_ALL;	/* ie, never track */
 		finfo->fn_addr = fbp->func;
 		finfo->fn_oid = functionId;
 		return;
@@ -230,7 +230,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 		 !heap_attisnull(procedureTuple, Anum_pg_proc_proconfig)))
 	{
 		finfo->fn_addr = fmgr_security_definer;
-		finfo->fn_stats = TRACK_FUNC_ALL;		/* ie, never track */
+		finfo->fn_stats = TRACK_FUNC_ALL;	/* ie, never track */
 		finfo->fn_oid = functionId;
 		ReleaseSysCache(procedureTuple);
 		return;
@@ -2056,6 +2056,128 @@ OidSendFunctionCall(Oid functionId, Datum val)
 	fmgr_info(functionId, &flinfo);
 	return SendFunctionCall(&flinfo, val);
 }
+
+
+/*
+ * On GPDB, int64, float8 and float4 are always pass-by-value, and there are
+ * static inline functions in postgres.h to implement these.
+ */
+#if 0
+/*-------------------------------------------------------------------------
+ *		Support routines for standard maybe-pass-by-reference datatypes
+ *
+ * int8, float4, and float8 can be passed by value if Datum is wide enough.
+ * (For backwards-compatibility reasons, we allow pass-by-ref to be chosen
+ * at compile time even if pass-by-val is possible.)  For the float types,
+ * we need a support routine even if we are passing by value, because many
+ * machines pass int and float function parameters/results differently;
+ * so we need to play weird games with unions.
+ *
+ * Note: there is only one switch controlling the pass-by-value option for
+ * both int8 and float8; this is to avoid making things unduly complicated
+ * for the timestamp types, which might have either representation.
+ *-------------------------------------------------------------------------
+ */
+
+#ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
+
+Datum
+Int64GetDatum(int64 X)
+{
+#ifndef INT64_IS_BUSTED
+	int64	   *retval = (int64 *) palloc(sizeof(int64));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#else							/* INT64_IS_BUSTED */
+
+	/*
+	 * On a machine with no 64-bit-int C datatype, sizeof(int64) will not be
+	 * 8, but we want Int64GetDatum to return an 8-byte object anyway, with
+	 * zeroes in the unused bits.  This is needed so that, for example, hash
+	 * join of int8 will behave properly.
+	 */
+	int64	   *retval = (int64 *) palloc0(Max(sizeof(int64), 8));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#endif   /* INT64_IS_BUSTED */
+}
+
+#endif /* USE_FLOAT8_BYVAL */
+
+Datum
+Float4GetDatum(float4 X)
+{
+#ifdef USE_FLOAT4_BYVAL
+	union {
+		float4	value;
+		int32	retval;
+	} myunion;
+
+	myunion.value = X;
+	return SET_4_BYTES(myunion.retval);
+#else
+	float4	   *retval = (float4 *) palloc(sizeof(float4));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#endif
+}
+
+#ifdef USE_FLOAT4_BYVAL
+
+float4
+DatumGetFloat4(Datum X)
+{
+	union {
+		int32	value;
+		float4	retval;
+	} myunion;
+
+	myunion.value = GET_4_BYTES(X);
+	return myunion.retval;
+}
+
+#endif /* USE_FLOAT4_BYVAL */
+
+Datum
+Float8GetDatum(float8 X)
+{
+#ifdef USE_FLOAT8_BYVAL
+	union {
+		float8	value;
+		int64	retval;
+	} myunion;
+
+	myunion.value = X;
+	return SET_8_BYTES(myunion.retval);
+#else
+	float8	   *retval = (float8 *) palloc(sizeof(float8));
+
+	*retval = X;
+	return PointerGetDatum(retval);
+#endif
+}
+
+#ifdef USE_FLOAT8_BYVAL
+
+float8
+DatumGetFloat8(Datum X)
+{
+	union {
+		int64	value;
+		float8	retval;
+	} myunion;
+
+	myunion.value = GET_8_BYTES(X);
+	return myunion.retval;
+}
+
+#endif /* USE_FLOAT8_BYVAL */
+
+#endif /* GPDB */
+
 
 /*-------------------------------------------------------------------------
  *		Support routines for toastable datatypes

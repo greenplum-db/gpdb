@@ -295,7 +295,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 		}
 
 		bmstate->bm_lov_scanDesc = index_beginscan(bmstate->bm_lov_heap,
-							 bmstate->bm_lov_index, ActiveSnapshot, 
+							 bmstate->bm_lov_index, GetActiveSnapshot(), 
 							 bmstate->bm_tupDesc->natts,
 							 bmstate->bm_lov_scanKeys);
 	}
@@ -306,7 +306,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 	 * writes page to the shared buffer, we can't disable WAL archiving.
 	 * We will add this shortly.
 	 */	
-	bmstate->use_wal = !XLog_UnconvertedCanBypassWal() && !index->rd_istemp;
+	bmstate->use_wal = !index->rd_istemp;
 }
 
 /*

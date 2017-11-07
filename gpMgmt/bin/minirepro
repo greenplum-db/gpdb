@@ -64,7 +64,7 @@ from optparse import OptionParser
 from pygresql import pgdb
 from datetime import datetime
 
-version = '1.10'
+version = '1.11'
 PATH_PREFIX = '/tmp/'
 PGDUMP_FILE = 'pg_dump_out.sql'
 sysnslist = "('pg_toast', 'pg_bitmapindex', 'pg_catalog', 'information_schema', 'gp_toolkit')"
@@ -188,8 +188,7 @@ def pg_dump_object(mr_query, connectionInfo, envOpts):
 
 def dump_tuple_count(cur, oid_str, f_out):
     stmt = "SELECT pgc.relname, pgn.nspname, pgc.relpages, pgc.reltuples FROM pg_class pgc, pg_namespace pgn " \
-            "WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) and pgn.nspname NOT LIKE 'pg_temp_%%' " \
-            "and pgn.nspname NOT IN %s" % (oid_str, sysnslist)
+            "WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) and pgn.nspname NOT LIKE 'pg_temp_%%'" % (oid_str)
 
     templateStmt = '-- Table: {1}\n' \
         'UPDATE pg_class\nSET\n' \
@@ -211,19 +210,20 @@ def dump_tuple_count(cur, oid_str, f_out):
 def dump_stats(cur, oid_str, f_out):
     query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgt.typname, pgs.* ' \
         'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt ' \
-        'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) and pgn.nspname NOT IN %s ' \
+        'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) ' \
         'and pgn.nspname NOT LIKE \'pg_temp_%%\' ' \
         'and pgc.oid = pgs.starelid ' \
         'and pga.attrelid = pgc.oid ' \
         'and pga.attnum = pgs.staattnum ' \
         'and pga.atttypid = pgt.oid ' \
-        'ORDER BY pgc.relname, pgs.staattnum' % (oid_str, sysnslist)
+        'ORDER BY pgc.relname, pgs.staattnum' % (oid_str)
 
     pstring = '--\n' \
         '-- Table: {0}, Attribute: {1}\n' \
         '--\n' \
+        'DELETE FROM pg_statistic WHERE starelid={2} AND staattnum={3};\n' \
         'INSERT INTO pg_statistic VALUES (\n' \
-        '{2});\n\n'
+        '{4});\n\n'
     types = ['smallint',  # staattnum
              'real',
              'integer',
@@ -245,7 +245,8 @@ def dump_stats(cur, oid_str, f_out):
     cur.execute(query)
 
     for vals in result_iter(cur):
-        rowVals = ["\t'%s.%s'::regclass" % (E(vals[1]), E(vals[0]))]
+        starelid = "'%s.%s'::regclass" % (E(vals[1]), E(vals[0]))
+        rowVals = ["\t%s" % (starelid)]
 
         if vals[3][0] == '_':
             rowTypes = types + [vals[3]] * 4
@@ -257,7 +258,7 @@ def dump_stats(cur, oid_str, f_out):
             elif isinstance(val, (str, unicode)) and val[0] == '{':
                 val = "E'%s'" % E(val)
             rowVals.append('\t{0}::{1}'.format(val, typ))
-        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), ',\n'.join(rowVals)))
+        f_out.writelines(pstring.format(E(vals[0]), E(vals[2]), starelid, vals[5], ',\n'.join(rowVals)))
 
 def main():
     parser = parse_cmd_line()

@@ -1753,16 +1753,19 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
 
 		/*
 		 * Now get information required for input conversion of the
-		 * procedure's arguments.  Note that we ignore pure output arguments here. 
+		 * procedure's arguments.  Note that we ignore output arguments
+		 * here --- since we don't support returning record, and that was
+		 * already checked above, there's no need to worry about multiple
+		 * output arguments.
 		 */
 		if (procStruct->pronargs)
 		{
-			Oid		   *types;
-			char	  **names,
-					   *modes;
-			int			i,
-						pos,
-						total;
+			Oid		*types;
+			char   **names,
+					*modes;
+			int		 i,
+					 pos,
+					 total;
 
 			/* extract argument type info from the pg_proc tuple */
 			total = get_func_arg_info(procTup, &types, &names, &modes);
@@ -2904,6 +2907,7 @@ static Datum
 PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 {
 	char	   *str;
+	Datum		rv;
 
 	Assert(plrv != Py_None);
 
@@ -2949,10 +2953,12 @@ PLyObject_ToDatum(PLyObToDatum *arg, int32 typmod, PyObject *plrv, bool inarray)
 					 errhint("To return a composite type in an array, return the composite type as a Python tuple, e.g. \"[('foo')]\"")));
 	}
 
-	return InputFunctionCall(&arg->typfunc,
-							 str,
-							 arg->typioparam,
-							 typmod);
+	rv = InputFunctionCall(&arg->typfunc,
+						   str,
+						   arg->typioparam,
+						   typmod);
+	pfree(str);
+	return rv;
 }
 
 static Datum

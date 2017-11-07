@@ -28,5 +28,6 @@ SELECT * FROM table_with_incomplete_type;
 \o
 DROP TABLE table_with_incomplete_type;
 DROP TYPE incomplete_type CASCADE;
-NOTICE:  drop cascades to function incomplete_type_out(incomplete_type)
-NOTICE:  drop cascades to function incomplete_type_in(cstring)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function incomplete_type_in(cstring)
+drop cascades to function incomplete_type_out(incomplete_type)

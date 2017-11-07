@@ -626,6 +626,48 @@ RESET enable_bitmapscan;
 DROP OWNED BY appendony_test_user2 CASCADE;
 DROP ROLE IF EXISTS appendony_test_user2;
 
+---------------------------------------------------------------
+-- Triggers
+---------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION ao_trigger_func() RETURNS trigger LANGUAGE plpgsql AS $$
+begin
+  raise notice 'new: %', NEW;
+  return new;
+end;
+$$;
+create table trigger_ao_test (id int4, t text) with (appendonly=true, orientation=row);
+create table trigger_aocs_test (id int4, t text) with (appendonly=true, orientation=column);
+
+CREATE TRIGGER show_trigger_data_trig_on_insert BEFORE INSERT ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_insert BEFORE INSERT ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+
+-- UPDATE or DELETE triggers are not supporeted on AO tables
+CREATE TRIGGER show_trigger_data_trig_on_update BEFORE UPDATE ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_update BEFORE UPDATE ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_delete BEFORE DELETE ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_delete BEFORE DELETE ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+
+INSERT INTO trigger_ao_test VALUES (1, 'foo');
+INSERT INTO trigger_aocs_test VALUES (1, 'bar');
+
+COPY trigger_ao_test FROM STDIN;
+2	foocopy
+\.
+
+COPY trigger_aocs_test FROM STDIN;
+2	barcopy
+\.
+
+SELECT * FROM trigger_ao_test;
+SELECT * FROM trigger_aocs_test;
+
 --------------------------------------------------------------------------------
 -- Finally check to detect if any dangling gp_fastsequence entries are left
 -- behind by this SQL file

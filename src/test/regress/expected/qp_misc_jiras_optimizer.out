@@ -188,10 +188,9 @@ INSERT INTO qp_misc_jiras.tbl1544 VALUES(2,'2001-01-01','xxx');
 delete from qp_misc_jiras.tbl1544 where pdate='2000-01-01';
 update qp_misc_jiras.tbl1544 set pval='yyy' where pdate='2000-01-01';
 drop table qp_misc_jiras.tbl1544 cascade;
-NOTICE:  drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2001_year
-NOTICE:  drop cascades to constraint tbl1544_child_depth_1_y_2001_year_pdate_check on table qp_misc_jiras.tbl1544_child_depth_1_y_2001_year
-NOTICE:  drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2000_year
-NOTICE:  drop cascades to constraint tbl1544_child_depth_1_y_2000_year_pdate_check on table qp_misc_jiras.tbl1544_child_depth_1_y_2000_year
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2000_year
+drop cascades to table qp_misc_jiras.tbl1544_child_depth_1_y_2001_year
 CREATE TYPE qp_misc_jiras.tbl4009_mediageoitem AS ( loctn_type character varying,
 loctn_nm character varying,
 loctn_desc character varying,
@@ -478,8 +477,9 @@ ORDER BY s.scheduled;
 (0 rows)
 
 drop table qp_misc_jiras.satelliteupdatelog cascade;
-NOTICE:  drop cascades to constraint satelliteupdatelogserver_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogserver
-NOTICE:  drop cascades to constraint satelliteupdatelogkey_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogkey
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to constraint satelliteupdatelogkey_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogkey
+drop cascades to constraint satelliteupdatelogserver_idsatelliteupdatelog_fk on table qp_misc_jiras.satelliteupdatelogserver
 drop table qp_misc_jiras.satelliteupdatelogkey cascade;
 drop table qp_misc_jiras.satellite cascade;
 drop table qp_misc_jiras.satelliteupdatelogserver cascade;
@@ -3165,7 +3165,7 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
  Index Scan using pg_class_oid_index on pg_class  (cost=200.27..400.54 rows=1 width=4)
    Index Cond: oid = $0
    Rows out:  1 rows with 0.037 ms to first row, 0.038 ms to end, start offset by 0.047 ms.
-   InitPlan
+   InitPlan 1 (returns $0)
      ->  Index Scan using pg_class_relname_nsp_index on pg_class  (cost=0.00..200.27 rows=1 width=4)
            Index Cond: relname = 'tbl_8205'::name
            Rows out:  1 rows with 0.021 ms to first row, 0.023 ms to end of 2 scans, start offset by 0.049 ms.
@@ -3998,19 +3998,12 @@ select schemaname, tablename, partitionschemaname,
 (0 rows)
 
 drop schema schema1 cascade;
-NOTICE:  drop cascades to table schema1.foo1_1_prt_1
-NOTICE:  drop cascades to constraint foo1_1_prt_1_check on table schema1.foo1_1_prt_1
 NOTICE:  drop cascades to table schema1.foo1
 drop schema schema2 cascade;
-NOTICE:  drop cascades to table schema2.foo3_1_prt_1
-NOTICE:  drop cascades to constraint foo3_1_prt_1_check on table schema2.foo3_1_prt_1
-NOTICE:  drop cascades to table schema2.foo3
-NOTICE:  drop cascades to table schema2.foo2_1_prt_1
-NOTICE:  drop cascades to constraint foo2_1_prt_1_check on table schema2.foo2_1_prt_1
-NOTICE:  drop cascades to table schema2.foo2
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table schema2.foo2
+drop cascades to table schema2.foo3
 drop schema schema3 cascade;
-NOTICE:  drop cascades to table schema3.foo4_1_prt_1
-NOTICE:  drop cascades to constraint foo4_1_prt_1_check on table schema3.foo4_1_prt_1
 NOTICE:  drop cascades to table schema3.foo4
 -- This is the to verify MPP-9167:
 --	Gather Motion shows wrong row estimate compared to 3.3

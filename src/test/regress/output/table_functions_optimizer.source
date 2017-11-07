@@ -2375,8 +2375,8 @@ SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
 
 -- Should fail due to dependency on sessionize
 DROP FUNCTION sessionize_describe(internal);
-NOTICE:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 ERROR:  cannot drop function sessionize_describe(internal) because other objects depend on it
+DETAIL:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
   profnoid  |     procallback     | promethod 
@@ -2413,8 +2413,8 @@ CREATE OR REPLACE FUNCTION sessionize(anytable, interval)
   WITH (describe = sessionize_describe);
 -- Check the dependency again, drop should fail
 DROP FUNCTION sessionize_describe(internal);
-NOTICE:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 ERROR:  cannot drop function sessionize_describe(internal) because other objects depend on it
+DETAIL:  function sessionize(anytable,interval) depends on function sessionize_describe(internal)
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 SELECT * FROM pg_proc_callback where profnoid = 'sessionize'::regproc;
   profnoid  |     procallback     | promethod 
@@ -3126,41 +3126,42 @@ DEALLOCATE p6;
 -- Cleanup
 -- =======
 DROP SCHEMA table_function CASCADE;
-NOTICE:  drop cascades to function noop_project(anytable)
-NOTICE:  drop cascades to function ud_project(anytable)
-NOTICE:  drop cascades to function ud_describe(internal)
-NOTICE:  drop cascades to function project(anytable,integer)
-NOTICE:  drop cascades to function project_describe(internal)
-NOTICE:  drop cascades to function sessionize_dynamic(anytable,interval)
-NOTICE:  drop cascades to function sessionize_static(anytable,interval)
-NOTICE:  drop cascades to function sessionize_plain(anytable,interval)
-NOTICE:  drop cascades to function sessionize_describe(internal)
-NOTICE:  drop cascades to function multi_args(anytable,integer)
-NOTICE:  drop cascades to function multiset_6(anytable)
-NOTICE:  drop cascades to function multiset_5(anytable)
-NOTICE:  drop cascades to function multiset_4(anytable)
-NOTICE:  drop cascades to function multiset_3(anytable)
-NOTICE:  drop cascades to function multiset_2(anytable)
-NOTICE:  drop cascades to function multiset_1(anytable)
-NOTICE:  drop cascades to function multiset_materialize_bad(anytable)
-NOTICE:  drop cascades to function multiset_materialize_good(anytable)
-NOTICE:  drop cascades to function multiset_setof_value(anytable)
-NOTICE:  drop cascades to function multiset_setof_null(anytable)
-NOTICE:  drop cascades to function multiset_scalar_tuple(anytable)
-NOTICE:  drop cascades to function multiset_scalar_value(anytable)
-NOTICE:  drop cascades to function multiset_scalar_null(anytable)
-NOTICE:  drop cascades to function scalar_tf_6(anyelement)
-NOTICE:  drop cascades to function scalar_tf_5(integer)
-NOTICE:  drop cascades to function scalar_tf_4(integer)
-NOTICE:  drop cascades to function scalar_tf_3(integer)
-NOTICE:  drop cascades to function scalar_tf_2(integer)
-NOTICE:  drop cascades to function scalar_tf_1(integer)
-NOTICE:  drop cascades to function scalar_5(anyelement)
-NOTICE:  drop cascades to function scalar_4(integer)
-NOTICE:  drop cascades to function scalar_3(integer)
-NOTICE:  drop cascades to function scalar_2(integer)
-NOTICE:  drop cascades to function scalar_1(integer)
-NOTICE:  drop cascades to table example_r
-NOTICE:  drop cascades to table history
-NOTICE:  drop cascades to table example
+NOTICE:  drop cascades to 37 other objects
+DETAIL:  drop cascades to table example
+drop cascades to table history
+drop cascades to table example_r
+drop cascades to function scalar_1(integer)
+drop cascades to function scalar_2(integer)
+drop cascades to function scalar_3(integer)
+drop cascades to function scalar_4(integer)
+drop cascades to function scalar_5(anyelement)
+drop cascades to function scalar_tf_1(integer)
+drop cascades to function scalar_tf_2(integer)
+drop cascades to function scalar_tf_3(integer)
+drop cascades to function scalar_tf_4(integer)
+drop cascades to function scalar_tf_5(integer)
+drop cascades to function scalar_tf_6(anyelement)
+drop cascades to function multiset_scalar_null(anytable)
+drop cascades to function multiset_scalar_value(anytable)
+drop cascades to function multiset_scalar_tuple(anytable)
+drop cascades to function multiset_setof_null(anytable)
+drop cascades to function multiset_setof_value(anytable)
+drop cascades to function multiset_materialize_good(anytable)
+drop cascades to function multiset_materialize_bad(anytable)
+drop cascades to function multiset_1(anytable)
+drop cascades to function multiset_2(anytable)
+drop cascades to function multiset_3(anytable)
+drop cascades to function multiset_4(anytable)
+drop cascades to function multiset_5(anytable)
+drop cascades to function multiset_6(anytable)
+drop cascades to function multi_args(anytable,integer)
+drop cascades to function sessionize_describe(internal)
+drop cascades to function sessionize_plain(anytable,interval)
+drop cascades to function sessionize_static(anytable,interval)
+drop cascades to function sessionize_dynamic(anytable,interval)
+drop cascades to function project_describe(internal)
+drop cascades to function project(anytable,integer)
+drop cascades to function ud_describe(internal)
+drop cascades to function ud_project(anytable)
+drop cascades to function noop_project(anytable)
 SET search_path TO public;

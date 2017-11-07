@@ -4888,9 +4888,6 @@
     <title>gp_resgroup_memory_policy</title>
     <body>
       <note>The <codeph>gp_resgroup_memory_policy</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
-      <note type="warning">Resource groups are an experimental feature and
-        are not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note>
       <p>Used by a resource group to manage memory allocation to query operators.</p>
       <p>When set to <codeph>auto</codeph>, Greenplum Database uses resource group memory limits to distribute memory across query operators, allocating a fixed size of memory to non-memory-intensive operators and the rest to memory-intensive operators.</p>
       <p>When you specify <codeph>eager_free</codeph>, Greenplum Database distributes memory among operators more optimally by re-allocating memory released by operators that have completed their processing to operators in a later query stage.</p>
@@ -4921,9 +4918,6 @@
     <title>gp_resource_group_cpu_limit</title>
     <body>
       <note>The <codeph>gp_resource_group_cpu_limit</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use
-        in a production environment. Experimental features are subject to change without notice in
-        future releases.</note>
       <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
         each Greenplum Database segment node.</p>
       <table id="gp_resource_group_cpu_limit_table">
@@ -4953,9 +4947,6 @@
     <title>gp_resource_group_memory_limit</title>
     <body>
       <note>The <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use
-        in a production environment. Experimental features are subject to change without notice in
-        future releases.</note>
       <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
         on each Greenplum Database segment node.</p>
       <table id="gp_resource_group_memory_limit_table">
@@ -4973,7 +4964,7 @@
           <tbody>
             <row>
               <entry colname="col1">0.1 - 1.0</entry>
-              <entry colname="col2">0.9</entry>
+              <entry colname="col2">0.7</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
@@ -4984,9 +4975,6 @@
   <topic id="gp_resource_manager">
     <title>gp_resource_manager</title>
     <body>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use
-        in a production environment. Experimental features are subject to change without notice in
-        future releases.</note>
       <p>Identifies the resource management scheme currently enabled in the Greenplum Database
         cluster. The default scheme is to use resource queues.</p>
       <table id="gp_resource_manager_table">
@@ -7270,9 +7258,6 @@
     <title>max_resource_groups</title>
     <body>
       <note>The <codeph>max_resource_groups</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use
-        in a production environment. Experimental features are subject to change without notice in
-        future releases.</note>
       <p>Sets the maximum number of resource groups that you can create in a Greenplum Database
         system. Resource groups are defined system-wide.</p>
       <table id="max_resource_queues_table">
@@ -7403,9 +7388,6 @@
     <title>memory_spill_ratio</title>
     <body>
       <note>The <codeph>memory_spill_ratio</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
-      <note type="warning">Resource groups are an experimental feature and are not intended for use
-        in a production environment. Experimental features are subject to change without notice in
-        future releases.</note>
       <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When a
         transaction reaches this threshold, it spills to disk.</p>
       <p>The default <codeph>memory_spill_ratio</codeph> is the value defined for the resource group

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_phj_g5j_tbb">
+  <title>gprestore</title>
+  <body>
+    <p>Restore a Greenplum Database backup that was created using the <codeph>gpbackup</codeph>
+      utility. By default <codeph>gprestore</codeph> uses backed up metadata files and DDL files
+      located in the Greenplum Database master host data directory, with table data stored locally
+      on segment hosts in CSV data files.</p>
+    <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
+      are not intended for use in a production environment. Experimental features are subject to
+      change without notice in future releases.</note>
+    <section>
+      <title>Synopsis</title>
+      <codeblock><b>gprestore -timestamp</b> <varname>YYYYMMDDHHMMSS</varname>
+   [<b>-backupdir</b> <varname>directory</varname>]
+   [<b>-createdb</b>]
+   [<b>-debug</b>]
+   [<b>-globals</b>]
+   [<b>-jobs</b> <varname>int</varname>]
+   [<b>-quiet</b>]
+   [<b>-redirect</b> <varname>database_name</varname>]
+   [<b>-verbose</b>]
+   [<b>-version</b>]
+   [<b>-with-stats</b>]</codeblock>
+    </section>
+    <section>
+      <title>Description</title>
+      <p>To use <codeph>gprestore</codeph> to restore from a backup set, you must include the
+          <codeph>-timestamp</codeph> option to specify the exact timestamp value
+          (<codeph>YYYYMMDDHHMMSS</codeph>) of the backup set to restore. If you specified a custom
+          <codeph>-backupdir</codeph> to consolidate the backup files, include the same
+          <codeph>-backupdir</codeph> option with <codeph>gprestore</codeph> to locate the backup
+        files.</p>
+      <p>Include the <codeph>-createdb</codeph> option if the database does not exist in the
+        cluster. You can optionally restore a backup set to a different database by using the
+          <codeph>-redirect</codeph> option.</p>
+      <p>Database objects to be restored must not exist in the target database. If the database
+        itself is not available in Greenplum Database, include the <codeph>-createdb</codeph> option
+        to create it with <codeph>gprestore</codeph>.</p>
+      <p>Greenplum Database system objects are automatically included in a <codeph>gpbackup</codeph>
+        backup set, but these objects are only restored if you include the <codeph>-globals</codeph>
+        option to <codeph>gprestore</codeph>. Similarly, if you backed up query plan statistics
+        using the <codeph>-with-stats</codeph> option, you can restore those statistics by providing
+          <codeph>-with-stats</codeph> to <codeph>gprestore</codeph>. By default, only database
+        objects in the backup set are restored.</p>
+      <p>Performance of restore operations can be improved by creating multiple parallel connections
+        to restore table data and metadata. By default <codeph>gprestore</codeph> uses 2 parallel
+        connections, but you can increase this number with the the <codeph>-jobs</codeph> option for
+        large restore operations.</p>
+      <p><codeph>gprestore</codeph> does not currently support filtering the database objects that
+        are restored from a backup set. </p>
+    </section>
+    <section>
+      <title>Options</title>
+      <parml>
+        <plentry>
+          <pt><b>-timestamp</b>
+            <varname>YYYYMMDDHHMMSS</varname></pt>
+          <pd>Required. Specifies the timestamp of the <codeph>gpbackup</codeph> backup set to
+            restore. By default <codeph>gprestore</codeph> tries to locate metadata files for the
+            timestamp on the Greenplum Database master host in the
+              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            directory, and CSV data files in the
+              <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory of each
+            segment host.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-backupdir</b>
+            <varname>directory</varname></pt>
+          <pd>Optional. Sources all backup files (metadata files and data files) from the specified
+            directory. You must specify <varname>directory</varname> as an absolute path (not
+            relative). If you do not supply this option, <codeph>gprestore</codeph> tries to locate
+            metadata files for the timestamp on the Greenplum Database master host in the
+              <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath>
+            directory. CSV data files must be available on each segment in the
+              <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. Include
+            this option when you specify a custom backup directory with
+            <codeph>gpbackup</codeph>.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-createdb</b></pt>
+          <pd>Optional. Creates the database before restoring the database object metadata.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-debug</b></pt>
+          <pd>Optional. Displays verbose debug messages during operation.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-globals</b></pt>
+          <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
+            database objects. See <xref
+              href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-jobs</b>
+            <varname>int</varname></pt>
+          <pd>Optional. Specifies the number of parallel connections to use when restoring table
+            data and post-data metadata. By default, <codeph>gprestore</codeph> uses 2 parallel
+            connections. Increasing this number can improve the speed of restoring data, especially
+            data data uses numerous indexes.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-quiet</b></pt>
+          <pd>Optional. Suppress all non-warning, non-error log messages.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-redirect</b>
+            <varname>database_name</varname></pt>
+          <pd>Optional. Restore to the specified <varname>database_name</varname> instead of to the
+            database that was backed up.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-verbose</b></pt>
+          <pd>Optional. Print verbose log messages.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-version</b></pt>
+          <pd>Optional. Print the version number and exit.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-with-stats</b></pt>
+          <pd>Optional. Restore query plan statistics from the backup set.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section>
+      <title>Examples</title>
+      <p>Create the demo database and restore all schemas and tables in the backup set for the
+        indicated
+        timestamp:<codeblock>$ dropdb demo;
+$ gprestore -timestamp 20171103152558 -createdb</codeblock></p>
+      <p>Restore the backup set to the "demos" database instead of the "demo" database that was
+        backed
+        up:<codeblock>$ createdb demo2;
+$ gprestore -timestamp 20171103152558 -redirect demo2</codeblock></p>
+      <p>Restore global Greenplum Database metadata and query plan statistics in addition to the
+        database
+        objects:<codeblock>$ gprestore -timestamp 20171103152558 -createdb -globals -with-stats</codeblock></p>
+      <p>Restore, using backup files that were created in the
+          <filepath>/home/gpadmin/backup</filepath> directory, creating 8 parallel
+        connections:<codeblock>$ gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb -jobs 8</codeblock></p>
+    </section>
+    <section id="section9">
+      <title>See Also</title>
+      <p>
+        <codeph>
+          <xref href="./gpbackup.xml" type="topic" format="dita"/>
+        </codeph>
+      </p>
+    </section>
+  </body>
+</topic>

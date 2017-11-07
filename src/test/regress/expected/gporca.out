@@ -9523,60 +9523,12 @@ where het_bm.i between 2 and 5;
 (1 row)
 
 drop schema bm cascade;
-NOTICE:  drop cascades to table bm.outer_tab
-NOTICE:  drop cascades to default for table bm.outer_tab column id
-NOTICE:  drop cascades to table bm.het_bm_1_prt_part5
-NOTICE:  drop cascades to constraint het_bm_1_prt_part5_check on table bm.het_bm_1_prt_part5
-NOTICE:  drop cascades to table bm.het_bm_1_prt_part4
-NOTICE:  drop cascades to constraint het_bm_1_prt_part4_check on table bm.het_bm_1_prt_part4
-NOTICE:  drop cascades to table bm.het_bm_1_prt_part3
-NOTICE:  drop cascades to constraint het_bm_1_prt_part3_check on table bm.het_bm_1_prt_part3
-NOTICE:  drop cascades to append only table bm.het_bm_1_prt_part2
-NOTICE:  drop cascades to constraint het_bm_1_prt_part2_check on append only table bm.het_bm_1_prt_part2
-NOTICE:  drop cascades to table bm.het_bm_1_prt_part1
-NOTICE:  drop cascades to constraint het_bm_1_prt_part1_check on table bm.het_bm_1_prt_part1
-NOTICE:  drop cascades to append only columnar table bm.het_bm_1_prt_part0
-NOTICE:  drop cascades to constraint het_bm_1_prt_part0_check on append only columnar table bm.het_bm_1_prt_part0
-NOTICE:  drop cascades to table bm.het_bm
-NOTICE:  drop cascades to table bm.hom_bm_aoco_1_prt_part5
-NOTICE:  drop cascades to constraint hom_bm_aoco_1_prt_part5_check on table bm.hom_bm_aoco_1_prt_part5
-NOTICE:  drop cascades to append only columnar table bm.hom_bm_aoco_1_prt_part4
-NOTICE:  drop cascades to constraint hom_bm_aoco_1_prt_part4_check on append only columnar table bm.hom_bm_aoco_1_prt_part4
-NOTICE:  drop cascades to append only columnar table bm.hom_bm_aoco_1_prt_part3
-NOTICE:  drop cascades to constraint hom_bm_aoco_1_prt_part3_check on append only columnar table bm.hom_bm_aoco_1_prt_part3
-NOTICE:  drop cascades to append only columnar table bm.hom_bm_aoco_1_prt_part2
-NOTICE:  drop cascades to constraint hom_bm_aoco_1_prt_part2_check on append only columnar table bm.hom_bm_aoco_1_prt_part2
-NOTICE:  drop cascades to append only columnar table bm.hom_bm_aoco_1_prt_part1
-NOTICE:  drop cascades to constraint hom_bm_aoco_1_prt_part1_check on append only columnar table bm.hom_bm_aoco_1_prt_part1
-NOTICE:  drop cascades to append only columnar table bm.hom_bm_aoco_1_prt_part0
-NOTICE:  drop cascades to constraint hom_bm_aoco_1_prt_part0_check on append only columnar table bm.hom_bm_aoco_1_prt_part0
-NOTICE:  drop cascades to append only columnar table bm.hom_bm_aoco
-NOTICE:  drop cascades to table bm.hom_bm_ao_1_prt_part5
-NOTICE:  drop cascades to constraint hom_bm_ao_1_prt_part5_check on table bm.hom_bm_ao_1_prt_part5
-NOTICE:  drop cascades to append only table bm.hom_bm_ao_1_prt_part4
-NOTICE:  drop cascades to constraint hom_bm_ao_1_prt_part4_check on append only table bm.hom_bm_ao_1_prt_part4
-NOTICE:  drop cascades to append only table bm.hom_bm_ao_1_prt_part3
-NOTICE:  drop cascades to constraint hom_bm_ao_1_prt_part3_check on append only table bm.hom_bm_ao_1_prt_part3
-NOTICE:  drop cascades to append only table bm.hom_bm_ao_1_prt_part2
-NOTICE:  drop cascades to constraint hom_bm_ao_1_prt_part2_check on append only table bm.hom_bm_ao_1_prt_part2
-NOTICE:  drop cascades to append only table bm.hom_bm_ao_1_prt_part1
-NOTICE:  drop cascades to constraint hom_bm_ao_1_prt_part1_check on append only table bm.hom_bm_ao_1_prt_part1
-NOTICE:  drop cascades to append only table bm.hom_bm_ao_1_prt_part0
-NOTICE:  drop cascades to constraint hom_bm_ao_1_prt_part0_check on append only table bm.hom_bm_ao_1_prt_part0
-NOTICE:  drop cascades to append only table bm.hom_bm_ao
-NOTICE:  drop cascades to table bm.hom_bm_heap_1_prt_part5
-NOTICE:  drop cascades to constraint hom_bm_heap_1_prt_part5_check on table bm.hom_bm_heap_1_prt_part5
-NOTICE:  drop cascades to table bm.hom_bm_heap_1_prt_part4
-NOTICE:  drop cascades to constraint hom_bm_heap_1_prt_part4_check on table bm.hom_bm_heap_1_prt_part4
-NOTICE:  drop cascades to table bm.hom_bm_heap_1_prt_part3
-NOTICE:  drop cascades to constraint hom_bm_heap_1_prt_part3_check on table bm.hom_bm_heap_1_prt_part3
-NOTICE:  drop cascades to table bm.hom_bm_heap_1_prt_part2
-NOTICE:  drop cascades to constraint hom_bm_heap_1_prt_part2_check on table bm.hom_bm_heap_1_prt_part2
-NOTICE:  drop cascades to table bm.hom_bm_heap_1_prt_part1
-NOTICE:  drop cascades to constraint hom_bm_heap_1_prt_part1_check on table bm.hom_bm_heap_1_prt_part1
-NOTICE:  drop cascades to table bm.hom_bm_heap_1_prt_part0
-NOTICE:  drop cascades to constraint hom_bm_heap_1_prt_part0_check on table bm.hom_bm_heap_1_prt_part0
-NOTICE:  drop cascades to table bm.hom_bm_heap
+NOTICE:  drop cascades to 5 other objects
+DETAIL:  drop cascades to table bm.hom_bm_heap
+drop cascades to append only table bm.hom_bm_ao
+drop cascades to append only columnar table bm.hom_bm_aoco
+drop cascades to table bm.het_bm
+drop cascades to table bm.outer_tab
 reset optimizer_enable_hashjoin;
 reset optimizer_enable_bitmapscan;
 -- End of BitmapTableScan & BitmapIndexScan tests
@@ -10152,199 +10104,49 @@ select * from unnest((select string_to_array(name, ',') from bar)) as a;
 
 -- clean up
 drop schema orca cascade;
-NOTICE:  drop cascades to table orca.index_test
-NOTICE:  drop cascades to table orca.t3
-NOTICE:  drop cascades to table orca.bm_dyn_test_onepart_1_prt_part5
-NOTICE:  drop cascades to constraint bm_dyn_test_onepart_1_prt_part5_check on table orca.bm_dyn_test_onepart_1_prt_part5
-NOTICE:  drop cascades to table orca.bm_dyn_test_onepart_1_prt_part4
-NOTICE:  drop cascades to constraint bm_dyn_test_onepart_1_prt_part4_check on table orca.bm_dyn_test_onepart_1_prt_part4
-NOTICE:  drop cascades to table orca.bm_dyn_test_onepart_1_prt_part3
-NOTICE:  drop cascades to constraint bm_dyn_test_onepart_1_prt_part3_check on table orca.bm_dyn_test_onepart_1_prt_part3
-NOTICE:  drop cascades to append only table orca.bm_dyn_test_onepart_1_prt_part2
-NOTICE:  drop cascades to constraint bm_dyn_test_onepart_1_prt_part2_check on append only table orca.bm_dyn_test_onepart_1_prt_part2
-NOTICE:  drop cascades to table orca.bm_dyn_test_onepart_1_prt_part1
-NOTICE:  drop cascades to constraint bm_dyn_test_onepart_1_prt_part1_check on table orca.bm_dyn_test_onepart_1_prt_part1
-NOTICE:  drop cascades to append only columnar table orca.bm_dyn_test_onepart_1_prt_part0
-NOTICE:  drop cascades to constraint bm_dyn_test_onepart_1_prt_part0_check on append only columnar table orca.bm_dyn_test_onepart_1_prt_part0
-NOTICE:  drop cascades to table orca.bm_dyn_test_onepart
-NOTICE:  drop cascades to table orca.bm_dyn_test_1_prt_part5
-NOTICE:  drop cascades to constraint bm_dyn_test_1_prt_part5_check on table orca.bm_dyn_test_1_prt_part5
-NOTICE:  drop cascades to table orca.bm_dyn_test_1_prt_part4
-NOTICE:  drop cascades to constraint bm_dyn_test_1_prt_part4_check on table orca.bm_dyn_test_1_prt_part4
-NOTICE:  drop cascades to table orca.bm_dyn_test_1_prt_part3
-NOTICE:  drop cascades to constraint bm_dyn_test_1_prt_part3_check on table orca.bm_dyn_test_1_prt_part3
-NOTICE:  drop cascades to append only table orca.bm_dyn_test_1_prt_part2
-NOTICE:  drop cascades to constraint bm_dyn_test_1_prt_part2_check on append only table orca.bm_dyn_test_1_prt_part2
-NOTICE:  drop cascades to table orca.bm_dyn_test_1_prt_part1
-NOTICE:  drop cascades to constraint bm_dyn_test_1_prt_part1_check on table orca.bm_dyn_test_1_prt_part1
-NOTICE:  drop cascades to append only columnar table orca.bm_dyn_test_1_prt_part0
-NOTICE:  drop cascades to constraint bm_dyn_test_1_prt_part0_check on append only columnar table orca.bm_dyn_test_1_prt_part0
-NOTICE:  drop cascades to table orca.bm_dyn_test
-NOTICE:  drop cascades to table orca.bm_test
-NOTICE:  drop cascades to table orca.arrtest
-NOTICE:  drop cascades to append only table orca.tmp_verd_s_pp_provtabs_agt_0015_extract1
-NOTICE:  drop cascades to table orca.p1_1_prt_pp2
-NOTICE:  drop cascades to constraint p1_1_prt_pp2_check on table orca.p1_1_prt_pp2
-NOTICE:  drop cascades to table orca.p1_1_prt_pp1
-NOTICE:  drop cascades to constraint p1_1_prt_pp1_check on table orca.p1_1_prt_pp1
-NOTICE:  drop cascades to table orca.p1
-NOTICE:  drop cascades to table orca.tab2
-NOTICE:  drop cascades to table orca.tab1
-NOTICE:  drop cascades to table orca.twf2
-NOTICE:  drop cascades to table orca.twf1
-NOTICE:  drop cascades to table orca.uu
-NOTICE:  drop cascades to table orca.ut
-NOTICE:  drop cascades to table orca.us
-NOTICE:  drop cascades to table orca.ur
-NOTICE:  drop cascades to table orca.toanalyze
-NOTICE:  drop cascades to table orca.prod9
-NOTICE:  drop cascades to append only table orca.t77
-NOTICE:  drop cascades to table orca.fooh2
-NOTICE:  drop cascades to table orca.fooh1
-NOTICE:  drop cascades to table orca.csq_r
-NOTICE:  drop cascades to function orca.csq_f(integer)
-NOTICE:  drop cascades to table orca.t_ceeval_ints_1_prt_part103
-NOTICE:  drop cascades to constraint t_ceeval_ints_1_prt_part103_check on table orca.t_ceeval_ints_1_prt_part103
-NOTICE:  drop cascades to table orca.t_ceeval_ints_1_prt_part101
-NOTICE:  drop cascades to constraint t_ceeval_ints_1_prt_part101_check on table orca.t_ceeval_ints_1_prt_part101
-NOTICE:  drop cascades to table orca.t_ceeval_ints_1_prt_part100
-NOTICE:  drop cascades to constraint t_ceeval_ints_1_prt_part100_check on table orca.t_ceeval_ints_1_prt_part100
-NOTICE:  drop cascades to table orca.t_ceeval_ints
-NOTICE:  drop cascades to table orca.t_employee_1_prt_part2
-NOTICE:  drop cascades to constraint t_employee_1_prt_part2_check on table orca.t_employee_1_prt_part2
-NOTICE:  drop cascades to table orca.t_employee_1_prt_part1
-NOTICE:  drop cascades to constraint t_employee_1_prt_part1_check on table orca.t_employee_1_prt_part1
-NOTICE:  drop cascades to table orca.t_employee
-NOTICE:  drop cascades to operator class orca.employee_op_class for access method btree
-NOTICE:  drop cascades to operator family orca.employee_op_class for access method btree
-NOTICE:  drop cascades to function orca.emp_equal(orca.employee,orca.employee)
-NOTICE:  drop cascades to operator =(orca.employee,orca.employee)
-NOTICE:  drop cascades to type orca.employee
-NOTICE:  drop cascades to table orca.t_text_1_prt_partugly
-NOTICE:  drop cascades to constraint t_text_1_prt_partugly_check on table orca.t_text_1_prt_partugly
-NOTICE:  drop cascades to table orca.t_text_1_prt_partbad
-NOTICE:  drop cascades to constraint t_text_1_prt_partbad_check on table orca.t_text_1_prt_partbad
-NOTICE:  drop cascades to table orca.t_text_1_prt_partgood
-NOTICE:  drop cascades to constraint t_text_1_prt_partgood_check on table orca.t_text_1_prt_partgood
-NOTICE:  drop cascades to table orca.t_text
-NOTICE:  drop cascades to table orca.t_date_1_prt_part201208
-NOTICE:  drop cascades to constraint t_date_1_prt_part201208_check on table orca.t_date_1_prt_part201208
-NOTICE:  drop cascades to table orca.t_date_1_prt_part201207
-NOTICE:  drop cascades to constraint t_date_1_prt_part201207_check on table orca.t_date_1_prt_part201207
-NOTICE:  drop cascades to table orca.t_date_1_prt_part201206
-NOTICE:  drop cascades to constraint t_date_1_prt_part201206_check on table orca.t_date_1_prt_part201206
-NOTICE:  drop cascades to table orca.t_date_1_prt_part201205
-NOTICE:  drop cascades to constraint t_date_1_prt_part201205_check on table orca.t_date_1_prt_part201205
-NOTICE:  drop cascades to table orca.t_date_1_prt_part201204
-NOTICE:  drop cascades to constraint t_date_1_prt_part201204_check on table orca.t_date_1_prt_part201204
-NOTICE:  drop cascades to table orca.t_date_1_prt_part201203
-NOTICE:  drop cascades to constraint t_date_1_prt_part201203_check on table orca.t_date_1_prt_part201203
-NOTICE:  drop cascades to table orca.t_date
-NOTICE:  drop cascades to table orca.t_1_prt_part201208
-NOTICE:  drop cascades to constraint t_1_prt_part201208_check on table orca.t_1_prt_part201208
-NOTICE:  drop cascades to append only table orca.t_1_prt_part201207
-NOTICE:  drop cascades to constraint t_1_prt_part201207_check on append only table orca.t_1_prt_part201207
-NOTICE:  drop cascades to append only columnar table orca.t_1_prt_part201206
-NOTICE:  drop cascades to constraint t_1_prt_part201206_check on append only columnar table orca.t_1_prt_part201206
-NOTICE:  drop cascades to table orca.t_1_prt_part201205
-NOTICE:  drop cascades to constraint t_1_prt_part201205_check on table orca.t_1_prt_part201205
-NOTICE:  drop cascades to append only table orca.t_1_prt_part201204
-NOTICE:  drop cascades to constraint t_1_prt_part201204_check on append only table orca.t_1_prt_part201204
-NOTICE:  drop cascades to append only columnar table orca.t_1_prt_part201203
-NOTICE:  drop cascades to constraint t_1_prt_part201203_check on append only columnar table orca.t_1_prt_part201203
-NOTICE:  drop cascades to table orca.t
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_2_prt_sp2_4_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_4
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_2_prt_sp2_3_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_3
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_2_prt_sp2_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_2_prt_sp2_1_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp2_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_2_prt_sp1_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp1_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_2_prt_sp1_1_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2_2_prt_sp1_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_2_check on table orca.multilevel_p_1_prt_bb_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_2_prt_sp2_4_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_4
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_2_prt_sp2_3_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_3
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_2_prt_sp2_2_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_2_prt_sp2_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp2_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_2_prt_sp1_2_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp1_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_2_prt_sp1_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1_2_prt_sp1_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_bb_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_bb_1_check on table orca.multilevel_p_1_prt_bb_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_2_prt_sp2_4_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_4
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_2_prt_sp2_3_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_3
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_2_prt_sp2_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_2_prt_sp2_1_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp2_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_2_prt_sp1_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp1_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_2_prt_sp1_1_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2_2_prt_sp1_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_2_check on table orca.multilevel_p_1_prt_aa_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_2_prt_sp2_4_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_4
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_4
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_2_prt_sp2_3_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_3
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_3
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_2_prt_sp2_2_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_2_prt_sp2_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp2_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_2_prt_sp1_2_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp1_2
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp1_2
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_2_prt_sp1_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp1_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1_2_prt_sp1_1
-NOTICE:  drop cascades to table orca.multilevel_p_1_prt_aa_1
-NOTICE:  drop cascades to constraint multilevel_p_1_prt_aa_1_check on table orca.multilevel_p_1_prt_aa_1
-NOTICE:  drop cascades to table orca.multilevel_p
-NOTICE:  drop cascades to table orca.pp_1_prt_pp1
-NOTICE:  drop cascades to constraint pp_1_prt_pp1_check on table orca.pp_1_prt_pp1
-NOTICE:  drop cascades to table orca.pp
-NOTICE:  drop cascades to table orca.onek
-NOTICE:  drop cascades to table orca.rcte
-NOTICE:  drop cascades to table orca.bar
-NOTICE:  drop cascades to table orca.foo
-NOTICE:  drop cascades to table orca.m1
-NOTICE:  drop cascades to table orca.m
-NOTICE:  drop cascades to table orca.s
-NOTICE:  drop cascades to table orca.r
-NOTICE:  drop cascades to table orca.bar2
-NOTICE:  drop cascades to table orca.bar1
+NOTICE:  drop cascades to 44 other objects
+DETAIL:  drop cascades to table orca.bar1
+drop cascades to table orca.bar2
+drop cascades to table orca.r
+drop cascades to table orca.s
+drop cascades to table orca.m
+drop cascades to table orca.m1
+drop cascades to table orca.foo
+drop cascades to table orca.bar
+drop cascades to table orca.rcte
+drop cascades to table orca.onek
+drop cascades to table orca.pp
+drop cascades to table orca.multilevel_p
+drop cascades to table orca.t
+drop cascades to table orca.t_date
+drop cascades to table orca.t_text
+drop cascades to type orca.employee
+drop cascades to function orca.emp_equal(orca.employee,orca.employee)
+drop cascades to operator =(orca.employee,orca.employee)
+drop cascades to operator family orca.employee_op_class for access method btree
+drop cascades to table orca.t_employee
+drop cascades to table orca.t_ceeval_ints
+drop cascades to function orca.csq_f(integer)
+drop cascades to table orca.csq_r
+drop cascades to table orca.fooh1
+drop cascades to table orca.fooh2
+drop cascades to append only table orca.t77
+drop cascades to table orca.prod9
+drop cascades to table orca.toanalyze
+drop cascades to table orca.ur
+drop cascades to table orca.us
+drop cascades to table orca.ut
+drop cascades to table orca.uu
+drop cascades to table orca.twf1
+drop cascades to table orca.twf2
+drop cascades to table orca.tab1
+drop cascades to table orca.tab2
+drop cascades to table orca.p1
+drop cascades to append only table orca.tmp_verd_s_pp_provtabs_agt_0015_extract1
+drop cascades to table orca.arrtest
+drop cascades to table orca.bm_test
+drop cascades to table orca.bm_dyn_test
+drop cascades to table orca.bm_dyn_test_onepart
+drop cascades to table orca.t3
+drop cascades to table orca.index_test
 reset optimizer_segments;

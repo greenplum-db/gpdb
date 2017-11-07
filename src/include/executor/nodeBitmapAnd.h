@@ -22,9 +22,4 @@ extern Node *MultiExecBitmapAnd(BitmapAndState *node);
 extern void ExecEndBitmapAnd(BitmapAndState *node);
 extern void ExecReScanBitmapAnd(BitmapAndState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t *GpmonPktFromBitmapAndState(BitmapAndState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif   /* NODEBITMAPAND_H */

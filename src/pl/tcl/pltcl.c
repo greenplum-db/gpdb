@@ -2,7 +2,7 @@
  * pltcl.c		- PostgreSQL support for Tcl as
  *				  procedural language (PL)
  *
- *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.119 2008/03/28 00:21:56 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/pl/tcl/pltcl.c,v 1.121 2008/06/17 00:52:43 tgl Exp $
  *
  **********************************************************************/
 
@@ -20,6 +20,7 @@
 
 #include "access/heapam.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_language.h"
 #include "catalog/pg_proc.h"
 #include "commands/trigger.h"
 #include "executor/spi.h"
@@ -278,7 +279,7 @@ pltcl_WaitForEvent(Tcl_Time *timePtr)
 {
 	return 0;
 }
-#endif   /* HAVE_TCL_VERSION(8,2) */
+#endif   /* HAVE_TCL_VERSION(8,4) */
 
 
 /*

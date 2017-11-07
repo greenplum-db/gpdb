@@ -28,7 +28,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_opclass.h,v 1.80 2008/03/27 03:57:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_opclass.h,v 1.82 2008/06/24 17:58:27 tgl Exp $
  *
  * NOTES
  *	  the genbki.sh script reads this file and generates .bki
@@ -159,7 +159,6 @@ DATA(insert (	405		timestamp_ops		PGNSP PGUID 2040 1114 t 0 ));
 DATA(insert (	403		text_pattern_ops	PGNSP PGUID 2095   25 f 0 ));
 DATA(insert (	403		varchar_pattern_ops PGNSP PGUID 2095   25 f 0 ));
 DATA(insert (	403		bpchar_pattern_ops	PGNSP PGUID 2097 1042 f 0 ));
-DATA(insert (	403		name_pattern_ops	PGNSP PGUID 2098   19 f 0 ));
 DATA(insert (	403		money_ops			PGNSP PGUID 2099  790 t 0 ));
 DATA(insert (	405		bool_ops			PGNSP PGUID 2222   16 t 0 ));
 DATA(insert (	405		bytea_ops			PGNSP PGUID 2223   17 t 0 ));
@@ -172,7 +171,6 @@ DATA(insert (	405		reltime_ops			PGNSP PGUID 2228  703 t 0 ));
 DATA(insert (	405		text_pattern_ops	PGNSP PGUID 2229   25 f 0 ));
 DATA(insert (	405		varchar_pattern_ops PGNSP PGUID 2229   25 f 0 ));
 DATA(insert (	405		bpchar_pattern_ops	PGNSP PGUID 2231 1042 f 0 ));
-DATA(insert (	405		name_pattern_ops	PGNSP PGUID 2232   19 f 0 ));
 DATA(insert (	403		reltime_ops			PGNSP PGUID 2233  703 t 0 ));
 DATA(insert (	403		tinterval_ops		PGNSP PGUID 2234  704 t 0 ));
 DATA(insert (	405		aclitem_ops			PGNSP PGUID 2235 1033 t 0 ));
@@ -256,7 +254,6 @@ DATA(insert (	3013	timestamp_ops		PGNSP PGUID 3041 1114 t 0 ));
 DATA(insert (	3013	text_pattern_ops	PGNSP PGUID 3042  25 f 0 ));
 DATA(insert (	3013	varchar_pattern_ops PGNSP PGUID 3042  25 f 0 ));
 DATA(insert (	3013	bpchar_pattern_ops	PGNSP PGUID 3044 1042 f 0 ));
-DATA(insert (	3013	name_pattern_ops	PGNSP PGUID 3045  19 f 0 ));
 DATA(insert (	3013	money_ops			PGNSP PGUID 3046 790 t 0 ));
 DATA(insert (	3013	reltime_ops			PGNSP PGUID 3047 703 t 0 ));
 DATA(insert (	3013	tinterval_ops		PGNSP PGUID 3048 704 t 0 ));

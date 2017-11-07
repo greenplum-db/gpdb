@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.358 2009/04/05 19:59:40 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.328 2008/07/17 16:02:12 tgl Exp $
  *
  * NOTES
  *	  Every node type that can appear in stored rules' parsetrees *must*
@@ -585,8 +585,6 @@ outIndexScanFields(StringInfo str, IndexScan *node)
 	WRITE_OID_FIELD(indexid);
 	WRITE_NODE_FIELD(indexqual);
 	WRITE_NODE_FIELD(indexqualorig);
-	WRITE_NODE_FIELD(indexstrategy);
-	WRITE_NODE_FIELD(indexsubtype);
 	WRITE_ENUM_FIELD(indexorderdir, ScanDirection);
 
 	if (isDynamicScan(&node->scan))
@@ -621,7 +619,21 @@ _outBitmapIndexScan(StringInfo str, BitmapIndexScan *node)
 {
 	WRITE_NODE_TYPE("BITMAPINDEXSCAN");
 
-	outIndexScanFields(str, (IndexScan *)node);
+	_outScanInfo(str, (Scan *) node);
+
+	WRITE_OID_FIELD(indexid);
+	WRITE_NODE_FIELD(indexqual);
+	WRITE_NODE_FIELD(indexqualorig);
+
+	if (isDynamicScan(&node->scan))
+	{
+		Assert(node->logicalIndexInfo);
+		outLogicalIndexInfo(str, node->logicalIndexInfo);
+	}
+	else
+	{
+		Assert(node->logicalIndexInfo == NULL);
+	}
 }
 
 static void
@@ -2959,7 +2971,7 @@ _outCreateOpClassItem(StringInfo str, CreateOpClassItem *node)
 	WRITE_NODE_FIELD(name);
 	WRITE_NODE_FIELD(args);
 	WRITE_INT_FIELD(number);
-	WRITE_BOOL_FIELD(recheck);
+	WRITE_NODE_FIELD(class_args);
 	WRITE_NODE_FIELD(storedtype);
 }
 
@@ -3214,7 +3226,7 @@ _outFuncCall(StringInfo str, FuncCall *node)
 	WRITE_BOOL_FIELD(agg_distinct);
 	WRITE_BOOL_FIELD(func_variadic);
 	WRITE_NODE_FIELD(over);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -3349,7 +3361,7 @@ _outTypeName(StringInfo str, TypeName *node)
 	WRITE_NODE_FIELD(typmods);
 	WRITE_INT_FIELD(typemod);
 	WRITE_NODE_FIELD(arrayBounds);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -3762,7 +3774,7 @@ _outAExpr(StringInfo str, A_Expr *node)
 
 	WRITE_NODE_FIELD(lexpr);
 	WRITE_NODE_FIELD(rexpr);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -3817,7 +3829,7 @@ _outColumnRef(StringInfo str, ColumnRef *node)
 	WRITE_NODE_TYPE("COLUMNREF");
 
 	WRITE_NODE_FIELD(fields);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -3838,7 +3850,6 @@ _outAConst(StringInfo str, A_Const *node)
 	appendStringInfoChar(str, ' ');
 
 	_outValue(str, &(node->val));
-	WRITE_NODE_FIELD_AS(typeName, typename);
     /*
      * CDB: For now we don't serialize the 'location' field, for compatibility
      * so stored constants can be read by pre-3.2 releases.  Anyway it's only
@@ -3883,7 +3894,7 @@ _outResTarget(StringInfo str, ResTarget *node)
 	WRITE_STRING_FIELD(name);
 	WRITE_NODE_FIELD(indirection);
 	WRITE_NODE_FIELD(val);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -3891,8 +3902,8 @@ _outSortBy(StringInfo str, SortBy *node)
 {
 	WRITE_NODE_TYPE("SORTBY");
 
-	WRITE_INT_FIELD(sortby_dir);
-	WRITE_INT_FIELD(sortby_nulls);
+	WRITE_ENUM_FIELD(sortby_dir, SortByDir);
+	WRITE_ENUM_FIELD(sortby_nulls, SortByNulls);
 	WRITE_NODE_FIELD(useOp);
 	WRITE_NODE_FIELD(node);
 	WRITE_LOCATION_FIELD(location);
@@ -4151,6 +4162,15 @@ _outFileSpaceEntry(StringInfo str, FileSpaceEntry *node)
 }
 
 static void
+_outDropFileSpaceStmt(StringInfo str, DropFileSpaceStmt *node)
+{
+	WRITE_NODE_TYPE("DROPFILESPACESTMT");
+
+	WRITE_STRING_FIELD(filespacename);
+	WRITE_BOOL_FIELD(missing_ok);
+}
+
+static void
 _outCreateTableSpaceStmt(StringInfo str, CreateTableSpaceStmt *node)
 {
 	WRITE_NODE_TYPE("CREATETABLESPACESTMT");
@@ -4158,6 +4178,15 @@ _outCreateTableSpaceStmt(StringInfo str, CreateTableSpaceStmt *node)
 	WRITE_STRING_FIELD(tablespacename);
 	WRITE_STRING_FIELD(owner);
 	WRITE_STRING_FIELD(filespacename);
+}
+
+static void
+_outDropTableSpaceStmt(StringInfo str, DropTableSpaceStmt *node)
+{
+	WRITE_NODE_TYPE("DROPTABLESPACESTMT");
+
+	WRITE_STRING_FIELD(tablespacename);
+	WRITE_BOOL_FIELD(missing_ok);
 }
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -5160,8 +5189,16 @@ _outNode(StringInfo str, void *obj)
 				_outFileSpaceEntry(str, obj);
 				break;
 
+			case T_DropFileSpaceStmt:
+				_outDropFileSpaceStmt(str, obj);
+				break;
+
 			case T_CreateTableSpaceStmt:
 				_outCreateTableSpaceStmt(str, obj);
+				break;
+
+			case T_DropTableSpaceStmt:
+				_outDropTableSpaceStmt(str, obj);
 				break;
 
 			case T_CreateQueueStmt:

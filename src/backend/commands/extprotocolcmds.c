@@ -110,64 +110,71 @@ DefineExtProtocol(List *name, List *parameters, bool trusted)
 
 
 /*
- * RemoveExtProtocol
- *		Deletes an external protocol.
+ * RemoveExtProtocols
+ *		Implements DROP EXTERNAL PROTOCOL
  */
 void
-RemoveExtProtocol(List *names, DropBehavior behavior, bool missing_ok)
+RemoveExtProtocols(DropStmt *drop)
 {
-	char	   *protocolName;
-	Oid			protocolOid = InvalidOid;
-	ObjectAddress object;
-
-	/* 
-	 * General DROP (object) syntax allows fully qualified names, but
-	 * protocols are global objects that do not live in schemas, so
-	 * it is a syntax error if a fully qualified name was given.
-	 */
-	if (list_length(names) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("protocol name may not be qualified")));
-	protocolName = strVal(linitial(names));
-
-	/* find protocol Oid. error inline if doesn't exist */
-	protocolOid = LookupExtProtocolOid(protocolName, missing_ok);
-
-	if (!OidIsValid(protocolOid))
-	{
-		if (!missing_ok)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("protocol \"%s\" does not exist",
-							protocolName)));
-		}
-		else
-		{
-			if (Gp_role != GP_ROLE_EXECUTE)
-				ereport(NOTICE,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("protocol \"%s\" does not exist, skipping",
-								protocolName)));
-		}
-
-		return;
-	}
-
-	/* Permission check: must own protocol */
-	if (!pg_extprotocol_ownercheck(protocolOid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EXTPROTOCOL, protocolName);
+	ObjectAddresses *objects;
+	ListCell		*cell;
 
 	/*
-	 * Do the deletion
+	 * First we identify all the objects, then we delete them in a single
+	 * performMultipleDeletions() call.  This is to avoid unwanted
+	 * DROP RESTRICT errors if one of the objects depends on another.
 	 */
-	object.classId = ExtprotocolRelationId;
-	object.objectId = protocolOid;
-	object.objectSubId = 0;
+	objects = new_object_addresses();
 
-	performDeletion(&object, behavior);
-	
+	foreach(cell, drop->objects)
+	{
+		List		*names = (List *) lfirst(cell);
+		char	   *protocolName;
+		Oid			protocolOid;
+		ObjectAddress object;
+
+		if (list_length(names) != 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("protocol name may not be qualified")));
+		protocolName = strVal(linitial(names));
+
+		protocolOid = LookupExtProtocolOid(protocolName, drop->missing_ok);
+
+		if (!OidIsValid(protocolOid))
+		{
+			if (!drop->missing_ok)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("protocol \"%s\" does not exist",
+								protocolName)));
+			}
+			else
+			{
+				if (Gp_role != GP_ROLE_EXECUTE)
+					ereport(NOTICE,
+							(errcode(ERRCODE_UNDEFINED_OBJECT),
+							 errmsg("protocol \"%s\" does not exist, skipping",
+									protocolName)));
+			}
+			continue;
+		}
+
+		/* Permission check: must own protocol */
+		if (!pg_extprotocol_ownercheck(protocolOid, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_EXTPROTOCOL, protocolName);
+
+		object.classId = ExtprotocolRelationId;
+		object.objectId = protocolOid;
+		object.objectSubId = 0;
+
+		add_exact_object_address(&object, objects);
+	}
+
+	performMultipleDeletions(objects, drop->behavior);
+
+	free_object_addresses(objects);
 }
 
 /*

@@ -2,12 +2,18 @@ create schema qp_dml_oids;
 set search_path='qp_dml_oids';
 DROP TABLE IF EXISTS dml_ao;
 NOTICE:  table "dml_ao" does not exist, skipping
+-- Create a table with OIDS, with a few rows
+--
+-- GPDB doesn't guarantee that OIDs on a user table are unique across nodes. So to
+-- make sure that the OIDs are unique in this test, all the rows have the same
+-- distribution key.
 CREATE TABLE dml_ao (a int , b int default -1, c text) WITH (appendonly = true, oids = true) DISTRIBUTED BY (a);
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
-INSERT INTO dml_ao VALUES(generate_series(1,2),generate_series(1,2),'r');
-INSERT INTO dml_ao VALUES(NULL,NULL,NULL);
+INSERT INTO dml_ao VALUES(1, 1, 'r');
+INSERT INTO dml_ao VALUES(1, 2, 'r');
+INSERT INTO dml_ao VALUES(1,NULL,NULL);
 --
--- DDL on AO/CO tables with OIDS(Negative Test)
+-- Check that UPDATE doesn't change the OIDs of existing rows.
 --
 DROP TABLE IF EXISTS tempoid;
 NOTICE:  table "tempoid" does not exist, skipping
@@ -16,7 +22,26 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 UPDATE dml_ao SET a = 100;
 ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
-SELECT * FROM ( (SELECT COUNT(*) FROM dml_ao) UNION (SELECT COUNT(*) FROM tempoid, dml_ao WHERE tempoid.oid = dml_ao.oid AND tempoid.gp_segment_id = dml_ao.gp_segment_id))foo;
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+ count 
+-------
+     3
+(1 row)
+
+-- Repeat the test a few times, just to make sure that at least one of these
+-- UPDATEs moved the tuples across segments. To make sure that that doesn't
+-- change the OIDs either.
+UPDATE dml_ao SET a = 101;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
+ count 
+-------
+     3
+(1 row)
+
+UPDATE dml_ao SET a = 102;
+ERROR:  Cannot parallelize an UPDATE statement that updates the distribution columns
+select count(distinct oid) from (select oid from tempoid UNION ALL select oid from dml_ao) as x;
  count 
 -------
      3
@@ -284,5 +309,48 @@ SELECT SUM(a) FROM dml_heap_r;
  sum 
 -----
    3
+(1 row)
+
+--
+-- Check that a row gets a new OID, even when inserting an otherwise identical row
+-- to it (see commit 3d02cae310).
+--
+-- Note: GPDB doesn't guarantee OIDS to be unique across segments! So if you change
+-- this to DISTRIBUTED RANDOMLY, it can fail.
+--
+create table dml_heap_with_oids(id int4) with oids distributed by (id);
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+insert into dml_heap_with_oids values (1);
+insert into dml_heap_with_oids select * from dml_heap_with_oids;
+insert into dml_heap_with_oids select * from dml_heap_with_oids;
+select count(*), count(distinct oid) from dml_heap_with_oids;
+ count | count 
+-------+-------
+     4 |     4
+(1 row)
+
+--
+-- Check that a tuple gets an OID, even if it's toasted (there used to
+-- be a bug, where toasting a tuple cleared its just-assigned OID)
+--
+INSERT INTO dml_ao (a, b, c) VALUES (10, 1, repeat('x', 50000));
+INSERT INTO dml_ao (a, b, c) VALUES (10, 2, repeat('x', 50000));
+SELECT COUNT(distinct oid) FROM dml_ao where a = 10;
+ count 
+-------
+     2
+(1 row)
+
+--
+-- Check that new OIDs are generated even if the tuple being inserted came from
+-- the same relation and segment.
+--
+INSERT INTO dml_ao VALUES (11, 1, 'foo');
+INSERT INTO dml_ao VALUES (11, 2, 'bar');
+INSERT INTO dml_ao SELECT * FROM dml_ao WHERE a = 11 LIMIT 1;
+SELECT COUNT(DISTINCT oid) FROM dml_ao WHERE a = 11; -- all three rows should have different OID
+ count 
+-------
+     3
 (1 row)
 

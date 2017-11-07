@@ -851,6 +851,8 @@ enable_dtrace
 enable_tap_tests
 with_blocksize
 with_segsize
+with_wal_blocksize
+with_wal_segsize
 with_CC
 enable_depend
 enable_cassert
@@ -1530,7 +1532,7 @@ Optional Features:
   --disable-spinlocks     do not use spinlocks
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
-  --enable-pxf            build with pxf
+  --disable-pxf           do not build pxf
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
@@ -1562,8 +1564,10 @@ Optional Packages:
   --with-libraries=DIRS   look for additional libraries in DIRS
   --with-libs=DIRS        alternative spelling of --with-libraries
   --with-pgport=PORTNUM   set default port number [5432]
-  --with-blocksize=BLOCKSIZE  set block size in kB [32]
-  --with-segsize=SEGSIZE  set segment size in GB [1]
+  --with-blocksize=BLOCKSIZE  set table block size in kB [8]
+  --with-segsize=SEGSIZE  set table segment size in GB [1]
+  --with-wal-blocksize=BLOCKSIZE  set WAL block size in kB [8]
+  --with-wal-segsize=SEGSIZE  set WAL segment size in MB [16]
   --with-codegen-prefix="PATH;PATH"  semicolon separated prefix search path for LLVM and Clang
   --with-tcl              build Tcl modules (PL/Tcl)
   --with-tclconfig=DIR    tclConfig.sh is in DIR
@@ -3967,7 +3971,7 @@ _ACEOF
 
 
 #
-# File segment size
+# Relation segment size
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for segment size" >&5
 $as_echo_n "checking for segment size... " >&6; }
@@ -3996,7 +4000,8 @@ fi
 
 
 # this expression is set up to avoid unnecessary integer overflow
-RELSEG_SIZE=`expr '(' 1024 '*' ${segsize} / ${blocksize} ')' '*' 1024`
+# blocksize is already guaranteed to be a factor of 1024
+RELSEG_SIZE=`expr '(' 1024 / ${blocksize} ')' '*' ${segsize} '*' 1024`
 test $? -eq 0 || exit 1
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${segsize}GB" >&5
 $as_echo "${segsize}GB" >&6; }
@@ -4004,6 +4009,102 @@ $as_echo "${segsize}GB" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define RELSEG_SIZE ${RELSEG_SIZE}
+_ACEOF
+
+
+#
+# WAL block size
+#
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for WAL block size" >&5
+$as_echo_n "checking for WAL block size... " >&6; }
+
+pgac_args="$pgac_args with_wal_blocksize"
+
+
+# Check whether --with-wal-blocksize was given.
+if test "${with_wal_blocksize+set}" = set; then :
+  withval=$with_wal_blocksize;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-wal-blocksize option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-wal-blocksize option" "$LINENO" 5
+      ;;
+    *)
+      wal_blocksize=$withval
+      ;;
+  esac
+
+else
+  wal_blocksize=32
+fi
+
+
+case ${wal_blocksize} in
+  1) XLOG_BLCKSZ=1024;;
+  2) XLOG_BLCKSZ=2048;;
+  4) XLOG_BLCKSZ=4096;;
+  8) XLOG_BLCKSZ=8192;;
+ 16) XLOG_BLCKSZ=16384;;
+ 32) XLOG_BLCKSZ=32768;;
+ 64) XLOG_BLCKSZ=65536;;
+  *) as_fn_error $? "Invalid WAL block size. Allowed values are 1,2,4,8,16,32,64." "$LINENO" 5
+esac
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${wal_blocksize}kB" >&5
+$as_echo "${wal_blocksize}kB" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define XLOG_BLCKSZ ${XLOG_BLCKSZ}
+_ACEOF
+
+
+#
+# WAL segment size
+#
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for WAL segment size" >&5
+$as_echo_n "checking for WAL segment size... " >&6; }
+
+pgac_args="$pgac_args with_wal_segsize"
+
+
+# Check whether --with-wal-segsize was given.
+if test "${with_wal_segsize+set}" = set; then :
+  withval=$with_wal_segsize;
+  case $withval in
+    yes)
+      as_fn_error $? "argument required for --with-wal-segsize option" "$LINENO" 5
+      ;;
+    no)
+      as_fn_error $? "argument required for --with-wal-segsize option" "$LINENO" 5
+      ;;
+    *)
+      wal_segsize=$withval
+      ;;
+  esac
+
+else
+  wal_segsize=64
+fi
+
+
+case ${wal_segsize} in
+  1) ;;
+  2) ;;
+  4) ;;
+  8) ;;
+ 16) ;;
+ 32) ;;
+ 64) ;;
+  *) as_fn_error $? "Invalid WAL segment size. Allowed values are 1,2,4,8,16,32,64." "$LINENO" 5
+esac
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${wal_segsize}MB" >&5
+$as_echo "${wal_segsize}MB" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define XLOG_SEG_SIZE (${wal_segsize} * 1024 * 1024)
 _ACEOF
 
 
@@ -8281,8 +8382,6 @@ $as_echo "$as_me: using CPPFLAGS=$CPPFLAGS" >&6;}
 $as_echo "$as_me: using LDFLAGS=$LDFLAGS" >&6;}
 
 
-
-
 # Check whether --with-gnu-ld was given.
 if test "${with_gnu_ld+set}" = set; then :
   withval=$with_gnu_ld; test "$withval" = no || with_gnu_ld=yes
@@ -9191,6 +9290,14 @@ $as_echo "$as_me: WARNING:
 *** Bison version 1.875 or later is required." >&2;}
     BISON=""
   fi
+ # Bison >=3.0 issues warnings about %name-prefix="base_yy", instead
+ # of the now preferred %name-prefix "base_yy", but the latter
+ # doesn't work with Bison 2.3 or less.  So for now we silence the
+ # deprecation warnings.
+ if echo "$pgac_bison_version" | $AWK '{ if ($4 >= 3) exit 0; else exit 1;}'
+ then
+   BISONFLAGS="$BISONFLAGS -Wno-deprecated"
+ fi
 fi
 
 if test -z "$BISON"; then
@@ -16925,6 +17032,30 @@ _ACEOF
 
 
 
+# In GPDB, float4 and float8 are always passed by value. There is
+# GPDB-specific code that assumes that in various places, so it's not
+# configurable.
+float4passbyval=true
+
+$as_echo "#define USE_FLOAT4_BYVAL 1" >>confdefs.h
+
+
+cat >>confdefs.h <<_ACEOF
+#define FLOAT4PASSBYVAL $float4passbyval
+_ACEOF
+
+
+# Note: this setting also controls int8 and related types such as timestamp.
+float8passbyval=true
+
+$as_echo "#define USE_FLOAT8_BYVAL 1" >>confdefs.h
+
+
+cat >>confdefs.h <<_ACEOF
+#define FLOAT8PASSBYVAL $float8passbyval
+_ACEOF
+
+
 # Determine memory alignment requirements for the basic C data types.
 
 # The cast to long int works around a bug in the HP C Compiler,
@@ -18649,7 +18780,41 @@ else
   link_test_func=exit
 fi
 
-if test "$PORTNAME" = "openbsd"; then
+if test "$PORTNAME" = "darwin"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -Wl,-dead_strip_dylibs" >&5
+$as_echo_n "checking if $CC supports -Wl,-dead_strip_dylibs... " >&6; }
+pgac_save_LDFLAGS=$LDFLAGS
+LDFLAGS="$pgac_save_LDFLAGS -Wl,-dead_strip_dylibs"
+if test "$cross_compiling" = yes; then :
+  LDFLAGS="$pgac_save_LDFLAGS"
+               { $as_echo "$as_me:${as_lineno-$LINENO}: result: assuming no" >&5
+$as_echo "assuming no" >&6; }
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern void $link_test_func (); void (*fptr) () = $link_test_func;
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  LDFLAGS="$pgac_save_LDFLAGS"
+               { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+
+elif test "$PORTNAME" = "openbsd"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -Wl,-Bdynamic" >&5
 $as_echo_n "checking if $CC supports -Wl,-Bdynamic... " >&6; }
 pgac_save_LDFLAGS=$LDFLAGS
@@ -18729,7 +18894,6 @@ $as_echo "$as_me: using CPPFLAGS=$CPPFLAGS" >&6;}
 $as_echo "$as_me: using LDFLAGS=$LDFLAGS" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: using LIBS=$LIBS" >&5
 $as_echo "$as_me: using LIBS=$LIBS" >&6;}
-
 
 # prepare build tree if outside source tree
 # Note 1: test -ef might not exist, but it's more reliable than `pwd`.

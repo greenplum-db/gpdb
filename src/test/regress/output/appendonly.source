@@ -1300,6 +1300,62 @@ RESET enable_indexscan;
 RESET enable_bitmapscan;
 DROP OWNED BY appendony_test_user2 CASCADE;
 DROP ROLE IF EXISTS appendony_test_user2;
+---------------------------------------------------------------
+-- Triggers
+---------------------------------------------------------------
+CREATE OR REPLACE FUNCTION ao_trigger_func() RETURNS trigger LANGUAGE plpgsql AS $$
+begin
+  raise notice 'new: %', NEW;
+  return new;
+end;
+$$;
+create table trigger_ao_test (id int4, t text) with (appendonly=true, orientation=row);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table trigger_aocs_test (id int4, t text) with (appendonly=true, orientation=column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TRIGGER show_trigger_data_trig_on_insert BEFORE INSERT ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+CREATE TRIGGER show_trigger_data_trig_on_insert BEFORE INSERT ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+-- UPDATE or DELETE triggers are not supporeted on AO tables
+CREATE TRIGGER show_trigger_data_trig_on_update BEFORE UPDATE ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+ERROR:  ON UPDATE triggers are not supported on append-only tables
+CREATE TRIGGER show_trigger_data_trig_on_update BEFORE UPDATE ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+ERROR:  ON UPDATE triggers are not supported on append-only tables
+CREATE TRIGGER show_trigger_data_trig_on_delete BEFORE DELETE ON trigger_ao_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+ERROR:  ON DELETE triggers are not supported on append-only tables
+CREATE TRIGGER show_trigger_data_trig_on_delete BEFORE DELETE ON trigger_aocs_test
+FOR EACH ROW EXECUTE PROCEDURE ao_trigger_func();
+ERROR:  ON DELETE triggers are not supported on append-only tables
+INSERT INTO trigger_ao_test VALUES (1, 'foo');
+NOTICE:  new: (1,foo)  (seg0 127.0.0.1:40000 pid=24242)
+INSERT INTO trigger_aocs_test VALUES (1, 'bar');
+NOTICE:  new: (1,bar)  (seg0 127.0.0.1:40000 pid=24242)
+COPY trigger_ao_test FROM STDIN;
+NOTICE:  new: (2,foocopy)  (seg0 127.0.0.1:40000 pid=24242)
+CONTEXT:  COPY trigger_ao_test, line 1: "2	foocopy"
+COPY trigger_aocs_test FROM STDIN;
+NOTICE:  new: (2,barcopy)  (seg0 127.0.0.1:40000 pid=24242)
+CONTEXT:  COPY trigger_aocs_test, line 1: "2	barcopy"
+SELECT * FROM trigger_ao_test;
+ id |    t    
+----+---------
+  1 | foo
+  2 | foocopy
+(2 rows)
+
+SELECT * FROM trigger_aocs_test;
+ id |    t    
+----+---------
+  1 | bar
+  2 | barcopy
+(2 rows)
+
 --------------------------------------------------------------------------------
 -- Finally check to detect if any dangling gp_fastsequence entries are left
 -- behind by this SQL file

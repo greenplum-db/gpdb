@@ -52,7 +52,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.120.2.1 2009/03/30 04:09:09 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.122 2008/05/12 00:00:43 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -61,7 +61,6 @@
 
 #include "access/heapam.h"
 #include "access/sysattr.h"
-#include "access/transam.h"
 #include "access/tuptoaster.h"
 #include "executor/tuptable.h"
 
@@ -285,7 +284,7 @@ heap_fill_tuple(TupleDesc tupleDesc,
 bool
 heap_attisnull(HeapTuple tup, int attnum)
 {
-	Assert(!is_heaptuple_memtuple(tup));
+	Assert(!is_memtuple((GenericTuple) tup));
 
 	if (attnum > (int) HeapTupleHeaderGetNatts(tup->t_data))
 		return true;
@@ -360,7 +359,7 @@ nocachegetattr(HeapTuple tuple,
 	bool		slow = false;	/* do we have to walk attrs? */
 	int			off;			/* current offset within data */
 
-	Assert(!is_heaptuple_memtuple(tuple));
+	Assert(!is_memtuple((GenericTuple) tuple));
 
 	/* ----------------
 	 *	 Three cases:
@@ -595,7 +594,7 @@ heap_getsysattr(HeapTuple tup, int attnum, bool *isnull)
 	Datum		result;
 
 	Assert(tup);
-	Assert(!is_heaptuple_memtuple(tup));
+	Assert(!is_memtuple((GenericTuple) tup));
 
 	/* Currently, no sys attribute ever reads as NULL. */
 	if (isnull)
@@ -661,7 +660,7 @@ heaptuple_copy_to(HeapTuple tuple, HeapTuple dest, uint32 *destlen)
 	if (!HeapTupleIsValid(tuple) || tuple->t_data == NULL)
 		return NULL;
 
-	Assert(!is_heaptuple_memtuple(tuple));
+	Assert(!is_memtuple((GenericTuple) tuple));
 
 	len = HEAPTUPLESIZE + tuple->t_len;
 	if(destlen && *destlen < len)
@@ -703,7 +702,7 @@ heap_copytuple_with_tuple(HeapTuple src, HeapTuple dest)
 		return;
 	}
 
-	Assert(!is_heaptuple_memtuple(src));
+	Assert(!is_memtuple((GenericTuple) src));
 
 	dest->t_len = src->t_len;
 	dest->t_self = src->t_self;
@@ -828,7 +827,7 @@ heaptuple_form_to(TupleDesc tupleDescriptor, Datum *values, bool *isnull, HeapTu
 								 (hasnull ? td->t_bits : NULL));
 
 	Assert(data_len == actual_len);
-	Assert(!is_heaptuple_memtuple(tuple));
+	Assert(!is_memtuple((GenericTuple) tuple));
 
 	return tuple;
 }
@@ -890,7 +889,7 @@ heap_modify_tuple(HeapTuple tuple,
 	bool	   *isnull;
 	HeapTuple	newTuple;
 
-	Assert(!is_heaptuple_memtuple(tuple));
+	Assert(!is_memtuple((GenericTuple) tuple));
 
 	/*
 	 * allocate and fill values and isnull arrays from either the tuple or the
@@ -1004,7 +1003,7 @@ heap_deform_tuple(HeapTuple tuple, TupleDesc tupleDesc,
 	bits8	   *bp = tup->t_bits;		/* ptr to null bitmap in tuple */
 	bool		slow = false;	/* can we use/set attcacheoff? */
 
-	Assert(!is_heaptuple_memtuple(tuple));
+	Assert(!is_memtuple((GenericTuple) tuple));
 	natts = HeapTupleHeaderGetNatts(tup);
 
 	/*
