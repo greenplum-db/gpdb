@@ -26,7 +26,7 @@ LOCATION ('pxf://tmp/dummy1'
 FORMAT 'CUSTOM' (formatter='pxfwritable_import');
 
 CREATE WRITABLE EXTERNAL TABLE pxf_write_test (a int, b TEXT)
-LOCATION ('pxf:///tmp/pxf-write?'
+LOCATION ('pxf:///tmp/pxf?'
 '&ACCESSOR=org.apache.hawq.pxf.api.examples.DemoFileWritableAccessor'
 '&RESOLVER=org.apache.hawq.pxf.api.examples.DemoTextResolver')
 FORMAT 'TEXT' (DELIMITER ',') DISTRIBUTED BY (a);

@@ -17,29 +17,10 @@ function run_regression_test() {
 	cd "\${1}/gpdb_src/gpAux"
 	source gpdemo/gpdemo-env.sh
 
-	# clean up PXF write destination
-	rm -rf /tmp/pxf-write
-
 	cd "\${1}/gpdb_src/gpAux/extensions/pxf"
 	make installcheck USE_PGXS=1
 
 	[ -s regression.diffs ] && cat regression.diffs && exit 1
-
-	# verify files written by PXF
-	ls -al /tmp/pxf-write
-	num_files=\$(ls -1 /tmp/pxf-write | wc -l)
-	if [ "\$num_files" != "3" ]; then
-	    echo "ERROR: Unexpected number of files written by PXF = \$num_files"
-	    exit 1
-	fi
-
-	# verify data written by PXF
-	cat /tmp/pxf-write/* | sort
-	num_rows=\$(cat /tmp/pxf-write/* | wc -l)
-	if [ "\$num_rows" != "100" ]; then
-	    echo "ERROR: Unexpected number of rows written by PXF = \$num_rows"
-	    exit 1
-	fi
 
 	exit 0
 	EOF
