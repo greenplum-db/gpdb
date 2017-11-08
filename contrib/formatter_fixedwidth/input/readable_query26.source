@@ -17,4 +17,4 @@ LOG ERRORS
 SEGMENT REJECT LIMIT 10 PERCENT;
 
 select count(*) from tbl_ext_fixedwidth;
-select count(*) from gp_read_error_log('tbl_ext_fixedwidth');
+select count(*) > 44 from gp_read_error_log('tbl_ext_fixedwidth');

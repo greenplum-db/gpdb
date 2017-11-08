@@ -22,9 +22,9 @@ SEGMENT REJECT LIMIT 10 PERCENT;
 select count(*) from tbl_ext_fixedwidth;
 ERROR:  Segment reject limit reached. Aborting operation. Last error was: invalid input syntax for integer: "s32"  (seg1 slice1 rh55-qavm55:7533 pid=29678)
 DETAIL:  External table tbl_ext_fixedwidth
-select count(*) from gp_read_error_log('tbl_ext_fixedwidth');
- count 
--------
-90
+select count(*) > 44 from gp_read_error_log('tbl_ext_fixedwidth');
+ ?column? 
+----------
+ t
 (1 row)
 
