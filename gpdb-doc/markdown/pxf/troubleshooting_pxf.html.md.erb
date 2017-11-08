@@ -156,7 +156,7 @@ Perform the following procedure to increase the heap size for the PXF agent runn
 
 ### <a id="pxf-threadcfg"></a>Another Option for Resource-Constrained PXF Segment Hosts
 
-If increasing the maximum heap size is not suitable for your Greenplum Database deployment, try decreasing the number of concurrent working threads configured for PXF's underlying Tomcat web application. A decrease in the number of running threads will prevent any PXF node from exhausting its memory, while ensuring that current queries run to completion (albeit a bit slower). As Tomcat's default behavior is to queue requests until a thread is free, decreasing this value will not result in denied requests.
+If increasing the maximum heap size is not suitable for your Greenplum Database deployment, try decreasing the number of concurrent working threads configured for PXF's underlying Tomcat web application. A decrease in the number of running threads will prevent any PXF node from exhausting its memory, while ensuring that current queries run to completion (albeit a bit slower). Tomcat's default behavior is to queue requests until a thread is free, or the queue is exhausted.
 
 The Tomcat default maximum number of threads is 300. Decrease the maximum number of threads to a value that works optimally for your Greenplum Database deployment. (If you plan to run large workloads on a large number of files in an external Hive data store, specify an even lower value.)
 
