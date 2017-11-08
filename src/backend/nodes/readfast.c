@@ -231,6 +231,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
+	READ_BOOL_FIELD(hasDistinctOn);
 	READ_BOOL_FIELD(hasDynamicFunctions);
 	READ_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	READ_NODE_FIELD(rtable);
@@ -2120,11 +2121,14 @@ _readSetOp(void)
 	readPlanInfo((Plan *)local_node);
 
 	READ_ENUM_FIELD(cmd, SetOpCmd);
+	READ_ENUM_FIELD(strategy, SetOpStrategy);
 	READ_INT_FIELD(numCols);
 	READ_INT_ARRAY(dupColIdx, local_node->numCols, AttrNumber);
 	READ_OID_ARRAY(dupOperators, local_node->numCols);
 
 	READ_INT_FIELD(flagColIdx);
+	READ_INT_FIELD(firstFlag);
+	READ_LONG_FIELD(numGroups);
 
 	READ_DONE();
 }
@@ -3358,11 +3362,8 @@ readNodeBinary(void)
 			case T_Query:
 				return_value = _readQuery();
 				break;
-			case T_SortClause:
-				return_value = _readSortClause();
-				break;
-			case T_GroupClause:
-				return_value = _readGroupClause();
+			case T_SortGroupClause:
+				return_value = _readSortGroupClause();
 				break;
 			case T_GroupingClause:
 				return_value = _readGroupingClause();

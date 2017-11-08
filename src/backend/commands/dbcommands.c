@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.209 2008/05/12 00:00:47 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.210 2008/08/04 18:03:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -97,6 +97,7 @@ static bool get_db_info(const char *name, LOCKMODE lockmode,
 			Oid *dbTablespace);
 static bool have_createdb_privilege(void);
 static bool check_db_file_conflict(Oid db_id);
+static int	errdetail_busy_db(int notherbackends, int npreparedxacts);
 
 /*
  * Create target database directories (under transaction).
@@ -627,6 +628,8 @@ createdb(CreatedbStmt *stmt)
 	int			encoding = -1;
 	int			dbconnlimit = -1;
 	int			ctype_encoding;
+	int			notherbackends;
+	int			npreparedxacts;
 	createdb_failure_params fparms;
 	bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH);
 	Snapshot	snapshot;
@@ -916,11 +919,12 @@ createdb(CreatedbStmt *stmt)
 	 * potential waiting; we may as well throw an error first if we're gonna
 	 * throw one.
 	 */
-	if (CheckOtherDBBackends(src_dboid))
+	if (CountOtherDBBackends(src_dboid, &notherbackends, &npreparedxacts))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_IN_USE),
 			errmsg("source database \"%s\" is being accessed by other users",
-				   dbtemplate)));
+				   dbtemplate),
+				 errdetail_busy_db(notherbackends, npreparedxacts)));
 
 	/*
 	 * Select an OID for the new database, checking that it doesn't have a
@@ -1355,6 +1359,8 @@ dropdb(const char *dbname, bool missing_ok)
 	Oid			defaultTablespace = InvalidOid;
 	Relation	pgdbrel;
 	HeapTuple	tup;
+	int			notherbackends;
+	int			npreparedxacts;
 
 	/*
 	 * Look up the target database's OID, and get exclusive lock on it. We
@@ -1429,11 +1435,12 @@ dropdb(const char *dbname, bool missing_ok)
 	 *
 	 * As in CREATE DATABASE, check this after other error conditions.
 	 */
-	if (CheckOtherDBBackends(db_id))
+	if (CountOtherDBBackends(db_id, &notherbackends, &npreparedxacts))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_IN_USE),
 				 errmsg("database \"%s\" is being accessed by other users",
-						dbname)));
+						dbname),
+				 errdetail_busy_db(notherbackends, npreparedxacts)));
 
 	/*
 	 * Free the database on the segDBs
@@ -1674,6 +1681,8 @@ RenameDatabase(const char *oldname, const char *newname)
 	Oid			db_id = InvalidOid;
 	HeapTuple	newtup;
 	Relation	rel;
+	int			notherbackends;
+	int			npreparedxacts;
 
 	/*
 	 * Look up the target database's OID, and get exclusive lock on it. We
@@ -1724,11 +1733,12 @@ RenameDatabase(const char *oldname, const char *newname)
 	 *
 	 * As in CREATE DATABASE, check this after other error conditions.
 	 */
-	if (CheckOtherDBBackends(db_id))
+	if (CountOtherDBBackends(db_id, &notherbackends, &npreparedxacts))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_IN_USE),
 				 errmsg("database \"%s\" is being accessed by other users",
-						oldname)));
+						oldname),
+				 errdetail_busy_db(notherbackends, npreparedxacts)));
 
 	/* rename */
 	newtup = SearchSysCacheCopy(DATABASEOID,
@@ -2485,6 +2495,29 @@ check_db_file_conflict(Oid db_id)
 	UnregisterSnapshot(snapshot);
 
 	return result;
+}
+
+/*
+ * Issue a suitable errdetail message for a busy database
+ */
+static int
+errdetail_busy_db(int notherbackends, int npreparedxacts)
+{
+	/*
+	 * We don't worry about singular versus plural here, since the English
+	 * rules for that don't translate very well.  But we can at least avoid
+	 * the case of zero items.
+	 */
+	if (notherbackends > 0 && npreparedxacts > 0)
+		errdetail("There are %d other session(s) and %d prepared transaction(s) using the database.",
+				  notherbackends, npreparedxacts);
+	else if (notherbackends > 0)
+		errdetail("There are %d other session(s) using the database.",
+				  notherbackends);
+	else
+		errdetail("There are %d prepared transaction(s) using the database.",
+				  npreparedxacts);
+	return 0;					/* just to keep ereport macro happy */
 }
 
 /*

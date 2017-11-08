@@ -1562,11 +1562,12 @@ CQueryMutators::PqueryEliminateDistinctClause
 	ListCell *plcDistinctCl = NULL;
 	ForEach (plcDistinctCl, pquery->distinctClause)
 	{
-		SortClause *psortcl  = (SortClause*) lfirst(plcDistinctCl);
+		SortGroupClause *psortcl  = (SortGroupClause*) lfirst(plcDistinctCl);
 		GPOS_ASSERT(NULL != psortcl);
 
-		GroupClause *pgrpcl = MakeNode(GroupClause);
+		SortGroupClause *pgrpcl = MakeNode(SortGroupClause);
 		pgrpcl->tleSortGroupRef = psortcl->tleSortGroupRef;
+		pgrpcl->eqop = psortcl->eqop;
 		pgrpcl->sortop = psortcl->sortop;
 		pgrpcl->nulls_first = psortcl->nulls_first;
 		pqueryNew->groupClause = gpdb::PlAppendElement(pqueryNew->groupClause, pgrpcl);

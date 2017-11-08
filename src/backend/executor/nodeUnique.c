@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.56.2.1 2008/08/05 21:28:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeUnique.c,v 1.57 2008/08/05 21:28:29 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -163,7 +163,7 @@ ExecInitUnique(Unique *node, EState *estate, int eflags)
 	uniquestate->eqfunctions =
 		execTuplesMatchPrepare(node->numCols,
 							   node->uniqOperators);
-	
+
 	return uniquestate;
 }
 

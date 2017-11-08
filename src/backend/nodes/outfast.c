@@ -504,11 +504,14 @@ _outSetOp(StringInfo str, SetOp *node)
 	_outPlanInfo(str, (Plan *) node);
 
 	WRITE_ENUM_FIELD(cmd, SetOpCmd);
+	WRITE_ENUM_FIELD(strategy, SetOpStrategy);
 	WRITE_INT_FIELD(numCols);
 	WRITE_INT_ARRAY(dupColIdx, node->numCols, AttrNumber);
 	WRITE_OID_ARRAY(dupOperators, node->numCols);
 
 	WRITE_INT_FIELD(flagColIdx);
+	WRITE_INT_FIELD(firstFlag);
+	WRITE_LONG_FIELD(numGroups);
 }
 
 static void
@@ -859,6 +862,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasWindowFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
+	WRITE_BOOL_FIELD(hasDistinctOn);
 	WRITE_BOOL_FIELD(hasDynamicFunctions);
 	WRITE_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	WRITE_NODE_FIELD(rtable);
@@ -1810,11 +1814,8 @@ _outNode(StringInfo str, void *obj)
 			case T_Query:
 				_outQuery(str, obj);
 				break;
-			case T_SortClause:
-				_outSortClause(str, obj);
-				break;
-			case T_GroupClause:
-				_outGroupClause(str, obj);
+			case T_SortGroupClause:
+				_outSortGroupClause(str, obj);
 				break;
 			case T_GroupingClause:
 				_outGroupingClause(str, obj);

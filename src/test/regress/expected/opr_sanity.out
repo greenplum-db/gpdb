@@ -159,7 +159,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.prorettype < p2.prorettype);
+    (p1.prorettype < p2.prorettype)
+ORDER BY 1, 2; -- order none
          prorettype          |        prorettype        
 -----------------------------+--------------------------
  text                        | character varying
@@ -175,7 +176,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[0] < p2.proargtypes[0]);
+    (p1.proargtypes[0] < p2.proargtypes[0])
+ORDER BY 1, 2; -- order none
          proargtypes         |       proargtypes        
 -----------------------------+--------------------------
  text                        | character
@@ -194,7 +196,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[1] < p2.proargtypes[1]);
+    (p1.proargtypes[1] < p2.proargtypes[1])
+ORDER BY 1, 2; -- order none
          proargtypes         |       proargtypes        
 -----------------------------+--------------------------
  integer                     | xid
@@ -217,7 +220,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[2] < p2.proargtypes[2]);
+    (p1.proargtypes[2] < p2.proargtypes[2])
+ORDER BY 1, 2; -- order none
          proargtypes         |       proargtypes        
 -----------------------------+--------------------------
  timestamp without time zone | timestamp with time zone
@@ -231,7 +235,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[3] < p2.proargtypes[3]);
+    (p1.proargtypes[3] < p2.proargtypes[3])
+ORDER BY 1, 2; -- order none
          proargtypes         |       proargtypes        
 -----------------------------+--------------------------
  timestamp without time zone | timestamp with time zone
@@ -245,7 +250,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[4] < p2.proargtypes[4]);
+    (p1.proargtypes[4] < p2.proargtypes[4])
+ORDER BY 1, 2; -- order none
  proargtypes | proargtypes 
 -------------+-------------
 (0 rows)
@@ -258,7 +264,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[5] < p2.proargtypes[5]);
+    (p1.proargtypes[5] < p2.proargtypes[5])
+ORDER BY 1, 2; -- order none
  proargtypes | proargtypes 
 -------------+-------------
 (0 rows)
@@ -271,7 +278,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[6] < p2.proargtypes[6]);
+    (p1.proargtypes[6] < p2.proargtypes[6])
+ORDER BY 1, 2; -- order none
  proargtypes | proargtypes 
 -------------+-------------
 (0 rows)
@@ -284,7 +292,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[7] < p2.proargtypes[7]);
+    (p1.proargtypes[7] < p2.proargtypes[7])
+ORDER BY 1, 2; -- order none 
  proargtypes | proargtypes 
 -------------+-------------
 (0 rows)

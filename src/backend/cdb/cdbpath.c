@@ -1266,14 +1266,13 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 		/* other uniqueifiers such as gp_segment_id */
 		else
 		{
-			Operator	optup;
 			Oid			eqop;
 
 			other_vars = lappend(other_vars, var);
 
-			optup = equality_oper(exprType((Node *) var), false);
-			eqop = oprid(optup);
-			ReleaseSysCache(optup);
+			get_sort_group_operators(exprType((Node *) var),
+									 false, true, false,
+									 NULL, &eqop, NULL);
 
 			other_operators = lappend_oid(other_operators, eqop);
 		}

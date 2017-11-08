@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/buffer/bufmgr.c,v 1.235 2008/08/01 13:16:08 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/buffer/bufmgr.c,v 1.236 2008/08/05 15:09:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -461,24 +461,29 @@ ReadBuffer_common(SMgrRelation smgr,
 		if (zeroPage)
 			MemSet((char *) bufBlock, 0, BLCKSZ);
 		else
-			smgrread(smgr, blockNum, (char *) bufBlock);
-		/* check for garbage data */
-		if (!PageIsVerified((Page) bufBlock, blockNum))
 		{
-			if (zero_damaged_pages)
+			smgrread(smgr, blockNum, (char *) bufBlock);
+
+			/* check for garbage data */
+			if (!PageIsVerified((Page) bufBlock, blockNum))
 			{
-				ereport(WARNING,
-						(errcode(ERRCODE_DATA_CORRUPTED),
-						 errmsg("invalid page in block %u of relation %s; zeroing out page",
-								blockNum, relpath(smgr->smgr_rnode))));
-				MemSet((char *) bufBlock, 0, BLCKSZ);
+				if (zero_damaged_pages)
+				{
+					ereport(WARNING,
+							(errcode(ERRCODE_DATA_CORRUPTED),
+							 errmsg("invalid page in block %u of relation %s; zeroing out page",
+									blockNum,
+									relpath(smgr->smgr_rnode))));
+					MemSet((char *) bufBlock, 0, BLCKSZ);
+				}
+				else
+					ereport(ERROR,
+							(errcode(ERRCODE_DATA_CORRUPTED),
+							 errmsg("invalid page in block %u of relation %s",
+									blockNum,
+									relpath(smgr->smgr_rnode)),
+							 errSendAlert(true)));
 			}
-			else
-				ereport(ERROR,
-						(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("invalid page in block %u of relation %s",
-						blockNum, relpath(smgr->smgr_rnode)),
-				 errSendAlert(true)));
 		}
 	}
 

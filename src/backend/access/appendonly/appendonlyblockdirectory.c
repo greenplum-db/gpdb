@@ -858,7 +858,12 @@ init_scankeys(TupleDesc tupleDesc,
 
 		if (strategyNumber == BTEqualStrategyNumber)
 		{
-			opfuncid = equality_oper_funcid(tupleDesc->attrs[keyNo]->atttypid);
+			Oid			eq_opr;
+
+			get_sort_group_operators(tupleDesc->attrs[keyNo]->atttypid,
+									 false, true, false,
+									 NULL, &eq_opr, NULL);
+			opfuncid = get_opcode(eq_opr);
 			ScanKeyEntryInitialize(scanKey,
 								   0,	/* sk_flag */
 								   keyNo + 1,	/* attribute number to scan */
@@ -873,7 +878,9 @@ init_scankeys(TupleDesc tupleDesc,
 			Oid			gtOid,
 						leOid;
 
-			gtOid = reverse_ordering_oper_opid(tupleDesc->attrs[keyNo]->atttypid);
+			get_sort_group_operators(tupleDesc->attrs[keyNo]->atttypid,
+									 false, false, true,
+									 NULL, NULL, &gtOid);
 			leOid = get_negator(gtOid);
 			opfuncid = get_opcode(leOid);
 

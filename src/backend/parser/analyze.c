@@ -19,7 +19,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/analyze.c,v 1.374 2008/07/31 22:47:56 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/analyze.c,v 1.376 2008/08/07 01:11:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1022,11 +1022,12 @@ init_grouped_window_context(grouped_window_ctx *ctx, Query *qry)
 {
 	List *grp_tles;
 	List *grp_sortops;
+	List *grp_eqops;
 	ListCell *lc = NULL;
 	Index maxsgr = 0;
 
 	get_sortgroupclauses_tles(qry->groupClause, qry->targetList,
-							  &grp_tles, &grp_sortops);
+							  &grp_tles, &grp_sortops, &grp_eqops);
 	list_free(grp_sortops);
 	maxsgr = maxSortGroupRef(grp_tles, true);
 
@@ -1158,26 +1159,14 @@ map_sgr_mutator(Node *node, void *context)
 		}
 		return (Node*)new_lst;
 	}
-
-	else if (IsA(node, GroupClause))
+	else if (IsA(node, SortGroupClause))
 	{
-		GroupClause *g = (GroupClause*)node;
-		GroupClause *new_g = makeNode(GroupClause);
-		memcpy(new_g, g, sizeof(GroupClause));
+		SortGroupClause *g = (SortGroupClause *) node;
+		SortGroupClause *new_g = makeNode(SortGroupClause);
+		memcpy(new_g, g, sizeof(SortGroupClause));
 		new_g->tleSortGroupRef = ctx->sgr_map[g->tleSortGroupRef];
 		return (Node*)new_g;
 	}
-
-	/* Just like above, but don't assume identical */
-	else if (IsA(node, SortClause))
-	{
-	SortClause *s = (SortClause*)node;
-		 SortClause *new_s = makeNode(SortClause);
-		 memcpy(new_s, s, sizeof(SortClause));
-		 new_s->tleSortGroupRef = ctx->sgr_map[s->tleSortGroupRef];
-		 return (Node*)new_s;
-	}
-
 	else if (IsA(node, GroupingClause))
 	{
 		GroupingClause *gc = (GroupingClause*)node;
@@ -1562,11 +1551,43 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 												stmt->scatterClause,
 												&qry->targetList);
 
-	qry->distinctClause = transformDistinctClause(pstate,
-												  stmt->distinctClause,
-												  &qry->targetList,
-												  qry->sortClause,
-												  &qry->groupClause);
+	if (stmt->distinctClause == NIL)
+	{
+		qry->distinctClause = NIL;
+		qry->hasDistinctOn = false;
+	}
+	else if (linitial(stmt->distinctClause) == NULL)
+	{
+		/* We had SELECT DISTINCT */
+		if (!pstate->p_hasAggs && !pstate->p_hasWindowFuncs && qry->groupClause == NIL)
+		{
+			/*
+			 * MPP-15040
+			 * turn distinct clause into grouping clause to make both sort-based
+			 * and hash-based grouping implementations viable plan options
+			 */
+			qry->distinctClause = transformDistinctToGroupBy(pstate,
+															 &qry->targetList,
+															 &qry->sortClause,
+															 &qry->groupClause);
+		}
+		else
+		{
+			qry->distinctClause = transformDistinctClause(pstate,
+														  &qry->targetList,
+														  qry->sortClause);
+		}
+		qry->hasDistinctOn = false;
+	}
+	else
+	{
+		/* We had SELECT DISTINCT ON */
+		qry->distinctClause = transformDistinctOnClause(pstate,
+														stmt->distinctClause,
+														&qry->targetList,
+														qry->sortClause);
+		qry->hasDistinctOn = true;
+	}
 
 	/* transform LIMIT */
 	qry->limitOffset = transformLimitClause(pstate, stmt->limitOffset,
@@ -2533,6 +2554,32 @@ coerceSetOpTypes(ParseState *pstate, Node *sop,
 			/* Set final decision */
 			op->colTypes = lappend_oid(op->colTypes, rescoltype);
 			op->colTypmods = lappend_int(op->colTypmods, rescoltypmod);
+
+			/*
+			 * For all cases except UNION ALL, identify the grouping operators
+			 * (and, if available, sorting operators) that will be used to
+			 * eliminate duplicates.
+			 */
+			if (op->op != SETOP_UNION || !op->all)
+			{
+				SortGroupClause *grpcl = makeNode(SortGroupClause);
+				Oid			sortop;
+				Oid			eqop;
+
+				/* determine the eqop and optional sortop */
+				get_sort_group_operators(rescoltype,
+										 false, true, false,
+										 &sortop, &eqop, NULL);
+
+				/* we don't have a tlist yet, so can't assign sortgrouprefs */
+				grpcl->tleSortGroupRef = 0;
+				grpcl->eqop = eqop;
+				grpcl->sortop = sortop;
+				grpcl->nulls_first = false;		/* OK with or without sortop */
+
+				op->groupClauses = lappend(op->groupClauses, grpcl);
+			}
+
 			lcm = lnext(lcm);
 			rcm = lnext(rcm);
 			mct = lnext(mct);

@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.241 2008/06/27 03:56:55 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.244 2008/08/07 19:35:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -989,7 +989,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 			Oid			in_oper = lfirst_oid(l);
 			Oid			sortop;
 			TargetEntry *tle;
-			SortClause *sortcl;
+			SortGroupClause *sortcl;
 
 			sortop = get_ordering_op_for_equality_op(in_oper, false);
 			if (!OidIsValid(sortop))	/* shouldn't happen */
@@ -998,9 +998,10 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 			tle = get_tle_by_resno(subplan->targetlist,
 								   groupColIdx[groupColPos]);
 			Assert(tle != NULL);
-			sortcl = makeNode(SortClause);
+			sortcl = makeNode(SortGroupClause);
 			sortcl->tleSortGroupRef = assignSortGroupRef(tle,
 														 subplan->targetlist);
+			sortcl->eqop = in_oper;
 			sortcl->sortop = sortop;
 			sortcl->nulls_first = false;
 			sortList = lappend(sortList, sortcl);
@@ -4402,6 +4403,10 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
 {
 	int			i;
 
+	Assert(OidIsValid(sortOp));
+
+	Assert(OidIsValid(sortOp));
+
 	for (i = 0; i < numCols; i++)
 	{
 		/*
@@ -4639,7 +4644,7 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
  * make_sort_from_sortclauses
  *	  Create sort plan to sort according to given sortclauses
  *
- *	  'sortcls' is a list of SortClauses
+ *	  'sortcls' is a list of SortGroupClauses
  *	  'lefttree' is the node which yields input tuples
  */
 Sort *
@@ -4664,7 +4669,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
 
 	foreach(l, sortcls)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(l);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(l);
 		TargetEntry *tle = get_sortgroupclause_tle(sortcl, sub_tlist);
 
 		/*
@@ -4688,7 +4693,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
  * make_sort_from_groupcols
  *	  Create sort plan to sort based on grouping columns
  *
- * 'groupcls' is the list of GroupClauses
+ * 'groupcls' is the list of SortGroupClauses
  * 'grpColIdx' gives the column numbers to use
  * 'appendGrouping' represents whether to append a Grouping
  *	  as the last sort key, used for grouping extension.
@@ -4697,7 +4702,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
  * but presently we *must* use the grpColIdx[] array to locate sort columns,
  * because the child plan's tlist is not marked with ressortgroupref info
  * appropriate to the grouping node.  So, only the sort ordering info
- * is used from the GroupClause entries.
+ * is used from the SortGroupClause entries.
  */
 Sort *
 make_sort_from_groupcols(PlannerInfo *root,
@@ -4733,7 +4738,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 
 	foreach(l, flat_groupcls)
 	{
-		GroupClause *grpcl = (GroupClause *) lfirst(l);
+		SortGroupClause *grpcl = (SortGroupClause *) lfirst(l);
 		TargetEntry *tle = get_tle_by_resno(sub_tlist, grpColIdx[grpno]);
 
 		grpno++;
@@ -4751,7 +4756,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 
 	if (appendGrouping)
 	{
-		Oid			sort_op;
+		Oid			lt_opr;
 
 		/* Grouping will be the last entry in grpColIdx */
 		TargetEntry *tle = get_tle_by_resno(sub_tlist, grpColIdx[grpno]);
@@ -4759,9 +4764,11 @@ make_sort_from_groupcols(PlannerInfo *root,
 		if (tle->resname == NULL)
 			tle->resname = "grouping";
 
-		sort_op = ordering_oper_opid(exprType((Node *) tle->expr));
+		get_sort_group_operators(exprType((Node *) tle->expr),
+								 true, false, false,
+								 &lt_opr, NULL, NULL);
 
-		numsortkeys = add_sort_column(tle->resno, sort_op, false,
+		numsortkeys = add_sort_column(tle->resno, lt_opr, false,
 						 numsortkeys, sortColIdx, sortOperators, nullsFirst);
 	}
 
@@ -4791,13 +4798,13 @@ reconstruct_group_clause(List *orig_groupClause, List *tlist, AttrNumber *grpCol
 	{
 		ListCell   *lc = NULL;
 		TargetEntry *te;
-		GroupClause *gc = NULL;
+		SortGroupClause *gc = NULL;
 
 		te = get_tle_by_resno(tlist, grpColIdx[grpno]);
 
 		foreach(lc, flat_groupcls)
 		{
-			gc = (GroupClause *) lfirst(lc);
+			gc = (SortGroupClause *) lfirst(lc);
 
 			if (gc->tleSortGroupRef == te->ressortgroupref)
 				break;
@@ -5169,7 +5176,7 @@ make_tablefunction(List *tlist,
 
 
 /*
- * distinctList is a list of SortClauses, identifying the targetlist items
+ * distinctList is a list of SortGroupClauses, identifying the targetlist items
  * that should be considered by the Unique filter.	The input path must
  * already be sorted accordingly.
  */
@@ -5206,7 +5213,7 @@ make_unique(Plan *lefttree, List *distinctList)
 	plan->righttree = NULL;
 
 	/*
-	 * convert SortClause list into arrays of attr indexes and equality
+	 * convert SortGroupClause list into arrays of attr indexes and equality
 	 * operators, as wanted by executor
 	 */
 	Assert(numCols > 0);
@@ -5215,14 +5222,12 @@ make_unique(Plan *lefttree, List *distinctList)
 
 	foreach(slitem, distinctList)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(slitem);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(slitem);
 		TargetEntry *tle = get_sortgroupclause_tle(sortcl, plan->targetlist);
 
 		uniqColIdx[keyno] = tle->resno;
-		uniqOperators[keyno] = get_equality_op_for_ordering_op(sortcl->sortop);
-		if (!OidIsValid(uniqOperators[keyno]))	/* shouldn't happen */
-			elog(ERROR, "could not find equality operator for ordering operator %u",
-				 sortcl->sortop);
+		uniqOperators[keyno] = sortcl->eqop;
+		Assert(OidIsValid(uniqOperators[keyno]));
 		keyno++;
 	}
 
@@ -5242,13 +5247,14 @@ make_unique(Plan *lefttree, List *distinctList)
 }
 
 /*
- * distinctList is a list of SortClauses, identifying the targetlist items
- * that should be considered by the SetOp filter.  The input path must
+ * distinctList is a list of SortGroupClauses, identifying the targetlist
+ * items that should be considered by the SetOp filter.  The input path must
  * already be sorted accordingly.
  */
 SetOp *
-make_setop(SetOpCmd cmd, Plan *lefttree,
-		   List *distinctList, AttrNumber flagColIdx)
+make_setop(SetOpCmd cmd, SetOpStrategy strategy, Plan *lefttree,
+		   List *distinctList, AttrNumber flagColIdx, int firstFlag,
+		   long numGroups, double outputRows)
 {
 	SetOp	   *node = makeNode(SetOp);
 	Plan	   *plan = &node->plan;
@@ -5259,20 +5265,13 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 	ListCell   *slitem;
 
 	copy_plan_costsize(plan, lefttree);
+	plan->plan_rows = outputRows;
 
 	/*
 	 * Charge one cpu_operator_cost per comparison per input tuple. We assume
 	 * all columns get compared at most of the tuples.
 	 */
-	plan->total_cost += cpu_operator_cost * plan->plan_rows * numCols;
-
-	/*
-	 * We make the unsupported assumption that there will be 10% as many
-	 * tuples out as in.  Any way to do better?
-	 */
-	plan->plan_rows *= 0.1;
-	if (plan->plan_rows < 1)
-		plan->plan_rows = 1;
+	plan->total_cost += cpu_operator_cost * lefttree->plan_rows * numCols;
 
 	plan->targetlist = cdbpullup_targetlist(lefttree,
 				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
@@ -5281,7 +5280,7 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 	plan->righttree = NULL;
 
 	/*
-	 * convert SortClause list into arrays of attr indexes and equality
+	 * convert SortGroupClause list into arrays of attr indexes and equality
 	 * operators, as wanted by executor
 	 */
 	Assert(numCols > 0);
@@ -5290,22 +5289,23 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 
 	foreach(slitem, distinctList)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(slitem);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(slitem);
 		TargetEntry *tle = get_sortgroupclause_tle(sortcl, plan->targetlist);
 
 		dupColIdx[keyno] = tle->resno;
-		dupOperators[keyno] = get_equality_op_for_ordering_op(sortcl->sortop);
-		if (!OidIsValid(dupOperators[keyno]))	/* shouldn't happen */
-			elog(ERROR, "could not find equality operator for ordering operator %u",
-				 sortcl->sortop);
+		dupOperators[keyno] = sortcl->eqop;
+		Assert(OidIsValid(dupOperators[keyno]));
 		keyno++;
 	}
 
 	node->cmd = cmd;
+	node->strategy = strategy;
 	node->numCols = numCols;
 	node->dupColIdx = dupColIdx;
 	node->dupOperators = dupOperators;
 	node->flagColIdx = flagColIdx;
+	node->firstFlag = firstFlag;
+	node->numGroups = numGroups;
 
 	return node;
 }
@@ -5531,16 +5531,16 @@ plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist)
  * as the tleSortGroupRef in gc.
  */
 static bool
-groupcol_in_list(GroupClause *gc, List *glist)
+groupcol_in_list(SortGroupClause *gc, List *glist)
 {
 	bool		found = false;
 	ListCell   *lc;
 
 	foreach(lc, glist)
 	{
-		GroupClause *entry = (GroupClause *) lfirst(lc);
+		SortGroupClause *entry = (SortGroupClause *) lfirst(lc);
 
-		Assert(IsA(entry, GroupClause));
+		Assert(IsA(entry, SortGroupClause));
 		if (gc->tleSortGroupRef == entry->tleSortGroupRef)
 		{
 			found = true;
@@ -5569,7 +5569,7 @@ flatten_grouping_list(List *groupcls)
 			continue;
 
 		Assert(IsA(node, GroupingClause) ||
-			   IsA(node, GroupClause) ||
+			   IsA(node, SortGroupClause) ||
 			   IsA(node, List));
 
 		if (IsA(node, GroupingClause))
@@ -5581,9 +5581,9 @@ flatten_grouping_list(List *groupcls)
 
 			foreach(lc, flatten_groupsets)
 			{
-				GroupClause *flatten_gc = (GroupClause *) lfirst(lc);
+				SortGroupClause *flatten_gc = (SortGroupClause *) lfirst(lc);
 
-				Assert(IsA(flatten_gc, GroupClause));
+				Assert(IsA(flatten_gc, SortGroupClause));
 
 				if (!groupcol_in_list(flatten_gc, result))
 					result = lappend(result, flatten_gc);
@@ -5598,9 +5598,9 @@ flatten_grouping_list(List *groupcls)
 
 			foreach(lc, flatten_groupsets)
 			{
-				GroupClause *flatten_gc = (GroupClause *) lfirst(lc);
+				SortGroupClause *flatten_gc = (SortGroupClause *) lfirst(lc);
 
-				Assert(IsA(flatten_gc, GroupClause));
+				Assert(IsA(flatten_gc, SortGroupClause));
 
 				if (!groupcol_in_list(flatten_gc, result))
 					result = lappend(result, flatten_gc);
@@ -5608,9 +5608,9 @@ flatten_grouping_list(List *groupcls)
 		}
 		else
 		{
-			Assert(IsA(node, GroupClause));
+			Assert(IsA(node, SortGroupClause));
 
-			if (!groupcol_in_list((GroupClause *) node, result))
+			if (!groupcol_in_list((SortGroupClause *) node, result))
 				result = lappend(result, node);
 		}
 	}

@@ -13,7 +13,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.177 2008/08/01 13:16:08 alvherre Exp $
+ *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.178 2008/08/05 12:09:30 mha Exp $
  * ----------
  */
 #include "postgres.h"
@@ -3329,14 +3329,6 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
 		return dbhash;
 
-		/*
-	 * Try to open the status file. If it doesn't exist, the backends simply
-	 * return zero for anything and the collector simply starts from scratch
-	 * with empty counters.
-	 */
-	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
-		return dbhash;
-
 	/*
 	 * Verify it's of the expected format.
 	 */
@@ -3620,10 +3612,10 @@ backend_read_statsfile(void)
 	TimestampTz min_ts;
 	int			count;
 
-		/* already read it? */
-		if (pgStatDBHash)
-			return;
-		Assert(!pgStatRunningInCollector);
+	/* already read it? */
+	if (pgStatDBHash)
+		return;
+	Assert(!pgStatRunningInCollector);
 
 	/*
 	 * We set the minimum acceptable timestamp to PGSTAT_STAT_INTERVAL msec
@@ -3672,7 +3664,10 @@ backend_read_statsfile(void)
 						"because stats collector is not responding")));
 
 	/* Autovacuum launcher wants stats about all databases */
-	pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);
+	if (IsAutoVacuumLauncherProcess())
+		pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);
+	else
+		pgStatDBHash = pgstat_read_statsfile(MyDatabaseId, false);
 }
 
 

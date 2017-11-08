@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.123 2008/07/01 10:33:09 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.124 2008/08/02 21:31:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,7 +85,7 @@ typedef struct AnlIndexData
 
 /*
  * Maintain the row index for large datums which must not be considered for
- * samples while calculating statistcs. The sample value at the row index for 
+ * samples while calculating statistcs. The sample value at the row index for
  * a column are masked as NULL.
  */
 typedef struct RowIndexes
@@ -595,7 +595,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 					 RelationGetRelationName(Irel[ind]), RelationGetRelationName(onerel));
 				estimatedIndexPages = 1.0;
 			}
-			else 
+			else
 			{
 				/**
 				 * NOTE: we don't attempt to estimate the number of tuples in an index.
@@ -1622,7 +1622,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 												  SPI_tuptable->tupdesc,
 												  &dummyNull);
 
-					/* 
+					/*
 					 * If Datum is too large, mark the index position as true
 					 * and increase the too wide count
 					 */
@@ -1669,9 +1669,9 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 static void
 analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *relPages, bool rootonly)
 {
-	*relPages = 0.0;		
-	*relTuples = 0.0;			
-	
+	*relPages = 0.0;
+	*relTuples = 0.0;
+
 	List *allRelOids = NIL;
 
 	/* if GUC optimizer_analyze_root_partition is off, we do not analyze root partitions, unless
@@ -2060,10 +2060,8 @@ static bool
 std_typanalyze(VacAttrStats *stats)
 {
 	Form_pg_attribute attr = stats->attr;
-	Operator	func_operator;
-	Oid			eqopr = InvalidOid;
-	Oid			eqfunc = InvalidOid;
-	Oid			ltopr = InvalidOid;
+	Oid			ltopr;
+	Oid			eqopr;
 	StdAnalyzeData *mystats;
 
 	/* If the attstattarget column is negative, use the default value */
@@ -2071,42 +2069,22 @@ std_typanalyze(VacAttrStats *stats)
 	if (attr->attstattarget < 0)
 		attr->attstattarget = default_statistics_target;
 
-	/* If column has no "=" operator, we can't do much of anything */
-	func_operator = equality_oper(attr->atttypid, true);
-	if (func_operator != NULL)
-	{
-		eqopr = oprid(func_operator);
-		eqfunc = oprfuncid(func_operator);
-		ReleaseSysCache(func_operator);
-	}
-	if (!OidIsValid(eqfunc))
-	{
-		/* Can't do much but the minimal stuff */
-		stats->compute_stats = compute_very_minimal_stats;
-		/* Might as well use the same minrows as below */
-		stats->minrows = 300 * attr->attstattarget;
-		return true;
-	}
-
-	/* Is there a "<" operator with suitable semantics? */
-	func_operator = ordering_oper(attr->atttypid, true);
-	if (func_operator != NULL)
-	{
-		ltopr = oprid(func_operator);
-		ReleaseSysCache(func_operator);
-	}
+	/* Look for default "<" and "=" operators for column's type */
+	get_sort_group_operators(attr->atttypid,
+							 false, false, false,
+							 &ltopr, &eqopr, NULL);
 
 	/* Save the operator info for compute_stats routines */
 	mystats = (StdAnalyzeData *) palloc(sizeof(StdAnalyzeData));
 	mystats->eqopr = eqopr;
-	mystats->eqfunc = eqfunc;
+	mystats->eqfunc = get_opcode(eqopr);
 	mystats->ltopr = ltopr;
 	stats->extra_data = mystats;
 
 	/*
 	 * Determine which standard statistics algorithm to use
 	 */
-	if (OidIsValid(ltopr))
+	if (OidIsValid(ltopr) && OidIsValid(eqopr))
 	{
 		/* Seems to be a scalar datatype */
 		stats->compute_stats = compute_scalar_stats;
@@ -2131,10 +2109,17 @@ std_typanalyze(VacAttrStats *stats)
 		 */
 		stats->minrows = 300 * attr->attstattarget;
 	}
-	else
+	else if (OidIsValid(eqopr))
 	{
 		/* Can't do much but the minimal stuff */
 		stats->compute_stats = compute_minimal_stats;
+		/* Might as well use the same minrows as above */
+		stats->minrows = 300 * attr->attstattarget;
+	}
+	else
+	{
+		/* Can't do much but the minimal stuff */
+		stats->compute_stats = compute_very_minimal_stats;
 		/* Might as well use the same minrows as above */
 		stats->minrows = 300 * attr->attstattarget;
 	}

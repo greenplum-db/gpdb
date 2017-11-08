@@ -28,7 +28,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.311 2008/07/26 19:15:35 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.312 2008/08/08 17:01:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,6 +67,7 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "parser/parse_clause.h"
+#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
@@ -2358,6 +2359,75 @@ ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping)
 }
 
 /*
+ * Verify that the tuples to be produced by INSERT or UPDATE match the
+ * target relation's rowtype
+ *
+ * We do this to guard against stale plans.  If plan invalidation is
+ * functioning properly then we should never get a failure here, but better
+ * safe than sorry.  Note that this is called after we have obtained lock
+ * on the target rel, so the rowtype can't change underneath us.
+ *
+ * The plan output is represented by its targetlist, because that makes
+ * handling the dropped-column case easier.
+ */
+static void
+ExecCheckPlanOutput(Relation resultRel, List *targetList)
+{
+	TupleDesc	resultDesc = RelationGetDescr(resultRel);
+	int			attno = 0;
+	ListCell   *lc;
+
+	foreach(lc, targetList)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+		Form_pg_attribute attr;
+
+		if (tle->resjunk)
+			continue;			/* ignore junk tlist items */
+
+		if (attno >= resultDesc->natts)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+					 errmsg("table row type and query-specified row type do not match"),
+					 errdetail("Query has too many columns.")));
+		attr = resultDesc->attrs[attno++];
+
+		if (!attr->attisdropped)
+		{
+			/* Normal case: demand type match */
+			if (exprType((Node *) tle->expr) != attr->atttypid)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+						 errmsg("table row type and query-specified row type do not match"),
+						 errdetail("Table has type %s at ordinal position %d, but query expects %s.",
+								   format_type_be(attr->atttypid),
+								   attno,
+								   format_type_be(exprType((Node *) tle->expr)))));
+		}
+		else
+		{
+			/*
+			 * For a dropped column, we can't check atttypid (it's likely 0).
+			 * In any case the planner has most likely inserted an INT4 null.
+			 * What we insist on is just *some* NULL constant.
+			 */
+			if (!IsA(tle->expr, Const) ||
+				!((Const *) tle->expr)->constisnull)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+						 errmsg("table row type and query-specified row type do not match"),
+						 errdetail("Query provides a value for a dropped column at ordinal position %d.",
+								   attno)));
+		}
+	}
+	if (attno != resultDesc->natts)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("table row type and query-specified row type do not match"),
+				 errdetail("Query has too few columns.")));
+}
+
+/*
  *		ExecGetTriggerResultRel
  *
  * Get a ResultRelInfo for a trigger target relation.  Most of the time,
@@ -2665,83 +2735,6 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 		heap_close(erm->relation, NoLock);
 	}
 }
-
-/*
- * Verify that the tuples to be produced by INSERT or UPDATE match the
- * target relation's rowtype
- *
- * We do this to guard against stale plans.  If plan invalidation is
- * functioning properly then we should never get a failure here, but better
- * safe than sorry.  Note that this is called after we have obtained lock
- * on the target rel, so the rowtype can't change underneath us.
- *
- * The plan output is represented by its targetlist, because that makes
- * handling the dropped-column case easier.
- */
-static void
-ExecCheckPlanOutput(Relation resultRel, List *targetList)
-{
-	TupleDesc	resultDesc = RelationGetDescr(resultRel);
-	int			attno = 0;
-	ListCell   *lc;
-
-	/*
-	 * Don't do this during dispatch because the plan is not suitable
-	 * structured to meet these tests
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-		return;
-
-	foreach(lc, targetList)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-		Form_pg_attribute attr;
-
-		if (tle->resjunk)
-			continue;			/* ignore junk tlist items */
-
-		if (attno >= resultDesc->natts)
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("table row type and query-specified row type do not match"),
-					 errdetail("Query has too many columns.")));
-		attr = resultDesc->attrs[attno++];
-
-		if (!attr->attisdropped)
-		{
-			/* Normal case: demand type match */
-			if (exprType((Node *) tle->expr) != attr->atttypid)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("table row type and query-specified row type do not match"),
-						 errdetail("Table has type %s at ordinal position %d, but query expects %s.",
-								   format_type_be(attr->atttypid),
-								   attno,
-								   format_type_be(exprType((Node *) tle->expr)))));
-		}
-		else
-		{
-			/*
-			 * For a dropped column, we can't check atttypid (it's likely 0).
-			 * In any case the planner has most likely inserted an INT4 null.
-			 * What we insist on is just *some* NULL constant.
-			 */
-			if (!IsA(tle->expr, Const) ||
-				!((Const *) tle->expr)->constisnull)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("table row type and query-specified row type do not match"),
-						 errdetail("Query provides a value for a dropped column at ordinal position %d.",
-								   attno)));
-		}
-	}
-	if (attno != resultDesc->natts)
-		ereport(ERROR,
-				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("table row type and query-specified row type do not match"),
-				 errdetail("Query has too few columns.")));
-}
-
 
 /* ----------------------------------------------------------------
  *		ExecutePlan

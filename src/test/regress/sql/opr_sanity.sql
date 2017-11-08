@@ -143,7 +143,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.prorettype < p2.prorettype);
+    (p1.prorettype < p2.prorettype)
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[0]::regtype, p2.proargtypes[0]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -153,7 +154,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[0] < p2.proargtypes[0]);
+    (p1.proargtypes[0] < p2.proargtypes[0])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[1]::regtype, p2.proargtypes[1]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -163,7 +165,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[1] < p2.proargtypes[1]);
+    (p1.proargtypes[1] < p2.proargtypes[1])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[2]::regtype, p2.proargtypes[2]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -173,7 +176,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[2] < p2.proargtypes[2]);
+    (p1.proargtypes[2] < p2.proargtypes[2])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[3]::regtype, p2.proargtypes[3]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -183,7 +187,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[3] < p2.proargtypes[3]);
+    (p1.proargtypes[3] < p2.proargtypes[3])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[4]::regtype, p2.proargtypes[4]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -193,7 +198,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[4] < p2.proargtypes[4]);
+    (p1.proargtypes[4] < p2.proargtypes[4])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[5]::regtype, p2.proargtypes[5]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -203,7 +209,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[5] < p2.proargtypes[5]);
+    (p1.proargtypes[5] < p2.proargtypes[5])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[6]::regtype, p2.proargtypes[6]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -213,7 +220,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[6] < p2.proargtypes[6]);
+    (p1.proargtypes[6] < p2.proargtypes[6])
+ORDER BY 1, 2; -- order none
 
 SELECT DISTINCT p1.proargtypes[7]::regtype, p2.proargtypes[7]::regtype
 FROM pg_proc AS p1, pg_proc AS p2
@@ -223,7 +231,8 @@ WHERE p1.oid != p2.oid AND
     p1.prolang = 12 AND p2.prolang = 12 AND
     NOT p1.proisagg AND NOT p2.proisagg AND
     NOT p1.proiswindow AND NOT p2.proiswindow AND
-    (p1.proargtypes[7] < p2.proargtypes[7]);
+    (p1.proargtypes[7] < p2.proargtypes[7])
+ORDER BY 1, 2; -- order none
 
 -- The checks above only extend to the first 8 parameters, list any
 -- functions not checked.

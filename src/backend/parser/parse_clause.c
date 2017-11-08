@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.171 2008/07/31 22:47:56 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_clause.c,v 1.175 2008/08/07 01:11:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -88,6 +88,9 @@ static List *findListTargetlistEntries(ParseState *pstate, Node *node,
 									   List **tlist, bool in_grpext,
 									   bool ignore_in_grpext,
                                        bool useSQL99);
+static List *addTargetToGroupList(ParseState *pstate, TargetEntry *tle,
+					 List *grouplist, List *targetlist, int location,
+					 bool resolveUnknown);
 static TargetEntry *getTargetBySortGroupRef(Index ref, List *tl);
 static List *reorderGroupList(List *grouplist);
 static List *transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
@@ -100,6 +103,8 @@ static Node *transformFrameOffset(ParseState *pstate, int frameOptions,
 								  Node *clause,
 								  List *orderClause, List *targetlist, bool isFollowing,
 								  int location);
+static SortGroupClause *make_group_clause(TargetEntry *tle, List *targetlist,
+				  Oid eqop, Oid sortop, bool nulls_first);
 
 typedef struct grouping_rewrite_ctx
 {
@@ -1784,19 +1789,6 @@ findTargetlistEntrySQL99(ParseState *pstate, Node *node, List **tlist)
 	return target_result;
 }
 
-static GroupClause *
-make_group_clause(TargetEntry *tle, List *targetlist,
-				  Oid sortop, bool nulls_first)
-{
-	GroupClause *result;
-
-	result = makeNode(GroupClause);
-	result->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
-	result->sortop = sortop;
-	result->nulls_first = nulls_first;
-	return result;
-}
-
 /*
  * make_grouping_clause -
  *     Generate a new GroupingClause object from a given one.
@@ -1856,16 +1848,19 @@ make_grouping_clause(ParseState *pstate, GroupingClause *grpcl, List* targetList
 		{
 			TargetEntry *tle = findTargetlistEntrySQL92(pstate, node,
                                                         &targetList, GROUP_CLAUSE);
-			Oid          sort_op;
+			Oid			sortop;
+			Oid			eqop;
 
 			/* Unlike ordinary grouping sets, we will create duplicate
 			 * expression entries. For example, rollup(a,a) consists
 			 * of three grouping sets "(a,a), (a), ()".
 			 */
-			sort_op = ordering_oper_opid(exprType((Node *) tle->expr));
+			get_sort_group_operators(exprType((Node *) tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 			result->groupsets =
 				lappend(result->groupsets,
-						make_group_clause(tle, targetList, sort_op, false));
+						make_group_clause(tle, targetList, eqop, sortop, false));
 		}
 	}
 
@@ -2008,7 +2003,7 @@ create_group_clause(List *tlist_group, List *targetlist,
 	 */
 	foreach(l, sortClause)
 	{
-		SortClause *sc = (SortClause *) lfirst(l);
+		SortGroupClause *sc = (SortGroupClause *) lfirst(l);
 		ListCell   *prev = NULL;
 		ListCell   *tl = NULL;
 		bool		found = false;
@@ -2024,13 +2019,13 @@ create_group_clause(List *tlist_group, List *targetlist,
 				if (!tle->resjunk &&
 					sc->tleSortGroupRef == tle->ressortgroupref)
 				{
-					GroupClause *gc;
+					SortGroupClause *gc;
 
 					tlist = list_delete_cell(tlist, tl, prev);
 
 					/* Use the sort clause's sorting information */
 					gc = make_group_clause(tle, targetlist,
-										   sc->sortop, sc->nulls_first);
+										   sc->eqop, sc->sortop, sc->nulls_first);
 					result = lappend(result, gc);
 					found = true;
 					break;
@@ -2051,7 +2046,19 @@ create_group_clause(List *tlist_group, List *targetlist,
 	return result;
 }
 
+static SortGroupClause *
+make_group_clause(TargetEntry *tle, List *targetlist,
+				  Oid eqop, Oid sortop, bool nulls_first)
+{
+	SortGroupClause *result;
 
+	result = makeNode(SortGroupClause);
+	result->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
+	result->eqop = eqop;
+	result->sortop = sortop;
+	result->nulls_first = nulls_first;
+	return result;
+}
 
 /*
  * transformGroupClause -
@@ -2062,11 +2069,6 @@ create_group_clause(List *tlist_group, List *targetlist,
  *
  * GROUP BY items will be added to the targetlist (as resjunk columns)
  * if not already present, so the targetlist must be passed by reference.
- *
- * The order of the elements of the grouping clause does not affect
- * the semantics of the query. However, the optimizer is not currently
- * smart enough to reorder the grouping clause, so we try to do some
- * primitive reordering here.
  */
 List *
 transformGroupClause(ParseState *pstate, List *grouplist,
@@ -2145,9 +2147,6 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 	foreach(l, reorder_grouplist)
 	{
 		Node *node = (Node*) lfirst(l);
-		TargetEntry *tle;
-		GroupClause *gc;
-		Oid			sort_op;
 
 		if (node == NULL) /* the empty grouping set */
 			result = list_concat(result, list_make1(NIL));
@@ -2175,12 +2174,16 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 
 		else
 		{
+			TargetEntry *tle;
+			SortGroupClause *gc;
+			Oid			sortop;
+			Oid			eqop;
 
-            if (useSQL99)
-                tle = findTargetlistEntrySQL99(pstate, node, targetlist);
-            else
-                tle = findTargetlistEntrySQL92(pstate, node, targetlist, 
-                                               GROUP_CLAUSE);
+			if (useSQL99)
+				tle = findTargetlistEntrySQL99(pstate, node, targetlist);
+			else
+				tle = findTargetlistEntrySQL92(pstate, node, targetlist,
+											   GROUP_CLAUSE);
 
 			/*
 			 * Avoid making duplicate grouplist entries.  Note that we don't
@@ -2189,11 +2192,13 @@ transformGroupClause(ParseState *pstate, List *grouplist,
 			 * "GROUP BY foo ORDER BY foo USING <<<", the GROUP BY operation
 			 * silently takes on the equality semantics implied by the ORDER BY.
 			 */
-			if (targetIsInSortGroupList(tle, InvalidOid, result))
+			if (targetIsInSortList(tle, InvalidOid, result))
 				continue;
 
-			sort_op = ordering_oper_opid(exprType((Node *) tle->expr));
-			gc = make_group_clause(tle, *targetlist, sort_op, false);
+			get_sort_group_operators(exprType((Node *) tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
+			gc = make_group_clause(tle, *targetlist, eqop, sortop, false);
 			result = lappend(result, gc);
 		}
 	}
@@ -2530,15 +2535,13 @@ transformWindowDefinitions(ParseState *pstate,
 }
 
 /*
- *
  * transformDistinctToGroupBy
  *
  * 		transform DISTINCT clause to GROUP-BY clause
- *
  */
-static List *
+List *
 transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
-							List *sortClause, List **groupClause)
+							List **sortClause, List **groupClause)
 {
 	List *group_tlist = list_copy(*targetlist);
 
@@ -2548,7 +2551,7 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 	List *group_tlist_remainder = NIL;
 	List *group_clause_list = create_group_clause(group_tlist,
 												*targetlist,
-												sortClause,
+												*sortClause,
 												&group_tlist_remainder);
 
 	if (list_length(group_tlist_remainder) > 0)
@@ -2576,19 +2579,6 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 														&sortby, true);
 			}
 		}
-
-		/*
-		 * fix tags of group clauses
-		 */
-		foreach(lc, group_clause_list)
-		{
-			Node *node = lfirst(lc);
-			if (IsA(node, SortClause))
-			{
-				SortClause *sc = (SortClause *) node;
-				sc->type = T_GroupClause;
-			}
-		}
 	}
 
 	*groupClause = group_clause_list;
@@ -2605,188 +2595,168 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 
 /*
  * transformDistinctClause -
- *	  transform a DISTINCT or DISTINCT ON clause
+ *	  transform a DISTINCT clause
  *
  * Since we may need to add items to the query's targetlist, that list
  * is passed by reference.
  *
  * As with GROUP BY, we absorb the sorting semantics of ORDER BY as much as
  * possible into the distinctClause.  This avoids a possible need to re-sort,
- * and allows the user to determine the equality semantics used by DISTINCT,
- * should she be working with a datatype that has more than one btree equality
+ * and allows the user to choose the equality semantics used by DISTINCT,
+ * should she be working with a datatype that has more than one equality
  * operator.
  */
 List *
-transformDistinctClause(ParseState *pstate, List *distinctlist,
-						List **targetlist, List *sortClause, List **groupClause)
+transformDistinctClause(ParseState *pstate,
+						List **targetlist, List *sortClause)
 {
 	List	   *result = NIL;
 	ListCell   *slitem;
-	ListCell   *dlitem;
 	ListCell   *tlitem;
 
-	/* No work if there was no DISTINCT clause */
-	if (distinctlist == NIL)
-		return NIL;
-
-	if (linitial(distinctlist) == NULL)
+	/*
+	 * The distinctClause should consist of all ORDER BY items followed by all
+	 * other non-resjunk targetlist items.  There must not be any resjunk
+	 * ORDER BY items --- that would imply that we are sorting by a value that
+	 * isn't necessarily unique within a DISTINCT group, so the results
+	 * wouldn't be well-defined.  This construction ensures we follow the rule
+	 * that sortClause and distinctClause match; in fact the sortClause will
+	 * always be a prefix of distinctClause.
+	 *
+	 * Note a corner case: the same TLE could be in the ORDER BY list multiple
+	 * times with different sortops.  We have to include it in the
+	 * distinctClause the same way to preserve the prefix property. The net
+	 * effect will be that the TLE value will be made unique according to both
+	 * sortops.
+	 */
+	foreach(slitem, sortClause)
 	{
-		/* We had SELECT DISTINCT */
+		SortGroupClause *scl = (SortGroupClause *) lfirst(slitem);
+		TargetEntry *tle = get_sortgroupclause_tle(scl, *targetlist);
 
-		if (!pstate->p_hasAggs && !pstate->p_hasWindowFuncs && *groupClause == NIL)
-		{
-			/*
-			 * MPP-15040
-			 * turn distinct clause into grouping clause to make both sort-based
-			 * and hash-based grouping implementations viable plan options
-			 */
-
-			return transformDistinctToGroupBy(pstate, targetlist, sortClause, groupClause);
-		}
-
-		/*
-		 * The distinctClause should consist of all ORDER BY items followed
-		 * by all other non-resjunk targetlist items.  There must not be any
-		 * resjunk ORDER BY items --- that would imply that we are sorting
-		 * by a value that isn't necessarily unique within a DISTINCT group,
-		 * so the results wouldn't be well-defined.  This construction
-		 * ensures we follow the rule that sortClause and distinctClause match;
-		 * in fact the sortClause will always be a prefix of distinctClause.
-		 *
-		 * Note a corner case: the same TLE could be in the ORDER BY list
-		 * multiple times with different sortops.  We have to include it in
-		 * the distinctClause the same way to preserve the prefix property.
-		 * The net effect will be that the TLE value will be made unique
-		 * according to both sortops.
-		 */
-		foreach(slitem, sortClause)
-		{
-			SortClause *scl = (SortClause *) lfirst(slitem);
-			TargetEntry *tle = get_sortgroupclause_tle(scl, *targetlist);
-
-			if (tle->resjunk)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-						 errmsg("for SELECT DISTINCT, ORDER BY expressions must appear in select list"),
-						 parser_errposition(pstate,
-											exprLocation((Node *) tle->expr))));
-			else
-				result = lappend(result, copyObject(scl));
-		}
-
-		/*
-		 * Now add any remaining non-resjunk tlist items, using default
-		 * sorting semantics for their data types.
-		 */
-		foreach(tlitem, *targetlist)
-		{
-			TargetEntry *tle = (TargetEntry *) lfirst(tlitem);
-
-			if (tle->resjunk)
-				continue;		/* ignore junk */
-			if (targetIsInSortGroupList(tle, InvalidOid, result))
-				continue;		/* already in list (with some semantics) */
-
-			SortBy sortby;
-
-			sortby.type = T_SortBy;
-			sortby.sortby_dir = SORTBY_DEFAULT;
-			sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-			sortby.useOp = NIL;
-			sortby.location = -1;
-			sortby.node = (Node *) tle->expr;
-
-			result = addTargetToSortList(pstate, tle,
-										 result, *targetlist,
-										 &sortby, true);
-		}
+		if (tle->resjunk)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+					 errmsg("for SELECT DISTINCT, ORDER BY expressions must appear in select list"),
+					 parser_errposition(pstate,
+										exprLocation((Node *) tle->expr))));
+		result = lappend(result, copyObject(scl));
 	}
-	else
+
+	/*
+	 * Now add any remaining non-resjunk tlist items, using default sort/group
+	 * semantics for their data types.
+	 */
+	foreach(tlitem, *targetlist)
 	{
-		/* We had SELECT DISTINCT ON (expr, ...) */
-		Bitmapset  *refnos = NULL;
+		TargetEntry *tle = (TargetEntry *) lfirst(tlitem);
+
+		if (tle->resjunk)
+			continue;			/* ignore junk */
+		result = addTargetToGroupList(pstate, tle,
+									  result, *targetlist,
+									  exprLocation((Node *) tle->expr),
+									  true);
+	}
+
+	return result;
+}
+
+/*
+ * transformDistinctOnClause -
+ *	  transform a DISTINCT ON clause
+ *
+ * Since we may need to add items to the query's targetlist, that list
+ * is passed by reference.
+ *
+ * As with GROUP BY, we absorb the sorting semantics of ORDER BY as much as
+ * possible into the distinctClause.  This avoids a possible need to re-sort,
+ * and allows the user to choose the equality semantics used by DISTINCT,
+ * should she be working with a datatype that has more than one equality
+ * operator.
+ */
+List *
+transformDistinctOnClause(ParseState *pstate, List *distinctlist,
+						  List **targetlist, List *sortClause)
+{
+	List	   *result = NIL;
+	List	   *sortgrouprefs = NIL;
+	bool		skipped_sortitem;
+	ListCell   *lc;
+	ListCell   *lc2;
+
+	/*
+	 * Add all the DISTINCT ON expressions to the tlist (if not already
+	 * present, they are added as resjunk items).  Assign sortgroupref numbers
+	 * to them, and make a list of these numbers.  (NB: we rely below on the
+	 * sortgrouprefs list being one-for-one with the original distinctlist.
+	 * Also notice that we could have duplicate DISTINCT ON expressions and
+	 * hence duplicate entries in sortgrouprefs.)
+	 */
+	foreach(lc, distinctlist)
+	{
+		Node	   *dexpr = (Node *) lfirst(lc);
 		int			sortgroupref;
-		bool		skipped_sortitem;
+		TargetEntry *tle;
 
-		/*
-		 * Add all the DISTINCT ON expressions to the tlist (if not already
-		 * present, they are added as resjunk items).  Assign sortgroupref
-		 * numbers to them, and form a bitmapset of these numbers.  (A
-		 * bitmapset is convenient here because we don't care about order
-		 * and we can discard duplicates.)
-		 */
-		foreach(dlitem, distinctlist)
+		tle = findTargetlistEntrySQL92(pstate, dexpr, targetlist,
+									   DISTINCT_ON_CLAUSE);
+		sortgroupref = assignSortGroupRef(tle, *targetlist);
+		sortgrouprefs = lappend_int(sortgrouprefs, sortgroupref);
+	}
+
+	/*
+	 * If the user writes both DISTINCT ON and ORDER BY, adopt the sorting
+	 * semantics from ORDER BY items that match DISTINCT ON items, and also
+	 * adopt their column sort order.  We insist that the distinctClause and
+	 * sortClause match, so throw error if we find the need to add any more
+	 * distinctClause items after we've skipped an ORDER BY item that wasn't
+	 * in DISTINCT ON.
+	 */
+	skipped_sortitem = false;
+	foreach(lc, sortClause)
+	{
+		SortGroupClause *scl = (SortGroupClause *) lfirst(lc);
+
+		if (list_member_int(sortgrouprefs, scl->tleSortGroupRef))
 		{
-			Node   *dexpr = (Node *) lfirst(dlitem);
-			TargetEntry *tle;
-
-			tle = findTargetlistEntrySQL92(pstate, dexpr,
-                                           targetlist, DISTINCT_ON_CLAUSE);
-			sortgroupref = assignSortGroupRef(tle, *targetlist);
-			refnos = bms_add_member(refnos, sortgroupref);
-		}
-
-		/*
-		 * If the user writes both DISTINCT ON and ORDER BY, adopt the
-		 * sorting semantics from ORDER BY items that match DISTINCT ON
-		 * items, and also adopt their column sort order.  We insist that
-		 * the distinctClause and sortClause match, so throw error if we
-		 * find the need to add any more distinctClause items after we've
-		 * skipped an ORDER BY item that wasn't in DISTINCT ON.
-		 */
-		skipped_sortitem = false;
-		foreach(slitem, sortClause)
-		{
-			SortClause *scl = (SortClause *) lfirst(slitem);
-
-			if (bms_is_member(scl->tleSortGroupRef, refnos))
-			{
-				if (skipped_sortitem)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
-							 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions")));
-				else
-					result = lappend(result, copyObject(scl));
-			}
-			else
-			{
-				skipped_sortitem = true;
-			}
-		}
-
-		/*
-		 * Now add any remaining DISTINCT ON items, using default sorting
-		 * semantics for their data types.  (Note: this is pretty
-		 * questionable; if the ORDER BY list doesn't include all the DISTINCT
-		 * ON items and more besides, you certainly aren't using DISTINCT ON
-		 * in the intended way, and you probably aren't going to get
-		 * consistent results.  It might be better to throw an error or warning
-		 * here.  But historically we've allowed it, so keep doing so.)
-		 */
-		while ((sortgroupref = bms_first_member(refnos)) >= 0)
-		{
-			TargetEntry *tle = get_sortgroupref_tle(sortgroupref, *targetlist);
-
-			if (targetIsInSortGroupList(tle, InvalidOid, result))
-				continue;		/* already in list (with some semantics) */
 			if (skipped_sortitem)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
 						 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions")));
-
-			SortBy sortby;
-
-			sortby.type = T_SortBy;
-			sortby.sortby_dir = SORTBY_DEFAULT;
-			sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
-			sortby.useOp = NIL;
-			sortby.location = -1;
-			sortby.node = (Node *) tle->expr;
-
-			result = addTargetToSortList(pstate, tle,
-										 result, *targetlist,
-										 &sortby, true);
+			else
+				result = lappend(result, copyObject(scl));
 		}
+		else
+			skipped_sortitem = true;
+	}
+
+	/*
+	 * Now add any remaining DISTINCT ON items, using default sort/group
+	 * semantics for their data types.  (Note: this is pretty questionable; if
+	 * the ORDER BY list doesn't include all the DISTINCT ON items and more
+	 * besides, you certainly aren't using DISTINCT ON in the intended way,
+	 * and you probably aren't going to get consistent results.  It might be
+	 * better to throw an error or warning here.  But historically we've
+	 * allowed it, so keep doing so.)
+	 */
+	forboth(lc, distinctlist, lc2, sortgrouprefs)
+	{
+		Node	   *dexpr = (Node *) lfirst(lc);
+		int			sortgroupref = lfirst_int(lc2);
+		TargetEntry *tle = get_sortgroupref_tle(sortgroupref, *targetlist);
+
+		if (targetIsInSortList(tle, InvalidOid, result))
+			continue;			/* already in list (with some semantics) */
+		if (skipped_sortitem)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+					 errmsg("SELECT DISTINCT ON expressions must match initial ORDER BY expressions"),
+					 parser_errposition(pstate, exprLocation(dexpr))));
+		result = addTargetToGroupList(pstate, tle,
+									  result, *targetlist,
+									  exprLocation(dexpr),
+									  true);
 	}
 
 	return result;
@@ -2837,16 +2807,16 @@ transformScatterClause(ParseState *pstate,
 
 /*
  * addTargetToSortList
- *		If the given targetlist entry isn't already in the SortClause list,
- *		add it to the end of the list, using the given sort ordering info.
+ *		If the given targetlist entry isn't already in the SortGroupClause
+ *		list, add it to the end of the list, using the given sort ordering
+ *		info.
  *
  * If resolveUnknown is TRUE, convert TLEs of type UNKNOWN to TEXT.  If not,
  * do nothing (which implies the search for a sort operator will fail).
  * pstate should be provided if resolveUnknown is TRUE, but can be NULL
  * otherwise.
  *
- * Returns the updated ORDER BY list.
- * May modify targetlist entry in place even when resolveUnknown is FALSE.
+ * Returns the updated SortGroupClause list.
  */
 List *
 addTargetToSortList(ParseState *pstate, TargetEntry *tle,
@@ -2855,7 +2825,7 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 {
 	Oid			restype = exprType((Node *) tle->expr);
 	Oid			sortop;
-	Oid			cmpfunc;
+	Oid			eqop;
 	bool		reverse;
 	int			location;
 	ParseCallbackState pcbstate;
@@ -2889,11 +2859,15 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 	{
 		case SORTBY_DEFAULT:
 		case SORTBY_ASC:
-			sortop = ordering_oper_opid(restype);
+			get_sort_group_operators(restype,
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 			reverse = false;
 			break;
 		case SORTBY_DESC:
-			sortop = reverse_ordering_oper_opid(restype);
+			get_sort_group_operators(restype,
+									 false, true, true,
+									 NULL, &eqop, &sortop);
 			reverse = true;
 			break;
 		case SORTBY_USING:
@@ -2908,8 +2882,8 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 			 * equality operator, and determine whether to consider it like
 			 * ASC or DESC.
 			 */
-			if (!get_compare_function_for_ordering_op(sortop,
-													  &cmpfunc, &reverse))
+			eqop = get_equality_op_for_ordering_op(sortop, &reverse);
+			if (!OidIsValid(eqop))
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					   errmsg("operator %s is not a valid ordering operator",
@@ -2920,6 +2894,7 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 		default:
 			elog(ERROR, "unrecognized sortby_dir: %d", sortby->sortby_dir);
 			sortop = InvalidOid;	/* keep compiler quiet */
+			eqop = InvalidOid;
 			reverse = false;
 			break;
 	}
@@ -2927,12 +2902,13 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 	cancel_parser_errposition_callback(&pcbstate);
 
 	/* avoid making duplicate sortlist entries */
-	if (!targetIsInSortGroupList(tle, sortop, sortlist))
+	if (!targetIsInSortList(tle, sortop, sortlist))
 	{
-		SortClause *sortcl = makeNode(SortClause);
+		SortGroupClause *sortcl = makeNode(SortGroupClause);
 
 		sortcl->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
 
+		sortcl->eqop = eqop;
 		sortcl->sortop = sortop;
 
 		switch (sortby->sortby_nulls)
@@ -2957,6 +2933,70 @@ addTargetToSortList(ParseState *pstate, TargetEntry *tle,
 	}
 
 	return sortlist;
+}
+
+/*
+ * addTargetToGroupList
+ *		If the given targetlist entry isn't already in the SortGroupClause
+ *		list, add it to the end of the list, using default sort/group
+ *		semantics.
+ *
+ * This is very similar to addTargetToSortList, except that we allow the
+ * case where only a grouping (equality) operator can be found, and that
+ * the TLE is considered "already in the list" if it appears there with any
+ * sorting semantics.
+ *
+ * If resolveUnknown is TRUE, convert TLEs of type UNKNOWN to TEXT.  If not,
+ * do nothing (which implies the search for an equality operator will fail).
+ * pstate should be provided if resolveUnknown is TRUE, but can be NULL
+ * otherwise.
+ *
+ * Returns the updated SortGroupClause list.
+ */
+static List *
+addTargetToGroupList(ParseState *pstate, TargetEntry *tle,
+					 List *grouplist, List *targetlist, int location,
+					 bool resolveUnknown)
+{
+	Oid			restype = exprType((Node *) tle->expr);
+	Oid			sortop;
+	Oid			eqop;
+
+	/* if tlist item is an UNKNOWN literal, change it to TEXT */
+	if (restype == UNKNOWNOID && resolveUnknown)
+	{
+		tle->expr = (Expr *) coerce_type(pstate, (Node *) tle->expr,
+										 restype, TEXTOID, -1,
+										 COERCION_IMPLICIT,
+										 COERCE_IMPLICIT_CAST,
+										 -1);
+		restype = TEXTOID;
+	}
+
+	/* avoid making duplicate grouplist entries */
+	if (!targetIsInSortList(tle, InvalidOid, grouplist))
+	{
+		SortGroupClause *grpcl = makeNode(SortGroupClause);
+		ParseCallbackState pcbstate;
+
+		setup_parser_errposition_callback(&pcbstate, pstate, location);
+
+		/* determine the eqop and optional sortop */
+		get_sort_group_operators(restype,
+								 false, true, false,
+								 &sortop, &eqop, NULL);
+
+		cancel_parser_errposition_callback(&pcbstate);
+
+		grpcl->tleSortGroupRef = assignSortGroupRef(tle, targetlist);
+		grpcl->eqop = eqop;
+		grpcl->sortop = sortop;
+		grpcl->nulls_first = false;		/* OK with or without sortop */
+
+		grouplist = lappend(grouplist, grpcl);
+	}
+
+	return grouplist;
 }
 
 /*
@@ -2989,8 +3029,8 @@ assignSortGroupRef(TargetEntry *tle, List *tlist)
 }
 
 /*
- * targetIsInSortGroupList
- *		Is the given target item already in the sortlist or grouplist?
+ * targetIsInSortList
+ *		Is the given target item already in the sortlist?
  *		If sortop is not InvalidOid, also test for a match to the sortop.
  *
  * It is not an oversight that this function ignores the nulls_first flag.
@@ -3002,15 +3042,15 @@ assignSortGroupRef(TargetEntry *tle, List *tlist)
  * opposite nulls direction is redundant.  Also, we can consider
  * ORDER BY foo ASC, foo DESC redundant, so check for a commutator match.
  *
- * Works for SortClause, GroupClause and GroupingClause lists.  Note
- * that the main reason we need this routine (and not just a quick
- * test for nonzeroness of ressortgroupref) is that a TLE might be in
- * only one of the lists.
+ * Works for both ordering and grouping lists (sortop would normally be
+ * InvalidOid when considering grouping).  Note that the main reason we need
+ * this routine (and not just a quick test for nonzeroness of ressortgroupref)
+ * is that a TLE might be in only one of the lists.
  *
  * Any GroupingClauses in the list will be skipped during comparison.
  */
 bool
-targetIsInSortGroupList(TargetEntry *tle, Oid sortop, List *sortgroupList)
+targetIsInSortList(TargetEntry *tle, Oid sortop, List *sortgroupList)
 {
 	Index		ref = tle->ressortgroupref;
 	ListCell   *l;
@@ -3027,9 +3067,9 @@ targetIsInSortGroupList(TargetEntry *tle, Oid sortop, List *sortgroupList)
 		if (node == NULL)
 			continue;
 
-		if (IsA(node, GroupClause) || IsA(node, SortClause))
+		if (IsA(node, SortGroupClause))
 		{
-			GroupClause *scl = (GroupClause *) node;
+			SortGroupClause *scl = (SortGroupClause *) node;
 
 			if (scl->tleSortGroupRef == ref &&
 				(sortop == InvalidOid ||
@@ -3169,7 +3209,6 @@ transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
 	List *args = rowexpr->args;
 	List *grping_set = NIL;
 	ListCell *arglc;
-	Oid sort_op;
 
 	foreach (arglc, args)
 	{
@@ -3189,9 +3228,14 @@ transformRowExprToList(ParseState *pstate, RowExpr *rowexpr,
 			 */
 			TargetEntry *arg_tle =
 				findTargetlistEntrySQL92(pstate, node, &targetList, GROUP_CLAUSE);
-			sort_op = ordering_oper_opid(exprType((Node *)arg_tle->expr));
+			Oid			sortop;
+			Oid			eqop;
+
+			get_sort_group_operators(exprType((Node *) arg_tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 			grping_set = lappend(grping_set,
-								 make_group_clause(arg_tle, targetList, sort_op, false));
+								 make_group_clause(arg_tle, targetList, eqop, sortop, false));
 		}
 	}
 	groupsets = lappend (groupsets, grping_set);
@@ -3218,7 +3262,6 @@ transformRowExprToGroupClauses(ParseState *pstate, RowExpr *rowexpr,
 {
 	List *args = rowexpr->args;
 	ListCell *arglc;
-	Oid sort_op;
 
 	foreach (arglc, args)
 	{
@@ -3237,15 +3280,19 @@ transformRowExprToGroupClauses(ParseState *pstate, RowExpr *rowexpr,
 			 */
 			TargetEntry *arg_tle =
 				findTargetlistEntrySQL92(pstate, node, &targetList, GROUP_CLAUSE);
+			Oid			sortop;
+			Oid			eqop;
 
-			sort_op = ordering_oper_opid(exprType((Node *)arg_tle->expr));
+			get_sort_group_operators(exprType((Node *) arg_tle->expr),
+									 true, true, false,
+									 &sortop, &eqop, NULL);
 
 			/* avoid making duplicate expression entries */
-			if (targetIsInSortGroupList(arg_tle, sort_op, groupsets))
+			if (targetIsInSortList(arg_tle, sortop, groupsets))
 				continue;
 
 			groupsets = lappend(groupsets,
-								make_group_clause(arg_tle, targetList, sort_op, false));
+								make_group_clause(arg_tle, targetList, eqop, sortop, false));
 		}
 	}
 
@@ -3305,7 +3352,7 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 		Oid			otype;
 		Oid			rtype;
 		Oid			newrtype;
-		SortClause *sort;
+		SortGroupClause *sort;
 		Oid			oprresult;
 		List	   *oprname;
 		Operator	tup;
@@ -3342,7 +3389,7 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 						 parser_errposition(pstate, con->location)));
 		}
 
-		sort = (SortClause *) linitial(orderClause);
+		sort = (SortGroupClause *) linitial(orderClause);
 		te = getTargetBySortGroupRef(sort->tleSortGroupRef,
 									 targetlist);
 		otype = exprType((Node *)te->expr);
@@ -3423,12 +3470,16 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 		{
 			/* see if RANGE parameter is negative */
 			Const *con = (Const *) node;
+			Oid			sortop;
 
-			tup = ordering_oper(newrtype, false);
-			if (HeapTupleIsValid(tup))
+			get_sort_group_operators(newrtype,
+									 false, false, false,
+									 &sortop, NULL, NULL);
+
+			if (OidIsValid(sortop))
 			{
 				Type typ = typeidType(newrtype);
-				Oid funcoid = oprfuncid(tup);
+				Oid funcoid = get_opcode(sortop);
 				Datum zero;
 				Datum result;
 
@@ -3447,7 +3498,6 @@ transformFrameOffset(ParseState *pstate, int frameOptions, Node *clause,
 							 errmsg("RANGE parameter cannot be negative"),
 							 parser_errposition(pstate, con->location)));
 
-				ReleaseSysCache(tup);
 				ReleaseSysCache(typ);
 			}
 		}

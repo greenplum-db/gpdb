@@ -1128,7 +1128,13 @@ gpdb::OidEqualityOp
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_type */
-		return equality_oper_opid(oidType);
+		Oid eq_opr;
+
+		get_sort_group_operators(oidType,
+					 false, true, false,
+					 NULL, &eq_opr, NULL);
+
+		return eq_opr;
 	}
 	GP_WRAP_END;
 	return InvalidOid;

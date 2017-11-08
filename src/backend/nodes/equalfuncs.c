@@ -24,7 +24,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.324 2008/07/16 01:30:22 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.326 2008/08/07 01:11:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -884,6 +884,7 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_SCALAR_FIELD(hasAggs);
 	COMPARE_SCALAR_FIELD(hasWindowFuncs);
 	COMPARE_SCALAR_FIELD(hasSubLinks);
+	COMPARE_SCALAR_FIELD(hasDistinctOn);
 	COMPARE_SCALAR_FIELD(hasDynamicFunctions);
 	COMPARE_SCALAR_FIELD(hasFuncsWithExecRestrictions);
 	COMPARE_NODE_FIELD(rtable);
@@ -984,6 +985,7 @@ _equalSetOperationStmt(SetOperationStmt *a, SetOperationStmt *b)
 	COMPARE_NODE_FIELD(rarg);
 	COMPARE_NODE_FIELD(colTypes);
 	COMPARE_NODE_FIELD(colTypmods);
+	COMPARE_NODE_FIELD(groupClauses);
 
 	return true;
 }
@@ -2332,9 +2334,10 @@ _equalRangeTblEntry(RangeTblEntry *a, RangeTblEntry *b)
 }
 
 static bool
-_equalSortClause(SortClause *a, SortClause *b)
+_equalSortGroupClause(SortGroupClause *a, SortGroupClause *b)
 {
 	COMPARE_SCALAR_FIELD(tleSortGroupRef);
+	COMPARE_SCALAR_FIELD(eqop);
 	COMPARE_SCALAR_FIELD(sortop);
 	COMPARE_SCALAR_FIELD(nulls_first);
 
@@ -3159,12 +3162,8 @@ equal(void *a, void *b)
 		case T_RangeTblEntry:
 			retval = _equalRangeTblEntry(a, b);
 			break;
-		case T_SortClause:
-			retval = _equalSortClause(a, b);
-			break;
-		case T_GroupClause:
-			/* GroupClause is equivalent to SortClause */
-			retval = _equalSortClause(a, b);
+		case T_SortGroupClause:
+			retval = _equalSortGroupClause(a, b);
 			break;
 		case T_GroupingClause:
 			retval = _equalGroupingClause(a, b);
