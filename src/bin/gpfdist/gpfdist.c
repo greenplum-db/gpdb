@@ -11,7 +11,6 @@
 #include <apr_file_info.h>
 #include <apr_hash.h>
 #include <apr_pools.h>
-#include <apr_signal.h>
 #include <apr_strings.h>
 #include <apr_time.h>
 #include <event.h>
@@ -191,6 +190,7 @@ static struct
 	int				listen_sock_count;
 	SOCKET 			listen_socks[6];
 	struct event 	listen_events[6];
+	struct event 	signal_event;
 	struct
 	{
 		int 		gen;
@@ -364,7 +364,7 @@ static int get_unsent_bytes(request_t* r);
 static void * palloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, ...);
 static void * pcalloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, ...);
 
-void process_signal(int sig);
+static void process_term_signal(int sig, short event, void* arg);
 int gpfdist_init(int argc, const char* const argv[]);
 int gpfdist_run(void);
 
@@ -2310,6 +2310,22 @@ print_addrinfo_list(struct addrinfo *head)
 	}
 }
 
+static void
+signal_register()
+{
+	/* when SIGTERM raised invoke process_term_signal */
+	signal_set(&gcb.signal_event, SIGTERM, process_term_signal, 0);
+
+	/* high priority so we accept as fast as possible */
+	if(event_priority_set(&gcb.signal_event, 0))
+		gwarning(NULL, "signal event priority set failed");
+
+	/* start watching this event */
+	if (signal_add(&gcb.signal_event, 0))
+		gfatal(NULL, "cannot set up event on signal register");
+
+}
+
 /* Create HTTP port and start to receive request */
 static void
 http_setup(void)
@@ -2517,8 +2533,8 @@ http_setup(void)
 		event_set(&gcb.listen_events[i], gcb.listen_socks[i], EV_READ | EV_PERSIST,
 				  do_accept, 0);
 
-		/* high priority so we accept as fast as possible */
-		if (event_priority_set(&gcb.listen_events[i], 0))
+		/* only signal process function priority higher than socket handler */
+		if (event_priority_set(&gcb.listen_events[i], 1))
 			gwarning(NULL, "event_priority_set failed");
 
 		/* start watching this event */
@@ -2529,22 +2545,19 @@ http_setup(void)
 }
 
 void
-process_signal(int sig)
+process_term_signal(int sig, short event, void* arg)
 {
-	if (sig == SIGINT || sig == SIGTERM)
-	{
-		gwarning(NULL, "signal %d received. gpfdist exits", sig);
-		log_gpfdist_status();
-		fflush(stdout);
+	gwarning(NULL, "signal %d received. gpfdist exits", sig);
+	log_gpfdist_status();
+	fflush(stdout);
 
-		int i;
-		for (i = 0; i < gcb.listen_sock_count; i++)
-			if (gcb.listen_socks[i] > 0)
-			{
-				closesocket(gcb.listen_socks[i]);
-			}
-		exit(1);
-	}
+	int i;
+	for (i = 0; i < gcb.listen_sock_count; i++)
+		if (gcb.listen_socks[i] > 0)
+		{
+			closesocket(gcb.listen_socks[i]);
+		}
+	exit(1);
 }
 
 
@@ -3493,7 +3506,7 @@ int gpfdist_init(int argc, const char* const argv[])
 	if (0 != apr_pool_create(&gcb.pool, 0))
 		gfatal(NULL, "apr_app_initialize failed");
 
-	apr_signal_init(gcb.pool);
+	// apr_signal_init(gcb.pool);
 
 	gcb.session.tab = apr_hash_make(gcb.pool);
 
@@ -3506,13 +3519,15 @@ int gpfdist_init(int argc, const char* const argv[])
 #endif
 	/*
 	 * apr_signal(SIGINT, process_signal);
+	 * apr_signal(SIGTERM, process_signal);
 	 */
-	apr_signal(SIGTERM, process_signal);
 	if (opt.V)
 		putenv("EVENT_SHOW_METHOD=1");
 	putenv("EVENT_NOKQUEUE=1");
 
 	event_init();
+
+	signal_register();
 	http_setup();
 
 #ifdef USE_SSL

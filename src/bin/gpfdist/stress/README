@@ -1,0 +1,10 @@
+This stress test contain two bash files which are "query.bash" and "stress.bash".
+The scripts depend on mockd process(https://github.com/pivotal/mock-data) to generate some fake data.
+After mockd compilation and please fill the path into "stress.bash" MOCKD_PATH variable.
+
+"query.bash" is an infinity loop to query data from external table in the test database.
+Running this script after "stress.bash" start. It sleeps 2-7 seconds then send SIGTERM
+signal to gpfdist. If gpfdist exit successfully, it will restart gpfdist again and do this previous
+task again until gpfdist hang.
+
+gpfdist does not hang through three hours test.
