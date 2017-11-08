@@ -32,4 +32,4 @@ LOCATION ('pxf:///tmp/pxf?'
 FORMAT 'TEXT' (DELIMITER ',') DISTRIBUTED BY (a);
 
 CREATE TABLE origin (a int, b TEXT) DISTRIBUTED BY (a);
-INSERT INTO origin SELECT i, 'data_' || i FROM generate_series(1,100) AS i;
+INSERT INTO origin SELECT i, 'data_' || i FROM generate_series(10,99) AS i;

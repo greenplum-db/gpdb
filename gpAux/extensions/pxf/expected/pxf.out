@@ -31,9 +31,7 @@ INSERT INTO pxf_write_test SELECT * from origin;
 \!ls -1 /tmp/pxf/ | wc -l | sed -e 's/^[[:space:]]*//'
 3
 \!cat /tmp/pxf/* | sort
-1,data_1
 10,data_10
-100,data_100
 11,data_11
 12,data_12
 13,data_13
@@ -43,7 +41,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 17,data_17
 18,data_18
 19,data_19
-2,data_2
 20,data_20
 21,data_21
 22,data_22
@@ -54,7 +51,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 27,data_27
 28,data_28
 29,data_29
-3,data_3
 30,data_30
 31,data_31
 32,data_32
@@ -65,7 +61,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 37,data_37
 38,data_38
 39,data_39
-4,data_4
 40,data_40
 41,data_41
 42,data_42
@@ -76,7 +71,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 47,data_47
 48,data_48
 49,data_49
-5,data_5
 50,data_50
 51,data_51
 52,data_52
@@ -87,7 +81,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 57,data_57
 58,data_58
 59,data_59
-6,data_6
 60,data_60
 61,data_61
 62,data_62
@@ -98,7 +91,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 67,data_67
 68,data_68
 69,data_69
-7,data_7
 70,data_70
 71,data_71
 72,data_72
@@ -109,7 +101,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 77,data_77
 78,data_78
 79,data_79
-8,data_8
 80,data_80
 81,data_81
 82,data_82
@@ -120,7 +111,6 @@ INSERT INTO pxf_write_test SELECT * from origin;
 87,data_87
 88,data_88
 89,data_89
-9,data_9
 90,data_90
 91,data_91
 92,data_92
