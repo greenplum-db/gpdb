@@ -7,7 +7,7 @@
       <p>The <codeph>segment_*</codeph> tables contain memory allocation statistics for the
          Greenplum Database segment instances. This tracks the amount of memory consumed by all
          postgres processes of a particular segment instance, and the remaining amount of memory
-         available to a segment as per the settings configured by the currently active resource management scheme (resource group-base or resource queue-based).
+         available to a segment as per the settings configured by the currently active resource management scheme (resource group-based or resource queue-based).
          See the <cite>Greenplum Database Administrator Guide</cite> for more
          information about resource management schemes.</p>
       <p>There are three segment tables, all having the same columns:</p>
