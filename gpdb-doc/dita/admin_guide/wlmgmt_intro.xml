@@ -119,12 +119,13 @@ gp_vmem_protect_limit = gp_vmem / max_acting_primary_segments</codeblock></p>
         <p><varname>gp_vmem_protect_limit</varname> does not affect segment memory when using 
           resource groups for Greenplum Database resource management.</p>
         <p>When resource group-based resource management is active, the amount of memory allocated
-          to each segment is the memory available to Greenplum Database multiplied by the
+          to each segment on a segment host is the memory available to Greenplum Database multiplied by the
           <varname>gp_resource_group_memory_limit</varname> server configuration parameter and
-          divided by the number of segments. Use the following formula to calculate a safe
-          value for segment memory when using resource groups for resource management.</p>
+          divided by the number of active primary segments on the host. Use the following
+          formula to calculate a safe value for segment memory when using resource groups for
+          resource management.</p>
         <p><codeblock>
-rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / number_of_segments </codeblock></p>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
         <p>Resource queues and resource groups support additional configuration parameters that
            enable you to further control and refine the amount of memory allocated for queries.</p>
       </section>
