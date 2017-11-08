@@ -1659,10 +1659,10 @@
   <topic id="default_statistics_target">
     <title>default_statistics_target</title>
     <body>
-      <p>Sets the default statistics target for table columns that have not had a column-specific
-        target set via <codeph>ALTER TABLE SET STATISTICS</codeph>. Larger values increase the time
-        needed to do <codeph>ANALYZE</codeph>, but may improve the quality of the legacy query
-        optimizer (planner) estimates.</p>
+      <p>Sets the default statistics sampling target (the number of values that are stored in the
+        list of common values) for table columns that have not had a column-specific target set via
+          <codeph>ALTER TABLE SET STATISTICS</codeph>. Larger values may improve the quality of the
+        legacy query optimizer (planner) estimates. </p>
       <table id="default_statistics_target_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

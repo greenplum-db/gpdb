@@ -150,7 +150,7 @@ ALTER TABLE <varname>name</varname>
                                 <li id="ay136944"><b>SET STATISTICS</b> — Sets the per-column
                                         statistics-gathering target for subsequent
                                                 <codeph>ANALYZE</codeph> operations. The target can
-                                        be set in the range 0 to 1000, or set to -1 to revert to
+                                        be set in the range 1 to 1000, or set to -1 to revert to
                                         using the system default statistics target
                                                 (<codeph>default_statistics_target</codeph>).</li>
                                 <li id="ay137022"><b>ADD <varname>table_constraint</varname></b> —
