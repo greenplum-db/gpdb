@@ -13,6 +13,7 @@
 #include "mock/libchurl_mock.c"
 #include "mock/pxfuriparser_mock.c"
 #include "mock/pxfheaders_mock.c"
+#include "mock/pxfutils_mock.c"
 #include "../src/pxfbridge.h"
 
 /* helper functions */
@@ -146,7 +147,8 @@ test_gpbridge_export_start(void **state)
 	will_return(getDistributedTransactionIdentifier, true);
 
 	/* expectation for remote uri construction */
-	char* expected_uri = psprintf("http://localhost:51200/pxf/v15/Writable/stream?path=%s", expected_file_name);
+	will_return(get_authority, "abc:123");
+	char* expected_uri = psprintf("http://abc:123/pxf/v15/Writable/stream?path=%s", expected_file_name);
 
 	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
 	will_return(churl_headers_init, headers);

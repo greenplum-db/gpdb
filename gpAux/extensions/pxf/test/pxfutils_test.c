@@ -63,13 +63,22 @@ test_normalize_key_name(void **state)
 
 }
 
+void
+test_get_authority(void **state)
+{
+	char	*authority = get_authority();
+	assert_string_equal(authority, "localhost:51200");
+	pfree(authority);
+}
+
 int
 main(int argc, char *argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
 	const		UnitTest tests[] = {
-		unit_test(test_normalize_key_name)
+		unit_test(test_normalize_key_name),
+		unit_test(test_get_authority)
 	};
 
 	MemoryContextInit();

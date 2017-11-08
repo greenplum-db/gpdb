@@ -162,9 +162,8 @@ build_uri_for_read(gphadoop_context *context)
 static void
 build_uri_for_write(gphadoop_context *context)
 {
-	appendStringInfo(&context->uri, "http://%s:%d/%s/%s/Writable/stream?path=%s",
-					 PxfDefaultHost, PxfDefaultPort,
-					 PXF_SERVICE_PREFIX, PXF_VERSION, context->write_file_name.data);
+	appendStringInfo(&context->uri, "http://%s/%s/%s/Writable/stream?path=%s",
+					 get_authority(), PXF_SERVICE_PREFIX, PXF_VERSION, context->write_file_name.data);
 	elog(DEBUG2, "pxf: uri %s with file name for write: %s", context->uri.data, context->write_file_name.data);
 }
 
