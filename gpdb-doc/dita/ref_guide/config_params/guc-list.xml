@@ -634,9 +634,6 @@
               <xref href="#max_resource_portals_per_transaction"/>
             </li>
             <li>
-              <xref href="#max_resource_groups"/>
-            </li>
-            <li>
               <xref href="#max_resource_queues"/>
             </li>
             <li>
@@ -7247,35 +7244,6 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">64</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="max_resource_groups">
-    <title>max_resource_groups</title>
-    <body>
-      <note>The <codeph>max_resource_groups</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
-      <p>Sets the maximum number of resource groups that you can create in a Greenplum Database
-        system. Resource groups are defined system-wide.</p>
-      <table id="max_resource_queues_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">0 - INT_MAX</entry>
-              <entry colname="col2">9</entry>
               <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
