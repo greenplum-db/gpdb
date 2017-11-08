@@ -1,4 +1,5 @@
 bin/explain.pl
+bin/explain.pm
 bin/gpcheckmirrorseg.pl
 bin/gpfaultinjector
 bin/gptorment.pl

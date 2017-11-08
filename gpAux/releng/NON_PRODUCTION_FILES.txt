@@ -1,16 +1,8 @@
-bin/UPDATE_INFO
 bin/explain.pl
-bin/gp
-bin/gpaddmirrors.py
-bin/gpdbupgrade
+bin/explain.pm
+bin/gpaddmirrors
 bin/gpfaultinjector
-bin/gpha
-bin/gpma
-bin/gppaxos
-bin/gpprintdbsizes
-bin/gprecoverseg.py
 bin/gptorment.pl
-bin/gpugcluster
 bin/lib/gpgetconfig.py
 bin/lib/gptest.py
 bin/pgbench
@@ -18,4 +10,3 @@ bin/postgresql_conf_gp_additions
 bin/run_operator_tests.pl
 bin/test_fsync
 lib/python/gppylib/programs/clsInjectFault.py
-
