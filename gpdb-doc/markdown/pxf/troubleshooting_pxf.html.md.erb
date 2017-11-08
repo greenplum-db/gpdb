@@ -111,9 +111,7 @@ dbname=# SET client_min_messages=NOTICE
 
 ## <a id="pxf-memcfg"></a>Addressing PXF Memory Issues
 
-The Java heap size can be a limiting factor in PXF’s ability to serve many concurrent requests or to run queries against large tables.
-
-You may run into situations where a query will hang or fail with an Out of Memory exception (OOM). This typically occurs when many threads are reading different data fragments from an external table and insufficient heap space exists to open all fragments at the same time. To avert or remedy this situation, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration.
+Because a single PXF agent (JVM) serves multiple segments on a segment host, the PXF heap size can be a limiting runtime factor. This will be more evident under concurrent workloads and/or queries against large files. You may run into situations where a query will hang or fail due to insufficient memory or the Java garbage collector impacting response times. To avert or remedy these situations, first try increasing the Java maximum heap size or decreasing the Tomcat maximum number of threads, depending upon what works best for your system configuration.
 
 **Note**: The configuration changes described in this topic require modifying config files on *each* segment node in your Greenplum Database cluster. After you perform the updates, be sure to verify that the configuration on all PXF nodes is the same.
 
