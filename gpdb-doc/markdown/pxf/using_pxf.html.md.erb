@@ -74,7 +74,7 @@ When you no longer want to use PXF on a specific database, you must explicitly d
 
 ## <a id="access_pxf"></a>Granting Access to PXF
 
-To access external data with PXF, you create an external table with the `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant `SELECT` permission to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. 
+To read external data with PXF, you create an external table with the `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant `SELECT` permission to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. 
 
 To grant a specific role access to the `pxf` protocol, use the `GRANT` command. For example, to grant the role named `bill` read access to data referenced by an external table created with the `pxf` protocol:
 
@@ -82,20 +82,24 @@ To grant a specific role access to the `pxf` protocol, use the `GRANT` command. 
 GRANT SELECT ON PROTOCOL pxf TO bill; 
 ```
 
-**Note**: The `pxf` protocol supports only read access at this time.
+To write data to HDFS with PXF, you create an external table with the `CREATE WRITABLE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant `INSERT` permission to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. For example:
 
+``` sql
+GRANT INSERT ON PROTOCOL pxf TO bill; 
+```
 
 ## <a id="built-inprofiles"></a> PXF Profiles
 
 PXF is installed with HDFS and Hive connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
 
-PXF provides the following built-in profiles:
+PXF provides the following built-in profiles. Those profiles that support write access are identified as such in their `Description`.
 
 | Data Source | Data Format | Profile Name(s) | Description |
 |-------|---------|------------|----------------|
-| HDFS | Text | HdfsTextSimple | Delimited single line records from plain text files on HDFS.|
+| HDFS | Text | HdfsTextSimple | Delimited single line records from plain text files on HDFS. *Supports write*. |
 | HDFS | Text | HdfsTextMulti | Delimited single or multi-line records with quoted linefeeds from plain text files on HDFS. |
 | HDFS | Avro | Avro | Avro format binary files (\<filename\>.avro). |
+| HDFS | Binary | SequenceWritable | Binary files. *Supports write*. |
 | Hive | TextFile | Hive, HiveText | Data in comma-, tab-, or space-separated value format or JSON notation. |
 | Hive | RCFile | Hive, HiveRC | Record columnar data consisting of binary key/value pairs. |
 | Hive | SequenceFile | Hive | Data consisting of binary key/value pairs. |
@@ -135,12 +139,11 @@ Should you need to add additional JAR dependencies for PXF, you must add them to
 The syntax for a `CREATE EXTERNAL TABLE` command that specifies the `pxf` protocol is as follows:
 
 ``` sql
-CREATE [READABLE] EXTERNAL TABLE <table_name>
+CREATE [WRITABLE] EXTERNAL TABLE <table_name>
         ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION('pxf://<path-to-data>?PROFILE[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
 ```
-**Note**: PXF does not currently support writable external tables.
 
 The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI that identifies the path to, or other information describing, the location of the external data. For example, if the external data source is HDFS, the \<path-to-data\> would identify the absolute path to a specific HDFS file. If the external data source is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
 
@@ -157,7 +160,7 @@ Greenplum Database passes the parameters in the `LOCATION` string as headers to 
 | Keyword               | Value and Description                                                                                                                                                                                                                                                          |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | \<path\-to\-data\>        | A directory, file name, wildcard pattern, table name, etc. The syntax of \<path-to-data\> is dependent upon the profile currently in use.                                                                                                                                                                                                                    |
-| PROFILE              | The profile PXF uses to access the data. PXF supports HDFS and Hive connectors that expose profiles named `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, and `HiveVectorizedORC`.                                                                                                                                                                                   |
+| PROFILE              | The profile PXF uses to access the data. PXF supports HDFS and Hive connectors that expose profiles named `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `SequenceWritable`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, and `HiveVectorizedORC`.                                                                                                                                                                                   |
 | \<custom-option\>=\<value\> | Additional options and values supported by the profile.                                                                  |
 | FORMAT  \<value\>| PXF profiles support the '`TEXT`', '`CSV`', and '`CUSTOM`' `FORMAT`s.  |
 | \<formatting-properties\> | Formatting properties supported by the profile; for example, the `formatter` or `delimiter`.                                                                   |
