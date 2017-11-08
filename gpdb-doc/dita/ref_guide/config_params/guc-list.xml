@@ -4967,6 +4967,25 @@
           </tbody>
         </tgroup>
       </table>
+      <note>When resource group-based resource management is active, the memory allotted to
+        a segment host is equally shared by active primary segments. Greenplum Database assigns
+        memory to primary segments when the segment takes the primary role. The initial memory
+        allotment to a primary segment does not change, even in a failover situation. This may
+        result in a segment host utilizing more memory than the
+        <codeph>gp_resource_group_memory_limit</codeph> setting permits.
+        <p>For example, suppose your Greenplum Database cluster is utilizing the default
+          <codeph>gp_resource_group_memory_limit</codeph> of <codeph>0.7</codeph> and a
+          segment host named <codeph>seghost1</codeph> has 4 primary segments and 4 mirror
+          segments. Greenplum Database assigns each primary segment on <codeph>seghost1</codeph>
+          <codeph>(0.7 / 4 = 0.175%)</codeph> of overall system memory. If failover occurs and
+          two mirrors on <codeph>seghost1</codeph> fail over to become primary segments,
+          each of the original 4 primaries retain their memory allotment of <codeph>0.175</codeph>,
+          and the two new primary segments are each allotted <codeph>(0.7 / 6 = 0.116%)</codeph>
+          of system memory. <codeph>seghost1</codeph>'s overall memory allocation
+          in this scenario is</p><p><codeblock>
+0.7 + (0.116 * 2) = 0.932%</codeblock></p>
+        <p>which is above the percentage configured
+          in the <codeph>gp_resource_group_memory_limit</codeph> setting.</p></note>
     </body>
   </topic>
   <topic id="gp_resource_manager">

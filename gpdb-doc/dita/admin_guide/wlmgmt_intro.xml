@@ -112,7 +112,7 @@
           fail. Use the following formula to calculate a safe value for
           <varname>gp_vmem_protect_limit</varname>; provide the <codeph>gp_vmem_rq</codeph>
           value you calculated earlier.</p><p><codeblock>
-gp_vmem_protect_limit = gp_vmem / max_acting_primary_segments</codeblock></p>
+gp_vmem_protect_limit = gp_vmem_rq / max_acting_primary_segments</codeblock></p>
           <p>where <codeph>max_acting_primary_segments</codeph> is the maximum number of
           primary segments that could be running on a host when mirror segments are activated
           due to a host or segment failure.</p>
