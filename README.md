@@ -35,7 +35,7 @@ to the segments, and collects the results.
 Follow [these macOS steps](README.macOS.md) for getting your system ready for GPDB
 
 ### Installing dependencies (for Linux developers)
-Follow [these linux steps](README.linux.md) for getting your system ready for GPDB
+Follow [appropriate linux steps](README.linux.md) for getting your system ready for GPDB
 
 <a name="buildOrca"></a>
 ### Build the optimizer
