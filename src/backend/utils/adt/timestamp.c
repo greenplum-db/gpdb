@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.184.2.2 2009/04/04 04:53:34 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/timestamp.c,v 1.192 2008/09/11 15:27:30 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

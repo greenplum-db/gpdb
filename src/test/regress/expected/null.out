@@ -13,8 +13,7 @@ select a from date_null where b <= date '1957-04-10';
 select a from date_null where b <= date '1957-04-10' - interval '90' day;
  a
 ---
- 1
-(1 row)
+(0 rows)
 
 -- check behavior when values are NULL with float8 type
 create table float8_null (a float8, b float8, c float8);
