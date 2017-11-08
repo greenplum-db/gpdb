@@ -52,5 +52,11 @@ def test_data_provider():
         'switch_checkpoint_10_dtm_broadcast_commit_prepared_gpstop_a_sync': ['sync','dtm_broadcast_commit_prepared','gpstop_a'],
         'switch_checkpoint_11_dtm_broadcast_commit_prepared_failover_to_primary_sync': ['sync','dtm_broadcast_commit_prepared','failover_to_primary'],
         'switch_checkpoint_12_dtm_broadcast_commit_prepared_failover_to_mirror_sync': ['sync','dtm_broadcast_commit_prepared','failover_to_mirror'],
-        }
+
+        'switch_checkpoint_13_dtm_broadcast_commit_prepared_gpstop_i_change_tracking': ['change_tracking','dtm_broadcast_commit_prepared','gpstop_i'],
+        'switch_checkpoint_14_dtm_broadcast_commit_prepared_gpstop_a_change_tracking': ['change_tracking','dtm_broadcast_commit_prepared','gpstop_a'],
+
+        'switch_checkpoint_15_dtm_broadcast_commit_prepared_gpstop_i_resync': ['resync','dtm_broadcast_commit_prepared','gpstop_i'],
+        'switch_checkpoint_16_dtm_broadcast_commit_prepared_gpstop_a_resync': ['resync','dtm_broadcast_commit_prepared','gpstop_a'],
+    }
     return data

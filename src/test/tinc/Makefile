@@ -144,12 +144,7 @@ test_pg_twophase_41_49:
 test_switch_01_12:
 	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
-	-p test_switch_01_12.py
-
-test_switch_13_24:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
-	-p test_switch_13_24.py
+	-p test_switch.py
 
 # cs-fts
 # The following targets are pulled from:

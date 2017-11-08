@@ -40,8 +40,7 @@ groups:
   - cs_pg_twophase_21_30
   - cs_pg_twophase_31_40
   - cs_pg_twophase_41_49
-  - cs_pg_twophase_switch_01_12
-  - cs_pg_twophase_switch_13_24
+  - cs_pg_twophase_switch
   - cs_crash_recovery_schema_topology
   - cs_crash_recovery_04_10
   - cs_crash_recovery_11_20
@@ -138,8 +137,7 @@ groups:
   - cs_pg_twophase_21_30
   - cs_pg_twophase_31_40
   - cs_pg_twophase_41_49
-  - cs_pg_twophase_switch_01_12
-  - cs_pg_twophase_switch_13_24
+  - cs_pg_twophase_switch
   - cs_crash_recovery_schema_topology
   - cs_crash_recovery_04_10
   - cs_crash_recovery_11_20
@@ -1534,7 +1532,7 @@ jobs:
       <<: *debug_sleep
   - *ccp_destroy
 
-- name: cs_pg_twophase_switch_01_12
+- name: cs_pg_twophase_switch
   plan:
   - *ccp_jitter_delay
   - aggregate:
@@ -1572,48 +1570,6 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       TINC_TARGET: test_switch_01_12
-    on_failure:
-      <<: *debug_sleep
-  - *ccp_destroy
-
-- name: cs_pg_twophase_switch_13_24
-  plan:
-  - *ccp_jitter_delay
-  - aggregate:
-    - get: gpdb_src
-      tags: ["ccp"]
-      passed: [gate_cs_start]
-    - get: gpdb_binary
-      tags: ["ccp"]
-      resource: bin_gpdb_centos6
-      passed: [gate_cs_start]
-      trigger: true
-    - get: ccp_src
-      tags: ["ccp"]
-    - get: centos-gpdb-dev-6
-      tags: ["ccp"]
-  - put: terraform
-    tags: ["ccp"]
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        aws_instance-node-instance_type: m4.large
-        aws_ebs_volume_type: gp2
-        number_of_nodes: 1
-  - task: gen_cluster
-    tags: ["ccp"]
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-    on_failure:
-      <<: *ccp_destroy
-  - task: run_tests
-    tags: ["ccp"]
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: test_switch_13_24
     on_failure:
       <<: *debug_sleep
   - *ccp_destroy
@@ -1794,8 +1750,7 @@ jobs:
       - cs_pg_twophase_21_30
       - cs_pg_twophase_31_40
       - cs_pg_twophase_41_49
-      - cs_pg_twophase_switch_01_12
-      - cs_pg_twophase_switch_13_24
+      - cs_pg_twophase_switch
       - cs_crash_recovery_schema_topology
       - cs_crash_recovery_04_10
       - cs_crash_recovery_11_20
@@ -3053,8 +3008,7 @@ jobs:
     - cs_pg_twophase_21_30
     - cs_pg_twophase_31_40
     - cs_pg_twophase_41_49
-    - cs_pg_twophase_switch_01_12
-    - cs_pg_twophase_switch_13_24
+    - cs_pg_twophase_switch
     - cs_crash_recovery_schema_topology
     - cs_crash_recovery_04_10
     - cs_crash_recovery_11_20
