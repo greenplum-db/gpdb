@@ -142,7 +142,7 @@ FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
 ```
 **Note**: PXF does not currently support writable external tables.
 
-The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI that identifies the path to, or other information describing, the location of the external data. For example, if the external data source is HDFS, the \<path-to-data\> would identify the full file system path to a specific HDFS file. If the external data source is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
+The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI that identifies the path to, or other information describing, the location of the external data. For example, if the external data source is HDFS, the \<path-to-data\> would identify the absolute path to a specific HDFS file. If the external data source is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
 
 Use the query portion of the URI, introduced by the question mark (?), to identify the PXF profile name. 
 

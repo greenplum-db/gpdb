@@ -38,7 +38,7 @@ The following PXF files and directories are installed in your Greenplum Database
 | `pxf`                 | The PXF installation directory.  |
 | `pxf/apache-tomcat`      | The PXF tomcat directory.  |
 | `pxf/bin`                 | The PXF script and executable directory.                                                                                                                                                                                                                       |
-| `pxf/conf`                | The PXF configuration directory. This directory contains the `pxf-env.sh`, `pxf-private.classpath` and `pxf-profiles.xml` configuration files. |
+| `pxf/conf`                | The PXF configuration directory. This directory contains the `pxf-env.sh`, `pxf-public.classpath`, `pxf-private.classpath` and `pxf-profiles.xml` configuration files. |
 | `pxf/conf-templates`                | Configuration templates for PXF. |
 | `pxf/lib`                 | The PXF library directory.                                                                                                                                                                                                                       |
 | `pxf/logs`, | The PXF log file directory. Includes `pxf-service.log` and Tomcat-related logs including `catalina.out`. The log directory and log files are readable only by the `gpadmin` user.
@@ -55,7 +55,7 @@ You must explicitly initialize the PXF service instance. This one-time initializ
 
 Before initializing PXF in your Greenplum Database cluster, ensure that you have:
 
-- Installed and configured the required Hadoop clients on each Greenplum Database segment host. Refer to [Installing and Configuring Clients for PXF](client_instcfg.html) for instructions.
+- Installed and configured the required Hadoop clients on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
 - Granted the `gpadmin` operating system user read permission on the relevant portions of your HDFS file system.
  
 ### <a id="init-pxf-steps"></a>Procedure

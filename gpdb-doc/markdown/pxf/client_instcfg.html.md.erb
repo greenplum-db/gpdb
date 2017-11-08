@@ -1,5 +1,5 @@
 ---
-title: Installing and Configuring Clients for PXF
+title: Installing and Configuring Hadoop Clients for PXF
 ---
 
 You use PXF connectors to access external data sources. PXF requires a client installation on each Greenplum Database segment host when reading external data from the following sources:
@@ -8,11 +8,13 @@ You use PXF connectors to access external data sources. PXF requires a client in
 - Hive
 - HBase
 
+PXF requires you install a Hadoop client. Hive and HBase client installation is required only if you plan to access those external data stores.
+
 Compatible Hadoop, Hive, and HBase clients for PXF include Cloudera, Hortonworks Data Platform, and generic Apache distributions.
 
 This topic describes how to install and configure Hadoop, Hive, and HBase client RPM distributions for PXF. When you install these clients via RPMs, PXF auto-detects your Hadoop distribution and optional Hive and HBase installations and sets certain configuration and class paths accordingly.
 
-If your Hadoop, Hive, and HBase installation is a custom or tarball distribution, refer to [Installing Tarball and Custom Clients](#client-install-custom) for instructions.
+If your Hadoop, Hive, and HBase installation is a custom or tarball distribution, refer to [Using a Custom Client Installation](#client-install-custom) for instructions.
 
 ## <a id="client-pxf-prereq"></a>Prerequisites
 
@@ -55,7 +57,7 @@ Perform the following procedure to install and configure the appropriate clients
 
 5. Set up a `yum` repository for your desired Hadoop distribution on each segment host.
 
-    1. Download the `.repo` file for your Hadoop distribution. For example:
+    1. Download the `.repo` file for your Hadoop distribution. For example, to download the file for RHEL 6:
 
         For Cloudera distributions:
 
@@ -174,24 +176,24 @@ You have installed the desired client packages on each segment host in your Gree
 If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated `.xml` file(s) to each Greenplum Database segment host and restart PXF.
 
 
-## <a id="client-install-custom"></a>Installing Tarball and Custom Clients
+## <a id="client-install-custom"></a>Using a Custom Client Installation
 
-If you did/can not install your Hadoop, Hive, and HBase clients via RPMs, you have a custom installation.
+If you can not install your Hadoop, Hive, and HBase clients via RPMs from supported distributions, you have a custom installation.
 
-Use the `HADOOP_ROOT` and `HADOOP_DISTRO` environment variables to provide additional configuration information to PXF for tarball and custom client Hadoop distributions. As specified below, you must set the relevant environment variable on the command line or in the PXF `$GPHOME/pxf/conf/pxf-env.sh` configuration file prior to initializing PXF.
+Use the `HADOOP_ROOT` and `HADOOP_DISTRO` environment variables to provide additional configuration information to PXF for custom client Hadoop distributions. As specified below, you must set the relevant environment variable on the command line or in the PXF `$GPHOME/pxf/conf/pxf-env.sh` configuration file prior to initializing PXF.
 
 If you must install your Hadoop and optional Hive and HBase client distributions from a *tarball*:
 
-- You must install the Hadoop and optional Hive and HBase clients in peer directories that are all children of a Hadoop root directory. These client directories must simply-named as `hadoop`, `hive`, and `hbase`.
+- You must install the Hadoop and optional Hive and HBase clients in peer directories that are all children of a Hadoop root directory. These client directories must be simply-named as `hadoop`, `hive`, and `hbase`.
 
-- You must identify the full file system path to the Hadoop root directory in the `HADOOP_ROOT` environment variable setting.
+- You must identify the absolute path to the Hadoop root directory in the `HADOOP_ROOT` environment variable setting.
 
 - The directory `$HADOOP_ROOT/hadoop/share/hadoop/common/lib` must exist.
 
-If the requirements above are not applicable to your Hadoop distribution, you are installing a *custom* tarball distribution:
+If the requirements above are not applicable to your Hadoop distribution:
 
 - You must set the `HADOOP_DISTRO` environment variable to the value `CUSTOM`.
 
-- After you initialize PXF, you must manually edit the `$GPHOME/pxf/conf/pxf-private.classpath` file to identify full file system paths to the Hadoop, Hive, and HBase JAR and configuration files. You must edit this file *before* you start PXF.
+- After you initialize PXF, you must manually edit the `$GPHOME/pxf/conf/pxf-private.classpath` file to identify absolute paths to the Hadoop, Hive, and HBase JAR and configuration files. You must edit this file *before* you start PXF.
 
-**Note**: After you install a tarball or custom client distribution, you must copy Hadoop, Hive, and HBase configuration as described in the procedure above.
+**Note**: After you install a custom client distribution, you must copy Hadoop, Hive, and HBase configuration as described in the procedure above.
