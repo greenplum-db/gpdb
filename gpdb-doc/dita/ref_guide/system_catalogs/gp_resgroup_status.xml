@@ -8,6 +8,7 @@
       and activity for a resource group. It shows how many queries are waiting
       to run and how many queries are currently active in the system for each resource
       group. The view also displays current memory and CPU usage for the resource group.</p>
+      <note>The <codeph>gp_resgroup_status</codeph> view is valid only when resource group-based resource management is active.</note>
     <table id="fp141982">
       <title>gp_toolkit.gp_resgroup_status</title>
       <tgroup cols="4">

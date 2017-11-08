@@ -511,9 +511,7 @@ chunksize = 67108864</codeblock></p>
             <note><ph id="memory-phrase">Greenplum Database can require up to <codeph>threadnum *
                      chunksize</codeph> memory on each segment host when uploading or downloading S3
                   files. Consider this <codeph>s3</codeph> protocol memory requirement when you
-                  configure overall Greenplum Database memory, and increase the value of <xref
-                     href="../../ref_guide/config_params/guc-list.xml#gp_vmem_protect_limit"
-                     >gp_vmem_protect_limit</xref> as necessary.</ph>
+                  configure overall Greenplum Database memory.</ph>
             </note>
          </sectiondiv>
       </section>

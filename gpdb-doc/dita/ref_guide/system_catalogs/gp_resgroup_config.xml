@@ -8,6 +8,7 @@
       current CPU, memory, and concurrency limits for a resource group. The
       view also displays proposed limit settings. A proposed limit will differ from a current
       limit when the limit has been altered, but the new value could not be immediately applied.</p>
+      <note>The <codeph>gp_resgroup_config</codeph> view is valid only when resource group-based resource management is active.</note>
     <table id="fp141982">
       <title>gp_toolkit.gp_resgroup_config</title>
       <tgroup cols="4">

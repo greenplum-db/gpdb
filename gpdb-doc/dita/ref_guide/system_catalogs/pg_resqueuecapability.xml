@@ -4,6 +4,7 @@
 <topic id="topic1" xml:lang="en">
   <title id="hk141670">pg_resqueuecapability</title>
   <body>
+    <note>The <codeph>pg_resqueuecapability</codeph> system catalog table is valid only when resource queue-based resource management is active.</note>
     <p>The <codeph>pg_resqueuecapability</codeph> system catalog table contains information about
       the extended attributes, or capabilities, of existing Greenplum Database
       resource queues. Only resource queues that have been assigned an extended capability, such as

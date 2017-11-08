@@ -269,6 +269,7 @@
       class="- topic/topic ">
       <title id="ie179843" class="- topic/title ">gp_locks_on_resqueue </title>
       <body class="- topic/body ">
+        <note>The <codeph>gp_locks_on_resqueue</codeph> view is valid only when resource queue-based resource management is active.</note>
         <p>This view shows any locks currently being held on a resource queue, and the associated
           session information about the query associated with the lock. This view is accessible to
           all users, however non-superusers will only be able to see the locks associated with their
@@ -1537,6 +1538,7 @@
     class="- topic/topic ">
     <title class="- topic/title ">Checking Resource Queue Activity and Status</title>
     <body class="- topic/body ">
+      <note>The resource queue activity and status views described in this section are valid only when resource queue-based resource management is active.</note>
       <p>The purpose of resource queues is to limit the number of active queries in the system at
         any given time in order to avoid exhausting system resources such as memory, CPU, and disk
         I/O. All database users are assigned to a resource queue, and every statement submitted by a
