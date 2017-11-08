@@ -108,13 +108,23 @@
           identifies the amount of memory to allocate to
           each segment. This value is estimated by calculating the memory available for all Greenplum
           Database processes and dividing by the maximum number of primary segments during a
-          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can fail.
-          <varname>gp_vmem_protect_limit</varname> does not affect segment memory when using 
+          failure. If <varname>gp_vmem_protect_limit</varname> is set too high, queries can
+          fail. Use the following formula to calculate a safe value for
+          <varname>gp_vmem_protect_limit</varname>; provide the <codeph>gp_vmem_rq</codeph>
+          value you calculated earlier.</p><p><codeblock>
+gp_vmem_protect_limit = gp_vmem / max_acting_primary_segments</codeblock></p>
+          <p>where <codeph>max_acting_primary_segments</codeph> is the maximum number of
+          primary segments that could be running on a host when mirror segments are activated
+          due to a host or segment failure.</p>
+        <p><varname>gp_vmem_protect_limit</varname> does not affect segment memory when using 
           resource groups for Greenplum Database resource management.</p>
         <p>When resource group-based resource management is active, the amount of memory allocated
-           to each segment is the memory available to Greenplum Database multiplied by the
-           <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter and
-           dividing by the number of segments.</p>
+          to each segment is the memory available to Greenplum Database multiplied by the
+          <varname>gp_resource_group_memory_limit</varname> server configuration parameter and
+          divided by the number of segments. Use the following formula to calculate a safe
+          value for segment memory when using resource groups for resource management.</p>
+        <p><codeblock>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / number_of_segments </codeblock></p>
         <p>Resource queues and resource groups support additional configuration parameters that
            enable you to further control and refine the amount of memory allocated for queries.</p>
       </section>
