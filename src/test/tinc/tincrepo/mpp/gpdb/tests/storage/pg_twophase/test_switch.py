@@ -39,24 +39,14 @@ class SwitchChekpoint01To12(SwitchCheckpointTestCase):
 @tinctest.dataProvider('data_types_provider')
 def test_data_provider():
     data = {'switch_checkpoint_01_dtm_broadcast_prepare_gpstop_i_sync': ['sync', 'dtm_broadcast_prepare', 'gpstop_i'],
-        'switch_checkpoint_02_dtm_broadcast_prepare_gpstop_a_sync': ['sync', 'dtm_broadcast_prepare', 'gpstop_a'],
-        'switch_checkpoint_03_dtm_broadcast_prepare_failover_to_primary_sync': ['sync', 'dtm_broadcast_prepare', 'failover_to_primary'],
-        'switch_checkpoint_04_dtm_broadcast_prepare_failover_to_mirror_sync': ['sync', 'dtm_broadcast_prepare', 'failover_to_mirror'],
-
-        'switch_checkpoint_05_dtm_broadcast_prepare_gpstop_i_change_tracking': ['change_tracking', 'dtm_broadcast_prepare', 'gpstop_i'],
-        'switch_checkpoint_06_dtm_broadcast_prepare_gpstop_a_change_tracking': ['change_tracking', 'dtm_broadcast_prepare', 'gpstop_a'],
-        'switch_checkpoint_07_dtm_broadcast_prepare_gpstop_i_resync': ['resync', 'dtm_broadcast_prepare', 'gpstop_i'],
-        'switch_checkpoint_08_dtm_broadcast_prepare_gpstop_a_resync': ['resync', 'dtm_broadcast_prepare', 'gpstop_a'],
-
-        'switch_checkpoint_09_dtm_broadcast_commit_prepared_gpstop_i_sync': ['sync','dtm_broadcast_commit_prepared','gpstop_i'],
-        'switch_checkpoint_10_dtm_broadcast_commit_prepared_gpstop_a_sync': ['sync','dtm_broadcast_commit_prepared','gpstop_a'],
-        'switch_checkpoint_11_dtm_broadcast_commit_prepared_failover_to_primary_sync': ['sync','dtm_broadcast_commit_prepared','failover_to_primary'],
-        'switch_checkpoint_12_dtm_broadcast_commit_prepared_failover_to_mirror_sync': ['sync','dtm_broadcast_commit_prepared','failover_to_mirror'],
-
-        'switch_checkpoint_13_dtm_broadcast_commit_prepared_gpstop_i_change_tracking': ['change_tracking','dtm_broadcast_commit_prepared','gpstop_i'],
-        'switch_checkpoint_14_dtm_broadcast_commit_prepared_gpstop_a_change_tracking': ['change_tracking','dtm_broadcast_commit_prepared','gpstop_a'],
-
-        'switch_checkpoint_15_dtm_broadcast_commit_prepared_gpstop_i_resync': ['resync','dtm_broadcast_commit_prepared','gpstop_i'],
-        'switch_checkpoint_16_dtm_broadcast_commit_prepared_gpstop_a_resync': ['resync','dtm_broadcast_commit_prepared','gpstop_a'],
+        'switch_checkpoint_02_dtm_broadcast_prepare_failover_to_primary_sync': ['sync', 'dtm_broadcast_prepare', 'failover_to_primary'],
+        'switch_checkpoint_03_dtm_broadcast_prepare_failover_to_mirror_sync': ['sync', 'dtm_broadcast_prepare', 'failover_to_mirror'],
+        'switch_checkpoint_04_dtm_broadcast_prepare_gpstop_i_change_tracking': ['change_tracking', 'dtm_broadcast_prepare', 'gpstop_i'],
+        'switch_checkpoint_05_dtm_broadcast_prepare_gpstop_i_resync': ['resync', 'dtm_broadcast_prepare', 'gpstop_i'],
+        'switch_checkpoint_06_dtm_broadcast_commit_prepared_gpstop_i_sync': ['sync','dtm_broadcast_commit_prepared','gpstop_i'],
+        'switch_checkpoint_07_dtm_broadcast_commit_prepared_failover_to_primary_sync': ['sync','dtm_broadcast_commit_prepared','failover_to_primary'],
+        'switch_checkpoint_08_dtm_broadcast_commit_prepared_failover_to_mirror_sync': ['sync','dtm_broadcast_commit_prepared','failover_to_mirror'],
+        'switch_checkpoint_09_dtm_broadcast_commit_prepared_gpstop_i_change_tracking': ['change_tracking','dtm_broadcast_commit_prepared','gpstop_i'],
+        'switch_checkpoint_10_dtm_broadcast_commit_prepared_gpstop_i_resync': ['resync','dtm_broadcast_commit_prepared','gpstop_i'],
     }
     return data
