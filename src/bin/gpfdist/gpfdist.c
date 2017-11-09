@@ -483,33 +483,35 @@ static void usage_error(const char* msg, int print_usage)
 		{
 			fprintf(stderr,
 					"gpfdist -- file distribution web server\n\n"
-						"usage: gpfdist [--ssl <certificates_directory>] [-d <directory>] [-p <http(s)_port>] [-l <log_file>] [-t <timeout>] [-v | -V | -s] [-m <maxlen>] [-w <timeout>]"
+						"usage: gpfdist [--ssl <certificates_directory>] [--sslclean <wait_time>] [-d <directory>] [-p <http(s)_port>] [-l <log_file>] [-t <timeout>] [-v | -V | -s] [-m <maxlen>] [-w <timeout>]"
 #ifdef GPFXDIST
 					    "[-c file]"
 #endif
 					    "\n\n"
 						"       gpfdist [-? | --help] | --version\n\n"
-						"        -?, --help : print this screen\n"
-						"        -v         : verbose mode\n"
-						"        -V         : more verbose\n"
-						"        -s         : simplified minimum log\n"
+						"        -?, --help      : print this screen\n"
+						"        -v              : verbose mode\n"
+						"        -V              : more verbose\n"
+						"        -s              : simplified minimum log\n"
 #ifdef USE_SSL
-						"        -p port    : port to serve HTTP(S), default is 8080\n"
+						"        -p port         : port to serve HTTP(S), default is 8080\n"
 #else
-						"        -p port    : port to serve HTTP, default is 8080\n"
+						"        -p port         : port to serve HTTP, default is 8080\n"
 #endif
-						"        -d dir     : serve files under the specified directory,  default is '.'\n"
-						"        -l logfn   : log filename\n"
-						"        -t tm      : timeout in seconds \n"
-						"        -m maxlen  : max data row length expected, in bytes. default is 32768\n"
+						"        -d dir          : serve files under the specified directory,  default is '.'\n"
+						"        -l logfn        : log filename\n"
+						"        -t tm           : timeout in seconds \n"
+						"        -m maxlen       : max data row length expected, in bytes. default is 32768\n"
+						"        -S              : open the file for synchronous I/O with the O_SYNC flag\n"
 #ifdef USE_SSL
-						"        --ssl dir  : start HTTPS server. Use the certificates from the specified directory\n"
+						"        --ssl dir       : start HTTPS server. Use the certificates from the specified directory\n"
+						"        --sslclean time : define the time to wait until cleanup the SSL resources, default is 0\n"
 #endif
 #ifdef GPFXDIST
-					    "        -c file    : configuration file for transformations\n"
+					    "        -c file         : configuration file for transformations\n"
 #endif
-						"        --version  : print version information\n"
-						"        -w timeout : timeout in seconds before close target file\n\n");
+						"        --version       : print version information\n"
+						"        -w timeout      : timeout in seconds before close target file\n\n");
 		}
 	}
 
