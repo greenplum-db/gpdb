@@ -232,11 +232,6 @@ ExecLimit(LimitState *node)
 	/* Return the current tuple */
 	Assert(!TupIsNull(slot));
 
-        if (!TupIsNull(slot))
-        {
-            Gpmon_Incr_Rows_Out(GpmonPktFromLimitState(node));
-            CheckSendPlanStateGpmonPkt(&node->ps); 
-        }
 	return slot;
 }
 
@@ -405,8 +400,6 @@ ExecInitLimit(Limit *node, EState *estate, int eflags)
 	 */
 	ExecAssignResultTypeFromTL(&limitstate->ps);
 	limitstate->ps.ps_ProjInfo = NULL;
-
-	initGpmonPktForLimit((Plan *)node, &limitstate->ps.gpmon_pkt, estate);
 	
 	return limitstate;
 }
@@ -452,12 +445,4 @@ ExecReScanLimit(LimitState *node, ExprContext *exprCtxt)
 	 */
 	if (((PlanState *) node)->lefttree->chgParam == NULL)
 		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
-}
-
-void
-initGpmonPktForLimit(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Limit));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

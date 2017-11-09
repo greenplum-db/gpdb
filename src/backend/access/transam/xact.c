@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.262 2008/03/26 18:48:59 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/xact.c,v 1.264 2008/05/12 20:01:58 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,7 @@
 #include "pgstat.h"
 #include "replication/walsender.h"
 #include "replication/syncrep.h"
+#include "storage/bufmgr.h"
 #include "storage/fd.h"
 #include "storage/lmgr.h"
 #include "storage/procarray.h"
@@ -887,12 +888,9 @@ CommandCounterIncrement(void)
 		}
 		currentCommandIdUsed = false;
 
-		/* Propagate new command ID into static snapshots, if set */
-		if (SerializableSnapshot)
-			SerializableSnapshot->curcid = currentCommandId;
-		if (LatestSnapshot)
-			LatestSnapshot->curcid = currentCommandId;
-
+		/* Propagate new command ID into static snapshots */
+		SnapshotSetCommandId(currentCommandId);
+		
 		/*
 		 * Make any catalog changes done by the just-completed command
 		 * visible in the local syscache.  We obviously don't need to do
@@ -2265,9 +2263,8 @@ StartTransaction(void)
 	s->transactionId = InvalidTransactionId;	/* until assigned */
 
 	/*
-	 * Make sure we've freed any old snapshot, and reset xact state variables
+	 * Make sure we've reset xact state variables
 	 */
-	FreeXactSnapshot();
 	XactIsoLevel = DefaultXactIsoLevel;
 	XactReadOnly = DefaultXactReadOnly;
 	forceSyncCommit = false;
@@ -2446,8 +2443,8 @@ StartTransaction(void)
 
 	ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
 			(errmsg("[Distributed Snapshot #%u] *StartTransaction* (gxid = %u, xid = %u, '%s')",
-					(SerializableSnapshot == NULL ? 0 :
-					 SerializableSnapshot->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
+					(!FirstSnapshotSet ? 0 :
+					 GetTransactionSnapshot()->distribSnapshotWithLocalMapping.ds.distribSnapshotId),
 					getDistributedTransactionId(),
 					s->transactionId,
 					DtxContextToString(DistributedTransactionContext))));
@@ -2743,7 +2740,10 @@ CommitTransaction(void)
 	/* All relations that are in the vacuum process are being commited now. */
 	ResetVacuumRels();
 
-	/* Process resource group related callbacks */
+	/*
+	 * Process resource group commit processing,
+	 * It must be called after prepareDtxTransaction()
+	 */
 	AtEOXact_ResGroup(true);
 
 	/* Check we've released all buffer pins */
@@ -2802,6 +2802,7 @@ CommitTransaction(void)
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
 	AtEOXact_PgStat(true);
+	AtEOXact_Snapshot(true);
 	pgstat_report_xact_timestamp(0);
 
 	CurrentResourceOwner = NULL;
@@ -2839,10 +2840,6 @@ CommitTransaction(void)
 	RESUME_INTERRUPTS();
 
 	freeGangsForPortal(NULL);
-
-	/* Release resource group slot at the end of a transaction */
-	if (ShouldUnassignResGroup())
-		UnassignResGroup();
 }
 
 
@@ -2892,6 +2889,9 @@ PrepareTransaction(void)
 		if (!PrepareHoldablePortals())
 			break;
 	}
+
+	/* detach from current resouce group */
+	AtPrepare_ResGroup();
 
 	/* Now we can shut down the deferred-trigger manager */
 	AfterTriggerEndXact(true);
@@ -3048,9 +3048,6 @@ PrepareTransaction(void)
 						 RESOURCE_RELEASE_BEFORE_LOCKS,
 						 true, true);
 
-	/* Process resource group related callbacks */
-	AtEOXact_ResGroup(true);
-
 	/* Check we've released all buffer pins */
 	AtEOXact_Buffers(true);
 
@@ -3096,6 +3093,7 @@ PrepareTransaction(void)
 	AtEOXact_ComboCid();
 	AtEOXact_HashTables(true);
 	/* don't call AtEOXact_PgStat here */
+	AtEOXact_Snapshot(true);
 
 	CurrentResourceOwner = NULL;
 	ResourceOwnerDelete(TopTransactionResourceOwner);
@@ -3215,6 +3213,9 @@ AbortTransaction(void)
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled())
 		AtAbort_ResScheduler();
 		
+	/* Perform any Resource Group abort processing. */
+	AtEOXact_ResGroup(false);
+
 	/* Perform any AO table abort processing */
 	AtAbort_AppendOnly();
 
@@ -3274,7 +3275,6 @@ AbortTransaction(void)
 		ResourceOwnerRelease(TopTransactionResourceOwner,
 							 RESOURCE_RELEASE_BEFORE_LOCKS,
 							 false, true);
-		AtEOXact_ResGroup(false);
 		AtEOXact_Buffers(false);
 		AtEOXact_RelationCache(false);
 		AtEOXact_Inval(false);
@@ -3305,6 +3305,7 @@ AbortTransaction(void)
 		AtEOXact_ComboCid();
 		AtEOXact_HashTables(false);
 		AtEOXact_PgStat(false);
+		AtEOXact_Snapshot(false);
 		pgstat_report_xact_timestamp(0);
 	}
 
@@ -3339,10 +3340,11 @@ AbortTransaction(void)
 		disconnectAndDestroyIdleReaderGangs();
 	}
 
-	/* If memprot decides to kill process, make sure we destroy all processes
+	/*
+	 * If memprot decides to kill process, make sure we destroy all processes
 	 * so that all mem/resource will be freed
 	 */
-	if(elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
+	if (elog_geterrcode() == ERRCODE_GP_MEMPROT_KILL)
 		DisconnectAndDestroyAllGangs(true);
 }
 
@@ -3392,10 +3394,6 @@ CleanupTransaction(void)
 	s->state = TRANS_DEFAULT;
 
 	finishDistributedTransactionContext("CleanupTransaction", true);
-
-	/* Release resource group slot at the end of a transaction */
-	if (ShouldUnassignResGroup())
-		UnassignResGroup();
 }
 
 /*
@@ -3404,6 +3402,9 @@ CleanupTransaction(void)
 void
 StartTransactionCommand(void)
 {
+	if (Gp_role == GP_ROLE_DISPATCH)
+		setupRegularDtxContext();
+
 	TransactionState s = CurrentTransactionState;
 
 	switch (s->blockState)
@@ -5341,6 +5342,7 @@ CommitSubTransaction(void)
 					  s->parent->subTransactionId);
 	AtEOSubXact_HashTables(true, s->nestingLevel);
 	AtEOSubXact_PgStat(true, s->nestingLevel);
+	AtSubCommit_Snapshot(s->nestingLevel);
 
 	/*
 	 * We need to restore the upper transaction's read-only state, in case the
@@ -5460,6 +5462,7 @@ AbortSubTransaction(void)
 						  s->parent->subTransactionId);
 		AtEOSubXact_HashTables(false, s->nestingLevel);
 		AtEOSubXact_PgStat(false, s->nestingLevel);
+		AtSubAbort_Snapshot(s->nestingLevel);
 	}
 
 	/*

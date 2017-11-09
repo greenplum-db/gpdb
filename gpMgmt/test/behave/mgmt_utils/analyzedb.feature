@@ -1770,3 +1770,35 @@ Feature: Incrementally analyze the database
         Then analyzedb should return a return code of 0
         And analyzedb should print "There are no tables or partitions to be analyzed. Exiting" to stdout
         And "3" analyze directories exist for database "incr_analyze"
+
+    @analyzedb_gen_profile_only
+    Scenario: analyzedb runs without actually doing an analyze but cache that all tables have been analyzed.
+        Given no state files exist for database "incr_analyze"
+        And the user runs "psql -d incr_analyze -c 'create table foo(i int)  with (appendonly=true);'"
+        When the user runs "psql -d incr_analyze -c 'insert into foo values (1);'"
+        And the user runs "analyzedb -a -d incr_analyze -t public.foo"
+        Then analyzedb should return a return code of 0
+        And the latest state file should have a mod count of 1 for table "foo" in "public" schema for database "incr_analyze"
+        When execute following sql in db "incr_analyze" and store result in the context
+            """
+            select stanullfrac from pg_statistic where starelid = (select oid from pg_class where relname='foo');
+            """
+        Then validate that following rows are in the stored rows
+          |  stanullfrac  |
+          |  0.0          |
+
+        When the user runs "psql -d incr_analyze -c 'update foo set i=NULL'"
+        And the user runs "analyzedb -a -d incr_analyze --gen_profile_only"
+        Then analyzedb should return a return code of 0
+        And the latest state file should have a mod count of 2 for table "foo" in "public" schema for database "incr_analyze"
+        When execute following sql in db "incr_analyze" and store result in the context
+            """
+            select stanullfrac from pg_statistic where starelid = (select oid from pg_class where relname='foo');
+            """
+        Then validate that following rows are in the stored rows
+          |  stanullfrac  |
+          |  0.0          |
+
+        When the user runs "analyzedb -a -d incr_analyze -t public.foo"
+        Then analyzedb should print "There are no tables or partitions to be analyzed. Exiting" to stdout
+

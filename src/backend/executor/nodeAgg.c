@@ -75,14 +75,13 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.160 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.159 2008/08/02 21:31:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_type.h"
@@ -1138,8 +1137,6 @@ agg_retrieve_direct(AggState *aggstate)
 				 * comparison (in group mode) and for projection.
 				 */
 
-				Gpmon_Incr_Rows_In(GpmonPktFromAggState(aggstate));
-				CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 				slot_getallattrs(outerslot);
 				aggstate->grp_firstTuple = memtuple_form_to(firstSlot->tts_mt_bind,
 						slot_get_values(outerslot),
@@ -1258,8 +1255,6 @@ agg_retrieve_direct(AggState *aggstate)
 						break;
 					}
 
-					Gpmon_Incr_Rows_In(GpmonPktFromAggState(aggstate));
-					CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 					/* set up for next advance aggregates call */
 					tmpcontext->ecxt_outertuple = outerslot;
 
@@ -1482,9 +1477,6 @@ agg_retrieve_direct(AggState *aggstate)
 			 * and the representative input tuple.	Note we do not support
 			 * aggregates returning sets ...
 			 */
-			Gpmon_Incr_Rows_Out(GpmonPktFromAggState(aggstate));
-			CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
-
 			return ExecProject(projInfo, NULL);
 		}
 	}
@@ -1598,8 +1590,6 @@ agg_retrieve_hash_table(AggState *aggstate)
 			 * and the representative input tuple.	Note we do not support
 			 * aggregates returning sets ...
 			 */
-			Gpmon_Incr_Rows_Out(GpmonPktFromAggState(aggstate));
-			CheckSendPlanStateGpmonPkt(&aggstate->ss.ps);
 			return ExecProject(projInfo, NULL);
 		}
 	}
@@ -2057,8 +2047,9 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 		if (aggref->aggdistinct)
 		{
 			TargetEntry *tle;
-			SortClause *sc;
-			Oid			eq_function;
+			SortGroupClause *sc;
+			Oid			lt_opr;
+			Oid			eq_opr;
 
 			/*
 			 * GPDB 4 doesh't implement DISTINCT aggs for aggs having more
@@ -2082,15 +2073,18 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			 * record it in the Aggref node ... or at latest, do it in the
 			 * planner.
 			 */
-			eq_function = equality_oper_funcid(inputTypes[0]);
-			fmgr_info(eq_function, &(peraggstate->equalfn));
+			get_sort_group_operators(inputTypes[0],
+									 true, true, false,
+									 &lt_opr, &eq_opr, NULL);
+			fmgr_info(get_opcode(eq_opr), &(peraggstate->equalfn));
 
 			tle = (TargetEntry *) linitial(inputTargets);
 			tle->ressortgroupref = 1;
 
-			sc = makeNode(SortClause);
+			sc = makeNode(SortGroupClause);
 			sc->tleSortGroupRef = tle->ressortgroupref;
-			sc->sortop = ordering_oper_opid(inputTypes[0]);
+			sc->eqop = eq_opr;
+			sc->sortop = lt_opr;
 
 			sortlist = list_make1(sc);
 			numSortCols = 1;
@@ -2136,7 +2130,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			i = 0;
 			foreach(lc, sortlist)
 			{
-				SortClause *sortcl = (SortClause *) lfirst(lc);
+				SortGroupClause *sortcl = (SortGroupClause *) lfirst(lc);
 				TargetEntry *tle = get_sortgroupclause_tle(sortcl,
 														   inputTargets);
 
@@ -2153,7 +2147,7 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 
 		if (aggref->aggdistinct)
 		{
-			Oid			eqfunc;
+			Oid			eq_opr;
 
 			Assert(numArguments == 1);
 			Assert(numSortCols == 1);
@@ -2162,8 +2156,10 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 			 * We need the equal function for the DISTINCT comparison we will
 			 * make.
 			 */
-			eqfunc = equality_oper_funcid(inputTypes[0]);
-			fmgr_info(eqfunc, &peraggstate->equalfn);
+			get_sort_group_operators(inputTypes[0],
+									 false, true, false,
+									 NULL, &eq_opr, NULL);
+			fmgr_info(get_opcode(eq_opr), &peraggstate->equalfn);
 		}
 
 		ReleaseSysCache(aggTuple);
@@ -2354,8 +2350,6 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	aggstate->mem_manager.free = cxt_free;
 	aggstate->mem_manager.manager = aggstate->aggcontext;
 	aggstate->mem_manager.realloc_ratio = 1;
-
-	initGpmonPktForAgg((Plan *) node, &aggstate->ss.ps.gpmon_pkt, estate);
 
 	return aggstate;
 }
@@ -2632,14 +2626,6 @@ get_grouping_groupid(TupleTableSlot *slot, int grping_attno)
 	return grouping;
 }
 
-void
-initGpmonPktForAgg(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Agg));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
-}
-
 /*
  * Combine the argument and sortkey expressions of an Aggref
  * node into a single target list (of TargetEntry*) and, if
@@ -2683,7 +2669,7 @@ combineAggrefArgs(Aggref *aggref, List **sort_clauses)
 
 		foreach(lc, inputSorts)
 		{
-			SortClause *sc = (SortClause *) lfirst(lc);
+			SortGroupClause *sc = (SortGroupClause *) lfirst(lc);
 			TargetEntry *newtle;
 
 			tle = get_sortgroupclause_tle(sc, aggref->aggorder->sortTargets);
@@ -2703,7 +2689,7 @@ combineAggrefArgs(Aggref *aggref, List **sort_clauses)
 	}
 	else if (aggref->aggdistinct)
 	{
-		SortClause *sc;
+		SortGroupClause *sc;
 
 		/* In GPDB, DISTINCT implies single argument. */
 		Assert(list_length(inputTargets) == 1);
@@ -2715,7 +2701,7 @@ combineAggrefArgs(Aggref *aggref, List **sort_clauses)
 
 		if (sort_clauses != NULL)
 		{
-			sc = makeNode(SortClause);
+			sc = makeNode(SortGroupClause);
 			sc->tleSortGroupRef = tle->ressortgroupref;
 			inputSorts = list_make1(sc);
 		}
@@ -2760,7 +2746,7 @@ combinePercentileArgs(PercentileExpr *p)
 	 */
 	foreach(l, p->sortClause)
 	{
-		SortClause *sc = lfirst(l);
+		SortGroupClause *sc = lfirst(l);
 		TargetEntry *sc_tle;
 
 		sc_tle = get_sortgroupclause_tle(sc, p->sortTargets);

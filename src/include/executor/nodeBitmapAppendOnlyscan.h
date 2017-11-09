@@ -27,10 +27,5 @@ extern void ExecEndBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);
 extern void ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeBitmapAppendOnlyScan(BitmapAppendOnlyScanState *node);
 
-static inline gpmon_packet_t * GpmonPktFromBitmapAppendOnlyScanState(BitmapAppendOnlyScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEBITMAPAPPENDONLYSCAN_H */
 

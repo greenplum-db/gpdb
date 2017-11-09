@@ -1056,7 +1056,6 @@ COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK
 ALTER table copy_on_segment_check_distkey_subpartition_1_prt_1_2_prt_1 set DISTRIBUTED RANDOMLY ;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 -- start_ignore
-DROP TABLE IF EXISTS LINEITEM;
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
 DROP TABLE IF EXISTS LINEITEM_3;
@@ -1096,6 +1095,31 @@ SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM 'echo $GP_SEGMENT_I';
 SELECT COUNT(*) FROM COPY_FROM_PROGRAM_ERROR;
 SET gp_enable_segment_copy_checking=off;
-COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM $quote$bash -c "echo -e '$GP_SEGMENT_ID\n<SEGID>'"$quote$ on segment;
-COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM $quote$bash -c "echo -e '$GP_SEGMENT_I\n<SEGID>'"$quote$ on segment;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM $quote$bash -c "printf '$GP_SEGMENT_ID\n<SEGID>'"$quote$ on segment;
+COPY COPY_FROM_PROGRAM_ERROR FROM PROGRAM $quote$bash -c "printf '$GP_SEGMENT_I\n<SEGID>'"$quote$ on segment;
 SET gp_enable_segment_copy_checking=on;
+
+-- Test that xlog records are generated for COPY in the same transaction as
+-- created table. The actual validation for this test will be performed once the
+-- gp_replica_check tool is enabled.
+BEGIN;
+CREATE TABLE copy_from_same_txn(a int, b int);
+COPY copy_from_same_txn FROM stdin;
+1	1
+2	2
+3	3
+\.
+COMMIT;
+
+-- Test that issuing a cancel requests during COPY aborts the processing before
+-- the entire contents has been copied out. The hardcoded rowcount 57190 is the
+-- number of rows in the lineitem table.
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
+SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'reset', 1);
+SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'interrupt', 1);
+
+COPY lineitem TO '/tmp/aborted.data';
+CREATE TABLE lineitem_aborted (LIKE lineitem);
+COPY lineitem_aborted FROM '/tmp/aborted.data';
+SELECT count(*) < 57190 FROM lineitem_aborted;

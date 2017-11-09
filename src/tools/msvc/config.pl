@@ -9,6 +9,8 @@ our $config = {
     # float8byval=>1,         # --disable-float8-byval, on by default
     # blocksize => 32,        # --with-blocksize, 8kB by default
     # ldap=>1,				# --with-ldap
+    # wal_blocksize => 8,     # --with-wal-blocksize, 8kb by default
+    # wal_segsize => 16,      # --with-wal-segsize, 16MB by default
     nls=>undef,				# --enable-nls=<path>
     tcl=>undef,				# --with-tls=<path>
     perl=>undef, 			# --with-perl

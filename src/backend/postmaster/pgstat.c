@@ -13,7 +13,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.173 2008/04/03 16:27:25 tgl Exp $
+ *	$PostgreSQL: pgsql/src/backend/postmaster/pgstat.c,v 1.178 2008/08/05 12:09:30 mha Exp $
  * ----------
  */
 #include "postgres.h"
@@ -43,12 +43,12 @@
 #include "access/xact.h"
 #include "catalog/pg_database.h"
 #include "catalog/pg_proc.h"
+#include "executor/instrument.h"
 #include "libpq/ip.h"
 #include "libpq/libpq.h"
 #include "libpq/pqsignal.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
-#include "executor/instrument.h"
 #include "pg_trace.h"
 #include "postmaster/autovacuum.h"
 #include "postmaster/fork_process.h"
@@ -114,10 +114,10 @@
  */
 bool		pgstat_track_activities = false;
 bool		pgstat_track_counts = false;
+int			pgstat_track_functions = TRACK_FUNC_OFF;
+int			pgstat_track_activity_query_size = 1024;
 
 bool		pgstat_collect_queuelevel = false;
-
-int			pgstat_track_functions = TRACK_FUNC_OFF;
 
 /* ----------
  * Built from GUC parameter
@@ -234,6 +234,13 @@ static TimestampTz last_statrequest;
 
 static volatile bool need_exit = false;
 static volatile bool got_SIGHUP = false;
+
+/*
+ * Total time charged to functions so far in the current backend.
+ * We use this to help separate "self" and "other" time charges.
+ * (We assume this initializes to zero.)
+ */
+static instr_time total_func_time;
 
 /*
  * Total time charged to functions so far in the current backend.
@@ -1319,7 +1326,7 @@ pgstat_init_function_usage(FunctionCallInfoData *fcinfo,
 						   PgStat_FunctionCallUsage *fcu)
 {
 	PgStat_BackendFunctionEntry *htabent;
-	bool		found;
+	bool 		found;
 
 	if (pgstat_track_functions <= fcinfo->flinfo->fn_stats)
 	{
@@ -2334,6 +2341,8 @@ pgstat_report_activity(const char *cmd_str)
 	TimestampTz start_timestamp;
 	int			len;
 
+	TRACE_POSTGRESQL_STATEMENT_STATUS(cmd_str);
+
 	if (!pgstat_track_activities || !beentry)
 		return;
 
@@ -3320,14 +3329,6 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
 		return dbhash;
 
-		/*
-	 * Try to open the status file. If it doesn't exist, the backends simply
-	 * return zero for anything and the collector simply starts from scratch
-	 * with empty counters.
-	 */
-	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
-		return dbhash;
-
 	/*
 	 * Verify it's of the expected format.
 	 */
@@ -3471,7 +3472,7 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 				/*
 				 * 'F'	A PgStat_StatFuncEntry follows.
 				 */
-            case 'F':
+			case 'F':
 				if (fread(&funcbuf, 1, sizeof(PgStat_StatFuncEntry),
 						  fpin) != sizeof(PgStat_StatFuncEntry))
 				{
@@ -3487,7 +3488,7 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 					break;
 
 				funcentry = (PgStat_StatFuncEntry *) hash_search(funchash,
-												(void *) &funcbuf.functionid,
+													(void *) &funcbuf.functionid,
 														 HASH_ENTER, &found);
 
 				if (found)
@@ -3499,6 +3500,7 @@ pgstat_read_statsfile(Oid onlydb, bool permanent)
 
 				memcpy(funcentry, &funcbuf, sizeof(funcbuf));
 				break;
+
 				/*
 				 * 'Q'	A PgStat_StatQueueEntry follows.  (GPDB)
 				 */
@@ -3610,10 +3612,10 @@ backend_read_statsfile(void)
 	TimestampTz min_ts;
 	int			count;
 
-		/* already read it? */
-		if (pgStatDBHash)
-			return;
-		Assert(!pgStatRunningInCollector);
+	/* already read it? */
+	if (pgStatDBHash)
+		return;
+	Assert(!pgStatRunningInCollector);
 
 	/*
 	 * We set the minimum acceptable timestamp to PGSTAT_STAT_INTERVAL msec
@@ -3662,7 +3664,10 @@ backend_read_statsfile(void)
 						"because stats collector is not responding")));
 
 	/* Autovacuum launcher wants stats about all databases */
-	pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);
+	if (IsAutoVacuumLauncherProcess())
+		pgStatDBHash = pgstat_read_statsfile(InvalidOid, false);
+	else
+		pgStatDBHash = pgstat_read_statsfile(MyDatabaseId, false);
 }
 
 
@@ -4132,7 +4137,6 @@ pgstat_recv_queuestat(PgStat_MsgQueuestat *msg, int len)
 	queueentry->n_queries_wait += msg->m_queries_wait;
 	queueentry->elapsed_exec += msg->m_elapsed_exec;
 	queueentry->elapsed_wait += msg->m_elapsed_wait;
-
 }
 
 
@@ -4145,10 +4149,8 @@ pgstat_recv_queuestat(PgStat_MsgQueuestat *msg, int len)
 void
 pgstat_init_localportalhash(void)
 {
-
 	HASHCTL		info;
 	int			hash_flags;
-
 
 	info.keysize = sizeof(uint32);
 	info.entrysize = sizeof(PgStat_StatPortalEntry);
@@ -4212,12 +4214,10 @@ pgstat_report_queuestat()
 	PgStat_StatPortalEntry	*pentry;
 	PgStat_MsgQueuestat		msg;
 
+	/* Not collecting queue stats or collector disabled. */
 	if (pgStatSock < 0 || !pgstat_collect_queuelevel)
-	{
-		return;			/* Not collecting queue stats or collector disabled. */
-	}
+		return;
 
-	
 	/* Do a sequential scan through the local portal/queue hash*/
 	hash_seq_init(&hstat, localStatPortalHash);
 	while ((pentry = (PgStat_StatPortalEntry *) hash_seq_search(&hstat)) != NULL)
@@ -4244,10 +4244,7 @@ pgstat_report_queuestat()
 		pentry->queueentry.elapsed_wait = 0;
 
 		pgstat_send(&msg, sizeof(msg));
-
 	}
-
-
 }
 
 
@@ -4301,8 +4298,8 @@ pgstat_recv_funcstat(PgStat_MsgFuncstat *msg, int len)
 	for (i = 0; i < msg->m_nentries; i++, funcmsg++)
 	{
 		funcentry = (PgStat_StatFuncEntry *) hash_search(dbentry->functions,
-												   (void *) &(funcmsg->f_id),
-														 HASH_ENTER, &found);
+												  (void *) &(funcmsg->f_id),
+													   HASH_ENTER, &found);
 
 		if (!found)
 		{

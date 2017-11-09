@@ -30,9 +30,16 @@ pip install psutil lockfile
 # Set up gpadmin user and SSH
 cd /home/gpadmin
 gpdb_src/concourse/scripts/setup_gpadmin_user.bash
-echo "export PS1='\n\w\n$ '" >> /home/gpadmin/.bashrc
-
 echo "/usr/sbin/sshd" >> /root/.bashrc
+
+su - gpadmin
+cat >> ~/.bash_profile <<EOF
+export PS1='\n\w\n$ '
+source /opt/gcc_env.sh
+export CC=\`which gcc\`
+export CXX=\`which g++\`
+EOF
+source ~/.bash_profile
 ```
 
 ## Set up rsync (optional)
@@ -40,7 +47,7 @@ echo "/usr/sbin/sshd" >> /root/.bashrc
 Compiling and running GPDB from the mounted OSX `gpdb_src` folder is quite slow and sometimes buggy due to the constant handshake between OSX and the Docker container. To get around this issue, we can use rsync to sync the files from `~/gpdb_src` to a local `~/gpdb` folder.
 
 ```
-rsync -avz --exclude=.git --exclude=gpAux/client/ --exclude=gpAux/docs/ /home/gpadmin/gpdb_src/ /home/gpadmin/gpdb/
+rsync -az --exclude=.git --exclude=gpAux/client/ --exclude=gpAux/docs/ /home/gpadmin/gpdb_src/ /home/gpadmin/gpdb/
 ```
 
 To make the resync a little faster after the initial sync, you can specify to sync only the `gpdb_src/src` directory if you only make modifications to that particular directory.
@@ -56,6 +63,11 @@ alias make="rsync [...] ; /bin/make -j8"
 Follow the instructions in the “Prerequisites” section from below:
 https://gpdb.docs.pivotal.io/500/admin_guide/workload_mgmt_resgroups.html
 
+And run the below command:
+
+```bash
+echo "cgconfigparser -l /etc/cgconfig.d/gpdb.conf" >> /root/.bashrc
+```
 
 ## Configure the GPDB Build Environment
 Run the `./configure` command as described in [README.md](README.md).
@@ -64,7 +76,7 @@ NOTE: make sure that the gpdb folder on the Mac is clean, so that no object file
 
 ```bash
 su - gpadmin
-cd gpdb_src
+cd gpdb_src #or gpdb if you are using rsync
 ./configure --with-perl --with-python --with-libxml --disable-orca --prefix=/home/gpadmin/gpdb_install
 ```
 
@@ -91,8 +103,7 @@ Note that you can run `docker exec -i -t [container name] /bin/bash` to create a
 ```bash
 su - gpadmin
 cd ~/gpdb_src
-make -j8
-make -j8 install
+make -j8 all install
 ```
 
 ## Starting a gpdemo Cluster

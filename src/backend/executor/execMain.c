@@ -28,7 +28,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.313 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.312 2008/08/08 17:01:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,12 +67,16 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "parser/parse_clause.h"
+#include "parser/parse_expr.h"
 #include "parser/parsetree.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/smgr.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
 #include "utils/ps_status.h"
@@ -108,6 +112,9 @@
 
 extern bool cdbpathlocus_querysegmentcatalogs;
 
+
+/* Hook for plugins to get control in ExecutorRun() */
+ExecutorRun_hook_type ExecutorRun_hook = NULL;
 
 typedef struct evalPlanQual
 {
@@ -370,8 +377,8 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 	/*
 	 * Copy other important information into the EState
 	 */
-	estate->es_snapshot = queryDesc->snapshot;
-	estate->es_crosscheck_snapshot = queryDesc->crosscheck_snapshot;
+	estate->es_snapshot = RegisterSnapshot(queryDesc->snapshot);
+	estate->es_crosscheck_snapshot = RegisterSnapshot(queryDesc->crosscheck_snapshot);
 	estate->es_instrument = queryDesc->doInstrument;
 	estate->showstatctx = queryDesc->showstatctx;
 
@@ -774,6 +781,10 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
  *		Note: count = 0 is interpreted as no portal limit, i.e., run to
  *		completion.
  *
+ *		We provide a function hook variable that lets loadable plugins
+ *		get control when ExecutorRun is called.  Such a plugin would
+ *		normally call standard_ExecutorRun().
+ *
  *		MPP: In here we must ensure to only run the plan and not call
  *		any setup/teardown items (unless in a CATCH block).
  *
@@ -782,6 +793,19 @@ ExecutorStart(QueryDesc *queryDesc, int eflags)
 TupleTableSlot *
 ExecutorRun(QueryDesc *queryDesc,
 			ScanDirection direction, long count)
+{
+	TupleTableSlot *result;
+
+	if (ExecutorRun_hook)
+		result = (*ExecutorRun_hook) (queryDesc, direction, count);
+	else
+		result = standard_ExecutorRun(queryDesc, direction, count);
+	return result;
+}
+
+TupleTableSlot *
+standard_ExecutorRun(QueryDesc *queryDesc,
+					 ScanDirection direction, long count)
 {
 	EState	   *estate;
 	CmdType		operation;
@@ -1077,6 +1101,10 @@ ExecutorEnd(QueryDesc *queryDesc)
 	 */
 	if (estate->es_select_into)
 		CloseIntoRel(queryDesc);
+
+	/* do away with our snapshots */
+	UnregisterSnapshot(estate->es_snapshot);
+	UnregisterSnapshot(estate->es_crosscheck_snapshot);
 
 	/*
 	 * Must switch out of context before destroying it
@@ -1895,9 +1923,7 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 	/*
 	 * Initialize the junk filter if needed.  SELECT and INSERT queries need a
-	 * filter if there are any junk attrs in the tlist.  INSERT and SELECT
-	 * INTO also need a filter if the plan may return raw disk tuples (else
-	 * heap_insert will be scribbling on the source relation!). UPDATE and
+	 * filter if there are any junk attrs in the tlist.  UPDATE and
 	 * DELETE always need a filter, since there's always a junk 'ctid'
 	 * attribute present --- no need to look first.
 	 *
@@ -1922,10 +1948,6 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 						break;
 					}
 				}
-				if (!junk_filter_needed &&
-					(operation == CMD_INSERT || estate->es_select_into) &&
-					ExecMayReturnRawTuples(planstate))
-					junk_filter_needed = true;
 				break;
 			case CMD_UPDATE:
 			case CMD_DELETE:
@@ -2337,6 +2359,75 @@ ResultRelInfoSetSegno(ResultRelInfo *resultRelInfo, List *mapping)
 }
 
 /*
+ * Verify that the tuples to be produced by INSERT or UPDATE match the
+ * target relation's rowtype
+ *
+ * We do this to guard against stale plans.  If plan invalidation is
+ * functioning properly then we should never get a failure here, but better
+ * safe than sorry.  Note that this is called after we have obtained lock
+ * on the target rel, so the rowtype can't change underneath us.
+ *
+ * The plan output is represented by its targetlist, because that makes
+ * handling the dropped-column case easier.
+ */
+static void
+ExecCheckPlanOutput(Relation resultRel, List *targetList)
+{
+	TupleDesc	resultDesc = RelationGetDescr(resultRel);
+	int			attno = 0;
+	ListCell   *lc;
+
+	foreach(lc, targetList)
+	{
+		TargetEntry *tle = (TargetEntry *) lfirst(lc);
+		Form_pg_attribute attr;
+
+		if (tle->resjunk)
+			continue;			/* ignore junk tlist items */
+
+		if (attno >= resultDesc->natts)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+					 errmsg("table row type and query-specified row type do not match"),
+					 errdetail("Query has too many columns.")));
+		attr = resultDesc->attrs[attno++];
+
+		if (!attr->attisdropped)
+		{
+			/* Normal case: demand type match */
+			if (exprType((Node *) tle->expr) != attr->atttypid)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+						 errmsg("table row type and query-specified row type do not match"),
+						 errdetail("Table has type %s at ordinal position %d, but query expects %s.",
+								   format_type_be(attr->atttypid),
+								   attno,
+								   format_type_be(exprType((Node *) tle->expr)))));
+		}
+		else
+		{
+			/*
+			 * For a dropped column, we can't check atttypid (it's likely 0).
+			 * In any case the planner has most likely inserted an INT4 null.
+			 * What we insist on is just *some* NULL constant.
+			 */
+			if (!IsA(tle->expr, Const) ||
+				!((Const *) tle->expr)->constisnull)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+						 errmsg("table row type and query-specified row type do not match"),
+						 errdetail("Query provides a value for a dropped column at ordinal position %d.",
+								   attno)));
+		}
+	}
+	if (attno != resultDesc->natts)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("table row type and query-specified row type do not match"),
+				 errdetail("Query has too few columns.")));
+}
+
+/*
  *		ExecGetTriggerResultRel
  *
  * Get a ResultRelInfo for a trigger target relation.  Most of the time,
@@ -2644,83 +2735,6 @@ ExecEndPlan(PlanState *planstate, EState *estate)
 		heap_close(erm->relation, NoLock);
 	}
 }
-
-/*
- * Verify that the tuples to be produced by INSERT or UPDATE match the
- * target relation's rowtype
- *
- * We do this to guard against stale plans.  If plan invalidation is
- * functioning properly then we should never get a failure here, but better
- * safe than sorry.  Note that this is called after we have obtained lock
- * on the target rel, so the rowtype can't change underneath us.
- *
- * The plan output is represented by its targetlist, because that makes
- * handling the dropped-column case easier.
- */
-static void
-ExecCheckPlanOutput(Relation resultRel, List *targetList)
-{
-	TupleDesc	resultDesc = RelationGetDescr(resultRel);
-	int			attno = 0;
-	ListCell   *lc;
-
-	/*
-	 * Don't do this during dispatch because the plan is not suitable
-	 * structured to meet these tests
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH)
-		return;
-
-	foreach(lc, targetList)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-		Form_pg_attribute attr;
-
-		if (tle->resjunk)
-			continue;			/* ignore junk tlist items */
-
-		if (attno >= resultDesc->natts)
-			ereport(ERROR,
-					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("table row type and query-specified row type do not match"),
-					 errdetail("Query has too many columns.")));
-		attr = resultDesc->attrs[attno++];
-
-		if (!attr->attisdropped)
-		{
-			/* Normal case: demand type match */
-			if (exprType((Node *) tle->expr) != attr->atttypid)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("table row type and query-specified row type do not match"),
-						 errdetail("Table has type %s at ordinal position %d, but query expects %s.",
-								   format_type_be(attr->atttypid),
-								   attno,
-								   format_type_be(exprType((Node *) tle->expr)))));
-		}
-		else
-		{
-			/*
-			 * For a dropped column, we can't check atttypid (it's likely 0).
-			 * In any case the planner has most likely inserted an INT4 null.
-			 * What we insist on is just *some* NULL constant.
-			 */
-			if (!IsA(tle->expr, Const) ||
-				!((Const *) tle->expr)->constisnull)
-				ereport(ERROR,
-						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("table row type and query-specified row type do not match"),
-						 errdetail("Query provides a value for a dropped column at ordinal position %d.",
-								   attno)));
-		}
-	}
-	if (attno != resultDesc->natts)
-		ereport(ERROR,
-				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("table row type and query-specified row type do not match"),
-				 errdetail("Query has too few columns.")));
-}
-
 
 /* ----------------------------------------------------------------
  *		ExecutePlan
@@ -3080,6 +3094,7 @@ ExecInsert(TupleTableSlot *slot,
 	bool		rel_is_aocols = false;
 	bool		rel_is_external = false;
 	ItemPointerData lastTid;
+	Oid			tuple_oid = InvalidOid;
 
 	/*
 	 * get information on the (current) result relation
@@ -3144,6 +3159,81 @@ ExecInsert(TupleTableSlot *slot,
 	rel_is_aorows = RelationIsAoRows(resultRelationDesc);
 	rel_is_external = RelationIsExternal(resultRelationDesc);
 
+	/*
+	 * Prepare the right kind of "insert desc".
+	 */
+	if (rel_is_aorows)
+	{
+		if (resultRelInfo->ri_aoInsertDesc == NULL)
+		{
+			/* Set the pre-assigned fileseg number to insert into */
+			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+
+			resultRelInfo->ri_aoInsertDesc =
+				appendonly_insert_init(resultRelationDesc,
+									   resultRelInfo->ri_aosegno,
+									   false);
+		}
+	}
+	else if (rel_is_aocols)
+	{
+		if (resultRelInfo->ri_aocsInsertDesc == NULL)
+		{
+			ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
+			resultRelInfo->ri_aocsInsertDesc = aocs_insert_init(resultRelationDesc,
+																resultRelInfo->ri_aosegno, false);
+		}
+	}
+	else if (rel_is_external)
+	{
+		if (resultRelInfo->ri_extInsertDesc == NULL)
+			resultRelInfo->ri_extInsertDesc = external_insert_init(resultRelationDesc);
+	}
+
+	/*
+	 * If the result relation has OIDs, force the tuple's OID to zero so that
+	 * heap_insert will assign a fresh OID.  Usually the OID already will be
+	 * zero at this point, but there are corner cases where the plan tree can
+	 * return a tuple extracted literally from some table with the same
+	 * rowtype.
+	 *
+	 * XXX if we ever wanted to allow users to assign their own OIDs to new
+	 * rows, this'd be the place to do it.  For the moment, we make a point
+	 * of doing this before calling triggers, so that a user-supplied trigger
+	 * could hack the OID if desired.
+	 *
+	 * GPDB: In PostgreSQL, here we set the Oid in the HeapTuple, which is a
+	 * local copy at this point. But in GPDB, we don't materialize the tuple
+	 * yet, because we might need a MemTuple or a HeapTuple depending on
+	 * what kind of a table this is (or neither for an AOCS table, since
+	 * aocs_insert() works directly off the slot). So we keep the Oid in a
+	 * local variable for now, and only set it in the tuple just before the
+	 * call to heap/appendonly/external_insert().
+	 */
+	if (resultRelationDesc->rd_rel->relhasoids)
+	{
+		tuple_oid = InvalidOid;
+
+		/*
+		 * But if this is really an UPDATE, try to preserve the old OID.
+		 */
+		if (isUpdate)
+		{
+			GenericTuple gtuple;
+
+			gtuple = ExecFetchSlotGenericTuple(slot, false);
+
+			if (!is_memtuple(gtuple))
+				tuple_oid = HeapTupleGetOid((HeapTuple) gtuple);
+			else
+			{
+				if (resultRelInfo->ri_aoInsertDesc)
+					tuple_oid = MemTupleGetOid((MemTuple) gtuple,
+											   resultRelInfo->ri_aoInsertDesc->mt_bind);
+			}
+		}
+	}
+
 	slot = reconstructMatchingTupleSlot(slot, resultRelInfo);
 
 	if (rel_is_external &&
@@ -3165,7 +3255,10 @@ ExecInsert(TupleTableSlot *slot,
 		HeapTuple	newtuple;
 		HeapTuple	tuple;
 
-		tuple = ExecFetchSlotHeapTuple(slot);
+		tuple = ExecMaterializeSlot(slot);
+
+		if (resultRelationDesc->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, tuple_oid);
 
 		newtuple = ExecBRInsertTriggers(estate, resultRelInfo, tuple);
 
@@ -3188,6 +3281,13 @@ ExecInsert(TupleTableSlot *slot,
 			newslot->tts_tableOid = slot->tts_tableOid; /* for constraints */
 			slot = newslot;
 			tuple = newtuple;
+
+			/*
+			 * since we keep the OID in a separate variable, also update that,
+			 * in case the trigger set it.
+			 */
+			if (resultRelationDesc->rd_rel->relhasoids)
+				tuple_oid = HeapTupleGetOid(newtuple);
 		}
 	}
 
@@ -3218,11 +3318,10 @@ ExecInsert(TupleTableSlot *slot,
 				appendonly_insert_init(resultRelationDesc,
 									   resultRelInfo->ri_aosegno,
 									   false);
-
 		}
 
 		mtuple = ExecFetchSlotMemTuple(slot, false);
-		appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, &newId, (AOTupleId *) &lastTid);
+		newId = appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, tuple_oid, (AOTupleId *) &lastTid);
 	}
 	else if (rel_is_aocols)
 	{
@@ -3244,7 +3343,13 @@ ExecInsert(TupleTableSlot *slot,
 		if (resultRelInfo->ri_extInsertDesc == NULL)
 			resultRelInfo->ri_extInsertDesc = external_insert_init(resultRelationDesc);
 
-		tuple = ExecFetchSlotHeapTuple(slot);
+		/*
+		 * get the heap tuple out of the tuple table slot, making sure we have a
+		 * writable copy. (external_insert() can scribble on the tuple)
+		 */
+		tuple = ExecMaterializeSlot(slot);
+		if (resultRelationDesc->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, tuple_oid);
 
 		newId = external_insert(resultRelInfo->ri_extInsertDesc, tuple);
 		ItemPointerSetInvalid(&lastTid);
@@ -3255,7 +3360,13 @@ ExecInsert(TupleTableSlot *slot,
 
 		Insist(rel_is_heap);
 
-		tuple = ExecFetchSlotHeapTuple(slot);
+		/*
+		 * get the heap tuple out of the tuple table slot, making sure we have a
+		 * writable copy. (heap_insert() will scribble on the tuple)
+		 */
+		tuple = ExecMaterializeSlot(slot);
+		if (resultRelationDesc->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, tuple_oid);
 
 		newId = heap_insert(resultRelationDesc,
 							tuple,
@@ -3282,7 +3393,7 @@ ExecInsert(TupleTableSlot *slot,
 		resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_INSERT] > 0 &&
 		!isUpdate)
 	{
-		HeapTuple tuple = ExecFetchSlotHeapTuple(slot);
+		HeapTuple tuple = ExecMaterializeSlot(slot);
 
 		Assert(planGen == PLANGEN_PLANNER);
 
@@ -3405,7 +3516,7 @@ ldelete:;
 		if (resultRelInfo->ri_deleteDesc == NULL)
 		{
 			resultRelInfo->ri_deleteDesc = 
-				appendonly_delete_init(resultRelationDesc, ActiveSnapshot);
+				appendonly_delete_init(resultRelationDesc, GetActiveSnapshot());
 		}
 
 		AOTupleId* aoTupleId = (AOTupleId*)tupleid;
@@ -3821,7 +3932,7 @@ lreplace:;
 		{
 			HeapTuple tuple;
 
-			tuple = ExecFetchSlotHeapTuple(slot);
+			tuple = ExecMaterializeSlot(slot);
 
 			result = heap_update(resultRelationDesc, tupleid, tuple,
 							 &update_ctid, &update_xmax,
@@ -3846,7 +3957,7 @@ lreplace:;
 			{
 				ResultRelInfoSetSegno(resultRelInfo, estate->es_result_aosegnos);
 				resultRelInfo->ri_updateDesc = (AppendOnlyUpdateDesc)
-					appendonly_update_init(resultRelationDesc, ActiveSnapshot, resultRelInfo->ri_aosegno);
+					appendonly_update_init(resultRelationDesc, GetActiveSnapshot(), resultRelInfo->ri_aosegno);
 			}
 
 			mtuple = ExecFetchSlotMemTuple(slot, false);
@@ -3925,13 +4036,11 @@ lreplace:;
 		/*
 		 * Persistent metadata path.
 		 */
-		persistentTuple = ExecCopySlotHeapTuple(slot);
+		persistentTuple = ExecMaterializeSlot(slot);
 		persistentTuple->t_self = *tupleid;
 
 		frozen_heap_inplace_update(resultRelationDesc, persistentTuple);
 		wasHotUpdate = false;
-
-		heap_freetuple(persistentTuple);
 	}
 
 	(estate->es_processed)++;
@@ -3961,7 +4070,7 @@ lreplace:;
 		resultRelInfo->ri_TrigDesc->n_after_row[TRIGGER_EVENT_UPDATE] > 0 &&
 		rel_is_heap)
 	{
-		HeapTuple tuple = ExecFetchSlotHeapTuple(slot);
+		HeapTuple tuple = ExecMaterializeSlot(slot);
 
 		ExecARUpdateTriggers(estate, resultRelInfo, tupleid, tuple);
 	}
@@ -4468,13 +4577,6 @@ EvalPlanQualStart(evalPlanQual *epq, EState *estate, evalPlanQual *priorepq)
 	epqstate->es_result_relation_info = estate->es_result_relation_info;
 	epqstate->es_junkFilter = estate->es_junkFilter;
 	/* es_trig_target_relations must NOT be copied */
-	epqstate->es_into_relation_descriptor = estate->es_into_relation_descriptor;
-	epqstate->es_into_relation_is_bulkload = estate->es_into_relation_is_bulkload;
-	epqstate->es_into_relation_last_heap_tid = estate->es_into_relation_last_heap_tid;
-
-	epqstate->es_into_relation_bulkloadinfo = (struct MirroredBufferPoolBulkLoadInfo *) palloc0(sizeof(MirroredBufferPoolBulkLoadInfo));
-	memcpy(epqstate->es_into_relation_bulkloadinfo, estate->es_into_relation_bulkloadinfo, sizeof(MirroredBufferPoolBulkLoadInfo));
-
 	epqstate->es_param_list_info = estate->es_param_list_info;
 	if (estate->es_plannedstmt->nParamExec > 0)
 		epqstate->es_param_exec_vals = (ParamExecData *)
@@ -4589,7 +4691,6 @@ EvalPlanQualStop(evalPlanQual *epq)
 	epqstate->es_result_relations = NULL;
 	epqstate->es_result_relation_info = NULL;
 	epqstate->es_junkFilter = NULL;
-	epqstate->es_into_relation_descriptor = NULL;
 	epqstate->es_param_list_info = NULL;
 	epqstate->es_rowMarks = NIL;
 	epqstate->es_plannedstmt = NULL;
@@ -4618,23 +4719,29 @@ ExecGetActivePlanTree(QueryDesc *queryDesc)
 		return queryDesc->planstate;
 }
 
-
 /*
  * Support for SELECT INTO (a/k/a CREATE TABLE AS)
  *
  * We implement SELECT INTO by diverting SELECT's normal output with
  * a specialized DestReceiver type.
- *
- * TODO: remove some of the INTO-specific cruft from EState, and keep
- * it in the DestReceiver instead.
  */
 
 typedef struct
 {
 	DestReceiver pub;			/* publicly-known function pointers */
 	EState	   *estate;			/* EState we are working with */
-	AppendOnlyInsertDescData *ao_insertDesc; /* descriptor to AO tables */
-        AOCSInsertDescData *aocs_ins;           /* descriptor for aocs */
+	Relation	rel;			/* Relation to write to */
+	bool		use_wal;		/* do we need to WAL-log our writes? */
+
+	struct AppendOnlyInsertDescData *ao_insertDesc; /* descriptor to AO tables */
+	struct AOCSInsertDescData *aocs_ins;           /* descriptor for aocs */
+
+	bool		is_bulkload;
+
+	ItemPointerData last_heap_tid;
+
+	struct MirroredBufferPoolBulkLoadInfo *bulkloadinfo;
+
 } DR_intorel;
 
 /*
@@ -4778,7 +4885,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	else
 		relstorage = RELSTORAGE_HEAP;
 
-	/* have to copy the actual tupdesc to get rid of any constraints */
+	/* Copy the tupdesc because heap_create_with_catalog modifies it */
 	tupdesc = CreateTupleDescCopy(queryDesc->tupDesc);
 
 	/*
@@ -4789,7 +4896,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 */
 	bufferPoolBulkLoad = 
 		(relstorage_is_buffer_pool(relstorage) ?
-									XLog_CanBypassWal() : false);
+									!XLogIsNeeded() : false);
 
 	/* Now we can actually create the new relation */
 	intoRelationId = heap_create_with_catalog(intoName,
@@ -4798,6 +4905,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 											  InvalidOid,
 											  GetUserId(),
 											  tupdesc,
+											  NIL,
 											  /* relam */ InvalidOid,
 											  relkind,
 											  relstorage,
@@ -4850,31 +4958,46 @@ OpenIntoRel(QueryDesc *queryDesc)
 	AddDefaultRelationAttributeOptions(intoRelationDesc,
 									   into->options);
 
+	/*
+	 * Now replace the query's DestReceiver with one for SELECT INTO
+	 */
+	queryDesc->dest = CreateDestReceiver(DestIntoRel, NULL);
+	myState = (DR_intorel *) queryDesc->dest;
+	Assert(myState->pub.mydest == DestIntoRel);
+	myState->estate = estate;
+
+	/*
+	 * We can skip WAL-logging the insertions, unless PITR is in use.
+	 */
+	myState->use_wal = XLogArchivingActive();
+	myState->rel = intoRelationDesc;
+
 	/* use_wal off requires rd_targblock be initially invalid */
 	Assert(intoRelationDesc->rd_targblock == InvalidBlockNumber);
 
-	estate->es_into_relation_is_bulkload = bufferPoolBulkLoad;
-	estate->es_into_relation_descriptor = intoRelationDesc;
+	myState->is_bulkload = bufferPoolBulkLoad;
+
+	myState->bulkloadinfo = (struct MirroredBufferPoolBulkLoadInfo *) palloc0(sizeof(MirroredBufferPoolBulkLoadInfo));
 
 	relFileNode.spcNode = tablespaceId;
 	relFileNode.dbNode = MyDatabaseId;
 	relFileNode.relNode = intoRelationId;
-	if (estate->es_into_relation_is_bulkload)
+	if (myState->is_bulkload)
 	{
 		MirroredBufferPool_BeginBulkLoad(
 								&relFileNode,
 								&persistentTid,
 								persistentSerialNum,
-								estate->es_into_relation_bulkloadinfo);
+								myState->bulkloadinfo);
 	}
 	else
 	{
 		/*
 		 * Save this information for tracing in CloseIntoRel.
 		 */
-		estate->es_into_relation_bulkloadinfo->relFileNode = relFileNode;
-		estate->es_into_relation_bulkloadinfo->persistentTid = persistentTid;
-		estate->es_into_relation_bulkloadinfo->persistentSerialNum = persistentSerialNum;
+		myState->bulkloadinfo->relFileNode = relFileNode;
+		myState->bulkloadinfo->persistentTid = persistentTid;
+		myState->bulkloadinfo->persistentSerialNum = persistentSerialNum;
 
 		if (Debug_persistent_print)
 		{
@@ -4887,14 +5010,6 @@ OpenIntoRel(QueryDesc *queryDesc)
 				 ItemPointerToString(&persistentTid));
 		}
 	}
-	
-	/*
-	 * Now replace the query's DestReceiver with one for SELECT INTO
-	 */
-	queryDesc->dest = CreateDestReceiver(DestIntoRel, NULL);
-	myState = (DR_intorel *) queryDesc->dest;
-	Assert(myState->pub.mydest == DestIntoRel);
-	myState->estate = estate;
 }
 
 /*
@@ -4903,34 +5018,35 @@ OpenIntoRel(QueryDesc *queryDesc)
 static void
 CloseIntoRel(QueryDesc *queryDesc)
 {
-	EState	   *estate = queryDesc->estate;
-	Relation	rel = estate->es_into_relation_descriptor;
+	DR_intorel *myState = (DR_intorel *) queryDesc->dest;
 
 	/* Partition with SELECT INTO is not supported */
-	Assert(!PointerIsValid(estate->es_result_partitions));
+	Assert(!PointerIsValid(queryDesc->estate->es_result_partitions));
 
 	/* OpenIntoRel might never have gotten called */
-	if (rel)
+	if (myState && myState->pub.mydest == DestIntoRel && myState->rel)
 	{
+		Relation	rel = myState->rel;
+
 		/* APPEND_ONLY is closed in the intorel_shutdown */
 		if (!(RelationIsAoRows(rel) || RelationIsAoCols(rel)))
 		{
 			int32 numOfBlocks;
 
 			/* If we skipped using WAL, must heap_sync before commit */
-			if (estate->es_into_relation_is_bulkload)
+			if (myState->is_bulkload)
 			{
 				FlushRelationBuffers(rel);
 				/* FlushRelationBuffers will have opened rd_smgr */
 				smgrimmedsync(rel->rd_smgr);
 			}
 
-			if (PersistentStore_IsZeroTid(&estate->es_into_relation_last_heap_tid))
+			if (PersistentStore_IsZeroTid(&myState->last_heap_tid))
 				numOfBlocks = 0;
 			else
-				numOfBlocks = ItemPointerGetBlockNumber(&estate->es_into_relation_last_heap_tid) + 1;
+				numOfBlocks = ItemPointerGetBlockNumber(&myState->last_heap_tid) + 1;
 
-			if (estate->es_into_relation_is_bulkload)
+			if (myState->is_bulkload)
 			{
 				bool mirrorDataLossOccurred;
 
@@ -4944,7 +5060,7 @@ CloseIntoRel(QueryDesc *queryDesc)
 
 					bulkLoadFinished = 
 						MirroredBufferPool_EvaluateBulkLoadFinish(
-									estate->es_into_relation_bulkloadinfo);
+									myState->bulkloadinfo);
 
 					if (bulkLoadFinished)
 					{
@@ -4962,12 +5078,12 @@ CloseIntoRel(QueryDesc *queryDesc)
 					 * Copy primary data to mirror and flush.
 					 */
 					MirroredBufferPool_CopyToMirror(
-							&estate->es_into_relation_bulkloadinfo->relFileNode,
-							estate->es_into_relation_descriptor->rd_rel->relname.data,
-							&estate->es_into_relation_bulkloadinfo->persistentTid,
-							estate->es_into_relation_bulkloadinfo->persistentSerialNum,
-							estate->es_into_relation_bulkloadinfo->mirrorDataLossTrackingState,
-							estate->es_into_relation_bulkloadinfo->mirrorDataLossTrackingSessionNum,
+							&myState->bulkloadinfo->relFileNode,
+							rel->rd_rel->relname.data,
+							&myState->bulkloadinfo->persistentTid,
+							myState->bulkloadinfo->persistentSerialNum,
+							myState->bulkloadinfo->mirrorDataLossTrackingState,
+							myState->bulkloadinfo->mirrorDataLossTrackingSessionNum,
 							numOfBlocks,
 							&mirrorDataLossOccurred);
 				}
@@ -4978,11 +5094,11 @@ CloseIntoRel(QueryDesc *queryDesc)
 				{
 					elog(Persistent_DebugPrintLevel(),
 						 "CloseIntoRel %u/%u/%u: did not bypass the WAL -- did not use bulk load, persistent serial num " INT64_FORMAT ", TID %s",
-						 estate->es_into_relation_bulkloadinfo->relFileNode.spcNode,
-						 estate->es_into_relation_bulkloadinfo->relFileNode.dbNode,
-						 estate->es_into_relation_bulkloadinfo->relFileNode.relNode,
-						 estate->es_into_relation_bulkloadinfo->persistentSerialNum,
-						 ItemPointerToString(&estate->es_into_relation_bulkloadinfo->persistentTid));
+						 myState->bulkloadinfo->relFileNode.spcNode,
+						 myState->bulkloadinfo->relFileNode.dbNode,
+						 myState->bulkloadinfo->relFileNode.relNode,
+						 myState->bulkloadinfo->persistentSerialNum,
+						 ItemPointerToString(&myState->bulkloadinfo->persistentTid));
 				}
 			}
 		}
@@ -4990,21 +5106,37 @@ CloseIntoRel(QueryDesc *queryDesc)
 		/* close rel, but keep lock until commit */
 		heap_close(rel, NoLock);
 
-		rel = NULL;
+		myState->rel = NULL;
 	}
+}
+
+/*
+ * Get the OID of the relation created for SELECT INTO or CREATE TABLE AS.
+ *
+ * To be called between ExecutorStart and ExecutorEnd.
+ */
+Oid
+GetIntoRelOid(QueryDesc *queryDesc)
+{
+	DR_intorel *myState = (DR_intorel *) queryDesc->dest;
+
+	if (myState && myState->pub.mydest == DestIntoRel && myState->rel)
+		return RelationGetRelid(myState->rel);
+	else
+		return InvalidOid;
 }
 
 /*
  * CreateIntoRelDestReceiver -- create a suitable DestReceiver object
  *
  * Since CreateDestReceiver doesn't accept the parameters we'd need,
- * we just leave the private fields empty here.  OpenIntoRel will
+ * we just leave the private fields zeroed here.  OpenIntoRel will
  * fill them in.
  */
 DestReceiver *
 CreateIntoRelDestReceiver(void)
 {
-	DR_intorel *self = (DR_intorel *) palloc(sizeof(DR_intorel));
+	DR_intorel *self = (DR_intorel *) palloc0(sizeof(DR_intorel));
 
 	self->pub.receiveSlot = intorel_receive;
 	self->pub.rStartup = intorel_startup;
@@ -5014,7 +5146,7 @@ CreateIntoRelDestReceiver(void)
 
 	self->estate = NULL;
 	self->ao_insertDesc = NULL;
-        self->aocs_ins = NULL;
+	self->aocs_ins = NULL;
 
 	return (DestReceiver *) self;
 }
@@ -5035,21 +5167,19 @@ static void
 intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 {
 	DR_intorel *myState = (DR_intorel *) self;
-	EState	   *estate = myState->estate;
-	Relation	into_rel = estate->es_into_relation_descriptor;
+	Relation	into_rel = myState->rel;
 
-	Assert(estate->es_result_partitions == NULL);
+	Assert(myState->estate->es_result_partitions == NULL);
 
 	if (RelationIsAoRows(into_rel))
 	{
 		MemTuple	tuple = ExecCopySlotMemTuple(slot);
-		Oid			tupleOid;
 		AOTupleId	aoTupleId;
 
 		if (myState->ao_insertDesc == NULL)
 			myState->ao_insertDesc = appendonly_insert_init(into_rel, RESERVED_SEGNO, false);
 
-		appendonly_insert(myState->ao_insertDesc, tuple, &tupleOid, &aoTupleId);
+		appendonly_insert(myState->ao_insertDesc, tuple, InvalidOid, &aoTupleId);
 		pfree(tuple);
 	}
 	else if (RelationIsAoCols(into_rel))
@@ -5061,18 +5191,28 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 	}
 	else
 	{
-		HeapTuple	tuple = ExecCopySlotHeapTuple(slot);
+		HeapTuple	tuple;
+
+		/*
+		 * get the heap tuple out of the tuple table slot, making sure we have a
+		 * writable copy
+		 */
+		tuple = ExecMaterializeSlot(slot);
+
+		/*
+		 * force assignment of new OID (see comments in ExecInsert)
+		 */
+		if (myState->rel->rd_rel->relhasoids)
+			HeapTupleSetOid(tuple, InvalidOid);
 
 		heap_insert(into_rel,
 					tuple,
-					estate->es_output_cid,
-					!estate->es_into_relation_is_bulkload,
+					myState->estate->es_output_cid,
+					myState->is_bulkload,
 					false, /* never any point in using FSM */
 					GetCurrentTransactionId());
 
-		estate->es_into_relation_last_heap_tid = tuple->t_self;
-
-		heap_freetuple(tuple);
+		myState->last_heap_tid = tuple->t_self;
 	}
 
 	/* We know this is a newly created relation, so there are no indexes */
@@ -5086,8 +5226,7 @@ intorel_shutdown(DestReceiver *self)
 {
 	/* If target was append only, finalise */
 	DR_intorel *myState = (DR_intorel *) self;
-	EState	   *estate = myState->estate;
-	Relation	into_rel = estate->es_into_relation_descriptor;
+	Relation	into_rel = myState->rel;
 
 
 	if (RelationIsAoRows(into_rel) && myState->ao_insertDesc)

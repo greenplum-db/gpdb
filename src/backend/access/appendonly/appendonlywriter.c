@@ -28,6 +28,7 @@
 #include "catalog/pg_authid.h"
 #include "libpq-fe.h"
 #include "miscadmin.h"
+#include "storage/lmgr.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
@@ -615,36 +616,25 @@ usedByConcurrentTransaction(AOSegfileStatus *segfilestat, int segno)
 	 */
 	Snapshot	snapshot = NULL;
 
-	if (SerializableSnapshot == NULL)
-	{
-		Assert(LatestSnapshot == NULL);
-		snapshot = GetTransactionSnapshot();
-	}
-	else if (LatestSnapshot != NULL)
-	{
-		snapshot = LatestSnapshot;
-	}
-	else
-	{
-		snapshot = SerializableSnapshot;
-	}
+	if (!ActiveSnapshotSet())
+		elog(ERROR, "could not check if dxid:%d is concurrently used, ActiveSnapshot not set",
+			 latestWriteXid);
+
+	snapshot = GetActiveSnapshot();
 
 	if (Debug_appendonly_print_segfile_choice)
 	{
 		elog(LOG, "usedByConcurrentTransaction: current distributed transaction id = %x, latestWriteXid that uses segno %d is %x",
 			 getDistributedTransactionId(), segno, latestWriteXid);
-		if (SerializableSnapshot != NULL && SerializableSnapshot->haveDistribSnapshot)
-			LogDistributedSnapshotInfo(SerializableSnapshot, "SerializableSnapshot: ");
-		if (LatestSnapshot != NULL && LatestSnapshot->haveDistribSnapshot)
-			LogDistributedSnapshotInfo(LatestSnapshot, "LatestSnapshot: ");
 		if (snapshot->haveDistribSnapshot)
 			LogDistributedSnapshotInfo(snapshot, "Used snapshot: ");
+		else
+			elog(LOG,
+				 "usedByConcurrentTransaction: snapshot is not distributed, so it is NOT considered concurrent");
 	}
 
 	if (!snapshot->haveDistribSnapshot)
 	{
-		ereportif(Debug_appendonly_print_segfile_choice, LOG,
-				  (errmsg("usedByConcurrentTransaction: snapshot is not distributed, so it is NOT considered concurrent")));
 		return false;
 	}
 

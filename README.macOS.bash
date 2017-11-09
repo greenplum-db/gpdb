@@ -29,7 +29,7 @@ brew install go # Or get the latest from https://golang.org/dl/
 # Installing python libraries
 brew install python
 cat >> ~/.bash_profile << EOF
-export PATH=/usr/local/opt/python/libexec/bin:$PATH
+export PATH=/usr/local/opt/python/libexec/bin:\$PATH
 EOF
 source ~/.bash_profile
 pip install lockfile psi paramiko pysql psutil setuptools
@@ -99,4 +99,3 @@ EOF
 
 # Step: install any optional tools
 brew install gdb
-

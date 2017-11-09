@@ -1,6 +1,12 @@
-#include "_int.h"
+/*
+ * $PostgreSQL: pgsql/contrib/intarray/_int_op.c,v 1.8 2008/05/17 01:28:19 adunstan Exp $ 
+ */
+#include "postgres.h"
 
 #include "lib/stringinfo.h"
+
+#include "_int.h"
+
 
 PG_MODULE_MAGIC;
 

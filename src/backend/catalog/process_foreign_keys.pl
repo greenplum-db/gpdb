@@ -5,11 +5,12 @@
 #
 # Usage: cat <input headers> | perl process_foreign_keys.pl
 #
-# Reads catalog header files, and spits out a 4.3.json file contianing
-# information about any foreign keys, as declare in FOREIGN_KEY lines
+# Reads catalog header files, and spits out a json file containing
+# information about any foreign keys, as declared in FOREIGN_KEY lines
 # in the headers.
 #
 #
+# Portions Copyright (c) 2016-Present Pivotal Software, Inc.
 # Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #

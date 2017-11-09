@@ -44,6 +44,24 @@
           <codeph>gpdbrestore</codeph> can also be used to copy files to the alternate location.</p>
     </section>
     <section>
+      <title>Parallel Backup with gpbackup and gprestore</title>
+      <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
+        are not intended for use in a production environment. Experimental features are subject to
+        change without notice in future releases.</note>
+      <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are new utilities that are
+        designed to improve the performance, functionality, and reliability of backups as compared
+        to <codeph>gpcrondump</codeph> and <codeph>gpdbrestore</codeph>. <codeph>gpbackup</codeph>
+        utilizes <codeph>ACCESS SHARE</codeph> locks at the individual table level, instead of
+          <codeph>EXCLUSIVE</codeph> locks on the <codeph>pg_class</codeph> catalog table. This
+        enables you to execute DML statements during the backup, such as <codeph>CREATE</codeph>,
+          <codeph>ALTER</codeph>,  <codeph>DROP</codeph>, and <codeph>TRUNCATE</codeph> operations,
+        as long as those operations do not target the current backup set. </p>
+      <p>Backup files created with <codeph>gpbackup</codeph> are designed to provide future
+        capabilities for restoring individual database objects along with their dependencies, such
+        as functions and required user-defined datatypes. See <xref
+          href="backup-gpbackup.xml#topic_yrr_hqw_sbb"/> for more information.</p>
+    </section>
+    <section>
       <title id="kk155276">Non-Parallel Backup with pg_dump</title>
       <p>The PostgreSQL <codeph>pg_dump</codeph> and <codeph>pg_dumpall</codeph> non-parallel backup
         utilities can be used to create a single dump file on the master host that contains all data

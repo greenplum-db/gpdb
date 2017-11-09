@@ -4,12 +4,8 @@
 --
 -- test temp table/index masking
 CREATE TABLE temptest(col int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE INDEX i_temptest ON temptest(col);
 CREATE TEMP TABLE temptest(tcol int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'tcol' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE INDEX i_temptest ON temptest(tcol);
 SELECT * FROM temptest;
  tcol 
@@ -27,12 +23,8 @@ DROP INDEX i_temptest;
 DROP TABLE temptest;
 -- test temp table selects
 CREATE TABLE temptest(col int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO temptest VALUES (1);
 CREATE TEMP TABLE temptest(tcol float);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'tcol' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO temptest VALUES (2.1);
 SELECT * FROM temptest;
  tcol 
@@ -50,17 +42,13 @@ SELECT * FROM temptest;
 DROP TABLE temptest;
 -- test temp table deletion
 CREATE TEMP TABLE temptest(col int);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-\c regression
+\c
 SELECT * FROM temptest;
 ERROR:  relation "temptest" does not exist
 LINE 1: SELECT * FROM temptest;
                       ^
 -- Test ON COMMIT DELETE ROWS
 CREATE TEMP TABLE temptest(col int) ON COMMIT DELETE ROWS;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 BEGIN;
 INSERT INTO temptest VALUES (1);
 INSERT INTO temptest VALUES (2);
@@ -80,8 +68,6 @@ SELECT * FROM temptest;
 DROP TABLE temptest;
 BEGIN;
 CREATE TEMP TABLE temptest(col) ON COMMIT DELETE ROWS AS SELECT 1;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SELECT * FROM temptest;
  col 
 -----
@@ -98,8 +84,6 @@ DROP TABLE temptest;
 -- Test ON COMMIT DROP
 BEGIN;
 CREATE TEMP TABLE temptest(col int) ON COMMIT DROP;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO temptest VALUES (1);
 INSERT INTO temptest VALUES (2);
 SELECT * FROM temptest;
@@ -116,8 +100,6 @@ LINE 1: SELECT * FROM temptest;
                       ^
 BEGIN;
 CREATE TEMP TABLE temptest(col) ON COMMIT DROP AS SELECT 1;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 SELECT * FROM temptest;
  col 
 -----
@@ -131,12 +113,8 @@ LINE 1: SELECT * FROM temptest;
                       ^
 -- ON COMMIT is only allowed for TEMP
 CREATE TABLE temptest(col int) ON COMMIT DELETE ROWS;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  ON COMMIT can only be used on temporary tables
 CREATE TABLE temptest(col) ON COMMIT DELETE ROWS AS SELECT 1;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'col' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  ON COMMIT can only be used on temporary tables
 -- Test foreign keys
 BEGIN;

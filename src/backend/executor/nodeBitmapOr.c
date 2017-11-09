@@ -90,8 +90,6 @@ ExecInitBitmapOr(BitmapOr *node, EState *estate, int eflags)
 		bitmapplanstates[i] = ExecInitNode(initNode, estate, eflags);
 		i++;
 	}
-
-	initGpmonPktForBitmapOr((Plan *)node, &bitmaporstate->ps.gpmon_pkt, estate);
 	
 	return bitmaporstate;
 }
@@ -256,12 +254,4 @@ ExecReScanBitmapOr(BitmapOrState *node, ExprContext *exprCtxt)
 		 */
 		ExecReScan(subnode, exprCtxt);
 	}
-}
-
-void
-initGpmonPktForBitmapOr(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapOr));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

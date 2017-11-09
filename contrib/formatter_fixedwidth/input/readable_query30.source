@@ -11,7 +11,7 @@
  -- Confirm the trailing while spaces will be reserved for vary-length data types: varchar(n) and text
  -- Trailing space is NOT reserved for char(n) data type. This is correct.
  -- The leading white spaces will be always reserved.
- select * from tbl_ext_fixedwidth order by s1;
+ select * from tbl_ext_fixedwidth;
 
  select * from tbl_ext_fixedwidth where s1='cha' and s2='vara      ' and s3='texta     ';
 

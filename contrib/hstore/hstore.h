@@ -1,5 +1,5 @@
 /*
- * $PostgreSQL: pgsql/contrib/hstore/hstore.h,v 1.8 2009/06/11 14:48:51 momjian Exp $
+ * $PostgreSQL: pgsql/contrib/hstore/hstore.h,v 1.6 2008/05/12 00:00:42 alvherre Exp $
  */
 #ifndef __HSTORE_H__
 #define __HSTORE_H__
@@ -70,4 +70,4 @@ size_t		hstoreCheckValLen(size_t len);
 #define HStoreContainsStrategyNumber	7
 #define HStoreExistsStrategyNumber		9
 
-#endif   /* __HSTORE_H__ */
+#endif /* __HSTORE_H__ */

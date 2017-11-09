@@ -1015,7 +1015,7 @@ static apr_uint32_t create_qexec_packet(const gpmon_qexec_t* qexec, gp_smon_to_m
 {
 	// Copy over needed values
 	memcpy(&pkt->u.qexec_packet.data.key, &qexec->key, sizeof(gpmon_qexeckey_t));
-	pkt->u.qexec_packet.data.measures_rows_in = qexec->rowsin;
+	pkt->u.qexec_packet.data.measures_rows_in = qexec->rowsout;
 	pkt->u.qexec_packet.data._cpu_elapsed = qexec->_cpu_elapsed;
 	pkt->u.qexec_packet.data.rowsout = qexec->rowsout;
 
@@ -1046,7 +1046,7 @@ static void extract_segments_exec(gpmon_packet_t* pkt)
 	if (rec)
 	{
 		rec->u.queryseg.sum_cpu_elapsed += pidrec->cpu_elapsed;
-		rec->u.queryseg.sum_measures_rows_in += p->rowsin;
+		rec->u.queryseg.sum_measures_rows_out += p->rowsout;
 		if (p->key.hash_key.segid == -1 && p->key.hash_key.nid == 1)
 		{
 			rec->u.queryseg.final_rowsout = p->rowsout;
@@ -1068,7 +1068,7 @@ static void extract_segments_exec(gpmon_packet_t* pkt)
 			rec->u.queryseg.final_rowsout = -1;
 		}
 		rec->u.queryseg.sum_cpu_elapsed = pidrec->cpu_elapsed;
-		rec->u.queryseg.sum_measures_rows_in = p->rowsin;
+		rec->u.queryseg.sum_measures_rows_out = p->rowsout;
 		apr_hash_set(gx.querysegtab, &rec->u.queryseg.key, sizeof(rec->u.queryseg.key), rec);
 	}
 }

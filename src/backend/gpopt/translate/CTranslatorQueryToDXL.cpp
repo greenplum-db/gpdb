@@ -1727,8 +1727,8 @@ CTranslatorQueryToDXL::PdrgpulPartCol
 		Node *pnodePartCl = (Node*) lfirst(plcPartCl);
 		GPOS_ASSERT(NULL != pnodePartCl);
 
-		GPOS_ASSERT(IsA(pnodePartCl, SortClause));
-		SortClause *psortcl = (SortClause*) pnodePartCl;
+		GPOS_ASSERT(IsA(pnodePartCl, SortGroupClause));
+		SortGroupClause *psortcl = (SortGroupClause *) pnodePartCl;
 
 		// get the colid of the partition-by column
 		ULONG ulColId = CTranslatorUtils::UlColId((INT) psortcl->tleSortGroupRef, phmiulColColId);
@@ -1763,9 +1763,9 @@ CTranslatorQueryToDXL::PdrgpdxlnSortCol
 		Node *pnodeSortCl = (Node*) lfirst(plcSortCl);
 		GPOS_ASSERT(NULL != pnodeSortCl);
 
-		GPOS_ASSERT(IsA(pnodeSortCl, SortClause));
+		GPOS_ASSERT(IsA(pnodeSortCl, SortGroupClause));
 
-		SortClause *psortcl = (SortClause*) pnodeSortCl;
+		SortGroupClause *psortcl = (SortGroupClause *) pnodeSortCl;
 
 		// get the colid of the sorting column
 		const ULONG ulColId = CTranslatorUtils::UlColId((INT) psortcl->tleSortGroupRef, phmiulColColId);

@@ -93,8 +93,7 @@
                      processes running on this segment host. Note that this value is a sum of the
                      available memory for all segments on a host. Even though this value reports
                      available memory, it is possible that one or more segments on the host have
-                     exceeded their memory limit as set by the
-                        <codeph>gp_vmem_protect_limit</codeph> parameter.</entry>
+                     exceeded their memory limit.</entry>
                </row>
             </tbody>
          </tgroup>

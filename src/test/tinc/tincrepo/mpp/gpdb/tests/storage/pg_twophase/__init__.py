@@ -318,16 +318,6 @@ class PgtwoPhaseClass(MPPTestCase):
             (host, port) = self.config.get_hostandport_of_segment(psegmentNumber=i)
             PSQL.run_sql_command_utility_mode(sql_cmd, host = host, port = port)
 
-    def switch_checkpoint_loop(self, fault_type):
-        '''     
-        @description: Run switch_xlog and checkpoint based on the fault_type
-        '''     
-        if fault_type == 'dtm_xlog_distributed_commit':
-            self.switch_ckpt_switch_xlog()
-        else:
-            for i in range(5):
-                self.switch_ckpt_switch_xlog()
-
     def switch_ckpt_crash_and_recover(self, crash_type, fault_type, test_dir, cluster_state='sync', checkpoint='noskip'):
         '''
         @param crash_type : gpstop_i/gpstop_a/failover_to_mirror/failover_to_primary

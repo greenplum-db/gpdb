@@ -79,6 +79,7 @@ Many developers want to create their own copies of the master pipeline.
 To accommodate this without naming confusion, workload instability, nor
 artifact collision, we have the following solution:
 
+1. install fly from the Concourse UI [detailed directions](https://github.com/concourse/fly#installing-from-the-concourse-ui-for-project-development)
 1. Fork or branch the gpdb git repo
 1. Create an s3 bucket for your pipeline to use
 1. Edit `concourse/pipelines/pipeline.yml` to point at your git branch and s3 bucket

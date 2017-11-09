@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/datetime.c,v 1.188 2008/03/25 22:42:43 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/datetime.c,v 1.190 2008/06/09 19:34:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,7 +19,6 @@
 #include <limits.h>
 #include <math.h>
 
-#include "access/heapam.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
 #include "funcapi.h"
@@ -2457,10 +2456,10 @@ DecodeTime(char *str, int fmask, int range,
 				return dterr;
 		}
 		else
-				return DTERR_BAD_FORMAT;
-		}
-		else
 			return DTERR_BAD_FORMAT;
+	}
+	else
+		return DTERR_BAD_FORMAT;
 
 	/* do a sanity check */
 #ifdef HAVE_INT64_TIMESTAMP

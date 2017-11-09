@@ -13,7 +13,6 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
-#include "miscadmin.h"
 
 /* System libraries for file and directory operations */
 #include <unistd.h>
@@ -499,29 +498,12 @@ CreateFileSpace(CreateFileSpaceStmt *stmt)
  * Be careful to check that the filespace is empty.
  */
 void 
-RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
+DropFileSpace(DropFileSpaceStmt *drop)
 {
+	char         *fsname = drop->filespacename;
 	Relation      rel;
-	char         *fsname;
 	Oid			  fsoid;
 	ObjectAddress object;
-
-	/* 
-	 * General DROP (object) syntax allows fully qualified names, but
-	 * filespaces are global objects that do not live in schemas, so
-	 * it is a syntax error if a fully qualified name was given.
-	 */
-	if (list_length(names) != 1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("filespace name may not be qualified")));
-	fsname = strVal(linitial(names));
-
-	/* Disallow CASCADE */
-	if (behavior == DROP_CASCADE)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("syntax at or near \"cascade\"")));
 
 	/* 
 	 * Because rollback of filespace operations are difficult and expected
@@ -536,7 +518,7 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 	{
 		heap_close(rel, AccessExclusiveLock);
 
-		if (missing_ok)
+		if (drop->missing_ok)
 		{
 			if (Gp_role != GP_ROLE_EXECUTE)
 				ereport(NOTICE,
@@ -604,10 +586,8 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 	heap_close(rel, NoLock);
 
 	/* 
-	 * Master Only:
-	 *   1) Remove entries from pg_filespace_entry
-	 *
-	 * Note: no need for dispatch, that is handled in utility.c
+	 * In the QD, also remove entries from pg_filespace_entry, and
+	 * dispatch to segments.
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
@@ -616,6 +596,13 @@ RemoveFileSpace(List *names, DropBehavior behavior, bool missing_ok)
 		/* MPP-6929: metadata tracking */
 		MetaTrackDropObject(FileSpaceRelationId,
 							fsoid);
+
+		CdbDispatchUtilityStatement((Node *) drop,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NIL,
+									NULL);
 	}
 
 	/* 

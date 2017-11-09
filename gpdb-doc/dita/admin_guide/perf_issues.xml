@@ -135,7 +135,7 @@
           <codeblock>ALTER TABLE sales ALTER COLUMN region SET STATISTICS 50;
 </codeblock>
         </p>
-        <p>This is equivalent to increasing <codeph>default_statistics_target</codeph> for a
+        <p>This is equivalent to changing <codeph>default_statistics_target</codeph> for a
           particular column. Subsequent <codeph>ANALYZE</codeph> operations will then gather more
           statistics data for that column and produce better query plans as a result.</p>
       </body>

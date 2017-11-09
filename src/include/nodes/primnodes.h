@@ -1196,9 +1196,9 @@ typedef struct CurrentOfExpr
  * risks confusing ExecGetJunkAttribute!
  *
  * ressortgroupref is used in the representation of ORDER BY, GROUP BY, and
- * DISTINCT items.	Targetlist entries with ressortgroupref=0 are not
+ * DISTINCT items.  Targetlist entries with ressortgroupref=0 are not
  * sort/group items.  If ressortgroupref>0, then this item is an ORDER BY,
- * GROUP BY, and/or DISTINCT target value.	No two entries in a targetlist
+ * GROUP BY, and/or DISTINCT target value.  No two entries in a targetlist
  * may have the same nonzero ressortgroupref --- but there is no particular
  * meaning to the nonzero values, except as tags.  (For example, one must
  * not assume that lower ressortgroupref means a more significant sort key.)

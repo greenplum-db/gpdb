@@ -18,6 +18,15 @@
 #include "libpq-fe.h"
 #include "libpq-int.h"
 
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
+#ifdef HAVE_SYS_POLL_H
+#include <sys/poll.h>
+#endif
+
+#define PROBE_RESPONSE_LEN  (20)         /* size of segment response message */
+
 typedef struct threadWorkerInfo
 {
 	uint8 *scan_status;
@@ -31,6 +40,293 @@ static uint8 *scan_status;
 
 /* mutex used for pthread synchronization in parallel probing */
 static pthread_mutex_t worker_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/*
+ * Establish async libpq connection to a segment
+ */
+static bool
+probeConnect(CdbComponentDatabaseInfo *dbInfo,
+			 ProbeConnectionInfo *probeInfo)
+{
+	char conninfo[1024];
+	snprintf(conninfo, 1024, "postgresql://%s:%d", dbInfo->hostip, dbInfo->port);
+	probeInfo->conn = PQconnectStart(conninfo);
+
+	if (probeInfo->conn == NULL)
+	{
+		write_log("FTS: cannot create libpq connection object, possibly out of memory"
+				  " (content=%d, dbid=%d)", probeInfo->segmentId, probeInfo->dbId);
+		return false;
+	}
+	if (probeInfo->conn->status == CONNECTION_BAD)
+	{
+		write_log("FTS: cannot establish libpq connection to (content=%d, dbid=%d): %s",
+				  probeInfo->segmentId, probeInfo->dbId,
+				  probeInfo->conn->errorMessage.data);
+		return false;
+	}
+	return true;
+}
+
+/*
+ * Wait for a socket to become available for writing.
+ */
+static bool
+probePollOut(ProbeConnectionInfo *probeInfo)
+{
+	struct pollfd nfd;
+	nfd.fd = PQsocket(probeInfo->conn);
+	nfd.events = POLLOUT;
+	int ret;
+
+	while ((ret = poll(&nfd, 1, 1000)) < 0 &&
+		   (errno == EAGAIN || errno == EINTR) &&
+		   !probeTimeout(probeInfo, "probePollOut"));
+	if (ret == 0)
+	{
+		write_log("FTS: pollout timeout waiting for libpq socket to become available,"
+				  " (content=%d, dbid=%d)", probeInfo->segmentId, probeInfo->dbId);
+		return false;
+	}
+	if (ret == -1)
+	{
+		probeInfo->probe_errno = errno;
+		write_log("FTS: pollout error on libpq socket (content=%d, dbid=%d): %s",
+				  probeInfo->segmentId, probeInfo->dbId, errmessage(probeInfo));
+		return false;
+	}
+
+	PostgresPollingStatusType status = PQconnectPoll(probeInfo->conn);
+	switch(status)
+	{
+		case PGRES_POLLING_OK:
+		case PGRES_POLLING_WRITING:
+			return true;
+		case PGRES_POLLING_READING:
+			write_log("FTS: PQconnectPoll protocol violation: received data "
+					  "before sending probe (content=%d, dbid=%d)",
+					  probeInfo->segmentId, probeInfo->dbId);
+			break;
+		case PGRES_POLLING_FAILED:
+			write_log("FTS: PQconnectPoll failed (content=%d, dbid=%d): %s",
+					  probeInfo->segmentId, probeInfo->dbId,
+					  probeInfo->conn->errorMessage.data);
+			break;
+		default:
+			write_log("FTS: bad status (%d) on libpq connection "
+					  "(content=%d, dbid=%d)",
+					  status, probeInfo->segmentId, probeInfo->dbId);
+			break;
+	}
+	return false;
+}
+
+/*
+ * Send the status request-startup-packet
+ */
+static bool
+probeSend(ProbeConnectionInfo *probeInfo)
+{
+	ProtocolVersion pv;
+	pv = htonl(PRIMARY_MIRROR_TRANSITION_QUERY_CODE);
+	if (pqPacketSend(probeInfo->conn, 0, &pv, sizeof(pv)) != STATUS_OK)
+	{
+		write_log("FTS: failed to send probe packet to (content=%d, dbid=%d): "
+				  "connection status %d, %s",
+				  probeInfo->segmentId, probeInfo->dbId, probeInfo->conn->status,
+				  probeInfo->conn->errorMessage.data);
+		return false;
+	}
+	return true;
+}
+
+/*
+ * Receive segment response
+ */
+static bool
+probeReceive(ProbeConnectionInfo *probeInfo)
+{
+	int ret;
+	if ((ret = pqReadData(probeInfo->conn)) == -1)
+	{
+		write_log("FTS: error reading probe response from libpq socket "
+				  "(content=%d, dbid=%d): %s",
+				  probeInfo->segmentId, probeInfo->dbId,
+				  probeInfo->conn->errorMessage.data);
+	}
+	else if (ret == 0)
+	{
+		write_log("FTS: no probe response available on libpq socket "
+				  "(content=%d, dbid=%d)",
+				  probeInfo->segmentId, probeInfo->dbId);
+	}
+	return (ret > 0);
+}
+
+/*
+ * Process segment response
+ */
+static bool
+probeProcessResponse(ProbeConnectionInfo *probeInfo)
+{
+	int32 responseLen;
+	if (pqGetInt(&responseLen, sizeof(PacketLen), probeInfo->conn))
+	{
+		write_log("FTS: invalid response from segment "
+				  "(content=%d, dbid=%d): %s", probeInfo->segmentId,
+				  probeInfo->dbId, probeInfo->conn->errorMessage.data);
+		return false;
+	}
+
+	if (responseLen != PROBE_RESPONSE_LEN)
+	{
+		write_log("FTS: invalid response length %d from segment "
+				  "(content=%d, dbid=%d): %s", responseLen, probeInfo->segmentId,
+				  probeInfo->dbId, probeInfo->conn->errorMessage.data);
+		return false;
+	}
+	/* segment responded to probe, mark it as alive */
+	probeInfo->segmentStatus = PROBE_ALIVE;
+	write_log("FTS: segment (content=%d, dbid=%d) reported segmentstatus %x to the prober.",
+			  probeInfo->segmentId, probeInfo->dbId, probeInfo->segmentStatus);
+
+	int32 role;
+	int32 state;
+	int32 mode;
+	int32 fault;
+
+	if (pqGetInt(&role, 4, probeInfo->conn) ||
+		pqGetInt(&state, 4, probeInfo->conn) ||
+		pqGetInt(&mode, 4, probeInfo->conn) ||
+		pqGetInt(&fault, 4, probeInfo->conn))
+	{
+		write_log("FTS: invalid response from segment "
+				  "(content=%d, dbid=%d): %s", probeInfo->segmentId,
+				  probeInfo->dbId, probeInfo->conn->errorMessage.data);
+		return false;
+	}
+
+	if (gp_log_fts > GPVARS_VERBOSITY_VERBOSE)
+	{
+		write_log("FTS: probe result for (content=%d, dbid=%d): %s %s %s %s.",
+				  probeInfo->segmentId, probeInfo->dbId,
+				  getMirrorModeLabel(role),
+				  getSegmentStateLabel(state),
+				  getDataStateLabel(mode),
+				  getFaultTypeLabel(fault));
+	}
+
+	/* check if segment has completed re-synchronizing */
+	if (mode == DataStateInSync && probeInfo->mode == 'r')
+	{
+		probeInfo->segmentStatus |= PROBE_RESYNC_COMPLETE;
+	}
+	else
+	{
+		/* check for inconsistent segment state */
+		char probeRole = getRole(role);
+		char probeMode = getMode(mode);
+		if ((probeRole != probeInfo->role || probeMode != probeInfo->mode))
+		{
+			write_log("FTS: segment (content=%d, dbid=%d) has not reached new state yet, "
+			          "expected state: ('%c','%c'), "
+			          "reported state: ('%c','%c').",
+					  probeInfo->segmentId,
+					  probeInfo->dbId,
+					  probeInfo->role,
+					  probeInfo->mode,
+					  probeRole,
+					  probeMode);
+		}
+	}
+
+	/* check if segment reported a fault */
+	if (state == SegmentStateFault)
+	{
+		/* get fault type - this will be used to decide the next segment state */
+		switch(fault)
+		{
+			case FaultTypeNet:
+				probeInfo->segmentStatus |= PROBE_FAULT_NET;
+				break;
+
+			case FaultTypeMirror:
+				probeInfo->segmentStatus |= PROBE_FAULT_MIRROR;
+				break;
+
+			case FaultTypeDB:
+			case FaultTypeIO:
+				probeInfo->segmentStatus |= PROBE_FAULT_CRASH;
+				break;
+
+			default:
+				Assert(!"Unexpected segment fault type");
+		}
+		write_log("FTS: segment (content=%d, dbid=%d) reported fault %s segment status %x to the prober.",
+				  probeInfo->segmentId, probeInfo->dbId, getFaultTypeLabel(fault), probeInfo->segmentStatus);
+	}
+	return true;
+}
+
+static char
+probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo,
+				   ProbeConnectionInfo *probeInfo)
+{
+	/*
+	 * probe segment: open socket -> connect -> send probe msg -> receive response;
+	 * on any error the connection is shut down, the socket is closed
+	 * and the probe process is restarted;
+	 * this is repeated until no error occurs (response is received) or timeout expires;
+	 */
+
+	int retryCnt = 0;
+	/* reset timer */
+	gp_set_monotonic_begin_time(&probeInfo->startTime);
+	while (retryCnt < gp_fts_probe_retries && FtsIsActive() && (
+			   !probeConnect(dbInfo, probeInfo) ||
+			   !probePollOut(probeInfo) ||
+			   !probeSend(probeInfo) ||
+			   !probePollIn(probeInfo) ||
+			   !probeReceive(probeInfo) ||
+			   !probeProcessResponse(probeInfo)))
+	{
+		PQfinish(probeInfo->conn);
+		probeInfo->conn = NULL;
+
+		/* sleep for 1 second to avoid tight loops */
+		pg_usleep(USECS_PER_SEC);
+		retryCnt++;
+
+		write_log("FTS: retry %d to probe segment (content=%d, dbid=%d).",
+				  retryCnt - 1, probeInfo->segmentId, probeInfo->dbId);
+
+		/* reset timer */
+		gp_set_monotonic_begin_time(&probeInfo->startTime);
+	}
+
+	if (!FtsIsActive())
+	{
+		/* the returned value will be ignored */
+		probeInfo->segmentStatus = PROBE_ALIVE;
+	}
+
+	if (retryCnt == gp_fts_probe_retries)
+	{
+		write_log("FTS: failed to probe segment (content=%d, dbid=%d) after trying %d time(s), "
+				  "maximum number of retries reached.",
+				  probeInfo->segmentId,
+				  probeInfo->dbId,
+				  retryCnt);
+	}
+
+	if (probeInfo->conn)
+	{
+		PQfinish(probeInfo->conn);
+		probeInfo->conn = NULL;
+	}
+
+	return probeInfo->segmentStatus;
+}
 
 /*
  * This is called from several different threads: ONLY USE THREADSAFE FUNCTIONS INSIDE.

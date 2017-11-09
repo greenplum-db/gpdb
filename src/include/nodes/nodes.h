@@ -56,7 +56,7 @@ typedef enum NodeTag
 	T_Join,
 
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
-	 * It will take the form of IndexScan, SeqScan, etc. 
+	 * It will take the form of IndexScan, SeqScan, etc.
 	 * CteScan will take the form of SubqueryScan.
 	 */
 	T_Result,
@@ -118,7 +118,7 @@ typedef enum NodeTag
 	T_JoinState,
 
 	/* Real plan node starts below.  Scan and Join are "Virtal nodes",
-	 * It will take the form of IndexScan, SeqScan, etc. 
+	 * It will take the form of IndexScan, SeqScan, etc.
 	 */
 	T_ResultState,
 	T_AppendState,
@@ -429,7 +429,7 @@ typedef enum NodeTag
 	T_DeallocateStmt,
 	T_DeclareCursorStmt,
 	T_CreateTableSpaceStmt,
-	T_DropTableSpaceStmt,           /* Removed, See DropStmt */
+	T_DropTableSpaceStmt,
 	T_AlterObjectSchemaStmt,
 	T_AlterOwnerStmt,
 	T_DropOwnedStmt,
@@ -449,6 +449,7 @@ typedef enum NodeTag
 	T_InheritPartitionCmd,
 	T_CreateFileSpaceStmt,
 	T_FileSpaceEntry,
+	T_DropFileSpaceStmt,
 	T_TableValueExpr,
 	T_DenyLoginInterval,
 	T_DenyLoginPoint,
@@ -482,11 +483,10 @@ typedef enum NodeTag
 	T_Constraint,
 	T_DefElem,
 	T_RangeTblEntry,
-	T_SortClause,
-	T_GroupClause,
 	T_GroupingClause,
 	T_GroupingFunc,
 	T_WindowClause,
+	T_SortGroupClause,
 	T_FkConstraint,
 	T_PrivGrantee,
 	T_FuncWithArgs,
@@ -525,7 +525,8 @@ typedef enum NodeTag
 	T_ExtProtocolData,          /* in access/extprotocol.h */
 	T_ExtProtocolValidatorData, /* in access/extprotocol.h */
 	T_SelectedParts,            /* in executor/nodePartitionSelector.h */
-	
+	T_CookedConstraint,			/* in catalog/heap.h */
+
     /* CDB: tags for random other stuff */
     T_CdbExplain_StatHdr = 1000,             /* in cdb/cdbexplain.c */
 
@@ -668,7 +669,7 @@ typedef enum CmdType
 typedef enum JoinType
 {
 	/*
-	 * The canonical kinds of joins according to the SQL JOIN syntax. 
+	 * The canonical kinds of joins according to the SQL JOIN syntax.
 	 * Only these codes can appear in parser output (e.g., JoinExpr nodes).
 	 */
 	JOIN_INNER,					/* matching tuple pairs only */
@@ -686,8 +687,8 @@ typedef enum JoinType
 	 * is guaranteed to be null-extended.
      *
      * CDB: We no longer use JOIN_REVERSE_IN, JOIN_UNIQUE_OUTER or
-     * JOIN_UNIQUE_INNER.  The definitions are retained in case they 
-     * might be referenced in the source code of user-defined 
+     * JOIN_UNIQUE_INNER.  The definitions are retained in case they
+     * might be referenced in the source code of user-defined
      * selectivity functions brought over from PostgreSQL.
 	 */
 	JOIN_SEMI,					/* 1 copy of each LHS row that has match(es) */
@@ -753,10 +754,10 @@ typedef enum DispatchMethod
 	DISPATCH_UNDETERMINED = 0,	/* Used prior to determination. */
 	DISPATCH_SEQUENTIAL,		/* Dispatch on entry postgres process only. */
 	DISPATCH_PARALLEL			/* Dispatch on query executor and entry processes. */
-	
+
 } DispatchMethod;
 
-/* 
+/*
  * Inside the executor, if a caller to some data type manipulation functions
  * (e.g., int8inc()) is doing aggregate or window function work, we want to
  * avoid copying the input datum and just write directly over the input. This

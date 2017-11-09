@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.182 2008/03/26 21:10:39 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.184 2008/05/12 00:00:52 alvherre Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -35,11 +35,14 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
+#include "postmaster/fts.h"
 #include "postmaster/postmaster.h"
 #include "replication/walsender.h"
 #include "storage/backendid.h"
+#include "storage/bufmgr.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
+#include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
@@ -554,6 +557,20 @@ BaseInit(void)
 	init_codegen();
 }
 
+/*
+ * Make sure we reserve enough connections for FTS handler.
+ */
+static void check_superuser_connection_limit()
+{
+	if (!am_ftshandler &&
+		!HaveNFreeProcs(RESERVED_FTS_CONNECTIONS))
+		ereport(FATAL,
+				(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
+						errmsg("connection limit exceeded for superusers (need "
+									   "at least %d connections reserved for FTS handler)",
+							   RESERVED_FTS_CONNECTIONS),
+						errSendAlert(true)));
+}
 
 /* --------------------------------
  * InitPostgres
@@ -726,6 +743,16 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	}
 
 	/*
+	 * If we're trying to shut down, only superusers can connect.
+	 */
+	if (!am_superuser &&
+		MyProcPort != NULL &&
+		MyProcPort->canAcceptConnections == CAC_WAITBACKUP)
+		ereport(FATAL,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be superuser to connect during database shutdown")));
+
+	/*
 	 * Check a normal user hasn't connected to a superuser reserved slot.
 	 */
 	if (!am_superuser &&
@@ -736,12 +763,15 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 				 errmsg("connection limit exceeded for non-superusers"),
 				 errSendAlert(true)));
 
+	if (am_superuser)
+		check_superuser_connection_limit();
+
 	/*
-	 * If walsender, we don't want to connect to any particular database. Just
-	 * finish the backend startup by processing any options from the startup
-	 * packet, and we're done.
+	 * If walsender or fts handler, we don't want to connect to any particular
+	 * database. Just finish the backend startup by processing any options from
+	 * the startup packet, and we're done.
 	 */
-	if (am_walsender)
+	if (am_walsender || am_ftshandler)
 	{
 		Assert(!bootstrap);
 

@@ -48,9 +48,4 @@ extern Datum last_value_generic(PG_FUNCTION_ARGS);
 extern Datum first_value_generic(PG_FUNCTION_ARGS);
 extern Datum lag_generic(PG_FUNCTION_ARGS);
 
-static inline gpmon_packet_t * GpmonPktFromWindowState(WindowState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 #endif   /* NODEWINDOW_H */

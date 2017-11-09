@@ -61,6 +61,10 @@ xslt_process(PG_FUNCTION_ARGS)
 {
 #ifdef USE_LIBXSLT
 
+	text	   *doct = PG_GETARG_TEXT_P(0);
+	text	   *ssheet = PG_GETARG_TEXT_P(1);
+	text	   *result;
+	text	   *paramstr;
 	const char *params[MAXPARAMS + 1];	/* +1 for the terminator */
 	xsltStylesheetPtr stylesheet = NULL;
 	xmlDocPtr	doctree;
@@ -72,11 +76,6 @@ xslt_process(PG_FUNCTION_ARGS)
 	xmlChar    *resstr;
 	int			resstat;
 	int			reslen;
-
-	text	   *doct = PG_GETARG_TEXT_P(0);
-	text	   *ssheet = PG_GETARG_TEXT_P(1);
-	text	   *paramstr;
-	text	   *tres;
 
 	if (fcinfo->nargs == 3)
 	{
@@ -183,14 +182,12 @@ xslt_process(PG_FUNCTION_ARGS)
 	if (resstat < 0)
 		PG_RETURN_NULL();
 
-	tres = palloc(reslen + VARHDRSZ);
-	memcpy(VARDATA(tres), resstr, reslen);
-	SET_VARSIZE(tres, reslen + VARHDRSZ);
+	result = cstring_to_text_with_len((char *) resstr, reslen);
 
 	if (resstr)
 		xmlFree(resstr);
 
-	PG_RETURN_TEXT_P(tres);
+	PG_RETURN_TEXT_P(result);
 
 #else /* !USE_LIBXSLT */
 

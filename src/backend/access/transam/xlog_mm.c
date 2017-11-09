@@ -22,6 +22,7 @@
 #include "access/twophase.h"
 #include "access/xlog.h"
 #include "access/xlogmm.h"
+#include "access/xlogutils.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_filespace.h"
 #include "catalog/pg_tablespace.h"

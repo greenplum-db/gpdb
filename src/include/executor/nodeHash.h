@@ -50,11 +50,6 @@ extern void ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstat
                                      HashJoinTable  hashtable);
 extern void ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable);
 
-static inline gpmon_packet_t * GpmonPktFromHashState(HashState *node)
-{
-	return &node->ps.gpmon_pkt;
-}
-
 static inline int
 ExecHashRowSize(int tupwidth)
 {

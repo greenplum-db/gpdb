@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_clause.h,v 1.49 2008/01/01 19:45:58 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_clause.h,v 1.52 2008/08/07 01:11:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,21 +37,21 @@ extern List *transformWindowDefinitions(ParseState *pstate,
 						   List *windowdefs,
 						   List **targetlist);
 
-extern List *transformDistinctClause(ParseState *pstate, List *distinctlist,
-						List **targetlist, List **sortClause, List **groupClause);
+extern List *transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
+						   List **sortClause, List **groupClause);
+extern List *transformDistinctClause(ParseState *pstate,
+						List **targetlist, List *sortClause);
+extern List *transformDistinctOnClause(ParseState *pstate, List *distinctlist,
+						List **targetlist, List *sortClause);
 extern List *transformScatterClause(ParseState *pstate, List *scatterlist,
 									List **targetlist);
 extern void processExtendedGrouping(ParseState *pstate, Node *havingQual,
 									List *windowClause, List *targetlist);
-
-extern List *addAllTargetsToSortList(ParseState *pstate,
-						List *sortlist, List *targetlist,
-						bool resolveUnknown);
-
 extern List *addTargetToSortList(ParseState *pstate, TargetEntry *tle,
-					List *sortlist, List *targetlist,
-					SortBy *sortby, bool resolveUnknown);
+					List *sortlist, List *targetlist, SortBy *sortby,
+					bool resolveUnknown);
+
 extern Index assignSortGroupRef(TargetEntry *tle, List *tlist);
-extern bool targetIsInSortGroupList(TargetEntry *tle, Oid sortop, List *sortList);
+extern bool targetIsInSortList(TargetEntry *tle, Oid sortop, List *sortList);
 
 #endif   /* PARSE_CLAUSE_H */

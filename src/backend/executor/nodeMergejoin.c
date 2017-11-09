@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.92 2008/08/14 18:47:58 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMergejoin.c,v 1.91 2008/04/13 20:51:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -201,7 +201,6 @@ MJExamineQuals(List *mergeclauses,
 		int			op_strategy;
 		Oid			op_lefttype;
 		Oid			op_righttype;
-		bool		op_recheck;
 		RegProcedure cmpproc;
 		AclResult	aclresult;
 
@@ -235,12 +234,10 @@ MJExamineQuals(List *mergeclauses,
 		get_op_opfamily_properties(qual->opno, opfamily,
 								   &op_strategy,
 								   &op_lefttype,
-								   &op_righttype,
-								   &op_recheck);
+								   &op_righttype);
 		if (op_strategy != BTEqualStrategyNumber)		/* should not happen */
 			elog(ERROR, "cannot merge using non-equality operator %u",
 				 qual->opno);
-		Assert(!op_recheck);	/* never true for btree */
 
 		/* And get the matching support procedure (comparison function) */
 		cmpproc = get_opfamily_proc(opfamily,
@@ -658,10 +655,6 @@ ExecMergeJoin(MergeJoinState *node)
 	if (node->prefetch_inner)
 	{
 		innerTupleSlot = ExecProcNode(innerPlan);
-          	if (!TupIsNull(innerTupleSlot))
-          	{
-          		Gpmon_Incr_Rows_In(GpmonPktFromMergeJoinState(node));
-          	}
 		node->mj_InnerTupleSlot = innerTupleSlot;
 
 		ExecReScan(innerPlan, econtext);
@@ -677,7 +670,6 @@ ExecMergeJoin(MergeJoinState *node)
 	for (;;)
 	{
 		MJ_dump(node);
-		CheckSendPlanStateGpmonPkt(&node->js.ps);
 
 		/*
 		 * get the current state of the join and do things accordingly.
@@ -1462,10 +1454,6 @@ ExecMergeJoin(MergeJoinState *node)
 
 					return NULL;
 				}
-				else
-				{
-					Gpmon_Incr_Rows_In(GpmonPktFromMergeJoinState(node));
-				}
 
 				/* Else remain in ENDOUTER state and process next tuple. */
 				break;
@@ -1492,11 +1480,7 @@ ExecMergeJoin(MergeJoinState *node)
 
 					result = MJFillOuter(node);
 					if (result)
-					{
-						Gpmon_Incr_Rows_Out(GpmonPktFromMergeJoinState(node));
-                               	CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return result;
-					}
 				}
 
 				/*
@@ -1716,8 +1700,6 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	 */
 	MJ1_printf("ExecInitMergeJoin: %s\n",
 			   "node initialized");
-
-	initGpmonPktForMergeJoin((Plan *)node, &mergestate->js.ps.gpmon_pkt, estate);
 	
 	return mergestate;
 }
@@ -1786,13 +1768,6 @@ ExecReScanMergeJoin(MergeJoinState *node, ExprContext *exprCtxt)
 	if (((PlanState *) node)->righttree->chgParam == NULL)
 		ExecReScan(((PlanState *) node)->righttree, exprCtxt);
 
-}
-void
-initGpmonPktForMergeJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, MergeJoin));
-	
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

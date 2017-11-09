@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.102 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execTuples.c,v 1.101 2008/05/12 00:00:49 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -94,8 +94,10 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "executor/executor.h"
+#include "parser/parse_expr.h"
 #include "parser/parsetree.h"               /* rt_fetch() */
 #include "nodes/nodeFuncs.h"
+#include "storage/bufmgr.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
 
@@ -703,9 +705,6 @@ ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, un
 HeapTuple
 ExecFetchSlotHeapTuple(TupleTableSlot *slot)
 {
-	uint32 tuplen;
-	HeapTuple htup;
-
 	/*
 	 * sanity checks
 	 */
@@ -717,29 +716,10 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
 	if(slot->PRIVATE_tts_heaptuple)
 		return slot->PRIVATE_tts_heaptuple;
 
-	slot_getallattrs(slot);
-
-	Assert(TupHasVirtualTuple(slot));
-	Assert(slot->PRIVATE_tts_nvalid == slot->tts_tupleDescriptor->natts);
-
-	tuplen = slot->PRIVATE_tts_htup_buf_len;
-	htup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot),
-			slot->PRIVATE_tts_htup_buf, &tuplen);
-	
-	if(!htup)
-	{
-		if(slot->PRIVATE_tts_htup_buf)
-			pfree(slot->PRIVATE_tts_htup_buf);
-		slot->PRIVATE_tts_htup_buf = (HeapTuple) MemoryContextAlloc(slot->tts_mcxt, tuplen);
-		slot->PRIVATE_tts_htup_buf_len = tuplen;
-
-		htup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot),
-			slot->PRIVATE_tts_htup_buf, &tuplen);
-		Assert(htup);
-	}
-
-	slot->PRIVATE_tts_heaptuple = htup;
-	return htup;
+	/*
+	 * Otherwise materialize the slot...
+	 */
+	return ExecMaterializeSlot(slot);
 }
 
 /* --------------------------------
@@ -800,6 +780,69 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast)
 		pfree(oldTuple);
 
 	return newTuple;
+}
+
+/* --------------------------------
+ *		ExecMaterializeSlot
+ *			Force a slot into the "materialized" state.
+ *
+ *		This causes the slot's tuple to be a local copy not dependent on
+ *		any external storage.  A pointer to the contained tuple is returned.
+ *
+ *		A typical use for this operation is to prepare a computed tuple
+ *		for being stored on disk.  The original data may or may not be
+ *		virtual, but in any case we need a private copy for heap_insert
+ *		to scribble on.
+ * --------------------------------
+ */
+HeapTuple
+ExecMaterializeSlot(TupleTableSlot *slot)
+{
+	uint32		tuplen;
+	HeapTuple	htup;
+
+	/*
+	 * sanity checks
+	 */
+	Assert(!TupIsNull(slot));
+
+	/*
+	 * If we have a regular physical tuple, and it's locally palloc'd, we have
+	 * nothing to do.
+	 */
+	if (slot->PRIVATE_tts_heaptuple &&
+		(TupShouldFree(slot) || slot->PRIVATE_tts_heaptuple == slot->PRIVATE_tts_htup_buf))
+		return slot->PRIVATE_tts_heaptuple;
+
+	/*
+	 * Otherwise, copy or build a physical tuple, and store it into the slot.
+	 */
+	slot_getallattrs(slot);
+
+	Assert(slot->PRIVATE_tts_nvalid == slot->tts_tupleDescriptor->natts);
+
+	tuplen = slot->PRIVATE_tts_htup_buf_len;
+	htup = heaptuple_form_to(slot->tts_tupleDescriptor, slot_get_values(slot), slot_get_isnull(slot),
+			slot->PRIVATE_tts_htup_buf, &tuplen);
+
+	if (!htup)
+	{
+		/* enlarge the buffer and retry */
+		if (slot->PRIVATE_tts_htup_buf)
+			pfree(slot->PRIVATE_tts_htup_buf);
+		slot->PRIVATE_tts_htup_buf = (HeapTuple) MemoryContextAlloc(slot->tts_mcxt, tuplen);
+		slot->PRIVATE_tts_htup_buf_len = tuplen;
+
+		htup = heaptuple_form_to(slot->tts_tupleDescriptor,
+								 slot_get_values(slot),
+								 slot_get_isnull(slot),
+								 slot->PRIVATE_tts_htup_buf,
+								 &tuplen);
+		Assert(htup);
+	}
+
+	slot->PRIVATE_tts_heaptuple = htup;
+	return htup;
 }
 
 /* --------------------------------

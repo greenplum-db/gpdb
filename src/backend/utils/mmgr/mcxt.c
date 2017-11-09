@@ -16,7 +16,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/mcxt.c,v 1.63 2008/01/01 19:45:55 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/mcxt.c,v 1.65 2008/06/28 16:45:22 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1284,6 +1284,21 @@ MemoryContextStrdup(MemoryContext context, const char *string)
 	return nstr;
 }
 
+/*
+ * pnstrdup
+ *		Like pstrdup(), but append null byte to a
+ *		not-necessarily-null-terminated input string.
+ */
+char *
+pnstrdup(const char *in, Size len)
+{
+	char	   *out = palloc(len + 1);
+
+	memcpy(out, in, len);
+	out[len] = '\0';
+	return out;
+}
+
 
 /*
  * floor_log2_Size
@@ -1299,21 +1314,6 @@ int floor_log2_Size(Size sz)
 int ceil_log2_Size(Size sz)
 {
     return ceil_log2_Size_inline(sz);
-}
-
-/*
- * pnstrdup
- *		Like pstrdup(), but append null byte to a
- *		not-necessarily-null-terminated input string.
- */
-char *
-pnstrdup(const char *in, Size len)
-{
-	char	   *out = palloc(len + 1);
-
-	memcpy(out, in, len);
-	out[len] = '\0';
-	return out;
 }
 
 

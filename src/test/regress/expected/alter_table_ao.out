@@ -672,52 +672,11 @@ select * from testbug_char5;
 
 set search_path=public;
 drop schema if exists mpp17582 cascade;
-NOTICE:  drop cascades to table mpp17582.load
-NOTICE:  drop cascades to table mpp17582.dim
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_yearyyyy_2_prt_def
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_yearyyyy
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_def
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_def
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_asia
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3_2_prt_usa
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part3
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part3_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part3
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_asia
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2_2_prt_usa
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part2
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part2_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part2
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_def
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_def
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_2_prt_asia_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_asia
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_2_prt_usa_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1_2_prt_usa
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table_1_prt_part1
-NOTICE:  drop cascades to constraint ao_multi_level_part_table_1_prt_part1_check on append only table mpp17582.ao_multi_level_part_table_1_prt_part1
-NOTICE:  drop cascades to append only table mpp17582.ao_multi_level_part_table
-NOTICE:  drop cascades to table mpp17582.testbug_char5_1_prt_part201208
-NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201208_check on table mpp17582.testbug_char5_1_prt_part201208
-NOTICE:  drop cascades to append only table mpp17582.testbug_char5_1_prt_part201207
-NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201207_check on append only table mpp17582.testbug_char5_1_prt_part201207
-NOTICE:  drop cascades to append only columnar table mpp17582.testbug_char5_1_prt_part201206
-NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201206_check on append only columnar table mpp17582.testbug_char5_1_prt_part201206
-NOTICE:  drop cascades to table mpp17582.testbug_char5_1_prt_part201205
-NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201205_check on table mpp17582.testbug_char5_1_prt_part201205
-NOTICE:  drop cascades to append only table mpp17582.testbug_char5_1_prt_part201204
-NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201204_check on append only table mpp17582.testbug_char5_1_prt_part201204
-NOTICE:  drop cascades to append only columnar table mpp17582.testbug_char5_1_prt_part201203
-NOTICE:  drop cascades to constraint testbug_char5_1_prt_part201203_check on append only columnar table mpp17582.testbug_char5_1_prt_part201203
-NOTICE:  drop cascades to table mpp17582.testbug_char5
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to table mpp17582.testbug_char5
+drop cascades to append only table mpp17582.ao_multi_level_part_table
+drop cascades to table mpp17582.dim
+drop cascades to table mpp17582.load
 -- Test for tuple descriptor leak during row splitting
 DROP TABLE IF EXISTS split_tupdesc_leak;
 NOTICE:  table "split_tupdesc_leak" does not exist, skipping

@@ -861,7 +861,7 @@ sub printfndef
 	$bigstr .= "/* " .
 		$fndef->{name} . "(" . 
 		($fndef->{rawargs} ? $fndef->{rawargs} : "" ) . ") => " .
-		(exists($fndef->{returntype}) ? $fndef->{returntype} : "()") . " */ \n"
+		(exists($fndef->{returntype}) ? $fndef->{returntype} : "()") . " */\n"
 		if ($addcomment);
 
 

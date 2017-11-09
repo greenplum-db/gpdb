@@ -65,12 +65,6 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 	elog(DEBUG2, "pxfprotocol_validate_urls: uri %s", uri_string);
 	GPHDUri    *uri = parseGPHDUri(uri_string);
 
-	/* Test that Fragmenter or Profile was specified in the URI */
-	if (!GPHDUri_opt_exists(uri, FRAGMENTER) && !GPHDUri_opt_exists(uri, PXF_PROFILE))
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("FRAGMENTER or PROFILE option must exist in %s", uri->uri)));
-
 	/* No duplicate options. */
 	GPHDUri_verify_no_duplicate_options(uri);
 
@@ -78,9 +72,9 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 	if (!GPHDUri_opt_exists(uri, PXF_PROFILE))
 	{
 		List	   *coreOptions = list_make2(ACCESSOR, RESOLVER);
-
-		if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
+        if (EXTPROTOCOL_VALIDATOR_GET_DIRECTION(fcinfo) != EXT_VALIDATE_WRITE)
 			coreOptions = lcons(FRAGMENTER, coreOptions);
+
 		GPHDUri_verify_core_options_exist(uri, coreOptions);
 		list_free(coreOptions);
 	}
@@ -95,9 +89,30 @@ pxfprotocol_validate_urls(PG_FUNCTION_ARGS)
 Datum
 pxfprotocol_export(PG_FUNCTION_ARGS)
 {
-	/* TODO: provide real implementation */
-	elog(INFO, "Dummy PXF protocol write");
-	PG_RETURN_INT32(0);
+	/* Must be called via the external table format manager */
+	check_caller(fcinfo, "pxfprotocol_export");
+	/* retrieve user context required for data write */
+	gphadoop_context *context = (gphadoop_context *) EXTPROTOCOL_GET_USER_CTX(fcinfo);
+
+	/* last call -- cleanup */
+	if (EXTPROTOCOL_IS_LAST_CALL(fcinfo))
+	{
+		cleanup_context(context);
+		EXTPROTOCOL_SET_USER_CTX(fcinfo, NULL);
+		PG_RETURN_INT32(0);
+	}
+
+	/* first call -- do any desired init */
+	if (context == NULL)
+	{
+		context = create_context(fcinfo, false);
+		EXTPROTOCOL_SET_USER_CTX(fcinfo, context);
+		gpbridge_export_start(context);
+	}
+	/* Read data */
+	int			bytes_written = gpbridge_write(context, EXTPROTOCOL_GET_DATABUF(fcinfo), EXTPROTOCOL_GET_DATALEN(fcinfo));
+
+	PG_RETURN_INT32(bytes_written);
 }
 
 /*
@@ -141,8 +156,10 @@ create_context(PG_FUNCTION_ARGS, bool is_import)
 	GPHDUri    *uri = parseGPHDUri(EXTPROTOCOL_GET_URL(fcinfo));
 	Relation	relation = EXTPROTOCOL_GET_RELATION(fcinfo);
 
-	/* fetch data fragments */
-	get_fragments(uri, relation);
+	if (is_import) {
+		/* fetch data fragments */
+		get_fragments(uri, relation);
+	}
 
 	/* set context */
 	gphadoop_context *context = palloc0(sizeof(gphadoop_context));

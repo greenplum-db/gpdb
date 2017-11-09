@@ -267,3 +267,39 @@ FOR EACH ROW
 EXECUTE PROCEDURE bfv_dml_error_func();
 UPDATE bfv_dml_trigger_test SET t = 'bar';
 UPDATE bfv_dml_trigger_test SET id = id + 1;
+--
+-- Verify that ExecInsert doesn't scribble on the old tuple, when the new
+-- tuple comes directly from the old table.
+--
+CREATE TABLE execinsert_test (id int4, t text) DISTRIBUTED BY (id);
+INSERT INTO execinsert_test values (1, 'foo');
+-- Insert another identical tuple, but roll it back. If the insertion
+-- incorrectly modified the xmin on the old tuple, then it will become
+-- invisible when we roll back.
+begin;
+INSERT INTO execinsert_test select * FROM execinsert_test;
+rollback;
+select * from execinsert_test;
+ id |  t  
+----+-----
+  1 | foo
+(1 row)
+
+drop table execinsert_test;
+-- Repeat with a hacked master-only table, just in case the planner decides
+-- to add a Motion node or something that hides the problem otherwise.
+CREATE TABLE execinsert_test (id int4, t text) DISTRIBUTED BY (id);
+set allow_system_table_mods='DML';
+delete from gp_distribution_policy where localoid='execinsert_test'::regclass;
+reset allow_system_table_mods;
+INSERT INTO execinsert_test values (1, 'foo');
+begin;
+INSERT INTO execinsert_test select * FROM execinsert_test;
+rollback;
+select * from execinsert_test;
+ id |  t  
+----+-----
+  1 | foo
+(1 row)
+
+drop table execinsert_test;

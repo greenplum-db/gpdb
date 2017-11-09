@@ -24,7 +24,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.352 2009/04/05 19:59:40 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.326 2008/08/07 01:11:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -884,6 +884,7 @@ _equalQuery(Query *a, Query *b)
 	COMPARE_SCALAR_FIELD(hasAggs);
 	COMPARE_SCALAR_FIELD(hasWindowFuncs);
 	COMPARE_SCALAR_FIELD(hasSubLinks);
+	COMPARE_SCALAR_FIELD(hasDistinctOn);
 	COMPARE_SCALAR_FIELD(hasDynamicFunctions);
 	COMPARE_SCALAR_FIELD(hasFuncsWithExecRestrictions);
 	COMPARE_NODE_FIELD(rtable);
@@ -984,6 +985,7 @@ _equalSetOperationStmt(SetOperationStmt *a, SetOperationStmt *b)
 	COMPARE_NODE_FIELD(rarg);
 	COMPARE_NODE_FIELD(colTypes);
 	COMPARE_NODE_FIELD(colTypmods);
+	COMPARE_NODE_FIELD(groupClauses);
 
 	return true;
 }
@@ -1313,6 +1315,7 @@ static bool
 _equalTruncateStmt(TruncateStmt *a, TruncateStmt *b)
 {
 	COMPARE_NODE_FIELD(relations);
+	COMPARE_SCALAR_FIELD(restart_seqs);
 	COMPARE_SCALAR_FIELD(behavior);
 
 	return true;
@@ -1590,7 +1593,6 @@ _equalCreateOpClassItem(CreateOpClassItem *a, CreateOpClassItem *b)
 	COMPARE_NODE_FIELD(name);
 	COMPARE_NODE_FIELD(args);
 	COMPARE_SCALAR_FIELD(number);
-	COMPARE_SCALAR_FIELD(recheck);
 	COMPARE_NODE_FIELD(class_args);
 	COMPARE_NODE_FIELD(storedtype);
 
@@ -1745,11 +1747,29 @@ _equalFileSpaceEntry(FileSpaceEntry *a, FileSpaceEntry *b)
 }
 
 static bool
+_equalDropFileSpaceStmt(DropFileSpaceStmt *a, DropFileSpaceStmt *b)
+{
+	COMPARE_STRING_FIELD(filespacename);
+	COMPARE_SCALAR_FIELD(missing_ok);
+
+	return true;
+}
+
+static bool
 _equalCreateTableSpaceStmt(CreateTableSpaceStmt *a, CreateTableSpaceStmt *b)
 {
 	COMPARE_STRING_FIELD(tablespacename);
 	COMPARE_STRING_FIELD(owner);
 	COMPARE_STRING_FIELD(filespacename);
+
+	return true;
+}
+
+static bool
+_equalDropTableSpaceStmt(DropTableSpaceStmt *a, DropTableSpaceStmt *b)
+{
+	COMPARE_STRING_FIELD(tablespacename);
+	COMPARE_SCALAR_FIELD(missing_ok);
 
 	return true;
 }
@@ -2095,7 +2115,6 @@ _equalAConst(A_Const *a, A_Const *b)
 {
 	if (!equal(&a->val, &b->val))		/* hack for in-line Value field */
 		return false;
-	COMPARE_NODE_FIELD(typeName);
 	/* do not compare 'location' field */;
 
 	return true;
@@ -2315,9 +2334,10 @@ _equalRangeTblEntry(RangeTblEntry *a, RangeTblEntry *b)
 }
 
 static bool
-_equalSortClause(SortClause *a, SortClause *b)
+_equalSortGroupClause(SortGroupClause *a, SortGroupClause *b)
 {
 	COMPARE_SCALAR_FIELD(tleSortGroupRef);
+	COMPARE_SCALAR_FIELD(eqop);
 	COMPARE_SCALAR_FIELD(sortop);
 	COMPARE_SCALAR_FIELD(nulls_first);
 
@@ -2965,9 +2985,6 @@ equal(void *a, void *b)
 		case T_DiscardStmt:
 			retval = _equalDiscardStmt(a, b);
 			break;
-		case T_CreateFileSpaceStmt:
-			retval = _equalCreateFileSpaceStmt(a, b);
-			break;
 		case T_CreateExtensionStmt:
 			retval = _equalCreateExtensionStmt(a, b);
 			break;
@@ -2977,11 +2994,20 @@ equal(void *a, void *b)
 		case T_AlterExtensionContentsStmt:
 			retval = _equalAlterExtensionContentsStmt(a, b);
 			break;
+		case T_CreateFileSpaceStmt:
+			retval = _equalCreateFileSpaceStmt(a, b);
+			break;
 		case T_FileSpaceEntry:
 			retval = _equalFileSpaceEntry(a, b);
 			break;
+		case T_DropFileSpaceStmt:
+			retval = _equalDropFileSpaceStmt(a, b);
+			break;
 		case T_CreateTableSpaceStmt:
 			retval = _equalCreateTableSpaceStmt(a, b);
+			break;
+		case T_DropTableSpaceStmt:
+			retval = _equalDropTableSpaceStmt(a, b);
 			break;
 		case T_CreateTrigStmt:
 			retval = _equalCreateTrigStmt(a, b);
@@ -3136,12 +3162,8 @@ equal(void *a, void *b)
 		case T_RangeTblEntry:
 			retval = _equalRangeTblEntry(a, b);
 			break;
-		case T_SortClause:
-			retval = _equalSortClause(a, b);
-			break;
-		case T_GroupClause:
-			/* GroupClause is equivalent to SortClause */
-			retval = _equalSortClause(a, b);
+		case T_SortGroupClause:
+			retval = _equalSortGroupClause(a, b);
 			break;
 		case T_GroupingClause:
 			retval = _equalGroupingClause(a, b);

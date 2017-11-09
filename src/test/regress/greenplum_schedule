@@ -50,7 +50,7 @@ test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 distributed_transactions 
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
-test: partition partition1 partition_indexing parruleord
+test: partition partition1 partition_indexing parruleord partition_storage partition_ddl
 # 'partition_locking' gets confused if other backends run concurrently and
 # hold locks.
 test: partition_locking
@@ -99,7 +99,7 @@ test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 # (https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=e5550d5fec66aa74caad1f79b79826ec64898688)
 test: catalog
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition DML_over_joins gporca bfv_statistic
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition bfv_partition_plans DML_over_joins gporca bfv_statistic
  
 test: aggregate_with_groupingsets 
 
@@ -113,7 +113,7 @@ test: tuple_serialization
 # temp tables
 test: bfv_cte bfv_joins bfv_subquery bfv_planner bfv_legacy bfv_temp bfv_dml
 
-test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids
+test: qp_olap_mdqa qp_misc gp_recursive_cte qp_dml_joins qp_dml_oids trigger_sets_oid
 
 test: qp_misc_jiras qp_with_clause qp_executor qp_olap_windowerr qp_olap_window qp_derived_table qp_bitmapscan session_level_memory_consumption qp_dropped_cols
 test: qp_with_functional_inlining qp_with_functional_noinlining
@@ -127,7 +127,7 @@ test: qp_functions_in_from qp_functions_in_select qp_functions_in_subquery qp_fu
 test: olap_setup
 test: qp_olap_group qp_olap_group2
 
-test: hooktest
+test: hooktest partition_rank
 
 ignore: tpch500GB_orca
 

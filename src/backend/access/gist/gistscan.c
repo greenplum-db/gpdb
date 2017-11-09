@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistscan.c,v 1.68.2.4 2008/12/04 11:10:06 teodor Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistscan.c,v 1.70 2008/06/19 00:46:03 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -17,6 +17,8 @@
 #include "access/genam.h"
 #include "access/gist_private.h"
 #include "access/gistscan.h"
+#include "access/relscan.h"
+#include "storage/bufmgr.h"
 #include "utils/memutils.h"
 
 static void gistfreestack(GISTSearchStack *s);
@@ -166,7 +168,7 @@ gistmarkpos(PG_FUNCTION_ARGS)
 	so->markNPageData = so->nPageData;
 	so->markCurPageData = so->curPageData;
 	if ( so->markNPageData > 0 )
-		memcpy( so->markPageData, so->pageData, sizeof(MatchedItemPtr) * so->markNPageData );		
+		memcpy(so->markPageData, so->pageData, sizeof(ItemResult) * so->markNPageData);
 
 	PG_RETURN_VOID();
 }
@@ -220,7 +222,7 @@ gistrestrpos(PG_FUNCTION_ARGS)
 	so->nPageData = so->markNPageData;
 	so->curPageData = so->markNPageData;
 	if ( so->markNPageData > 0 )
-		memcpy( so->pageData, so->markPageData, sizeof(MatchedItemPtr) * so->markNPageData );		
+		memcpy(so->pageData, so->markPageData, sizeof(ItemResult) * so->markNPageData);
 
 	PG_RETURN_VOID();
 }

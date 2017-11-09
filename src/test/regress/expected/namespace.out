@@ -105,17 +105,14 @@ ERROR:  cannot drop schema pg_toast because it is required by the database syste
 DROP SCHEMA test_schema_1;  -- does not exist
 ERROR:  schema "test_schema_1" does not exist
 DROP SCHEMA test_schema_2;  -- contains objects
-NOTICE:  view test_schema_2.abc_view depends on schema test_schema_2
-NOTICE:  rule _RETURN on view test_schema_2.abc_view depends on view test_schema_2.abc_view
-NOTICE:  table test_schema_2.abc depends on schema test_schema_2
-NOTICE:  default for table test_schema_2.abc column a depends on sequence test_schema_2.abc_a_seq
 ERROR:  cannot drop schema test_schema_2 because other objects depend on it
+DETAIL:  table test_schema_2.abc depends on schema test_schema_2
+view test_schema_2.abc_view depends on schema test_schema_2
 HINT:  Use DROP ... CASCADE to drop the dependent objects too.
 DROP SCHEMA test_schema_2 CASCADE;
-NOTICE:  drop cascades to view test_schema_2.abc_view
-NOTICE:  drop cascades to rule _RETURN on view test_schema_2.abc_view
-NOTICE:  drop cascades to table test_schema_2.abc
-NOTICE:  drop cascades to default for table test_schema_2.abc column a
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table test_schema_2.abc
+drop cascades to view test_schema_2.abc_view
 DROP ROLE tmp_test_schema_role;
 -- verify that the objects were dropped
 SELECT nspname, relname

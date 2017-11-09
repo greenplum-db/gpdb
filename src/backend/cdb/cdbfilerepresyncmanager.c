@@ -164,6 +164,7 @@
 #include "cdb/cdbresynchronizechangetracking.h"
 #include "postmaster/bgwriter.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "storage/lmgr.h"
 #include "utils/flatfiles.h"
 #include "utils/faultinjector.h"
 

@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2010, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/common.c,v 1.40 2010/02/26 02:01:20 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/scripts/common.c,v 1.32 2008/05/12 22:59:58 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -258,7 +258,7 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
 }
 
 /*
- * "Safe" wrapper around strdup().	Pulled from psql/common.c
+ * "Safe" wrapper around strdup().  Pulled from psql/common.c
  */
 char *
 pg_strdup(const char *string)

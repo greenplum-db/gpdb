@@ -1707,3 +1707,19 @@ select count(*) from mpp3033b;
   1000
 (1 row)
 
+create table mpp6379(a int, b date, primary key (a,b)) distributed by (a) partition by range (b) (partition p1 end ('2009-01-02'::date));
+NOTICE:  CREATE TABLE will create partition "mpp6379_1_prt_p1" for table "mpp6379"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp6379_pkey" for table "mpp6379"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp6379_1_prt_p1_pkey" for table "mpp6379_1_prt_p1"
+insert into mpp6379( a, b ) values( 1, '20090101' );
+insert into mpp6379( a, b ) values( 1, '20090101' );
+ERROR:  duplicate key value violates unique constraint "mpp6379_1_prt_p1_pkey"
+DETAIL:  Key (a, b)=(1, 01-01-2009) already exists.
+alter table mpp6379 add partition p2 end(date '2009-01-03');
+NOTICE:  CREATE TABLE will create partition "mpp6379_1_prt_p2" for table "mpp6379"
+NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "mpp6379_1_prt_p2_pkey" for table "mpp6379_1_prt_p2"
+insert into mpp6379( a, b ) values( 2, '20090102' );
+insert into mpp6379( a, b ) values( 2, '20090102' );
+ERROR:  duplicate key value violates unique constraint "mpp6379_1_prt_p2_pkey"
+DETAIL:  Key (a, b)=(2, 01-02-2009) already exists.
+drop table mpp6379;

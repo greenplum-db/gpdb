@@ -22,9 +22,4 @@ extern TupleTableSlot *ExecNestLoop(NestLoopState *node);
 extern void ExecEndNestLoop(NestLoopState *node);
 extern void ExecReScanNestLoop(NestLoopState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromNLJState(NestLoopState *node)
-{
-	return &node->js.ps.gpmon_pkt;
-}
-
 #endif   /* NODENESTLOOP_H */

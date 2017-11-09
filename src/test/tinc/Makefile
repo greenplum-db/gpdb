@@ -44,13 +44,11 @@ aocoalter_catalog_loaders:
 	-s storage/aoco_alter \
 	-s catalog/mpp25256 \
 	-s catalog/oid_inconsistency \
-	-s catalog/udf_exception_handling \
-	-s storage/loaders
+	-s catalog/udf_exception_handling
 
 storage_uao_and_transactionmanagement:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
 	-s storage/transaction_management \
-	-s storage/basic \
 	-s storage/uao
 
 storage_persistent_accessmethods_and_vacuum:
@@ -146,18 +144,7 @@ test_pg_twophase_41_49:
 test_switch_01_12:
 	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
-	-p test_switch_01_12.py
-
-test_switch_13_24:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
-	-p test_switch_13_24.py
-
-test_switch_25_33:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/pg_twophase \
-	-p test_switch_25_33.py
-
+	-p test_switch.py
 
 # cs-fts
 # The following targets are pulled from:

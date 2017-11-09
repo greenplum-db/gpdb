@@ -58,7 +58,7 @@ typedef struct
 typedef struct
 {
 #ifdef HAVE_LIBZ
-	gzFile	   *FH;
+	gzFile	   FH;
 #else
 	FILE	   *FH;
 #endif
@@ -294,7 +294,7 @@ _PrintFileData(ArchiveHandle *AH, char *filename, RestoreOptions *ropt)
 		return;
 
 #ifdef HAVE_LIBZ
-	gzFile *FH = gzopen(filename, "rb");
+	gzFile FH = gzopen(filename, "rb");
 #else
 	FILE *FH = fopen(filename, PG_BINARY_R);
 #endif

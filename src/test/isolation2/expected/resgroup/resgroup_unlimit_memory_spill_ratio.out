@@ -40,9 +40,9 @@ ALTER
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 100;
 ALTER
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO -1;
-ERROR:  memory spill ratio cannot be less than 0
+ERROR:  memory_spill_ratio range is [0, 100]
 ALTER RESOURCE GROUP rg_spill_test SET MEMORY_SPILL_RATIO 101;
-ERROR:  memory spill ratio cannot be greater than 100
+ERROR:  memory_spill_ratio range is [0, 100]
 
 DROP RESOURCE GROUP rg_spill_test;
 DROP

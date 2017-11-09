@@ -17,15 +17,15 @@ void AssertFailed()
 /* Actual function body */
 #include "../gp_replication.c"
 
-void
-test_IsMirrorUp_Assert(void **state)
+static void
+expect_lwlock(void)
 {
-	/*
-	 * Test the Assert
-	 */
-	max_wal_senders = 0;
-	IsMirrorUp();
-	assert_true(is_assert_failed);
+	expect_value(LWLockAcquire, lockid, SyncRepLock);
+	expect_value(LWLockAcquire, mode, LW_SHARED);
+	will_be_called(LWLockAcquire);
+
+	expect_value(LWLockRelease, lockid, SyncRepLock);
+	will_be_called(LWLockRelease);
 }
 
 static void
@@ -35,6 +35,8 @@ test_setup(WalSndCtlData *data, WalSndState state)
 	WalSndCtl = data;
 	data->walsnds[0].pid = 1;
 	data->walsnds[0].state = state;
+
+	expect_lwlock();
 }
 
 void
@@ -44,6 +46,8 @@ test_IsMirrorUp_Pid_Zero(void **state)
 	WalSndCtlData data;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
+
+	expect_lwlock();
 	assert_false(IsMirrorUp());
 }
 
@@ -85,7 +89,6 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test_IsMirrorUp_Assert),
 		unit_test(test_IsMirrorUp_Pid_Zero),
 		unit_test(test_IsMirrorUp_WALSNDSTATE_STARTUP),
 		unit_test(test_IsMirrorUp_WALSNDSTATE_BACKUP),

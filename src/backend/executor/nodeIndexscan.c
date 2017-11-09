@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeIndexscan.c,v 1.126 2008/03/18 03:54:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeIndexscan.c,v 1.129 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -27,6 +27,7 @@
 #include "access/genam.h"
 #include "access/nbtree.h"
 #include "cdb/cdbvars.h"
+#include "access/relscan.h"
 #include "executor/execdebug.h"
 #include "executor/nodeIndexscan.h"
 #include "executor/execIndexscan.h"
@@ -151,15 +152,13 @@ IndexNext(IndexScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		Gpmon_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
-                CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		return slot;
 	}
 
 	/*
 	 * ok, now that we have what we need, fetch the next tuple.
 	 */
-	if ((tuple = index_getnext(scandesc, direction)) != NULL)
+	while ((tuple = index_getnext(scandesc, direction)) != NULL)
 	{
 		/*
 		 * Store the scanned tuple in the scan tuple slot of the scan state.
@@ -171,8 +170,18 @@ IndexNext(IndexScanState *node)
 					   scandesc->xs_cbuf,		/* buffer containing tuple */
 					   false);	/* don't pfree */
 
-		Gpmon_Incr_Rows_Out(GpmonPktFromIndexScanState(node));
-                CheckSendPlanStateGpmonPkt(&node->ss.ps);
+		/*
+		 * If the index was lossy, we have to recheck the index quals using
+		 * the real tuple.
+		 */
+		if (scandesc->xs_recheck)
+		{
+			econtext->ecxt_scantuple = slot;
+			ResetExprContext(econtext);
+			if (!ExecQual(node->indexqualorig, econtext, false))
+				continue;		/* nope, so ask index for another one */
+		}
+
 		return slot;
 	}
 
@@ -276,8 +285,6 @@ ExecIndexReScan(IndexScanState *node, ExprContext *exprCtxt)
 
 	/* reset index scan */
 	index_rescan(node->iss_ScanDesc, node->iss_ScanKeys);
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 
@@ -518,7 +525,6 @@ void
 ExecIndexRestrPos(IndexScanState *node)
 {
 	index_restrpos(node->iss_ScanDesc);
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 /* ----------------------------------------------------------------
@@ -625,8 +631,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	ExecIndexBuildScanKeys((PlanState *) indexstate,
 						   indexstate->iss_RelationDesc,
 						   node->indexqual,
-						   node->indexstrategy,
-						   node->indexsubtype,
 						   &indexstate->iss_ScanKeys,
 						   &indexstate->iss_NumScanKeys,
 						   &indexstate->iss_RuntimeKeys,
@@ -641,8 +645,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 * Initialize index-specific scan state
 	 */
 	indexstate->iss_RuntimeKeysReady = false;
-
-	initGpmonPktForIndexScan((Plan *)node, &indexstate->ss.ps.gpmon_pkt, estate);
 
 	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,
@@ -693,12 +695,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
  * planstate: executor state node we are working for
  * index: the index we are building scan keys for
  * quals: indexquals expressions
- * strategies: associated operator strategy numbers
- * subtypes: associated operator subtype OIDs
- *
- * (Any elements of the strategies and subtypes lists that correspond to
- * RowCompareExpr quals are not used here; instead we look up the info
- * afresh.)
  *
  * Output params are:
  *
@@ -713,15 +709,12 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
  * ScalarArrayOpExpr quals are not supported.
  */
 void
-ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
-					   List *quals, List *strategies, List *subtypes,
+ExecIndexBuildScanKeys(PlanState *planstate, Relation index, List *quals,
 					   ScanKey *scanKeys, int *numScanKeys,
 					   IndexRuntimeKeyInfo **runtimeKeys, int *numRuntimeKeys,
 					   IndexArrayKeyInfo **arrayKeys, int *numArrayKeys)
 {
 	ListCell   *qual_cell;
-	ListCell   *strategy_cell;
-	ListCell   *subtype_cell;
 	ScanKey		scan_keys;
 	IndexRuntimeKeyInfo *runtime_keys;
 	IndexArrayKeyInfo *array_keys;
@@ -763,33 +756,23 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 	extra_scan_keys = n_scan_keys;
 
 	/*
-	 * for each opclause in the given qual, convert each qual's opclause into
+	 * for each opclause in the given qual, convert the opclause into
 	 * a single scan key
 	 */
-	qual_cell = list_head(quals);
-	strategy_cell = list_head(strategies);
-	subtype_cell = list_head(subtypes);
-
-	for (j = 0; j < n_scan_keys; j++)
+	j = 0;
+	foreach(qual_cell, quals)
 	{
-		ScanKey		this_scan_key = &scan_keys[j];
-		Expr	   *clause;		/* one clause of index qual */
+		Expr	   *clause = (Expr *) lfirst(qual_cell);
+		ScanKey		this_scan_key = &scan_keys[j++];
+		Oid			opno;		/* operator's OID */
 		RegProcedure opfuncid;	/* operator proc id used in scan */
-		StrategyNumber strategy;	/* op's strategy number */
-		Oid			subtype;	/* op's strategy subtype */
+		Oid			opfamily;	/* opfamily of index column */
+		int			op_strategy; /* operator's strategy number */
+		Oid			op_lefttype; /* operator's declared input types */
+		Oid			op_righttype;
 		Expr	   *leftop;		/* expr on lhs of operator */
 		Expr	   *rightop;	/* expr on rhs ... */
 		AttrNumber	varattno;	/* att number used in scan */
-
-		/*
-		 * extract clause information from the qualification
-		 */
-		clause = (Expr *) lfirst(qual_cell);
-		qual_cell = lnext(qual_cell);
-		strategy = lfirst_int(strategy_cell);
-		strategy_cell = lnext(strategy_cell);
-		subtype = lfirst_oid(subtype_cell);
-		subtype_cell = lnext(subtype_cell);
 
 		if (IsA(clause, OpExpr))
 		{
@@ -797,6 +780,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			int			flags = 0;
 			Datum		scanvalue;
 
+			opno = ((OpExpr *) clause)->opno;
 			opfuncid = ((OpExpr *) clause)->opfuncid;
 
 			/*
@@ -814,6 +798,19 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				elog(ERROR, "indexqual doesn't have key on left side");
 
 			varattno = ((Var *) leftop)->varattno;
+			if (varattno < 1 || varattno > index->rd_index->indnatts)
+				elog(ERROR, "bogus index qualification");
+
+			/*
+			 * We have to look up the operator's strategy number.  This
+			 * provides a cross-check that the operator does match the index.
+			 */
+			opfamily = index->rd_opfamily[varattno - 1];
+
+			get_op_opfamily_properties(opno, opfamily,
+									   &op_strategy,
+									   &op_lefttype,
+									   &op_righttype);
 
 			/*
 			 * rightop is the constant or variable comparison value
@@ -848,8 +845,8 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScanKeyEntryInitialize(this_scan_key,
 								   flags,
 								   varattno,	/* attribute number to scan */
-								   strategy,	/* op's strategy */
-								   subtype,		/* strategy subtype */
+								   op_strategy,	/* op's strategy */
+								   op_righttype, /* strategy subtype */
 								   opfuncid,	/* reg proc to use */
 								   scanvalue);	/* constant */
 		}
@@ -868,12 +865,6 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				ScanKey		this_sub_key = &scan_keys[extra_scan_keys];
 				int			flags = SK_ROW_MEMBER;
 				Datum		scanvalue;
-				Oid			opno;
-				Oid			opfamily;
-				int			op_strategy;
-				Oid			op_lefttype;
-				Oid			op_righttype;
-				bool		op_recheck;
 
 				/*
 				 * leftop should be the index key Var, possibly relabeled
@@ -935,8 +926,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				get_op_opfamily_properties(opno, opfamily,
 										   &op_strategy,
 										   &op_lefttype,
-										   &op_righttype,
-										   &op_recheck);
+										   &op_righttype);
 
 				if (op_strategy != rc->rctype)
 					elog(ERROR, "RowCompare index qualification contains wrong operator");
@@ -979,6 +969,7 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScalarArrayOpExpr *saop = (ScalarArrayOpExpr *) clause;
 
 			Assert(saop->useOr);
+			opno = saop->opno;
 			opfuncid = saop->opfuncid;
 
 			/*
@@ -996,6 +987,19 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 				elog(ERROR, "indexqual doesn't have key on left side");
 
 			varattno = ((Var *) leftop)->varattno;
+			if (varattno < 1 || varattno > index->rd_index->indnatts)
+				elog(ERROR, "bogus index qualification");
+
+			/*
+			 * We have to look up the operator's strategy number.  This
+			 * provides a cross-check that the operator does match the index.
+			 */
+			opfamily = index->rd_opfamily[varattno - 1];
+
+			get_op_opfamily_properties(opno, opfamily,
+									   &op_strategy,
+									   &op_lefttype,
+									   &op_righttype);
 
 			/*
 			 * rightop is the constant or variable array value
@@ -1019,8 +1023,8 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScanKeyEntryInitialize(this_scan_key,
 								   0,	/* flags */
 								   varattno,	/* attribute number to scan */
-								   strategy,	/* op's strategy */
-								   subtype,		/* strategy subtype */
+								   op_strategy,	/* op's strategy */
+								   op_righttype, /* strategy subtype */
 								   opfuncid,	/* reg proc to use */
 								   (Datum) 0);	/* constant */
 		}
@@ -1051,8 +1055,8 @@ ExecIndexBuildScanKeys(PlanState *planstate, Relation index,
 			ScanKeyEntryInitialize(this_scan_key,
 								   SK_ISNULL | SK_SEARCHNULL,
 								   varattno,	/* attribute number to scan */
-								   strategy,	/* op's strategy */
-								   subtype,		/* strategy subtype */
+								   InvalidStrategy,	/* no strategy */
+								   InvalidOid,	/* no strategy subtype */
 								   InvalidOid,	/* no reg proc for this */
 								   (Datum) 0);	/* constant */
 		}
@@ -1094,14 +1098,6 @@ ExecCountSlotsIndexScan(IndexScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + INDEXSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, IndexScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

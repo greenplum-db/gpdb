@@ -418,6 +418,8 @@ expression_tree_walker(Node *node,
 					return true;
 				if (walker(setop->rarg, context))
 					return true;
+
+				/* groupClauses are deemed uninteresting */
 			}
 			break;
 		case T_PlaceHolderVar:
@@ -445,8 +447,7 @@ expression_tree_walker(Node *node,
 			break;
 		case T_Grouping:
 		case T_GroupId:
-		case T_GroupClause:
-		case T_SortClause: /* occurs in WindowClause lists */
+		case T_SortGroupClause: /* occurs in WindowClause lists */
 			{
 				/* do nothing */
 			}

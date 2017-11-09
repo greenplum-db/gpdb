@@ -59,8 +59,6 @@ typedef struct ConvertSubqueryToJoinContext
 {
 	bool		safeToConvert;	/* Can correlated expression subquery be
 								 * pulled up? */
-	bool		considerNonEqualQual;	/* Should we consider correlated expr
-										 * of the form o.a OP i.b ? */
 	Node	   *joinQual;		/* Qual to employ to join subquery */
 	Node	   *innerQual;		/* Qual to leave behind in subquery */
 	List	   *targetList;		/* targetlist for subquery */
@@ -135,7 +133,6 @@ InitConvertSubqueryToJoinContext(ConvertSubqueryToJoinContext *ctx)
 	ctx->groupClause = NIL;
 	ctx->targetList = NIL;
 	ctx->extractGrouping = false;
-	ctx->considerNonEqualQual = false;
 }
 
 /**
@@ -204,10 +201,10 @@ IsCorrelatedOpExpr(OpExpr *opexp, Expr **innerExpr)
  * Output:
  *	returns true if correlated equality condition
  *	*innerExpr - points to the inner expr i.e. bar(innervar) in the condition
- *	*sortOp - postgres special, sort operator to implement the condition as a mergejoin.
+ *	*eqOp and *sortOp - equality and < operators, to implement the condition as a mergejoin.
  */
 static bool
-IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *sortOp)
+IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *eqOp, Oid *sortOp)
 {
 	Oid			opfamily;
 	Oid			ltype;
@@ -217,6 +214,7 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *sortOp)
 	Assert(opexp);
 	Assert(list_length(opexp->args) > 1);
 	Assert(innerExpr);
+	Assert(eqOp);
 	Assert(sortOp);
 
 	/*
@@ -242,6 +240,11 @@ IsCorrelatedEqualityOpExpr(OpExpr *opexp, Expr **innerExpr, Oid *sortOp)
 	 */
 	ltype = exprType(linitial(opexp->args));
 	rtype = exprType(lsecond(opexp->args));
+	*eqOp = get_opfamily_member(opfamily, ltype, rtype, BTEqualStrategyNumber);
+	if (!OidIsValid(*eqOp))	/* should not happen */
+		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
+			 BTEqualStrategyNumber, ltype, rtype, opfamily);
+
 	*sortOp = get_opfamily_member(opfamily, ltype, rtype, BTLessStrategyNumber);
 	if (!OidIsValid(*sortOp))	/* should not happen */
 		elog(ERROR, "could not find member %d(%u,%u) of opfamily %u",
@@ -400,18 +403,12 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 		/**
 		 * If this is an expression of the form foo(outervar) = bar(innervar), then we want to know about the inner expression.
 		 */
+		Oid			eqOp = InvalidOid;
 		Oid			sortOp = InvalidOid;
 		Expr	   *innerExpr = NULL;
 		bool		considerOpExpr = false;
 
-		if (context->considerNonEqualQual)
-		{
-			considerOpExpr = IsCorrelatedOpExpr(opexp, &innerExpr);
-		}
-		else
-		{
-			considerOpExpr = IsCorrelatedEqualityOpExpr(opexp, &innerExpr, &sortOp);
-		}
+		considerOpExpr = IsCorrelatedEqualityOpExpr(opexp, &innerExpr, &eqOp, &sortOp);
 
 		if (considerOpExpr)
 		{
@@ -423,9 +420,10 @@ SubqueryToJoinWalker(Node *node, ConvertSubqueryToJoinContext *context)
 
 			if (context->extractGrouping)
 			{
-				GroupClause *gc = makeNode(GroupClause);
+				SortGroupClause *gc = makeNode(SortGroupClause);
 
 				gc->sortop = sortOp;
+				gc->eqop = eqOp;
 				gc->tleSortGroupRef = list_length(context->groupClause) + 1;
 				context->groupClause = lappend(context->groupClause, gc);
 				tle->ressortgroupref = list_length(context->targetList) + 1;

@@ -471,7 +471,7 @@ _bitmap_findbitmaps(IndexScanDesc scan, ScanDirection dir  __attribute__((unused
 			scanPos->nvec++;
 		}
 
-		scanDesc = index_beginscan(lovHeap, lovIndex, ActiveSnapshot,
+		scanDesc = index_beginscan(lovHeap, lovIndex, GetActiveSnapshot(),
 								   scan->numberOfKeys, scanKeys);
 
 		/*

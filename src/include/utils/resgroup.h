@@ -27,11 +27,7 @@
 /*
  * Resource group capability.
  */
-typedef struct ResGroupCap
-{
-	int		value;
-	int		proposed;
-} ResGroupCap;
+typedef int32 ResGroupCap;
 
 /*
  * Resource group capabilities.
@@ -59,33 +55,6 @@ typedef struct ResGroupCaps
 	ResGroupCap		memSharedQuota;
 	ResGroupCap		memSpillRatio;
 } ResGroupCaps;
-
-/*
- * Resource group setting options.
- *
- * These can represent the effective settings of a resource group,
- * or the new settings from ALTER RESOURCE GROUP syntax.
- *
- * The properties must be in the same order as ResGroupLimitType.
- *
- * This struct can also be converted to an array of int32 so the fields
- * can be accessed via index and iterated with loop.
- *
- *     ResGroupOpts opts;
- *     int32 *array = (int32 *) &opts;
- *     opts.concurrency = 1;
- *     array[RESGROUP_LIMIT_TYPE_CONCURRENCY] = 2;
- *     Assert(opts.concurrency == 2);
- */
-typedef struct ResGroupOpts
-{
-	int32			__unknown;			/* placeholder, do not use it */
-	int32			concurrency;
-	int32			cpuRateLimit;
-	int32			memLimit;
-	int32			memSharedQuota;
-	int32			memSpillRatio;
-} ResGroupOpts;
 
 /*
  * GUC variables.
@@ -126,6 +95,8 @@ typedef enum
 /*
  * Functions in resgroup.c
  */
+extern void AtEOXact_ResGroup(bool isCommit);
+extern void AtPrepare_ResGroup(void);
 
 /* Shared memory and semaphores */
 extern Size ResGroupShmemSize(void);
@@ -134,7 +105,7 @@ extern void ResGroupControlInit(void);
 /* Load resource group information from catalog */
 extern void	InitResGroups(void);
 
-extern void AllocResGroupEntry(Oid groupId, const ResGroupOpts *opts);
+extern void AllocResGroupEntry(Oid groupId, const ResGroupCaps *caps);
 
 extern void SerializeResGroupInfo(StringInfo str);
 extern void DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
@@ -151,8 +122,6 @@ extern void SwitchResGroupOnSegment(const char *buf, int len);
 /* Retrieve statistic information of type from resource group */
 extern Datum ResGroupGetStat(Oid groupId, ResGroupStatType type);
 
-extern void ResGroupOptsToCaps(const ResGroupOpts *optsIn, ResGroupCaps *capsOut);
-extern void ResGroupCapsToOpts(const ResGroupCaps *capsIn, ResGroupOpts *optsOut);
 extern void ResGroupDumpMemoryInfo(void);
 
 /* Check the memory limit of resource group */
@@ -166,12 +135,6 @@ extern void ResGroupAlterOnCommit(Oid groupId,
 								  ResGroupLimitType limittype,
 								  const ResGroupCaps *caps);
 extern void ResGroupCheckForDrop(Oid groupId, char *name);
-extern void ResGroupDecideMemoryCaps(int groupId,
-									 ResGroupCaps *caps,
-									 const ResGroupOpts *opts);
-extern void ResGroupDecideConcurrencyCaps(Oid groupId,
-										  ResGroupCaps *caps,
-										  const ResGroupOpts *opts);
 
 extern int32 ResGroupGetVmemLimitChunks(void);
 extern int32 ResGroupGetVmemChunkSizeInBits(void);

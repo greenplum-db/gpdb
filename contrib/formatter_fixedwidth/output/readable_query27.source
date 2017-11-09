@@ -8,17 +8,17 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in',
   s1='10',s2='10', s3='10');
 -- Confirm only the trailing while spaces will be trimmed.
 -- The leading white spaces will be always reserved.
-select * from tbl_ext_fixedwidth order by s1;
+select * from tbl_ext_fixedwidth;
      s1     |    s2     |     s3     
 ------------+-----------+------------
  cha        | vara      | texta
   chb       |  varb     |  textb
    chc      |   varc    |   textc
-chd         |    vard   |    textd
- che        |     vare  |     texte
-  chf       |      varf |      textf
- chg        |     varg  |     textg
-chh         |    varh   |    texth
+    chd     |    vard   |    textd
+     che    |     vare  |     texte
+      chf   |      varf |      textf
+     chg    |     varg  |     textg
+    chh     |    varh   |    texth
    chi      |   vari    |   texti
   chj       |  varj     |  textj
 (10 rows)

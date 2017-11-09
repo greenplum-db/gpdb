@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_type.c,v 1.100 2008/10/04 21:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_type.c,v 1.97 2008/04/29 20:44:49 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -24,6 +24,7 @@
 #include "parser/parse_type.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
+#include "utils/datum.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
@@ -291,19 +292,15 @@ typenameTypeMod(ParseState *pstate, const TypeName *typename, Type typ)
 		{
 			A_Const    *ac = (A_Const *) tm;
 
-			/*
-			 * The grammar hands back some integers with ::int4 attached, so
-			 * allow a cast decoration if it's an Integer value, but not
-			 * otherwise.
-			 */
 			if (IsA(&ac->val, Integer))
 			{
 				cstr = (char *) palloc(32);
 				snprintf(cstr, 32, "%ld", (long) ac->val.val.ival);
 			}
-			else if (ac->typeName == NULL)		/* no casts allowed */
+			else if (IsA(&ac->val, Float) ||
+					 IsA(&ac->val, String))
 			{
-				/* otherwise we can just use the str field directly. */
+				/* we can just use the str field directly. */
 				cstr = ac->val.val.str;
 			}
 		}
@@ -493,13 +490,38 @@ typeTypeRelid(Type typ)
 Datum
 stringTypeDatum(Type tp, char *string, int32 atttypmod)
 {
-	Oid			typinput;
-	Oid			typioparam;
+	Form_pg_type typform = (Form_pg_type) GETSTRUCT(tp);
+	Oid			typinput = typform->typinput;
+	Oid			typioparam = getTypeIOParam(tp);
+	Datum		result;
 
-	typinput = ((Form_pg_type) GETSTRUCT(tp))->typinput;
-	typioparam = getTypeIOParam(tp);
-	return OidInputFunctionCall(typinput, string,
-								typioparam, atttypmod);
+	result = OidInputFunctionCall(typinput, string,
+								  typioparam, atttypmod);
+
+#ifdef RANDOMIZE_ALLOCATED_MEMORY
+	/*
+	 * For pass-by-reference data types, repeat the conversion to see if the
+	 * input function leaves any uninitialized bytes in the result.  We can
+	 * only detect that reliably if RANDOMIZE_ALLOCATED_MEMORY is enabled,
+	 * so we don't bother testing otherwise.  The reason we don't want any
+	 * instability in the input function is that comparison of Const nodes
+	 * relies on bytewise comparison of the datums, so if the input function
+	 * leaves garbage then subexpressions that should be identical may not get
+	 * recognized as such.  See pgsql-hackers discussion of 2008-04-04.
+	 */
+	if (string && !typform->typbyval)
+	{
+		Datum		result2;
+
+		result2 = OidInputFunctionCall(typinput, string,
+									   typioparam, atttypmod);
+		if (!datumIsEqual(result, result2, typform->typbyval, typform->typlen))
+			elog(WARNING, "type %s has unstable input conversion for \"%s\"",
+				 NameStr(typform->typname), string);
+	}
+#endif
+
+	return result;
 }
 
 /* given a typeid, return the type's typrelid (associated relation, if any) */

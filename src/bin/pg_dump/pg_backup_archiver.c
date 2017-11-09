@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.153 2008/03/20 17:36:57 tgl Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.c,v 1.157 2008/05/04 08:32:21 adunstan Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2195,7 +2195,7 @@ _tocEntryRequired(TocEntry *te, RestoreOptions *ropt, bool include_acls)
 static void
 _doSetFixedOutputState(ArchiveHandle *AH)
 {
-	/* Disable statement_timeout in archive for pg_restore/psql  */
+	/* Disable statement_timeout in archive for pg_restore/psql	 */
 	ahprintf(AH, "SET statement_timeout = 0;\n");
 
 	/* Select the correct character set encoding */

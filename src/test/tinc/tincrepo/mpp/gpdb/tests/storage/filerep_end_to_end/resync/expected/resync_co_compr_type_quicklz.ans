@@ -88,8 +88,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists sync1_int_quicklz_6 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function sync1_int_quicklz_6_out(sync1_int_quicklz_6)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function sync1_int_quicklz_6_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function sync1_int_quicklz_6_out(sync1_int_quicklz_6)
+drop cascades to function sync1_int_quicklz_6_in(cstring)
 DROP TYPE
  
 --ck_sync1
@@ -103,8 +104,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists ck_sync1_int_quicklz_5 cascade;
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ck_sync1_int_quicklz_5_out(ck_sync1_int_quicklz_5)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ck_sync1_int_quicklz_5_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function ck_sync1_int_quicklz_5_in(cstring)
+drop cascades to function ck_sync1_int_quicklz_5_out(ck_sync1_int_quicklz_5)
 DROP TYPE
  
  
@@ -119,8 +121,9 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists ct_int_quicklz_3 cascade; 
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ct_int_quicklz_3_out(ct_int_quicklz_3)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function ct_int_quicklz_3_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function ct_int_quicklz_3_in(cstring)
+drop cascades to function ct_int_quicklz_3_out(ct_int_quicklz_3)
 DROP TYPE
  
 --resync
@@ -134,6 +137,7 @@ ALTER TYPE
  --Drop type
  
 Drop type if exists resync_int_quicklz_1 cascade; 
-psql:/path/sql_file:1: NOTICE:  drop cascades to function resync_int_quicklz_1_out(resync_int_quicklz_1)
-psql:/path/sql_file:1: NOTICE:  drop cascades to function resync_int_quicklz_1_in(cstring)
+psql:/path/sql_file:1: NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function resync_int_quicklz_1_in(cstring)
+drop cascades to function resync_int_quicklz_1_out(resync_int_quicklz_1)
 DROP TYPE

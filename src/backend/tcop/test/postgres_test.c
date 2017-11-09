@@ -15,7 +15,6 @@
 int errfinish_impl(int dummy __attribute__((unused)),...)
 {
 	PG_RE_THROW();
-	return 0;
 }
 
 #include "../postgres.c"

@@ -271,6 +271,7 @@ clean :
 	@rm -rf *.pyc lib/*.pyc
 	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
 	@rm -f gpconfig_modules/gucs_disallowed_in_file.txt
+	@rm -f gppylib/data/$(GP_MAJORVERSION).json
 
 .PHONY: disclean
 distclean: clean

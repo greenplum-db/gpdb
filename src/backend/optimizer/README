@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/optimizer/README,v 1.46 2008/04/09 01:00:46 momjian Exp $
+$PostgreSQL: pgsql/src/backend/optimizer/README,v 1.47 2008/08/02 21:31:59 tgl Exp $
 
 Optimizer
 =========

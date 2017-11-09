@@ -113,5 +113,6 @@ where t1.c1 = t2.c1 and t1.c3 = t2.c3 limit 50000;');
 (3 rows)
 
 drop schema sisc_mat_sort cascade;
-NOTICE:  drop cascades to table testsiscm
-NOTICE:  drop cascades to function is_workfile_created(text)
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function is_workfile_created(text)
+drop cascades to table testsiscm

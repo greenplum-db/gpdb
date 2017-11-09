@@ -24,6 +24,7 @@
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
+#include "storage/lmgr.h"
 #include "utils/builtins.h"
 #include "catalog/gp_fastsequence.h"
 
@@ -116,6 +117,7 @@ CreateAOAuxiliaryTable(
 											     InvalidOid,
 											     rel->rd_rel->relowner,
 											     tupledesc,
+												 NIL,
 											     /* relam */ InvalidOid,
 											     relkind,
 											     RELSTORAGE_HEAP,

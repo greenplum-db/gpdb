@@ -227,4 +227,7 @@ typedef struct PrimaryMirrorTransitionPacket
  * end connection after detecting process is exitting */
 #define PQ_BUSY_TEST_COUNT_IN_EXITING 5
 
+#define GPCONN_TYPE "gpconntype"
+#define GPCONN_TYPE_FTS "fts"
+
 #endif   /* PQCOMM_H */

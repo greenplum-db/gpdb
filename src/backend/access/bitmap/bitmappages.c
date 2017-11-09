@@ -211,16 +211,16 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 	for (i = 0; i < bmstate->bm_tupDesc->natts; i++)
 	{
 		Oid			typid = bmstate->bm_tupDesc->attrs[i]->atttypid;
-		Operator	optup;
 		Oid			eq_opr;
 		Oid			eq_function;
 		Oid			left_hash_function;
 		Oid			right_hash_function;
 
-		optup = equality_oper(typid, false);
-		eq_opr = oprid(optup);
-		eq_function = oprfuncid(optup);
-		ReleaseSysCache(optup);
+		get_sort_group_operators(typid,
+								 false, true, false,
+								 NULL, &eq_opr, NULL);
+
+		eq_function = get_opcode(eq_opr);
 
 		if (!get_op_hash_functions(eq_opr,
 								   &left_hash_function,
@@ -283,11 +283,16 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 
 		for (attno = 0; attno < bmstate->bm_tupDesc->natts; attno++)
 		{
-			RegProcedure	opfuncid;
-			Oid				atttypid;
+			Oid			eq_opr;
+			RegProcedure opfuncid;
+			Oid			atttypid;
 
 			atttypid = bmstate->bm_tupDesc->attrs[attno]->atttypid;
-			opfuncid = equality_oper_funcid(atttypid);
+
+			get_sort_group_operators(atttypid,
+									 false, true, false,
+									 NULL, &eq_opr, NULL);
+			opfuncid = get_opcode(eq_opr);
 
 			ScanKeyEntryInitialize(&(bmstate->bm_lov_scanKeys[attno]), SK_ISNULL, 
 							   attno + 1, BTEqualStrategyNumber, InvalidOid, 
@@ -295,7 +300,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 		}
 
 		bmstate->bm_lov_scanDesc = index_beginscan(bmstate->bm_lov_heap,
-							 bmstate->bm_lov_index, ActiveSnapshot, 
+							 bmstate->bm_lov_index, GetActiveSnapshot(), 
 							 bmstate->bm_tupDesc->natts,
 							 bmstate->bm_lov_scanKeys);
 	}
@@ -306,7 +311,7 @@ _bitmap_init_buildstate(Relation index, BMBuildState *bmstate)
 	 * writes page to the shared buffer, we can't disable WAL archiving.
 	 * We will add this shortly.
 	 */	
-	bmstate->use_wal = !XLog_UnconvertedCanBypassWal() && !index->rd_istemp;
+	bmstate->use_wal = !index->rd_istemp;
 }
 
 /*

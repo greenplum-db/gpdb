@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/test/regress/pg_regress.c,v 1.44 2008/03/31 01:31:43 tgl Exp $
+ * $PostgreSQL: pgsql/src/test/regress/pg_regress.c,v 1.47 2008/08/05 05:16:08 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1998,7 +1998,7 @@ run_schedule(const char *schedule, test_function tfunc)
 				bool		newdiff;
 
 				if (tl)
-					tl = tl->next;		/* tl has the same lengt has rl and el
+					tl = tl->next;		/* tl has the same length as rl and el
 										 * if it exists */
 
 				newdiff = results_differ(tests[i], rl->str, el->str);
@@ -2090,7 +2090,7 @@ run_single_test(const char *test, test_function tfunc)
 		bool		newdiff;
 
 		if (tl)
-			tl = tl->next;		/* tl has the same lengt has rl and el if it
+			tl = tl->next;		/* tl has the same length as rl and el if it
 								 * exists */
 
 		newdiff = results_differ(test, rl->str, el->str);
@@ -2673,13 +2673,13 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			pg_conf = fopen(buf, "a");
 			if (pg_conf == NULL)
 			{
-				fprintf(stderr, _("\n%s: could not open %s for adding extra config:\nError was %s\n"), progname, buf, strerror(errno));
+				fprintf(stderr, _("\n%s: could not open \"%s\" for adding extra config: %s\n"), progname, buf, strerror(errno));
 				exit_nicely(2);
 			}
 			extra_conf = fopen(temp_config, "r");
 			if (extra_conf == NULL)
 			{
-				fprintf(stderr, _("\n%s: could not open %s to read extra config:\nError was %s\n"), progname, temp_config, strerror(errno));
+				fprintf(stderr, _("\n%s: could not open \"%s\" to read extra config: %s\n"), progname, temp_config, strerror(errno));
 				exit_nicely(2);
 			}
 			while (fgets(line_buf, sizeof(line_buf), extra_conf) != NULL)

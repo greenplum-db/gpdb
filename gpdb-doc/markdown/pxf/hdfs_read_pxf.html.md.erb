@@ -29,11 +29,9 @@ This section describes how to use PXF to access HDFS data, including how to crea
 
 Before working with HDFS file data using PXF, ensure that:
 
--  You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html) for instructions.
+- You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
 - You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Managing PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
 - You have granted the `gpadmin` user read permission on the relevant portions of your HDFS file system.
-
-If you plan to access Avro format files, make sure that you have downloaded the required JAR file as described in [Installing and Configuring the Hadoop Client for PXF](hdfsclient_instcfg.html). You must restart PXF if you download and install this file while PXF is running.
 
 ## <a id="hdfs_fileformats"></a>HDFS File Formats
 
@@ -104,7 +102,7 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 
 | Keyword  | Value |
 |-------|-------------------------------------|
-| \<path-to-hdfs-file\>    | The the full file system path to the file in the HDFS data store. |
+| \<path-to-hdfs-file\>    | The absolute path to the file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, or `Avro`. |
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
 | FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references a plain text delimited file.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value file.  |

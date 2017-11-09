@@ -25,9 +25,4 @@ extern void ExecSortRestrPos(SortState *node);
 extern void ExecReScanSort(SortState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeSort(SortState *node);
 
-static inline gpmon_packet_t * GpmonPktFromSortState(SortState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODESORT_H */

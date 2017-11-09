@@ -29,6 +29,8 @@
             <xref href="gpaddmirrors.xml#topic1" type="topic" format="dita"/>
           </p>
           <p>
+            <xref href="gpbackup.xml" type="topic" format="dita"/></p>
+          <p>
             <xref href="gpcheck.xml#topic1" type="topic" format="dita"/></p>
           <p>
             <xref href="gpcheckcat.xml#topic1"/>
@@ -98,6 +100,8 @@
           <p>
             <xref href="gpreload.xml#topic1"/>
           </p>
+          <p>
+            <xref href="gprestore.xml" type="topic" format="dita"/></p>
           <p> gp_restore (deprecated)</p>
           <p>gpsizecalc (deprecated)</p>
           <p>

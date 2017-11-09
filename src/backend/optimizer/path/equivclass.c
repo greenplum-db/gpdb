@@ -379,7 +379,7 @@ add_eq_member(EquivalenceClass *ec, Expr *expr, Relids relids,
  *	  class it is a member of; if none, build a new single-member
  *	  EquivalenceClass for it.
  *
- * sortref is the SortGroupRef of the originating SortClause, if any,
+ * sortref is the SortGroupRef of the originating SortGroupClause, if any,
  * or zero if not.
  *
  * This can be used safely both before and after EquivalenceClass merging;

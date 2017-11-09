@@ -207,17 +207,6 @@ fetchNextBitmapPage(BitmapTableScanState *scanState)
 }
 
 /*
- * Initializes perfmon details for BitmapTableScan node.
- */
-void
-initGpmonPktForBitmapTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapTableScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
-}
-
-/*
  * Checks eligibility of a tuple.
  *
  * Note, a tuple may fail to meet visibility requirement. Moreover,

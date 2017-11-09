@@ -62,7 +62,7 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
                 8. Validate using gpcheckcat and gpcheckmirrorseg
 
         '''
-        test_dir = {"dtm_broadcast_prepare":"switch_ckpt_a,switch_ckpt_b", "dtm_broadcast_commit_prepared":"switch_ckpt_a,switch_ckpt_b", "dtm_xlog_distributed_commit":"switch_ckpt_c"}
+        test_dir = {"dtm_broadcast_prepare":"switch_ckpt_a,switch_ckpt_b", "dtm_broadcast_commit_prepared":"switch_ckpt_a,switch_ckpt_b"}
 
         test_case_list0 = []
         test_case_list0.append('mpp.gpdb.tests.storage.lib.dbstate.DbStateClass.check_system')
@@ -78,8 +78,6 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
             test_case_list1.append('mpp.gpdb.tests.storage.pg_twophase.checkpoint.test_checkpoint.TestCheckpointClass')
             test_case_list1.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_b.pre_sql.test_presqls.TestPreSQLClass')
          
-        if fault_type == 'dtm_xlog_distributed_commit':
-            test_case_list1.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_c.pre_sql.test_presqls.TestPreSQLClass')
         self.test_case_scenario.append(test_case_list1)
 
         test_case_list2 = []
@@ -100,9 +98,6 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
             test_case_list4.append('mpp.gpdb.tests.storage.pg_twophase.checkpoint.test_checkpoint.TestCheckpointClass')
             test_case_list4.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_b.trigger_sql.test_triggersqls.TestTriggerSQLClass')
          
-        if fault_type == 'dtm_xlog_distributed_commit':
-            test_case_list4.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_c.trigger_sql.test_triggersqls.TestTriggerSQLClass')
-
         test_case_list4.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_ckpt_crash_and_recover', [crash_type, fault_type, test_dir[fault_type], cluster_state]))
         self.test_case_scenario.append(test_case_list4)
 
@@ -121,16 +116,12 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.checkpoint.test_checkpoint.TestCheckpointClass')
             test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_b.post_sql.test_postsqls.TestPostSQLClass')
          
-        if fault_type == 'dtm_xlog_distributed_commit':
-            test_case_list6.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_c.post_sql.test_postsqls.TestPostSQLClass')
-
         self.test_case_scenario.append(test_case_list6)
 
         test_case_list7 = []
         if fault_type in ('dtm_broadcast_commit_prepared', 'dtm_broadcast_prepare'):
             test_case_list7.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_b.cleanup_sql.test_cleanup.TestCleanupClass')
-        if fault_type == 'dtm_xlog_distributed_commit':
-            test_case_list7.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_c.cleanup_sql.test_cleanup.TestCleanupClass')
+
         self.test_case_scenario.append(test_case_list7)
 
         test_case_list8 = []
@@ -140,58 +131,3 @@ class SwitchCheckpointTestCase(ScenarioTestCase):
         test_case_list9 = []
         test_case_list9.append('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.cleanup_dangling_processes')
         self.test_case_scenario.append(test_case_list9)
-        
-        
-
-    def switch_checkpoint_serial(self, cluster_state, fault_type, crash_type='gpstop_i'):
-        '''
-        @description: Tests with more switch_xlogs before trigger sqls
-        '''
-        
-        test_case_list0 = []
-        test_case_list0.append('mpp.gpdb.tests.storage.lib.dbstate.DbStateClass.check_system')
-        self.test_case_scenario.append(test_case_list0)
-
-        test_case_list1 = []
-        test_case_list1.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_serial.pre_sql.test_presqls.TestPreSQLClass')
-        self.test_case_scenario.append(test_case_list1)
-    
-        test_case_list2 = []
-        test_case_list2.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_ckpt_faults_before_trigger', [cluster_state, fault_type]))
-        self.test_case_scenario.append(test_case_list2)
-        
-        test_case_list3 = []
-        test_case_list3.append('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_ckpt_switch_xlog')
-        self.test_case_scenario.append(test_case_list3)
-        
-        test_dir = 'switch_ckpt_serial'
-        test_case_list4 = []
-        test_case_list4.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_serial.trigger_sql.test_triggersqls.TestTriggerSQLClass')
-        test_case_list4.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_ckpt_crash_and_recover', [crash_type, fault_type, test_dir, cluster_state]))
-        self.test_case_scenario.append(test_case_list4)
-                
-        test_case_list5 = []
-        test_case_list5.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.switch_checkpoint_loop', [fault_type]))
-        self.test_case_scenario.append(test_case_list5)
-        
-        test_case_list6 = []
-        test_case_list6.append(('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.run_gprecover', [crash_type, cluster_state]))
-        self.test_case_scenario.append(test_case_list6)
-
-        if fault_type not in ('dtm_broadcast_prepare'):
-            test_case_list7 = []
-            test_case_list7.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_serial.post_sql.test_postsqls.TestPostSQLClass')
-            self.test_case_scenario.append(test_case_list7)
-                
-        test_case_list8 = []
-        test_case_list8.append('mpp.gpdb.tests.storage.pg_twophase.switch_ckpt_serial.cleanup_sql.test_cleanup.TestCleanupClass')
-        self.test_case_scenario.append(test_case_list8)
-                
-        test_case_list9 = []
-        test_case_list9.append('mpp.gpdb.tests.storage.lib.dbstate.DbStateClass.run_validation')
-        self.test_case_scenario.append(test_case_list9)
-
-        test_case_list10 = []
-        test_case_list10.append('mpp.gpdb.tests.storage.pg_twophase.PgtwoPhaseClass.cleanup_dangling_processes')
-        self.test_case_scenario.append(test_case_list10)
-        

@@ -1,4 +1,4 @@
-/* $PostgreSQL: pgsql/contrib/seg/uninstall_seg.sql,v 1.5 2007/11/13 04:24:28 momjian Exp $ */
+/* $PostgreSQL: pgsql/contrib/seg/uninstall_seg.sql,v 1.8 2008/04/18 20:51:17 tgl Exp $ */
 
 -- Adjust this setting to control where the objects get dropped.
 SET search_path = public;
@@ -19,7 +19,7 @@ DROP FUNCTION gseg_decompress(internal);
 
 DROP FUNCTION gseg_compress(internal);
 
-DROP FUNCTION gseg_consistent(internal,seg,int4);
+DROP FUNCTION gseg_consistent(internal,seg,int,oid,internal);
 
 DROP OPERATOR <@ (seg, seg);
 
@@ -50,6 +50,8 @@ DROP OPERATOR > (seg, seg);
 DROP OPERATOR <= (seg, seg);
 
 DROP OPERATOR < (seg, seg);
+
+DROP FUNCTION seg_center(seg);
 
 DROP FUNCTION seg_lower(seg);
 

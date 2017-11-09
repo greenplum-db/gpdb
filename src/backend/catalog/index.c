@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.303 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.301 2008/08/10 19:02:33 tgl Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -27,6 +27,8 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/relscan.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/xact.h"
 #include "bootstrap/bootstrap.h"
@@ -51,6 +53,9 @@
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/var.h"
+#include "parser/parse_expr.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/procarray.h"
 #include "storage/smgr.h"
 #include "utils/builtins.h"
@@ -846,7 +851,9 @@ index_create(Oid heapRelationId,
 										   InvalidOid,	/* no associated index */
 										   NULL,		/* no check constraint */
 										   NULL,
-										   NULL);
+										   NULL,
+										   true, /* islocal */
+										   0); /* inhcount */
 
 			referenced.classId = ConstraintRelationId;
 			referenced.objectId = conOid;
@@ -1756,6 +1763,7 @@ IndexBuildScan(Relation parentRelation,
 	EState	   *estate;
 	ExprContext *econtext;
 	Snapshot	snapshot;
+	bool		registered_snapshot = false;
 	TransactionId OldestXmin;
 
 	/*
@@ -1793,7 +1801,8 @@ IndexBuildScan(Relation parentRelation,
 			 RelationIsAoRows(parentRelation) ||
 			 RelationIsAoCols(parentRelation))
 	{
-		snapshot = CopySnapshot(GetTransactionSnapshot());
+		snapshot = RegisterSnapshot(GetTransactionSnapshot());
+		registered_snapshot = true;
 		OldestXmin = InvalidTransactionId;		/* not used */
 	}
 	else
@@ -1836,7 +1845,12 @@ IndexBuildScan(Relation parentRelation,
 			 parentRelation->rd_rel->relstorage);
 	}
 
+	/* we can now forget our snapshot, if set */
+	if (registered_snapshot)
+		UnregisterSnapshot(snapshot);
+
 	ExecDropSingleTupleTableSlot(slot);
+
 	FreeExecutorState(estate);
 
 	/* These may have been pointing to the now-gone estate */

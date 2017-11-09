@@ -7,11 +7,9 @@
       <p>The <codeph>segment_*</codeph> tables contain memory allocation statistics for the
          Greenplum Database segment instances. This tracks the amount of memory consumed by all
          postgres processes of a particular segment instance, and the remaining amount of memory
-         available to a segment as per the setting of the <codeph>postgresql.conf</codeph>
-         configuration parameter: <codeph>gp_vmem_protect_limit</codeph>. Query processes that cause
-         a segment to exceed this limit will be cancelled in order to prevent system-level
-         out-of-memory errors. See the <i>Greenplum Database Reference Guide</i> for more
-         information about this parameter.</p>
+         available to a segment as per the settings configured by the currently active resource management scheme (resource group-based or resource queue-based).
+         See the <cite>Greenplum Database Administrator Guide</cite> for more
+         information about resource management schemes.</p>
       <p>There are three segment tables, all having the same columns:</p>
       <ul>
          <li>
@@ -83,8 +81,8 @@
                   </entry>
                   <entry>bigint</entry>
                   <entry>The amount of additional dynamic memory (in bytes) that the segment can
-                     request before reaching the limit set by the
-                        <codeph>gp_vmem_protect_limit</codeph> parameter.</entry>
+                     request before reaching the limit set by the currently active
+                     resource management scheme (resource group-based or resource queue-based). </entry>
                </row>
             </tbody>
          </tgroup>

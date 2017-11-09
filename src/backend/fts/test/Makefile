@@ -3,7 +3,7 @@ top_builddir=../../../..
 include $(top_builddir)/src/Makefile.global
 
 ifeq ($(enable_segwalrep), yes)
-TARGETS=ftsprobehandler
+TARGETS=ftsprobehandler ftsprobe
 
 include $(top_builddir)/src/backend/mock.mk
 
@@ -14,5 +14,13 @@ ftsprobehandler.t: \
     $(MOCK_DIR)/backend/replication/gp_replication_mock.o \
     $(MOCK_DIR)/backend/lib/stringinfo_mock.o \
     $(MOCK_DIR)/backend/libpq/pqformat_mock.o \
-    $(MOCK_DIR)/backend/libpq/pqcomm_mock.o
+    $(MOCK_DIR)/backend/libpq/pqcomm_mock.o \
+    $(MOCK_DIR)/backend/tcop/dest_mock.o
+
+ftsprobe.t: \
+    $(MOCK_DIR)/backend/utils/error/elog_mock.o \
+    $(MOCK_DIR)/backend/libpq/fe-exec_mock.o \
+    $(MOCK_DIR)/backend/libpq/fe-connect_mock.o \
+    $(MOCK_DIR)/backend/cdb/cdbthreadlog_mock.o
+
 endif

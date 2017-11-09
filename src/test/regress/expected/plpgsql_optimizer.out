@@ -3598,6 +3598,405 @@ end;
 $$ language plpgsql;
 ERROR:  cursor FOR loop must use a bound cursor variable
 CONTEXT:  compile of PL/pgSQL function "forc_bad" near line 4
+-- test RETURN QUERY EXECUTE
+create or replace function return_dquery()
+returns setof int as $$
+begin
+  return query execute 'select * from (values(10),(20)) f';
+  return query execute 'select * from (values($1),($2)) f' using 40,50;
+end;
+$$ language plpgsql;
+select * from return_dquery();
+ return_dquery 
+---------------
+            10
+            20
+            40
+            50
+(4 rows)
+
+drop function return_dquery();
+-- Tests for 8.4's new RAISE features
+create or replace function raise_test() returns void as $$
+begin
+  raise notice '% % %', 1, 2, 3
+     using errcode = '55001', detail = 'some detail info', hint = 'some hint';
+  raise '% % %', 1, 2, 3
+     using errcode = 'division_by_zero', detail = 'some detail info';
+end;
+$$ language plpgsql;
+select raise_test();
+NOTICE:  1 2 3
+DETAIL:  some detail info
+HINT:  some hint
+ERROR:  1 2 3
+DETAIL:  some detail info
+-- Since we can't actually see the thrown SQLSTATE in default psql output,
+-- test it like this; this also tests re-RAISE
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = 'division_by_zero', detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+select raise_test();
+NOTICE:  SQLSTATE: 22012 SQLERRM: check me
+ERROR:  check me
+DETAIL:  some detail info
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = '1234F', detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+select raise_test();
+NOTICE:  SQLSTATE: 1234F SQLERRM: check me
+ERROR:  check me
+DETAIL:  some detail info
+-- SQLSTATE specification in WHEN
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = '1234F', detail = 'some detail info';
+  exception
+    when sqlstate '1234F' then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+select raise_test();
+NOTICE:  SQLSTATE: 1234F SQLERRM: check me
+ERROR:  check me
+DETAIL:  some detail info
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+select raise_test();
+NOTICE:  SQLSTATE: 22012 SQLERRM: division_by_zero
+ERROR:  division_by_zero
+DETAIL:  some detail info
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero;
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  division_by_zero
+create or replace function raise_test() returns void as $$
+begin
+  raise sqlstate '1234F';
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  1234F
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using message = 'custom' || ' message';
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  custom message
+create or replace function raise_test() returns void as $$
+begin
+  raise using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  custom message
+-- conflict on message
+create or replace function raise_test() returns void as $$
+begin
+  raise notice 'some message' using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  RAISE option already specified: MESSAGE
+CONTEXT:  PL/pgSQL function "raise_test" line 2 at RAISE
+-- conflict on errcode
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  RAISE option already specified: ERRCODE
+CONTEXT:  PL/pgSQL function "raise_test" line 2 at RAISE
+-- nothing to re-RAISE
+create or replace function raise_test() returns void as $$
+begin
+  raise;
+end;
+$$ language plpgsql;
+select raise_test();
+ERROR:  RAISE without parameters cannot be used outside an exception handler
+CONTEXT:  PL/pgSQL function "raise_test"
+drop function raise_test();
+-- test CASE statement
+create or replace function case_test(bigint) returns text as $$
+declare a int = 10;
+        b int = 1;
+begin
+  case $1
+    when 1 then
+      return 'one';
+    when 2 then
+      return 'two';
+    when 3,4,3+5 then
+      return 'three, four or eight';
+    when a then
+      return 'ten';
+    when a+b, a+b+1 then
+      return 'eleven, twelve';
+  end case;
+end;
+$$ language plpgsql immutable;
+select case_test(1);
+ case_test 
+-----------
+ one
+(1 row)
+
+select case_test(2);
+ case_test 
+-----------
+ two
+(1 row)
+
+select case_test(3);
+      case_test       
+----------------------
+ three, four or eight
+(1 row)
+
+select case_test(4);
+      case_test       
+----------------------
+ three, four or eight
+(1 row)
+
+select case_test(5); -- fails
+ERROR:  case not found
+HINT:  CASE statement is missing ELSE part.
+CONTEXT:  PL/pgSQL function "case_test" line 4 at CASE
+select case_test(8);
+      case_test       
+----------------------
+ three, four or eight
+(1 row)
+
+select case_test(10);
+ case_test 
+-----------
+ ten
+(1 row)
+
+select case_test(11);
+   case_test    
+----------------
+ eleven, twelve
+(1 row)
+
+select case_test(12);
+   case_test    
+----------------
+ eleven, twelve
+(1 row)
+
+select case_test(13); -- fails
+ERROR:  case not found
+HINT:  CASE statement is missing ELSE part.
+CONTEXT:  PL/pgSQL function "case_test" line 4 at CASE
+create or replace function catch() returns void as $$
+begin
+  raise notice '%', case_test(6);
+exception
+  when case_not_found then
+    raise notice 'caught case_not_found % %', SQLSTATE, SQLERRM;
+end
+$$ language plpgsql;
+select catch();
+NOTICE:  caught case_not_found 20000 case not found
+ catch 
+-------
+ 
+(1 row)
+
+-- test the searched variant too, as well as ELSE
+create or replace function case_test(bigint) returns text as $$
+declare a int = 10;
+begin
+  case
+    when $1 = 1 then
+      return 'one';
+    when $1 = a + 2 then
+      return 'twelve';
+    else
+      return 'other';
+  end case;
+end;
+$$ language plpgsql immutable;
+select case_test(1);
+ case_test 
+-----------
+ one
+(1 row)
+
+select case_test(2);
+ case_test 
+-----------
+ other
+(1 row)
+
+select case_test(12);
+ case_test 
+-----------
+ twelve
+(1 row)
+
+select case_test(13);
+ case_test 
+-----------
+ other
+(1 row)
+
+drop function catch();
+drop function case_test(bigint);
+-- test variadic functions
+create or replace function vari(variadic int[])
+returns void as $$
+begin
+  for i in array_lower($1,1)..array_upper($1,1) loop
+    raise notice '%', $1[i];
+  end loop; end;
+$$ language plpgsql;
+select vari(1,2,3,4,5);
+NOTICE:  1
+NOTICE:  2
+NOTICE:  3
+NOTICE:  4
+NOTICE:  5
+ vari 
+------
+ 
+(1 row)
+
+select vari(3,4,5);
+NOTICE:  3
+NOTICE:  4
+NOTICE:  5
+ vari 
+------
+ 
+(1 row)
+
+select vari(variadic array[5,6,7]);
+NOTICE:  5
+NOTICE:  6
+NOTICE:  7
+ vari 
+------
+ 
+(1 row)
+
+drop function vari(int[]);
+-- coercion test
+create or replace function pleast(variadic numeric[])
+returns numeric as $$
+declare aux numeric = $1[array_lower($1,1)];
+begin
+  for i in array_lower($1,1)+1..array_upper($1,1) loop
+    if $1[i] < aux then aux := $1[i]; end if;
+  end loop;
+  return aux;
+end;
+$$ language plpgsql immutable strict;
+select pleast(10,1,2,3,-16);
+ pleast 
+--------
+    -16
+(1 row)
+
+select pleast(10.2,2.2,-1.1);
+ pleast 
+--------
+   -1.1
+(1 row)
+
+select pleast(10.2,10, -20);
+ pleast 
+--------
+    -20
+(1 row)
+
+select pleast(10,20, -1.0);
+ pleast 
+--------
+   -1.0
+(1 row)
+
+-- in case of conflict, non-variadic version is preferred
+create or replace function pleast(numeric)
+returns numeric as $$
+begin
+  raise notice 'non-variadic function called';
+  return $1;
+end;
+$$ language plpgsql immutable strict;
+select pleast(10);
+NOTICE:  non-variadic function called
+ pleast 
+--------
+     10
+(1 row)
+
+drop function pleast(numeric[]);
+drop function pleast(numeric);
+-- test table functions
+create function tftest(int) returns table(a int, b int) as $$
+begin
+  return query select $1, $1+i from generate_series(1,5) g(i);
+end;
+$$ language plpgsql immutable strict;
+select * from tftest(10);
+ a  | b  
+----+----
+ 10 | 11
+ 10 | 12
+ 10 | 13
+ 10 | 14
+ 10 | 15
+(5 rows)
+
+create or replace function tftest(a1 int) returns table(a int, b int) as $$
+begin
+  a := a1; b := a1 + 1;
+  return next;
+  a := a1 * 10; b := a1 * 10 + 1;
+  return next;
+end;
+$$ language plpgsql immutable strict;
+select * from tftest(10);
+  a  |  b  
+-----+-----
+  10 |  11
+ 100 | 101
+(2 rows)
+
+drop function tftest(int);
 -- Test for appropriate cleanup of non-simple expression evaluations
 -- (bug in all versions prior to August 2010)
 CREATE FUNCTION nonsimple_expr_test() RETURNS text[] AS $$

@@ -80,3 +80,10 @@ concat(int num_args,...)
 
 	return str.data;
 }
+
+/* Get authority (host:port) for the PXF server URL */
+char *
+get_authority(void)
+{
+	return psprintf("%s:%d", PxfDefaultHost, PxfDefaultPort);
+}

@@ -7,17 +7,17 @@ CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth (
  FORMAT 'CUSTOM' (formatter='fixedwidth_in', 
      s1='10',s2='10', s3='10', col_empty='5', col_null='5');
 -- query ext table can return correct results
-select * from tbl_ext_fixedwidth order by s1;
+select * from tbl_ext_fixedwidth;
           s1          |    s2     |     s3     | col_empty | col_null 
 ----------------------+-----------+------------+-----------+----------
  cha              | vara      | texta      |           | null
   chb             |  varb     |  textb     |           | NULL
    chc            |   varc    |   textc    |           | Null
-chd               |    vard   |    textd   |           | NULLL
- che              |     vare  |     texte  |           | 
-  chf             |      varf |      textf |           | null
- chg              |     varg  |     textg  |           | NULLa
-chh               |    varh   |    texth   |           | NULL_
+    chd           |    vard   |    textd   |           | NULLL
+     che          |     vare  |     texte  |           | 
+      chf         |      varf |      textf |           | null
+     chg          |     varg  |     textg  |           | NULLa
+    chh           |    varh   |    texth   |           | NULL_
    chi            |   vari    |   texti    |           | null
   chj             |  varj     |  textj     |           | aNULL
 (10 rows)

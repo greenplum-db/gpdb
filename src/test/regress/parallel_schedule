@@ -103,6 +103,10 @@ test: misc
 # ----------
 test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts json
 
+# GPDB_84_MERGE_FIXME: While disabling this was not really an effect of the 8.4
+# merge, it was done a long time ago, it's time to revisit this so we can re-
+# enable it
+#
 # 'rules' test is disabled in GPDB. Maintaining the list of views in it is
 # too painful, and there are also errors because of cross-segment UPDATEs
 # and functions.

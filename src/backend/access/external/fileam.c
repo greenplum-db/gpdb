@@ -584,6 +584,7 @@ external_insert_init(Relation rel)
  * - transaction information is of no interest.
  * - tuples are sent always to the destination (local file or remote target).
  *
+ * Like heap_insert(), this function can modify the input tuple!
  */
 Oid
 external_insert(ExternalInsertDesc extInsertDesc, HeapTuple instup)

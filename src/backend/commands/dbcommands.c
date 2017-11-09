@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.205 2008/03/26 21:10:37 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.210 2008/08/04 18:03:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -28,11 +28,12 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
-#include "catalog/heap.h"
-#include "access/xact.h"
 #include "access/transam.h"				/* InvalidTransactionId */
+#include "access/xact.h"
+#include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
+#include "catalog/heap.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_authid.h"
@@ -47,6 +48,8 @@
 #include "miscadmin.h"
 #include "pgstat.h"
 #include "postmaster/bgwriter.h"
+#include "storage/bufmgr.h"
+#include "storage/lmgr.h"
 #include "storage/freespace.h"
 #include "storage/ipc.h"
 #include "storage/procarray.h"
@@ -94,6 +97,7 @@ static bool get_db_info(const char *name, LOCKMODE lockmode,
 			Oid *dbTablespace);
 static bool have_createdb_privilege(void);
 static bool check_db_file_conflict(Oid db_id);
+static int	errdetail_busy_db(int notherbackends, int npreparedxacts);
 
 /*
  * Create target database directories (under transaction).
@@ -624,13 +628,17 @@ createdb(CreatedbStmt *stmt)
 	int			encoding = -1;
 	int			dbconnlimit = -1;
 	int			ctype_encoding;
+	int			notherbackends;
+	int			npreparedxacts;
 	createdb_failure_params fparms;
 	bool		shouldDispatch = (Gp_role == GP_ROLE_DISPATCH);
 	Snapshot	snapshot;
 
 	if (shouldDispatch)
+	{
 		if (Persistent_BeforePersistenceWork())
 			elog(NOTICE, " Create database dispatch before persistence work!");
+	}
 
 	/* Extract options from the statement node tree */
 	foreach(option, stmt->options)
@@ -911,11 +919,12 @@ createdb(CreatedbStmt *stmt)
 	 * potential waiting; we may as well throw an error first if we're gonna
 	 * throw one.
 	 */
-	if (CheckOtherDBBackends(src_dboid))
+	if (CountOtherDBBackends(src_dboid, &notherbackends, &npreparedxacts))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_IN_USE),
 			errmsg("source database \"%s\" is being accessed by other users",
-				   dbtemplate)));
+				   dbtemplate),
+				 errdetail_busy_db(notherbackends, npreparedxacts)));
 
 	/*
 	 * Select an OID for the new database, checking that it doesn't have a
@@ -1043,7 +1052,7 @@ createdb(CreatedbStmt *stmt)
 	 * trouble here than anywhere else.  XXX this code should be changed
 	 * whenever a generic fix is implemented.
 	 */
-	snapshot = CopySnapshot(GetLatestSnapshot());
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
 
 	/*
 	 * Once we start copying subdirectories, we need to be able to clean 'em
@@ -1170,7 +1179,7 @@ createdb(CreatedbStmt *stmt)
 				PersistentFileSysRelStorageMgr localRelStorageMgr;
 				PersistentFileSysRelBufpoolKind relBufpoolKind;
 				
-				useWal = !XLog_CanBypassWal();
+				useWal = XLogIsNeeded();
 				
 				GpPersistentRelationNode_GetRelationInfo(
 													dbInfoRel->relkind,
@@ -1314,7 +1323,11 @@ createdb(CreatedbStmt *stmt)
 	}
 	PG_END_ENSURE_ERROR_CLEANUP(createdb_failure_callback,
 								PointerGetDatum(&fparms));
+
+	/* Free our snapshot */
+	UnregisterSnapshot(snapshot);
 }
+
 
 /* Error cleanup callback for createdb */
 static void
@@ -1333,7 +1346,6 @@ createdb_failure_callback(int code, Datum arg)
 	/* Throw away any successfully copied subdirectories */
 	remove_dbtablespaces(fparms->dest_dboid);
 #endif
-
 }
 
 /*
@@ -1347,6 +1359,8 @@ dropdb(const char *dbname, bool missing_ok)
 	Oid			defaultTablespace = InvalidOid;
 	Relation	pgdbrel;
 	HeapTuple	tup;
+	int			notherbackends;
+	int			npreparedxacts;
 
 	/*
 	 * Look up the target database's OID, and get exclusive lock on it. We
@@ -1421,11 +1435,12 @@ dropdb(const char *dbname, bool missing_ok)
 	 *
 	 * As in CREATE DATABASE, check this after other error conditions.
 	 */
-	if (CheckOtherDBBackends(db_id))
+	if (CountOtherDBBackends(db_id, &notherbackends, &npreparedxacts))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_IN_USE),
 				 errmsg("database \"%s\" is being accessed by other users",
-						dbname)));
+						dbname),
+				 errdetail_busy_db(notherbackends, npreparedxacts)));
 
 	/*
 	 * Free the database on the segDBs
@@ -1666,6 +1681,8 @@ RenameDatabase(const char *oldname, const char *newname)
 	Oid			db_id = InvalidOid;
 	HeapTuple	newtup;
 	Relation	rel;
+	int			notherbackends;
+	int			npreparedxacts;
 
 	/*
 	 * Look up the target database's OID, and get exclusive lock on it. We
@@ -1716,11 +1733,12 @@ RenameDatabase(const char *oldname, const char *newname)
 	 *
 	 * As in CREATE DATABASE, check this after other error conditions.
 	 */
-	if (CheckOtherDBBackends(db_id))
+	if (CountOtherDBBackends(db_id, &notherbackends, &npreparedxacts))
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_IN_USE),
 				 errmsg("database \"%s\" is being accessed by other users",
-						oldname)));
+						oldname),
+				 errdetail_busy_db(notherbackends, npreparedxacts)));
 
 	/* rename */
 	newtup = SearchSysCacheCopy(DATABASEOID,
@@ -2445,7 +2463,7 @@ check_db_file_conflict(Oid db_id)
 	 *
 	 * XXX change this when a generic fix for SnapshotNow races is implemented
 	 */
-	snapshot = CopySnapshot(GetLatestSnapshot());
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
 
 	rel = heap_open(TableSpaceRelationId, AccessShareLock);
 	scan = heap_beginscan(rel, snapshot, 0, NULL);
@@ -2474,7 +2492,32 @@ check_db_file_conflict(Oid db_id)
 
 	heap_endscan(scan);
 	heap_close(rel, AccessShareLock);
+	UnregisterSnapshot(snapshot);
+
 	return result;
+}
+
+/*
+ * Issue a suitable errdetail message for a busy database
+ */
+static int
+errdetail_busy_db(int notherbackends, int npreparedxacts)
+{
+	/*
+	 * We don't worry about singular versus plural here, since the English
+	 * rules for that don't translate very well.  But we can at least avoid
+	 * the case of zero items.
+	 */
+	if (notherbackends > 0 && npreparedxacts > 0)
+		errdetail("There are %d other session(s) and %d prepared transaction(s) using the database.",
+				  notherbackends, npreparedxacts);
+	else if (notherbackends > 0)
+		errdetail("There are %d other session(s) using the database.",
+				  notherbackends);
+	else
+		errdetail("There are %d prepared transaction(s) using the database.",
+				  npreparedxacts);
+	return 0;					/* just to keep ereport macro happy */
 }
 
 /*

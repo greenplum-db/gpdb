@@ -827,6 +827,9 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	if (estate->es_instrument && result != NULL)
 		result->instrument = InstrAlloc(1);
 
+	/* Also set up gpmon counters */
+	InitPlanNodeGpmonPkt(node, &result->gpmon_pkt, estate);
+
 	if (result != NULL)
 	{
 		SAVE_EXECUTOR_MEMORY_ACCOUNT(result, curMemoryAccountId);
@@ -1203,6 +1206,12 @@ ExecProcNode(PlanState *node)
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;
 			break;
+	}
+
+	if (!TupIsNull(result))
+	{
+		Gpmon_Incr_Rows_Out(&node->gpmon_pkt);
+		CheckSendPlanStateGpmonPkt(node);
 	}
 
 	if (node->instrument)

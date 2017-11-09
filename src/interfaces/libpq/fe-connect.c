@@ -14,13 +14,14 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef FRONTEND
-#ifndef WIN32
-#include "postgres.h"
-#endif
-#else
-#include "postgres_fe.h"
-#endif
+/*
+ * This file is compiled with both frontend and backend codes, symlinked by
+ * src/backend/Makefile, and use macro FRONTEND to switch.
+ *
+ * Include "c.h" to adopt Greenplum C types. Don't include "postgres_fe.h",
+ * which only defines FRONTEND besides including "c.h"
+ */
+#include "c.h"
 
 #ifndef WIN32
 #include <poll.h>
@@ -331,6 +332,10 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	{"replication", NULL, NULL, NULL,
 		"Replication", "D", 5,
 	offsetof(struct pg_conn, replication)},
+
+	{GPCONN_TYPE, NULL, NULL, NULL,
+		"connection type", "D", 10,
+	offsetof(struct pg_conn, gpconntype)},
 
 	/* Terminating entry --- MUST BE LAST */
 	{NULL, NULL, NULL, NULL,

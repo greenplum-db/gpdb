@@ -9,7 +9,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in',
 
 -- Confirm only the trailing while spaces will be trimmed.
 -- The leading white spaces will be always reserved.
-select * from tbl_ext_fixedwidth order by s1;
+select * from tbl_ext_fixedwidth;
 
 select * from tbl_ext_fixedwidth where s1='cha' and s2='vara' and s3='texta';
 

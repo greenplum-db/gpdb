@@ -2,24 +2,24 @@
 -- PLPGSQL
 --
 -- Scenario:
--- 
+--
 --     A building with a modern TP cable installation where any
 --     of the wall connectors can be used to plug in phones,
 --     ethernet interfaces or local office hubs. The backside
 --     of the wall connectors is wired to one of several patch-
 --     fields in the building.
--- 
+--
 --     In the patchfields, there are hubs and all the slots
 --     representing the wall connectors. In addition there are
 --     slots that can represent a phone line from the central
 --     phone system.
--- 
+--
 --     Triggers ensure consistency of the patching information.
--- 
+--
 --     Functions are used to build up powerful views that let
 --     you look behind the wall when looking at a patchfield
 --     or into a room.
--- 
+--
 
 
 create table Room (
@@ -116,10 +116,10 @@ create unique index PHone_name on PHone using btree (slotname bpchar_ops);
 
 
 -- ************************************************************
--- * 
+-- *
 -- * Trigger procedures and functions for the patchfield
 -- * test of PL/pgSQL
--- * 
+-- *
 -- ************************************************************
 
 
@@ -708,11 +708,11 @@ begin
     mytype := substr(myname, 1, 2);
     link := mytype || substr(blname, 1, 2);
     if link = ''PLPL'' then
-        raise exception 
+        raise exception
 		''backlink between two phone lines does not make sense'';
     end if;
     if link in (''PLWS'', ''WSPL'') then
-        raise exception 
+        raise exception
 		''direct link of phone line to wall slot not permitted'';
     end if;
     if mytype = ''PS'' then
@@ -868,19 +868,19 @@ begin
     mytype := substr(myname, 1, 2);
     link := mytype || substr(blname, 1, 2);
     if link = ''PHPH'' then
-        raise exception 
+        raise exception
 		''slotlink between two phones does not make sense'';
     end if;
     if link in (''PHHS'', ''HSPH'') then
-        raise exception 
+        raise exception
 		''link of phone to hub does not make sense'';
     end if;
     if link in (''PHIF'', ''IFPH'') then
-        raise exception 
+        raise exception
 		''link of phone to hub does not make sense'';
     end if;
     if link in (''PSWS'', ''WSPS'') then
-        raise exception 
+        raise exception
 		''slotlink from patchslot to wallslot not permitted'';
     end if;
     if mytype = ''PS'' then
@@ -2444,7 +2444,7 @@ drop function footest();
 -- test scrollable cursor support
 
 create function sc_test() returns setof integer as $$
-declare 
+declare
   c scroll cursor for select f1 from int4_tbl;
   x integer;
 begin
@@ -2461,7 +2461,7 @@ $$ language plpgsql;
 select * from sc_test();
 
 create or replace function sc_test() returns setof integer as $$
-declare 
+declare
   c no scroll cursor for select f1 from int4_tbl;
   x integer;
 begin
@@ -2478,7 +2478,7 @@ $$ language plpgsql;
 select * from sc_test();  -- fails because of NO SCROLL specification
 
 create or replace function sc_test() returns setof integer as $$
-declare 
+declare
   c refcursor;
   x integer;
 begin
@@ -2495,7 +2495,7 @@ $$ language plpgsql;
 select * from sc_test();
 
 create or replace function sc_test() returns setof integer as $$
-declare 
+declare
   c refcursor;
   x integer;
 begin
@@ -2669,6 +2669,285 @@ begin
   end loop;
 end;
 $$ language plpgsql;
+
+-- test RETURN QUERY EXECUTE
+
+create or replace function return_dquery()
+returns setof int as $$
+begin
+  return query execute 'select * from (values(10),(20)) f';
+  return query execute 'select * from (values($1),($2)) f' using 40,50;
+end;
+$$ language plpgsql;
+
+select * from return_dquery();
+
+drop function return_dquery();
+
+-- Tests for 8.4's new RAISE features
+
+create or replace function raise_test() returns void as $$
+begin
+  raise notice '% % %', 1, 2, 3
+     using errcode = '55001', detail = 'some detail info', hint = 'some hint';
+  raise '% % %', 1, 2, 3
+     using errcode = 'division_by_zero', detail = 'some detail info';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- Since we can't actually see the thrown SQLSTATE in default psql output,
+-- test it like this; this also tests re-RAISE
+
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = 'division_by_zero', detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = '1234F', detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- SQLSTATE specification in WHEN
+create or replace function raise_test() returns void as $$
+begin
+  raise 'check me'
+     using errcode = '1234F', detail = 'some detail info';
+  exception
+    when sqlstate '1234F' then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using detail = 'some detail info';
+  exception
+    when others then
+      raise notice 'SQLSTATE: % SQLERRM: %', sqlstate, sqlerrm;
+      raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise sqlstate '1234F';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using message = 'custom' || ' message';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+create or replace function raise_test() returns void as $$
+begin
+  raise using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- conflict on message
+create or replace function raise_test() returns void as $$
+begin
+  raise notice 'some message' using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- conflict on errcode
+create or replace function raise_test() returns void as $$
+begin
+  raise division_by_zero using message = 'custom' || ' message', errcode = '22012';
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+-- nothing to re-RAISE
+create or replace function raise_test() returns void as $$
+begin
+  raise;
+end;
+$$ language plpgsql;
+
+select raise_test();
+
+drop function raise_test();
+
+-- test CASE statement
+
+create or replace function case_test(bigint) returns text as $$
+declare a int = 10;
+        b int = 1;
+begin
+  case $1
+    when 1 then
+      return 'one';
+    when 2 then
+      return 'two';
+    when 3,4,3+5 then
+      return 'three, four or eight';
+    when a then
+      return 'ten';
+    when a+b, a+b+1 then
+      return 'eleven, twelve';
+  end case;
+end;
+$$ language plpgsql immutable;
+
+select case_test(1);
+select case_test(2);
+select case_test(3);
+select case_test(4);
+select case_test(5); -- fails
+select case_test(8);
+select case_test(10);
+select case_test(11);
+select case_test(12);
+select case_test(13); -- fails
+
+create or replace function catch() returns void as $$
+begin
+  raise notice '%', case_test(6);
+exception
+  when case_not_found then
+    raise notice 'caught case_not_found % %', SQLSTATE, SQLERRM;
+end
+$$ language plpgsql;
+
+select catch();
+
+-- test the searched variant too, as well as ELSE
+create or replace function case_test(bigint) returns text as $$
+declare a int = 10;
+begin
+  case
+    when $1 = 1 then
+      return 'one';
+    when $1 = a + 2 then
+      return 'twelve';
+    else
+      return 'other';
+  end case;
+end;
+$$ language plpgsql immutable;
+
+select case_test(1);
+select case_test(2);
+select case_test(12);
+select case_test(13);
+
+drop function catch();
+drop function case_test(bigint);
+
+-- test variadic functions
+
+create or replace function vari(variadic int[])
+returns void as $$
+begin
+  for i in array_lower($1,1)..array_upper($1,1) loop
+    raise notice '%', $1[i];
+  end loop; end;
+$$ language plpgsql;
+
+select vari(1,2,3,4,5);
+select vari(3,4,5);
+select vari(variadic array[5,6,7]);
+
+drop function vari(int[]);
+
+-- coercion test
+create or replace function pleast(variadic numeric[])
+returns numeric as $$
+declare aux numeric = $1[array_lower($1,1)];
+begin
+  for i in array_lower($1,1)+1..array_upper($1,1) loop
+    if $1[i] < aux then aux := $1[i]; end if;
+  end loop;
+  return aux;
+end;
+$$ language plpgsql immutable strict;
+
+select pleast(10,1,2,3,-16);
+select pleast(10.2,2.2,-1.1);
+select pleast(10.2,10, -20);
+select pleast(10,20, -1.0);
+
+-- in case of conflict, non-variadic version is preferred
+create or replace function pleast(numeric)
+returns numeric as $$
+begin
+  raise notice 'non-variadic function called';
+  return $1;
+end;
+$$ language plpgsql immutable strict;
+
+select pleast(10);
+
+drop function pleast(numeric[]);
+drop function pleast(numeric);
+
+-- test table functions
+
+create function tftest(int) returns table(a int, b int) as $$
+begin
+  return query select $1, $1+i from generate_series(1,5) g(i);
+end;
+$$ language plpgsql immutable strict;
+
+select * from tftest(10);
+
+create or replace function tftest(a1 int) returns table(a int, b int) as $$
+begin
+  a := a1; b := a1 + 1;
+  return next;
+  a := a1 * 10; b := a1 * 10 + 1;
+  return next;
+end;
+$$ language plpgsql immutable strict;
+
+select * from tftest(10);
+
+drop function tftest(int);
 
 -- Test for appropriate cleanup of non-simple expression evaluations
 -- (bug in all versions prior to August 2010)

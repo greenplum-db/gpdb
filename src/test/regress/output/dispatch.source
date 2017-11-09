@@ -554,3 +554,29 @@ NOTICE:  Success:
  t
 (1 row)
 
+--
+-- Test that an error happens after a big command is dispatched.
+--
+select gp_inject_fault('after_one_slice_dispatched', 'error', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select * from gp_dist_random('gp_id')
+	where gpname > (select * from repeat('sssss', 10000000));
+ERROR:  fault triggered, fault name:'after_one_slice_dispatched' fault type:'error'
+select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+select * from gp_dist_random('gp_id')
+	where gpname > (select * from repeat('sssss', 10000000));
+ gpname | numsegments | dbid | content 
+--------+-------------+------+---------
+(0 rows)
+

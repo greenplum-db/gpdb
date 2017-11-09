@@ -283,6 +283,10 @@
           <pd>Restores only the data backed up during the incremental backup specified by the
               <varname>timestamp_key</varname>. No other data from the complete backup set are
             restored. The full backup set containing the incremental backup must be available. </pd>
+          <pd>The <codeph>--noplan</codeph> option does not truncate existing tables prior to
+            restoration. To avoid loading duplicate data into existing tables, you can truncate the
+            tables before performing an incremental restore with the <codeph>--noplan</codeph>
+            option. </pd>
           <pd>If the <varname>timestamp_key</varname> specified with the <codeph>-t</codeph> option
             does not reference an incremental backup, an error is returned.</pd>
           <pd>Not supported with the <codeph>-m</codeph> option.</pd>
@@ -453,7 +457,10 @@
       <p>The following <codeph>gbdbrestore</codeph> command uses the <codeph>--noplan</codeph>
         option to restore only the data that was backed up during the incremental backup with the
         timestamp key 20161114064330. Data in the previous incremental backups and the data in the
-        full backup are not restored.</p>
+        full backup are not restored. The <codeph>--noplan</codeph> option does not truncate
+        existing tables prior to restoration. To avoid loading duplicate data into existing tables,
+        you can truncate the tables before performing an incremental restore with the
+          <codeph>--noplan</codeph> option. </p>
       <codeblock>gpdbrestore -t 20161114064330 --noplan</codeblock>
       <p>This gpdbrestore command restores Greenplum Database data from the data managed by
         NetBackup master server <codeph>nbu_server1</codeph>. The option <codeph>-t

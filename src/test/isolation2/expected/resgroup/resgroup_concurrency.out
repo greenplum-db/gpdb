@@ -167,7 +167,7 @@ ALTER
 SELECT concurrency,proposed_concurrency FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_concurrency_test';
 concurrency|proposed_concurrency
 -----------+--------------------
-3          |2                   
+2          |2                   
 (1 row)
 -- When one transaction is finished, queueing transaction won't be woken up. There're 2 running transactions and 1 queueing transaction.
 24:END;
