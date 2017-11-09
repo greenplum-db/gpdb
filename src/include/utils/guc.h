@@ -486,6 +486,7 @@ extern double optimizer_sort_factor;
 /* Optimizer hints */
 extern int optimizer_array_expansion_threshold;
 extern int optimizer_join_order_threshold;
+extern int optimizer_join_order;
 extern int optimizer_join_arity_for_associativity_commutativity;
 extern int optimizer_cte_inlining_bound;
 extern bool optimizer_force_multistage_agg;
@@ -528,6 +529,11 @@ extern int codegen_optimization_level;
  * Enable logging of DPE match in optimizer.
  */
 extern bool	optimizer_partition_selection_log;
+
+/* optimizer join heuristic models */
+#define JOIN_ORDER_IN_QUERY                 0
+#define JOIN_ORDER_GREEDY_SEARCH            1
+#define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
 
 extern char  *gp_email_smtp_server;
 extern char  *gp_email_smtp_userid;

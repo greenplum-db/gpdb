@@ -473,6 +473,26 @@ CConfigParamMapping::PbsPack
 		pbs->FExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfIndexGet2IndexScan));
 	}
 
+	CBitSet *pbsJoinHeuristic = NULL;
+	switch (optimizer_join_order)
+	{
+		case JOIN_ORDER_IN_QUERY:
+			pbsJoinHeuristic = CXform::PbsJoinOrderInQueryXforms(pmp);
+			break;
+		case JOIN_ORDER_GREEDY_SEARCH:
+			pbsJoinHeuristic = CXform::PbsJoinOrderOnGreedyXforms(pmp);
+			break;
+		case JOIN_ORDER_EXHAUSTIVE_SEARCH:
+			pbsJoinHeuristic = GPOS_NEW(pmp) CBitSet(pmp, EopttraceSentinel);
+			break;
+		default:
+			elog(ERROR, "Invalid value for optimizer_join_order, must \
+				 not come here");
+			break;
+	}
+	pbs->Union(pbsJoinHeuristic);
+	pbsJoinHeuristic->Release();
+
 	return pbs;
 }
 
