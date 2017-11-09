@@ -1230,14 +1230,18 @@ grow_unsorted_array(Tuplesortstate_mk *state)
 	if ((availMem / (sizeof(MKEntry) + avgTupSize + avgExtraForPrep)) == 0)
 		return false;
 
-	int			maxNumEntries = state->entry_allocsize + (availMem / (sizeof(MKEntry) + avgTupSize + avgExtraForPrep));
-	int			newNumEntries = Min(maxNumEntries, state->entry_allocsize * 2);
+	uint64		maxNumEntries = state->entry_allocsize + (availMem / (sizeof(MKEntry) + avgTupSize + avgExtraForPrep));
+	uint64		newNumEntries = Min(maxNumEntries, state->entry_allocsize * 2);
 
-	state->entries = (MKEntry *) repalloc(state->entries, newNumEntries * sizeof(MKEntry));
-	for (int entryNo = state->entry_allocsize; entryNo < newNumEntries; entryNo++)
+	uint64 allocsize = newNumEntries * sizeof(MKEntry);
+	if (!AllocSizeIsValid(allocsize))
+		return false;
+
+	state->entries = (MKEntry *) repalloc(state->entries, allocsize);
+	for (uint64 entryNo = state->entry_allocsize; entryNo < newNumEntries; entryNo++)
 		mke_blank(state->entries + entryNo);
 
-	state->entry_allocsize = newNumEntries;
+	state->entry_allocsize = (long) newNumEntries;
 
 	return true;
 }
