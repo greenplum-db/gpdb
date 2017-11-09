@@ -1600,10 +1600,6 @@
                 <entry colname="col2" class="- topic/entry ">The CPU limit (<codeph>CPU_RATE_LIMIT</codeph>) value specified for the resource group.</entry>
               </row>
               <row class="- topic/row ">
-                <entry colname="col1" class="- topic/entry ">proposed_cpu_rate_limit</entry>
-                <entry colname="col2" class="- topic/entry ">The pending CPU limit value for the resource group.</entry>
-              </row>
-              <row class="- topic/row ">
                 <entry colname="col1" class="- topic/entry ">memory_limit</entry>
                 <entry colname="col2" class="- topic/entry ">The memory limit (<codeph>MEMORY_LIMIT</codeph>) value specified for the resource group.</entry>
               </row>

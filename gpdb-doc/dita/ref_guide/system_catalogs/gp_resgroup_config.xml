@@ -67,14 +67,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>proposed_cpu_rate_limit</codeph>
-            </entry>
-            <entry colname="col2">text</entry>
-            <entry colname="col3">pg_resgroupcapability.proposed for pg_resgroupcapability.reslimittype = 2</entry>
-            <entry colname="col4">The pending CPU limit value for the resource group.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>memory_limit</codeph>
             </entry>
             <entry colname="col2">text</entry>
