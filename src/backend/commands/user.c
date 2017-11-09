@@ -710,6 +710,8 @@ AlterRole(AlterRoleStmt *stmt)
 	bool		createwexthdfs;
 	List	   *addintervals = NIL;    /* list of time intervals for which login should be denied */
 	List		*dropintervals = NIL;    /* list of time intervals for which matching rules should be dropped */
+	Oid			queueid;
+
 
 	numopts = list_length(stmt->options);
 
@@ -1114,54 +1116,41 @@ AlterRole(AlterRoleStmt *stmt)
 	if (resqueue)
 	{
 		/* NONE not supported -- use default queue  */
-		if (
-/*			( 0 == pg_strcasecmp(resqueue,"none"))) */
-			( 0 == strcmp(resqueue,"none")))
+		if (strcmp(resqueue, "none") == 0)
 		{
 			/*
-			 * Don't complain if you ALTER a superuser,
-			 * who doesn't use the queue
+			 * Don't complain if you ALTER a superuser, who doesn't use the
+			 * queue
 			 */
 			if (!bWas_super && IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH)
 			{
 				ereport(NOTICE,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("resource queue required -- "
-								"using default resource queue \"%s\"",
+						 errmsg("resource queue required -- using default resource queue \"%s\"",
 								GP_DEFAULT_RESOURCE_QUEUE_NAME)));
 			}
 
 			resqueue = pstrdup(GP_DEFAULT_RESOURCE_QUEUE_NAME);
 		}
 
-		if ( strcmp(resqueue, "none") == 0)
-		{
-			new_record_nulls[Anum_pg_authid_rolresqueue - 1] = true;
-		}
-		else
-		{
-			Oid			queueid;
+		queueid = GetResQueueIdForName(resqueue);
+		if (queueid == InvalidOid)
+			ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("resource queue \"%s\" does not exist", resqueue)));
 
-			queueid = GetResQueueIdForName(resqueue);
-			if (queueid == InvalidOid)
-				ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("resource queue \"%s\" does not exist",
-							resqueue)));
-			new_record[Anum_pg_authid_rolresqueue - 1] =
-				ObjectIdGetDatum(queueid);
-		}
+		new_record[Anum_pg_authid_rolresqueue - 1] = ObjectIdGetDatum(queueid);
 		new_record_repl[Anum_pg_authid_rolresqueue - 1] = true;
 
 		if (!IsResQueueEnabled() && !bWas_super)
 		{
 			/*
-			 * Don't complain if you ALTER a superuser,
-			 * who doesn't use the queue
+			 * Don't complain if you ALTER a superuser, who doesn't use the
+			 * queue
 			 */
 			ereport(WARNING,
 					(errmsg("resource queue is disabled"),
-					 errhint("To enable set gp_resource_manager=queue")));
+					 errhint("To enable set gp_resource_manager=queue.")));
 		}
 	}
 
