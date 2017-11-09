@@ -660,6 +660,7 @@ jobs:
   plan:
   - aggregate:
     - get: gpdb_src
+      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
@@ -693,6 +694,7 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
+      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
       passed: [gate_compile_start]
     - get: gpaddon_src
@@ -725,6 +727,7 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
+      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
       passed: [gate_compile_start]
@@ -751,6 +754,7 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
+      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
       passed: [gate_compile_start]
@@ -770,6 +774,7 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
+      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: centos-gpdb-dev-6
       passed: [gate_compile_start]
@@ -817,6 +822,7 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
+      passed: [gate_compile_start]
       trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
       passed: [gate_compile_start]
@@ -840,6 +846,7 @@ jobs:
       tags: ["wix"]
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
+      passed: [gate_compile_start]
       tags: ["wix"]
     - get: gpaddon_src
       passed: [gate_compile_start]
