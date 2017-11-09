@@ -94,7 +94,7 @@ static void assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldno
 static int *makeDefaultSegIdxArray(int numSegs);
 
 static void add_slice_to_motion(Motion *motion,
-					MotionType motionType, List *hashExpr, List *sortPathKeys,
+					MotionType motionType, List *hashExpr,
 					int numOutputSegs, int *outputSegIdx);
 
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
@@ -1108,7 +1108,7 @@ assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode)
 
 static void
 add_slice_to_motion(Motion *motion,
-					MotionType motionType, List *hashExpr, List *sortPathKeys,
+					MotionType motionType, List *hashExpr,
 					int numOutputSegs, int *outputSegIdx)
 {
 	/* sanity checks */
@@ -1226,7 +1226,7 @@ make_union_motion(Plan *lefttree, int destSegIndex, bool useExecutorVarFormat)
 	outSegIdx[0] = destSegIndex;
 
 	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, NIL, 1, outSegIdx);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 1, outSegIdx);
 	return motion;
 }
 
@@ -1243,7 +1243,7 @@ make_sorted_union_motion(PlannerInfo *root,
 	outSegIdx[0] = destSegIndex;
 
 	motion = make_motion(root, lefttree, sortPathKeys, useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, sortPathKeys, 1, outSegIdx);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 1, outSegIdx);
 	return motion;
 }
 
@@ -1254,7 +1254,7 @@ make_hashed_motion(Plan *lefttree,
 	Motion	   *motion;
 
 	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, NIL, 0, NULL);
+	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, 0, NULL);
 	return motion;
 }
 
@@ -1265,7 +1265,7 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat)
 
 	motion = make_motion(NULL, lefttree, NIL, useExecutorVarFormat);
 
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, NIL, 0, NULL);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 0, NULL);
 	return motion;
 }
 
@@ -1280,7 +1280,7 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 
 	motion->segidColIdx = segidColIdx;
 
-	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT, NULL, NIL, 0, NULL);
+	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT, NULL, 0, NULL);
 	return motion;
 }
 

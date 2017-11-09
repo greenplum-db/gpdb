@@ -16,11 +16,12 @@
 
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
+#include "executor/spi.h"
+#include "postmaster/fts.h"
+#include "replication/walsender.h"
 #include "utils/guc.h"
 #include "utils/resource_manager.h"
 #include "utils/resgroup-ops.h"
-#include "replication/walsender.h"
-#include "executor/spi.h"
 
 /*
  * GUC variables.
@@ -87,7 +88,7 @@ InitResManager(void)
 	else if  (IsResGroupEnabled() &&
 			 (Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
 			 IsUnderPostmaster &&
-			 !am_walsender)
+			 !am_walsender && !am_ftshandler)
 	{
 		/*
 		 * InitResManager() is called under PostgresMain(), so resource group is not

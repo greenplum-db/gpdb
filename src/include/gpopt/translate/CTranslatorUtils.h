@@ -301,11 +301,11 @@ namespace gpdxl
 
 			// check to see if the target list entry is a grouping column
 			static
-			BOOL FGroupingColumn(const TargetEntry *pte, const GroupClause *pgrcl);
+			BOOL FGroupingColumn(const TargetEntry *pte, const SortGroupClause *pgrcl);
 
 			// check to see if the sorting column entry is a grouping column
 			static
-			BOOL FGroupingColumn(const SortClause *psortcl, List *plGrpCl);
+			BOOL FGroupingColumn(const SortGroupClause *psortcl, List *plGrpCl);
 
 			// check if the expression has a matching target entry that is a grouping column
 			static

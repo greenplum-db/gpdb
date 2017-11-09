@@ -66,7 +66,6 @@ bmbuild(PG_FUNCTION_ARGS)
 	BMBuildState bmstate;
 	IndexBuildResult *result;
 	TupleDesc	tupDesc;
-	bool		useWal;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
 
@@ -85,10 +84,8 @@ bmbuild(PG_FUNCTION_ARGS)
 
 	tupDesc = RelationGetDescr(index);
 
-	useWal = (!XLog_UnconvertedCanBypassWal() && !index->rd_istemp);
-
 	/* initialize the bitmap index. */
-	_bitmap_init(index, useWal);
+	_bitmap_init(index, !index->rd_istemp);
 
 	/* initialize the build state. */
 	_bitmap_init_buildstate(index, &bmstate);
@@ -98,23 +95,6 @@ bmbuild(PG_FUNCTION_ARGS)
 							  bmbuildCallback, (void *)&bmstate);
 	/* clean up the build state */
 	_bitmap_cleanup_buildstate(index, &bmstate);
-
-	/*
-	 * fsync the relevant files to disk, unless we're building
-	 * a temporary index
-	 */
-    if (!useWal)
-    {
-		FlushRelationBuffers(bmstate.bm_lov_heap);
-        smgrimmedsync(bmstate.bm_lov_heap->rd_smgr);
-
-		FlushRelationBuffers(bmstate.bm_lov_index);
-		smgrimmedsync(bmstate.bm_lov_index->rd_smgr);
-
-		FlushRelationBuffers(index);
-		/* FlushRelationBuffers will have opened rd_smgr */
-        smgrimmedsync(index->rd_smgr);
-    }
 	
 	/* return statistics */
 	result = (IndexBuildResult *) palloc0(sizeof(IndexBuildResult));
@@ -165,6 +145,9 @@ bmgettuple(PG_FUNCTION_ARGS)
 	bool res;
 
 	MIRROREDLOCK_BUFMGR_VERIFY_NO_LOCK_LEAK_ENTER;
+
+	/* This implementation of a bitmap index is never lossy */
+	scan->xs_recheck = false;
 
 	/* 
 	 * If we have already begun our scan, continue in the same direction.

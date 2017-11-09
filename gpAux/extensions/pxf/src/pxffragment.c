@@ -98,16 +98,10 @@ static void
 assign_pxf_location_to_fragments(List *fragments)
 {
 	ListCell   *frag_c = NULL;
-	StringInfoData authority;
-
-	initStringInfo(&authority);
-	appendStringInfo(&authority, "%s:%d", PxfDefaultHost, PxfDefaultPort);
-
 	foreach(frag_c, fragments)
 	{
 		FragmentData *fragment = (FragmentData *) lfirst(frag_c);
-
-		fragment->authority = pstrdup(authority.data);
+		fragment->authority = get_authority();
 	}
 	return;
 }

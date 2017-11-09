@@ -139,7 +139,7 @@ struct gpmon_query_seginfo_t
 	 */
 	int64				final_rowsout;
 	uint64				sum_cpu_elapsed;
-	uint64				sum_measures_rows_in;
+	uint64				sum_measures_rows_out;
 };
 
 /* process metrics ... filled in by gpsmon */
@@ -203,7 +203,6 @@ struct gpmon_qexec_t {
 	uint64		_cpu_elapsed; /* CPU elapsed for iter */
 	gpmon_proc_metrics_t 	_p_metrics;
 	uint64 		rowsout;
-	uint64 		rowsin;
 };
 
 /*

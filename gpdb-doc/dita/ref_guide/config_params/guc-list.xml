@@ -634,9 +634,6 @@
               <xref href="#max_resource_portals_per_transaction"/>
             </li>
             <li>
-              <xref href="#max_resource_groups"/>
-            </li>
-            <li>
               <xref href="#max_resource_queues"/>
             </li>
             <li>
@@ -1662,10 +1659,10 @@
   <topic id="default_statistics_target">
     <title>default_statistics_target</title>
     <body>
-      <p>Sets the default statistics target for table columns that have not had a column-specific
-        target set via <codeph>ALTER TABLE SET STATISTICS</codeph>. Larger values increase the time
-        needed to do <codeph>ANALYZE</codeph>, but may improve the quality of the legacy query
-        optimizer (planner) estimates.</p>
+      <p>Sets the default statistics sampling target (the number of values that are stored in the
+        list of common values) for table columns that have not had a column-specific target set via
+          <codeph>ALTER TABLE SET STATISTICS</codeph>. Larger values may improve the quality of the
+        legacy query optimizer (planner) estimates. </p>
       <table id="default_statistics_target_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4887,6 +4884,7 @@
   <topic id="gp_resgroup_memory_policy">
     <title>gp_resgroup_memory_policy</title>
     <body>
+      <note>The <codeph>gp_resgroup_memory_policy</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <p>Used by a resource group to manage memory allocation to query operators.</p>
       <p>When set to <codeph>auto</codeph>, Greenplum Database uses resource group memory limits to distribute memory across query operators, allocating a fixed size of memory to non-memory-intensive operators and the rest to memory-intensive operators.</p>
       <p>When you specify <codeph>eager_free</codeph>, Greenplum Database distributes memory among operators more optimally by re-allocating memory released by operators that have completed their processing to operators in a later query stage.</p>
@@ -4916,6 +4914,7 @@
   <topic id="gp_resource_group_cpu_limit">
     <title>gp_resource_group_cpu_limit</title>
     <body>
+      <note>The <codeph>gp_resource_group_cpu_limit</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <p>Identifies the maximum percentage of system CPU resources to allocate to resource groups on
         each Greenplum Database segment node.</p>
       <table id="gp_resource_group_cpu_limit_table">
@@ -4944,6 +4943,7 @@
   <topic id="gp_resource_group_memory_limit">
     <title>gp_resource_group_memory_limit</title>
     <body>
+      <note>The <codeph>gp_resource_group_memory_limit</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <p>Identifies the maximum percentage of system memory resources to allocate to resource groups
         on each Greenplum Database segment node.</p>
       <table id="gp_resource_group_memory_limit_table">
@@ -4967,6 +4967,25 @@
           </tbody>
         </tgroup>
       </table>
+      <note>When resource group-based resource management is active, the memory allotted to
+        a segment host is equally shared by active primary segments. Greenplum Database assigns
+        memory to primary segments when the segment takes the primary role. The initial memory
+        allotment to a primary segment does not change, even in a failover situation. This may
+        result in a segment host utilizing more memory than the
+        <codeph>gp_resource_group_memory_limit</codeph> setting permits.
+        <p>For example, suppose your Greenplum Database cluster is utilizing the default
+          <codeph>gp_resource_group_memory_limit</codeph> of <codeph>0.7</codeph> and a
+          segment host named <codeph>seghost1</codeph> has 4 primary segments and 4 mirror
+          segments. Greenplum Database assigns each primary segment on <codeph>seghost1</codeph>
+          <codeph>(0.7 / 4 = 0.175%)</codeph> of overall system memory. If failover occurs and
+          two mirrors on <codeph>seghost1</codeph> fail over to become primary segments,
+          each of the original 4 primaries retain their memory allotment of <codeph>0.175</codeph>,
+          and the two new primary segments are each allotted <codeph>(0.7 / 6 = 0.116%)</codeph>
+          of system memory. <codeph>seghost1</codeph>'s overall memory allocation
+          in this scenario is</p><p><codeblock>
+0.7 + (0.116 * 2) = 0.932%</codeblock></p>
+        <p>which is above the percentage configured
+          in the <codeph>gp_resource_group_memory_limit</codeph> setting.</p></note>
     </body>
   </topic>
   <topic id="gp_resource_manager">
@@ -5000,6 +5019,7 @@
   <topic id="gp_resqueue_memory_policy">
     <title>gp_resqueue_memory_policy</title>
     <body>
+      <note>The <codeph>gp_resqueue_memory_policy</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Enables Greenplum memory management features. The distribution algorithm
           <codeph>eager_free</codeph> takes advantage of the fact that not all operators execute at
         the same time<ph> (in Greenplum Database 4.2 and later)</ph>. The query plan is divided into
@@ -5035,6 +5055,7 @@
   <topic id="gp_resqueue_priority">
     <title>gp_resqueue_priority</title>
     <body>
+      <note>The <codeph>gp_resqueue_priority</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Enables or disables query prioritization. When this parameter is disabled, existing
         priority settings are not evaluated at query run time.</p>
       <table id="gp_resqueue_priority_table">
@@ -5063,6 +5084,7 @@
   <topic id="gp_resqueue_priority_cpucores_per_segment">
     <title>gp_resqueue_priority_cpucores_per_segment</title>
     <body>
+      <note>The <codeph>gp_resqueue_priority_cpucores_per_segment</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Specifies the number of CPU units allocated per segment instance. For example, if a
         Greenplum Database cluster has 10-core segment hosts that are configured with four segments,
         set the value for the segment instances to 2.5. For the master instance, the value would be
@@ -5098,6 +5120,7 @@
   <topic id="gp_resqueue_priority_sweeper_interval">
     <title>gp_resqueue_priority_sweeper_interval</title>
     <body>
+      <note>The <codeph>gp_resqueue_priority_sweeper_interval</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Specifies the interval at which the sweeper process evaluates current CPU usage. When a new
         statement becomes active, its priority is evaluated and its CPU share determined when the
         next interval is reached.</p>
@@ -5562,6 +5585,7 @@
   <topic id="gp_vmem_protect_limit">
     <title>gp_vmem_protect_limit</title>
     <body>
+      <note>The <codeph>gp_vmem_protect_limit</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the amount of memory (in number of MBs) that all postgres processes of an active
         segment instance can consume. If a query causes this limit to be exceeded, memory will not
         be allocated and the query will fail. Note that this is a local parameter and must be set
@@ -7219,6 +7243,7 @@
   <topic id="max_resource_portals_per_transaction">
     <title>max_resource_portals_per_transaction</title>
     <body>
+      <note>The <codeph>max_resource_portals_per_transaction</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the maximum number of simultaneously open user-declared cursors allowed per
         transaction. Note that an open cursor will hold an active query slot in a resource queue.
         Used for resource management.</p>
@@ -7245,37 +7270,10 @@
       </table>
     </body>
   </topic>
-  <topic id="max_resource_groups">
-    <title>max_resource_groups</title>
-    <body>
-      <p>Sets the maximum number of resource groups that you can create in a Greenplum Database
-        system. Resource groups are defined system-wide.</p>
-      <table id="max_resource_queues_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">0 - INT_MAX</entry>
-              <entry colname="col2">9</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="max_resource_queues">
     <title>max_resource_queues</title>
     <body>
+      <note>The <codeph>max_resource_queues</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the maximum number of resource queues that can be created in a Greenplum Database
         system. Note that resource queues are system-wide (as are roles) so they apply to all
         databases in the system.</p>
@@ -7336,6 +7334,7 @@
   <topic id="max_statement_mem">
     <title>max_statement_mem</title>
     <body>
+      <note>The <codeph>max_statement_mem</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the maximum memory limit for a query. Helps avoid out-of-memory errors on a segment
         host during query processing as a result of setting <codeph><xref href="#statement_mem"
             format="dita"/>
@@ -7375,6 +7374,7 @@
   <topic id="memory_spill_ratio">
     <title>memory_spill_ratio</title>
     <body>
+      <note>The <codeph>memory_spill_ratio</codeph> server configuration parameter is enforced only when resource group-based resource management is active.</note>
       <p>Sets the memory usage threshold for memory-intensive operators in a transaction. When a
         transaction reaches this threshold, it spills to disk.</p>
       <p>The default <codeph>memory_spill_ratio</codeph> is the value defined for the resource group
@@ -8494,6 +8494,7 @@
   <topic id="resource_cleanup_gangs_on_wait">
     <title>resource_cleanup_gangs_on_wait</title>
     <body>
+      <note>The <codeph>resource_cleanup_gangs_on_wait</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>If a statement is submitted through a resource queue, clean up any idle query executor
         worker processes before taking a lock on the resource queue.</p>
       <table id="resource_cleanup_gangs_on_wait_table">
@@ -8522,6 +8523,7 @@
   <topic id="resource_select_only">
     <title>resource_select_only</title>
     <body>
+      <note>The <codeph>resource_select_only</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the types of queries managed by resource queues. If set to on, then
           <codeph>SELECT</codeph>, <codeph>SELECT INTO</codeph>, <codeph>CREATE TABLE AS
           SELECT</codeph>, and <codeph>DECLARE CURSOR</codeph> commands are evaluated. If set to off
@@ -8553,6 +8555,7 @@
   <topic id="runaway_detector_activation_percent">
     <title>runaway_detector_activation_percent</title>
     <body>
+      <note>The <codeph>runaway_detector_activation_percent</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Sets the percentage of Greenplum Database vmem memory that triggers the termination of
         queries. If the percentage of vmem memory that is utilized for a Greenplum Database segment
         exceeds the specified value, Greenplum Database terminates queries based on memory usage,
@@ -8911,6 +8914,7 @@
   <topic id="statement_mem">
     <title>statement_mem</title>
     <body>
+      <note>The <codeph>statement_mem</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Allocates segment host memory per query. The amount of memory allocated with this parameter
         cannot exceed <codeph><xref href="#max_statement_mem" format="dita"/></codeph> or the memory
         limit on the resource queue through which the query was submitted. When <codeph><xref
@@ -8983,6 +8987,7 @@
   <topic id="stats_queue_level">
     <title>stats_queue_level</title>
     <body>
+      <note>The <codeph>stats_queue_level</codeph> server configuration parameter is enforced only when resource queue-based resource management is active.</note>
       <p>Collects resource queue statistics on database activity.</p>
       <table id="stats_queue_level_table">
         <tgroup cols="3">

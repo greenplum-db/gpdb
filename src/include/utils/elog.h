@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/elog.h,v 1.92 2008/03/24 18:08:47 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/utils/elog.h,v 1.93 2008/04/16 23:59:40 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

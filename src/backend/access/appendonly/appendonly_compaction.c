@@ -281,7 +281,7 @@ AppendOnlyMoveTuple(MemTuple tuple,
 	tupleOid = MemTupleGetOid(tuple, mt_bind);
 	appendonly_insert(insertDesc,
 					  tuple,
-					  &tupleOid,
+					  tupleOid,
 					  &newAoTupleId);
 
 	/* insert index' tuples if needed */

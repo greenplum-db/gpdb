@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.118 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_type.c,v 1.121 2008/08/03 15:23:58 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,6 +31,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
@@ -126,6 +127,8 @@ TypeShellMake(const char *typeName, Oid typeNamespace, Oid ownerId)
 	values[i++] = Int16GetDatum(sizeof(int4));	/* typlen */
 	values[i++] = BoolGetDatum(true);	/* typbyval */
 	values[i++] = CharGetDatum(TYPTYPE_PSEUDO); /* typtype */
+	values[i++] = CharGetDatum(TYPCATEGORY_PSEUDOTYPE); /* typcategory */
+	values[i++] = BoolGetDatum(false);	/* typispreferred */
 	values[i++] = BoolGetDatum(false);	/* typisdefined */
 	values[i++] = CharGetDatum(DEFAULT_TYPDELIM);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(InvalidOid); /* typrelid */
@@ -209,6 +212,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 		   Oid ownerId,
 		   int16 internalSize,
 		   char typeType,
+		   char typeCategory,
+		   bool typePreferred,
 		   char typDelim,
 		   Oid inputProcedure,
 		   Oid outputProcedure,
@@ -246,8 +251,7 @@ TypeCreateWithOptions(Oid newTypeOid,
 	 * not check for bad combinations.
 	 *
 	 * Validate size specifications: either positive (fixed-length) or -1
-	 * (varlena) or -2 (cstring).  Pass-by-value types must have a fixed
-	 * length not more than sizeof(Datum).
+	 * (varlena) or -2 (cstring).
 	 */
 	if (!(internalSize > 0 ||
 		  internalSize == -1 ||
@@ -256,12 +260,70 @@ TypeCreateWithOptions(Oid newTypeOid,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("invalid type internal size %d",
 						internalSize)));
-	if (passedByValue &&
-		(internalSize <= 0 || internalSize > (int16) sizeof(Datum)))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+
+	if (passedByValue)
+	{
+		/*
+		 * Pass-by-value types must have a fixed length that is one of the
+		 * values supported by fetch_att() and store_att_byval(); and the
+		 * alignment had better agree, too.  All this code must match
+		 * access/tupmacs.h!
+		 */
+		if (internalSize == (int16) sizeof(char))
+		{
+			if (alignment != 'c')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+		else if (internalSize == (int16) sizeof(int16))
+		{
+			if (alignment != 's')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+		else if (internalSize == (int16) sizeof(int32))
+		{
+			if (alignment != 'i')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+#if SIZEOF_DATUM == 8
+		else if (internalSize == (int16) sizeof(Datum))
+		{
+			if (alignment != 'd')
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("alignment \"%c\" is invalid for passed-by-value type of size %d",
+								alignment, internalSize)));
+		}
+#endif
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 			   errmsg("internal size %d is invalid for passed-by-value type",
 					  internalSize)));
+	}
+	else
+	{
+		/* varlena types must have int align or better */
+		if (internalSize == -1 && !(alignment == 'i' || alignment == 'd'))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					 errmsg("alignment \"%c\" is invalid for variable-length type",
+							alignment)));
+		/* cstring must have char alignment */
+		if (internalSize == -2 && !(alignment == 'c'))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					 errmsg("alignment \"%c\" is invalid for variable-length type",
+							alignment)));
+	}
 
 	/* Only varlena types can be toasted */
 	if (storage != 'p' && internalSize != -1)
@@ -290,6 +352,8 @@ TypeCreateWithOptions(Oid newTypeOid,
 	values[i++] = Int16GetDatum(internalSize);	/* typlen */
 	values[i++] = BoolGetDatum(passedByValue);	/* typbyval */
 	values[i++] = CharGetDatum(typeType);		/* typtype */
+	values[i++] = CharGetDatum(typeCategory);	/* typcategory */
+	values[i++] = BoolGetDatum(typePreferred);	/* typispreferred */
 	values[i++] = BoolGetDatum(true);	/* typisdefined */
 	values[i++] = CharGetDatum(typDelim);		/* typdelim */
 	values[i++] = ObjectIdGetDatum(relationOid);		/* typrelid */
@@ -437,6 +501,8 @@ TypeCreate(Oid newTypeOid,
 		   Oid ownerId,
 		   int16 internalSize,
 		   char typeType,
+		   char typeCategory,
+		   bool typePreferred,
 		   char typDelim,
 		   Oid inputProcedure,
 		   Oid outputProcedure,
@@ -466,6 +532,8 @@ TypeCreate(Oid newTypeOid,
 		   ownerId,
 		   internalSize,
 		   typeType,
+		   typeCategory,
+		   typePreferred,
 		   typDelim,
 		   inputProcedure,
 		   outputProcedure,

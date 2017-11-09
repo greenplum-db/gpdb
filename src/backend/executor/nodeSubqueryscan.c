@@ -77,12 +77,6 @@ SubqueryNext(SubqueryScanState *node)
     	slot_set_ctid_from_fake(slot, &node->cdb_fake_ctid);
     }
 
-    if (!TupIsNull(slot))
-    {
-        Gpmon_Incr_Rows_Out(GpmonPktFromSubqueryScanState(node));
-        CheckSendPlanStateGpmonPkt(&node->ss.ps);
-    }
-
 	return slot;
 }
 
@@ -186,8 +180,6 @@ ExecInitSubqueryScan(SubqueryScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&subquerystate->ss.ps);
 	ExecAssignScanProjectionInfo(&subquerystate->ss);
 
-	initGpmonPktForSubqueryScan((Plan *)node, &subquerystate->ss.ps.gpmon_pkt, estate);
-
 	return subquerystate;
 }
 
@@ -266,11 +258,4 @@ ExecSubqueryReScan(SubqueryScanState *node, ExprContext *exprCtxt)
 	/*node->ss.ps.ps_TupFromTlist = false;*/
 
 	CheckSendPlanStateGpmonPkt(&node->ss.ps);
-}
-	
-void
-initGpmonPktForSubqueryScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, SubqueryScan));
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

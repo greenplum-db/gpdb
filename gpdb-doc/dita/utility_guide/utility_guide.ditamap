@@ -8,6 +8,7 @@
             <topicref href="admin_utilities/analyzedb.xml"/>
             <topicref href="admin_utilities/gpactivatestandby.xml"/>
             <topicref href="admin_utilities/gpaddmirrors.xml"/>
+            <topicref href="admin_utilities/gpbackup.xml"/>
             <topicref href="admin_utilities/gpcheck.xml"/>
             <topicref href="admin_utilities/gpcheckcat.xml"/>
             <topicref href="admin_utilities/gpcheckperf.xml"/>
@@ -31,6 +32,7 @@
             <topicref href="admin_utilities/gppkg.xml"/>
             <topicref href="admin_utilities/gprecoverseg.xml"/>
             <topicref href="admin_utilities/gpreload.xml"/>
+            <topicref href="admin_utilities/gprestore.xml"/>
             <topicref href="admin_utilities/gpscp.xml"/>
             <topicref href="admin_utilities/gpseginstall.xml"/>
             <topicref href="admin_utilities/gpssh.xml"/>

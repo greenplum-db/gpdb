@@ -24,8 +24,4 @@ extern void ExecTidMarkPos(TidScanState *node);
 extern void ExecTidRestrPos(TidScanState *node);
 extern void ExecTidReScan(TidScanState *node, ExprContext *exprCtxt);
 
-static inline gpmon_packet_t * GpmonPktFromTidScanState(TidScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
 #endif   /* NODETIDSCAN_H */

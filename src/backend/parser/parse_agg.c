@@ -109,21 +109,21 @@ transformAggregateCall(ParseState *pstate, Aggref *agg, List *agg_order)
 		min_varlevel = 0;
 	agg->agglevelsup = min_varlevel;
 
-    /* 
+    /*
      * Transform the aggregate order by, if any.
      *
-     * This involves transforming a sortlist, which in turn requires 
+     * This involves transforming a sortlist, which in turn requires
      * maintenace of a targetlist maintained for the purposes of the
-     * sort.  This targetlist cannot be the main query targetlist 
+     * sort.  This targetlist cannot be the main query targetlist
      * because the rules of which columns are referencable are different
      * for the two targetlists.  This one can reference any column in
      * in the from list, the main targetlist is limitted to expressions
      * that show up in the group by clause.
      *
      * CDB: This is a little different from the postgres implementation.
-     * In the postgres implementation the "args" of the aggregate is 
+     * In the postgres implementation the "args" of the aggregate is
      * the targetlist.  In the GP implementation the args are a regular
-     * parameter list and we build a separate targetlist for use in 
+     * parameter list and we build a separate targetlist for use in
      * the order by.
      */
     if (agg_order)
@@ -138,18 +138,18 @@ transformAggregateCall(ParseState *pstate, Aggref *agg, List *agg_order)
          * restore it when the transform is complete. */
         save_next_resno = pstate->p_next_resno;
         pstate->p_next_resno = 1;
-        
+
         aggorder->sortImplicit = false;   /* TODO: implicit ordered aggregates */
-        aggorder->sortClause = 
-            transformSortClause(pstate, 
+        aggorder->sortClause =
+            transformSortClause(pstate,
                                 agg_order,
                                 &tlist,
                                 true /* fix unknowns */ ,
                                 true /* use SQL99 rules */ );
         aggorder->sortTargets = tlist;
-        
+
         pstate->p_next_resno = save_next_resno;
-        
+
         agg->aggorder = aggorder;
     }
 
@@ -342,7 +342,7 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 		if (grpcl == NULL)
 			continue;
 
-		Assert(IsA(grpcl, GroupClause) || IsA(grpcl, GroupingClause));
+		Assert(IsA(grpcl, SortGroupClause) || IsA(grpcl, GroupingClause));
 
 		exprs = get_groupclause_exprs(grpcl, qry->targetList);
 
@@ -485,7 +485,7 @@ parseCheckWindowFuncs(ParseState *pstate, Query *qry)
 		Node	   *grpcl = lfirst(l);
 		Node	   *expr;
 
-		Assert(IsA(grpcl, GroupClause) || IsA(grpcl, GroupingClause));
+		Assert(IsA(grpcl, SortGroupClause) || IsA(grpcl, GroupingClause));
 
 		expr = (Node *) get_groupclause_exprs(grpcl, qry->targetList);
 
@@ -757,7 +757,7 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 		*prelimfnexpr = (Expr *) makeFuncExpr(prelimfn_oid, agg_state_type,
 											  args, COERCE_DONTCARE);
 	}
-	
+
 	/* inverse functions */
 	if (OidIsValid(invtransfn_oid))
 	{
@@ -807,17 +807,17 @@ List*
 get_groupclause_exprs(Node *grpcl, List *targetList)
 {
 	List *result = NIL;
-	
+
 	if ( !grpcl )
 		return result;
 
-	Assert(IsA(grpcl, GroupClause) ||
+	Assert(IsA(grpcl, SortGroupClause) ||
 		   IsA(grpcl, GroupingClause) ||
 		   IsA(grpcl, List));
 
-	if (IsA(grpcl, GroupClause))
+	if (IsA(grpcl, SortGroupClause))
 	{
-		Node *node = get_sortgroupclause_expr((GroupClause*)grpcl, targetList);
+		Node *node = get_sortgroupclause_expr((SortGroupClause *) grpcl, targetList);
 		result = lappend(result, node);
 	}
 
@@ -878,11 +878,11 @@ checkExprHasGroupExtFuncs_walker(Node *node, checkHasGroupExtFuncs_context *cont
  * checkExprHasGroupExtFuncs -
  *  Check if an expression contains a grouping() or group_id() call.
  *
- * 
+ *
  * The objective of this routine is to detect whether there are window functions
- * belonging to the initial query level. Window functions belonging to 
+ * belonging to the initial query level. Window functions belonging to
  * subqueries or outer queries do NOT cause a true result.  We must recurse into
- * subqueries to detect outer-reference window functions that logically belong 
+ * subqueries to detect outer-reference window functions that logically belong
  * to the initial query level.
  *
  * Compare this function to checkExprHasAggs().
@@ -892,12 +892,12 @@ checkExprHasGroupExtFuncs(Node *node)
 {
 	checkHasGroupExtFuncs_context context;
 	context.sublevels_up = 0;
-	
+
 	/*
 	 * Must be prepared to start with a Query or a bare expression tree; if
 	 * it's a Query, we don't want to increment sublevels_up.
 	 */
 	return query_or_expression_tree_walker(node,
 										   checkExprHasGroupExtFuncs_walker,
-										   (void *) &context, 0);	
+										   (void *) &context, 0);
 }

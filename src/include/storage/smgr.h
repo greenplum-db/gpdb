@@ -213,8 +213,6 @@ extern void smgrcreatepending(
 extern void smgrcreate(
 	SMgrRelation 				reln,
 
-	bool						isLocalBuf, 
-
 	char						*relationName,
 					/* For tracing only.  Can be NULL in some execution paths. */
 
@@ -441,8 +439,6 @@ extern void mdcreatedbdir(
 	bool						*mirrorDataLossOccurred);
 extern void mdcreate(
 	SMgrRelation 				reln,
-
-	bool 						isLocalBuf, 
 
 	char						*relationName,
 					/* For tracing only.  Can be NULL in some execution paths. */

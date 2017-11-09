@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.233 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execQual.c,v 1.231 2008/05/15 00:17:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -36,7 +36,6 @@
 
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "access/nbtree.h"
 #include "access/tuptoaster.h"
 #include "catalog/pg_type.h"
@@ -51,6 +50,8 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/planmain.h"
+#include "parser/parse_expr.h"
+#include "pgstat.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
@@ -579,7 +580,7 @@ ExecEvalAggref(AggrefExprState *aggref, ExprContext *econtext,
  *		Returns a Datum whose value is the value of a GROUPING_ID
  *		with respect to the given context.
  */
-static Datum 
+static Datum
 ExecEvalGroupingFunc(GroupingFuncExprState *gstate,
 					 ExprContext *econtext,
 					 bool *isNull, ExprDoneCond *isDone)
@@ -1666,6 +1667,7 @@ ExecMakeFunctionResult(FuncExprState *fcache,
 {
 	Datum		result;
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	ReturnSetInfo rsinfo;		/* for functions returning sets */
 	ExprDoneCond argDone;
 	bool		hasSetArg;
@@ -1812,11 +1814,16 @@ restart:
 
 			if (callit)
 			{
+				pgstat_init_function_usage(&fcinfo, &fcusage);
+
 				fcinfo.isnull = false;
 				rsinfo.isDone = ExprSingleResult;
 				result = FunctionCallInvoke(&fcinfo);
 				*isNull = fcinfo.isnull;
 				*isDone = rsinfo.isDone;
+
+				pgstat_end_function_usage(&fcusage,
+										  rsinfo.isDone != ExprMultipleResult);
 			}
 			else
 			{
@@ -1941,9 +1948,14 @@ restart:
 				}
 			}
 		}
+
+		pgstat_init_function_usage(&fcinfo, &fcusage);
+
 		fcinfo.isnull = false;
 		result = FunctionCallInvoke(&fcinfo);
 		*isNull = fcinfo.isnull;
+
+		pgstat_end_function_usage(&fcusage, true);
 	}
 
 	return result;
@@ -1964,6 +1976,7 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 	ListCell   *arg;
 	Datum		result;
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	int			i;
 
 	/* Guard against stack overflow due to overly complex expressions */
@@ -2002,9 +2015,14 @@ ExecMakeFunctionResultNoSets(FuncExprState *fcache,
 			}
 		}
 	}
+
+	pgstat_init_function_usage(&fcinfo, &fcusage);
+
 	/* fcinfo.isnull = false; */	/* handled by InitFunctionCallInfoData */
 	result = FunctionCallInvoke(&fcinfo);
 	*isNull = fcinfo.isnull;
+
+	pgstat_end_function_usage(&fcusage, true);
 
 	return result;
 }
@@ -2020,7 +2038,7 @@ Tuplestorestate *
 ExecMakeTableFunctionResult(ExprState *funcexpr,
 							ExprContext *econtext,
 							TupleDesc expectedDesc,
-							uint64 operatorMemKB) 
+							uint64 operatorMemKB)
 {
 	Tuplestorestate *tupstore = NULL;
 	TupleDesc	tupdesc = NULL;
@@ -2029,6 +2047,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 	bool		returnsTuple;
 	bool		returnsSet = false;
 	FunctionCallInfoData fcinfo;
+	PgStat_FunctionCallUsage fcusage;
 	ReturnSetInfo rsinfo;
 	HeapTupleData tmptup;
 	MemoryContext callerContext;
@@ -2159,9 +2178,14 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 		/* Call the function or expression one time */
 		if (direct_function_call)
 		{
+			pgstat_init_function_usage(&fcinfo, &fcusage);
+
 			fcinfo.isnull = false;
 			rsinfo.isDone = ExprSingleResult;
 			result = FunctionCallInvoke(&fcinfo);
+
+			pgstat_end_function_usage(&fcusage,
+									  rsinfo.isDone != ExprMultipleResult);
 		}
 		else
 		{
@@ -2229,7 +2253,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 
 				mt_bind = create_memtuple_binding(tupdesc);
 
-				tupstore = tuplestore_begin_heap(true, false, operatorMemKB); 
+				tupstore = tuplestore_begin_heap(true, false, operatorMemKB);
 				MemoryContextSwitchTo(oldcontext);
 				rsinfo.setResult = tupstore;
 				rsinfo.setDesc = tupdesc;
@@ -2327,7 +2351,7 @@ no_function_result:
 	if (rsinfo.setResult == NULL)
 	{
 		MemoryContextSwitchTo(econtext->ecxt_per_query_memory);
-		tupstore = tuplestore_begin_heap(true, false, operatorMemKB); 
+		tupstore = tuplestore_begin_heap(true, false, operatorMemKB);
 		rsinfo.setResult = tupstore;
 		if (!returnsSet)
 		{
@@ -2501,13 +2525,13 @@ ExecEvalDistinct(FuncExprState *fcache,
 }
 
 static inline void ExecEvalFPStrict2Arg(FuncExprState *expr, ExprContext *econtext, bool *isNull, ExprDoneCond *isDone)
-{ 
+{
 	ExprDoneCond argDone[2];
 
 	Assert(expr->fp_arg[0] && expr->fp_arg[1]);
 	if(isDone)
 		*isDone = ExprSingleResult;
-	
+
 	expr->fp_datum[0] = ExecEvalExpr(expr->fp_arg[0], econtext, &expr->fp_null[0], &argDone[0]);
 	expr->fp_datum[1] = ExecEvalExpr(expr->fp_arg[1], econtext, &expr->fp_null[1], &argDone[1]);
 
@@ -2546,10 +2570,10 @@ static Datum ExecEvalFPStrict2_Int8Eq(FuncExprState *fstate, ExprContext *ctxt, 
 #define DATE_EQ_OID 1086
 
 /* Optimize x op y if op has no side effect.  Almost all our functions are
- * strict, 2 args.  
- * 
- * NOTE: You need to implement the ExecEvalFPStrict2_FUNC FAITHFULLY.  
- * For example, before you fast path int4add, make sure your implementation 
+ * strict, 2 args.
+ *
+ * NOTE: You need to implement the ExecEvalFPStrict2_FUNC FAITHFULLY.
+ * For example, before you fast path int4add, make sure your implementation
  * is the same as the old int4add, that is, you need to handle under/over flow etc.
  */
 static void FastPathStrict2Func(Oid funcoid, FuncExprState *fstate)
@@ -2603,7 +2627,7 @@ ExecEvalFPScalarArrayInt(ScalarArrayOpExprState *sstate,
 
 	if (isDone)
 		*isDone = ExprSingleResult;
-		
+
 	if (isnull)
 	{
 		*isNull = true;
@@ -2651,7 +2675,7 @@ ExecEvalFPScalarArrayStr(ScalarArrayOpExprState *sstate,
 
 	if (isDone)
 		*isDone = ExprSingleResult;
-		
+
 	if (isnull)
 	{
 		*isNull = true;
@@ -2715,7 +2739,7 @@ static void FastPathScalarArrayOp(ScalarArrayOpExpr *opexpr, ScalarArrayOpExprSt
 	};
 
 	int i;
-		
+
 	/* IN will be evaluated as OR */
 	if (!opexpr->useOr)
 		return;
@@ -2735,7 +2759,7 @@ static void FastPathScalarArrayOp(ScalarArrayOpExpr *opexpr, ScalarArrayOpExprSt
 
 	/* Better to have just two args */
 	Assert(list_length(sstate->fxprstate.args) == 2);
-	
+
 	/* only if the second args are const */
 	argstate = (ExprState *) lsecond(sstate->fxprstate.args);
 	if (argstate->evalfunc != ExecEvalConst)
@@ -2778,11 +2802,11 @@ static void FastPathScalarArrayOp(ScalarArrayOpExpr *opexpr, ScalarArrayOpExprSt
 	for (i = 0; i < sstate->fp_n; i++)
 	{
 		Datum elt;
-		
+
 		/* Do not deal with null yet */
 		if (bitmap && (*bitmap & bitmask) == 0)
 			return;
-		
+
 		elt = fetch_att(s, typbyval, typlen);
 		s = att_addlength_pointer(s, typlen, PointerGetDatum(s));
 		s = (char *) att_align_nominal(s, typalign);
@@ -2835,12 +2859,12 @@ static void FastPathScalarArrayOp(ScalarArrayOpExpr *opexpr, ScalarArrayOpExprSt
 	/* Now we are sure we can fast path this */
 	if (fnoid == INT2EQ_OID || fnoid == INT4EQ_OID || fnoid == INT8EQ_OID || fnoid == DATE_EQ_OID)
 		sstate->fxprstate.xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalFPScalarArrayInt;
-	else if (fnoid == TEXTEQ_OID || fnoid == BPCHAREQ_OID) 
-		sstate->fxprstate.xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalFPScalarArrayStr; 
+	else if (fnoid == TEXTEQ_OID || fnoid == BPCHAREQ_OID)
+		sstate->fxprstate.xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalFPScalarArrayStr;
 	else
 		Assert(!"Wrong optimize_funcoid");
 }
-	
+
 /*
  * ExecEvalScalarArrayOp
  *
@@ -3759,10 +3783,10 @@ ExecEvalRowCompare(RowCompareExprState *rstate,
  *		ExecEvalTableValue
  * ----------------------------------------------------------------
  */
-static Datum 
+static Datum
 ExecEvalTableValue(ExprState	*estate,
 				   ExprContext	*econtext,
-				   bool			*isNull, 
+				   bool			*isNull,
 				   ExprDoneCond	*isDone)
 {
 	/* Guard against stack overflow due to overly complex expressions */
@@ -4964,7 +4988,7 @@ static Datum ExecEvalPartListNullTestExpr(PartListNullTestExprState *exprstate,
  *
  *    Evaluate CURRENT OF
  *
- *    Constant folding must have bound observed values of 
+ *    Constant folding must have bound observed values of
  * 	gp_segment_id, ctid, and tableoid into the CurrentOfExpr for
  *	this function's consumption.
  * ----------------------------------------------------------------
@@ -4987,12 +5011,12 @@ ExecEvalCurrentOfExpr(ExprState *exprstate, ExprContext *econtext,
 	slot = econtext->ecxt_scantuple;
 	Assert(!TupIsNull(slot));
 
-	/* 
+	/*
 	 * The currently scanned tuple must use heap storage for it to possibly
 	 * satisfy the CURRENT OF qualification. Despite our grand attempts during
-	 * parsing and constant folding to demand heap storage, the scanning of an 
-	 * AO part is still possible, when the current row uses heap storage, but the 
-	 * CURRENT OF invocation uses an unpruned scan of the partition table, yielding 
+	 * parsing and constant folding to demand heap storage, the scanning of an
+	 * AO part is still possible, when the current row uses heap storage, but the
+	 * CURRENT OF invocation uses an unpruned scan of the partition table, yielding
 	 * tuples from the AO parts before the desired heap tuple.
 	 */
 	if (TupHasHeapTuple(slot))
@@ -5302,7 +5326,7 @@ ExecInitExpr(Expr *node, PlanState *parent)
 				WindowFuncExprState *wfstate = makeNode(WindowFuncExprState);
 				int			numrefs;
 				WindowState *winstate = (WindowState *) parent;
-				
+
 				wfstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalWindowFunc;
 				if (parent && IsA(parent, WindowState))
 				{
@@ -5455,12 +5479,12 @@ ExecInitExpr(Expr *node, PlanState *parent)
 			{
 				AlternativeSubPlan *asplan = (AlternativeSubPlan *) node;
 				AlternativeSubPlanState *asstate;
-				
+
 				if (!parent)
 					elog(ERROR, "AlternativeSubPlan found with no parent plan");
-				
+
 				asstate = ExecInitAlternativeSubPlan(asplan, parent);
-				
+
 				state = (ExprState *) asstate;
 			}
 			break;
@@ -5705,14 +5729,12 @@ ExecInitExpr(Expr *node, PlanState *parent)
 					int			strategy;
 					Oid			lefttype;
 					Oid			righttype;
-					bool		recheck;
 					Oid			proc;
 
 					get_op_opfamily_properties(opno, opfamily,
 											   &strategy,
 											   &lefttype,
-											   &righttype,
-											   &recheck);
+											   &righttype);
 					proc = get_opfamily_proc(opfamily,
 											 lefttype,
 											 righttype,
@@ -6361,7 +6383,7 @@ ExecVariableList(ProjectionInfo *projInfo,
 		TupleTableSlot *varSlot = *((TupleTableSlot **) slotptr);
 		int			varNumber = varNumbers[i] - 1;
 
-		values[i] = slot_getattr(varSlot, varNumber+1, &(isnull[i])); 
+		values[i] = slot_getattr(varSlot, varNumber+1, &(isnull[i]));
 	}
 }
 
@@ -6542,7 +6564,7 @@ neededColumnContextWalker(Node *node, neededColumnContext *c)
 	{
 		Var *var = (Var *)node;
 
-		if (var->varattno > 0) 
+		if (var->varattno > 0)
 		{
 			Assert(var->varattno <= c->n);
 			c->mask[var->varattno - 1] = true;

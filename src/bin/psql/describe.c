@@ -22,6 +22,7 @@
 #include "settings.h"
 #include "variables.h"
 
+
 static bool describeOneTableDetails(const char *schemaname,
 						const char *relationname,
 						const char *oid,
@@ -183,28 +184,28 @@ describeAggregates(const char *pattern, bool verbose, bool showSystem)
 	printfPQExpBuffer(&buf,
 					  "SELECT n.nspname as \"%s\",\n"
 					  "  p.proname AS \"%s\",\n"
-				 "  pg_catalog.format_type(p.prorettype, NULL) AS \"%s\",\n",
+					  "  pg_catalog.format_type(p.prorettype, NULL) AS \"%s\",\n",
 					  gettext_noop("Schema"),
 					  gettext_noop("Name"),
 					  gettext_noop("Result data type"));
 
 	if (pset.sversion >= 80200)
-		appendPQExpBuffer(&buf,
-						  "  CASE WHEN p.pronargs = 0\n"
-						  "    THEN CAST('*' AS pg_catalog.text)\n"
-						  "    ELSE\n"
-						  "    pg_catalog.array_to_string(ARRAY(\n"
-						  "      SELECT\n"
+	    appendPQExpBuffer(&buf,
+					  "  CASE WHEN p.pronargs = 0\n"
+					  "    THEN CAST('*' AS pg_catalog.text)\n"
+					  "    ELSE\n"
+					  "    pg_catalog.array_to_string(ARRAY(\n"
+					  "      SELECT\n"
 				 "        pg_catalog.format_type(p.proargtypes[s.i], NULL)\n"
-						  "      FROM\n"
-						  "        pg_catalog.generate_series(0, pg_catalog.array_upper(p.proargtypes, 1)) AS s(i)\n"
-						  "    ), ', ')\n"
-						  "  END AS \"%s\",\n",
-						  gettext_noop("Argument data types"));
+					  "      FROM\n"
+					  "        pg_catalog.generate_series(0, pg_catalog.array_upper(p.proargtypes, 1)) AS s(i)\n"
+					  "    ), ', ')\n"
+					  "  END AS \"%s\",\n",
+					  gettext_noop("Argument data types"));
 	else
-		appendPQExpBuffer(&buf,
-			 "  pg_catalog.format_type(p.proargtypes[0], NULL) AS \"%s\",\n",
-						  gettext_noop("Argument data types"));
+	    appendPQExpBuffer(&buf,
+					  "  pg_catalog.format_type(p.proargtypes[0], NULL) AS \"%s\",\n",
+					  gettext_noop("Argument data types"));
 
 	appendPQExpBuffer(&buf,
 				 "  pg_catalog.obj_description(p.oid, 'pg_proc') as \"%s\"\n"
@@ -498,7 +499,7 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "  WHEN p.provolatile = 's' THEN '%s'\n"
 						  "  WHEN p.provolatile = 'v' THEN '%s'\n"
 						  "END as \"%s\""
-				   ",\n  pg_catalog.pg_get_userbyid(p.proowner) as \"%s\",\n"
+						  ",\n  pg_catalog.pg_get_userbyid(p.proowner) as \"%s\",\n"
 						  "  l.lanname as \"%s\",\n"
 						  "  p.prosrc as \"%s\",\n"
 				  "  pg_catalog.obj_description(p.oid, 'pg_proc') as \"%s\"",
@@ -667,7 +668,7 @@ describeTypes(const char *pattern, bool verbose, bool showSystem)
 		appendPQExpBuffer(&buf, " pg_catalog.array_to_string(te.typoptions, ',') AS \"%s\",\n", gettext_noop("Type Options"));
 
 	appendPQExpBuffer(&buf,
-				"  pg_catalog.obj_description(t.oid, 'pg_type') as \"%s\"\n",
+					  "  pg_catalog.obj_description(t.oid, 'pg_type') as \"%s\"\n",
 					  gettext_noop("Description"));
 
 	appendPQExpBuffer(&buf, "FROM pg_catalog.pg_type t\n"
@@ -818,7 +819,7 @@ listAllDbs(bool verbose)
 						  ",\n       t.spcname as \"%s\"",
 						  gettext_noop("Tablespace"));
 	if (verbose && pset.sversion >= 80200)
-		appendPQExpBuffer(&buf,
+		    appendPQExpBuffer(&buf,
 						  ",\n       pg_catalog.shobj_description(d.oid, 'pg_database') as \"%s\"",
 						  gettext_noop("Description"));
 	appendPQExpBuffer(&buf,
@@ -1565,7 +1566,8 @@ describeOneTableDetails(const char *schemaname,
 							  schemaname, relationname);
 			break;
 		default:
-			printfPQExpBuffer(&title, _("?%c? \"%s.%s\""),
+			/* untranslated unknown relkind */
+			printfPQExpBuffer(&title, "?%c? \"%s.%s\"",
 							  tableinfo.relkind, schemaname, relationname);
 			break;
 	}
@@ -1607,12 +1609,13 @@ describeOneTableDetails(const char *schemaname,
 		printTableAddHeader(&cont, headers[i], true, 'l');
 
 	/* Check if table is a view */
+	/* GPDB_84_MERGE_FIXME: look into the below comment.. can we take "&& verbose" ? */
 	if (tableinfo.relkind == 'v' /* && verbose  ***  GPDB change:  Do this even if not verbose, for 8.2 compatibility */)
 	{
 		PGresult   *result;
 
 		printfPQExpBuffer(&buf,
-			  "SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)",
+						  "SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)",
 						  oid);
 		result = PSQLexec(buf.data, false);
 		if (!result)
@@ -2249,7 +2252,7 @@ describeOneTableDetails(const char *schemaname,
 							  "SELECT r.conname, "
 							  "pg_catalog.pg_get_constraintdef(r.oid, true)\n"
 							  "FROM pg_catalog.pg_constraint r\n"
-				   "WHERE r.conrelid = '%s' AND r.contype = 'c'\nORDER BY 1",
+					"WHERE r.conrelid = '%s' AND r.contype = 'c'\nORDER BY 1",
 							  oid);
 			result = PSQLexec(buf.data, false);
 			if (!result)
@@ -3159,7 +3162,6 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
 	return true;
 }
 
-
 /*
  * listTables()
  *
@@ -3467,7 +3469,7 @@ listCasts(const char *pattern)
 	printfPQExpBuffer(&buf,
 			   "SELECT pg_catalog.format_type(castsource, NULL) AS \"%s\",\n"
 			   "       pg_catalog.format_type(casttarget, NULL) AS \"%s\",\n"
-				  "       CASE WHEN castfunc = 0 THEN '(binary coercible)'\n"
+					  "       CASE WHEN castfunc = 0 THEN '(binary coercible)'\n"
 					  "            ELSE p.proname\n"
 					  "       END as \"%s\",\n"
 					  "       CASE WHEN c.castcontext = 'e' THEN '%s'\n"
@@ -3554,7 +3556,7 @@ listSchemas(const char *pattern, bool verbose)
 	}
 
 	appendPQExpBuffer(&buf,
-					  "\nFROM pg_catalog.pg_namespace n\n"
+			  "\nFROM pg_catalog.pg_namespace n\n"
 					  "WHERE	(n.nspname !~ '^pg_temp_' OR\n"
 		   "		 n.nspname = (pg_catalog.current_schemas(true))[1])\n");		/* temp schema is first */
 

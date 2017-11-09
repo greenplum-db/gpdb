@@ -5,7 +5,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.74 2008/04/03 16:27:25 tgl Exp $
+ *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.77 2008/06/30 10:58:47 heikki Exp $
  * ----------
  */
 #ifndef PGSTAT_H
@@ -14,7 +14,6 @@
 #include "libpq/pqcomm.h"
 #include "portability/instr_time.h"
 #include "utils/hsearch.h"
-#include "utils/rel.h"
 #include "utils/relcache.h"
 #include "utils/timestamp.h"
 
@@ -387,7 +386,7 @@ typedef struct PgStat_FunctionEntry
  *								usage statistics.
  * ----------
  */
-#define PGSTAT_NUM_FUNCENTRIES	\
+#define PGSTAT_NUM_FUNCENTRIES  \
 	((PGSTAT_MSG_PAYLOAD - sizeof(Oid) - sizeof(int))  \
 	 / sizeof(PgStat_FunctionEntry))
 
@@ -638,7 +637,7 @@ typedef struct PgBackendStatus
 	char	   *st_appname;
 
 	/* current command string; MUST be null-terminated */
-	char		*st_activity;
+	char	   *st_activity;
 
 	Oid			st_rsgid;
 } PgBackendStatus;
@@ -652,11 +651,11 @@ typedef struct PgStat_FunctionCallUsage
 	/* NULL means we are not tracking the current function call */
 	PgStat_FunctionCounts *fs;
 	/* Total time previously charged to function, as of function start */
-	instr_time	save_f_time;
+	instr_time		save_f_time;
 	/* Backend-wide total time as of function start */
-	instr_time	save_total;
+	instr_time		save_total;
 	/* system clock as of function start */
-	instr_time	f_start;
+	instr_time		f_start;
 } PgStat_FunctionCallUsage;
 
 
@@ -666,6 +665,8 @@ typedef struct PgStat_FunctionCallUsage
  */
 extern bool pgstat_track_activities;
 extern bool pgstat_track_counts;
+extern int	pgstat_track_functions;
+extern int	pgstat_track_activity_query_size;
 
 extern bool pgstat_collect_queuelevel;
 
@@ -884,6 +885,11 @@ extern void pgstat_count_heap_insert(Relation rel);
 extern void pgstat_count_heap_update(Relation rel, bool hot);
 extern void pgstat_count_heap_delete(Relation rel);
 extern void pgstat_update_heap_dead_tuples(Relation rel, int delta);
+
+extern void pgstat_init_function_usage(FunctionCallInfoData *fcinfo,
+									   PgStat_FunctionCallUsage *fcu);
+extern void pgstat_end_function_usage(PgStat_FunctionCallUsage *fcu,
+									  bool finalize);
 
 extern void AtEOXact_PgStat(bool isCommit);
 extern void AtEOSubXact_PgStat(bool isCommit, int nestDepth);

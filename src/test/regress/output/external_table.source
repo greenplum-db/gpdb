@@ -190,7 +190,7 @@ HINT:  Use ALTER EXTERNAL TABLE instead
 alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
 alter external table ext add column extnewcol int not null; -- should fail (constraints not allowed)
-ERROR:  Unsupported ALTER command for table type external
+ERROR:  Unsupported ALTER command for table type external. No constraints allowed.
 alter external table ext add column extnewcol int; -- pass
 alter external table ext alter column extnewcol set default 1; -- should fail (unsupported alter type)
 ERROR:  Unsupported ALTER command for table type external
@@ -278,6 +278,10 @@ DROP EXTERNAL TABLE ext_r;
 RESET SESSION AUTHORIZATION;
 REVOKE ALL PRIVILEGES ON PROTOCOL demoprot FROM extprotu;
 DROP ROLE IF EXISTS extprotu;
+-- Test multi-object DROP
+CREATE PROTOCOL demoprot_droptest1 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+CREATE PROTOCOL demoprot_droptest2 (readfunc = 'read_from_file', writefunc = 'write_to_file');
+DROP PROTOCOL demoprot_droptest1, demoprot_droptest2;
 --
 -- WET tests
 --
@@ -518,7 +522,7 @@ create external table ret_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
 ) format 'text';
 select * from ret_too_many_uris;
-ERROR:  There are more external files (URLs) than primary segments that can read them. Found 20 URLs and 3 primary segments.
+ERROR:  There are more external files (URLs) than primary segments that can read them.
 create writable external table wet_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/wet.out1',  'gpfdist://foo.invalid:7070/wet.out2',
   'gpfdist://foo.invalid:7070/wet.out3',  'gpfdist://foo.invalid:7070/wet.out4',
@@ -796,12 +800,6 @@ select count(*) from gp_read_error_log('exttab_cte_2');
  count 
 -------
      1
-(1 row)
-
-select count(*) from gp_read_error_log('exttab_cte_1');
- count 
--------
-     2
 (1 row)
 
 -- CTE without segment reject limit exceeded

@@ -78,7 +78,7 @@ WalSnd	   *MyWalSnd = NULL;
 
 /* Global state */
 bool		am_walsender = false;		/* Am I a walsender process ? */
-int			max_wal_senders = 1;	/* the maximum number of concurrent walsenders */
+int			max_wal_senders = 0;	/* the maximum number of concurrent walsenders */
 
 /* User-settable parameters for walsender */
 int			replication_timeout = 60 * 1000;	/* maximum time to send one

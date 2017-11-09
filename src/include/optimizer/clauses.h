@@ -31,7 +31,6 @@ typedef struct
 	int			numAggs;		/* total number of aggregate calls */
 	int			numDistinctAggs;	/* number that use DISTINCT */
 	Size		transitionSpace;	/* for pass-by-ref transition data */
-	bool	canHashAgg;		/*CDB: Could use HashAgg except for DQA(s). */
 	List   *dqaArgs;	/* CDB: List of distinct DQA argument exprs. */
 	List   *aggOrder;   /* CDB: List of AggOrder clauses */
 	bool	missing_prelimfunc; /* CDB: any agg func w/o a prelim func? */
@@ -89,9 +88,6 @@ extern char check_execute_on_functions(Node *clause);
 
 extern bool is_pseudo_constant_clause(Node *clause);
 extern bool is_pseudo_constant_clause_relids(Node *clause, Relids relids);
-
-extern bool has_distinct_clause(Query *query);
-extern bool has_distinct_on_clause(Query *query);
 
 extern int	NumRelids(Node *clause);
 

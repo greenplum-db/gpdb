@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapIndexscan.c,v 1.25 2008/01/01 19:45:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapIndexscan.c,v 1.27 2008/04/13 20:51:20 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -153,8 +153,6 @@ ExecBitmapIndexReScan(BitmapIndexScanState *node, ExprContext *exprCtxt)
 		tbm_bitmap_free(node->bitmap);
 		node->bitmap = NULL;
 	}
-
-	CheckSendPlanStateGpmonPkt(&scanState->ss.ps);
 }
 
 /* ----------------------------------------------------------------
@@ -224,8 +222,6 @@ ExecInitBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags)
 	 */
 	Assert(NULL == scanState->ss.ss_currentRelation);
 
-	initGpmonPktForBitmapIndexScan((Plan *)node, &scanState->ss.ps.gpmon_pkt, estate);
-
 	return indexstate;
 }
 
@@ -234,13 +230,4 @@ ExecCountSlotsBitmapIndexScan(BitmapIndexScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPINDEXSCAN_NSLOTS;
-}
-
-
-void
-initGpmonPktForBitmapIndexScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(NULL != planNode && NULL != gpmon_pkt && IsA(planNode, BitmapIndexScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

@@ -1122,7 +1122,7 @@ CTranslatorUtils::PdrgpbsGroupBy
 
 	Node *pnode = (Node*) LInitial(plGroupClause);
 
-	if (NULL == pnode || IsA(pnode, GroupClause))
+	if (NULL == pnode || IsA(pnode, SortGroupClause))
 	{
 		// simple group by
 		CBitSet *pbsGroupingSet = PbsGroupingSet(pmp, plGroupClause, ulCols, phmululGrpColPos, pbsGrpCols);
@@ -1164,11 +1164,11 @@ CTranslatorUtils::PdrgpbsGroupBy
 		Node *pnodeGroupingSet = (Node *) lfirst(plcGroupingSet);
 
 		CBitSet *pbs = NULL;
-		if (IsA(pnodeGroupingSet, GroupClause))
+		if (IsA(pnodeGroupingSet, SortGroupClause))
 		{
 			// grouping set contains a single grouping column
 			pbs = GPOS_NEW(pmp) CBitSet(pmp, ulCols);
-			ULONG ulSortGrpRef = ((GroupClause *) pnodeGroupingSet)->tleSortGroupRef;
+			ULONG ulSortGrpRef = ((SortGroupClause *) pnodeGroupingSet)->tleSortGroupRef;
 			pbs->FExchangeSet(ulSortGrpRef);
 			UpdateGrpColMapping(pmp, phmululGrpColPos, pbsGrpCols, ulSortGrpRef);
 		}
@@ -1216,10 +1216,10 @@ CTranslatorUtils::PdrgpbsRollup
 	{
 		Node *pnode = (Node *) lfirst(plcGroupingSet);
 		CBitSet *pbs = GPOS_NEW(pmp) CBitSet(pmp);
-		if (IsA(pnode, GroupClause))
+		if (IsA(pnode, SortGroupClause))
 		{
 			// simple group clause, create a singleton grouping set
-			GroupClause *pgrpcl = (GroupClause *) pnode;
+			SortGroupClause *pgrpcl = (SortGroupClause *) pnode;
 			ULONG ulSortGrpRef = pgrpcl->tleSortGroupRef;
 			(void) pbs->FExchangeSet(ulSortGrpRef);
 			pdrgpbsGroupingSets->Append(pbs);
@@ -1234,14 +1234,14 @@ CTranslatorUtils::PdrgpbsRollup
 			ForEach (plcGrpCl, plist)
 			{
 				Node *pnodeGrpCl = (Node *) lfirst(plcGrpCl);
-				if (!IsA(pnodeGrpCl, GroupClause))
+				if (!IsA(pnodeGrpCl, SortGroupClause))
 				{
 					// each list entry must be a group clause
 					// for example, rollup((a,b),(c,(d,e)));
 					GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Nested grouping sets"));
 				}
 
-				GroupClause *pgrpcl = (GroupClause *) pnodeGrpCl;
+				SortGroupClause *pgrpcl = (SortGroupClause *) pnodeGrpCl;
 				ULONG ulSortGrpRef = pgrpcl->tleSortGroupRef;
 				(void) pbs->FExchangeSet(ulSortGrpRef);
 				UpdateGrpColMapping(pmp, phmululGrpColPos, pbsGrpCols, ulSortGrpRef);
@@ -1308,12 +1308,12 @@ CTranslatorUtils::PbsGroupingSet
 			continue;
 		}
 
-		if (!IsA(pnodeElem, GroupClause))
+		if (!IsA(pnodeElem, SortGroupClause))
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Mixing grouping sets with simple group by lists"));
 		}
 
-		ULONG ulSortGrpRef = ((GroupClause *) pnodeElem)->tleSortGroupRef;
+		ULONG ulSortGrpRef = ((SortGroupClause *) pnodeElem)->tleSortGroupRef;
 		pbs->FExchangeSet(ulSortGrpRef);
 		
 		UpdateGrpColMapping(pmp, phmululGrpColPos, pbsGrpCols, ulSortGrpRef);
@@ -1892,7 +1892,8 @@ CTranslatorUtils::FSortingColumn
 	ForEach (plcSortCl, plSortCl)
 	{
 		Node *pnodeSortCl = (Node*) lfirst(plcSortCl);
-		if (IsA(pnodeSortCl, SortClause) && pte->ressortgroupref == ((SortClause *) pnodeSortCl)->tleSortGroupRef)
+		if (IsA(pnodeSortCl, SortGroupClause) &&
+		    pte->ressortgroupref == ((SortGroupClause *) pnodeSortCl)->tleSortGroupRef)
 		{
 			return true;
 		}
@@ -1986,7 +1987,8 @@ CTranslatorUtils::FGroupingColumn
 			continue;
 		}
 
-		if (IsA(pnodeGrpCl, GroupClause) && FGroupingColumn(pte, (GroupClause*) pnodeGrpCl))
+		if (IsA(pnodeGrpCl, SortGroupClause) &&
+		    FGroupingColumn(pte, (SortGroupClause*) pnodeGrpCl))
 		{
 			return true;
 		}
@@ -2000,7 +2002,8 @@ CTranslatorUtils::FGroupingColumn
 			{
 				Node *pnodeGroupingSet = (Node *) lfirst(plcGroupingSet);
 
-				if (IsA(pnodeGroupingSet, GroupClause) && FGroupingColumn(pte, ((GroupClause *) pnodeGroupingSet)))
+				if (IsA(pnodeGroupingSet, SortGroupClause) &&
+				    FGroupingColumn(pte, ((SortGroupClause *) pnodeGroupingSet)))
 				{
 					return true;
 				}
@@ -2027,7 +2030,7 @@ BOOL
 CTranslatorUtils::FGroupingColumn
 	(
 	const TargetEntry *pte,
-	const GroupClause *pgrcl
+	const SortGroupClause *pgrcl
 	)
 {
 	GPOS_ASSERT(NULL != pgrcl);
@@ -2045,7 +2048,7 @@ CTranslatorUtils::FGroupingColumn
 BOOL
 CTranslatorUtils::FGroupingColumn
 	(
-	const SortClause *psortcl,
+	const SortGroupClause *psortcl,
 	List *plGrpCl
 	)
 {
@@ -2053,9 +2056,9 @@ CTranslatorUtils::FGroupingColumn
 	ForEach (plcGrpCl, plGrpCl)
 	{
 		Node *pnodeGrpCl = (Node*) lfirst(plcGrpCl);
-		GPOS_ASSERT(IsA(pnodeGrpCl, GroupClause) && "We currently do not support grouping sets.");
+		GPOS_ASSERT(IsA(pnodeGrpCl, SortGroupClause) && "We currently do not support grouping sets.");
 
-		GroupClause *pgrpcl = (GroupClause*) pnodeGrpCl;
+		SortGroupClause *pgrpcl = (SortGroupClause *) pnodeGrpCl;
 		if (psortcl->tleSortGroupRef == pgrpcl->tleSortGroupRef)
 		{
 			return true;

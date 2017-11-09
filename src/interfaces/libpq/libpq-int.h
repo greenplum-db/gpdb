@@ -369,7 +369,7 @@ struct pg_conn
 #if defined(KRB5) || defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	char	   *krbsrvname;		/* Kerberos service name */
 #endif
-
+    char       *gpconntype; /* type of connection */
     char       *gpqeid;        /* MPP: session id & startup info for qExec */
 
 	/* Optional file to write trace info to */

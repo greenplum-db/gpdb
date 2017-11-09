@@ -600,14 +600,16 @@ Distributed by: (sale_id)
         <body>
           <p>The <i>session_level_memory_consumption</i> view provides information about memory
             consumption and idle time for sessions that are running SQL queries. </p>
-          <p>In the view, the column <codeph>is_runaway</codeph> indicates whether Greenplum
+          <p>When resource queue-based resource management is active, the column
+            <codeph>is_runaway</codeph> indicates whether Greenplum
             Database considers the session a runaway session based on the vmem memory consumption of
-            the session's queries. When the queries consume an excessive amount of memory, Greenplum
-            Database considers the session a runaway. The Greenplum Database server configuration
-            parameter <codeph>runaway_detector_activation_percent</codeph> controlling when
-            Greenplum Database considers a session a runaway session. </p>
-          <p>For information about the parameter, see "Server Configuration Parameters" in the
-              <cite>Greenplum Database Reference Guide</cite>. </p>
+            the session's queries. Under the resource queue-based resource management scheme, Greenplum
+            Database considers the session a runaway when the queries consume an excessive amount of
+            memory. The Greenplum Database server configuration
+            parameter <codeph>runaway_detector_activation_percent</codeph> governs the
+            conditions under which Greenplum Database considers a session a runaway session. </p>
+          <p>The <codeph>is_runaway</codeph>, <codeph>runaway_vmem_mb</codeph>, and
+            <codeph>runaway_command_cnt</codeph> columns are not applicable when resource group-based resource management is active.</p>
           <table id="session_level_memory_consumption_table">
             <title>session_level_memory_consumption</title>
             <tgroup cols="4">

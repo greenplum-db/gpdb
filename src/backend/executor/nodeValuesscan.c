@@ -277,8 +277,6 @@ ExecInitValuesScan(ValuesScan *node, EState *estate, int eflags)
 	 */
 	ExecAssignResultTypeFromTL(&scanstate->ss.ps);
 	ExecAssignScanProjectionInfo(&scanstate->ss);
-
-	initGpmonPktForValuesScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
 	
 	return scanstate;
 }
@@ -353,15 +351,4 @@ ExecValuesReScan(ValuesScanState *node, ExprContext *exprCtxt)
 	/*node->ss.ps.ps_TupFromTlist = false;*/
 
 	node->curr_idx = -1;
-}
-
-void
-initGpmonPktForValuesScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	RangeTblEntry *rte;
-	Assert(planNode != NULL && gpmon_pkt != NULL);
-
-	rte = rt_fetch(((ValuesScan *)planNode)->scan.scanrelid, estate->es_range_table);
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

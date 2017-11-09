@@ -10,13 +10,14 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.43 2008/08/25 22:42:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/planagg.c,v 1.42 2008/08/02 21:32:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "catalog/pg_aggregate.h"
+#include "catalog/pg_am.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
@@ -488,7 +489,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	Plan	   *plan;
 	Plan	   *iplan;
 	TargetEntry *tle;
-	SortClause *sortcl;
+	SortGroupClause *sortcl;
 
 	/*
 	 * Generate a suitably modified query.	Much of the work here is probably
@@ -503,6 +504,7 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	subparse->utilityStmt = NULL;
 	subparse->intoClause = NULL;
 	subparse->hasAggs = false;
+	subparse->hasDistinctOn = false;
 	subparse->groupClause = NIL;
 	subparse->havingQual = NULL;
 	subparse->distinctClause = NIL;
@@ -516,8 +518,12 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	subparse->targetList = list_make1(tle);
 
 	/* set up the appropriate ORDER BY entry */
-	sortcl = makeNode(SortClause);
+	sortcl = makeNode(SortGroupClause);
 	sortcl->tleSortGroupRef = assignSortGroupRef(tle, subparse->targetList);
+	sortcl->eqop = get_equality_op_for_ordering_op(info->aggsortop, NULL);
+	if (!OidIsValid(sortcl->eqop))		/* shouldn't happen */
+		elog(ERROR, "could not find equality operator for ordering operator %u",
+			 info->aggsortop);
 	sortcl->sortop = info->aggsortop;
 	sortcl->nulls_first = info->nulls_first;
 	subparse->sortClause = list_make1(sortcl);
@@ -525,8 +531,8 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *info)
 	/* set up LIMIT 1 */
 	subparse->limitOffset = NULL;
 	subparse->limitCount = (Node *) makeConst(INT8OID, -1, sizeof(int64),
-											  Int64GetDatum(1),
-											  false, true /* not by val */ );
+											  Int64GetDatum(1), false,
+											  FLOAT8PASSBYVAL);
 
 	/*
 	 * Generate the plan for the subquery.	We already have a Path for the

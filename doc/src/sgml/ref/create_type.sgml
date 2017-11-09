@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_type.sgml,v 1.80 2009/12/26 16:55:21 momjian Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_type.sgml,v 1.77 2008/07/31 16:27:16 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -38,6 +38,8 @@ CREATE TYPE <replaceable class="parameter">name</replaceable> (
     [ , PASSEDBYVALUE ]
     [ , ALIGNMENT = <replaceable class="parameter">alignment</replaceable> ]
     [ , STORAGE = <replaceable class="parameter">storage</replaceable> ]
+    [ , CATEGORY = <replaceable class="parameter">category</replaceable> ]
+    [ , PREFERRED = <replaceable class="parameter">preferred</replaceable> ]
     [ , DEFAULT = <replaceable class="parameter">default</replaceable> ]
     [ , ELEMENT = <replaceable class="parameter">element</replaceable> ]
     [ , DELIMITER = <replaceable class="parameter">delimiter</replaceable> ]
@@ -100,7 +102,13 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
 
   <para>
    The third form of <command>CREATE TYPE</command> creates a new base type
-   (scalar type).  The parameters can appear in any order, not only that
+   (scalar type).  To create a new base type, you must be a superuser.
+   (This restriction is made because an erroneous type definition could
+   confuse or even crash the server.)
+  </para>
+
+  <para>
+   The parameters can appear in any order, not only that
    illustrated above, and most are optional.  You must register
    two or more functions (using <command>CREATE FUNCTION</command>) before
    defining the type.  The support functions
@@ -199,7 +207,7 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
    attached to a type declaration, such as <literal>char(5)</> or
    <literal>numeric(30,2)</>.  <productname>PostgreSQL</productname> allows
    user-defined types to take one or more simple constants or identifiers as
-   modifiers; however, this information must be capable of being packed into a
+   modifiers.  However, this information must be capable of being packed into a
    single non-negative integer value for storage in the system catalogs.  The
    <replaceable class="parameter">type_modifier_input_function</replaceable>
    is passed the declared modifier(s) in the form of a <type>cstring</>
@@ -282,6 +290,27 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
    other way to make a row fit, but they will be kept in the main
    table preferentially over <literal>extended</literal> and
    <literal>external</literal> items.)
+  </para>
+
+  <para>
+   The <replaceable class="parameter">category</replaceable> and
+   <replaceable class="parameter">preferred</replaceable> parameters can be
+   used to help control which implicit cast will be applied in ambiguous
+   situations.  Each data type belongs to a category named by a single ASCII
+   character, and each type is either <quote>preferred</> or not within its
+   category.  The parser will prefer casting to preferred types (but only from
+   other types within the same category) when this rule is helpful in
+   resolving overloaded functions or operators.  For more details see <xref
+   linkend="typeconv">.  For types that have no implicit casts to or from any
+   other types, it is sufficient to leave these settings at the defaults.
+   However, for a group of related types that have implicit casts, it is often
+   helpful to mark them all as belonging to a category and select one or two
+   of the <quote>most general</> types as being preferred within the category.
+   The <replaceable class="parameter">category</replaceable> parameter is
+   especially useful when adding a user-defined type to an existing built-in
+   category, such as the numeric or string types.  However, it is also
+   possible to create new entirely-user-defined type categories.  Select any
+   ASCII character other than an upper-case letter to name such a category.
   </para>
 
   <para>
@@ -498,6 +527,31 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
    </varlistentry>
 
    <varlistentry>
+    <term><replaceable class="parameter">category</replaceable></term>
+    <listitem>
+     <para>
+      The category code (a single ASCII character) for this type.
+      The default is <literal>'U'</> for <quote>user-defined type</>.
+      Other standard category codes can be found in
+      <xref linkend="catalog-typcategory-table">.  You may also choose
+      other ASCII characters in order to create custom categories.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="parameter">preferred</replaceable></term>
+    <listitem>
+     <para>
+      True if this type is a preferred type within its type category,
+      else false.  The default is false.  Be very careful about creating
+      a new preferred type within an existing type category, as this
+      could cause surprising changes in behavior.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><replaceable class="parameter">default</replaceable></term>
     <listitem>
      <para>
@@ -584,8 +638,8 @@ CREATE TYPE <replaceable class="parameter">name</replaceable>
   <para>
    Because there are no restrictions on use of a data type once it's been
    created, creating a base type is tantamount to granting public execute
-   permission on the functions mentioned in the type definition.  (The creator
-   of the type is therefore required to own these functions.)  This is usually
+   permission on the functions mentioned in the type definition.
+   This is usually
    not an issue for the sorts of functions that are useful in a type
    definition.  But you might want to think twice before designing a type
    in a way that would require <quote>secret</> information to be used

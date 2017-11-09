@@ -2638,7 +2638,7 @@ initWindowStatePerLevel(WindowState * wstate, WindowAgg *node)
 	eqOperators = (Oid *) palloc(lvl->numSortCols * sizeof(Oid));
 	for (i = 0; i < lvl->numSortCols; i++)
 	{
-		eqOperators[i] = get_equality_op_for_ordering_op(lvl->sortOperators[i]);
+		eqOperators[i] = get_equality_op_for_ordering_op(lvl->sortOperators[i], NULL);
 	}
 	lvl->eqfunctions = execTuplesMatchPrepare(lvl->numSortCols,
 											  eqOperators);
@@ -4218,8 +4218,6 @@ fetchCurrentRow(WindowState * wstate)
 		if (TupIsNull(slot))
 			return NULL;
 
-		Gpmon_Incr_Rows_In(GpmonPktFromWindowState(wstate));
-		CheckSendPlanStateGpmonPkt(&wstate->ps);
 		if (buffer == NULL)
 		{
 			initializePartition(wstate);
@@ -4410,8 +4408,6 @@ fetchTupleSlotThroughBuf(WindowState * wstate)
 			return NULL;
 		}
 
-		Gpmon_Incr_Rows_In(GpmonPktFromWindowState(wstate));
-		CheckSendPlanStateGpmonPkt(&wstate->ps);
 		/* Put the new tuple into the input buffer */
 		ntuplestore_acc_put_tupleslot(buffer->writer, slot);
 		buffer->num_tuples++;
@@ -4553,16 +4549,8 @@ ExecWindow(WindowState * wstate)
 	 */
 	resultSlot = ExecProject(wstate->ps.ps_ProjInfo, &isDone);
 
-	if (!TupIsNull(resultSlot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromWindowState(wstate));
-		CheckSendPlanStateGpmonPkt(&wstate->ps);
-	}
-
-	else
-	{
+	if (TupIsNull(resultSlot))
 		ExecEagerFreeWindow(wstate);
-	}
 
 	return resultSlot;
 }
@@ -5062,7 +5050,6 @@ make_eq_exprstate(WindowState * wstate, Expr *expr1, Expr *expr2)
 	Oid			restype1,
 				restype2;
 	Expr	   *eq_expr;
-	Operator	eq_optup;
 	Oid			eq_opid;
 
 	restype1 = exprType((Node *) expr1);
@@ -5079,12 +5066,12 @@ make_eq_exprstate(WindowState * wstate, Expr *expr1, Expr *expr2)
 											  -1);
 	}
 
-	eq_optup = equality_oper(restype1, false);
+	get_sort_group_operators(restype1,
+							 false, true, false,
+							 NULL, &eq_opid, NULL);
 	Assert(exprType((Node *) expr1) == exprType((Node *) expr2));
-	eq_opid = oprid(eq_optup);
 	eq_expr = make_opclause(eq_opid, BOOLOID, false, expr1, expr2);
-	((OpExpr *) eq_expr)->opfuncid = oprfuncid(eq_optup);
-	ReleaseSysCache(eq_optup);
+	((OpExpr *) eq_expr)->opfuncid = get_opcode(eq_opid);
 
 	return ExecInitExpr(eq_expr, (PlanState *) wstate);
 }
@@ -5154,19 +5141,17 @@ setEmptyFrame(WindowStatePerLevel level_state,
 			Datum		eq_datum;
 			FmgrInfo	ineq_fcinfo;
 			FmgrInfo	eq_fcinfo;
-			Operator	ineq_optup;
-			Operator	eq_optup;
+			Oid			lt_opr;
+			Oid			eq_opr;
 
-			ineq_optup = ordering_oper(exprType((Node *) level_state->trail_expr->expr),
-									   false);
-			ineq_ordfuncid = oprfuncid(ineq_optup);
-			ReleaseSysCache(ineq_optup);
+			get_sort_group_operators(exprType((Node *) level_state->trail_expr->expr),
+									 true, true, false,
+									 &lt_opr, &eq_opr, NULL);
+
+			ineq_ordfuncid = get_opcode(lt_opr);
 			fmgr_info(ineq_ordfuncid, &ineq_fcinfo);
 
-			eq_optup = equality_oper(exprType((Node *) level_state->trail_expr->expr),
-									 false);
-			eq_ordfuncid = oprfuncid(eq_optup);
-			ReleaseSysCache(eq_optup);
+			eq_ordfuncid = get_opcode(eq_opr);
 			fmgr_info(eq_ordfuncid, &eq_fcinfo);
 
 			/* is trail less than or equal to lead */
@@ -5825,8 +5810,6 @@ ExecInitWindow(WindowAgg * node, EState *estate, int eflags)
 
 	/* Frame initialisation can take place now */
 	init_frames(wstate);
-
-	initGpmonPktForWindow((Plan *) node, &wstate->ps.gpmon_pkt, estate);
 
 	return wstate;
 }
@@ -6764,14 +6747,6 @@ first_value_generic(PG_FUNCTION_ARGS)
 		PG_RETURN_NULL();
 
 	return d;
-}
-
-void
-initGpmonPktForWindow(Plan * planNode, gpmon_packet_t * gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, WindowAgg));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

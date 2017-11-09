@@ -44,15 +44,12 @@ class PgtwoPhase01To10(PgtwoPhaseTestCase):
 @tinctest.dataProvider('data_types_provider')
 def test_data_provider():
     data = {'01_skip_sync_create_commit_gpstop_i': ['skip','sync','create','commit','gpstop_i'],
-            '02_skip_sync_create_commit_gpstop_a': ['skip','sync','create','commit','gpstop_a'],
             '03_skip_sync_create_commit_failover_to_primary': ['skip','sync','create','commit','failover_to_primary'],
             '04_skip_sync_create_commit_failover_to_mirror': ['skip','sync','create','commit','failover_to_mirror'],
             '05_noskip_sync_create_commit_gpstop_i': ['noskip','sync','create','commit','gpstop_i'],
-            '06_noskip_sync_create_commit_gpstop_a': ['noskip','sync','create','commit','gpstop_a'],
             '07_noskip_sync_create_commit_failover_to_primary': ['noskip','sync','create','commit','failover_to_primary'],
             '08_noskip_sync_create_commit_failover_to_mirror': ['noskip','sync','create','commit','failover_to_mirror'],
             '09_skip_change_tracking_create_commit_gpstop_i': ['skip','change_tracking','create','commit','gpstop_i'],
-            '10_skip_change_tracking_create_commit_gpstop_a': ['skip','change_tracking','create','commit','gpstop_a']
             }
     return data
         

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *      $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.125 2008/08/25 22:42:32 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.124 2008/08/02 21:31:59 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -38,6 +38,7 @@
 #include "parser/parse_relation.h"
 #include "pgstat.h"
 #include "postmaster/autovacuum.h"
+#include "storage/bufmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/acl.h"
@@ -84,7 +85,7 @@ typedef struct AnlIndexData
 
 /*
  * Maintain the row index for large datums which must not be considered for
- * samples while calculating statistcs. The sample value at the row index for 
+ * samples while calculating statistcs. The sample value at the row index for
  * a column are masked as NULL.
  */
 typedef struct RowIndexes
@@ -594,7 +595,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 					 RelationGetRelationName(Irel[ind]), RelationGetRelationName(onerel));
 				estimatedIndexPages = 1.0;
 			}
-			else 
+			else
 			{
 				/**
 				 * NOTE: we don't attempt to estimate the number of tuples in an index.
@@ -854,6 +855,7 @@ examine_attribute(Relation onerel, int attnum)
 	Form_pg_attribute attr = onerel->rd_att->attrs[attnum - 1];
 	HeapTuple	typtuple;
 	VacAttrStats *stats;
+	int			i;
 	bool		ok;
 
 	/* Never analyze dropped columns */
@@ -879,6 +881,20 @@ examine_attribute(Relation onerel, int attnum)
 	stats->relstorage = RelationGetForm(onerel)->relstorage;
 	stats->anl_context = anl_context;
 	stats->tupattnum = attnum;
+
+	/*
+	 * The fields describing the stats->stavalues[n] element types default
+	 * to the type of the field being analyzed, but the type-specific
+	 * typanalyze function can change them if it wants to store something
+	 * else.
+	 */
+	for (i = 0; i < STATISTIC_NUM_SLOTS; i++)
+	{
+		stats->statypid[i] = stats->attr->atttypid;
+		stats->statyplen[i] = stats->attrtype->typlen;
+		stats->statypbyval[i] = stats->attrtype->typbyval;
+		stats->statypalign[i] = stats->attrtype->typalign;
+	}
 
 	/*
 	 * Call the type-specific typanalyze function.	If none is specified, use
@@ -1606,7 +1622,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 												  SPI_tuptable->tupdesc,
 												  &dummyNull);
 
-					/* 
+					/*
 					 * If Datum is too large, mark the index position as true
 					 * and increase the too wide count
 					 */
@@ -1653,9 +1669,9 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 static void
 analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *relPages, bool rootonly)
 {
-	*relPages = 0.0;		
-	*relTuples = 0.0;			
-	
+	*relPages = 0.0;
+	*relTuples = 0.0;
+
 	List *allRelOids = NIL;
 
 	/* if GUC optimizer_analyze_root_partition is off, we do not analyze root partitions, unless
@@ -1882,7 +1898,7 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 				/* XXX knows more than it should about type float4: */
 				arry = construct_array(numdatums, nnum,
 									   FLOAT4OID,
-									   sizeof(float4), true, 'i');
+									   sizeof(float4), FLOAT4PASSBYVAL, 'i');
 				values[i++] = PointerGetDatum(arry);	/* stanumbersN */
 			}
 			else
@@ -1899,10 +1915,10 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 
 				arry = construct_array(stats->stavalues[k],
 									   stats->numvalues[k],
-									   stats->attr->atttypid,
-									   stats->attrtype->typlen,
-									   stats->attrtype->typbyval,
-									   stats->attrtype->typalign);
+									   stats->statypid[k],
+									   stats->statyplen[k],
+									   stats->statypbyval[k],
+									   stats->statypalign[k]);
 				values[i++] = PointerGetDatum(arry);	/* stavaluesN */
 			}
 			else
@@ -2044,10 +2060,8 @@ static bool
 std_typanalyze(VacAttrStats *stats)
 {
 	Form_pg_attribute attr = stats->attr;
-	Operator	func_operator;
-	Oid			eqopr = InvalidOid;
-	Oid			eqfunc = InvalidOid;
-	Oid			ltopr = InvalidOid;
+	Oid			ltopr;
+	Oid			eqopr;
 	StdAnalyzeData *mystats;
 
 	/* If the attstattarget column is negative, use the default value */
@@ -2055,42 +2069,22 @@ std_typanalyze(VacAttrStats *stats)
 	if (attr->attstattarget < 0)
 		attr->attstattarget = default_statistics_target;
 
-	/* If column has no "=" operator, we can't do much of anything */
-	func_operator = equality_oper(attr->atttypid, true);
-	if (func_operator != NULL)
-	{
-		eqopr = oprid(func_operator);
-		eqfunc = oprfuncid(func_operator);
-		ReleaseSysCache(func_operator);
-	}
-	if (!OidIsValid(eqfunc))
-	{
-		/* Can't do much but the minimal stuff */
-		stats->compute_stats = compute_very_minimal_stats;
-		/* Might as well use the same minrows as below */
-		stats->minrows = 300 * attr->attstattarget;
-		return true;
-	}
-
-	/* Is there a "<" operator with suitable semantics? */
-	func_operator = ordering_oper(attr->atttypid, true);
-	if (func_operator != NULL)
-	{
-		ltopr = oprid(func_operator);
-		ReleaseSysCache(func_operator);
-	}
+	/* Look for default "<" and "=" operators for column's type */
+	get_sort_group_operators(attr->atttypid,
+							 false, false, false,
+							 &ltopr, &eqopr, NULL);
 
 	/* Save the operator info for compute_stats routines */
 	mystats = (StdAnalyzeData *) palloc(sizeof(StdAnalyzeData));
 	mystats->eqopr = eqopr;
-	mystats->eqfunc = eqfunc;
+	mystats->eqfunc = get_opcode(eqopr);
 	mystats->ltopr = ltopr;
 	stats->extra_data = mystats;
 
 	/*
 	 * Determine which standard statistics algorithm to use
 	 */
-	if (OidIsValid(ltopr))
+	if (OidIsValid(ltopr) && OidIsValid(eqopr))
 	{
 		/* Seems to be a scalar datatype */
 		stats->compute_stats = compute_scalar_stats;
@@ -2115,10 +2109,17 @@ std_typanalyze(VacAttrStats *stats)
 		 */
 		stats->minrows = 300 * attr->attstattarget;
 	}
-	else
+	else if (OidIsValid(eqopr))
 	{
 		/* Can't do much but the minimal stuff */
 		stats->compute_stats = compute_minimal_stats;
+		/* Might as well use the same minrows as above */
+		stats->minrows = 300 * attr->attstattarget;
+	}
+	else
+	{
+		/* Can't do much but the minimal stuff */
+		stats->compute_stats = compute_very_minimal_stats;
 		/* Might as well use the same minrows as above */
 		stats->minrows = 300 * attr->attstattarget;
 	}
@@ -2430,6 +2431,10 @@ compute_minimal_stats(VacAttrStatsP stats,
 			stats->numnumbers[0] = num_mcv;
 			stats->stavalues[0] = mcv_values;
 			stats->numvalues[0] = num_mcv;
+			/*
+			 * Accept the defaults for stats->statypid and others.
+			 * They have been set before we were called (see vacuum.h)
+			 */
 		}
 	}
 	else if (null_cnt > 0)
@@ -2861,6 +2866,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 			stats->numnumbers[slot_idx] = num_mcv;
 			stats->stavalues[slot_idx] = mcv_values;
 			stats->numvalues[slot_idx] = num_mcv;
+			/*
+			 * Accept the defaults for stats->statypid and others.
+			 * They have been set before we were called (see vacuum.h)
+			 */
 			slot_idx++;
 		}
 
@@ -2945,6 +2954,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 			stats->staop[slot_idx] = mystats->ltopr;
 			stats->stavalues[slot_idx] = hist_values;
 			stats->numvalues[slot_idx] = num_hist;
+			/*
+			 * Accept the defaults for stats->statypid and others.
+			 * They have been set before we were called (see vacuum.h)
+			 */
 			slot_idx++;
 		}
 

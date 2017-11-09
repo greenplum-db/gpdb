@@ -584,7 +584,7 @@ Feature: gptransfer tests
     Scenario:  gptransfer --dest-database option specified to a different name within the same system, should succeed
         Given the gptransfer test is initialized
         And the user runs "gptransfer -d gptransfer_testdb1 --dest-database gptransfer_destdb --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_SOURCE_USER --dest-port $GPTRANSFER_SOURCE_PORT --dest-host $GPTRANSFER_SOURCE_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
-        And the user runs "psql -t -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'select array_agg(foo) from (select count(*) foo from t0 union select count(*) foo from t1 union select count(*) foo from t2) q' gptransfer_destdb && dropdb -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST gptransfer_destdb"
+        And the user runs "psql -t -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -c 'select array_agg(foo ORDER BY foo) from (select count(*) foo from t0 union select count(*) foo from t1 union select count(*) foo from t2) q' gptransfer_destdb && dropdb -U $GPTRANSFER_SOURCE_USER -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST gptransfer_destdb"
         Then gptransfer should return a return code of 0
         And psql should print "{100,200,300}" to stdout
 

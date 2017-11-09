@@ -21,7 +21,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.25 2008/03/26 21:10:38 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeBitmapHeapscan.c,v 1.29 2008/06/19 00:46:04 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -185,11 +185,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -318,11 +313,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		}
 
 		/* OK to return this tuple */
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapHeapScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -413,7 +403,7 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 		OffsetNumber maxoff = PageGetMaxOffsetNumber(dp);
 		OffsetNumber offnum;
 
-		for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum++)
+		for (offnum = FirstOffsetNumber; offnum <= maxoff; offnum = OffsetNumberNext(offnum))
 		{
 			ItemId		lp;
 			HeapTupleData loctup;
@@ -495,7 +485,6 @@ ExecBitmapHeapReScan(BitmapHeapScanState *node, ExprContext *exprCtxt)
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
 
@@ -632,8 +621,6 @@ ExecInitBitmapHeapScan(BitmapHeapScan *node, EState *estate, int eflags)
 	 */
 	outerPlanState(scanstate) = ExecInitNode(outerPlan(node), estate, eflags);
 
-	initGpmonPktForBitmapHeapScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
-
 	/*
 	 * all done.
 	 */
@@ -645,14 +632,6 @@ ExecCountSlotsBitmapHeapScan(BitmapHeapScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPHEAPSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForBitmapHeapScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapHeapScan));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

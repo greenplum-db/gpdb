@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/typecmds.c,v 1.117 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/typecmds.c,v 1.122 2008/07/31 16:27:16 tgl Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -101,14 +101,13 @@ static void remove_type_encoding(Oid typid);
 
 /*
  * DefineType
- *		Registers a new type.
+ *		Registers a new base type.
  */
 void
 DefineType(List *names, List *parameters)
 {
 	char	   *typeName;
 	Oid			typeNamespace;
-	AclResult	aclresult;
 	int16		internalLength = -1;	/* default: variable-length */
 	Oid			elemType = InvalidOid;
 	List	   *inputName = NIL;
@@ -120,6 +119,8 @@ DefineType(List *names, List *parameters)
 	List	   *analyzeName = NIL;
 	char	   *defaultValue = NULL;
 	bool		byValue = false;
+	char		category = TYPCATEGORY_USER;
+	bool		preferred = false;
 	char		delimiter = DEFAULT_TYPDELIM;
 	char		alignment = 'i';	/* default alignment */
 	char		storage = 'p';	/* default TOAST storage method */
@@ -139,14 +140,33 @@ DefineType(List *names, List *parameters)
 	List	   *encoding = NIL;
 	Relation	pg_type;
 
+	/*
+	 * As of Postgres 8.4, we require superuser privilege to create a base
+	 * type.  This is simple paranoia: there are too many ways to mess up the
+	 * system with an incorrect type definition (for instance, representation
+	 * parameters that don't match what the C code expects).  In practice
+	 * it takes superuser privilege to create the I/O functions, and so the
+	 * former requirement that you own the I/O functions pretty much forced
+	 * superuserness anyway.  We're just making doubly sure here.
+	 *
+	 * XXX re-enable NOT_USED code sections below if you remove this test.
+	 */
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be superuser to create a base type")));
+
 	/* Convert list of names to a name and namespace */
 	typeNamespace = QualifiedNameGetCreationNamespace(names, &typeName);
 
+#ifdef NOT_USED
+	/* XXX this is unnecessary given the superuser check above */
 	/* Check we have creation rights in target namespace */
 	aclresult = pg_namespace_aclcheck(typeNamespace, GetUserId(), ACL_CREATE);
 	if (aclresult != ACLCHECK_OK)
 		aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
 					   get_namespace_name(typeNamespace));
+#endif
 
 	/*
 	 * Look to see if type already exists (presumably as a shell; if not,
@@ -217,8 +237,6 @@ DefineType(List *names, List *parameters)
 
 		if (pg_strcasecmp(defel->defname, "internallength") == 0)
 			internalLength = defGetTypeLength(defel);
-		else if (pg_strcasecmp(defel->defname, "externallength") == 0)
-			;					/* ignored -- remove after 7.3 */
 		else if (pg_strcasecmp(defel->defname, "input") == 0)
 			inputName = defGetQualifiedName(defel);
 		else if (pg_strcasecmp(defel->defname, "output") == 0)
@@ -234,11 +252,26 @@ DefineType(List *names, List *parameters)
 		else if (pg_strcasecmp(defel->defname, "analyze") == 0 ||
 				 pg_strcasecmp(defel->defname, "analyse") == 0)
 			analyzeName = defGetQualifiedName(defel);
+		else if (pg_strcasecmp(defel->defname, "category") == 0)
+		{
+			char	   *p = defGetString(defel);
+
+			category = p[0];
+			/* restrict to non-control ASCII */
+			if (category < 32 || category > 126)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid type category \"%s\": must be simple ASCII",
+								p)));
+		}
+		else if (pg_strcasecmp(defel->defname, "preferred") == 0)
+			preferred = defGetBoolean(defel);
 		else if (pg_strcasecmp(defel->defname, "delimiter") == 0)
 		{
 			char	   *p = defGetString(defel);
 
 			delimiter = p[0];
+			/* XXX shouldn't we restrict the delimiter? */
 		}
 		else if (pg_strcasecmp(defel->defname, "element") == 0)
 		{
@@ -422,6 +455,8 @@ DefineType(List *names, List *parameters)
 	 * don't have a way to make the type go away if the grant option is
 	 * revoked, so ownership seems better.
 	 */
+#ifdef NOT_USED
+	/* XXX this is unnecessary given the superuser check above */
 	if (inputOid && !pg_proc_ownercheck(inputOid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 					   NameListToString(inputName));
@@ -443,6 +478,7 @@ DefineType(List *names, List *parameters)
 	if (analyzeOid && !pg_proc_ownercheck(analyzeOid, GetUserId()))
 		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_PROC,
 					   NameListToString(analyzeName));
+#endif
 
 	array_type = makeArrayTypeName(typeName, typeNamespace);
 	pg_type = heap_open(TypeRelationId, AccessShareLock);
@@ -472,6 +508,8 @@ DefineType(List *names, List *parameters)
 				   GetUserId(),	/* owner's ID */
 				   internalLength,		/* internal size */
 				   TYPTYPE_BASE,	/* type-type (base type) */
+				   category,	/* type-category */
+				   preferred,	/* is it a preferred type? */
 				   delimiter,	/* array element delimiter */
 				   inputOid,	/* input procedure */
 				   outputOid,	/* output procedure */
@@ -509,6 +547,8 @@ DefineType(List *names, List *parameters)
 			   GetUserId(),		/* owner's ID */
 			   -1,				/* internal size (always varlena) */
 			   TYPTYPE_BASE,	/* type-type (base type) */
+			   TYPCATEGORY_ARRAY, /* type-category (array) */
+			   false,			/* array types are never preferred */
 			   delimiter,		/* array element delimiter */
 			   F_ARRAY_IN,		/* input procedure */
 			   F_ARRAY_OUT,		/* output procedure */
@@ -553,73 +593,99 @@ DefineType(List *names, List *parameters)
 
 
 /*
- *	RemoveType
- *		Removes a datatype.
+ *	RemoveTypes
+ *		Implements DROP TYPE and DROP DOMAIN
+ *
+ * Note: if DOMAIN is specified, we enforce that each type is a domain, but
+ * we don't enforce the converse for DROP TYPE
  */
 void
-RemoveType(List *names, DropBehavior behavior, bool missing_ok)
+RemoveTypes(DropStmt *drop)
 {
-	TypeName   *typename;
-	Oid			typeoid;
-	HeapTuple	tup;
-	ObjectAddress object;
-	Form_pg_type typ;
+	ObjectAddresses *objects;
+	ListCell		*cell;
 
-	/* Make a TypeName so we can use standard type lookup machinery */
-	typename = makeTypeNameFromNameList(names);
+	/*
+	 * First we identify all the types, then we delete them in a single
+	 * performMultipleDeletions() call.  This is to avoid unwanted
+	 * DROP RESTRICT errors if one of the types depends on another.
+	 */
+	objects = new_object_addresses();
 
-	/* Use LookupTypeName here so that shell types can be removed. */
-	tup = LookupTypeName(NULL, typename, NULL);
-	if (tup == NULL)
+	foreach(cell, drop->objects)
 	{
-		if (!missing_ok)
+		List       *names = (List *) lfirst(cell);
+		TypeName   *typename;
+		Oid			typeoid;
+		HeapTuple	tup;
+		ObjectAddress object;
+		Form_pg_type typ;
+
+		/* Make a TypeName so we can use standard type lookup machinery */
+		typename = makeTypeNameFromNameList(names);
+
+		/* Use LookupTypeName here so that shell types can be removed. */
+		tup = LookupTypeName(NULL, typename, NULL);
+		if (tup == NULL)
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("type \"%s\" does not exist",
-							TypeNameToString(typename))));
-		}
-		else
-		{
-			if (Gp_role != GP_ROLE_EXECUTE)
-			ereport(NOTICE,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("type \"%s\" does not exist, skipping",
-							TypeNameToString(typename))));
+			if (!drop->missing_ok)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("type \"%s\" does not exist",
+								TypeNameToString(typename))));
+			}
+			else
+			{
+				if (Gp_role != GP_ROLE_EXECUTE)
+					ereport(NOTICE,
+							(errmsg("type \"%s\" does not exist, skipping",
+									TypeNameToString(typename))));
+			}
+			continue;
 		}
 
-		return;
+		typeoid = typeTypeId(tup);
+		typ = (Form_pg_type) GETSTRUCT(tup);
+
+		/* Permission check: must own type or its namespace */
+		if (!pg_type_ownercheck(typeoid, GetUserId()) &&
+			!pg_namespace_ownercheck(typ->typnamespace, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
+						   TypeNameToString(typename));
+
+		if (drop->removeType == OBJECT_DOMAIN)
+		{
+			/* Check that this is actually a domain */
+			if (typ->typtype != TYPTYPE_DOMAIN)
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("\"%s\" is not a domain",
+								TypeNameToString(typename))));
+		}
+
+		/*
+		 * Remove any storage encoding
+		 */
+		remove_type_encoding(typeoid);
+
+		/*
+		 * Note: we need no special check for array types here, as the normal
+		 * treatment of internal dependencies handles it just fine
+		 */
+
+		object.classId = TypeRelationId;
+		object.objectId = typeoid;
+		object.objectSubId = 0;
+
+		add_exact_object_address(&object, objects);
+
+		ReleaseSysCache(tup);
 	}
 
-	typeoid = typeTypeId(tup);
-	typ = (Form_pg_type) GETSTRUCT(tup);
+	performMultipleDeletions(objects, drop->behavior);
 
-	/* Permission check: must own type or its namespace */
-	if (!pg_type_ownercheck(typeoid, GetUserId()) &&
-		!pg_namespace_ownercheck(typ->typnamespace, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
-					   TypeNameToString(typename));
-
-	/*
-	 * Remove any storage encoding
-	 */
-	remove_type_encoding(typeoid);
-
-	/*
-	 * Note: we need no special check for array types here, as the normal
-	 * treatment of internal dependencies handles it just fine
-	 */
-
-	ReleaseSysCache(tup);
-
-	/*
-	 * Do the deletion
-	 */
-	object.classId = TypeRelationId;
-	object.objectId = typeoid;
-	object.objectSubId = 0;
-
-	performDeletion(&object, behavior);
+	free_object_addresses(objects);
 }
 
 
@@ -681,6 +747,7 @@ DefineDomain(CreateDomainStmt *stmt)
 	Oid			analyzeProcedure;
 	bool		byValue;
 	Oid			typelem;
+	char		category;
 	char		delimiter;
 	char		alignment;
 	char		storage;
@@ -761,6 +828,9 @@ DefineDomain(CreateDomainStmt *stmt)
 
 	/* Storage Length */
 	internalLength = baseType->typlen;
+
+	/* Type Category */
+	category = baseType->typcategory;
 
 	/* Array element type (in case base type is an array) */
 	typelem = baseType->typelem;
@@ -955,6 +1025,8 @@ DefineDomain(CreateDomainStmt *stmt)
 				   GetUserId(),	/* owner's ID */
 				   internalLength,		/* internal size */
 				   TYPTYPE_DOMAIN,		/* type-type (domain type) */
+				   category,	/* type-category */
+				   false,		/* domain types are never preferred */
 				   delimiter,	/* array element delimiter */
 				   inputProcedure,		/* input procedure */
 				   outputProcedure,		/* output procedure */
@@ -1019,77 +1091,6 @@ DefineDomain(CreateDomainStmt *stmt)
 	}
 }
 
-
-/*
- *	RemoveDomain
- *		Removes a domain.
- *
- * This is identical to RemoveType except we insist it be a domain.
- */
-void
-RemoveDomain(List *names, DropBehavior behavior, bool missing_ok)
-{
-	TypeName   *typename;
-	Oid			typeoid;
-	HeapTuple	tup;
-	char		typtype;
-	ObjectAddress object;
-
-	/* Make a TypeName so we can use standard type lookup machinery */
-	typename = makeTypeNameFromNameList(names);
-
-	/* Use LookupTypeName here so that shell types can be removed. */
-	tup = LookupTypeName(NULL, typename, NULL);
-	if (tup == NULL)
-	{
-		if (!missing_ok)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("type \"%s\" does not exist",
-							TypeNameToString(typename))));
-		}
-		else
-		{
-			if (Gp_role != GP_ROLE_EXECUTE)
-			ereport(NOTICE,
-					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("type \"%s\" does not exist, skipping",
-							TypeNameToString(typename))));
-		}
-
-		return;
-	}
-
-	typeoid = typeTypeId(tup);
-
-	/* Permission check: must own type or its namespace */
-	if (!pg_type_ownercheck(typeoid, GetUserId()) &&
-	  !pg_namespace_ownercheck(((Form_pg_type) GETSTRUCT(tup))->typnamespace,
-							   GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_TYPE,
-					   TypeNameToString(typename));
-
-	/* Check that this is actually a domain */
-	typtype = ((Form_pg_type) GETSTRUCT(tup))->typtype;
-
-	if (typtype != TYPTYPE_DOMAIN)
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("\"%s\" is not a domain",
-						TypeNameToString(typename))));
-
-	ReleaseSysCache(tup);
-
-	/*
-	 * Do the deletion
-	 */
-	object.classId = TypeRelationId;
-	object.objectId = typeoid;
-	object.objectSubId = 0;
-
-	performDeletion(&object, behavior);
-}
 
 /*
  * DefineEnum
@@ -1160,6 +1161,8 @@ DefineEnum(CreateEnumStmt *stmt)
 				   GetUserId(),	/* owner's ID */
 				   sizeof(Oid), /* internal size */
 				   TYPTYPE_ENUM,	/* type-type (enum type) */
+				   TYPCATEGORY_ENUM,	/* type-category (enum type) */
+				   false,		/* enum types are never preferred */
 				   DEFAULT_TYPDELIM,	/* array element delimiter */
 				   F_ENUM_IN,	/* input procedure */
 				   F_ENUM_OUT,	/* output procedure */
@@ -1195,6 +1198,8 @@ DefineEnum(CreateEnumStmt *stmt)
 			   GetUserId(),		/* owner's ID */
 			   -1,				/* internal size (always varlena) */
 			   TYPTYPE_BASE,	/* type-type (base type) */
+			   TYPCATEGORY_ARRAY, /* type-category (array) */
+			   false,			/* array types are never preferred */
 			   DEFAULT_TYPDELIM,	/* array element delimiter */
 			   F_ARRAY_IN,		/* input procedure */
 			   F_ARRAY_OUT,		/* output procedure */
@@ -2348,7 +2353,9 @@ domainAddConstraint(Oid domainOid, Oid domainNamespace, Oid baseTypeOid,
 						  InvalidOid,
 						  expr, /* Tree form check constraint */
 						  ccbin,	/* Binary form check constraint */
-						  ccsrc);		/* Source form check constraint */
+						  ccsrc,	/* Source form check constraint */
+						  true, /* is local */
+						  0);	/* inhcount */
 
 	/*
 	 * Return the compiled constraint expression so the calling routine can

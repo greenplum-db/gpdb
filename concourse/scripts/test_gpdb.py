@@ -26,6 +26,14 @@ def create_gpadmin_user():
 
 
 def copy_output():
+    for dirpath, dirs, diff_files in os.walk('gpdb_src/'):
+        if 'regression.diffs' in diff_files:
+            diff_file = dirpath + '/' + 'regression.diffs'
+            print(  "======================================================================\n" +
+                    "DIFF FILE: " + diff_file+"\n" +
+                    "----------------------------------------------------------------------")
+            with open(diff_file, 'r') as fin:
+                print fin.read()
     shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
     shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
 

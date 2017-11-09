@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.298 2008/03/26 18:48:59 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.299 2008/05/12 20:01:59 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1565,13 +1565,10 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		plan = planner(query, 0, NULL);
 
 		/*
-		 * Update snapshot command ID to ensure this query sees results of any
-		 * previously executed queries.  (It's a bit cheesy to modify
-		 * ActiveSnapshot without making a copy, but for the limited ways in
-		 * which COPY can be invoked, I think it's OK, because the active
-		 * snapshot shouldn't be shared with anything else anyway.)
+		 * Use a snapshot with an updated command ID to ensure this query sees
+		 * results of any previously executed queries.
 		 */
-		ActiveSnapshot->curcid = GetCurrentCommandId(false);
+		PushUpdatedSnapshot(GetActiveSnapshot());
 
 		/* Create dest receiver for COPY OUT */
 		dest = CreateDestReceiver(DestCopyOut, NULL);
@@ -1579,7 +1576,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 
 		/* Create a QueryDesc requesting no output */
 		cstate->queryDesc = CreateQueryDesc(plan, queryString,
-											ActiveSnapshot, InvalidSnapshot,
+											GetActiveSnapshot(),
+											InvalidSnapshot,
 											dest, NULL, false);
 
 		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
@@ -1898,10 +1896,11 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		ExecutorEnd(cstate->queryDesc);
 		FreeQueryDesc(cstate->queryDesc);
 		cstate->queryDesc = NULL;
+		PopActiveSnapshot();
 	}
 
 	/* Clean up single row error handling related memory */
-	if(cstate->cdbsreh)
+	if (cstate->cdbsreh)
 		destroyCdbSreh(cstate->cdbsreh);
 
 	/* Clean up storage (probably not really necessary) */
@@ -1920,15 +1919,13 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 				(unsigned int) processed);
 	}
 
-    /* 	 Fix for MPP-4082. Issue automatic ANALYZE if conditions are satisfied. */
+    /* Issue automatic ANALYZE if conditions are satisfied (MPP-4082). */
 	if (Gp_role == GP_ROLE_DISPATCH && is_from)
-	{
 		auto_stats(AUTOSTATS_CMDTYPE_COPY, relationOid, processed, false /* inFunction */);
-	} /*end auto-stats block*/
 
-	if(cstate->force_quote_flags)
+	if (cstate->force_quote_flags)
 		pfree(cstate->force_quote_flags);
-	if(cstate->force_notnull_flags)
+	if (cstate->force_notnull_flags)
 		pfree(cstate->force_notnull_flags);
 
 	pfree(cstate->attribute_buf.data);
@@ -2594,7 +2591,7 @@ CopyTo(CopyState cstate)
 			{
 				HeapTuple	tuple;
 
-				scandesc = heap_beginscan(rel, ActiveSnapshot, 0, NULL);
+				scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
 				while ((tuple = heap_getnext(scandesc, ForwardScanDirection)) != NULL)
 				{
 					CHECK_FOR_INTERRUPTS();
@@ -2608,13 +2605,14 @@ CopyTo(CopyState cstate)
 
 				heap_endscan(scandesc);
 			}
-			else if(RelationIsAoRows(rel))
+			else if (RelationIsAoRows(rel))
 			{
 				MemTuple		tuple;
 				TupleTableSlot	*slot = MakeSingleTupleTableSlot(tupDesc);
 				MemTupleBinding *mt_bind = create_memtuple_binding(tupDesc);
 
-				aoscandesc = appendonly_beginscan(rel, ActiveSnapshot, ActiveSnapshot, 0, NULL);
+				aoscandesc = appendonly_beginscan(rel, GetActiveSnapshot(),
+												  GetActiveSnapshot(), 0, NULL);
 
 				while ((tuple = appendonly_getnext(aoscandesc, ForwardScanDirection, slot)) != NULL)
 				{
@@ -2633,7 +2631,7 @@ CopyTo(CopyState cstate)
 
 				appendonly_endscan(aoscandesc);
 			}
-			else if(RelationIsAoCols(rel))
+			else if (RelationIsAoCols(rel))
 			{
 				AOCSScanDesc scan = NULL;
 				TupleTableSlot *slot = MakeSingleTupleTableSlot(tupDesc);
@@ -2648,10 +2646,12 @@ CopyTo(CopyState cstate)
 				}
 
 				proj = palloc(sizeof(bool) * nvp);
-				for(i=0; i<nvp; ++i)
+				for(i = 0; i < nvp; ++i)
 				    proj[i] = true;
 
-				scan = aocs_beginscan(rel, ActiveSnapshot, ActiveSnapshot, NULL /* relationTupleDesc */, proj);
+				scan = aocs_beginscan(rel, GetActiveSnapshot(),
+									  GetActiveSnapshot(),
+									  NULL /* relationTupleDesc */, proj);
 				for(;;)
 				{
 				    CHECK_FOR_INTERRUPTS();
@@ -4275,7 +4275,7 @@ CopyFrom(CopyState cstate)
 	/*----------
 	 * Check to see if we can avoid writing WAL
 	 *
-	 * If archive logging is not enabled *and* either
+	 * If archive logging/streaming is not enabled *and* either
 	 *	- table was created in same transaction as this COPY
 	 *	- data is being written to relfilenode created in this transaction
 	 * then we can skip writing WAL.  It's safe because if the transaction
@@ -4303,8 +4303,7 @@ CopyFrom(CopyState cstate)
 		cstate->rel->rd_newRelfilenodeSubid != InvalidSubTransactionId)
 	{
 		use_fsm = false;
-		if (!XLogArchivingActive())
-			use_wal = false;
+		use_wal = XLogIsNeeded();
 	}
 
 	oldcontext = MemoryContextSwitchTo(estate->es_query_cxt);
@@ -4908,13 +4907,12 @@ PROCESS_SEGMENT_DATA:
 					 */
 					if (relstorage == RELSTORAGE_AOROWS)
 					{
-						Oid			tupleOid;
 						MemTuple	mtuple;
 
 						mtuple = ExecFetchSlotMemTuple(slot, false);
 
 						/* inserting into an append only relation */
-						appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, &tupleOid, (AOTupleId *) &insertedTid);
+						appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, InvalidOid, (AOTupleId *) &insertedTid);
 					}
 					else if (relstorage == RELSTORAGE_AOCOLS)
 					{

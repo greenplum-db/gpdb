@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/utils/mb/README,v 1.7 2008/03/21 13:23:28 momjian Exp $
+$PostgreSQL: pgsql/src/backend/utils/mb/README,v 1.8 2008/06/17 18:22:43 momjian Exp $
 
 Encodings
 =========

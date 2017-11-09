@@ -37,6 +37,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 #include "utils/datum.h"
+#include "catalog/heap.h"
 #include "cdb/cdbgang.h"
 #include "utils/workfile_mgr.h"
 #include "parser/parsetree.h"
@@ -503,11 +504,14 @@ _outSetOp(StringInfo str, SetOp *node)
 	_outPlanInfo(str, (Plan *) node);
 
 	WRITE_ENUM_FIELD(cmd, SetOpCmd);
+	WRITE_ENUM_FIELD(strategy, SetOpStrategy);
 	WRITE_INT_FIELD(numCols);
 	WRITE_INT_ARRAY(dupColIdx, node->numCols, AttrNumber);
 	WRITE_OID_ARRAY(dupOperators, node->numCols);
 
 	WRITE_INT_FIELD(flagColIdx);
+	WRITE_INT_FIELD(firstFlag);
+	WRITE_LONG_FIELD(numGroups);
 }
 
 static void
@@ -606,7 +610,7 @@ _outSubLink(StringInfo str, SubLink *node)
 	WRITE_ENUM_FIELD(subLinkType, SubLinkType);
 	WRITE_NODE_FIELD(testexpr);
 	WRITE_NODE_FIELD(operName);
-	WRITE_INT_FIELD(location);      /*CDB*/
+	WRITE_LOCATION_FIELD(location);      /*CDB*/
 	WRITE_NODE_FIELD(subselect);
 }
 
@@ -720,7 +724,7 @@ _outPartitionSpec(StringInfo str, PartitionSpec *node)
 	WRITE_NODE_FIELD(partElem);
 	WRITE_NODE_FIELD(subSpec);
 	WRITE_BOOL_FIELD(istemplate);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 	WRITE_NODE_FIELD(enc_clauses);
 }
 
@@ -731,7 +735,7 @@ _outPartitionBoundSpec(StringInfo str, PartitionBoundSpec *node)
 	WRITE_NODE_FIELD(partStart);
 	WRITE_NODE_FIELD(partEnd);
 	WRITE_NODE_FIELD(partEvery);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -831,7 +835,7 @@ _outTypeName(StringInfo str, TypeName *node)
 	WRITE_NODE_FIELD(typmods);
 	WRITE_INT_FIELD(typemod);
 	WRITE_NODE_FIELD(arrayBounds);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -858,6 +862,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_BOOL_FIELD(hasAggs);
 	WRITE_BOOL_FIELD(hasWindowFuncs);
 	WRITE_BOOL_FIELD(hasSubLinks);
+	WRITE_BOOL_FIELD(hasDistinctOn);
 	WRITE_BOOL_FIELD(hasDynamicFunctions);
 	WRITE_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	WRITE_NODE_FIELD(rtable);
@@ -998,7 +1003,7 @@ _outAExpr(StringInfo str, A_Expr *node)
 
 	WRITE_NODE_FIELD(lexpr);
 	WRITE_NODE_FIELD(rexpr);
-	WRITE_INT_FIELD(location);
+	WRITE_LOCATION_FIELD(location);
 }
 
 static void
@@ -1037,8 +1042,7 @@ _outAConst(StringInfo str, A_Const *node)
 	WRITE_NODE_TYPE("A_CONST");
 
 	_outValue(str, &(node->val));
-	WRITE_NODE_FIELD(typeName);
-	WRITE_INT_FIELD(location);  /*CDB*/
+	WRITE_LOCATION_FIELD(location);  /*CDB*/
 
 }
 
@@ -1136,6 +1140,19 @@ _outTupleDescNode(StringInfo str, TupleDescNode *node)
 	WRITE_INT_FIELD(tuple->tdtypmod);
 	WRITE_BOOL_FIELD(tuple->tdhasoid);
 	WRITE_INT_FIELD(tuple->tdrefcount);
+}
+
+static void
+_outCookedConstraint(StringInfo str, CookedConstraint *node)
+{
+	WRITE_NODE_TYPE("COOKEDCONSTRAINT");
+
+	WRITE_ENUM_FIELD(contype,ConstrType);
+	WRITE_STRING_FIELD(name);
+	WRITE_INT_FIELD(attnum);
+	WRITE_NODE_FIELD(expr);
+	WRITE_BOOL_FIELD(is_local);
+	WRITE_INT_FIELD(inhcount);
 }
 
 /*
@@ -1797,11 +1814,8 @@ _outNode(StringInfo str, void *obj)
 			case T_Query:
 				_outQuery(str, obj);
 				break;
-			case T_SortClause:
-				_outSortClause(str, obj);
-				break;
-			case T_GroupClause:
-				_outGroupClause(str, obj);
+			case T_SortGroupClause:
+				_outSortGroupClause(str, obj);
 				break;
 			case T_GroupingClause:
 				_outGroupingClause(str, obj);
@@ -1951,8 +1965,16 @@ _outNode(StringInfo str, void *obj)
 				_outFileSpaceEntry(str, obj);
 				break;
 
+			case T_DropFileSpaceStmt:
+				_outDropFileSpaceStmt(str, obj);
+				break;
+
 			case T_CreateTableSpaceStmt:
 				_outCreateTableSpaceStmt(str, obj);
+				break;
+
+			case T_DropTableSpaceStmt:
+				_outDropTableSpaceStmt(str, obj);
 				break;
 
 			case T_CreateQueueStmt:
@@ -2012,6 +2034,10 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_PlaceHolderInfo:
 				_outPlaceHolderInfo(str, obj);
+				break;
+
+			case T_CookedConstraint:
+				_outCookedConstraint(str, obj);
 				break;
 
 			default:

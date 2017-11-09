@@ -137,7 +137,7 @@ class StartInstances():
         segment_role = StartInstances.getRole(contentid)
 
         # Need to set the dbid to 0 on segments to prevent use in mmxlog records
-        if contentid != -1:
+        if contentid != GpSegmentConfiguration.MASTER_CONTENT_ID:
             dbid = 0
 
         opts = "-p %d --gp_dbid=%d --silent-mode=true -i -M %s --gp_contentid=%d --gp_num_contents_in_cluster=%d" % \
@@ -146,9 +146,17 @@ class StartInstances():
         # Arguments for the master. -x sets the dbid for the standby master. Hardcoded to 0 for now, but may need to be
         # refactored when we start to focus on the standby master.
         #
-        # -E echos internal commands to the  terminal. Set here mostly to maintain parity with gpstart behavior.
-        if contentid == -1:
-            opts += " -x 0 -E"
+        # -E in GPDB will set Gp_entry_postmaster = true;
+        # to start master in utility mode, need to remove -E and add -c gp_role=utility
+        #
+        # we automatically assume people want to start in master only utility mode
+        # if the self.clusterconfig.get_num_contents() is 0
+        if contentid == GpSegmentConfiguration.MASTER_CONTENT_ID:
+            opts += " -x 0"
+            if self.clusterconfig.get_num_contents() == 0:
+                opts += " -c gp_role=utility"
+            else:
+                opts += " -E"
 
         if self.wait:
             waitstring = "-w -t 180"
@@ -156,7 +164,7 @@ class StartInstances():
         commands.append("pg_ctl -D %s %s -o '%s' start" % (segment_dir, waitstring, opts))
         commands.append("pg_ctl -D %s status" % segment_dir)
 
-        if contentid == -1:
+        if contentid == GpSegmentConfiguration.MASTER_CONTENT_ID:
             segment_label = 'master'
         elif segconfig.preferred_role == GpSegmentConfiguration.ROLE_PRIMARY:
             segment_label = 'primary'
@@ -346,10 +354,13 @@ class ColdMasterClusterConfiguration(ClusterConfiguration):
     def __init__(self, port, master_directory):
         self.seg_configs = []
 
-        master_seg_config = GpSegmentConfiguration(1, -1, port, master_directory, GpSegmentConfiguration.ROLE_PRIMARY)
+        master_seg_config = GpSegmentConfiguration(1, GpSegmentConfiguration.MASTER_CONTENT_ID,
+                                                   port, master_directory,
+                                                   GpSegmentConfiguration.ROLE_PRIMARY,
+                                                   GpSegmentConfiguration.MIRROR_UP)
         self.seg_configs.append(master_seg_config)
 
-        self.num_contents = 1 # need to be > 1 to avoid assert failure
+        self.num_contents = 0
 
 def defargs():
     parser = argparse.ArgumentParser(description='Initialize, start, stop, or destroy WAL replication mirror segments')

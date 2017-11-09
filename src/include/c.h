@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/c.h,v 1.224 2008/03/17 19:44:41 petere Exp $
+ * $PostgreSQL: pgsql/src/include/c.h,v 1.229 2008/07/03 02:49:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -112,7 +112,7 @@ extern "C" {
 
 /*
  *	Use this to mark string constants as needing translation at some later
- *	time, rather than immediately.	This is useful for cases where you need
+ *	time, rather than immediately.  This is useful for cases where you need
  *	access to the original string and translated string, and for cases where
  *	immediate translation is not possible, like when initializing global
  *	variables.

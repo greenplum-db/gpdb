@@ -8,6 +8,7 @@
       and activity for a resource queue. It shows how many queries are waiting
       to run and how many queries are currently active in the system from a particular resource
       queue.</p>
+      <note>The <codeph>gp_resqueue_status</codeph> view is valid only when resource queue-based resource management is active.</note>
     <table id="fp141982">
       <title>gp_toolkit.gp_resqueue_status</title>
       <tgroup cols="4">

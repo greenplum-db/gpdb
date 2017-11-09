@@ -27,9 +27,11 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
 
+CATALOG_JSON:= $(addprefix $(top_srcdir)/gpMgmt/bin/gppylib/data/, $(addsuffix .json,$(GP_MAJORVERSION)))
+
 include $(top_srcdir)/src/backend/common.mk
 
-all: $(BKIFILES)
+all: $(BKIFILES) $(CATALOG_JSON)
 
 # Note: there are some undocumented dependencies on the ordering in which
 # the catalog header files are assembled into postgres.bki.  In particular,
@@ -85,8 +87,8 @@ postgres.shdescription: postgres.bki ;
 postgres_bki_srcs: process_col_defaults.pl $(POSTGRES_BKI_SRCS)
 	cat $(POSTGRES_BKI_SRCS) | $(PERL) process_col_defaults.pl > postgres_bki_srcs
 
-6.json: process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h
-	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > 6.json
+$(CATALOG_JSON): process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h
+	cat $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/include/catalog/catversion.h | $(PERL) process_foreign_keys.pl > $@
 
 postgres.bki: genbki.sh postgres_bki_srcs $(top_srcdir)/src/include/pg_config_manual.h
 	AWK='$(AWK)' $(SHELL) $< $(pg_includes) --set-version=$(PG_VERSION) -o postgres postgres_bki_srcs

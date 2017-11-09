@@ -23,7 +23,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.43 2008/03/26 18:48:59 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.46 2008/08/04 18:03:46 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1055,16 +1055,18 @@ QEwriterSnapshotUpToDate(void)
  *
  * We also update the following backend-global variables:
  *		TransactionXmin: the oldest xmin of any snapshot in use in the
- *			current transaction (this is the same as MyProc->xmin).  This
- *			is just the xmin computed for the first, serializable snapshot.
+ *			current transaction (this is the same as MyProc->xmin).
  *		RecentXmin: the xmin computed for the most recent snapshot.  XIDs
  *			older than this are known not running any more.
  *		RecentGlobalXmin: the global xmin (oldest TransactionXmin across all
  *			running transactions, except those running LAZY VACUUM).  This is
  *			the same computation done by GetOldestXmin(true, true).
+ *
+ * Note: this function should probably not be called with an argument that's
+ * not statically allocated (see xip allocation below).
  */
 Snapshot
-GetSnapshotData(Snapshot snapshot, bool serializable)
+GetSnapshotData(Snapshot snapshot)
 {
 	ProcArrayStruct *arrayP = procArray;
 	TransactionId xmin;
@@ -1235,6 +1237,8 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 
 				snapshot->curcid = SharedLocalSnapshotSlot->snapshot.curcid;
 
+				snapshot->subxcnt = -1;
+
 				/* combocid */
 				if (usedComboCids != SharedLocalSnapshotSlot->combocidcnt)
 				{
@@ -1347,15 +1351,6 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	/* We must not be a reader. */
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_READER);
 	Assert(DistributedTransactionContext != DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
-
-	/* Serializable snapshot must be computed before any other... */
-	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
-			(errmsg("GetSnapshotData serializable %s, xmin %u",
-					(serializable ? "true" : "false"),
-					MyProc->xmin)));
-	Assert(serializable ?
-		   !TransactionIdIsValid(MyProc->xmin) :
-		   TransactionIdIsValid(MyProc->xmin));
 
 	/*
 	 * It is sufficient to get shared lock on ProcArrayLock, even if we are
@@ -1501,7 +1496,7 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 		}
 	}
 
-	if (serializable)
+	if (!TransactionIdIsValid(MyProc->xmin))
 	{
 		/* Not that these values are not set atomically. However,
 		 * each of these assignments is itself assumed to be atomic. */
@@ -1546,6 +1541,14 @@ GetSnapshotData(Snapshot snapshot, bool serializable)
 	snapshot->subxcnt = subcount;
 
 	snapshot->curcid = GetCurrentCommandId(false);
+
+	/*
+	 * This is a new snapshot, so set both refcounts are zero, and mark it
+	 * as not copied in persistent memory.
+	 */
+	snapshot->active_count = 0;
+	snapshot->regd_count = 0;
+	snapshot->copied = false;
 
 	/*
 	 * MPP Addition. If we are the chief then we'll save our local snapshot
@@ -1671,12 +1674,13 @@ HaveVirtualXIDsDelayingChkpt(VirtualTransactionId *vxids, int nvxids)
  * MPP: Special code to update the command id in the SharedLocalSnapshot
  * when we are in SERIALIZABLE isolation mode.
  */
-void UpdateSerializableCommandId(void)
+void
+UpdateSerializableCommandId(CommandId curcid)
 {
 	if ((DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
 		 DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER) &&
 		 SharedLocalSnapshotSlot != NULL &&
-		 SerializableSnapshot != NULL)
+		 FirstSnapshotSet)
 	{
 		int combocidSize;
 
@@ -1695,11 +1699,11 @@ void UpdateSerializableCommandId(void)
 		}
 
 		ereport((Debug_print_snapshot_dtm ? LOG : DEBUG5),
-				(errmsg("[Distributed Snapshot #%u] *Update Serializable Command Id* segment currcid = %d, QDcid = %d, SerializableSnapshot currcid = %d, Shared currcid = %d (gxid = %u, '%s')",
+				(errmsg("[Distributed Snapshot #%u] *Update Serializable Command Id* segment currcid = %d, QDcid = %d, TransactionSnapshot currcid = %d, Shared currcid = %d (gxid = %u, '%s')",
 						QEDtxContextInfo.distributedSnapshot.distribSnapshotId,
 						QEDtxContextInfo.curcid,
 						SharedLocalSnapshotSlot->QDcid,
-						SerializableSnapshot->curcid,
+						curcid,
 						SharedLocalSnapshotSlot->snapshot.curcid,
 						getDistributedTransactionId(),
 						DtxContextToString(DistributedTransactionContext))));
@@ -1714,7 +1718,7 @@ void UpdateSerializableCommandId(void)
 		memcpy((void *)SharedLocalSnapshotSlot->combocids, comboCids,
 			   combocidSize * sizeof(ComboCidKeyData));
 
-		SharedLocalSnapshotSlot->snapshot.curcid = SerializableSnapshot->curcid;
+		SharedLocalSnapshotSlot->snapshot.curcid = curcid;
 		SharedLocalSnapshotSlot->QDcid = QEDtxContextInfo.curcid;
 		SharedLocalSnapshotSlot->segmateSync = QEDtxContextInfo.segmateSync;
 
@@ -1981,7 +1985,7 @@ CountUserBackends(Oid roleid)
 }
 
 /*
- * CheckOtherDBBackends -- check for other backends running in the given DB
+ * CountOtherDBBackends -- check for other backends running in the given DB
  *
  * If there are other backends in the DB, we will wait a maximum of 5 seconds
  * for them to exit.  Autovacuum backends are encouraged to exit early by
@@ -1991,6 +1995,8 @@ CountUserBackends(Oid roleid)
  * check whether the current backend uses the given DB, if it's important.
  *
  * Returns TRUE if there are (still) other backends in the DB, FALSE if not.
+ * Also, *nbackends and *nprepared are set to the number of other backends
+ * and prepared transactions in the DB, respectively.
  *
  * This function is used to interlock DROP DATABASE and related commands
  * against there being any active backends in the target DB --- dropping the
@@ -2002,18 +2008,23 @@ CountUserBackends(Oid roleid)
  * indefinitely.
  */
 bool
-CheckOtherDBBackends(Oid databaseId)
+CountOtherDBBackends(Oid databaseId, int *nbackends, int *nprepared)
 {
 	ProcArrayStruct *arrayP = procArray;
+#define MAXAUTOVACPIDS  10		/* max autovacs to SIGTERM per iteration */
+	int			autovac_pids[MAXAUTOVACPIDS];
 	int			tries;
 
 	/* 50 tries with 100ms sleep between tries makes 5 sec total wait */
 	for (tries = 0; tries < 50; tries++)
 	{
+		int			nautovacs = 0;
 		bool		found = false;
 		int			index;
 
 		CHECK_FOR_INTERRUPTS();
+
+		*nbackends = *nprepared = 0;
 
 		LWLockAcquire(ProcArrayLock, LW_SHARED);
 
@@ -2028,38 +2039,32 @@ CheckOtherDBBackends(Oid databaseId)
 
 			found = true;
 
-			if (proc->vacuumFlags & PROC_IS_AUTOVACUUM)
-			{
-				/* an autovacuum --- send it SIGTERM before sleeping */
-				int			autopid = proc->pid;
-
-				/*
-				 * It's a bit awkward to release ProcArrayLock within the
-				 * loop, but we'd probably better do so before issuing kill().
-				 * We have no idea what might block kill() inside the
-				 * kernel...
-				 */
-				LWLockRelease(ProcArrayLock);
-
-				(void) kill(autopid, SIGTERM);	/* ignore any error */
-
-				break;
-			}
+			if (proc->pid == 0)
+				(*nprepared)++;
 			else
 			{
-				LWLockRelease(ProcArrayLock);
-				break;
+				(*nbackends)++;
+				if ((proc->vacuumFlags & PROC_IS_AUTOVACUUM) &&
+					nautovacs < MAXAUTOVACPIDS)
+					autovac_pids[nautovacs++] = proc->pid;
 			}
 		}
 
-		/* if found is set, we released the lock within the loop body */
-		if (!found)
-		{
-			LWLockRelease(ProcArrayLock);
-			return false;		/* no conflicting backends, so done */
-		}
+		LWLockRelease(ProcArrayLock);
 
-		/* else sleep and try again */
+		if (!found)
+			return false;		/* no conflicting backends, so done */
+
+		/*
+		 * Send SIGTERM to any conflicting autovacuums before sleeping.
+		 * We postpone this step until after the loop because we don't
+		 * want to hold ProcArrayLock while issuing kill().
+		 * We have no idea what might block kill() inside the kernel...
+		 */
+		for (index = 0; index < nautovacs; index++)
+			(void) kill(autovac_pids[index], SIGTERM);	/* ignore any error */
+
+		/* sleep, then try again */
 		pg_usleep(100 * 1000L); /* 100ms */
 	}
 

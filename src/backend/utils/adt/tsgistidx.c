@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsgistidx.c,v 1.7 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsgistidx.c,v 1.9 2008/05/16 16:31:01 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -307,6 +307,12 @@ checkcondition_arr(void *checkval, QueryOperand *val)
 
 	/* Loop invariant: StopLow <= val < StopHigh */
 
+	/* 
+	 * we are not able to find a a prefix by hash value 
+	 */
+	if ( val->prefix )
+		return true;
+
 	while (StopLow < StopHigh)
 	{
 		StopMiddle = StopLow + (StopHigh - StopLow) / 2;
@@ -324,16 +330,26 @@ checkcondition_arr(void *checkval, QueryOperand *val)
 static bool
 checkcondition_bit(void *checkval, QueryOperand *val)
 {
+	/* 
+	 * we are not able to find a a prefix in signature tree 
+	 */
+	if ( val->prefix )
+		return true; 
 	return GETBIT(checkval, HASHVAL(val->valcrc));
 }
 
 Datum
 gtsvector_consistent(PG_FUNCTION_ARGS)
 {
+	GISTENTRY  *entry = (GISTENTRY *) PG_GETARG_POINTER(0);
 	TSQuery		query = PG_GETARG_TSQUERY(1);
-	SignTSVector *key = (SignTSVector *) DatumGetPointer(
-									((GISTENTRY *) PG_GETARG_POINTER(0))->key
-	);
+	/* StrategyNumber strategy = (StrategyNumber) PG_GETARG_UINT16(2); */
+	/* Oid		subtype = PG_GETARG_OID(3); */
+	bool	   *recheck = (bool *) PG_GETARG_POINTER(4);
+	SignTSVector *key = (SignTSVector *) DatumGetPointer(entry->key);
+
+	/* All cases served by this function are inexact */
+	*recheck = true;
 
 	if (!query->size)
 		PG_RETURN_BOOL(false);

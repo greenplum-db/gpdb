@@ -145,7 +145,6 @@ ExecMaterial(MaterialState *node)
 
 				break;
 			}
-			Gpmon_Incr_Rows_In(GpmonPktFromMaterialState(node));
 
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
 		}
@@ -195,11 +194,6 @@ ExecMaterial(MaterialState *node)
 	if(tsa != NULL && ntuplestore_acc_tell(tsa, NULL))
 	{
 		ntuplestore_acc_current_tupleslot(tsa, slot);
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -234,16 +228,12 @@ ExecMaterial(MaterialState *node)
 			return NULL;
 		}
 
-		Gpmon_Incr_Rows_In(GpmonPktFromMaterialState(node));
-
 		if (tsa)
 			ntuplestore_acc_put_tupleslot(tsa, outerslot);
 
 		/*
 		 * We can just return the subplan's returned tuple, without copying.
 		 */
-		Gpmon_Incr_Rows_Out(GpmonPktFromMaterialState(node));
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		return outerslot;
 	}
 
@@ -377,8 +367,6 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 		snEntry->sharePlan = (Node *) node;
 		snEntry->shareState = (Node *) matstate;
 	}
-
-	initGpmonPktForMaterial((Plan *)node, &matstate->ss.ps.gpmon_pkt, estate);
 
 	return matstate;
 }
@@ -547,10 +535,8 @@ ExecChildRescan(MaterialState *node, ExprContext *exprCtxt)
 	 * first ExecProcNode. Otherwise, we need to rescan subplan here
 	 */
 	if (((PlanState *) node)->lefttree->chgParam == NULL)
-	{
-		CheckSendPlanStateGpmonPkt(&node->ss.ps);
 		ExecReScan(((PlanState *) node)->lefttree, exprCtxt);
-	}
+
 	node->eof_underlying = false;
 }
 
@@ -611,14 +597,6 @@ ExecMaterialReScan(MaterialState *node, ExprContext *exprCtxt)
 		/* In this case we are just passing on the subquery's output */
 		ExecChildRescan(node, exprCtxt);
 	}
-}
-
-void
-initGpmonPktForMaterial(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Material));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

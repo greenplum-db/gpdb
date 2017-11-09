@@ -292,8 +292,6 @@ ExecHashJoin(HashJoinState *node)
 				return NULL;
 			}
 
-			Gpmon_Incr_Rows_In(GpmonPktFromHashJoinState(node));
-			CheckSendPlanStateGpmonPkt(&node->js.ps);
 			node->js.ps.ps_OuterTupleSlot = outerTupleSlot;
 			econtext->ecxt_outertuple = outerTupleSlot;
 			node->hj_NeedNewOuter = false;
@@ -392,11 +390,7 @@ ExecHashJoin(HashJoinState *node)
 						node->hj_NeedNewOuter = true;
 
 					if (otherqual == NIL || ExecQual(otherqual, econtext, false))
-					{
-						Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
-						CheckSendPlanStateGpmonPkt(&node->js.ps);
 						return ExecProject(node->js.ps.ps_ProjInfo, NULL);
-					}
 
 					/*
 					 * If semijoin and we didn't return the tuple, we're still
@@ -426,11 +420,7 @@ ExecHashJoin(HashJoinState *node)
 			econtext->ecxt_innertuple = node->hj_NullInnerTupleSlot;
 
 			if (otherqual == NIL || ExecQual(otherqual, econtext, false))
-			{
-				Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(node));
-				CheckSendPlanStateGpmonPkt(&node->js.ps);
 				return ExecProject(node->js.ps.ps_ProjInfo, NULL);
-			}
 		}
 	}
 }
@@ -626,8 +616,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	hjstate->hj_MatchedOuter = false;
 	hjstate->hj_OuterNotEmpty = false;
 
-	initGpmonPktForHashJoin((Plan *) node, &hjstate->js.ps.gpmon_pkt, estate);
-
 	return hjstate;
 }
 
@@ -767,8 +755,6 @@ ExecHashJoinOuterGetTuple(PlanState *outerNode,
 		elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples for batch %d", hashtable->totalTuples, curbatch);
 #endif
 
-		Gpmon_Incr_Rows_Out(GpmonPktFromHashJoinState(hjstate));
-		CheckSendPlanStateGpmonPkt(&hjstate->js.ps);
 	} /* if (curbatch == 0) */
 
 	/*
@@ -1247,14 +1233,6 @@ isNotDistinctJoin(List *qualList)
 		}
 	}
 	return false;
-}
-
-void
-initGpmonPktForHashJoin(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, HashJoin));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

@@ -102,7 +102,7 @@ SELECT 1.1 AS three UNION SELECT 2 UNION SELECT 3;
      3
 (3 rows)
 
-SELECT 1.1::float8 AS two UNION SELECT 2 UNION SELECT 2.0::float8;
+SELECT 1.1::float8 AS two UNION SELECT 2 UNION SELECT 2.0::float8 ORDER BY 1;
  two 
 -----
  1.1
@@ -129,7 +129,8 @@ SELECT 1.1 AS two UNION (SELECT 2 UNION ALL SELECT 2);
 --
 SELECT f1 AS five FROM FLOAT8_TBL
 UNION
-SELECT f1 FROM FLOAT8_TBL;
+SELECT f1 FROM FLOAT8_TBL
+ORDER BY 1;
          five          
 -----------------------
  -1.2345678901234e+200
@@ -158,7 +159,8 @@ SELECT f1 FROM FLOAT8_TBL;
 
 SELECT f1 AS nine FROM FLOAT8_TBL
 UNION
-SELECT f1 FROM INT4_TBL;
+SELECT f1 FROM INT4_TBL
+ORDER BY 1;
          nine          
 -----------------------
  -1.2345678901234e+200
@@ -205,7 +207,8 @@ SELECT f1 FROM INT4_TBL
 
 SELECT CAST(f1 AS char(4)) AS three FROM VARCHAR_TBL
 UNION
-SELECT f1 FROM CHAR_TBL;
+SELECT f1 FROM CHAR_TBL
+ORDER BY 1;
  three 
 -------
  a   
@@ -215,7 +218,8 @@ SELECT f1 FROM CHAR_TBL;
 
 SELECT f1 AS three FROM VARCHAR_TBL
 UNION
-SELECT CAST(f1 AS varchar) FROM CHAR_TBL;
+SELECT CAST(f1 AS varchar) FROM CHAR_TBL
+ORDER BY 1;
  three 
 -------
  a
@@ -242,7 +246,8 @@ SELECT f1 AS five FROM TEXT_TBL
 UNION
 SELECT f1 FROM VARCHAR_TBL
 UNION
-SELECT TRIM(TRAILING FROM f1) FROM CHAR_TBL;
+SELECT TRIM(TRAILING FROM f1) FROM CHAR_TBL
+ORDER BY 1;
        five        
 -------------------
  a
@@ -270,21 +275,21 @@ SELECT q2 FROM int8_tbl INTERSECT ALL SELECT q1 FROM int8_tbl;
  4567890123456789
 (3 rows)
 
-SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
         q2         
 -------------------
  -4567890123456789
                456
 (2 rows)
 
-SELECT q2 FROM int8_tbl EXCEPT ALL SELECT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl EXCEPT ALL SELECT q1 FROM int8_tbl ORDER BY 1;
         q2         
 -------------------
  -4567890123456789
                456
 (2 rows)
 
-SELECT q2 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q1 FROM int8_tbl;
+SELECT q2 FROM int8_tbl EXCEPT ALL SELECT DISTINCT q1 FROM int8_tbl ORDER BY 1;
         q2         
 -------------------
  -4567890123456789
@@ -321,7 +326,7 @@ SELECT f1 FROM float8_tbl INTERSECT SELECT f1 FROM int4_tbl;
   0
 (1 row)
 
-SELECT f1 FROM float8_tbl EXCEPT SELECT f1 FROM int4_tbl;
+SELECT f1 FROM float8_tbl EXCEPT SELECT f1 FROM int4_tbl ORDER BY 1;
           f1           
 -----------------------
  -1.2345678901234e+200
@@ -364,14 +369,14 @@ SELECT q1 FROM int8_tbl INTERSECT (((SELECT q2 FROM int8_tbl UNION ALL SELECT q2
  -4567890123456789
 (7 rows)
 
-SELECT q1 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl;
+SELECT q1 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
         q1         
 -------------------
  -4567890123456789
                456
 (2 rows)
 
-SELECT q1 FROM int8_tbl UNION ALL (((SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl)));
+SELECT q1 FROM int8_tbl UNION ALL (((SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1))); --order none
         q1         
 -------------------
                123
@@ -383,7 +388,7 @@ SELECT q1 FROM int8_tbl UNION ALL (((SELECT q2 FROM int8_tbl EXCEPT SELECT q1 FR
                456
 (7 rows)
 
-(((SELECT q1 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl))) EXCEPT SELECT q1 FROM int8_tbl;
+(((SELECT q1 FROM int8_tbl UNION ALL SELECT q2 FROM int8_tbl))) EXCEPT SELECT q1 FROM int8_tbl ORDER BY 1;
         q1         
 -------------------
  -4567890123456789

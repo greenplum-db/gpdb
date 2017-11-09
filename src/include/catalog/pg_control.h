@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.40 2008/02/17 02:09:30 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/pg_control.h,v 1.41 2008/04/21 00:26:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -26,7 +26,7 @@
  * The first three digits is the PostgreSQL version number. The last
  * four digits indicates the GPDB version.
  */
-#define PG_CONTROL_VERSION	8410600
+#define PG_CONTROL_VERSION	8420600
 
 /*
  * Body of CheckPoint XLOG records.  This is declared here because we keep
@@ -178,7 +178,11 @@ typedef struct ControlFileData
 	uint32		toast_max_chunk_size;	/* chunk size in TOAST tables */
 
 	/* flag indicating internal format of timestamp, interval, time */
-	uint32		enableIntTimes; /* int64 storage enabled? */
+	bool		enableIntTimes; /* int64 storage enabled? */
+
+	/* flags indicating pass-by-value status of various types */
+	bool		float4ByVal;	/* float4 pass-by-value? */
+	bool		float8ByVal;	/* float8, int8, etc pass-by-value? */
 
 	/* active locales */
 	uint32		localeBuflen;

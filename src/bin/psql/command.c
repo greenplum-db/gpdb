@@ -71,6 +71,15 @@ static void checkWin32Codepage(void);
 #endif
 
 
+#ifdef USE_SSL
+static void printSSLInfo(void);
+#endif
+
+#ifdef WIN32
+static void checkWin32Codepage(void);
+#endif
+
+
 
 /*----------
  * HandleSlashCmds:
@@ -1439,9 +1448,9 @@ connection_warnings(bool in_startup)
 
 		if (pset.sversion / 100 != client_ver / 100)
 			printf(_("WARNING: %s version %d.%d, server version %d.%d.\n"
-					 "         Some psql features might not work.\n"),
-				 pset.progname, client_ver / 10000, (client_ver / 100) % 100,
-				   pset.sversion / 10000, (pset.sversion / 100) % 100);
+				 "         Some psql features might not work.\n"),
+				pset.progname, client_ver / 10000, (client_ver / 100) % 100,
+				pset.sversion / 10000, (pset.sversion / 100) % 100);
 
 #ifdef WIN32
 		checkWin32Codepage();
@@ -1501,7 +1510,7 @@ checkWin32Codepage(void)
 	{
 		printf(_("WARNING: Console code page (%u) differs from Windows code page (%u)\n"
 				 "         8-bit characters might not work correctly. See psql reference\n"
-				 "         page \"Notes for Windows users\" for details.\n"),
+			     "         page \"Notes for Windows users\" for details.\n"),
 			   concp, wincp);
 	}
 }

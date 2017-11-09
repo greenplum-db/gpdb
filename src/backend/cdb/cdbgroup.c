@@ -2011,17 +2011,15 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	 * GroupClause node for the DQA argument.  This is where the sort operator
 	 * for the DQA argument is selected.
 	 */
-	{
-		GroupClause *gc;
+	 {
+		SortGroupClause *gc;
 		TargetEntry *tle;
 		Oid			dqaArg_orderingop;
 		Oid			dqaArg_eqop;
 
-		dqaArg_orderingop = ordering_oper_opid(exprType((Node *) dqaArg->distinctExpr));
-		dqaArg_eqop = get_equality_op_for_ordering_op(dqaArg_orderingop);
-		if (!OidIsValid(dqaArg_eqop))	/* shouldn't happen */
-			elog(ERROR, "could not find equality operator for ordering operator %u",
-				 dqaArg_orderingop);
+		get_sort_group_operators(exprType((Node *) dqaArg->distinctExpr),
+								 true, true, false,
+								 &dqaArg_orderingop, &dqaArg_eqop, NULL);
 
 		n = ctx->numGroupCols + 1;	/* add the DQA argument as a grouping key */
 		Assert(n > 0);
@@ -2029,9 +2027,10 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		prelimGroupColIdx = (AttrNumber *) palloc(n * sizeof(AttrNumber));
 		prelimGroupOperators = (Oid *) palloc(n * sizeof(Oid));
 
-		gc = makeNode(GroupClause);
+		gc = makeNode(SortGroupClause);
 		tle = get_tle_by_resno(ctx->sub_tlist, dqaArg->base_index);
 		gc->tleSortGroupRef = tle->ressortgroupref;
+		gc->eqop = dqaArg_eqop;
 		gc->sortop = dqaArg_orderingop;
 
 		extendedGroupClause = list_copy(root->parse->groupClause);
@@ -2638,15 +2637,16 @@ make_subplan_tlist(List *tlist, Node *havingQual,
 		int			keyno = 0;
 		List	   *tles;
 		List	   *sortops;
+		List	   *eqops;
 		ListCell   *lc_tle;
-		ListCell   *lc_sortop;
+		ListCell   *lc_eqop;
 
 		cols_gkeys = (AttrNumber *) palloc(sizeof(AttrNumber) * num_gkeys);
 		cols_gops = (Oid *) palloc(sizeof(Oid) * num_gkeys);
 
-		get_sortgroupclauses_tles(grp_clauses, tlist, &tles, &sortops);
+		get_sortgroupclauses_tles(grp_clauses, tlist, &tles, &sortops, &eqops);
 
-		forboth(lc_tle, tles, lc_sortop, sortops)
+		forboth (lc_tle, tles, lc_eqop, eqops)
 		{
 			TargetEntry *tle = (TargetEntry *) lfirst(lc_tle);
 			Node	   *expr = (Node *) tle->expr;;
@@ -2673,8 +2673,8 @@ make_subplan_tlist(List *tlist, Node *havingQual,
 			sub_tle->ressortgroupref = tle->ressortgroupref;
 			cols_gkeys[keyno] = sub_tle->resno;
 
-			cols_gops[keyno] = get_equality_op_for_ordering_op(lfirst_oid(lc_sortop));
-			if (!OidIsValid(cols_gops[keyno]))	/* shouldn't happen */
+			cols_gops[keyno] = lfirst_oid(lc_eqop);
+			if (!OidIsValid(cols_gops[keyno]))          /* shouldn't happen */
 				elog(ERROR, "could not find equality operator for ordering operator %u",
 					 cols_gops[keyno]);
 			keyno++;
@@ -2828,16 +2828,17 @@ describe_subplan_tlist(List *sub_tlist,
 	{
 		List	   *tles;
 		List	   *sortops;
+		List	   *eqops;
 		ListCell   *lc_tle;
-		ListCell   *lc_sortop;
+		ListCell   *lc_eqop;
 		int			keyno = 0;
 
 		cols = (AttrNumber *) palloc0(sizeof(AttrNumber) * nkeys);
 		grpops = (Oid *) palloc0(sizeof(Oid) * nkeys);
 
-		get_sortgroupclauses_tles(grp_clauses, tlist, &tles, &sortops);
+		get_sortgroupclauses_tles(grp_clauses, tlist, &tles, &sortops, &eqops);
 
-		forboth(lc_tle, tles, lc_sortop, sortops)
+		forboth (lc_tle, tles, lc_eqop, eqops)
 		{
 			TargetEntry *tle = (TargetEntry *) lfirst(lc_tle);
 			TargetEntry *sub_tle;
@@ -2849,8 +2850,8 @@ describe_subplan_tlist(List *sub_tlist,
 
 			cols[keyno] = sub_tle->resno;
 
-			grpops[keyno] = get_equality_op_for_ordering_op(lfirst_oid(lc_sortop));
-			if (!OidIsValid(grpops[keyno])) /* shouldn't happen */
+			grpops[keyno] = lfirst_oid(lc_eqop);
+			if (!OidIsValid(grpops[keyno]))          /* shouldn't happen */
 				elog(ERROR, "could not find equality operator for ordering operator %u",
 					 grpops[keyno]);
 			keyno++;
@@ -4321,18 +4322,16 @@ add_subqueryscan(PlannerInfo *root, List **p_pathkeys,
 static bool
 hash_safe_type(Oid type)
 {
-	Operator	optup;
-	bool		oprcanhash;
+	Oid			eq_opr;
 
-	optup = equality_oper(type, true);
-	if (!optup)
-		return false;
-	oprcanhash = ((Form_pg_operator) GETSTRUCT(optup))->oprcanhash;
-	ReleaseSysCache(optup);
-	if (!oprcanhash)
+	get_sort_group_operators(type,
+							 false, false, false,
+							 NULL, &eq_opr, NULL);
+
+	if (!OidIsValid(eq_opr))
 		return false;
 
-	return true;
+	return op_hashjoinable(eq_opr);
 }
 
 /*
@@ -4356,12 +4355,13 @@ static bool
 gp_hash_safe_grouping(PlannerInfo *root)
 {
 	List	   *grouptles;
-	List	   *groupops;
+	List	   *sortops;
+	List	   *eqops;
 	ListCell   *glc;
 
 	get_sortgroupclauses_tles(root->parse->groupClause,
 							  root->parse->targetList,
-							  &grouptles, &groupops);
+							  &grouptles, &sortops, &eqops);
 	foreach(glc, grouptles)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(glc);
@@ -5078,8 +5078,11 @@ set_coplan_strategies(PlannerInfo *root, MppGroupContext *ctx, DqaInfo *dqaArg, 
 	long		numGroups = (group_rows < 0) ? 0 :
 	(group_rows > LONG_MAX) ? LONG_MAX :
 	(long) group_rows;
-	bool		can_hash_group_key = ctx->agg_counts->canHashAgg;
-	bool		can_hash_dqa_arg = dqaArg->can_hash;
+	// GPDB_84_MERGE_FIXME: choose_hashed_grouping no longer tracks these separately.
+	//bool		can_hash_group_key = ctx->agg_counts->canHashAgg;
+	//bool		can_hash_dqa_arg = dqaArg->can_hash;
+	bool can_hash_group_key = true;
+	bool can_hash_dqa_arg = true;
 	bool		use_hashed_preliminary = false;
 
 	Cost		sort_input = incremental_sort_cost(input_rows, input_width,
@@ -5760,19 +5763,15 @@ make_deduplicate_plan(PlannerInfo *root,
 	const Index Outer = 1;
 
 	/*
-	 * It is doable to just concatenate groupClause and sortClause, but it is
-	 * more semantic to convert sortClause to groupClause. Especially we want
-	 * to use make_pathkeys_from_groupclause later where sortClause is not
-	 * handled.
+	 * Concatenate groupClause and sortclause.
 	 *
 	 * Copy input groupClause, since we change it.
 	 */
 	groupClause = copyObject(groupClause);
 	foreach(l1, sortClause)
 	{
-		SortClause *sc = copyObject(lfirst(l1));
+		SortGroupClause *sc = copyObject(lfirst(l1));
 
-		sc->type = T_GroupClause;
 		groupClause = lappend(groupClause, sc);
 	}
 
@@ -5794,7 +5793,7 @@ make_deduplicate_plan(PlannerInfo *root,
 		 */
 		foreach(l2, groupClause)
 		{
-			GroupClause *gc = lfirst(l2);
+			SortGroupClause *gc = lfirst(l2);
 
 			if (gc->tleSortGroupRef == tle->ressortgroupref)
 				break;
@@ -5833,9 +5832,8 @@ make_deduplicate_plan(PlannerInfo *root,
 												 -1.0,
 												 group_context->cheapest_path,
 												 NULL,
-												 groupOperators, numGroupCols, numGroups,
+												 numGroupCols, numGroups,
 												 &agg_counts);
-	use_hashed_grouping = agg_counts.canHashAgg;
 
 	ctx.best_path = group_context->best_path;
 	ctx.cheapest_path = group_context->cheapest_path;
@@ -6207,7 +6205,7 @@ within_agg_construct_inner(PlannerInfo *root,
 	tlist = NIL;
 	foreach_with_count(l, root->parse->groupClause, idx)
 	{
-		GroupClause *gc = (GroupClause *) lfirst(l);
+		SortGroupClause *gc = (SortGroupClause *) lfirst(l);
 		TargetEntry *tle,
 				   *newtle;
 
@@ -6261,7 +6259,7 @@ within_agg_construct_inner(PlannerInfo *root,
 												 -1.0,
 												 &input_path,
 												 &input_path,
-												 grpOperators, numGroupCols, numGroups,
+												 numGroupCols, numGroups,
 												 &agg_counts);
 
 	ctx.best_path = &input_path;
@@ -6378,7 +6376,7 @@ within_agg_join_plans(PlannerInfo *root,
 
 	foreach(l, root->parse->groupClause)
 	{
-		GroupClause *gc = lfirst(l);
+		SortGroupClause *gc = lfirst(l);
 		TargetEntry *gc_tle,
 				   *join_tle;
 
@@ -6467,7 +6465,7 @@ within_agg_join_plans(PlannerInfo *root,
 		idx = 0;
 		forboth(lg, root->parse->groupClause, lpk, root->group_pathkeys)
 		{
-			GroupClause *gc = (GroupClause *) lfirst(lg);
+			SortGroupClause *gc = (SortGroupClause *) lfirst(lg);
 			PathKey    *pk = (PathKey *) lfirst(lpk);
 			TargetEntry *tle;
 			Var		   *outer_var,
@@ -6692,11 +6690,12 @@ plan_within_agg_persort(PlannerInfo *root,
 	Plan	   *outer_plan,
 			   *inner_plan;
 	List	   *partners;
-	ListCell   *l;
 
 	memset(&wag_context, 0, sizeof(WithinAggContext));
 	wag_context.current_pathkeys = current_pathkeys;
 
+#if 0 // GPDB_84_MERGE_FIXME: Is this needed at all?
+	ListCell		   *l;
 	/*
 	 * Group clause expressions should be in ascending order, because our
 	 * MergeJoin is not able to handle descending-ordered child plans.  It is
@@ -6704,18 +6703,19 @@ plan_within_agg_persort(PlannerInfo *root,
 	 */
 	foreach(l, root->parse->groupClause)
 	{
-		GroupClause *gc = lfirst(l);
+		SortGroupClause *gc = lfirst(l);
 		Node	   *gcexpr;
 		Oid			gctype;
 
 		/*
 		 * We assume only flattened grouping expressions here.
 		 */
-		Assert(IsA(gc, GroupClause));
+		Assert(IsA(gc, SortGroupClause));
 		gcexpr = get_sortgroupclause_expr(gc, group_context->sub_tlist);
 		gctype = exprType(gcexpr);
 		gc->sortop = ordering_oper_opid(gctype);
 	}
+#endif
 
 	/*
 	 * Make a common plan shared by outer and inner plan.  It may become a
@@ -6930,7 +6930,7 @@ within_agg_planner(PlannerInfo *root,
 		 */
 		foreach(sl, sortClause)
 		{
-			SortClause *sc = lfirst(sl);
+			SortGroupClause *sc = lfirst(sl);
 			TargetEntry *tle,
 					   *sub_tle;
 

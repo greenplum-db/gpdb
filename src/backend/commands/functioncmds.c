@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.91 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.98 2008/07/18 03:32:52 tgl Exp $
  *
  * DESCRIPTION
  *	  These routines take the parse tree and pick out the
@@ -34,6 +34,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/oid_dispatch.h"
@@ -59,6 +60,7 @@
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
@@ -262,74 +264,54 @@ examine_parameter_list(List *parameters, Oid languageOid,
 					 errmsg("functions cannot accept set arguments")));
 		}
 
-		/* track input vs output parameters */
-		switch (fp->mode)
+		/* handle input parameters */
+		if (fp->mode != FUNC_PARAM_OUT && fp->mode != FUNC_PARAM_TABLE)
 		{
-			/* input only modes */
-			case FUNC_PARAM_VARIADIC:	/* GPDB: not yet supported */
-			case FUNC_PARAM_IN:
-				inTypes[inCount++] = toid;
-				isinput = true;
+			/* other input parameters can't follow a VARIADIC parameter */
+			if (varCount > 0)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+						 errmsg("VARIADIC parameter must be the last input parameter")));
+			inTypes[inCount++] = toid;
+			isinput = true;
 
-				/* Keep track of the number of anytable arguments */
-				if (toid == ANYTABLEOID)
-					multisetCount++;
+			/* Keep track of the number of anytable arguments */
+			if (toid == ANYTABLEOID)
+				multisetCount++;
+		}
 
-				/* Other input parameters cannot follow VARIADIC parameter */
-				if (fp->mode == FUNC_PARAM_VARIADIC)
-				{
-					varCount++;
-					switch (toid)
-					{
-						case ANYARRAYOID:
-						case ANYOID:
-							break;
-						default:
-							if (!OidIsValid(get_element_type(toid)))
-								ereport(ERROR,
-										(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-										 errmsg("VARIADIC parameter must be an array")));
-							break;
-					}
-				}
-				else if (varCount > 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-							 errmsg("VARIADIC parameter must be the last input parameter")));
-				break;
+		/* handle output parameters */
+		if (fp->mode != FUNC_PARAM_IN && fp->mode != FUNC_PARAM_VARIADIC)
+		{
+			if (toid == ANYTABLEOID)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+						 errmsg("functions cannot return \"anytable\" arguments")));
 
-			/* output only modes */
-			case FUNC_PARAM_OUT:
-			case FUNC_PARAM_TABLE:
-				if (toid == ANYTABLEOID)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-							 errmsg("functions cannot return \"anytable\" arguments")));
+			if (outCount == 0)	/* save first output param's type */
+				*requiredResultType = toid;
+			outCount++;
+		}
 
-				if (outCount == 0)	/* save first OUT param's type */
-					*requiredResultType = toid;
-				outCount++;
-				break;
+		if (fp->mode == FUNC_PARAM_VARIADIC)
+		{
+			varCount++;
+			/* validate variadic parameter type */
+			switch (toid)
+			{
+				case ANYARRAYOID:
+				case ANYOID:
+					/* okay */
+					break;
+				default:
+					if (!OidIsValid(get_element_type(toid)))
+						ereport(ERROR,
+								(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
+								 errmsg("VARIADIC parameter must be an array")));
+					break;
+			}
 
-			/* input and output */
-			case FUNC_PARAM_INOUT:
-				if (toid == ANYTABLEOID)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-							 errmsg("functions cannot return \"anytable\" arguments")));
-
-				inTypes[inCount++] = toid;
-				isinput = true;
-
-				if (outCount == 0)	/* save first OUT param's type */
-					*requiredResultType = toid;
-				outCount++;
-				break;
-
-			/* above list must be exhaustive */
-			default:
-				elog(ERROR, "unrecognized function parameter mode: %c", fp->mode);
-				break;
+			isinput = true;
 		}
 
 		allTypes[i] = ObjectIdGetDatum(toid);
@@ -872,11 +854,11 @@ interpret_AS_clause(Oid languageOid, const char *languageName,
 	{
 		/*
 		 * For "C" language, store the file name in probin and, when given,
-		 * the link symbol name in prosrc. If link symbol is omitted,
+		 * the link symbol name in prosrc.  If link symbol is omitted,
 		 * substitute procedure name.  We also allow link symbol to be
-		 * specified as "-", since that was the habit in GPDB versions before
-		 * Paris, and there might be dump files out there that don't translate
-		 * that back to "omitted". 
+		 * specified as "-", since that was the habit in PG versions before
+		 * 8.4, and there might be dump files out there that don't translate
+		 * that back to "omitted".
 		 */
 		*probin_str_p = strVal(linitial(as));
 		if (list_length(as) == 1)
@@ -899,6 +881,20 @@ interpret_AS_clause(Oid languageOid, const char *languageName,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 					 errmsg("only one AS item needed for language \"%s\"",
 							languageName)));
+
+		if (languageOid == INTERNALlanguageId)
+		{
+			/*
+			 * In PostgreSQL versions before 6.5, the SQL name of the created
+			 * function could not be different from the internal name, and
+			 * "prosrc" wasn't used.  So there is code out there that does
+			 * CREATE FUNCTION xyz AS '' LANGUAGE internal. To preserve some
+			 * modicum of backwards compatibility, accept an empty "prosrc"
+			 * value as meaning the supplied SQL function name.
+			 */
+			if (strlen(*prosrc_str_p) == 0)
+				*prosrc_str_p = funcname;
+		}
 	}
 
 	if (languageOid == INTERNALlanguageId)
@@ -1956,10 +1952,10 @@ CreateCast(CreateCastStmt *stmt)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				  errmsg("cast function must take one to three arguments")));
-		if (procstruct->proargtypes.values[0] != sourcetypeid)
+		if (!IsBinaryCoercible(sourcetypeid, procstruct->proargtypes.values[0]))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-			errmsg("argument of cast function must match source data type")));
+			errmsg("argument of cast function must match or be binary-coercible from source data type")));
 		if (nargs > 1 && procstruct->proargtypes.values[1] != INT4OID)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
@@ -1968,10 +1964,10 @@ CreateCast(CreateCastStmt *stmt)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 			errmsg("third argument of cast function must be type boolean")));
-		if (procstruct->prorettype != targettypeid)
+		if (!IsBinaryCoercible(procstruct->prorettype, targettypeid))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("return data type of cast function must match target data type")));
+					 errmsg("return data type of cast function must match or be binary-coercible to target data type")));
 
 		/*
 		 * Restricting the volatility of a cast function may or may not be a

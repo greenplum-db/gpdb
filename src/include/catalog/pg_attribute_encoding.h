@@ -16,6 +16,7 @@
 #define PG_ATTRIBUTE_ENCODING_H
 
 #include "catalog/genbki.h"
+#include "utils/rel.h"
 
 /* ----------------
  *		pg_attribute_encoding definition.  cpp turns this into

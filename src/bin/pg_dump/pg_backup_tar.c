@@ -54,17 +54,13 @@ static FILE *newTempFile(void);
 
 #define K_STD_BUF_SIZE 1024
 
-
-#ifdef HAVE_LIBZ
- /* typedef gzFile	 ThingFile; */
-typedef FILE ThingFile;
-#else
-typedef FILE ThingFile;
-#endif
-
 typedef struct
 {
-	ThingFile  *zFH;
+#ifdef HAVE_LIBZ
+	gzFile		zFH;
+#else
+	FILE		*zFH;
+#endif
 	FILE	   *nFH;
 	FILE	   *tarFH;
 	FILE	   *tmpFH;

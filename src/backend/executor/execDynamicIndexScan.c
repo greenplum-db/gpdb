@@ -265,8 +265,6 @@ IndexScan_PrepareIndexScanKeys(IndexScanState *indexScanState, MemoryContext par
 	ExecIndexBuildScanKeys((PlanState *) indexScanState,
 						   indexScanState->iss_RelationDesc,
 						   plan->indexqual,
-						   plan->indexstrategy,
-						   plan->indexsubtype,
 						   &indexScanState->iss_ScanKeys,
 						   &indexScanState->iss_NumScanKeys,
 						   &indexScanState->iss_RuntimeKeys,

@@ -270,9 +270,9 @@ CREATE
 ALTER RESOURCE GROUP admin_group SET CONCURRENCY 0;
 ERROR:  admin_group must have at least one concurrency
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -1;
-ERROR:  concurrency limit cannot be less than 0
+ERROR:  concurrency range is [0, 'max_connections']
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY 26;
-ERROR:  concurrency limit cannot be greater than 'max_connections'
+ERROR:  concurrency range is [0, 'max_connections']
 ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -0.5;
 ERROR:  syntax error at or near "0.5"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CONCURRENCY -0.5;
@@ -310,9 +310,9 @@ ERROR:  syntax error at or near "0.1"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT -0.1;
                                                                ^
 ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT -1;
-ERROR:  cpu rate limit cannot be less than 1
+ERROR:  cpu_rate_limit range is [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 0;
-ERROR:  cpu rate limit cannot be less than 1
+ERROR:  cpu_rate_limit range is [1, 100]
 ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 0.7;
 ERROR:  syntax error at or near "0.7"
 LINE 1: ALTER RESOURCE GROUP rg_test_group SET CPU_RATE_LIMIT 0.7;

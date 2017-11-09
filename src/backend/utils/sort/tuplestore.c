@@ -49,7 +49,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.38 2008/03/25 19:26:53 neilc Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.39 2008/05/12 00:00:53 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -184,6 +184,12 @@ struct Tuplestorestate
 	long		allowedMem;		/* total memory allowed, in bytes */
 	long        availMemMin;    /* availMem low water mark (bytes) */
 	int64       spilledBytes;   /* memory used for spilled tuples */
+
+	/*
+	 * MemTupleBinding used for putvalues of tuplestore.
+	 */
+	 MemTupleBinding	*mt_bind;
+
 };
 
 #define COPYTUP(state,tup)	((*(state)->copytup) (state, tup))
@@ -342,6 +348,7 @@ tuplestore_begin_heap(bool randomAccess, bool interXact, int maxKBytes)
 	state->copytup = copytup_heap;
 	state->writetup = writetup_heap;
 	state->readtup = readtup_heap;
+	state->mt_bind = NULL;
 
 	return state;
 }
@@ -450,6 +457,11 @@ tuplestore_clear(Tuplestorestate *state)
 		readptr->eof_reached = false;
 		readptr->current = 0;
 	}
+
+	if (state->mt_bind)
+		pfree(state->mt_bind);
+
+	state->mt_bind = NULL;
 }
 
 /*
@@ -492,6 +504,8 @@ tuplestore_end(Tuplestorestate *state)
 		pfree(state->memtuples);
 	}
 	pfree(state->readptrs);
+	if (state->mt_bind)
+		pfree(state->mt_bind);
 	pfree(state);
 }
 
@@ -636,8 +650,13 @@ tuplestore_putvalues(Tuplestorestate *state, TupleDesc tdesc,
 {
 	MemoryContext oldcxt = MemoryContextSwitchTo(state->context);
 
-	MemTupleBinding *mt_bind = create_memtuple_binding(tdesc);
-	MemTuple tuple = memtuple_form_to(mt_bind, values, isnull, NULL, NULL, false);
+	if (!state->mt_bind)
+	{
+		state->mt_bind = create_memtuple_binding(tdesc);
+		Assert(state->mt_bind);
+	}
+
+	MemTuple tuple = memtuple_form_to(state->mt_bind, values, isnull, NULL, NULL, false);
 
 	USEMEM(state, GetMemoryChunkSpace(tuple));
 

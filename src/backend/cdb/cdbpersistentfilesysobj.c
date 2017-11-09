@@ -44,6 +44,7 @@
 #include "cdb/cdbglobalsequence.h"
 
 #include "storage/itemptr.h"
+#include "storage/lmgr.h"
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"

@@ -27,6 +27,7 @@
 #include "utils/builtins.h"
 #include "utils/datum.h"
 #include "utils/guc.h"
+#include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
 
 /*
@@ -2557,10 +2558,15 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 
 	for (attno = 0; attno < tupDesc->natts; attno++)
 	{
-		RegProcedure	opfuncid;
-		ScanKey			scanKey;
+		Oid			eq_opr;
+		RegProcedure opfuncid;
+		ScanKey		scanKey;
 
-		opfuncid = equality_oper_funcid(tupDesc->attrs[attno]->atttypid);
+		get_sort_group_operators(tupDesc->attrs[attno]->atttypid,
+								 false, true, false,
+								 NULL, &eq_opr, NULL);
+		opfuncid = get_opcode(eq_opr);
+
 		scanKey = (ScanKey) (((char *)scanKeys) + attno * sizeof(ScanKeyData));
 
 		ScanKeyEntryInitialize(scanKey, SK_ISNULL, attno + 1, 
@@ -2578,7 +2584,7 @@ _bitmap_doinsert(Relation rel, ItemPointerData ht_ctid, Datum *attdata,
 		}
 	}
 
-	scanDesc = index_beginscan(lovHeap, lovIndex, ActiveSnapshot,
+	scanDesc = index_beginscan(lovHeap, lovIndex, GetActiveSnapshot(),
 							   tupDesc->natts, scanKeys);
 
 	/* insert this new tuple into the bitmap index. */

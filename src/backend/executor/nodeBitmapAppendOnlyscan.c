@@ -285,11 +285,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		/* Flag for the next call that no more tuples */
 		estate->es_evTupleNull[scanrelid - 1] = true;
 
-		if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
 		return slot;
 	}
 
@@ -453,12 +448,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 		}
 
 		/* OK to return this tuple */
-      	if (!TupIsNull(slot))
-		{
-			Gpmon_Incr_Rows_Out(GpmonPktFromBitmapAppendOnlyScanState(node));
-			CheckSendPlanStateGpmonPkt(&node->ss.ps);
-		}
-
 		return slot;
 	}
 
@@ -527,8 +516,6 @@ ExecBitmapAppendOnlyReScan(BitmapAppendOnlyScanState *node, ExprContext *exprCtx
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
-
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
 
@@ -678,8 +665,6 @@ ExecInitBitmapAppendOnlyScan(BitmapAppendOnlyScan *node, EState *estate, int efl
 	 */
 	outerPlanState(scanstate) = ExecInitNode(outerPlan(node), estate, eflags);
 
-	initGpmonPktForBitmapAppendOnlyScan((Plan *)node, &scanstate->ss.ps.gpmon_pkt, estate);
-
 	/*
 	 * all done.
 	 */
@@ -691,14 +676,6 @@ ExecCountSlotsBitmapAppendOnlyScan(BitmapAppendOnlyScan *node)
 {
 	return ExecCountSlotsNode(outerPlan((Plan *) node)) +
 		ExecCountSlotsNode(innerPlan((Plan *) node)) + BITMAPAPPENDONLYSCAN_NSLOTS;
-}
-
-void
-initGpmonPktForBitmapAppendOnlyScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, BitmapAppendOnlyScan));
-
-    InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

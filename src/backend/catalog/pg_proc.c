@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.151 2008/03/27 03:57:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.153 2008/07/18 03:32:52 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -236,8 +236,8 @@ ProcedureCreate(const char *procedureName,
 		 * need to use deconstruct_array() since the array data is just going
 		 * to look like a C array of char values.
 		 */
-		ArrayType 	*modesArray = (ArrayType *) DatumGetPointer(parameterModes);
-		char		*modes;
+		ArrayType  *modesArray = (ArrayType *) DatumGetPointer(parameterModes);
+		char	   *modes;
 
 		if (ARR_NDIM(modesArray) != 1 ||
 			ARR_DIMS(modesArray)[0] != allParamCount ||
@@ -245,10 +245,9 @@ ProcedureCreate(const char *procedureName,
 			ARR_ELEMTYPE(modesArray) != CHAROID)
 			elog(ERROR, "parameterModes is not a 1-D char array");
 		modes = (char *) ARR_DATA_PTR(modesArray);
-
 		/*
 		 * Only the last input parameter can be variadic; if it is, save
-		 * its element type. Errors here are just elog since caller should
+		 * its element type.  Errors here are just elog since caller should
 		 * have checked this already.
 		 */
 		for (i = 0; i < allParamCount; i++)
@@ -337,7 +336,7 @@ ProcedureCreate(const char *procedureName,
 	if (proconfig != PointerGetDatum(NULL))
 		values[Anum_pg_proc_proconfig - 1] = proconfig;
 	else
-		nulls[Anum_pg_proc_proconfig - 1] = 'n';
+		nulls[Anum_pg_proc_proconfig - 1] = true;
 	/* start out with empty permissions */
 	nulls[Anum_pg_proc_proacl - 1] = true;
 	values[Anum_pg_proc_prodataaccess - 1] = CharGetDatum(prodataaccess);
@@ -754,12 +753,12 @@ fmgr_c_validator(PG_FUNCTION_ARGS)
 
 	tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_prosrc, &isnull);
 	if (isnull)
-		elog(ERROR, "null prosrc");
+		elog(ERROR, "null prosrc for C function %u", funcoid);
 	prosrc = TextDatumGetCString(tmp);
 
 	tmp = SysCacheGetAttr(PROCOID, tuple, Anum_pg_proc_probin, &isnull);
 	if (isnull)
-		elog(ERROR, "null probin");
+		elog(ERROR, "null probin for C function %u", funcoid);
 	probin = TextDatumGetCString(tmp);
 
 	(void) load_external_function(probin, prosrc, true, &libraryhandle);

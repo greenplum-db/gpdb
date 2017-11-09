@@ -103,33 +103,28 @@ _bitmap_xlog_newpage(XLogRecPtr lsn, XLogRecord *record)
 
 	xl_bm_newpage	*xlrec = (xl_bm_newpage *) XLogRecGetData(record);
 
-	Relation		reln;
 	Page			page;
 	uint8			info;
 	Buffer		buffer;
 
 	info = record->xl_info & ~XLR_INFO_MASK;
 
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
-
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	buffer = XLogReadBuffer(reln, xlrec->bm_new_blkno, true);
+	buffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_new_blkno, true);
 	Assert(BufferIsValid(buffer));
 
 	page = BufferGetPage(buffer);
 	Assert(PageIsNew(page));
 
-	REDO_PRINT_LSN_APPLICATION(reln, xlrec->bm_new_blkno, page, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, xlrec->bm_new_blkno, page, lsn);
 	if (XLByteLT(PageGetLSN(page), lsn))
 	{
 		switch (info)
 		{
 			case XLOG_BITMAP_INSERT_NEWLOV:
-				_bitmap_init_lovpage(reln, buffer);
+				_bitmap_init_lovpage(NULL, buffer);
 				break;
 			default:
 				elog(PANIC, "_bitmap_xlog_newpage: unknown newpage op code %u",
@@ -156,26 +151,21 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_bm_lovitem	*xlrec = (xl_bm_lovitem *) XLogRecGetData(record);
-	Relation reln;
 	Buffer			lovBuffer;
 	Page			lovPage;
-
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
 
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
 	if (xlrec->bm_is_new_lov_blkno)
 	{
-		lovBuffer = XLogReadBuffer(reln, xlrec->bm_lov_blkno, true);
+		lovBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_lov_blkno, true);
 		Assert(BufferIsValid(lovBuffer));
 	}
 	else
 	{
-		lovBuffer = XLogReadBuffer(reln, xlrec->bm_lov_blkno, false);
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->bm_lov_blkno, lovBuffer, lsn);
+		lovBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_lov_blkno, false);
+		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->bm_node, xlrec->bm_lov_blkno, lovBuffer, lsn);
 		if (!BufferIsValid(lovBuffer))
 		{
 			MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -188,12 +178,12 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 	lovPage = BufferGetPage(lovBuffer);
 
 	if (PageIsNew(lovPage))
-		_bitmap_init_lovpage(reln, lovBuffer);
+		_bitmap_init_lovpage(NULL, lovBuffer);
 
 	elog(DEBUG1, "In redo, processing a lovItem: (blockno, offset)=(%d,%d)",
 		 xlrec->bm_lov_blkno, xlrec->bm_lov_offset);
 
-	REDO_PRINT_LSN_APPLICATION(reln, xlrec->bm_lov_blkno, lovPage, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, xlrec->bm_lov_blkno, lovPage, lsn);
 	if (XLByteLT(PageGetLSN(lovPage), lsn))
 	{
 		OffsetNumber	newOffset, itemSize;
@@ -228,9 +218,7 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 						newOffset, false, false) == InvalidOffsetNumber)
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
-					errmsg("_bitmap_xlog_insert_lovitem: failed to add LOV "
-						   "item to \"%s\"",
-					RelationGetRelationName(reln))));
+					errmsg("_bitmap_xlog_insert_lovitem: failed to add LOV item")));
 
 		PageSetLSN(lovPage, lsn);
 
@@ -242,9 +230,9 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
  	/* Update the meta page when needed */
  	if (xlrec->bm_is_new_lov_blkno)
  	{
- 		Buffer metabuf = XLogReadBuffer(reln, BM_METAPAGE, false);
+ 		Buffer metabuf = XLogReadBuffer(xlrec->bm_node, BM_METAPAGE, false);
  		BMMetaPage metapage;
-		REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, BM_METAPAGE, metabuf, lsn);
+		REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->bm_node, BM_METAPAGE, metabuf, lsn);
 		if (!BufferIsValid(metabuf))
 		{
 			MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -253,8 +241,7 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
  			return;
 		}
 		
- 		metapage = (BMMetaPage)
- 			PageGetContents(BufferGetPage(metabuf));
+ 		metapage = (BMMetaPage) PageGetContents(BufferGetPage(metabuf));
  		
  		if (XLByteLT(PageGetLSN(BufferGetPage(metabuf)), lsn))
  		{
@@ -284,25 +271,20 @@ _bitmap_xlog_insert_meta(XLogRecPtr lsn, XLogRecord *record)
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
 	xl_bm_metapage	*xlrec = (xl_bm_metapage *) XLogRecGetData(record);
-	Relation		reln;
 	Buffer			metabuf;
 	Page			mp;
 	BMMetaPage		metapage;
 
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
-
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	metabuf = XLogReadBuffer(reln, BM_METAPAGE, true);
+	metabuf = XLogReadBuffer(xlrec->bm_node, BM_METAPAGE, true);
 
 	mp = BufferGetPage(metabuf);
 	if (PageIsNew(mp))
 		PageInit(mp, BufferGetPageSize(metabuf), 0);
 
-	REDO_PRINT_LSN_APPLICATION(reln, BM_METAPAGE, mp, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, BM_METAPAGE, mp, lsn);
 	if (XLByteLT(PageGetLSN(mp), lsn))
 	{
 		metapage = (BMMetaPage)PageGetContents(mp);
@@ -321,7 +303,6 @@ _bitmap_xlog_insert_meta(XLogRecPtr lsn, XLogRecord *record)
 	
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
-	
 }
 
 /*
@@ -334,7 +315,6 @@ _bitmap_xlog_insert_bitmap_lastwords(XLogRecPtr lsn,
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
-	Relation reln;
 	xl_bm_bitmap_lastwords *xlrec;
 
 	Buffer		lovBuffer;
@@ -343,20 +323,16 @@ _bitmap_xlog_insert_bitmap_lastwords(XLogRecPtr lsn,
 
 	xlrec = (xl_bm_bitmap_lastwords *) XLogRecGetData(record);
 
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
-
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	lovBuffer = XLogReadBuffer(reln, xlrec->bm_lov_blkno, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->bm_lov_blkno, lovBuffer, lsn);
+	lovBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_lov_blkno, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->bm_node, xlrec->bm_lov_blkno, lovBuffer, lsn);
 	if (BufferIsValid(lovBuffer))
 	{
 		lovPage = BufferGetPage(lovBuffer);
 
-		REDO_PRINT_LSN_APPLICATION(reln, xlrec->bm_lov_blkno, lovPage, lsn);
+		REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, xlrec->bm_lov_blkno, lovPage, lsn);
 		if (XLByteLT(PageGetLSN(lovPage), lsn))
 		{
 			ItemId item = PageGetItemId(lovPage, xlrec->bm_lov_offset);
@@ -392,7 +368,6 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
-	Relation reln;
 	xl_bm_bitmapwords *xlrec;
 
 	Buffer		bitmapBuffer;
@@ -411,23 +386,19 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 	
 	xlrec = (xl_bm_bitmapwords *) XLogRecGetData(record);
 
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
-
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	bitmapBuffer = XLogReadBuffer(reln, xlrec->bm_blkno, true);
+	bitmapBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_blkno, true);
 	bitmapPage = BufferGetPage(bitmapBuffer);
 
 	if (PageIsNew(bitmapPage))
-		_bitmap_init_bitmappage(reln, bitmapBuffer);
+		_bitmap_init_bitmappage(NULL, bitmapBuffer);
 
 	bitmapPageOpaque =
 		(BMBitmapOpaque)PageGetSpecialPointer(bitmapPage);
 
-	REDO_PRINT_LSN_APPLICATION(reln, xlrec->bm_blkno, bitmapPage, lsn);
+	REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, xlrec->bm_blkno, bitmapPage, lsn);
 	if (XLByteLT(PageGetLSN(bitmapPage), lsn))
 	{
 		uint64      *last_tids;
@@ -489,10 +460,10 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 			Page	nextPage;
 
 			/* create a new bitmap page */
-			nextBuffer = XLogReadBuffer(reln, xlrec->bm_next_blkno, true);
+			nextBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_next_blkno, true);
 			nextPage = BufferGetPage(nextBuffer);
 
-			_bitmap_init_bitmappage(reln, nextBuffer);
+			_bitmap_init_bitmappage(NULL, nextBuffer);
 			
 			PageSetLSN(nextPage, lsn);
 
@@ -513,8 +484,8 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogRecord *record)
 	}
 
  	/* Update lovPage when needed */
- 	lovBuffer = XLogReadBuffer(reln, xlrec->bm_lov_blkno, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->bm_lov_blkno, lovBuffer, lsn);
+ 	lovBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_lov_blkno, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->bm_node, xlrec->bm_lov_blkno, lovBuffer, lsn);
  	if (!BufferIsValid(lovBuffer))
 	{
 		MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -571,7 +542,6 @@ _bitmap_xlog_updateword(XLogRecPtr lsn, XLogRecord *record)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
-	Relation reln;
 	xl_bm_updateword *xlrec;
 
 	Buffer			bitmapBuffer;
@@ -580,9 +550,6 @@ _bitmap_xlog_updateword(XLogRecPtr lsn, XLogRecord *record)
 	BMBitmap 		bitmap;
 
 	xlrec = (xl_bm_updateword *) XLogRecGetData(record);
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
 
 	elog(DEBUG1, "_bitmap_xlog_updateword: (blkno, word_no, cword, hword)="
 		 "(%d, %d, " INT64_FORMAT ", " INT64_FORMAT ")", xlrec->bm_blkno,
@@ -592,8 +559,8 @@ _bitmap_xlog_updateword(XLogRecPtr lsn, XLogRecord *record)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	bitmapBuffer = XLogReadBuffer(reln, xlrec->bm_blkno, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->bm_blkno, bitmapBuffer, lsn);
+	bitmapBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_blkno, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->bm_node, xlrec->bm_blkno, bitmapBuffer, lsn);
 	if (BufferIsValid(bitmapBuffer))
 	{
 		bitmapPage = BufferGetPage(bitmapBuffer);
@@ -601,7 +568,7 @@ _bitmap_xlog_updateword(XLogRecPtr lsn, XLogRecord *record)
 			(BMBitmapOpaque)PageGetSpecialPointer(bitmapPage);
 		bitmap = (BMBitmap) PageGetContentsMaxAligned(bitmapPage);
 
-		REDO_PRINT_LSN_APPLICATION(reln, xlrec->bm_blkno, bitmapPage, lsn);
+		REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, xlrec->bm_blkno, bitmapPage, lsn);
 		if (XLByteLT(PageGetLSN(bitmapPage), lsn))
 		{
 			Assert(bitmapOpaque->bm_hrl_words_used > xlrec->bm_word_no);
@@ -612,14 +579,12 @@ _bitmap_xlog_updateword(XLogRecPtr lsn, XLogRecord *record)
 			PageSetLSN(bitmapPage, lsn);
 			_bitmap_wrtbuf(bitmapBuffer);
 		}
-
 		else
 			_bitmap_relbuf(bitmapBuffer);
 	}
 	
 	MIRROREDLOCK_BUFMGR_UNLOCK;
 	// -------- MirroredLock ----------
-	
 }
 
 static void
@@ -627,7 +592,6 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
-	Relation reln;
 	xl_bm_updatewords *xlrec;
 	Buffer			firstBuffer;
 	Buffer			secondBuffer = InvalidBuffer;
@@ -639,9 +603,6 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
 	BMBitmap		secondBitmap = NULL;
 
 	xlrec = (xl_bm_updatewords *) XLogRecGetData(record);
-	reln = XLogOpenRelation(xlrec->bm_node);
-	if (!RelationIsValid(reln))
-		return;
 
 	elog(DEBUG1, "_bitmap_xlog_updatewords: (first_blkno, num_cwords, last_tid, next_blkno)="
 		 "(%d, " INT64_FORMAT ", " INT64_FORMAT ", %d), (second_blkno, num_cwords, last_tid, next_blkno)="
@@ -654,8 +615,8 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
 
-	firstBuffer = XLogReadBuffer(reln, xlrec->bm_first_blkno, false);
-	REDO_PRINT_READ_BUFFER_NOT_FOUND(reln, xlrec->bm_first_blkno, firstBuffer, lsn);
+	firstBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_first_blkno, false);
+	REDO_PRINT_READ_BUFFER_NOT_FOUND(&xlrec->bm_node, xlrec->bm_first_blkno, firstBuffer, lsn);
 	if (BufferIsValid(firstBuffer))
 	{
 		firstPage = BufferGetPage(firstBuffer);
@@ -663,7 +624,7 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
 			(BMBitmapOpaque)PageGetSpecialPointer(firstPage);
 		firstBitmap = (BMBitmap) PageGetContentsMaxAligned(firstPage);
 
-		REDO_PRINT_LSN_APPLICATION(reln, xlrec->bm_first_blkno, firstPage, lsn);
+		REDO_PRINT_LSN_APPLICATION(&xlrec->bm_node, xlrec->bm_first_blkno, firstPage, lsn);
 		if (XLByteLT(PageGetLSN(firstPage), lsn))
 		{
 			memcpy(firstBitmap->cwords, xlrec->bm_first_cwords,
@@ -688,13 +649,12 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
  	/* Update secondPage when needed */
  	if (xlrec->bm_two_pages)
  	{
- 		secondBuffer = XLogReadBuffer(reln, xlrec->bm_second_blkno, true);
+ 		secondBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_second_blkno, true);
  		secondPage = BufferGetPage(secondBuffer);
  		if (PageIsNew(secondPage))
- 			_bitmap_init_bitmappage(reln, secondBuffer);
+ 			_bitmap_init_bitmappage(NULL, secondBuffer);
  		
- 		secondOpaque =
- 			(BMBitmapOpaque)PageGetSpecialPointer(secondPage);
+ 		secondOpaque = (BMBitmapOpaque)PageGetSpecialPointer(secondPage);
  		secondBitmap = (BMBitmap) PageGetContentsMaxAligned(secondPage);
  
  		if (XLByteLT(PageGetLSN(secondPage), lsn))
@@ -724,7 +684,7 @@ _bitmap_xlog_updatewords(XLogRecPtr lsn, XLogRecord *record)
  		Page lovPage;
  		BMLOVItem lovItem;
  		
- 		lovBuffer = XLogReadBuffer(reln, xlrec->bm_lov_blkno, false);
+ 		lovBuffer = XLogReadBuffer(xlrec->bm_node, xlrec->bm_lov_blkno, false);
  		if (!BufferIsValid(lovBuffer))
 		{	
 			MIRROREDLOCK_BUFMGR_UNLOCK;
@@ -886,7 +846,6 @@ bitmap_xlog_cleanup(void)
 	ListCell* l;
 	foreach (l, incomplete_actions)
 	{
-		Relation 			reln;
 		Buffer				lovBuffer;
 		BMTIDBuffer 	    newWords;
 
@@ -897,14 +856,10 @@ bitmap_xlog_cleanup(void)
 
 		bm_incomplete_action *action = (bm_incomplete_action *) lfirst(l);
 
-		reln = XLogOpenRelation(action->bm_node);
-		if (!RelationIsValid(reln))
-			return;
-
 		// -------- MirroredLock ----------
 		MIRROREDLOCK_BUFMGR_LOCK;
 
-		lovBuffer = XLogReadBuffer(reln, action->bm_lov_blkno, false);
+		lovBuffer = XLogReadBuffer(action->bm_node, action->bm_lov_blkno, false);
 
 		newWords.num_cwords = action->bm_num_cwords;
 		newWords.start_wordno = action->bm_start_wordno;
@@ -931,7 +886,7 @@ bitmap_xlog_cleanup(void)
 		newWords.last_tid = action->bm_last_setbit;
 
 		/* Finish an incomplete insert */
-		_bitmap_write_new_bitmapwords(reln,
+		_bitmap_write_new_bitmapwords(RelationIdGetRelation(action->bm_node.relNode),
 							  lovBuffer, action->bm_lov_offset,
 							  &newWords, false);
 

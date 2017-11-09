@@ -18,5 +18,6 @@
       <topicref href="gpdbrestore.xml"/>
       <topicref href="restore-diff-system.xml"/>
     </topicref>
+    <topicref href="backup-gpbackup.xml"/>
   </topicref>
 </map>

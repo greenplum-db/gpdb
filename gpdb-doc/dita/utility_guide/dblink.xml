@@ -13,6 +13,8 @@
         href="https://www.postgresql.org/docs/8.3/static/dblink.html" format="html" scope="external"
         >dblink</xref> in the PostgreSQL documentation for more information about individual
       functions. </p>
+    <note>You must specify both a hostname and a password to connect with <codeph>dblink</codeph> as
+      a non-superuser.</note>
     <ol id="ol_nhg_f1q_fz">
       <li>Begin by creating a sample table to query using the <codeph>dblink</codeph> functions.
         These commands create a small table in the <codeph>postgres</codeph> database, which you
@@ -60,7 +62,9 @@ CREATE FUNCTION
           make a connection to a remote database system, simply include host and port information in
           the connection string. For example, to create an implicit <codeph>dblink</codeph>
           connection to a remote
-          system:<codeblock>gpadmin=# <b>SELECT dblink_connect('host=remotehost port=5432 dbname=postgres');</b></codeblock></p></li>
+          system:<codeblock>gpadmin=# <b>SELECT dblink_connect('host=remotehost port=5432 dbname=postgres');</b></codeblock></p><note>You
+          must specify both a hostname and a password in the connection string to connect as a
+          non-superuser.</note></li>
       <li>Use the basic <codeph>dblink</codeph> function to query a database using a configured
         connection. Keep in mind that the <codeph>dblink</codeph> function returns a record type, so
         you must assign the columns returned in the <codeph>dblink</codeph> query. For example, the

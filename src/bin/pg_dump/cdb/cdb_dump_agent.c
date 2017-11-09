@@ -6606,7 +6606,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		{
 			ConstraintInfo *constr = &(tbinfo->checkexprs[j]);
 
-			if (constr->coninherited || constr->separate)
+			if (constr->separate || !constr->conislocal)
 				continue;
 
 			if (actual_atts > 0)
@@ -6911,7 +6911,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 	{
 		ConstraintInfo *constr = &(tbinfo->checkexprs[j]);
 
-		if (constr->coninherited || constr->separate)
+		if (constr->separate || !constr->conislocal)
 			continue;
 
 		dumpTableConstraintComment(fout, constr);

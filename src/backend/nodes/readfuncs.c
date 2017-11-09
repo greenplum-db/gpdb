@@ -324,6 +324,7 @@ _readQuery(void)
 	READ_BOOL_FIELD(hasAggs);
 	READ_BOOL_FIELD(hasWindowFuncs);
 	READ_BOOL_FIELD(hasSubLinks);
+	READ_BOOL_FIELD(hasDistinctOn);
 	READ_BOOL_FIELD(hasDynamicFunctions);
 	READ_BOOL_FIELD(hasFuncsWithExecRestrictions);
 	READ_NODE_FIELD(rtable);
@@ -414,29 +415,15 @@ _readSingleRowErrorDesc(void)
 }
 
 /*
- * _readSortClause
+ * _readSortGroupClause
  */
-static SortClause *
-_readSortClause(void)
+static SortGroupClause *
+_readSortGroupClause(void)
 {
-	READ_LOCALS(SortClause);
+	READ_LOCALS(SortGroupClause);
 
 	READ_UINT_FIELD(tleSortGroupRef);
-	READ_OID_FIELD(sortop);
-	READ_BOOL_FIELD(nulls_first);
-
-	READ_DONE();
-}
-
-/*
- * _readGroupClause
- */
-static GroupClause *
-_readGroupClause(void)
-{
-	READ_LOCALS(GroupClause);
-
-	READ_UINT_FIELD(tleSortGroupRef);
+	READ_OID_FIELD(eqop);
 	READ_OID_FIELD(sortop);
 	READ_BOOL_FIELD(nulls_first);
 
@@ -578,6 +565,7 @@ _readSetOperationStmt(void)
 	READ_NODE_FIELD(rarg);
 	READ_NODE_FIELD(colTypes);
 	READ_NODE_FIELD(colTypmods);
+	READ_NODE_FIELD(groupClauses);
 
 	READ_DONE();
 }
@@ -1108,7 +1096,7 @@ _readFuncCall(void)
 	READ_BOOL_FIELD(agg_distinct);
 	READ_BOOL_FIELD(func_variadic);
 	READ_NODE_FIELD(over);
-    READ_INT_FIELD(location);
+    READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1183,9 +1171,6 @@ _readAConst(void)
 		}
 	}
 
-	local_node->typeName = NULL;
-	READ_NODE_FIELD(typeName);
-
     /* CDB: 'location' field is not serialized */
     local_node->location = -1;
 
@@ -1255,7 +1240,7 @@ _readAExpr(void)
 
 	READ_NODE_FIELD(lexpr);
 	READ_NODE_FIELD(rexpr);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1936,7 +1921,7 @@ _readColumnRef(void)
 	READ_LOCALS(ColumnRef);
 
 	READ_NODE_FIELD(fields);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -1953,7 +1938,7 @@ _readTypeName(void)
 	READ_NODE_FIELD(typmods);
 	READ_INT_FIELD(typemod);
 	READ_NODE_FIELD(arrayBounds);
-	READ_INT_FIELD(location);
+	READ_LOCATION_FIELD(location);
 
 	READ_DONE();
 }
@@ -2507,7 +2492,7 @@ _readCreateOpClassItem(void)
 	READ_NODE_FIELD(name);
 	READ_NODE_FIELD(args);
 	READ_INT_FIELD(number);
-	READ_BOOL_FIELD(recheck);
+	READ_NODE_FIELD(class_args);
 	READ_NODE_FIELD(storedtype);
 
 	READ_DONE();
@@ -2838,10 +2823,8 @@ parseNodeString(void)
 
 	if (MATCH("QUERY", 5))
 		return_value = _readQuery();
-	else if (MATCH("SORTCLAUSE", 10))
-		return_value = _readSortClause();
-	else if (MATCH("GROUPCLAUSE", 11))
-		return_value = _readGroupClause();
+	else if (MATCH("SORTGROUPCLAUSE", 15))
+		return_value = _readSortGroupClause();
 	else if (MATCH("WINDOWCLAUSE", 12))
 		return_value = _readWindowClause();
 	else if (MATCH("ROWMARKCLAUSE", 13))

@@ -883,7 +883,7 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		dummy_path.total_cost = agg_node->total_cost;
 		dummy_path.pathkeys = NIL;
 		if (choose_hashed_grouping(root, context->tuple_fraction, -1.0, &dummy_path,
-								   NULL, NULL, 0, *context->p_dNumGroups,
+								   NULL, 0, *context->p_dNumGroups,
 								   context->agg_counts))
 			context->aggstrategy = AGG_HASHED;
 
@@ -1919,7 +1919,6 @@ convert_gs_to_rollups(AttrNumber *grpColIdx, Oid *grpOperators,
 	for (no = 0; no < max_sortgroupref; no++)
 	{
 		TargetEntry *tle = NULL;
-		SortClause sc = { };
 		
 		if (sortrefs_to_resnos[no] > 0)
 			continue;
@@ -1928,8 +1927,7 @@ convert_gs_to_rollups(AttrNumber *grpColIdx, Oid *grpOperators,
 		 * and find the corresponding target entry in sub_tlist. Fill in the
 		 * resno.
 		 */
-		sc.tleSortGroupRef = no+1;
-		tle = get_sortgroupclause_tle(&sc, tlist);
+		tle = get_sortgroupref_tle(no + 1, tlist);
 		foreach (sub_lc, sub_tlist)
 		{
 			TargetEntry *sub_tle = (TargetEntry *)lfirst(sub_lc);
@@ -2691,6 +2689,29 @@ contain_groupingfunc(Node *node)
 {
 	return contain_groupingfunc_walker(node, NULL);
 }
+
+
+static bool
+contain_group_id_walker(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+	else if (IsA(node, GroupId))
+		return true;
+	return expression_tree_walker(node,
+								  contain_group_id_walker,
+								  context);
+}
+
+/*
+ * Return true if the given node contains GroupId
+ */
+bool
+contain_group_id(Node *node)
+{
+	return contain_group_id_walker(node, NULL);
+}
+
 
 #ifdef DEBUG_GROUPING_SETS
 

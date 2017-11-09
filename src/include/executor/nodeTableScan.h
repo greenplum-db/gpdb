@@ -25,9 +25,4 @@ extern void ExecTableRestrPos(TableScanState *node);
 extern void ExecTableReScan(TableScanState *node, ExprContext *exprCtxt);
 extern void ExecEagerFreeTableScan(TableScanState *node);
 
-static inline gpmon_packet_t * GpmonPktFromTableScanState(TableScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif

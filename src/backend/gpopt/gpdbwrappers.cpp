@@ -1128,7 +1128,13 @@ gpdb::OidEqualityOp
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_type */
-		return equality_oper_opid(oidType);
+		Oid eq_opr;
+
+		get_sort_group_operators(oidType,
+					 false, true, false,
+					 NULL, &eq_opr, NULL);
+
+		return eq_opr;
 	}
 	GP_WRAP_END;
 	return InvalidOid;
@@ -2779,8 +2785,7 @@ gpdb::IndexOpProperties
 	Oid opno,
 	Oid opfamily,
 	int *strategy,
-	Oid *subtype,
-	bool *recheck
+	Oid *subtype
 	)
 {
 	GP_WRAP_START;
@@ -2791,7 +2796,7 @@ gpdb::IndexOpProperties
 		// type is simply ignored.
 		Oid	lefttype;
 
-		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype, recheck);
+		get_op_opfamily_properties(opno, opfamily, strategy, &lefttype, subtype);
 		return;
 	}
 	GP_WRAP_END;

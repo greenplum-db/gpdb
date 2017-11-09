@@ -576,8 +576,8 @@ check_ntile_argument(List *args, WindowClause *wc, List *tlist)
 		{
 			ListCell *tlist_lc = NULL;
 			
-			SortClause *sc = (SortClause *) lfirst(lc);
-			Assert(IsA(sc, SortClause));
+			SortGroupClause *sc = (SortGroupClause *) lfirst(lc);
+			Assert(IsA(sc, SortGroupClause));
 
 			foreach(tlist_lc, tlist)
 			{
@@ -794,7 +794,7 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 		
 		foreach ( lcp, spec->partitionClause )
 		{
-			SortClause *sc = (SortClause *) lfirst(lcp);
+			SortGroupClause *sc = (SortGroupClause *) lfirst(lcp);
 			map = bms_add_member(map, sc->tleSortGroupRef);
 		}
 		specinfos[i].specindex = i;
@@ -815,7 +815,7 @@ static void inventory_window_specs(List *window_specs, WindowContext *context)
 		
 		foreach (lc, specinfos[i].order)
 		{
-			SortClause *sc = (SortClause *)lfirst(lc);
+			SortGroupClause *sc = (SortGroupClause *)lfirst(lc);
 			if (!bms_is_member(sc->tleSortGroupRef, specinfos[i].partset))
 			{
 				if (!bms_is_member(sc->tleSortGroupRef, orderset))
@@ -1033,7 +1033,7 @@ static void assign_window_info(WindowContext *context)
 		{
 			foreach (lc, final_sinfo->partkey)
 			{
-				SortClause *sc = (SortClause *)lfirst(lc);
+				SortGroupClause *sc = (SortGroupClause *)lfirst(lc);
 				
 				if (sc->tleSortGroupRef == sortgroupref)
 				{
@@ -1166,8 +1166,8 @@ static int compare_order(List *a, List* b)
 	
 	forboth ( lca, a, lcb, b )
 	{
-		SortClause *sca = (SortClause *)lfirst(lca);
-		SortClause *scb = (SortClause *)lfirst(lcb);
+		SortGroupClause *sca = (SortGroupClause *)lfirst(lca);
+		SortGroupClause *scb = (SortGroupClause *)lfirst(lcb);
 		
 		if ( sca->tleSortGroupRef < scb->tleSortGroupRef )
 			return -1;
@@ -1232,7 +1232,7 @@ make_lower_targetlist(Query *parse,
 	List	   *lower_tlist;
 	bool		need_tlist_eval;
 	int			i;
-	SortClause *dummy;
+	SortGroupClause *dummy;
 	ListCell   *lc;
 
 	Assert ( parse->hasWindowFuncs );
@@ -1264,7 +1264,7 @@ make_lower_targetlist(Query *parse,
 	/* Find or add target list entries for partitioning or ordering exprs
 	 * mentioned in window specs to be fed by this targetlist. 
 	 */
-	dummy = makeNode(SortClause);
+	dummy = makeNode(SortGroupClause);
 	for ( i = 0; i < context->nspecinfos; i++ )
 	{
 		TargetEntry *tle;
@@ -1279,7 +1279,7 @@ make_lower_targetlist(Query *parse,
 		}
 		foreach ( lc, context->specinfos[i].order )
 		{
-			SortClause *sc = (SortClause *) lfirst(lc);
+			SortGroupClause *sc = (SortGroupClause *) lfirst(lc);
 			tle = get_sortgroupclause_tle(sc, tlist);
 			extra_tles = lappend(extra_tles, tle);
 		}
@@ -1345,6 +1345,7 @@ set_window_keys(WindowContext *context, int wind_index)
 	int			nattrs;
 	AttrNumber *sortattrs = NULL;
 	Oid		   *sortops = NULL;
+	Oid		   *eqops = NULL;
 	bool	   *nullsFirstFlags = NULL;
 
 	/* results  */
@@ -1362,13 +1363,15 @@ set_window_keys(WindowContext *context, int wind_index)
 	{
 		sortattrs = (AttrNumber *)palloc(nattrs*sizeof(AttrNumber));
 		sortops = (Oid *)palloc(nattrs*sizeof(Oid));
+		eqops = (Oid *)palloc(nattrs*sizeof(Oid));
 		nullsFirstFlags = (bool *) palloc(nattrs * sizeof(bool));
 		i = 0;
 		foreach ( lc, winfo->sortclause )
 		{
-			SortClause *sc = (SortClause *)lfirst(lc);
+			SortGroupClause *sc = (SortGroupClause *)lfirst(lc);
 			sortattrs[i] = context->sortref_resno[sc->tleSortGroupRef];
 			sortops[i] = sc->sortop;
+			eqops[i] = sc->eqop;
 			nullsFirstFlags[i] = sc->nulls_first;
 			i++;
 		}
@@ -1383,10 +1386,9 @@ set_window_keys(WindowContext *context, int wind_index)
 		for ( i = 0; i < partkey_len; i++ )
 		{
 			partkey_attrs[i] = sortattrs[i];
-			partkey_operators[i] = get_equality_op_for_ordering_op(sortops[i]);
+			partkey_operators[i] = eqops[i];
 			if (!OidIsValid(partkey_operators[i]))		/* shouldn't happen */
-				elog(ERROR, "could not find equality operator for ordering operator %u",
-					 sortops[i]);
+				elog(ERROR, "could not find equality operator for PARTITION BY key");
 		}
 	}
 
@@ -1439,14 +1441,14 @@ set_window_keys(WindowContext *context, int wind_index)
 		}
 		else
 		{
-			SortClause *sc;
+			SortGroupClause *sc;
 
 			/* Copy the first ORDER BY key into SortCols. */
 			winfo->ordNumCols = 1;
 			winfo->ordColIdx = (AttrNumber *)palloc(sizeof(AttrNumber));
 			winfo->ordOperators = (Oid*)palloc(sizeof(Oid));
 			winfo->nullsFirst = (bool *) palloc(sizeof(bool));
-			sc = (SortClause *)linitial(firstOrderedSinfo->order);
+			sc = (SortGroupClause *)linitial(firstOrderedSinfo->order);
 			winfo->ordColIdx[0] = context->sortref_resno[sc->tleSortGroupRef];
 			winfo->ordOperators[0] = sc->sortop;
 			winfo->nullsFirst[0] = sc->nulls_first;
@@ -1708,7 +1710,7 @@ Plan *assure_collocation_and_order(
 			List *dist_exprs = NIL;
 			foreach (lc, dist_sortclauses)
 			{
-				SortClause *sc = (SortClause*)lfirst(lc);
+				SortGroupClause *sc = (SortGroupClause *) lfirst(lc);
 				TargetEntry *tle =  get_sortgroupclause_tle(sc,input_plan->targetlist);
 				dist_exprs = lappend(dist_exprs, tle->expr);
 			}

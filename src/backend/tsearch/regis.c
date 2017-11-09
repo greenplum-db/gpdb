@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tsearch/regis.c,v 1.4.2.1 2009/08/30 16:53:45 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tsearch/regis.c,v 1.5 2008/06/17 16:09:06 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -178,7 +178,7 @@ RS_free(Regis *r)
 	r->node = NULL;
 }
 
-#ifdef TS_USE_WIDE
+#ifdef USE_WIDE_UPPER_LOWER
 static bool
 mb_strchr(char *str, char *c)
 {

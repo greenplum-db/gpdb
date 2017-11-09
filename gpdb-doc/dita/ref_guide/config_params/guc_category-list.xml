@@ -182,9 +182,7 @@
     <topic id="topic16" xml:lang="en">
       <title>Memory Consumption Parameters</title>
       <body>
-        <p>These parameters control system memory usage. You can adjust
-            <codeph>gp_vmem_protect_limit</codeph> to avoid running out of memory at the segment
-          hosts during query processing.</p>
+        <p>These parameters control system memory usage.</p>
         <simpletable id="kh160388" frame="none">
           <strow>
             <stentry>
@@ -193,8 +191,12 @@
                   >gp_vmem_idle_resource_timeout</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
+                  >gp_resource_group_memory_limit</xref> (resource group-based resource management)
+              </p>
+              <p>
                 <xref href="guc-list.xml#gp_vmem_protect_limit" type="section"
-                  >gp_vmem_protect_limit</xref>
+                  >gp_vmem_protect_limit</xref> (resource queue-based resource management)
               </p>
               <p>
                 <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
@@ -204,6 +206,8 @@
                 <xref href="guc-list.xml#gp_workfile_limit_files_per_query" type="section"
                   >gp_workfile_limit_files_per_query</xref>
               </p>
+            </stentry>
+            <stentry>
               <p>
                 <xref href="guc-list.xml#gp_workfile_limit_per_query" type="section"
                   >gp_workfile_limit_per_query</xref>
@@ -212,8 +216,6 @@
                 <xref href="guc-list.xml#gp_workfile_limit_per_segment" type="section"
                   >gp_workfile_limit_per_segment</xref>
               </p>
-            </stentry>
-            <stentry>
               <p>
                 <xref href="guc-list.xml#max_stack_depth" type="section">max_stack_depth</xref>
               </p>
@@ -1138,6 +1140,10 @@
         <strow>
           <stentry>
             <p>
+              <xref href="guc-list.xml#gp_resqueue_memory_policy" type="section"
+                >gp_resqueue_memory_policy</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#gp_resqueue_priority" type="section"
                 >gp_resqueue_priority</xref>
             </p>
@@ -1161,15 +1167,19 @@
               <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
                 >gp_vmem_protect_segworker_cache_limit</xref>
             </p>
-          </stentry>
-          <stentry>
             <p>
               <xref href="guc-list.xml#max_resource_queues" type="section"
                 >max_resource_queues</xref>
             </p>
+          </stentry>
+          <stentry>
             <p>
               <xref href="guc-list.xml#max_resource_portals_per_transaction" type="section"
                 >max_resource_portals_per_transaction</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#max_statement_mem" type="section"
+                >max_statement_mem</xref>
             </p>
             <p>
               <xref href="guc-list.xml#resource_cleanup_gangs_on_wait" type="section"
@@ -1182,6 +1192,9 @@
             <p>
               <xref href="guc-list.xml#runaway_detector_activation_percent" type="section"
                 >runaway_detector_activation_percent</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#statement_mem" type="section">statement_mem</xref>
             </p>
             <p>
               <xref href="guc-list.xml#stats_queue_level" type="section">stats_queue_level</xref>
@@ -1213,19 +1226,25 @@
               <xref href="guc-list.xml#gp_resource_group_memory_limit" type="section"
                 >gp_resource_group_memory_limit</xref>
             </p>
-          </stentry>
-          <stentry>
             <p>
               <xref href="guc-list.xml#gp_resource_manager" type="section"
                 >gp_resource_manager</xref>
             </p>
+          </stentry>
+          <stentry>
             <p>
-              <xref href="guc-list.xml#max_resource_groups" type="section"
-                >max_resource_groups</xref>
+              <xref href="guc-list.xml#gp_vmem_idle_resource_timeout" type="section"
+                >gp_vmem_idle_resource_timeout</xref>
+            </p>
+            <p>
+              <xref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit" type="section"
+                >gp_vmem_protect_segworker_cache_limit</xref>
             </p>
             <p>
               <xref href="guc-list.xml#memory_spill_ratio" type="section">memory_spill_ratio</xref>
             </p>
+            <p><xref href="guc-list.xml#vmem_process_interrupt" type="section"
+                >vmem_process_interrupt</xref></p>
           </stentry>
         </strow>
       </simpletable>

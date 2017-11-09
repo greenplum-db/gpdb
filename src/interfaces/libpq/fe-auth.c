@@ -20,7 +20,14 @@
  *								of the authentication system
  */
 
-#include "postgres_fe.h"
+/*
+ * This file is compiled with both frontend and backend codes, symlinked by
+ * src/backend/Makefile, and use macro FRONTEND to switch.
+ *
+ * Include "c.h" to adopt Greenplum C types. Don't include "postgres_fe.h",
+ * which only defines FRONTEND besides including "c.h"
+ */
+#include "c.h"
 
 #ifdef WIN32
 #include "win32.h"

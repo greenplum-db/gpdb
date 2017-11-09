@@ -40,6 +40,7 @@
 #include "utils/faultinjector.h"
 #include "port/atomics.h"
 #include "port/pg_crc32c.h"
+#include "storage/latch.h"
 #include "storage/pmsignal.h"
 
 #include "cdb/tupchunklist.h"
@@ -235,9 +236,9 @@ struct CursorICHistoryTable
 /*
  * Synchronization timeout values
  *
- * MAIN_THREAD_COND_TIMEOUT - 1/4 second in usec
+ * MAIN_THREAD_COND_TIMEOUT - 1/4 second
  */
-#define MAIN_THREAD_COND_TIMEOUT (250000)
+#define MAIN_THREAD_COND_TIMEOUT_MS (250)
 
 /*
  *  Used for synchronization between main thread (receiver) and background thread.
@@ -414,12 +415,12 @@ struct ICGlobalControlInfo
 	MemoryContext memContext;
 
 	/*
-	 * Lock and condition variable for coordination between main thread and
+	 * Lock and latch for coordination between main thread and
 	 * background thread. It protects the shared data between the two threads
 	 * (the connHtab, rx buffer pool and the mainWaitingState etc.).
 	 */
 	pthread_mutex_t lock;
-	pthread_cond_t cond;
+	Latch		latch;
 
 	/* Am I a sender? */
 	bool		isSender;
@@ -737,7 +738,7 @@ static void handleAckedPacket(MotionConn *ackConn, ICBuffer *buf, uint64 now);
 static bool handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry);
 static void handleStopMsgs(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, int16 motionId);
 static void handleDisorderPacket(MotionConn *conn, int pos, uint32 tailSeq, icpkthdr *pkt);
-static bool handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer, socklen_t *peerlen, AckSendParam *param);
+static bool handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer, socklen_t *peerlen, AckSendParam *param, bool *wakeup_mainthread);
 static bool handleAckForDuplicatePkt(MotionConn *conn, icpkthdr *pkt);
 static bool handleAckForDisorderPkt(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntry, MotionConn *conn, icpkthdr *pkt);
 
@@ -763,7 +764,6 @@ static void handleCachedPackets(void);
 
 static uint64 getCurrentTime(void);
 static void initMutex(pthread_mutex_t *mutex);
-static bool waitOnCondition(int timeout_us, pthread_cond_t *cond, pthread_mutex_t *mutex);
 
 static inline void logPkt(char *prefix, icpkthdr *pkt);
 static void aggregateStatistics(ChunkTransportStateEntry *pEntry);
@@ -1373,7 +1373,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 													   ALLOCSET_DEFAULT_MAXSIZE);
 	initMutex(&ic_control_info.errorLock);
 	initMutex(&ic_control_info.lock);
-	pthread_cond_init(&ic_control_info.cond, NULL);
+	InitLatch(&ic_control_info.latch);
 	ic_control_info.shutdown = 0;
 	ic_control_info.threadCreated = false;
 
@@ -1502,60 +1502,6 @@ CleanupMotionUDPIFC(void)
 	if (icudp_malloc_times != 0)
 		elog(LOG, "WARNING: malloc times and free times do not match.");
 #endif
-}
-
-/*
- * waitOnCondition
- *		Used by sender/receiver to wait some time.
- *
- *	MUST BE CALLED WITH *mutex* HELD!
- */
-static bool
-waitOnCondition(int timeout_us, pthread_cond_t *cond, pthread_mutex_t *mutex)
-{
-	struct timespec ts;
-	struct timeval tv;
-	int			wait;
-
-	Assert(timeout_us >= 0);
-
-	gettimeofday(&tv, NULL);
-	ts.tv_sec = tv.tv_sec;
-	/* leave in ms for this */
-	ts.tv_nsec = (tv.tv_usec + timeout_us);
-	if (ts.tv_nsec >= 1000000)
-	{
-		ts.tv_sec++;
-		ts.tv_nsec -= 1000000;
-	}
-	ts.tv_nsec *= 1000;			/* convert usec to nsec */
-
-	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-	{
-		elog(DEBUG5, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
-			 (rx_control_info.mainWaitingState.waitingRoute == ANY_ROUTE ? "(any route)" : ""));
-	}
-
-
-	/*
-	 * Interrupts may occur when we are waiting. The interrupt handler only
-	 * set some flags. Only when interrupt checking function is called, the
-	 * interrupts are handled.
-	 *
-	 * We should pay attention to the fact that in elog/erreport/write_log,
-	 * interrupts are checked.
-	 */
-
-	wait = pthread_cond_timedwait(cond, mutex, &ts);
-
-	if (wait == ETIMEDOUT)
-	{
-		/* condition not met */
-		return false;
-	}
-
-	/* we didn't time out, condition met! */
-	return true;
 }
 
 /*
@@ -2946,6 +2892,7 @@ handleCachedPackets(void)
 	AckSendParam param;
 	int			i = 0;
 	int			j = 0;
+	bool		dummy;
 
 	for (i = 0; i < ic_control_info.startupCacheHtab.size; i++)
 	{
@@ -2976,7 +2923,7 @@ handleCachedPackets(void)
 				}
 
 				memset(&param, 0, sizeof(param));
-				if (!handleDataPacket(setupConn, pkt, &cachedConn->peer, &cachedConn->peer_len, &param))
+				if (!handleDataPacket(setupConn, pkt, &cachedConn->peer, &cachedConn->peer_len, &param, &dummy))
 				{
 					/* no need to cache this packet */
 					putRxBufferToFreeList(&rx_buffer_pool, pkt);
@@ -3748,14 +3695,44 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 
 		retries++;
 
-		/* 2. Wait for data to become ready */
-		if (waitOnCondition(MAIN_THREAD_COND_TIMEOUT, &ic_control_info.cond, &ic_control_info.lock))
-		{
-			continue;			/* success ! */
-		}
-
-		/* handle timeout, check for cancel */
+		/*
+		 * Ok, we've processed all the items currently in the queue. Arm the
+		 * latch (before releasing the mutex), and wait for more messages to
+		 * arrive. The RX thread will wake us up using the latch.
+		 */
+		ResetLatch(&ic_control_info.latch);
 		pthread_mutex_unlock(&ic_control_info.lock);
+
+		/*
+		 * Wait for data to become ready.
+		 *
+		 * In the QD, also wake up immediately if one of the QEs report an
+		 * error through the main QD-QE libpq connection. For that, ask
+		 * the dispatcher for a file descriptor to wait on for that.
+		 *
+		 * XXX: We currently only get a single FD to wait on. That catches
+		 * the common case that *all* the QEs report the same error more or
+		 * less at the same time. WaitLatchOrSocket doesn't allow waiting for
+		 * more than one socket at a time. PostgreSQL 9.6 introduces a more
+		 * flexible "wait event" API for the latches, so once we merge with
+		 * that, we could improve this.
+		 */
+		int			wakeEvents = WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH;
+		int			waitFd = PGINVALID_SOCKET;
+
+		if (Gp_role == GP_ROLE_DISPATCH)
+			waitFd = cdbdisp_getWaitSocketFd(pTransportStates->estate->dispatcherState);
+		if (waitFd != PGINVALID_SOCKET)
+			wakeEvents |= WL_SOCKET_READABLE;
+
+		if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+		{
+			elog(DEBUG5, "waiting (timed) on route %d %s", rx_control_info.mainWaitingState.waitingRoute,
+				 (rx_control_info.mainWaitingState.waitingRoute == ANY_ROUTE ? "(any route)" : ""));
+		}
+		(void) WaitLatchOrSocket(&ic_control_info.latch,
+								 wakeEvents, waitFd,
+								 MAIN_THREAD_COND_TIMEOUT_MS);
 
 		/* check the potential errors in rx thread. */
 		checkRxThreadError();
@@ -3768,7 +3745,6 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 		{
 			checkForCancelFromQD(pTransportStates);
 		}
-
 
 		/*
 		 * 1. NIC on master (and thus the QD connection) may become bad, check
@@ -3899,6 +3875,7 @@ RecvTupleChunkFromAnyUDPIFC(MotionLayerState *mlStates,
 	{
 		pthread_mutex_unlock(&ic_control_info.errorLock);
 		pthread_mutex_unlock(&ic_control_info.lock);
+
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -4004,6 +3981,7 @@ RecvTupleChunkFromUDPIFC(ChunkTransportState *transportStates,
 	{
 		pthread_mutex_unlock(&ic_control_info.errorLock);
 		pthread_mutex_unlock(&ic_control_info.lock);
+
 		PG_RE_THROW();
 	}
 	PG_END_TRY();
@@ -5874,9 +5852,12 @@ putIntoUnackQueueRing(UnackQueueRing *uqr, ICBuffer *buf, uint64 expTime, uint64
  * handleDataPacket
  * 		Handling the data packet.
  *
+ * On return, will set *wakeup_mainthread, if a packet was received successfully
+ * and the caller should wake up the main thread, after releasing the mutex.
  */
 static bool
-handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer, socklen_t *peerlen, AckSendParam *param)
+handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer, socklen_t *peerlen,
+				 AckSendParam *param, bool *wakeup_mainthread)
 {
 
 	if ((pkt->len == sizeof(icpkthdr)) && (pkt->flags & UDPIC_FLAGS_CAPACITY))
@@ -6094,7 +6075,7 @@ handleDataPacket(MotionConn *conn, icpkthdr *pkt, struct sockaddr_storage *peer,
 			rx_control_info.mainWaitingState.reachRoute = conn->route;
 		}
 		/* WAKE MAIN THREAD HERE */
-		pthread_cond_signal(&ic_control_info.cond);
+		*wakeup_mainthread = true;
 	}
 
 	return true;
@@ -6285,6 +6266,7 @@ rxThreadFunc(void *arg)
 			logPkt("GOT MESSAGE", pkt);
 #endif
 
+			bool		wakeup_mainthread = false;
 			AckSendParam param;
 
 			memset(&param, 0, sizeof(AckSendParam));
@@ -6303,7 +6285,7 @@ rxThreadFunc(void *arg)
 			if (conn != NULL)
 			{
 				/* Handling a regular packet */
-				if (handleDataPacket(conn, pkt, &peer, &peerlen, &param))
+				if (handleDataPacket(conn, pkt, &peer, &peerlen, &param, &wakeup_mainthread))
 					pkt = NULL;
 				ic_statistics.recvPktNum++;
 			}
@@ -6332,6 +6314,9 @@ rxThreadFunc(void *arg)
 				}
 			}
 			pthread_mutex_unlock(&ic_control_info.lock);
+
+			if (wakeup_mainthread)
+				SetLatch(&ic_control_info.latch);
 
 			/*
 			 * real ack sending is after lock release to decrease the lock

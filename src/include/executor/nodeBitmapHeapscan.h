@@ -25,9 +25,4 @@ extern void ExecEagerFreeBitmapHeapScan(BitmapHeapScanState *node);
 
 extern void bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres);
 
-static inline gpmon_packet_t * GpmonPktFromBitmapHeapScanState(BitmapHeapScanState *node)
-{
-	return &node->ss.ps.gpmon_pkt;
-}
-
 #endif   /* NODEBITMAPHEAPSCAN_H */

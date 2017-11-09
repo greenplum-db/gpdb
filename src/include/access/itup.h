@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/itup.h,v 1.52 2009/08/01 19:59:41 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/access/itup.h,v 1.50 2008/07/13 20:45:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -134,7 +134,7 @@ typedef IndexAttributeBitMapData *IndexAttributeBitMap;
  * must be maxaligned, and it must have an associated item pointer.
  */
 #define MaxIndexTuplesPerPage	\
-	((int) ((BLCKSZ - offsetof(PageHeaderData, pd_linp)) / \
+	((int) ((BLCKSZ - SizeOfPageHeaderData) / \
 			(MAXALIGN(sizeof(IndexTupleData) + 1) + sizeof(ItemIdData))))
 
 

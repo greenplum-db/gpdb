@@ -58,6 +58,14 @@
    (--enable-thread-safety) */
 #undef ENABLE_THREAD_SAFETY
 
+/* float4 values are passed by value if 'true', by reference if 'false'
+   (always true in GPDB) */
+#undef FLOAT4PASSBYVAL
+
+/* float8, int8, and related values are passed by value if 'true', by
+   reference if 'false' (always true in GPDB) */
+#undef FLOAT8PASSBYVAL
+
 /* Define to 1 if getpwuid_r() takes a 5th argument. */
 #undef GETPWUID_R_5ARG
 
@@ -886,6 +894,14 @@
 /* Define to 1 to build with debug_ntuplestore. (--enable-ntuplestore) */
 #undef USE_DEBUG_NTUPLESTORE
 
+/* Define to 1 if you want float4 values to be passed by value. (Always
+   defined in GPDB) */
+#undef USE_FLOAT4_BYVAL
+
+/* Define to 1 if you want float8, int8, etc values to be passed by value.
+   (Always defined in GPDB) */
+#undef USE_FLOAT8_BYVAL
+
 /* Define to 1 to build with gpcloud (--enable-gpcloud) */
 #undef USE_GPCLOUD
 
@@ -968,6 +984,18 @@
 #  undef WORDS_BIGENDIAN
 # endif
 #endif
+
+/* Size of a WAL file block. This need have no particular relation to BLCKSZ.
+   XLOG_BLCKSZ must be a power of 2, and if your system supports O_DIRECT I/O,
+   XLOG_BLCKSZ must be a multiple of the alignment requirement for direct-I/O
+   buffers, else direct I/O may fail. Changing XLOG_BLCKSZ requires an initdb.
+   */
+#undef XLOG_BLCKSZ
+
+/* XLOG_SEG_SIZE is the size of a single WAL file. This must be a power of 2
+   and larger than XLOG_BLCKSZ (preferably, a great deal larger than
+   XLOG_BLCKSZ). Changing XLOG_SEG_SIZE requires an initdb. */
+#undef XLOG_SEG_SIZE
 
 /* Enable large inode numbers on Mac OS X 10.5.  */
 #ifndef _DARWIN_USE_64_BIT_INODE

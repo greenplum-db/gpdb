@@ -44,13 +44,10 @@ class PgtwoPhase31To40(PgtwoPhaseTestCase):
 @tinctest.dataProvider('data_types_provider')
 def test_data_provider():
     data = {'31_noskip_resync_drop_commit_gpstop_i': ['noskip','resync','drop','commit','gpstop_i'],
-            '32_noskip_resync_drop_commit_gpstop_a': ['noskip','resync','drop','commit','gpstop_a'],
             '33_skip_sync_create_abort_gpstop_i': ['skip','sync','create','abort','gpstop_i'],
-            '34_skip_sync_create_abort_gpstop_a': ['skip','sync','create','abort','gpstop_a'],
             '35_skip_sync_create_abort_failover_to_primary': ['skip','sync','create','abort','failover_to_primary'],
             '36_skip_sync_create_abort_failover_to_mirror': ['skip','sync','create','abort','failover_to_mirror'],
             '37_noskip_sync_create_abort_gpstop_i': ['noskip','sync','create','abort','gpstop_i'],
-            '38_noskip_sync_create_abort_gpstop_a': ['noskip','sync','create','abort','gpstop_a'],
             '39_noskip_sync_create_abort_failover_to_primary': ['noskip','sync','create','abort','failover_to_primary'],
             '40_noskip_sync_create_abort_failover_to_mirror': ['noskip','sync','create','abort','failover_to_mirror']
             }

@@ -91,16 +91,16 @@ static void cdbdisp_dispatchToGang_async(struct CdbDispatcherState *ds,
 							 struct Gang *gp,
 							 int sliceIndex,
 							 CdbDispatchDirectDesc *dispDirect);
-static void
-			cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
+static void	cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds);
 
-static bool
-			cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
+static bool	cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds);
+static int cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds);
 
 DispatcherInternalFuncs DispatcherAsyncFuncs =
 {
 	NULL,
 	cdbdisp_checkForCancel_async,
+	cdbdisp_getWaitSocketFd_async,
 	cdbdisp_makeDispatchParams_async,
 	cdbdisp_checkDispatchResult_async,
 	cdbdisp_dispatchToGang_async,
@@ -142,6 +142,48 @@ cdbdisp_checkForCancel_async(struct CdbDispatcherState *ds)
 
 	checkDispatchResult(ds, false);
 	return cdbdisp_checkResultsErrcode(ds->primaryResults);
+}
+
+/*
+ * Return a FD to wait for, after dispatching.
+ */
+static int
+cdbdisp_getWaitSocketFd_async(struct CdbDispatcherState *ds)
+{
+	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
+	int			i;
+
+	Assert(ds);
+
+	if (proc_exit_inprogress)
+		return PGINVALID_SOCKET;
+
+	/*
+	 * This should match the logic in cdbdisp_checkForCancel_async(). In
+	 * particular, when cdbdisp_checkForCancel_async() is called, it must
+	 * process any incoming data from the socket we return here, or we
+	 * will busy wait.
+	 */
+	for (i = 0; i < pParms->dispatchCount; i++)
+	{
+		CdbDispatchResult *dispatchResult;
+		SegmentDatabaseDescriptor *segdbDesc;
+
+		dispatchResult = pParms->dispatchResultPtrArray[i];
+		segdbDesc = dispatchResult->segdbDesc;
+
+		/*
+		 * Already finished with this QE?
+		 */
+		if (!dispatchResult->stillRunning)
+			continue;
+
+		Assert(!cdbconn_isBadConnection(segdbDesc));
+
+		return PQsocket(segdbDesc->conn);
+	}
+
+	return PGINVALID_SOCKET;
 }
 
 /*
@@ -376,6 +418,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 		int			sock;
 		int			n;
 		int			nfds = 0;
+		PGconn		*conn;
 
 		/*
 		 * bail-out if we are dying. Once QD dies, QE will recognize it
@@ -399,6 +442,7 @@ checkDispatchResult(CdbDispatcherState *ds,
 		{
 			dispatchResult = pParms->dispatchResultPtrArray[i];
 			segdbDesc = dispatchResult->segdbDesc;
+			conn = segdbDesc->conn;
 
 			/*
 			 * Already finished with this QE?
@@ -409,9 +453,25 @@ checkDispatchResult(CdbDispatcherState *ds,
 			Assert(!cdbconn_isBadConnection(segdbDesc));
 
 			/*
+			 * Flush out buffer in case some commands are not fully
+			 * dispatched to QEs, this can prevent QD from polling
+			 * on such QEs forever.
+			 */
+			if (conn->outCount > 0)
+			{
+				/*
+				 * Don't error out here, let following poll() routine to
+				 * handle it.
+				 */
+				if (pqFlush(conn) < 0)
+					elog(LOG, "Failed flushing outbound data to %s:%s",
+						 segdbDesc->whoami, PQerrorMessage(conn));
+			}
+
+			/*
 			 * Add socket to fd_set if still connected.
 			 */
-			sock = PQsocket(segdbDesc->conn);
+			sock = PQsocket(conn);
 			Assert(sock >= 0);
 			fds[nfds].fd = sock;
 			fds[nfds].events = POLLIN;

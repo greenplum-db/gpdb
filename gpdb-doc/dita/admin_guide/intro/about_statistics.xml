@@ -329,8 +329,8 @@
             <codeph>default_statistics_target</codeph> server configuration parameter. The default
           value is usually sufficient, and you should only raise or lower it if your tests
           demonstrate that query plans improve with the new target. For example, to raise the
-          default statistics target from 25 to 50 you can use the <codeph>gpconfig</codeph>
-          utility:<codeblock>gpconfig -c default_statistics_target -v 50</codeblock></p>
+          default statistics target from 100 to 150 you can use the <codeph>gpconfig</codeph>
+          utility:<codeblock>gpconfig -c default_statistics_target -v 150</codeblock></p>
         <p>The statististics target for individual columns can be set with the <codeph>ALTER
             TABLE</codeph> command. For example, some queries can be improved by increasing the
           target for certain columns, especially columns that have irregular distributions. You can

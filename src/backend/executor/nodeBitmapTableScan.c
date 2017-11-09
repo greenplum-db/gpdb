@@ -82,8 +82,6 @@ ExecInitBitmapTableScan(BitmapTableScan *node, EState *estate, int eflags)
 	 */
 	outerPlanState(state) = ExecInitNode(outerPlan(node), estate, eflags);
 
-	initGpmonPktForBitmapTableScan((Plan *)node, &state->ss.ps.gpmon_pkt, estate);
-
 	return state;
 }
 
@@ -98,12 +96,7 @@ ExecBitmapTableScan(BitmapTableScanState *node)
 	TupleTableSlot *slot = DynamicScan_GetNextTuple(scanState, BitmapTableScanBeginPartition,
 			BitmapTableScanEndPartition, BitmapTableScanReScanPartition, BitmapTableScanFetchNext);
 
-	if (!TupIsNull(slot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromBitmapTableScanState(node));
-		CheckSendPlanStateGpmonPkt(&scanState->ps);
-	}
-	else if (!scanState->ps.delayEagerFree)
+	if (TupIsNull(slot) && !scanState->ps.delayEagerFree)
 	{
 		ExecEagerFreeBitmapTableScan(node);
 	}
@@ -122,7 +115,6 @@ ExecBitmapTableReScan(BitmapTableScanState *node, ExprContext *exprCtxt)
 	 * Always rescan the input immediately, to ensure we can pass down any
 	 * outer tuple that might be used in index quals.
 	 */
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 	ExecReScan(outerPlanState(node), exprCtxt);
 }
 

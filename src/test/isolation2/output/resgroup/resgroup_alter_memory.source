@@ -94,7 +94,7 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|60          |60                   |70                 |80                          
+rg1_memory_test|60          |60                   |80                 |80                          
 (1 row)
 
 1q: ... <quitting>
@@ -227,7 +227,7 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|50          |60                   |60                 |60                          
+rg1_memory_test|60          |60                   |60                 |60                          
 (1 row)
 
 ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 40;
@@ -253,7 +253,7 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|40          |10                   |60                 |60                          
+rg1_memory_test|10          |10                   |60                 |60                          
 (1 row)
 
 --
@@ -291,7 +291,7 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|40          |40                   |60                 |20                          
+rg1_memory_test|40          |40                   |20                 |20                          
 (1 row)
 
 ALTER RESOURCE GROUP rg1_memory_test SET MEMORY_LIMIT 30;
@@ -302,7 +302,7 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|40          |30                   |60                 |20                          
+rg1_memory_test|30          |30                   |20                 |20                          
 (1 row)
 
 1q: ... <quitting>
@@ -345,7 +345,7 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|40          |40                   |0                  |0                           
 rg2_memory_test|20          |20                   |0                  |0                           
 (2 rows)
 
@@ -410,8 +410,8 @@ BEGIN
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |15                   |0                  |0                           
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|15          |15                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -431,8 +431,8 @@ rg2_memory_test|              |<IDLE> in transaction
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |15                   |0                  |0                           
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|15          |15                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -451,8 +451,8 @@ BEGIN
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |15                   |0                  |0                           
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|15          |15                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -536,8 +536,8 @@ SET
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |15                   |0                  |0                           
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|15          |15                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -557,8 +557,8 @@ END
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |15                   |0                  |0                           
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|15          |15                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -581,8 +581,8 @@ BEGIN
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |15                   |0                  |0                           
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|15          |15                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -666,8 +666,8 @@ SET
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |20                   |60                 |60                          
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|20          |20                   |60                 |60                          
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -693,7 +693,7 @@ SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
 rg1_memory_test|20          |20                   |30                 |30                          
-rg2_memory_test|30          |40                   |0                  |0                           
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -790,8 +790,8 @@ SET
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |20                   |90                 |90                          
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|20          |20                   |90                 |90                          
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -810,8 +810,8 @@ ALTER
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |20                   |90                 |30                          
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|20          |20                   |30                 |30                          
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -834,8 +834,8 @@ BEGIN
 SELECT * FROM rg_mem_status;
 groupname      |memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota
 ---------------+------------+---------------------+-------------------+----------------------------
-rg1_memory_test|30          |20                   |90                 |30                          
-rg2_memory_test|30          |40                   |0                  |0                           
+rg1_memory_test|20          |20                   |30                 |30                          
+rg2_memory_test|40          |40                   |0                  |0                           
 (2 rows)
 SELECT * FROM rg_activity_status;
 rsgname        |waiting_reason|current_query        
@@ -861,4 +861,79 @@ DROP
 DROP RESOURCE GROUP rg1_memory_test;
 DROP
 DROP RESOURCE GROUP rg2_memory_test;
+DROP
+
+--
+-- Test PrepareTransaction report an error
+--
+CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5);
+CREATE
+CREATE ROLE rg_test_role RESOURCE GROUP rg_test_group;
+CREATE
+
+SET debug_dtm_action = "fail_begin_command";
+SET
+SET debug_dtm_action_target = "protocol";
+SET
+SET debug_dtm_action_protocol = "prepare";
+SET
+SET debug_dtm_action_segment = 0;
+SET
+
+-- ALTER should fail and the memory_limit in both catalog and share memory are
+-- still 5%
+ALTER RESOURCE GROUP rg_test_group set memory_limit 1;
+ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid = 1509599543-0000000983. (cdbtm.c:698)
+
+RESET debug_dtm_action;
+RESET
+RESET debug_dtm_action_target;
+RESET
+RESET debug_dtm_action_protocol;
+RESET
+RESET debug_dtm_action_segment;
+RESET
+
+-- should still be 5% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+memory_limit
+------------
+5           
+(1 row)
+
+--
+-- Test error happen on commit_prepare, DDL success after retry
+--
+SET debug_dtm_action = "fail_begin_command";
+SET
+SET debug_dtm_action_target = "protocol";
+SET
+SET debug_dtm_action_protocol = "commit_prepared";
+SET
+SET debug_dtm_action_segment = 0;
+SET
+
+-- ALTER should success
+ALTER RESOURCE GROUP rg_test_group set memory_limit 4;
+ALTER
+
+RESET debug_dtm_action;
+RESET
+RESET debug_dtm_action_target;
+RESET
+RESET debug_dtm_action_protocol;
+RESET
+RESET debug_dtm_action_segment;
+RESET
+
+-- should still be 4% on both QD and QE
+select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_test_group';
+memory_limit
+------------
+4           
+(1 row)
+
+DROP ROLE rg_test_role;
+DROP
+DROP RESOURCE GROUP rg_test_group;
 DROP

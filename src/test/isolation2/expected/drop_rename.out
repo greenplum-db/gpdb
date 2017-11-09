@@ -23,7 +23,7 @@ ANALYZE
 1:commit;
 COMMIT
 2<:  <... completed>
-ERROR:  relation "t1" does not exist
+ERROR:  table "t1" does not exist
 2:select count(*) from newt1;
 count
 -----
@@ -47,7 +47,7 @@ ALTER
 1:commit;
 COMMIT
 2<:  <... completed>
-ERROR:  relation "t2" does not exist
+ERROR:  table "t2" does not exist
 2:select count(*) from newt2;
 count
 -----
@@ -69,7 +69,7 @@ DROP
 1:commit;
 COMMIT
 3<:  <... completed>
-ERROR:  relation "t3" does not exist
+ERROR:  table "t3" does not exist
 2<:  <... completed>
 DROP
 2:select count(*) from t3;

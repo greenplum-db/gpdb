@@ -4,7 +4,7 @@
  *
  * Tatsuo Ishii
  *
- * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.69.2.1 2008/05/27 12:24:46 mha Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.73 2008/06/18 23:08:47 tgl Exp $
  */
 #include "postgres.h"
 
@@ -648,7 +648,7 @@ wchar2char(char *to, const wchar_t *from, size_t tolen)
 	if (GetDatabaseEncoding() == PG_UTF8)
 	{
 		result = WideCharToMultiByte(CP_UTF8, 0, from, -1, to, tolen,
-									 NULL, NULL);
+								NULL, NULL);
 		/* A zero return is failure */
 		if (result <= 0)
 			result = -1;

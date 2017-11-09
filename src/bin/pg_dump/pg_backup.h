@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.46 2008/03/20 17:36:57 tgl Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup.h,v 1.47 2008/04/13 03:49:21 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */

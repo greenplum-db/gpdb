@@ -22,11 +22,12 @@ Finally, keep in mind that it is NEVER a good idea to remove licensing headers f
 
 Your chances of getting feedback and seeing your code merged into the project greatly depend on how granular your changes are. If you happen to have a bigger change in mind, we highly recommend engaging on the developer's mailing list first and sharing your proposal with us before you spend a lot of time writing code. Even when your proposal gets validated by the community, we still recommend doing the actual work as a series of small, self-contained commits. This makes the reviewer's job much easier and increases the timeliness of feedback.
 
-When it comes to C and C++ parts of Greenplum, we try to follow PostgreSQL Coding Conventions. In addition to that we require that:
+When it comes to C and C++ parts of Greenplum, we try to follow PostgreSQL Coding Conventions. In addition to that:
 
-All Python code passes Pylint
-All Go code is formatted according to gofmt
-We recommend using git diff --color when reviewing your changes so that you don't have any spurious whitespace issues in the code that you submit.
+For C and perl code, please run pgindent if necessary as specified in [README.gpdb](/src/tools/pgindent/README.gpdb).
+All Python code must pass Pylint.
+All Go code must be formatted according to gofmt.
+We recommend using `git diff --color` when reviewing your changes so that you don't have any spurious whitespace issues in the code that you submit.
 
 All new functionality that is contributed to Greenplum should be covered by regression tests that are contributed alongside it. If you are uncertain on how to test or document your work, please raise the question on the gpdb-dev mailing list and the developer community will do its best to help you.
 

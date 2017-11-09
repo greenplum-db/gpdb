@@ -31,3 +31,4 @@ table_functions_optimizer.out
 tablespace.out
 transient_types.out
 workfile_mgr_test.out
+trigger_sets_oid.out

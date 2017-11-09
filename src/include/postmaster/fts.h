@@ -19,6 +19,14 @@
 #include "cdb/cdbutil.h"
 
 #ifdef USE_SEGWALREP
+
+/* Queries for FTS messages */
+#define	FTS_MSG_TYPE_PROBE "PROBE"
+
+#define Natts_fts_probe_response 1
+#define Anum_fts_probe_response_is_mirror_up 0
+#define FTS_PROBE_RESPONSE_NTUPLES 1
+
 typedef struct
 {
 	int16 dbid;
@@ -45,6 +53,8 @@ typedef struct ProbeResponse
 } ProbeResponse;
 
 #endif
+
+extern bool am_ftshandler;
 
 /*
  * ENUMS

@@ -28,19 +28,16 @@ typedef struct ProbeConnectionInfo
 	GpMonotonicTime startTime;           /* probe start timestamp */
 #ifdef USE_SEGWALREP
 	probe_result *result;
-#endif
+#else
 	char segmentStatus;                  /* probed segment status */
+#endif
 	int16 probe_errno;                   /* saved errno from the latest system call */
 	char errmsg[PROBE_ERR_MSG_LEN];      /* message returned by strerror() */
 	struct pg_conn *conn;                        /* libpq connection object */
 } ProbeConnectionInfo;
 
-extern
-#ifdef USE_SEGWALREP
-void
-#else
-char
-#endif
-probeSegmentHelper(CdbComponentDatabaseInfo *dbInfo, ProbeConnectionInfo *probeInfo);
+extern char *errmessage(ProbeConnectionInfo *probeInfo);
+extern bool probePollIn(ProbeConnectionInfo *probeInfo);
+extern bool probeTimeout(ProbeConnectionInfo *probeInfo, const char* calledFrom);
 
 #endif

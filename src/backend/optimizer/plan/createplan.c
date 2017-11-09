@@ -12,13 +12,14 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.251 2008/10/21 20:42:53 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.244 2008/08/07 19:35:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include <limits.h>
+#include <math.h>
 
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_type.h"	/* INT8OID */
@@ -71,8 +72,7 @@ static AppendOnlyScan *create_appendonlyscan_plan(PlannerInfo *root, Path *best_
 static AOCSScan *create_aocsscan_plan(PlannerInfo *root, Path *best_path,
 					 List *tlist, List *scan_clauses);
 static IndexScan *create_indexscan_plan(PlannerInfo *root, IndexPath *best_path,
-					  List *tlist, List *scan_clauses,
-					  List **nonlossy_clauses);
+					  List *tlist, List *scan_clauses);
 static BitmapHeapScan *create_bitmap_scan_plan(PlannerInfo *root,
 						BitmapHeapPath *best_path,
 						List *tlist, List *scan_clauses);
@@ -103,13 +103,8 @@ static MergeJoin *create_mergejoin_plan(PlannerInfo *root, MergePath *best_path,
 					  Plan *outer_plan, Plan *inner_plan);
 static HashJoin *create_hashjoin_plan(PlannerInfo *root, HashPath *best_path,
 					 Plan *outer_plan, Plan *inner_plan);
-static void fix_indexqual_references(List *indexquals, IndexPath *index_path,
-						 List **fixed_indexquals,
-						 List **nonlossy_indexquals,
-						 List **indexstrategy,
-						 List **indexsubtype);
-static Node *fix_indexqual_operand(Node *node, IndexOptInfo *index,
-					  Oid *opfamily);
+static List *fix_indexqual_references(List *indexquals, IndexPath *index_path);
+static Node *fix_indexqual_operand(Node *node, IndexOptInfo *index);
 static List *get_switched_clauses(List *clauses, Relids outerrelids);
 static List *order_qual_clauses(PlannerInfo *root, List *clauses);
 static void copy_path_costsize(PlannerInfo *root, Plan *dest, Path *src);
@@ -130,13 +125,10 @@ static ExternalScan *make_externalscan(List *qptlist,
 				  int encoding);
 static IndexScan *make_indexscan(List *qptlist, List *qpqual, Index scanrelid,
 			   Oid indexid, List *indexqual, List *indexqualorig,
-			   List *indexstrategy, List *indexsubtype,
 			   ScanDirection indexscandir);
 static BitmapIndexScan *make_bitmap_indexscan(Index scanrelid, Oid indexid,
 					  List *indexqual,
-					  List *indexqualorig,
-					  List *indexstrategy,
-					  List *indexsubtype);
+					  List *indexqualorig);
 static BitmapHeapScan *make_bitmap_heapscan(List *qptlist,
 					 List *qpqual,
 					 Plan *lefttree,
@@ -343,8 +335,7 @@ create_scan_plan(PlannerInfo *root, Path *best_path)
 			plan = (Plan *) create_indexscan_plan(root,
 												  (IndexPath *) best_path,
 												  tlist,
-												  scan_clauses,
-												  NULL);
+												  scan_clauses);
 			break;
 
 		case T_BitmapHeapScan:
@@ -998,7 +989,7 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 			Oid			in_oper = lfirst_oid(l);
 			Oid			sortop;
 			TargetEntry *tle;
-			SortClause *sortcl;
+			SortGroupClause *sortcl;
 
 			sortop = get_ordering_op_for_equality_op(in_oper, false);
 			if (!OidIsValid(sortop))	/* shouldn't happen */
@@ -1007,9 +998,10 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 			tle = get_tle_by_resno(subplan->targetlist,
 								   groupColIdx[groupColPos]);
 			Assert(tle != NULL);
-			sortcl = makeNode(SortClause);
+			sortcl = makeNode(SortGroupClause);
 			sortcl->tleSortGroupRef = assignSortGroupRef(tle,
 														 subplan->targetlist);
+			sortcl->eqop = in_oper;
 			sortcl->sortop = sortop;
 			sortcl->nulls_first = false;
 			sortList = lappend(sortList, sortcl);
@@ -1934,16 +1926,12 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
  * The indexquals list of the path contains implicitly-ANDed qual conditions.
  * The list can be empty --- then no index restrictions will be applied during
  * the scan.
- *
- * If nonlossy_clauses isn't NULL, *nonlossy_clauses receives a list of the
- * nonlossy indexquals.
  */
 static IndexScan *
 create_indexscan_plan(PlannerInfo *root,
 					  IndexPath *best_path,
 					  List *tlist,
-					  List *scan_clauses,
-					  List **nonlossy_clauses)
+					  List *scan_clauses)
 {
 	List	   *indexquals = best_path->indexquals;
 	Index		baserelid = best_path->path.parent->relid;
@@ -1951,9 +1939,6 @@ create_indexscan_plan(PlannerInfo *root,
 	List	   *qpqual;
 	List	   *stripped_indexquals;
 	List	   *fixed_indexquals;
-	List	   *nonlossy_indexquals;
-	List	   *indexstrategy;
-	List	   *indexsubtype;
 	ListCell   *l;
 	IndexScan  *scan_plan;
 
@@ -1969,18 +1954,9 @@ create_indexscan_plan(PlannerInfo *root,
 
 	/*
 	 * The executor needs a copy with the indexkey on the left of each clause
-	 * and with index attr numbers substituted for table ones. This pass also
-	 * gets strategy info and looks for "lossy" operators.
+	 * and with index attr numbers substituted for table ones.
 	 */
-	fix_indexqual_references(indexquals, best_path,
-							 &fixed_indexquals,
-							 &nonlossy_indexquals,
-							 &indexstrategy,
-							 &indexsubtype);
-
-	/* pass back nonlossy quals if caller wants 'em */
-	if (nonlossy_clauses)
-		*nonlossy_clauses = nonlossy_indexquals;
+	fixed_indexquals = fix_indexqual_references(indexquals, best_path);
 
 	/*
 	 * If this is an innerjoin scan, the indexclauses will contain join
@@ -2001,9 +1977,8 @@ create_indexscan_plan(PlannerInfo *root,
 	 * by the index.  All the predicates in the indexquals will be checked
 	 * (either by the index itself, or by nodeIndexscan.c), but if there are
 	 * any "special" operators involved then they must be included in qpqual.
-	 * Also, any lossy index operators must be rechecked in the qpqual.  The
-	 * upshot is that qpqual must contain scan_clauses minus whatever appears
-	 * in nonlossy_indexquals.
+	 * The upshot is that qpqual must contain scan_clauses minus whatever
+	 * appears in indexquals.
 	 *
 	 * In normal cases simple pointer equality checks will be enough to spot
 	 * duplicate RestrictInfos, so we try that first.  In some situations
@@ -2026,13 +2001,13 @@ create_indexscan_plan(PlannerInfo *root,
 		Assert(IsA(rinfo, RestrictInfo));
 		if (rinfo->pseudoconstant)
 			continue;			/* we may drop pseudoconstants here */
-		if (list_member_ptr(nonlossy_indexquals, rinfo))
+		if (list_member_ptr(indexquals, rinfo))
 			continue;
 		if (!contain_mutable_functions((Node *) rinfo->clause))
 		{
 			List	   *clausel = list_make1(rinfo->clause);
 
-			if (predicate_implied_by(clausel, nonlossy_indexquals))
+			if (predicate_implied_by(clausel, indexquals))
 				continue;
 			if (best_path->indexinfo->indpred)
 			{
@@ -2059,8 +2034,6 @@ create_indexscan_plan(PlannerInfo *root,
 							   indexoid,
 							   fixed_indexquals,
 							   stripped_indexquals,
-							   indexstrategy,
-							   indexsubtype,
 							   best_path->indexscandir);
 
 	copy_path_costsize(root, &scan_plan->scan.plan, &best_path->path);
@@ -2115,9 +2088,9 @@ create_bitmap_scan_plan(PlannerInfo *root,
 	 * The qpqual list must contain all restrictions not automatically handled
 	 * by the index.  All the predicates in the indexquals will be checked
 	 * (either by the index itself, or by nodeBitmapHeapscan.c), but if there
-	 * are any "special" or lossy operators involved then they must be added
-	 * to qpqual.  The upshot is that qpqual must contain scan_clauses minus
-	 * whatever appears in indexquals.
+	 * are any "special" operators involved then they must be added to qpqual.
+	 * The upshot is that qpqual must contain scan_clauses minus whatever
+	 * appears in indexquals.
 	 *
 	 * In normal cases simple equal() checks will be enough to spot duplicate
 	 * clauses, so we try that first.  In some situations (particularly with
@@ -2154,7 +2127,7 @@ create_bitmap_scan_plan(PlannerInfo *root,
 	qpqual = order_qual_clauses(root, qpqual);
 
 	/*
-	 * When dealing with special or lossy operators, we will at this point
+	 * When dealing with special operators, we will at this point
 	 * have duplicate clauses in qpqual and bitmapqualorig.  We may as well
 	 * drop 'em from bitmapqualorig, since there's no point in making the
 	 * tests twice.
@@ -2290,10 +2263,12 @@ create_bitmap_appendonly_scan_plan(PlannerInfo *root,
  *
  * As byproducts, we also return in *qual and *indexqual the qual lists
  * (in implicit-AND form, without RestrictInfos) describing the original index
- * conditions and the generated indexqual conditions.  The latter is made to
- * exclude lossy index operators.  Both lists include partial-index predicates,
- * because we have to recheck predicates as well as index conditions if the
- * bitmap scan becomes lossy.
+ * conditions and the generated indexqual conditions.  (These are the same in
+ * simple cases, but when special index operators are involved, the former
+ * list includes the special conditions while the latter includes the actual
+ * indexable conditions derived from them.)  Both lists include partial-index
+ * predicates, because we have to recheck predicates as well as index
+ * conditions if the bitmap scan becomes lossy.
  *
  * Note: if you find yourself changing this, you probably need to change
  * make_restrictinfo_from_bitmapqual too.
@@ -2420,26 +2395,22 @@ create_bitmap_subplan(PlannerInfo *root, Path *bitmapqual,
 	{
 		IndexPath  *ipath = (IndexPath *) bitmapqual;
 		IndexScan  *iscan;
-		List	   *nonlossy_clauses;
 		ListCell   *l;
 
 		/* Use the regular indexscan plan build machinery... */
-		iscan = create_indexscan_plan(root, ipath, NIL, NIL,
-									  &nonlossy_clauses);
+		iscan = create_indexscan_plan(root, ipath, NIL, NIL);
 		/* then convert to a bitmap indexscan */
 		plan = (Plan *) make_bitmap_indexscan(iscan->scan.scanrelid,
 											  iscan->indexid,
 											  iscan->indexqual,
-											  iscan->indexqualorig,
-											  iscan->indexstrategy,
-											  iscan->indexsubtype);
+											  iscan->indexqualorig);
 		plan->startup_cost = 0.0;
 		plan->total_cost = ipath->indextotalcost;
 		plan->plan_rows =
 			clamp_row_est(ipath->indexselectivity * ipath->path.parent->tuples);
 		plan->plan_width = 0;	/* meaningless */
 		*qual = get_actual_clauses(ipath->indexclauses);
-		*indexqual = get_actual_clauses(nonlossy_clauses);
+		*indexqual = get_actual_clauses(ipath->indexquals);
 		foreach(l, ipath->indexinfo->indpred)
 		{
 			Expr	   *pred = (Expr *) lfirst(l);
@@ -3413,62 +3384,38 @@ create_hashjoin_plan(PlannerInfo *root,
 /*
  * fix_indexqual_references
  *	  Adjust indexqual clauses to the form the executor's indexqual
- *	  machinery needs, and check for recheckable (lossy) index conditions.
+ *	  machinery needs.
  *
- * We have five tasks here:
+ * We have three tasks here:
  *	* Remove RestrictInfo nodes from the input clauses.
  *	* Index keys must be represented by Var nodes with varattno set to the
  *	  index's attribute number, not the attribute number in the original rel.
  *	* If the index key is on the right, commute the clause to put it on the
  *	  left.
- *	* We must construct lists of operator strategy numbers and subtypes
- *	  for the top-level operators of each index clause.
- *	* We must detect any lossy index operators.  The API is that we return
- *	  a list of the input clauses whose operators are NOT lossy.
  *
- * fixed_indexquals receives a modified copy of the indexquals list --- the
+ * The result is a modified copy of the indexquals list --- the
  * original is not changed.  Note also that the copy shares no substructure
  * with the original; this is needed in case there is a subplan in it (we need
  * two separate copies of the subplan tree, or things will go awry).
- *
- * nonlossy_indexquals receives a list of the original input clauses (with
- * RestrictInfos) that contain non-lossy operators.
- *
- * indexstrategy receives an integer list of strategy numbers.
- * indexsubtype receives an OID list of strategy subtypes.
  */
-static void
-fix_indexqual_references(List *indexquals, IndexPath *index_path,
-						 List **fixed_indexquals,
-						 List **nonlossy_indexquals,
-						 List **indexstrategy,
-						 List **indexsubtype)
+static List *
+fix_indexqual_references(List *indexquals, IndexPath *index_path)
 {
 	IndexOptInfo *index = index_path->indexinfo;
+	List	   *fixed_indexquals;
 	ListCell   *l;
 
-	*fixed_indexquals = NIL;
-	*nonlossy_indexquals = NIL;
-	*indexstrategy = NIL;
-	*indexsubtype = NIL;
+	fixed_indexquals = NIL;
 
 	/*
 	 * For each qual clause, commute if needed to put the indexkey operand on
 	 * the left, and then fix its varattno.  (We do not need to change the
-	 * other side of the clause.)  Then determine the operator's strategy
-	 * number and subtype number, and check for lossy index behavior.
+	 * other side of the clause.)
 	 */
 	foreach(l, indexquals)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(l);
 		Expr	   *clause;
-		Oid			clause_op;
-		Oid			opfamily;
-		int			stratno;
-		Oid			stratlefttype;
-		Oid			stratrighttype;
-		bool		recheck;
-		bool		is_null_op = false;
 
 		Assert(IsA(rinfo, RestrictInfo));
 
@@ -3497,13 +3444,11 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 				CommuteOpExpr(op);
 
 			/*
-			 * Now, determine which index attribute this is, change the
-			 * indexkey operand as needed, and get the index opfamily.
+			 * Now, determine which index attribute this is and change the
+			 * indexkey operand as needed.
 			 */
 			linitial(op->args) = fix_indexqual_operand(linitial(op->args),
-													   index,
-													   &opfamily);
-			clause_op = op->opno;
+													   index);
 		}
 		else if (IsA(clause, RowCompareExpr))
 		{
@@ -3522,23 +3467,12 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 			/*
 			 * For each column in the row comparison, determine which index
 			 * attribute this is and change the indexkey operand as needed.
-			 *
-			 * Save the index opfamily for only the first column.  We will
-			 * return the operator and opfamily info for just the first column
-			 * of the row comparison; the executor will have to look up the
-			 * rest if it needs them.
 			 */
 			foreach(lc, rc->largs)
 			{
-				Oid			tmp_opfamily;
-
 				lfirst(lc) = fix_indexqual_operand(lfirst(lc),
-												   index,
-												   &tmp_opfamily);
-				if (lc == list_head(rc->largs))
-					opfamily = tmp_opfamily;
+												   index);
 			}
-			clause_op = linitial_oid(rc->opnos);
 		}
 		else if (IsA(clause, ScalarArrayOpExpr))
 		{
@@ -3547,13 +3481,11 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 			/* Never need to commute... */
 
 			/*
-			 * Now, determine which index attribute this is, change the
-			 * indexkey operand as needed, and get the index opfamily.
+			 * Determine which index attribute this is and change the
+			 * indexkey operand as needed.
 			 */
 			linitial(saop->args) = fix_indexqual_operand(linitial(saop->args),
-														 index,
-														 &opfamily);
-			clause_op = saop->opno;
+														 index);
 		}
 		else if (IsA(clause, NullTest))
 		{
@@ -3561,53 +3493,20 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path,
 
 			Assert(nt->nulltesttype == IS_NULL);
 			nt->arg = (Expr *) fix_indexqual_operand((Node *) nt->arg,
-													 index,
-													 &opfamily);
-			is_null_op = true;
-			clause_op = InvalidOid;		/* keep compiler quiet */
+													 index);
 		}
 		else
-		{
 			elog(ERROR, "unsupported indexqual type: %d",
 				 (int) nodeTag(clause));
-			continue;			/* keep compiler quiet */
-		}
 
-		*fixed_indexquals = lappend(*fixed_indexquals, clause);
-
-		if (is_null_op)
-		{
-			/* IS NULL doesn't have a clause_op */
-			stratno = InvalidStrategy;
-			stratrighttype = InvalidOid;
-			/* We assume it's non-lossy ... might need more work someday */
-			recheck = false;
-		}
-		else
-		{
-			/*
-			 * Look up the (possibly commuted) operator in the operator family
-			 * to get its strategy number and the recheck indicator. This also
-			 * double-checks that we found an operator matching the index.
-			 */
-			get_op_opfamily_properties(clause_op, opfamily,
-									   &stratno,
-									   &stratlefttype,
-									   &stratrighttype,
-									   &recheck);
-		}
-
-		*indexstrategy = lappend_int(*indexstrategy, stratno);
-		*indexsubtype = lappend_oid(*indexsubtype, stratrighttype);
-
-		/* If it's not lossy, add to nonlossy_indexquals */
-		if (!recheck)
-			*nonlossy_indexquals = lappend(*nonlossy_indexquals, rinfo);
+		fixed_indexquals = lappend(fixed_indexquals, clause);
 	}
+
+	return fixed_indexquals;
 }
 
 static Node *
-fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
+fix_indexqual_operand(Node *node, IndexOptInfo *index)
 {
 	/*
 	 * We represent index keys by Var nodes having the varno of the base table
@@ -3640,8 +3539,6 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
 				{
 					result = (Var *) copyObject(node);
 					result->varattno = pos + 1;
-					/* return the correct opfamily, too */
-					*opfamily = index->opfamily[pos];
 					return (Node *) result;
 				}
 			}
@@ -3667,8 +3564,6 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
 				result = makeVar(index->rel->relid, pos + 1,
 								 exprType(lfirst(indexpr_item)), -1,
 								 0);
-				/* return the correct opfamily, too */
-				*opfamily = index->opfamily[pos];
 				return (Node *) result;
 			}
 			indexpr_item = lnext(indexpr_item);
@@ -3677,8 +3572,7 @@ fix_indexqual_operand(Node *node, IndexOptInfo *index, Oid *opfamily)
 
 	/* Ooops... */
 	elog(ERROR, "node is not an index attribute");
-	*opfamily = InvalidOid;		/* keep compiler quiet */
-	return NULL;
+	return NULL;				/* keep compiler quiet */
 }
 
 /*
@@ -3991,8 +3885,6 @@ make_indexscan(List *qptlist,
 			   Oid indexid,
 			   List *indexqual,
 			   List *indexqualorig,
-			   List *indexstrategy,
-			   List *indexsubtype,
 			   ScanDirection indexscandir)
 {
 	IndexScan  *node = makeNode(IndexScan);
@@ -4007,8 +3899,6 @@ make_indexscan(List *qptlist,
 	node->indexid = indexid;
 	node->indexqual = indexqual;
 	node->indexqualorig = indexqualorig;
-	node->indexstrategy = indexstrategy;
-	node->indexsubtype = indexsubtype;
 	node->indexorderdir = indexscandir;
 
 	return node;
@@ -4018,9 +3908,7 @@ static BitmapIndexScan *
 make_bitmap_indexscan(Index scanrelid,
 					  Oid indexid,
 					  List *indexqual,
-					  List *indexqualorig,
-					  List *indexstrategy,
-					  List *indexsubtype)
+					  List *indexqualorig)
 {
 	BitmapIndexScan *node = makeNode(BitmapIndexScan);
 	Plan	   *plan = &node->scan.plan;
@@ -4034,8 +3922,6 @@ make_bitmap_indexscan(Index scanrelid,
 	node->indexid = indexid;
 	node->indexqual = indexqual;
 	node->indexqualorig = indexqualorig;
-	node->indexstrategy = indexstrategy;
-	node->indexsubtype = indexsubtype;
 
 	return node;
 }
@@ -4237,8 +4123,8 @@ make_append(List *appendplans, bool isTarget, List *tlist)
 {
 	Append	   *node = makeNode(Append);
 	Plan	   *plan = &node->plan;
+	double		total_size;
 	ListCell   *subnode;
-	double		weighted_total_width = 0.0;		/* maintain weighted total */
 
 	/*
 	 * Compute cost as sum of subplan costs.  We charge nothing extra for the
@@ -4248,7 +4134,7 @@ make_append(List *appendplans, bool isTarget, List *tlist)
 	plan->startup_cost = 0;
 	plan->total_cost = 0;
 	plan->plan_rows = 0;
-	plan->plan_width = 0;
+	total_size = 0;
 	foreach(subnode, appendplans)
 	{
 		Plan	   *subplan = (Plan *) lfirst(subnode);
@@ -4257,9 +4143,15 @@ make_append(List *appendplans, bool isTarget, List *tlist)
 			plan->startup_cost = subplan->startup_cost;
 		plan->total_cost += subplan->total_cost;
 		plan->plan_rows += subplan->plan_rows;
-		weighted_total_width += (double) subplan->plan_rows * (double) subplan->plan_width;
+		total_size += subplan->plan_width * subplan->plan_rows;
 	}
-	plan->plan_width = (int) ceil(weighted_total_width / Max(1.0, plan->plan_rows));
+	/* GPDB_84_MERGE_FIXME: ensure this math is okay compared to before the
+	 * merge */
+	if (plan->plan_rows > 0)
+		plan->plan_width = rint(total_size / plan->plan_rows);
+	else
+		plan->plan_width = 0;
+
 	plan->targetlist = tlist;
 	plan->qual = NIL;
 	plan->lefttree = NULL;
@@ -4511,6 +4403,10 @@ add_sort_column(AttrNumber colIdx, Oid sortOp, bool nulls_first,
 {
 	int			i;
 
+	Assert(OidIsValid(sortOp));
+
+	Assert(OidIsValid(sortOp));
+
 	for (i = 0; i < numCols; i++)
 	{
 		/*
@@ -4748,7 +4644,7 @@ make_sort_from_pathkeys(PlannerInfo *root, Plan *lefttree, List *pathkeys,
  * make_sort_from_sortclauses
  *	  Create sort plan to sort according to given sortclauses
  *
- *	  'sortcls' is a list of SortClauses
+ *	  'sortcls' is a list of SortGroupClauses
  *	  'lefttree' is the node which yields input tuples
  */
 Sort *
@@ -4773,7 +4669,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
 
 	foreach(l, sortcls)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(l);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(l);
 		TargetEntry *tle = get_sortgroupclause_tle(sortcl, sub_tlist);
 
 		/*
@@ -4797,7 +4693,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
  * make_sort_from_groupcols
  *	  Create sort plan to sort based on grouping columns
  *
- * 'groupcls' is the list of GroupClauses
+ * 'groupcls' is the list of SortGroupClauses
  * 'grpColIdx' gives the column numbers to use
  * 'appendGrouping' represents whether to append a Grouping
  *	  as the last sort key, used for grouping extension.
@@ -4806,7 +4702,7 @@ make_sort_from_sortclauses(PlannerInfo *root, List *sortcls, Plan *lefttree)
  * but presently we *must* use the grpColIdx[] array to locate sort columns,
  * because the child plan's tlist is not marked with ressortgroupref info
  * appropriate to the grouping node.  So, only the sort ordering info
- * is used from the GroupClause entries.
+ * is used from the SortGroupClause entries.
  */
 Sort *
 make_sort_from_groupcols(PlannerInfo *root,
@@ -4842,7 +4738,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 
 	foreach(l, flat_groupcls)
 	{
-		GroupClause *grpcl = (GroupClause *) lfirst(l);
+		SortGroupClause *grpcl = (SortGroupClause *) lfirst(l);
 		TargetEntry *tle = get_tle_by_resno(sub_tlist, grpColIdx[grpno]);
 
 		grpno++;
@@ -4860,7 +4756,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 
 	if (appendGrouping)
 	{
-		Oid			sort_op;
+		Oid			lt_opr;
 
 		/* Grouping will be the last entry in grpColIdx */
 		TargetEntry *tle = get_tle_by_resno(sub_tlist, grpColIdx[grpno]);
@@ -4868,9 +4764,11 @@ make_sort_from_groupcols(PlannerInfo *root,
 		if (tle->resname == NULL)
 			tle->resname = "grouping";
 
-		sort_op = ordering_oper_opid(exprType((Node *) tle->expr));
+		get_sort_group_operators(exprType((Node *) tle->expr),
+								 true, false, false,
+								 &lt_opr, NULL, NULL);
 
-		numsortkeys = add_sort_column(tle->resno, sort_op, false,
+		numsortkeys = add_sort_column(tle->resno, lt_opr, false,
 						 numsortkeys, sortColIdx, sortOperators, nullsFirst);
 	}
 
@@ -4900,13 +4798,13 @@ reconstruct_group_clause(List *orig_groupClause, List *tlist, AttrNumber *grpCol
 	{
 		ListCell   *lc = NULL;
 		TargetEntry *te;
-		GroupClause *gc = NULL;
+		SortGroupClause *gc = NULL;
 
 		te = get_tle_by_resno(tlist, grpColIdx[grpno]);
 
 		foreach(lc, flat_groupcls)
 		{
-			gc = (GroupClause *) lfirst(lc);
+			gc = (SortGroupClause *) lfirst(lc);
 
 			if (gc->tleSortGroupRef == te->ressortgroupref)
 				break;
@@ -5278,7 +5176,7 @@ make_tablefunction(List *tlist,
 
 
 /*
- * distinctList is a list of SortClauses, identifying the targetlist items
+ * distinctList is a list of SortGroupClauses, identifying the targetlist items
  * that should be considered by the Unique filter.	The input path must
  * already be sorted accordingly.
  */
@@ -5315,7 +5213,7 @@ make_unique(Plan *lefttree, List *distinctList)
 	plan->righttree = NULL;
 
 	/*
-	 * convert SortClause list into arrays of attr indexes and equality
+	 * convert SortGroupClause list into arrays of attr indexes and equality
 	 * operators, as wanted by executor
 	 */
 	Assert(numCols > 0);
@@ -5324,14 +5222,12 @@ make_unique(Plan *lefttree, List *distinctList)
 
 	foreach(slitem, distinctList)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(slitem);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(slitem);
 		TargetEntry *tle = get_sortgroupclause_tle(sortcl, plan->targetlist);
 
 		uniqColIdx[keyno] = tle->resno;
-		uniqOperators[keyno] = get_equality_op_for_ordering_op(sortcl->sortop);
-		if (!OidIsValid(uniqOperators[keyno]))	/* shouldn't happen */
-			elog(ERROR, "could not find equality operator for ordering operator %u",
-				 sortcl->sortop);
+		uniqOperators[keyno] = sortcl->eqop;
+		Assert(OidIsValid(uniqOperators[keyno]));
 		keyno++;
 	}
 
@@ -5351,13 +5247,14 @@ make_unique(Plan *lefttree, List *distinctList)
 }
 
 /*
- * distinctList is a list of SortClauses, identifying the targetlist items
- * that should be considered by the SetOp filter.  The input path must
+ * distinctList is a list of SortGroupClauses, identifying the targetlist
+ * items that should be considered by the SetOp filter.  The input path must
  * already be sorted accordingly.
  */
 SetOp *
-make_setop(SetOpCmd cmd, Plan *lefttree,
-		   List *distinctList, AttrNumber flagColIdx)
+make_setop(SetOpCmd cmd, SetOpStrategy strategy, Plan *lefttree,
+		   List *distinctList, AttrNumber flagColIdx, int firstFlag,
+		   long numGroups, double outputRows)
 {
 	SetOp	   *node = makeNode(SetOp);
 	Plan	   *plan = &node->plan;
@@ -5368,20 +5265,13 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 	ListCell   *slitem;
 
 	copy_plan_costsize(plan, lefttree);
+	plan->plan_rows = outputRows;
 
 	/*
 	 * Charge one cpu_operator_cost per comparison per input tuple. We assume
 	 * all columns get compared at most of the tuples.
 	 */
-	plan->total_cost += cpu_operator_cost * plan->plan_rows * numCols;
-
-	/*
-	 * We make the unsupported assumption that there will be 10% as many
-	 * tuples out as in.  Any way to do better?
-	 */
-	plan->plan_rows *= 0.1;
-	if (plan->plan_rows < 1)
-		plan->plan_rows = 1;
+	plan->total_cost += cpu_operator_cost * lefttree->plan_rows * numCols;
 
 	plan->targetlist = cdbpullup_targetlist(lefttree,
 				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
@@ -5390,7 +5280,7 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 	plan->righttree = NULL;
 
 	/*
-	 * convert SortClause list into arrays of attr indexes and equality
+	 * convert SortGroupClause list into arrays of attr indexes and equality
 	 * operators, as wanted by executor
 	 */
 	Assert(numCols > 0);
@@ -5399,22 +5289,23 @@ make_setop(SetOpCmd cmd, Plan *lefttree,
 
 	foreach(slitem, distinctList)
 	{
-		SortClause *sortcl = (SortClause *) lfirst(slitem);
+		SortGroupClause *sortcl = (SortGroupClause *) lfirst(slitem);
 		TargetEntry *tle = get_sortgroupclause_tle(sortcl, plan->targetlist);
 
 		dupColIdx[keyno] = tle->resno;
-		dupOperators[keyno] = get_equality_op_for_ordering_op(sortcl->sortop);
-		if (!OidIsValid(dupOperators[keyno]))	/* shouldn't happen */
-			elog(ERROR, "could not find equality operator for ordering operator %u",
-				 sortcl->sortop);
+		dupOperators[keyno] = sortcl->eqop;
+		Assert(OidIsValid(dupOperators[keyno]));
 		keyno++;
 	}
 
 	node->cmd = cmd;
+	node->strategy = strategy;
 	node->numCols = numCols;
 	node->dupColIdx = dupColIdx;
 	node->dupOperators = dupOperators;
 	node->flagColIdx = flagColIdx;
+	node->firstFlag = firstFlag;
+	node->numGroups = numGroups;
 
 	return node;
 }
@@ -5640,16 +5531,16 @@ plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist)
  * as the tleSortGroupRef in gc.
  */
 static bool
-groupcol_in_list(GroupClause *gc, List *glist)
+groupcol_in_list(SortGroupClause *gc, List *glist)
 {
 	bool		found = false;
 	ListCell   *lc;
 
 	foreach(lc, glist)
 	{
-		GroupClause *entry = (GroupClause *) lfirst(lc);
+		SortGroupClause *entry = (SortGroupClause *) lfirst(lc);
 
-		Assert(IsA(entry, GroupClause));
+		Assert(IsA(entry, SortGroupClause));
 		if (gc->tleSortGroupRef == entry->tleSortGroupRef)
 		{
 			found = true;
@@ -5678,7 +5569,7 @@ flatten_grouping_list(List *groupcls)
 			continue;
 
 		Assert(IsA(node, GroupingClause) ||
-			   IsA(node, GroupClause) ||
+			   IsA(node, SortGroupClause) ||
 			   IsA(node, List));
 
 		if (IsA(node, GroupingClause))
@@ -5690,9 +5581,9 @@ flatten_grouping_list(List *groupcls)
 
 			foreach(lc, flatten_groupsets)
 			{
-				GroupClause *flatten_gc = (GroupClause *) lfirst(lc);
+				SortGroupClause *flatten_gc = (SortGroupClause *) lfirst(lc);
 
-				Assert(IsA(flatten_gc, GroupClause));
+				Assert(IsA(flatten_gc, SortGroupClause));
 
 				if (!groupcol_in_list(flatten_gc, result))
 					result = lappend(result, flatten_gc);
@@ -5707,9 +5598,9 @@ flatten_grouping_list(List *groupcls)
 
 			foreach(lc, flatten_groupsets)
 			{
-				GroupClause *flatten_gc = (GroupClause *) lfirst(lc);
+				SortGroupClause *flatten_gc = (SortGroupClause *) lfirst(lc);
 
-				Assert(IsA(flatten_gc, GroupClause));
+				Assert(IsA(flatten_gc, SortGroupClause));
 
 				if (!groupcol_in_list(flatten_gc, result))
 					result = lappend(result, flatten_gc);
@@ -5717,9 +5608,9 @@ flatten_grouping_list(List *groupcls)
 		}
 		else
 		{
-			Assert(IsA(node, GroupClause));
+			Assert(IsA(node, SortGroupClause));
 
-			if (!groupcol_in_list((GroupClause *) node, result))
+			if (!groupcol_in_list((SortGroupClause *) node, result))
 				result = lappend(result, node);
 		}
 	}

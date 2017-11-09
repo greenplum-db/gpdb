@@ -6,28 +6,9 @@
  * for developers.	If you edit any of these, be sure to do a *full*
  * rebuild (and an initdb if noted).
  *
- * $PostgreSQL: pgsql/src/include/pg_config_manual.h,v 1.30 2008/03/27 03:57:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/pg_config_manual.h,v 1.35 2008/07/12 02:28:43 tgl Exp $
  *------------------------------------------------------------------------
  */
-
-/*
- * Size of a WAL file block.  This need have no particular relation to BLCKSZ.
- * XLOG_BLCKSZ must be a power of 2, and if your system supports O_DIRECT I/O,
- * XLOG_BLCKSZ must be a multiple of the alignment requirement for direct-I/O
- * buffers, else direct I/O may fail.
- *
- * Changing XLOG_BLCKSZ requires an initdb.
- */
-#define XLOG_BLCKSZ		32768
-
-/*
- * XLOG_SEG_SIZE is the size of a single WAL file.	This must be a power of 2
- * and larger than XLOG_BLCKSZ (preferably, a great deal larger than
- * XLOG_BLCKSZ).
- *
- * Changing XLOG_SEG_SIZE requires an initdb.
- */
-#define XLOG_SEG_SIZE	(64*1024*1024)
 
 /*
  * Maximum length for identifiers (e.g. table names, column names,

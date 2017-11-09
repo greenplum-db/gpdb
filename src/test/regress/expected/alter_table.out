@@ -356,7 +356,7 @@ ERROR:  new row for relation "atacc2" violates check constraint "foo"  (seg2 rh5
 insert into atacc2 (test2) values (3);
 -- fail and then succeed on atacc3
 insert into atacc3 (test2) values (-3);
-ERROR:  new row for relation "atacc3" violates check constraint "foo"  (seg1 rh55-qavm63:18507 pid=26647)
+ERROR:  new row for relation "atacc3" violates check constraint "foo"
 insert into atacc3 (test2) values (3);
 drop table atacc3;
 drop table atacc2;
@@ -391,7 +391,8 @@ alter table atacc3 inherit atacc2;
 ERROR:  child table is missing column "test2"
 -- fail due to mismatched data type
 alter table atacc3 add test2 bool;
-alter table atacc3 add inherit atacc2;
+alter table atacc3 inherit atacc2;
+ERROR:  child table "atacc3" has different type for column "test2"
 alter table atacc3 drop test2;
 -- succeed
 alter table atacc3 add test2 int;
@@ -416,26 +417,26 @@ select test2 from atacc2;
 
 drop table atacc2 cascade;
 NOTICE:  drop cascades to table atacc3
-NOTICE:  drop cascades to constraint foo on table atacc3
 drop table atacc1;
--- let's try only to add only to the parent
+-- adding only to a parent is disallowed as of 8.4
 create table atacc1 (test int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table atacc2 (test2 int);
+create table atacc2 (test2 int) inherits (atacc1);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'test2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-create table atacc3 (test3 int) inherits (atacc1, atacc2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
-alter table only atacc2 add constraint foo check (test2>0);
--- fail and then succeed on atacc2
-insert into atacc2 (test2) values (-3);
-ERROR:  new row for relation "atacc2" violates check constraint "foo"  (seg2 rh55-qavm63:18508 pid=26649)
-insert into atacc2 (test2) values (3);
--- both succeed on atacc3
-insert into atacc3 (test2) values (-3);
-insert into atacc3 (test2) values (3);
-drop table atacc3;
+-- fail:
+alter table only atacc1 add constraint foo check (test>0);
+ERROR:  constraint must be added to child tables too
+-- ok:
+alter table only atacc2 add constraint foo check (test>0);
+-- check constraint not there on parent
+insert into atacc1 (test) values (-3);
+insert into atacc1 (test) values (3);
+-- check constraint is there on child
+insert into atacc2 (test) values (-3);
+ERROR:  new row for relation "atacc2" violates check constraint "foo"
+insert into atacc2 (test) values (3);
 drop table atacc2;
 drop table atacc1;
 -- test unique constraint adding
@@ -1265,8 +1266,9 @@ order by relname, attnum;
 (8 rows)
 
 drop table p1, p2 cascade;
-NOTICE:  drop cascades to table c1
-NOTICE:  drop cascades to table gc1
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table c1
+drop cascades to table gc1
 --
 -- Test the ALTER TABLE WITHOUT OIDS command
 --
@@ -1347,7 +1349,7 @@ alter table p1 add column f2 text;
 NOTICE:  merging definition of column "f2" for child "c1"
 insert into p1 values (1,2,'abc');
 insert into c1 values(11,'xyz',33,0); -- should fail
-ERROR:  new row for relation "c1" violates check constraint "c1_a1_check"  (seg2 rh55-qavm63:18508 pid=26649)
+ERROR:  new row for relation "c1" violates check constraint "p1_a1_check"
 insert into c1 values(11,'xyz',33,22);
 select * from p1 order by 1,2,3;
  f1 | a1 | f2  
@@ -1366,7 +1368,6 @@ select * from p1 order by 1,2,3;
 
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
-NOTICE:  drop cascades to constraint c1_a1_check on table c1
 -- test that operations with a dropped column do not try to reference
 -- its datatype
 create domain mytype as text;
@@ -1602,12 +1603,9 @@ select alter2.plus1(41);
 
 -- clean up
 drop schema alter2 cascade;
-NOTICE:  drop cascades to type alter2.ctype
-NOTICE:  drop cascades to type alter2.posint
-NOTICE:  drop cascades to function alter2.plus1(integer)
-NOTICE:  drop cascades to view alter2.v1
-NOTICE:  drop cascades to rule _RETURN on view alter2.v1
-NOTICE:  drop cascades to sequence alter2.t1_f1_seq
-NOTICE:  drop cascades to default for table alter2.t1 column f1
-NOTICE:  drop cascades to table alter2.t1
-NOTICE:  drop cascades to constraint t1_f2_check on table alter2.t1
+NOTICE:  drop cascades to 5 other objects
+DETAIL:  drop cascades to table alter2.t1
+drop cascades to view alter2.v1
+drop cascades to function alter2.plus1(integer)
+drop cascades to type alter2.posint
+drop cascades to type alter2.ctype

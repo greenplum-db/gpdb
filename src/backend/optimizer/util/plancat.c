@@ -11,7 +11,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.145 2008/04/01 00:48:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/plancat.c,v 1.148 2008/07/13 20:45:47 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -21,6 +21,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_inherits.h"
@@ -35,9 +36,10 @@
 #include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "storage/bufmgr.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
-#include "utils/relcache.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
@@ -669,7 +671,7 @@ estimate_tuple_width(Relation   rel,
 	tuple_width += sizeof(HeapTupleHeaderData);
 	tuple_width += sizeof(ItemPointerData);
     /* note: integer division is intentional here */
-	density = (BLCKSZ - sizeof(PageHeaderData)) / tuple_width;
+	density = (BLCKSZ - SizeOfPageHeaderData) / tuple_width;
 
     *bytes_per_tuple = tuple_width;
     *tuples_per_page = Max(1.0, density);

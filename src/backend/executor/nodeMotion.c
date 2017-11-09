@@ -164,23 +164,6 @@ bool isMotionGather(const Motion *m)
 			&& m->numOutputSegs == 1);
 }
 
-/*
- * Set the statistic info in gpmon packet.
- */
-static void
-setMotionStatsForGpmon(MotionState *node)
-{
-	ChunkTransportState *transportStates = node->ps.state->interconnect_context;
-	int motionId = ((Motion *) node->ps.plan)->motionID;
-
-	ChunkTransportStateEntry *transportEntry = NULL;
-	getChunkTransportState(transportStates, motionId, &transportEntry);
-	uint64 avgAckTime = 0;
-	if (transportEntry->stat_count_acks > 0)
-		avgAckTime = transportEntry->stat_total_ack_time / transportEntry->stat_count_acks;
-}
-
-
 /* ----------------------------------------------------------------
  *		ExecMotion
  * ----------------------------------------------------------------
@@ -241,12 +224,6 @@ ExecMotion(MotionState * node)
 
 		if (tuple == NULL)
 			node->ps.state->active_recv_id = -1;
-		else
-		{
-			Gpmon_Incr_Rows_In(GpmonPktFromMotionState(node));
-			Gpmon_Incr_Rows_Out(GpmonPktFromMotionState(node));
-			setMotionStatsForGpmon(node);
-		}
 #ifdef MEASURE_MOTION_TIME
 		gettimeofday(&stopTime, NULL);
 
@@ -265,7 +242,6 @@ ExecMotion(MotionState * node)
 			node->motionTime.tv_sec++;
 		}
 #endif
-		CheckSendPlanStateGpmonPkt(&node->ps);
 		return tuple;
 	}
 	else if(node->mstype == MOTIONSTATE_SEND)
@@ -333,10 +309,6 @@ execMotionSender(MotionState * node)
 		{
 			doSendTuple(motion, node, outerTupleSlot);
 			/* doSendTuple() may have set node->stopRequested as a side-effect */
-
-			Gpmon_Incr_Rows_Out(GpmonPktFromMotionState(node));
-			setMotionStatsForGpmon(node);
-			CheckSendPlanStateGpmonPkt(&node->ps);
 
 			if (node->stopRequested)
 			{
@@ -882,7 +854,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	Assert(node->motionID <= sliceTable->nMotions);
 
 	estate->currentSliceIdInPlan = node->motionID;
-	int parentExecutingSliceId = estate->currentExecutingSliceId;
 	estate->currentExecutingSliceId = node->motionID;
 
 	/*
@@ -1062,14 +1033,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
                           &typisvarlena);
     }
 #endif
-
-	/*
-	 * Temporarily set currentExecutingSliceId to the parent value, since
-	 * this motion might be in the top slice of an InitPlan.
-	 */
-	estate->currentExecutingSliceId = parentExecutingSliceId;
-	initGpmonPktForMotion((Plan *)node, &motionstate->ps.gpmon_pkt, estate);
-	estate->currentExecutingSliceId = node->motionID;
 
 	return motionstate;
 }
@@ -1593,12 +1556,4 @@ ExecStopMotion(MotionState * node)
 	SendStopMessage(node->ps.state->motionlayer_context,
 					node->ps.state->interconnect_context,
 					motion->motionID);
-}
-
-void
-initGpmonPktForMotion(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL && IsA(planNode, Motion));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }

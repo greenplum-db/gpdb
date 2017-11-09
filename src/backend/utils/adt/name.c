@@ -14,7 +14,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/name.c,v 1.61 2008/01/01 19:45:52 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/name.c,v 1.63 2008/06/24 17:58:27 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -182,65 +182,6 @@ namege(PG_FUNCTION_ARGS)
 	Name		arg2 = PG_GETARG_NAME(1);
 
 	PG_RETURN_BOOL(strncmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) >= 0);
-}
-
-
-/*
- * comparison routines for LIKE indexing support
- */
-
-Datum
-name_pattern_eq(PG_FUNCTION_ARGS)
-{
-	Name		arg1 = PG_GETARG_NAME(0);
-	Name		arg2 = PG_GETARG_NAME(1);
-
-	PG_RETURN_BOOL(memcmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) == 0);
-}
-
-Datum
-name_pattern_ne(PG_FUNCTION_ARGS)
-{
-	Name		arg1 = PG_GETARG_NAME(0);
-	Name		arg2 = PG_GETARG_NAME(1);
-
-	PG_RETURN_BOOL(memcmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) != 0);
-}
-
-Datum
-name_pattern_lt(PG_FUNCTION_ARGS)
-{
-	Name		arg1 = PG_GETARG_NAME(0);
-	Name		arg2 = PG_GETARG_NAME(1);
-
-	PG_RETURN_BOOL(memcmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) < 0);
-}
-
-Datum
-name_pattern_le(PG_FUNCTION_ARGS)
-{
-	Name		arg1 = PG_GETARG_NAME(0);
-	Name		arg2 = PG_GETARG_NAME(1);
-
-	PG_RETURN_BOOL(memcmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) <= 0);
-}
-
-Datum
-name_pattern_gt(PG_FUNCTION_ARGS)
-{
-	Name		arg1 = PG_GETARG_NAME(0);
-	Name		arg2 = PG_GETARG_NAME(1);
-
-	PG_RETURN_BOOL(memcmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) > 0);
-}
-
-Datum
-name_pattern_ge(PG_FUNCTION_ARGS)
-{
-	Name		arg1 = PG_GETARG_NAME(0);
-	Name		arg2 = PG_GETARG_NAME(1);
-
-	PG_RETURN_BOOL(memcmp(NameStr(*arg1), NameStr(*arg2), NAMEDATALEN) >= 0);
 }
 
 

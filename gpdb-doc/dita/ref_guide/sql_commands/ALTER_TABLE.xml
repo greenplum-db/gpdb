@@ -150,7 +150,7 @@ ALTER TABLE <varname>name</varname>
                                 <li id="ay136944"><b>SET STATISTICS</b> — Sets the per-column
                                         statistics-gathering target for subsequent
                                                 <codeph>ANALYZE</codeph> operations. The target can
-                                        be set in the range 0 to 1000, or set to -1 to revert to
+                                        be set in the range 1 to 1000, or set to -1 to revert to
                                         using the system default statistics target
                                                 (<codeph>default_statistics_target</codeph>).</li>
                                 <li id="ay137022"><b>ADD <varname>table_constraint</varname></b> —
@@ -592,15 +592,9 @@ ALTER TABLE <varname>name</varname>
                                                 table validation against the <codeph>CHECK</codeph>
                                                 constraint of the partition you are exchanging.</pd>
                                         <pd>Exchanging a leaf child partition with an external table
-                                                is not supported in these cases:<ul
-                                                  id="ul_xfz_ckw_yt">
-                                                  <li>The partitioned table is created with the
-                                                  <codeph>SUBPARTITION</codeph> clause or if a
-                                                  partition has a subpartition.</li>
-                                                  <li>The partitioned table contains a column with a
-                                                  check constraint or a <codeph>NOT NULL</codeph>
-                                                  constraint.</li>
-                                                </ul></pd>
+                                                is not supported if the partitioned table contains a
+                                                column with a check constraint or a <codeph>NOT
+                                                  NULL</codeph> constraint.</pd>
                                         <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
                                                 the data in the table matches the
                                                   <codeph>CHECK</codeph> constraint of the partition
@@ -625,10 +619,10 @@ ALTER TABLE <varname>name</varname>
                                 </plentry>
                                 <plentry>
                                         <pt>SPLIT DEFAULT PARTITION</pt>
-                                        <pd>Splits a default partition. Only a range partition can
-                                                be split, not a list partition. In a multi-level
-                                                partition design, you can only split the lowest
-                                                level default partitions (those that contain data).
+                                        <pd>Splits a default partition. In a multi-level partition,
+                                                only a range partition can be split, not a list
+                                                partition, and you can only split the lowest level
+                                                default partitions (those that contain data).
                                                 Splitting a default partition creates a new
                                                 partition containing the values specified and leaves
                                                 the default partition containing any values that do
@@ -651,11 +645,11 @@ ALTER TABLE <varname>name</varname>
                                 </plentry>
                                 <plentry>
                                         <pt>SPLIT PARTITION</pt>
-                                        <pd>Splits an existing partition into two partitions. Only a
-                                                range partition can be split, not a list partition.
-                                                In a multi-level partition design, you can only
-                                                split the lowest level partitions (those that
-                                                contain data). </pd>
+                                        <pd>Splits an existing partition into two partitions. In a
+                                                multi-level partition, only a range partition can be
+                                                split, not a list partition, and you can only split
+                                                the lowest level partitions (those that contain
+                                                data). </pd>
                                         <pd><b>AT</b> - Specifies a single value that should be used
                                                 as the criteria for the split. The partition will be
                                                 divided into two new partitions with the split value

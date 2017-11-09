@@ -142,9 +142,6 @@ class Guc:
 
         elif self.name == "gp_resource_manager":
             if newval == "'group'":
-                LOGGER.warn("Managing queries with resource groups is an "
-                            "experimental feature. A work-in-progress version is "
-                            "enabled.")
                 msg = GpResGroup().validate()
                 if msg is not None:
                     return msg

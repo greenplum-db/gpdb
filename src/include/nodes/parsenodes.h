@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.361 2008/03/21 22:41:48 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/parsenodes.h,v 1.371 2008/08/07 01:11:51 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -124,6 +124,7 @@ typedef struct Query
 	bool		hasSubLinks;	/* has subquery SubLink */
 	bool        hasDynamicFunctions; /* has functions with unstable return types */
 	bool		hasFuncsWithExecRestrictions; /* has functions with EXECUTE ON MASTER or ALL SEGMENTS */
+	bool		hasDistinctOn;	/* distinctClause is from DISTINCT ON */
 
 	List	   *rtable;			/* list of range table entries */
 	FromExpr   *jointree;		/* table join tree (FROM and WHERE clauses) */
@@ -146,7 +147,7 @@ typedef struct Query
 	 * --> GroupClause(c) ) ) --> GroupingClause( CUBE, groupsets
 	 * (GroupClause(e) --> GroupClause(d) ) )
 	 */
-	List	   *groupClause;
+	List	   *groupClause;	/* a list of SortGroupClause's */
 
 	Node	   *havingQual;		/* qualifications applied to groups */
 
@@ -162,6 +163,7 @@ typedef struct Query
 	List	   *cteList;		/* a list of CommonTableExprs in WITH clause */
 	bool		hasRecursive;	/* Whether this query has a recursive WITH
 								 * clause */
+
 
 	Node	   *limitOffset;	/* # of result tuples to skip (int8 expr) */
 	Node	   *limitCount;		/* # of result tuples to return (int8 expr) */
@@ -283,18 +285,11 @@ typedef struct A_Const
 {
 	NodeTag		type;
 	Value		val;			/* value (includes type info, see value.h) */
-	TypeName   *typeName;		/* typecast, or NULL if none */
 	int			location;		/* token location, or -1 if unknown */
 } A_Const;
 
 /*
  * TypeCast - a CAST expression
- *
- * NOTE: for mostly historical reasons, A_Const parsenodes contain
- * room for a TypeName, allowing a constant to be marked as being of a given
- * type without a separate TypeCast node.  Either representation will work,
- * but the combined representation saves a bit of code in many
- * productions in gram.y.
  */
 typedef struct TypeCast
 {
@@ -786,42 +781,58 @@ typedef struct RangeTblEntry
 } RangeTblEntry;
 
 /*
- * SortClause -
- *	   representation of ORDER BY clauses
+ * SortGroupClause -
+ *	   representation of ORDER BY, GROUP BY, DISTINCT, DISTINCT ON items
+ *
+ * You might think that ORDER BY is only interested in defining ordering,
+ * and GROUP/DISTINCT are only interested in defining equality.  However,
+ * one way to implement grouping is to sort and then apply a "uniq"-like
+ * filter.  So it's also interesting to keep track of possible sort operators
+ * for GROUP/DISTINCT, and in particular to try to sort for the grouping
+ * in a way that will also yield a requested ORDER BY ordering.  So we need
+ * to be able to compare ORDER BY and GROUP/DISTINCT lists, which motivates
+ * the decision to give them the same representation.
  *
  * tleSortGroupRef must match ressortgroupref of exactly one entry of the
- * associated targetlist; that is the expression to be sorted (or grouped) by.
- * sortop is the OID of the ordering operator (a "<" or ">" operator).
- * nulls_first does about what you'd expect.
+ *		query's targetlist; that is the expression to be sorted or grouped by.
+ * eqop is the OID of the equality operator.
+ * sortop is the OID of the ordering operator (a "<" or ">" operator),
+ *		or InvalidOid if not available.
+ * nulls_first means about what you'd expect.  If sortop is InvalidOid
+ *		then nulls_first is meaningless and should be set to false.
  *
- * SortClauses are also used to identify targets that we will do a "Unique"
- * filter step on (for SELECT DISTINCT and SELECT DISTINCT ON).  The
- * distinctClause list is simply a copy of the relevant members of the
- * sortClause list.  Note that distinctClause can be a subset of sortClause,
- * but cannot have members not present in sortClause; and the members that
- * do appear must be in the same order as in sortClause.
+ * In an ORDER BY item, all fields must be valid.  (The eqop isn't essential
+ * here, but it's cheap to get it along with the sortop, and requiring it
+ * to be valid eases comparisons to grouping items.)
+ *
+ * In a grouping item, eqop must be valid.  If the eqop is a btree equality
+ * operator, then sortop should be set to a compatible ordering operator.
+ * We prefer to set eqop/sortop/nulls_first to match any ORDER BY item that
+ * the query presents for the same tlist item.  If there is none, we just
+ * use the default ordering op for the datatype.
+ *
+ * If the tlist item's type has a hash opclass but no btree opclass, then
+ * we will set eqop to the hash equality operator, sortop to InvalidOid,
+ * and nulls_first to false.  A grouping item of this kind can only be
+ * implemented by hashing, and of course it'll never match an ORDER BY item.
+ *
+ * A query might have both ORDER BY and DISTINCT (or DISTINCT ON) clauses.
+ * In SELECT DISTINCT, the distinctClause list is as long or longer than the
+ * sortClause list, while in SELECT DISTINCT ON it's typically shorter.
+ * The two lists must match up to the end of the shorter one --- the parser
+ * rearranges the distinctClause if necessary to make this true.  (This
+ * restriction ensures that only one sort step is needed to both satisfy the
+ * ORDER BY and set up for the Unique step.  This is semantically necessary
+ * for DISTINCT ON, and presents no real drawback for DISTINCT.)
  */
-typedef struct SortClause
+typedef struct SortGroupClause
 {
 	NodeTag		type;
 	Index		tleSortGroupRef;	/* reference into targetlist */
-	Oid			sortop;			/* the ordering operator ('<' op) */
-	bool		nulls_first;	/* do NULLs come before normal values? */
-} SortClause;
-
-/*
- * GroupClause -
- *	   representation of GROUP BY clauses
- *
- * GroupClause is exactly like SortClause except for the nodetag value.
- * We have routines that operate interchangeably on both.
- *
- * XXX SortClause overspecifies the semantics so far as GROUP BY is concerned
- * (ditto for DISTINCT).  It'd be better to specify an equality operator not
- * an ordering operator.  However, the two implementations are tightly entwined
- * at the moment ... breaking them apart is work for another day.
- */
-typedef SortClause GroupClause;
+	Oid			eqop;				/* the equality operator ('=' op) */
+	Oid			sortop;				/* the ordering operator ('<' op), or 0 */
+	bool		nulls_first;		/* do NULLs come before normal values? */
+} SortGroupClause;
 
 /*
  * GroupingClause -
@@ -1082,7 +1093,12 @@ typedef struct SelectStmt
  * top-level Query node containing the leaf SELECTs as subqueries in its
  * range table.  Its setOperations field shows the tree of set operations,
  * with leaf SelectStmt nodes replaced by RangeTblRef nodes, and internal
- * nodes replaced by SetOperationStmt nodes.
+ * nodes replaced by SetOperationStmt nodes.  Information about the output
+ * column types is added, too.  (Note that the child nodes do not necessarily
+ * produce these types directly, but we've checked that their output types
+ * can be coerced to the output column type.)  Also, if it's not UNION ALL,
+ * information about the types' sort/group semantics is provided in the form
+ * of a SortGroupClause list (same representation as, eg, DISTINCT).
  * ----------------------
  */
 typedef struct SetOperationStmt
@@ -1097,6 +1113,8 @@ typedef struct SetOperationStmt
 	/* Fields derived during parse analysis: */
 	List	   *colTypes;		/* OID list of output column type OIDs */
 	List	   *colTypmods;		/* integer list of output column typmods */
+	List	   *groupClauses;	/* a list of SortGroupClause's */
+	/* groupClauses is NIL if UNION ALL, but must be set otherwise */
 } SetOperationStmt;
 
 
@@ -1256,8 +1274,7 @@ typedef enum AlterTableType
 	AT_ProcessedConstraint,		/* pre-processed add constraint (local in
 								 * parser/parse_utilcmd.c) */
 	AT_DropConstraint,			/* drop constraint */
-	AT_DropConstraintQuietly,	/* drop constraint, no error/warning (local in
-								 * commands/tablecmds.c) */
+	AT_DropConstraintRecurse,	/* internal to commands/tablecmds.c */
 	AT_AlterColumnType,			/* alter column type */
 	AT_ChangeOwner,				/* change owner */
 	AT_ClusterOn,				/* CLUSTER ON */
@@ -1312,7 +1329,7 @@ typedef struct AlterTableCmd	/* one subcommand of an ALTER TABLE */
 } AlterTableCmd;
 
 
-typedef struct SetDistributionCmd 
+typedef struct SetDistributionCmd
 {
 	NodeTag		type;
 	int	        backendId;     /* backend ID on QD */
@@ -1839,7 +1856,6 @@ typedef struct CreateFileSpaceStmt
 	List       *locations;  /* List of FileSpaceEntry */
 } CreateFileSpaceStmt;
 
-
 /*
  * FileSpaceEntry:
  *   A CreateFilespaceStatement has a list of these, one per location
@@ -1854,6 +1870,14 @@ typedef struct FileSpaceEntry
 	char       *hostname;
 } FileSpaceEntry;
 
+typedef struct DropFileSpaceStmt
+{
+	NodeTag		type;
+	char	   *filespacename;
+	bool		missing_ok;		/* skip error if missing? */
+} DropFileSpaceStmt;
+
+
 /* ----------------------
  *		Create/Drop TableSpace Statements
  * ----------------------
@@ -1866,6 +1890,13 @@ typedef struct CreateTableSpaceStmt
 	char	   *owner;
 	char       *filespacename;
 } CreateTableSpaceStmt;
+
+typedef struct DropTableSpaceStmt
+{
+	NodeTag		type;
+	char	   *tablespacename;
+	bool		missing_ok;		/* skip error if missing? */
+} DropTableSpaceStmt;
 
 /* ----------------------
  *		Create/Drop TRIGGER Statements
@@ -2097,7 +2128,6 @@ typedef struct CreateOpClassItem
 	List	   *name;			/* operator or function name */
 	List	   *args;			/* argument types */
 	int			number;			/* strategy num or support proc num */
-	bool		recheck;		/* only used for operators */
 	List	   *class_args;		/* only used for functions */
 	/* fields used for a storagetype item: */
 	TypeName   *storedtype;		/* datatype stored in index */
@@ -2170,6 +2200,7 @@ typedef struct TruncateStmt
 {
 	NodeTag		type;
 	List	   *relations;		/* relations (RangeVars) to be truncated */
+	bool		restart_seqs;	/* restart owned sequences? */
 	DropBehavior behavior;		/* RESTRICT or CASCADE behavior */
 } TruncateStmt;
 
@@ -2297,7 +2328,7 @@ typedef enum FunctionParameterMode
 	FUNC_PARAM_OUT = 'o',		/* output only */
 	FUNC_PARAM_INOUT = 'b',		/* both */
 	FUNC_PARAM_VARIADIC = 'v',	/* variadic (always input) */
-	FUNC_PARAM_TABLE = 't'		/* table (always output) */
+	FUNC_PARAM_TABLE = 't'		/* table function output column */
 } FunctionParameterMode;
 
 typedef struct FunctionParameter

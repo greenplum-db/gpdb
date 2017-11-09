@@ -30,8 +30,6 @@ ExecInitTableScan(TableScan *node, EState *estate, int eflags)
 	state->ss.scan_state = SCAN_INIT;
 
 	InitScanStateInternal((ScanState *)state, (Plan *)node, estate, eflags, true /* initCurrentRelation */);
-	
-	initGpmonPktForTableScan((Plan *)node, &state->ss.ps.gpmon_pkt, estate);
 
 	return state;
 }
@@ -48,14 +46,8 @@ ExecTableScan(TableScanState *node)
 	}
 
 	TupleTableSlot *slot = ExecTableScanRelation(scanState);
-	
-	if (!TupIsNull(slot))
-	{
-		Gpmon_Incr_Rows_Out(GpmonPktFromTableScanState(node));
-		CheckSendPlanStateGpmonPkt(&scanState->ps);
-	}
-	
-	else if (!scanState->ps.delayEagerFree)
+
+	if (TupIsNull(slot) && !scanState->ps.delayEagerFree)
 	{
 		EndTableScanRelation(scanState);
 	}
@@ -79,8 +71,6 @@ void
 ExecTableReScan(TableScanState *node, ExprContext *exprCtxt)
 {
 	ReScanRelation((ScanState *)node);
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 void
@@ -93,26 +83,12 @@ void
 ExecTableRestrPos(TableScanState *node)
 {
 	RestrPosScanRelation((ScanState *)node);
-
-	CheckSendPlanStateGpmonPkt(&node->ss.ps);
 }
 
 int
 ExecCountSlotsTableScan(TableScan *node)
 {
 	return TABLE_SCAN_NSLOTS;
-}
-
-void
-initGpmonPktForTableScan(Plan *planNode, gpmon_packet_t *gpmon_pkt, EState *estate)
-{
-	Assert(planNode != NULL && gpmon_pkt != NULL);
-	Assert(IsA(planNode, TableScan) ||
-		   IsA(planNode, SeqScan) ||
-		   IsA(planNode, AppendOnlyScan) ||
-		   IsA(planNode, AOCSScan));
-
-	InitPlanNodeGpmonPkt(planNode, gpmon_pkt, estate);
 }
 
 void

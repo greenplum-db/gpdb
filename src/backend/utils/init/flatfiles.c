@@ -23,7 +23,7 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.32 2008/03/26 21:10:39 alvherre Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/init/flatfiles.c,v 1.35 2008/06/12 09:12:31 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,7 @@
 #include "access/transam.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "access/xlogutils.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_auth_members.h"
 #include "catalog/pg_auth_time_constraint.h"
@@ -49,7 +50,9 @@
 #include "catalog/pg_tablespace.h"
 #include "commands/trigger.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
 #include "storage/fd.h"
+#include "storage/lmgr.h"
 #include "storage/pmsignal.h"
 #include "utils/builtins.h"
 #include "utils/flatfiles.h"
@@ -483,6 +486,10 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 		}
 		else
 		{
+			/* GPDB_84_MERGE_FIXME: ensure that the following block is
+			 * equivalent to the upstream code that follows it, then remove the
+			 * block */
+#if 0
 			/*
 			 * rolvaliduntil is timestamptz, which we assume is double
 			 * alignment and pass-by-value.
@@ -490,6 +497,15 @@ load_auth_entries(Relation rel_authid, auth_entry **auth_info_out, int *total_ro
 			off = att_align_nominal(off, 'd');
 			datum = fetch_att(tp + off, true, sizeof(TimestampTz));
 			auth_info[curr_role].rolvaliduntil = DatumGetCString(DirectFunctionCall1(timestamptz_out, datum));
+#endif
+			TimestampTz *rvup;
+
+			/* Assume timestamptz has double alignment */
+			off = att_align_nominal(off, 'd');
+			rvup = (TimestampTz *) (tp + off);
+			auth_info[curr_role].rolvaliduntil =
+				DatumGetCString(DirectFunctionCall1(timestamptz_out,
+												TimestampTzGetDatum(*rvup)));
 		}
 
 		/*
@@ -936,12 +952,6 @@ BuildFlatFiles(bool database_only)
 				rel_authmem,
 				rel_authtime;
 
-	/*
-	 * We don't have any hope of running a real relcache, but we can use the
-	 * same fake-relcache facility that WAL replay uses.
-	 */
-	XLogInitRelationCache();
-
 	/* Need a resowner to keep the heapam and buffer code happy */
 	owner = ResourceOwnerCreate(NULL, "BuildFlatFiles");
 	CurrentResourceOwner = owner;
@@ -951,9 +961,15 @@ BuildFlatFiles(bool database_only)
 	rnode.dbNode = 0;
 	rnode.relNode = DatabaseRelationId;
 
-	/* No locking is needed because no one else is alive yet */
-	rel_db = XLogOpenRelation(rnode);
+	/*
+	 * We don't have any hope of running a real relcache, but we can use the
+	 * same fake-relcache facility that WAL replay uses.
+	 *
+	 * No locking is needed because no one else is alive yet.
+	 */
+	rel_db = CreateFakeRelcacheEntry(rnode);
 	write_database_file(rel_db, true);
+	FreeFakeRelcacheEntry(rel_db);
 
 	if (!database_only)
 	{
@@ -961,13 +977,13 @@ BuildFlatFiles(bool database_only)
 		rnode.spcNode = GLOBALTABLESPACE_OID;
 		rnode.dbNode = 0;
 		rnode.relNode = AuthIdRelationId;
-		rel_authid = XLogOpenRelation(rnode);
+		rel_authid = CreateFakeRelcacheEntry(rnode);
 
 		/* hard-wired path to pg_auth_members */
 		rnode.spcNode = GLOBALTABLESPACE_OID;
 		rnode.dbNode = 0;
 		rnode.relNode = AuthMemRelationId;
-		rel_authmem = XLogOpenRelation(rnode);
+		rel_authmem = CreateFakeRelcacheEntry(rnode);
 
 		write_auth_file(rel_authid, rel_authmem);
 
@@ -975,15 +991,17 @@ BuildFlatFiles(bool database_only)
 		rnode.spcNode = GLOBALTABLESPACE_OID;
 		rnode.dbNode = 0;
 		rnode.relNode = AuthTimeConstraintRelationId;
-		rel_authtime = XLogOpenRelation(rnode);
+		rel_authtime = CreateFakeRelcacheEntry(rnode);
 
 		write_auth_time_file(rel_authid, rel_authtime);
+
+		FreeFakeRelcacheEntry(rel_authid);
+		FreeFakeRelcacheEntry(rel_authmem);
+		FreeFakeRelcacheEntry(rel_authtime);
 	}
 
 	CurrentResourceOwner = NULL;
 	ResourceOwnerDelete(owner);
-
-	XLogCloseRelationCache();
 }
 
 

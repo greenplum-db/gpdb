@@ -7,16 +7,18 @@
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/catalog.h,v 1.38 2008/01/01 19:45:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/catalog.h,v 1.40 2008/06/19 00:46:06 alvherre Exp $
  *
  *-------------------------------------------------------------------------
  */
 #ifndef CATALOG_H
 #define CATALOG_H
 
-#include "catalog/oid_dispatch.h"
+#include "catalog/pg_class.h"
+#include "storage/relfilenode.h"
 #include "utils/relcache.h"
-#include "utils/rel.h"
+
+#include "catalog/oid_dispatch.h"
 
 
 extern char *relpath(RelFileNode rnode);
@@ -41,7 +43,8 @@ extern char* GetReservedPrefix(const char *name);
 extern bool IsSharedRelation(Oid relationId);
 
 extern Oid	GetNewOid(Relation relation);
-extern Oid	GetNewOidWithIndex(Relation relation, Relation indexrel);
+extern Oid	GetNewOidWithIndex(Relation relation, Oid indexId,
+							   AttrNumber oidcolumn);
 extern Oid	GetNewSequenceRelationOid(Relation relation);
 extern Oid GetNewRelFileNode(Oid reltablespace, bool relisshared);
 

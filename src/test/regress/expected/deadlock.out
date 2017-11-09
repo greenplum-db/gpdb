@@ -42,5 +42,6 @@ select count(*) from gp_dist_random('l') left outer join gp_dist_random('r') on 
 (1 row)
 
 drop schema if exists deadlock cascade;
-NOTICE:  drop cascades to table r
-NOTICE:  drop cascades to table l
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to table l
+drop cascades to table r
