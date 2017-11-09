@@ -27,6 +27,7 @@ groups:
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
+  - test_gpdb_debian_package
   - icw_planner_ictcp_centos6
   - icw_gporca_centos6_gpos_memory
   - QP_memory-accounting
@@ -120,6 +121,7 @@ groups:
   - icw_planner_centos6
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
+  - test_gpdb_debian_package
   - icw_gporca_centos6
   - icw_gporca_centos7
   - icw_gporca_sles11
@@ -334,6 +336,12 @@ resources:
     repository: pivotaldata/ubuntu-gpdb-dev
     tag: '16.04_gcc_6_3'
 
+- name: ubuntu16.04
+  type: docker-image
+  source:
+    repository: ubuntu
+    tag: '16.04'
+
 - name: centos-mingw
   type: docker-image
   source:
@@ -446,6 +454,15 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     regexp: deliverables/greenplum-loaders-(.*)-aix7_ppc_64.zip
+
+- name: deb_package_ubuntu16
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{deb_package_ubuntu16_versioned_file}}
 
 - name: singlecluster-HDP
   type: s3
@@ -657,6 +674,7 @@ jobs:
     - get: centos-gpdb-dev-7
     - get: centos-mingw
     - get: ubuntu-gpdb-dev-16
+    - get: ubuntu16.04
 
 - name: compile_gpdb_centos6
   plan:
@@ -822,17 +840,28 @@ jobs:
       trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
       passed: [gate_compile_start]
-  - task: compile_gpdb_and_orca
-    file: gpdb_src/concourse/tasks/compile_gpdb_and_orca_with_conan.yml
-    params:
-      BINTRAY_REMOTE: {{bintray_remote}}
-      BINTRAY_REMOTE_URL: {{bintray_remote_url}}
-  - put: compiled_bits_gpdb_with_orca_conan_ubuntu16
-    params:
-      file: {{compiled_bits_gpdb_with_orca_conan_ubuntu16_versioned_file}}
-  - put: compiled_bits_orca_with_conan_ubuntu16
-    params:
-      file: {{compiled_bits_orca_with_conan_ubuntu16_versioned_file}}
+    - get: ubuntu16.04
+      passed:
+      - gate_compile_start
+  - aggregate:
+    - task: compile_gpdb_and_orca
+      file: gpdb_src/concourse/tasks/compile_gpdb_and_orca_with_conan.yml
+      params:
+        BINTRAY_REMOTE: {{bintray_remote}}
+        BINTRAY_REMOTE_URL: {{bintray_remote_url}}
+    - task: deb_create_package
+      file: gpdb_src/concourse/tasks/deb_create_package.yml
+      image: ubuntu16.04
+  - aggregate:
+    - put: compiled_bits_gpdb_with_orca_conan_ubuntu16
+      params:
+        file: {{compiled_bits_gpdb_with_orca_conan_ubuntu16_versioned_file}}
+    - put: compiled_bits_orca_with_conan_ubuntu16
+      params:
+        file: {{compiled_bits_orca_with_conan_ubuntu16_versioned_file}}
+    - put: deb_package_ubuntu16
+      params:
+        file: {{deb_package_ubuntu16_versioned_file}}
 
 - name: compile_gpdb_windows_cl
   plan:
@@ -992,6 +1021,9 @@ jobs:
     - get: compiled_bits_orca_with_conan_ubuntu16
       passed:
       - compile_gpdb_and_orca_conan_ubuntu16
+    - get: deb_package_ubuntu16
+      passed:
+      - compile_gpdb_and_orca_conan_ubuntu16
 ################# Compile Group End
 
 ################# ICW Group
@@ -1021,6 +1053,9 @@ jobs:
         passed:
         - gate_compile_end
       - get: compiled_bits_orca_with_conan_ubuntu16
+        passed:
+        - gate_compile_end
+      - get: deb_package_ubuntu16
         passed:
         - gate_compile_end
 
@@ -1140,6 +1175,23 @@ jobs:
     file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
     params:
       TEST_SUITE: "icw"
+
+- name: test_gpdb_debian_package
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_icw_start
+    - get: ubuntu16.04
+    - get: deb_package_ubuntu16
+      passed:
+      - gate_icw_start
+      trigger: true
+  - task: test_gpdb_deb_package
+    file: gpdb_src/concourse/tasks/deb_test_package.yml
+    image: ubuntu16.04
+    params:
+      DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
 
 - name: icw_gporca_centos6_gpos_memory
   plan:
@@ -3028,6 +3080,7 @@ jobs:
     - icw_gporca_sles11
     - icw_planner_ubuntu16
     - icw_gporca_conan_ubuntu16
+    - test_gpdb_debian_package
     - icw_planner_ictcp_centos6
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6

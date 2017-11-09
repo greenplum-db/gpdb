@@ -1,0 +1,47 @@
+Source: greenplum-db-oss
+Maintainer: Pivotal Containerization Team <gpdb-bosh@pivotal.io>
+Section: database
+Build-Depends: debhelper (>= 9),
+    bison,
+    ccache,
+    cmake,
+    flex,
+    gcc,
+    g++,
+    libapr1-dev,
+    libbz2-dev,
+    libcurl4-gnutls-dev,
+    libevent-dev,
+    libkrb5-dev,
+    libperl-dev,
+    libreadline-dev,
+    libssl-dev,
+    libxerces-c-dev,
+    libxml2-dev,
+    python-dev,
+    python-setuptools,
+    wget,
+    zlib1g-dev
+
+Package: greenplum-db-oss
+Architecture: any
+Depends: bison,
+    curl,
+    inetutils-ping,
+    libbz2-dev,
+    libcurl4-gnutls-dev,
+    libreadline-dev,
+    libxerces-c-dev,
+    libxml2-dev,
+    locales,
+    net-tools,
+    openssh-client,
+    openssh-server,
+    openssl,
+    python-lockfile,
+    python-paramiko,
+    python-psutil,
+    python-yaml,
+    python-pip,
+    zlib1g-dev
+Description: Greenplum Database is an advanced, fully featured, open source data platform.  It provides powerful and rapid analytics on petabyte scale data volumes.  Uniquely geared toward big data analytics, Greenplum Database is powered by the world’s most advanced cost-based query optimizer delivering high analytical query performance on large data volumes.The Greenplum Database® project is released under the Apache 2 license.  We want to thank all our current community contributors and all who are interested in new contributions.  For the Greenplum Database community, no contribution is too small, we encourage all types of contributions.
