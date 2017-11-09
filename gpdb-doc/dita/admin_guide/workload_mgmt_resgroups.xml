@@ -530,7 +530,7 @@ gpstart
     <topic id="topic23" xml:lang="en">
       <title id="iz152239">Viewing Resource Group Query Status and CPU/Memory Usage</title>
       <body>
-        <p>The <codeph><xref href="../ref_guide/system_catalogs/gp_resgroup_status.xml" type="topic"
+        <p>The <codeph><xref href="../ref_guide/gp_toolkit.xml#topic31x" type="topic"
               format="dita"/></codeph>
           <codeph>gp_toolkit</codeph> system view enables you to view the status and activity of a
           resource group. The view displays the number of running and queued transactions. It also
