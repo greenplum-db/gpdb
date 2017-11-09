@@ -62,8 +62,10 @@
                 <topicref href="client_utilities/vacuumdb.xml"/>
             </topicref>
         </topicref>
-        <topicref href="orafce_ref.xml"/>
-        <topicref href="dblink.xml"/>
-        <topicref href="hstore.xml"/>
+        <topicref href="contrib-modules.xml">
+            <topicref href="dblink.xml"/>
+            <topicref href="hstore.xml"/>
+            <topicref href="orafce_ref.xml"/>
+        </topicref>
     </topicref>
 </map>
