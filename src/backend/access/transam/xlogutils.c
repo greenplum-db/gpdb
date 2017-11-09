@@ -319,30 +319,31 @@ XLogReadBuffer(RelFileNode rnode, BlockNumber blkno, bool init)
 	 * filesystem loses an inode during a crash.  Better to write the data
 	 * until we are actually told to delete the file.)
 	 */
-	/* GPDB_84_MERGE_FIXME: this block of code (brought over from
-	 * XLogOpenRelation) was marked to be removed.  Can we? Is it related to
-	 * filerep? */
-	// UNDONE: Can't remove this block of code yet until boot time calls to this routine are analyzed...
-	{
-		MirrorDataLossTrackingState mirrorDataLossTrackingState;
-		int64 mirrorDataLossTrackingSessionNum;
-		bool mirrorDataLossOccurred;
+
+	/*
+	 * The multi-pass WAL replay during crash recovery in GPDB, guided by
+	 * persistent tables, may make the following smgrcreate() call redundant.
+	 * The problem is shortlived, it will go away once filerep and persistent
+	 * tables are removed.  To be clear, that the smgrcreate() call exists in
+	 * upstream.
+	 */
+	MirrorDataLossTrackingState mirrorDataLossTrackingState;
+	int64 mirrorDataLossTrackingSessionNum;
+	bool mirrorDataLossOccurred;
 		
-		// UNDONE: What about the persistent rel files table???
-		// UNDONE: This condition should not occur anymore.
-		// UNDONE: segmentFileNum and AO?
-		mirrorDataLossTrackingState = 
-					FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
-													&mirrorDataLossTrackingSessionNum);
-		smgrcreate(
-			smgr, 
-			/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-			mirrorDataLossTrackingState,
-			mirrorDataLossTrackingSessionNum,
-			/* ignoreAlreadyExists */ true,
-			&mirrorDataLossOccurred);
-		
-	}
+	// UNDONE: What about the persistent rel files table???
+	// UNDONE: This condition should not occur anymore.
+	// UNDONE: segmentFileNum and AO?
+	mirrorDataLossTrackingState =
+		FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
+			&mirrorDataLossTrackingSessionNum);
+	smgrcreate(
+		smgr,
+		/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
+		mirrorDataLossTrackingState,
+		mirrorDataLossTrackingSessionNum,
+		/* ignoreAlreadyExists */ true,
+		&mirrorDataLossOccurred);
 
 	lastblock = smgrnblocks(smgr);
 

@@ -2482,6 +2482,15 @@ ao_insert_replay(XLogRecord *record)
 	seek_offset = FileSeek(file, xlrec->target.offset, SEEK_SET);
 	if (seek_offset != xlrec->target.offset)
 	{
+		/*
+		 * FIXME: If non-existance of the segment file is handled by recording
+		 * it as invalid using XLogAOSegmentFile, should this case also behave
+		 * that way?  See GitHub issue
+		 *    https://github.com/greenplum-db/gpdb/issues/3843
+		 *
+		 * Note: heap redo routines treat a non existant file and a non
+		 * existant block within a file as identical.  See XLogReadBuffer.
+		 */
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("seeked to position " INT64_FORMAT " but expected to seek to position " INT64_FORMAT " in file \"%s\": %m",
