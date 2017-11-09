@@ -12,16 +12,16 @@ Before working with HBase table data, ensure that you have:
 
 - Installed and configured an HBase client on each Greenplum Database segment host. Refer to [Installing and Configuring Clients for PXF](client_instcfg.html).
 
-- Initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Starting PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
+- Initialized PXF on your Greenplum Database segment hosts, and started PXF on each host. See [Configuring, Initializing, and Starting PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
 
 ## <a id="hbase_primer"></a>HBase Primer
 
 This topic assumes that you have a basic understanding of the following HBase concepts:
  
-- An HBase column includes two components - a column family and a column qualifier. These components are delimited by a colon `:` character, \<column-family\>:\<column-qualifier\>.
+- An HBase column includes two components: a column family and a column qualifier. These components are delimited by a colon `:` character, \<column-family\>:\<column-qualifier\>.
 - An HBase row consists of a row key and one or more column values. A row key is a unique identifier for the table row.
 - An HBase table is a multi-dimensional map comprised of one or more columns and rows of data. You specify the complete set of column families when you create an HBase table.
-- An HBase cell is comprised of a row (column family, column qualifier, column value) and a timestamp. The column value and timestamp in a given cell represents a version of the value.
+- An HBase cell is comprised of a row (column family, column qualifier, column value) and a timestamp. The column value and timestamp in a given cell represent a version of the value.
 
 For detailed information about HBase, refer to the [Apache HBase Reference Guide](http://hbase.apache.org/book.html).
 
@@ -105,7 +105,7 @@ HBase connector-specific keywords and values used in the [CREATE EXTERNAL TABLE]
 
 ## <a id="datatypemapping"></a>Data Type Mapping
 
-HBase is byte-based; it stores all data types as an array of bytes. To represent HBase data in Greenplum Database, select a data type for your Greenplum column that matches the underlying content of the HBase column qualifier values.
+HBase is byte-based; it stores all data types as an array of bytes. To represent HBase data in Greenplum Database, select a data type for your Greenplum Database column that matches the underlying content of the HBase column qualifier values.
 
 **Note**: PXF does not support complex objects.
 
@@ -116,7 +116,7 @@ You can create a Greenplum Database external table that references all, or a sub
 
 ### <a id="directmapping" class="no-quick-link"></a>Direct Mapping
 
-When you use direct mapping to map Greenplum Database external table column names to HBase qualifiers, you specify column-family-qualified HBase qualifier names as quoted values. The PXF HBase connector passes these column names as-is to HBase it reads the table data.
+When you use direct mapping to map Greenplum Database external table column names to HBase qualifiers, you specify column-family-qualified HBase qualifier names as quoted values. The PXF HBase connector passes these column names as-is to HBase as it reads the table data.
 
 For example, to create a Greenplum Database external table accessing the following data:
 
@@ -143,13 +143,13 @@ hbase(main):> create 'pxflookup', 'mapping'
 
 While the direct mapping method is fast and intuitive, using indirect mapping allows you to create a shorter, character-based alias for the HBase \<column-family\>:\<column-qualifier\> name. This better reconciles HBase column qualifier names with Greenplum Database due to the following:
 
--   HBase qualifier names can be very long. Greenplum Database has a 63 character limit on column name size.
+-   HBase qualifier names can be very long. Greenplum Database has a 63 character limit on the size of the column name.
 -   HBase qualifier names can include binary or non-printable characters. Greenplum Database column names are character-based.
 
 When populating the `pxflookup` HBase table, add rows to the table such that the:
 
 - row key specifies the HBase table name
-- `mapping` column family qualifier identifies the Greenplum Database column name and the value identifies the HBase `<column-family>:<column-qualifier>` for which you are creating the alias.
+- `mapping` column family qualifier identifies the Greenplum Database column name, and the value identifies the HBase `<column-family>:<column-qualifier>` for which you are creating the alias.
 
 For example, to use indirect mapping with the `order_info` table, add these entries to the `pxflookup` table:
 
@@ -158,7 +158,7 @@ hbase(main):> put 'pxflookup', 'order_info', 'mapping:pname', 'product:name'
 hbase(main):> put 'pxflookup', 'order_info', 'mapping:zip', 'shipping_info:zipcode'
 ```
 
-and create a Greenplum Database external table using the following `CREATE EXTERNAL TABLE` syntax:
+Then create a Greenplum Database external table using the following `CREATE EXTERNAL TABLE` syntax:
 
 ``` sql
 CREATE EXTERNAL TABLE orderinfo_map (pname varchar, zip int)
