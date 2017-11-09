@@ -66,6 +66,7 @@
             <topicref href="dblink.xml"/>
             <topicref href="hstore.xml"/>
             <topicref href="orafce_ref.xml"/>
+            <topicref href="passwordcheck.xml"/>
         </topicref>
     </topicref>
 </map>
