@@ -20,7 +20,7 @@ Perform this procedure before you upgrade to a new version of Greenplum Database
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/hawq/greenplum_path.sh
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Create a text file that lists your Greenplum Database segment hosts, one host name per line. Ensure that there are no blank lines or extra spaces in the file. For example, a file named `seghostfile` may include:
@@ -57,7 +57,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/hawq/greenplum_path.sh
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. If you updated the `pxf-env.sh` configuration file in your *PXF.from* installation, re-apply those changes to the file, and copy the updated `pxf-env.sh` to all segment hosts. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
@@ -69,7 +69,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     
 3. Initialize PXF on each segment host as described in [Initializing PXF](cfginitstart_pxf.html#init_pxf).
 
-4. If you updated any of the `pxf-profiles.xml`, `pxf-log4j.properties`, or `pxf-public.classpath` configuration files in your *PXF.from* installation, re-apply those changes and copy the updated file(s) to all segment hosts. Refer to Step 2 above for a similar `gpscp` command.
+4. If you updated any of the `pxf-profiles.xml`, `pxf-log4j.properties`, `pxf-private.classpath`, or `pxf-public.classpath` configuration files in your *PXF.from* installation, re-apply those changes and copy the updated file(s) to all segment hosts. Refer to Step 2 above for a similar `gpscp` command.
 
 5. If you added additional JAR files to your *PXF.from* installation, copy them to the corresponding directory in your *PXF.to* installation **on each segment host**.
  
