@@ -3529,9 +3529,9 @@ struct config_int ConfigureNamesInt_gp[] =
 		&statement_mem,
 #ifdef USE_ASSERT_CHECKING
 		/** Allow lower values for testing */
-		128000, 50, INT_MAX, gpvars_assign_statement_mem, NULL
+		128000, 50, INT_MAX, NULL, NULL
 #else
-		128000, 1000, INT_MAX, gpvars_assign_statement_mem, NULL
+		128000, 1000, INT_MAX, NULL, NULL
 #endif
 	},
 

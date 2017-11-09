@@ -1056,8 +1056,6 @@ extern const char *gpvars_assign_gp_resgroup_memory_policy(const char *newval, b
 
 extern const char *gpvars_show_gp_resgroup_memory_policy(void);
 
-extern bool gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute__((unused)) );
-
 extern void increment_command_count(void);
 
 /*
