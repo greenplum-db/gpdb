@@ -2,6 +2,7 @@ DROP ROLE IF EXISTS role_dumpinfo_test;
 DROP ROLE IF EXISTS role_permission;
 -- start_ignore
 DROP RESOURCE GROUP rg_dumpinfo_test;
+DROP LANGUAGE IF EXISTS plpythonu;
 -- end_ignore
 
 CREATE LANGUAGE plpythonu;
@@ -89,3 +90,4 @@ SET ROLE gpadmin;
 DROP ROLE role_dumpinfo_test;
 DROP ROLE role_permission;
 DROP RESOURCE GROUP rg_dumpinfo_test;
+DROP LANGUAGE plpythonu CASCADE;
