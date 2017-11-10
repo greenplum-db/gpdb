@@ -1,5 +1,5 @@
 [requires]
-gpbackup/0.5.17+dev@gpdb/devel
+gpbackup/1.0.0-alpha.1@gpdb/stable
 
 [imports]
 bin, * -> gpbackup/bin
