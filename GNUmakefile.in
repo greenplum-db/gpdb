@@ -173,6 +173,9 @@ ifeq ($(enable_segwalrep), yes)
 	do \
 		gpcheckcat -R $$test -A;\
 	done;
+
+	# Verify the filesystem objects are consistent between primary and mirror
+	$(MAKE) -C contrib/gp_replica_check installcheck
 else
 	gpcheckcat -A
 	$(MAKE) -C contrib/pg_upgrade check

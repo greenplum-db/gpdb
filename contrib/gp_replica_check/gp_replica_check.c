@@ -172,11 +172,15 @@ compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *ren
 
 	primaryFile = PathNameOpenFile(primaryfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
 	if (primaryFile < 0)
+	{
+		elog(WARNING, "Unable to open file %s", primaryfilepath);
 		return false;
+	}
 
 	mirrorFile = PathNameOpenFile(mirrorfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
 	if (mirrorFile < 0)
 	{
+		elog(WARNING, "Unable to open file %s", mirrorfilepath);
 		FileClose(primaryFile);
 		return false;
 	}
