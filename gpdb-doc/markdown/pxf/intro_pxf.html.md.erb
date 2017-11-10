@@ -2,11 +2,11 @@
 title: PXF Architecture
 ---
     
-The PXF Extension Framework is composed of a Greenplum Database protocol and associated C client library plus a Java service. These components work together to provide you access to data stored in sources external to your Greenplum Database deployment. 
+The Greenplum Platform Extension Framework (PXF) is composed of a Greenplum Database protocol and associated C client library plus a Java service. These components work together to provide you access to data stored in sources external to your Greenplum Database deployment. 
 
 Your Greenplum Database deployment consists of a master node and multiple segment hosts. After you configure and initialize PXF, you start a single PXF JVM process on each Greenplum Database segment host. This PXF process (referred to as the PXF agent) spawns a thread for each segment instance on a segment host that participates in a query against a PXF external table. Multiple segment instances on each segment host communicate via a REST API with PXF in parallel, and the PXF agents on multiple hosts communicate with HDFS in parallel.
 
-<span class="figtitleprefix">Figure: </span>PXF Extension Framework Architecture
+<span class="figtitleprefix">Figure: </span>PXF Architecture
 
 <img src="graphics/pxfarch.png" class="image" />
 

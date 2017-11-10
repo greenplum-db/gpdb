@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF Extension Framework implements a protocol named `pxf` that you can use to create an external table that references data in an external data store. The PXF Extension Framework protocol and Java service are packaged as a Greenplum Database extension.
+The Greenplum Platform Extension Framework (PXF) implements a protocol named `pxf` that you can use to create an external table that references data in an external data store. The PXF protocol and Java service are packaged as a Greenplum Database extension.
 
 You must enable the PXF extension in each database in which you plan to use the framework to access external data. You must also explicitly `GRANT` permission to the `pxf` protocol to those users/roles who require access.
 
@@ -127,7 +127,7 @@ A PXF profile definition includes the name of the profile, a description, and th
 
 ## <a id="profile-dependencies"></a>PXF JAR Dependencies
 
-You use the PXF Extension Framework to access data stored on external systems. Depending upon the external data source, this access may require that you install and/or configure additional components or services for the external data source. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
+You use PXF to access data stored on external systems. Depending upon the external data source, this access may require that you install and/or configure additional components or services for the external data source. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
 
 PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` and `$GPHOME/pxf/conf/pxf-public.classpath` configuration files identify PXF JAR dependencies. In most cases, PXF manages the `pxf-private.classpath` file, adding entries as necessary based on your Hadoop distribution and optional Hive and HBase client installations. 
 
