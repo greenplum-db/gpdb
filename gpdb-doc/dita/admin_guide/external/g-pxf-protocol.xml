@@ -2,11 +2,11 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_z5g_l5h_kr1313">
   <title>pxf:// Protocol</title>
-  <shortdesc>You can use the PXF Extension Framework <codeph>pxf://</codeph> protocol to access data on external HDFS and Hive systems.</shortdesc>
+  <shortdesc>You can use the Greenplum Platform Extension Framework (PXF) <codeph>pxf://</codeph> protocol to access data on external HDFS and Hive systems.</shortdesc>
   <body>
-    <p>The PXF Extension Framework <codeph>pxf</codeph> protocol is packaged as a Greenplum Database extension. The <codeph>pxf</codeph> protocol supports reading HDFS file and Hive table data. The protocol does not yet support writing to HDFS or Hive data stores.</p>
+    <p>The PXF <codeph>pxf</codeph> protocol is packaged as a Greenplum Database extension. The <codeph>pxf</codeph> protocol supports reading HDFS file and Hive table data. The protocol does not yet support writing to HDFS or Hive data stores.</p>
     <p>When you use the <codeph>pxf</codeph> protocol to query HDFS and Hive systems, you specify the HDFS file or Hive table you want to access. PXF requests the data from HDFS and delivers the relevant portions in parallel to each Greenplum Database segment instance serving the query.</p>
-    <p>You must explicitly initialize and start the PXF Extension Framework before you can use the <codeph>pxf</codeph> protocol to read external data. You must also grant permissions to the <codeph>pxf</codeph> protocol and enable PXF in each database in which you want to create external tables to access external data.</p>
-    <p>For detailed information about configuring and using the PXF Extension Framework and the <codeph>pxf</codeph> protocol, refer to <xref href="pxf-overview.xml" type="topic">Accessing HDFS and Hive Data with PXF</xref>.</p>
+    <p>You must explicitly initialize and start PXF before you can use the <codeph>pxf</codeph> protocol to read external data. You must also grant permissions to the <codeph>pxf</codeph> protocol and enable PXF in each database in which you want to create external tables to access external data.</p>
+    <p>For detailed information about configuring and using PXF and the <codeph>pxf</codeph> protocol, refer to <xref href="pxf-overview.xml" type="topic">Accessing External Data with PXF</xref>.</p>
   </body>
 </topic>
