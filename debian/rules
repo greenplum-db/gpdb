@@ -15,9 +15,9 @@ orca:
 	# instead, download it and install it using python
 	wget https://bootstrap.pypa.io/get-pip.py
 	python get-pip.py
-	pip install conan
+	PATH="/usr/local/bin:$(PATH)" pip install conan
 	debian/set_conan_remote.bash
-	cd depends && conan install --build
+	cd depends && PATH="/usr/local/bin:$(PATH)" conan install --build
 
 override_dh_auto_configure: orca
 	./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=${PWD}/debian/tmp
@@ -38,7 +38,17 @@ override_dh_auto_install:
 	rm -rf debian/tmp/lib/python/paramiko
 	rm -rf debian/tmp/lib/python/psutil
 	rm -rf debian/tmp/lib/python/yaml
-	# TODO Remove fault injector and other packages
+	# Remove fault injector and other packages
+#	pushd ${PWD}/debian/tmp && \
+#	while read file; do \
+#      if [ -f "$file" ]; then\
+#    	echo "Deleting: $file";\
+#    	rm "$file";\
+#      else\
+#    	echo "File $file does not exist. Skipping." ; \
+#      fi
+#    done < "${PWD}/gpAux/releng/NON_PRODUCTION_FILES.txt"
+#    popd
 
 override_dh_auto_clean:
     # since we need orca to build before configuring, and configuring happens before dh_auto_clean,
