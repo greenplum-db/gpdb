@@ -4896,7 +4896,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 */
 	bufferPoolBulkLoad = 
 		(relstorage_is_buffer_pool(relstorage) ?
-									!XLogIsNeeded() : false);
+									XLogIsNeeded() : false);
 
 	/* Now we can actually create the new relation */
 	intoRelationId = heap_create_with_catalog(intoName,
@@ -4969,7 +4969,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	/*
 	 * We can skip WAL-logging the insertions, unless PITR is in use.
 	 */
-	myState->use_wal = XLogArchivingActive();
+	myState->use_wal = XLogIsNeeded();
 	myState->rel = intoRelationDesc;
 
 	/* use_wal off requires rd_targblock be initially invalid */
