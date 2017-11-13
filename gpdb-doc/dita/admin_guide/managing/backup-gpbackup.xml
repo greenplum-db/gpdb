@@ -47,9 +47,9 @@
             restore the backup set.</li>
           <li>You cannot back up and restore multi-level partitioned tables that have been altered
             by exchanging a leaf child partition with a readable external table. You can back up and
-            restore single-level partitioned tables when a leaf child partition is readable external
-            table if the partitions are named partitions (<codeph>partitionname</codeph> in the
-              <codeph>pg_partitions</codeph> system view is not <codeph>NULL</codeph> for the
+            restore single-level partitioned tables when a leaf child partition is a readable
+            external table if the partitions are named partitions (<codeph>partitionname</codeph> in
+            the <codeph>pg_partitions</codeph> system view is not <codeph>NULL</codeph> for the
             partition).</li>
           <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
             requires a distinct timestamp.</li>
