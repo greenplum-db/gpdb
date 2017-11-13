@@ -4626,60 +4626,31 @@ coerce_partition_value(Node *node, Oid typid, int32 typmod,
 								COERCION_EXPLICIT,
 								COERCE_IMPLICIT_CAST,
 								-1);
+
 	/* MPP-3626: better error message */
 	if (!out)
 	{
-		char		exprBuf[10000];
-		char	   *specTName = "";
-		char	   *pparam = "";
-		StringInfoData sid;
+		char		   *pparam;
+		StringInfoData	sid;
 
-/*		elog(ERROR, "cannot coerce partition parameter to column type"); */
+		initStringInfo(&sid);
 
-		switch (partype)
-		{
-			case PARTTYP_HASH:
-				specTName = "HASH ";
-				break;
-			case PARTTYP_LIST:
-				specTName = "LIST ";
-				break;
-			case PARTTYP_RANGE:
-				specTName = "RANGE ";
-				break;
-			default:
-				break;
-		}
-
-		/* try to build a printable string of the node value */
+		/*
+		 * Try to build a printable string of the node value.
+		 * deparse_expression() returns a palloc'd buffer from a StringInfo so
+		 * we can safely inspect it.
+		 */
 		pparam = deparse_expression(node,
-									deparse_context_for("partition",
-														InvalidOid),
+									deparse_context_for("partition", InvalidOid),
 									false, false);
-		if (pparam)
-		{
-			initStringInfo(&sid);
-			appendStringInfo(&sid, "(");
-			appendStringInfoString(&sid, pparam);
-			appendStringInfo(&sid, ") ");
-
-			pfree(pparam);
-
-			exprBuf[0] = '\0';
-			snprintf(exprBuf, sizeof(exprBuf), "%s", sid.data);
-			pfree(sid.data);
-
-			pparam = exprBuf;
-		}
-		else
-			pparam = "";
+		if (strlen(pparam) != 0)
+			appendStringInfo(&sid, "(%s) ", pparam);
 
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("cannot coerce %spartition parameter %s"
-						"to column type (%s)",
-						specTName,
-						pparam,
+				 errmsg("cannot coerce %s partition parameter %s to column type (%s)",
+						(partype == PARTTYP_LIST) ? "LIST" : "RANGE",
+						sid.data,
 						format_type_be(typid))));
 	}
 
