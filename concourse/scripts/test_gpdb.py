@@ -37,6 +37,24 @@ def copy_output():
     shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
     shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
 
+
+def configure():
+    p_env = os.environ.copy()
+    p_env['LD_LIBRARY_PATH'] = '/usr/local/gpdb/lib'
+    p_env['CFLAGS'] = '-I/usr/local/gpdb/include'
+    p_env['CPPFLAGS'] = '-I/usr/local/gpdb/include'
+    p_env['LDFLAGS'] = '-L/usr/local/gpdb/lib'
+    return subprocess.call(["./configure",
+                            "--enable-mapreduce",
+                            "--with-gssapi",
+                            "--with-perl",
+                            "--with-libxml",
+                            "--with-python",
+                            "--disable-gpcloud",
+                            "--with-libs=/usr/local/gpdb/lib"
+                            "--with-includes=/usr/local/gpdb/include"
+                            "--prefix=/usr/local/gpdb"], env=p_env, shell=True, cwd="gpdb_src")
+
 def main():
     parser = optparse.OptionParser()
     parser.add_option("--build_type", dest="build_type", default="RELEASE")
@@ -51,14 +69,14 @@ def main():
     elif options.mode == 'planner':
         ciCommon = GpBuild(options.mode)
 
-    for dependency in args:
-        status = ciCommon.install_dependency(dependency)
-        if status:
-            return status
+    # for dependency in args:
+    #     status = ciCommon.install_dependency(dependency)
+    #     if status:
+    #         return status
     status = install_gpdb(options.gpdb_name)
     if status:
         return status
-    status = ciCommon.configure()
+    status = configure()
     if status:
         return status
     status = create_gpadmin_user()
