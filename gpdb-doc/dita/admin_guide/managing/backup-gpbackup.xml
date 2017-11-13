@@ -45,6 +45,12 @@
             inherited from the new parent table. In this case, <codeph>gpbackup</codeph> backs up
             conflicting <codeph>CREATE INDEX</codeph> statements, which causes an error when you
             restore the backup set.</li>
+          <li>You cannot back up and restore multi-level partitioned tables that have been altered
+            by exchanging a leaf child partition with a readable external table. You can back up and
+            restore single-level partitioned tables when a leaf child partition is readable external
+            table if the partitions are named partitions (<codeph>partitionname</codeph> in the
+              <codeph>pg_partitions</codeph> system view is not <codeph>NULL</codeph> for the
+            partition).</li>
           <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
             requires a distinct timestamp.</li>
           <li>Database object filtering is currently limited to schemas and tables.</li>
@@ -323,7 +329,7 @@ public.sales_1_prt_dec17</codeblock>
         in the directory
           <filepath>$MASTER_DATA_DIRECTORY/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you
         specify a custom backup directory, this same file path is created as a subdirectory of the
-        backup directory.  The following table describes the names and contents of the metadata and
+        backup directory. The following table describes the names and contents of the metadata and
         supporting files.<table frame="all" rowsep="1" colsep="1" id="table_nrz_4gj_tbb">
           <title>gpbackup Metadata Files (master)</title>
           <tgroup cols="2">
