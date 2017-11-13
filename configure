@@ -14835,8 +14835,8 @@ else
 int
 main ()
 {
-struct timeval *tp;
-struct timezone *tzp;
+struct timeval *tp = 0;
+struct timezone *tzp = 0;
 gettimeofday(tp,tzp);
   ;
   return 0;
@@ -16356,11 +16356,11 @@ else
 int
 main ()
 {
-uid_t uid;
-struct passwd *space;
-char *buf;
-size_t bufsize;
-struct passwd **result;
+uid_t uid = 0;
+struct passwd *space = 0;
+char *buf = 0;
+size_t bufsize = 0;
+struct passwd **result = 0;
 getpwuid_r(uid, space, buf, bufsize, result);
   ;
   return 0;
