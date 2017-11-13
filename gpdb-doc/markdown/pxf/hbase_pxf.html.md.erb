@@ -6,6 +6,8 @@ Apache HBase is a distributed, versioned, non-relational database on Hadoop.
 
 The PXF HBase connector reads data stored in an HBase table. This section describes how to use the PXF HBase connector.
 
+**Note**: PXF does not yet support predicate pushdown to HBase.
+
 ## <a id="hbase_prereq"></a>Prerequisites
 
 Before working with HBase table data, ensure that you have:
@@ -107,7 +109,7 @@ HBase connector-specific keywords and values used in the [CREATE EXTERNAL TABLE]
 
 HBase is byte-based; it stores all data types as an array of bytes. To represent HBase data in Greenplum Database, select a data type for your Greenplum Database column that matches the underlying content of the HBase column qualifier values.
 
-**Note**: PXF does not support complex objects.
+**Note**: PXF does not support complex HBase objects.
 
 
 ## <a id="columnmapping"></a>Column Mapping
