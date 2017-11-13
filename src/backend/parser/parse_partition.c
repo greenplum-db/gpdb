@@ -2464,7 +2464,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 				validate_list_partition(vstate);
 				break;
 
-			case PARTTYP_REFERENCE:		/* for future use... */
 			default:
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),

@@ -1746,8 +1746,7 @@ typedef struct FkConstraint
 typedef enum PartitionByType			/* types of Partitions */
 {
 	PARTTYP_RANGE,
-	PARTTYP_LIST,
-	PARTTYP_REFERENCE /* for future use... */
+	PARTTYP_LIST
 } PartitionByType;
 
 typedef enum PartitionByVerbosity		/* control Partition messaging */
