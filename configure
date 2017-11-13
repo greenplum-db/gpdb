@@ -16092,12 +16092,17 @@ $as_echo_n "checking for the pthreads library -l$flag... " >&6; }
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <pthread.h>
+                     static void routine(void *a) { a = 0; }
+                     static void *start_routine(void *a) { return a; }
 int
 main ()
 {
-pthread_t th; pthread_join(th, 0);
-                     pthread_attr_init(0); pthread_cleanup_push(0, 0);
-                     pthread_create(0,0,0,0); pthread_cleanup_pop(0);
+pthread_t th; pthread_attr_t attr;
+                     pthread_create(&th, 0, start_routine, 0);
+                     pthread_join(th, 0);
+                     pthread_attr_init(&attr);
+                     pthread_cleanup_push(routine, 0);
+                     pthread_cleanup_pop(0);
   ;
   return 0;
 }
