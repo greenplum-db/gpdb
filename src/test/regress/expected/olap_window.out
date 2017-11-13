@@ -8309,6 +8309,8 @@ i | sum
 6 |   6
 (4 rows)
 
+-- Should not push-down predicates referring to window functions in the subquery which is the source for the insertion
+insert into window_preds select k from ( select row_number() over() as k from window_preds union all select row_number() over() as k from window_preds) as t where k = 1;
 -- MPP-19964
 drop table if exists customers_test;
 NOTICE:  table "customers_test" does not exist, skipping

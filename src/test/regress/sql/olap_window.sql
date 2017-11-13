@@ -1605,6 +1605,9 @@ select * from (select i,j,k, sum(i) over(partition by i,j), row_number() over(pa
 select * from (select i,j,k, sum(i) over(partition by i,j), row_number() over(partition by i,j), rank() over(partition by i,j order by i) from window_preds) as foo where i+j>2 order by sum;
 select * from (select i, sum(i) over(partition by j) from (select i,j, row_number() over(partition by i) from window_preds) as bar) as foo where i>2 order by sum;
 
+-- Should not push-down predicates referring to window functions in the subquery which is the source for the insertion
+insert into window_preds select k from ( select row_number() over() as k from window_preds union all select row_number() over() as k from window_preds) as t where k = 1;
+
 -- MPP-19964
 drop table if exists customers_test;
 create table customers_test(name text, device_model text, device_id integer, ppp numeric) distributed by (device_id);
