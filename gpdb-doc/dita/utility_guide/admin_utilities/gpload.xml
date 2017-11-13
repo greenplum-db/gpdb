@@ -803,9 +803,9 @@ OUTPUT:
    - TABLE: public.'"MyTable"'</codeblock>
             <p>If the YAML control file contains the <codeph>ERROR_TABLE</codeph> element that was
                 available in Greenplum Database 4.3.x, <codeph>gpload</codeph> logs a warning
-                stating that <codeph>ERROR_TABLE</codeph> is not supported the and handles load
-                errors as if the <codeph>LOG_ERRORS</codeph> and <codeph>REUSE_TABLE</codeph>
-                elements are set to <codeph>true</codeph>. Rows with formatting errors are logged
+                stating that <codeph>ERROR_TABLE</codeph> is not supported, and load errors are
+                handled as if the <codeph>LOG_ERRORS</codeph> and <codeph>REUSE_TABLE</codeph>
+                elements were set to <codeph>true</codeph>. Rows with formatting errors are logged
                 internally when running in single row error isolation mode.</p>
         </section>
         <section id="section10">
