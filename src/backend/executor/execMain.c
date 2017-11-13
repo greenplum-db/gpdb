@@ -5208,7 +5208,7 @@ intorel_receive(TupleTableSlot *slot, DestReceiver *self)
 		heap_insert(into_rel,
 					tuple,
 					myState->estate->es_output_cid,
-					myState->is_bulkload,
+					!myState->is_bulkload,
 					false, /* never any point in using FSM */
 					GetCurrentTransactionId());
 
