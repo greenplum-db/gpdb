@@ -7235,9 +7235,6 @@ partition_rule_def_worker(PartitionRule *rule, Node *start,
 
 	switch (part->parkind)
 	{
-		case 'h':
-			break;
-
 		case 'r':
 			{
 				/* MPP-7232: Note: distinguish "(start) rule" and
@@ -7426,7 +7423,6 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 
 		switch (pn->part->parkind)
 		{
-			case 'h': appendStringInfoString(head->buf, "HASH"); break;
 			case 'l': appendStringInfoString(head->buf, "LIST"); break;
 			case 'r': appendStringInfoString(head->buf, "RANGE"); break;
 			default:
@@ -7449,10 +7445,6 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 		}
 		appendStringInfoChar(head->buf, ')');
 
-		if (pn->part->parkind == 'h')
-			appendStringInfo(head->buf, " %sPARTITIONS %i ",
-							 pn->part->parlevel > 0 ? "SUB" : "",
-							 list_length(pn->rules));
 		(*leveldone)++;
 	}
 
@@ -7465,16 +7457,6 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 	foreach(lc, pn->rules)
 	{
 		rule = lfirst(lc);
-
-		/*
-		 * If we're doing hash partitioning and the first rule doesn't have
-		 * a parname, none will so break out.
-		 *
-		 * XXX: when we support hash, do need to dump these in case they have
-		 * children.
-		 */
-		if (pn->part->parkind == 'h' && !strlen(rule->parname))
-			break;
 
 		/*
 		 * RANGE partitions are the interesting case. If the partitions use
@@ -7632,7 +7614,7 @@ get_partition_recursive(PartitionNode *pn, deparse_context *head,
 		} /* end if range */
 
 		/*
-		 * Note that this handles the LIST and HASH cases too */
+		 * Note that this handles the LIST case too */
 		write_out_rule(rule, pn, rule->parrangestart,
 					   rule->parrangeend,
 					   rule,
@@ -7838,7 +7820,7 @@ pg_get_partition_template_def_worker(Oid relid, int prettyFlags,
 					partIdStr = partidsid.data;
 				}
 					break;
-				default: /* including hash for now... */
+				default:
 					elog(ERROR, "unrecognized partitioning kind '%c'",
 						 pn->part->parkind);
 					break;

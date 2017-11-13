@@ -2747,7 +2747,6 @@ _outPartitionBy(StringInfo str, PartitionBy *node)
 	WRITE_ENUM_FIELD(partType, PartitionByType);
 	WRITE_NODE_FIELD(keys);
 	WRITE_NODE_FIELD(keyopclass);
-	WRITE_NODE_FIELD(partNum);
 	WRITE_NODE_FIELD(subPart);
 	WRITE_NODE_FIELD(partSpec);
 	WRITE_INT_FIELD(partDepth);

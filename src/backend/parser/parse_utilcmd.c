@@ -3153,11 +3153,8 @@ transformAlterTableStmt(AlterTableStmt *stmt, const char *queryString)
 				/* CDB: Partitioned Tables */
             case AT_PartAlter:			/* Alter */
             case AT_PartAdd:			/* Add */
-            case AT_PartCoalesce:		/* Coalesce */
             case AT_PartDrop:			/* Drop */
             case AT_PartExchange:		/* Exchange */
-            case AT_PartMerge:			/* Merge */
-            case AT_PartModify:			/* Modify */
             case AT_PartRename:			/* Rename */
             case AT_PartSetTemplate:	/* Set Subpartition Template */
             case AT_PartSplit:			/* Split */
@@ -4233,11 +4230,8 @@ transformAlterTable_all_PartitionStmt(
 	{
 		case AT_PartAdd:				/* Add */
 		case AT_PartSetTemplate:		/* Set Subpartn Template */
-		case AT_PartCoalesce:			/* Coalesce */
 		case AT_PartDrop:				/* Drop */
 		case AT_PartExchange:			/* Exchange */
-		case AT_PartMerge:				/* Merge */
-		case AT_PartModify:				/* Modify */
 		case AT_PartRename:				/* Rename */
 		case AT_PartTruncate:			/* Truncate */
 		case AT_PartSplit:				/* Split */

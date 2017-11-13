@@ -229,8 +229,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 %type <node>	alter_table_partition_cmd alter_table_partition_id_spec
 				alter_table_partition_id_spec_with_opt_default
 %type <list>	part_values_clause multi_spec_value_list part_values_single
-%type <ival>	opt_table_partition_exchange_validate partition_hash_keyword
-				partition_coalesce_keyword
+%type <ival>	opt_table_partition_exchange_validate
 
 %type <dbehavior>	opt_drop_behavior
 
@@ -442,7 +441,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				tab_part_val tab_part_val_no_paran
 %type <node>	list_subparts opt_list_subparts
 %type <list>	opt_check_option
-%type <node>	OptTabPartitionsNumber OptTabSubPartitionsNumber 
 %type <node>	OptTabPartitionSpec OptTabSubPartitionSpec TabSubPartitionTemplate      /* PartitionSpec */
 %type <list>	TabPartitionElemList TabSubPartitionElemList /* list of PartitionElem */
 
@@ -450,16 +448,13 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <node> 	TabPartitionBoundarySpec OptTabPartitionBoundarySpec  /* PartitionBoundSpec */
 %type <list> 	TabPartitionBoundarySpecValList
-				OptTabPartitionBoundarySpecValList
 				part_values_or_spec_list
 %type <node> 	TabPartitionBoundarySpecStart TabPartitionBoundarySpecEnd
 				OptTabPartitionBoundarySpecEnd        /* PartitionRangeItem */
 %type <node> 	OptTabPartitionBoundarySpecEvery      /* PartitionRangeItem */
 %type <str> 	TabPartitionNameDecl TabSubPartitionNameDecl
 				TabPartitionDefaultNameDecl TabSubPartitionDefaultNameDecl 
-%type <node>	opt_table_partition_merge_into
-				table_partition_modify
-				opt_table_partition_split_into
+%type <node>	opt_table_partition_split_into
 %type <boolean>	opt_comma
 %type <node> 	OptTabPartitionStorageAttr
 %type <node>	opt_time
@@ -603,7 +598,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	LIST LOG_P
 
-	MASTER MEDIAN MERGE MISSING MODIFIES MODIFY
+	MASTER MEDIAN MISSING MODIFIES
 
 	NEWLINE NOCREATEEXTTABLE NOOVERCOMMIT
 
@@ -617,7 +612,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 	RANDOMLY RANGE READABLE READS REF REJECT_P RESOURCE
 	ROLLUP ROOTPARTITION
 
-	SCATTER SEGMENT SEGMENTS SETS SPLIT SQL SUBPARTITION SUBPARTITIONS
+	SCATTER SEGMENT SEGMENTS SETS SPLIT SQL SUBPARTITION
 
 	THRESHOLD TIES
 
@@ -800,13 +795,11 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc MEMORY_LIMIT
 			%nonassoc MEMORY_SHARED_QUOTA
 			%nonassoc MEMORY_SPILL_RATIO
-			%nonassoc MERGE
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
 			%nonassoc MISSING
 			%nonassoc MODE
 			%nonassoc MODIFIES
-			%nonassoc MODIFY
 			%nonassoc MONTH_P
 			%nonassoc MOVE
 			%nonassoc NAME_P
@@ -896,7 +889,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 			%nonassoc STDOUT
 			%nonassoc STORAGE
 			%nonassoc SUBPARTITION
-			%nonassoc SUBPARTITIONS
 			%nonassoc SUPERUSER_P
 			%nonassoc SYSID
 			%nonassoc SYSTEM_P
@@ -2569,111 +2561,6 @@ opt_table_partition_split_into:
 			| /*EMPTY*/						{ $$ = NULL; /* default */ }
 		;
 
-opt_table_partition_merge_into: 
-			INTO 
-            alter_table_partition_id_spec_with_opt_default
-				{
-                    /* re-use alterpartitioncmd struct here... */
-					AlterPartitionCmd *pc = makeNode(AlterPartitionCmd);
-                    pc->partid = (Node *)$2;
-                    pc->arg1 = NULL;
-                    pc->arg2 = NULL;
-                    pc->location = @2;
-					$$ = (Node *)pc;
-                }
-
-			| /*EMPTY*/						{ $$ = NULL; /* default */ }
-		;
-
-table_partition_modify:
-			TabPartitionBoundarySpecStart
-            OptTabPartitionBoundarySpecEnd
-            OptTabPartitionBoundarySpecEvery  
-				{
-                    /* re-use alterpartitioncmd struct here... */
-					AlterPartitionCmd  *pc = makeNode(AlterPartitionCmd);
-                    PartitionBoundSpec *bs = makeNode(PartitionBoundSpec); 
-                    PartitionElem      *n  = makeNode(PartitionElem); 
-
-                    n->partName  = NULL;
-                    n->boundSpec = (Node *)bs;
-                    n->subSpec   = NULL;
-                    n->location  = @1;
-                    n->isDefault = 0;
-                    n->storeAttr = NULL;
-                    n->AddPartDesc = NULL;
-
-                    bs->partStart = $1;
-                    bs->partEnd   = $2;
-                    bs->partEvery = $3;
-                    bs->everyGenList = NIL; 
-                    bs->pWithTnameStr = NULL;
-                    bs->location  = @1;
-
-                    pc->partid = NULL;
-                    pc->arg1 = (Node *)makeDefElem("START", NULL);
-                    pc->arg2 = (Node *)n;
-                    pc->location = @1;
-					$$ = (Node *)pc;
-                }
-			| TabPartitionBoundarySpecEnd
-              OptTabPartitionBoundarySpecEvery	
-				{
-                    /* re-use alterpartitioncmd struct here... */
-					AlterPartitionCmd  *pc = makeNode(AlterPartitionCmd);
-                    PartitionBoundSpec *bs = makeNode(PartitionBoundSpec); 
-                    PartitionElem      *n  = makeNode(PartitionElem); 
-
-                    n->partName  = NULL;
-                    n->boundSpec = (Node *)bs;
-                    n->subSpec   = NULL;
-                    n->location  = @1;
-                    n->isDefault = 0;
-                    n->storeAttr = NULL;
-                    n->AddPartDesc = NULL;
-
-                    bs->partStart = NULL;
-                    bs->partEnd   = $1;
-                    bs->partEvery = $2;
-                    bs->everyGenList = NIL; 
-                    bs->pWithTnameStr = NULL;
-                    bs->location  = @1;
-
-                    pc->partid = NULL;
-                    pc->arg1 = (Node *)makeDefElem("END", NULL);
-                    pc->arg2 = (Node *)n;
-                    pc->location = @1;
-					$$ = (Node *)pc;
-                }
-			| add_drop part_values_clause
-				{
-                    /* re-use alterpartitioncmd struct here... */
-					AlterPartitionCmd   *pc = makeNode(AlterPartitionCmd);
-                    PartitionValuesSpec *vs = makeNode(PartitionValuesSpec); 
-                    PartitionElem       *n  = makeNode(PartitionElem); 
-
-                    n->partName  = NULL;
-                    n->boundSpec = (Node *)vs;
-                    n->subSpec   = NULL;
-                    n->location  = @1;
-                    n->isDefault = 0;
-                    n->storeAttr = NULL;
-                    n->AddPartDesc = NULL;
-
-                    vs->partValues = $2;
-                    vs->location  = @2;
-
-                    pc->partid = NULL;
-                    if (1 == $1)
-                        pc->arg1 = (Node *)makeDefElem("ADD", NULL);
-                    else
-                        pc->arg1 = (Node *)makeDefElem("DROP", NULL);
-                    pc->arg2 = (Node *)n;
-                    pc->location = @2;
-					$$ = (Node *)pc;
-                }
-		;
-
 opt_table_partition_exchange_validate: 
 			WITH VALIDATION						{ $$ = +1; }
 			| WITHOUT VALIDATION				{ $$ = +0; }
@@ -2896,46 +2783,6 @@ alter_table_partition_cmd:
 					n->def = (Node *)pc;
 					$$ = (Node *)n;
 				}
-			| partition_coalesce_keyword PARTITION 	 
-				{
-					AlterPartitionId  *pid = makeNode(AlterPartitionId);
-					AlterPartitionCmd *pc = makeNode(AlterPartitionCmd);
-					AlterTableCmd *n = makeNode(AlterTableCmd);
-
-                    pid->idtype = AT_AP_IDNone;
-                    pid->location = @2;
-                    pid->partiddef = NULL;
-
-                    pc->partid = (Node *)pid;
-                    pc->arg1 = NULL;
-                    pc->arg2 = NULL;
-                    pc->location = @2;
-
-					n->subtype = AT_PartCoalesce;
-					n->def = (Node *)pc;
-					$$ = (Node *)n;
-				}
-			| partition_coalesce_keyword PARTITION 
-            alter_table_partition_id_spec 
-				{
-					AlterPartitionId *pid = (AlterPartitionId *)$3;
-					AlterPartitionCmd *pc = makeNode(AlterPartitionCmd);
-					AlterTableCmd *n = makeNode(AlterTableCmd);
-
-                    if (pid->idtype != AT_AP_IDName)
-						ereport(ERROR,
-								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("Can only COALESCE a partition by name")));
-
-                    pc->partid = (Node *)pid;
-                    pc->arg1 = NULL;
-                    pc->arg2 = NULL;
-                    pc->location = @3;
-
-					n->subtype = AT_PartCoalesce;
-					n->def = (Node *)pc;
-					$$ = (Node *)n;
-				}
 			| DROP PARTITION IF_P EXISTS 
             alter_table_partition_id_spec	 
             opt_drop_behavior
@@ -3063,49 +2910,6 @@ alter_table_partition_cmd:
                     pc->location = @5;
 
 					n->subtype = AT_PartExchange;
-					n->def = (Node *)pc;
-					$$ = (Node *)n;
-				}
-			| MERGE 
-            alter_table_partition_id_spec_with_opt_default ','
-            alter_table_partition_id_spec_with_opt_default
-            opt_table_partition_merge_into	
-				{
-					AlterPartitionCmd *pc = makeNode(AlterPartitionCmd);
-					AlterTableCmd *n = makeNode(AlterTableCmd);
-
-                    if (!gp_enable_hash_partitioned_tables)
-                    {
-                        yyerror("syntax error");
-                    }
-
-                    pc->partid = (Node *)$2;
-                    pc->arg1 = (Node *)$4;
-                    pc->arg2 = (Node *)$5;
-                    pc->location = @4;
-
-					n->subtype = AT_PartMerge;
-					n->def = (Node *)pc;
-					$$ = (Node *)n;
-				}
-			| MODIFY 
-            alter_table_partition_id_spec_with_opt_default
-            table_partition_modify
-				{
-					AlterPartitionCmd *pc = makeNode(AlterPartitionCmd);
-					AlterTableCmd *n = makeNode(AlterTableCmd);
-
-                    if (!gp_enable_hash_partitioned_tables)
-                    {
-                        yyerror("syntax error");
-                    }
-
-                    pc->partid = (Node *)$2;
-                    pc->arg1 = (Node *)$3;
-                    pc->arg2 = NULL;
-                    pc->location = @3;
-
-					n->subtype = AT_PartModify;
 					n->def = (Node *)pc;
 					$$ = (Node *)n;
 				}
@@ -4064,44 +3868,6 @@ OptTabPartitionStorageAttr: WITH definition TABLESPACE name
 			| /*EMPTY*/ { $$ = NULL; }
 		;
 
-OptTabPartitionsNumber: PARTITIONS IntegerOnly 		
-				{
-                    /* special rule to disable the use of HASH partitioned
-                       tables with nice syntax error.  
-
-                       XXX XXX REMOVE when HASH partitions are in
-                       production 
-                    */
-
-                    if (!gp_enable_hash_partitioned_tables)
-                    {
-                        yyerror("syntax error");
-                    }
-                    
-                    $$ = makeAConst($2, @2); 
-				}
-			| /*EMPTY*/								{ $$ = NULL; }
-		;
-
-OptTabSubPartitionsNumber: SUBPARTITIONS IntegerOnly 
-				{
-                    /* special rule to disable the use of HASH partitioned
-                       tables with nice syntax error.  
-
-                       XXX XXX REMOVE when HASH partitions are in
-                       production 
-                    */
-
-                    if (!gp_enable_hash_partitioned_tables)
-                    {
-                        yyerror("syntax error");
-                    }
-                    
-                    $$ = makeAConst($2, @2); 
-                }
-			| /*EMPTY*/								{ $$ = NULL; }
-		;
-
 OptTabPartitionSpec: '(' TabPartitionElemList ')'
 				{
                         PartitionSpec *n = makeNode(PartitionSpec); 
@@ -4156,17 +3922,10 @@ tab_part_val: tab_part_val_no_paran { $$ = $1; }
 				}
 		; 
 		
-
 TabPartitionBoundarySpecValList:
               tab_part_val				{ $$ = list_make1($1); }
 			| TabPartitionBoundarySpecValList ',' 
               tab_part_val				{ $$ = lappend($1, $3); }
-		;
-
-/* only optional for START and END in ALTER TABLE...MODIFY PARTITION */
-OptTabPartitionBoundarySpecValList:
-            TabPartitionBoundarySpecValList			{ $$ = $1; }
-			| /*EMPTY*/								{ $$ = NULL; }
 		;
 
 OptTabPartitionRangeInclusive:
@@ -4177,7 +3936,7 @@ OptTabPartitionRangeInclusive:
 
 TabPartitionBoundarySpecStart:
 			START 
-            '(' OptTabPartitionBoundarySpecValList ')' 
+            '(' TabPartitionBoundarySpecValList ')' 
 			OptTabPartitionRangeInclusive
 				{
                         PartitionRangeItem *n = makeNode(PartitionRangeItem); 
@@ -4193,7 +3952,7 @@ TabPartitionBoundarySpecStart:
 
 TabPartitionBoundarySpecEnd:
 			END_P 
-            '(' OptTabPartitionBoundarySpecValList ')' 
+            '(' TabPartitionBoundarySpecValList ')' 
 			OptTabPartitionRangeInclusive
 				{
                         PartitionRangeItem *n = makeNode(PartitionRangeItem); 
@@ -4450,67 +4209,22 @@ TabSubPartitionDefaultNameDecl: DEFAULT SUBPARTITION PartitionColId
 				}
 		;
 
-partition_hash_keyword: 			HASH
-				{
-                    /* special rule to disable the use of HASH partitioned
-                       tables with nice syntax error.  
-
-                       XXX XXX REMOVE when HASH partitions are in
-                       production 
-                    */
-
-                    if (!gp_enable_hash_partitioned_tables)
-                        ereport(ERROR,
-                            (errcode(ERRCODE_SYNTAX_ERROR),
-                             errmsg("PARTITION BY must specify RANGE or LIST")));
-
-                    $$ = 1;
-                }
-		;
-
-partition_coalesce_keyword: 			COALESCE
-				{
-                    /* special rule to disable the use of HASH partitioned
-                       tables with nice syntax error.  
-
-                       XXX XXX REMOVE when HASH partitions are in
-                       production 
-                    */
-
-                    if (!gp_enable_hash_partitioned_tables)
-                    {
-                        yyerror("syntax error");
-                    }
-
-                    $$ = 1;
-                }
-		;
-
 TabPartitionByType:
 			RANGE 				{ $$ = PARTTYP_RANGE; }
-			| partition_hash_keyword { $$ = PARTTYP_HASH; }
 			| LIST				{ $$ = PARTTYP_LIST; }
 			| /*EMPTY*/
 				{
 					$$ = PARTTYP_RANGE; 
 
-                    if (!gp_enable_hash_partitioned_tables)
-                        ereport(ERROR,
-                            (errcode(ERRCODE_SYNTAX_ERROR),
-                             errmsg("PARTITION BY must specify RANGE or LIST")));
-                    else
-                        ereport(ERROR,
-                            (errcode(ERRCODE_SYNTAX_ERROR),
-                             errmsg("PARTITION BY must specify RANGE, HASH, or LIST")));
-
-                    
+					ereport(ERROR,
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("PARTITION BY must specify RANGE or LIST")));
 				}
 		;
 
 OptTabPartitionBy:
 			PARTITION BY 
             TabPartitionByType '(' columnList ')' 
-            OptTabPartitionsNumber 
 			opt_list_subparts
             OptTabPartitionSpec						
 				{
@@ -4518,13 +4232,12 @@ OptTabPartitionBy:
 						
 					n->partType = $3;
 					n->keys     = $5; 
-					n->partNum  = $7;
-					n->subPart  = $8;
+					n->subPart  = $7;
 					if (PointerIsValid(n->subPart) &&
 						!IsA(n->subPart, PartitionBy))
 						yyerror("syntax error");
 
-					n->partSpec = $9;
+					n->partSpec = $8;
 					n->partDepth = 0;
 					n->partQuiet = PART_VERBO_NODISTRO;
 					n->location  = @3;
@@ -4607,12 +4320,10 @@ list_subparts: TabSubPartitionBy { $$ = $1; }
 TabSubPartitionBy:
 			SUBPARTITION BY 
             TabPartitionByType '(' columnList ')' 
-            OptTabSubPartitionsNumber 
 				{
                         PartitionBy *n = makeNode(PartitionBy); 
                         n->partType = $3;
                         n->keys     = $5; 
-                        n->partNum  = $7;
                         n->subPart  = NULL;
                         n->partSpec = NULL;
                         n->partDepth = 0;
@@ -13210,13 +12921,11 @@ unreserved_keyword:
 			| MEMORY_LIMIT
 			| MEMORY_SHARED_QUOTA
 			| MEMORY_SPILL_RATIO
-			| MERGE
 			| MINUTE_P
 			| MINVALUE
 			| MISSING
 			| MODE
 			| MODIFIES
-			| MODIFY
 			| MONTH_P
 			| MOVE
 			| NAME_P
@@ -13320,7 +13029,6 @@ unreserved_keyword:
 			| STRICT_P
 			| STRIP_P
 			| SUBPARTITION
-			| SUBPARTITIONS
 			| SUPERUSER_P
 			| SYSID
 			| SYSTEM_P
@@ -13510,12 +13218,10 @@ PartitionIdentKeyword: ABORT_P
 			| MEMORY_LIMIT
 			| MEMORY_SHARED_QUOTA
 			| MEMORY_SPILL_RATIO
-			| MERGE
 			| MINVALUE
 			| MISSING
 			| MODE
 			| MODIFIES
-			| MODIFY
 			| MOVE
 			| NAME_P
 			| NAMES
@@ -13600,7 +13306,6 @@ PartitionIdentKeyword: ABORT_P
 			| STORAGE
 			| STRICT_P
 			| SUBPARTITION
-			| SUBPARTITIONS
 			| SUPERUSER_P
 			| SYSID
 			| SYSTEM_P

@@ -993,13 +993,13 @@ check_covering_aoindex(migratorContext *ctx)
 /*
  *	check_hash_partition_usage()
  *	8.3 -> 8.4
- *	The hash algorithm was changed in 8.4, so upgrading is impossible. This
- *	is basically the same problem as with hash indexes in PostgreSQL. Hash
- *	partitioning was not officially supported in GPDB5, but better check just
- *	in case someone has found the hidden GUC and used them anyway.
  *
- *	XXX: Actually, pg_dump outright fails on hash partitioned tables, so we
- *	cannot support hash partitioned tables even on a same-version upgrade.
+ *	Hash partitioning was never officially supported in GPDB5 and was removed
+ *	in GPDB6, but better check just in case someone has found the hidden GUC
+ *	and used them anyway.
+ *
+ *	The hash algorithm was changed in 8.4, so upgrading is impossible anyway.
+ *	This is basically the same problem as with hash indexes in PostgreSQL.
  */
 void
 check_hash_partition_usage(migratorContext *ctx, Cluster whichCluster)

@@ -1,19 +1,30 @@
 set enable_partition_rules = false;
-set gp_enable_hash_partitioned_tables = true;
 
 -- Check multi level partition COPY
-CREATE TABLE REGION (
-                    R_REGIONKEY INTEGER not null,
-                    R_NAME CHAR(25),
-                    R_COMMENT VARCHAR(152)
-                    )
-distributed by (r_regionkey)
-partition by hash (r_regionkey) partitions 1
-subpartition by hash (r_name) subpartitions 3
-,subpartition by hash (r_comment) subpartitions 2
+create table region
 (
-partition p1(subpartition sp1,subpartition sp2,subpartition sp3)
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+)
+distributed by (r_regionkey)
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition africa values ('AFRICA'),
+	subpartition america values ('AMERICA'),
+	subpartition asia values ('ASIA'),
+	subpartition europe values ('EUROPE'),
+	subpartition mideast values ('MIDDLE EAST'),
+	subpartition australia values ('AUSTRALIA'),
+	subpartition antarctica values ('ANTARCTICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
 );
+
 create unique index region_pkey on region(r_regionkey);
 
 copy region from stdin with delimiter '|';
@@ -36,21 +47,13 @@ select * from region where r_regionkey = 5;
 select * from region where r_regionkey = 6;
 
 -- Test indexes with insert
--- start_matchsubs
---
--- # Note: insert is different partition depending on endianness
---
--- m/ERROR:.*duplicate key violates unique constraint.*region_1_prt_p1_2_prt_sp\d+_3_prt_1_pkey/
--- s/sp\d+/SPSOMETHING/
---
--- end_matchsubs
 
-insert into region values(7, 'abc', 'def');
+insert into region values(7, 'AUSTRALIA', 'def');
 select * from region where r_regionkey = '7';
 -- test duplicate key. We shouldn't really allow primary keys on partitioned
 -- tables since we cannot enforce them. But since this insert maps to a
 -- single definitive partition, we can detect it.
-insert into region values(7, 'abc', 'def');
+insert into region values(7, 'AUSTRALIA', 'def');
 
 drop table region;
 
@@ -370,19 +373,19 @@ drop table foo_p;
 drop table bar_p;
 
 -- exchange default partition is not allowed (single level)
-drop table if exists d;
+drop table if exists dex;
 drop table if exists exh_abc;
-create table d (i int,  j int) partition by range(j)
+create table dex (i int,  j int) partition by range(j)
 (partition a start (1) end(10), partition b start(11) end(20),
 default partition abc);
 
-create table exh_abc (like d);
-alter table d exchange default partition with table exh_abc;
+create table exh_abc (like dex);
+alter table dex exchange default partition with table exh_abc;
 set gp_enable_exchange_default_partition = on;
-alter table d exchange default partition with table exh_abc;
+alter table dex exchange default partition with table exh_abc;
 reset gp_enable_exchange_default_partition;
 
-drop table d;
+drop table dex;
 drop table exh_abc;
 
 -- exchange default partition is not allowed (multi level)
@@ -723,17 +726,6 @@ partitionboundary from pg_partitions where
 tablename = 'partsupp';
 select pg_get_partition_def('partsupp'::regclass, true);
 drop table partsupp;
-set gp_enable_hash_partitioned_tables = true;
-create table i5 (i int, g text) partition by list(g) 
-  subpartition by hash(i) subpartitions 3
-(partition p1 values('foo', 'bar'), partition p2 values('foz')
-);
-select tablename, partitiontablename,
-partitionboundary from pg_partitions where
-tablename = 'i5';
-select pg_get_partition_def('i5'::regclass, true);
-drop table i5;
-set gp_enable_hash_partitioned_tables = false;
 
 -- ALTER TABLE ALTER PARTITION tests
 
@@ -2740,59 +2732,6 @@ alter table cov1 set subpartition template (values (1,2) (values (2,3)));
 
 -- create and drop default partition in one statement!
 alter table cov1 add default partition def1, drop default partition;
-
-drop table cov1;
-
-set gp_enable_hash_partitioned_tables = true;
--- not hash
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-partitions 3
-(
-start (1) end (10) every (1)
-);
-
--- not hash
-create table cov1 (a int, b int, d int)
-distributed by (a)
-partition by range (b)
-subpartition by range (d)
-subpartitions 3
-(
-start (1) end (10) every (1)
-);
-
-set gp_enable_hash_partitioned_tables = false;
--- not hash
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-partitions 3
-(
-start (1) end (10) every (1)
-);
-
--- not hash
-create table cov1 (a int, b int, d int)
-distributed by (a)
-partition by range (b)
-subpartition by range (d)
-subpartitions 3
-(
-start (1) end (10) every (1)
-);
-
--- legal?!?! 
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-(
-start () end(2)  
-);
-
--- no start, just end!
-select * from pg_partitions where tablename = 'cov1';
 
 drop table cov1;
 

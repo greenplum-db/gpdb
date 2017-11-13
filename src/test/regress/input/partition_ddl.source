@@ -1,61 +1,10 @@
 set client_min_messages = WARNING;
-set gp_enable_hash_partitioned_tables = true;
 set timezone to '+07:00';
 DROP SCHEMA IF EXISTS partition_ddl2 CASCADE;
 CREATE SCHEMA partition_ddl2;
 set search_path to partition_ddl2;
--- MPP-2977
-create table catcheck(a int, b date, d int, e numeric, f float, g numeric, h char, i text) distributed by (a) partition by hash(b) partitions 2 subpartition by hash(d) subpartitions 2, subpartition by hash(e) subpartitions 2, subpartition by hash(f) subpartitions 2, subpartition by hash(h) subpartitions 2;
-
-\d catcheck*
-
-drop table catcheck cascade;
-set enable_partition_rules=off;
-create table T1_PART(C4 int, C5 int, C6 int, C7 int, C8 int, C9 int, C10 int, C11 int, C12 int, C13 int, C14 int) 
-partition by range(c4)
-subpartition by hash(c11) subpartitions 8
-(
-	partition p1 start(1) end(4),
-	partition p2 end(10)
-);
-
-INSERT INTO T1_PART VALUES ( 2, 5, 1, 4, 5, 4, 5, 1, 5, 4, 1 );
-INSERT INTO T1_PART VALUES ( 1, 3, 1, 1, 5, 2, 4, 4, 3, 3, 1 );
-INSERT INTO T1_PART VALUES ( 1, 3, 1, 4, 1, 3, 2, 3, 1, 3, 5 );
-INSERT INTO T1_PART VALUES ( 2, 5, 2, 5, 2, 2, 4, 1, 2, 5, 1 );
-INSERT INTO T1_PART VALUES ( 3, 5, 3, 4, 1, 2, 3, 5, 3, 1, 1 );
-INSERT INTO T1_PART VALUES ( 2, 4, 4, 4, 2, 5, 2, 2, 3, 2, 5 );
-INSERT INTO T1_PART VALUES ( 4, 5, 5, 3, 1, 3, 1, 1, 3, 5, 1 );
-INSERT INTO T1_PART VALUES ( 3, 4, 1, 3, 5, 3, 1, 4, 2, 1, 3 );
-INSERT INTO T1_PART VALUES ( 4, 2, 3, 5, 4, 5, 5, 5, 1, 4, 4 );
-INSERT INTO T1_PART VALUES ( 1, 2, 4, 4, 3, 2, 3, 1, 5, 1, 3 );
-
-SELECT * FROM T1_PART;
-
-DROP TABLE T1_PART CASCADE;
 set enable_partition_rules = off;
 
-create table hashtest (i int) distributed by (i) partition by hash(i) partitions 2;
-insert into hashtest values(NULL);
-insert into hashtest values(NULL);
-
-select * from hashtest;
-
-drop table hashtest;
-
-create table hashtest (i int, j int) distributed by (i) partition by hash(i, j) partitions 2;
-insert into hashtest values(NULL, NULL);
-insert into hashtest values(NULL, 1);
-insert into hashtest values(1, 1);
-insert into hashtest values(1, NULL);
-
-select * from hashtest order by 1,2;
-
-select * from hashtest_1_prt_1 order by 1,2;
-
-select * from hashtest_1_prt_2 order by 1,2;
-
-drop table hashtest;
 CREATE TABLE rank (
                 id int,
                 rank int,
@@ -94,38 +43,6 @@ select * from ggg order by 1,2;
 select * from ggg_1_prt_bb order by 1,2;
 
 drop table ggg;
-create table mpp3053_test(a int, b int) partition by range(a) subpartition by hash (b) subpartitions 2(partition p1 end(5), partition p2 end(10));
-insert into mpp3053_test values(5,5);
-select * from mpp3053_test;
-drop table mpp3053_test;
-CREATE TABLE MPP3083_REGION (
-                    R_REGIONKEY INTEGER,
-                    R_NAME CHAR(25),
-                    R_COMMENT VARCHAR(152),
-                    primary key (r_regionkey, r_name, r_comment)
-                    )
-partition by hash (r_name) partitions 1
-subpartition by hash (r_regionkey)
-,subpartition by hash (r_comment) subpartitions 2
-(
-partition p1(subpartition sp1,subpartition sp2,subpartition sp3)
-);
-
-select tablename, parentpartitionname, count(*)
-from pg_partitions
-where tablename = 'mpp3083_region'
-group by tablename, parentpartitionname
-order by 1,2 asc;
-
-INSERT INTO mpp3083_region VALUES (0, 'AFRICA', 'lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to ');
-INSERT INTO mpp3083_region VALUES (4, 'MIDDLE EAST', 'uickly special accounts cajole carefully blithely close requests. carefully final asymptotes haggle furiousl');
-INSERT INTO mpp3083_region VALUES (3, 'EUROPE', 'ly final courts cajole furiously final excuse');
-INSERT INTO mpp3083_region VALUES (1, 'AMERICA', 'hs use ironic, even requests. s');
-INSERT INTO mpp3083_region VALUES (2, 'ASIA', 'ges. thinly even pinto beans ca');
-
-select * from mpp3083_region order by r_regionkey;
-
-drop table mpp3083_region;
 -- QA-877
 -- Johnny Soedomo
 -- Updated test case to use default tablespace. We now support partition and tablespace
@@ -171,39 +88,6 @@ select count(*) from mpp3137_region;
 select * from mpp3137_region order by r_regionkey;
 
 drop table mpp3137_region;
-create table mpp3084_region
-(
-                    R_REGIONKEY INTEGER,
-                    R_NAME CHAR(25),
-                    R_COMMENT VARCHAR(152),
-                    primary key (r_regionkey, r_name, r_comment)
-                    )
-partition by hash (r_regionkey) partitions 1
-subpartition by hash (r_name)
-,subpartition by hash (r_comment) subpartitions 2
-(
-partition p1(subpartition sp1,subpartition sp2,subpartition sp3)
-);
-
-select tablename, parentpartitionname, count(*)
-from pg_partitions
-where tablename = 'mpp3084_region'
-group by tablename, parentpartitionname
-order by 1,2 asc;
-
-COPY mpp3084_region from STDIN delimiter '|';
-0|AFRICA|lar deposits. blithely final packages cajole. regular waters are final requests. regular accounts are according to
-1|AMERICA|hs use ironic, even requests. s
-2|ASIA|ges. thinly even pinto beans ca
-3|EUROPE|ly final courts cajole furiously final excuse
-4|MIDDLE EAST|uickly special accounts cajole carefully blithely close requests. carefully final asymptotes haggle furiousl
-\.
-
-select count(*) from mpp3084_region;
-select * from mpp3084_region order by r_regionkey;
-
-drop table mpp3084_region;
-
 drop table if exists mpp3285_lineitem;
 CREATE TABLE mpp3285_LINEITEM (
                 L_ORDERKEY INT8,

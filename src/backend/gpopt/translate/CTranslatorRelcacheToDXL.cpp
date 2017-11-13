@@ -3166,11 +3166,6 @@ CTranslatorRelcacheToDXL::GetPartKeysAndTypes
 	PartitionNode *pn = gpdb::PpnParts(oid, 0 /*level*/, 0 /*parent*/, false /*inctemplate*/, true /*includesubparts*/);
 	GPOS_ASSERT(NULL != pn);
 	
-	if (gpdb::FHashPartitioned(pn->part->parkind))
-	{
-		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Hash partitioning"));
-	}
-	
 	List *plPartKeys = NIL;
 	List *plPartTypes = NIL;
 	gpdb::GetOrderedPartKeysAndKinds(oid, &plPartKeys, &plPartTypes);

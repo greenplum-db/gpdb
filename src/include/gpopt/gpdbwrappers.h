@@ -487,9 +487,6 @@ namespace gpdb {
 	// check whether table with the given oid is a regular table and not part of a partitioned table
 	bool FRelPartIsNone(Oid relid);
 
-	// check whether partitioning type encodes hash partitioning
-	bool FHashPartitioned(char c);
-
 	// check whether a relation is inherited
 	bool FHasSubclass(Oid oidRel);
 

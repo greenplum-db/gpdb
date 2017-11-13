@@ -2247,20 +2247,6 @@ gpdb::FRelPartIsNone
 }
 
 bool
-gpdb::FHashPartitioned
-	(
-	char c
-	)
-{
-	GP_WRAP_START;
-	{
-		return PARTTYP_HASH == char_to_parttype(c);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
-bool
 gpdb::FHasSubclass
 	(
 	Oid oidRel

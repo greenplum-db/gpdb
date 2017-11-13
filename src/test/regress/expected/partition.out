@@ -1,39 +1,77 @@
 set enable_partition_rules = false;
-set gp_enable_hash_partitioned_tables = true;
 -- Check multi level partition COPY
-CREATE TABLE REGION (
-                    R_REGIONKEY INTEGER not null,
-                    R_NAME CHAR(25),
-                    R_COMMENT VARCHAR(152)
-                    )
-distributed by (r_regionkey)
-partition by hash (r_regionkey) partitions 1
-subpartition by hash (r_name) subpartitions 3
-,subpartition by hash (r_comment) subpartitions 2
+create table region
 (
-partition p1(subpartition sp1,subpartition sp2,subpartition sp3)
+	r_regionkey integer not null,
+	r_name char(25),
+	r_comment varchar(152)
+)
+distributed by (r_regionkey)
+partition by range (r_regionkey)
+subpartition by list (r_name) subpartition template
+(
+	subpartition africa values ('AFRICA'),
+	subpartition america values ('AMERICA'),
+	subpartition asia values ('ASIA'),
+	subpartition europe values ('EUROPE'),
+	subpartition mideast values ('MIDDLE EAST'),
+	subpartition australia values ('AUSTRALIA'),
+	subpartition antarctica values ('ANTARCTICA')
+)
+(
+	partition region1 start (0),
+	partition region2 start (3),
+	partition region3 start (5) end (8)
 );
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1" for table "region"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp1" for table "region_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp1_3_prt_1" for table "region_1_prt_p1_2_prt_sp1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp1_3_prt_2" for table "region_1_prt_p1_2_prt_sp1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp2" for table "region_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp2_3_prt_1" for table "region_1_prt_p1_2_prt_sp2"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp2_3_prt_2" for table "region_1_prt_p1_2_prt_sp2"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp3" for table "region_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp3_3_prt_1" for table "region_1_prt_p1_2_prt_sp3"
-NOTICE:  CREATE TABLE will create partition "region_1_prt_p1_2_prt_sp3_3_prt_2" for table "region_1_prt_p1_2_prt_sp3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1" for table "region"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_africa" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_america" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_asia" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_europe" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_mideast" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_australia" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region1_2_prt_antarctica" for table "region_1_prt_region1"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2" for table "region"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_africa" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_america" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_asia" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_europe" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_mideast" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_australia" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region2_2_prt_antarctica" for table "region_1_prt_region2"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3" for table "region"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_africa" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_america" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_asia" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_europe" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_mideast" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_australia" for table "region_1_prt_region3"
+NOTICE:  CREATE TABLE will create partition "region_1_prt_region3_2_prt_antarctica" for table "region_1_prt_region3"
 create unique index region_pkey on region(r_regionkey);
-NOTICE:  building index for child partition "region_1_prt_p1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp1_3_prt_1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp1_3_prt_2"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp2"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp2_3_prt_1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp2_3_prt_2"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp3"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp3_3_prt_1"
-NOTICE:  building index for child partition "region_1_prt_p1_2_prt_sp3_3_prt_2"
+NOTICE:  building index for child partition "region_1_prt_region1"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_africa"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_america"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_asia"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_europe"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_mideast"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_australia"
+NOTICE:  building index for child partition "region_1_prt_region1_2_prt_antarctica"
+NOTICE:  building index for child partition "region_1_prt_region2"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_africa"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_america"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_asia"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_europe"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_mideast"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_australia"
+NOTICE:  building index for child partition "region_1_prt_region2_2_prt_antarctica"
+NOTICE:  building index for child partition "region_1_prt_region3" for table "region"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_africa"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_america"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_asia"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_europe"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_mideast"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_australia"
+NOTICE:  building index for child partition "region_1_prt_region3_2_prt_antarctica"
 copy region from stdin with delimiter '|';
 -- Test indexes
 set enable_seqscan to off;
@@ -74,26 +112,18 @@ select * from region where r_regionkey = 6;
 (1 row)
 
 -- Test indexes with insert
--- start_matchsubs
---
--- # Note: insert is different partition depending on endianness
---
--- m/ERROR:.*duplicate key violates unique constraint.*region_1_prt_p1_2_prt_sp\d+_3_prt_1_pkey/
--- s/sp\d+/SPSOMETHING/
---
--- end_matchsubs
-insert into region values(7, 'abc', 'def');
+insert into region values(7, 'AUSTRALIA', 'def');
 select * from region where r_regionkey = '7';
  r_regionkey |          r_name           | r_comment 
 -------------+---------------------------+-----------
-           7 | abc                       | def
+           7 | AUSTRALIA                 | def
 (1 row)
 
 -- test duplicate key. We shouldn't really allow primary keys on partitioned
 -- tables since we cannot enforce them. But since this insert maps to a
 -- single definitive partition, we can detect it.
-insert into region values(7, 'abc', 'def');
-ERROR: duplicate key value violates unique constraint "region_pkey_1_prt_p1_2_prt_sp1_3_prt_1"  (seg0 slarimac:40000 pid=97859)
+insert into region values(7, 'AUSTRALIA', 'def');
+ERROR: duplicate key value violates unique constraint "region_pkey_1_prt_region3_2_prt_australia"  (seg0 slarimac:40000 pid=97859)
 DETAIL: Key (r_regionkey)=(7) already exists.
 drop table region;
 -- exchange
@@ -699,28 +729,28 @@ select * from bar_p;
 drop table foo_p;
 drop table bar_p;
 -- exchange default partition is not allowed (single level)
-drop table if exists d;
-NOTICE:  table "d" does not exist, skipping
+drop table if exists dex;
+NOTICE:  table "dex" does not exist, skipping
 drop table if exists exh_abc;
 NOTICE:  table "exh_abc" does not exist, skipping
-create table d (i int,  j int) partition by range(j)
+create table dex (i int,  j int) partition by range(j)
 (partition a start (1) end(10), partition b start(11) end(20),
 default partition abc);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "d_1_prt_abc" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_a" for table "d"
-NOTICE:  CREATE TABLE will create partition "d_1_prt_b" for table "d"
-create table exh_abc (like d);
+NOTICE:  CREATE TABLE will create partition "dex_1_prt_abc" for table "dex"
+NOTICE:  CREATE TABLE will create partition "dex_1_prt_a" for table "dex"
+NOTICE:  CREATE TABLE will create partition "dex_1_prt_b" for table "dex"
+create table exh_abc (like dex);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-alter table d exchange default partition with table exh_abc;
+alter table dex exchange default partition with table exh_abc;
 ERROR:  cannot exchange DEFAULT partition
 set gp_enable_exchange_default_partition = on;
-alter table d exchange default partition with table exh_abc;
+alter table dex exchange default partition with table exh_abc;
 WARNING:  Exchanging default partition may result in unexpected query results if the data being exchanged should have been inserted into a different partition
-NOTICE:  exchanged partition "abc" of relation "d" with relation "exh_abc"
+NOTICE:  exchanged partition "abc" of relation "dex" with relation "exh_abc"
 reset gp_enable_exchange_default_partition;
-drop table d;
+drop table dex;
 drop table exh_abc;
 -- exchange default partition is not allowed (multi level)
 Drop table if exists sto_ao_ao;
@@ -1393,53 +1423,6 @@ select pg_get_partition_def('partsupp'::regclass, true);
 (1 row)
 
 drop table partsupp;
-set gp_enable_hash_partitioned_tables = true;
-create table i5 (i int, g text) partition by list(g) 
-  subpartition by hash(i) subpartitions 3
-(partition p1 values('foo', 'bar'), partition p2 values('foz')
-);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1" for table "i5"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1_2_prt_1" for table "i5_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1_2_prt_2" for table "i5_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p1_2_prt_3" for table "i5_1_prt_p1"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2" for table "i5"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2_2_prt_1" for table "i5_1_prt_p2"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2_2_prt_2" for table "i5_1_prt_p2"
-NOTICE:  CREATE TABLE will create partition "i5_1_prt_p2_2_prt_3" for table "i5_1_prt_p2"
-select tablename, partitiontablename,
-partitionboundary from pg_partitions where
-tablename = 'i5';
- tablename | partitiontablename  |         partitionboundary         
------------+---------------------+-----------------------------------
- i5        | i5_1_prt_p1         | PARTITION p1 VALUES('foo', 'bar')
- i5        | i5_1_prt_p2         | PARTITION p2 VALUES('foz')
- i5        | i5_1_prt_p1_2_prt_1 | 
- i5        | i5_1_prt_p1_2_prt_2 | 
- i5        | i5_1_prt_p1_2_prt_3 | 
- i5        | i5_1_prt_p2_2_prt_1 | 
- i5        | i5_1_prt_p2_2_prt_2 | 
- i5        | i5_1_prt_p2_2_prt_3 | 
-(8 rows)
-
-select pg_get_partition_def('i5'::regclass, true);
-                pg_get_partition_def                 
------------------------------------------------------
- PARTITION BY LIST(g)                                
-           SUBPARTITION BY HASH(i) SUBPARTITIONS 3   
-           (                                         
-           PARTITION p1 VALUES('foo', 'bar')         
-                   (                                 
-                   ),                                
-           PARTITION p2 VALUES('foz')                
-                   (                                 
-                   )                                 
-           )
-(1 row)
-
-drop table i5;
-set gp_enable_hash_partitioned_tables = false;
 -- ALTER TABLE ALTER PARTITION tests
 CREATE TABLE ataprank (id int, rank int,
 year date, gender char(1),
@@ -6041,79 +6024,6 @@ ERROR:  template cannot contain specification for child partition
 alter table cov1 add default partition def1, drop default partition;
 NOTICE:  CREATE TABLE will create partition "cov1_1_prt_def1" for table "cov1"
 NOTICE:  dropped partition "def1" for relation "cov1"
-drop table cov1;
-set gp_enable_hash_partitioned_tables = true;
--- not hash
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-partitions 3
-(
-start (1) end (10) every (1)
-);
-ERROR:  PARTITIONS clause requires a HASH partition
-LINE 3: partition by range (b)
-                     ^
--- not hash
-create table cov1 (a int, b int, d int)
-distributed by (a)
-partition by range (b)
-subpartition by range (d)
-subpartitions 3
-(
-start (1) end (10) every (1)
-);
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_1" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_2" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_3" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_4" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_5" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_6" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_7" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_8" for table "cov1"
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_9" for table "cov1"
-ERROR:  SUBPARTITIONS clause requires a HASH partition (at depth 2)
-LINE 4: subpartition by range (d)
-                        ^
-set gp_enable_hash_partitioned_tables = false;
--- not hash
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-partitions 3
-(
-start (1) end (10) every (1)
-);
-ERROR:  syntax error at or near "3"
-LINE 4: partitions 3
-                   ^
--- not hash
-create table cov1 (a int, b int, d int)
-distributed by (a)
-partition by range (b)
-subpartition by range (d)
-subpartitions 3
-(
-start (1) end (10) every (1)
-);
-ERROR:  syntax error at or near "3"
-LINE 5: subpartitions 3
-                      ^
--- legal?!?! 
-create table cov1 (a int, b int)
-distributed by (a)
-partition by range (b)
-(
-start () end(2)  
-);
-NOTICE:  CREATE TABLE will create partition "cov1_1_prt_1" for table "cov1"
--- no start, just end!
-select * from pg_partitions where tablename = 'cov1';
- schemaname | tablename | partitionschemaname | partitiontablename | partitionname | parentpartitiontablename | parentpartitionname | partitiontype | partitionlevel | partitionrank | partitionposition | partitionlistvalues | partitionrangestart | partitionstartinclusive | partitionrangeend | partitionendinclusive | partitioneveryclause | partitionisdefault | partitionboundary | parenttablespace | partitiontablespace 
-------------+-----------+---------------------+--------------------+---------------+--------------------------+---------------------+---------------+----------------+---------------+-------------------+---------------------+---------------------+-------------------------+-------------------+-----------------------+----------------------+--------------------+-------------------+------------------+---------------------
- public     | cov1      | public              | cov1_1_prt_1       |               |                          |                     | range         |              0 |             1 |                 1 |                     |                     | t                       | 2                 | f                     |                      | f                  |  END (2)          | pg_default       | pg_default
-(1 row)
-
 drop table cov1;
 -- every 5 (1) now disallowed...
 create table cov1 (a int, b int)

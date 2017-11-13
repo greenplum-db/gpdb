@@ -3228,7 +3228,6 @@ _copyPartitionBy(PartitionBy *from)
 	COPY_SCALAR_FIELD(partType);
 	COPY_NODE_FIELD(keys);
 	COPY_NODE_FIELD(keyopclass);
-	COPY_NODE_FIELD(partNum);
 	COPY_NODE_FIELD(subPart);
 	COPY_NODE_FIELD(partSpec);
 	COPY_SCALAR_FIELD(partDepth);

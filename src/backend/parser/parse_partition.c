@@ -81,7 +81,6 @@ static void make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtCont
 				Node *pRuleCatalog, Node *pPostCreate, Node *pConstraint,
 				Node *pStoreAttr, char *prtstr, bool bQuiet,
 				List *stenc);
-static void expand_hash_partition_spec(PartitionBy *pBy);
 static char *deparse_partition_rule(Node *pNode, ParseState *pstate, Node *parent);
 static Node *
 make_prule_catalog(ParseState *pstate,
@@ -245,38 +244,8 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	}
 
 	/*
-	 * Derive the number of partitions from the PARTITIONS clause.
-	 */
-	if (pBy->partNum)
-	{
-		A_Const    *con = (A_Const *) pBy->partNum;
-
-		Assert(IsA(&con->val, Integer));
-
-		partNumber = intVal(&con->val);
-
-		if (pBy->partType != PARTTYP_HASH)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("%sPARTITIONS clause requires a HASH partition%s",
-							pBy->partDepth != 0 ? "SUB" : "", at_depth),
-					 parser_errposition(pstate, pBy->location)));
-		}
-
-		if (partNumber < 1)
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("%sPARTITIONS cannot be less than one%s",
-							pBy->partDepth != 0 ? "SUB" : "", at_depth),
-					 parser_errposition(pstate, pBy->location)));
-		}
-	}
-
-	/*
-	 * The recursive nature of this code means that if we're processing a sub
-	 * partition rule, the opclass may have been looked up already.
+	 * The recursive nature of this code means that if we're processing a
+	 * subpartition rule, the opclass may have been looked up already.
 	 */
 	lookup_opclass = list_length(pBy->keyopclass) == 0;
 
@@ -357,9 +326,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 			/* get access method ID for this partition type */
 			switch (pBy->partType)
 			{
-				case PARTTYP_HASH:
-					accessMethodId = HASH_AM_OID;
-					break;
 				case PARTTYP_RANGE:
 				case PARTTYP_LIST:
 					accessMethodId = BTREE_AM_OID;
@@ -430,26 +396,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	}
 	key_attnames = NIL;
 
-	if (pBy->partType == PARTTYP_HASH)
-	{
-		if (pBy->partSpec == NULL)
-		{
-			if (pBy->partNum == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("hash partition requires PARTITIONS clause "
-								"or partition specification"),
-						 parser_errposition(pstate, pBy->location)));
-
-			/*
-			 * Users don't have to specify a partition specification for HASH.
-			 * If they didn't, create one so that the rest of the code can
-			 * generate some valid partition children.
-			 */
-			expand_hash_partition_spec(pBy);
-		}
-	}
-
 	if (pBy->partSpec)
 	{
 		partNumber = validate_partition_spec(pstate, cxt, stmt, pBy, at_depth,
@@ -514,8 +460,10 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 	Assert(partNumber > 0);
 
 	/*
-	 * We must iterate through the elements in this way to support HASH
-	 * partitioning, which likely has no partitioning elements.
+	 * We iterated through the elements in this way to support HASH
+	 * partitioning, which likely had no partitioning elements.
+	 * FIXME: can we refactor this code now that HASH partitioning
+	 * is removed?
 	 */
 	lc = list_head(partElts);
 
@@ -648,7 +596,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 
 				newSub->partType = psubBy->partType;
 				newSub->keys = psubBy->keys;
-				newSub->partNum = psubBy->partNum;
 				newSub->subPart = psubBy->subPart;
 				newSub->partSpec = pElem->subSpec;		/* use the subspec */
 				newSub->partDepth = psubBy->partDepth;
@@ -824,7 +771,6 @@ transformPartitionBy(ParseState *pstate, CreateStmtContext *cxt,
 			curPby->keys = key_attnums;
 
 			curPby->keyopclass = copyObject(pBy->keyopclass);
-			curPby->partNum = copyObject(pBy->partNum);
 
 			if (pElem)
 			{
@@ -1024,13 +970,9 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 
 	merge_part_column_encodings(child_tab_stmt, stenc);
 
-	/* Hash partitioning special case. */
-	if (pConstraint && ((enable_partition_rules &&
-						 curPby->partType == PARTTYP_HASH) ||
-						curPby->partType != PARTTYP_HASH))
-		child_tab_stmt->tableElts =
-			lappend(child_tab_stmt->tableElts,
-					pConstraint);
+	if (pConstraint)
+		child_tab_stmt->tableElts = lappend(child_tab_stmt->tableElts,
+											pConstraint);
 
 	/*
 	 * XXX XXX: inheriting the parent causes a headache in
@@ -1144,34 +1086,6 @@ make_child_node(ParseState *pstate, CreateStmt *stmt, CreateStmtContext *cxt, ch
 	cxt->alist = list_concat(cxt->alist, childstmts);
 }
 
-static void
-expand_hash_partition_spec(PartitionBy *pBy)
-{
-	PartitionSpec *spec;
-	long		i;
-	long		max;
-	List	   *elem = NIL;
-	A_Const    *con;
-
-	Assert(pBy->partType == PARTTYP_HASH);
-	Assert(pBy->partSpec == NULL);
-
-	spec = makeNode(PartitionSpec);
-
-	con = (A_Const *) pBy->partNum;
-	Assert(IsA(&con->val, Integer));
-	max = intVal(&con->val);
-
-	for (i = 0; i < max; i++)
-	{
-		PartitionElem *el = makeNode(PartitionElem);
-
-		elem = lappend(elem, el);
-	}
-	spec->partElem = elem;
-	pBy->partSpec = (Node *) spec;
-}
-
 static List *
 make_partition_rules(ParseState *pstate,
 					 CreateStmtContext *cxt, CreateStmt *stmt,
@@ -1187,159 +1101,7 @@ make_partition_rules(ParseState *pstate,
 	Node	   *pRule = NULL;
 	List	   *allRules = NULL;
 
-	if (pBy->partType != PARTTYP_HASH)
-	{
-		Assert(pElem);
-	}
-	if (pBy->partType == PARTTYP_HASH)
-	{
-		List	   *colElts = pBy->keys;
-		ListCell   *lc = NULL;
-		char	   *exprStr;
-		StringInfoData sid;
-		int			colcnt = 0;
-		Node	   *pHashArgs = NULL;
-		Node	   *pExpr = NULL;
-		PartitionBoundSpec *pBSpec = NULL;
-
-		if (pElem)
-		{
-			pBSpec = (PartitionBoundSpec *) pElem->boundSpec;
-		}
-
-		initStringInfo(&sid);
-
-		lc = list_head(colElts);
-
-		for (; lc; lc = lnext(lc))		/* for all cols */
-		{
-			Node	   *pCol = lfirst(lc);
-			Value	   *pColConst;
-			ColumnRef  *pCRef = NULL;
-
-			pColConst = (Value *) pCol;
-
-			Assert(IsA(pColConst, String));
-
-			exprStr = deparse_partition_rule((Node *) pCol, pstate, pBSpec ? (Node *) pBSpec : (Node *) pBy);
-
-			pCRef = makeNode(ColumnRef);
-			pCRef->location = -1;
-			pCRef->fields = list_make1(pCol);
-
-			if (colcnt)
-			{
-				Node	   *pAppOp = NULL;
-
-				pAppOp =
-					(Node *) makeSimpleA_Expr(AEXPR_OP, "||",
-											  pHashArgs,
-											  (Node *) pCRef,
-											  -1);
-				pHashArgs = pAppOp;
-
-				appendStringInfo(&sid, "||");
-			}
-			else
-			{
-				pHashArgs = (Node *) pCRef;
-			}
-
-			appendStringInfo(&sid, "%s", exprStr);
-
-			colcnt++;
-		}						/* end for all cols */
-
-		/*
-		 * magic_hash: maximum number of partitions is maxPartNum current
-		 * partition number is parNumId
-		 */
-
-		/*
-		 * modulus arithmetic is 0 to N-1, so go to (partNumId-1). Also,
-		 * hashtext can return a negative, so fix it up
-		 */
-
-		exprStr = psprintf(
-/*				 "magic_hash(%d, %s) = %d", */
-/* double % for % literal - ((hash(cols)%max + max) % max) */
-				 "(hashtext(%s)%%%d + %d)%%%d = %d",
-				 sid.data,
-				 maxPartNum,
-				 maxPartNum,
-				 maxPartNum,
-				 (partNumId - 1)
-			);
-
-		pfree(sid.data);
-
-		{
-			Node	   *pPlusOp = NULL;
-			Node	   *pModOp = NULL;
-			A_Const    *pModBy = NULL;
-			A_Const    *pPartID = NULL;
-			FuncCall   *pFC = makeNode(FuncCall);
-
-			pFC->funcname = list_make1(makeString("hashtext"));
-			pFC->args = list_make1(pHashArgs);
-			pFC->agg_star = FALSE;
-			pFC->agg_distinct = FALSE;
-			pFC->location = -1;
-			pFC->over = NULL;
-
-			pModBy = makeNode(A_Const);
-			pModBy->val.type = T_Integer;
-			pModBy->val.val.ival = maxPartNum;
-			pModBy->location = -1;
-
-			pPartID = makeNode(A_Const);
-			pPartID->val.type = T_Integer;
-			pPartID->val.val.ival = (partNumId - 1);
-			pPartID->location = -1;
-
-			pModOp = (Node *) makeSimpleA_Expr(AEXPR_OP, "%",
-										  (Node *) pFC, (Node *) pModBy, -1);
-
-			pPlusOp = (Node *) makeSimpleA_Expr(AEXPR_OP, "+",
-									   (Node *) pModOp, (Node *) pModBy, -1);
-
-			pModOp = (Node *) makeSimpleA_Expr(AEXPR_OP, "%",
-									  (Node *) pPlusOp, (Node *) pModBy, -1);
-
-			pExpr = (Node *) makeSimpleA_Expr(AEXPR_OP, "=",
-											  pModOp, (Node *) pPartID, -1);
-
-		}
-
-		/*
-		 * first the CHECK constraint, then the INSERT statement, then the
-		 * RULE statement
-		 */
-		allRules = list_make1(pExpr);
-
-		if (doRuleStmt)
-		{
-			pRule = make_prule_catalog(pstate,
-									   cxt, stmt,
-									   partitionBy, pElem,
-									   at_depth, child_name_str,
-									   exprStr,
-									   pExpr);
-
-			allRules = lappend(allRules, pRule);
-
-			pRule = make_prule_rulestmt(pstate,
-										cxt, stmt,
-										partitionBy, pElem,
-										at_depth, child_name_str,
-										exprStr,
-										pExpr);
-
-			allRules = lappend(allRules, pRule);
-		}
-
-
-	}							/* end if HASH */
+	Assert(pElem);
 
 	if (pBy->partType == PARTTYP_LIST)
 	{
@@ -2526,8 +2288,7 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 	pSpec = (PartitionSpec *) pBy->partSpec;
 
 	/*
-	 * Find number of partitions in the specification, and match it up with
-	 * the PARTITIONS clause if partitioned by HASH, and determine the
+	 * Find number of partitions in the specification, and determine the
 	 * subpartition specifications.  Perform basic error checking on boundary
 	 * specifications.
 	 */
@@ -2607,9 +2368,8 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 			/*
 			 * handle all default partition cases:
 			 *
-			 * - HASH partitioned tables cannot have DEFAULT partitions. - Can
-			 * only have a single DEFAULT partition. - Default partitions
-			 * cannot have a boundary specification.
+			 * - Can only have a single DEFAULT partition.
+			 * - Default partitions cannot have a boundary specification.
 			 */
 			if (pElem->isDefault)
 			{
@@ -2629,18 +2389,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 				}
 
 				pDefaultElem = pElem;	/* save the default */
-
-				if (PARTTYP_HASH == pBy->partType)
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("invalid use of DEFAULT partition "
-									"for partition%s of type HASH%s",
-									namBuf,
-									at_depth),
-							 parser_errposition(pstate, pElem->location)));
-
-				}
 
 				if (pBSpec)
 				{
@@ -2708,31 +2456,6 @@ validate_partition_spec(ParseState *pstate, CreateStmtContext *cxt,
 
 		switch (pBy->partType)
 		{
-			case PARTTYP_HASH:
-				if (vstate->spec)
-				{
-					char	   *specTName = "RANGE";
-
-					if (IsA(vstate->spec, PartitionValuesSpec))
-						specTName = "LIST";
-
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						   errmsg("invalid use of %s boundary specification "
-								  "in partition%s of type HASH%s",
-								  specTName,
-								  vstate->namBuf,
-								  vstate->at_depth),
-					/* MPP-4249: use value spec location if have one */
-							 ((IsA(vstate->spec, PartitionValuesSpec)) ?
-							  parser_errposition(pstate,
-						  ((PartitionValuesSpec *) vstate->spec)->location) :
-					/* else use boundspec */
-							  parser_errposition(pstate,
-							 ((PartitionBoundSpec *) vstate->spec)->location)
-							  )));
-				}
-				break;
 			case PARTTYP_RANGE:
 				validate_range_partition(vstate);
 				break;
@@ -3800,8 +3523,7 @@ l_next_iteration:
 
 /*
  * Basic partition validation:
- * Check that PARTITIONS matches specification (for HASH). Perform basic error
- * checking on boundary specifications.
+ * Perform basic error checking on boundary specifications.
  */
 static void
 validate_range_partition(partValidationState *vstate)

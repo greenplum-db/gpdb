@@ -832,16 +832,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_enable_hash_partitioned_tables", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Enable hash partitioned tables."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_enable_hash_partitioned_tables,
-		false, NULL, NULL
-	},
-
-	{
 		{"gp_setwith_alter_storage", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Let SET WITH alter the storage options."),
 			NULL,

@@ -834,10 +834,6 @@ extern int gp_sort_flags;
  */
 extern int gp_sort_max_distinct;
 
-/* turn the hash partitioned tables on */
-
-extern bool	gp_enable_hash_partitioned_tables;
-
 /**
  * Enable dynamic pruning of partitions based on join condition.
  */

@@ -1302,11 +1302,8 @@ typedef enum AlterTableType
 	AT_PartAdd,					/* Add */
 	AT_PartAddForSplit,			/* Add, as subcommand of a split */
 	AT_PartAlter,				/* Alter */
-	AT_PartCoalesce,			/* Coalesce */
 	AT_PartDrop,				/* Drop */
 	AT_PartExchange,			/* Exchange */
-	AT_PartMerge,				/* Merge */
-	AT_PartModify,				/* Modify */
 	AT_PartRename,				/* Rename */
 	AT_PartSetTemplate,			/* Set Subpartition Template */
 	AT_PartSplit,				/* Split */
@@ -1748,7 +1745,6 @@ typedef struct FkConstraint
  */
 typedef enum PartitionByType			/* types of Partitions */
 {
-	PARTTYP_HASH,
 	PARTTYP_RANGE,
 	PARTTYP_LIST,
 	PARTTYP_REFERENCE /* for future use... */
@@ -1768,7 +1764,6 @@ typedef struct PartitionBy			/* the Partition By clause */
 	PartitionByType		partType;
 	List			   *keys;		/* key columns (Partition By ...) */
 	List			   *keyopclass;	/* opclass for each key */
-	Node			   *partNum;	/* partitions (constant number)*/
 	Node			   *subPart;	/* optional subpartn (PartitionBy ptr) */
 	Node			   *partSpec;	/* specification or template */
 	Node			   *partDefault;/* DEFAULT partition (if exists) */

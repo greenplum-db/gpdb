@@ -161,9 +161,6 @@ static int range_test(Datum tupval, Oid ruleTypeOid, Oid exprTypeOid, PartitionR
 static PartitionNode *selectRangePartition(PartitionNode *partnode, Datum *values, bool *isnull,
 					 TupleDesc tupdesc, PartitionAccessMethods *accessMethods,
 					 Oid *foundOid, int *pSearch, PartitionRule **prule, Oid exprTypid);
-static PartitionNode *selectHashPartition(PartitionNode *partnode, Datum *values, bool *isnull,
-					TupleDesc tupdesc, PartitionAccessMethods *accessMethods,
-					Oid *found, PartitionRule **prule);
 static Oid selectPartition1(PartitionNode *partnode, Datum *values, bool *isnull,
 				 TupleDesc tupdesc, PartitionAccessMethods *accessMethods,
 				 int *pSearch,
@@ -1315,7 +1312,7 @@ constraint_diffs(List *cons_a, List *cons_b, bool match_names, List **missing, L
 
 /*
  * Translate internal representation to catalog partition type indication
- * ('r', 'h' or 'l').
+ * ('r' or 'l').
  */
 static char
 parttype_to_char(PartitionByType type)
@@ -1324,9 +1321,6 @@ parttype_to_char(PartitionByType type)
 
 	switch (type)
 	{
-		case PARTTYP_HASH:
-			c = 'h';
-			break;
 		case PARTTYP_RANGE:
 			c = 'r';
 			break;
@@ -1342,7 +1336,7 @@ parttype_to_char(PartitionByType type)
 }
 
 /*
- * Translate a catalog partition type indication ('r', 'h' or 'l') to the
+ * Translate a catalog partition type indication ('r' or 'l') to the
  * internal representation.
  */
 PartitionByType
@@ -1352,10 +1346,7 @@ char_to_parttype(char c)
 
 	switch (c)
 	{
-		case 'h':				/* hash */
-			pt = PARTTYP_HASH;
-			break;
-		case 'r':				/* range */
+		case 'r':
 			pt = PARTTYP_RANGE;
 			break;
 		case 'l':				/* list */
@@ -1739,8 +1730,6 @@ add_part_to_catalog(Oid relid, PartitionBy *pby,
 
 		switch (pby->partType)
 		{
-			case PARTTYP_HASH:
-				break;
 			case PARTTYP_LIST:
 				{
 					PartitionValuesSpec *vspec =
@@ -4446,62 +4435,6 @@ l_fin_range:
 }								/* end selectrangepartition */
 
 
-/* select partition via hash */
-static PartitionNode *
-selectHashPartition(PartitionNode *partnode, Datum *values, bool *isnull,
-					TupleDesc tupdesc, PartitionAccessMethods *accessMethods, Oid *found, PartitionRule **prule)
-{
-	uint32		hash = 0;
-	int			i;
-	int			part;
-	PartitionRule *rule;
-	MemoryContext oldcxt = NULL;
-
-	if (partnode->rules == NIL)
-		return NULL;
-
-	if (accessMethods && accessMethods->part_cxt)
-		oldcxt = MemoryContextSwitchTo(accessMethods->part_cxt);
-
-	for (i = 0; i < partnode->part->parnatts; i++)
-	{
-		AttrNumber	attnum = partnode->part->paratts[i];
-
-		/* rotate hash left 1 bit at each step */
-		hash = (hash << 1) | ((hash & 0x80000000) ? 1 : 0);
-
-		/*
-		 * If we found a NULL, just pretend it has a hashcode of 0 (like the
-		 * hash join code does.
-		 */
-		if (isnull[attnum - 1])
-			continue;
-		else
-		{
-			Oid			opclass = partnode->part->parclass[i];
-			Oid			inctype = get_opclass_input_type(opclass);
-			Oid			opfamily = get_opclass_family(opclass);
-
-			Oid			hashfunc = get_opfamily_proc(opfamily, inctype, inctype, HASHPROC);
-			Datum		d = values[attnum - 1];
-
-			hash ^= DatumGetUInt32(OidFunctionCall1(hashfunc, d));
-		}
-	}
-
-	part = hash % list_length(partnode->rules);
-
-	rule = (PartitionRule *) list_nth(partnode->rules, part);
-
-	*found = rule->parchildrelid;
-	*prule = rule;
-
-	if (oldcxt)
-		MemoryContextSwitchTo(oldcxt);
-
-	return rule->children;
-}
-
 /*
  * selectPartition1()
  *
@@ -4530,10 +4463,6 @@ selectPartition1(PartitionNode *partnode, Datum *values, bool *isnull,
 		case 'r':				/* range */
 			pn = selectRangePartition(partnode, values, isnull, tupdesc,
 									  accessMethods, &relid, pSearch, &prule, InvalidOid);
-			break;
-		case 'h':				/* hash */
-			pn = selectHashPartition(partnode, values, isnull, tupdesc,
-									 accessMethods, &relid, &prule);
 			break;
 		case 'l':				/* list */
 			pn = selectListPartition(partnode, values, isnull, tupdesc,
@@ -4627,10 +4556,6 @@ get_next_level_matched_partition(PartitionNode *partnode, Datum *values, bool *i
 		case 'l':				/* list */
 			selectListPartition(partnode, values, isnull, tupdesc,
 								accessMethods, &relid, &prule, exprTypid);
-			break;
-		case 'h':				/* hash */
-			selectHashPartition(partnode, values, isnull, tupdesc,
-								 accessMethods, &relid, &prule);
 			break;
 		default:
 			elog(ERROR, "unrecognized partitioning kind '%c'",
@@ -4814,28 +4739,11 @@ get_part_rule1(Relation rel,
 		}
 		else if (pid->idtype == AT_AP_IDRank)
 		{
-			char	   *parTypName = "UNKNOWN";
-
-			if (pNode->part->parkind != 'r')
-			{
-				switch (pNode->part->parkind)
-				{
-					case 'h':	/* hash */
-						parTypName = "HASH";
-						break;
-					case 'l':	/* list */
-						parTypName = "LIST";
-						break;
-				}				/* end switch */
-
+			if (pNode->part->parkind == 'l')
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("cannot find partition by RANK -- "
-								"%s is %s partitioned",
-								relname,
-								parTypName)));
-
-			}
+						 errmsg("cannot find partition by RANK -- %s is LIST partitioned",
+								relname)));
 
 			partrelid = selectPartitionByRank(pNode, idrank);
 		}
@@ -5232,7 +5140,6 @@ atpxPart_validate_spec(
 
 	pBy->partType = part_type;
 	pBy->keys = NULL;
-	pBy->partNum = 0;
 	pBy->subPart = NULL;
 	pBy->partSpec = (Node *) spec;
 	pBy->partDepth = pNode->part->parlevel;
@@ -5323,19 +5230,12 @@ atpxPart_validate_spec(
 				{
 					pNode2 = prule->children;
 
-					/* XXX XXX: make this work for HASH at some point */
-
-					Assert(
-						   ('l' == pNode2->part->parkind) ||
+					Assert(('l' == pNode2->part->parkind) ||
 						   ('r' == pNode2->part->parkind));
 
 					pBy2 = makeNode(PartitionBy);
-					pBy2->partType =
-						('r' == pNode2->part->parkind) ?
-						PARTTYP_RANGE :
-						PARTTYP_LIST;
+					pBy2->partType = char_to_parttype(pNode2->part->parkind);
 					pBy2->keys = NULL;
-					pBy2->partNum = 0;
 					pBy2->subPart = NULL;
 					pBy2->partSpec = NULL;
 					pBy2->partDepth = pNode2->part->parlevel;

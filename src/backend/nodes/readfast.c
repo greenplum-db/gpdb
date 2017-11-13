@@ -1167,7 +1167,6 @@ _readPartitionBy(void)
 	READ_ENUM_FIELD(partType, PartitionByType);
 	READ_NODE_FIELD(keys);
 	READ_NODE_FIELD(keyopclass);
-	READ_NODE_FIELD(partNum);
 	READ_NODE_FIELD(subPart);
 	READ_NODE_FIELD(partSpec);
 	READ_INT_FIELD(partDepth);
