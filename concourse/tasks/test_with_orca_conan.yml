@@ -6,7 +6,6 @@ image_resource:
     tag: 7-gcc6.2-llvm3.7
 inputs:
   - name: gpdb_src
-  - name: bin_orca
   - name: bin_gpdb
 outputs:
   - name: icg_output
@@ -15,7 +14,6 @@ run:
   args:
     - --mode=orca
     - --gpdb_name=bin_gpdb
-    - bin_orca
 params:
   BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
   TEST_SUITE: "icg"
