@@ -21,7 +21,9 @@
     </ul>
     <note type="warning">PL/Container is an experimental feature and is not intended for use in a
       production environment. Experimental features are subject to change without notice in future
-      releases.</note>
+      releases. <p>PL/Container is compatible with Greenplum Database 5.2.0. PL/Container has not
+        been tested for compatibility with Greenplum Database 5.1.0 or 5.0.0.</p>
+    </note>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="pz217886">About the PL/Container Extension</title>
