@@ -64,7 +64,7 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed later in this topic.|
 | FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile to write plain, delimited text to \<path-to-hdfs-dir\>.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` profile to write comma-separated value text to \<path-to-hdfs-dir\>.<br> Use `FORMAT` '`CUSTOM`' with  the `SequenceWritable` profile. The `SequenceWritable` `'CUSTOM'` `FORMAT` supports only the built-in `(formatter='pxfwritable_export')` (write) and `(formatter='pxfwritable_import')` (read) \<formatting-properties\>. |
  \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified later in this topic. |
-| DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data.|
+| DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
 
