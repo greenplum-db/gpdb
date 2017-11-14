@@ -95,8 +95,8 @@ jobs:
           TARGET_OS_VERSION: 6
           BLD_TARGETS: "clients loaders"
 
-      - task: compile_gpdb_and_orca_conan_ubuntu16
-        file: gpdb_pr/concourse/tasks/compile_gpdb_and_orca_with_conan.yml
+      - task: compile_gpdb_ubuntu16
+        file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
         image: ubuntu-gpdb-dev-16
         input_mapping:
           gpdb_src: gpdb_pr
@@ -142,13 +142,12 @@ jobs:
         timeout: 5h
         on_failure: *pr_failure
 
-      - task: icw_gporca_conan_ubuntu16
+      - task: icw_gporca_ubuntu16
         image: ubuntu-gpdb-dev-16
         file: gpdb_pr/concourse/tasks/test_with_orca_conan.yml
         input_mapping:
           gpdb_src: gpdb_pr
-          bin_gpdb: compiled_bits_gpdb_with_orca_conan_ubuntu16
-          bin_orca: compiled_bits_orca_with_conan_ubuntu16
+          bin_gpdb: compiled_bits_ubuntu16
         params:
           TEST_SUITE: "icw"
         timeout: 2h30m
