@@ -111,7 +111,30 @@ class WorkerPool(object):
             logger.info('%0.2f%% of jobs completed' % (num_completed_percentage * 100))
             if num_completed >= command_count:
                 return
-            time.sleep(10)
+            self._join_work_queue_with_timeout(10)
+
+    def _join_work_queue_with_timeout(self, timeout):
+        """
+        Queue.join() unfortunately doesn't take a timeout (see
+        https://bugs.python.org/issue9634). Fake it here, with a solution
+        inspired by notes on that bug report.
+
+        XXX This solution uses undocumented Queue internals (though they are not
+        underscore-prefixed...).
+        """
+        done_condition = self.work_queue.all_tasks_done
+        done_condition.acquire()
+        try:
+            while self.work_queue.unfinished_tasks:
+                if (timeout <= 0):
+                    # Timed out.
+                    return
+
+                start_time = time.time()
+                done_condition.wait(timeout)
+                timeout -= (time.time() - start_time)
+        finally:
+            done_condition.release()
 
     def join(self):
         self.work_queue.join()

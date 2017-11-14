@@ -1,0 +1,51 @@
+top_builddir=../
+INSTALL_DIR=@prefix@
+CONAN_CMD=CONAN_USER_HOME=@abs_builddir@ @CONAN@
+MKDIR_P=@MKDIR_P@
+INSTALL=@INSTALL@
+
+-include ../src/Makefile.global
+
+.PHONY: clean distclean orca
+default: orca
+
+.conan/conan.conf:
+	${CONAN_CMD} remote add gpdb-oss https://api.bintray.com/conan/greenplum-db/gpdb-oss;
+
+orca: conanfile_orca.txt .conan/conan.conf
+	${CONAN_CMD} install -f conanfile_orca.txt --build missing
+	@echo
+	@echo "==================================================================="
+	@echo "Orca can now be installed on the local system using \"make install\""
+	@echo "and be used as any normal system library"
+	@echo
+	@echo "If you'd rather compile GPDB using ORCA in it's current location and then"
+	@echo "install ORCA into the gpdb installation location then first run the top"
+	@echo "level configure as follows:"
+	@echo "LD_LIBRARY_PATH=@abs_builddir@/build/lib ./configure \\ "
+	@echo "    --with-libraries=@abs_builddir@/build/lib \\ "
+	@echo "    --with-includes=@abs_builddir@/build/include "
+	@echo
+	@echo "Then run \"make\"".
+	@echo "Then run \"LD_LIBRARY_PATH=@abs_builddir@/build/lib make install\""
+	@echo
+	@echo "These steps should work on both MacOS and Linux"
+
+
+clean:
+	rm -rf build .conan
+	rm -f conanenv.txt \
+		conan_imports_manifest.txt \
+		conanbuildinfo* \
+		conaninfo.txt \
+
+distclean: clean
+	rm -f config.cache config.log config.status Makefile
+	@rm -rf autom4te.cache/
+
+install_local: orca
+	${MKDIR_P} ${INSTALL_DIR}
+	cp -R build/* ${INSTALL_DIR}
+
+install: orca
+	cp -R --preserve=links build/* $(prefix)

@@ -25,7 +25,7 @@ The PXF Extension Framework implements a protocol named `pxf` that you can use t
 
 You must enable the PXF extension in each database in which you plan to use the framework to access external data. You must also explicitly `GRANT` permission to the `pxf` protocol to those users/roles who require access.
 
-After the extension is registered and privileges are assigned, you can use the `CREATE EXTERNAL TABLE` command to create an external table using the `pxf` protocol. PXF provides built-in HDFS and Hive connectors. These connectors define profiles that support different file formats. You specify the profile name in the `CREATE EXTERNAL TABLE` command `LOCATION` URI.
+After the extension is registered and privileges are assigned, you can use the `CREATE EXTERNAL TABLE` command to create an external table using the `pxf` protocol. PXF provides built-in HDFS, Hive, and HBase connectors. These connectors define profiles that support different file formats. You specify the profile name in the `CREATE EXTERNAL TABLE` command `LOCATION` URI.
 
 
 ## <a id="enable-pxf-ext"></a>Enabling/Disabling PXF
@@ -87,12 +87,13 @@ GRANT SELECT ON PROTOCOL pxf TO bill;
 
 ## <a id="built-inprofiles"></a> PXF Profiles
 
-PXF is installed with HDFS and Hive connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
+PXF is installed with HDFS, Hive, and HBase connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing an external data store.
 
 PXF provides the following built-in profiles:
 
 | Data Source | Data Format | Profile Name(s) | Description |
 |-------|---------|------------|----------------|
+| HBase | Many | HBase | Any data type that can be converted to an array of bytes.|
 | HDFS | Text | HdfsTextSimple | Delimited single line records from plain text files on HDFS.|
 | HDFS | Text | HdfsTextMulti | Delimited single or multi-line records with quoted linefeeds from plain text files on HDFS. |
 | HDFS | Avro | Avro | Avro format binary files (\<filename\>.avro). |
@@ -157,7 +158,7 @@ Greenplum Database passes the parameters in the `LOCATION` string as headers to 
 | Keyword               | Value and Description                                                                                                                                                                                                                                                          |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | \<path\-to\-data\>        | A directory, file name, wildcard pattern, table name, etc. The syntax of \<path-to-data\> is dependent upon the profile currently in use.                                                                                                                                                                                                                    |
-| PROFILE              | The profile PXF uses to access the data. PXF supports HDFS and Hive connectors that expose profiles named `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, and `HiveVectorizedORC`.                                                                                                                                                                                   |
+| PROFILE              | The profile PXF uses to access the data. PXF supports HBase, HDFS, and Hive connectors that expose profiles named `HBase`, `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, `Hive`, `HiveText`, `HiveRC`, `HiveORC`, and `HiveVectorizedORC`.                                                                                                                                                                                   |
 | \<custom-option\>=\<value\> | Additional options and values supported by the profile.                                                                  |
 | FORMAT  \<value\>| PXF profiles support the '`TEXT`', '`CSV`', and '`CUSTOM`' `FORMAT`s.  |
 | \<formatting-properties\> | Formatting properties supported by the profile; for example, the `formatter` or `delimiter`.                                                                   |
