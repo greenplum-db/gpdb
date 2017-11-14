@@ -409,10 +409,10 @@ chunksize = 67108864</codeblock></p>
                   <pt>gpcheckcloud_newline</pt>
                   <pd>When downloading files from an S3 location, the <codeph>gpcheckcloud</codeph>
                      utility appends a new line character to last line of a file if the last line of
-                     a file does not have an  EOL (end of line) character. The default character is
+                     a file does not have an EOL (end of line) character. The default character is
                         <codeph>\n</codeph> (newline). The value can be <codeph>\n</codeph>,
                         <codeph>\r</codeph> (carriage return), or <codeph>\n\r</codeph>
-                     (newline/carriage return)<p>Adding an EOL character prevents the last line of
+                     (newline/carriage return).<p>Adding an EOL character prevents the last line of
                         one file from being concatenated with the first line of next file.</p></pd>
                </plentry>
                <plentry>
