@@ -165,14 +165,14 @@ def display_params(options, dburl, standby, segments, dumpDirsExist):
         port = segdb.getSegmentPort()
         logger.info('%s:%s:%s' % (host, datadir, port))
 
-    yn = ask_yesno('', 'Continue with Greenplum instance deletion?', 'N')
+    yn = ask_yesno(None, '\nContinue with Greenplum instance deletion?', 'N')
     if yn:
         logger.info('FINAL WARNING, you are about to delete the Greenplum instance')
         logger.info('on master host %s.' % dburl.pghost)
         if dumpDirsExist and options.force:
             logger.warn('There are database dump files, these will be DELETED if you continue!')
             g_warnings_generated = True
-        yn = ask_yesno('', 'Continue with Greenplum instance deletion?', 'N')
+        yn = ask_yesno(None, '\nContinue with Greenplum instance deletion?', 'N')
         if not yn:
             raise GpDeleteSystemException('User canceled')
     else:
