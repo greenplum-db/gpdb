@@ -47,8 +47,6 @@ extern Oid	DefineRelation(CreateStmt *stmt, char relkind, char relstorage, bool 
 
 extern void	DefineExternalRelation(CreateExternalStmt *stmt);
 
-extern void DefineForeignRelation(CreateForeignStmt *createForeignStmt);
-
 extern void	DefinePartitionedRelation(CreateStmt *stmt, Oid reloid);
 
 extern void EvaluateDeferredStatements(List *deferredStmts);
