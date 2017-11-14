@@ -31,7 +31,6 @@
          </ul></p>
       <section id="s3_prereq">
          <title>Configuring and Using S3 External Tables</title>
-         <!--conref in CREATE EXTERNAL TABLE-->
          <p>Follow these basic steps to configure the S3 protocol and use S3 external tables, using
             the available links for more information. See also <xref
                href="#amazon-emr/section_tsq_n3t_3x" format="dita"/> to better understand the
@@ -127,7 +126,6 @@
                <codeph>version</codeph> parameter is 2. For information about
                <codeph>version</codeph> parameter, see <xref href="#amazon-emr/s3_config_file"
                format="dita"/>.</p>
-         <!--conref in CREATE EXTERNAL TABLE-->
          <note id="s3-prefix-note">Although the <varname>S3_prefix</varname> is an optional part of
             the syntax, you should always include an S3 prefix for both writable and read-only S3
             tables to separate datasets as part of the <codeph><xref
@@ -287,8 +285,8 @@ server_side_encryption = sse-s3
             with the <codeph>s3</codeph> protocol configuration parameter <codeph>proxy</codeph> or
             an environment variable. If the configuration parameter is set, the environment
             variables are ignored. </p>
-         <p>To specify proxy with an environment variable, you set the environment variable based
-            on the protocol: <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
+         <p>To specify proxy with an environment variable, you set the environment variable based on
+            the protocol: <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
                <codeph>socks_proxy</codeph>. You can specify a different URL for each protocol by
             setting the appropriate environment variable. S3 supports these environment
                variables.<ul id="ul_cy3_km2_r1b">
@@ -304,7 +302,6 @@ server_side_encryption = sse-s3
       </section>
       <section id="s3_config_param">
          <title>About the s3 Protocol config Parameter</title>
-         <!--conref in CREATE EXTERNAL TABLE-->
          <p>The optional <codeph>config</codeph> parameter specifies the location of the required
                <codeph>s3</codeph> protocol configuration file. The file contains Amazon Web
             Services (AWS) connection credentials and communication parameters. For information
@@ -327,7 +324,6 @@ server_side_encryption = sse-s3
       </section>
       <section id="s3_config_file">
          <title>s3 Protocol Configuration File</title>
-         <!--conref in CREATE EXTERNAL TABLE-->
          <p>When using the <codeph>s3</codeph> protocol, an <codeph>s3</codeph> protocol
             configuration file is required on all Greenplum Database segments. The default location
             is:<codeblock><varname>gpseg_data_dir</varname>/<varname>gpseg-prefix</varname><varname>N</varname>/s3/s3.conf</codeblock></p>
@@ -408,6 +404,16 @@ chunksize = 67108864</codeblock></p>
                            <codeph>s3</codeph> protocol (port 80 for HTTP or port 443 for HTTPS). If
                         the port is specified, that port is used regardless of the encryption
                         setting.</p></pd>
+               </plentry>
+               <plentry>
+                  <pt>gpcheckcloud_newline</pt>
+                  <pd>When downloading files from an S3 location, the <codeph>gpcheckcloud</codeph>
+                     utility appends a new line character to last line of a file if the last line of
+                     a file does not have an  EOL (end of line) character. The default character is
+                        <codeph>\n</codeph> (newline). The value can be <codeph>\n</codeph>,
+                        <codeph>\r</codeph> (carriage return), or <codeph>\n\r</codeph>
+                     (newline/carriage return)<p>Adding an EOL character prevents the last line of
+                        one file from being concatenated with the first line of next file.</p></pd>
                </plentry>
                <plentry>
                   <pt>low_speed_limit</pt>
@@ -507,7 +513,6 @@ chunksize = 67108864</codeblock></p>
       config=/home/gpadmin/aws_s3/s3.conf') </codeblock></pd>
                </plentry>
             </parml>
-            <!--conref in 43100 RelNotes-->
             <note><ph id="memory-phrase">Greenplum Database can require up to <codeph>threadnum *
                      chunksize</codeph> memory on each segment host when uploading or downloading S3
                   files. Consider this <codeph>s3</codeph> protocol memory requirement when you
@@ -517,7 +522,6 @@ chunksize = 67108864</codeblock></p>
       </section>
       <section id="section_tsq_n3t_3x">
          <title>s3 Protocol Limitations</title>
-         <!--conref in CREATE EXTERNAL TABLE-->
          <p>These are <codeph>s3</codeph> protocol limitations: <ul id="ul_qqg_qcz_55">
                <li>Only the S3 path-style URL is
                   supported.<codeblock>s3://<varname>S3_endpoint</varname>/<varname>bucketname</varname>/[<varname>S3_prefix</varname>]</codeblock></li>
