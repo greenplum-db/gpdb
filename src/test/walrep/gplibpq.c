@@ -137,7 +137,7 @@ test_receive_and_verify(PG_FUNCTION_ARGS)
 	{
 		if (walrcv_receive(NAPTIME_PER_CYCLE, &type, &buf, &len))
 		{
-			XLogRecPtr logStreamStart;
+			XLogRecPtr logStreamStart = {};
 			/* Accept the received data, and process it */
 			test_XLogWalRcvProcessMsg(type, buf, len, &logStreamStart);
 
