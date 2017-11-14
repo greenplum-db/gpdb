@@ -2140,20 +2140,6 @@ def impl(context, table_type, table_name, db_name, num_partitions):
     create_large_num_partitions(table_type, table_name, db_name, num_partitions)
 
 
-@given('the length of partition names of table "{table_name}" in "{db_name}" exceeds the command line maximum limit')
-def impl(context, table_name, db_name):
-    partitions = get_partition_tablenames(table_name, db_name)
-    partition_list_string = ''
-    for part in partitions:
-        partition_list_string += (part[0] + ',')
-    if partition_list_string[-1] == ',':
-        parition_list_string = partition_list_string[:-1]
-    MAX_COMMAND_LINE_LEN = 100000
-    if len(partition_list_string) < MAX_COMMAND_LINE_LEN:
-        raise Exception('Expected the length of the string to be greater than %s, but got %s instead' % (
-        MAX_COMMAND_LINE_LEN, len(partition_list_string)))
-
-
 @given('there is a table-file "{filename}" with tables "{table_list}"')
 @then('there is a table-file "{filename}" with tables "{table_list}"')
 def impl(context, filename, table_list):
