@@ -1382,38 +1382,52 @@ static bool
 simplify_EXISTS_query(PlannerInfo *root, Query *query)
 {
 	/*
+	 * We don't try to simplify at all if the query uses set operations,
+	 * OFFSET, or FOR UPDATE/SHARE; none of these seem likely in normal
+	 * usage and their possible effects are complex.
+	 */
+	if (query->commandType != CMD_SELECT ||
+		query->intoClause ||
+		query->setOperations ||
+		query->limitOffset ||
+		query->rowMarks)
+		return false;
+
+	/*
+	 * Mustn't throw away the targetlist if it contains set-returning
+	 * functions; those could affect whether zero rows are returned!
+	 */
+	if (expression_returns_set((Node *) query->targetList))
+		return false;
+
+	if (query->havingQual)
+	{
+		/* If HAVING has no aggregates, demote it to WHERE. */
+		if (!checkExprHasAggs(query->havingQual))
+		{
+			query->jointree->quals = make_and_qual(query->jointree->quals,
+												   query->havingQual);
+			query->havingQual = NULL;
+			query->hasAggs = false;
+		}
+		else
+			return false;
+	}
+
+	/*
 	 * Otherwise, we can throw away the targetlist, as well as any GROUP,
-	 * DISTINCT, and ORDER BY clauses; none of those clauses will change
-	 * a nonzero-rows result to zero rows or vice versa.  (Furthermore,
+	 * WINDOW, DISTINCT, and ORDER BY clauses; none of those clauses will
+	 * change a nonzero-rows result to zero rows or vice versa.  (Furthermore,
 	 * since our parsetree representation of these clauses depends on the
 	 * targetlist, we'd better throw them away if we drop the targetlist.)
 	 */
-	/* Delete ORDER BY and DISTINCT. */
-	query->sortClause = NIL;
-	query->distinctClause = NIL;
-
-	/*
-	 * HAVING is the only place that could still contain aggregates. We can
-	 * delete targetlist if there is no havingQual.
-	 */
-	if (query->havingQual == NULL)
-	{
-		query->targetList = NULL;
-		query->hasAggs = false;
-	}
-
-	/* If HAVING has no aggregates, demote it to WHERE. */
-	else if (!checkExprHasAggs(query->havingQual))
-	{
-		query->jointree->quals = make_and_qual(query->jointree->quals,
-												   query->havingQual);
-		query->havingQual = NULL;
-		query->hasAggs = false;
-	}
-
+	query->targetList = NULL;
 	/* Delete GROUP BY if no aggregates. */
 	if (!query->hasAggs)
 		query->groupClause = NIL;
+	query->windowClause = NIL;
+	query->distinctClause = NIL;
+	query->sortClause = NIL;
 
 	return true;
 }
@@ -1446,9 +1460,6 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 
 	Assert(IsA(subselect, Query));
 
-	if (has_correlation_in_funcexpr_rte(subselect->rtable))
-		return NULL;
-
 	/*
 	 * Can't flatten if it contains WITH.  (We could arrange to pull up the
 	 * WITH into the parent query's cteList, but that risks changing the
@@ -1460,11 +1471,16 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	if (subselect->cteList)
 		return NULL;
 
+
+	if (has_correlation_in_funcexpr_rte(subselect->rtable))
+		return NULL;
+
 	/*
 	 * If deeply correlated, don't bother.
 	 */
 	if (IsSubqueryMultiLevelCorrelated(subselect))
 		return NULL;
+
 	/*
 	 * 'LIMIT n' makes EXISTS false when n <= 0, and doesn't affect the
 	 * outcome when n > 0.  Delete subquery's LIMIT and build (0 < n) expr to
@@ -1480,12 +1496,6 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 									 lnode, rnode, -1);
 		subselect->limitCount = NULL;
 	}
-
-	/* CDB TODO: Set-returning function in tlist could return empty set. */
-	if (expression_returns_set((Node *) subselect->targetList))
-		ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-						errmsg("Set-returning function in EXISTS subquery: not yet implemented")
-						));
 
 	/*
 	 * Trivial EXISTS subquery can be eliminated altogether.  If subquery has
@@ -1538,12 +1548,12 @@ convert_EXISTS_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 		return node;
 	}
 
-        /*
-        * Don't remove the sublink if we cannot pull-up the subquery
-        * later during pull_up_simple_subquery()
-        */
-        if (!simplify_EXISTS_query(root, subselect))
-                return NULL;
+	/*
+	 * Don't remove the sublink if we cannot pull-up the subquery
+	 * later during pull_up_simple_subquery()
+	 */
+	if (!simplify_EXISTS_query(root, subselect))
+		return NULL;
 
 	/*
 	 * The subquery must have a nonempty jointree, else we won't have a join.

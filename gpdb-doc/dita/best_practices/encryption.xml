@@ -22,7 +22,7 @@
           the cluster. Check your operating system documentation for IPsec support, or consider a 
           third-party solution such as that provided by <xref href="https://www.zettaset.com" 
           scope="external" format="html">Zettaset</xref>.</li>
-        <li>The <codeph>pgcrypto</codeph> package of encryption/decryption functions protects data
+        <li>The <codeph>pgcrypto</codeph> module of encryption/decryption functions protects data
           at rest in the database. Encryption at the column level protects sensitive information,
           such as passwords, Social Security numbers, or credit card numbers. See <xref
             href="#topic_th5_5bf_jr/section_emf_3kr_bs" format="dita"/> for an example. </li>
@@ -45,7 +45,7 @@
         <li>A symmetric encryption scheme, where the same key is used to both encrypt and decrypt,
           has better performance than an asymmetric scheme and should be used when the key can be
           shared safely.</li>
-        <li>Use functions from the pgcrypto package to encrypt data on disk. The data is encrypted
+        <li>Use functions from the pgcrypto module to encrypt data on disk. The data is encrypted
           and decrypted in the database process, so it is important to secure the client connection
           with SSL to avoid transmitting unencrypted data.</li>
         <li>Use the gpfdists protocol to secure ETL data as it is loaded into or unloaded from the
@@ -72,11 +72,13 @@
     </section>
     <section>
       <title>Encrypting Data at Rest with pgcrypto</title>
-      <p>The pgcrypto package for Greenplum Database provides functions for encrypting data at rest
+      <p>The pgcrypto module for Greenplum Database provides functions for encrypting data at rest
         in the database. Administrators can encrypt columns with sensitive information, such as
         social security numbers or credit card numbers, to provide an extra layer of protection.
         Database data stored in encrypted form cannot be read by users who do not have the
         encryption key, and the data cannot be read directly from disk. </p>
+      <p>pgcrypto is installed by default when you install Greenplum Database. You must
+        explicitly enable pgcrypto in each database in which you want to use the module.</p>
       <p>pgcrypto allows PGP encryption using symmetric and asymmetric encryption. Symmetric
         encryption encrypts and decrypts data using the same key and is faster than asymmetric
         encryption. It is the preferred method in an environment where exchanging secret keys is not
@@ -103,10 +105,6 @@
         between pgcrypto and the client application in clear-text. For optimal security, you should
         connect locally or use SSL connections and you should trust both the system and database
         administrators. </p>
-      <p>The pgcrypto package is not installed by default with Greenplum Database. You can download
-        a pgcrypto package from <xref href="http://network.pivotal.io" format="html"
-          scope="external">Pivotal Network</xref> and use the Greenplum Package Manager
-          (<codeph>gppkg</codeph>) to install <codeph>pgcrypto</codeph> across your cluster. </p>
       <p>pgcrypto configures itself according to the findings of the main PostgreSQL configure
         script.</p>
       <p>When compiled with <codeph>zlib</codeph>, pgcrypto encryption functions are able to

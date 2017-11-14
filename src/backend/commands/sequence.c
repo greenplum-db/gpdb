@@ -390,6 +390,7 @@ DefineSequence(CreateSeqStmt *seq)
 	bool		null[SEQ_COL_LASTCOL];
 	int			i;
 	NameData	name;
+	OffsetNumber offnum;
 
 	bool shouldDispatch =  Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode();
 
@@ -494,85 +495,53 @@ DefineSequence(CreateSeqStmt *seq)
 	rel = heap_open(seqoid, AccessExclusiveLock);
 	tupDesc = RelationGetDescr(rel);
 
-	/* Initialize first page of relation with special magic number */
+	/* Now form sequence tuple */
+	tuple = heap_form_tuple(tupDesc, value, null);
+
+	/* Fetch gp_persistent_relation_node information that will be added to XLOG record. */
+	Assert(rel != NULL);
+	Sequence_FetchGpRelationNodeForXLog(rel);
 
 	// -------- MirroredLock ----------
 	MIRROREDLOCK_BUFMGR_LOCK;
-	
+
+	/* Initialize first page of relation with special magic number */
 	buf = ReadBuffer(rel, P_NEW);
 	Assert(BufferGetBlockNumber(buf) == 0);
 
 	page = BufferGetPage(buf);
 
-	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
-
 	PageInit(page, BufferGetPageSize(buf), sizeof(sequence_magic));
 	sm = (sequence_magic *) PageGetSpecialPointer(page);
 	sm->magic = SEQ_MAGIC;
 
-	LockBuffer(buf, BUFFER_LOCK_UNLOCK);
-	
-	MIRROREDLOCK_BUFMGR_UNLOCK;
-	// -------- MirroredLock ----------
-	
-	/* hack: ensure heap_insert will insert on the just-created page */
-	rel->rd_targblock = 0;
-
-	/* Now form & insert sequence tuple */
-	tuple = heap_form_tuple(tupDesc, value, null);
-	simple_heap_insert(rel, tuple);
-
-	Assert(ItemPointerGetOffsetNumber(&(tuple->t_self)) == FirstOffsetNumber);
-
-	// Fetch gp_persistent_relation_node information that will be added to XLOG record.
-	Assert(rel != NULL);
-	Sequence_FetchGpRelationNodeForXLog(rel);
+	/* Now insert sequence tuple */
+	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 
 	/*
-	 * Two special hacks here:
-	 *
-	 * 1. Since VACUUM does not process sequences, we have to force the tuple
+	 * Since VACUUM does not process sequences, we have to force the tuple
 	 * to have xmin = FrozenTransactionId now.	Otherwise it would become
 	 * invisible to SELECTs after 2G transactions.	It is okay to do this
 	 * because if the current transaction aborts, no other xact will ever
 	 * examine the sequence tuple anyway.
 	 *
-	 * 2. Even though heap_insert emitted a WAL log record, we have to emit an
-	 * XLOG_SEQ_LOG record too, since (a) the heap_insert record will not have
-	 * the right xmin, and (b) REDO of the heap_insert record would re-init
-	 * page and sequence magic number would be lost.  This means two log
-	 * records instead of one :-(
 	 */
 
-	// -------- MirroredLock ----------
-	MIRROREDLOCK_BUFMGR_LOCK;
-
-	LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+	HeapTupleHeaderSetXmin(tuple->t_data, FrozenTransactionId);
+	HeapTupleHeaderSetXminFrozen(tuple->t_data);
+	HeapTupleHeaderSetCmin(tuple->t_data, FirstCommandId);
+	HeapTupleHeaderSetXmax(tuple->t_data, InvalidTransactionId);
+	tuple->t_data->t_infomask |= HEAP_XMAX_INVALID;
+	ItemPointerSet(&tuple->t_data->t_ctid, 0, FirstOffsetNumber);
 
 	START_CRIT_SECTION();
 
-	{
-		/*
-		 * Note that the "tuple" structure is still just a local tuple record
-		 * created by heap_form_tuple; its t_data pointer doesn't point at the
-		 * disk buffer.  To scribble on the disk buffer we need to fetch the
-		 * item pointer.  But do the same to the local tuple, since that will
-		 * be the source for the WAL log record, below.
-		 */
-		ItemId		itemId;
-		Item		item;
-
-		itemId = PageGetItemId((Page) page, FirstOffsetNumber);
-		item = PageGetItem((Page) page, itemId);
-
-		HeapTupleHeaderSetXmin((HeapTupleHeader) item, FrozenTransactionId);
-		((HeapTupleHeader) item)->t_infomask |= HEAP_XMIN_COMMITTED;
-
-		HeapTupleHeaderSetXmin(tuple->t_data, FrozenTransactionId);
-		tuple->t_data->t_infomask |= HEAP_XMIN_COMMITTED;
-	}
-
 	MarkBufferDirty(buf);
+
+	offnum = PageAddItem(page, (Item) tuple->t_data, tuple->t_len,
+						 InvalidOffsetNumber, false, false);
+	if (offnum != FirstOffsetNumber)
+		elog(ERROR, "failed to add sequence tuple to page");
 
 	/* XLOG stuff */
 	if (!rel->rd_istemp)

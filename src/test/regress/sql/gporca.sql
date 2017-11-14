@@ -1399,9 +1399,13 @@ create table foo (a int, b character varying(10));
 explain select * from foo where b in ('1', '2');
 
 set optimizer_enable_ctas = off;
+set log_statement='none';
+set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
 reset client_min_messages;
+reset log_min_duration_statement;
+reset log_statement;
 reset optimizer_enable_ctas;
 
 -- start_ignore

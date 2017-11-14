@@ -5,6 +5,8 @@ DROP
 -- start_ignore
 DROP RESOURCE GROUP rg_dumpinfo_test;
 ERROR:  resource group "rg_dumpinfo_test" does not exist
+DROP LANGUAGE IF EXISTS plpythonu;
+DROP
 -- end_ignore
 
 CREATE LANGUAGE plpythonu;
@@ -71,4 +73,6 @@ DROP
 DROP ROLE role_permission;
 DROP
 DROP RESOURCE GROUP rg_dumpinfo_test;
+DROP
+DROP LANGUAGE plpythonu CASCADE;
 DROP

@@ -1,0 +1,77 @@
+---
+title: Upgrading PXF
+---
+
+If you are using PXF in your current Greenplum Database installation, you must upgrade the PXF service when you upgrade to a new version of Greenplum Database.
+
+The PXF upgrade procedure describes how to upgrade PXF in your Greenplum Database installation. This procedure uses *PXF.from* to refer to your currently-installed PXF version and *PXF.to* to refer to the PXF version installed when you upgrade to the new version of Greenplum Database.
+
+The PXF upgrade procedure has two parts. You perform one procedure before, and one procedure after, you upgrade to a new version of Greenplum Database:
+
+-   [Step 1: PXF Pre-Upgrade Actions](#pxfpre)
+-   Upgrade to a new Greenplum Database version
+-   [Step 2: Upgrading PXF](#pxfup)
+
+## <a id="pxfpre"></a>Step 1: PXF Pre-Upgrade Actions
+
+Perform this procedure before you upgrade to a new version of Greenplum Database:
+
+1. Log in to the Greenplum Database master node and set up the environment. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    ```
+
+2. Create a text file that lists your Greenplum Database segment hosts, one host name per line. Ensure that there are no blank lines or extra spaces in the file. For example, a file named `seghostfile` may include:
+
+    ``` pre
+    seghost1
+    seghost2
+    seghost3
+    ```
+
+3. Run the `pxf stop` command to stop PXF on each segment host. For example:
+
+    ``` shell
+    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf stop"
+    ```
+
+4. Back up the *PXF.from* configuration files found in the `$GPHOME/pxf/conf/` directory. These files should be the same on all segment hosts, so you need only copy from one of the hosts. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ mkdir -p /save/pxf-from-conf
+    gpadmin@gpmaster$ scp gpadmin@seghost1:/usr/local/greenplum-db/pxf/conf/* /save/pxf-from-conf/
+    ```
+
+5. Note the locations of any JAR files you may have added to your *PXF.from* installation. Save a copy of these JAR files in case they are removed or altered when you upgrade to the new version of Greenplum Database.
+
+6. Upgrade to the new version of Greenplum Database and then continue your PXF upgrade with [Step 2: Upgrading PXF](#pxfup).
+
+
+## <a id="pxfup"></a>Step 2: Upgrading PXF
+
+After you upgrade to the new version of Greenplum Database, perform the following procedure to upgrade and configure the *PXF.to* software:
+
+1. Log in to the Greenplum Database master node and set up the environment. For example:
+
+    ``` shell
+    $ ssh gpadmin@<gpmaster>
+    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
+    ```
+
+2. If you updated the `pxf-env.sh` configuration file in your *PXF.from* installation, re-apply those changes to the file, and copy the updated `pxf-env.sh` to all segment hosts. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+
+    ``` shell
+    gpadmin@gpmaster$ vi /usr/local/greenplum-db/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ gpscp -v -f seghostfile /usr/local/greenplum-db/pxf/conf/pxf-env.sh =:/usr/local/greenplum-db/pxf/conf/pxf-env.sh
+    ```
+    
+3. Initialize PXF on each segment host as described in [Initializing PXF](cfginitstart_pxf.html#init_pxf).
+
+4. If you updated any of the `pxf-profiles.xml`, `pxf-log4j.properties`, `pxf-private.classpath`, or `pxf-public.classpath` configuration files in your *PXF.from* installation, re-apply those changes and copy the updated file(s) to all segment hosts. Refer to Step 2 above for a similar `gpscp` command.
+
+5. If you added additional JAR files to your *PXF.from* installation, copy them to the corresponding directory in your *PXF.to* installation **on each segment host**.
+ 
+6. Start PXF on each segment host as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
+

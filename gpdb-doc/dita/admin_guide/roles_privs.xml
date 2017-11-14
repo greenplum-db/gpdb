@@ -431,7 +431,7 @@
   <topic id="topic8" xml:lang="en">
     <title>Encrypting Data</title>
     <body>
-      <p>Greenplum Database includes an optional package of encryption/decryption functions called
+      <p>Greenplum Database is installed with an optional module of encryption/decryption functions called
           <codeph>pgcrypto</codeph>. The <codeph>pgcrypto</codeph> functions allow database
         administrators to store certain columns of data in encrypted form. This adds an extra layer
         of protection for sensitive data, as data stored in Greenplum Database in encrypted form

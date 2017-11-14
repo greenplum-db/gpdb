@@ -3415,12 +3415,12 @@ def duplicatePersistentEntryQuery(catname, pkey, excol, state):
                    where {excol} != {state}
               ) all_segments
                 LEFT OUTER JOIN pg_database d ON (all_segments.database_oid = d.oid)
-              WHERE d.datname = '{dbname}'
+              WHERE d.datname = {dbname}
               GROUP BY segid, {pkey}
               HAVING count(*) > 1
           ) rowresult
           GROUP BY {pkey}, total
-          """.format(catalog=catname, pkey=','.join(pkey), excol=excol, state=state, dbname=GV.dbname)
+          """.format(catalog=catname, pkey=','.join(pkey), excol=excol, state=state, dbname=quote_value(GV.dbname))
     return qry
 
 # -------------------------------------------------------------------------------

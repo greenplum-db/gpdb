@@ -67,13 +67,12 @@ static int getOvercommitRatio(void);
 static void detectCgroupMountPoint(void);
 
 static Oid currentGroupIdInCGroup = InvalidOid;
-static int cpucores = 0;
 static char cgdir[MAXPGPATH];
 
 /*
  * Build path string with parameters.
  * - if base is NULL, use default value "gpdb"
- * - if group is 0 then the path is for the gpdb toplevel cgroup;
+ * - if group is RESGROUP_ROOT_ID then the path is for the gpdb toplevel cgroup;
  * - if prop is "" then the path is for the cgroup dir;
  */
 static char *
@@ -89,7 +88,7 @@ buildPath(Oid group,
 	if (!base)
 		base = "gpdb";
 
-	if (group)
+	if (group != RESGROUP_ROOT_ID)
 		snprintf(path, pathsize, "%s/%s/%s/%d/%s", cgdir, comp, base, group, prop);
 	else
 		snprintf(path, pathsize, "%s/%s/%s/%s", cgdir, comp, base, prop);
@@ -167,7 +166,7 @@ unassignGroup(Oid group, const char *comp, int fddir)
 	if (buflen == 0)
 		return;
 
-	buildPath(0, NULL, comp, "cgroup.procs", path, pathsize);
+	buildPath(RESGROUP_ROOT_ID, NULL, comp, "cgroup.procs", path, pathsize);
 
 	fdw = open(path, O_WRONLY);
 	__CHECK(fdw >= 0, ( close(fddir) ), "can't open file for write");
@@ -373,24 +372,26 @@ removeDir(Oid group, const char *comp, bool unassign)
 static int
 getCpuCores(void)
 {
-	if (cpucores == 0)
+	static int cpucores = 0;
+
+	/*
+	 * cpuset ops requires _GNU_SOURCE to be defined,
+	 * and _GNU_SOURCE is forced on in src/template/linux,
+	 * so we assume these ops are always available on linux.
+	 */
+	cpu_set_t cpuset;
+	int i;
+
+	if (cpucores != 0)
+		return cpucores;
+
+	if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0)
+		CGROUP_ERROR("can't get cpu cores: %s", strerror(errno));
+
+	for (i = 0; i < CPU_SETSIZE; i++)
 	{
-		/*
-		 * cpuset ops requires _GNU_SOURCE to be defined,
-		 * and _GNU_SOURCE is forced on in src/template/linux,
-		 * so we assume these ops are always available on linux.
-		 */
-		cpu_set_t cpuset;
-		int i;
-
-		if (sched_getaffinity(0, sizeof(cpuset), &cpuset) < 0)
-			CGROUP_ERROR("can't get cpu cores: %s", strerror(errno));
-
-		for (i = 0; i < CPU_SETSIZE; i++)
-		{
-			if (CPU_ISSET(i, &cpuset))
-				cpucores++;
-		}
+		if (CPU_ISSET(i, &cpuset))
+			cpucores++;
 	}
 
 	if (cpucores == 0)
@@ -550,8 +551,8 @@ getMemoryInfo(unsigned long *ram, unsigned long *swap)
 static void
 getCgMemoryInfo(uint64 *cgram, uint64 *cgmemsw)
 {
-	*cgram = readInt64(0, "", "memory", "memory.limit_in_bytes");
-	*cgmemsw = readInt64(0, "", "memory", "memory.memsw.limit_in_bytes");
+	*cgram = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.limit_in_bytes");
+	*cgmemsw = readInt64(RESGROUP_ROOT_ID, "", "memory", "memory.memsw.limit_in_bytes");
 }
 
 /* get vm.overcommit_ratio */
@@ -628,14 +629,14 @@ ResGroupOps_Bless(void)
 		return;
 
 	detectCgroupMountPoint();
-	checkPermission(0, true);
+	checkPermission(RESGROUP_ROOT_ID, true);
 
 	/*
 	 * Put postmaster and all the children processes into the gpdb cgroup,
 	 * otherwise auxiliary processes might get too low priority when
 	 * gp_resource_group_cpu_priority is set to a large value
 	 */
-	ResGroupOps_AssignGroup(InvalidOid, PostmasterPid);
+	ResGroupOps_AssignGroup(RESGROUP_ROOT_ID, PostmasterPid);
 }
 
 /* Initialize the OS group */
@@ -660,10 +661,10 @@ ResGroupOps_Init(void)
 	int ncores = getCpuCores();
 	const char *comp = "cpu";
 
-	cfs_period_us = readInt64(0, NULL, comp, "cpu.cfs_period_us");
-	writeInt64(0, NULL, comp, "cpu.cfs_quota_us",
+	cfs_period_us = readInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.cfs_period_us");
+	writeInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.cfs_quota_us",
 			   cfs_period_us * ncores * gp_resource_group_cpu_limit);
-	writeInt64(0, NULL, comp, "cpu.shares",
+	writeInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.shares",
 			   1024LL * gp_resource_group_cpu_priority);
 }
 
@@ -678,13 +679,7 @@ ResGroupOps_AdjustGUCs(void)
 	 *
 	 * this function should be called before GUCs are dispatched to segments.
 	 */
-	/* TODO: when cgroup is enabled we should move postmaster and maybe
-	 *       also other processes to a separate group or gpdb toplevel */
-	if (gp_segworker_relative_priority != 0)
-	{
-		/* TODO: produce a warning */
-		gp_segworker_relative_priority = 0;
-	}
+	gp_segworker_relative_priority = 0;
 }
 
 /*
@@ -797,7 +792,7 @@ ResGroupOps_SetCpuRateLimit(Oid group, int cpu_rate_limit)
 
 	/* SUB/shares := TOP/shares * cpu_rate_limit */
 
-	int64 shares = readInt64(0, NULL, comp, "cpu.shares");
+	int64 shares = readInt64(RESGROUP_ROOT_ID, NULL, comp, "cpu.shares");
 	writeInt64(group, NULL, comp, "cpu.shares", shares * cpu_rate_limit / 100);
 }
 

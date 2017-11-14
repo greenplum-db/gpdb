@@ -14,6 +14,7 @@
 #ifndef RES_GROUP_OPS_H
 #define RES_GROUP_OPS_H
 
+#define RESGROUP_ROOT_ID (InvalidOid)
 /*
  * Interfaces for OS dependent operations
  */

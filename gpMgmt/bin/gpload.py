@@ -1137,6 +1137,7 @@ class gpload:
         self.options.l = None
         self.formatOpts = ""
         self.startTimestamp = time.time()
+        self.error_table = False
         seenv = False
         seenq = False
 
@@ -1468,7 +1469,10 @@ class gpload:
             self.options.d = self.options.U
 
         if self.getconfig('gpload:input:error_table', unicode, None):
-            self.control_file_error("ERROR_TABLE is not supported. Please use LOG_ERRORS instead.")
+            self.error_table = True
+            self.log(self.WARN,
+                        "ERROR_TABLE is not supported. " +
+                        "We will set LOG_ERRORS and REUSE_TABLES to True for compatibility.")
 
     def gpfdist_port_options(self, name, availablePorts, popenList):
         """
@@ -2642,6 +2646,9 @@ class gpload:
         if preload:
             truncate = self.getconfig('gpload:preload:truncate',bool,False)
             self.reuse_tables = self.getconfig('gpload:preload:reuse_tables',bool,False)
+        if self.error_table:
+            self.log_errors = True
+            self.reuse_tables = True
         if truncate == True:
             if method=='insert':
                 self.do_truncate(self.schemaTable)

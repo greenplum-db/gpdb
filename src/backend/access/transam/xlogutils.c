@@ -319,30 +319,31 @@ XLogReadBuffer(RelFileNode rnode, BlockNumber blkno, bool init)
 	 * filesystem loses an inode during a crash.  Better to write the data
 	 * until we are actually told to delete the file.)
 	 */
-	/* GPDB_84_MERGE_FIXME: this block of code (brought over from
-	 * XLogOpenRelation) was marked to be removed.  Can we? Is it related to
-	 * filerep? */
-	// UNDONE: Can't remove this block of code yet until boot time calls to this routine are analyzed...
-	{
-		MirrorDataLossTrackingState mirrorDataLossTrackingState;
-		int64 mirrorDataLossTrackingSessionNum;
-		bool mirrorDataLossOccurred;
+
+	/*
+	 * The multi-pass WAL replay during crash recovery in GPDB, guided by
+	 * persistent tables, may make the following smgrcreate() call redundant.
+	 * The problem is shortlived, it will go away once filerep and persistent
+	 * tables are removed.  To be clear, that the smgrcreate() call exists in
+	 * upstream.
+	 */
+	MirrorDataLossTrackingState mirrorDataLossTrackingState;
+	int64 mirrorDataLossTrackingSessionNum;
+	bool mirrorDataLossOccurred;
 		
-		// UNDONE: What about the persistent rel files table???
-		// UNDONE: This condition should not occur anymore.
-		// UNDONE: segmentFileNum and AO?
-		mirrorDataLossTrackingState = 
-					FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
-													&mirrorDataLossTrackingSessionNum);
-		smgrcreate(
-			smgr, 
-			/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
-			mirrorDataLossTrackingState,
-			mirrorDataLossTrackingSessionNum,
-			/* ignoreAlreadyExists */ true,
-			&mirrorDataLossOccurred);
-		
-	}
+	// UNDONE: What about the persistent rel files table???
+	// UNDONE: This condition should not occur anymore.
+	// UNDONE: segmentFileNum and AO?
+	mirrorDataLossTrackingState =
+		FileRepPrimary_GetMirrorDataLossTrackingSessionNum(
+			&mirrorDataLossTrackingSessionNum);
+	smgrcreate(
+		smgr,
+		/* relationName */ NULL,		// Ok to be NULL -- we don't know the name here.
+		mirrorDataLossTrackingState,
+		mirrorDataLossTrackingSessionNum,
+		/* ignoreAlreadyExists */ true,
+		&mirrorDataLossOccurred);
 
 	lastblock = smgrnblocks(smgr);
 
@@ -443,97 +444,6 @@ CreateFakeRelcacheEntry(RelFileNode rnode)
 	rel->rd_rel = &fakeentry->pgc;
 	rel->rd_node = rnode;
 
-	/* GPDB_84_MERGE_FIXME: this if block was moved from the removed
-	 * XLogOpenRelation(). Is this the correct place for it? What does it do?
-	 */
-#if 0
-	/*
-	 * We need to fault in the database directory on the standby.
-	 */
-	if (rnode.spcNode != GLOBALTABLESPACE_OID && IsStandbyMode())
-	{
-		char *primaryFilespaceLocation = NULL;
-
-		char *dbPath;
-		
-		if (IsBuiltinTablespace(rnode.spcNode))
-		{
-			/*
-			 * No filespace to fetch.
-			 */
-		}
-		else
-		{		
-			char *mirrorFilespaceLocation = NULL;
-		
-			/*
-			 * Investigate whether the containing directories exist to give more detail.
-			 */
-			PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-												rnode.spcNode,
-												&primaryFilespaceLocation,
-												&mirrorFilespaceLocation);
-			if (primaryFilespaceLocation == NULL ||
-				strlen(primaryFilespaceLocation) == 0)
-			{
-				elog(ERROR, "Empty primary filespace directory location");
-			}
-		
-			if (mirrorFilespaceLocation != NULL)
-			{
-				pfree(mirrorFilespaceLocation);
-				mirrorFilespaceLocation = NULL;
-			}
-		}
-		
-		dbPath = (char*)palloc(MAXPGPATH + 1);
-		
-		FormDatabasePath(
-					dbPath,
-					primaryFilespaceLocation,
-					rnode.spcNode,
-					rnode.dbNode);
-
-		if (primaryFilespaceLocation != NULL)
-		{
-			pfree(primaryFilespaceLocation);
-			primaryFilespaceLocation = NULL;
-		}
-		
-		if (mkdir(dbPath, 0700) == 0)
-		{
-			if (Debug_persistent_recovery_print)
-			{
-				elog(PersistentRecovery_DebugPrintLevel(), 
-					 "XLogOpenRelation: Re-created database directory \"%s\"",
-					 dbPath);
-			}
-		}
-		else
-		{
-			/*
-			 * Allowed to already exist.
-			 */
-			if (errno != EEXIST)
-			{
-				elog(ERROR, "could not create database directory \"%s\": %m",
-					 dbPath);
-			}
-			else
-			{
-				if (Debug_persistent_recovery_print)
-				{
-					elog(PersistentRecovery_DebugPrintLevel(), 
-						 "XLogOpenRelation: Database directory \"%s\" already exists",
-						 dbPath);
-				}
-			}
-		}
-
-		pfree(dbPath);
-	}
-#endif
-		
 	/* We don't know the name of the relation; use relfilenode instead */
 	sprintf(RelationGetRelationName(rel), "%u", rnode.relNode);
 

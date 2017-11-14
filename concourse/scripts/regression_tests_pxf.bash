@@ -136,6 +136,10 @@ function setup_hadoop_client() {
 function start_pxf() {
 	local hdfsrepo=$1
 	pushd ${PXF_HOME} > /dev/null
+
+	#Check if some other process is listening on 51200
+	netstat -tlpna | grep 51200 || true
+
 	su gpadmin -c "bash ./bin/pxf init"
 	su gpadmin -c "bash ./bin/pxf start"
 	popd > /dev/null
@@ -153,12 +157,12 @@ function _main() {
 		exit 1
 	fi
 
+	# Reserve port 51200 for PXF service
+	echo "pxf             51200/tcp               # PXF Service" >> /etc/services
+
 	time configure
 	time install_gpdb
 	time setup_gpadmin_user
-
-	# Reserve port 51200 for PXF service
-	echo "pxf             51200/tcp               # PXF Service" >> /etc/services
 
 	# setup hadoop before making GPDB cluster to use system python for yum install
 	time setup_singlecluster

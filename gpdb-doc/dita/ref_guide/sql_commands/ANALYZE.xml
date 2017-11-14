@@ -139,7 +139,7 @@
             >optimizer_analyze_root_partition</xref></codeph> affects when statistics are collected
         on the root partition of a partitioned table. If the parameter is enabled, statistics are
         also collected on the root partition when you run <codeph>ANALYZE</codeph> (without the
-          <codeph>ROOTPARTITON</codeph> keyword) and specify the root partition.</p>
+          <codeph>ROOTPARTITION</codeph> keyword) and specify the root partition.</p>
       <p>The statistics collected by <codeph>ANALYZE</codeph> usually include a list of some of the
         most common values in each column and a histogram showing the approximate data distribution
         in each column. One or both of these may be omitted if <codeph>ANALYZE</codeph> deems them

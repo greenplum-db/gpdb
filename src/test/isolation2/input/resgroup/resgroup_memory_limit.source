@@ -139,6 +139,41 @@ CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
 2q:
 1q:
 
+-- 7) QD: concurrent transactions in same group with memory_shared_quota = 100
+
+ALTER RESOURCE GROUP rg1_memory_test SET memory_shared_quota 100;
+
+1: SET ROLE TO role1_memory_test;
+1: BEGIN;
+1: SELECT hold_memory_by_percent(1,0.6);
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT hold_memory_by_percent(1,0.3);
+2q:
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT hold_memory_by_percent(1,0.2);
+2: SELECT hold_memory_by_percent(1,0.2);
+2q:
+1q:
+
+-- 8) QE: concurrent transactions in same group with memory_shared_quota = 100
+
+ALTER RESOURCE GROUP rg1_memory_test SET memory_shared_quota 100;
+
+1: SET ROLE TO role1_memory_test;
+1: BEGIN;
+1: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.6)=0;
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.3)=0;
+2q:
+2: SET ROLE TO role1_memory_test;
+2: BEGIN;
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+2: SELECT count(null) FROM gp_dist_random('gp_id') t1 WHERE hold_memory_by_percent(t1.dbid,0.2)=0;
+2q:
+1q:
 
 -- cleanup
 DROP ROLE role1_memory_test;

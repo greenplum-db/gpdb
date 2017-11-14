@@ -8,6 +8,18 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- s/^DETAIL:  Internal error: No motion listener port \(seg\d.*:.*\)/DETAIL:  Internal error: No motion listener port/
 -- end_matchsubs
 -- Test quoting of GUC values and database names when they're sent to segments
+set client_min_messages='warning';
+DROP DATABASE IF EXISTS "funny""db'with\\quotes";
+reset client_min_messages;
+CREATE DATABASE "funny""db'with\\quotes";
+ALTER DATABASE "funny""db'with\\quotes" SET search_path="funny""schema'with\\quotes";
+NOTICE:  schema "funny"schema'with\\quotes" does not exist
+-- GPDB_91_MERGE_FIXME: It would be good to leave the database in place, to
+-- also test gpcheckcat and pg_upgrade after all the regression tests have
+-- completed. As of this writing pg_upgrade does not in fact handle that well.
+-- Remove this DROP DATABASE once it's fixed. That should happen when we
+-- reach commit a2385cac13, which was backported to PostgreSQL 9.1.
+DROP DATABASE "funny""db'with\\quotes";
 -- There used to be a bug in the quoting when the search_path setting was sent
 -- to the segment. It was not easily visible when search_path was set with a
 -- SET command, only when the setting was sent as part of the startup packet.

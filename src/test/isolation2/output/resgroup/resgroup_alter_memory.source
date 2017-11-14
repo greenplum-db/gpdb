@@ -15,6 +15,9 @@ CREATE
 CREATE OR REPLACE FUNCTION hold_memory_by_percent(int, float) RETURNS int AS $$ SELECT * FROM resGroupPalloc($2) $$ LANGUAGE sql;
 CREATE
 
+CREATE OR REPLACE FUNCTION hold_memory_by_percent_on_qe(int, float) RETURNS int AS $$ SELECT resGroupPalloc($2) FROM gp_dist_random('gp_id') $$ LANGUAGE sql;
+CREATE
+
 -- After a 'q' command the client connection is disconnected but the
 -- QD may still be alive, if we then query pg_stat_activity quick enough
 -- we might still see this session with current_query '<IDLE>'.

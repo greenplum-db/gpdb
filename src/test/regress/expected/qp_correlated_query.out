@@ -1064,7 +1064,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
    ->  Seq Scan on a  (cost=0.00..3.05 rows=2 width=8)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(13 rows)
+(4 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 5 offset 3);
  i  | j  
@@ -1083,7 +1083,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
    One-Time Filter: false
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(13 rows)
+(4 rows)
 
 select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1 offset 0);
  i | j 
@@ -1091,20 +1091,25 @@ select * from A where not exists (select sum(C.i) from C where C.i = A.i limit 1
 (0 rows)
 
 explain select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=6.33..6.33 rows=4 width=4)
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=31.43..31.45 rows=5 width=4)
    Merge Key: c.j
-   ->  Sort  (cost=6.33..6.33 rows=2 width=4)
+   ->  Sort  (cost=31.43..31.45 rows=2 width=4)
          Sort Key: c.j
-         ->  Hash Anti Join  (cost=3.14..6.30 rows=2 width=4)
-               Hash Cond: c.i = b.i
-               ->  Seq Scan on c  (cost=0.00..3.09 rows=3 width=8)
-               ->  Hash  (cost=3.06..3.06 rows=2 width=4)
-                     ->  Seq Scan on b  (cost=0.00..3.06 rows=2 width=4)
+         ->  Seq Scan on c  (cost=0.00..31.39 rows=2 width=4)
+               Filter: NOT ((SubPlan 1))
+               SubPlan 1
+                 ->  Aggregate  (cost=3.13..3.14 rows=1 width=4)
+                       Filter: max(b.i) IS NOT NULL
+                       ->  Result  (cost=3.08..3.09 rows=1 width=4)
+                             Filter: $0 = b.i
+                             ->  Materialize  (cost=3.08..3.09 rows=1 width=4)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.08 rows=1 width=4)
+                                         ->  Seq Scan on b  (cost=0.00..3.08 rows=1 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(11 rows)
+(16 rows)
 
 select C.j from C where not exists (select max(B.i) from B  where C.i = B.i having max(B.i) is not null) order by C.j;
  j  

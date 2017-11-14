@@ -453,3 +453,40 @@ select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d
 (1 row)
 
 drop table foo, bar;
+--
+-- subqueries with unnest in projectlist
+--
+-- start_ignore
+DROP TABLE IF EXISTS A;
+NOTICE:  table "a" does not exist, skipping
+CREATE TABLE A AS SELECT ARRAY[1,2,3] AS X;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'x' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO A VALUES(NULL::int4[]);
+-- end_ignore
+SELECT (NOT EXISTS (SELECT UNNEST(X))) AS B FROM A;
+ b 
+---
+ f
+ t
+(2 rows)
+
+SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
+ b 
+---
+ t
+ f
+(2 rows)
+
+EXPLAIN SELECT (EXISTS (SELECT UNNEST(X))) AS B FROM A;
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.02 rows=1 width=33)
+   ->  Seq Scan on a  (cost=0.00..1.02 rows=1 width=33)
+         SubPlan 1
+           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Settings:  optimizer=off
+ Optimizer status: legacy query optimizer
+(6 rows)
+
+DROP TABLE A;

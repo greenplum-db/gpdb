@@ -29,7 +29,7 @@
           type="topic"/>
       </topicref>
     </topicref>
-    <topicref href="pxf-overview.xml" navtitle="Accessing HDFS and Hive Data with PXF"/>
+    <topicref href="pxf-overview.xml" navtitle="Accessing External Data with PXF"/>
     <topicref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml" type="topic">
       <topicref href="g-one-time-hdfs-protocol-installation.xml" type="topic"/>
       <topicref href="g-grant-privileges-for-the-hdfs-protocol.xml" type="topic"/>

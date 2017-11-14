@@ -4,6 +4,7 @@
 #include "access/nbtree.h"
 #include "access/gist_private.h"
 #include "access/gin.h"
+#include "commands/sequence.h"
 #include "replication/walsender_private.h"
 #include "replication/walsender.h"
 #include "utils/builtins.h"
@@ -43,7 +44,7 @@ static RelationTypeData relation_types[MAX_INCLUDE_RELATION_TYPES] = {
 
 static void init_relation_types(char *include_relation_types);
 static RelationTypeData get_relation_type_data(int relam, char relstorage, int relkind);
-static void mask_block(char *pagedata, BlockNumber blkno, Oid relam);
+static void mask_block(char *pagedata, BlockNumber blkno, int relam, int relkind);
 static bool compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *rentry);
 static XLogRecPtr* get_synced_lsns();
 static bool compare_sent_lsns(XLogRecPtr *start_sent_lsns, XLogRecPtr *end_sent_lsns);
@@ -135,7 +136,7 @@ get_relation_type_data(int relam, char relstorage, int relkind)
 }
 
 static void
-mask_block(char *pagedata, BlockNumber blockno, Oid relam)
+mask_block(char *pagedata, BlockNumber blockno, int relam, int relkind)
 {
 	switch(relam)
 	{
@@ -153,7 +154,11 @@ mask_block(char *pagedata, BlockNumber blockno, Oid relam)
 
 		/* heap table */
 		default:
-			heap_mask(pagedata, blockno);
+			if (relkind == RELKIND_SEQUENCE)
+				seq_mask(pagedata, blockno);
+			else
+				heap_mask(pagedata, blockno);
+
 			break;
 	}
 }
@@ -172,11 +177,15 @@ compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *ren
 
 	primaryFile = PathNameOpenFile(primaryfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
 	if (primaryFile < 0)
+	{
+		elog(WARNING, "Unable to open file %s", primaryfilepath);
 		return false;
+	}
 
 	mirrorFile = PathNameOpenFile(mirrorfilepath, O_RDONLY | PG_BINARY, S_IRUSR);
 	if (mirrorFile < 0)
 	{
+		elog(WARNING, "Unable to open file %s", mirrorfilepath);
 		FileClose(primaryFile);
 		return false;
 	}
@@ -201,8 +210,8 @@ compare_files(char* primaryfilepath, char* mirrorfilepath, RelfilenodeEntry *ren
 
 		if (rentry->relstorage == RELSTORAGE_HEAP)
 		{
-			mask_block(primaryFileBuf, blockno, rentry->relam);
-			mask_block(mirrorFileBuf, blockno, rentry->relam);
+			mask_block(primaryFileBuf, blockno, rentry->relam, rentry->relkind);
+			mask_block(mirrorFileBuf, blockno, rentry->relam, rentry->relkind);
 		}
 
 

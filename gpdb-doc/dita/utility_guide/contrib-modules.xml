@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="topic_khf_ltc_vbb">
+  <title>Additional Supplied Modules</title>
+  <shortdesc>This section describes additional modules available in the Greenplum Database
+      <codeph>contrib</codeph> subdirectory.</shortdesc>
+</topic>
