@@ -10,4 +10,4 @@ include $(PGXS)
 # For now run only for HEAP as for other object types like Sequence, AO, btree
 # there are still known differences to be fixed.
 installcheck: install
-	gp_replica_check.py -r="heap"
+	gp_replica_check.py -r="heap, sequence"
