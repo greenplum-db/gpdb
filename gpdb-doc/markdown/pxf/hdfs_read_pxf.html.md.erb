@@ -21,32 +21,32 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-HDFS is the primary distributed storage mechanism used by Apache Hadoop applications. The PXF HDFS connector reads file data stored in HDFS. The connector supports plain delimited and comma-separated-value format text files.  The HDFS connector also supports the Avro binary format.
+HDFS is the primary distributed storage mechanism used by Apache Hadoop applications. The PXF HDFS connector reads file data stored in HDFS. The connector supports plain delimited and comma-separated-value format data.  The HDFS connector also supports the Avro binary format.
 
 This section describes how to use PXF to access HDFS data, including how to create and query an external table referencing files in the HDFS data store.
 
 ## <a id="hdfs_prereq"></a>Prerequisites
 
-Before working with HDFS file data using PXF, ensure that:
+Before working with HDFS data using PXF, ensure that:
 
 -  You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
 - You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Starting PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
 - You have granted the `gpadmin` user read permission on the relevant portions of your HDFS file system.
 
-## <a id="hdfs_fileformats"></a>HDFS File Formats
+## <a id="hdfs_fileformats"></a>HDFS Data Formats
 
-The PXF HDFS connector supports reading the following file formats:
+The PXF HDFS connector supports reading the following data formats:
 
-- Text - comma-separated value (.csv) or delimited format plain text file
+- Text - comma-separated value (.csv) or delimited format plain text data
 - Avro - JSON-defined, schema-based data serialization format
 
-The PXF HDFS connector provides the following profiles to read the file formats listed above:
+The PXF HDFS connector provides the following profiles to read the data formats listed above:
 
 | Data Format | Profile Name(s) | Description |
 |-------|---------|------------|----------------|
-| Text | HdfsTextSimple | Read delimited single line records from plain text files on HDFS.|
-| Text | HdfsTextMulti | Read delimited single or multi-line records with quoted linefeeds from plain text files on HDFS. |
-| Avro | Avro | Read Avro format binary files (\<filename\>.avro). |
+| Text | HdfsTextSimple | Read delimited single line records from plain text data on HDFS.|
+| Text | HdfsTextMulti | Read delimited single or multi-line records with quoted linefeeds from plain text data on HDFS. |
+| Avro | Avro | Read Avro format binary data (\<filename\>.avro). |
 
 
 ## <a id="hdfs_cmdline"></a>HDFS Shell Command Primer
@@ -54,7 +54,7 @@ Hadoop includes command-line tools that interact directly with your HDFS file sy
 
 The HDFS file system command syntax is `hdfs dfs <options> [<file>]`. Invoked with no options, `hdfs dfs` lists the file system options supported by the tool.
 
-The user invoking the `hdfs dfs` command must have read privileges on the HDFS data store to list and view file contents, and write permission to create directories and files.
+The user invoking the `hdfs dfs` command must have read privileges on the HDFS data store to list and view directory and file contents, and write permission to create directories and files.
 
 The `hdfs dfs` options used in this topic are:
 
@@ -102,24 +102,24 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 
 | Keyword  | Value |
 |-------|-------------------------------------|
-| \<path-to-hdfs-file\>    | The absolute path to the file in the HDFS data store. |
+| \<path-to-hdfs-file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, or `Avro`. |
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
-| FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references a plain text delimited file.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value file.  |
+| FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value data.  |
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with  the `Avro` profile. The `Avro` `'CUSTOM'` `FORMAT` requires the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
  \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
 
-## <a id="profile_hdfstextsimple"></a>Reading Text Files
+## <a id="profile_hdfstextsimple"></a>Reading Text Data
 
-Use the `HdfsTextSimple` profile when you read a plain text delimited or .csv file where each row is a single record.
+Use the `HdfsTextSimple` profile when you read a plain text delimited or .csv data where each row is a single record.
 
 \<formatting-properties\> supported by the `HdfsTextSimple` profile include:
 
 | Keyword  | Syntax, Example(s) | Description |
 |-------|--------------|-----------------------|
-| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the file. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
 ### <a id="profile_hdfstextsimple_query" class="no-quick-link"></a>Example: Using the HdfsTextSimple Profile
 
@@ -193,17 +193,17 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_hdfs_simple.txt
     postgres=# SELECT * FROM pxf_hdfs_textsimple_csv;          
     ```
 
-    When specifying `FORMAT 'CSV'` for a comma-separated value file, no `delimiter` formatter option is required because comma is the default delimiter value.
+    When specifying `FORMAT 'CSV'` for comma-separated value data no `delimiter` formatter option is required because comma is the default delimiter value.
 
-## <a id="profile_hdfstextmulti"></a>Reading Text Files with Quoted Linefeeds
+## <a id="profile_hdfstextmulti"></a>Reading Text Data with Quoted Linefeeds
 
-Use the `HdfsTextMulti` profile to read plain text files with delimited single- or multi- line records that include embedded (quoted) linefeed characters.
+Use the `HdfsTextMulti` profile to read plain text data with delimited single- or multi- line records that include embedded (quoted) linefeed characters.
 
 \<formatting-properties\> supported by the `HdfsTextMulti` profile include:
 
 | Keyword  | Syntax, Example(s) | Value |
 |-------|--------------|-----------------------|
-| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the file. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
 ### <a id="profile_hdfstextmulti_query" class="no-quick-link"></a>Example: Using the HdfsTextMulti Profile
 
@@ -270,9 +270,9 @@ Perform the following steps to create a sample text file, copy the file to HDFS,
     (5 rows)
     ```
 
-## <a id="profile_hdfsavro"></a>Reading Avro Files
+## <a id="profile_hdfsavro"></a>Reading Avro Data
 
-Apache Avro is a data serialization framework where the data is serialized in a compact binary format. Avro specifies that data types be defined in JSON. Avro format files have an independent schema, also defined in JSON. An Avro schema, together with its data, is fully self-describing.
+Apache Avro is a data serialization framework where the data is serialized in a compact binary format. Avro specifies that data types be defined in JSON. Avro format data has an independent schema, also defined in JSON. An Avro schema, together with its data, is fully self-describing.
 
 ### <a id="profile_hdfsavrodatamap" class="no-quick-link"></a>Data Type Mapping
 

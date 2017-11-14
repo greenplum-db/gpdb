@@ -82,7 +82,7 @@ To grant a specific role access to the `pxf` protocol, use the `GRANT` command. 
 GRANT SELECT ON PROTOCOL pxf TO bill; 
 ```
 
-To write data to HDFS with PXF, you create an external table with the `CREATE WRITABLE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant `INSERT` permission to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. For example:
+To write data to an external data store with PXF, you create an external table with the `CREATE WRITABLE EXTERNAL TABLE` command that specifies the `pxf` protocol. You must specifically grant `INSERT` permission to the `pxf` protocol to all non-`SUPERUSER` Greenplum Database roles that require such access. For example:
 
 ``` sql
 GRANT INSERT ON PROTOCOL pxf TO bill; 
@@ -90,7 +90,7 @@ GRANT INSERT ON PROTOCOL pxf TO bill;
 
 ## <a id="built-inprofiles"></a> PXF Profiles
 
-PXF is installed with HDFS and Hive connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data sources of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references an external data store.
+PXF is installed with HDFS and Hive connectors that provide a number of built-in profiles. These profiles simplify and unify access to external data stores of varied formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references an external data store.
 
 PXF provides the following built-in profiles. Those profiles that support write access are identified as such in their `Description`.
 
@@ -127,7 +127,7 @@ A PXF profile definition includes the name of the profile, a description, and th
 
 ## <a id="profile-dependencies"></a>PXF JAR Dependencies
 
-You use PXF to access data stored on external systems. Depending upon the external data source, this access may require that you install and/or configure additional components or services for the external data source. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
+You use PXF to access data stored on external systems. Depending upon the external data store, this access may require that you install and/or configure additional components or services for the external data store. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
 
 PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` and `$GPHOME/pxf/conf/pxf-public.classpath` configuration files identify PXF JAR dependencies. In most cases, PXF manages the `pxf-private.classpath` file, adding entries as necessary based on your Hadoop distribution and optional Hive and HBase client installations. 
 
@@ -145,7 +145,7 @@ LOCATION('pxf://<path-to-data>?PROFILE[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
 ```
 
-The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI that identifies the path to, or other information describing, the location of the external data. For example, if the external data source is HDFS, the \<path-to-data\> would identify the absolute path to a specific HDFS file. If the external data source is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
+The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI that identifies the path to, or other information describing, the location of the external data. For example, if the external data store is HDFS, the \<path-to-data\> would identify the absolute path to a specific HDFS file. If the external data store is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
 
 Use the query portion of the URI, introduced by the question mark (?), to identify the PXF profile name. 
 

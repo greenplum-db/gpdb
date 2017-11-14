@@ -23,15 +23,15 @@ under the License.
 
 <div class="note warning">Warning: Writing text and binary data to HDFS an experimental PXF feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
 
-You can use the PXF HDFS connector to write text and SequenceFile format binary data to files stored on HDFS.
+You can use the PXF HDFS connector to write text and SequenceFile format binary data to files stored on HDFS. When you create a writable external table with the PXF HDFS connector, you specify the name of a directory on HDFS. When you insert records into the external table, the block(s) of data you insert are written to one or more files in the directory you specified.
 
-This section describes how to use PXF to write HDFS data, including how to create and insert data into a writable external table that references an HDFS file.
+This section describes how to use PXF to write HDFS data, including how to create and insert data into a writable external table that references an HDFS directory.
 
-**Note**: External tables that you create with a writable profile can only be used for `INSERT` operations. If you want to query the data you inserted, you must create a separate readable external table that references the HDFS file.
+**Note**: External tables that you create with a writable profile can only be used for `INSERT` operations. If you want to query the data you inserted, you must create a separate readable external table that references the HDFS directory.
 
 ## <a id="hdfswrite_prereq"></a>Prerequisites
 
-Before writing HDFS file data using PXF, ensure that:
+Before writing HDFS data using PXF, ensure that:
 
 -  You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
 - You have initialized and started PXF on your Greenplum Database segment hosts. See [Configuring, Initializing, and Managing PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
@@ -42,14 +42,14 @@ Before writing HDFS file data using PXF, ensure that:
 The PXF HDFS connector supports two writable profiles: `HdfsTextSimple` and `SequenceWritable`.
 
 - Specify the `HdfsTextSimple` profile when you want to write single line plain text data to HDFS.
-- Specify the `SequenceWritable` profile when the data you want to write is in SequenceFile binary format.
+- Specify the `SequenceWritable` profile when you want to write data in SequenceFile binary format.
 
-Use the following syntax to create a Greenplum Database writable external table that references an HDFS file: 
+Use the following syntax to create a Greenplum Database writable external table that references an HDFS directory: 
 
 ``` sql
 CREATE WRITABLE EXTERNAL TABLE <table_name> 
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
-LOCATION ('pxf://<path-to-hdfs-file>
+LOCATION ('pxf://<path-to-hdfs-dir>
     ?PROFILE=HdfsTextSimple|SequenceWritable[&<custom-option>=<value>[...]]')
 FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
 ```
@@ -58,10 +58,10 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 
 | Keyword  | Value |
 |-------|-------------------------------------|
-| \<path-to-hdfs-file\>    | The the absolute path to the file in the HDFS data store. |
+| \<path-to-hdfs-dir\>    | The the absolute path to the directory in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple` or `SequenceWritable`. |
 | \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed later in this topic.|
-| FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile to write plain, delimited text to \<path-to-hdfs-file\>.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` profile to write comma-separated value text to \<path-to-hdfs-file\>.<br> Use `FORMAT` '`CUSTOM`' with  the `SequenceWritable` profile. The `SequenceWritable` `'CUSTOM'` `FORMAT` supports only the built-in `(formatter='pxfwritable_export')` (write) and `(formatter='pxfwritable_import')` (read) \<formatting-properties\>. |
+| FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile to write plain, delimited text to \<path-to-hdfs-dir\>.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` profile to write comma-separated value text to \<path-to-hdfs-dir\>.<br> Use `FORMAT` '`CUSTOM`' with  the `SequenceWritable` profile. The `SequenceWritable` `'CUSTOM'` `FORMAT` supports only the built-in `(formatter='pxfwritable_export')` (write) and `(formatter='pxfwritable_import')` (read) \<formatting-properties\>. |
  \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified later in this topic. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
@@ -79,7 +79,7 @@ The `HdfsTextSimple` and `SequenceWritable` writable profiles support the follow
 
 ## <a id="write_text"></a>Writing Text Data
 
-Use the `HdfsTextSimple` profile when you want to write single line delimited data to a plain text file.
+Use the `HdfsTextSimple` profile when you want to write single line delimited data to HDFS.
 
 Writable external tables you create using the `HdfsTextSimple` profile can optionally use record or block compression. The PXF `HdfsTextSimple` profile supports the following compression codecs:
 
@@ -91,7 +91,7 @@ Writable external tables you create using the `HdfsTextSimple` profile can optio
 
 | Keyword  | Syntax, Example(s) | Description |
 |-------|-----------------------|--------------|
-| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the file. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
+| delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
 
 ### <a id="write_hdfstextsimple_example" class="no-quick-link"></a>Example: Writing Text Data Using the HdfsTextSimple Profile
@@ -109,19 +109,19 @@ This example also optionally uses the Greenplum Database external table named `p
 
 #### <a id="write_hdfstextsimple_proc" class="no-quick-link"></a>Procedure
 
-Perform the following procedure to create Greenplum Database writable external tables utilizing the same data schema as described above, one of which will employ compression. You will use the PXF `HdfsTextSimple` profile to write data to the underlying HDFS file. You will also create a separate, readable external table to read the data you wrote to the associated HDFS file.
+Perform the following procedure to create Greenplum Database writable external tables utilizing the same data schema as described above, one of which will employ compression. You will use the PXF `HdfsTextSimple` profile to write data to the underlying HDFS directory. You will also create a separate, readable external table to read the data you wrote to the HDFS directory.
 
-1. Create a Greenplum Database writable external table utilizing the data schema described above. Write to the HDFS file `/data/pxf_examples/pxfwritable_hdfs_textsimple1`. Create the table specifying a comma `,` as the delimiter:
+1. Create a Greenplum Database writable external table utilizing the data schema described above. Write to the HDFS directory `/data/pxf_examples/pxfwritable_hdfs_textsimple1`. Create the table specifying a comma `,` as the delimiter:
 
     ``` sql
     postgres=# CREATE WRITABLE EXTERNAL TABLE pxf_hdfs_writabletbl_1(location text, month text, num_orders int, total_sales float8)
                 LOCATION ('pxf://data/pxf_examples/pxfwritable_hdfs_textsimple1?PROFILE=HdfsTextSimple')
-              FORMAT 'TEXT' (delimiter=E',');
+              FORMAT 'TEXT' (delimiter=',');
     ```
     
-    You specify the `FORMAT` subclause `delimiter` value as the single ascii comma character `,`. `E` escapes the ascii character.
+    You specify the `FORMAT` subclause `delimiter` value as the single ascii comma character `,`.
 
-2. Write a few individual records to the `pxfwritable_hdfs_textsimple1` HDFS file by invoking the SQL `INSERT` command on `pxf_hdfs_writabletbl_1`:
+2. Write a few individual records to the `pxfwritable_hdfs_textsimple1` HDFS directory by invoking the SQL `INSERT` command on `pxf_hdfs_writabletbl_1`:
 
     ``` sql
     postgres=# INSERT INTO pxf_hdfs_writabletbl_1 VALUES ( 'Frankfurt', 'Mar', 777, 3956.98 );
@@ -134,7 +134,7 @@ Perform the following procedure to create Greenplum Database writable external t
     postgres=# INSERT INTO pxf_hdfs_writabletbl_1 SELECT * FROM pxf_hdfs_textsimple;
     ```
 
-4. In another terminal window, display the contents of the file stored in HDFS:
+4. In another terminal window, display the data you just added to HDFS:
 
     ``` shell
     $ hdfs dfs -cat /data/pxf_examples/pxfwritable_hdfs_textsimple1/*
@@ -146,9 +146,9 @@ Perform the following procedure to create Greenplum Database writable external t
     Beijing,Jul,411,11600.67
     ```
 
-    Because you specified comma `,` as the delimiter when you created the writable external table, this character is the field separator used in each record of the HDFS file.
+    Because you specified comma `,` as the delimiter when you created the writable external table, this character is the field separator used in each record of the HDFS data.
 
-5. Greenplum Database does not support directly querying a writable external table. To query the data in your newly-created HDFS file, you must create a readable external Greenplum Database table that references the HDFS file:
+5. Greenplum Database does not support directly querying a writable external table. To query the data you just added to HDFS, you must create a readable external Greenplum Database table that references the HDFS directory:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textsimple_r1(location text, month text, num_orders int, total_sales float8)
@@ -183,17 +183,17 @@ Perform the following procedure to create Greenplum Database writable external t
     ``` sql
     postgres=# CREATE WRITABLE EXTERNAL TABLE pxf_hdfs_writabletbl_2 (location text, month text, num_orders int, total_sales float8)
                 LOCATION ('pxf://data/pxf_examples/pxfwritable_hdfs_textsimple2?PROFILE=HdfsTextSimple&COMPRESSION_CODEC=org.apache.hadoop.io.compress.GzipCodec')
-              FORMAT 'TEXT' (delimiter=E':');
+              FORMAT 'TEXT' (delimiter=':');
     ```
 
-8. Write a few records to the `pxfwritable_hdfs_textsimple2` HDFS file by inserting directly into the `pxf_hdfs_writabletbl_2` table:
+8. Write a few records to the `pxfwritable_hdfs_textsimple2` HDFS directory by inserting directly into the `pxf_hdfs_writabletbl_2` table:
 
     ``` sql
     gpadmin=# INSERT INTO pxf_hdfs_writabletbl_2 VALUES ( 'Frankfurt', 'Mar', 777, 3956.98 );
     gpadmin=# INSERT INTO pxf_hdfs_writabletbl_2 VALUES ( 'Cleveland', 'Oct', 3812, 96645.37 );
     ```
 
-9. In another terminal window, display the contents of this file in HDFS; use the `-text` option to `hdfs dfs` to view the compressed data as text:
+9. In another terminal window, display the contents of the data you added to HDFS; use the `-text` option to `hdfs dfs` to view the compressed data as text:
 
     ``` shell
     $ hdfs dfs -text /data/pxf_examples/pxfwritable_hdfs_textsimple2/*
@@ -201,21 +201,21 @@ Perform the following procedure to create Greenplum Database writable external t
     Cleveland:Oct:3812:96645.3
     ```
 
-    Notice that the colon `:` is the field separator in this HDFS file.
+    Notice that the colon `:` is the field separator in this HDFS data.
 
-    To query data from the newly-created HDFS file named `pxfwritable_hdfs_textsimple2`, you can create a readable external Greenplum Database table as described above that references this HDFS file and specifies `FORMAT 'CSV' (delimiter ':')`.
+    To query data from the newly-created HDFS directory named `pxfwritable_hdfs_textsimple2`, you can create a readable external Greenplum Database table as described above that references this HDFS directory and specifies `FORMAT 'CSV' (delimiter=':')`.
 
 
 ## <a id="write_binary"></a>Writing Binary Data
 
-Use the HDFS connector `SequenceWritable` profile when you want to write SequenceFile format files to HDFS. Files of this type consist of binary key/value pairs. Sequence files are a common data transfer format between MapReduce jobs. 
+Use the HDFS connector `SequenceWritable` profile when you want to write SequenceFile format data to HDFS. Files of this type consist of binary key/value pairs. SequenceFile format is a common data transfer format between MapReduce jobs. 
 
-SequenceFile format files can optionally employ record or block compression. The PXF `SequenceWritable` profile supports the following compression codecs:
+SequenceFile format data can optionally employ record or block compression. The PXF `SequenceWritable` profile supports the following compression codecs:
 
 - org.apache.hadoop.io.compress.DefaultCodec
 - org.apache.hadoop.io.compress.BZip2Codec
 
-When you use the `SequenceWritable` profile to write a SequenceFile format file, you must provide the name of the Java class to use for serializing/deserializing the binary data. This class must provide read and write methods for each data type referenced in the data schema.
+When you use the `SequenceWritable` profile to write SequenceFile format data, you must provide the name of the Java class to use for serializing/deserializing the binary data. This class must provide read and write methods for each data type referenced in the data schema.
 
 ### <a id="write_sequencewritable_example" class="no-quick-link"></a>Example: Writing Binary Data Using the SequenceWritable Profile
 
@@ -384,7 +384,7 @@ public class PxfExample_CustomWritable implements Writable {
 
     Notice that the `'CUSTOM'` `FORMAT` \<formatting-properties\> specifies the built-in `pxfwritable_export` formatter.
 
-6. Write a few records to the `pxf_seqwrit_file` HDFS file by inserting directly into the `pxf_tbl_seqwrit` table. For example:
+6. Write a few records to the `pxf_seqwrit_file` HDFS directory by inserting directly into the `pxf_tbl_seqwrit` table. For example:
 
     ``` sql
     postgres=# INSERT INTO pxf_tbl_seqwrit VALUES ( 'Frankfurt', 'Mar', 777, 3956.98 );
@@ -392,14 +392,14 @@ public class PxfExample_CustomWritable implements Writable {
     
     ```
 
-6. Recall that Greenplum Database does not support directly querying a writable external table. To query the data in the newly-created `pxf_seqwrit_file` file, create a readable external Greenplum Database referencing this HDFS file:
+6. Recall that Greenplum Database does not support directly querying a writable external table. To query the data in `pxf_seqwrit_file`, create a readable external Greenplum Database referencing this HDFS directory:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE read_pxf_tbl_seqwrit (location text, month text, number_of_orders integer, total_sales real)
                 LOCATION ('pxf://data/pxf_examples/pxf_seqwrit_file?PROFILE=SequenceWritable&DATA-SCHEMA=com.example.pxf.hdfs.writable.dataschema.PxfExample_CustomWritable')
               FORMAT 'CUSTOM' (formatter='pxfwritable_import');
     ```
-    You must specify the `DATA-SCHEMA` \<custom-option\> when you read an HDFS file via the `SequenceWritable` profile. You need not provide compression-related options.
+    You must specify the `DATA-SCHEMA` \<custom-option\> when you read HDFS data via the `SequenceWritable` profile. You need not provide compression-related options.
     
 6. Query the readable external table `read_pxf_tbl_seqwrit`:
 
@@ -418,7 +418,7 @@ public class PxfExample_CustomWritable implements Writable {
 
 # <a id="read_recordkey"></a>Reading the Record Key
 
-When a Greenplum Database external table references a SequenceFile or another file format that stores rows in a key-value format, you can access the key values in Greenplum queries by using the `recordkey` keyword as a field name.
+When a Greenplum Database external table references SequenceFile or another data format that stores rows in a key-value format, you can access the key values in Greenplum queries by using the `recordkey` keyword as a field name.
 
 The field type of `recordkey` must correspond to the key type, much as the other fields must match the HDFS data. 
 
@@ -432,7 +432,7 @@ You can define `recordkey` to be any of the following Hadoop types:
 -   LongWritable
 -   Text
 
-If no record key is defined for a row, Greenplum Database returns the id of the segment on which the row data is stored.
+If no record key is defined for a row, Greenplum Database returns the id of the segment that processed the row.
 
 
 ### <a id="read_recordkey_example"></a>Example: Using Record Keys
@@ -454,5 +454,5 @@ gpadmin=# SELECT * FROM read_pxf_tbl_seqwrit_recordkey;
 (2 rows)
 ```
 
-You did not define a record key when you inserted the rows into the writable table, so the `recordkey` identifies the segment on which the row data is stored.
+You did not define a record key when you inserted the rows into the writable table, so the `recordkey` identifies the segment on which the row data was processed.
 
