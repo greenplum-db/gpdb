@@ -2,7 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_u14_wtd_dbb">
   <title>Accessing External Data with PXF</title>
-  <shortdesc>Data managed by your organization may already reside in external sources. The Greenplum Database PXF Extension Framework (PXF) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition.</shortdesc>
+  <shortdesc>Data managed by your organization may already reside in external sources. The Greenplum Platform Extension Framework (PXF) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition.</shortdesc>
   <body>
     <p>PXF is installed with HDFS, Hive, and HBase connectors. These connectors enable you to read external HDFS file system and Hive and HBase table data stored in text, Avro, RCFile, Parquet, SequenceFile, and ORC formats.</p>
     <p>The Greenplum Platform Extension Framework includes a protocol C library and a Java service. After you configure and initialize PXF, you start a single PXF JVM process on each Greenplum Database segment host. This long-running process concurrently serves multiple query requests.</p>
