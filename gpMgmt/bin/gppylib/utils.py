@@ -398,9 +398,10 @@ class TableLogger:
     Use this by constructing it, then calling warn, info, and infoOrWarn with arrays of columns, then outputTable
     """
 
-    def __init__(self):
+    def __init__(self, logger=get_default_logger()):
         self.__lines = []
         self.__warningLines = {}
+        self.logger = logger
 
         #
         # If True, then warn calls will produce arrows as well at the end of the lines
@@ -473,7 +474,7 @@ class TableLogger:
                 #
                 # separator
                 #
-                logger.info("----------------------------------------------------")
+                self.logger.info("----------------------------------------------------")
             else:
                 outLine = []
                 for i, field in enumerate(line):
@@ -486,9 +487,9 @@ class TableLogger:
                 msg = "".join(outLine)
 
                 if doWarn:
-                    logger.warn(msg)
+                    self.logger.warn(msg)
                 else:
-                    logger.info("   " + msg) # add 3 so that lines will line up even with the INFO and WARNING stuff on front
+                    self.logger.info("   " + msg) # add 3 so that lines will line up even with the INFO and WARNING stuff on front
 
         return self
 

@@ -51,7 +51,7 @@ class WorkerPool(object):
 
     halt_command = 'halt command'
 
-    def __init__(self, numWorkers=16, items=None, daemonize=False):
+    def __init__(self, numWorkers=16, items=None, daemonize=False, logger=gplog.get_default_logger()):
         if numWorkers <= 0:
             raise Exception("WorkerPool(): numWorkers should be greater than 0.")
         self.workers = []
@@ -108,7 +108,7 @@ class WorkerPool(object):
             num_completed_percentage = 0
             if command_count:
                 num_completed_percentage = float(num_completed) / command_count
-            logger.info('%0.2f%% of jobs completed' % (num_completed_percentage * 100))
+            self.logger.info('%0.2f%% of jobs completed' % (num_completed_percentage * 100))
             if num_completed >= command_count:
                 return
             self._join_work_queue_with_timeout(10)

@@ -24,7 +24,7 @@ try:
     from gppylib import pgconf
     from gppylib.commands import unix
     from gppylib.commands import gp
-    from gppylib.commands.gp import SEGMENT_STOP_TIMEOUT_DEFAULT
+    from gppylib.commands.gp import SEGMENT_STOP_TIMEOUT_DEFAULT, SegmentStop, GpSegStopCmd
     from gppylib.commands import base
     from gppylib.commands import pg
     from gppylib.commands import dca
@@ -64,7 +64,7 @@ class GpStop:
     def __init__(self, mode, master_datadir=None,
                  parallel=DEFAULT_NUM_WORKERS, quiet=False, masteronly=False, sighup=False,
                  interactive=False, stopstandby=False, restart=False,
-                 timeout=SEGMENT_STOP_TIMEOUT_DEFAULT, logfileDirectory=False):
+                 timeout=SEGMENT_STOP_TIMEOUT_DEFAULT, logfileDirectory=False, onlyThisHost=None):
         self.mode = mode
         self.master_datadir = master_datadir
         self.pool = None
@@ -79,6 +79,7 @@ class GpStop:
         self.hadFailures = False
         self.timeout = timeout
         self.logfileDirectory = logfileDirectory
+        self.onlyThisHost = onlyThisHost
 
         # some variables that will be assigned during run()
         self.gphome = None
@@ -93,7 +94,19 @@ class GpStop:
         pass
 
 
-        #####
+    #####
+    def _filter_segments_for_single_host_stop(self):
+        host_to_segments_mapping = self.gparray.getSegmentsByHostName(self.gparray.getSegDbList())
+        segments_on_host = host_to_segments_mapping[self.onlyThisHost]
+        up_segments_on_host = [seg for seg in segments_on_host if seg.isSegmentUp()]
+
+        for seg in up_segments_on_host:
+            if seg.isSegmentModeSynchronized():
+                continue
+            raise Exception("Segment '%s' not synchronized. Aborting." % seg)
+
+        return up_segments_on_host
+
 
     def run(self):
         """
@@ -118,8 +131,15 @@ class GpStop:
             if self.sighup:
                 return self._sighup_cluster()
             else:
+
+                segs = []
+                if self.onlyThisHost:
+                    segs = self._filter_segments_for_single_host_stop()
+                else:
+                    segs = self.gparray.getSegDbList()
+
                 if self.interactive:
-                    self._summarize_actions()
+                    self._summarize_actions(segs)
                     if not userinput.ask_yesno(None, "\nContinue with Greenplum instance shutdown", 'N'):
                         raise UserAbortedException()
 
@@ -127,9 +147,10 @@ class GpStop:
                     # Disable Ctrl-C
                     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-                    self._stop_master()
-                    self._stop_standby()
-                    self._stop_segments()
+                    if self.onlyThisHost is None:
+                        self._stop_master()
+                        self._stop_standby()
+                    self._stop_segments(segs)
                     self._stop_gpmmon()
                     self._stop_gpsmon()
                     self._remove_shared_memory()  # this creates a new logfile - why?
@@ -269,7 +290,18 @@ class GpStop:
         self._read_postgresqlconf()
         self._check_db_running()
         self._build_gparray()
+        if self.onlyThisHost:
+            self._is_hostname_valid()
         self._check_version()
+
+    ######
+    def _is_hostname_valid(self):
+        segments = self.gparray.getSegmentsByHostName( self.gparray.getDbList())
+        host_names = segments.keys()
+        if self.onlyThisHost not in host_names:
+            logger.error("host '%s' is not found in gp_segment_configuration" % self.onlyThisHost)
+            logger.error("hosts in cluster config: %s" % host_names)
+            raise SystemExit(1)
 
     ######
     def _check_version(self):
@@ -315,6 +347,7 @@ class GpStop:
         logger.info("Obtaining Segment details from master...")
         self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
         self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
+
 
     ######
     def _stop_master(self, masterOnly=False):
@@ -404,7 +437,7 @@ class GpStop:
 
             logger.info("Stopping master standby host %s mode=fast" % standby.hostname)
             try:
-                cmd = gp.SegmentStop("stopping master standby",
+                cmd = SegmentStop("stopping master standby",
                                      standby.datadir, mode='fast',
                                      timeout=self.timeout,
                                      ctxt=base.REMOTE,
@@ -419,7 +452,7 @@ class GpStop:
             else:
                 logger.warning("Process master standby still running, will issue fast shutdown with immediate")
                 try:
-                    cmd = gp.SegmentStop("stopping master standby", standby.datadir, mode='immediate',
+                    cmd = SegmentStop("stopping master standby", standby.datadir, mode='immediate',
                                          timeout=self.timeout,
                                          ctxt=base.REMOTE, remoteHost=standby.hostname)
                     cmd.run(validateAfter=True)
@@ -446,15 +479,15 @@ class GpStop:
             return True
 
     ######
-    def _stop_segments(self):
+    def _stop_segments(self, segs):
         failed_seg_status = []
         workers = min(len(self.gparray.get_hostlist()), self.parallel)
-        self.pool = base.WorkerPool(numWorkers=workers)
+        self.pool = base.WorkerPool(numWorkers=workers, logger=logger)
 
-        segs = self.gparray.getSegDbList()
+        logger.info("Targeting dbid %s for shutdown" % [seg.getSegmentDbId() for seg in segs])
 
-        # read in the hostcache file and make sure we can ping everybody
-        self.hostcache = gphostcache.GpHostCache(self.gparray, self.pool)
+        self.hostcache = gphostcache.GpHostCache(self.gparray, self.pool, segs=segs)
+
         failed_pings = self.hostcache.ping_hosts(self.pool)
         for db in failed_pings:
             logger.warning(
@@ -467,7 +500,7 @@ class GpStop:
             # stop primaries
             logger.info("Commencing parallel primary segment instance shutdown, please wait...")
             try:
-                self._stopseg_cmds(True, False)
+                self._stopseg_cmds(True, False, segs=segs)
             finally:
                 self.pool.join()
             primary_success_seg_status = self._process_segment_stop(failed_seg_status)
@@ -475,7 +508,7 @@ class GpStop:
             # stop mirrors
             logger.info("Commencing parallel mirror segment instance shutdown, please wait...")
             try:
-                self._stopseg_cmds(False, True)
+                self._stopseg_cmds(False, True, segs=segs)
             finally:
                 self.pool.join()
             mirror_success_seg_status = self._process_segment_stop(failed_seg_status)
@@ -487,7 +520,7 @@ class GpStop:
             logger.info("Commencing parallel segment instance shutdown, please wait...")
             # There are no active-mirrors
             try:
-                self._stopseg_cmds(True, False)
+                self._stopseg_cmds(True, False, segs=segs)
             finally:
                 self.pool.join()
             success_seg_status = self._process_segment_stop(failed_seg_status)
@@ -496,19 +529,24 @@ class GpStop:
         pass
 
     ######
-    def _stopseg_cmds(self, includePrimaries, includeMirrors):
+    def _stopseg_cmds(self, includePrimaries, includeMirrors, segs):
         dispatch_count = 0
 
-        for gphost in self.hostcache.get_hosts():
+        host_segs_map = {}
+        for seg in segs:
+            if seg.getSegmentHostName() in host_segs_map.keys():
+                host_segs_map[seg.getSegmentHostName()].append(seg)
+            else:
+                host_segs_map[seg.getSegmentHostName()] = [seg]
+
+        for hostname, gpdb_objs in host_segs_map.iteritems():
             dbs = []
-            for db in gphost.dbs:
+            for db in gpdb_objs:
                 role = db.getSegmentRole()
                 if role == 'p' and includePrimaries:
                     dbs.append(db)
                 elif role != 'p' and includeMirrors:
                     dbs.append(db)
-
-            hostname = gphost.dbs[0].hostname
 
             # If we have no dbs then we have no segments of the type primary
             # or mirror.  This will occur when you have an entire host fail
@@ -518,7 +556,7 @@ class GpStop:
                 continue
 
             logger.debug("Dispatching command to shutdown %d segments on host: %s" % (len(dbs), hostname))
-            cmd = gp.GpSegStopCmd("remote segment starts on host '%s'" % hostname, self.gphome, self.gpversion,
+            cmd = GpSegStopCmd("remote segment starts on host '%s'" % hostname, self.gphome, self.gpversion,
                                   mode=self.mode, dbs=dbs, timeout=self.timeout,
                                   verbose=logging_is_verbose(), ctxt=base.REMOTE, remoteHost=hostname,
                                   logfileDirectory=self.logfileDirectory)
@@ -604,7 +642,7 @@ class GpStop:
                 for stat in success_seg_status:
                     logger.debug(stat)
 
-        tabLog = TableLogger().setWarnWithArrows(True)
+        tabLog = TableLogger(logger=logger).setWarnWithArrows(True)
         tabLog.addSeparator()
         tabLog.info(["Segments stopped successfully", "= %d" % stopped])
         tabLog.infoOrWarn(failed > 0, ["Segments with errors during stop", "= %d" % failed])
@@ -697,12 +735,12 @@ class GpStop:
         return 1
 
     ######
-    def _summarize_actions(self):
+    def _summarize_actions(self, segs):
         logger.info("--------------------------------------------")
         logger.info("Master instance parameters")
         logger.info("--------------------------------------------")
 
-        tabLog = TableLogger().setWarnWithArrows(True)
+        tabLog = TableLogger(logger=logger).setWarnWithArrows(True)
         tabLog.info(["Master Greenplum instance process active PID", "= %s" % self.pid])
         tabLog.info(["Database", "= %s" % self.dburl.pgdb])
         tabLog.info(["Master port", "= %s" % self.port])
@@ -719,9 +757,10 @@ class GpStop:
         logger.info("Segment instances that will be shutdown:")
         logger.info("--------------------------------------------")
 
-        tabLog = TableLogger().setWarnWithArrows(True)
+        tabLog = TableLogger(logger=logger).setWarnWithArrows(True)
         tabLog.info(["Host", "Datadir", "Port", "Status"])
-        for db in self.gparray.getSegDbList():
+
+        for db in segs:
             tabLog.info([db.getSegmentHostName(), db.getSegmentDataDirectory(),
                          str(db.getSegmentPort()), db.getSegmentStatus()])
         tabLog.outputTable()
@@ -769,6 +808,9 @@ class GpStop:
                          help='number of segment hosts to run in parallel. Default is %d' % DEFAULT_NUM_WORKERS)
         addTo.add_option('-t', '--timeout', dest='timeout', default=SEGMENT_STOP_TIMEOUT_DEFAULT, type='int',
                          help='time to wait for segment stop (in seconds)')
+        addTo.add_option('--host', dest='only_this_host', type='string',
+                         help='stop all segments on this host if failover segments are available. '
+                              'hostname as displayed in gp_segment_configuration')
 
         parser.set_defaults(verbose=False, filters=[], slice=(None, None))
         return parser
@@ -819,7 +861,8 @@ class GpStop:
                       stopstandby=options.stop_standby,
                       restart=options.restart,
                       timeout=options.timeout,
-                      logfileDirectory=logfileDirectory)
+                      logfileDirectory=logfileDirectory,
+                      onlyThisHost=options.only_this_host)
 
 
 if __name__ == '__main__':
