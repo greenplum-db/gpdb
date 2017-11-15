@@ -25,7 +25,5 @@ set -e
 
 pushd ${SRC_DIR}
     dpkg-buildpackage -us -uc -b
-    # print contents just for human-readable feedback; not necessary
-    dpkg --contents ../greenplum-db*.deb
 popd
 cp greenplum-db*.deb deb_package_ubuntu16/greenplum-db.deb
