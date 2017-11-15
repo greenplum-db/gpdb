@@ -205,10 +205,9 @@ $ <b>gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -crea
 20171103:15:51:17 gprestore:gpadmin:0ee2f5fb02c9:017819-[INFO]:-Post-data metadata restore complete</codeblock></p>
       <p><codeph>gprestore</codeph> does not attempt to restore global metadata for the Greenplum
         System by default. If this is required, include the <codeph>-globals</codeph> argument.</p>
-      <p>By default, <codeph>gprestore</codeph> uses 2 parallel connections to restore table data
-        and metadata. If you have a large backup set, especially a large backup that contains
-        numerous indexes, then you can improve performance of the restore option by increasing the
-        number of parallel connections with the <codeph>-jobs</codeph> option. For
+      <p>By default, <codeph>gprestore</codeph> uses 2 parallel connections to restore table data.
+        If you have a large backup set you can improve performance of the restore option by
+        increasing the number of parallel connections with the <codeph>-jobs</codeph> option. For
         example:<codeblock>$ <b>gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb -jobs 8</b></codeblock></p>
       <p>Test the number of parallel connections with your backup set to determine the ideal number
         for fast data recovery.</p>
