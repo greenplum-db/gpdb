@@ -13,7 +13,4 @@ run:
   args:
   - -exc
   - |
-    python gpdb_src/concourse/scripts/build_orca.py --bintrayRemote=${BINTRAY_REMOTE} --bintrayRemoteURL=${BINTRAY_REMOTE_URL}
-params:
-  BINTRAY_USER: required
-  BINTRAY_REMOTE_URL: required
+    python gpdb_src/concourse/scripts/build_orca.py
