@@ -7,6 +7,7 @@
         <topicref href="topics/query-piv-optimizer.xml">
             <topicref href="topics/query-piv-opt-overview.xml"/>
             <topicref href="topics/query-piv-opt-enable.xml"/>
+            <topicref href="topics/query-piv-opt-root-partition.xml"/>
             <topicref href="topics/query-piv-opt-notes.xml"/>
             <topicref href="topics/query-piv-opt-features.xml"/>
             <topicref href="topics/query-piv-opt-changed.xml"/>

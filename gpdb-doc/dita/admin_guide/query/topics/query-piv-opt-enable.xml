@@ -7,10 +7,6 @@
       Server configuration parameters enable or disable GPORCA.</shortdesc>
   </abstract>
   <body>
-    <p>For a partitioned table, GPORCA uses statistics of the table root partition to generate query
-      plans. This is in contrast to the legacy planner, which uses the statistics of each leaf
-      partition. See <xref href="#topic_r5d_hv1_kr" format="dita"/> to ensure that you collect
-      statistics on the root partition.</p>
     <p>Although GPORCA is on by default, you can configure GPORCA usage at the system, database,
       session, or query level using the <cmdname>optimizer</cmdname> parameter. Refer to one of the
       following sections if you want to change the default behavior:<ul id="ul_frw_y51_kr">
@@ -22,40 +18,7 @@
       server configuration parameter <cmdname>optimizer_control</cmdname>. For information about the
       server configuration parameters, see the <cite>Greenplum Database Reference
         Guide</cite>.</note>
-    <note type="important">If you intend to execute queries on partitioned tables with GPORCA enabled, you must collect statistics on the partitioned table root partition
-      with the <cmdname>ANALYZE ROOTPARTITION</cmdname> command. The command <codeph>ANALYZE
-        ROOTPARTITION</codeph> collects statistics on the root partition of a partitioned table
-      based on the data in the table. Statistics are not collected on the leaf partitions, leaf
-      partition data is only sampled. If you specify a list of column names for a partitioned table,
-      the statistics for the columns and the root partition are collected. For information on the
-        <cmdname>ANALYZE</cmdname> command, see the <cite>Greenplum Database Reference Guide</cite>.<p>You can also use the Greenplum Database utility <codeph>analyzedb</codeph> to update table statistics. The
-          Greenplum Database utility <codeph>analyzedb</codeph> can update statistics
-        for multiple tables in parallel. The utility can also check table statistics and update
-        statistics only if the statistics are not current or do not exist. For information about the
-          <codeph>analyzedb</codeph> utility, see the <cite>Greenplum Database Utility
-          Guide</cite>.</p><p>As part of routine database maintenance, Refresh statistics on
-        the root partition when there are significant changes to leaf partition data.</p></note>
   </body>
-  <topic id="topic_r5d_hv1_kr">
-    <title>Setting the optimizer_analyze_root_partition Parameter</title>
-    <body>
-      <p>When the configuration parameter <codeph>optimizer_analyze_root_partition</codeph> is set
-        to <codeph>on</codeph>, root partition statistics will be collected when
-          <cmdname>ANALYZE</cmdname> is run on a partitioned table. Root partition statistics are
-        required by GPORCA.</p>
-      <ol id="ol_n22_hv1_kr">
-        <li>Log into the Greenplum Database master host as <codeph>gpadmin</codeph>,
-          the Greenplum Database administrator.</li>
-        <li>Set the values of the server configuration parameters. These Greenplum Database
-          <cmdname>gpconfig</cmdname> utility commands sets the value of the parameters to
-            <codeph>on</codeph>:<codeblock>$ gpconfig -c optimizer_analyze_root_partition -v on --masteronly</codeblock></li>
-        <li>Restart Greenplum Database. This Greenplum Database
-          <cmdname>gpstop</cmdname> utility command reloads the <codeph>postgresql.conf</codeph>
-          files of the master and segments without shutting down Greenplum Database.
-          <codeblock>gpstop -u</codeblock></li>
-      </ol>
-    </body>
-  </topic>
   <topic id="topic_byp_lqk_br">
     <title>Enabling GPORCA for a System</title>
     <body>
