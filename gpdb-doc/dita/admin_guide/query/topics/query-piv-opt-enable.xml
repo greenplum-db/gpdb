@@ -7,19 +7,17 @@
       Server configuration parameters enable or disable GPORCA.</shortdesc>
   </abstract>
   <body>
-    <ul id="ul_o5l_tqk_br">
-      <li><xref format="dita" href="#topic_r5d_hv1_kr">Set the
-            <codeph>optimizer_analyze_root_partition</codeph> parameter to
-          <codeph>on</codeph></xref> to enable statistics collection for the root partition of a
-        partitioned table.</li>
-      <li>Set the <cmdname>optimizer</cmdname> parameter to <codeph>on</codeph> (the default) or
-          <codeph>off</codeph> to enable or disable GPORCA. You can set the parameter at these
-          levels:<ul id="ul_frw_y51_kr">
-          <li><xref href="#topic_byp_lqk_br" format="dita">A Greenplum Database system</xref></li>
-          <li><xref href="#topic_pzr_3db_3r" format="dita">A specific Greenplum database</xref></li>
-          <li><xref href="#topic_lx4_vqk_br" format="dita">A session or query</xref></li>
-        </ul></li>
-    </ul>
+    <p>For a partitioned table, GPORCA uses statistics of the table root partition to generate query
+      plans. This is in contrast to the legacy planner, which uses the statistics of each leaf
+      partition. See <xref href="#topic_r5d_hv1_kr" format="dita"/> to ensure that you collect
+      statistics on the root partition.</p>
+    <p>Although GPORCA is on by default, you can configure GPORCA usage at the system, database,
+      session, or query level using the <cmdname>optimizer</cmdname> parameter. Refer to one of the
+      following sections if you want to change the default behavior:<ul id="ul_frw_y51_kr">
+        <li><xref href="#topic_byp_lqk_br" format="dita"/></li>
+        <li><xref href="#topic_pzr_3db_3r" format="dita"/></li>
+        <li><xref href="#topic_lx4_vqk_br" format="dita"/></li>
+      </ul></p>
     <note>You can disable the ability to enable or disable GPORCA with the
       server configuration parameter <cmdname>optimizer_control</cmdname>. For information about the
       server configuration parameters, see the <cite>Greenplum Database Reference
