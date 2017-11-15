@@ -762,16 +762,16 @@ $$ LANGUAGE plcontainer;</codeblock></p>
        gp_segment_configuration as g
    where f.oid = fe.fsefsoid and g.dbid = fe.fsedbid 
        and f.fsname = 'pg_system';</codeblock></li>
-          <li>In some cases, when PL/Container is running in a high-concurrent scenario, the Docker
-            daemon hangs or fails to work with log entries that indicate a memory shortage. However,
-            the system seems to have adequate free memory. <p>The issue seems to be triggered by a
+          <li>In some cases, when PL/Container is running in a high concurrency scenario, the Docker
+            daemon hangs with log entries that indicate a memory shortage. This can happen even when
+            the system seems to have adequate free memory.<p>The issue seems to be triggered by a
               combination of two factors, the aggressive virtual memory requirement of the Go
               language (<codeph>golang</codeph>) runtime that is used by PL/Container, and the
               Greenplum Database Linux server kernel parameter setting for
                 <codeph>overcommit_memory</codeph>. The parameter is set to 2 which does not allow
               memory overcommit. </p><p>A workaround that might help is to increase the amount of
               swap space and increase the Linux server kernel parameter
-                <codeph>overcommit_ratio</codeph>. If this issue sill occurs after the changes,
+                <codeph>overcommit_ratio</codeph>. If this issue still occurs after the changes,
               there might be memory shortage. You should check free memory on the system and add
               more RAM if needed. You can also decrease the cluster load.</p></li>
         </ul>
