@@ -2,7 +2,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: centos
+    repository: pivotaldata/ccp
     tag: "7"
 inputs:
 - name: terraform
@@ -16,7 +16,6 @@ run:
   - -c
   - |
     set -ex
-    ccp_src/aws/setup_software.sh
     ccp_src/aws/setup_ssh_to_cluster.sh
     scp cluster_env_files/hostfile_all mdw:/home/gpadmin/hostfile_all
     ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/backup_utils.sh; copy_backup_files"
