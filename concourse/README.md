@@ -29,7 +29,6 @@ There should be just a handful of pipelines in this directory:
   from the master branch of gpdb.
 * `dev_generate_installer.yml` which compiles and generates an installer for
   the given source and saves it to a dev bucket.
-* `gpcloud_pipeline.yml` run gpcloud tests against developers specified branch.
 * `pr_pipeline.yml` which compiles and tests pull requests.
 * `concourse-upgrade.yml` which uses Concourse to upgrade itself.
 * `pipeline_coverity.yml` run a build with coverity flags, separate so that it

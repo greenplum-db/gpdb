@@ -1137,24 +1137,36 @@ jobs:
     - get: centos-gpdb-dev-6
     - get: ubuntu-gpdb-dev-16
   - aggregate:
-    - task: test_gpcloud_centos
+    - task: unit_tests_gpcloud
+      file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
+      image: centos-gpdb-dev-6
+      params:
+        TARGET_OS: centos
+    - task: regression_tests_gpcloud_centos
       input_mapping:
         bin_gpdb: bin_gpdb_centos6
-      file: gpdb_src/concourse/tasks/test_gpcloud.yml
+      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
       image: centos-gpdb-dev-6
       params:
         gpcloud_access_key_id: {{gpcloud-access-key-id}}
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
         TARGET_OS: centos
-    - task: test_gpcloud_ubuntu
+    - task: regression_tests_gpcloud_ubuntu
       input_mapping:
         bin_gpdb: compiled_bits_ubuntu16
-      file: gpdb_src/concourse/tasks/test_gpcloud.yml
+      file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
       image: ubuntu-gpdb-dev-16
       params:
         gpcloud_access_key_id: {{gpcloud-access-key-id}}
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
         TARGET_OS: ubuntu
+    - task: gpcheckcloud_tests_gpcloud_centos
+      file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
+      image: centos-gpdb-dev-6
+      params:
+        gpcloud_access_key_id: {{gpcloud-access-key-id}}
+        gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
+        TARGET_OS: centos
 
 - name: QP_memory-accounting
   plan:
