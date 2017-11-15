@@ -346,6 +346,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <li><codeph>plpy.fatal(msg)</codeph> - Send a FATAL message to the Greenplum Database log. A
           FATAL message causes Greenplum Database session to be closed and transaction to be rolled
           back.</li>
+        <li><codeph>plpy.subtransaction()</codeph> - Manage <codeph>plpy.execute</codeph> calls in
+          an explicit subtransaction. See <xref
+            href="https://www.postgresql.org/docs/9.1/static/plpython-subtransaction.html"
+            format="html" scope="external">Explicit Subtransactions</xref> in the PostgreSQL
+          documentation for additional information about
+          <codeph>plpy.subtransaction()</codeph>.</li>
       </ul>
       <p>Also, the Python module has two global dictionary objects that retain the data between
         function calls. They are named GD and SD. GD is used to share the data between all the

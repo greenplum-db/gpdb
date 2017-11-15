@@ -189,6 +189,11 @@ SELECT * FROM composite_type_as_list();
           SQL query and prepare an execution plan for a query, <codeph>plpy.execute</codeph> and
             <codeph>plpy.prepare</codeph>. Preparing the execution plan for a query is useful if you
           run the query from multiple Python functions.</p>
+        <p>PL/Python also supports the <codeph>plpy.subtransaction()</codeph> function to help
+          manage <codeph>plpy.execute</codeph> calls in an explicit subtransaction. See <xref
+            href="https://www.postgresql.org/docs/9.1/static/plpython-subtransaction.html"
+            format="html" scope="external">Explicit Subtransactions</xref> in the PostgreSQL
+          documentation for additional information about <codeph>plpy.subtransaction()</codeph>.</p>
       </body>
       <topic id="topic_jnf_45f_zt">
         <title>plpy.execute</title>
