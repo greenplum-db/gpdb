@@ -16,6 +16,6 @@
 
 #include "postgres.h"
 
-extern bool IsMirrorUp(void);
+extern void GetMirrorStatus(bool *IsMirrorUp, bool *IsInSync);
 
-#endif //GPDB_GP_REPLICATION_H
+#endif

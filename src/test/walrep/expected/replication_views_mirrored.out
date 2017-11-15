@@ -5,9 +5,8 @@ SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and statu
      3
 (1 row)
 
--- Check how many WAL replication mirrors are up and not-in-sync
--- FIXME: mode should be 's', pending FTS changes
-SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode='n';
+-- Check how many WAL replication mirrors are up and in-sync
+SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode='s';
  count 
 -------
      3

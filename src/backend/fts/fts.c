@@ -404,8 +404,10 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeCo
 
 #ifdef USE_SEGWALREP
 static void
-probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive)
+probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive, bool IsInSync)
 {
+	Assert(IsInSync ? IsSegmentAlive : true);
+
 	/*
 	 * Insert new tuple into gp_configuration_history catalog.
 	 */
@@ -424,10 +426,13 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive)
 		histvals[Anum_gp_configuration_history_dbid-1] =
 				Int16GetDatum(dbid);
 		snprintf(desc, sizeof(desc),
-				"FTS: update status for dbid %d with contentid %d to %c",
-				dbid, segindex,
-				IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
-					GP_SEGMENT_CONFIGURATION_STATUS_DOWN);
+				 "FTS: update status and mode for dbid %d with contentid %d to %c and %c",
+				 dbid, segindex,
+				 IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
+				 GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
+				 IsInSync ? GP_SEGMENT_CONFIGURATION_MODE_INSYNC :
+				 GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC
+			);
 		histvals[Anum_gp_configuration_history_desc-1] =
 				CStringGetTextDatum(desc);
 		histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
@@ -476,6 +481,11 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive)
 										GP_SEGMENT_CONFIGURATION_STATUS_DOWN);
 		repls[Anum_gp_segment_configuration_status-1] = true;
 
+		configvals[Anum_gp_segment_configuration_mode-1] =
+			CharGetDatum(IsInSync ? GP_SEGMENT_CONFIGURATION_MODE_INSYNC :
+						 GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC);
+		repls[Anum_gp_segment_configuration_mode-1] = true;
+
 		newtuple = heap_modify_tuple(configtuple, RelationGetDescr(configrel),
 									 configvals, confignulls, repls);
 		simple_heap_update(configrel, &configtuple->t_self, newtuple);
@@ -503,15 +513,29 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, probe_context *context)
 			return false;
 
 		CdbComponentDatabaseInfo *primary = response->segment_db_info;
+
 		CdbComponentDatabaseInfo *mirror = FtsGetPeerSegment(cdbs,
 															 primary->segindex,
 															 primary->dbid);
 
+		/*
+		 * Currently, mode of primary and mirror should be same, either both
+		 * reflecting in sync or not in sync.
+		 */
+		Assert(primary->mode == mirror->mode);
+
 		bool IsPrimaryAlive = response->result.isPrimaryAlive;
 		bool IsMirrorAlive = response->result.isMirrorAlive;
+		bool IsInSync = response->result.isInSync;
+
+		/* If are in sync, then both have to be ALIVE */
+		Assert(IsInSync ? (IsPrimaryAlive && IsMirrorAlive) : true);
 
 		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
 		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
+
+		if (IsInSync != SEGMENT_IS_IN_SYNC(primary))
+			UpdatePrimary = UpdateMirror = true;
 
 		if (UpdatePrimary || UpdateMirror)
 		{
@@ -524,10 +548,12 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, probe_context *context)
 			GetTransactionSnapshot();
 
 			if (UpdatePrimary)
-				probeWalRepUpdateConfig(primary->dbid, primary->segindex, IsPrimaryAlive);
+				probeWalRepUpdateConfig(primary->dbid, primary->segindex,
+										IsPrimaryAlive, IsInSync);
 
 			if (UpdateMirror)
-				probeWalRepUpdateConfig(mirror->dbid, mirror->segindex, IsMirrorAlive);
+				probeWalRepUpdateConfig(mirror->dbid, mirror->segindex,
+										IsMirrorAlive, IsInSync);
 
 			if (shutdown_requested)
 			{
@@ -576,12 +602,15 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, probe_context *context)
 		Assert(FtsIsSegmentAlive(primary));
 
 		/*
-		 * Before we probe, we always DEFAULT the response for primary is down.
-		 * This will only be changed to true if primary is alive, otherwise some
-		 * error happened during the probe.
+		 * Before we probe, we always DEFAULT the response for primary is
+		 * down. This will only be changed to true if primary is alive,
+		 * otherwise some error happened during the probe. Similarly, always
+		 * DEFAULT the response to not in sync. Only if primary communicates
+		 * positively, consider it in sync.
 		 */
 		response->result.isPrimaryAlive = false;
 		response->result.isMirrorAlive = SEGMENT_IS_ALIVE(mirror);
+		response->result.isInSync = false;
 
 		response->segment_db_info = primary;
 		response->isScheduled = false;

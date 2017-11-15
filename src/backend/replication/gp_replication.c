@@ -22,9 +22,10 @@
  * True: if any mirror is up.
  * False: if none of the mirrors is up.
  */
-bool IsMirrorUp(void)
+void GetMirrorStatus(bool *IsMirrorUp, bool *IsInSync)
 {
-	bool IsMirrorUp = false;
+	*IsMirrorUp = false;
+	*IsInSync = false;
 
 	/*
 	 * Greenplum currently supports only ONE mirror per primary.
@@ -42,15 +43,17 @@ bool IsMirrorUp(void)
 		if (walsnd->pid != 0)
 		{
 			if(walsnd->state == WALSNDSTATE_CATCHUP
-				|| walsnd->state == WALSNDSTATE_STREAMING)
+			   || walsnd->state == WALSNDSTATE_STREAMING)
 			{
-				IsMirrorUp = true;
+				*IsMirrorUp = true;
+
+				if (walsnd->state == WALSNDSTATE_STREAMING)
+					*IsInSync = true;
+
 				break;
 			}
 		}
 	}
 
 	LWLockRelease(SyncRepLock);
-
-	return IsMirrorUp;
 }

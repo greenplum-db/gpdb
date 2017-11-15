@@ -23,8 +23,10 @@
 /* Queries for FTS messages */
 #define	FTS_MSG_TYPE_PROBE "PROBE"
 
-#define Natts_fts_probe_response 1
+#define Natts_fts_probe_response 2
 #define Anum_fts_probe_response_is_mirror_up 0
+#define Anum_fts_probe_response_is_in_sync 1
+
 #define FTS_PROBE_RESPONSE_NTUPLES 1
 
 typedef struct
@@ -32,6 +34,7 @@ typedef struct
 	int16 dbid;
 	bool isPrimaryAlive;
 	bool isMirrorAlive;
+	bool isInSync;
 } probe_result;
 
 typedef struct
@@ -50,6 +53,7 @@ typedef struct
 typedef struct ProbeResponse
 {
 	bool IsMirrorUp;
+	bool IsInSync;
 } ProbeResponse;
 
 #endif

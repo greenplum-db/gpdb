@@ -94,13 +94,21 @@ static void
 probeRecordResponse(ProbeConnectionInfo *probeInfo, PGresult *result)
 {
 	probeInfo->result->isPrimaryAlive = true;
+
 	int *isMirrorAlive = (int *) PQgetvalue(result, 0,
 											Anum_fts_probe_response_is_mirror_up);
 	Assert (isMirrorAlive);
 	probeInfo->result->isMirrorAlive = *isMirrorAlive;
 
-	write_log("FTS: segment (content=%d, dbid=%d, role=%c) reported IsMirrorUp %d to the prober.",
-			  probeInfo->segmentId, probeInfo->dbId, probeInfo->role, probeInfo->result->isMirrorAlive);
+	int *isInSync = (int *) PQgetvalue(result, 0,
+									   Anum_fts_probe_response_is_in_sync);
+	Assert (isInSync);
+	probeInfo->result->isInSync = *isInSync;
+
+	write_log("FTS: segment (content=%d, dbid=%d, role=%c) reported isMirrorUp %d and isInSync %d to the prober.",
+			  probeInfo->segmentId, probeInfo->dbId, probeInfo->role,
+			  probeInfo->result->isMirrorAlive,
+			  probeInfo->result->isInSync);
 }
 
 /*

@@ -29,11 +29,19 @@ SendProbeResponse(ProbeResponse *response)
 	BeginCommand(FTS_MSG_TYPE_PROBE, DestRemote);
 
 	pq_beginmessage(&buf, 'T');
-	pq_sendint(&buf, Natts_fts_probe_response, 2); /* 1 field */
+	pq_sendint(&buf, Natts_fts_probe_response, 2); /* 2 fields */
 
 	pq_sendstring(&buf, "is_mirror_up");
 	pq_sendint(&buf, 0, 4);		/* table oid */
 	pq_sendint(&buf, Anum_fts_probe_response_is_mirror_up, 2);		/* attnum */
+	pq_sendint(&buf, BOOLOID, 4);		/* type oid */
+	pq_sendint(&buf, 1, 2);	/* typlen */
+	pq_sendint(&buf, -1, 4);		/* typmod */
+	pq_sendint(&buf, 0, 2);		/* format code */
+
+	pq_sendstring(&buf, "is_in_sync");
+	pq_sendint(&buf, 0, 4);		/* table oid */
+	pq_sendint(&buf, Anum_fts_probe_response_is_in_sync, 2);		/* attnum */
 	pq_sendint(&buf, BOOLOID, 4);		/* type oid */
 	pq_sendint(&buf, 1, 2);	/* typlen */
 	pq_sendint(&buf, -1, 4);		/* typmod */
@@ -43,10 +51,14 @@ SendProbeResponse(ProbeResponse *response)
 	/* Send a DataRow message */
 	pq_beginmessage(&buf, 'D');
 	pq_sendint(&buf, Natts_fts_probe_response, 2);		/* # of columns */
+
 	pq_sendint(&buf, 1, 4); /* col1 len */
 	pq_sendint(&buf, response->IsMirrorUp, 1);
-	pq_endmessage(&buf);
 
+	pq_sendint(&buf, 1, 4); /* col2 len */
+	pq_sendint(&buf, response->IsInSync, 1);
+
+	pq_endmessage(&buf);
 	EndCommand(FTS_MSG_TYPE_PROBE, DestRemote);
 	pq_flush();
 }
@@ -56,6 +68,6 @@ HandleFtsWalRepProbe()
 {
 	ProbeResponse response;
 
-	response.IsMirrorUp = IsMirrorUp();
+	GetMirrorStatus(&response.IsMirrorUp, &response.IsInSync);
 	SendProbeResponse(&response);
 }

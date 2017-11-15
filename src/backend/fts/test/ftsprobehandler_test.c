@@ -20,9 +20,9 @@ void AssertFailed()
 void
 test_HandleFtsWalRepProbe(void **state)
 {
-	bool expected_mirror_state = true;
-
-	will_return(IsMirrorUp, expected_mirror_state);
+	expect_any(GetMirrorStatus, IsMirrorUp);
+	expect_any(GetMirrorStatus, IsInSync);
+	will_be_called(GetMirrorStatus);
 
 	expect_value(BeginCommand, commandTag, FTS_MSG_TYPE_PROBE);
 	expect_value(BeginCommand, dest, DestRemote);

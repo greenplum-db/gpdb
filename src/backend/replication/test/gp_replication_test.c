@@ -40,47 +40,77 @@ test_setup(WalSndCtlData *data, WalSndState state)
 }
 
 void
-test_IsMirrorUp_Pid_Zero(void **state)
+test_GetMirrorStatus_Pid_Zero(void **state)
 {
-	max_wal_senders = 1;
+	bool isMirrorUp;
+	bool isInSync;
 	WalSndCtlData data;
+
+	max_wal_senders = 1;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
 
 	expect_lwlock();
-	assert_false(IsMirrorUp());
+	GetMirrorStatus(&isMirrorUp, &isInSync);
+
+	assert_false(isMirrorUp);
+	assert_false(isInSync);
 }
 
 void
-test_IsMirrorUp_WALSNDSTATE_STARTUP(void **state)
+test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 {
+	bool isMirrorUp;
+	bool isInSync;
 	WalSndCtlData data;
+
 	test_setup(&data, WALSNDSTATE_STARTUP);
-	assert_false(IsMirrorUp());
+	GetMirrorStatus(&isMirrorUp, &isInSync);
+
+	assert_false(isMirrorUp);
+	assert_false(isInSync);
 }
 
 void
-test_IsMirrorUp_WALSNDSTATE_BACKUP(void **state)
+test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 {
+	bool isMirrorUp;
+	bool isInSync;
 	WalSndCtlData data;
+
 	test_setup(&data, WALSNDSTATE_BACKUP);
-	assert_false(IsMirrorUp());
+	GetMirrorStatus(&isMirrorUp, &isInSync);
+
+	assert_false(isMirrorUp);
+	assert_false(isInSync);
 }
 
 void
-test_IsMirrorUp_WALSNDSTATE_CATCHUP(void **state)
+test_GetMirrorStatus_WALSNDSTATE_CATCHUP(void **state)
 {
+	bool isMirrorUp;
+	bool isInSync;
 	WalSndCtlData data;
+
 	test_setup(&data, WALSNDSTATE_CATCHUP);
-	assert_true(IsMirrorUp());
+	GetMirrorStatus(&isMirrorUp, &isInSync);
+
+	assert_true(isMirrorUp);
+	assert_false(isInSync);
 }
 
 void
-test_IsMirrorUp_WALSNDSTATE_STREAMING(void **state)
+test_GetMirrorStatus_WALSNDSTATE_STREAMING(void **state)
 {
+	bool isMirrorUp;
+	bool isInSync;
 	WalSndCtlData data;
+
 	test_setup(&data, WALSNDSTATE_STREAMING);
-	assert_true(IsMirrorUp());
+	GetMirrorStatus(&isMirrorUp, &isInSync);
+
+	assert_true(isMirrorUp);
+	assert_true(isInSync);
 }
 
 int
@@ -89,11 +119,11 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test_IsMirrorUp_Pid_Zero),
-		unit_test(test_IsMirrorUp_WALSNDSTATE_STARTUP),
-		unit_test(test_IsMirrorUp_WALSNDSTATE_BACKUP),
-		unit_test(test_IsMirrorUp_WALSNDSTATE_CATCHUP),
-		unit_test(test_IsMirrorUp_WALSNDSTATE_STREAMING)
+		unit_test(test_GetMirrorStatus_Pid_Zero),
+		unit_test(test_GetMirrorStatus_WALSNDSTATE_STARTUP),
+		unit_test(test_GetMirrorStatus_WALSNDSTATE_BACKUP),
+		unit_test(test_GetMirrorStatus_WALSNDSTATE_CATCHUP),
+		unit_test(test_GetMirrorStatus_WALSNDSTATE_STREAMING)
 	};
 	return run_tests(tests);
 }
