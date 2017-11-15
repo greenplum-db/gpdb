@@ -22,6 +22,7 @@
  */
 
 #include <math.h>
+#include "catalog/gp_segment_config.h"
 
 /* cdb_rand returns a random float value between 0 and 1 inclusive */
 #define cdb_rand() ((double) random() / (double) MAX_RANDOM_VALUE)
@@ -64,16 +65,18 @@ typedef struct CdbComponentDatabaseInfo
 	int16		hostSegs;		/* number of primary segments on the same hosts */
 } CdbComponentDatabaseInfo;
 
-#define SEGMENT_ROLE_PRIMARY 'p'
-#define SEGMENT_ROLE_MIRROR 'm'
-
 #define SEGMENT_IS_ACTIVE_MIRROR(p) \
-	((p)->role == SEGMENT_ROLE_MIRROR ? true : false)
+	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR ? true : false)
 #define SEGMENT_IS_ACTIVE_PRIMARY(p) \
-	((p)->role == SEGMENT_ROLE_PRIMARY ? true : false)
+	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY ? true : false)
 
-#define SEGMENT_IS_ALIVE(p) ((p)->status == 'u' ? true : false)
+#define SEGMENT_IS_ALIVE(p) \
+	((p)->status == GP_SEGMENT_CONFIGURATION_STATUS_UP ? true : false)
 
+#define SEGMENT_IS_IN_SYNC(p) \
+	((p)->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC ? true : false)
+#define SEGMENT_IS_NOT_INSYNC(p) \
+	((p)->mode == GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC ? true : false)
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for return value from getCdbSegmentDatabases()

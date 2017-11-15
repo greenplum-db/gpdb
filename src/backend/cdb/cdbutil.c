@@ -271,7 +271,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		pRow->hostip = pstrdup(pRow->hostaddrs[0]);
 		Assert(strlen(pRow->hostip) <= INET6_ADDRSTRLEN);
 
-		if (pRow->role != SEGMENT_ROLE_PRIMARY)
+		if (pRow->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
 		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, pRow->hostip, HASH_ENTER, &found);
@@ -398,7 +398,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		cdbInfo = &component_databases->segment_db_info[i];
 
-		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY)
+		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
 		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);
@@ -410,7 +410,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->role != SEGMENT_ROLE_PRIMARY)
+		if (cdbInfo->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
 		hsEntry = (HostSegsEntry *) hash_search(hostSegsHash, cdbInfo->hostip, HASH_FIND, &found);

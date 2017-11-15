@@ -69,7 +69,7 @@ get_seginfo(int16 dbid)
 static int16
 content_get_mirror_dbid(int16 contentid)
 {
-	return contentid_get_dbid(contentid, SEGMENT_ROLE_MIRROR, false /* false == current, not
+	return contentid_get_dbid(contentid, GP_SEGMENT_CONFIGURATION_ROLE_MIRROR, false /* false == current, not
 							    * preferred, role */ );
 }
 
@@ -307,11 +307,11 @@ static bool
 must_update_persistent(int16 pridbid, seginfo *i)
 {
 	/* if we're adding a new primary (for expansion), bail out */
-	if (i->db.role == SEGMENT_ROLE_PRIMARY)
+	if (i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 		return false;
 
 	/* if we're adding a mirror for host that is not this machine, return */
-	if (i->db.role == SEGMENT_ROLE_MIRROR && pridbid != GpIdentity.dbid)
+	if (i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR && pridbid != GpIdentity.dbid)
 		return false;
 
 	return true;
@@ -446,7 +446,7 @@ update_tablespaces(int16 pridbid, seginfo *i, bool add)
 	/* if we're adding a new primary (for expansion), bail out */
 	if (pridbid == i->db.dbid)
 	{
-		Insist(i->db.role == SEGMENT_ROLE_PRIMARY);
+		Insist(i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY);
 		return;
 	}
 
@@ -461,7 +461,7 @@ update_tablespaces(int16 pridbid, seginfo *i, bool add)
 		PersistentTablespace_AddMirrorAll(pridbid, i->db.dbid);
 	else
 		PersistentTablespace_RemoveSegment(i->db.dbid,
-										   i->db.role == SEGMENT_ROLE_MIRROR);
+										   i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR);
 }
 
 /* As above, for databases. */
@@ -479,7 +479,7 @@ update_databases(int16 pridbid, seginfo *i, bool add)
 		PersistentDatabase_AddMirrorAll(pridbid, i->db.dbid);
 	else
 		PersistentDatabase_RemoveSegment(i->db.dbid,
-										 i->db.role == SEGMENT_ROLE_MIRROR);
+										 i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR);
 }
 
 /* As above, for relations */
@@ -497,7 +497,7 @@ update_relations(int16 pridbid, seginfo *i, bool add)
 		PersistentRelation_AddMirrorAll(pridbid, i->db.dbid);
 	else
 		PersistentRelation_RemoveSegment(i->db.dbid,
-										 i->db.role == SEGMENT_ROLE_MIRROR);
+										 i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR);
 }
 
 static void
@@ -572,7 +572,7 @@ add_segment_persistent_entries(int16 pridbid, seginfo *i, ArrayType *fsmap)
 	 * If we're adding a new segment mirror, we need to dispatch to that
 	 * segment's primary.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && i->db.role == SEGMENT_ROLE_MIRROR)
+	if (Gp_role == GP_ROLE_DISPATCH && i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR)
 		dispatch_add_to_segment(pridbid, i->db.dbid, fsmap);
 }
 
@@ -608,7 +608,7 @@ remove_segment_persistent_entries(int16 pridbid, seginfo *i)
 	 * If we're removing a segment mirror, we need to dispatch to that
 	 * segment's primary.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && i->db.role == SEGMENT_ROLE_MIRROR)
+	if (Gp_role == GP_ROLE_DISPATCH && i->db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR)
 	{
 		StringInfoData *q = makeStringInfo();
 
@@ -724,7 +724,7 @@ add_segment(seginfo new_segment_information, ArrayType *file_space_map)
 
 	if (new_segment_information.db.role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR)
 	{
-		primary_dbid = contentid_get_dbid(new_segment_information.db.segindex, SEGMENT_ROLE_PRIMARY, false	/* false == current, not
+		primary_dbid = contentid_get_dbid(new_segment_information.db.segindex, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, false	/* false == current, not
 										    * preferred, role */ );
 		if (!primary_dbid)
 			elog(ERROR, "contentid %i does not point to an existing segment",
@@ -741,7 +741,7 @@ add_segment(seginfo new_segment_information, ArrayType *file_space_map)
 		 * or mirror (no preferred primary -- make this one the preferred
 		 * primary)
 		 */
-		int			preferredPrimaryDbId = contentid_get_dbid(new_segment_information.db.segindex, SEGMENT_ROLE_PRIMARY, true /* preferred role */ );
+		int			preferredPrimaryDbId = contentid_get_dbid(new_segment_information.db.segindex, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, true /* preferred role */ );
 
 		if (preferredPrimaryDbId == 0 && new_segment_information.db.preferred_role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR)
 		{
@@ -796,8 +796,8 @@ gp_add_segment_primary(PG_FUNCTION_ARGS)
 
 	new.db.segindex = get_maxcontentid() + 1;
 	new.db.dbid = get_availableDbId();
-	new.db.role = SEGMENT_ROLE_PRIMARY;
-	new.db.preferred_role = SEGMENT_ROLE_PRIMARY;
+	new.db.role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+	new.db.preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 #ifdef USE_SEGWALREP
 	new.db.mode = GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC;
 #else
@@ -973,8 +973,8 @@ gp_add_segment_mirror(PG_FUNCTION_ARGS)
 	new.db.mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
 	new.db.status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
 #endif
-	new.db.role = SEGMENT_ROLE_MIRROR;
-	new.db.preferred_role = SEGMENT_ROLE_MIRROR;
+	new.db.role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+	new.db.preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 
 	add_segment(new, fsmap);
 
@@ -1009,7 +1009,7 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 	/* avoid races */
 	rel = heap_open(GpSegmentConfigRelationId, AccessExclusiveLock);
 
-	pridbid = contentid_get_dbid(contentid, SEGMENT_ROLE_PRIMARY, false /* false == current, not
+	pridbid = contentid_get_dbid(contentid, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, false /* false == current, not
 								   * preferred, role */ );
 
 	if (!pridbid)
@@ -1018,7 +1018,7 @@ gp_remove_segment_mirror(PG_FUNCTION_ARGS)
 	if (!segment_has_mirror(contentid))
 		elog(ERROR, "segment does not have a mirror");
 
-	mirdbid = contentid_get_dbid(contentid, SEGMENT_ROLE_MIRROR, false	/* false == current, not
+	mirdbid = contentid_get_dbid(contentid, GP_SEGMENT_CONFIGURATION_ROLE_MIRROR, false	/* false == current, not
 								   * preferred, role */ );
 	if (!mirdbid)
 		elog(ERROR, "no mirror dbid for contentid %i", contentid);
@@ -1090,13 +1090,13 @@ gp_add_master_standby(PG_FUNCTION_ARGS)
 	 * master.
 	 */
 	master_dbid = contentid_get_dbid(MASTER_CONTENT_ID,
-									 SEGMENT_ROLE_PRIMARY, false);
+									 GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, false);
 	i = get_seginfo(master_dbid);
 	memcpy(&new, i, sizeof(seginfo));
 
 	new.db.dbid = maxdbid + 1;
-	new.db.role = SEGMENT_ROLE_MIRROR;
-	new.db.preferred_role = SEGMENT_ROLE_MIRROR;
+	new.db.role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+	new.db.preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 	new.db.mode = GP_SEGMENT_CONFIGURATION_MODE_INSYNC;
 	new.db.status = GP_SEGMENT_CONFIGURATION_STATUS_UP;
 
@@ -1269,8 +1269,8 @@ segment_config_activate_standby(int16 standbydbid, int16 newdbid)
 
 	tuple = heap_copytuple(tuple);
 	((Form_gp_segment_configuration) GETSTRUCT(tuple))->dbid = newdbid;
-	((Form_gp_segment_configuration) GETSTRUCT(tuple))->role = SEGMENT_ROLE_PRIMARY;
-	((Form_gp_segment_configuration) GETSTRUCT(tuple))->preferred_role = SEGMENT_ROLE_PRIMARY;
+	((Form_gp_segment_configuration) GETSTRUCT(tuple))->role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+	((Form_gp_segment_configuration) GETSTRUCT(tuple))->preferred_role = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
 
 	simple_heap_update(rel, &tuple->t_self, tuple);
 	CatalogUpdateIndexes(rel, tuple);
@@ -1365,7 +1365,7 @@ gp_activate_standby(PG_FUNCTION_ARGS)
 	int16		olddbid = GpIdentity.dbid;
 	int16		newdbid;
 
-	newdbid = contentid_get_dbid(MASTER_CONTENT_ID, SEGMENT_ROLE_PRIMARY, true);
+	newdbid = contentid_get_dbid(MASTER_CONTENT_ID, GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY, true);
 
 	/*
 	 * This call comes from Startup process post checking state in pg_control
@@ -1447,7 +1447,7 @@ gp_add_segment_persistent_entries(PG_FUNCTION_ARGS)
 
 	MemSet(&seg, 0, sizeof(seginfo));
 	seg.db.dbid = mirdbid;
-	seg.db.role = SEGMENT_ROLE_MIRROR;
+	seg.db.role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 
 	add_segment_persistent_entries(dbid, &seg, fsmap);
 
@@ -1486,7 +1486,7 @@ gp_remove_segment_persistent_entries(PG_FUNCTION_ARGS)
 
 	MemSet(&seg, 0, sizeof(seginfo));
 	seg.db.dbid = mirdbid;
-	seg.db.role = SEGMENT_ROLE_MIRROR;
+	seg.db.role = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 
 	remove_segment_persistent_entries(dbid, &seg);
 
