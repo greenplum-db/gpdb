@@ -35,10 +35,10 @@ class GpAddMirrorsTest(GpTestCase):
         self.gpMasterEnvironmentMock = self.get_mock_from_apply_patch("GpMasterEnvironment")
         self.gpMasterEnvironmentMock.return_value.getMasterPort.return_value = 123456
         self.getConfigProviderFunctionMock = self.get_mock_from_apply_patch('getConfigurationProvider')
-        config_provider_mock = Mock(spec=GpConfigurationProvider)
-        self.getConfigProviderFunctionMock.return_value = config_provider_mock
-        config_provider_mock.initializeProvider.return_value = config_provider_mock
-        config_provider_mock.loadSystemConfig.return_value = self.gparrayMock
+        self.config_provider_mock = Mock(spec=GpConfigurationProvider)
+        self.getConfigProviderFunctionMock.return_value = self.config_provider_mock
+        self.config_provider_mock.initializeProvider.return_value = self.config_provider_mock
+        self.config_provider_mock.loadSystemConfig.return_value = self.gparrayMock
         self.mock_heap_checksum = self.get_mock_from_apply_patch('HeapChecksum')
         self.mock_heap_checksum.return_value.get_master_value.return_value = 1
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [0])
@@ -95,6 +95,7 @@ class GpAddMirrorsTest(GpTestCase):
         datadir_config = _write_datadir_config(self.mdd)
         mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
         sys.argv = ['gpaddmirrors', '-o', mirror_config_output_file, '-m', datadir_config]
+        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
         options, _ = self.parser.parse_args()
         subject = GpAddMirrorsProgram(options)
         subject.run()
@@ -111,6 +112,7 @@ class GpAddMirrorsTest(GpTestCase):
         mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
         sys.argv = ['gpaddmirrors', '-p', '5000', '-o', mirror_config_output_file, '-m', datadir_config]
         options, _ = self.parser.parse_args()
+        self.config_provider_mock.loadSystemConfig.return_value = GpArray([self.master, self.primary0, self.primary1])
         subject = GpAddMirrorsProgram(options)
         subject.run()
 

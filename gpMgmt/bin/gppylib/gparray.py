@@ -1151,6 +1151,8 @@ class GpArray:
 
             # Handle regular segments
             elif segdb.isSegmentQE():
+                if segdb.isSegmentMirror():
+                    self.hasMirrors = True
                 self.addSegmentDb(segdb)
 
             else:
