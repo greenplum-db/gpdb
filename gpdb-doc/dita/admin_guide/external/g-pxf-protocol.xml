@@ -2,7 +2,7 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_z5g_l5h_kr1313">
   <title>pxf:// Protocol</title>
-  <shortdesc>You can use the Greenplum Platform Extension Framework (PXF) <codeph>pxf://</codeph> protocol to access data on external HDFS and Hive systems.</shortdesc>
+  <shortdesc>You can use the Greenplum Platform Extension Framework (PXF) <codeph>pxf://</codeph> protocol to access data on external HDFS, Hive, and HBase systems.</shortdesc>
   <body>
     <p>The PXF <codeph>pxf</codeph> protocol is packaged as a Greenplum Database extension. The <codeph>pxf</codeph> protocol supports reading from HDFS, Hive, and HBase data stores. You can also write text and binary data to HDFS with the <codeph>pxf</codeph> protocol.</p>
     <p>When you use the <codeph>pxf</codeph> protocol to query HDFS, Hive, or HBase systems, you specify the HDFS file or Hive or HBase table that you want to access. PXF requests the data from the data store and delivers the relevant portions in parallel to each Greenplum Database segment instance serving the query.</p>

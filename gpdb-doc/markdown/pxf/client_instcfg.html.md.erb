@@ -24,6 +24,8 @@ Before setting up the Hadoop, Hive, and HBase clients for PXF, ensure that you h
 - Superuser permissions to add `yum` repository files and install RPM packages on each Greenplum Database segment host.
 - Access to, or superuser permissions to install, Java version 1.7 or 1.8 on each Greenplum Database segment host.
 
+**Note**: If you plan to access JSON format data stored in a Cloudera Hadoop cluster, PXF requires a Cloudera version 5.8 or later Hadoop distribution.
+
 
 ## <a id="client-pxf-config-steps"></a>Procedure
 Perform the following procedure to install and configure the appropriate clients for PXF on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
