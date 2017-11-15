@@ -634,7 +634,7 @@ Once the data is loaded to HDFS, you can use Greenplum Database and PXF to query
 
 ### <a id="json_customopts" class="no-quick-link"></a>Custom Options
 
-PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify to PXF the member name of the first field in the JSON record object:
+PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify the member name of the first field in the JSON record object:
 
 | Keyword  | Syntax, Example(s) | Description |
 |-------|--------------|-----------------------|
@@ -668,7 +668,7 @@ SELECT * FROM singleline_json_tbl;
 
 ### <a id="jsonexample2" class="no-quick-link"></a>Example: Multi-Line Records
 
-The `CREATE EXTERNAL TABLE` SQL command to create a readable external table referencing the multi-line-per-record JSON data set is very similar to that of the single line data set above. You must additionally specify the `LOCATION` clause `IDENTIFIER` keyword and an associated value when you want to read multi-line JSON records. For example:
+The SQL command to create a readable external table from the multi-line-per-record JSON file is very similar to that of the single line data set above. You must additionally specify the `LOCATION` clause `IDENTIFIER` keyword and an associated value when you want to read multi-line JSON records. For example:
 
 ``` sql
 CREATE EXTERNAL TABLE multiline_json_tbl(
