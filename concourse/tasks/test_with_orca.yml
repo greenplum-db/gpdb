@@ -12,11 +12,11 @@ inputs:
 outputs:
   - name: icg_output
 run:
-  path: gpdb_src/concourse/scripts/test_gpdb.py
+  path: gpdb_src/concourse/scripts/build_gpdb.py
   args:
     - --mode=orca
     - --gpdb_name=bin_gpdb
-    - bin_orca
-    - bin_xerces
+    - --action=test
+    - --configure-option=--disable-gpcloud
 params:
   BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"

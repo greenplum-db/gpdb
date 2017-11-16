@@ -15,5 +15,8 @@ run:
   args:
     - --mode=orca
     - --output_dir=bin_gpdb/install
+    - --action=build
+    - --configure-option=--disable-gpcloud
+    - --orca-in-gpdb-install-location
     - bin_orca
     - bin_xerces

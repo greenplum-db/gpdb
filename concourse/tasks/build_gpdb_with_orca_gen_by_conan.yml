@@ -15,3 +15,5 @@ run:
     - --mode=orca
     - --output_dir=bin_gpdb/install
     - bin_orca
+    - --action=build
+    - --configure-option=--disable-gpcloud
