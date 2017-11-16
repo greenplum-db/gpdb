@@ -1,0 +1,10 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: deb_package_ubuntu16
+  - name: gpdb_src
+run:
+  path: gpdb_src/concourse/scripts/deb_test_package.bash
+params:
+  DEBIAN_PACKAGE:

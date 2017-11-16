@@ -29,40 +29,60 @@ function make_cluster() {
   popd
 }
 
-function gen_env_for_gpadmin_to_run(){
+function gen_icw_test_script(){
   cat > /opt/run_test.sh <<-EOF
-		trap look4diffs ERR
+  SRC_DIR="\${1}/gpdb_src"
+  trap look4diffs ERR
+  function look4diffs() {
+    diff_files=\`find .. -name regression.diffs\`
+    for diff_file in \${diff_files}; do
+      if [ -f "\${diff_file}" ]; then
+        cat <<-FEOF
+          ======================================================================
+          DIFF FILE: \${diff_file}
+          ----------------------------------------------------------------------
+          \$(cat "\${diff_file}")
+FEOF
+      fi
+    done
+  exit 1
+  }
+  source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh
+  source \${SRC_DIR}/gpAux/gpdemo/gpdemo-env.sh
+  cd \${SRC_DIR}
+  make ${MAKE_TEST_COMMAND}
 
-		function look4diffs() {
-
-		    diff_files=\`find .. -name regression.diffs\`
-
-		    for diff_file in \${diff_files}; do
-			if [ -f "\${diff_file}" ]; then
-			    cat <<-FEOF
-
-						======================================================================
-						DIFF FILE: \${diff_file}
-						----------------------------------------------------------------------
-
-						\$(cat "\${diff_file}")
-
-					FEOF
-			fi
-		    done
-		    exit 1
-		}
-		source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh
-		cd "\${1}/gpdb_src"
-		source gpAux/gpdemo/gpdemo-env.sh
-		make ${MAKE_TEST_COMMAND}
-	EOF
+EOF
 
 	chmod a+x /opt/run_test.sh
 }
 
-function run_test() {
+function gen_unit_test_script(){
+  cat > /opt/run_unit_test.sh <<-EOF
+    SRC_DIR="\${1}/gpdb_src"
+    RESULT_FILE="\${SRC_DIR}/gpMgmt/gpMgmt_testunit_results.log"
+    trap look4results ERR
+    function look4results() {
+      cat "\${RESULT_FILE}"
+      exit 1
+    }
+    source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh
+    source \${SRC_DIR}/gpAux/gpdemo/gpdemo-env.sh
+    cd \${SRC_DIR}/gpMgmt/bin
+    make check
+    # show results into concourse
+    cat \${RESULT_FILE}
+EOF
+
+	chmod a+x /opt/run_unit_test.sh
+}
+
+function run_icw_test() {
   su - gpadmin -c "bash /opt/run_test.sh $(pwd)"
+}
+
+function run_unit_test() {
+  su - gpadmin -c "bash /opt/run_unit_test.sh $(pwd)"
 }
 
 function _main() {
@@ -75,8 +95,10 @@ function _main() {
     time configure
     time setup_gpadmin_user
     time make_cluster
-    time gen_env_for_gpadmin_to_run
-    time run_test
+    time gen_unit_test_script
+    time gen_icw_test_script
+    time run_unit_test
+    time run_icw_test
 }
 
 _main "$@"

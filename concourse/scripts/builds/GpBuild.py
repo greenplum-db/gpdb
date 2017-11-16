@@ -25,6 +25,16 @@ class GpBuild(GpdbBuildBase):
             && make create-demo-cluster DEFAULT_QD_MAX_CONNECT=150\"" % INSTALL_DIR],
             cwd="gpdb_src/gpAux/gpdemo", shell=True)
 
+    def unit_test(self):
+        status = self.create_demo_cluster()
+        if status:
+            return status
+        status = self.run_install_check_with_command('make -C gpMgmt/bin check')
+        subprocess.check_call(["cat", "gpdb_src/gpMgmt/gpMgmt_testunit_results.log"])
+        subprocess.check_call(["runuser gpadmin -c \"source /usr/local/gpdb/greenplum_path.sh \
+            && pwd && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && gpstop -a\""], shell=True)
+        return status
+
     def install_check(self, option='good'):
         status = self.create_demo_cluster()
         if status:

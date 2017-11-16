@@ -1,0 +1,9 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: gpdb_src
+outputs:
+  - name: deb_package_ubuntu16
+run:
+  path: gpdb_src/concourse/scripts/deb_create_package.bash
