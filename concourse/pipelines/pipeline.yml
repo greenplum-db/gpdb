@@ -2164,20 +2164,7 @@ jobs:
   - task: pre_run_test_setup
     tags: ["ccp"]
     image: centos-gpdb-dev-6
-    config:
-      platform: linux
-      inputs:
-       - name: ccp_src
-       - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          ssh -t mdw "HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4 \
-                      bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@\$i \"sudo chmod 777 /usr/local\"; done'"
+    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     on_failure:
       <<: *debug_sleep
   - task: run_tests
@@ -2227,20 +2214,7 @@ jobs:
   - task: pre_run_test_setup
     tags: ["ccp"]
     image: centos-gpdb-dev-6
-    config:
-      platform: linux
-      inputs:
-       - name: ccp_src
-       - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/aws/setup_ssh_to_cluster.sh
-          ssh -t mdw "HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4 \
-                      bash -c 'ssh-keygen -f ~/.ssh/id_rsa -y > ~/.ssh/id_rsa.pub; for i in mdw sdw{1..4}; do ssh centos@\$i \"sudo chmod 777 /usr/local\"; done'"
+    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     on_failure:
       <<: *debug_sleep
   - task: run_tests
