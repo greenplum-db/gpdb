@@ -240,6 +240,25 @@ class GpStop(GpTestCase):
                                                                    self.mirror3.getSegmentDbId()], log_messages)
         self.assertIn("Successfully shutdown 3 of 8 segment instances ", log_messages)
 
+    def test_host_option_segment_on_same_host_with_mirror_fails(self):
+        sys.argv = ["gpstop", "-a", "--host", "sdw1"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.master = GpDB.initFromString(
+            "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+
+        self.primary0 = GpDB.initFromString(
+            "2|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
+        self.mirror0 = GpDB.initFromString(
+            "3|0|m|m|s|u|sdw1|sdw1|50000|51000|/data/mirror0||/data/mirror0/base/10899,/data/mirror0/base/1,/data/mirror0/base/10898,/data/mirror0/base/25780,/data/mirror0/base/34782")
+        self.mock_gparray.return_value = GpArray([self.master, self.primary0, self.mirror0])
+
+        gpstop = self.subject.GpStop.createProgram(options, args)
+
+        with self.assertRaisesRegexp(Exception,"Segment host '%s' has both of corresponding primary '%s' and mirror '%s'. Aborting." % (self.primary0.getSegmentHostName(), self.primary0, self.mirror0)):
+            gpstop.run()
+        self.assertEquals(0, self.mock_GpSegStopCmdInit.call_count)
 
 
 if __name__ == '__main__':

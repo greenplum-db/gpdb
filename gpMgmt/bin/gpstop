@@ -95,10 +95,29 @@ class GpStop:
 
 
     #####
+    def _find_any_primary_and_mirror_on_same_host(self, segs):
+        map_content_id_to_segment = {}
+        for seg in segs:
+            seg_content_id = seg.getSegmentContentId()
+            if seg_content_id in map_content_id_to_segment:
+                if seg.isSegmentPrimary(True):
+                    return seg, map_content_id_to_segment[seg_content_id]
+                else:
+                    return map_content_id_to_segment[seg_content_id], seg
+            else:
+                map_content_id_to_segment[seg_content_id] = seg
+
+        return None, None
+
     def _filter_segments_for_single_host_stop(self):
         host_to_segments_mapping = self.gparray.getSegmentsByHostName(self.gparray.getSegDbList())
         segments_on_host = host_to_segments_mapping[self.onlyThisHost]
         up_segments_on_host = [seg for seg in segments_on_host if seg.isSegmentUp()]
+        matching_primary, matching_mirror = self._find_any_primary_and_mirror_on_same_host(up_segments_on_host)
+        if matching_primary or matching_mirror:
+            raise Exception("Segment host '%s' has both of corresponding primary "
+                            "'%s' and mirror '%s'. Aborting." % (matching_primary.getSegmentHostName(),
+                                                                 matching_primary, matching_mirror))
 
         for seg in up_segments_on_host:
             if seg.isSegmentModeSynchronized():
