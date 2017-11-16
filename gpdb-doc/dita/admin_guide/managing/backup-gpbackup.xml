@@ -45,8 +45,10 @@
             inherited from the new parent table. In this case, <codeph>gpbackup</codeph> backs up
             conflicting <codeph>CREATE INDEX</codeph> statements, which causes an error when you
             restore the backup set.</li>
-          <li>You cannot back up and restore partitioned tables that have been altered by exchanging
-            a leaf child partition with a readable external table. </li>
+          <li>You can back up and restore single level partitioned tables that have been altered by
+            exchanging a leaf child partition with a readable external table. You cannot back up and
+            restore multi-level partitioned tables when a leaf child partition is a readable
+            external table.</li>
           <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
             requires a distinct timestamp.</li>
           <li>Database object filtering is currently limited to schemas and tables.</li>
