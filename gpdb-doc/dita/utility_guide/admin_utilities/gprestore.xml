@@ -106,9 +106,8 @@
           <pt><b>-jobs</b>
             <varname>int</varname></pt>
           <pd>Optional. Specifies the number of parallel connections to use when restoring table
-            data and post-data metadata. By default, <codeph>gprestore</codeph> uses 2 parallel
-            connections. Increasing this number can improve the speed of restoring data, especially
-            data data uses numerous indexes.</pd>
+            data and post-data metadata. By default, <codeph>gprestore</codeph> uses 1 connection.
+            Increasing this number can improve the speed of restoring data.</pd>
         </plentry>
       </parml>
       <parml>
