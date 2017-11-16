@@ -583,7 +583,7 @@ namespace gpdxl
 				BitmapTableScan *pdbts
 				);
 			
-			// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan
+			// translate CDXLScalarBitmapIndexProbe into BitmapIndexScan or DynamicBitmapIndexScan
 			Plan *PplanBitmapIndexProbe
 				(
 				const CDXLNode *pdxlnBitmapIndexProbe,

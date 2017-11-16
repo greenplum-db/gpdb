@@ -16,7 +16,7 @@
 
 #include "nodes/execnodes.h"
 
-extern DynamicBitmapIndexScanState *ExecInitDynamicBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags);
+extern DynamicBitmapIndexScanState *ExecInitDynamicBitmapIndexScan(DynamicBitmapIndexScan *node, EState *estate, int eflags);
 extern Node *MultiExecDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecEndDynamicBitmapIndexScan(DynamicBitmapIndexScanState *node);
 extern void ExecDynamicBitmapIndexReScan(DynamicBitmapIndexScanState *node, ExprContext *exprCtxt);

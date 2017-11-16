@@ -17,12 +17,6 @@
  * above it. It scans only one partition at a time, but the partition
  * can change at a rescan.
  *
- * NOTE: There is no DynamicBitmapIndexScan plan node. A BitmapIndexScan
- * plan node is backed by either a BitmapIndexScanState or a
- * DynamicIndexScanState executor node, depending on whether the
- * BitmapIndexScan is beneath a dynamic or non-dynamic BitmapHeapScan node
- * The choice between the two is in ExecInitNode().
- *
  * Portions Copyright (c) 2013 - present, EMC/Greenplum
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
@@ -53,7 +47,7 @@
  * Initialize ScanState in DynamicBitmapIndexScan.
  */
 DynamicBitmapIndexScanState *
-ExecInitDynamicBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags)
+ExecInitDynamicBitmapIndexScan(DynamicBitmapIndexScan *node, EState *estate, int eflags)
 {
 	DynamicBitmapIndexScanState *dynamicBitmapIndexScanState;
 
@@ -81,7 +75,7 @@ ExecInitDynamicBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags
 }
 
 static void
-BitmapIndexScan_ReMapColumns(BitmapIndexScan *indexScan, Oid oldOid, Oid newOid)
+BitmapIndexScan_ReMapColumns(DynamicBitmapIndexScan *dbiScan, Oid oldOid, Oid newOid)
 {
 	AttrNumber *attMap;
 
@@ -100,9 +94,9 @@ BitmapIndexScan_ReMapColumns(BitmapIndexScan *indexScan, Oid oldOid, Oid newOid)
 
 	if (attMap)
 	{
-		LogicalIndexInfo *logicalIndexInfo = indexScan->logicalIndexInfo;
-
-		IndexScan_MapLogicalIndexInfo(logicalIndexInfo, attMap, indexScan->scan.scanrelid);
+		IndexScan_MapLogicalIndexInfo(dbiScan->logicalIndexInfo,
+									  attMap,
+									  dbiScan->biscan.scan.scanrelid);
 
 		/* A bitmap index scan has no target list or quals */
 
@@ -119,7 +113,7 @@ static void
 beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 							Oid tableOid)
 {
-	BitmapIndexScan *bitmapIndexScan = (BitmapIndexScan *) node->ss.ps.plan;
+	DynamicBitmapIndexScan *dbiScan = (DynamicBitmapIndexScan *) node->ss.ps.plan;
 	Relation	currentRelation;
 	Oid			indexOid;
 	MemoryContext oldCxt;
@@ -135,8 +129,7 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 		/* Very first partition */
 		node->columnLayoutOid = rel_partition_get_root(tableOid);
 	}
-	BitmapIndexScan_ReMapColumns(bitmapIndexScan,
-								 node->columnLayoutOid, tableOid);
+	BitmapIndexScan_ReMapColumns(dbiScan, node->columnLayoutOid, tableOid);
 	node->columnLayoutOid = tableOid;
 
 	/*
@@ -147,16 +140,16 @@ beginCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node, EState *estate,
 	 * partition.
 	 */
 	currentRelation = OpenScanRelationByOid(tableOid);
-	indexOid = getPhysicalIndexRelid(currentRelation, bitmapIndexScan->logicalIndexInfo);
+	indexOid = getPhysicalIndexRelid(currentRelation, dbiScan->logicalIndexInfo);
 	if (!OidIsValid(indexOid))
 		elog(ERROR, "failed to find index for partition \"%s\" in dynamic index scan",
 			 RelationGetRelationName(currentRelation));
 	ExecCloseScanRelation(currentRelation);
 
 	/* Modify the plan node with the index ID */
-	bitmapIndexScan->indexid = indexOid;
+	dbiScan->biscan.indexid = indexOid;
 
-	node->bitmapIndexScanState = ExecInitBitmapIndexScan(bitmapIndexScan,
+	node->bitmapIndexScanState = ExecInitBitmapIndexScan(&dbiScan->biscan,
 														 estate,
 														 node->eflags);
 

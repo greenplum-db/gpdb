@@ -1707,9 +1707,11 @@ _readExternalScan(void)
 	READ_DONE();
 }
 
-static void
-readLogicalIndexInfo(LogicalIndexInfo *local_node)
+static LogicalIndexInfo *
+readLogicalIndexInfo(void)
 {
+	LogicalIndexInfo *local_node = palloc(sizeof(LogicalIndexInfo));
+
 	READ_OID_FIELD(logicalIndexOid);
 	READ_INT_FIELD(nColumns);
 	READ_INT_ARRAY(indexKeys, local_node->nColumns, AttrNumber);
@@ -1719,6 +1721,10 @@ readLogicalIndexInfo(LogicalIndexInfo *local_node)
 	READ_ENUM_FIELD(indType, LogicalIndexType);
 	READ_NODE_FIELD(partCons);
 	READ_NODE_FIELD(defaultLevels);
+
+	/* No READ_DONE, this is "embedded" in other structs */
+
+	return local_node;
 }
 
 static void
@@ -1730,12 +1736,6 @@ readIndexScanFields(IndexScan *local_node)
 	READ_NODE_FIELD(indexqual);
 	READ_NODE_FIELD(indexqualorig);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
-
-	if (isDynamicScan(&local_node->scan))
-	{
-		ALLOCATE_LOCAL(local_node->logicalIndexInfo, LogicalIndexInfo, 1 /* single node allocation  */);
-		readLogicalIndexInfo(local_node->logicalIndexInfo);
-	}
 }
 
 /*
@@ -1757,9 +1757,20 @@ _readDynamicIndexScan(void)
 	READ_LOCALS(DynamicIndexScan);
 
 	/* DynamicIndexScan has some content from IndexScan. */
-	readIndexScanFields((IndexScan *)local_node);
+	readIndexScanFields(&local_node->indexscan);
+	local_node->logicalIndexInfo = readLogicalIndexInfo();
 
 	READ_DONE();
+}
+
+static void
+readBitmapIndexScanFields(BitmapIndexScan *local_node)
+{
+	readScanInfo((Scan *)local_node);
+
+	READ_OID_FIELD(indexid);
+	READ_NODE_FIELD(indexqual);
+	READ_NODE_FIELD(indexqualorig);
 }
 
 static BitmapIndexScan *
@@ -1767,17 +1778,19 @@ _readBitmapIndexScan(void)
 {
 	READ_LOCALS(BitmapIndexScan);
 
-	readScanInfo((Scan *)local_node);
+	readBitmapIndexScanFields(local_node);
 
-	READ_OID_FIELD(indexid);
-	READ_NODE_FIELD(indexqual);
-	READ_NODE_FIELD(indexqualorig);
+	READ_DONE();
+}
 
-	if (isDynamicScan(&local_node->scan))
-	{
-		ALLOCATE_LOCAL(local_node->logicalIndexInfo, LogicalIndexInfo, 1 /* single node allocation  */);
-		readLogicalIndexInfo(local_node->logicalIndexInfo);
-	}
+static DynamicBitmapIndexScan *
+_readDynamicBitmapIndexScan(void)
+{
+	READ_LOCALS(DynamicBitmapIndexScan);
+
+	/* DynamicBitmapIndexScan has some content from BitmapIndexScan. */
+	readBitmapIndexScanFields(&local_node->biscan);
+	local_node->logicalIndexInfo = readLogicalIndexInfo();
 
 	READ_DONE();
 }
@@ -2878,6 +2891,9 @@ readNodeBinary(void)
 				break;
 			case T_BitmapIndexScan:
 				return_value = _readBitmapIndexScan();
+				break;
+			case T_DynamicBitmapIndexScan:
+				return_value = _readDynamicBitmapIndexScan();
 				break;
 			case T_BitmapHeapScan:
 				return_value = _readBitmapHeapScan();

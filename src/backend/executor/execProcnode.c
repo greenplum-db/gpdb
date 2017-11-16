@@ -449,12 +449,19 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 			START_MEMORY_ACCOUNT(curMemoryAccountId);
 			{
-				if (isDynamicScan((Scan *) node))
-					result = (PlanState *) ExecInitDynamicBitmapIndexScan((BitmapIndexScan *) node,
-																   estate, eflags);
-				else
-					result = (PlanState *) ExecInitBitmapIndexScan((BitmapIndexScan *) node,
-																   estate, eflags);
+				result = (PlanState *) ExecInitBitmapIndexScan((BitmapIndexScan *) node,
+															   estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
+
+		case T_DynamicBitmapIndexScan:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, DynamicBitmapIndexScan);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+				result = (PlanState *) ExecInitDynamicBitmapIndexScan((DynamicBitmapIndexScan *) node,
+																	  estate, eflags);
 			}
 			END_MEMORY_ACCOUNT();
 			break;

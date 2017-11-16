@@ -586,16 +586,6 @@ outIndexScanFields(StringInfo str, IndexScan *node)
 	WRITE_NODE_FIELD(indexqual);
 	WRITE_NODE_FIELD(indexqualorig);
 	WRITE_ENUM_FIELD(indexorderdir, ScanDirection);
-
-	if (isDynamicScan(&node->scan))
-	{
-		Assert(node->logicalIndexInfo);
-		outLogicalIndexInfo(str, node->logicalIndexInfo);
-	}
-	else
-	{
-		Assert(node->logicalIndexInfo == NULL);
-	}
 }
 
 static void
@@ -611,7 +601,18 @@ _outDynamicIndexScan(StringInfo str, DynamicIndexScan *node)
 {
 	WRITE_NODE_TYPE("DYNAMICINDEXSCAN");
 
-	outIndexScanFields(str, (IndexScan *)node);
+	outIndexScanFields(str, &node->indexscan);
+	outLogicalIndexInfo(str, node->logicalIndexInfo);
+}
+
+static void
+_outBitmapIndexScanFields(StringInfo str, BitmapIndexScan *node)
+{
+	_outScanInfo(str, (Scan *) node);
+
+	WRITE_OID_FIELD(indexid);
+	WRITE_NODE_FIELD(indexqual);
+	WRITE_NODE_FIELD(indexqualorig);
 }
 
 static void
@@ -619,21 +620,17 @@ _outBitmapIndexScan(StringInfo str, BitmapIndexScan *node)
 {
 	WRITE_NODE_TYPE("BITMAPINDEXSCAN");
 
-	_outScanInfo(str, (Scan *) node);
+	_outBitmapIndexScanFields(str, node);
+}
 
-	WRITE_OID_FIELD(indexid);
-	WRITE_NODE_FIELD(indexqual);
-	WRITE_NODE_FIELD(indexqualorig);
 
-	if (isDynamicScan(&node->scan))
-	{
-		Assert(node->logicalIndexInfo);
-		outLogicalIndexInfo(str, node->logicalIndexInfo);
-	}
-	else
-	{
-		Assert(node->logicalIndexInfo == NULL);
-	}
+static void
+_outDynamicBitmapIndexScan(StringInfo str, DynamicBitmapIndexScan *node)
+{
+	WRITE_NODE_TYPE("DYNAMICBITMAPINDEXSCAN");
+
+	_outBitmapIndexScanFields(str, &node->biscan);
+	outLogicalIndexInfo(str, node->logicalIndexInfo);
 }
 
 static void
@@ -4428,6 +4425,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_BitmapIndexScan:
 				_outBitmapIndexScan(str, obj);
+				break;
+			case T_DynamicBitmapIndexScan:
+				_outDynamicBitmapIndexScan(str, obj);
 				break;
 			case T_BitmapHeapScan:
 				_outBitmapHeapScan(str, obj);

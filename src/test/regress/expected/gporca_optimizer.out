@@ -9187,7 +9187,7 @@ explain select * from orca.bm_dyn_test where i=2 and t='2';
          ->  Bitmap Table Scan on bm_dyn_test (dynamic scan id: 1)  (cost=0.00..0.00 rows=1 width=16)
                Recheck Cond: i = 2
                Filter: i = 2 AND t = '2'::text
-               ->  Bitmap Index Scan on bm_dyn_test_idx_1_prt_part0  (cost=0.00..0.00 rows=0 width=0)
+               ->  Dynamic Bitmap Index Scan on bm_dyn_test_idx_1_prt_part0  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: i = 2
  Settings:  optimizer=on
  Optimizer status: PQO version 1.602

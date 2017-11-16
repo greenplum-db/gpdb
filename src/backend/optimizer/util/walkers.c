@@ -942,6 +942,7 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			if (walker((Node *) ((BitmapIndexScan *) node)->indexqual, context))

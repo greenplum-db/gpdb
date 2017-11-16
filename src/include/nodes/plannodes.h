@@ -501,9 +501,6 @@ typedef struct IndexScan
 	List	   *indexqual;		/* list of index quals (OpExprs) */
 	List	   *indexqualorig;	/* the same in original form */
 	ScanDirection indexorderdir;	/* forward or backward or don't care */
-
-	/* logical index to use */
-	LogicalIndexInfo *logicalIndexInfo;
 } IndexScan;
 
 /*
@@ -512,7 +509,14 @@ typedef struct IndexScan
  *   The primary application of this operator is to be used
  *   for partition tables.
 */
-typedef IndexScan DynamicIndexScan;
+typedef struct DynamicIndexScan
+{
+	/* Fields shared with a normal IndexScan. Must be first! */
+	IndexScan	indexscan;
+
+	/* logical index to use */
+	LogicalIndexInfo *logicalIndexInfo;
+} DynamicIndexScan;
 
 /* ----------------
  *		bitmap index scan node
@@ -539,10 +543,23 @@ typedef struct BitmapIndexScan
 	Oid			indexid;		/* OID of index to scan */
 	List	   *indexqual;		/* list of index quals (OpExprs) */
 	List	   *indexqualorig;	/* the same in original form */
+} BitmapIndexScan;
+
+
+/*
+ * DynamicBitmapIndexScan
+ *   Scan a list of indexes that will be determined at run time.
+ *   The primary application of this operator is to be used
+ *   for partition tables.
+*/
+typedef struct DynamicBitmapIndexScan
+{
+	/* Fields shared with a normal BitmapIndexScan. Must be first! */
+	BitmapIndexScan biscan;
 
 	/* logical index to use */
 	LogicalIndexInfo *logicalIndexInfo;
-} BitmapIndexScan;
+} DynamicBitmapIndexScan;
 
 /* ----------------
  *		bitmap sequential scan node

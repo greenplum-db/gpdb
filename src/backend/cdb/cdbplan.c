@@ -369,11 +369,26 @@ plan_tree_mutator(Node *node,
 			break;
 
 		case T_IndexScan:
+		case T_DynamicIndexScan:
 			{
 				IndexScan  *idxscan = (IndexScan *) node;
 				IndexScan  *newidxscan;
 
-				FLATCOPY(newidxscan, idxscan, IndexScan);
+				if (IsA(node, DynamicIndexScan))
+				{
+					/*
+					 * A DynamicIndexScan is identical to IndexScan, except for
+					 * additional fields. This convoluted coding is to avoid
+					 * copy-pasting this code and risking bugs of omission if
+					 * new fields are added to IndexScan in upstream.
+					 */
+					DynamicIndexScan *newdiscan;
+
+					FLATCOPY(newdiscan, idxscan, DynamicIndexScan);
+					newidxscan = (IndexScan *) newdiscan;
+				}
+				else
+					FLATCOPY(newidxscan, idxscan, IndexScan);
 				SCANMUTATE(newidxscan, idxscan);
 				newidxscan->indexid = idxscan->indexid;
 				/* MUTATE(newidxscan->indexid, idxscan->indexid, List *); */
@@ -385,11 +400,21 @@ plan_tree_mutator(Node *node,
 			break;
 
 		case T_BitmapIndexScan:
+		case T_DynamicBitmapIndexScan:
 			{
 				BitmapIndexScan *idxscan = (BitmapIndexScan *) node;
 				BitmapIndexScan *newidxscan;
 
-				FLATCOPY(newidxscan, idxscan, BitmapIndexScan);
+				if (IsA(node, DynamicBitmapIndexScan))
+				{
+					/* see comment above on DynamicIndexScan */
+					DynamicBitmapIndexScan *newdbiscan;
+
+					FLATCOPY(newdbiscan, idxscan, DynamicBitmapIndexScan);
+					newidxscan = (BitmapIndexScan *) newdbiscan;
+				}
+				else
+					FLATCOPY(newidxscan, idxscan, BitmapIndexScan);
 				SCANMUTATE(newidxscan, idxscan);
 				newidxscan->indexid = idxscan->indexid;
 

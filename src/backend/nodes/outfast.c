@@ -1247,6 +1247,9 @@ _outNode(StringInfo str, void *obj)
 			case T_BitmapIndexScan:
 				_outBitmapIndexScan(str, obj);
 				break;
+			case T_DynamicBitmapIndexScan:
+				_outDynamicBitmapIndexScan(str, obj);
+				break;
 			case T_BitmapHeapScan:
 				_outBitmapHeapScan(str, obj);
 				break;

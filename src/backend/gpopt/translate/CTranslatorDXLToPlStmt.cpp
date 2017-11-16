@@ -3556,19 +3556,19 @@ CTranslatorDXLToPlStmt::PplanDIS
 
 	DynamicIndexScan *pdis = MakeNode(DynamicIndexScan);
 
-	pdis->scan.scanrelid = iRel;
-	pdis->scan.partIndex = pdxlop->UlPartIndexId();
-	pdis->scan.partIndexPrintable = pdxlop->UlPartIndexIdPrintable();
+	pdis->indexscan.scan.scanrelid = iRel;
+	pdis->indexscan.scan.partIndex = pdxlop->UlPartIndexId();
+	pdis->indexscan.scan.partIndexPrintable = pdxlop->UlPartIndexIdPrintable();
 
 	CMDIdGPDB *pmdidIndex = CMDIdGPDB::PmdidConvert(pdxlop->Pdxlid()->Pmdid());
 	const IMDIndex *pmdindex = m_pmda->Pmdindex(pmdidIndex);
 	Oid oidIndex = pmdidIndex->OidObjectId();
 
 	GPOS_ASSERT(InvalidOid != oidIndex);
-	pdis->indexid = oidIndex;
+	pdis->indexscan.indexid = oidIndex;
 	pdis->logicalIndexInfo = gpdb::Plgidxinfo(prte->relid, oidIndex);
 
-	Plan *pplan = &(pdis->scan.plan);
+	Plan *pplan = &(pdis->indexscan.scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->nMotionNodes = 0;
 
@@ -3602,7 +3602,7 @@ CTranslatorDXLToPlStmt::PplanDIS
 					pdrgpdxltrctxPrevSiblings
 					);
 
-	pdis->indexorderdir = CTranslatorUtils::Scandirection(pdxlop->EdxlScanDirection());
+	pdis->indexscan.indexorderdir = CTranslatorUtils::Scandirection(pdxlop->EdxlScanDirection());
 
 	// translate index condition list
 	List *plIndexConditions = NIL;
@@ -3627,8 +3627,8 @@ CTranslatorDXLToPlStmt::PplanDIS
 		);
 
 
-	pdis->indexqual = plIndexConditions;
-	pdis->indexqualorig = plIndexOrigConditions;
+	pdis->indexscan.indexqual = plIndexConditions;
+	pdis->indexscan.indexqualorig = plIndexOrigConditions;
 	/*
 	 * As of 8.4, the indexstrategy and indexsubtype fields are no longer
 	 * available or needed in IndexScan. Ignore them.
@@ -5394,7 +5394,8 @@ CTranslatorDXLToPlStmt::PplanBitmapBoolOp
 //		CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 //
 //	@doc:
-//		Translate CDXLScalarBitmapIndexProbe into BitmapIndexScan
+//		Translate CDXLScalarBitmapIndexProbe into a BitmapIndexScan
+//		or a DynamicBitmapIndexScan
 //
 //---------------------------------------------------------------------------
 Plan *
@@ -5412,7 +5413,20 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	CDXLScalarBitmapIndexProbe *pdxlopScalar =
 			CDXLScalarBitmapIndexProbe::PdxlopConvert(pdxlnBitmapIndexProbe->Pdxlop());
 
-	BitmapIndexScan *pbis = MakeNode(BitmapIndexScan);
+	BitmapIndexScan *pbis;
+	DynamicBitmapIndexScan *pdbis;
+
+	if (pdbts->scan.partIndex)
+	{
+		/* It's a Dynamic Bitmap Index Scan */
+		pdbis = MakeNode(DynamicBitmapIndexScan);
+		pbis = &(pdbis->biscan);
+	}
+	else
+	{
+		pdbis = NULL;
+		pbis = MakeNode(BitmapIndexScan);
+	}
 	pbis->scan.scanrelid = pdbts->scan.scanrelid;
 	pbis->scan.partIndex = pdbts->scan.partIndex;
 
@@ -5423,7 +5437,6 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	GPOS_ASSERT(InvalidOid != oidIndex);
 	pbis->indexid = oidIndex;
 	OID oidRel = CMDIdGPDB::PmdidConvert(pdxltabdesc->Pmdid())->OidObjectId();
-	pbis->logicalIndexInfo = gpdb::Plgidxinfo(oidRel, oidIndex);
 	Plan *pplan = &(pbis->scan.plan);
 	pplan->plan_node_id = m_pctxdxltoplstmt->UlNextPlanId();
 	pplan->nMotionNodes = 0;
@@ -5458,6 +5471,15 @@ CTranslatorDXLToPlStmt::PplanBitmapIndexProbe
 	 * available or needed in IndexScan. Ignore them.
 	 */
 	SetParamIds(pplan);
+
+	/*
+	 * If it's a Dynamic Bitmap Index Scan, also fill in the information
+	 * about the indexes on the partitions.
+	 */
+	if (pdbis)
+	{
+		pdbis->logicalIndexInfo = gpdb::Plgidxinfo(oidRel, oidIndex);
+	}
 
 	return pplan;
 }

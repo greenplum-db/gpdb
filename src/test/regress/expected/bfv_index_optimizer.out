@@ -171,7 +171,7 @@ AND ft.id = dt1.id;
                                                    Partitions selected:  20 (out of 20)
                                              ->  Bitmap Table Scan on bfv_tab2_facttable1 (dynamic scan id: 1)  (cost=0.00..0.16 rows=1 width=2)
                                                    Recheck Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
-                                                   ->  Bitmap Index Scan on idx_bfv_tab2_facttable1_1_prt_dflt  (cost=0.00..0.00 rows=0 width=0)
+                                                   ->  Dynamic Bitmap Index Scan on idx_bfv_tab2_facttable1_1_prt_dflt  (cost=0.00..0.00 rows=0 width=0)
                                                          Index Cond: bfv_tab2_facttable1.id = bfv_tab2_dimtabl1.id
  Settings:  optimizer=on
  Optimizer status: PQO version 1.621

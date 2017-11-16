@@ -208,9 +208,11 @@ CopyPlanFields(Plan *from, Plan *newnode)
  *		This function copies the LogicalIndexInfo, which is part of
  *		DynamicIndexScan node.
  */
-static void
-CopyLogicalIndexInfo(const LogicalIndexInfo *from, LogicalIndexInfo *newnode)
+static LogicalIndexInfo *
+CopyLogicalIndexInfo(const LogicalIndexInfo *from)
 {
+	LogicalIndexInfo *newnode = palloc(sizeof(LogicalIndexInfo));
+
 	COPY_SCALAR_FIELD(logicalIndexOid);
 	COPY_SCALAR_FIELD(nColumns);
 	COPY_POINTER_FIELD(indexKeys, from->nColumns * sizeof(AttrNumber));
@@ -220,6 +222,8 @@ CopyLogicalIndexInfo(const LogicalIndexInfo *from, LogicalIndexInfo *newnode)
 	COPY_SCALAR_FIELD(indType);
 	COPY_NODE_FIELD(partCons);
 	COPY_NODE_FIELD(defaultLevels);
+
+	return newnode;
 }
 
 /*
@@ -512,7 +516,7 @@ _copyExternalScan(ExternalScan *from)
 }
 
 static void
-copyIndexScanFields(const IndexScan *from, IndexScan *newnode)
+CopyIndexScanFields(const IndexScan *from, IndexScan *newnode)
 {
 	CopyScanFields((Scan *) from, (Scan *) newnode);
 
@@ -520,24 +524,6 @@ copyIndexScanFields(const IndexScan *from, IndexScan *newnode)
 	COPY_NODE_FIELD(indexqual);
 	COPY_NODE_FIELD(indexqualorig);
 	COPY_SCALAR_FIELD(indexorderdir);
-
-	/*
-	 * If we don't have a valid partIndex, we also don't have
-	 * a valid logicalIndexInfo (it should be set to NULL). So,
-	 * we don't copy.
-	 */
-	if (isDynamicScan(&from->scan))
-	{
-		Assert(NULL != from->logicalIndexInfo);
-		Assert(NULL == newnode->logicalIndexInfo);
-		newnode->logicalIndexInfo = palloc(sizeof(LogicalIndexInfo));
-
-		CopyLogicalIndexInfo(from->logicalIndexInfo, newnode->logicalIndexInfo);
-	}
-	else
-	{
-		Assert(newnode->logicalIndexInfo == NULL);
-	}
 }
 
 /*
@@ -548,7 +534,7 @@ _copyIndexScan(IndexScan *from)
 {
 	IndexScan  *newnode = makeNode(IndexScan);
 
-	copyIndexScanFields(from, newnode);
+	CopyIndexScanFields(from, newnode);
 
 	return newnode;
 }
@@ -562,7 +548,8 @@ _copyDynamicIndexScan(const DynamicIndexScan *from)
 	DynamicIndexScan  *newnode = makeNode(DynamicIndexScan);
 
 	/* DynamicIndexScan has some content from IndexScan */
-	copyIndexScanFields((IndexScan *)from, (IndexScan *)newnode);
+	CopyIndexScanFields(&from->indexscan, &newnode->indexscan);
+	newnode->logicalIndexInfo = CopyLogicalIndexInfo(from->logicalIndexInfo);
 
 	return newnode;
 }
@@ -570,34 +557,36 @@ _copyDynamicIndexScan(const DynamicIndexScan *from)
 /*
  * _copyBitmapIndexScan
  */
-static BitmapIndexScan *
-_copyBitmapIndexScan(BitmapIndexScan *from)
+static void
+CopyBitmapIndexScanFields(BitmapIndexScan *from, BitmapIndexScan *newnode)
 {
-	BitmapIndexScan *newnode = makeNode(BitmapIndexScan);
-
 	CopyScanFields((Scan *) from, (Scan *) newnode);
 
 	COPY_SCALAR_FIELD(indexid);
 	COPY_NODE_FIELD(indexqual);
 	COPY_NODE_FIELD(indexqualorig);
+}
 
-	/*
-	 * If we don't have a valid partIndex, we also don't have
-	 * a valid logicalIndexInfo (it should be set to NULL). So,
-	 * we don't copy.
-	 */
-	if (isDynamicScan(&from->scan))
-	{
-		Assert(NULL != from->logicalIndexInfo);
-		Assert(NULL == newnode->logicalIndexInfo);
-		newnode->logicalIndexInfo = palloc(sizeof(LogicalIndexInfo));
+static BitmapIndexScan *
+_copyBitmapIndexScan(BitmapIndexScan *from)
+{
+	BitmapIndexScan *newnode = makeNode(BitmapIndexScan);
 
-		CopyLogicalIndexInfo(from->logicalIndexInfo, newnode->logicalIndexInfo);
-	}
-	else
-	{
-		Assert(newnode->logicalIndexInfo == NULL);
-	}
+	CopyBitmapIndexScanFields(from, newnode);
+
+	return newnode;
+}
+
+/*
+ * _copyDynamicBitmapIndexScan
+ */
+static DynamicBitmapIndexScan *
+_copyDynamicBitmapIndexScan(DynamicBitmapIndexScan *from)
+{
+	DynamicBitmapIndexScan *newnode = makeNode(DynamicBitmapIndexScan);
+
+	CopyBitmapIndexScanFields(&from->biscan, &newnode->biscan);
+	newnode->logicalIndexInfo = CopyLogicalIndexInfo(from->logicalIndexInfo);
 
 	return newnode;
 }
@@ -4680,6 +4669,9 @@ copyObject(void *from)
 			break;
 		case T_BitmapIndexScan:
 			retval = _copyBitmapIndexScan(from);
+			break;
+		case T_DynamicBitmapIndexScan:
+			retval = _copyDynamicBitmapIndexScan(from);
 			break;
 		case T_BitmapHeapScan:
 			retval = _copyBitmapHeapScan(from);

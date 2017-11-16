@@ -70,12 +70,12 @@ ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags)
 	 * find and process any SubPlans. See comment in ExecInitIndexScan.
 	 */
 	dynamicIndexScanState->ss.ps.targetlist = (List *)
-		ExecInitExpr((Expr *) node->scan.plan.targetlist,
+		ExecInitExpr((Expr *) node->indexscan.scan.plan.targetlist,
 					 (PlanState *) dynamicIndexScanState);
 	dynamicIndexScanState->ss.ps.qual = (List *)
-		ExecInitExpr((Expr *) node->scan.plan.qual,
+		ExecInitExpr((Expr *) node->indexscan.scan.plan.qual,
 					 (PlanState *) dynamicIndexScanState);
-	(void) ExecInitExpr((Expr *) node->indexqualorig,
+	(void) ExecInitExpr((Expr *) node->indexscan.indexqualorig,
 						(PlanState *) dynamicIndexScanState);
 
 	/*
@@ -102,8 +102,9 @@ ExecInitDynamicIndexScan(DynamicIndexScan *node, EState *estate, int eflags)
 }
 
 static void
-DynamicIndexScan_ReMapColumns(DynamicIndexScan *indexScan, Oid oldOid, Oid newOid)
+DynamicIndexScan_ReMapColumns(DynamicIndexScan *dIndexScan, Oid oldOid, Oid newOid)
 {
+	IndexScan *indexScan = &dIndexScan->indexscan;
 	AttrNumber *attMap;
 
 	Assert(OidIsValid(newOid));
@@ -121,9 +122,8 @@ DynamicIndexScan_ReMapColumns(DynamicIndexScan *indexScan, Oid oldOid, Oid newOi
 
 	if (attMap)
 	{
-		LogicalIndexInfo *logicalIndexInfo = indexScan->logicalIndexInfo;
-
-		IndexScan_MapLogicalIndexInfo(logicalIndexInfo, attMap, indexScan->scan.scanrelid);
+		IndexScan_MapLogicalIndexInfo(dIndexScan->logicalIndexInfo, attMap,
+									  indexScan->scan.scanrelid);
 
 		/* Also map attrnos in targetlist and quals */
 		change_varattnos_of_a_varno((Node *) indexScan->scan.plan.targetlist,
@@ -180,7 +180,7 @@ beginCurrentIndexScan(DynamicIndexScanState *node, EState *estate,
 		elog(ERROR, "failed to find index for partition \"%s\" in dynamic index scan",
 			 RelationGetRelationName(currentRelation));
 
-	node->indexScanState = ExecInitIndexScanForPartition((IndexScan *) dynamicIndexScan, estate,
+	node->indexScanState = ExecInitIndexScanForPartition(&dynamicIndexScan->indexscan, estate,
 														 node->eflags,
 														 currentRelation, indexOid);
 	/* The IndexScan node takes ownership of currentRelation, and will close it when done */
@@ -251,22 +251,24 @@ initNextIndexToScan(DynamicIndexScanState *node)
 static void
 setPidIndex(DynamicIndexScanState *node)
 {
-	Assert(node->pidxIndex == NULL);
-
 	IndexScanState *indexState = (IndexScanState *)node;
-	EState *estate = indexState->ss.ps.state;
-	DynamicIndexScan *plan = (DynamicIndexScan *)indexState->ss.ps.plan;
+	DynamicIndexScan *plan = (DynamicIndexScan *) indexState->ss.ps.plan;
+	EState	   *estate = indexState->ss.ps.state;
+	int			partIndex = plan->indexscan.scan.partIndex;
+
+	Assert(node->pidxIndex == NULL);
 	Assert(estate->dynamicTableScanInfo != NULL);
+
 	/*
 	 * Ensure that the dynahash exists even if the partition selector
 	 * didn't choose any partition for current scan node [MPP-24169].
 	 */
-	InsertPidIntoDynamicTableScanInfo(estate, plan->scan.partIndex,
+	InsertPidIntoDynamicTableScanInfo(estate, partIndex,
 									  InvalidOid, InvalidPartitionSelectorId);
 
 	Assert(NULL != estate->dynamicTableScanInfo->pidIndexes);
-	Assert(estate->dynamicTableScanInfo->numScans >= plan->scan.partIndex);
-	node->pidxIndex = estate->dynamicTableScanInfo->pidIndexes[plan->scan.partIndex - 1];
+	Assert(estate->dynamicTableScanInfo->numScans >= partIndex);
+	node->pidxIndex = estate->dynamicTableScanInfo->pidIndexes[partIndex - 1];
 	Assert(node->pidxIndex != NULL);
 }
 

@@ -1118,6 +1118,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_DynamicIndexScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapIndexScan:
 		return "X_BitmapIndexScan";
+	case MEMORY_OWNER_TYPE_Exec_DynamicBitmapIndexScan:
+		return "X_DynamicBitmapIndexScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapHeapScan:
 		return "X_BitmapHeapScan";
 	case MEMORY_OWNER_TYPE_Exec_BitmapAppendOnlyScan:
