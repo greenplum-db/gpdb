@@ -39,6 +39,7 @@ where option can be:
     | ROLE rolename [, ...]
     | ADMIN rolename [, ...]
     | RESOURCE QUEUE queue_name
+    | RESOURCE GROUP group_name
 </synopsis>
  </refsynopsisdiv>
 
@@ -301,7 +302,36 @@ where option can be:
      </varlistentry>
 
      <varlistentry>
-      <term><literal>RESOURCE QUEUE</> <replaceable class="parameter">queuename</replaceable></term>
+      <term><literal>RESOURCE GROUP</> <replaceable class="parameter">group_name</replaceable></term>
+      <listitem>
+       <para>
+        The name of the resource group to assign to the the new role. The
+        role will be subject to the concurrent transaction, memory, and
+        CPU limits configured for the resource group. You can assign a
+        single resource group to one or more roles.
+       </para>
+       <para>
+        If you do not specify a resource group for a new role, the role
+        is automatically assigned the default resource group for the role's
+        capability, <literal>admin_group</literal> for <literal>SUPERUSER</literal> roles, <literal>default_group</literal> for 
+        non-admin roles.
+       </para>
+       <para>
+        You can assign the <literal>admin_group</literal> resource group to any role having
+        the <literal>SUPERUSER</literal> attribute.
+       </para>
+       <para>
+        You can assign the <literal>default_group</literal> resource group to any role.
+       </para>
+       <para>
+	See <xref linkend="sql-createresourcegroup" 
+        endterm="sql-createresourcegroup-title"> for more information.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><literal>RESOURCE QUEUE</> <replaceable class="parameter">queue_name</replaceable></term>
       <listitem>
        <para>
         The <literal>RESOURCE QUEUE</literal> that this role is in.
