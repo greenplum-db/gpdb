@@ -534,8 +534,28 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, probe_context *context)
 		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
 		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
 
+		/*
+		 * If probe response state is different from current state in
+		 * configuration, update both primary and mirror.
+		 */
 		if (IsInSync != SEGMENT_IS_IN_SYNC(primary))
 			UpdatePrimary = UpdateMirror = true;
+
+		/*
+		 * ----------------------------
+		 * In double fault situations:
+		 *     - Primary and Mirror are up but not in SYNC
+		 *     - Mirror is down and hence are not in SYNC
+		 *
+		 * In these situations probe fails, cannot make any change to
+		 * configuration and need to leave current primary marked as UP.
+		 */
+		if (SEGMENT_IS_NOT_INSYNC(primary) && !IsPrimaryAlive)
+		{
+			elog(WARNING, "FTS double fault detected for primary dbid %d, mirror dbid %d having contentid %d",
+				 primary->dbid, mirror->dbid, primary->segindex);
+			continue;
+		}
 
 		if (UpdatePrimary || UpdateMirror)
 		{
@@ -566,7 +586,6 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, probe_context *context)
 			CommitTransactionCommand();
 			CurrentResourceOwner = save;
 		}
-
 	}
 
 	return is_updated;
