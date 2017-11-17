@@ -23,7 +23,6 @@ ftsprobe.t: \
     $(MOCK_DIR)/backend/libpq/fe-connect_mock.o \
     $(MOCK_DIR)/backend/cdb/cdbthreadlog_mock.o
 
-
 fts.t: \
     $(MOCK_DIR)/backend/access/transam/xact_mock.o \
     $(MOCK_DIR)/backend/utils/time/snapmgr_mock.o \
