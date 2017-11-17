@@ -31,7 +31,14 @@ TEST(Config, Basic) {
 
     EXPECT_FALSE(params.isDebugCurl());
 
+    EXPECT_EQ("", params.getProxy());
+
+    EXPECT_TRUE(params.isAutoCompress());
+    EXPECT_TRUE(params.isVerifyCert());
+
     EXPECT_EQ(SSE_S3, params.getSSEType());
+
+    EXPECT_EQ("\n", params.getGpcheckcloud_newline());
 }
 
 TEST(Config, SpecialSectionValues) {
@@ -65,6 +72,7 @@ TEST(Config, SpecialSwitches) {
     S3Params params = InitConfig("s3://abc/a config=data/s3test.conf section=special_switches");
 
     EXPECT_TRUE(params.isDebugCurl());
+    EXPECT_FALSE(params.isAutoCompress());
 }
 
 TEST(Config, SectionExist) {

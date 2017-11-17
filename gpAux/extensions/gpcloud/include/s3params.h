@@ -17,10 +17,12 @@ class S3Params {
           numOfChunks(0),
           lowSpeedLimit(0),
           lowSpeedTime(0),
+          proxy(""),
           debugCurl(false),
           autoCompress(false),
           verifyCert(false),
-          sseType(SSE_NONE) {
+          sseType(SSE_NONE),
+          gpcheckcloud_newline("") {
     }
 
     virtual ~S3Params() {
