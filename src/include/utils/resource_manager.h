@@ -15,8 +15,9 @@
 #ifndef RESOURCEMANAGER_H
 #define RESOURCEMANAGER_H
 
-#include "utils/resscheduler.h"
 #include "utils/resgroup.h"
+#include "utils/resowner.h"
+#include "utils/resscheduler.h"
 
 typedef enum
 {
@@ -37,5 +38,8 @@ extern bool IsResGroupActivated(void);
 
 extern void ResManagerShmemInit(void);
 extern void InitResManager(void);
+
+extern ResourceOwner DefaultResourceOwnerAcquire(const char *defaultOwnerName);
+extern void DefaultResourceOwnerRelease(ResourceOwner owner);
 
 #endif   /* RESOURCEMANAGER_H */

@@ -119,3 +119,32 @@ InitResManager(void)
 		SPI_InitMemoryReservation();
 	}
 }
+
+/*
+ * Certain Postgres function calls like systable_beginscan() and heap_open()
+ * require that a CurrentResourceOwner is set, which is normally true if the
+ * code path is within a transaction.
+ *
+ * These functions can be used to ensure that precondition is met.
+ */
+ResourceOwner
+DefaultResourceOwnerAcquire(const char *defaultOwnerName)
+{
+	ResourceOwner owner = NULL;
+	if (CurrentResourceOwner == NULL)
+	{
+		owner = ResourceOwnerCreate(NULL, defaultOwnerName);
+		CurrentResourceOwner = owner;
+	}
+	return owner;
+}
+
+void
+DefaultResourceOwnerRelease(ResourceOwner owner)
+{
+	if (owner)
+	{
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
+	}
+}
