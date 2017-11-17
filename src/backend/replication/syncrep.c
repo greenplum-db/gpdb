@@ -343,7 +343,23 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	 * holding SyncRepLock, because any walsenders will ignore us anyway when
 	 * we're not on the queue.
 	 */
-	Assert(SHMQueueIsDetached(&(MyProc->syncRepLinks)));
+	if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
+	{
+		elog(LOG, "WalSndCtl->lsn[SYNC_REP_WAIT_WRITE]=%d/%x, lsn[SYNC_REP_WAIT_FLUSH]=%d/%x",
+			 WalSndCtl->lsn[SYNC_REP_WAIT_WRITE].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_WRITE].xrecoff,
+			 WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xrecoff);
+		PGPROC *proc;
+		proc = (PGPROC *) SHMQueueNext(&(WalSndCtl->SyncRepQueue[mode]),
+									   &(WalSndCtl->SyncRepQueue[mode]),
+									   offsetof(PGPROC, syncRepLinks));
+		while (proc)
+		{
+			ereport(LOG, (errmsg("pid=%d, syncRepState=%d, waitLSN=%d/%x",
+								 proc->pid, proc->syncRepState, proc->waitLSN.xlogid,
+								 proc->waitLSN.xrecoff), errprintstack(true)));
+		}
+		elog(ERROR, "Assertion failed: SHMQueueIsDetached(&(MyProc->syncRepLinks))");
+	}
 	MyProc->syncRepState = SYNC_REP_NOT_WAITING;
 	MyProc->waitLSN.xlogid = 0;
 	MyProc->waitLSN.xrecoff = 0;
