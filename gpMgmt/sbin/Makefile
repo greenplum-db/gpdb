@@ -8,5 +8,5 @@ install:
 	find . -not -path '*Makefile' -type f -exec cp -- {} $(prefix)/sbin/{} \;
 
 
-clean:
+clean distclean:
 	@rm -f *.pyc

@@ -259,19 +259,18 @@ solarisTest:
 installcheck:
 	$(MAKE) -C gpload_test $@
 
-.PHONY: clean
-clean :
-	@rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
-	@rm -rf $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)
-	@rm -rf $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)
-	@rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
-	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)
-	@rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
-	@rm -rf $(STREAM_DIR)/stream lib/stream  
-	@rm -rf *.pyc lib/*.pyc
-	@rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
-	@rm -f gpconfig_modules/gucs_disallowed_in_file.txt
-	@rm -f gppylib/data/$(GP_MAJORVERSION).json
-
-.PHONY: disclean
-distclean: clean
+clean distclean:
+	rm -rf $(PYLIB_SRC_EXT)/$(LOCKFILE_DIR)
+	rm -rf $(PYLIB_SRC_EXT)/$(PARAMIKO_DIR)
+	rm -rf $(PYLIB_SRC_EXT)/$(PYCRYPTO_DIR)
+	rm -rf $(PYLIB_SRC_EXT)/$(PYLINT_DIR)
+	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_COMMON_DIR)
+	rm -rf $(PYLIB_SRC_EXT)/$(LOGILAB_ASTNG_DIR)
+	rm -rf $(PYLIB_SRC_EXT)/$(PYGRESQL_DIR)/build
+	rm -rf $(PYLIB_SRC)/$(PYGRESQL_DIR)/build
+	rm -rf $(PYLIB_SRC)/subprocess32/build
+	rm -rf $(STREAM_DIR)/stream lib/stream
+	rm -rf *.pyc lib/*.pyc
+	rm -f gpcheckcatc gpcrondumpc gpexpandc gptransferc
+	rm -f gpconfig_modules/gucs_disallowed_in_file.txt
+	rm -f gppylib/data/$(GP_MAJORVERSION).json
