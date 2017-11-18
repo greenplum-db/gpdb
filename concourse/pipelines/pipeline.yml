@@ -2420,8 +2420,8 @@ jobs:
       image_resource:
         type: docker-image
         source:
-          repository: centos
-          tag: '6'
+          repository: pivotaldata/ccp
+          tag: "7"
       run:
         path: sh
         args:
@@ -2531,8 +2531,8 @@ jobs:
       image_resource:
         type: docker-image
         source:
-          repository: centos
-          tag: '6'
+          repository: pivotaldata/ccp
+          tag: "7"
       run:
         path: sh
         args:

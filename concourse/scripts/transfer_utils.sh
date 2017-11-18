@@ -33,7 +33,6 @@ exchange_keys() {
 }
 
 setup_gptransfer() {
-    yum install -y -d1 openssh openssh-clients epel-release
     setup_ssh_to_both_clusters
     exchange_keys
     ssh -t mdw "source /home/gpadmin/gpdb_src/concourse/scripts/transfer_utils.sh; create_map_file"
