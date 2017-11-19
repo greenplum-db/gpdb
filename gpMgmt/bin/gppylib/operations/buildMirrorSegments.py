@@ -355,7 +355,7 @@ class GpMirrorListToBuild:
                 raise
         else:
             try:
-                print 'updating flat files'
+                self.__logger.info("Updating flat files")
                 UpdateFlatFiles(gpArray, primaries=False).run()
             except MoveFilespaceError, e:
                 self.__logger.error(str(e))
