@@ -28,15 +28,18 @@ git:
 
 addons:
   apt:
+    sources:
+    - ubuntu-toolchain-r-test
     packages:
     - libevent-dev
+    - g++-6
 
 ## ----------------------------------------------------------------------
 ## Build tools
 ## ----------------------------------------------------------------------
 
 compiler:
-  - gcc
+  - gcc-6
 
 python:
   - "2.7"
@@ -59,6 +62,8 @@ install:
 env:
   - APR=apr-1.6.3
     APR_UTIL=apr-util-1.6.1
+    CC=gcc-6
+    CXX=g++-6
 
 before_script:
   - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
