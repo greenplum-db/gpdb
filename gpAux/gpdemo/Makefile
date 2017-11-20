@@ -38,11 +38,11 @@ all:
 cluster create-demo-cluster:
 ifeq ($(enable_segwalrep), yes)
 	@WITH_MIRRORS=false ./demo_cluster.sh # will generate gpdemo-env.sh
-	@if [[ $(WITH_MIRRORS) == true ]]; then \
-	 	. ./gpdemo-env.sh; \
-	 	./gpsegwalrep.py init --host `hostname`; \
-	 	./gpsegwalrep.py start; \
-	 fi
+ifeq ($(WITH_MIRRORS), true)
+	@. ./gpdemo-env.sh; \
+	./gpsegwalrep.py init --host `hostname`; \
+	./gpsegwalrep.py start;
+endif
 	@echo ""
 else
 	@./demo_cluster.sh
