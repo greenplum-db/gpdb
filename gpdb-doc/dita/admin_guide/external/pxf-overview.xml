@@ -5,6 +5,7 @@
   <shortdesc>Data managed by your organization may already reside in external sources. The Greenplum Platform Extension Framework (PXF) provides access to this external data via built-in connectors that map an external data source to a Greenplum Database table definition.</shortdesc>
   <body>
     <p>PXF is installed with HDFS, Hive, and HBase connectors. These connectors enable you to read external HDFS file system and Hive and HBase table data stored in text, Avro, JSON, RCFile, Parquet, SequenceFile, and ORC formats.</p>
+    <note>PXF does not currently support filter predicate pushdown in the HDFS, Hive, and HBase connectors.</note>
     <p>The Greenplum Platform Extension Framework includes a protocol C library and a Java service. After you configure and initialize PXF, you start a single PXF JVM process on each Greenplum Database segment host. This long-running process concurrently serves multiple query requests.</p>
     <p>For detailed information about the architecture of and using PXF, refer to the <xref href="../../pxf/overview_pxf.html" type="topic" format="html">Using PXF with External Data</xref> documentation.</p>
   </body>
