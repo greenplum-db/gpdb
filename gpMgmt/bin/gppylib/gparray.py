@@ -1616,6 +1616,13 @@ class GpArray:
         return hosts
 
     # --------------------------------------------------------------------
+    def get_master_host_names(self):
+        if self.hasStandbyMaster():
+            return [self.master.hostname, self.standbyMaster.hostname]
+        else:
+            return [self.master.hostname]
+
+    # --------------------------------------------------------------------
     def get_max_dbid(self,includeExpansionSegs=False):
         """Returns the maximum dbid in the array.  If includeExpansionSegs
         is True, this includes the expansion segment array in the search"""
