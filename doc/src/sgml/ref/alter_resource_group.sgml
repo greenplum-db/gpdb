@@ -38,7 +38,7 @@ where group_attribute is one of:
   <para>
    ALTER RESOURCE GROUP changes the limits of a resource group. 
    Only a superuser can alter a resource group.
-  </para.
+  </para>
 
   <para>
    You can set or reset the concurrency limit of a resource group to
