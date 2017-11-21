@@ -303,6 +303,27 @@ class GpStop(GpTestCase):
             gpstop.run()
         self.assertEquals(0, self.mock_GpSegStopCmdInit.call_count)
 
+    def test_host_option_if_no_mirrors_fails(self):
+        sys.argv = ["gpstop", "-a", "--host", "sdw2"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.master = GpDB.initFromString(
+            "1|-1|p|p|s|u|mdw|mdw|5432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+        self.standby = GpDB.initFromString(
+            "2|-1|m|m|s|u|sdw1|sdw1|25432|None|/data/master||/data/master/base/10899,/data/master/base/1,/data/master/base/10898,/data/master/base/25780,/data/master/base/34782")
+        self.primary0 = GpDB.initFromString(
+            "3|0|p|p|s|u|sdw1|sdw1|40000|41000|/data/primary0||/data/primary0/base/10899,/data/primary0/base/1,/data/primary0/base/10898,/data/primary0/base/25780,/data/primary0/base/34782")
+        self.primary1 = GpDB.initFromString(
+            "4|0|p|p|s|u|sdw2|sdw2|40001|41001|/data/primary1||/data/primary1/base/10899,/data/primary1/base/1,/data/primary1/base/10898,/data/primary1/base/25780,/data/primary1/base/34782")
+        self.mock_gparray.return_value = GpArray([self.master, self.standby, self.primary0, self.primary1])
+
+        gpstop = self.subject.GpStop.createProgram(options, args)
+
+        with self.assertRaisesRegexp(Exception,"Cannot perform host-specific gpstop on a cluster without segment mirroring."):
+            gpstop.run()
+        self.assertEquals(0, self.mock_GpSegStopCmdInit.call_count)
+
     def test_host_option_with_master_option_fails(self):
         sys.argv = ["gpstop", "--host", "sdw1", "-m"]
         parser = self.subject.GpStop.createParser()
