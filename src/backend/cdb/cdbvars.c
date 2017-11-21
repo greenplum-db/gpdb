@@ -1353,25 +1353,6 @@ gpvars_show_gp_resgroup_memory_policy(void)
 }
 
 /*
- * gpvars_assign_statement_mem
- */
-bool
-gpvars_assign_statement_mem(int newval, bool doit, GucSource source __attribute__((unused)))
-{
-	if (doit)
-	{
-		if (newval >= max_statement_mem)
-		{
-			elog(ERROR, "Invalid input for statement_mem. Must be less than max_statement_mem (%d kB).", max_statement_mem);
-		}
-
-		statement_mem = newval;
-	}
-
-	return true;
-}
-
-/*
  * increment_command_count
  *	  Increment gp_command_count. If the new command count is 0 or a negative number, reset it to 1.
  */
@@ -1391,4 +1372,14 @@ increment_command_count()
 	{
 		gp_command_count = 1;
 	}
+}
+
+uint64
+GetStatementMem() {
+	if (statement_mem > max_statement_mem)
+	{
+		elog(WARNING, "statement_mem must be <= max_statement_mem (%d kB). Throttled to %d kB", max_statement_mem, max_statement_mem);
+		return (uint64) max_statement_mem;
+	}
+	return (uint64) statement_mem;
 }

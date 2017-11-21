@@ -477,9 +477,9 @@ MemoryAccounting_SaveToFile(int currentSliceId)
 	initStringInfo(&memBuf);
 
 	/* run_id, dataset_id, query_id, scale_factor, gp_session_id, current_statement_timestamp, slice_id, segment_idx, */
-	appendStringInfo(&prefix, "%s,%s,%s,%u,%u,%d," UINT64_FORMAT ",%d,%d",
+	appendStringInfo(&prefix, "%s,%s,%s,%u," UINT64_FORMAT ",%d," UINT64_FORMAT ",%d,%d",
 			memory_profiler_run_id, memory_profiler_dataset_id, memory_profiler_query_id,
-			memory_profiler_dataset_size, statement_mem, gp_session_id, GetCurrentStatementStartTimestamp(),
+			memory_profiler_dataset_size, GetStatementMem(), gp_session_id, GetCurrentStatementStartTimestamp(),
 			currentSliceId, GpIdentity.segindex);
 
 	MemoryAccountTree *tree = ConvertMemoryAccountArrayToTree(&longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Undefined],

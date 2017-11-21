@@ -2173,9 +2173,9 @@ uint64 ResourceQueueGetQueryMemoryLimit(PlannedStmt *stmt, Oid queueId)
 	/**
 	 * If user requests more using statement_mem, grant that.
 	 */
-	if (queryMem < statement_mem * 1024L)
+	if (queryMem < GetStatementMem() * 1024L)
 	{
-		queryMem = (uint64) statement_mem * 1024L;
+		queryMem = GetStatementMem() * 1024L;
 	}
 
 	return queryMem;
@@ -2187,5 +2187,5 @@ uint64 ResourceQueueGetQueryMemoryLimit(PlannedStmt *stmt, Oid queueId)
 static uint64 ResourceQueueGetSuperuserQueryMemoryLimit(void)
 {
 	Assert(superuser());
-	return (uint64) statement_mem * 1024L;
+	return GetStatementMem() * 1024L;
 }

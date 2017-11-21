@@ -2559,7 +2559,7 @@ void SPI_InitMemoryReservation(void)
 	}
 	else
 	{
-		SPIMemReserved = (uint64) statement_mem * 1024L;;
+		SPIMemReserved = GetStatementMem() * 1024L;;
 	}
 }
 
