@@ -488,7 +488,10 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 							  contrecord->xl_rem_len);
 			}
 			else
+			{
 				i += XLogPageHeaderSize(hdr);
+				elog(DEBUG1, "XLOG_PAGE_MAGIC else, i:%u", i);
+			}
 
 		}
 		else if (xlrec->xl_rmid == RM_APPEND_ONLY_ID)
@@ -496,29 +499,21 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 			CheckAoRecordResult *aorecordresult = &aorecordresults[num_found];
 			aorecordresult->xrecoff = xrecoff + i;
 
-			xl_ao_target *xlaorecord = palloc0(xlrec->xl_tot_len);
+			xl_ao_target *xlaorecord = XLogRecGetData(xlrec);
 
 			if (xlrec->xl_tot_len > avail_in_block)
 			{
 				/*
-				 * The AO record is split across two pages and needs to be
-				 * reassembled
+				 * The AO record is split across two pages, skip to the next page
 				 */
-				char aobuf[XLOG_BLCKSZ];
-				memcpy(aobuf, xlrec, avail_in_block);
-				elog(DEBUG1, "copied partial record of %u bytes", avail_in_block);
-				contrecord = (XLogContRecord *)((char *)xlrec + avail_in_block +
-							  XLogPageHeaderSize(hdr));
-				memcpy(aobuf + avail_in_block, ((char *)contrecord + SizeOfXLogContRecord),
-					   contrecord->xl_rem_len);
-				memcpy(xlaorecord, XLogRecGetData(aobuf), xlrec->xl_tot_len);
-				i += avail_in_block +
-					 MAXALIGN(XLogPageHeaderSize(hdr) + SizeOfXLogContRecord + contrecord->xl_rem_len);
+				Assert(avail_in_block >= sizeof(xl_ao_target));
+				i += avail_in_block;
+				elog(DEBUG1, "AO record split found, i: %u, avail_in_block: %u", i, avail_in_block);
 			}
 			else
 			{
-				memcpy(xlaorecord, XLogRecGetData(xlrec), sizeof(xl_ao_insert));
 				i += MAXALIGN(xlrec->xl_tot_len);
+				elog(DEBUG1, "RM_APPEND_ONLY_DI, else, i: %u", i);
 			}
 
 			aorecordresult->target.node.spcNode = xlaorecord->node.spcNode;
@@ -528,7 +523,6 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 			aorecordresult->target.offset = xlaorecord->offset;
 			aorecordresult->len = xlrec->xl_len;
 			aorecordresult->ao_xlog_record_type = info;
-
 
 			num_found++;
 
@@ -542,9 +536,15 @@ check_ao_record_present(unsigned char type, char *buf, Size len,
 			 * onto the next page.
 			 */
 			if (xlrec->xl_tot_len > avail_in_block || avail_in_block < SizeOfXLogRecord)
+			{
 				i += avail_in_block;
+				elog(DEBUG1, "record too long, i: %u, avail_in_block: %u, xlrec->xl_tot_len: %u", i, avail_in_block, xlrec->xl_tot_len);
+			}
 			else
+			{
 				i += MAXALIGN(xlrec->xl_tot_len);
+				elog(DEBUG1, "default, else, i: %u, xlrec->xl_tot_len: %u", i, xlrec->xl_tot_len);
+			}
 		}
 	}
 	return num_found;
