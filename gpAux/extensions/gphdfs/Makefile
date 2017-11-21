@@ -13,74 +13,26 @@ PG_CONFIG := pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
-JAR_FILES = dist/gpmr-1.2-gnet-1.2.0.0.jar \
-	dist/cdh4.1-gnet-1.2.0.0.jar \
-	dist/hdp2.0-gnet-1.2.0.0.jar
+JAR_FILES = dist/hdp2.0-gnet-1.2.0.0.jar
 
 JAVADOC_TARS = gnet-1.2-javadoc.tar
 
 all: $(JAR_FILES) unittest $(JAVADOC_TARS)
 
-IVY_HTTPAUTH_PROPS = /tmp/ivy_httpauth.properties
-
-$(IVY_HTTPAUTH_PROPS):
-	@echo ivyrepo.host="$(IVYREPO_HOST)" > $@
-	@echo ivyrepo.realm="$(IVYREPO_REALM)" >> $@
-	@echo ivyrepo.user="$(IVYREPO_USER)" >> $@
-	@echo ivyrepo.passwd="$(IVYREPO_PASSWD)" >> $@
-
-#gpmr-1.2 uses hadoop-core-2.0.0-mr1-cdh4.1.2.jar to build, the same as cdh4.1
-dist/gpmr-1.2-gnet-1.2.0.0.jar:
+dist/hdp2.0-gnet-1.2.0.0.jar:
 	$(ANT) clean
-	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dorg=apache \
-                -Dname=hadoop-core \
-                -Drevision=2.0.0-mr1-cdh4.1.2 \
-                -Dhadoop-common.revision=2.0.0-cdh4.1.2 \
-                -Dgphdgnet.version=gpmr-1.2-gnet-1.2.0.0 \
-                -Dgpgnet.src=1.2 \
-                -Dgpgnet.configuration=hadoop2 \
-                -propertyfile $(IVY_HTTPAUTH_PROPS)
-
-dist/hdp2-gnet-1.2.0.0.jar:
-	$(ANT) clean
-	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dorg=apache \
-                -Dname=hadoop-core \
-                -Drevision=2.0.0-mr1-cdh4.1.2 \
-                -Dhadoop-common.revision=2.0.0-cdh4.1.2 \
-                -Dgphdgnet.version=hdp2-gnet-1.2.0.0 \
-                -Dgpgnet.src=1.2 \
-                -Dgpgnet.configuration=hadoop2 \
-                -propertyfile $(IVY_HTTPAUTH_PROPS)
-
-dist/cdh4.1-gnet-1.2.0.0.jar:
-	$(ANT) clean
-	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dorg=apache \
-                -Dname=hadoop-core \
-                -Drevision=2.0.0-mr1-cdh4.1.2 \
-                -Dhadoop-common.revision=2.0.0-cdh4.1.2 \
-                -Dgphdgnet.version=cdh4.1-gnet-1.2.0.0 \
-                -Dgpgnet.src=1.2 \
-                -Dgpgnet.configuration=hadoop2 \
-                -propertyfile $(IVY_HTTPAUTH_PROPS)
+	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dgphdgnet.version=hdp2.0-gnet-1.2.0.0 \
+                -Dgpgnet.src=1.2 -Dgpgnet.configuration=hadoop2
+	cp dist/hdp2.0-gnet-1.2.0.0.jar dist/cdh4.1-gnet-1.2.0.0.jar
+	cp dist/hdp2.0-gnet-1.2.0.0.jar dist/gpmr-1.2-gnet-1.2.0.0.jar
 
 unittest: $(JAR_FILES)
 	$(ANT) clean
-	ANT_OPTS=$(ANT_OPTS) $(ANT) test -Dorg=apache \
-                -Dname=hadoop-core \
-                -Drevision=2.0.0-mr1-cdh4.1.2 \
-                -Dhadoop-common.revision=2.0.0-cdh4.1.2 \
-                -Dgphdgnet.version=cdh4.1-gnet-1.2.0.0 \
-                -Dgpgnet.src=1.2 \
-                -Dgpgnet.configuration=ut \
-                -propertyfile $(IVY_HTTPAUTH_PROPS)
+	ANT_OPTS=$(ANT_OPTS) $(ANT) test -Dgphdgnet.version=hdp2.0-gnet-1.2.0.0 \
+                -Dgpgnet.src=1.2 -Dgpgnet.configuration=ut
 
 gnet-1.2-javadoc.tar: $(JAR_FILES)
-	$(ANT) javadoc -Dorg=apache \
-                   -Dname=hadoop-core \
-                   -Drevision=2.0.0-cdh4.1.2 \
-                   -Dgphdgnet.version=gnet-1.2 \
-                   -Dgpgnet.src=1.2 \
-                   -propertyfile $(IVY_HTTPAUTH_PROPS)
+	$(ANT) javadoc -Dgphdgnet.version=gnet-1.2 -Dgpgnet.src=1.2 -Dgpgnet.configuration=hadoop2
 	$(TAR) -cf gnet-1.2-javadoc.tar gnet-1.2-javadoc
 
 install-jars: $(JAR_FILES)
@@ -119,4 +71,3 @@ clean-extras:
 	rm -rf *-javadoc
 	rm -f *-javadoc.tar
 	rm -rf result
-	rm -f $(IVY_HTTPAUTH_PROPS)
