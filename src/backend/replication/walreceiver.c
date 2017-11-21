@@ -837,7 +837,7 @@ XLogWalRcvSendReply(void)
 
 	walrcv_send(buf, sizeof(StandbyReplyMessage) + 1);
 
-	elogif(debug_walrepl_rcv, LOG,
+	elog(LOG,
 		   "walrcv reply -- Sent write %X/%X flush %X/%X apply %X/%X",
 		   reply_message.write.xlogid, reply_message.write.xrecoff,
 		   reply_message.flush.xlogid, reply_message.flush.xrecoff,
