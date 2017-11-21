@@ -345,9 +345,15 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	 */
 	if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
 	{
-		elog(LOG, "WalSndCtl->lsn[SYNC_REP_WAIT_WRITE]=%d/%x, lsn[SYNC_REP_WAIT_FLUSH]=%d/%x",
+		elog(LOG,
+			 "WalSndCtl->lsn[SYNC_REP_WAIT_WRITE]=%d/%x, "
+			 "lsn[SYNC_REP_WAIT_FLUSH]=%d/%x "
+			 "MyProc->syncRepState=%d, MyProc->waitLSN=%d/%x "
+			 "MyProc->syncRepLinks(prev=%ld, next=%ld)",
 			 WalSndCtl->lsn[SYNC_REP_WAIT_WRITE].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_WRITE].xrecoff,
-			 WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xrecoff);
+			 WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xrecoff,
+			 MyProc->syncRepState, MyProc->waitLSN.xlogid, MyProc->waitLSN.xrecoff,
+			 MyProc->syncRepLinks.prev, MyProc->syncRepLinks.next);
 		PGPROC *proc;
 		proc = (PGPROC *) SHMQueueNext(&(WalSndCtl->SyncRepQueue[mode]),
 									   &(WalSndCtl->SyncRepQueue[mode]),
@@ -357,6 +363,9 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 			ereport(LOG, (errmsg("pid=%d, syncRepState=%d, waitLSN=%d/%x",
 								 proc->pid, proc->syncRepState, proc->waitLSN.xlogid,
 								 proc->waitLSN.xrecoff), errprintstack(true)));
+			proc = (PGPROC *) SHMQueueNext(&(WalSndCtl->SyncRepQueue[mode]),
+										   &proc->syncRepLinks,
+										   offsetof(PGPROC, syncRepLinks));
 		}
 		elog(ERROR, "Assertion failed: SHMQueueIsDetached(&(MyProc->syncRepLinks))");
 	}
