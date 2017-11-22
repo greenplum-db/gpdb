@@ -505,7 +505,7 @@ RelationTruncate(Relation rel, BlockNumber nblocks, bool markPersistentAsPhysica
 	 * harmless failure to truncate, that could spell trouble at WAL replay,
 	 * into a certain PANIC.
 	 */
-	if (rel->rd_istemp)
+	if (!rel->rd_istemp)
 	{
 		/*
 		 * Make an XLOG entry showing the file truncation.
