@@ -1,37 +1,45 @@
 #!/usr/bin/make -f
 
-DH_VERBOSE = 1
-PWD=`pwd`
 # see EXAMPLES in dpkg-buildflags(1) and read /usr/share/dpkg/*
+DH_VERBOSE = 1
 DPKG_EXPORT_BUILDFLAGS = 1
+
+# assumes that CWD is root of gpdb source
+GPDB_SRC_DIR := $(shell pwd)
 DEB_BUILD_OPTIONS += parallel=6
 VERSION := $(shell ./getversion | tr " " ".")
 PACKAGE := $(shell cat debian/control | egrep "^Package: " | cut -d " " -f 2)
+DEBIAN_DESTINATION := ${GPDB_SRC_DIR}/debian/tmp
+ORCA_DIR := ${GPDB_SRC_DIR}/depends
 
 include /usr/share/dpkg/default.mk
 
-orca:
-	# ubuntu pip is ancient and problematic to install/upgrade during PPA builds
-	# instead, download it and install it using python
+# The ubuntu version of 'pip' is ancient and problematic to install/upgrade during PPA builds,
+# so instead of relying on it, download it separately and install it using python
+/usr/local/bin/conan:
 	wget https://bootstrap.pypa.io/get-pip.py
 	python get-pip.py
-	PATH="/usr/local/bin:$(PATH)" pip install conan
-	debian/set_conan_remote.bash
-	cd depends && PATH="/usr/local/bin:$(PATH)" conan install --build
+	pip install conan
+
+orca: /usr/local/bin/conan
+	mkdir -p ${DEBIAN_DESTINATION}
+	cd ${ORCA_DIR}  &&  ./configure --prefix=${DEBIAN_DESTINATION}  &&  make  && make install
 
 override_dh_auto_configure: orca
-	./configure --with-perl --with-python --with-libxml --with-gssapi --prefix=${PWD}/debian/tmp
+	./configure --with-perl --with-python --with-libxml --with-gssapi \
+        --with-libs=${ORCA_DIR}/build/lib \
+        --with-includes=${ORCA_DIR}/build/include \
+        --prefix=${DEBIAN_DESTINATION}
 
 %:
 	dh $@
 
 override_dh_auto_install:
 	make install
+	cp -R ${ORCA_DIR}/build/lib/* ${DEBIAN_DESTINATION}/lib/
 	# the staging directory for creating a debian is NOT the right GPHOME.
 	# change GPHOME to point to the post-install target install directory.
 	sed -i "s#GPHOME=.*#GPHOME=/opt/gpdb#g" debian/tmp/greenplum_path.sh
-	mkdir -p debian/tmp/usr/lib/
-	cp /usr/local/lib/lib*.so.* debian/tmp/lib/
 	# remove bundled python from open-source package
 	rm -rf debian/tmp/lib/python/Crypto
 	rm -rf debian/tmp/lib/python/lockfile
@@ -40,13 +48,14 @@ override_dh_auto_install:
 	rm -rf debian/tmp/lib/python/yaml
 	# Remove fault injector and other packages
 	while read file; do\
-      if [ -f "${PWD}/debian/tmp/$${file}" ]; then\
-        echo "Deleting: ${PWD}/debian/tmp/$${file}"; \
-        rm "${PWD}/debian/tmp/$${file}"; \
+      if [ -f "${DEBIAN_DESTINATION}/$${file}" ]; then\
+        echo "Deleting: ${DEBIAN_DESTINATION}/$${file}"; \
+        rm "${DEBIAN_DESTINATION}/$${file}"; \
       else\
         echo "File $${file} does not exist. Skipping." ; \
       fi;\
-    done < "${PWD}/gpAux/releng/NON_PRODUCTION_FILES.txt"
+    done < ${GPDB_SRC_DIR}/gpAux/releng/NON_PRODUCTION_FILES.txt
+	cd ${DEBIAN_DESTINATION} && chmod -R 755 .
 
 
 # since we need orca to build before configuring, and configuring happens before dh_auto_clean,
@@ -55,8 +64,10 @@ override_dh_auto_install:
 # we can  make this step into a no-op: the container is clean to begin with.
 override_dh_auto_clean:
 	echo "Skipping clean"
-	# Do nothing
 
 override_dh_gencontrol:
 	echo "using version $(VERSION) for binary"
 	dpkg-gencontrol -v$(VERSION) -Pdebian/$(PACKAGE)
+
+override_dh_shlibdeps:
+	LD_LIBRARY_PATH=${DEBIAN_DESTINATION}/lib dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
