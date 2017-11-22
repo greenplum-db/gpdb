@@ -19,7 +19,7 @@ pushd ${SRC_DIR}
     MESSAGE="Bumping to Greenplum version $VERSION, git SHA $SHA"
     PACKAGE=`cat debian/control | egrep "^Package: " | cut -d " " -f 2`
 
-    dch --create -M --package $PACKAGE -v $VERSION "$MESSAGE"
+    dch --create --package $PACKAGE -v $VERSION "$MESSAGE"
 popd
 
 # the image should already have all the debian packages

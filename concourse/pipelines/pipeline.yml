@@ -775,6 +775,9 @@ jobs:
     - task: deb_create_package
       file: gpdb_src/concourse/tasks/deb_create_package.yml
       image: ubuntu-gpdb-debian-dev-16
+      params:
+        DEBFULLNAME: ((debian-package-maintainer-fullname))
+        DEBEMAIL: ((debian-package-maintainer-email))
   - aggregate:
     - put: compiled_bits_ubuntu16
       params:
