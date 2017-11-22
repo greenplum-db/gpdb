@@ -129,9 +129,9 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
     <topic id="topic_ydr_q5l_ybb">
       <title>Enabling GDAL Raster Drivers</title>
       <body>
-        <p>PostGIS uses GDAL raster drivers when processing raster data with commands such a
+        <p>PostGIS uses GDAL raster drivers when processing raster data with commands such as
             <codeph>ST_AsJPEG()</codeph>. As the default, PostGIS disables all raster drivers. You
-          enable raster drivers by setting the value of
+          enable raster drivers by setting the value of the
             <codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph> environment variable in the
             <codeph>greenplum_path.sh</codeph> file on all Greenplum Database hosts.</p>
         <p>To see the list of supported GDAL raster drivers for a Greenplum Database system, run the
