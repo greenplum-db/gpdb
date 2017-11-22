@@ -62,6 +62,8 @@ static PGconn *connectDatabase(const char *dbname, const char *pghost, const cha
 static PGresult *executeQuery(PGconn *conn, const char *query);
 static void executeCommand(PGconn *conn, const char *query);
 
+static void error_unsupported_server_version(PGconn *conn) pg_attribute_noreturn();
+
 static char pg_dump_bin[MAXPGPATH];
 static PQExpBuffer pgdumpopts;
 static bool output_clean = false;
@@ -1463,6 +1465,8 @@ dumpCreateDB(PGconn *conn)
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
 						   "WHERE datallowconn ORDER BY 1");
+	else
+		error_unsupported_server_version(conn);
 
 	for (i = 0; i < PQntuples(res); i++)
 	{
@@ -2017,4 +2021,29 @@ doShellQuoting(PQExpBuffer buf, const char *str)
 	}
 	appendPQExpBufferChar(buf, '"');
 #endif /* WIN32 */
+}
+
+
+/*
+ * This GPDB-specific function is copied (in spirit) from pg_dump.c.
+ *
+ * PostgreSQL's pg_dumpall supports very old server versions, but in GPDB, we
+ * only need to go back to 8.2-derived GPDB versions (4.something?). A lot of
+ * that code to deal with old versions has been removed. But in order to not
+ * change the formatting of the surrounding code, and to make it more clear
+ * when reading a diff against the corresponding PostgreSQL version of
+ * pg_dumpall, calls to this function has been left in place of the removed
+ * code.
+ *
+ * This function should never actually be used, because check that the server
+ * version is new enough at the beginning of pg_dumpall. This is just for
+ * documentation purposes, to show were upstream code has been removed, and
+ * to avoid those diffs or merge conflicts with upstream.
+ */
+static void
+error_unsupported_server_version(PGconn *conn)
+{
+	fprintf(stderr, _("unexpected server version %d\n"), server_version);
+	PQfinish(conn);
+	exit(1);
 }
