@@ -53,15 +53,12 @@ mask_page_hint_bits(Page page)
 	PageClearFull(page);
 	PageClearHasFreeLinePointers(page);
 
-/* GPDB_84_MERGE_FIXME */
-#if 0
 	/*
 	 * During replay, if the page LSN has advanced past our XLOG record's LSN,
 	 * we don't mark the page all-visible. See heap_xlog_visible() for
 	 * details.
 	 */
 	PageClearAllVisible(page);
-#endif
 }
 
 /*
