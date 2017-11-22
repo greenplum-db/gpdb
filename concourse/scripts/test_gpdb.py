@@ -77,6 +77,10 @@ def main():
     status = create_gpadmin_user()
     if status:
         return status
+    status = gp_build.unit_test()
+
+    if status:
+        return status
     if os.getenv("TEST_SUITE", "icg") == 'icw':
       status = gp_build.install_check('world')
     else:

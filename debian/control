@@ -1,5 +1,5 @@
-Source: greenplum-db
-Maintainer: Pivotal Containerization Team <gpdb-bosh@pivotal.io>
+Source: greenplum-db-oss
+Maintainer: gpdb team <gpdb-bosh@pivotal.io>
 Section: database
 Build-Depends: debhelper (>= 9),
     bison,
@@ -23,7 +23,7 @@ Build-Depends: debhelper (>= 9),
     wget,
     zlib1g-dev
 
-Package: greenplum-db
+Package: greenplum-db-oss
 Architecture: any
 Depends: bison,
     curl,

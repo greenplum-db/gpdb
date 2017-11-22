@@ -182,6 +182,7 @@ PYTHONSRC_INSTALL_PYTHON_PATH=$(PYTHONPATH):$(PYTHONSRC_INSTALL_SITE)
 BEHAVE_BIN=$(PYTHONSRC_INSTALL)/bin/behave
 # TODO: mock-1.0.1-py2.6.egg package should be updated.
 MOCK_BIN=$(PYTHONSRC_INSTALL)/lib/python$(PYTHON_VERSION)/site-packages/mock-1.0.1-py2.6.egg
+UBUNTU_PLATFORM=$(shell if lsb_release -a 2>/dev/null | grep -q 'Ubuntu' ; then echo "Ubuntu"; fi)
 
 pylint:
 	@echo "--- pylint"
@@ -197,10 +198,15 @@ pylint:
 	@touch $(PYLIB_SRC_EXT)/$(PYLINT_DIR)/build/lib/logilab/__init__.py
 
 $(MOCK_BIN):
-	@echo "--- mock"
-	@mkdir -p $(PYTHONSRC_INSTALL_SITE)
-	@cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(MOCK_DIR).tar.gz
-	@cd $(PYLIB_SRC_EXT)/$(MOCK_DIR)/ && PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL)
+	@echo "--- mock for platform $(UBUNTU_PLATFORM)"
+	@if [ $(UBUNTU_PLATFORM) = "Ubuntu" ]; then\
+       pip install mock;\
+     else\
+       mkdir -p $(PYTHONSRC_INSTALL_SITE) && \
+	   cd $(PYLIB_SRC_EXT)/ && $(TAR) xzf $(MOCK_DIR).tar.gz && \
+	   cd $(PYLIB_SRC_EXT)/$(MOCK_DIR)/ && \
+	   PYTHONPATH=$(PYTHONSRC_INSTALL_PYTHON_PATH) python setup.py install --prefix $(PYTHONSRC_INSTALL) ; \
+	 fi;
 
 #
 # BEHAVE 
