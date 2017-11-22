@@ -39,22 +39,21 @@ override_dh_auto_install:
 	rm -rf debian/tmp/lib/python/psutil
 	rm -rf debian/tmp/lib/python/yaml
 	# Remove fault injector and other packages
-#	pushd ${PWD}/debian/tmp && \
-#	while read file; do \
-#      if [ -f "$file" ]; then\
-#    	echo "Deleting: $file";\
-#    	rm "$file";\
-#      else\
-#    	echo "File $file does not exist. Skipping." ; \
-#      fi
-#    done < "${PWD}/gpAux/releng/NON_PRODUCTION_FILES.txt"
-#    popd
+	while read file; do\
+      if [ -f "${PWD}/debian/tmp/$${file}" ]; then\
+        echo "Deleting: ${PWD}/debian/tmp/$${file}"; \
+        rm "${PWD}/debian/tmp/$${file}"; \
+      else\
+        echo "File $${file} does not exist. Skipping." ; \
+      fi;\
+    done < "${PWD}/gpAux/releng/NON_PRODUCTION_FILES.txt"
 
+
+# since we need orca to build before configuring, and configuring happens before dh_auto_clean,
+# we can either add a make dependency here, which will cause and orca/configure to happen multiple times,
+# or, since we assume that this build is happening in concourse on a brand new container,
+# we can  make this step into a no-op: the container is clean to begin with.
 override_dh_auto_clean:
-    # since we need orca to build before configuring, and configuring happens before dh_auto_clean,
-    # we can either add a make dependency here, which will cause and orca/configure to happen multiple times,
-    # or, since we assume that this build is happening in concourse on a brand new container,
-    # we can  make this step into a no-op: the container is clean to begin with.
 	echo "Skipping clean"
 	# Do nothing
 
