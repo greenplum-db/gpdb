@@ -155,6 +155,8 @@ set log_min_messages to DEBUG;
 -- recovery back. otherwise it should be bug somewhere
 set gp_gang_creation_retry_count to 120;
 set gp_gang_creation_retry_timer to 1000;
+-- Pause FTS prober so that the segment in recovery is not marked down.
+set gp_fts_probe_pause = true;
 select cleanupAllGangs();
  cleanupallgangs 
 -----------------
@@ -253,6 +255,7 @@ NOTICE:  Success:
  t
 (1 row)
 
+set gp_fts_probe_pause = false;
 --start_ignore
 -- enlarge the retry count
 set gp_gang_creation_retry_count to 128 ;
