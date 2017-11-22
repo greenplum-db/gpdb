@@ -123,7 +123,37 @@
             <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support. </p>
         <codeblock>export GDAL_DATA=$GPHOME/share/gdal
 export POSTGIS_ENABLE_OUTDB_RASTERS=0
-export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
+export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
+      </body>
+    </topic>
+    <topic id="topic_ydr_q5l_ybb">
+      <title>Enabling GDAL Raster Drivers</title>
+      <body>
+        <p>PostGIS uses GDAL raster drivers when processing raster data with commands such a
+            <codeph>ST_AsJPEG()</codeph>. As the default, PostGIS disables all raster drivers. You
+          enable raster drivers by setting the value of
+            <codeph>POSTGIS_GDAL_ENABLED_DRIVERS</codeph> environment variable in the
+            <codeph>greenplum_path.sh</codeph> file on all Greenplum Database hosts.</p>
+        <p>To see the list of supported GDAL raster drivers for a Greenplum Database system, run the
+            <codeph>raster2pgsql</codeph> utility with the <codeph>-G</codeph> option on the
+          Greenplum Database master.</p>
+        <p>
+          <codeblock>raster2pgsql -G </codeblock>
+        </p>
+        <p>The command lists the driver long format name. The <cite>GDAL Raster Formats</cite> table
+          at <xref href="http://www.gdal.org/formats_list.html" format="html" scope="external"
+            >http://www.gdal.org/formats_list.html</xref> lists the long format names and the
+          corresponding codes that you specify as the value of the environment variable. For
+          example, the code for the long name Portable Network Graphics is <codeph>PNG</codeph>.
+          This example <codeph>export</codeph> line enables four GDAL raster drivers.</p>
+        <codeblock>export POSTGIS_GDAL_ENABLED_DRIVERS="GTiff PNG JPEG GIF"</codeblock>
+        <p>The <codeph>gpstop -r</codeph> command restarts the Greenplum Database system to use the
+          updated settings in the <codeph>greenplum_path.sh</codeph> file.</p>
+        <p>After you have updated the <codeph>greenplum_path.sh</codeph> file on all hosts, and have
+          restarted the Greenplum Database system, you can display the enabled raster drivers with
+          the <codeph>ST_GDALDrivers()</codeph> function. This <codeph>SELECT</codeph> command lists
+          the enabled raster drivers.</p>
+        <codeblock>SELECT short_name, long_name FROM ST_GDALDrivers();</codeblock>
       </body>
     </topic>
     <topic id="topic_bgz_vcl_r1b">
@@ -359,7 +389,7 @@ psql -d mydatabase -f
               <codeph>greenplum_path.sh</codeph> file for PostGIS Raster support.</p>
           <codeblock>export GDAL_DATA=$GPHOME/share/gdal
 export POSTGIS_ENABLE_OUTDB_RASTERS=0
-export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
+export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
           <p><codeph>GDAL_DATA</codeph> specifies the location of GDAL utilities and support files
             used by the GDAL library. For example, the directory contains EPSG support files such as
               <codeph>gcs.csv​</codeph> and <codeph>pcs.csv</codeph> (so called dictionaries, mostly
@@ -399,7 +429,7 @@ export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
             <codeph>greenplum_path.sh</codeph> file.</p>
         <codeblock>export GDAL_DATA=$GPHOME/share/gdal
 export POSTGIS_ENABLE_OUTDB_RASTERS=0
-export POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL</codeblock>
+export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL</codeblock>
       </body>
     </topic>
   </topic>
