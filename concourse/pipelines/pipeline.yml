@@ -314,6 +314,12 @@ resources:
     private_key: {{pxf_automation-git-key}}
     uri: {{pxf_automation-git-remote}}
 
+- name: debian_release
+  type: git
+  source:
+    branch: ((debian-release-git-branch))
+    uri: ((debian-release-git-remote))
+
 - name: centos-gpdb-dev-6
   type: docker-image
   source:
@@ -332,10 +338,10 @@ resources:
     repository: pivotaldata/ubuntu-gpdb-dev
     tag: '16.04_gcc_6_3'
 
-- name: ubuntu16.04
+- name: ubuntu-gpdb-debian-dev-16
   type: docker-image
   source:
-    repository: ubuntu
+    repository: pivotaldata/ubuntu-gpdb-debian-dev
     tag: '16.04'
 
 - name: centos-mingw
@@ -652,7 +658,7 @@ jobs:
     - get: centos-gpdb-dev-7
     - get: centos-mingw
     - get: ubuntu-gpdb-dev-16
-    - get: ubuntu16.04
+    - get: ubuntu-gpdb-debian-dev-16
 
 - name: compile_gpdb_centos6
   plan:
@@ -756,9 +762,10 @@ jobs:
       trigger: ((gpdb_src-trigger-flag))
     - get: ubuntu-gpdb-dev-16
       passed: [gate_compile_start]
-    - get: ubuntu16.04
+    - get: ubuntu-gpdb-debian-dev-16
       passed:
       - gate_compile_start
+    - get: debian_release
   - aggregate:
     - task: compile_gpdb
       image: ubuntu-gpdb-dev-16
@@ -767,7 +774,7 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
     - task: deb_create_package
       file: gpdb_src/concourse/tasks/deb_create_package.yml
-      image: ubuntu16.04
+      image: ubuntu-gpdb-debian-dev-16
   - aggregate:
     - put: compiled_bits_ubuntu16
       params:
@@ -1128,14 +1135,14 @@ jobs:
     - get: gpdb_src
       passed:
       - gate_icw_start
-    - get: ubuntu16.04
+    - get: ubuntu-gpdb-debian-dev-16
     - get: deb_package_ubuntu16
       passed:
       - gate_icw_start
       trigger: true
   - task: test_gpdb_deb_package
     file: gpdb_src/concourse/tasks/deb_test_package.yml
-    image: ubuntu16.04
+    image: ubuntu-gpdb-debian-dev-16
     params:
       DEBIAN_PACKAGE: {{deb_package_ubuntu16_versioned_file}}
 

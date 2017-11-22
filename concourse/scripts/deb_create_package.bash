@@ -3,11 +3,15 @@ set -euxo pipefail
 
 SRC_DIR=gpdb_src
 
-apt-get update
-apt-get install -y vim \
-                   debmake \
-                   equivs \
-                   git
+# the image should already have all the necessary apt-get packages for building .deb's
+
+# cannot use 'mv' because of concourse inputs
+# mv: inter-device move failed: 'debian_release/debian' to 'gpdb_src/debian'; unable to remove target: Directory not empty
+cp -R debian_release/debian ${SRC_DIR}/
+
+# Regex to capture required gporca version and download gporca source
+ORCA_TAG=$(grep -Po 'v\d+.\d+.\d+' ${SRC_DIR}/depends/conanfile_orca.txt)
+git clone --branch ${ORCA_TAG} https://github.com/greenplum-db/gporca.git ${SRC_DIR}/gporca
 
 pushd ${SRC_DIR}
     VERSION=`./getversion | tr " " "."`-oss
@@ -18,14 +22,10 @@ pushd ${SRC_DIR}
     dch --create -M --package $PACKAGE -v $VERSION "$MESSAGE"
 popd
 
-set +e
-    # processing triggers can result in a non-zero result code
-    yes | mk-build-deps -i ${SRC_DIR}/debian/control
-set -e
+# the image should already have all the debian packages
+# yes | mk-build-deps -i ${SRC_DIR}/debian/control
 
 pushd ${SRC_DIR}
-    dpkg-buildpackage -us -uc -b
-    # print contents just for human-readable feedback; not necessary
-    dpkg --contents ../greenplum-db*.deb
+    debuild -us -uc -b
 popd
 cp greenplum-db*.deb deb_package_ubuntu16/greenplum-db.deb

@@ -3,6 +3,7 @@ image_resource:
   type: docker-image
 inputs:
   - name: gpdb_src
+  - name: debian_release
 outputs:
   - name: deb_package_ubuntu16
 run:
