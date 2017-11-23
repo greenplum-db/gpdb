@@ -134,10 +134,6 @@ void S3RESTfulService::performCurl(CURL *curl, Response &response) {
         // Get the HTTP response status code from HTTP header
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 
-        if (responseCode == 500) {
-            S3_DIE(S3ConnectionError, "Server temporary unavailable");
-        }
-
         response.FillResponse(responseCode);
     }
 }

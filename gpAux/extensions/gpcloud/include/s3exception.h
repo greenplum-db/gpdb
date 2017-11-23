@@ -27,7 +27,8 @@ class S3Exception {
     }
 };
 
-// HTTP request failed.
+// HTTP request failed
+// InternalError, RequestTimeout or ServiceUnavailable
 class S3ConnectionError : public S3Exception {
    public:
     S3ConnectionError(const string& msg) : message(msg) {
@@ -79,7 +80,7 @@ class S3FailedAfterRetry : public S3Exception {
     string message;
 };
 
-// HTTP request success, but the data received is not completed.
+// HTTP request successes, but the data is not received completely.
 class S3PartialResponseError : public S3Exception {
    public:
     S3PartialResponseError(uint64_t expected, uint64_t received)
@@ -100,7 +101,7 @@ class S3PartialResponseError : public S3Exception {
     uint64_t receivedLength;
 };
 
-// User press control + C or transaction is aborted.
+// User presses Ctrl + C or the transaction is aborted.
 class S3QueryAbort : public S3Exception {
    public:
     S3QueryAbort() : message("Query is aborted") {
@@ -119,7 +120,8 @@ class S3QueryAbort : public S3Exception {
     string message;
 };
 
-// Used for AWS S3 errors (e.g. 403, 404)
+// AWS S3 responds errors
+// AccessDenied, NoSuchBucket or other kinds of InvalidRequest
 class S3LogicError : public S3Exception {
    public:
     S3LogicError(string code, string msg) : message(msg), awscode(code) {

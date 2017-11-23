@@ -33,9 +33,29 @@ Response S3InterfaceService::getResponseWithRetries(const string &url, HTTPHeade
                                                     uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
-            return this->restfulService->get(url, headers);
+            Response response = this->restfulService->get(url, headers);
+
+            if (response.getStatus() == RESPONSE_OK) {
+                return response;
+            }
+
+            S3MessageParser s3msg(response);
+            message = s3msg.getMessage();
+            ResponseCode responseCode = response.getResponseCode();
+
+            if ((responseCode == 500) || (responseCode == 503)) {
+                S3_DIE(S3ConnectionError, message);
+            }
+            if (responseCode == 400) {
+                if (s3msg.getCode().compare("RequestTimeout") == 0) {
+                    S3_DIE(S3ConnectionError, message);
+                }
+            }
+
+            return response;
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
@@ -52,9 +72,29 @@ Response S3InterfaceService::putResponseWithRetries(const string &url, HTTPHeade
                                                     S3VectorUInt8 &data, uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
-            return this->restfulService->put(url, headers, data);
+            Response response = this->restfulService->put(url, headers, data);
+
+            if (response.getStatus() == RESPONSE_OK) {
+                return response;
+            }
+
+            S3MessageParser s3msg(response);
+            message = s3msg.getMessage();
+            ResponseCode responseCode = response.getResponseCode();
+
+            if ((responseCode == 500) || (responseCode == 503)) {
+                S3_DIE(S3ConnectionError, message);
+            }
+            if (responseCode == 400) {
+                if (s3msg.getCode().compare("RequestTimeout") == 0) {
+                    S3_DIE(S3ConnectionError, message);
+                }
+            }
+
+            return response;
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
@@ -72,9 +112,29 @@ Response S3InterfaceService::postResponseWithRetries(const string &url, HTTPHead
                                                      uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
-            return this->restfulService->post(url, headers, data);
+            Response response = this->restfulService->post(url, headers, data);
+
+            if (response.getStatus() == RESPONSE_OK) {
+                return response;
+            }
+
+            S3MessageParser s3msg(response);
+            message = s3msg.getMessage();
+            ResponseCode responseCode = response.getResponseCode();
+
+            if ((responseCode == 500) || (responseCode == 503)) {
+                S3_DIE(S3ConnectionError, message);
+            }
+            if (responseCode == 400) {
+                if (s3msg.getCode().compare("RequestTimeout") == 0) {
+                    S3_DIE(S3ConnectionError, message);
+                }
+            }
+
+            return response;
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
@@ -95,9 +155,16 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
                                                          uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
-            return this->restfulService->head(url, headers);
+            ResponseCode responseCode = this->restfulService->head(url, headers);
+
+            if ((responseCode == 500) || (responseCode == 503)) {
+                S3_DIE(S3ConnectionError, "Server temporary unavailable");
+            }
+
+            return responseCode;
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
@@ -110,13 +177,34 @@ ResponseCode S3InterfaceService::headResponseWithRetries(const string &url, HTTP
 
     S3_DIE(S3FailedAfterRetry, url, retries, message);
 }
+
 Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHeaders &headers,
                                                       uint64_t retries) {
     string message;
     uint64_t retry = retries;
+
     while (retry--) {
         try {
-            return this->restfulService->deleteRequest(url, headers);
+            Response response = this->restfulService->deleteRequest(url, headers);
+
+            if (response.getStatus() == RESPONSE_OK) {
+                return response;
+            }
+
+            S3MessageParser s3msg(response);
+            message = s3msg.getMessage();
+            ResponseCode responseCode = response.getResponseCode();
+
+            if ((responseCode == 500) || (responseCode == 503)) {
+                S3_DIE(S3ConnectionError, message);
+            }
+            if (responseCode == 400) {
+                if (s3msg.getCode().compare("RequestTimeout") == 0) {
+                    S3_DIE(S3ConnectionError, message);
+                }
+            }
+
+            return response;
         } catch (S3ConnectionError &e) {
             message = e.getMessage();
             if (S3QueryIsAbortInProgress()) {
@@ -132,7 +220,7 @@ Response S3InterfaceService::deleteRequestWithRetries(const string &url, HTTPHea
 xmlParserCtxtPtr S3InterfaceService::getXMLContext(Response &response) {
     xmlParserCtxtPtr xmlptr =
         xmlCreatePushParserCtxt(NULL, NULL, (const char *)(response.getRawData().data()),
-                                response.getRawData().size(), "resp.xml");
+                                response.getRawData().size(), "getXMLContext.xml");
     if (xmlptr != NULL) {
         xmlParseChunk(xmlptr, "", 0, 1);
     } else {
@@ -550,17 +638,15 @@ bool S3InterfaceService::abortUpload(const S3Url &s3Url, const string &uploadId)
     }
 }
 
-S3MessageParser::S3MessageParser(const Response &resp) : xmlptr(NULL) {
+S3MessageParser::S3MessageParser(const Response &resp)
+    : xmlptr(NULL), message("Unkown error"), code("Unknown error code") {
     // Compatible S3 services don't always return XML
     if (resp.getRawData().data() == NULL) {
-        message = "Unknown error";
-        code = "Unknown error code";
-
         return;
     }
 
     xmlptr = xmlCreatePushParserCtxt(NULL, NULL, (const char *)(resp.getRawData().data()),
-                                     resp.getRawData().size(), "resp.xml");
+                                     resp.getRawData().size(), "S3MessageParser.xml");
     if (xmlptr != NULL) {
         xmlParseChunk(xmlptr, "", 0, 1);
         message = parseS3Tag("Message");
@@ -576,7 +662,7 @@ S3MessageParser::~S3MessageParser() {
 }
 
 string S3MessageParser::parseS3Tag(const string &tag) {
-    string contentStr;
+    string contentStr("Unknown value");
 
     xmlNode *rootElement = xmlDocGetRootElement(xmlptr->myDoc);
     if (rootElement == NULL) {
