@@ -43,6 +43,7 @@
 #include "commands/async.h"
 #include "miscadmin.h"
 #include "postmaster/autovacuum.h"
+#include "postmaster/bgworker.h"
 #include "postmaster/fts.h"
 #include "replication/syncrep.h"
 #include "replication/walsender.h"
@@ -179,6 +180,7 @@ InitProcGlobal(int mppLocalProcessCounter)
 	PGPROC	   *procs;
 	int			i;
 	bool		found;
+	int			numBgworkers;
 
 	/* Create the ProcGlobal shared structure */
 	ProcGlobal = (PROC_HDR *)
@@ -199,6 +201,7 @@ InitProcGlobal(int mppLocalProcessCounter)
 	 */
 	ProcGlobal->freeProcs = NULL;
 	ProcGlobal->autovacFreeProcs = NULL;
+	ProcGlobal->bgworkerFreeProcs = NULL; /* Greenplum specific bgworker */
 
 	ProcGlobal->spins_per_delay = DEFAULT_SPINS_PER_DELAY;
 
@@ -236,6 +239,28 @@ InitProcGlobal(int mppLocalProcessCounter)
 		InitSharedLatch(&(procs[i].procLatch));
 		procs[i].links.next = (SHM_QUEUE *) ProcGlobal->autovacFreeProcs;
 		ProcGlobal->autovacFreeProcs = &procs[i];
+	}
+
+	/*
+	 * Greenplum specific bgworker
+	 */
+	numBgworkers = GetNumShmemAttachedBgworkers();
+	if (numBgworkers > 0)
+	{
+		procs = (PGPROC *) ShmemAlloc(numBgworkers * sizeof(PGPROC));
+		if (!procs)
+			ereport(FATAL,
+						(errcode(ERRCODE_OUT_OF_MEMORY),
+	 					 errmsg("out of shared memory")));
+		MemSet(procs, 0, numBgworkers * sizeof(PGPROC));
+		for (i = 0; i < numBgworkers; i++)
+		{
+			/* PGPROC for bgworker, add to bgworkerFreeProcs list */
+			PGSemaphoreCreate(&(procs[i].sem));
+			InitSharedLatch(&(procs[i].procLatch));
+			procs[i].links.next = (SHM_QUEUE *)ProcGlobal->bgworkerFreeProcs;
+			ProcGlobal->bgworkerFreeProcs = &procs[i];
+		}
 	}
 
 	MemSet(AuxiliaryProcs, 0, NUM_AUXILIARY_PROCS * sizeof(PGPROC));
@@ -299,6 +324,8 @@ InitProcess(void)
 
 	if (IsAutoVacuumWorkerProcess())
 		MyProc = procglobal->autovacFreeProcs;
+	else if (IsBackgroundWorker) /* Greenplum specific bgworker */
+		MyProc = procglobal->bgworkerFreeProcs;
 	else
 		MyProc = procglobal->freeProcs;
 
@@ -306,6 +333,8 @@ InitProcess(void)
 	{
 		if (IsAutoVacuumWorkerProcess())
 			procglobal->autovacFreeProcs = (PGPROC *) MyProc->links.next;
+		else if (IsBackgroundWorker)  /* Greenplum specific bgworker */
+			procglobal->bgworkerFreeProcs = (PGPROC *)MyProc->links.next;		
 		else
 			procglobal->freeProcs = (PGPROC *) MyProc->links.next;
 
@@ -804,6 +833,11 @@ ProcKill(int code, Datum arg)
 	{
 		proc->links.next = (SHM_QUEUE *) procglobal->autovacFreeProcs;
 		procglobal->autovacFreeProcs = proc;
+	}
+	else if (IsBackgroundWorker) /* Greenplum specific bgworker */
+	{
+		proc->links.next = (SHM_QUEUE *) procglobal->bgworkerFreeProcs;
+		procglobal->bgworkerFreeProcs = proc;
 	}
 	else
 	{

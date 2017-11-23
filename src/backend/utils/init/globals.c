@@ -93,6 +93,7 @@ pid_t		PostmasterPid = 0;
 bool		IsPostmasterEnvironment = false;
 bool		IsUnderPostmaster = false;
 bool		IsBinaryUpgrade = false;
+bool		IsBackgroundWorker = false; /* Greenplum specific bgworker */
 
 bool		ExitOnAnyError = false;
 

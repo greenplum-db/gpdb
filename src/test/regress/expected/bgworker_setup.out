@@ -1,0 +1,40 @@
+--
+-- Setup for bgworker.sql tests
+-- 
+-- We are setting shared_preload_libraries to "bgworker_example.so" and
+-- restart database, then use bgworker.sql to verify bgworker processes
+-- are correctly launched 
+-- start_ignore 
+\! cp $MASTER_DATA_DIRECTORY/postgresql.conf $MASTER_DATA_DIRECTORY/postgresql.conf.bgworkertest.bak
+\! gpconfig -c shared_preload_libraries -v "bgworker_example"
+20171129:16:17:34:030886 gpconfig:sdw:gpadmin-[INFO]:-completed successfully with parameters '-c shared_preload_libraries -v bgworker_example'
+\! PGDATESTYLE="" gpstop -rai
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Gathering information and validating the environment...
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.1581.g3cb8ea8 build dev'
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-There are 1 connections to the database
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Master host=sdw
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20171129:16:17:34:032327 gpstop:sdw:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/gpdb5.data/master/gpseg-1
+20171129:16:17:35:032327 gpstop:sdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20171129:16:17:35:032327 gpstop:sdw:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/gpdb5.data/master/gpseg-1
+20171129:16:17:35:032327 gpstop:sdw:gpadmin-[INFO]:-No standby master host configured
+20171129:16:17:35:032327 gpstop:sdw:gpadmin-[INFO]:-Commencing parallel segment instance shutdown, please wait...
+20171129:16:17:35:032327 gpstop:sdw:gpadmin-[INFO]:-0.00% of jobs completed
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-100.00% of jobs completed
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-   Segments stopped successfully      = 2
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-Successfully shutdown 2 of 2 segment instances 
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-No leftover gpmmon process found
+20171129:16:17:37:032327 gpstop:sdw:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20171129:16:17:38:032327 gpstop:sdw:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20171129:16:17:38:032327 gpstop:sdw:gpadmin-[INFO]:-Cleaning up leftover shared memory
+20171129:16:17:39:032327 gpstop:sdw:gpadmin-[INFO]:-Restarting System...
+-- end_ignore
