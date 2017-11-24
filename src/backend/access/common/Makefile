@@ -12,6 +12,6 @@ subdir = src/backend/access/common
 top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
-OBJS = bufmask.o memtuple.o heaptuple.o indextuple.o printtup.o reloptions.o scankey.o tupdesc.o  
+OBJS = bufmask.o memtuple.o heaptuple.o indextuple.o printtup.o reloptions.o reloptions_gp.o scankey.o tupdesc.o
 
 include $(top_srcdir)/src/backend/common.mk

@@ -26,6 +26,8 @@
 #define AO_DEFAULT_BLOCKSIZE      DEFAULT_APPENDONLY_BLOCK_SIZE
 /* Compression is turned off by default. */
 #define AO_DEFAULT_COMPRESSLEVEL  0
+#define AO_MIN_COMPRESSLEVEL  0
+#define AO_MAX_COMPRESSLEVEL  9
 /*
  * If compression is turned on without specifying compresstype, this
  * is the default.
@@ -52,8 +54,10 @@ typedef enum relopt_kind
 	RELOPT_KIND_HASH,
 	RELOPT_KIND_GIN,
 	RELOPT_KIND_GIST,
+	RELOPT_KIND_BITMAP,
+	RELOPT_KIND_INTERNAL,
 	/* if you add a new kind, make sure you update "last_default" too */
-	RELOPT_KIND_LAST_DEFAULT = RELOPT_KIND_GIST,
+	RELOPT_KIND_LAST_DEFAULT = RELOPT_KIND_INTERNAL,
 	RELOPT_KIND_MAX = 255
 } relopt_kind;
 
@@ -212,6 +216,6 @@ extern void setDefaultAOStorageOpts(StdRdOptions *copy);
 extern const StdRdOptions *currentAOStorageOptions(void);
 extern Datum parseAOStorageOpts(const char *opts_str, bool *aovalue);
 extern void parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-									  bool validate, char relkind);
+									  bool validate, relopt_kind relkind);
 
 #endif   /* RELOPTIONS_H */

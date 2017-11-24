@@ -1170,17 +1170,8 @@ bmoptions(PG_FUNCTION_ARGS)
 	bool		validate = PG_GETARG_BOOL(1);
 	bytea	   *result;
 
-	/*
-	 * It's not clear that fillfactor is useful for on-disk bitmap index,
-	 * but for the moment we'll accept it anyway.  (It won't do anything...)
-	 */
-#define BM_MIN_FILLFACTOR			10
-#define BM_DEFAULT_FILLFACTOR		100
-
 	result = default_reloptions(reloptions, validate,
-								RELKIND_INDEX,
-								BM_MIN_FILLFACTOR,
-								BM_DEFAULT_FILLFACTOR);
+								RELOPT_KIND_BITMAP);
 	if (result)
 		PG_RETURN_BYTEA_P(result);
 	PG_RETURN_NULL();

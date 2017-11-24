@@ -597,7 +597,7 @@ select * from atsdb;
 
 -- validate parameters
 alter table atsdb set with (appendonly = ff);
-ERROR:  invalid parameter value for "appendonly": "ff"
+ERROR:  invalid value for boolean option "appendonly": ff (reloptions.c:716)
 alter table atsdb set with (reorganize = true);
 alter table atsdb set with (fgdfgef = asds);
 ERROR:  unrecognized parameter "fgdfgef"
