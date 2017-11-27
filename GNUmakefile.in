@@ -133,6 +133,7 @@ distclean maintainer-clean:
 	$(MAKE) -C gpAux/platform $@
 	$(MAKE) -C contrib $@
 	$(MAKE) -C config $@
+	$(MAKE) -C gpMgmt $@
 	$(MAKE) -C src $@
 	rm -f config.cache config.log config.status GNUmakefile
 # Garbage from autoconf:
