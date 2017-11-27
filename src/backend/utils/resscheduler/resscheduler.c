@@ -42,7 +42,6 @@
 #include "utils/guc.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
-#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
 
@@ -193,15 +192,21 @@ InitResQueues(void)
 	
 	Assert(ResScheduler);
 
-	ResourceOwner owner = DefaultResourceOwnerAcquire("InitQueues");
+	/*
+	 * Need a resource owner to keep the heapam code happy.
+	 */
+	Assert(CurrentResourceOwner == NULL);
 
+	ResourceOwner owner = ResourceOwnerCreate(NULL, "InitQueues");
+	CurrentResourceOwner = owner;
+	
 	/**
-	 * The resqueue shared mem initialization must be serialized. Only the first
-	 * session should do the init.
-	 * Serialization is done the ResQueueLock LW_EXCLUSIVE. However, we must
-	 * obtain all DB lock before obtaining LWlock.
-	 * So, we must have obtained ResQueueRelationId and
-	 * ResQueueCapabilityRelationId lock first.
+	 * The resqueue shared mem initialization must be serialized. Only the first session
+	 * should do the init.
+	 * Serialization is done the ResQueueLock LW_EXCLUSIVE. However, we must obtain all DB
+	 * lock before obtaining LWlock.
+	 * So, we must have obtained ResQueueRelationId and ResQueueCapabilityRelationId lock
+	 * first.
 	 */
 	/* XXX XXX: should this be rowexclusive ? */
 	Relation relResqueue = heap_open(ResQueueRelationId, AccessShareLock);
@@ -214,7 +219,8 @@ InitResQueues(void)
 		LWLockRelease(ResQueueLock);
 		UnlockRelationOid(ResQueueCapabilityRelationId, RowExclusiveLock);
 		heap_close(relResqueue, AccessShareLock);
-		DefaultResourceOwnerRelease(owner);
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
 		return;
 	}
 
@@ -263,7 +269,8 @@ InitResQueues(void)
 
 	elog(LOG,"initialized %d resource queues", numQueues);
 
-	DefaultResourceOwnerRelease(owner);
+	CurrentResourceOwner = NULL;
+	ResourceOwnerDelete(owner);
 
 	return;
 }
@@ -897,11 +904,25 @@ GetResQueueForRole(Oid roleid)
 void
 SetResQueueId(void)
 {
-	ResourceOwner owner = DefaultResourceOwnerAcquire("SetResQueueId");
+	/* to cave the code of cache part, we provide a resource owner here if no
+	 * existing */
+	ResourceOwner owner = NULL;
+
+	if (CurrentResourceOwner == NULL)
+	{
+		owner = ResourceOwnerCreate(NULL, "SetResQueueId");
+		CurrentResourceOwner = owner;
+	}
 
 	MyQueueId = GetResQueueForRole(GetUserId());
 
-	DefaultResourceOwnerRelease(owner);
+	if (owner)
+	{
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
+	}
+
+	return;
 }
 
 

@@ -518,12 +518,21 @@ Oid
 GetResGroupIdForRole(Oid roleid)
 {
 	HeapTuple	tuple;
+	ResourceOwner owner = NULL;
 	Oid			groupId;
 	Relation	rel;
 	ScanKeyData	key;
 	SysScanDesc	 sscan;
 
-	ResourceOwner owner = DefaultResourceOwnerAcquire("GetResGroupIdForRole");
+	/*
+	 * to cave the code of cache part, we provide a resource owner here if no
+	 * existing
+	 */
+	if (CurrentResourceOwner == NULL)
+	{
+		owner = ResourceOwnerCreate(NULL, "GetResGroupIdForRole");
+		CurrentResourceOwner = owner;
+	}
 
 	rel = heap_open(AuthIdRelationId, AccessShareLock);
 
@@ -565,7 +574,11 @@ GetResGroupIdForRole(Oid roleid)
 	if (!OidIsValid(groupId))
 		groupId = InvalidOid;
 
-	DefaultResourceOwnerRelease(owner);
+	if (owner)
+	{
+		CurrentResourceOwner = NULL;
+		ResourceOwnerDelete(owner);
+	}
 
 	return groupId;
 }
@@ -586,8 +599,6 @@ GetResGroupIdForName(char *name, LOCKMODE lockmode)
 	HeapTuple	tuple;
 	Oid			rsgid;
 
-	ResourceOwner owner = DefaultResourceOwnerAcquire("GetResGroupIdForName");
-
 	rel = heap_open(ResGroupRelationId, lockmode);
 
 	/* SELECT oid FROM pg_resgroup WHERE rsgname = :1 */
@@ -606,8 +617,6 @@ GetResGroupIdForName(char *name, LOCKMODE lockmode)
 
 	systable_endscan(scan);
 	heap_close(rel, lockmode);
-
-	DefaultResourceOwnerRelease(owner);
 
 	return rsgid;
 }
