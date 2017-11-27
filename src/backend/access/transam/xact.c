@@ -2161,18 +2161,6 @@ StartTransaction(void)
 	}
 
 	/*
-	 * Acquire a resource group slot.
-	 *
-	 * AssignResGroupOnMaster() might throw error, so call it before touch
-	 * transaction state.
-	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned,
-	 * this slot will be release when transaction is committed or abortted,
-	 * so don't error out before transaction state is set to TRANS_START.
-	 */
-	if (ShouldAssignResGroupOnMaster())
-		AssignResGroupOnMaster();
-
-	/*
 	 * Let's just make sure the state stack is empty
 	 */
 	s = &TopTransactionStateData;
@@ -2436,6 +2424,18 @@ StartTransaction(void)
 	 * progress"
 	 */
 	s->state = TRANS_INPROGRESS;
+
+	/*
+	 * Acquire a resource group slot.
+	 *
+	 * AssignResGroupOnMaster() might throw a PG exception, but we can still
+	 * call it after touching the transaction state.
+	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned,
+	 * this slot will be release when transaction is committed or aborted,
+	 * so don't error out before transaction state is set to TRANS_START.
+	 */
+	if (ShouldAssignResGroupOnMaster())
+		AssignResGroupOnMaster();
 
 	ShowTransactionState("StartTransaction");
 
