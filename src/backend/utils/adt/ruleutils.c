@@ -1877,9 +1877,6 @@ print_function_arguments(StringInfo buf, HeapTuple proctup,
 	return argsprinted;
 }
 
-/* GPDB_84_MERGE_FIXME: this function was duplicated during the 8.4 merge; we
- * replaced our version entirely with the one that was in 8.4, since it appeared
- * to be more modern. Check this. */
 /*
  * pg_get_function_result
  *		Get a nicely-formatted version of the result type of a function.
