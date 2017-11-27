@@ -1437,19 +1437,15 @@ if test "$enable_ddboost" = yes ; then
   LIBS="$_LIBS"
 fi
 
+# Check for Greenplum Query Optimizer (orca) libraries.
+if test "$enable_orca" = yes; then
+  PGAC_CHECK_ORCA_XERCES
+  PGAC_CHECK_ORCA_LIBS
+fi
+
 ##
 ## Header files
 ##
-
-AC_INCLUDES_DEFAULT
-
-# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
-if test "$enable_orca" = yes; then
-  PGAC_CHECK_ORCA_HEADERS
-  PGAC_CHECK_ORCA_XERCES
-  PGAC_CHECK_ORCA_LIBS
-  PGAC_CHECK_ORCA_VERSION
-fi
 
 dnl sys/socket.h is required by AC_FUNC_ACCEPT_ARGTYPES
 AC_CHECK_HEADERS([atomic.h crypt.h dld.h endian.h fp_class.h getopt.h ieeefp.h ifaddrs.h langinfo.h mbarrier.h poll.h pwd.h sys/ioctl.h sys/ipc.h sys/poll.h sys/pstat.h sys/resource.h sys/select.h sys/sem.h sys/shm.h sys/socket.h sys/sockio.h sys/tas.h sys/time.h sys/un.h termios.h ucred.h utime.h wchar.h wctype.h kernel/OS.h kernel/image.h SupportDefs.h])
@@ -1607,7 +1603,7 @@ esac
 # net-snmp
 if test "$enable_snmp" = yes; then
 	AC_CHECK_HEADERS([net-snmp/net-snmp-config.h], [],
-					[AC_MSG_ERROR([header file <<net-snmp/net-snmp-config.h> is required for snmp support])])
+					[AC_MSG_ERROR([header file <net-snmp/net-snmp-config.h> is required for snmp support])])
 fi
 
 
@@ -1621,7 +1617,13 @@ if test "$enable_mapreduce" = yes; then
   if test "$with_perl" = no; then
     AC_MSG_ERROR([Greenplum Mapreduce requires Perl, reconfigure with --with-perl])
   fi
-  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([YAML includes required for Greenplum Mapreduce])])
+  AC_CHECK_HEADERS(yaml.h, [], [AC_MSG_ERROR([header file <yaml.h> is required for Greenplum Mapreduce])])
+fi
+
+# Check for Greenplum Query Optimizer (orca) and supporting Greenplum OS header files.
+if test "$enable_orca" = yes; then
+  PGAC_CHECK_ORCA_HEADERS
+  PGAC_CHECK_ORCA_VERSION
 fi
 
 ##
