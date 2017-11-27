@@ -16,6 +16,7 @@ groups:
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
+  - compile_gpdb_segwalrep_centos6
   - client_loader_remote_test_aix
   - gate_compile_end
 ################################
@@ -29,6 +30,8 @@ groups:
   - icw_extensions_gpcloud
   - icw_planner_ictcp_centos6
   - icw_gporca_centos6_gpos_memory
+  - icw_planner_segwalrep_centos6
+  - icw_gporca_segwalrep_centos6
   - QP_memory-accounting
   - gate_icw_end
 ################################
@@ -48,6 +51,7 @@ groups:
   - cs_crash_recovery_31_42
   - fts
   - storage
+  - segwalrep_mirrorless_centos6
   - gate_cs_end
 ################################
   - gate_mpp_start
@@ -97,6 +101,13 @@ groups:
   jobs:
   - Release_Candidate
 
+- name: segwalrep
+  jobs:
+  - compile_gpdb_segwalrep_centos6
+  - icw_planner_segwalrep_centos6
+  - icw_gporca_segwalrep_centos6
+  - segwalrep_mirrorless_centos6
+
 - name: G:Compile
   jobs:
   - gate_compile_start
@@ -108,6 +119,7 @@ groups:
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_windows_cl
   - compile_gpdb_aix7_remote
+  - compile_gpdb_segwalrep_centos6
   - client_loader_remote_test_aix
   - gate_compile_end
 
@@ -123,6 +135,8 @@ groups:
   - icw_planner_ictcp_centos6
   - icw_extensions_gpcloud
   - icw_gporca_centos6_gpos_memory
+  - icw_planner_segwalrep_centos6
+  - icw_gporca_segwalrep_centos6
   - QP_memory-accounting
   - gate_icw_end
 
@@ -144,6 +158,7 @@ groups:
   - cs_crash_recovery_31_42
   - fts
   - storage
+  - segwalrep_mirrorless_centos6
   - gate_cs_end
 
 - name: G:MPP
@@ -336,6 +351,15 @@ resources:
     repository: pivotaldata/centos-mingw
 
 - name: bin_gpdb_centos6
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: {{bin_gpdb_centos_versioned_file}}
+
+- name: bin_gpdb_segwalrep_centos6
   type: s3
   source:
     access_key_id: {{bucket-access-key-id}}
@@ -668,6 +692,39 @@ jobs:
       params:
         file: gpdb_artifacts/bin_gpdb.tar.gz
 
+- name: compile_gpdb_segwalrep_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_compile_start]
+      trigger: ((gpdb_src-trigger-flag))
+    - get: reduced-frequency-trigger
+      trigger: ((reduced-frequency-trigger-flag))
+    - get: gpaddon_src
+      passed: [gate_compile_start]
+    - get: pxf_src
+      trigger: true
+      passed: [gate_compile_start]
+    - get: centos-gpdb-dev-6
+      passed: [gate_compile_start]
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      IVYREPO_HOST: {{ivyrepo_host}}
+      IVYREPO_REALM: {{ivyrepo_realm}}
+      IVYREPO_USER: {{ivyrepo_user}}
+      IVYREPO_PASSWD: {{ivyrepo_passwd}}
+      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      BLD_TARGETS: "clients loaders"
+  - aggregate:
+    - put: bin_gpdb_segwalrep_centos6
+      params:
+        file: gpdb_artifacts/bin_gpdb.tar.gz
+
+
 - name: compile_gpdb_centos7
   plan:
   - aggregate:
@@ -932,6 +989,7 @@ jobs:
       - compile_gpdb_sles11
       - compile_gpdb_ubuntu16
       - compile_gpdb_windows_cl
+      - compile_gpdb_segwalrep_centos6
       trigger: true
     - get: bin_gpdb_sles11
       passed:
@@ -945,6 +1003,9 @@ jobs:
     - get: bin_gpdb_centos6
       passed:
       - compile_gpdb_centos6
+    - get: bin_gpdb_segwalrep_centos6
+      passed:
+      - compile_gpdb_segwalrep_centos6
     - get: compiled_bits_ubuntu16
       passed:
       - compile_gpdb_ubuntu16
@@ -968,6 +1029,9 @@ jobs:
         passed:
         - gate_compile_end
       - get: bin_gpdb_centos6
+        passed:
+        - gate_compile_end
+      - get: bin_gpdb_segwalrep_centos6
         passed:
         - gate_compile_end
       - get: compiled_bits_ubuntu16
@@ -1016,6 +1080,44 @@ jobs:
       BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_segwalrep_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_segwalrep_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off|gp_fts_probe_retries=100"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
+
+- name: icw_gporca_segwalrep_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_segwalrep_centos6
+      passed: [gate_icw_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off|gp_fts_probe_retries=100"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
 
 - name: icw_gporca_centos7
   plan:
@@ -1203,6 +1305,8 @@ jobs:
       - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud
       - icw_gporca_centos6_gpos_memory
+      - icw_planner_segwalrep_centos6
+      - icw_gporca_segwalrep_centos6
       - QP_memory-accounting
       trigger: true
 
@@ -1236,6 +1340,9 @@ jobs:
       passed:
       - gate_compile_end
     - get: bin_gpdb_centos6
+      passed:
+      - gate_compile_end
+    - get: bin_gpdb_segwalrep_centos6
       passed:
       - gate_compile_end
 
@@ -1733,6 +1840,26 @@ jobs:
       image: centos-gpdb-dev-6
       timeout: 3h
 
+- name: segwalrep_mirrorless_centos6
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_cs_start]
+    - get: bin_gpdb
+      resource: bin_gpdb_segwalrep_centos6
+      passed: [gate_cs_start]
+      trigger: true
+    - get: centos-gpdb-dev-6
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-dev-6
+    params:
+      MAKE_TEST_COMMAND: "-C src/test/regress && make -C src/test/walrep install installcheck"
+      BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
+      TEST_OS: centos
+      CONFIGURE_FLAGS: "((configure_flags)) --enable-segwalrep"
+      WITH_MIRRORS: false
+
 - name: gate_cs_end
   plan:
   - aggregate:
@@ -1753,6 +1880,7 @@ jobs:
       - cs_crash_recovery_31_42
       - fts
       - storage
+      - segwalrep_mirrorless_centos6
       trigger: true
 ############## CS End
 
@@ -2961,6 +3089,7 @@ jobs:
     - compile_gpdb_ubuntu16
     - compile_gpdb_windows_cl
     - compile_gpdb_aix7_remote
+    - compile_gpdb_segwalrep_centos6
     - icw_planner_centos6
     - icw_gporca_centos6
     - icw_gporca_centos7
@@ -2969,6 +3098,8 @@ jobs:
     - icw_gporca_conan_ubuntu16
     - icw_planner_ictcp_centos6
     - icw_extensions_gpcloud
+    - icw_planner_segwalrep_centos6
+    - icw_gporca_segwalrep_centos6
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6
     - mpp_resource_group_centos7
@@ -2980,8 +3111,6 @@ jobs:
     - DPM_backup-restore
     - MM_gppkg
     - MM_pt-rebuild
-    - fts
-    - storage
     - cs_walrep_1
     - cs_walrep_2
     - cs_filerep_e2e_full_primary
@@ -2999,6 +3128,9 @@ jobs:
     - cs_crash_recovery_11_20
     - cs_crash_recovery_21_30
     - cs_crash_recovery_31_42
+    - fts
+    - storage
+    - segwalrep_mirrorless_centos6
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
     - regression_tests_pxf_hdp_rpm

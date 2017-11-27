@@ -343,7 +343,18 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	 * holding SyncRepLock, because any walsenders will ignore us anyway when
 	 * we're not on the queue.
 	 */
-	Assert(SHMQueueIsDetached(&(MyProc->syncRepLinks)));
+	if (!SHMQueueIsDetached(&(MyProc->syncRepLinks)))
+	{
+		elog(PANIC,
+			 "WalSndCtl->lsn[SYNC_REP_WAIT_WRITE]=%d/%x, "
+			 "lsn[SYNC_REP_WAIT_FLUSH]=%d/%x "
+			 "MyProc->syncRepState=%d, MyProc->waitLSN=%d/%x "
+			 "MyProc->syncRepLinks(prev=%ld, next=%ld)",
+			 WalSndCtl->lsn[SYNC_REP_WAIT_WRITE].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_WRITE].xrecoff,
+			 WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xlogid, WalSndCtl->lsn[SYNC_REP_WAIT_FLUSH].xrecoff,
+			 MyProc->syncRepState, MyProc->waitLSN.xlogid, MyProc->waitLSN.xrecoff,
+			 MyProc->syncRepLinks.prev, MyProc->syncRepLinks.next);
+	}
 	MyProc->syncRepState = SYNC_REP_NOT_WAITING;
 	MyProc->waitLSN.xlogid = 0;
 	MyProc->waitLSN.xrecoff = 0;
