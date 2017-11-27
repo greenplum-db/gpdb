@@ -1224,6 +1224,12 @@ extern Datum rle_type_compress(PG_FUNCTION_ARGS);
 extern Datum rle_type_decompress(PG_FUNCTION_ARGS);
 extern Datum rle_type_validator(PG_FUNCTION_ARGS);
 
+extern Datum zstd_constructor(PG_FUNCTION_ARGS);
+extern Datum zstd_destructor(PG_FUNCTION_ARGS);
+extern Datum zstd_compress(PG_FUNCTION_ARGS);
+extern Datum zstd_decompress(PG_FUNCTION_ARGS);
+extern Datum zstd_validator(PG_FUNCTION_ARGS);
+
 extern Datum delta_constructor(PG_FUNCTION_ARGS);
 extern Datum delta_destructor(PG_FUNCTION_ARGS);
 extern Datum delta_compress(PG_FUNCTION_ARGS);
