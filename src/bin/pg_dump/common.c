@@ -1243,12 +1243,12 @@ status_log_msg(const char *loglevel, const char *prog, const char *fmt,...)
 {
     va_list     ap;  
     char        szTimeNow[18];
-    struct tm   pNow;
+    struct tm  *pNow;
     time_t      tNow = time(NULL);
     char       *format = "%Y%m%d:%H:%M:%S";
 
-    localtime_r(&tNow, &pNow);
-    strftime(szTimeNow, 18, format, &pNow);
+    pNow = localtime(&tNow);
+    strftime(szTimeNow, 18, format, pNow);
 
     va_start(ap, fmt);
     fprintf(stderr, "%s|%s-[%s]:-", szTimeNow, prog, loglevel);
