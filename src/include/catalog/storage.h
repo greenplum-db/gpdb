@@ -4,10 +4,10 @@
  *	  prototypes for functions in backend/catalog/storage.c
  *
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/storage.h,v 1.2 2008/12/12 22:56:00 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/storage.h,v 1.3 2009/01/01 17:23:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -20,7 +20,7 @@
 #include "storage/relfilenode.h"
 #include "utils/relcache.h"
 
-extern void RelationCreateStorage(RelFileNode rnode, bool istemp,
+extern void RelationCreateStorage(RelFileNode rnode, bool isLocalBuf,
 					  char *relationName,
 					  MirrorDataLossTrackingState mirrorDataLossTrackingState,
 					  int64 mirrorDataLossTrackingSessionNum,

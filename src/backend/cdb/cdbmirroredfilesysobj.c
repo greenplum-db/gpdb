@@ -1005,7 +1005,7 @@ MirroredFileSysObj_TransactionCreateBufferPoolFile(RelFileNode *rnode,
 	 * Synchronous primary and mirror create relation.
 	 */
 	RelationCreateStorage(*rnode,
-						  isLocalBuf, /* GPDB_84_MERGE_FIXME: is isLocalBuf the same as isTemp? */
+						  isLocalBuf,
 						  relationName,
 						  mirrorDataLossTrackingState,
 						  mirrorDataLossTrackingSessionNum,

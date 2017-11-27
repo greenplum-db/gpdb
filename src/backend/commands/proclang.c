@@ -3,11 +3,11 @@
  * proclang.c
  *	  PostgreSQL PROCEDURAL LANGUAGE support code.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/proclang.c,v 1.82 2008/12/18 18:20:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/proclang.c,v 1.84 2009/01/01 17:23:39 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -173,7 +173,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 										 pltemplate->tmplhandler,
 										 pltemplate->tmpllibrary,
 										 false, /* isAgg */
-										 false, /* isWin */
+										 false,	/* isWindowFunc */
 										 false, /* security_definer */
 										 false, /* isStrict */
 										 PROVOLATILE_VOLATILE,
@@ -253,7 +253,7 @@ CreateProceduralLanguage(CreatePLangStmt *stmt)
 										 pltemplate->tmplvalidator,
 										 pltemplate->tmpllibrary,
 										 false, /* isAgg */
-										 false, /* isWin */
+										 false,	/* isWindowFunc */
 										 false, /* security_definer */
 										 true, /* isStrict */
 										 PROVOLATILE_IMMUTABLE,

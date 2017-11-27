@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.169 2008/12/11 07:34:07 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/miscinit.c,v 1.172 2009/01/05 13:57:12 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1329,7 +1329,7 @@ load_libraries(const char *libraries, const char *gucname, bool restricted)
 
 	/*
 	 * Choose notice level: avoid repeat messages when re-loading a library
-	 * that was preloaded into the postmaster.	(Only possible in EXEC_BACKEND
+	 * that was preloaded into the postmaster.  (Only possible in EXEC_BACKEND
 	 * configurations)
 	 */
 #ifdef EXEC_BACKEND

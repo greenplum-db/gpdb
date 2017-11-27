@@ -12,7 +12,7 @@
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.483 2008/12/13 19:13:44 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/misc/guc.c,v 1.489 2009/01/05 13:23:33 tgl Exp $
  *
  *--------------------------------------------------------------------
  */
@@ -1252,7 +1252,7 @@ static struct config_bool ConfigureNamesBool[] =
 	},
 
 	{
-		{"krb_caseins_users", PGC_POSTMASTER, CONN_AUTH_SECURITY,
+		{"krb_caseins_users", PGC_SIGHUP, CONN_AUTH_SECURITY,
 			gettext_noop("Sets whether Kerberos and GSSAPI user names should be treated as case-insensitive."),
 			NULL
 		},
@@ -2322,7 +2322,7 @@ static struct config_string ConfigureNamesString[] =
 	},
 
 	{
-		{"krb_server_keyfile", PGC_POSTMASTER, CONN_AUTH_SECURITY,
+		{"krb_server_keyfile", PGC_SIGHUP, CONN_AUTH_SECURITY,
 			gettext_noop("Sets the location of the Kerberos server key file."),
 			NULL,
 			GUC_SUPERUSER_ONLY
@@ -6230,6 +6230,17 @@ init_custom_variable(const char *name,
 {
 	struct config_generic *gen;
 
+	/*
+	 * Only allow custom PGC_POSTMASTER variables to be created during
+	 * shared library preload; any later than that, we can't ensure that
+	 * the value doesn't change after startup.  This is a fatal elog if it
+	 * happens; just erroring out isn't safe because we don't know what
+	 * the calling loadable module might already have hooked into.
+	 */
+	if (context == PGC_POSTMASTER &&
+		!process_shared_preload_libraries_in_progress)
+		elog(FATAL, "cannot create PGC_POSTMASTER variables after startup");
+
 	gen = (struct config_generic *) guc_malloc(ERROR, sz);
 	memset(gen, 0, sz);
 
@@ -6312,7 +6323,15 @@ define_custom_variable(struct config_generic * variable)
 		case PGC_S_ENV_VAR:
 		case PGC_S_FILE:
 		case PGC_S_ARGV:
-			phcontext = PGC_SIGHUP;
+			/*
+			 * If we got past the check in init_custom_variable, we can
+			 * safely assume that any existing value for a PGC_POSTMASTER
+			 * variable was set in postmaster context.
+			 */
+			if (variable->context == PGC_POSTMASTER)
+				phcontext = PGC_POSTMASTER;
+			else
+				phcontext = PGC_SIGHUP;
 			break;
 		case PGC_S_DATABASE:
 		case PGC_S_USER:
@@ -6333,9 +6352,17 @@ define_custom_variable(struct config_generic * variable)
 	value = *pHolder->variable;
 
 	if (value)
-		set_config_option(name, value,
-						  phcontext, pHolder->gen.source,
-						  GUC_ACTION_SET, true);
+	{
+		if (set_config_option(name, value,
+							  phcontext, pHolder->gen.source,
+							  GUC_ACTION_SET, true))
+		{
+			/* Also copy over any saved source-location information */
+			if (pHolder->gen.sourcefile)
+				set_config_sourcefile(name, pHolder->gen.sourcefile,
+									  pHolder->gen.sourceline);
+		}
+	}
 
 	/*
 	 * Free up as much as we conveniently can of the placeholder structure
@@ -7321,19 +7348,82 @@ is_newvalue_equal(struct config_generic * record, const char *newvalue)
 #ifdef EXEC_BACKEND
 
 /*
- *	This routine dumps out all non-default GUC options into a binary
+ *	These routines dump out all non-default GUC options into a binary
  *	file that is read by all exec'ed backends.  The format is:
  *
  *		variable name, string, null terminated
  *		variable value, string, null terminated
  *		variable source, integer
  */
+static void
+write_one_nondefault_variable(FILE *fp, struct config_generic *gconf)
+{
+	if (gconf->source == PGC_S_DEFAULT)
+		return;
+
+	fprintf(fp, "%s", gconf->name);
+	fputc(0, fp);
+
+	switch (gconf->vartype)
+	{
+		case PGC_BOOL:
+		{
+			struct config_bool *conf = (struct config_bool *) gconf;
+
+			if (*conf->variable)
+				fprintf(fp, "true");
+			else
+				fprintf(fp, "false");
+		}
+		break;
+
+		case PGC_INT:
+		{
+			struct config_int *conf = (struct config_int *) gconf;
+
+			fprintf(fp, "%d", *conf->variable);
+		}
+		break;
+
+		case PGC_REAL:
+		{
+			struct config_real *conf = (struct config_real *) gconf;
+
+			/* Could lose precision here? */
+			fprintf(fp, "%f", *conf->variable);
+		}
+		break;
+
+		case PGC_STRING:
+		{
+			struct config_string *conf = (struct config_string *) gconf;
+
+			fprintf(fp, "%s", *conf->variable);
+		}
+		break;
+
+		case PGC_ENUM:
+		{
+			struct config_enum *conf = (struct config_enum *) gconf;
+						
+			fprintf(fp, "%s",
+					config_enum_lookup_by_value(conf, *conf->variable));
+		}
+		break;
+	}
+
+	fputc(0, fp);
+
+	fwrite(&gconf->source, sizeof(gconf->source), 1, fp);
+}
+
 void
 write_nondefault_variables(GucContext context)
 {
-	int			i;
 	int			elevel;
 	FILE	   *fp;
+	struct config_generic *cvc_conf;
+	int			i;
 
 	Assert(context == PGC_POSTMASTER || context == PGC_SIGHUP);
 
@@ -7352,66 +7442,20 @@ write_nondefault_variables(GucContext context)
 		return;
 	}
 
+	/*
+	 * custom_variable_classes must be written out first; otherwise we might
+	 * reject custom variable values while reading the file.
+	 */
+	cvc_conf = find_option("custom_variable_classes", false, ERROR);
+	if (cvc_conf)
+		write_one_nondefault_variable(fp, cvc_conf);
+
 	for (i = 0; i < num_guc_variables; i++)
 	{
 		struct config_generic *gconf = guc_variables[i];
 
-		if (gconf->source != PGC_S_DEFAULT)
-		{
-			fprintf(fp, "%s", gconf->name);
-			fputc(0, fp);
-
-			switch (gconf->vartype)
-			{
-				case PGC_BOOL:
-					{
-						struct config_bool *conf = (struct config_bool *) gconf;
-
-						if (*conf->variable == 0)
-							fprintf(fp, "false");
-						else
-							fprintf(fp, "true");
-					}
-					break;
-
-				case PGC_INT:
-					{
-						struct config_int *conf = (struct config_int *) gconf;
-
-						fprintf(fp, "%d", *conf->variable);
-					}
-					break;
-
-				case PGC_REAL:
-					{
-						struct config_real *conf = (struct config_real *) gconf;
-
-						/* Could lose precision here? */
-						fprintf(fp, "%f", *conf->variable);
-					}
-					break;
-
-				case PGC_STRING:
-					{
-						struct config_string *conf = (struct config_string *) gconf;
-
-						fprintf(fp, "%s", *conf->variable);
-					}
-					break;
-
-				case PGC_ENUM:
-					{
-						struct config_enum *conf = (struct config_enum *) gconf;
-						
-						fprintf(fp, "%s", config_enum_lookup_by_value(conf, *conf->variable));
-					}
-					break;
-			}
-
-			fputc(0, fp);
-
-			fwrite(&gconf->source, sizeof(gconf->source), 1, fp);
-		}
+		if (gconf != cvc_conf)
+			write_one_nondefault_variable(fp, gconf);
 	}
 
 	if (FreeFile(fp))
@@ -8098,11 +8142,11 @@ assign_custom_variable_classes(const char *newval, bool doit, GucSource source)
 			continue;
 		}
 
-		if (hasSpaceAfterToken || !isalnum((unsigned char) c))
+		if (hasSpaceAfterToken || !(isalnum((unsigned char) c) || c == '_'))
 		{
 			/*
-			 * Syntax error due to token following space after token or non
-			 * alpha numeric character
+			 * Syntax error due to token following space after token or
+			 * non-identifier character
 			 */
 			pfree(buf.data);
 			return NULL;

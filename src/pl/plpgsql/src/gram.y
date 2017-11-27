@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.117 2008/11/26 08:45:12 petere Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.118 2009/01/01 17:24:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.185 2008/11/02 21:24:52 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.186 2009/01/01 17:23:47 momjian Exp $
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When

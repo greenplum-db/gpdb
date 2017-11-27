@@ -6,10 +6,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.64 2008/11/19 10:34:52 heikki Exp $
+ * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.65 2009/01/01 17:24:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/port/thread.c,v 1.39 2008/04/22 13:06:57 mha Exp $
+ * $PostgreSQL: pgsql/src/port/thread.c,v 1.40 2009/01/01 17:24:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

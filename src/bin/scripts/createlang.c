@@ -5,7 +5,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/createlang.c,v 1.31 2008/12/11 07:34:08 petere Exp $
+ * $PostgreSQL: pgsql/src/bin/scripts/createlang.c,v 1.32 2009/01/01 17:23:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

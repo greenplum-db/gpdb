@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.257 2008/10/23 00:24:50 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/selfuncs.c,v 1.258 2009/01/01 17:23:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

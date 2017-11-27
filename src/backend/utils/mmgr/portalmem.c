@@ -7,13 +7,14 @@
  * This module provides memory management services for portals, but it
  * doesn't actually run the executor for them.
  *
+ *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/portalmem.c,v 1.112 2008/10/29 00:00:38 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mmgr/portalmem.c,v 1.113 2009/01/01 17:23:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

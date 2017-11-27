@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.127 2008/12/01 17:06:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/pquery.c,v 1.129 2009/01/02 20:42:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -46,6 +46,7 @@ Portal		ActivePortal = NULL;
 
 static void ProcessQuery(Portal portal, /* Resource queueing need SQL, so we pass portal. */
 			 PlannedStmt *stmt,
+			 const char *sourceText,
 			 ParamListInfo params,
 			 DestReceiver *dest,
 			 char *completionTag);
@@ -88,8 +89,7 @@ CreateQueryDesc(PlannedStmt *plannedstmt,
 	qd->operation = plannedstmt->commandType;	/* operation */
 	qd->plannedstmt = plannedstmt;		/* plan */
 	qd->utilitystmt = plannedstmt->utilityStmt; /* in case DECLARE CURSOR */
-	/* GPDB_84_MERGE_FIXME do we need to pstrdup sourceText? */
-	qd->sourceText = pstrdup(sourceText);		/* query text */
+	qd->sourceText = sourceText;		/* query text */
 	qd->snapshot = RegisterSnapshot(snapshot);	/* snapshot */
 	/* RI check snapshot */
 	qd->crosscheck_snapshot = RegisterSnapshot(crosscheck_snapshot);
@@ -145,7 +145,7 @@ CreateUtilityQueryDesc(Node *utilitystmt,
 	qd->operation = CMD_UTILITY;	/* operation */
 	qd->plannedstmt = NULL;
 	qd->utilitystmt = utilitystmt;		/* utility command */
-	qd->sourceText = pstrdup(sourceText);		/* query text */
+	qd->sourceText = sourceText;		/* query text */
 	qd->snapshot = RegisterSnapshot(snapshot);	/* snapshot */
 	qd->crosscheck_snapshot = InvalidSnapshot;	/* RI check snapshot */
 	qd->dest = dest;			/* output dest */
@@ -172,8 +172,6 @@ FreeQueryDesc(QueryDesc *qdesc)
 {
 	/* Can't be a live query */
 	Assert(qdesc->estate == NULL);
-	/* Only the QueryDesc itself and the sourceText need be freed */
-	pfree((void*) qdesc->sourceText);
 
 	/* forget our snapshots */
 	UnregisterSnapshot(qdesc->snapshot);
@@ -205,6 +203,7 @@ FreeQueryDesc(QueryDesc *qdesc)
 static void
 ProcessQuery(Portal portal,
 			 PlannedStmt *stmt,
+			 const char *sourceText,
 			 ParamListInfo params,
 			 DestReceiver *dest,
 			 char *completionTag)
@@ -1458,6 +1457,7 @@ PortalRunMulti(Portal portal, bool isTopLevel,
 			{
 				/* statement can set tag string */
 				ProcessQuery(portal, pstmt,
+							 portal->sourceText,
 							 portal->portalParams,
 							 dest, completionTag);
 			}
@@ -1465,6 +1465,7 @@ PortalRunMulti(Portal portal, bool isTopLevel,
 			{
 				/* stmt added by rewrite cannot set tag */
 				ProcessQuery(portal, pstmt,
+							 portal->sourceText,
 							 portal->portalParams,
 							 altdest, NULL);
 			}

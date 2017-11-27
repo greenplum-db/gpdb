@@ -17,7 +17,7 @@
  *
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/pg_config/pg_config.c,v 1.29 2008/12/11 07:34:07 petere Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_config/pg_config.c,v 1.30 2009/01/01 17:23:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

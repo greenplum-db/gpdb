@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/contrib/Makefile,v 1.85 2008/11/19 02:59:28 tgl Exp $
+# $PostgreSQL: pgsql/contrib/Makefile,v 1.86 2009/01/04 22:19:59 tgl Exp $
 
 subdir = contrib
 top_builddir = ..
@@ -14,6 +14,7 @@ WANTED_DIRS = \
 		hstore		\
 		intarray \
 		pageinspect \
+		pg_stat_statements \
 		pg_upgrade \
 		pg_upgrade_support \
 		test_parser \

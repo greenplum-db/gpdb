@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_expr.h,v 1.39 2008/08/25 22:42:34 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_expr.h,v 1.40 2009/01/01 17:24:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

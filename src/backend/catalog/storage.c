@@ -3,12 +3,12 @@
  * storage.c
  *	  code to create and destroy physical storage for relations
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/storage.c,v 1.2 2008/12/03 13:05:22 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/storage.c,v 1.4 2009/01/04 14:59:22 heikki Exp $
  *
  * NOTES
  *	  Some of this code used to be in storage/smgr/smgr.c, and the
@@ -232,7 +232,7 @@ static void smgrDoDeleteActions(PendingDelete **list, int *listCount, bool forCo
  * transaction aborts later on, the storage will be destroyed.
  */
 void
-RelationCreateStorage(RelFileNode rnode, bool istemp,
+RelationCreateStorage(RelFileNode rnode, bool isLocalBuf,
 					  char *relationName, /* For tracing only. Can be NULL in some execution paths. */
 					  MirrorDataLossTrackingState mirrorDataLossTrackingState,
 					  int64 mirrorDataLossTrackingSessionNum,
@@ -250,7 +250,13 @@ RelationCreateStorage(RelFileNode rnode, bool istemp,
 					   mirrorDataLossTrackingSessionNum,
 					   false, /* ignoreAlreadyExists */
 					   mirrorDataLossOccurred);
-	if (istemp)
+
+	/*
+	 * With file replication, the caller is expected to create an MMXLOG WAL
+	 * record for this instead.
+	 */
+#ifdef USE_SEGWALREP
+	if (!isLocalBuf)
 	{
 		/*
 		 * Make an XLOG entry showing the file creation.  If we abort, the file
@@ -265,6 +271,7 @@ RelationCreateStorage(RelFileNode rnode, bool istemp,
 
 		lsn = XLogInsert(RM_SMGR_ID, XLOG_SMGR_CREATE, &rdata);
 	}
+#endif
 }
 
 void

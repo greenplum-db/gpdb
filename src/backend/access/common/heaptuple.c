@@ -52,7 +52,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.124 2008/11/14 01:57:41 alvherre Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/common/heaptuple.c,v 1.125 2009/01/01 17:23:34 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

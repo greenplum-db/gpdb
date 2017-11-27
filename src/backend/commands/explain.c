@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.181 2008/11/19 01:10:23 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.184 2009/01/02 20:42:00 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -292,7 +292,7 @@ ExplainOneQuery(Query *query, ExplainStmt *stmt, const char *queryString,
 		plan = pg_plan_query(query, 0, params);
 
 		/* run it (if needed) and produce output */
-		ExplainOnePlan(plan, params, stmt, queryString, tstate);
+		ExplainOnePlan(plan, stmt, queryString, params, tstate);
 	}
 }
 
@@ -364,8 +364,9 @@ ExplainCodegen(PlanState *planstate, TupOutputState *tstate) {
  * to call it.
  */
 void
-ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
-			   ExplainStmt *stmt, const char *queryString, TupOutputState *tstate)
+ExplainOnePlan(PlannedStmt *plannedstmt, ExplainStmt *stmt,
+			   const char *queryString, ParamListInfo params,
+			   TupOutputState *tstate)
 {
 	QueryDesc  *queryDesc;
 	instr_time	starttime;
@@ -382,8 +383,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, ParamListInfo params,
 	PushUpdatedSnapshot(GetActiveSnapshot());
 
 	/* Create a QueryDesc requesting no output */
-	queryDesc = CreateQueryDesc(plannedstmt,
-								queryString,
+	queryDesc = CreateQueryDesc(plannedstmt, queryString,
 								GetActiveSnapshot(), InvalidSnapshot,
 								None_Receiver, params,
 								stmt->analyze);

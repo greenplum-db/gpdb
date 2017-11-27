@@ -8,7 +8,7 @@
 #
 #
 # IDENTIFICATION
-#    $PostgreSQL: pgsql/src/test/bench/Makefile,v 1.16 2008/03/18 16:24:50 petere Exp $
+#    $PostgreSQL: pgsql/src/test/bench/Makefile,v 1.17 2009/01/01 17:24:04 momjian Exp $
 #
 #-------------------------------------------------------------------------
 

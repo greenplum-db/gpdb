@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/datetime.c,v 1.199 2008/11/12 01:36:19 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/datetime.c,v 1.200 2009/01/01 17:23:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

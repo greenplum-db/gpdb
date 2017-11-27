@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.347 2008/11/29 00:13:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.349 2009/01/01 17:23:36 momjian Exp $
  *
  *
  * INTERFACE ROUTINES

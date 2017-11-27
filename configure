@@ -9683,7 +9683,6 @@ fi
 
 fi
 
-ZIC=
 if test "$cross_compiling" = yes && test -z "$with_system_tzdata"; then
   # Extract the first word of "zic", so it can be a program name with args.
 set dummy zic; ac_word=$2

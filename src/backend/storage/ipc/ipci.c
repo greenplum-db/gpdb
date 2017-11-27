@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipci.c,v 1.97 2008/09/30 10:52:13 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipci.c,v 1.99 2009/01/03 17:08:39 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -411,7 +411,7 @@ CreateSharedMemoryAndSemaphores(bool makePrivate, int port)
 
 	if (gp_enable_resqueue_priority)
 		BackoffStateInit();
-	
+
 	/*
 	 * Now give loadable modules a chance to set up their shmem allocations
 	 */

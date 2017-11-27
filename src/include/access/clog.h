@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/clog.h,v 1.22 2008/10/20 19:18:18 alvherre Exp $
+ * $PostgreSQL: pgsql/src/include/access/clog.h,v 1.23 2009/01/01 17:23:55 momjian Exp $
  */
 #ifndef CLOG_H
 #define CLOG_H

@@ -5,12 +5,12 @@
  *	  Routines for CREATE and DROP FUNCTION commands and CREATE and DROP
  *	  CAST commands.
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.103 2008/12/18 18:20:33 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.106 2009/01/01 17:23:38 momjian Exp $
  *
  * DESCRIPTION
  *	  These routines take the parse tree and pick out the
@@ -678,6 +678,7 @@ static void
 compute_attributes_sql_style(List *options,
 							 List **as,
 							 char **language,
+							 bool *windowfunc_p,
 							 char *volatility_p,
 							 bool *strict_p,
 							 bool *security_definer,
@@ -690,6 +691,7 @@ compute_attributes_sql_style(List *options,
 	ListCell   *option;
 	DefElem    *as_item = NULL;
 	DefElem    *language_item = NULL;
+	DefElem    *windowfunc_item = NULL;
 	DefElem    *volatility_item = NULL;
 	DefElem    *strict_item = NULL;
 	DefElem    *security_item = NULL;
@@ -718,6 +720,14 @@ compute_attributes_sql_style(List *options,
 						(errcode(ERRCODE_SYNTAX_ERROR),
 						 errmsg("conflicting or redundant options")));
 			language_item = defel;
+		}
+		else if (strcmp(defel->defname, "window") == 0)
+		{
+			if (windowfunc_item)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			windowfunc_item = defel;
 		}
 		else if (compute_common_attribute(defel,
 										  &volatility_item,
@@ -759,6 +769,8 @@ compute_attributes_sql_style(List *options,
 	}
 
 	/* process optional items */
+	if (windowfunc_item)
+		*windowfunc_p = intVal(windowfunc_item->arg);
 	if (volatility_item)
 		*volatility_p = interpret_func_volatility(volatility_item);
 	if (strict_item)
@@ -1069,7 +1081,8 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	List	   *parameterDefaults;
 	Oid			variadicArgType;
 	Oid			requiredResultType;
-	bool		isStrict,
+	bool		isWindowFunc,
+				isStrict,
 				security;
 	char		volatility;
 	ArrayType  *proconfig;
@@ -1095,6 +1108,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					   get_namespace_name(namespaceId));
 
 	/* default attributes */
+	isWindowFunc = false;
 	isStrict = false;
 	security = false;
 	volatility = PROVOLATILE_VOLATILE;
@@ -1107,7 +1121,8 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 	/* override attributes from explicit list */
 	compute_attributes_sql_style(stmt->options,
 								 &as_clause, &language,
-								 &volatility, &isStrict, &security,
+								 &isWindowFunc, &volatility,
+								 &isStrict, &security,
 								 &proconfig, &procost, &prorows,
 								 &dataAccess, &execLocation);
 
@@ -1264,7 +1279,7 @@ CreateFunction(CreateFunctionStmt *stmt, const char *queryString)
 					prosrc_str, /* converted to text later */
 					probin_str, /* converted to text later */
 					false,		/* not an aggregate */
-					false,		/* not a window function */
+					isWindowFunc,
 					security,
 					isStrict,
 					volatility,

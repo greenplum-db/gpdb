@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.112 2008/12/01 09:38:08 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.116 2008/12/31 23:42:56 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -594,6 +594,100 @@ HAVING <replaceable class="parameter">condition</replaceable>
     <literal>HAVING</literal> clause can only reference table columns from
     within aggregate functions.  Such a query will emit a single row if the
     <literal>HAVING</literal> condition is true, zero rows if it is not true.
+   </para>
+  </refsect2>
+
+  <refsect2 id="SQL-WINDOW">
+   <title id="sql-window-title"><literal>WINDOW</literal> Clause</title>
+
+   <para>
+    The optional <literal>WINDOW</literal> clause has the general form
+<synopsis>
+WINDOW <replaceable class="parameter">window_name</replaceable> AS ( <replaceable class="parameter">window_definition</replaceable> ) [, ...]
+</synopsis>
+    where <replaceable class="parameter">window_name</replaceable> is
+    a name that can be referenced from subsequent window definitions or
+    <literal>OVER</> clauses, and
+    <replaceable class="parameter">window_definition</replaceable> is
+<synopsis>
+[ <replaceable class="parameter">existing_window_name</replaceable> ]
+[ PARTITION BY <replaceable class="parameter">expression</replaceable> [, ...] ]
+[ ORDER BY <replaceable class="parameter">expression</replaceable> [ ASC | DESC | USING <replaceable class="parameter">operator</replaceable> ] [ NULLS { FIRST | LAST } ] [, ...] ]
+[ <replaceable class="parameter">frame_clause</replaceable> ]
+</synopsis>
+   </para>
+
+   <para>
+    If an <replaceable class="parameter">existing_window_name</replaceable>
+    is specified it must refer to an earlier entry in the <literal>WINDOW</>
+    list; the new window copies its partitioning clause from that entry,
+    as well as its ordering clause if any.  In this case the new window cannot
+    specify its own <literal>PARTITION BY</> clause, and it can specify
+    <literal>ORDER BY</> only if the copied window does not have one.
+    The new window always uses its own frame clause; the copied window
+    must not specify a frame clause.
+   </para>
+
+   <para>
+    The elements of the <literal>PARTITION BY</> list are interpreted in
+    the same fashion as elements of a
+    <xref linkend="sql-groupby" endterm="sql-groupby-title">, and
+    the elements of the <literal>ORDER BY</> list are interpreted in the
+    same fashion as elements of an
+    <xref linkend="sql-orderby" endterm="sql-orderby-title">.
+    The only difference is that these expressions can contain aggregate
+    function calls, which are not allowed in a regular <literal>GROUP BY</>
+    clause.  They are allowed here because windowing occurs after grouping
+    and aggregation.
+   </para>
+
+   <para>
+    The optional <replaceable class="parameter">frame_clause</> defines
+    the <firstterm>window frame</> for window functions that depend on the
+    frame (not all do).  It can be one of
+<synopsis>
+RANGE UNBOUNDED PRECEDING
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+ROWS UNBOUNDED PRECEDING
+ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+</synopsis>
+    The first two are equivalent and are also the default: they set the
+    frame to be all rows from the partition start up through the current row's
+    last peer in the <literal>ORDER BY</> ordering (which means all rows if
+    there is no <literal>ORDER BY</>).  The options
+    <literal>RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</> and
+    <literal>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</>
+    are also equivalent: they always select all rows in the partition.
+    Lastly, <literal>ROWS UNBOUNDED PRECEDING</> or its verbose equivalent
+    <literal>ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</> select
+    all rows up through the current row (regardless of duplicates).
+    Beware that this option can produce implementation-dependent results
+    if the <literal>ORDER BY</> ordering does not order the rows uniquely.
+   </para>
+
+   <para>
+    The purpose of a <literal>WINDOW</literal> clause is to specify the
+    behavior of <firstterm>window functions</> appearing in the query's
+    <xref linkend="sql-select-list" endterm="sql-select-list-title"> or
+    <xref linkend="sql-orderby" endterm="sql-orderby-title">.  These functions
+    can reference the <literal>WINDOW</literal> clause entries by name
+    in their <literal>OVER</> clauses.  A <literal>WINDOW</literal> clause
+    entry does not have to be referenced anywhere, however; if it is not
+    used in the query it is simply ignored.  It is possible to use window
+    functions without any <literal>WINDOW</literal> clause at all, since
+    a window function call can specify its window definition directly in
+    its <literal>OVER</> clause.  However, the <literal>WINDOW</literal>
+    clause saves typing when the same window definition is needed for more
+    than one window function.
+   </para>
+
+   <para>
+    Window functions are described in detail in
+    <xref linkend="tutorial-window">,
+    <xref linkend="syntax-window-functions">, and
+    <xref linkend="queries-window">.
    </para>
   </refsect2>
 
@@ -1431,6 +1525,17 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
     In most cases, however, <productname>PostgreSQL</productname>
     will interpret an <literal>ORDER BY</literal> or <literal>GROUP
     BY</literal> expression the same way SQL:1999 does.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>WINDOW</literal> Clause Restrictions</title>
+
+   <para>
+    The SQL standard provides additional options for the window
+    <replaceable class="parameter">frame_clause</>.
+    <productname>PostgreSQL</productname> currently supports only the
+    options listed above.
    </para>
   </refsect2>
 

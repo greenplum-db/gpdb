@@ -5,10 +5,10 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/commands/sequence.h,v 1.41 2008/05/16 23:36:05 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/commands/sequence.h,v 1.42 2009/01/01 17:23:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

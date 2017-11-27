@@ -39,7 +39,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.567 2008/12/11 10:25:17 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.570 2009/01/04 22:19:59 tgl Exp $
  *
  * NOTES
  *
@@ -2202,7 +2202,7 @@ BeginResetOfPostmasterAfterChildrenAreShutDown(void)
 	 * this happens before forking the filerep peer reset process;
 	 * the latter process should not use information from shared memory;
 	 */
-	shmem_exit(0 /*code*/);
+	shmem_exit(1 /*code*/);
 	reset_shared(PostPortNumber, true /*isReset*/);
 
 	/*
@@ -7167,15 +7167,6 @@ SubPostmasterMain(int argc, char *argv[])
 		if (EnableSSL)
 			secure_initialize();
 #endif
-
-		/*
-		 * process any libraries that should be preloaded at postmaster start
-		 *
-		 * NOTE: we have to re-load the shared_preload_libraries here because
-		 * this backend is not fork()ed so we can't inherit any shared
-		 * libraries / DLL's from our parent (the postmaster).
-		 */
-		process_shared_preload_libraries();
 
 		/*
 		 * Perform additional initialization and client authentication.

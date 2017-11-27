@@ -44,7 +44,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.209 2008/10/27 19:37:21 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.210 2009/01/01 17:23:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

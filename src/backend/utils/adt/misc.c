@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/misc.c,v 1.66 2008/12/05 13:41:20 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/misc.c,v 1.67 2009/01/01 17:23:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

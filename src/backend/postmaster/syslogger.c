@@ -18,7 +18,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.46 2008/12/11 10:25:17 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.47 2009/01/01 17:23:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

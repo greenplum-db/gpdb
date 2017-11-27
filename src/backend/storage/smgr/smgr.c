@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.114 2008/11/19 10:34:52 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.115 2009/01/01 17:23:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

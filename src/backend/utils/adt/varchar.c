@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/varchar.c,v 1.129 2008/05/27 00:13:09 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/varchar.c,v 1.130 2009/01/01 17:23:50 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

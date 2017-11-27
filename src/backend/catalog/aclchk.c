@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/aclchk.c,v 1.150 2008/12/19 16:25:16 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/aclchk.c,v 1.151 2009/01/01 17:23:36 momjian Exp $
  *
  * NOTES
  *	  See acl.h.

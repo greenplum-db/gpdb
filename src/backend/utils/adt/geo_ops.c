@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/geo_ops.c,v 1.100 2008/04/11 22:52:05 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/geo_ops.c,v 1.101 2009/01/01 17:23:49 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

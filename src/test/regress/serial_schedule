@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/test/regress/serial_schedule,v 1.48 2008/12/19 16:25:19 petere Exp $
+# $PostgreSQL: pgsql/src/test/regress/serial_schedule,v 1.50 2008/12/30 17:11:26 tgl Exp $
 # This should probably be in an order similar to parallel_schedule.
 test: boolean
 test: char
@@ -98,6 +98,9 @@ test: guc
 test: bitmapops
 test: combocid
 test: tsearch
+test: tsdicts
+test: foreign_data
+test: window
 test: plancache
 test: json
 test: limit
@@ -109,8 +112,6 @@ test: rangefuncs
 test: prepare
 test: without_oid
 test: conversion
-test: tsdicts
-test: foreign_data
 test: truncate
 test: alter_table
 test: sequence
@@ -119,7 +120,6 @@ test: rowtypes
 test: returning
 # GPDB_83_MERGE_FIXME: the largeobject test is temporarily disabled due to test errors
 ignore: largeobject
-test: window
 test: with
 test: xml
 test: stats

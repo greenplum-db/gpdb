@@ -3,12 +3,12 @@
  * parse_agg.c
  *	  handle aggregates in parser
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_agg.c,v 1.84 2008/10/04 21:56:54 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_agg.c,v 1.87 2009/01/01 17:23:45 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -749,7 +749,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 			winref++;
 			if (refwin->refname && windef->refname &&
 				strcmp(refwin->refname, windef->refname) == 0)
-				 /* matched on refname */ ;
+				/* matched on refname */ ;
 			else if (!refwin->refname && !windef->refname)
 				 /* matched, no refname */ ;
 			else

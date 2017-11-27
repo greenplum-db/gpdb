@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.204 2008/12/09 15:59:39 heikki Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.205 2009/01/01 17:23:48 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

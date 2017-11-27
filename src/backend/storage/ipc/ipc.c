@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipc.c,v 1.101 2008/04/16 23:59:40 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipc.c,v 1.102 2009/01/01 17:23:47 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

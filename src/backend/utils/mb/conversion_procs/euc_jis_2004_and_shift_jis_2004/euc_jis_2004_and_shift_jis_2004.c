@@ -5,7 +5,7 @@
  * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/mb/conversion_procs/euc_jis_2004_and_shift_jis_2004/euc_jis_2004_and_shift_jis_2004.c,v 1.4 2008/08/29 16:34:14 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/mb/conversion_procs/euc_jis_2004_and_shift_jis_2004/euc_jis_2004_and_shift_jis_2004.c,v 1.5 2009/01/01 17:23:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

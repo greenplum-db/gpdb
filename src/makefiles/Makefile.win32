@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/makefiles/Makefile.win32,v 1.12 2008/12/07 08:36:22 petere Exp $
+# $PostgreSQL: pgsql/src/makefiles/Makefile.win32,v 1.13 2009/01/05 09:27:20 petere Exp $
 
 # Use replacement include files for those missing on Win32
 override CPPFLAGS+="-I$(top_srcdir)/src/include/port/win32"

@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parser.c,v 1.75 2008/10/28 14:09:45 petere Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parser.c,v 1.76 2009/01/01 17:23:46 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
