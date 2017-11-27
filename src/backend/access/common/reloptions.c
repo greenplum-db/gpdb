@@ -3,7 +3,7 @@
  * reloptions.c
  *	  Core support for relation options (pg_class.reloptions)
  *
- * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -55,6 +55,7 @@
 
 static relopt_bool boolRelOpts[] =
 {
+#if 0
 	{
 		{
 			"autovacuum_enabled",
@@ -71,6 +72,7 @@ static relopt_bool boolRelOpts[] =
 		},
 		true
 	},
+#endif
 	/* list terminator */
 	{ { NULL } }
 };
@@ -212,9 +214,9 @@ static void parse_one_reloption(relopt_value *option, char *text_str,
 					int text_len, bool validate);
 
 extern int num_reloptions_gp(void);
-extern void initialize_reloptions_gp(struct relopt_gen **rel_opts_arr, int *index);
-extern void default_reloptions_gp(relopt_gen **rel_opts, Datum reloptions,
-								  bool validate, relopt_kind kind, StdRdOptions *result);
+extern void initialize_reloptions_gp(void);
+extern void validate_and_refill_options(StdRdOptions *result, relopt_value *options,
+									int numoptions, relopt_kind kind, bool validate);
 
 /*
  * initialize_reloptions
@@ -236,7 +238,9 @@ initialize_reloptions(void)
 		j++;
 	for (i = 0; stringRelOpts[i].gen.name; i++)
 		j++;
-	j += num_reloptions_gp();
+
+	initialize_reloptions_gp();
+
 	j += num_custom_options;
 
 	if (relOpts)
@@ -276,8 +280,6 @@ initialize_reloptions(void)
 		relOpts[j]->namelen = strlen(relOpts[j]->name);
 		j++;
 	}
-
-	initialize_reloptions_gp(relOpts, &j);
 
 	for (i = 0; i < num_custom_options; i++)
 	{
@@ -992,8 +994,16 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 	relopt_value   *options;
 	StdRdOptions   *rdopts;
 	int				numoptions;
+
+	/* The type of columnstores are different in StdRdOptions and options */
 	relopt_parse_elt tab[] = {
-		{"fillfactor", RELOPT_TYPE_INT, offsetof(StdRdOptions, fillfactor)}
+		{"fillfactor", RELOPT_TYPE_INT, offsetof(StdRdOptions, fillfactor)},
+		{SOPT_APPENDONLY, RELOPT_TYPE_BOOL, offsetof(StdRdOptions, appendonly)},
+		{SOPT_BLOCKSIZE, RELOPT_TYPE_INT, offsetof(StdRdOptions, blocksize)},
+		{SOPT_COMPLEVEL, RELOPT_TYPE_INT, offsetof(StdRdOptions, compresslevel)},
+		{SOPT_COMPTYPE, RELOPT_TYPE_STRING, offsetof(StdRdOptions, compresstype)},
+		{SOPT_CHECKSUM, RELOPT_TYPE_BOOL, offsetof(StdRdOptions, checksum)},
+		{SOPT_ORIENTATION, RELOPT_TYPE_STRING, offsetof(StdRdOptions, orientation)}
 	};
 
 	options = parseRelOptions(reloptions, validate, kind, &numoptions);
@@ -1007,8 +1017,7 @@ default_reloptions(Datum reloptions, bool validate, relopt_kind kind)
 	fillRelOptions((void *) rdopts, sizeof(StdRdOptions), options, numoptions,
 				   validate, tab, lengthof(tab));
 
-	/* GPDB has some special logic for default options, so we need to call it. */
-	default_reloptions_gp(relOpts, reloptions, validate, kind, &lopts);
+	validate_and_refill_options(rdopts, options, numoptions, kind, validate);
 
 	pfree(options);
 
@@ -1023,12 +1032,26 @@ heap_reloptions(char relkind, Datum reloptions, bool validate)
 {
 	switch (relkind)
 	{
+#if 0
 		case RELKIND_TOASTVALUE:
 			return default_reloptions(reloptions, validate, RELOPT_KIND_TOAST);
+#endif
 		case RELKIND_RELATION:
-			return default_reloptions(reloptions, validate, RELOPT_KIND_HEAP);
+			return default_reloptions(reloptions, validate, RELOPT_KIND_HEAP | RELOPT_KIND_AO);
+		case RELKIND_TOASTVALUE:
+		case RELKIND_AOSEGMENTS:
+		case RELKIND_AOBLOCKDIR:
+		case RELKIND_AOVISIMAP:
+		case RELKIND_VIEW:
+		case RELKIND_COMPOSITE_TYPE:
+		case RELKIND_SEQUENCE:
+			return default_reloptions(reloptions, validate, RELOPT_KIND_AOAUX);
 		default:
 			/* sequences, composite types and views are not supported */
+			/*
+			 * GPDB_84_MERGE_FIXME: Make sure GPDB now support sequences,
+			 * composite and views already.
+			 */
 			return NULL;
 	}
 }

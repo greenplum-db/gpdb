@@ -1,14 +1,14 @@
 /*-------------------------------------------------------------------------
+ * reloptions_gp.c
  *
- * reloptions.c
- *	  Core support for relation options (pg_class.reloptions)
+ * Core support for Greenplum-specific relation options (pg_class.reloptions)
  *
- * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
- *
+ * Portions Copyright (c) 2005-2010, Greenplum inc
+ * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
+ * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/common/reloptions.c,v 1.13 2009/01/05 17:14:28 alvherre Exp $
+ *	  src/backend/access/common/reloptions_gp.c
  *
  *-------------------------------------------------------------------------
  */
@@ -26,12 +26,16 @@
 #include "utils/memutils.h"
 #include "miscadmin.h"
 
+#define INDEX_OPTIONS (RELOPT_KIND_BTREE | RELOPT_KIND_BITMAP | RELOPT_KIND_GIN | RELOPT_KIND_GIST | RELOPT_KIND_HASH)
+#define KIND_IS_NOT_RELATION(kind) ((kind & (RELOPT_KIND_HEAP | RELOPT_KIND_AO)) == 0)
+
 /*
  * GPDB reloptions specification.
  *
  * Make GPDB reloptions a separated file in order to reduce conflicts
  * when merging with upstream code.
  *
+ * GPDB_84_MERGE_FIXME: Fix heap_reloptions so that we could tell it is heap or ao.
  */
 
 static relopt_bool boolRelOpts_gp[] =
@@ -40,7 +44,7 @@ static relopt_bool boolRelOpts_gp[] =
 		{
 			SOPT_APPENDONLY,
 			"Append only storage parameter",
-			RELOPT_KIND_HEAP
+			RELOPT_KIND_HEAP | RELOPT_KIND_AO | RELOPT_KIND_AOAUX | INDEX_OPTIONS
 		},
 		AO_DEFAULT_APPENDONLY,
 	},
@@ -48,7 +52,7 @@ static relopt_bool boolRelOpts_gp[] =
 		{
 			SOPT_CHECKSUM,
 			"Append table checksum",
-			RELOPT_KIND_HEAP
+			RELOPT_KIND_AO | RELOPT_KIND_HEAP| RELOPT_KIND_AOAUX | INDEX_OPTIONS
 		},
 		AO_DEFAULT_CHECKSUM
 	},
@@ -68,9 +72,17 @@ static relopt_int intRelOpts_gp[] =
 	},
 	{
 		{
+			SOPT_FILLFACTOR,
+			"Packs ao index pages only to this percentage",
+			RELOPT_KIND_AO
+		},
+		HEAP_DEFAULT_FILLFACTOR, HEAP_MIN_FILLFACTOR, 100
+	},
+	{
+		{
 			SOPT_BLOCKSIZE,
 			"AO tables block size in bytes",
-			RELOPT_KIND_HEAP
+			RELOPT_KIND_AO | RELOPT_KIND_HEAP| RELOPT_KIND_AOAUX | INDEX_OPTIONS
 		},
 		AO_DEFAULT_BLOCKSIZE, MIN_APPENDONLY_BLOCK_SIZE, MAX_APPENDONLY_BLOCK_SIZE
 	},
@@ -78,17 +90,9 @@ static relopt_int intRelOpts_gp[] =
 		{
 			SOPT_COMPLEVEL,
 			"AO table compression level",
-			RELOPT_KIND_HEAP
+			RELOPT_KIND_AO | RELOPT_KIND_HEAP| RELOPT_KIND_AOAUX | INDEX_OPTIONS
 		},
 		AO_DEFAULT_COMPRESSLEVEL, AO_MIN_COMPRESSLEVEL, AO_MAX_COMPRESSLEVEL
-	},
-	{
-		{
-			SOPT_FILLFACTOR,
-			"Packs bitmap index pages only to this percentage",
-			RELOPT_KIND_INTERNAL
-		},
-		HEAP_DEFAULT_FILLFACTOR, HEAP_MIN_FILLFACTOR, 100
 	},
 	/* list terminator */
 	{ { NULL } }
@@ -100,142 +104,74 @@ static relopt_real realRelOpts_gp[] =
 	{ { NULL } }
 };
 
-static relopt_string stringRelOpts_gp[] = 
+static relopt_string stringRelOpts_gp[] =
 {
 	{
 		{
 			SOPT_COMPTYPE,
 			"AO tables compression type",
-			RELOPT_KIND_HEAP
+			RELOPT_KIND_AO | RELOPT_KIND_HEAP| RELOPT_KIND_AOAUX | INDEX_OPTIONS
 		},
-		0, true, ""
+		0, true, NULL, ""
 	},
 	{
 		{
 			SOPT_ORIENTATION,
 			"AO tables orientation",
-			RELOPT_KIND_HEAP
+			RELOPT_KIND_AO | RELOPT_KIND_HEAP| RELOPT_KIND_AOAUX | INDEX_OPTIONS
 		},
-		0, false, "" 
+		0, false, NULL, ""
 	},
 	/* list terminator */
 	{ { NULL } }
 };
 
+#undef INDEX_OPTIONS
+
 static void free_options_deep(relopt_value *options, int num_options);
-static relopt_value* get_option(relopt_value *options, int num_options, const char *opt_name);
-static bool option_exists(struct relopt_gen **rel_opts_arr, const char *name,
-						  relopt_kind kind, relopt_type type);
+static relopt_value* get_option_set(relopt_value *options, int num_options, const char *opt_name);
 
-static struct relopt_gen * get_option_gen(struct relopt_gen **rel_opts_arr, const char *name,
-			   relopt_kind kind, relopt_type type);
+extern void initialize_reloptions_gp(void);
 
-extern int num_reloptions_gp(void);
-extern void initialize_reloptions_gp(struct relopt_gen **rel_opts_arr, int *index);
-
-extern void default_reloptions_gp(relopt_gen **rel_opts, Datum reloptions, bool validate,
-					  relopt_kind kind, StdRdOptions *result);
-
-int num_reloptions_gp(void)
-{
-	return ARRAY_SIZE(boolRelOpts_gp) + ARRAY_SIZE(intRelOpts_gp) +
-		ARRAY_SIZE(realRelOpts_gp) + ARRAY_SIZE(stringRelOpts_gp);
-}
+extern void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
+							int num_options, relopt_kind kind, bool validate);
+extern void validate_and_refill_options(StdRdOptions *result, relopt_value *options,
+										int num_options, relopt_kind kind, bool validate);
 
 /*
  * initialize_reloptions_gp
  * 		initialization routine for GPDB reloptions
  *
- * Initialize the relOpts array passed in and fill each variable's
- * type and name length. We are called after basic initialization of
- * PG part, so we can check confliction here.
+ * We use the add_*_option interface in reloptions.h to add GPDB special options.
  */
 void
-initialize_reloptions_gp(struct relopt_gen **rel_opts_arr, int *index)
+initialize_reloptions_gp()
 {
 	int		i;
-
-	Assert(rel_opts_arr);
-	Assert(index);
-
-	MemSet(rel_opts_arr + *index, 0, num_reloptions_gp() * sizeof(relopt_gen *));
-
-	/* Check conflict setting first. */
-	for (i = 0; boolRelOpts_gp[i].gen.name; i++)
-	{
-		if (option_exists(rel_opts_arr, boolRelOpts_gp[i].gen.name,
-						  boolRelOpts_gp[i].gen.kind, RELOPT_TYPE_BOOL))
-		{
-			ereport(ERROR,
-					(errmsg("duplicated reloption item \"%s\" in GPDB",
-							boolRelOpts_gp[i].gen.name)));
-		}
-	}
-
-	for (i = 0; intRelOpts_gp[i].gen.name; i++)
-	{
-		if (option_exists(rel_opts_arr, intRelOpts_gp[i].gen.name,
-						  intRelOpts_gp[i].gen.kind, RELOPT_TYPE_INT))
-		{
-			ereport(ERROR,
-					(errmsg("duplicated reloption item \"%s\" in GPDB",
-							intRelOpts_gp[i].gen.name)));
-		}
-	}
-
-	for (i = 0; realRelOpts_gp[i].gen.name; i++)
-	{
-		if (option_exists(rel_opts_arr, realRelOpts_gp[i].gen.name,
-						  realRelOpts_gp[i].gen.kind, RELOPT_TYPE_REAL))
-		{
-			ereport(ERROR,
-					(errmsg("duplicated reloption item \"%s\" in GPDB",
-							realRelOpts_gp[i].gen.name)));
-		}
-	}
-
-	for (i = 0; stringRelOpts_gp[i].gen.name; i++)
-	{
-		if (option_exists(rel_opts_arr, stringRelOpts_gp[i].gen.name,
-						  stringRelOpts_gp[i].gen.kind, RELOPT_TYPE_STRING))
-		{
-			ereport(ERROR,
-					(errmsg("duplicated reloption item \"%s\" in GPDB",
-							stringRelOpts_gp[i].gen.name)));
-		}
-	}
 
 	/* Set GPDB specific options */
 	for (i = 0; boolRelOpts_gp[i].gen.name; i++)
 	{
-		rel_opts_arr[*index] = &boolRelOpts_gp[i].gen;
-		rel_opts_arr[*index]->type = RELOPT_TYPE_BOOL;
-		rel_opts_arr[*index]->namelen = strlen(rel_opts_arr[*index]->name);
-		(*index)++;
+		add_bool_reloption(boolRelOpts_gp[i].gen.kinds, (char*)boolRelOpts_gp[i].gen.name,
+						(char*)boolRelOpts_gp[i].gen.desc, boolRelOpts_gp[i].default_val);
 	}
 
 	for (i = 0; intRelOpts_gp[i].gen.name; i++)
 	{
-		rel_opts_arr[*index] = &intRelOpts_gp[i].gen;
-		rel_opts_arr[*index]->type = RELOPT_TYPE_INT;
-		rel_opts_arr[*index]->namelen = strlen(rel_opts_arr[*index]->name);
-		(*index)++;
+		add_int_reloption(intRelOpts_gp[i].gen.kinds, (char*)intRelOpts_gp[i].gen.name, (char*)intRelOpts_gp[i].gen.desc,
+					intRelOpts_gp[i].default_val, intRelOpts_gp[i].min, intRelOpts_gp[i].max);
 	}
 
 	for (i = 0; realRelOpts_gp[i].gen.name; i++)
 	{
-		rel_opts_arr[*index] = &realRelOpts_gp[i].gen;
-		rel_opts_arr[*index]->type = RELOPT_TYPE_REAL;
-		rel_opts_arr[*index]->namelen = strlen(rel_opts_arr[*index]->name);
-		(*index)++;
+		add_real_reloption(realRelOpts_gp[i].gen.kinds, (char*)realRelOpts_gp[i].gen.name, (char*)realRelOpts_gp[i].gen.desc,
+					realRelOpts_gp[i].default_val, realRelOpts_gp[i].min, realRelOpts_gp[i].max);
 	}
 
 	for (i = 0; stringRelOpts_gp[i].gen.name; i++)
 	{
-		rel_opts_arr[*index] = &stringRelOpts_gp[i].gen;
-		rel_opts_arr[*index]->type = RELOPT_TYPE_STRING;
-		rel_opts_arr[*index]->namelen = strlen(rel_opts_arr[*index]->name);
-		(*index)++;
+		add_string_reloption(stringRelOpts_gp[i].gen.kinds, (char*)stringRelOpts_gp[i].gen.name,
+			(char*)stringRelOpts_gp[i].gen.desc, NULL, stringRelOpts_gp[i].validate_cb);
 	}
 }
 
@@ -243,6 +179,7 @@ initialize_reloptions_gp(struct relopt_gen **rel_opts_arr, int *index)
  * This is set whenever the GUC gp_default_storage_options is set.
  */
 static StdRdOptions ao_storage_opts;
+static bool	ao_storage_opts_changed = false;
 
 inline bool
 isDefaultAOCS(void)
@@ -369,6 +306,7 @@ resetAOStorageOpts(StdRdOptions *ao_opts)
 	ao_opts->columnstore = AO_DEFAULT_COLUMNSTORE;
 	ao_opts->compresslevel = AO_DEFAULT_COMPRESSLEVEL;
 	ao_opts->compresstype = NULL;
+	ao_opts->orientation = NULL;
 }
 
 /*
@@ -380,7 +318,12 @@ resetDefaultAOStorageOpts(void)
 {
 	if (ao_storage_opts.compresstype)
 		free(ao_storage_opts.compresstype);
+
+	if (ao_storage_opts.orientation)
+		free(ao_storage_opts.orientation);
+
 	resetAOStorageOpts(&ao_storage_opts);
+	ao_storage_opts_changed = false;
 }
 
 const StdRdOptions *
@@ -400,6 +343,13 @@ setDefaultAOStorageOpts(StdRdOptions *copy)
 		free(ao_storage_opts.compresstype);
 		ao_storage_opts.compresstype = NULL;
 	}
+
+	if (ao_storage_opts.orientation)
+	{
+		free(ao_storage_opts.orientation);
+		ao_storage_opts.orientation = NULL;
+	}
+
 	memcpy(&ao_storage_opts, copy, sizeof(ao_storage_opts));
 	if (copy->compresstype != NULL)
 	{
@@ -415,6 +365,15 @@ setDefaultAOStorageOpts(StdRdOptions *copy)
 				elog(ERROR, "out of memory");
 		}
 	}
+
+	if (copy->orientation != NULL)
+	{
+		ao_storage_opts.orientation = strdup(copy->orientation);
+		if (ao_storage_opts.orientation == NULL)
+			elog(ERROR, "out of memory");
+	}
+
+	ao_storage_opts_changed = true;
 }
 
 static int setDefaultCompressionLevel(char* compresstype);
@@ -884,12 +843,10 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts)
 			PointerGetDatum(NULL);
 }
 
-void
-parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
-						  bool validate, relopt_kind kind)
+void validate_and_adjust_options(StdRdOptions *result, relopt_value *options,
+					int num_options, relopt_kind kind, bool validate)
 {
-	relopt_value	*options;
-	int				num_options;
+	int				i;
 	relopt_value	*fillfactor_opt;
 	relopt_value	*appendonly_opt;
 	relopt_value	*blocksize_opt;
@@ -898,21 +855,17 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	relopt_value	*checksum_opt;
 	relopt_value	*orientation_opt;
 
-	int			i = 0;
-
-	options = parseRelOptions(reloptions, validate, RELOPT_KIND_HEAP, &num_options);
-
 	/* fillfactor */
-	fillfactor_opt = get_option(options, num_options, SOPT_FILLFACTOR);
+	fillfactor_opt = get_option_set(options, num_options, SOPT_FILLFACTOR);
 	if (fillfactor_opt != NULL)
 	{
 		result->fillfactor = fillfactor_opt->values.int_val;
 	}
 	/* appendonly */
-	appendonly_opt = get_option(options, num_options, SOPT_APPENDONLY);
+	appendonly_opt = get_option_set(options, num_options, SOPT_APPENDONLY);
 	if (appendonly_opt != NULL)
 	{
-		if (kind != RELOPT_KIND_HEAP)
+		if (KIND_IS_NOT_RELATION(kind))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"appendonly\" in a non relation object is not supported")));
@@ -920,10 +873,10 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	}
 
 	/* blocksize */
-	blocksize_opt = get_option(options, num_options, SOPT_BLOCKSIZE);
+	blocksize_opt = get_option_set(options, num_options, SOPT_BLOCKSIZE);
 	if (blocksize_opt != NULL)
 	{
-		if (kind != RELOPT_KIND_HEAP && validate)
+		if (KIND_IS_NOT_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"blocksize\" in a non relation object is not supported")));
@@ -952,10 +905,10 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	}
 
 	/* compression type */
-	comptype_opt = get_option(options, num_options, SOPT_COMPTYPE);
+	comptype_opt = get_option_set(options, num_options, SOPT_COMPTYPE);
 	if (comptype_opt != NULL)
 	{
-		if (kind != RELOPT_KIND_HEAP && validate)
+		if (KIND_IS_NOT_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"compresstype\" in a non relation object is not supported")));
@@ -977,10 +930,10 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	}
 
 	/* compression level */
-	complevel_opt = get_option(options, num_options, SOPT_COMPLEVEL);
+	complevel_opt = get_option_set(options, num_options, SOPT_COMPLEVEL);
 	if (complevel_opt != NULL)
 	{
-		if (kind != RELOPT_KIND_HEAP && validate)
+		if (KIND_IS_NOT_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"compresslevel\" in a non relation object is not supported")));
@@ -1052,10 +1005,10 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 	}
 
 	/* checksum */
-	checksum_opt = get_option(options, num_options, SOPT_CHECKSUM);
+	checksum_opt = get_option_set(options, num_options, SOPT_CHECKSUM);
 	if (checksum_opt != NULL)
 	{
-		if (kind != RELOPT_KIND_HEAP && validate)
+		if (KIND_IS_NOT_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"checksum\" in a non relation "
@@ -1073,10 +1026,10 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 		result->checksum = false;
 
 	/* columnstore */
-	orientation_opt = get_option(options, num_options, SOPT_ORIENTATION);
+	orientation_opt = get_option_set(options, num_options, SOPT_ORIENTATION);
 	if (orientation_opt != NULL)
 	{
-		if (kind != RELOPT_KIND_HEAP && validate)
+		if (KIND_IS_NOT_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("usage of parameter \"orientation\" in a non "
@@ -1117,6 +1070,52 @@ parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
 		if (result->compresslevel == AO_DEFAULT_COMPRESSLEVEL)
 			result->compresslevel = setDefaultCompressionLevel(
 					result->compresstype);
+}
+
+void
+validate_and_refill_options(StdRdOptions *result, relopt_value *options,
+					int numrelopts, relopt_kind kind, bool validate)
+{
+	if (validate &&
+		ao_storage_opts_changed &&
+		(kind & (RELOPT_KIND_HEAP | RELOPT_KIND_AO)) != 0)
+	{
+		if (!(get_option_set(options, numrelopts, SOPT_APPENDONLY)))
+			result->appendonly = ao_storage_opts.appendonly;
+
+		if (!(get_option_set(options, numrelopts, SOPT_FILLFACTOR)))
+			result->fillfactor = ao_storage_opts.fillfactor;
+
+		if (!(get_option_set(options, numrelopts, SOPT_BLOCKSIZE)))
+			result->blocksize = ao_storage_opts.blocksize;
+
+		if (!(get_option_set(options, numrelopts, SOPT_COMPLEVEL)))
+			result->compresslevel = ao_storage_opts.compresslevel;
+
+		if (!(get_option_set(options, numrelopts, SOPT_COMPTYPE)))
+			result->compresstype = ao_storage_opts.compresstype;
+
+		if (!(get_option_set(options, numrelopts, SOPT_CHECKSUM)))
+			result->checksum = ao_storage_opts.checksum;
+
+		if (!(get_option_set(options, numrelopts, SOPT_ORIENTATION)))
+			result->columnstore = ao_storage_opts.columnstore;
+	}
+
+	validate_and_adjust_options(result, options, numrelopts, kind, validate);
+}
+
+
+void
+parse_validate_reloptions(StdRdOptions *result, Datum reloptions,
+						  bool validate, relopt_kind kind)
+{
+	relopt_value	*options;
+	int				num_options;
+
+	options = parseRelOptions(reloptions, validate, RELOPT_KIND_HEAP, &num_options);
+
+	validate_and_adjust_options(result, options, num_options, kind, validate);
 
 	free_options_deep(options, num_options);
 }
@@ -1238,61 +1237,6 @@ static int setDefaultCompressionLevel(char* compresstype)
 		return 1;
 }
 
-/*
- * Merge GPDB special user-specified reloptions with pre-configured default storage
- * options and return a StdRdOptions object.
- */
-void
-default_reloptions_gp(relopt_gen **rel_opts, Datum reloptions, bool validate,
-					  relopt_kind kind, StdRdOptions *result)
-{
-	relopt_int		*fillfactor_gen;
-
-	if (validate && (kind == RELOPT_KIND_HEAP))
-	{
-		/*
-		 * Relation creation is in progress.  reloptions are specified
-		 * by user.  We should merge currently configured default
-		 * storage options along with user-specified ones.  It is
-		 * assumed that auxiliary relations (relkind != 'r') such as
-		 * toast, aoseg, etc are heap relations.
-		 */
-		result->appendonly = ao_storage_opts.appendonly;
-		result->blocksize = ao_storage_opts.blocksize;
-		result->checksum = ao_storage_opts.checksum;
-		result->columnstore = ao_storage_opts.columnstore;
-		result->compresslevel = ao_storage_opts.compresslevel;
-		if (ao_storage_opts.compresstype)
-		{
-			result->compresstype = pstrdup(ao_storage_opts.compresstype);
-		}
-	}
-	else
-	{
-		/*
-		 * We are called for either creating an auxiliary relation or
-		 * through heap_open().  If we are doing heap_open(),
-		 * reloptions argument contains pg_class.reloptions for the
-		 * relation being opened.
-		 */
-		resetAOStorageOpts(result);
-	}
-
-	/* Make sure fillfactor already exist */
-	fillfactor_gen = (relopt_int*)get_option_gen(rel_opts, SOPT_FILLFACTOR, kind, RELOPT_TYPE_INT);
-	if (fillfactor_gen == NULL)
-	{
-		ereport(ERROR,
-				(errmsg("the default value of option \"%s\" not found",
-						SOPT_FILLFACTOR)));
-	}
-
-	if (result->appendonly == false)
-		result->fillfactor = fillfactor_gen->default_val;
-
-	parse_validate_reloptions(result, reloptions, validate, kind);
-}
-
 void
 free_options_deep(relopt_value *options, int num_options)
 {
@@ -1310,7 +1254,7 @@ free_options_deep(relopt_value *options, int num_options)
 }
 
 relopt_value*
-get_option(relopt_value *options, int num_options, const char *opt_name)
+get_option_set(relopt_value *options, int num_options, const char *opt_name)
 {
 	int		i;
 	int		opt_name_len;
@@ -1320,38 +1264,9 @@ get_option(relopt_value *options, int num_options, const char *opt_name)
 	for (i = 0; i < num_options; ++i)
 	{
 		cmp_len = options[i].gen->namelen > opt_name_len ? opt_name_len : options[i].gen->namelen;
-		if (options[i].isset && pg_strncasecmp(options[i].gen->name, opt_name, cmp_len) == 0)
+		if (options[i].isset &&
+			pg_strncasecmp(options[i].gen->name, opt_name, cmp_len) == 0)
 			return &options[i];
 	}
 	return NULL;
-}
-
-
-struct relopt_gen *
-get_option_gen(struct relopt_gen **rel_opts_arr, const char *name,
-			   relopt_kind kind, relopt_type type)
-{
-	int		i;
-	int		opt_name_len;
-	int		cmp_len;
-
-	opt_name_len = strlen(name);
-	for (i = 0; rel_opts_arr[i] && rel_opts_arr[i]->name; ++i)
-	{
-		cmp_len = rel_opts_arr[i]->namelen > opt_name_len ?
-				opt_name_len : rel_opts_arr[i]->namelen;
-		if (pg_strncasecmp(rel_opts_arr[i]->name, name, cmp_len) == 0 &&
-			rel_opts_arr[i]->type == type &&
-			rel_opts_arr[i]->kind == kind)
-			return rel_opts_arr[i];
-	}
-
-	return NULL;
-}
-
-bool
-option_exists(struct relopt_gen **rel_opts_arr, const char *name,
-			  relopt_kind kind, relopt_type type)
-{
-	return get_option_gen(rel_opts_arr, name, kind, type) != NULL;
 }
