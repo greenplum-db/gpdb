@@ -46,40 +46,40 @@ static bool isGPDB4200OrLater(void);
 static bool isGPDB5000OrLater(void);
 static bool isGPDB6000OrLater(void);
 
-/* GPDB 3.2 used PG version 8.2.10, and we've moved the minor number up since then for each release,  4.1 = 8.2.15 */
-/* Allow for a couple of future releases.  If the version isn't in this range, we are talking to PostgreSQL, not GPDB */
-#define mightBeGPDB() (pset.sversion >= 80210 && pset.sversion < 90400)
-
 static bool isGPDB(void)
 {
-	static enum { gpdb_maybe, gpdb_yes, gpdb_no } talking_to_gpdb;
-	if (mightBeGPDB())
+	static enum
 	{
-		PGresult   *res;
-		char       *ver;
+		gpdb_maybe,
+		gpdb_yes,
+		gpdb_no
+	} talking_to_gpdb;
 
-		if (talking_to_gpdb == gpdb_yes)
-			return true;
-		else if (talking_to_gpdb == gpdb_no)
-			return false;
+	PGresult   *res;
+	char       *ver;
 
-		res = PSQLexec("select version()", false);
-		if (!res)
-			return false;
+	if (talking_to_gpdb == gpdb_yes)
+		return true;
+	else if (talking_to_gpdb == gpdb_no)
+		return false;
 
-		ver = PQgetvalue(res, 0, 0);
-		if (strstr(ver,"Greenplum") != NULL)
-		{
-			PQclear(res);
-			talking_to_gpdb = gpdb_yes;
-			return true;
-		}
+	res = PSQLexec("select pg_catalog.version()", false);
+	if (!res)
+		return false;
 
-		talking_to_gpdb = gpdb_no;
+	ver = PQgetvalue(res, 0, 0);
+	if (strstr(ver, "Greenplum") != NULL)
+	{
 		PQclear(res);
+		talking_to_gpdb = gpdb_yes;
+		return true;
 	}
 
-	talking_to_gpdb = gpdb_maybe; /* if we reconnect to a GPDB system later. do the check again */
+	talking_to_gpdb = gpdb_no;
+	PQclear(res);
+
+	/* If we reconnect to a GPDB system later, do the check again */
+	talking_to_gpdb = gpdb_maybe;
 
 	return false;
 }
