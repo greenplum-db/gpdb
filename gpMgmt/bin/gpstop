@@ -32,6 +32,7 @@ try:
     from gppylib.gp_era import GpEraFile
     from gppylib.operations.unix import CleanSharedMem
     from gppylib.operations.utils import ParallelOperation, RemoteOperation
+    from gppylib.operations.rebalanceSegments import ReconfigDetectionSQLQueryCommand
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -182,6 +183,22 @@ class GpStop:
                     # Reenable Ctrl-C
                     self.cleanup()
                     signal.signal(signal.SIGINT, signal.default_int_handler)
+
+                if self.onlyThisHost:
+                    logger.info("Recognizing new cluster state...")
+                    try:
+                        # currently responsible for triggering an update to gp_segment_configuration
+                        # because dbconn.connect() internally calls commit()
+                        self.conn = dbconn.connect(self.dburl)
+
+                        # backup in case connect() does not do a commit
+                        ReconfigDetectionSQLQueryCommand(self.conn).run()
+                    except Exception as e:
+                        logger.debug('query trying to start a transaction failed: %s' % str(e))
+                        logger.debug('expected: the purpose was that by attempting a transaction, gp_segment_configuration would be updated')
+                    finally:
+                        if self.conn:
+                            self.conn.close()
 
                 if self.restart:
                     logger.info("Restarting System...")
