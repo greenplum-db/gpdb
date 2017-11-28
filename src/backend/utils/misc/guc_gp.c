@@ -5834,7 +5834,7 @@ assign_gp_default_storage_options(const char *newval,
 			 */
 			resetAOStorageOpts(newopts);
 			parse_validate_reloptions(newopts, newopts_datum,
-									   /* validate */ true, RELKIND_RELATION);
+									   /* validate */ true, RELOPT_KIND_HEAP);
 			validateAppendOnlyRelOptions(
 										 newopts->appendonly,
 										 newopts->blocksize,

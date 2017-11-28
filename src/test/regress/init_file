@@ -103,3 +103,10 @@ s/\d+ was concurrently dropped/##### was concurrently dropped/
 m/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/
 s/ERROR:  There are more external files \(URLs\) than primary segments that can read them.*/ERROR:  There are more external files (URLs) than primary segments that can read them./
 -- end_matchsubs
+-- matches ignore reloptions.c error line
+-- start_matchsubs
+m/ERROR:  value \d+ out of bounds for option ".*" \(reloptions\.c:\d+\)/
+s/ERROR:  value (\d+) out of bounds for option "(.*)" \(reloptions\.c:\d+\)/ERROR:  value $1 out of bounds for option "$2" DUMMY/
+m/ERROR:  invalid value for .* option ".*": .* \(reloptions\.c:\d+\)/
+s/ERROR:  invalid value for (.*) option "(.*)": (.*) \(reloptions\.c:\d+\)/ERROR:  invalid value for $1 option "$2": $3 DUMMY/
+-- end_matchsubs

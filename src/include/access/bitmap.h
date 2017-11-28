@@ -866,4 +866,8 @@ extern void bitmap_xlog_startup(void);
 extern void bitmap_xlog_cleanup(void);
 extern bool bitmap_safe_restartpoint(void);
 
+/* reloptions.c */
+#define BITMAP_MIN_FILLFACTOR		10
+#define BITMAP_DEFAULT_FILLFACTOR	100
+
 #endif
