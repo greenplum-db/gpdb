@@ -2428,11 +2428,16 @@ StartTransaction(void)
 	/*
 	 * Acquire a resource group slot.
 	 *
-	 * AssignResGroupOnMaster() might throw a PG exception, but we can still
-	 * call it after touching the transaction state.
-	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned,
-	 * this slot will be release when transaction is committed or aborted,
-	 * so don't error out before transaction state is set to TRANS_START.
+	 * Slot is successfully acquired when AssignResGroupOnMaster() is returned.
+	 * This slot will be released when transaction is committed or aborted.
+	 *
+	 * Note that AssignResGroupOnMaster() can throw a PG exception. Since we
+	 * have set the transaction state to TRANS_INPROGRESS by this point, any
+	 * exceptions thrown will trigger AbortTransaction() and free the slot.
+	 *
+	 * It's important that we acquire the resource group *after* starting the
+	 * transaction. AssignResGroupOnMaster() accesses heap tables, and a
+	 * transaction must be in progress when it does so.
 	 */
 	if (ShouldAssignResGroupOnMaster())
 		AssignResGroupOnMaster();
