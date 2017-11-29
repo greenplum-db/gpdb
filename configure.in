@@ -744,18 +744,6 @@ if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
     sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
 fi
 
-# Create compiler version string
-if test x"$GCC" = x"yes" ; then
-  cc_string="GCC `${CC} --version | sed q`"
-else
-  cc_string=$CC
-fi
-AC_CHECK_SIZEOF([void *])
-
-AC_DEFINE_UNQUOTED(PG_VERSION_STR,
-                   ["PostgreSQL $PG_PACKAGE_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string, `expr $ac_cv_sizeof_void_p \* 8`-bit"],
-                   [A string containing the version number, platform, and C compiler])
-
 AC_DEFINE_UNQUOTED(GP_VERSION,
                    ["$GP_VERSION"],
                    [A string containing the Greenplum version number])
@@ -1287,12 +1275,6 @@ fi
 
 AC_SUBST(ADDON_DIR)
 
-# Supply a numeric version string for use by 3rd party add-ons
-# awk -F is a regex on some platforms, and not on others, so make "." a tab
-[PG_VERSION_NUM="`echo "$PG_PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
-tr '.' '	' |
-$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
-AC_DEFINE_UNQUOTED(PG_VERSION_NUM, $PG_VERSION_NUM, [PostgreSQL version as a number])
 
 #
 [GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
@@ -2462,6 +2444,25 @@ AC_MSG_NOTICE([using CFLAGS=$CFLAGS])
 AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
 AC_MSG_NOTICE([using LIBS=$LIBS])
+
+# Create compiler version string
+if test x"$GCC" = x"yes" ; then
+  cc_string="GCC `${CC} --version | sed q`"
+else
+  cc_string=$CC
+fi
+
+AC_DEFINE_UNQUOTED(PG_VERSION_STR,
+                   ["PostgreSQL $PG_PACKAGE_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string, `expr $ac_cv_sizeof_void_p \* 8`-bit"],
+                   [A string containing the version number, platform, and C compiler])
+
+# Supply a numeric version string for use by 3rd party add-ons
+# awk -F is a regex on some platforms, and not on others, so make "." a tab
+[PG_VERSION_NUM="`echo "$PG_PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
+tr '.' '	' |
+$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
+AC_DEFINE_UNQUOTED(PG_VERSION_NUM, $PG_VERSION_NUM, [PostgreSQL version as a number])
+
 
 # prepare build tree if outside source tree
 # Note 1: test -ef might not exist, but it's more reliable than `pwd`.
