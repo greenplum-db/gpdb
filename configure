@@ -1621,7 +1621,7 @@ Optional Packages:
                           use system time zone data in DIR
   --without-zlib          do not use Zlib
   --without-libbz2        do not use bzip2
-  --with-zstd             do not use zstd
+  --with-zstd             build with Zstandard support (requires zstd library)
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
   --with-apr-config=PATH  path to apr-1-config utility
@@ -13248,9 +13248,15 @@ fi
 
 fi
 
+# Check for zstd.h
+# Note that this check for zstd is the last one;
+# if it passes, define a constant to make the compiler actually use zstd library
+# (see src/backend/catalog/zstd_compression.c for details)
 if test "$with_zstd" = yes; then
   ac_fn_c_check_header_mongrel "$LINENO" "zstd.h" "ac_cv_header_zstd_h" "$ac_includes_default"
 if test "x$ac_cv_header_zstd_h" = xyes; then :
+
+$as_echo "#define HAVE_ZSTD 1" >>confdefs.h
 
 else
   as_fn_error $? "header file <zstd.h> not found" "$LINENO" 5

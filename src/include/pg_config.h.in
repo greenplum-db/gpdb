@@ -755,6 +755,9 @@
 /* Define to 1 if you have the <yaml.h> header file. */
 #undef HAVE_YAML_H
 
+/* Define to 1 if the Zstandard library must be used */
+#undef HAVE_ZSTD
+
 /* Define to 1 if your compiler understands __builtin_constant_p. */
 #undef HAVE__BUILTIN_CONSTANT_P
 

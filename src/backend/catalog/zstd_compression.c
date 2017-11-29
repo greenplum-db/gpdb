@@ -29,10 +29,13 @@
 #include "utils/syscache.h"
 #include "utils/faultinjector.h"
 
+
+#ifdef HAVE_ZSTD
+/* Zstandard library is provided */
+
 #include <zstd.h>
 
-
-/* Internal state for zstd */
+// Internal state for zstd
 typedef struct zstd_state
 {
 	int level;							// Compression level
@@ -165,3 +168,43 @@ zstd_validator(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_VOID();
 }
+
+
+#else
+/* Zstandard library is not provided; use dummy functions instead */
+
+Datum
+zstd_constructor(PG_FUNCTION_ARGS)
+{
+	elog(ERROR, "Zstandard library is not available in the current build");
+	PG_RETURN_VOID();
+}
+
+Datum
+zstd_destructor(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_VOID();
+}
+
+Datum
+zstd_compress(PG_FUNCTION_ARGS)
+{
+    elog(ERROR, "Zstandard library is not available in the current build");
+	PG_RETURN_VOID();
+}
+
+Datum
+zstd_decompress(PG_FUNCTION_ARGS)
+{
+    elog(ERROR, "Zstandard library is not available in the current build");
+	PG_RETURN_VOID();
+}
+
+Datum
+zstd_validator(PG_FUNCTION_ARGS)
+{
+	elog(ERROR, "Zstandard library is not available in the current build");
+	PG_RETURN_VOID();
+}
+
+#endif
