@@ -518,21 +518,10 @@ Oid
 GetResGroupIdForRole(Oid roleid)
 {
 	HeapTuple	tuple;
-	ResourceOwner owner = NULL;
 	Oid			groupId;
 	Relation	rel;
 	ScanKeyData	key;
 	SysScanDesc	 sscan;
-
-	/*
-	 * to cave the code of cache part, we provide a resource owner here if no
-	 * existing
-	 */
-	if (CurrentResourceOwner == NULL)
-	{
-		owner = ResourceOwnerCreate(NULL, "GetResGroupIdForRole");
-		CurrentResourceOwner = owner;
-	}
 
 	rel = heap_open(AuthIdRelationId, AccessShareLock);
 
@@ -573,12 +562,6 @@ GetResGroupIdForRole(Oid roleid)
 
 	if (!OidIsValid(groupId))
 		groupId = InvalidOid;
-
-	if (owner)
-	{
-		CurrentResourceOwner = NULL;
-		ResourceOwnerDelete(owner);
-	}
 
 	return groupId;
 }
