@@ -238,9 +238,6 @@ RelationCreateStorage(RelFileNode rnode, bool isLocalBuf,
 					  int64 mirrorDataLossTrackingSessionNum,
 					  bool *mirrorDataLossOccurred) /* FIXME: is this arg still needed? */
 {
-	XLogRecPtr	lsn;
-	XLogRecData rdata;
-	xl_smgr_create xlrec;
 	SMgrRelation srel;
 
 	srel = smgropen(rnode);
@@ -258,6 +255,10 @@ RelationCreateStorage(RelFileNode rnode, bool isLocalBuf,
 #ifdef USE_SEGWALREP
 	if (!isLocalBuf)
 	{
+		XLogRecPtr  lsn;
+		XLogRecData rdata;
+		xl_smgr_create xlrec;
+
 		/*
 		 * Make an XLOG entry showing the file creation.  If we abort, the file
 		 * will be dropped at abort time.
