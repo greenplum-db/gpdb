@@ -34,10 +34,14 @@ AC_CONFIG_AUX_DIR(config)
 AC_PREFIX_DEFAULT(/usr/local/gpdb)
 AC_SUBST(configure_args, [$ac_configure_args])
 
-AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_PACKAGE_VERSION", [Postgres version Greenplum Database is based on])
 [PG_MAJORVERSION=`expr "$PG_PACKAGE_VERSION" : '\([0-9][0-9]*\.[0-9][0-9]*\)'`]
 AC_SUBST(PG_MAJORVERSION)
 AC_DEFINE_UNQUOTED(PG_MAJORVERSION, "$PG_MAJORVERSION", [PostgreSQL major version as a string])
+
+PGAC_ARG_REQ(with, extra-version, [STRING], [append STRING to version],
+             [PG_VERSION="$PG_PACKAGE_VERSION$withval"],
+             [PG_VERSION="$PG_PACKAGE_VERSION"])
+AC_DEFINE_UNQUOTED(PG_VERSION, "$PG_VERSION", [Postgres version Greenplum Database is based on])
 
 AC_CANONICAL_HOST
 
@@ -271,7 +275,7 @@ AC_SUBST(enable_coverage)
 #
 PGAC_ARG_BOOL(enable, dtrace, no,
               [build with DTrace support],
-[AC_DEFINE([ENABLE_DTRACE], 1, 
+[AC_DEFINE([ENABLE_DTRACE], 1,
            [Define to 1 to enable DTrace support. (--enable-dtrace)])
 AC_CHECK_PROGS(DTRACE, dtrace)
 if test -z "$DTRACE"; then
@@ -310,14 +314,14 @@ AC_DEFINE_UNQUOTED([BLCKSZ], ${BLCKSZ}, [
  can set it bigger if you need bigger tuples (although TOAST should
  reduce the need to have large tuples, since fields can be spread
  across multiple tuples).
- 
+
  BLCKSZ must be a power of 2.  The maximum possible value of BLCKSZ
  is currently 2^15 (32768).  This is determined by the 15-bit widths
  of the lp_off and lp_len fields in ItemIdData (see
  include/storage/itemid.h).
- 
+
  Changing BLCKSZ requires an initdb.
-]) 
+])
 
 #
 # Relation segment size
@@ -336,7 +340,7 @@ AC_DEFINE_UNQUOTED([RELSEG_SIZE], ${RELSEG_SIZE}, [
  RELSEG_SIZE is the maximum number of blocks allowed in one disk file.
  Thus, the maximum size of a single file is RELSEG_SIZE * BLCKSZ;
  relations bigger than that are divided into multiple files.
- 
+
  RELSEG_SIZE * BLCKSZ must be less than your OS' limit on file size.
  This is often 2 GB or 4GB in a 32-bit operating system, unless you
  have large file support enabled.  By default, we make the limit 1 GB
@@ -377,7 +381,7 @@ AC_DEFINE_UNQUOTED([XLOG_BLCKSZ], ${XLOG_BLCKSZ}, [
  buffers, else direct I/O may fail.
 
  Changing XLOG_BLCKSZ requires an initdb.
-]) 
+])
 
 #
 # WAL segment size
@@ -663,7 +667,7 @@ fi
 # enable profiling if --enable-profiling
 if test "$enable_profiling" = yes && test "$ac_cv_prog_cc_g" = yes; then
   if test "$GCC" = yes; then
-    AC_DEFINE([PROFILE_PID_DIR], 1, 
+    AC_DEFINE([PROFILE_PID_DIR], 1,
            [Define to 1 to allow profiling output to be saved separately for each process.])
     CFLAGS="$CFLAGS -pg $PLATFORM_PROFILE_FLAGS"
   else
@@ -1711,7 +1715,7 @@ if test "$with_krb5" = yes; then
   AC_MSG_CHECKING(for krb5_free_unparsed_name)
   AC_TRY_LINK([#include <krb5.h>],
               [krb5_free_unparsed_name(NULL,NULL);],
-              [AC_DEFINE(HAVE_KRB5_FREE_UNPARSED_NAME, 1, [Define to 1 if you have krb5_free_unparsed_name]) 
+              [AC_DEFINE(HAVE_KRB5_FREE_UNPARSED_NAME, 1, [Define to 1 if you have krb5_free_unparsed_name])
 AC_MSG_RESULT(yes)],
               [AC_MSG_RESULT(no)])
 fi
@@ -2453,7 +2457,7 @@ else
 fi
 
 AC_DEFINE_UNQUOTED(PG_VERSION_STR,
-                   ["PostgreSQL $PG_PACKAGE_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string, `expr $ac_cv_sizeof_void_p \* 8`-bit"],
+                   ["PostgreSQL $PG_VERSION (Greenplum Database $GP_VERSION) on $host, compiled by $cc_string, `expr $ac_cv_sizeof_void_p \* 8`-bit"],
                    [A string containing the version number, platform, and C compiler])
 
 # Supply a numeric version string for use by 3rd party add-ons
