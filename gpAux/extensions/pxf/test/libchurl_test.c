@@ -13,7 +13,7 @@
 #include "mock/curl_mock.c"
 
 /* test strings */
-const char *uri_param = "pxf://localhost:51200/tmp/dummy1";
+const char *uri_param = "pxf://localhost:5888/tmp/dummy1";
 const char *read_string = "Hello World!\0";
 
 void
@@ -61,7 +61,7 @@ test_churl_init()
 	/* set mock behavior for all the curl_easy_setopt calls */
 #ifdef CURLOPT_RESOLVE
 	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_RESOLVE);
-	curl_slist_append_test_helper(NULL, "localhost:51200:127.0.0.1");
+	curl_slist_append_test_helper(NULL, "localhost:5888:127.0.0.1");
 #endif
 	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_URL);
 	curl_easy_setopt_test_helper(mock_curl_handle, CURLOPT_VERBOSE);

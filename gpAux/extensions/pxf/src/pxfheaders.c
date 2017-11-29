@@ -18,7 +18,6 @@
  */
 
 #include "pxfheaders.h"
-#include "pxfutils.h"
 #include "access/fileam.h"
 #include "catalog/pg_exttable.h"
 
