@@ -18,6 +18,7 @@
             </stentry>
             <stentry>
                <p><codeph>optimizer_join_arity_for_associativity_commutativity</codeph></p>
+               <p><codeph>optimizer_join_order</codeph></p>
                <p><codeph>optimizer_join_order_threshold</codeph></p>
                <p><codeph>optimizer_mdcache_size</codeph>
                </p>

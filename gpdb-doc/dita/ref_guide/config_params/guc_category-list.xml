@@ -359,6 +359,8 @@
           <stentry>
             <p><xref href="guc-list.xml#optimizer_join_arity_for_associativity_commutativity"
                 type="section">optimizer_join_arity_for_associativity_commutativity</xref></p>
+            <p><xref href="guc-list.xml#optimizer_join_order" format="dita" type="section"
+                >optimizer_join_order</xref></p>
             <p><xref href="guc-list.xml#optimizer_join_order_threshold" format="dita"
                 >optimizer_join_order_threshold</xref></p>
             <p><xref href="guc-list.xml#optimizer_mdcache_size" type="section"

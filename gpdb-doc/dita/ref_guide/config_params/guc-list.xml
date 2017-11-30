@@ -677,6 +677,9 @@
                 >optimizer_join_arity_for_associativity_commutativity</xref>
             </li>
             <li>
+              <xref href="#optimizer_join_order" type="section">optimizer_join_order</xref>
+            </li>
+            <li>
               <xref href="#optimizer_join_order_threshold" type="section"
                 >optimizer_join_order_threshold</xref>
             </li>
@@ -7714,6 +7717,45 @@
               <entry colname="col1">integer > 0</entry>
               <entry colname="col2">7</entry>
               <entry colname="col3">local<p>system</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_join_order">
+    <title>optimizer_join_order</title>
+    <body>
+      <p>This parameter sets the optimization level for join ordering during query optimization 
+        by specifying which types of join ordering alternatives to evaluate.</p>
+      <ul id="ul_dpf_cyr_1cb">
+        <li><codeph>query</codeph> - Uses the join order specified in the query.</li>
+        <li><codeph>greedy</codeph> - Evaluates the join order specified in the query and 
+          alternatives based on minimum cardinalities of the relations in the joins.</li>
+        <li><codeph>exhaustive</codeph> - Applies transformation rules to find and evaluate 
+          all join ordering alternatives.</li>
+      </ul>
+      <p>The default value is <codeph>exhaustive</codeph>. Setting this parameter to 
+        <codeph>query</codeph> or <codeph>greedy</codeph> can generate a suboptimal 
+        query plan. </p>
+      <p>This parameter can be set for an individual database, a session, or a query. </p>
+      <table id="table_ucb_str_1cb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">query<p>greedy</p><p>exhaustive</p></entry>
+              <entry colname="col2">exhaustive</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
