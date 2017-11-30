@@ -231,6 +231,13 @@ PGAC_ARG_BOOL(enable, pxf, yes,
 AC_SUBST(enable_pxf)
 
 #
+# gphdfs
+#
+PGAC_ARG_BOOL(enable, gphdfs, yes,
+             [do not build gphdfs])
+AC_SUBST(enable_gphdfs)
+
+#
 # --enable-gpperfmon
 #
 PGAC_ARG_BOOL(enable, gpperfmon, no,

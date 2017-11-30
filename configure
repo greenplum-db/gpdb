@@ -776,6 +776,7 @@ GCOV
 enable_profiling
 enable_debug
 enable_gpperfmon
+enable_gphdfs
 enable_pxf
 enable_gpfdist
 enable_rpath
@@ -847,6 +848,7 @@ enable_spinlocks
 enable_atomics
 enable_gpfdist
 enable_pxf
+enable_gphdfs
 enable_gpperfmon
 enable_debug
 enable_profiling
@@ -1540,6 +1542,7 @@ Optional Features:
   --disable-atomics       do not use atomic operations
   --disable-gpfdist       do not use gpfdist
   --disable-pxf           do not build pxf
+  --disable-gphdfs        do not build gphdfs
   --enable-gpperfmon      build with gpperfmon
   --enable-debug          build with debugging symbols (-g)
   --enable-profiling      build with profiling enabled
@@ -3607,6 +3610,35 @@ if test "${enable_pxf+set}" = set; then :
 
 else
   enable_pxf=yes
+
+fi
+
+
+
+
+#
+# gphdfs
+#
+
+pgac_args="$pgac_args enable_gphdfs"
+
+# Check whether --enable-gphdfs was given.
+if test "${enable_gphdfs+set}" = set; then :
+  enableval=$enable_gphdfs;
+  case $enableval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --enable-gphdfs option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  enable_gphdfs=yes
 
 fi
 

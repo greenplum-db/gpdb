@@ -15,8 +15,8 @@
   <property name="test.build.dir" value="${build.dir}/test"/>
   
   <!-- Java Doc -->
-  <property name="javadoc.link.java" value="http://java.sun.com/javase/6/docs/api/"/>
-  <property name="javadoc.link.hadoop" value="http://hadoop.apache.org/common/docs/r0.20.2/api/"/>
+  <property name="javadoc.link.java" value="http://java.sun.com/javase/7/docs/api/"/>
+  <property name="javadoc.link.hadoop" value="http://hadoop.apache.org/common/docs/r2.4.1/api/"/>
 
   <!--Apache Ivy(http://ant.apache.org/ivy/history/latest-milestone/install.html) -->
   <loadproperties srcfile="${basedir}/ivy/libraries.properties" />
@@ -119,7 +119,7 @@
     <mkdir dir="${javadoc.dir}"/>
     <javadoc destdir="${javadoc.dir}" author="false" classpathref="library.commons.classpath"
              additionalparam="-J-Dorg.apache.commons.attributes.javadoc.CATaglet.sources=${basedir}">
-      <fileset dir="${src.dir}/com/emc/greenplum/gpdb/hadoop" includes="**/*.java" excludes="**/test/*.java"/>
+      <fileset dir="${src.dir}/com/emc/greenplum/gpdb" includes="**/*.java" excludes="**/test/*.java"/>
       <link href="${javadoc.link.hadoop}"/>
       <link href="${javadoc.link.java}"/>
     </javadoc>
