@@ -86,17 +86,17 @@ test_build_http_headers(void **state)
 	expect_value(external_set_env_vars, scancounter, 0);
 
 	struct extvar_t mock_extvar;
-
+	mock_extvar.GP_USER = "user";
 	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
 	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
 	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
-
 	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
 	will_be_called(external_set_env_vars);
 
-	expect_headers_append(headers, "X-GP-SEGMENT-ID", mock_extvar.GP_SEGMENT_ID);
-	expect_headers_append(headers, "X-GP-SEGMENT-COUNT", mock_extvar.GP_SEGMENT_COUNT);
-	expect_headers_append(headers, "X-GP-XID", mock_extvar.GP_XID);
+	expect_headers_append(headers, "X-GP-USER", "user");
+	expect_headers_append(headers, "X-GP-SEGMENT-ID", "SegId");
+	expect_headers_append(headers, "X-GP-SEGMENT-COUNT", "10");
+	expect_headers_append(headers, "X-GP-XID", "20");
 
 	char		alignment[3];
 
@@ -128,6 +128,114 @@ test_build_http_headers(void **state)
 	pfree(gphd_uri);
 	pfree(headers);
 	pfree(input);
+}
+
+void
+test_build_http_headers_no_user_error(void **state) {
+
+	/* setup mock data and expectations */
+	PxfInputData *input = (PxfInputData *) palloc0(sizeof(PxfInputData));
+	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
+	GPHDUri *gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	Relation rel = (Relation) palloc0(sizeof(RelationData));
+
+	ExtTableEntry ext_tbl;
+	struct tupleDesc tuple;
+
+	input->headers = headers;
+	input->gphduri = gphd_uri;
+	input->rel = NULL;
+
+	gphd_uri->uri = "testuri";
+
+	expect_any(external_set_env_vars, extvar);
+	expect_string(external_set_env_vars, uri, gphd_uri->uri);
+	expect_value(external_set_env_vars, csv, false);
+	expect_value(external_set_env_vars, escape, NULL);
+	expect_value(external_set_env_vars, quote, NULL);
+	expect_value(external_set_env_vars, header, false);
+	expect_value(external_set_env_vars, scancounter, 0);
+
+	struct extvar_t mock_extvar;
+	mock_extvar.GP_USER = NULL;
+	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
+	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
+	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
+	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
+	will_be_called(external_set_env_vars);
+
+	MemoryContext old_context = CurrentMemoryContext;
+	PG_TRY();
+	{
+		build_http_headers(input);
+		assert_false("Expected Exception");
+	}
+	PG_CATCH();
+	{
+		MemoryContextSwitchTo(old_context);
+		ErrorData  *edata = CopyErrorData();
+
+		assert_true(edata->elevel == ERROR);
+		char	   *expected_message = pstrdup("User identity is unknown");
+
+		assert_string_equal(edata->message, expected_message);
+		pfree(expected_message);
+	}
+	PG_END_TRY();
+}
+
+void
+test_build_http_headers_empty_user_error(void **state) {
+
+	/* setup mock data and expectations */
+	PxfInputData *input = (PxfInputData *) palloc0(sizeof(PxfInputData));
+	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
+	GPHDUri *gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
+	Relation rel = (Relation) palloc0(sizeof(RelationData));
+
+	ExtTableEntry ext_tbl;
+	struct tupleDesc tuple;
+
+	input->headers = headers;
+	input->gphduri = gphd_uri;
+	input->rel = NULL;
+
+	gphd_uri->uri = "testuri";
+
+	expect_any(external_set_env_vars, extvar);
+	expect_string(external_set_env_vars, uri, gphd_uri->uri);
+	expect_value(external_set_env_vars, csv, false);
+	expect_value(external_set_env_vars, escape, NULL);
+	expect_value(external_set_env_vars, quote, NULL);
+	expect_value(external_set_env_vars, header, false);
+	expect_value(external_set_env_vars, scancounter, 0);
+
+	struct extvar_t mock_extvar;
+	mock_extvar.GP_USER = "";
+	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
+	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
+	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
+	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
+	will_be_called(external_set_env_vars);
+
+	MemoryContext old_context = CurrentMemoryContext;
+	PG_TRY();
+	{
+		build_http_headers(input);
+		assert_false("Expected Exception");
+	}
+	PG_CATCH();
+	{
+		MemoryContextSwitchTo(old_context);
+		ErrorData  *edata = CopyErrorData();
+
+		assert_true(edata->elevel == ERROR);
+		char	   *expected_message = pstrdup("User identity is unknown");
+
+		assert_string_equal(edata->message, expected_message);
+		pfree(expected_message);
+	}
+	PG_END_TRY();
 }
 
 void
@@ -305,6 +413,8 @@ main(int argc, char *argv[])
 	const		UnitTest tests[] = {
 		unit_test(test_get_format_name),
 		unit_test(test_build_http_headers),
+		unit_test(test_build_http_headers_no_user_error),
+		unit_test(test_build_http_headers_empty_user_error),
 		unit_test(test_add_tuple_desc_httpheader)
 	};
 

@@ -58,6 +58,13 @@ build_http_headers(PxfInputData *input)
 	/* GP cluster configuration */
 	external_set_env_vars(&ev, gphduri->uri, false, NULL, NULL, false, 0);
 
+	/* make sure that user identity is known and set, otherwise impersonation by PXF will be impossible */
+	if (!ev.GP_USER || !ev.GP_USER[0])
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("User identity is unknown")));
+	churl_headers_append(headers, "X-GP-USER", ev.GP_USER);
+
 	churl_headers_append(headers, "X-GP-SEGMENT-ID", ev.GP_SEGMENT_ID);
 	churl_headers_append(headers, "X-GP-SEGMENT-COUNT", ev.GP_SEGMENT_COUNT);
 	churl_headers_append(headers, "X-GP-XID", ev.GP_XID);
