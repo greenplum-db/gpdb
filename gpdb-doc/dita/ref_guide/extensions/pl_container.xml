@@ -285,14 +285,18 @@
           <varname>name</varname> to a Docker container.</p>
       <p>The PL/Container configuration file is read only on the first invocation of a PL/Container
         function in each Greenplum Database session that runs PL/Container functions. You can force
-        the configuration file to be re-read by calling the function
-          <codeph>plcontainer_refresh_config()</codeph> during the session. For example, this
+        the configuration file to be re-read by performing a <codeph>SELECT</codeph> command on the
+        view <codeph>plcontainer_refresh_config</codeph> during the session. For example, this
           <codeph>SELECT</codeph> command forces a the configuration file to be read.</p>
-      <codeblock>select * from plcontainer_refresh_config();</codeblock>
-      <p>Also, you can show all the configurations in the session by calling the function
-          <codeph>plcontainer_show_config();</codeph>. For example, this <codeph>SELECT</codeph>
-        command returns the PL/Container configurations. </p>
-      <codeblock>select * from plcontainer_show_config();</codeblock>
+      <codeblock>select * from plcontainer_refresh_config;</codeblock>
+      <p>Running the command executes a PL/Container function that updates the configuration on the
+        master and segment instances.</p>
+      <p>Also, you can show all the configurations in the session by performing a
+          <codeph>SELECT</codeph> command on the view <codeph>plcontainer_show_config</codeph>. For
+        example, this <codeph>SELECT</codeph> command returns the PL/Container configurations . </p>
+      <codeblock>select * from plcontainer_show_config;</codeblock>
+      <p>Running the command executes a PL/Container function that displays configuration
+        information from the master and segment instances.</p>
     </body>
     <topic id="topic9" xml:lang="en">
       <title id="pz215232">Examples</title>
@@ -535,13 +539,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.<ul
                   id="ul_k2l_f4d_rbb">
                   <li><varname>host-dir</varname> - absolute path to a directory on the host system.
-                    The Greenplum Database administrator user (gpadmin) must have appropiate access
+                    The Greenplum Database administrator user (gpadmin) must have appropriate access
                     to the directory.</li>
                   <li><varname>container-dir</varname> - absolute path to a directory in the Docker
                     container.</li>
                   <li><codeph>[rw|ro]</codeph> - read-write or read-only access to the host
                     directory from the container. Information is stored in the configuration file
-                    element shared_directory.</li>
+                    element <codeph>shared_directory</codeph>.</li>
                 </ul></pd>
             </plentry>
             <plentry>
@@ -677,8 +681,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     client process inside in the container. </pd>
                   <pd>You should modify it only if you build your custom container and want to
                     implement some additional initialization logic before the container
-                      starts.<note>this cannot be set via plcontainer utility, will need to be set
-                      by advanced users via -e option</note></pd>
+                      starts.<note>This element cannot be set with the <codeph>plcontainer
+                        install</codeph> command. You can update the configuration file with the
+                      with the <codeph>plcontainer configure -e</codeph> command.</note></pd>
                 </plentry>
                 <plentry>
                   <pt>memory_mb</pt>
@@ -705,9 +710,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         which can be either <codeph>ro</codeph> (read-only) or <codeph>rw</codeph>
                         (read-write). </li>
                     </ul></pd>
-                  <pd>You should be careful specifying writable shared directories on the host.
-                    Write access to the host system might be used to exchange the data between
-                    containers and possibly compromise the host system.</pd>
+                  <pd>When specifying a host directory with read-write access, ensure that the
+                    specified host directory has the correct permissions. Write access to the host
+                    system might be used to exchange the data between containers and possibly
+                    compromise the host system.</pd>
                 </plentry>
                 <plentry>
                   <pt>use_network</pt>
@@ -768,18 +774,30 @@ $$ LANGUAGE plcontainer;</codeblock></p>
        gp_segment_configuration as g
    where f.oid = fe.fsefsoid and g.dbid = fe.fsedbid 
        and f.fsname = 'pg_system';</codeblock></li>
-          <li>In some cases, when PL/Container is running in a high concurrency scenario, the Docker
-            daemon hangs with log entries that indicate a memory shortage. This can happen even when
-            the system seems to have adequate free memory.<p>The issue seems to be triggered by a
-              combination of two factors, the aggressive virtual memory requirement of the Go
-              language (<codeph>golang</codeph>) runtime that is used by PL/Container, and the
-              Greenplum Database Linux server kernel parameter setting for
+          <li>In some cases, when PL/Container is running in a high concurrency environment, the
+            Docker daemon hangs with log entries that indicate a memory shortage. This can happen
+            even when the system seems to have adequate free memory.<p>The issue seems to be
+              triggered by a combination of two factors, the aggressive virtual memory requirement
+              of the Go language (<codeph>golang</codeph>) runtime that is used by PL/Container, and
+              the Greenplum Database Linux server kernel parameter setting for
                 <codeph>overcommit_memory</codeph>. The parameter is set to 2 which does not allow
               memory overcommit. </p><p>A workaround that might help is to increase the amount of
               swap space and increase the Linux server kernel parameter
-                <codeph>overcommit_ratio</codeph>. If this issue still occurs after the changes,
+                <codeph>overcommit_ratio</codeph>. If the issue still occurs after the changes,
               there might be memory shortage. You should check free memory on the system and add
               more RAM if needed. You can also decrease the cluster load.</p></li>
+          <li>PL/Container does not limit the Docker base device size, the size of the Docker
+            container. In some cases, the Docker daemon controls the base device size. For example,
+            if the Docker storage driver is devicemapper, the Docker daemon
+              <codeph>--storage-opt</codeph> option flag <codeph>dm.basesize</codeph> controls the
+            base device size. The default base device size for devicemapper is 10GB. The Docker
+            command <codeph>docker info</codeph> displays Docker system information including the
+            storage driver and base device size. For information about Docker storage drivers, see
+            the Docker information <xref
+              href="https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-storage-driver"
+              format="html" scope="external">Daemon storage-driver</xref>. <p>When setting the
+              Docker base device size, the size must be set on all Greenplum Database
+            hosts.</p></li>
         </ul>
       </body>
     </topic>
