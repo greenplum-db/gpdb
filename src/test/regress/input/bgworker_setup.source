@@ -8,6 +8,8 @@
 
 -- start_ignore 
 \! cp $MASTER_DATA_DIRECTORY/postgresql.conf $MASTER_DATA_DIRECTORY/postgresql.conf.bgworkertest.bak
-\! gpconfig -c shared_preload_libraries -v "bgworker_example"
-\! PGDATESTYLE="" gpstop -rai
+\! echo "shared_preload_libraries='bgworker_example'" >> $MASTER_DATA_DIRECTORY/postgresql.conf 
+\! PGDATESTYLE="" gpstop -ai
+\! cp @libdir@/bgworker_example@DLSUFFIX@ $GPHOME/lib/postgresql/
+\! PGDATESTYLE="" gpstart -a
 -- end_ignore

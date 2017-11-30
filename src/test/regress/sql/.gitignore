@@ -36,3 +36,4 @@ transient_types.sql
 hooktest.sql
 gpcopy.sql
 trigger_sets_oid.sql
+bgworker_setup.sql

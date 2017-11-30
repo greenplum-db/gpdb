@@ -9,7 +9,7 @@ DROP EXTERNAL WEB TABLE IF EXISTS find_bgworker CASCADE;
 CREATE EXTERNAL WEB TABLE find_bgworker(line text) EXECUTE 'ps aux | grep bgworker 2>&1' ON MASTER FORMAT 'TEXT';
 
 CREATE OR REPLACE VIEW check_number_bgworkers AS
-SELECT CASE WHEN count(*) = (3 * (SELECT count(*) AS segnum FROM gp_segment_configuration WHERE role = 'p' AND hostname IN (SELECT hostname FROM gp_segment_configuration WHERE role = 'p' AND content = -1))) THEN true ELSE false END AS ok
+SELECT CASE WHEN count(*) = 3 THEN true ELSE false END AS ok
 FROM find_bgworker WHERE line NOT LIKE '%grep%';
 
 CREATE OR REPLACE VIEW number_bgworkers_should_be_zero AS
