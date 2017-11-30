@@ -293,7 +293,7 @@
         master and segment instances.</p>
       <p>Also, you can show all the configurations in the session by performing a
           <codeph>SELECT</codeph> command on the view <codeph>plcontainer_show_config</codeph>. For
-        example, this <codeph>SELECT</codeph> command returns the PL/Container configurations . </p>
+        example, this <codeph>SELECT</codeph> command returns the PL/Container configurations. </p>
       <codeblock>select * from plcontainer_show_config;</codeblock>
       <p>Running the command executes a PL/Container function that displays configuration
         information from the master and segment instances.</p>
