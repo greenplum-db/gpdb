@@ -595,7 +595,6 @@ fi
 
 if test "$GCC" = yes -a "$ICC" = no; then
   CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith"
-  PGAC_PROG_CC_CFLAGS_OPT([-Werror=uninitialized])
   # These work in some but not all gcc versions
   # GPDB code is full of declarations after statement.
   #PGAC_PROG_CC_CFLAGS_OPT([-Wdeclaration-after-statement])
@@ -2450,6 +2449,14 @@ elif test "$PORTNAME" = "openbsd"; then
   PGAC_PROG_CC_LDFLAGS_OPT([-Wl,-Bdynamic], $link_test_func)
 else
   PGAC_PROG_CC_LDFLAGS_OPT([-Wl,--as-needed], $link_test_func)
+fi
+
+# Many of the autoconf tests produce warnings, or even compiler errors, on
+# purpose as they run through the conftest programs. So, treating warning as
+# error should be last step after all autoconf checks are performed, otherwise
+# false side-effects happens.
+if test "$GCC" = yes -a "$ICC" = no; then
+  PGAC_PROG_CC_CFLAGS_OPT([-Werror=uninitialized])
 fi
 
 # Begin output steps
