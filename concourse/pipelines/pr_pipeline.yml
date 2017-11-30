@@ -125,7 +125,7 @@ jobs:
           BLDWRAP_POSTGRES_CONF_ADDONS: "fsync=off"
           TEST_OS: centos
           CONFIGURE_FLAGS: {{configure_flags}}
-        timeout: 2h
+        timeout: 3h
         on_failure: *pr_failure
 
       - task: icw_gporca_orca_centos6
