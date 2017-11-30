@@ -248,11 +248,15 @@ RelationCreateStorage(RelFileNode rnode, bool isLocalBuf,
 					   false, /* ignoreAlreadyExists */
 					   mirrorDataLossOccurred);
 
-	/*
-	 * With file replication, the caller is expected to create an MMXLOG WAL
-	 * record for this instead.
-	 */
-#ifdef USE_SEGWALREP
+/*
+ * Disable generation of XLOG_SMGR_CREATE until persistent tables and MMXLOG
+ * records are removed from Greenplum.  Multipass crash recovery using
+ * persistent tables will handle relation file creation on primary or master.
+ * On Standby, MMXLOG_CREATE_FILE xlog record replayed in mmxlog_redo will take
+ * care of things.  In filerep, persistent tables guide crash recovery on both,
+ * primary and mirror.
+ */
+#if 0
 	if (!isLocalBuf)
 	{
 		XLogRecPtr  lsn;
@@ -1531,12 +1535,6 @@ smgr_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 						   /* ignoreAlreadyExists */ true,
 						   &mirrorDataLossOccurred);
 #endif
-		/*
-		 * Multipass crash recovery using persistent tables will handle
-		 * relation file creation on primary or master. On Standby,
-		 * MMXLOG_CREATE_FILE xlog record replayed in mmxlog_redo will take
-		 * care of things.
-		 */
 		return;
 	}
 	else if (info == XLOG_SMGR_TRUNCATE)
