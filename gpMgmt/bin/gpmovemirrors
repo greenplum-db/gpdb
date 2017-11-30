@@ -46,7 +46,7 @@ Moves mirror segments in a pre-existing GPDB Array.
 EXECNAME = os.path.split(__file__)[-1]
 
 _help = ["""
-The input file should be be a plain text file with the format:
+The input file should be a plain text file with the format:
 
   filespaceOrder=[<filespace1_fsname>[:<filespace2_fsname>:...]
   <old_address>:<port>:<system_filespace_location> <new_address:port>:<replication_port>:<system_filespace_location>[:<fselocation>:...]

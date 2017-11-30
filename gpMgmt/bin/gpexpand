@@ -64,7 +64,7 @@ Adds additional segments to a pre-existing GPDB Array.
 """)
 
 _help = ["""
-The input file should be be a plain text file with a line for each segment
+The input file should be a plain text file with a line for each segment
 to add with the format:
 
   <hostname>:<port>:<data_directory>:<dbid>:<content>:<definedprimary>
