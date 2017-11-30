@@ -28,6 +28,7 @@
 #include <linux/version.h>
 #include <linux/seq_file.h>
 #include <linux/random.h>
+#include <linux/proc_fs.h>
 
 #include "ict.h"
 #include "connectionTable.h"
@@ -319,7 +320,14 @@ ic_init_module(void)
 		return -1;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	entry = proc_create("ickmlog", 0, NULL, &my_proc_ops);
+#else
 	entry = create_proc_entry("ickmlog", 0, NULL);
+	if (entry)
+		entry->proc_fops = &my_proc_ops;
+#endif
+
 	if (entry == NULL)
 	{
 		printk(KERN_INFO "Unable to create proc entry for module ickm");
@@ -327,8 +335,6 @@ ic_init_module(void)
 	}
 	init_seq_ops();
 	init_proc_ops();
-	if (entry)
-		entry->proc_fops = &my_proc_ops;
 
 	if ((ict_type & FUNCTION_MASK) == OUT_OF_ORDER_PACKET)
 	{
