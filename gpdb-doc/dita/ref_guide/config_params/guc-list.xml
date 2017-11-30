@@ -7737,7 +7737,10 @@
       </ul>
       <p>The default value is <codeph>exhaustive</codeph>. Setting this parameter to 
         <codeph>query</codeph> or <codeph>greedy</codeph> can generate a suboptimal 
-        query plan. </p>
+        query plan. However, if the administrator is confident that a satisfactory plan 
+        is generated with the <codeph>query</codeph> or <codeph>greedy</codeph> setting, 
+        query performance can be improved by setting the parameter to the lower 
+        optimization level.<p>
       <p>This parameter can be set for an individual database, a session, or a query. </p>
       <table id="table_ucb_str_1cb">
         <tgroup cols="3">

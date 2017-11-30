@@ -29,8 +29,8 @@
         aggregate plan for a scalar distinct qualified aggregate. </li>
       <li><codeph>optimizer_force_three_stage_scalar_dqa</codeph> forces GPORCA to choose a plan
         with multistage aggregates when such a plan alternative is generated. </li>
-      <li><codeph>optimizer_join_order</codeph> sets the optimization level for join ordering during 
-        query optimization by specifying which types of join ordering alternatives to evaluate.</li>
+      <li><codeph>optimizer_join_order</codeph> sets the query optimization level for join ordering
+        by specifying which types of join ordering alternatives to evaluate.</li>
       <li><codeph>optimizer_join_order_threshold</codeph> specifies the maximum number of join
         children for which GPORCA uses the dynamic programming-based join ordering algorithm.</li>
       <li><codeph>optimizer_nestloop_factor</codeph> controls nested loop join cost factor to apply
