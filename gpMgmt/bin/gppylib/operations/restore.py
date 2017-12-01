@@ -903,10 +903,11 @@ class ValidateSegments(Operation):
                 raise ExceptionNoStackTraceNeeded("Host %s dir %s dbid %d marked as invalid" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory(), seg.getSegmentDbId()))
 
             if self.context.netbackup_service_host is None:
+                user_or_default_dir = self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory())
                 remote_file = get_filename_for_content(self.context, "dump", seg.getSegmentContentId(),
-                                                       self.context.get_backup_dir(segment_dir=seg.getSegmentDataDirectory()), seg.getSegmentHostName())
+                                                       user_or_default_dir, seg.getSegmentHostName())
                 if not remote_file:
-                    raise ExceptionNoStackTraceNeeded("No dump file on %s in %s" % (seg.getSegmentHostName(), seg.getSegmentDataDirectory()))
+                    raise ExceptionNoStackTraceNeeded("No dump file on %s in %s" % (seg.getSegmentHostName(), user_or_default_dir))
 
 def check_table_name_format_and_duplicate(table_list, restore_schemas=None):
     """
