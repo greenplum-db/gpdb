@@ -18,7 +18,6 @@
   <property name="javadoc.link.java" value="http://java.sun.com/javase/7/docs/api/"/>
   <property name="javadoc.link.hadoop" value="http://hadoop.apache.org/common/docs/r2.4.1/api/"/>
 
-  <!--Apache Ivy(http://ant.apache.org/ivy/history/latest-milestone/install.html) -->
   <loadproperties srcfile="${basedir}/ivy/libraries.properties" />
   <property name="build.ivy.lib.dir" value="${build.dir}/lib" />
   <property name="ivy.artifact.retrieve.pattern" value="[artifact]-[revision](-[classifier]).[ext]" />
@@ -38,10 +37,6 @@
   <property name="gpgnet.configuration" value="compile"/>
   <!-- Project Libraries -->
   
-  <path id="pig.classpath">
-    <fileset file="${lib.dir}/hadoop-${hadoop.version}/pig-*-core.jar" />
-  </path>
-
   <path id="library.commons.classpath">
     <fileset dir="${lib.dir}">
       <patternset refid="library.patterns" />
