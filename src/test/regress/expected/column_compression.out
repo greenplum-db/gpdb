@@ -448,7 +448,7 @@ ERROR:  unknown compresstype "yawn"
 alter table ccddl add column j int encoding(compresstype=zlib,
 compresslevel=100000);
 ERROR:  value 100000 out of bounds for option "compresslevel"
-DETAIL:  Valid values are between "0" and "9".
+DETAIL:  Valid values are between "0" and "19".
 alter table ccddl add column j int encoding(a=b);
 ERROR:  unrecognized parameter "a"
 drop table ccddl;
@@ -471,8 +471,7 @@ ERROR:  DEFAULT COLUMN ENCODING clause cannot override values set in WITH clause
 -- Invalid encoding clauses
 create table t1 (i int encoding (compresstype=zlib, compresslevel=19))
 with (appendonly=true, orientation=column);
-ERROR:  value 19 out of bounds for option "compresslevel"
-DETAIL:  Valid values are between "0" and "9".
+ERROR:  compresslevel=19 is out of range for zlib (should be in the range 1 to 9)
 create table t1 (i int encoding (compresstype=zlib, ahhhh=boooooo))
 with (appendonly=true, orientation=column);
 ERROR:  unrecognized parameter "ahhhh"
@@ -1843,7 +1842,7 @@ alter type text set default encoding (compresstype=10);
 ERROR:  unknown compresstype "10"
 alter type text set default encoding (compresstype=zlib, compresslevel=100);
 ERROR:  value 100 out of bounds for option "compresslevel"
-DETAIL:  Valid values are between "0" and "9".
+DETAIL:  Valid values are between "0" and "19".
 -- dependency check on drop type
 drop type int42 cascade;
 NOTICE:  drop cascades to 2 other objects

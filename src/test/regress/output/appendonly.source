@@ -45,8 +45,7 @@ CREATE TABLE tenk_ao5 (like tenk_heap) with (appendonly=true, compresslevel=6, c
 CREATE TABLE tenk_ao6 (like tenk_heap) with (appendonly=false, compresslevel=6, checksum=true) distributed by(unique1);
 ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
 CREATE TABLE tenk_ao7 (like tenk_heap) with (appendonly=true, compresslevel=16, compresstype=zlib) distributed by(unique1);
-ERROR:  value 16 out of bounds for option "compresslevel"
-DETAIL:  Valid values are between "0" and "9".
+ERROR:  compresslevel=16 is out of range for zlib (should be in the range 1 to 9)
 CREATE TABLE tenk_ao8 (like tenk_heap) with (appendonly=true, blocksize=100) distributed by(unique1);
 ERROR:  value 100 out of bounds for option "blocksize"
 DETAIL:  Valid values are between "8192" and "2097152".
