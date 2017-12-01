@@ -30,7 +30,7 @@
 #include "utils/faultinjector.h"
 
 
-#ifdef HAVE_ZSTD
+#ifdef HAVE_LIBZSTD
 /* Zstandard library is provided */
 
 #include <zstd.h>

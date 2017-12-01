@@ -1592,14 +1592,8 @@ if test "$with_libbz2" = yes ; then
 fi
 
 # Check for zstd.h
-# Note that this check for zstd is the last one;
-# if it passes, define a constant to make the compiler actually use zstd library
-# (see src/backend/catalog/zstd_compression.c for details)
 if test "$with_zstd" = yes; then
-  AC_CHECK_HEADER(zstd.h,
-                  [AC_DEFINE([HAVE_ZSTD], [1],
-                             [Define to 1 if the Zstandard library must be used])],
-                  [AC_MSG_ERROR([header file <zstd.h> not found])])
+  AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
 fi
 
 if test "$with_gssapi" = yes ; then
