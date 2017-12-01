@@ -144,38 +144,40 @@ zstd_validator(PG_FUNCTION_ARGS)
 #else							/* HAVE_LIBZSTD */
 /* Zstandard library is not provided; use dummy functions instead */
 
+#define NO_ZSTD_SUPPORT() \
+	ereport(ERROR, \
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED), \
+			 errmsg("Zstandard library is not supported by this build"), \
+			 errhint("Compile with --with-zstd to use Zstandard compression.")))
+
 Datum
 zstd_constructor(PG_FUNCTION_ARGS)
 {
-	elog(ERROR, "Zstandard library is not available in the current build");
-	PG_RETURN_VOID();
+	NO_ZSTD_SUPPORT();
 }
 
 Datum
 zstd_destructor(PG_FUNCTION_ARGS)
 {
-	PG_RETURN_VOID();
+	NO_ZSTD_SUPPORT();
 }
 
 Datum
 zstd_compress(PG_FUNCTION_ARGS)
 {
-	elog(ERROR, "Zstandard library is not available in the current build");
-	PG_RETURN_VOID();
+	NO_ZSTD_SUPPORT();
 }
 
 Datum
 zstd_decompress(PG_FUNCTION_ARGS)
 {
-	elog(ERROR, "Zstandard library is not available in the current build");
-	PG_RETURN_VOID();
+	NO_ZSTD_SUPPORT();
 }
 
 Datum
 zstd_validator(PG_FUNCTION_ARGS)
 {
-	elog(ERROR, "Zstandard library is not available in the current build");
-	PG_RETURN_VOID();
+	NO_ZSTD_SUPPORT();
 }
 
 #endif							/* HAVE_LIBZSTD */
