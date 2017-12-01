@@ -27,7 +27,7 @@
 /* Compression is turned off by default. */
 #define AO_DEFAULT_COMPRESSLEVEL  0
 #define AO_MIN_COMPRESSLEVEL  0
-#define AO_MAX_COMPRESSLEVEL  9
+#define AO_MAX_COMPRESSLEVEL  19
 /*
  * If compression is turned on without specifying compresstype, this
  * is the default.
