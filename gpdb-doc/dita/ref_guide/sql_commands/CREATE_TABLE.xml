@@ -48,7 +48,7 @@
             [ key_match_type ]
             [ key_action ]</codeblock>
       <p>where <varname>storage_directive</varname> for a column is:</p>
-      <codeblock>   COMPRESSTYPE={ZLIB | QUICKLZ | RLE_TYPE | NONE}
+      <codeblock>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
     [COMPRESSLEVEL={0-9} ]
     [BLOCKSIZE={8192-2097152} ]</codeblock>
       <p>where <varname>storage_parameter</varname> for the table is:</p>
@@ -56,7 +56,7 @@
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    CHECKSUM={TRUE|FALSE}
-   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    COMPRESSLEVEL={0-9}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
@@ -126,7 +126,7 @@
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    CHECKSUM={TRUE|FALSE}
-   COMPRESSTYPE={ZLIB|QUICKLZ|RLE_TYPE|NONE}
+   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
    COMPRESSLEVEL={1-9}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
@@ -384,11 +384,12 @@
             checksum, the transaction is aborted. If you set the value to <codeph>FALSE</codeph> to
             disable checksum validation, checking the table data for on-disk corruption will not be
             performed.</pd>
-          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default),
+          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
               <codeph>RLE-TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
-            of compression used. The value <codeph>NONE</codeph>disables compression. QuickLZ uses
-            less CPU power and compresses data faster at a lower compression ratio than zlib.
-            Conversely, zlib provides more compact compression ratios at lower speeds. This option
+              of compression used. The value <codeph>NONE</codeph>disables compression. Zstd provides
+	      for both speed or a good compression ratio, tunable with the compression level option.
+	      QuickLZ and zlib are provided for backwards-compatibility, they are less flexible and
+	      zstd outperforms them on usual workloads. This option
             is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
               <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
                 release of Pivotal Greenplum Database.</note>
@@ -405,8 +406,9 @@
               in sorted order or the compression is applied to column data that is in sorted
               order.</p><p>For information about using table compression, see "Choosing the Table
               Storage Model" in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
-          <pd><b>COMPRESSLEVEL</b> — For zlib compression of append-optimized tables, set to an
-            integer value between 1 (fastest compression) to 9 (highest compression ratio). QuickLZ
+              <pd><b>COMPRESSLEVEL</b> — For Zstd compression of append-optimized tables, set to an
+	      integer values between 1 (fastest compression) to 19 (highest compression ratio).
+	      For zlib compression, the valid range is between 1 and 9. QuickLZ
             compression level can only be set to 1. If not declared, the default is 1. For
               <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value between 1
             (fastest compression) to 4 (highest compression ratio). </pd>

@@ -173,13 +173,13 @@
             <row>
               <entry colname="col1">Row</entry>
               <entry colname="col2">Table</entry>
-              <entry colname="col3"><codeph>ZLIB</codeph> and
+              <entry colname="col3"><codeph>ZLIB</codeph>, <codeph>ZSTD</codeph>, and
                 <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
             <row>
               <entry colname="col1">Column</entry>
               <entry colname="col2">Column and Table</entry>
-              <entry colname="col3"><codeph>RLE_TYPE</codeph>, <codeph>ZLIB</codeph>, and
+              <entry colname="col3"><codeph>RLE_TYPE</codeph>, <codeph>ZLIB</codeph>, <codeph>ZSTD</codeph>, and
                   <codeph>QUICKLZ</codeph><sup>1</sup></entry>
             </row>
           </tbody>
@@ -204,7 +204,8 @@
               (<codeph>compresslevel=1</codeph>), QuickLZ and zlib have comparable compression
             ratios, though at different speeds. Using zlib with <codeph>compresslevel=6</codeph> can
             significantly increase the compression ratio compared to QuickLZ, though with lower
-            compression speed.</p></li>
+            compression speed. ZStandard compression can provide for either good compression ratio or
+	    speed, depending on compression level, or a good compromise on both.  </p></li>
         <li id="im201783">Speed of decompression/scan rate. Performance with compressed
           append-optimized tables depends on hardware, query tuning settings, and other factors.
           Perform comparison testing to determine the actual performance in your
@@ -216,7 +217,8 @@
       <p>Performance with compressed append-optimized tables depends on hardware, query tuning
         settings, and other factors. You should perform comparison testing to determine
         the actual performance in your environment.</p>
-      <note type="note">QuickLZ compression level can only be set to level 1; no other options are
+	<note type="note">Zstd compression level can be set between 1 and 19.
+	QuickLZ compression level can only be set to level 1; no other options are
         available. Compression level with zlib can be set at values from 1 - 9. Compression level
         with RLE can be set at values from 1 - 4.<p>An <codeph>ENCODING</codeph> clause specifies
           compression type and level for individual columns. When an <codeph>ENCODING</codeph>
@@ -355,7 +357,8 @@
                 <codeph>COMPRESSTYPE</codeph>
               </entry>
               <entry colname="col2">Type of compression.</entry>
-              <entry colname="col3"><codeph>zlib: </codeph>deflate
+              <entry colname="col3"><codeph>zstd: </codeph>ZStandard
+                    algorithm<p><codeph>zlib: </codeph>deflate
                     algorithm<p><codeph>quicklz</codeph>: fast
                     compression</p><p><codeph>RLE_TYPE</codeph>: run-length encoding
                     </p><p><codeph>none</codeph>: no compression</p></entry>
@@ -367,9 +370,9 @@
               </entry>
               <entry colname="col2" morerows="2">Compression level.</entry>
               <entry colname="col3"><codeph>zlib</codeph> compression:
-                  <codeph>1</codeph>-<codeph>9</codeph></entry>
+                  <codeph>1</codeph>-<codeph>19</codeph></entry>
               <entry colname="col4"><codeph>1</codeph> is the fastest method with the least
-                compression. <codeph>1</codeph> is the default.<p><codeph>9</codeph> is the slowest
+                compression. <codeph>1</codeph> is the default.<p><codeph>19</codeph> is the slowest
                   method with the most compression.</p></entry>
             </row>
             <row>
