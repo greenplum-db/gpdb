@@ -20,30 +20,29 @@
 
 #include <zstd.h>
 
-// Internal state for zstd
+/* Internal state for zstd */
 typedef struct zstd_state
 {
-	int level;							// Compression level
+	int			level;			/* Compression level */
 
-	bool compress;						// Compress if true, decompress otherwise
+	bool		compress;		/* Compress if true, decompress otherwise */
 
-	ZSTD_CCtx* zstd_compress_context;	// ZSTD compression context
+	ZSTD_CCtx  *zstd_compress_context;	/* ZSTD compression context */
 
-	ZSTD_DCtx* zstd_decompress_context;	// ZSTD decompression context
+	ZSTD_DCtx  *zstd_decompress_context;	/* ZSTD decompression context */
 
-	size_t (*compress_fn) (ZSTD_CCtx *cctx,
-						   void *dst,
-						   size_t dstCapacity,
-						   const void* src,
-						   size_t srcSize,
-						   int level);
+	size_t		(*compress_fn) (ZSTD_CCtx * cctx,
+								void *dst,
+								size_t dstCapacity,
+								const void *src,
+								size_t srcSize,
+								int level);
 
-	size_t (*decompress_fn) (ZSTD_DCtx *dctx,
-							 void* dst,
-							 size_t dstCapacity,
-							 const void* src,
-							 size_t srcSize);
-
+	size_t		(*decompress_fn) (ZSTD_DCtx * dctx,
+								  void *dst,
+								  size_t dstCapacity,
+								  const void *src,
+								  size_t srcSize);
 } zstd_state;
 
 Datum
@@ -54,7 +53,7 @@ zstd_constructor(PG_FUNCTION_ARGS)
 	StorageAttributes *sa = (StorageAttributes *) PG_GETARG_POINTER(1);
 	CompressionState *cs = palloc0(sizeof(CompressionState));
 	zstd_state *state = palloc0(sizeof(zstd_state));
-	bool compress = PG_GETARG_BOOL(2);
+	bool		compress = PG_GETARG_BOOL(2);
 
 	cs->opaque = (void *) state;
 	cs->desired_sz = NULL;
@@ -81,7 +80,7 @@ zstd_destructor(PG_FUNCTION_ARGS)
 	zstd_state *state = (zstd_state *) cs->opaque;
 
 	if (cs != NULL && cs->opaque != NULL)
- 	{
+	{
 		ZSTD_freeCCtx(state->zstd_compress_context);
 		ZSTD_freeDCtx(state->zstd_decompress_context);
 		pfree(cs->opaque);
@@ -93,27 +92,28 @@ zstd_destructor(PG_FUNCTION_ARGS)
 Datum
 zstd_compress(PG_FUNCTION_ARGS)
 {
-    // FIXME: Change types to ZSTD::size_t
+	/* FIXME: Change types to ZSTD::size_t */
 	const void *src = PG_GETARG_POINTER(0);
-	int32 src_sz = PG_GETARG_INT32(1);
-	void *dst = PG_GETARG_POINTER(2);
-	int32 dst_sz = PG_GETARG_INT32(3);
-	int32 *dst_used = (int32 *) PG_GETARG_POINTER(4);
+	int32		src_sz = PG_GETARG_INT32(1);
+	void	   *dst = PG_GETARG_POINTER(2);
+	int32		dst_sz = PG_GETARG_INT32(3);
+	int32	   *dst_used = (int32 *) PG_GETARG_POINTER(4);
 	CompressionState *cs = (CompressionState *) PG_GETARG_POINTER(5);
 	zstd_state *state = (zstd_state *) cs->opaque;
 
 	unsigned long dst_length_used;
 
 	dst_length_used = state->compress_fn(state->zstd_compress_context,
-										 dst, dst_sz, 
-                                         src, src_sz,
-                                         state->level);
+										 dst, dst_sz,
+										 src, src_sz,
+										 state->level);
 
-	if (ZSTD_isError(dst_length_used)) {
-        elog(ERROR, "%s", ZSTD_getErrorName(dst_length_used));
-    }
+	if (ZSTD_isError(dst_length_used))
+	{
+		elog(ERROR, "%s", ZSTD_getErrorName(dst_length_used));
+	}
 
-    *dst_used = (int32) dst_length_used;
+	*dst_used = (int32) dst_length_used;
 
 	PG_RETURN_VOID();
 }
@@ -121,12 +121,12 @@ zstd_compress(PG_FUNCTION_ARGS)
 Datum
 zstd_decompress(PG_FUNCTION_ARGS)
 {
-    // FIXME: Change types to ZSTD::size_t
+	/* FIXME: Change types to ZSTD::size_t */
 	const void *src = PG_GETARG_POINTER(0);
-	int32 src_sz = PG_GETARG_INT32(1);
-	void *dst = PG_GETARG_POINTER(2);
-	int32 dst_sz = PG_GETARG_INT32(3);
-	int32 *dst_used = (int32 *) PG_GETARG_POINTER(4);
+	int32		src_sz = PG_GETARG_INT32(1);
+	void	   *dst = PG_GETARG_POINTER(2);
+	int32		dst_sz = PG_GETARG_INT32(3);
+	int32	   *dst_used = (int32 *) PG_GETARG_POINTER(4);
 	CompressionState *cs = (CompressionState *) PG_GETARG_POINTER(5);
 	zstd_state *state = (zstd_state *) cs->opaque;
 
@@ -136,14 +136,15 @@ zstd_decompress(PG_FUNCTION_ARGS)
 
 	dst_length_used = state->decompress_fn(state->zstd_decompress_context,
 										   dst, dst_sz,
-									       src, src_sz);
+										   src, src_sz);
 
-	
-    if (ZSTD_isError(dst_length_used)) {
-        elog(ERROR, "%s", ZSTD_getErrorName(dst_length_used));
-    }
 
-    *dst_used = (int32) dst_length_used;
+	if (ZSTD_isError(dst_length_used))
+	{
+		elog(ERROR, "%s", ZSTD_getErrorName(dst_length_used));
+	}
+
+	*dst_used = (int32) dst_length_used;
 
 	PG_RETURN_VOID();
 }
@@ -174,14 +175,14 @@ zstd_destructor(PG_FUNCTION_ARGS)
 Datum
 zstd_compress(PG_FUNCTION_ARGS)
 {
-    elog(ERROR, "Zstandard library is not available in the current build");
+	elog(ERROR, "Zstandard library is not available in the current build");
 	PG_RETURN_VOID();
 }
 
 Datum
 zstd_decompress(PG_FUNCTION_ARGS)
 {
-    elog(ERROR, "Zstandard library is not available in the current build");
+	elog(ERROR, "Zstandard library is not available in the current build");
 	PG_RETURN_VOID();
 }
 
