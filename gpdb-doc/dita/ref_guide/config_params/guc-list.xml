@@ -7692,13 +7692,15 @@
       <p>The value is an optimization hint to limit the number of join associativity and join
         commutativity transformations explored during query optimization. The limit controls the
         alternative plans that GPORCA considers during query optimization. For example, the default
-        value of 7 is a optimization hint for GPORCA to stop exploring join associativity and join
+        value of 7 is an optimization hint for GPORCA to stop exploring join associativity and join
         commutativity transformations when an n-ary join operator has more than 7 children during
         optimization.</p>
       <p>For a query with a large number of joins, specifying a lower value improves query
         performance by limiting the number of alternate query plans that GPORCA evaluates. However,
         setting the value too low might cause GPORCA to generate a query plan that performs
         sub-optimally.</p>
+      <p>This parameter has no effect when the <codeph>optimizer_join_order</codeph> parameter is 
+        set to <codeph>query</codeph> or <codeph>greedy</codeph>.</p>
       <p>This parameter can be set for a database system or a session.</p>
       <table id="table_lfq_3zg_nbb">
         <tgroup cols="3">
@@ -7739,8 +7741,11 @@
         <codeph>query</codeph> or <codeph>greedy</codeph> can generate a suboptimal 
         query plan. However, if the administrator is confident that a satisfactory plan 
         is generated with the <codeph>query</codeph> or <codeph>greedy</codeph> setting, 
-        query performance can be improved by setting the parameter to the lower 
-        optimization level.<p>
+        query optimization time can be improved by setting the parameter to the lower 
+        optimization level.</p>
+      <p>Setting this parameter to <codeph>query</codeph> or <codeph>greedy</codeph> 
+        overrides the <codeph>optimizer_join_order_threshold </codeph> and 
+        <codeph>optimizer_join_arity_for_associativity_commutativity</codeph> parameters. </p>
       <p>This parameter can be set for an individual database, a session, or a query. </p>
       <table id="table_ucb_str_1cb">
         <tgroup cols="3">
@@ -7771,7 +7776,9 @@
       <p>When GPORCA is enabled (the default), this parameter sets the maximum number of join
         children for which GPORCA will use the dynamic programming-based join ordering algorithm.
         You can set this value for a single query or for an entire session.</p>
-      <table id="table_z1c_bqp_jx">
+      <p>This parameter has no effect when the <codeph>optimizer_join_query</codeph> parameter is 
+        set to <codeph>query</codeph> or <codeph>greedy</codeph>.</p>
+       <table id="table_z1c_bqp_jx">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
           <colspec colnum="2" colname="col2" colwidth="1*"/>
