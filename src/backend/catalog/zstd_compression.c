@@ -31,18 +31,6 @@ typedef struct zstd_state
 
 	ZSTD_DCtx  *zstd_decompress_context;	/* ZSTD decompression context */
 
-	size_t		(*compress_fn) (ZSTD_CCtx * cctx,
-								void *dst,
-								size_t dstCapacity,
-								const void *src,
-								size_t srcSize,
-								int level);
-
-	size_t		(*decompress_fn) (ZSTD_DCtx * dctx,
-								  void *dst,
-								  size_t dstCapacity,
-								  const void *src,
-								  size_t srcSize);
 } zstd_state;
 
 Datum
@@ -65,8 +53,6 @@ zstd_constructor(PG_FUNCTION_ARGS)
 
 	state->level = sa->complevel;
 	state->compress = compress;
-	state->compress_fn = ZSTD_compressCCtx;
-	state->decompress_fn = ZSTD_decompressDCtx;
 	state->zstd_compress_context = ZSTD_createCCtx();
 	state->zstd_decompress_context = ZSTD_createDCtx();
 
@@ -103,10 +89,10 @@ zstd_compress(PG_FUNCTION_ARGS)
 
 	unsigned long dst_length_used;
 
-	dst_length_used = state->compress_fn(state->zstd_compress_context,
-										 dst, dst_sz,
-										 src, src_sz,
-										 state->level);
+	dst_length_used = ZSTD_compressCCtx(state->zstd_compress_context,
+										dst, dst_sz,
+										src, src_sz,
+										state->level);
 
 	if (ZSTD_isError(dst_length_used))
 	{
@@ -134,9 +120,9 @@ zstd_decompress(PG_FUNCTION_ARGS)
 
 	Insist(src_sz > 0 && dst_sz > 0);
 
-	dst_length_used = state->decompress_fn(state->zstd_decompress_context,
-										   dst, dst_sz,
-										   src, src_sz);
+	dst_length_used = ZSTD_decompressDCtx(state->zstd_decompress_context,
+										  dst, dst_sz,
+										  src, src_sz);
 
 
 	if (ZSTD_isError(dst_length_used))
@@ -156,7 +142,7 @@ zstd_validator(PG_FUNCTION_ARGS)
 }
 
 
-#else
+#else							/* HAVE_LIBZSTD */
 /* Zstandard library is not provided; use dummy functions instead */
 
 Datum
@@ -193,4 +179,4 @@ zstd_validator(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();
 }
 
-#endif
+#endif							/* HAVE_LIBZSTD */
