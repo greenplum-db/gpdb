@@ -24,13 +24,9 @@
 typedef struct zstd_state
 {
 	int			level;			/* Compression level */
-
 	bool		compress;		/* Compress if true, decompress otherwise */
-
 	ZSTD_CCtx  *zstd_compress_context;	/* ZSTD compression context */
-
 	ZSTD_DCtx  *zstd_decompress_context;	/* ZSTD decompression context */
-
 } zstd_state;
 
 Datum
@@ -43,10 +39,11 @@ zstd_constructor(PG_FUNCTION_ARGS)
 	zstd_state *state = palloc0(sizeof(zstd_state));
 	bool		compress = PG_GETARG_BOOL(2);
 
+	if (!PointerIsValid(sa->comptype))
+		elog(ERROR, "zstd_constructor called with no compression type");
+
 	cs->opaque = (void *) state;
 	cs->desired_sz = NULL;
-
-	Insist(PointerIsValid(sa->comptype));
 
 	if (sa->complevel == 0)
 		sa->complevel = 1;
@@ -118,12 +115,14 @@ zstd_decompress(PG_FUNCTION_ARGS)
 
 	unsigned long dst_length_used;
 
-	Insist(src_sz > 0 && dst_sz > 0);
+	if (src_sz <= 0)
+		elog(ERROR, "invalid source buffer size %d", src_sz);
+	if (dst_sz <= 0)
+		elog(ERROR, "invalid destination buffer size %d", dst_sz);
 
 	dst_length_used = ZSTD_decompressDCtx(state->zstd_decompress_context,
 										  dst, dst_sz,
 										  src, src_sz);
-
 
 	if (ZSTD_isError(dst_length_used))
 	{
