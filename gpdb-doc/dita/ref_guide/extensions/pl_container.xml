@@ -792,8 +792,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
               <codeph>--storage-opt</codeph> option flag <codeph>dm.basesize</codeph> controls the
             base device size. The default base device size for devicemapper is 10GB. The Docker
             command <codeph>docker info</codeph> displays Docker system information including the
-            storage driver and base device size. For information about Docker storage drivers, see
-            the Docker information <xref
+            storage driver. The base device size is displayed in Docker 1.12 and later. For
+            information about Docker storage drivers, see the Docker information <xref
               href="https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-storage-driver"
               format="html" scope="external">Daemon storage-driver</xref>. <p>When setting the
               Docker base device size, the size must be set on all Greenplum Database
