@@ -1,0 +1,48 @@
+-- Tests for zstd compression.
+CREATE TABLE zstdtest (id int4, t text) WITH (appendonly=true, compresstype=zstd, orientation=column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO zstdtest SELECT g, 'foo' || g FROM generate_series(1, 100000) g;
+ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+INSERT INTO zstdtest SELECT g, 'bar' || g FROM generate_series(1, 100000) g;
+ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+-- Check contents, at the beginning of the table and at the end.
+SELECT * FROM zstdtest ORDER BY id LIMIT 5;
+ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+SELECT * FROM zstdtest ORDER BY id DESC LIMIT 5;
+ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+-- Test different compression levels:
+CREATE TABLE zstdtest_1 (id int4, t text) WITH (appendonly=true, compresstype=zstd, compresslevel=1);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE zstdtest_10 (id int4, t text) WITH (appendonly=true, compresstype=zstd, compresslevel=10);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE zstdtest_19 (id int4, t text) WITH (appendonly=true, compresstype=zstd, compresslevel=19);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO zstdtest_1 SELECT g, 'foo' || g FROM generate_series(1, 10000) g;
+ERROR:  Zstandard library is not supported by this build  (seg0 127.0.0.1:40000 pid=19720)
+INSERT INTO zstdtest_1 SELECT g, 'bar' || g FROM generate_series(1, 10000) g;
+ERROR:  Zstandard library is not supported by this build  (seg0 127.0.0.1:40000 pid=19720)
+SELECT * FROM zstdtest_1 ORDER BY id LIMIT 5;
+ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+SELECT * FROM zstdtest_1 ORDER BY id DESC LIMIT 5;
+ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+INSERT INTO zstdtest_19 SELECT g, 'foo' || g FROM generate_series(1, 10000) g;
+ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+INSERT INTO zstdtest_19 SELECT g, 'bar' || g FROM generate_series(1, 10000) g;
+ERROR:  Zstandard library is not supported by this build  (seg1 127.0.0.1:40001 pid=19721)
+SELECT * FROM zstdtest_19 ORDER BY id LIMIT 5;
+ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+SELECT * FROM zstdtest_19 ORDER BY id DESC LIMIT 5;
+ERROR:  Zstandard library is not supported by this build  (seg0 slice1 127.0.0.1:40000 pid=19720)
+-- Test the bounds of compresslevel. None of these are allowed.
+CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=-1);
+ERROR:  value -1 out of bounds for option "compresslevel"
+DETAIL:  Valid values are between "0" and "19".
+CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=0);
+ERROR:  compresstype can't be used with compresslevel 0
+CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=20);
+ERROR:  value 20 out of bounds for option "compresslevel"
+DETAIL:  Valid values are between "0" and "19".
