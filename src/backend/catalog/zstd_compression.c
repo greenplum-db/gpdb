@@ -9,26 +9,11 @@
  */
 
 #include "postgres.h"
-#include "fmgr.h"
 
 #include "access/genam.h"
-#include "access/reloptions.h"
-#include "access/tupdesc.h"
-#include "access/tupmacs.h"
-#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_compression.h"
-#include "catalog/dependency.h"
-#include "storage/gp_compress.h"
+#include "fmgr.h"
 #include "utils/builtins.h"
-#include "utils/fmgroids.h"
-#include "utils/formatting.h"
-#include "utils/guc.h"
-#include "utils/lsyscache.h"
-#include "utils/rel.h"
-#include "utils/relcache.h"
-#include "utils/syscache.h"
-#include "utils/faultinjector.h"
-
 
 #ifdef HAVE_LIBZSTD
 /* Zstandard library is provided */
