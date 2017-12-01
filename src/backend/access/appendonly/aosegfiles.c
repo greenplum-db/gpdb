@@ -227,7 +227,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	if (fsinfo->eof < 0)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Invalid eof " INT64_FORMAT " for relation %s",
 						fsinfo->eof, RelationGetRelationName(parentrel))));
 
@@ -1192,7 +1192,7 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to obtain AO relation information from segment databases."),
 							errdetail("SPI_connect failed in gp_update_ao_master_stats")));
 		}
@@ -1656,7 +1656,7 @@ get_ao_distribution_oid(PG_FUNCTION_ARGS)
 
 			if (SPI_OK_CONNECT != SPI_connect())
 			{
-				ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("Unable to obtain AO relation information from segment databases."),
 								errdetail("SPI_connect failed in get_ao_distribution")));
 			}
@@ -1836,7 +1836,7 @@ get_ao_distribution_name(PG_FUNCTION_ARGS)
 
 			if (SPI_OK_CONNECT != SPI_connect())
 			{
-				ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("Unable to obtain AO relation information from segment databases."),
 								errdetail("SPI_connect failed in get_ao_distribution")));
 			}
@@ -2018,7 +2018,7 @@ aorow_compression_ratio_internal(Relation parentrel)
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to obtain AO relation information from segment databases."),
 							errdetail("SPI_connect failed in get_ao_compression_ratio")));
 		}

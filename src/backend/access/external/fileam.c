@@ -2367,7 +2367,7 @@ parseFormatString(CopyState pstate, char *fmtstr, bool iscustom)
 		}
 
 		if (!formatter_found)
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("external table internal parse error: "
 								   "no formatter function name found")));
 
@@ -2384,11 +2384,11 @@ parseFormatString(CopyState pstate, char *fmtstr, bool iscustom)
 
 error:
 	if (token)
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 					  errmsg("external table internal parse error at \"%s\"",
 							 token)));
 	else
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 					  errmsg("external table internal parse error at end of "
 							 "line")));
 

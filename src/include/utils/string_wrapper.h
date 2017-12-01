@@ -49,7 +49,7 @@ int gp_strcoll(const char *left, const char *right)
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to compare strings.  "
 							       "Error: %s.  "
 							       "First string has length %lu and value (limited to 100 characters): '%.100s'.  "
@@ -90,7 +90,7 @@ size_t gp_strxfrm(char *dst, const char *src, size_t n)
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to process string for comparison or sorting.  Error: %s.  "
 							        "String has length %lu and value (limited to 100 characters): '%.100s'",
 									strerror(errno),

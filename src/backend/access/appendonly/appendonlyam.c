@@ -774,7 +774,7 @@ AppendOnlyExecutorReadBlock_GetContents(AppendOnlyExecutorReadBlock *executorRea
 			varBlockCheckError = VarBlockIsValid(executorReadBlock->dataBuffer, executorReadBlock->dataLen);
 			if (varBlockCheckError != VarBlockCheckOk)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("VarBlock  is not valid. "
 								"Valid block check error %d, detail '%s'",
 								varBlockCheckError,
@@ -796,7 +796,7 @@ AppendOnlyExecutorReadBlock_GetContents(AppendOnlyExecutorReadBlock *executorRea
 			if (executorReadBlock->rowCount != executorReadBlock->readerItemCount)
 			{
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Row count %d in append-only storage header does not match VarBlock item count %d",
 								executorReadBlock->rowCount,
 								executorReadBlock->readerItemCount),
@@ -815,7 +815,7 @@ AppendOnlyExecutorReadBlock_GetContents(AppendOnlyExecutorReadBlock *executorRea
 			if (executorReadBlock->rowCount != 1)
 			{
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Row count %d in append-only storage header is not 1 for single row",
 								executorReadBlock->rowCount),
 						 errdetail_appendonly_read_storage_content_header(executorReadBlock->storageRead),
@@ -1587,7 +1587,7 @@ finishWriteBlock(AppendOnlyInsertDesc aoInsertDesc)
 				varBlockCheckError = VarBlockIsValid(aoInsertDesc->uncompressedBuffer, dataLen);
 				if (varBlockCheckError != VarBlockCheckOk)
 					ereport(ERROR,
-							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							(errcode(ERRCODE_INTERNAL_ERROR),
 							 errmsg("Verify block during write found VarBlock is not valid. "
 									"Valid block check error %d, detail '%s'",
 									varBlockCheckError,

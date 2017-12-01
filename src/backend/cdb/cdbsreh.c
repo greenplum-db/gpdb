@@ -848,7 +848,7 @@ ErrorLogDelete(Oid databaseId, Oid relationId)
 				if (len >= (MAXPGPATH - 1))
 				{
 					ereport(WARNING,
-							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							(errcode(ERRCODE_INTERNAL_ERROR),
 							 (errmsg("log filename truncation on \"%s\", unable to delete error log",
 									 de->d_name))));
 					continue;

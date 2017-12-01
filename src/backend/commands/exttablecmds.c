@@ -120,7 +120,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 
 		default:
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("Internal error: unknown external table type")));
 	}
 
@@ -703,7 +703,7 @@ transformExecOnClause(List *on_clause)
 			else
 			{
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Unknown location code for EXECUTE in tablecmds.")));
 			}
 		}

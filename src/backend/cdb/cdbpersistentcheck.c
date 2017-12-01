@@ -966,7 +966,7 @@ Persistent_Pre_ExecuteQuery()
 
 	if (SPI_OK_CONNECT != SPI_connect())
 	{
-		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("SPI Unsuccessfull : "),
 						errdetail("SPI_connect failed in Persistent_Pre_ExecuteQuery")));
 	}

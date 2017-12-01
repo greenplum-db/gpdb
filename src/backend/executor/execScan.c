@@ -528,7 +528,7 @@ MarkRestrNotAllowed(ScanState *scanState)
 	}
 
 	ereport(ERROR,
-			(errcode(ERRCODE_GP_INTERNAL_ERROR),
+			(errcode(ERRCODE_INTERNAL_ERROR),
 			 errmsg("Mark/Restore is not allowed in %s", scan)));
 	
 }

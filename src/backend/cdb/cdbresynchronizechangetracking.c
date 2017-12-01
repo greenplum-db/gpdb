@@ -1424,7 +1424,7 @@ ChangeTracking_GetIncrementalChangeList(void)
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to obtain change tracking information from segment database."),
 							errdetail("SPI_connect failed in ChangeTracking_GetIncrementalChangeList()")));
 		}
@@ -1719,7 +1719,7 @@ ChangeTracking_GetChanges(ChangeTrackingRequest *request)
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to obtain change tracking information from segment database."),
 							errdetail("SPI_connect failed in ChangeTracking_GetChanges()")));
 		}
@@ -3232,7 +3232,7 @@ ChangeTracking_CompactLogFile(CTFType source, CTFType dest, XLogRecPtr *uptolsn)
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to obtain change tracking information from segment database."),
 							errdetail("SPI_connect failed in ChangeTracking_CreateCompactLogFromFull()")));
 		}

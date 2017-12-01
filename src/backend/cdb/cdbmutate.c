@@ -448,7 +448,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 													 targetPolicy->attrs,
 													 true);
 				if (!repartitionPlan(plan, false, false, hashExpr))
-					ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 									errmsg("Cannot parallelize that SELECT INTO yet")
 									));
 
@@ -698,7 +698,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 																	 true);
 
 							if (!repartitionPlan(plan, false, false, hashExpr))
-								ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+								ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 												errmsg("Cannot parallelize that INSERT yet")));
 							break;
 						}
@@ -715,7 +715,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 						 * will override that to bring it to the QD instead.
 						 */
 						if (!focusPlan(plan, false, false))
-							ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+							ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 											errmsg("Cannot parallelize that INSERT yet")));
 						break;
 
@@ -738,7 +738,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					if (query->commandType == CMD_UPDATE &&
 						doesUpdateAffectPartitionCols(root, plan, query))
 					{
-						ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 										errmsg("Cannot parallelize an UPDATE statement that updates the distribution columns")));
 					}
 
@@ -1146,7 +1146,7 @@ add_slice_to_motion(Motion *motion,
 			/* Get oid of the equality operator for this data type. */
 			eqopoid = compatible_oper_opid(eq, typeoid, typeoid, true);
 			if (eqopoid == InvalidOid)
-				ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("no equality operator for typid %d",
 									   typeoid)));
 

@@ -397,7 +397,7 @@ cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
 		segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
 		if (segdbDesc->motionListener == 0)
 		{
-			segdbDesc->errcode = ERRCODE_GP_INTERNAL_ERROR;
+			segdbDesc->errcode = ERRCODE_INTERNAL_ERROR;
 			appendPQExpBuffer(&segdbDesc->error_message,
 							  "Internal error: No motion listener port");
 

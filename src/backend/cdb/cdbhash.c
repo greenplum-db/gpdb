@@ -595,7 +595,7 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 		default:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 					 errmsg("Type %u is not hashable.", type)));
 
 	}							/* switch(type) */

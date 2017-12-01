@@ -324,7 +324,7 @@ static void checkGroupExtensionQuery(CanonicalGroupingSets *cgs, List *targetLis
 					 */
 					if (subexpression_match(expr1, expr2) || subexpression_match(expr2, expr1))
 					{
-						ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 								errmsg("GROUPING SETS / ROLLUP / CUBE columns ambiguous.")
 						));
 					}

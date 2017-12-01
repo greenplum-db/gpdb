@@ -222,7 +222,7 @@ sendSequenceRequest(int     sockfd,
 		{
 			if (saved_err != EINTR && saved_err != EWOULDBLOCK)
 			{
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("Error: Could not write()  message to seqserver: %s",
 									   strerror(errno)),
 								errdetail("error during write() call (error:%d) to seqserver on sockfd: %d ",
@@ -250,7 +250,7 @@ sendSequenceRequest(int     sockfd,
 					{
 						saved_err = errno;
 
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("Error: Could not write()  message to seqserver: %s",
 											   strerror(errno)),
 										errdetail("error during write() call (error:%d) to seqserver on sockfd: %d ",
@@ -313,7 +313,7 @@ sendSequenceRequest(int     sockfd,
 					{
 						saved_err = errno;
 
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 									    errmsg("Error: Could not read() message from seqserver"),
 										errdetail("error during read() call (error:%d) from remote"
 												  "sockfd = %d", errno, sockfd)));
@@ -1028,7 +1028,7 @@ listenerSetup(void)
 
 	if (rp == NULL)
 	{               /* No address succeeded */
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 			   errmsg("SeqServer Error: Could not setup listener socket: %m"),
 				  errdetail("error during bind() call (error:%d).", errno)));
 		
@@ -1036,7 +1036,7 @@ listenerSetup(void)
 
 	if (listen(listenerFd, LISTEN_BACKLOG) < 0)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("SeqServer Error: Could not setup listener socket: %s", strerror(errno)),
 				errdetail("error during listen() call (error:%d).", errno)));
 	}
@@ -1046,7 +1046,7 @@ listenerSetup(void)
 
 	if (getsockname(listenerFd, (struct sockaddr *) & addr, &addrlen) < 0)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("SeqServer Error: Could not setup listener socket: %s", strerror(errno)),
 		   errdetail("error during getsockname() call (error:%d).", errno)));
 	}

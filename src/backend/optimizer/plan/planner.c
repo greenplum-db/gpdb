@@ -1054,7 +1054,7 @@ inheritance_planner(PlannerInfo *root)
 			if (!locus_ok)
 			{
 				ereport(ERROR, (
-								errcode(ERRCODE_CDB_INTERNAL_ERROR),
+								errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("incompatible loci in target inheritance set")));
 			}
 		}
@@ -1156,7 +1156,7 @@ inheritance_planner(PlannerInfo *root)
 
 				default:
 					ereport(ERROR,
-							(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+							(errcode(ERRCODE_INTERNAL_ERROR),
 							 errmsg("unexpected locus assigned to target inheritance set")));
 			}
 		}
@@ -2463,7 +2463,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			; /* Already collocated. */
 		else
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("unexpected input locus to distinct")));
 		}
 

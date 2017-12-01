@@ -233,7 +233,7 @@ cdbparallelize(PlannerInfo *root,
 					: (query->commandType == CMD_UPDATE) ? "UPDATE"
 					: "DELETE";
 
-					ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_SUPPORTED),
+					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
 									errmsg("The RETURNING clause of the %s "
 										   "statement is not yet supported in "
 										   "this version of " PACKAGE_NAME ".",
@@ -485,7 +485,7 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		if (rte->funcexpr &&
 			ContainsParamWalker(rte->funcexpr, NULL /* ctx */ ) && ctx->subPlanDistributed)
 		{
-			ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+			ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 							errmsg("Cannot parallelize that query yet."),
 							errdetail("In a subquery FROM clause, a "
 									  "function invocation cannot contain "

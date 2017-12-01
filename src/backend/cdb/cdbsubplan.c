@@ -280,7 +280,7 @@ addRemoteExecParamsToParamList(PlannedStmt *stmt, ParamListInfo extPrm, ParamExe
 		 * "Subquery datatype information unavailable."
 		 */
 		ereport(ERROR,
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("no parameter found for initplan subquery")));
 	}
 

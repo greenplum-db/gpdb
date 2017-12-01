@@ -1106,7 +1106,7 @@ static PersistentFileSysObjVerifyExpectedResult PersistentFileSysObj_VerifyExpec
 		}
 
 		ereport(elevel,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Did not expect to find a 'Free' entry"),
 				 errcontext_persistent_relation_state_change(
 								 						fsObjName,
@@ -1130,7 +1130,7 @@ static PersistentFileSysObjVerifyExpectedResult PersistentFileSysObj_VerifyExpec
 		}
 
 		ereport(elevel,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Found different serial number " INT64_FORMAT " than expected (persistent file-system object found is '%s', state '%s')",
 				        actualSerialNum,
 						PersistentFileSysObjName_TypeAndObjectName(&actualFsObjName),
@@ -1156,7 +1156,7 @@ static PersistentFileSysObjVerifyExpectedResult PersistentFileSysObj_VerifyExpec
 		}
 
 		ereport(elevel,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Found persistent file-system object in unexpected state '%s'",
 						PersistentFileSysObjState_Name(actualState)),
 				 errcontext_persistent_relation_state_change(

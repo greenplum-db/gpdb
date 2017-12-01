@@ -2388,7 +2388,7 @@ CopyToDispatch(CopyState cstate)
 		cdbCopyEnd(cdbCopy);
 
 		ereport(LOG,
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("%s", cdbcopy_err.data)));
 		PG_RE_THROW();
 	}
@@ -3448,7 +3448,7 @@ CopyFromDispatch(CopyState cstate)
 		appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 
 		ereport(LOG,
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("%s", cdbcopy_err.data)));
 		PG_RE_THROW();
 	}
@@ -7686,7 +7686,7 @@ void CopyEolStrToType(CopyState cstate)
 	}
 	else /* error. must have been validated in CopyValidateControlChars() ! */
 		ereport(ERROR,
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("internal error in CopySetEolType. Trying to set NEWLINE %s", 
 						 cstate->eol_str)));
 }

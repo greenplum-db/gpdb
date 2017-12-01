@@ -185,7 +185,7 @@ ExecBitmapIndexReScan(BitmapIndexScanState *node, ExprContext *exprCtxt)
 		(!IsA(node->biss_result, TIDBitmap) && !IsA(node->biss_result, StreamBitmap)))
 	{
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("the returning bitmap in nodeBitmapIndexScan is invalid.")));
 	}
 

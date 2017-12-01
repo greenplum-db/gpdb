@@ -1682,7 +1682,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 						 max_participants_allowed, total_to_skip);
 
 					ereport(ERROR,
-							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							(errcode(ERRCODE_INTERNAL_ERROR),
 							 errmsg("Internal error in createplan for external tables"
 									" when trying to assign segments for gpfdist(s)")));
 				}
@@ -1867,7 +1867,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 		else
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("Internal error in createplan for external tables: "
 							"got invalid ON clause code %s", on_clause)));
 		}
@@ -1889,7 +1889,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	{
 		/* should never get here */
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Internal error in createplan for external tables")));
 	}
 

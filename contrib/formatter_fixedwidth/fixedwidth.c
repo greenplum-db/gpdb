@@ -438,7 +438,7 @@ get_tuple_info(TupleDesc tupdesc, int *r_ncolumns, format_t **r_myData, char **d
 	}
 	if (myData->ncols != ncolumns)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("formatter_export: unexpected change of output record type")));	
 	
 	/* break the input tuple into fields */

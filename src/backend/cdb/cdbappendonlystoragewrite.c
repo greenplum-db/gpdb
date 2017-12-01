@@ -485,7 +485,7 @@ AppendOnlyStorageWrite_DoPadOutRemainder(AppendOnlyStorageWrite *storageWrite,
 		if (buffer == NULL)
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("We do not expect files to be have a maximum length")));
 		}
 
@@ -1143,7 +1143,7 @@ AppendOnlyStorageWrite_VerifyWriteBlock(AppendOnlyStorageWrite *storageWrite,
 
 				if (cfns == NULL)
 					ereport(ERROR,
-							(errcode(ERRCODE_GP_INTERNAL_ERROR),
+							(errcode(ERRCODE_INTERNAL_ERROR),
 							 errmsg("decompression information missing")));
 
 				decompressor = cfns[COMPRESSION_DECOMPRESS];
@@ -1283,7 +1283,7 @@ AppendOnlyStorageWrite_CompressAppend(AppendOnlyStorageWrite *storageWrite,
 	header = BufferedAppendGetMaxBuffer(&storageWrite->bufferedAppend);
 	if (header == NULL)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("We do not expect files to be have a maximum length"),
 				 errcontext_appendonly_write_storage_block(storageWrite)));
 

@@ -945,7 +945,7 @@ cdb_grouping_planner(PlannerInfo *root,
 		result_plan = make_three_stage_agg_plan(root, &ctx);
 	else
 		ereport(ERROR,
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("no parallel plan for aggregation")));
 
 	if (!is_grpext && result_plan != NULL &&
@@ -1086,7 +1086,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 		case MPP_GRP_PREP_HASH_DISTINCT:
 		case MPP_GRP_PREP_BROADCAST:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("no parallel plan for aggregation")));
 			break;				/* Never */
 	}
@@ -1326,7 +1326,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		case MPP_GRP_PREP_HASH_GROUPS:
 		case MPP_GRP_PREP_BROADCAST:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("unexpected call for two-stage aggregation")));
 			break;				/* Never */
 	}
@@ -1516,7 +1516,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		case MPP_GRP_TYPE_GROUPED_DQA_2STAGE:
 		case MPP_GRP_TYPE_PLAIN_DQA_2STAGE:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("unexpected use of 2-stage aggregation")));
 			break;				/* Never */
 	}
@@ -2170,7 +2170,7 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		case MPP_GRP_TYPE_GROUPED_2STAGE:
 		case MPP_GRP_TYPE_PLAIN_2STAGE:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("unexpected use of DQA pruned 2-phase aggregation")));
 			break;				/* Never */
 	}
@@ -4654,7 +4654,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 			break;
 		default:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("unexpected call for two-stage aggregation")));
 			break;				/* Never */
 	}
@@ -4741,7 +4741,7 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 			break;
 		default:
 			ereport(ERROR,
-					(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("unexpected call for two-stage aggregation")));
 			break;				/* Never */
 	}

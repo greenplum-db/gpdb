@@ -1576,7 +1576,7 @@ acquire_sample_rows_by_query(Relation onerel, int nattrs, VacAttrStats **attrsta
 	oldcxt = CurrentMemoryContext;
 
 	if (SPI_OK_CONNECT != SPI_connect())
-		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("Unable to connect to execute internal query.")));
 
 	elog(elevel, "Executing SQL: %s", str.data);
@@ -1727,7 +1727,7 @@ analyzeEstimateReltuplesRelpages(Oid relationOid, float4 *relTuples, float4 *rel
 		}
 
 		if (SPI_OK_CONNECT != SPI_connect())
-			ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 							errmsg("Unable to connect to execute internal query.")));
 
 		elog(elevel, "Executing SQL: %s", sqlstmt.data);
@@ -1791,7 +1791,7 @@ analyzeEstimateIndexpages(Relation onerel, Relation indrel, BlockNumber *indexPa
 	}
 
 	if (SPI_OK_CONNECT != SPI_connect())
-		ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("Unable to connect to execute internal query.")));
 	elog(elevel, "Executing SQL: %s", sqlstmt.data);
 

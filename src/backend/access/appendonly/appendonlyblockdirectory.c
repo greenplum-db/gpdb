@@ -476,7 +476,7 @@ AppendOnlyBlockDirectory_GetEntry(
 		Assert(RelationIsValid(blockDirectory->aoRel));
 
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Block directory for append-only relation '%s' does not exist",
 						RelationGetRelationName(blockDirectory->aoRel))));
 		return false;

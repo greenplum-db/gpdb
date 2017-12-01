@@ -154,7 +154,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 					case CdbLocusType_Replicated:
 					default:
 						ereport(ERROR, (
-										errcode(ERRCODE_CDB_INTERNAL_ERROR),
+										errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
 				}
@@ -183,7 +183,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 					case CdbLocusType_Replicated:
 					default:
 						ereport(ERROR, (
-										errcode(ERRCODE_CDB_INTERNAL_ERROR),
+										errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
 				}
@@ -212,7 +212,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 					case CdbLocusType_Replicated:
 					default:
 						ereport(ERROR, (
-										errcode(ERRCODE_CDB_INTERNAL_ERROR),
+										errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
 						break;
 				}
@@ -220,7 +220,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 
 			case PSETOP_PARALLEL_REPLICATED:
 				/* Only when all args are replicated. */
-				ereport(ERROR, (errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("unexpected replicated intermediate result"),
 								errdetail("argument to set operation may not be replicated")));
 				break;
@@ -228,7 +228,7 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 			default:
 				/* Can't happen! */
 				ereport(ERROR, (
-								errcode(ERRCODE_CDB_INTERNAL_ERROR),
+								errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("unexpected arguments to set operation")));
 				break;
 		}

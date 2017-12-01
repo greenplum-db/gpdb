@@ -359,7 +359,7 @@ ExecMarkPos(PlanState *node)
 
 		case T_MotionState:
 			ereport(ERROR, (
-				errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("unsupported call to mark position of Motion operator")
 				));
 			break;
@@ -433,7 +433,7 @@ ExecRestrPos(PlanState *node)
 
 		case T_MotionState:
 			ereport(ERROR, (
-				errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				errcode(ERRCODE_INTERNAL_ERROR),
 				errmsg("unsupported call to restore position of Motion operator")
 				));
 			break;

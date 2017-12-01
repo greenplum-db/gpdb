@@ -349,7 +349,7 @@ AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
 	 */
 	if (logicalEof == 0)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Append-only Storage Read segment file '%s' EOF must be > 0 for relation '%s'",
 						filePathName,
 						storageRead->relationName)));
@@ -546,7 +546,7 @@ AppendOnlyStorageRead_DoSkipPadding(AppendOnlyStorageRead *storageRead,
 		if (buffer == NULL || safeWriteRemainder != availableLen)
 		{
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("Unexpected end of file.  Expected to read %d bytes after position " INT64_FORMAT " but found %d bytes (bufferCount  " INT64_FORMAT ")\n",
 							safeWriteRemainder,
 							nextReadPosition,
@@ -613,7 +613,7 @@ AppendOnlyStorageRead_PositionToNextBlock(AppendOnlyStorageRead *storageRead,
 
 	if (availableLen != storageRead->minimumHeaderLen)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Expected %d bytes and got %d bytes in table %s (segment file '%s', header offset in file = " INT64_FORMAT ", bufferCount " INT64_FORMAT ")\n",
 						storageRead->minimumHeaderLen,
 						availableLen,
@@ -658,7 +658,7 @@ AppendOnlyStorageRead_PositionToNextBlock(AppendOnlyStorageRead *storageRead,
 
 			if (availableLen != storageRead->minimumHeaderLen)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Expected %d bytes and found %d bytes in table %s (segment file '%s', header offset in file = " INT64_FORMAT ", bufferCount " INT64_FORMAT ")",
 								storageRead->minimumHeaderLen,
 								availableLen,
@@ -883,7 +883,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 		if (header == NULL ||
 			availableLen != storageRead->current.actualHeaderLen)
 			ereport(ERROR,
-					(errcode(ERRCODE_GP_INTERNAL_ERROR),
+					(errcode(ERRCODE_INTERNAL_ERROR),
 					 errmsg("Expected %d bytes and found %d bytes in table %s "
 							"(segment file '%s', header offset in file = " INT64_FORMAT ", bufferCount " INT64_FORMAT ")",
 							storageRead->current.actualHeaderLen,
@@ -922,7 +922,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Bad append-only storage header of type small content. Header check error %d, detail '%s'",
 								(int) checkError,
 								AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
@@ -946,7 +946,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				 &storageRead->current.rowCount);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Bad append-only storage header of type large content. Header check error %d, detail '%s'",
 								(int) checkError,
 								AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
@@ -977,7 +977,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Bad append-only storage header of type non-bulk dense content. Header check error %d, detail '%s'",
 								(int) checkError,
 								AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
@@ -1009,7 +1009,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 				);
 			if (checkError != AOHeaderCheckOk)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Bad append-only storage header of type bulk dense content. Header check error %d, detail '%s'",
 								(int) checkError,
 								AppendOnlyStorageFormat_GetHeaderCheckErrorStr()),
@@ -1169,7 +1169,7 @@ AppendOnlyStorageRead_InternalGetBuffer(AppendOnlyStorageRead *storageRead,
 
 	if (storageRead->current.overallBlockLen != availableLen)
 		ereport(ERROR,
-				(errcode(ERRCODE_GP_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Wrong buffer length.  Expected %d byte length buffer and got %d ",
 						storageRead->current.overallBlockLen,
 						availableLen),
@@ -1302,7 +1302,7 @@ AppendOnlyStorageRead_Content(AppendOnlyStorageRead *storageRead,
 				 * Unexpected end of file.
 				 */
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Unexpected end of file trying to read block %d of large content in segment file '%s' of table '%s'.  "
 								"Large content metadata block is at position " INT64_FORMAT "  "
 								"Large content length %d",
@@ -1318,7 +1318,7 @@ AppendOnlyStorageRead_Content(AppendOnlyStorageRead *storageRead,
 				 * Unexpected headerKind.
 				 */
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Expected header kind 'Block' for block %d of large content in segment file '%s' of table '%s'.  "
 								"Large content metadata block is at position " INT64_FORMAT "  "
 								"Large content length %d",
@@ -1338,7 +1338,7 @@ AppendOnlyStorageRead_Content(AppendOnlyStorageRead *storageRead,
 				 * Too much data found???
 				 */
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Too much data found after reading %d blocks for large content in segment file '%s' of table '%s'.  "
 								"Large content metadata block is at position " INT64_FORMAT "  "
 								"Large content length %d; extra data length %d",
@@ -1413,7 +1413,7 @@ AppendOnlyStorageRead_Content(AppendOnlyStorageRead *storageRead,
 
 			if (cfns == NULL)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("decompression information missing")));
 
 			decompressor = cfns[COMPRESSION_DECOMPRESS];
@@ -1503,7 +1503,7 @@ AppendOnlyStorageRead_SkipCurrentBlock(AppendOnlyStorageRead *storageRead)
 				 * Unexpected end of file.
 				 */
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Unexpected end of file trying to read block %d of large content in segment file '%s' of table '%s'.  "
 								"Large content metadata block is at position " INT64_FORMAT "  "
 								"Large content length %d",
@@ -1519,7 +1519,7 @@ AppendOnlyStorageRead_SkipCurrentBlock(AppendOnlyStorageRead *storageRead)
 				 * Unexpected headerKind.
 				 */
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Expected header kind 'Block' for block %d of large content in segment file '%s' of table '%s'.  "
 								"Large content metadata block is at position " INT64_FORMAT "  "
 								"Large content length %d",
@@ -1537,7 +1537,7 @@ AppendOnlyStorageRead_SkipCurrentBlock(AppendOnlyStorageRead *storageRead)
 
 			if (storageRead->current.overallBlockLen != availableLen)
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Wrong buffer length.  Expected %d byte length"
 								" buffer and got %d ",
 								storageRead->current.overallBlockLen,
@@ -1553,7 +1553,7 @@ AppendOnlyStorageRead_SkipCurrentBlock(AppendOnlyStorageRead *storageRead)
 				 * Too much data found???
 				 */
 				ereport(ERROR,
-						(errcode(ERRCODE_GP_INTERNAL_ERROR),
+						(errcode(ERRCODE_INTERNAL_ERROR),
 						 errmsg("Too much data found after reading %d blocks for large content in segment file '%s' of table '%s'.	"
 								"Large content metadata block is at position " INT64_FORMAT "  "
 								"Large content length %d; extra data length %d",

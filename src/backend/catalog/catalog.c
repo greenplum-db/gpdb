@@ -92,14 +92,14 @@ GetFilespacePathForTablespace(Oid tablespaceOid)
 	{
 	case PersistentTablespaceGetFilespaces_TablespaceNotFound:
 		ereport(ERROR, 
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Unable to find entry for tablespace OID = %u when forming file-system path",
 						tablespaceOid)));
 		break;
 			
 	case PersistentTablespaceGetFilespaces_FilespaceNotFound:
 		ereport(ERROR, 
-				(errcode(ERRCODE_CDB_INTERNAL_ERROR),
+				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Unable to find entry for filespace OID = %u when forming file-system path for tablespace OID = %u",
 				 		filespaceOid,
 						tablespaceOid)));

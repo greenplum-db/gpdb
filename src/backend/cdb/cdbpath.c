@@ -1499,7 +1499,7 @@ cdbpath_dedup_fixup_append(AppendPath *appendPath, CdbpathDedupFixupContext *ctx
 		 * targetlists in sync.
 		 */
 		if (list_length(subpath->parent->reltargetlist) != ncol)
-			ereport(ERROR, (errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+			ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
 							errmsg("The query is not yet supported in "
 								   "this version of " PACKAGE_NAME "."),
 							errdetail("Unsupported combination of "
