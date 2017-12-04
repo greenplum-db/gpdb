@@ -757,7 +757,9 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 				 * replicated across cluster and don't suffer from the
 				 * deadlock.
 				 */
-				if (rte->relid > FirstNormalObjectId)
+				if (rte->relid > FirstNormalObjectId &&
+					(plannedstmt->commandType == CMD_UPDATE ||
+					 plannedstmt->commandType == CMD_DELETE))
 					lockmode = ExclusiveLock;
 				else
 					lockmode = RowExclusiveLock;
@@ -830,7 +832,9 @@ ScanQueryForLocks(Query *parsetree, bool acquire)
 					 * Catalog tables are replicated across cluster and don't
 					 * suffer from the deadlock.
 					 */
-					if (rte->relid > FirstNormalObjectId)
+					if (rte->relid > FirstNormalObjectId &&
+						(parsetree->commandType == CMD_UPDATE ||
+						 parsetree->commandType == CMD_DELETE))
 						lockmode = ExclusiveLock;
 					else
 						lockmode = RowExclusiveLock;

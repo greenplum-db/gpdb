@@ -6,3 +6,4 @@ test: ao-serializable-read
 test: ao-serializable-vacuum
 test: ao-insert-eof
 test: create_index_hot
+test: udf-insert-deadlock
