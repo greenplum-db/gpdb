@@ -48,8 +48,6 @@
           <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
             requires a distinct timestamp.</li>
           <li>Database object filtering is currently limited to schemas and tables.</li>
-          <li><codeph>gprestore</codeph> supports filtering at the schema level, but not individual
-            tables.</li>
           <li>If you use the <codeph>gpbackup -single-data-file</codeph> option to combine table
             backups into a single file per segment, you cannot perform a parallel restore operation
             with <codeph>gprestore</codeph> (cannot set <codeph>-jobs</codeph> to a value higher
@@ -218,7 +216,7 @@ $ <b>gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -crea
     </body>
   </topic>
   <topic id="topic_et4_b5d_tbb">
-    <title>Filtering the Contents of a Backup</title>
+    <title>Filtering the Contents of a Backup or Restore</title>
     <body>
       <p><codeph>gpbackup</codeph> backs up all schemas and tables in the specified database, unless
         you exclude or include individual schema or table objects. You can filter the database
@@ -297,6 +295,35 @@ public.sales_1_prt_dec17</codeblock>
             <codeph>-leaf-partition-data</codeph>. Although you can specify leaf partition names in
           a file specified with <codeph>-exclude-table-file</codeph>, <codeph>gpbackup</codeph>
           ignores the partition names.</note>
+      </section>
+      <section>
+        <title>Filtering with gprestore</title>
+        <p>After creating a backup set with <codeph>gpbackup</codeph>, you can filter the schemas
+          and tables that you want to restore from the backup set using the
+            <codeph>gprestore</codeph>
+          <codeph>-include-schema</codeph> and <codeph>-include-table-file</codeph> options. These
+          options work in the same way as their <codeph>gpbackup</codeph> counterparts, but have the
+          following restrictions:<ul id="ul_hts_clc_ccb">
+            <li>The schemas or tables that you attempt to restore must not already exist in the
+              database.</li>
+            <li>If you attempt to restore a schema or table that does not exist in the backup set,
+              the <codeph>gprestore</codeph> does not execute.</li>
+            <li>Backup sets that use a single data file for all tables on a segment
+                (<codeph>gpbackup -single-data-file</codeph> option) cannot be restored using the
+                <codeph>-include-schema</codeph> option.</li>
+            <li>You cannot use the <codeph>-include-schema</codeph> and  <codeph>-redirect</codeph>
+              options in the same <codeph>gprestore</codeph> command.</li>
+            <li>If you use the <codeph>-include-schema</codeph> option, <codeph>gprestore</codeph>
+              cannot restore objects that have dependencies on multiple schemas.</li>
+            <li>If you use the <codeph>-include-table-file</codeph> option,
+                <codeph>gprestore</codeph> does not restore indexes, create roles, or set the owner
+              of the tables. <codeph>gprestore</codeph> also does not restore global metadata, so
+              you cannot include the <codeph>-globals</codeph> and
+                <codeph>-include-table-file</codeph> options in the same command.</li>
+            <li>The file that you specify with <codeph>-include-table-file</codeph> cannot include a
+              leaf partition name, as it can when you specify this option with
+                <codeph>gpbackup</codeph>.</li>
+          </ul></p>
       </section>
     </body>
   </topic>

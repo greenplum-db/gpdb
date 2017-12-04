@@ -195,7 +195,8 @@
             for each table that is backed up on the segment.<note>If you use the
                 <codeph>-single-data-file</codeph> option to combine table backups into a single
               file per segment, you cannot perform a parallel restore operation with
-                <codeph>gprestore</codeph>.</note></pd>
+                <codeph>gprestore</codeph>, and you cannot use the <codeph>-include-schema</codeph>
+              option with <codeph>gprestore</codeph>.</note></pd>
         </plentry>
       </parml>
       <parml>

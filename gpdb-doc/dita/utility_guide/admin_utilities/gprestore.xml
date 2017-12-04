@@ -17,6 +17,8 @@
    [<b>-createdb</b>]
    [<b>-debug</b>]
    [<b>-globals</b>]
+   [<b>-include-schema</b> <varname>schema_name</varname>]
+   [<b>-include-table-file</b> <varname>file_name</varname>]
    [<b>-jobs</b> <varname>int</varname>]
    [<b>-quiet</b>]
    [<b>-redirect</b> <varname>database_name</varname>]
@@ -98,7 +100,46 @@
           <pt><b>-globals</b></pt>
           <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
             database objects. See <xref
-              href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
+              href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>. You cannot
+            use this option with <codeph>-include-table-file</codeph>.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-include-schema</b>
+            <varname>schema_name</varname></pt>
+          <pd>Optional. Specifies a database schema to restore. You can specify this option multiple
+            times to include multiple schemas. If you specify this option, any schemas that you
+            specify must be available in the backup set. Any schemas that are not included in
+            subsequent <codeph>-include-schema</codeph> options are omitted from the restore
+            operation. </pd>
+          <pd>Schemas that you specify for inclusion must not be present in the database when you
+            execute <codeph>gprestore</codeph>. You cannot use this option if the backup set uses a
+            single data file for all tables on each segment (<codeph>gpbackup
+              -single-data-file</codeph> option), or if objects in the backup set have dependencies
+            on multiple schemas. You cannot combine this option with the <codeph>-redirect</codeph>
+            option. </pd>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+            for more information.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-include-table-file</b>
+            <varname>file_name</varname></pt>
+          <pd>Optional. Specifies a text file containing a list of tables to restore. Each line in
+            the text file must define a single table using the format
+              <codeph>&lt;schema-name>.&lt;table-name></codeph>. The file must not include trailing
+            lines. If a table or schema name uses any character other than a lowercase letter,
+            number, or an underscore character, then you must include that name in double quotes.
+            Any tables not listed in this file are omitted from the restore operation. </pd>
+          <pd>If you use the <codeph>-include-table-file</codeph> option, <codeph>gprestore</codeph>
+            does not restore indexes, create roles, or set the owner of the tables.
+              <codeph>gprestore</codeph> also does not restore global metadata, so you cannot
+            include the <codeph>-globals</codeph> and <codeph>-include-table-file</codeph> options
+            in the same command.</pd>
+          <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
+            for more information.</pd>
         </plentry>
       </parml>
       <parml>
@@ -124,7 +165,8 @@
           <pt><b>-redirect</b>
             <varname>database_name</varname></pt>
           <pd>Optional. Restore to the specified <varname>database_name</varname> instead of to the
-            database that was backed up.</pd>
+            database that was backed up. You cannot use this option with
+              <codeph>-include-schema</codeph>.</pd>
         </plentry>
       </parml>
       <parml>
@@ -150,11 +192,11 @@
       <title>Examples</title>
       <p>Create the demo database and restore all schemas and tables in the backup set for the
         indicated
-        timestamp:<codeblock>$ dropdb demo;
+        timestamp:<codeblock>$ dropdb demo
 $ gprestore -timestamp 20171103152558 -createdb</codeblock></p>
       <p>Restore the backup set to the "demos" database instead of the "demo" database that was
         backed
-        up:<codeblock>$ createdb demo2;
+        up:<codeblock>$ createdb demo2
 $ gprestore -timestamp 20171103152558 -redirect demo2</codeblock></p>
       <p>Restore global Greenplum Database metadata and query plan statistics in addition to the
         database
@@ -162,6 +204,9 @@ $ gprestore -timestamp 20171103152558 -redirect demo2</codeblock></p>
       <p>Restore, using backup files that were created in the
           <filepath>/home/gpadmin/backup</filepath> directory, creating 8 parallel
         connections:<codeblock>$ gprestore -backupdir /home/gpadmin/backups/ -timestamp 20171103153156 -createdb -jobs 8</codeblock></p>
+      <p>Restore only the "wikipedia" schema included in the backup
+        set:<codeblock>$ dropdb demo
+$ gprestore -include-schema wikipedia /home/gpadmin/backups/ -timestamp 20171103153156 -createdb</codeblock></p>
     </section>
     <section id="section9">
       <title>See Also</title>
