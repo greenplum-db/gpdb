@@ -7728,8 +7728,9 @@
   <topic id="optimizer_join_order">
     <title>optimizer_join_order</title>
     <body>
-      <p>This parameter sets the optimization level for join ordering during query optimization 
-        by specifying which types of join ordering alternatives to evaluate.</p>
+      <p>When GPORCA is enabled, this parameter sets the optimization level for join 
+        ordering during query optimization by specifying which types of join ordering 
+        alternatives to evaluate.</p>
       <ul id="ul_dpf_cyr_1cb">
         <li><codeph>query</codeph> - Uses the join order specified in the query.</li>
         <li><codeph>greedy</codeph> - Evaluates the join order specified in the query and 
