@@ -45,9 +45,9 @@
           <codeph>-with-stats</codeph> to <codeph>gprestore</codeph>. By default, only database
         objects in the backup set are restored.</p>
       <p>Performance of restore operations can be improved by creating multiple parallel connections
-        to restore table data. By default <codeph>gprestore</codeph> uses 2 parallel connections,
-        but you can increase this number with the the <codeph>-jobs</codeph> option for large
-        restore operations.</p>
+        to restore table data. By default <codeph>gprestore</codeph> uses 1 connection, but you can
+        increase this number with the the <codeph>-jobs</codeph> option for large restore
+        operations.</p>
       <p><codeph>gprestore</codeph> does not currently support filtering the database objects that
         are restored from a backup set. </p>
     </section>
@@ -107,7 +107,10 @@
             <varname>int</varname></pt>
           <pd>Optional. Specifies the number of parallel connections to use when restoring table
             data. By default, <codeph>gprestore</codeph> uses 1 connection. Increasing this number
-            can improve the speed of restoring data.</pd>
+            can improve the speed of restoring data.<note>If you used the <codeph>gpbackup
+                -single-data-file</codeph> option to combine table backups into a single file per
+              segment, you cannot perform a parallel restore operation with
+                <codeph>gprestore</codeph>.</note></pd>
         </plentry>
       </parml>
       <parml>

@@ -22,6 +22,7 @@
    [<b>-metadata-only</b>]
    [<b>-no-compression</b>]
    [<b>-quiet</b>]
+   [<b>-single-data-file]</b>
    [<b>-verbose</b>]
    [<b>-version</b>]
    [<b>-with-stats</b>]</codeblock>
@@ -184,6 +185,17 @@
         <plentry>
           <pt><b>-quiet</b></pt>
           <pd>Optional. Suppress all non-warning, non-error log messages.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt>-single-data-file</pt>
+          <pd>Optional. Create a single data file on each segment host for all tables backed up on
+            that segment. By default, each <codeph>gpbackup</codeph> creates one compressed CSV file
+            for each table that is backed up on the segment.<note>If you use the
+                <codeph>-single-data-file</codeph> option to combine table backups into a single
+              file per segment, you cannot perform a parallel restore operation with
+                <codeph>gprestore</codeph>.</note></pd>
         </plentry>
       </parml>
       <parml>

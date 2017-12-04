@@ -48,7 +48,12 @@
           <li>You can execute multiple instances of <codeph>gpbackup</codeph>, but each execution
             requires a distinct timestamp.</li>
           <li>Database object filtering is currently limited to schemas and tables.</li>
-          <li>Filtering objects with <codeph>gprestore</codeph> is not yet supported.</li>
+          <li><codeph>gprestore</codeph> supports filtering at the schema level, but not individual
+            tables.</li>
+          <li>If you use the <codeph>gpbackup -single-data-file</codeph> option to combine table
+            backups into a single file per segment, you cannot perform a parallel restore operation
+            with <codeph>gprestore</codeph> (cannot set <codeph>-jobs</codeph> to a value higher
+            than 1).</li>
           <li>You cannot use the <codeph>-exclude-table-file</codeph> with
               <codeph>-leaf-partition-data</codeph>. Although you can specify leaf partition names
             in a file specified with <codeph>-exclude-table-file</codeph>, <codeph>gpbackup</codeph>
@@ -155,8 +160,9 @@ Tables backed up:  2 / 2 [======================================================
         example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20171103/20171103152558/</b>
 gpbackup_20171103152558_config.yaml  gpbackup_20171103152558_postdata.sql  gpbackup_20171103152558_report
 gpbackup_20171103152558_global.sql   gpbackup_20171103152558_predata.sql   gpbackup_20171103152558_toc.yaml</codeblock></p>
-      <p>By default, each segment stores table data for the backup in compressed CSV files in
-          <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20171103/20171103152558/
+      <p>By default, each segment stores each table's data for the backup in a separate compressed
+        CSV file in
+        <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20171103/20171103152558/
 </b>gpbackup_0_20171103152558_16524.gz  gpbackup_0_20171103152558_16543.gz</codeblock></p>
       <p>To consolidate all backup files into a single directory, include the
           <codeph>-backupdir</codeph> option. Note that you must specify an absolute path with this
@@ -421,10 +427,9 @@ public.sales_1_prt_dec17</codeblock>
       <section id="section_oys_cpj_tbb">
         <title>Segment Data Files</title>
         <p>By default, each segment creates one compressed CSV file for each table that is backed up
-          on the segment. The files are stored in
-            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. You can optionally
-          specify the gzip compression level (from 1-9) using the
-            <codeph>-compression-level</codeph> option.</p>
+          on the segment. You can optionally specify the <codeph>-single-data-file</codeph> option
+          to create a single data file on each segment. The files are stored in
+            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. </p>
         <p>If you specify a custom backup directory, segment data files are copied to this same file
           path as a subdirectory of the backup directory. If you include the
             <codeph>-leaf-partition-data</codeph> option, <codeph>gpbackup</codeph> creates one data
@@ -441,6 +446,9 @@ public.sales_1_prt_dec17</codeblock>
                 <filepath>&lt;oid></filepath> to locate the data for a specific table in a
               schema.</li>
           </ul></p>
+        <p>You can optionally specify the gzip compression level (from 1-9) using the
+            <codeph>-compression-level</codeph> option, or disable compression entirely with
+            <codeph>-no-compression</codeph>.</p>
       </section>
     </body>
   </topic>
