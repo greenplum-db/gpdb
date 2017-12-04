@@ -99,7 +99,9 @@ test: direct_dispatch bfv_dd bfv_dd_multicolumn bfv_dd_types
 # (https://git.postgresql.org/gitweb/?p=postgresql.git;a=commitdiff;h=e5550d5fec66aa74caad1f79b79826ec64898688)
 test: catalog
 
-test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition bfv_partition_plans DML_over_joins gporca bfv_statistic
+test: gporca
+
+test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition bfv_partition_plans DML_over_joins bfv_statistic
  
 test: aggregate_with_groupingsets 
 

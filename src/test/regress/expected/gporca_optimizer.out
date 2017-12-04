@@ -1965,6 +1965,14 @@ NOTICE:  Success:
 
 select count(*) from orca.s;
 ERROR:  canceling statement due to user request
+select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- constants
 select 0.001::numeric from orca.r;
  numeric 

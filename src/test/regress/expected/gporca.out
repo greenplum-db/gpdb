@@ -1966,6 +1966,13 @@ select count(*) from orca.s;
     30
 (1 row)
 
+select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- constants
 select 0.001::numeric from orca.r;
  numeric 

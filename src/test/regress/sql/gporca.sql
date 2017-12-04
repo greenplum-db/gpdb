@@ -69,6 +69,7 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
 select gp_inject_fault('opt_relcache_translator_catalog_access', 'interrupt', 1);
 select count(*) from orca.s;
+select gp_inject_fault('opt_relcache_translator_catalog_access', 'reset', 1);
 
 -- constants
 
