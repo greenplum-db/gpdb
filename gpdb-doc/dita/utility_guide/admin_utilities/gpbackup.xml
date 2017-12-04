@@ -11,6 +11,7 @@
       <title>Synopsis</title>
       <codeblock><b>gpbackup -dbname</b> <varname>database_name</varname>
    [<b>-backupdir</b> <varname>directory</varname>]
+   [<b>-compression-level</b> <varname>level</varname>
    [<b>-data-only</b>]
    [<b>-debug</b>]
    [<b>-exclude-schema</b> <varname>schema_name</varname>]
@@ -72,6 +73,17 @@
               <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDhhmmss/</filepath> directory. When you
             specify a custom backup directory, files are copied to these paths in subdirectories of
             the backup directory.</pd>
+        </plentry>
+      </parml>
+      <parml>
+        <plentry>
+          <pt><b>-compression-level</b>
+            <varname>level</varname></pt>
+          <pd>Optional. Specifies the gzip compression level (from 1 to 9) used to compress data
+            files. The default is 1.  Note that <codeph>gpbackup</codeph> uses compression by
+            default. If you specify both <codeph>-compression-level</codeph> and
+              <codeph>-no-compression</codeph> in the same command, <codeph>gpbackup</codeph>
+            compresses data files using the default compression level 1.</pd>
         </plentry>
       </parml>
       <parml>

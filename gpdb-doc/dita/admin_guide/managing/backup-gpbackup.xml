@@ -410,8 +410,9 @@ public.sales_1_prt_dec17</codeblock>
                     <li dir="ltr">Database name</li>
                     <li dir="ltr">Greenplum Database version</li>
                     <li dir="ltr">Additional option settings such as
-                        <codeph>-no-compression</codeph>, <codeph>-metadata-only</codeph>,
-                        <codeph>-data-only</codeph>, and <codeph>-with-stats</codeph>.</li>
+                        <codeph>-no-compression</codeph>, <codeph>-compression-level</codeph>,
+                        <codeph>-metadata-only</codeph>, <codeph>-data-only</codeph>, and
+                        <codeph>-with-stats</codeph>.</li>
                   </ul></entry>
               </row>
             </tbody>
@@ -421,9 +422,11 @@ public.sales_1_prt_dec17</codeblock>
         <title>Segment Data Files</title>
         <p>By default, each segment creates one compressed CSV file for each table that is backed up
           on the segment. The files are stored in
-            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. If you specify a
-          custom backup directory, segment data files are copied to this same file path as a
-          subdirectory of the backup directory. If you include the
+            <filepath>&lt;seg_dir>/backups/YYYYMMDD/YYYYMMDDHHMMSS/</filepath>. You can optionally
+          specify the gzip compression level (from 1-9) using the
+            <codeph>-compression-level</codeph> option.</p>
+        <p>If you specify a custom backup directory, segment data files are copied to this same file
+          path as a subdirectory of the backup directory. If you include the
             <codeph>-leaf-partition-data</codeph> option, <codeph>gpbackup</codeph> creates one data
           file for each leaf partition of a partitioned table, instead of just one table for
           file.</p>
