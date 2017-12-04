@@ -65,10 +65,10 @@
           <tbody>
             <row>
               <entry colname="col1">Operating System</entry>
-              <entry colname="col2">SUSE Linux Enterprise Server 64-bit 11 SP4<p>CentOS 64-bit 6.x
-                  or 7.x</p><p>Red Hat Enterprise Linux (RHEL) 64-bit 6.x or 7.x</p><note>See the
-                    <cite otherprops="pivotal">Greenplum Database Release Notes</cite> for current
-                  supported platform information.</note></entry>
+              <entry colname="col2">SUSE Linux Enterprise Server 64-bit 12 SP3 or 11 SP4<p>CentOS
+                  64-bit 6.x or 7.x</p><p>Red Hat Enterprise Linux (RHEL) 64-bit 6.x or
+                  7.x</p><note>See the <cite otherprops="pivotal">Greenplum Database Release
+                    Notes</cite> for current supported platform information.</note></entry>
             </row>
             <row>
               <entry colname="col1">File Systems</entry>
@@ -369,8 +369,8 @@ GRUB_DISABLE_RECOVERY="true"</codeblock></li>
           <li>Download or copy the RPM distribution file to the master host machine. The RPM
             distribution filename has the format
               <codeph>greenplum-db-&lt;version>-&lt;platform>.rpm</codeph> where
-              <codeph>&lt;platform></codeph> is either <codeph>RHEL6-x86_64</codeph> (Red Hat
-            64-bit) or <codeph>SuSE11-x86_64</codeph> (SuSe Linux 64 bit).</li>
+              <codeph>&lt;platform></codeph> is similar to <codeph>RHEL7-x86_64</codeph> (Red Hat
+            64-bit) or <codeph>SuSE12-x86_64</codeph> (SuSe Linux 64 bit).</li>
           <li>Install the local RPM
               file:<codeblock># rpm -Uvh ./greenplum-db-&lt;version>-&lt;platform>.rpm
 Preparing...                ########################################### [100%]
@@ -397,8 +397,8 @@ Preparing...                ########################################### [100%]
           <li id="ji162300">Download or copy the Binary Installation distribution file to the master
             host machine. The Binary Installer distribution filename has the format
               <codeph>greenplum-db-&lt;version>-&lt;platform>.zip</codeph> where
-              <codeph>&lt;platform></codeph> is either <codeph>RHEL6-x86_64</codeph> (Red Hat
-            64-bit) or <codeph>SuSE11-x86_64</codeph> (SuSe Linux 64 bit).</li>
+              <codeph>&lt;platform></codeph> is either <codeph>RHEL7-x86_64</codeph> (Red Hat
+            64-bit) or <codeph>SuSE12-x86_64</codeph> (SuSe Linux 64 bit).</li>
           <li id="ji162305">Unzip the installer
             file:<codeblock># unzip greenplum-db-&lt;version>-&lt;platform>.zip</codeblock></li>
           <li id="ji162310">Launch the installer using
