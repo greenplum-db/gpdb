@@ -81,10 +81,8 @@
           <pt><b>-compression-level</b>
             <varname>level</varname></pt>
           <pd>Optional. Specifies the gzip compression level (from 1 to 9) used to compress data
-            files. The default is 1.  Note that <codeph>gpbackup</codeph> uses compression by
-            default. If you specify both <codeph>-compression-level</codeph> and
-              <codeph>-no-compression</codeph> in the same command, <codeph>gpbackup</codeph>
-            compresses data files using the default compression level 1.</pd>
+            files. The default is 1. Note that <codeph>gpbackup</codeph> uses compression by
+            default.</pd>
         </plentry>
       </parml>
       <parml>
