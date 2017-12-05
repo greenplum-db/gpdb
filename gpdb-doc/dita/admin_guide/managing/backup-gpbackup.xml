@@ -471,7 +471,8 @@ public.sales_1_prt_dec17</codeblock>
           </ul></p>
         <p>You can optionally specify the gzip compression level (from 1-9) using the
             <codeph>-compression-level</codeph> option, or disable compression entirely with
-            <codeph>-no-compression</codeph>.</p>
+            <codeph>-no-compression</codeph>. If you do not specify a compression level,
+            <codeph>gpbackup</codeph> uses compression level 1 by default.</p>
       </section>
     </body>
   </topic>
