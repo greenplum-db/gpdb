@@ -818,17 +818,17 @@ class GpStop:
         addTo.add_option('-m', '--master_only', action='store_true',
                          help='stop master instance started in maintenance mode')
         addTo.add_option('-y', dest="stop_standby", action='store_false', default=True,
-                         help='stop master instance started in maintenance mode')
+                         help='Do not stop the standby master process.')
         addTo.add_option('-u', dest="request_sighup", action='store_true',
                          help="upload new master postgresql.conf settings, does not stop Greenplum array," \
-                              "issues a signal to the master segment potmaster process to reload")
+                              "issues a signal to the master segment postmaster process to reload")
 
         addTo.add_option('-B', '--parallel', type="int", default=DEFAULT_NUM_WORKERS, metavar="<parallel_processes>",
                          help='number of segment hosts to run in parallel. Default is %d' % DEFAULT_NUM_WORKERS)
         addTo.add_option('-t', '--timeout', dest='timeout', default=SEGMENT_STOP_TIMEOUT_DEFAULT, type='int',
                          help='time to wait for segment stop (in seconds)')
         addTo.add_option('--host', dest='only_this_host', type='string',
-                         help='stop all segments on this host if failover segments are available. '
+                         help='stop all segments on this host (this will only complete if failover segments are available). '
                               'hostname as displayed in gp_segment_configuration')
 
         parser.set_defaults(verbose=False, filters=[], slice=(None, None))
@@ -840,6 +840,22 @@ class GpStop:
         if options.mode != 'smart':
             if options.fast or options.immediate:
                 raise ProgramArgumentValidationException("Can not mix --mode options with older deprecated '-f,-i,-s'")
+
+        if options.master_only and options.only_this_host:
+            raise ProgramArgumentValidationException("Incompatible flags. Cannot mix '--host' option with '-m' for "
+                                                     "master-only.")
+
+        if options.restart and options.only_this_host:
+            raise ProgramArgumentValidationException("Incompatible flags. Cannot mix '--host' option with '-r' for "
+                                                     "restart.")
+
+        if options.request_sighup and options.only_this_host:
+            raise ProgramArgumentValidationException("Incompatible flags. Cannot mix '--host' option with '-u' for "
+                                                     "config reload.")
+
+        if (not options.stop_standby) and options.only_this_host:
+            raise ProgramArgumentValidationException("Incompatible flags. Cannot mix '--host' option with '-y' for "
+                                                     "skipping standby.")
 
         if options.fast:
             options.mode = "fast"

@@ -6,6 +6,7 @@ from gparray import GpDB, GpArray, Segment
 from mock import Mock, patch
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands.gp import GpSegStopCmd
+from gppylib.mainUtils import ProgramArgumentValidationException
 
 
 class GpStop(GpTestCase):
@@ -260,6 +261,41 @@ class GpStop(GpTestCase):
             gpstop.run()
         self.assertEquals(0, self.mock_GpSegStopCmdInit.call_count)
 
+    def test_host_option_with_master_option_fails(self):
+        sys.argv = ["gpstop", "--host", "sdw1", "-m"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        with self.assertRaisesRegexp(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
+                                                                         "option with '-m' for master-only."):
+            self.subject.GpStop.createProgram(options, args)
+
+    def test_host_option_with_restart_option_fails(self):
+        sys.argv = ["gpstop", "--host", "sdw1", "-r"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        with self.assertRaisesRegexp(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
+                                                                         "option with '-r' for restart."):
+            self.subject.GpStop.createProgram(options, args)
+
+    def test_host_option_with_request_sighup_option_fails(self):
+        sys.argv = ["gpstop", "--host", "sdw1", "-u"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        with self.assertRaisesRegexp(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
+                                                                         "option with '-u' for config reload."):
+            self.subject.GpStop.createProgram(options, args)
+
+    def test_host_option_with_stop_standby_option_fails(self):
+        sys.argv = ["gpstop", "--host", "sdw1", "-y"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        with self.assertRaisesRegexp(ProgramArgumentValidationException, "Incompatible flags. Cannot mix '--host' "
+                                                                         "option with '-y' for skipping standby."):
+            self.subject.GpStop.createProgram(options, args)
 
 if __name__ == '__main__':
     run_tests()
