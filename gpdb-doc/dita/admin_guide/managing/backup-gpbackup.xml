@@ -315,9 +315,7 @@ public.sales_1_prt_dec17</codeblock>
               cannot restore objects that have dependencies on multiple schemas.</li>
             <li>If you use the <codeph>-include-table-file</codeph> option,
                 <codeph>gprestore</codeph> does not restore indexes, create roles, or set the owner
-              of the tables. <codeph>gprestore</codeph> also does not restore global metadata, so
-              you cannot include the <codeph>-globals</codeph> and
-                <codeph>-include-table-file</codeph> options in the same command.</li>
+              of the tables.</li>
             <li>The file that you specify with <codeph>-include-table-file</codeph> cannot include a
               leaf partition name, as it can when you specify this option with
                 <codeph>gpbackup</codeph>.</li>

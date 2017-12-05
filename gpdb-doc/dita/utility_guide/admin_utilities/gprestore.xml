@@ -100,8 +100,7 @@
           <pt><b>-globals</b></pt>
           <pd>Optional. Restores Greenplum Database system objects in the backup set, in addition to
             database objects. See <xref
-              href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>. You cannot
-            use this option with <codeph>-include-table-file</codeph>.</pd>
+              href="../../admin_guide/managing/backup-gpbackup.xml#topic_x3s_lqj_tbb"/>.</pd>
         </plentry>
       </parml>
       <parml>
@@ -133,10 +132,7 @@
             number, or an underscore character, then you must include that name in double quotes.
             Any tables not listed in this file are omitted from the restore operation. </pd>
           <pd>If you use the <codeph>-include-table-file</codeph> option, <codeph>gprestore</codeph>
-            does not restore indexes, create roles, or set the owner of the tables.
-              <codeph>gprestore</codeph> also does not restore global metadata, so you cannot
-            include the <codeph>-globals</codeph> and <codeph>-include-table-file</codeph> options
-            in the same command.</pd>
+            does not restore indexes, create roles, or set the owner of the tables.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
