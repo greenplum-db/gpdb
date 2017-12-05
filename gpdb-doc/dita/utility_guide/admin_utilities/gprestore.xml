@@ -117,8 +117,7 @@
             execute <codeph>gprestore</codeph>. You cannot use this option if the backup set uses a
             single data file for all tables on each segment (<codeph>gpbackup
               -single-data-file</codeph> option), or if objects in the backup set have dependencies
-            on multiple schemas. You cannot combine this option with the <codeph>-redirect</codeph>
-            option. </pd>
+            on multiple schemas.</pd>
           <pd>See <xref href="../../admin_guide/managing/backup-gpbackup.xml#topic_et4_b5d_tbb"/>
             for more information.</pd>
         </plentry>
@@ -165,8 +164,7 @@
           <pt><b>-redirect</b>
             <varname>database_name</varname></pt>
           <pd>Optional. Restore to the specified <varname>database_name</varname> instead of to the
-            database that was backed up. You cannot use this option with
-              <codeph>-include-schema</codeph>.</pd>
+            database that was backed up.</pd>
         </plentry>
       </parml>
       <parml>

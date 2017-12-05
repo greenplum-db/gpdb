@@ -311,8 +311,6 @@ public.sales_1_prt_dec17</codeblock>
             <li>Backup sets that use a single data file for all tables on a segment
                 (<codeph>gpbackup -single-data-file</codeph> option) cannot be restored using the
                 <codeph>-include-schema</codeph> option.</li>
-            <li>You cannot use the <codeph>-include-schema</codeph> and  <codeph>-redirect</codeph>
-              options in the same <codeph>gprestore</codeph> command.</li>
             <li>If you use the <codeph>-include-schema</codeph> option, <codeph>gprestore</codeph>
               cannot restore objects that have dependencies on multiple schemas.</li>
             <li>If you use the <codeph>-include-table-file</codeph> option,
