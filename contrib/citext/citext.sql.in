@@ -49,10 +49,7 @@ CREATE TYPE citext (
     RECEIVE        = citextrecv,
     SEND           = citextsend,
     INTERNALLENGTH = VARIABLE,
-    STORAGE        = extended,
-    -- make it a non-preferred member of string type category
-    CATEGORY       = 'S',
-    PREFERRED      = false
+    STORAGE        = extended
 );
 
 --

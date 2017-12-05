@@ -119,30 +119,6 @@ SELECT 'A'::text  <> 'a'::citext AS t;
  t
 (1 row)
 
-SELECT 'B'::citext <  'a'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
-SELECT 'B'::citext <= 'a'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >  'B'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >= 'B'::text AS t;  -- text wins.
- t 
----
- t
-(1 row)
-
 -- Test implicit casting. citext casts to varchar, but not vice-versa.
 SELECT 'a'::citext = 'a'::varchar   AS t;
  t 
@@ -151,30 +127,6 @@ SELECT 'a'::citext = 'a'::varchar   AS t;
 (1 row)
 
 SELECT 'A'::varchar  <> 'a'::citext AS t;
- t 
----
- t
-(1 row)
-
-SELECT 'B'::citext <  'a'::varchar AS t;  -- varchar wins.
- t 
----
- t
-(1 row)
-
-SELECT 'B'::citext <= 'a'::varchar AS t;  -- varchar wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >  'B'::varchar AS t;  -- varchar wins.
- t 
----
- t
-(1 row)
-
-SELECT 'a'::citext >= 'B'::varchar AS t;  -- varchar wins.
  t 
 ---
  t
@@ -221,60 +173,55 @@ SELECT citext_cmp('B'::citext, 'a'::citext) AS one;
 
 -- Do some tests using a table and index.
 CREATE TEMP TABLE try (
-   name citext PRIMARY KEY
-);
-NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "try_pkey" for table "try"
-INSERT INTO try (name)
-VALUES ('a'), ('ab'), ('â'), ('aba'), ('b'), ('ba'), ('bab'), ('AZ');
-SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â';
+   a text,
+   name citext,
+   UNIQUE (a, name)
+) DISTRIBUTED BY (a);
+NOTICE:  CREATE TABLE / UNIQUE will create implicit index "try_a_key" for table "try"
+INSERT INTO try (a, name)
+VALUES ('a', 'a'), ('a','ab'), ('â','â'), ('aba','aba'), ('b','b'), ('ba','ba'), ('bab','bab'), ('AZ','AZ');
+SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â' order by name;
  name | eq_a 
 ------+------
  a    | t
  ab   | f
  aba  | f
+ AZ   | f
  b    | f
  ba   | f
  bab  | f
- AZ   | f
 (7 rows)
 
-SELECT name, 'a' = name AS t      FROM try where name = 'a';
+SELECT name, 'a' = name AS t      FROM try where name = 'a' order by name;
  name | t 
 ------+---
  a    | t
 (1 row)
 
-SELECT name, 'A' = name AS "eq_A" FROM try WHERE name <> 'â';
+SELECT name, 'A' = name AS "eq_A" FROM try WHERE name <> 'â' order by name;
  name | eq_A 
 ------+------
  a    | t
  ab   | f
  aba  | f
+ AZ   | f
  b    | f
  ba   | f
  bab  | f
- AZ   | f
 (7 rows)
 
-SELECT name, 'A' = name AS t      FROM try where name = 'A';
+SELECT name, 'A' = name AS t      FROM try where name = 'A' order by name;
  name | t 
 ------+---
  a    | t
 (1 row)
 
-SELECT name, 'A' = name AS t      FROM try where name = 'A';
+SELECT name, 'A' = name AS t      FROM try where name = 'A' order by name;
  name | t 
 ------+---
  a    | t
 (1 row)
 
--- expected failures on duplicate key
-INSERT INTO try (name) VALUES ('a');
-ERROR:  duplicate key value violates unique constraint "try_pkey"
-INSERT INTO try (name) VALUES ('A');
-ERROR:  duplicate key value violates unique constraint "try_pkey"
-INSERT INTO try (name) VALUES ('aB');
-ERROR:  duplicate key value violates unique constraint "try_pkey"
 -- Make sure that citext_smaller() and citext_lager() work properly.
 SELECT citext_smaller( 'aa'::citext, 'ab'::citext ) = 'aa' AS t;
  t 
@@ -322,6 +269,7 @@ SELECT citext_larger( 'aardvark'::citext, 'Aaba'::citext ) = 'aardvark' AS t;
 CREATE TEMP TABLE srt (
    name CITEXT
 );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
 INSERT INTO srt (name)
 VALUES ('aardvark'),
        ('AAA'),
@@ -521,14 +469,14 @@ SELECT name FROM srt WHERE name !~ 'A$' ORDER BY name;
 (3 rows)
 
 -- SIMILAR TO should be case-insensitive.
-SELECT name FROM srt WHERE name SIMILAR TO '%a.*';
+SELECT name FROM srt WHERE name SIMILAR TO '%a.*' order by name;
  name 
 ------
  AAA
  aba
 (2 rows)
 
-SELECT name FROM srt WHERE name SIMILAR TO '%A.*';
+SELECT name FROM srt WHERE name SIMILAR TO '%A.*' order by name;
  name 
 ------
  AAA
@@ -536,12 +484,6 @@ SELECT name FROM srt WHERE name SIMILAR TO '%A.*';
 (2 rows)
 
 -- Table 9-5. SQL String Functions and Operators
-SELECT 'D'::citext || 'avid'::citext = 'David'::citext AS citext_concat;
- citext_concat 
----------------
- t
-(1 row)
-
 SELECT 'Value: '::citext || 42 = 'Value: 42' AS text_concat;
  text_concat 
 -------------
@@ -857,16 +799,6 @@ SELECT quote_ident( name ) = quote_ident( name::text ) AS t FROM srt;
  t
 (5 rows)
 
-SELECT quote_literal( name ) = quote_literal( name::text ) AS t FROM srt;
- t 
----
- t
- t
- t
- t
- t
-(5 rows)
-
 SELECT regexp_matches('foobarbequebaz'::citext, '(bar)(beque)') = ARRAY[ 'bar', 'beque' ] AS t;
  t 
 ---
@@ -1141,13 +1073,3 @@ SELECT like_escape( name::text, ''::citext ) =like_escape( name::text, '' ) AS t
  t
 (5 rows)
 
---- TODO: Get citext working with magic cast functions?
-SELECT cidr( '192.168.1.2'::citext ) = cidr( '192.168.1.2'::text ) AS "t TODO";
-ERROR:  function cidr(citext) does not exist
-LINE 1: SELECT cidr( '192.168.1.2'::citext ) = cidr( '192.168.1.2'::...
-               ^
-HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
-SELECT '192.168.1.2'::cidr::citext = '192.168.1.2'::cidr::text AS "t TODO";
-ERROR:  cannot cast type cidr to citext
-LINE 1: SELECT '192.168.1.2'::cidr::citext = '192.168.1.2'::cidr::te...
-                                    ^

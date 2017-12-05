@@ -64,21 +64,9 @@ SELECT 'a'::citext <= 'B'::citext AS t;
 SELECT 'a'::citext = 'a'::text   AS t;
 SELECT 'A'::text  <> 'a'::citext AS t;
 
-SELECT 'B'::citext <  'a'::text AS t;  -- text wins.
-SELECT 'B'::citext <= 'a'::text AS t;  -- text wins.
-
-SELECT 'a'::citext >  'B'::text AS t;  -- text wins.
-SELECT 'a'::citext >= 'B'::text AS t;  -- text wins.
-
 -- Test implicit casting. citext casts to varchar, but not vice-versa.
 SELECT 'a'::citext = 'a'::varchar   AS t;
 SELECT 'A'::varchar  <> 'a'::citext AS t;
-
-SELECT 'B'::citext <  'a'::varchar AS t;  -- varchar wins.
-SELECT 'B'::citext <= 'a'::varchar AS t;  -- varchar wins.
-
-SELECT 'a'::citext >  'B'::varchar AS t;  -- varchar wins.
-SELECT 'a'::citext >= 'B'::varchar AS t;  -- varchar wins.
 
 -- A couple of longer examlpes to ensure that we don't get any issues with bad
 -- conversions to char[] in the c code. Yes, I did do this.
@@ -95,22 +83,19 @@ SELECT citext_cmp('B'::citext, 'a'::citext) AS one;
 -- Do some tests using a table and index.
 
 CREATE TEMP TABLE try (
-   name citext PRIMARY KEY
-);
+   a text,
+   name citext,
+   UNIQUE (a, name)
+) DISTRIBUTED BY (a);
 
-INSERT INTO try (name)
-VALUES ('a'), ('ab'), ('â'), ('aba'), ('b'), ('ba'), ('bab'), ('AZ');
+INSERT INTO try (a, name)
+VALUES ('a', 'a'), ('a','ab'), ('â','â'), ('aba','aba'), ('b','b'), ('ba','ba'), ('bab','bab'), ('AZ','AZ');
 
-SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â';
-SELECT name, 'a' = name AS t      FROM try where name = 'a';
-SELECT name, 'A' = name AS "eq_A" FROM try WHERE name <> 'â';
-SELECT name, 'A' = name AS t      FROM try where name = 'A';
-SELECT name, 'A' = name AS t      FROM try where name = 'A';
-
--- expected failures on duplicate key
-INSERT INTO try (name) VALUES ('a');
-INSERT INTO try (name) VALUES ('A');
-INSERT INTO try (name) VALUES ('aB');
+SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â' order by name;
+SELECT name, 'a' = name AS t      FROM try where name = 'a' order by name;
+SELECT name, 'A' = name AS "eq_A" FROM try WHERE name <> 'â' order by name;
+SELECT name, 'A' = name AS t      FROM try where name = 'A' order by name;
+SELECT name, 'A' = name AS t      FROM try where name = 'A' order by name;
 
 -- Make sure that citext_smaller() and citext_lager() work properly.
 SELECT citext_smaller( 'aa'::citext, 'ab'::citext ) = 'aa' AS t;
@@ -179,11 +164,10 @@ SELECT name FROM srt WHERE name ~  '^A' ORDER BY name;
 SELECT name FROM srt WHERE name !~ 'A$' ORDER BY name;
 
 -- SIMILAR TO should be case-insensitive.
-SELECT name FROM srt WHERE name SIMILAR TO '%a.*';
-SELECT name FROM srt WHERE name SIMILAR TO '%A.*';
+SELECT name FROM srt WHERE name SIMILAR TO '%a.*' order by name;
+SELECT name FROM srt WHERE name SIMILAR TO '%A.*' order by name;
 
 -- Table 9-5. SQL String Functions and Operators
-SELECT 'D'::citext || 'avid'::citext = 'David'::citext AS citext_concat;
 SELECT 'Value: '::citext || 42 = 'Value: 42' AS text_concat;
 SELECT  42 || ': value'::citext ='42: value' AS int_concat;
 SELECT bit_length('jose'::citext) = 32 AS t;
@@ -243,7 +227,6 @@ SELECT ltrim('zzzytrim'::citext, 'xyz'::text  ) = 'trim' AS t;
 SELECT md5( name ) = md5( name::text ) AS t FROM srt;
 -- pg_client_encoding() takes no args and returns name.
 SELECT quote_ident( name ) = quote_ident( name::text ) AS t FROM srt;
-SELECT quote_literal( name ) = quote_literal( name::text ) AS t FROM srt;
 
 SELECT regexp_matches('foobarbequebaz'::citext, '(bar)(beque)') = ARRAY[ 'bar', 'beque' ] AS t;
 SELECT regexp_replace('Thomas'::citext, '.[mN]a.', 'M') = 'ThM' AS t;
@@ -323,6 +306,3 @@ SELECT COUNT(*) = 19::bigint AS t FROM try;
 SELECT like_escape( name, '' ) = like_escape( name::text, '' ) AS t FROM srt;
 SELECT like_escape( name::text, ''::citext ) =like_escape( name::text, '' ) AS t FROM srt;
 
---- TODO: Get citext working with magic cast functions?
-SELECT cidr( '192.168.1.2'::citext ) = cidr( '192.168.1.2'::text ) AS "t TODO";
-SELECT '192.168.1.2'::cidr::citext = '192.168.1.2'::cidr::text AS "t TODO";

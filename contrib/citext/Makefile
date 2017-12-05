@@ -15,3 +15,10 @@ top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+installcheck: prepare_citext_sql
+
+prepare_citext_sql:
+	cp $(GPHOME)/share/postgresql/contrib/citext.sql ./citext.sql
+
+.PHONY: prepare_citext_sql
