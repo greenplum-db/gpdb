@@ -457,7 +457,8 @@ class GpExpandTests(MPPTestCase):
         max_parallel = -1
         prev_count = int(number_of_parallel_table_redistributed)
 
-        while int(tables_in_progress) != int(number_of_parallel_table_redistributed) and int(tables_completed)<int(number_of_parallel_table_redistributed):
+        minimum_acceptable_evidence_of_parallelism = 2
+        while int(tables_in_progress) < minimum_acceptable_evidence_of_parallelism and int(tables_completed)<int(number_of_parallel_table_redistributed):
             tables_in_progress = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='IN PROGRESS';")
             tables_completed = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='COMPLETED';")
             tinctest.logger.info("waiting to reach desired number of parallel redistributions \ntables_completed : " + tables_completed)
@@ -466,7 +467,7 @@ class GpExpandTests(MPPTestCase):
             if int(tables_in_progress) > max_parallel:
                 max_parallel = int(tables_in_progress)
 
-        if max_parallel < int(number_of_parallel_table_redistributed):
+        if max_parallel < minimum_acceptable_evidence_of_parallelism:
             self.fail("The specified value was never reached.")
 
         while True :
