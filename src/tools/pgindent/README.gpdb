@@ -43,8 +43,8 @@ newest verison of Postgres code that appears in the file.
 
 CONCLUSION:
 
-Although it is always awkward, pgindent'ing code is a good practice in general if
-done understanding the above constraints.
+Although it is always awkward, pgindent'ing code is a good practice in general
+if done understanding the above constraints.
 
 
 DOING THE INDENT RUN:
@@ -68,7 +68,9 @@ that file is following the latest pgindent rules:
 However, running it against `src/backend/main/main.c` which originated from
 Postgres 8.3 (as of this writing) will produce diffs:
 ```bash
-~/workspace/postgres/src/tools/pgindent/pgindent ~/workspace/gpdb/src/tools/pgindent/typedefs.list ~/workspace/gpdb/src/backend/main/main.c
+~/workspace/postgres/src/tools/pgindent/pgindent \
+	~/workspace/gpdb/src/tools/pgindent/typedefs.list \
+	~/workspace/gpdb/src/backend/main/main.c
 ```
 
 
@@ -94,3 +96,10 @@ objdump -W postgres |\
      print $flds[-1],"\n"; }'  |\
  sort | uniq > typedefs.list
 ```
+
+
+Editor Code Style Configuration
+===============================
+The `src/tools/editors` directory contains sample settings that can be used with
+the emacs, xemacs, vim and CLion editors, that assist in keeping to PostgreSQL
+coding standards.
