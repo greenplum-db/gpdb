@@ -1225,7 +1225,6 @@ class GpRecoverSegmentProgram:
                                      " Please review the output in the gprecoverseg log.")
                 self.logger.info("There is a resynchronization running in the background to bring all")
                 self.logger.info("segments in sync.")
-                self.logger.info("")
                 self.logger.info("Use gpstate -e to check the resynchronization progress.")
                 self.logger.info("******************************************************************")
 
@@ -1257,7 +1256,6 @@ class GpRecoverSegmentProgram:
             self.logger.info("******************************************************************")
             self.logger.info("Updating segments for resynchronization is completed.")
             self.logger.info("For segments updated successfully, resynchronization will continue in the background.")
-            self.logger.info("")
             self.logger.info("Use  gpstate -s  to check the resynchronization progress.")
             self.logger.info("******************************************************************")
 
