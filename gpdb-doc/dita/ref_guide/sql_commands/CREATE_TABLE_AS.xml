@@ -86,9 +86,9 @@
 	      for both speed or a good compression ratio, tunable with the compression level option.
 	      QuickLZ and zlib are provided for backwards-compatibility, they are less flexible and
 	      zstd outperforms them on usual workloads. This option
-            is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
+            is only valid if <codeph>APPENDONLY=TRUE</codeph>.
               <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
-                release of Pivotal Greenplum Database.</note>
+                release of Pivotal Greenplum Database.</note></pd>
           <pd><b>COMPRESSLEVEL</b> — For Zstd compression of append-optimized tables, set to an
             integer values between 1 (fastest compression) to 19 (highest compression ratio).
 	    For zlib compression, the valid range is between 1 and 9. QuickLZ
