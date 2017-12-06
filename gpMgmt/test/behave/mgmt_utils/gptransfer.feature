@@ -11,6 +11,7 @@ Feature: gptransfer tests
         Given the gptransfer test is initialized
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_SOURCE_USER --dest-port $GPTRANSFER_SOURCE_PORT --dest-host $GPTRANSFER_SOURCE_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
+        And verify that the utility gptransfer ever does logging into the user's "gpAdminLogs" directory
 
     Scenario: gptransfer full no validator
         Given the gptransfer test is initialized
@@ -626,12 +627,6 @@ Feature: gptransfer tests
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user root --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 2
 
-    Scenario: gptransfer with log in ~/gpAdminLogs
-        Given the gptransfer test is initialized
-        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
-        Then gptransfer should return a return code of 0
-        And verify that a log was created by gptransfer in the user's "gpAdminLogs" directory
-
     Scenario: gptransfer with log in /tmp
         Given the gptransfer test is initialized
         And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -l /tmp --batch-size=10"
@@ -640,8 +635,9 @@ Feature: gptransfer tests
 
     Scenario: gptransfer with log in nonexistent directory
         Given the gptransfer test is initialized
-        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -l ~/gpAdminLogs/gpAdminLogs --batch-size=10"
+        And the user runs "gptransfer --full --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE -l /tmp/nonexistent-dir --batch-size=10"
         Then gptransfer should return a return code of 0
+        And verify that a log was created by gptransfer in the "/tmp/nonexistent-dir" directory
 
     Scenario: gptransfer --schema-only
         Given the gptransfer test is initialized
@@ -662,7 +658,6 @@ Feature: gptransfer tests
         And the user runs "gptransfer -t gptransfer_testdb1.public.t0 -q --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
         And gptransfer should not print "Transfering" to stdout
-        And verify that a log was created by gptransfer in the user's "gpAdminLogs" directory
 
     Scenario: gptransfer --skip-existing conflicts with --full
         Given the gptransfer test is initialized

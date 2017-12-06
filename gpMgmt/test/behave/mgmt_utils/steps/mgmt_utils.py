@@ -4125,20 +4125,21 @@ def impl(context, schema_name, dbname):
         raise Exception("Schema '%s' does not exist in the database '%s'" % (schema_name, dbname))
 
 
-def get_log_name(utilname, logdir):
-    today = datetime.now()
-    logname = "%s/%s_%s.log" % (logdir, utilname, today.strftime('%Y%m%d'))
-    return logname
-
-
-@then('verify that a log was created by {utilname} in the user\'s "{dirname}" directory')
+@then('verify that the utility {utilname} ever does logging into the user\'s "{dirname}" directory')
 def impl(context, utilname, dirname):
     absdirname = "%s/%s" % (os.path.expanduser("~"), dirname)
     if not os.path.exists(absdirname):
         raise Exception('No such directory: %s' % absdirname)
-    logname = get_log_name(utilname, absdirname)
-    if not os.path.exists(logname):
-        raise Exception('Log "%s" was not created' % logname)
+    pattern = "%s/%s_*.log" % (absdirname, utilname)
+    logs_for_a_util = glob.glob(pattern)
+    if not logs_for_a_util:
+        raise Exception('Logs matching "%s" were not created' % pattern)
+
+
+def get_log_name(utilname, logdir):
+    today = datetime.now()
+    logname = "%s/%s_%s.log" % (logdir, utilname, today.strftime('%Y%m%d'))
+    return logname
 
 
 @then('verify that a log was created by {utilname} in the "{dirname}" directory')
