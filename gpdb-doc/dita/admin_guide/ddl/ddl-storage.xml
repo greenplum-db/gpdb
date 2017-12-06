@@ -359,7 +359,7 @@
               <entry colname="col2">Type of compression.</entry>
               <entry colname="col3"><codeph>zstd: </codeph>ZStandard
                     algorithm<p><codeph>zlib: </codeph>deflate
-                    algorithm<p><codeph>quicklz</codeph>: fast
+                    algorithm</p><p><codeph>quicklz</codeph>: fast
                     compression</p><p><codeph>RLE_TYPE</codeph>: run-length encoding
                     </p><p><codeph>none</codeph>: no compression</p></entry>
               <entry colname="col4">Values are not case-sensitive.</entry>
