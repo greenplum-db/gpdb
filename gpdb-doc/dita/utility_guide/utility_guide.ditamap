@@ -25,7 +25,7 @@
             <topicref href="admin_utilities/gplogfilter.xml"/>
             <topicref href="admin_utilities/gpmapreduce.xml"/>
             <topicref href="admin_utilities/gpmfr.xml"/>
-<!-- hidden until testing is complete -msk
+            <!-- hidden until testing is complete -msk
             <topicref href="admin_utilities/gpmovemirrors.xml"/>
 -->
             <topicref href="admin_utilities/gpperfmon_install.xml"/>
@@ -64,6 +64,7 @@
         </topicref>
         <topicref href="contrib-modules.xml">
             <topicref href="dblink.xml"/>
+            <topicref href="citext.xml"/>
             <topicref href="hstore.xml"/>
             <topicref href="orafce_ref.xml"/>
             <topicref href="passwordcheck.xml"/>
