@@ -47,8 +47,8 @@ static void check_ext_options(const FunctionCallInfo fcinfo)
         List *options = exttbl->options;
 
         foreach(cell, options) {
-                DefElem *def = (DefElem *) lfirst(cell);
-                char *key = def->defname;
+                Value *value = (Value *) lfirst(cell);
+                char *key = value->val.str;
 
                 if (key && strcasestr(key, "database") && !strcasestr(key, "greenplum")) {
                         ereport(ERROR, (0, errmsg("This is greenplum.")));
