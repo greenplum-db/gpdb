@@ -16,6 +16,9 @@
 
 <b>gpstop</b> <b>-u</b> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>] [<b>-v</b> | <b>-q</b>]
  
+<b>gpstop</b> <b>--host</b> <varname>host_name</varname> [<b>-d</b> <varname>master_data_directory</varname>] [<b>-l</b> <varname>logfile_directory</varname>]
+       [<b>-t</b> <varname>timeout_seconds</varname>] [<b>-a</b>] [<b>-v</b> | <b>-q</b>]
+
 <b>gpstop</b> <b>--version</b> 
 
 <b>gpstop</b> <b>-?</b> | <b>-h</b> | <b>--help</b></codeblock>
@@ -56,6 +59,23 @@
                     <pt>-d <varname>master_data_directory</varname></pt>
                     <pd>Optional. The master host data directory. If not specified, the value set
                         for <codeph>$MASTER_DATA_DIRECTORY</codeph> will be used.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--host <varname>host_name</varname></pt>
+                    <pd>If segment mirroring is enabled, the utility shuts down the Greenplum
+                        Database segment instances on the specified host. The primary segment
+                        instances on the host are shut down and the associated mirror segment
+                        instances are promoted to primary segments. Mirror segment instances on the
+                        host are shut down.</pd>
+                    <pd>The segment instances are not shut down and utility returns an error in
+                        these cases:<ul id="ul_at2_kk3_ccb">
+                            <li>Segment mirroring is not enabled for the system.</li>
+                            <li>The master or standby master is on the host.</li>
+                            <li>Both a primary segment instance and its mirror are on the host.</li>
+                        </ul></pd>
+                    <pd>This option cannot be specified with the <codeph>-m</codeph>,
+                            <codeph>-r</codeph>, <codeph>-u</codeph>, or <codeph>-y</codeph>
+                        options.</pd>
                 </plentry>
                 <plentry>
                     <pt>-l <varname>logfile_directory</varname></pt>
