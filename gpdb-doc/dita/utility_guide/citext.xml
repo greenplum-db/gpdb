@@ -4,7 +4,7 @@
 <topic id="topic1" xml:lang="en">
   <title id="ij138244">citext Data Type</title>
   <body>
-    <p>The citext module provides a case-insensitive character string type, citext. Essentially, it internally calls the <codeph>lower</codeph> function when comparing values. Otherwise, it behaves almost exactly like the text data type.</p>
+    <p>The citext module provides a case-insensitive character string type, <codeph>citext</codeph>. Essentially, it internally calls the <codeph>lower</codeph> function when comparing values. Otherwise, it behaves almost exactly like the <codeph>text</codeph> data type.</p>
     <p>The standard method to perform case-insensitive matches on text values is to use the <codeph>lower</codeph> function when comparing values, for example</p>
     <codeblock>SELECT * FROM tab WHERE lower(col) = LOWER(?);</codeblock>
     <p>This method works well, but has drawbacks:</p>
@@ -13,7 +13,7 @@
       <li>It does not work with an index, unless you create a functional index using <codeph>lower</codeph>.</li>
       <li>If you declare a column as UNIQUE or PRIMARY KEY, the implicitly generated index is case-sensitive. The index cannot be used for case-insensitive searches, and uniqueness is not enforced case-insensitively. </li>
     </ul>
-    <p>The citext data type allows you to eliminate calls to <codeph>lower</codeph> in SQL queries, and allows a primary key to be case-insensitive. citext is locale-aware, like the text type, which means comparing uppercase and lowercase characters depends on the rules of the LC_CTYPE locale setting. This behavior is as the same as using <codeph>lower</codeph> in queries, but it is done transparently by the data type, so you do not have to do anything special in your queries.</p>
+    <p>The <codeph>citext</codeph> data type allows you to eliminate calls to <codeph>lower</codeph> in SQL queries, and allows a primary key to be case-insensitive. <codeph>citext</codeph> is locale-aware, like the <codeph>text</codeph> type, which means comparing uppercase and lowercase characters depends on the rules of the LC_CTYPE locale setting. This behavior is the same as using <codeph>lower</codeph> in queries, but it is done transparently by the data type, so you do not have to do anything special in your queries.</p>
   </body>
   <topic id="topic_axc_qk4_ccb">
     <title>Installing citext</title>
@@ -25,7 +25,7 @@
   <topic id="topic_m4v_r5j_ccb">
     <title>Using the citext Type</title>
     <body>
-      <p>Here is a simple example defining a citext table column:</p>
+      <p>Here is a simple example defining a <codeph>citext</codeph> table column:</p>
       <codeblock>CREATE TABLE users (
     nick CITEXT PRIMARY KEY,
     pass TEXT   NOT NULL
@@ -46,7 +46,7 @@ SELECT * FROM users WHERE nick = 'Larry';
     <title>String Comparison Behavior</title>
     <body>
       <p><codeph>citext</codeph> performs comparisons by converting each string to lower case (as though the <codeph>lower</codeph> function were called) and then comparing the results normally. Two strings are considered equal if <codeph>lower</codeph> would produce identical results for them.</p>
-      <p>In order to emulate a case-insensitive collation as closely as possible, there are <codeph>citext</codeph>-specific versions of a number of string-processing operators and functions. So, for example, the regular expression operators <codeph>~</codeph> and <codeph>~*</codeph> exhibit the same behavior when applied to <codeph>citext</codeph>: they both match case-insensitively. The same is true for <codeph>!~</codeph> and <codeph>!~*</codeph>, as well as for the <codeph>LIKE</codeph> operators <codeph>~~</codeph> and <codeph>~~*</codeph>, and <codeph>!~~</codeph> and <codeph>!~~*</codeph>. If want to match case-sensitively, you can cast the operator's arguments to <codeph>text</codeph>.</p>
+      <p>In order to emulate a case-insensitive collation as closely as possible, there are <codeph>citext</codeph>-specific versions of a number of string-processing operators and functions. So, for example, the regular expression operators <codeph>~</codeph> and <codeph>~*</codeph> exhibit the same behavior when applied to <codeph>citext</codeph>: they both match case-insensitively. The same is true for <codeph>!~</codeph> and <codeph>!~*</codeph>, as well as for the <codeph>LIKE</codeph> operators <codeph>~~</codeph> and <codeph>~~*</codeph>, and <codeph>!~~</codeph> and <codeph>!~~*</codeph>. If you want to match case-sensitively, you can cast the operator's arguments to <codeph>text</codeph>.</p>
       <p>The following functions perform matching case-insensitively if their arguments are <codeph>citext</codeph>:</p>
       <ul id="ul_yjj_z5j_ccb">
         <li><codeph>regexp_match()</codeph></li>
@@ -67,7 +67,7 @@ SELECT * FROM users WHERE nick = 'Larry';
     <body>
       <ul id="ul_jmp_bvj_ccb">
         <li>
-          <p>The citext type's case-folding behavior depends on the <codeph>LC_CTYPE</codeph> setting of your database. How it compares values is therefore determined when the database is created. It is not truly case-insensitive in the terms defined by the Unicode standard. Effectively, what this means is that, as long as you're happy with your collation, you should be happy with <codeph>citext</codeph>'s comparisons. But if you have data in different languages stored in your database, users of one language may find their query results are not as expected if the collation is for another language.</p>
+          <p>The <codeph>citext</codeph> type's case-folding behavior depends on the <codeph>LC_CTYPE</codeph> setting of your database. How it compares values is therefore determined when the database is created. It is not truly case-insensitive in the terms defined by the Unicode standard. Effectively, what this means is that, as long as you're happy with your collation, you should be happy with <codeph>citext</codeph>'s comparisons. But if you have data in different languages stored in your database, users of one language may find their query results are not as expected if the collation is for another language.</p>
         </li>
         <!--<li><p>As of PostgreSQL 9.1, you can attach a <codeph>COLLATE</codeph> specification to <codeph>citext</codeph> columns or data values. Currently, <codeph>citext</codeph> operators will honor a non-default <codeph>COLLATE</codeph> specification while comparing case-folded strings, but the initial folding to lower case is always done according to the database's <codeph>LC_CTYPE</codeph> setting (that is, as though <codeph>COLLATE "default"</codeph> were given). This may be changed in a future release so that both steps follow the input <codeph>COLLATE</codeph> specification.</p></li>-->
         <li><codeph>citext</codeph> is not as efficient as <codeph>text</codeph> because the operator functions and the B-tree comparison functions must make copies of the data and convert them to lower case for comparisons. It is, however, slightly more efficient than using <codeph>lower</codeph> to perform case-insensitive matching.</li>

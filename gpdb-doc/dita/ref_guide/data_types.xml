@@ -12,7 +12,8 @@
     <p>Optional modules in the <filepath>contrib</filepath> directory may also install new data
       types.  The <codeph>hstore</codeph> module, for example, introduces a new data type and
       associated functions for working with key-value pairs. See <xref
-        href="../utility_guide/hstore.xml#topic_vcn_jkq_1bb"/>.</p>
+        href="../utility_guide/hstore.xml#topic_vcn_jkq_1bb"/>. The <codeph>citext</codeph> module 
+        adds a case-insensitive text data type. See <xref href="../utility_guide/citype.xml"/>.</p>
     <p>The following data types are specified by SQL: <i>bit</i>, <i>bit varying</i>,
       <i>boolean</i>, <i>character varying, varchar</i>, <i>character, char</i>, <i>date</i>,
         <i>double precision</i>, <i>integer</i>, <i>interval</i>, <i>numeric</i>, <i>decimal</i>,
