@@ -4173,7 +4173,7 @@
           <tbody>
             <row>
               <entry colname="col1"
-                  >gphd-1.0<p>gphd-1.1</p><p>gphd-1.2</p><p>gphd-2.0</p><p>gphd-3.0</p><p>gpmr-1.0</p><p>gpmr-1.2</p><p>hadoop2</p><p>hdp2</p><p>cdh5</p><p>cdh3u2</p><p>cdh4.1</p></entry>
+                  >gpmr-1.2<p>hadoop2</p><p>hdp2</p><p>cdh5</p><p>cdh4.1</p></entry>
               <entry colname="col2">gphd-1.1</entry>
               <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
