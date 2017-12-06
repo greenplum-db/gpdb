@@ -62,8 +62,8 @@
                 </plentry>
                 <plentry>
                     <pt>--host <varname>host_name</varname></pt>
-                    <pd>If segment mirroring is enabled, the utility shuts down the Greenplum
-                        Database segment instances on the specified host. Each primary segment
+                    <pd>The utility shuts down the Greenplum Database segment instances on the
+                        specified host to allow maintenance on the host. Each primary segment
                         instance on the host is shut down and the associated mirror segment instance
                         is promoted to a primary segment if the mirror segment is on another host.
                         Mirror segment instances on the host are shut down.</pd>
