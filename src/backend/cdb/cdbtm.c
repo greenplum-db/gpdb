@@ -687,7 +687,6 @@ doPrepareTransaction(void)
 
 /*
  * Insert FORGET COMMITTED into the xlog.
- * Call with both ProcArrayLock and DTM lock already held.
  */
 static void
 doInsertForgetCommitted(void)
@@ -696,7 +695,9 @@ doInsertForgetCommitted(void)
 
 	elog(DTM_DEBUG5, "doInsertForgetCommitted entering in state = %s", DtxStateToString(currentGxact->state));
 
-	setCurrentGxactState( DTX_STATE_INSERTING_FORGET_COMMITTED );
+	getTmLock();
+	setCurrentGxactState(DTX_STATE_INSERTING_FORGET_COMMITTED);
+	releaseTmLock();
 
 	if (strlen(currentGxact->gid) >= TMGIDSIZE)
 		elog(PANIC, "Distribute transaction identifier too long (%d)",
@@ -706,16 +707,46 @@ doInsertForgetCommitted(void)
 
 	RecordDistributedForgetCommitted(&gxact_log);
 
-	setCurrentGxactState( DTX_STATE_INSERTED_FORGET_COMMITTED );
+	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+	getTmLock();
+
+	setCurrentGxactState(DTX_STATE_INSERTED_FORGET_COMMITTED);
 
 	/*
-	 * These two actions must be performed for a distributed transaction under the same
-	 * locking of ProceArrayLock so the visibility of the transaction changes for local
-	 * master readers (e.g. those using  SnapshotNow for reading) the same as for
-	 * distributed transactions.
+	 * These two actions must be performed for a distributed transaction under
+	 * the same locking of ProceArrayLock so the visibility of the transaction
+	 * changes for local master readers (e.g. those using  SnapshotNow for
+	 * reading) the same as for distributed transactions.
+	 *
+	 *
+	 * In upstream Postgres, proc->xid is cleared in ProcArrayEndTransaction.
+	 * But there would have a small window in Greenplum that allows inconsistency
+	 * between ProcArrayEndTransaction and notifying prepared commit to segments.
+	 * In between, the master has new tuple visible while the segments are seeing
+	 * old tuples.
+	 *
+	 * For example, session 1 runs:
+	 *    RENAME from a_new to a;
+	 * session 2 runs:
+	 *    DROP TABLE a;
+	 *
+	 * When session 1 goes to just before notifyCommittedDtxTransaction, the new
+	 * coming session 2 can see a new tuple for renamed table "a" in pg_class,
+	 * and can drop it in master. However, dispatching DROP to segments, at this
+	 * point of time segments still have old tuple for "a_new" visible in
+	 * pg_class and DROP process just fails to drop "a". Then DTX is notified
+	 * later and committed in the segments, the new tuple for "a" is visible
+	 * now, but nobody wants to DROP it anymore, so the master has no tuple for
+	 * "a" while the segments have it.
+	 *
+	 * To fix this, transactions require two-phase commit should defer clear 
+	 * proc->xid here with ProcArryLock held.
 	 */
 	ClearTransactionFromPgProc_UnderLock(MyProc, true);
 	releaseGxact_UnderLocks();
+
+	releaseTmLock();
+	LWLockRelease(ProcArrayLock);
 
 	elog(DTM_DEBUG5, "doInsertForgetCommitted called releaseGxact");
 }
@@ -823,19 +854,7 @@ doNotifyingCommitPrepared(void)
 	elog(DTM_DEBUG5, "the distributed transaction 'Commit Prepared' broadcast "
 		 "succeeded to all the segments for gid = %s.", currentGxact->gid);
 
-	/*
-	 * Global locking order: ProcArrayLock then DTM lock since
-	 * calls doInsertForgetCommitted calls releaseGxact.
-	 */
-	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-	getTmLock();
-
 	doInsertForgetCommitted();
-
-	releaseTmLock();
-
-	LWLockRelease(ProcArrayLock);
 }
 
 static void
@@ -1012,11 +1031,6 @@ doNotifyingAbort(void)
 
 	SIMPLE_FAULT_INJECTOR(DtmBroadcastAbortPrepared);
 
-	/*
-	 * Global locking order: ProcArrayLock then DTM lock.
-	 */
-	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
 	getTmLock();
 
 	Assert(currentGxact->state == DTX_STATE_NOTIFYING_ABORT_NO_PREPARED ||
@@ -1027,8 +1041,6 @@ doNotifyingAbort(void)
 	elog(DTM_DEBUG5, "doNotifyingAbort called releaseGxact");
 
 	releaseTmLock();
-
-	LWLockRelease(ProcArrayLock);
 }
 
 static bool
@@ -2413,6 +2425,7 @@ createDtxSnapshot(
 			case DTX_STATE_NOTIFYING_ABORT_PREPARED:
 			case DTX_STATE_RETRY_COMMIT_PREPARED:
 			case DTX_STATE_RETRY_ABORT_PREPARED:
+			case DTX_STATE_INSERTING_FORGET_COMMITTED:
 				/*
 				 * Active or commit/abort not complete.  Keep this transaction
 				 * considered for distributed snapshots.
@@ -2426,10 +2439,6 @@ createDtxSnapshot(
 
 			case DTX_STATE_INSERTING_COMMITTED:
 				elog(FATAL, "Cannot also be inserting COMMITTED into log buffer from another process with TM lock held");
-				break;
-
-			case DTX_STATE_INSERTING_FORGET_COMMITTED:
-				elog(FATAL, "Cannot also be inserting FORGET COMMITTED into log buffer from another process with TM lock held");
 				break;
 
 			case DTX_STATE_CRASH_COMMITTED:
@@ -2553,12 +2562,7 @@ createDtx(DistributedTransactionId		*distribXid)
 
 	MIRRORED_LOCK_DECLARE;
 
-	/*
-	 * Global locking order: ProcArrayLock then DTM lock.
-	 */
 	MIRRORED_LOCK;
-
-	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 
 	getTmLock();
 
@@ -2566,7 +2570,6 @@ createDtx(DistributedTransactionId		*distribXid)
 	{
 		dumpAllDtx();
 		releaseTmLock();
-		LWLockRelease(ProcArrayLock);
 		ereport(FATAL,
 				(errmsg("the limit of %d distributed transactions has been reached.",
 						max_tm_gxacts),
@@ -2589,8 +2592,6 @@ createDtx(DistributedTransactionId		*distribXid)
 
 	releaseTmLock();
 
-	LWLockRelease(ProcArrayLock);
-
 	MIRRORED_UNLOCK;
 
 	currentGxact = gxact;
@@ -2603,7 +2604,7 @@ createDtx(DistributedTransactionId		*distribXid)
 
 /*
  * Release global transaction's shared memory.
- * Must already hold ProcArrayLock and the DTM lock.
+ * Must already hold the DTM lock.
  */
 static void
 releaseGxact_UnderLocks(void)
@@ -2648,18 +2649,11 @@ releaseGxact_UnderLocks(void)
 static void
 releaseGxact(void)
 {
-	/*
-	 * Global locking order: ProcArrayLock then DTM lock.
-	 */
-	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
 	getTmLock();
 
 	releaseGxact_UnderLocks();
 
 	releaseTmLock();
-
-	LWLockRelease(ProcArrayLock);
 }
 
 /*
@@ -2771,15 +2765,12 @@ getDtxCheckPointInfoAndLock(char **result, int *result_size)
 			elog(FATAL, "Cannot also be buffering COMMITTED from another process with TM lock held");
 			continue;
 
-		case DTX_STATE_INSERTING_FORGET_COMMITTED:
-			elog(FATAL, "Cannot also be buffering FORGET COMMITTED from another process with TM lock held");
-			continue;
-
 		case DTX_STATE_INSERTED_COMMITTED:
 		case DTX_STATE_FORCED_COMMITTED:
 		case DTX_STATE_NOTIFYING_COMMIT_PREPARED:
 		case DTX_STATE_RETRY_COMMIT_PREPARED:
 		case DTX_STATE_CRASH_COMMITTED:
+		case DTX_STATE_INSERTING_FORGET_COMMITTED:
 			break;
 
 		case DTX_STATE_NOTIFYING_ABORT_NO_PREPARED:
@@ -3028,22 +3019,10 @@ recoverInDoubtTransactions(void)
 		currentGxact = gxact;
 
 		/*
-		 * Global locking order: ProcArrayLock then DTM lock since
-		 * calls doInsertForgetCommitted calls releaseGxact.
+		 * This routine would call releaseGxact_UnderLocks, which would
+		 * decrease *shmNumGxacts and do a swap, so no need to increase i
 		 */
-		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-
-		getTmLock();
-
-		/* This routine would call releaseGxact_UnderLocks, which
-		 * would decrease *shmNumGxacts and do a swap, so no need
-		 * to increase i */
 		doInsertForgetCommitted();
-
-		releaseTmLock();
-
-		LWLockRelease(ProcArrayLock);
-
 	}
 
 	currentGxact = saved_currentGxact;
