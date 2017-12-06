@@ -63,8 +63,8 @@
             </topicref>
         </topicref>
         <topicref href="contrib-modules.xml">
-            <topicref href="dblink.xml"/>
             <topicref href="citext.xml"/>
+            <topicref href="dblink.xml"/>
             <topicref href="hstore.xml"/>
             <topicref href="orafce_ref.xml"/>
             <topicref href="passwordcheck.xml"/>
