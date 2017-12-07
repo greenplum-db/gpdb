@@ -449,16 +449,16 @@ class GpExpandTests(MPPTestCase):
 
     def check_number_of_parallel_tables_expanded(self, number_of_parallel_table_redistributed):
         tinctest.logger.info("in check_number_of_parallel_tables_expanded")
-        tables_in_progress = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='IN PROGRESS';")
-        tables_not_started = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='NOT STARTED';")
         tables_completed = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='COMPLETED';")
-
-        count = 0
         max_parallel = -1
-        prev_count = int(number_of_parallel_table_redistributed)
 
+        # For parallelism, we expect tables_in_progress to be more than one.
         minimum_acceptable_evidence_of_parallelism = 2
-        while int(tables_in_progress) < minimum_acceptable_evidence_of_parallelism and int(tables_completed)<int(number_of_parallel_table_redistributed):
+
+        # If the data being distributed is smaller than the number_of_parallel_table_redistributed,
+        # then this will go into an infinite loop. However, we know that our current data is larger or equal to the
+        # requested value number_of_parallel_table_redistributed. So, we won't consider that case here.
+        while int(tables_completed) < int(number_of_parallel_table_redistributed):
             tables_in_progress = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='IN PROGRESS';")
             tables_completed = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='COMPLETED';")
             tinctest.logger.info("waiting to reach desired number of parallel redistributions \ntables_completed : " + tables_completed)
@@ -468,29 +468,18 @@ class GpExpandTests(MPPTestCase):
                 max_parallel = int(tables_in_progress)
 
         if max_parallel < minimum_acceptable_evidence_of_parallelism:
-            self.fail("The specified value was never reached.")
-
-        while True :
-            tables_in_progress = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='IN PROGRESS';")
-            tables_completed = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='COMPLETED';")
-            tinctest.logger.info("Redistributing in parallel - tables_completed : " + tables_completed)
-            tinctest.logger.info("Redistributing in parallel -  tables_in_progress :"+ tables_in_progress)
-            if int(tables_in_progress) > prev_count:
-                self.fail("The number of parallel tables being redistributed was not stable")
-         
-            count = count +1
-            prev_count = int(tables_in_progress)
-
-            if int(tables_in_progress) == 0 and int(tables_completed) == int(number_of_parallel_table_redistributed):
-                break
-
-        tables_in_progress = self.get_value_from_query("select count(*) from gpexpand.status_detail where status='IN PROGRESS';")
+            self.fail("The minimum parallelism %d was never reached. "
+                      "Maximum number of parallel found for IN_PROGRESS is only %d. "
+                      "The table redistributed is %d. "
+                      % (minimum_acceptable_evidence_of_parallelism, max_parallel,
+                         int(number_of_parallel_table_redistributed)))
 
         sql_cmd = "select * from gpexpand.status_detail"
-        res = PSQL.run_sql_command(sql_cmd, out_file = "/data/gpexpand_psql.out", flags ='-q -t')
+        PSQL.run_sql_command(sql_cmd, out_file="/data/gpexpand_psql.out", flags='-q -t')
 
-        if int(tables_in_progress) != 0:
-            self.fail("Tables currently being redistributed in parallel is not as specified: In progress tables found %s" %(tables_in_progress))                         
+        # It is possible that gpexpand continues to run if it has more data, and there could be more tables IN_PROGRESS.
+        # However, we have observed parallelism if tables_in_progress is more than minimum_acceptable_evidence_of
+        # parallelism.
 
     def _validate_redistribution(self):
         """
