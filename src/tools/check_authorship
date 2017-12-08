@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# check HEAD commit to ensure `Author:` exists
+git show --pretty=format:%b -s | grep "Author:"

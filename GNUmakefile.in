@@ -301,5 +301,8 @@ distcheck: dist
 	rm -rf $(distdir) $(dummy)
 	@echo "Distribution integrity checks out."
 
+check-authorship:
+	src/tools/check_authorship
+
 .PHONY: dist distdir distcheck
 unexport split-dist
