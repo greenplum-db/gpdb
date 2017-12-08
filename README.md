@@ -383,6 +383,23 @@ At the very minimum you should always be running
 ```make installcheck-world```
 to make sure that you're not breaking anything.
 
+### Authorship guidelines
+
+In order to retain clear authorship of patches, we use the following authorship guideline.
+At the end of each commit message, add all the contributors with the prefix of `Author:`
+and person's name and email information. For example:
+
+```
+This is a new commit.
+
+Author: Alice <alice@somewhere.com>
+Author: Bob <bob@someplace.org>
+```
+
+To help automate the process, people can either:
+ - set git commit template by `git config --global commit.template=<your authorship template>`
+ - use [git-author](https://www.github.com/xinzweb/git-author)
+
 ### Changes applicable to upstream PostgreSQL
 
 If the change you're working on touches functionality that is common between PostgreSQL
