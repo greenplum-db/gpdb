@@ -3167,7 +3167,7 @@ InitTempTableNamespace(void)
 	/*
 	 * GPDB: Delete old temp schema.
 	 *
-	 * Remove any vestigages of old temporary schema, if any.  This can
+	 * Remove any vestiges of old temporary schema, if any.  This can
 	 * happen when an old session crashes and doesn't run normal session
 	 * shutdown.
 	 *
@@ -3503,6 +3503,7 @@ RemoveTempRelationsCallback(int code, Datum arg)
 
 			/* MPP-3390: drop pg_temp_N schema entry from pg_namespace */
 			RemoveSchemaById(myTempNamespace);
+			RemoveSchemaById(myTempToastNamespace);
 			elog(DEBUG1, "Remove schema entry %u from pg_namespace", 
 				 myTempNamespace); 
 		}
