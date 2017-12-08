@@ -138,7 +138,7 @@ installdirs-tests: installdirs
 
 # Get some extra C modules from contrib/spi...
 
-all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest
+all: refint$(DLSUFFIX) autoinc$(DLSUFFIX) tablespace-setup includecheck hooktest bgworker_example$(DLSUFFIX)
 
 refint$(DLSUFFIX): $(top_builddir)/contrib/spi/refint$(DLSUFFIX)
 	cp $< $@
@@ -152,6 +152,11 @@ $(top_builddir)/contrib/spi/refint$(DLSUFFIX): $(top_srcdir)/contrib/spi/refint.
 $(top_builddir)/contrib/spi/autoinc$(DLSUFFIX): $(top_srcdir)/contrib/spi/autoinc.c
 	$(MAKE) -C $(top_builddir)/contrib/spi autoinc$(DLSUFFIX)
 
+bgworker_example$(DLSUFFIX): $(top_builddir)/contrib/bgworker_example/bgworker_example$(DLSUFFIX)
+	cp $< $@
+
+$(top_builddir)/contrib/bgworker_example/bgworker_example$(DLSUFFIX): $(top_srcdir)/contrib/bgworker_example/bgworker_example.c
+	$(MAKE) -C $(top_builddir)/contrib/bgworker_example bgworker_example$(DLSUFFIX)
 
 # Tablespace setup
 

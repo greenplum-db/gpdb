@@ -201,6 +201,7 @@ do { \
 extern pid_t PostmasterPid;
 extern bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
+extern bool IsBackgroundWorker;  /* Greenplum specific bgworker */
 extern bool IsBinaryUpgrade;
 
 /* Are we binary-upgrading a QE node? */

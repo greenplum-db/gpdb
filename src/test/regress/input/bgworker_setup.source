@@ -1,0 +1,15 @@
+--
+-- Setup for bgworker.sql tests
+-- 
+
+-- We are setting shared_preload_libraries to "bgworker_example.so" and
+-- restart database, then use bgworker.sql to verify bgworker processes
+-- are correctly launched 
+
+-- start_ignore 
+\! cp $MASTER_DATA_DIRECTORY/postgresql.conf $MASTER_DATA_DIRECTORY/postgresql.conf.bgworkertest.bak
+\! echo "shared_preload_libraries='bgworker_example'" >> $MASTER_DATA_DIRECTORY/postgresql.conf 
+\! PGDATESTYLE="" gpstop -ai
+\! cp @libdir@/bgworker_example@DLSUFFIX@ $GPHOME/lib/postgresql/
+\! PGDATESTYLE="" gpstart -a
+-- end_ignore

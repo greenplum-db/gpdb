@@ -33,6 +33,12 @@ test: workfile/hashagg_spill workfile/hashjoin_spill workfile/materialize_spill 
 # 'zlib' utilizes fault injectors so it needs to be in a group by itself
 test: zlib
 
+# This test will change the shared_preload_libraries and need to restart the DB.
+# So it needs to be in a group by itself.
+test: bgworker_setup
+test: bgworker
+test: bgworker_cleanup
+
 # This test will change the gp_workfile_limit_per_segment and will need to restart the DB.
 # It will also use faultinjector - so it needs to be in a group by itself.
 test: segspace_setup

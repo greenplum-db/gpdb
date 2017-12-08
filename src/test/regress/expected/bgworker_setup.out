@@ -1,0 +1,65 @@
+--
+-- Setup for bgworker.sql tests
+-- 
+-- We are setting shared_preload_libraries to "bgworker_example.so" and
+-- restart database, then use bgworker.sql to verify bgworker processes
+-- are correctly launched 
+-- start_ignore 
+\! cp $MASTER_DATA_DIRECTORY/postgresql.conf $MASTER_DATA_DIRECTORY/postgresql.conf.bgworkertest.bak
+\! echo "shared_preload_libraries='bgworker_example'" >> $MASTER_DATA_DIRECTORY/postgresql.conf 
+\! PGDATESTYLE="" gpstop -ai
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Starting gpstop with args: -ai
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Gathering information and validating the environment...
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.1581.g3cb8ea8 build dev'
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-There are 1 connections to the database
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode='immediate'
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Master host=sdw
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Commencing Master instance shutdown with mode=immediate
+20171130:18:01:57:026828 gpstop:sdw:gpadmin-[INFO]:-Master segment instance directory=/home/gpadmin/gpdb5.data/master/gpseg-1
+20171130:18:01:58:026828 gpstop:sdw:gpadmin-[INFO]:-Attempting forceful termination of any leftover master process
+20171130:18:01:58:026828 gpstop:sdw:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/gpdb5.data/master/gpseg-1
+20171130:18:01:58:026828 gpstop:sdw:gpadmin-[INFO]:-No standby master host configured
+20171130:18:01:58:026828 gpstop:sdw:gpadmin-[INFO]:-Commencing parallel segment instance shutdown, please wait...
+20171130:18:01:58:026828 gpstop:sdw:gpadmin-[INFO]:-0.00% of jobs completed
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-100.00% of jobs completed
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-   Segments stopped successfully      = 2
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-Successfully shutdown 2 of 2 segment instances 
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-Cleaning up leftover gpmmon process
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-No leftover gpmmon process found
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-Cleaning up leftover gpsmon processes
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-No leftover gpsmon processes on some hosts. not attempting forceful termination on these hosts
+20171130:18:02:00:026828 gpstop:sdw:gpadmin-[INFO]:-Cleaning up leftover shared memory
+\! cp /home/gpadmin/workspace_wh/gpdb_wh/src/test/regress/bgworker_example.so $GPHOME/lib/postgresql/
+\! PGDATESTYLE="" gpstart -a
+20171130:18:02:02:029710 gpstart:sdw:gpadmin-[INFO]:-Starting gpstart with args: -a
+20171130:18:02:02:029710 gpstart:sdw:gpadmin-[INFO]:-Gathering information and validating the environment...
+20171130:18:02:02:029710 gpstart:sdw:gpadmin-[INFO]:-Greenplum Binary Version: 'postgres (Greenplum Database) 6.0.0-alpha.0+dev.1581.g3cb8ea8 build dev'
+20171130:18:02:02:029710 gpstart:sdw:gpadmin-[INFO]:-Greenplum Catalog Version: '301711241'
+20171130:18:02:02:029710 gpstart:sdw:gpadmin-[INFO]:-Starting Master instance in admin mode
+20171130:18:02:03:029710 gpstart:sdw:gpadmin-[INFO]:-Obtaining Greenplum Master catalog information
+20171130:18:02:03:029710 gpstart:sdw:gpadmin-[INFO]:-Obtaining Segment details from master...
+20171130:18:02:03:029710 gpstart:sdw:gpadmin-[INFO]:-Setting new master era
+20171130:18:02:03:029710 gpstart:sdw:gpadmin-[INFO]:-Master Started...
+20171130:18:02:04:029710 gpstart:sdw:gpadmin-[INFO]:-Heap checksum setting is consistent across the cluster
+20171130:18:02:04:029710 gpstart:sdw:gpadmin-[INFO]:-Shutting down master
+20171130:18:02:05:029710 gpstart:sdw:gpadmin-[INFO]:-Commencing parallel segment instance startup, please wait...
+.. 
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-Process results...
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-   Successful segment starts                                            = 2
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-   Failed segment starts                                                = 0
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-   Skipped segment starts (segments are marked down in configuration)   = 0
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-Successfully started 2 of 2 segment instances 
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-----------------------------------------------------
+20171130:18:02:07:029710 gpstart:sdw:gpadmin-[INFO]:-Starting Master instance sdw directory /home/gpadmin/gpdb5.data/master/gpseg-1 
+20171130:18:02:08:029710 gpstart:sdw:gpadmin-[INFO]:-Command pg_ctl reports Master sdw instance active
+20171130:18:02:08:029710 gpstart:sdw:gpadmin-[INFO]:-No standby master configured.  skipping...
+20171130:18:02:08:029710 gpstart:sdw:gpadmin-[INFO]:-Database successfully started
+-- end_ignore
