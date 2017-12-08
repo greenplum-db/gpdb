@@ -52,8 +52,8 @@ function build_gpdb() {
     # value based on number of CPUs or anything like that. Going above -j4 wouldn't
     # make it much faster, and -j4 is small enough to not hurt too badly even on
     # a single-CPU system
-    make -j4
-    make install
+    make -j4 -s
+    make -s install
   popd
 }
 

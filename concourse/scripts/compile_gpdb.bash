@@ -86,9 +86,9 @@ function build_gpdb() {
     # make it much faster, and -j4 is small enough to not hurt too badly even on
     # a single-CPU system
     if [ -n "$1" ]; then
-      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
+      make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
     else
-      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 dist
+      make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j4 -s dist
     fi
   popd
 }
@@ -102,7 +102,7 @@ function build_gppkg() {
 function unittest_check_gpdb() {
   pushd $GPDB_SRC_PATH
     source $GREENPLUM_INSTALL_DIR/greenplum_path.sh
-    make GPROOT=/usr/local unittest-check
+    make GPROOT=/usr/local -s unittest-check
   popd
 }
 
@@ -112,7 +112,7 @@ function build_pxf() {
   export BUILD_NUMBER="${TARGET_OS}"
   export PXF_HOME="${GREENPLUM_INSTALL_DIR}/pxf"
   export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
-  make install DATABASE=gpdb
+  make install -s DATABASE=gpdb
   popd
 }
 

@@ -27,7 +27,7 @@ function build_gpdb() {
       --with-libraries=${CWD}/depends/build/lib \
       --with-includes=${CWD}/depends/build/include \
       --prefix=${GREENPLUM_INSTALL_DIR}
-    make -j4
+    make -j4 -s
     LD_LIBRARY_PATH=${CWD}/depends/build/lib make install
     popd
     install_external_depends
