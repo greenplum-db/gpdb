@@ -75,7 +75,10 @@
                         </ul></pd>
                     <pd>This option cannot be specified with the <codeph>-m</codeph>,
                             <codeph>-r</codeph>, <codeph>-u</codeph>, or <codeph>-y</codeph>
-                        options.</pd>
+                            options.<note>The <codeph>gpseginstall</codeph> utility restores segment
+                            instances. Run <codeph>gpseginstall</codeph> commands to start the
+                            segments as mirrors and then to return the segments to their preferred
+                            role (primary segments). </note></pd>
                 </plentry>
                 <plentry>
                     <pt>-l <varname>logfile_directory</varname></pt>
