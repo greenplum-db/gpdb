@@ -27,15 +27,16 @@
     <body>
       <p>Here is a simple example defining a <codeph>citext</codeph> table column:</p>
       <codeblock>CREATE TABLE users (
-    nick CITEXT PRIMARY KEY,
+    id bigint PRIMARY KEY,
+    nick CITEXT NOT NULL,
     pass TEXT   NOT NULL
-);
+) DISTRIBUTED BY (id);
 
-INSERT INTO users VALUES ( 'larry',  md5(random()::text) );
-INSERT INTO users VALUES ( 'Tom',    md5(random()::text) );
-INSERT INTO users VALUES ( 'Damian', md5(random()::text) );
-INSERT INTO users VALUES ( 'NEAL',   md5(random()::text) );
-INSERT INTO users VALUES ( 'Bjørn',  md5(random()::text) );
+INSERT INTO users VALUES (1,  'larry',  md5(random()::text) );
+INSERT INTO users VALUES (2,  'Tom',    md5(random()::text) );
+INSERT INTO users VALUES (3,  'Damian', md5(random()::text) );
+INSERT INTO users VALUES (4,  'NEAL',   md5(random()::text) );
+INSERT INTO users VALUES (5,  'Bjørn',  md5(random()::text) );
 
 SELECT * FROM users WHERE nick = 'Larry';
 </codeblock>
