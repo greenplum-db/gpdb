@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.214 2008/12/19 16:25:16 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/psql-ref.sgml,v 1.225 2009/04/21 17:23:05 momjian Exp $
 PostgreSQL documentation
 -->
 
@@ -920,6 +920,12 @@ testdb=&gt;
         objects.
         </para>
 
+        <para>
+        By default, only user-created objects are shown;  supply a
+        pattern or the <literal>S</literal> modifier to include system
+        objects.
+        </para>
+
         <note>
         <para>
         If <command>\d</command> is used without a
@@ -1135,7 +1141,7 @@ testdb=&gt;
         form <literal>\df+</literal> is used, additional information
         about each function, including volatility, language, source
         code and description, is shown.  By default, only user-created
-        objects are shown; supply a pattern or the <literal>S</literal>
+        objects are shown;  supply a pattern or the <literal>S</literal>
         modifier to include system objects.
         </para>
 
@@ -1226,9 +1232,9 @@ testdb=&gt;
         <term><literal>\ds[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dt[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
         <term><literal>\dv[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-	<term><literal>\dP[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-	<term><literal>\dx[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
-	<term><literal>\dr[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dP[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dx[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
+        <term><literal>\dr[S+] [ <link linkend="APP-PSQL-patterns"><replaceable class="parameter">pattern</replaceable></link> ]</literal></term>
 
         <listitem>
         <para>
@@ -1243,6 +1249,9 @@ testdb=&gt;
         and tables.  If <literal>+</literal> is
         appended to the command name, each object is listed with its
         physical size on disk and its associated description, if any.
+        By default, only user-created objects are shown;  supply a
+        pattern or the <literal>S</literal> modifier to include system
+        objects.
         </para>
 
         <para>

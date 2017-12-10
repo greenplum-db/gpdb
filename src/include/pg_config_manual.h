@@ -6,7 +6,7 @@
  * for developers.	If you edit any of these, be sure to do a *full*
  * rebuild (and an initdb if noted).
  *
- * $PostgreSQL: pgsql/src/include/pg_config_manual.h,v 1.35 2008/07/12 02:28:43 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/pg_config_manual.h,v 1.39 2009/06/11 14:49:08 momjian Exp $
  *------------------------------------------------------------------------
  */
 
@@ -65,12 +65,6 @@
  * semaphores have to be used.
  */
 #define NUM_ATOMICS_SEMAPHORES      64
-
-/*
- * Define this if you want psql to _always_ ask for a username and a
- * password for password authentication.
- */
-/* #define PSQL_ALWAYS_GET_PASSWORDS */
 
 /*
  * Define this if you want to allow the lo_import and lo_export SQL
@@ -134,6 +128,25 @@
 #endif
 
 /*
+ * USE_POSIX_FADVISE controls whether Postgres will attempt to use the
+ * posix_fadvise() kernel call.  Usually the automatic configure tests are
+ * sufficient, but some older Linux distributions had broken versions of
+ * posix_fadvise().  If necessary you can remove the #define here.
+ */
+#if HAVE_DECL_POSIX_FADVISE && defined(HAVE_POSIX_FADVISE)
+#define USE_POSIX_FADVISE
+#endif
+
+/*
+ * USE_PREFETCH code should be compiled only if we have a way to implement
+ * prefetching.  (This is decoupled from USE_POSIX_FADVISE because there
+ * might in future be support for alternative low-level prefetch APIs.)
+ */
+#ifdef USE_POSIX_FADVISE
+#define USE_PREFETCH
+#endif
+
+/*
  * This is the default directory in which AF_UNIX socket files are
  * placed.	Caution: changing this risks breaking your existing client
  * applications, which are likely to continue to look in the old
@@ -183,7 +196,7 @@
 /*
  * Define this to cause palloc()'d memory to be filled with random data, to
  * facilitate catching code that depends on the contents of uninitialized
- * memory.  Caution: this is horrendously expensive.
+ * memory.	Caution: this is horrendously expensive.
  */
 /* #define RANDOMIZE_ALLOCATED_MEMORY */
 

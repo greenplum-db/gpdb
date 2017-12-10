@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/gist/gistvacuum.c,v 1.42 2009/01/01 17:23:35 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/gist/gistvacuum.c,v 1.45 2009/06/11 14:48:53 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -527,18 +527,22 @@ gistvacuumcleanup(PG_FUNCTION_ARGS)
 	Relation	rel = info->index;
 	BlockNumber npages,
 				blkno;
-	BlockNumber	totFreePages;
+	BlockNumber totFreePages;
 	BlockNumber lastBlock = GIST_ROOT_BLKNO,
 				lastFilledBlock = GIST_ROOT_BLKNO;
 	bool		needLock;
+
+	/* No-op in ANALYZE ONLY mode */
+	if (info->analyze_only)
+		PG_RETURN_POINTER(stats);
 
 	/* Set up all-zero stats if gistbulkdelete wasn't called */
 	if (stats == NULL)
 	{
 		stats = (GistBulkDeleteResult *) palloc0(sizeof(GistBulkDeleteResult));
 		/* use heap's tuple count */
-		Assert(info->num_heap_tuples >= 0);
 		stats->std.num_index_tuples = info->num_heap_tuples;
+		stats->std.estimated_count = info->estimated_count;
 
 		/*
 		 * XXX the above is wrong if index is partial.	Would it be OK to just
@@ -700,6 +704,7 @@ gistbulkdelete(PG_FUNCTION_ARGS)
 	if (stats == NULL)
 		stats = (GistBulkDeleteResult *) palloc0(sizeof(GistBulkDeleteResult));
 	/* we'll re-count the tuples each time */
+	stats->std.estimated_count = false;
 	stats->std.num_index_tuples = 0;
 
 	stack = (GistBDItem *) palloc0(sizeof(GistBDItem));

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.349 2009/01/01 17:23:36 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/heap.c,v 1.354 2009/06/11 14:48:54 momjian Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -116,10 +116,10 @@ static Oid AddNewRelationType(const char *typeName,
 				   Oid new_array_type);
 static void RelationRemoveInheritance(Oid relid);
 static void StoreRelCheck(Relation rel, char *ccname, Node *expr,
-						  bool is_local, int inhcount);
+			  bool is_local, int inhcount);
 static void StoreConstraints(Relation rel, List *cooked_constraints);
 static bool MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
-										bool allow_merge, bool is_local);
+							bool allow_merge, bool is_local);
 static Node *cookConstraint(ParseState *pstate,
 			   Node *raw_constraint,
 			   char *relname);
@@ -144,37 +144,37 @@ static List *insert_ordered_unique_oid(List *list, Oid datum);
 static FormData_pg_attribute a1 = {
 	0, {"ctid"}, TIDOID, 0, sizeof(ItemPointerData),
 	SelfItemPointerAttributeNumber, 0, -1, -1,
-	false, 'p', 's', true, false, false, true, 0
+	false, 'p', 's', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a2 = {
 	0, {"oid"}, OIDOID, 0, sizeof(Oid),
 	ObjectIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a3 = {
 	0, {"xmin"}, XIDOID, 0, sizeof(TransactionId),
 	MinTransactionIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a4 = {
 	0, {"cmin"}, CIDOID, 0, sizeof(CommandId),
 	MinCommandIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a5 = {
 	0, {"xmax"}, XIDOID, 0, sizeof(TransactionId),
 	MaxTransactionIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 static FormData_pg_attribute a6 = {
 	0, {"cmax"}, CIDOID, 0, sizeof(CommandId),
 	MaxCommandIdAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 /*
@@ -186,7 +186,7 @@ static FormData_pg_attribute a6 = {
 static FormData_pg_attribute a7 = {
 	0, {"tableoid"}, OIDOID, 0, sizeof(Oid),
 	TableOidAttributeNumber, 0, -1, -1,
-	true, 'p', 'i', true, false, false, true, 0
+	true, 'p', 'i', true, false, false, true, 0, {0}
 };
 
 /*CDB*/
@@ -912,11 +912,13 @@ void MetaTrackDropObject(Oid		classid,
  *		Construct and insert a new tuple in pg_attribute.
  *
  * Caller has already opened and locked pg_attribute.  new_attribute is the
- * attribute to insert.
+ * attribute to insert (but we ignore its attacl, if indeed it has one).
  *
- * indstate is the index state for CatalogIndexInsert.  It can be passed as
+ * indstate is the index state for CatalogIndexInsert.	It can be passed as
  * NULL, in which case we'll fetch the necessary info.  (Don't do this when
  * inserting multiple attributes, because it's a tad more expensive.)
+ *
+ * We always initialize attacl to NULL (i.e., default permissions).
  */
 void
 InsertPgAttributeTuple(Relation pg_attribute_rel,
@@ -949,6 +951,9 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 	values[Anum_pg_attribute_attislocal - 1] = BoolGetDatum(new_attribute->attislocal);
 	values[Anum_pg_attribute_attinhcount - 1] = Int32GetDatum(new_attribute->attinhcount);
 
+	/* start out with empty permissions */
+	nulls[Anum_pg_attribute_attacl - 1] = true;
+
 	tup = heap_form_tuple(RelationGetDescr(pg_attribute_rel), values, nulls);
 
 	/* finally insert the new tuple, update the indexes, and clean up */
@@ -961,6 +966,7 @@ InsertPgAttributeTuple(Relation pg_attribute_rel,
 
 	heap_freetuple(tup);
 }
+
 /* --------------------------------
  *		AddNewAttributeTuples
  *
@@ -1100,6 +1106,7 @@ InsertPgClassTuple(Relation pg_class_desc,
 	values[Anum_pg_class_reltoastidxid - 1] = ObjectIdGetDatum(rd_rel->reltoastidxid);
 	values[Anum_pg_class_relhasindex - 1] = BoolGetDatum(rd_rel->relhasindex);
 	values[Anum_pg_class_relisshared - 1] = BoolGetDatum(rd_rel->relisshared);
+	values[Anum_pg_class_relistemp - 1] = BoolGetDatum(rd_rel->relistemp);
 	values[Anum_pg_class_relkind - 1] = CharGetDatum(rd_rel->relkind);
 	values[Anum_pg_class_relstorage - 1] = CharGetDatum(rd_rel->relstorage);
 	values[Anum_pg_class_relnatts - 1] = Int16GetDatum(rd_rel->relnatts);
@@ -1246,7 +1253,7 @@ AddNewRelationType(const char *typeName,
 				   ownerid,		/* owner's ID */
 				   -1,			/* internal size (varlena) */
 				   TYPTYPE_COMPOSITE,	/* type-type (composite) */
-				   TYPCATEGORY_COMPOSITE, /* type-category (ditto) */
+				   TYPCATEGORY_COMPOSITE,		/* type-category (ditto) */
 				   false,		/* composite types are never preferred */
 				   DEFAULT_TYPDELIM,	/* default array delimiter */
 				   F_RECORD_IN, /* input procedure */
@@ -1536,25 +1543,30 @@ heap_create_with_catalog(const char *relname,
 	 * Was "appendonly" specified in the relopts? If yes, fix our relstorage.
 	 * Also, check for override (debug) GUCs.
 	 */
-	stdRdOptions = (StdRdOptions*) heap_reloptions(
-			relkind, reloptions, !valid_opts);
-	appendOnlyRel = stdRdOptions->appendonly;
-	validateAppendOnlyRelOptions(appendOnlyRel,
-								 stdRdOptions->blocksize,
-								 safefswritesize,
-								 stdRdOptions->compresslevel,
-								 stdRdOptions->compresstype,
-								 stdRdOptions->checksum,
-								 relkind,
-								 stdRdOptions->columnstore);
-	if(appendOnlyRel)
+	if (relkind == RELKIND_RELATION)
 	{
-		if(stdRdOptions->columnstore)
-            relstorage = RELSTORAGE_AOCOLS;
-		else
-			relstorage = RELSTORAGE_AOROWS;
-		reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
+		stdRdOptions = (StdRdOptions*) heap_reloptions(
+			relkind, reloptions, !valid_opts);
+		appendOnlyRel = stdRdOptions->appendonly;
+		validateAppendOnlyRelOptions(appendOnlyRel,
+									 stdRdOptions->blocksize,
+									 safefswritesize,
+									 stdRdOptions->compresslevel,
+									 stdRdOptions->compresstype,
+									 stdRdOptions->checksum,
+									 relkind,
+									 stdRdOptions->columnstore);
+		if(appendOnlyRel)
+		{
+			if(stdRdOptions->columnstore)
+				relstorage = RELSTORAGE_AOCOLS;
+			else
+				relstorage = RELSTORAGE_AOROWS;
+			reloptions = transformAOStdRdOptions(stdRdOptions, reloptions);
+		}
 	}
+	else
+		appendOnlyRel = false;
 
 	/* MPP-8058: disallow OIDS on column-oriented tables */
 	if (tupdesc->tdhasoid && 
@@ -1745,7 +1757,7 @@ heap_create_with_catalog(const char *relname,
 				   ownerid,		/* owner's ID */
 				   -1,			/* Internal size (varlena) */
 				   TYPTYPE_BASE,	/* Not composite - typelem is */
-				   TYPCATEGORY_ARRAY, /* type-category (array) */
+				   TYPCATEGORY_ARRAY,	/* type-category (array) */
 				   false,		/* array types are never preferred */
 				   DEFAULT_TYPDELIM,	/* default array delimiter */
 				   F_ARRAY_IN,	/* array input proc */
@@ -2757,8 +2769,8 @@ StoreRelCheck(Relation rel, char *ccname, Node *expr,
 						  expr, /* Tree form check constraint */
 						  ccbin,	/* Binary form check constraint */
 						  ccsrc,	/* Source form check constraint */
-						  is_local,	/* conislocal */
-						  inhcount); /* coninhcount */
+						  is_local,		/* conislocal */
+						  inhcount);	/* coninhcount */
 
 	pfree(ccbin);
 	pfree(ccsrc);
@@ -2975,10 +2987,10 @@ AddRelationNewConstraints(Relation rel,
 			checknames = lappend(checknames, ccname);
 
 			/*
-			 * Check against pre-existing constraints.  If we are allowed
-			 * to merge with an existing constraint, there's no more to
-			 * do here.  (We omit the duplicate constraint from the result,
-			 * which is what ATAddCheckConstraint wants.)
+			 * Check against pre-existing constraints.	If we are allowed to
+			 * merge with an existing constraint, there's no more to do here.
+			 * (We omit the duplicate constraint from the result, which is
+			 * what ATAddCheckConstraint wants.)
 			 */
 			if (MergeWithExistingConstraint(rel, ccname, expr,
 											allow_merge, is_local))
@@ -3101,8 +3113,8 @@ MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 			/* Found it.  Conflicts if not identical check constraint */
 			if (con->contype == CONSTRAINT_CHECK)
 			{
-				Datum	val;
-				bool	isnull;
+				Datum		val;
+				bool		isnull;
 
 				val = fastgetattr(tup,
 								  Anum_pg_constraint_conbin,
@@ -3120,8 +3132,8 @@ MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 					   ccname, RelationGetRelationName(rel))));
 			/* OK to update the tuple */
 			ereport(NOTICE,
-					(errmsg("merging constraint \"%s\" with inherited definition",
-							ccname)));
+			   (errmsg("merging constraint \"%s\" with inherited definition",
+					   ccname)));
 			tup = heap_copytuple(tup);
 			con = (Form_pg_constraint) GETSTRUCT(tup);
 			if (is_local)

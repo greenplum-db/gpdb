@@ -2479,6 +2479,10 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 			/* Make the hash join. */
 			bool		motion_added_outer = false;
 			bool		motion_added_inner = false;
+			Oid			skewTable = InvalidOid;
+			AttrNumber	skewColumn = InvalidAttrNumber;
+			Oid			skewColType = InvalidOid;
+			int32		skewColTypmod = -1;
 
 			outer = add_motion_to_dqa_child(outer, root, &motion_added_outer);
 			inner = add_motion_to_dqa_child(inner, root, &motion_added_inner);
@@ -2490,7 +2494,44 @@ join_dqa_coplan(PlannerInfo *root, MppGroupContext *ctx, Plan *outer, int dqa_in
 				ctx->current_pathkeys = NULL;
 			}
 
-			Hash	   *hash_plan = make_hash(inner);
+			/*
+			 * If there is a single join clause and we can identify the outer
+			 * variable as a simple column reference, supply its identity for
+			 * possible use in skew optimization.  (Note: in principle we could
+			 * do skew optimization with multiple join clauses, but we'd have
+			 * to be able to determine the most common combinations of outer
+			 * values, which we don't currently have enough stats for.)
+			 */
+			if (list_length(hashclause) == 1)
+			{
+				OpExpr	   *clause = (OpExpr *) linitial(hashclause);
+				Node	   *node;
+
+				Assert(is_opclause(clause));
+				node = (Node *) linitial(clause->args);
+				if (IsA(node, RelabelType))
+					node = (Node *) ((RelabelType *) node)->arg;
+				if (IsA(node, Var))
+				{
+					Var		   *var = (Var *) node;
+					RangeTblEntry *rte;
+
+					rte = root->simple_rte_array[var->varno];
+					if (rte->rtekind == RTE_RELATION)
+					{
+						skewTable = rte->relid;
+						skewColumn = var->varattno;
+						skewColType = var->vartype;
+						skewColTypmod = var->vartypmod;
+					}
+				}
+			}
+
+			Hash	   *hash_plan = make_hash(inner,
+											  skewTable,
+											  skewColumn,
+											  skewColType,
+											  skewColTypmod);
 
 			joinclause = get_actual_clauses(joinclause);
 			join_plan = (Plan *) make_hashjoin(join_tlist,

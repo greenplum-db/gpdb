@@ -27,28 +27,30 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-                                                         QUERY PLAN                                                          
------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice3; segments: 2)  (cost=7249.73..7250.76 rows=206 width=16)
-   Merge Key: fivemin
-   ->  Sort  (cost=7249.73..7250.76 rows=206 width=16)
-         Sort Key: partial_aggregation.unnamed_attr_1
-         ->  HashAggregate  (cost=7226.69..7231.84 rows=206 width=16)
-               Group By: "?column1?"
-               ->  Redistribute Motion 2:2  (slice2; segments: 2)  (cost=7209.18..7220.51 rows=206 width=16)
-                     Hash Key: unnamed_attr_1
-                     ->  HashAggregate  (cost=7209.18..7212.27 rows=206 width=16)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=5002.09..5003.12 rows=412 width=16)
+   Merge Key: (tt.event_ts / 100000 / 5 * 5)
+   ->  Sort  (cost=5002.09..5003.12 rows=138 width=16)
+         Sort Key: (tt.event_ts / 100000 / 5 * 5)
+         ->  HashAggregate  (cost=4978.02..4984.20 rows=138 width=16)
+               Group By: (tt.event_ts / 100000 / 5 * 5)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=4959.48..4970.81 rows=138 width=16)
+                     Hash Key: (tt.event_ts / 100000 / 5 * 5)
+                     ->  HashAggregate  (cost=4959.48..4962.57 rows=138 width=16)
                            Group By: tt.event_ts / 100000 / 5 * 5
-                           ->  Hash Join  (cost=28.30..6982.21 rows=22697 width=8)
-                                 Hash Cond: tq.sym::bpchar = tt.symbol
+                           ->  Hash Join  (cost=51.61..4619.03 rows=15132 width=8)
+                                 Hash Cond: tt.symbol = tq.sym::bpchar
                                  Join Filter: tt.event_ts >= tq.ets AND tt.event_ts < tq.end_ts
-                                 ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..26.27 rows=1014 width=20)
-                                 ->  Hash  (cost=17.80..17.80 rows=420 width=25)
-                                       ->  Broadcast Motion 2:2  (slice1; segments: 2)  (cost=0.00..17.80 rows=420 width=25)
-                                             ->  Seq Scan on my_tt_agg_small tt  (cost=0.00..5.20 rows=210 width=25)
-(17 rows)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..23.00 rows=420 width=25)
+                                       ->  Seq Scan on my_tt_agg_small tt  (cost=0.00..6.20 rows=140 width=25)
+                                 ->  Hash  (cost=26.27..26.27 rows=676 width=20)
+                                       ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..26.27 rows=676 width=20)
+ Settings:  optimizer=off; optimizer_nestloop_factor=1
+ Optimizer status: legacy query optimizer
+(19 rows)
 
-  
+
 SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin, COUNT(*)
 FROM my_tt_agg_small tt, my_tq_agg_small tq
 WHERE tq.sym = tt.symbol AND

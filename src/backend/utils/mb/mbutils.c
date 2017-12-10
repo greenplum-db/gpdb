@@ -4,7 +4,7 @@
  *
  * Tatsuo Ishii
  *
- * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.76 2009/01/04 18:37:35 tgl Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/mb/mbutils.c,v 1.87 2009/06/11 14:49:05 momjian Exp $
  */
 #include "postgres.h"
 
@@ -28,22 +28,36 @@
 #define MAX_CONVERSION_GROWTH  4
 
 /*
- * We handle for actual FE and BE encoding setting encoding-identificator
- * and encoding-name too. It prevent searching and conversion from encoding
- * to encoding name in getdatabaseencoding() and other routines.
+ * We maintain a simple linked list caching the fmgr lookup info for the
+ * currently selected conversion functions, as well as any that have been
+ * selected previously in the current session.	(We remember previous
+ * settings because we must be able to restore a previous setting during
+ * transaction rollback, without doing any fresh catalog accesses.)
+ *
+ * Since we'll never release this data, we just keep it in TopMemoryContext.
+ */
+typedef struct ConvProcInfo
+{
+	int			s_encoding;		/* server and client encoding IDs */
+	int			c_encoding;
+	FmgrInfo	to_server_info; /* lookup info for conversion procs */
+	FmgrInfo	to_client_info;
+} ConvProcInfo;
+
+static List *ConvProcList = NIL;	/* List of ConvProcInfo */
+
+/*
+ * These variables point to the currently active conversion functions,
+ * or are NULL when no conversion is needed.
+ */
+static FmgrInfo *ToServerConvProc = NULL;
+static FmgrInfo *ToClientConvProc = NULL;
+
+/*
+ * These variables track the currently selected FE and BE encodings.
  */
 static pg_enc2name *ClientEncoding = &pg_enc2name_tbl[PG_SQL_ASCII];
 static pg_enc2name *DatabaseEncoding = &pg_enc2name_tbl[PG_SQL_ASCII];
-
-/*
- * Caches for conversion function info. These values are allocated in
- * MbProcContext. That context is a child of TopMemoryContext,
- * which allows these values to survive across transactions. See
- * SetClientEncoding() for more details.
- */
-static MemoryContext MbProcContext = NULL;
-static FmgrInfo *ToServerConvProc = NULL;
-static FmgrInfo *ToClientConvProc = NULL;
 
 /*
  * During backend startup we can't set client encoding because we (a)
@@ -72,11 +86,7 @@ int
 SetClientEncoding(int encoding, bool doit)
 {
 	int			current_server_encoding;
-	Oid			to_server_proc,
-				to_client_proc;
-	FmgrInfo   *to_server;
-	FmgrInfo   *to_client;
-	MemoryContext oldcontext;
+	ListCell   *lc;
 
 	if (!PG_VALID_FE_ENCODING(encoding))
 		return -1;
@@ -103,74 +113,112 @@ SetClientEncoding(int encoding, bool doit)
 			ClientEncoding = &pg_enc2name_tbl[encoding];
 			ToServerConvProc = NULL;
 			ToClientConvProc = NULL;
-			if (MbProcContext)
-				MemoryContextReset(MbProcContext);
 		}
 		return 0;
 	}
 
-	/*
-	 * If we're not inside a transaction then we can't do catalog lookups, so
-	 * fail.  After backend startup, this could only happen if we are
-	 * re-reading postgresql.conf due to SIGHUP --- so basically this just
-	 * constrains the ability to change client_encoding on the fly from
-	 * postgresql.conf.  Which would probably be a stupid thing to do anyway.
-	 */
-	if (!IsTransactionState())
-		return -1;
-
-	/*
-	 * Look up the conversion functions.
-	 */
-	to_server_proc = FindDefaultConversionProc(encoding,
-											   current_server_encoding);
-	if (!OidIsValid(to_server_proc))
-		return -1;
-	to_client_proc = FindDefaultConversionProc(current_server_encoding,
-											   encoding);
-	if (!OidIsValid(to_client_proc))
-		return -1;
-
-	/*
-	 * Done if not wanting to actually apply setting.
-	 */
-	if (!doit)
-		return 0;
-
-	/* Before loading the new fmgr info, remove the old info, if any */
-	ToServerConvProc = NULL;
-	ToClientConvProc = NULL;
-	if (MbProcContext != NULL)
+	if (IsTransactionState())
 	{
-		MemoryContextReset(MbProcContext);
+		/*
+		 * If we're in a live transaction, it's safe to access the catalogs,
+		 * so look up the functions.  We repeat the lookup even if the info is
+		 * already cached, so that we can react to changes in the contents of
+		 * pg_conversion.
+		 */
+		Oid			to_server_proc,
+					to_client_proc;
+		ConvProcInfo *convinfo;
+		MemoryContext oldcontext;
+
+		to_server_proc = FindDefaultConversionProc(encoding,
+												   current_server_encoding);
+		if (!OidIsValid(to_server_proc))
+			return -1;
+		to_client_proc = FindDefaultConversionProc(current_server_encoding,
+												   encoding);
+		if (!OidIsValid(to_client_proc))
+			return -1;
+
+		/*
+		 * Done if not wanting to actually apply setting.
+		 */
+		if (!doit)
+			return 0;
+
+		/*
+		 * Load the fmgr info into TopMemoryContext (could still fail here)
+		 */
+		convinfo = (ConvProcInfo *) MemoryContextAlloc(TopMemoryContext,
+													   sizeof(ConvProcInfo));
+		convinfo->s_encoding = current_server_encoding;
+		convinfo->c_encoding = encoding;
+		fmgr_info_cxt(to_server_proc, &convinfo->to_server_info,
+					  TopMemoryContext);
+		fmgr_info_cxt(to_client_proc, &convinfo->to_client_info,
+					  TopMemoryContext);
+
+		/* Attach new info to head of list */
+		oldcontext = MemoryContextSwitchTo(TopMemoryContext);
+		ConvProcList = lcons(convinfo, ConvProcList);
+		MemoryContextSwitchTo(oldcontext);
+
+		/*
+		 * Everything is okay, so apply the setting.
+		 */
+		ClientEncoding = &pg_enc2name_tbl[encoding];
+		ToServerConvProc = &convinfo->to_server_info;
+		ToClientConvProc = &convinfo->to_client_info;
+
+		/*
+		 * Remove any older entry for the same encoding pair (this is just to
+		 * avoid memory leakage).
+		 */
+		foreach(lc, ConvProcList)
+		{
+			ConvProcInfo *oldinfo = (ConvProcInfo *) lfirst(lc);
+
+			if (oldinfo == convinfo)
+				continue;
+			if (oldinfo->s_encoding == convinfo->s_encoding &&
+				oldinfo->c_encoding == convinfo->c_encoding)
+			{
+				ConvProcList = list_delete_ptr(ConvProcList, oldinfo);
+				pfree(oldinfo);
+				break;			/* need not look further */
+			}
+		}
+
+		return 0;				/* success */
 	}
 	else
 	{
 		/*
-		 * This is the first time through, so create the context. Make it a
-		 * child of TopMemoryContext so that these values survive across
-		 * transactions.
+		 * If we're not in a live transaction, the only thing we can do is
+		 * restore a previous setting using the cache.	This covers all
+		 * transaction-rollback cases.	The only case it might not work for is
+		 * trying to change client_encoding on the fly by editing
+		 * postgresql.conf and SIGHUP'ing.  Which would probably be a stupid
+		 * thing to do anyway.
 		 */
-		MbProcContext = AllocSetContextCreate(TopMemoryContext,
-											  "MbProcContext",
-											  ALLOCSET_SMALL_MINSIZE,
-											  ALLOCSET_SMALL_INITSIZE,
-											  ALLOCSET_SMALL_MAXSIZE);
+		foreach(lc, ConvProcList)
+		{
+			ConvProcInfo *oldinfo = (ConvProcInfo *) lfirst(lc);
+
+			if (oldinfo->s_encoding == current_server_encoding &&
+				oldinfo->c_encoding == encoding)
+			{
+				if (doit)
+				{
+					ClientEncoding = &pg_enc2name_tbl[encoding];
+					ToServerConvProc = &oldinfo->to_server_info;
+					ToClientConvProc = &oldinfo->to_client_info;
+				}
+				return 0;
+			}
+		}
+
+		return -1;				/* it's not cached, so fail */
 	}
-
-	/* Load the fmgr info into MbProcContext */
-	oldcontext = MemoryContextSwitchTo(MbProcContext);
-	to_server = palloc(sizeof(FmgrInfo));
-	to_client = palloc(sizeof(FmgrInfo));
-	fmgr_info(to_server_proc, to_server);
-	fmgr_info(to_client_proc, to_client);
-	MemoryContextSwitchTo(oldcontext);
-
-	ClientEncoding = &pg_enc2name_tbl[encoding];
-	ToServerConvProc = to_server;
-	ToClientConvProc = to_client;
-
-	return 0;
 }
 
 /*
@@ -229,7 +277,7 @@ pg_get_client_encoding_name(void)
  *
  * CAUTION: although the presence of a length argument means that callers
  * can pass non-null-terminated strings, care is required because the same
- * string will be passed back if no conversion occurs.  Such callers *must*
+ * string will be passed back if no conversion occurs.	Such callers *must*
  * check whether result == src and handle that case differently.
  *
  * Note: we try to avoid raising error, since that could get us into
@@ -648,7 +696,7 @@ wchar2char(char *to, const wchar_t *from, size_t tolen)
 	if (GetDatabaseEncoding() == PG_UTF8)
 	{
 		result = WideCharToMultiByte(CP_UTF8, 0, from, -1, to, tolen,
-								NULL, NULL);
+									 NULL, NULL);
 		/* A zero return is failure */
 		if (result <= 0)
 			result = -1;
@@ -1068,25 +1116,6 @@ SetDatabaseEncoding(int encoding)
 
 	DatabaseEncoding = &pg_enc2name_tbl[encoding];
 	Assert(DatabaseEncoding->encoding == encoding);
-
-	/*
-	 * On Windows, we allow UTF-8 database encoding to be used with any
-	 * locale setting, because UTF-8 requires special handling anyway.
-	 * But this means that gettext() might be misled about what output
-	 * encoding it should use, so we have to tell it explicitly.
-	 *
-	 * In future we might want to call bind_textdomain_codeset
-	 * unconditionally, but that requires knowing how to spell the codeset
-	 * name properly for all encodings on all platforms, which might be
-	 * problematic.
-	 *
-	 * This is presently unnecessary, but harmless, on non-Windows platforms.
-	 */
-#ifdef ENABLE_NLS
-	if (encoding == PG_UTF8)
-		if (bind_textdomain_codeset("postgres", "UTF-8") == NULL)
-			elog(LOG, "bind_textdomain_codeset failed");
-#endif
 }
 
 /*
@@ -1127,12 +1156,6 @@ pg_bind_textdomain_codeset(const char *domainname)
 		}
 	}
 #endif
-}
-
-void
-SetDefaultClientEncoding(void)
-{
-	ClientEncoding = &pg_enc2name_tbl[GetDatabaseEncoding()];
 }
 
 int

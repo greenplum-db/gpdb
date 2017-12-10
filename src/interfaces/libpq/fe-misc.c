@@ -1230,8 +1230,8 @@ pqSocketPoll(int sock, int forRead, int forWrite, time_t end_time)
 		FD_SET(sock, &input_mask);
 
 	if (forWrite)
-		FD_SET(sock, &output_mask);
-	FD_SET(sock, &except_mask);
+		FD_SET		(sock, &output_mask);
+	FD_SET		(sock, &except_mask);
 
 	/* Compute appropriate timeout interval */
 	if (end_time == ((time_t) -1))

@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.97 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeHashjoin.c,v 1.101 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,7 +32,7 @@
 #include "miscadmin.h"			/* work_mem */
 
 /* Returns true for JOIN_LEFT and JOIN_ANTI jointypes */
-#define HASHJOIN_IS_OUTER(hjstate)  ((hjstate)->hj_NullInnerTupleSlot != NULL)
+#define HASHJOIN_IS_OUTER(hjstate)	((hjstate)->hj_NullInnerTupleSlot != NULL)
 
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 						  HashJoinState *hjstate,
@@ -298,19 +298,23 @@ ExecHashJoin(HashJoinState *node)
 			node->hj_MatchedOuter = false;
 
 			/*
-			 * now we have an outer tuple, find the corresponding bucket for
-			 * this tuple from the hash table
+			 * Now we have an outer tuple; find the corresponding bucket for
+			 * this tuple in the main hash table or skew hash table.
 			 */
 			node->hj_CurHashValue = hashvalue;
 			ExecHashGetBucketAndBatch(hashtable, hashvalue,
 									  &node->hj_CurBucketNo, &batchno);
+			node->hj_CurSkewBucketNo = ExecHashGetSkewBucket(hashtable,
+															 hashvalue);
 			node->hj_CurTuple = NULL;
 
 			/*
 			 * Now we've got an outer tuple and the corresponding hash bucket,
-			 * but this tuple may not belong to the current batch.
+			 * but it might not belong to the current batch, or it might match
+			 * a skew bucket.
 			 */
-			if (batchno != hashtable->curbatch)
+			if (batchno != hashtable->curbatch &&
+				node->hj_CurSkewBucketNo == INVALID_SKEW_BUCKET_NO)
 			{
 				/*
 				 * Need to postpone this outer tuple to a later batch. Save it
@@ -597,6 +601,7 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 
 	hjstate->hj_CurHashValue = 0;
 	hjstate->hj_CurBucketNo = 0;
+	hjstate->hj_CurSkewBucketNo = INVALID_SKEW_BUCKET_NO;
 	hjstate->hj_CurTuple = NULL;
 
 	/*
@@ -864,6 +869,19 @@ start_over:
 		hashtable->innerBatchFile[curbatch] == NULL)
 	{
 		SpillCurrentBatch(hjstate);
+	}
+	else	/* we just finished the first batch */
+	{
+		/*
+		 * Reset some of the skew optimization state variables, since we no
+		 * longer need to consider skew tuples after the first batch. The
+		 * memory context reset we are about to do will release the skew
+		 * hashtable itself.
+		 */
+		hashtable->skewEnabled = false;
+		hashtable->skewBucket = NULL;
+		hashtable->skewBucketNums = NULL;
+		hashtable->spaceUsedSkew = 0;
 	}
 
 	/*
@@ -1159,6 +1177,7 @@ ExecReScanHashJoin(HashJoinState *node, ExprContext *exprCtxt)
 	/* Always reset intra-tuple state */
 	node->hj_CurHashValue = 0;
 	node->hj_CurBucketNo = 0;
+	node->hj_CurSkewBucketNo = INVALID_SKEW_BUCKET_NO;
 	node->hj_CurTuple = NULL;
 
 	node->hj_NeedNewOuter = true;

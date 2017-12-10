@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.131 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/analyze.c,v 1.139 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -179,7 +179,6 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	Relation   *Irel;
 	int			nindexes;
 	bool		hasindex;
-	bool		analyzableindex;
 	VacAttrStats **vacattrstats;
 	AnlIndexData *indexdata;
 	int			targrows,
@@ -237,8 +236,8 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 		{
 			if (onerel->rd_rel->relisshared)
 				ereport(WARNING,
-						(errmsg("skipping \"%s\" --- only superuser can analyze it",
-								RelationGetRelationName(onerel))));
+				 (errmsg("skipping \"%s\" --- only superuser can analyze it",
+						 RelationGetRelationName(onerel))));
 			else if (onerel->rd_rel->relnamespace == PG_CATALOG_NAMESPACE)
 				ereport(WARNING,
 						(errmsg("skipping \"%s\" --- only superuser or database owner can analyze it",
@@ -273,7 +272,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	 * probably not up-to-date on disk.  (We don't throw a warning here; it
 	 * would just lead to chatter during a database-wide ANALYZE.)
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(onerel)))
+	if (RELATION_IS_OTHER_TEMP(onerel))
 	{
 		relation_close(onerel, ShareUpdateExclusiveLock);
 		return;
@@ -367,7 +366,6 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	vac_open_indexes(onerel, AccessShareLock, &nindexes, &Irel);
 	hasindex = (nindexes > 0);
 	indexdata = NULL;
-	analyzableindex = false;
 	if (hasindex)
 	{
 		indexdata = (AnlIndexData *) palloc0(nindexes * sizeof(AnlIndexData));
@@ -414,10 +412,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 						thisdata->vacattrstats[tcnt] =
 							examine_attribute(Irel[ind], i + 1);
 						if (thisdata->vacattrstats[tcnt] != NULL)
-						{
 							tcnt++;
-							analyzableindex = true;
-						}
 					}
 				}
 				thisdata->attr_cnt = tcnt;
@@ -426,15 +421,10 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 	}
 
 	/*
-	 * Quit if no analyzable columns.
-	 */
-	if (attr_cnt <= 0 && !analyzableindex && vacstmt->vacuum)
-		goto cleanup;
-
-	/*
 	 * Determine how many rows we need to sample, using the worst case from
 	 * all analyzable columns.	We use a lower bound of 100 rows to avoid
-	 * possible overflow in Vitter's algorithm.
+	 * possible overflow in Vitter's algorithm.  (Note: that will also be
+	 * the target in the corner case where there are no analyzable columns.)
 	 */
 	targrows = 100;
 	for (i = 0; i < attr_cnt; i++)
@@ -575,7 +565,7 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 
 	/*
 	 * Same for indexes. Vacuum always scans all indexes, so if we're part of
-	 * VACUUM ANALYZE, don't overwrite the accurate count already inserted by 
+	 * VACUUM ANALYZE, don't overwrite the accurate count already inserted by
 	 * VACUUM.
 	 */
 	if (!vacstmt->vacuum)
@@ -632,8 +622,28 @@ analyze_rel_internal(Oid relid, VacuumStmt *vacstmt,
 			);
 	}
 
-	/* We skip to here if there were no analyzable columns */
-cleanup:
+	/* If this isn't part of VACUUM ANALYZE, let index AMs do cleanup */
+	if (!vacstmt->vacuum)
+	{
+		for (ind = 0; ind < nindexes; ind++)
+		{
+			IndexBulkDeleteResult *stats;
+			IndexVacuumInfo ivinfo;
+
+			ivinfo.index = Irel[ind];
+			ivinfo.vacuum_full = false;
+			ivinfo.analyze_only = true;
+			ivinfo.estimated_count = true;
+			ivinfo.message_level = elevel;
+			ivinfo.num_heap_tuples = onerel->rd_rel->reltuples;
+			ivinfo.strategy = vac_strategy;
+
+			stats = index_vacuum_cleanup(&ivinfo, NULL);
+
+			if (stats)
+				pfree(stats);
+		}
+	}
 
 	/* Done with indexes */
 	vac_close_indexes(nindexes, Irel, NoLock);
@@ -864,14 +874,15 @@ examine_attribute(Relation onerel, int attnum)
 		return NULL;
 
 	/*
-	 * Create the VacAttrStats struct.
+	 * Create the VacAttrStats struct.	Note that we only have a copy of the
+	 * fixed fields of the pg_attribute tuple.
 	 */
 	stats = (VacAttrStats *) palloc0(sizeof(VacAttrStats));
-	stats->attr = (Form_pg_attribute) palloc(ATTRIBUTE_TUPLE_SIZE);
-	memcpy(stats->attr, attr, ATTRIBUTE_TUPLE_SIZE);
+	stats->attr = (Form_pg_attribute) palloc(ATTRIBUTE_FIXED_PART_SIZE);
+	memcpy(stats->attr, attr, ATTRIBUTE_FIXED_PART_SIZE);
 	typtuple = SearchSysCacheCopy(TYPEOID,
-								  ObjectIdGetDatum(attr->atttypid),
-								  0, 0, 0);
+							  ObjectIdGetDatum(attr->atttypid),
+							  0, 0, 0);
 	if (!HeapTupleIsValid(typtuple))
 		elog(ERROR, "cache lookup failed for type %u", attr->atttypid);
 	stats->attrtype = (Form_pg_type) GETSTRUCT(typtuple);
@@ -880,10 +891,9 @@ examine_attribute(Relation onerel, int attnum)
 	stats->tupattnum = attnum;
 
 	/*
-	 * The fields describing the stats->stavalues[n] element types default
-	 * to the type of the field being analyzed, but the type-specific
-	 * typanalyze function can change them if it wants to store something
-	 * else.
+	 * The fields describing the stats->stavalues[n] element types default to
+	 * the type of the field being analyzed, but the type-specific typanalyze
+	 * function can change them if it wants to store something else.
 	 */
 	for (i = 0; i < STATISTIC_NUM_SLOTS; i++)
 	{
@@ -1040,7 +1050,7 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					double *totalrows, double *totaldeadrows)
 {
 	int			numrows = 0;	/* # rows now in reservoir */
-	double		samplerows = 0;	/* total # rows collected */
+	double		samplerows = 0; /* total # rows collected */
 	double		liverows = 0;	/* # live rows seen */
 	double		deadrows = 0;	/* # dead rows seen */
 	double		rowstoskip = -1;	/* -1 means not set yet */
@@ -1077,9 +1087,9 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 		 * the maxoffset value stays good (else concurrent VACUUM might delete
 		 * tuples out from under us).  Hence, pin the page until we are done
 		 * looking at it.  We also choose to hold sharelock on the buffer
-		 * throughout --- we could release and re-acquire sharelock for
-		 * each tuple, but since we aren't doing much work per tuple, the
-		 * extra lock traffic is probably better avoided.
+		 * throughout --- we could release and re-acquire sharelock for each
+		 * tuple, but since we aren't doing much work per tuple, the extra
+		 * lock traffic is probably better avoided.
 		 */
 		targbuffer = ReadBufferExtended(onerel, MAIN_FORKNUM, targblock,
 										RBM_NORMAL, vac_strategy);
@@ -1098,9 +1108,9 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 
 			/*
 			 * We ignore unused and redirect line pointers.  DEAD line
-			 * pointers should be counted as dead, because we need vacuum
-			 * to run to get rid of them.  Note that this rule agrees with
-			 * the way that heap_page_prune() counts things.
+			 * pointers should be counted as dead, because we need vacuum to
+			 * run to get rid of them.	Note that this rule agrees with the
+			 * way that heap_page_prune() counts things.
 			 */
 			if (!ItemIdIsNormal(itemid))
 			{
@@ -1131,6 +1141,7 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					break;
 
 				case HEAPTUPLE_INSERT_IN_PROGRESS:
+
 					/*
 					 * Insert-in-progress rows are not counted.  We assume
 					 * that when the inserting transaction commits or aborts,
@@ -1138,17 +1149,17 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					 * count.  This works right only if that transaction ends
 					 * after we finish analyzing the table; if things happen
 					 * in the other order, its stats update will be
-					 * overwritten by ours.  However, the error will be
-					 * large only if the other transaction runs long enough
-					 * to insert many tuples, so assuming it will finish
-					 * after us is the safer option.
+					 * overwritten by ours.  However, the error will be large
+					 * only if the other transaction runs long enough to
+					 * insert many tuples, so assuming it will finish after us
+					 * is the safer option.
 					 *
 					 * A special case is that the inserting transaction might
-					 * be our own.  In this case we should count and sample
+					 * be our own.	In this case we should count and sample
 					 * the row, to accommodate users who load a table and
 					 * analyze it in one transaction.  (pgstat_report_analyze
-					 * has to adjust the numbers we send to the stats collector
-					 * to make this come out right.)
+					 * has to adjust the numbers we send to the stats
+					 * collector to make this come out right.)
 					 */
 					if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(targtuple.t_data)))
 					{
@@ -1158,6 +1169,7 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					break;
 
 				case HEAPTUPLE_DELETE_IN_PROGRESS:
+
 					/*
 					 * We count delete-in-progress rows as still live, using
 					 * the same reasoning given above; but we don't bother to
@@ -1166,8 +1178,8 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					 * If the delete was done by our own transaction, however,
 					 * we must count the row as dead to make
 					 * pgstat_report_analyze's stats adjustments come out
-					 * right.  (Note: this works out properly when the row
-					 * was both inserted and deleted in our xact.)
+					 * right.  (Note: this works out properly when the row was
+					 * both inserted and deleted in our xact.)
 					 */
 					if (TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmax(targtuple.t_data)))
 						deadrows += 1;
@@ -1201,8 +1213,8 @@ acquire_sample_rows(Relation onerel, HeapTuple *rows, int targrows,
 					/*
 					 * t in Vitter's paper is the number of records already
 					 * processed.  If we need to compute a new S value, we
-					 * must use the not-yet-incremented value of samplerows
-					 * as t.
+					 * must use the not-yet-incremented value of samplerows as
+					 * t.
 					 */
 					if (rowstoskip < 0)
 						rowstoskip = get_next_S(samplerows, targrows, &rstate);
@@ -1937,10 +1949,10 @@ update_attstats(Oid relid, int natts, VacAttrStats **vacattrstats)
 		{
 			/* Yes, replace it */
 			stup = heap_modify_tuple(oldtup,
-									RelationGetDescr(sd),
-									values,
-									nulls,
-									replaces);
+									 RelationGetDescr(sd),
+									 values,
+									 nulls,
+									 replaces);
 			ReleaseSysCache(oldtup);
 			simple_heap_update(sd, &stup->t_self, stup);
 		}
@@ -2430,9 +2442,10 @@ compute_minimal_stats(VacAttrStatsP stats,
 			stats->numnumbers[0] = num_mcv;
 			stats->stavalues[0] = mcv_values;
 			stats->numvalues[0] = num_mcv;
+
 			/*
-			 * Accept the defaults for stats->statypid and others.
-			 * They have been set before we were called (see vacuum.h)
+			 * Accept the defaults for stats->statypid and others. They have
+			 * been set before we were called (see vacuum.h)
 			 */
 		}
 	}
@@ -2799,7 +2812,9 @@ compute_scalar_stats(VacAttrStatsP stats,
 		 * least 2 instances in the sample.  Also, we won't suppress values
 		 * that have a frequency of at least 1/K where K is the intended
 		 * number of histogram bins; such values might otherwise cause us to
-		 * emit duplicate histogram bin boundaries.
+		 * emit duplicate histogram bin boundaries.  (We might end up with
+		 * duplicate histogram entries anyway, if the distribution is skewed;
+		 * but we prefer to treat such values as MCVs if at all possible.)
 		 */
 		if (track_cnt == ndistinct && toowide_cnt == 0 &&
 			stats->stadistinct > 0 &&
@@ -2865,9 +2880,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 			stats->numnumbers[slot_idx] = num_mcv;
 			stats->stavalues[slot_idx] = mcv_values;
 			stats->numvalues[slot_idx] = num_mcv;
+
 			/*
-			 * Accept the defaults for stats->statypid and others.
-			 * They have been set before we were called (see vacuum.h)
+			 * Accept the defaults for stats->statypid and others. They have
+			 * been set before we were called (see vacuum.h)
 			 */
 			slot_idx++;
 		}
@@ -2885,6 +2901,10 @@ compute_scalar_stats(VacAttrStatsP stats,
 			MemoryContext old_context;
 			Datum	   *hist_values;
 			int			nvals;
+			int			pos,
+						posfrac,
+						delta,
+						deltafrac;
 
 			/* Sort the MCV items into position order to speed next loop */
 			qsort((void *) track, num_mcv,
@@ -2938,24 +2958,45 @@ compute_scalar_stats(VacAttrStatsP stats,
 			/* Must copy the target values into anl_context */
 			old_context = MemoryContextSwitchTo(stats->anl_context);
 			hist_values = (Datum *) palloc(num_hist * sizeof(Datum));
+
+			/*
+			 * The object of this loop is to copy the first and last values[]
+			 * entries along with evenly-spaced values in between.	So the
+			 * i'th value is values[(i * (nvals - 1)) / (num_hist - 1)].  But
+			 * computing that subscript directly risks integer overflow when
+			 * the stats target is more than a couple thousand.  Instead we
+			 * add (nvals - 1) / (num_hist - 1) to pos at each step, tracking
+			 * the integral and fractional parts of the sum separately.
+			 */
+			delta = (nvals - 1) / (num_hist - 1);
+			deltafrac = (nvals - 1) % (num_hist - 1);
+			pos = posfrac = 0;
+
 			for (i = 0; i < num_hist; i++)
 			{
-				int			pos;
-
-				pos = (i * (nvals - 1)) / (num_hist - 1);
 				hist_values[i] = datumCopy(values[pos].value,
 										   stats->attr->attbyval,
 										   stats->attr->attlen);
+				pos += delta;
+				posfrac += deltafrac;
+				if (posfrac >= (num_hist - 1))
+				{
+					/* fractional part exceeds 1, carry to integer part */
+					pos++;
+					posfrac -= (num_hist - 1);
+				}
 			}
+
 			MemoryContextSwitchTo(old_context);
 
 			stats->stakind[slot_idx] = STATISTIC_KIND_HISTOGRAM;
 			stats->staop[slot_idx] = mystats->ltopr;
 			stats->stavalues[slot_idx] = hist_values;
 			stats->numvalues[slot_idx] = num_hist;
+
 			/*
-			 * Accept the defaults for stats->statypid and others.
-			 * They have been set before we were called (see vacuum.h)
+			 * Accept the defaults for stats->statypid and others. They have
+			 * been set before we were called (see vacuum.h)
 			 */
 			slot_idx++;
 		}

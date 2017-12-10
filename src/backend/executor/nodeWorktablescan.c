@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeWorktablescan.c,v 1.5 2009/01/01 17:23:42 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeWorktablescan.c,v 1.7 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -43,6 +43,10 @@ WorkTableScanNext(WorkTableScanState *node)
 	 * worktable plan node, since it cannot appear high enough in the plan
 	 * tree of a scrollable cursor to be exposed to a backward-scan
 	 * requirement.  So it's not worth expending effort to support it.
+	 *
+	 * Note: we are also assuming that this node is the only reader of the
+	 * worktable.  Therefore, we don't need a private read pointer for the
+	 * tuplestore, nor do we need to tell tuplestore_gettupleslot to copy.
 	 */
 	estate = node->ss.ps.state;
 
@@ -74,10 +78,10 @@ TupleTableSlot *
 ExecWorkTableScan(WorkTableScanState *node)
 {
 	/*
-	 * On the first call, find the ancestor RecursiveUnion's state
-	 * via the Param slot reserved for it.  (We can't do this during node
-	 * init because there are corner cases where we'll get the init call
-	 * before the RecursiveUnion does.)
+	 * On the first call, find the ancestor RecursiveUnion's state via the
+	 * Param slot reserved for it.	(We can't do this during node init because
+	 * there are corner cases where we'll get the init call before the
+	 * RecursiveUnion does.)
 	 */
 	if (node->rustate == NULL)
 	{
@@ -101,8 +105,8 @@ ExecWorkTableScan(WorkTableScanState *node)
 						   ExecGetResultType(&node->rustate->ps));
 
 		/*
-		 * Now we can initialize the projection info.  This must be
-		 * completed before we can call ExecScan().
+		 * Now we can initialize the projection info.  This must be completed
+		 * before we can call ExecScan().
 		 */
 		ExecAssignScanProjectionInfo(&node->ss);
 	}

@@ -15,7 +15,7 @@
  * own server.
  *
  * The bgwriter is started by the postmaster as soon as the startup subprocess
- * finishes.
+ * finishes, or as soon as recovery begins if we are doing archive recovery.
  * It remains alive until the postmaster commands it to terminate.
  * Normal termination is by SIGUSR2, which instructs the bgwriter to exit(0).
  * Emergency termination is by SIGQUIT; like any backend, the bgwriter will
@@ -30,7 +30,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.55 2009/01/01 17:23:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/bgwriter.c,v 1.62 2009/06/26 20:29:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,6 +42,7 @@
 #include <unistd.h>
 
 #include "access/xlog_internal.h"
+#include "catalog/pg_control.h"
 #include "libpq/pqsignal.h"
 #include "miscadmin.h"
 #include "pgstat.h"

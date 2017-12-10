@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.349 2009/01/01 17:23:43 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/outfuncs.c,v 1.360 2009/06/11 14:48:58 momjian Exp $
  *
  * NOTES
  *	  Every node type that can appear in stored rules' parsetrees *must*
@@ -221,8 +221,6 @@ _outList(StringInfo str, List *node)
  *	   converts a bitmap set of integers
  *
  * Note: the output format is "(b int int ...)", similar to an integer List.
- * Currently bitmapsets do not appear in any node type that is stored in
- * rules, so there is no support in readfuncs.c for reading this format.
  */
 static void
 _outBitmapset(StringInfo str, Bitmapset *bms)
@@ -811,7 +809,7 @@ _outHashJoin(StringInfo str, HashJoin *node)
 static void
 _outAgg(StringInfo str, Agg *node)
 {
-	int i;
+	int			i;
 
 	WRITE_NODE_TYPE("AGG");
 
@@ -980,6 +978,12 @@ _outHash(StringInfo str, Hash *node)
 	WRITE_NODE_TYPE("HASH");
 
 	_outPlanInfo(str, (Plan *) node);
+
+	WRITE_OID_FIELD(skewTable);
+	WRITE_INT_FIELD(skewColumn);
+	WRITE_OID_FIELD(skewColType);
+	WRITE_INT_FIELD(skewColTypmod);
+
 	WRITE_BOOL_FIELD(rescannable);          /*CDB*/
 }
 
@@ -1974,6 +1978,7 @@ _outHashPath(StringInfo str, HashPath *node)
 	_outJoinPathInfo(str, (JoinPath *) node);
 
 	WRITE_NODE_FIELD(path_hashclauses);
+	WRITE_INT_FIELD(num_batches);
 }
 
 static void
@@ -2224,7 +2229,8 @@ _outRestrictInfo(StringInfo str, RestrictInfo *node)
 	WRITE_BITMAPSET_FIELD(right_relids);
 	WRITE_NODE_FIELD(orclause);
 	/* don't write parent_ec, leads to infinite recursion in plan tree dump */
-	WRITE_FLOAT_FIELD(this_selec, "%.4f");
+	WRITE_FLOAT_FIELD(norm_selec, "%.4f");
+	WRITE_FLOAT_FIELD(outer_selec, "%.4f");
 	WRITE_NODE_FIELD(mergeopfamilies);
 	/* don't write left_ec, leads to infinite recursion in plan tree dump */
 	/* don't write right_ec, leads to infinite recursion in plan tree dump */
@@ -3262,6 +3268,7 @@ _outDefElem(StringInfo str, DefElem *node)
 {
 	WRITE_NODE_TYPE("DEFELEM");
 
+	WRITE_STRING_FIELD(defnamespace);
 	WRITE_STRING_FIELD(defname);
 	WRITE_NODE_FIELD(arg);
 	WRITE_ENUM_FIELD(defaction, DefElemAction);
@@ -3718,12 +3725,16 @@ _outRangeTblEntry(StringInfo str, RangeTblEntry *node)
 	WRITE_BOOL_FIELD(inFromCl);
 	WRITE_UINT_FIELD(requiredPerms);
 	WRITE_OID_FIELD(checkAsUser);
+	WRITE_BITMAPSET_FIELD(selectedCols);
+	WRITE_BITMAPSET_FIELD(modifiedCols);
 
 	WRITE_BOOL_FIELD(forceDistRandom);
 	/*
 	 * pseudocols is intentionally not serialized. It's only used in the planning
 	 * stage, so no need to transfer it to the QEs.
 	 */
+	/* GPDB_84_MERGE_FIXME: um, pick either "serialized" or "not serialized".
+	   Then update the fast serialization functions to match. */
     WRITE_NODE_FIELD(pseudocols);                                       /*CDB*/
 }
 #endif /* COMPILING_BINARY_FUNCS */
@@ -4068,7 +4079,7 @@ _outVacuumStmt(StringInfo str, VacuumStmt *node)
 	WRITE_BOOL_FIELD(verbose);
 	WRITE_BOOL_FIELD(rootonly);
 	WRITE_INT_FIELD(freeze_min_age);
-	WRITE_BOOL_FIELD(scan_all);
+	WRITE_INT_FIELD(freeze_table_age);
 	WRITE_NODE_FIELD(relation);
 	WRITE_NODE_FIELD(va_cols);
 
@@ -4144,7 +4155,7 @@ _outCreateTrigStmt(StringInfo str, CreateTrigStmt *node)
 	WRITE_NODE_FIELD(args);
 	WRITE_BOOL_FIELD(before);
 	WRITE_BOOL_FIELD(row);
-	WRITE_STRING_FIELD(actions);
+	WRITE_INT_FIELD(events);
 	WRITE_BOOL_FIELD(isconstraint);
 	WRITE_BOOL_FIELD(deferrable);
 	WRITE_BOOL_FIELD(initdeferred);

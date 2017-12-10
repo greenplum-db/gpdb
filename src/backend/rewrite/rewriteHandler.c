@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteHandler.c,v 1.182 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteHandler.c,v 1.186 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -417,7 +417,7 @@ rewriteRuleAction(Query *parsetree,
 					break;
 			}
 			if (sub_action->hasSubLinks)
-				break;		/* no need to keep scanning rtable */
+				break;			/* no need to keep scanning rtable */
 		}
 	}
 
@@ -538,7 +538,7 @@ rewriteRuleAction(Query *parsetree,
 		 */
 		if (parsetree->hasSubLinks && !rule_action->hasSubLinks)
 			rule_action->hasSubLinks =
-					checkExprHasSubLink((Node *) rule_action->returningList);
+				checkExprHasSubLink((Node *) rule_action->returningList);
 	}
 
 	return rule_action;
@@ -1215,9 +1215,13 @@ ApplyRetrieveRule(Query *parsetree,
 	Assert(subrte->relid == relation->rd_id);
 	subrte->requiredPerms = rte->requiredPerms;
 	subrte->checkAsUser = rte->checkAsUser;
+	subrte->selectedCols = rte->selectedCols;
+	subrte->modifiedCols = rte->modifiedCols;
 
 	rte->requiredPerms = 0;		/* no permission check on subquery itself */
 	rte->checkAsUser = InvalidOid;
+	rte->selectedCols = NULL;
+	rte->modifiedCols = NULL;
 
 	/*
 	 * FOR UPDATE/SHARE of view?
@@ -1294,7 +1298,7 @@ markQueryForLocking(Query *qry, Node *jtnode, bool forUpdate, bool noWait)
 				if (strcmp(cte->ctename, rte->ctename) == 0)
 					break;
 			}
-			if (lc == NULL)				/* shouldn't happen */
+			if (lc == NULL)		/* shouldn't happen */
 				elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
 			/* should be analyzed by now */
 			Assert(IsA(cte->ctequery, Query));

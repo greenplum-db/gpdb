@@ -881,20 +881,20 @@ select c1 from t1 where c1 <=all (select c2 from t2 where c2 not in (select c1n 
 --q35
 --
 explain select c1 from t1 where not c1 =all (select c2 from t2 where not c2 >all (select c3 from t3));
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=5.43..11.91 rows=45 width=4)
-   ->  Nested Loop Semi Join  (cost=5.43..11.91 rows=15 width=4)
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=5.23..10.36 rows=45 width=4)
+   ->  Nested Loop Semi Join  (cost=5.23..10.36 rows=15 width=4)
          Join Filter: t1.c1 <> t2.c2
          ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
-         ->  Materialize  (cost=5.43..5.58 rows=5 width=4)
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=2.05..5.42 rows=5 width=4)
-                     ->  Nested Loop  (cost=2.05..5.22 rows=2 width=4)
+         ->  Materialize  (cost=5.23..5.38 rows=5 width=4)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=2.16..5.22 rows=5 width=4)
+                     ->  Nested Loop Semi Join  (cost=2.16..5.02 rows=2 width=4)
                            Join Filter: t2.c2 <= t3.c3
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
-                                 ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
-                           ->  Materialize  (cost=2.05..2.10 rows=2 width=4)
-                                 ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
+                           ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
+                           ->  Materialize  (cost=2.16..2.25 rows=3 width=4)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.15 rows=3 width=4)
+                                       ->  Seq Scan on t3  (cost=0.00..2.03 rows=1 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
 (14 rows)

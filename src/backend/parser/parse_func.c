@@ -8,17 +8,15 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_func.c,v 1.211 2009/01/01 17:23:45 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_func.c,v 1.216 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
-#include "access/heapam.h"
 #include "catalog/pg_aggregate.h"
 #include "catalog/pg_attrdef.h"
 #include "catalog/pg_constraint.h"
-#include "catalog/pg_inherits.h"
 #include "catalog/pg_partition_rule.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_proc_callback.h"
@@ -39,7 +37,6 @@
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-#include "utils/tqual.h"
 
 
 static void unify_hypothetical_args(ParseState *pstate,
@@ -128,8 +125,10 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	if (list_length(fargs) > FUNC_MAX_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-				 errmsg("cannot pass more than %d arguments to a function",
-						FUNC_MAX_ARGS),
+			 errmsg_plural("cannot pass more than %d argument to a function",
+						   "cannot pass more than %d arguments to a function",
+						   FUNC_MAX_ARGS,
+						   FUNC_MAX_ARGS),
 				 parser_errposition(pstate, location)));
 
 	/*
@@ -493,20 +492,22 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 	 * If there are default arguments, we have to include their types in
 	 * actual_arg_types for the purpose of checking generic type consistency.
 	 * However, we do NOT put them into the generated parse node, because
-	 * their actual values might change before the query gets run.  The
+	 * their actual values might change before the query gets run.	The
 	 * planner has to insert the up-to-date values at plan time.
 	 */
 	nargsplusdefs = nargs;
 	foreach(l, argdefaults)
 	{
-		Node	*expr = (Node *) lfirst(l);
+		Node	   *expr = (Node *) lfirst(l);
 
 		/* probably shouldn't happen ... */
 		if (nargsplusdefs >= FUNC_MAX_ARGS)
 			ereport(ERROR,
 					(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-					 errmsg("cannot pass more than %d arguments to a function",
-							FUNC_MAX_ARGS),
+			 errmsg_plural("cannot pass more than %d argument to a function",
+						   "cannot pass more than %d arguments to a function",
+						   FUNC_MAX_ARGS,
+						   FUNC_MAX_ARGS),
 					 parser_errposition(pstate, location)));
 
 		actual_arg_types[nargsplusdefs++] = exprType(expr);
@@ -560,7 +561,7 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("could not find array type for data type %s",
 							format_type_be(newa->element_typeid)),
-					 parser_errposition(pstate, exprLocation((Node *) vargs))));
+				  parser_errposition(pstate, exprLocation((Node *) vargs))));
 		newa->multidims = false;
 		newa->location = exprLocation((Node *) vargs);
 
@@ -854,7 +855,7 @@ func_select_candidate(int nargs,
 				nmatch,
 				nunknowns;
 	Oid			input_base_typeids[FUNC_MAX_ARGS];
-	TYPCATEGORY	slot_category[FUNC_MAX_ARGS],
+	TYPCATEGORY slot_category[FUNC_MAX_ARGS],
 				current_category;
 	bool		current_is_preferred;
 	bool		slot_has_preferred_type[FUNC_MAX_ARGS];
@@ -864,8 +865,10 @@ func_select_candidate(int nargs,
 	if (nargs > FUNC_MAX_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-				 errmsg("cannot pass more than %d arguments to a function",
-						FUNC_MAX_ARGS)));
+			 errmsg_plural("cannot pass more than %d argument to a function",
+						   "cannot pass more than %d arguments to a function",
+						   FUNC_MAX_ARGS,
+						   FUNC_MAX_ARGS)));
 
 	/*
 	 * If any input types are domains, reduce them to their base types. This
@@ -1372,8 +1375,8 @@ func_get_detail(List *funcname,
 
 		/*
 		 * If expanding variadics or defaults, the "best candidate" might
-		 * represent multiple equivalently good functions; treat this case
-		 * as ambiguous.
+		 * represent multiple equivalently good functions; treat this case as
+		 * ambiguous.
 		 */
 		if (!OidIsValid(best_candidate->oid))
 			return FUNCDETAIL_MULTIPLE;
@@ -1437,97 +1440,6 @@ func_get_detail(List *funcname,
 	return FUNCDETAIL_NOTFOUND;
 }
 
-
-/*
- * Given two type OIDs, determine whether the first is a complex type
- * (class type) that inherits from the second.
- */
-bool
-typeInheritsFrom(Oid subclassTypeId, Oid superclassTypeId)
-{
-	bool		result = false;
-	Oid			relid;
-	Relation	inhrel;
-	List	   *visited,
-			   *queue;
-	ListCell   *queue_item;
-
-	if (!ISCOMPLEX(subclassTypeId) || !ISCOMPLEX(superclassTypeId))
-		return false;
-	relid = typeidTypeRelid(subclassTypeId);
-	if (relid == InvalidOid)
-		return false;
-
-	/*
-	 * Begin the search at the relation itself, so add relid to the queue.
-	 */
-	queue = list_make1_oid(relid);
-	visited = NIL;
-
-	inhrel = heap_open(InheritsRelationId, AccessShareLock);
-
-	/*
-	 * Use queue to do a breadth-first traversal of the inheritance graph from
-	 * the relid supplied up to the root.  Notice that we append to the queue
-	 * inside the loop --- this is okay because the foreach() macro doesn't
-	 * advance queue_item until the next loop iteration begins.
-	 */
-	foreach(queue_item, queue)
-	{
-		Oid			this_relid = lfirst_oid(queue_item);
-		ScanKeyData skey;
-		HeapScanDesc inhscan;
-		HeapTuple	inhtup;
-
-		/* If we've seen this relid already, skip it */
-		if (list_member_oid(visited, this_relid))
-			continue;
-
-		/*
-		 * Okay, this is a not-yet-seen relid. Add it to the list of
-		 * already-visited OIDs, then find all the types this relid inherits
-		 * from and add them to the queue. The one exception is we don't add
-		 * the original relation to 'visited'.
-		 */
-		if (queue_item != list_head(queue))
-			visited = lappend_oid(visited, this_relid);
-
-		ScanKeyInit(&skey,
-					Anum_pg_inherits_inhrelid,
-					BTEqualStrategyNumber, F_OIDEQ,
-					ObjectIdGetDatum(this_relid));
-
-		inhscan = heap_beginscan(inhrel, SnapshotNow, 1, &skey);
-
-		while ((inhtup = heap_getnext(inhscan, ForwardScanDirection)) != NULL)
-		{
-			Form_pg_inherits inh = (Form_pg_inherits) GETSTRUCT(inhtup);
-			Oid			inhparent = inh->inhparent;
-
-			/* If this is the target superclass, we're done */
-			if (get_rel_type_id(inhparent) == superclassTypeId)
-			{
-				result = true;
-				break;
-			}
-
-			/* Else add to queue */
-			queue = lappend_oid(queue, inhparent);
-		}
-
-		heap_endscan(inhscan);
-
-		if (result)
-			break;
-	}
-
-	heap_close(inhrel, AccessShareLock);
-
-	list_free(visited);
-	list_free(queue);
-
-	return result;
-}
 
 /*
  * unify_hypothetical_args()
@@ -1923,8 +1835,10 @@ LookupFuncNameTypeNames(List *funcname, List *argtypes, bool noError)
 	if (argcount > FUNC_MAX_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-				 errmsg("functions cannot have more than %d arguments",
-						FUNC_MAX_ARGS)));
+				 errmsg_plural("functions cannot have more than %d argument",
+							   "functions cannot have more than %d arguments",
+							   FUNC_MAX_ARGS,
+							   FUNC_MAX_ARGS)));
 
 	args_item = list_head(argtypes);
 	for (i = 0; i < argcount; i++)
@@ -1961,8 +1875,10 @@ LookupAggNameTypeNames(List *aggname, List *argtypes, bool noError)
 	if (argcount > FUNC_MAX_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-				 errmsg("functions cannot have more than %d arguments",
-						FUNC_MAX_ARGS)));
+				 errmsg_plural("functions cannot have more than %d argument",
+							   "functions cannot have more than %d arguments",
+							   FUNC_MAX_ARGS,
+							   FUNC_MAX_ARGS)));
 
 	i = 0;
 	foreach(lc, argtypes)

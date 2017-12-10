@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.169 2009/01/01 17:23:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_target.c,v 1.171 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -306,14 +306,14 @@ markTargetListOrigin(ParseState *pstate, TargetEntry *tle,
 			/* not a simple relation, leave it unmarked */
 			break;
 		case RTE_CTE:
+
 			/*
-			 * CTE reference: copy up from the subquery, if possible.
-			 * If the RTE is a recursive self-reference then we can't do
-			 * anything because we haven't finished analyzing it yet.
-			 * However, it's no big loss because we must be down inside
-			 * the recursive term of a recursive CTE, and so any markings
-			 * on the current targetlist are not going to affect the results
-			 * anyway.
+			 * CTE reference: copy up from the subquery, if possible. If the
+			 * RTE is a recursive self-reference then we can't do anything
+			 * because we haven't finished analyzing it yet. However, it's no
+			 * big loss because we must be down inside the recursive term of a
+			 * recursive CTE, and so any markings on the current targetlist
+			 * are not going to affect the results anyway.
 			 */
 			if (attnum != InvalidAttrNumber && !rte->self_reference)
 			{
@@ -356,7 +356,7 @@ markTargetListOrigin(ParseState *pstate, TargetEntry *tle,
  *
  * Note: location points at the target column name (SET target or INSERT
  * column name list entry), and must therefore be -1 in an INSERT that
- * omits the column name list.  So we should usually prefer to use
+ * omits the column name list.	So we should usually prefer to use
  * exprLocation(expr) for errors that can happen in a default INSERT.
  */
 Expr *
@@ -472,7 +472,7 @@ transformAssignedExpr(ParseState *pstate,
 		 * For normal non-qualified target column, do type checking and
 		 * coercion.
 		 */
-		Node   *orig_expr = (Node *) expr;
+		Node	   *orig_expr = (Node *) expr;
 
 		expr = (Expr *)
 			coerce_to_target_type(pstate,
@@ -874,6 +874,8 @@ checkInsertTargets(ParseState *pstate, List *cols, List **attrnos)
  * in a SELECT target list (where we want TargetEntry nodes in the result)
  * and foo.* in a ROW() or VALUES() construct (where we want just bare
  * expressions).
+ *
+ * The referenced columns are marked as requiring SELECT access.
  */
 static List *
 ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
@@ -955,20 +957,37 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
 								 makeRangeVar(schemaname, relname,
 											  cref->location));
 
-		/* Require read access --- see comments in setTargetTable() */
-		rte->requiredPerms |= ACL_SELECT;
-
 		rtindex = RTERangeTablePosn(pstate, rte, &sublevels_up);
 
 		if (targetlist)
+		{
+			/* expandRelAttrs handles permissions marking */
 			return expandRelAttrs(pstate, rte, rtindex, sublevels_up,
 								  cref->location);
+		}
 		else
 		{
 			List	   *vars;
+			ListCell   *l;
 
 			expandRTE(rte, rtindex, sublevels_up, cref->location, false,
 					  NULL, &vars);
+
+			/*
+			 * Require read access to the table.  This is normally redundant
+			 * with the markVarForSelectPriv calls below, but not if the table
+			 * has zero columns.
+			 */
+			rte->requiredPerms |= ACL_SELECT;
+
+			/* Require read access to each column */
+			foreach(l, vars)
+			{
+				Var		   *var = (Var *) lfirst(l);
+
+				markVarForSelectPriv(pstate, var, rte);
+			}
+
 			return vars;
 		}
 	}
@@ -982,6 +1001,8 @@ ExpandColumnRefStar(ParseState *pstate, ColumnRef *cref,
  * varnamespace.  We do not consider relnamespace because that would include
  * input tables of aliasless JOINs, NEW/OLD pseudo-entries, implicit RTEs,
  * etc.
+ *
+ * The referenced relations/columns are marked as requiring SELECT access.
  */
 static List *
 ExpandAllTables(ParseState *pstate, int location)
@@ -1000,9 +1021,6 @@ ExpandAllTables(ParseState *pstate, int location)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(l);
 		int			rtindex = RTERangeTablePosn(pstate, rte, NULL);
-
-		/* Require read access --- see comments in setTargetTable() */
-		rte->requiredPerms |= ACL_SELECT;
 
 		target = list_concat(target,
 							 expandRelAttrs(pstate, rte, rtindex, 0,

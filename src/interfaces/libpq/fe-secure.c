@@ -700,11 +700,11 @@ verify_cb(int ok, X509_STORE_CTX *ctx)
  * Check if a wildcard certificate matches the server hostname.
  *
  * The rule for this is:
- *  1. We only match the '*' character as wildcard
- *  2. We match only wildcards at the start of the string
- *  3. The '*' character does *not* match '.', meaning that we match only
- *     a single pathname component.
- *  4. We don't support more than one '*' in a single pattern.
+ *	1. We only match the '*' character as wildcard
+ *	2. We match only wildcards at the start of the string
+ *	3. The '*' character does *not* match '.', meaning that we match only
+ *	   a single pathname component.
+ *	4. We don't support more than one '*' in a single pattern.
  *
  * This is roughly in line with RFC2818, but contrary to what most browsers
  * appear to be implementing (point 3 being the difference)
@@ -714,8 +714,8 @@ verify_cb(int ok, X509_STORE_CTX *ctx)
 static int
 wildcard_certificate_match(const char *pattern, const char *string)
 {
-	int lenpat = strlen(pattern);
-	int lenstr = strlen(string);
+	int			lenpat = strlen(pattern);
+	int			lenstr = strlen(string);
 
 	/* If we don't start with a wildcard, it's not a match (rule 1 & 2) */
 	if (lenpat < 3 ||
@@ -949,7 +949,7 @@ init_ssl_system(PGconn *conn)
 			CRYPTO_set_locking_callback(pq_lockingcallback);
 		}
 	}
-#endif /* ENABLE_THREAD_SAFETY */
+#endif   /* ENABLE_THREAD_SAFETY */
 
 	if (!SSL_context)
 	{

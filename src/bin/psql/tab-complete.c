@@ -5,7 +5,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/tab-complete.c,v 1.179 2009/01/01 17:23:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/tab-complete.c,v 1.184 2009/06/11 14:49:08 momjian Exp $
  */
 
 /*----------------------------------------------------------------------
@@ -129,7 +129,7 @@ static int	completion_max_records;
  * Communication variables set by COMPLETE_WITH_FOO macros and then used by
  * the completion callback functions.  Ugly but there is no better way.
  */
-static const char *completion_charp;			/* to pass a string */
+static const char *completion_charp;	/* to pass a string */
 static const char *const * completion_charpp;	/* to pass a list of strings */
 static const char *completion_info_charp;		/* to pass a second string */
 static const char *completion_info_charp2;		/* to pass a third string */
@@ -795,7 +795,7 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev2_wd, "WRAPPER") == 0)
 	{
 		static const char *const list_ALTER_FDW[] =
-		{"LIBRARY", "OPTIONS", "OWNER TO", NULL};
+		{"VALIDATOR", "OPTIONS", "OWNER TO", NULL};
 
 		COMPLETE_WITH_LIST(list_ALTER_FDW);
 	}
@@ -1487,12 +1487,7 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev4_wd, "FOREIGN") == 0 &&
 			 pg_strcasecmp(prev3_wd, "DATA") == 0 &&
 			 pg_strcasecmp(prev2_wd, "WRAPPER") == 0)
-		COMPLETE_WITH_CONST("LIBRARY");
-
-	else if (pg_strcasecmp(prev5_wd, "DATA") == 0 &&
-			 pg_strcasecmp(prev4_wd, "WRAPPER") == 0 &&
-			 pg_strcasecmp(prev2_wd, "LIBRARY") == 0)
-		COMPLETE_WITH_CONST("LANGUAGE C");
+		COMPLETE_WITH_CONST("VALIDATOR");
 
 	/* CREATE INDEX */
 	/* First off we complete CREATE UNIQUE with "INDEX" */

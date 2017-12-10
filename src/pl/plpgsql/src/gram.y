@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.118 2009/01/01 17:24:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/gram.y,v 1.125 2009/06/18 10:22:09 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -62,6 +62,8 @@ static PLpgSQL_row		*make_scalar_list1(const char *initial_name,
 										   int lineno);
 static	void			 check_sql_expr(const char *stmt);
 static	void			 plpgsql_sql_error_callback(void *arg);
+static	char			*parse_string_token(const char *token);
+static	void			 plpgsql_string_error_callback(void *arg);
 static	char			*check_label(const char *yytxt);
 static	void			 check_labels(const char *start_label,
 									  const char *end_label);
@@ -142,7 +144,7 @@ static List				*read_raise_options(void);
 %type <forvariable>	for_variable
 %type <stmt>	for_control
 
-%type <str>		opt_lblname opt_block_label opt_label
+%type <str>		any_identifier any_name opt_block_label opt_label
 %type <str>		execsql_start
 
 %type <list>	proc_sect proc_stmts stmt_else
@@ -228,8 +230,6 @@ static List				*read_raise_options(void);
 		/*
 		 * Other tokens
 		 */
-%token	T_FUNCTION
-%token	T_TRIGGER
 %token	T_STRING
 %token	T_NUMBER
 %token	T_SCALAR				/* a VAR, RECFIELD, or TRIGARG */
@@ -244,13 +244,9 @@ static List				*read_raise_options(void);
 
 %%
 
-pl_function		: T_FUNCTION comp_optsect pl_block opt_semi
+pl_function		: comp_optsect pl_block opt_semi
 					{
-						yylval.program = (PLpgSQL_stmt_block *)$3;
-					}
-				| T_TRIGGER comp_optsect pl_block opt_semi
-					{
-						yylval.program = (PLpgSQL_stmt_block *)$3;
+						yylval.program = (PLpgSQL_stmt_block *) $2;
 					}
 				;
 
@@ -335,7 +331,7 @@ decl_stmts		: decl_stmts decl_stmt
 					{	$$ = $1;	}
 				;
 
-decl_stmt		: '<' '<' opt_lblname '>' '>'
+decl_stmt		: '<' '<' any_name '>' '>'
 					{	$$ = $3;	}
 				| K_DECLARE
 					{	$$ = NULL;	}
@@ -516,12 +512,12 @@ decl_cursor_arg : decl_varname decl_datatype
 decl_is_for		:	K_IS |		/* Oracle */
 					K_FOR;		/* ANSI */
 
-decl_aliasitem	: T_WORD
+decl_aliasitem	: any_identifier
 					{
 						char	*name;
 						PLpgSQL_nsitem *nsi;
 
-						plpgsql_convert_ident(yytext, &name, 1);
+						plpgsql_convert_ident($1, &name, 1);
 						if (name[0] != '$')
 							yyerror("only positional parameters can be aliased");
 
@@ -553,8 +549,27 @@ decl_varname	: T_WORD
 						$$.name = name;
 						$$.lineno  = plpgsql_scanner_lineno();
 					}
+				| T_SCALAR
+					{
+						/*
+						 * Since the scanner is only searching the topmost
+						 * namestack entry, getting T_SCALAR etc can only
+						 * happen if the name is already declared in this
+						 * block.
+						 */
+						yyerror("duplicate declaration");
+					}
+				| T_ROW
+					{
+						yyerror("duplicate declaration");
+					}
+				| T_RECORD
+					{
+						yyerror("duplicate declaration");
+					}
 				;
 
+/* XXX this is broken because it doesn't allow for T_SCALAR,T_ROW,T_RECORD */
 decl_renname	: T_WORD
 					{
 						char	*name;
@@ -1043,7 +1058,7 @@ for_control		:
 							if ($2.scalar && $2.row)
 								ereport(ERROR,
 										(errcode(ERRCODE_SYNTAX_ERROR),
-										 errmsg("cursor FOR loop must have just one target variable")));
+										 errmsg("cursor FOR loop must have only one target variable")));
 
 							/* create loop's private RECORD variable */
 							plpgsql_convert_ident($2.name, &varname, 1);
@@ -1131,7 +1146,7 @@ for_control		:
 								if ($2.scalar && $2.row)
 									ereport(ERROR,
 											(errcode(ERRCODE_SYNTAX_ERROR),
-											 errmsg("integer FOR loop must have just one target variable")));
+											 errmsg("integer FOR loop must have only one target variable")));
 
 								/* create loop's private variable */
 								plpgsql_convert_ident($2.name, &varname, 1);
@@ -1403,7 +1418,7 @@ stmt_raise		: K_RAISE lno
 							if (tok == T_STRING)
 							{
 								/* old style message and parameters */
-								new->message = plpgsql_get_string_value();
+								new->message = parse_string_token(yytext);
 								/*
 								 * We expect either a semi-colon, which
 								 * indicates no parameters, or a comma that
@@ -1435,7 +1450,7 @@ stmt_raise		: K_RAISE lno
 
 									if (yylex() != T_STRING)
 										yyerror("syntax error");
-									sqlstatestr = plpgsql_get_string_value();
+									sqlstatestr = parse_string_token(yytext);
 
 									if (strlen(sqlstatestr) != 5)
 										yyerror("invalid SQLSTATE code");
@@ -1570,7 +1585,7 @@ stmt_open		: K_OPEN lno cursor_variable
 										(errcode(ERRCODE_SYNTAX_ERROR),
 										 errmsg("syntax error at \"%s\"",
 												yytext),
-										 errdetail("Expected FOR to open a reference cursor.")));
+										 errdetail("Expected \"FOR\", to open a cursor for an unbound cursor variable.")));
 							}
 
 							tok = yylex();
@@ -1664,7 +1679,7 @@ cursor_variable	: T_SCALAR
 							plpgsql_error_lineno = plpgsql_scanner_lineno();
 							ereport(ERROR,
 									(errcode(ERRCODE_DATATYPE_MISMATCH),
-									 errmsg("\"%s\" must be of type cursor or refcursor",
+									 errmsg("variable \"%s\" must be of type cursor or refcursor",
 											((PLpgSQL_var *) yylval.scalar)->refname)));
 						}
 						$$ = (PLpgSQL_var *) yylval.scalar;
@@ -1756,45 +1771,39 @@ proc_conditions	: proc_conditions K_OR proc_condition
 						}
 				;
 
-proc_condition	: opt_lblname
+proc_condition	: any_name
 						{
-							$$ = plpgsql_parse_err_condition($1);
-						}
-				| T_SCALAR
-						{
-							/*
-							 * Because we know the special sqlstate variable
-							 * is at the top of the namestack (see the
-							 * exception_sect production), the SQLSTATE
-							 * keyword will always lex as T_SCALAR.  This
-							 * might not be true in other parsing contexts!
-							 */
-							PLpgSQL_condition *new;
-							char   *sqlstatestr;
+							if (strcmp($1, "sqlstate") != 0)
+							{
+								$$ = plpgsql_parse_err_condition($1);
+							}
+							else
+							{
+								PLpgSQL_condition *new;
+								char   *sqlstatestr;
 
-							if (pg_strcasecmp(yytext, "sqlstate") != 0)
-								yyerror("syntax error");
+								/* next token should be a string literal */
+								if (yylex() != T_STRING)
+									yyerror("syntax error");
+								sqlstatestr = parse_string_token(yytext);
 
-							/* next token should be a string literal */
-							if (yylex() != T_STRING)
-								yyerror("syntax error");
-							sqlstatestr = plpgsql_get_string_value();
+								if (strlen(sqlstatestr) != 5)
+									yyerror("invalid SQLSTATE code");
+								if (strspn(sqlstatestr, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 5)
+									yyerror("invalid SQLSTATE code");
 
-							if (strlen(sqlstatestr) != 5)
-								yyerror("invalid SQLSTATE code");
-							if (strspn(sqlstatestr, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") != 5)
-								yyerror("invalid SQLSTATE code");
+								new = palloc(sizeof(PLpgSQL_condition));
+								new->sqlerrstate =
+									MAKE_SQLSTATE(sqlstatestr[0],
+												  sqlstatestr[1],
+												  sqlstatestr[2],
+												  sqlstatestr[3],
+												  sqlstatestr[4]);
+								new->condname = sqlstatestr;
+								new->next = NULL;
 
-							new = palloc(sizeof(PLpgSQL_condition));
-							new->sqlerrstate = MAKE_SQLSTATE(sqlstatestr[0],
-															 sqlstatestr[1],
-															 sqlstatestr[2],
-															 sqlstatestr[3],
-															 sqlstatestr[4]);
-							new->condname = sqlstatestr;
-							new->next = NULL;
-
-							$$ = new;
+								$$ = new;
+							}
 						}
 				;
 
@@ -1819,35 +1828,20 @@ opt_block_label	:
 						plpgsql_ns_push(NULL);
 						$$ = NULL;
 					}
-				| '<' '<' opt_lblname '>' '>'
+				| '<' '<' any_name '>' '>'
 					{
 						plpgsql_ns_push($3);
 						$$ = $3;
 					}
 				;
 
-/*
- * need all the options because scanner will have tried to resolve as variable
- */
 opt_label	:
 					{
 						$$ = NULL;
 					}
-				| T_WORD
+				| any_identifier
 					{
-						$$ = check_label(yytext);
-					}
-				| T_SCALAR
-					{
-						$$ = check_label(yytext);
-					}
-				| T_RECORD
-					{
-						$$ = check_label(yytext);
-					}
-				| T_ROW
-					{
-						$$ = check_label(yytext);
+						$$ = check_label($1);
 					}
 				;
 
@@ -1857,11 +1851,32 @@ opt_exitcond	: ';'
 					{ $$ = $2; }
 				;
 
-opt_lblname		: T_WORD
+/*
+ * need all the options because scanner will have tried to resolve as variable
+ */
+any_identifier	: T_WORD
+					{
+						$$ = yytext;
+					}
+				| T_SCALAR
+					{
+						$$ = yytext;
+					}
+				| T_RECORD
+					{
+						$$ = yytext;
+					}
+				| T_ROW
+					{
+						$$ = yytext;
+					}
+				;
+
+any_name		: any_identifier
 					{
 						char	*name;
 
-						plpgsql_convert_ident(yytext, &name, 1);
+						plpgsql_convert_ident($1, &name, 1);
 						$$ = name;
 					}
 				;
@@ -2094,7 +2109,7 @@ read_datatype(int tok)
 			if (parenlevel != 0)
 				yyerror("mismatched parentheses");
 			else
-				yyerror("incomplete datatype declaration");
+				yyerror("incomplete data type declaration");
 		}
 		/* Possible followers for datatype in a declaration */
 		if (tok == K_NOT || tok == K_ASSIGN || tok == K_DEFAULT)
@@ -2119,7 +2134,7 @@ read_datatype(int tok)
 	type_name = plpgsql_dstring_get(&ds);
 
 	if (type_name[0] == '\0')
-		yyerror("missing datatype declaration");
+		yyerror("missing data type declaration");
 
 	plpgsql_error_lineno = lno;	/* in case of error in parse_datatype */
 
@@ -2380,11 +2395,11 @@ make_return_stmt(int lineno)
 				break;
 
 			default:
-				yyerror("RETURN must specify a record or row variable in function returning tuple");
+				yyerror("RETURN must specify a record or row variable in function returning row");
 				break;
 		}
 		if (yylex() != ';')
-			yyerror("RETURN must specify a record or row variable in function returning tuple");
+			yyerror("RETURN must specify a record or row variable in function returning row");
 	}
 	else
 	{
@@ -2433,11 +2448,11 @@ make_return_next_stmt(int lineno)
 				break;
 
 			default:
-				yyerror("RETURN NEXT must specify a record or row variable in function returning tuple");
+				yyerror("RETURN NEXT must specify a record or row variable in function returning row");
 				break;
 		}
 		if (yylex() != ';')
-			yyerror("RETURN NEXT must specify a record or row variable in function returning tuple");
+			yyerror("RETURN NEXT must specify a record or row variable in function returning row");
 	}
 	else
 		new->expr = plpgsql_read_expression(';', ";");
@@ -2743,6 +2758,48 @@ plpgsql_sql_error_callback(void *arg)
 	errposition(0);
 }
 
+/*
+ * Convert a string-literal token to the represented string value.
+ *
+ * To do this, we need to invoke the core lexer.  Here we are only concerned
+ * with setting up the right errcontext state, which is handled the same as
+ * in check_sql_expr().
+ */
+static char *
+parse_string_token(const char *token)
+{
+	char	   *result;
+	ErrorContextCallback  syntax_errcontext;
+	ErrorContextCallback *previous_errcontext;
+
+	/* See comments in check_sql_expr() */
+	Assert(error_context_stack->callback == plpgsql_compile_error_callback);
+
+	previous_errcontext = error_context_stack;
+	syntax_errcontext.callback = plpgsql_string_error_callback;
+	syntax_errcontext.arg = (char *) token;
+	syntax_errcontext.previous = error_context_stack->previous;
+	error_context_stack = &syntax_errcontext;
+
+	result = pg_parse_string_token(token);
+
+	/* Restore former ereport callback */
+	error_context_stack = previous_errcontext;
+
+	return result;
+}
+
+static void
+plpgsql_string_error_callback(void *arg)
+{
+	Assert(plpgsql_error_funcname);
+
+	errcontext("string literal in PL/PgSQL function \"%s\" near line %d",
+			   plpgsql_error_funcname, plpgsql_error_lineno);
+	/* representing the string literal as internalquery seems overkill */
+	errposition(0);
+}
+
 static char *
 check_label(const char *yytxt)
 {
@@ -2750,7 +2807,7 @@ check_label(const char *yytxt)
 
 	plpgsql_convert_ident(yytxt, &label_name, 1);
 	if (plpgsql_ns_lookup_label(label_name) == NULL)
-		yyerror("no such label");
+		yyerror("label does not exist");
 	return label_name;
 }
 

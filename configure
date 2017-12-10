@@ -627,6 +627,9 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 vpath_build
+GP_MAJORVERSION
+GP_VERSION_SHORT
+BLD_ARCH
 PROVE
 DOCBOOK2MAN
 SGMLSPL
@@ -746,9 +749,6 @@ enable_codegen
 enable_orca
 autodepend
 TAS
-GP_MAJORVERSION
-GP_VERSION_SHORT
-BLD_ARCH
 GCC
 CPP
 CFLAGS_VECTOR
@@ -3012,7 +3012,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-PG_PACKAGE_VERSION=8.4devel
+PG_PACKAGE_VERSION=8.4.0
 
 
 
@@ -5386,7 +5386,8 @@ fi
 
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
-# ICC pretends to be GCC but it's lying; it doesn't support these options.
+# ICC pretends to be GCC but it's lying; it doesn't support these flags,
+# but has its own.  Also check other compiler-specific flags here.
 
 if test "$GCC" = yes -a "$ICC" = no; then
   CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith"
@@ -5762,8 +5763,8 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 ac_c_werror_flag=$ac_save_c_werror_flag
 
-elif test x"${CC}" = x"xlc"; then
-  # AIX xlc has to have strict aliasing turned off too
+elif test "$PORTNAME" = "aix"; then
+  # AIX's xlc has to have strict aliasing turned off too
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC supports -qnoansialias" >&5
 $as_echo_n "checking if $CC supports -qnoansialias... " >&6; }
 pgac_save_CFLAGS=$CFLAGS
@@ -6088,59 +6089,6 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-
-
-BLD_ARCH=`echo $BLD_ARCH`
-
-
-# Get the Greenplum version string from VERSION
-
-GP_VERSION_LONG=`bash ./getversion`
-
-if test "$with_extra_version" = "" ; then
-  with_extra_version="-oss"
-fi
-
-GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
-
-echo $GP_VERSION_LONG > VERSION
-GP_VERSION=`cat VERSION`
-
-GP_VERSION_SHORT=`bash ./getversion --short`
-GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
-
-
-GP_VERSION_IN="src/include/catalog/gp_version.in"
-GP_VERSION_HEADER="src/include/catalog/gp_version.h"
-if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_HEADER
-fi
-
-GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
-GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
-if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
-fi
-
-GPTEST_IN="src/test/regress/GPTest.pm.in"
-GPTEST_PM="src/test/regress/GPTest.pm"
-if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
-    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
-fi
-
-
-cat >>confdefs.h <<_ACEOF
-#define GP_VERSION "$GP_VERSION"
-_ACEOF
-
-
-GP_MAJORVERSION=`expr "$GP_VERSION" : '\([0-9][0-9]*\)'`
-
-
-cat >>confdefs.h <<_ACEOF
-#define GP_MAJORVERSION "$GP_MAJORVERSION"
-_ACEOF
 
 
 
@@ -9790,17 +9738,6 @@ program to use during the build." "$LINENO" 5
   fi
 fi
 
-
-
-
-#
-GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
-tr '.' '	' |
-$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"
-
-cat >>confdefs.h <<_ACEOF
-#define GP_VERSION_NUM $GP_VERSION_NUM
-_ACEOF
 
 
 ##
@@ -15463,19 +15400,6 @@ esac
 
 fi
 
-ac_fn_c_check_func "$LINENO" "unsetenv" "ac_cv_func_unsetenv"
-if test "x$ac_cv_func_unsetenv" = xyes; then :
-  $as_echo "#define HAVE_UNSETENV 1" >>confdefs.h
-
-else
-  case " $LIBOBJS " in
-  *" unsetenv.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS unsetenv.$ac_objext"
- ;;
-esac
-
-fi
-
 
 
 case $host_os in
@@ -15534,22 +15458,7 @@ esac
 fi
 
 # Similarly, use system's getopt_long() only if system provides struct option.
-# Solaris' getopt() doesn't do what we want for long options, so always use
-# our versions on that platform.
-if test "$PORTNAME" = "solaris"; then
-  case " $LIBOBJS " in
-  *" getopt.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS getopt.$ac_objext"
- ;;
-esac
-
-  case " $LIBOBJS " in
-  *" getopt_long.$ac_objext "* ) ;;
-  *) LIBOBJS="$LIBOBJS getopt_long.$ac_objext"
- ;;
-esac
-
-elif test x"$ac_cv_type_struct_option" = xyes ; then
+if test x"$ac_cv_type_struct_option" = xyes ; then
   ac_fn_c_check_func "$LINENO" "getopt_long" "ac_cv_func_getopt_long"
 if test "x$ac_cv_func_getopt_long" = xyes; then :
   $as_echo "#define HAVE_GETOPT_LONG 1" >>confdefs.h
@@ -15568,6 +15477,17 @@ else
   case " $LIBOBJS " in
   *" getopt_long.$ac_objext "* ) ;;
   *) LIBOBJS="$LIBOBJS getopt_long.$ac_objext"
+ ;;
+esac
+
+fi
+
+# Solaris' getopt() doesn't do what we want for long options, so always use
+# our version on that platform.
+if test "$PORTNAME" = "solaris"; then
+  case " $LIBOBJS " in
+  *" getopt.$ac_objext "* ) ;;
+  *) LIBOBJS="$LIBOBJS getopt.$ac_objext"
  ;;
 esac
 
@@ -19125,6 +19045,58 @@ $as_echo "$as_me: using LDFLAGS=$LDFLAGS" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: using LIBS=$LIBS" >&5
 $as_echo "$as_me: using LIBS=$LIBS" >&6;}
 
+BLD_ARCH=`echo $BLD_ARCH`
+
+
+# Get the Greenplum version string from VERSION
+
+GP_VERSION_LONG=`bash ./getversion`
+
+if test "$with_extra_version" = "" ; then
+  with_extra_version="-oss"
+fi
+
+GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
+
+echo $GP_VERSION_LONG > VERSION
+GP_VERSION=`cat VERSION`
+
+GP_VERSION_SHORT=`bash ./getversion --short`
+GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
+
+
+GP_VERSION_IN="src/include/catalog/gp_version.in"
+GP_VERSION_HEADER="src/include/catalog/gp_version.h"
+if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
+    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_HEADER
+fi
+
+GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
+GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
+if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
+fi
+
+GPTEST_IN="src/test/regress/GPTest.pm.in"
+GPTEST_PM="src/test/regress/GPTest.pm"
+if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
+fi
+
+
+cat >>confdefs.h <<_ACEOF
+#define GP_VERSION "$GP_VERSION"
+_ACEOF
+
+
+GP_MAJORVERSION=`expr "$GP_VERSION" : '\([0-9][0-9]*\)'`
+
+
+cat >>confdefs.h <<_ACEOF
+#define GP_MAJORVERSION "$GP_MAJORVERSION"
+_ACEOF
+
+
 # Create compiler version string
 if test x"$GCC" = x"yes" ; then
   cc_string="GCC `${CC} --version | sed q`"
@@ -19146,6 +19118,16 @@ $AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"
 
 cat >>confdefs.h <<_ACEOF
 #define PG_VERSION_NUM $PG_VERSION_NUM
+_ACEOF
+
+
+#
+GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
+tr '.' '	' |
+$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"
+
+cat >>confdefs.h <<_ACEOF
+#define GP_VERSION_NUM $GP_VERSION_NUM
 _ACEOF
 
 

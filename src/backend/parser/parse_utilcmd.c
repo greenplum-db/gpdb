@@ -19,7 +19,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.20 2009/01/01 17:23:46 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/parse_utilcmd.c,v 2.21 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -35,6 +35,7 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_type_encoding.h"
@@ -421,9 +422,9 @@ transformColumnDefinition(ParseState *pstate, CreateStmtContext *cxt,
 		}
 
 		/*
-		 * We have to reject "serial[]" explicitly, because once we've
-		 * set typeid, LookupTypeName won't notice arrayBounds.  We don't
-		 * need any special coding for serial(typmod) though.
+		 * We have to reject "serial[]" explicitly, because once we've set
+		 * typeid, LookupTypeName won't notice arrayBounds.  We don't need any
+		 * special coding for serial(typmod) though.
 		 */
 		if (is_serial && column->typeName->arrayBounds != NIL)
 			ereport(ERROR,
@@ -971,9 +972,9 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 	index->idxname = NULL;
 
 	/*
-	 * If the index is marked PRIMARY, it's certainly from a constraint;
-	 * else, if it's not marked UNIQUE, it certainly isn't; else, we have
-	 * to search pg_depend to see if there's an associated unique constraint.
+	 * If the index is marked PRIMARY, it's certainly from a constraint; else,
+	 * if it's not marked UNIQUE, it certainly isn't; else, we have to search
+	 * pg_depend to see if there's an associated unique constraint.
 	 */
 	if (index->primary)
 		index->isconstraint = true;
@@ -1083,10 +1084,10 @@ generateClonedIndexStmt(CreateStmtContext *cxt, Relation source_idx,
 		if (amrec->amcanorder)
 		{
 			/*
-			 * If it supports sort ordering, copy DESC and NULLS opts.
-			 * Don't set non-default settings unnecessarily, though,
-			 * so as to improve the chance of recognizing equivalence
-			 * to constraint indexes.
+			 * If it supports sort ordering, copy DESC and NULLS opts. Don't
+			 * set non-default settings unnecessarily, though, so as to
+			 * improve the chance of recognizing equivalence to constraint
+			 * indexes.
 			 */
 			if (opt & INDOPTION_DESC)
 			{
@@ -2187,6 +2188,7 @@ transformIndexConstraints(ParseState *pstate, CreateStmtContext *cxt, bool mayDe
 				strcmp(index->accessMethod, priorindex->accessMethod) == 0)
 			{
 				priorindex->unique |= index->unique;
+
 				/*
 				 * If the prior index is as yet unnamed, and this one is
 				 * named, then transfer the name to the prior index. This
@@ -2562,7 +2564,9 @@ transformIndexStmt_recurse(IndexStmt *stmt, const char *queryString,
 		nameCache = parser_get_namecache(masterpstate);
 
 		/* Loop over all partition children */
-		children = find_inheritance_children(RelationGetRelid(rel));
+		/* GPDB_84_MERGE_FIXME: do we need another lock here, or did the above
+		 * heap_openrv() take care of it? */
+		children = find_inheritance_children(RelationGetRelid(rel), NoLock);
 
 		foreach(l, children)
 		{
@@ -3608,6 +3612,9 @@ transformStorageEncodingClause(List *options)
 	 */
 	d = transformRelOptions(PointerGetDatum(NULL),
 									  list_concat(extra, options),
+									  /* GPDB_84_MERGE_FIXME: do we need any
+									   * namespaces? */
+									  NULL, NULL,
 									  true, false);
 	(void)heap_reloptions(RELKIND_RELATION, d, true);
 

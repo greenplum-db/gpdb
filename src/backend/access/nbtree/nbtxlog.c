@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtxlog.c,v 1.53 2009/01/01 17:23:36 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/nbtree/nbtxlog.c,v 1.55 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -356,8 +356,8 @@ btree_xlog_split(bool onleft, bool isroot,
 	_bt_restore_page(rpage, datapos, datalen);
 
 	/*
-	 * On leaf level, the high key of the left page is equal to the
-	 * first key on the right page.
+	 * On leaf level, the high key of the left page is equal to the first key
+	 * on the right page.
 	 */
 	if (xlrec->level == 0)
 	{
@@ -766,6 +766,8 @@ btree_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
 
+	RestoreBkpBlocks(lsn, record, false);
+
 	switch (info)
 	{
 		case XLOG_BTREE_INSERT_LEAF:
@@ -1116,7 +1118,7 @@ btree_xlog_cleanup(void)
 			buf = XLogReadBuffer(action->node, action->delblk, false);
 			if (BufferIsValid(buf))
 			{
-				Relation reln;
+				Relation	reln;
 
 				reln = CreateFakeRelcacheEntry(action->node);
 				if (_bt_pagedel(reln, buf, NULL, true) == 0)

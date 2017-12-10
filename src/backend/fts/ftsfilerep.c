@@ -18,6 +18,7 @@
 
 #include "access/heapam.h"
 #include "access/genam.h"
+#include "access/xact.h"
 #include "catalog/gp_configuration_history.h"
 #include "catalog/gp_segment_config.h"
 
@@ -27,6 +28,7 @@
 #include "libpq-int.h"
 #include "postmaster/fts.h"
 #include "postmaster/primary_mirror_mode.h"
+#include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"

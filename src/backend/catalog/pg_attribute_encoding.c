@@ -232,7 +232,7 @@ AddDefaultRelationAttributeOptions(Relation rel, List *options)
 
 	ce = transformStorageEncodingClause(ce);
 
-	opts = transformRelOptions(PointerGetDatum(NULL), ce, true, false);
+	opts = transformRelOptions(PointerGetDatum(NULL), ce, NULL, NULL, true, false);
 
 	for (attno = 1; attno <= RelationGetNumberOfAttributes(rel); attno++)
 		add_attribute_encoding_entry(RelationGetRelid(rel),
@@ -277,6 +277,8 @@ AddRelationAttributeEncodings(Relation rel, List *attr_encodings)
 
 		attoptions = transformRelOptions(PointerGetDatum(NULL),
 										 encoding,
+										 NULL,
+										 NULL,
 										 true,
 										 false);
 

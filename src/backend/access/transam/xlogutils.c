@@ -13,7 +13,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/backend/access/transam/xlogutils.c,v 1.66 2009/01/01 17:23:36 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/access/transam/xlogutils.c,v 1.68 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -77,7 +77,8 @@ log_invalid_page(RelFileNode node, ForkNumber forkno, BlockNumber blkno,
 	 */
 	if (log_min_messages <= DEBUG1 || client_min_messages <= DEBUG1)
 	{
-		char *path = relpath(node, forkno);
+		char	   *path = relpath(node, forkno);
+
 		if (present)
 		{
 			elog(DEBUG1, "page %u of relation %s is uninitialized",
@@ -153,7 +154,8 @@ forget_invalid_pages(RelFileNode node, ForkNumber forkno, BlockNumber minblkno)
 		{
 			if (log_min_messages <= DEBUG2 || client_min_messages <= DEBUG2)
 			{
-				char *path = relpath(hentry->key.node, forkno);
+				char	   *path = relpath(hentry->key.node, forkno);
+
 				elog(DEBUG2, "page %u of relation %s has been dropped",
 					 hentry->key.blkno, path);
 				if (Debug_persistent_recovery_print)
@@ -191,7 +193,8 @@ forget_invalid_pages_db(Oid tblspc, Oid dbid)
 		{
 			if (log_min_messages <= DEBUG2 || client_min_messages <= DEBUG2)
 			{
-				char *path = relpath(hentry->key.node, hentry->key.forkno);
+				char	   *path = relpath(hentry->key.node, hentry->key.forkno);
+
 				elog(DEBUG2, "page %u of relation %s has been dropped",
 					 hentry->key.blkno, path);
 				if (Debug_persistent_recovery_print)
@@ -261,7 +264,8 @@ XLogCheckInvalidPages(void)
 	 */
 	while ((hentry = (xl_invalid_page *) hash_seq_search(&status)) != NULL)
 	{
-		char *path = relpath(hentry->key.node, hentry->key.forkno);
+		char	   *path = relpath(hentry->key.node, hentry->key.forkno);
+
 		if (hentry->present)
 			elog(WARNING, "page %u of relation %s was uninitialized",
 				 hentry->key.blkno, path);
@@ -281,8 +285,19 @@ XLogCheckInvalidPages(void)
 
 /*
  * XLogReadBuffer
- *		A shorthand of XLogReadBufferExtended(), for reading from the main
- *		fork.
+ *		Read a page during XLOG replay.
+ *
+ * This is a shorthand of XLogReadBufferExtended() followed by
+ * LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE), for reading from the main
+ * fork.
+ *
+ * (Getting the lock is not really necessary, since we expect that this is
+ * only used during single-process XLOG replay, but some subroutines such
+ * as MarkBufferDirty will complain if we don't. And hopefully we'll get
+ * hot standby support in the future, where there will be backends running
+ * read-only queries during XLOG replay.)
+ *
+ * The returned buffer is exclusively-locked.
  *
  * For historical reasons, instead of a ReadBufferMode argument, this only
  * supports RBM_ZERO (init == true) and RBM_NORMAL (init == false) modes.
@@ -290,22 +305,22 @@ XLogCheckInvalidPages(void)
 Buffer
 XLogReadBuffer(RelFileNode rnode, BlockNumber blkno, bool init)
 {
-	return XLogReadBufferExtended(rnode, MAIN_FORKNUM, blkno,
-								  init ? RBM_ZERO : RBM_NORMAL);
+	Buffer		buf;
+
+	buf = XLogReadBufferExtended(rnode, MAIN_FORKNUM, blkno,
+								 init ? RBM_ZERO : RBM_NORMAL);
+	if (BufferIsValid(buf))
+		LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+
+	return buf;
 }
 
 /*
  * XLogReadBufferExtended
  *		Read a page during XLOG replay
  *
- * This is functionally comparable to ReadBuffer followed by
- * LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE): you get back a pinned
- * and locked buffer.  (Getting the lock is not really necessary, since we
- * expect that this is only used during single-process XLOG replay, but
- * some subroutines such as MarkBufferDirty will complain if we don't.)
- *
- * There's some differences in the behavior wrt. the "mode" argument,
- * compared to ReadBufferExtended:
+ * This is functionally comparable to ReadBufferExtended. There's some
+ * differences in the behavior wrt. the "mode" argument:
  *
  * In RBM_NORMAL mode, if the page doesn't exist, or contains all-zeroes, we
  * return InvalidBuffer. In this case the caller should silently skip the
@@ -402,16 +417,19 @@ XLogReadBufferExtended(RelFileNode rnode, ForkNumber forknum,
 		Assert(BufferGetBlockNumber(buffer) == blkno);
 	}
 
-	LockBuffer(buffer, BUFFER_LOCK_EXCLUSIVE);
-
 	if (mode == RBM_NORMAL)
 	{
 		/* check that page has been initialized */
 		Page		page = (Page) BufferGetPage(buffer);
 
+		/*
+		 * We assume that PageIsNew is safe without a lock. During recovery,
+		 * there should be no other backends that could modify the buffer at
+		 * the same time.
+		 */
 		if (PageIsNew(page))
 		{
-			UnlockReleaseBuffer(buffer);
+			ReleaseBuffer(buffer);
 			log_invalid_page(rnode, forknum, blkno, true);
 			return InvalidBuffer;
 		}
@@ -441,8 +459,8 @@ XLogAOSegmentFile(RelFileNode rnode, uint32 segmentFileNum)
  */
 typedef struct
 {
-	RelationData		reldata;	/* Note: this must be first */
-	FormData_pg_class	pgc;
+	RelationData reldata;		/* Note: this must be first */
+	FormData_pg_class pgc;
 } FakeRelCacheEntryData;
 
 typedef FakeRelCacheEntryData *FakeRelCacheEntry;
@@ -451,10 +469,10 @@ typedef FakeRelCacheEntryData *FakeRelCacheEntry;
  * Create a fake relation cache entry for a physical relation
  *
  * It's often convenient to use the same functions in XLOG replay as in the
- * main codepath, but those functions typically work with a relcache entry. 
- * We don't have a working relation cache during XLOG replay, but this 
- * function can be used to create a fake relcache entry instead. Only the 
- * fields related to physical storage, like rd_rel, are initialized, so the 
+ * main codepath, but those functions typically work with a relcache entry.
+ * We don't have a working relation cache during XLOG replay, but this
+ * function can be used to create a fake relcache entry instead. Only the
+ * fields related to physical storage, like rd_rel, are initialized, so the
  * fake entry is only usable in low-level operations like ReadBuffer().
  *
  * Caller must free the returned entry with FreeFakeRelcacheEntry().
@@ -463,7 +481,7 @@ Relation
 CreateFakeRelcacheEntry(RelFileNode rnode)
 {
 	FakeRelCacheEntry fakeentry;
-	Relation rel;
+	Relation	rel;
 
 	/* Allocate the Relation struct and all related space in one block. */
 	fakeentry = palloc0(sizeof(FakeRelCacheEntryData));
@@ -478,9 +496,9 @@ CreateFakeRelcacheEntry(RelFileNode rnode)
 	/*
 	 * We set up the lockRelId in case anything tries to lock the dummy
 	 * relation.  Note that this is fairly bogus since relNode may be
-	 * different from the relation's OID.  It shouldn't really matter
-	 * though, since we are presumably running by ourselves and can't have
-	 * any lock conflicts ...
+	 * different from the relation's OID.  It shouldn't really matter though,
+	 * since we are presumably running by ourselves and can't have any lock
+	 * conflicts ...
 	 */
 	rel->rd_lockInfo.lockRelId.dbId = rnode.dbNode;
 	rel->rd_lockInfo.lockRelId.relId = rnode.relNode;
@@ -534,10 +552,9 @@ XLogDropDatabase(Oid tblspc, Oid dbid)
 {
 	/*
 	 * This is unnecessarily heavy-handed, as it will close SMgrRelation
-	 * objects for other databases as well. DROP DATABASE occurs seldom
-	 * enough that it's not worth introducing a variant of smgrclose for
-	 * just this purpose. XXX: Or should we rather leave the smgr entries
-	 * dangling?
+	 * objects for other databases as well. DROP DATABASE occurs seldom enough
+	 * that it's not worth introducing a variant of smgrclose for just this
+	 * purpose. XXX: Or should we rather leave the smgr entries dangling?
 	 */
 	smgrcloseall();
 

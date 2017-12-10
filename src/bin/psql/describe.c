@@ -184,7 +184,7 @@ describeAggregates(const char *pattern, bool verbose, bool showSystem)
 	printfPQExpBuffer(&buf,
 					  "SELECT n.nspname as \"%s\",\n"
 					  "  p.proname AS \"%s\",\n"
-					  "  pg_catalog.format_type(p.prorettype, NULL) AS \"%s\",\n",
+				 "  pg_catalog.format_type(p.prorettype, NULL) AS \"%s\",\n",
 					  gettext_noop("Schema"),
 					  gettext_noop("Name"),
 					  gettext_noop("Result data type"));
@@ -204,15 +204,15 @@ describeAggregates(const char *pattern, bool verbose, bool showSystem)
 						  "    pg_catalog.array_to_string(ARRAY(\n"
 						  "      SELECT\n"
 				 "        pg_catalog.format_type(p.proargtypes[s.i], NULL)\n"
-					  "      FROM\n"
-					  "        pg_catalog.generate_series(0, pg_catalog.array_upper(p.proargtypes, 1)) AS s(i)\n"
-					  "    ), ', ')\n"
-					  "  END AS \"%s\",\n",
-					  gettext_noop("Argument data types"));
+						  "      FROM\n"
+						  "        pg_catalog.generate_series(0, pg_catalog.array_upper(p.proargtypes, 1)) AS s(i)\n"
+						  "    ), ', ')\n"
+						  "  END AS \"%s\",\n",
+						  gettext_noop("Argument data types"));
 	else
-	    appendPQExpBuffer(&buf,
-					  "  pg_catalog.format_type(p.proargtypes[0], NULL) AS \"%s\",\n",
-					  gettext_noop("Argument data types"));
+		appendPQExpBuffer(&buf,
+			 "  pg_catalog.format_type(p.proargtypes[0], NULL) AS \"%s\",\n",
+						  gettext_noop("Argument data types"));
 
 	appendPQExpBuffer(&buf,
 				 "  pg_catalog.obj_description(p.oid, 'pg_proc') as \"%s\"\n"
@@ -376,8 +376,8 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 
 	if (pset.sversion >= 80400)
 		appendPQExpBuffer(&buf,
-						  "  pg_catalog.pg_get_function_result(p.oid) as \"%s\",\n"
-						  "  pg_catalog.pg_get_function_arguments(p.oid) as \"%s\",\n"
+					"  pg_catalog.pg_get_function_result(p.oid) as \"%s\",\n"
+				 "  pg_catalog.pg_get_function_arguments(p.oid) as \"%s\",\n"
 						  " CASE\n"
 						  "  WHEN p.proisagg THEN '%s'\n"
 						  "  WHEN p.proiswindow THEN '%s'\n"
@@ -419,15 +419,15 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "      SELECT\n"
 						  "        CASE\n"
 						  "          WHEN p.proargmodes[s.i] = 'i' THEN ''\n"
-						  "          WHEN p.proargmodes[s.i] = 'o' THEN 'OUT '\n"
-						  "          WHEN p.proargmodes[s.i] = 'b' THEN 'INOUT '\n"
-						  "          WHEN p.proargmodes[s.i] = 'v' THEN 'VARIADIC '\n"
+					  "          WHEN p.proargmodes[s.i] = 'o' THEN 'OUT '\n"
+					"          WHEN p.proargmodes[s.i] = 'b' THEN 'INOUT '\n"
+				 "          WHEN p.proargmodes[s.i] = 'v' THEN 'VARIADIC '\n"
 						  "        END ||\n"
 						  "        CASE\n"
-						  "          WHEN COALESCE(p.proargnames[s.i], '') = '' THEN ''\n"
+			 "          WHEN COALESCE(p.proargnames[s.i], '') = '' THEN ''\n"
 						  "          ELSE p.proargnames[s.i] || ' ' \n"
 						  "        END ||\n"
-						  "        pg_catalog.format_type(p.proallargtypes[s.i], NULL)\n"
+			  "        pg_catalog.format_type(p.proallargtypes[s.i], NULL)\n"
 						  "      FROM\n"
 						  "        pg_catalog.generate_series(1, pg_catalog.array_upper(p.proallargtypes, 1)) AS s(i)\n"
 						  "    ), ', ')\n"
@@ -435,10 +435,10 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "    pg_catalog.array_to_string(ARRAY(\n"
 						  "      SELECT\n"
 						  "        CASE\n"
-						  "          WHEN COALESCE(p.proargnames[s.i+1], '') = '' THEN ''\n"
+		   "          WHEN COALESCE(p.proargnames[s.i+1], '') = '' THEN ''\n"
 						  "          ELSE p.proargnames[s.i+1] || ' '\n"
 						  "          END ||\n"
-						  "        pg_catalog.format_type(p.proargtypes[s.i], NULL)\n"
+				 "        pg_catalog.format_type(p.proargtypes[s.i], NULL)\n"
 						  "      FROM\n"
 						  "        pg_catalog.generate_series(0, pg_catalog.array_upper(p.proargtypes, 1)) AS s(i)\n"
 						  "    ), ', ')\n"
@@ -505,7 +505,7 @@ describeFunctions(const char *functypes, const char *pattern, bool verbose, bool
 						  "  WHEN p.provolatile = 's' THEN '%s'\n"
 						  "  WHEN p.provolatile = 'v' THEN '%s'\n"
 						  "END as \"%s\""
-						  ",\n  pg_catalog.pg_get_userbyid(p.proowner) as \"%s\",\n"
+				   ",\n  pg_catalog.pg_get_userbyid(p.proowner) as \"%s\",\n"
 						  "  l.lanname as \"%s\",\n"
 						  "  p.prosrc as \"%s\",\n"
 				  "  pg_catalog.obj_description(p.oid, 'pg_proc') as \"%s\"",
@@ -674,7 +674,7 @@ describeTypes(const char *pattern, bool verbose, bool showSystem)
 		appendPQExpBuffer(&buf, " pg_catalog.array_to_string(te.typoptions, ',') AS \"%s\",\n", gettext_noop("Type Options"));
 
 	appendPQExpBuffer(&buf,
-					  "  pg_catalog.obj_description(t.oid, 'pg_type') as \"%s\"\n",
+				"  pg_catalog.obj_description(t.oid, 'pg_type') as \"%s\"\n",
 					  gettext_noop("Description"));
 
 	appendPQExpBuffer(&buf, "FROM pg_catalog.pg_type t\n"
@@ -822,7 +822,7 @@ listAllDbs(bool verbose)
 						  ",\n       t.spcname as \"%s\"",
 						  gettext_noop("Tablespace"));
 	if (verbose && pset.sversion >= 80200)
-		    appendPQExpBuffer(&buf,
+		appendPQExpBuffer(&buf,
 						  ",\n       pg_catalog.shobj_description(d.oid, 'pg_database') as \"%s\"",
 						  gettext_noop("Description"));
 	appendPQExpBuffer(&buf,
@@ -876,8 +876,6 @@ permissionsList(const char *pattern)
 
 	printACLColumn(&buf, "c.relacl");
 
-	// GPDB_84_MERGE_FIXME: We haven't merged the patch that added attacl yet.
-#if 0
 	if (pset.sversion >= 80400)
 		appendPQExpBuffer(&buf,
 						  ",\n  pg_catalog.array_to_string(ARRAY(\n"
@@ -886,7 +884,7 @@ permissionsList(const char *pattern)
 						  "    WHERE attrelid = c.oid AND NOT attisdropped AND attacl IS NOT NULL\n"
 						  "  ), E'\\n') AS \"%s\"",
 						  gettext_noop("Column access privileges"));
-#endif
+
 	appendPQExpBuffer(&buf, "\nFROM pg_catalog.pg_class c\n"
 	   "     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace\n"
 					  "WHERE c.relkind IN ('r', 'v', 'S')\n");
@@ -1280,7 +1278,7 @@ describeOneTableDetails(const char *schemaname,
 	PGresult   *res = NULL;
 	printTableOpt myopt = pset.popt.topt;
 	printTableContent cont;
-	bool printTableInitialized = false;
+	bool		printTableInitialized = false;
 	int			i;
 	char	   *view_def = NULL;
 	char	   *headers[9];
@@ -1598,7 +1596,7 @@ describeOneTableDetails(const char *schemaname,
 		PGresult   *result;
 
 		printfPQExpBuffer(&buf,
-						  "SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)",
+			  "SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)",
 						  oid);
 		result = PSQLexec(buf.data, false);
 		if (!result)
@@ -2235,7 +2233,7 @@ describeOneTableDetails(const char *schemaname,
 							  "SELECT r.conname, "
 							  "pg_catalog.pg_get_constraintdef(r.oid, true)\n"
 							  "FROM pg_catalog.pg_constraint r\n"
-					"WHERE r.conrelid = '%s' AND r.contype = 'c'\nORDER BY 1",
+				   "WHERE r.conrelid = '%s' AND r.contype = 'c'\nORDER BY 1",
 							  oid);
 			result = PSQLexec(buf.data, false);
 			if (!result)
@@ -3156,7 +3154,7 @@ listDbRoleSettings(const char *pattern, const char *pattern2)
  * v - views
  * s - sequences
  * (any order of the above is fine)
- * If tabtypes is empty, we default to \dtvsr.
+ * If tabtypes is empty, we default to \dtvs.
  */
 bool
 listTables(const char *tabtypes, const char *pattern, bool verbose, bool showSystem)
@@ -3448,7 +3446,7 @@ listCasts(const char *pattern)
 	printfPQExpBuffer(&buf,
 			   "SELECT pg_catalog.format_type(castsource, NULL) AS \"%s\",\n"
 			   "       pg_catalog.format_type(casttarget, NULL) AS \"%s\",\n"
-					  "       CASE WHEN castfunc = 0 THEN '(binary coercible)'\n"
+				  "       CASE WHEN castfunc = 0 THEN '(binary coercible)'\n"
 					  "            ELSE p.proname\n"
 					  "       END as \"%s\",\n"
 					  "       CASE WHEN c.castcontext = 'e' THEN '%s'\n"
@@ -3530,12 +3528,12 @@ listSchemas(const char *pattern, bool verbose)
 		appendPQExpBuffer(&buf, ",\n  ");
 		printACLColumn(&buf, "n.nspacl");
 		appendPQExpBuffer(&buf,
-			",\n  pg_catalog.obj_description(n.oid, 'pg_namespace') AS \"%s\"",
+		  ",\n  pg_catalog.obj_description(n.oid, 'pg_namespace') AS \"%s\"",
 						  gettext_noop("Description"));
 	}
 
 	appendPQExpBuffer(&buf,
-			  "\nFROM pg_catalog.pg_namespace n\n"
+					  "\nFROM pg_catalog.pg_namespace n\n"
 					  "WHERE	(n.nspname !~ '^pg_temp_' OR\n"
 		   "		 n.nspname = (pg_catalog.current_schemas(true))[1])\n");		/* temp schema is first */
 
@@ -4150,10 +4148,10 @@ listForeignDataWrappers(const char *pattern, bool verbose)
 	printfPQExpBuffer(&buf,
 					  "SELECT fdwname AS \"%s\",\n"
 					  "  pg_catalog.pg_get_userbyid(fdwowner) AS \"%s\",\n"
-					  "  fdwlibrary AS \"%s\"",
+					  "  fdwvalidator::pg_catalog.regproc AS \"%s\"",
 					  gettext_noop("Name"),
 					  gettext_noop("Owner"),
-					  gettext_noop("Library"));
+					  gettext_noop("Validator"));
 
 	if (verbose)
 	{
@@ -4189,7 +4187,7 @@ listForeignDataWrappers(const char *pattern, bool verbose)
 /*
  * \des
  *
- * Describes foreign-data servers.
+ * Describes foreign servers.
  */
 bool
 listForeignServers(const char *pattern, bool verbose)
@@ -4200,7 +4198,7 @@ listForeignServers(const char *pattern, bool verbose)
 
 	if (pset.sversion < 80400)
 	{
-		fprintf(stderr, _("The server (version %d.%d) does not support foreign-data servers.\n"),
+		fprintf(stderr, _("The server (version %d.%d) does not support foreign servers.\n"),
 				pset.sversion / 10000, (pset.sversion / 100) % 100);
 		return true;
 	}
@@ -4229,8 +4227,8 @@ listForeignServers(const char *pattern, bool verbose)
 	}
 
 	appendPQExpBuffer(&buf,
-			  		  "\nFROM pg_catalog.pg_foreign_server s\n"
-					  "     JOIN pg_catalog.pg_foreign_data_wrapper f ON f.oid=s.srvfdw\n");
+					  "\nFROM pg_catalog.pg_foreign_server s\n"
+	   "     JOIN pg_catalog.pg_foreign_data_wrapper f ON f.oid=s.srvfdw\n");
 
 	processSQLNamePattern(pset.db, &buf, pattern, false, false,
 						  NULL, "s.srvname", NULL, NULL);
@@ -4266,7 +4264,7 @@ listUserMappings(const char *pattern, bool verbose)
 
 	if (pset.sversion < 80400)
 	{
-		fprintf(stderr, _("The server (version %d.%d) does not support foreign-data user mappings.\n"),
+		fprintf(stderr, _("The server (version %d.%d) does not support user mappings.\n"),
 				pset.sversion / 10000, (pset.sversion / 100) % 100);
 		return true;
 	}
@@ -4276,7 +4274,7 @@ listUserMappings(const char *pattern, bool verbose)
 					  "SELECT um.srvname AS \"%s\",\n"
 					  "  um.usename AS \"%s\"",
 					  gettext_noop("Server"),
-					  gettext_noop("Username"));
+					  gettext_noop("User name"));
 
 	if (verbose)
 		appendPQExpBuffer(&buf,
@@ -4483,7 +4481,7 @@ listOneExtensionContents(const char *extname, const char *oid)
  * printACLColumn
  *
  * Helper function for consistently formatting ACL (privilege) columns.
- * The proper targetlist entry is appended to buf.  Note lack of any
+ * The proper targetlist entry is appended to buf.	Note lack of any
  * whitespace or comma decoration.
  */
 static void

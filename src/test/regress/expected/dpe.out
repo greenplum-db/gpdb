@@ -286,11 +286,15 @@ select * from t, pt where t1 = pt1 and ptid = tid;
 --
 -- in and exists clauses
 --
+-- start_ignore
+-- GPDB_84_MERGE_FIXME: merging upstream commit 8dcf18414 made this plan more
+-- complicated; make sure it's an okay change.
+-- end_ignore
 explain select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=1.09..20.45 rows=54 width=31)
-   ->  Hash Semi Join  (cost=1.09..20.45 rows=18 width=31)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=1.10..20.39 rows=54 width=31)
+   ->  Hash Join  (cost=1.10..20.39 rows=18 width=31)
          Hash Cond: dpe_single.pt.ptid = t.tid
          ->  Append  (cost=0.00..18.54 rows=18 width=31)
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
@@ -311,15 +315,19 @@ explain select * from pt where ptid in (select tid from t where t1 = 'hello' || 
                ->  Result  (cost=0.00..3.09 rows=3 width=31)
                      One-Time Filter: PartSelected
                      ->  Seq Scan on pt_1_prt_6 pt  (cost=0.00..3.09 rows=3 width=31)
-         ->  Hash  (cost=1.07..1.07 rows=1 width=11)
-               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=0.00..1.07 rows=1 width=11)
+         ->  Hash  (cost=1.09..1.09 rows=1 width=11)
+               ->  Partition Selector for pt (dynamic scan id: 1)  (cost=1.06..1.09 rows=1 width=11)
                      Filter: t.tid
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.07 rows=1 width=11)
-                           ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
-                                 Filter: t1 = ('hello'::text || tid::text)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=1.06..1.09 rows=1 width=11)
+                           ->  HashAggregate  (cost=1.06..1.07 rows=1 width=36)
+                                 Group By: t.tid
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.06 rows=1 width=11)
+                                       Hash Key: t.tid
+                                       ->  Seq Scan on t  (cost=0.00..1.04 rows=1 width=11)
+                                             Filter: t1 = ('hello'::text || tid::text)
  Settings:  gp_segments_for_planner=2; optimizer=off; optimizer_segments=2
  Optimizer status: legacy query optimizer
-(30 rows)
+(34 rows)
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
  dist |   pt1   |  pt2  |    pt3    | ptid 
@@ -2367,24 +2375,24 @@ analyze b;
 analyze c;
 set gp_dynamic_partition_pruning = off;
 explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
-                                                                                                         QUERY PLAN                                                                                                          
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=5.78..33.46 rows=5 width=19)
-   ->  Hash Join  (cost=5.78..33.46 rows=2 width=19)
-         Hash Cond: a.id = c.id
-         ->  Hash Join  (cost=2.32..29.94 rows=4 width=13)
-               Hash Cond: a.t = b.t
+                                                                                                                 QUERY PLAN                                                                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=5.78..34.85 rows=5 width=20)
+   ->  Hash Join  (cost=5.78..34.85 rows=2 width=20)
+         Hash Cond: a.t = b.t
+         ->  Hash Join  (cost=3.45..32.39 rows=7 width=14)
+               Hash Cond: a.id = c.id
                ->  Append  (cost=0.00..24.99 rows=333 width=8)
                      ->  Seq Scan on apart_1_prt_1 a  (cost=0.00..5.00 rows=67 width=7)
                      ->  Seq Scan on apart_1_prt_2 a  (cost=0.00..5.00 rows=67 width=8)
                      ->  Seq Scan on apart_1_prt_3 a  (cost=0.00..5.00 rows=67 width=8)
                      ->  Seq Scan on apart_1_prt_4 a  (cost=0.00..5.00 rows=67 width=8)
                      ->  Seq Scan on apart_1_prt_5 a  (cost=0.00..4.99 rows=67 width=8)
-               ->  Hash  (cost=2.20..2.20 rows=4 width=6)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
-                           ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
-         ->  Hash  (cost=3.20..3.20 rows=7 width=6)
-               ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
+               ->  Hash  (cost=3.20..3.20 rows=7 width=6)
+                     ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
+         ->  Hash  (cost=2.20..2.20 rows=4 width=6)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
+                     ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=off; gp_segments_for_planner=2; optimizer_segments=2
  Optimizer status: legacy query optimizer
 (18 rows)
@@ -2401,13 +2409,13 @@ select * from apart as a, b, c where a.t = b.t and a.id = c.id;
 
 set gp_dynamic_partition_pruning = on;
 explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
-                                                                                                         QUERY PLAN                                                                                                         
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=5.78..33.46 rows=5 width=19)
-   ->  Hash Join  (cost=5.78..33.46 rows=2 width=19)
-         Hash Cond: a.id = c.id
-         ->  Hash Join  (cost=2.32..29.94 rows=4 width=13)
-               Hash Cond: a.t = b.t
+                                                                                                                QUERY PLAN                                                                                                                 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=5.78..34.85 rows=5 width=20)
+   ->  Hash Join  (cost=5.78..34.85 rows=2 width=20)
+         Hash Cond: a.t = b.t
+         ->  Hash Join  (cost=3.45..32.39 rows=7 width=14)
+               Hash Cond: a.id = c.id
                ->  Append  (cost=0.00..24.99 rows=333 width=8)
                      ->  Result  (cost=0.00..5.00 rows=67 width=7)
                            One-Time Filter: PartSelected
@@ -2424,13 +2432,13 @@ explain select * from apart as a, b, c where a.t = b.t and a.id = c.id;
                      ->  Result  (cost=0.00..4.99 rows=67 width=8)
                            One-Time Filter: PartSelected
                            ->  Seq Scan on apart_1_prt_5 a  (cost=0.00..4.99 rows=67 width=8)
-               ->  Hash  (cost=2.20..2.20 rows=4 width=6)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
-                           ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
-         ->  Hash  (cost=3.20..3.20 rows=7 width=6)
-               ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..3.20 rows=7 width=6)
-                     Filter: c.id
-                     ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
+               ->  Hash  (cost=3.20..3.20 rows=7 width=6)
+                     ->  Partition Selector for apart (dynamic scan id: 1)  (cost=0.00..3.20 rows=7 width=6)
+                           Filter: c.id
+                           ->  Seq Scan on c  (cost=0.00..3.20 rows=7 width=6)
+         ->  Hash  (cost=2.20..2.20 rows=4 width=6)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.20 rows=4 width=6)
+                     ->  Seq Scan on b  (cost=0.00..2.05 rows=2 width=6)
  Settings:  enable_bitmapscan=off; enable_hashjoin=on; enable_indexscan=off; enable_mergejoin=off; enable_nestloop=off; enable_seqscan=on; gp_dynamic_partition_pruning=on; gp_segments_for_planner=2; optimizer_segments=2
  Optimizer status: legacy query optimizer
 (30 rows)

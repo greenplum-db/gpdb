@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.107 2009/01/01 17:24:04 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/plpgsql.h,v 1.113 2009/06/11 14:49:14 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -18,6 +18,7 @@
 
 #include "postgres.h"
 
+#include "access/xact.h"
 #include "fmgr.h"
 #include "miscadmin.h"
 #include "commands/trigger.h"
@@ -31,6 +32,9 @@
 /* define our text domain for translations */
 #undef TEXTDOMAIN
 #define TEXTDOMAIN PG_TEXTDOMAIN("plpgsql")
+
+#undef _
+#define _(x) dgettext(TEXTDOMAIN, x)
 
 /* ----------
  * Compiler's namestack item types
@@ -203,13 +207,14 @@ typedef struct PLpgSQL_expr
 	int			expr_simple_generation; /* plancache generation we checked */
 
 	/*
-	 * if expr is simple AND prepared in current eval_estate,
+	 * if expr is simple AND prepared in current transaction,
 	 * expr_simple_state and expr_simple_in_use are valid. Test validity by
-	 * seeing if expr_simple_id matches eval_estate_simple_id.
+	 * seeing if expr_simple_lxid matches current LXID.  (If not,
+	 * expr_simple_state probably points at garbage!)
 	 */
 	ExprState  *expr_simple_state;		/* eval tree for expr_simple_expr */
 	bool		expr_simple_in_use;		/* true if eval tree is active */
-	long int	expr_simple_id;
+	LocalTransactionId expr_simple_lxid;
 
 	/* params to pass to expr */
 	int			nparams;
@@ -404,7 +409,7 @@ typedef struct					/* CASE statement */
 	int			lineno;
 	PLpgSQL_expr *t_expr;		/* test expression, or NULL if none */
 	int			t_varno;		/* var to store test expression value into */
-	List	   *case_when_list;	/* List of PLpgSQL_case_when structs */
+	List	   *case_when_list; /* List of PLpgSQL_case_when structs */
 	bool		have_else;		/* flag needed because list could be empty */
 	List	   *else_stmts;		/* List of statements */
 } PLpgSQL_stmt_case;
@@ -587,7 +592,7 @@ typedef struct
 
 typedef struct
 {								/* RAISE statement option */
-	int 		opt_type;
+	int			opt_type;
 	PLpgSQL_expr *expr;
 } PLpgSQL_raise_option;
 
@@ -649,7 +654,7 @@ typedef struct PLpgSQL_function
 	Oid			fn_oid;
 	TransactionId fn_xmin;
 	ItemPointerData fn_tid;
-	int			fn_functype;
+	bool		fn_is_trigger;
 	PLpgSQL_func_hashkey *fn_hashkey;	/* back-link to hashtable key */
 	MemoryContext fn_cxt;
 
@@ -719,8 +724,6 @@ typedef struct
 	uint64		eval_processed;
 	Oid			eval_lastoid;
 	ExprContext *eval_econtext; /* for executing simple expressions */
-	EState	   *eval_estate;	/* EState containing eval_econtext */
-	long int	eval_estate_simple_id;	/* ID for eval_estate */
 
 	/* status information for error context reporting */
 	PLpgSQL_function *err_func; /* current func */
@@ -826,9 +829,9 @@ extern PLpgSQL_variable *plpgsql_build_variable(const char *refname, int lineno,
 					   PLpgSQL_type *dtype,
 					   bool add2namespace);
 extern PLpgSQL_rec *plpgsql_build_record(const char *refname, int lineno,
-										 bool add2namespace);
-extern int	plpgsql_recognize_err_condition(const char *condname,
-											bool allow_sqlstate);
+					 bool add2namespace);
+extern int plpgsql_recognize_err_condition(const char *condname,
+								bool allow_sqlstate);
 extern PLpgSQL_condition *plpgsql_parse_err_condition(char *condname);
 extern void plpgsql_adddatum(PLpgSQL_datum *new);
 extern int	plpgsql_add_initdatums(int **varnos);
@@ -876,7 +879,7 @@ extern void plpgsql_ns_push(const char *label);
 extern void plpgsql_ns_pop(void);
 extern void plpgsql_ns_additem(int itemtype, int itemno, const char *name);
 extern PLpgSQL_nsitem *plpgsql_ns_lookup(const char *name1, const char *name2,
-										 const char *name3, int *names_used);
+				  const char *name3, int *names_used);
 extern PLpgSQL_nsitem *plpgsql_ns_lookup_label(const char *name);
 extern void plpgsql_ns_rename(char *oldname, char *newname);
 
@@ -900,8 +903,7 @@ extern int	plpgsql_yylex(void);
 extern void plpgsql_push_back_token(int token);
 extern void plpgsql_yyerror(const char *message);
 extern int	plpgsql_scanner_lineno(void);
-extern void plpgsql_scanner_init(const char *str, int functype);
+extern void plpgsql_scanner_init(const char *str);
 extern void plpgsql_scanner_finish(void);
-extern char *plpgsql_get_string_value(void);
 
 #endif   /* PLPGSQL_H */

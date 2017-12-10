@@ -379,7 +379,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 				if (NULL != scanState &&
 				    scanState->tableType == TableTypeHeap &&
 				    NULL != projInfo &&
-				    projInfo->pi_isVarList &&
+				    projInfo->pi_directMap &&
 				    NULL != projInfo->pi_targetlist)
 				{
 					enroll_ExecVariableList_codegen(ExecVariableList,

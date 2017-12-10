@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.180 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/cluster.c,v 1.186 2009/06/11 20:46:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -131,7 +131,7 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 		 * Reject clustering a remote temp table ... their local buffer
 		 * manager is not going to cope.
 		 */
-		if (isOtherTempNamespace(RelationGetNamespace(rel)))
+		if (RELATION_IS_OTHER_TEMP(rel))
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			   errmsg("cannot cluster temporary tables of other sessions")));
@@ -359,7 +359,7 @@ cluster_rel(RelToCluster *rvtc, bool recheck, bool verbose, ClusterStmt *stmt, b
 		 * check_index_is_clusterable which is redundant, but we leave it for
 		 * extra safety.
 		 */
-		if (isOtherTempNamespace(RelationGetNamespace(OldHeap)))
+		if (RELATION_IS_OTHER_TEMP(OldHeap))
 		{
 			relation_close(OldHeap, AccessExclusiveLock);
 			return false;		
@@ -523,7 +523,7 @@ check_index_is_clusterable(Relation OldHeap, Oid indexOid, bool recheck)
 	 * Don't allow cluster on temp tables of other backends ... their local
 	 * buffer manager is not going to cope.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(OldHeap)))
+	if (RELATION_IS_OTHER_TEMP(OldHeap))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			   errmsg("cannot cluster temporary tables of other sessions")));
@@ -704,9 +704,9 @@ rebuild_relation(Relation OldHeap, Oid indexOid, ClusterStmt *stmt)
 
 	/*
 	 * At this point, everything is kosher except that the toast table's name
-	 * corresponds to the temporary table.  The name is irrelevant to
-	 * the backend because it's referenced by OID, but users looking at the
-	 * catalogs could be confused.  Rename it to prevent this problem.
+	 * corresponds to the temporary table.	The name is irrelevant to the
+	 * backend because it's referenced by OID, but users looking at the
+	 * catalogs could be confused.	Rename it to prevent this problem.
 	 *
 	 * Note no lock required on the relation, because we already hold an
 	 * exclusive lock on it.
@@ -742,6 +742,7 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	TupleDesc	OldHeapDesc,
 				tupdesc;
 	Oid			OIDNewHeap;
+	Oid			toastid;
 	Relation	OldHeap;
 	HeapTuple	tuple;
 	Datum		reloptions;
@@ -755,10 +756,10 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 
 	/*
 	 * Need to make a copy of the tuple descriptor, since
-	 * heap_create_with_catalog modifies it.  Note that the NewHeap will
-	 * not receive any of the defaults or constraints associated with the
-	 * OldHeap; we don't need 'em, and there's no reason to spend cycles
-	 * inserting them into the catalogs only to delete them.
+	 * heap_create_with_catalog modifies it.  Note that the NewHeap will not
+	 * receive any of the defaults or constraints associated with the OldHeap;
+	 * we don't need 'em, and there's no reason to spend cycles inserting them
+	 * into the catalogs only to delete them.
 	 */
 	tupdesc = CreateTupleDescCopy(OldHeapDesc);
 
@@ -811,7 +812,21 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTable(OIDNewHeap, is_part);
+	toastid = OldHeap->rd_rel->reltoastrelid;
+	reloptions = (Datum) 0;
+	if (OidIsValid(toastid))
+	{
+		tuple = SearchSysCache(RELOID,
+							   ObjectIdGetDatum(toastid),
+							   0, 0, 0);
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "cache lookup failed for relation %u", toastid);
+		reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
+									 &isNull);
+		if (isNull)
+			reloptions = (Datum) 0;
+	}
+	AlterTableCreateToastTable(OIDNewHeap, InvalidOid, reloptions, false, is_part);
 	AlterTableCreateAoSegTable(OIDNewHeap, is_part);
 	AlterTableCreateAoVisimapTable(OIDNewHeap, is_part);
 
@@ -823,6 +838,9 @@ make_new_heap(Oid OIDOldHeap, const char *NewName, Oid NewTableSpace,
 	cloneAttributeEncoding(OIDOldHeap,
 						   OIDNewHeap,
 						   RelationGetNumberOfAttributes(OldHeap));
+
+	if (OidIsValid(toastid))
+		ReleaseSysCache(tuple);
 
 	heap_close(OldHeap, NoLock);
 
@@ -901,12 +919,12 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex)
 	 * freeze_min_age to avoid having CLUSTER freeze tuples earlier than a
 	 * plain VACUUM would.
 	 */
-	vacuum_set_xid_limits(-1, OldHeap->rd_rel->relisshared,
-						  &OldestXmin, &FreezeXid);
+	vacuum_set_xid_limits(-1, -1, OldHeap->rd_rel->relisshared,
+						  &OldestXmin, &FreezeXid, NULL);
 
 	/*
-	 * FreezeXid will become the table's new relfrozenxid, and that mustn't
-	 * go backwards, so take the max.
+	 * FreezeXid will become the table's new relfrozenxid, and that mustn't go
+	 * backwards, so take the max.
 	 */
 	if (TransactionIdPrecedes(FreezeXid, OldHeap->rd_rel->relfrozenxid))
 		FreezeXid = OldHeap->rd_rel->relfrozenxid;

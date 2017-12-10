@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.81 2009/01/01 17:23:36 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/catalog.c,v 1.83 2009/06/11 14:48:54 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -65,8 +65,8 @@
 #include "cdb/cdbpersistenttablespace.h"
 #include "cdb/cdbvars.h"
 
-#define OIDCHARS		10			/* max chars printed by %u */
-#define FORKNAMECHARS	4			/* max chars for a fork name */
+#define OIDCHARS		10		/* max chars printed by %u */
+#define FORKNAMECHARS	4		/* max chars for a fork name */
 
 static char *
 GetFilespacePathForTablespace(Oid tablespaceOid)
@@ -133,9 +133,9 @@ GetFilespacePathForTablespace(Oid tablespaceOid)
  * up-to-date.
  */
 const char *forkNames[] = {
-	"main", /* MAIN_FORKNUM */
-	"fsm",   /* FSM_FORKNUM */
-	"vm"   /* VISIBILITYMAP_FORKNUM */
+	"main",						/* MAIN_FORKNUM */
+	"fsm",						/* FSM_FORKNUM */
+	"vm"						/* VISIBILITYMAP_FORKNUM */
 };
 
 /*
@@ -144,7 +144,7 @@ const char *forkNames[] = {
 ForkNumber
 forkname_to_number(char *forkName)
 {
-	ForkNumber forkNum;
+	ForkNumber	forkNum;
 
 	for (forkNum = 0; forkNum <= MAX_FORKNUM; forkNum++)
 		if (strcmp(forkNames[forkNum], forkName) == 0)
@@ -153,8 +153,8 @@ forkname_to_number(char *forkName)
 	ereport(ERROR,
 			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 			 errmsg("invalid fork name"),
-			 errhint("Valid fork names are 'main' and 'fsm'")));
-	return InvalidForkNumber; /* keep compiler quiet */
+			 errhint("Valid fork names are \"main\", \"fsm\", and \"vm\".")));
+	return InvalidForkNumber;	/* keep compiler quiet */
 }
 
 /*
@@ -841,7 +841,7 @@ GetNewOidWithIndex(Relation relation, Oid indexId, AttrNumber oidcolumn)
 {
 	Oid			newOid;
 	SnapshotData SnapshotDirty;
-	SysScanDesc	scan;
+	SysScanDesc scan;
 	ScanKeyData key;
 	bool		collides;
 

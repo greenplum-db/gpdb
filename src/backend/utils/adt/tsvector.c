@@ -7,7 +7,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector.c,v 1.15 2009/01/01 17:23:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/tsvector.c,v 1.18 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,9 +85,9 @@ compareentry(const void *va, const void *vb, void *arg)
 	const WordEntryIN *b = (const WordEntryIN *) vb;
 	char	   *BufferStr = (char *) arg;
 
-	return tsCompareString( &BufferStr[a->entry.pos], a->entry.len,
-							&BufferStr[b->entry.pos], b->entry.len,
-							false );
+	return tsCompareString(&BufferStr[a->entry.pos], a->entry.len,
+						   &BufferStr[b->entry.pos], b->entry.len,
+						   false);
 }
 
 /*
@@ -219,7 +219,7 @@ tsvectorin(PG_FUNCTION_ARGS)
 		if (cur - tmpbuf > MAXSTRPOS)
 			ereport(ERROR,
 					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 	 errmsg("string is too long for tsvector (%ld bytes, max %ld bytes)",
+					 errmsg("string is too long for tsvector (%ld bytes, max %ld bytes)",
 							(long) (cur - tmpbuf), (long) MAXSTRPOS)));
 
 		/*
@@ -451,6 +451,7 @@ tsvectorrecv(PG_FUNCTION_ARGS)
 								 * WordEntries */
 	Size		hdrlen;
 	Size		len;			/* allocated size of vec */
+	bool		needSort = false;
 
 	nentries = pq_getmsgint(buf, sizeof(int32));
 	if (nentries < 0 || nentries > (MaxAllocSize / sizeof(WordEntry)))
@@ -507,7 +508,7 @@ tsvectorrecv(PG_FUNCTION_ARGS)
 		if (i > 0 && WordEntryCMP(&vec->entries[i],
 								  &vec->entries[i - 1],
 								  STRPTR(vec)) <= 0)
-			elog(ERROR, "lexemes are misordered");
+			needSort = true;
 
 		/* Receive positions */
 		if (npos > 0)
@@ -541,6 +542,10 @@ tsvectorrecv(PG_FUNCTION_ARGS)
 	}
 
 	SET_VARSIZE(vec, hdrlen + datalen);
+
+	if (needSort)
+		qsort_arg((void *) ARRPTR(vec), vec->size, sizeof(WordEntry),
+				  compareentry, (void *) STRPTR(vec));
 
 	PG_RETURN_TSVECTOR(vec);
 }

@@ -24,8 +24,11 @@
 # "postgres -c log_connections=on".  Some parameters can be changed at run time
 # with the "SET" SQL command.
 #
-# Memory units:  kB = kilobytes MB = megabytes GB = gigabytes
-# Time units:    ms = milliseconds s = seconds min = minutes h = hours d = days
+# Memory units:  kB = kilobytes        Time units:  ms  = milliseconds
+#                MB = megabytes                     s   = seconds
+#                GB = gigabytes                     min = minutes
+#                                                   h   = hours
+#                                                   d   = days
 
 
 #------------------------------------------------------------------------------
@@ -136,6 +139,10 @@ max_prepared_transactions = 250		# can be 0 or more
 #vacuum_cost_page_dirty = 20		# 0-10000 credits
 #vacuum_cost_limit = 200		# 1-10000 credits
 
+# - Asynchronous Behavior -
+
+#effective_io_concurrency = 1		# 1-1000. 0 disables prefetching
+
 #------------------------------------------------------------------------------
 # QUERY TUNING
 #------------------------------------------------------------------------------
@@ -211,10 +218,10 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 					# off, meaning append to existing files
 					# in all cases.
 #log_rotation_age = 1d			# Automatic rotation of logfiles will
-					# happen after that time.  0 to disable.
+					# happen after that time.  0 disables.
 #log_rotation_size = 10MB		# Automatic rotation of logfiles will 
 					# happen after that much log output.
-					# 0 to disable.
+					# 0 disables.
 
 # - When to Log -
 
@@ -261,7 +268,8 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 #log_min_duration_statement = -1	# -1 is disabled, 0 logs all statements
 					# and their durations, > 0 logs only
-					# statements running at least this time.
+					# statements running at least this number
+					# of milliseconds
 
 # - What to Log -
 
@@ -393,7 +401,8 @@ log_autostats=off	# print additional autostats information
 					# requires track_counts to also be on.
 #log_autovacuum_min_duration = -1	# -1 disables, 0 logs all actions and
 					# their durations, > 0 logs only
-					# actions running at least that time.
+					# actions running at least this number
+					# of milliseconds.
 #autovacuum_max_workers = 3		# max number of autovacuum subprocesses
 #autovacuum_naptime = 1min		# time between autovacuum runs
 #autovacuum_vacuum_threshold = 50	# min number of row updates before
@@ -404,9 +413,9 @@ log_autostats=off	# print additional autostats information
 #autovacuum_analyze_scale_factor = 0.1	# fraction of table size before analyze
 #autovacuum_freeze_max_age = 200000000	# maximum XID age before forced vacuum
 					# (change requires restart)
-#autovacuum_vacuum_cost_delay = 20	# default vacuum cost delay for
-					# autovacuum, -1 means use
-					# vacuum_cost_delay
+#autovacuum_vacuum_cost_delay = 20ms	# default vacuum cost delay for
+					# autovacuum, in milliseconds;
+					# -1 means use vacuum_cost_delay
 #autovacuum_vacuum_cost_limit = -1	# default vacuum cost limit for
 					# autovacuum, -1 means use
 					# vacuum_cost_limit
@@ -425,7 +434,8 @@ log_autostats=off	# print additional autostats information
 #session_replication_role = 'origin'
 #statement_timeout = 0			# 0 is disabled
 #idle_session_gang_timeout = 18s 	# in milliseconds, 0 is disabled
-#vacuum_freeze_min_age = 100000000
+#vacuum_freeze_min_age = 50000000
+#vacuum_freeze_table_age = 150000000
 #bytea_output='escape'
 
 # - Locale and Formatting -

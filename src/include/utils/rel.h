@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.111 2009/01/01 17:24:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/rel.h,v 1.114 2009/06/11 14:49:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -142,6 +142,7 @@ typedef struct RelationData
 								 * InvalidBlockNumber */
 	int			rd_refcnt;		/* reference count */
 	bool		rd_istemp;		/* CDB: true => skip locking, logging, fsync */
+	bool		rd_islocaltemp; /* rel is a temp rel of this session */
 	bool		rd_issyscat;	/* GP: true => system catalog table (has "pg_" prefix) */
 	bool		rd_isnailed;	/* rel is nailed in cache */
 	bool		rd_isvalid;		/* relcache entry is valid */
@@ -226,8 +227,8 @@ typedef struct RelationData
 	 * sizes of the free space and visibility map forks, or InvalidBlockNumber
 	 * if not known yet
 	 */
-	BlockNumber	rd_fsm_nblocks;
-	BlockNumber	rd_vm_nblocks;
+	BlockNumber rd_fsm_nblocks;
+	BlockNumber rd_vm_nblocks;
 
 	/*
 	 * AO table support info (used only for AO and AOCS relations)
@@ -444,8 +445,17 @@ typedef struct StdRdOptions
  * Beware of multiple eval of argument
  */
 #define RELATION_IS_LOCAL(relation) \
-	((relation)->rd_istemp || \
+	((relation)->rd_islocaltemp || \
 	 (relation)->rd_createSubid != InvalidSubTransactionId)
+
+/*
+ * RELATION_IS_OTHER_TEMP
+ *		Test for a temporary relation that belongs to some other session.
+ *
+ * Beware of multiple eval of argument
+ */
+#define RELATION_IS_OTHER_TEMP(relation) \
+	((relation)->rd_istemp && !(relation)->rd_islocaltemp)
 
 /* routines in utils/cache/relcache.c */
 extern void RelationIncrementReferenceCount(Relation rel);

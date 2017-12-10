@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.115 2009/01/01 17:23:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/smgr.c,v 1.117 2009/06/11 14:49:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -37,7 +37,6 @@
 #include "storage/smgr_ao.h"
 #include "utils/faultinjector.h"
 #include "utils/hsearch.h"
-#include "utils/memutils.h"
 
 /*
  * Each backend has a hashtable that stores all extant SMgrRelation objects.
@@ -123,14 +122,14 @@ smgropen(RelFileNode rnode)
 	/* Initialize it if not present before */
 	if (!found)
 	{
-		int forknum;
+		int			forknum;
 
 		/* hash_search already filled in the lookup key */
 		reln->smgr_owner = NULL;
 		reln->smgr_which = 0;	/* we only have md.c at present */
 
 		/* mark it not open */
-		for(forknum = 0; forknum <= MAX_FORKNUM; forknum++)
+		for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
 			reln->md_fd[forknum] = NULL;
 	}
 
@@ -176,7 +175,7 @@ void
 smgrclose(SMgrRelation reln)
 {
 	SMgrRelation *owner;
-	ForkNumber forknum;
+	ForkNumber	forknum;
 
 	for (forknum = 0; forknum <= MAX_FORKNUM; forknum++)
 		mdclose(reln, forknum);
@@ -559,10 +558,19 @@ smgrdormdbdir(DbDirNode *dbDirNode,
  *		failure we clean up by truncating.
  */
 void
-smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, 
+smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		   char *buffer, bool isTemp)
 {
 	mdextend(reln, forknum, blocknum, buffer, isTemp);
+}
+
+/*
+ *	smgrprefetch() -- Initiate asynchronous read of the specified block of a relation.
+ */
+void
+smgrprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
+{
+	mdprefetch(reln, forknum, blocknum);
 }
 
 /*
@@ -574,7 +582,7 @@ smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
  *		return pages in the format that POSTGRES expects.
  */
 void
-smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, 
+smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		 char *buffer)
 {
 	mdread(reln, forknum, blocknum, buffer);
@@ -596,7 +604,7 @@ smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
  *		made to fsync the write before checkpointing.
  */
 void
-smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, 
+smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		  char *buffer, bool isTemp)
 {
 		mdwrite(reln, forknum, blocknum, buffer, isTemp);

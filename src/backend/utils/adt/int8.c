@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/int8.c,v 1.73 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/int8.c,v 1.74 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -687,9 +687,9 @@ int8inc(PG_FUNCTION_ARGS)
 	/*
 	 * When int8 is pass-by-reference, we provide this special case to avoid
 	 * palloc overhead for COUNT(): when called from nodeAgg, we know that the
-	 * argument is modifiable local storage, so just update it in-place.
-	 * (If int8 is pass-by-value, then of course this is useless as well
-	 * as incorrect, so just ifdef it out.)
+	 * argument is modifiable local storage, so just update it in-place. (If
+	 * int8 is pass-by-value, then of course this is useless as well as
+	 * incorrect, so just ifdef it out.)
 	 */
 #ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
 	if (fcinfo->context && IsA(fcinfo->context, AggState))

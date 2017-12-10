@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.161 2009/01/01 17:23:50 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/cache/lsyscache.c,v 1.162 2009/06/11 14:49:05 momjian Exp $
  *
  * NOTES
  *	  Eventually, the index information should go through here, too.
@@ -26,6 +26,7 @@
 #include "catalog/pg_amproc.h"
 #include "catalog/pg_constraint.h"
 #include "catalog/pg_inherits.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
@@ -255,6 +256,7 @@ get_compare_function_for_ordering_op(Oid opno, Oid *cmpfunc, bool *reverse)
 									 opcintype,
 									 opcintype,
 									 BTORDER_PROC);
+
 		if (!OidIsValid(*cmpfunc))		/* should not happen */
 			elog(ERROR, "missing support function %d(%u,%u) in opfamily %u",
 				 BTORDER_PROC, opcintype, opcintype, opfamily);
@@ -264,6 +266,7 @@ get_compare_function_for_ordering_op(Oid opno, Oid *cmpfunc, bool *reverse)
 
 	/* ensure outputs are set on failure */
 	*cmpfunc = InvalidOid;
+
 	*reverse = false;
 	return false;
 }
@@ -3954,51 +3957,21 @@ get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt)
 }
 
 /*
- * has_subclass_fast
- *
- * In the current implementation, has_subclass returns whether a
- * particular class *might* have a subclass. It will not return the
- * correct result if a class had a subclass which was later dropped.
- * This is because relhassubclass in pg_class is not updated when a
- * subclass is dropped, primarily because of concurrency concerns.
- *
- * Currently has_subclass is only used as an efficiency hack to skip
- * unnecessary inheritance searches, so this is OK.
- */
-bool
-has_subclass_fast(Oid relationId)
-{
-	HeapTuple	tuple;
-	bool		result;
-
-	tuple = SearchSysCache1(RELOID,
-							ObjectIdGetDatum(relationId));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relationId);
-
-	result = ((Form_pg_class) GETSTRUCT(tuple))->relhassubclass;
-
-	ReleaseSysCache(tuple);
-	return result;
-}
-
-/*
- * has_subclass
+ * has_subclass_slow
  *
  * Performs the exhaustive check whether a relation has a subclass. This is 
- * different from has_subclass_fast, in that the latter can return true if a relation.
- * *might* have a subclass. See comments in has_subclass_fast for more details.
- * 
+ * different from has_subclass(), in that the latter can return true if a relation.
+ * *might* have a subclass. See comments in has_subclass() for more details.
  */
 bool
-has_subclass(Oid relationId)
+has_subclass_slow(Oid relationId)
 {
 	ScanKeyData	scankey;
 	Relation	rel;
 	SysScanDesc sscan;
 	bool		result;
 
-	if (!has_subclass_fast(relationId))
+	if (!has_subclass(relationId))
 	{
 		return false;
 	}
@@ -4106,7 +4079,7 @@ bool
 has_parquet_children(Oid relationId)
 {
 	Assert(InvalidOid != relationId);
-	List *child_oids = find_all_inheritors(relationId);
+	List *child_oids = find_all_inheritors(relationId, NoLock);
 	ListCell *lc = NULL;
 	
 	foreach (lc, child_oids)
@@ -4166,7 +4139,7 @@ child_distribution_mismatch(Relation rel)
 		return false;
 	}
 
-	List *child_oids = find_all_inheritors(rel->rd_id);
+	List *child_oids = find_all_inheritors(rel->rd_id, NoLock);
 	ListCell *lc = NULL;
 
 	foreach (lc, child_oids)
@@ -4207,7 +4180,7 @@ child_triggers(Oid relationId, int32 triggerType)
 		return false;
 	}
 
-	List *childOids = find_all_inheritors(relationId);
+	List *childOids = find_all_inheritors(relationId, NoLock);
 	ListCell *lc = NULL;
 
 	bool found = false;

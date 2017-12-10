@@ -88,7 +88,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.164 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeAgg.c,v 1.167 2009/06/17 16:05:34 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -978,12 +978,6 @@ hash_agg_entry_size(int numAggs)
 TupleTableSlot *
 ExecAgg(AggState *node)
 {
-	if (node->agg_done)
-	{
-		ExecEagerFreeAgg(node);
-		return NULL;
-	}
-
 #if 0
 	/*
 	 * Check to see if we're still projecting out tuples from a previous agg
@@ -1003,6 +997,15 @@ ExecAgg(AggState *node)
 	}
 #endif
 
+	/*
+	 * Exit if nothing left to do.  (We must do the ps_TupFromTlist check
+	 * first, because in some cases agg_done gets set before we emit the
+	 * final aggregate tuple, and we have to finish running SRFs for it.)
+	 */
+	if (node->agg_done)
+		return NULL;
+
+	/* Dispatch based on strategy */
 	if (((Agg *) node->ss.ps.plan)->aggstrategy == AGG_HASHED)
 	{
 		TupleTableSlot *tuple = NULL;

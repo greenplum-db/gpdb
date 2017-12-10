@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/nodes/execnodes.h,v 1.200 2009/01/10 21:08:36 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/execnodes.h,v 1.205 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -233,16 +233,25 @@ typedef struct ExecVariableListCodegenInfo
  *
  *		The planner very often produces tlists that consist entirely of
  *		simple Var references (lower levels of a plan tree almost always
- *		look like that).  So we have an optimization to handle that case
- *		with minimum overhead.
+ *		look like that).  And top-level tlists are often mostly Vars too.
+ *		We therefore optimize execution of simple-Var tlist entries.
+ *		The pi_targetlist list actually contains only the tlist entries that
+ *		aren't simple Vars, while those that are Vars are processed using the
+ *		varSlotOffsets/varNumbers/varOutputCols arrays.
  *
- *		targetlist		target list for projection
+ *		The lastXXXVar fields are used to optimize fetching of fields from
+ *		input tuples: they let us do a slot_getsomeattrs() call to ensure
+ *		that all needed attributes are extracted in one pass.
+ *
+ *		targetlist		target list for projection (non-Var expressions only)
  *		exprContext		expression context in which to evaluate targetlist
  *		slot			slot to place projection result in
- *		itemIsDone		workspace for ExecProject
- *		isVarList		TRUE if simple-Var-list optimization applies
+ *		itemIsDone		workspace array for ExecProject
+ *		directMap		true if varOutputCols[] is an identity map
+ *		numSimpleVars	number of simple Vars found in original tlist
  *		varSlotOffsets	array indicating which slot each simple Var is from
- *		varNumbers		array indicating attr numbers of simple Vars
+ *		varNumbers		array containing input attr numbers of simple Vars
+ *		varOutputCols	array containing output attr numbers of simple Vars
  *		lastInnerVar	highest attnum from inner tuple slot (0 if none)
  *		lastOuterVar	highest attnum from outer tuple slot (0 if none)
  *		lastScanVar		highest attnum from scan tuple slot (0 if none)
@@ -255,9 +264,11 @@ typedef struct ProjectionInfo
 	ExprContext *pi_exprContext;
 	TupleTableSlot *pi_slot;
 	ExprDoneCond *pi_itemIsDone;
-	bool		pi_isVarList;
+	bool		pi_directMap;
+	int			pi_numSimpleVars;
 	int		   *pi_varSlotOffsets;
 	int		   *pi_varNumbers;
+	int		   *pi_varOutputCols;
 	int			pi_lastInnerVar;
 	int			pi_lastOuterVar;
 	int			pi_lastScanVar;
@@ -660,8 +671,8 @@ extern void SliceLeafMotionStateAreValid(struct MotionState *ms);
 #endif
 
 /*
- * es_rowMarks is a list of these structs.  See RowMarkClause for details
- * about rti and prti.  toidAttno is not used in a "plain" rowmark.
+ * es_rowMarks is a list of these structs.	See RowMarkClause for details
+ * about rti and prti.	toidAttno is not used in a "plain" rowmark.
  */
 typedef struct ExecRowMark
 {
@@ -910,19 +921,20 @@ typedef struct FuncExprState
 	FmgrInfo	func;
 
 	/*
-	 * For a set-returning function (SRF) that returns a tuplestore, we
-	 * keep the tuplestore here and dole out the result rows one at a time.
-	 * The slot holds the row currently being returned.
+	 * For a set-returning function (SRF) that returns a tuplestore, we keep
+	 * the tuplestore here and dole out the result rows one at a time. The
+	 * slot holds the row currently being returned.
 	 */
 	Tuplestorestate *funcResultStore;
 	TupleTableSlot *funcResultSlot;
 
 	/*
 	 * In some cases we need to compute a tuple descriptor for the function's
-	 * output.  If so, it's stored here.
+	 * output.	If so, it's stored here.
 	 */
 	TupleDesc	funcResultDesc;
-	bool		funcReturnsTuple;	/* valid when funcResultDesc isn't NULL */
+	bool		funcReturnsTuple;		/* valid when funcResultDesc isn't
+										 * NULL */
 
 	/*
 	 * We need to store argument values across calls when evaluating a SRF
@@ -1272,7 +1284,6 @@ typedef struct XmlExprState
 {
 	ExprState	xprstate;
 	List	   *named_args;		/* ExprStates for named arguments */
-	FmgrInfo   *named_outfuncs; /* array of output fns for named arguments */
 	List	   *args;			/* ExprStates for other arguments */
 } XmlExprState;
 
@@ -1513,7 +1524,7 @@ typedef struct RecursiveUnionState
 	FmgrInfo   *hashfunctions;	/* per-grouping-field hash fns */
 	MemoryContext tempContext;	/* short-term context for comparisons */
 	TupleHashTable hashtable;	/* hash table for tuples already seen */
-	MemoryContext tableContext;	/* memory context containing hash table */
+	MemoryContext tableContext; /* memory context containing hash table */
 } RecursiveUnionState;
 
 /* ----------------
@@ -1798,6 +1809,9 @@ typedef struct DynamicBitmapIndexScanState
  *		tbm				   bitmap obtained from child index scan(s)
  *		tbmiterator		   iterator for scanning current pages
  *		tbmres			   current-page data
+ *		prefetch_iterator  iterator for prefetching ahead of current page
+ *		prefetch_pages	   # pages prefetch iterator is ahead of current
+ *		prefetch_target    target prefetch distance
  * ----------------
  */
 typedef struct BitmapHeapScanState
@@ -1808,6 +1822,9 @@ typedef struct BitmapHeapScanState
 	Node	   *tbm;
 	GenericBMIterator *tbmiterator;
 	TBMIterateResult *tbmres;
+	GenericBMIterator *prefetch_iterator;
+	int			prefetch_pages;
+	int			prefetch_target;
 } BitmapHeapScanState;
 
 /* ----------------
@@ -1997,7 +2014,7 @@ typedef struct CteScanState
 	/* Link to the "leader" CteScanState (possibly this same node) */
 	struct CteScanState *leader;
 	/* The remaining fields are only valid in the "leader" CteScanState */
-	Tuplestorestate *cte_table;	/* rows already read from the CTE query */
+	Tuplestorestate *cte_table; /* rows already read from the CTE query */
 	bool		eof_cte;		/* reached end of CTE query? */
 } CteScanState;
 
@@ -2005,7 +2022,7 @@ typedef struct CteScanState
  *	 WorkTableScanState information
  *
  *		WorkTableScan nodes are used to scan the work table created by
- *		a RecursiveUnion node.  We locate the RecursiveUnion node
+ *		a RecursiveUnion node.	We locate the RecursiveUnion node
  *		during executor startup.
  * ----------------
  */
@@ -2241,11 +2258,12 @@ typedef struct MergeJoinState
  *		hj_HashTable			hash table for the hashjoin
  *								(NULL if table not built yet)
  *		hj_CurHashValue			hash value for current outer tuple
- *		hj_CurBucketNo			bucket# for current outer tuple
+ *		hj_CurBucketNo			regular bucket# for current outer tuple
+ *		hj_CurSkewBucketNo		skew bucket# for current outer tuple
  *		hj_CurTuple				last inner tuple matched to current outer
  *								tuple, or NULL if starting search
- *								(CurHashValue, CurBucketNo and CurTuple are
- *								 undefined if OuterTupleSlot is empty!)
+ *								(hj_CurXXX variables are undefined if
+ *								OuterTupleSlot is empty!)
  *		hj_OuterHashKeys		the outer hash keys in the hashjoin condition
  *		hj_InnerHashKeys		the inner hash keys in the hashjoin condition
  *		hj_HashOperators		the join operators in the hashjoin condition
@@ -2272,6 +2290,7 @@ typedef struct HashJoinState
 	HashJoinTable hj_HashTable;
 	uint32		hj_CurHashValue;
 	int			hj_CurBucketNo;
+	int			hj_CurSkewBucketNo;
 	HashJoinTuple hj_CurTuple;
 	List	   *hj_OuterHashKeys;		/* list of ExprState nodes */
 	List	   *hj_InnerHashKeys;		/* list of ExprState nodes */
@@ -2613,7 +2632,7 @@ typedef struct SetOpState
 	HeapTuple	grp_firstTuple; /* copy of first tuple of current group */
 	/* these fields are used in SETOP_HASHED mode: */
 	TupleHashTable hashtable;	/* hash table with one entry per group */
-	MemoryContext tableContext;	/* memory context containing hash table */
+	MemoryContext tableContext; /* memory context containing hash table */
 	bool		table_filled;	/* hash table filled yet? */
 	TupleHashIterator hashiter; /* for iterating through hash table */
 } SetOpState;

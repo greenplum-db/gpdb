@@ -365,3 +365,27 @@ CREATE TEMPORARY TABLE result (f1 int, f2 text, f3 text[]);
 INSERT INTO result SELECT * FROM dblink ('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[]);
 SELECT * FROM result;
 SELECT * FROM (SELECT * FROM dblink('dbname=contrib_regression','select * from foo') AS t(f1 int, f2 text, f3 text[])) AS t1;
+
+-- test foreign data wrapper functionality
+CREATE ROLE dblink_regression_test;
+
+CREATE FOREIGN DATA WRAPPER postgresql;
+CREATE SERVER fdtest FOREIGN DATA WRAPPER postgresql OPTIONS (dbname 'contrib_regression', host 'localhost');
+CREATE USER MAPPING FOR public SERVER fdtest OPTIONS (user :'USER');
+GRANT USAGE ON FOREIGN SERVER fdtest TO dblink_regression_test;
+GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO dblink_regression_test;
+
+SET SESSION AUTHORIZATION dblink_regression_test;
+-- should fail
+SELECT dblink_connect('myconn', 'fdtest');
+-- should succeed
+SELECT dblink_connect_u('myconn', 'fdtest');
+SELECT * FROM dblink('myconn','SELECT * FROM foo') AS t(a int, b text, c text[]);
+
+\c - -
+REVOKE USAGE ON FOREIGN SERVER fdtest FROM dblink_regression_test;
+REVOKE EXECUTE ON FUNCTION dblink_connect_u(text, text) FROM dblink_regression_test;
+DROP USER dblink_regression_test;
+DROP USER MAPPING FOR public SERVER fdtest;
+DROP SERVER fdtest;
+DROP FOREIGN DATA WRAPPER postgresql;

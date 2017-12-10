@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.97 2009/01/01 17:23:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/joinrels.c,v 1.100 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -196,7 +196,7 @@ join_search_one_level(PlannerInfo *root, int level, List **joinrels)
 	 * Last-ditch effort: if we failed to find any usable joins so far, force
 	 * a set of cartesian-product joins to be generated.  This handles the
 	 * special case where all the available rels have join clauses but we
-	 * cannot use any of the joins yet.  An example is
+	 * cannot use any of those clauses yet.  An example is
 	 *
 	 * SELECT * FROM a,b,c WHERE (a.f1 + b.f2 + c.f3) = 0;
 	 *
@@ -364,7 +364,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 	ListCell   *l;
 
 	/*
-	 * Ensure output params are set on failure return.  This is just to
+	 * Ensure output params are set on failure return.	This is just to
 	 * suppress uninitialized-variable warnings from overly anal compilers.
 	 */
 	*sjinfo_p = NULL;
@@ -372,7 +372,7 @@ join_is_legal(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2,
 
 	/*
 	 * If we have any special joins, the proposed join might be illegal; and
-	 * in any case we have to determine its join type.  Scan the join info
+	 * in any case we have to determine its join type.	Scan the join info
 	 * list for conflicts.
 	 */
 	match_sjinfo = NULL;
@@ -585,7 +585,7 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	
 	/*
 	 * If it's a plain inner join, then we won't have found anything in
-	 * join_info_list.  Make up a SpecialJoinInfo so that selectivity
+	 * join_info_list.	Make up a SpecialJoinInfo so that selectivity
 	 * estimation functions will know what's being joined.
 	 */
 	if (sjinfo == NULL)
@@ -625,8 +625,8 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 							 &restrictlist);
 
 	/*
-	 * If we've already proven this join is empty, we needn't consider
-	 * any more paths for it.
+	 * If we've already proven this join is empty, we needn't consider any
+	 * more paths for it.
 	 */
 	if (is_dummy_rel(joinrel))
 	{
@@ -681,19 +681,19 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 	}
 
 	/*
-	 * Consider paths using each rel as both outer and inner.  Depending
-	 * on the join type, a provably empty outer or inner rel might mean
-	 * the join is provably empty too; in which case throw away any
-	 * previously computed paths and mark the join as dummy.  (We do it
-	 * this way since it's conceivable that dummy-ness of a multi-element
-	 * join might only be noticeable for certain construction paths.)
+	 * Consider paths using each rel as both outer and inner.  Depending on
+	 * the join type, a provably empty outer or inner rel might mean the join
+	 * is provably empty too; in which case throw away any previously computed
+	 * paths and mark the join as dummy.  (We do it this way since it's
+	 * conceivable that dummy-ness of a multi-element join might only be
+	 * noticeable for certain construction paths.)
 	 *
 	 * Also, a provably constant-false join restriction typically means that
-	 * we can skip evaluating one or both sides of the join.  We do this
-	 * by marking the appropriate rel as dummy.
+	 * we can skip evaluating one or both sides of the join.  We do this by
+	 * marking the appropriate rel as dummy.
 	 *
-	 * We need only consider the jointypes that appear in join_info_list,
-	 * plus JOIN_INNER.
+	 * We need only consider the jointypes that appear in join_info_list, plus
+	 * JOIN_INNER.
 	 */
 	switch (sjinfo->jointype)
 	{
@@ -741,9 +741,12 @@ make_join_rel(PlannerInfo *root, RelOptInfo *rel1, RelOptInfo *rel2)
 								 restrictlist);
 			break;
 		case JOIN_SEMI:
+
 			/*
-			 * Do these steps only if we actually have a regular semijoin,
-			 * as opposed to a case where we should unique-ify the RHS.
+			 * We might have a normal semijoin, or a case where we don't have
+			 * enough rels to do the semijoin but can unique-ify the RHS and
+			 * then do an innerjoin (see comments in join_is_legal).  In the
+			 * latter case we can't apply JOIN_SEMI joining.
 			 */
 			if (bms_is_subset(sjinfo->min_lefthand, rel1->relids) &&
 				bms_is_subset(sjinfo->min_righthand, rel2->relids))
@@ -929,7 +932,7 @@ cdb_add_subquery_join_paths(PlannerInfo    *root,
  *
  * In practice this is always used with have_relevant_joinclause(), and so
  * could be merged with that function, but it seems clearer to separate the
- * two concerns.  We need these tests because there are degenerate cases where
+ * two concerns.  We need this test because there are degenerate cases where
  * a clauseless join must be performed to satisfy join-order restrictions.
  *
  * Note: this is only a problem if one side of a degenerate outer join
@@ -1185,12 +1188,12 @@ restriction_is_constant_false(List *restrictlist)
 	 */
 	foreach(lc, restrictlist)
 	{
-		RestrictInfo   *rinfo = (RestrictInfo *) lfirst(lc);
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 
 		Assert(IsA(rinfo, RestrictInfo));
 		if (rinfo->clause && IsA(rinfo->clause, Const))
 		{
-			Const  *con = (Const *) rinfo->clause;
+			Const	   *con = (Const *) rinfo->clause;
 
 			/* constant NULL is as good as constant FALSE for our purposes */
 			if (con->constisnull)

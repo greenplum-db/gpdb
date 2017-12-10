@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/port/win32/socket.c,v 1.21 2009/01/01 17:23:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/port/win32/socket.c,v 1.22 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -444,7 +444,7 @@ pgwin32_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, c
 					 * Not completed, and not just "would block", so an error
 					 * occured
 					 */
-					FD_SET(writefds->fd_array[i], &outwritefds);
+					FD_SET		(writefds->fd_array[i], &outwritefds);
 			}
 		}
 		if (outwritefds.fd_count > 0)

@@ -40,7 +40,7 @@ void
 test_checkValidUntilForGssapi3(void **state)
 {
 	int			result = -1;
-	ListCell   *cell;
+	ListCell   *cell = NULL;
 	List	   *list = list_make1(cell);
 	List	  **line = &list;
 	Port	   *port = (Port *) malloc(sizeof(Port));
@@ -56,8 +56,8 @@ void
 test_checkValidUntilForGssapi4(void **state)
 {
 	int			result = -1;
-	ListCell   *cell;
-	ListCell   *cell1;
+	ListCell   *cell = NULL;
+	ListCell   *cell1 = NULL;
 	List	   *list = list_make2(cell, cell1);
 	List	  **line = &list;
 	Port	   *port = (Port *) malloc(sizeof(Port));
@@ -73,9 +73,7 @@ void
 test_checkValidUntilForGssapi5(void **state)
 {
 	int			result = -1;
-	ListCell   *cell;
-	ListCell   *cell1;
-	ListCell   *cell2;
+	ListCell   *cell = NULL;
 	List	   *list = list_make3(cell, "foo", "bar");
 	List	  **line = &list;
 	Port	   *port = (Port *) malloc(sizeof(Port));
@@ -97,9 +95,7 @@ void
 test_checkValidUntilForGssapi6(void **state)
 {
 	int			result = -1;
-	ListCell   *cell;
-	ListCell   *cell1;
-	ListCell   *cell2;
+	ListCell   *cell = NULL;
 	List	   *list = list_make3(cell, "foo", "bar");
 	List	  **line = &list;
 	Port	   *port = (Port *) malloc(sizeof(Port));

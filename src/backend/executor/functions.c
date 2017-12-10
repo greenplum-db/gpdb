@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.132 2009/01/02 20:42:00 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/functions.c,v 1.135 2009/06/11 17:25:38 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -112,8 +112,8 @@ typedef SQLFunctionCache *SQLFunctionCachePtr;
 
 /* non-export function prototypes */
 static execution_state *init_execution_state(List *queryTree_list,
-											 SQLFunctionCachePtr fcache,
-											 bool lazyEvalOK);
+					 SQLFunctionCachePtr fcache,
+					 bool lazyEvalOK);
 static void init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK);
 static void postquel_start(execution_state *es, SQLFunctionCachePtr fcache);
 static bool postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache);
@@ -258,8 +258,8 @@ init_execution_state(List *queryTree_list,
 
 		newes->next = NULL;
 		newes->status = F_EXEC_START;
-		newes->setsResult = false;			/* might change below */
-		newes->lazyEval = false;			/* might change below */
+		newes->setsResult = false;		/* might change below */
+		newes->lazyEval = false;	/* might change below */
 		newes->stmt = stmt;
 		newes->qd = NULL;
 
@@ -270,9 +270,9 @@ init_execution_state(List *queryTree_list,
 	}
 
 	/*
-	 * Mark the last canSetTag query as delivering the function result;
-	 * then, if it is a plain SELECT, mark it for lazy evaluation.
-	 * If it's not a SELECT we must always run it to completion.
+	 * Mark the last canSetTag query as delivering the function result; then,
+	 * if it is a plain SELECT, mark it for lazy evaluation. If it's not a
+	 * SELECT we must always run it to completion.
 	 *
 	 * Note: at some point we might add additional criteria for whether to use
 	 * lazy eval.  However, we should prefer to use it whenever the function
@@ -281,8 +281,8 @@ init_execution_state(List *queryTree_list,
 	 *
 	 * Note: don't set setsResult if the function returns VOID, as evidenced
 	 * by not having made a junkfilter.  This ensures we'll throw away any
-	 * output from a utility statement that check_sql_fn_retval deemed to
-	 * not have output.
+	 * output from a utility statement that check_sql_fn_retval deemed to not
+	 * have output.
 	 */
 	if (lasttages && fcache->junkFilter)
 	{
@@ -461,10 +461,10 @@ init_sql_fcache(FmgrInfo *finfo, bool lazyEvalOK)
 	 * Note: we set fcache->returnsTuple according to whether we are returning
 	 * the whole tuple result or just a single column.	In the latter case we
 	 * clear returnsTuple because we need not act different from the scalar
-	 * result case, even if it's a rowtype column.  (However, we have to
-	 * force lazy eval mode in that case; otherwise we'd need extra code to
-	 * expand the rowtype column into multiple columns, since we have no
-	 * way to notify the caller that it should do that.)
+	 * result case, even if it's a rowtype column.  (However, we have to force
+	 * lazy eval mode in that case; otherwise we'd need extra code to expand
+	 * the rowtype column into multiple columns, since we have no way to
+	 * notify the caller that it should do that.)
 	 *
 	 * check_sql_fn_retval will also construct a JunkFilter we can use to
 	 * coerce the returned rowtype to the desired form (unless the result type
@@ -624,7 +624,7 @@ postquel_getnext(execution_state *es, SQLFunctionCachePtr fcache)
 						es->qd->utilitystmt),
 					   fcache->src,
 					   es->qd->params,
-					   false,		/* not top level */
+					   false,	/* not top level */
 					   es->qd->dest,
 					   NULL);
 		result = true;			/* never stops early */
@@ -744,7 +744,7 @@ postquel_get_single_result(TupleTableSlot *slot,
 	/*
 	 * Set up to return the function value.  For pass-by-reference datatypes,
 	 * be sure to allocate the result in resultcontext, not the current memory
-	 * context (which has query lifespan).  We can't leave the data in the
+	 * context (which has query lifespan).	We can't leave the data in the
 	 * TupleTableSlot because we intend to clear the slot before returning.
 	 */
 	oldcontext = MemoryContextSwitchTo(resultcontext);
@@ -848,8 +848,8 @@ fmgr_sql(PG_FUNCTION_ARGS)
 		postquel_sub_params(fcache, fcinfo);
 
 	/*
-	 * Build tuplestore to hold results, if we don't have one already.
-	 * Note it's in the query-lifespan context.
+	 * Build tuplestore to hold results, if we don't have one already. Note
+	 * it's in the query-lifespan context.
 	 */
 	if (!fcache->tstore)
 		fcache->tstore = tuplestore_begin_heap(randomAccess, false, work_mem);
@@ -881,7 +881,7 @@ fmgr_sql(PG_FUNCTION_ARGS)
 		 */
 		while (es)
 		{
-			bool	completed;
+			bool		completed;
 
 			if (es->status == F_EXEC_START)
 				postquel_start(es, fcache);
@@ -889,22 +889,22 @@ fmgr_sql(PG_FUNCTION_ARGS)
 			completed = postquel_getnext(es, fcache);
 
 			/*
-			 * If we ran the command to completion, we can shut it down now.
-			 * Any row(s) we need to return are safely stashed in the tuplestore,
-			 * and we want to be sure that, for example, AFTER triggers get fired
+			 * If we ran the command to completion, we can shut it down now. Any
+			 * row(s) we need to return are safely stashed in the tuplestore, and
+			 * we want to be sure that, for example, AFTER triggers get fired
 			 * before we return anything.  Also, if the function doesn't return
-			 * set, we can shut it down anyway because it must be a SELECT and
-			 * we don't care about fetching any more result rows.
+			 * set, we can shut it down anyway because it must be a SELECT and we
+			 * don't care about fetching any more result rows.
 			 */
 			if (completed || !fcache->returnsSet)
 				postquel_end(es);
 
 			/*
 			 * Break from loop if we didn't shut down (implying we got a
-			 * lazily-evaluated row).  Otherwise we'll press on till the
-			 * whole function is done, relying on the tuplestore to keep hold
-			 * of the data to eventually be returned.  This is necessary since
-			 * an INSERT/UPDATE/DELETE RETURNING that sets the result might be
+			 * lazily-evaluated row).  Otherwise we'll press on till the whole
+			 * function is done, relying on the tuplestore to keep hold of the
+			 * data to eventually be returned.  This is necessary since an
+			 * INSERT/UPDATE/DELETE RETURNING that sets the result might be
 			 * followed by additional rule-inserted commands, and we want to
 			 * finish doing all those commands before we return anything.
 			 */
@@ -932,7 +932,8 @@ fmgr_sql(PG_FUNCTION_ARGS)
 		if (es)
 		{
 			/*
-			 * If we stopped short of being done, we must have a lazy-eval row.
+			 * If we stopped short of being done, we must have a lazy-eval
+			 * row.
 			 */
 			Assert(es->lazyEval);
 			/* Re-use the junkfilter's output slot to fetch back the tuple */
@@ -967,7 +968,7 @@ fmgr_sql(PG_FUNCTION_ARGS)
 		else if (fcache->lazyEval)
 		{
 			/*
-			 * We are done with a lazy evaluation.  Clean up.
+			 * We are done with a lazy evaluation.	Clean up.
 			 */
 			tuplestore_clear(fcache->tstore);
 
@@ -991,9 +992,9 @@ fmgr_sql(PG_FUNCTION_ARGS)
 		else
 		{
 			/*
-			 * We are done with a non-lazy evaluation.  Return whatever is
-			 * in the tuplestore.  (It is now caller's responsibility to
-			 * free the tuplestore when done.)
+			 * We are done with a non-lazy evaluation.	Return whatever is in
+			 * the tuplestore.	(It is now caller's responsibility to free the
+			 * tuplestore when done.)
 			 */
 			rsi->returnMode = SFRM_Materialize;
 			rsi->setResult = fcache->tstore;
@@ -1046,8 +1047,8 @@ fmgr_sql(PG_FUNCTION_ARGS)
 	}
 
 	/*
-	 * If we've gone through every command in the function, we are done.
-	 * Reset the execution states to start over again on next call.
+	 * If we've gone through every command in the function, we are done. Reset
+	 * the execution states to start over again on next call.
 	 */
 	if (es == NULL)
 	{
@@ -1199,7 +1200,7 @@ ShutdownSQLFunction(Datum arg)
  * function definition of a polymorphic function.)
  *
  * This function returns true if the sql function returns the entire tuple
- * result of its final statement, and false otherwise.  Note that because we
+ * result of its final statement, and false otherwise.	Note that because we
  * allow "SELECT rowtype_expression", this may be false even when the declared
  * function return type is a rowtype.
  *
@@ -1231,14 +1232,14 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 		*junkFilter = NULL;		/* initialize in case of VOID result */
 
 	/*
-	 * Find the last canSetTag query in the list.  This isn't necessarily
-	 * the last parsetree, because rule rewriting can insert queries after
-	 * what the user wrote.
+	 * Find the last canSetTag query in the list.  This isn't necessarily the
+	 * last parsetree, because rule rewriting can insert queries after what
+	 * the user wrote.
 	 */
 	parse = NULL;
 	foreach(lc, queryTreeList)
 	{
-		Query  *q = (Query *) lfirst(lc);
+		Query	   *q = (Query *) lfirst(lc);
 
 		if (q->canSetTag)
 			parse = q;
@@ -1246,12 +1247,12 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 
 	/*
 	 * If it's a plain SELECT, it returns whatever the targetlist says.
-	 * Otherwise, if it's INSERT/UPDATE/DELETE with RETURNING, it returns that.
-	 * Otherwise, the function return type must be VOID.
+	 * Otherwise, if it's INSERT/UPDATE/DELETE with RETURNING, it returns
+	 * that. Otherwise, the function return type must be VOID.
 	 *
 	 * Note: eventually replace this test with QueryReturnsTuples?	We'd need
-	 * a more general method of determining the output type, though.  Also,
-	 * it seems too dangerous to consider FETCH or EXECUTE as returning a
+	 * a more general method of determining the output type, though.  Also, it
+	 * seems too dangerous to consider FETCH or EXECUTE as returning a
 	 * determinable rowtype, since they depend on relatively short-lived
 	 * entities.
 	 */
@@ -1278,7 +1279,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 			 errmsg("return type mismatch in function declared to return %s",
 					format_type_be(rettype)),
-				 errdetail("Function's final statement must be SELECT or INSERT/UPDATE/DELETE RETURNING.")));
+					 errdetail("Function's final statement must be SELECT or INSERT/UPDATE/DELETE RETURNING.")));
 		return false;
 	}
 
@@ -1314,7 +1315,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 			 errmsg("return type mismatch in function declared to return %s",
 					format_type_be(rettype)),
-				 errdetail("Final statement must return exactly one column.")));
+			  errdetail("Final statement must return exactly one column.")));
 
 		/* We assume here that non-junk TLEs must come first in tlists */
 		tle = (TargetEntry *) linitial(tlist);
@@ -1350,8 +1351,8 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 		 * If the target list is of length 1, and the type of the varnode in
 		 * the target list matches the declared return type, this is okay.
 		 * This can happen, for example, where the body of the function is
-		 * 'SELECT func2()', where func2 has the same composite return type
-		 * as the function that's calling it.
+		 * 'SELECT func2()', where func2 has the same composite return type as
+		 * the function that's calling it.
 		 *
 		 * XXX Note that if rettype is RECORD, the IsBinaryCoercible check
 		 * will succeed for any composite restype.  For the moment we rely on
@@ -1418,7 +1419,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 							(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
 							 errmsg("return type mismatch in function declared to return %s",
 									format_type_be(rettype)),
-					   errdetail("Final statement returns too many columns.")));
+					errdetail("Final statement returns too many columns.")));
 				attr = tupdesc->attrs[colindex - 1];
 			} while (attr->attisdropped);
 			tuplogcols++;

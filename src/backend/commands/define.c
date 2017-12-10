@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/define.c,v 1.102 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/define.c,v 1.104 2009/04/04 21:12:31 tgl Exp $
  *
  * DESCRIPTION
  *	  The "DefineFoo" routines take the parse tree and pick out the
@@ -311,9 +311,5 @@ defGetTypeLength(DefElem *def)
 DefElem *
 defWithOids(bool value)
 {
-	DefElem    *f = makeNode(DefElem);
-
-	f->defname = "oids";
-	f->arg = (Node *) makeInteger(value);
-	return f;
+	return makeDefElem("oids", (Node *) makeInteger(value));
 }

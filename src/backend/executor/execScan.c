@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execScan.c,v 1.44 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execScan.c,v 1.46 2009/04/02 20:59:10 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */

@@ -23,7 +23,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.47 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/procarray.c,v 1.50 2009/06/11 14:49:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -759,6 +759,18 @@ HasSerializableBackends(bool allDbs)
  * must be TRUE for that case, and ignoreVacuum FALSE.
  *
  * GPDB: ignoreVacuum is ignored.
+ *
+ * Note: it's possible for the calculated value to move backwards on repeated
+ * calls. The calculated value is conservative, so that anything older is
+ * definitely not considered as running by anyone anymore, but the exact
+ * value calculated depends on a number of things. For example, if allDbs is
+ * TRUE and there are no transactions running in the current database,
+ * GetOldestXmin() returns latestCompletedXid. If a transaction begins after
+ * that, its xmin will include in-progress transactions in other databases
+ * that started earlier, so another call will return an lower value. The
+ * return value is also adjusted with vacuum_defer_cleanup_age, so increasing
+ * that setting on the fly is an easy way to have GetOldestXmin() move
+ * backwards.
  *
  * Note: we include all currently running xids in the set of considered xids.
  * This ensures that if a just-started xact has not yet set its snapshot,
@@ -1543,8 +1555,8 @@ GetSnapshotData(Snapshot snapshot)
 	snapshot->curcid = GetCurrentCommandId(false);
 
 	/*
-	 * This is a new snapshot, so set both refcounts are zero, and mark it
-	 * as not copied in persistent memory.
+	 * This is a new snapshot, so set both refcounts are zero, and mark it as
+	 * not copied in persistent memory.
 	 */
 	snapshot->active_count = 0;
 	snapshot->regd_count = 0;
@@ -1815,25 +1827,42 @@ IsBackendPid(int pid)
 /*
  * GetCurrentVirtualXIDs -- returns an array of currently active VXIDs.
  *
- * The array is palloc'd and is terminated with an invalid VXID.
+ * The array is palloc'd. The number of valid entries is returned into *nvxids.
  *
- * If limitXmin is not InvalidTransactionId, we skip any backends
- * with xmin >= limitXmin.	If allDbs is false, we skip backends attached
- * to other databases.  If excludeVacuum isn't zero, we skip processes for
- * which (excludeVacuum & vacuumFlags) is not zero.  Also, our own process
- * is always skipped.
+ * The arguments allow filtering the set of VXIDs returned.  Our own process
+ * is always skipped.  In addition:
+ *	If limitXmin is not InvalidTransactionId, skip processes with
+ *		xmin > limitXmin.
+ *	If excludeXmin0 is true, skip processes with xmin = 0.
+ *	If allDbs is false, skip processes attached to other databases.
+ *	If excludeVacuum isn't zero, skip processes for which
+ *		(vacuumFlags & excludeVacuum) is not zero.
+ *
+ * Note: the purpose of the limitXmin and excludeXmin0 parameters is to
+ * allow skipping backends whose oldest live snapshot is no older than
+ * some snapshot we have.  Since we examine the procarray with only shared
+ * lock, there are race conditions: a backend could set its xmin just after
+ * we look.  Indeed, on multiprocessors with weak memory ordering, the
+ * other backend could have set its xmin *before* we look.	We know however
+ * that such a backend must have held shared ProcArrayLock overlapping our
+ * own hold of ProcArrayLock, else we would see its xmin update.  Therefore,
+ * any snapshot the other backend is taking concurrently with our scan cannot
+ * consider any transactions as still running that we think are committed
+ * (since backends must hold ProcArrayLock exclusive to commit).
  */
 VirtualTransactionId *
-GetCurrentVirtualXIDs(TransactionId limitXmin, bool allDbs, int excludeVacuum)
+GetCurrentVirtualXIDs(TransactionId limitXmin, bool excludeXmin0,
+					  bool allDbs, int excludeVacuum,
+					  int *nvxids)
 {
 	VirtualTransactionId *vxids;
 	ProcArrayStruct *arrayP = procArray;
 	int			count = 0;
 	int			index;
 
-	/* allocate result space with room for a terminator */
+	/* allocate what's certainly enough result space */
 	vxids = (VirtualTransactionId *)
-		palloc(sizeof(VirtualTransactionId) * (arrayP->maxProcs + 1));
+		palloc(sizeof(VirtualTransactionId) * arrayP->maxProcs);
 
 	LWLockAcquire(ProcArrayLock, LW_SHARED);
 
@@ -1849,15 +1878,18 @@ GetCurrentVirtualXIDs(TransactionId limitXmin, bool allDbs, int excludeVacuum)
 
 		if (allDbs || proc->databaseId == MyDatabaseId)
 		{
-			/* Fetch xmin just once - might change on us? */
+			/* Fetch xmin just once - might change on us */
 			TransactionId pxmin = proc->xmin;
 
+			if (excludeXmin0 && !TransactionIdIsValid(pxmin))
+				continue;
+
 			/*
-			 * Note that InvalidTransactionId precedes all other XIDs, so a
-			 * proc that hasn't set xmin yet will always be included.
+			 * InvalidTransactionId precedes all other XIDs, so a proc that
+			 * hasn't set xmin yet will not be rejected by this test.
 			 */
 			if (!TransactionIdIsValid(limitXmin) ||
-				TransactionIdPrecedes(pxmin, limitXmin))
+				TransactionIdPrecedesOrEquals(pxmin, limitXmin))
 			{
 				VirtualTransactionId vxid;
 
@@ -1870,10 +1902,7 @@ GetCurrentVirtualXIDs(TransactionId limitXmin, bool allDbs, int excludeVacuum)
 
 	LWLockRelease(ProcArrayLock);
 
-	/* add the terminator */
-	vxids[count].backendId = InvalidBackendId;
-	vxids[count].localTransactionId = InvalidLocalTransactionId;
-
+	*nvxids = count;
 	return vxids;
 }
 
@@ -1909,9 +1938,9 @@ CountActiveBackends(void)
 		 *
 		 * If someone just decremented numProcs, 'proc' could also point to a
 		 * PGPROC entry that's no longer in the array. It still points to a
-		 * PGPROC struct, though, because freed PGPPROC entries just go to
-		 * the free list and are recycled. Its contents are nonsense in that
-		 * case, but that's acceptable for this function.
+		 * PGPROC struct, though, because freed PGPPROC entries just go to the
+		 * free list and are recycled. Its contents are nonsense in that case,
+		 * but that's acceptable for this function.
 		 */
 		if (proc == NULL)
 			continue;
@@ -2011,7 +2040,8 @@ bool
 CountOtherDBBackends(Oid databaseId, int *nbackends, int *nprepared)
 {
 	ProcArrayStruct *arrayP = procArray;
-#define MAXAUTOVACPIDS  10		/* max autovacs to SIGTERM per iteration */
+
+#define MAXAUTOVACPIDS	10		/* max autovacs to SIGTERM per iteration */
 	int			autovac_pids[MAXAUTOVACPIDS];
 	int			tries;
 
@@ -2056,10 +2086,10 @@ CountOtherDBBackends(Oid databaseId, int *nbackends, int *nprepared)
 			return false;		/* no conflicting backends, so done */
 
 		/*
-		 * Send SIGTERM to any conflicting autovacuums before sleeping.
-		 * We postpone this step until after the loop because we don't
-		 * want to hold ProcArrayLock while issuing kill().
-		 * We have no idea what might block kill() inside the kernel...
+		 * Send SIGTERM to any conflicting autovacuums before sleeping. We
+		 * postpone this step until after the loop because we don't want to
+		 * hold ProcArrayLock while issuing kill(). We have no idea what might
+		 * block kill() inside the kernel...
 		 */
 		for (index = 0; index < nautovacs; index++)
 			(void) kill(autovac_pids[index], SIGTERM);	/* ignore any error */

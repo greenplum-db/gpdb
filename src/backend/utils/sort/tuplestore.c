@@ -29,7 +29,7 @@
  * When the caller requests backward-scan capability, we write the temp file
  * in a format that allows either forward or backward scan.  Otherwise, only
  * forward scan is allowed.  A request for backward scan must be made before
- * putting any tuples into the tuplestore.  Rewind is normally allowed but
+ * putting any tuples into the tuplestore.	Rewind is normally allowed but
  * can be turned off via tuplestore_set_eflags; turning off rewind for all
  * read pointers enables truncation of the tuplestore at the oldest read point
  * for minimal memory usage.  (The caller must explicitly call tuplestore_trim
@@ -49,7 +49,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.46 2009/01/01 17:23:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplestore.c,v 1.48 2009/06/11 14:49:06 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -86,7 +86,7 @@ typedef enum
  *
  * Special case: if eof_reached is true, then the pointer's read position is
  * implicitly equal to the write position, and current/file/offset aren't
- * maintained.  This way we need not update all the read pointers each time
+ * maintained.	This way we need not update all the read pointers each time
  * we write.
  */
 typedef struct
@@ -175,7 +175,7 @@ struct Tuplestorestate
 	int			readptrsize;	/* allocated length of readptrs array */
 
 	int			writepos_file;	/* file# (valid if READFILE state) */
-	off_t		writepos_offset; /* offset (valid if READFILE state) */
+	off_t		writepos_offset;	/* offset (valid if READFILE state) */
 
     /*
      * CDB: EXPLAIN ANALYZE reporting interface and statistics.
@@ -407,7 +407,7 @@ tuplestore_alloc_read_pointer(Tuplestorestate *state, int eflags)
 	/* Make room for another read pointer if needed */
 	if (state->readptrcount >= state->readptrsize)
 	{
-		int		newcnt = state->readptrsize * 2;
+		int			newcnt = state->readptrsize * 2;
 
 		state->readptrs = (TSReadPointer *)
 			repalloc(state->readptrs, newcnt * sizeof(TSReadPointer));
@@ -1119,7 +1119,7 @@ tuplestore_rescan(Tuplestorestate *state)
 }
 
 /*
- * tuplestore_copy_read_pointer	- copy a read pointer's state to another
+ * tuplestore_copy_read_pointer - copy a read pointer's state to another
  */
 void
 tuplestore_copy_read_pointer(Tuplestorestate *state,
@@ -1138,8 +1138,8 @@ tuplestore_copy_read_pointer(Tuplestorestate *state,
 	if (dptr->eflags != sptr->eflags)
 	{
 		/* Possible change of overall eflags, so copy and then recompute */
-		int		eflags;
-		int		i;
+		int			eflags;
+		int			i;
 
 		*dptr = *sptr;
 		eflags = state->readptrs[0].eflags;
@@ -1354,8 +1354,8 @@ copytup_heap(Tuplestorestate *state, void *tup)
 static void
 writetup_heap(Tuplestorestate *state, void *tup)
 {
-	uint32 tuplen = 0;
-	Size         memsize = 0;
+	uint32		tuplen = 0;
+	Size		memsize = 0;
 
 	if (is_memtuple((GenericTuple) tup))
 		tuplen = memtuple_get_size((MemTuple) tup);
@@ -1383,10 +1383,10 @@ writetup_heap(Tuplestorestate *state, void *tup)
 static void *
 readtup_heap(Tuplestorestate *state, unsigned int len)
 {
-	void *tup = NULL;
-	uint32 tuplen = 0;
+	void	   *tup = NULL;
+	uint32		tuplen = 0;
 
-	if(is_len_memtuplen(len))
+	if (is_len_memtuplen(len))
 	{
 		tuplen = memtuple_size_from_uint32(len);
 	}
@@ -1426,11 +1426,14 @@ readtup_heap(Tuplestorestate *state, unsigned int len)
 	}
 
 	if (state->backward)	/* need trailing length word? */
+	{
 		if (BufFileRead(state->myfile, (void *) &tuplen,
 						sizeof(tuplen)) != sizeof(tuplen))
 		{
 			insist_log(false, "unexpected end of data");
 		}
+	}
+
 	return (void *) tup;
 }
 

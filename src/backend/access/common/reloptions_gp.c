@@ -36,7 +36,7 @@
  * the confusion in this file, use this macro to check for "heap or AO/CO
  * table".
  */
-#define KIND_IS_RELATION(kind) ((kind) == RELOPT_KIND_HEAP)
+#define KIND_IS_RELATION(kind) (((kind) & RELOPT_KIND_HEAP) != 0)
 
 /*
  * GPDB reloptions specification.
@@ -94,7 +94,7 @@ static relopt_int intRelOpts_gp[] =
 		{
 			SOPT_FILLFACTOR,
 			"Packs bitmap index pages only to this percentage",
-			RELOPT_KIND_INTERNAL
+			RELOPT_KIND_BITMAP
 		},
 		HEAP_DEFAULT_FILLFACTOR, HEAP_MIN_FILLFACTOR, 100
 	},
@@ -116,7 +116,7 @@ static relopt_string stringRelOpts_gp[] =
 			"AO tables compression type",
 			RELOPT_KIND_HEAP
 		},
-		0, true, ""
+		0, true, NULL, ""
 	},
 	{
 		{
@@ -124,7 +124,7 @@ static relopt_string stringRelOpts_gp[] =
 				"AO tables orientation",
 				RELOPT_KIND_HEAP
 		},
-			0, false, ""
+		0, false, NULL, ""
 	},
 	/* list terminator */
 	{{NULL}}
@@ -153,7 +153,7 @@ initialize_reloptions_gp(void)
 	/* Set GPDB specific options */
 	for (i = 0; boolRelOpts_gp[i].gen.name; i++)
 	{
-		add_bool_reloption(boolRelOpts_gp[i].gen.kind,
+		add_bool_reloption(boolRelOpts_gp[i].gen.kinds,
 						   (char *) boolRelOpts_gp[i].gen.name,
 						   (char *) boolRelOpts_gp[i].gen.desc,
 						   boolRelOpts_gp[i].default_val);
@@ -161,7 +161,7 @@ initialize_reloptions_gp(void)
 
 	for (i = 0; intRelOpts_gp[i].gen.name; i++)
 	{
-		add_int_reloption(intRelOpts_gp[i].gen.kind,
+		add_int_reloption(intRelOpts_gp[i].gen.kinds,
 						  (char *) intRelOpts_gp[i].gen.name,
 						  (char *) intRelOpts_gp[i].gen.desc,
 						  intRelOpts_gp[i].default_val,
@@ -171,7 +171,7 @@ initialize_reloptions_gp(void)
 
 	for (i = 0; realRelOpts_gp[i].gen.name; i++)
 	{
-		add_real_reloption(realRelOpts_gp[i].gen.kind,
+		add_real_reloption(realRelOpts_gp[i].gen.kinds,
 						   (char *) realRelOpts_gp[i].gen.name,
 						   (char *) realRelOpts_gp[i].gen.desc,
 						   realRelOpts_gp[i].default_val,
@@ -180,10 +180,11 @@ initialize_reloptions_gp(void)
 
 	for (i = 0; stringRelOpts_gp[i].gen.name; i++)
 	{
-		add_string_reloption(stringRelOpts_gp[i].gen.kind,
+		add_string_reloption(stringRelOpts_gp[i].gen.kinds,
 							 (char *) stringRelOpts_gp[i].gen.name,
 							 (char *) stringRelOpts_gp[i].gen.desc,
-							 NULL);
+							 NULL,
+							 stringRelOpts_gp[i].validate_cb);
 	}
 }
 

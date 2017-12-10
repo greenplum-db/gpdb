@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.186 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/lock.c,v 1.188 2009/06/11 14:49:02 momjian Exp $
  *
  * NOTES
  *	  A lock table is a shared memory hash table.  When
@@ -964,11 +964,21 @@ LockAcquire(const LOCKTAG *locktag,
 		 * Sleep till someone wakes me up.
 		 */
 
-		TRACE_POSTGRESQL_LOCK_WAIT_START(locktag->locktag_field2, lockmode);
+		TRACE_POSTGRESQL_LOCK_WAIT_START(locktag->locktag_field1,
+										 locktag->locktag_field2,
+										 locktag->locktag_field3,
+										 locktag->locktag_field4,
+										 locktag->locktag_type,
+										 lockmode);
 
 		WaitOnLock(locallock, owner);
 
-		TRACE_POSTGRESQL_LOCK_WAIT_DONE(locktag->locktag_field2, lockmode);
+		TRACE_POSTGRESQL_LOCK_WAIT_DONE(locktag->locktag_field1,
+										locktag->locktag_field2,
+										locktag->locktag_field3,
+										locktag->locktag_field4,
+										locktag->locktag_type,
+										lockmode);
 
 		/*
 		 * NOTE: do not do any material change of state between here and
@@ -1335,7 +1345,7 @@ WaitOnLock(LOCALLOCK *locallock, ResourceOwner owner)
 {
 	LOCKMETHODID lockmethodid = LOCALLOCK_LOCKMETHOD(*locallock);
 	LockMethod	lockMethodTable = LockMethods[lockmethodid];
-	char	   * volatile new_status = NULL;
+	char	   *volatile new_status = NULL;
 
 	LOCK_PRINT("WaitOnLock: sleeping on lock",
 			   locallock->lock, locallock->tag.mode);
@@ -1368,20 +1378,20 @@ WaitOnLock(LOCALLOCK *locallock, ResourceOwner owner)
 	 * the locktable state must fully reflect the fact that we own the lock;
 	 * we can't do additional work on return.
 	 *
-	 * We can and do use a PG_TRY block to try to clean up after failure,
-	 * but this still has a major limitation: elog(FATAL) can occur while
-	 * waiting (eg, a "die" interrupt), and then control won't come back here.
-	 * So all cleanup of essential state should happen in LockWaitCancel,
-	 * not here.  We can use PG_TRY to clear the "waiting" status flags,
-	 * since doing that is unimportant if the process exits.
+	 * We can and do use a PG_TRY block to try to clean up after failure, but
+	 * this still has a major limitation: elog(FATAL) can occur while waiting
+	 * (eg, a "die" interrupt), and then control won't come back here. So all
+	 * cleanup of essential state should happen in LockWaitCancel, not here.
+	 * We can use PG_TRY to clear the "waiting" status flags, since doing that
+	 * is unimportant if the process exits.
 	 */
 	PG_TRY();
 	{
 		if (ProcSleep(locallock, lockMethodTable) != STATUS_OK)
 		{
 			/*
-			 * We failed as a result of a deadlock, see CheckDeadLock().
-			 * Quit now.
+			 * We failed as a result of a deadlock, see CheckDeadLock(). Quit
+			 * now.
 			 */
 			awaitedLock = NULL;
 			LOCK_PRINT("WaitOnLock: aborting on lock",

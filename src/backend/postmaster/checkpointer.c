@@ -105,7 +105,7 @@
 typedef struct
 {
 	RelFileNode	rnode;
-	ForkNumber forknum;
+	ForkNumber	forknum;
 	BlockNumber segno;			/* see md.c for special values */
 	/* might add a real request-type field later; not needed yet */
 } CheckpointerRequest;
@@ -422,8 +422,18 @@ CheckpointerMain(void)
 		 */
 		if (do_checkpoint)
 		{
+			bool		ckpt_performed = false;
+			bool		do_restartpoint;
+
 			/* use volatile pointer to prevent code rearrangement */
 			volatile CheckpointerShmemStruct *cps = CheckpointerShmem;
+
+			/*
+			 * Check if we should perform a checkpoint or a restartpoint. As a
+			 * side-effect, RecoveryInProgress() initializes TimeLineID if
+			 * it's not set yet.
+			 */
+			do_restartpoint = RecoveryInProgress();
 
 			/*
 			 * Atomically fetch the request flags to figure out what kind of a
@@ -437,17 +447,27 @@ CheckpointerMain(void)
 			SpinLockRelease(&cps->ckpt_lck);
 
 			/*
+			 * The end-of-recovery checkpoint is a real checkpoint that's
+			 * performed while we're still in recovery.
+			 */
+			if (flags & CHECKPOINT_END_OF_RECOVERY)
+				do_restartpoint = false;
+
+			/*
 			 * We will warn if (a) too soon since last checkpoint (whatever
 			 * caused it) and (b) somebody set the CHECKPOINT_CAUSE_XLOG flag
 			 * since the last checkpoint start.  Note in particular that this
 			 * implementation will not generate warnings caused by
 			 * CheckPointTimeout < CheckPointWarning.
 			 */
-			if ((flags & CHECKPOINT_CAUSE_XLOG) &&
+			if (!do_restartpoint &&
+				(flags & CHECKPOINT_CAUSE_XLOG) &&
 				elapsed_secs < CheckPointWarning)
 				ereport(LOG,
-						(errmsg("checkpoints are occurring too frequently (%d seconds apart)",
-								elapsed_secs),
+						(errmsg_plural("checkpoints are occurring too frequently (%d second apart)",
+				"checkpoints are occurring too frequently (%d seconds apart)",
+									   elapsed_secs,
+									   elapsed_secs),
 						 errhint("Consider increasing the configuration parameter \"checkpoint_segments\".")));
 
 			/*
@@ -455,14 +475,21 @@ CheckpointerMain(void)
 			 * checkpoint
 			 */
 			ckpt_active = true;
-			ckpt_start_recptr = GetInsertRecPtr();
+			if (!do_restartpoint)
+				ckpt_start_recptr = GetInsertRecPtr();
 			ckpt_start_time = now;
 			ckpt_cached_elapsed = 0;
 
 			/*
 			 * Do the checkpoint.
 			 */
-			CreateCheckPoint(flags);
+			if (!do_restartpoint)
+			{
+				CreateCheckPoint(flags);
+				ckpt_performed = true;
+			}
+			else
+				ckpt_performed = CreateRestartPoint(flags);
 
 			/*
 			 * After any checkpoint, close all smgr files.  This is so we
@@ -477,14 +504,27 @@ CheckpointerMain(void)
 			cps->ckpt_done = cps->ckpt_started;
 			SpinLockRelease(&cps->ckpt_lck);
 
-			ckpt_active = false;
+			if (ckpt_performed)
+			{
+				/*
+				 * Note we record the checkpoint start time not end time as
+				 * last_checkpoint_time.  This is so that time-driven
+				 * checkpoints happen at a predictable spacing.
+				 */
+				last_checkpoint_time = now;
+			}
+			else
+			{
+				/*
+				 * We were not able to perform the restartpoint (checkpoints
+				 * throw an ERROR in case of error).  Most likely because we
+				 * have not received any new checkpoint WAL records since the
+				 * last restartpoint. Try again in 15 s.
+				 */
+				last_checkpoint_time = now - CheckPointTimeout + 15;
+			}
 
-			/*
-			 * Note we record the checkpoint start time not end time as
-			 * last_checkpoint_time.  This is so that time-driven checkpoints
-			 * happen at a predictable spacing.
-			 */
-			last_checkpoint_time = now;
+			ckpt_active = false;
 		}
 
 		/* Nap for one second. */
@@ -515,7 +555,7 @@ CheckArchiveTimeout(void)
 	pg_time_t	now;
 	pg_time_t	last_time;
 
-	if (XLogArchiveTimeout <= 0)
+	if (XLogArchiveTimeout <= 0 || RecoveryInProgress())
 		return;
 
 	now = (pg_time_t) time(NULL);

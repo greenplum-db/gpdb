@@ -6,7 +6,7 @@
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.83 2009/01/01 17:23:36 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/transam/varsup.c,v 1.84 2009/04/23 00:23:45 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -103,6 +103,11 @@ GetNewTransactionId(bool isSubXact, bool setProcXid)
 			(errmsg("database \"%s\" must be vacuumed within %u transactions",
 					NameStr(ShmemVariableCache->limit_datname),
 					ShmemVariableCache->xidWrapLimit - xid),
+			 /*
+			  * In GPDB, don't say anything about old prepared transactions, because the system
+			  * only uses prepared transactions internally. PREPARE TRANSACTION is not available
+			  * to users.
+			  */
 			 errhint("To avoid a database shutdown, execute a database-wide VACUUM in \"%s\".",
 					 NameStr(ShmemVariableCache->limit_datname))));
 	}
@@ -315,6 +320,11 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid,
 		   (errmsg("database \"%s\" must be vacuumed within %u transactions",
 				   NameStr(*oldest_datname),
 				   xidWrapLimit - curXid),
+			 /*
+			  * In GPDB, don't say anything about old prepared transactions, because the system
+			  * only uses prepared transactions internally. PREPARE TRANSACTION is not available
+			  * to users.
+			  */
 			errhint("To avoid a database shutdown, execute a database-wide VACUUM in \"%s\".",
 					NameStr(*oldest_datname))));
 }

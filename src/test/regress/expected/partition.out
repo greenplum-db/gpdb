@@ -1899,176 +1899,142 @@ NOTICE:  CREATE TABLE will create partition "granttest_1_prt_2" for table "grant
 NOTICE:  CREATE TABLE will create partition "granttest_1_prt_2_2_prt_1" for table "granttest_1_prt_2"
 NOTICE:  CREATE TABLE will create partition "granttest_1_prt_3" for table "granttest"
 NOTICE:  CREATE TABLE will create partition "granttest_1_prt_3_2_prt_1" for table "granttest_1_prt_3"
-select has_table_privilege('part_role', 'granttest'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
+select relname, has_table_privilege('part_role', oid,'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_2         | f       | f      | f
+ granttest_1_prt_2_2_prt_1 | f       | f      | f
+ granttest_1_prt_3         | f       | f      | f
+ granttest_1_prt_3_2_prt_1 | f       | f      | f
+ granttest                 | f       | f      | f
+ granttest_1_prt_1         | f       | f      | f
+ granttest_1_prt_1_2_prt_1 | f       | f      | f
+(7 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- f
-(1 row)
+grant select (i) on granttest to part_role;
+select relname, has_table_privilege('part_role', oid,'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_2         | f       | t      | f
+ granttest_1_prt_2_2_prt_1 | f       | t      | f
+ granttest_1_prt_3         | f       | t      | f
+ granttest_1_prt_3_2_prt_1 | f       | t      | f
+ granttest                 | f       | t      | f
+ granttest_1_prt_1         | f       | t      | f
+ granttest_1_prt_1_2_prt_1 | f       | t      | f
+(7 rows)
 
 grant select on granttest to part_role;
-select has_table_privilege('part_role', 'granttest'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'select');
- has_table_privilege 
----------------------
- t
-(1 row)
+select relname, has_table_privilege('part_role', oid,'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_1         | t       | t      | t
+ granttest_1_prt_1_2_prt_1 | t       | t      | t
+ granttest_1_prt_2         | t       | t      | t
+ granttest_1_prt_2_2_prt_1 | t       | t      | t
+ granttest_1_prt_3         | t       | t      | t
+ granttest_1_prt_3_2_prt_1 | t       | t      | t
+ granttest                 | t       | t      | t
+(7 rows)
 
 grant insert on granttest to part_role;
-select has_table_privilege('part_role', 'granttest'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_1         | t       | t      | t
+ granttest_1_prt_1_2_prt_1 | t       | t      | t
+ granttest_1_prt_2         | t       | t      | t
+ granttest_1_prt_2_2_prt_1 | t       | t      | t
+ granttest_1_prt_3         | t       | t      | t
+ granttest_1_prt_3_2_prt_1 | t       | t      | t
+ granttest                 | t       | t      | t
+(7 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+revoke insert on granttest from part_role;
+grant insert (j) on granttest to part_role;
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+          relname          | tabpriv | i_priv | j_priv 
+---------------------------+---------+--------+--------
+ granttest_1_prt_1         | f       | f      | t
+ granttest_1_prt_1_2_prt_1 | f       | f      | t
+ granttest_1_prt_2         | f       | f      | t
+ granttest_1_prt_2_2_prt_1 | f       | f      | t
+ granttest_1_prt_3         | f       | f      | t
+ granttest_1_prt_3_2_prt_1 | f       | f      | t
+ granttest                 | f       | f      | t
+(7 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+-- Check that when a new partition is created, it inherits the permissions
+-- from the parent.
+alter table granttest add partition newpart start(100) end (101);
+NOTICE:  CREATE TABLE will create partition "granttest_1_prt_newpart" for table "granttest"
+NOTICE:  CREATE TABLE will create partition "granttest_1_prt_newpart_2_prt_1" for table "granttest_1_prt_newpart"
+select relname, has_table_privilege('part_role', oid, 'select') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'select') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'select') as j_priv
+from pg_class where relname like 'granttest%';
+             relname             | tabpriv | i_priv | j_priv 
+---------------------------------+---------+--------+--------
+ granttest_1_prt_1               | t       | t      | t
+ granttest_1_prt_1_2_prt_1       | t       | t      | t
+ granttest_1_prt_2               | t       | t      | t
+ granttest_1_prt_2_2_prt_1       | t       | t      | t
+ granttest_1_prt_3               | t       | t      | t
+ granttest_1_prt_3_2_prt_1       | t       | t      | t
+ granttest                       | t       | t      | t
+ granttest_1_prt_newpart         | t       | t      | t
+ granttest_1_prt_newpart_2_prt_1 | t       | t      | t
+(9 rows)
 
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- t
-(1 row)
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+             relname             | tabpriv | i_priv | j_priv 
+---------------------------------+---------+--------+--------
+ granttest_1_prt_1               | f       | f      | t
+ granttest_1_prt_1_2_prt_1       | f       | f      | t
+ granttest_1_prt_2               | f       | f      | t
+ granttest_1_prt_2_2_prt_1       | f       | f      | t
+ granttest_1_prt_3               | f       | f      | t
+ granttest_1_prt_3_2_prt_1       | f       | f      | t
+ granttest                       | f       | f      | t
+ granttest_1_prt_newpart         | f       | f      | t
+ granttest_1_prt_newpart_2_prt_1 | f       | f      | t
+(9 rows)
 
 revoke all on granttest from part_role;
-select has_table_privilege('part_role', 'granttest'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_1_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_2_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
-
-select has_table_privilege('part_role', 'granttest_1_prt_3_2_prt_1'::regclass,'insert');
- has_table_privilege 
----------------------
- f
-(1 row)
+select relname, has_table_privilege('part_role', oid, 'insert') as tabpriv,
+       has_column_privilege('part_role', oid, 'i', 'insert') as i_priv,
+       has_column_privilege('part_role', oid, 'j', 'insert') as j_priv
+from pg_class where relname like 'granttest%';
+             relname             | tabpriv | i_priv | j_priv 
+---------------------------------+---------+--------+--------
+ granttest_1_prt_1               | f       | f      | f
+ granttest_1_prt_1_2_prt_1       | f       | f      | f
+ granttest_1_prt_2               | f       | f      | f
+ granttest_1_prt_2_2_prt_1       | f       | f      | f
+ granttest_1_prt_3               | f       | f      | f
+ granttest_1_prt_3_2_prt_1       | f       | f      | f
+ granttest_1_prt_newpart         | f       | f      | f
+ granttest_1_prt_newpart_2_prt_1 | f       | f      | f
+ granttest                       | f       | f      | f
+(9 rows)
 
 drop table granttest;
 drop role part_role;

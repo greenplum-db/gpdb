@@ -10,12 +10,13 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.304 2009/01/01 17:23:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/tcop/utility.c,v 1.309 2009/06/11 20:46:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
+#include "access/reloptions.h"
 #include "access/twophase.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
@@ -332,7 +333,7 @@ ProcessUtility(Node *parsetree,
 			   DestReceiver *dest,
 			   char *completionTag)
 {
-	Assert(queryString != NULL);				/* required as of 8.4 */
+	Assert(queryString != NULL);	/* required as of 8.4 */
 
 	check_xact_readonly(parsetree);
 
@@ -560,6 +561,8 @@ ProcessUtility(Node *parsetree,
 						CreateStmt *cstmt = (CreateStmt *) stmt;
 						char		relKind = RELKIND_RELATION;
 						char		relStorage = RELSTORAGE_HEAP;
+						Datum		toast_options;
+						static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
 
 						/*
 						 * If this T_CreateStmt was dispatched and we're a QE
@@ -607,7 +610,20 @@ ProcessUtility(Node *parsetree,
 
 						if (relKind != RELKIND_COMPOSITE_TYPE)
 						{
+							/* parse and validate reloptions for the toast table */
+							toast_options = transformRelOptions((Datum) 0,
+																((CreateStmt *) stmt)->options,
+																"toast",
+																validnsps,
+																true, false);
+							(void) heap_reloptions(RELKIND_TOASTVALUE,
+												   toast_options,
+												   true);
+
 							AlterTableCreateToastTable(relOid,
+													   InvalidOid,
+													   toast_options,
+													   false,
 													   cstmt->is_part_child);
 							AlterTableCreateAoSegTable(relOid,
 													   cstmt->is_part_child);
@@ -1308,7 +1324,7 @@ ProcessUtility(Node *parsetree,
 
 		case T_CreateTrigStmt:
 			{
-				Oid trigOid = CreateTrigger((CreateTrigStmt *) parsetree, InvalidOid);
+				Oid trigOid = CreateTrigger((CreateTrigStmt *) parsetree, InvalidOid, true);
 				if (Gp_role == GP_ROLE_DISPATCH)
 				{
 					((CreateTrigStmt *) parsetree)->trigOid = trigOid;
@@ -1450,6 +1466,7 @@ ProcessUtility(Node *parsetree,
 			break;
 
 		case T_LockStmt:
+
 			/*
 			 * Since the lock would just get dropped immediately, LOCK TABLE
 			 * outside a transaction block is presumed to be user error.

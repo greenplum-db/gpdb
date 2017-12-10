@@ -18,7 +18,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.47 2009/01/01 17:23:46 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/syslogger.c,v 1.51 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -314,9 +314,9 @@ SysLoggerMain(int argc, char *argv[])
 	InitializeCriticalSection(&sysloggerSection);
 	EnterCriticalSection(&sysloggerSection);
 
-    threadHandle = (HANDLE) _beginthreadex(NULL, 0, pipeThread, NULL, 0, NULL);
-    if (threadHandle == 0)
-        elog(FATAL, "could not create syslogger data transfer thread: %m");
+	threadHandle = (HANDLE) _beginthreadex(NULL, 0, pipeThread, NULL, 0, NULL);
+	if (threadHandle == 0)
+		elog(FATAL, "could not create syslogger data transfer thread: %m");
 #endif   /* WIN32 */
 
 	/*
@@ -469,6 +469,7 @@ SysLoggerMain(int argc, char *argv[])
          */
         FD_ZERO(&rfds);
         FD_SET(syslogPipe[0], &rfds);
+
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
 
@@ -2107,18 +2108,9 @@ logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directo
 
 	len = strlen(filename);
 
-	if (strchr(log_file_pattern, '%'))
-	{
-		/* treat it as a strftime pattern */
-		pg_strftime(filename + len, MAXPGPATH - len, log_file_pattern,
-				   pg_localtime(&timestamp, log_timezone));
-	}
-	else
-	{
-		/* no strftime escapes, so append timestamp to new filename */
-		snprintf(filename + len, MAXPGPATH - len, "%s.%lu",
-				 log_file_pattern, (unsigned long) timestamp);
-	}
+	/* treat it as a strftime pattern */
+	pg_strftime(filename + len, MAXPGPATH - len, log_file_pattern,
+				pg_localtime(&timestamp, log_timezone));
 
 	/*
 	 * If the logging format is 'TEXT' and the filename ends with ".csv",

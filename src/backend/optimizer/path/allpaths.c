@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.179 2009/01/01 17:23:43 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/allpaths.c,v 1.183 2009/06/11 14:48:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,9 +67,9 @@ static void set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel,
 static void set_values_pathlist(PlannerInfo *root, RelOptInfo *rel,
 					RangeTblEntry *rte);
 static void set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel,
-							 RangeTblEntry *rte);
+				 RangeTblEntry *rte);
 static void set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel,
-								   RangeTblEntry *rte);
+					   RangeTblEntry *rte);
 static RelOptInfo *make_rel_from_joinlist(PlannerInfo *root, List *joinlist);
 static Query *push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
 				   RangeTblEntry *rte, Index rti, Query *subquery);
@@ -281,19 +281,25 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		return;
 	}
 
+	/*
+	 * Test any partial indexes of rel for applicability.  We must do this
+	 * first since partial unique indexes can affect size estimates.
+	 */
+	check_partial_indexes(root, rel);
+
 	/* Mark rel with estimated output rows, width, etc */
 	set_baserel_size_estimates(root, rel);
-
-	/* Test any partial indexes of rel for applicability */
-	check_partial_indexes(root, rel);
 
 	/*
 	 * Check to see if we can extract any restriction conditions from join
 	 * quals that are OR-of-AND structures.  If so, add them to the rel's
-	 * restriction list, and recompute the size estimates.
+	 * restriction list, and redo the above steps.
 	 */
 	if (create_or_index_quals(root, rel))
+	{
+		check_partial_indexes(root, rel);
 		set_baserel_size_estimates(root, rel);
+	}
 
 	/* CDB: Attach subquery duplicate suppression info. */
 	if (root->join_info_list)
@@ -437,13 +443,13 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	/*
 	 * Initialize to compute size estimates for whole append relation.
 	 *
-	 * We handle width estimates by weighting the widths of different
-	 * child rels proportionally to their number of rows.  This is sensible
-	 * because the use of width estimates is mainly to compute the total
-	 * relation "footprint" if we have to sort or hash it.  To do this,
-	 * we sum the total equivalent size (in "double" arithmetic) and then
-	 * divide by the total rowcount estimate.  This is done separately for
-	 * the total rel width and each attribute.
+	 * We handle width estimates by weighting the widths of different child
+	 * rels proportionally to their number of rows.  This is sensible because
+	 * the use of width estimates is mainly to compute the total relation
+	 * "footprint" if we have to sort or hash it.  To do this, we sum the
+	 * total equivalent size (in "double" arithmetic) and then divide by the
+	 * total rowcount estimate.  This is done separately for the total rel
+	 * width and each attribute.
 	 *
 	 * Note: if you consider changing this logic, beware that child rels could
 	 * have zero rows and/or width, if they were excluded by constraints.
@@ -522,11 +528,11 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		}
 
 		/*
-		 * Note: we could compute appropriate attr_needed data for the
-		 * child's variables, by transforming the parent's attr_needed
-		 * through the translated_vars mapping.  However, currently there's
-		 * no need because attr_needed is only examined for base relations
-		 * not otherrels.  So we just leave the child's attr_needed empty.
+		 * Note: we could compute appropriate attr_needed data for the child's
+		 * variables, by transforming the parent's attr_needed through the
+		 * translated_vars mapping.  However, currently there's no need
+		 * because attr_needed is only examined for base relations not
+		 * otherrels.  So we just leave the child's attr_needed empty.
 		 */
 
 		/*
@@ -595,7 +601,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	rel->rows = parent_rows;
 	if (parent_rows > 0)
 	{
-		int		i;
+		int			i;
 
 		rel->width = rint(width_avg / parent_rows);
 		for (i = 0; i < nattrs; i++)
@@ -1119,8 +1125,8 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 	/*
 	 * We need to find the non-recursive term's plan, which is in the plan
-	 * level that's processing the recursive UNION, which is one level
-	 * *below* where the CTE comes from.
+	 * level that's processing the recursive UNION, which is one level *below*
+	 * where the CTE comes from.
 	 */
 	levelsup = rte->ctelevelsup;
 	if (levelsup == 0)			/* shouldn't happen */
@@ -1597,7 +1603,7 @@ compare_tlist_datatypes(List *tlist, List *colTypes,
  * of rows returned.  (This condition is vacuous for DISTINCT, because then
  * there are no non-DISTINCT output columns, so we needn't check.  But note
  * we are assuming that the qual can't distinguish values that the DISTINCT
- * operator sees as equal.  This is a bit shaky but we have no way to test
+ * operator sees as equal.	This is a bit shaky but we have no way to test
  * for the case, and it's unlikely enough that we shouldn't refuse the
  * optimization just because it could theoretically happen.)
  *

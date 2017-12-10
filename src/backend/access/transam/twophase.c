@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/backend/access/transam/twophase.c,v 1.51 2009/01/01 17:23:36 momjian Exp $
+ *		$PostgreSQL: pgsql/src/backend/access/transam/twophase.c,v 1.54 2009/06/25 19:05:52 heikki Exp $
  *
  * NOTES
  *		Each global transaction is associated with a global transaction
@@ -80,7 +80,7 @@
 #include "cdb/cdbpersistentfilesysobj.h"
 
 /* GUC variable, can't be changed after startup */
-int			max_prepared_xacts = 5;
+int			max_prepared_xacts = 0;
 
 /*
  * This struct describes one global transaction that is in prepared state
@@ -548,6 +548,13 @@ MarkAsPreparing(TransactionId xid,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("transaction identifier \"%s\" is too long (%d > %d max)",
 					 gid, idlen, GIDSIZE)));
+
+	/* fail immediately if feature is disabled */
+	if (max_prepared_xacts == 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("prepared transactions are disabled"),
+			  errhint("Set max_prepared_transactions to a nonzero value.")));
 
 	LWLockAcquire(TwoPhaseStateLock, LW_EXCLUSIVE);
 

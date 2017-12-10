@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/trigger.c,v 1.243 2009/01/01 17:23:40 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/trigger.c,v 1.248 2009/06/18 01:27:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -76,11 +76,16 @@ static void AfterTriggerSaveEvent(ResultRelInfo *relinfo, int event,
  * be made to link the trigger to that constraint.	constraintOid is zero when
  * executing a user-entered CREATE TRIGGER command.
  *
+ * If checkPermissions is true we require ACL_TRIGGER permissions on the
+ * relation.  If not, the caller already checked permissions.  (This is
+ * currently redundant with constraintOid being zero, but it's clearer to
+ * have a separate argument.)
+ *
  * Note: can return InvalidOid if we decided to not create a trigger at all,
  * but a foreign-key constraint.  This is a kluge for backwards compatibility.
  */
 Oid
-CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
+CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid, bool checkPermissions)
 {
 	int16		tgtype;
 	int2vector *tgattr;
@@ -97,7 +102,6 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 	Oid			funcoid;
 	Oid			funcrettype;
 	Oid			trigoid;
-	int			i;
 	char		constrtrigname[NAMEDATALEN];
 	char	   *trigname;
 	char	   *constrname;
@@ -119,36 +123,26 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 				 errmsg("permission denied: \"%s\" is a system catalog",
 						RelationGetRelationName(rel))));
 
+	if (stmt->isconstraint && stmt->constrrel != NULL)
+		constrrelid = RangeVarGetRelid(stmt->constrrel, false);
+
 	/* permission checks */
-
-	if (stmt->isconstraint)
+	if (checkPermissions)
 	{
-		/* constraint trigger */
-		aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
-									  ACL_REFERENCES);
-		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_CLASS,
-						   RelationGetRelationName(rel));
-
-		if (stmt->constrrel != NULL)
-		{
-			constrrelid = RangeVarGetRelid(stmt->constrrel, false);
-
-			aclresult = pg_class_aclcheck(constrrelid, GetUserId(),
-										  ACL_REFERENCES);
-			if (aclresult != ACLCHECK_OK)
-				aclcheck_error(aclresult, ACL_KIND_CLASS,
-							   get_rel_name(constrrelid));
-		}
-	}
-	else
-	{
-		/* regular trigger */
 		aclresult = pg_class_aclcheck(RelationGetRelid(rel), GetUserId(),
 									  ACL_TRIGGER);
 		if (aclresult != ACLCHECK_OK)
 			aclcheck_error(aclresult, ACL_KIND_CLASS,
 						   RelationGetRelationName(rel));
+
+		if (OidIsValid(constrrelid))
+		{
+			aclresult = pg_class_aclcheck(constrrelid, GetUserId(),
+										  ACL_TRIGGER);
+			if (aclresult != ACLCHECK_OK)
+				aclcheck_error(aclresult, ACL_KIND_CLASS,
+							   get_rel_name(constrrelid));
+		}
 	}
 
 	/* Compute tgtype */
@@ -157,50 +151,13 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 		TRIGGER_SETT_BEFORE(tgtype);
 	if (stmt->row)
 		TRIGGER_SETT_ROW(tgtype);
+	tgtype |= stmt->events;
 
-	for (i = 0; stmt->actions[i]; i++)
-	{
-		switch (stmt->actions[i])
-		{
-			case 'i':
-				if (TRIGGER_FOR_INSERT(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple INSERT events specified")));
-				TRIGGER_SETT_INSERT(tgtype);
-				break;
-			case 'd':
-				if (TRIGGER_FOR_DELETE(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple DELETE events specified")));
-				TRIGGER_SETT_DELETE(tgtype);
-				break;
-			case 'u':
-				if (TRIGGER_FOR_UPDATE(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple UPDATE events specified")));
-				TRIGGER_SETT_UPDATE(tgtype);
-				break;
-			case 't':
-				if (TRIGGER_FOR_TRUNCATE(tgtype))
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("multiple TRUNCATE events specified")));
-				TRIGGER_SETT_TRUNCATE(tgtype);
-				/* Disallow ROW-level TRUNCATE triggers */
-				if (stmt->row)
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("TRUNCATE FOR EACH ROW triggers are not supported")));
-				break;
-			default:
-				elog(ERROR, "unrecognized trigger event: %d",
-					 (int) stmt->actions[i]);
-				break;
-		}
-	}
+	/* Disallow ROW-level TRUNCATE triggers */
+	if (TRIGGER_FOR_ROW(tgtype) && TRIGGER_FOR_TRUNCATE(tgtype))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("TRUNCATE FOR EACH ROW triggers are not supported")));
 
 	/*
 	 * Find and validate the trigger function.
@@ -312,8 +269,8 @@ CreateTrigger(CreateTrigStmt *stmt, Oid constraintOid)
 	}
 
 	/*
-	 * Scan pg_trigger for existing triggers on relation.  We do this only
-	 * to give a nice error message if there's already a trigger of the same
+	 * Scan pg_trigger for existing triggers on relation.  We do this only to
+	 * give a nice error message if there's already a trigger of the same
 	 * name.  (The unique index on tgrelid/tgname would complain anyway.)
 	 *
 	 * NOTE that this is cool only because we have AccessExclusiveLock on the
@@ -659,7 +616,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 		ereport(NOTICE,
 		(errmsg("ignoring incomplete trigger group for constraint \"%s\" %s",
 				constr_name, buf.data),
-		 errdetail("%s", funcdescr[funcnum])));
+		 errdetail("%s", _(funcdescr[funcnum]))));
 		oldContext = MemoryContextSwitchTo(TopMemoryContext);
 		info = (OldTriggerInfo *) palloc0(sizeof(OldTriggerInfo));
 		info->args = copyObject(stmt->args);
@@ -675,7 +632,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 		ereport(NOTICE,
 		(errmsg("ignoring incomplete trigger group for constraint \"%s\" %s",
 				constr_name, buf.data),
-		 errdetail("%s", funcdescr[funcnum])));
+		 errdetail("%s", _(funcdescr[funcnum]))));
 	}
 	else
 	{
@@ -687,7 +644,7 @@ ConvertTriggerToFK(CreateTrigStmt *stmt, Oid funcoid)
 		ereport(NOTICE,
 				(errmsg("converting trigger group into constraint \"%s\" %s",
 						constr_name, buf.data),
-				 errdetail("%s", funcdescr[funcnum])));
+				 errdetail("%s", _(funcdescr[funcnum]))));
 		if (funcnum == 2)
 		{
 			/* This trigger is on the FK table */
@@ -907,12 +864,12 @@ RemoveTriggerById(Oid trigOid)
 
 	/*
 	 * We do not bother to try to determine whether any other triggers remain,
-	 * which would be needed in order to decide whether it's safe to clear
-	 * the relation's relhastriggers.  (In any case, there might be a
-	 * concurrent process adding new triggers.)  Instead, just force a
-	 * relcache inval to make other backends (and this one too!) rebuild
-	 * their relcache entries.  There's no great harm in leaving relhastriggers
-	 * true even if there are no triggers left.
+	 * which would be needed in order to decide whether it's safe to clear the
+	 * relation's relhastriggers.  (In any case, there might be a concurrent
+	 * process adding new triggers.)  Instead, just force a relcache inval to
+	 * make other backends (and this one too!) rebuild their relcache entries.
+	 * There's no great harm in leaving relhastriggers true even if there are
+	 * no triggers left.
 	 */
 	CacheInvalidateRelcache(rel);
 
@@ -1090,12 +1047,14 @@ renametrig(Oid relid,
 /*
  * EnableDisableTrigger()
  *
- *	Called by ALTER TABLE ENABLE/DISABLE TRIGGER
+ *	Called by ALTER TABLE ENABLE/DISABLE [ REPLICA | ALWAYS ] TRIGGER
  *	to change 'tgenabled' field for the specified trigger(s)
  *
  * rel: relation to process (caller must hold suitable lock on it)
  * tgname: trigger to process, or NULL to scan all triggers
- * enable: new value for tgenabled field
+ * fires_when: new value for tgenabled field. In addition to generic
+ *			   enablement/disablement, this also defines when the trigger
+ *			   should be fired in session replication roles.
  * skip_system: if true, skip "system" triggers (constraint triggers)
  *
  * Caller should have checked permissions for the table; here we also
@@ -1219,8 +1178,8 @@ RelationBuildTriggers(Relation relation)
 	int			i;
 
 	/*
-	 * Allocate a working array to hold the triggers (the array is extended
-	 * if necessary)
+	 * Allocate a working array to hold the triggers (the array is extended if
+	 * necessary)
 	 */
 	maxtrigs = 16;
 	triggers = (Trigger *) palloc(maxtrigs * sizeof(Trigger));
@@ -2257,8 +2216,8 @@ ExecBSTruncateTriggers(EState *estate, ResultRelInfo *relinfo)
 
 		if (newtuple)
 			ereport(ERROR,
-		 			(errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED),
-		 		  errmsg("BEFORE STATEMENT trigger cannot return a value")));
+					(errcode(ERRCODE_E_R_I_E_TRIGGER_PROTOCOL_VIOLATED),
+				  errmsg("BEFORE STATEMENT trigger cannot return a value")));
 	}
 }
 
@@ -2453,7 +2412,7 @@ typedef SetConstraintStateData *SetConstraintState;
  * Per-trigger-event data
  *
  * The actual per-event data, AfterTriggerEventData, includes DONE/IN_PROGRESS
- * status bits and one or two tuple CTIDs.  Each event record also has an
+ * status bits and one or two tuple CTIDs.	Each event record also has an
  * associated AfterTriggerSharedData that is shared across all instances
  * of similar events within a "chunk".
  *
@@ -2467,12 +2426,13 @@ typedef SetConstraintStateData *SetConstraintState;
  * Although this is mutable state, we can keep it in AfterTriggerSharedData
  * because all instances of the same type of event in a given event list will
  * be fired at the same time, if they were queued between the same firing
- * cycles.  So we need only ensure that ats_firing_id is zero when attaching
+ * cycles.	So we need only ensure that ats_firing_id is zero when attaching
  * a new event to an existing AfterTriggerSharedData record.
  */
 typedef uint32 TriggerFlags;
 
-#define AFTER_TRIGGER_OFFSET			0x0FFFFFFF /* must be low-order bits */
+#define AFTER_TRIGGER_OFFSET			0x0FFFFFFF		/* must be low-order
+														 * bits */
 #define AFTER_TRIGGER_2CTIDS			0x10000000
 #define AFTER_TRIGGER_DONE				0x20000000
 #define AFTER_TRIGGER_IN_PROGRESS		0x40000000
@@ -2513,13 +2473,13 @@ typedef struct AfterTriggerEventDataOneCtid
 /*
  * To avoid palloc overhead, we keep trigger events in arrays in successively-
  * larger chunks (a slightly more sophisticated version of an expansible
- * array).  The space between CHUNK_DATA_START and freeptr is occupied by
+ * array).	The space between CHUNK_DATA_START and freeptr is occupied by
  * AfterTriggerEventData records; the space between endfree and endptr is
  * occupied by AfterTriggerSharedData records.
  */
 typedef struct AfterTriggerEventChunk
 {
-	struct AfterTriggerEventChunk *next;	/* list link */
+	struct AfterTriggerEventChunk *next;		/* list link */
 	char	   *freeptr;		/* start of free space in chunk */
 	char	   *endfree;		/* end of free space in chunk */
 	char	   *endptr;			/* end of chunk */
@@ -2744,9 +2704,9 @@ afterTriggerAddEvent(AfterTriggerEventList *events,
 			/* check number of shared records in preceding chunk */
 			if ((chunk->endptr - chunk->endfree) <=
 				(100 * sizeof(AfterTriggerSharedData)))
-				chunksize *= 2;				/* okay, double it */
+				chunksize *= 2; /* okay, double it */
 			else
-				chunksize /= 2;				/* too many shared records */
+				chunksize /= 2; /* too many shared records */
 			chunksize = Min(chunksize, MAX_CHUNK_SIZE);
 		}
 		chunk = MemoryContextAlloc(afterTriggers->event_cxt, chunksize);
@@ -2763,8 +2723,8 @@ afterTriggerAddEvent(AfterTriggerEventList *events,
 	}
 
 	/*
-	 * Try to locate a matching shared-data record already in the chunk.
-	 * If none, make a new one.
+	 * Try to locate a matching shared-data record already in the chunk. If
+	 * none, make a new one.
 	 */
 	for (newshared = ((AfterTriggerShared) chunk->endptr) - 1;
 		 (char *) newshared >= chunk->endfree;
@@ -2779,7 +2739,7 @@ afterTriggerAddEvent(AfterTriggerEventList *events,
 	if ((char *) newshared < chunk->endfree)
 	{
 		*newshared = *evtshared;
-		newshared->ats_firing_id = 0;				/* just to be sure */
+		newshared->ats_firing_id = 0;	/* just to be sure */
 		chunk->endfree = (char *) newshared;
 	}
 
@@ -2847,6 +2807,7 @@ afterTriggerRestoreEventList(AfterTriggerEventList *events,
 		/* and clean up the tail chunk to be the right length */
 		events->tail->next = NULL;
 		events->tail->freeptr = events->tailfree;
+
 		/*
 		 * We don't make any effort to remove now-unused shared data records.
 		 * They might still be useful, anyway.
@@ -3131,7 +3092,7 @@ afterTriggerInvokeEvents(AfterTriggerEventList *events,
 					trigdesc = rInfo->ri_TrigDesc;
 					finfo = rInfo->ri_TrigFunctions;
 					instr = rInfo->ri_TrigInstrument;
-					if (trigdesc == NULL)	/* should not happen */
+					if (trigdesc == NULL)		/* should not happen */
 						elog(ERROR, "relation %u has no triggers",
 							 evtshared->ats_relid);
 				}
@@ -3206,7 +3167,7 @@ AfterTriggerBeginXact(void)
 		MemoryContextAlloc(TopTransactionContext,
 						   sizeof(AfterTriggersData));
 
-	afterTriggers->firing_counter = (CommandId) 1; /* mustn't be 0 */
+	afterTriggers->firing_counter = (CommandId) 1;		/* mustn't be 0 */
 	afterTriggers->state = SetConstraintStateCreate(8);
 	afterTriggers->events.head = NULL;
 	afterTriggers->events.tail = NULL;
@@ -3538,8 +3499,8 @@ AfterTriggerEndSubXact(bool isCommit)
 	else
 	{
 		/*
-		 * Aborting.  Release any event lists from queries being aborted,
-		 * and restore query_depth to its pre-subxact value.
+		 * Aborting.  Release any event lists from queries being aborted, and
+		 * restore query_depth to its pre-subxact value.
 		 */
 		while (afterTriggers->query_depth > afterTriggers->depth_stack[my_level])
 		{
@@ -3911,7 +3872,7 @@ AfterTriggerSetState(ConstraintsSetStmt *stmt)
 
 			/*
 			 * Make sure a snapshot has been established in case trigger
-			 * functions need one.  Note that we avoid setting a snapshot if
+			 * functions need one.	Note that we avoid setting a snapshot if
 			 * we don't find at least one trigger that has to be fired now.
 			 * This is so that BEGIN; SET CONSTRAINTS ...; SET TRANSACTION
 			 * ISOLATION LEVEL SERIALIZABLE; ... works properly.  (If we are

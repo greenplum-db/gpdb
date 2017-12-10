@@ -588,7 +588,7 @@ ArchiveEntry(Archive *AHX,
 			 const char *namespace,
 			 const char *tablespace,
 			 const char *owner, bool withOids,
-			 const char *desc, const char *defn,
+			 const char *desc, teSection section, const char *defn,
 			 const char *dropStmt, const char *copyStmt,
 			 const DumpId *deps, int nDeps,
 			 DataDumperPtr dumpFn, void *dumpArg)
@@ -611,6 +611,7 @@ ArchiveEntry(Archive *AHX,
 
 	newToc->catalogId = catalogId;
 	newToc->dumpId = dumpId;
+	newToc->section = section;
 
 	newToc->tag = strdup(tag);
 	newToc->namespace = namespace ? strdup(namespace) : NULL;

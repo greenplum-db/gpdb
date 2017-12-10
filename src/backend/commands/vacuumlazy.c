@@ -29,7 +29,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.115 2009/01/01 17:23:40 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuumlazy.c,v 1.121 2009/06/11 14:48:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -92,14 +92,22 @@
  */
 #define LAZY_ALLOC_TUPLES		MaxHeapTuplesPerPage
 
+/*
+ * Before we consider skipping a page that's marked as clean in
+ * visibility map, we must've seen at least this many clean pages.
+ */
+#define SKIP_PAGES_THRESHOLD	32
+
 typedef struct LVRelStats
 {
 	/* hasindex = true means two-pass strategy; false means one-pass */
 	bool		hasindex;
+	bool		scanned_all;	/* have we scanned all pages (this far)? */
 	/* Overall statistics about rel */
 	BlockNumber rel_pages;		/* total number of pages */
 	BlockNumber scanned_pages;	/* number of pages we examined */
 	double		scanned_tuples;	/* counts only tuples on scanned pages */
+	double		old_rel_tuples; /* previous value of pg_class.reltuples */
 	double		new_rel_tuples; /* new estimated total # of tuples */
 	BlockNumber pages_removed;
 	double		tuples_deleted;
@@ -169,6 +177,8 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	BlockNumber possibly_freeable;
 	PGRUsage	ru0;
 	TimestampTz starttime = 0;
+	bool		scan_all;		/* should we scan all pages? */
+	TransactionId freezeTableLimit;
 	bool		heldoff = false;
 
 	pg_rusage_init(&ru0);
@@ -211,8 +221,11 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	 */
 	vac_strategy = bstrategy;
 
-	vacuum_set_xid_limits(vacstmt->freeze_min_age, onerel->rd_rel->relisshared,
-						  &OldestXmin, &FreezeLimit);
+	vacuum_set_xid_limits(vacstmt->freeze_min_age, vacstmt->freeze_table_age,
+						  onerel->rd_rel->relisshared,
+						  &OldestXmin, &FreezeLimit, &freezeTableLimit);
+	scan_all = TransactionIdPrecedesOrEquals(onerel->rd_rel->relfrozenxid,
+											 freezeTableLimit);
 
 	/*
 	 * Execute the various vacuum operations. Appendonly tables are treated
@@ -233,9 +246,9 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	/* Open all indexes of the relation */
 	vac_open_indexes(onerel, RowExclusiveLock, &nindexes, &Irel);
 	vacrelstats->hasindex = (nindexes > 0);
- 
+
 	/* Do the vacuuming */
-	lazy_scan_heap(onerel, vacrelstats, Irel, nindexes, vacstmt->scan_all, updated_stats);
+	lazy_scan_heap(onerel, vacrelstats, Irel, nindexes, scan_all, updated_stats);
 
 	/* Done with indexes */
 	vac_close_indexes(nindexes, Irel, NoLock);
@@ -269,9 +282,9 @@ lazy_vacuum_rel(Relation onerel, VacuumStmt *vacstmt,
 	 * Update statistics in pg_class.  But only if we didn't skip any pages;
 	 * the tuple count only includes tuples from the pages we've visited, and
 	 * we haven't frozen tuples in unvisited pages either.  The page count is
-	 * accurate in any case, but because we use the reltuples / relpages
-	 * ratio in the planner, it's better to not update relpages either if we
-	 * can't update reltuples.
+	 * accurate in any case, but because we use the reltuples / relpages ratio
+	 * in the planner, it's better to not update relpages either if we can't
+	 * update reltuples.
 	 */
 	vac_update_relstats_from_list(onerel,
 								  vacrelstats->rel_pages, vacrelstats->new_rel_tuples,
@@ -449,6 +462,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 	int reindex_count = 1;
 	PGRUsage	ru0;
 	Buffer		vmbuffer = InvalidBuffer;
+	BlockNumber all_visible_streak;
 
 	/* Fetch gp_persistent_relation_node information that will be added to XLOG record. */
 	RelationFetchGpRelationNodeForXLog(onerel);
@@ -474,6 +488,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 
 	lazy_space_alloc(vacrelstats, nblocks);
 
+	all_visible_streak = 0;
 	for (blkno = 0; blkno < nblocks; blkno++)
 	{
 		Buffer		buf;
@@ -488,17 +503,34 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 		Size		freespace;
 		bool		all_visible_according_to_vm = false;
 		bool		all_visible;
+		bool		has_dead_tuples;
 
 		/*
-		 * Skip pages that don't require vacuuming according to the
-		 * visibility map.
+		 * Skip pages that don't require vacuuming according to the visibility
+		 * map. But only if we've seen a streak of at least
+		 * SKIP_PAGES_THRESHOLD pages marked as clean. Since we're reading
+		 * sequentially, the OS should be doing readahead for us and there's
+		 * no gain in skipping a page now and then. You need a longer run of
+		 * consecutive skipped pages before it's worthwhile. Also, skipping
+		 * even a single page means that we can't update relfrozenxid or
+		 * reltuples, so we only want to do it if there's a good chance to
+		 * skip a goodly number of pages.
 		 */
 		if (!scan_all)
 		{
 			all_visible_according_to_vm =
 				visibilitymap_test(onerel, blkno, &vmbuffer);
 			if (all_visible_according_to_vm)
-				continue;
+			{
+				all_visible_streak++;
+				if (all_visible_streak >= SKIP_PAGES_THRESHOLD)
+				{
+					vacrelstats->scanned_all = false;
+					continue;
+				}
+			}
+			else
+				all_visible_streak = 0;
 		}
 
 		vacuum_delay_point();
@@ -637,6 +669,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 		 * requiring freezing.
 		 */
 		all_visible = true;
+		has_dead_tuples = false;
 		nfrozen = 0;
 		hastup = false;
 		prev_dead_count = vacrelstats->num_dead_tuples;
@@ -736,9 +769,10 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 							all_visible = false;
 							break;
 						}
+
 						/*
-						 * The inserter definitely committed. But is it
-						 * old enough that everyone sees it as committed?
+						 * The inserter definitely committed. But is it old
+						 * enough that everyone sees it as committed?
 						 */
 						xmin = HeapTupleHeaderGetXmin(tuple.t_data);
 						if (!TransactionIdPrecedes(xmin, OldestXmin))
@@ -790,6 +824,7 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 			{
 				lazy_record_dead_tuple(vacrelstats, &(tuple.t_self));
 				tups_vacuumed += 1;
+				has_dead_tuples = true;
 			}
 			else
 			{
@@ -834,6 +869,8 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 		{
 			/* Remove tuples from heap */
 			lazy_vacuum_page(onerel, blkno, buf, 0, vacrelstats);
+			has_dead_tuples = false;
+
 			/* Forget the now-vacuumed tuples, and press on */
 			vacrelstats->num_dead_tuples = 0;
 			vacuumed_pages++;
@@ -847,9 +884,22 @@ lazy_scan_heap(Relation onerel, LVRelStats *vacrelstats,
 			PageSetAllVisible(page);
 			MarkBufferDirty(buf);
 		}
-		else if (PageIsAllVisible(page) && !all_visible)
+		/*
+		 * It's possible for the value returned by GetOldestXmin() to move
+		 * backwards, so it's not wrong for us to see tuples that appear to
+		 * not be visible to everyone yet, while PD_ALL_VISIBLE is already
+		 * set. The real safe xmin value never moves backwards, but
+		 * GetOldestXmin() is conservative and sometimes returns a value
+		 * that's unnecessarily small, so if we see that contradiction it
+		 * just means that the tuples that we think are not visible to
+		 * everyone yet actually are, and the PD_ALL_VISIBLE flag is correct.
+		 *
+		 * There should never be dead tuples on a page with PD_ALL_VISIBLE
+		 * set, however.
+		 */
+		else if (PageIsAllVisible(page) && has_dead_tuples)
 		{
-			elog(WARNING, "PD_ALL_VISIBLE flag was incorrectly set in relation \"%s\" page %u",
+			elog(WARNING, "page containing dead tuples is marked as all-visible in relation \"%s\" page %u",
 				 relname, blkno);
 			PageClearAllVisible(page);
 			MarkBufferDirty(buf);
@@ -1097,9 +1147,10 @@ lazy_vacuum_index(Relation indrel,
 
 	ivinfo.index = indrel;
 	ivinfo.vacuum_full = false;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = true;
 	ivinfo.message_level = elevel;
-	/* We don't yet know rel_tuples, so pass -1 */
-	ivinfo.num_heap_tuples = -1;
+	ivinfo.num_heap_tuples = vacrelstats->old_rel_tuples;
 	ivinfo.strategy = vac_strategy;
 
 	/* Do bulk deletion */
@@ -1129,6 +1180,8 @@ lazy_cleanup_index(Relation indrel,
 
 	ivinfo.index = indrel;
 	ivinfo.vacuum_full = false;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = !vacrelstats->scanned_all;
 	ivinfo.message_level = elevel;
 	ivinfo.num_heap_tuples = vacrelstats->new_rel_tuples;
 	ivinfo.strategy = vac_strategy;
@@ -1138,11 +1191,15 @@ lazy_cleanup_index(Relation indrel,
 	if (!stats)
 		return;
 
-	/* now update statistics in pg_class */
-	vac_update_relstats_from_list(indrel,
-						stats->num_pages, stats->num_index_tuples,
-						false, InvalidTransactionId,
-						updated_stats);
+	/*
+	 * Now update statistics in pg_class, but only if the index says the count
+	 * is accurate.
+	 */
+	if (!stats->estimated_count)
+		vac_update_relstats_from_list(indrel,
+							stats->num_pages, stats->num_index_tuples,
+							false, InvalidTransactionId,
+							updated_stats);
 
 	ereport(elevel,
 			(errmsg("index \"%s\" now contains %.0f row versions in %u pages",

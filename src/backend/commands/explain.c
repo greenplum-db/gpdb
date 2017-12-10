@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.184 2009/01/02 20:42:00 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/explain.c,v 1.186 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -100,7 +100,7 @@ static void explain_outNode(StringInfo str,
 				Plan *outer_plan, Plan *parentPlan,
 				int indent, ExplainState *es);
 static void show_plan_tlist(Plan *plan,
-							StringInfo str, int indent, ExplainState *es);
+				StringInfo str, int indent, ExplainState *es);
 static void show_scan_qual(List *qual, const char *qlabel,
 			   int scanrelid, Plan *scan_plan, Plan *outer_plan,
 			   StringInfo str, int indent, ExplainState *es);
@@ -1661,8 +1661,8 @@ explain_outNode(StringInfo str,
                  * for now, just omit the slice id.
                  */
             }
-
             appendStringInfoChar(str, '\n');
+
 			for (i = 0; i < indent; i++)
 				appendStringInfo(str, "  ");
 			appendStringInfo(str, "    ->  ");

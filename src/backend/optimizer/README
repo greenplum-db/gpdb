@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/backend/optimizer/README,v 1.48 2008/08/14 18:47:59 tgl Exp $
+$PostgreSQL: pgsql/src/backend/optimizer/README,v 1.49 2009/02/27 22:41:37 tgl Exp $
 
 Optimizer
 =========
@@ -238,7 +238,7 @@ required on each side of the join to form the outer join.  Note that
 these are minimums; there's no explicit maximum, since joining other
 rels to the OJ's syntactic rels may be legal.  Per identities 1 and 2,
 non-FULL joins can be freely associated into the lefthand side of an
-OJ, but in general they can't be associated into the righthand side.
+OJ, but in some cases they can't be associated into the righthand side.
 So the restriction enforced by join_is_legal is that a proposed join
 can't join a rel within or partly within an RHS boundary to one outside
 the boundary, unless the join validly implements some outer join.

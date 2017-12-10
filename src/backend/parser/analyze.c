@@ -19,13 +19,14 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- *	$PostgreSQL: pgsql/src/backend/parser/analyze.c,v 1.386 2009/01/01 17:23:45 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/parser/analyze.c,v 1.389 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 
 #include "postgres.h"
 
+#include "access/sysattr.h"
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -103,7 +104,7 @@ static Query *transformSelectStmt(ParseState *pstate, SelectStmt *stmt);
 static Query *transformValuesClause(ParseState *pstate, SelectStmt *stmt);
 static Query *transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt);
 static Node *transformSetOperationTree(ParseState *pstate, SelectStmt *stmt,
-									   List **colInfo);
+						  List **colInfo);
 static Node *transformSetOperationTree_internal(ParseState *pstate, SelectStmt *stmt,
 												setop_types_ctx *setop_types);
 static void coerceSetOpTypes(ParseState *pstate, Node *sop, List *coltypes, List *coltypmods,
@@ -115,7 +116,7 @@ static Query *transformDeclareCursorStmt(ParseState *pstate,
 static Query *transformExplainStmt(ParseState *pstate,
 					 ExplainStmt *stmt);
 static void transformLockingClause(ParseState *pstate,
-								   Query *qry, LockingClause *lc);
+					   Query *qry, LockingClause *lc);
 static bool check_parameter_resolution_walker(Node *node, ParseState *pstate);
 
 static void setQryDistributionPolicy(SelectStmt *stmt, Query *qry);
@@ -148,7 +149,7 @@ parse_analyze(Node *parseTree, const char *sourceText,
 	ParseState *pstate = make_parsestate(NULL);
 	Query	   *query;
 
-	Assert(sourceText != NULL);				/* required as of 8.4 */
+	Assert(sourceText != NULL); /* required as of 8.4 */
 
 	pstate->p_sourcetext = sourceText;
 	pstate->p_paramtypes = paramTypes;
@@ -176,7 +177,7 @@ parse_analyze_varparams(Node *parseTree, const char *sourceText,
 	ParseState *pstate = make_parsestate(NULL);
 	Query	   *query;
 
-	Assert(sourceText != NULL);				/* required as of 8.4 */
+	Assert(sourceText != NULL); /* required as of 8.4 */
 
 	pstate->p_sourcetext = sourceText;
 	pstate->p_paramtypes = *paramTypes;
@@ -293,12 +294,16 @@ transformStmt(ParseState *pstate, Node *parseTree)
  *		Returns true if a snapshot must be set before doing parse analysis
  *		on the given raw parse tree.
  *
- * Classification here should match transformStmt().
+ * Classification here should match transformStmt(); but we also have to
+ * allow a NULL input (for Parse/Bind of an empty query string).
  */
 bool
 analyze_requires_snapshot(Node *parseTree)
 {
 	bool		result;
+
+	if (parseTree == NULL)
+		return false;
 
 	switch (nodeTag(parseTree))
 	{
@@ -321,6 +326,7 @@ analyze_requires_snapshot(Node *parseTree)
 			break;
 
 		case T_ExplainStmt:
+
 			/*
 			 * We only need a snapshot in varparams case, but it doesn't seem
 			 * worth complicating this function's API to distinguish that.
@@ -514,6 +520,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		 * bugs of just that nature...)
 		 */
 		sub_pstate->p_rtable = sub_rtable;
+		sub_pstate->p_joinexprs = NIL;	/* sub_rtable has no joins */
 		sub_pstate->p_relnamespace = sub_relnamespace;
 		sub_pstate->p_varnamespace = sub_varnamespace;
 
@@ -531,7 +538,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("INSERT ... SELECT cannot specify INTO"),
 					 parser_errposition(pstate,
-										exprLocation((Node *) selectQuery->intoClause))));
+						   exprLocation((Node *) selectQuery->intoClause))));
 
 		/*
 		 * Make the source be a subquery in the INSERT's rangetable, and add
@@ -628,7 +635,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("VALUES must not contain table references"),
 					 parser_errposition(pstate,
-										locate_var_of_level((Node *) exprsLists, 0))));
+							  locate_var_of_level((Node *) exprsLists, 0))));
 
 		/*
 		 * Another thing we can't currently support is NEW/OLD references in
@@ -643,7 +650,7 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 					 errmsg("VALUES must not contain OLD or NEW references"),
 					 errhint("Use SELECT ... UNION ALL ... instead."),
 					 parser_errposition(pstate,
-										locate_var_of_level((Node *) exprsLists, 0))));
+							  locate_var_of_level((Node *) exprsLists, 0))));
 
 		/*
 		 * Generate the VALUES RTE
@@ -692,7 +699,9 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 
 	/*
 	 * Generate query's target list using the computed list of expressions.
+	 * Also, mark all the target columns as needing insert permissions.
 	 */
+	rte = pstate->p_target_rangetblentry;
 	qry->targetList = NIL;
 	icols = list_head(icolumns);
 	attnos = list_head(attrnos);
@@ -700,16 +709,21 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 	{
 		Expr	   *expr = (Expr *) lfirst(lc);
 		ResTarget  *col;
+		AttrNumber	attr_num;
 		TargetEntry *tle;
 
 		col = (ResTarget *) lfirst(icols);
 		Assert(IsA(col, ResTarget));
+		attr_num = (AttrNumber) lfirst_int(attnos);
 
 		tle = makeTargetEntry(expr,
-							  (AttrNumber) lfirst_int(attnos),
+							  attr_num,
 							  col->name,
 							  false);
 		qry->targetList = lappend(qry->targetList, tle);
+
+		rte->modifiedCols = bms_add_member(rte->modifiedCols,
+							  attr_num - FirstLowInvalidHeapAttributeNumber);
 
 		icols = lnext(icols);
 		attnos = lnext(attnos);
@@ -785,7 +799,7 @@ transformInsertRow(ParseState *pstate, List *exprlist,
 				 errmsg("INSERT has more expressions than target columns"),
 				 parser_errposition(pstate,
 									exprLocation(list_nth(exprlist,
-														  list_length(icolumns))))));
+												  list_length(icolumns))))));
 	if (stmtcols != NIL &&
 		list_length(exprlist) < list_length(icolumns))
 		ereport(ERROR,
@@ -793,7 +807,7 @@ transformInsertRow(ParseState *pstate, List *exprlist,
 				 errmsg("INSERT has more target columns than expressions"),
 				 parser_errposition(pstate,
 									exprLocation(list_nth(icolumns,
-														  list_length(exprlist))))));
+												  list_length(exprlist))))));
 
 	/*
 	 * Prepare columns for assignment to target table.
@@ -1507,9 +1521,9 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 
 	/*
 	 * Transform sorting/grouping stuff.  Do ORDER BY first because both
-	 * transformGroupClause and transformDistinctClause need the results.
-	 * Note that these functions can also change the targetList, so it's
-	 * passed to them by reference.
+	 * transformGroupClause and transformDistinctClause need the results. Note
+	 * that these functions can also change the targetList, so it's passed to
+	 * them by reference.
 	 */
 	qry->sortClause = transformSortClause(pstate,
 										  stmt->sortClause,
@@ -1819,7 +1833,7 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("VALUES must not contain table references"),
 				 parser_errposition(pstate,
-									locate_var_of_level((Node *) newExprsLists, 0))));
+						   locate_var_of_level((Node *) newExprsLists, 0))));
 
 	/*
 	 * Another thing we can't currently support is NEW/OLD references in rules
@@ -1834,7 +1848,7 @@ transformValuesClause(ParseState *pstate, SelectStmt *stmt)
 				 errmsg("VALUES must not contain OLD or NEW references"),
 				 errhint("Use SELECT ... UNION ALL ... instead."),
 				 parser_errposition(pstate,
-									locate_var_of_level((Node *) newExprsLists, 0))));
+						   locate_var_of_level((Node *) newExprsLists, 0))));
 
 	qry->rtable = pstate->p_rtable;
 	qry->jointree = makeFromExpr(pstate->p_joinlist, NULL);
@@ -1878,8 +1892,8 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	List	   *targetvars,
 			   *targetnames,
 			   *sv_relnamespace,
-			   *sv_varnamespace,
-			   *sv_rtable;
+			   *sv_varnamespace;
+	int			sv_rtable_length;
 	RangeTblEntry *jrte;
 	int			tllen;
 
@@ -2015,15 +2029,14 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	 * "ORDER BY upper(foo)" will draw the right error message rather than
 	 * "foo not found".
 	 */
-	jrte = addRangeTableEntryForJoin(NULL,
+	sv_rtable_length = list_length(pstate->p_rtable);
+
+	jrte = addRangeTableEntryForJoin(pstate,
 									 targetnames,
 									 JOIN_INNER,
 									 targetvars,
 									 NULL,
 									 false);
-
-	sv_rtable = pstate->p_rtable;
-	pstate->p_rtable = list_make1(jrte);
 
 	sv_relnamespace = pstate->p_relnamespace;
 	pstate->p_relnamespace = NIL;		/* no qualified names allowed */
@@ -2046,7 +2059,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 										  false /* no unknowns expected */,
                                           false /* allow SQL92 rules */ );
 
-	pstate->p_rtable = sv_rtable;
+	pstate->p_rtable = list_truncate(pstate->p_rtable, sv_rtable_length);
 	pstate->p_relnamespace = sv_relnamespace;
 	pstate->p_varnamespace = sv_varnamespace;
 
@@ -2057,7 +2070,7 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 				 errdetail("Only result column names can be used, not expressions or functions."),
 				 errhint("Add the expression/function to every SELECT, or move the UNION into a FROM clause."),
 				 parser_errposition(pstate,
-									exprLocation(list_nth(qry->targetList, tllen)))));
+						   exprLocation(list_nth(qry->targetList, tllen)))));
 
 	qry->limitOffset = transformLimitClause(pstate, limitOffset,
 											EXPR_KIND_OFFSET, "OFFSET");
@@ -2330,7 +2343,7 @@ transformSetOperationTree_internal(ParseState *pstate, SelectStmt *stmt,
 						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
 						 errmsg("UNION/INTERSECT/EXCEPT member statement cannot refer to other relations of same query level"),
 						 parser_errposition(pstate,
-											locate_var_of_level((Node *) selectQuery, 1))));
+							 locate_var_of_level((Node *) selectQuery, 1))));
 		}
 
 		/*
@@ -2647,6 +2660,7 @@ static Query *
 transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 {
 	Query	   *qry = makeNode(Query);
+	RangeTblEntry *target_rte;
 	Node	   *qual;
 	ListCell   *origTargetList;
 	ListCell   *tl;
@@ -2715,6 +2729,7 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 		pstate->p_next_resno = pstate->p_target_relation->rd_rel->relnatts + 1;
 
 	/* Prepare non-junk columns for assignment to target table */
+	target_rte = pstate->p_target_rangetblentry;
 	origTargetList = list_head(stmt->targetList);
 
 	foreach(tl, qry->targetList)
@@ -2754,6 +2769,10 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 							  attrno,
 							  origTarget->indirection,
 							  origTarget->location);
+
+		/* Mark the target column as requiring update permissions */
+		target_rte->modifiedCols = bms_add_member(target_rte->modifiedCols,
+								attrno - FirstLowInvalidHeapAttributeNumber);
 
 		origTargetList = lnext(origTargetList);
 	}
@@ -2798,8 +2817,8 @@ transformReturningList(ParseState *pstate, List *returningList)
 	/* no new relation references please */
 	if (list_length(pstate->p_rtable) != length_rtable)
 	{
-		int		vlocation = -1;
-		int		relid;
+		int			vlocation = -1;
+		int			relid;
 
 		/* try to locate such a reference to point to */
 		for (relid = length_rtable + 1; relid <= list_length(pstate->p_rtable); relid++)
@@ -2810,7 +2829,7 @@ transformReturningList(ParseState *pstate, List *returningList)
 		}
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		  errmsg("RETURNING cannot contain references to other relations"),
+			errmsg("RETURNING cannot contain references to other relations"),
 				 parser_errposition(pstate, vlocation)));
 	}
 
@@ -3017,10 +3036,10 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc)
 					{
 						/*
 						 * We allow FOR UPDATE/SHARE of a WITH query to be
-						 * propagated into the WITH, but it doesn't seem
-						 * very sane to allow this for a reference to an
-						 * outer-level WITH.  And it definitely wouldn't
-						 * work for a self-reference, since we're not done
+						 * propagated into the WITH, but it doesn't seem very
+						 * sane to allow this for a reference to an
+						 * outer-level WITH.  And it definitely wouldn't work
+						 * for a self-reference, since we're not done
 						 * analyzing the CTE anyway.
 						 */
 						CommonTableExpr *cte;
@@ -3089,19 +3108,19 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc)
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 									 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to a join"),
-									 parser_errposition(pstate, thisrel->location)));
+							 parser_errposition(pstate, thisrel->location)));
 							break;
 						case RTE_SPECIAL:
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 									 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to NEW or OLD"),
-									 parser_errposition(pstate, thisrel->location)));
+							 parser_errposition(pstate, thisrel->location)));
 							break;
 						case RTE_FUNCTION:
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 									 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to a function"),
-									 parser_errposition(pstate, thisrel->location)));
+							 parser_errposition(pstate, thisrel->location)));
 							break;
 						case RTE_TABLEFUNCTION:
 							ereport(ERROR,
@@ -3112,7 +3131,7 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc)
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 									 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to VALUES"),
-									 parser_errposition(pstate, thisrel->location)));
+							 parser_errposition(pstate, thisrel->location)));
 							break;
 						case RTE_CTE:
 							{
@@ -3129,14 +3148,14 @@ transformLockingClause(ParseState *pstate, Query *qry, LockingClause *lc)
 
 								if (rte->ctelevelsup > 0 || rte->self_reference)
 									ereport(ERROR,
-											(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-											 errmsg("SELECT FOR UPDATE/SHARE cannot be applied to an outer-level WITH query"),
-											 parser_errposition(pstate, thisrel->location)));
+									 (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									  errmsg("SELECT FOR UPDATE/SHARE cannot be applied to an outer-level WITH query"),
+									  parser_errposition(pstate, thisrel->location)));
 								cte = GetCTEForRTE(pstate, rte, -1);
 								/* should be analyzed by now */
 								Assert(IsA(cte->ctequery, Query));
 								transformLockingClause(pstate,
-													   (Query *) cte->ctequery,
+													 (Query *) cte->ctequery,
 													   allrels);
 							}
 							break;

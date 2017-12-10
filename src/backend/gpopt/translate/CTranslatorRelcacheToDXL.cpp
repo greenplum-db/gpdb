@@ -528,7 +528,7 @@ CTranslatorRelcacheToDXL::CheckUnsupportedRelation
 	List *plPartKeys = gpdb::PlPartitionAttrs(oidRel);
 	ULONG ulLevels = gpdb::UlListLength(plPartKeys);
 
-	if (0 == ulLevels && gpdb::FHasSubclass(oidRel))
+	if (0 == ulLevels && gpdb::FHasSubclassSlow(oidRel))
 	{
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Inherited tables"));
 	}

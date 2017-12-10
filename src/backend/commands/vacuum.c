@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.384 2009/01/01 17:23:40 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/vacuum.c,v 1.389 2009/06/11 14:48:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,6 +85,7 @@
 #include "utils/tqual.h"
 
 #include "access/distributedlog.h"
+#include "catalog/pg_inherits_fn.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "nodes/makefuncs.h"     /* makeRangeVar */
@@ -95,6 +96,7 @@
  * GUC parameters
  */
 int			vacuum_freeze_min_age;
+int			vacuum_freeze_table_age;
 
 /*
  * VacPage structures keep track of each page on which we find useful
@@ -1470,7 +1472,7 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
 			else if (rel_is_child_partition(relid))
 			{
 				/* get my children */
-				prels = find_all_inheritors(relid);
+				prels = find_all_inheritors(relid, NoLock);
 			}
 
 			/* Make a relation list entry for this relation */
@@ -1609,9 +1611,12 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, const char *stmttype)
  * vacuum_set_xid_limits() -- compute oldest-Xmin and freeze cutoff points
  */
 void
-vacuum_set_xid_limits(int freeze_min_age, bool sharedRel,
+vacuum_set_xid_limits(int freeze_min_age,
+					  int freeze_table_age,
+					  bool sharedRel,
 					  TransactionId *oldestXmin,
-					  TransactionId *freezeLimit)
+					  TransactionId *freezeLimit,
+					  TransactionId *freezeTableLimit)
 {
 	int			freezemin;
 	TransactionId limit;
@@ -1667,6 +1672,34 @@ vacuum_set_xid_limits(int freeze_min_age, bool sharedRel,
 	}
 
 	*freezeLimit = limit;
+
+	if (freezeTableLimit != NULL)
+	{
+		int			freezetable;
+
+		/*
+		 * Determine the table freeze age to use: as specified by the caller,
+		 * or vacuum_freeze_table_age, but in any case not more than
+		 * autovacuum_freeze_max_age * 0.95, so that if you have e.g nightly
+		 * VACUUM schedule, the nightly VACUUM gets a chance to freeze tuples
+		 * before anti-wraparound autovacuum is launched.
+		 */
+		freezetable = freeze_min_age;
+		if (freezetable < 0)
+			freezetable = vacuum_freeze_table_age;
+		freezetable = Min(freezetable, autovacuum_freeze_max_age * 0.95);
+		Assert(freezetable >= 0);
+
+		/*
+		 * Compute the cutoff XID, being careful not to generate a "permanent"
+		 * XID.
+		 */
+		limit = ReadNewTransactionId() - freezetable;
+		if (!TransactionIdIsNormal(limit))
+			limit = FirstNormalTransactionId;
+
+		*freezeTableLimit = limit;
+	}
 }
 
 
@@ -2659,8 +2692,9 @@ full_vacuum_rel(Relation onerel, VacuumStmt *vacstmt, List *updated_stats)
 	bool		heldoff = false;
 	bool update_relstats = true;
 
-	vacuum_set_xid_limits(vacstmt->freeze_min_age, onerel->rd_rel->relisshared,
-						  &OldestXmin, &FreezeLimit);
+	vacuum_set_xid_limits(vacstmt->freeze_min_age, vacstmt->freeze_table_age,
+						  onerel->rd_rel->relisshared,
+						  &OldestXmin, &FreezeLimit, NULL);
 
 	/*
 	 * Flush any previous async-commit transactions.  This does not guarantee
@@ -3356,13 +3390,13 @@ scan_heap(VRelStats *vacrelstats, Relation onerel,
 		/*
 		 * Add the page to vacuum_pages if it requires reaping, and add it to
 		 * fraged_pages if it has a useful amount of free space.  "Useful"
-		 * means enough for a minimal-sized tuple.  But we don't know that
+		 * means enough for a minimal-sized tuple.	But we don't know that
 		 * accurately near the start of the relation, so add pages
 		 * unconditionally if they have >= BLCKSZ/10 free space.  Also
 		 * forcibly add pages with no live tuples, to avoid confusing the
 		 * empty_end_pages logic.  (In the presence of unreasonably small
-		 * fillfactor, it seems possible that such pages might not pass
-		 * the free-space test, but they had better be in the list anyway.)
+		 * fillfactor, it seems possible that such pages might not pass the
+		 * free-space test, but they had better be in the list anyway.)
 		 */
 		do_frag = (vacpage->free >= min_tlen || vacpage->free >= BLCKSZ / 10 ||
 				   notup);
@@ -3884,7 +3918,7 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 					/* assume block# is OK (see heap_fetch comments) */
 					nextBuf = ReadBufferExtended(onerel, MAIN_FORKNUM,
 										 ItemPointerGetBlockNumber(&nextTid),
-										 RBM_NORMAL, vac_strategy);
+												 RBM_NORMAL, vac_strategy);
 					nextPage = BufferGetPage(nextBuf);
 					/* If bogus or unused slot, assume tp is end of chain */
 					nextOffnum = ItemPointerGetOffsetNumber(&nextTid);
@@ -4030,7 +4064,7 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 					tp.t_self = vtlp->this_tid;
 					Pbuf = ReadBufferExtended(onerel, MAIN_FORKNUM,
 									 ItemPointerGetBlockNumber(&(tp.t_self)),
-									 RBM_NORMAL, vac_strategy);
+											  RBM_NORMAL, vac_strategy);
 					Ppage = BufferGetPage(Pbuf);
 					Pitemid = PageGetItemId(Ppage,
 								   ItemPointerGetOffsetNumber(&(tp.t_self)));
@@ -4114,7 +4148,7 @@ repair_frag(VRelStats *vacrelstats, Relation onerel,
 					tuple.t_self = vtmove[ti].tid;
 					Cbuf = ReadBufferExtended(onerel, MAIN_FORKNUM,
 								  ItemPointerGetBlockNumber(&(tuple.t_self)),
-								  RBM_NORMAL, vac_strategy);
+											  RBM_NORMAL, vac_strategy);
 
 					/* Get page to move to */
 					dst_buffer = ReadBufferExtended(onerel, MAIN_FORKNUM,
@@ -4831,6 +4865,8 @@ scan_index(Relation indrel, double num_tuples, List *updated_stats, bool isfull,
 
 	ivinfo.index = indrel;
 	ivinfo.vacuum_full = isfull;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = false;
 	ivinfo.message_level = elevel;
 	ivinfo.num_heap_tuples = num_tuples;
 	ivinfo.strategy = vac_strategy;
@@ -4840,10 +4876,14 @@ scan_index(Relation indrel, double num_tuples, List *updated_stats, bool isfull,
 	if (!stats)
 		return;
 
-	/* now update statistics in pg_class */
-	vac_update_relstats_from_list(indrel,
-						stats->num_pages, stats->num_index_tuples,
-						false, InvalidTransactionId, updated_stats);
+	/*
+	 * Now update statistics in pg_class, but only if the index says the count
+	 * is accurate.
+	 */
+	if (!stats->estimated_count)
+		vac_update_relstats_from_list(indrel,
+							stats->num_pages, stats->num_index_tuples,
+							false, InvalidTransactionId, updated_stats);
 
 	ereport(elevel,
 			(errmsg("index \"%s\" now contains %.0f row versions in %u pages",
@@ -4859,7 +4899,9 @@ scan_index(Relation indrel, double num_tuples, List *updated_stats, bool isfull,
 	 * Check for tuple count mismatch.	If the index is partial, then it's OK
 	 * for it to have fewer tuples than the heap; else we got trouble.
 	 */
-	if (check_stats && stats->num_index_tuples != num_tuples)
+	if (check_stats &&
+		!stats->estimated_count &&
+		stats->num_index_tuples != num_tuples)
 	{
 		if (stats->num_index_tuples > num_tuples ||
 			!vac_is_partial_index(indrel))
@@ -4958,6 +5000,8 @@ vacuum_index(VacPageList vacpagelist, Relation indrel,
 
 	ivinfo.index = indrel;
 	ivinfo.vacuum_full = true;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = false;
 	ivinfo.message_level = elevel;
 	ivinfo.num_heap_tuples = num_tuples + keep_tuples;
 	ivinfo.strategy = vac_strategy;
@@ -4971,8 +5015,12 @@ vacuum_index(VacPageList vacpagelist, Relation indrel,
 	if (!stats)
 		return;
 
-	/* now update statistics in pg_class */
-	vac_update_relstats_from_list(indrel,
+	/*
+	 * Now update statistics in pg_class, but only if the index says the count
+	 * is accurate.
+	 */
+	if (!stats->estimated_count)
+		vac_update_relstats_from_list(indrel,
 						stats->num_pages, stats->num_index_tuples,
 						false, InvalidTransactionId, updated_stats);
 
@@ -4992,7 +5040,9 @@ vacuum_index(VacPageList vacpagelist, Relation indrel,
 	 * Check for tuple count mismatch.	If the index is partial, then it's OK
 	 * for it to have fewer tuples than the heap; else we got trouble.
 	 */
-	if (check_stats && stats->num_index_tuples != num_tuples + keep_tuples)
+	if (check_stats &&
+		!stats->estimated_count &&
+		stats->num_index_tuples != num_tuples + keep_tuples)
 	{
 		if (stats->num_index_tuples > num_tuples + keep_tuples ||
 			!vac_is_partial_index(indrel))
@@ -5403,7 +5453,7 @@ PageGetFreeSpaceWithFillFactor(Relation relation, Page page)
 {
 	/*
 	 * It is correct to use PageGetExactFreeSpace() here, *not*
-	 * PageGetHeapFreeSpace().  This is because (a) we do our own, exact
+	 * PageGetHeapFreeSpace().	This is because (a) we do our own, exact
 	 * accounting for whether line pointers must be added, and (b) we will
 	 * recycle any LP_DEAD line pointers before starting to add rows to a
 	 * page, but that may not have happened yet at the time this function is

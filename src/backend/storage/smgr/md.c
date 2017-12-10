@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.143 2009/01/01 17:23:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/smgr/md.c,v 1.148 2009/06/26 20:29:04 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -138,7 +138,7 @@ static MemoryContext MdCxt;		/* context for all md.c allocations */
 typedef struct
 {
 	RelFileNode rnode;			/* the targeted relation */
-	ForkNumber forknum;
+	ForkNumber	forknum;
 	BlockNumber segno;			/* which segment */
 } PendingOperationTag;
 
@@ -179,11 +179,11 @@ static void register_dirty_segment(SMgrRelation reln, ForkNumber forknum,
 static void register_unlink(RelFileNode rnode);
 static MdfdVec *_fdvec_alloc(void);
 static MdfdVec *_mdfd_openseg(SMgrRelation reln, ForkNumber forkno,
-							  BlockNumber segno, int oflags);
+			  BlockNumber segno, int oflags);
 static MdfdVec *_mdfd_getseg(SMgrRelation reln, ForkNumber forkno,
 			 BlockNumber blkno, bool isTemp, ExtensionBehavior behavior);
 static BlockNumber _mdnblocks(SMgrRelation reln, ForkNumber forknum,
-							  MdfdVec *seg);
+		   MdfdVec *seg);
 
 
 /*
@@ -221,7 +221,22 @@ mdinit(void)
 }
 
 /*
- *  mdexists() -- Does the physical file exist?
+ * In archive recovery, we rely on bgwriter to do fsyncs, but we will have
+ * already created the pendingOpsTable during initialization of the startup
+ * process.  Calling this function drops the local pendingOpsTable so that
+ * subsequent requests will be forwarded to bgwriter.
+ */
+void
+SetForwardFsyncRequests(void)
+{
+	/* Perform any pending ops we may have queued up */
+	if (pendingOpsTable)
+		mdsync();
+	pendingOpsTable = NULL;
+}
+
+/*
+ *	mdexists() -- Does the physical file exist?
  *
  * Note: this will return true for lingering files, with pending deletions
  */
@@ -229,8 +244,8 @@ bool
 mdexists(SMgrRelation reln, ForkNumber forkNum)
 {
 	/*
-	 * Close it first, to ensure that we notice if the fork has been
-	 * unlinked since we opened it.
+	 * Close it first, to ensure that we notice if the fork has been unlinked
+	 * since we opened it.
 	 */
 	mdclose(reln, forkNum);
 
@@ -472,8 +487,8 @@ mdunlink(RelFileNode rnode, ForkNumber forkNum, bool isRedo)
 				if (errno != ENOENT)
 					ereport(WARNING,
 							(errcode_for_file_access(),
-							 errmsg("could not remove segment %u of relation %s: %m",
-									segno, path)));
+					 errmsg("could not remove segment %u of relation %s: %m",
+							segno, path)));
 				break;
 			}
 		}
@@ -694,7 +709,8 @@ mdextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 
 	v = _mdfd_getseg(reln, forknum, blocknum, isTemp, EXTENSION_CREATE);
 
-	seekpos = (off_t) BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE));
+	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
+
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
 if (forknum == MAIN_FORKNUM)
@@ -888,7 +904,7 @@ mdclose(SMgrRelation reln, ForkNumber forknum)
 	if (v == NULL)
 		return;
 
-	reln->md_fd[forknum] = NULL;			/* prevent dangling pointer after error */
+	reln->md_fd[forknum] = NULL;	/* prevent dangling pointer after error */
 
 	while (v != NULL)
 	{
@@ -906,6 +922,30 @@ mdclose(SMgrRelation reln, ForkNumber forknum)
 }
 
 /*
+ *	mdprefetch() -- Initiate asynchronous read of the specified block of a relation
+ */
+void
+mdprefetch(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum)
+{
+#ifdef USE_PREFETCH
+	off_t		seekpos;
+	MdfdVec    *v;
+
+	v = _mdfd_getseg(reln, forknum, blocknum, false, EXTENSION_FAIL);
+
+	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
+
+	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
+
+	if (forknum == MAIN_FORKNUM)
+		(void) FilePrefetch(v->mdmir_open.primaryFile, seekpos, BLCKSZ);
+	else
+		(void) FilePrefetch(v->mdfd_vfd, seekpos, BLCKSZ);
+#endif   /* USE_PREFETCH */
+}
+
+
+/*
  *	mdread() -- Read the specified block from a relation.
  */
 void
@@ -916,11 +956,15 @@ mdread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 	int			nbytes;
 	MdfdVec    *v;
 
-	TRACE_POSTGRESQL_SMGR_MD_READ_START(forknum, blocknum, reln->smgr_rnode.spcNode, reln->smgr_rnode.dbNode, reln->smgr_rnode.relNode);
+	TRACE_POSTGRESQL_SMGR_MD_READ_START(forknum, blocknum,
+										reln->smgr_rnode.spcNode,
+										reln->smgr_rnode.dbNode,
+										reln->smgr_rnode.relNode);
 
 	v = _mdfd_getseg(reln, forknum, blocknum, false, EXTENSION_FAIL);
 
-	seekpos = (off_t) BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE));
+	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
+
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
 if (forknum == MAIN_FORKNUM)
@@ -947,15 +991,20 @@ else
 	nbytes = FileRead(v->mdfd_vfd, buffer, BLCKSZ);
 }
 
-	TRACE_POSTGRESQL_SMGR_MD_READ_DONE(forknum, blocknum, reln->smgr_rnode.spcNode, reln->smgr_rnode.dbNode, reln->smgr_rnode.relNode, relpath(reln->smgr_rnode, forknum), nbytes, BLCKSZ);
+	TRACE_POSTGRESQL_SMGR_MD_READ_DONE(forknum, blocknum,
+									   reln->smgr_rnode.spcNode,
+									   reln->smgr_rnode.dbNode,
+									   reln->smgr_rnode.relNode,
+									   nbytes,
+									   BLCKSZ);
 
 	if (nbytes != BLCKSZ)
 	{
 		if (nbytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-				   errmsg("could not read block %u of relation %s: %m",
-						  blocknum, relpath(reln->smgr_rnode, forknum))));
+					 errmsg("could not read block %u of relation %s: %m",
+							blocknum, relpath(reln->smgr_rnode, forknum))));
 
 		/*
 		 * Short read: we are at or past EOF, or we read a partial block at
@@ -996,11 +1045,15 @@ mdwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 	Assert(blocknum < mdnblocks(reln, forknum));
 #endif
 
-	TRACE_POSTGRESQL_SMGR_MD_WRITE_START(forknum, blocknum, reln->smgr_rnode.spcNode, reln->smgr_rnode.dbNode, reln->smgr_rnode.relNode);
+	TRACE_POSTGRESQL_SMGR_MD_WRITE_START(forknum, blocknum,
+										 reln->smgr_rnode.spcNode,
+										 reln->smgr_rnode.dbNode,
+										 reln->smgr_rnode.relNode);
 
 	v = _mdfd_getseg(reln, forknum, blocknum, isTemp, EXTENSION_FAIL);
 
-	seekpos = (off_t) BLCKSZ * (blocknum % ((BlockNumber) RELSEG_SIZE));
+	seekpos = (off_t) BLCKSZ *(blocknum % ((BlockNumber) RELSEG_SIZE));
+
 	Assert(seekpos < (off_t) BLCKSZ * RELSEG_SIZE);
 
 if (forknum == MAIN_FORKNUM)
@@ -1020,15 +1073,21 @@ else
 
 	nbytes = FileWrite(v->mdfd_vfd, buffer, BLCKSZ);
 }
-	TRACE_POSTGRESQL_SMGR_MD_WRITE_DONE(forknum, blocknum, reln->smgr_rnode.spcNode, reln->smgr_rnode.dbNode, reln->smgr_rnode.relNode, relpath(reln->smgr_rnode, forknum), nbytes, BLCKSZ);
+
+	TRACE_POSTGRESQL_SMGR_MD_WRITE_DONE(forknum, blocknum,
+										reln->smgr_rnode.spcNode,
+										reln->smgr_rnode.dbNode,
+										reln->smgr_rnode.relNode,
+										nbytes,
+										BLCKSZ);
 
 	if (nbytes != BLCKSZ)
 	{
 		if (nbytes < 0)
 			ereport(ERROR,
 					(errcode_for_file_access(),
-				  errmsg("could not write block %u of relation %s: %m",
-						 blocknum, relpath(reln->smgr_rnode, forknum))));
+					 errmsg("could not write block %u of relation %s: %m",
+							blocknum, relpath(reln->smgr_rnode, forknum))));
 		/* short write: complain appropriately */
 		ereport(ERROR,
 				(errcode(ERRCODE_DISK_FULL),
@@ -1101,9 +1160,9 @@ mdnblocks(SMgrRelation reln, ForkNumber forknum)
 			if (v->mdfd_chain == NULL)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-				 errmsg("could not open segment %u of relation %s: %m",
-						segno,
-						relpath(reln->smgr_rnode, forknum))));
+					   errmsg("could not open segment %u of relation %s: %m",
+							  segno,
+							  relpath(reln->smgr_rnode, forknum))));
 		}
 
 		v = v->mdfd_chain;
@@ -1175,13 +1234,14 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 			if (!success)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-						 errmsg("could not truncate relation %s to %u blocks: %m",
-								relpath(reln->smgr_rnode, forknum),
-								nblocks)));
-		  if (!isTemp)
+					errmsg("could not truncate relation %s to %u blocks: %m",
+						   relpath(reln->smgr_rnode, forknum),
+						   nblocks)));
+			if (!isTemp)
 				register_dirty_segment(reln, forknum, v);
 			v = v->mdfd_chain;
-			Assert(ov != reln->md_fd[forknum]);	/* we never drop the 1st segment */
+			Assert(ov != reln->md_fd[forknum]); /* we never drop the 1st
+												 * segment */
 			pfree(ov);
 		}
 		else if (priorblocks + ((BlockNumber) RELSEG_SIZE) > nblocks)
@@ -1205,9 +1265,9 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 			if (!success)
 				ereport(ERROR,
 						(errcode_for_file_access(),
-						 errmsg("could not truncate relation %s to %u blocks: %m",
-								relpath(reln->smgr_rnode, forknum),
-								nblocks)));
+					errmsg("could not truncate relation %s to %u blocks: %m",
+						   relpath(reln->smgr_rnode, forknum),
+						   nblocks)));
 			if (!isTemp)
 				register_dirty_segment(reln, forknum, v);
 			v = v->mdfd_chain;
@@ -1456,8 +1516,8 @@ mdsync(void)
 					failures > 0)
 					ereport(ERROR,
 							(errcode_for_file_access(),
-							 errmsg("could not fsync segment %u of relation %s: %m",
-									entry->tag.segno, path)));
+					  errmsg("could not fsync segment %u of relation %s: %m",
+							 entry->tag.segno, path)));
 				else
 					ereport(DEBUG1,
 							(errcode_for_file_access(),
@@ -1669,7 +1729,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 		hash_seq_init(&hstat, pendingOpsTable);
 		while ((entry = (PendingOperationEntry *) hash_seq_search(&hstat)) != NULL)
 		{
-			if (RelFileNodeEquals(entry->tag.rnode, rnode) && 
+			if (RelFileNodeEquals(entry->tag.rnode, rnode) &&
 				entry->tag.forknum == forknum)
 			{
 				/* Okay, cancel this entry */
@@ -1682,7 +1742,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 		/* Remove any pending requests for the entire database */
 		HASH_SEQ_STATUS hstat;
 		PendingOperationEntry *entry;
-		ListCell   *cell, 
+		ListCell   *cell,
 				   *prev,
 				   *next;
 
@@ -1705,7 +1765,7 @@ RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum, BlockNumber segno)
 			PendingUnlinkEntry *entry = (PendingUnlinkEntry *) lfirst(cell);
 
 			next = lnext(cell);
-			if (entry->rnode.dbNode == rnode.dbNode) 
+			if (entry->rnode.dbNode == rnode.dbNode)
 			{
 				pendingUnlinks = list_delete_cell(pendingUnlinks, cell, prev);
 				pfree(entry);
@@ -2028,8 +2088,8 @@ _mdnblocks(SMgrRelation reln, ForkNumber forknum, MdfdVec *seg)
 	if (len < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("could not seek to end of segment %u of relation %s: %m",
-						seg->mdfd_segno, relpath(reln->smgr_rnode, forknum))));
+			 errmsg("could not seek to end of segment %u of relation %s: %m",
+					seg->mdfd_segno, relpath(reln->smgr_rnode, forknum))));
 	/* note that this calculation will ignore any partial block at EOF */
 	return (BlockNumber) (len / BLCKSZ);
 }

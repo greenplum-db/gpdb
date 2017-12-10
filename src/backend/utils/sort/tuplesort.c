@@ -93,7 +93,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.89 2009/01/01 17:23:53 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/sort/tuplesort.c,v 1.91 2009/06/11 14:49:06 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -129,14 +129,15 @@
 #include "lib/stringinfo.h"             /* StringInfo */
 #include "utils/dynahash.h"             /* my_log2 */
 
+/* sort-type codes for sort__start probes */
+#define HEAP_SORT	0
+#define INDEX_SORT	1
+#define DATUM_SORT	2
+
 /* GUC variables */
 #ifdef TRACE_SORT
 bool		trace_sort = false;
 #endif
-
-#define HEAP_SORT	0
-#define INDEX_SORT	1
-#define DATUM_SORT	2
 
 #ifdef DEBUG_BOUNDED_SORT
 bool		optimize_bounded_sort = true;
@@ -519,9 +520,9 @@ static void readtup_heap(Tuplesortstate *state, TuplesortPos *pos, SortTuple *st
 			 LogicalTape *lt, unsigned int len);
 static void reversedirection_heap(Tuplesortstate *state);
 static int comparetup_index_btree(const SortTuple *a, const SortTuple *b,
-				 Tuplesortstate *state);
+					   Tuplesortstate *state);
 static int comparetup_index_hash(const SortTuple *a, const SortTuple *b,
-				 Tuplesortstate *state);
+					  Tuplesortstate *state);
 static void copytup_index(Tuplesortstate *state, SortTuple *stup, void *tup);
 static void writetup_index(Tuplesortstate *state, LogicalTape *lt, SortTuple *stup);
 static void readtup_index(Tuplesortstate *state, TuplesortPos *pos, SortTuple *stup,
@@ -660,9 +661,13 @@ tuplesort_begin_heap(ScanState *ss, TupleDesc tupDesc,
 			 "begin tuple sort: nkeys = %d, workMem = %d, randomAccess = %c",
 			 nkeys, workMem, randomAccess ? 't' : 'f');
 
-	TRACE_POSTGRESQL_SORT_START(HEAP_SORT, false, nkeys, workMem, randomAccess);
-
 	state->nKeys = nkeys;
+
+	TRACE_POSTGRESQL_SORT_START(HEAP_SORT,
+								false,	/* no unique check */
+								nkeys,
+								workMem,
+								randomAccess);
 
 	state->comparetup = comparetup_heap;
 	state->copytup = copytup_heap;
@@ -728,7 +733,11 @@ tuplesort_begin_index_btree(Relation indexRel,
 
 	state->nKeys = RelationGetNumberOfAttributes(indexRel);
 
-	TRACE_POSTGRESQL_SORT_START(INDEX_SORT, enforceUnique, state->nKeys, workMem, randomAccess);
+	TRACE_POSTGRESQL_SORT_START(INDEX_SORT,
+								enforceUnique,
+								state->nKeys,
+								workMem,
+								randomAccess);
 
 	state->comparetup = comparetup_index_btree;
 	state->copytup = copytup_index;
@@ -758,7 +767,7 @@ tuplesort_begin_index_hash(Relation indexRel,
 #ifdef TRACE_SORT
 	if (trace_sort)
 		elog(LOG,
-			 "begin index sort: hash_mask = 0x%x, workMem = %d, randomAccess = %c",
+		"begin index sort: hash_mask = 0x%x, workMem = %d, randomAccess = %c",
 			 hash_mask,
 			 workMem, randomAccess ? 't' : 'f');
 #endif
@@ -799,9 +808,13 @@ tuplesort_begin_datum(ScanState *ss, Oid datumType,
 			 "begin datum sort: workMem = %d, randomAccess = %c",
 			 workMem, randomAccess ? 't' : 'f');
 
-	TRACE_POSTGRESQL_SORT_START(DATUM_SORT, false, 1, workMem, randomAccess);
-
 	state->nKeys = 1;			/* always a one-column sort */
+
+	TRACE_POSTGRESQL_SORT_START(DATUM_SORT,
+								false,	/* no unique check */
+								1,
+								workMem,
+								randomAccess);
 
 	state->comparetup = comparetup_datum;
 	state->copytup = copytup_datum;
@@ -920,10 +933,7 @@ tuplesort_end(Tuplesortstate *state)
 				 spaceUsed, pg_rusage_show(&state->ru_start));
 	}
 
-	TRACE_POSTGRESQL_SORT_DONE(state->tapeset,
-			(state->tapeset ? LogicalTapeSetBlocks(state->tapeset) :
-			(state->allowedMem - state->availMem + 1023) / 1024));
-
+	TRACE_POSTGRESQL_SORT_DONE(state->tapeset != NULL, spaceUsed);
 
 	MemoryContextSwitchTo(oldcontext);
 
@@ -3159,8 +3169,8 @@ comparetup_index_hash(const SortTuple *a, const SortTuple *b,
 	CHECK_FOR_INTERRUPTS();
 
 	/*
-	 * Fetch hash keys and mask off bits we don't want to sort by.
-	 * We know that the first column of the index tuple is the hash key.
+	 * Fetch hash keys and mask off bits we don't want to sort by. We know
+	 * that the first column of the index tuple is the hash key.
 	 */
 	Assert(!a->isnull1);
 	hash1 = DatumGetUInt32(a->datum1) & state->hash_mask;

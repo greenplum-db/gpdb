@@ -8,7 +8,7 @@
  * Copyright (c) 2007-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/contrib/pageinspect/rawpage.c,v 1.10 2009/01/01 17:23:32 momjian Exp $
+ *	  $PostgreSQL: pgsql/contrib/pageinspect/rawpage.c,v 1.13 2009/06/11 14:48:51 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -31,7 +31,12 @@
 PG_MODULE_MAGIC;
 
 Datum		get_raw_page(PG_FUNCTION_ARGS);
+Datum		get_raw_page_fork(PG_FUNCTION_ARGS);
 Datum		page_header(PG_FUNCTION_ARGS);
+
+static bytea *get_raw_page_internal(text *relname, ForkNumber forknum,
+					  BlockNumber blkno);
+
 
 /*
  * get_raw_page
@@ -44,13 +49,56 @@ Datum
 get_raw_page(PG_FUNCTION_ARGS)
 {
 	text	   *relname = PG_GETARG_TEXT_P(0);
+	uint32		blkno = PG_GETARG_UINT32(1);
+	bytea	   *raw_page;
+
+	/*
+	 * We don't normally bother to check the number of arguments to a C
+	 * function, but here it's needed for safety because early 8.4 beta
+	 * releases mistakenly redefined get_raw_page() as taking three arguments.
+	 */
+	if (PG_NARGS() != 2)
+		ereport(ERROR,
+				(errmsg("wrong number of arguments to get_raw_page()"),
+				 errhint("Run the updated pageinspect.sql script.")));
+
+	raw_page = get_raw_page_internal(relname, MAIN_FORKNUM, blkno);
+
+	PG_RETURN_BYTEA_P(raw_page);
+}
+
+/*
+ * get_raw_page_fork
+ *
+ * Same, for any fork
+ */
+PG_FUNCTION_INFO_V1(get_raw_page_fork);
+
+Datum
+get_raw_page_fork(PG_FUNCTION_ARGS)
+{
+	text	   *relname = PG_GETARG_TEXT_P(0);
 	text	   *forkname = PG_GETARG_TEXT_P(1);
 	uint32		blkno = PG_GETARG_UINT32(2);
+	bytea	   *raw_page;
 	ForkNumber	forknum;
 
-	Relation	rel;
-	RangeVar   *relrv;
+	forknum = forkname_to_number(text_to_cstring(forkname));
+
+	raw_page = get_raw_page_internal(relname, forknum, blkno);
+
+	PG_RETURN_BYTEA_P(raw_page);
+}
+
+/*
+ * workhorse
+ */
+static bytea *
+get_raw_page_internal(text *relname, ForkNumber forknum, BlockNumber blkno)
+{
 	bytea	   *raw_page;
+	RangeVar   *relrv;
+	Relation	rel;
 	char	   *raw_page_data;
 	Buffer		buf;
 	MIRROREDLOCK_BUFMGR_DECLARE;
@@ -59,8 +107,6 @@ get_raw_page(PG_FUNCTION_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 (errmsg("must be superuser to use raw functions"))));
-
-	forknum = forkname_to_number(text_to_cstring(forkname));
 
 	relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	rel = relation_openrv(relrv, AccessShareLock);
@@ -78,11 +124,11 @@ get_raw_page(PG_FUNCTION_ARGS)
 						RelationGetRelationName(rel))));
 
 	/*
-	 * Reject attempts to read non-local temporary relations; we would
-	 * be likely to get wrong data since we have no visibility into the
-	 * owning session's local buffers.
+	 * Reject attempts to read non-local temporary relations; we would be
+	 * likely to get wrong data since we have no visibility into the owning
+	 * session's local buffers.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(rel)))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot access temporary tables of other sessions")));
@@ -114,7 +160,7 @@ get_raw_page(PG_FUNCTION_ARGS)
 
 	relation_close(rel, AccessShareLock);
 
-	PG_RETURN_BYTEA_P(raw_page);
+	return raw_page;
 }
 
 /*

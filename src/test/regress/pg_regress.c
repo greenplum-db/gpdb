@@ -11,7 +11,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/test/regress/pg_regress.c,v 1.56 2009/01/01 17:24:04 momjian Exp $
+ * $PostgreSQL: pgsql/src/test/regress/pg_regress.c,v 1.63 2009/06/11 14:49:15 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -309,7 +309,7 @@ stop_postmaster(void)
 		{
 			fprintf(stderr, _("\n%s: could not stop postmaster: exit code was %d\n"),
 					progname, r);
-			exit(2);   /* not exit_nicely(), that would be recursive */
+			exit(2);			/* not exit_nicely(), that would be recursive */
 		}
 
 		postmaster_running = false;
@@ -657,8 +657,8 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	if (ret != 0 || !S_ISDIR(st.st_mode))
 	{
 		/*
-		 * No warning, to avoid noise in tests that do not have
-		 * these directories; for example, ecpg, contrib and src/pl.
+		 * No warning, to avoid noise in tests that do not have these
+		 * directories; for example, ecpg, contrib and src/pl.
 		 */
 		return count;
 	}
@@ -675,11 +675,12 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	snprintf(testtablespace, MAXPGPATH, "%s/testtablespace", outputdir);
 
 #ifdef WIN32
+
 	/*
 	 * On Windows only, clean out the test tablespace dir, or create it if it
-	 * doesn't exist.  On other platforms we expect the Makefile to take
-	 * care of that.  (We don't migrate that functionality in here because
-	 * it'd be harder to cope with platform-specific issues such as SELinux.)
+	 * doesn't exist.  On other platforms we expect the Makefile to take care
+	 * of that.  (We don't migrate that functionality in here because it'd be
+	 * harder to cope with platform-specific issues such as SELinux.)
 	 *
 	 * XXX it would be better if pg_regress.c had nothing at all to do with
 	 * testtablespace, and this were handled by a .BAT file or similar on
@@ -1029,7 +1030,7 @@ initialize_environment(void)
 	{
 		const char *my_pgoptions = "-c intervalstyle=postgres_verbose";
 		const char *old_pgoptions = getenv("PGOPTIONS");
-		char   *new_pgoptions;
+		char	   *new_pgoptions;
 
 		if (!old_pgoptions)
 			old_pgoptions = "";
@@ -1352,7 +1353,7 @@ spawn_process(const char *cmdline)
 
 	free(cmdline2);
 
-    ResumeThread(pi.hThread);
+	ResumeThread(pi.hThread);
 	CloseHandle(pi.hThread);
 	return pi.hProcess;
 #endif
@@ -2215,13 +2216,13 @@ create_role(const char *rolename, const _stringlist * granted_dbs)
 static char *
 make_absolute_path(const char *in)
 {
-	char *result;
+	char	   *result;
 
 	if (is_absolute_path(in))
 		result = strdup(in);
 	else
 	{
-		static char		cwdbuf[MAXPGPATH];
+		static char cwdbuf[MAXPGPATH];
 
 		if (!cwdbuf[0])
 		{
@@ -2546,10 +2547,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	}
 
 	if (temp_install && !port_specified_by_user)
+
 		/*
-		 * To reduce chances of interference with parallel
-		 * installations, use a port number starting in the private
-		 * range (49152-65535) calculated from the version number.
+		 * To reduce chances of interference with parallel installations, use
+		 * a port number starting in the private range (49152-65535)
+		 * calculated from the version number.
 		 */
 		port = 0xC000 | (PG_VERSION_NUM & 0x3FFF);
 
@@ -2571,6 +2573,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
 	if (temp_install)
 	{
+		FILE	   *pg_conf;
+
 		/*
 		 * Prepare the temp installation
 		 */
@@ -2626,20 +2630,29 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			exit_nicely(2);
 		}
 
-		/* add any extra config specified to the postgresql.conf */
+		/*
+		 * Adjust the default postgresql.conf as needed for regression
+		 * testing. The user can specify a file to be appended; in any case we
+		 * set max_prepared_transactions to enable testing of prepared xacts.
+		 * (Note: to reduce the probability of unexpected shmmax failures,
+		 * don't set max_prepared_transactions any higher than actually needed
+		 * by the prepared_xacts regression test.)
+		 */
+		snprintf(buf, sizeof(buf), "%s/data/postgresql.conf", temp_install);
+		pg_conf = fopen(buf, "a");
+		if (pg_conf == NULL)
+		{
+			fprintf(stderr, _("\n%s: could not open \"%s\" for adding extra config: %s\n"), progname, buf, strerror(errno));
+			exit_nicely(2);
+		}
+		fputs("\n# Configuration added by pg_regress\n\n", pg_conf);
+		fputs("max_prepared_transactions = 2\n", pg_conf);
+
 		if (temp_config != NULL)
 		{
 			FILE	   *extra_conf;
-			FILE	   *pg_conf;
 			char		line_buf[1024];
 
-			snprintf(buf, sizeof(buf), "%s/data/postgresql.conf", temp_install);
-			pg_conf = fopen(buf, "a");
-			if (pg_conf == NULL)
-			{
-				fprintf(stderr, _("\n%s: could not open \"%s\" for adding extra config: %s\n"), progname, buf, strerror(errno));
-				exit_nicely(2);
-			}
 			extra_conf = fopen(temp_config, "r");
 			if (extra_conf == NULL)
 			{
@@ -2649,8 +2662,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			while (fgets(line_buf, sizeof(line_buf), extra_conf) != NULL)
 				fputs(line_buf, pg_conf);
 			fclose(extra_conf);
-			fclose(pg_conf);
 		}
+
+		fclose(pg_conf);
 
 		/*
 		 * Check if there is a postmaster running already.
@@ -2674,7 +2688,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 					exit_nicely(2);
 				}
 
-				fprintf(stderr, _("port %d apparently in use, trying %d\n"), port, port+1);
+				fprintf(stderr, _("port %d apparently in use, trying %d\n"), port, port + 1);
 				port++;
 				sprintf(s, "%d", port);
 				doputenv("PGPORT", s);

@@ -3993,9 +3993,21 @@ class GpTransfer(object):
         return src_tbl_columns == dest_tbl_columns
 
     def _get_table_columns(self, tbl, host, port, user):
+        # GPDB 6 reports the precision of timestamp et al.  datatypes
+        # differently from previous versions (see PostgreSQL commit
+        # 208d3a7555). The CASE construct below is to mask those differences
+        #when transfering between versions
         get_columns_sql = ''' select is_nullable, data_type, character_maximum_length,
                              character_octet_length, numeric_precision, numeric_precision_radix, numeric_scale,
-                             datetime_precision, interval_type, udt_name from information_schema.columns
+                             case when data_type = 'date' and datetime_precision is null then 0
+                                  when data_type in ('time without time zone',
+                                                     'timestamp without time zone',
+                                                     'time with time zone',
+                                                     'timestamp with time zone')
+                                       and datetime_precision is null then 6
+                                  when data_type = 'interval' and datetime_precision is null then 6
+                                  else datetime_precision end as datetime_precision,
+                             interval_type, udt_name from information_schema.columns
                              where table_schema = '%s' and table_name = '%s' order by ordinal_position asc;''' % (pg.escape_string(tbl.schema), pg.escape_string(tbl.table))
         with dbconn.connect(dbconn.DbURL(host, port, tbl.database, user)) as conn:
             cursor = execSQL(conn, get_columns_sql)

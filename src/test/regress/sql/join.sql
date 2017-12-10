@@ -206,13 +206,13 @@ CREATE TABLE t1 (name TEXT, n INTEGER);
 CREATE TABLE t2 (name TEXT, n INTEGER);
 CREATE TABLE t3 (name TEXT, n INTEGER);
 
-INSERT INTO t1 VALUES ( 'aa', 11 );
-INSERT INTO t2 VALUES ( 'aa', 12 );
-INSERT INTO t2 VALUES ( 'bb', 22 );
-INSERT INTO t2 VALUES ( 'dd', 42 );
-INSERT INTO t3 VALUES ( 'aa', 13 );
-INSERT INTO t3 VALUES ( 'bb', 23 );
-INSERT INTO t3 VALUES ( 'cc', 33 );
+INSERT INTO t1 VALUES ( 'bb', 11 );
+INSERT INTO t2 VALUES ( 'bb', 12 );
+INSERT INTO t2 VALUES ( 'cc', 22 );
+INSERT INTO t2 VALUES ( 'ee', 42 );
+INSERT INTO t3 VALUES ( 'bb', 13 );
+INSERT INTO t3 VALUES ( 'cc', 23 );
+INSERT INTO t3 VALUES ( 'dd', 33 );
 
 SELECT * FROM t1 FULL JOIN t2 USING (name) FULL JOIN t3 USING (name);
 
@@ -501,6 +501,16 @@ where a.unique1 = 42 and
       ((b.unique2 is null and a.ten = 2) or b.hundred = 3);
 
 --
+-- test proper positioning of one-time quals in EXISTS (8.4devel bug)
+--
+prepare foo(bool) as
+  select count(*) from tenk1 a left join tenk1 b
+    on (a.unique2 = b.unique1 and exists
+        (select 1 from tenk1 c where c.thousand = b.unique2 and $1));
+execute foo(true);
+execute foo(false);
+
+--
 -- test for sane behavior with noncanonical merge clauses, per bug #4926
 --
 
@@ -529,16 +539,6 @@ select f1, unique2, case when unique2 is null then f1 else 0 end
   from int4_tbl a left join tenk1 b on f1 = unique2
   where (case when unique2 is null then f1 else 0 end) = 0;
 
-
---
--- test proper positioning of one-time quals in EXISTS (8.4devel bug)
---
-prepare foo(bool) as
-select count(*) from tenk1 a left join tenk1 b
-on (a.unique2 = b.unique1 and exists
-(select 1 from tenk1 c where c.thousand = b.unique2 and $1));
-execute foo(true);
-execute foo(false);
 
 --
 -- test NULL behavior of whole-row Vars, per bug #5025

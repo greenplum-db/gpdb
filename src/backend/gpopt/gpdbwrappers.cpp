@@ -2263,7 +2263,7 @@ gpdb::FRelPartIsNone
 }
 
 bool
-gpdb::FHasSubclass
+gpdb::FHasSubclassSlow
 	(
 	Oid oidRel
 	)
@@ -2271,7 +2271,7 @@ gpdb::FHasSubclass
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_inherits */
-		return has_subclass(oidRel);
+		return has_subclass_slow(oidRel);
 	}
 	GP_WRAP_END;
 	return false;

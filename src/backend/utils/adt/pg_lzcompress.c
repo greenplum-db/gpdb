@@ -166,7 +166,7 @@
  *
  * Copyright (c) 1999-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/backend/utils/adt/pg_lzcompress.c,v 1.32 2009/01/01 17:23:49 momjian Exp $
+ * $PostgreSQL: pgsql/src/backend/utils/adt/pg_lzcompress.c,v 1.34 2009/06/11 14:49:03 momjian Exp $
  * ----------
  */
 #include "postgres.h"
@@ -578,7 +578,7 @@ pglz_compress(const char *source, int32 slen, PGLZ_Header *dest,
 
 		/*
 		 * If we've emitted more than first_success_by bytes without finding
-		 * anything compressible at all, fail.  This lets us fall out
+		 * anything compressible at all, fail.	This lets us fall out
 		 * reasonably quickly when looking at incompressible input (such as
 		 * pre-compressed data).
 		 */
@@ -717,8 +717,8 @@ pglz_decompress(const PGLZ_Header *source, char *dest)
 				 * An unset control bit means LITERAL BYTE. So we just copy
 				 * one from INPUT to OUTPUT.
 				 */
-				if (dp >= destend)	/* check for buffer overrun */
-					break;			/* do not clobber memory */
+				if (dp >= destend)		/* check for buffer overrun */
+					break;		/* do not clobber memory */
 
 				*dp++ = *sp++;
 			}

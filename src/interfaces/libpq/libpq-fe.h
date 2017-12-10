@@ -32,10 +32,10 @@ extern		"C"
 /*
  * Option flags for PQcopyResult
  */
-#define PG_COPYRES_ATTRS          0x01
-#define PG_COPYRES_TUPLES         0x02		/* Implies PG_COPYRES_ATTRS */
-#define PG_COPYRES_EVENTS         0x04
-#define PG_COPYRES_NOTICEHOOKS    0x08
+#define PG_COPYRES_ATTRS		  0x01
+#define PG_COPYRES_TUPLES		  0x02	/* Implies PG_COPYRES_ATTRS */
+#define PG_COPYRES_EVENTS		  0x04
+#define PG_COPYRES_NOTICEHOOKS	  0x08
 
 /* Application-visible enum types */
 
@@ -512,9 +512,9 @@ extern void PQfreemem(void *ptr);
 /* Create and manipulate PGresults */
 extern PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status);
 extern PGresult *PQcopyResult(const PGresult *src, int flags);
-extern int PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs);
+extern int	PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs);
 extern void *PQresultAlloc(PGresult *res, size_t nBytes);
-extern int PQsetvalue(PGresult *res, int tup_num, int field_num, char *value, int len);
+extern int	PQsetvalue(PGresult *res, int tup_num, int field_num, char *value, int len);
 
 /* Quoting strings before inclusion in queries. */
 extern size_t PQescapeStringConn(PGconn *conn,

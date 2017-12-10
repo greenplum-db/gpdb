@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.311 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/index.c,v 1.318 2009/06/11 14:48:55 momjian Exp $
  *
  *
  * INTERFACE ROUTINES
@@ -216,7 +216,7 @@ ConstructTupleDescriptor(Relation heapRelation,
 			 * now that we've determined the "from", let's copy the tuple desc
 			 * data...
 			 */
-			memcpy(to, from, ATTRIBUTE_TUPLE_SIZE);
+			memcpy(to, from, ATTRIBUTE_FIXED_PART_SIZE);
 
 			/*
 			 * Fix the stuff that should not be the same as the underlying
@@ -236,7 +236,7 @@ ConstructTupleDescriptor(Relation heapRelation,
 			/* Expressional index */
 			Node	   *indexkey;
 
-			MemSet(to, 0, ATTRIBUTE_TUPLE_SIZE);
+			MemSet(to, 0, ATTRIBUTE_FIXED_PART_SIZE);
 
 			if (indexpr_item == NULL)	/* shouldn't happen */
 				elog(ERROR, "too few entries in indexprs list");
@@ -875,8 +875,8 @@ index_create(Oid heapRelationId,
 										   NULL,		/* no check constraint */
 										   NULL,
 										   NULL,
-										   true, /* islocal */
-										   0); /* inhcount */
+										   true,		/* islocal */
+										   0);	/* inhcount */
 
 			referenced.classId = ConstraintRelationId;
 			referenced.objectId = conOid;
@@ -1037,14 +1037,13 @@ index_drop(Oid indexId)
 
 	/*
 	 * To drop an index safely, we must grab exclusive lock on its parent
-	 * table; otherwise there could be other backends using the index!
-	 * Exclusive lock on the index alone is insufficient because another
-	 * backend might be in the midst of devising a query plan that will use
-	 * the index.  The parser and planner take care to hold an appropriate
-	 * lock on the parent table while working, but having them hold locks on
-	 * all the indexes too seems overly expensive.	We do grab exclusive lock
-	 * on the index too, just to be safe. Both locks must be held till end of
-	 * transaction, else other backends will still see this index in pg_index.
+	 * table.  Exclusive lock on the index alone is insufficient because
+	 * another backend might be about to execute a query on the parent table.
+	 * If it relies on a previously cached list of index OIDs, then it could
+	 * attempt to access the just-dropped index.  We must therefore take a
+	 * table lock strong enough to prevent all queries on the table from
+	 * proceeding until we commit and send out a shared-cache-inval notice
+	 * that will make them update their index lists.
 	 */
 	heapId = IndexGetRelation(indexId);
 	userHeapRelation = heap_open(heapId, AccessExclusiveLock);
@@ -1947,9 +1946,9 @@ IndexBuildHeapScan(Relation heapRelation,
 
 	scan = heap_beginscan_strat(heapRelation,	/* relation */
 								snapshot,		/* snapshot */
-								0,				/* number of keys */
-								NULL,			/* scan key */
-								true,			/* buffer access strategy OK */
+								0,		/* number of keys */
+								NULL,	/* scan key */
+								true,	/* buffer access strategy OK */
 								allow_sync);	/* syncscan OK? */
 
 	reltuples = 0;
@@ -2584,8 +2583,10 @@ validate_index(Oid heapId, Oid indexId, Snapshot snapshot)
 	 */
 	ivinfo.index = indexRelation;
 	ivinfo.vacuum_full = false;
+	ivinfo.analyze_only = false;
+	ivinfo.estimated_count = true;
 	ivinfo.message_level = DEBUG2;
-	ivinfo.num_heap_tuples = -1;
+	ivinfo.num_heap_tuples = heapRelation->rd_rel->reltuples;
 	ivinfo.strategy = NULL;
 
 	state.tuplesort = tuplesort_begin_datum(NULL,
@@ -2702,10 +2703,10 @@ validate_index_heapscan(Relation heapRelation,
 	 */
 	scan = heap_beginscan_strat(heapRelation,	/* relation */
 								snapshot,		/* snapshot */
-								0,				/* number of keys */
-								NULL,			/* scan key */
-								true,			/* buffer access strategy OK */
-								false);			/* syncscan not OK */
+								0,		/* number of keys */
+								NULL,	/* scan key */
+								true,	/* buffer access strategy OK */
+								false); /* syncscan not OK */
 
 	/*
 	 * Scan all tuples matching the snapshot.
@@ -2961,6 +2962,7 @@ reindex_index(Oid indexId)
 				pg_index;
 	Oid			heapId;
 	bool		inplace;
+	IndexInfo  *indexInfo;
 	HeapTuple	indexTuple;
 	Form_pg_index indexForm;
 	Oid			namespaceId;
@@ -2986,14 +2988,14 @@ reindex_index(Oid indexId)
 	 * Don't allow reindex on temp tables of other backends ... their local
 	 * buffer manager is not going to cope.
 	 */
-	if (isOtherTempNamespace(RelationGetNamespace(iRel)))
+	if (RELATION_IS_OTHER_TEMP(iRel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot reindex temporary tables of other sessions")));
+			   errmsg("cannot reindex temporary tables of other sessions")));
 
 	/*
-	 * Also check for active uses of the index in the current transaction;
-	 * we don't want to reindex underneath an open indexscan.
+	 * Also check for active uses of the index in the current transaction; we
+	 * don't want to reindex underneath an open indexscan.
 	 */
 	CheckTableNotInUse(iRel, "REINDEX INDEX");
 
@@ -3022,8 +3024,6 @@ reindex_index(Oid indexId)
 
 	PG_TRY();
 	{
-		IndexInfo  *indexInfo;
-
 		/* Suppress use of the target index while rebuilding it */
 		SetReindexProcessing(heapId, indexId);
 
@@ -3066,15 +3066,9 @@ reindex_index(Oid indexId)
 	 * CREATE INDEX CONCURRENTLY), we can now mark it valid.  This allows
 	 * REINDEX to be used to clean up in such cases.
 	 *
-	 * Note that it is important to not update the pg_index entry if we don't
-	 * have to, because updating it will move the index's usability horizon
-	 * (recorded as the tuple's xmin value) if indcheckxmin is true.  We don't
-	 * really want REINDEX to move the usability horizon forward ever, but we
-	 * have no choice if we are to fix indisvalid or indisready.  Of course,
-	 * clearing indcheckxmin eliminates the issue, so we're happy to do that
-	 * if we can.  Another reason for caution here is that while reindexing
-	 * pg_index itself, we must not try to update it.  We assume that
-	 * pg_index's indexes will always have these flags in their clean state.
+	 * We can also reset indcheckxmin, because we have now done a
+	 * non-concurrent index build, *except* in the case where index_build
+	 * found some still-broken HOT chains.
 	 */
 	pg_index = heap_open(IndexRelationId, RowExclusiveLock);
 
@@ -3085,10 +3079,13 @@ reindex_index(Oid indexId)
 		elog(ERROR, "cache lookup failed for index %u", indexId);
 	indexForm = (Form_pg_index) GETSTRUCT(indexTuple);
 
-	if (!indexForm->indisvalid || !indexForm->indisready)
+	if (!indexForm->indisvalid || !indexForm->indisready ||
+		(indexForm->indcheckxmin && !indexInfo->ii_BrokenHotChain))
 	{
 		indexForm->indisvalid = true;
 		indexForm->indisready = true;
+		if (!indexInfo->ii_BrokenHotChain)
+			indexForm->indcheckxmin = false;
 		simple_heap_update(pg_index, &indexTuple->t_self, indexTuple);
 		CatalogUpdateIndexes(pg_index, indexTuple);
 

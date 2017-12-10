@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/vacuum.sgml,v 1.54 2008/12/11 18:16:18 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/vacuum.sgml,v 1.55 2009/03/24 20:17:08 tgl Exp $
 PostgreSQL documentation
 -->
 

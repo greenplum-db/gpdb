@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.146 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/file/fd.c,v 1.149 2009/06/11 14:49:01 momjian Exp $
  *
  * NOTES:
  *
@@ -65,6 +65,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>		/* for getrlimit */
+#endif
 
 #include "miscadmin.h"
 #include "access/xact.h"
@@ -153,7 +156,7 @@ static int	max_safe_fds = 32;	/* default if not changed */
  * Flag to tell whether it's worth scanning VfdCache looking for temp files to
  * close
  */
-static bool		have_xact_temporary_files = false;
+static bool have_xact_temporary_files = false;
 
 typedef struct vfd
 {
@@ -408,13 +411,38 @@ count_usable_fds(int max_to_probe, int *usable_fds, int *already_open)
 	int			highestfd = 0;
 	int			j;
 
+#ifdef HAVE_GETRLIMIT
+	struct rlimit rlim;
+	int			getrlimit_status;
+#endif
+
 	size = 1024;
 	fd = (int *) palloc(size * sizeof(int));
+
+#ifdef HAVE_GETRLIMIT
+#ifdef RLIMIT_NOFILE			/* most platforms use RLIMIT_NOFILE */
+	getrlimit_status = getrlimit(RLIMIT_NOFILE, &rlim);
+#else	/* but BSD doesn't ... */
+	getrlimit_status = getrlimit(RLIMIT_OFILE, &rlim);
+#endif   /* RLIMIT_NOFILE */
+	if (getrlimit_status != 0)
+		ereport(WARNING, (errmsg("getrlimit failed: %m")));
+#endif   /* HAVE_GETRLIMIT */
 
 	/* dup until failure or probe limit reached */
 	for (;;)
 	{
 		int			thisfd;
+
+#ifdef HAVE_GETRLIMIT
+
+		/*
+		 * don't go beyond RLIMIT_NOFILE; causes irritating kernel logs on
+		 * some platforms
+		 */
+		if (getrlimit_status == 0 && highestfd >= rlim.rlim_cur - 1)
+			break;
+#endif
 
 		thisfd = dup(0);
 		if (thisfd < 0)
@@ -1183,6 +1211,42 @@ FileClose(File file)
 	 * Return the Vfd slot to the free list
 	 */
 	FreeVfd(file);
+}
+
+/*
+ * FilePrefetch - initiate asynchronous read of a given range of the file.
+ * The logical seek position is unaffected.
+ *
+ * Currently the only implementation of this function is using posix_fadvise
+ * which is the simplest standardized interface that accomplishes this.
+ * We could add an implementation using libaio in the future; but note that
+ * this API is inappropriate for libaio, which wants to have a buffer provided
+ * to read into.
+ */
+int
+FilePrefetch(File file, off_t offset, int amount)
+{
+#if defined(USE_POSIX_FADVISE) && defined(POSIX_FADV_WILLNEED)
+	int			returnCode;
+
+	Assert(FileIsValid(file));
+
+	DO_DB(elog(LOG, "FilePrefetch: %d (%s) " INT64_FORMAT " %d",
+			   file, VfdCache[file].fileName,
+			   (int64) offset, amount));
+
+	returnCode = FileAccess(file);
+	if (returnCode < 0)
+		return returnCode;
+
+	returnCode = posix_fadvise(VfdCache[file].fd, offset, amount,
+							   POSIX_FADV_WILLNEED);
+
+	return returnCode;
+#else
+	Assert(FileIsValid(file));
+	return 0;
+#endif
 }
 
 int

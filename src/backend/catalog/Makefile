@@ -16,8 +16,8 @@ endif
 
 OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        objectaddress.o pg_aggregate.o pg_constraint.o pg_conversion.o pg_depend.o pg_enum.o \
-       pg_largeobject.o pg_namespace.o pg_operator.o pg_proc.o pg_shdepend.o \
-       pg_type.o storage.o toasting.o \
+       pg_inherits.o pg_largeobject.o pg_namespace.o pg_operator.o pg_proc.o \
+       pg_shdepend.o pg_type.o storage.o toasting.o \
        pg_exttable.o pg_extprotocol.o \
        pg_proc_callback.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
@@ -40,7 +40,7 @@ all: $(BKIFILES) $(CATALOG_JSON)
 
 POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	pg_proc.h pg_proc_gp.h \
-	pg_type.h pg_attribute.h pg_class.h pg_autovacuum.h \
+	pg_type.h pg_attribute.h pg_class.h \
 	pg_attrdef.h pg_constraint.h pg_inherits.h pg_index.h pg_operator.h \
 	pg_opfamily.h pg_opclass.h pg_am.h pg_amop.h pg_amproc.h \
 	pg_language.h pg_largeobject.h pg_aggregate.h pg_statistic.h \

@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/backend/nls.mk,v 1.23 2008/10/27 19:37:21 tgl Exp $
+# $PostgreSQL: pgsql/src/backend/nls.mk,v 1.27 2009/06/26 19:33:43 petere Exp $
 CATALOG_NAME	:= postgres
 AVAIL_LANGUAGES	:= de es fr ja pt_BR tr
 GETTEXT_FILES	:= + gettext-files

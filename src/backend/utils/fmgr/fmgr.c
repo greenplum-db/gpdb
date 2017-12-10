@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.124 2009/01/01 17:23:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/fmgr/fmgr.c,v 1.126 2009/06/11 14:49:05 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -201,7 +201,7 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 		finfo->fn_nargs = fbp->nargs;
 		finfo->fn_strict = fbp->strict;
 		finfo->fn_retset = fbp->retset;
-		finfo->fn_stats = TRACK_FUNC_ALL;	/* ie, never track */
+		finfo->fn_stats = TRACK_FUNC_ALL;		/* ie, never track */
 		finfo->fn_addr = fbp->func;
 		finfo->fn_oid = functionId;
 		return;
@@ -222,14 +222,22 @@ fmgr_info_cxt_security(Oid functionId, FmgrInfo *finfo, MemoryContext mcxt,
 	/*
 	 * If it has prosecdef set, or non-null proconfig, use
 	 * fmgr_security_definer call handler --- unless we are being called again
-	 * by fmgr_security_definer or fmgr_info_other_lang.
+	 * by fmgr_security_definer.
+	 *
+	 * When using fmgr_security_definer, function stats tracking is always
+	 * disabled at the outer level, and instead we set the flag properly in
+	 * fmgr_security_definer's private flinfo and implement the tracking
+	 * inside fmgr_security_definer.  This loses the ability to charge the
+	 * overhead of fmgr_security_definer to the function, but gains the
+	 * ability to set the track_functions GUC as a local GUC parameter of an
+	 * interesting function and have the right things happen.
 	 */
 	if (!ignore_security &&
 		(procedureStruct->prosecdef ||
 		 !heap_attisnull(procedureTuple, Anum_pg_proc_proconfig)))
 	{
 		finfo->fn_addr = fmgr_security_definer;
-		finfo->fn_stats = TRACK_FUNC_ALL;	/* ie, never track */
+		finfo->fn_stats = TRACK_FUNC_ALL;		/* ie, never track */
 		finfo->fn_oid = functionId;
 		ReleaseSysCache(procedureTuple);
 		return;
@@ -965,7 +973,7 @@ fmgr_security_definer(PG_FUNCTION_ARGS)
 
 	/*
 	 * We don't need to restore GUC or userid settings on error, because the
-	 * ensuing xact or subxact abort will do that.  The PG_TRY block is only
+	 * ensuing xact or subxact abort will do that.	The PG_TRY block is only
 	 * needed to clean up the flinfo link.
 	 */
 	save_flinfo = fcinfo->flinfo;
@@ -1869,7 +1877,7 @@ OidFunctionCall9(Oid functionId, Datum arg1, Datum arg2,
  *
  * One important difference from the bare function call is that we will
  * push any active SPI context, allowing SPI-using I/O functions to be
- * called from other SPI functions without extra notation.  This is a hack,
+ * called from other SPI functions without extra notation.	This is a hack,
  * but the alternative of expecting all SPI functions to do SPI_push/SPI_pop
  * around I/O calls seems worse.
  */
@@ -2102,17 +2110,17 @@ Int64GetDatum(int64 X)
 	return PointerGetDatum(retval);
 #endif   /* INT64_IS_BUSTED */
 }
-
-#endif /* USE_FLOAT8_BYVAL */
+#endif   /* USE_FLOAT8_BYVAL */
 
 Datum
 Float4GetDatum(float4 X)
 {
 #ifdef USE_FLOAT4_BYVAL
-	union {
-		float4	value;
-		int32	retval;
-	} myunion;
+	union
+	{
+		float4		value;
+		int32		retval;
+	}			myunion;
 
 	myunion.value = X;
 	return SET_4_BYTES(myunion.retval);
@@ -2129,25 +2137,26 @@ Float4GetDatum(float4 X)
 float4
 DatumGetFloat4(Datum X)
 {
-	union {
-		int32	value;
-		float4	retval;
-	} myunion;
+	union
+	{
+		int32		value;
+		float4		retval;
+	}			myunion;
 
 	myunion.value = GET_4_BYTES(X);
 	return myunion.retval;
 }
-
-#endif /* USE_FLOAT4_BYVAL */
+#endif   /* USE_FLOAT4_BYVAL */
 
 Datum
 Float8GetDatum(float8 X)
 {
 #ifdef USE_FLOAT8_BYVAL
-	union {
-		float8	value;
-		int64	retval;
-	} myunion;
+	union
+	{
+		float8		value;
+		int64		retval;
+	}			myunion;
 
 	myunion.value = X;
 	return SET_8_BYTES(myunion.retval);
@@ -2164,16 +2173,16 @@ Float8GetDatum(float8 X)
 float8
 DatumGetFloat8(Datum X)
 {
-	union {
-		int64	value;
-		float8	retval;
-	} myunion;
+	union
+	{
+		int64		value;
+		float8		retval;
+	}			myunion;
 
 	myunion.value = GET_8_BYTES(X);
 	return myunion.retval;
 }
-
-#endif /* USE_FLOAT8_BYVAL */
+#endif   /* USE_FLOAT8_BYVAL */
 
 #endif /* GPDB */
 

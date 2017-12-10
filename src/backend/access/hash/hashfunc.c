@@ -241,7 +241,7 @@ hashvarlena(PG_FUNCTION_ARGS)
  *
  * This allows some parallelism.  Read-after-writes are good at doubling
  * the number of bits affected, so the goal of mixing pulls in the opposite
- * direction from the goal of parallelism.  I did what I could.  Rotates
+ * direction from the goal of parallelism.	I did what I could.  Rotates
  * seem to cost as much as shifts on every machine I could lay my hands on,
  * and rotates are much kinder to the top and bottom bits, so I used rotates.
  *----------
@@ -275,7 +275,7 @@ hashvarlena(PG_FUNCTION_ARGS)
  * substantial performance increase since final() does not need to
  * do well in reverse, but is does need to affect all output bits.
  * mix(), on the other hand, does not need to affect all output
- * bits (affecting 32 bits is enough).  The original hash function had
+ * bits (affecting 32 bits is enough).	The original hash function had
  * a single mixing operation that had to satisfy both sets of requirements
  * and was slower as a result.
  *----------

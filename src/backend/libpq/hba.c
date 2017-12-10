@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/hba.c,v 1.178 2009/01/02 11:34:03 mha Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/hba.c,v 1.188 2009/06/24 13:39:42 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -750,12 +750,12 @@ check_same_host_or_net(SockAddr *raddr, IPCompareMethod method)
 /*
  * Macros used to check and report on invalid configuration options.
  * INVALID_AUTH_OPTION = reports when an option is specified for a method where it's
- *                       not supported.
+ *						 not supported.
  * REQUIRE_AUTH_OPTION = same as INVALID_AUTH_OPTION, except it also checks if the
- *                       method is actually the one specified. Used as a shortcut when
- *                       the option is only valid for one authentication method.
+ *						 method is actually the one specified. Used as a shortcut when
+ *						 the option is only valid for one authentication method.
  * MANDATORY_AUTH_ARG  = check if a required option is set for an authentication method,
- *                       reporting error if it's not.
+ *						 reporting error if it's not.
  */
 #define INVALID_AUTH_OPTION(optname, validmethods) do {\
 	ereport(LOG, \
@@ -826,7 +826,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 					 errmsg("hostssl not supported on this platform"),
 			  errhint("Compile with --with-openssl to use SSL connections."),
 					 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
+								line_num, HbaFileName)));
 			return false;
 #endif
 		}
@@ -836,12 +836,12 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 			parsedline->conntype = ctHostNoSSL;
 		}
 #endif
-		else 
+		else
 		{
 			/* "host", or "hostnossl" and SSL support not built in */
 			parsedline->conntype = ctHost;
 		}
-	} /* record type */
+	}							/* record type */
 	else
 	{
 		ereport(LOG,
@@ -849,7 +849,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				 errmsg("invalid connection type \"%s\"",
 						token),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 
@@ -861,7 +861,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				(errcode(ERRCODE_CONFIG_FILE_ERROR),
 				 errmsg("end-of-line before database specification"),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 	parsedline->database = pstrdup(lfirst(line_item));
@@ -874,7 +874,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				(errcode(ERRCODE_CONFIG_FILE_ERROR),
 				 errmsg("end-of-line before role specification"),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 	parsedline->role = pstrdup(lfirst(line_item));
@@ -889,7 +889,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
 					 errmsg("end-of-line before IP address specification"),
 					 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
+								line_num, HbaFileName)));
 			return false;
 		}
 		token = lfirst(line_item);
@@ -910,107 +910,107 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 			/* IP and netmask are specified */
 			parsedline->ip_cmp_method = ipCmpMask;
 
-		/* need a modifiable copy of token */
+			/* need a modifiable copy of token */
 			token = pstrdup(token);
 
-		/* Check if it has a CIDR suffix and if so isolate it */
-		cidr_slash = strchr(token, '/');
-		if (cidr_slash)
-			*cidr_slash = '\0';
+			/* Check if it has a CIDR suffix and if so isolate it */
+			cidr_slash = strchr(token, '/');
+			if (cidr_slash)
+				*cidr_slash = '\0';
 
-		/* Get the IP address either way */
-		hints.ai_flags = AI_NUMERICHOST;
-		hints.ai_family = PF_UNSPEC;
-		hints.ai_socktype = 0;
-		hints.ai_protocol = 0;
-		hints.ai_addrlen = 0;
-		hints.ai_canonname = NULL;
-		hints.ai_addr = NULL;
-		hints.ai_next = NULL;
-
-		ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
-		if (ret || !gai_result)
-		{
-			ereport(LOG,
-					(errcode(ERRCODE_CONFIG_FILE_ERROR),
-					 errmsg("invalid IP address \"%s\": %s",
-							token, gai_strerror(ret)),
-					 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
-			if (gai_result)
-				pg_freeaddrinfo_all(hints.ai_family, gai_result);
-			pfree(token);
-			return false;
-		}
-
-			memcpy(&parsedline->addr, gai_result->ai_addr,
-				   gai_result->ai_addrlen);
-		pg_freeaddrinfo_all(hints.ai_family, gai_result);
-
-		/* Get the netmask */
-		if (cidr_slash)
-		{
-			if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1,
-									  parsedline->addr.ss_family) < 0)
-			{
-				*cidr_slash = '/';			/* restore token for message */
-				ereport(LOG,
-						(errcode(ERRCODE_CONFIG_FILE_ERROR),
-						 errmsg("invalid CIDR mask in address \"%s\"",
-								token),
-						 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
-				pfree(token);
-				return false;
-			}
-			pfree(token);
-		}
-		else
-		{
-			/* Read the mask field. */
-			pfree(token);
-			line_item = lnext(line_item);
-			if (!line_item)
-			{
-				ereport(LOG,
-						(errcode(ERRCODE_CONFIG_FILE_ERROR),
-						 errmsg("end-of-line before netmask specification"),
-						 errcontext("line %d of configuration file \"%s\"",
-								line_num, HbaFileName)));
-				return false;
-			}
-			token = lfirst(line_item);
+			/* Get the IP address either way */
+			hints.ai_flags = AI_NUMERICHOST;
+			hints.ai_family = PF_UNSPEC;
+			hints.ai_socktype = 0;
+			hints.ai_protocol = 0;
+			hints.ai_addrlen = 0;
+			hints.ai_canonname = NULL;
+			hints.ai_addr = NULL;
+			hints.ai_next = NULL;
 
 			ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
 			if (ret || !gai_result)
 			{
 				ereport(LOG,
 						(errcode(ERRCODE_CONFIG_FILE_ERROR),
-						 errmsg("invalid IP mask \"%s\": %s",
+						 errmsg("invalid IP address \"%s\": %s",
 								token, gai_strerror(ret)),
 						 errcontext("line %d of configuration file \"%s\"",
-							line_num, HbaFileName)));
+									line_num, HbaFileName)));
 				if (gai_result)
 					pg_freeaddrinfo_all(hints.ai_family, gai_result);
+				pfree(token);
 				return false;
 			}
+
+			memcpy(&parsedline->addr, gai_result->ai_addr,
+				   gai_result->ai_addrlen);
+			pg_freeaddrinfo_all(hints.ai_family, gai_result);
+
+			/* Get the netmask */
+			if (cidr_slash)
+			{
+				if (pg_sockaddr_cidr_mask(&parsedline->mask, cidr_slash + 1,
+										  parsedline->addr.ss_family) < 0)
+				{
+					*cidr_slash = '/';			/* restore token for message */
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("invalid CIDR mask in address \"%s\"",
+									token),
+							 errcontext("line %d of configuration file \"%s\"",
+										line_num, HbaFileName)));
+					pfree(token);
+					return false;
+				}
+				pfree(token);
+			}
+			else
+			{
+				/* Read the mask field. */
+				pfree(token);
+				line_item = lnext(line_item);
+				if (!line_item)
+				{
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("end-of-line before netmask specification"),
+							 errcontext("line %d of configuration file \"%s\"",
+										line_num, HbaFileName)));
+					return false;
+				}
+				token = lfirst(line_item);
+
+				ret = pg_getaddrinfo_all(token, NULL, &hints, &gai_result);
+				if (ret || !gai_result)
+				{
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
+							 errmsg("invalid IP mask \"%s\": %s",
+									token, gai_strerror(ret)),
+							 errcontext("line %d of configuration file \"%s\"",
+										line_num, HbaFileName)));
+					if (gai_result)
+						pg_freeaddrinfo_all(hints.ai_family, gai_result);
+					return false;
+				}
 
 				memcpy(&parsedline->mask, gai_result->ai_addr,
 					   gai_result->ai_addrlen);
-			pg_freeaddrinfo_all(hints.ai_family, gai_result);
+				pg_freeaddrinfo_all(hints.ai_family, gai_result);
 
-			if (parsedline->addr.ss_family != parsedline->mask.ss_family)
-			{
-				ereport(LOG,
-						(errcode(ERRCODE_CONFIG_FILE_ERROR),
+				if (parsedline->addr.ss_family != parsedline->mask.ss_family)
+				{
+					ereport(LOG,
+							(errcode(ERRCODE_CONFIG_FILE_ERROR),
 							 errmsg("IP address and mask do not match"),
-						   errcontext("line %d of configuration file \"%s\"",
-									  line_num, HbaFileName)));
-				return false;
+							 errcontext("line %d of configuration file \"%s\"",
+										line_num, HbaFileName)));
+					return false;
+				}
 			}
 		}
-		}
-	} /* != ctLocal */
+	}							/* != ctLocal */
 
 	/* Get the authentication method */
 	line_item = lnext(line_item);
@@ -1020,7 +1020,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				(errcode(ERRCODE_CONFIG_FILE_ERROR),
 				 errmsg("end-of-line before authentication method"),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 	token = lfirst(line_item);
@@ -1092,7 +1092,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				 errmsg("invalid authentication method \"%s\"",
 						token),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 
@@ -1103,7 +1103,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 				 errmsg("invalid authentication method \"%s\": not supported on this platform",
 						token),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 
@@ -1113,9 +1113,9 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 	{
 		ereport(LOG,
 				(errcode(ERRCODE_CONFIG_FILE_ERROR),
-				 errmsg("krb5 authentication is not supported on local sockets"),
+			 errmsg("krb5 authentication is not supported on local sockets"),
 				 errcontext("line %d of configuration file \"%s\"",
-						line_num, HbaFileName)));
+							line_num, HbaFileName)));
 		return false;
 	}
 
@@ -1150,7 +1150,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 	/* Parse remaining arguments */
 	while ((line_item = lnext(line_item)) != NULL)
 	{
-		char *c;
+		char	   *c;
 
 		token = lfirst(line_item);
 
@@ -1182,7 +1182,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 		}
 		else
 		{
-			*c++ = '\0'; /* token now holds "name", c holds "value" */
+			*c++ = '\0';		/* token now holds "name", c holds "value" */
 			if (strcmp(token, "map") == 0)
 			{
 				if (parsedline->auth_method != uaIdent &&
@@ -1205,8 +1205,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 					ereport(LOG,
 							(errcode(ERRCODE_CONFIG_FILE_ERROR),
 							 errmsg("clientcert can only be configured for \"hostssl\" rows"),
-							 errcontext("line %d of configuration file \"%s\"",
-										line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 					return false;
 				}
 				if (strcmp(c, "1") == 0)
@@ -1230,8 +1230,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 						ereport(LOG,
 								(errcode(ERRCODE_CONFIG_FILE_ERROR),
 								 errmsg("clientcert can not be set to 0 when using \"cert\" authentication"),
-								 errcontext("line %d of configuration file \"%s\"",
-											line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 						return false;
 					}
 					parsedline->clientcert = false;
@@ -1264,8 +1264,8 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 					ereport(LOG,
 							(errcode(ERRCODE_CONFIG_FILE_ERROR),
 							 errmsg("invalid LDAP port number: \"%s\"", c),
-							 errcontext("line %d of configuration file \"%s\"",
-										line_num, HbaFileName)));
+						   errcontext("line %d of configuration file \"%s\"",
+									  line_num, HbaFileName)));
 					return false;
 				}
 			}
@@ -1448,7 +1448,7 @@ parse_hba_line(List *line, int line_num, HbaLine *parsedline)
 	{
 		parsedline->clientcert = true;
 	}
-	
+
 	return true;
 }
 
@@ -1462,7 +1462,7 @@ check_hba(hbaPort *port)
 {
 	//Oid			roleid;
 	ListCell   *line;
-	HbaLine	   *hba;
+	HbaLine    *hba;
 
 	/* Get the target role's OID.  Note we do not error out for bad role. */
 
@@ -1515,19 +1515,19 @@ check_hba(hbaPort *port)
 					if (!check_ip(&port->raddr,
 								  (struct sockaddr *) & hba->addr,
 								  (struct sockaddr *) & hba->mask))
-					continue;
+						continue;
 					break;
 				case ipCmpSameHost:
 				case ipCmpSameNet:
 					if (!check_same_host_or_net(&port->raddr,
 												hba->ip_cmp_method))
-					continue;
+						continue;
 					break;
 				default:
 					/* shouldn't get here, but deem it no-match if so */
-				continue;
+					continue;
 			}
-		} /* != ctLocal */
+		}						/* != ctLocal */
 
 		/* Check database and role */
 		if (!check_db(port->database_name, port->user_name,
@@ -1719,11 +1719,11 @@ free_hba_record(HbaLine *record)
 static void
 clean_hba_list(List *lines)
 {
-	ListCell	*line;
+	ListCell   *line;
 
 	foreach(line, lines)
 	{
-		HbaLine *parsed = (HbaLine *)lfirst(line);
+		HbaLine    *parsed = (HbaLine *) lfirst(line);
 
 		if (parsed)
 			free_hba_record(parsed);
@@ -1742,12 +1742,12 @@ bool
 load_hba(void)
 {
 	FILE	   *file;
-	List *hba_lines = NIL;
-	List *hba_line_nums = NIL;
+	List	   *hba_lines = NIL;
+	List	   *hba_line_nums = NIL;
 	ListCell   *line,
 			   *line_num;
-	List *new_parsed_lines = NIL;
-	bool ok = true;
+	List	   *new_parsed_lines = NIL;
+	bool		ok = true;
 
 	file = AllocateFile(HbaFileName, "r");
 	if (file == NULL)
@@ -1771,7 +1771,7 @@ load_hba(void)
 	/* Now parse all the lines */
 	forboth(line, hba_lines, line_num, hba_line_nums)
 	{
-		HbaLine *newline;
+		HbaLine    *newline;
 
 		newline = palloc0(sizeof(HbaLine));
 
@@ -1917,8 +1917,8 @@ parse_ident_usermap(List *line, int line_number, const char *usermap_name,
 		char	   *ofs;
 		char	   *regexp_pgrole;
 
-		wstr = palloc((strlen(file_ident_user+1) + 1) * sizeof(pg_wchar));
-		wlen = pg_mb2wchar_with_len(file_ident_user+1, wstr, strlen(file_ident_user+1));
+		wstr = palloc((strlen(file_ident_user + 1) + 1) * sizeof(pg_wchar));
+		wlen = pg_mb2wchar_with_len(file_ident_user + 1, wstr, strlen(file_ident_user + 1));
 
 		/*
 		 * XXX: Major room for optimization: regexps could be compiled when
@@ -1927,7 +1927,7 @@ parse_ident_usermap(List *line, int line_number, const char *usermap_name,
 		r = pg_regcomp(&re, wstr, wlen, REG_ADVANCED);
 		if (r)
 		{
-			char errstr[100];
+			char		errstr[100];
 
 			pg_regerror(r, &re, errstr, sizeof(errstr));
 			ereport(LOG,
@@ -1944,10 +1944,10 @@ parse_ident_usermap(List *line, int line_number, const char *usermap_name,
 		wstr = palloc((strlen(ident_user) + 1) * sizeof(pg_wchar));
 		wlen = pg_mb2wchar_with_len(ident_user, wstr, strlen(ident_user));
 
-		r = pg_regexec(&re, wstr, wlen, 0, NULL, 2, matches,0);
+		r = pg_regexec(&re, wstr, wlen, 0, NULL, 2, matches, 0);
 		if (r)
 		{
-			char errstr[100];
+			char		errstr[100];
 
 			if (r != REG_NOMATCH)
 			{
@@ -1974,7 +1974,7 @@ parse_ident_usermap(List *line, int line_number, const char *usermap_name,
 				ereport(LOG,
 						(errcode(ERRCODE_INVALID_REGULAR_EXPRESSION),
 						 errmsg("regular expression \"%s\" has no subexpressions as requested by backreference in \"%s\"",
-								file_ident_user+1, file_pgrole)));
+								file_ident_user + 1, file_pgrole)));
 				pg_regfree(&re);
 				*error_p = true;
 				return;
@@ -1984,12 +1984,12 @@ parse_ident_usermap(List *line, int line_number, const char *usermap_name,
 			 * length: original length minus length of \1 plus length of match
 			 * plus null terminator
 			 */
-			regexp_pgrole = palloc0(strlen(file_pgrole) - 2 + (matches[1].rm_eo-matches[1].rm_so) + 1);
-			strncpy(regexp_pgrole, file_pgrole, (ofs-file_pgrole));
-			memcpy(regexp_pgrole+strlen(regexp_pgrole),
-				   ident_user+matches[1].rm_so,
-				   matches[1].rm_eo-matches[1].rm_so);
-			strcat(regexp_pgrole, ofs+2);
+			regexp_pgrole = palloc0(strlen(file_pgrole) - 2 + (matches[1].rm_eo - matches[1].rm_so) + 1);
+			strncpy(regexp_pgrole, file_pgrole, (ofs - file_pgrole));
+			memcpy(regexp_pgrole + strlen(regexp_pgrole),
+				   ident_user + matches[1].rm_so,
+				   matches[1].rm_eo - matches[1].rm_so);
+			strcat(regexp_pgrole, ofs + 2);
 		}
 		else
 		{
@@ -2051,7 +2051,7 @@ ident_syntax:
  *	See if the user with ident username "auth_user" is allowed to act
  *	as Postgres user "pg_role" according to usermap "usermap_name".
  *
- *  Special case: Usermap NULL, equivalent to what was previously called
+ *	Special case: Usermap NULL, equivalent to what was previously called
  *	"sameuser" or "samerole", means don't look in the usermap file.
  *	That's an implied map wherein "pg_role" must be identical to
  *	"auth_user" in order to be authorized.
@@ -2060,9 +2060,9 @@ ident_syntax:
  */
 int
 check_usermap(const char *usermap_name,
-					const char *pg_role,
-					const char *auth_user,
-					bool case_insensitive)
+			  const char *pg_role,
+			  const char *auth_user,
+			  bool case_insensitive)
 {
 	bool		found_entry = false,
 				error = false;
@@ -2092,7 +2092,7 @@ check_usermap(const char *usermap_name,
 		forboth(line_cell, ident_lines, num_cell, ident_line_nums)
 		{
 			parse_ident_usermap(lfirst(line_cell), lfirst_int(num_cell),
-								usermap_name, pg_role, auth_user, case_insensitive,
+						  usermap_name, pg_role, auth_user, case_insensitive,
 								&found_entry, &error);
 			if (found_entry || error)
 				break;
@@ -2104,7 +2104,7 @@ check_usermap(const char *usermap_name,
 				(errmsg("no match in usermap \"%s\" for user \"%s\" authenticated as \"%s\"",
 						usermap_name, pg_role, auth_user)));
 	}
-	return found_entry?STATUS_OK:STATUS_ERROR;
+	return found_entry ? STATUS_OK : STATUS_ERROR;
 }
 
 
@@ -2139,7 +2139,7 @@ load_ident(void)
 
 /*
  *	Determine what authentication method should be used when accessing database
- *	"database" from frontend "raddr", user "user".	Return the method and
+ *	"database" from frontend "raddr", user "user".  Return the method and
  *	an optional argument (stored in fields of *port), and STATUS_OK.
  *
  *	Note that STATUS_ERROR indicates a problem with the hba config file.

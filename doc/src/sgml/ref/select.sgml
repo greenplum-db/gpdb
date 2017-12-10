@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.116 2008/12/31 23:42:56 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/select.sgml,v 1.122 2009/05/03 20:45:43 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -215,10 +215,11 @@ and <replaceable class="parameter">with_query</replaceable> is:
   </para>
 
   <para>
-   You must have <literal>SELECT</literal> privilege on a table to
-   read its values.  The use of <literal>FOR UPDATE</literal> or
-   <literal>FOR SHARE</literal> requires
-   <literal>UPDATE</literal> privilege as well.
+   You must have <literal>SELECT</literal> privilege on each column used
+   in a <command>SELECT</> command.  The use of <literal>FOR UPDATE</literal>
+   or <literal>FOR SHARE</literal> requires
+   <literal>UPDATE</literal> privilege as well (for at least one column
+   of each table so selected).
   </para>
  </refsect1>
 
@@ -1032,6 +1033,13 @@ OFFSET <replaceable class="parameter">start</replaceable>
    </para>
 
    <para>
+    If the <replaceable class="parameter">count</replaceable> expression
+    evaluates to NULL, it is treated as <literal>LIMIT ALL</>, i.e., no
+    limit.  If <replaceable class="parameter">start</replaceable> evaluates
+    to NULL, it is treated the same as <literal>OFFSET 0</>.
+   </para>
+
+   <para>
     SQL:2008 introduced a different syntax to achieve the same thing,
     which PostgreSQL also supports.  It is:
 <synopsis>
@@ -1043,11 +1051,12 @@ FETCH { FIRST | NEXT } [ <replaceable class="parameter">count</replaceable> ] { 
     the <literal>FETCH</literal> clause.  <literal>ROW</literal>
     and <literal>ROWS</literal> as well as <literal>FIRST</literal>
     and <literal>NEXT</literal> are noise words that don't influence
-    the effects of these clauses.  When using expressions other than
-    constants for the offset or fetch count, parentheses will be
-    necessary in most cases.  If the fetch count is omitted, it
-    defaults to 1.
-   </para>    
+    the effects of these clauses.  In this syntax, when using expressions
+    other than simple constants for <replaceable class="parameter">start</>
+    or <replaceable class="parameter">count</replaceable>, parentheses will be
+    necessary in most cases.  If <replaceable class="parameter">count</> is
+    omitted in <literal>FETCH</>, it defaults to 1.
+   </para>
 
    <para>
     When using <literal>LIMIT</>, it is a good idea to use an
@@ -1192,11 +1201,11 @@ ROLLBACK TO s;
   <caution>
    <para>
     It is possible for a <command>SELECT</> command using both
-    <literal>LIMIT</literal> and  <literal>FOR UPDATE/SHARE</literal>
+    <literal>LIMIT</literal> and <literal>FOR UPDATE/SHARE</literal>
     clauses to return fewer rows than specified by <literal>LIMIT</literal>.
     This is because <literal>LIMIT</> is applied first.  The command
     selects the specified number of rows,
-    but might then block trying to obtain lock on one or more of them.
+    but might then block trying to obtain a lock on one or more of them.
     Once the <literal>SELECT</> unblocks, the row might have been deleted
     or updated so that it does not meet the query <literal>WHERE</> condition
     anymore, in which case it will not be returned.
@@ -1217,7 +1226,6 @@ ROLLBACK TO s;
     ... ORDER BY</>.
    </para>
   </caution>
-
   </refsect2>
 
   <refsect2 id="SQL-TABLE">
@@ -1500,6 +1508,19 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
     be omitted before an alias that is an unreserved keyword.  But
     this is impractical for output column names, because of syntactic
     ambiguities.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>ONLY</literal> and Parentheses</title>
+
+   <para>
+    The SQL standard requires parentheses around the table name
+    after <literal>ONLY</literal>, as in <literal>SELECT * FROM ONLY
+    (tab1), ONLY (tab2) WHERE ...</literal>.  PostgreSQL supports that
+    as well, but the parentheses are optional.  (This point applies
+    equally to all SQL commands supporting the <literal>ONLY</literal>
+    option.)
    </para>
   </refsect2>
 

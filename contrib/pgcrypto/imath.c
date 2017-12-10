@@ -211,7 +211,7 @@ static int	s_vcmp(mp_int a, int v);
 static mp_digit s_uadd(mp_digit *da, mp_digit *db, mp_digit *dc,
 	   mp_size size_a, mp_size size_b);
 
-/* Unsigned magnitude subtraction.  Assumes dc is big enough. */
+/* Unsigned magnitude subtraction.	Assumes dc is big enough. */
 static void s_usub(mp_digit *da, mp_digit *db, mp_digit *dc,
 	   mp_size size_a, mp_size size_b);
 

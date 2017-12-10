@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/nodeMaterial.c,v 1.65 2009/01/01 17:23:42 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/nodeMaterial.c,v 1.69 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -282,7 +282,7 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	/*
 	 * Tuplestore's interpretation of the flag bits is subtly different from
 	 * the general executor meaning: it doesn't think BACKWARD necessarily
-	 * means "backwards all the way to start".  If told to support BACKWARD we
+	 * means "backwards all the way to start".	If told to support BACKWARD we
 	 * must include REWIND in the tuplestore eflags, else tuplestore_trim
 	 * might throw away too much.
 	 */

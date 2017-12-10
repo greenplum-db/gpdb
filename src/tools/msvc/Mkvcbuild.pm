@@ -3,7 +3,7 @@ package Mkvcbuild;
 #
 # Package that generates build files for msvc build
 #
-# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.35 2008/12/20 22:04:02 mha Exp $
+# $PostgreSQL: pgsql/src/tools/msvc/Mkvcbuild.pm,v 1.40 2009/06/05 18:29:56 adunstan Exp $
 #
 use Carp;
 use Win32;
@@ -49,7 +49,7 @@ sub mkvcbuild
 
     our @pgportfiles = qw(
       chklocale.c crypt.c fseeko.c getrusage.c inet_aton.c random.c srandom.c
-      unsetenv.c getaddrinfo.c gettimeofday.c kill.c open.c rand.c
+      getaddrinfo.c gettimeofday.c kill.c open.c rand.c
       snprintf.c strlcat.c strlcpy.c copydir.c dirmod.c exec.c noblock.c path.c pipe.c
       pgsleep.c pgstrcasecmp.c qsort.c qsort_arg.c sprompt.c thread.c
       getopt.c getopt_long.c dirent.c rint.c win32env.c win32error.c glob.c);
@@ -150,10 +150,10 @@ sub mkvcbuild
         {
             $plperl->AddLibrary($perl_libs[0]);
         }
-        else
-        {
+		else
+		{
 			die "could not identify perl library version";
-        }
+		}
     }
 
     if ($solution->{options}->{python})
@@ -192,7 +192,7 @@ sub mkvcbuild
         }
         else
         {
-        $pltcl->AddLibrary($solution->{options}->{tcl} . '\lib\tcl84.lib');
+            $pltcl->AddLibrary($solution->{options}->{tcl} . '\lib\tcl84.lib');
         }
     }
 
@@ -398,15 +398,6 @@ sub mkvcbuild
         $p->AddReference($postgres);
     }
 
-    $mf = Project::read_file('src\backend\foreign\Makefile');
-    $mf =~ s{\\s*[\r\n]+}{}mg;
-    $mf =~ m{FDW\s*=\s*(.*)$}m || die 'Could not match in foreign makefile' . "\n";
-    foreach my $foreign (split /\s+/,$1)
-    {
-        my $proj = $solution->AddProject($foreign . '_fdw', 'dll', 'foreign', 'src\backend\foreign\\' . $foreign);
-        $proj->AddReference($postgres);
-    }
-
     $mf = Project::read_file('src\bin\scripts\Makefile');
     $mf =~ s{\\s*[\r\n]+}{}mg;
     $mf =~ m{PROGRAMS\s*=\s*(.*)$}m || die 'Could not match in bin\scripts\Makefile' . "\n";
@@ -417,11 +408,22 @@ sub mkvcbuild
         my @files = split /\s+/,$1;
         foreach my $f (@files)
         {
-			$f =~ s/\.o$/\.c/;
+            $f =~ s/\.o$/\.c/;
             if ($f eq 'keywords.c')
             {
-                $proj->AddFile('src\backend\parser\keywords.c');
-                $proj->AddIncludeDir('src\backend');
+                $proj->AddFile('src\bin\pg_dump\keywords.c');
+            }
+            elsif ($f eq 'kwlookup.c')
+            {
+                $proj->AddFile('src\backend\parser\kwlookup.c');
+            }
+            elsif ($f eq 'dumputils.c')
+            {
+                $proj->AddFile('src\bin\pg_dump\dumputils.c');
+            }
+            elsif ($f =~ /print\.c$/)
+            { # Also catches mbprint.c
+                $proj->AddFile('src\bin\psql\\' . $f);
             }
             elsif ($f eq '$(top_builddir)/src/backend/parser/keywords.c')
             {

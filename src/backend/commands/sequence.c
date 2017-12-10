@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/sequence.c,v 1.156 2009/01/01 17:23:39 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/sequence.c,v 1.160 2009/06/11 14:48:56 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -1722,8 +1722,8 @@ init_params(List *options, bool isInit,
 		snprintf(bufm, sizeof(bufm), INT64_FORMAT, new->min_value);
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("RESTART value (%s) cannot be less than MINVALUE (%s)",
-						bufs, bufm)));
+			   errmsg("RESTART value (%s) cannot be less than MINVALUE (%s)",
+					  bufs, bufm)));
 	}
 	if (new->last_value > new->max_value)
 	{
@@ -1734,8 +1734,8 @@ init_params(List *options, bool isInit,
 		snprintf(bufm, sizeof(bufm), INT64_FORMAT, new->max_value);
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			  errmsg("RESTART value (%s) cannot be greater than MAXVALUE (%s)",
-					 bufs, bufm)));
+			errmsg("RESTART value (%s) cannot be greater than MAXVALUE (%s)",
+				   bufs, bufm)));
 	}
 
 	/* CACHE */
@@ -1864,6 +1864,9 @@ seq_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 	Size		itemsz;
 	xl_seq_rec *xlrec = (xl_seq_rec *) XLogRecGetData(record);
 	sequence_magic *sm;
+
+	/* Backup blocks are not used in seq records */
+	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
 
 	if (info != XLOG_SEQ_LOG)
 		elog(PANIC, "seq_redo: unknown op code %u", info);

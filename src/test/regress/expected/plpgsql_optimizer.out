@@ -1401,123 +1401,123 @@ ERROR:  function cannot execute on segment because it accesses relation "public.
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PField values ('PF1_1', 'Wallslots 1st floor');
-insert into PSlot values ('PS.1st.a1', 'PF1_1', '', 'WS.101.1a');
+insert into PField values ('PF1_1', 'Wallslots first floor');
+insert into PSlot values ('PS.first.a1', 'PF1_1', '', 'WS.101.1a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.a2', 'PF1_1', '', 'WS.101.1b');
+insert into PSlot values ('PS.first.a2', 'PF1_1', '', 'WS.101.1b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.a3', 'PF1_1', '', 'WS.101.2a');
+insert into PSlot values ('PS.first.a3', 'PF1_1', '', 'WS.101.2a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.a4', 'PF1_1', '', 'WS.101.2b');
+insert into PSlot values ('PS.first.a4', 'PF1_1', '', 'WS.101.2b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.a5', 'PF1_1', '', 'WS.101.3a');
+insert into PSlot values ('PS.first.a5', 'PF1_1', '', 'WS.101.3a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.a6', 'PF1_1', '', 'WS.101.3b');
+insert into PSlot values ('PS.first.a6', 'PF1_1', '', 'WS.101.3b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.b1', 'PF1_1', '', 'WS.102.1a');
+insert into PSlot values ('PS.first.b1', 'PF1_1', '', 'WS.102.1a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.b2', 'PF1_1', '', 'WS.102.1b');
+insert into PSlot values ('PS.first.b2', 'PF1_1', '', 'WS.102.1b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.b3', 'PF1_1', '', 'WS.102.2a');
+insert into PSlot values ('PS.first.b3', 'PF1_1', '', 'WS.102.2a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.b4', 'PF1_1', '', 'WS.102.2b');
+insert into PSlot values ('PS.first.b4', 'PF1_1', '', 'WS.102.2b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.b5', 'PF1_1', '', 'WS.102.3a');
+insert into PSlot values ('PS.first.b5', 'PF1_1', '', 'WS.102.3a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.b6', 'PF1_1', '', 'WS.102.3b');
+insert into PSlot values ('PS.first.b6', 'PF1_1', '', 'WS.102.3b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.c1', 'PF1_1', '', 'WS.105.1a');
+insert into PSlot values ('PS.first.c1', 'PF1_1', '', 'WS.105.1a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.c2', 'PF1_1', '', 'WS.105.1b');
+insert into PSlot values ('PS.first.c2', 'PF1_1', '', 'WS.105.1b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.c3', 'PF1_1', '', 'WS.105.2a');
+insert into PSlot values ('PS.first.c3', 'PF1_1', '', 'WS.105.2a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.c4', 'PF1_1', '', 'WS.105.2b');
+insert into PSlot values ('PS.first.c4', 'PF1_1', '', 'WS.105.2b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.c5', 'PF1_1', '', 'WS.105.3a');
+insert into PSlot values ('PS.first.c5', 'PF1_1', '', 'WS.105.3a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.c6', 'PF1_1', '', 'WS.105.3b');
+insert into PSlot values ('PS.first.c6', 'PF1_1', '', 'WS.105.3b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.d1', 'PF1_1', '', 'WS.106.1a');
+insert into PSlot values ('PS.first.d1', 'PF1_1', '', 'WS.106.1a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.d2', 'PF1_1', '', 'WS.106.1b');
+insert into PSlot values ('PS.first.d2', 'PF1_1', '', 'WS.106.1b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.d3', 'PF1_1', '', 'WS.106.2a');
+insert into PSlot values ('PS.first.d3', 'PF1_1', '', 'WS.106.2a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.d4', 'PF1_1', '', 'WS.106.2b');
+insert into PSlot values ('PS.first.d4', 'PF1_1', '', 'WS.106.2b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.d5', 'PF1_1', '', 'WS.106.3a');
+insert into PSlot values ('PS.first.d5', 'PF1_1', '', 'WS.106.3a');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.d6', 'PF1_1', '', 'WS.106.3b');
+insert into PSlot values ('PS.first.d6', 'PF1_1', '', 'WS.106.3b');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
@@ -1600,63 +1600,63 @@ select * from PSlot where slotname ~ 'PS.base.a' order by slotname;
 ----------+--------+----------+----------
 (0 rows)
 
-insert into PField values ('PF1_2', 'Phonelines 1st floor');
-insert into PSlot values ('PS.1st.ta1', 'PF1_2', '', '');
+insert into PField values ('PF1_2', 'Phonelines first floor');
+insert into PSlot values ('PS.first.ta1', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.ta2', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta2', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.ta3', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta3', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.ta4', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta4', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.ta5', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta5', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.ta6', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.ta6', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.tb1', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb1', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.tb2', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb2', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.tb3', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb3', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.tb4', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb4', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.tb5', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb5', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
 PL/pgSQL function "tg_pslot_biu" line 5 at SQL statement
-insert into PSlot values ('PS.1st.tb6', 'PF1_2', '', '');
+insert into PSlot values ('PS.first.tb6', 'PF1_2', '', '');
 ERROR:  function cannot execute on segment because it accesses relation "public.pfield"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PField where name =  $1 "
@@ -1752,56 +1752,56 @@ SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.015', '-134', '', 'PS.1st.ta1');
+insert into PLine values ('PL.015', '-134', '', 'PS.first.ta1');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.016', '-137', '', 'PS.1st.ta3');
+insert into PLine values ('PL.016', '-137', '', 'PS.first.ta3');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.017', '-139', '', 'PS.1st.ta4');
+insert into PLine values ('PL.017', '-139', '', 'PS.first.ta4');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.018', '-362', '', 'PS.1st.tb1');
+insert into PLine values ('PL.018', '-362', '', 'PS.first.tb1');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.019', '-363', '', 'PS.1st.tb2');
+insert into PLine values ('PL.019', '-363', '', 'PS.first.tb2');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.020', '-364', '', 'PS.1st.tb3');
+insert into PLine values ('PL.020', '-364', '', 'PS.first.tb3');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.021', '-365', '', 'PS.1st.tb5');
+insert into PLine values ('PL.021', '-365', '', 'PS.first.tb5');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.022', '-367', '', 'PS.1st.tb6');
+insert into PLine values ('PL.022', '-367', '', 'PS.first.tb6');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
@@ -1815,7 +1815,7 @@ SQL statement "select * from PSlot where slotname =  $1 "
 PL/pgSQL function "tg_backlink_set" line 17 at SQL statement
 SQL statement "SELECT  tg_backlink_set( $1 ,  $2 )"
 PL/pgSQL function "tg_backlink_a" line 6 at assignment
-insert into PLine values ('PL.029', '-502', 'Fax 1st floor', 'PS.1st.ta1');
+insert into PLine values ('PL.029', '-502', 'Fax first floor', 'PS.first.ta1');
 ERROR:  function cannot execute on segment because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 DETAIL:  
 SQL statement "select * from PSlot where slotname =  $1 "
@@ -3074,7 +3074,7 @@ begin
   end loop flbl1;
 end;
 $$ language plpgsql;
-ERROR:  no such label at or near "flbl1"
+ERROR:  label does not exist at or near "flbl1"
 LINE 5:   end loop flbl1;
                    ^
 -- should fail: end label does not match start label
@@ -3088,7 +3088,7 @@ begin
 end;
 $$ language plpgsql;
 ERROR:  end label "outer_label" differs from block's label "inner_label"
-CONTEXT:  compile of PL/pgSQL function "end_label3" near line 6
+CONTEXT:  compilation of PL/pgSQL function "end_label3" near line 6
 -- should fail: end label on a block without a start label
 create function end_label4() returns void as $$
 <<outer_label>>
@@ -3099,7 +3099,7 @@ begin
 end;
 $$ language plpgsql;
 ERROR:  end label "outer_label" specified for unlabelled block
-CONTEXT:  compile of PL/pgSQL function "end_label4" near line 5
+CONTEXT:  compilation of PL/pgSQL function "end_label4" near line 5
 -- using list of scalars in fori and fore stmts
 create function for_vect() returns void as $proc$
 <<lbl>>declare a integer; b varchar; c varchar; r record;
@@ -3597,7 +3597,7 @@ begin
 end;
 $$ language plpgsql;
 ERROR:  cursor FOR loop must use a bound cursor variable
-CONTEXT:  compile of PL/pgSQL function "forc_bad" near line 4
+CONTEXT:  compilation of PL/pgSQL function "forc_bad" near line 4
 -- test RETURN QUERY EXECUTE
 create or replace function return_dquery()
 returns setof int as $$
@@ -3997,6 +3997,77 @@ select * from tftest(10);
 (2 rows)
 
 drop function tftest(int);
+create or replace function rttest()
+returns setof int as $$
+declare rc int;
+begin
+  return query values(10),(20);
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+  return query select * from (values(10),(20)) f(a) where false;
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+  return query execute 'values(10),(20)';
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+  return query execute 'select * from (values(10),(20)) f(a) where false';
+  get diagnostics rc = row_count;
+  raise notice '% %', found, rc;
+end;
+$$ language plpgsql;
+select * from rttest();
+NOTICE:  t 2
+NOTICE:  f 0
+NOTICE:  t 2
+NOTICE:  f 0
+ rttest 
+--------
+     10
+     20
+     10
+     20
+(4 rows)
+
+drop function rttest();
+-- Test for proper cleanup at subtransaction exit.  This example
+-- exposed a bug in PG 8.2.
+CREATE FUNCTION leaker_1(fail BOOL) RETURNS INTEGER AS $$
+DECLARE
+  v_var INTEGER;
+BEGIN
+  BEGIN
+    v_var := (leaker_2(fail)).error_code;
+  EXCEPTION
+    WHEN others THEN RETURN 0;
+  END;
+  RETURN 1;
+END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION leaker_2(fail BOOL, OUT error_code INTEGER, OUT new_id INTEGER)
+  RETURNS RECORD AS $$
+BEGIN
+  IF fail THEN
+    RAISE EXCEPTION 'fail ...';
+  END IF;
+  error_code := 1;
+  new_id := 1;
+  RETURN;
+END;
+$$ LANGUAGE plpgsql;
+SELECT * FROM leaker_1(false);
+ leaker_1 
+----------
+        1
+(1 row)
+
+SELECT * FROM leaker_1(true);
+ leaker_1 
+----------
+        0
+(1 row)
+
+DROP FUNCTION leaker_1(bool);
+DROP FUNCTION leaker_2(bool);
 -- Test for appropriate cleanup of non-simple expression evaluations
 -- (bug in all versions prior to August 2010)
 CREATE FUNCTION nonsimple_expr_test() RETURNS text[] AS $$
@@ -4088,6 +4159,77 @@ select error2('public.stuffs');
 rollback;
 drop function error2(p_name_table text);
 drop function error1(text);
+-- Test handling of string literals.
+set standard_conforming_strings = off;
+create or replace function strtest() returns text as $$
+begin
+  raise notice 'foo\\bar\041baz';
+  return 'foo\\bar\041baz';
+end
+$$ language plpgsql;
+WARNING:  nonstandard use of \\ in a string literal
+HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
+CONTEXT:  string literal in PL/PgSQL function "strtest" near line 2
+WARNING:  nonstandard use of \\ in a string literal
+LINE 1: SELECT  'foo\\bar\041baz'
+                ^
+HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
+QUERY:  SELECT  'foo\\bar\041baz'
+CONTEXT:  SQL statement in PL/PgSQL function "strtest" near line 3
+select strtest();
+NOTICE:  foo\bar!baz
+WARNING:  nonstandard use of \\ in a string literal
+LINE 1: SELECT  'foo\\bar\041baz'
+                ^
+HINT:  Use the escape string syntax for backslashes, e.g., E'\\'.
+QUERY:  SELECT  'foo\\bar\041baz'
+CONTEXT:  PL/pgSQL function "strtest" line 3 at RETURN
+   strtest   
+-------------
+ foo\bar!baz
+(1 row)
+
+create or replace function strtest() returns text as $$
+begin
+  raise notice E'foo\\bar\041baz';
+  return E'foo\\bar\041baz';
+end
+$$ language plpgsql;
+select strtest();
+NOTICE:  foo\bar!baz
+   strtest   
+-------------
+ foo\bar!baz
+(1 row)
+
+set standard_conforming_strings = on;
+create or replace function strtest() returns text as $$
+begin
+  raise notice 'foo\\bar\041baz\';
+  return 'foo\\bar\041baz\';
+end
+$$ language plpgsql;
+select strtest();
+NOTICE:  foo\\bar\041baz\
+     strtest      
+------------------
+ foo\\bar\041baz\
+(1 row)
+
+create or replace function strtest() returns text as $$
+begin
+  raise notice E'foo\\bar\041baz';
+  return E'foo\\bar\041baz';
+end
+$$ language plpgsql;
+select strtest();
+NOTICE:  foo\bar!baz
+   strtest   
+-------------
+ foo\bar!baz
+(1 row)
+
+drop function strtest();
 -- Test anonymous code blocks.
 DO $$
 DECLARE r record;

@@ -92,8 +92,8 @@ static char *_add(const char *, char *, const char *);
 static char *_conv(int, const char *, char *, const char *);
 static char *_fmt(const char *, const struct pg_tm *, char *,
 	 const char *, int *);
-static char * _yconv(const int, const int, const int, const int, 
-	 char *, const char * const);
+static char *_yconv(const int, const int, const int, const int,
+	   char *, const char *const);
 
 #define IN_NONE 0
 #define IN_SOME 1
@@ -368,11 +368,11 @@ _fmt(const char *format, const struct pg_tm * t, char *pt, const char *ptlim,
 						{
 							*warnp = IN_ALL;
 							pt = _yconv(year, base, 0, 1,
-									   pt, ptlim);
+										pt, ptlim);
 						}
 						else
 							pt = _yconv(year, base, 1, 1,
-									   pt, ptlim);
+										pt, ptlim);
 					}
 					continue;
 				case 'v':
@@ -493,13 +493,13 @@ _add(const char *str, char *pt, const char *ptlim)
  * with more only if necessary.
  */
 static char *
-_yconv(const int a, const int b, const int convert_top, 
-	   const int convert_yy, char *pt, const char * const ptlim)
+_yconv(const int a, const int b, const int convert_top,
+	   const int convert_yy, char *pt, const char *const ptlim)
 {
-	int    lead;
-	int    trail;
- 
-#define DIVISOR       100
+	int			lead;
+	int			trail;
+
+#define DIVISOR		  100
 	trail = a % DIVISOR + b % DIVISOR;
 	lead = a / DIVISOR + b / DIVISOR + trail / DIVISOR;
 	trail %= DIVISOR;
@@ -524,4 +524,3 @@ _yconv(const int a, const int b, const int convert_top,
 		pt = _conv(((trail < 0) ? -trail : trail), "%02d", pt, ptlim);
 	return pt;
 }
- 

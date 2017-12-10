@@ -3,7 +3,7 @@ package Install;
 #
 # Package that provides 'make install' functionality for msvc builds
 #
-# $PostgreSQL: pgsql/src/tools/msvc/Install.pm,v 1.31 2008/09/17 04:31:08 tgl Exp $
+# $PostgreSQL: pgsql/src/tools/msvc/Install.pm,v 1.33 2009/04/20 08:38:00 mha Exp $
 #
 use strict;
 use warnings;
@@ -103,7 +103,7 @@ sub Install
     CopyContribFiles($config,$target);
     CopyIncludeFiles($target);
 
-    GenerateNLSFiles($target,$config->{nls}) if ($config->{nls});
+    GenerateNLSFiles($target,$config->{nls},$majorver) if ($config->{nls});
 
     print "Installation complete.\n";
 }
@@ -473,11 +473,10 @@ sub GenerateNLSFiles
 				  }, "src");
     foreach (@flist)
     {
+        my $prgm = DetermineCatalogName($_);
         s/nls.mk/po/;
         my $dir = $_;
         next unless ($dir =~ /([^\/]+)\/po$/);
-        my $prgm = $1;
-        $prgm = 'postgres' if ($prgm eq 'backend');
         foreach (glob("$dir/*.po"))
         {
             my $lang;

@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/float.c,v 1.159 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/float.c,v 1.162 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -595,9 +595,7 @@ float4um(PG_FUNCTION_ARGS)
 	float4		arg1 = PG_GETARG_FLOAT4(0);
 	float4		result;
 
-	result = ((arg1 != 0) ? -(arg1) : arg1);
-
-	CHECKFLOATVAL(result, isinf(arg1), true);
+	result = -arg1;
 	PG_RETURN_FLOAT4(result);
 }
 
@@ -664,9 +662,7 @@ float8um(PG_FUNCTION_ARGS)
 	float8		arg1 = PG_GETARG_FLOAT8(0);
 	float8		result;
 
-	result = ((arg1 != 0) ? -(arg1) : arg1);
-
-	CHECKFLOATVAL(result, isinf(arg1), true);
+	result = -arg1;
 	PG_RETURN_FLOAT8(result);
 }
 
@@ -722,16 +718,16 @@ float8smaller(PG_FUNCTION_ARGS)
 Datum
 float4pl(PG_FUNCTION_ARGS)
 {
-	float8		arg1 = PG_GETARG_FLOAT4(0);
-	float8		arg2 = PG_GETARG_FLOAT4(1);
+	float4		arg1 = PG_GETARG_FLOAT4(0);
+	float4		arg2 = PG_GETARG_FLOAT4(1);
 	float4		result;
 
 	result = arg1 + arg2;
 
 	/*
 	 * There isn't any way to check for underflow of addition/subtraction
-	 * because numbers near the underflow value have been already been to the
-	 * point where we can't detect the that the two values were originally
+	 * because numbers near the underflow value have already been rounded to
+	 * the point where we can't detect that the two values were originally
 	 * different, e.g. on x86, '1e-45'::float4 == '2e-45'::float4 ==
 	 * 1.4013e-45.
 	 */

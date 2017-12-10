@@ -18,6 +18,7 @@
 #include "cdb/cdbutil.h"
 #include <unistd.h>
 
+#include "access/xact.h"
 #include "access/xlog_internal.h"
 #include "access/bitmap.h"
 #include "access/htup.h"
@@ -31,6 +32,7 @@
 #include "storage/lock.h"
 #include "storage/relfilenode.h"
 #include "storage/shmem.h"
+#include "utils/builtins.h"
 #include "utils/faultinjector.h"
 #include "utils/memutils.h"
 #include "utils/palloc.h"

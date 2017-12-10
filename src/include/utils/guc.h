@@ -9,7 +9,7 @@
  * Copyright (c) 2000-2009, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
- * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.100 2009/01/01 17:24:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/guc.h,v 1.102 2009/06/11 14:49:13 momjian Exp $
  *--------------------------------------------------------------------
  */
 #ifndef GUC_H
@@ -115,7 +115,7 @@ typedef enum
 struct config_enum_entry
 {
 	const char *name;
-	int         val;
+	int			val;
 	bool		hidden;
 };
 
@@ -675,16 +675,16 @@ extern void DefineCustomStringVariable(
 						   GucShowHook show_hook);
 
 extern void DefineCustomEnumVariable(
-						   const char *name,
-						   const char *short_desc,
-						   const char *long_desc,
-						   int *valueAddr,
-						   int bootValue,
-						   const struct config_enum_entry *options,
-						   GucContext context,
-						   int flags,
-						   GucEnumAssignHook assign_hook,
-						   GucShowHook show_hook);
+						 const char *name,
+						 const char *short_desc,
+						 const char *long_desc,
+						 int *valueAddr,
+						 int bootValue,
+						 const struct config_enum_entry * options,
+						 GucContext context,
+						 int flags,
+						 GucEnumAssignHook assign_hook,
+						 GucShowHook show_hook);
 
 extern void EmitWarningsOnPlaceholders(const char *className);
 
@@ -700,9 +700,8 @@ extern int	NewGUCNestLevel(void);
 extern void AtEOXact_GUC(bool isCommit, int nestLevel);
 extern void BeginReportingGUCOptions(void);
 extern void ParseLongOption(const char *string, char **name, char **value);
-extern bool parse_bool(const char *value, bool *result);
 extern bool parse_int(const char *value, int *result, int flags,
-					  const char **hintmsg);
+		  const char **hintmsg);
 extern bool parse_real(const char *value, double *result);
 extern bool set_config_option(const char *name, const char *value,
 				  GucContext context, GucSource source,
@@ -767,7 +766,7 @@ extern const char *assign_search_path(const char *newval,
 
 /* in access/transam/xlog.c */
 extern bool assign_xlog_sync_method(int newval,
-				bool doit, GucSource source);
+						bool doit, GucSource source);
 
 extern StdRdOptions *defaultStdRdOptions(char relkind);
 

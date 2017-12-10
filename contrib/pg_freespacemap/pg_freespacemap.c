@@ -3,7 +3,7 @@
  * pg_freespacemap.c
  *	  display contents of a free space map
  *
- *	  $PostgreSQL: pgsql/contrib/pg_freespacemap/pg_freespacemap.c,v 1.12 2008/10/02 12:20:50 heikki Exp $
+ *	  $PostgreSQL: pgsql/contrib/pg_freespacemap/pg_freespacemap.c,v 1.14 2009/06/11 14:48:51 momjian Exp $
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
@@ -17,7 +17,6 @@
 PG_MODULE_MAGIC;
 
 Datum		pg_freespace(PG_FUNCTION_ARGS);
-Datum		pg_freespacedump(PG_FUNCTION_ARGS);
 
 /*
  * Returns the amount of free space on a given page, according to the
@@ -28,10 +27,10 @@ PG_FUNCTION_INFO_V1(pg_freespace);
 Datum
 pg_freespace(PG_FUNCTION_ARGS)
 {
-	Oid		relid = PG_GETARG_OID(0);
-	int64	blkno = PG_GETARG_INT64(1);
-	int16	freespace;
-	Relation rel;
+	Oid			relid = PG_GETARG_OID(0);
+	int64		blkno = PG_GETARG_INT64(1);
+	int16		freespace;
+	Relation	rel;
 
 	rel = relation_open(relid, AccessShareLock);
 

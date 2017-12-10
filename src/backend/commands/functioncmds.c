@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.106 2009/01/01 17:23:38 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/functioncmds.c,v 1.110 2009/06/11 14:48:55 momjian Exp $
  *
  * DESCRIPTION
  *	  These routines take the parse tree and pick out the
@@ -332,7 +332,7 @@ interpret_function_parameter_list(List *parameters,
 					if (!OidIsValid(get_element_type(toid)))
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-								 errmsg("VARIADIC parameter must be an array")));
+							 errmsg("VARIADIC parameter must be an array")));
 					break;
 			}
 
@@ -351,12 +351,12 @@ interpret_function_parameter_list(List *parameters,
 
 		if (fp->defexpr)
 		{
-			Node   *def;
+			Node	   *def;
 
 			if (!isinput)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-						 errmsg("only input parameters can have default values")));
+				   errmsg("only input parameters can have default values")));
 
 			if (toid == ANYTABLEOID)
 				ereport(ERROR,
@@ -875,7 +875,7 @@ interpret_AS_clause(Oid languageOid, const char *languageName,
 	{
 		/*
 		 * For "C" language, store the file name in probin and, when given,
-		 * the link symbol name in prosrc.  If link symbol is omitted,
+		 * the link symbol name in prosrc.	If link symbol is omitted,
 		 * substitute procedure name.  We also allow link symbol to be
 		 * specified as "-", since that was the habit in PG versions before
 		 * 8.4, and there might be dump files out there that don't translate
@@ -1640,7 +1640,7 @@ AlterFunctionOwner_internal(Relation rel, HeapTuple tup, Oid newOwnerId)
 		}
 
 		newtuple = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val,
-									repl_null, repl_repl);
+									 repl_null, repl_repl);
 
 		simple_heap_update(rel, &newtuple->t_self, newtuple);
 		CatalogUpdateIndexes(rel, newtuple);
@@ -1782,7 +1782,7 @@ AlterFunction(AlterFunctionStmt *stmt)
 		}
 
 		tup = heap_modify_tuple(tup, RelationGetDescr(rel),
-							   repl_val, repl_null, repl_repl);
+								repl_val, repl_null, repl_repl);
 	}
 	if (data_access_item)
 	{
@@ -1932,6 +1932,8 @@ CreateCast(CreateCastStmt *stmt)
 {
 	Oid			sourcetypeid;
 	Oid			targettypeid;
+	char		sourcetyptype;
+	char		targettyptype;
 	Oid			funcid;
 	int			nargs;
 	char		castcontext;
@@ -1945,15 +1947,17 @@ CreateCast(CreateCastStmt *stmt)
 
 	sourcetypeid = typenameTypeId(NULL, stmt->sourcetype, NULL);
 	targettypeid = typenameTypeId(NULL, stmt->targettype, NULL);
+	sourcetyptype = get_typtype(sourcetypeid);
+	targettyptype = get_typtype(targettypeid);
 
 	/* No pseudo-types allowed */
-	if (get_typtype(sourcetypeid) == TYPTYPE_PSEUDO)
+	if (sourcetyptype == TYPTYPE_PSEUDO)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("source data type %s is a pseudo-type",
 						TypeNameToString(stmt->sourcetype))));
 
-	if (get_typtype(targettypeid) == TYPTYPE_PSEUDO)
+	if (targettyptype == TYPTYPE_PSEUDO)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("target data type %s is a pseudo-type",
@@ -1971,7 +1975,7 @@ CreateCast(CreateCastStmt *stmt)
 	/* Detemine the cast method */
 	if (stmt->func != NULL)
 		castmethod = COERCION_METHOD_FUNCTION;
-	else if(stmt->inout)
+	else if (stmt->inout)
 		castmethod = COERCION_METHOD_INOUT;
 	else
 		castmethod = COERCION_METHOD_BINARY;
@@ -1999,7 +2003,7 @@ CreateCast(CreateCastStmt *stmt)
 		if (!IsBinaryCoercible(sourcetypeid, procstruct->proargtypes.values[0]))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-			errmsg("argument of cast function must match or be binary-coercible from source data type")));
+					 errmsg("argument of cast function must match or be binary-coercible from source data type")));
 		if (nargs > 1 && procstruct->proargtypes.values[1] != INT4OID)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
@@ -2077,6 +2081,33 @@ CreateCast(CreateCastStmt *stmt)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 errmsg("source and target data types are not physically compatible")));
+
+		/*
+		 * We know that composite, enum and array types are never binary-
+		 * compatible with each other.	They all have OIDs embedded in them.
+		 *
+		 * Theoretically you could build a user-defined base type that is
+		 * binary-compatible with a composite, enum, or array type.  But we
+		 * disallow that too, as in practice such a cast is surely a mistake.
+		 * You can always work around that by writing a cast function.
+		 */
+		if (sourcetyptype == TYPTYPE_COMPOSITE ||
+			targettyptype == TYPTYPE_COMPOSITE)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				  errmsg("composite data types are not binary-compatible")));
+
+		if (sourcetyptype == TYPTYPE_ENUM ||
+			targettyptype == TYPTYPE_ENUM)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					 errmsg("enum data types are not binary-compatible")));
+
+		if (OidIsValid(get_element_type(sourcetypeid)) ||
+			OidIsValid(get_element_type(targettypeid)))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+					 errmsg("array data types are not binary-compatible")));
 	}
 
 	/*

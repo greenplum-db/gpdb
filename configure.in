@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $PostgreSQL: pgsql/configure.in,v 1.579 2009/01/05 10:25:59 petere Exp $
+dnl $PostgreSQL: pgsql/configure.in,v 1.602 2009/06/27 00:14:47 scrappy Exp $
 dnl
 dnl Developers, please strive to achieve this order:
 dnl
@@ -21,7 +21,7 @@ dnl The PACKAGE_VERSION from upstream PostgreSQL is maintained in the
 dnl PG_PACKAGE_VERSION variable, when merging make sure to update this
 dnl variable with the merge conflict from the AC_INIT() statement.
 AC_INIT([Greenplum Database], [6.0.0-alpha.0], [support@greenplum.org])
-[PG_PACKAGE_VERSION=8.4devel]
+[PG_PACKAGE_VERSION=8.4.0]
 AC_SUBST(PG_PACKAGE_VERSION)
 
 dnl m4_if(m4_defn([m4_PACKAGE_VERSION]), [2.63], [], [m4_fatal([Autoconf version 2.63 is required.
@@ -592,7 +592,8 @@ fi
 
 # Some versions of GCC support some additional useful warning flags.
 # Check whether they are supported, and add them to CFLAGS if so.
-# ICC pretends to be GCC but it's lying; it doesn't support these options.
+# ICC pretends to be GCC but it's lying; it doesn't support these flags,
+# but has its own.  Also check other compiler-specific flags here.
 
 if test "$GCC" = yes -a "$ICC" = no; then
   CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wpointer-arith"
@@ -630,8 +631,8 @@ elif test "$ICC" = yes; then
   PGAC_PROG_CC_CFLAGS_OPT([-mp1])
   # Make sure strict aliasing is off (though this is said to be the default)
   PGAC_PROG_CC_CFLAGS_OPT([-fno-strict-aliasing])
-elif test x"${CC}" = x"xlc"; then
-  # AIX xlc has to have strict aliasing turned off too
+elif test "$PORTNAME" = "aix"; then
+  # AIX's xlc has to have strict aliasing turned off too
   PGAC_PROG_CC_CFLAGS_OPT([-qnoansialias])
 fi
 
@@ -719,53 +720,6 @@ done
 
 AC_PROG_CPP
 AC_SUBST(GCC)
-
-[BLD_ARCH=`echo $BLD_ARCH`]
-AC_SUBST(BLD_ARCH)
-
-# Get the Greenplum version string from VERSION
-
-GP_VERSION_LONG=`bash ./getversion`
-
-if test "$with_extra_version" = "" ; then
-  with_extra_version="-oss"
-fi
-
-GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
-
-echo $GP_VERSION_LONG > VERSION
-GP_VERSION=`cat VERSION`
-
-GP_VERSION_SHORT=`bash ./getversion --short`
-GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
-AC_SUBST(GP_VERSION_SHORT)
-
-GP_VERSION_IN="src/include/catalog/gp_version.in"
-GP_VERSION_HEADER="src/include/catalog/gp_version.h"
-if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_HEADER
-fi
-
-GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
-GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
-if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
-    sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
-fi
-
-GPTEST_IN="src/test/regress/GPTest.pm.in"
-GPTEST_PM="src/test/regress/GPTest.pm"
-if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
-    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
-fi
-
-AC_DEFINE_UNQUOTED(GP_VERSION,
-                   ["$GP_VERSION"],
-                   [A string containing the Greenplum version number])
-
-[GP_MAJORVERSION=`expr "$GP_VERSION" : '\([0-9][0-9]*\)'`]
-AC_SUBST(GP_MAJORVERSION)
-AC_DEFINE_UNQUOTED(GP_MAJORVERSION, "$GP_MAJORVERSION", [Greenplum major version as a string])
-
 
 #
 # Set up TAS assembly code if needed; the template file has now had its
@@ -1295,13 +1249,6 @@ program to use during the build.])
 fi
 
 AC_SUBST(ADDON_DIR)
-
-
-#
-[GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
-tr '.' '	' |
-$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
-AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a number])
 
 ##
 ## Libraries
@@ -1874,7 +1821,7 @@ LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
 # net-snmp has the same problem..
 LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
 
-AC_REPLACE_FUNCS([crypt fseeko getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul unsetenv])
+AC_REPLACE_FUNCS([crypt fseeko getopt getpeereid getrusage inet_aton random rint srandom strdup strerror strlcat strlcpy strtol strtoul])
 
 case $host_os in
 
@@ -1899,15 +1846,16 @@ else
 fi
 
 # Similarly, use system's getopt_long() only if system provides struct option.
-# Solaris' getopt() doesn't do what we want for long options, so always use
-# our versions on that platform.
-if test "$PORTNAME" = "solaris"; then
-  AC_LIBOBJ(getopt)
-  AC_LIBOBJ(getopt_long)
-elif test x"$ac_cv_type_struct_option" = xyes ; then
+if test x"$ac_cv_type_struct_option" = xyes ; then
   AC_REPLACE_FUNCS([getopt_long])
 else
   AC_LIBOBJ(getopt_long)
+fi
+
+# Solaris' getopt() doesn't do what we want for long options, so always use
+# our version on that platform.
+if test "$PORTNAME" = "solaris"; then
+  AC_LIBOBJ(getopt)
 fi
 
 # mingw has adopted a GNU-centric interpretation of optind/optreset,
@@ -2484,6 +2432,52 @@ AC_MSG_NOTICE([using CPPFLAGS=$CPPFLAGS])
 AC_MSG_NOTICE([using LDFLAGS=$LDFLAGS])
 AC_MSG_NOTICE([using LIBS=$LIBS])
 
+[BLD_ARCH=`echo $BLD_ARCH`]
+AC_SUBST(BLD_ARCH)
+
+# Get the Greenplum version string from VERSION
+
+GP_VERSION_LONG=`bash ./getversion`
+
+if test "$with_extra_version" = "" ; then
+  with_extra_version="-oss"
+fi
+
+GP_VERSION_LONG="$GP_VERSION_LONG$with_extra_version"
+
+echo $GP_VERSION_LONG > VERSION
+GP_VERSION=`cat VERSION`
+
+GP_VERSION_SHORT=`bash ./getversion --short`
+GP_VERSION_SHORT="$GP_VERSION_SHORT$with_extra_version"
+AC_SUBST(GP_VERSION_SHORT)
+
+GP_VERSION_IN="src/include/catalog/gp_version.in"
+GP_VERSION_HEADER="src/include/catalog/gp_version.h"
+if grep '\$\$' $GP_VERSION_IN > /dev/null 2>&1 ; then
+    sed "s,\\$.*\\$\\$,$GP_VERSION," $GP_VERSION_IN > $GP_VERSION_HEADER
+fi
+
+GP_BASH_VERSION_IN="gpMgmt/bin/lib/gp_bash_version.sh.in"
+GP_BASH_VERSION_SH="gpMgmt/bin/lib/gp_bash_version.sh"
+if grep '##' $GP_BASH_VERSION_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GP_BASH_VERSION_IN > $GP_BASH_VERSION_SH
+fi
+
+GPTEST_IN="src/test/regress/GPTest.pm.in"
+GPTEST_PM="src/test/regress/GPTest.pm"
+if grep '##' $GPTEST_IN > /dev/null 2>&1 ; then
+    sed "s,##.*##,$GP_VERSION," $GPTEST_IN > $GPTEST_PM
+fi
+
+AC_DEFINE_UNQUOTED(GP_VERSION,
+                   ["$GP_VERSION"],
+                   [A string containing the Greenplum version number])
+
+[GP_MAJORVERSION=`expr "$GP_VERSION" : '\([0-9][0-9]*\)'`]
+AC_SUBST(GP_MAJORVERSION)
+AC_DEFINE_UNQUOTED(GP_MAJORVERSION, "$GP_MAJORVERSION", [Greenplum major version as a string])
+
 # Create compiler version string
 if test x"$GCC" = x"yes" ; then
   cc_string="GCC `${CC} --version | sed q`"
@@ -2501,6 +2495,12 @@ AC_DEFINE_UNQUOTED(PG_VERSION_STR,
 tr '.' '	' |
 $AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
 AC_DEFINE_UNQUOTED(PG_VERSION_NUM, $PG_VERSION_NUM, [PostgreSQL version as a number])
+
+#
+[GP_VERSION_NUM="`echo "$PACKAGE_VERSION" | sed 's/[A-Za-z].*$//' |
+tr '.' '	' |
+$AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
+AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a number])
 
 
 # prepare build tree if outside source tree

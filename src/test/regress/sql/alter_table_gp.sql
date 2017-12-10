@@ -6,7 +6,7 @@ CREATE TABLE cor (a int, b float);
 INSERT INTO cor SELECT i, i+1 FROM generate_series(1,100)i;
 DELETE FROM pg_attribute WHERE attname='a' AND attrelid='cor'::regclass;
 ALTER TABLE cor RENAME TO oldcor;
-INSERT INTO pg_attribute SELECT distinct * FROM gp_dist_random('pg_attribute') WHERE attname='a' AND attrelid='oldcor'::regclass;
+INSERT INTO pg_attribute SELECT distinct on(attrelid, attnum) * FROM gp_dist_random('pg_attribute') WHERE attname='a' AND attrelid='oldcor'::regclass;
 DROP TABLE oldcor;
 
 -- typname is out of sync

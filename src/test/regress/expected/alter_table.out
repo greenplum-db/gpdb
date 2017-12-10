@@ -1210,7 +1210,7 @@ NOTICE:  drop cascades to 2 other objects
 DETAIL:  drop cascades to table c1
 drop cascades to table gc1
 --
--- Test the ALTER TABLE WITHOUT OIDS command
+-- Test the ALTER TABLE SET WITH/WITHOUT OIDS command
 --
 create table altstartwith (col integer) with oids;
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
@@ -1232,10 +1232,19 @@ select * from altstartwith;
    1
 (1 row)
 
--- Run inheritance tests
+alter table altstartwith set with oids;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+select oid > 0, * from altstartwith;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+drop table altstartwith;
+-- Check inheritance cases
 create table altwithoid (col integer) with oids;
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
--- Inherits parents oid column
+-- Inherits parents oid column anyway
 create table altinhoid () inherits (altwithoid) without oids;
 NOTICE:  Table has parent, setting distribution columns to match parent table
 NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
@@ -1253,7 +1262,6 @@ select oid > 0, * from altinhoid;
 (1 row)
 
 alter table altwithoid set without oids;
-alter table altinhoid set without oids;
 select oid > 0, * from altwithoid; -- fails
 ERROR:  column "oid" does not exist
 LINE 1: select oid > 0, * from altwithoid;
@@ -1274,6 +1282,67 @@ select * from altinhoid;
    1
 (1 row)
 
+alter table altwithoid set with oids;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+select oid > 0, * from altwithoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+drop table altwithoid cascade;
+NOTICE:  drop cascades to table altinhoid
+create table altwithoid (col integer) without oids;
+-- child can have local oid column
+create table altinhoid () inherits (altwithoid) with oids;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+insert into altinhoid values (1);
+select oid > 0, * from altwithoid; -- fails
+ERROR:  column "oid" does not exist
+LINE 1: select oid > 0, * from altwithoid;
+               ^
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+alter table altwithoid set with oids;
+NOTICE:  merging definition of column "oid" for child "altinhoid"
+NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+select oid > 0, * from altwithoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+-- the child's local definition should remain
+alter table altwithoid set without oids;
+select oid > 0, * from altwithoid; -- fails
+ERROR:  column "oid" does not exist
+LINE 1: select oid > 0, * from altwithoid;
+               ^
+select oid > 0, * from altinhoid;
+ ?column? | col 
+----------+-----
+ t        |   1
+(1 row)
+
+drop table altwithoid cascade;
+NOTICE:  drop cascades to table altinhoid
 -- test renumbering of child-table columns in inherited operations
 create table p1 (f1 int);
 create table c1 (f2 text, f3 int) inherits (p1);
@@ -1306,11 +1375,11 @@ NOTICE:  drop cascades to table c1
 -- its datatype
 create domain mytype as text;
 create temp table foo (f1 text, f2 mytype, f3 text);
-insert into foo values('aa','bb','cc');
+insert into foo values('bb','cc','dd');
 select * from foo;
  f1 | f2 | f3 
 ----+----+----
- aa | bb | cc
+ bb | cc | dd
 (1 row)
 
 drop domain mytype cascade;
@@ -1318,14 +1387,14 @@ NOTICE:  drop cascades to table foo column f2
 select * from foo;
  f1 | f3 
 ----+----
- aa | cc
+ bb | dd
 (1 row)
 
 insert into foo values('qq','rr');
 select * from foo;
  f1 | f3 
 ----+----
- aa | cc
+ bb | dd
  qq | rr
 (2 rows)
 
@@ -1333,7 +1402,7 @@ update foo set f3 = 'zz';
 select * from foo;
  f1 | f3 
 ----+----
- aa | zz
+ bb | zz
  qq | zz
 (2 rows)
 

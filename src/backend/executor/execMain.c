@@ -28,7 +28,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.320 2009/01/01 17:23:41 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/execMain.c,v 1.326 2009/06/11 20:46:11 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -40,6 +40,7 @@
 #include "access/appendonlywriter.h"
 #include "access/fileam.h"
 #include "access/reloptions.h"
+#include "access/sysattr.h"
 #include "access/transam.h"
 #include "access/xact.h"
 #include "catalog/heap.h"
@@ -112,9 +113,9 @@ extern bool cdbpathlocus_querysegmentcatalogs;
 
 
 /* Hooks for plugins to get control in ExecutorStart/Run/End() */
-ExecutorStart_hook_type	ExecutorStart_hook = NULL;
-ExecutorRun_hook_type	ExecutorRun_hook = NULL;
-ExecutorEnd_hook_type	ExecutorEnd_hook = NULL;
+ExecutorStart_hook_type ExecutorStart_hook = NULL;
+ExecutorRun_hook_type ExecutorRun_hook = NULL;
+ExecutorEnd_hook_type ExecutorEnd_hook = NULL;
 
 typedef struct evalPlanQual
 {
@@ -1244,8 +1245,12 @@ void
 ExecCheckRTEPerms(RangeTblEntry *rte)
 {
 	AclMode		requiredPerms;
+	AclMode		relPerms;
+	AclMode		remainingPerms;
 	Oid			relOid;
 	Oid			userid;
+	Bitmapset  *tmpset;
+	int			col;
 
 	/*
 	 * Only plain-relation RTEs need to be checked here.  Function RTEs are
@@ -1275,17 +1280,109 @@ ExecCheckRTEPerms(RangeTblEntry *rte)
 	userid = rte->checkAsUser ? rte->checkAsUser : GetUserId();
 
 	/*
-	 * We must have *all* the requiredPerms bits, so use aclmask not aclcheck.
+	 * We must have *all* the requiredPerms bits, but some of the bits can be
+	 * satisfied from column-level rather than relation-level permissions.
+	 * First, remove any bits that are satisfied by relation permissions.
 	 */
-	if (pg_class_aclmask(relOid, userid, requiredPerms, ACLMASK_ALL)
-		!= requiredPerms)
+	relPerms = pg_class_aclmask(relOid, userid, requiredPerms, ACLMASK_ALL);
+	remainingPerms = requiredPerms & ~relPerms;
+	if (remainingPerms != 0)
 	{
 		/*
-		 * If the table is a partition, return an error message that includes
-		 * the name of the parent table.
+		 * If we lack any permissions that exist only as relation permissions,
+		 * we can fail straight away.
 		 */
-		const char *rel_name = get_rel_name_partition(relOid);
-		aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS, rel_name);
+		if (remainingPerms & ~(ACL_SELECT | ACL_INSERT | ACL_UPDATE))
+			aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+						   get_rel_name_partition(relOid));
+
+		/*
+		 * Check to see if we have the needed privileges at column level.
+		 *
+		 * Note: failures just report a table-level error; it would be nicer
+		 * to report a column-level error if we have some but not all of the
+		 * column privileges.
+		 */
+		if (remainingPerms & ACL_SELECT)
+		{
+			/*
+			 * When the query doesn't explicitly reference any columns (for
+			 * example, SELECT COUNT(*) FROM table), allow the query if we
+			 * have SELECT on any column of the rel, as per SQL spec.
+			 */
+			if (bms_is_empty(rte->selectedCols))
+			{
+				if (pg_attribute_aclcheck_all(relOid, userid, ACL_SELECT,
+											  ACLMASK_ANY) != ACLCHECK_OK)
+					aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+								   get_rel_name_partition(relOid));
+			}
+
+			tmpset = bms_copy(rte->selectedCols);
+			while ((col = bms_first_member(tmpset)) >= 0)
+			{
+				/* remove the column number offset */
+				col += FirstLowInvalidHeapAttributeNumber;
+				if (col == InvalidAttrNumber)
+				{
+					/* Whole-row reference, must have priv on all cols */
+					if (pg_attribute_aclcheck_all(relOid, userid, ACL_SELECT,
+												  ACLMASK_ALL) != ACLCHECK_OK)
+						aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+									   get_rel_name_partition(relOid));
+				}
+				else
+				{
+					if (pg_attribute_aclcheck(relOid, col, userid, ACL_SELECT)
+						!= ACLCHECK_OK)
+						aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+									   get_rel_name_partition(relOid));
+				}
+			}
+			bms_free(tmpset);
+		}
+
+		/*
+		 * Basically the same for the mod columns, with either INSERT or
+		 * UPDATE privilege as specified by remainingPerms.
+		 */
+		remainingPerms &= ~ACL_SELECT;
+		if (remainingPerms != 0)
+		{
+			/*
+			 * When the query doesn't explicitly change any columns, allow the
+			 * query if we have permission on any column of the rel.  This is
+			 * to handle SELECT FOR UPDATE as well as possible corner cases in
+			 * INSERT and UPDATE.
+			 */
+			if (bms_is_empty(rte->modifiedCols))
+			{
+				if (pg_attribute_aclcheck_all(relOid, userid, remainingPerms,
+											  ACLMASK_ANY) != ACLCHECK_OK)
+					aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+								   get_rel_name_partition(relOid));
+			}
+
+			tmpset = bms_copy(rte->modifiedCols);
+			while ((col = bms_first_member(tmpset)) >= 0)
+			{
+				/* remove the column number offset */
+				col += FirstLowInvalidHeapAttributeNumber;
+				if (col == InvalidAttrNumber)
+				{
+					/* whole-row reference can't happen here */
+					elog(ERROR, "whole-row update is not implemented");
+				}
+				else
+				{
+					if (pg_attribute_aclcheck(relOid, col, userid, remainingPerms)
+						!= ACLCHECK_OK)
+						aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+									   get_rel_name_partition(relOid));
+				}
+			}
+			bms_free(tmpset);
+		}
 	}
 }
 
@@ -1960,9 +2057,9 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 
 	/*
 	 * Initialize the junk filter if needed.  SELECT and INSERT queries need a
-	 * filter if there are any junk attrs in the tlist.  UPDATE and
-	 * DELETE always need a filter, since there's always a junk 'ctid'
-	 * attribute present --- no need to look first.
+	 * filter if there are any junk attrs in the tlist.  UPDATE and DELETE
+	 * always need a filter, since there's always a junk 'ctid' attribute
+	 * present --- no need to look first.
 	 *
 	 * This section of code is also a convenient place to verify that the
 	 * output of an INSERT or UPDATE matches the target table(s).
@@ -2452,7 +2549,7 @@ ExecCheckPlanOutput(Relation resultRel, List *targetList)
 						 errdetail("Table has type %s at ordinal position %d, but query expects %s.",
 								   format_type_be(attr->atttypid),
 								   attno,
-								   format_type_be(exprType((Node *) tle->expr)))));
+							 format_type_be(exprType((Node *) tle->expr)))));
 		}
 		else
 		{
@@ -2473,7 +2570,7 @@ ExecCheckPlanOutput(Relation resultRel, List *targetList)
 	if (attno != resultDesc->natts)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
-				 errmsg("table row type and query-specified row type do not match"),
+		  errmsg("table row type and query-specified row type do not match"),
 				 errdetail("Query has too few columns.")));
 }
 
@@ -2935,7 +3032,7 @@ lnext:	;
 					/* if child rel, must check whether it produced this row */
 					if (erm->rti != erm->prti)
 					{
-						Oid		tableoid;
+						Oid			tableoid;
 
 						datum = ExecGetJunkAttribute(slot,
 													 erm->toidAttNo,
@@ -4832,6 +4929,7 @@ OpenIntoRel(QueryDesc *queryDesc)
 	Oid			intoRelationId;
 	TupleDesc	tupdesc;
 	DR_intorel *myState;
+	static char *validnsps[] = HEAP_RELOPT_NAMESPACES;
 	char	   *intoTableSpaceName;
     GpPolicy   *targetPolicy;
 	bool		use_wal;
@@ -4934,6 +5032,8 @@ OpenIntoRel(QueryDesc *queryDesc)
 	/* Parse and validate any reloptions */
 	reloptions = transformRelOptions((Datum) 0,
 									 into->options,
+									 NULL,
+									 validnsps,
 									 true,
 									 false);
 
@@ -4997,7 +5097,16 @@ OpenIntoRel(QueryDesc *queryDesc)
 	 * CommandCounterIncrement(), so that the new tables will be visible for
 	 * insertion.
 	 */
-	AlterTableCreateToastTable(intoRelationId, false);
+	reloptions = transformRelOptions((Datum) 0,
+									 into->options,
+									 "toast",
+									 validnsps,
+									 true,
+									 false);
+
+	(void) heap_reloptions(RELKIND_TOASTVALUE, reloptions, true);
+	AlterTableCreateToastTable(intoRelationId, InvalidOid, reloptions, false, false);
+
 	AlterTableCreateAoSegTable(intoRelationId, false);
 	AlterTableCreateAoVisimapTable(intoRelationId, false);
 
@@ -5030,8 +5139,8 @@ OpenIntoRel(QueryDesc *queryDesc)
 	myState->rel = intoRelationDesc;
 
 	/*
-	 * We can skip WAL-logging the insertions, unless PITR is in use.  We
-	 * can skip the FSM in any case.
+	 * We can skip WAL-logging the insertions, unless PITR is in use.  We can
+	 * skip the FSM in any case.
 	 */
 	myState->hi_options = HEAP_INSERT_SKIP_FSM |
 		(use_wal ? 0 : HEAP_INSERT_SKIP_WAL);

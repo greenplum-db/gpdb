@@ -1,11 +1,12 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_server.sgml,v 1.1 2008/12/19 16:25:16 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_server.sgml,v 1.5 2009/06/19 15:28:25 petere Exp $
 PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATESERVER">
  <refmeta>
   <refentrytitle id="sql-createserver-title">CREATE SERVER</refentrytitle>
+  <manvolnum>7</manvolnum>
   <refmiscinfo>SQL - Language Statements</refmiscinfo>
  </refmeta>
 
@@ -35,7 +36,14 @@ CREATE SERVER <replaceable class="parameter">servername</replaceable> [ TYPE 'se
   </para>
 
   <para>
-   The server name must be unique within database.
+   A foreign server typically encapsulates connection information that
+   a foreign-data wrapper uses to access an external data resource.
+   Additional user-specific connection information may be specified by
+   means of user mappings.
+  </para>
+
+  <para>
+   The server name must be unique within the database.
   </para>
 
   <para>
@@ -85,7 +93,7 @@ CREATE SERVER <replaceable class="parameter">servername</replaceable> [ TYPE 'se
    </varlistentry>
 
    <varlistentry>
-    <term><literal>OPTIONS ( <replaceable class="PARAMETER">option</replaceable> ['<replaceable class="PARAMETER">value</replaceable>'] [, ... ] )</literal></term>
+    <term><literal>OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] )</literal></term>
     <listitem>
      <para>
       This clause specifies the options for the server.  The options
@@ -96,6 +104,20 @@ CREATE SERVER <replaceable class="parameter">servername</replaceable> [ TYPE 'se
     </listitem>
    </varlistentry>
   </variablelist>
+ </refsect1>
+
+ <refsect1>
+  <title>Notes</title>
+
+  <para>
+   When using the <application>dblink</application> module
+   (see <xref linkend="dblink">), the foreign server name can be used
+   as an argument of the <xref linkend="contrib-dblink-connect">
+   function to indicate the connection parameters.  See also there for
+   more examples.  It is necessary to have
+   the <literal>USAGE</literal> privilege on the foreign server to be
+   able to use it in this way.
+  </para>
  </refsect1>
 
  <refsect1>

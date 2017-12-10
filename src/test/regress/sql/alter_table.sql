@@ -924,7 +924,7 @@ order by relname, attnum;
 drop table p1, p2 cascade;
 
 --
--- Test the ALTER TABLE WITHOUT OIDS command
+-- Test the ALTER TABLE SET WITH/WITHOUT OIDS command
 --
 create table altstartwith (col integer) with oids;
 
@@ -937,10 +937,16 @@ alter table altstartwith set without oids;
 select oid > 0, * from altstartwith; -- fails
 select * from altstartwith;
 
--- Run inheritance tests
+alter table altstartwith set with oids;
+
+select oid > 0, * from altstartwith;
+
+drop table altstartwith;
+
+-- Check inheritance cases
 create table altwithoid (col integer) with oids;
 
--- Inherits parents oid column
+-- Inherits parents oid column anyway
 create table altinhoid () inherits (altwithoid) without oids;
 
 insert into altinhoid values (1);
@@ -949,12 +955,41 @@ select oid > 0, * from altwithoid;
 select oid > 0, * from altinhoid;
 
 alter table altwithoid set without oids;
-alter table altinhoid set without oids;
 
 select oid > 0, * from altwithoid; -- fails
 select oid > 0, * from altinhoid; -- fails
 select * from altwithoid;
 select * from altinhoid;
+
+alter table altwithoid set with oids;
+
+select oid > 0, * from altwithoid;
+select oid > 0, * from altinhoid;
+
+drop table altwithoid cascade;
+
+create table altwithoid (col integer) without oids;
+
+-- child can have local oid column
+create table altinhoid () inherits (altwithoid) with oids;
+
+insert into altinhoid values (1);
+
+select oid > 0, * from altwithoid; -- fails
+select oid > 0, * from altinhoid;
+
+alter table altwithoid set with oids;
+
+select oid > 0, * from altwithoid;
+select oid > 0, * from altinhoid;
+
+-- the child's local definition should remain
+alter table altwithoid set without oids;
+
+select oid > 0, * from altwithoid; -- fails
+select oid > 0, * from altinhoid;
+
+drop table altwithoid cascade;
 
 -- test renumbering of child-table columns in inherited operations
 
@@ -980,7 +1015,7 @@ drop table p1 cascade;
 create domain mytype as text;
 create temp table foo (f1 text, f2 mytype, f3 text);
 
-insert into foo values('aa','bb','cc');
+insert into foo values('bb','cc','dd');
 select * from foo;
 
 drop domain mytype cascade;

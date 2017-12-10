@@ -24,7 +24,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepunion.c,v 1.164 2009/01/01 17:23:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/prep/prepunion.c,v 1.171 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -32,7 +32,9 @@
 
 
 #include "access/heapam.h"
+#include "access/sysattr.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbpartition.h"
 #include "commands/tablecmds.h"
@@ -42,7 +44,6 @@
 #include "optimizer/cost.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
-#include "optimizer/plancat.h"
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
 #include "optimizer/prep.h"
@@ -116,6 +117,8 @@ static void make_inh_translation_list(Relation oldrelation,
 						  Relation newrelation,
 						  Index newvarno,
 						  List **translated_vars);
+static Bitmapset *translate_col_privs(const Bitmapset *parent_privs,
+					List *translated_vars);
 static Relids adjust_relid_set(Relids relids, Index oldrelid, Index newrelid);
 static List *adjust_inherited_tlist(List *tlist,
 					   AppendRelInfo *apprelinfo);
@@ -240,9 +243,9 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 								   config);
 
 		/*
-		 * Estimate number of groups if caller wants it.  If the subquery
-		 * used grouping or aggregation, its output is probably mostly
-		 * unique anyway; otherwise do statistical estimation.
+		 * Estimate number of groups if caller wants it.  If the subquery used
+		 * grouping or aggregation, its output is probably mostly unique
+		 * anyway; otherwise do statistical estimation.
 		 */
 		if (pNumGroups)
 		{
@@ -251,7 +254,7 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 				*pNumGroups = subplan->plan_rows;
 			else
 				*pNumGroups = estimate_num_groups(subroot,
-												  get_tlist_exprs(subquery->targetList, false),
+								get_tlist_exprs(subquery->targetList, false),
 												  subplan->plan_rows);
 		}
 
@@ -384,7 +387,7 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 	}
 	else
 	{
-		double	dNumGroups;
+		double		dNumGroups;
 
 		/* Identify the grouping semantics */
 		groupList = generate_setop_grouplist(setOp, tlist);
@@ -397,8 +400,8 @@ generate_recursion_plan(SetOperationStmt *setOp, PlannerInfo *root,
 					 errdetail("All column datatypes must be hashable.")));
 
 		/*
-		 * For the moment, take the number of distinct groups as equal to
-		 * the total input size, ie, the worst case.
+		 * For the moment, take the number of distinct groups as equal to the
+		 * total input size, ie, the worst case.
 		 */
 		dNumGroups = lplan->plan_rows + rplan->plan_rows * 10;
 
@@ -504,9 +507,9 @@ generate_union_plan(SetOperationStmt *op, PlannerInfo *root,
 	}
 
 	/*
-	 * Estimate number of groups if caller wants it.  For now we just
-	 * assume the output is unique --- this is certainly true for the
-	 * UNION case, and we want worst-case estimates anyway.
+	 * Estimate number of groups if caller wants it.  For now we just assume
+	 * the output is unique --- this is certainly true for the UNION case, and
+	 * we want worst-case estimates anyway.
 	 */
 	if (pNumGroups)
 		*pNumGroups = plan->plan_rows;
@@ -642,8 +645,8 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	 * Estimate number of distinct groups that we'll need hashtable entries
 	 * for; this is the size of the left-hand input for EXCEPT, or the smaller
 	 * input for INTERSECT.  Also estimate the number of eventual output rows.
-	 * In non-ALL cases, we estimate each group produces one output row;
-	 * in ALL cases use the relevant relation size.  These are worst-case
+	 * In non-ALL cases, we estimate each group produces one output row; in
+	 * ALL cases use the relevant relation size.  These are worst-case
 	 * estimates, of course, but we need to be conservative.
 	 */
 	if (op->op == SETOP_EXCEPT)
@@ -665,7 +668,7 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	 */
 	use_hash = choose_hashed_setop(root, groupList, plan,
 								   dNumGroups, dNumOutputRows, tuple_fraction,
-								   (op->op == SETOP_INTERSECT) ? "INTERSECT" : "EXCEPT");
+					   (op->op == SETOP_INTERSECT) ? "INTERSECT" : "EXCEPT");
 
 	if (!use_hash)
 	{
@@ -778,12 +781,12 @@ make_union_unique(SetOperationStmt *op, Plan *plan,
 	}
 
 	/*
-	 * XXX for the moment, take the number of distinct groups as equal to
-	 * the total input size, ie, the worst case.  This is too conservative,
-	 * but we don't want to risk having the hashtable overrun memory; also,
-	 * it's not clear how to get a decent estimate of the true size.  One
-	 * should note as well the propensity of novices to write UNION rather
-	 * than UNION ALL even when they don't expect any duplicates...
+	 * XXX for the moment, take the number of distinct groups as equal to the
+	 * total input size, ie, the worst case.  This is too conservative, but we
+	 * don't want to risk having the hashtable overrun memory; also, it's not
+	 * clear how to get a decent estimate of the true size.  One should note
+	 * as well the propensity of novices to write UNION rather than UNION ALL
+	 * even when they don't expect any duplicates...
 	 */
 	dNumGroups = plan->plan_rows;
 
@@ -865,7 +868,7 @@ choose_hashed_setop(PlannerInfo *root, List *groupClauses,
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 /* translator: %s is UNION, INTERSECT, or EXCEPT */
+		/* translator: %s is UNION, INTERSECT, or EXCEPT */
 				 errmsg("could not implement %s", construct),
 				 errdetail("Some of the datatypes only support hashing, while others only support sorting.")));
 
@@ -1191,47 +1194,6 @@ generate_setop_grouplist(SetOperationStmt *op, List *targetlist)
 
 
 /*
- * find_all_inheritors -
- *		Returns a list of relation OIDs including the given rel plus
- *		all relations that inherit from it, directly or indirectly.
- */
-List *
-find_all_inheritors(Oid parentrel)
-{
-	List	   *rels_list;
-	ListCell   *l;
-
-	/*
-	 * We build a list starting with the given rel and adding all direct and
-	 * indirect children.  We can use a single list as both the record of
-	 * already-found rels and the agenda of rels yet to be scanned for more
-	 * children.  This is a bit tricky but works because the foreach() macro
-	 * doesn't fetch the next list element until the bottom of the loop.
-	 */
-	rels_list = list_make1_oid(parentrel);
-
-	foreach(l, rels_list)
-	{
-		Oid			currentrel = lfirst_oid(l);
-		List	   *currentchildren;
-
-		/* Get the direct children of this rel */
-		currentchildren = find_inheritance_children(currentrel);
-
-		/*
-		 * Add to the queue only those children not already seen. This avoids
-		 * making duplicate entries in case of multiple inheritance paths from
-		 * the same parent.  (It'll also keep us from getting into an infinite
-		 * loop, though theoretically there can't be any cycles in the
-		 * inheritance graph anyway.)
-		 */
-		rels_list = list_concat_unique_oid(rels_list, currentchildren);
-	}
-
-	return rels_list;
-}
-
-/*
  * expand_inherited_tables
  *		Expand each rangetable entry that represents an inheritance set
  *		into an "append relation".	At the conclusion of this process,
@@ -1302,15 +1264,38 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	}
 	/* Fast path for common case of childless table */
 	parentOID = rte->relid;
-	if (!has_subclass_fast(parentOID))
+	if (!has_subclass(parentOID))
 	{
 		/* Clear flag before returning */
 		rte->inh = false;
 		return;
 	}
 
-	/* Scan for all members of inheritance set */
-	inhOIDs = find_all_inheritors(parentOID);
+	parent_is_partitioned = rel_is_partitioned(parentOID);
+
+	/*
+	 * The rewriter should already have obtained an appropriate lock on each
+	 * relation named in the query.  However, for each child relation we add
+	 * to the query, we must obtain an appropriate lock, because this will be
+	 * the first use of those relations in the parse/rewrite/plan pipeline.
+	 *
+	 * If the parent relation is the query's result relation, then we need
+	 * RowExclusiveLock.  Otherwise, if it's accessed FOR UPDATE/SHARE, we
+	 * need RowShareLock; otherwise AccessShareLock.  We can't just grab
+	 * AccessShareLock because then the executor would be trying to upgrade
+	 * the lock, leading to possible deadlocks.  (This code should match the
+	 * parser and rewriter.)
+	 */
+	oldrc = get_rowmark(parse, rti);
+	if (rti == parse->resultRelation)
+		lockmode = RowExclusiveLock;
+	else if (oldrc)
+		lockmode = RowShareLock;
+	else
+		lockmode = AccessShareLock;
+
+	/* Scan for all members of inheritance set, acquire needed locks */
+	inhOIDs = find_all_inheritors(parentOID, lockmode);
 
 	/*
 	 * Check that there's at least one descendant, else treat as no-child
@@ -1325,41 +1310,18 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 	}
 
 	/*
-	 * Find out if parent relation is selected FOR UPDATE/SHARE.  If so,
-	 * we need to mark its RowMarkClause as isParent = true, and generate
-	 * a new RowMarkClause for each child.
+	 * If parent relation is selected FOR UPDATE/SHARE, we need to mark its
+	 * RowMarkClause as isParent = true, and generate a new RowMarkClause for
+	 * each child.
 	 */
-	oldrc = get_rowmark(parse, rti);
 	if (oldrc)
 		oldrc->isParent = true;
 
 	/*
 	 * Must open the parent relation to examine its tupdesc.  We need not lock
-	 * it since the rewriter already obtained at least AccessShareLock on each
-	 * relation used in the query.
+	 * it; we assume the rewriter already did.
 	 */
 	oldrelation = heap_open(parentOID, NoLock);
-
-	/*
-	 * However, for each child relation we add to the query, we must obtain an
-	 * appropriate lock, because this will be the first use of those relations
-	 * in the parse/rewrite/plan pipeline.
-	 *
-	 * If the parent relation is the query's result relation, then we need
-	 * RowExclusiveLock.  Otherwise, if it's accessed FOR UPDATE/SHARE, we
-	 * need RowShareLock; otherwise AccessShareLock.  We can't just grab
-	 * AccessShareLock because then the executor would be trying to upgrade
-	 * the lock, leading to possible deadlocks.  (This code should match the
-	 * parser and rewriter.)
-	 */
-	if (rti == parse->resultRelation)
-		lockmode = RowExclusiveLock;
-	else if (oldrc)
-		lockmode = RowShareLock;
-	else
-		lockmode = AccessShareLock;
-
-	parent_is_partitioned = rel_is_partitioned(parentOID);
 
 	/* Scan the inheritance set and expand it */
 	appinfos = NIL;
@@ -1371,29 +1333,33 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 		Index		childRTindex;
 		AppendRelInfo *appinfo;
 
+		/* Open rel if needed; we already have required locks */
+		if (childOID != parentOID)
+			newrelation = heap_open(childOID, NoLock);
+		else
+			newrelation = oldrelation;
+
 		/*
 		 * It is possible that the parent table has children that are temp
 		 * tables of other backends.  We cannot safely access such tables
 		 * (because of buffering issues), and the best thing to do seems to be
 		 * to silently ignore them.
 		 */
-		if (childOID != parentOID &&
-			isOtherTempNamespace(get_rel_namespace(childOID)))
+		if (childOID != parentOID && RELATION_IS_OTHER_TEMP(newrelation))
+		{
+			heap_close(newrelation, lockmode);
 			continue;
+		}
 
 		/*
 		 * show root and leaf partitions
 		 */
 		if (parent_is_partitioned && !rel_is_leaf_partition(childOID))
 		{
+			if (childOID != parentOID)
+				heap_close(newrelation, lockmode);
 			continue;
 		}
-
-		/* Open rel, acquire the appropriate lock type */
-		if (childOID != parentOID)
-			newrelation = heap_open(childOID, lockmode);
-		else
-			newrelation = oldrelation;
 
 		/*
 		 * Build an RTE for the child, and attach to query's rangetable list.
@@ -1420,6 +1386,19 @@ expand_inherited_rtentry(PlannerInfo *root, RangeTblEntry *rte, Index rti)
 								  &appinfo->translated_vars);
 		appinfo->parent_reloid = parentOID;
 		appinfos = lappend(appinfos, appinfo);
+
+		/*
+		 * Translate the column permissions bitmaps to the child's attnums (we
+		 * have to build the translated_vars list before we can do this). But
+		 * if this is the parent table, leave copyObject's result alone.
+		 */
+		if (childOID != parentOID)
+		{
+			childrte->selectedCols = translate_col_privs(rte->selectedCols,
+												   appinfo->translated_vars);
+			childrte->modifiedCols = translate_col_privs(rte->modifiedCols,
+												   appinfo->translated_vars);
+		}
 
 		/*
 		 * Build a RowMarkClause if parent is marked FOR UPDATE/SHARE.
@@ -1578,6 +1557,59 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 	}
 
 	*translated_vars = vars;
+}
+
+/*
+ * translate_col_privs
+ *	  Translate a bitmapset representing per-column privileges from the
+ *	  parent rel's attribute numbering to the child's.
+ *
+ * The only surprise here is that we don't translate a parent whole-row
+ * reference into a child whole-row reference.	That would mean requiring
+ * permissions on all child columns, which is overly strict, since the
+ * query is really only going to reference the inherited columns.  Instead
+ * we set the per-column bits for all inherited columns.
+ */
+static Bitmapset *
+translate_col_privs(const Bitmapset *parent_privs,
+					List *translated_vars)
+{
+	Bitmapset  *child_privs = NULL;
+	bool		whole_row;
+	int			attno;
+	ListCell   *lc;
+
+	/* System attributes have the same numbers in all tables */
+	for (attno = FirstLowInvalidHeapAttributeNumber + 1; attno < 0; attno++)
+	{
+		if (bms_is_member(attno - FirstLowInvalidHeapAttributeNumber,
+						  parent_privs))
+			child_privs = bms_add_member(child_privs,
+								 attno - FirstLowInvalidHeapAttributeNumber);
+	}
+
+	/* Check if parent has whole-row reference */
+	whole_row = bms_is_member(InvalidAttrNumber - FirstLowInvalidHeapAttributeNumber,
+							  parent_privs);
+
+	/* And now translate the regular user attributes, using the vars list */
+	attno = InvalidAttrNumber;
+	foreach(lc, translated_vars)
+	{
+		Var		   *var = (Var *) lfirst(lc);
+
+		attno++;
+		if (var == NULL)		/* ignore dropped columns */
+			continue;
+		Assert(IsA(var, Var));
+		if (whole_row ||
+			bms_is_member(attno - FirstLowInvalidHeapAttributeNumber,
+						  parent_privs))
+			child_privs = bms_add_member(child_privs,
+						 var->varattno - FirstLowInvalidHeapAttributeNumber);
+	}
+
+	return child_privs;
 }
 
 /*
@@ -1802,7 +1834,8 @@ adjust_appendrel_attrs_mutator(Node *node, AppendRelInfoContext *ctx)
 		 * different values when considering the child relation.
 		 */
 		newinfo->eval_cost.startup = -1;
-		newinfo->this_selec = -1;
+		newinfo->norm_selec = -1;
+		newinfo->outer_selec = -1;
 		newinfo->left_ec = NULL;
 		newinfo->right_ec = NULL;
 		newinfo->left_em = NULL;

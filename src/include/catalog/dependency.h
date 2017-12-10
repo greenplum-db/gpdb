@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.38 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/catalog/dependency.h,v 1.40 2009/06/11 14:49:09 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -232,20 +232,21 @@ extern Oid	getExtensionOfObject(Oid classId, Oid objectId);
 extern void recordDependencyOnCurrentExtension(const ObjectAddress *object,
 								   bool isReplace);
 
-extern void deleteSharedDependencyRecordsFor(Oid classId, Oid objectId);
+extern void deleteSharedDependencyRecordsFor(Oid classId, Oid objectId,
+								 int32 objectSubId);
 
 extern void recordDependencyOnOwner(Oid classId, Oid objectId, Oid owner);
 
 extern void changeDependencyOnOwner(Oid classId, Oid objectId,
 						Oid newOwnerId);
 
-extern void updateAclDependencies(Oid classId, Oid objectId,
+extern void updateAclDependencies(Oid classId, Oid objectId, int32 objectSubId,
 					  Oid ownerId, bool isGrant,
 					  int noldmembers, Oid *oldmembers,
 					  int nnewmembers, Oid *newmembers);
 
 extern bool checkSharedDependencies(Oid classId, Oid objectId,
-									char **detail_msg, char **detail_log_msg);
+						char **detail_msg, char **detail_log_msg);
 
 extern void copyTemplateDependencies(Oid templateDbId, Oid newDbId);
 

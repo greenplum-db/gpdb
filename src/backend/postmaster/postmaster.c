@@ -39,7 +39,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.570 2009/01/04 22:19:59 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/postmaster/postmaster.c,v 1.583 2009/06/26 20:29:04 tgl Exp $
  *
  * NOTES
  *
@@ -331,9 +331,9 @@ static bool gHaveCalledOnetimeInitFunctions = false;
  * states later than PM_RUN --- Shutdown and FatalError must be consulted
  * to find that out.  FatalError is never true in PM_INIT through PM_RUN
  * states, nor in PM_SHUTDOWN states (because we don't enter those states
- * when trying to recover from a crash).
- *
- * RecoveryError means that we have crashed during recovery, and
+ * when trying to recover from a crash).  It can be true in PM_STARTUP state,
+ * because we don't clear it until we've successfully started WAL redo.
+ * Similarly, RecoveryError means that we have crashed during recovery, and
  * should not try to restart.
  */
 typedef enum
@@ -494,9 +494,8 @@ extern char *optarg;
 extern int	optind,
 			opterr;
 
-/* If not HAVE_GETOPT, we are using src/port/getopt.c, which has optreset */
-#if defined(HAVE_INT_OPTRESET) || !defined(HAVE_GETOPT)
-extern int	optreset;
+#ifdef HAVE_INT_OPTRESET
+extern int	optreset;			/* might not be declared by system headers */
 #endif
 
 /* some GUC values used in fetching status from status transition */
@@ -599,7 +598,7 @@ typedef struct
 	HANDLE		waitHandle;
 	HANDLE		procHandle;
 	DWORD		procId;
-}	win32_deadchild_waitinfo;
+} win32_deadchild_waitinfo;
 
 #endif
 
@@ -658,7 +657,7 @@ typedef struct
 	char		ExtraOptions[MAXPGPATH];
 	char		lc_collate[NAMEDATALEN];
 	char		lc_ctype[NAMEDATALEN];
-}	BackendParameters;
+} BackendParameters;
 
 static void read_backend_variables(char *id, Port *port);
 static void restore_backend_variables(BackendParameters *param, Port *port);
@@ -2592,7 +2591,8 @@ initMasks(fd_set *rmask)
 
 		if (fd == PGINVALID_SOCKET)
 			break;
-		FD_SET(fd, rmask);
+		FD_SET		(fd, rmask);
+
 		if (fd > maxsock)
 			maxsock = fd;
 	}
@@ -4500,6 +4500,24 @@ do_reaper()
 				continue;
 			}
 
+			/*
+			 * Start the bgwriter if not running.
+			 *
+			 * In archive recovery, the startup process already asked us
+			 * to start it. There's no particular reason the pass 3 needs it
+			 * it to be running, except that it needs to know whether it's
+			 * running or not, when it wants to create a checkpoint. The
+			 * easiest way to deal with that is to ensure it's always
+			 * running.
+			 *
+			 * In GPDB, it's actually the checkpointer process that we care
+			 * about. So launch that too.
+			 */
+			if (BgWriterPID == 0)
+				BgWriterPID = StartBackgroundWriter();
+			if (CheckpointerPID == 0)
+				CheckpointerPID = StartCheckpointer();
+
 		    Assert(StartupPass3PID == 0);
 			StartupPass3PID = StartupPass3DataBase();
 			Assert(StartupPass3PID != 0);
@@ -6322,7 +6340,8 @@ BackendStartup(Port *port)
 
 	/* Pass down canAcceptConnections state */
 	port->canAcceptConnections = canAcceptConnections();
-	bn->dead_end = (port->canAcceptConnections != CAC_OK);
+	bn->dead_end = (port->canAcceptConnections != CAC_OK &&
+					port->canAcceptConnections != CAC_WAITBACKUP);
 
 	/*
 	 * Unless it's a dead_end child, assign it a child slot number
@@ -7827,24 +7846,28 @@ StartAutovacuumWorker(void)
 	 */
 	if (canAcceptConnections() == CAC_OK)
 	{
-		/*
-		 * Compute the cancel key that will be assigned to this session. We
-		 * probably don't need cancel keys for autovac workers, but we'd
-		 * better have something random in the field to prevent unfriendly
-		 * people from sending cancels to them.
-		 */
-		MyCancelKey = PostmasterRandom();
-
 		bn = (Backend *) malloc(sizeof(Backend));
 		if (bn)
 		{
+			/*
+			 * Compute the cancel key that will be assigned to this session.
+			 * We probably don't need cancel keys for autovac workers, but
+			 * we'd better have something random in the field to prevent
+			 * unfriendly people from sending cancels to them.
+			 */
+			MyCancelKey = PostmasterRandom();
+			bn->cancel_key = MyCancelKey;
+
+			/* Autovac workers are not dead_end and need a child slot */
+			bn->dead_end = false;
+			bn->child_slot = MyPMChildSlot = AssignPostmasterChildSlot();
+
 			bn->pid = StartAutoVacWorker();
 			if (bn->pid > 0)
 			{
-				bn->cancel_key = MyCancelKey;
 				bn->is_autovacuum = true;
-				bn->dead_end = false;
-				DLAddHead(BackendList, DLNewElem(bn));
+				DLInitElem(&bn->elem, bn);
+				DLAddHead(BackendList, &bn->elem);
 #ifdef EXEC_BACKEND
 				ShmemBackendArrayAdd(bn);
 #endif

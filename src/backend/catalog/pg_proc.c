@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.160 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_proc.c,v 1.164 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -124,8 +124,10 @@ ProcedureCreate(const char *procedureName,
 	if (parameterCount < 0 || parameterCount > FUNC_MAX_ARGS)
 		ereport(ERROR,
 				(errcode(ERRCODE_TOO_MANY_ARGUMENTS),
-				 errmsg("functions cannot have more than %d arguments",
-						FUNC_MAX_ARGS)));
+				 errmsg_plural("functions cannot have more than %d argument",
+							   "functions cannot have more than %d arguments",
+							   FUNC_MAX_ARGS,
+							   FUNC_MAX_ARGS)));
 	/* note: the above is correct, we do NOT count output arguments */
 
 	if (allParameterTypes != PointerGetDatum(NULL))
@@ -242,10 +244,11 @@ ProcedureCreate(const char *procedureName,
 			ARR_ELEMTYPE(modesArray) != CHAROID)
 			elog(ERROR, "parameterModes is not a 1-D char array");
 		modes = (char *) ARR_DATA_PTR(modesArray);
+
 		/*
-		 * Only the last input parameter can be variadic; if it is, save
-		 * its element type.  Errors here are just elog since caller should
-		 * have checked this already.
+		 * Only the last input parameter can be variadic; if it is, save its
+		 * element type.  Errors here are just elog since caller should have
+		 * checked this already.
 		 */
 		for (i = 0; i < allParamCount; i++)
 		{
@@ -412,11 +415,11 @@ ProcedureCreate(const char *procedureName,
 
 		/*
 		 * If there are existing defaults, check compatibility: redefinition
-		 * must not remove any defaults nor change their types.  (Removing
-		 * a default might cause a function to fail to satisfy an existing
-		 * call.  Changing type would only be possible if the associated
-		 * parameter is polymorphic, and in such cases a change of default
-		 * type might alter the resolved output type of existing calls.)
+		 * must not remove any defaults nor change their types.  (Removing a
+		 * default might cause a function to fail to satisfy an existing call.
+		 * Changing type would only be possible if the associated parameter is
+		 * polymorphic, and in such cases a change of default type might alter
+		 * the resolved output type of existing calls.)
 		 */
 		if (oldproc->pronargdefaults != 0)
 		{
@@ -449,8 +452,8 @@ ProcedureCreate(const char *procedureName,
 
 			foreach(oldlc, oldDefaults)
 			{
-				Node   *oldDef = (Node *) lfirst(oldlc);
-				Node   *newDef = (Node *) lfirst(newlc);
+				Node	   *oldDef = (Node *) lfirst(oldlc);
+				Node	   *newDef = (Node *) lfirst(newlc);
 
 				if (exprType(oldDef) != exprType(newDef))
 					ereport(ERROR,
@@ -514,13 +517,13 @@ ProcedureCreate(const char *procedureName,
 			if (oldproc->proisagg)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("function \"%s\" is an aggregate",
+						 errmsg("function \"%s\" is an aggregate function",
 								procedureName)));
 			else
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("function \"%s\" is not an aggregate",
-								procedureName)));
+					   errmsg("function \"%s\" is not an aggregate function",
+							  procedureName)));
 		}
 		if (oldproc->proiswindow != isWindowFunc)
 		{

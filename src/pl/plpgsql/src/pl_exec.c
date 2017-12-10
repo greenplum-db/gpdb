@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_exec.c,v 1.226 2009/01/01 17:24:03 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/pl/plpgsql/src/pl_exec.c,v 1.244 2009/06/17 13:46:12 petere Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -25,9 +25,11 @@
 #include "funcapi.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/scansup.h"
+#include "storage/proc.h"
 #include "tcop/tcopprot.h"
 #include "utils/array.h"
 #include "utils/builtins.h"
+#include "utils/datum.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
@@ -51,27 +53,26 @@ typedef struct
  * creates its own "eval_econtext" ExprContext within this estate for
  * per-evaluation workspace.  eval_econtext is freed at normal function exit,
  * and the EState is freed at transaction end (in case of error, we assume
- * that the abort mechanisms clean it all up).	In order to be sure
- * ExprContext callbacks are handled properly, each subtransaction has to have
- * its own such EState; hence we need a stack.	We use a simple counter to
- * distinguish different instantiations of the EState, so that we can tell
- * whether we have a current copy of a prepared expression.
+ * that the abort mechanisms clean it all up).	Furthermore, any exception
+ * block within a function has to have its own eval_econtext separate from
+ * the containing function's, so that we can clean up ExprContext callbacks
+ * properly at subtransaction exit.  We maintain a stack that tracks the
+ * individual econtexts so that we can clean up correctly at subxact exit.
  *
  * This arrangement is a bit tedious to maintain, but it's worth the trouble
  * so that we don't have to re-prepare simple expressions on each trip through
  * a function.	(We assume the case to optimize is many repetitions of a
  * function within a transaction.)
  */
-typedef struct SimpleEstateStackEntry
+typedef struct SimpleEcontextStackEntry
 {
-	EState	   *xact_eval_estate;		/* EState for current xact level */
-	long int	xact_estate_simple_id;	/* ID for xact_eval_estate */
+	ExprContext *stack_econtext;	/* a stacked econtext */
 	SubTransactionId xact_subxid;		/* ID for current subxact */
-	struct SimpleEstateStackEntry *next;		/* next stack entry up */
-} SimpleEstateStackEntry;
+	struct SimpleEcontextStackEntry *next;		/* next stack entry up */
+} SimpleEcontextStackEntry;
 
-static SimpleEstateStackEntry *simple_estate_stack = NULL;
-static long int simple_estate_id_counter = 0;
+static EState *simple_eval_estate = NULL;
+static SimpleEcontextStackEntry *simple_econtext_stack = NULL;
 
 /************************************************************
  * Local function forward declarations
@@ -94,7 +95,7 @@ static int exec_stmt_getdiag(PLpgSQL_execstate *estate,
 static int exec_stmt_if(PLpgSQL_execstate *estate,
 			 PLpgSQL_stmt_if *stmt);
 static int exec_stmt_case(PLpgSQL_execstate *estate,
-						  PLpgSQL_stmt_case *stmt);
+			   PLpgSQL_stmt_case *stmt);
 static int exec_stmt_loop(PLpgSQL_execstate *estate,
 			   PLpgSQL_stmt_loop *stmt);
 static int exec_stmt_while(PLpgSQL_execstate *estate,
@@ -168,7 +169,7 @@ static Datum exec_eval_expr(PLpgSQL_execstate *estate,
 static int exec_run_select(PLpgSQL_execstate *estate,
 				PLpgSQL_expr *expr, long maxtuples, Portal *portalP);
 static int exec_for_query(PLpgSQL_execstate *estate, PLpgSQL_stmt_forq *stmt,
-						  Portal portal, bool prefetch_ok);
+			   Portal portal, bool prefetch_ok);
 static void eval_expr_params(PLpgSQL_execstate *estate,
 				 PLpgSQL_expr *expr, Datum **p_values, char **p_nulls);
 static void exec_move_row(PLpgSQL_execstate *estate,
@@ -196,13 +197,14 @@ static void validate_tupdesc_compat(TupleDesc expected, TupleDesc returned,
 						const char *msg);
 static void exec_set_found(PLpgSQL_execstate *estate, bool state);
 static void plpgsql_create_econtext(PLpgSQL_execstate *estate);
+static void plpgsql_destroy_econtext(PLpgSQL_execstate *estate);
 static void free_var(PLpgSQL_var *var);
 static void assign_text_var(PLpgSQL_var *var, const char *str);
 static PreparedParamsData *exec_eval_using_params(PLpgSQL_execstate *estate,
-												  List *params);
+					   List *params);
 static void free_params_data(PreparedParamsData *ppd);
 static Portal exec_dynquery_with_params(PLpgSQL_execstate *estate,
-										PLpgSQL_expr *query, List *params);
+						  PLpgSQL_expr *query, List *params);
 
 
 /* ----------
@@ -391,8 +393,7 @@ plpgsql_exec_function(PLpgSQL_function *func, FunctionCallInfo fcinfo)
 				case TYPEFUNC_COMPOSITE:
 					/* got the expected result rowtype, now check it */
 					validate_tupdesc_compat(tupdesc, estate.rettupdesc,
-											gettext_noop("returned record type does "
-														 "not match expected record type"));
+											"returned record type does not match expected record type");
 					break;
 				case TYPEFUNC_RECORD:
 
@@ -459,8 +460,7 @@ plpgsql_exec_function(PLpgSQL_function *func, FunctionCallInfo fcinfo)
 		((*plugin_ptr)->func_end) (&estate, func);
 
 	/* Clean up any leftover temporary memory */
-	FreeExprContext(estate.eval_econtext);
-	estate.eval_econtext = NULL;
+	plpgsql_destroy_econtext(&estate);
 	exec_eval_cleanup(&estate);
 
 	/*
@@ -713,8 +713,7 @@ plpgsql_exec_trigger(PLpgSQL_function *func,
 	{
 		validate_tupdesc_compat(trigdata->tg_relation->rd_att,
 								estate.rettupdesc,
-								gettext_noop("returned tuple structure does "
-											 "not match table of trigger event"));
+								"returned row structure does not match the structure of the triggering table");
 		/* Copy tuple to upper executor memory */
 		rettup = SPI_copytuple((HeapTuple) DatumGetPointer(estate.retval));
 	}
@@ -726,8 +725,7 @@ plpgsql_exec_trigger(PLpgSQL_function *func,
 		((*plugin_ptr)->func_end) (&estate, func);
 
 	/* Clean up any leftover temporary memory */
-	FreeExprContext(estate.eval_econtext);
-	estate.eval_econtext = NULL;
+	plpgsql_destroy_econtext(&estate);
 	exec_eval_cleanup(&estate);
 
 	/*
@@ -998,8 +996,6 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 		MemoryContext oldcontext = CurrentMemoryContext;
 		ResourceOwner oldowner = CurrentResourceOwner;
 		ExprContext *old_eval_econtext = estate->eval_econtext;
-		EState	   *old_eval_estate = estate->eval_estate;
-		long int	old_eval_estate_simple_id = estate->eval_estate_simple_id;
 
 		estate->err_text = gettext_noop("during statement block entry");
 
@@ -1048,10 +1044,11 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 			MemoryContextSwitchTo(oldcontext);
 			CurrentResourceOwner = oldowner;
 
-			/* Revert to outer eval_econtext */
+			/*
+			 * Revert to outer eval_econtext.  (The inner one was
+			 * automatically cleaned up during subxact exit.)
+			 */
 			estate->eval_econtext = old_eval_econtext;
-			estate->eval_estate = old_eval_estate;
-			estate->eval_estate_simple_id = old_eval_estate_simple_id;
 
 			/*
 			 * AtEOSubXact_SPI() should not have popped any SPI context, but
@@ -1078,8 +1075,6 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 
 			/* Revert to outer eval_econtext */
 			estate->eval_econtext = old_eval_econtext;
-			estate->eval_estate = old_eval_estate;
-			estate->eval_estate_simple_id = old_eval_estate_simple_id;
 
 			/*
 			 * If AtEOSubXact_SPI() popped any SPI context of the subxact, it
@@ -1166,11 +1161,16 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 			return rc;
 
 		case PLPGSQL_RC_EXIT:
+
+			/*
+			 * This is intentionally different from the handling of RC_EXIT
+			 * for loops: to match a block, we require a match by label.
+			 */
 			if (estate->exitlabel == NULL)
-				return PLPGSQL_RC_OK;
+				return PLPGSQL_RC_EXIT;
 			if (block->label == NULL)
 				return PLPGSQL_RC_EXIT;
-			if (strcmp(block->label, estate->exitlabel))
+			if (strcmp(block->label, estate->exitlabel) != 0)
 				return PLPGSQL_RC_EXIT;
 			estate->exitlabel = NULL;
 			return PLPGSQL_RC_OK;
@@ -1460,18 +1460,17 @@ exec_stmt_case(PLpgSQL_execstate *estate, PLpgSQL_stmt_case *stmt)
 	if (stmt->t_expr != NULL)
 	{
 		/* simple case */
-		Datum	t_val;
-		Oid		t_oid;
+		Datum		t_val;
+		Oid			t_oid;
 
 		t_val = exec_eval_expr(estate, stmt->t_expr, &isnull, &t_oid);
 
 		t_var = (PLpgSQL_var *) estate->datums[stmt->t_varno];
 
 		/*
-		 * When expected datatype is different from real, change it.
-		 * Note that what we're modifying here is an execution copy
-		 * of the datum, so this doesn't affect the originally stored
-		 * function parse tree.
+		 * When expected datatype is different from real, change it. Note that
+		 * what we're modifying here is an execution copy of the datum, so
+		 * this doesn't affect the originally stored function parse tree.
 		 */
 		if (t_var->datatype->typoid != t_oid)
 			t_var->datatype = plpgsql_build_datatype(t_oid, -1);
@@ -1490,7 +1489,7 @@ exec_stmt_case(PLpgSQL_execstate *estate, PLpgSQL_stmt_case *stmt)
 	foreach(l, stmt->case_when_list)
 	{
 		PLpgSQL_case_when *cwt = (PLpgSQL_case_when *) lfirst(l);
-		bool	value;
+		bool		value;
 
 		value = exec_eval_boolean(estate, cwt->expr, &isnull);
 		exec_eval_cleanup(estate);
@@ -1617,7 +1616,7 @@ exec_stmt_while(PLpgSQL_execstate *estate, PLpgSQL_stmt_while *stmt)
 					return PLPGSQL_RC_OK;
 				if (stmt->label == NULL)
 					return PLPGSQL_RC_EXIT;
-				if (strcmp(stmt->label, estate->exitlabel))
+				if (strcmp(stmt->label, estate->exitlabel) != 0)
 					return PLPGSQL_RC_EXIT;
 				estate->exitlabel = NULL;
 				return PLPGSQL_RC_OK;
@@ -1680,7 +1679,7 @@ exec_stmt_fori(PLpgSQL_execstate *estate, PLpgSQL_stmt_fori *stmt)
 	if (isnull)
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("lower bound of FOR loop cannot be NULL")));
+				 errmsg("lower bound of FOR loop cannot be null")));
 	loop_value = DatumGetInt32(value);
 	exec_eval_cleanup(estate);
 
@@ -1695,7 +1694,7 @@ exec_stmt_fori(PLpgSQL_execstate *estate, PLpgSQL_stmt_fori *stmt)
 	if (isnull)
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("upper bound of FOR loop cannot be NULL")));
+				 errmsg("upper bound of FOR loop cannot be null")));
 	end_value = DatumGetInt32(value);
 	exec_eval_cleanup(estate);
 
@@ -1712,7 +1711,7 @@ exec_stmt_fori(PLpgSQL_execstate *estate, PLpgSQL_stmt_fori *stmt)
 		if (isnull)
 			ereport(ERROR,
 					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-					 errmsg("BY value of FOR loop cannot be NULL")));
+					 errmsg("BY value of FOR loop cannot be null")));
 		step_value = DatumGetInt32(value);
 		exec_eval_cleanup(estate);
 		if (step_value <= 0)
@@ -1915,7 +1914,7 @@ exec_stmt_forc(PLpgSQL_execstate *estate, PLpgSQL_stmt_forc *stmt)
 		if (curvar->cursor_explicit_argrow < 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("arguments given for cursor without arguments")));
+					 errmsg("arguments given for cursor without arguments")));
 
 		memset(&set_args, 0, sizeof(set_args));
 		set_args.cmd_type = PLPGSQL_STMT_EXECSQL;
@@ -2080,7 +2079,7 @@ exec_stmt_return(PLpgSQL_execstate *estate, PLpgSQL_stmt_return *stmt)
 					estate->retval =
 						PointerGetDatum(make_tuple_from_row(estate, row,
 															row->rowtupdesc));
-					if (DatumGetPointer(estate->retval) == NULL) /* should not happen */
+					if (DatumGetPointer(estate->retval) == NULL)		/* should not happen */
 						elog(ERROR, "row not compatible with its own tupdesc");
 					estate->rettupdesc = row->rowtupdesc;
 					estate->retisnull = false;
@@ -2143,11 +2142,11 @@ static int
 exec_stmt_return_next(PLpgSQL_execstate *estate,
 					  PLpgSQL_stmt_return_next *stmt)
 {
-	TupleDesc		tupdesc;
-	int				natts;
-	MemoryContext	oldcxt;
-	HeapTuple		tuple = NULL;
-	bool			free_tuple = false;
+	TupleDesc	tupdesc;
+	int			natts;
+	MemoryContext oldcxt;
+	HeapTuple	tuple = NULL;
+	bool		free_tuple = false;
 
 	if (!estate->retisset)
 		ereport(ERROR,
@@ -2202,11 +2201,10 @@ exec_stmt_return_next(PLpgSQL_execstate *estate,
 						  (errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 						   errmsg("record \"%s\" is not assigned yet",
 								  rec->refname),
-						   errdetail("The tuple structure of a not-yet-assigned"
-									 " record is indeterminate.")));
+						errdetail("The tuple structure of a not-yet-assigned"
+								  " record is indeterminate.")));
 					validate_tupdesc_compat(tupdesc, rec->tupdesc,
-						                    gettext_noop("wrong record type supplied "
-														 "in RETURN NEXT"));
+								"wrong record type supplied in RETURN NEXT");
 					tuple = rec->tup;
 				}
 				break;
@@ -2287,6 +2285,7 @@ exec_stmt_return_query(PLpgSQL_execstate *estate,
 					   PLpgSQL_stmt_return_query *stmt)
 {
 	Portal		portal;
+	uint32		processed = 0;
 
 	if (!estate->retisset)
 		ereport(ERROR,
@@ -2310,8 +2309,7 @@ exec_stmt_return_query(PLpgSQL_execstate *estate,
 	}
 
 	validate_tupdesc_compat(estate->rettupdesc, portal->tupDesc,
-							gettext_noop("structure of query does not match "
-										 "function result type"));
+				   "structure of query does not match function result type");
 
 	while (true)
 	{
@@ -2328,6 +2326,7 @@ exec_stmt_return_query(PLpgSQL_execstate *estate,
 			HeapTuple	tuple = SPI_tuptable->vals[i];
 
 			tuplestore_puttuple(estate->tuple_store, tuple);
+			processed++;
 		}
 		MemoryContextSwitchTo(old_cxt);
 
@@ -2336,6 +2335,9 @@ exec_stmt_return_query(PLpgSQL_execstate *estate,
 
 	SPI_freetuptable(SPI_tuptable);
 	SPI_cursor_close(portal);
+
+	estate->eval_processed = processed;
+	exec_set_found(estate, processed != 0);
 
 	return PLPGSQL_RC_OK;
 }
@@ -2435,10 +2437,10 @@ exec_stmt_raise(PLpgSQL_execstate *estate, PLpgSQL_stmt_raise *stmt)
 				if (current_param == NULL)
 					ereport(ERROR,
 							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("too few parameters specified for RAISE")));
+						  errmsg("too few parameters specified for RAISE")));
 
 				paramvalue = exec_eval_expr(estate,
-											(PLpgSQL_expr *) lfirst(current_param),
+									  (PLpgSQL_expr *) lfirst(current_param),
 											&paramisnull,
 											&paramtypeid);
 
@@ -2483,7 +2485,7 @@ exec_stmt_raise(PLpgSQL_execstate *estate, PLpgSQL_stmt_raise *stmt)
 		if (optionisnull)
 			ereport(ERROR,
 					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-					 errmsg("RAISE statement option cannot be NULL")));
+					 errmsg("RAISE statement option cannot be null")));
 
 		extval = convert_value_to_string(estate, optionvalue, optiontypeid);
 
@@ -2961,7 +2963,7 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 	if (isnull)
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("cannot EXECUTE a null querystring")));
+				 errmsg("query string argument of EXECUTE is null")));
 
 	/* Get the C-String representation */
 	querystr = convert_value_to_string(estate, query, restype);
@@ -2998,6 +3000,7 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 		case SPI_OK_UPDATE_RETURNING:
 		case SPI_OK_DELETE_RETURNING:
 		case SPI_OK_UTILITY:
+		case SPI_OK_REWRITTEN:
 			break;
 
 		case 0:
@@ -3028,7 +3031,7 @@ exec_stmt_dynexecute(PLpgSQL_execstate *estate,
 				if (*ptr == 'S' || *ptr == 's')
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("EXECUTE of SELECT ... INTO is not implemented yet")));
+					errmsg("EXECUTE of SELECT ... INTO is not implemented")));
 				break;
 			}
 
@@ -3215,7 +3218,7 @@ exec_stmt_open(PLpgSQL_execstate *estate, PLpgSQL_stmt_open *stmt)
 		if (isnull)
 			ereport(ERROR,
 					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-					 errmsg("cannot EXECUTE a null querystring")));
+					 errmsg("query string argument of EXECUTE is null")));
 
 		/* Get the C-String representation */
 		querystr = convert_value_to_string(estate, queryD, restype);
@@ -3342,7 +3345,7 @@ exec_stmt_fetch(PLpgSQL_execstate *estate, PLpgSQL_stmt_fetch *stmt)
 	SPITupleTable *tuptab;
 	Portal		portal;
 	char	   *curname;
-	int			n;
+	uint32		n;
 
 	/* ----------
 	 * Get the portal of the cursor by name
@@ -3352,7 +3355,7 @@ exec_stmt_fetch(PLpgSQL_execstate *estate, PLpgSQL_stmt_fetch *stmt)
 	if (curvar->isnull)
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("cursor variable \"%s\" is NULL", curvar->refname)));
+				 errmsg("cursor variable \"%s\" is null", curvar->refname)));
 	curname = TextDatumGetCString(curvar->value);
 
 	portal = SPI_cursor_find(curname);
@@ -3373,7 +3376,7 @@ exec_stmt_fetch(PLpgSQL_execstate *estate, PLpgSQL_stmt_fetch *stmt)
 		if (isnull)
 			ereport(ERROR,
 					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-					 errmsg("relative or absolute cursor position is NULL")));
+					 errmsg("relative or absolute cursor position is null")));
 
 		exec_eval_cleanup(estate);
 	}
@@ -3400,19 +3403,13 @@ exec_stmt_fetch(PLpgSQL_execstate *estate, PLpgSQL_stmt_fetch *stmt)
 		n = SPI_processed;
 
 		/* ----------
-		 * Set the target and the global FOUND variable appropriately.
+		 * Set the target appropriately.
 		 * ----------
 		 */
 		if (n == 0)
-		{
 			exec_move_row(estate, rec, row, NULL, tuptab->tupdesc);
-			exec_set_found(estate, false);
-		}
 		else
-		{
 			exec_move_row(estate, rec, row, tuptab->vals[0], tuptab->tupdesc);
-			exec_set_found(estate, true);
-		}
 
 		exec_eval_cleanup(estate);
 		SPI_freetuptable(tuptab);
@@ -3422,10 +3419,11 @@ exec_stmt_fetch(PLpgSQL_execstate *estate, PLpgSQL_stmt_fetch *stmt)
 		/* Move the cursor */
 		SPI_scroll_cursor_move(portal, stmt->direction, how_many);
 		n = SPI_processed;
-
-		/* Set the global FOUND variable appropriately. */
-		exec_set_found(estate, n != 0);
 	}
+
+	/* Set the ROW_COUNT and the global FOUND variable appropriately. */
+	estate->eval_processed = n;
+	exec_set_found(estate, n != 0);
 
 	return PLPGSQL_RC_OK;
 }
@@ -3449,7 +3447,7 @@ exec_stmt_close(PLpgSQL_execstate *estate, PLpgSQL_stmt_close *stmt)
 	if (curvar->isnull)
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("cursor variable \"%s\" is NULL", curvar->refname)));
+				 errmsg("cursor variable \"%s\" is null", curvar->refname)));
 	curname = TextDatumGetCString(curvar->value);
 
 	portal = SPI_cursor_find(curname);
@@ -3669,8 +3667,8 @@ exec_assign_value(PLpgSQL_execstate *estate,
 
 				/*
 				 * Get the number of the records field to change and the
-				 * number of attributes in the tuple.  Note: disallow
-				 * system column names because the code below won't cope.
+				 * number of attributes in the tuple.  Note: disallow system
+				 * column names because the code below won't cope.
 				 */
 				fno = SPI_fnumber(rec->tupdesc, recfield->fieldname);
 				if (fno <= 0)
@@ -3788,8 +3786,8 @@ exec_assign_value(PLpgSQL_execstate *estate,
 					if (nsubscripts >= MAXDIM)
 						ereport(ERROR,
 								(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-								 errmsg("number of array dimensions exceeds the maximum allowed, %d",
-										MAXDIM)));
+								 errmsg("number of array dimensions (%d) exceeds the maximum allowed (%d)",
+										nsubscripts, MAXDIM)));
 					subscripts[nsubscripts++] = arrayelem->subscript;
 					target = estate->datums[arrayelem->arrayparentno];
 				} while (target->dtype == PLPGSQL_DTYPE_ARRAYELEM);
@@ -3832,7 +3830,7 @@ exec_assign_value(PLpgSQL_execstate *estate,
 					if (subisnull)
 						ereport(ERROR,
 								(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-								 errmsg("array subscript in assignment must not be NULL")));
+								 errmsg("array subscript in assignment must not be null")));
 
 					/*
 					 * Clean up in case the subscript expression wasn't simple.
@@ -4063,7 +4061,7 @@ exec_eval_datum(PLpgSQL_execstate *estate,
 				if (expectedtypeid != InvalidOid && expectedtypeid != *typeid)
 					ereport(ERROR,
 							(errcode(ERRCODE_DATATYPE_MISMATCH),
-							 errmsg("type of tgargv[%d] does not match that when preparing the plan",
+							 errmsg("type of tg_argv[%d] does not match that when preparing the plan",
 									tgargno)));
 				break;
 			}
@@ -4289,8 +4287,8 @@ exec_for_query(PLpgSQL_execstate *estate, PLpgSQL_stmt_forq *stmt,
 		elog(ERROR, "unsupported target");
 
 	/*
-	 * Fetch the initial tuple(s).  If prefetching is allowed then we grab
-	 * a few more rows to avoid multiple trips through executor startup
+	 * Fetch the initial tuple(s).	If prefetching is allowed then we grab a
+	 * few more rows to avoid multiple trips through executor startup
 	 * overhead.
 	 */
 	SPI_cursor_fetch(portal, true, prefetch_ok ? 10 : 1);
@@ -4298,8 +4296,8 @@ exec_for_query(PLpgSQL_execstate *estate, PLpgSQL_stmt_forq *stmt,
 	n = SPI_processed;
 
 	/*
-	 * If the query didn't return any rows, set the target to NULL and
-	 * fall through with found = false.
+	 * If the query didn't return any rows, set the target to NULL and fall
+	 * through with found = false.
 	 */
 	if (n <= 0)
 		exec_move_row(estate, rec, row, NULL, tuptab->tupdesc);
@@ -4449,6 +4447,7 @@ exec_eval_simple_expr(PLpgSQL_execstate *estate,
 					  Oid *rettype)
 {
 	ExprContext *econtext = estate->eval_econtext;
+	LocalTransactionId curlxid = MyProc->lxid;
 	CachedPlanSource *plansource;
 	CachedPlan *cplan;
 	ParamListInfo paramLI;
@@ -4464,8 +4463,7 @@ exec_eval_simple_expr(PLpgSQL_execstate *estate,
 	/*
 	 * If expression is in use in current xact, don't touch it.
 	 */
-	if (expr->expr_simple_in_use &&
-		expr->expr_simple_id == estate->eval_estate_simple_id)
+	if (expr->expr_simple_in_use && expr->expr_simple_lxid == curlxid)
 		return false;
 
 	/*
@@ -4496,15 +4494,15 @@ exec_eval_simple_expr(PLpgSQL_execstate *estate,
 
 	/*
 	 * Prepare the expression for execution, if it's not been done already in
-	 * the current eval_estate.  (This will be forced to happen if we called
+	 * the current transaction.  (This will be forced to happen if we called
 	 * exec_simple_check_plan above.)
 	 */
-	if (expr->expr_simple_id != estate->eval_estate_simple_id)
+	if (expr->expr_simple_lxid != curlxid)
 	{
 		expr->expr_simple_state = ExecPrepareExpr(expr->expr_simple_expr,
-												  estate->eval_estate);
+												  simple_eval_estate);
 		expr->expr_simple_in_use = false;
-		expr->expr_simple_id = estate->eval_estate_simple_id;
+		expr->expr_simple_lxid = curlxid;
 	}
 
 	/*
@@ -4710,12 +4708,13 @@ exec_move_row(PLpgSQL_execstate *estate,
 	 * attributes of the tuple to the variables the row points to.
 	 *
 	 * NOTE: this code used to demand row->nfields ==
-	 * HeapTupleHeaderGetNatts(tup->t_data), but that's wrong.  The tuple might
-	 * have more fields than we expected if it's from an inheritance-child
-	 * table of the current table, or it might have fewer if the table has had
-	 * columns added by ALTER TABLE. Ignore extra columns and assume NULL for
-	 * missing columns, the same as heap_getattr would do.	We also have to
-	 * skip over dropped columns in either the source or destination.
+	 * HeapTupleHeaderGetNatts(tup->t_data), but that's wrong.  The tuple
+	 * might have more fields than we expected if it's from an
+	 * inheritance-child table of the current table, or it might have fewer if
+	 * the table has had columns added by ALTER TABLE. Ignore extra columns
+	 * and assume NULL for missing columns, the same as heap_getattr would do.
+	 * We also have to skip over dropped columns in either the source or
+	 * destination.
 	 *
 	 * If we have no tuple data at all, we'll assign NULL to all columns of
 	 * the row variable.
@@ -5297,7 +5296,7 @@ exec_simple_check_plan(PLpgSQL_expr *expr)
 	expr->expr_simple_expr = tle->expr;
 	expr->expr_simple_state = NULL;
 	expr->expr_simple_in_use = false;
-	expr->expr_simple_id = -1;
+	expr->expr_simple_lxid = InvalidLocalTransactionId;
 	/* Also stash away the expression result type */
 	expr->expr_simple_type = exprType((Node *) tle->expr);
 }
@@ -5309,8 +5308,8 @@ exec_simple_check_plan(PLpgSQL_expr *expr)
 static void
 validate_tupdesc_compat(TupleDesc expected, TupleDesc returned, const char *msg)
 {
-	int		   i;
-	const char *dropped_column_type = gettext_noop("n/a (dropped column)");
+	int			i;
+	const char *dropped_column_type = gettext_noop("N/A (dropped column)");
 
 	if (!expected || !returned)
 		ereport(ERROR,
@@ -5330,15 +5329,15 @@ validate_tupdesc_compat(TupleDesc expected, TupleDesc returned, const char *msg)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
 					 errmsg("%s", _(msg)),
-					 errdetail("Returned type %s does not match expected type "
-							   "%s in column %s.",
-							   OidIsValid(returned->attrs[i]->atttypid) ?
-							   format_type_be(returned->attrs[i]->atttypid) :
-							   _(dropped_column_type),
-							   OidIsValid(expected->attrs[i]->atttypid) ?
-							   format_type_be(expected->attrs[i]->atttypid) :
-							   _(dropped_column_type),
-							   NameStr(expected->attrs[i]->attname))));
+				   errdetail("Returned type %s does not match expected type "
+							 "%s in column \"%s\".",
+							 OidIsValid(returned->attrs[i]->atttypid) ?
+							 format_type_be(returned->attrs[i]->atttypid) :
+							 _(dropped_column_type),
+							 OidIsValid(expected->attrs[i]->atttypid) ?
+							 format_type_be(expected->attrs[i]->atttypid) :
+							 _(dropped_column_type),
+							 NameStr(expected->attrs[i]->attname))));
 }
 
 /* ----------
@@ -5359,46 +5358,69 @@ exec_set_found(PLpgSQL_execstate *estate, bool state)
 /*
  * plpgsql_create_econtext --- create an eval_econtext for the current function
  *
- * We may need to create a new eval_estate too, if there's not one already
- * for the current (sub) transaction.  The EState will be cleaned up at
- * (sub) transaction end.
+ * We may need to create a new simple_eval_estate too, if there's not one
+ * already for the current transaction.  The EState will be cleaned up at
+ * transaction end.
  */
 static void
 plpgsql_create_econtext(PLpgSQL_execstate *estate)
 {
-	SubTransactionId my_subxid = GetCurrentSubTransactionId();
-	SimpleEstateStackEntry *entry = simple_estate_stack;
+	SimpleEcontextStackEntry *entry;
 
-	/* Create new EState if not one for current subxact */
-	if (entry == NULL ||
-		entry->xact_subxid != my_subxid)
+	/*
+	 * Create an EState for evaluation of simple expressions, if there's not
+	 * one already in the current transaction.	The EState is made a child of
+	 * TopTransactionContext so it will have the right lifespan.
+	 */
+	if (simple_eval_estate == NULL)
 	{
 		MemoryContext oldcontext;
 
-		/* Stack entries are kept in TopTransactionContext for simplicity */
-		entry = (SimpleEstateStackEntry *)
-			MemoryContextAlloc(TopTransactionContext,
-							   sizeof(SimpleEstateStackEntry));
-
-		/* But each EState should be a child of its CurTransactionContext */
-		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
-		entry->xact_eval_estate = CreateExecutorState();
+		oldcontext = MemoryContextSwitchTo(TopTransactionContext);
+		simple_eval_estate = CreateExecutorState();
 		MemoryContextSwitchTo(oldcontext);
-
-		/* Assign a reasonably-unique ID to this EState */
-		entry->xact_estate_simple_id = simple_estate_id_counter++;
-		entry->xact_subxid = my_subxid;
-
-		entry->next = simple_estate_stack;
-		simple_estate_stack = entry;
 	}
 
-	/* Link plpgsql estate to it */
-	estate->eval_estate = entry->xact_eval_estate;
-	estate->eval_estate_simple_id = entry->xact_estate_simple_id;
+	/*
+	 * Create a child econtext for the current function.
+	 */
+	estate->eval_econtext = CreateExprContext(simple_eval_estate);
 
-	/* And create a child econtext for the current function */
-	estate->eval_econtext = CreateExprContext(estate->eval_estate);
+	/*
+	 * Make a stack entry so we can clean up the econtext at subxact end.
+	 * Stack entries are kept in TopTransactionContext for simplicity.
+	 */
+	entry = (SimpleEcontextStackEntry *)
+		MemoryContextAlloc(TopTransactionContext,
+						   sizeof(SimpleEcontextStackEntry));
+
+	entry->stack_econtext = estate->eval_econtext;
+	entry->xact_subxid = GetCurrentSubTransactionId();
+
+	entry->next = simple_econtext_stack;
+	simple_econtext_stack = entry;
+}
+
+/*
+ * plpgsql_destroy_econtext --- destroy function's econtext
+ *
+ * We check that it matches the top stack entry, and destroy the stack
+ * entry along with the context.
+ */
+static void
+plpgsql_destroy_econtext(PLpgSQL_execstate *estate)
+{
+	SimpleEcontextStackEntry *next;
+
+	Assert(simple_econtext_stack != NULL);
+	Assert(simple_econtext_stack->stack_econtext == estate->eval_econtext);
+
+	next = simple_econtext_stack->next;
+	pfree(simple_econtext_stack);
+	simple_econtext_stack = next;
+
+	FreeExprContext(estate->eval_econtext);
+	estate->eval_econtext = NULL;
 }
 
 /*
@@ -5414,22 +5436,22 @@ plpgsql_xact_cb(XactEvent event, void *arg)
 	 * If we are doing a clean transaction shutdown, free the EState (so that
 	 * any remaining resources will be released correctly). In an abort, we
 	 * expect the regular abort recovery procedures to release everything of
-	 * interest.  We don't need to free the individual stack entries since
-	 * TopTransactionContext is about to go away anyway.
-	 *
-	 * Note: if plpgsql_subxact_cb is doing its job, there should be at most
-	 * one stack entry, but we may as well code this as a loop.
+	 * interest.
 	 */
 	if (event != XACT_EVENT_ABORT)
 	{
-		while (simple_estate_stack != NULL)
-		{
-			FreeExecutorState(simple_estate_stack->xact_eval_estate);
-			simple_estate_stack = simple_estate_stack->next;
-		}
+		/* Shouldn't be any econtext stack entries left at commit */
+		Assert(simple_econtext_stack == NULL);
+
+		if (simple_eval_estate)
+			FreeExecutorState(simple_eval_estate);
+		simple_eval_estate = NULL;
 	}
 	else
-		simple_estate_stack = NULL;
+	{
+		simple_econtext_stack = NULL;
+		simple_eval_estate = NULL;
+	}
 }
 
 /*
@@ -5447,16 +5469,15 @@ plpgsql_subxact_cb(SubXactEvent event, SubTransactionId mySubid,
 	if (event == SUBXACT_EVENT_START_SUB)
 		return;
 
-	if (simple_estate_stack != NULL &&
-		simple_estate_stack->xact_subxid == mySubid)
+	while (simple_econtext_stack != NULL &&
+		   simple_econtext_stack->xact_subxid == mySubid)
 	{
-		SimpleEstateStackEntry *next;
+		SimpleEcontextStackEntry *next;
 
-		if (event == SUBXACT_EVENT_COMMIT_SUB)
-			FreeExecutorState(simple_estate_stack->xact_eval_estate);
-		next = simple_estate_stack->next;
-		pfree(simple_estate_stack);
-		simple_estate_stack = next;
+		FreeExprContext(simple_econtext_stack->stack_econtext);
+		next = simple_econtext_stack->next;
+		pfree(simple_econtext_stack);
+		simple_econtext_stack = next;
 	}
 }
 
@@ -5512,7 +5533,7 @@ exec_eval_using_params(PLpgSQL_execstate *estate, List *params)
 	foreach(lc, params)
 	{
 		PLpgSQL_expr *param = (PLpgSQL_expr *) lfirst(lc);
-		bool	isnull;
+		bool		isnull;
 
 		ppd->values[i] = exec_eval_expr(estate, param,
 										&isnull,
@@ -5523,8 +5544,8 @@ exec_eval_using_params(PLpgSQL_execstate *estate, List *params)
 		/* pass-by-ref non null values must be copied into plpgsql context */
 		if (!isnull)
 		{
-			int16	typLen;
-			bool	typByVal;
+			int16		typLen;
+			bool		typByVal;
 
 			get_typlenbyval(ppd->types[i], &typLen, &typByVal);
 			if (!typByVal)
@@ -5548,7 +5569,7 @@ exec_eval_using_params(PLpgSQL_execstate *estate, List *params)
 static void
 free_params_data(PreparedParamsData *ppd)
 {
-	int 	i;
+	int			i;
 
 	for (i = 0; i < ppd->nargs; i++)
 	{
@@ -5578,14 +5599,14 @@ exec_dynquery_with_params(PLpgSQL_execstate *estate, PLpgSQL_expr *dynquery,
 	char	   *querystr;
 
 	/*
-	 * Evaluate the string expression after the EXECUTE keyword. Its result
-	 * is the querystring we have to execute.
+	 * Evaluate the string expression after the EXECUTE keyword. Its result is
+	 * the querystring we have to execute.
 	 */
 	query = exec_eval_expr(estate, dynquery, &isnull, &restype);
 	if (isnull)
 		ereport(ERROR,
 				(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-				 errmsg("cannot EXECUTE a null querystring")));
+				 errmsg("query string argument of EXECUTE is null")));
 
 	/* Get the C-String representation */
 	querystr = convert_value_to_string(estate, query, restype);
@@ -5596,9 +5617,9 @@ exec_dynquery_with_params(PLpgSQL_execstate *estate, PLpgSQL_expr *dynquery,
 	exec_eval_cleanup(estate);
 
 	/*
-	 * Open an implicit cursor for the query.  We use SPI_cursor_open_with_args
-	 * even when there are no params, because this avoids making and freeing
-	 * one copy of the plan.
+	 * Open an implicit cursor for the query.  We use
+	 * SPI_cursor_open_with_args even when there are no params, because this
+	 * avoids making and freeing one copy of the plan.
 	 */
 	if (params)
 	{

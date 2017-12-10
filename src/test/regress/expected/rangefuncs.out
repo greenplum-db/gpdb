@@ -708,6 +708,53 @@ select * from array_to_set(array['one', 'two']); -- fail
 ERROR:  a column definition list is required for functions returning "record"
 LINE 1: select * from array_to_set(array['one', 'two']);
                       ^
+-- start_ignore
+-- GPDB_90_MERGE_FIXME: disable RETURNING clause tests (see above).
+create temp table foo(f1 int8, f2 int8);
+create function testfoo() returns record as $$
+  insert into foo values (1,2) returning *;
+$$ language sql;
+select testfoo();
+ testfoo 
+---------
+ (1,2)
+(1 row)
+
+select * from testfoo() as t(f1 int8,f2 int8);
+ f1 | f2 
+----+----
+  1 |  2
+(1 row)
+
+select * from testfoo(); -- fail
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from testfoo();
+                      ^
+drop function testfoo();
+create function testfoo() returns setof record as $$
+  insert into foo values (1,2), (3,4) returning *;
+$$ language sql;
+select testfoo();
+ testfoo 
+---------
+ (1,2)
+ (3,4)
+(2 rows)
+
+select * from testfoo() as t(f1 int8,f2 int8);
+ f1 | f2 
+----+----
+  1 |  2
+  3 |  4
+(2 rows)
+
+select * from testfoo(); -- fail
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from testfoo();
+                      ^
+drop function testfoo();
+-- end of disabled RETURNING tests.
+-- end_ignore
 -- check handling of a SQL function with multiple OUT params (bug #5777)
 create or replace function foobar(out integer, out numeric) as
 $$ select (1, 2.1) $$ language sql;

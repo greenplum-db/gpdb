@@ -4,7 +4,7 @@
  *
  *	Copyright (c) 2003-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/bin/scripts/common.h,v 1.21 2009/01/01 17:23:55 momjian Exp $
+ *	$PostgreSQL: pgsql/src/bin/scripts/common.h,v 1.23 2009/04/05 04:19:59 tgl Exp $
  */
 #ifndef COMMON_H
 #define COMMON_H
@@ -19,10 +19,6 @@ enum trivalue
 	TRI_NO,
 	TRI_YES
 };
-
-#ifndef HAVE_INT_OPTRESET
-extern int	optreset;
-#endif
 
 typedef void (*help_handler) (const char *progname);
 

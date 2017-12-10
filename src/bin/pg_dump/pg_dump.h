@@ -8,7 +8,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.145 2009/01/01 17:23:54 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump.h,v 1.154 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -19,25 +19,6 @@
 #include "postgres_fe.h"
 #include "pqexpbuffer.h"
 #include "libpq-fe.h"
-
-/*
- * WIN32 does not provide 64-bit off_t, but does provide the functions operating
- * with 64-bit offsets.
- */
-#ifdef WIN32
-#define pgoff_t __int64
-#undef fseeko
-#undef ftello
-#ifdef WIN32_ONLY_COMPILER
-#define fseeko(stream, offset, origin) _fseeki64(stream, offset, origin)
-#define ftello(stream) _ftelli64(stream)
-#else
-#define fseeko(stream, offset, origin) fseeko64(stream, offset, origin)
-#define ftello(stream) ftello64(stream)
-#endif
-#else
-#define pgoff_t off_t
-#endif
 
 /*
  * pg_dump uses two different mechanisms for identifying database objects:
@@ -298,10 +279,12 @@ typedef struct _tableInfo
 	char		relstorage;
 	char	   *reltablespace;	/* relation tablespace */
 	char	   *reloptions;		/* options specified by WITH (...) */
+	char	   *toast_reloptions;		/* ditto, for the TOAST table */
 	bool		hasindex;		/* does it have any indexes? */
 	bool		hasrules;		/* does it have any rules? */
 	bool		hastriggers;	/* does it have any triggers? */
 	bool		hasoids;		/* does it have OIDs? */
+	uint32		frozenxid;		/* for restore frozen xid */
 	int			ncheck;			/* # of CHECK expressions */
 	/* these two are set only if table is a sequence owned by a column: */
 	Oid			owning_tab;		/* OID of table owning sequence */
@@ -335,7 +318,7 @@ typedef struct _tableInfo
 	 */
 	int			numParents;		/* number of (immediate) parent tables */
 	struct _tableInfo **parents;	/* TableInfos of immediate parents */
-	struct _tableDataInfo *dataObj;	/* TableDataInfo, if dumping its data */
+	struct _tableDataInfo *dataObj;		/* TableDataInfo, if dumping its data */
 	Oid			parrelid;			/* external partition's parent oid */
 } TableInfo;
 
@@ -480,7 +463,7 @@ typedef struct _fdwInfo
 {
 	DumpableObject dobj;
 	char	   *rolname;
-	char	   *fdwlibrary;
+	char	   *fdwvalidator;
 	char	   *fdwoptions;
 	char	   *fdwacl;
 } FdwInfo;

@@ -13,7 +13,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipc.c,v 1.102 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/ipc/ipc.c,v 1.105 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -45,6 +45,8 @@ bool		proc_exit_inprogress = false;
  * (or in the parent postmaster).
  */
 static bool atexit_callback_setup = false;
+
+/* GPDB_84_MERGE_FIXME: externs in .c files like this are dangerous */
 extern void WaitInterconnectQuit(void);
 
 /* ----------------------------------------------------------------
@@ -83,7 +85,7 @@ static int	on_proc_exit_index,
  *		-cim 2/6/90
  *
  *		Unfortunately, we can't really guarantee that add-on code
- *		obeys the rule of not calling exit() directly.  So, while
+ *		obeys the rule of not calling exit() directly.	So, while
  *		this is the preferred way out of the system, we also register
  *		an atexit callback that will make sure cleanup happens.
  * ----------------------------------------------------------------

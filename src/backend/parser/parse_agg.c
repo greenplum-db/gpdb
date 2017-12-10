@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/parser/parse_agg.c,v 1.87 2009/01/01 17:23:45 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/parser/parse_agg.c,v 1.88 2009/06/11 14:49:00 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -749,7 +749,7 @@ transformWindowFuncCall(ParseState *pstate, WindowFunc *wfunc,
 			winref++;
 			if (refwin->refname && windef->refname &&
 				strcmp(refwin->refname, windef->refname) == 0)
-				/* matched on refname */ ;
+				 /* matched on refname */ ;
 			else if (!refwin->refname && !windef->refname)
 				 /* matched, no refname */ ;
 			else
@@ -850,10 +850,9 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	 * If there are join alias vars involved, we have to flatten them to the
 	 * underlying vars, so that aliased and unaliased vars will be correctly
 	 * taken as equal.	We can skip the expense of doing this if no rangetable
-	 * entries are RTE_JOIN kind.
-	 * We use the planner's flatten_join_alias_vars routine to do the
-	 * flattening; it wants a PlannerInfo root node, which fortunately can be
-	 * mostly dummy.
+	 * entries are RTE_JOIN kind. We use the planner's flatten_join_alias_vars
+	 * routine to do the flattening; it wants a PlannerInfo root node, which
+	 * fortunately can be mostly dummy.
 	 */
 	if (hasJoinRTEs)
 	{

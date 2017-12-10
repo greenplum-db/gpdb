@@ -15,7 +15,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.217 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/dbcommands.c,v 1.225 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -611,7 +611,7 @@ createdb(CreatedbStmt *stmt)
 {
 	Oid			src_dboid = InvalidOid;
 	Oid			src_owner;
-	int			src_encoding;
+	int			src_encoding = 0;
 	char	   *src_collate = NULL;
 	char	   *src_ctype = NULL;
 	bool		src_istemplate;
@@ -692,7 +692,7 @@ createdb(CreatedbStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dencoding = defel;
 		}
-		else if (strcmp(defel->defname, "collate") == 0)
+		else if (strcmp(defel->defname, "lc_collate") == 0)
 		{
 			if (dcollate)
 				ereport(ERROR,
@@ -700,7 +700,7 @@ createdb(CreatedbStmt *stmt)
 						 errmsg("conflicting or redundant options")));
 			dcollate = defel;
 		}
-		else if (strcmp(defel->defname, "ctype") == 0)
+		else if (strcmp(defel->defname, "lc_ctype") == 0)
 		{
 			if (dctype)
 				ereport(ERROR,
@@ -774,7 +774,13 @@ createdb(CreatedbStmt *stmt)
 		dbctype = strVal(dctype->arg);
 
 	if (dconnlimit && dconnlimit->arg)
+	{
 		dbconnlimit = intVal(dconnlimit->arg);
+		if (dbconnlimit < -1)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid connection limit: %d", dbconnlimit)));
+	}
 
 	/* obtain OID of proposed owner */
 	if (dbowner)
@@ -856,10 +862,12 @@ createdb(CreatedbStmt *stmt)
 				 errmsg("invalid locale name %s", dbctype)));
 
 	/*
-	 * Check whether encoding matches server locale settings.  We allow
-	 * mismatch in three cases:
+	 * Check whether chosen encoding matches chosen locale settings.  This
+	 * restriction is necessary because libc's locale-specific code usually
+	 * fails when presented with data in an encoding it's not expecting. We
+	 * allow mismatch in three cases:
 	 *
-	 * 1. ctype_encoding = SQL_ASCII, which means either that the locale is
+	 * 1. locale encoding = SQL_ASCII, which means either that the locale is
 	 * C/POSIX which works with any encoding, or that we couldn't determine
 	 * the locale's encoding and have to trust the user to get it right.
 	 *
@@ -883,13 +891,13 @@ createdb(CreatedbStmt *stmt)
 #endif
 		  (encoding == PG_SQL_ASCII && superuser())))
 	{
-
 		ereport(gp_encoding_check_locale_compatibility ? ERROR : WARNING,
-				(errmsg("encoding %s does not match server's locale %s",
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("encoding %s does not match locale %s",
 						pg_encoding_to_char(encoding),
 						dbctype),
-			 errdetail("The chosen CTYPE setting requires encoding %s.",
-					   pg_encoding_to_char(ctype_encoding))));
+			   errdetail("The chosen LC_CTYPE setting requires encoding %s.",
+						 pg_encoding_to_char(ctype_encoding))));
 	}
 
 	if (!(collate_encoding == encoding ||
@@ -899,30 +907,46 @@ createdb(CreatedbStmt *stmt)
 #endif
 		  (encoding == PG_SQL_ASCII && superuser())))
 		ereport(ERROR,
-				(errmsg("encoding %s does not match locale %s",
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("encoding %s does not match locale %s",
 						pg_encoding_to_char(encoding),
 						dbcollate),
-			 errdetail("The chosen COLLATE setting requires encoding %s.",
+			 errdetail("The chosen LC_COLLATE setting requires encoding %s.",
 					   pg_encoding_to_char(collate_encoding))));
 
 	/*
-	 * Check that the new locale is compatible with the source database.
+	 * Check that the new encoding and locale settings match the source
+	 * database.  We insist on this because we simply copy the source data ---
+	 * any non-ASCII data would be wrongly encoded, and any indexes sorted
+	 * according to the source locale would be wrong.
 	 *
-	 * We know that template0 doesn't contain any indexes that depend on
-	 * collation or ctype, so template0 can be used as template for
-	 * any locale.
+	 * However, we assume that template0 doesn't contain any non-ASCII data
+	 * nor any indexes that depend on collation or ctype, so template0 can be
+	 * used as template for creating a database with any encoding or locale.
 	 */
 	if (strcmp(dbtemplate, "template0") != 0)
 	{
-		if (strcmp(dbcollate, src_collate))
+		if (encoding != src_encoding)
 			ereport(ERROR,
-					(errmsg("new collation is incompatible with the collation of the template database (%s)", src_collate),
-					 errhint("Use the same collation as in the template database, or use template0 as template")));
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("new encoding (%s) is incompatible with the encoding of the template database (%s)",
+							pg_encoding_to_char(encoding),
+							pg_encoding_to_char(src_encoding)),
+					 errhint("Use the same encoding as in the template database, or use template0 as template.")));
 
-		if (strcmp(dbctype, src_ctype))
+		if (strcmp(dbcollate, src_collate) != 0)
 			ereport(ERROR,
-					(errmsg("new ctype is incompatible with the ctype of the template database (%s)", src_ctype),
-					 errhint("Use the same ctype as in the template database, or use template0 as template")));
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("new collation (%s) is incompatible with the collation of the template database (%s)",
+							dbcollate, src_collate),
+					 errhint("Use the same collation as in the template database, or use template0 as template.")));
+
+		if (strcmp(dbctype, src_ctype) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("new LC_CTYPE (%s) is incompatible with the LC_CTYPE of the template database (%s)",
+							dbctype, src_ctype),
+					 errhint("Use the same LC_CTYPE as in the template database, or use template0 as template.")));
 	}
 
 	/* Resolve default tablespace for new database */
@@ -1062,7 +1086,7 @@ createdb(CreatedbStmt *stmt)
 	new_record_nulls[Anum_pg_database_datacl - 1] = true;
 
 	tuple = heap_form_tuple(RelationGetDescr(pg_database_rel),
-						   new_record, new_record_nulls);
+							new_record, new_record_nulls);
 
 	HeapTupleSetOid(tuple, dboid);
 
@@ -1423,9 +1447,9 @@ createdb_failure_callback(int code, Datum arg)
 	createdb_failure_params *fparms = (createdb_failure_params *) DatumGetPointer(arg);
 
 	/*
-	 * Release lock on source database before doing recursive remove.
-	 * This is not essential but it seems desirable to release the lock
-	 * as soon as possible.
+	 * Release lock on source database before doing recursive remove. This is
+	 * not essential but it seems desirable to release the lock as soon as
+	 * possible.
 	 */
 	UnlockSharedObject(DatabaseRelationId, fparms->src_dboid, 0, ShareLock);
 
@@ -1592,9 +1616,9 @@ dropdb(const char *dbname, bool missing_ok)
 
 	/*
 	 * Tell bgwriter to forget any pending fsync and unlink requests for files
-	 * in the database; else the fsyncs will fail at next checkpoint, or worse,
-	 * it will delete files that belong to a newly created database with the
-	 * same OID.
+	 * in the database; else the fsyncs will fail at next checkpoint, or
+	 * worse, it will delete files that belong to a newly created database
+	 * with the same OID.
 	 */
 	ForgetDatabaseFsyncRequests(InvalidOid, db_id);
 
@@ -1858,21 +1882,23 @@ RenameDatabase(const char *oldname, const char *newname)
 static void
 movedb(const char *dbname, const char *tblspcname)
 {
-	Oid			  db_id;
-	Relation	  pgdbrel;
-	int			  notherbackends;
-	int			  npreparedxacts;
-	HeapTuple	  oldtuple, newtuple;
-	Oid           src_tblspcoid, dst_tblspcoid;
-	Datum		  new_record[Natts_pg_database];
-	bool		  new_record_nulls[Natts_pg_database];
-	bool		  new_record_repl[Natts_pg_database];
-	ScanKeyData   scankey;
-	SysScanDesc   sysscan;
-	AclResult	  aclresult;
-	char          *src_dbpath;
-	char          *dst_dbpath;
-	DIR           *dstdir;
+	Oid			db_id;
+	Relation	pgdbrel;
+	int			notherbackends;
+	int			npreparedxacts;
+	HeapTuple	oldtuple,
+				newtuple;
+	Oid			src_tblspcoid,
+				dst_tblspcoid;
+	Datum		new_record[Natts_pg_database];
+	bool		new_record_nulls[Natts_pg_database];
+	bool		new_record_repl[Natts_pg_database];
+	ScanKeyData scankey;
+	SysScanDesc sysscan;
+	AclResult	aclresult;
+	char	   *src_dbpath;
+	char	   *dst_dbpath;
+	DIR		   *dstdir;
 	struct dirent *xlde;
 	movedb_failure_params fparms;
 
@@ -1972,13 +1998,13 @@ movedb(const char *dbname, const char *tblspcname)
 
 	/*
 	 * Force a checkpoint before proceeding. This will force dirty buffers out
-	 * to disk, to ensure source database is up-to-date on disk for the
-	 * copy. FlushDatabaseBuffers() would suffice for that, but we also want
-	 * to process any pending unlink requests. Otherwise, the check for
-	 * existing files in the target directory might fail unnecessarily, not to
-	 * mention that the copy might fail due to source files getting deleted
-	 * under it.  On Windows, this also ensures that the bgwriter doesn't hold
-	 * any open files, which would cause rmdir() to fail.
+	 * to disk, to ensure source database is up-to-date on disk for the copy.
+	 * FlushDatabaseBuffers() would suffice for that, but we also want to
+	 * process any pending unlink requests. Otherwise, the check for existing
+	 * files in the target directory might fail unnecessarily, not to mention
+	 * that the copy might fail due to source files getting deleted under it.
+	 * On Windows, this also ensures that the bgwriter doesn't hold any open
+	 * files, which would cause rmdir() to fail.
 	 */
 	RequestCheckpoint(CHECKPOINT_IMMEDIATE | CHECKPOINT_FORCE | CHECKPOINT_WAIT);
 
@@ -1999,7 +2025,8 @@ movedb(const char *dbname, const char *tblspcname)
 				continue;
 
 			ereport(ERROR,
-					(errmsg("some relations of database \"%s\" are already in tablespace \"%s\"",
+					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+					 errmsg("some relations of database \"%s\" are already in tablespace \"%s\"",
 							dbname, tblspcname),
 					 errhint("You must move them back to the database's default tablespace before using this command.")));
 		}
@@ -2007,8 +2034,8 @@ movedb(const char *dbname, const char *tblspcname)
 		FreeDir(dstdir);
 
 		/*
-		 * The directory exists but is empty.
-		 * We must remove it before using the copydir function.
+		 * The directory exists but is empty. We must remove it before using
+		 * the copydir function.
 		 */
 		if (rmdir(dst_dbpath) != 0)
 			elog(ERROR, "could not remove directory \"%s\": %m",
@@ -2017,7 +2044,7 @@ movedb(const char *dbname, const char *tblspcname)
 
 	/*
 	 * Use an ENSURE block to make sure we remove the debris if the copy fails
-	 * (eg, due to out-of-disk-space).  This is not a 100% solution, because
+	 * (eg, due to out-of-disk-space).	This is not a 100% solution, because
 	 * of the possibility of failure during transaction commit, but it should
 	 * handle most scenarios.
 	 */
@@ -2061,7 +2088,7 @@ movedb(const char *dbname, const char *tblspcname)
 		sysscan = systable_beginscan(pgdbrel, DatabaseNameIndexId, true,
 									 SnapshotNow, 1, &scankey);
 		oldtuple = systable_getnext(sysscan);
-		if (!HeapTupleIsValid(oldtuple)) /* shouldn't happen... */
+		if (!HeapTupleIsValid(oldtuple))		/* shouldn't happen... */
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_DATABASE),
 					 errmsg("database \"%s\" does not exist", dbname)));
@@ -2110,13 +2137,13 @@ movedb(const char *dbname, const char *tblspcname)
 								PointerGetDatum(&fparms));
 
 	/*
-	 * Commit the transaction so that the pg_database update is committed.
-	 * If we crash while removing files, the database won't be corrupt,
-	 * we'll just leave some orphaned files in the old directory.
+	 * Commit the transaction so that the pg_database update is committed. If
+	 * we crash while removing files, the database won't be corrupt, we'll
+	 * just leave some orphaned files in the old directory.
 	 *
 	 * (This is OK because we know we aren't inside a transaction block.)
 	 *
-	 * XXX would it be safe/better to do this inside the ensure block?  Not
+	 * XXX would it be safe/better to do this inside the ensure block?	Not
 	 * convinced it's a good idea; consider elog just after the transaction
 	 * really commits.
 	 */
@@ -2228,7 +2255,13 @@ AlterDatabase(AlterDatabaseStmt *stmt, bool isTopLevel)
 	}
 
 	if (dconnlimit)
+	{
 		connlimit = intVal(dconnlimit->arg);
+		if (connlimit < -1)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("invalid connection limit: %d", connlimit)));
+	}
 
 	/*
 	 * Get the old tuple.  We don't need a lock on the database per se,
@@ -2268,7 +2301,7 @@ AlterDatabase(AlterDatabaseStmt *stmt, bool isTopLevel)
 	}
 
 	newtuple = heap_modify_tuple(tuple, RelationGetDescr(rel), new_record,
-								new_record_nulls, new_record_repl);
+								 new_record_nulls, new_record_repl);
 	simple_heap_update(rel, &tuple->t_self, newtuple);
 
 	/* Update indexes */
@@ -2412,7 +2445,7 @@ AlterDatabaseSet(AlterDatabaseSetStmt *stmt)
 	}
 
 	newtuple = heap_modify_tuple(tuple, RelationGetDescr(rel),
-								repl_val, repl_null, repl_repl);
+								 repl_val, repl_null, repl_repl);
 	simple_heap_update(rel, &tuple->t_self, newtuple);
 
 	/* Update indexes */
@@ -3014,6 +3047,9 @@ void
 dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attribute__((unused)), XLogRecord *record)
 {
 	uint8		info = record->xl_info & ~XLR_INFO_MASK;
+
+	/* Backup blocks are not used in dbase records */
+	Assert(!(record->xl_info & XLR_BKP_BLOCK_MASK));
 
 	if (info == XLOG_DBASE_CREATE)
 	{

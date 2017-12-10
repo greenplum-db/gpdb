@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/truncate.sgml,v 1.31 2008/12/18 10:45:00 petere Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/truncate.sgml,v 1.33 2009/04/26 02:56:52 tgl Exp $
 PostgreSQL documentation
 -->
 
@@ -21,7 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ... ]
+TRUNCATE [ TABLE ] [ ONLY ] <replaceable class="PARAMETER">name</replaceable> [, ... ]
     [ RESTART IDENTITY | CONTINUE IDENTITY ] [ CASCADE | RESTRICT ]
 </synopsis>
  </refsynopsisdiv>
@@ -47,7 +47,10 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ... ]
     <term><replaceable class="PARAMETER">name</replaceable></term>
     <listitem>
      <para>
-      The name (optionally schema-qualified) of a table to be truncated.
+      The name (optionally schema-qualified) of a table to be
+      truncated.  If <literal>ONLY</> is specified, only that table is
+      truncated.  If <literal>ONLY</> is not specified, the table and
+      all its descendant tables (if any) are truncated.
      </para>
     </listitem>
    </varlistentry>
@@ -103,8 +106,8 @@ TRUNCATE [ TABLE ] <replaceable class="PARAMETER">name</replaceable> [, ... ]
   </para>
 
   <para>
-   <command>TRUNCATE</> acquires an access exclusive lock on the
-   tables in operates on, which blocks all other concurrent operations
+   <command>TRUNCATE</> acquires an <literal>ACCESS EXCLUSIVE</> lock on each
+   table it operates on, which blocks all other concurrent operations
    on the table.  If concurrent access to a table is required, then
    the <command>DELETE</> command should be used instead.
   </para>

@@ -17,7 +17,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.h,v 1.76 2007/11/07 12:24:24 petere Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_backup_archiver.h,v 1.79 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -64,7 +64,7 @@ typedef z_stream *z_streamp;
 
 /* Current archive version number (the format we can output) */
 #define K_VERS_MAJOR 1
-#define K_VERS_MINOR 10
+#define K_VERS_MINOR 11
 #define K_VERS_REV 0
 
 /* Data block types */
@@ -87,9 +87,11 @@ typedef z_stream *z_streamp;
 #define K_VERS_1_9 (( (1 * 256 + 9) * 256 + 0) * 256 + 0)		/* add default_with_oids
 																 * tracking */
 #define K_VERS_1_10 (( (1 * 256 + 10) * 256 + 0) * 256 + 0)		/* add tablespace */
+#define K_VERS_1_11 (( (1 * 256 + 11) * 256 + 0) * 256 + 0)		/* add toc section
+																 * indicator */
 
 /* Newest format we can read */
-#define K_VERS_MAX (( (1 * 256 + 10) * 256 + 255) * 256 + 0)
+#define K_VERS_MAX (( (1 * 256 + 11) * 256 + 255) * 256 + 0)
 
 
 /* Flags to indicate disposition of offsets stored in files */
@@ -102,6 +104,7 @@ struct _tocEntry;
 struct _restoreList;
 
 typedef void (*ClosePtr) (struct _archiveHandle * AH);
+typedef void (*ReopenPtr) (struct _archiveHandle * AH);
 typedef void (*ArchiveEntryPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
 
 typedef void (*StartDataPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
@@ -122,6 +125,9 @@ typedef void (*WriteExtraTocPtr) (struct _archiveHandle * AH, struct _tocEntry *
 typedef void (*ReadExtraTocPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
 typedef void (*PrintExtraTocPtr) (struct _archiveHandle * AH, struct _tocEntry * te);
 typedef void (*PrintTocDataPtr) (struct _archiveHandle * AH, struct _tocEntry * te, RestoreOptions *ropt);
+
+typedef void (*ClonePtr) (struct _archiveHandle * AH);
+typedef void (*DeClonePtr) (struct _archiveHandle * AH);
 
 typedef size_t (*CustomOutPtr) (struct _archiveHandle * AH, const void *buf, size_t len);
 
@@ -215,6 +221,7 @@ typedef struct _archiveHandle
 	WriteBufPtr WriteBufPtr;	/* Write a buffer of output to the archive */
 	ReadBufPtr ReadBufPtr;		/* Read a buffer of input from the archive */
 	ClosePtr ClosePtr;			/* Close the archive */
+	ReopenPtr ReopenPtr;		/* Reopen the archive */
 	WriteExtraTocPtr WriteExtraTocPtr;	/* Write extra TOC entry data
 										 * associated with the current archive
 										 * format */
@@ -227,6 +234,9 @@ typedef struct _archiveHandle
 	EndBlobsPtr EndBlobsPtr;
 	StartBlobPtr StartBlobPtr;
 	EndBlobPtr EndBlobPtr;
+
+	ClonePtr ClonePtr;			/* Clone format-specific fields */
+	DeClonePtr DeClonePtr;		/* Clean up cloned fields */
 
 	CustomOutPtr CustomOutPtr;	/* Alternative script output routine */
 
@@ -287,6 +297,7 @@ typedef struct _tocEntry
 	struct _tocEntry *next;
 	CatalogId	catalogId;
 	DumpId		dumpId;
+	teSection	section;
 	bool		hadDumper;		/* Archiver was passed a dumper routine (used
 								 * in restore) */
 	char	   *tag;			/* index tag */
@@ -305,6 +316,13 @@ typedef struct _tocEntry
 	DataDumperPtr dataDumper;	/* Routine to dump data for object */
 	void	   *dataDumperArg;	/* Arg for above routine */
 	void	   *formatData;		/* TOC Entry data specific to file format */
+
+	/* working state (needed only for parallel restore) */
+	bool		restored;		/* item is in progress or done */
+	bool		created;		/* set for DATA member if TABLE was created */
+	int			depCount;		/* number of dependencies not yet restored */
+	DumpId	   *lockDeps;		/* dumpIds of objects this one needs lock on */
+	int			nLockDeps;		/* number of such dependencies */
 } TocEntry;
 
 /* Used everywhere */

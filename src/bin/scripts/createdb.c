@@ -5,7 +5,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/createdb.c,v 1.30 2009/01/01 17:23:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/scripts/createdb.c,v 1.34 2009/04/06 08:42:53 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -67,7 +67,7 @@ main(int argc, char *argv[])
 
 	handle_help_version_opts(argc, argv, "createdb", help);
 
-	while ((c = getopt_long(argc, argv, "h:p:U:WeqO:D:T:E:l:", long_options, &optindex)) != -1)
+	while ((c = getopt_long(argc, argv, "h:p:U:wWeO:D:T:E:l:", long_options, &optindex)) != -1)
 	{
 		switch (c)
 		{
@@ -186,9 +186,9 @@ main(int argc, char *argv[])
 	if (template)
 		appendPQExpBuffer(&sql, " TEMPLATE %s", fmtId(template));
 	if (lc_collate)
-		appendPQExpBuffer(&sql, " COLLATE '%s'", lc_collate);
+		appendPQExpBuffer(&sql, " LC_COLLATE '%s'", lc_collate);
 	if (lc_ctype)
-		appendPQExpBuffer(&sql, " CTYPE '%s'", lc_ctype);
+		appendPQExpBuffer(&sql, " LC_CTYPE '%s'", lc_ctype);
 
 	appendPQExpBuffer(&sql, ";\n");
 
@@ -249,8 +249,8 @@ help(const char *progname)
 	printf(_("  -e, --echo                   show the commands being sent to the server\n"));
 	printf(_("  -E, --encoding=ENCODING      encoding for the database\n"));
 	printf(_("  -l, --locale=LOCALE          locale settings for the database\n"));
-	printf(_("  --lc-collate=LOCALE          LC_COLLATE setting for the database\n"));
-	printf(_("  --lc-ctype=LOCALE            LC_CTYPE setting for the database\n"));
+	printf(_("      --lc-collate=LOCALE      LC_COLLATE setting for the database\n"));
+	printf(_("      --lc-ctype=LOCALE        LC_CTYPE setting for the database\n"));
 	printf(_("  -O, --owner=OWNER            database user to own the new database\n"));
 	printf(_("  -T, --template=TEMPLATE      template database to copy\n"));
 	printf(_("  --help                       show this help, then exit\n"));

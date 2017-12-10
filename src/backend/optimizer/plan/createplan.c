@@ -12,7 +12,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.255 2009/01/01 17:23:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/plan/createplan.c,v 1.260 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -89,10 +89,10 @@ static TableFunctionScan *create_tablefunction_plan(PlannerInfo *root,
 						  List *scan_clauses);
 static ValuesScan *create_valuesscan_plan(PlannerInfo *root, Path *best_path,
 					   List *tlist, List *scan_clauses);
-static SubqueryScan * create_ctescan_plan(PlannerInfo *root, Path *best_path,
-										  List *tlist, List *scan_clauses);
+static SubqueryScan *create_ctescan_plan(PlannerInfo *root, Path *best_path,
+					List *tlist, List *scan_clauses);
 static WorkTableScan *create_worktablescan_plan(PlannerInfo *root, Path *best_path,
-												List *tlist, List *scan_clauses);
+						  List *tlist, List *scan_clauses);
 static BitmapAppendOnlyScan *create_bitmap_appendonly_scan_plan(PlannerInfo *root,
 								   BitmapAppendOnlyPath *best_path,
 								   List *tlist, List *scan_clauses);
@@ -152,9 +152,9 @@ static FunctionScan *make_functionscan(List *qptlist, List *qpqual,
 static ValuesScan *make_valuesscan(List *qptlist, List *qpqual,
 				Index scanrelid, List *values_lists);
 static CteScan *make_ctescan(List *qptlist, List *qpqual,
-							 Index scanrelid, int ctePlanId, int cteParam);
+			 Index scanrelid, int ctePlanId, int cteParam);
 static WorkTableScan *make_worktablescan(List *qptlist, List *qpqual,
-										 Index scanrelid, int wtParam);
+				   Index scanrelid, int wtParam);
 static BitmapAnd *make_bitmap_and(List *bitmapplans);
 static BitmapOr *make_bitmap_or(List *bitmapplans);
 static List *flatten_grouping_list(List *groupcls);
@@ -448,7 +448,7 @@ build_relation_tlist(RelOptInfo *rel)
 	foreach(v, rel->reltargetlist)
 	{
 		/* Do we really need to copy here?	Not sure */
-		Node   *node = (Node *) copyObject(lfirst(v));
+		Node	   *node = (Node *) copyObject(lfirst(v));
 
 		tlist = lappend(tlist, makeTargetEntry((Expr *) node,
 											   resno,
@@ -858,20 +858,20 @@ create_unique_plan(PlannerInfo *root, UniquePath *best_path)
 	}
 
 	/*
-	 * As constructed, the subplan has a "flat" tlist containing just the
-	 * Vars needed here and at upper levels.  The values we are supposed
-	 * to unique-ify may be expressions in these variables.  We have to
-	 * add any such expressions to the subplan's tlist.
+	 * As constructed, the subplan has a "flat" tlist containing just the Vars
+	 * needed here and at upper levels.  The values we are supposed to
+	 * unique-ify may be expressions in these variables.  We have to add any
+	 * such expressions to the subplan's tlist.
 	 *
-	 * The subplan may have a "physical" tlist if it is a simple scan plan.
-	 * If we're going to sort, this should be reduced to the regular tlist,
-	 * so that we don't sort more data than we need to.  For hashing, the
-	 * tlist should be left as-is if we don't need to add any expressions;
-	 * but if we do have to add expressions, then a projection step will be
-	 * needed at runtime anyway, so we may as well remove unneeded items.
-	 * Therefore newtlist starts from build_relation_tlist() not just a
-	 * copy of the subplan's tlist; and we don't install it into the subplan
-	 * unless we are sorting or stuff has to be added.
+	 * The subplan may have a "physical" tlist if it is a simple scan plan. If
+	 * we're going to sort, this should be reduced to the regular tlist, so
+	 * that we don't sort more data than we need to.  For hashing, the tlist
+	 * should be left as-is if we don't need to add any expressions; but if we
+	 * do have to add expressions, then a projection step will be needed at
+	 * runtime anyway, so we may as well remove unneeded items. Therefore
+	 * newtlist starts from build_relation_tlist() not just a copy of the
+	 * subplan's tlist; and we don't install it into the subplan unless we are
+	 * sorting or stuff has to be added.
 	 */
 	in_operators = best_path->distinct_on_eq_operators; /* CDB */
 	uniq_exprs = best_path->distinct_on_exprs;	/* CDB */
@@ -2126,10 +2126,10 @@ create_bitmap_scan_plan(PlannerInfo *root,
 	qpqual = order_qual_clauses(root, qpqual);
 
 	/*
-	 * When dealing with special operators, we will at this point
-	 * have duplicate clauses in qpqual and bitmapqualorig.  We may as well
-	 * drop 'em from bitmapqualorig, since there's no point in making the
-	 * tests twice.
+	 * When dealing with special operators, we will at this point have
+	 * duplicate clauses in qpqual and bitmapqualorig.	We may as well drop
+	 * 'em from bitmapqualorig, since there's no point in making the tests
+	 * twice.
 	 */
 	bitmapqualorig = list_difference_ptr(bitmapqualorig, qpqual);
 
@@ -2677,12 +2677,12 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path,
 
 	/*
 	 * We need to find the worktable param ID, which is in the plan level
-	 * that's processing the recursive UNION, which is one level *below*
-	 * where the CTE comes from.
+	 * that's processing the recursive UNION, which is one level *below* where
+	 * the CTE comes from.
 	 */
 	levelsup = rte->ctelevelsup;
 	if (levelsup == 0)			/* shouldn't happen */
-			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
+		elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
 	levelsup--;
 	cteroot = root;
 	while (levelsup-- > 0)
@@ -2691,7 +2691,7 @@ create_worktablescan_plan(PlannerInfo *root, Path *best_path,
 		if (!cteroot)			/* shouldn't happen */
 			elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
 	}
-	if (cteroot->wt_param_id < 0)	/* shouldn't happen */
+	if (cteroot->wt_param_id < 0)		/* shouldn't happen */
 		elog(ERROR, "could not find param ID for CTE \"%s\"", rte->ctename);
 
 	/* Sort clauses into best execution order */
@@ -2835,80 +2835,15 @@ create_nestloop_plan(PlannerInfo *root,
 		mat->cdb_strict = true;
 	}
 
-	if (IsA(best_path->innerjoinpath, IndexPath))
-	{
-		/*
-		 * An index is being used to reduce the number of tuples scanned in
-		 * the inner relation.	If there are join clauses being used with the
-		 * index, we may remove those join clauses from the list of clauses
-		 * that have to be checked as qpquals at the join node.
-		 *
-		 * We can also remove any join clauses that are redundant with those
-		 * being used in the index scan; this check is needed because
-		 * find_eclass_clauses_for_index_join() may emit different clauses
-		 * than generate_join_implied_equalities() did.
-		 *
-		 * We can skip this if the index path is an ordinary indexpath and not
-		 * a special innerjoin path, since it then wouldn't be using any join
-		 * clauses.
-		 */
-		IndexPath  *innerpath = (IndexPath *) best_path->innerjoinpath;
-
-		if (innerpath->isjoininner)
-			joinrestrictclauses =
-				select_nonredundant_join_clauses(root,
-												 joinrestrictclauses,
-												 innerpath->indexclauses);
-	}
-	else if (IsA(best_path->innerjoinpath, BitmapHeapPath) ||
-			 IsA(best_path->innerjoinpath, BitmapAppendOnlyPath))
-	{
-		/*
-		 * Same deal for bitmapped index scans.
-		 *
-		 * Note: both here and above, we ignore any implicit index
-		 * restrictions associated with the use of partial indexes.  This is
-		 * OK because we're only trying to prove we can dispense with some
-		 * join quals; failing to prove that doesn't result in an incorrect
-		 * plan.  It is the right way to proceed because adding more quals to
-		 * the stuff we got from the original query would just make it harder
-		 * to detect duplication.  (Also, to change this we'd have to be wary
-		 * of UPDATE/DELETE/SELECT FOR UPDATE target relations; see notes
-		 * above about EvalPlanQual.)
-		 */
-		bool		isjoininner = false;
-		Path	   *bitmapqual = NULL;
-
-		if (IsA(best_path->innerjoinpath, BitmapHeapPath))
-		{
-			BitmapHeapPath *innerpath = (BitmapHeapPath *) best_path->innerjoinpath;
-
-			isjoininner = innerpath->isjoininner;
-			bitmapqual = innerpath->bitmapqual;
-		}
-		else
-		{
-			BitmapAppendOnlyPath *innerpath = (BitmapAppendOnlyPath *) best_path->innerjoinpath;
-
-			Assert(IsA(best_path->innerjoinpath, BitmapAppendOnlyPath));
-			isjoininner = innerpath->isjoininner;
-			bitmapqual = innerpath->bitmapqual;
-		}
-
-		if (isjoininner)
-		{
-			List	   *bitmapclauses;
-
-			bitmapclauses =
-				make_restrictinfo_from_bitmapqual(bitmapqual,
-												  true,
-												  false);
-			joinrestrictclauses =
-				select_nonredundant_join_clauses(root,
-												 joinrestrictclauses,
-												 bitmapclauses);
-		}
-	}
+	/*
+	 * If the inner path is a nestloop inner indexscan, it might be using some
+	 * of the join quals as index quals, in which case we don't have to check
+	 * them again at the join node.  Remove any join quals that are redundant.
+	 */
+	joinrestrictclauses =
+		select_nonredundant_join_clauses(root,
+										 joinrestrictclauses,
+										 best_path->innerjoinpath);
 
 	/* Sort join qual clauses into best execution order */
 	joinrestrictclauses = order_qual_clauses(root, joinrestrictclauses);
@@ -3290,6 +3225,10 @@ create_hashjoin_plan(PlannerInfo *root,
 	List	   *joinclauses;
 	List	   *otherclauses;
 	List	   *hashclauses;
+	Oid			skewTable = InvalidOid;
+	AttrNumber	skewColumn = InvalidAttrNumber;
+	Oid			skewColType = InvalidOid;
+	int32		skewColTypmod = -1;
 	HashJoin   *join_plan;
 	Hash	   *hash_plan;
 
@@ -3333,10 +3272,51 @@ create_hashjoin_plan(PlannerInfo *root,
 	if (outer_plan)
 		disuse_physical_tlist(outer_plan, best_path->jpath.outerjoinpath);
 
+	/* If we expect batching, suppress excess columns in outer tuples too */
+	if (best_path->num_batches > 1)
+		disuse_physical_tlist(outer_plan, best_path->jpath.outerjoinpath);
+
+	/*
+	 * If there is a single join clause and we can identify the outer variable
+	 * as a simple column reference, supply its identity for possible use in
+	 * skew optimization.  (Note: in principle we could do skew optimization
+	 * with multiple join clauses, but we'd have to be able to determine the
+	 * most common combinations of outer values, which we don't currently have
+	 * enough stats for.)
+	 */
+	if (list_length(hashclauses) == 1)
+	{
+		OpExpr	   *clause = (OpExpr *) linitial(hashclauses);
+		Node	   *node;
+
+		Assert(is_opclause(clause));
+		node = (Node *) linitial(clause->args);
+		if (IsA(node, RelabelType))
+			node = (Node *) ((RelabelType *) node)->arg;
+		if (IsA(node, Var))
+		{
+			Var		   *var = (Var *) node;
+			RangeTblEntry *rte;
+
+			rte = root->simple_rte_array[var->varno];
+			if (rte->rtekind == RTE_RELATION)
+			{
+				skewTable = rte->relid;
+				skewColumn = var->varattno;
+				skewColType = var->vartype;
+				skewColTypmod = var->vartypmod;
+			}
+		}
+	}
+
 	/*
 	 * Build the hash node and hash join node.
 	 */
-	hash_plan = make_hash(inner_plan);
+	hash_plan = make_hash(inner_plan,
+						  skewTable,
+						  skewColumn,
+						  skewColType,
+						  skewColTypmod);
 	join_plan = make_hashjoin(tlist,
 							  joinclauses,
 							  otherclauses,
@@ -3479,8 +3459,8 @@ fix_indexqual_references(List *indexquals, IndexPath *index_path)
 			/* Never need to commute... */
 
 			/*
-			 * Determine which index attribute this is and change the
-			 * indexkey operand as needed.
+			 * Determine which index attribute this is and change the indexkey
+			 * operand as needed.
 			 */
 			linitial(saop->args) = fix_indexqual_operand(linitial(saop->args),
 														 index);
@@ -4082,7 +4062,7 @@ make_ctescan(List *qptlist,
 			 int ctePlanId,
 			 int cteParam)
 {
-	CteScan *node = makeNode(CteScan);
+	CteScan    *node = makeNode(CteScan);
 	Plan	   *plan = &node->scan.plan;
 
 	/* cost should be inserted by caller */
@@ -4297,7 +4277,11 @@ make_hashjoin(List *tlist,
 }
 
 Hash *
-make_hash(Plan *lefttree)
+make_hash(Plan *lefttree,
+		  Oid skewTable,
+		  AttrNumber skewColumn,
+		  Oid skewColType,
+		  int32 skewColTypmod)
 {
 	Hash	   *node = makeNode(Hash);
 	Plan	   *plan = &node->plan;
@@ -4313,6 +4297,11 @@ make_hash(Plan *lefttree)
 	plan->qual = NIL;
 	plan->lefttree = lefttree;
 	plan->righttree = NULL;
+
+	node->skewTable = skewTable;
+	node->skewColumn = skewColumn;
+	node->skewColType = skewColType;
+	node->skewColTypmod = skewColTypmod;
 
 	node->rescannable = false;	/* CDB (unused for now) */
 

@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.65 2009/01/01 17:24:01 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/storage/smgr.h,v 1.68 2009/06/25 21:36:00 heikki Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -210,15 +210,17 @@ extern void smgrdormdbdir(DbDirNode *dropDbDirNode,
 			  bool mirrorOnly,
 			  bool ignoreNonExistence,
 			  bool *mirrorDataLossOccurred);
-extern void smgrextend(SMgrRelation reln, ForkNumber forknum, 
-					   BlockNumber blocknum, char *buffer, bool isTemp);
+extern void smgrextend(SMgrRelation reln, ForkNumber forknum,
+		   BlockNumber blocknum, char *buffer, bool isTemp);
+extern void smgrprefetch(SMgrRelation reln, ForkNumber forknum,
+			 BlockNumber blocknum);
 extern void smgrread(SMgrRelation reln, ForkNumber forknum,
-					 BlockNumber blocknum, char *buffer);
+		 BlockNumber blocknum, char *buffer);
 extern void smgrwrite(SMgrRelation reln, ForkNumber forknum,
-					  BlockNumber blocknum, char *buffer, bool isTemp);
+		  BlockNumber blocknum, char *buffer, bool isTemp);
 extern BlockNumber smgrnblocks(SMgrRelation reln, ForkNumber forknum);
 extern void smgrtruncate(SMgrRelation reln, ForkNumber forknum,
-						 BlockNumber nblocks, bool isTemp);
+			 BlockNumber nblocks, bool isTemp);
 extern bool smgrgetpersistentinfo(XLogRecord *record,
 					  RelFileNode *relFileNode,
 					  ItemPointer persistentTid,
@@ -252,13 +254,15 @@ extern void mdmirroredunlink(RelFileNode rnode,
 		 bool isRedo,
 		 bool ignoreNonExistence,
 		 bool *mirrorDataLossOccurred);
+extern void mdunlink(RelFileNode rnode, ForkNumber forknum, bool isRedo);
 extern void mdextend(SMgrRelation reln,  ForkNumber forknum,
 		 BlockNumber blocknum, char *buffer, bool isTemp);
-extern void mdunlink(RelFileNode rnode, ForkNumber forknum, bool isRedo);
+extern void mdprefetch(SMgrRelation reln, ForkNumber forknum,
+		   BlockNumber blocknum);
 extern void mdread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
-				   char *buffer);
+	   char *buffer);
 extern void mdwrite(SMgrRelation reln, ForkNumber forknum,
-					BlockNumber blocknum, char *buffer, bool isTemp);
+		BlockNumber blocknum, char *buffer, bool isTemp);
 extern BlockNumber mdnblocks(SMgrRelation reln, ForkNumber forknum);
 extern void mdtruncate(SMgrRelation reln, ForkNumber forknum,
 					   BlockNumber nblocks, bool isTemp,
@@ -338,8 +342,9 @@ PendingDelete_AddCreatePendingEntryWrapper(PersistentFileSysObjName *fsObjName,
 										   ItemPointer persistentTid,
 										   int64 persistentSerialNum);
 
+extern void SetForwardFsyncRequests(void);
 extern void RememberFsyncRequest(RelFileNode rnode, ForkNumber forknum,
-								 BlockNumber segno);
+					 BlockNumber segno);
 extern void ForgetRelationFsyncRequests(RelFileNode rnode, ForkNumber forknum);
 extern void ForgetDatabaseFsyncRequests(Oid tblspc, Oid dbid);
 

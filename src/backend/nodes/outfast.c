@@ -908,6 +908,8 @@ _outRangeTblEntry(StringInfo str, RangeTblEntry *node)
 	WRITE_BOOL_FIELD(inFromCl);
 	WRITE_UINT_FIELD(requiredPerms);
 	WRITE_OID_FIELD(checkAsUser);
+	WRITE_BITMAPSET_FIELD(selectedCols);
+	WRITE_BITMAPSET_FIELD(modifiedCols);
 
 	WRITE_BOOL_FIELD(forceDistRandom);
 	/*
@@ -1128,7 +1130,7 @@ _outCreateFdwStmt(StringInfo str, CreateFdwStmt *node)
 	WRITE_NODE_TYPE("CREATEFDWSTMT");
 
 	WRITE_STRING_FIELD(fdwname);
-	WRITE_STRING_FIELD(library);
+	WRITE_NODE_FIELD(validator);
 	WRITE_NODE_FIELD(options);
 }
 
@@ -1138,7 +1140,8 @@ _outAlterFdwStmt(StringInfo str, AlterFdwStmt *node)
 	WRITE_NODE_TYPE("ALTERFDWSTMT");
 
 	WRITE_STRING_FIELD(fdwname);
-	WRITE_STRING_FIELD(library);
+	WRITE_NODE_FIELD(validator);
+	WRITE_BOOL_FIELD(change_validator);
 	WRITE_NODE_FIELD(options);
 }
 
@@ -1216,12 +1219,12 @@ _outDropUserMappingStmt(StringInfo str, DropUserMappingStmt *node)
 }
 
 static void
-_outOptionDefElem(StringInfo str, OptionDefElem *node)
+_outAccessPriv(StringInfo str, AccessPriv *node)
 {
-	WRITE_NODE_TYPE("OPTIONDEFELEM");
+	WRITE_NODE_TYPE("ACCESSPRIV");
 
-	WRITE_ENUM_FIELD(alter_op, AlterOptionOp);
-	WRITE_NODE_FIELD(def);
+	WRITE_STRING_FIELD(priv_name);
+	WRITE_NODE_FIELD(cols);
 }
 
 /*
@@ -1624,6 +1627,9 @@ _outNode(StringInfo str, void *obj)
 
 			case T_GrantStmt:
 				_outGrantStmt(str, obj);
+				break;
+			case T_AccessPriv:
+				_outAccessPriv(str, obj);
 				break;
 			case T_PrivGrantee:
 				_outPrivGrantee(str, obj);
@@ -2135,10 +2141,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_CreateFdwStmt:
 				_outCreateFdwStmt(str, obj);
-				break;
-
-			case T_OptionDefElem:
-				_outOptionDefElem(str, obj);
 				break;
 
 			default:

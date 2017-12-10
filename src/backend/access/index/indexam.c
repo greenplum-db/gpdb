@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.112 2009/01/01 17:23:35 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/index/indexam.c,v 1.114 2009/06/11 14:48:54 momjian Exp $
  *
  * INTERFACE ROUTINES
  *		index_open		- open an index relation by relation OID
@@ -21,7 +21,7 @@
  *		index_markpos	- mark a scan position
  *		index_restrpos	- restore a scan position
  *		index_getnext	- get the next tuple from a scan
- *		index_getbitmap	- get the next bitmap from a scan
+ *		index_getbitmap - get all tuples from a scan
  *		index_bulk_delete	- bulk deletion of index tuples
  *		index_vacuum_cleanup	- post-deletion cleanup of an index
  *		index_getprocid - get a support procedure OID
@@ -485,9 +485,9 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 
 			/*
 			 * The AM's gettuple proc finds the next index entry matching the
-			 * scan keys, and puts the TID in xs_ctup.t_self (ie, *tid).
-			 * It should also set scan->xs_recheck, though we pay no
-			 * attention to that here.
+			 * scan keys, and puts the TID in xs_ctup.t_self (ie, *tid). It
+			 * should also set scan->xs_recheck, though we pay no attention to
+			 * that here.
 			 */
 			found = DatumGetBool(FunctionCall2(procedure,
 											   PointerGetDatum(scan),

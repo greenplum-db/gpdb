@@ -5,7 +5,7 @@
  *
  *	Copyright (c) 2001-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.82 2009/01/04 22:19:59 tgl Exp $
+ *	$PostgreSQL: pgsql/src/include/pgstat.h,v 1.83 2009/06/11 14:49:08 momjian Exp $
  * ----------
  */
 #ifndef PGSTAT_H
@@ -183,8 +183,8 @@ typedef struct PgStat_MsgDummy
 
 typedef struct PgStat_MsgInquiry
 {
-	PgStat_MsgHdr	m_hdr;
-	TimestampTz		inquiry_time;	/* minimum acceptable file timestamp */
+	PgStat_MsgHdr m_hdr;
+	TimestampTz inquiry_time;	/* minimum acceptable file timestamp */
 } PgStat_MsgInquiry;
 
 
@@ -385,7 +385,7 @@ typedef struct PgStat_FunctionEntry
  *								usage statistics.
  * ----------
  */
-#define PGSTAT_NUM_FUNCENTRIES  \
+#define PGSTAT_NUM_FUNCENTRIES	\
 	((PGSTAT_MSG_PAYLOAD - sizeof(Oid) - sizeof(int))  \
 	 / sizeof(PgStat_FunctionEntry))
 
@@ -569,7 +569,7 @@ typedef struct PgStat_StatPortalEntry
  */
 typedef struct PgStat_GlobalStats
 {
-	TimestampTz stats_timestamp;		/* time of stats file update */
+	TimestampTz stats_timestamp;	/* time of stats file update */
 	PgStat_Counter timed_checkpoints;
 	PgStat_Counter requested_checkpoints;
 	PgStat_Counter buf_written_checkpoints;
@@ -650,11 +650,11 @@ typedef struct PgStat_FunctionCallUsage
 	/* NULL means we are not tracking the current function call */
 	PgStat_FunctionCounts *fs;
 	/* Total time previously charged to function, as of function start */
-	instr_time		save_f_time;
+	instr_time	save_f_time;
 	/* Backend-wide total time as of function start */
-	instr_time		save_total;
+	instr_time	save_total;
 	/* system clock as of function start */
-	instr_time		f_start;
+	instr_time	f_start;
 } PgStat_FunctionCallUsage;
 
 
@@ -665,7 +665,7 @@ typedef struct PgStat_FunctionCallUsage
 extern bool pgstat_track_activities;
 extern bool pgstat_track_counts;
 extern int	pgstat_track_functions;
-extern PGDLLIMPORT int	pgstat_track_activity_query_size;
+extern PGDLLIMPORT int pgstat_track_activity_query_size;
 extern char *pgstat_stat_tmpname;
 extern char *pgstat_stat_filename;
 
@@ -888,9 +888,9 @@ extern void pgstat_count_heap_delete(Relation rel);
 extern void pgstat_update_heap_dead_tuples(Relation rel, int delta);
 
 extern void pgstat_init_function_usage(FunctionCallInfoData *fcinfo,
-									   PgStat_FunctionCallUsage *fcu);
+						   PgStat_FunctionCallUsage *fcu);
 extern void pgstat_end_function_usage(PgStat_FunctionCallUsage *fcu,
-									  bool finalize);
+						  bool finalize);
 
 extern void AtEOXact_PgStat(bool isCommit);
 extern void AtEOSubXact_PgStat(bool isCommit, int nestDepth);

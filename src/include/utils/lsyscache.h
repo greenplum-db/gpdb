@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.127 2009/01/01 17:24:02 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/utils/lsyscache.h,v 1.128 2009/06/11 14:49:13 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -144,8 +144,8 @@ extern char get_typtype(Oid typid);
 extern bool type_is_rowtype(Oid typid);
 extern bool type_is_enum(Oid typid);
 extern void get_type_category_preferred(Oid typid,
-										char *typcategory,
-										bool *typispreferred);
+							char *typcategory,
+							bool *typispreferred);
 extern Oid	get_typ_typrelid(Oid typid);
 extern Oid	get_element_type(Oid typid);
 extern Oid	get_array_type(Oid typid);
@@ -192,8 +192,7 @@ extern char *get_check_constraint_name(Oid oidCheckconstraint);
 extern Node *get_check_constraint_expr_tree(Oid oidCheckconstraint);
 Oid get_check_constraint_relid(Oid oidCheckconstraint);
 
-extern bool has_subclass_fast(Oid relationId);
-extern bool has_subclass(Oid relationId);
+extern bool has_subclass_slow(Oid relationId);
 extern bool has_parquet_children(Oid relationId);
 extern GpPolicy *relation_policy(Relation rel);
 extern bool child_distribution_mismatch(Relation rel);
@@ -203,7 +202,6 @@ extern bool get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oi
 
 extern Oid get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt);
 extern CmpType get_comparison_type(Oid oidOp, Oid oidLeft, Oid oidRight);
-extern List *find_all_inheritors(Oid parentrel);
 
 extern List *get_operator_opfamilies(Oid opno);
 extern List *get_index_opfamilies(Oid oidIndex);

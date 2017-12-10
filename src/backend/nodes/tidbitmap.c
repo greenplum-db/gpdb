@@ -23,7 +23,7 @@
  * Copyright (c) 2003-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/tidbitmap.c,v 1.17 2009/01/10 21:08:36 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/tidbitmap.c,v 1.19 2009/06/11 14:48:58 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -91,7 +91,7 @@ struct TIDBitmap
 
 /*
  * When iterating over a bitmap in sorted order, a TBMIterator is used to
- * track our progress.  There can be several iterators scanning the same
+ * track our progress.	There can be several iterators scanning the same
  * bitmap concurrently.  Note that the bitmap becomes read-only as soon as
  * any iterator is created.
  */
@@ -333,6 +333,22 @@ tbm_add_tuples(TIDBitmap *tbm, const ItemPointer tids, int ntids,
 		if (tbm->nentries > tbm->maxentries)
 			tbm_lossify(tbm);
 	}
+}
+
+/*
+ * tbm_add_page - add a whole page to a TIDBitmap
+ *
+ * This causes the whole page to be reported (with the recheck flag)
+ * when the TIDBitmap is scanned.
+ */
+void
+tbm_add_page(TIDBitmap *tbm, BlockNumber pageno)
+{
+	/* Enter the page in the bitmap, or mark it lossy if already present */
+	tbm_mark_page_lossy(tbm, pageno);
+	/* If we went over the memory limit, lossify some more pages */
+	if (tbm->nentries > tbm->maxentries)
+		tbm_lossify(tbm);
 }
 
 /*
@@ -585,7 +601,7 @@ tbm_begin_iterate(TIDBitmap *tbm)
 	 * needs of the TBMIterateResult sub-struct.
 	 */
 	iterator = (TBMIterator *) palloc(sizeof(TBMIterator) +
-									  MAX_TUPLES_PER_PAGE * sizeof(OffsetNumber));
+								 MAX_TUPLES_PER_PAGE * sizeof(OffsetNumber));
 	iterator->tbm = tbm;
 
 	/*
@@ -596,10 +612,10 @@ tbm_begin_iterate(TIDBitmap *tbm)
 	iterator->schunkbit = 0;
 
 	/*
-	 * If we have a hashtable, create and fill the sorted page lists,
-	 * unless we already did that for a previous iterator.  Note that the
-	 * lists are attached to the bitmap not the iterator, so they can be
-	 * used by more than one iterator.
+	 * If we have a hashtable, create and fill the sorted page lists, unless
+	 * we already did that for a previous iterator.  Note that the lists are
+	 * attached to the bitmap not the iterator, so they can be used by more
+	 * than one iterator.
 	 */
 	if (tbm->status == TBM_HASH && !tbm->iterating)
 	{

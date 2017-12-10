@@ -5686,15 +5686,15 @@ GRANT SELECT ON part_acl_test TO part_acl_u1;
 ALTER TABLE part_acl_test ADD PARTITION p2 VALUES (2);
 -- View permissions
 \dp part_acl_*
-                                   Access privileges
-    Schema     |          Name          | Type  |           Access privileges           
----------------+------------------------+-------+---------------------------------------
- bfv_partition | part_acl_test          | table | part_acl_owner=arwdDxt/part_acl_owner 
-                                                : part_acl_u1=r/part_acl_owner
- bfv_partition | part_acl_test_1_prt_p1 | table | part_acl_owner=arwdDxt/part_acl_owner 
-                                                : part_acl_u1=r/part_acl_owner
- bfv_partition | part_acl_test_1_prt_p2 | table | part_acl_owner=arwdDxt/part_acl_owner 
-                                                : part_acl_u1=r/part_acl_owner
+                                                 Access privileges
+    Schema     |          Name          | Type  |           Access privileges           | Column access privileges 
+---------------+------------------------+-------+---------------------------------------+--------------------------
+ bfv_partition | part_acl_test          | table | part_acl_owner=arwdDxt/part_acl_owner | 
+                                                : part_acl_u1=r/part_acl_owner            
+ bfv_partition | part_acl_test_1_prt_p1 | table | part_acl_owner=arwdDxt/part_acl_owner | 
+                                                : part_acl_u1=r/part_acl_owner            
+ bfv_partition | part_acl_test_1_prt_p2 | table | part_acl_owner=arwdDxt/part_acl_owner | 
+                                                : part_acl_u1=r/part_acl_owner            
 (3 rows)
 
 -- View dependencies

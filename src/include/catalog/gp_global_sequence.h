@@ -51,7 +51,7 @@ typedef FormData_gp_global_sequence *Form_gp_global_sequence;
 #define Class_gp_global_sequence \
   {"gp_global_sequence"}, PG_CATALOG_NAMESPACE, GP_GLOBAL_SEQUENCE_RELTYPE_OID, BOOTSTRAP_SUPERUSERID, 0, \
                GpGlobalSequenceRelationId, GLOBALTABLESPACE_OID, \
-               25, 10000, 0, 0, false, true, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_gp_global_sequence, \
+               25, 10000, 0, 0, false, true, false, RELKIND_RELATION, RELSTORAGE_HEAP, Natts_gp_global_sequence, \
                0, false, false, false, false, false, FirstNormalTransactionId, {0}, {{{'\0','\0','\0','\0'},{'\0'}}}
 
 

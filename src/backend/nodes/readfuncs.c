@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/readfuncs.c,v 1.220 2009/01/01 17:23:43 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/readfuncs.c,v 1.222 2009/06/11 14:48:58 momjian Exp $
  *
  * NOTES
  *	  Path and Plan nodes do not need to have any readfuncs support, because we
@@ -146,7 +146,7 @@ inline static char extended_char(char* token, size_t length)
 #define READ_LOCATION_FIELD(fldname) \
 	token = pg_strtok(&length);		/* skip :fldname */ \
 	token = pg_strtok(&length);		/* get field value */ \
-	local_node->fldname = -1		/* set field to "unknown" */
+	local_node->fldname = -1	/* set field to "unknown" */
 
 /* Read a Node field */
 #define READ_NODE_FIELD(fldname) \
@@ -155,19 +155,17 @@ inline static char extended_char(char* token, size_t length)
 	    local_node->fldname = nodeRead(NULL, 0); \
     } while (0)
 
-/* Read a bitmapset field */
-#define READ_BITMAPSET_FIELD(fldname) \
-    do { \
-	    token = pg_strtok(&length);		/* skip :fldname */ \
-	    local_node->fldname = bitmapsetRead(); \
-    } while (0)
-
 /* Read a bytea field */
 #define READ_BYTEA_FIELD(fldname) \
 	local_node->fldname = (bytea *) DatumGetPointer(readDatum(false))
 
 /* Set field to a given value, ignoring the value read from the input */
 #define READ_DUMMY_FIELD(fldname,fldvalue)  READ_SCALAR_FIELD(fldname, fldvalue)
+
+/* Read a bitmapset field */
+#define READ_BITMAPSET_FIELD(fldname) \
+	token = pg_strtok(&length);		/* skip :fldname */ \
+	local_node->fldname = _readBitmapset()
 
 /* Routine exit */
 #define READ_DONE() \
@@ -313,6 +311,49 @@ inline static char extended_char(char* token, size_t length)
 #endif /* COMPILING_BINARY_FUNCS */
 
 static Datum readDatum(bool typbyval);
+
+#ifndef COMPILING_BINARY_FUNCS
+/*
+ * _readBitmapset
+ */
+static Bitmapset *
+_readBitmapset(void)
+{
+	Bitmapset  *result = NULL;
+
+	READ_TEMP_LOCALS();
+
+	token = pg_strtok(&length);
+	if (token == NULL)
+		elog(ERROR, "incomplete Bitmapset structure");
+	if (length != 1 || token[0] != '(')
+		elog(ERROR, "unrecognized token: \"%.*s\"", length, token);
+
+	token = pg_strtok(&length);
+	if (token == NULL)
+		elog(ERROR, "incomplete Bitmapset structure");
+	if (length != 1 || token[0] != 'b')
+		elog(ERROR, "unrecognized token: \"%.*s\"", length, token);
+
+	for (;;)
+	{
+		int			val;
+		char	   *endptr;
+
+		token = pg_strtok(&length);
+		if (token == NULL)
+			elog(ERROR, "unterminated Bitmapset structure");
+		if (length == 1 && token[0] == ')')
+			break;
+		val = (int) strtol(token, &endptr, 10);
+		if (endptr != token + length)
+			elog(ERROR, "unrecognized integer: \"%.*s\"", length, token);
+		result = bms_add_member(result, val);
+	}
+
+	return result;
+}
+#endif /* COMPILING_BINARY_FUNCS */
 
 
 #ifndef COMPILING_BINARY_FUNCS
@@ -1073,6 +1114,7 @@ _readDefElem(void)
 {
 	READ_LOCALS(DefElem);
 
+	READ_STRING_FIELD(defnamespace);
 	READ_STRING_FIELD(defname);
 	READ_NODE_FIELD(arg);
 	READ_ENUM_FIELD(defaction, DefElemAction);
@@ -2035,6 +2077,8 @@ _readRangeTblEntry(void)
 	READ_BOOL_FIELD(inFromCl);
 	READ_UINT_FIELD(requiredPerms);
 	READ_OID_FIELD(checkAsUser);
+	READ_BITMAPSET_FIELD(selectedCols);
+	READ_BITMAPSET_FIELD(modifiedCols);
 
 	READ_BOOL_FIELD(forceDistRandom);
 	READ_NODE_FIELD(pseudocols);
@@ -2651,7 +2695,7 @@ _readVacuumStmt(void)
 	READ_BOOL_FIELD(verbose);
 	READ_BOOL_FIELD(rootonly);
 	READ_INT_FIELD(freeze_min_age);
-	READ_BOOL_FIELD(scan_all);
+	READ_INT_FIELD(freeze_table_age);
 	READ_NODE_FIELD(relation);
 	READ_NODE_FIELD(va_cols);
 	READ_NODE_FIELD(expanded_relids);
@@ -2743,33 +2787,6 @@ _readVariableSetStmt(void)
 
 	READ_DONE();
 }
-
-
-#ifndef COMPILING_BINARY_FUNCS
-static CreateTrigStmt *
-_readCreateTrigStmt(void)
-{
-	READ_LOCALS(CreateTrigStmt);
-
-	READ_STRING_FIELD(trigname);
-	READ_NODE_FIELD(relation);
-	READ_NODE_FIELD(funcname);
-	READ_NODE_FIELD(args);
-	READ_BOOL_FIELD(before);
-	READ_BOOL_FIELD(row);
-	token = pg_strtok(&length);		/* skip :fldname */
-	token = pg_strtok(&length);		/* get field value */
-	strcpy(local_node->actions, debackslash(token, length));
-	READ_BOOL_FIELD(isconstraint);
-	READ_BOOL_FIELD(deferrable);
-	READ_BOOL_FIELD(initdeferred);
-	READ_NODE_FIELD(constrrel);
-	READ_OID_FIELD(trigOid);
-
-	READ_DONE();
-}
-#endif /* COMPILING_BINARY_FUNCS */
-
 
 static TableValueExpr *
 _readTableValueExpr(void)
@@ -3001,8 +3018,6 @@ parseNodeString(void)
 		return_value = _readCreateSeqStmt();
 	else if (MATCHX("CREATESTMT"))
 		return_value = _readCreateStmt();
-	else if (MATCHX("CREATETRIGSTMT"))
-		return_value = _readCreateTrigStmt();
 	else if (MATCHX("CURSORPOSINFO"))
 		return_value = _readCursorPosInfo();
 	else if (MATCHX("DEFELEM"))

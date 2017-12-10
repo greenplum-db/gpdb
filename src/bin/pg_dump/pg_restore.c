@@ -34,7 +34,7 @@
  *
  *
  * IDENTIFICATION
- *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.90 2009/01/05 16:54:37 tgl Exp $
+ *		$PostgreSQL: pgsql/src/bin/pg_dump/pg_restore.c,v 1.100 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -55,10 +55,6 @@
 extern char *optarg;
 extern int	optind;
 
-#ifndef HAVE_INT_OPTRESET
-int			optreset;
-#endif
-
 #ifdef ENABLE_NLS
 #include <locale.h>
 #endif
@@ -78,7 +74,7 @@ main(int argc, char **argv)
 	char	   *inputFileSpec;
 	static int	disable_triggers = 0;
 	static int	no_data_for_failed_tables = 0;
-	static int  outputNoTablespaces = 0;
+	static int	outputNoTablespaces = 0;
 	static int	use_setsessauth = 0;
 
 	struct option cmdopts[] = {
@@ -93,12 +89,14 @@ main(int argc, char **argv)
 		{"host", 1, NULL, 'h'},
 		{"ignore-version", 0, NULL, 'i'},
 		{"index", 1, NULL, 'I'},
+		{"jobs", 1, NULL, 'j'},
 		{"list", 0, NULL, 'l'},
 		{"no-privileges", 0, NULL, 'x'},
 		{"no-acl", 0, NULL, 'x'},
 		{"no-owner", 0, NULL, 'O'},
 		{"no-reconnect", 0, NULL, 'R'},
 		{"port", 1, NULL, 'p'},
+		{"no-password", 0, NULL, 'w'},
 		{"password", 0, NULL, 'W'},
 		{"schema", 1, NULL, 'n'},
 		{"schema-only", 0, NULL, 's'},
@@ -124,6 +122,8 @@ main(int argc, char **argv)
 
 	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_dump"));
 
+	init_parallel_dump_utils();
+
 	opts = NewRestoreOptions();
 
 	progname = get_progname(argv[0]);
@@ -142,7 +142,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	while ((c = getopt_long(argc, argv, "acCd:ef:F:h:iI:lL:n:Op:P:RsS:t:T:uU:vwWxX:1",
+	while ((c = getopt_long(argc, argv, "acCd:ef:F:h:iI:j:lL:n:Op:P:RsS:t:T:uU:vwWxX:1",
 							cmdopts, NULL)) != -1)
 	{
 		switch (c)
@@ -175,6 +175,10 @@ main(int argc, char **argv)
 				break;
 			case 'i':
 				/* ignored, deprecated option */
+				break;
+
+			case 'j':			/* number of restore jobs */
+				opts->number_of_jobs = atoi(optarg);
 				break;
 
 			case 'l':			/* Dump the TOC summary */
@@ -279,7 +283,11 @@ main(int argc, char **argv)
 				break;
 
 			case 0:
-				/* This covers the long options equivalent to -X xxx. */
+
+				/*
+				 * This covers the long options without a short equivalent,
+				 * including those equivalent to -X xxx.
+				 */
 				break;
 
 			case 2:				/* SET ROLE */
@@ -302,13 +310,21 @@ main(int argc, char **argv)
 	{
 		if (opts->filename)
 		{
-			fprintf(stderr, _("%s: cannot specify both -d and -f output\n"),
+			fprintf(stderr, _("%s: options -d/--dbname and -f/--file cannot be used together\n"),
 					progname);
 			fprintf(stderr, _("Try \"%s --help\" for more information.\n"),
 					progname);
 			exit(1);
 		}
 		opts->useDB = 1;
+	}
+
+	/* Can't do single-txn mode with multiple connections */
+	if (opts->single_txn && opts->number_of_jobs > 1)
+	{
+		fprintf(stderr, _("%s: cannot specify both --single-transaction and multiple jobs\n"),
+				progname);
+		exit(1);
 	}
 
 	opts->disable_triggers = disable_triggers;
@@ -318,10 +334,8 @@ main(int argc, char **argv)
 
 	if (opts->formatName)
 	{
-
 		switch (opts->formatName[0])
 		{
-
 			case 'c':
 			case 'C':
 				opts->format = archCustom;
@@ -393,7 +407,7 @@ usage(const char *progname)
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -d, --dbname=NAME        connect to database name\n"));
 	printf(_("  -f, --file=FILENAME      output file name\n"));
-	printf(_("  -F, --format=c|t         specify backup file format\n"));
+	printf(_("  -F, --format=c|t         backup file format (should be automatic)\n"));
 	printf(_("  -l, --list               print summarized TOC of the archive\n"));
 	printf(_("  -v, --verbose            verbose mode\n"));
 	printf(_("  --help                   show this help, then exit\n"));
@@ -401,19 +415,20 @@ usage(const char *progname)
 
 	printf(_("\nOptions controlling the restore:\n"));
 	printf(_("  -a, --data-only          restore only the data, no schema\n"));
-	printf(_("  -c, --clean              clean (drop) schema prior to create\n"));
+	printf(_("  -c, --clean              clean (drop) database objects before recreating\n"));
 	printf(_("  -C, --create             create the target database\n"));
+	printf(_("  -e, --exit-on-error      exit on error, default is to continue\n"));
 	printf(_("  -I, --index=NAME         restore named index\n"));
-	printf(_("  -L, --use-list=FILENAME  use specified table of contents for ordering\n"
-			 "                           output from this file\n"));
+	printf(_("  -j, --jobs=NUM           use this many parallel jobs to restore\n"));
+	printf(_("  -L, --use-list=FILENAME  use table of contents from this file for\n"
+			 "                           selecting/ordering output\n"));
 	printf(_("  -n, --schema=NAME        restore only objects in this schema\n"));
 	printf(_("  -O, --no-owner           skip restoration of object ownership\n"));
 	printf(_("  -P, --function='NAME(args)'\n"
 			 "                           restore named function. name must be exactly\n"
 			 "                           as appears in the TOC, and inside single quotes\n"));
 	printf(_("  -s, --schema-only        restore only the schema, no data\n"));
-	printf(_("  -S, --superuser=NAME     specify the superuser user name to use for\n"
-			 "                           disabling triggers\n"));
+	printf(_("  -S, --superuser=NAME     superuser user name to use for disabling triggers\n"));
 	printf(_("  -t, --table=NAME         restore named table\n"));
 	printf(_("  -T, --trigger=NAME       restore named trigger\n"));
 	printf(_("  -x, --no-privileges      skip restoration of access privileges (grant/revoke)\n"));
@@ -424,8 +439,8 @@ usage(const char *progname)
 	printf(_("  --no-tablespaces         do not dump tablespace assignments\n"));
 	printf(_("  --role=ROLENAME          do SET ROLE before restore\n"));
 	printf(_("  --use-set-session-authorization\n"
-			 "                           use SESSION AUTHORIZATION commands instead of\n"
-			 "                           OWNER TO commands\n"));
+			 "                           use SET SESSION AUTHORIZATION commands instead of\n"
+	  "                           ALTER OWNER commands to set ownership\n"));
 	printf(_("  -1, --single-transaction\n"
 			 "                           restore as a single transaction\n"));
 
@@ -433,8 +448,8 @@ usage(const char *progname)
 	printf(_("  -h, --host=HOSTNAME      database server host or socket directory\n"));
 	printf(_("  -p, --port=PORT          database server port number\n"));
 	printf(_("  -U, --username=NAME      connect as specified database user\n"));
+	printf(_("  -w, --no-password        never prompt for password\n"));
 	printf(_("  -W, --password           force password prompt (should happen automatically)\n"));
-	printf(_("  -e, --exit-on-error      exit on error, default is to continue\n"));
 
 	printf(_("\nIf no input file name is supplied, then standard input is used.\n\n"));
 	printf(_("Report bugs to <bugs@greenplum.org>.\n"));

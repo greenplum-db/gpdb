@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/date.c,v 1.144 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/date.c,v 1.146 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -231,7 +231,7 @@ EncodeSpecialDate(DateADT dt, char *str)
 		strcpy(str, EARLY);
 	else if (DATE_IS_NOEND(dt))
 		strcpy(str, LATE);
-	else						/* shouldn't happen */
+	else	/* shouldn't happen */
 		elog(ERROR, "invalid argument for EncodeSpecialDate");
 }
 
@@ -1114,8 +1114,18 @@ time_recv(PG_FUNCTION_ARGS)
 
 #ifdef HAVE_INT64_TIMESTAMP
 	result = pq_getmsgint64(buf);
+
+	if (result < INT64CONST(0) || result > USECS_PER_DAY)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("time out of range")));
 #else
 	result = pq_getmsgfloat8(buf);
+
+	if (result < 0 || result > (double) SECS_PER_DAY)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("time out of range")));
 #endif
 
 	AdjustTimeForTypmod(&result, typmod);
@@ -1953,10 +1963,28 @@ timetz_recv(PG_FUNCTION_ARGS)
 
 #ifdef HAVE_INT64_TIMESTAMP
 	result->time = pq_getmsgint64(buf);
+
+	if (result->time < INT64CONST(0) || result->time > USECS_PER_DAY)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("time out of range")));
 #else
 	result->time = pq_getmsgfloat8(buf);
+
+	if (result->time < 0 || result->time > (double) SECS_PER_DAY)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("time out of range")));
 #endif
+
 	result->zone = pq_getmsgint(buf, sizeof(result->zone));
+
+	/* we allow GMT displacements up to 14:59:59, cf DecodeTimezone() */
+	if (result->zone <= -15 * SECS_PER_HOUR ||
+		result->zone >= 15 * SECS_PER_HOUR)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TIME_ZONE_DISPLACEMENT_VALUE),
+				 errmsg("time zone displacement out of range")));
 
 	AdjustTimeForTypmod(&(result->time), typmod);
 
@@ -2624,7 +2652,7 @@ timetz_zone(PG_FUNCTION_ARGS)
 	pg_tz	   *tzp;
 
 	/*
-	 * Look up the requested timezone.  First we look in the date token table
+	 * Look up the requested timezone.	First we look in the date token table
 	 * (to handle cases like "EST"), and if that fails, we look in the
 	 * timezone database (to handle cases like "America/New_York").  (This
 	 * matches the order in which timestamp input checks the cases; it's

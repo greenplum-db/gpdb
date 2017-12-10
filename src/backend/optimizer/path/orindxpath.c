@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/path/orindxpath.c,v 1.86 2009/01/01 17:23:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/path/orindxpath.c,v 1.90 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -96,10 +96,10 @@ create_or_index_quals(PlannerInfo *root, RelOptInfo *rel)
 	 * enforced at the relation scan level.
 	 *
 	 * We must also ignore clauses that are marked !is_pushed_down (ie they
-	 * are themselves outer-join clauses).  It would be safe to extract an
+	 * are themselves outer-join clauses).	It would be safe to extract an
 	 * index condition from such a clause if we are within the nullable rather
 	 * than the non-nullable side of its join, but we haven't got enough
-	 * context here to tell which applies.  OR clauses in outer-join quals
+	 * context here to tell which applies.	OR clauses in outer-join quals
 	 * aren't exactly common, so we'll let that case go unoptimized for now.
 	 */
 	foreach(i, rel->joininfo)
@@ -182,12 +182,13 @@ create_or_index_quals(PlannerInfo *root, RelOptInfo *rel)
 		orig_selec = clause_selectivity(root, (Node *) bestrinfo,
 										0, JOIN_INNER, NULL,
 										false /* use_damping */);
-		bestrinfo->this_selec = orig_selec / or_selec;
+		bestrinfo->norm_selec = orig_selec / or_selec;
 		/* clamp result to sane range */
-		if (bestrinfo->this_selec > 1)
-			bestrinfo->this_selec = 1;
+		if (bestrinfo->norm_selec > 1)
+			bestrinfo->norm_selec = 1;
+		/* It isn't an outer join clause, so no need to adjust outer_selec */
 	}
 
-	/* Tell caller to recompute rel's rows estimate */
+	/* Tell caller to recompute partial index status and rowcount estimate */
 	return true;
 }

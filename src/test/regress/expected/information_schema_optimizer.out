@@ -87,7 +87,7 @@ where ordinal_position = 20;
  information_schema | attributes           | datetime_precision |               20
  pg_catalog         | pg_type              | typanalyze         |               20
  pg_catalog         | pg_proc              | proargnames        |               20
- pg_catalog         | pg_class             | relhasrules        |               20
+ pg_catalog         | pg_class             | relhaspkey         |               20
  pg_catalog         | pg_constraint        | consrc             |               20
  pg_catalog         | pg_am                | amendscan          |               20
  information_schema | columns              | collation_catalog  |               20

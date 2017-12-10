@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/placeholder.c,v 1.3 2009/01/01 17:23:45 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/placeholder.c,v 1.5 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -85,7 +85,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv)
 	phinfo->ph_var = copyObject(phv);
 	phinfo->ph_eval_at = pull_varnos((Node *) phv);
 	/* ph_eval_at may change later, see update_placeholder_eval_levels */
-	phinfo->ph_needed = NULL;		/* initially it's unused */
+	phinfo->ph_needed = NULL;	/* initially it's unused */
 	phinfo->ph_may_need = NULL;
 	/* for the moment, estimate width using just the datatype info */
 	phinfo->ph_width = get_typavgwidth(exprType((Node *) phv->phexpr),

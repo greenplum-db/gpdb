@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump_sort.c,v 1.23 2009/01/01 17:23:54 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/bin/pg_dump/pg_dump_sort.c,v 1.25 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -23,8 +23,8 @@ static const char *modulename = gettext_noop("sorter");
  * Objects are sorted by priority levels, and within an equal priority level
  * by OID.	(This is a relatively crude hack to provide semi-reasonable
  * behavior for old databases without full dependency info.)  Note: text
- * search objects can't really happen here, so the rather bogus priorities
- * for them don't matter.
+ * search and foreign-data objects can't really happen here, so the rather
+ * bogus priorities for them don't matter.
  */
 static const int oldObjectTypePriority[] =
 {
@@ -77,27 +77,28 @@ static const int newObjectTypePriority[] =
 	7,							/* DO_OPCLASS */
 	7,							/* DO_OPFAMILY */
 	9,							/* DO_CONVERSION */
-	14,							/* DO_TABLE */
-	16,							/* DO_ATTRDEF */
-	21,							/* DO_INDEX */
-	22,							/* DO_RULE */
-	23,							/* DO_TRIGGER */
-	20,							/* DO_CONSTRAINT */
-	24,							/* DO_FK_CONSTRAINT */
+	16,							/* DO_TABLE */
+	18,							/* DO_ATTRDEF */
+	23,							/* DO_INDEX */
+	24,							/* DO_RULE */
+	25,							/* DO_TRIGGER */
+	22,							/* DO_CONSTRAINT */
+	26,							/* DO_FK_CONSTRAINT */
 	2,							/* DO_PROCLANG */
 	8,							/* DO_CAST */
-	17,							/* DO_TABLE_DATA */
-	15,							/* DO_DUMMY_TYPE */
+	19,							/* DO_TABLE_DATA */
+	17,							/* DO_DUMMY_TYPE */
 	10,							/* DO_TSPARSER */
 	12,							/* DO_TSDICT */
 	11,							/* DO_TSTEMPLATE */
 	13,							/* DO_TSCONFIG */
-	3,							/* DO_FDW */
-	4,							/* DO_FOREIGN_SERVER */
-	18,							/* DO_BLOBS */
-	19,							/* DO_BLOB_COMMENTS */
+	14,							/* DO_FDW */
+	15,							/* DO_FOREIGN_SERVER */
+	20,							/* DO_BLOBS */
+	21,							/* DO_BLOB_COMMENTS */
+	/* GPDB_84_MERGE_FIXME: Are these priorities sensible? */
 	8,							/* DO_EXTPROTOCOL */
-	19							/* DO_TYPE_STORAGE_OPTIONS */
+	22							/* DO_TYPE_STORAGE_OPTIONS */
 };
 
 
@@ -960,7 +961,7 @@ repairDependencyLoop(DumpableObject **loop,
 	/*
 	 * If all the objects are TABLE_DATA items, what we must have is a
 	 * circular set of foreign key constraints (or a single self-referential
-	 * table).  Print an appropriate complaint and break the loop arbitrarily.
+	 * table).	Print an appropriate complaint and break the loop arbitrarily.
 	 */
 	for (i = 0; i < nLoop; i++)
 	{
@@ -976,7 +977,7 @@ repairDependencyLoop(DumpableObject **loop,
 		write_msg(NULL, "Consider using a full dump instead of a --data-only dump to avoid this problem.\n");
 		if (nLoop > 1)
 			removeObjectDependency(loop[0], loop[1]->dumpId);
-		else						/* must be a self-dependency */
+		else	/* must be a self-dependency */
 			removeObjectDependency(loop[0], loop[0]->dumpId);
 		return;
 	}
@@ -996,7 +997,7 @@ repairDependencyLoop(DumpableObject **loop,
 
 	if (nLoop > 1)
 		removeObjectDependency(loop[0], loop[1]->dumpId);
-	else						/* must be a self-dependency */
+	else	/* must be a self-dependency */
 		removeObjectDependency(loop[0], loop[0]->dumpId);
 }
 

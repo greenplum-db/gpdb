@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2000-2010, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.133 2009/01/01 17:23:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/psql/help.c,v 1.150 2009/06/11 14:49:08 momjian Exp $
  */
 #include "postgres_fe.h"
 
@@ -83,17 +83,7 @@ usage(void)
 #endif   /* WIN32 */
 	}
 
-
-
-#if 0
-    /* psql 9.0 does it this way: */
-	printf(_("psql is the PostgreSQL interactive terminal.\n\n"));
-#else
-/* GPDB : for compatibility with 4.0 and 3.3, say this */
-/* >>> If this " is the start of the string then it ought to end there to fit in 80 columns >> " */
-	printf(_("This is psql %s, the PostgreSQL interactive terminal (Greenplum version).\n\n"),
-		   PG_VERSION);
-#endif
+	printf(_("psql is the PostgreSQL interactive terminal (Greenplum version).\n\n"));
 	printf(_("Usage:\n"));
 	printf(_("  psql [OPTION]... [DBNAME [USERNAME]]\n\n"));
 
@@ -200,11 +190,11 @@ slashUsage(unsigned short int pager)
 	fprintf(output, "\n");
 
 	fprintf(output, _("Input/Output\n"));
-	fprintf(output, _("  \\copy ...      perform SQL COPY with data stream to the client host\n"));
-	fprintf(output, _("  \\echo [STRING] write string to standard output\n"));
-	fprintf(output, _("  \\i FILE        execute commands from file\n"));
-	fprintf(output, _("  \\o [FILE]      send all query results to file or |pipe\n"));
-	fprintf(output, _("  \\qecho [STRING] write string to query output stream (see \\o)\n"));
+	fprintf(output, _("  \\copy ...              perform SQL COPY with data stream to the client host\n"));
+	fprintf(output, _("  \\echo [STRING]         write string to standard output\n"));
+	fprintf(output, _("  \\i FILE                execute commands from file\n"));
+	fprintf(output, _("  \\o [FILE]              send all query results to file or |pipe\n"));
+	fprintf(output, _("  \\qecho [STRING]        write string to query output stream (see \\o)\n"));
 	fprintf(output, "\n");
 
 	fprintf(output, _("Informational\n"));
@@ -251,13 +241,13 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\f [STRING]            show or set field separator for unaligned query output\n"));
 	fprintf(output, _("  \\H                     toggle HTML output mode (currently %s)\n"),
 			ON(pset.popt.topt.format == PRINT_HTML));
-	fprintf(output, _("  \\pset NAME [VALUE]  set table output option\n"
-					  "                 (NAME := {format|border|expanded|fieldsep|footer|null|\n"
-					  "                 numericlocale|recordsep|tuples_only|title|tableattr|pager})\n"));
-	fprintf(output, _("  \\t [on|off]    show only rows (currently %s)\n"),
+	fprintf(output, _("  \\pset NAME [VALUE]     set table output option\n"
+					  "                         (NAME := {format|border|expanded|fieldsep|footer|null|\n"
+					  "                         numericlocale|recordsep|tuples_only|title|tableattr|pager})\n"));
+	fprintf(output, _("  \\t [on|off]            show only rows (currently %s)\n"),
 			ON(pset.popt.topt.tuples_only));
-	fprintf(output, _("  \\T [STRING]    set HTML <table> tag attributes, or unset if none\n"));
-	fprintf(output, _("  \\x [on|off]    toggle expanded output (currently %s)\n"),
+	fprintf(output, _("  \\T [STRING]            set HTML <table> tag attributes, or unset if none\n"));
+	fprintf(output, _("  \\x [on|off]            toggle expanded output (currently %s)\n"),
 			ON(pset.popt.topt.expanded));
 	fprintf(output, "\n");
 

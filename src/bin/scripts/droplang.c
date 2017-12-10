@@ -5,7 +5,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/bin/scripts/droplang.c,v 1.29 2009/01/01 17:23:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/scripts/droplang.c,v 1.31 2009/02/26 16:02:39 petere Exp $
  *
  *-------------------------------------------------------------------------
  */

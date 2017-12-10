@@ -24,7 +24,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.344 2009/01/01 17:23:43 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/nodes/equalfuncs.c,v 1.355 2009/06/18 01:27:02 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -826,9 +826,9 @@ static bool
 _equalPlaceHolderVar(PlaceHolderVar *a, PlaceHolderVar *b)
 {
 	/*
-	 * We intentionally do not compare phexpr.  Two PlaceHolderVars with the
+	 * We intentionally do not compare phexpr.	Two PlaceHolderVars with the
 	 * same ID and levelsup should be considered equal even if the contained
-	 * expressions have managed to mutate to different states.  One way in
+	 * expressions have managed to mutate to different states.	One way in
 	 * which that can happen is that initplan sublinks would get replaced by
 	 * differently-numbered Params when sublink folding is done.  (The end
 	 * result of such a situation would be some unreferenced initplans, which
@@ -1147,6 +1147,15 @@ _equalFuncWithArgs(FuncWithArgs *a, FuncWithArgs *b)
 {
 	COMPARE_NODE_FIELD(funcname);
 	COMPARE_NODE_FIELD(funcargs);
+
+	return true;
+}
+
+static bool
+_equalAccessPriv(AccessPriv *a, AccessPriv *b)
+{
+	COMPARE_STRING_FIELD(priv_name);
+	COMPARE_NODE_FIELD(cols);
 
 	return true;
 }
@@ -1684,7 +1693,7 @@ _equalVacuumStmt(VacuumStmt *a, VacuumStmt *b)
 	COMPARE_SCALAR_FIELD(verbose);
 	COMPARE_SCALAR_FIELD(rootonly);
 	COMPARE_SCALAR_FIELD(freeze_min_age);
-	COMPARE_SCALAR_FIELD(scan_all);
+	COMPARE_SCALAR_FIELD(freeze_table_age);
 	COMPARE_NODE_FIELD(relation);
 	COMPARE_NODE_FIELD(va_cols);
 	COMPARE_NODE_FIELD(expanded_relids);
@@ -1799,7 +1808,7 @@ static bool
 _equalCreateFdwStmt(CreateFdwStmt *a, CreateFdwStmt *b)
 {
 	COMPARE_STRING_FIELD(fdwname);
-	COMPARE_STRING_FIELD(library);
+	COMPARE_NODE_FIELD(validator);
 	COMPARE_NODE_FIELD(options);
 
 	return true;
@@ -1809,7 +1818,8 @@ static bool
 _equalAlterFdwStmt(AlterFdwStmt *a, AlterFdwStmt *b)
 {
 	COMPARE_STRING_FIELD(fdwname);
-	COMPARE_STRING_FIELD(library);
+	COMPARE_NODE_FIELD(validator);
+	COMPARE_SCALAR_FIELD(change_validator);
 	COMPARE_NODE_FIELD(options);
 
 	return true;
@@ -1897,8 +1907,7 @@ _equalCreateTrigStmt(CreateTrigStmt *a, CreateTrigStmt *b)
 	COMPARE_NODE_FIELD(args);
 	COMPARE_SCALAR_FIELD(before);
 	COMPARE_SCALAR_FIELD(row);
-	if (strcmp(a->actions, b->actions) != 0)	/* in-line string field */
-		return false;
+	COMPARE_SCALAR_FIELD(events);
 	COMPARE_SCALAR_FIELD(isconstraint);
 	COMPARE_SCALAR_FIELD(deferrable);
 	COMPARE_SCALAR_FIELD(initdeferred);
@@ -2412,17 +2421,10 @@ _equalConstraint(Constraint *a, Constraint *b)
 static bool
 _equalDefElem(DefElem *a, DefElem *b)
 {
+	COMPARE_STRING_FIELD(defnamespace);
 	COMPARE_STRING_FIELD(defname);
 	COMPARE_NODE_FIELD(arg);
-
-	return true;
-}
-
-static bool
-_equalOptionDefElem(OptionDefElem *a, OptionDefElem *b)
-{
-	COMPARE_SCALAR_FIELD(alter_op);
-	COMPARE_NODE_FIELD(def);
+	COMPARE_SCALAR_FIELD(defaction);
 
 	return true;
 }
@@ -2461,6 +2463,8 @@ _equalRangeTblEntry(RangeTblEntry *a, RangeTblEntry *b)
 	COMPARE_SCALAR_FIELD(inFromCl);
 	COMPARE_SCALAR_FIELD(requiredPerms);
 	COMPARE_SCALAR_FIELD(checkAsUser);
+	COMPARE_BITMAPSET_FIELD(selectedCols);
+	COMPARE_BITMAPSET_FIELD(modifiedCols);
 
 	return true;
 }
@@ -3302,9 +3306,6 @@ equal(void *a, void *b)
 		case T_DefElem:
 			retval = _equalDefElem(a, b);
 			break;
-		case T_OptionDefElem:
-			retval = _equalOptionDefElem(a, b);
-			break;
 		case T_LockingClause:
 			retval = _equalLockingClause(a, b);
 			break;
@@ -3346,6 +3347,9 @@ equal(void *a, void *b)
 			break;
 		case T_FuncWithArgs:
 			retval = _equalFuncWithArgs(a, b);
+			break;
+		case T_AccessPriv:
+			retval = _equalAccessPriv(a, b);
 			break;
 		case T_XmlSerialize:
 			retval = _equalXmlSerialize(a, b);

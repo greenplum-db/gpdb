@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.175 2009/01/01 17:23:42 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/libpq/auth.c,v 1.183 2009/06/25 11:30:08 mha Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -22,7 +22,7 @@
 #include <sys/ucred.h>
 #endif
 #ifdef HAVE_UCRED_H
-# include <ucred.h>
+#include <ucred.h>
 #endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -120,12 +120,12 @@ static Port *pam_port_cludge;	/* Workaround for passing "Port *port" into
 
 /* Correct header from the Platform SDK */
 typedef
-ULONG(*__ldap_start_tls_sA) (
-							 IN PLDAP ExternalHandle,
-							 OUT PULONG ServerReturnValue,
-							 OUT LDAPMessage ** result,
-							 IN PLDAPControlA * ServerControls,
-							 IN PLDAPControlA * ClientControls
+ULONG		(*__ldap_start_tls_sA) (
+												IN PLDAP ExternalHandle,
+												OUT PULONG ServerReturnValue,
+												OUT LDAPMessage **result,
+										   IN PLDAPControlA * ServerControls,
+											IN PLDAPControlA * ClientControls
 );
 #endif
 
@@ -155,7 +155,7 @@ bool		pg_krb_caseins_users;
  *----------------------------------------------------------------
  */
 #ifdef KRB5
-static int pg_krb5_recvauth(Port *port);
+static int	pg_krb5_recvauth(Port *port);
 
 #include <krb5.h>
 /* Some old versions of Kerberos do not include <com_err.h> in <krb5.h> */
@@ -170,7 +170,7 @@ static int	pg_krb5_initialised;
 static krb5_context pg_krb5_context;
 static krb5_keytab pg_krb5_keytab;
 static krb5_principal pg_krb5_server;
-#endif /* KRB5 */
+#endif   /* KRB5 */
 
 
 /*----------------------------------------------------------------
@@ -194,10 +194,10 @@ static int check_valid_until_for_gssapi(Port *port);
  *----------------------------------------------------------------
  */
 #ifdef ENABLE_SSPI
-typedef		SECURITY_STATUS
+typedef SECURITY_STATUS
 			(WINAPI * QUERY_SECURITY_CONTEXT_TOKEN_FN) (
 													   PCtxtHandle, void **);
-static int pg_SSPI_recvauth(Port *port);
+static int	pg_SSPI_recvauth(Port *port);
 #endif
 
 /*----------------------------------------------------------------
@@ -484,7 +484,7 @@ ClientAuthentication(Port *port)
 		{
 			ereport(FATAL,
 					(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
-					 errmsg("connection requires a valid client certificate")));
+				  errmsg("connection requires a valid client certificate")));
 		}
 #else
 
@@ -2035,9 +2035,9 @@ ident_unix(int sock, char *ident_user)
 	/* Solaris > 10 */
 	uid_t		uid;
 	struct passwd *pass;
-	ucred_t	   *ucred;
+	ucred_t    *ucred;
 
-	ucred = NULL; /* must be initialized to NULL */
+	ucred = NULL;				/* must be initialized to NULL */
 	if (getpeerucred(sock, &ucred) == -1)
 	{
 		ereport(LOG,
@@ -2050,7 +2050,7 @@ ident_unix(int sock, char *ident_user)
 	{
 		ereport(LOG,
 				(errcode_for_socket_access(),
-				 errmsg("could not get effective UID from peer credentials: %m")));
+		   errmsg("could not get effective UID from peer credentials: %m")));
 		return false;
 	}
 
@@ -2060,8 +2060,8 @@ ident_unix(int sock, char *ident_user)
 	if (pass == NULL)
 	{
 		ereport(LOG,
-			(errmsg("local user with ID %d does not exist",
-					(int) uid)));
+				(errmsg("local user with ID %d does not exist",
+						(int) uid)));
 		return false;
 	}
 
@@ -2755,6 +2755,7 @@ CheckCertAuth(Port *port)
 	/* Just pass the certificate CN to the usermap check */
 	return check_usermap(port->hba->usermap, port->user_name, port->peer_cn, false);
 }
+
 #endif
 
 

@@ -24,7 +24,7 @@ extern		"C"
 #endif
 
 /* Callback Event Ids */
-typedef enum
+			typedef enum
 {
 	PGEVT_REGISTER,
 	PGEVT_CONNRESET,
@@ -36,41 +36,41 @@ typedef enum
 
 typedef struct
 {
-	PGconn *conn;
+	PGconn	   *conn;
 } PGEventRegister;
 
 typedef struct
 {
-	PGconn *conn;
+	PGconn	   *conn;
 } PGEventConnReset;
 
 typedef struct
 {
-	PGconn *conn;
+	PGconn	   *conn;
 } PGEventConnDestroy;
 
 typedef struct
 {
-	PGconn *conn;
-	PGresult *result;
+	PGconn	   *conn;
+	PGresult   *result;
 } PGEventResultCreate;
 
 typedef struct
 {
 	const PGresult *src;
-	PGresult *dest;
+	PGresult   *dest;
 } PGEventResultCopy;
 
 typedef struct
 {
-	PGresult *result;
+	PGresult   *result;
 } PGEventResultDestroy;
 
 typedef int (*PGEventProc) (PGEventId evtId, void *evtInfo, void *passThrough);
 
 /* Registers an event proc with the given PGconn. */
-extern int	PQregisterEventProc(PGconn *conn, PGEventProc proc,
-								const char *name, void *passThrough);
+extern int PQregisterEventProc(PGconn *conn, PGEventProc proc,
+					const char *name, void *passThrough);
 
 /* Sets the PGconn instance data for the provided proc to data. */
 extern int	PQsetInstanceData(PGconn *conn, PGEventProc proc, void *data);
@@ -91,4 +91,4 @@ extern int	PQfireResultCreateEvents(PGconn *conn, PGresult *res);
 }
 #endif
 
-#endif /* LIBPQ_EVENTS_H */
+#endif   /* LIBPQ_EVENTS_H */

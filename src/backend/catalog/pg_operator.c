@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/catalog/pg_operator.c,v 1.107 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/catalog/pg_operator.c,v 1.109 2009/06/11 14:48:55 momjian Exp $
  *
  * NOTES
  *	  these routines moved here from commands/define.c and somewhat cleaned up.
@@ -392,11 +392,11 @@ OperatorCreate(const char *operatorName,
 		if (OidIsValid(restrictionId))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-				 errmsg("only boolean operators can have restriction selectivity")));
+					 errmsg("only boolean operators can have restriction selectivity")));
 		if (OidIsValid(joinId))
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-				 errmsg("only boolean operators can have join selectivity")));
+				errmsg("only boolean operators can have join selectivity")));
 		if (canMerge)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
@@ -421,8 +421,8 @@ OperatorCreate(const char *operatorName,
 
 	/*
 	 * At this point, if operatorObjectId is not InvalidOid then we are
-	 * filling in a previously-created shell.  Insist that the user own
-	 * any such shell.
+	 * filling in a previously-created shell.  Insist that the user own any
+	 * such shell.
 	 */
 	if (OidIsValid(operatorObjectId) &&
 		!pg_oper_ownercheck(operatorObjectId, GetUserId()))
@@ -500,10 +500,10 @@ OperatorCreate(const char *operatorName,
 	values[i++] = ObjectIdGetDatum(rightTypeId);		/* oprright */
 	values[i++] = ObjectIdGetDatum(operResultType);		/* oprresult */
 	values[i++] = ObjectIdGetDatum(commutatorId);		/* oprcom */
-	values[i++] = ObjectIdGetDatum(negatorId);		/* oprnegate */
-	values[i++] = ObjectIdGetDatum(procedureId);	/* oprcode */
-	values[i++] = ObjectIdGetDatum(restrictionId);	/* oprrest */
-	values[i++] = ObjectIdGetDatum(joinId);			/* oprjoin */
+	values[i++] = ObjectIdGetDatum(negatorId);	/* oprnegate */
+	values[i++] = ObjectIdGetDatum(procedureId);		/* oprcode */
+	values[i++] = ObjectIdGetDatum(restrictionId);		/* oprrest */
+	values[i++] = ObjectIdGetDatum(joinId);		/* oprjoin */
 
 	pg_operator_desc = heap_open(OperatorRelationId, RowExclusiveLock);
 
@@ -520,10 +520,10 @@ OperatorCreate(const char *operatorName,
 				 operatorObjectId);
 
 		tup = heap_modify_tuple(tup,
-							   RelationGetDescr(pg_operator_desc),
-							   values,
-							   nulls,
-							   replaces);
+								RelationGetDescr(pg_operator_desc),
+								values,
+								nulls,
+								replaces);
 
 		simple_heap_update(pg_operator_desc, &tup->t_self, tup);
 	}
@@ -691,10 +691,10 @@ OperatorUpd(Oid baseId, Oid commId, Oid negId)
 				}
 
 				tup = heap_modify_tuple(tup,
-									   RelationGetDescr(pg_operator_desc),
-									   values,
-									   nulls,
-									   replaces);
+										RelationGetDescr(pg_operator_desc),
+										values,
+										nulls,
+										replaces);
 
 				simple_heap_update(pg_operator_desc, &tup->t_self, tup);
 
@@ -716,10 +716,10 @@ OperatorUpd(Oid baseId, Oid commId, Oid negId)
 		replaces[Anum_pg_operator_oprcom - 1] = true;
 
 		tup = heap_modify_tuple(tup,
-							   RelationGetDescr(pg_operator_desc),
-							   values,
-							   nulls,
-							   replaces);
+								RelationGetDescr(pg_operator_desc),
+								values,
+								nulls,
+								replaces);
 
 		simple_heap_update(pg_operator_desc, &tup->t_self, tup);
 
@@ -742,10 +742,10 @@ OperatorUpd(Oid baseId, Oid commId, Oid negId)
 		replaces[Anum_pg_operator_oprnegate - 1] = true;
 
 		tup = heap_modify_tuple(tup,
-							   RelationGetDescr(pg_operator_desc),
-							   values,
-							   nulls,
-							   replaces);
+								RelationGetDescr(pg_operator_desc),
+								values,
+								nulls,
+								replaces);
 
 		simple_heap_update(pg_operator_desc, &tup->t_self, tup);
 
@@ -778,7 +778,7 @@ makeOperatorDependencies(HeapTuple tuple)
 	 * for extension membership which should remain the same.
 	 */
 	deleteDependencyRecordsFor(myself.classId, myself.objectId, false);
-	deleteSharedDependencyRecordsFor(myself.classId, myself.objectId);
+	deleteSharedDependencyRecordsFor(myself.classId, myself.objectId, 0);
 
 	/* Dependency on namespace */
 	if (OidIsValid(oper->oprnamespace))

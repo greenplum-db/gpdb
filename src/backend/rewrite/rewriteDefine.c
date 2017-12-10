@@ -10,13 +10,14 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteDefine.c,v 1.134 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteDefine.c,v 1.138 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
 
 #include "access/heapam.h"
+#include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
@@ -36,11 +37,11 @@
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
-#include "cdb/cdbvars.h"
+#include "catalog/heap.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbmirroredfilesysobj.h"
-#include "catalog/heap.h"
 #include "cdb/cdbpersistentfilesysobj.h"
+#include "cdb/cdbvars.h"
 
 
 static void checkRuleResultList(List *targetList, TupleDesc resultDesc,
@@ -127,7 +128,7 @@ InsertRule(char *rulname,
 		replaces[Anum_pg_rewrite_ev_action - 1] = true;
 
 		tup = heap_modify_tuple(oldtup, RelationGetDescr(pg_rewrite_desc),
-							   values, nulls, replaces);
+								values, nulls, replaces);
 
 		simple_heap_update(pg_rewrite_desc, &tup->t_self, tup);
 
@@ -249,6 +250,22 @@ DefineQueryRewrite(char *rulename,
 	 * let's just grab AccessExclusiveLock all the time.
 	 */
 	event_relation = heap_open(event_relid, AccessExclusiveLock);
+
+	/*
+	 * Verify relation is of a type that rules can sensibly be applied to.
+	 */
+	if (event_relation->rd_rel->relkind != RELKIND_RELATION &&
+		event_relation->rd_rel->relkind != RELKIND_VIEW)
+		ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+				 errmsg("\"%s\" is not a table or view",
+						RelationGetRelationName(event_relation))));
+
+	if (!allowSystemTableModsDDL && IsSystemRelation(event_relation))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied: \"%s\" is a system catalog",
+						RelationGetRelationName(event_relation))));
 
 	/*
 	 * Check user has permission to apply rules to this relation.
@@ -379,9 +396,9 @@ DefineQueryRewrite(char *rulename,
 		 *
 		 * If so, check that the relation is empty because the storage for the
 		 * relation is going to be deleted.  Also insist that the rel not have
-		 * any triggers, indexes, or child tables.  (Note: these tests are
-		 * too strict, because they will reject relations that once had such
-		 * but don't anymore.  But we don't really care, because this whole
+		 * any triggers, indexes, or child tables.	(Note: these tests are too
+		 * strict, because they will reject relations that once had such but
+		 * don't anymore.  But we don't really care, because this whole
 		 * business of converting relations to views is just a kluge to allow
 		 * loading ancient pg_dump files.)
 		 */

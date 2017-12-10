@@ -17,7 +17,7 @@
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  * Copyright (c) 2003-2009, PostgreSQL Global Development Group
  *
- * $PostgreSQL: pgsql/src/include/nodes/tidbitmap.h,v 1.9 2009/01/10 21:08:36 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/nodes/tidbitmap.h,v 1.11 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -191,8 +191,9 @@ extern TIDBitmap *tbm_create(long maxbytes);
 extern void tbm_free(TIDBitmap *tbm);
 
 extern void tbm_add_tuples(TIDBitmap *tbm,
-						   const ItemPointer tids, int ntids,
-						   bool recheck);
+			   const ItemPointer tids, int ntids,
+			   bool recheck);
+extern void tbm_add_page(TIDBitmap *tbm, BlockNumber pageno);
 extern void tbm_union(TIDBitmap *a, const TIDBitmap *b);
 extern void tbm_intersect(TIDBitmap *a, const TIDBitmap *b);
 extern bool tbm_is_empty(const TIDBitmap *tbm);
@@ -214,5 +215,6 @@ extern void tbm_generic_set_instrument(Node *bm, struct Instrumentation *instr);
 extern void tbm_generic_upd_instrument(Node *bm);
 
 extern void tbm_convert_appendonly_tid_out(ItemPointer psudeoHeapTid, AOTupleId *aoTid);
+
 
 #endif   /* TIDBITMAP_H */

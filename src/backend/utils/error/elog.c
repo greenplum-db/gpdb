@@ -44,7 +44,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.210 2009/01/01 17:23:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/error/elog.c,v 1.216 2009/06/25 23:07:15 tgl Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -119,6 +119,14 @@ __attribute__((format_arg(1)));
 #undef _
 #define _(x) err_gettext(x)
 
+#undef _
+#define _(x) err_gettext(x)
+
+static const char *err_gettext(const char *str)
+/* This extension allows gcc to check the format string for consistency with
+   the supplied arguments. */
+__attribute__((format_arg(1)));
+
 /* Global variables */
 ErrorContextCallback *error_context_stack = NULL;
 
@@ -136,7 +144,7 @@ int			Log_destination = LOG_DESTINATION_STDERR;
 /*
  * Max string length to send to syslog().  Note that this doesn't count the
  * sequence-number prefix we add, and of course it doesn't count the prefix
- * added by syslog itself.  On many implementations it seems that the hard
+ * added by syslog itself.	On many implementations it seems that the hard
  * limit is approximately 2K bytes including both those prefixes.
  */
 #ifndef PG_SYSLOG_LIMIT
@@ -445,8 +453,8 @@ errstart(int elevel, const char *filename, int lineno,
 		MemoryContextReset(ErrorContext);
 
 		/*
-		 * Infinite error recursion might be due to something broken
-		 * in a context traceback routine.	Abandon them too.  We also abandon
+		 * Infinite error recursion might be due to something broken in a
+		 * context traceback routine.  Abandon them too.  We also abandon
 		 * attempting to print the error statement (which, if long, could
 		 * itself be the source of the recursive failure).
 		 */
@@ -2450,7 +2458,7 @@ log_line_prefix(StringInfo buf)
 				break;
 			case 'v':
 				/* keep VXID format in sync with lockfuncs.c */
-				if (MyProc != NULL)
+				if (MyProc != NULL && MyProc->backendId != InvalidBackendId)
 					appendStringInfo(buf, "%d/%u",
 									 MyProc->backendId, MyProc->lxid);
 				break;
@@ -2590,7 +2598,7 @@ static void
 write_csvlog(ErrorData *edata)
 {
 	StringInfoData buf;
-	bool	print_stmt = false;
+	bool		print_stmt = false;
 
 	/* static counter for line numbers */
 	static long log_line_number = 0;
@@ -2744,7 +2752,7 @@ write_csvlog(ErrorData *edata)
 	/* file error location */
 	if (Log_error_verbosity >= PGERROR_VERBOSE)
 	{
-		StringInfoData	msgbuf;
+		StringInfoData msgbuf;
 
 		initStringInfo(&msgbuf);
 
@@ -4084,10 +4092,6 @@ useful_strerror(int errnum)
 
 /*
  * error_severity --- get localized string representing elevel
- *
- * Note: in an error recursion situation, we stop localizing the tags
- * for ERROR and above.  This is necessary because the problem might be
- * failure to convert one of these strings to the client encoding.
  */
 static const char *
 error_severity(int elevel)
@@ -4125,22 +4129,13 @@ error_severity(int elevel)
 			prefix = _("WARNING");
 			break;
 		case ERROR:
-			if (in_error_recursion_trouble())
-				prefix = "ERROR";
-			else
-				prefix = _("ERROR");
+			prefix = _("ERROR");
 			break;
 		case FATAL:
-			if (in_error_recursion_trouble())
-				prefix = "FATAL";
-			else
-				prefix = _("FATAL");
+			prefix = _("FATAL");
 			break;
 		case PANIC:
-			if (in_error_recursion_trouble())
-				prefix = "PANIC";
-			else
-				prefix = _("PANIC");
+			prefix = _("PANIC");
 			break;
 		default:
 			prefix = "???";

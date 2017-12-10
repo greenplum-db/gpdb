@@ -24,7 +24,7 @@ typedef struct
 	char	   *ident;
 	int			nplans;
 	SPIPlanPtr *splan;
-}	EPlan;
+} EPlan;
 
 static EPlan *FPlans = NULL;
 static int	nFPlans = 0;

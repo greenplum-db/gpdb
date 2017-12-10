@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.108 2009/01/01 17:23:35 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/access/hash/hash.c,v 1.112 2009/06/11 14:48:53 momjian Exp $
  *
  * NOTES
  *	  This file contains only the public interface routines.
@@ -52,7 +52,7 @@ hashbuild(PG_FUNCTION_ARGS)
 	Relation	index = (Relation) PG_GETARG_POINTER(1);
 	IndexInfo  *indexInfo = (IndexInfo *) PG_GETARG_POINTER(2);
 	IndexBuildResult *result;
-	BlockNumber	relpages;
+	BlockNumber relpages;
 	double		reltuples;
 	uint32		num_buckets;
 	HashBuildState buildstate;
@@ -76,12 +76,12 @@ hashbuild(PG_FUNCTION_ARGS)
 	 * (assuming their hash codes are pretty random) there will be no locality
 	 * of access to the index, and if the index is bigger than available RAM
 	 * then we'll thrash horribly.  To prevent that scenario, we can sort the
-	 * tuples by (expected) bucket number.  However, such a sort is useless
+	 * tuples by (expected) bucket number.	However, such a sort is useless
 	 * overhead when the index does fit in RAM.  We choose to sort if the
 	 * initial index size exceeds NBuffers.
 	 *
-	 * NOTE: this test will need adjustment if a bucket is ever different
-	 * from one page.
+	 * NOTE: this test will need adjustment if a bucket is ever different from
+	 * one page.
 	 */
 	if (num_buckets >= (uint32) NBuffers)
 		buildstate.spool = _h_spoolinit(index, num_buckets);
@@ -292,12 +292,12 @@ hashgetbitmap(PG_FUNCTION_ARGS)
 {
 	MIRROREDLOCK_BUFMGR_DECLARE;
 
-	IndexScanDesc 	scan = (IndexScanDesc) PG_GETARG_POINTER(0);
-	Node		   *n = (Node *) PG_GETARG_POINTER(1);
-	TIDBitmap	   *tbm;
-	HashScanOpaque	so = (HashScanOpaque) scan->opaque;
-	bool			res;
-	int64			ntids = 0;
+	IndexScanDesc scan = (IndexScanDesc) PG_GETARG_POINTER(0);
+	Node	   *n = (Node *) PG_GETARG_POINTER(1);
+	TIDBitmap  *tbm;
+	HashScanOpaque so = (HashScanOpaque) scan->opaque;
+	bool		res;
+	int64		ntids = 0;
 
 	if (n == NULL)
 		tbm = tbm_create(work_mem * 1024L);
@@ -314,8 +314,6 @@ hashgetbitmap(PG_FUNCTION_ARGS)
 	while (res)
 	{
 		bool		add_tuple;
-
-		CHECK_FOR_INTERRUPTS();
 
 		/*
 		 * Skip killed tuples if asked to.
@@ -511,7 +509,7 @@ hashbulkdelete(PG_FUNCTION_ARGS)
 	
 	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_READ, LH_META_PAGE);
 	_hash_checkpage(rel, metabuf, LH_META_PAGE);
-	metap =  HashPageGetMeta(BufferGetPage(metabuf));
+	metap = HashPageGetMeta(BufferGetPage(metabuf));
 	orig_maxbucket = metap->hashm_maxbucket;
 	orig_ntuples = metap->hashm_ntuples;
 	memcpy(&local_metapage, metap, sizeof(local_metapage));
@@ -640,6 +638,8 @@ loop_top:
 		/*
 		 * Otherwise, our count is untrustworthy since we may have
 		 * double-scanned tuples in split buckets.	Proceed by dead-reckoning.
+		 * (Note: we still return estimated_count = false, because using this
+		 * count is better than not updating reltuples at all.)
 		 */
 		if (metap->hashm_ntuples > tuples_removed)
 			metap->hashm_ntuples -= tuples_removed;
@@ -656,6 +656,7 @@ loop_top:
 	/* return statistics */
 	if (stats == NULL)
 		stats = (IndexBulkDeleteResult *) palloc0(sizeof(IndexBulkDeleteResult));
+	stats->estimated_count = false;
 	stats->num_index_tuples = num_index_tuples;
 	stats->tuples_removed += tuples_removed;
 	/* hashvacuumcleanup will fill in num_pages */
@@ -677,6 +678,7 @@ hashvacuumcleanup(PG_FUNCTION_ARGS)
 	BlockNumber num_pages;
 
 	/* If hashbulkdelete wasn't called, return NULL signifying no change */
+	/* Note: this covers the analyze_only case too */
 	if (stats == NULL)
 		PG_RETURN_POINTER(NULL);
 

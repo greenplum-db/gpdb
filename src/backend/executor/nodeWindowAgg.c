@@ -4,7 +4,7 @@
  *	  routines to handle WindowAgg nodes.
  *
  * A WindowAgg node evaluates "window functions" across suitable partitions
- * of the input tuple set.  Any one WindowAgg works for just a single window
+ * of the input tuple set.	Any one WindowAgg works for just a single window
  * specification, though it can evaluate multiple window functions sharing
  * identical window specifications.  The input tuples are required to be
  * delivered in sorted order, with the PARTITION BY columns (if any) as
@@ -14,7 +14,7 @@
  *
  * Since window functions can require access to any or all of the rows in
  * the current partition, we accumulate rows of the partition into a
- * tuplestore.  The window functions are called using the WindowObject API
+ * tuplestore.	The window functions are called using the WindowObject API
  * so that they can access those rows as needed.
  *
  * We also support using plain aggregate functions as window functions.
@@ -828,7 +828,7 @@ spool_tuples(WindowAggState *winstate, int64 pos)
 
 	/*
 	 * If the tuplestore has spilled to disk, alternate reading and writing
-	 * becomes quite expensive due to frequent buffer flushes.  It's cheaper
+	 * becomes quite expensive due to frequent buffer flushes.	It's cheaper
 	 * to force the entire partition to get spooled in one go.
 	 *
 	 * XXX this is a horrid kluge --- it'd be better to fix the performance
@@ -920,7 +920,7 @@ release_partition(WindowAggState *winstate)
  * to our window framing rule
  *
  * The caller must have already determined that the row is in the partition
- * and fetched it into a slot.  This function just encapsulates the framing
+ * and fetched it into a slot.	This function just encapsulates the framing
  * rules.
  */
 static bool
@@ -2451,7 +2451,7 @@ window_gettupleslot(WindowObject winobj, int64 pos, TupleTableSlot *slot)
  * requested amount of space.  Subsequent calls just return the same chunk.
  *
  * Memory obtained this way is normally used to hold state that should be
- * automatically reset for each new partition.  If a window function wants
+ * automatically reset for each new partition.	If a window function wants
  * to hold state across the whole query, fcinfo->fn_extra can be used in the
  * usual way for that.
  */

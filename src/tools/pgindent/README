@@ -1,0 +1,61 @@
+$PostgreSQL: pgsql/src/tools/pgindent/README,v 1.31 2009/06/10 01:51:44 momjian Exp $
+
+pgindent
+========
+
+This can format all PostgreSQL *.c and *.h files, but excludes *.y, and
+*.l files.  For source code typedefs, download:
+
+	http://www.pgbuildfarm.org/cgi-bin/typedefs.pl
+
+1) Run 'gmake distclean' from the top of the source tree to remove any
+   derived C files.
+
+2) From the top of the source tree, run:
+
+	find . -name '*.[ch]' -type f -print |
+	egrep -v '/s_lock.h|/ecpg/test/expected/|/snowball/libstemmer/' |
+	xargs -n100 pgindent /tmp/typedefs.pl
+
+
+---------------------------------------------------------------------------
+
+We have standardized on NetBSD's indent.  We have fixed a few bugs which 
+requre the NetBSD source to be patched with indent.bsd.patch patch.  A 
+fully patched  version is available at ftp://ftp.postgresql.org/pub/dev.
+
+GNU indent, version 2.2.6, has several problems, and is not recommended.
+These bugs become pretty major when you are doing >500k lines of code.
+If you don't believe me, take a directory and make a copy.  Run pgindent
+on the copy using GNU indent, and do a diff -r. You will see what I
+mean. GNU indent does some things better, but mangles too.
+
+Notes about excluded files:
+
+src/include/storage/s_lock.h is excluded because it contains assembly code
+that pgindent tends to mess up.
+
+src/interfaces/ecpg/test/expected/ is excluded to avoid breaking the ecpg
+regression tests.
+
+src/include/snowball/libstemmer/ and src/backend/snowball/libstemmer/
+are excluded because those files are imported from an external project,
+not maintained locally, and are machine-generated anyway.
+
+---------------------------------------------------------------------------
+
+Obsolete typedef list creation instructions:
+--------------------------------------------
+
+To use pgindent:
+
+1) Build the source tree with _debug_ symbols and all possible configure options
+
+2) Install to /usr/local/pgsql
+
+3) Install all contrib modules
+
+4) Save a list of typedefs by running:
+
+	src/tools/find_typedef /usr/local/pgsql/bin /usr/local/pgsql/lib > /tmp/pgtypedefs
+

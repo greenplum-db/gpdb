@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.205 2009/01/01 17:23:48 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/storage/lmgr/proc.c,v 1.207 2009/06/11 14:49:02 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -50,6 +50,7 @@
 #include "storage/spin.h"
 #include "storage/sinval.h"
 #include "storage/lmgr.h"
+#include "storage/pmsignal.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "storage/pmsignal.h"
@@ -1413,8 +1414,8 @@ CheckDeadLock(void)
 	 * Check to see if we've been awoken by anyone in the interim.
 	 *
 	 * If we have, we can return and resume our transaction -- happy day.
-	 * Before we are awoken the process releasing the lock grants it to us
-	 * so we know that we don't have to wait anymore.
+	 * Before we are awoken the process releasing the lock grants it to us so
+	 * we know that we don't have to wait anymore.
 	 *
 	 * We check by looking to see if we've been unlinked from the wait queue.
 	 * This is quicker than checking our semaphore's state, since no kernel

@@ -26,6 +26,7 @@
 #include "access/genam.h"
 #include "access/heapam.h"
 #include "access/transam.h"
+#include "access/xact.h"
 #include "executor/spi.h"
 #include "utils/builtins.h"
 #include "utils/guc.h"

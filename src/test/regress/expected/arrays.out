@@ -1141,26 +1141,6 @@ select array_length(array[[1,2,3], [4,5,6]], 3);
              
 (1 row)
 
-select cardinality(array[1,2,3]);
- cardinality 
--------------
-           3
-(1 row)
-
-select cardinality(array[[1,2,3], [4,5,6]]);
- cardinality 
--------------
-           2
-(1 row)
-
-select c, cardinality(c), d, cardinality(d) from arrtest;
-         c         | cardinality |       d       | cardinality 
--------------------+-------------+---------------+-------------
- {}                |             | {}            |            
- {foobar,new_word} |           2 | {{elt1,elt2}} |           1
- {foo,new_word}    |           2 | {bar,foo}     |           2
-(3 rows)
-
 select array_agg(unique1 order by unique1) from (select unique1 from tenk1 where unique1 < 15 order by unique1) ss;
               array_agg               
 --------------------------------------
@@ -1177,12 +1157,6 @@ select array_agg(nullif(ten, 4) order by ten) from (select ten from tenk1 where 
                array_agg               
 ---------------------------------------
  {0,0,1,1,2,2,3,3,NULL,NULL,5,6,7,8,9}
-(1 row)
-
-select cardinality(array_agg(unique1)) from tenk1 where unique1 < 15;
- cardinality 
--------------
-          15
 (1 row)
 
 select array_agg(unique1 order by unique1) from tenk1 where unique1 < -15;

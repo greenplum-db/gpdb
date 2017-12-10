@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.149 2009/01/01 17:23:44 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/optimizer/util/pathnode.c,v 1.152 2009/06/11 14:48:59 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -2827,12 +2827,12 @@ create_mergejoin_path(PlannerInfo *root,
 	 * selected as the input of a mergejoin, and they don't support
 	 * mark/restore at present.
 	 *
-	 * Note: Sort supports mark/restore, so no materialize is really needed
-	 * in that case; but one may be desirable anyway to optimize the sort.
-	 * However, since we aren't representing the sort step separately in
-	 * the Path tree, we can't explicitly represent the materialize either.
-	 * So that case is not handled here.  Instead, cost_mergejoin has to
-	 * factor in the cost and create_mergejoin_plan has to add the plan node.
+	 * Note: Sort supports mark/restore, so no materialize is really needed in
+	 * that case; but one may be desirable anyway to optimize the sort.
+	 * However, since we aren't representing the sort step separately in the
+	 * Path tree, we can't explicitly represent the materialize either. So
+	 * that case is not handled here.  Instead, cost_mergejoin has to factor
+	 * in the cost and create_mergejoin_plan has to add the plan node.
 	 */
 	if (!ExecSupportsMarkRestore(inner_path->pathtype))
 	{
@@ -2951,11 +2951,23 @@ create_hashjoin_path(PlannerInfo *root,
 	pathnode->jpath.outerjoinpath = outer_path;
 	pathnode->jpath.innerjoinpath = inner_path;
 	pathnode->jpath.joinrestrictinfo = restrict_clauses;
-	/* A hashjoin never has pathkeys, since its ordering is unpredictable */
+
+	/*
+	 * A hashjoin never has pathkeys, since its output ordering is
+	 * unpredictable due to possible batching.	XXX If the inner relation is
+	 * small enough, we could instruct the executor that it must not batch,
+	 * and then we could assume that the output inherits the outer relation's
+	 * ordering, which might save a sort step.	However there is considerable
+	 * downside if our estimate of the inner relation size is badly off. For
+	 * the moment we don't risk it.  (Note also that if we wanted to take this
+	 * seriously, joinpath.c would have to consider many more paths for the
+	 * outer rel than it does now.)
+	 */
 	pathnode->jpath.path.pathkeys = NIL;
     pathnode->jpath.path.locus = join_locus;
 
 	pathnode->path_hashclauses = hashclauses;
+	/* cost_hashjoin will fill in pathnode->num_batches */
 
     /*
      * If hash table overflows to disk, and an ancestor node requests rescan

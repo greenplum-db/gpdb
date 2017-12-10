@@ -14,7 +14,7 @@
  * Copyright (c) 1998-2009, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.116 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/numeric.c,v 1.118 2009/06/11 14:49:03 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -71,7 +71,7 @@ typedef int16 NumericDigit;
 
 
 /* ----------
- * NumericVar is the format we use for arithmetic.  The digit-array part
+ * NumericVar is the format we use for arithmetic.	The digit-array part
  * is the same as the NumericData storage format, but the header is more
  * complex.
  *
@@ -276,7 +276,7 @@ static void dump_var(const char *str, NumericVar *var);
 static void alloc_var(NumericVar *var, int ndigits);
 static void zero_var(NumericVar *var);
 
-static void init_var_from_str(const char *str, NumericVar *dest);
+static const char *init_var_from_str(const char *str, const char *cp, NumericVar *dest);
 static void set_var_from_var(NumericVar *value, NumericVar *dest);
 static void init_var_from_var(NumericVar *value, NumericVar *dest);
 static void init_ro_var_from_var(NumericVar *value, NumericVar *dest);
@@ -313,7 +313,7 @@ static void mul_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 static void div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 		int rscale, bool round);
 static void div_var_fast(NumericVar *var1, NumericVar *var2, NumericVar *result,
-		int rscale, bool round);
+			 int rscale, bool round);
 static int	select_div_scale(NumericVar *var1, NumericVar *var2);
 static void mod_var(NumericVar *var1, NumericVar *var2, NumericVar *result);
 static void ceil_var(NumericVar *var, NumericVar *result);
@@ -368,24 +368,68 @@ numeric_in(PG_FUNCTION_ARGS)
 	Oid			typelem = PG_GETARG_OID(1);
 #endif
 	int32		typmod = PG_GETARG_INT32(2);
-	NumericVar	value;
 	Numeric		res;
+	const char *cp;
+
+	/* Skip leading spaces */
+	cp = str;
+	while (*cp)
+	{
+		if (!isspace((unsigned char) *cp))
+			break;
+		cp++;
+	}
 
 	/*
 	 * Check for NaN
 	 */
-	if (pg_strcasecmp(str, "NaN") == 0)
-		PG_RETURN_NUMERIC(make_result(&const_nan));
+	if (pg_strncasecmp(cp, "NaN", 3) == 0)
+	{
+		res = make_result(&const_nan);
 
-	/*
-	 * Use init_var_from_str() to parse the input string and return it in the
-	 * packed DB storage format
-	 */
-	init_var_from_str(str, &value);
+		/* Should be nothing left but spaces */
+		cp += 3;
+		while (*cp)
+		{
+			if (!isspace((unsigned char) *cp))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					  errmsg("invalid input syntax for type numeric: \"%s\"",
+							 str)));
+			cp++;
+		}
+	}
+	else
+	{
+		/*
+		 * Use init_var_from_str() to parse the input string and return it in the
+		 * packed DB storage format
+		 */
+		NumericVar	value;
 
-	apply_typmod(&value, typmod);
+		cp = init_var_from_str(str, cp, &value);
 
-	res = make_result(&value);
+		/*
+		 * We duplicate a few lines of code here because we would like to
+		 * throw any trailing-junk syntax error before any semantic error
+		 * resulting from apply_typmod.  We can't easily fold the two cases
+		 * together because we mustn't apply apply_typmod to a NaN.
+		 */
+		while (*cp)
+		{
+			if (!isspace((unsigned char) *cp))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+					  errmsg("invalid input syntax for type numeric: \"%s\"",
+							 str)));
+			cp++;
+		}
+
+		apply_typmod(&value, typmod);
+
+		res = make_result(&value);
+		free_var(&value);
+	}
 
 	PG_RETURN_NUMERIC(res);
 }
@@ -1911,8 +1955,8 @@ numeric_power(PG_FUNCTION_ARGS)
 
 	/*
 	 * The SQL spec requires that we emit a particular SQLSTATE error code for
-	 * certain error conditions.  Specifically, we don't return a divide-by-zero
-	 * error code for 0 ^ -1.
+	 * certain error conditions.  Specifically, we don't return a
+	 * divide-by-zero error code for 0 ^ -1.
 	 */
 	if (cmp_var(&arg1, &const_zero) == 0 &&
 		cmp_var(&arg2, &const_zero) < 0)
@@ -2103,7 +2147,8 @@ numeric_li_value(float8 f, Numeric y0, Numeric y1)
 		/* Make a numeric version of f */
 		snprintf(buf, sizeof(buf), "%.*g", DBL_DIG, f);
 
-		init_var_from_str(buf, &vf);
+		/* Assume we need not worry about leading/trailing spaces */
+		(void) init_var_from_str(buf, buf, &vf);
 		
 		mul_var(&vf, &v1, &v1, vf.dscale + v1.dscale);
 		add_var(&v0, &v1, &v1);  
@@ -2358,7 +2403,9 @@ float8_numeric(PG_FUNCTION_ARGS)
 
 	snprintf(buf, sizeof(buf), "%.*g", DBL_DIG, val);
 
-	init_var_from_str(buf, &result);
+	/* Assume we need not worry about leading/trailing spaces */
+	(void) init_var_from_str(buf, buf, &result);
+
 	res = make_result(&result);
 
 	PG_RETURN_NUMERIC(res);
@@ -2414,7 +2461,9 @@ float4_numeric(PG_FUNCTION_ARGS)
 
 	snprintf(buf, sizeof(buf), "%.*g", FLT_DIG, val);
 
-	init_var_from_str(buf, &result);
+	/* Assume we need not worry about leading/trailing spaces */
+	(void) init_var_from_str(buf, buf, &result);
+
 	res = make_result(&result);
 
 	PG_RETURN_NUMERIC(res);
@@ -2807,9 +2856,9 @@ int2_sum(PG_FUNCTION_ARGS)
 	/*
 	 * If we're invoked by nodeAgg, we can cheat and modify our first
 	 * parameter in-place to avoid palloc overhead. If not, we need to return
-	 * the new value of the transition variable.
-	 * (If int8 is pass-by-value, then of course this is useless as well
-	 * as incorrect, so just ifdef it out.)
+	 * the new value of the transition variable. (If int8 is pass-by-value,
+	 * then of course this is useless as well as incorrect, so just ifdef it
+	 * out.)
 	 */
 #ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
 	if (fcinfo->context && IsA(fcinfo->context, AggState))
@@ -2856,9 +2905,9 @@ int4_sum(PG_FUNCTION_ARGS)
 	/*
 	 * If we're invoked by nodeAgg, we can cheat and modify our first
 	 * parameter in-place to avoid palloc overhead. If not, we need to return
-	 * the new value of the transition variable.
-	 * (If int8 is pass-by-value, then of course this is useless as well
-	 * as incorrect, so just ifdef it out.)
+	 * the new value of the transition variable. (If int8 is pass-by-value,
+	 * then of course this is useless as well as incorrect, so just ifdef it
+	 * out.)
 	 */
 #ifndef USE_FLOAT8_BYVAL		/* controls int8 too */
 	if (fcinfo->context && IsA(fcinfo->context, AggState))
@@ -3595,11 +3644,16 @@ zero_var(NumericVar *var)
  *
  *	Parse a string and put the number into a variable
  *
+ * This function does not handle leading or trailing spaces, and it doesn't
+ * accept "NaN" either.  It returns the end+1 position so that caller can
+ * check for trailing spaces/garbage if deemed necessary.
+ *
+ * cp is the place to actually start parsing; str is what to use in error
+ * reports.  (Typically cp would be the same except advanced over spaces.)
  */
-static void
-init_var_from_str(const char *str, NumericVar *dest)
+static const char *
+init_var_from_str(const char *str, const char *cp, NumericVar *dest)
 {
-	const char *cp = str;
 	bool		have_dp = FALSE;
 	int			i;
 	unsigned char *decdigits;
@@ -3617,15 +3671,6 @@ init_var_from_str(const char *str, NumericVar *dest)
 	 * We first parse the string to extract decimal digits and determine the
 	 * correct decimal weight.	Then convert to NBASE representation.
 	 */
-
-	/* skip leading spaces */
-	while (*cp)
-	{
-		if (!isspace((unsigned char) *cp))
-			break;
-		cp++;
-	}
-
 	switch (*cp)
 	{
 		case '+':		/* NUMERIC_POS default set up above */
@@ -3712,17 +3757,6 @@ init_var_from_str(const char *str, NumericVar *dest)
 			dscale = 0;
 	}
 
-	/* Should be nothing left but spaces */
-	while (*cp)
-	{
-		if (!isspace((unsigned char) *cp))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-					 errmsg("invalid input syntax for type numeric: \"%s\"",
-							str)));
-		cp++;
-	}
-
 	/*
 	 * Okay, convert pure-decimal representation to base NBASE.  First we need
 	 * to determine the converted weight and ndigits.  offset is the number of
@@ -3762,6 +3796,9 @@ init_var_from_str(const char *str, NumericVar *dest)
 
 	if (decdigits != tdd)
 		pfree(decdigits);
+
+	/* Return end+1 position for caller */
+	return cp;
 }
 
 
@@ -4979,6 +5016,7 @@ div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 	/* If rounding needed, figure one more digit to ensure correct result */
 	if (round)
 		res_ndigits++;
+
 	/*
 	 * The working dividend normally requires res_ndigits + var2ndigits
 	 * digits, but make it at least var1ndigits so we can load all of var1
@@ -4992,8 +5030,8 @@ div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 	/*
 	 * We need a workspace with room for the working dividend (div_ndigits+1
 	 * digits) plus room for the possibly-normalized divisor (var2ndigits
-	 * digits).  It is convenient also to have a zero at divisor[0] with
-	 * the actual divisor data in divisor[1 .. var2ndigits].  Transferring the
+	 * digits).  It is convenient also to have a zero at divisor[0] with the
+	 * actual divisor data in divisor[1 .. var2ndigits].  Transferring the
 	 * digits into the workspace also allows us to realloc the result (which
 	 * might be the same as either input var) before we begin the main loop.
 	 * Note that we use palloc0 to ensure that divisor[0], dividend[0], and
@@ -5014,8 +5052,8 @@ div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 	if (var2ndigits == 1)
 	{
 		/*
-		 * If there's only a single divisor digit, we can use a fast path
-		 * (cf. Knuth section 4.3.1 exercise 16).
+		 * If there's only a single divisor digit, we can use a fast path (cf.
+		 * Knuth section 4.3.1 exercise 16).
 		 */
 		divisor1 = divisor[1];
 		carry = 0;
@@ -5034,12 +5072,12 @@ div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 		 *
 		 * We need the first divisor digit to be >= NBASE/2.  If it isn't,
 		 * make it so by scaling up both the divisor and dividend by the
-		 * factor "d".  (The reason for allocating dividend[0] above is to
+		 * factor "d".	(The reason for allocating dividend[0] above is to
 		 * leave room for possible carry here.)
 		 */
 		if (divisor[1] < HALF_NBASE)
 		{
-			int		d = NBASE / (divisor[1] + 1);
+			int			d = NBASE / (divisor[1] + 1);
 
 			carry = 0;
 			for (i = var2ndigits; i > 0; i--)
@@ -5065,22 +5103,22 @@ div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 		divisor2 = divisor[2];
 
 		/*
-		 * Begin the main loop.  Each iteration of this loop produces the
-		 * j'th quotient digit by dividing dividend[j .. j + var2ndigits]
-		 * by the divisor; this is essentially the same as the common manual
+		 * Begin the main loop.  Each iteration of this loop produces the j'th
+		 * quotient digit by dividing dividend[j .. j + var2ndigits] by the
+		 * divisor; this is essentially the same as the common manual
 		 * procedure for long division.
 		 */
 		for (j = 0; j < res_ndigits; j++)
 		{
 			/* Estimate quotient digit from the first two dividend digits */
-			int		next2digits = dividend[j] * NBASE + dividend[j+1];
-			int		qhat;
+			int			next2digits = dividend[j] * NBASE + dividend[j + 1];
+			int			qhat;
 
 			/*
 			 * If next2digits are 0, then quotient digit must be 0 and there's
-			 * no need to adjust the working dividend.  It's worth testing
-			 * here to fall out ASAP when processing trailing zeroes in
-			 * a dividend.
+			 * no need to adjust the working dividend.	It's worth testing
+			 * here to fall out ASAP when processing trailing zeroes in a
+			 * dividend.
 			 */
 			if (next2digits == 0)
 			{
@@ -5092,14 +5130,15 @@ div_var(NumericVar *var1, NumericVar *var2, NumericVar *result,
 				qhat = NBASE - 1;
 			else
 				qhat = next2digits / divisor1;
+
 			/*
 			 * Adjust quotient digit if it's too large.  Knuth proves that
-			 * after this step, the quotient digit will be either correct
-			 * or just one too large.  (Note: it's OK to use dividend[j+2]
-			 * here because we know the divisor length is at least 2.)
+			 * after this step, the quotient digit will be either correct or
+			 * just one too large.	(Note: it's OK to use dividend[j+2] here
+			 * because we know the divisor length is at least 2.)
 			 */
 			while (divisor2 * qhat >
-				   (next2digits - qhat * divisor1) * NBASE + dividend[j+2])
+				   (next2digits - qhat * divisor1) * NBASE + dividend[j + 2])
 				qhat--;
 
 			/* As above, need do nothing more when quotient digit is 0 */
@@ -6018,16 +6057,16 @@ power_var(NumericVar *base, NumericVar *exp, NumericVar *result)
 	}
 
 	/*
-	 *	This avoids log(0) for cases of 0 raised to a non-integer.
-	 *	0 ^ 0 handled by power_var_int().
+	 * This avoids log(0) for cases of 0 raised to a non-integer. 0 ^ 0
+	 * handled by power_var_int().
 	 */
 	if (cmp_var(base, &const_zero) == 0)
 	{
 		set_var_from_var(&const_zero, result);
-		result->dscale = NUMERIC_MIN_SIG_DIGITS;	/* no need to round */
+		result->dscale = NUMERIC_MIN_SIG_DIGITS;		/* no need to round */
 		return;
 	}
-	
+
 	quick_init_var(&ln_base);
 	quick_init_var(&ln_num);
 
@@ -6095,11 +6134,13 @@ power_var_int(NumericVar *base, int exp, NumericVar *result, int rscale)
 	switch (exp)
 	{
 		case 0:
+
 			/*
-			 *	While 0 ^ 0 can be either 1 or indeterminate (error), we
-			 *	treat it as 1 because most programming languages do this.
-			 *	SQL:2003 also requires a return value of 1.
-			 *	http://en.wikipedia.org/wiki/Exponentiation#Zero_to_the_zero_power
+			 * While 0 ^ 0 can be either 1 or indeterminate (error), we treat
+			 * it as 1 because most programming languages do this. SQL:2003
+			 * also requires a return value of 1.
+			 * http://en.wikipedia.org/wiki/Exponentiation#Zero_to_the_zero_pow
+			 * er
 			 */
 			set_var_from_var(&const_one, result);
 			result->dscale = rscale;	/* no need to round */

@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/mb/pg_wchar.h,v 1.82 2009/01/04 18:37:36 tgl Exp $
+ * $PostgreSQL: pgsql/src/include/mb/pg_wchar.h,v 1.91 2009/06/11 14:49:11 momjian Exp $
  *
  *	NOTES
  *		This is used both by the backend and by libpq, but should not be
@@ -405,8 +405,8 @@ extern int	pg_mic_mblen(const unsigned char *mbstr);
 extern int	pg_mbstrlen(const char *mbstr);
 extern int	pg_mbstrlen_with_len(const char *mbstr, int len);
 extern int	pg_mbcliplen(const char *mbstr, int len, int limit);
-extern int	pg_encoding_mbcliplen(int encoding, const char *mbstr,
-								  int len, int limit);
+extern int pg_encoding_mbcliplen(int encoding, const char *mbstr,
+					  int len, int limit);
 extern int	pg_mbcharcliplen(const char *mbstr, int len, int imit);
 extern int	pg_encoding_max_length(int encoding);
 extern int	pg_database_encoding_max_length(void);
@@ -416,7 +416,6 @@ extern size_t wchar2char(char *to, const wchar_t *from, size_t tolen);
 extern size_t char2wchar(wchar_t *to, size_t tolen, const char *from, size_t fromlen);
 #endif
 
-extern void SetDefaultClientEncoding(void); /* Obsolete? */
 extern int	SetClientEncoding(int encoding, bool doit);
 extern void InitializeClientEncoding(void);
 extern int	pg_get_client_encoding(void);

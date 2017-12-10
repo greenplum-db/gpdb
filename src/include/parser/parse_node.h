@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.60 2009/01/01 17:24:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/parser/parse_node.h,v 1.62 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -88,6 +88,10 @@ typedef enum ParseExprKind
  * Note that neither relname nor refname of these entries are necessarily
  * unique; searching the rtable by name is a bad idea.
  *
+ * p_joinexprs: list of JoinExpr nodes associated with p_rtable entries.
+ * This is one-for-one with p_rtable, but contains NULLs for non-join
+ * RTEs, and may be shorter than p_rtable if the last RTE(s) aren't joins.
+ *
  * p_joinlist: list of join items (RangeTblRef and JoinExpr nodes) that
  * will become the fromlist of the query's top-level FromExpr node.
  *
@@ -110,8 +114,8 @@ typedef enum ParseExprKind
  * to make an RTE before you can access a CTE.
  *
  * p_future_ctes: list of CommonTableExprs (WITH items) that are not yet
- * visible due to scope rules.  This is used to help improve error messages.
-
+ * visible due to scope rules.	This is used to help improve error messages.
+ *
  * p_windowdefs: list of WindowDefs representing WINDOW and OVER clauses.
  * We collect these while transforming expressions and then transform them
  * afterwards (so that any resjunk tlist items needed for the sort/group
@@ -132,6 +136,7 @@ typedef struct ParseState
 	struct ParseState *parentParseState;		/* stack link */
 	const char *p_sourcetext;	/* source text, or NULL if not available */
 	List	   *p_rtable;		/* range table so far */
+	List	   *p_joinexprs;	/* JoinExprs for RTE_JOIN p_rtable entries */
 	List	   *p_joinlist;		/* join items so far (will become FromExpr
 								 * node's fromlist) */
 	List	   *p_relnamespace; /* current namespace for relations */
@@ -180,7 +185,7 @@ extern void setup_parser_errposition_callback(ParseCallbackState *pcbstate,
 extern void cancel_parser_errposition_callback(ParseCallbackState *pcbstate);
 
 extern Var *make_var(ParseState *pstate, RangeTblEntry *rte, int attrno,
-					 int location);
+		 int location);
 extern Oid	transformArrayType(Oid arrayType);
 extern ArrayRef *transformArraySubscripts(ParseState *pstate,
 						 Node *arrayBase,

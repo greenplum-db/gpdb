@@ -150,22 +150,24 @@ EXPLAIN DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x F
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
  Delete (slice0; segments: 3)  (rows=2471070 width=10)
-   ->  Result  (cost=2037.31..77345.88 rows=2471070 width=10)
+   ->  Result  (cost=1198.81..76614.79 rows=2471070 width=10)
          One-Time Filter: $0
          InitPlan 1 (returns $0)  (slice2)
-           ->  Limit  (cost=0.00..0.06 rows=1 width=4)
-                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.06 rows=1 width=4)
-                       ->  Limit  (cost=0.00..0.04 rows=1 width=4)
-                             ->  Seq Scan on keo5  (cost=0.00..1176.25 rows=9567 width=4)
+           ->  Limit  (cost=0.00..0.06 rows=1 width=0)
+                 ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..0.06 rows=1 width=0)
+                       ->  Limit  (cost=0.00..0.04 rows=1 width=0)
+                             ->  Seq Scan on keo5  (cost=0.00..1176.25 rows=9567 width=0)
                                    Filter: x < 2
-         ->  Hash Semi Join  (cost=2037.25..77345.82 rows=2471070 width=10)
+         ->  Hash Join  (cost=1198.75..76614.73 rows=2471070 width=10)
                Hash Cond: public.keo5.x = public.keo5.x
                ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=14)
-               ->  Hash  (cost=961.00..961.00 rows=28700 width=4)
-                     ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=4)
+               ->  Hash  (cost=1186.25..1186.25 rows=334 width=4)
+                     ->  HashAggregate  (cost=1176.25..1186.25 rows=334 width=4)
+                           Group By: public.keo5.x
+                           ->  Seq Scan on keo5  (cost=0.00..961.00 rows=28700 width=4)
  Settings:  optimizer=off
  Optimizer status: legacy query optimizer
-(16 rows)
+(18 rows)
 
 DELETE FROM keo5 WHERE x IN (SELECT x FROM keo5 WHERE EXISTS (SELECT x FROM keo5 WHERE x < 2));
 SELECT x FROM keo5;

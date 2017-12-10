@@ -1,5 +1,5 @@
 <!--
-$PostgreSQL: pgsql/doc/src/sgml/ref/create_view.sgml,v 1.39 2008/12/15 21:35:31 tgl Exp $
+$PostgreSQL: pgsql/doc/src/sgml/ref/create_view.sgml,v 1.41 2009/01/27 12:40:15 petere Exp $
 PostgreSQL documentation
 -->
 

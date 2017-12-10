@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/executor/spi.c,v 1.204 2009/01/02 20:42:00 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/executor/spi.c,v 1.208 2009/06/11 14:48:57 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -16,12 +16,20 @@
 
 #include "access/printtup.h"
 #include "access/sysattr.h"
+#include "access/xact.h"
 #include "catalog/heap.h"
+#include "catalog/pg_type.h"
 #include "commands/trigger.h"
+#include "executor/executor.h"
 #include "executor/spi_priv.h"
+#include "tcop/pquery.h"
+#include "tcop/utility.h"
+#include "utils/builtins.h"
+#include "utils/datum.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/snapmgr.h"
+#include "utils/syscache.h"
 #include "utils/typcache.h"
 #include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
@@ -58,8 +66,8 @@ static int	_SPI_connected = -1;
 static int	_SPI_curid = -1;
 
 static Portal SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
-									   Datum *Values, const char *Nulls,
-									   bool read_only, int pflags);
+						 Datum *Values, const char *Nulls,
+						 bool read_only, int pflags);
 
 static void _SPI_prepare_plan(const char *src, SPIPlanPtr plan,
 				  ParamListInfo boundParams);
@@ -332,7 +340,7 @@ SPI_pop(void)
 bool
 SPI_push_conditional(void)
 {
-	bool	pushed = (_SPI_curid != _SPI_connected);
+	bool		pushed = (_SPI_curid != _SPI_connected);
 
 	if (pushed)
 	{
@@ -994,7 +1002,7 @@ SPI_cursor_open(const char *name, SPIPlanPtr plan,
 /*
  * SPI_cursor_open_with_args()
  *
- * Parse and plan a query and open it as a portal.  Like SPI_execute_with_args,
+ * Parse and plan a query and open it as a portal.	Like SPI_execute_with_args,
  * we can tell the planner to rely on the parameter values as constants,
  * because the plan will only be used once.
  */
@@ -1260,8 +1268,8 @@ SPI_cursor_open_internal(const char *name, SPIPlanPtr plan,
 	}
 
 	/*
-	 * Set up the snapshot to use.	(PortalStart will do PushActiveSnapshot, so
-	 * we skip that here.)
+	 * Set up the snapshot to use.	(PortalStart will do PushActiveSnapshot,
+	 * so we skip that here.)
 	 */
 	if (read_only)
 		snapshot = GetActiveSnapshot();
@@ -1538,6 +1546,8 @@ SPI_result_code_string(int code)
 			return "SPI_OK_DELETE_RETURNING";
 		case SPI_OK_UPDATE_RETURNING:
 			return "SPI_OK_UPDATE_RETURNING";
+		case SPI_OK_REWRITTEN:
+			return "SPI_OK_REWRITTEN";
 	}
 	/* Unrecognized code ... return something useful ... */
 	sprintf(buf, "Unrecognized SPI code %d", code);
@@ -1839,13 +1849,13 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			if (read_only && !CommandIsReadOnly(stmt))
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 /* translator: %s is a SQL statement name */
-						 errmsg("%s is not allowed in a non-volatile function",
-								CreateCommandTag(stmt))));
+				/* translator: %s is a SQL statement name */
+					   errmsg("%s is not allowed in a non-volatile function",
+							  CreateCommandTag(stmt))));
 
 			/*
-			 * If not read-only mode, advance the command counter before
-			 * each command.
+			 * If not read-only mode, advance the command counter before each
+			 * command.
 			 */
 			if (!read_only)
 				CommandCounterIncrement();
@@ -1856,7 +1866,8 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			{
 				/*
 				 * Default read_only behavior is to use the entry-time
-				 * ActiveSnapshot, if any; if read-write, grab a full new snap.
+				 * ActiveSnapshot, if any; if read-write, grab a full new
+				 * snap.
 				 */
 				if (read_only)
 				{
@@ -1876,8 +1887,8 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 			{
 				/*
 				 * We interpret read_only with a specified snapshot to be
-				 * exactly that snapshot, but read-write means use the
-				 * snap with advancing of command ID.
+				 * exactly that snapshot, but read-write means use the snap
+				 * with advancing of command ID.
 				 */
 				if (read_only)
 					PushActiveSnapshot(snapshot);
@@ -1931,7 +1942,7 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				ProcessUtility(stmt,
 							   plansource->query_string,
 							   paramLI,
-							   false,		/* not top level */
+							   false,	/* not top level */
 							   dest,
 							   NULL);
 				/* Update "processed" if stmt returned tuples */
@@ -1945,9 +1956,9 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 				PopActiveSnapshot();
 
 			/*
-			 * The last canSetTag query sets the status values returned to
-			 * the caller.	Be careful to free any tuptables not returned,
-			 * to avoid intratransaction memory leak.
+			 * The last canSetTag query sets the status values returned to the
+			 * caller.	Be careful to free any tuptables not returned, to
+			 * avoid intratransaction memory leak.
 			 */
 			if (canSetTag)
 			{
@@ -1976,9 +1987,9 @@ _SPI_execute_plan(SPIPlanPtr plan, ParamListInfo paramLI,
 		cplan = NULL;
 
 		/*
-		 * If not read-only mode, advance the command counter after the
-		 * last command.  This ensures that its effects are visible, in
-		 * case it was DDL that would affect the next CachedPlanSource.
+		 * If not read-only mode, advance the command counter after the last
+		 * command.  This ensures that its effects are visible, in case it was
+		 * DDL that would affect the next CachedPlanSource.
 		 */
 		if (!read_only)
 			CommandCounterIncrement();
@@ -2006,11 +2017,12 @@ fail:
 	_SPI_current->tuptable = NULL;
 
 	/*
-	 * If none of the queries had canSetTag, we return the last query's result
-	 * code, but not its auxiliary results (for backwards compatibility).
+	 * If none of the queries had canSetTag, return SPI_OK_REWRITTEN. Prior to
+	 * 8.4, we used return the last query's result code, but not its auxiliary
+	 * results, but that's confusing.
 	 */
 	if (my_res == 0)
-		my_res = res;
+		my_res = SPI_OK_REWRITTEN;
 
 	return my_res;
 }
@@ -2031,7 +2043,7 @@ _SPI_convert_params(int nargs, Oid *argtypes,
 
 		/* sizeof(ParamListInfoData) includes the first array element */
 		paramLI = (ParamListInfo) palloc(sizeof(ParamListInfoData) +
-										 (nargs - 1) *sizeof(ParamExternData));
+									   (nargs - 1) *sizeof(ParamExternData));
 		paramLI->numParams = nargs;
 
 		for (i = 0; i < nargs; i++)

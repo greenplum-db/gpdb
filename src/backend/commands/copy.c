@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.304 2009/01/02 20:42:00 tgl Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/copy.c,v 1.312 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -844,7 +844,7 @@ void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 		if (strlen(delim) != 1 && !delim_off)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("delimiter must be a single byte character, or \'off\'")));
+					errmsg("delimiter must be a single one-byte character, or \'off\'")));
 	}
 	else
 	{
@@ -852,7 +852,7 @@ void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 		if ((strlen(delim) != 1 || IS_HIGHBIT_SET(delim[0])) && !delim_off )
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("delimiter must be a single ASCII character, or \'off\'")));
+					errmsg("delimiter must be a single one-byte character, or \'off\'")));
 	}
 
 	if (strchr(delim, '\r') != NULL ||
@@ -882,8 +882,8 @@ void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
 	 * backslash because it would be ambiguous.  We can't allow the other
 	 * cases because data characters matching the delimiter must be
 	 * backslashed, and certain backslash combinations are interpreted
-	 * non-literally by COPY IN.  Disallowing all lower case ASCII letters
-	 * is more than strictly necessary, but seems best for consistency and
+	 * non-literally by COPY IN.  Disallowing all lower case ASCII letters is
+	 * more than strictly necessary, but seems best for consistency and
 	 * future-proofing.  Likewise we disallow all digits though only octal
 	 * digits are actually dangerous.
 	 */
@@ -1073,7 +1073,7 @@ void ValidateControlChars(bool copy, bool load, bool csv_mode, char *delim,
  * or write to a file.
  *
  * Do not allow the copy if user doesn't have proper permission to access
- * the table.
+ * the table or the specifically requested columns.
  */
 uint64
 DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
@@ -1084,7 +1084,8 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 	List	   *force_quote = NIL;
 	List	   *force_notnull = NIL;
 	AclMode		required_access = (is_from ? ACL_INSERT : ACL_SELECT);
-	AclResult	aclresult;
+	AclMode		relPerms;
+	AclMode		remainingPerms;
 	ListCell   *option;
 	TupleDesc	tupDesc;
 	int			num_phys_attrs;
@@ -1490,17 +1491,34 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 		/* save relation oid for auto-stats call later */
 		relationOid = RelationGetRelid(cstate->rel);
 
+		tupDesc = RelationGetDescr(cstate->rel);
+
 		/* Check relation permissions. */
-		aclresult = pg_class_aclcheck(RelationGetRelid(cstate->rel),
-									  GetUserId(),
-									  required_access);
-		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_CLASS,
-						   RelationGetRelationName(cstate->rel));
+		relPerms = pg_class_aclmask(RelationGetRelid(cstate->rel), GetUserId(),
+									required_access, ACLMASK_ALL);
+		remainingPerms = required_access & ~relPerms;
+		if (remainingPerms != 0)
+		{
+			/* We don't have table permissions, check per-column permissions */
+			List	   *attnums;
+			ListCell   *cur;
+
+			attnums = CopyGetAttnums(tupDesc, cstate->rel, attnamelist);
+			foreach(cur, attnums)
+			{
+				int			attnum = lfirst_int(cur);
+
+				if (pg_attribute_aclcheck(RelationGetRelid(cstate->rel),
+										  attnum,
+										  GetUserId(),
+										  remainingPerms) != ACLCHECK_OK)
+					aclcheck_error(ACLCHECK_NO_PRIV, ACL_KIND_CLASS,
+								   RelationGetRelationName(cstate->rel));
+			}
+		}
 
 		/* check read-only transaction */
-		if (XactReadOnly && is_from &&
-			!isTempNamespace(RelationGetNamespace(cstate->rel)))
+		if (XactReadOnly && is_from && !cstate->rel->rd_islocaltemp)
 			ereport(ERROR,
 					(errcode(ERRCODE_READ_ONLY_SQL_TRANSACTION),
 					 errmsg("transaction is read-only")));
@@ -1511,8 +1529,6 @@ DoCopyInternal(const CopyStmt *stmt, const char *queryString, CopyState cstate)
 					(errcode(ERRCODE_UNDEFINED_COLUMN),
 					 errmsg("table \"%s\" does not have OIDs",
 							RelationGetRelationName(cstate->rel))));
-
-		tupDesc = RelationGetDescr(cstate->rel);
 
 		/* Update error log info */
 		if (cstate->cdbsreh)
@@ -5828,7 +5844,7 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 	int			hex_val;
 	int			attnum = 0;		/* attribute number being parsed */
 	int			attribute = 1;
-	bool		saw_high_bit = false;
+	bool		saw_non_ascii = false;
 	ListCell   *cur;			/* cursor to attribute list used for this COPY */
 
 	/* init variables for attribute scan */
@@ -6055,8 +6071,8 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 							}
 						}
 						newc = oct_val & 0377;	/* the escaped byte value */
-						if (IS_HIGHBIT_SET(newc))
-							saw_high_bit = true;
+						if (newc == '\0' || IS_HIGHBIT_SET(newc))
+							saw_non_ascii = true;
 						break;
 					case 'x':
 						/* Handle \x3F */
@@ -6075,8 +6091,8 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 								hex_val = (hex_val << 4) + GetDecimalFromHex(nextc);
 							}
 							newc = hex_val & 0xff;
-							if (IS_HIGHBIT_SET(newc))
-								saw_high_bit = true;
+							if (newc == '\0' || IS_HIGHBIT_SET(newc))
+								saw_non_ascii = true;
 						}
 						else
 						{
@@ -6178,7 +6194,7 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
 	 * such octal sequences are so rare in client data that it wouldn't
 	 * affect performance at all anyway.
 	 */
-	if(saw_high_bit)
+	if (saw_non_ascii)
 	{
 		for (attribute = 0; attribute < num_phys_attrs; attribute++)
 		{
@@ -6380,8 +6396,8 @@ CopyReadAttributesCSV(CopyState cstate, bool *nulls, int *attr_offsets,
 		if (in_quote && c == escapec)
 		{
 			/*
-			 * peek at the next char if available, and escape it if it is
-			 * an escape char or a quote char
+			 * peek at the next char if available, and escape it if it
+			 * is an escape char or a quote char
 			 */
 			if (cstate->line_buf.cursor <= cstate->line_buf.len)
 			{
@@ -6398,9 +6414,9 @@ CopyReadAttributesCSV(CopyState cstate, bool *nulls, int *attr_offsets,
 		}
 
 		/*
-		 * end of quoted field. Must do this test after testing for escape
-		 * in case quote char and escape char are the same (which is the
-		 * common case).
+		 * end of quoted field. Must do this test after testing for
+		 * escape in case quote char and escape char are the same
+		 * (which is the common case).
 		 */
 		if (in_quote && c == quotec)
 		{
@@ -6612,11 +6628,11 @@ CopyAttributeOutText(CopyState cstate, char *string)
 			if ((unsigned char) c < (unsigned char) 0x20)
 			{
 				/*
-				 * \r and \n must be escaped, the others are traditional.
-				 * We prefer to dump these using the C-like notation, rather
-				 * than a backslash and the literal character, because it
-				 * makes the dump file a bit more proof against Microsoftish
-				 * data mangling.
+				 * \r and \n must be escaped, the others are traditional. We
+				 * prefer to dump these using the C-like notation, rather than
+				 * a backslash and the literal character, because it makes the
+				 * dump file a bit more proof against Microsoftish data
+				 * mangling.
 				 */
 				switch (c)
 				{

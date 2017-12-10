@@ -22,6 +22,7 @@
 
 #include "access/genam.h"
 #include "access/heapam.h"
+#include "access/xact.h"
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_authid.h"
 #include "libpq/pqsignal.h"
@@ -45,6 +46,7 @@
 #include "utils/ps_status.h"
 #include "utils/relcache.h"
 #include "utils/snapmgr.h"
+#include "utils/syscache.h"
 
 
 #include "catalog/pg_authid.h"

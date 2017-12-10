@@ -965,6 +965,8 @@ _readJoinExpr(void)
  *	Stuff from parsenodes.h.
  */
 
+static Bitmapset *bitmapsetRead(void);
+
 /*
  * _readRangeTblEntry
  */
@@ -1025,6 +1027,8 @@ _readRangeTblEntry(void)
 	READ_BOOL_FIELD(inFromCl);
 	READ_UINT_FIELD(requiredPerms);
 	READ_OID_FIELD(checkAsUser);
+	READ_BITMAPSET_FIELD(selectedCols);
+	READ_BITMAPSET_FIELD(modifiedCols);
 
 	READ_BOOL_FIELD(forceDistRandom);
 	/* 'pseudocols' is intentionally missing, see out function */
@@ -1039,7 +1043,6 @@ _readRangeTblEntry(void)
 static void readPlanInfo(Plan *local_node);
 static void readScanInfo(Scan *local_node);
 static void readJoinInfo(Join *local_node);
-static Bitmapset *bitmapsetRead(void);
 
 
 static CreateExtensionStmt *
@@ -2120,6 +2123,12 @@ _readHash(void)
 	READ_LOCALS(Hash);
 
 	readPlanInfo((Plan *)local_node);
+
+	READ_OID_FIELD(skewTable);
+	READ_INT_FIELD(skewColumn);
+	READ_OID_FIELD(skewColType);
+	READ_INT_FIELD(skewColTypmod);
+
     READ_BOOL_FIELD(rescannable);           /*CDB*/
 
 	READ_DONE();
@@ -2385,11 +2394,7 @@ _readCreateTrigStmt(void)
 	READ_NODE_FIELD(args);
 	READ_BOOL_FIELD(before);
 	READ_BOOL_FIELD(row);
-	{ int slen;
-		memcpy(&slen, read_str_ptr, sizeof(int));
-		read_str_ptr+=sizeof(int);
-		memcpy(local_node->actions,read_str_ptr,slen);
-		read_str_ptr+=slen; }
+	READ_INT_FIELD(events);
 	READ_BOOL_FIELD(isconstraint);
 	READ_BOOL_FIELD(deferrable);
 	READ_BOOL_FIELD(initdeferred);
@@ -2668,7 +2673,7 @@ _readCreateFdwStmt(void)
 	READ_LOCALS(CreateFdwStmt);
 
 	READ_STRING_FIELD(fdwname);
-	READ_STRING_FIELD(library);
+	READ_NODE_FIELD(validator);
 	READ_NODE_FIELD(options);
 
 	READ_DONE();
@@ -2680,7 +2685,8 @@ _readAlterFdwStmt(void)
 	READ_LOCALS(AlterFdwStmt);
 
 	READ_STRING_FIELD(fdwname);
-	READ_STRING_FIELD(library);
+	READ_NODE_FIELD(validator);
+	READ_BOOL_FIELD(change_validator);
 	READ_NODE_FIELD(options);
 
 	READ_DONE();
@@ -2773,13 +2779,13 @@ _readDropUserMappingStmt(void)
 	READ_DONE();
 }
 
-static OptionDefElem *
-_readOptionDefElem(void)
+static AccessPriv *
+_readAccessPriv(void)
 {
-	READ_LOCALS(OptionDefElem);
+	READ_LOCALS(AccessPriv);
 
-	READ_ENUM_FIELD(alter_op, AlterOptionOp);
-	READ_NODE_FIELD(def);
+	READ_STRING_FIELD(priv_name);
+	READ_NODE_FIELD(cols);
 
 	READ_DONE();
 }
@@ -3192,6 +3198,9 @@ readNodeBinary(void)
 			case T_GrantStmt:
 				return_value = _readGrantStmt();
 				break;
+			case T_AccessPriv:
+				return_value = _readAccessPriv();
+				break;
 			case T_PrivGrantee:
 				return_value = _readPrivGrantee();
 				break;
@@ -3538,9 +3547,6 @@ readNodeBinary(void)
 				break;
 			case T_DefElem:
 				return_value = _readDefElem();
-				break;
-			case T_OptionDefElem:
-				return_value = _readOptionDefElem();
 				break;
 			case T_CreateSchemaStmt:
 				return_value = _readCreateSchemaStmt();

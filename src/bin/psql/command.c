@@ -57,7 +57,7 @@ static backslashResult exec_command(const char *cmd,
 			 PsqlScanState scan_state,
 			 PQExpBuffer query_buf);
 static bool do_edit(const char *filename_arg, PQExpBuffer query_buf,
-					bool *edited);
+		bool *edited);
 static bool do_connect(char *dbname, char *user, char *host, char *port);
 static bool do_shell(const char *command);
 static bool lookup_function_oid(PGconn *conn, const char *desc, Oid *foid);
@@ -368,7 +368,7 @@ exec_command(const char *cmd,
 					success = describeTableDetails(pattern, show_verbose, show_system);
 				else
 					/* standard listing of interesting things */
-					success = listTables("tvsEr", NULL, show_verbose, show_system);
+					success = listTables("tvsE", NULL, show_verbose, show_system);
 				break;
 			case 'a':
 				success = describeAggregates(pattern, show_verbose, show_system);
@@ -447,9 +447,7 @@ exec_command(const char *cmd,
 					success = listDbRoleSettings(pattern, pattern2);
 				}
 				else
-					//success = PSQL_CMD_UNKNOWN;
-					/* GPDB uses \dr for foreign tables ? */
-					success = listTables(&cmd[1], pattern, show_verbose, show_system);
+					success = PSQL_CMD_UNKNOWN;
 				break;
 			case 'u':
 				success = describeRoles(pattern, show_verbose);
@@ -476,7 +474,7 @@ exec_command(const char *cmd,
 				}
 				break;
 			case 'e':			/* SQL/MED subsystem */
-				switch(cmd[2])
+				switch (cmd[2])
 				{
 					case 's':
 						success = listForeignServers(pattern, show_verbose);
@@ -586,7 +584,7 @@ exec_command(const char *cmd,
 
 		if (status != PSQL_CMD_ERROR)
 		{
-			bool edited = false;
+			bool		edited = false;
 
 			if (!do_edit(0, query_buf, &edited))
 				status = PSQL_CMD_ERROR;
@@ -1456,9 +1454,9 @@ connection_warnings(bool in_startup)
 
 		if (pset.sversion / 100 != client_ver / 100)
 			printf(_("WARNING: %s version %d.%d, server version %d.%d.\n"
-				 "         Some psql features might not work.\n"),
-				pset.progname, client_ver / 10000, (client_ver / 100) % 100,
-				pset.sversion / 10000, (pset.sversion / 100) % 100);
+					 "         Some psql features might not work.\n"),
+				 pset.progname, client_ver / 10000, (client_ver / 100) % 100,
+				   pset.sversion / 10000, (pset.sversion / 100) % 100);
 
 #ifdef WIN32
 		checkWin32Codepage();
@@ -1518,7 +1516,7 @@ checkWin32Codepage(void)
 	{
 		printf(_("WARNING: Console code page (%u) differs from Windows code page (%u)\n"
 				 "         8-bit characters might not work correctly. See psql reference\n"
-			     "         page \"Notes for Windows users\" for details.\n"),
+				 "         page \"Notes for Windows users\" for details.\n"),
 			   concp, wincp);
 	}
 }
@@ -2189,7 +2187,7 @@ lookup_function_oid(PGconn *conn, const char *desc, Oid *foid)
 {
 	bool		result = true;
 	PQExpBuffer query;
-	PGresult *res;
+	PGresult   *res;
 
 	query = createPQExpBuffer();
 	printfPQExpBuffer(query, "SELECT ");
@@ -2221,7 +2219,7 @@ get_create_function_cmd(PGconn *conn, Oid oid, PQExpBuffer buf)
 {
 	bool		result = true;
 	PQExpBuffer query;
-	PGresult *res;
+	PGresult   *res;
 
 	query = createPQExpBuffer();
 	printfPQExpBuffer(query, "SELECT pg_catalog.pg_get_functiondef(%u)", oid);

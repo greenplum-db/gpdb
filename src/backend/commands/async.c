@@ -7,7 +7,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/async.c,v 1.145 2009/01/01 17:23:37 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/async.c,v 1.147 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -53,7 +53,7 @@
  *	  transaction.
  *
  * Like NOTIFY, LISTEN and UNLISTEN just add the desired action to a list
- * of pending actions.  If we reach transaction commit, the changes are
+ * of pending actions.	If we reach transaction commit, the changes are
  * applied to pg_listener just before executing any pending NOTIFYs.  This
  * method is necessary because to avoid race conditions, we must hold lock
  * on pg_listener from when we insert a new listener tuple until we commit.
@@ -125,12 +125,12 @@ typedef enum
 typedef struct
 {
 	ListenActionKind action;
-	char		condname[1];				/* actually, as long as needed */
+	char		condname[1];	/* actually, as long as needed */
 } ListenAction;
 
-static List *pendingActions = NIL;			/* list of ListenAction */
+static List *pendingActions = NIL;		/* list of ListenAction */
 
-static List *upperPendingActions = NIL;		/* list of upper-xact lists */
+static List *upperPendingActions = NIL; /* list of upper-xact lists */
 
 /*
  * State for outbound notifies consists of a list of all relnames NOTIFYed
@@ -148,7 +148,7 @@ static List *upperPendingActions = NIL;		/* list of upper-xact lists */
  * condition name, it will get a self-notify at commit.  This is a bit odd
  * but is consistent with our historical behavior.
  */
-static List *pendingNotifies = NIL;				/* list of C strings */
+static List *pendingNotifies = NIL;		/* list of C strings */
 
 static List *upperPendingNotifies = NIL;		/* list of upper-xact lists */
 

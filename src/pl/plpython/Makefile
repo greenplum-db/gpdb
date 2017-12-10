@@ -1,4 +1,4 @@
-# $PostgreSQL: pgsql/src/pl/plpython/Makefile,v 1.31 2008/10/02 08:11:11 petere Exp $
+# $PostgreSQL: pgsql/src/pl/plpython/Makefile,v 1.32 2009/01/15 13:49:56 petere Exp $
 
 subdir = src/pl/plpython
 top_builddir = ../../..

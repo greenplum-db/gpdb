@@ -42,7 +42,7 @@
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions taken from FreeBSD.
  *
- * $PostgreSQL: pgsql/src/bin/initdb/initdb.c,v 1.166 2009/01/01 17:23:53 momjian Exp $
+ * $PostgreSQL: pgsql/src/bin/initdb/initdb.c,v 1.172 2009/06/11 14:49:07 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -61,10 +61,6 @@
 #include "getaddrinfo.h"
 #include "getopt_long.h"
 #include "miscadmin.h"
-
-#ifndef HAVE_INT_OPTRESET
-int			optreset;
-#endif
 
 
 /* version string we expect back from postgres */
@@ -215,7 +211,7 @@ static void setlocales(void);
 static void usage(const char *progname);
 
 #ifdef WIN32
-static int	CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION * processInfo);
+static int	CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo);
 #endif
 
 
@@ -1096,16 +1092,16 @@ check_input(char *path)
 					_("%s: file \"%s\" does not exist\n"), progname, path);
 			fprintf(stderr,
 					_("This might mean you have a corrupted installation or identified\n"
-					  "the wrong directory with the invocation option -L.\n"));
+					"the wrong directory with the invocation option -L.\n"));
 		}
 		else
 		{
 			fprintf(stderr,
-					_("%s: could not access file \"%s\": %s\n"), progname, path,
-					  strerror(errno));
+				 _("%s: could not access file \"%s\": %s\n"), progname, path,
+					strerror(errno));
 			fprintf(stderr,
 					_("This might mean you have a corrupted installation or identified\n"
-					  "the wrong directory with the invocation option -L.\n"));
+					"the wrong directory with the invocation option -L.\n"));
 		}
 		exit(1);
 	}
@@ -1114,8 +1110,8 @@ check_input(char *path)
 		fprintf(stderr,
 				_("%s: file \"%s\" is not a regular file\n"), progname, path);
 		fprintf(stderr,
-				_("This might mean you have a corrupted installation or identified\n"
-				  "the wrong directory with the invocation option -L.\n"));
+		_("This might mean you have a corrupted installation or identified\n"
+		  "the wrong directory with the invocation option -L.\n"));
 		exit(1);
 	}
 }
@@ -1548,9 +1544,9 @@ bootstrap_template1(char *short_version)
 	bki_lines = replace_token(bki_lines, "ENCODING", encodingid);
 
 	bki_lines = replace_token(bki_lines, "LC_COLLATE", lc_collate);
-	
+
 	bki_lines = replace_token(bki_lines, "LC_CTYPE", lc_ctype);
-	
+
 	/*
 	 * Pass correct LC_xxx environment to bootstrap.
 	 *
@@ -1806,7 +1802,7 @@ setup_depend(void)
 		" FROM pg_ts_template;\n",
 		"INSERT INTO pg_depend SELECT 0,0,0, tableoid,oid,0, 'p' "
 		" FROM pg_ts_config;\n",
-		"INSERT INTO pg_shdepend SELECT 0, 0, 0, tableoid, oid, 'p' "
+		"INSERT INTO pg_shdepend SELECT 0,0,0,0, tableoid,oid, 'p' "
 		" FROM pg_authid;\n",
 		NULL
 	};
@@ -2591,10 +2587,10 @@ check_locale_encoding(const char *locale, int user_enc)
 #ifdef WIN32
 
 	/*
-	 * On win32, if the encoding chosen is UTF8, all locales are OK
-	 * (assuming the actual locale name passed the checks above). This is
-	 * because UTF8 is a pseudo-codepage, that we convert to UTF16 before
-	 * doing any operations on, and UTF16 supports all locales.
+	 * On win32, if the encoding chosen is UTF8, all locales are OK (assuming
+	 * the actual locale name passed the checks above). This is because UTF8
+	 * is a pseudo-codepage, that we convert to UTF16 before doing any
+	 * operations on, and UTF16 supports all locales.
 	 */
 		  || user_enc == PG_UTF8
 #endif
@@ -2602,11 +2598,11 @@ check_locale_encoding(const char *locale, int user_enc)
 	{
 		fprintf(stderr, _("%s: encoding mismatch\n"), progname);
 		fprintf(stderr,
-			   _("The encoding you selected (%s) and the encoding that the\n"
+				_("The encoding you selected (%s) and the encoding that the\n"
 			  "selected locale uses (%s) do not match.  This would lead to\n"
 			"misbehavior in various character string processing functions.\n"
 			   "Rerun %s and either do not specify an encoding explicitly,\n"
-				 "or choose a matching combination.\n"),
+				  "or choose a matching combination.\n"),
 				pg_encoding_to_char(user_enc),
 				pg_encoding_to_char(locale_enc),
 				progname);
@@ -2740,7 +2736,7 @@ err:
 
 
 #ifdef WIN32
-typedef		BOOL(WINAPI * __CreateRestrictedToken) (HANDLE, DWORD, DWORD, PSID_AND_ATTRIBUTES, DWORD, PLUID_AND_ATTRIBUTES, DWORD, PSID_AND_ATTRIBUTES, PHANDLE);
+typedef BOOL (WINAPI * __CreateRestrictedToken) (HANDLE, DWORD, DWORD, PSID_AND_ATTRIBUTES, DWORD, PLUID_AND_ATTRIBUTES, DWORD, PSID_AND_ATTRIBUTES, PHANDLE);
 
 #define DISABLE_MAX_PRIVILEGE	0x1
 
@@ -2753,7 +2749,7 @@ typedef		BOOL(WINAPI * __CreateRestrictedToken) (HANDLE, DWORD, DWORD, PSID_AND_
  * NOT execute anything.
  */
 static int
-CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION * processInfo)
+CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION *processInfo)
 {
 	BOOL		b;
 	STARTUPINFO si;
@@ -2825,16 +2821,16 @@ CreateRestrictedProcess(char *cmd, PROCESS_INFORMATION * processInfo)
 #endif
 
 	if (!CreateProcessAsUser(restrictedToken,
-						NULL,
-						cmd,
-						NULL,
-						NULL,
-						TRUE,
-						CREATE_SUSPENDED,
-						NULL,
-						NULL,
-						&si,
-						processInfo))
+							 NULL,
+							 cmd,
+							 NULL,
+							 NULL,
+							 TRUE,
+							 CREATE_SUSPENDED,
+							 NULL,
+							 NULL,
+							 &si,
+							 processInfo))
 
 	{
 		fprintf(stderr, "CreateProcessAsUser failed: %lu\n", GetLastError());
@@ -2855,38 +2851,37 @@ usage(const char *progname)
 	printf(_("Usage:\n"));
 	printf(_("  %s [OPTION]... [DATADIR]\n"), progname);
 	printf(_("\nOptions:\n"));
+	printf(_("  -A, --auth=METHOD         default authentication method for local connections\n"));
 	printf(_(" [-D, --pgdata=]DATADIR     location for this database cluster\n"));
 	printf(_("  -E, --encoding=ENCODING   set default encoding for new databases\n"));
-	printf(_("  --locale=LOCALE           set default locale for new databases\n"));
-	printf(_("  --lc-collate, --lc-ctype, --lc-messages=LOCALE\n"
-			 "  --lc-monetary, --lc-numeric, --lc-time=LOCALE\n"
-			 "                            set default locale in the respective\n"
-			 "                            category for new databases (default\n"
-			 "                            taken from environment)\n"));
-	printf(_("  --is_filerep_mirrored=yes|no whether or not this db directory will be mirrored by file replication\n"));
-	printf(_("  --no-locale               equivalent to --locale=C\n"));
+	printf(_("      --locale=LOCALE       set default locale for new databases\n"));
+	printf(_("      --lc-collate=, --lc-ctype=, --lc-messages=LOCALE\n"
+			 "      --lc-monetary=, --lc-numeric=, --lc-time=LOCALE\n"
+			 "                            set default locale in the respective category for\n"
+			 "                            new databases (default taken from environment)\n"));
+	printf(_("      --no-locale           equivalent to --locale=C\n"));
+	printf(_("      --is_filerep_mirrored=yes|no whether or not this db directory will be mirrored by file replication\n"));
+	printf(_("      --pwfile=FILE         read password for the new superuser from file\n"));
 	printf(_("  -T, --text-search-config=CFG\n"
 		 "                            default text search configuration\n"));
-	printf(_("  -X, --xlogdir=XLOGDIR     location for the transaction log directory\n"));
-	printf(_("  -A, --auth=METHOD         default authentication method for local connections\n"));
 	printf(_("  -U, --username=NAME       database superuser name\n"));
 	printf(_("  -W, --pwprompt            prompt for a password for the new superuser\n"));
-	printf(_("  --pwfile=FILE             read password for the new superuser from file\n"));
-	printf(_("  -?, --help                show this help, then exit\n"));
-	printf(_("  -V, --version             output version information, then exit\n"));
-	printf(_("  --gp-version             output Greenplum version information, then exit\n"));
+	printf(_("  -X, --xlogdir=XLOGDIR     location for the transaction log directory\n"));
 	printf(_("\nShared memory allocation:\n"));
 	printf(_("  --max_connections=MAX-CONNECT  maximum number of allowed connections\n"));
 	printf(_("  --shared_buffers=NBUFFERS number of shared buffers; or, amount of memory for\n"
 			 "                            shared buffers if kB/MB/GB suffix is appended\n"));
-	printf(_("  --max_fsm_pages=MAX-FSM   number of disk pages for which free space is tracked\n"));
 	printf(_("\nLess commonly used options:\n"));
 	printf(_("  -d, --debug               generate lots of debugging output\n"));
-	printf(_("  -s, --show                show internal settings\n"));
-	printf(_("  -k, --data-checksums      data page checksums\n"));
 	printf(_("  -L DIRECTORY              where to find the input files\n"));
 	printf(_("  -n, --noclean             do not clean up after errors\n"));
+	printf(_("  -s, --show                show internal settings\n"));
+	printf(_("  -k, --data-checksums      data page checksums\n"));
 	printf(_("  -m, --formirror           only create data needed to start the backend in mirror mode\n"));
+	printf(_("\nOther options:\n"));
+	printf(_("  -?, --help                show this help, then exit\n"));
+	printf(_("  -V, --version             output version information, then exit\n"));
+	printf(_("      --gp-version          output Greenplum version information, then exit\n"));
 	printf(_("\nIf the data directory is not specified, the environment variable PGDATA\n"
 			 "is used.\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
@@ -2916,7 +2911,6 @@ main(int argc, char *argv[])
 		{"pwfile", required_argument, NULL, 9},
 		{"username", required_argument, NULL, 'U'},
         {"max_connections", required_argument, NULL, 1001},     /*CDB*/
-        {"max_fsm_pages", required_argument, NULL, 1002},       /*CDB*/
         {"shared_buffers", required_argument, NULL, 1003},      /*CDB*/
         {"is_filerep_mirrored", required_argument, NULL, 1004},      /*CDB*/
         {"backend_output", optional_argument, NULL, 1005},      /*CDB*/
@@ -3422,7 +3416,7 @@ main(int argc, char *argv[])
 	user_enc = atoi(encodingid);
 	if (!check_locale_encoding(lc_ctype, user_enc) ||
 		!check_locale_encoding(lc_collate, user_enc))
-		exit(1); /* check_locale_encoding printed the error */
+		exit(1);				/* check_locale_encoding printed the error */
 
 	if (strlen(default_text_search_config) == 0)
 	{
@@ -3594,8 +3588,8 @@ main(int argc, char *argv[])
 						_("%s: directory \"%s\" exists but is not empty\n"),
 						progname, xlog_dir);
 				fprintf(stderr,
-						_("If you want to store the transaction log there, either\n"
-						  "remove or empty the directory \"%s\".\n"),
+				 _("If you want to store the transaction log there, either\n"
+				   "remove or empty the directory \"%s\".\n"),
 						xlog_dir);
 				exit_nicely();
 

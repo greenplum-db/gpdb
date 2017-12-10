@@ -9,7 +9,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.95 2009/01/01 17:24:00 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/optimizer/cost.h,v 1.97 2009/06/11 14:49:11 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -30,6 +30,13 @@
 #define DEFAULT_CPU_OPERATOR_COST  0.0025
 
 #define DEFAULT_EFFECTIVE_CACHE_SIZE  16384		/* measured in pages */
+
+typedef enum
+{
+	CONSTRAINT_EXCLUSION_OFF,	/* do not use c_e */
+	CONSTRAINT_EXCLUSION_ON,	/* apply c_e to all rels */
+	CONSTRAINT_EXCLUSION_PARTITION		/* apply c_e to otherrels only */
+} ConstraintExclusionType;
 
 
 /*
@@ -71,7 +78,7 @@ extern bool enable_groupagg;
 extern bool enable_nestloop;
 extern bool enable_mergejoin;
 extern bool enable_hashjoin;
-extern bool constraint_exclusion;
+extern int	constraint_exclusion;
 
 extern Cost disable_cost;
 
@@ -129,11 +136,11 @@ extern void cost_group(Path *path, PlannerInfo *root,
 		   double input_tuples);
 extern void cost_shareinputscan(Path *path, PlannerInfo *root, Cost sharecost, double ntuples, int width);
 extern void cost_nestloop(NestPath *path, PlannerInfo *root,
-						  SpecialJoinInfo *sjinfo);
+			  SpecialJoinInfo *sjinfo);
 extern void cost_mergejoin(MergePath *path, PlannerInfo *root,
-						   SpecialJoinInfo *sjinfo);
+			   SpecialJoinInfo *sjinfo);
 extern void cost_hashjoin(HashPath *path, PlannerInfo *root,
-						  SpecialJoinInfo *sjinfo);
+			  SpecialJoinInfo *sjinfo);
 extern void cost_subplan(PlannerInfo *root, SubPlan *subplan, Plan *plan);
 extern void cost_qual_eval(QualCost *cost, List *quals, PlannerInfo *root);
 extern void cost_qual_eval_node(QualCost *cost, Node *qual, PlannerInfo *root);
@@ -148,7 +155,7 @@ extern void set_table_function_size_estimates(PlannerInfo *root, RelOptInfo *rel
 extern void set_rel_width(PlannerInfo *root, RelOptInfo *rel);
 extern void set_values_size_estimates(PlannerInfo *root, RelOptInfo *rel);
 extern void set_cte_size_estimates(PlannerInfo *root, RelOptInfo *rel,
-								   Plan *cteplan);
+					   Plan *cteplan);
 
 /* Additional costsize.c prototypes for CDB incremental cost functions. */
 extern Cost incremental_hashjoin_cost(double rows, 

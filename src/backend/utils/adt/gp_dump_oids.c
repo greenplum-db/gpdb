@@ -12,7 +12,7 @@
  */
 #include "postgres.h"
 
-#include "postgres_fe.h"
+#include "catalog/pg_inherits_fn.h"
 #include "funcapi.h"
 #include "optimizer/prep.h"
 #include "utils/builtins.h"
@@ -32,12 +32,14 @@ PG_FUNCTION_INFO_V1(gp_dump_query_oids);
 static void
 appendChildrenRelids(StringInfoData *relbuf, Oid relid)
 {
-	List *relids = find_all_inheritors(relid);
+	List	   *relids;
+	ListCell   *lc;
+
+	relids = find_all_inheritors(relid, NoLock);
 	if (list_length(relids) <= 1)
 		return;
 
 	relids = list_delete_first(relids);
-	ListCell   *lc;
 	foreach(lc, relids)
 	{
 		appendStringInfo(relbuf, ",%u", lfirst_oid(lc));

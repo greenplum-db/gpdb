@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.187 2009/01/01 17:23:51 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/init/postinit.c,v 1.191 2009/06/11 14:49:05 momjian Exp $
  *
  *
  *-------------------------------------------------------------------------
@@ -416,25 +416,25 @@ CheckMyDatabase(const char *name, bool am_superuser)
 	/* If we have no other source of client_encoding, use server encoding */
 	SetConfigOption("client_encoding", GetDatabaseEncodingName(),
 					PGC_BACKEND, PGC_S_DEFAULT);
-	
-	/* assign locale variables */ 
+
+	/* assign locale variables */
 	collate = NameStr(dbform->datcollate);
 	ctype = NameStr(dbform->datctype);
-					
+
 	if (setlocale(LC_COLLATE, collate) == NULL)
-		ereport(FATAL, 
+		ereport(FATAL,
 			(errmsg("database locale is incompatible with operating system"),
-			errdetail("The database was initialized with LC_COLLATE \"%s\", "
-						" which is not recognized by setlocale().", collate),
-			errhint("Recreate the database with another locale or install the missing locale.")));
-			
+			 errdetail("The database was initialized with LC_COLLATE \"%s\", "
+					   " which is not recognized by setlocale().", collate),
+			 errhint("Recreate the database with another locale or install the missing locale.")));
+
 	if (setlocale(LC_CTYPE, ctype) == NULL)
-		ereport(FATAL, 
+		ereport(FATAL,
 			(errmsg("database locale is incompatible with operating system"),
-			errdetail("The database was initialized with LC_CTYPE \"%s\", "
-						" which is not recognized by setlocale().", ctype),
-			errhint("Recreate the database with another locale or install the missing locale.")));
-			
+			 errdetail("The database was initialized with LC_CTYPE \"%s\", "
+					   " which is not recognized by setlocale().", ctype),
+			 errhint("Recreate the database with another locale or install the missing locale.")));
+
 	/* Make the locale settings visible as GUC variables, too */
 	SetConfigOption("lc_collate", collate, PGC_INTERNAL, PGC_S_OVERRIDE);
 	SetConfigOption("lc_ctype", ctype, PGC_INTERNAL, PGC_S_OVERRIDE);

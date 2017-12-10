@@ -14,7 +14,7 @@
  * Portions Copyright (c) 1996-2011, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/c.h,v 1.234 2009/01/01 17:23:55 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/c.h,v 1.236 2009/06/11 14:49:08 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -112,7 +112,7 @@ extern "C" {
 
 /*
  *	Use this to mark string constants as needing translation at some later
- *	time, rather than immediately.  This is useful for cases where you need
+ *	time, rather than immediately.	This is useful for cases where you need
  *	access to the original string and translated string, and for cases where
  *	immediate translation is not possible, like when initializing global
  *	variables.
@@ -896,9 +896,9 @@ typedef NameData *Name;
 #define CppAsString2(x) CppAsString(x)
 
 #ifdef SO_MAJOR_VERSION
-# define PG_TEXTDOMAIN(domain) (domain CppAsString2(SO_MAJOR_VERSION) "-" PG_MAJORVERSION)
+#define PG_TEXTDOMAIN(domain) (domain CppAsString2(SO_MAJOR_VERSION) "-" PG_MAJORVERSION)
 #else
-# define PG_TEXTDOMAIN(domain) (domain "-" PG_MAJORVERSION)
+#define PG_TEXTDOMAIN(domain) (domain "-" PG_MAJORVERSION)
 #endif
 
 

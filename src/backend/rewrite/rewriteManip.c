@@ -9,7 +9,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteManip.c,v 1.120 2009/01/01 17:23:47 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/rewrite/rewriteManip.c,v 1.122 2009/06/11 14:49:01 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -42,9 +42,9 @@ typedef struct
 } locate_windowfunc_context;
 
 static bool contain_aggs_of_level_walker(Node *node,
-						contain_aggs_of_level_context *context);
+							 contain_aggs_of_level_context *context);
 static bool locate_agg_of_level_walker(Node *node,
-						locate_agg_of_level_context *context);
+						   locate_agg_of_level_context *context);
 static bool contain_windowfuncs_walker(Node *node, void *context);
 static bool locate_windowfunc_walker(Node *node,
 						 locate_windowfunc_context *context);
@@ -59,7 +59,7 @@ static Relids adjust_relid_set(Relids relids, int oldrelid, int newrelid);
  *	specified query level.
  *
  * The objective of this routine is to detect whether there are aggregates
- * belonging to the given query level.  Aggregates belonging to subqueries
+ * belonging to the given query level.	Aggregates belonging to subqueries
  * or outer queries do NOT cause a true result.  We must recurse into
  * subqueries to detect outer-reference aggregates that logically belong to
  * the specified query level.
@@ -115,7 +115,7 @@ contain_aggs_of_level_walker(Node *node,
  *	  Find the parse location of any aggregate of the specified query level.
  *
  * Returns -1 if no such agg is in the querytree, or if they all have
- * unknown parse location.  (The former case is probably caller error,
+ * unknown parse location.	(The former case is probably caller error,
  * but we don't bother to distinguish it from the latter case.)
  *
  * Note: it might seem appropriate to merge this functionality into
@@ -128,7 +128,7 @@ locate_agg_of_level(Node *node, int levelsup)
 {
 	locate_agg_of_level_context context;
 
-	context.agg_location = -1;		/* in case we find nothing */
+	context.agg_location = -1;	/* in case we find nothing */
 	context.sublevels_up = levelsup;
 
 	/*
@@ -210,7 +210,7 @@ contain_windowfuncs_walker(Node *node, void *context)
  *	  Find the parse location of any windowfunc of the current query level.
  *
  * Returns -1 if no such windowfunc is in the querytree, or if they all have
- * unknown parse location.  (The former case is probably caller error,
+ * unknown parse location.	(The former case is probably caller error,
  * but we don't bother to distinguish it from the latter case.)
  *
  * Note: it might seem appropriate to merge this functionality into

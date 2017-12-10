@@ -8,7 +8,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.53 2009/01/01 17:23:49 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/utils/adt/pgstatfuncs.c,v 1.54 2009/06/11 14:49:04 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -363,7 +363,7 @@ pg_stat_get_last_autoanalyze_time(PG_FUNCTION_ARGS)
 Datum
 pg_stat_get_function_calls(PG_FUNCTION_ARGS)
 {
-	Oid	funcid = PG_GETARG_OID(0);
+	Oid			funcid = PG_GETARG_OID(0);
 	PgStat_StatFuncEntry *funcentry;
 
 	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
@@ -374,7 +374,7 @@ pg_stat_get_function_calls(PG_FUNCTION_ARGS)
 Datum
 pg_stat_get_function_time(PG_FUNCTION_ARGS)
 {
-	Oid	funcid = PG_GETARG_OID(0);
+	Oid			funcid = PG_GETARG_OID(0);
 	PgStat_StatFuncEntry *funcentry;
 
 	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
@@ -385,7 +385,7 @@ pg_stat_get_function_time(PG_FUNCTION_ARGS)
 Datum
 pg_stat_get_function_self_time(PG_FUNCTION_ARGS)
 {
-	Oid	funcid = PG_GETARG_OID(0);
+	Oid			funcid = PG_GETARG_OID(0);
 	PgStat_StatFuncEntry *funcentry;
 
 	if ((funcentry = pgstat_fetch_stat_funcentry(funcid)) == NULL)
@@ -608,9 +608,9 @@ pg_stat_get_activity(PG_FUNCTION_ARGS)
 #ifdef HAVE_IPV6
 					|| beentry->st_clientaddr.addr.ss_family == AF_INET6
 #endif
-				   )
+					)
 				{
-					char        remote_host[NI_MAXHOST];
+					char		remote_host[NI_MAXHOST];
 					char		remote_port[NI_MAXSERV];
 					int			ret;
 

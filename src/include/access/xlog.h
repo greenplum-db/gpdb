@@ -6,7 +6,7 @@
  * Portions Copyright (c) 1996-2009, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
- * $PostgreSQL: pgsql/src/include/access/xlog.h,v 1.89 2009/01/01 17:23:56 momjian Exp $
+ * $PostgreSQL: pgsql/src/include/access/xlog.h,v 1.93 2009/06/26 20:29:04 tgl Exp $
  */
 #ifndef XLOG_H
 #define XLOG_H
@@ -208,19 +208,21 @@ extern bool XLOG_DEBUG;
 
 /* These directly affect the behavior of CreateCheckPoint and subsidiaries */
 #define CHECKPOINT_IS_SHUTDOWN	0x0001	/* Checkpoint is for shutdown */
-#define CHECKPOINT_IMMEDIATE	0x0002	/* Do it without delays */
-#define CHECKPOINT_FORCE		0x0004	/* Force even if no activity */
+#define CHECKPOINT_END_OF_RECOVERY	0x0002	/* Like shutdown checkpoint, but
+											 * issued at end of WAL recovery */
+#define CHECKPOINT_IMMEDIATE	0x0004	/* Do it without delays */
+#define CHECKPOINT_FORCE		0x0008	/* Force even if no activity */
 /* These are important to RequestCheckpoint */
-#define CHECKPOINT_WAIT			0x0008	/* Wait for completion */
+#define CHECKPOINT_WAIT			0x0010	/* Wait for completion */
 /* These indicate the cause of a checkpoint request */
-#define CHECKPOINT_CAUSE_XLOG	0x0010	/* XLOG consumption */
-#define CHECKPOINT_CAUSE_TIME	0x0020	/* Elapsed time */
+#define CHECKPOINT_CAUSE_XLOG	0x0020	/* XLOG consumption */
+#define CHECKPOINT_CAUSE_TIME	0x0040	/* Elapsed time */
 /*
  * This falls in two categories, affects behavior of CreateCheckPoint and also
  * indicates request is coming from ResyncManager process to switch primary
  * segment from resync mode to sync mode.
  */
-#define CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION 0x0040
+#define CHECKPOINT_RESYNC_TO_INSYNC_TRANSITION 0x0400
 
 /* Checkpoint statistics */
 typedef struct CheckpointStatsData
@@ -255,6 +257,8 @@ extern void XLogFileRepFlushCache(
 extern void XLogGetLastRemoved(uint32 *log, uint32 *seg);
 extern XLogRecPtr XLogSaveBufferForHint(Buffer buffer, Relation relation);
 
+extern void RestoreBkpBlocks(XLogRecPtr lsn, XLogRecord *record, bool cleanup);
+
 extern void xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribute__((unused)), XLogRecord *record);
 extern void xlog_desc(StringInfo buf, XLogRecPtr beginLoc, XLogRecord *record);
 
@@ -266,8 +270,7 @@ extern bool XLogNeedsFlush(XLogRecPtr RecPtr);
 extern void XLogSetAsyncCommitLSN(XLogRecPtr record);
 
 extern bool RecoveryInProgress(void);
-extern XLogRecPtr GetInsertRecPtr(void);
-extern XLogRecPtr GetFlushRecPtr(void);
+extern bool XLogInsertAllowed(void);
 
 extern void UpdateControlFile(void);
 extern uint64 GetSystemIdentifier(void);
@@ -286,10 +289,12 @@ extern void StartupXLOG_Pass4(void);
 extern void ShutdownXLOG(int code, Datum arg);
 extern void InitXLOGAccess(void);
 extern void CreateCheckPoint(int flags);
+extern bool CreateRestartPoint(int flags);
 extern void XLogPutNextOid(Oid nextOid);
 extern void XLogPutNextRelfilenode(Oid nextRelfilenode);
 extern XLogRecPtr GetRedoRecPtr(void);
 extern XLogRecPtr GetInsertRecPtr(void);
+extern XLogRecPtr GetFlushRecPtr(void);
 extern void GetNextXidAndEpoch(TransactionId *xid, uint32 *epoch);
 
 extern void XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPointLoc, CheckPoint *redoCheckPoint);

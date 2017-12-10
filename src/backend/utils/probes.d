@@ -3,12 +3,17 @@
  *
  *	Copyright (c) 2006-2009, PostgreSQL Global Development Group
  *
- *	$PostgreSQL: pgsql/src/backend/utils/probes.d,v 1.6 2009/01/01 17:23:48 momjian Exp $
+ *	$PostgreSQL: pgsql/src/backend/utils/probes.d,v 1.11 2009/04/02 20:59:10 momjian Exp $
  * ----------
  */
 
 
-/* typedefs used in PostgreSQL */
+/*
+ * Typedefs used in PostgreSQL.
+ *
+ * NOTE: Do not use system-provided typedefs (e.g. uintptr_t, uint32_t, etc)
+ * in probe definitions, as they cause compilation errors on Mac OS X 10.5.
+ */
 #define LocalTransactionId unsigned int
 #define LWLockId int
 #define LWLockMode int
@@ -20,10 +25,6 @@
 
 provider postgresql {
 
-	/* 
-	 * Note: Do not use built-in typedefs (e.g. uintptr_t, uint32_t, etc)		 *       as they cause compilation errors in Mac OS X 10.5.  
-	 */
-	  
 	probe transaction__start(LocalTransactionId);
 	probe transaction__commit(LocalTransactionId);
 	probe transaction__abort(LocalTransactionId);
@@ -48,8 +49,8 @@ provider postgresql {
 	probe lwlock__condacquire(LWLockId, LWLockMode);
 	probe lwlock__condacquire__fail(LWLockId, LWLockMode);
 
-	probe lock__wait__start(unsigned int, LOCKMODE);
-	probe lock__wait__done(unsigned int, LOCKMODE);
+	probe lock__wait__start(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, LOCKMODE);
+	probe lock__wait__done(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, LOCKMODE);
 
 	probe query__parse__start(const char *);
 	probe query__parse__done(const char *);
@@ -64,15 +65,13 @@ provider postgresql {
 	probe statement__status(const char *);
 
 	probe sort__start(int, bool, int, int, bool);
-	probe sort__done(unsigned long, long);
+	probe sort__done(bool, long);
 
-	probe buffer__read__start(ForkNumber, BlockNumber, Oid, Oid, Oid, bool);
-	probe buffer__read__done(ForkNumber, BlockNumber, Oid, Oid, Oid, bool, bool);
-	probe buffer__flush__start(Oid, Oid, Oid);
-	probe buffer__flush__done(Oid, Oid, Oid);
+	probe buffer__read__start(ForkNumber, BlockNumber, Oid, Oid, Oid, bool, bool);
+	probe buffer__read__done(ForkNumber, BlockNumber, Oid, Oid, Oid, bool, bool, bool);
+	probe buffer__flush__start(ForkNumber, BlockNumber, Oid, Oid, Oid);
+	probe buffer__flush__done(ForkNumber, BlockNumber, Oid, Oid, Oid);
 
-	probe buffer__hit(bool);
-	probe buffer__miss(bool);
 	probe buffer__checkpoint__start(int);
 	probe buffer__checkpoint__sync__start();
 	probe buffer__checkpoint__done();
@@ -96,9 +95,9 @@ provider postgresql {
 	probe twophase__checkpoint__done();
 
 	probe smgr__md__read__start(ForkNumber, BlockNumber, Oid, Oid, Oid);
-	probe smgr__md__read__done(ForkNumber, BlockNumber, Oid, Oid, Oid, const char *, int, int);
+	probe smgr__md__read__done(ForkNumber, BlockNumber, Oid, Oid, Oid, int, int);
 	probe smgr__md__write__start(ForkNumber, BlockNumber, Oid, Oid, Oid);
-	probe smgr__md__write__done(ForkNumber, BlockNumber, Oid, Oid, Oid, const char *, int, int);
+	probe smgr__md__write__done(ForkNumber, BlockNumber, Oid, Oid, Oid, int, int);
 
 	probe xlog__insert(unsigned char, unsigned char);
 	probe xlog__switch();

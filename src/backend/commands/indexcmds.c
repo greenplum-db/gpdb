@@ -10,7 +10,7 @@
  *
  *
  * IDENTIFICATION
- *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.181 2009/01/01 17:23:38 momjian Exp $
+ *	  $PostgreSQL: pgsql/src/backend/commands/indexcmds.c,v 1.185 2009/06/11 14:48:55 momjian Exp $
  *
  *-------------------------------------------------------------------------
  */
@@ -56,6 +56,7 @@
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
+#include "catalog/pg_inherits_fn.h"
 #include "cdb/cdbcat.h"
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbdispatchresult.h"
@@ -239,6 +240,7 @@ DefineIndex(RangeVar *heapRelation,
 	int			numberOfAttributes;
 	VirtualTransactionId *old_lockholders;
 	VirtualTransactionId *old_snapshots;
+	int			n_old_snapshots;
 	LockRelId	heaprelid;
 	LOCKTAG		heaplocktag;
 	Snapshot	snapshot;
@@ -247,6 +249,7 @@ DefineIndex(RangeVar *heapRelation,
 	bool		shouldDispatch = Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode();
 	List	   *dispatch_oids;
 	char	   *altconname = stmt ? stmt->altconname : NULL;
+	int			i;
 
 	/*
 	 * count attributes in index
@@ -291,7 +294,7 @@ DefineIndex(RangeVar *heapRelation,
 	/*
 	 * Don't try to CREATE INDEX on temp tables of other backends.
 	 */
-	if (isOtherTempNamespace(namespaceId))
+	if (RELATION_IS_OTHER_TEMP(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("cannot create indexes on temporary tables of other sessions")));
@@ -539,7 +542,7 @@ DefineIndex(RangeVar *heapRelation,
 	/*
 	 * Parse AM-specific options, convert to text array form, validate.
 	 */
-	reloptions = transformRelOptions((Datum) 0, options, false, false);
+	reloptions = transformRelOptions((Datum) 0, options, NULL, NULL, false, false);
 
 	(void) index_reloptions(amoptions, reloptions, true);
 
@@ -844,7 +847,7 @@ DefineIndex(RangeVar *heapRelation,
 	 * snapshot treats as committed.  If such a recently-committed transaction
 	 * deleted tuples in the table, we will not include them in the index; yet
 	 * those transactions which see the deleting one as still-in-progress will
-	 * expect them to be there once we mark the index as valid.
+	 * expect such tuples to be there once we mark the index as valid.
 	 *
 	 * We solve this by waiting for all endangered transactions to exit before
 	 * we mark the index as valid.
@@ -867,31 +870,70 @@ DefineIndex(RangeVar *heapRelation,
 	 * transactions that might have older snapshots.  Obtain a list of VXIDs
 	 * of such transactions, and wait for them individually.
 	 *
-	 * We can exclude any running transactions that have xmin >= the xmax of
-	 * our reference snapshot, since they are clearly not interested in any
-	 * missing older tuples.  Transactions in other DBs aren't a problem
-	 * either, since they'll never even be able to see this index.
+	 * We can exclude any running transactions that have xmin > the xmin of
+	 * our reference snapshot; their oldest snapshot must be newer than ours.
+	 * We can also exclude any transactions that have xmin = zero, since they
+	 * evidently have no live snapshot at all (and any one they might be in
+	 * process of taking is certainly newer than ours).  Transactions in other
+	 * DBs can be ignored too, since they'll never even be able to see this
+	 * index.
 	 *
 	 * We can also exclude autovacuum processes and processes running manual
 	 * lazy VACUUMs, because they won't be fazed by missing index entries
-	 * either.  (Manual ANALYZEs, however, can't be excluded because they
+	 * either.	(Manual ANALYZEs, however, can't be excluded because they
 	 * might be within transactions that are going to do arbitrary operations
 	 * later.)
 	 *
 	 * Also, GetCurrentVirtualXIDs never reports our own vxid, so we need not
 	 * check for that.
+	 *
+	 * If a process goes idle-in-transaction with xmin zero, we do not need to
+	 * wait for it anymore, per the above argument.  We do not have the
+	 * infrastructure right now to stop waiting if that happens, but we can at
+	 * least avoid the folly of waiting when it is idle at the time we would
+	 * begin to wait.  We do this by repeatedly rechecking the output of
+	 * GetCurrentVirtualXIDs.  If, during any iteration, a particular vxid
+	 * doesn't show up in the output, we know we can forget about it.
 	 */
-#if 0  /* Upstream code not applicable to GPDB */
-	old_snapshots = GetCurrentVirtualXIDs(snapshot->xmax, false,
-										  PROC_IS_AUTOVACUUM | PROC_IN_VACUUM);
-#else
-	old_snapshots = GetCurrentVirtualXIDs(snapshot->xmax, false,
-										  PROC_IS_AUTOVACUUM);
-#endif
-	while (VirtualTransactionIdIsValid(*old_snapshots))
+	old_snapshots = GetCurrentVirtualXIDs(snapshot->xmin, true, false,
+										  PROC_IS_AUTOVACUUM /* not in GPDB: | PROC_IN_VACUUM */,
+										  &n_old_snapshots);
+
+	for (i = 0; i < n_old_snapshots; i++)
 	{
-		VirtualXactLockTableWait(*old_snapshots);
-		old_snapshots++;
+		if (!VirtualTransactionIdIsValid(old_snapshots[i]))
+			continue;			/* found uninteresting in previous cycle */
+
+		if (i > 0)
+		{
+			/* see if anything's changed ... */
+			VirtualTransactionId *newer_snapshots;
+			int			n_newer_snapshots;
+			int			j;
+			int			k;
+
+			newer_snapshots = GetCurrentVirtualXIDs(snapshot->xmin,
+													true, false,
+													PROC_IS_AUTOVACUUM /* not in GPDB: | PROC_IN_VACUUM */,
+													&n_newer_snapshots);
+			for (j = i; j < n_old_snapshots; j++)
+			{
+				if (!VirtualTransactionIdIsValid(old_snapshots[j]))
+					continue;	/* found uninteresting in previous cycle */
+				for (k = 0; k < n_newer_snapshots; k++)
+				{
+					if (VirtualTransactionIdEquals(old_snapshots[j],
+												   newer_snapshots[k]))
+						break;
+				}
+				if (k >= n_newer_snapshots)		/* not there anymore */
+					SetInvalidVirtualTransactionId(old_snapshots[j]);
+			}
+			pfree(newer_snapshots);
+		}
+
+		if (VirtualTransactionIdIsValid(old_snapshots[i]))
+			VirtualXactLockTableWait(old_snapshots[i]);
 	}
 
 	/*
@@ -1217,7 +1259,7 @@ GetDefaultOpClass(Oid type_id, Oid am_id)
 	ScanKeyData skey[1];
 	SysScanDesc scan;
 	HeapTuple	tup;
-	TYPCATEGORY	tcategory;
+	TYPCATEGORY tcategory;
 
 	/* If it's a domain, look at the base type instead */
 	type_id = getBaseType(type_id);
@@ -1675,7 +1717,7 @@ ReindexTable(ReindexStmt *stmt)
 		prels = all_partition_relids(pn);
 	}
 	else if (rel_is_child_partition(relid))
-		prels = find_all_inheritors(relid);
+		prels = find_all_inheritors(relid, NoLock);
 
 	/*
 	 * Create a memory context that will survive forced transaction commits we
@@ -1809,7 +1851,8 @@ ReindexDatabase(ReindexStmt *stmt)
 			continue;
 
 		/* Skip temp tables of other backends; we can't reindex them at all */
-		if (isOtherTempNamespace(classtuple->relnamespace))
+		if (classtuple->relistemp &&
+			!isTempNamespace(classtuple->relnamespace))
 			continue;
 
 		/* Check user/system classification, and optionally skip */

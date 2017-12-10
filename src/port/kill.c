@@ -25,6 +25,7 @@ pgkill(int pid, int sig)
 	BYTE		sigData = sig;
 	BYTE		sigRet = 0;
 	DWORD		bytes;
+	int			pipe_tries;
 
 	/* we allow signal 0 here, but it will be ignored in pg_queue_signal */
 	if (sig >= PG_SIGNAL_COUNT || sig < 0)

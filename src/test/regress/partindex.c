@@ -6,6 +6,7 @@
 #include "executor/spi.h"
 #include "optimizer/prep.h"
 #include "optimizer/planmain.h"
+#include "utils/builtins.h"
 #include "utils/lsyscache.h"
 
 extern Datum gp_build_logical_index_info(PG_FUNCTION_ARGS);

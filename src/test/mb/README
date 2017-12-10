@@ -1,4 +1,4 @@
-$PostgreSQL: pgsql/src/test/mb/README,v 1.3 2008/03/21 13:23:29 momjian Exp $
+$PostgreSQL: pgsql/src/test/mb/README,v 1.4 2009/05/06 16:15:21 tgl Exp $
 
 README for multibyte regression test
 							1998/7/22
