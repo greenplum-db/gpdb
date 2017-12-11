@@ -56,7 +56,6 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbtm.o cdbtmutils.o \
 	   cdbutil.o \
 	   cdbvars.o cdbvarblock.o \
-	   cdbpersistentcheck.o \
 	   partitionselection.o
 
 ifeq ($(PORTNAME),cygwin)

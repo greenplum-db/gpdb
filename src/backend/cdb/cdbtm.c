@@ -42,7 +42,6 @@
 #include "postmaster/postmaster.h"
 #include "storage/procarray.h"
 #include "cdb/cdbpersistentrecovery.h"
-#include "cdb/cdbpersistentcheck.h"
 
 #include "cdb/cdbllize.h"
 #include "utils/faultinjector.h"
@@ -1332,18 +1331,6 @@ initTM_recover_as_needed(void)
 			{
 				recoverTM();
 				*shmTmRecoverred = true;
-
-				/*
-				 * The in-doubt transactions are recovered. Perform
-				 * PersistentTable-Catalog non-database specific
-				 * verifications, if requested and if needed
-				 */
-				if (debug_persistent_ptcat_verification &&
-					Persistent_PostDTMRecv_PTCatVerificationNeeded())
-				{
-					Persistent_PrintHash();
-					Persistent_PostDTMRecv_NonDBSpecificPTCatVerification();
-				}
 			}
 			PG_CATCH();
 			{
@@ -1477,7 +1464,6 @@ void
 initTM(void)
 {
 	char	   *olduser = NULL;
-	bool		exists = false;
 	MemoryContext oldcontext;
 	bool		succeeded,
 				first;
@@ -1564,49 +1550,6 @@ initTM(void)
 		RestoreToUser(olduser);
 
 		freeGangsForPortal(NULL);
-	}
-	else
-	{
-		PG_TRY();
-		{
-			/*
-			 * Do Database-specific PTCat verification ? Yes, if 1- GUC is
-			 * turned ON and if 2- DTM recovery INDEED happened and if 3-
-			 * Current Database has not been verified before (If the Database
-			 * is present in the Hash Table)
-			 */
-			Assert(MyDatabaseId != InvalidOid);
-			if (debug_persistent_ptcat_verification &&
-				Persistent_PostDTMRecv_PTCatVerificationNeeded())
-			{
-				getTmLock();
-				Persistent_PostDTMRecv_LookupHashEntry(MyDatabaseId, &exists);
-				if (exists)
-				{
-					olduser = ChangeToSuperuser();
-
-					Persistent_PostDTMRecv_DBSpecificPTCatVerification();
-
-					/*
-					 * The current database is now verified. Remove its entry
-					 * from the Hash table to avoid performing these
-					 * verifications next time a session connects to the
-					 * current database
-					 */
-					Persistent_PostDTMRecv_RemoveHashEntry(MyDatabaseId);
-
-					RestoreToUser(olduser);
-					freeGangsForPortal(NULL);
-				}
-				releaseTmLock();
-			}
-		}
-		PG_CATCH();
-		{
-			elog(FATAL, " Failure during DTM Post Recovery PersistentTables-Catalog"
-				 " DB-specific Verification");
-		}
-		PG_END_TRY();
 	}
 }
 
@@ -3054,14 +2997,6 @@ recoverInDoubtTransactions(void)
 		 */
 		doNotifyCommittedInDoubt(gxact->gid);
 
-		/*
-		 * This means there was atleast one in-doubt transactions for whom
-		 * prepared commit was sent out. Hence, we've a chance to perform
-		 * PT-Catalog verification if requested.
-		 */
-		if (debug_persistent_ptcat_verification)
-			Persistent_Set_PostDTMRecv_PTCatVerificationNeeded();
-
 		currentGxact = gxact;
 
 		/*
@@ -3088,15 +3023,6 @@ recoverInDoubtTransactions(void)
 	 * COMMIT.
 	 */
 	abortRMInDoubtTransactions(htab);
-
-	/*
-	 * If there were any In-Doubt transactions collected from the segment
-	 * instances and if the verification checks are requested then make the
-	 * flag green so that the system is informed to run the verification
-	 * checks post DTM is recovered
-	 */
-	if (debug_persistent_ptcat_verification && htab)
-		Persistent_Set_PostDTMRecv_PTCatVerificationNeeded();
 
 	/* get rid of the hashtable */
 	hash_destroy(htab);

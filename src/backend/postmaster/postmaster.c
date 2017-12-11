@@ -4642,29 +4642,6 @@ do_reaper()
 				continue;
 			}
 
-			/*
-			 * Startup Pass 4 can perform PersistentTable-Catalog verification
-			 * too. But, it is turned on when appropriate GUC is set.
-			 *
-			 * If the GUC is set --
-			 * 1. Both Non-DB specific and DB-specific verification checks
-			 * are executed to see if the system is consistent.
-			 * 2. First run of Pass 4 performs basic integrity checks and
-			 * non-DB specific checks. At the same time, next DB on which DB-specific
-			 * verifications are to be performed is selected.
-			 * 3. This DB selected in #2 will be used in the next cycle of Pass 4
-			 * as a new spawned process for verification purposes. At the same time,
-			 * a new database is selected for the subsequent cycle and thus this
-			 * continues until there are no more DBs left to be verified in the system.
-			 */
-			if (XLogStartup_DoNextPTCatVerificationIteration())
-			{
-				Assert(StartupPass4PID == 0);
-				StartupPass4PID = StartupPass4DataBase();
-				Assert(StartupPass4PID != 0);
-				continue;
-			}
-
 			if (PgStatPID == 0)
 			{
 				PgStatPID = pgstat_start();

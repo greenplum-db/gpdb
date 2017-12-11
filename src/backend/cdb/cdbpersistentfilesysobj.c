@@ -30,7 +30,6 @@
 #include "cdb/cdbpersistentfilesysobj.h"
 #include "cdb/cdbpersistentfilespace.h"
 #include "cdb/cdbpersistenttablespace.h"
-#include "cdb/cdbpersistentcheck.h"
 #include "cdb/cdbmirroredfilesysobj.h"
 #include "cdb/cdbdirectopen.h"
 #include "cdb/cdbfilerepservice.h"
@@ -461,8 +460,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentRelationNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintRelationFile,
-						Persistent_RelationScanKeyInit,
-						Persistent_RelationAllowDuplicateEntry,
 						Natts_gp_persistent_relation_node,
 						Anum_gp_persistent_relation_node_persistent_serial_num);
 
@@ -484,8 +481,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentDatabaseNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintDatabaseDir,
-						Persistent_DatabaseScanKeyInit,
-						Persistent_DatabaseAllowDuplicateEntry,
 						Natts_gp_persistent_database_node,
 						Anum_gp_persistent_database_node_persistent_serial_num);
 		
@@ -507,8 +502,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentTableSpaceNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintTablespaceDir,
-						Persistent_TablespaceScanKeyInit,
-						Persistent_TablespaceAllowDuplicateEntry,
 						Natts_gp_persistent_tablespace_node,
 						Anum_gp_persistent_tablespace_node_persistent_serial_num);
 
@@ -530,8 +523,6 @@ void PersistentFileSysObj_Init(
 						DirectOpen_GpPersistentFileSpaceNodeClose,
 						scanTupleCallback,
 						PersistentFileSysObj_PrintFilespaceDir,
-						Persistent_FilespaceScanKeyInit,
-						Persistent_FilespaceAllowDuplicateEntry,
 						Natts_gp_persistent_filespace_node,
 						Anum_gp_persistent_filespace_node_persistent_serial_num);
 		

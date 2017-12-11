@@ -862,14 +862,6 @@ DESCR("Remove an entry from gp_relation_node");
 DATA(insert OID = 5074 ( gp_persistent_relation_node_check  PGNSP PGUID 12 1 1000 0 f f f f t v 0 0 6990 "" _null_ _null_ _null_ _null_ gp_persistent_relation_node_check _null_ _null_ _null_ n a ));
 DESCR("physical filesystem information");
 
-/* gp_dbspecific_ptcat_verification() => bool */
-DATA(insert OID = 5075 ( gp_dbspecific_ptcat_verification  PGNSP PGUID 12 1 0 0 f f f f f v 0 0 16 "" _null_ _null_ _null_ _null_ gp_dbspecific_ptcat_verification _null_ _null_ _null_ n a ));
-DESCR("perform database specific PersistentTables-Catalog verification");
-
-/* gp_nondbspecific_ptcat_verification() => bool */
-DATA(insert OID = 5080 ( gp_nondbspecific_ptcat_verification  PGNSP PGUID 12 1 0 0 f f f f f v 0 0 16 "" _null_ _null_ _null_ _null_ gp_nondbspecific_ptcat_verification _null_ _null_ _null_ n a ));
-DESCR("perform non-database specific PersistentTables-Catalog verification");
-
 /* cosh(float8) => float8 */
 DATA(insert OID = 3539 ( cosh  PGNSP PGUID 12 1 0 0 f f f f f i 1 0 701 "701" _null_ _null_ _null_ _null_ dcosh _null_ _null_ _null_ n a ));
 DESCR("Hyperbolic cosine function");

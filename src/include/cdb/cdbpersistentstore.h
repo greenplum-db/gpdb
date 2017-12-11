@@ -80,15 +80,7 @@ typedef void (*PersistentStorePrintTupleCallback) (
 								ItemPointer 			persistentTid,
 								Datum					*values);
 
-typedef ScanKey (*PersistentStoreScanKeyInitCallback) (
-								Datum 					*values,
-								int                     *nKeys);
-
-typedef bool (*PersistentStoreAllowDuplicateCallback) (
-								Datum 					*exist_values,
-								Datum 					*new_values);
-
-#define PersistentStoreData_StaticInit {NULL,0,NULL,NULL,NULL,NULL,0,0,0,0}
+#define PersistentStoreData_StaticInit {NULL,0,NULL,NULL,NULL,NULL,0,0}
 
 typedef struct PersistentStoreData
 {
@@ -98,8 +90,6 @@ typedef struct PersistentStoreData
 	PersistentStoreCloseRel				closeRel;
 	PersistentStoreScanTupleCallback	scanTupleCallback;
 	PersistentStorePrintTupleCallback	printTupleCallback;
-	PersistentStoreScanKeyInitCallback  scanKeyInitCallback;
-	PersistentStoreAllowDuplicateCallback allowDuplicateCallback;
 	int64			myHighestSerialNum;
 	int				numAttributes;
 	int				attNumPersistentSerialNum;
@@ -425,8 +415,6 @@ extern void PersistentStore_Init(
 	PersistentStoreCloseRel		closeRel,
 	PersistentStoreScanTupleCallback	scanTupleCallback,
 	PersistentStorePrintTupleCallback	printTupleCallback,
-	PersistentStoreScanKeyInitCallback  scanKeyInitCallback,
-	PersistentStoreAllowDuplicateCallback allowDuplicateCallback,
 	int 						numAttributes,
 	int 						attNumPersistentSerialNum);
 

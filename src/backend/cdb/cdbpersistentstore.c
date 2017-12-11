@@ -17,7 +17,6 @@
 #include "utils/palloc.h"
 
 #include "cdb/cdbpersistentstore.h"
-#include "cdb/cdbpersistentcheck.h"
 
 #include "storage/itemptr.h"
 #include "access/genam.h"
@@ -50,8 +49,6 @@ PersistentStore_Init(
 					 PersistentStoreCloseRel closeRel,
 					 PersistentStoreScanTupleCallback scanTupleCallback,
 					 PersistentStorePrintTupleCallback printTupleCallback,
-					 PersistentStoreScanKeyInitCallback scanKeyInitCallback,
-					 PersistentStoreAllowDuplicateCallback allowDuplicateCallback,
 					 int numAttributes,
 					 int attNumPersistentSerialNum)
 {
@@ -63,8 +60,6 @@ PersistentStore_Init(
 	storeData->closeRel = closeRel;
 	storeData->scanTupleCallback = scanTupleCallback;
 	storeData->printTupleCallback = printTupleCallback;
-	storeData->scanKeyInitCallback = scanKeyInitCallback;
-	storeData->allowDuplicateCallback = allowDuplicateCallback;
 	storeData->numAttributes = numAttributes;
 	storeData->attNumPersistentSerialNum = attNumPersistentSerialNum;
 }
@@ -766,8 +761,6 @@ PersistentStore_AddTuple(
 		!PersistentStoreSharedData_EyecatcherIsValid(storeSharedData))
 		elog(ERROR, "Persistent store shared-memory not valid");
 #endif
-
-	PTCheck_BeforeAddingEntry(storeData, values);
 
 	if (Debug_persistent_store_print)
 		elog(PersistentStore_DebugPrintLevel(),

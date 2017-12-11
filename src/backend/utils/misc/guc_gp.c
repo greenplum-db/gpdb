@@ -165,8 +165,6 @@ bool		Debug_persistent_store_print = false;
 int			Debug_persistent_store_print_level = LOG;
 bool		Debug_persistent_bootstrap_print = false;
 bool		persistent_integrity_checks = true;
-bool		debug_persistent_ptcat_verification = false;
-bool		debug_print_persistent_checks = false;
 bool		Debug_persistent_appendonly_commit_count_print = false;
 bool		Debug_cancel_print = false;
 bool		Debug_datumstream_write_print_small_varlena_info = false;
@@ -1721,26 +1719,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&persistent_integrity_checks,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_persistent_ptcat_verification", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("When set, it enables all set of cross catalog consistency integrity checks for persistent tables in Startup pass 4."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&debug_persistent_ptcat_verification,
-		false, NULL, NULL
-	},
-
-	{
-		{"debug_print_persistent_checks", PGC_SUSET, DEVELOPER_OPTIONS,
-			gettext_noop("When set enables printing of logs in integrity checks for persistent tables module."),
-			NULL,
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&debug_print_persistent_checks,
 		false, NULL, NULL
 	},
 

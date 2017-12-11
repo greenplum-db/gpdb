@@ -1171,9 +1171,6 @@ Datum gp_persistent_build_all(PG_FUNCTION_ARGS);
 Datum gp_persistent_reset_all(PG_FUNCTION_ARGS);
 Datum gp_persistent_repair_delete(PG_FUNCTION_ARGS);
 
-Datum gp_dbspecific_ptcat_verification(PG_FUNCTION_ARGS);
-Datum gp_nondbspecific_ptcat_verification(PG_FUNCTION_ARGS);
-
 /* utils/error/elog.c */
 extern Datum gp_elog(PG_FUNCTION_ARGS);
 

@@ -282,7 +282,6 @@ extern void BootStrapXLOG(void);
 extern void StartupXLOG(void);
 extern bool XLogStartupMultipleRecoveryPassesNeeded(void);
 extern bool XLogStartupIntegrityCheckNeeded(void);
-extern bool XLogStartup_DoNextPTCatVerificationIteration(void);
 extern void StartupXLOG_Pass2(void);
 extern void StartupXLOG_Pass3(void);
 extern void StartupXLOG_Pass4(void);
