@@ -364,8 +364,8 @@ SELECT first_value(ten) OVER (PARTITION BY four ORDER BY ten), ten, four FROM te
 SELECT last_value(four) OVER (ORDER BY ten), ten, four FROM tenk1 WHERE unique2 < 10; 
  last_value | ten | four 
 ------------+-----+------
-          0 |   0 |    0
           0 |   0 |    2
+          0 |   0 |    0
           0 |   0 |    0
           1 |   1 |    1
           1 |   1 |    3
@@ -382,13 +382,13 @@ SELECT last_value(ten) OVER (PARTITION BY four), ten, four FROM
 	ORDER BY four, ten;
  last_value | ten | four 
 ------------+-----+------
-          0 |   0 |    0
-          0 |   0 |    0
-          0 |   4 |    0
-          1 |   1 |    1
-          1 |   1 |    1
-          1 |   7 |    1
-          1 |   9 |    1
+          4 |   0 |    0
+          4 |   0 |    0
+          4 |   4 |    0
+          9 |   1 |    1
+          9 |   1 |    1
+          9 |   7 |    1
+          9 |   9 |    1
           0 |   0 |    2
           3 |   1 |    3
           3 |   3 |    3
@@ -401,10 +401,10 @@ SELECT nth_value(ten, four + 1) OVER (PARTITION BY four), ten, four
          0 |   0 |    0
          0 |   0 |    0
          0 |   4 |    0
-         7 |   1 |    1
-         7 |   1 |    1
-         7 |   7 |    1
-         7 |   9 |    1
+         1 |   1 |    1
+         1 |   1 |    1
+         1 |   7 |    1
+         1 |   9 |    1
            |   0 |    2
            |   1 |    3
            |   3 |    3

@@ -2134,6 +2134,27 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 														   tlist,
 														   true);
 
+                if(pathkeys_contained_in(window_pathkeys, best_path->pathkeys))
+                {
+                    window_pathkeys = best_path->pathkeys;
+                    List *expr_list = NIL;
+                    ListCell *l;
+                    foreach(l, window_pathkeys)
+                    {
+                        PathKey *pathkey = (PathKey *) lfirst(l);
+                        ListCell *lc;
+                        foreach(lc, pathkey->pk_eclass->ec_members)
+                        {
+                            EquivalenceMember *em = (EquivalenceMember *)lfirst(lc);
+							expr_list = lappend(expr_list, em->em_expr);
+                        }
+                    }
+                    window_tlist = add_to_flat_tlist_junk(window_tlist,
+                                                          expr_list,
+                                                          true /* resjunk */);
+                }
+
+                result_plan->targetlist = (List *) copyObject(window_tlist);
 				/*
 				 * This is a bit tricky: we build a sort node even if we don't
 				 * really have to sort.  Even when no explicit sort is needed,
@@ -4010,9 +4031,6 @@ get_column_info_for_window(PlannerInfo *root, WindowClause *wc, List *tlist,
 				pathkeys = new_pathkeys;
 			}
 		}
-		/* complain if we didn't eat exactly the right number of sort cols */
-		if (scidx != numSortCols)
-			elog(ERROR, "failed to deconstruct sort operators into partitioning/ordering operators");
 	}
 }
 
