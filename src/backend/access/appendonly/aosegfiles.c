@@ -232,7 +232,6 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 						fsinfo->eof, RelationGetRelationName(parentrel))));
 
 	/* get the tupcount */
-/* FIXME: diagnostics: int64 or uint64 */
 	fsinfo->total_tupcount = DatumGetInt64(
 										   fastgetattr(fstuple, Anum_pg_aoseg_tupcount, pg_aoseg_dsc, &isNull));
 
@@ -646,7 +645,6 @@ UpdateFileSegInfo(Relation parentrel,
 				  int64 eof_uncompressed,
 				  int64 tuples_added,
 				  int64 varblocks_added,
-/* FIXME: diagnostics: int64 or uint64 */
 				  int64 modcount_added,
 				  FileSegInfoState newState)
 {
@@ -681,7 +679,6 @@ UpdateFileSegInfo_internal(Relation parentrel,
 						   int64 eof_uncompressed,
 						   int64 tuples_added,
 						   int64 varblocks_added,
-/* FIXME: diagnostics: int64 or uint64 */
 						   int64 modcount_added,
 						   FileSegInfoState newState)
 {
@@ -956,7 +953,6 @@ GetSegFilesTotals(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
  * Get the total bytes for a specific AO table from the pg_aoseg table on this local segdb.
  * (A version of GetSegFilesTotals that just gets the total bytes.)
  */
-/* FIXME: diagnostics: int64 or uint64 */
 int64
 GetAOTotalBytes(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot)
 {
@@ -1171,7 +1167,6 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 	char		aoseg_relname[NAMEDATALEN];
 	int			proc;	/* 32 bit, only holds number of segments */
 	int			ret;
-/* FIXME: diagnostics: int64 or uint64 */
 	int64		total_count = 0;
 	MemoryContext oldcontext = CurrentMemoryContext;
 
@@ -1222,7 +1217,6 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 				HeapTuple	tuple = tuptable->vals[i];
 				FileSegInfo *fsinfo = NULL;
 				int			qe_segno;
-/* FIXME: diagnostics: int64 or uint64 */
 				int64		qe_tupcount;
 				char	   *val_segno;
 				char	   *val_tupcount;
@@ -1460,7 +1454,6 @@ gp_aoseg_name(PG_FUNCTION_ARGS)
 
 		values[0] = Int32GetDatum(aoSegfile->segno);
 		values[1] = Int64GetDatum(aoSegfile->eof);
-/* FIXME: diagnostics: int64 or uint64 */
 		values[2] = Int64GetDatum(aoSegfile->total_tupcount);
 		values[3] = Int64GetDatum(aoSegfile->varblockcount);
 		values[4] = Int64GetDatum(aoSegfile->eof_uncompressed);

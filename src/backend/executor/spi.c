@@ -1297,7 +1297,6 @@ SPI_cursor_find(const char *name)
  *
  *	Fetch rows in a cursor
  */
-/* FIXME: diagnostics: count as long or uint64 */
 void
 SPI_cursor_fetch(Portal portal, bool forward, long count)
 {
@@ -1313,7 +1312,6 @@ SPI_cursor_fetch(Portal portal, bool forward, long count)
  *
  *	Move in a cursor
  */
-/* FIXME: diagnostics: count as long or uint64 */
 void
 SPI_cursor_move(Portal portal, bool forward, long count)
 {
@@ -1328,7 +1326,6 @@ SPI_cursor_move(Portal portal, bool forward, long count)
  *
  *	Fetch rows in a scrollable cursor
  */
-/* FIXME: diagnostics: count as long or uint64 */
 void
 SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
 {
@@ -1344,7 +1341,6 @@ SPI_scroll_cursor_fetch(Portal portal, FetchDirection direction, long count)
  *
  *	Move in a scrollable cursor
  */
-/* FIXME: diagnostics: count as long or uint64 */
 void
 SPI_scroll_cursor_move(Portal portal, FetchDirection direction, long count)
 {

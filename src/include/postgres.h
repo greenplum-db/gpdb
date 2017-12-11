@@ -360,11 +360,6 @@ static inline int64 DatumGetInt64(Datum d) { return (int64) d; }
 static inline Datum Int64GetDatum(int64 i64) { return (Datum) i64; } 
 static inline Datum Int64GetDatumFast(int64 x) { return Int64GetDatum(x); } 
 
-/* FIXME: diagnostics: remove
-static inline uint64 DatumGetUInt64(Datum d) { return (uint64) d; } 
-static inline Datum UInt64GetDatum(uint64 ui64) { return (Datum) ui64; } 
-*/
-
 /*
  * DatumGetUInt64
  *		Returns 64-bit unsigned integer value of a datum.
