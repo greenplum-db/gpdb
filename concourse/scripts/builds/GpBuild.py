@@ -1,21 +1,21 @@
 import subprocess
 from GpdbBuildBase import GpdbBuildBase
 
-INSTALL_DIR="/usr/local/gpdb"
+INSTALL_DIR = "/usr/local/gpdb"
 
 
 class GpBuild(GpdbBuildBase):
     def __init__(self, mode="orca"):
         GpdbBuildBase.__init__(self)
         self.mode = 'on' if mode == 'orca' else 'off'
-        self.configure_options =  [
-                                    "--enable-mapreduce",
-                                    "--with-gssapi",
-                                    "--with-perl",
-                                    "--with-libxml",
-                                    "--with-python",
-                                    "--prefix={0}".format(INSTALL_DIR)
-                                  ]
+        self.configure_options = [
+            "--enable-mapreduce",
+            "--with-gssapi",
+            "--with-perl",
+            "--with-libxml",
+            "--with-python",
+            "--prefix={0}".format(INSTALL_DIR)
+        ]
         self.source_gcc_env_cmd = ''
 
     def configure(self):
@@ -27,6 +27,11 @@ class GpBuild(GpdbBuildBase):
         return self.run_cmd(cmd, "gpdb_src")
 
     def create_demo_cluster(self):
+        """
+        create a demo cluster from script in gpdemo.
+        assumes current working dir is parent of gpdb_src
+        """
+
         return subprocess.call([
             "runuser gpadmin -c \"source {0}/greenplum_path.sh \
             && {1} make create-demo-cluster DEFAULT_QD_MAX_CONNECT=150\"".format(INSTALL_DIR, self.source_gcc_env_cmd)],
@@ -72,8 +77,8 @@ class GpBuild(GpdbBuildBase):
         return self.run_cmd(cmd, "gpdb_src")
 
     def run_cmd(self, cmd, working_dir):
-        cmd =  self.source_gcc_env_cmd + cmd
-        return  subprocess.call(cmd, shell=True, cwd=working_dir)
+        cmd = self.source_gcc_env_cmd + cmd
+        return subprocess.call(cmd, shell=True, cwd=working_dir)
 
     def make_install(self):
         cmd = "make install"

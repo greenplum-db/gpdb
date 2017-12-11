@@ -3,6 +3,7 @@ image_resource:
   type: docker-image
 inputs:
   - name: gpdb_src
+  - name: pxf_src
 outputs:
   - name: compiled_bits_ubuntu16
 run:

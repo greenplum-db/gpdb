@@ -26,9 +26,10 @@ groups:
   - icw_gporca_sles11
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
-  - icw_extensions_gpcloud
   - test_gpdb_debian_package
   - icw_planner_ictcp_centos6
+  - icw_extensions_pxf
+  - icw_extensions_gpcloud
   - icw_gporca_centos6_gpos_memory
   - QP_memory-accounting
   - gate_icw_end
@@ -79,10 +80,7 @@ groups:
   - gate_dpm_end
 ################################
   - gate_ud_start
-  - regression_tests_pxf_hdp_rpm
-  - regression_tests_pxf_hdp_tar
-  - regression_tests_pxf_cdh_rpm
-  - regression_tests_pxf_cdh_tar
+  - icw_extensions_pxf
   - regression_tests_gphdfs_centos
   - gate_ud_end
 ################################
@@ -122,6 +120,7 @@ groups:
   - icw_gporca_centos7
   - icw_gporca_sles11
   - icw_planner_ictcp_centos6
+  - icw_extensions_pxf
   - icw_extensions_gpcloud
   - icw_gporca_centos6_gpos_memory
   - test_gpdb_debian_package
@@ -186,10 +185,7 @@ groups:
 - name: G:UD
   jobs:
   - gate_ud_start
-  - regression_tests_pxf_hdp_rpm
-  - regression_tests_pxf_hdp_tar
-  - regression_tests_pxf_cdh_rpm
-  - regression_tests_pxf_cdh_tar
+  - icw_extensions_pxf
   - regression_tests_gphdfs_centos
   - gate_ud_end
 
@@ -755,9 +751,10 @@ jobs:
     - get: ubuntu-gpdb-dev-16
       passed: [gate_compile_start]
     - get: ubuntu-gpdb-debian-dev-16
-      passed:
-      - gate_compile_start
+      passed: [gate_compile_start]
     - get: debian_release
+    - get: pxf_src
+      passed: [gate_compile_start]
   - aggregate:
     - task: compile_gpdb
       image: ubuntu-gpdb-dev-16
@@ -1255,6 +1252,7 @@ jobs:
       - icw_gporca_centos7
       - icw_gporca_sles11
       - icw_planner_ictcp_centos6
+      - icw_extensions_pxf
       - icw_extensions_gpcloud
       - icw_gporca_centos6_gpos_memory
       - QP_memory-accounting
@@ -2641,104 +2639,83 @@ jobs:
     - get: bin_gpdb_centos7
       passed:
       - gate_compile_end
+    - get: compiled_bits_ubuntu16
+      passed:
+      - gate_compile_end
 
-## PXF Regression Test Start
-- name: regression_tests_pxf_hdp_rpm
+- name: icw_extensions_pxf
   plan:
   - aggregate:
     - get: gpdb_src
       passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
       trigger: true
-    - get: singlecluster
+    - get: bin_gpdb_centos6
+      passed: [gate_ud_start]
+    - get: compiled_bits_ubuntu16
+      passed: [gate_ud_start]
+    - get: singlecluster-hdp
       resource: singlecluster-HDP
-      trigger: true
-    - get: pxf_automation_src
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: {{pxf_automation_test_group}}
-      HADOOP_CLIENT: HDP
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: regression_tests_pxf_hdp_tar
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: true
-    - get: singlecluster
-      resource: singlecluster-HDP
-      trigger: true
-    - get: pxf_automation_src
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: {{pxf_automation_test_group}}
-      HADOOP_CLIENT: TAR
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: regression_tests_pxf_cdh_rpm
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: true
-    - get: singlecluster
+    - get: singlecluster-cdh
       resource: singlecluster-CDH
-      trigger: true
     - get: pxf_automation_src
-      trigger: true
     - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: {{pxf_automation_test_group}}
-      HADOOP_CLIENT: CDH
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: regression_tests_pxf_cdh_tar
-  plan:
+    - get: ubuntu-gpdb-dev-16
   - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: true
-    - get: singlecluster
-      resource: singlecluster-CDH
-      trigger: true
-    - get: pxf_automation_src
-      trigger: true
-    - get: centos-gpdb-dev-6
-  - task: regression_tests_pxf
-    file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
-    image: centos-gpdb-dev-6
-    params:
-      GROUP: {{pxf_automation_test_group}}
-      HADOOP_CLIENT: TAR
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-## PXF Regression Tests End
+    - task: regression_tests_pxf_hdp_rpm
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+        singlecluster: singlecluster-hdp
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: HDP
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+    - task: regression_tests_pxf_hdp_tar
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+        singlecluster: singlecluster-hdp
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: TAR
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+    - task: regression_tests_pxf_cdh_rpm
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+        singlecluster: singlecluster-cdh
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: CDH
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+    - task: regression_tests_pxf_cdh_tar_centos
+      input_mapping:
+        bin_gpdb: bin_gpdb_centos6
+        singlecluster: singlecluster-cdh
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: centos-gpdb-dev-6
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: TAR
+        TARGET_OS: centos
+        TARGET_OS_VERSION: 6
+    - task: regression_tests_pxf_cdh_tar_ubuntu
+      input_mapping:
+        bin_gpdb: compiled_bits_ubuntu16
+        singlecluster: singlecluster-cdh
+      file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
+      image: ubuntu-gpdb-dev-16
+      params:
+        GROUP: gpdb
+        HADOOP_CLIENT: TAR
+        TARGET_OS: ubuntu
+        TARGET_OS_VERSION: 16
 
 - name: regression_tests_gphdfs_centos
   plan:
@@ -2763,10 +2740,7 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed:
-      - regression_tests_pxf_hdp_rpm
-      - regression_tests_pxf_hdp_tar
-      - regression_tests_pxf_cdh_rpm
-      - regression_tests_pxf_cdh_tar
+      - icw_extensions_pxf
       - regression_tests_gphdfs_centos
       trigger: true
 ################ General Misc End
@@ -2992,6 +2966,7 @@ jobs:
     - icw_gporca_conan_ubuntu16
     - test_gpdb_debian_package
     - icw_planner_ictcp_centos6
+    - icw_extensions_pxf
     - icw_extensions_gpcloud
     - client_loader_remote_test_aix
     - mpp_resource_group_centos6
@@ -3025,10 +3000,6 @@ jobs:
     - cs_crash_recovery_31_42
     - QP_memory-accounting
     - regression_tests_gphdfs_centos
-    - regression_tests_pxf_hdp_rpm
-    - regression_tests_pxf_hdp_tar
-    - regression_tests_pxf_cdh_rpm
-    - regression_tests_pxf_cdh_tar
     - MM_gpcheckcat
     - MM_gprecoverseg
     - MM_gpexpand_1
