@@ -730,7 +730,6 @@ PortalStart(Portal portal, ParamListInfo params, Snapshot snapshot,
 				portal->atStart = true;
 				portal->atEnd = false;	/* allow fetches */
 				portal->portalPos = 0;
-				portal->posOverflow = false;
 
 				PopActiveSnapshot();
 				break;
@@ -1692,13 +1691,6 @@ DoPortalRunFetch(Portal portal,
 				 *
 				 * In any case, we arrange to fetch the target row going
 				 * forwards.
-				 */
-				/*
-				 * FIXME: diagnostics
-				 *
-				if (portal->posOverflow || 
-					portal->portalPos ==  INT64CONST(0x7FFFFFFFFFFFFFFF) ||
-					count - 1 <= portal->portalPos / 2)
 				 */
 				if ((uint64) (count - 1) <= portal->portalPos / 2 ||
 					portal->portalPos >= (uint64) LONG_MAX)
