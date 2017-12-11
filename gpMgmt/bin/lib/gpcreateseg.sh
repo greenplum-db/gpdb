@@ -217,7 +217,7 @@ PROCESS_QE () {
 	STOP_QE
     fi
 
-    LOG_MSG "[INFO]:-[$INST_COUNT]-End Function $FUNCNAME"
+    LOG_MSG "[INFO][$INST_COUNT]:-End Function $FUNCNAME"
 }
 
 STOP_QE() {
