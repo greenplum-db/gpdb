@@ -257,7 +257,7 @@ CTranslatorScalarToDXL::PdxlnScOpFromExpr
 	{
 		CHAR *sz = (CHAR*) gpdb::SzNodeToString(const_cast<Expr*>(pexpr));
 		CWStringDynamic *pstr = CDXLUtils::PstrFromSz(m_pmp, sz);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion, pstr->Wsz());
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, pstr->Wsz());
 	}
 
 	CDXLNode *pdxlnReturn = (this->*pf)(pexpr, pmapvarcolid);
@@ -647,7 +647,7 @@ CTranslatorScalarToDXL::PdxlnScBoolExprFromExpr
 		GPOS_RAISE
 			(
 			gpdxl::ExmaDXL,
-			gpdxl::ExmiPlStmt2DXLConversion,
+			gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT("Boolean Expression (OR / AND): Incorrect Number of Children ")
 			);
 	}
@@ -656,7 +656,7 @@ CTranslatorScalarToDXL::PdxlnScBoolExprFromExpr
 		GPOS_RAISE
 			(
 			gpdxl::ExmaDXL,
-			gpdxl::ExmiPlStmt2DXLConversion,
+			gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT("Boolean Expression (NOT): Incorrect Number of Children ")
 			);
 	}
@@ -893,7 +893,7 @@ CTranslatorScalarToDXL::PdxlnScCaseStmtFromExpr
 			GPOS_RAISE
 				(
 				gpdxl::ExmaDXL,
-				gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT("Do not support SIMPLE CASE STATEMENT")
 				);
 			return NULL;
@@ -1312,7 +1312,7 @@ CTranslatorScalarToDXL::PdxlnScAggrefFromAggref
 		GPOS_RAISE
 		(
 				gpdxl::ExmaDXL,
-				gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT("Ordered aggregates")
 		);
 	}
@@ -1321,7 +1321,7 @@ CTranslatorScalarToDXL::PdxlnScAggrefFromAggref
 	if (paggref->aggdistinct)
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL,
-				   gpdxl::ExmiPlStmt2DXLConversion,
+				   gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Distinct aggregates"));
 	}
 
@@ -1418,7 +1418,7 @@ CTranslatorScalarToDXL::Pdxlwf
 	else if ((frameOptions & FRAMEOPTION_END_UNBOUNDED_FOLLOWING) != 0)
 		edxlfbLead = EdxlfbUnboundedFollowing;
 	else
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			   GPOS_WSZ_LIT("Unrecognized window frame option"));
 
 	EdxlFrameBoundary edxlfbTrail;
@@ -1433,7 +1433,7 @@ CTranslatorScalarToDXL::Pdxlwf
 	else if ((frameOptions & FRAMEOPTION_START_UNBOUNDED_FOLLOWING) != 0)
 		edxlfbTrail = EdxlfbUnboundedFollowing;
 	else
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			   GPOS_WSZ_LIT("Unrecognized window frame option"));
 
 	// We don't support non-default EXCLUDE [CURRENT ROW | GROUP | TIES |
@@ -1563,6 +1563,19 @@ CTranslatorScalarToDXL::PdxlnScWindowFunc
 	}
 
 	GPOS_ASSERT(EdxlwinstageSentinel != edxlwinstage && "Invalid window stage");
+
+	if (3103 == pwindowfunc->winfnoid)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("PERCENT_RANK Window Functions"));
+	}
+	else if (3104 == pwindowfunc->winfnoid)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("CUME_DIST Window Functions"));
+	}
+	else if (3105 == pwindowfunc->winfnoid)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("NTILE(int4) Window Functions"));
+	}
 
 	/*
 	 * ORCA's ScalarWindowRef object doesn't have fields for the 'winstar'
