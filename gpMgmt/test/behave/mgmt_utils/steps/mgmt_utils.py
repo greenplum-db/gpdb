@@ -4519,8 +4519,18 @@ def impl(context, tabletype, table_name, dbname):
 @when('read pid from file "{filename}" and kill the process')
 @given('read pid from file "{filename}" and kill the process')
 def impl(context, filename):
-    with open(filename) as fr:
-        pid = fr.readline().strip()
+    retry = 0
+    pid = None
+
+    while retry < 5:
+        try:
+            with open(filename) as fr:
+                pid = fr.readline().strip()
+            if pid:
+                break
+        except:
+            retry += 1
+            time.sleep(retry * 0.1) # 100 millis, 200 millis, etc.
 
     if not pid:
         raise Exception("process id '%s' not found in the file '%s'" % (pid, filename))
