@@ -422,7 +422,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         Greenplum Database segments. However, PL/Container configurations of currently running
         sessions use the configuration that existed during session start up. To update the
         PL/Container configuration in a running session, execute this command in the session.</p>
-      <codeblock>select * from plcontainer_refresh_config();</codeblock>
+      <codeblock>select * from plcontainer_refresh_config;</codeblock>
+      <p>Running the command executes a PL/Container function that updates the configuration on the
+        master and segment instances.</p>
       <p>When you change the <codeph>plcontainer_configuration.xml</codeph> configuration file with
         the <codeph>plcontainer</codeph> utility, the utility creates a back up of the original
         configuration file in the same directory. The backup file name is
