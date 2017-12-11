@@ -64,7 +64,7 @@ select move_xlog((select fselocation || '/pg_xlog' from gp_segment_configuration
 select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='m' and c.content=0 and c.dbid = f.fsedbid), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0);
 
 -- check the view, we expect to see error
-select wait_for_replication_error('walread', 0, 100);
+select wait_for_replication_error('walread', 0, 200);
 select sync_error from gp_stat_replication where gp_segment_id = 0;
 
 -- bring the missing xlog back on segment 0

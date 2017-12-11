@@ -79,7 +79,7 @@ select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_
 (1 row)
 
 -- check the view, we expect to see error
-select wait_for_replication_error('walread', 0, 100);
+select wait_for_replication_error('walread', 0, 200);
  wait_for_replication_error 
 ----------------------------
  t
