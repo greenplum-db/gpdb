@@ -6216,10 +6216,6 @@ CopyReadAttributesText(CopyState cstate, bool * __restrict nulls,
  * the pre-de-escaped input string (thus if it is quoted it is not a NULL).
  *----------
  */
-// GPDB_84_MERGE_FIXME: This was refactored for performance in upstream,
-// in commit 95c238d941. However, the GPDB version was so heavily modified
-// that I was not able to merge that commit. So this is still based on
-// the slower pre-8.4 version.
 void
 CopyReadAttributesCSV(CopyState cstate, bool *nulls, int *attr_offsets,
 					  int num_phys_attrs, Form_pg_attribute *attr)
@@ -6227,77 +6223,137 @@ CopyReadAttributesCSV(CopyState cstate, bool *nulls, int *attr_offsets,
 	char		delimc = cstate->delim[0];
 	char		quotec = cstate->quote[0];
 	char		escapec = cstate->escape[0];
-	char		c;
-	int			start_cursor = cstate->line_buf.cursor;
-	int			end_cursor = start_cursor;
-	int			input_len = 0;
-	int			attnum;			/* attribute number being parsed */
-	int			m = 0;			/* attribute index being parsed */
 	int			attribute = 1;
-	bool		in_quote = false;
-	bool		saw_quote = false;
 	ListCell   *cur;			/* cursor to attribute list used for this COPY */
+	int 		attr_cursor;
 
 	/* init variables for attribute scan */
 	RESET_ATTRBUF;
 
 	cur = list_head(cstate->attnumlist);
+	attr_cursor = cstate->attribute_buf.cursor;
 
-	if(num_phys_attrs > 0)
+	int line_len = cstate->line_buf.len;
+	if (cstate->eol_type == EOL_CRLF)
+		line_len--;
+
+	/* if zero column table and data is trying to get in */
+	if(num_phys_attrs == 0)
 	{
-		attnum = lfirst_int(cur);
-		m = attnum - 1;
+		if (line_len > 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("extra data after last expected column")));
+		return;
 	}
+
+	if (cstate->delimiter_off)
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("delimiter 'OFF' is not supported by copy command")));
 
 	for (;;)
 	{
-		end_cursor = cstate->line_buf.cursor;
+		bool		found_delim = false;
+		bool		saw_quote = false;
+		int			input_len = 0;
+		int			attnum;			/* attribute number being parsed */
+		int			fieldno = 0;			/* attribute index being parsed */
+		int			start_cursor = cstate->line_buf.cursor;
+		int			end_cursor;
 
-		/* finished processing attributes in line */
-		if (cstate->line_buf.cursor >= cstate->line_buf.len - 1)
+		/*
+		 * Scan data for field,
+		 *
+		 * The loop starts in "not quote" mode and then toggles between that
+		 * and "in quote" mode. The loop exits normally if it is in "not
+		 * quote" mode and a delimiter or line end is seen.
+		 */
+		for (;;)
 		{
-			input_len = end_cursor - start_cursor;
+			char		c;
 
-			if (cstate->eol_type == EOL_CRLF)
+			/* Not in quote */
+			for (;;)
 			{
-				/* ignore the leftover CR */
-				input_len--;
-				cstate->attribute_buf.data[cstate->attribute_buf.cursor - 1] = '\0';
+				end_cursor = cstate->line_buf.cursor;
+				if (cstate->line_buf.cursor >= line_len - 1)
+					goto endfield;
+				c = cstate->line_buf.data[cstate->line_buf.cursor++];
+				/* unquoted field delimiter */
+				if (c == delimc)
+				{
+					found_delim = true;
+					goto endfield;
+				}
+				/* start of quoted field (or part of field) */
+				if (c == quotec)
+				{
+					saw_quote = true;
+					break;
+				}
+				/* Add c to output string */
+				appendStringInfoCharMacro(&cstate->attribute_buf, c);
+				cstate->attribute_buf.cursor++;
 			}
 
-			/* check whether raw input matched null marker */
-			if(num_phys_attrs > 0)
+			/* In quote */
+			for (;;)
 			{
-				if (!saw_quote && input_len == cstate->null_print_len &&
-					strncmp(&cstate->line_buf.data[start_cursor], cstate->null_print, input_len) == 0)
-					nulls[m] = true;
-				else
-					nulls[m] = false;
-			}
-
-			/* if zero column table and data is trying to get in */
-			if(num_phys_attrs == 0 && input_len > 0)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						 errmsg("extra data after last expected column")));
-			if (cur == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						 errmsg("extra data after last expected column")));
-
-			if (in_quote)
-			{
-				/* next c will usually be LF, but it could also be a quote
-				 * char if the last line of the file has no LF, and we don't
-				 * want to error out in this case.
-				 */
-				c = cstate->line_buf.data[cstate->line_buf.cursor];
-				if(c != quotec)
+				end_cursor = cstate->line_buf.cursor;
+				if (cstate->line_buf.cursor >= line_len - 1)
 					ereport(ERROR,
 							(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
 							 errmsg("unterminated CSV quoted field")));
-			}
 
+				c = cstate->line_buf.data[cstate->line_buf.cursor++];
+
+				/* escape within a quoted field */
+				if (c == escapec)
+				{
+					/*
+					 * peek at the next char if available, and escape it if it
+					 * is an escape char or a quote char
+					 */
+					if (cstate->line_buf.cursor < line_len - 1)
+					{
+						char 		nextc = cstate->line_buf.data[cstate->line_buf.cursor];
+
+						if (nextc == escapec || nextc == quotec)
+						{
+							appendStringInfoCharMacro(&cstate->attribute_buf, nextc);
+							cstate->attribute_buf.cursor++;
+							cstate->line_buf.cursor++;
+							continue;
+						}
+					}
+				}
+
+				/*
+				 * end of quoted field. Must do this test after testing for
+				 * escape in case quote char and escape char are the same
+				 * (which is the common case).
+				 */
+				if (c == quotec)
+					break;
+
+				/* Add c to output string */
+				appendStringInfoCharMacro(&cstate->attribute_buf, c);
+				cstate->attribute_buf.cursor++;
+			}
+		}
+endfield:
+		if (cur == NULL)
+			ereport(ERROR,
+					(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
+					 errmsg("extra data after last expected column")));
+
+		/* Check whether raw input matched null marker */
+		input_len = end_cursor - start_cursor;
+
+		/* finished processing attributes in line */
+		if (!found_delim)
+		{
 			/*
 			 * line is done, but do we have more attributes to process?
 			 *
@@ -6321,112 +6377,45 @@ CopyReadAttributesCSV(CopyState cstate, bool *nulls, int *attr_offsets,
 							 errmsg("missing data for column \"%s\", found empty data line",
 									NameStr(attr[lfirst_int(lnext(cur)) - 1]->attname))));
 			}
-
-			break;
 		}
 
-		c = cstate->line_buf.data[cstate->line_buf.cursor++];
+		/* check whether raw input matched null marker */
+		attnum = lfirst_int(cur);
+		fieldno = attnum - 1;
+		if (!saw_quote && input_len == cstate->null_print_len &&
+			strncmp(&cstate->line_buf.data[start_cursor], cstate->null_print, input_len) == 0)
+			nulls[fieldno] = true;
+		else
+			nulls[fieldno] = false;
+		attr_offsets[fieldno] = attr_cursor;
 
-		/* unquoted field delimiter  */
-		if (!in_quote && c == delimc && !cstate->delimiter_off)
-		{
-			/* check whether raw input matched null marker */
-			input_len = end_cursor - start_cursor;
+		/* Terminate attribute value in output area */
+		appendStringInfoCharMacro(&cstate->attribute_buf, '\0');
+		cstate->attribute_buf.cursor++;
+		attr_cursor = cstate->attribute_buf.cursor;
 
-			if (cur == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						 errmsg("extra data after last expected column")));
-
-			if(num_phys_attrs > 0)
-			{
-				if (!saw_quote && input_len == cstate->null_print_len &&
-				strncmp(&cstate->line_buf.data[start_cursor], cstate->null_print, input_len) == 0)
-					nulls[m] = true;
-				else
-					nulls[m] = false;
-			}
-
-			/* terminate attr string with '\0' */
-			appendStringInfoCharMacro(&cstate->attribute_buf, '\0');
-			cstate->attribute_buf.cursor++;
-
-			/* setup next attribute scan */
-			cur = lnext(cur);
-
-			if (cur == NULL)
-				ereport(ERROR,
-						(errcode(ERRCODE_BAD_COPY_FILE_FORMAT),
-						 errmsg("extra data after last expected column")));
-
-			saw_quote = false;
-
-			if(num_phys_attrs > 0)
-			{
-				attnum = lfirst_int(cur);
-				m = attnum - 1;
-				attr_offsets[m] = cstate->attribute_buf.cursor;
-			}
-
-			start_cursor = cstate->line_buf.cursor;
-
-			/*
-			 * for the dispatcher - stop parsing once we have
-			 * all the hash field values. We don't need the rest.
-			 */
-			if (Gp_role == GP_ROLE_DISPATCH)
-			{
-				if (attribute == cstate->last_hash_field)
-					break;
-			}
-
-			attribute++;
-			continue;
-		}
-
-		/* start of quoted field (or part of field) */
-		if (!in_quote && c == quotec)
-		{
-			saw_quote = true;
-			in_quote = true;
-			continue;
-		}
-
-		/* escape within a quoted field */
-		if (in_quote && c == escapec)
-		{
-			/*
-			 * peek at the next char if available, and escape it if it
-			 * is an escape char or a quote char
-			 */
-			if (cstate->line_buf.cursor <= cstate->line_buf.len)
-			{
-				char		nextc = cstate->line_buf.data[cstate->line_buf.cursor];
-
-				if (nextc == escapec || nextc == quotec)
-				{
-					appendStringInfoCharMacro(&cstate->attribute_buf, nextc);
-					cstate->line_buf.cursor++;
-					cstate->attribute_buf.cursor++;
-					continue;
-				}
-			}
-		}
+		/* setup next attribute scan */
+		cur = lnext(cur);
 
 		/*
-		 * end of quoted field. Must do this test after testing for
-		 * escape in case quote char and escape char are the same
-		 * (which is the common case).
+		 * for the dispatcher - stop parsing once we have
+		 * all the hash field values. We don't need the rest.
 		 */
-		if (in_quote && c == quotec)
+		if (Gp_role == GP_ROLE_DISPATCH)
 		{
-			in_quote = false;
-			continue;
+			if (attribute == cstate->last_hash_field)
+				break;
 		}
-		appendStringInfoCharMacro(&cstate->attribute_buf, c);
-		cstate->attribute_buf.cursor++;
+
+		attribute++;
+
+		/* Done if we hit EOL instead of a delim */
+		if (!found_delim)
+			break;
 	}
 
+	if (cstate->eol_type == EOL_CRLF)
+		cstate->line_buf.cursor++;
 }
 
 /*
