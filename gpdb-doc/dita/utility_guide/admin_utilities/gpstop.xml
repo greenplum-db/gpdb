@@ -75,8 +75,8 @@
                         </ul></pd>
                     <pd>This option cannot be specified with the <codeph>-m</codeph>,
                             <codeph>-r</codeph>, <codeph>-u</codeph>, or <codeph>-y</codeph>
-                            options.<note>The <codeph>gpseginstall</codeph> utility restores segment
-                            instances. Run <codeph>gpseginstall</codeph> commands to start the
+                            options.<note>The <codeph>gprecoverseg</codeph> utility restores segment
+                            instances. Run <codeph>gprecoverseg</codeph> commands to start the
                             segments as mirrors and then to return the segments to their preferred
                             role (primary segments). </note></pd>
                 </plentry>
