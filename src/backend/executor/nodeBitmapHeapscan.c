@@ -90,15 +90,6 @@ freeScanDesc(BitmapHeapScanState *scanstate)
 }
 
 /*
- * Initialize the state relevant to bitmaps.
- */
-static inline void
-initBitmapState(BitmapHeapScanState *scanstate)
-{
-	/* GPDB_84_MERGE_FIXME: nothing to do? */
-}
-
-/*
  * Free the state relevant to bitmaps
  */
 static inline void
@@ -146,7 +137,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 	slot = node->ss.ss_ScanTupleSlot;
 
 	initScanDesc(node);
-	initBitmapState(node);
 
 	scan = node->ss_currentScanDesc;
 	scanrelid = ((BitmapHeapScan *) node->ss.ps.plan)->scan.scanrelid;

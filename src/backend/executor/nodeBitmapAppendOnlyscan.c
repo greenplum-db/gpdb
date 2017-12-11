@@ -179,15 +179,6 @@ freeFetchDesc(BitmapAppendOnlyScanState *scanstate)
 }
 
 /*
- * Initialize the state relevant to bitmaps.
- */
-static inline void
-initBitmapState(BitmapAppendOnlyScanState *scanstate)
-{
-	/* GPDB_84_MERGE_FIXME: nothing to do? */
-}
-
-/*
  * Free the state relevant to bitmaps
  */
 static inline void
@@ -230,7 +221,6 @@ BitmapAppendOnlyScanNext(BitmapAppendOnlyScanState *node)
 	econtext = node->ss.ps.ps_ExprContext;
 	slot = node->ss.ss_ScanTupleSlot;
 
-	initBitmapState(node);
 	initFetchDesc(node);
 
 	aoFetchDesc = node->baos_currentAOFetchDesc;

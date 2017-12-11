@@ -67,15 +67,6 @@ getBitmapTableScanMethod(TableType tableType)
 }
 
 /*
- * Initializes the state relevant to bitmaps.
- */
-static inline void
-initBitmapState(BitmapTableScanState *scanstate)
-{
-	/* GPDB_84_MERGE_FIXME: nothing to do? */
-}
-
-/*
  * Frees the state relevant to bitmaps.
  */
 static inline void
@@ -250,8 +241,6 @@ BitmapTableScanBeginPartition(ScanState *node, AttrNumber *attMap)
 	BitmapTableScanState *scanState = (BitmapTableScanState *)node;
 	BitmapTableScan *plan = (BitmapTableScan*)(node->ps.plan);
 
-	initBitmapState(scanState);
-
 	/* Remap the bitmapqualorig as we might have dropped column problem */
 	DynamicScan_RemapExpression(node, attMap, (Node *) plan->bitmapqualorig);
 
@@ -311,7 +300,6 @@ BitmapTableScanReScanPartition(ScanState *node)
 	freeBitmapState(scanState);
 	Assert(scanState->tbm == NULL);
 
-	initBitmapState(scanState);
 	scanState->needNewBitmapPage = true;
 	scanState->recheckTuples = true;
 
