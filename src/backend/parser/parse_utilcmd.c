@@ -1764,8 +1764,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 							{
 								ereport(ERROR,
 										(errcode(ERRCODE_GP_FEATURE_NOT_SUPPORTED),
-										 errmsg("type \"%s\" can't be a part of a "
-												"distribution key",
+										 errmsg("type \"%s\" can't be a part of a distribution key",
 												format_type_be(typeOid))));
 							}
 
@@ -1856,8 +1855,7 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 						heap_close(rel, NoLock);
 
 						if (found)
-							elog(DEBUG1, "'DISTRIBUTED BY' clause refers to "
-								 "columns of inherited table");
+							elog(DEBUG1, "'DISTRIBUTED BY' clause refers to columns of inherited table");
 
 						if (found)
 							break;
@@ -1978,12 +1976,11 @@ transformDistributedBy(ParseState *pstate, CreateStmtContext *cxt,
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("UNIQUE constraint and DISTRIBUTED BY "
-									"definitions incompatible"),
+							 errmsg("UNIQUE constraint and DISTRIBUTED BY definitions incompatible"),
 							 errhint("When there is both a UNIQUE constraint, "
 									 "and a DISTRIBUTED BY clause, the "
 									 "DISTRIBUTED BY clause must be equal to "
-									 "or a left-subset of the UNIQUE columns")));
+									 "or a left-subset of the UNIQUE columns.")));
 				}
 				i++;
 			}

@@ -594,10 +594,28 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 			break;
 
 		default:
-			ereport(ERROR,
-					(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
-					 errmsg("Type %u is not hashable.", type)));
+			{
+				int			tmplen;
 
+				/*
+				 * If the datatype is unknown to us, but is binary coercible
+				 * to TEXT we can still hash it for distribution since we know
+				 * how to handle TEXT.
+				 */
+				if (!IsBinaryCoercible(type, TEXTOID))
+					ereport(ERROR,
+							(errcode(ERRCODE_CDB_FEATURE_NOT_YET),
+							 errmsg("Type %u is not hashable", type)));
+
+				varattrib_untoast_ptr_len(datum, (char **) &buf, &tmplen, &tofree);
+				/* adjust length to not include trailing blanks */
+				if (tmplen > 1)
+					tmplen = ignoreblanks((char *) buf, tmplen);
+
+				len = tmplen;
+
+				break;
+			}
 	}							/* switch(type) */
 
 	/* do the hash using the selected algorithm */
@@ -782,7 +800,15 @@ isGreenplumDbHashable(Oid typid)
 		case COMPLEXOID:
 			return true;
 		default:
-			return false;
+			{
+				/*
+				 * Allow hash distribution on datatypes which can be treated
+				 * as TEXT even if we don't know their details.
+				 */
+				if (IsBinaryCoercible(typid, TEXTOID))
+					return true;
+				return false;
+			}
 	}
 }
 
