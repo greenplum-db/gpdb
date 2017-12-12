@@ -255,13 +255,13 @@
         <p>Complete the following tasks on each node in your Greenplum Database cluster to set up
           cgroups for use with resource groups:</p>
         <ol>
-          <li>If you are running the Suse 11+ operating system on your Greenplum Database cluster
+          <li>If you are running the SuSE 11+ operating system on your Greenplum Database cluster
             nodes, you must enable swap accounting on each node and restart your Greenplum Database
             cluster. The <codeph>swapaccount</codeph> kernel boot parameter governs the swap
-            accounting setting on Suse 11+ systems. After setting this boot parameter, you must
+            accounting setting on SuSE 11+ systems. After setting this boot parameter, you must
             reboot your systems. For details, refer to the <xref
               href="https://www.suse.com/releasenotes/x86_64/SUSE-SLES/11-SP2/#fate-310471"
-              format="html" scope="external">Cgroup Swap Control</xref> discussion in the Suse 11
+              format="html" scope="external">Cgroup Swap Control</xref> discussion in the SuSE 11
             release notes. You must be the superuser or have <codeph>sudo</codeph> access to
             configure kernel boot parameters and reboot systems. </li>
           <li>Create the Greenplum Database cgroups configuration file
@@ -302,7 +302,7 @@ sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
                 <codeblock>sudo yum install libcgroup
 sudo service cgconfig start </codeblock>
               </li>
-              <li> Suse 11+ systems:
+              <li> SuSE 11+ systems:
                 <codeblock>sudo zypper install libcgroup-tools
 sudo cgconfigparser -l /etc/cgconfig.d/gpdb.conf </codeblock>
               </li>
@@ -320,6 +320,24 @@ ls -l <i>cgroup_mount_point</i>/cpuacct/gpdb
             <p>If these directories exist and are owned by <codeph>gpadmin:gpadmin</codeph>, you
               have successfully configured cgroups for Greenplum Database CPU resource
               management.</p>
+          </li>
+          <li>To persist your Greenplum Database resource group cgroup configuration, configure your
+             system to enable the Linux cgroup service daemon <codeph>cgconfig.service</codeph> 
+            (Redhat/CentOS 7.x and SuSE 11+) or <codeph>cgconfig</codeph> (Redhat/CentOS 6.x) on
+            node start-up. For example:
+            <ul>
+              <li> Redhat/CentOS 7.x systems:
+                <codeblock>sudo systemctl start cgconfig.service</codeblock>
+              </li>
+              <li> Redhat/CentOS 6.x systems:
+                <codeblock>sudo service cgconfig start </codeblock>
+              </li>
+              <li> SuSE 11+ systems:
+                <codeblock>sudo systemctl start cgconfig.service</codeblock>
+              </li>
+            </ul>
+            <p>You may choose a different method to persist the Greenplum Database resource group
+              cgroup configuration.</p>
           </li>
         </ol>
       </section>
