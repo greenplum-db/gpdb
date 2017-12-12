@@ -327,7 +327,8 @@ SELECT citext_larger( 'aardvark'::citext, 'Aaba'::citext ) = 'aardvark' AS t;
 CREATE TEMP TABLE srt (
    name CITEXT
 );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'name' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO srt (name)
 VALUES ('aardvark'),
        ('AAA'),
@@ -1092,6 +1093,8 @@ CREATE TABLE caster (
     tsquery     tsquery,
     uuid        uuid
 );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'citext' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO caster (text)          VALUES ('foo'::citext);
 INSERT INTO caster (citext)        VALUES ('foo'::text);
 INSERT INTO caster (varchar)       VALUES ('foo'::text);
