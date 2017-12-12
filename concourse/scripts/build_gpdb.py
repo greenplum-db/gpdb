@@ -119,10 +119,10 @@ def main():
         status = gpBuild.make()
         fail_on_error(status)
 
-        status = gpBuild.unittest()
+        status = gpBuild.make_install()
         fail_on_error(status)
 
-        status = gpBuild.make_install()
+        status = gpBuild.unittest()
         fail_on_error(status)
 
         status = copy_installed(options.output_dir)
