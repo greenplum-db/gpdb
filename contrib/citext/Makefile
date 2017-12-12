@@ -3,7 +3,7 @@
 MODULES = citext
 DATA_built = citext.sql
 DATA = uninstall_citext.sql
-REGRESS = citext
+REGRESS = citext citext_gp
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config
