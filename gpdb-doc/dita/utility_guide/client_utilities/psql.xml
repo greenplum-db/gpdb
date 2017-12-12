@@ -177,7 +177,9 @@
             <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
             <pd>The host name of the machine on which the Greenplum master database server is
               running. If not specified, reads from the environment variable <codeph>PGHOST</codeph>
-              or defaults to localhost.</pd>
+              or defaults to localhost.</pd> 
+             <pd>When starting <codeph>psql</codeph> on the master host, if the <varname>host</varname> 
+              value begins with a slash, it is used as the directory for the UNIX-domain socket.</pd>
           </plentry>
           <plentry>
             <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
