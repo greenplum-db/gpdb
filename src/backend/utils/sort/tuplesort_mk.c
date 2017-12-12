@@ -159,7 +159,7 @@ typedef enum
 
 // #define PRINT_SPILL_AND_MEMORY_MESSAGES
 
-/* 
+/*
  * Current position of Tuplesort operation.
  */
 struct TuplesortPos_mk
@@ -1728,8 +1728,8 @@ tuplesort_getdatum_mk(Tuplesortstate_mk *state, bool forward,
 bool
 tuplesort_skiptuples_mk(Tuplesortstate_mk *state, int64 ntuples, bool forward)
 {
-	MemoryContext oldcontext = MemoryContextSwitchTo(state->sortcontext);
-	bool		fOK;
+	MemoryContext	oldcontext;
+	bool			fOK;
 
 	/*
 	 * We don't actually support backwards skip yet, because no callers need
@@ -1739,34 +1739,43 @@ tuplesort_skiptuples_mk(Tuplesortstate_mk *state, int64 ntuples, bool forward)
 	Assert(ntuples >= 0);
 
 	/*
-	 * GPDB_84_MERGE_FIXME: This simplistic implementation just calls
-	 * gettuple, even if the sort happened in memory.
+	 * Optimize skip strategy only for in memory non unique store. But for unique store, we
+	 * use normal one by one logic because we need to check the emptiness of entries.
 	 */
-
-	/*
-	 * We could probably optimize these cases better, but for now it's
-	 * not worth the trouble.
-	 */
-	fOK = true;
-	while (ntuples-- > 0)
+	if (state->status == TSS_SORTEDINMEM && !state->mkctxt.unique)
 	{
-		MKEntry		e;
-		bool		should_free;
-
-		if (!tuplesort_gettuple_common_pos(state, &state->pos, forward,
-										   &e, &should_free))
+		TuplesortPos_mk	*pos = &state->pos;
+		if (pos->current + ntuples <= state->entry_count)
 		{
-			fOK = false;
-			break;
+			pos->current += ntuples;
+			return true;
 		}
-		if (should_free)
-			pfree(e.ptr);
-		CHECK_FOR_INTERRUPTS();
+		pos->eof_reached = true;
+		return false;
 	}
+	else
+	{
+		oldcontext = MemoryContextSwitchTo(state->sortcontext);
+		fOK = true;
+		while (ntuples-- > 0)
+		{
+			MKEntry		e;
+			bool		should_free;
 
-	MemoryContextSwitchTo(oldcontext);
+			if (!tuplesort_gettuple_common_pos(state, &state->pos, forward,
+											   &e, &should_free))
+			{
+				fOK = false;
+				break;
+			}
+			if (should_free)
+				pfree(e.ptr);
+			CHECK_FOR_INTERRUPTS();
+		}
 
-	return true;
+		MemoryContextSwitchTo(oldcontext);
+		return fOK;
+	}
 }
 
 
