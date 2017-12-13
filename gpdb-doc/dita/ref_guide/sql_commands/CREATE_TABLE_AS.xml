@@ -18,8 +18,8 @@
       <codeblock>   APPENDONLY={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
-   COMPRESSTYPE={ZLIB|QUICKLZ}
-   COMPRESSLEVEL={1-9 | 1}
+   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ}
+   COMPRESSLEVEL={1-19 | 1}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
     </section>
@@ -80,16 +80,18 @@
           <pd>ORIENTATION — Set to <codeph>column</codeph> for column-oriented storage, or
               <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
             if <codeph>APPENDONLY=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
-          <pd>COMPRESSTYPE — Set to <codeph>ZLIB</codeph> (the default) or
+          <pd>COMPRESSTYPE — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph> or
               <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type of compression used. QuickLZ
             uses less CPU power and compresses data faster at a lower compression ratio than zlib.
-            Conversely, zlib provides more compact compression ratios at lower speeds. This option
-            is only valid if <codeph>APPENDONLY=TRUE</codeph>. <note type="note"><sup>1</sup>QuickLZ
-              compression is available only in the commercial release of Pivotal Greenplum
-              Database.</note></pd>
+            Conversely, zlib provides more compact compression ratios at lower speeds. Zstd provides
+			for both speed or a good compression ratio, tunable with the compresslevel parameter. 
+			This option is only valid if <codeph>APPENDONLY=TRUE</codeph>. 
+			<note type="note"><sup>1</sup>QuickLZ compression is available only in the 
+			commercial release of Pivotal Greenplum Database.</note></pd>
           <pd>COMPRESSLEVEL — For zlib compression of append-optimized tables, set to a value
-            between 1 (fastest compression) to 9 (highest compression ratio). QuickLZ compression
-            level can only be set to 1. If not declared, the default is 1. This option is only valid
+            between 1 (fastest compression) to 9 (highest compression ratio). For zstd, the valid
+			range is between 1 and 19. QuickLZ compression level can only be set to 1.
+			If not declared, the default is 1. This option is only valid
             if <codeph>APPENDONLY=TRUE</codeph>.</pd>
           <pd>FILLFACTOR — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
