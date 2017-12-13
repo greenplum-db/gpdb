@@ -3612,8 +3612,6 @@ transformStorageEncodingClause(List *options)
 	 */
 	d = transformRelOptions(PointerGetDatum(NULL),
 									  list_concat(extra, options),
-									  /* GPDB_84_MERGE_FIXME: do we need any
-									   * namespaces? */
 									  NULL, NULL,
 									  true, false);
 	(void)heap_reloptions(RELKIND_RELATION, d, true);
