@@ -642,10 +642,16 @@ Feature: gptransfer tests
     Scenario: gptransfer --schema-only
         Given the gptransfer test is initialized
         And database "gptransfer_testdb1" exists
-        And schema "test_schema" exists in "gptransfer_testdb1"
         And the user runs "gptransfer --schema-only -t gptransfer_testdb1.public.t0 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
         Then gptransfer should return a return code of 0
-        And verify that the schema "test_schema" exists in "gptransfer_testdb1"
+        And verify that there is a "heap" table "public.t0" in "gptransfer_testdb1"
+
+    Scenario: gptransfer --schema-only -d
+        Given the gptransfer test is initialized
+        And database "gptransfer_testdb1" exists
+        And the user runs "gptransfer --schema-only -d gptransfer_testdb1 --source-port $GPTRANSFER_SOURCE_PORT --source-host $GPTRANSFER_SOURCE_HOST --source-user $GPTRANSFER_SOURCE_USER --dest-user $GPTRANSFER_DEST_USER --dest-port $GPTRANSFER_DEST_PORT --dest-host $GPTRANSFER_DEST_HOST --source-map-file $GPTRANSFER_MAP_FILE --batch-size=10"
+        Then gptransfer should return a return code of 0
+        And verify that there is a "heap" table "public.t0" in "gptransfer_testdb1"
 
     Scenario: gptransfer --schema-only conflicts with --truncate
         Given the gptransfer test is initialized

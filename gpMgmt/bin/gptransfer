@@ -1726,7 +1726,8 @@ class GpTransferCommand(Command):
                     self._drop_target_table()
                     self._create_target_table()
                 if self._schema_only:
-                    return
+                    self._success = True
+                    return 0
                 if not self._table_pair.dest.external:
                     self._cleanup_named_pipes_needed = True
                     self._create_named_pipe()
@@ -2720,7 +2721,7 @@ class GpTransfer(object):
                 logger.warn('the data transfer.')
                 return 1
             else:
-                if self._validator_class:
+                if self._validator_class and not self._options.schema_only:
                     self._final_count_validation()
         else:
             # dry run
