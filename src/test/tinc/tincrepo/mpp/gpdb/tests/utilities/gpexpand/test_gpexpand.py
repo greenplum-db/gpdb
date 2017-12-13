@@ -169,12 +169,11 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
 
         self.hosts = ['localhost']
 
-        # TODO: See if we can parameterize this
-        self.port_base = '40000'
+        self.port_base = '20500'
         self.master_port = os.environ.get('PGPORT', '10300')
-        self.mirror_port_base = '50000'
-        self.rep_port_base = '41000'
-        self.mirror_rep_port_base = '51000'
+        self.mirror_port_base = '21500'
+        self.rep_port_base = '22500'
+        self.mirror_rep_port_base = '23500'
 
         self.testcase_primary_dir = os.path.join(self.testcase_out_dir, 'data/primary')
         self.testcase_mirror_dir = os.path.join(self.testcase_out_dir, 'data/mirror')
