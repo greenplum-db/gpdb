@@ -171,26 +171,33 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
         <p>The <codeph>SELECT</codeph> list (between the key words <codeph>SELECT</codeph> and
             <codeph>FROM</codeph>) specifies expressions that form the output rows of the
             <codeph>SELECT</codeph> statement. The expressions can (and usually do) refer to columns
-          computed in the <codeph>FROM</codeph> clause. </p>
-        <p>Using the clause <codeph>[AS] </codeph>
-          <varname>output_name</varname>, another name can be specified for an output column. This
-          name is primarily used to label the column for display. It can also be used to refer to
-          the column's value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph> clauses, but
-          not in the <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there you must write
-          out the expression instead. The <codeph>AS</codeph> keyword is optional in most cases
-          (such as when declaring an alias for column names, constants, function calls, and simple
-          unary operator expressions). In cases where the declared alias is a reserved SQL keyword,
-          the <varname>output_name</varname> must be enclosed in double quotes to avoid
-          ambiguity.</p><p>An <varname>expression</varname> in the <codeph>SELECT</codeph> list can
-          be a constant value, a column reference, an operator invocation, a function call, an
-          aggregate expression, a window expression, a scalar subquery, and so on. A number of
-          constructs can be classified as an expression but do not follow any general syntax rules.
-          These generally have the semantics of a function or operator. For information about SQL
-          value expressions and function calls, see "Querying Data" in the <i>Greenplum Database
-            Administrator Guide</i>.</p><p>Instead of an expression, <codeph>*</codeph> can be
-          written in the output list as a shorthand for all the columns of the selected rows. Also,
-          you can write <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the
-          columns coming from just that table.</p></sectiondiv><sectiondiv id="section6"><b>The FROM
+          computed in the <codeph>FROM</codeph> clause. </p><p>An <varname>expression</varname> in
+          the <codeph>SELECT</codeph> list can be a constant value, a column reference, an operator
+          invocation, a function call, an aggregate expression, a window expression, a scalar
+          subquery, and so on. A number of constructs can be classified as an expression but do not
+          follow any general syntax rules. These generally have the semantics of a function or
+          operator. For information about SQL value expressions and function calls, see "Querying
+          Data" in the <i>Greenplum Database Administrator Guide</i>.</p><p>Instead of an
+          expression, <codeph>*</codeph> can be written in the output list as a shorthand for all
+          the columns of the selected rows. Also, you can write
+              <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the columns coming
+          from just that table.</p><p>Just as in a table, every output column of a
+            <codeph>SELECT</codeph> has a name. In a simple <codeph>SELECT</codeph> this name is
+          just used to label the column for display, but when the <codeph>SELECT</codeph> is a
+          sub-query of a larger query, the name is seen by the larger query as the column name of
+          the virtual table produced by the sub-query. To specify the name to use for an output
+          column, write <codeph>AS</codeph>
+          <varname>output_name</varname> after the column's expression. (You can omit
+            <codeph>AS</codeph>, but only if the desired output name does not match any SQL keyword.
+          For protection against possible future keyword additions, you can always either write
+            <codeph>AS</codeph> or double-quote the output name.) If you do not specify a column
+          name, Greenplum Database chooses a name is automatically. If the column's expression is a
+          simple column reference then the chosen name is the same as that column's name. In more
+          complex cases a generated name looking like<codeph> ?column<varname>N</varname>?</codeph>
+          is usually chosen. An output column's name can be used to refer to the column's value in
+            <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph> clauses, but not in the
+            <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there you must write out the
+          expression instead.</p></sectiondiv><sectiondiv id="section6"><b>The FROM
           Clause</b><p>The <codeph>FROM</codeph> clause specifies one or more source tables for the
             <codeph>SELECT</codeph>. If multiple sources are specified, the result is the Cartesian
           product (cross join) of all the sources. But usually qualification conditions are added to
