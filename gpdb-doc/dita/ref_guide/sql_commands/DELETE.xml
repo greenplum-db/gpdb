@@ -9,7 +9,8 @@
             <title>Synopsis</title>
             <codeblock id="sql_command_synopsis">DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
       [USING <varname>usinglist</varname>]
-      [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname> ]</codeblock>
+      [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname>]
+      [RETURNING * | <varname>output_expression</varname> [[AS] <varname>output_name</varname>] [, …]]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -25,6 +26,12 @@
                 the specific circumstances. </p>
             <p>If the <codeph>WHERE CURRENT OF</codeph> clause is specified, the row that is deleted
                 is the one most recently fetched from the specified cursor. </p>
+            <p>The optional <codeph>RETURNING</codeph> clause causes <codeph>DELETE</codeph> to
+                compute and return value(s) based on each row actually deleted. Any expression using
+                the table's columns, and/or columns of other tables mentioned in
+                    <codeph>USING</codeph>, can be computed. The syntax of the
+                    <codeph>RETURNING</codeph> list is identical to that of the output list of
+                    <codeph>SELECT</codeph>.</p>
             <p>You must have the <codeph>DELETE</codeph> privilege on the table to delete from it. </p>
             <sectiondiv id="section4">
                 <b>Outputs</b>
@@ -41,7 +48,7 @@
                 <plentry>
                     <pt>ONLY</pt>
                     <pd>If specified, delete rows from the named table only. When not specified, any
-                        tables inheriting from the named table are also processed. </pd>
+                        tables inheriting from the named table are also processed.</pd>
                 </plentry>
                 <plentry>
                     <pt>
@@ -95,6 +102,14 @@
                     <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"
                             /></codeph> for more information about creating cursors.</pd>
                 </plentry>
+                <plentry>
+                    <pt><varname>output_expression</varname></pt>
+                    <pd>An expression to be computed and returned by the <codeph>DELETE</codeph> command after each row is deleted. The expression can use any column names of the table or table(s) listed in <codeph>USING</codeph>. Write * to return all columns.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>output_name</varname></pt>
+                    <pd>A name to use for a returned column.</pd>
+                </plentry>
             </parml>
         </section>
         <section id="section6">
@@ -129,6 +144,8 @@ name = 'Hannah';</codeblock>
             <codeblock>DELETE FROM films WHERE kind &lt;&gt; 'Musical';</codeblock>
             <p>Clear the table films:</p>
             <codeblock>DELETE FROM films;</codeblock>
+            <p>Delete completed tasks, returning full details of the deleted
+                rows:<codeblock>DELETE FROM tasks WHERE status = 'DONE' RETURNING *;</codeblock></p>
             <p>Delete using a join:</p>
             <codeblock>DELETE FROM rank USING names WHERE names.id = rank.id AND 
 name = 'Hannah';</codeblock>
