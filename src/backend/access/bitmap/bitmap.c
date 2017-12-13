@@ -363,26 +363,15 @@ bmendscan(PG_FUNCTION_ARGS)
 		 * release the buffers that have been stored for each related 
 		 * bitmap vector.
 		 */
-		if (so->bm_currPos->nvec > 1)
-		{
-			/* GPDB_84_MERGE_FIXME: does ->bm_batchWords need to be pfree'd? */
-			 _bitmap_cleanup_batchwords(so->bm_currPos->bm_batchWords);
-		}
-		_bitmap_cleanup_scanpos(so->bm_currPos->posvecs,
-								so->bm_currPos->nvec);
+		cleanup_pos(so->bm_currPos);
 		pfree(so->bm_currPos);
 		so->bm_currPos = NULL;
 	}
 
 	if (so->bm_markPos != NULL)
 	{
-		if (so->bm_markPos->nvec > 1)
-		{
-			/* GPDB_84_MERGE_FIXME: does ->bm_batchWords need to be pfree'd? */
-			 _bitmap_cleanup_batchwords(so->bm_markPos->bm_batchWords);
-		}
-		_bitmap_cleanup_scanpos(so->bm_markPos->posvecs,
-								so->bm_markPos->nvec);
+		cleanup_pos(so->bm_markPos);
+		pfree(so->bm_markPos);
 		so->bm_markPos = NULL;
 	}
 
@@ -743,8 +732,7 @@ pull_stream(StreamBMIterator *iterator, PagetableEntry *e)
 	}
 	else if (so->is_done)
 	{
-		/* GPDB_84_MERGE_FIXME: this doesn't seem right; shouldn't we free at
-		 * end_iterate()? */
+		/* Just free opaque state early so that we could short circuit. */
 		if (iterator->opaque) {
 			stream_free(iterator->opaque);
 			iterator->opaque = NULL;
