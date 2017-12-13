@@ -674,7 +674,6 @@ apr_cflags
 apr_link_ld_libs
 apr_includes
 APR_1_CONFIG
-ADDON_DIR
 ZIC
 python_additional_libs
 python_libspec
@@ -9737,7 +9736,6 @@ existing time-zone data, or set the environment variable ZIC to a zic
 program to use during the build." "$LINENO" 5
   fi
 fi
-
 
 
 ##

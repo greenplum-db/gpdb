@@ -39,8 +39,6 @@ PG_MAJORVERSION = @PG_MAJORVERSION@
 GP_VERSION = @GP_VERSION_SHORT@
 GP_MAJORVERSION = @GP_MAJORVERSION@
 
-ADDON_DIR = @ADDON_DIR@
-
 # Support for VPATH builds
 vpath_build = @vpath_build@
 abs_top_srcdir = @abs_top_srcdir@

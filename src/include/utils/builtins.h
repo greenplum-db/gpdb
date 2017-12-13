@@ -1221,12 +1221,6 @@ extern Datum gp_delete_relation_node_entry(PG_FUNCTION_ARGS);
 extern Datum gp_persistent_relation_node_check(PG_FUNCTION_ARGS);
 
 /* storage/compress.c */
-extern Datum quicklz_constructor(PG_FUNCTION_ARGS);
-extern Datum quicklz_destructor(PG_FUNCTION_ARGS);
-extern Datum quicklz_compress(PG_FUNCTION_ARGS);
-extern Datum quicklz_decompress(PG_FUNCTION_ARGS);
-extern Datum quicklz_validator(PG_FUNCTION_ARGS);
-
 extern Datum zlib_constructor(PG_FUNCTION_ARGS);
 extern Datum zlib_destructor(PG_FUNCTION_ARGS);
 extern Datum zlib_compress(PG_FUNCTION_ARGS);
@@ -1259,7 +1253,6 @@ extern Datum dummy_compression_validator(PG_FUNCTION_ARGS);
 
 extern Datum gp_compressor(PG_FUNCTION_ARGS);
 extern Datum gp_decompressor(PG_FUNCTION_ARGS);
-extern Datum test_quicklz_compression(PG_FUNCTION_ARGS);
 
 /* percentile.c */
 extern Datum percentile_cont_trans(PG_FUNCTION_ARGS);

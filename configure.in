@@ -1248,7 +1248,6 @@ program to use during the build.])
   fi
 fi
 
-AC_SUBST(ADDON_DIR)
 
 ##
 ## Libraries

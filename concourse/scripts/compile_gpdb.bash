@@ -179,16 +179,6 @@ function _main() {
     BLD_TARGET_OPTION=("")
   fi
 
-  # Copy gpaddon_src into gpAux/addon directory and set the ADDON_DIR
-  # environment variable, so that quicklz support is available in enterprise
-  # builds.
-  export ADDON_DIR=addon
-  export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
-  # We cannot symlink the addon directory here because `make -C` resolves the
-  # symlink and `cd`s to the actual directory. Currently the Makefile in the
-  # addon directory assumes that it is located in a particular location under
-  # the source tree and hence needs to be copied over.
-  rsync -auv gpaddon_src/ $GPDB_SRC_PATH/gpAux/$ADDON_DIR
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   build_gppkg
   if [ "$TARGET_OS" != "win32" ] ; then

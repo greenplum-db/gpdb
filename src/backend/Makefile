@@ -16,14 +16,9 @@ include $(top_builddir)/src/Makefile.global
 
 BLD_TOP = $(top_builddir)/gpAux
 
-ifdef ADDON_DIR
-include $(BLD_TOP)/$(ADDON_DIR)/src/Makefile
-endif
-
 SUBDIRS = access bootstrap catalog parser commands executor foreign \
 	fts lib libpq main nodes optimizer port postmaster regex \
-	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb \
-	$(ADDON_SUBDIR)
+	replication rewrite storage tcop tsearch utils $(top_builddir)/src/timezone cdb
 
 ifeq ($(enable_orca),yes)
 SUBDIRS += gpopt

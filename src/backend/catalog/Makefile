@@ -10,10 +10,6 @@ subdir = src/backend/catalog
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-ifndef ADDON_DIR
-QUICKLZ_COMPRESSION = quicklz_compression.o
-endif
-
 OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        objectaddress.o pg_aggregate.o pg_constraint.o pg_conversion.o pg_depend.o pg_enum.o \
        pg_inherits.o pg_largeobject.o pg_namespace.o pg_operator.o pg_proc.o \
@@ -23,7 +19,7 @@ OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        gp_global_sequence.o gp_persistent.o pg_appendonly.o \
-       oid_dispatch.o aocatalog.o zstd_compression.o $(QUICKLZ_COMPRESSION)
+       oid_dispatch.o aocatalog.o zstd_compression.o
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
 
