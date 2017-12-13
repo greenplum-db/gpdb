@@ -2309,11 +2309,13 @@ pg_query(pgobject * self, PyObject * args)
 					{
 						char	*ret = PQcmdTuples(result);
 
-						PQclear(result);
 						if (ret[0])		/* return number of rows affected */
 						{
-							return PyString_FromString(ret);
+							PyObject* obj = PyString_FromString(ret);
+							PQclear(result);
+							return obj;
 						}
+						PQclear(result);
 						Py_INCREF(Py_None);
 						return Py_None;
 					}
