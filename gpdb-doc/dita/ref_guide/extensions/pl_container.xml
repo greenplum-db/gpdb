@@ -650,8 +650,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           </plentry>
           <plentry>
             <pt>container</pt>
-            <pd>One element for each specific container available in the system. Child element of
-              the <codeph>configuration</codeph> element.</pd>
+            <pd>One element for each specific container available in the system. These are child
+              element of the <codeph>configuration</codeph> element.</pd>
             <pd>
               <parml>
                 <plentry>
@@ -686,6 +686,17 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                       starts.<note>This element cannot be set with the <codeph>plcontainer
                         install</codeph> command. You can update the configuration file with the
                       with the <codeph>plcontainer configure -e</codeph> command.</note></pd>
+                </plentry>
+                <plentry>
+                  <pt>logs</pt>
+                  <pd>Optional. This element enables PL/Container logging for the container. Specify
+                    the attribute <codeph>enable="yes"</codeph>. The attribute
+                      <codeph>enable="no"</codeph> disables logging (the default).
+                    <codeblock>&lt;logs enable="yes">&lt;/logs></codeblock></pd>
+                  <pd>or<codeblock>&lt;logs enable="yes" /></codeblock><p>On Red Hat 7 or CentOS 7
+                      systems, the log is sent to the <codeph>journald</codeph> service. On Red Hat
+                      6 or CentOS 6 systems, the log is sent to <codeph>syslogd</codeph> service.
+                    </p></pd>
                 </plentry>
                 <plentry>
                   <pt>memory_mb</pt>
