@@ -261,6 +261,10 @@
                                 href="../topics/functions-operators.xml#topic29/in204913"/>.</li>
                         <li id="in200915">Greenplum Database does not support DISTINCT
                             with multiple input expressions.</li>
+                        <li id="in2009151">Greenplum Database does not support specifying an
+                            aggregate function as an argument to another aggregate function.</li>
+                        <li id="in2009152">Greenplum Database does not support specifying a
+                            window function as an argument to an aggregate function.</li>
                     </ul>
                 </body>
             </topic>
@@ -281,6 +285,8 @@
                     value for every row, but that value is calculated with respect to the rows in a
                     particular window partition. If no partition is specified, the window function
                     is computed over the complete intermediate result set.</p>
+                <p>Greenplum Database does not support specifying a window function as an argument
+                    to another window function.</p>
                 <p>The syntax of a window expression is:</p>
                 <p>
                     <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) OVER ( <i>window_specification</i> )</codeblock>
