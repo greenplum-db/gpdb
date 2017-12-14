@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # set variables if they are unset or null
-export HADOOP_HOME=${HADOOP_HOME:-/usr/hdp/current/hadoop-client}
+export HADOOP_HOME=${HADOOP_HOME:-/usr/local/hadoop}
 export GP_HADOOP_TARGET_VERSION=${GP_HADOOP_TARGET_VERSION:-hadoop}
 export HADOOP_HOST=${HADOOP_HOST:-localhost}
 export HADOOP_PORT=${HADOOP_PORT:-8020}
