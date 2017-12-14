@@ -651,7 +651,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           <plentry>
             <pt>container</pt>
             <pd>One element for each specific container available in the system. These are child
-              element of the <codeph>configuration</codeph> element.</pd>
+              elements of the <codeph>configuration</codeph> element.</pd>
             <pd>
               <parml>
                 <plentry>
