@@ -170,7 +170,17 @@ function _main() {
 
 	time make_cluster
 	time start_pxf $(pwd)/singlecluster
-	chown -R gpadmin:gpadmin $(pwd)
+        # Let's make sure that the pxf_automation_src directory is writeable
+        # Recusive chowning will hammer OverlayFS and introduce flakiness so we'll make
+        # the directory structure writable by all
+        local pxf_src_dir=pxf_automation_src
+        if [ -d "${pxf_src_dir}" ]
+        then
+            chmod a+w ${pxf_src_dir} 
+            find ${pxf_src_dir}  -type d -exec chmod a+w {} \;
+        fi
+        #chowning the singlecluster else test will fail
+        chown -R gpadmin:gpadmin singlecluster
 	time run_regression_test
 	time run_pxf_automation $(pwd)/singlecluster
 }

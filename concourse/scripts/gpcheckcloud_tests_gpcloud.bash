@@ -16,7 +16,6 @@ function gen_env(){
 	bash gpcheckcloud_regress.sh
 	EOF
 
-	chown -R gpadmin:gpadmin $(pwd)
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_gpcheckcloud.sh
 	chmod a+x /home/gpadmin/run_regression_gpcheckcloud.sh
 }

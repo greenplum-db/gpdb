@@ -34,10 +34,14 @@ ssh_keyscan_for_user() {
 }
 
 transfer_ownership() {
-  chown -R gpadmin:gpadmin gpdb_src
-  [ -d /usr/local/gpdb ] && chown -R gpadmin:gpadmin /usr/local/gpdb
-  [ -d /usr/local/greenplum-db-devel ] && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
-  chown -R gpadmin:gpadmin /home/gpadmin
+    #  chown -R gpadmin:gpadmin gpdb_src
+    chmod a+w gpdb_src
+    find gpdb_src -type d -exec chmod a+w {} \;
+    # Needed for the gpload test
+    [ -f gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.csv ] && chown gpadmin:gpadmin gpdb_src/gpMgmt/bin/gpload_test/gpload2/data_file.csv
+    [ -d /usr/local/gpdb ] && chown -R gpadmin:gpadmin /usr/local/gpdb
+    [ -d /usr/local/greenplum-db-devel ] && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
+    chown -R gpadmin:gpadmin /home/gpadmin
 }
 
 set_limits() {

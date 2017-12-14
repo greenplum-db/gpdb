@@ -64,7 +64,6 @@ function gen_env(){
 	exit 0
 	EOF
 
-	chown -R gpadmin:gpadmin $(pwd)
 	chown gpadmin:gpadmin /home/gpadmin/run_regression_test.sh
 	chmod a+x /home/gpadmin/run_regression_test.sh
 }
