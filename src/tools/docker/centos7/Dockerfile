@@ -5,7 +5,7 @@ RUN yum makecache && \
     rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7 && \
     yum -y install epel-release java-1.8.0-openjdk-devel && \
     yum -y install createrepo jq git iproute net-tools openssh-server rpm-build rsync sudo svn vim wget \
-        ant-junit autoconf bison cmake flex gcc gcc-c++ gperf indent lcov libtool links make maven && \
+        ant-junit autoconf bison cmake flex gcc gperf indent lcov libtool links make maven && \
     yum clean all
 
 # install all software we need
@@ -21,12 +21,14 @@ RUN yum makecache && \
 RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
     echo "gpadmin  ALL=(ALL)       NOPASSWD: ALL" > /etc/sudoers.d/gpadmin && \
     groupadd supergroup && usermod -a -G supergroup gpadmin && \
+    #
     # setup ssh client keys for root
     ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa && \
     cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
     chmod 0600 /root/.ssh/authorized_keys && \
     echo -e "password\npassword" | passwd 2> /dev/null && \
     { ssh-keyscan localhost; ssh-keyscan 0.0.0.0; } >> /root/.ssh/known_hosts && \
+    #
     # setup ssh client keys for gpadmin
     mkdir /home/gpadmin/.ssh && \
     ssh-keygen -t rsa -N "" -f /home/gpadmin/.ssh/id_rsa && \
@@ -35,6 +37,7 @@ RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
     echo -e "password\npassword" | passwd gpadmin 2> /dev/null && \
     { ssh-keyscan localhost; ssh-keyscan 0.0.0.0; } >> /home/gpadmin/.ssh/known_hosts && \
     chown -R gpadmin:gpadmin /home/gpadmin/.ssh && \
+    #
     # setup system configuration
     ssh-keygen -f /etc/ssh/ssh_host_key -N '' -t rsa1 && \
     ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa && \
@@ -42,6 +45,11 @@ RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
     sed -i -e 's|Defaults    requiretty|#Defaults    requiretty|' /etc/sudoers && \
     sed -ri 's/UsePAM yes/UsePAM no/g;s/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config && \
     sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@;s@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
+
+# need newer version of gcc
+RUN yum -y install centos-release-scl && yum -y install --nogpgcheck devtoolset-6-gcc devtoolset-6-gcc-c++ && yum clean all && \
+    echo -e 'source /opt/rh/devtoolset-6/enable' >> /opt/gcc_env.sh && \
+    echo -e 'source /opt/gcc_env.sh' >> /home/gpadmin/.bashrc
 
 # setup run environment
 RUN mkdir -p /usr/local/gpdb/lib/python /home/build && \

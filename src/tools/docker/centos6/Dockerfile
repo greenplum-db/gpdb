@@ -4,12 +4,13 @@ FROM centos:centos6
 RUN yum -y install epel-release java-1.7.0-openjdk-devel && \
     yum -y install autoconf bison createrepo flex git gperf libtool && \
     yum -y install openssh-server rpm-build rsync sudo svn vim wget && \
+    #
     # install all other software we need
-    yum -y install python-paramiko python-pip python-devel python-psutil python-setuptools && \
+    yum -y install python-paramiko python-pip python-PSI python-devel python-lockfile python-psutil python-setuptools && \
     yum -y install apr-devel bzip2-devel expat-devel libcurl-devel libevent-devel libuuid-devel && \
     yum -y install libxml2-devel libyaml-devel openssl-devel pam-devel readline-devel snappy-devel && \
-    yum -y install ant-junit libicu perl-ExtUtils-Embed perl-JSON && \
-    yum clean all
+    yum -y install ant-junit libicu perl-ExtUtils-Embed perl-JSON json-c-devel libgsasl-devel protobuf && \
+    pip install --upgrade pip && yum clean all
 
 # create user gpadmin since GPDB cannot run under root
 RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
@@ -41,11 +42,11 @@ RUN groupadd -g 1000 gpadmin && useradd -u 1000 -g 1000 gpadmin && \
     sed -ri 's@^HostKey /etc/ssh/ssh_host_ecdsa_key$@#&@;s@^HostKey /etc/ssh/ssh_host_ed25519_key$@#&@' /etc/ssh/sshd_config
 
 # need newer version of gcc
-RUN wget -q http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo -O /etc/yum.repos.d/slc6-devtoolset.repo && \
-  yum install -y -d 1 --nogpgcheck cmake3 devtoolset-2-gcc devtoolset-2-binutils devtoolset-2-gcc-c++ && \
-  yum clean all && rm -rf /usr/bin/cmake && ln -s /usr/bin/cmake3 /usr/bin/cmake && \
-  scl enable devtoolset-2 bash && gcc --version && pip install --upgrade pip && pip install psi lockfile && \
-  echo -e 'source /opt/rh/devtoolset-2/enable' >> /home/gpadmin/.bashrc
+RUN yum -y install centos-release-scl && yum -y install --nogpgcheck cmake3 devtoolset-6-gcc devtoolset-6-gcc-c++ && \
+    yum -y install https://s3-us-west-2.amazonaws.com/pivotal-public/apache-maven-3.3.9-1.el6.noarch.rpm && \
+    yum clean all && rm -rf /usr/bin/cmake && ln -s /usr/bin/cmake3 /usr/bin/cmake && \
+    echo -e 'source /opt/rh/devtoolset-6/enable' >> /opt/gcc_env.sh && \
+    echo -e 'source /opt/gcc_env.sh' >> /home/gpadmin/.bashrc
 
 # setup run environment
 RUN mkdir -p /usr/local/gpdb/lib/python /home/build && \
