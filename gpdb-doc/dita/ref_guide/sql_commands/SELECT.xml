@@ -177,16 +177,12 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
           subquery, and so on. A number of constructs can be classified as an expression but do not
           follow any general syntax rules. These generally have the semantics of a function or
           operator. For information about SQL value expressions and function calls, see "Querying
-          Data" in the <i>Greenplum Database Administrator Guide</i>.</p><p>Instead of an
-          expression, <codeph>*</codeph> can be written in the output list as a shorthand for all
-          the columns of the selected rows. Also, you can write
-              <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the columns coming
-          from just that table.</p><p>Just as in a table, every output column of a
-            <codeph>SELECT</codeph> has a name. In a simple <codeph>SELECT</codeph> this name is
-          just used to label the column for display, but when the <codeph>SELECT</codeph> is a
-          sub-query of a larger query, the name is seen by the larger query as the column name of
-          the virtual table produced by the sub-query. To specify the name to use for an output
-          column, write <codeph>AS</codeph>
+          Data" in the <i>Greenplum Database Administrator Guide</i>.</p><p>Just as in a table,
+          every output column of a <codeph>SELECT</codeph> has a name. In a simple
+            <codeph>SELECT</codeph> this name is just used to label the column for display, but when
+          the <codeph>SELECT</codeph> is a sub-query of a larger query, the name is seen by the
+          larger query as the column name of the virtual table produced by the sub-query. To specify
+          the name to use for an output column, write <codeph>AS</codeph>
           <varname>output_name</varname> after the column's expression. (You can omit
             <codeph>AS</codeph>, but only if the desired output name does not match any SQL keyword.
           For protection against possible future keyword additions, you can always either write
@@ -194,10 +190,15 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
           name, Greenplum Database chooses a name is automatically. If the column's expression is a
           simple column reference then the chosen name is the same as that column's name. In more
           complex cases a generated name looking like<codeph> ?column<varname>N</varname>?</codeph>
-          is usually chosen. An output column's name can be used to refer to the column's value in
-            <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph> clauses, but not in the
+          is usually chosen. </p><p>An output column's name can be used to refer to the column's
+          value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph> clauses, but not in the
             <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there you must write out the
-          expression instead.</p></sectiondiv><sectiondiv id="section6"><b>The FROM
+          expression instead.</p><p>Instead of an expression, <codeph>*</codeph> can be written in
+          the output list as a shorthand for all the columns of the selected rows. Also, you can
+          write <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the columns
+          coming from just that table. In these cases it is not possible to specify new names with
+            <codeph>AS</codeph>; the output column names will be the same as the table columns'
+          names.</p></sectiondiv><sectiondiv id="section6"><b>The FROM
           Clause</b><p>The <codeph>FROM</codeph> clause specifies one or more source tables for the
             <codeph>SELECT</codeph>. If multiple sources are specified, the result is the Cartesian
           product (cross join) of all the sources. But usually qualification conditions are added to
@@ -600,8 +601,8 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           binds at the same level as <codeph>UNION</codeph>. </p><p>Currently, <codeph>FOR
             UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be specified either for an
             <codeph>EXCEPT</codeph> result or for any input of an <codeph>EXCEPT</codeph>.
-        </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional
-            <codeph>ORDER BY</codeph> clause has this general
+        </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional <codeph>ORDER BY</codeph>
+          clause has this general
           form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS { FIRST | LAST}] [, ...]</codeblock><p>where
             <varname>expression</varname> can be the name or ordinal number of an output column
             (<codeph>SELECT</codeph> list item), or it can be an arbitrary expression formed from
@@ -610,18 +611,18 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           left-most expression, they are compared according to the next expression and so on. If
           they are equal according to all specified expressions, they are returned in an
           implementation-dependent order.</p><p>The ordinal number refers to the ordinal
-          (left-to-right) position of the result column. This feature makes it possible to define an
+          (left-to-right) position of the output column. This feature makes it possible to define an
           ordering on the basis of a column that does not have a unique name. This is never
-          absolutely necessary because it is always possible to assign a name to a result column
+          absolutely necessary because it is always possible to assign a name to an output column
           using the <codeph>AS</codeph> clause. </p><p>It is also possible to use arbitrary
           expressions in the <codeph>ORDER BY</codeph> clause, including columns that do not appear
-          in the <codeph>SELECT</codeph> result list. Thus the following statement is
+          in the <codeph>SELECT</codeph> output list. Thus the following statement is
           valid:</p><codeblock>SELECT name FROM distributors ORDER BY code;</codeblock><p>A
           limitation of this feature is that an <codeph>ORDER BY</codeph> clause applying to the
           result of a <codeph>UNION</codeph>, <codeph>INTERSECT</codeph>, or <codeph>EXCEPT</codeph>
           clause may only specify an output column name or number, not an expression.</p><p>If an
-            <codeph>ORDER BY</codeph> expression is a simple name that matches both a result column
-          name and an input column name, <codeph>ORDER BY</codeph> will interpret it as the result
+            <codeph>ORDER BY</codeph> expression is a simple name that matches both an output column
+          name and an input column name, <codeph>ORDER BY</codeph> will interpret it as the output
           column name. This is the opposite of the choice that <codeph>GROUP BY</codeph> will make
           in the same situation. This inconsistency is made to be compatible with the SQL standard.
           </p><p>Optionally one may add the key word <codeph>ASC</codeph> (ascending) or
@@ -828,23 +829,26 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           to do the <codeph>SELECT</codeph>. </p><p>Note that if a <codeph>FROM</codeph> clause is
           not specified, the query cannot reference any database tables. For compatibility with
           applications that rely on this behavior the <varname>add_missing_from</varname>
-          configuration variable can be enabled.</p></sectiondiv><sectiondiv id="section21"><b>The
-          AS Key Word</b><p>In the SQL standard, the optional key word <codeph>AS</codeph> is just
-          noise and can be omitted without affecting the meaning. The Greenplum Database parser
-          requires this key word when renaming output columns because the type extensibility
-          features lead to parsing ambiguities without it. <codeph>AS</codeph> is optional in
-            <codeph>FROM</codeph> items, however. </p></sectiondiv><sectiondiv id="section22"
-          ><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92 standard, an
-            <codeph>ORDER BY</codeph> clause may only use result column names or numbers, while a
-            <codeph>GROUP BY</codeph> clause may only use expressions based on input column names.
-          Greenplum Database extends each of these clauses to allow the other choice as well (but it
-          uses the standard's interpretation if there is ambiguity). Greenplum Database also allows
-          both clauses to specify arbitrary expressions. Note that names appearing in an expression
-          are always taken as input-column names, not as result-column names. </p><p>SQL:1999 and
-          later use a slightly different definition which is not entirely upward compatible with
-          SQL-92. In most cases, however, Greenplum Database interprets an <codeph>ORDER BY</codeph>
-          or <codeph>GROUP BY</codeph> expression the same way SQL:1999 does.
-        </p></sectiondiv><sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clauses
+            configuration variable can be enabled.</p></sectiondiv><sectiondiv id="section21"><b>Omitting the AS Key Word</b><p>In the SQL standard, the optional key
+          word <codeph>AS</codeph> can be omitted before an output column name whenever the new
+          column name is a valid column name (that is, not the same as any reserved keyword).
+          Greenplum Database is slightly more restrictive: <codeph>AS</codeph> is required if the
+          new column name matches any keyword at all, reserved or not. Recommended practice is to
+          use <codeph>AS</codeph> or double-quote output column names, to prevent any possible
+          conflict against future keyword additions. </p><p>In <codeph>FROM</codeph> items, both the
+          standard and Greenplum Database allow <codeph>AS</codeph> to be omitted before an alias
+          that is an unreserved keyword. But this is impractical for output column names, because of
+          syntactic ambiguities.</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
+          standard, an <codeph>ORDER BY</codeph> clause may only use output column names or numbers,
+          while a <codeph>GROUP BY</codeph> clause may only use expressions based on input column
+          names. Greenplum Database extends each of these clauses to allow the other choice as well
+          (but it uses the standard's interpretation if there is ambiguity). Greenplum Database also
+          allows both clauses to specify arbitrary expressions. Note that names appearing in an
+          expression are always taken as input-column names, not as output column names.
+          </p><p>SQL:1999 and later use a slightly different definition which is not entirely upward
+          compatible with SQL-92. In most cases, however, Greenplum Database interprets an
+            <codeph>ORDER BY</codeph> or <codeph>GROUP BY</codeph> expression the same way SQL:1999
+          does. </p></sectiondiv><sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clauses
             <codeph>DISTINCT ON</codeph>, <codeph>LIMIT</codeph>, and <codeph>OFFSET</codeph> are
           not defined in the SQL standard.</p></sectiondiv><sectiondiv id="section24"><b>Limited Use
           of STABLE and VOLATILE Functions</b><p>To prevent data from becoming out-of-sync across
