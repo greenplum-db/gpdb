@@ -624,7 +624,6 @@ public class GPDBWritable implements Writable {
 	/**
 	 * Set the column value of the record
 	 * @param colIdx the column index
-	 * @param val the value
 	 * @throws TypeMismatchException the column type does not match
 	 */
 	public void setNull(int colIdx)

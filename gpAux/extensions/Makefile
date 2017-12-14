@@ -15,7 +15,7 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-.PHONY: all install clean distclean installcheck mapreduce pxf gpcloud gphdfs mkorafce
+.PHONY: all install clean distclean installcheck mapreduce pxf gpcloud gphdfs mkgphdfs mkorafce
 
 #
 # targets built via top_builddir/GNUmakefile
@@ -94,8 +94,13 @@ unittest-check:
 # below targets will be built via top_builddir/gpAux/Makefile
 #
 
+mkgphdfs:
+	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs USE_PGXS=1 docdir=$(INSTLOC)/docs install \
+		ANT=/opt/releng/apache-ant/bin/ant \
+		JAVA_HOME=${JAVA_HOME}
+
 # Only include these files when running enterprise build
-ENTERPRISE_TARGETS="mkorafce"
+ENTERPRISE_TARGETS="mkgphdfs mkorafce"
 ifneq ($(findstring $(MAKECMDGOALS), $(ENTERPRISE_TARGETS)),)
 include $(BLD_TOP)/Makefile.global
 include $(BLD_TOP)/Makefile.thirdparty

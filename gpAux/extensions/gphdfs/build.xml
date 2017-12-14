@@ -150,7 +150,7 @@
         </classpath>
         <classpath refid="library.commons.classpath" />
         <batchtest todir="${result.home}">
-            <fileset dir="${build.dir}/classes" includes="**/Test*.class" />
+            <fileset dir="${build.dir}/classes" includes="**/TestGP*.class" />
         </batchtest>
     </junit>
   </target>

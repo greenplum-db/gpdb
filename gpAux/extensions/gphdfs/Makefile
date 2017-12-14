@@ -18,22 +18,22 @@ else
 	include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
-JAR_FILES = dist/hadoop2-gnet-1.2.0.0.jar
+JAR_FILES = dist/hadoop-gnet-1.2.0.0.jar
 JAVADOC_TARS = gnet-1.2-javadoc.tar
 
 all: $(JAR_FILES) unittest $(JAVADOC_TARS)
 
-dist/hadoop2-gnet-1.2.0.0.jar:
+dist/hadoop-gnet-1.2.0.0.jar:
 	$(ANT) clean
-	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dgphdgnet.version=hadoop2-gnet-1.2.0.0 \
+	ANT_OPTS=$(ANT_OPTS) $(ANT) dist -Dgphdgnet.version=hadoop-gnet-1.2.0.0 \
                 -Dgpgnet.src=1.2 -Dgpgnet.configuration=hadoop2
-	cp dist/hadoop2-gnet-1.2.0.0.jar dist/hdp2.0-gnet-1.2.0.0.jar
-	cp dist/hadoop2-gnet-1.2.0.0.jar dist/cdh5.0-gnet-1.2.0.0.jar
-	cp dist/hadoop2-gnet-1.2.0.0.jar dist/mpr4.0-gnet-1.2.0.0.jar
+	cp dist/hadoop-gnet-1.2.0.0.jar dist/hdp-gnet-1.2.0.0.jar
+	cp dist/hadoop-gnet-1.2.0.0.jar dist/cdh-gnet-1.2.0.0.jar
+	cp dist/hadoop-gnet-1.2.0.0.jar dist/mpr-gnet-1.2.0.0.jar
 
 unittest: $(JAR_FILES)
 	$(ANT) clean
-	ANT_OPTS=$(ANT_OPTS) $(ANT) test -Dgphdgnet.version=hadoop2-gnet-1.2.0.0 \
+	ANT_OPTS=$(ANT_OPTS) $(ANT) test -Dgphdgnet.version=hadoop-gnet-1.2.0.0 \
                 -Dgpgnet.src=1.2 -Dgpgnet.configuration=ut
 
 gnet-1.2-javadoc.tar: $(JAR_FILES)

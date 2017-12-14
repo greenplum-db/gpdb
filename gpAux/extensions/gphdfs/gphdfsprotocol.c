@@ -60,10 +60,10 @@ typedef struct {
  */
 static hadoop_vers_to_connector_ver hdVer_to_connVer[] =
 {
-	{"hadoop2",  "hadoop2-gnet-1.2.0.0"},
-	{"hdp2.0",   "hdp2.0-gnet-1.2.0.0"},
-	{"cdh5.0",   "cdh5.0-gnet-1.2.0.0"},
-	{"mpr4.0",   "mpr4.0-gnet-1.2.0.0"},
+	{"hadoop",  "hadoop-gnet-1.2.0.0"},
+	{"hdp",   "hdp-gnet-1.2.0.0"},
+	{"cdh",   "cdh-gnet-1.2.0.0"},
+	{"mpr",   "mpr-gnet-1.2.0.0"},
 	/* End-of-list marker */
 	{NULL, NULL}
 };
@@ -86,7 +86,7 @@ getConnectorVersion()
 	ereport(ERROR,
 			(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
 			 errmsg("target Hadoop version \"%s\" is not supported", gp_hadoop_target_version),
-			 errhint("please use one of 'hadoop2', 'hdp2.0', 'mpr4.0', 'cdh5.0'")));
+			 errhint("please use one of 'hadoop', 'hdp', 'mpr', 'cdh'")));
 
 	return "N/A";
 }

@@ -42,6 +42,7 @@
         <artifact name="hadoop-common" type="test-jar" ext="jar" e:classifier="tests" />
       </dependency>
 
+      <dependency org="org.apache.hadoop" name="hadoop-minicluster" rev="2.4.0" conf="ut->*"/>
       <dependency org="org.apache.hadoop" name="hadoop-hdfs" rev="2.4.0" conf="ut->*">
           <artifact name="hadoop-hdfs" type="jar"/>
           <artifact name="hadoop-hdfs" type="test-jar" ext="jar" e:classifier="tests" />
