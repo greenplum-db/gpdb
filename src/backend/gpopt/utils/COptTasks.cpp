@@ -502,8 +502,6 @@ COptTasks::Execute
 	// initialize DXL support
 	InitDXL();
 
-	bool abort_flag = false;
-
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcNone, CMemoryPoolManager::EatTracker, false /* fThreadSafe */);
 
 	gpos_exec_params params;
@@ -512,7 +510,7 @@ COptTasks::Execute
 	params.stack_start = &params;
 	params.error_buffer = err_buf;
 	params.error_buffer_size = GPOPT_ERROR_BUFFER_SIZE;
-	params.abort_requested = &abort_flag;
+	params.abort_requested = &QueryCancelPending;
 
 	// execute task and send log message to server log
 	GPOS_TRY

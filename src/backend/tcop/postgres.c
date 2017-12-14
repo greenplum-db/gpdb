@@ -106,11 +106,6 @@
 #include "utils/session_state.h"
 #include "utils/vmem_tracker.h"
 
-#ifdef USE_ORCA
-extern void SignalInterruptGPOPT(int signal);
-extern void ResetInterruptsGPOPT(void);
-#endif
-
 extern int	optind;
 extern char *optarg;
 
@@ -3517,13 +3512,6 @@ StatementCancelHandler(SIGNAL_ARGS)
 		QueryCancelPending = true;
 		QueryCancelCleanup = true;
 
-#ifdef USE_ORCA
-		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			SignalInterruptGPOPT(postgres_signal_arg);
-		}
-#endif
-
 		/*
 		 * If it's safe to interrupt, and we're waiting for a lock, service
 		 * the interrupt immediately.  No point in interrupting if we're
@@ -3655,13 +3643,6 @@ ProcessInterrupts(const char* filename, int lineno)
 		gp_simex_run = 0;
 	}
 #endif   /* USE_TEST_UTILS */
-
-#ifdef USE_ORCA
-	if (Gp_role == GP_ROLE_DISPATCH)
-	{
-		ResetInterruptsGPOPT();
-	}
-#endif
 
 	InterruptPending = false;
 	if (ProcDiePending)

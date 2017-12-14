@@ -42,16 +42,6 @@ class CGPOptimizer
 
     static
     void TerminateGPOPT();
-
-    // Signal handler for ORCA
-    static
-    void SignalInterruptGPOPT(int iSignal);
-
-    // Reset optimizer state to before SignalInterruptGPOPT() was called.
-    // To be called after interrupts have been handled by ORCA.
-    static
-    void ResetInterruptsGPOPT();
-
 };
 
 #endif // CGPOptimizer_H
