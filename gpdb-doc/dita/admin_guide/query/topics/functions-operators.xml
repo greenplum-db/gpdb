@@ -66,7 +66,7 @@
                             <entry colname="col2">Restricted</entry>
                             <entry colname="col3">Function values can change within a single table
                                 scan. For example: <codeph>random()</codeph>,
-                                <codeph>timeofday()</codeph>.</entry>
+                                    <codeph>timeofday()</codeph>.</entry>
                             <entry colname="col4">Any function with side effects is volatile, even
                                 if its result is predictable. For example:
                                 <codeph>setval()</codeph>.</entry>
@@ -106,6 +106,23 @@ SELECT foo();
                     (<codeph>rangeFuncs</codeph>) or functions that use the
                     <codeph>refCursor</codeph> datatype.</p>
         </body>
+        <topic id="topic_kp3_ljw_2cb">
+            <title>Function Volitionality and EXECUTE ON Attributes</title>
+            <body>
+                <p>Volatility attributes (<codeph>IMMUTIBLE</codeph>, <codeph>STABLE</codeph>,
+                        <codeph>VOLITILE</codeph>) and <codeph>EXECUTE ON</codeph> attributes
+                    specify two different aspects of function execution. In general, volatility
+                    indicates when the function is executed, and <codeph>EXECUTE ON</codeph>
+                    indicates where it is executed. </p>
+                <p>For example, a function defined with the <codeph>IMMUTABLE</codeph> attribute can
+                    be executed at query planning time, while a function with the
+                        <codeph>VOLATILE</codeph> attribute must be executed for every row in the
+                    query. A function with the <codeph>EXECUTE ON MASTER</codeph> attribute is
+                    executed only on the master segment and a function with the <codeph>EXECUTE ON
+                        ALL SEGMENTS</codeph> attribute is executed on all primary segment instances
+                    (not the master).</p>
+            </body>
+        </topic>
         <topic id="topic281" xml:lang="en">
             <title id="in1414519">Function Volatility and Plan Caching</title>
             <body>
