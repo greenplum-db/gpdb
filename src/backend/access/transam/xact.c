@@ -5547,9 +5547,8 @@ xact_redo_commit(xl_xact_commit *xlrec, TransactionId xid,
 		TransactionIdAdvance(ShmemVariableCache->nextXid);
 	}
 
-	/* GPDB_84_MERGE_FIXME: This came from upstream, but the old code this replaced
-	 * had been removed from this function GPDB. Where does this belong now? */
-#if 0
+	for (i = 0; i < xlrec->nrels; i++)
+	{
 		SMgrRelation srel = smgropen(xlrec->xnodes[i]);
 		ForkNumber fork;
 
@@ -5563,7 +5562,6 @@ xact_redo_commit(xl_xact_commit *xlrec, TransactionId xid,
 		}
 		smgrclose(srel);
 	}
-#endif
 }
 
 static void
@@ -5645,22 +5643,21 @@ xact_redo_distributed_commit(xl_xact_commit *xlrec, TransactionId xid)
 			TransactionIdAdvance(ShmemVariableCache->nextXid);
 		}
 
-		/* GPDB_84_MERGE_FIXME: This came from upstream, but the old code this replaced
-		 * had been removed from this function GPDB. Where does this belong now? */
-#if 0
-		SMgrRelation srel = smgropen(xlrec->xnodes[i]);
-		ForkNumber	fork;
-
-		for (fork = 0; fork <= MAX_FORKNUM; fork++)
+		for (i = 0; i < xlrec->nrels; i++)
 		{
-			if (smgrexists(srel, fork))
+			SMgrRelation srel = smgropen(xlrec->xnodes[i]);
+			ForkNumber	fork;
+
+			for (fork = 0; fork <= MAX_FORKNUM; fork++)
 			{
-				XLogDropRelation(xlrec->xnodes[i], fork);
-				smgrdounlink(srel, fork, false, true);
+				if (smgrexists(srel, fork))
+				{
+					XLogDropRelation(xlrec->xnodes[i], fork);
+					smgrdounlink(srel, fork, false, true);
+				}
 			}
+			smgrclose(srel);
 		}
-		smgrclose(srel);
-#endif
 	}
 
 	/*
@@ -5694,9 +5691,6 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 		TransactionIdAdvance(ShmemVariableCache->nextXid);
 	}
 
-	/* GPDB_84_MERGE_FIXME: This came from upstream, but the old code this replaced
-	 * had been removed from this function GPDB. Where does this belong now? */
-#if 0
 	/* Make sure files supposed to be dropped are dropped */
 	for (i = 0; i < xlrec->nrels; i++)
 	{
@@ -5713,7 +5707,6 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 		}
 		smgrclose(srel);
 	}
-#endif
 }
 
 static void
