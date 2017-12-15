@@ -34,7 +34,6 @@ ssh_keyscan_for_user() {
 }
 
 transfer_ownership() {
-    #  chown -R gpadmin:gpadmin gpdb_src
     chmod a+w gpdb_src
     find gpdb_src -type d -exec chmod a+w {} \;
     # Needed for the gpload test
