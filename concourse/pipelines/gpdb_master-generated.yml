@@ -377,12 +377,14 @@ resources:
     private_key: {{pxf-git-key}}
     uri: {{pxf-git-remote}}
 
-- name: pxf_automation_src
+- name: pxf_infra_src
   type: git
   source:
-    branch: {{pxf_automation-git-branch}}
-    private_key: {{pxf_automation-git-key}}
-    uri: {{pxf_automation-git-remote}}
+    branch: {{pxf_infra-git-branch}}
+    private_key: {{pxf_infra-git-key}}
+    uri: {{pxf_infra-git-remote}}
+    paths:
+    - pxf_automation
 
 - name: debian_release
   type: git
@@ -3013,7 +3015,7 @@ jobs:
     - get: singlecluster
       resource: singlecluster-HDP
       trigger: true
-    - get: pxf_automation_src
+    - get: pxf_infra_src
       trigger: true
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
@@ -3037,7 +3039,7 @@ jobs:
     - get: singlecluster
       resource: singlecluster-CDH
       trigger: true
-    - get: pxf_automation_src
+    - get: pxf_infra_src
       trigger: true
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
@@ -3061,7 +3063,7 @@ jobs:
     - get: singlecluster
       resource: singlecluster-HDP
       trigger: true
-    - get: pxf_automation_src
+    - get: pxf_infra_src
       trigger: true
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
@@ -3085,7 +3087,7 @@ jobs:
     - get: singlecluster
       resource: singlecluster-CDH
       trigger: true
-    - get: pxf_automation_src
+    - get: pxf_infra_src
       trigger: true
     - get: centos-gpdb-dev-6
   - task: regression_tests_pxf
