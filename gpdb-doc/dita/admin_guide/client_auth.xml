@@ -7,35 +7,32 @@
     Greenplum Database.</shortdesc>
   <body>
     <p>When a Greenplum Database system is first initialized, the system contains one predefined
-       <i>superuser</i> role. This role will have the same name as the operating system user who
+        <i>superuser</i> role. This role will have the same name as the operating system user who
       initialized the Greenplum Database system. This role is referred to as
-      <codeph>gpadmin</codeph>. By default, the system is configured to only allow local 
+        <codeph>gpadmin</codeph>. By default, the system is configured to only allow local
       connections to the database from the <codeph>gpadmin</codeph> role. If you want to allow any
       other roles to connect, or if you want to allow connections from remote hosts, you have to
-      configure Greenplum Database to allow such connections. This section explains how to
-      configure client connections and authentication to Greenplum Database.</p>
+      configure Greenplum Database to allow such connections. This section explains how to configure
+      client connections and authentication to Greenplum Database.</p>
     <note>The PgBouncer connection pooler is bundled with Greenplum Database. PgBouncer can be
       configured to support LDAP or Active Directory authentication for users connecting to
-      Greenplum Database through the connection pooler client connections to Greenplum Database.
-      See
-      <xref
-        href="access_db/topics/pgbouncer.xml#topic_fstrm"/>. </note>
+      Greenplum Database through the connection pooler client connections to Greenplum Database. See
+        <xref href="access_db/topics/pgbouncer.xml#topic_fstrm"/>. </note>
   </body>
   <topic id="topic2" xml:lang="en">
     <title id="ip142171">Allowing Connections to Greenplum Database</title>
     <body>
       <p>Client access and authentication is controlled by the standard PostgreSQL host-based
-        authentication file, <filepath>pg_hba.conf</filepath>.  For detailed information about
-        this file, see <xref
-          href="http://www.postgresql.org/docs/9.0/interactive/auth-pg-hba-conf.html"
-          scope="external" format="html"
-        >The pg_hba.conf File</xref> in the PostgreSQL documentation. </p>
+        authentication file, <filepath>pg_hba.conf</filepath>. For detailed information about this
+        file, see <xref href="http://www.postgresql.org/docs/9.0/interactive/auth-pg-hba-conf.html"
+          scope="external" format="html">The pg_hba.conf File</xref> in the PostgreSQL
+        documentation. </p>
       <p>In Greenplum Database, the <filepath>pg_hba.conf</filepath> file of the master instance
         controls client access and authentication to your Greenplum Database system. The Greenplum
         Database segments also have <filepath>pg_hba.conf</filepath> files, but these are already
         correctly configured to allow only client connections from the master host. The segments
         never accept outside client connections, so there is no need to alter the
-        <codeph>pg_hba.conf</codeph> file on segments.</p>
+          <codeph>pg_hba.conf</codeph> file on segments.</p>
       <p>The general format of the <filepath>pg_hba.conf</filepath> file is a set of records, one
         per line. Greenplum Database ignores blank lines and any text after the <codeph>#</codeph>
         comment character. A record consists of a number of fields that are separated by spaces or
@@ -59,42 +56,37 @@
           <tbody>
             <row>
               <entry colname="col1">local</entry>
-              <entry colname="col2"
-                >Matches connection attempts using UNIX-domain sockets. Without a
+              <entry colname="col2">Matches connection attempts using UNIX-domain sockets. Without a
                 record of this type, UNIX-domain socket connections are disallowed.</entry>
             </row>
             <row>
               <entry colname="col1">host</entry>
-              <entry colname="col2"
-                  >Matches connection attempts made using TCP/IP. Remote TCP/IP connections will
-                not be possible unless the server is started with an appropriate value for the
-                <codeph>listen_addresses</codeph> server configuration parameter.</entry>
+              <entry colname="col2">Matches connection attempts made using TCP/IP. Remote TCP/IP
+                connections will not be possible unless the server is started with an appropriate
+                value for the <codeph>listen_addresses</codeph> server configuration
+                parameter.</entry>
             </row>
             <row>
               <entry colname="col1">hostssl</entry>
-              <entry colname="col2"
-                  >Matches connection attempts made using TCP/IP, but only when the connection is
-                made with SSL encryption. SSL must be enabled at server start time by setting the
-                <codeph>ssl</codeph> server configuration parameter. </entry>
+              <entry colname="col2">Matches connection attempts made using TCP/IP, but only when the
+                connection is made with SSL encryption. SSL must be enabled at server start time by
+                setting the <codeph>ssl</codeph> server configuration parameter. </entry>
             </row>
             <row>
               <entry colname="col1">hostnossl</entry>
-              <entry colname="col2"
-                >Matches connection attempts made over TCP/IP that do not use
+              <entry colname="col2">Matches connection attempts made over TCP/IP that do not use
                 SSL.</entry>
             </row>
             <row>
               <entry colname="col1">database</entry>
-              <entry colname="col2"
-                  >Specifies which database names this record matches. The value
+              <entry colname="col2">Specifies which database names this record matches. The value
                   <codeph>all</codeph> specifies that it matches all databases. Multiple database
                 names can be supplied by separating them with commas. A separate file containing
                 database names can be specified by preceding the file name with @.</entry>
             </row>
             <row>
               <entry colname="col1">role</entry>
-              <entry colname="col2"
-                  >Specifies which database role names this record matches. The
+              <entry colname="col2">Specifies which database role names this record matches. The
                 value <codeph>all</codeph> specifies that it matches all roles. If the specified
                 role is a group and you want all members of that group to be included, precede the
                 role name with a +. Multiple role names can be supplied by separating them with
@@ -103,45 +95,44 @@
             </row>
             <row>
               <entry colname="col1">CIDR-address</entry>
-              <entry colname="col2"
-                  >Specifies the client machine IP address range that this record matches. It
-                contains an IP address in standard dotted decimal notation and a CIDR mask length.
-                IP addresses can only be specified numerically, not as domain or host names. The
-                mask length indicates the number of high-order bits of the client IP address that
-                must match. Bits to the right of this must be zero in the given IP address. There
-                must not be any white space between the IP address, the /, and the CIDR mask length.
-                <p>Typical examples of a CIDR-address are 172.20.143.89/32 for a single host, or
-                  172.20.143.0/24 for a small network, or 10.6.0.0/16 for a larger one. To specify
-                  a single host, use a CIDR mask of 32 for IPv4 or 128 for IPv6. In a network
-                  address, do not omit trailing zeroes.</p></entry>
+              <entry colname="col2">Specifies the client machine IP address range that this record
+                matches. It contains an IP address in standard dotted decimal notation and a CIDR
+                mask length. IP addresses can only be specified numerically, not as domain or host
+                names. The mask length indicates the number of high-order bits of the client IP
+                address that must match. Bits to the right of this must be zero in the given IP
+                address. There must not be any white space between the IP address, the /, and the
+                CIDR mask length. <p>Typical examples of a CIDR-address are 172.20.143.89/32 for a
+                  single host, or 172.20.143.0/24 for a small network, or 10.6.0.0/16 for a larger
+                  one. To specify a single host, use a CIDR mask of 32 for IPv4 or 128 for IPv6. In
+                  a network address, do not omit trailing zeroes.</p></entry>
             </row>
             <row>
               <entry colname="col1">IP-address<p>IP-mask</p></entry>
-              <entry colname="col2"
-                >These fields can be used as an alternative to the CIDR-address notation. Instead
-                of specifying the mask length, the actual mask is specified in a separate column.
-                For example, 255.0.0.0 represents an IPv4 CIDR mask length of 8, and 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to and 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to host, hostssl, and hostnossl records. </entry>
+              <entry colname="col2">These fields can be used as an alternative to the CIDR-address
+                notation. Instead of specifying the mask length, the actual mask is specified in a
+                separate column. For example, 255.0.0.0 represents an IPv4 CIDR mask length of 8,
+                and 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to
+                and 255.255.255.255 represents a CIDR mask length of 32. These fields only apply to
+                host, hostssl, and hostnossl records. </entry>
             </row>
             <row>
               <entry colname="col1">authentication-method</entry>
-              <entry colname="col2"
-                  >Specifies the authentication method to use when connecting. Greenplum supports
-                the <xref
+              <entry colname="col2">Specifies the authentication method to use when connecting.
+                Greenplum supports the <xref
                   href="http://www.postgresql.org/docs/9.0/static/auth-methods.html"
-                  scope="external" format="html"
-                >authentication methods</xref> supported by PostgreSQL 9.0.</entry>
+                  scope="external" format="html">authentication methods</xref> supported by
+                PostgreSQL 9.0.</entry>
             </row>
           </tbody>
         </tgroup>
       </table>
-      <note type="caution"
-          >For a more secure system, consider removing records for remote connections that use
-        trust authentication from the <codeph>pg_hba.conf</codeph> file. Trust authentication
-        grants any user who can connect to the server access to the database using any role they
-        specify. You can safely replace trust authentication with ident authentication for local
-        UNIX-socket connections. You can also use ident authentication for local and remote TCP
-        clients, but the client host must be running an ident service and you must trust the
-        integrity of that machine.</note>
+      <note type="caution">For a more secure system, consider removing records for remote
+        connections that use trust authentication from the <codeph>pg_hba.conf</codeph> file. Trust
+        authentication grants any user who can connect to the server access to the database using
+        any role they specify. You can safely replace trust authentication with ident authentication
+        for local UNIX-socket connections. You can also use ident authentication for local and
+        remote TCP clients, but the client host must be running an ident service and you must trust
+        the integrity of that machine.</note>
     </body>
     <topic id="topic3" xml:lang="en">
       <title id="ip141322">Editing the pg_hba.conf File</title>
@@ -158,17 +149,15 @@
           connections, for example 127.0.0.1/28. Using ident authentication for remote TCP
           connections is less secure because it requires you to trust the integrity of the ident
           service on the client's host.</p>
-        <p>This example shows how to edit the <filepath>pg_hba.conf</filepath> file of the master
-          to allow remote client access to all databases from all roles using encrypted password
+        <p>This example shows how to edit the <filepath>pg_hba.conf</filepath> file of the master to
+          allow remote client access to all databases from all roles using encrypted password
           authentication.</p>
         <section id="ip144328">
           <title>Editing pg_hba.conf</title>
           <ol id="ol_xz4_x15_jp">
-            <li id="ip142837"
-              >Open the file <filepath>$MASTER_DATA_DIRECTORY/pg_hba.conf</filepath>
+            <li id="ip142837">Open the file <filepath>$MASTER_DATA_DIRECTORY/pg_hba.conf</filepath>
               in a text editor.</li>
-            <li id="ip141930"
-              >Add a line to the file for each type of connection you want to allow.
+            <li id="ip141930">Add a line to the file for each type of connection you want to allow.
               Records are read sequentially, so the order of the records is significant. Typically,
               earlier records will have tight connection match parameters and weaker authentication
               methods, while later records will have looser match parameters and stronger
@@ -196,12 +185,10 @@ ldapsuffix=",ou=People,dc=company,dc=com"</codeblock></li>
                 <codeblock>$ gpstop -u</codeblock>
               </p></li>
           </ol>
-          <note type="note"
-              >Note that you can also control database access by
-            setting object privileges as described in <xref
-              href="roles_privs.xml#topic6" type="topic" format="dita"
-              />. The <filepath>pg_hba.conf</filepath> file just controls
-            who can initiate a database session and how those connections are authenticated.</note>
+          <note type="note">Note that you can also control database access by setting object
+            privileges as described in <xref href="roles_privs.xml#topic6" type="topic"
+              format="dita"/>. The <filepath>pg_hba.conf</filepath> file just controls who can
+            initiate a database session and how those connections are authenticated.</note>
         </section>
       </body>
     </topic>
@@ -215,8 +202,8 @@ ldapsuffix=",ou=People,dc=company,dc=com"</codeblock></li>
         can configure the <codeph>max_connections</codeph> server configuration parameter. This is a
           <i>local</i> parameter, meaning that you must set it in the
           <codeph>postgresql.conf</codeph> file of the master, the standby master, and each segment
-        instance (primary and mirror). The recommended value of
-          <codeph>max_connections</codeph> on segments is 5-10 times the value on the master.</p>
+        instance (primary and mirror). The recommended value of <codeph>max_connections</codeph> on
+        segments is 5-10 times the value on the master.</p>
       <p>When you set <codeph>max_connections</codeph>, you must also set the dependent parameter
           <codeph>max_prepared_transactions</codeph>. This value must be at least as large as the
         value of <codeph>max_connections</codeph> on the master, and segment instances should be set
@@ -244,25 +231,22 @@ max_prepared_transactions=100
       </ul>
       <p>The following steps set the parameter values with the Greenplum Database utility
           <codeph>gpconfig</codeph>. </p>
-      <p>For information about <codeph>gpconfig</codeph>, see the <i>Greenplum
-          Database Utility Guide</i>.</p>
+      <p>For information about <codeph>gpconfig</codeph>, see the <i>Greenplum Database Utility
+          Guide</i>.</p>
       <section id="ip142411">
         <title>To change the number of allowed connections</title>
         <ol id="ol_sty_r15_jp">
-          <li id="ip146498"
-              >Log into the Greenplum Database master host as the Greenplum Database
+          <li id="ip146498">Log into the Greenplum Database master host as the Greenplum Database
             administrator and source the file <codeph>$GPHOME/greenplum_path.sh</codeph>. </li>
-          <li id="ip146499"
-              >Set the value of the <codeph>max_connections</codeph> parameter. This
+          <li id="ip146499">Set the value of the <codeph>max_connections</codeph> parameter. This
               <codeph>gpconfig</codeph> command sets the value on the segments to 1000 and the value
             on the master to 200.<p>
               <codeblock>$ gpconfig -c max_connections -v 1000 -m 200
 </codeblock>
-            </p><p>The value on the segments must be greater than the value on the master. The 
-              recommended value of <codeph>max_connections</codeph> on segments is 5-10 times the 
+            </p><p>The value on the segments must be greater than the value on the master. The
+              recommended value of <codeph>max_connections</codeph> on segments is 5-10 times the
               value on the master. </p></li>
-          <li id="ip146502"
-              >Set the value of the <codeph>max_prepared_transactions</codeph>
+          <li id="ip146502">Set the value of the <codeph>max_prepared_transactions</codeph>
             parameter. This <codeph>gpconfig</codeph> command sets the value to 200 on the master
             and all segments.<p>
               <codeblock>$ gpconfig -c max_prepared_transactions -v 200
@@ -273,8 +257,7 @@ max_prepared_transactions=100
               <codeblock>$ gpstop -r
 </codeblock>
             </p></li>
-          <li id="ip146510"
-              >You can check the value of parameters on the master and segments with
+          <li id="ip146510">You can check the value of parameters on the master and segments with
             the <codeph>gpconfig</codeph>
             <codeph>-s</codeph> option. This <codeph>gpconfig</codeph> command displays the values
             of the <codeph>max_connections</codeph> parameter. <p>
@@ -306,8 +289,7 @@ max_prepared_transactions=100
         files <filepath>server.key</filepath> (server private key) and
           <filepath>server.crt</filepath> (server certificate) in the master data directory. These
         files must be set up correctly before an SSL-enabled Greenplum Database system can start. </p>
-      <note type="important"
-        > Do not protect the private key with a passphrase. The server does not
+      <note type="important"> Do not protect the private key with a passphrase. The server does not
         prompt for a passphrase for the private key, and the database startup fails with an error if
         one is required.</note>
       <p>A self-signed certificate can be used for testing, but a certificate signed by a
@@ -344,9 +326,7 @@ max_prepared_transactions=100
           <codeblock># chmod og-rwx server.key</codeblock>
         </p>
         <p>For more details on how to create your server private key and certificate, refer to the
-            <xref
-            href="https://www.openssl.org/docs/" format="html" scope="external"
-            >OpenSSL
+            <xref href="https://www.openssl.org/docs/" format="html" scope="external">OpenSSL
             documentation</xref>.</p>
       </body>
     </topic>
