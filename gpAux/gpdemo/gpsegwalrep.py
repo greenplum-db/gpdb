@@ -32,6 +32,7 @@ import subprocess
 import threading
 import datetime
 import time
+from sets import Set
 from gppylib.db import dbconn
 
 PRINT_LOCK = threading.Lock()
@@ -364,7 +365,7 @@ class ClusterConfiguration():
             print e
             sys.exit(1)
 
-        self._all_seg_configs = []
+        contentIDs = Set()
         self.seg_configs = []
         self.num_contents = 0
         for result in resultsets:
@@ -386,10 +387,12 @@ class ClusterConfiguration():
             if append:
                 self.seg_configs.append(seg_config)
 
-            # Count primary segments
-            if (seg_config.preferred_role == GpSegmentConfiguration.ROLE_PRIMARY
-                and seg_config.content != GpSegmentConfiguration.MASTER_CONTENT_ID):
-                self.num_contents += 1
+            # Count distinct content IDs, not including the master.
+            if (seg_config.content != GpSegmentConfiguration.MASTER_CONTENT_ID):
+                contentIDs.add(seg_config.content)
+
+        self.num_contents = len(contentIDs)
+        print 'found %d distinct content IDs' % (self.num_contents)
 
     def check_status_and_mode(self, expected_status, expected_mode):
         ''' Check if all the instance reached the expected_state and expected_mode '''

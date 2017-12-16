@@ -57,6 +57,7 @@ extern void ClosePostmasterPorts(bool am_syslogger);
 extern int	MaxLivePostmasterChildren(void);
 
 extern bool AreWeAMirror;
+extern void SignalPromote(void);
 
 #ifdef EXEC_BACKEND
 extern pid_t postmaster_forkexec(int argc, char *argv[]);

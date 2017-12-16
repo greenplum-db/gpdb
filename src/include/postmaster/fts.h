@@ -23,6 +23,7 @@
 /* Queries for FTS messages */
 #define	FTS_MSG_PROBE "PROBE"
 #define FTS_MSG_SYNCREP_OFF "SYNCREP_OFF"
+#define FTS_MSG_PROMOTE "PROMOTE"
 
 #define Natts_fts_message_response 4
 #define Anum_fts_message_response_is_mirror_up 0

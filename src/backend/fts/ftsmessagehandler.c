@@ -16,6 +16,7 @@
 #include "libpq/pqformat.h"
 #include "libpq/libpq.h"
 #include "postmaster/fts.h"
+#include "postmaster/postmaster.h"
 #include "utils/guc.h"
 #include "replication/gp_replication.h"
 
@@ -120,6 +121,25 @@ HandleFtsWalRepSyncRepOff(void)
 	SendFtsResponse(&response, FTS_MSG_SYNCREP_OFF);
 }
 
+static void
+HandleFtsWalRepPromote(void)
+{
+	FtsResponse response = {
+		false, /* IsMirrorUp */
+		false, /* IsInSync */
+		false  /* IsSyncRepEnabled */
+	};
+
+	ereport(LOG,
+			(errmsg("promoting mirror to primary due to FTS request")));
+
+	/* Unset synchronous replication and promote. */
+	UnsetSyncStandbysDefined();
+	SignalPromote();
+
+	SendFtsResponse(&response, FTS_MSG_PROMOTE);
+}
+
 void
 HandleFtsMessage(const char* query_string)
 {
@@ -129,6 +149,9 @@ HandleFtsMessage(const char* query_string)
 	else if (strncmp(query_string, FTS_MSG_SYNCREP_OFF,
 					 strlen(FTS_MSG_SYNCREP_OFF)) == 0)
 		HandleFtsWalRepSyncRepOff();
+	else if (strncmp(query_string, FTS_MSG_PROMOTE,
+					 strlen(FTS_MSG_PROMOTE)) == 0)
+		HandleFtsWalRepPromote();
 	else
 		ereport(ERROR,
 				(errmsg("received unknown FTS query: %s", query_string)));

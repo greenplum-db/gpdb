@@ -348,7 +348,8 @@ messageWalRepSegmentFromThread(void *arg)
 
 		/* now let's probe the primary. */
 		probe_response_per_segment *response = &context->responses[response_index];
-		Assert(SEGMENT_IS_ACTIVE_PRIMARY(response->segment_db_info));
+		AssertImply(strcmp(response->message, FTS_MSG_PROMOTE) != 0,
+					SEGMENT_IS_ACTIVE_PRIMARY(response->segment_db_info));
 		messageWalRepSegment(response);
 	}
 

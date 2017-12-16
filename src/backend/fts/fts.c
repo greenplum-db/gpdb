@@ -400,7 +400,8 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeCo
 }
 
 static void
-probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive, bool IsInSync)
+probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
+						bool IsSegmentAlive, bool IsInSync)
 {
 	Assert(IsInSync ? IsSegmentAlive : true);
 
@@ -422,8 +423,8 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive, bool Is
 		histvals[Anum_gp_configuration_history_dbid-1] =
 				Int16GetDatum(dbid);
 		snprintf(desc, sizeof(desc),
-				 "FTS: update status and mode for dbid %d with contentid %d to %c and %c",
-				 dbid, segindex,
+				 "FTS: update role, status, and mode for dbid %d with contentid %d to %c, %c, and %c",
+				 dbid, segindex, role,
 				 IsSegmentAlive ? GP_SEGMENT_CONFIGURATION_STATUS_UP :
 				 GP_SEGMENT_CONFIGURATION_STATUS_DOWN,
 				 IsInSync ? GP_SEGMENT_CONFIGURATION_MODE_INSYNC :
@@ -470,6 +471,15 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, bool IsSegmentAlive, bool Is
 		{
 			elog(ERROR, "FTS cannot find dbid=%d in %s", dbid,
 				 RelationGetRelationName(configrel));
+		}
+
+		char oldrole =
+			((Form_gp_segment_configuration) GETSTRUCT(configtuple))->role;
+
+		if (oldrole != role)
+		{
+			configvals[Anum_gp_segment_configuration_role-1] = CharGetDatum(role);
+			repls[Anum_gp_segment_configuration_role-1] = true;
 		}
 
 		configvals[Anum_gp_segment_configuration_status-1] =
@@ -536,6 +546,10 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
 		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
 
+		/* Only swapped in promotion; by default, keep the current roles. */
+		char newPrimaryRole = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+		char newMirrorRole = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+
 		/*
 		 * If probe response state is different from current state in
 		 * configuration, update both primary and mirror.
@@ -559,6 +573,23 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 			 * can be notified to unblock commits.
 			 */
 			Assert(UpdateMirror || !SEGMENT_IS_ALIVE(mirror));
+		}
+		else if (!IsPrimaryAlive && SEGMENT_IS_IN_SYNC(mirror))
+		{
+			/* The primary is down; promote the mirror to primary. */
+			response->message = FTS_MSG_PROMOTE;
+			response->segment_db_info = mirror;
+
+			/*
+			 * Flip the roles and mark the failed primary as down in FTS
+			 * configuration before sending promote message.  Dispatcher
+			 * should no longer consider the failed primary for gang
+			 * creation, FTS should no longer probe the failed primary.
+			 */
+			newPrimaryRole = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
+			newMirrorRole = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
+
+			Assert(SEGMENT_IS_IN_SYNC(primary));
 		}
 
 		/*
@@ -589,11 +620,13 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 
 			if (UpdatePrimary)
 				probeWalRepUpdateConfig(primary->dbid, primary->segindex,
-										IsPrimaryAlive, IsInSync);
+										newPrimaryRole, IsPrimaryAlive,
+										IsInSync);
 
 			if (UpdateMirror)
 				probeWalRepUpdateConfig(mirror->dbid, mirror->segindex,
-										IsMirrorAlive, IsInSync);
+										newMirrorRole, IsMirrorAlive,
+										IsInSync);
 
 			if (shutdown_requested)
 			{
@@ -686,14 +719,18 @@ FtsWalRepSetupMessageContext(fts_context *context)
 			response->message = NULL;
 			response->isScheduled = true;
 		}
-		else
+		else if ((response->message == FTS_MSG_SYNCREP_OFF)
+				 || (response->message == FTS_MSG_PROMOTE))
 		{
-			Assert(strcmp(response->message, FTS_MSG_SYNCREP_OFF) == 0);
 			response->isScheduled = false;
 			response->result.isPrimaryAlive = false;
 			response->result.isInSync = false;
 			response->result.isSyncRepEnabled = false;
 			message_segments = true;
+		}
+		else
+		{
+			Assert(false);
 		}
 	}
 	return message_segments;

@@ -6933,6 +6933,18 @@ sigusr1_handler(SIGNAL_ARGS)
 	errno = save_errno;
 }
 
+/* XXX */
+void SignalPromote(void)
+{
+	FILE *fd;
+	if ((fd = fopen("promote", "w")))
+	{
+		/* XXX what if it fails? */
+		fclose(fd);
+	}
+	signal_child(StartupPID, SIGUSR2);
+}
+
 
 /*
  * Dummy signal handler
