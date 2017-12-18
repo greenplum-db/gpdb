@@ -4146,9 +4146,10 @@ def get_log_name(utilname, logdir):
 def impl(context, utilname, dirname):
     if not os.path.exists(dirname):
         raise Exception('No such directory: %s' % dirname)
-    logname = get_log_name(utilname, dirname)
-    if not os.path.exists(logname):
-        raise Exception('Log "%s" was not created' % logname)
+    pattern = "%s/%s_*.log" % (dirname, utilname)
+    logs_for_a_util = glob.glob(pattern)
+    if not logs_for_a_util:
+        raise Exception('Logs matching "%s" were not created' % pattern)
 
 
 @given('a table is created containing rows of length "{length}" with connection "{dbconn}"')
