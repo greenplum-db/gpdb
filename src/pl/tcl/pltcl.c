@@ -217,7 +217,7 @@ static int pltcl_process_SPI_result(Tcl_Interp *interp,
 						 CONST84 char *loop_body,
 						 int spi_rc,
 						 SPITupleTable *tuptable,
-						 int ntuples);
+						 int64 ntuples);
 static int pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 				  int argc, CONST84 char *argv[]);
 static int pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
@@ -486,7 +486,7 @@ pltcl_init_load_unknown(Tcl_Interp *interp)
 	int			tcl_rc;
 	Tcl_DString unknown_src;
 	char	   *part;
-	int			i;
+	int64			i;
 	int			fno;
 
 	/************************************************************
@@ -1906,7 +1906,7 @@ pltcl_SPI_execute(ClientData cdata, Tcl_Interp *interp,
 	{
 		UTF_BEGIN;
 		spi_rc = SPI_execute(UTF_U2E(argv[query_idx]),
-							 pltcl_current_prodesc->fn_readonly, count);
+							 pltcl_current_prodesc->fn_readonly, (int64) count);
 		UTF_END;
 
 		my_rc = pltcl_process_SPI_result(interp,
@@ -1939,11 +1939,10 @@ pltcl_process_SPI_result(Tcl_Interp *interp,
 						 CONST84 char *loop_body,
 						 int spi_rc,
 						 SPITupleTable *tuptable,
-						 int ntuples)
+						 int64 ntuples)
 {
 	int			my_rc = TCL_OK;
 	char		buf[64];
-	int			i;
 	int			loop_rc;
 	HeapTuple  *tuples;
 	TupleDesc	tupdesc;
@@ -1954,8 +1953,11 @@ pltcl_process_SPI_result(Tcl_Interp *interp,
 		case SPI_OK_INSERT:
 		case SPI_OK_DELETE:
 		case SPI_OK_UPDATE:
-			snprintf(buf, sizeof(buf), "%d", ntuples);
+			snprintf(buf, sizeof(buf), INT64_FORMAT, ntuples);
+/* FIXME: diagnostics
 			Tcl_SetResult(interp, buf, TCL_VOLATILE);
+*/
+			Tcl_SetObjResult(interp, Tcl_NewWideIntObj(ntuples));
 			break;
 
 		case SPI_OK_UTILITY:
@@ -1984,6 +1986,8 @@ pltcl_process_SPI_result(Tcl_Interp *interp,
 				 * If there is no loop body given, just set the variables from
 				 * the first tuple (if any)
 				 */
+				 int64		i;
+
 				if (ntuples > 0)
 					pltcl_set_tuple_values(interp, arrayname, 0,
 										   tuples[0], tupdesc);
@@ -2019,8 +2023,12 @@ pltcl_process_SPI_result(Tcl_Interp *interp,
 
 			if (my_rc == TCL_OK)
 			{
-				snprintf(buf, sizeof(buf), "%d", ntuples);
+				snprintf(buf, sizeof(buf), INT64_FORMAT, ntuples);
+/* FIXME: diagnostics
 				Tcl_SetResult(interp, buf, TCL_VOLATILE);
+				Tcl_SetObjResult(interp, Tcl_NewIntObj(ntuples));
+*/
+				Tcl_SetObjResult(interp, Tcl_NewWideIntObj(ntuples));
 			}
 			break;
 
@@ -2361,7 +2369,7 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 		 * Execute the plan
 		 ************************************************************/
 		spi_rc = SPI_execute_plan(qdesc->plan, argvalues, nulls,
-								  pltcl_current_prodesc->fn_readonly, count);
+								  pltcl_current_prodesc->fn_readonly, (int64) count);
 
 		my_rc = pltcl_process_SPI_result(interp,
 										 arrayname,
@@ -2409,7 +2417,7 @@ pltcl_SPI_lastoid(ClientData cdata, Tcl_Interp *interp,
  **********************************************************************/
 static void
 pltcl_set_tuple_values(Tcl_Interp *interp, CONST84 char *arrayname,
-					   int tupno, HeapTuple tuple, TupleDesc tupdesc)
+					   uint64 tupno, HeapTuple tuple, TupleDesc tupdesc)
 {
 	int			i;
 	char	   *outputstr;
@@ -2438,8 +2446,11 @@ pltcl_set_tuple_values(Tcl_Interp *interp, CONST84 char *arrayname,
 	{
 		arrptr = &arrayname;
 		nameptr = &attname;
-		snprintf(buf, sizeof(buf), "%d", tupno);
+		snprintf(buf, sizeof(buf), UINT64_FORMAT, tupno);
+/* FIXME: diagnostics
 		Tcl_SetVar2(interp, arrayname, ".tupno", buf, 0);
+*/
+		Tcl_SetVar2Ex(interp, arrayname, ".tupno", Tcl_NewWideIntObj(tupno), 0);
 	}
 
 	for (i = 0; i < tupdesc->natts; i++)
