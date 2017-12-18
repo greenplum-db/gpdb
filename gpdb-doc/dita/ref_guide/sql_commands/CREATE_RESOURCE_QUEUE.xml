@@ -47,11 +47,14 @@
         that will be exempt from resource queueing.</p>
       <note>GPORCA and the legacy Greenplum Database query optimizer utilize different
               query costing models and may compute different costs for the same query.
-              When resource queue-based resource management is active, use the
+              The Greenplum Database resource queue resource management scheme neither
+              differentiates nor aligns costs between GPORCA and the legacy optimizer; it
+              uses the literal cost value returned from the optimizer to throttle
+              queries.<p> When resource queue-based resource management is active, use the
               <codeph>MEMORY_LIMIT</codeph> and <codeph>ACTIVE_STATEMENTS</codeph> limits for
               resource queues rather than configuring cost-based limits. Even when using GPORCA,
               Greenplum Database may fall back to using the legacy query optimizer for certain
-              queries, so using cost-based limits can lead to unexpected results.</note>
+              queries, so using cost-based limits can lead to unexpected results.</p></note>
       <p>If a value is not defined for <codeph>ACTIVE_STATEMENTS</codeph> or
           <codeph>MAX_COST</codeph>, it is set to <codeph>-1</codeph> by default (meaning no limit).
         After defining a resource queue, you must assign roles to the queue using the <codeph><xref
