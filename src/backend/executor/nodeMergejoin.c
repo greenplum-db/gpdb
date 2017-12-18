@@ -851,16 +851,9 @@ ExecMergeJoin(MergeJoinState *node)
 				innerTupleSlot = node->mj_InnerTupleSlot;
 				econtext->ecxt_innertuple = innerTupleSlot;
 
-				/* GPDB_84_MERGE_FIXME: why is this condition different from upstream? */
-				if (node->js.jointype == JOIN_SEMI &&
-					node->mj_MatchedOuter)
-					qualResult = false;
-				else
-				{
-					qualResult = (joinqual == NIL ||
-								  ExecQual(joinqual, econtext, false));
-					MJ_DEBUG_QUAL(joinqual, qualResult);
-				}
+				qualResult = (joinqual == NIL ||
+							  ExecQual(joinqual, econtext, false));
+				MJ_DEBUG_QUAL(joinqual, qualResult);
 
 				if (qualResult)
 				{
