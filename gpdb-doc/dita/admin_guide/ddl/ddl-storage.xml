@@ -217,10 +217,10 @@
       <p>Performance with compressed append-optimized tables depends on hardware, query tuning
         settings, and other factors. You should perform comparison testing to determine
         the actual performance in your environment.</p>
-	<note type="note">Zstd compression level can be set between 1 and 19.
-	QuickLZ compression level can only be set to level 1; no other options are
-        available. Compression level with zlib can be set at values from 1 - 9. Compression level
-        with RLE can be set at values from 1 - 4.<p>An <codeph>ENCODING</codeph> clause specifies
+	<note type="note">Zstd compression level can be set to values between 1 and 19.
+	QuickLZ compression level can only be set to level 1; no other values are
+        available. Compression level with zlib can be set to values from 1 - 9. Compression level
+        with RLE can be set to values from 1 - 4.<p>An <codeph>ENCODING</codeph> clause specifies
           compression type and level for individual columns. When an <codeph>ENCODING</codeph>
           clause conflicts with a <codeph>WITH</codeph> clause, the <codeph>ENCODING</codeph> clause
           has higher precedence than the <codeph>WITH</codeph> clause.</p></note>
@@ -370,6 +370,13 @@
               </entry>
               <entry colname="col2" morerows="2">Compression level.</entry>
               <entry colname="col3"><codeph>zlib</codeph> compression:
+                  <codeph>1</codeph>-<codeph>9</codeph></entry>
+              <entry colname="col4"><codeph>1</codeph> is the fastest method with the least
+                compression. <codeph>1</codeph> is the default.<p><codeph>9</codeph> is the slowest
+                  method with the most compression.</p></entry>
+            </row>
+            <row>
+              <entry colname="col3"><codeph>zstd</codeph> compression:
                   <codeph>1</codeph>-<codeph>19</codeph></entry>
               <entry colname="col4"><codeph>1</codeph> is the fastest method with the least
                 compression. <codeph>1</codeph> is the default.<p><codeph>19</codeph> is the slowest

@@ -59,7 +59,7 @@
             <entry colname="col4">The compression level, with compression ratio increasing from 1 to
               19. <p otherprops="pivotal">When <codeph>quicklz</codeph><sup>1</sup> is specified for
                 compresstype, valid values are 1 or 3. With <codeph>zlib</codeph> specified, valid
-                values are 1-9. </p></entry>
+                values are 1-9. When <codeph>zstd</codeph> is specified, valid values are 1-19.</p></entry>
           </row>
           <row>
             <entry colname="col1">
