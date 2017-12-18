@@ -232,9 +232,9 @@ host2_name,host2_ipaddr
       </table>
       <p>The <codeph>--full</codeph> option and the <codeph>--schema-only</codeph> option can be
         used together if you want to copy a database in phases, for example, during scheduled
-        periods of downtime or low activity. Run <codeph>gptransfer --full --schema-only -d
-            <i>&lt;database_name></i> ...</codeph> to create the full database on the destination
-        cluster, but with no data. Then you can transfer the tables in stages during scheduled down
+        periods of downtime or low activity. Run <codeph>gptransfer --full --schema-only ...</codeph>
+        to create the full database schema on the destination
+        cluster, but with no data. You can then transfer the tables in stages during scheduled down
         times or periods of low activity. Be sure to include the <codeph>--truncate</codeph> or
           <codeph>--drop</codeph> option when you later transfer tables to prevent the transfer from
         failing because the table already exists at the destination.</p>
@@ -282,7 +282,7 @@ host2_name,host2_ipaddr
       <ol>
         <li>Before you begin to transfer data, replicate the schema or schemas from the source
           cluster to the destination cluster. Do not use <codeph>gptransfer</codeph> with the
-            <codeph>--full –schema-only</codeph> options. Here are some options for copying the
+            <codeph>--full -–schema-only</codeph> options. Here are some options for copying the
             schema:<ul id="ul_q1y_1hh_1s">
             <li>Use the <codeph>gpsd</codeph> (Greenplum Statistics Dump) support utility. This
               method includes statistics, so be sure to run <codeph>ANALYZE</codeph> after creating
