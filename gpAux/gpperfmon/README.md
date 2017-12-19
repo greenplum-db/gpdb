@@ -11,11 +11,12 @@ Find more information about the architecture on [the wiki page](https://github.c
 	For macOS:
 		to build:
 	    `mkdir build && cd build && cmake .. && make && make install`
+
 	For CentOS:
 		wget ftp://rpmfind.net/linux/centos/6.9/os/x86_64/Packages/sigar-1.6.5-0.4.git58097d9.el6.x86_64.rpm
 		rpm -i sigar-1.6.5-0.4.git58097d9.el6.x86_64.rpm
-		wget https://raw.githubusercontent.com/hyperic/sigar/sigar-1.6/include/sigar.h
-		mv sigar.h /usr/local/include
+		wget http://mirror.centos.org/centos/6/os/x86_64/Packages/sigar-devel-1.6.5-0.4.git58097d9.el6.x86_64.rpm
+		rpm -i sigar-devel-1.6.5-0.4.git58097d9.el6.x86_64.rpm
 
 ## Troubleshooting
 	For macOS:
