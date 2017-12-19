@@ -51,19 +51,17 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                            <entry colname="col1">
                               <codeph>gp_hadoop_target_version</codeph>
                            </entry>
-                           <entry colname="col2">The Hadoop target. Choose one of the following. <p>
-                                 <codeph>cdh5</codeph>
+                           <entry colname="col2">The Hadoop target. Choose one of the following: <p>
+                                 <codeph>cdh</codeph>
                               </p><p>
-                                 <codeph>cdh4.1</codeph>
+                                 <codeph>hadoop</codeph>
                               </p><p>
-                                 <codeph>hdp2</codeph>
+                                 <codeph>hdp</codeph>
                               </p><p>
-                                 <codeph>gpmr-1.2</codeph>
-                              </p><p>
-                                 <codeph>hadoop2</codeph>
+                                 <codeph>mpr</codeph>
                               </p></entry>
                            <entry colname="col3">
-                              <codeph>gphd-1.1*</codeph>
+                              <codeph>hadoop</codeph>
                            </entry>
                            <entry colname="col4">master<p>session</p>reload </entry>
                         </row>
@@ -80,11 +78,11 @@ export HADOOP_HOME=/usr/lib/gphd</codeblock><p>The
                         </row>
                      </tbody>
                   </tgroup>
-               </table> <note>*The default <codeph>gp_hadoop_target_version</codeph> value <codeph>gphd-1.1</codeph> is not supported; you must set this server configuration parameter to a supported value.</note>
+               </table> 
                For example, the following commands use the Greenplum Database utilities
                   <codeph>gpconfig</codeph> and <codeph>gpstop</codeph> to set the server
                configuration parameters and restart Greenplum
-               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v 'hdb2'
+               Database:<codeblock>gpconfig -c gp_hadoop_target_version -v 'hdp'
 gpstop -u</codeblock>
                For information about the Greenplum Database utilities <codeph>gpconfig</codeph> and
                   <codeph>gpstop</codeph>, see the <cite>Greenplum Database Utility Guide</cite>. </li>

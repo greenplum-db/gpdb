@@ -4174,16 +4174,13 @@
           <tbody>
             <row>
               <entry colname="col1"
-                >gpmr-1.2<p>hadoop2</p><p>hdp2</p><p>cdh5</p><p>cdh4.1</p></entry>
-              <entry colname="col2">gphd-1.1*</entry>
+                >cdh<p>hadoop</p><p>hdp</p><p>mpr</p></entry>
+              <entry colname="col2">hadoop</entry>
               <entry colname="col3">local<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
       </table>
-      <note>*The default <codeph>gp_hadoop_target_version</codeph> value <codeph>gphd-1.1</codeph>
-        is not supported; you must set this server configuration parameter to a supported
-        value.</note>
     </body>
   </topic>
   <topic id="gp_hashjoin_tuples_per_bucket">

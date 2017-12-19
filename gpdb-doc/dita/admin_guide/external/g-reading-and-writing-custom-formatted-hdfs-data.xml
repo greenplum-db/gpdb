@@ -37,7 +37,7 @@ com.emc.greenplum.gpdb.hadoop.mapreduce.lib.output
                 <codeph>GPDBOutputFormat</codeph>. The Java packages are available in
                 <codeph>$GPHOME/lib/hadoop</codeph>. Compile and run the MapReduce job with the
             cross-connect package. For example, compile and run the MapReduce job with
-                <codeph>hdp2.0-gnet-1.2.0.0.jar</codeph> if you use the HDP
+                <codeph>hdp-gnet-1.2.0.0.jar</codeph> if you use the HDP
             distribution of Hadoop.</p>
         <p>To make the Java library available to all Hadoop users, the Hadoop cluster administrator
             should place the corresponding <codeph>gphdfs</codeph> connector jar in the
