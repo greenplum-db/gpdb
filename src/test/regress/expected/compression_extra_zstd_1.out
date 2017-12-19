@@ -1,0 +1,2822 @@
+--
+-- Extra tests for Zstandard compression for append-optimized column-oriented tables
+--
+-- 0. Create 'base' table which contains values to be inserted later;
+-- 1. Create tables like the 'base' and apply different
+--    compression type / level / blocksize to each one;
+-- 2. SELECT * from each one in a subquery; display only the first column;
+-- 3. INNER JOIN some of the tables generated before.
+--
+CREATE TABLE zstd_test_base (
+id_bigint bigint,
+id_bigserial bigserial,
+id_bit bit(10),
+id_bool bool,
+id_box box,
+id_bytea bytea,
+id_text text,
+id_cidr cidr,
+id_circle circle,
+id_float float,
+id_inet inet,
+id_int int,
+id_interval interval,
+id_json json,
+id_lseg lseg,
+id_macaddr macaddr,
+id_money money,
+id_path path,
+id_point point,
+id_polygon polygon,
+id_serial serial,
+id_timestamp timestamp without time zone,
+id_uuid uuid,
+id_txid_snapshot txid_snapshot
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_base_id_bigserial_seq" for serial column "zstd_test_base.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_base_id_serial_seq" for serial column "zstd_test_base.id_serial"
+INSERT INTO zstd_test_base (
+id_bigint,
+id_bit,
+id_bool,
+id_box,
+id_bytea,
+id_text,
+id_cidr,
+id_circle,
+id_float,
+id_inet,
+id_int,
+id_interval,
+id_json,
+id_lseg,
+id_macaddr,
+id_money,
+id_path,
+id_point,
+id_polygon,
+id_timestamp,
+id_uuid,
+id_txid_snapshot
+) SELECT g AS id_bigint,
+B'1010101001' AS id_bit,
+true AS id_bool,
+'(1,2),(5,7)' AS id_box,
+decode('013d7d16d7ad4fefb61bd95b765c8ceb', 'hex') AS id_bytea,
+'foo' || g AS id_text,
+'127.0.0.0' AS id_cidr,
+'6,7,10' AS id_circle,
+'123456.123456789' AS id_float,
+'127.0.0.1' AS id_inet,
+g AS id_int,
+'10 years' AS id_interval,
+'{
+    "glossary": {
+        "title": "example glossary",
+                "GlossDiv": {
+            "title": "S",
+                        "GlossList": {
+                "GlossEntry": {
+                    "ID": "SGML",
+                                        "SortAs": "SGML",
+                                        "GlossTerm": "Standard Generalized Markup Language",
+                                        "Acronym": "SGML",
+                                        "Abbrev": "ISO 8879:1986",
+                                        "GlossDef": {
+                        "para": "A meta-markup language, used to create markup languages such AS DocBook.",
+                                                "GlossSeeAlso": ["GML", "XML"]
+                    },
+                                        "GlossSee": "markup"
+                }
+            }
+        }
+    }
+}' AS id_json,
+'(1,2),(5,7)' AS id_lseg,
+'01:23:45:67:89:ab' AS id_macaddr,
+'12345.67'::money AS id_money,
+'[(1,1),(2,2)]' AS id_path,
+'(1,1)' AS id_point,
+'(1,1),(2,2)' AS id_polygon,
+TIMESTAMP '2004-10-19 10:23:54' AS id_timestamp,
+'550e8400-e29b-41d4-a716-446655440000' AS id_uuid,
+'1018:1018:' AS id_txid_snapshot
+FROM generate_series(1, 10) g;
+CREATE TABLE zstd_test_111 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_111_id_bigserial_seq" for serial column "zstd_test_111.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_111_id_serial_seq" for serial column "zstd_test_111.id_serial"
+INSERT INTO zstd_test_111 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_111 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_112 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_112_id_bigserial_seq" for serial column "zstd_test_112.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_112_id_serial_seq" for serial column "zstd_test_112.id_serial"
+INSERT INTO zstd_test_112 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_112 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_113 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_113_id_bigserial_seq" for serial column "zstd_test_113.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_113_id_serial_seq" for serial column "zstd_test_113.id_serial"
+INSERT INTO zstd_test_113 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_113 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_121 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_121_id_bigserial_seq" for serial column "zstd_test_121.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_121_id_serial_seq" for serial column "zstd_test_121.id_serial"
+INSERT INTO zstd_test_121 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_121 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_122 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_122_id_bigserial_seq" for serial column "zstd_test_122.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_122_id_serial_seq" for serial column "zstd_test_122.id_serial"
+INSERT INTO zstd_test_122 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_122 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_123 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_123_id_bigserial_seq" for serial column "zstd_test_123.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_123_id_serial_seq" for serial column "zstd_test_123.id_serial"
+INSERT INTO zstd_test_123 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_123 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_131 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_131_id_bigserial_seq" for serial column "zstd_test_131.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_131_id_serial_seq" for serial column "zstd_test_131.id_serial"
+INSERT INTO zstd_test_131 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_131 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_132 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_132_id_bigserial_seq" for serial column "zstd_test_132.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_132_id_serial_seq" for serial column "zstd_test_132.id_serial"
+INSERT INTO zstd_test_132 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_132 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_133 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_133_id_bigserial_seq" for serial column "zstd_test_133.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_133_id_serial_seq" for serial column "zstd_test_133.id_serial"
+INSERT INTO zstd_test_133 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_133 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_211 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_211_id_bigserial_seq" for serial column "zstd_test_211.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_211_id_serial_seq" for serial column "zstd_test_211.id_serial"
+INSERT INTO zstd_test_211 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_211 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_212 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_212_id_bigserial_seq" for serial column "zstd_test_212.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_212_id_serial_seq" for serial column "zstd_test_212.id_serial"
+INSERT INTO zstd_test_212 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_212 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_213 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_213_id_bigserial_seq" for serial column "zstd_test_213.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_213_id_serial_seq" for serial column "zstd_test_213.id_serial"
+INSERT INTO zstd_test_213 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_213 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_221 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_221_id_bigserial_seq" for serial column "zstd_test_221.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_221_id_serial_seq" for serial column "zstd_test_221.id_serial"
+INSERT INTO zstd_test_221 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_221 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_222 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_222_id_bigserial_seq" for serial column "zstd_test_222.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_222_id_serial_seq" for serial column "zstd_test_222.id_serial"
+INSERT INTO zstd_test_222 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_222 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_223 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_223_id_bigserial_seq" for serial column "zstd_test_223.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_223_id_serial_seq" for serial column "zstd_test_223.id_serial"
+INSERT INTO zstd_test_223 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_223 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_231 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_231_id_bigserial_seq" for serial column "zstd_test_231.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_231_id_serial_seq" for serial column "zstd_test_231.id_serial"
+INSERT INTO zstd_test_231 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_231 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_232 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_232_id_bigserial_seq" for serial column "zstd_test_232.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_232_id_serial_seq" for serial column "zstd_test_232.id_serial"
+INSERT INTO zstd_test_232 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_232 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_233 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_233_id_bigserial_seq" for serial column "zstd_test_233.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_233_id_serial_seq" for serial column "zstd_test_233.id_serial"
+INSERT INTO zstd_test_233 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_233 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_311 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_311_id_bigserial_seq" for serial column "zstd_test_311.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_311_id_serial_seq" for serial column "zstd_test_311.id_serial"
+INSERT INTO zstd_test_311 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_311 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_312 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_312_id_bigserial_seq" for serial column "zstd_test_312.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_312_id_serial_seq" for serial column "zstd_test_312.id_serial"
+INSERT INTO zstd_test_312 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_312 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_313 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_313_id_bigserial_seq" for serial column "zstd_test_313.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_313_id_serial_seq" for serial column "zstd_test_313.id_serial"
+INSERT INTO zstd_test_313 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_313 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_321 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_321_id_bigserial_seq" for serial column "zstd_test_321.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_321_id_serial_seq" for serial column "zstd_test_321.id_serial"
+INSERT INTO zstd_test_321 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_321 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_322 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_322_id_bigserial_seq" for serial column "zstd_test_322.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_322_id_serial_seq" for serial column "zstd_test_322.id_serial"
+INSERT INTO zstd_test_322 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_322 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_323 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_323_id_bigserial_seq" for serial column "zstd_test_323.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_323_id_serial_seq" for serial column "zstd_test_323.id_serial"
+INSERT INTO zstd_test_323 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_323 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_331 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_331_id_bigserial_seq" for serial column "zstd_test_331.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_331_id_serial_seq" for serial column "zstd_test_331.id_serial"
+INSERT INTO zstd_test_331 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_331 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_332 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_332_id_bigserial_seq" for serial column "zstd_test_332.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_332_id_serial_seq" for serial column "zstd_test_332.id_serial"
+INSERT INTO zstd_test_332 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_332 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_333 (
+id_bigint bigint ENCODING (COMPRESSTYPE=none, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_333_id_bigserial_seq" for serial column "zstd_test_333.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_333_id_serial_seq" for serial column "zstd_test_333.id_serial"
+INSERT INTO zstd_test_333 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_333 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_411 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_411_id_bigserial_seq" for serial column "zstd_test_411.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_411_id_serial_seq" for serial column "zstd_test_411.id_serial"
+INSERT INTO zstd_test_411 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_411 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_412 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_412_id_bigserial_seq" for serial column "zstd_test_412.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_412_id_serial_seq" for serial column "zstd_test_412.id_serial"
+INSERT INTO zstd_test_412 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_412 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_413 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_413_id_bigserial_seq" for serial column "zstd_test_413.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_413_id_serial_seq" for serial column "zstd_test_413.id_serial"
+INSERT INTO zstd_test_413 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_413 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_421 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_421_id_bigserial_seq" for serial column "zstd_test_421.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_421_id_serial_seq" for serial column "zstd_test_421.id_serial"
+INSERT INTO zstd_test_421 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_421 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_422 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_422_id_bigserial_seq" for serial column "zstd_test_422.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_422_id_serial_seq" for serial column "zstd_test_422.id_serial"
+INSERT INTO zstd_test_422 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_422 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_423 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_423_id_bigserial_seq" for serial column "zstd_test_423.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_423_id_serial_seq" for serial column "zstd_test_423.id_serial"
+INSERT INTO zstd_test_423 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_423 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_431 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_431_id_bigserial_seq" for serial column "zstd_test_431.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_431_id_serial_seq" for serial column "zstd_test_431.id_serial"
+INSERT INTO zstd_test_431 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_431 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_432 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_432_id_bigserial_seq" for serial column "zstd_test_432.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_432_id_serial_seq" for serial column "zstd_test_432.id_serial"
+INSERT INTO zstd_test_432 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_432 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_433 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_433_id_bigserial_seq" for serial column "zstd_test_433.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_433_id_serial_seq" for serial column "zstd_test_433.id_serial"
+INSERT INTO zstd_test_433 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_433 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_511 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_511_id_bigserial_seq" for serial column "zstd_test_511.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_511_id_serial_seq" for serial column "zstd_test_511.id_serial"
+INSERT INTO zstd_test_511 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_511 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_512 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_512_id_bigserial_seq" for serial column "zstd_test_512.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_512_id_serial_seq" for serial column "zstd_test_512.id_serial"
+INSERT INTO zstd_test_512 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_512 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_513 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_513_id_bigserial_seq" for serial column "zstd_test_513.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_513_id_serial_seq" for serial column "zstd_test_513.id_serial"
+INSERT INTO zstd_test_513 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_513 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_521 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_521_id_bigserial_seq" for serial column "zstd_test_521.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_521_id_serial_seq" for serial column "zstd_test_521.id_serial"
+INSERT INTO zstd_test_521 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_521 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_522 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_522_id_bigserial_seq" for serial column "zstd_test_522.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_522_id_serial_seq" for serial column "zstd_test_522.id_serial"
+INSERT INTO zstd_test_522 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_522 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_523 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_523_id_bigserial_seq" for serial column "zstd_test_523.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_523_id_serial_seq" for serial column "zstd_test_523.id_serial"
+INSERT INTO zstd_test_523 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_523 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_531 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_531_id_bigserial_seq" for serial column "zstd_test_531.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_531_id_serial_seq" for serial column "zstd_test_531.id_serial"
+INSERT INTO zstd_test_531 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_531 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_532 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_532_id_bigserial_seq" for serial column "zstd_test_532.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_532_id_serial_seq" for serial column "zstd_test_532.id_serial"
+INSERT INTO zstd_test_532 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_532 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_533 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zlib, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_533_id_bigserial_seq" for serial column "zstd_test_533.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_533_id_serial_seq" for serial column "zstd_test_533.id_serial"
+INSERT INTO zstd_test_533 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_533 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_611 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_611_id_bigserial_seq" for serial column "zstd_test_611.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_611_id_serial_seq" for serial column "zstd_test_611.id_serial"
+INSERT INTO zstd_test_611 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_611 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_612 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_612_id_bigserial_seq" for serial column "zstd_test_612.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_612_id_serial_seq" for serial column "zstd_test_612.id_serial"
+INSERT INTO zstd_test_612 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_612 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_613 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_613_id_bigserial_seq" for serial column "zstd_test_613.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_613_id_serial_seq" for serial column "zstd_test_613.id_serial"
+INSERT INTO zstd_test_613 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_613 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_621 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_621_id_bigserial_seq" for serial column "zstd_test_621.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_621_id_serial_seq" for serial column "zstd_test_621.id_serial"
+INSERT INTO zstd_test_621 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_621 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_622 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_622_id_bigserial_seq" for serial column "zstd_test_622.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_622_id_serial_seq" for serial column "zstd_test_622.id_serial"
+INSERT INTO zstd_test_622 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_622 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_623 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_623_id_bigserial_seq" for serial column "zstd_test_623.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_623_id_serial_seq" for serial column "zstd_test_623.id_serial"
+INSERT INTO zstd_test_623 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_623 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_631 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_631_id_bigserial_seq" for serial column "zstd_test_631.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_631_id_serial_seq" for serial column "zstd_test_631.id_serial"
+INSERT INTO zstd_test_631 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_631 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_632 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_632_id_bigserial_seq" for serial column "zstd_test_632.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_632_id_serial_seq" for serial column "zstd_test_632.id_serial"
+INSERT INTO zstd_test_632 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_632 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_633 (
+id_bigint bigint ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_633_id_bigserial_seq" for serial column "zstd_test_633.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_633_id_serial_seq" for serial column "zstd_test_633.id_serial"
+INSERT INTO zstd_test_633 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_633 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_711 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_711_id_bigserial_seq" for serial column "zstd_test_711.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_711_id_serial_seq" for serial column "zstd_test_711.id_serial"
+INSERT INTO zstd_test_711 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_711 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_712 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_712_id_bigserial_seq" for serial column "zstd_test_712.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_712_id_serial_seq" for serial column "zstd_test_712.id_serial"
+INSERT INTO zstd_test_712 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_712 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_713 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=8192),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=8192)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_713_id_bigserial_seq" for serial column "zstd_test_713.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_713_id_serial_seq" for serial column "zstd_test_713.id_serial"
+INSERT INTO zstd_test_713 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_713 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_721 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_721_id_bigserial_seq" for serial column "zstd_test_721.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_721_id_serial_seq" for serial column "zstd_test_721.id_serial"
+INSERT INTO zstd_test_721 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_721 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_722 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_722_id_bigserial_seq" for serial column "zstd_test_722.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_722_id_serial_seq" for serial column "zstd_test_722.id_serial"
+INSERT INTO zstd_test_722 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_722 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_723 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=32768),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=32768)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_723_id_bigserial_seq" for serial column "zstd_test_723.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_723_id_serial_seq" for serial column "zstd_test_723.id_serial"
+INSERT INTO zstd_test_723 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_723 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_731 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=1, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_731_id_bigserial_seq" for serial column "zstd_test_731.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_731_id_serial_seq" for serial column "zstd_test_731.id_serial"
+INSERT INTO zstd_test_731 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_731 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_732 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=10, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_732_id_bigserial_seq" for serial column "zstd_test_732.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_732_id_serial_seq" for serial column "zstd_test_732.id_serial"
+INSERT INTO zstd_test_732 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_732 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+CREATE TABLE zstd_test_733 (
+id_bigint bigint ENCODING (COMPRESSTYPE=rle_type, COMPRESSLEVEL=1, BLOCKSIZE=2097152),
+id_bigserial bigserial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bit bit(10) ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bool bool ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_box box ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_bytea bytea ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_text text ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_cidr cidr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_circle circle ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_float float ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_inet inet ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_int int ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_interval interval ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_json json ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_lseg lseg ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_macaddr macaddr ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_money money ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_path path ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_point point ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_polygon polygon ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_serial serial ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_timestamp timestamp without time zone ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_uuid uuid ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152),
+id_txid_snapshot txid_snapshot ENCODING (COMPRESSTYPE=zstd, COMPRESSLEVEL=19, BLOCKSIZE=2097152)
+) WITH (appendonly=true, orientation=column) DISTRIBUTED RANDOMLY;
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_733_id_bigserial_seq" for serial column "zstd_test_733.id_bigserial"
+NOTICE:  CREATE TABLE will create implicit sequence "zstd_test_733_id_serial_seq" for serial column "zstd_test_733.id_serial"
+INSERT INTO zstd_test_733 (SELECT * FROM zstd_test_base);
+ERROR:  Zstandard library is not supported by this build
+SELECT subq.id_bigint
+FROM (SELECT * FROM zstd_test_733 ORDER BY id_bigint ASC LIMIT 5) AS subq;
+ id_bigint 
+-----------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_111 AS t_left
+INNER JOIN zstd_test_211 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_112 AS t_left
+INNER JOIN zstd_test_212 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_113 AS t_left
+INNER JOIN zstd_test_213 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_121 AS t_left
+INNER JOIN zstd_test_221 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_122 AS t_left
+INNER JOIN zstd_test_222 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_123 AS t_left
+INNER JOIN zstd_test_223 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_131 AS t_left
+INNER JOIN zstd_test_231 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_132 AS t_left
+INNER JOIN zstd_test_232 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_133 AS t_left
+INNER JOIN zstd_test_233 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_111 AS t_left
+INNER JOIN zstd_test_511 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_112 AS t_left
+INNER JOIN zstd_test_512 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_113 AS t_left
+INNER JOIN zstd_test_513 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_121 AS t_left
+INNER JOIN zstd_test_521 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_122 AS t_left
+INNER JOIN zstd_test_522 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_123 AS t_left
+INNER JOIN zstd_test_523 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_131 AS t_left
+INNER JOIN zstd_test_531 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_132 AS t_left
+INNER JOIN zstd_test_532 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_133 AS t_left
+INNER JOIN zstd_test_533 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_111 AS t_left
+INNER JOIN zstd_test_711 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_112 AS t_left
+INNER JOIN zstd_test_712 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_113 AS t_left
+INNER JOIN zstd_test_713 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_121 AS t_left
+INNER JOIN zstd_test_721 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_122 AS t_left
+INNER JOIN zstd_test_722 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_123 AS t_left
+INNER JOIN zstd_test_723 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_131 AS t_left
+INNER JOIN zstd_test_731 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_132 AS t_left
+INNER JOIN zstd_test_732 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_133 AS t_left
+INNER JOIN zstd_test_733 AS t_right
+ON t_left.id_bigint = t_right.id_bigint
+ORDER BY t_left.id_bigint ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_111 AS t_left
+INNER JOIN zstd_test_411 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_112 AS t_left
+INNER JOIN zstd_test_412 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_113 AS t_left
+INNER JOIN zstd_test_413 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_121 AS t_left
+INNER JOIN zstd_test_421 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_122 AS t_left
+INNER JOIN zstd_test_422 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_123 AS t_left
+INNER JOIN zstd_test_423 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_131 AS t_left
+INNER JOIN zstd_test_431 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_132 AS t_left
+INNER JOIN zstd_test_432 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_133 AS t_left
+INNER JOIN zstd_test_433 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_111 AS t_left
+INNER JOIN zstd_test_611 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_112 AS t_left
+INNER JOIN zstd_test_612 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_113 AS t_left
+INNER JOIN zstd_test_613 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_121 AS t_left
+INNER JOIN zstd_test_621 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_122 AS t_left
+INNER JOIN zstd_test_622 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_123 AS t_left
+INNER JOIN zstd_test_623 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_131 AS t_left
+INNER JOIN zstd_test_631 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_132 AS t_left
+INNER JOIN zstd_test_632 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
+SELECT subq.id_int FROM (SELECT t_left.*, t_right.id_float
+FROM zstd_test_133 AS t_left
+INNER JOIN zstd_test_633 AS t_right
+ON t_left.id_int = t_right.id_int
+ORDER BY t_left.id_int ASC
+LIMIT 5) AS subq;
+ id_int 
+--------
+(0 rows)
+
