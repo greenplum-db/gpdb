@@ -48,7 +48,7 @@ function run_pxf_automation() {
 	cp -r \${psi_dir} ${GPHOME}/lib/python
 	psql -d template1 -c "CREATE EXTENSION PXF"
 	cd \${1}/pxf_infra_src/pxf_automation
-	make GROUP=gpdb
+	make GROUP=${GROUP}
 
 	exit 0
 	EOF
