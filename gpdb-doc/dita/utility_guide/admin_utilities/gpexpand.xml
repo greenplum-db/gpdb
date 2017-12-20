@@ -71,7 +71,7 @@
         rebalance the tables across new segments, and to set tables to their original distribution
         policy. If <codeph>gpexpand</codeph> completes the reorganization of all tables before the
         specified duration, it displays a success message and ends.</p>
-      <note>This utility utilizes secure shell (SSH) connections between systems to
+      <note>This utility uses secure shell (SSH) connections between systems to
          perform its tasks. In large Greenplum Database deployments, cloud deployments,
          or deployments with a large number of segments per host, this utility may
          exceed the host's maximum threshold for unauthenticated connections.
