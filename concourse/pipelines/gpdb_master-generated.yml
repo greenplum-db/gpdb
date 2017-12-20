@@ -3022,7 +3022,7 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: {{pxf_automation_test_group}}
+      GROUP: {{pxf_infra_test_group}}
       HADOOP_CLIENT: HDP
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -3046,7 +3046,7 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: {{pxf_automation_test_group}}
+      GROUP: {{pxf_infra_test_group}}
       HADOOP_CLIENT: CDH
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -3070,7 +3070,7 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: {{pxf_automation_test_group}}
+      GROUP: {{pxf_infra_test_group}}
       HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -3094,7 +3094,7 @@ jobs:
     file: gpdb_src/concourse/tasks/regression_tests_pxf.yml
     image: centos-gpdb-dev-6
     params:
-      GROUP: {{pxf_automation_test_group}}
+      GROUP: {{pxf_infra_test_group}}
       HADOOP_CLIENT: TAR
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
