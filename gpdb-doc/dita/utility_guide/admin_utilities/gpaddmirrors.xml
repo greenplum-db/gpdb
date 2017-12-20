@@ -79,6 +79,13 @@ mirror1=1:sdw1-1:60001:61001:62001:/gpdata/mir2/gp1</codeblock>
                 locations specified. You may want to create these directories on the segment hosts
                 and <codeph>chown</codeph> them to the appropriate user before running
                     <codeph>gpaddmirrors</codeph>.</p>
+              <note>This utility utilizes secure shell (SSH) connections between systems to
+                perform its tasks. In large Greenplum Database deployments, cloud deployments,
+                or deployments with a large number of segments per host, this utility may
+                exceed the host's maximum threshold for unauthenticated connections.
+                Consider updating the SSH <codeph>MaxStartups</codeph> configuration parameter
+                to increase this threshold. For more information about SSH configuration
+                options, refer to the SSH documentation for your Linux distribution.</note>
         </section>
         <section id="section4">
             <title>Options</title>

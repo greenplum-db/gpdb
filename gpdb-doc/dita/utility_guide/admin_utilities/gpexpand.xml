@@ -61,15 +61,23 @@
             RANDOMLY</codeph>. The original distribution policies are later restored in the
           redistribution phase.</li>
       </ul>
+      <note>Data redistribution should
+          be performed during low-use hours. Redistribution can divided into batches over an
+          extended period.</note>
       <p>To begin the redistribution phase, you must run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options. Until the
         specified end time or duration is reached, the utility will redistribute tables in the
         expansion schema. Each table is reorganized using <codeph>ALTER TABLE</codeph> commands to
         rebalance the tables across new segments, and to set tables to their original distribution
         policy. If <codeph>gpexpand</codeph> completes the reorganization of all tables before the
-        specified duration, it displays a success message and ends. <note>Data redistribution should
-          be performed during low-use hours. Redistribution can divided into batches over an
-          extended period.</note></p>
+        specified duration, it displays a success message and ends.</p>
+      <note>This utility utilizes secure shell (SSH) connections between systems to
+         perform its tasks. In large Greenplum Database deployments, cloud deployments,
+         or deployments with a large number of segments per host, this utility may
+         exceed the host's maximum threshold for unauthenticated connections.
+         Consider updating the SSH <codeph>MaxStartups</codeph> configuration parameter
+         to increase this threshold. For more information about SSH configuration
+         options, refer to the SSH documentation for your Linux distribution.</note>
     </section>
     <section id="section5">
       <title>Options</title>
@@ -84,7 +92,7 @@
           <pd>Batch size of remote commands to send to a given host before making a one-second
             pause. Default is <codeph>16</codeph>. Valid values are 1-128.</pd>
           <pd>The <codeph>gpexpand</codeph> utility issues a number of setup commands that may
-            exceed the host's maximum threshold for authenticated connections as defined by
+            exceed the host's maximum threshold for unauthenticated connections as defined by
               <codeph>MaxStartups</codeph> in the SSH daemon configuration. The one-second pause
             allows authentications to be completed before <codeph>gpexpand</codeph> issues any more
             commands. </pd>
