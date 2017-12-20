@@ -57,9 +57,10 @@ typedef struct CdbComponentDatabaseInfo
 	char	   *hostname;		/* name or ip address of host machine */
 	char	   *address;		/* ip address of host machine */
 
+	char	   *datadir;		/* absolute path to data directory on the host. */
+
 	char	   *hostip;			/* cached lookup of name */
 	int32		port;			/* port that instance is listening on */
-	int32		filerep_port;  	/* port that instance filerep is listening on */
 
 	char	   *hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
 	int16		hostSegs;		/* number of primary segments on the same hosts */

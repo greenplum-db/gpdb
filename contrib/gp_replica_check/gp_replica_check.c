@@ -8,6 +8,8 @@
 #include "postmaster/bgwriter.h"
 #include "replication/walsender_private.h"
 #include "replication/walsender.h"
+#include "catalog/catalog.h"
+#include "catalog/pg_tablespace.h"
 #include "storage/fd.h"
 #include "utils/builtins.h"
 #include "utils/hsearch.h"
@@ -518,6 +520,14 @@ gp_replica_check(PG_FUNCTION_ARGS)
 	bool dir_equal = true;
 
 	init_relation_types(relation_types);
+
+	/* TODO: Currently, we only scan the default tablespace */
+	primarydirpath = psprintf("%s/%s",
+							  primarydirpath,
+							  GetDatabasePath(MyDatabaseId, DEFAULTTABLESPACE_OID));
+	mirrordirpath = psprintf("%s/%s",
+							 mirrordirpath,
+							 GetDatabasePath(MyDatabaseId, DEFAULTTABLESPACE_OID));
 
 	DIR *primarydir = AllocateDir(primarydirpath);
 	DIR *mirrordir = AllocateDir(mirrordirpath);

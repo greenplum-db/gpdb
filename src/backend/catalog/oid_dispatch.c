@@ -88,7 +88,6 @@
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
-#include "catalog/pg_filespace.h"
 #include "catalog/pg_language.h"
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_opclass.h"
@@ -237,13 +236,6 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 				Form_pg_extprotocol protForm = (Form_pg_extprotocol) GETSTRUCT(tuple);
 
 				key.objname = NameStr(protForm->ptcname);
-				break;
-			}
-		case FileSpaceRelationId:
-			{
-				Form_pg_filespace fsForm = (Form_pg_filespace) GETSTRUCT(tuple);
-
-				key.objname = NameStr(fsForm->fsname);
 				break;
 			}
 		case ForeignDataWrapperRelationId:

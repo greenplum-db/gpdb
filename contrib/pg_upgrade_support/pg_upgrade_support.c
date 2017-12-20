@@ -30,7 +30,6 @@
 #include "catalog/pg_enum.h"
 #include "catalog/pg_extension.h"
 #include "catalog/pg_extprotocol.h"
-#include "catalog/pg_filespace.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
@@ -251,21 +250,6 @@ preassign_extprotocol_oid(PG_FUNCTION_ARGS)
 	if (Gp_role == GP_ROLE_UTILITY)
 	{
 		AddPreassignedOidFromBinaryUpgrade(extprotoid, ExtprotocolRelationId, objname,
-									InvalidOid, InvalidOid, InvalidOid);
-	}
-
-	PG_RETURN_VOID();
-}
-
-Datum
-preassign_filespace_oid(PG_FUNCTION_ARGS)
-{
-	Oid			fsoid = PG_GETARG_OID(0);
-	char	   *objname = GET_STR(PG_GETARG_TEXT_P(1));
-
-	if (Gp_role == GP_ROLE_UTILITY)
-	{
-		AddPreassignedOidFromBinaryUpgrade(fsoid, FileSpaceRelationId, objname,
 									InvalidOid, InvalidOid, InvalidOid);
 	}
 

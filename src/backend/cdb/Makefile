@@ -34,7 +34,6 @@ OBJS = cdbappendonlystorage.o cdbappendonlystorageformat.o \
 	   cdbpartindex.o \
 	   cdbpartition.o \
 	   cdbpath.o cdbpathlocus.o cdbpathtoplan.o \
-	   cdbpersistenttablespace.o \
 	   cdbpgdatabase.o \
 	   cdbplan.o cdbpullup.o \
 	   cdbrelsize.o \

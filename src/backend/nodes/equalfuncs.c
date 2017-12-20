@@ -1757,40 +1757,11 @@ _equalDiscardStmt(DiscardStmt *a, DiscardStmt *b)
 }
 
 static bool
-_equalCreateFileSpaceStmt(CreateFileSpaceStmt *a, CreateFileSpaceStmt *b)
-{
-	COMPARE_STRING_FIELD(filespacename);
-	COMPARE_STRING_FIELD(owner);
-	COMPARE_NODE_FIELD(locations);
-
-	return true;
-}
-
-static bool
-_equalFileSpaceEntry(FileSpaceEntry *a, FileSpaceEntry *b)
-{
-	COMPARE_SCALAR_FIELD(dbid);
-	/* equality does not require check on "contentid" */
-	COMPARE_STRING_FIELD(location);
-
-	return true;
-}
-
-static bool
-_equalDropFileSpaceStmt(DropFileSpaceStmt *a, DropFileSpaceStmt *b)
-{
-	COMPARE_STRING_FIELD(filespacename);
-	COMPARE_SCALAR_FIELD(missing_ok);
-
-	return true;
-}
-
-static bool
 _equalCreateTableSpaceStmt(CreateTableSpaceStmt *a, CreateTableSpaceStmt *b)
 {
 	COMPARE_STRING_FIELD(tablespacename);
 	COMPARE_STRING_FIELD(owner);
-	COMPARE_STRING_FIELD(filespacename);
+	COMPARE_STRING_FIELD(location);
 
 	return true;
 }
@@ -3113,15 +3084,6 @@ equal(void *a, void *b)
 			break;
 		case T_AlterExtensionContentsStmt:
 			retval = _equalAlterExtensionContentsStmt(a, b);
-			break;
-		case T_CreateFileSpaceStmt:
-			retval = _equalCreateFileSpaceStmt(a, b);
-			break;
-		case T_FileSpaceEntry:
-			retval = _equalFileSpaceEntry(a, b);
-			break;
-		case T_DropFileSpaceStmt:
-			retval = _equalDropFileSpaceStmt(a, b);
 			break;
 		case T_CreateTableSpaceStmt:
 			retval = _equalCreateTableSpaceStmt(a, b);

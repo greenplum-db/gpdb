@@ -39,7 +39,6 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbvars.h"
-#include "cdb/cdbpersistenttablespace.h"
 
 
 static int64
@@ -161,10 +160,10 @@ static int64
 calculate_database_size(Oid dbOid)
 {
 	int64		totalsize;
+	DIR		   *dirdesc;
+	struct dirent *direntry;
+	char		dirpath[MAXPGPATH];
 	char		pathname[MAXPGPATH];
-	Relation    rel;
-	HeapScanDesc scandesc;
-	HeapTuple   tuple;
 	AclResult	aclresult;
 
 	/* User must have connect privilege for target database */
@@ -173,38 +172,38 @@ calculate_database_size(Oid dbOid)
 		aclcheck_error(aclresult, ACL_KIND_DATABASE,
 					   get_database_name(dbOid));
 
-	/* Scan through all tablespaces */
-	rel = heap_open(TableSpaceRelationId, AccessShareLock);
-	scandesc = heap_beginscan(rel, SnapshotNow, 0, NULL);
-	tuple = heap_getnext(scandesc, ForwardScanDirection);
-	totalsize = 0;
-	while (HeapTupleIsValid(tuple))
+	/* Shared storage in pg_global is not counted */
+
+	/* Include pg_default storage */
+	snprintf(pathname, MAXPGPATH, "base/%u", dbOid);
+	totalsize = db_dir_size(pathname);
+
+	/* Scan the non-default tablespaces */
+	snprintf(dirpath, MAXPGPATH, "pg_tblspc");
+	dirdesc = AllocateDir(dirpath);
+	if (!dirdesc)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not open tablespace directory \"%s\": %m",
+						dirpath)));
+
+	while ((direntry = ReadDir(dirdesc, dirpath)) != NULL)
 	{
-		char *priFilespace, *mirFilespace;
-		Oid   tsOid;
-		
-		tsOid = HeapTupleGetOid(tuple);
-		
-		/* Don't include shared relations */
-		if (tsOid != GLOBALTABLESPACE_OID)
-		{			
-			/* Find the filespace path for this tablespace */
-			PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-				tsOid, &priFilespace, &mirFilespace);
+		CHECK_FOR_INTERRUPTS();
 
-			/* Build the path for this database in this tablespace */
-			FormDatabasePath(pathname, priFilespace, tsOid, dbOid);
-			
-			totalsize += db_dir_size(pathname);
-		}
+		if (strcmp(direntry->d_name, ".") == 0 ||
+			strcmp(direntry->d_name, "..") == 0)
+			continue;
 
-		tuple = heap_getnext(scandesc, ForwardScanDirection);
+		snprintf(pathname, MAXPGPATH, "pg_tblspc/%s/%u",
+				 direntry->d_name, dbOid);
+		totalsize += db_dir_size(pathname);
 	}
-	heap_endscan(scandesc);
-	heap_close(rel, AccessShareLock);
+
+	FreeDir(dirdesc);
 
 	/* Complain if we found no trace of the DB at all */
-	if (totalsize == 0)
+	if (!totalsize)
 		ereport(ERROR,
 				(ERRCODE_UNDEFINED_DATABASE,
 				 errmsg("database with OID %u does not exist", dbOid)));

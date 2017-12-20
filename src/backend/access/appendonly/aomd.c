@@ -33,7 +33,6 @@
 #include "access/appendonlytid.h"
 #include "cdb/cdbappendonlystorage.h"
 #include "cdb/cdbappendonlyxlog.h"
-#include "cdb/cdbpersistenttablespace.h"
 
 int
 AOSegmentFilePathNameLen(Relation rel)
@@ -136,30 +135,17 @@ OpenAOSegmentFile(Relation rel,
 				  int32	segmentFileNum,
 				  int64	logicalEof)
 {	
-	char	   *primaryFilespaceLocation;
-	char	   *mirrorFilespaceLocation;
 	char	   *dbPath;
-	char	   *path;
+	char		path[MAXPGPATH];
 	int			fileFlags = O_RDWR | PG_BINARY;
 	File		fd;
 
-	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-										rel->rd_node.spcNode,
-										&primaryFilespaceLocation,
-										&mirrorFilespaceLocation);
-
-	dbPath = (char *) palloc(MAXPGPATH + 1);
-	path = (char *) palloc(MAXPGPATH + 1);
-
-	FormDatabasePath(dbPath,
-					 primaryFilespaceLocation,
-					 rel->rd_node.spcNode,
-					 rel->rd_node.dbNode);
+	dbPath = GetDatabasePath(rel->rd_node.dbNode, rel->rd_node.spcNode);
 
 	if (segmentFileNum == 0)
-		sprintf(path, "%s/%u", dbPath, rel->rd_node.relNode);
+		snprintf(path, MAXPGPATH, "%s/%u", dbPath, rel->rd_node.relNode);
 	else
-		sprintf(path, "%s/%u.%u", dbPath, rel->rd_node.relNode, segmentFileNum);
+		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, rel->rd_node.relNode, segmentFileNum);
 
 	errno = 0;
 
@@ -175,7 +161,6 @@ OpenAOSegmentFile(Relation rel,
 						filepathname)));
 	}
 	pfree(dbPath);
-	pfree(path);
 
 	return fd;
 }

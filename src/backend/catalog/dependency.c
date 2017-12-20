@@ -37,7 +37,6 @@
 #include "catalog/pg_depend.h"
 #include "catalog/pg_extprotocol.h"
 #include "catalog/pg_extension.h"
-#include "catalog/pg_filespace.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
@@ -63,7 +62,6 @@
 #include "commands/defrem.h"
 #include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
-#include "commands/filespace.h"
 #include "commands/proclang.h"
 #include "commands/schemacmds.h"
 #include "commands/tablespace.h"
@@ -159,7 +157,6 @@ static const Oid object_classes[MAX_OCLASS] = {
 	AuthIdRelationId,			/* OCLASS_ROLE */
 	DatabaseRelationId,			/* OCLASS_DATABASE */
 	TableSpaceRelationId,		/* OCLASS_TBLSPACE */
-	FileSpaceRelationId,		/* OCLASS_FILESPACE */
 	ExtprotocolRelationId,		/* OCLASS_EXTPROTOCOL */
 	CompressionRelationId,		/* OCLASS_COMPRESSION */
 	ExtensionRelationId			/* OCLASS_EXTENSION */
@@ -1184,10 +1181,6 @@ doDeletion(const ObjectAddress *object)
 			RemoveExtensionById(object->objectId);
 			break;
 
-		case OCLASS_FILESPACE:
-			RemoveFileSpaceById(object->objectId);
-			break;
-
 		case OCLASS_EXTPROTOCOL:
 			RemoveExtProtocolById(object->objectId);
 			break;
@@ -2159,10 +2152,6 @@ getObjectClass(const ObjectAddress *object)
 			Assert(object->objectSubId == 0);
 			return OCLASS_USER_MAPPING;
 
-		case FileSpaceRelationId:
-			Assert(object->objectSubId == 0);
-			return OCLASS_FILESPACE;
-			
 		case ExtprotocolRelationId:
 			Assert(object->objectSubId == 0);
 			return OCLASS_EXTPROTOCOL;
@@ -2715,18 +2704,6 @@ getObjectDescription(const ObjectAddress *object)
 				appendStringInfo(&buffer, _("user mapping for %s"), usename);
 				break;
 			}
-
-		case OCLASS_FILESPACE:
-			{
-				char       *fsname;
-
-				fsname = get_filespace_name(object->objectId);
-				if (!fsname)
-					elog(ERROR, "cache lookup failed for filespace %u",
-						 object->objectId);
-				appendStringInfo(&buffer, _("filespace %s"), fsname);
-				break;
-			}				
 
 		case OCLASS_EXTENSION:
 			{

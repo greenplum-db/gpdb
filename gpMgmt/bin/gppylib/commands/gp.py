@@ -127,16 +127,11 @@ class CmdArgs(list):
 
     def set_segments(self, segments):
         """
-        The reduces the command line length of the gpsegstart.py and other
-        commands. There are shell limitations to the length and if there are a
-        large number of segments and filespaces this limit can be exceeded.
-        Since filespaces are not used by our callers, we remove all but one of them.
-
         @param segments - segments (from GpArray.getSegmentsByHostName)
         """
         for seg in segments:
-            cfg_array = repr(seg).split('|')[0:-1]
-            self.append("-D '%s'" % ('|'.join(cfg_array) + '|'))
+            cfg_array = repr(seg)
+            self.append("-D '%s'" % (cfg_array))
         return self
 
 

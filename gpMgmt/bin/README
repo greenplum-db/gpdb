@@ -61,7 +61,6 @@ bin/gpactivatestandby   -  Activates the Standby Master
 bin/gpaddconfig         -  Edits postgresql.conf file for all segments
 bin/gpdeletesystem      -  Deletes a Greenplum Database
 bin/gpexpand            -  Adds additional segments to a Greenplum Database
-bin/gpfilespace         -  Adds a filespace to a Greenplum Database (partial use of libraries)
 bin/gpinitstandby       -  Initializes standby master
 bin/gplogfilter         -  Filters log files
 bin/gpstart             -  Start a Greenplum Database

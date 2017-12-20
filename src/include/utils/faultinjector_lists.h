@@ -44,14 +44,6 @@ FI_IDENT(PgControl, "pg_control")
 FI_IDENT(PgXlog, "pg_xlog")
 /* inject fault during start prepare */
 FI_IDENT(StartPrepareTx, "start_prepare")
-/* inject fault after adding entry to persistent relation table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteRelationEntry, "fault_before_pending_delete_relation_entry")
-/* inject fault after adding entry to persistent database table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteDatabaseEntry, "fault_before_pending_delete_database_entry")
-/* inject fault after adding entry to persistent tablespace table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteTablespaceEntry, "fault_before_pending_delete_tablespace_entry")
-/* inject fault after adding entry to persistent filespace table in CP state but before adding to Pending delete list */
-FI_IDENT(FaultBeforePendingDeleteFilespaceEntry, "fault_before_pending_delete_filespace_entry")
 /* inject fault before checkpoint is taken */
 FI_IDENT(Checkpoint, "checkpoint")
 FI_IDENT(TransactionStartUnderEntryDbSingleton, "transaction_start_under_entry_db_singleton")
@@ -211,8 +203,6 @@ FI_DDL_STATEMENT(CreateIndex, "create_index")
 FI_DDL_STATEMENT(AlterIndex, "alter_index")
 FI_DDL_STATEMENT(ReIndex, "reindex")
 FI_DDL_STATEMENT(DropIndex, "drop_index")
-FI_DDL_STATEMENT(CreateFilespaces, "create_filespaces")
-FI_DDL_STATEMENT(DropFilespaces, "drop_filespaces")
 FI_DDL_STATEMENT(CreateTablespaces, "create_tablespaces")
 FI_DDL_STATEMENT(DropTablespaces, "drop_tablespaces")
 FI_DDL_STATEMENT(Truncate, "truncate")

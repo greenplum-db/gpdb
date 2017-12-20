@@ -787,29 +787,6 @@ pg_namespace.oid FROM pg_namespace WHERE (pg_namespace.nspname =
 'pg_catalog'::name)))))))
 UNION 
 SELECT
-'pg_filespace' AS classname, a.fsname AS objname, 
-c.objid,  NULL AS schemaname,
-CASE WHEN 
-((b.oid = c.stasysid) AND (b.rolname = c.stausename) )
-THEN 'CURRENT'
- WHEN 
-(b.rolname != c.stausename)
-THEN 'CHANGED'
-ELSE 'DROPPED' END AS usestatus, 
-CASE WHEN b.rolname IS NULL THEN c.stausename
-ELSE b.rolname END AS usename, 
-c.staactionname AS actionname, 
-c.stasubtype AS subtype,
---
-c.statime
-FROM pg_filespace a, (pg_authid b FULL JOIN pg_stat_last_shoperation c ON
-((b.oid = c.stasysid))) WHERE ((a.oid = c.objid) AND (c.classid =
-(SELECT pg_class.oid FROM pg_class WHERE ((pg_class.relname =
-'pg_filespace'::name) AND (pg_class.relnamespace = (SELECT
-pg_namespace.oid FROM pg_namespace WHERE (pg_namespace.nspname =
-'pg_catalog'::name)))))))
-UNION
-SELECT
 'pg_tablespace' AS classname, a.spcname AS objname, 
 c.objid,  NULL AS schemaname,
 CASE WHEN 

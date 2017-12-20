@@ -2330,12 +2330,6 @@ static struct config_string ConfigureNamesString[] =
 		"", assign_default_tablespace, NULL
 	},
 
-/*
- * GPDB_83_MERGE_FIXME: what to do with temp tablespaces in GPDB? we
- * had something similar with filespaces, I think. See also comments in
- * OpenTemporaryFile()
- */
-#if 0
 	{
 		{"temp_tablespaces", PGC_USERSET, CLIENT_CONN_STATEMENT,
 			gettext_noop("Sets the tablespace(s) to use for temporary tables and sort files."),
@@ -2345,7 +2339,6 @@ static struct config_string ConfigureNamesString[] =
 		&temp_tablespaces,
 		"", assign_temp_tablespaces, NULL
 	},
-#endif
 	{
 		{"dynamic_library_path", PGC_SUSET, CLIENT_CONN_OTHER,
 			gettext_noop("Sets the path for dynamically loadable modules."),

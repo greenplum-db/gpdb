@@ -80,13 +80,13 @@ class InitMirrors():
         commands = []
         if self.init:
             primary_port = segconfig.port
-            primary_dir = segconfig.fselocation
+            primary_dir = segconfig.datadir
             mirror_dir = cluster_config.get_pair_dir(segconfig)
             mirror_port = cluster_config.get_pair_port(segconfig)
         else:
             primary_port = cluster_config.get_pair_port(segconfig)
             primary_dir = cluster_config.get_pair_dir(segconfig)
-            mirror_dir = segconfig.fselocation
+            mirror_dir = segconfig.datadir
             mirror_port = segconfig.port
 
         mirror_contentid = segconfig.content
@@ -102,7 +102,7 @@ class InitMirrors():
 
         if self.init:
             # 2. update catalog
-            catalog_update_query = "select pg_catalog.gp_add_segment_mirror(%d::int2, '%s', '%s', %d, -1, '{pg_system, %s}')" % (mirror_contentid, self.hostname, self.hostname, mirror_port, mirror_dir)
+            catalog_update_query = "select pg_catalog.gp_add_segment_mirror(%d::int2, '%s', '%s', %d, '%s')" % (mirror_contentid, self.hostname, self.hostname, mirror_port, mirror_dir)
             commands.append("PGOPTIONS=\"-c gp_session_role=utility\" psql postgres -c \"%s\"" % catalog_update_query)
 
         thread_name = 'Mirror content %d' % mirror_contentid
@@ -142,7 +142,7 @@ class StartInstances():
         dbid = segconfig.dbid
         contentid = segconfig.content
         segment_port = segconfig.port
-        segment_dir = segconfig.fselocation
+        segment_dir = segconfig.datadir
         segment_role = StartInstances.getRole(contentid)
 
         # Need to set the dbid to 0 on segments to prevent use in mmxlog records
@@ -211,7 +211,7 @@ class StopInstances():
     def stopThread(self, segconfig):
         commands = []
         segment_contentid = segconfig.content
-        segment_dir = segconfig.fselocation
+        segment_dir = segconfig.datadir
 
         if segment_contentid == GpSegmentConfiguration.MASTER_CONTENT_ID:
             segment_type = 'master'
@@ -246,7 +246,7 @@ class DestroyMirrors():
     def destroyThread(self, segconfig):
         commands = []
         mirror_contentid = segconfig.content
-        mirror_dir = segconfig.fselocation
+        mirror_dir = segconfig.datadir
 
         commands.append("pg_ctl -D %s stop" % mirror_dir)
         commands.append("rm -rf %s" % mirror_dir)
@@ -294,11 +294,11 @@ class GpSegmentConfiguration():
     IN_SYNC = 's'
     MASTER_CONTENT_ID = -1
 
-    def __init__(self, dbid, content, port, fselocation, role, preferred_role, status, mode):
+    def __init__(self, dbid, content, port, datadir, role, preferred_role, status, mode):
         self.dbid = dbid
         self.content = content
         self.port = port
-        self.fselocation = fselocation
+        self.datadir = datadir
         self.role = role
         self.preferred_role = preferred_role
         self.status = status
@@ -337,11 +337,11 @@ class ClusterConfiguration():
         for seg_config in self._all_seg_configs:
             if (seg_config.content == input_config.content
                 and seg_config.role != input_config.role):
-                return seg_config.fselocation
+                return seg_config.datadir
 
         assert(input_config.role == GpSegmentConfiguration.ROLE_PRIMARY)
         ''' if not found then assume its mirror and hence return location at which mirror must be created '''
-        return input_config.fselocation.replace('dbfast', 'dbfast_mirror')
+        return input_config.datadir.replace('dbfast', 'dbfast_mirror')
 
     def get_gp_segment_ids(self):
         ids = []
@@ -350,9 +350,8 @@ class ClusterConfiguration():
         return ','.join(ids)
 
     def refresh(self):
-        query = ("SELECT dbid, content, port, fselocation, role, preferred_role, status, mode "
-                "FROM gp_segment_configuration s, pg_filespace_entry f "
-                "WHERE s.dbid = fsedbid")
+        query = ("SELECT dbid, content, port, datadir, role, preferred_role, status, mode "
+                "FROM gp_segment_configuration s WHERE 1 = 1")
 
         print '%s: fetching cluster configuration' % (datetime.datetime.now())
         dburl = dbconn.DbURL(self.hostname, self.port, self.dbname)

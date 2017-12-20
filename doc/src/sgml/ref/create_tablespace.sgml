@@ -21,9 +21,7 @@ PostgreSQL documentation
 
  <refsynopsisdiv>
 <synopsis>
-
-CREATE TABLESPACE tablespace_name [OWNER username] FILESPACE filespace_name
-
+CREATE TABLESPACE <replaceable class="parameter">tablespacename</replaceable> [ OWNER <replaceable class="parameter">username</replaceable> ] LOCATION '<replaceable class="parameter">directory</replaceable>'
 </synopsis>
  </refsynopsisdiv>
 

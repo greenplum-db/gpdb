@@ -64,10 +64,6 @@ DECLARE_TOAST(pg_shdescription, 2846, 2847);
 DECLARE_TOAST(gp_segment_configuration, 6092, 6093);
 #define GpSegmentConfigToastTable	6092
 #define GpSegmentConfigToastIndex	6093
-/* relation id: 5033 - pg_filespace_entry 20101122 */
-DECLARE_TOAST(pg_filespace_entry, 6094, 6095);
-#define PgFileSpaceEntryToastTable	6094
-#define PgFileSpaceEntryToastIndex	6095
 /* relation id: 3231 - pg_attribute_encoding 20110727 */
 DECLARE_TOAST(pg_attribute_encoding, 3233, 3234);
 #define PgAttributeEncodingToastTable	3233

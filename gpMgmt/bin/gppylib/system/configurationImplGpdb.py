@@ -319,13 +319,12 @@ class GpConfigurationProviderUsingGpdbCatalog(GpConfigurationProvider) :
         logger.debug('callSegmentAddMirror %s' % repr(seg))
         filespaceMapStr = self.__toSqlFilespaceMapStr(gpArray, seg)
 
-        sql = "SELECT gp_add_segment_mirror(%s::int2, %s, %s, %s, %s, %s)" \
+        sql = "SELECT gp_add_segment_mirror(%s::int2, %s, %s, %s, %s)" \
             % (
                 self.__toSqlIntValue(seg.getSegmentContentId()),
                 self.__toSqlTextValue(seg.getSegmentHostName()),
                 self.__toSqlTextValue(seg.getSegmentAddress()),
                 self.__toSqlIntValue(seg.getSegmentPort()),
-                self.__toSqlIntValue(seg.getSegmentReplicationPort()),
                 self.__toSqlTextValue(filespaceMapStr)
               )
 

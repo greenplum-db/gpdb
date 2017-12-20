@@ -358,13 +358,13 @@
 
  CREATE FUNCTION gp_remove_master_standby() RETURNS bool LANGUAGE internal VOLATILE AS 'gp_remove_master_standby' WITH (OID=5047, DESCRIPTION="Remove a master standby from the system catalog");
 
- CREATE FUNCTION gp_add_segment_primary(text, text, int4, _text) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_segment_primary' WITH (OID=5039, DESCRIPTION="Perform the catalog operations necessary for adding a new primary segment");
+ CREATE FUNCTION gp_add_segment_primary(text, text, int4) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_segment_primary' WITH (OID=5039, DESCRIPTION="Perform the catalog operations necessary for adding a new primary segment");
 
- CREATE FUNCTION gp_add_segment_mirror(int2, text, text, int4, int4, _text) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_segment_mirror' WITH (OID=5048, DESCRIPTION="Perform the catalog operations necessary for adding a new segment mirror");
+ CREATE FUNCTION gp_add_segment_mirror(int2, text, text, int4, text) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_segment_mirror' WITH (OID=5048, DESCRIPTION="Perform the catalog operations necessary for adding a new segment mirror");
 
  CREATE FUNCTION gp_remove_segment_mirror(int2) RETURNS bool LANGUAGE internal VOLATILE AS 'gp_remove_segment_mirror' WITH (OID=5049, DESCRIPTION="Remove a segment mirror from the system catalog");
 
- CREATE FUNCTION gp_add_segment(int2, int2, "char", "char", "char", "char", int4, text, text, int4, _text) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_segment' WITH (OID=5050, DESCRIPTION="Perform the catalog operations necessary for adding a new segment");
+ CREATE FUNCTION gp_add_segment(int2, int2, "char", "char", "char", "char", int4, text, text, text) RETURNS int2 LANGUAGE internal VOLATILE AS 'gp_add_segment' WITH (OID=5050, DESCRIPTION="Perform the catalog operations necessary for adding a new segment");
 
  CREATE FUNCTION gp_remove_segment(int2) RETURNS bool LANGUAGE internal VOLATILE AS 'gp_remove_segment' WITH (OID=5051, DESCRIPTION="Remove a primary segment from the system catalog");
 

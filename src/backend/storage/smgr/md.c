@@ -312,7 +312,7 @@ mdcreate_ao(RelFileNode rnode, int32 segmentFileNum, bool isRedo)
 
 	if (segmentFileNum != 0)
 	{
-		sprintf(buf, "%s.%d", path, segmentFileNum);
+		snprintf(buf, MAXPGPATH, "%s.%d", path, segmentFileNum);
 		pfree(path);
 		path = buf;
 	}
