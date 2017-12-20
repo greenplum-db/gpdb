@@ -9,5 +9,5 @@ run:
   - |
     set -ex
     ccp_src/aws/setup_ssh_to_cluster.sh
-    ssh centos@mdw "sudo bash -c \"yum install -y valgrind mailx\""
+    ssh centos@mdw "sudo bash -c \"yum --cacheonly list installed mailx valgrind\""
     ssh -t mdw "$CUSTOM_ENV bash /home/gpadmin/gpdb_src/concourse/scripts/run_behave_test.sh \"$BEHAVE_FLAGS\""

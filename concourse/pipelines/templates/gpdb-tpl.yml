@@ -2058,7 +2058,7 @@ jobs:
           set -ex
           ccp_src/aws/setup_ssh_to_cluster.sh
           ssh -t centos@mdw << 'SSH_CMD'
-            sudo yum -y install kernel-devel-$(uname -r)
+            sudo yum --cacheonly list installed kernel-devel-$(uname -r)
           SSH_CMD
     on_failure:
       <<: *set_failed
