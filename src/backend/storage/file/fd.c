@@ -547,9 +547,22 @@ int
 BasicOpenFile(FileName fileName, int fileFlags, int fileMode)
 {
 	int			fd;
+	struct stat	sb;
 
 tryAgain:
-	fd = open(fileName, fileFlags, fileMode);
+	if ((stat(fileName, &sb) == 0) && ((sb.st_mode & S_IFMT) == S_IFIFO))
+	{
+		fd = open(fileName, fileFlags | O_NONBLOCK, fileMode);
+
+		if (fd != -1)
+		{
+			fcntl(fd, F_SETFL, fileFlags);
+		}
+	}
+	else
+	{
+		fd = open(fileName, fileFlags, fileMode);
+	}
 
 	if (fd >= 0)
 		return fd;				/* success! */
@@ -1580,7 +1593,10 @@ FileTruncate(File file, int64 offset)
 FILE *
 AllocateFile(const char *name, const char *mode)
 {
-	FILE	   *file;
+	int		fd;
+	int		flags;
+	struct stat	sb;
+	FILE	*file = NULL;
 
 	DO_DB(elog(LOG, "AllocateFile: Allocated %d (%s)",
 			   numAllocatedDescs, name));
@@ -1596,7 +1612,25 @@ AllocateFile(const char *name, const char *mode)
 		elog(ERROR, "too many private files demanded");
 
 TryAgain:
-	if ((file = fopen(name, mode)) != NULL)
+	if ((mode[0] == 'r') && (stat(name, &sb) == 0) && ((sb.st_mode & S_IFMT) == S_IFIFO))
+	{
+		fd = open(name, O_RDONLY | O_NONBLOCK);
+
+		if (fd != -1)
+		{
+			flags = fcntl(fd, F_GETFL);
+			flags &= ~O_NONBLOCK;
+			fcntl(fd, F_SETFL, flags);
+
+			file = fdopen(fd, PG_BINARY_R);
+		}
+	}
+	else
+	{
+		file = fopen(name, mode);
+	}
+
+	if (file != NULL)
 	{
 		AllocateDesc *desc = &allocatedDescs[numAllocatedDescs];
 
