@@ -498,12 +498,12 @@
       <topic id="topic48" xml:lang="en">
         <title>Example 1 </title>
         <body>
-          <p>In this example, column <codeph>c1</codeph> is compressed using <codeph>zlib</codeph>
+          <p>In this example, column <codeph>c1</codeph> is compressed using <codeph>zstd</codeph>
             and uses the block size defined by the system. Column <codeph>c2</codeph> is compressed
             with <codeph>quicklz</codeph>, and uses a block size of <codeph>65536</codeph>. Column
               <codeph>c3</codeph> is not compressed and uses the block size defined by the
             system.</p>
-          <codeblock>CREATE TABLE T1 (c1 int ENCODING (compresstype=zlib),
+          <codeblock>CREATE TABLE T1 (c1 int ENCODING (compresstype=zstd),
                   c2 char ENCODING (compresstype=quicklz, blocksize=65536),
                   c3 char     WITH (appendonly=true, orientation=column);</codeblock>
         </body>
