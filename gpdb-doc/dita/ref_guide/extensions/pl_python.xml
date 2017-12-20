@@ -655,12 +655,13 @@ INSERT INTO sales VALUES
         by the input value. In the Python function, the row numbering starts from 0. Valid input for
         the function is an integer between 0 and 4. </p>
       <codeblock>CREATE OR REPLACE FUNCTION mypytest(a integer) 
-  RETURNS text 
+  RETURNS setof text 
 AS $$ 
   rv = plpy.execute("SELECT * FROM sales ORDER BY id", 5)
-  region = rv[a]["region"]
+  region =[]
+  region.append(rv[a]["region"])
   return region
-$$ language plpythonu;</codeblock>
+$$ language plpythonu EXECUTE ON MASTER;</codeblock>
       <p>Running this <codeph>SELECT</codeph> statement returns the <codeph>REGION</codeph> column
         value from the third row of the result set.</p>
       <codeblock>SELECT mypytest(2) ;</codeblock>

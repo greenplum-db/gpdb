@@ -1,211 +1,179 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-  <topic id="topic1" xml:lang="en">
+<topic id="topic1" xml:lang="en">
     <title id="px216155">Greenplum PL/Perl Language Extension</title>
     <body>
-      <p>This chapter includes the following information:</p>
-      <ul>
-<li id="px220017">
-<xref href="#topic2" type="topic" format="dita"/>
-</li>
-<li id="px220032">
-<xref href="#topic3" type="topic" format="dita"/>
-</li>
-<li id="px216091">
-<xref href="#topic31" type="topic" format="dita"/>
-</li>
-<li id="px214686">
-<xref href="#topic33" type="topic" format="dita"/>
-</li>
-</ul>
-</body>
+        <p>This chapter includes the following information:</p>
+        <ul>
+            <li id="px220017">
+                <xref href="#topic2" type="topic" format="dita"/>
+            </li>
+            <li id="px220032">
+                <xref href="#topic3" type="topic" format="dita"/>
+            </li>
+            <li id="px216091">
+                <xref href="#topic31" type="topic" format="dita"/>
+            </li>
+            <li id="px214686">
+                <xref href="#topic33" type="topic" format="dita"/>
+            </li>
+        </ul>
+    </body>
 
-<topic id="topic2" xml:lang="en">
-<title id="px216140">About Greenplum PL/Perl</title>
-<body>
-<p>
-With the Greenplum Database PL/Perl extension, you can write user-defined functions
-in Perl that take advantage of its advanced string manipulation operators and
-functions. PL/Perl provides both trusted and untrusted variants of the language.
-</p>
-<p>
-PL/Perl is embedded in your Greenplum Database distribution. Greenplum Database
-PL/Perl requires Perl to be installed on the system of each database host.
-</p>
-<p>
-Refer to the <xref href="https://www.postgresql.org/docs/9.1/static/plperl.html" scope="external" format="html">
-PostgreSQL PL/Perl documentation
-</xref>
- for additional information.
-</p>
-</body>
-</topic>
+    <topic id="topic2" xml:lang="en">
+        <title id="px216140">About Greenplum PL/Perl</title>
+        <body>
+            <p> With the Greenplum Database PL/Perl extension, you can write user-defined functions
+                in Perl that take advantage of its advanced string manipulation operators and
+                functions. PL/Perl provides both trusted and untrusted variants of the language. </p>
+            <p> PL/Perl is embedded in your Greenplum Database distribution. Greenplum Database
+                PL/Perl requires Perl to be installed on the system of each database host. </p>
+            <p> Refer to the <xref href="https://www.postgresql.org/docs/9.1/static/plperl.html"
+                    scope="external" format="html"> PostgreSQL PL/Perl documentation </xref> for
+                additional information. </p>
+        </body>
+    </topic>
 
-<topic id="topic3" xml:lang="en">
-<title>Greenplum Database PL/Perl Limitations</title>
-<body>
-<p>
-Limitations of the Greenplum Database PL/Perl language include:
-<ul>
-<li>Greenplum Database does not support PL/Perl triggers.</li>
-<li>PL/Perl functions cannot call each other directly.</li>
-<li>SPI is not yet fully implemented.</li>
-<li>If you fetch very large data sets using <codeph>spi_exec_query()</codeph>, you should be
-aware that these will all go into memory. You can avoid this problem by using
-<codeph>spi_query()/spi_fetchrow()</codeph>. A similar problem occurs if a
-set-returning function passes a large set of rows back to Greenplum Database
-via a <codeph>return</codeph> statement. Use <codeph>return_next</codeph> for
-each row returned to avoid this problem.</li>
-<li>When a session ends normally, not due to a fatal error, PL/Perl executes any
-<codeph>END</codeph> blocks that you have defined. No other actions are currently
-performed. (File handles are not automatically flushed and objects are not
-automatically destroyed.)</li>
-</ul> </p>
-</body>
-</topic>
+    <topic id="topic3" xml:lang="en">
+        <title>Greenplum Database PL/Perl Limitations</title>
+        <body>
+            <p> Limitations of the Greenplum Database PL/Perl language include: <ul>
+                    <li>Greenplum Database does not support PL/Perl triggers.</li>
+                    <li>PL/Perl functions cannot call each other directly.</li>
+                    <li>SPI is not yet fully implemented.</li>
+                    <li>If you fetch very large data sets using <codeph>spi_exec_query()</codeph>,
+                        you should be aware that these will all go into memory. You can avoid this
+                        problem by using <codeph>spi_query()/spi_fetchrow()</codeph>. A similar
+                        problem occurs if a set-returning function passes a large set of rows back
+                        to Greenplum Database via a <codeph>return</codeph> statement. Use
+                            <codeph>return_next</codeph> for each row returned to avoid this
+                        problem.</li>
+                    <li>When a session ends normally, not due to a fatal error, PL/Perl executes any
+                            <codeph>END</codeph> blocks that you have defined. No other actions are
+                        currently performed. (File handles are not automatically flushed and objects
+                        are not automatically destroyed.)</li>
+                </ul>
+            </p>
+        </body>
+    </topic>
 
 
-<topic id="topic31" xml:lang="en">
-<title>Trusted/Untrusted Language</title>
-<body>
-<p>
-PL/Perl includes trusted and untrusted language variants.
-</p>
-<p>
-The PL/Perl trusted language is named <codeph>plperl</codeph>. The trusted PL/Perl
-language restricts file system operations, as well as <codeph>require</codeph>,
-<codeph>use</codeph>, and other statements that could potentially interact with
-the operating system or database server process. With these restrictions in
-place, any Greenplum Database user can create and execute functions in the trusted
-<codeph>plperl</codeph> language.
-</p>
-<p>
-The PL/Perl untrusted language is named <codeph>plperlu</codeph>. You cannot
-restrict the operation of functions you create with the <codeph>plperlu</codeph>
-untrusted language. Only database superusers have privileges to create untrusted
-PL/Perl user-defined functions. And only database superusers and other database
-users that are explicitly granted the permissions can execute untrusted PL/Perl
-user-defined functions.
-</p>
-<p>
-PL/Perl has limitations with respect to communication between interpreters
-and the number of interpreters running in a single process. Refer to the
-PostgreSQL <xref href="https://www.postgresql.org/docs/9.1/static/plperl-trusted.html" scope="external" format="html">Trusted and Untrusted PL/Perl</xref>
-documentation for additional information.
-</p>
-</body>
-</topic>
+    <topic id="topic31" xml:lang="en">
+        <title>Trusted/Untrusted Language</title>
+        <body>
+            <p> PL/Perl includes trusted and untrusted language variants. </p>
+            <p> The PL/Perl trusted language is named <codeph>plperl</codeph>. The trusted PL/Perl
+                language restricts file system operations, as well as <codeph>require</codeph>,
+                    <codeph>use</codeph>, and other statements that could potentially interact with
+                the operating system or database server process. With these restrictions in place,
+                any Greenplum Database user can create and execute functions in the trusted
+                    <codeph>plperl</codeph> language. </p>
+            <p> The PL/Perl untrusted language is named <codeph>plperlu</codeph>. You cannot
+                restrict the operation of functions you create with the <codeph>plperlu</codeph>
+                untrusted language. Only database superusers have privileges to create untrusted
+                PL/Perl user-defined functions. And only database superusers and other database
+                users that are explicitly granted the permissions can execute untrusted PL/Perl
+                user-defined functions. </p>
+            <p> PL/Perl has limitations with respect to communication between interpreters and the
+                number of interpreters running in a single process. Refer to the PostgreSQL <xref
+                    href="https://www.postgresql.org/docs/9.1/static/plperl-trusted.html"
+                    scope="external" format="html">Trusted and Untrusted PL/Perl</xref>
+                documentation for additional information. </p>
+        </body>
+    </topic>
 
-<topic id="topic6" xml:lang="en">
-<title>Enabling and Removing PL/Perl Support</title>
-<body>
-<p>
-You must register the PL/Perl language with a database before you can create and
-execute a PL/Perl user-defined function within that database. To remove PL/Perl
-support, you must explicitly remove the extension from each database in which it
-was registered. You must be a database superuser or owner to register or remove
-trusted languages in Greenplum databases.
-</p>
-<note>Only database superusers may register or remove support for the
-<i>untrusted</i> PL/Perl language <codeph>plperlu</codeph>.</note>
-<p>
-Before you enable or remove PL/Perl support in a database, ensure that:
-<ul>
-<li>Your Greenplum Database is running.</li>
-<li>You have sourced <codeph>greenplum_path.sh</codeph>.</li>
-<li>You have set the <codeph>$MASTER_DATA_DIRECTORY</codeph> and
-<codeph>$GPHOME</codeph> environment variables.</li>
-</ul>
-</p>
-</body>
-<topic id="topic61" xml:lang="en">
-<title>Enabling PL/Perl Support</title>
-<body>
-<p>
-For each database in which you want to enable PL/Perl, register the language using the SQL
-<codeph><xref href="../sql_commands/CREATE_LANGUAGE.xml#topic1">CREATE LANGUAGE</xref></codeph>
-command or the Greenplum Database
-<codeph><xref href="../../utility_guide/client_utilities/createlang.xml#topic1">createlang</xref></codeph>
-utility. For example, run the following command as the <codeph>gpadmin</codeph>
-user to register the trusted PL/Perl language for the database named
-<codeph>testdb</codeph>:
-</p>
-<codeblock>$ createlang plperl -d testdb</codeblock>
-</body>
-</topic>
-<topic id="topic62" xml:lang="en">
-<title>Removing PL/Perl Support</title>
-<body>
-<p>
-To remove support for PL/Perl from a database, run the SQL 
-<codeph><xref href="../sql_commands/DROP_LANGUAGE.xml#topic1">DROP LANGUAGE</xref></codeph>
-command or the Greenplum Database
-<codeph><xref href="../../utility_guide/client_utilities/droplang.xml#topic1">droplang</xref></codeph>
-utility. For example, run the following command as the <codeph>gpadmin</codeph>
-user to remove support for the trusted PL/Perl language from the database named
-<codeph>testdb</codeph>:
-</p>
-<codeblock>
+    <topic id="topic6" xml:lang="en">
+        <title>Enabling and Removing PL/Perl Support</title>
+        <body>
+            <p> You must register the PL/Perl language with a database before you can create and
+                execute a PL/Perl user-defined function within that database. To remove PL/Perl
+                support, you must explicitly remove the extension from each database in which it was
+                registered. You must be a database superuser or owner to register or remove trusted
+                languages in Greenplum databases. </p>
+            <note>Only database superusers may register or remove support for the <i>untrusted</i>
+                PL/Perl language <codeph>plperlu</codeph>.</note>
+            <p> Before you enable or remove PL/Perl support in a database, ensure that: <ul>
+                    <li>Your Greenplum Database is running.</li>
+                    <li>You have sourced <codeph>greenplum_path.sh</codeph>.</li>
+                    <li>You have set the <codeph>$MASTER_DATA_DIRECTORY</codeph> and
+                            <codeph>$GPHOME</codeph> environment variables.</li>
+                </ul>
+            </p>
+        </body>
+        <topic id="topic61" xml:lang="en">
+            <title>Enabling PL/Perl Support</title>
+            <body>
+                <p> For each database in which you want to enable PL/Perl, register the language
+                    using the SQL <codeph><xref href="../sql_commands/CREATE_LANGUAGE.xml#topic1"
+                            >CREATE LANGUAGE</xref></codeph> command or the Greenplum Database
+                            <codeph><xref
+                            href="../../utility_guide/client_utilities/createlang.xml#topic1"
+                            >createlang</xref></codeph> utility. For example, run the following
+                    command as the <codeph>gpadmin</codeph> user to register the trusted PL/Perl
+                    language for the database named <codeph>testdb</codeph>: </p>
+                <codeblock>$ createlang plperl -d testdb</codeblock>
+            </body>
+        </topic>
+        <topic id="topic62" xml:lang="en">
+            <title>Removing PL/Perl Support</title>
+            <body>
+                <p> To remove support for PL/Perl from a database, run the SQL <codeph><xref
+                            href="../sql_commands/DROP_LANGUAGE.xml#topic1">DROP
+                        LANGUAGE</xref></codeph> command or the Greenplum Database <codeph><xref
+                            href="../../utility_guide/client_utilities/droplang.xml#topic1"
+                            >droplang</xref></codeph> utility. For example, run the following
+                    command as the <codeph>gpadmin</codeph> user to remove support for the trusted
+                    PL/Perl language from the database named <codeph>testdb</codeph>: </p>
+                <codeblock>
 $ psql -d testdb
 psql (8.3.23)
 Type "help" for help.
 
 testdb=# DROP LANGUAGE plperl;
 </codeblock>
-<p>
-The default <codeph>DROP LANGUAGE</codeph> behavior is <codeph>RESTRICT</codeph>;
-the command fails if any existing objects (such as functions) depend on the
-language. Specify the <codeph>CASCADE</codeph> clause to also drop all dependent
-objects, including functions that you created with PL/Perl.
-</p>
-</body>
-</topic>
-</topic>
+                <p> The default <codeph>DROP LANGUAGE</codeph> behavior is
+                    <codeph>RESTRICT</codeph>; the command fails if any existing objects (such as
+                    functions) depend on the language. Specify the <codeph>CASCADE</codeph> clause
+                    to also drop all dependent objects, including functions that you created with
+                    PL/Perl. </p>
+            </body>
+        </topic>
+    </topic>
 
-<topic id="topic33" xml:lang="en">
-<title>Developing Functions with PL/Perl</title>
-<body>
-<p>
-You define a PL/Perl function using the standard SQL <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1">CREATE FUNCTION</xref></codeph> syntax.
-The body of a PL/Perl user-defined function is ordinary Perl code. The PL/Perl
-interpreter wraps this code inside a Perl subroutine.
-</p>
-<p>
-You can also create an anonymous code block with PL/Perl. An anonymous code block,
-called with the SQL <codeph><xref href="../sql_commands/DO.xml#topic1">DO</xref></codeph>
-command, receives no arguments, and whatever value it might return is discarded.
-Otherwise, a PL/Perl anonymous code block behaves just like a function.  Only
-database superusers create an anonymous code block with the untrusted
-<codeph>plperlu</codeph> language.
-</p>
-<p>
-The syntax of the <codeph>CREATE FUNCTION</codeph> command requires that you write
-the PL/Perl function body as a string constant. While it is more convenient to use
-dollar-quoting, you can choose to use escape string syntax (<codeph>E''</codeph>)
-provided that you double any single quote marks and backslashes used in the body
-of the function.
-</p>
-<p>
-PL/Perl arguments and results are handled as they are in Perl. Arguments you pass
-in to a PL/Perl function are accessed via the <codeph>@_</codeph> array. You
-return a result value with the <codeph>return</codeph> statement, or as the last
-expression evaluated in the function. A PL/Perl function cannot directly return a
-non-scalar type because you call it in a scalar context. You can return non-scalar
-types such as arrays, records, and sets in a PL/Perl function by returning a
-reference.
-</p>
-<p>
-PL/Perl treats null argument values as "undefined". Adding the
-<codeph>STRICT</codeph> keyword to the <codeph>LANGUAGE</codeph> subclause
-instructs Greenplum Database to immediately return null when any of the input
-arguments are null. When created as <codeph>STRICT</codeph>, the function itself
-need not perform null checks.
-</p>
-<p>The following PL/Perl function utilizes the <codeph>STRICT</codeph> keyword to
-return the greater of two integers, or null if any of the inputs are null:
-</p>
-<codeblock>
+    <topic id="topic33" xml:lang="en">
+        <title>Developing Functions with PL/Perl</title>
+        <body>
+            <p> You define a PL/Perl function using the standard SQL <codeph><xref
+                        href="../sql_commands/CREATE_FUNCTION.xml#topic1">CREATE
+                    FUNCTION</xref></codeph> syntax. The body of a PL/Perl user-defined function is
+                ordinary Perl code. The PL/Perl interpreter wraps this code inside a Perl
+                subroutine. </p>
+            <p> You can also create an anonymous code block with PL/Perl. An anonymous code block,
+                called with the SQL <codeph><xref href="../sql_commands/DO.xml#topic1"
+                    >DO</xref></codeph> command, receives no arguments, and whatever value it might
+                return is discarded. Otherwise, a PL/Perl anonymous code block behaves just like a
+                function. Only database superusers create an anonymous code block with the untrusted
+                    <codeph>plperlu</codeph> language. </p>
+            <p> The syntax of the <codeph>CREATE FUNCTION</codeph> command requires that you write
+                the PL/Perl function body as a string constant. While it is more convenient to use
+                dollar-quoting, you can choose to use escape string syntax (<codeph>E''</codeph>)
+                provided that you double any single quote marks and backslashes used in the body of
+                the function. </p>
+            <p> PL/Perl arguments and results are handled as they are in Perl. Arguments you pass in
+                to a PL/Perl function are accessed via the <codeph>@_</codeph> array. You return a
+                result value with the <codeph>return</codeph> statement, or as the last expression
+                evaluated in the function. A PL/Perl function cannot directly return a non-scalar
+                type because you call it in a scalar context. You can return non-scalar types such
+                as arrays, records, and sets in a PL/Perl function by returning a reference. </p>
+            <p> PL/Perl treats null argument values as "undefined". Adding the
+                    <codeph>STRICT</codeph> keyword to the <codeph>LANGUAGE</codeph> subclause
+                instructs Greenplum Database to immediately return null when any of the input
+                arguments are null. When created as <codeph>STRICT</codeph>, the function itself
+                need not perform null checks. </p>
+            <p>The following PL/Perl function utilizes the <codeph>STRICT</codeph> keyword to return
+                the greater of two integers, or null if any of the inputs are null: </p>
+            <codeblock>
 CREATE FUNCTION perl_max (integer, integer) RETURNS integer AS $$
     if ($_[0] > $_[1]) { return $_[0]; }
     return $_[1];
@@ -224,41 +192,35 @@ SELECT perl_max( 1, null );
 (1 row)
 </codeblock>
 
-<p>
-PL/Perl considers anything in a function argument that is not a reference to be a
-string, the standard Greenplum Database external text representation. The argument
-values supplied to a PL/Perl function are simply the input arguments converted to
-text form (just as if they had been displayed by a <codeph>SELECT</codeph>
-statement). In cases where the function argument is not an ordinary numeric or
-text type, you must convert the Greenplum Database type to a form that is more
-usable by Perl. Conversely, the <codeph>return</codeph> and
-<codeph>return_next</codeph> statements accept any string that is an acceptable
-input format for the function's declared return type.
-</p>
-<p>
-Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/9.1/static/plperl-funcs.html" scope="external" format="html">PL/Perl Functions and Arguments</xref>
-documentation for additional information, including composite type and result
-set manipulation.
-</p>
+            <p> PL/Perl considers anything in a function argument that is not a reference to be a
+                string, the standard Greenplum Database external text representation. The argument
+                values supplied to a PL/Perl function are simply the input arguments converted to
+                text form (just as if they had been displayed by a <codeph>SELECT</codeph>
+                statement). In cases where the function argument is not an ordinary numeric or text
+                type, you must convert the Greenplum Database type to a form that is more usable by
+                Perl. Conversely, the <codeph>return</codeph> and <codeph>return_next</codeph>
+                statements accept any string that is an acceptable input format for the function's
+                declared return type. </p>
+            <p> Refer to the PostgreSQL <xref
+                    href="https://www.postgresql.org/docs/9.1/static/plperl-funcs.html"
+                    scope="external" format="html">PL/Perl Functions and Arguments</xref>
+                documentation for additional information, including composite type and result set
+                manipulation. </p>
 
-</body>
+        </body>
 
-<topic id="topic3311" xml:lang="en">
-<title>Built-in PL/Perl Functions</title>
-<body>
-<p>
-PL/Perl includes built-in functions to access the database, including those to
-prepare and perform queries and manipulate query results. The language also
-includes utility functions for error logging and string manipulation.
-</p>
-<p>
-The following example creates a simple table with an integer and a text column. 
-It creates a PL/Perl user-defined function that takes an input string argument and
-invokes the <codeph>spi_exec_query()</codeph> built-in function to select all
-columns and rows of the table.  The function returns all rows in the query results
-where the <codeph>v</codeph> column includes the function input string.
-</p>
-<codeblock>
+        <topic id="topic3311" xml:lang="en">
+            <title>Built-in PL/Perl Functions</title>
+            <body>
+                <p>PL/Perl includes built-in functions to access the database, including those to
+                    prepare and perform queries and manipulate query results. The language also
+                    includes utility functions for error logging and string manipulation. </p>
+                <p> The following example creates a simple table with an integer and a text column.
+                    It creates a PL/Perl user-defined function that takes an input string argument
+                    and invokes the <codeph>spi_exec_query()</codeph> built-in function to select
+                    all columns and rows of the table. The function returns all rows in the query
+                    results where the <codeph>v</codeph> column includes the function input string. </p>
+                <codeblock>
 CREATE TABLE test (
     i int,
     v varchar
@@ -291,7 +253,7 @@ CREATE OR REPLACE FUNCTION return_match(varchar) RETURNS SETOF test AS $$
         }
     }
     return undef;
-$$ LANGUAGE plperl;
+$$ LANGUAGE plperl EXECUTE ON MASTER ;
 
 SELECT return_match( 'iff' );
  return_match
@@ -299,26 +261,22 @@ SELECT return_match( 'iff' );
  (4,different)
 (1 row)
 </codeblock>
-<p>
-Refer to the PostgreSQL PL/Perl <xref href="https://www.postgresql.org/docs/9.1/static/plperl-builtins.html" scope="external" format="html">Built-in Functions</xref>
-documentation for a detailed discussion of available functions.
-</p>
-</body>
-</topic>
-<topic id="topic331" xml:lang="en">
-<title>Global Values in PL/Perl</title>
-<body>
-<p>
-You can use the global hash map <codeph>%_SHARED</codeph> to share data, including
-code references, between PL/Perl function calls for the lifetime of the current
-session.
-</p>
-<p>
-The following example uses <codeph>%_SHARED</codeph> to share data between the
-user-defined <codeph>set_var()</codeph> and <codeph>get_var()</codeph> PL/Perl
-functions:
-</p>
-<codeblock>
+                <p> Refer to the PostgreSQL PL/Perl <xref
+                        href="https://www.postgresql.org/docs/9.1/static/plperl-builtins.html"
+                        scope="external" format="html">Built-in Functions</xref> documentation for a
+                    detailed discussion of available functions. </p>
+            </body>
+        </topic>
+        <topic id="topic331" xml:lang="en">
+            <title>Global Values in PL/Perl</title>
+            <body>
+                <p> You can use the global hash map <codeph>%_SHARED</codeph> to share data,
+                    including code references, between PL/Perl function calls for the lifetime of
+                    the current session. </p>
+                <p> The following example uses <codeph>%_SHARED</codeph> to share data between the
+                    user-defined <codeph>set_var()</codeph> and <codeph>get_var()</codeph> PL/Perl
+                    functions: </p>
+                <codeblock>
 CREATE OR REPLACE FUNCTION set_var(name text, val text) RETURNS text AS $$
     if ($_SHARED{$_[0]} = $_[1]) {
         return 'ok';
@@ -343,43 +301,38 @@ SELECT get_var('key1');
  value1
 (1 row)
 </codeblock>
-<p>
-For security reasons, PL/Perl creates a separate Perl interpreter for each role.
-This prevents accidental or malicious interference by one user with the behavior
-of another user's PL/Perl functions. Each such interpreter retains its own value
-of the <codeph>%_SHARED</codeph> variable and other global state. Two PL/Perl
-functions share the same value of <codeph>%_SHARED</codeph> if and only if they
-are executed by the same SQL role.
-</p>
-<p>
-There are situations where you must take explicit steps to ensure that PL/Perl
-functions can share data in <codeph>%_SHARED</codeph>. For example, if an
-application executes under multiple SQL roles
-(via <codeph>SECURITY DEFINER</codeph> functions, use of <codeph>SET ROLE</codeph>,
-etc.) in a single session, make sure that functions that need to communicate are
-owned by the same user, and mark these functions as
-<codeph>SECURITY DEFINER</codeph>.
-</p>
-</body>
-</topic>
+                <p> For security reasons, PL/Perl creates a separate Perl interpreter for each role.
+                    This prevents accidental or malicious interference by one user with the behavior
+                    of another user's PL/Perl functions. Each such interpreter retains its own value
+                    of the <codeph>%_SHARED</codeph> variable and other global state. Two PL/Perl
+                    functions share the same value of <codeph>%_SHARED</codeph> if and only if they
+                    are executed by the same SQL role. </p>
+                <p> There are situations where you must take explicit steps to ensure that PL/Perl
+                    functions can share data in <codeph>%_SHARED</codeph>. For example, if an
+                    application executes under multiple SQL roles (via <codeph>SECURITY
+                        DEFINER</codeph> functions, use of <codeph>SET ROLE</codeph>, etc.) in a
+                    single session, make sure that functions that need to communicate are owned by
+                    the same user, and mark these functions as <codeph>SECURITY DEFINER</codeph>.
+                </p>
+            </body>
+        </topic>
 
-<topic id="topic335" xml:lang="en">
-<title>Notes</title>
-<body>
-<p>
-Additional considerations when developing PL/Perl functions:
-<ul>
-<li>PL/Perl internally utilizes the UTF-8 encoding. It converts any arguments
-provided in other encodings to UTF-8, and converts return values from UTF-8 back
-to the original encoding.</li>
-<li>Nesting named PL/Perl subroutines retains the same dangers as in Perl.</li>
-<li>Only the untrusted PL/Perl language variant supports module import. Use
-<codeph>plperlu</codeph> with care.</li>
-<li>Any module that you use in a <codeph>plperlu</codeph> function must be available from the same location on all Greenplum Database hosts.</li>
-</ul>
-</p>
-</body>
+        <topic id="topic335" xml:lang="en">
+            <title>Notes</title>
+            <body>
+                <p> Additional considerations when developing PL/Perl functions: <ul>
+                        <li>PL/Perl internally utilizes the UTF-8 encoding. It converts any
+                            arguments provided in other encodings to UTF-8, and converts return
+                            values from UTF-8 back to the original encoding.</li>
+                        <li>Nesting named PL/Perl subroutines retains the same dangers as in
+                            Perl.</li>
+                        <li>Only the untrusted PL/Perl language variant supports module import. Use
+                                <codeph>plperlu</codeph> with care.</li>
+                        <li>Any module that you use in a <codeph>plperlu</codeph> function must be
+                            available from the same location on all Greenplum Database hosts.</li>
+                    </ul>
+                </p>
+            </body>
+        </topic>
+    </topic>
 </topic>
-</topic>
-</topic>
-

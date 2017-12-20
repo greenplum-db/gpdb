@@ -40,15 +40,17 @@
             </ul></li>
           <li>Multiple <cmdname>DISTINCT</cmdname> qualified aggregate functions </li>
           <li>Inverse distribution functions</li>
+          <li>Queries that execute functions that are defined with the <codeph>ON MASTER</codeph> or
+              <codeph>ON ALL SEGMENTS</codeph> attribute</li>
         </ul></p>
     </body>
   </topic>
   <topic id="topic_u4t_vxl_vp">
     <title>Performance Regressions</title>
     <body>
-      <p>The following features are known performance regressions that occur with GPORCA
-          enabled:<ul id="ul_zp2_4yl_vp">
-           <li>Short running queries - For GPORCA, short running queries might encounter additional
+      <p>The following features are known performance regressions that occur with GPORCA enabled:<ul
+          id="ul_zp2_4yl_vp">
+          <li>Short running queries - For GPORCA, short running queries might encounter additional
             overhead due to GPORCA enhancements for determining an optimal query execution
             plan.</li>
           <li><cmdname>ANALYZE</cmdname> - For GPORCA, the <cmdname>ANALYZE</cmdname> command

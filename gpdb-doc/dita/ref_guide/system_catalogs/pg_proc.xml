@@ -69,7 +69,7 @@
             </entry>
             <entry colname="col2">float4</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Estimated execution cost (in cpu_operator_cost units); if 
+            <entry colname="col4">Estimated execution cost (in cpu_operator_cost units); if
               proretset is <codeph>true</codeph>, identifies the cost per row returned.</entry>
           </row>
           <row>
@@ -86,8 +86,8 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Data type of the variadic array parameter's elements, or zero
-              if the function does not have a variadic parameter.</entry>
+            <entry colname="col4">Data type of the variadic array parameter's elements, or zero if
+              the function does not have a variadic parameter.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -177,9 +177,9 @@
             <entry colname="col2">oidvector</entry>
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">An array with the data types of the function arguments. This
-              includes only input arguments (including <codeph>INOUT</codeph> and 
-              <codeph>VARIADIC</codeph> arguments), and thus
-              represents the call signature of the function.</entry>
+              includes only input arguments (including <codeph>INOUT</codeph> and
+                <codeph>VARIADIC</codeph> arguments), and thus represents the call signature of the
+              function.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -201,10 +201,10 @@
             <entry colname="col3"/>
             <entry colname="col4">An array with the modes of the function arguments:
                 <codeph>i</codeph> = <codeph>IN</codeph>, <codeph>o</codeph> = <codeph>OUT</codeph>
-              , <codeph>b</codeph> = <codeph>INOUT</codeph>, <codeph>v</codeph> = 
-              <codeph>VARIADIC</codeph>. If all the arguments are IN arguments,
-              this field will be null. Note that subscripts correspond to positions of
-              proallargtypes not proargtypes.</entry>
+              , <codeph>b</codeph> = <codeph>INOUT</codeph>, <codeph>v</codeph> =
+                <codeph>VARIADIC</codeph>. If all the arguments are IN arguments, this field will be
+              null. Note that subscripts correspond to positions of proallargtypes not
+              proargtypes.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -223,11 +223,10 @@
             </entry>
             <entry colname="col2"> text </entry>
             <entry colname="col3"/>
-            <entry colname="col4">Expression trees for default argument values. This is a list with 
-              pronargdefaults elements, corresponding to the last
-              <varname>N</varname> input arguments (i.e., the last <varname>N</varname>
-              proargtypes positions). If none of the arguments have defaults,
-              this field is empty.</entry>
+            <entry colname="col4">Expression trees for default argument values. This is a list with
+              pronargdefaults elements, corresponding to the last <varname>N</varname> input
+              arguments (i.e., the last <varname>N</varname> proargtypes positions). If none of the
+              arguments have defaults, this field is empty.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -250,6 +249,13 @@
               the interpretation is language-specific.</entry>
           </row>
           <row>
+            <entry colname="col1"><codeph>proconfig</codeph></entry>
+            <entry colname="col2">text[]</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">An array with runtime configuration variable settings that are
+              local to function execution.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>proacl</codeph>
             </entry>
@@ -257,6 +263,23 @@
             <entry colname="col3"/>
             <entry colname="col4">Access privileges for the function as given by
                 <codeph>GRANT</codeph>/<codeph>REVOKE</codeph>.</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>prodataaccess</codeph></entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Provides a hint regarding the type SQL statements that are
+              included in the function: <codeph>n</codeph> - does not contain SQL,
+                <codeph>c</codeph> - contains SQL, <codeph>r</codeph> - contains SQL that reads
+              data, <codeph>m</codeph> - contains SQL that modifies data</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>proexeclocation</codeph></entry>
+            <entry colname="col2">char</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Where the function is executed when it is invoked:
+                <codeph>m</codeph> - master only, <codeph>a</codeph> - any segment instance,
+                <codeph>s</codeph> - all segment instances.</entry>
           </row>
         </tbody>
       </tgroup>

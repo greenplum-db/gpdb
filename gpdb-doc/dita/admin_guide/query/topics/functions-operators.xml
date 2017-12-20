@@ -26,8 +26,24 @@
     <topic id="topic27" xml:lang="en">
         <title id="in201560">Using Functions in Greenplum Database</title>
         <body>
+            <p>When you invoke a function in Greenplum Database, function attributes control the
+                execution of the function. The volatility attributes (<codeph>IMMUTABLE</codeph>,
+                    <codeph>STABLE</codeph>, <codeph>VOLATILE</codeph>) and the <codeph>EXECUTE
+                    ON</codeph> attributes control two different aspects of function execution. In
+                general, volatility indicates when the function is executed, and <codeph>EXECUTE
+                    ON</codeph> indicates where it is executed. The volatility attributes are
+                PostgreSQL based attributes, the <codeph>EXECUTE ON</codeph> attributes are
+                Greenplum Database attributes.</p>
+            <p>For example, a function defined with the <codeph>IMMUTABLE</codeph> attribute can be
+                executed at query planning time, while a function with the <codeph>VOLATILE</codeph>
+                attribute must be executed for every row in the query. A function with the
+                    <codeph>EXECUTE ON MASTER</codeph> attribute is executed only on the master
+                segment, and a function with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> attribute
+                is executed on all primary segment instances (not the master). </p>
+            <p>These tables summarize what Greenplum Database assumes about function execution based
+                on the attribute.</p>
             <table id="in201681">
-                <title>Functions in Greenplum Database</title>
+                <title>Function Volatility Attributes in Greenplum Database</title>
                 <tgroup cols="4">
                     <colspec colname="col1" colnum="1" colwidth="77*"/>
                     <colspec colname="col2" colnum="2" colwidth="86*"/>
@@ -35,7 +51,7 @@
                     <colspec colname="col4" colnum="4" colwidth="144*"/>
                     <thead>
                         <row>
-                            <entry colname="col1">Function Type</entry>
+                            <entry colname="col1">Function Attribute</entry>
                             <entry colname="col2">Greenplum Support</entry>
                             <entry colname="col3">Description</entry>
                             <entry colname="col4">Comments</entry>
@@ -66,7 +82,8 @@
                             <entry colname="col2">Restricted</entry>
                             <entry colname="col3">Function values can change within a single table
                                 scan. For example: <codeph>random()</codeph>,
-                                <codeph>timeofday()</codeph>.</entry>
+                                    <codeph>timeofday()</codeph>. This is the default
+                                attribute.</entry>
                             <entry colname="col4">Any function with side effects is volatile, even
                                 if its result is predictable. For example:
                                 <codeph>setval()</codeph>.</entry>
@@ -74,11 +91,57 @@
                     </tbody>
                 </tgroup>
             </table>
+            <table id="table_cnz_4ng_gcb">
+                <title>Function EXECUTE ON attributes in Greenplum Database </title>
+                <tgroup cols="3">
+                    <colspec colname="col1" colnum="1" colwidth="77*"/>
+                    <colspec colname="col3" colnum="2" colwidth="144*"/>
+                    <colspec colname="col4" colnum="3" colwidth="144*"/>
+                    <thead>
+                        <row>
+                            <entry colname="col1">Function Attribute</entry>
+                            <entry colname="col3">Description</entry>
+                            <entry colname="col4">Comments</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry colname="col1">EXECUTE ON ANY</entry>
+                            <entry colname="col3">Indicates that the function can be executed on the
+                                master, or any segment instance, and it returns the same result
+                                regardless of where it is executed. This is the default
+                                attribute.</entry>
+                            <entry colname="col4">Greenplum Database determines where the function
+                                is executed.</entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">EXECUTE ON MASTER</entry>
+                            <entry colname="col3">Indicates that the function must be executed on
+                                the master instance.</entry>
+                            <entry colname="col4">Specify this attribute if the user-defined
+                                function executes queries to access tables. </entry>
+                        </row>
+                        <row>
+                            <entry colname="col1">EXECUTE ON ALL SEGMENTS</entry>
+                            <entry colname="col3">Indicates that for each invocation, the function
+                                must be executed on all primary segment instances, but not the
+                                master.</entry>
+                            <entry colname="col4"/>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+            <p>You can display the function volatility and <codeph>EXECUTE ON</codeph> attribute
+                information with the psql <codeph>\df+ <varname>function</varname></codeph>
+                command.</p>
             <p>Refer to the PostgreSQL <xref
                     href="https://www.postgresql.org/docs/8.3/static/xfunc-volatility.html"
                     scope="external" format="html">Function Volatility Categories</xref>
                 documentation for additional information about the Greenplum Database function
                 volatility classifications.</p>
+            <p>For more information about <codeph>EXECUTE ON</codeph> attributes, see <codeph><xref
+                        href="../../../ref_guide/sql_commands/CREATE_FUNCTION.xml#topic1"
+                        format="dita" scope="peer">CREATE FUNCTION</xref></codeph>.</p>
             <p>In Greenplum Database, data is divided up across segments — each segment is a
                 distinct PostgreSQL database. To prevent inconsistent or unexpected results, do not
                 execute functions classified as <codeph>VOLATILE</codeph> at the segment level if
@@ -92,19 +155,17 @@
                 without a <codeph>FROM</codeph> clause):</p>
             <p>
                 <codeblock>SELECT setval('myseq', 201);
-SELECT foo();
-</codeblock>
+SELECT foo();</codeblock>
             </p>
             <p>If a statement has a <codeph>FROM</codeph> clause containing a distributed table
                     <i>and</i> the function in the <codeph>FROM</codeph> clause returns a set of
                 rows, the statement can run on the segments:</p>
             <p>
-                <codeblock>SELECT * from foo();
-</codeblock>
+                <codeblock>SELECT * from foo();</codeblock>
             </p>
             <p>Greenplum Database does not support functions that return a table reference
                     (<codeph>rangeFuncs</codeph>) or functions that use the
-                    <codeph>refCursor</codeph> datatype.</p>
+                    <codeph>refCursor</codeph> data type.</p>
         </body>
         <topic id="topic281" xml:lang="en">
             <title id="in1414519">Function Volatility and Plan Caching</title>
@@ -113,7 +174,7 @@ SELECT foo();
                         <codeph>IMMUTABLE</codeph> function volatility categories for simple
                     interactive queries that are planned and immediately executed. It does not
                     matter much whether a function is executed once during planning or once during
-                    query execution startup. But there is a big difference when you save the plan
+                    query execution start up. But there is a big difference when you save the plan
                     and reuse it later. If you mislabel a function <codeph>IMMUTABLE</codeph>,
                     Greenplum Database may prematurely fold it to a constant during planning,
                     possibly reusing a stale value during subsequent execution of the plan. You may
@@ -133,6 +194,13 @@ SELECT foo();
                 default, user-defined functions are declared as <codeph>VOLATILE</codeph>, so if
                 your user-defined function is <codeph>IMMUTABLE</codeph> or <codeph>STABLE</codeph>,
                 you must specify the correct volatility level when you register your function.</p>
+            <p>By default, user-defined functions are declared as <codeph>EXEUCTE ON ANY</codeph>. A
+                function that executes queries to access tables is supported only when a function is
+                executed on the master instance. Such functions should be defined with the
+                    <codeph>EXECUTE ON MASTER</codeph> attribute. Otherwise, the function might
+                return incorrect results when the function is used in a complicated query. Without
+                the attribute, planner optimization might determine it would be beneficial to push
+                the function invocation to segment instances. </p>
             <p>When you create user-defined functions, avoid using fatal errors or destructive
                 calls. Greenplum Database may respond to such errors with a sudden shutdown or
                 restart.</p>
