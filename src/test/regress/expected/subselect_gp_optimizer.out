@@ -1575,22 +1575,23 @@ EXPLAIN SELECT '' AS six, f1 AS "Correlated Field", f3 AS "Second Field"
   FROM SUBSELECT_TBL upper
   WHERE f3 IN (SELECT upper.f1 + f2 FROM SUBSELECT_TBL
                WHERE f2 = CAST(f3 AS integer)) ORDER BY 2,3;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=2.18..2.19 rows=4 width=12)
-   Merge Key: upper.f1, upper.f3
-   ->  Sort  (cost=2.18..2.19 rows=2 width=12)
-         Sort Key: upper.f1, upper.f3
-         ->  Nested Loop Semi Join  (cost=3.16..6.90 rows=2 width=12)
-               Join Filter: (upper.f1 + subselect_tbl.f2)::double precision = upper.f3
-               ->  Seq Scan on subselect_tbl upper  (cost=0.00..3.08 rows=3 width=12)
-               ->  Materialize  (cost=3.16..3.19 rows=1 width=12)
-                     ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.16 rows=1 width=12)
-                           ->  Seq Scan on subselect_tbl  (cost=0.00..3.12 rows=1 width=12)
-                                 Filter: f2 = f3::integer
- Settings:  optimizer=on
- Optimizer status: legacy query optimizer
-(13 rows)
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..1324033.89 rows=3 width=20)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324033.89 rows=8 width=12)
+         Merge Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f3
+         ->  Sort  (cost=0.00..1324033.89 rows=3 width=12)
+               Sort Key: subselect_gp.subselect_tbl.f1, subselect_gp.subselect_tbl.f3
+               ->  Table Scan on subselect_tbl  (cost=0.00..1324033.89 rows=3 width=12)
+                     Filter: (SubPlan 1)
+                     SubPlan 1
+                       ->  Result  (cost=0.00..431.00 rows=4 width=4)
+                             ->  Materialize  (cost=0.00..431.00 rows=4 width=4)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
+                                         ->  Table Scan on subselect_tbl  (cost=0.00..431.00 rows=2 width=4)
+                                               Filter: f2 = int4(f3)
+ Optimizer status: PQO version 2.53.1
+(14 rows)
 
 EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
   FROM SUBSELECT_TBL

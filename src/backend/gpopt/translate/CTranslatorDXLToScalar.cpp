@@ -49,6 +49,7 @@ using namespace gpdxl;
 using namespace gpos;
 using namespace gpopt;
 
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CTranslatorDXLToScalar::CTranslatorDXLToScalar
@@ -640,35 +641,37 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	)
 {
 	CDXLTranslateContext *pdxltrctxOut = (dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->PpdxltrctxOut();
-	
+
 	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->Pctxdxltoplstmt();
 
 	CDXLScalarSubPlan *pdxlop = CDXLScalarSubPlan::PdxlopConvert(pdxlnSubPlan->Pdxlop());
-	
+
 	// translate subplan test expression
-        SubLinkType slink = CTranslatorUtils::Slink(pdxlop->Edxlsptype());
-        Expr *pexprTestExpr = PexprSubplanTestExpr(pdxlop->PdxlnTestExpr(), slink, pmapcidvar);
+	List *plparamIds = NIL;
+
+	SubLinkType slink = CTranslatorUtils::Slink(pdxlop->Edxlsptype());
+	Expr *pexprTestExpr = PexprSubplanTestExpr(pdxlop->PdxlnTestExpr(), slink, pmapcidvar, &plparamIds);
 
 	const DrgPdxlcr *pdrgdxlcrOuterRefs = pdxlop->DrgdxlcrOuterRefs();
 	const DrgPmdid *pdrgmdidOuterRefs = pdxlop->DrgmdidOuterRefs();
 
 	const ULONG ulLen = pdrgdxlcrOuterRefs->UlLength();
-	
+
 	// create a copy of the translate context: the param mappings from the outer scope get copied in the constructor
 	CDXLTranslateContext dxltrctxSubplan(m_pmp, pdxltrctxOut->FParentAggNode(), pdxltrctxOut->PhmColParam());
-	
+
 	// insert new outer ref mappings in the subplan translate context
 	for (ULONG ul = 0; ul < ulLen; ul++)
 	{
 		IMDId *pmdid = (*pdrgmdidOuterRefs)[ul];
 		CDXLColRef *pdxlcr = (*pdrgdxlcrOuterRefs)[ul];
 		ULONG ulColid = pdxlcr->UlID();
-		
+
 		if (NULL == dxltrctxSubplan.Pmecolidparamid(ulColid))
 		{
 			// keep outer reference mapping to the original column for subsequent subplans
 			CMappingElementColIdParamId *pmecolidparamid = GPOS_NEW(m_pmp) CMappingElementColIdParamId(ulColid, pctxdxltoplstmt->UlNextParamId(), pmdid);
-			
+
 #ifdef GPOS_DEBUG
 			BOOL fInserted =
 #endif
@@ -702,16 +705,7 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	// translate subplan and set test expression
 	SubPlan *psubplan = PsubplanFromChildPlan(pplanChild, slink, pctxdxltoplstmt);
 	psubplan->testexpr = (Node *) pexprTestExpr;
-	if (NULL != psubplan->testexpr && nodeTag(psubplan->testexpr) != T_Const)
-        {
-		// test expression is used for non-scalar subplan,
-		// second arg of test expression must be an EXEC param referring to subplan output,
-		// we add this param to subplan param ids before translating other params 
-
-                Param *pparam = (Param *) gpdb::PvListNth(((OpExpr *)psubplan->testexpr)->args, 1);
-                psubplan->paramIds = NIL;
-                psubplan->paramIds = gpdb::PlAppendInt(psubplan->paramIds, pparam->paramid);
-        }
+	psubplan->paramIds = plparamIds;
 
 	// translate other subplan params
 	TranslateSubplanParams(psubplan, &dxltrctxSubplan, pdrgdxlcrOuterRefs, pmapcidvar);
@@ -719,6 +713,28 @@ CTranslatorDXLToScalar::PsubplanFromDXLNodeScSubPlan
 	return (Expr *)psubplan;
 }
 
+inline BOOL FDXLCastedId(CDXLNode *pdxln)
+{
+	return EdxlopScalarCast == pdxln->Pdxlop()->Edxlop() &&
+		   pdxln->UlArity() > 0 && EdxlopScalarIdent == (*pdxln)[0]->Pdxlop()->Edxlop();
+}
+
+inline Oid OidParamOidFromDXLIdentOrDXLCastIdent(CDXLNode *pdxlnIdentOrCastIdent)
+{
+	GPOS_ASSERT(EdxlopScalarIdent == pdxlnIdentOrCastIdent->Pdxlop()->Edxlop() || FDXLCastedId(pdxlnIdentOrCastIdent));
+
+	CDXLScalarIdent *pdxlopInnerIdent;
+	if (EdxlopScalarIdent == pdxlnIdentOrCastIdent->Pdxlop()->Edxlop())
+	{
+		pdxlopInnerIdent = CDXLScalarIdent::PdxlopConvert(pdxlnIdentOrCastIdent->Pdxlop());
+	}
+	else
+	{
+		pdxlopInnerIdent = CDXLScalarIdent::PdxlopConvert((*pdxlnIdentOrCastIdent)[0]->Pdxlop());
+	}
+	Oid oidInnerType = CMDIdGPDB::PmdidConvert(pdxlopInnerIdent->PmdidType())->OidObjectId();
+	return oidInnerType;
+}
 
 //---------------------------------------------------------------------------
 //      @function:
@@ -733,7 +749,8 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
 	(
 	CDXLNode *pdxlnTestExpr,
 	SubLinkType slink,
-	CMappingColIdVar *pmapcidvar
+	CMappingColIdVar *pmapcidvar,
+	List **plparamIds
 	)
 {
 	if (EXPR_SUBLINK == slink || EXISTS_SUBLINK == slink || NOT_EXISTS_SUBLINK == slink)
@@ -761,7 +778,7 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
 	CDXLNode *pdxlnOuterChild = (*pdxlnTestExpr)[0];
 	CDXLNode *pdxlnInnerChild = (*pdxlnTestExpr)[1];
 
-	if (EdxlopScalarIdent != pdxlnInnerChild->Pdxlop()->Edxlop())
+	if (EdxlopScalarIdent != pdxlnInnerChild->Pdxlop()->Edxlop() && !FDXLCastedId(pdxlnInnerChild))
 	{
 		// test expression is expected to be a comparison between an outer expression 
 		// and a scalar identifier from subplan child
@@ -770,10 +787,8 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
 
 	// extract type of inner column
         CDXLScalarComp *pdxlopCmp = CDXLScalarComp::PdxlopConvert(pdxlnTestExpr->Pdxlop());
-        CDXLScalarIdent *pdxlopInnerIdent = CDXLScalarIdent::PdxlopConvert(pdxlnInnerChild->Pdxlop());
-        Oid oidInnerType = CMDIdGPDB::PmdidConvert(pdxlopInnerIdent->PmdidType())->OidObjectId();
 
-	// create an OpExpr for subplan test expression
+		// create an OpExpr for subplan test expression
         OpExpr *popexpr = MakeNode(OpExpr);
         popexpr->opno = CMDIdGPDB::PmdidConvert(pdxlopCmp->Pmdid())->OidObjectId();
         const IMDScalarOp *pmdscop = m_pmda->Pmdscop(pdxlopCmp->Pmdid());
@@ -789,16 +804,31 @@ CTranslatorDXLToScalar::PexprSubplanTestExpr
         plistArgs = gpdb::PlAppendElement(plistArgs, pexprTestExprOuterArg);
 
 	// second arg must be an EXEC param which is replaced during query execution with subplan output
-        Param *pparam = MakeNode(Param);
-        pparam->paramkind = PARAM_EXEC;
-	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt*>(pmapcidvar))->Pctxdxltoplstmt();
+	Param *pparam = MakeNode(Param);
+	pparam->paramkind = PARAM_EXEC;
+	CContextDXLToPlStmt *pctxdxltoplstmt = (dynamic_cast<CMappingColIdVarPlStmt *>(pmapcidvar))->Pctxdxltoplstmt();
 	pparam->paramid = pctxdxltoplstmt->UlNextParamId();
-	pparam->paramtype = oidInnerType;
+	pparam->paramtype = OidParamOidFromDXLIdentOrDXLCastIdent(pdxlnInnerChild);
 
-        plistArgs = gpdb::PlAppendElement(plistArgs, pparam);
-        popexpr->args = plistArgs;
+	// test expression is used for non-scalar subplan,
+	// second arg of test expression must be an EXEC param referring to subplan output,
+	// we add this param to subplan param ids before translating other params
 
-        return (Expr *) popexpr;
+	*plparamIds = gpdb::PlAppendInt(*plparamIds, pparam->paramid);
+
+	if (EdxlopScalarIdent == pdxlnInnerChild->Pdxlop()->Edxlop())
+	{
+		plistArgs = gpdb::PlAppendElement(plistArgs, pparam);
+	}
+	else // we have a cast
+	{
+		CDXLScalarCast *pdxlScalaCast = CDXLScalarCast::PdxlopConvert(pdxlnInnerChild->Pdxlop());
+		Expr *pexprCastParam = PrelabeltypeOrFuncexprFromDXLNodeScalarCast(pdxlScalaCast, (Expr *) pparam);
+		plistArgs = gpdb::PlAppendElement(plistArgs, pexprCastParam);
+	}
+	popexpr->args = plistArgs;
+
+	return (Expr *) popexpr;
 }
 
 
@@ -1113,39 +1143,19 @@ CTranslatorDXLToScalar::PnullifFromDXLNodeScNullIf
 	return (Expr *) pnullifexpr;
 }
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
-//
-//	@doc:
-//		Translates a DXL scalar cast into a GPDB RelabelType / FuncExpr node
-//
-//---------------------------------------------------------------------------
 Expr *
-CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
-	(
-	const CDXLNode *pdxlnCast,
-	CMappingColIdVar *pmapcidvar
-	)
+CTranslatorDXLToScalar::PrelabeltypeOrFuncexprFromDXLNodeScalarCast(const CDXLScalarCast *pdxlscalarcast, Expr *pexprChild)
 {
-	GPOS_ASSERT(NULL != pdxlnCast);
-	CDXLScalarCast *pdxlop = CDXLScalarCast::PdxlopConvert(pdxlnCast->Pdxlop());
-
-	GPOS_ASSERT(1 == pdxlnCast->UlArity());
-	CDXLNode *pdxlnChild = (*pdxlnCast)[0];
-
-	Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
-
-	if (IMDId::FValid(pdxlop->PmdidFunc()))
+	if (IMDId::FValid(pdxlscalarcast->PmdidFunc()))
 	{
 		FuncExpr *pfuncexpr = MakeNode(FuncExpr);
-		pfuncexpr->funcid = CMDIdGPDB::PmdidConvert(pdxlop->PmdidFunc())->OidObjectId();
+		pfuncexpr->funcid = CMDIdGPDB::PmdidConvert(pdxlscalarcast->PmdidFunc())->OidObjectId();
 
-		const IMDFunction *pmdfunc = m_pmda->Pmdfunc(pdxlop->PmdidFunc());
+		const IMDFunction *pmdfunc = m_pmda->Pmdfunc(pdxlscalarcast->PmdidFunc());
 		pfuncexpr->funcretset = pmdfunc->FReturnsSet();;
 
 		pfuncexpr->funcformat = COERCE_IMPLICIT_CAST;
-		pfuncexpr->funcresulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+		pfuncexpr->funcresulttype = CMDIdGPDB::PmdidConvert(pdxlscalarcast->PmdidType())->OidObjectId();
 
 		pfuncexpr->args = NIL;
 		pfuncexpr->args = gpdb::PlAppendElement(pfuncexpr->args, pexprChild);
@@ -1155,13 +1165,32 @@ CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
 
 	RelabelType *prelabeltype = MakeNode(RelabelType);
 
-	prelabeltype->resulttype = CMDIdGPDB::PmdidConvert(pdxlop->PmdidType())->OidObjectId();
+	prelabeltype->resulttype = CMDIdGPDB::PmdidConvert(pdxlscalarcast->PmdidType())->OidObjectId();
 	prelabeltype->arg = pexprChild;
 	prelabeltype->resulttypmod = -1;
 	prelabeltype->location = -1;
 	prelabeltype->relabelformat = COERCE_DONTCARE;
 
 	return (Expr *) prelabeltype;
+}
+
+// Translates a DXL scalar cast into a GPDB RelabelType / FuncExpr node
+Expr *
+CTranslatorDXLToScalar::PrelabeltypeFromDXLNodeScCast
+	(
+	const CDXLNode *pdxlnCast,
+	CMappingColIdVar *pmapcidvar
+	)
+{
+	GPOS_ASSERT(NULL != pdxlnCast);
+	const CDXLScalarCast *pdxlop = CDXLScalarCast::PdxlopConvert(pdxlnCast->Pdxlop());
+
+	GPOS_ASSERT(1 == pdxlnCast->UlArity());
+	CDXLNode *pdxlnChild = (*pdxlnCast)[0];
+
+	Expr *pexprChild = PexprFromDXLNodeScalar(pdxlnChild, pmapcidvar);
+
+	return PrelabeltypeOrFuncexprFromDXLNodeScalarCast(pdxlop, pexprChild);
 }
 
 

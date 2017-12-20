@@ -1436,6 +1436,46 @@ create table bar(name text);
 insert into bar values('person');
 select * from unnest((select string_to_array(name, ',') from bar)) as a;
 
+-- Query should not fall back to planner and handle implicit cast properly
+
+CREATE TYPE myint;
+
+CREATE FUNCTION myintout(myint) RETURNS cstring AS 'int4out' LANGUAGE INTERNAL STRICT IMMUTABLE;
+CREATE FUNCTION myintin(cstring) RETURNS myint AS 'int4in' LANGUAGE INTERNAL STRICT IMMUTABLE;
+
+CREATE TYPE myint
+(
+	INPUT=myintin,
+	OUTPUT=myintout,
+	INTERNALLENGTH=4,
+	PASSEDBYVALUE
+);
+
+CREATE FUNCTION myint_int8(myint) RETURNS int8 AS 'int48' LANGUAGE INTERNAL STRICT IMMUTABLE;
+
+CREATE CAST (myint AS int8) WITH FUNCTION myint_int8(myint) AS IMPLICIT;
+
+CREATE TABLE csq_cast_param_outer (a int, b myint);
+INSERT INTO csq_cast_param_outer VALUES
+	(1, '42'),
+	(2, '12');
+
+CREATE TABLE csq_cast_param_inner (c int, d myint);
+INSERT INTO csq_cast_param_inner VALUES
+	(11, '11'),
+	(101, '12');
+
+EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+
+DROP CAST (myint as int8);
+
+CREATE FUNCTION myint_numeric(myint) RETURNS numeric AS 'int4_numeric' LANGUAGE INTERNAL STRICT IMMUTABLE;
+CREATE CAST (myint AS numeric) WITH FUNCTION myint_numeric(myint) AS IMPLICIT;
+
+EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

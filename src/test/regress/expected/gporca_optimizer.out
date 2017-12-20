@@ -10163,3 +10163,79 @@ select * from unnest((select string_to_array(name, ',') from bar)) as a;
  person
 (1 row)
 
+-- Query should not fall back to planner and handle implicit cast properly
+CREATE TYPE myint;
+CREATE FUNCTION myintout(myint) RETURNS cstring AS 'int4out' LANGUAGE INTERNAL STRICT IMMUTABLE;
+NOTICE:  argument type myint is only a shell
+CREATE FUNCTION myintin(cstring) RETURNS myint AS 'int4in' LANGUAGE INTERNAL STRICT IMMUTABLE;
+NOTICE:  return type myint is only a shell
+CREATE TYPE myint
+(
+	INPUT=myintin,
+	OUTPUT=myintout,
+	INTERNALLENGTH=4,
+	PASSEDBYVALUE
+);
+CREATE FUNCTION myint_int8(myint) RETURNS int8 AS 'int48' LANGUAGE INTERNAL STRICT IMMUTABLE;
+CREATE CAST (myint AS int8) WITH FUNCTION myint_int8(myint) AS IMPLICIT;
+CREATE TABLE csq_cast_param_outer (a int, b myint);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO csq_cast_param_outer VALUES
+	(1, '42'),
+	(2, '12');
+CREATE TABLE csq_cast_param_inner (c int, d myint);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO csq_cast_param_inner VALUES
+	(11, '11'),
+	(101, '12');
+EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+                                                   QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.56 rows=2 width=4)
+   ->  Result  (cost=0.00..1324032.56 rows=1 width=4)
+         ->  Table Scan on csq_cast_param_outer  (cost=0.00..1324032.56 rows=1 width=4)
+               Filter: (SubPlan 1)
+               SubPlan 1
+                 ->  Result  (cost=0.00..431.00 rows=2 width=4)
+                       ->  Materialize  (cost=0.00..431.00 rows=2 width=4)
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
+                                   ->  Table Scan on csq_cast_param_inner  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 2.51.3
+(11 rows)
+
+SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+ a
+---
+ 1
+ 2
+(2 rows)
+
+DROP CAST (myint as int8);
+CREATE FUNCTION myint_numeric(myint) RETURNS numeric AS 'int4_numeric' LANGUAGE INTERNAL STRICT IMMUTABLE;
+CREATE CAST (myint AS numeric) WITH FUNCTION myint_numeric(myint) AS IMPLICIT;
+EXPLAIN SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+                                                   QUERY PLAN
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324032.56 rows=2 width=4)
+   ->  Result  (cost=0.00..1324032.56 rows=1 width=4)
+         ->  Table Scan on csq_cast_param_outer  (cost=0.00..1324032.56 rows=1 width=4)
+               Filter: (SubPlan 1)
+               SubPlan 1
+                 ->  Result  (cost=0.00..431.00 rows=2 width=4)
+                       ->  Materialize  (cost=0.00..431.00 rows=2 width=4)
+                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
+                                   ->  Table Scan on csq_cast_param_inner  (cost=0.00..431.00 rows=1 width=4)
+ Settings:  optimizer_cte_inlining_bound=1000; optimizer_metadata_caching=on
+ Optimizer status: PQO version 2.51.3
+(11 rows)
+
+SELECT a FROM csq_cast_param_outer WHERE b in (SELECT CASE WHEN a > 1 THEN d ELSE '42' END FROM csq_cast_param_inner);
+ a
+---
+ 1
+ 2
+(2 rows)
+

@@ -27,6 +27,7 @@
 #include "naucrates/dxl/operators/CDXLNode.h"
 #include "naucrates/dxl/operators/CDXLDatum.h"
 #include "naucrates/dxl/operators/CDXLScalarArrayRefIndexList.h"
+#include "naucrates/dxl/operators/CDXLScalarCast.h"
 
 // fwd declarations
 namespace gpopt
@@ -228,11 +229,12 @@ namespace gpdxl
 
 			// translate subplan test expression
 			Expr *PexprSubplanTestExpr
-        			(
-        			CDXLNode *pdxlnTestExpr,
+				(
+				CDXLNode *pdxlnTestExpr,
 				SubLinkType slink,
-        			CMappingColIdVar *pmapcidvar
-        			);
+				CMappingColIdVar *pmapcidvar,
+				List **plparamIds
+				);
 			
 			// translate subplan parameters
 			void TranslateSubplanParams
@@ -319,6 +321,11 @@ namespace gpdxl
 			Const *PconstInt8(CDXLDatum *pdxldatum);
 			Const *PconstBool(CDXLDatum *pdxldatum);
 			Const *PconstGeneric(CDXLDatum *pdxldatum);
+			Expr *PrelabeltypeOrFuncexprFromDXLNodeScalarCast
+				(
+				const CDXLScalarCast *pdxlscalarcast,
+				Expr *pexprChild
+				);
 
 			// private copy ctor
 			CTranslatorDXLToScalar(const CTranslatorDXLToScalar&);
