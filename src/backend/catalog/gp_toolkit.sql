@@ -981,7 +981,7 @@ GRANT SELECT ON TABLE gp_toolkit.gp_bloat_expected_pages TO public;
 --        gp_toolkit.gp_bloat_diag
 -- @in:
 --        int - actual number of pages according to statistics
---        int - expecte number of pages
+--        numeric - expected number of pages
 --        bool - is AO table?
 -- @out:
 --        int - bloat indicator
@@ -991,7 +991,7 @@ GRANT SELECT ON TABLE gp_toolkit.gp_bloat_expected_pages TO public;
 --        diagnose table bloat based on expected and actual number of pages
 --
 --------------------------------------------------------------------------------
-CREATE FUNCTION gp_toolkit.gp_bloat_diag(btdrelpages int, btdexppages int, aotable bool,
+CREATE FUNCTION gp_toolkit.gp_bloat_diag(btdrelpages int, btdexppages numeric, aotable bool,
     OUT bltidx int, OUT bltdiag text)
 AS
 $$
@@ -1024,7 +1024,7 @@ $$
 $$
 LANGUAGE SQL READS SQL DATA;
 
-GRANT EXECUTE ON FUNCTION gp_toolkit.gp_bloat_diag(int, int, bool, OUT int, OUT text) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.gp_bloat_diag(int, numeric, bool, OUT int, OUT text) TO public;
 
 
 --------------------------------------------------------------------------------
@@ -1048,7 +1048,7 @@ AS
     (
         SELECT
             fn.*, beg.*,
-            gp_toolkit.gp_bloat_diag(btdrelpages::int, btdexppages::int, iao.iaotype::bool) AS bd
+            gp_toolkit.gp_bloat_diag(btdrelpages::int, btdexppages::numeric, iao.iaotype::bool) AS bd
         FROM
             gp_toolkit.gp_bloat_expected_pages beg,
             pg_catalog.pg_class pgc,

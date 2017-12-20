@@ -631,3 +631,20 @@ reset session authorization;
 drop database toolkit_testdb;
 drop role toolkit_user1;
 drop role toolkit_admin;
+create database gptoolkit;
+\c gptoolkit
+drop table if exists test;
+NOTICE:  table "test" does not exist, skipping
+create table test as select * from pg_attribute;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'attrelid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+set allow_system_table_mods=dml ;
+update pg_statistic set stawidth=2034567890 where starelid = (select oid from pg_class where relname='test');
+select * from gp_toolkit.gp_bloat_diag;
+ bdirelid | bdinspname | bdirelname | bdirelpages | bdiexppages |              bdidiag               
+----------+------------+------------+-------------+-------------+------------------------------------
+     2618 | pg_catalog | pg_rewrite |          20 |           6 | moderate amount of bloat suspected
+(1 row)
+
+\c regression
+drop database gptoolkit
