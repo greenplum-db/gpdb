@@ -281,9 +281,7 @@ host2_name,host2_ipaddr
         smaller tables. </p>
       <ol>
         <li>Before you begin to transfer data, replicate the schema or schemas from the source
-          cluster to the destination cluster. Avoid using <codeph>gptransfer</codeph> with the
-            <codeph>--full -–schema-only</codeph> options. Instead, copy schemas to the
-            destination database using a different method. Options for copying the
+          cluster to the destination cluster. Options for copying the
             schema include:<ul id="ul_q1y_1hh_1s">
             <li>Use the <codeph>gpsd</codeph> (Greenplum Statistics Dump) support utility. This
               method includes statistics, so be sure to run <codeph>ANALYZE</codeph> after creating
