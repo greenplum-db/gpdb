@@ -150,7 +150,7 @@
             <codeph>$GPHOME/greenplum_path.sh</codeph>.<codeblock>source $GPHOME/greenplum_path.sh</codeblock></li>
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
           <li>Enable PL/Container for specific databases by
-              running<codeblock>psql -d <codeph>your_database</codeph> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
+              running<codeblock>psql -d <varname>your_database</varname> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
               SQL script registers the language <codeph>plcontainer</codeph> in the database creates
               PL/Container specific UDFs.</p></li>
           <li>Initialize PL/Container configuration on the Greenplum Database hosts by running the
@@ -200,13 +200,11 @@
       <p>This example runs <codeph>plcontainer</codeph> to install the Docker image for PL/Python
         and add the image to the PL/Container configuration.
         <codeblock>plcontainer install -n plc_python_shared -i /home/gpadmin/plcontainer-python-images-0.9.3.tar.gz \
-  -c  pivotaldata/plc_python_shared:1.0.0 \
-  -l python -v /tmp:/clientdir:rw</codeblock></p>
+  -c  pivotaldata/plc_python_shared:1.0.0 -l python</codeblock></p>
       <p>This example runs <codeph>plcontainer</codeph> to install the Docker image for PL/R and add
         the image to the PL/Container configuration.</p>
       <codeblock>plcontainer install -n plc_r -i /home/gpadmin/plcontainer-r-images-0.9.3.tar.gz \
-  -c pivotaldata/plc_r_shared:1.0.0 \
-  -l r -v /tmp:/clientdir:rw</codeblock>
+  -c pivotaldata/plc_r_shared:1.0.0 -l r</codeblock>
       <p>You can view the host system Docker repository with the <codeph>docker images</codeph>
         command. The image name specified with the <codeph>-c</codeph> option appears in the list of
         Docker images.</p>
@@ -538,7 +536,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
               <pd>Specify a Docker volume to bind mount. You can specify multiple volumes as a comma
                 separated lists of volumes.</pd>
               <pd>The format for a shared volume:
-                    <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.<ul
+                    <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.
+                The information is stored as attributes in the <codeph>shared_directory</codeph>
+                element of the <codeph>container</codeph> element in the PL/Container configuration
+                file. <ul
                   id="ul_k2l_f4d_rbb">
                   <li><varname>host-dir</varname> - absolute path to a directory on the host system.
                     The Greenplum Database administrator user (gpadmin) must have appropriate access
@@ -549,6 +550,17 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     directory from the container. Information is stored in the configuration file
                     element <codeph>shared_directory</codeph>.</li>
                 </ul></pd>
+              <pd>Do not specify a shared volume when you install the Greenplum Docker image for
+                PL/Python or PL/R PL/Container. The utility sets shared volume when the Docker
+                images are installed.   </pd>
+              <pd>This is <codeph>shared_directory</codeph> element that specifies the shared volume
+                for the Greenplum PL/R Docker image.</pd>
+              <pd>
+                <codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/> </codeblock>
+              </pd>
+              <pd>This is <codeph>shared_directory</codeph> element that specifies the shared volume
+                for the Greenplum PL/Python Docker
+                image.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/pyclient"/></codeblock></pd>
             </plentry>
             <plentry>
               <pt>--verbose</pt>
@@ -566,7 +578,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         </section>
         <section>
           <title>Examples</title>
-          <p>The most common commands you would run are the following:</p>
+          <p>These are examples of common commands to mange PL/Container:</p>
           <ul id="ul_fn5_1bw_qbb">
             <li>
               <p>Initialize the Greenplum Database installation with default configuration file
@@ -576,40 +588,41 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           </ul>
           <ul id="ul_gn5_1bw_qbb">
             <li>
-              <p>Edit the configuration in interactive editor of your
+              <p>Edit the configuration in an interactive editor of your
                 choice:<codeblock>plcontainer configure -e vim</codeblock></p>
             </li>
           </ul>
           <ul id="ul_hn5_1bw_qbb">
             <li>
-              <p>Show the current
-                configuration:<codeblock>plcontainer configure --show</codeblock></p>
+              <p>Show the current configuration
+                file:<codeblock>plcontainer configure --show</codeblock></p>
             </li>
           </ul>
           <ul id="ul_in5_1bw_qbb">
             <li>
-              <p>Restore previous configuration from the
+              <p>Restore the previous configuration from a
                 backup:<codeblock>plcontainer configure --restore</codeblock></p>
             </li>
           </ul>
           <ul id="ul_jn5_1bw_qbb">
             <li>
-              <p>Overwrite plcontainer configurations with xml file directly
-                :<codeblock>plcontainer configure -f new_plcontainer_configuration.xml </codeblock></p>
+              <p>Overwrite PL/Container configuration file with an XML
+                file:<codeblock>plcontainer configure -f new_plcontainer_configuration.xml </codeblock></p>
             </li>
           </ul>
           <ul id="ul_kn5_1bw_qbb">
             <li>
-              <p>Configure new container entry to plcontainer
-                configurations<codeblock>plcontainer configure -n plc_python_newpy -l python
-  -i pivotaldata/plc_python_newimage:latest -v /tmp:/clientdir:rw</codeblock></p>
+              <p>Add a container entry to PL/Container configuration
+                file:<codeblock>plcontainer configure -n plc_python_newpy -l python
+  -i pivotaldata/plc_python_newimage:latest</codeblock></p>
             </li>
           </ul>
           <ul id="ul_ln5_1bw_qbb">
             <li>
-              <p>Install new docker image and configure it to plcontainer
-                configurations.<codeblock>plcontainer install -n plc_r_newr -i plc_newr.tar.gz -c pivotaldata/plc_r_newr:latest 
-  -l r -v /tmp:/clientdir:rw</codeblock></p>
+              <p>Install a Docker image and add a container entry for the image in the PL/Container
+                configuration
+                file.<codeblock>plcontainer install -n plc_r_newr -i plc_newr.tar.gz -c pivotaldata/plc_r_newr:latest 
+  -l r</codeblock></p>
             </li>
           </ul>
         </section>
@@ -639,7 +652,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       &lt;command>/rclient.sh&lt;/command>
       &lt;memory_mb>256&lt;/memory_mb>
       &lt;use_network>yes&lt;/use_network>
-      &lt;shared_directory access="rw" container="/plc_log" host="/tmp/plc_log"/>
+      &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/>
    &lt;/container>
 &lt;/configuration></codeblock></p>
         <p>These are the XML elements and attributes in a PL/Container configuration file.</p>
@@ -837,11 +850,14 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             administrator (gpadmin) to the group
             <codeph>docker</codeph>.<codeblock>sudo usermod -aG docker gpadmin</codeblock></li>
           <li>Exit the session and login again to update the privileges.</li>
-          <li>Run a Docker command Run to the Docker installation.
-            <codeblock>docker ps</codeblock></li>
+          <li>Run a Docker command to test the Docker installation. This command lists the currently
+            running Docker containers. <codeblock>docker ps</codeblock></li>
         </ol>
-        <p>To configure Docker to start when the server
+        <p>This command configures Docker to start when the host system
           starts.<codeblock>sudo systemctl start  docker.service</codeblock></p>
+        <p>After you have installed Docker on all Greenplum Database hosts, restart the Greenplum
+          Database system to give Greenplum Database access Docker.
+          <codeblock>gpstop -ra</codeblock></p>
       </section>
       <section>
         <title>Installing Docker on CentOS 6</title>
@@ -854,12 +870,15 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           <li>To give access to the Docker daemon and docker commands, assign the Greenplum Database
             administrator (gpadmin) to the group
             <codeph>docker</codeph>.<codeblock>sudo usermod -aG docker gpadmin</codeblock></li>
-          <li>Exit the session and login again to active </li>
-          <li>Run a docker command. This command lists the currently running Docker containers.
-            <codeblock>docker ps</codeblock></li>
+          <li>Exit the session and login again to update the privileges.</li>
+          <li>Run a Docker command to test the Docker installation. This command lists the currently
+            running Docker containers. <codeblock>docker ps</codeblock></li>
         </ol>
-        <p>To configure Docker to start when the server
+        <p>This command configures Docker to start when the host system
           starts.<codeblock>sudo chkconfig docker on</codeblock></p>
+        <p>After you have installed Docker on all Greenplum Database hosts, restart the Greenplum
+          Database system to give Greenplum Database access Docker.
+          <codeblock>gpstop -ra</codeblock></p>
       </section>
     </body>
   </topic>
