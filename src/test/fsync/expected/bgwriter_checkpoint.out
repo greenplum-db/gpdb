@@ -60,6 +60,7 @@ NOTICE:  Success:
 NOTICE:  Success:
 NOTICE:  Success:
 NOTICE:  Success:
+NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
@@ -69,7 +70,8 @@ NOTICE:  Success:
  t
  t
  t
-(7 rows)
+ t
+(8 rows)
 
 -- Start with a clean slate (no dirty buffers).
 checkpoint;
@@ -227,6 +229,7 @@ NOTICE:  Success:
 NOTICE:  Success:
 NOTICE:  Success:
 NOTICE:  Success:
+NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
@@ -236,5 +239,6 @@ NOTICE:  Success:
  t
  t
  t
-(7 rows)
+ t
+(8 rows)
 
