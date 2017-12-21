@@ -1,9 +1,8 @@
 --
 -- STANDARD DATA FOR olap_* TESTS.
 --
--- start_ignore
--- GPDB_84_MERGE_FIXME
-set optimizer to off;
+--- start_ignore
+set optimizer_trace_fallback = on;
 
 drop table cf_olap_windowerr_customer;
 drop table cf_olap_windowerr_vendor;
@@ -150,11 +149,6 @@ SELECT cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sal
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(COUNT(floor(cf_olap_windowerr_sale.prc/cf_olap_windowerr_sale.prc)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
@@ -174,7 +168,7 @@ TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(cf_olap_windowerr_sale.vn-cf_olap_windowerr_sale.cn) as int),cast (floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.vn desc range between floor(cf_olap_windowerr_sale.cn+cf_olap_windowerr_sale.qty) preceding and 2 preceding ),
-win2 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.pn desc),
+win2 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
 win3 as (order by cf_olap_windowerr_sale.cn desc),
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
@@ -199,7 +193,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(order by cf_olap_windowerr_sale.vn asc),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.vn desc range between floor(cf_olap_windowerr_sale.cn-cf_olap_windowerr_sale.vn) preceding and floor(cf_olap_windowerr_sale.cn) following ),
-win2 as (order by cf_olap_windowerr_sale.vn asc);
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
 -- COUNT() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -215,7 +209,7 @@ SELECT cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sal
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.cn asc range between current row and unbounded following ),
-win2 as (order by cf_olap_windowerr_sale.vn asc);
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
 -- COUNT() function with ONLY order by having rows based framing clause in combination with other functions --
 
@@ -244,11 +238,6 @@ win3 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
 win5 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- COUNT() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn, TO_CHAR(COALESCE(COUNT(floor(cf_olap_windowerr_sale.vn/cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn,
@@ -280,7 +269,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.pn/cf_olap_windowerr_sale
 TO_CHAR(COALESCE(RANK() OVER(win5),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc,cf_olap_windowerr_sale.pn desc,cf_olap_windowerr_sale.pn desc rows between 0 preceding and floor(cf_olap_windowerr_sale.pn+cf_olap_windowerr_sale.qty) following ),
-win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn desc),
+win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
 win3 as (order by cf_olap_windowerr_sale.vn desc),
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
 win5 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn desc);
@@ -299,11 +288,6 @@ win2 as (partition by cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MAX() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.cn)) OVER(win1),0),'99999999.9999999'),
@@ -313,7 +297,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win3),0),'99999999.9999999'),cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product,cf_olap_windowerr_vendor,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn AND cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.vn asc range between 3 following and floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.qty) following ),
-win2 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.pn asc),
+win2 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
 win3 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn desc);
 
 -- MAX() function with ONLY order by having rows based framing clause in combination with other functions --
@@ -333,7 +317,7 @@ SELECT cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sal
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),cf_olap_windowerr_sale.prc
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc,cf_olap_windowerr_sale.cn asc rows between floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.prc) preceding and current row ),
-win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.vn asc);
+win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
 -- MAX() function with ONLY order by having rows based framing clause in combination with other functions --
 
@@ -370,11 +354,6 @@ WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn a
 win2 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MAX() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
@@ -389,12 +368,6 @@ win2 as (partition by cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale
 win3 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
 win4 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME: GPORCA does not support queries with percent_rank(). It
--- should fall back to planner.
--- Tracker Story: #153076325
--- Re-enable ORCA once the issue is fixed.
--- end_ignore
 -- MAX() function with partition by and order by having rows based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn, TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.prc/cf_olap_windowerr_sale.prc)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
@@ -405,7 +378,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.vn)) OVER(order by cf_olap_windowerr_sale.cn asc),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.pn desc rows between unbounded preceding and 2 preceding ),
-win2 as (order by cf_olap_windowerr_sale.vn desc),
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (order by cf_olap_windowerr_sale.cn asc);
 
 -- MAX() function with partition by and order by having rows based framing clause --
@@ -414,13 +387,6 @@ SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sal
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc rows between 7 preceding and unbounded following );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME: GPORCA does not support queries with percent_rank(). It
--- should fall back to planner.
--- Tracker Story: #153076325
--- Re-enable ORCA once the issue is fixed.
-
--- end_ignore
 -- MAX() function with partition by and order by having rows based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.qty+cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,
@@ -449,14 +415,9 @@ TO_CHAR(COALESCE(COUNT(floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.cn
 TO_CHAR(COALESCE(LEAD(cast(floor(cf_olap_windowerr_sale.prc) as int),cast (floor(cf_olap_windowerr_sale.vn*cf_olap_windowerr_sale.pn) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc rows between floor(cf_olap_windowerr_sale.prc) following and unbounded following ),
-win2 as (order by cf_olap_windowerr_sale.vn desc),
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing wrong results
--- Refer QP tracker story #153077397
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MIN() function with NULL OVER() clause in combination with other window functions --
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.pn+cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999')
@@ -473,11 +434,6 @@ SELECT cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn, TO_CHAR(COALESCE(MI
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.pn);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MIN() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.pn, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
@@ -503,7 +459,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999'),cf_olap_windower
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.cn desc range between floor(cf_olap_windowerr_sale.pn) preceding and floor(cf_olap_windowerr_sale.qty) following ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
-win3 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.vn desc);
+win3 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc);
 
 -- MIN() function with ONLY order by having range based framing clause --
 
@@ -523,11 +479,6 @@ SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sa
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc rows current row );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing wrong results
--- Refer QP tracker story #153077397
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MIN() function with ONLY order by having rows based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.dt, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,
@@ -548,7 +499,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc rows between floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.pn) preceding and current row ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
-win3 as (order by cf_olap_windowerr_sale.cn asc);
+win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
 
 -- MIN() function with ONLY order by having rows based framing clause in combination with other functions --
 
@@ -564,10 +515,6 @@ win2 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_ola
 win3 as (order by cf_olap_windowerr_sale.vn asc),
 win4 as (order by cf_olap_windowerr_sale.cn asc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing wrong results
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT cf_olap_windowerr_sale.vn, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.pn/cf_olap_windowerr_sale.qty)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty,
@@ -577,11 +524,6 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (partition by cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.cn desc range unbounded preceding ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MIN() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.pn+cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn,
@@ -590,10 +532,6 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.cn desc range between floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.cn) preceding and floor(cf_olap_windowerr_sale.pn*cf_olap_windowerr_sale.prc) preceding );
 
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing wrong results
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- MIN() function with partition by and order by having rows based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.vn+cf_olap_windowerr_sale.cn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,
@@ -628,13 +566,6 @@ SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn, TO_CHAR(COALESCE(MIN
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc rows between current row and floor(cf_olap_windowerr_sale.cn/cf_olap_windowerr_sale.prc) following );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME: GPORCA does not support queries with percent_rank(). It
--- should fall back to planner.
--- Tracker Story: #153076325
--- Re-enable ORCA once the issue is fixed.
-
--- end_ignore
 -- MIN() function with partition by and order by having rows based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn, TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,
@@ -652,11 +583,6 @@ SELECT cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sa
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.pn desc range unbounded preceding );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV() function with ONLY order by having range based framing clause --
 
 SELECT cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(STDDEV(floor(cf_olap_windowerr_sale.qty)) OVER(win1),0),'99999999.9999999')
@@ -677,11 +603,6 @@ win2 as (order by cf_olap_windowerr_sale.pn asc),
 win3 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.pn asc),
 win4 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.cn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV() function with ONLY order by having range based framing clause --
 
 SELECT cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn, TO_CHAR(COALESCE(STDDEV(floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999')
@@ -722,7 +643,7 @@ TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.cn)) OVER(win2),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc,cf_olap_windowerr_sale.cn desc rows between floor(cf_olap_windowerr_sale.vn-cf_olap_windowerr_sale.pn) following and unbounded following ),
-win2 as (order by cf_olap_windowerr_sale.pn asc);
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
 -- STDDEV() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -735,11 +656,6 @@ WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn
 win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV() function with partition by and order by having range based framing clause --
 
 SELECT cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn, TO_CHAR(COALESCE(STDDEV(floor(cf_olap_windowerr_sale.qty/cf_olap_windowerr_sale.prc)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn
@@ -755,7 +671,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win3),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn AND cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc,cf_olap_windowerr_sale.pn asc,cf_olap_windowerr_sale.cn asc rows between unbounded preceding and floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.pn) preceding ),
 win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.vn asc),
-win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn asc);
+win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
 
 -- STDDEV() function with partition by and order by having rows based framing clause in combination with other functions --
 
@@ -799,11 +715,6 @@ WINDOW win1 as (order by cf_olap_windowerr_sale.pn desc range between unbounded 
 win2 as (partition by cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.vn asc),
 win3 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV_POP() function with ONLY order by having range based framing clause --
 
 SELECT cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn, TO_CHAR(COALESCE(STDDEV_POP(floor(cf_olap_windowerr_sale.qty+cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999')
@@ -830,13 +741,8 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc rows between unbounded preceding and unbounded following ),
 win2 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn desc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
-win4 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn desc);
+win4 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV_POP() function with partition by and order by having range based framing clause --
 
 SELECT cf_olap_windowerr_sale.cn, TO_CHAR(COALESCE(STDDEV_POP(floor(cf_olap_windowerr_sale.vn-cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn
@@ -888,11 +794,6 @@ win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_ola
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win4 as (order by cf_olap_windowerr_sale.pn desc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV_SAMP() function with NULL OVER() clause in combination with other window functions --
 
 SELECT cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty, TO_CHAR(COALESCE(STDDEV_SAMP(floor(cf_olap_windowerr_sale.prc*cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9999999')
@@ -930,11 +831,6 @@ TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.prc+cf_olap_windowerr_sale.vn)
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.cn asc range between current row and current row );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing executor error
--- Refer QP tracker story #153039698
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV_SAMP() function with ONLY order by having range based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(STDDEV_SAMP(floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.cn)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.cn,
@@ -955,13 +851,6 @@ SELECT cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn, TO_CHAR(COALESCE(STD
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc rows floor(cf_olap_windowerr_sale.vn-cf_olap_windowerr_sale.vn) preceding );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME: GPORCA does not support queries with percent_rank(). It
--- should fall back to planner.
--- Tracker Story: #153076325
--- Re-enable ORCA once the issue is fixed.
-
--- end_ignore
 -- STDDEV_SAMP() function with ONLY order by having rows based framing clause in combination with other functions --
 
 SELECT cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt, TO_CHAR(COALESCE(STDDEV_SAMP(floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.prc)) OVER(win1),0),'99999999.9999999'),
@@ -985,28 +874,17 @@ SELECT cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.qty,cf_olap_windowerr_s
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc rows between 7 following and floor(cf_olap_windowerr_sale.vn) following );
 
--- start_ignore
--- GPDB_84_MERGE_FIXME:  GPORCA produces incorrect plan causing wrong results
--- Refer QP tracker story #153077397
--- Re-enable GPORCA once issue is fixed
--- end_ignore
 -- STDDEV_SAMP() function with OVER() clause having PARTITION BY and ORDER BY (without framing) in combination with other window functions --
 
 SELECT cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn, TO_CHAR(COALESCE(STDDEV_SAMP(floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.qty)) OVER(win1),0),'99999999.9999999'),cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn
 ,
 TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.pn) as int),cast (floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.vn) as int),NULL) OVER(win2),0),'99999999.9999999'),
-TO_CHAR(COALESCE(ROW_NUMBER() OVER(partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.vn asc),0),'99999999.9999999'),
+TO_CHAR(COALESCE(ROW_NUMBER() OVER(partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.vn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.vn asc),
 win2 as (partition by cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
--- start_ignore
--- GPDB_84_MERGE_FIXME: GPORCA does not support queries with percent_rank(),
--- cum_dist(). It should fall back to planner.
--- Tracker Story: #153076325
--- Re-enable ORCA once the issue is fixed.
--- end_ignore
 -- STDDEV_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
 SELECT cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc, TO_CHAR(COALESCE(STDDEV_SAMP(floor(cf_olap_windowerr_sale.prc-cf_olap_windowerr_sale.prc)) OVER(win1),0),'99999999.9999999'),
@@ -1077,7 +955,7 @@ TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.qty/cf_olap_windowerr_sale.prc
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc rows between 3 preceding and current row ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
-win3 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.pn asc);
+win3 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
 -- STDDEV_SAMP() function with partition by and order by having rows based framing clause --
 
@@ -1096,7 +974,7 @@ TO_CHAR(COALESCE(RANK() OVER(win2),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.pn asc range current row ),
 win2 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.pn asc),
-win3 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.cn desc),
+win3 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
 win4 as (order by cf_olap_windowerr_sale.vn asc);
 
 -- SUM() function with ONLY order by having range based framing clause in combination with other functions --
@@ -1170,7 +1048,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_ol
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.vn desc rows between floor(cf_olap_windowerr_sale.prc) preceding and floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.pn) following ),
 win2 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
-win4 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.cn desc, cf_olap_windowerr_sale.pn),
+win4 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc, cf_olap_windowerr_sale.pn),
 win5 as (order by cf_olap_windowerr_sale.pn asc);
 
 -- SUM() function with partition by and order by having range based framing clause in combination with other functions--
@@ -1260,7 +1138,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.prc) as int),cast (floor(
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.cn desc range between floor(cf_olap_windowerr_sale.cn/cf_olap_windowerr_sale.prc) preceding and 4 preceding ),
 win2 as (order by cf_olap_windowerr_sale.vn asc),
-win3 as (order by cf_olap_windowerr_sale.pn asc),
+win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 -- VAR_POP() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -1465,7 +1343,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(order by cf_olap_windowerr_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn asc range floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.pn) preceding ),
-win2 as (order by cf_olap_windowerr_sale.cn desc);
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
 -- VAR_SAMP() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -1624,7 +1502,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.vn asc rows between unbounded preceding and unbounded following ),
 win2 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win3 as (order by cf_olap_windowerr_sale.vn asc),
-win4 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn asc),
+win4 as (partition by cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
 win5 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
 -- VARIANCE() function with ONLY order by having rows based framing clause in combination with other functions --
@@ -1734,7 +1612,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc rows between floor(cf_olap_windowerr_sale.cn*cf_olap_windowerr_sale.prc) following and 1 following ),
 win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
 win3 as (order by cf_olap_windowerr_sale.cn desc),
-win4 as (order by cf_olap_windowerr_sale.pn asc);
+win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
 -- CORR() function with ONLY order by having range based framing clause in combination with other functions --
 
@@ -1839,7 +1717,7 @@ SELECT cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sa
 TO_CHAR(COALESCE(COUNT(floor(cf_olap_windowerr_sale.qty/cf_olap_windowerr_sale.cn)) OVER(win1),0),'99999999.9999999'),
 TO_CHAR(COALESCE(CUME_DIST() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.qty+cf_olap_windowerr_sale.pn) as int),cast (floor(cf_olap_windowerr_sale.pn) as int),NULL) OVER(win3),0),'99999999.9999999'),
-TO_CHAR(COALESCE(ROW_NUMBER() OVER(partition by cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.pn asc),0),'99999999.9999999'),
+TO_CHAR(COALESCE(ROW_NUMBER() OVER(partition by cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LEAD(cast(floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.prc) as int),cast (floor(cf_olap_windowerr_sale.qty*cf_olap_windowerr_sale.qty) as int),NULL) OVER(win4),0),'99999999.9999999'),cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.dt
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.cn desc range between floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.prc) preceding and unbounded following ),
@@ -2147,7 +2025,7 @@ TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.vn)) OVER(win1),0),'99999999.9
 TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.vn)) OVER(partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc rows between unbounded preceding and floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.qty) preceding ),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc rows between unbounded preceding and floor(cf_olap_windowerr_sale.pn-cf_olap_windowerr_sale.qty) preceding ),
-win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.vn desc);
+win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc);
 
 -- COVAR_SAMP() function with partition by and order by having rows based framing clause in combination with other functions --
 
@@ -2218,7 +2096,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.qty) as int),cast (floor(
 TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.pn asc range current row ),
-win2 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.cn desc),
+win2 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
 win4 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn asc);
 
@@ -2292,7 +2170,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(partition by cf_olap_windowerr_sale.dt,cf_ola
 TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.vn-cf_olap_windowerr_sale.qty) as int),cast (floor(cf_olap_windowerr_sale.cn-cf_olap_windowerr_sale.qty) as int),NULL) OVER(win3),0),'99999999.9999999'),cf_olap_windowerr_sale.pn
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc,cf_olap_windowerr_sale.cn asc rows between floor(cf_olap_windowerr_sale.vn/cf_olap_windowerr_sale.cn) following and 1 following ),
-win2 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn desc),
+win2 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
 win3 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
 
 -- REGR_AVGX() function with partition by and order by having rows based framing clause in combination with other functions --
@@ -2336,7 +2214,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999'),cf_olap_windowerr_sale.dt
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.pn desc range 4 preceding ),
-win2 as (order by cf_olap_windowerr_sale.vn desc),
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (partition by cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
 win4 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.vn desc);
 
@@ -2444,7 +2322,7 @@ TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.prc)) OVER(partition by cf_ola
 TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.pn/cf_olap_windowerr_sale.pn)) OVER(win1),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.cn asc range between 4 following and unbounded following ),
-win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.vn asc);
+win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
 -- REGR_AVGY() function with partition by and order by having rows based framing clause in combination with other functions --
 
@@ -2506,7 +2384,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_ola
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn asc),
-win4 as (order by cf_olap_windowerr_sale.vn asc);
+win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc);
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause --
 
@@ -2525,7 +2403,7 @@ TO_CHAR(COALESCE(RANK() OVER(order by cf_olap_windowerr_sale.cn desc),0),'999999
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn AND cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.cn asc range current row ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
-win3 as (order by cf_olap_windowerr_sale.cn desc);
+win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
 -- REGR_COUNT() function with ONLY order by having range based framing clause --
 
@@ -2706,7 +2584,7 @@ TO_CHAR(COALESCE(RANK() OVER(win4),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc rows floor(cf_olap_windowerr_sale.qty) preceding ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
-win3 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.pn desc),
+win3 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
 win4 as (partition by cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.vn desc);
 
 -- REGR_INTERCEPT() function with ONLY order by having rows based framing clause --
@@ -2829,7 +2707,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.prc/cf_olap_windowerr_sal
 TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.pn/cf_olap_windowerr_sale.vn)) OVER(win3),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.cn desc range between current row and unbounded following ),
-win2 as (order by cf_olap_windowerr_sale.vn desc),
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win3 as (order by cf_olap_windowerr_sale.vn asc),
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
@@ -2972,7 +2850,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),cf_olap_windower
 TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.cn)) OVER(order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc,cf_olap_windowerr_sale.cn desc rows between 2 preceding and unbounded following ),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product,cf_olap_windowerr_vendor,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn AND cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc,cf_olap_windowerr_sale.cn desc rows between 2 preceding and unbounded following ),
-win2 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.pn desc);
+win2 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
 -- REGR_R2() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -3079,7 +2957,7 @@ TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.qty) as int),cast (floor(
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.pn desc range unbounded preceding ),
-win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.vn asc),
+win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc);
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause in combination with other functions --
@@ -3091,7 +2969,7 @@ TO_CHAR(COALESCE(RANK() OVER(win3),0),'99999999.9999999'),
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.cn desc range between unbounded preceding and 4 preceding ),
-win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.pn desc),
+win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
 win3 as (partition by cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.vn asc);
 
 -- REGR_SLOPE() function with ONLY order by having range based framing clause in combination with other functions --
@@ -3155,7 +3033,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(DENSE_RANK() OVER(partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn desc),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.cn desc range current row ),
-win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.cn desc);
+win2 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
 -- REGR_SLOPE() function with partition by and order by having range based framing clause in combination with other functions--
 
@@ -3238,7 +3116,7 @@ TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.pn/cf_olap_windowerr_sale.vn))
 TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc,cf_olap_windowerr_sale.cn asc,cf_olap_windowerr_sale.cn desc rows between current row and floor(cf_olap_windowerr_sale.qty-cf_olap_windowerr_sale.pn) following ),
-win2 as (order by cf_olap_windowerr_sale.cn desc);
+win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
 -- REGR_SLOPE() function with partition by and order by having rows based framing clause in combination with other functions --
 
@@ -3250,7 +3128,7 @@ TO_CHAR(COALESCE(DENSE_RANK() OVER(win3),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.qty order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc,cf_olap_windowerr_sale.pn asc rows between 4 following and 2 following ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc),
-win3 as (order by cf_olap_windowerr_sale.pn asc);
+win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc);
 
 -- REGR_SXX() function with ONLY order by having range based framing clause --
 
@@ -3360,7 +3238,7 @@ FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_ol
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc,cf_olap_windowerr_sale.vn desc,cf_olap_windowerr_sale.cn asc rows between floor(cf_olap_windowerr_sale.pn) following and unbounded following ),
 win2 as (order by cf_olap_windowerr_sale.vn desc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
-win4 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.vn desc);
+win4 as (partition by cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc);
 
 -- REGR_SXX() function with partition by and order by having range based framing clause --
 
@@ -3388,7 +3266,7 @@ TO_CHAR(COALESCE(ROW_NUMBER() OVER(win2),0),'99999999.9999999'),
 TO_CHAR(COALESCE(LAG(cast(floor(cf_olap_windowerr_sale.prc) as int),cast (floor(cf_olap_windowerr_sale.prc) as int),NULL) OVER(win3),0),'99999999.9999999')
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.vn desc range between 4 preceding and current row ),
-win2 as (partition by cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.vn asc),
+win2 as (partition by cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
 -- REGR_SXX() function with partition by and order by having range based framing clause in combination with other functions--
@@ -3537,7 +3415,7 @@ TO_CHAR(COALESCE(MAX(floor(cf_olap_windowerr_sale.qty)) OVER(win1),0),'99999999.
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc,cf_olap_windowerr_sale.cn asc rows 3 preceding ),
 win2 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
-win3 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.vn desc),
+win3 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
 win4 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.dt order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn asc),
 win5 as (partition by cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
 
@@ -3595,7 +3473,7 @@ TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.qty)) OVER(order by cf_olap_wi
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_customer WHERE cf_olap_windowerr_sale_ord.cn=cf_olap_windowerr_customer.cn ) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.pn,cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.pn desc range between floor(cf_olap_windowerr_sale.cn) preceding and 1 following ),
 win2 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc,cf_olap_windowerr_sale.cn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc),
-win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.vn asc),
+win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.dt,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc),
 win4 as (order by cf_olap_windowerr_sale.pn asc);
 
 -- REGR_SXY() function with partition by and order by having range based framing clause in combination with other functions--
@@ -3627,7 +3505,7 @@ TO_CHAR(COALESCE(COUNT(floor(cf_olap_windowerr_sale.cn*cf_olap_windowerr_sale.pr
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn asc,cf_olap_windowerr_sale.cn desc rows current row ),
 win2 as (partition by cf_olap_windowerr_sale.vn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
-win3 as (order by cf_olap_windowerr_sale.cn desc);
+win3 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc);
 
 -- REGR_SXY() function with partition by and order by having rows based framing clause in combination with other functions --
 
@@ -3640,7 +3518,7 @@ TO_CHAR(COALESCE(MIN(floor(cf_olap_windowerr_sale.pn*cf_olap_windowerr_sale.cn))
 FROM (SELECT cf_olap_windowerr_sale_ord.* FROM cf_olap_windowerr_sale_ord,cf_olap_windowerr_product,cf_olap_windowerr_vendor WHERE cf_olap_windowerr_sale_ord.pn=cf_olap_windowerr_product.pn AND cf_olap_windowerr_sale_ord.vn=cf_olap_windowerr_vendor.vn) cf_olap_windowerr_sale
 WINDOW win1 as (partition by cf_olap_windowerr_sale.vn,cf_olap_windowerr_sale.qty,cf_olap_windowerr_sale.pn order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.vn desc,cf_olap_windowerr_sale.vn desc rows between unbounded preceding and floor(cf_olap_windowerr_sale.cn-cf_olap_windowerr_sale.pn) preceding ),
 win2 as (partition by cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.pn desc),
-win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.cn desc),
+win3 as (partition by cf_olap_windowerr_sale.cn,cf_olap_windowerr_sale.prc order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn desc),
 win4 as (order by cf_olap_windowerr_sale.ord, cf_olap_windowerr_sale.cn asc);
 
 -- REGR_SXY() function with partition by and order by having rows based framing clause in combination with other functions --
