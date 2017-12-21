@@ -8,6 +8,7 @@
   <body>
     <section otherprops="op-print">
       <p>This section contains the following topics:<ul id="ul_dgc_f4q_lp" otherprops="op-print">
+          <li><xref href="versioning.xml#topic1"/></li>
           <li><xref href="startstop.xml#topic1"/></li>
           <li><xref href="../access_db/topics/g-accessing-the-database.xml"/></li>
           <li><xref href="../topics/g-configuring-the-greenplum-system.xml#topic1"/></li>

@@ -15,6 +15,7 @@
             <topicref href="intro/about_statistics.xml"/>
         </topicref>
         <topicref href="managing/partII.xml" id="partII">
+            <topicref href="managing/versioning.xml" navtitle="About Your Greenplum Database Release Version Number"/>
             <topicref href="managing/startstop.xml" navtitle="Starting and Stopping Greenplum"/>
             <topicref href="access_db/access_db.ditamap" format="ditamap"/>
             <topicref href="configure.ditamap" format="ditamap"/>

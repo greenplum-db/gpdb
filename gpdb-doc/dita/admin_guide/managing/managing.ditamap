@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
+  <topicref href="versioning.xml" navtitle="About Your Greenplum Database Release Version Number"/>
   <topicref href="startstop.xml" navtitle="Starting and Stopping Greenplum"/>
   <topicref href="access_db.xml" navtitle="Accessing the Database"/>
   <topicref href="configure.xml" navtitle="Configuring Your Greenplum System"/>

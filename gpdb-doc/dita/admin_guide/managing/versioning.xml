@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+  PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="kg1382433">About your Greenplum Database Release Version Number</title>
+  <shortdesc>Greenplum Database version numbers and they way they change identify
+    what has been modified from one Greenplum Database release to the next.</shortdesc>
+  <body>
+    <p>A Greenplum Database release version number takes the format
+      <varname>x.y.z</varname>, where:
+      <ul>
+        <li><varname>x</varname> identifies the Major version number</li>
+        <li><varname>y</varname> identifies the Minor version number</li>
+        <li><varname>z</varname> identifies the Patch version number</li>
+      </ul>
+    </p>
+    <p>Greenplum Database releases with the same Major release number are guaranteed 
+      to be backwards compatible.</p>
+    <p>Greenplum Database increments the Major release number when the catalog 
+      changes or when incompatible feature changes or new features are introduced.</p>
+    <p>The Minor release number for a given Major release is incremented when 
+      backwards compatible new features are introduced or when a Greenplum Database
+      feature is deprecated.</p>
+    <p>Greenplum Database increments the Patch release number for a given Minor
+      release for backwards-compatible bug fixes.</p>
+  </body>
+</topic>
