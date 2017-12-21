@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title id="kg1382433">About your Greenplum Database Release Version Number</title>
+  <title id="kg1382433">About the Greenplum Database Release Version Number</title>
   <shortdesc>Greenplum Database version numbers and they way they change identify
     what has been modified from one Greenplum Database release to the next.</shortdesc>
   <body>
@@ -14,11 +14,11 @@
         <li><varname>z</varname> identifies the Patch version number</li>
       </ul>
     </p>
-    <p>Greenplum Database releases with the same Major release number are guaranteed 
-      to be backwards compatible.</p>
-    <p>Greenplum Database increments the Major release number when the catalog 
-      changes or when incompatible feature changes or new features are introduced.</p>
-    <p>The Minor release number for a given Major release is incremented when 
+    <p>Greenplum Database releases that have the same Major release number are 
+      guaranteed to be backwards compatible. Greenplum Database increments the
+      Major release number when the catalog changes or when incompatible feature
+      changes or new features are introduced.</p>
+    <p>The Minor release number for a given Major release increments when 
       backwards compatible new features are introduced or when a Greenplum Database
       feature is deprecated.</p>
     <p>Greenplum Database increments the Patch release number for a given Minor
