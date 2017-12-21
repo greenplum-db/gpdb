@@ -510,8 +510,11 @@ test_postmaster_connection(bool do_checkpoint __attribute__((unused)))
 	 */
 	for (p = post_opts; *p;)
 	{
-		/* advance past whitespace */
-		while (isspace((unsigned char) *p))
+		/*
+		 * advance past whitespace/quoting
+		 * GPDB: We also advance upon seeing quotes and backslashes because our post_opts still has them.
+		 */
+		while (isspace((unsigned char) *p) || *p == '\'' || *p == '"')
 			p++;
 
 		if (strncmp(p, "-p", 2) == 0)
