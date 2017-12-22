@@ -1,3 +1,4 @@
+set optimizer_trace_fallback to on;
 --
 -- UNION (also INTERSECT, EXCEPT)
 --
@@ -437,6 +438,64 @@ SELECT q1 FROM int8_tbl EXCEPT (((SELECT q2 FROM int8_tbl ORDER BY q2 LIMIT 1)))
 (5 rows)
 
 --
+-- Check behavior with empty select list (allowed since 9.4)
+-- ORCA should fall back to planner when target list is empty
+--
+select union select;
+ERROR:  UNION over no columns is not supported
+select intersect select;
+ERROR:  INTERSECT over no columns is not supported
+select except select;
+ERROR:  EXCEPT over no columns is not supported
+-- check hashed implementation
+set enable_hashagg = true;
+set enable_sort = false;
+explain (costs off)
+select from generate_series(1,5) union select from generate_series(1,3);
+ERROR:  UNION over no columns is not supported
+explain (costs off)
+select from generate_series(1,5) intersect select from generate_series(1,3);
+ERROR:  INTERSECT over no columns is not supported
+select from generate_series(1,5) union select from generate_series(1,3);
+ERROR:  UNION over no columns is not supported
+select from generate_series(1,5) union all select from generate_series(1,3);
+--
+(8 rows)
+
+select from generate_series(1,5) intersect select from generate_series(1,3);
+ERROR:  INTERSECT over no columns is not supported
+select from generate_series(1,5) intersect all select from generate_series(1,3);
+ERROR:  INTERSECT over no columns is not supported
+select from generate_series(1,5) except select from generate_series(1,3);
+ERROR:  EXCEPT over no columns is not supported
+select from generate_series(1,5) except all select from generate_series(1,3);
+ERROR:  EXCEPT over no columns is not supported
+-- check sorted implementation
+set enable_hashagg = false;
+set enable_sort = true;
+explain (costs off)
+select from generate_series(1,5) union select from generate_series(1,3);
+ERROR:  UNION over no columns is not supported
+explain (costs off)
+select from generate_series(1,5) intersect select from generate_series(1,3);
+ERROR:  INTERSECT over no columns is not supported
+select from generate_series(1,5) union select from generate_series(1,3);
+ERROR:  UNION over no columns is not supported
+select from generate_series(1,5) union all select from generate_series(1,3);
+--
+(8 rows)
+
+select from generate_series(1,5) intersect select from generate_series(1,3);
+ERROR:  INTERSECT over no columns is not supported
+select from generate_series(1,5) intersect all select from generate_series(1,3);
+ERROR:  INTERSECT over no columns is not supported
+select from generate_series(1,5) except select from generate_series(1,3);
+ERROR:  EXCEPT over no columns is not supported
+select from generate_series(1,5) except all select from generate_series(1,3);
+ERROR:  EXCEPT over no columns is not supported
+reset enable_hashagg;
+reset enable_sort;
+--
 -- Check handling of a case with unknown constants.  We don't guarantee
 -- an undecorated constant will work in all cases, but historically this
 -- usage has worked, so test we don't break it.
@@ -737,5 +796,6 @@ select * from
  0 |  0
 (2 rows)
 
+reset optimizer_trace_fallback;
 drop table t3;
 drop function expensivefunc(int);
