@@ -1,0 +1,64 @@
+# Time zone configuration file for set "Asia"
+
+# In order to use this file, you need to set the run-time parameter
+# timezone_abbreviations to 'Asia'.  See the `Date/Time Support'
+#   appendix in the PostgreSQL documentation for more information.
+#
+# src/timezone/tznames/Asia
+
+
+# include the default set
+@INCLUDE Default
+
+# most timezones are already defined in the default set. With the OVERRIDE
+# option, PostgreSQL will use the new definitions instead of throwing an error
+# in case of a conflict.
+@OVERRIDE
+
+AQTT    18000    # Aqtau Time
+                 # Aqtobe Time
+                 #     (Asia/Aqtau)
+                 #     (Asia/Aqtobe)
+AST     10800    # Arabia Standard Time
+                 #     (Asia/Aden)
+                 #     (Asia/Baghdad)
+                 #     (Asia/Bahrain)
+                 #     (Asia/Kuwait)
+                 #     (Asia/Qatar)
+                 #     (Asia/Riyadh)
+CHOST   36000 D  # Choibalsan Summer Time
+                 #     (Asia/Choibalsan)
+CHOT    32400    # Choibalsan Time
+                 #     (Asia/Choibalsan)
+CIT     28800    # Central Indonesia Time (obsolete, WITA is now preferred)
+CST     28800    # China Standard Time
+                 #     (Asia/Macau)
+                 #     (Asia/Shanghai)
+                 #     (Asia/Taipei)
+EIT     32400    # East Indonesia Time
+                 #     (Asia/Jayapura)
+GST     14400    # Gulf Standard Time
+                 #     (Asia/Dubai)
+                 #     (Asia/Muscat)
+HOVST   28800 D  # Hovd Summer Time
+                 #     (Asia/Hovd)
+HOVT    25200    # Hovd Time
+                 #     (Asia/Hovd)
+IRDT    16200 D  # Iran Daylight Time
+                 #     (Asia/Tehran)
+IST     19800    # Indian Standard Time
+                 #     (Asia/Calcutta)
+ORAT    18000    # Oral Time
+                 #     (Asia/Oral)
+QYZT    21600    # Kizilorda Time
+                 #     (Asia/Qyzylorda)
+SAKST   39600 D  # Sakhalin Summer Time
+                 #     (Asia/Sakhalin)
+SAKT    36000    # Sakhalin Time
+                 #     (Asia/Sakhalin)
+TLT     32400    # East Timor Time
+                 #     (Asia/Dili)
+WIT     25200    # Waktu Indonesia Timur
+                 # West Indonesia Time
+                 #     (Asia/Jakarta)
+                 #     (Asia/Pontianak)

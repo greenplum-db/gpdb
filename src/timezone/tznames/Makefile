@@ -16,7 +16,7 @@ TZNAMES_TEMPLATES = Africa.txt America.txt Antarctica.txt Asia.txt \
 	Atlantic.txt Australia.txt Etc.txt Europe.txt Indian.txt Pacific.txt
 TZNAMES_TEMPLATES_FILES = $(TZNAMES_TEMPLATES:%=$(srcdir)/%)
 
-TZNAMES_SETS = Default Australia India
+TZNAMES_SETS = Default Australia India Asia
 TZNAMES_SETS_FILES = $(TZNAMES_SETS:%=$(srcdir)/%)
 
 install: installdirs

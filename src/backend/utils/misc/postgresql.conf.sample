@@ -449,6 +449,7 @@ log_autostats=off	# print additional autostats information
 					#   Default
 					#   Australia
 					#   India
+					#   Asia
 					# You can create your own file in
 					# share/timezonesets/.
 #extra_float_digits = 0			# min -15, max 2
