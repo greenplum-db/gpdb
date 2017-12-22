@@ -1102,6 +1102,7 @@ sub atmsort_bigloop
     my $getstatement = 0;
     my $has_order = 0;
     my $copy_to_stdout_result = 0;
+    my $describe_mode = 0;
     my $directive = {};
     my $big_ignore = 0;
     my %define_match_expression;
@@ -1218,12 +1219,41 @@ sub atmsort_bigloop
                 goto reprocess_row;
             }
 
+            my $end_of_table = 0;
+
+            if ($describe_mode)
+            {
+                # \d tables don't always end with a row count, and there may be
+                # more than one of them per command. So we allow any of the
+                # following to end the table:
+                # - a blank line
+                # - a row that doesn't have the same number of column separators
+                #   as the header line
+                # - a row count (checked below)
+                if ($ini =~ m/^$/)
+                {
+                    $end_of_table = 1;
+                }
+                elsif (exists($directive->{firstline}))
+                {
+                    # Count the number of column separators in the table header
+                    # and our current line.
+                    my @headerSeparators = $directive->{firstline} =~ m/\|/;
+                    my @lineSeparators = $ini =~ m/\|/;
+
+                    if (scalar @headerSeparators != scalar @lineSeparators)
+                    {
+                        $end_of_table = 1;
+                    }
+                }
+
+                # Don't reset describe_mode at the end of the table; there may
+                # be more tables still to go.
+            }
+
             # regex example: (5 rows)
             if ($ini =~ m/^\s*\(\d+\s+row(?:s)*\)\s*$/)
             {
-                format_query_output($glob_fqo,
-                                    $has_order, \@outarr, $directive);
-
                 # Always ignore the rowcount for explain plan out as the
                 # skeleton plans might be the same even if the row counts
                 # differ because of session level GUCs.
@@ -1231,6 +1261,14 @@ sub atmsort_bigloop
                 {
                     $ini = 'GP_IGNORE:' . $ini;
                 }
+
+                $end_of_table = 1;
+            }
+
+            if ($end_of_table)
+            {
+                format_query_output($glob_fqo,
+                                    $has_order, \@outarr, $directive);
 
                 $directive = {};
                 @outarr = ();
@@ -1282,6 +1320,10 @@ sub atmsort_bigloop
                 {
                     $directive->{explain} = 'normal';
                 }
+
+                # Should we apply more heuristics to try to find the end of \d
+                # output?
+                $describe_mode = ($ini =~ m/\\d/);
             }
 
 			# Catching multiple commands and capturing the parens matches
