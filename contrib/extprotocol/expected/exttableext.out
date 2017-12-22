@@ -689,9 +689,9 @@ Type: readable
 Encoding: UTF8
 Format type: text
 Format options: delimiter '	' null '\N' escape '\'
+External options: {}
 External location: demoprot://exttabtest.txt
 Execute on: all segments
-External options: {}
 
     select count(*) from pg_class where relname = 'exttabtest_r_newname';
  count 
