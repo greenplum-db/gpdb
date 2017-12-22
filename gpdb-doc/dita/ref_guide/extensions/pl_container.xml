@@ -550,7 +550,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     element <codeph>shared_directory</codeph>.</li>
                 </ul></pd>
               <pd>Do not specify a shared volume when you install the Greenplum Docker image for
-                PL/Python or PL/R PL/Container. The utility a sets shared volume when the Docker
+                PL/Python or PL/R PL/Container. The utility sets a shared volume when the Docker
                 images are installed. </pd>
               <pd>This is the <codeph>shared_directory</codeph> element that specifies the shared
                 volume for the Greenplum PL/R Docker image.</pd>
