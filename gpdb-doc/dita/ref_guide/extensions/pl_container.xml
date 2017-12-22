@@ -539,8 +539,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.
                 The information is stored as attributes in the <codeph>shared_directory</codeph>
                 element of the <codeph>container</codeph> element in the PL/Container configuration
-                file. <ul
-                  id="ul_k2l_f4d_rbb">
+                file. <ul id="ul_k2l_f4d_rbb">
                   <li><varname>host-dir</varname> - absolute path to a directory on the host system.
                     The Greenplum Database administrator user (gpadmin) must have appropriate access
                     to the directory.</li>
@@ -551,15 +550,15 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     element <codeph>shared_directory</codeph>.</li>
                 </ul></pd>
               <pd>Do not specify a shared volume when you install the Greenplum Docker image for
-                PL/Python or PL/R PL/Container. The utility sets shared volume when the Docker
-                images are installed.   </pd>
-              <pd>This is <codeph>shared_directory</codeph> element that specifies the shared volume
-                for the Greenplum PL/R Docker image.</pd>
+                PL/Python or PL/R PL/Container. The utility a sets shared volume when the Docker
+                images are installed. </pd>
+              <pd>This is the <codeph>shared_directory</codeph> element that specifies the shared
+                volume for the Greenplum PL/R Docker image.</pd>
               <pd>
                 <codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/> </codeblock>
               </pd>
-              <pd>This is <codeph>shared_directory</codeph> element that specifies the shared volume
-                for the Greenplum PL/Python Docker
+              <pd>This is the <codeph>shared_directory</codeph> element that specifies the shared
+                volume for the Greenplum PL/Python Docker
                 image.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/pyclient"/></codeblock></pd>
             </plentry>
             <plentry>
@@ -606,13 +605,13 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           </ul>
           <ul id="ul_jn5_1bw_qbb">
             <li>
-              <p>Overwrite PL/Container configuration file with an XML
+              <p>Overwrite the PL/Container configuration file with an XML
                 file:<codeblock>plcontainer configure -f new_plcontainer_configuration.xml </codeblock></p>
             </li>
           </ul>
           <ul id="ul_kn5_1bw_qbb">
             <li>
-              <p>Add a container entry to PL/Container configuration
+              <p>Add a container entry to the PL/Container configuration
                 file:<codeblock>plcontainer configure -n plc_python_newpy -l python
   -i pivotaldata/plc_python_newimage:latest</codeblock></p>
             </li>
