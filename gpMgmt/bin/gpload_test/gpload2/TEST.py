@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -172,6 +172,9 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n           n7: s_n7")
         f.write("\n           n8: s_n8")
         f.write("\n           n9: s_n9")
+    if externalSchema:
+        f.write("\n   EXTERNAL:")
+        f.write("\n    - SCHEMA: "+externalSchema)
     f.write("\n   PRELOAD:")
     f.write("\n    - REUSE_TABLES: "+reuse_flag)
     f.write("\n")
@@ -420,7 +423,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,24):
+        for num in range(1,25):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -597,6 +600,23 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('large_file.csv','data_file.csv')
         write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",error_table="err_table",error_limit='90000000')
         self.doTest(23)
+    def test_24_gpload_error_count(self):
+        "24  gpload error count with ext schema"
+        file = mkpath('setup.sql')
+        runfile(file)
+        f = open(mkpath('query24.sql'),'a')
+        f.write("\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+        f.close()
+        f = open(mkpath('data/large_file.csv'),'w')
+        for i in range(0, 10000):
+            if i % 2 == 0:
+                f.write('1997,Ford,E350,"ac, abs, moon",3000.00,a\n')
+            else:
+                f.write('1997,Ford,E350,"ac, abs, moon",3000.00\n')
+        f.close()
+        copy_data('large_file.csv','data_file.csv')
+        write_config_file(reuse_flag='true',formatOpts='csv',file='data_file.csv',table='csvtable',format='csv',delimiter="','",log_errors=True,error_limit='90000000',externalSchema='test')
+        self.doTest(24)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)

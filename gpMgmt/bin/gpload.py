@@ -2262,7 +2262,7 @@ class gpload:
             # around
 
             self.extTableName = "ext_gpload_reusable_%s" % self.unique_suffix
-            self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.extTableName)
+            self.log(self.INFO, "did not find an external table to reuse. creating %s" % self.get_ext_schematable(self.extSchemaName, self.extTableName))
 
         # process the single quotes in order to successfully create an external table.
         self.formatOpts = self.formatOpts.replace("'\''","E'\\''")
@@ -2383,11 +2383,11 @@ class gpload:
         if self.log_errors and not self.options.D:
             # make sure we only get errors for our own instance
             if not self.reuse_tables:
-                queryStr = "select count(*) from gp_read_error_log('%s')" % pg.escape_string(self.extTableName)
+                queryStr = "select count(*) from gp_read_error_log('%s')" % pg.escape_string(self.extSchemaTable)
                 results = self.db.query(queryStr.encode('utf-8')).getresult()
                 return (results[0])[0]
             else: # reuse_tables
-                queryStr = "select count(*) from gp_read_error_log('%s') where cmdtime > to_timestamp(%s)" % (pg.escape_string(self.extTableName), self.startTimestamp)
+                queryStr = "select count(*) from gp_read_error_log('%s') where cmdtime > to_timestamp(%s)" % (pg.escape_string(self.extSchemaTable), self.startTimestamp)
                 results = self.db.query(queryStr.encode('utf-8')).getresult()
                 global NUM_WARN_ROWS
                 NUM_WARN_ROWS = (results[0])[0]
@@ -2405,7 +2405,7 @@ class gpload:
         # if reuse_table is set, error message is not deleted.
         if errors and self.log_errors and self.reuse_tables:
             self.log(self.WARN, "Please use following query to access the detailed error")
-            self.log(self.WARN, "select * from gp_read_error_log('{0}') where cmdtime > to_timestamp('{1}')".format(pg.escape_string(self.extTableName), self.startTimestamp))
+            self.log(self.WARN, "select * from gp_read_error_log('{0}') where cmdtime > to_timestamp('{1}')".format(pg.escape_string(self.extSchemaTable), self.startTimestamp))
         self.exitValue = 1 if errors else 0
 
 

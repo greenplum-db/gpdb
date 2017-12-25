@@ -4,6 +4,8 @@ CREATE DATABASE reuse_gptest;
 
 \c reuse_gptest
 
+CREATE SCHEMA test;
+
 DROP TABLE IF EXISTS texttable;
 DROP TABLE IF EXISTS csvtable;
 CREATE TABLE texttable (
