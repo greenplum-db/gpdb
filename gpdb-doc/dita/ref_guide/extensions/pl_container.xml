@@ -533,8 +533,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             </plentry>
             <plentry>
               <pt>{-v | --volume} <varname>shared-volume</varname></pt>
-              <pd>Specify a Docker volume to bind mount. You can specify multiple volumes as a comma
-                separated lists of volumes.</pd>
+              <pd>Optional. Specify a Docker volume to bind mount. You can specify multiple volumes
+                as a comma separated lists of volumes.</pd>
               <pd>The format for a shared volume:
                     <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.
                 The information is stored as attributes in the <codeph>shared_directory</codeph>
@@ -549,17 +549,24 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     directory from the container. Information is stored in the configuration file
                     element <codeph>shared_directory</codeph>.</li>
                 </ul></pd>
-              <pd>Do not specify a shared volume when you install the Greenplum Docker image for
-                PL/Python or PL/R PL/Container. The utility sets a shared volume when the Docker
-                images are installed. </pd>
-              <pd>This is the <codeph>shared_directory</codeph> element that specifies the shared
-                volume for the Greenplum PL/R Docker image.</pd>
+              <pd>The utility sets a read-only shared volume when the Docker images are installed. </pd>
+              <pd>This is the <codeph>shared-volume</codeph> that the utility specifies for the
+                Greenplum PL/R Docker image.</pd>
               <pd>
-                <codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/> </codeblock>
+                <codeblock>/usr/local/greenplum-db/./bin/rclient:/clientdir:ro </codeblock>
               </pd>
-              <pd>This is the <codeph>shared_directory</codeph> element that specifies the shared
-                volume for the Greenplum PL/Python Docker
-                image.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/pyclient"/></codeblock></pd>
+              <pd>This is the <codeph>shared-volume</codeph> that the utility specifies for the
+                Greenplum PL/Python Docker
+                image.<codeblock>/usr/local/greenplum-db/./bin/pyclient:/clientdir:ro</codeblock></pd>
+              <pd>If needed, you can specify other shared directories. Specifying the same shared
+                directory as the one that is automatically set by the utility will cause a Docker
+                container startup failure.</pd>
+              <pd>When specifying read-write access to host directory, ensure that the specified
+                host directory has the correct permissions. Also, if a Docker image managed by
+                PL/Container is configured with read-write access to a host directory, PL/Container
+                could run multiple Docker containers on a host that change data in the directory.
+                This might cause issues when running PL/Container user-defined functions that access
+                the shared directory. </pd>
             </plentry>
             <plentry>
               <pt>--verbose</pt>
@@ -577,7 +584,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         </section>
         <section>
           <title>Examples</title>
-          <p>These are examples of common commands to mange PL/Container:</p>
+          <p>These are examples of common commands to manage PL/Container:</p>
           <ul id="ul_fn5_1bw_qbb">
             <li>
               <p>Initialize the Greenplum Database installation with default configuration file
@@ -724,10 +731,25 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         which can be either <codeph>ro</codeph> (read-only) or <codeph>rw</codeph>
                         (read-write). </li>
                     </ul></pd>
-                  <pd>When specifying a host directory with read-write access, ensure that the
-                    specified host directory has the correct permissions. Write access to the host
-                    system might be used to exchange the data between containers and possibly
-                    compromise the host system.</pd>
+                  <pd>The <codeph>plcontainer</codeph> utility sets a read-only shared volume when
+                    the Docker images are installed. </pd>
+                  <pd>This is the <codeph>shared_directory</codeph> element that the utility creates
+                    for the Greenplum PL/R Docker image.</pd>
+                  <pd>
+                    <codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/> </codeblock>
+                  </pd>
+                  <pd>This is the <codeph>shared_directory</codeph> element that the utility creates
+                    for the Greenplum PL/Python Docker
+                    image.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/pyclient"/></codeblock></pd>
+                  <pd>If needed, you can specify other shared directories. Specifying the same
+                    shared directory as the one that is automatically set by the utility will cause
+                    a Docker container startup failure.</pd>
+                  <pd>When specifying read-write access to host directory, ensure that the specified
+                    host directory has the correct permissions. Also, if a PL/Container
+                      <codeph>container</codeph> is configured with read-write access to a host
+                    directory, PL/Container could run multiple Docker containers on a host that
+                    change data in the directory. This might cause issues when running PL/Container
+                    user-defined functions that access the shared directory. </pd>
                 </plentry>
                 <plentry>
                   <pt>use_network</pt>
@@ -855,7 +877,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <p>This command configures Docker to start when the host system
           starts.<codeblock>sudo systemctl start  docker.service</codeblock></p>
         <p>After you have installed Docker on all Greenplum Database hosts, restart the Greenplum
-          Database system to give Greenplum Database access Docker.
+          Database system to give Greenplum Database access to Docker.
           <codeblock>gpstop -ra</codeblock></p>
       </section>
       <section>
