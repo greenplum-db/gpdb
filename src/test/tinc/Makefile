@@ -58,11 +58,6 @@ storage_persistent_accessmethods_and_vacuum:
 	-s vacuum \
 	-q "class!=XidlimitsTests"
 
-storage_filerep:
-	$(TESTER) $(DISCOVER) \
-	-q "class!=Mpp18816" \
-	-s tincrepo/mpp/gpdb/tests/storage/filerep
-
 # cs-walrepl-multinode
 walrep_1:
 	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests/storage/walrepl \

@@ -2037,14 +2037,6 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
       image: centos-gpdb-dev-6
       timeout: 3h
-    - task: storage_filerep
-      file: gpdb_src/concourse/tasks/tinc_gpdb.yml
-      params:
-        MAKE_TEST_COMMAND: storage_filerep
-        TEST_OS: centos
-        CONFIGURE_FLAGS: {{configure_flags}}
-      image: centos-gpdb-dev-6
-      timeout: 3h
     - task: storage_uao_transactionmanagement
       file: gpdb_src/concourse/tasks/tinc_gpdb.yml
       params:
