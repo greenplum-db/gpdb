@@ -87,53 +87,6 @@ class AOCOAlterColumn(MPPTestCase):
         outfile = local_path("gpcheckcat_"+datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')+".out")
         self.dbstate.check_catalog(outputFile=outfile)
 
-    def run_test_ChangeTracking(self,filename):
-        # Log the segment state before starting the test
-        # Expectation is a SYNC state
-        self.log_segment_state()
-        primary_dbid=self.get_dbid()
-        # Run the 'alter table add column cmmand' in the background
-        self.run_sql_ChangeTracking(filename,stage='fail',validate=False,background=True)
-        # Inject Fault to put one primary in panic
-        self.fileutil.inject_fault(f='postmaster', y='reset',  seg_id=primary_dbid)
-        self.fileutil.inject_fault(f='postmaster', y='panic',  seg_id=primary_dbid)
-        state=self.fileutil.check_fault_status(fault_name='postmaster', status='triggered')
-        self.log_segment_state()
-        # Recover the down segments
-        self.recover_seg()
-        self.log_segment_state()
-        # Validate that the previous alter failed because primary segment went down as the alter was taking place
-        self.run_sql_ChangeTracking(filename,stage='failvalidate',validate=True,background=False) 
-        # Now the system is in change tracking so the next alter should pass
-        self.run_sql_ChangeTracking(filename,stage='pass',validate=True,background=False) 
-        self.log_segment_state()
-
-
-    def recover_seg(self):
-        result=self.get_segcount_state(state='d')
-        if result > 0:
-            if not self.gprecover.incremental():
-                raise Exception('Gprecoverseg failed')
-            if not self.gprecover.wait_till_insync_transition():
-                raise Exception('Segments not in sync')
-        tinctest.logger.info('Segments recovered and back in sync')
-        
-
-    def run_sql_ChangeTracking(self,filename,stage,validate=False,background=False):
-        fname=filename+'-'+stage
-        sql_file = self.get_sql_files(fname)
-        out_file = self.base_dir+ "/sql/"+fname +'.out'
-        ans_file = self.base_dir+ "/expected/"+fname+'.ans'
-        tinctest.logger.info( '\n==============stage = %s ================' % (stage))
-        tinctest.logger.info( sql_file)
-        tinctest.logger.info( out_file)
-        tinctest.logger.info( ans_file)
-        tinctest.logger.info( '==============================')
-        result=self.run_sql(sql_file,out_file=out_file,background=background)
-        if validate == True:
-           self.validate_sql(ans_file,out_file)
-
- 
     def get_dbid(self):
         sql_cmd = "select min(dbid) dbid from gp_segment_configuration where role = 'p' and status = 'u' and content > -1"
         dbid=PSQL.run_sql_command(sql_cmd= sql_cmd,flags='-q -t')
