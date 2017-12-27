@@ -53,3 +53,9 @@ uninstall:
 
 clean distclean maintainer-clean:
 	rm -f pg_config$(X) $(OBJS)
+
+check:
+	$(prove_check)
+
+installcheck:
+	$(prove_installcheck)
