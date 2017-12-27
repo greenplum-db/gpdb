@@ -359,13 +359,13 @@ Feature: gpcheckcat tests
         And the user runs "psql constraint_g_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_invalid_constraint.sql"
         Then psql should return a return code of 0
         When the user runs "gpcheckcat -g repair_dir constraint_g_db"
-        Then gpcheckcat should return a return code of 3
+        Then gpcheckcat should return a return code of 1
         Then gpcheckcat should print "repair script\(s\) generated in dir repair_dir" to stdout
         Then the path "repair_dir" is found in cwd "1" times
         Then run all the repair scripts in the dir "repair_dir"
         And the path "repair_dir" is removed from current working directory
         When the user runs "gpcheckcat -g repair_dir constraint_g_db"
-        Then gpcheckcat should return a return code of 3
+        Then gpcheckcat should return a return code of 0
         Then the path "repair_dir" is found in cwd "0" times
         And the user runs "dropdb constraint_g_db"
         And the path "repair_dir" is removed from current working directory
