@@ -898,7 +898,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <p>This command configures Docker to start when the host system
           starts.<codeblock>sudo chkconfig docker on</codeblock></p>
         <p>After you have installed Docker on all Greenplum Database hosts, restart the Greenplum
-          Database system to give Greenplum Database access Docker.
+          Database system to give Greenplum Database access to Docker.
           <codeblock>gpstop -ra</codeblock></p>
       </section>
     </body>
