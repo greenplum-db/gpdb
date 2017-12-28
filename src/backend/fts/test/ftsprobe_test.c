@@ -102,6 +102,14 @@ static void PQclear_will_be_called()
 	will_be_called(PQclear);
 }
 
+static void PQgetvalue_will_return(int attnum, bool value)
+{
+	expect_any(PQgetvalue, res);
+	expect_value(PQgetvalue, tup_num, 0);
+	expect_value(PQgetvalue, field_num, attnum);
+	will_return(PQgetvalue, &value);
+}
+
 /*
  * Scenario: if primary didn't respond in time to FTS probe, ftsReceive on
  * master should fail.
@@ -192,6 +200,69 @@ test_ftsReceive_when_fts_handler_ERROR(void **state)
 	assert_false(actual_return_value);
 }
 
+static void ftsReceive_request_retry_setup()
+{
+	PQisBusy_will_return(false);
+
+	/*
+	 * mock tmpResult to NULL, so that we break the for loop.
+	 */
+	PQgetResult_will_return(NULL);
+	PQresultStatus_will_return(PGRES_TUPLES_OK);
+
+	expect_any(PQnfields, res);
+	will_return(PQnfields, Natts_fts_message_response);
+	expect_any(PQntuples, res);
+	will_return(PQntuples, FTS_MESSAGE_RESPONSE_NTUPLES);
+
+	PQgetvalue_will_return(Anum_fts_message_response_is_mirror_up, true);
+	PQgetvalue_will_return(Anum_fts_message_response_is_in_sync, true);
+	PQgetvalue_will_return(Anum_fts_message_response_is_syncrep_enabled, true);
+}
+
+void
+test_ftsReceive_when_primary_request_retry_true(void **state)
+{
+	FtsConnectionInfo info;
+	struct pg_conn conn;
+	probe_result result;
+	char str[50] = FTS_MSG_PROBE;
+
+	info.conn = &conn;
+	info.result = &result;
+	info.message = &str;
+
+	ftsReceive_request_retry_setup();
+	write_log_will_be_called();
+	write_log_will_be_called();
+	PQgetvalue_will_return(Anum_fts_message_response_request_retry, true);
+
+	/* TEST */
+	bool actual_return_value = ftsReceive(&info);
+	assert_false(actual_return_value);
+}
+
+void
+test_ftsReceive_when_primary_request_retry_false(void **state)
+{
+	FtsConnectionInfo info;
+	struct pg_conn conn;
+	probe_result result;
+	char str[50] = FTS_MSG_PROBE;
+
+	info.conn = &conn;
+	info.result = &result;
+	info.message = &str;
+
+	ftsReceive_request_retry_setup();
+	write_log_will_be_called();
+	PQgetvalue_will_return(Anum_fts_message_response_request_retry, false);
+
+	/* TEST */
+	bool actual_return_value = ftsReceive(&info);
+	assert_true(actual_return_value);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -201,6 +272,8 @@ main(int argc, char* argv[])
 		unit_test(test_ftsReceive_when_fts_handler_hung),
 		unit_test(test_ftsReceive_when_fts_handler_FATAL),
 		unit_test(test_ftsReceive_when_fts_handler_ERROR),
+		unit_test(test_ftsReceive_when_primary_request_retry_true),
+		unit_test(test_ftsReceive_when_primary_request_retry_false)
 	};
 	return run_tests(tests);
 }

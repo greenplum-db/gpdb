@@ -24,10 +24,11 @@
 #define	FTS_MSG_PROBE "PROBE"
 #define FTS_MSG_SYNCREP_OFF "SYNCREP_OFF"
 
-#define Natts_fts_message_response 3
+#define Natts_fts_message_response 4
 #define Anum_fts_message_response_is_mirror_up 0
 #define Anum_fts_message_response_is_in_sync 1
 #define Anum_fts_message_response_is_syncrep_enabled 2
+#define Anum_fts_message_response_request_retry 3
 
 #define FTS_MESSAGE_RESPONSE_NTUPLES 1
 
@@ -38,6 +39,7 @@ typedef struct
 	bool isMirrorAlive;
 	bool isInSync;
 	bool isSyncRepEnabled;
+	bool retryRequested;
 } probe_result;
 
 typedef struct
@@ -59,6 +61,7 @@ typedef struct FtsResponse
 	bool IsMirrorUp;
 	bool IsInSync;
 	bool IsSyncRepEnabled;
+	bool RequestRetry;
 } FtsResponse;
 
 extern bool am_ftshandler;

@@ -654,6 +654,7 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		response->result.isMirrorAlive = SEGMENT_IS_ALIVE(mirror);
 		response->result.isInSync = false;
 		response->result.isSyncRepEnabled = false;
+		response->result.retryRequested = false;
 		response->message = FTS_MSG_PROBE;
 
 		response->segment_db_info = primary;

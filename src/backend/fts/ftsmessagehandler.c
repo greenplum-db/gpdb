@@ -55,6 +55,14 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	pq_sendint(&buf, -1, 4);		/* typmod */
 	pq_sendint(&buf, 0, 2);		/* format code */
 
+	pq_sendstring(&buf, "request_retry");
+	pq_sendint(&buf, 0, 4);		/* table oid */
+	pq_sendint(&buf, Anum_fts_message_response_request_retry, 2);		/* attnum */
+	pq_sendint(&buf, BOOLOID, 4);		/* type oid */
+	pq_sendint(&buf, 1, 2);	/* typlen */
+	pq_sendint(&buf, -1, 4);		/* typmod */
+	pq_sendint(&buf, 0, 2);		/* format code */
+
 	pq_endmessage(&buf);
 
 	/* Send a DataRow message */
@@ -69,6 +77,9 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 
 	pq_sendint(&buf, 1, 4); /* col3 len */
 	pq_sendint(&buf, response->IsSyncRepEnabled, 1);
+
+	pq_sendint(&buf, 1, 4); /* col4 len */
+	pq_sendint(&buf, response->RequestRetry, 1);
 
 	pq_endmessage(&buf);
 	EndCommand(messagetype, DestRemote);
