@@ -738,10 +738,7 @@ class GpStop:
                     results = item.get_results()
                     if results.wasSuccessful():
                         continue
-                    if "No such process" in results.stderr:
-                        self.failed.append(item.db)
-                        continue
-                    raise ExecutionError("Error Executing Command: ", item)
+                    self.failed.append(item.db)
 
         self.pool = SighupWorkerPool(numWorkers=workers)
         dbList = self.gparray.getDbList()
