@@ -261,8 +261,11 @@ write_database_file(Relation drel, bool startup)
 		/*
 		 * Identify the oldest datfrozenxid.  This must match the logic in
 		 * vac_truncate_clog() in vacuum.c.
+		 *
+		 * MPP-20053: Skip databases that cannot be connected to in computing
+		 * the oldest database.
 		 */
-		if (TransactionIdIsNormal(datfrozenxid))
+		if (dbform->datallowconn && TransactionIdIsNormal(datfrozenxid))
 		{
 			if (oldest_datfrozenxid == InvalidTransactionId ||
 				TransactionIdPrecedes(datfrozenxid, oldest_datfrozenxid))
