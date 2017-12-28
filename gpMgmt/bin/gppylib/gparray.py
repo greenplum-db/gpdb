@@ -1473,7 +1473,8 @@ class GpArray:
         """
         hostList = []
         hostList.append(self.master.getSegmentHostName())
-        if self.standbyMaster:
+        if (self.standbyMaster and
+            self.master.getSegmentHostName() != self.standbyMaster.getSegmentHostName()):
             hostList.append(self.standbyMaster.getSegmentHostName())
 
         dbList = self.getDbList(includeExpansionSegs = includeExpansionSegs)
