@@ -59,6 +59,12 @@ static void InitSegmentInfoGpmonPkt(gpmon_packet_t *gpmon_pkt);
 static void UpdateSegmentInfoGpmonPkt(gpmon_packet_t *gpmon_pkt);
 
 /*
+ * cluster state collector hook
+ * Use this hook to collect cluster wide state data periodically.
+ */
+cluster_state_collect_hook_type cluster_state_collect_hook = NULL;
+
+/*
  * query info collector hook
  * Use this hook to collect real-time query information and status data.
  */
@@ -177,11 +183,14 @@ NON_EXEC_STATIC void SegmentInfoSenderMain(int argc, char *argv[])
 
 	MyBackendId = InvalidBackendId;
 
-	/* Init gpmon connection */
-	gpmon_init();
+	if (gp_enable_gpperfmon)
+	{
+		/* Init gpmon connection */
+		gpmon_init();
 
-	/* Create and initialize gpmon_pkt */
-	InitSegmentInfoGpmonPkt(&seginfopkt);
+		/* Create and initialize gpmon_pkt */
+		InitSegmentInfoGpmonPkt(&seginfopkt);
+	}
 
 	/* main loop */
 	SegmentInfoSenderLoop();
@@ -198,8 +207,10 @@ NON_EXEC_STATIC void SegmentInfoSenderMain(int argc, char *argv[])
 static void
 SegmentInfoSenderLoop(void)
 {
+	int rc;
+	int counter;
 
-	for (;;)
+	for (counter = 0;; counter += SEGMENT_INFO_LOOP_SLEEP_MS)
 	{
 		CHECK_FOR_INTERRUPTS();
 
@@ -212,11 +223,24 @@ SegmentInfoSenderLoop(void)
 		if (!PostmasterIsAlive(true))
 			exit(1);
 
-		SegmentInfoSender();
+		if (cluster_state_collect_hook)
+			cluster_state_collect_hook();
+
+		if (gp_enable_gpperfmon && counter >= gp_perfmon_segment_interval)
+		{
+			SegmentInfoSender();
+			counter = 0;
+		}
 
 		/* Sleep a while. */
-		Assert(gp_perfmon_segment_interval > 0);
-		pg_usleep(gp_perfmon_segment_interval * 1000);
+		rc = WaitLatch(&MyProc->procLatch,
+				WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+				SEGMENT_INFO_LOOP_SLEEP_MS);
+		ResetLatch(&MyProc->procLatch);
+
+		/* emergency bailout if postmaster has died */
+		if (rc & WL_POSTMASTER_DEATH)
+			proc_exit(1);
 	} /* end server loop */
 
 	return;
