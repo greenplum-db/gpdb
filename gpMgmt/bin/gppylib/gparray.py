@@ -50,6 +50,7 @@ VALID_STATUS = [STATUS_UP, STATUS_DOWN]
 MODE_NOT_INITIALIZED = ''               # no mirroring
 MODE_CHANGELOGGING = 'c'                # filerep logging
 MODE_SYNCHRONIZED = 's'                 # filerep synchronized
+MODE_NOT_SYNC = 'n'
 MODE_RESYNCHRONIZATION = 'r'            #
 
 # Map gp_segment_configuration mode values to values retured from gp_primarymirror.
@@ -79,13 +80,15 @@ SEGMENT_STATE_IMMEDIATE_SHUTDOWN            = "ImmediateShutdown"
 
 VALID_MODE = [
     MODE_SYNCHRONIZED,
+    MODE_NOT_SYNC,
     MODE_CHANGELOGGING,
     MODE_RESYNCHRONIZATION,
 ]
 MODE_LABELS = {
     MODE_CHANGELOGGING: "Change Tracking",
     MODE_SYNCHRONIZED: "Synchronized",
-    MODE_RESYNCHRONIZATION: "Resynchronizing"
+    MODE_RESYNCHRONIZATION: "Resynchronizing",
+    MODE_NOT_SYNC: "Not In Sync"
 }
 
 # These are all the valid states primary/mirror pairs can
@@ -100,7 +103,9 @@ VALID_SEGMENT_STATES = [
     (STATUS_UP, MODE_CHANGELOGGING, STATUS_DOWN, MODE_SYNCHRONIZED),
     (STATUS_UP, MODE_CHANGELOGGING, STATUS_DOWN, MODE_RESYNCHRONIZATION),
     (STATUS_UP, MODE_RESYNCHRONIZATION, STATUS_UP, MODE_RESYNCHRONIZATION),
-    (STATUS_UP, MODE_SYNCHRONIZED, STATUS_UP, MODE_SYNCHRONIZED)
+    (STATUS_UP, MODE_SYNCHRONIZED, STATUS_UP, MODE_SYNCHRONIZED),
+    (STATUS_UP, MODE_NOT_SYNC, STATUS_UP, MODE_NOT_SYNC),
+    (STATUS_UP, MODE_NOT_SYNC, STATUS_DOWN, MODE_NOT_SYNC)
 ]
 
 def getDataModeLabel(mode):
