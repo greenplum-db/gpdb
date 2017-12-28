@@ -366,6 +366,7 @@ class ClusterConfiguration():
             sys.exit(1)
 
         contentIDs = Set()
+        self._all_seg_configs = []
         self.seg_configs = []
         self.num_contents = 0
         for result in resultsets:

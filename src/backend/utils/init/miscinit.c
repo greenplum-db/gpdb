@@ -585,7 +585,7 @@ InitializeSessionUserIdStandalone(void)
 {
 	/* This function should only be called in a single-user backend. */
 	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || am_startup
-				|| (am_ftshandler && AreWeAMirror));
+				|| (am_ftshandler && am_mirror));
 
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));

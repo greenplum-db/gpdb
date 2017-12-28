@@ -12,6 +12,7 @@
  */
 
 #include "replication/gp_replication.h"
+#include "replication/walreceiver.h"
 #include "replication/walsender_private.h"
 #include "utils/builtins.h"
 
@@ -26,7 +27,8 @@
  * Check the WalSndCtl to obtain if mirror is up or down, if the wal sender is
  * in streaming, and if synchronous replication is enabled or not.
  */
-void GetMirrorStatus(FtsResponse *response)
+void
+GetMirrorStatus(FtsResponse *response)
 {
 	response->IsMirrorUp = false;
 	response->IsInSync = false;

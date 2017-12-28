@@ -109,16 +109,22 @@ probeRecordResponse(FtsConnectionInfo *ftsInfo, PGresult *result)
 	Assert (isSyncRepEnabled);
 	ftsInfo->result->isSyncRepEnabled = *isSyncRepEnabled;
 
+	int *isRoleMirror = (int *) PQgetvalue(result, 0,
+										   Anum_fts_message_response_is_role_mirror);
+	Assert (isRoleMirror);
+	ftsInfo->result->isRoleMirror = *isRoleMirror;
+
 	int *retryRequested = (int *) PQgetvalue(result, 0,
 											 Anum_fts_message_response_request_retry);
 	Assert (retryRequested);
 	ftsInfo->result->retryRequested = *retryRequested;
 
-	write_log("FTS: segment (content=%d, dbid=%d, role=%c) reported isMirrorUp %d, isInSync %d, isSyncRepEnabled %d and retryRequested %d to the prober.",
+	write_log("FTS: segment (content=%d, dbid=%d, role=%c) reported isMirrorUp %d, isInSync %d, isSyncRepEnabled %d, isRoleMirror %d, and retryRequested %d to the prober.",
 			  ftsInfo->segmentId, ftsInfo->dbId, ftsInfo->role,
 			  ftsInfo->result->isMirrorAlive,
 			  ftsInfo->result->isInSync,
 			  ftsInfo->result->isSyncRepEnabled,
+			  ftsInfo->result->isRoleMirror,
 			  ftsInfo->result->retryRequested);
 }
 

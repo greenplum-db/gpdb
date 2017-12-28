@@ -541,7 +541,7 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 		bool IsInSync = response->result.isInSync;
 
 		/* If are in sync, then both have to be ALIVE */
-		Assert(IsInSync ? (IsPrimaryAlive && IsMirrorAlive) : true);
+		AssertImply(IsInSync, IsPrimaryAlive && IsMirrorAlive);
 
 		bool UpdatePrimary = (IsPrimaryAlive != SEGMENT_IS_ALIVE(primary));
 		bool UpdateMirror = (IsMirrorAlive != SEGMENT_IS_ALIVE(mirror));
@@ -576,6 +576,9 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 		}
 		else if (!IsPrimaryAlive && SEGMENT_IS_IN_SYNC(mirror))
 		{
+			/* Primary must have been recorded as in-sync before the probe. */
+			Assert(SEGMENT_IS_IN_SYNC(primary));
+
 			/* The primary is down; promote the mirror to primary. */
 			response->message = FTS_MSG_PROMOTE;
 			response->segment_db_info = mirror;
@@ -588,8 +591,17 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 			 */
 			newPrimaryRole = GP_SEGMENT_CONFIGURATION_ROLE_MIRROR;
 			newMirrorRole = GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY;
-
-			Assert(SEGMENT_IS_IN_SYNC(primary));
+		}
+		else if (IsPrimaryAlive && response->result.isRoleMirror)
+		{
+			/* A promote message sent previously didn't make it to the mirror. */
+			Assert(!SEGMENT_IS_ALIVE(mirror));
+			Assert(SEGMENT_IS_NOT_INSYNC(mirror));
+			Assert(SEGMENT_IS_NOT_INSYNC(primary));
+			Assert(!response->result.isSyncRepEnabled);
+			Assert(!UpdateMirror);
+			Assert(!UpdatePrimary);
+			response->message = FTS_MSG_PROMOTE;
 		}
 
 		/*
@@ -686,6 +698,7 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		response->result.isInSync = false;
 		response->result.isSyncRepEnabled = false;
 		response->result.retryRequested = false;
+		response->result.isRoleMirror = false;
 		response->message = FTS_MSG_PROBE;
 
 		response->segment_db_info = primary;

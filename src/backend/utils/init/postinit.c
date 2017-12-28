@@ -724,7 +724,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * transaction or create a snapshot.  Neither are they required to
 	 * respond to a FTS message.
 	 */
-	if (!bootstrap && !(am_ftshandler && AreWeAMirror))
+	if (!bootstrap && !(am_ftshandler && am_mirror))
 	{
 		StartTransactionCommand();
 		(void) GetTransactionSnapshot();
@@ -752,7 +752,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 					 errhint("You should immediately run CREATE USER \"%s\" CREATEUSER;.",
 							 username)));
 	}
-	else if (am_ftshandler && AreWeAMirror)
+	else if (am_ftshandler && am_mirror)
 	{
 		/*
 		 * A mirror must receive and act upon FTS messages.  Performing proper
@@ -839,7 +839,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		pgstat_bestart();
 
 		/* close the transaction we started above */
-		if (!(am_ftshandler && AreWeAMirror))
+		if (!(am_ftshandler && am_mirror))
 			CommitTransactionCommand();
 
 		return;

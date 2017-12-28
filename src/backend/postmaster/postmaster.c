@@ -154,7 +154,7 @@ void SeqServerMain(int argc, char *argv[]);
 void FtsProbeMain(int argc, char *argv[]);
 #endif
 
-bool AreWeAMirror = false;
+bool am_mirror = false;
 
 
 /*
@@ -2473,6 +2473,23 @@ initMasks(fd_set *rmask)
 	return maxsock + 1;
 }
 
+/*
+ * XXX check to see if we're a mirror.  And if we are: (1) Assume that we
+ * are running as super user. (2) No data pages need to be accessed by this
+ * backend - no snapshot / transaction needed.
+ *
+ * The recovery.conf file is renamed to recovery.done at the end of xlog
+ * replay.  Normal backends can be created thereafter.
+ */
+bool
+IsRoleMirror(void)
+{
+	struct stat stat_buf;
+	return (stat(RECOVERY_COMMAND_FILE, &stat_buf) == 0);
+}
+
+
+
 
 /*
  * Read a client's startup packet and do something according to it.
@@ -2723,13 +2740,7 @@ retry1:
 		port->guc_options = NIL;
 	}
 
-	/* XXX check to see if we're a mirror */
-	{
-		FILE *fd = AllocateFile("recovery.conf", "r");
-		AreWeAMirror = fd ? true : false;
-		if (fd)
-			FreeFile(fd);
-	}
+	am_mirror = IsRoleMirror();
 
 	/* Check a user name was given. */
 	if (port->user_name == NULL || port->user_name[0] == '\0')
@@ -2796,7 +2807,7 @@ retry1:
 	switch (port->canAcceptConnections)
 	{
 		case CAC_STARTUP:
-			if (am_ftshandler && AreWeAMirror)
+			if (am_ftshandler && am_mirror)
 				break;
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
@@ -6937,7 +6948,7 @@ sigusr1_handler(SIGNAL_ARGS)
 void SignalPromote(void)
 {
 	FILE *fd;
-	if ((fd = fopen("promote", "w")))
+	if ((fd = fopen(PROMOTE_SIGNAL_FILE, "w")))
 	{
 		/* XXX what if it fails? */
 		fclose(fd);

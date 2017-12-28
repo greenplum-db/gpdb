@@ -81,12 +81,6 @@
 
 extern uint32 bootstrap_data_checksum_version;
 
-/* File path names (all relative to $PGDATA) */
-#define RECOVERY_COMMAND_FILE	"recovery.conf"
-#define RECOVERY_COMMAND_DONE	"recovery.done"
-#define PROMOTE_SIGNAL_FILE "promote"
-
-
 /* User-settable parameters */
 int			CheckPointSegments = 3;
 int			XLOGbuffers = 8;
@@ -6446,6 +6440,12 @@ XLogProcessCheckpointRecord(XLogRecord *rec, XLogRecPtr loc)
 	}
 }
 
+DBState
+GetCurrentDBState(void)
+{
+	Assert(ControlFile);
+	return ControlFile->state;
+}
 
 static void
 UpdateCatalogForStandbyPromotion(void)

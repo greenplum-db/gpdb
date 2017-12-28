@@ -56,6 +56,14 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	pq_sendint(&buf, -1, 4);		/* typmod */
 	pq_sendint(&buf, 0, 2);		/* format code */
 
+	pq_sendstring(&buf, "is_role_mirror");
+	pq_sendint(&buf, 0, 4);		/* table oid */
+	pq_sendint(&buf, Anum_fts_message_response_is_role_mirror, 2);		/* attnum */
+	pq_sendint(&buf, BOOLOID, 4);		/* type oid */
+	pq_sendint(&buf, 1, 2);	/* typlen */
+	pq_sendint(&buf, -1, 4);		/* typmod */
+	pq_sendint(&buf, 0, 2);		/* format code */
+
 	pq_sendstring(&buf, "request_retry");
 	pq_sendint(&buf, 0, 4);		/* table oid */
 	pq_sendint(&buf, Anum_fts_message_response_request_retry, 2);		/* attnum */
@@ -80,6 +88,9 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	pq_sendint(&buf, response->IsSyncRepEnabled, 1);
 
 	pq_sendint(&buf, 1, 4); /* col4 len */
+	pq_sendint(&buf, response->IsRoleMirror, 1);
+
+	pq_sendint(&buf, 1, 4); /* col5 len */
 	pq_sendint(&buf, response->RequestRetry, 1);
 
 	pq_endmessage(&buf);
@@ -90,7 +101,12 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 static void
 HandleFtsWalRepProbe(void)
 {
-	FtsResponse response;
+	FtsResponse response = {
+		false, /* IsMirrorUp */
+		false, /* IsInSync */
+		false, /* IsSyncRepEnabled */
+		false  /* IsRoleMirror */
+	};
 
 	GetMirrorStatus(&response);
 
@@ -104,6 +120,13 @@ HandleFtsWalRepProbe(void)
 		/* Syncrep is enabled now, so respond accordingly. */
 		response.IsSyncRepEnabled = true;
 	}
+	else if (!response.IsMirrorUp && IsRoleMirror())
+	{
+		Assert(!response.IsInSync);
+		Assert(!response.IsSyncRepEnabled);
+		response.IsRoleMirror = true;
+		elog(LOG, "received probe message while acting as mirror");
+	}
 
 	SendFtsResponse(&response, FTS_MSG_PROBE);
 }
@@ -111,13 +134,17 @@ HandleFtsWalRepProbe(void)
 static void
 HandleFtsWalRepSyncRepOff(void)
 {
-	FtsResponse response;
+	FtsResponse response = {
+		false, /* IsMirrorUp */
+		false, /* IsInSync */
+		false, /* IsSyncRepEnabled */
+		false  /* IsRoleMirror */
+	};
 
 	ereport(LOG,
 			(errmsg("turning off synchronous wal replication due to FTS request")));
 	UnsetSyncStandbysDefined();
 	GetMirrorStatus(&response);
-
 	SendFtsResponse(&response, FTS_MSG_SYNCREP_OFF);
 }
 
@@ -127,15 +154,29 @@ HandleFtsWalRepPromote(void)
 	FtsResponse response = {
 		false, /* IsMirrorUp */
 		false, /* IsInSync */
-		false  /* IsSyncRepEnabled */
+		false, /* IsSyncRepEnabled */
+		false  /* IsRoleMirror */
 	};
 
 	ereport(LOG,
 			(errmsg("promoting mirror to primary due to FTS request")));
+	Assert(IsRoleMirror());
 
 	/* Unset synchronous replication and promote. */
 	UnsetSyncStandbysDefined();
-	SignalPromote();
+	/*
+	 * FTS sends promote message to a mirror.  The mirror may be undergoing
+	 * promotion.  Promote messages should therefore be handled in an
+	 * idempotent way.
+	 */
+	DBState state = GetCurrentDBState();
+	if (state == DB_IN_STANDBY_MODE)
+		SignalPromote();
+	else
+	{
+		Assert(state == DB_IN_STANDBY_PROMOTED);
+		elog(LOG, "ignoring promote request as wal receiver is not running");
+	}
 
 	SendFtsResponse(&response, FTS_MSG_PROMOTE);
 }
