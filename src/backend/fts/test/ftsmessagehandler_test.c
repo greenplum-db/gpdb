@@ -18,9 +18,9 @@ void AssertFailed()
 #include "../ftsmessagehandler.c"
 
 static void
-mockSendFtsResponse(const char *messagetype)
+expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expectedResponse)
 {
-	expect_value(BeginCommand, commandTag, messagetype);
+	expect_value(BeginCommand, commandTag, expectedMessageType);
 	expect_value(BeginCommand, dest, DestRemote);
 	will_be_called(BeginCommand);
 
@@ -43,28 +43,48 @@ mockSendFtsResponse(const char *messagetype)
 	expect_any(pq_endmessage, buf);
 	will_be_called(pq_endmessage);
 
+	int number_of_columns = Natts_fts_message_response;
+	int calls_per_column_for_schema = 6;
+	int calls_per_column_for_data = 2;
+	int total_number_of_calls_of_pq_sendint = number_of_columns *
+	  (calls_per_column_for_schema + calls_per_column_for_data) +
+	  1 /*fixed for schema*/ + 1 /*fixed for data*/;
+	int total_number_of_calls_of_pq_sendint_for_none_data = total_number_of_calls_of_pq_sendint - number_of_columns;
+	int total_number_of_calls_of_pq_sendstring = number_of_columns;
+	
 	expect_any_count(pq_sendint, buf, -1);
-	expect_any_count(pq_sendint, i, -1);
+	expect_any_count(pq_sendint, i, total_number_of_calls_of_pq_sendint_for_none_data);
+  	expect_value(pq_sendint, i, expectedResponse->IsMirrorUp);
+	expect_value(pq_sendint, i, expectedResponse->IsInSync);
+	expect_value(pq_sendint, i, expectedResponse->IsSyncRepEnabled);
+	expect_value(pq_sendint, i, expectedResponse->IsRoleMirror);
 	expect_any_count(pq_sendint, b, -1);
-	will_be_called_count(pq_sendint, -1);
+	will_be_called_count(pq_sendint, total_number_of_calls_of_pq_sendint);
 
 	expect_any_count(pq_sendstring, buf, -1);
 	expect_any_count(pq_sendstring, str, -1);
-	will_be_called_count(pq_sendstring, -1);
+	will_be_called_count(pq_sendstring, total_number_of_calls_of_pq_sendstring);
 
-	expect_value(EndCommand, commandTag, messagetype);
+	expect_value(EndCommand, commandTag, expectedMessageType);
 	expect_value(EndCommand, dest, DestRemote);
 	will_be_called(EndCommand);
 
 	will_be_called(pq_flush);
 }
+
 void
-test_HandleFtsWalRepProbe(void **state)
+mockIsRoleMirror(bool expectedRoleMirror)
+{
+}
+
+void
+test_HandleFtsWalRepProbePrimary(void **state)
 {
 	FtsResponse mockresponse;
 	mockresponse.IsMirrorUp = true;
 	mockresponse.IsInSync = true;
 	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror = false;
 
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
@@ -72,7 +92,11 @@ test_HandleFtsWalRepProbe(void **state)
 
 	will_be_called(SetSyncStandbysDefined);
 
-	mockSendFtsResponse(FTS_MSG_PROBE);
+	mockIsRoleMirror(mockresponse.IsRoleMirror);
+
+	/* SyncRep should be enabled as soon as we found mirror is up. */
+	mockresponse.IsSyncRepEnabled = true;
+	expectSendFtsResponse(FTS_MSG_PROBE, &mockresponse);
 
 	HandleFtsWalRepProbe();
 }
@@ -83,7 +107,8 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 	FtsResponse mockresponse;
 	mockresponse.IsMirrorUp = false;
 	mockresponse.IsInSync = false;
-	mockresponse.IsSyncRepEnabled = true;
+	/* unblock primary if FTS requests it */
+	mockresponse.IsSyncRepEnabled = false;
 
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
@@ -91,9 +116,23 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 
 	will_be_called(UnsetSyncStandbysDefined);
 
-	mockSendFtsResponse(FTS_MSG_SYNCREP_OFF);
-
+	/* since this function doesn't have any logic, the test just verified the message type */
+	expectSendFtsResponse(FTS_MSG_SYNCREP_OFF, &mockresponse);
+	
 	HandleFtsWalRepSyncRepOff();
+}
+
+void
+test_HandleFtsWalRepProbeMirror(void **state)
+{
+  FtsResponse mockresponse;
+  mockresponse.IsMirrorUp = false;
+  mockresponse.IsInSync = false;
+  mockresponse.IsSyncRepEnabled = false;
+  
+  mockresponse.IsRoleMirror = true;
+
+  
 }
 
 int
@@ -102,8 +141,9 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test_HandleFtsWalRepProbe),
-		unit_test(test_HandleFtsWalRepSyncRepOff)
+		unit_test(test_HandleFtsWalRepProbePrimary),
+		unit_test(test_HandleFtsWalRepSyncRepOff),
+		unit_test(test_HandleFtsWalRepProbeMirror)
 	};
 	return run_tests(tests);
 }
