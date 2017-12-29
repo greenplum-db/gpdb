@@ -713,6 +713,7 @@ with_apu_config
 with_apr_config
 with_libcurl
 with_rt
+with_zstd
 with_zlib
 with_system_tzdata
 with_libxslt
@@ -887,6 +888,7 @@ with_libxml
 with_libxslt
 with_system_tzdata
 with_zlib
+with_zstd
 with_rt
 with_libcurl
 with_apr_config
@@ -1585,6 +1587,7 @@ STRING
   --with-libxslt          use XSLT support when building contrib/xml2
   --with-system-tzdata=DIR  use system time zone data in DIR
   --without-zlib          do not use Zlib
+  --with-zstd             build with Zstandard support (requires zstd library)
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
   --with-apr-config=PATH  path to apr-1-config utility
@@ -7939,6 +7942,36 @@ fi
 
 
 #
+# zstd
+#
+
+pgac_args="$pgac_args with_zstd"
+
+
+# Check whether --with-zstd was given.
+if test "${with_zstd+set}" = set; then :
+  withval=$with_zstd;
+  case $withval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --with-zstd option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  with_zstd=no
+
+fi
+
+
+
+
+#
 # Realtime library
 #
 
@@ -10305,6 +10338,56 @@ fi
 
 fi
 
+if test "$with_zstd" = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ZSTD_compressCCtx in -lzstd" >&5
+$as_echo_n "checking for ZSTD_compressCCtx in -lzstd... " >&6; }
+if ${ac_cv_lib_zstd_ZSTD_compressCCtx+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lzstd  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ZSTD_compressCCtx ();
+int
+main ()
+{
+return ZSTD_compressCCtx ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_zstd_ZSTD_compressCCtx=yes
+else
+  ac_cv_lib_zstd_ZSTD_compressCCtx=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_zstd_ZSTD_compressCCtx" >&5
+$as_echo "$ac_cv_lib_zstd_ZSTD_compressCCtx" >&6; }
+if test "x$ac_cv_lib_zstd_ZSTD_compressCCtx" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBZSTD 1
+_ACEOF
+
+  LIBS="-lzstd $LIBS"
+
+else
+  as_fn_error $? "zstd library not found." "$LINENO" 5
+fi
+
+fi
+
 if test "$enable_spinlocks" = yes; then
 
 $as_echo "#define HAVE_SPINLOCKS 1" >>confdefs.h
@@ -12637,6 +12720,18 @@ if test "x$ac_cv_header_bzlib_h" = xyes; then :
 
 else
   as_fn_error $? "header file <bzlib.h> is required for bzip2 support" "$LINENO" 5
+fi
+
+
+fi
+
+# Check for zstd.h
+if test "$with_zstd" = yes; then
+  ac_fn_c_check_header_mongrel "$LINENO" "zstd.h" "ac_cv_header_zstd_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <zstd.h> is required for zstd support" "$LINENO" 5
 fi
 
 

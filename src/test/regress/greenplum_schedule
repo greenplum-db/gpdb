@@ -67,7 +67,7 @@ test: sreh
 # ERROR:  parameter "gp_interconnect_type" cannot be set after connection start
 
 ignore: gp_portal_error
-test: external_table external_table_create_privs column_compression eagerfree gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
+test: external_table external_table_create_privs column_compression compression_zstd compression_extra_zstd eagerfree gpdtm_plpgsql alter_table_aocs alter_table_aocs2 alter_distribution_policy ic aoco_privileges aocs
 test: alter_table_set alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
 ignore: icudp_full
 

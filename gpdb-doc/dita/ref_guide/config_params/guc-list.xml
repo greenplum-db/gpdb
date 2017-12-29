@@ -2942,11 +2942,12 @@
                   <codeph>FALSE</codeph><p><cmdname>BLOCKSIZE</cmdname>= integer between 8192 and
                   2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
-                </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>ZLIB</codeph> |
-                    <codeph>QUICKLZ</codeph><sup>2</sup> |
-                    <codeph>RLE</codeph>_<codeph>TYPE</codeph> | <codeph>NONE</codeph>
-                </p><p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and
-                    9</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
+                </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>QUICKLZ</codeph><sup>2</sup> |
+                    <codeph>RLE_TYPE</codeph> | <codeph>ZLIB</codeph> | <codeph>ZSTD</codeph> |
+					<codeph>NONE</codeph>
+                </p>
+				<p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and 19</p>
+				<p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
                     <codeph>COLUMN</codeph>
                 </p></entry>
               <entry colname="col2"><cmdname>APPENDONLY</cmdname>=<codeph>FALSE</codeph>

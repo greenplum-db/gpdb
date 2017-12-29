@@ -1025,6 +1025,13 @@ PGAC_ARG_BOOL(with, zlib, yes,
 AC_SUBST(with_zlib)
 
 #
+# zstd
+#
+PGAC_ARG_BOOL(with, zstd, no,
+              [build with Zstandard support (requires zstd library)])
+AC_SUBST(with_zstd)
+
+#
 # Realtime library
 #
 PGAC_ARG_BOOL(with, rt, yes,
@@ -1212,6 +1219,11 @@ failure.  It is possible the compiler isn't looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
 fi
 
+if test "$with_zstd" = yes; then
+  AC_CHECK_LIB(zstd, ZSTD_compressCCtx, [],
+               [AC_MSG_ERROR([zstd library not found.])])
+fi
+
 if test "$enable_spinlocks" = yes; then
   AC_DEFINE(HAVE_SPINLOCKS, 1, [Define to 1 if you have spinlocks.])
 else
@@ -1366,6 +1378,11 @@ if test "$PORTNAME" = "win32"; then
   AC_MSG_WARN([*** bzip2 not required for windows partial build --- disabling.])
 else
   AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
+fi
+
+# Check for zstd.h
+if test "$with_zstd" = yes; then
+  AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
 fi
 
 # On BSD, cpp test for net/if.h will fail unless sys/socket.h

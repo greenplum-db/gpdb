@@ -508,7 +508,7 @@ create table co7(a int, b float,
 ERROR:  compresslevel=7 is out of range for rle_type (should be in the range 1 to 4)
 -- negative tests - session level set
 set gp_default_storage_options="compresstype=zlib,compresslevel=11";
-ERROR:  compresslevel=11 is out of range (should be between 0 and 9)
+ERROR:  compresslevel=11 is out of range for zlib (should be in the range 1 to 9)
 set gp_default_storage_options="compresslevel=5,compresstype=RLE_TYPE";
 ERROR:  compresslevel=5 is out of range for rle_type (should be in the range 1 to 4)
 set gp_default_storage_options="compresslevel=1,compresstype=rle";

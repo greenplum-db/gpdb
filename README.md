@@ -110,9 +110,9 @@ building, see the README at the following repositories:
     2. conan remote add conan-gpdb https://api.bintray.com/conan/greenplum-db/gpdb-oss
     3. conan install --build
        * This command will fetch the orca and xerces artifacts from bintray repository, build and install them.
-       * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory. 
+       * The header and library files will be copied to the location specified by imports section of conanfile.txt in depends directory.
        In case, the files should be copied elsewhere, please change the location.
-    
+
 ### Build the database
 
 ```
@@ -200,6 +200,7 @@ make installcheck-world
 ## Alternative Configurations
 
 ### Building GPDB without GPORCA
+
 Currently, GPDB is built with ORCA by default so latest ORCA libraries and headers need
 to be available in the environment. [Build and Install](#buildOrca) the latest ORCA.
 
@@ -213,11 +214,22 @@ make distclean
 ```
 
 ### Building GPDB with PXF
+
 PXF is an extension framework for GPDB to enable fast access to external hadoop datasets.
 Refer to [PXF extension](https://github.com/greenplum-db/gpdb/tree/master/gpAux/extensions/pxf) for more information.
-Currently, GPDPB is built with PXF by default (--enable-pxf is on).
+Currently, GPDB is built with PXF by default (`--enable-pxf` is on).
 In order to build GPDB without pxf, simply invoke `./configure` with additional option `--disable-pxf`.
 PXF requires curl, so `--enable-pxf` is not compatible with the `--without-libcurl` option.
+
+### Building GPDB with Zstandard
+
+[Zstandard](https://github.com/facebook/zstd) is a fast real-time compression algorithm
+which offers a wide range of compression / speed trade-off. Zstandard is intended to become
+a default compression for most applications in GPDB. Currently, it is available as a
+compression option for append-only and append-only column-oriented tables.
+
+To build GPDB with Zstandard support, install packages `libzstd` and `libzstd-devel` and
+invoke `./configure` with an additional option `--with-zstd`.
 
 ### Building GPDB with code generation enabled
 
@@ -377,7 +389,7 @@ future releases.
 
 Greenplum is developed on GitHub, and anybody wishing to contribute to it will
 have to [have a GitHub account](https://github.com/signup/free) and be familiar
-with [Git tools and workflow](https://wiki.postgresql.org/wiki/Working_with_Git). 
+with [Git tools and workflow](https://wiki.postgresql.org/wiki/Working_with_Git).
 It is also recommend that you follow the [developer's mailing list](http://greenplum.org/#contribute)
 since some of the contributions may generate more detailed discussions there.
 
@@ -397,10 +409,10 @@ easier to submit one instead of claiming an "obvious fix" exception.
 
 If the contribution you're submitting is original work, you can assume that Pivotal
 will release it as part of an overall Greenplum release available to the downstream
-consumers under the Apache License, Version 2.0. However, in addition to that, Pivotal 
+consumers under the Apache License, Version 2.0. However, in addition to that, Pivotal
 may also decide to release it under a different license (such as [PostgreSQL License](https://www.postgresql.org/about/licence/) to the upstream consumers that require it. A typical example here would be Pivotal
 upstreaming your contribution back to PostgreSQL community (which can be done either
-verbatim or your contribution being upstreamed as part of the larger changeset). 
+verbatim or your contribution being upstreamed as part of the larger changeset).
 
 If the contribution you're submitting is NOT original work you have to indicate the name
 of the license and also make sure that it is similar in terms to the Apache License 2.0.
@@ -423,7 +435,7 @@ code. Even when your proposal gets validated by the community, we still recommen
 doing the actual work as a series of small, self-contained commits. This makes
 the reviewer's job much easier and increases the timeliness of feedback.
 
-When it comes to C and C++ parts of Greenplum, we try to follow 
+When it comes to C and C++ parts of Greenplum, we try to follow
 [PostgreSQL Coding Conventions](https://www.postgresql.org/docs/devel/static/source.html).
 In addition to that we require that:
    * All Python code passes [Pylint](https://www.pylint.org/)
@@ -433,11 +445,11 @@ We recommend using ```git diff --color``` when reviewing your changes so that yo
 don't have any spurious whitespace issues in the code that you submit.
 
 All new functionality that is contributed to Greenplum should be covered by regression
-tests that are contributed alongside it. If you are uncertain on how to test or document 
-your work, please raise the question on the gpdb-dev mailing list and the developer 
+tests that are contributed alongside it. If you are uncertain on how to test or document
+your work, please raise the question on the gpdb-dev mailing list and the developer
 community will do its best to help you.
 
-At the very minimum you should always be running 
+At the very minimum you should always be running
 ```make installcheck-world```
 to make sure that you're not breaking anything.
 
@@ -452,15 +464,15 @@ you can be sure whether your changes may need to be forward-ported.
 
 ### Submission timing
 
-To improve the odds of the right discussion of your patch or idea happening, pay attention 
-to what the community work cycle is. For example, if you send in a brand new idea in the 
+To improve the odds of the right discussion of your patch or idea happening, pay attention
+to what the community work cycle is. For example, if you send in a brand new idea in the
 beta phase of a release, we may defer review or target its inclusion for a later version.
 Feel free to ask on the mailing list to learn more about the Greenplum release policy and timing.
 
 ### Patch submission
 
 Once you are ready to share your work with the Greenplum core team and the rest of
-the Greenplum community, you should push all the commits to a branch in your own 
+the Greenplum community, you should push all the commits to a branch in your own
 repository forked from the official Greenplum and [send us a pull request](https://help.github.com/articles/about-pull-requests/).
 
 For now, we require all pull requests to be submitted against the main master
@@ -487,13 +499,13 @@ to a pull request in your email.
 
 ### Patch review
 
-A submitted pull request with passing validation checks is assumed to be available 
-for peer review. Peer review is the process that ensures that contributions to Greenplum 
+A submitted pull request with passing validation checks is assumed to be available
+for peer review. Peer review is the process that ensures that contributions to Greenplum
 are of high quality and align well with the road map and community expectations. Every
 member of the Greenplum community is encouraged to review pull requests and provide
 feedback. Since you don't have to be a core team member to be able to do that, we
 recommend following a stream of pull reviews to anybody who's interested in becoming
-a long-term contributor to Greenplum. As [Linus would say](https://en.wikipedia.org/wiki/Linus's_Law) 
+a long-term contributor to Greenplum. As [Linus would say](https://en.wikipedia.org/wiki/Linus's_Law)
 "given enough eyeballs, all bugs are shallow".
 
 One outcome of the peer review could be a consensus that you need to modify your
@@ -502,11 +514,11 @@ a branch from which a pull request was sent. Those additional commits will be th
 visible to all of the reviewers.
 
 A peer review converges when it receives at least one +1 and no -1s votes from
-the participants. At that point you should expect one of the core team 
+the participants. At that point you should expect one of the core team
 members to pull your changes into the project.
 
-Greenplum prides itself on being a collaborative, consensus-driven environment. 
-We do not believe in vetoes and any -1 vote casted as part of the peer review 
+Greenplum prides itself on being a collaborative, consensus-driven environment.
+We do not believe in vetoes and any -1 vote casted as part of the peer review
 has to have a detailed technical explanation of what's wrong with the change.
 Should a strong disagreement arise it may be advisable to take the matter onto
 the mailing list since it allows for a more natural flow of the conversation.
