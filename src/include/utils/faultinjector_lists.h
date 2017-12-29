@@ -161,6 +161,8 @@ FI_IDENT(QEGotSnapshotAndInterconnect, "qe_got_snapshot_and_interconnect")
 FI_IDENT(FsyncCounter, "fsync_counter")
 /* inject fault to count buffers fsync'ed by checkpoint process */
 FI_IDENT(BgBufferSyncDefaultLogic, "bg_buffer_sync_default_logic")
+/* inject fault in FinishPreparedTransaction() right at start of function */
+FI_IDENT(FinishPreparedStartOfFunction, "finish_prepared_start_of_function")
 /* inject fault in FinishPreparedTransaction() after recording the commit prepared record */
 FI_IDENT(FinishPreparedAfterRecordCommitPrepared, "finish_prepared_after_record_commit_prepared")
 /* inject fault to report ERROR just after creating Gang */
