@@ -120,7 +120,7 @@ HandleFtsWalRepProbe(void)
 		/* Syncrep is enabled now, so respond accordingly. */
 		response.IsSyncRepEnabled = true;
 	}
-	else if (!response.IsMirrorUp && IsRoleMirror())
+	else if (!response.IsMirrorUp && am_mirror)
 	{
 		Assert(!response.IsInSync);
 		Assert(!response.IsSyncRepEnabled);
@@ -160,10 +160,8 @@ HandleFtsWalRepPromote(void)
 
 	ereport(LOG,
 			(errmsg("promoting mirror to primary due to FTS request")));
-	Assert(IsRoleMirror());
+	Assert(am_mirror);
 
-	/* Unset synchronous replication and promote. */
-	UnsetSyncStandbysDefined();
 	/*
 	 * FTS sends promote message to a mirror.  The mirror may be undergoing
 	 * promotion.  Promote messages should therefore be handled in an

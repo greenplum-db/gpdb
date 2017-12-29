@@ -2688,8 +2688,13 @@ retry1:
 			{
 				if (strcmp(valptr, GPCONN_TYPE_FTS) == 0)
 				{
+					if (GpIdentity.segindex == MASTER_CONTENT_ID)
+						ereport(FATAL,
+								(errcode(ERRCODE_PROTOCOL_VIOLATION),
+								 errmsg("cannot handle FTS connection on master")));
 					elog(LOG, "handling FTS connection");
 					am_ftshandler = true;
+					am_mirror = IsRoleMirror();
 				}
 				else
 					ereport(FATAL,
@@ -2739,8 +2744,6 @@ retry1:
 			port->cmdline_options[sizeof(packet->options)] = '\0';
 		port->guc_options = NIL;
 	}
-
-	am_mirror = IsRoleMirror();
 
 	/* Check a user name was given. */
 	if (port->user_name == NULL || port->user_name[0] == '\0')
