@@ -19,10 +19,8 @@
       <li><xref href="#topic_ydt_rtc_rbb" format="dita"/></li>
       <li><xref href="#topic_kds_plk_rbb" format="dita"/></li>
     </ul>
-    <note type="warning">PL/Container is an experimental feature and is not intended for use in a
-      production environment. Experimental features are subject to change without notice in future
-      releases. <p>PL/Container is compatible with Greenplum Database 5.2.0. PL/Container has not
-        been tested for compatibility with Greenplum Database 5.1.0 or 5.0.0.</p>
+    <note type="warning">PL/Container is compatible with Greenplum Database 5.2.0 and later.
+      PL/Container has not been tested for compatibility with Greenplum Database 5.1.0 or 5.0.0.
     </note>
   </body>
   <topic id="topic2" xml:lang="en">
@@ -84,9 +82,9 @@
       </ul>
       <p>The Docker container tag represents the PL/Container extension release version (for
         example, 1.0.0). For example, the full container name for <codeph>plc_python_shared</codeph>
-        is similar to <codeph>pivotaldata/plc_python_shared:1.0.0, version 1.0.0</codeph>. This is
-        the name that is referred to in the default PL/Container configuration. Also, You can also
-        create custom Docker images and add the image to the PL/Container configuration. </p>
+        is similar to <codeph>pivotaldata/plc_python_shared:1.0.0</codeph>. This is the name that is
+        referred to in the default PL/Container configuration. Also, You can create custom Docker
+        images, install the image and add the image to the PL/Container configuration. </p>
     </body>
   </topic>
   <topic id="topic_i31_3tr_dw">
@@ -136,6 +134,7 @@
     </body>
     <topic id="topic_ifk_2tr_dw" otherprops="pivotal">
       <title>Installing the PL/Container Extension Package</title>
+      <!--Pivotal conent-->
       <body>
         <p>Install the PL/Container extension with the Greenplum Database <codeph>gppkg</codeph>
           utility.</p>
@@ -151,18 +150,16 @@
           <li>Restart Greenplum Database.<codeblock>gpstop -ra</codeblock></li>
           <li>Enable PL/Container for specific databases by
               running<codeblock>psql -d <varname>your_database</varname> -f $GPHOME/share/postgresql/plcontainer/plcontainer_install.sql</codeblock><p>The
-              SQL script registers the language <codeph>plcontainer</codeph> in the database creates
-              PL/Container specific UDFs.</p></li>
-          <li>Initialize PL/Container configuration on the Greenplum Database hosts by running the
-              <codeph>plcontainer configure</codeph>
-              command.<codeblock>plcontainer configure --reset</codeblock><p>The
-                <codeph>plcontainer</codeph> utility is included with the PL/Container
-              extension.</p></li>
+              SQL script registers the language <codeph>plcontainer</codeph> in the database and
+              creates PL/Container specific UDFs.</p></li>
         </ol>
+        <p>After installing PL/Container, you can manage Docker images and manage the PL/Container
+          configuration with the Greenplum Database <codeph>plcontainer</codeph> utility.</p>
       </body>
     </topic>
     <topic id="topic_i2t_v2n_sbb" otherprops="oss-only">
       <title>Building and Installing the PL/Container Extension</title>
+      <!--oss only conent-->
       <body>
         <p>The PL/Container extension is available as an open source module. For information about
           the building and installing the module as part of Greenplum Database, see the README file
@@ -175,16 +172,16 @@
     <title>Installing PL/Container Language Docker Images</title>
     <body>
       <p>The PL/Container extension includes the <codeph>plcontainer</codeph> utility that installs
-        Docker images in the host Docker repository and adds the installed image to the PL/Container
-        configuration. The utility adds the Docker image to all Greenplum Database hosts and updates
-        configuration information on all the hosts. For information about
-          <codeph>plcontainer</codeph>, see <xref href="#topic_rw3_52s_dw" format="dita"/>.</p>
+        Docker images on the Greenplum Database hosts and adds configuration information to the
+        PL/Container configuration file. The configuration information allows PL/Container to create
+        Docker containers with the Docker images. For information about
+        <codeph>plcontainer</codeph>, see <xref href="#topic_rw3_52s_dw" format="dita"/>.</p>
       <!--Pivotal conent-->
       <p otherprops="pivotal">Download the <codeph>tar.gz</codeph> file that contains the Docker
         images from <xref href="https://network.pivotal.io/products/pivotal-gpdb" scope="external"
           format="html" class="- topic/xref ">Pivotal Network</xref>. <ul id="ul_vsj_pxb_tbb">
-          <li><codeph>plcontainer-python-images-1.0.0-beta1.tar.gz</codeph></li>
-          <li><codeph>plcontainer-r-images-1.0.0-beta1.tar.gz</codeph></li>
+          <li><codeph>plcontainer-python-images-1.0.0.tar.gz</codeph></li>
+          <li><codeph>plcontainer-r-images-1.0.0.tar.gz</codeph></li>
         </ul></p>
       <!--oss only conent-->
       <p otherprops="oss-only">The PL/Container open source module contains dockerfiles to build
@@ -192,33 +189,56 @@
         PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub
         repository at <xref href="https://github.com/greenplum-db/plcontainer" format="html"
           scope="external">https://github.com/greenplum-db/plcontainer</xref>.</p>
-      <p>Install the Docker images on the Greenplum Database hosts. These examples use the
-          <codeph>plcontainer</codeph> utility to install Docker images for Python and R and add the
-        images to the PL/Container configuration. The utility installs the images and configures all
-        the Greenplum Database hosts. The examples assume the Docker images are in
-          <codeph>/home/gpadmin</codeph>.</p>
-      <p>This example runs <codeph>plcontainer</codeph> to install the Docker image for PL/Python
-        and add the image to the PL/Container configuration.
-        <codeblock>plcontainer install -n plc_python_shared -i /home/gpadmin/plcontainer-python-images-0.9.3.tar.gz \
-  -c  pivotaldata/plc_python_shared:1.0.0 -l python</codeblock></p>
-      <p>This example runs <codeph>plcontainer</codeph> to install the Docker image for PL/R and add
-        the image to the PL/Container configuration.</p>
-      <codeblock>plcontainer install -n plc_r -i /home/gpadmin/plcontainer-r-images-0.9.3.tar.gz \
-  -c pivotaldata/plc_r_shared:1.0.0 -l r</codeblock>
-      <p>You can view the host system Docker repository with the <codeph>docker images</codeph>
-        command. The image name specified with the <codeph>-c</codeph> option appears in the list of
-        Docker images.</p>
-      <p>You can view the updated the PL/Container configuration file with the <codeph>plcontainer
-          configure -s</codeph> command. A container element in the configuration XML file with the
-        name specified with the <codeph>-n</codeph> option appears in the file. </p>
+      <p>Install the Docker images on the Greenplum Database hosts. This example uses the
+          <codeph>plcontainer</codeph> utility to install a Docker image for Python and to update
+        the PL/Container configuration. The example assumes the Docker image to be installed is in a
+        file in <codeph>/home/gpadmin</codeph>.</p>
+      <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python from a
+        Docker image file.
+        <codeblock>plcontainer image-add -i /home/gpadmin/plcontainer-python-images-1.0.0-beta1.tar.gz</codeblock></p>
+      <p>The utility displays progress information as it installs the Docker image on the Greenplum
+        Database hosts. </p>
+      <p>Use the <codeph>plcontainer image-show</codeph> command to display the installed Docker
+        images on the local host.</p>
+      <p>This command adds information to the PL/Container configuration file so that PL/Container
+        can access the Docker image to create a Docker
+        container.<codeblock>plcontainer configure-add -r plc_py -i pivotaldata/plcontainer:devel -l python</codeblock></p>
+      <p>The utility displays progress information as it updates the PL/Container configuration file
+        on the Greenplum Database instances.</p>
+      <p>You can view the PL/Container configuration information with the <codeph>plcontainer
+          runtime-show -r plc_py</codeph> command. You can view the PL/Container configuration XML
+        file with the <codeph>plcontainer runtime-edit</codeph> command. </p>
     </body>
   </topic>
   <topic id="topic6" xml:lang="en">
     <title id="pz213704">Uninstalling PL/Container</title>
     <body>
+      <p>To uninstall PL/Container, remove Docker containers and images, and then remove the
+        PL/Container support from Greenplum Database.</p>
       <p>When you remove support for the PL/Container extension, the <codeph>plcontainer</codeph>
         user-defined functions that you created in the database will no longer work. </p>
     </body>
+    <topic id="topic_rnb_4s5_lw">
+      <title>Uninstall Docker Containers and Images</title>
+      <body>
+        <p>On the Greenplum Database hosts, uninstall the Docker containers and images that are no
+          longer required. </p>
+        <p>The <codeph>plcontainer image-list</codeph> command lists the Docker images that are
+          installed on the local Greenplum Database host. </p>
+        <p>The <codeph>plcontainer image-delete</codeph> command deletes Docker images from all
+          Greenplum Database hosts. </p>
+        <p>Some Docker containers might exist on a host if the containers were not managed by
+          PL/Container. You might need to remove the containers with Docker commands. These
+            <codeph>docker</codeph> commands manage Docker containers and images on a local host.<ul
+            id="ul_emd_ts5_lw">
+            <li>The command <codeph>docker ps -a</codeph> lists all containers on a host. The
+              command <codeph>docker stop</codeph> stops a container.</li>
+            <li>The command <codeph>docker images</codeph> lists the images on a host.</li>
+            <li>The command <codeph>docker rmi</codeph> removes images.</li>
+            <li>The command <codeph>docker rm</codeph> removes containers. </li>
+          </ul></p>
+      </body>
+    </topic>
     <topic xml:lang="en" id="topic_qnb_3cj_kw">
       <title>Remove PL/Container Support for a Database</title>
       <body>
@@ -249,19 +269,6 @@
         </ol>
       </body>
     </topic>
-    <topic id="topic_rnb_4s5_lw">
-      <title>Uninstall Docker Containers and Images</title>
-      <body>
-        <p>On the Greenplum Database hosts, uninstall the Docker containers and images that are no
-          longer required.<ul id="ul_emd_ts5_lw">
-            <li>The command <codeph>docker ps -a</codeph> lists the containers on a host. The
-              command <codeph>docker stop</codeph> stops a container.</li>
-            <li>The command <codeph>docker images</codeph> lists the images on a host.</li>
-            <li>The command <codeph>docker rmi</codeph> removes images.</li>
-            <li>The command <codeph>docker rm</codeph> removes containers. </li>
-          </ul></p>
-      </body>
-    </topic>
   </topic>
   <topic id="topic_rh3_p3q_dw">
     <title>Using PL/Container Languages</title>
@@ -271,16 +278,15 @@
         images. To create a UDF that uses PL/Container, the UDF must have the these items.</p>
       <ul id="ul_z2m_1kj_kw">
         <li>The first line of the UDF must be <codeph># container:
-          <varname>name</varname></codeph></li>
+          <varname>ID</varname></codeph></li>
         <li>The <codeph>LANGUAGE</codeph> attribute must be <codeph>plcontainer</codeph></li>
       </ul>
-      <p>The <varname>name</varname> is the name that PL/Container uses to identify the Docker
-        container that runs the UDF. in the XML configuration file
-          <codeph>plcontainer_configuration.xml</codeph>, there should be a
-          <codeph>container</codeph> XML element with a corresponding <codeph>name</codeph> XML
-        element that specifies the detail Docker container information. See <xref
-          href="#topic_sk1_gdq_dw" format="dita"/> for information about how PL/Container maps the
-          <varname>name</varname> to a Docker container.</p>
+      <p>The <varname>ID</varname> is the name that PL/Container uses to identify the Docker image
+        that is used to start a Docker container that runs the UDF. In the XML configuration file
+          <codeph>plcontainer_configuration.xml</codeph>, there is a <codeph>runtime</codeph> XML
+        element that contains a corresponding <codeph>id</codeph> XML element that specifies the
+        Docker container startup information. See <xref href="#topic_sk1_gdq_dw" format="dita"/> for
+        information about how PL/Container maps the <varname>ID</varname> to a Docker image.</p>
       <p>The PL/Container configuration file is read only on the first invocation of a PL/Container
         function in each Greenplum Database session that runs PL/Container functions. You can force
         the configuration file to be re-read by performing a <codeph>SELECT</codeph> command on the
@@ -288,13 +294,52 @@
           <codeph>SELECT</codeph> command forces a the configuration file to be read.</p>
       <codeblock>select * from plcontainer_refresh_config;</codeblock>
       <p>Running the command executes a PL/Container function that updates the configuration on the
-        master and segment instances.</p>
+        master and segment instances and returns the status of the
+        refresh.<codeblock> gp_segment_id | plcontainer_refresh_local_config
+---------------+----------------------------------
+             1 | ok
+             0 | ok
+            -1 | ok
+(3 rows)</codeblock></p>
       <p>Also, you can show all the configurations in the session by performing a
           <codeph>SELECT</codeph> command on the view <codeph>plcontainer_show_config</codeph>. For
         example, this <codeph>SELECT</codeph> command returns the PL/Container configurations. </p>
       <codeblock>select * from plcontainer_show_config;</codeblock>
       <p>Running the command executes a PL/Container function that displays configuration
-        information from the master and segment instances.</p>
+        information from the master and segment instances. This is an example of the start and end
+        of the view
+        output.<codeblock>INFO:  Container 'plc_python_example1' configuration
+INFO:      image = 'pivotaldata/plcontainer_python_with_clients:0.1'
+INFO:      memory_mb = '1024'
+INFO:      use network = 'no'
+INFO:      enable log  = 'no'
+INFO:  Container 'plc_python_example2' configuration
+INFO:      image = 'pivotaldata/plcontainer_python_without_clients:0.1'
+INFO:      memory_mb = '1024'
+INFO:      use network = 'yes'
+INFO:      enable log  = 'yes'
+INFO:      shared directory from host '/usr/local/greenplum-db/bin/plcontainer_clients' to container '/clientdir'
+INFO:          access = readonly
+
+    ...
+
+ gp_segment_id | plcontainer_show_local_config
+---------------+-------------------------------
+             0 | ok
+            -1 | ok
+             1 | ok</codeblock></p>
+      <p>The PL/Container function <codeph>plcontainer_containers_summary()</codeph> displays
+        information about the currently running Docker
+        containers.<codeblock>select * from plcontainer_containers_summary();</codeblock></p>
+      <p>If normal (non-superuser) Greenplum Database user runs the function, the function display
+        information only for containers created by the user. If a Greenplum Database superuser runs
+        the function, information for all containers created by Greenplum Database users is
+        displayed. This is sample output when 2 containers are running.</p>
+      <codeblock> SEGMENT_ID |                           CONTAINER_ID                           |   UP_TIME    |  OWNER  | MEMORY_USAGE(KB)
+------------+------------------------------------------------------------------+--------------+---------+------------------
+ 1          | 693a6cb691f1d2881ec0160a44dae2547a0d5b799875d4ec106c09c97da422ea | Up 8 seconds | gpadmin | 12940
+ 1          | bc9a0c04019c266f6d8269ffe35769d118bfb96ec634549b2b1bd2401ea20158 | Up 2 minutes | gpadmin | 13628
+(2 rows)</codeblock>
     </body>
     <topic id="topic9" xml:lang="en">
       <title id="pz215232">Examples</title>
@@ -311,12 +356,14 @@ $$ LANGUAGE plcontainer;</codeblock></p>
 # container: plc_r_shared
 return(log10(100))
 $$ LANGUAGE plcontainer;</codeblock></p>
-        <p>The PL/Container Docker container that you specify, <codeph>plc_python_shared</codeph>
-          and <codeph>plc_r_shared</codeph> in the examples, are the <codeph>name</codeph> elements
-          defined in <codeph>plcontainer_config.xml</codeph> file, and they are mapped to the
-            <codeph>image</codeph> XML element that specifies the Docker image to be started.
-          Removing a specific <codeph>container</codeph> XML element from the configuration file
-          makes it impossible for end users to start the container. </p>
+        <p>The PL/Container Docker IDs in the <codeph># container</codeph> lines of the examples,
+            <codeph>plc_python_shared</codeph> and <codeph>plc_r_shared</codeph>, are the
+            <codeph>id</codeph> XML elements defined in <codeph>plcontainer_config.xml</codeph>
+          file. The <codeph>id</codeph> element is mapped to the <codeph>image</codeph> element that
+          specifies the Docker image to be started. </p>
+        <p>If the <codeph># container</codeph> line in a UDF specifies an ID that is not the
+          PL/Container configuration file, Greenplum Database returns an error when you try to
+          execute the UDF.</p>
       </body>
     </topic>
   </topic>
@@ -412,224 +459,303 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       <p>The Greenplum Database utility <codeph>plcontainer</codeph> manages the PL/Container
         configuration files in a Greenplum Database system. The utility ensures that the
         configuration files are consistent across the Greenplum Database master and segment
-        hosts.</p>
-      <note type="warning"> Modifying the configuration files manually might create different,
-        incompatible configurations on different Greenplum Database segments that could cause
-        unexpected behavior. </note>
+        instances.</p>
+      <note type="warning"> Modifying the configuration files on the manually on the segment
+        instances might create different, incompatible configurations on different Greenplum
+        Database segments that could cause unexpected behavior. </note>
       <p>Configuration changes that are made with the utility are applied to the XML files on all
         Greenplum Database segments. However, PL/Container configurations of currently running
         sessions use the configuration that existed during session start up. To update the
         PL/Container configuration in a running session, execute this command in the session.</p>
       <codeblock>select * from plcontainer_refresh_config;</codeblock>
-      <p>Running the command executes a PL/Container function that updates the configuration on the
-        master and segment instances.</p>
-      <p>When you change the <codeph>plcontainer_configuration.xml</codeph> configuration file with
-        the <codeph>plcontainer</codeph> utility, the utility creates a back up of the original
-        configuration file in the same directory. The backup file name is
-            <codeph>plcontainer_configuration.xml.bak<varname>YYYYMMDD</varname>_<varname>hhmmss</varname></codeph>.
-        The timestamp of the change is appended to the file name. Using the <codeph>plcontainer
-          configure</codeph> command with the <codeph>--restore</codeph> option, you can roll back
-        the configuration changes to the previous version.</p>
+      <p>Running the command executes a PL/Container function that updates the session configuration
+        on the master and segment instances.</p>
     </body>
     <topic id="topic_rw3_52s_dw">
-      <title>plcontainer Utility</title>
+      <title>The plcontainer Utility</title>
       <body>
         <p>The <codeph>plcontainer</codeph> utility installs Docker images and manages the
-          PL/Container configuration. The utility consists of two commands.</p>
-        <ul id="ul_kxp_byw_qbb">
-          <li><codeph>plcontainer configure</codeph> - Manages the PL/Container configuration file
-            on the hosts. You can add Docker image information to the PL/Container configuration
-            file including the image name, location, and shared folder information. You can also
-            edit the configuration file.</li>
-          <li><codeph>plcontainer install</codeph> - Install a Docker image in Docker repository and
-            add the image information to the PL/Container configuration file on each host.</li>
+          PL/Container configuration. The utility consists of two sets of commands.</p>
+        <ul id="ul_lzy_xsw_gcb">
+          <li><codeph>image-*</codeph> commands manage Docker images on the Greenplum Database
+            system hosts. </li>
+          <li><codeph>runtime-*</codeph> commands manage the PL/Container configuration file on the
+            Greenplum Database instances. You can add Docker image information to the PL/Container
+            configuration file including the image name, location, and shared folder information.
+            You can also edit the configuration file.</li>
         </ul>
-        <p>The <codeph>plcontainer</codeph> utility
-          syntax:<codeblock><b>plcontainer configure</b> {{<b>-n</b> | <b>--name</b>} <varname>container-name</varname>
-               {<b>-i</b> | <b>--image</b>} <varname>image-location</varname>
-               {<b>-l</b> | <b>--language</b>} <varname>language</varname>
-               {<b>-v</b> | <b>--volume</b>} <varname>shared-volumes</varname> } |
-             {[<b>-e</b> <b>--editor</b> [<varname>editor</varname>] } |
-             { <b>--reset</b> | <b>--restore</b> } |
-             { | {<b>-s</b> | <b>--show</b>} | 
-             {<b>-f</b> <b>--file</b>} <varname>config-file</varname>} 
-             [{<b>-y</b> | <b>--yes</b>)]
-             [<b>--verbose</b>] 
-
-<b>plcontainer install</b> {<b>-n</b> | <b>--name</b>} <varname>container-name</varname> 
-             {<b>-i</b> | <b>--image</b>} <varname>image-location</varname>
-             {<b>-c</b> | <b>--imagename</b>} <varname>docker-image</varname>
-             {<b>-l</b> | <b>--language</b>} <varname>language</varname>
-             {<b>-v</b> | <b>--volume</b>} <varname>shared-volumes</varname>
-
-<b>plcontainer</b> {<b>configure</b> | <b>install</b>} {<b>-h</b> | <b>--help</b>}</codeblock></p>
+        <p>To configure PL/Container to use a Docker image, you install the Docker image on all the
+          Greenplum Database hosts and then add configuration information to the PL/Container
+          configuration. </p>
+        <p>PL/Container configuration values, such as image names, runtime IDs, and parameter values
+          and names are case sensitive.</p>
         <section>
-          <title>Options</title>
-          <parml>
-            <plentry>
-              <pt>{-c | --imagename} <varname>local-image</varname></pt>
-              <pd>The utility installs the Docker image on the Greenplum Database hosts with the
-                specified Docker name and uses the name in the PL/Container configuration file
-                element <codeph>image</codeph> when creating a container element in the
-                configuration file.</pd>
-            </plentry>
-            <plentry>
-              <pt>{-e | --editor } [<varname>editor</varname>]</pt>
-              <pd>Open the file <codeph>plcontainer_configuration.xml</codeph> with the specified
-                editor. The default is the <codeph>vi</codeph> editor.</pd>
-              <pd>Saving the file updates the configuration file on all Greenplum Database hosts and
-                saves the previous version of the file.</pd>
-            </plentry>
-            <plentry>
-              <pt>{-f | --file} <varname>config-file</varname></pt>
-              <pd>
-                <p>The utility replaces the existing PL/Container configuration file with the
-                  specified file. Specify the absolute path to a configuration file. The
-                  configuration file is replaced on all Greenplum Database hosts.</p>
-              </pd>
-            </plentry>
-            <plentry>
-              <pt>{-i | --image} <varname>docker-image</varname></pt>
-              <pd>Specify a full Docker image. For example
-                  <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>.<ul id="ul_l5l_jmd_rbb">
-                  <li><codeph>configure</codeph> - When creating a <codeph>container</codeph> entry
-                    in PL/Container configuration this is the value of configuration file element
-                      <codeph>image</codeph>. The Docker image must be installed. </li>
-                  <li><codeph>install</codeph> - Installs the Docker image from the specified
-                    location. You can specify a URL to a Docker registry or the absolute path to a
-                      <codeph>tar.gz</codeph> file that contains a docker image. When installing a
-                    docker image, the utility uses <codeph>--imagename
-                        <varname>local-image</varname></codeph> for the value of configuration file
-                    element <codeph>image</codeph>.</li>
-                </ul></pd>
-            </plentry>
-            <plentry>
-              <pt>{-l | --language} <varname>language</varname></pt>
-              <pd>
-                <p> Configure PL/Container language type, supported values are
-                    <codeph>python</codeph> (PL/Python) and <codeph>r</codeph> (PL/R).</p>
-              </pd>
-            </plentry>
-            <plentry>
-              <pt>{-n | --name} <varname>container-name</varname></pt>
-              <pd>When adding a container element in the PL/Container configuration file, this is
-                the value of the <codeph>name</codeph> element. You specify the name in the
-                Greenplum Database UDF on the <codeph># container</codeph> line. For example, this
-                line in a PL/Container UDF <codeph>plc_r_shared</codeph> specifies using the
-                information in the <codeph>plc_r_shared</codeph> container element to create a
-                Docker container.<codeblock># container: plc_r_shared</codeblock></pd>
-            </plentry>
-            <plentry>
-              <pt>--reset</pt>
-              <pd>Reset the configuration file to the default.</pd>
-            </plentry>
-            <plentry>
-              <pt>--restore</pt>
-              <pd>Restore the previous version of the PL/Container configuration file.</pd>
-            </plentry>
-            <plentry>
-              <pt>-s | --show</pt>
-              <pd>Display the contents of the PL/Container configuration file.</pd>
-            </plentry>
-            <plentry>
-              <pt>{-v | --volume} <varname>shared-volume</varname></pt>
-              <pd>Optional. Specify a Docker volume to bind mount. You can specify multiple volumes
-                as a comma separated lists of volumes.</pd>
-              <pd>The format for a shared volume:
-                    <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.
-                The information is stored as attributes in the <codeph>shared_directory</codeph>
-                element of the <codeph>container</codeph> element in the PL/Container configuration
-                file. <ul id="ul_k2l_f4d_rbb">
-                  <li><varname>host-dir</varname> - absolute path to a directory on the host system.
-                    The Greenplum Database administrator user (gpadmin) must have appropriate access
-                    to the directory.</li>
-                  <li><varname>container-dir</varname> - absolute path to a directory in the Docker
-                    container.</li>
-                  <li><codeph>[rw|ro]</codeph> - read-write or read-only access to the host
-                    directory from the container. Information is stored in the configuration file
-                    element <codeph>shared_directory</codeph>.</li>
-                </ul></pd>
-              <pd>The utility sets a read-only shared volume when the Docker images are installed. </pd>
-              <pd>This is the <codeph>shared-volume</codeph> that the utility specifies for the
-                Greenplum PL/R Docker image.</pd>
-              <pd>
-                <codeblock>/usr/local/greenplum-db/./bin/rclient:/clientdir:ro </codeblock>
-              </pd>
-              <pd>This is the <codeph>shared-volume</codeph> that the utility specifies for the
-                Greenplum PL/Python Docker
-                image.<codeblock>/usr/local/greenplum-db/./bin/pyclient:/clientdir:ro</codeblock></pd>
-              <pd>If needed, you can specify other shared directories. Specifying the same shared
-                directory as the one that is automatically set by the utility will cause a Docker
-                container startup failure.</pd>
-              <pd>When specifying read-write access to host directory, ensure that the specified
-                host directory has the correct permissions. Also, if a Docker image managed by
-                PL/Container is configured with read-write access to a host directory, PL/Container
-                could run multiple Docker containers on a host that change data in the directory.
-                This might cause issues when running PL/Container user-defined functions that access
-                the shared directory. </pd>
-            </plentry>
-            <plentry>
-              <pt>--verbose</pt>
-              <pd>Enable verbose logging.</pd>
-            </plentry>
-            <plentry>
-              <pt>-y | --yes</pt>
-              <pd>Continue without confirmation prompts.</pd>
-            </plentry>
-            <plentry>
-              <pt>h | --help</pt>
-              <pd>Display help text.</pd>
-            </plentry>
-          </parml>
+          <title>plcontainer Syntax</title>
+          <codeblock><b>plcontainer</b> [<varname>command</varname>] [<b>-h</b> | <b>--help</b>]  [<b>--verbose</b>]</codeblock>
+          <p>Where <varname>command</varname> is one of the following.</p>
+          <codeblock>  image-add {{<b>-f</b> | <b>--file</b>} <varname>image_file</varname>} | {{<b>-u</b> | <b>--URL</b>} <varname>image_URL</varname>}
+  image-delete {<b>-i</b> | <b>--image</b>} <varname>image_name</varname>
+  image-list
+
+  runtime-add {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
+     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> <b>-l</b> {r | python}
+     [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]] 
+     [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> ...]]
+  runtime-replace {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
+     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> <b>-l</b> {r | python}
+     [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]] 
+     [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> ...]]
+  runtime-show {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
+  runtime-delete {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
+  runtime-edit [{<b>-e</b> | <b>--editor</b>} <varname>editor</varname>]
+  runtime-backup {<b>-f</b> | <b>--file</b>} <varname>config_file</varname>
+  runtime-restore {<b>-f</b> | <b>--file</b>} <varname>config_file</varname>
+  runtime-verify</codeblock>
         </section>
+        <section>
+          <title>plcontainer Commands and Options</title>
+        </section>
+        <parml>
+          <plentry>
+            <pt>image-add <varname>location</varname></pt>
+            <pd>Install a Docker image on the Greenplum Database hosts. Specify either the location
+              of the Docker image file on the host or the URL to the Docker image. These are the
+              supported location options.<ul id="ul_ihd_dsv_gcb">
+                <li>{<b>-f</b> | <b>--file</b>} <varname>image_file</varname> Specify the tar
+                  archive file on the host that contains the Docker image. This example points to an
+                  image file in the gpadmin home directory
+                    <codeph>/home/gpadmin/test_image.tar.gz</codeph></li>
+                <li>{<b>-u</b> | <b>--URL</b>} <varname>image_URL</varname> Specify the URL of the
+                  Docker repository and image. This example URL points to a local Docker repository
+                    <codeph>192.168.0.1:5000/images/mytest_plc_r:devel</codeph></li>
+              </ul></pd>
+            <pd>After installing the Docker image, use the <codeph><xref
+                  href="#topic_rw3_52s_dw/runtime_add" format="dita">runtime-add</xref></codeph>
+              command to configure PL/Container to use the Docker image.</pd>
+          </plentry>
+          <plentry>
+            <pt>image-delete {<b>-i</b> | <b>--image</b>} <varname>image_name</varname></pt>
+            <pd>Remove an installed Docker image from all Greenplum Database hosts. Specify the full
+              Docker image name including the tag for example
+                <codeph>pivotaldata/plcontainer_python_shared:1.0.0</codeph></pd>
+          </plentry>
+          <plentry>
+            <pt>image-list</pt>
+            <pd>List the Docker images installed on the host. The command list only the images on
+              the local host, not remote hosts. The command lists all installed Docker images,
+              including images installed with Docker commands.</pd>
+          </plentry>
+          <plentry id="runtime_add">
+            <pt>runtime-add <varname>options</varname></pt>
+            <pd>Add configuration information to the PL/Container configuration file on all
+              Greenplum Database hosts. If the specified <varname>runtime_id</varname> exists, the
+              utility returns and error and configuration information is not added. </pd>
+            <pd>For information about PL/Container configuration, see <xref href="#topic_ojn_r2s_dw"
+                format="dita"/>. </pd>
+            <pd>These are the supported options:</pd>
+            <pd>
+              <parml>
+                <plentry>
+                  <pt>{-i | --image} <varname>docker-image</varname></pt>
+                  <pd>Required. Specify the full Docker image name, including the tag, that is
+                    installed on the Greenplum Database hosts. For example
+                      <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>. </pd>
+                  <pd>The utility does not check if the Docker image is installed.</pd>
+                  <pd>The <codeph>plcontainer image-list</codeph> command displays installed image
+                    information including the name (Repository) and tag.</pd>
+                </plentry>
+                <plentry>
+                  <pt>{-l | --language} l | r</pt>
+                  <pd>Required. Specify the PL/Container language type, supported values are
+                      <codeph>python</codeph> (PL/Python) and <codeph>r</codeph> (PL/R). When adding
+                    configuration information for a new runtime, the utility adds a startup command
+                    to the configuration based on the language you specify.</pd>
+                  <pd>Startup command for the Python
+                    language.<codeblock>/clientdir/pyclient.sh</codeblock></pd>
+                  <pd>Startup command for the for the R
+                    language.<codeblock>/clientdir/rclient.sh</codeblock></pd>
+                </plentry>
+                <plentry>
+                  <pt>{<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
+                  </pt>
+                  <pd>Required. Add the runtime ID. When adding a <codeph>runtime</codeph> element
+                    in the PL/Container configuration file, this is the value of the
+                      <codeph>id</codeph> element in PL/Container configuration file. </pd>
+                  <pd>You specify the name in the Greenplum Database UDF on the <codeph>#
+                      container</codeph> line. See <xref href="#topic9" format="dita"/>.</pd>
+                </plentry>
+                <plentry>
+                  <pt>{<b>-s</b> | <b>--setting</b>}
+                      <varname>param</varname>=<varname>value</varname></pt>
+                  <pd>Optional. Specify a setting to be added to the runtime configuration
+                    information. You can specify this option multiple times. The parameter is the
+                    XML attribute of the <codeph>setting</codeph> element in the PL/Container
+                    configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
+                      <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
+                        The value is an integer that specifies the amount of memory in MB. </li>
+                      <li><codeph>use_network</codeph> - Set the type of networking for
+                        communication between the container and Greenplum Database. The value is
+                        either <codeph>yes</codeph>, use TCP, or <codeph>no</codeph> use IPC. The
+                        default is <codeph>no</codeph>, use IPC.</li>
+                      <li><codeph>logs</codeph> - Enable or disable PL/Container logging. The value
+                        is either <codeph>yes</codeph> (enable logging) or <codeph>no</codeph>
+                        (disable logging, the default). </li>
+                    </ul></pd>
+                </plentry>
+                <plentry>
+                  <pt>{-v | --volume} <varname>shared-volume</varname></pt>
+                  <pd>Optional. Specify a Docker volume to bind mount. You can specify this option
+                    multiple times to define multiple volumes.</pd>
+                  <pd>The format for a shared volume:
+                        <codeph><varname>host-dir</varname>:<varname>container-dir</varname>:[rw|ro]</codeph>.
+                    The information is stored as attributes in the <codeph>shared_directory</codeph>
+                    element of the <codeph>runtime</codeph> element in the PL/Container
+                    configuration file. <ul id="ul_nms_vvv_gcb">
+                      <li><varname>host-dir</varname> - absolute path to a directory on the host
+                        system. The Greenplum Database administrator user (gpadmin) must have
+                        appropriate access to the directory.</li>
+                      <li><varname>container-dir</varname> - absolute path to a directory in the
+                        Docker container.</li>
+                      <li><codeph>[rw|ro]</codeph> - read-write or read-only access to the host
+                        directory from the container. </li>
+                    </ul></pd>
+                  <pd>When adding configuration information for a new runtime, the utility adds this
+                    read-only shared volume information. </pd>
+                  <pd>
+                    <codeblock><varname>greenplum-home</varname>/bin/plcontainer_clients:/clientdir:ro</codeblock>
+                  </pd>
+                  <pd>If needed, you can specify other shared directories. Specifying the same
+                    shared directory as the one that is added by the utility will cause a Docker
+                    container startup failure.</pd>
+                  <pd>When specifying read-write access to host directory, ensure that the specified
+                    host directory has the correct permissions. Also, if a PL/Container runtime is
+                    configured with read-write access to a host directory, PL/Container can run
+                    multiple Docker containers on a host that could change data in the directory.
+                    This might cause issues when running PL/Container user-defined functions that
+                    access the shared directory. </pd>
+                </plentry>
+              </parml>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-backup {<b>-f</b> | <b>--file</b>} <varname>config_file</varname></pt>
+            <pd>
+              <p dir="ltr">Copies the PL/Container configuration file to the specified file on the
+                local host. </p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-delete {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname></pt>
+            <pd>
+              <p dir="ltr">Removes runtime configuration information in the PL/Container
+                configuration file on all Greenplum Database instances. If the specified
+                  <varname>runtime_id</varname> does not exist in the file, an error is
+                returned.</p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-edit [{<b>-e</b> | <b>--editor</b>} <varname>editor</varname>]</pt>
+            <pd>Edit the XML file <codeph>plcontainer_configuration.xml</codeph> with the specified
+              editor. The default editor is <codeph>vi</codeph>.</pd>
+            <pd>Saving the file updates the configuration file on all Greenplum Database hosts. If
+              errors exist in the updated file, the utility returns an error and does not update the
+              file.</pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-replace <varname>options</varname></pt>
+            <pd>
+              <p dir="ltr">Replaces runtime configuration information in the PL/Container
+                configuration file on all Greenplum Database instances. If the
+                  <varname>runtime_id</varname> does not exist, the information is added to the
+                configuration file. The utility adds a startup command and shared directory to the
+                configuration. </p>
+              <p dir="ltr">See <codeph><xref href="#topic_rw3_52s_dw/runtime_add" format="dita"
+                    >runtime-add</xref></codeph> for command options and information added to the
+                configuration.</p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-restore {<b>-f</b> | <b>--file</b>} <varname>config_file</varname></pt>
+            <pd>
+              <p dir="ltr">Replaces information in the PL/Container configuration file
+                  <codeph>plcontainer_configuration.xml</codeph> on all Greenplum Database instances
+                with the information from the specified file on the local host.</p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-show [{<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>]</pt>
+            <pd>
+              <p dir="ltr">Displays formatted PL/Container runtime configuration information. If a
+                  <varname>runtime_id</varname> is not specified, the configuration for all runtime
+                IDs are displayed.</p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>runtime-verify</pt>
+            <pd>
+              <p dir="ltr">Checks the PL/Container configuration information on the Greenplum
+                Database instances with the configuration information on the master. If the utility
+                finds inconsistencies, you are prompted to replace the remote copy with the local
+                copy. The utility also performs XML validation.</p>
+            </pd>
+          </plentry>
+          <plentry>
+            <pt>-h | --help</pt>
+            <pd>Display help text. If specified without a command, displays help for all
+                <codeph>plcontainer</codeph> commands. If specified with a command, displays help
+              for the command.</pd>
+          </plentry>
+          <plentry>
+            <pt>--verbose</pt>
+            <pd>Enable verbose logging for the command.</pd>
+          </plentry>
+        </parml>
         <section>
           <title>Examples</title>
           <p>These are examples of common commands to manage PL/Container:</p>
-          <ul id="ul_fn5_1bw_qbb">
-            <li>
-              <p>Initialize the Greenplum Database installation with default configuration file
-                after installing a PL/Container
-                package:<codeblock>plcontainer configure --reset</codeblock></p>
-            </li>
-          </ul>
-          <ul id="ul_gn5_1bw_qbb">
-            <li>
-              <p>Edit the configuration in an interactive editor of your
-                choice:<codeblock>plcontainer configure -e vim</codeblock></p>
-            </li>
-          </ul>
-          <ul id="ul_hn5_1bw_qbb">
-            <li>
-              <p>Show the current configuration
-                file:<codeblock>plcontainer configure --show</codeblock></p>
-            </li>
-          </ul>
-          <ul id="ul_in5_1bw_qbb">
-            <li>
-              <p>Restore the previous configuration from a
-                backup:<codeblock>plcontainer configure --restore</codeblock></p>
-            </li>
-          </ul>
-          <ul id="ul_jn5_1bw_qbb">
-            <li>
-              <p>Overwrite the PL/Container configuration file with an XML
-                file:<codeblock>plcontainer configure -f new_plcontainer_configuration.xml </codeblock></p>
-            </li>
-          </ul>
-          <ul id="ul_kn5_1bw_qbb">
-            <li>
-              <p>Add a container entry to the PL/Container configuration
-                file:<codeblock>plcontainer configure -n plc_python_newpy -l python
-  -i pivotaldata/plc_python_newimage:latest</codeblock></p>
-            </li>
-          </ul>
-          <ul id="ul_ln5_1bw_qbb">
-            <li>
-              <p>Install a Docker image and add a container entry for the image in the PL/Container
-                configuration
-                file.<codeblock>plcontainer install -n plc_r_newr -i plc_newr.tar.gz -c pivotaldata/plc_r_newr:latest 
-  -l r</codeblock></p>
-            </li>
+          <ul id="ul_ijd_xmw_gcb">
+            <li>Install a Docker image on all Greenplum Database hosts. This example loads a Docker
+              image from a file. The utility displays progress information on the command line as
+              the utility installs the Docker image on all the
+                hosts.<codeblock>plcontainer image-add f plc_newr.tar.gz</codeblock><p>After
+                installing the Docker image, you add or update a runtime entry in the PL/Container
+                configuration file to give PL/Container access to the Docker image to start Docker
+                containers.</p></li>
+            <li>Add a container entry to PL/Container configuration file. This example, adds
+              configuration information for a PL/R runtime and specifies a shared volume, and
+              settings for memory and network.
+                <codeblock>plcontainer runtime-add -r runtime2 -i test_image2:0.1 -l r \
+  -v /host_dir2/shared2:/container_dir2/shared2:ro \
+  -s memory_mb=512 -s use_network=yes</codeblock><p>The
+                utility displays progress information on the command line as it adds the runtime
+                configuration to the configuration file and distributes the updated configuration to
+                all instances.</p></li>
+            <li>Show specific runtime with given runtime id in configuration
+                file<codeblock>plcontainer runtime-show -r plc_python_shared</codeblock><p>The
+                utility displays the configuration information similar to this
+                output.<codeblock>PL/Container Runtime Configuration:
+---------------------------------------------------------
+ Runtime ID: plc_python_shared
+ Linked Docker Image: test1:latest
+ Runtime Setting(s):
+ Shared Directory:
+ ---- Shared Directory From HOST '/usr/local/greenplum-db/bin/plcontainer_clients' to Container '/clientdir', access mode is 'ro'
+ ---- Shared Directory From HOST '/home/gpadmin/share/' to Container '/opt/share', access mode is 'rw'
+---------------------------------------------------------</codeblock></p></li>
+            <li>Edit the configuration in an interactive editor of your choice. This example edits
+              the configuration file with the vim
+                editor.<codeblock>plcontainer runtime-edit -e vim</codeblock><p>When you save the
+                file, the utility displays progress information on the command line as it
+                distributes the file to the Greenplum Database hosts. </p></li>
+            <li>Save the current PL/Container configuration to a file. This example saves the file
+              to the local file
+              <codeph>/home/gpadmin/saved_plc_config.xml</codeph><codeblock>plcontainer runtime-backup -f /home/gpadmin/saved_plc_config.xml</codeblock></li>
+            <li>Overwrite PL/Container configuration file with an XML file. This example replaces
+              the information in the configuration file with the information from the file in the
+                <codeph>/home/gpadmin</codeph>
+              directory.<codeblock>plcontainer runtime-restore -f /home/gpadmin/new_plcontainer_configuration.xml</codeblock>The
+              utility displays progress information on the command line as it distributes the
+              updated file to the Greenplum Database instances. </li>
           </ul>
         </section>
       </body>
@@ -637,29 +763,39 @@ $$ LANGUAGE plcontainer;</codeblock></p>
     <topic id="topic_ojn_r2s_dw">
       <title>PL/Container Configuration File</title>
       <body>
-        <p>The default PL/Container configuration file is in
-            <codeph>$GPHOME/share/postgresql/plcontainer/plcontainer_configuration.xml</codeph> of
-          each host. The PL/Container configuration file is an XML file. In the XML file, the root
-          element <codeph>configuration</codeph> contains a one or more <codeph>container</codeph>
-          elements, one element for each PL/Container language in the Greenplum Database
-          installation.
-          <codeblock>&lt;configuration>
-   &lt;container>
-      &lt;name>plc_python_shared&lt;/name>
-      &lt;image>pivotaldata/plcontainer_python:1.0.0&lt;/image>
-      &lt;command>./client&lt;/command>
-      &lt;memory_mb>128&lt;/memory_mb>
-      &lt;use_network>no&lt;/use_network>
-      &lt;shared_directory access="ro" container="/clientdir" host="/path/to/pyclient"/>
-   &lt;/container>
-   &lt;container>
-      &lt;name>plc_r&lt;/name>
-      &lt;image>pivotaldata/plcontainer_r:1.0.0&lt;/image>
-      &lt;command>/rclient.sh&lt;/command>
-      &lt;memory_mb>256&lt;/memory_mb>
-      &lt;use_network>yes&lt;/use_network>
-      &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/>
-   &lt;/container>
+        <p>The PL/Container maintains a configuration file
+            <codeph>plcontainer_configuration.xml</codeph> in the data directory of all Greenplum
+          Database segments. The PL/Container configuration file is an XML file. In the XML file,
+          the root element <codeph>configuration</codeph> contains a one or more
+            <codeph>runtime</codeph> elements. You specify the <codeph>id</codeph> of the
+            <codeph>runtime</codeph> element in the <codeph># container:</codeph> line of a
+          PL/Container function definition. </p>
+        <p>In an XML names, such as element and attribute names, and values are case sensitive.</p>
+        <p>This is an example
+          file.<codeblock>&lt;?xml version="1.0" ?>
+&lt;configuration>
+    &lt;runtime>
+        &lt;id>plc_python_example1&lt;/id>
+        &lt;image>pivotaldata/plcontainer_python_with_clients:0.1&lt;/image>
+        &lt;command>./pyclient&lt;/command>
+    &lt;/runtime>
+    &lt;runtime>
+        &lt;id>plc_python_example2&lt;/id>
+        &lt;image>pivotaldata/plcontainer_python_without_clients:0.1&lt;/image>
+        &lt;command>/clientdir/pyclient.sh&lt;/command>
+        &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
+        &lt;setting memory_mb="512"/>
+        &lt;setting use_network="yes"/>
+        &lt;setting logs="enable"/>
+    &lt;/runtime>
+    &lt;runtime>
+        &lt;id>plc_r_example&lt;/id>
+        &lt;image>pivotaldata/plcontainer_r_without_clients:0.2&lt;/image>
+        &lt;command>/clientdir/rclient.sh&lt;/command>
+        &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/>
+        &lt;setting logs="enable"/>
+    &lt;/runtime>
+    &lt;runtime>
 &lt;/configuration></codeblock></p>
         <p>These are the XML elements and attributes in a PL/Container configuration file.</p>
         <parml>
@@ -668,97 +804,111 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             <pd>Root element for the XML file.</pd>
           </plentry>
           <plentry>
-            <pt>container</pt>
-            <pd>One element for each specific container available in the system. Child element of
-              the <codeph>configuration</codeph> element.</pd>
+            <pt>runtime</pt>
+            <pd>One element for each specific container available in the system. These are child
+              elements of the <codeph>configuration</codeph> element.</pd>
             <pd>
               <parml>
                 <plentry>
-                  <pt>name</pt>
-                  <pd>Required. The value is used to reference a Docker container from a function.
-                    Only containers defined in the PL/Container configuration file can be specified
-                    in PL/Container functions. A Docker container cannot be referenced by its full
-                    Docker name (container ID) for security reasons. This name must be unique in the
-                    configuration file.</pd>
+                  <pt>id</pt>
+                  <pd>Required. The value is used to reference a Docker container from a
+                    PL/Container user-defined function. The <codeph>id</codeph> value must be unique
+                    in the configuration. </pd>
+                  <pd>The <codeph>id</codeph> specifies which Docker image to use when PL/Container
+                    creates a Docker container to execute a user-defined function. </pd>
                 </plentry>
                 <plentry>
-                  <pt>container_id</pt>
+                  <pt>image</pt>
                   <pd>
                     <p>Required. The value is the full Docker image name, including image tag. The
                       same way you specify them for starting this container in Docker. Configuration
                       allows to have many container objects referencing the same image name, this
                       way in Docker they would be represented by identical containers. </p>
-                    <p>For example, you might have two containers named
-                        <codeph>plc_python_128</codeph> and <codeph>plc_python_256</codeph>, both
-                      referencing the Docker image
-                        <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>, but first one with
-                      128MB RAM limit and the second one with 256MB limit that is specified by the
-                        <codeph>memory_mb</codeph> element.</p>
+                    <p>For example, you might have two <codeph>runtime</codeph> elements, with
+                      different <codeph>id</codeph> elements, <codeph>plc_python_128</codeph> and
+                        <codeph>plc_python_256</codeph>, both referencing the Docker image
+                        <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>. The first
+                        <codeph>runtime</codeph> specifies a 128MB RAM limit and the second one
+                      specifies a 256MB limit that is specified by the <codeph>memory_mb</codeph>
+                      attribute of a <codeph>setting</codeph> element.</p>
                   </pd>
                 </plentry>
                 <plentry>
                   <pt>command</pt>
                   <pd>Required. The value is the command to be run inside of container to start the
-                    client process inside in the container. </pd>
-                  <pd>You should modify it only if you build your custom container and want to
+                    client process inside in the container. When creating a <codeph>runtime</codeph>
+                    element, the <codeph>plcontainer</codeph> utility adds a
+                      <codeph>command</codeph> element based on the language ( the
+                      <codeph>-l</codeph> option).</pd>
+                  <pd><codeph>command</codeph> element for the python
+                    language.<codeblock>&lt;command>/clientdir/pyclient.sh&lt;/command></codeblock></pd>
+                  <pd><codeph>command</codeph> element for the R
+                    language.<codeblock>&lt;command>/clientdir/rclient.sh&lt;/command></codeblock></pd>
+                  <pd>You should modify the value only if you build a custom container and want to
                     implement some additional initialization logic before the container
-                      starts.<note>This element cannot be set with the <codeph>plcontainer
-                        install</codeph> command. You can update the configuration file with the
-                      with the <codeph>plcontainer configure -e</codeph> command.</note></pd>
-                </plentry>
-                <plentry>
-                  <pt>memory_mb</pt>
-                  <pd>The value specifies the amount of memory container is allowed to use, in MB.
-                    Each container is started with this amount of RAM and twice the amount of swap
-                    space. The container memory consumption is limited by the host system
-                      <codeph>cgroups</codeph>configuration, which means in case of memory
-                    overcommit, the container is killed by the System.<note>You can add this element
-                      by editing the configuration file with the <codeph>plcontainer configure
-                        -e</codeph> command.</note></pd>
+                      starts.<note>This element cannot be set with the <codeph>plcontainer</codeph>
+                      utility. You can update the configuration file with the with the
+                        <codeph>plcontainer runtime-edit</codeph> command.</note></pd>
                 </plentry>
                 <plentry>
                   <pt>shared_directory</pt>
-                  <pd>Required. This element specifies one or more shared directories for a
-                    container, with different sharing options. There must be at least one shared
-                    directory between client location and the directory in the container,
-                      <codeph>/clientdir</codeph> usually in the Pivotal provided image. </pd>
-                  <pd>XML attributes allowed:<ul id="ul_x4d_lcs_dw">
-                      <li><codeph>host</codeph> - specifies a shared directory location on the host
-                        system.</li>
-                      <li><codeph>container</codeph> - specifies a directory location inside of
+                  <pd>Optional. This element specifies a shared Docker shared volume for a container
+                    with access information. Mutliple <codeph>shared_directory</codeph> elements are
+                    allowed. Each <codeph>shared_directory</codeph> element specifies a single
+                    shared volume. XML attributes for the <codeph>shared_directory</codeph>
+                      element:<ul id="ul_x4d_lcs_dw">
+                      <li><codeph>host</codeph> - a directory location on the host system.</li>
+                      <li><codeph>container</codeph> - a directory location inside of
                         container.</li>
-                      <li><codeph>access</codeph> - specifies access level to this shared directory,
-                        which can be either <codeph>ro</codeph> (read-only) or <codeph>rw</codeph>
-                        (read-write). </li>
+                      <li><codeph>access</codeph> - access level to the host directory, which can be
+                        either <codeph>ro</codeph> (read-only) or <codeph>rw</codeph> (read-write).
+                      </li>
                     </ul></pd>
-                  <pd>The <codeph>plcontainer</codeph> utility sets a read-only shared volume when
-                    the Docker images are installed. </pd>
-                  <pd>This is the <codeph>shared_directory</codeph> element that the utility creates
-                    for the Greenplum PL/R Docker image.</pd>
-                  <pd>
-                    <codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/rclient"/> </codeblock>
-                  </pd>
-                  <pd>This is the <codeph>shared_directory</codeph> element that the utility creates
-                    for the Greenplum PL/Python Docker
-                    image.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/./bin/pyclient"/></codeblock></pd>
-                  <pd>If needed, you can specify other shared directories. Specifying the same
-                    shared directory as the one that is automatically set by the utility will cause
-                    a Docker container startup failure.</pd>
+                  <pd>When creating a <codeph>runtime</codeph> element, the
+                      <codeph>plcontainer</codeph> utility adds a <codeph>shared_directory</codeph>
+                    element.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/></codeblock></pd>
+                  <pd>Adding duplicate <codeph>shared_dirctory</codeph> elements will cause a Docker
+                    container startup failure.</pd>
                   <pd>When specifying read-write access to host directory, ensure that the specified
-                    host directory has the correct permissions. Also, if a PL/Container
-                      <codeph>container</codeph> is configured with read-write access to a host
-                    directory, PL/Container could run multiple Docker containers on a host that
-                    change data in the directory. This might cause issues when running PL/Container
-                    user-defined functions that access the shared directory. </pd>
+                    host directory has the correct permissions. Also, if a PL/Container runtime is
+                    configured with read-write access to a host directory, PL/Container could run
+                    multiple Docker containers on a host that change data in the directory. This
+                    might cause issues when running PL/Container user-defined functions that access
+                    the shared directory. </pd>
                 </plentry>
                 <plentry>
-                  <pt>use_network</pt>
-                  <pd>
-                    <p>Optional. The value can be either <codeph>yes</codeph> or <codeph>no</codeph>
-                      to specify whether use <codeph>TCP</codeph> or <codeph>IPC</codeph> for
-                      communication between the Greenplum Database process and the Docker container
-                      process. The default is <codeph>no</codeph> use <codeph>IPC</codeph>.</p>
-                  </pd>
+                  <pt>settings</pt>
+                  <pd>Optional. This element specifies Docker container configuration information.
+                    The element attributes specify logging, memory and networking information. Each
+                      <codeph>setting</codeph> element contains one attribute. For example, this
+                    element enables logging.<codeblock>&lt;setting logs="enable"/></codeblock></pd>
+                  <pd>These are the valid attributes.<parml>
+                      <plentry>
+                        <pt>logs="{enable | disable}"</pt>
+                        <pd>Enables PL/Container logging for the container. Specify the attribute
+                            <codeph>enable="yes"</codeph>. The attribute
+                            <codeph>enable="no"</codeph> disables logging (the default). </pd>
+                        <pd>On Red Hat 7 or CentOS 7 systems, the log is sent to the
+                            <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6 systems, the
+                          log is sent to <codeph>syslogd</codeph> service. </pd>
+                      </plentry>
+                      <plentry>
+                        <pt>memory_mb="<varname>size</varname>"</pt>
+                        <pd>Optional. The value specifies the amount of memory, in MB, that a
+                          container is allowed to use. Each container is started with this amount of
+                          RAM and twice the amount of swap space. The container memory consumption
+                          is limited by the host system <codeph>cgroups</codeph>configuration, which
+                          means in case of memory overcommit, the container is killed by the
+                          system.</pd>
+                      </plentry>
+                      <plentry>
+                        <pt>use_network="{yes | no}"</pt>
+                        <pd>The value can be either <codeph>yes</codeph> or <codeph>no</codeph> to
+                          specify whether use TCP or IPC for communication between the Greenplum
+                          Database process and the Docker container process. The default is
+                            <codeph>no</codeph> use IPC.</pd>
+                      </plentry>
+                    </parml></pd>
                 </plentry>
               </parml>
             </pd>
@@ -769,31 +919,35 @@ $$ LANGUAGE plcontainer;</codeblock></p>
     <topic id="topic_v3s_qv3_kw">
       <title>Updating the PL/Container Configuration</title>
       <body>
-        <p>You can add a <codeph>container</codeph> element to the PL/Container configuration file
-          with the <codeph>plcontainer configure</codeph> command specifying options with options
-          that specify values such as the name, Docker image, command, and shared directory. You can
-          use the <codeph>plcontainer configure</codeph> command with the -e option to edit the
-          configuration file. The utility updates the configuration file on all hosts.</p>
-        <p>The PL/Container configuration file can contain multiple <codeph>container</codeph>
+        <p>You can add a <codeph>runtime</codeph> element to the PL/Container configuration file
+          with the <codeph>plcontainer runtime-add</codeph> command specifying options with options
+          that specify values such as the name, runtime ID, Docker image, and shared directory. You
+          can use the <codeph>plcontainer runtime-replace</codeph> command to update an existing
+            <codeph>runtime</codeph> element . The utility updates the configuration file on all
+          hosts.</p>
+        <p>The PL/Container configuration file can contain multiple <codeph>runtime</codeph>
           elements that reference the same Docker image specified by the XML element
-            <codeph>image</codeph>. In the example configuration file, the <codeph>image</codeph>
-          specifies contains <codeph>container</codeph> elements named
-            <codeph>plc_python_128</codeph> and <codeph>plc_python_256</codeph>, both referencing
-          the Docker container <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>. The first
-          element is defined with a 128MB RAM limit and the second one with a 256MB RAM limit.</p>
+            <codeph>image</codeph>. In the example configuration file, the <codeph>runtime</codeph>
+          elements contain <codeph>id</codeph> elements named <codeph>plc_python_128</codeph> and
+            <codeph>plc_python_256</codeph>, both referencing the Docker container
+            <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>. The first
+            <codeph>runtime</codeph> element is defined with a 128MB RAM limit and the second one
+          with a 256MB RAM limit.</p>
         <codeblock>&lt;configuration>
-  &lt;container>
-    &lt;name>plc_python_128&lt;/name>
+  &lt;runtime>
+    &lt;id>plc_python_128&lt;/id>
     &lt;image>pivotaldata/plcontainer_python:1.0.0&lt;/image>
     &lt;command>./client&lt;/command>
-    &lt;memory_mb>128&lt;/memory_mb>
-  &lt;/container>
-  &lt;container>
-    &lt;name>plc_python_256&lt;/name>
-    &lt;cimage>pivotaldata/plcontainer_python:1.0.0&lt;/image>
+    &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/gpdb/bin/plcontainer_clients"/>
+    &lt;setting memory_mb="128"/>
+  &lt;/runtime>
+  &lt;runtime>
+    &lt;id>plc_python_256&lt;/id>
+    &lt;image>pivotaldata/plcontainer_python:1.0.0&lt;/image>
     &lt;command>./client&lt;/command>
-    &lt;memory_mb>256&lt;/memory_mb>
-  &lt;/container>
+    &lt;shared_directory access="ro" container="/clientdir" host="/usr/local/gpdb/bin/plcontainer_clients"/>
+    &lt;setting memory_mb="256"/>
+  &lt;/runtime>
 &lt;configuration></codeblock>
       </body>
     </topic>
@@ -801,15 +955,17 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       <title>Notes</title>
       <body>
         <ul id="ul_j4g_vgs_wbb">
-          <li>PL/Container configuration file <codeph>plcontainer_configuration.xml</codeph> is
-            stored in all the Greenplum Database data directories for all the Greenplum Database
-            segment instances: master, standby master, primary and mirror. This query lists the
-            Greenplum Database system data
-            directories:<codeblock>select g.hostname, fe.fselocation as directory 
-   from pg_filespace as f, pg_filespace_entry as fe, 
-       gp_segment_configuration as g
-   where f.oid = fe.fsefsoid and g.dbid = fe.fsedbid 
-       and f.fsname = 'pg_system';</codeblock></li>
+          <li>PL/Container maintains the configuration file
+              <codeph>plcontainer_configuration.xml</codeph> in the data directory of all Greenplum
+            Database segment instances: master, standby master, primary and mirror. This query lists
+            the Greenplum Database system data
+              directories:<codeblock>SELECT g.hostname, fe.fselocation as directory 
+   FROM pg_filespace AS f, pg_filespace_entry AS fe, 
+       gp_segment_configuration AS g
+   WHERE f.oid = fe.fsefsoid AND g.dbid = fe.fsedbid 
+       AND f.fsname = 'pg_system';</codeblock><p>A
+              sample PL/Container configuration file is in
+                <codeph>$GPHOME/share/postgresql/plcontainer</codeph>. </p></li>
           <li>In some cases, when PL/Container is running in a high concurrency environment, the
             Docker daemon hangs with log entries that indicate a memory shortage. This can happen
             even when the system seems to have adequate free memory.<p>The issue seems to be
