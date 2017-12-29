@@ -131,10 +131,11 @@ class InitMirrors():
 class StartInstances():
     ''' Start a greenplum segment '''
 
-    def __init__(self, cluster_config, host, wait=False):
+    def __init__(self, cluster_config, host, operation, wait=False):
         self.clusterconfig = cluster_config
         self.segconfigs = cluster_config.get_seg_configs()
         self.host = host
+        self.operation = operation
         self.wait = wait
 
     def startThread(self, segconfig):
@@ -195,9 +196,17 @@ class StartInstances():
     def run(self):
         startThreads = []
         for segconfig in self.segconfigs:
-            thread = threading.Thread(target=self.startThread, args=(segconfig,))
-            thread.start()
-            startThreads.append(thread)
+            # Do not start mirrors that are marked down if we are
+            # doing "clusterstart" operation.
+            if (segconfig.content == GpSegmentConfiguration.MASTER_CONTENT_ID or
+                segconfig.status == GpSegmentConfiguration.STATUS_UP or
+                self.operation != "clusterstart"):
+                thread = threading.Thread(target=self.startThread, args=(segconfig,))
+                thread.start()
+                startThreads.append(thread)
+            else:
+                print ("WARNING: not starting segment (content=%d, dbid=%d, role=%c status=%c) as it is not up" %
+                       (segconfig.content, segconfig.dbid, segconfig.role, segconfig.status))
 
         for thread in startThreads:
             thread.join()
@@ -523,23 +532,23 @@ if __name__ == "__main__":
     elif args.operation == 'clusterstart':
         # If we are starting the cluster, we need to start the master before we get the segment info
         cold_master_cluster_config = ColdMasterClusterConfiguration(int(args.port), args.master_directory)
-        StartInstances(cold_master_cluster_config, args.host, wait=True).run()
+        StartInstances(cold_master_cluster_config, args.host, args.operation, wait=True).run()
         cluster_config = ClusterConfiguration(args.host, args.port, args.database)
         StopInstances(cold_master_cluster_config).run()
-        StartInstances(cluster_config, args.host).run()
+        StartInstances(cluster_config, args.host, args.operation).run()
         ForceFTSProbeScan(cluster_config)
     elif args.operation == 'start':
         cluster_config = ClusterConfiguration(args.host, args.port, args.database,
                                               role=GpSegmentConfiguration.ROLE_MIRROR,
                                               status=GpSegmentConfiguration.STATUS_DOWN)
-        StartInstances(cluster_config, args.host).run()
+        StartInstances(cluster_config, args.host, args.operation).run()
         ForceFTSProbeScan(cluster_config, GpSegmentConfiguration.STATUS_UP, GpSegmentConfiguration.IN_SYNC)
     elif args.operation == 'recover':
         cluster_config = ClusterConfiguration(args.host, args.port, args.database,
                                               role=GpSegmentConfiguration.ROLE_MIRROR,
                                               status=GpSegmentConfiguration.STATUS_DOWN)
         if len(cluster_config.seg_configs) > 0:
-            StartInstances(cluster_config, args.host).run()
+            StartInstances(cluster_config, args.host, args.operation).run()
             failed_gp_segment_ids = WaitForRecover(cluster_config)
             if len(failed_gp_segment_ids) > 0:
                 print("ERROR: incremental recovery failed for some segments (%s)" % failed_gp_segment_ids)
@@ -554,7 +563,7 @@ if __name__ == "__main__":
                                               status=GpSegmentConfiguration.STATUS_DOWN)
         if len(cluster_config.seg_configs) > 0:
             InitMirrors(cluster_config, args.host, False).run()
-            StartInstances(cluster_config, args.host).run()
+            StartInstances(cluster_config, args.host, args.operation).run()
         ForceFTSProbeScan(cluster_config, GpSegmentConfiguration.STATUS_UP, GpSegmentConfiguration.IN_SYNC)
     elif args.operation == 'stop':
         cluster_config = ClusterConfiguration(args.host, args.port, args.database,
