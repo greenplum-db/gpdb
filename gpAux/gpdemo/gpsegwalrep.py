@@ -82,11 +82,11 @@ class InitMirrors():
         if self.init:
             primary_port = segconfig.port
             primary_dir = segconfig.datadir
-            mirror_dir = cluster_config.get_pair_dir(segconfig)
-            mirror_port = cluster_config.get_pair_port(segconfig)
+            mirror_dir = self.clusterconfig.get_pair_dir(segconfig)
+            mirror_port = self.clusterconfig.get_pair_port(segconfig)
         else:
-            primary_port = cluster_config.get_pair_port(segconfig)
-            primary_dir = cluster_config.get_pair_dir(segconfig)
+            primary_port = self.clusterconfig.get_pair_port(segconfig)
+            primary_dir = self.clusterconfig.get_pair_dir(segconfig)
             mirror_dir = segconfig.datadir
             mirror_port = segconfig.port
 
@@ -287,7 +287,7 @@ class DestroyMirrors():
     def run(self):
         destroyThreads = []
         for segconfig in self.segconfigs:
-            assert(segconfig.preferred_role == GpSegmentConfiguration.ROLE_MIRROR)
+            assert(segconfig.role == GpSegmentConfiguration.ROLE_MIRROR)
             thread = threading.Thread(target=self.destroyThread, args=(segconfig,))
             thread.start()
             destroyThreads.append(thread)
@@ -317,13 +317,14 @@ class GpSegmentConfiguration():
 class ClusterConfiguration():
     ''' Cluster configuration '''
 
-    def __init__(self, hostname, port, dbname, role = "all", status = "all", include_master = True):
+    def __init__(self, hostname, port, dbname, role = "all", status = "all", include_master = True, content = "all"):
         self.hostname = hostname
         self.port = port
         self.dbname = dbname
         self.role = role
         self.status = status
         self.include_master = include_master
+        self.content = content
         self._all_seg_configs = None
         self.refresh()
 
@@ -389,6 +390,9 @@ class ClusterConfiguration():
             if (self.role != "all"
                 and self.role != seg_config.role):
                 append = False
+            if (self.content != "all"
+                and self.content != seg_config.content):
+                append = False
 
             if (not self.include_master
                 and seg_config.content == GpSegmentConfiguration.MASTER_CONTENT_ID):
@@ -440,7 +444,9 @@ def defargs():
                         help='Master port to get segment config information from')
     parser.add_argument('--database', type=str, required=False, default='postgres',
                         help='Database name to get segment config information from')
-    parser.add_argument('operation', type=str, choices=['clusterstart', 'clusterstop', 'init', 'start', 'stop', 'destroy', 'recover', 'recoverfull'])
+    parser.add_argument('--content', type=int, required=False,
+                        help='Content ID of the mirror to be rebuilt')
+    parser.add_argument('operation', type=str, choices=['clusterstart', 'clusterstop', 'init', 'start', 'stop', 'destroy', 'recover', 'recoverfull', 'rebuild'])
 
     return parser.parse_args()
 
@@ -578,6 +584,19 @@ if __name__ == "__main__":
     elif args.operation == 'clusterstop':
         cluster_config = ClusterConfiguration(args.host, args.port, args.database)
         StopInstances(cluster_config).run()
+    elif args.operation == 'rebuild':
+        if args.content is None:
+            print "ERROR: missing argument 'content' for rebuild operation"
+            sys.exit(1)
+        cluster_config_mirror = ClusterConfiguration(args.host, args.port, args.database, content=args.content,
+                                              role=GpSegmentConfiguration.ROLE_MIRROR)
+        StopInstances(cluster_config_mirror).run()
+        DestroyMirrors(cluster_config_mirror).run()
+        cluster_config_primary = ClusterConfiguration(args.host, args.port, args.database, content=args.content,
+                                                      role=GpSegmentConfiguration.ROLE_PRIMARY)
+        InitMirrors(cluster_config_primary, args.host, True).run()
+        cluster_config_mirror.refresh()
+        StartInstances(cluster_config_mirror, args.host, args.operation).run()
 
     if args.operation != 'clusterstop':
         displaySegmentConfiguration()

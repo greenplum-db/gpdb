@@ -683,6 +683,12 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 															 primary->segindex,
 															 primary->dbid);
 
+		/*
+		 * If there is no mirror under this primary, no need to probe.
+		 */
+		if (!mirror)
+			continue;
+
 		/* primary in catalog will NEVER be marked down. */
 		Assert(FtsIsSegmentAlive(primary));
 
