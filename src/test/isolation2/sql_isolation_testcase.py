@@ -124,15 +124,32 @@ class SQLIsolationExecutor(object):
                     opt="-c gp_session_role=utility",
                     dbname=self.dbname)
             else:
-                self.con = pygresql.pg.connect(dbname=self.dbname)
+                self.con = self.connectdb()
+
             self.filename = "%s.%s" % (output_file, os.getpid())
+
+        def connectdb(self):
+            con = None
+            retry = 1000
+            while retry:
+                try:
+                    con = pygresql.pg.connect(dbname=self.dbname)
+                    break
+                except Exception as e:
+                    if (("the database system is starting up" in str(e) or
+                         "the database system is in recovery mode" in str(e)) and
+                        retry > 1):
+                        retry -= 1
+                    else:
+                        raise
+            return con
 
         def get_utility_mode_port(self, name):
             """
                 Gets the port number/hostname combination of the
                 dbid with the id = name
             """
-            con = pygresql.pg.connect(dbname=self.dbname)
+            con = self.connectdb()
             r = con.query("SELECT hostname, port FROM gp_segment_configuration WHERE dbid = %s" % name).getresult()
             if len(r) == 0:
                 raise Exception("Invalid dbid %s" % name)
