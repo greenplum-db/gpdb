@@ -1238,10 +1238,10 @@ sub atmsort_bigloop
                 {
                     # Count the number of column separators in the table header
                     # and our current line.
-                    my @headerSeparators = $directive->{firstline} =~ m/\|/;
-                    my @lineSeparators = $ini =~ m/\|/;
+                    my $headerSeparators = ($directive->{firstline} =~ tr/\|//);
+                    my $lineSeparators = ($ini =~ tr/\|//);
 
-                    if (scalar @headerSeparators != scalar @lineSeparators)
+                    if ($headerSeparators != $lineSeparators)
                     {
                         $end_of_table = 1;
                     }
@@ -1310,7 +1310,7 @@ sub atmsort_bigloop
             }
 
             # Note: \d is for the psql "describe"
-            if ($ini =~ m/(?:insert|update|delete|select|\\d|copy|execute)/i)
+            if ($ini =~ m/(?:insert|update|delete|select|^\s*\\d|copy|execute)/i)
             {
                 $copy_to_stdout_result = 0;
                 $has_order = 0;
@@ -1323,7 +1323,7 @@ sub atmsort_bigloop
 
                 # Should we apply more heuristics to try to find the end of \d
                 # output?
-                $describe_mode = ($ini =~ m/\\d/);
+                $describe_mode = ($ini =~ m/^\s*\\d/);
             }
 
 			# Catching multiple commands and capturing the parens matches
