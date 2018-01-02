@@ -24,7 +24,7 @@ static void relarr_free(RelInfoArr *rel_arr);
 static void map_rel(migratorContext *ctx, const RelInfo *oldrel,
 		const RelInfo *newrel, const DbInfo *old_db,
 		const DbInfo *new_db, const char *olddata,
-		const char *newdata, FileNameMap *map);
+		const char *newdata, FileNameMap *map, RelType reltype);
 static void map_rel_by_id(migratorContext *ctx, Oid oldid, Oid newid,
 			  const char *old_nspname, const char *old_relname,
 			  const char *new_nspname, const char *new_relname,
@@ -79,6 +79,7 @@ gen_db_file_maps(migratorContext *ctx, DbInfo *old_db, DbInfo *new_db,
 		&old_db->rel_arr.rels[old_relnum] : NULL;
 		RelInfo    *new_rel = (new_relnum < new_db->rel_arr.nrels) ?
 		&new_db->rel_arr.rels[new_relnum] : NULL;
+		RelType		reltype;
 
 		/* check for mismatched OID */
 		if (old_rel->reloid < new_rel->reloid)
@@ -133,8 +134,15 @@ gen_db_file_maps(migratorContext *ctx, DbInfo *old_db, DbInfo *new_db,
 			continue;
 		}
 
+		if (old_rel->aosegments != NULL)
+			reltype = AO;
+		else if (old_rel->aocssegments != NULL)
+			reltype = AOCS;
+		else
+			reltype = HEAP;
+
 		map_rel(ctx, old_rel, new_rel, old_db, new_db, old_pgdata, new_pgdata,
-				maps + num_maps);
+				maps + num_maps, reltype);
 
 		num_maps++;
 		old_relnum++;
@@ -153,7 +161,7 @@ gen_db_file_maps(migratorContext *ctx, DbInfo *old_db, DbInfo *new_db,
 static void
 map_rel(migratorContext *ctx, const RelInfo *oldrel, const RelInfo *newrel,
 		const DbInfo *old_db, const DbInfo *new_db, const char *olddata,
-		const char *newdata, FileNameMap *map)
+		const char *newdata, FileNameMap *map, RelType reltype)
 {
 	map_rel_by_id(ctx, oldrel->relfilenode, newrel->relfilenode, oldrel->nspname,
 				  oldrel->relname, newrel->nspname, newrel->relname, oldrel->tablespace, newrel->tablespace, old_db,
@@ -163,6 +171,7 @@ map_rel(migratorContext *ctx, const RelInfo *oldrel, const RelInfo *newrel,
 	map->atts = oldrel->atts;
 	map->natts = oldrel->natts;
 	map->gpdb4_heap_conversion_needed = oldrel->gpdb4_heap_conversion_needed;
+	map->type = reltype;
 
 	/* An AO table doesn't necessarily have segment 0 at all. */
 	map->missing_seg0_ok = relstorage_is_ao(oldrel->relstorage);

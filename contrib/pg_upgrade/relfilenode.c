@@ -20,7 +20,7 @@ static void transfer_relfile(migratorContext *ctx, pageCnvCtx *pageConverter,
 				 const char *oldnspname, const char *oldrelname,
 				 const char *newnspname, const char *newrelname,
 				 bool gpdb4_heap_conversion_needed,
-				 bool has_numerics, AttInfo *atts, int natts);
+				 bool has_numerics, AttInfo *atts, int natts, RelType reltype);
 
 /* used by scandir(), must be global */
 char		scandir_file_pattern[MAXPGPATH];
@@ -146,7 +146,8 @@ transfer_single_new_db(migratorContext *ctx, pageCnvCtx *pageConverter,
 						 maps[mapnum].old_nspname, maps[mapnum].old_relname,
 						 maps[mapnum].new_nspname, maps[mapnum].new_relname,
 						 maps[mapnum].gpdb4_heap_conversion_needed,
-						 maps[mapnum].has_numerics, maps[mapnum].atts, maps[mapnum].natts);
+						 maps[mapnum].has_numerics, maps[mapnum].atts,
+						 maps[mapnum].natts, maps[mapnum].type);
 			seg0_missing = false;
 		}
 		else
@@ -172,7 +173,7 @@ transfer_single_new_db(migratorContext *ctx, pageCnvCtx *pageConverter,
 				transfer_relfile(ctx, pageConverter, old_file, new_file,
 						  maps[mapnum].old_nspname, maps[mapnum].old_relname,
 								 maps[mapnum].new_nspname, maps[mapnum].new_relname,
-								 false, false, NULL, 0);
+								 false, false, NULL, 0, FSM);
 
 				pg_free(namelist[numFiles]);
 			}
@@ -202,7 +203,8 @@ transfer_single_new_db(migratorContext *ctx, pageCnvCtx *pageConverter,
 						  maps[mapnum].old_nspname, maps[mapnum].old_relname,
 							 maps[mapnum].new_nspname, maps[mapnum].new_relname,
 							 maps[mapnum].gpdb4_heap_conversion_needed,
-							 maps[mapnum].has_numerics, maps[mapnum].atts, maps[mapnum].natts);
+							 maps[mapnum].has_numerics, maps[mapnum].atts,
+							 maps[mapnum].natts, maps[mapnum].type);
 
 			pg_free(namelist[numFiles]);
 		}
@@ -222,7 +224,7 @@ transfer_relfile(migratorContext *ctx, pageCnvCtx *pageConverter, const char *ol
 		 const char *newfile, const char *oldnspname, const char *oldrelname,
 				 const char *newnspname, const char *newrelname,
 				 bool gpdb4_heap_conversion_needed,
-				 bool has_numerics, AttInfo *atts, int natts)
+				 bool has_numerics, AttInfo *atts, int natts, RelType type)
 {
 	const char *msg;
 
@@ -244,11 +246,20 @@ transfer_relfile(migratorContext *ctx, pageCnvCtx *pageConverter, const char *ol
 
 	if (ctx->transfer_mode == TRANSFER_MODE_COPY)
 	{
-		pg_log(ctx, PG_INFO, "copying %s to %s\n", oldfile, newfile);
-
-		if ((msg = copyAndUpdateFile(ctx, pageConverter, oldfile, newfile, true)) != NULL)
-			pg_log(ctx, PG_FATAL, "error while copying %s.%s(%s) to %s.%s(%s): %s\n",
-				   oldnspname, oldrelname, oldfile, newnspname, newrelname, newfile, msg);
+		if (ctx->checksum_mode != CHECKSUM_NONE && type == HEAP)
+		{
+			pg_log(ctx, PG_INFO, "rewriting \"%s\" to \"%s\"\n",
+				   oldfile, newfile);
+			rewriteHeapPageChecksum(ctx, oldfile, newfile, newnspname, newrelname);
+		}
+		else
+		{
+			pg_log(ctx, PG_INFO, "copying \"%s\" to \"%s\"\n",
+				   oldfile, newfile);
+			if ((msg = copyAndUpdateFile(ctx, pageConverter, oldfile, newfile, true)) != NULL)
+				pg_log(ctx, PG_FATAL, "error while copying %s.%s(%s) to %s.%s(%s): %s\n",
+					   oldnspname, oldrelname, oldfile, newnspname, newrelname, newfile, msg);
+		}
 	}
 	else
 	{

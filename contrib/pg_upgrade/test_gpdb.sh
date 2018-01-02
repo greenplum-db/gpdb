@@ -14,11 +14,19 @@ OLD_DATADIR=
 NEW_BINDIR=
 NEW_DATADIR=
 
+DEMOCLUSTER_OPTS=
+PGUPGRADE_OPTS=
+
 qddir=
 
 # The normal ICW run has a gpcheckcat call, so allow this testrunner to skip
 # running it in case it was just executed to save time.
 gpcheckcat=1
+
+# gpdemo can create a cluster without mirrors, and if such a cluster should be
+# upgraded then mirror upgrading must be turned off as it otherwise will report
+# a failure.
+mirrors=0
 
 # Smoketesting pg_upgrade is done by just upgrading the QD without diffing the
 # results. This is *NOT* a test of whether pg_upgrade can successfully upgrade
@@ -58,6 +66,14 @@ restore_cluster()
 	if ! git ls-files lalshell --error-unmatch >/dev/null 2>&1; then
 		rm -f lalshell
 	fi
+
+	# Remove configuration files created by setting up the new cluster
+	rm -f clusterConfigPostgresAddonsFile
+	rm -f clusterConfigFile
+	rm -f gpdemo-env.sh
+	
+	# Remove the temporary cluster
+	rm -rf "$temp_root"
 }
 
 upgrade_qd()
@@ -66,7 +82,7 @@ upgrade_qd()
 
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 --dispatcher-mode
+	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 --dispatcher-mode ${PGUPGRADE_OPTS}
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading qd node"
 		exit 1
@@ -87,7 +103,7 @@ upgrade_segment()
 
 	# Run pg_upgrade
 	pushd $1
-	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3
+	time ${NEW_BINDIR}/pg_upgrade --old-bindir=${OLD_BINDIR} --old-datadir=$2 --new-bindir=${NEW_BINDIR} --new-datadir=$3 ${PGUPGRADE_OPTS}
 	if (( $? )) ; then
 		echo "ERROR: Failure encountered in upgrading node"
 		exit 1
@@ -103,13 +119,16 @@ usage()
 	echo " -b <dir>     Directory containing binaries"
 	echo " -s           Run smoketest only"
 	echo " -C           Skip gpcheckcat test"
+	echo " -k           Add checksums to new cluster"
+	echo " -K           Remove checksums during upgrade"
+	echo " -m           Upgrade mirrors"
 	exit 0
 }
 
 # Main
 temp_root=`pwd`/tmp_check
 
-while getopts ":o:b:sC" opt; do
+while getopts ":o:b:sCkKm" opt; do
 	case ${opt} in
 		o )
 			realpath OLD_DATADIR "${OPTARG}"
@@ -124,6 +143,18 @@ while getopts ":o:b:sC" opt; do
 		C )
 			gpcheckcat=0
 			;;
+		k )
+			add_checksums=1
+			PGUPGRADE_OPTS=' -J '
+			;;
+		K )
+			remove_checksums=1
+			DEMOCLUSTER_OPTS=' -K '
+			PGUPGRADE_OPTS=' -j '
+			;;
+		m )
+			mirrors=1
+			;;
 		* )
 			usage
 			;;
@@ -132,6 +163,11 @@ done
 
 if [ -z "${OLD_DATADIR}" ] || [ -z "${NEW_BINDIR}" ]; then
 	usage
+fi
+
+if [ ! -z "${add_checksums}"] && [ ! -z "${remove_checksums}" ]; then
+	echo "ERROR: adding and removing checksums are mutually exclusive"
+	exit 1
 fi
 
 rm -rf "$temp_root"
@@ -178,7 +214,7 @@ export DEMO_PORT_BASE=27432
 export NUM_PRIMARY_MIRROR_PAIRS=3
 export MASTER_DATADIR=${temp_root}
 cp ${OLD_DATADIR}/../lalshell .
-BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${OLD_DATADIR}/../demo_cluster.sh
+BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${OLD_DATADIR}/../demo_cluster.sh ${DEMOCLUSTER_OPTS}
 
 NEW_DATADIR="${temp_root}/datadirs"
 
@@ -208,7 +244,9 @@ for i in 1 2 3
 do
 	j=$(($i-1))
 	upgrade_segment "${temp_root}/upgrade/dbfast$i" "${OLD_DATADIR}/dbfast$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/"
-	upgrade_segment "${temp_root}/upgrade/dbfast_mirror$i" "${OLD_DATADIR}/dbfast_mirror$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast_mirror$i/demoDataDir$j/"
+	if (( $mirrors )) ; then
+		upgrade_segment "${temp_root}/upgrade/dbfast_mirror$i" "${OLD_DATADIR}/dbfast_mirror$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast_mirror$i/demoDataDir$j/"
+	fi
 done
 
 . ${NEW_BINDIR}/../greenplum_path.sh

@@ -124,10 +124,14 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 		got_float8_pass_by_value = true;
 	}
 
-	/* Only in <= 9.2 */
-	if (GET_MAJOR_VERSION(cluster->major_version) <= 902)
+	/*
+	 * In PostgreSQL, checksums were introduced in 9.3 so the test for checksum
+	 * version applies to <= 9.2. Greenplum backported checksums into 5.x which
+	 * is based on PostgreSQL 8.3 so this test need to go on <= 8.3 instead.
+	 */
+	if (GET_MAJOR_VERSION(cluster->major_version) <= 803)
 	{
-		cluster->controldata.data_checksums = false;
+		cluster->controldata.data_checksum_version = false;
 		got_data_checksums = true;
 	}
 
@@ -368,7 +372,7 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 			cluster->controldata.float8_pass_by_value = strstr(p, "by value") != NULL;
 			got_float8_pass_by_value = true;
 		}
-		else if ((p = strstr(bufin, "checksums")) != NULL)
+		else if ((p = strstr(bufin, "checksum")) != NULL)
 		{
 			p = strchr(p, ':');
 
@@ -377,7 +381,7 @@ get_control_data(migratorContext *ctx, ClusterInfo *cluster, bool live_check)
 
 			p++;				/* removing ':' char */
 			/* used later for contrib check */
-			cluster->controldata.data_checksums = strstr(p, "enabled") != NULL;
+			cluster->controldata.data_checksum_version = str2uint(p);
 			got_data_checksums = true;
 		}
 		/* In pre-8.4 only */
@@ -572,11 +576,26 @@ check_control_data(migratorContext *ctx, ControlData *oldctrl,
 			   "with those options.\n");
 	}
 
-	if (oldctrl->data_checksums != newctrl->data_checksums)
-	{
-		pg_log(ctx, PG_FATAL,
-			   "old and new pg_controldata checksums settings are invalid or do not match\n");
-	}
+	/*
+	 * Check for allowed combinations of data checksums
+	 */
+	if (oldctrl->data_checksum_version == 0 &&
+		newctrl->data_checksum_version != 0 &&
+		ctx->checksum_mode != CHECKSUM_ADD)
+		pg_log(ctx, PG_FATAL, "old cluster does not use data checksums but the new one does\n");
+	else if (oldctrl->data_checksum_version != 0 &&
+			 newctrl->data_checksum_version == 0 &&
+			 ctx->checksum_mode != CHECKSUM_REMOVE)
+		pg_log(ctx, PG_FATAL, "old cluster uses data checksums but the new one does not\n");
+	else if (oldctrl->data_checksum_version == newctrl->data_checksum_version &&
+			 ctx->checksum_mode != CHECKSUM_NONE)
+		pg_log(ctx, PG_FATAL, "old and new cluster data checksum configuration match, cannot %s data checksums\n",
+				 (ctx->checksum_mode == CHECKSUM_ADD ? "add" : "remove"));
+	else if (oldctrl->data_checksum_version != 0 && ctx->checksum_mode == CHECKSUM_ADD)
+		pg_log(ctx, PG_FATAL, "--add-checksum option not supported for old cluster which uses data checksums\n");
+	else if (oldctrl->data_checksum_version != newctrl->data_checksum_version
+			 && ctx->checksum_mode == CHECKSUM_NONE)
+		pg_log(ctx, PG_FATAL, "old and new cluster pg_controldata checksum versions do not match\n");
 }
 
 

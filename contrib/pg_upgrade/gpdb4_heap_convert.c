@@ -6,16 +6,9 @@
 
 #include "pg_upgrade.h"
 
-/*
- * Hack to make backend macros that check for assertions to work.
- */
-#ifdef AssertMacro
-#undef AssertMacro
-#endif
-#define AssertMacro(condition) ((void) true)
-
 #include "access/xlogdefs.h"
 #include "storage/bufpage.h"
+#include "storage/checksum.h"
 
 /*
  * Page format version that we convert to.
@@ -66,6 +59,7 @@ static AttInfo *curr_atts;
 static int		curr_natts;
 
 static char		overflow_buf[BLCKSZ];
+static int		overflow_blkno;
 static int		curr_dstfd;
 
 static void make_room(migratorContext *ctx, char *page);
@@ -271,15 +265,22 @@ make_room(migratorContext *ctx, char *page)
 static void
 flush_overflow_page(migratorContext *ctx)
 {
-	if (!PageIsEmpty(overflow_buf))
+	if (!PageIsNew(overflow_buf))
 	{
+		if (ctx->checksum_mode == CHECKSUM_ADD)
+			((PageHeader) overflow_buf)->pd_checksum =
+				pg_checksum_page(overflow_buf, overflow_blkno);
+
 		if (write(curr_dstfd, overflow_buf, BLCKSZ) != BLCKSZ)
 			pg_log(ctx, PG_FATAL, "can't write overflow page to destination\n");
 		pg_log(ctx, PG_DEBUG, "flushed overflow block\n");
+
+		overflow_blkno++;
 	}
 
 	/* Re-initialize the overflow buffer as an empty page. */
 	page_init(overflow_buf);
+	overflow_blkno = 0;
 }
 
 /*  Like PageInit() in the backend */
@@ -435,6 +436,7 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 {
 	int			src_fd;
 	int			dstfd;
+	int			blkno;
 	char		buf[BLCKSZ];
 	ssize_t		bytesRead;
 	const char *msg = NULL;
@@ -444,6 +446,7 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 	curr_natts = natts;
 
 	page_init(overflow_buf);
+	overflow_blkno = 0;
 
 	if ((src_fd = open(src, O_RDONLY, 0)) < 0)
 		return "can't open source file";
@@ -454,6 +457,7 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 		return "can't create destination file";
 	}
 
+	blkno = 0;
 	curr_dstfd = dstfd;
 	
 	while ((bytesRead = read(src_fd, buf, BLCKSZ)) == BLCKSZ)
@@ -462,11 +466,23 @@ convert_gpdb4_heap_file(migratorContext *ctx,
 		if (msg)
 			break;
 
+		/*
+		 * GPDB 4.x doesn't support checksums so we don't need to worry about
+		 * retaining an existing checksum like for upgrades from 5.x. If we're
+		 * not adding them we want a zeroed out portion in the header
+		 */
+		if (ctx->checksum_mode == CHECKSUM_ADD)
+			((PageHeader) buf)->pd_checksum = pg_checksum_page(buf, blkno);
+		else
+			memset(&(((PageHeader) buf)->pd_checksum), 0, sizeof(uint16));
+
 		if (write(dstfd, buf, BLCKSZ) != BLCKSZ)
 		{
 			msg = "can't write new page to destination";
 			break;
 		}
+
+		blkno++;
 	}
 
 	flush_overflow_page(ctx);

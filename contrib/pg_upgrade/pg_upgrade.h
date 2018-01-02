@@ -175,6 +175,14 @@ typedef struct
 	int			nrels;
 } RelInfoArr;
 
+typedef enum
+{
+	HEAP,
+	AO,
+	AOCS,
+	FSM
+} RelType;
+
 /*
  * The following structure represents a relation mapping.
  */
@@ -189,6 +197,8 @@ typedef struct
 	char		new_nspname[NAMEDATALEN];		/* new name of the namespace */
 	char		new_relname[NAMEDATALEN];		/* new name of the relation */
 	bool		missing_seg0_ok;
+
+	RelType		type;			/* Type of relation */
 
 	/* Extra information for heap tables */
 	bool		gpdb4_heap_conversion_needed;
@@ -240,7 +250,7 @@ typedef struct
 	uint32		toast;
 	bool		date_is_int;
 	bool		float8_pass_by_value;
-	bool		data_checksums;
+	bool		data_checksum_version;
 	char	   *lc_collate;
 	char	   *lc_ctype;
 	char	   *encoding;
@@ -254,6 +264,16 @@ typedef enum
 	TRANSFER_MODE_COPY,
 	TRANSFER_MODE_LINK
 } transferMode;
+
+/*
+ * Enumeration to denote checksum modes
+ */
+typedef enum
+{
+	CHECKSUM_NONE = 0,
+	CHECKSUM_ADD,
+	CHECKSUM_REMOVE
+} checksumMode;
 
 /*
  * Enumeration to denote pg_log modes
@@ -347,6 +367,8 @@ typedef struct
 	bool		debug;			/* TRUE -> log more information */
 	transferMode transfer_mode; /* copy files or link them? */
 	bool		dispatcher_mode;	/* TRUE -> upgrading QD node */
+	checksumMode checksum_mode;	/* true -> calculate and add checksums to
+								 * data pages */
 } migratorContext;
 
 
@@ -438,6 +460,9 @@ const char *linkAndUpdateFile(migratorContext *ctx,
 				pageCnvCtx *pageConverter, const char *src, const char *dst);
 
 void		check_hard_link(migratorContext *ctx);
+void rewriteHeapPageChecksum(migratorContext *ctx,
+					 const char *fromfile, const char *tofile,
+					 const char *schemaName, const char *relName);
 
 /* function.c */
 
@@ -554,3 +579,15 @@ void old_GPDB4_check_no_free_aoseg(migratorContext *ctx, Cluster whichCluster);
 void dump_new_oids(migratorContext *ctx);
 void get_old_oids(migratorContext *ctx);
 void slurp_oid_files(migratorContext *ctx);
+
+/*
+ * Hack to make backend macros that check for assertions to work.
+ */
+#ifdef AssertMacro
+#undef AssertMacro
+#endif
+#define AssertMacro(condition) ((void) true)
+#ifdef Assert
+#undef Assert
+#endif
+#define Assert(condition) ((void) (true || (condition)))
