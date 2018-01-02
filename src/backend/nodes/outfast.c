@@ -2032,18 +2032,6 @@ _outNode(StringInfo str, void *obj)
 				_outCreateTrigStmt(str, obj);
 				break;
 
-			case T_CreateFileSpaceStmt:
-				_outCreateFileSpaceStmt(str, obj);
-				break;
-
-			case T_FileSpaceEntry:
-				_outFileSpaceEntry(str, obj);
-				break;
-
-			case T_DropFileSpaceStmt:
-				_outDropFileSpaceStmt(str, obj);
-				break;
-
 			case T_CreateTableSpaceStmt:
 				_outCreateTableSpaceStmt(str, obj);
 				break;

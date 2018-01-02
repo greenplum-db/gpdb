@@ -34,7 +34,7 @@ try:
     from gppylib.utils import TableLogger
     from gppylib.gp_dbid import GpDbidFile
     from gppylib.gp_era import GpEraFile
-    from gppylib.operations.filespace import CheckFilespaceConsistency, FileType, is_filespace_configured
+    from gppylib.operations.filespace import CheckFilespaceConsistency, FileType
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -176,15 +176,6 @@ class GpStart:
             else:
                 logger.info("Skipping Standby activation status checking.")
 
-            filespace_configured = is_filespace_configured()
-            inconsistent_filespace = False
-            if filespace_configured:
-                # Check for filespace consistency
-                if not CheckFilespaceConsistency(self.gparray, FileType.TRANSACTION_FILES).run() or \
-                        not CheckFilespaceConsistency(self.gparray, FileType.TEMPORARY_FILES).run():
-                    logger.error('Filespaces are inconsistent. Abort Greenplum Database start.')
-                    inconsistent_filespace = True
-
             logger.info("Shutting down master")
             cmd = gp.GpStop("Shutting down master", masterOnly=True,
                             fast=True, quiet=logging_is_quiet(),
@@ -194,11 +185,6 @@ class GpStart:
             cmd.run()
             logger.debug("results of forcing master shutdown: %s" % cmd)
             # TODO: check results of command.
-
-            # in order to fail out here we must have filespace configured and also
-            # have failed the consistency check
-            if filespace_configured and inconsistent_filespace:
-                return 1
 
         finally:
             # Reenable Ctrl-C

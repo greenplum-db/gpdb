@@ -3495,17 +3495,15 @@ CleanupBackupHistory(void)
 	DIR		   *xldir;
 	struct dirent *xlde;
 	char		path[MAXPGPATH];
-	char	*xlogDir = NULL;
 
-	xlogDir = makeRelativeToTxnFilespace(XLOGDIR);
-	xldir = AllocateDir(xlogDir);
+	xldir = AllocateDir(XLOGDIR);
 	if (xldir == NULL)
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open transaction log directory \"%s\": %m",
-						xlogDir)));
+						XLOGDIR)));
 
-	while ((xlde = ReadDir(xldir, xlogDir)) != NULL)
+	while ((xlde = ReadDir(xldir, XLOGDIR)) != NULL)
 	{
 		if (strlen(xlde->d_name) > 24 &&
 			strspn(xlde->d_name, "0123456789ABCDEF") == 24 &&
@@ -3524,7 +3522,6 @@ CleanupBackupHistory(void)
 		}
 	}
 
-	pfree(xlogDir);
 	FreeDir(xldir);
 }
 
@@ -3734,13 +3731,10 @@ static void
 ValidateXLOGDirectoryStructure(void)
 {
 	char		path[MAXPGPATH];
-	char	   *fullpath;
 	struct stat stat_buf;
 
-	fullpath = makeRelativeToTxnFilespace(XLOGDIR);
-
 	/* Check for pg_xlog; if it doesn't exist, error out */
-	if (stat(fullpath, &stat_buf) != 0 ||
+	if (stat(XLOGDIR, &stat_buf) != 0 ||
 			!S_ISDIR(stat_buf.st_mode))
 			ereport(FATAL,
 					(errmsg("required WAL directory \"%s\" does not exist",
@@ -3748,8 +3742,7 @@ ValidateXLOGDirectoryStructure(void)
 
 	/* Check for archive_status */
 	snprintf(path, MAXPGPATH, XLOGDIR "/archive_status");
-	fullpath = makeRelativeToTxnFilespace(path);
-	if (stat(fullpath, &stat_buf) == 0)
+	if (stat(path, &stat_buf) == 0)
 	{
 		/* Check for weird cases where it exists but isn't a directory */
 		if (!S_ISDIR(stat_buf.st_mode))
@@ -3761,7 +3754,7 @@ ValidateXLOGDirectoryStructure(void)
 	{
 		ereport(LOG,
 				(errmsg("creating missing WAL directory \"%s\"", path)));
-		if (mkdir(fullpath, 0700) < 0)
+		if (mkdir(path, 0700) < 0)
 			ereport(FATAL, 
 					(errmsg("could not create missing directory \"%s\": %m",
 							path)));

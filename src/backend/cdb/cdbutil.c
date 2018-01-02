@@ -256,15 +256,6 @@ getCdbComponentInfo(bool DNSLookupAsError)
 		Assert(!isNull);
 		pRow->port = DatumGetInt32(attr);
 
-		/*
-		 * Filerep_port
-		 */
-		attr = heap_getattr(gp_seg_config_tuple, Anum_gp_segment_configuration_replication_port, RelationGetDescr(gp_seg_config_rel), &isNull);
-		if (!isNull)
-			pRow->filerep_port = DatumGetInt32(attr);
-		else
-			pRow->filerep_port = -1;
-
 		getAddressesForDBid(pRow, DNSLookupAsError ? ERROR : LOG);
 
 		/* We make sure we get a valid hostip here */
@@ -1091,16 +1082,6 @@ dbid_get_dbinfo(int16 dbid)
 							RelationGetDescr(rel), &isNull);
 		Assert(!isNull);
 		i->port = DatumGetInt32(attr);
-
-		/*
-		 * Filerep_port
-		 */
-		attr = heap_getattr(tuple, Anum_gp_segment_configuration_replication_port,
-							RelationGetDescr(rel), &isNull);
-		if (!isNull)
-			i->filerep_port = DatumGetInt32(attr);
-		else
-			i->filerep_port = -1;
 
 		Assert(systable_getnext(scan) == NULL); /* should be only 1 */
 	}

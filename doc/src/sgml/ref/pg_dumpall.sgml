@@ -210,7 +210,7 @@ PostgreSQL documentation
       <term><option>--roles-only</option></term>
       <listitem>
        <para>
-        Dump only roles, no databases, tablespaces or filespaces.
+        Dump only roles, no databases or tablespaces.
        </para>
       </listitem>
      </varlistentry>

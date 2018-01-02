@@ -251,7 +251,6 @@ extern bool	Debug_database_command_print;
 extern int	Debug_database_command_print_level;
 extern int	gp_max_databases;
 extern int	gp_max_tablespaces;
-extern int	gp_max_filespaces;
 extern bool gp_startup_integrity_checks;
 extern bool Debug_print_xlog_relation_change_info;
 extern bool Debug_print_xlog_relation_change_info_skip_issues_only;
@@ -318,7 +317,6 @@ extern bool execute_pruned_plan;
 extern bool gp_partitioning_dynamic_selection_log;
 extern int gp_max_partition_level;
 
-extern bool gp_temporary_files_filespace_repair;
 extern bool gp_perfmon_print_packet_info;
 extern bool fts_diskio_check;
 

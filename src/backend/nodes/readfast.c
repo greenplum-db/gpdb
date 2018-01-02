@@ -2405,43 +2405,6 @@ _readCreateTrigStmt(void)
 
 }
 
-static CreateFileSpaceStmt *
-_readCreateFileSpaceStmt(void)
-{
-	READ_LOCALS(CreateFileSpaceStmt);
-
-	READ_STRING_FIELD(filespacename);
-	READ_STRING_FIELD(owner);
-	READ_NODE_FIELD(locations);
-
-	READ_DONE();
-}
-
-
-static FileSpaceEntry *
-_readFileSpaceEntry(void)
-{
-	READ_LOCALS(FileSpaceEntry);
-
-	READ_INT_FIELD(dbid);
-	READ_INT_FIELD(contentid);
-	READ_STRING_FIELD(location);
-	READ_STRING_FIELD(hostname);
-
-	READ_DONE();
-}
-
-static DropFileSpaceStmt *
-_readDropFileSpaceStmt(void)
-{
-	READ_LOCALS(DropFileSpaceStmt);
-
-	READ_STRING_FIELD(filespacename);
-	READ_BOOL_FIELD(missing_ok);
-
-	READ_DONE();
-}
-
 static CreateTableSpaceStmt *
 _readCreateTableSpaceStmt(void)
 {
@@ -2449,7 +2412,7 @@ _readCreateTableSpaceStmt(void)
 
 	READ_STRING_FIELD(tablespacename);
 	READ_STRING_FIELD(owner);
-	READ_STRING_FIELD(filespacename);
+	READ_STRING_FIELD(location);
 
 	READ_DONE();
 }
@@ -3577,16 +3540,6 @@ readNodeBinary(void)
 				break;
 			case T_CreateTrigStmt:
 				return_value = _readCreateTrigStmt();
-				break;
-
-			case T_CreateFileSpaceStmt:
-				return_value = _readCreateFileSpaceStmt();
-				break;
-			case T_FileSpaceEntry:
-				return_value = _readFileSpaceEntry();
-				break;
-			case T_DropFileSpaceStmt:
-				return_value = _readDropFileSpaceStmt();
 				break;
 
 			case T_CreateTableSpaceStmt:

@@ -55,7 +55,7 @@ POSTGRES_BKI_SRCS := $(addprefix $(top_srcdir)/src/include/catalog/, \
 	gp_segment_config.h \
 	pg_exttable.h pg_appendonly.h aoseg.h \
 	gp_fastsequence.h pg_extprotocol.h \
-	pg_partition.h pg_partition_rule.h pg_filespace.h pg_filespace_entry.h \
+	pg_partition.h pg_partition_rule.h \
 	pg_attribute_encoding.h \
 	pg_auth_time_constraint.h \
 	pg_compression.h \

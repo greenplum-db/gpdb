@@ -213,45 +213,22 @@ typedef XLogLongPageHeaderData *XLogLongPageHeader;
 	sscanf(fname, "%08X%08X%08X", tli, log, seg)
 
 #define XLogFilePath(path, tli, log, seg)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/%08X%08X%08X", XLogDir, tli, log, seg);	\
-		pfree(XLogDir);								\
-	}while(0)
-
-#define XLogFilePath2(path, tli, log, seg)	\
-		snprintf(path, MAXPGPATH, "%s/%08X%08X%08X", XLOGDIR, tli, log, seg);	
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X", tli, log, seg)
 
 #define TLHistoryFileName(fname, tli)	\
 	snprintf(fname, MAXFNAMELEN, "%08X.history", tli)
 
 #define TLHistoryFilePath(path, tli)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/%08X.history", XLogDir, tli);			\
-		pfree(XLogDir);								\
-	}while(0)
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X.history", tli)
 
 #define StatusFilePath(path, xlog, suffix)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/archive_status/%s%s", XLogDir, xlog, suffix);	\
-		pfree(XLogDir);								\
-	}while(0)
+	snprintf(path, MAXPGPATH, XLOGDIR "/archive_status/%s%s", xlog, suffix)
 
 #define BackupHistoryFileName(fname, tli, log, seg, offset) \
 	snprintf(fname, MAXFNAMELEN, "%08X%08X%08X.%08X.backup", tli, log, seg, offset)
 
 #define BackupHistoryFilePath(path, tli, log, seg, offset)	\
-	do										\
-	{										\
-		char *XLogDir = makeRelativeToTxnFilespace(XLOGDIR);		\
-		snprintf(path, MAXPGPATH, "%s/%08X%08X%08X.%08X.backup", XLogDir, tli, log, seg, offset);	\
-		pfree(XLogDir);								\
-	}while(0)
+	snprintf(path, MAXPGPATH, XLOGDIR "/%08X%08X%08X.%08X.backup", tli, log, seg, offset)
 
 
 /*

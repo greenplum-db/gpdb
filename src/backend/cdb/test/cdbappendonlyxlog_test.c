@@ -107,5 +107,7 @@ main(int argc, char* argv[])
 		unit_test(test_ao_truncate_replay_invalid_segment_file)
 	};
 
+	MemoryContextInit();
+
 	return run_tests(tests);
 }

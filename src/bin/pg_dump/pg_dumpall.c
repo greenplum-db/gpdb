@@ -35,8 +35,6 @@ static const char *progname;
 
 static void help(void);
 
-static void dropFilespaces(PGconn *conn);
-static void dumpFilespaces(PGconn *conn);
 static void dumpResQueues(PGconn *conn);
 static void dumpResGroups(PGconn *conn);
 static void dumpRoleConstraints(PGconn *conn);
@@ -68,7 +66,6 @@ static char pg_dump_bin[MAXPGPATH];
 static PQExpBuffer pgdumpopts;
 static bool skip_acls = false;
 static bool verbose = false;
-static bool filespaces = false;
 
 static int	resource_queues = 0;
 static int	resource_groups = 0;
@@ -131,7 +128,6 @@ main(int argc, char *argv[])
 		{"password", no_argument, NULL, 'W'},
 		{"no-privileges", no_argument, NULL, 'x'},
 		{"no-acl", no_argument, NULL, 'x'},
-		{"filespaces", no_argument, NULL, 'F'},
 
 		/*
 		 * the following options don't have an equivalent short option letter
@@ -261,10 +257,6 @@ main(int argc, char *argv[])
 			case 'r':
 				fprintf(stderr, _("-r option is not supported. Did you mean --roles-only or --resource-queues?\n"));
 				exit(1);
-				break;
-
-			case 'F':
-				filespaces = true;
 				break;
 
 			case 's':
@@ -541,9 +533,6 @@ main(int argc, char *argv[])
 					dropTablespaces(conn);
 			}
 
-			if (!roles_only && !tablespaces_only)
-				dropFilespaces(conn);
-
 			if (!tablespaces_only)
 				dropRoles(conn);
 		}
@@ -570,10 +559,6 @@ main(int argc, char *argv[])
 
 			/* Dump role constraints */
 			dumpRoleConstraints(conn);
-
-			/* Dump filespaces */
-			if (filespaces)
-				dumpFilespaces(conn);
 		}
 
 		if (!roles_only && !no_tablespaces)
@@ -629,7 +614,6 @@ help(void)
 	printf(_("  -S, --superuser=NAME        superuser user name to use in the dump\n"));
 	printf(_("  -t, --tablespaces-only      dump only tablespaces, no databases or roles\n"));
 	printf(_("  -x, --no-privileges         do not dump privileges (grant/revoke)\n"));
-	printf(_("  -F, --filespaces            dump filespace data\n"));
 	printf(_("  --resource-queues           dump resource queue data\n"));
 	printf(_("  --resource-groups           dump resource group data\n"));
 	printf(_("  --binary-upgrade            for use by upgrade utilities only\n"));
@@ -1313,141 +1297,6 @@ dumpRoleConstraints(PGconn *conn)
 
 
 /*
- * Drop filespace.
- *
- * GPDB_84_MERGE_FIXME: I wrote this without any testing at all. Needs testing.
- */
-static void
-dropFilespaces(PGconn *conn)
-{
-	PGresult   *res;
-	int			i;
-
-	/*
-	 * Get all filespaces except built-in ones (which we assume are named
-	 * pg_xxx) (GPDB_84_MERGE_FIXME: are there any built-in filespaces?)
-	 */
-	res = executeQuery(conn, "SELECT fsname "
-					   "FROM pg_catalog.pg_filespace "
-					   "WHERE fsname !~ '^pg_' "
-					   "ORDER BY 1");
-
-	if (PQntuples(res) > 0)
-		fprintf(OPF, "--\n-- Drop filespaces\n--\n\n");
-
-	for (i = 0; i < PQntuples(res); i++)
-	{
-		char	   *fsname = PQgetvalue(res, i, 0);
-
-		fprintf(OPF, "DROP FILESPACE %s;\n", fmtId(fsname));
-	}
-
-	PQclear(res);
-
-	fprintf(OPF, "\n\n");
-}
-
-/*
- * Dump filespaces.
- */
-static void
-dumpFilespaces(PGconn *conn)
-{
-	int			i,
-				j;
-	PGresult   *res;
-
-	/*
-	 * Get all filespaces except built-in ones (named pg_xxx)
-	 */
-	if (server_version < 80214)
-	{
-		/* Filespaces were introduced in GP 4.0 (server_version 8.2.14) */
-		return;
-	}
-	else
-	{
-		res = executeQuery(conn,
-						   "SELECT fsname, oid, "
-						   "       pg_catalog.pg_get_userbyid(fsowner) as fsowner, "
-						   "       pg_catalog.shobj_description(oid, 'pg_filespace') "
-						   "FROM pg_catalog.pg_filespace "
-						   "WHERE fsname !~ '^pg_' "
-						   "ORDER BY 1");
-	}
-
-	if (PQntuples(res) > 0)
-			fprintf(OPF, "--\n-- Filespaces\n--\n\n");
-
-	for (i = 0; i < PQntuples(res); i++)
-	{
-		PQExpBuffer buf = createPQExpBuffer();
-		char	   *fsname = PQgetvalue(res, i, 0);
-		char	   *fsoid = PQgetvalue(res, i, 1);
-		char	   *fsowner = PQgetvalue(res, i, 2);
-		char	   *fsdesc = PQgetvalue(res, i, 3);
-		PQExpBuffer subbuf;
-		PGresult   *entries = NULL;
-
-		/* quote name if needed */
-		fsname = strdup(fmtId(fsname));
-
-		/* Begin creating the filespace definition */
-		appendPQExpBuffer(buf, "CREATE FILESPACE %s", fsname);
-		appendPQExpBuffer(buf, " OWNER %s", fmtId(fsowner));
-		appendPQExpBuffer(buf, " (\n");
-
-		/*
-		 * We still need to lookup all of the paths associated with this
-		 * filespace, look them up in the pg_filespace_entry table.
-		 */
-		subbuf = createPQExpBuffer();
-		appendPQExpBuffer(subbuf,
-						  "SELECT fsedbid, fselocation "
-						  "FROM pg_catalog.pg_filespace_entry "
-						  "WHERE fsefsoid = %s "
-						  "ORDER BY 1",
-						  fsoid);
-		entries = executeQuery(conn, subbuf->data);
-		destroyPQExpBuffer(subbuf);
-
-		/* append the filespace location information to output */
-		for (j = 0; j < PQntuples(entries); j++)
-		{
-			char	   *dbid = PQgetvalue(entries, j, 0);
-			char	   *location = PQgetvalue(entries, j, 1);
-
-			if (j > 0)
-				appendPQExpBuffer(buf, ",\n");
-			appendPQExpBuffer(buf, "  %s: ", dbid);
-			appendStringLiteralConn(buf, location, conn);
-		}
-		PQclear(entries);
-
-		/* Finish off the statement */
-		appendPQExpBuffer(buf, "\n);\n");
-
-		/* Add a comment on the filespace if specified */
-		if (fsdesc && strlen(fsdesc))
-		{
-			appendPQExpBuffer(buf, "COMMENT ON FILESPACE %s IS ", fsname);
-			appendStringLiteralConn(buf, fsdesc, conn);
-			appendPQExpBuffer(buf, ";\n");
-		}
-
-		/* Output the results */
-		fprintf(OPF, "%s", buf->data);
-
-		free(fsname);
-		destroyPQExpBuffer(buf);
-	}
-
-	PQclear(res);
-	fprintf(OPF, "\n\n");
-}
-
-
-/*
  * Drop tablespaces.
  */
 static void
@@ -1489,6 +1338,8 @@ dumpTablespaces(PGconn *conn)
 	PGresult   *res;
 	int			i;
 
+	// WALREP_FIXME: filespaces are gone. How do we deal with that here?
+	
 	/*
 	 * Get all tablespaces execpt built-in ones (named pg_xxx)
 	 *

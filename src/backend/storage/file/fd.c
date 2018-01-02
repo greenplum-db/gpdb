@@ -969,6 +969,10 @@ FileNameOpenFile(FileName fileName, int fileFlags, int fileMode)
  * GPDB also has a concept of "temp filespace", and GPDB used
  * "getCurrentTempFilePath" instead of DatabasePath.
  *
+ * WALREP_FIXME: getCurrentTempFilePath was removed, and replaced with
+ * just "base/". We need to resurrect this upstream code, to make
+ * use of temp_tablespaces again.
+ *
  * So this upstream commit is not merged.
  */
 /*

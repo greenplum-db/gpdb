@@ -31,7 +31,6 @@
 #include "cdb/cdbappendonlystoragewrite.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "cdb/cdbmirroredfilesysobj.h"
-#include "cdb/cdbpersistenttablespace.h"
 #include "utils/guc.h"
 
 
@@ -321,29 +320,16 @@ AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,
 	/*
 	 * Open or create the file for write.
 	 */
-	char	   *primaryFilespaceLocation;
-	char	   *mirrorFilespaceLocation;
 	char	   *dbPath;
-	char	   *path;
+	char		path[MAXPGPATH];
 	int			fileFlags = O_RDWR | PG_BINARY;
 
-	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-										relFileNode->spcNode,
-										&primaryFilespaceLocation,
-										&mirrorFilespaceLocation);
-
-	dbPath = (char *) palloc(MAXPGPATH + 1);
-	path = (char *) palloc(MAXPGPATH + 1);
-
-	FormDatabasePath(dbPath,
-					 primaryFilespaceLocation,
-					 relFileNode->spcNode,
-					 relFileNode->dbNode);
+	dbPath = GetDatabasePath(relFileNode->dbNode, relFileNode->spcNode);
 
 	if (segmentFileNum == 0)
-		sprintf(path, "%s/%u", dbPath, relFileNode->relNode);
+		snprintf(path, MAXPGPATH, "%s/%u", dbPath, relFileNode->relNode);
 	else
-		sprintf(path, "%s/%u.%u", dbPath, relFileNode->relNode, segmentFileNum);
+		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, relFileNode->relNode, segmentFileNum);
 
 	errno = 0;
 
@@ -351,8 +337,8 @@ AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,
 	if (file < 0)
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("Append-only Storage Write could not open segment file \"%s\" for relation \"%s\": %m",
-						filePathName,
+				 errmsg("Append-only Storage Write could not open segment file %s \"%s\" for relation \"%s\": %m",
+						path, filePathName,
 						storageWrite->relationName)));
 
 	/*

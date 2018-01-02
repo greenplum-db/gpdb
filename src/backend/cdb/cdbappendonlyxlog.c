@@ -19,15 +19,9 @@
 #include <fcntl.h>
 #include <sys/file.h>
 
-#include "utils/palloc.h"
 #include "cdb/cdbappendonlyxlog.h"
 #include "storage/fd.h"
 #include "catalog/catalog.h"
-#include "cdb/cdbpersistenttablespace.h"
-#include "storage/smgr.h"
-#include "storage/lwlock.h"
-#include "utils/guc.h"
-#include "postmaster/primary_mirror_mode.h"
 
 #include "access/xlogutils.h"
 #include "cdb/cdbappendonlyam.h"
@@ -70,34 +64,24 @@ xlog_ao_insert(RelFileNode relFileNode, int32 segmentFileNum,
 void
 ao_insert_replay(XLogRecord *record)
 {
-	char	   *primaryFilespaceLocation;
-	char	   *mirrorFilespaceLocation;
-	char		dbPath[MAXPGPATH + 1];
-	char		path[MAXPGPATH + 1];
+	char	   *dbPath;
+	char		path[MAXPGPATH];
 	int			written_len;
 	int64		seek_offset;
 	File		file;
 	int			fileFlags;
-
 	xl_ao_insert *xlrec = (xl_ao_insert *) XLogRecGetData(record);
 	char	   *buffer = (char *) xlrec + SizeOfAOInsert;
 	uint32		len = record->xl_len - SizeOfAOInsert;
 
-	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-							   xlrec->target.node.spcNode,
-							   &primaryFilespaceLocation,
-							   &mirrorFilespaceLocation);
-
-	FormDatabasePath(
-			 dbPath,
-			 primaryFilespaceLocation,
-			 xlrec->target.node.spcNode,
-			 xlrec->target.node.dbNode);
+	dbPath = GetDatabasePath(xlrec->target.node.dbNode,
+							 xlrec->target.node.spcNode);
 
 	if (xlrec->target.segment_filenum == 0)
 		snprintf(path, MAXPGPATH, "%s/%u", dbPath, xlrec->target.node.relNode);
 	else
 		snprintf(path, MAXPGPATH, "%s/%u.%u", dbPath, xlrec->target.node.relNode, xlrec->target.segment_filenum);
+	pfree(dbPath);
 
 	fileFlags = O_RDWR | PG_BINARY;
 
@@ -175,24 +159,14 @@ void xlog_ao_truncate(RelFileNode relFileNode, int32 segmentFileNum, int64 offse
 void
 ao_truncate_replay(XLogRecord *record)
 {
-	char *primaryFilespaceLocation;
-	char *mirrorFilespaceLocation;
-	char dbPath[MAXPGPATH + 1];
-	char path[MAXPGPATH + 1];
-	File file;
+	char	   *dbPath;
+	char		path[MAXPGPATH];
+	File		file;
 
 	xl_ao_truncate *xlrec = (xl_ao_truncate*) XLogRecGetData(record);
 
-	PersistentTablespace_GetPrimaryAndMirrorFilespaces(
-		xlrec->target.node.spcNode,
-		&primaryFilespaceLocation,
-		&mirrorFilespaceLocation);
-
-	FormDatabasePath(
-				dbPath,
-				primaryFilespaceLocation,
-				xlrec->target.node.spcNode,
-				xlrec->target.node.dbNode);
+	dbPath = GetDatabasePath(xlrec->target.node.dbNode,
+							 xlrec->target.node.spcNode);
 
 	if (xlrec->target.segment_filenum == 0)
 		snprintf(path, MAXPGPATH, "%s/%u", dbPath, xlrec->target.node.relNode);

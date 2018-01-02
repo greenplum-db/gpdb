@@ -3395,13 +3395,6 @@ quickdie_impl()
 	 * being doubly sure.)
 	 */
 
-	/*
-	 * MPP-17167: We need to release any filrep or primary/mirror spin locks.
-	 * to allow the possibility that filerep itself has sent us a SIGQUIT
-	 * message as part of filerep transition.
-	 */
-	primaryMirrorModeResetSpinLocks();
-
 	_exit(2);
 }
 

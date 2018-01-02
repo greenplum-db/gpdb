@@ -265,16 +265,7 @@ describeTablespaces(const char *pattern, bool verbose)
 
 	initPQExpBuffer(&buf);
 
-    if (isGPDB() && pset.sversion >= 80213) /* GPDB ? */
 	printfPQExpBuffer(&buf,
-					  "SELECT spcname AS \"%s\",\n"
-					  "  pg_catalog.pg_get_userbyid(spcowner) AS \"%s\",\n"
-					  "  fsname AS \"%s\"",
-					  gettext_noop("Name"),
-					  gettext_noop("Owner"),
-					  gettext_noop("Filespace Name"));
-    else
-    printfPQExpBuffer(&buf,
 					  "SELECT spcname AS \"%s\",\n"
 					  "  pg_catalog.pg_get_userbyid(spcowner) AS \"%s\",\n"
 					  "  spclocation AS \"%s\"",
@@ -290,14 +281,11 @@ describeTablespaces(const char *pattern, bool verbose)
 
 	if (verbose && pset.sversion >= 80200)
 		appendPQExpBuffer(&buf,
-		 ",\n  pg_catalog.shobj_description(t.oid, 'pg_tablespace') AS \"%s\"",
+		 ",\n  pg_catalog.shobj_description(oid, 'pg_tablespace') AS \"%s\"",
 						  gettext_noop("Description"));
 
 	appendPQExpBuffer(&buf,
-					  "\nFROM pg_catalog.pg_tablespace t\n");
-	if (isGPDB())
-	    appendPQExpBuffer(&buf,
-					  "JOIN pg_catalog.pg_filespace fs on (spcfsoid=fs.oid)");
+					  "\nFROM pg_catalog.pg_tablespace\n");
 
 	processSQLNamePattern(pset.db, &buf, pattern, false, false,
 						  NULL, "spcname", NULL,

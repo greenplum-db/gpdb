@@ -223,7 +223,7 @@ PROCESS_QE () {
 
 REGISTER_MIRROR() {
     LOG_MSG "[INFO]:-Start Function $FUNCNAME"
-    env PGOPTIONS="-c gp_session_role=utility" $PSQL "${DEFAULTDB}" -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTADDRESS}', '${GP_HOSTADDRESS}', ${GP_PORT}, -1, '{pg_system, ${GP_DIR}}')" >> $LOG_FILE 2>&1
+    env PGOPTIONS="-c gp_session_role=utility" $PSQL "${DEFAULTDB}" -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTADDRESS}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}')" >> $LOG_FILE 2>&1
     LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 

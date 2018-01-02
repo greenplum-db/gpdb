@@ -20,15 +20,15 @@
 
 #include "catalog/oid_dispatch.h"
 
+#define OIDCHARS		10		/* max chars printed by %u */
+#define TABLESPACE_VERSION_DIRECTORY	"PG_" PG_MAJORVERSION "_" \
+									CppAsString2(CATALOG_VERSION_NO)
 
 extern const char *forkNames[];
 extern ForkNumber forkname_to_number(char *forkName);
 
 extern char *relpath(RelFileNode rnode, ForkNumber forknum);
 extern char *GetDatabasePath(Oid dbNode, Oid spcNode);
-extern void FormDatabasePath(char *databasePath, char *filespaceLocation, Oid tablespaceOid, Oid databaseOid);
-extern void FormTablespacePath(char *tablespacePath, char *filespaceLocation, Oid tablespaceOid);
-extern void FormRelationPath(char *relationPath, char *filespaceLocation, RelFileNode rnode);
 
 extern bool IsSystemRelation(Relation relation);
 extern bool IsToastRelation(Relation relation);

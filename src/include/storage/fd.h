@@ -128,4 +128,8 @@ extern int gp_retry_close(int fd);
 
 extern size_t GetTempFilePrefix(char * buf, size_t buflen, const char * fileName);
 
+// WALREP_FIXME: Need to chase all the places that use this, and replace them
+// with something that uses temp_tablespaces properly.
+#define getCurrentTempFilePath "base"
+
 #endif   /* FD_H */

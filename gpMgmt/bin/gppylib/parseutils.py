@@ -296,52 +296,6 @@ def line_reader(f):
 
 
 ################
-# gpfilespace format
-#
-# First line in file is the filespace name, remaining lines are
-# specify hostname, dbid, and a path:
-#
-#   filespace:name
-#   hostname:dbid:path
-#   ...
-################
-
-def parse_fspacename(filename, lineno, line):
-    """
-    Parse the filespace: line which appears at the beginning of the gpfilespace configuration file.
-
-    >>> parse_fspacename('file', 1, 'filespace:blah')
-    'blah'
-    """
-    p = LineParser(caller(), filename, lineno, line)
-    p.ensure_starts_with('filespace:')
-    fspacename = p.read_delimited_field(':')
-    if p.rest is not None:
-        msg = "unexpected characters after filespace name >>%s" % p.rest
-        raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    return fspacename
-
-
-def parse_gpfilespace_line(filename, lineno, line):
-    """
-    Parse a line of the gpfilespace configuration file other than the first.
-
-    >>> parse_gpfilespace_line('file', 1, '[::1]:dbid:path')
-    ('::1', 'dbid', 'path')
-    >>> parse_gpfilespace_line('file', 1, 'host:dbid:path')
-    ('host', 'dbid', 'path')
-    """
-    p = LineParser(caller(), filename, lineno, line)
-    host = p.handle_field('[host]')  # [host] indicates possible IPv6 address
-    dbid = p.handle_field('dbid')
-    path = p.handle_field('path')
-    if p.rest is not None:
-        msg = "unexpected characters after path name >>%s" % p.rest
-        raise ExceptionNoStackTraceNeeded("%s:%s:%s LINE >>%s\n%s" % (filename, lineno, caller(), line, msg))
-    return host, dbid, path
-
-
-################
 # gpexpand segment file format:
 #
 # Form of file is hostname:address:port:dtadir:dbid:contentId:role[:replicationPort]

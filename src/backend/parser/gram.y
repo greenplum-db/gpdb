@@ -225,7 +225,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 /* GPDB-specific commands */
 %type <node>	AlterTypeStmt AlterQueueStmt AlterResourceGroupStmt
-		CreateExternalStmt CreateFileSpaceStmt DropFileSpaceStmt
+		CreateExternalStmt
 		CreateQueueStmt CreateResourceGroupStmt
 		DropQueueStmt DropResourceGroupStmt
 		ExtTypedesc OptSingleRowErrorHandling
@@ -459,9 +459,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <list>	constraints_set_list
 %type <boolean> constraints_set_mode
-%type <str>		OptTableSpace OptConsTableSpace OptOwner
-%type <list>    FileSpaceSegList
-%type <node>    FileSpaceSeg
+%type <str>		OptTableSpace OptConsTableSpace OptTableSpaceOwner
 %type <list>    DistributedBy OptDistributedBy 
 %type <ival>	TabPartitionByType OptTabPartitionRangeInclusive
 %type <node>	OptTabPartitionBy TabSubPartitionBy 
@@ -619,7 +617,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 	ERRORS EVERY EXCHANGE EXCLUDE
 
-	FIELDS FILESPACE FILL FILTER FORMAT
+	FIELDS FILL FILTER FORMAT
 
 	GROUP_ID GROUPING
 
@@ -1105,7 +1103,6 @@ stmt :
 			| CreateDomainStmt
 			| CreateExtensionStmt
 			| CreateExternalStmt
-			| CreateFileSpaceStmt
 			| CreateFdwStmt
 			| CreateForeignServerStmt
 			| CreateFunctionStmt
@@ -1144,7 +1141,6 @@ stmt :
 			| DropResourceGroupStmt
 			| DropRuleStmt
 			| DropStmt
-			| DropFileSpaceStmt
 			| DropTableSpaceStmt
 			| DropTrigStmt
 			| DropRoleStmt
@@ -5062,89 +5058,22 @@ opt_procedural:
 /*****************************************************************************
  *
  * 		QUERY:
- *             CREATE FILESPACE filespace ( ... )
+ *             CREATE TABLESPACE tablespace LOCATION '/path/to/tablespace/'
  *
  *****************************************************************************/
 
-CreateFileSpaceStmt: 
-			CREATE FILESPACE name OptOwner '(' FileSpaceSegList ')' 
-				{
-					CreateFileSpaceStmt *n = makeNode(CreateFileSpaceStmt);
-					n->filespacename = $3;
-					n->owner = $4;
-					n->locations = $6;
-					$$ = (Node *) n;
-				}
-		;
-
-FileSpaceSegList:
-			FileSpaceSeg
-			{
-				$$ = list_make1($1);
-			}
-			| FileSpaceSegList ',' FileSpaceSeg  
-			{ 
-				$$ = lappend($1, $3); 
-			}
-		;
-
-FileSpaceSeg:
-            Iconst ':' Sconst
-			{
-				FileSpaceEntry *n = makeNode(FileSpaceEntry);
-				n->dbid = $1;
-				n->contentid = -1;  /* will be filled in later */
-				n->location = $3;
-				$$ = (Node *) n;
-			}
-		;
-
-OptOwner: 
-			OWNER name			{ $$ = $2; }
-			| /*EMPTY*/			{ $$ = NULL; }
-		;
-
-/*****************************************************************************
- *
- * 		QUERY :
- *				DROP FILESPACE <tablespace>
- *
- *		No need for drop behaviour as we cannot implement dependencies for
- *		objects in other databases; we can only support RESTRICT.
- *
- ****************************************************************************/
-
-DropFileSpaceStmt: DROP FILESPACE name
-				{
-					DropFileSpaceStmt *n = makeNode(DropFileSpaceStmt);
-					n->filespacename = $3;
-					n->missing_ok = false;
-					$$ = (Node *) n;
-				}
-				|  DROP FILESPACE IF_P EXISTS name
-                {
-					DropFileSpaceStmt *n = makeNode(DropFileSpaceStmt);
-					n->filespacename = $5;
-					n->missing_ok = true;
-					$$ = (Node *) n;
-				}
-		;
-
-/*****************************************************************************
- *
- * 		QUERY:
- *             CREATE TABLESPACE tablespace FILESPACE filespace
- *
- *****************************************************************************/
-
-CreateTableSpaceStmt: CREATE TABLESPACE name OptOwner FILESPACE name
+CreateTableSpaceStmt: CREATE TABLESPACE name OptTableSpaceOwner LOCATION Sconst
 				{
 					CreateTableSpaceStmt *n = makeNode(CreateTableSpaceStmt);
 					n->tablespacename = $3;
 					n->owner = $4;
-					n->filespacename = $6;
+					n->location = $6;
 					$$ = (Node *) n;
 				}
+		;
+
+OptTableSpaceOwner: OWNER name			{ $$ = $2; }
+			| /*EMPTY */				{ $$ = NULL; }
 		;
 
 /*****************************************************************************
@@ -6692,7 +6621,6 @@ comment_type:
 			| TABLESPACE						{ $$ = OBJECT_TABLESPACE; }
 			| EXTENSION							{ $$ = OBJECT_EXTENSION; }
 			| ROLE								{ $$ = OBJECT_ROLE; }
-			| FILESPACE                         { $$ = OBJECT_FILESPACE; }
 			| RESOURCE QUEUE                    { $$ = OBJECT_RESQUEUE; }
 		;
 
@@ -8015,14 +7943,6 @@ RenameStmt: ALTER AGGREGATE func_name aggr_args RENAME TO name
 					n->newname = $6;
 					$$ = (Node *)n;
 				}
-			| ALTER FILESPACE name RENAME TO name
-				{
-					RenameStmt *n = makeNode(RenameStmt);
-					n->renameType = OBJECT_FILESPACE;
-					n->subname = $3;
-					n->newname = $6;
-					$$ = (Node *)n;
-				}
 			| ALTER FUNCTION function_with_argtypes RENAME TO name
 				{
 					RenameStmt *n = makeNode(RenameStmt);
@@ -8321,14 +8241,6 @@ AlterOwnerStmt: ALTER AGGREGATE func_name aggr_args OWNER TO RoleId
 					AlterOwnerStmt *n = makeNode(AlterOwnerStmt);
 					n->objectType = OBJECT_DOMAIN;
 					n->object = $3;
-					n->newowner = $6;
-					$$ = (Node *)n;
-				}
-			| ALTER FILESPACE name OWNER TO RoleId
-				{
-					AlterOwnerStmt *n = makeNode(AlterOwnerStmt);
-					n->objectType = OBJECT_FILESPACE;
-					n->object = list_make1(makeString($3));
 					n->newowner = $6;
 					$$ = (Node *)n;
 				}
@@ -13591,7 +13503,6 @@ unreserved_keyword:
 			| EXTERNAL
 			| FAMILY
 			| FIELDS
-			| FILESPACE
 			| FILL
 			| FIRST_P
 			| FORCE

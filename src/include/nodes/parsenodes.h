@@ -1191,7 +1191,6 @@ typedef enum ObjectType
 	OBJECT_TABLE,
 	OBJECT_EXTTABLE,
 	OBJECT_EXTPROTOCOL,
-	OBJECT_FILESPACE,
 	OBJECT_TABLESPACE,
 	OBJECT_TRIGGER,
 	OBJECT_TSCONFIGURATION,
@@ -1884,37 +1883,6 @@ typedef struct PartitionSpec			/* a Partition Specification */
 	int					location;		/* token location, or -1 if unknown */
 } PartitionSpec;
 
-/* CREATE FILESPACE ... */
-typedef struct CreateFileSpaceStmt
-{
-	NodeTag		type;
-	char	   *filespacename;
-	char	   *owner;
-	List       *locations;  /* List of FileSpaceEntry */
-} CreateFileSpaceStmt;
-
-/*
- * FileSpaceEntry:
- *   A CreateFilespaceStatement has a list of these, one per location
- *   specified.
- */
-typedef struct FileSpaceEntry
-{
-	NodeTag     type;
-	int         dbid;
-	int         contentid;
-	char       *location;
-	char       *hostname;
-} FileSpaceEntry;
-
-typedef struct DropFileSpaceStmt
-{
-	NodeTag		type;
-	char	   *filespacename;
-	bool		missing_ok;		/* skip error if missing? */
-} DropFileSpaceStmt;
-
-
 /* ----------------------
  *		Create/Drop TableSpace Statements
  * ----------------------
@@ -1925,7 +1893,7 @@ typedef struct CreateTableSpaceStmt
 	NodeTag		type;
 	char	   *tablespacename;
 	char	   *owner;
-	char       *filespacename;
+	char	   *location;
 } CreateTableSpaceStmt;
 
 typedef struct DropTableSpaceStmt
@@ -2288,7 +2256,7 @@ typedef struct AlterOpFamilyStmt
 /* ----------------------
  *		DROP Statement, applies to:
  *        Table, External Table, Sequence, View, Index, Type, Domain,
- *        Conversion, Schema, Filespace
+ *        Conversion, Schema
  * ----------------------
  */
 

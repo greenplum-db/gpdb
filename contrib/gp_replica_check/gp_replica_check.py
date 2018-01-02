@@ -35,22 +35,22 @@ import threading
 import Queue
 
 class ReplicaCheck(threading.Thread):
-    def __init__(self, row, relation_types):
+    def __init__(self, segrow, datname, relation_types):
         super(ReplicaCheck, self).__init__()
-        self.host = row[0]
-        self.port = row[1]
-        self.content = row[2]
-        self.primary_status = row[3]
-        self.datname = row[4]
-        self.ploc = row[5]
-        self.mloc = row[6]
+        self.host = segrow[0]
+        self.port = segrow[1]
+        self.content = segrow[2]
+        self.primary_status = segrow[3]
+        self.ploc = segrow[4]
+        self.mloc = segrow[5]
+        self.datname = datname
         self.relation_types = relation_types;
         self.result = False
 
     def __str__(self):
         return 'Host: %s, Port: %s, Database: %s\n\
-Primary Filespace Location: %s\n\
-Mirror Filespace Location: %s' % (self.host, self.port, self.datname,
+Primary Data Directory Location: %s\n\
+Mirror Data Directory Location: %s' % (self.host, self.port, self.datname,
                                           self.ploc, self.mloc)
 
     def run(self):
@@ -81,53 +81,56 @@ def install_extension(databases):
         if len(datname) > 1 and (datname.strip() in database_list or 'all' in database_list):
             print subprocess.check_output('psql %s -t -c "%s"' % (datname.strip(), create_ext_sql), stderr=subprocess.STDOUT, shell=True)
 
-def get_fsmap(databases):
-    fslist_sql = '''
-SELECT gscp.address,
-       gscp.port,
-       gscp.content,
-       gscp.status,
-       pdb.datname,
-       CASE WHEN tep.oid = 1663 THEN fep.fselocation || '/' || 'base/' || pdb.oid
-            WHEN tep.oid = 1664 THEN fep.fselocation || '/' || 'global'
-            ELSE fep.fselocation || '/' || tep.oid
-       END AS ploc,
-       CASE WHEN tem.oid = 1663 THEN fem.fselocation || '/' || 'base/' || pdb.oid
-            WHEN tem.oid = 1664 THEN fem.fselocation || '/' || 'global'
-            ELSE fem.fselocation || '/' || tem.oid
-       END AS mloc
-FROM gp_segment_configuration gscp, pg_filespace_entry fep, pg_tablespace tep,
-     gp_segment_configuration gscm, pg_filespace_entry fem, pg_tablespace tem,
-     pg_filespace pfs, pg_database pdb
-WHERE fep.fsedbid = gscp.dbid
-      AND fem.fsedbid = gscm.dbid
-      AND ((tep.oid = 1663 AND tem.oid = 1663) OR (tep.oid = 1664 AND tem.oid = 1664 AND pdb.oid = 1))
-      AND gscp.content = gscm.content
+# Get the primary and mirror servers, for each content ID.
+def get_segments():
+    seglist_sql = '''
+SELECT gscp.address, gscp.port, gscp.content, gscp.status, gscp.datadir as p_datadir, gscm.datadir as m_datadir
+FROM gp_segment_configuration gscp,
+     gp_segment_configuration gscm
+WHERE gscp.content = gscm.content
       AND gscp.role = 'p'
       AND gscm.role = 'm'
-      AND pfs.oid = fep.fsefsoid
-      AND pdb.datname != 'template0'
+'''
+    seglist = subprocess.check_output('psql postgres -t -c "%s"' % seglist_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
+    segmap = {}
+    for segrow in seglist:
+        segelements = map(str.strip, segrow.split('|'))
+        if len(segelements) > 1:
+            segmap.setdefault(segelements[2], []).append(segelements)
+
+    return segmap
+
+# Get list of database from pg_database.
+#
+# The argument is a list of "allowed" database. The returned list will be
+# filtered to contain only database from that list. If it includes 'all',
+# then all databases are returned. (template0 is left out in any case)
+def get_databases(databases):
+    dblist_sql = '''
+SELECT datname FROM pg_catalog.pg_database WHERE datname != 'template0'
 '''
 
     database_list = map(str.strip, databases.split(','))
 
-    fsmap = {}
-    fslist = subprocess.check_output('psql postgres -t -c "%s"' % fslist_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
-    for fsrow in fslist:
-        fselements = map(str.strip, fsrow.split('|'))
-        if len(fselements) > 1 and (fselements[4].strip() in database_list or 'all' in database_list):
-            fsmap.setdefault(fselements[2], []).append(fselements)
+    dbrawlist = subprocess.check_output('psql postgres -t -c "%s"' % dblist_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
+    dblist = []
+    for dbrow in dbrawlist:
+        dbname = dbrow.strip()
+        if dbname != '':
+            if dbname in database_list or 'all' in database_list:
+                dblist.append(dbname)
 
-    return fsmap
+    return dblist
 
-def start_verification(fsmap, relation_types):
+def start_verification(segmap, dblist, relation_types):
     replica_check_list = []
-    for content, fslist in fsmap.items():
-        for fsrow in fslist:
-            replica_check = ReplicaCheck(fsrow, relation_types)
-            replica_check_list.append(replica_check)
-            replica_check.start()
-            replica_check.join()
+    for content, seglist in segmap.items():
+        for segrow in seglist:
+            for dbname in dblist:
+                replica_check = ReplicaCheck(segrow, dbname, relation_types)
+                replica_check_list.append(replica_check)
+                replica_check.start()
+                replica_check.join()
 
     for replica_check in replica_check_list:
         if not replica_check.result:
@@ -149,4 +152,4 @@ if __name__ == '__main__':
     args = defargs()
 
     install_extension(args.databases)
-    start_verification(get_fsmap(args.databases), args.relation_types)
+    start_verification(get_segments(), get_databases(args.databases), args.relation_types)

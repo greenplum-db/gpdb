@@ -3477,7 +3477,6 @@ _outQuery(StringInfo str, Query *node)
 			case T_AlterOwnerStmt:
 			case T_AlterObjectSchemaStmt:
 
-			case T_CreateFileSpaceStmt:
 			case T_CreateTableSpaceStmt:
 
 			case T_RenameStmt:
@@ -4164,43 +4163,13 @@ _outCreateTrigStmt(StringInfo str, CreateTrigStmt *node)
 }
 
 static void
-_outCreateFileSpaceStmt(StringInfo str, CreateFileSpaceStmt *node)
-{
-	WRITE_NODE_TYPE("CREATEFILESPACESTMT");
-
-	WRITE_STRING_FIELD(filespacename);
-	WRITE_STRING_FIELD(owner);
-	WRITE_NODE_FIELD(locations);
-}
-
-static void
-_outFileSpaceEntry(StringInfo str, FileSpaceEntry *node)
-{
-	WRITE_NODE_TYPE("FILESPACEENTRY");
-
-	WRITE_INT_FIELD(dbid);
-	WRITE_INT_FIELD(contentid);
-	WRITE_STRING_FIELD(location);
-	WRITE_STRING_FIELD(hostname);
-}
-
-static void
-_outDropFileSpaceStmt(StringInfo str, DropFileSpaceStmt *node)
-{
-	WRITE_NODE_TYPE("DROPFILESPACESTMT");
-
-	WRITE_STRING_FIELD(filespacename);
-	WRITE_BOOL_FIELD(missing_ok);
-}
-
-static void
 _outCreateTableSpaceStmt(StringInfo str, CreateTableSpaceStmt *node)
 {
 	WRITE_NODE_TYPE("CREATETABLESPACESTMT");
 
 	WRITE_STRING_FIELD(tablespacename);
 	WRITE_STRING_FIELD(owner);
-	WRITE_STRING_FIELD(filespacename);
+	WRITE_STRING_FIELD(location);
 }
 
 static void
@@ -5199,18 +5168,6 @@ _outNode(StringInfo str, void *obj)
 
 			case T_CreateTrigStmt:
 				_outCreateTrigStmt(str, obj);
-				break;
-
-			case T_CreateFileSpaceStmt:
-				_outCreateFileSpaceStmt(str, obj);
-				break;
-
-			case T_FileSpaceEntry:
-				_outFileSpaceEntry(str, obj);
-				break;
-
-			case T_DropFileSpaceStmt:
-				_outDropFileSpaceStmt(str, obj);
 				break;
 
 			case T_CreateTableSpaceStmt:

@@ -282,9 +282,7 @@ class StartSegmentsOperation:
             dbData["dbid"] = db.getSegmentDbId()
             dbData["mode"] = db.getSegmentMode()
             dbData["hostName"] = db.getSegmentAddress()
-            dbData["hostPort"] = db.getSegmentReplicationPort()
             dbData["peerName"] = peer.getSegmentAddress()
-            dbData["peerPort"] = peer.getSegmentReplicationPort()
             dbData["peerPMPort"] = peer.getSegmentPort()
             dbData["fullResyncFlag"] = db.getSegmentDbId() in dbIdToFullResync
             dbData["targetMode"] = targetModePerSegment[i]

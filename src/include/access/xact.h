@@ -18,7 +18,6 @@
 #include "nodes/pg_list.h"
 #include "storage/relfilenode.h"
 #include "utils/timestamp.h"
-#include "access/persistentendxactrec.h"
 
 #include "cdb/cdbpublic.h"
 

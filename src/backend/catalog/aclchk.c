@@ -39,7 +39,6 @@
 #include "catalog/pg_opfamily.h"
 #include "catalog/pg_proc.h"
 #include "catalog/pg_tablespace.h"
-#include "catalog/pg_filespace.h"
 #include "catalog/pg_type.h"
 #include "catalog/pg_ts_config.h"
 #include "catalog/pg_ts_dict.h"
@@ -2630,8 +2629,6 @@ static const char *const no_priv_msg[MAX_ACL_KIND] =
 	gettext_noop("permission denied for foreign-data wrapper %s"),
 	/* ACL_KIND_FOREIGN_SERVER */
 	gettext_noop("permission denied for foreign server %s"),
-	/* ACL_KIND_FILESPACE */
-	gettext_noop("permission denied for filespace %s"),	
 	/* ACL_KIND_EXTPROTOCOL */
 	gettext_noop("permission denied for external protocol %s")	
 };
@@ -2672,8 +2669,6 @@ static const char *const not_owner_msg[MAX_ACL_KIND] =
 	gettext_noop("must be owner of foreign-data wrapper %s"),
 	/* ACL_KIND_FOREIGN_SERVER */
 	gettext_noop("must be owner of foreign server %s"),
-	/* ACL_KIND_FILESPACE */
-	gettext_noop("must be owner of filespace %s"),
 	/* ACL_KIND_EXTPROTOCOL */
 	gettext_noop("must be owner of external protocol %s")
 };
@@ -3960,44 +3955,6 @@ pg_tablespace_ownercheck(Oid spc_oid, Oid roleid)
 	heap_close(pg_tablespace, AccessShareLock);
 
 	return has_privs_of_role(roleid, spcowner);
-}
-
-/*
- * Ownership check for a filespace (specified by OID).
- */
-bool
-pg_filespace_ownercheck(Oid fsoid, Oid roleid)
-{
-	Oid			owner;
-	Relation	pg_filespace;
-	ScanKeyData entry[1];
-	SysScanDesc scan;
-	HeapTuple	fstuple;
-
-	/* Superusers bypass all permission checking. */
-	if (superuser_arg(roleid))
-		return true;
-
-	/* SELECT fsowner FROM pg_filespace WHERE oid = :1 */
-	pg_filespace = heap_open(FileSpaceRelationId, AccessShareLock);
-
-	ScanKeyInit(&entry[0], ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(fsoid));
-	scan = systable_beginscan(pg_filespace, FilespaceOidIndexId, true,
-							   SnapshotNow, 1, entry);
-	fstuple = systable_getnext(scan);
-	if (!fstuple)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("filepace with OID %u does not exist", fsoid)));
-
-	owner = ((Form_pg_filespace) GETSTRUCT(fstuple))->fsowner;
-
-	systable_endscan(scan);
-	heap_close(pg_filespace, AccessShareLock);
-
-	return has_privs_of_role(roleid, owner);
 }
 
 

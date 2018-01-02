@@ -23,7 +23,6 @@
 #include "commands/defrem.h"
 #include "commands/extension.h"
 #include "commands/extprotocolcmds.h"
-#include "commands/filespace.h"
 #include "commands/proclang.h"
 #include "commands/schemacmds.h"
 #include "commands/tablecmds.h"
@@ -93,10 +92,6 @@ ExecRenameStmt(RenameStmt *stmt)
 
 		case OBJECT_TABLESPACE:
 			RenameTableSpace(stmt->subname, stmt->newname);
-			break;
-
-		case OBJECT_FILESPACE:
-			RenameFileSpace(stmt->subname, stmt->newname);
 			break;
 
 		case OBJECT_TABLE:
@@ -515,10 +510,6 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 
 		case OBJECT_TABLESPACE:
 			AlterTableSpaceOwner(strVal(linitial(stmt->object)), newowner);
-			break;
-
-		case OBJECT_FILESPACE:
-			AlterFileSpaceOwner(stmt->object, newowner);
 			break;
 
 		case OBJECT_EXTPROTOCOL:

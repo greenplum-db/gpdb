@@ -497,7 +497,6 @@ extern char    *locale_collate;
 static void getInstallationPaths(const char *argv0);
 static void checkDataDir(void);
 static void checkPgDir(const char *dir);
-static void checkPgDir2(const char *dir);
 
 #ifdef USE_BONJOUR
 static void reg_reply(DNSServiceRegistrationReplyErrorType errorCode,
@@ -1745,35 +1744,6 @@ checkPgDir(const char *dir)
 }
 
 /*
- * check if file or directory under current transaction filespace exists and is accessible
- */
-static void
-checkPgDir2(const char *dir)
-{
-	Assert(DataDir);
-
-	struct stat st;
-	char	   *path = makeRelativeToTxnFilespace((char*)dir);
-
-	if (stat(path, &st) != 0)
-	{
-		/* check if pg_log is there */
-		char		buf[MAXPGPATH + MAXPGPATH];
-
-		snprintf(buf, sizeof(buf), "%s%s", DataDir, "/pg_log");
-		if (stat(buf, &st) == 0)
-			elog(LOG, "System file or directory missing (%s), shutting down segment", path);
-
-		pfree(path);
-		/* quit all processes and exit */
-		pmdie(SIGQUIT);
-		return;
-	}
-
-	pfree(path);
-}
-
-/*
  * This file is only created/used on primary and not on mirror
  * Hence .bak extension to filename, so that checkMirrorIntegrity tool skips checking it
  */
@@ -2279,15 +2249,15 @@ ServerLoop(void)
 			checkPgDir("/global");
 			checkPgDir("/pg_twophase");
 			checkPgDir("/pg_utilitymodedtmredo");
-			checkPgDir2("pg_distributedlog");
-			checkPgDir2("pg_distributedxidmap");
-			checkPgDir2("pg_multixact");
-			checkPgDir2("pg_subtrans");
-			checkPgDir2("pg_xlog");
-			checkPgDir2("pg_clog");
-			checkPgDir2("pg_multixact/members");
-			checkPgDir2("pg_multixact/offsets");
-			checkPgDir2("pg_xlog/archive_status");	
+			checkPgDir("/pg_distributedlog");
+			checkPgDir("/pg_distributedxidmap");
+			checkPgDir("/pg_multixact");
+			checkPgDir("/pg_subtrans");
+			checkPgDir("/pg_xlog");
+			checkPgDir("/pg_clog");
+			checkPgDir("/pg_multixact/members");
+			checkPgDir("/pg_multixact/offsets");
+			checkPgDir("/pg_xlog/archive_status");	
 		}
 
 		/*
@@ -3391,13 +3361,6 @@ processPrimaryMirrorTransitionRequest(Port *port, void *pkt)
             args->dataState = DataStateInResync;
 			args->forceFullResync = TRUE;
 			
-			/* 
-			 * The system may have been configured to use a new filespace for transaction files
-			 * when this segment was down. Now when the segment comes up, we need to make sure
-			 * to reload all the info abt the location of txn files from the flat files and hence
-			 * make sure that the mirror starts using the logs at the right location 
-			 */
-			primaryMirrorPopulateFilespaceInfo();
         }
 		else
 		{
@@ -6939,14 +6902,6 @@ sigusr1_handler(SIGNAL_ARGS)
 			 * WALREP_FIXME: Multi-pass recovery is gone. Is this still needed?
 			 */
 			GpIdentity.dbid = newdbid;
-
-			/*
-			 * Also update trans/temp filespace if configured.  This relies on
-			 * the external tool to have updated the flat files already prior
-			 * to the promote time.  Again this is not atomic and risky, but
-			 * given the current design there's not much we can do.
-			 */
-			primaryMirrorPopulateFilespaceInfo();
 		}
 	}
 

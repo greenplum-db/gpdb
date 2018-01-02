@@ -25,8 +25,6 @@
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_database.h"
-#include "catalog/pg_filespace.h"
-#include "catalog/pg_filespace_entry.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "lib/stringinfo.h"
@@ -60,10 +58,10 @@ typedef struct
 } basebackup_options;
 
 
-static bool match_exclude_list(char *path, List *exclude);
-static int64 sendDir(char *path, int basepathlen, List *exclude, bool sizeonly);
-static void sendFile(char *readfilename, char *tarfilename,
-		 struct stat * statbuf);
+static int64 sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces);
+static int64 sendTablespace(char *path, bool sizeonly);
+static bool sendFile(char *readfilename, char *tarfilename,
+		 struct stat * statbuf, bool missing_ok);
 static void sendFileWithContent(const char *filename, const char *content);
 static void _tarWriteHeader(const char *filename, const char *linktarget,
 				struct stat * statbuf);
@@ -73,7 +71,6 @@ static void base_backup_cleanup(int code, Datum arg);
 static void perform_base_backup(basebackup_options *opt, DIR *tblspcdir);
 static void parse_basebackup_options(List *options, basebackup_options *opt);
 static void SendXlogRecPtrResult(XLogRecPtr ptr);
-static List *get_filespaces_to_send(basebackup_options *opt);
 
 /*
  * Size of each block sent into the tar stream for larger files.
@@ -86,17 +83,9 @@ typedef struct
 {
 	char	   *oid;
 	char	   *path;
+	char	   *rpath;			/* relative path within PGDATA, or NULL */
 	int64		size;
 } tablespaceinfo;
-
-typedef struct
-{
-	char	   *oid;
-	char	   *primary_path;
-	char	   *standby_path;
-	int64		size;
-	bool		xlogdir;
-} filespaceinfo;
 
 
 /*
@@ -121,6 +110,9 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 	XLogRecPtr	startptr;
 	XLogRecPtr	endptr;
 	char	   *labelfile;
+	int			datadirpathlen;
+
+	datadirpathlen = strlen(DataDir);
 
 	startptr = do_pg_start_backup(opt->label, opt->fastcheckpoint, &labelfile);
 	Assert(!XLogRecPtrIsInvalid(startptr));
@@ -138,23 +130,87 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 
 	SIMPLE_FAULT_INJECTOR(BaseBackupPostCreateCheckpoint);
 
-	SendXlogRecPtrResult(startptr);
-
 	PG_ENSURE_ERROR_CLEANUP(base_backup_cleanup, (Datum) 0);
 	{
-		List	   *filespaces = NIL;
+		List	   *tablespaces = NIL;
 		ListCell   *lc;
+		struct dirent *de;
+		tablespaceinfo *ti;
 
-		/* Collect information about all filespaces, including pg_system */
-		filespaces = get_filespaces_to_send(opt);
+		SendXlogRecPtrResult(startptr);
 
-		/* Send filespace header */
-		SendBackupHeader(filespaces);
-
-		/* Send off our filespaces one by one */
-		foreach(lc, filespaces)
+		/* Collect information about all tablespaces */
+		while ((de = ReadDir(tblspcdir, "pg_tblspc")) != NULL)
 		{
-			filespaceinfo *fi = (filespaceinfo *) lfirst(lc);
+			char		fullpath[MAXPGPATH];
+			char		linkpath[MAXPGPATH];
+			char	   *relpath = NULL;
+			int			rllen;
+
+			/* Skip special stuff */
+			if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+				continue;
+
+			snprintf(fullpath, sizeof(fullpath), "pg_tblspc/%s", de->d_name);
+
+#if defined(HAVE_READLINK) || defined(WIN32)
+			rllen = readlink(fullpath, linkpath, sizeof(linkpath));
+			if (rllen < 0)
+			{
+				ereport(WARNING,
+						(errmsg("could not read symbolic link \"%s\": %m",
+								fullpath)));
+				continue;
+			}
+			else if (rllen >= sizeof(linkpath))
+			{
+				ereport(WARNING,
+						(errmsg("symbolic link \"%s\" target is too long",
+								fullpath)));
+				continue;
+			}
+			linkpath[rllen] = '\0';
+
+			/*
+			 * Relpath holds the relative path of the tablespace directory
+			 * when it's located within PGDATA, or NULL if it's located
+			 * elsewhere.
+			 */
+			if (rllen > datadirpathlen &&
+				strncmp(linkpath, DataDir, datadirpathlen) == 0 &&
+				IS_DIR_SEP(linkpath[datadirpathlen]))
+				relpath = linkpath + datadirpathlen + 1;
+
+			ti = palloc(sizeof(tablespaceinfo));
+			ti->oid = pstrdup(de->d_name);
+			ti->path = pstrdup(linkpath);
+			ti->rpath = relpath ? pstrdup(relpath) : NULL;
+			ti->size = opt->progress ? sendTablespace(fullpath, true) : -1;
+			tablespaces = lappend(tablespaces, ti);
+#else
+			/*
+			 * If the platform does not have symbolic links, it should not be
+			 * possible to have tablespaces - clearly somebody else created
+			 * them. Warn about it and ignore.
+			 */
+			ereport(WARNING,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("tablespaces are not supported on this platform")));
+#endif
+		}
+
+		/* Add a node for the base directory at the end */
+		ti = palloc0(sizeof(tablespaceinfo));
+		ti->size = opt->progress ? sendDir(".", 1, true, tablespaces) : -1;
+		tablespaces = lappend(tablespaces, ti);
+
+		/* Send tablespace header */
+		SendBackupHeader(tablespaces);
+
+		/* Send off our tablespaces one by one */
+		foreach(lc, tablespaces)
+		{
+			tablespaceinfo *ti = (tablespaceinfo *) lfirst(lc);
 			StringInfoData buf;
 
 			/* Send CopyOutResponse message */
@@ -163,32 +219,26 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			pq_sendint(&buf, 0, 2);		/* natts */
 			pq_endmessage(&buf);
 
-			/* In the main tar, include the backup_label first. */
-			if (fi->primary_path == NULL)
-				sendFileWithContent(BACKUP_LABEL_FILE, labelfile);
-
-			sendDir(fi->primary_path == NULL ? "." : fi->primary_path,
-					fi->primary_path == NULL ? 1 : strlen(fi->primary_path),
-					opt->exclude, false);
-
-			/* In the main tar, include pg_control last. */
-			if (fi->primary_path == NULL)
+			if (ti->path == NULL)
 			{
 				struct stat statbuf;
 
+				/* In the main tar, include the backup_label first... */
+				sendFileWithContent(BACKUP_LABEL_FILE, labelfile);
+
+				/* ... then the bulk of the files ... */
+				sendDir(".", 1, false, tablespaces);
+
+				/* ... and pg_control after everything else. */
 				if (lstat(XLOG_CONTROL_FILE, &statbuf) != 0)
-				{
 					ereport(ERROR,
 							(errcode_for_file_access(),
 							 errmsg("could not stat control file \"%s\": %m",
 									XLOG_CONTROL_FILE)));
-				}
-
-				sendFile(XLOG_CONTROL_FILE, XLOG_CONTROL_FILE, &statbuf);
-
-				elogif(debug_basebackup, LOG,
-					   "basebackup perform -- Sent file %s." , XLOG_CONTROL_FILE);
+				sendFile(XLOG_CONTROL_FILE, XLOG_CONTROL_FILE, &statbuf, false);
 			}
+			else
+				sendTablespace(ti->path, false);
 
 			/*
 			 * If we're including WAL, and this is the main data directory we
@@ -196,7 +246,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			 * the xlog files below and terminate it then. This is safe since
 			 * the main data directory is always sent *last*.
 			 */
-			if (opt->includewal && fi->xlogdir)
+			if (opt->includewal && ti->path == NULL)
 			{
 				Assert(lnext(lc) == NULL);
 			}
@@ -459,17 +509,17 @@ send_int8_string(StringInfoData *buf, int64 intval)
 }
 
 static void
-SendBackupHeader(List *filespaces)
+SendBackupHeader(List *tablespaces)
 {
 	StringInfoData buf;
 	ListCell   *lc;
 
 	/* Construct and send the directory information */
 	pq_beginmessage(&buf, 'T'); /* RowDescription */
-	pq_sendint(&buf, 4, 2);		/* 4 fields */
+	pq_sendint(&buf, 3, 2);		/* 3 fields */
 
-	/* First field - fsefsoid */
-	pq_sendstring(&buf, "fsefsoid");
+	/* First field - spcoid */
+	pq_sendstring(&buf, "spcoid");
 	pq_sendint(&buf, 0, 4);		/* table oid */
 	pq_sendint(&buf, 0, 2);		/* attnum */
 	pq_sendint(&buf, OIDOID, 4);	/* type oid */
@@ -477,8 +527,8 @@ SendBackupHeader(List *filespaces)
 	pq_sendint(&buf, 0, 4);		/* typmod */
 	pq_sendint(&buf, 0, 2);		/* format code */
 
-	/* Second field - fselocationprimary */
-	pq_sendstring(&buf, "fselocationprimary");
+	/* Second field - spcpath */
+	pq_sendstring(&buf, "spclocation");
 	pq_sendint(&buf, 0, 4);
 	pq_sendint(&buf, 0, 2);
 	pq_sendint(&buf, TEXTOID, 4);
@@ -486,16 +536,7 @@ SendBackupHeader(List *filespaces)
 	pq_sendint(&buf, 0, 4);
 	pq_sendint(&buf, 0, 2);
 
-	/* Third field - fselocationstandby */
-	pq_sendstring(&buf, "fselocationstandby");
-	pq_sendint(&buf, 0, 4);
-	pq_sendint(&buf, 0, 2);
-	pq_sendint(&buf, TEXTOID, 4);
-	pq_sendint(&buf, -1, 2);
-	pq_sendint(&buf, 0, 4);
-	pq_sendint(&buf, 0, 2);
-
-	/* Fourth field - size */
+	/* Third field - size */
 	pq_sendstring(&buf, "size");
 	pq_sendint(&buf, 0, 4);
 	pq_sendint(&buf, 0, 2);
@@ -505,44 +546,27 @@ SendBackupHeader(List *filespaces)
 	pq_sendint(&buf, 0, 2);
 	pq_endmessage(&buf);
 
-	foreach(lc, filespaces)
+	foreach(lc, tablespaces)
 	{
-		filespaceinfo  *fi = lfirst(lc);
+		tablespaceinfo *ti = lfirst(lc);
 
 		/* Send one datarow message */
 		pq_beginmessage(&buf, 'D');
-		pq_sendint(&buf, 4, 2); /* number of columns */
-		if (fi->primary_path == NULL)
+		pq_sendint(&buf, 3, 2); /* number of columns */
+		if (ti->path == NULL)
 		{
-			/* base directory.  standby_path should be NULL */
-			Assert(fi->standby_path == NULL);
 			pq_sendint(&buf, -1, 4);	/* Length = -1 ==> NULL */
-			pq_sendint(&buf, -1, 4);
 			pq_sendint(&buf, -1, 4);
 		}
 		else
 		{
-			char	   *standby_path;
-
-			pq_sendint(&buf, strlen(fi->oid), 4);		/* length */
-			pq_sendbytes(&buf, fi->oid, strlen(fi->oid));
-			pq_sendint(&buf, strlen(fi->primary_path), 4);		/* length */
-			pq_sendbytes(&buf, fi->primary_path, strlen(fi->primary_path));
-			/*
-			 * If standby is not configured but we have user filespace,
-			 * just send the original path...  pg_basebackup will fail
-			 * in case of extract mode in the same host, but it is
-			 * the same behaivor as postgres.
-			 */
-			if (fi->standby_path == NULL)
-				standby_path = fi->primary_path;
-			else
-				standby_path = fi->standby_path;
-			pq_sendint(&buf, strlen(standby_path), 4);		/* length */
-			pq_sendbytes(&buf, standby_path, strlen(standby_path));
+			pq_sendint(&buf, strlen(ti->oid), 4);		/* length */
+			pq_sendbytes(&buf, ti->oid, strlen(ti->oid));
+			pq_sendint(&buf, strlen(ti->path), 4);		/* length */
+			pq_sendbytes(&buf, ti->path, strlen(ti->path));
 		}
-		if (fi->size >= 0)
-			send_int8_string(&buf, fi->size / 1024);
+		if (ti->size >= 0)
+			send_int8_string(&buf, ti->size / 1024);
 		else
 			pq_sendint(&buf, -1, 4);	/* NULL */
 
@@ -639,37 +663,60 @@ sendFileWithContent(const char *filename, const char *content)
 }
 
 /*
- * Check if client EXCLUDE option matches this path.  Current implementation
- * is only the exact match for the relative path from a filespace root (e.g.
- * "./pg_log" etc).
+ * Include the tablespace directory pointed to by 'path' in the output tar
+ * stream.  If 'sizeonly' is true, we just calculate a total length and return
+ * it, without actually sending anything.
+ *
+ * Only used to send auxiliary tablespaces, not PGDATA.
  */
-static bool
-match_exclude_list(char *path, List *exclude)
+static int64
+sendTablespace(char *path, bool sizeonly)
 {
-	ListCell	   *l;
+	int64		size;
+	char		pathbuf[MAXPGPATH];
+	struct stat statbuf;
 
-	/* fast check */
-	if (exclude == NIL)
-		return false;
+	/*
+	 * 'path' points to the tablespace location, but we only want to include
+	 * the version directory in it that belongs to us.
+	 */
+	snprintf(pathbuf, sizeof(pathbuf), "%s/%s", path,
+			 TABLESPACE_VERSION_DIRECTORY);
 
-	foreach (l, exclude)
+	/*
+	 * Store a directory entry in the tar file so we get the permissions right.
+	 */
+	if (lstat(pathbuf, &statbuf) != 0)
 	{
-		char	   *val = strVal(lfirst(l));
+		if (errno != ENOENT)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not stat file or directory \"%s\": %m",
+							pathbuf)));
 
-		if (strcmp(val, path) == 0)
-			return true;
+		/* If the tablespace went away while scanning, it's no error. */
+		return 0;
 	}
+	if (!sizeonly)
+		_tarWriteHeader(TABLESPACE_VERSION_DIRECTORY, NULL, &statbuf);
+	size = 512;		/* Size of the header just added */
 
-	return false;
+	/* Send all the files in the tablespace version directory */
+	size += sendDir(pathbuf, strlen(path), sizeonly, NIL);
+
+	return size;
 }
 
 /*
  * Include all files from the given directory in the output tar stream. If
  * 'sizeonly' is true, we just calculate a total length and return it, without
  * actually sending anything.
+ *
+ * Omit any directory in the tablespaces list, to avoid backing up
+ * tablespaces twice when they were created inside PGDATA.
  */
 static int64
-sendDir(char *path, int basepathlen, List *exclude, bool sizeonly)
+sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces)
 {
 	DIR		   *dir;
 	struct dirent *de;
@@ -754,12 +801,7 @@ sendDir(char *path, int basepathlen, List *exclude, bool sizeonly)
 			continue;			/* don't recurse into pg_xlog */
 		}
 
-		/* Skip if client does not want */
-		if (match_exclude_list(pathbuf, exclude))
-			continue;
-
 		/* Allow symbolic links in pg_tblspc only */
-		/* NB: This is not the case in GPDB, but safe to leave. */
 		if (strcmp(path, "./pg_tblspc") == 0 &&
 #ifndef WIN32
 			S_ISLNK(statbuf.st_mode)
@@ -802,6 +844,9 @@ sendDir(char *path, int basepathlen, List *exclude, bool sizeonly)
 		}
 		else if (S_ISDIR(statbuf.st_mode))
 		{
+			bool		skip_this_dir = false;
+			ListCell   *lc;
+
 			/*
 			 * Store a directory entry in the tar file so we can get the
 			 * permissions right.
@@ -810,16 +855,44 @@ sendDir(char *path, int basepathlen, List *exclude, bool sizeonly)
 				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
 			size += 512;		/* Size of the header just added */
 
-			/* call ourselves recursively for a directory */
-			size += sendDir(pathbuf, basepathlen, exclude, sizeonly);
+			/*
+			 * Call ourselves recursively for a directory, unless it happens
+			 * to be a separate tablespace located within PGDATA.
+			 */
+			foreach(lc, tablespaces)
+			{
+				tablespaceinfo *ti = (tablespaceinfo *) lfirst(lc);
+
+				/*
+				 * ti->rpath is the tablespace relative path within PGDATA, or
+				 * NULL if the tablespace has been properly located somewhere
+				 * else.
+				 *
+				 * Skip past the leading "./" in pathbuf when comparing.
+				 */
+				if (ti->rpath && strcmp(ti->rpath, pathbuf + 2) == 0)
+				{
+					skip_this_dir = true;
+					break;
+				}
+			}
+			if (!skip_this_dir)
+				size += sendDir(pathbuf, basepathlen, sizeonly, tablespaces);
 		}
 		else if (S_ISREG(statbuf.st_mode))
 		{
-			/* Add size, rounded up to 512byte block */
-			size += ((statbuf.st_size + 511) & ~511);
+			bool sent = false;
+
 			if (!sizeonly)
-				sendFile(pathbuf, pathbuf + basepathlen + 1, &statbuf);
-			size += 512;		/* Size of the header of the file */
+				sent = sendFile(pathbuf, pathbuf + basepathlen + 1, &statbuf,
+								true);
+
+			if (sent || sizeonly)
+			{
+				/* Add size, rounded up to 512byte block */
+				size += ((statbuf.st_size + 511) & ~511);
+				size += 512;		/* Size of the header of the file */
+			}
 		}
 		else
 			ereport(WARNING,
@@ -878,9 +951,17 @@ _tarChecksum(char *header)
 	return sum + 256;			/* Assume 8 blanks in checksum field */
 }
 
-/* Given the member, write the TAR header & send the file */
-static void
-sendFile(char *readfilename, char *tarfilename, struct stat * statbuf)
+/*
+ * Given the member, write the TAR header & send the file.
+ *
+ * If 'missing_ok' is true, will not throw an error if the file is not found.
+ *
+ * Returns true if the file was successfully sent, false if 'missing_ok',
+ * and the file did not exist.
+ */
+static bool
+sendFile(char *readfilename, char *tarfilename, struct stat *statbuf,
+		 bool missing_ok)
 {
 	FILE	   *fp;
 	char		buf[TAR_SEND_SIZE];
@@ -890,9 +971,13 @@ sendFile(char *readfilename, char *tarfilename, struct stat * statbuf)
 
 	fp = AllocateFile(readfilename, "rb");
 	if (fp == NULL)
+	{
+		if (errno == ENOENT && missing_ok)
+			return false;
 		ereport(ERROR,
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\": %m", readfilename)));
+	}
 
 	/*
 	 * Some compilers will throw a warning knowing this test can never be true
@@ -946,6 +1031,8 @@ sendFile(char *readfilename, char *tarfilename, struct stat * statbuf)
 	}
 
 	FreeFile(fp);
+
+	return true;
 }
 
 
@@ -1034,174 +1121,4 @@ _tarWriteHeader(const char *filename, const char *linktarget,
 	}
 
 	pq_putmessage('d', h, 512);
-}
-
-/*
- * Collect all information of filespaces to be sent.
- */
-static List *
-get_filespaces_to_send(basebackup_options *opt)
-{
-	List		   *filespaces = NIL;
-	Oid				txnFilespaceOID;
-	Relation		rel;
-	ScanKeyData		scankey;
-	SysScanDesc		sscan;
-	HeapTuple		tuple;
-	int16			standbyDbid;
-	filespaceinfo  *xlog_fi = NULL;
-
-	/*
-	 * GpIdentity.dbid can be -1 in utility mode, but we don't support it.
-	 */
-	if (GpIdentity.dbid == -1)
-		elog(ERROR, "basebackup is not supported with dbid -1");
-
-	/*
-	 * There is no pg_filespace_entry table on the segment, so currently we
-	 * just send the default data directory for segments. GPDB_SEGWALREP_TODO:
-	 * enhance to support transaction and user filespaces for segments.
-	 */
-	if (GpIdentity.segindex != MASTER_CONTENT_ID)
-	{
-		filespaceinfo *fi = palloc0(sizeof(filespaceinfo));
-
-		fi->primary_path = NULL;
-		fi->standby_path = NULL;
-		fi->size = -1;
-		fi->xlogdir = true;
-
-		filespaces = lappend(filespaces, fi);
-		return filespaces;
-	}
-
-	txnFilespaceOID = primaryMirrorGetTxnFilespaceOID();
-	/*
-	 * Scan the filespace entries for this db.
-	 */
-	standbyDbid = GetStandbyDbid();
-
-	rel = heap_open(FileSpaceEntryRelationId, AccessShareLock);
-
-	/* SELECT * FROM pg_filespace_entry WHERE fsedbid = :1" */
-	ScanKeyInit(&scankey,
-				Anum_pg_filespace_entry_fsedbid,
-				BTEqualStrategyNumber, F_INT2EQ,
-				Int16GetDatum(GpIdentity.dbid));
-
-	sscan = systable_beginscan(rel, InvalidOid, false,
-							   SnapshotNow, 1, &scankey);
-
-	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
-	{
-		Form_pg_filespace_entry pg_filespace_entry;
-		bool			isnull;
-		filespaceinfo  *fi;
-		char		   *fselocation;
-		char			*primary_fselocation = NULL;
-		char			*standby_fselocation = NULL;
-
-		pg_filespace_entry = (Form_pg_filespace_entry) GETSTRUCT(tuple);
-		fselocation = TextDatumGetCString(
-			heap_getattr(tuple,
-						 Anum_pg_filespace_entry_fselocation,
-						 RelationGetDescr(rel),
-						 &isnull));
-
-		Assert(strlen(fselocation) <= MAXPGPATH);
-		Assert(!isnull);
-
-		/* Save for logging purpose */
-		primary_fselocation = fselocation;
-
-		fi = palloc0(sizeof(filespaceinfo));
-		fi->oid = DatumGetCString(DirectFunctionCall1(oidout,
-						ObjectIdGetDatum(pg_filespace_entry->fsefsoid)));
-		if (pg_filespace_entry->fsefsoid == SYSTEMFILESPACE_OID)
-			fi->primary_path = NULL;
-		else
-			fi->primary_path = pstrdup(fselocation);
-
-		/*
-		 * If standby is configured, get its entry and attach it.
-		 * For base directory, it is just a sanity check.
-		 */
-		if (OidIsValid(standbyDbid))
-		{
-			ScanKeyData		standby_scankey[2];
-			SysScanDesc		standby_sscan;
-			HeapTuple	standby_tuple;
-
-			ScanKeyInit(&standby_scankey[0],
-						Anum_pg_filespace_entry_fsefsoid,
-						BTEqualStrategyNumber, F_OIDEQ,
-						ObjectIdGetDatum(pg_filespace_entry->fsefsoid));
-			ScanKeyInit(&standby_scankey[1],
-						Anum_pg_filespace_entry_fsedbid,
-						BTEqualStrategyNumber, F_INT2EQ,
-						Int16GetDatum(standbyDbid));
-
-			standby_sscan = systable_beginscan(rel, FileSpaceEntryFsefsoidFsedbidIndexId, true,
-											   SnapshotNow, 2, standby_scankey);
-			standby_tuple = systable_getnext(standby_sscan);
-			if (!HeapTupleIsValid(standby_tuple))
-				elog(ERROR, "cache lookup failed for filespace %u",
-							pg_filespace_entry->fsefsoid);
-
-			fselocation = TextDatumGetCString(
-				heap_getattr(standby_tuple,
-							 Anum_pg_filespace_entry_fselocation,
-							 RelationGetDescr(rel),
-							 &isnull));
-			Assert(strlen(fselocation) <= MAXPGPATH);
-			Assert(!isnull);
-
-			/* Save for logging purpose */
-			standby_fselocation = fselocation;
-
-			/*
-			 * For base directory, standby side is also set NULL.
-			 */
-			if (fi->primary_path == NULL)
-				fi->standby_path = NULL;
-			else
-				fi->standby_path = pstrdup(fselocation);
-
-			systable_endscan(standby_sscan);
-		}
-		fi->size = opt->progress ?
-			sendDir(fselocation, strlen(fselocation), opt->exclude, true) : -1;
-
-		if (txnFilespaceOID == pg_filespace_entry->fsefsoid)
-			xlog_fi = fi;
-		else
-			filespaces = lappend(filespaces, fi);
-
-		elogif(debug_basebackup, LOG,
-				"basebackup pg_filespace_entry -- "
-				"filespace oid = %s, "
-				"filespace primary path = %s, "
-				"filespace standby path = %s, "
-				"filespace size = %lld, "
-				"txn filespace = %s.",
-				fi->oid,
-				primary_fselocation,
-				(standby_fselocation) ? standby_fselocation : "NA",
-				(long long int)fi->size,
-				(txnFilespaceOID == pg_filespace_entry->fsefsoid) ? "true" : "false");
-	}
-
-	/*
-	 * Add the directory for pg_xlog (which could be different from basedir
-	 * in case we configured txn filespace) last so that we can include xlogs
-	 * after pg_stop_basebackup.
-	 */
-	Assert(xlog_fi != NULL);
-	xlog_fi->xlogdir = true;
-	filespaces = lappend(filespaces, xlog_fi);
-
-	systable_endscan(sscan);
-	heap_close(rel, AccessShareLock);
-
-	return filespaces;
 }
