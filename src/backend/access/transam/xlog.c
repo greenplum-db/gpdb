@@ -7427,6 +7427,30 @@ StartupXLOG(void)
 							   true);
 #endif
 
+	/*
+	 * Now we can update the catalog to tell the system is fully-promoted,
+	 * if was standby.  This should be done after all WAL-replay finished
+	 * otherwise we'll be in inconsistent state where catalog says I'm in
+	 * primary state while the recovery is trying to stream.
+	 */
+	if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
+	{
+		GpRoleValue old_role = Gp_role;
+
+		/* I am privileged */
+		InitializeSessionUserIdStandalone();
+		/* Start transaction locally */
+		Gp_role = GP_ROLE_UTILITY;
+		StartTransactionCommand();
+		GetTransactionSnapshot();
+		DirectFunctionCall1(gp_activate_standby, (Datum) 0);
+		/* close the transaction we started above */
+		CommitTransactionCommand();
+		Gp_role = old_role;
+
+		ereport(LOG, (errmsg("Updated catalog to support standby promotion")));
+	}
+
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
 	ControlFile->state = DB_IN_PRODUCTION;
 	ControlFile->time = (pg_time_t) time(NULL);
