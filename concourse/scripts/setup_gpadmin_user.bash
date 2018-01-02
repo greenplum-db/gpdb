@@ -28,7 +28,6 @@ ssh_keyscan_for_user() {
   {
     ssh-keyscan localhost
     ssh-keyscan 0.0.0.0
-    ssh-keyscan github.com
     ssh-keyscan `hostname`
   } >> "${home_dir}/.ssh/known_hosts"
 }
