@@ -29,6 +29,7 @@ command_fails(
 	[ 'initdb', '-X', 'pgxlog', $datadir ],
 	'relative xlog directory not allowed');
 
+# GPDB_84_MERGE_FIXME: reenable this after -U is ported.
 #command_fails(
 #	[ 'initdb', '-U', 'pg_test', $datadir ],
 #	'role names cannot begin with "pg_"');
@@ -46,5 +47,7 @@ mkdir $datadir;
 	command_ok([ 'initdb', '-T', 'german', '-X', $xlogdir, $datadir ],
 		'successful creation');
 }
+
+# GPDB_84_MERGE_FIXME: reenable this after -S is ported.
 #command_ok([ 'initdb', '-S', $datadir ], 'sync only');
 command_fails([ 'initdb', $datadir ], 'existing data directory');

@@ -12,6 +12,9 @@ command_fails([ 'pg_controldata', 'nonexistent' ],
 	'pg_controldata with nonexistent directory fails');
 
 my $node = get_new_demo_node('main');
+
+# GPDB_84_MERGE_FIXME: Seems there already exist demo cluster in
+# GPDB, should we init cluster here or just use demo cluster?
 #$node->init;
 
 command_like([ 'pg_controldata', $node->name ],
