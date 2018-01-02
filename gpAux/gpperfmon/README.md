@@ -12,6 +12,12 @@ Find more information about the architecture on [the wiki page](https://github.c
 		to build:
 	    `mkdir build && cd build && cmake .. && make && make install`
 
+	For CentOS:
+		wget ftp://rpmfind.net/linux/centos/6.9/os/x86_64/Packages/sigar-1.6.5-0.4.git58097d9.el6.x86_64.rpm
+		rpm -i sigar-1.6.5-0.4.git58097d9.el6.x86_64.rpm
+		wget http://mirror.centos.org/centos/6/os/x86_64/Packages/sigar-devel-1.6.5-0.4.git58097d9.el6.x86_64.rpm
+		rpm -i sigar-devel-1.6.5-0.4.git58097d9.el6.x86_64.rpm
+
 ## Troubleshooting
 	For macOS:
 		You may hit a reverse look up issue when viewing the logs of gpperfmon by default $MASTER_DATA_DIRECTORY/gpperfmon/logs
