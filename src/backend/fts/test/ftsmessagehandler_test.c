@@ -58,6 +58,7 @@ expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expect
 	expect_value(pq_sendint, i, expectedResponse->IsInSync);
 	expect_value(pq_sendint, i, expectedResponse->IsSyncRepEnabled);
 	expect_value(pq_sendint, i, expectedResponse->IsRoleMirror);
+	expect_value(pq_sendint, i, expectedResponse->RequestRetry);
 	expect_any_count(pq_sendint, b, -1);
 	will_be_called_count(pq_sendint, total_number_of_calls_of_pq_sendint);
 
@@ -75,6 +76,7 @@ expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expect
 void
 mockIsRoleMirror(bool expectedRoleMirror)
 {
+	am_mirror = expectedRoleMirror;
 }
 
 void
@@ -85,6 +87,7 @@ test_HandleFtsWalRepProbePrimary(void **state)
 	mockresponse.IsInSync = true;
 	mockresponse.IsSyncRepEnabled = false;
 	mockresponse.IsRoleMirror = false;
+	mockresponse.RequestRetry = false;
 
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
@@ -107,6 +110,7 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 	FtsResponse mockresponse;
 	mockresponse.IsMirrorUp = false;
 	mockresponse.IsInSync = false;
+	mockresponse.RequestRetry = false;
 	/* unblock primary if FTS requests it */
 	mockresponse.IsSyncRepEnabled = false;
 
@@ -129,10 +133,9 @@ test_HandleFtsWalRepProbeMirror(void **state)
   mockresponse.IsMirrorUp = false;
   mockresponse.IsInSync = false;
   mockresponse.IsSyncRepEnabled = false;
-  
   mockresponse.IsRoleMirror = true;
 
-  
+  /* TODO: figure out scenario of probing a mirror */
 }
 
 int
