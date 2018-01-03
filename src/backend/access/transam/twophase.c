@@ -124,11 +124,6 @@ typedef struct GlobalTransactionData
 	BackendId	locking_backend; /* backend currently working on the xact */
 	bool		valid;			/* TRUE if PGPROC entry is in proc array */
 	char		gid[GIDSIZE];	/* The GID assigned to the prepared xact */
-	int         prepareAppendOnlyIntentCount;
-                                                                /*
-                                                                 * The Append-Only Resync EOF intent count for
-                                                                 * a non-crashed prepared transaction.
-                                                                 */
 } GlobalTransactionData;
 
 /*
@@ -552,7 +547,6 @@ MarkAsPreparing(TransactionId xid,
 	gxact->locking_backend = MyBackendId;
 	gxact->valid = false;
 	strcpy(gxact->gid, gid);
-	gxact->prepareAppendOnlyIntentCount = 0;
 
 	/* And insert it into the active array */
 	Assert(TwoPhaseState->numPrepXacts < max_prepared_xacts);
@@ -700,43 +694,6 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 					 gid)));
 	}
 
-	return NULL;
-}
-
-/*
- * FindCurrentPrepareGXact
- *		Locate the current prepare transaction.
- */
-static GlobalTransaction
-FindPrepareGXact(const char *gid)
-{
-	int			i;
-
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),"FindCurrentPrepareGXact called to lock identifier = %s.",gid);
-
-	LWLockAcquire(TwoPhaseStateLock, LW_EXCLUSIVE);
-
-	for (i = 0; i < TwoPhaseState->numPrepXacts; i++)
-	{
-		GlobalTransaction gxact = TwoPhaseState->prepXacts[i];
-
-		elog((Debug_print_full_dtm ? LOG : DEBUG5), "FindCurrentPrepareGXact checking identifier = %s.",gxact->gid);
-
-		if (strcmp(gxact->gid, gid) != 0)
-			continue;
-
-		LWLockRelease(TwoPhaseStateLock);
-
-		return gxact;
-	}
-	LWLockRelease(TwoPhaseStateLock);
-
-	ereport(ERROR,
-			(errcode(ERRCODE_UNDEFINED_OBJECT),
-		 errmsg("prepared transaction with identifier \"%s\" does not exist",
-				gid)));
-
-	/* NOTREACHED */
 	return NULL;
 }
 
@@ -1275,29 +1232,6 @@ RegisterTwoPhaseRecord(TwoPhaseRmgrId rmid, uint16 info,
 	if (len > 0)
 		save_state_data(data, len);
 }
-
-void
-PrepareIntentAppendOnlyCommitWork(char *gid)
-{
-	GlobalTransaction gxact;
-
-	gxact = FindPrepareGXact(gid);
-
-	Assert(gxact->prepareAppendOnlyIntentCount >= 0);
-	gxact->prepareAppendOnlyIntentCount++;
-}
-
-void
-PrepareDecrAppendOnlyCommitWork(char *gid)
-{
-	GlobalTransaction gxact;
-
-	gxact = FindPrepareGXact(gid);
-
-	Assert(gxact->prepareAppendOnlyIntentCount >= 1);
-	gxact->prepareAppendOnlyIntentCount--;
-}
-
 
 /*
  * FinishPreparedTransaction: execute COMMIT PREPARED or ROLLBACK PREPARED
