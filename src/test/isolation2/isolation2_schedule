@@ -7,7 +7,7 @@ test: resource_queue
 test: alter_blocks_for_update_and_viceversa
 test: reader_waits_for_lock
 test: drop_rename
-#test: master_panic_after_phase1_commit
+test: master_panic_after_phase1_commit
 
 test: setup
 # Tests on Append-Optimized tables (row-oriented).
