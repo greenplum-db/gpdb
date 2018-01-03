@@ -195,14 +195,14 @@
         file in <codeph>/home/gpadmin</codeph>.</p>
       <p>This <codeph>plcontainer</codeph> command installs the Docker image for PL/Python from a
         Docker image file.
-        <codeblock>plcontainer image-add -i /home/gpadmin/plcontainer-python-images-1.0.0-beta1.tar.gz</codeblock></p>
+        <codeblock>plcontainer image-add -i /home/gpadmin/plcontainer-python-images-1.0.0.tar.gz</codeblock></p>
       <p>The utility displays progress information as it installs the Docker image on the Greenplum
         Database hosts. </p>
       <p>Use the <codeph>plcontainer image-show</codeph> command to display the installed Docker
         images on the local host.</p>
       <p>This command adds information to the PL/Container configuration file so that PL/Container
         can access the Docker image to create a Docker
-        container.<codeblock>plcontainer configure-add -r plc_py -i pivotaldata/plcontainer:devel -l python</codeblock></p>
+        container.<codeblock>plcontainer runtime-add -r plc_py -i pivotaldata/plcontainer:devel -l python</codeblock></p>
       <p>The utility displays progress information as it updates the PL/Container configuration file
         on the Greenplum Database instances.</p>
       <p>You can view the PL/Container configuration information with the <codeph>plcontainer
@@ -356,7 +356,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
 # container: plc_r_shared
 return(log10(100))
 $$ LANGUAGE plcontainer;</codeblock></p>
-        <p>The PL/Container Docker IDs in the <codeph># container</codeph> lines of the examples,
+        <p>The values in the <codeph># container</codeph> lines of the examples,
             <codeph>plc_python_shared</codeph> and <codeph>plc_r_shared</codeph>, are the
             <codeph>id</codeph> XML elements defined in <codeph>plcontainer_config.xml</codeph>
           file. The <codeph>id</codeph> element is mapped to the <codeph>image</codeph> element that
@@ -498,12 +498,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
   image-list
 
   runtime-add {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
-     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> <b>-l</b> {r | python}
-     [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]] 
+     {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> {<b>-l | --language</b>} {python | r}
+     [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]] 
      [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> ...]]
   runtime-replace {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
      {<b>-i</b> | <b>--image</b>} <varname>image_name</varname> <b>-l</b> {r | python}
-     [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b>| <b>--volume</b>} <varname>shared_volume</varname>...]] 
+     [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname> [{<b>-v</b> | <b>--volume</b>} <varname>shared_volume</varname>...]] 
      [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> [{<b>-s</b> | <b>--setting</b>} <varname>param_value</varname> ...]]
   runtime-show {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
   runtime-delete {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname>
@@ -549,7 +549,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             <pt>runtime-add <varname>options</varname></pt>
             <pd>Add configuration information to the PL/Container configuration file on all
               Greenplum Database hosts. If the specified <varname>runtime_id</varname> exists, the
-              utility returns and error and configuration information is not added. </pd>
+              utility returns an error and the configuration information is not added. </pd>
             <pd>For information about PL/Container configuration, see <xref href="#topic_ojn_r2s_dw"
                 format="dita"/>. </pd>
             <pd>These are the supported options:</pd>
@@ -565,14 +565,14 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     information including the name (Repository) and tag.</pd>
                 </plentry>
                 <plentry>
-                  <pt>{-l | --language} l | r</pt>
+                  <pt>{-l | --language} python | r</pt>
                   <pd>Required. Specify the PL/Container language type, supported values are
                       <codeph>python</codeph> (PL/Python) and <codeph>r</codeph> (PL/R). When adding
                     configuration information for a new runtime, the utility adds a startup command
                     to the configuration based on the language you specify.</pd>
                   <pd>Startup command for the Python
                     language.<codeblock>/clientdir/pyclient.sh</codeblock></pd>
-                  <pd>Startup command for the for the R
+                  <pd>Startup command for the R
                     language.<codeblock>/clientdir/rclient.sh</codeblock></pd>
                 </plentry>
                 <plentry>
@@ -597,8 +597,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                         communication between the container and Greenplum Database. The value is
                         either <codeph>yes</codeph>, use TCP, or <codeph>no</codeph> use IPC. The
                         default is <codeph>no</codeph>, use IPC.</li>
-                      <li><codeph>logs</codeph> - Enable or disable PL/Container logging. The value
-                        is either <codeph>yes</codeph> (enable logging) or <codeph>no</codeph>
+                      <li><codeph>logs</codeph> - Enable or disable Docker logging. The value is
+                        either <codeph>enable</codeph> (enable logging) or <codeph>disable</codeph>
                         (disable logging, the default). </li>
                     </ul></pd>
                 </plentry>
@@ -624,15 +624,20 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>
                     <codeblock><varname>greenplum-home</varname>/bin/plcontainer_clients:/clientdir:ro</codeblock>
                   </pd>
-                  <pd>If needed, you can specify other shared directories. Specifying the same
-                    shared directory as the one that is added by the utility will cause a Docker
-                    container startup failure.</pd>
-                  <pd>When specifying read-write access to host directory, ensure that the specified
-                    host directory has the correct permissions. Also, if a PL/Container runtime is
-                    configured with read-write access to a host directory, PL/Container can run
-                    multiple Docker containers on a host that could change data in the directory.
-                    This might cause issues when running PL/Container user-defined functions that
-                    access the shared directory. </pd>
+                  <pd>If needed, you can specify other shared directories. The utility returns an
+                    error if the specified <varname>container-dir</varname> is the same as the as
+                    the one that is added by the utility. The utility returns an error if you
+                    specifying multiple shared volumes with the same
+                      <varname>container-dir</varname>.<note type="warning">Allowing read-write
+                      access to a host directory requires special considerations.<ul
+                        id="ul_ibw_gvk_kcb">
+                        <li>When specifying read-write access to host directory, ensure that the
+                          specified host directory has the correct permissions. </li>
+                        <li>When running PL/Container user-defined functions, multiple concurrent
+                          Docker containers that are running on a host could change data in the host
+                          directory. Ensure that the functions support multiple concurrent access to
+                          the data in the host directory.</li>
+                      </ul></note></pd>
                 </plentry>
               </parml>
             </pd>
@@ -648,9 +653,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             <pt>runtime-delete {<b>-r</b> | <b>--runtime</b>} <varname>runtime_id</varname></pt>
             <pd>
               <p dir="ltr">Removes runtime configuration information in the PL/Container
-                configuration file on all Greenplum Database instances. If the specified
-                  <varname>runtime_id</varname> does not exist in the file, an error is
-                returned.</p>
+                configuration file on all Greenplum Database instances. The utility returns a
+                message if the specified <varname>runtime_id</varname> does not exist in the
+                file.</p>
             </pd>
           </plentry>
           <plentry>
@@ -867,14 +872,20 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>When creating a <codeph>runtime</codeph> element, the
                       <codeph>plcontainer</codeph> utility adds a <codeph>shared_directory</codeph>
                     element.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/></codeblock></pd>
-                  <pd>Adding duplicate <codeph>shared_dirctory</codeph> elements will cause a Docker
-                    container startup failure.</pd>
-                  <pd>When specifying read-write access to host directory, ensure that the specified
-                    host directory has the correct permissions. Also, if a PL/Container runtime is
-                    configured with read-write access to a host directory, PL/Container could run
-                    multiple Docker containers on a host that change data in the directory. This
-                    might cause issues when running PL/Container user-defined functions that access
-                    the shared directory. </pd>
+                  <pd>For each <codeph>runtime</codeph> element, the <codeph>container</codeph>
+                    attribute of the <codeph>shared_dirctory</codeph> elements must be unique. For
+                    example, a <codeph>runtime</codeph> element cannot have two
+                      <codeph>shared_dirctory</codeph> elements with attribute
+                      <codeph>container="/clientdir"</codeph>. <note type="warning">Allowing
+                      read-write access to a host directory requires special consideration.<ul
+                        id="ul_vzb_dvk_kcb">
+                        <li>When specifying read-write access to host directory, ensure that the
+                          specified host directory has the correct permissions. </li>
+                        <li>When running PL/Container user-defined functions, multiple concurrent
+                          Docker containers that are running on a host could change data in the host
+                          directory. Ensure that the functions support multiple concurrent access to
+                          the data in the host directory.</li>
+                      </ul></note></pd>
                 </plentry>
                 <plentry>
                   <pt>settings</pt>
@@ -885,9 +896,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>These are the valid attributes.<parml>
                       <plentry>
                         <pt>logs="{enable | disable}"</pt>
-                        <pd>Enables PL/Container logging for the container. Specify the attribute
-                            <codeph>enable="yes"</codeph>. The attribute
-                            <codeph>enable="no"</codeph> disables logging (the default). </pd>
+                        <pd>Enables or disables Docker logging for the container. The attribute
+                            <codeph>logs="enable"</codeph> enables logging. The attribute
+                            <codeph>logs="disable"</codeph> disables logging (the default). </pd>
                         <pd>On Red Hat 7 or CentOS 7 systems, the log is sent to the
                             <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6 systems, the
                           log is sent to <codeph>syslogd</codeph> service. </pd>
