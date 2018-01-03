@@ -172,8 +172,8 @@ HandleFtsWalRepPromote(void)
 		SignalPromote();
 	else
 	{
-		Assert(state == DB_IN_STANDBY_PROMOTED);
-		elog(LOG, "ignoring promote request as wal receiver is not running");
+		elog(LOG, "ignoring promote request, walreceiver not running,"
+			 " DBState = %d", state);
 	}
 
 	SendFtsResponse(&response, FTS_MSG_PROMOTE);
