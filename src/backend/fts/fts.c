@@ -392,9 +392,6 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeCo
 		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC)
 			segStatus |= FTS_STATUS_SYNCHRONIZED;
 
-		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING)
-			segStatus |= FTS_STATUS_CHANGELOGGING;
-
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
 	}
 

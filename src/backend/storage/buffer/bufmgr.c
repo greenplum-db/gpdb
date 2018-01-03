@@ -179,23 +179,6 @@ static inline bool ConditionalAcquireContentLock( volatile BufferDesc *buf, LWLo
 }
 
 /*
- * Read Buffer for pages to be Resynced
- */
-Buffer
-ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum)
-{
-	bool		isHit;
-
-	return ReadBuffer_common(reln,
-							 false, /* isLocalBuf */
-							 MAIN_FORKNUM,
-							 blockNum,
-							 RBM_NORMAL, /* mode */
-							 NULL,	/* strategy */
-							 &isHit);
-}
-
-/*
  * PrefetchBuffer -- initiate asynchronous read of a block of a relation
  *
  * This is named by analogy to ReadBuffer but doesn't actually allocate a

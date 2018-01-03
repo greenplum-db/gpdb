@@ -35,10 +35,6 @@
 #define GP_SEGMENT_CONFIGURATION_MODE_INSYNC 's'
 #define GP_SEGMENT_CONFIGURATION_MODE_NOTINSYNC 'n'
 
-#define GP_SEGMENT_CONFIGURATION_MODE_CHANGETRACKING 'c'
-#define GP_SEGMENT_CONFIGURATION_MODE_RESYNC 'r'
-
-
 /* ----------------
  *		gp_segment_configuration definition.  cpp turns this into
  *		typedef struct FormData_gp_segment_configuration

@@ -339,60 +339,6 @@ UnlockRelationForExtension(Relation relation, LOCKMODE lockmode)
 	LockRelease(&tag, lockmode, false);
 }
 
-/*
- * Separate routine for LockRelationForExtension() because resync workers do not have relation.  
- */
-void
-LockRelationForResyncExtension(RelFileNode *relFileNode, LOCKMODE lockmode)
-{
-	LOCKTAG		tag;
-	
-	SET_LOCKTAG_RELATION_EXTEND(tag,
-								relFileNode->dbNode,
-								relFileNode->relNode);
-	
-	(void) LockAcquire(&tag, lockmode, false, false);
-}
-
-/*
- * Separate routine for UnlockRelationForExtension() because resync workers do not have relation.
- */
-void
-UnlockRelationForResyncExtension(RelFileNode *relFileNode, LOCKMODE lockmode)
-{
-	LOCKTAG		tag;
-	
-	SET_LOCKTAG_RELATION_EXTEND(tag,
-								relFileNode->dbNode,
-								relFileNode->relNode);
-	
-	LockRelease(&tag, lockmode, false);
-}
-
-void
-LockRelationForResynchronize(RelFileNode *relFileNode, LOCKMODE lockmode)
-{
-	LOCKTAG		tag;
-
-	SET_LOCKTAG_RELATION_RESYNCHRONIZE(tag,
-						 relFileNode->dbNode,
-						 relFileNode->relNode);
-
-	(void) LockAcquire(&tag, lockmode, false, false);
-}
-
-void
-UnlockRelationForResynchronize(RelFileNode *relFileNode, LOCKMODE lockmode)
-{
-	LOCKTAG		tag;
-
-	SET_LOCKTAG_RELATION_RESYNCHRONIZE(tag,
-						 relFileNode->dbNode,
-						 relFileNode->relNode);
-
-	LockRelease(&tag, lockmode, false);
-}
-
 LockAcquireResult
 LockRelationAppendOnlySegmentFile(RelFileNode *relFileNode, int32 segno, LOCKMODE lockmode, bool dontWait)
 {
@@ -863,12 +809,6 @@ DescribeLockTag(StringInfo buf, const LOCKTAG *tag)
 							 tag->locktag_field2,
 							 tag->locktag_field1);
 			break;
-		case LOCKTAG_RELATION_RESYNCHRONIZE:
-			appendStringInfo(buf,
-							 _("resynchronize relation %u of database %u"),
-							 tag->locktag_field1,
-							 tag->locktag_field2);
-			break;
 		case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
 			appendStringInfo(buf,
 							 _("segment file %u of appendonly relation %u of database %u"),
@@ -941,7 +881,6 @@ LockTagIsTemp(const LOCKTAG *tag)
 		case LOCKTAG_RELATION_EXTEND:
 		case LOCKTAG_PAGE:
 		case LOCKTAG_TUPLE:
-		case LOCKTAG_RELATION_RESYNCHRONIZE:
 		case LOCKTAG_RELATION_APPENDONLY_SEGMENT_FILE:
 			/* check for lock on a temp relation */
 			/* field1 is dboid, field2 is reloid for all of these */

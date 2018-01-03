@@ -75,7 +75,6 @@ enum probe_result_e
 	PROBE_DEAD            = 0x00,
 	PROBE_ALIVE           = 0x01,
 	PROBE_SEGMENT         = 0x02,
-	PROBE_RESYNC_COMPLETE = 0x04,
 	PROBE_FAULT_CRASH     = 0x08,
 	PROBE_FAULT_MIRROR    = 0x10,
 	PROBE_FAULT_NET       = 0x20,
@@ -85,8 +84,6 @@ enum probe_result_e
 
 #define PROBE_IS_ALIVE(dbInfo) \
 	PROBE_CHECK_FLAG(probe_results[(dbInfo)->dbid], PROBE_ALIVE)
-#define PROBE_IS_RESYNC_COMPLETE(dbInfo) \
-	PROBE_CHECK_FLAG(probe_results[(dbInfo)->dbid], PROBE_RESYNC_COMPLETE)
 #define PROBE_HAS_FAULT_CRASH(dbInfo) \
 	PROBE_CHECK_FLAG(probe_results[(dbInfo)->dbid], PROBE_FAULT_CRASH)
 #define PROBE_HAS_FAULT_MIRROR(dbInfo) \

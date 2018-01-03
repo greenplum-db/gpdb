@@ -966,11 +966,6 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks,
 						nblocks, curnblk)));
 	}
 
-	/*
-	 * Resync issues truncate to mirror only. In that case on primary nblocks
-	 * will be always identical to curnblock since nblocks is allocated while
-	 * holding LockRelationForResyncExtension.
-	 */
 	if (nblocks == curnblk && (forknum != MAIN_FORKNUM))
 		return;					/* no work */
 

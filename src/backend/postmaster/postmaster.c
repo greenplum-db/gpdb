@@ -675,9 +675,6 @@ bool Gp_entry_postmaster = false;
 static int Save_MppLocalProcessCounter = 0;
 static DistributedTransactionTimeStamp Save_DtxStartTime = 0;
 
-/* changetracking size info from cdbresynchronizechangetracking.h */
-extern int64 ChangeTracking_GetTotalSpaceUsedOnDisk(void);
-
 #ifndef WIN32
 /*
  * File descriptors for pipe used to monitor if postmaster is alive.

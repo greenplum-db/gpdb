@@ -170,7 +170,6 @@ extern Buffer ReadBuffer(Relation reln, BlockNumber blockNum);
 extern Buffer ReadBufferExtended(Relation reln, ForkNumber forkNum,
 				   BlockNumber blockNum, ReadBufferMode mode,
 				   BufferAccessStrategy strategy);
-extern Buffer ReadBuffer_Resync(SMgrRelation reln, BlockNumber blockNum);
 extern Buffer ReadBufferWithoutRelcache(RelFileNode rnode, bool isLocalBuf,
 						  ForkNumber forkNum, BlockNumber blockNum,
 						  ReadBufferMode mode, BufferAccessStrategy strategy);
