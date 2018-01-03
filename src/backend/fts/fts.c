@@ -398,6 +398,7 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeCo
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
 	}
 
+	ftsProbeInfo->fts_status_initialized = true;
 	return cdbs;
 }
 
