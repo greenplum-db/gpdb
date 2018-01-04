@@ -79,6 +79,7 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
         And all the segments are running
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "mirror" segment option
 
     @multinode
     Scenario: gprecoverseg with -i and -o option
@@ -98,6 +99,7 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -i failedSegmentFile -a"
         Then gprecoverseg should return a return code of 0
         Then gprecoverseg should print "1 segment\(s\) to recover" to stdout
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "mirror" segment option
 
     @multinode
     @fail_on_corrupted_change_tracking
@@ -125,6 +127,7 @@ Feature: gprecoverseg tests
         Then all the segments are running
         And the segments are synchronized
         And user runs the command "gpfaultinjector -y reset -f change_tracking_disable" with the saved "primary" segment option
+        When user runs the command "gpfaultinjector -f filerep_consumer  -m async -y reset" with the saved "mirror" segment option
 
     @multinode
     Scenario: gprecoverseg should not throw exception for empty input file
@@ -145,6 +148,7 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -a -F"
         Then all the segments are running
         And the segments are synchronized
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "mirror" segment option
 
     Scenario: gprecoverseg does not recover segments with persistent rebuild inconsistencies
         Given the database is running
@@ -165,13 +169,14 @@ Feature: gprecoverseg tests
         When the user runs "gprecoverseg -a -F"
         Then all the segments are running
         And the segments are synchronized
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" on segment "0"
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" on segment "1"
 
     Scenario: gprecoverseg -r should not hang when some segments are not yet synchronized
         Given the database is running
         And all the segments are running
         And the segments are synchronized
         And the information of a "mirror" segment on any host is saved
-        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" on segment "0"
         And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" on segment "0"
         Given database "gptest1" exists
         Then the mirror with content id "0" is marked down in config
@@ -186,6 +191,7 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         Then all the segments are running
         And the segments are synchronized
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" on segment "0"
 
     @multinode
     @gprecoverseg_checksums
@@ -198,7 +204,6 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the information of a "mirror" segment on a remote host is saved
         And the information of the corresponding primary segment on a remote host is saved
-        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "primary" segment option
         And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y fault" with the saved "primary" segment option
         Given database "gptest1" exists
         Then the saved mirror segment is marked down in config
@@ -210,3 +215,4 @@ Feature: gprecoverseg tests
         And all the segments are running
         # validate the the new segment has the correct setting by getting admin connection to that segment
         Then the saved primary segment reports the same value for sql "show data_checksums" db "template1" as was saved
+        And user runs the command "gpfaultinjector  -f filerep_consumer  -m async -y reset" with the saved "primary" segment option
