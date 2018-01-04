@@ -562,7 +562,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                       <codeph>pivotaldata/plcontainer_python:1.0.0</codeph>. </pd>
                   <pd>The utility does not check if the Docker image is installed.</pd>
                   <pd>The <codeph>plcontainer image-list</codeph> command displays installed image
-                    information including the name (Repository) and tag.</pd>
+                    information including the name and tag (the Repository and Tag columns).</pd>
                 </plentry>
                 <plentry>
                   <pt>{-l | --language} python | r</pt>
