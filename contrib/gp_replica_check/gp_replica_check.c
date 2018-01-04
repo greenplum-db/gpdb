@@ -276,7 +276,7 @@ retry:
 	if (attempts == NUM_RETRIES)
 	{
 		ereport(WARNING,
-				(errmsg("%s files %s and %s mismatch at blockno %d, gave up after %d retries",
+				(errmsg("%s files \"%s\" and \"%s\" mismatch at blockno %d, gave up after %d retries",
 						get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
 						primaryfilepath, mirrorfilepath, blockno, attempts)));
 		return false;
@@ -379,9 +379,10 @@ retry:
 		{
 			/* length mismatch */
 			ereport(NOTICE,
-					(errmsg("%s files \"%s\" and \"%s\" mismatch at blockno %u",
+					(errmsg("%s files \"%s\" and \"%s\" mismatch at blockno %u, primary length: %i, mirror length: %i",
 							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
-							primaryfilepath, mirrorfilepath, blockno)));
+							primaryfilepath, mirrorfilepath, blockno,
+							primaryFileBytesRead, mirrorFileBytesRead)));
 			goto retry;
 		}
 

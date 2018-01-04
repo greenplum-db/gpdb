@@ -14,7 +14,7 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
-# For now run only for HEAP as for other object types like Sequence, btree
+# For now run don't run for object types like btree as
 # there are still known differences to be fixed.
 installcheck: install
 	gp_replica_check.py -r="heap, ao"
