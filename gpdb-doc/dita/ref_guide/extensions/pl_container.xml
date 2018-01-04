@@ -626,10 +626,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   </pd>
                   <pd>If needed, you can specify other shared directories. The utility returns an
                     error if the specified <varname>container-dir</varname> is the same as the one
-                    that is added by the utility. The utility returns an error if you specify
-                    multiple shared volumes with the same <varname>container-dir</varname>.<note
-                      type="warning">Allowing read-write access to a host directory requires special
-                        considerations.<ul id="ul_ibw_gvk_kcb">
+                    that is added by the utility, or if you specify multiple shared volumes with the
+                    same <varname>container-dir</varname>.<note type="warning">Allowing read-write
+                      access to a host directory requires special considerations.<ul
+                        id="ul_ibw_gvk_kcb">
                         <li>When specifying read-write access to host directory, ensure that the
                           specified host directory has the correct permissions. </li>
                         <li>When running PL/Container user-defined functions, multiple concurrent
