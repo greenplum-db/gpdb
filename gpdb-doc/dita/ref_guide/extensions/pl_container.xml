@@ -331,10 +331,10 @@ INFO:          access = readonly
       <p>The PL/Container function <codeph>plcontainer_containers_summary()</codeph> displays
         information about the currently running Docker
         containers.<codeblock>select * from plcontainer_containers_summary();</codeblock></p>
-      <p>If normal (non-superuser) Greenplum Database user runs the function, the function display
-        information only for containers created by the user. If a Greenplum Database superuser runs
-        the function, information for all containers created by Greenplum Database users is
-        displayed. This is sample output when 2 containers are running.</p>
+      <p>If a normal (non-superuser) Greenplum Database user runs the function, the function
+        displays information only for containers created by the user. If a Greenplum Database
+        superuser runs the function, information for all containers created by Greenplum Database
+        users is displayed. This is sample output when 2 containers are running.</p>
       <codeblock> SEGMENT_ID |                           CONTAINER_ID                           |   UP_TIME    |  OWNER  | MEMORY_USAGE(KB)
 ------------+------------------------------------------------------------------+--------------+---------+------------------
  1          | 693a6cb691f1d2881ec0160a44dae2547a0d5b799875d4ec106c09c97da422ea | Up 8 seconds | gpadmin | 12940
@@ -358,7 +358,7 @@ return(log10(100))
 $$ LANGUAGE plcontainer;</codeblock></p>
         <p>The values in the <codeph># container</codeph> lines of the examples,
             <codeph>plc_python_shared</codeph> and <codeph>plc_r_shared</codeph>, are the
-            <codeph>id</codeph> XML elements defined in <codeph>plcontainer_config.xml</codeph>
+            <codeph>id</codeph> XML elements defined in the <codeph>plcontainer_config.xml</codeph>
           file. The <codeph>id</codeph> element is mapped to the <codeph>image</codeph> element that
           specifies the Docker image to be started. </p>
         <p>If the <codeph># container</codeph> line in a UDF specifies an ID that is not the
@@ -460,8 +460,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         configuration files in a Greenplum Database system. The utility ensures that the
         configuration files are consistent across the Greenplum Database master and segment
         instances.</p>
-      <note type="warning"> Modifying the configuration files on the manually on the segment
-        instances might create different, incompatible configurations on different Greenplum
+      <note type="warning"> Modifying the configuration files on the segment instances without using
+        the utility might create different, incompatible configurations on different Greenplum
         Database segments that could cause unexpected behavior. </note>
       <p>Configuration changes that are made with the utility are applied to the XML files on all
         Greenplum Database segments. However, PL/Container configurations of currently running
@@ -580,17 +580,17 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   </pt>
                   <pd>Required. Add the runtime ID. When adding a <codeph>runtime</codeph> element
                     in the PL/Container configuration file, this is the value of the
-                      <codeph>id</codeph> element in PL/Container configuration file. </pd>
+                      <codeph>id</codeph> element in the PL/Container configuration file. </pd>
                   <pd>You specify the name in the Greenplum Database UDF on the <codeph>#
                       container</codeph> line. See <xref href="#topic9" format="dita"/>.</pd>
                 </plentry>
                 <plentry>
                   <pt>{<b>-s</b> | <b>--setting</b>}
                       <varname>param</varname>=<varname>value</varname></pt>
-                  <pd>Optional. Specify a setting to be added to the runtime configuration
-                    information. You can specify this option multiple times. The parameter is the
-                    XML attribute of the <codeph>setting</codeph> element in the PL/Container
-                    configuration file. These are valid parameters.<ul id="ul_dsz_j4w_gcb">
+                  <pd>Optional. Specify a setting to add to the runtime configuration information.
+                    You can specify this option multiple times. The parameter is the XML attribute
+                    of the <codeph>setting</codeph> element in the PL/Container configuration file.
+                    These are valid parameters.<ul id="ul_dsz_j4w_gcb">
                       <li><codeph>memory_mb</codeph> - Set the memory allocated for the container.
                         The value is an integer that specifies the amount of memory in MB. </li>
                       <li><codeph>use_network</codeph> - Set the type of networking for
@@ -625,12 +625,11 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     <codeblock><varname>greenplum-home</varname>/bin/plcontainer_clients:/clientdir:ro</codeblock>
                   </pd>
                   <pd>If needed, you can specify other shared directories. The utility returns an
-                    error if the specified <varname>container-dir</varname> is the same as the as
-                    the one that is added by the utility. The utility returns an error if you
-                    specifying multiple shared volumes with the same
-                      <varname>container-dir</varname>.<note type="warning">Allowing read-write
-                      access to a host directory requires special considerations.<ul
-                        id="ul_ibw_gvk_kcb">
+                    error if the specified <varname>container-dir</varname> is the same as the one
+                    that is added by the utility. The utility returns an error if you specify
+                    multiple shared volumes with the same <varname>container-dir</varname>.<note
+                      type="warning">Allowing read-write access to a host directory requires special
+                        considerations.<ul id="ul_ibw_gvk_kcb">
                         <li>When specifying read-write access to host directory, ensure that the
                           specified host directory has the correct permissions. </li>
                         <li>When running PL/Container user-defined functions, multiple concurrent
@@ -722,12 +721,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             <li>Install a Docker image on all Greenplum Database hosts. This example loads a Docker
               image from a file. The utility displays progress information on the command line as
               the utility installs the Docker image on all the
-                hosts.<codeblock>plcontainer image-add f plc_newr.tar.gz</codeblock><p>After
+                hosts.<codeblock>plcontainer image-add -f plc_newr.tar.gz</codeblock><p>After
                 installing the Docker image, you add or update a runtime entry in the PL/Container
                 configuration file to give PL/Container access to the Docker image to start Docker
                 containers.</p></li>
-            <li>Add a container entry to PL/Container configuration file. This example, adds
-              configuration information for a PL/R runtime and specifies a shared volume, and
+            <li>Add a container entry to the PL/Container configuration file. This example adds
+              configuration information for a PL/R runtime, and specifies a shared volume and
               settings for memory and network.
                 <codeblock>plcontainer runtime-add -r runtime2 -i test_image2:0.1 -l r \
   -v /host_dir2/shared2:/container_dir2/shared2:ro \
@@ -768,14 +767,15 @@ $$ LANGUAGE plcontainer;</codeblock></p>
     <topic id="topic_ojn_r2s_dw">
       <title>PL/Container Configuration File</title>
       <body>
-        <p>The PL/Container maintains a configuration file
+        <p>PL/Container maintains a configuration file
             <codeph>plcontainer_configuration.xml</codeph> in the data directory of all Greenplum
           Database segments. The PL/Container configuration file is an XML file. In the XML file,
-          the root element <codeph>configuration</codeph> contains a one or more
+          the root element <codeph>configuration</codeph> contains one or more
             <codeph>runtime</codeph> elements. You specify the <codeph>id</codeph> of the
             <codeph>runtime</codeph> element in the <codeph># container:</codeph> line of a
           PL/Container function definition. </p>
-        <p>In an XML names, such as element and attribute names, and values are case sensitive.</p>
+        <p>In an XML file, names, such as element and attribute names, and values are case
+          sensitive.</p>
         <p>This is an example
           file.<codeblock>&lt;?xml version="1.0" ?>
 &lt;configuration>
@@ -843,7 +843,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>Required. The value is the command to be run inside of container to start the
                     client process inside in the container. When creating a <codeph>runtime</codeph>
                     element, the <codeph>plcontainer</codeph> utility adds a
-                      <codeph>command</codeph> element based on the language ( the
+                      <codeph>command</codeph> element based on the language (the
                       <codeph>-l</codeph> option).</pd>
                   <pd><codeph>command</codeph> element for the python
                     language.<codeblock>&lt;command>/clientdir/pyclient.sh&lt;/command></codeblock></pd>
@@ -873,9 +873,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                       <codeph>plcontainer</codeph> utility adds a <codeph>shared_directory</codeph>
                     element.<codeblock>&lt;shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/></codeblock></pd>
                   <pd>For each <codeph>runtime</codeph> element, the <codeph>container</codeph>
-                    attribute of the <codeph>shared_dirctory</codeph> elements must be unique. For
+                    attribute of the <codeph>shared_directory</codeph> elements must be unique. For
                     example, a <codeph>runtime</codeph> element cannot have two
-                      <codeph>shared_dirctory</codeph> elements with attribute
+                      <codeph>shared_directory</codeph> elements with attribute
                       <codeph>container="/clientdir"</codeph>. <note type="warning">Allowing
                       read-write access to a host directory requires special consideration.<ul
                         id="ul_vzb_dvk_kcb">
@@ -890,9 +890,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                 <plentry>
                   <pt>settings</pt>
                   <pd>Optional. This element specifies Docker container configuration information.
-                    The element attributes specify logging, memory and networking information. Each
-                      <codeph>setting</codeph> element contains one attribute. For example, this
-                    element enables logging.<codeblock>&lt;setting logs="enable"/></codeblock></pd>
+                    Each <codeph>setting</codeph> element contains one attribute. The element
+                    attribute specifies logging, memory, or networking information. For example,
+                    this element enables
+                    logging.<codeblock>&lt;setting logs="enable"/></codeblock></pd>
                   <pd>These are the valid attributes.<parml>
                       <plentry>
                         <pt>logs="{enable | disable}"</pt>
@@ -901,21 +902,22 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                             <codeph>logs="disable"</codeph> disables logging (the default). </pd>
                         <pd>On Red Hat 7 or CentOS 7 systems, the log is sent to the
                             <codeph>journald</codeph> service. On Red Hat 6 or CentOS 6 systems, the
-                          log is sent to <codeph>syslogd</codeph> service. </pd>
+                          log is sent to the <codeph>syslogd</codeph> service. </pd>
                       </plentry>
                       <plentry>
                         <pt>memory_mb="<varname>size</varname>"</pt>
                         <pd>Optional. The value specifies the amount of memory, in MB, that a
                           container is allowed to use. Each container is started with this amount of
                           RAM and twice the amount of swap space. The container memory consumption
-                          is limited by the host system <codeph>cgroups</codeph>configuration, which
-                          means in case of memory overcommit, the container is killed by the
+                          is limited by the host system <codeph>cgroups</codeph> configuration,
+                          which means in case of memory overcommit, the container is killed by the
                           system.</pd>
                       </plentry>
                       <plentry>
                         <pt>use_network="{yes | no}"</pt>
                         <pd>The value can be either <codeph>yes</codeph> or <codeph>no</codeph> to
-                          specify whether use TCP or IPC for communication between the Greenplum
+                          specify whether to use TCP (the value <codeph>yes</codeph>) or IPC (the
+                          value <codeph>no</codeph>) for communication between the Greenplum
                           Database process and the Docker container process. The default is
                             <codeph>no</codeph> use IPC.</pd>
                       </plentry>
@@ -931,11 +933,11 @@ $$ LANGUAGE plcontainer;</codeblock></p>
       <title>Updating the PL/Container Configuration</title>
       <body>
         <p>You can add a <codeph>runtime</codeph> element to the PL/Container configuration file
-          with the <codeph>plcontainer runtime-add</codeph> command specifying options with options
-          that specify values such as the name, runtime ID, Docker image, and shared directory. You
-          can use the <codeph>plcontainer runtime-replace</codeph> command to update an existing
-            <codeph>runtime</codeph> element . The utility updates the configuration file on all
-          hosts.</p>
+          with the <codeph>plcontainer runtime-add</codeph> command. The command options specify
+          information such as the runtime ID, Docker image, and language. You can use the
+            <codeph>plcontainer runtime-replace</codeph> command to update an existing
+            <codeph>runtime</codeph> element. The utility updates the configuration file on the
+          master and all segment instances.</p>
         <p>The PL/Container configuration file can contain multiple <codeph>runtime</codeph>
           elements that reference the same Docker image specified by the XML element
             <codeph>image</codeph>. In the example configuration file, the <codeph>runtime</codeph>
@@ -968,8 +970,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <ul id="ul_j4g_vgs_wbb">
           <li>PL/Container maintains the configuration file
               <codeph>plcontainer_configuration.xml</codeph> in the data directory of all Greenplum
-            Database segment instances: master, standby master, primary and mirror. This query lists
-            the Greenplum Database system data
+            Database segment instances: master, standby master, primary, and mirror. This query
+            lists the Greenplum Database system data
               directories:<codeblock>SELECT g.hostname, fe.fselocation as directory 
    FROM pg_filespace AS f, pg_filespace_entry AS fe, 
        gp_segment_configuration AS g
