@@ -2943,10 +2943,10 @@
                   2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
                 </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>ZLIB</codeph> |
-                    <codeph>QUICKLZ</codeph><sup>2</sup> |
+                    <codeph>ZSTD</codeph> | <codeph>QUICKLZ</codeph><sup>2</sup> |
                     <codeph>RLE</codeph>_<codeph>TYPE</codeph> | <codeph>NONE</codeph>
                 </p><p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and
-                    9</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
+                    19</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
                     <codeph>COLUMN</codeph>
                 </p></entry>
               <entry colname="col2"><cmdname>APPENDONLY</cmdname>=<codeph>FALSE</codeph>
@@ -7708,8 +7708,8 @@
       <p>The value is an optimization hint to limit the number of join associativity and join
         commutativity transformations explored during query optimization. The limit controls the
         alternative plans that GPORCA considers during query optimization. For example, the default
-        value of 7 is an optimization hint for GPORCA to stop exploring join associativity and join
-        commutativity transformations when an n-ary join operator has more than 7 children during
+        value of 18 is an optimization hint for GPORCA to stop exploring join associativity and join
+        commutativity transformations when an n-ary join operator has more than 18 children during
         optimization.</p>
       <p>For a query with a large number of joins, specifying a lower value improves query
         performance by limiting the number of alternate query plans that GPORCA evaluates. However,
@@ -7733,7 +7733,7 @@
           <tbody>
             <row>
               <entry colname="col1">integer > 0</entry>
-              <entry colname="col2">7</entry>
+              <entry colname="col2">18</entry>
               <entry colname="col3">local<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
