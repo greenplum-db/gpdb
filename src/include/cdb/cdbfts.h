@@ -14,16 +14,21 @@
 
 #define FTS_MAX_DBS (128 * 1024)
 
-#define FTS_STATUS_ALIVE				(1<<0)
-#define FTS_STATUS_PRIMARY				(1<<1)
-#define FTS_STATUS_DEFINEDPRIMARY		(1<<2)
-#define FTS_STATUS_SYNCHRONIZED			(1<<3)
+/*
+ * There used to many more states here but currently dispatch is only checking
+ * if segment is UP or not. So just have that, when needed for other states
+ * this can be extended.
+ */
+#define FTS_STATUS_UP				(1<<0)
 
-#define FTS_STATUS_TEST(dbid, status, flag) (((status)[(dbid)] & (flag)) ? true : false)
-#define FTS_STATUS_ISALIVE(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_ALIVE)
-#define FTS_STATUS_ISPRIMARY(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_PRIMARY)
-#define FTS_STATUS_ISDEFINEDPRIMARY(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_DEFINEDPRIMARY)
-#define FTS_STATUS_IS_SYNCED(dbid, status) FTS_STATUS_TEST((dbid), (status), FTS_STATUS_SYNCHRONIZED)
+#define FTS_STATUS_TEST(status, flag) (((status) & (flag)) ? true : false)
+#define FTS_STATUS_IS_UP(status) FTS_STATUS_TEST((status), FTS_STATUS_UP)
+
+#define FTS_STATUS_SET(status, flag) ((status) |= (flag))
+#define FTS_STATUS_SET_UP(status) FTS_STATUS_SET((status), FTS_STATUS_UP)
+
+#define FTS_STATUS_RESET(status, flag) ((status) &= ~(flag))
+#define FTS_STATUS_SET_DOWN(status) FTS_STATUS_RESET((status), FTS_STATUS_UP)
 
 typedef struct FtsProbeInfo
 {

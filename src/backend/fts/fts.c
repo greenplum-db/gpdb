@@ -376,21 +376,10 @@ CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeCo
 	for (i=0; i < cdbs->total_segment_dbs; i++)
 	{
 		CdbComponentDatabaseInfo *segInfo = &cdbs->segment_db_info[i];
-		uint8	segStatus;
-
-		segStatus = 0;
+		uint8	segStatus = 0;
 
 		if (SEGMENT_IS_ALIVE(segInfo))
-			segStatus |= FTS_STATUS_ALIVE;
-
-		if (SEGMENT_IS_ACTIVE_PRIMARY(segInfo))
-			segStatus |= FTS_STATUS_PRIMARY;
-
-		if (segInfo->preferred_role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
-			segStatus |= FTS_STATUS_DEFINEDPRIMARY;
-
-		if (segInfo->mode == GP_SEGMENT_CONFIGURATION_MODE_INSYNC)
-			segStatus |= FTS_STATUS_SYNCHRONIZED;
+			FTS_STATUS_SET_UP(segStatus);
 
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
 	}
@@ -605,6 +594,21 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 
 			CommitTransactionCommand();
 			CurrentResourceOwner = save;
+
+			/*
+			 * Update the status to in-memory variable as well used by
+			 * dispatcher, now that changes has been persisted to catalog.
+			 */
+			Assert(ftsProbeInfo);
+			if (IsPrimaryAlive)
+				FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[primary->dbid]);
+			else
+				FTS_STATUS_SET_DOWN(ftsProbeInfo->fts_status[primary->dbid]);
+
+			if (IsMirrorAlive)
+				FTS_STATUS_SET_UP(ftsProbeInfo->fts_status[mirror->dbid]);
+			else
+				FTS_STATUS_SET_DOWN(ftsProbeInfo->fts_status[mirror->dbid]);
 		}
 	}
 
@@ -874,37 +878,6 @@ FtsIsSegmentAlive(CdbComponentDatabaseInfo *segInfo)
 		return true;
 
 	return false;
-}
-
-
-/*
- * Dump out the changes to our logfile.
- */
-void
-FtsDumpChanges(FtsSegmentStatusChange *changes, int changeEntries)
-{
-	Assert(changes != NULL);
-	int i = 0;
-
-	for (i = 0; i < changeEntries; i++)
-	{
-		bool new_alive, old_alive;
-		bool new_pri, old_pri;
-
-		new_alive = (changes[i].newStatus & FTS_STATUS_ALIVE ? true : false);
-		old_alive = (changes[i].oldStatus & FTS_STATUS_ALIVE ? true : false);
-
-		new_pri = (changes[i].newStatus & FTS_STATUS_PRIMARY ? true : false);
-		old_pri = (changes[i].oldStatus & FTS_STATUS_PRIMARY ? true : false);
-
-		elog(LOG, "FTS: change state for segment (dbid=%d, content=%d) from ('%c','%c') to ('%c','%c')",
-			 changes[i].dbid,
-			 changes[i].segindex,
-			 (old_alive ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN),
-			 (old_pri ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR),
-			 (new_alive ? GP_SEGMENT_CONFIGURATION_STATUS_UP : GP_SEGMENT_CONFIGURATION_STATUS_DOWN),
-			 (new_pri ? GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY : GP_SEGMENT_CONFIGURATION_ROLE_MIRROR));
-	}
 }
 
 /*

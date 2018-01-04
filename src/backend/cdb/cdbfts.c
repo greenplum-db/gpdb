@@ -205,7 +205,7 @@ FtsTestConnection(CdbComponentDatabaseInfo *failedDBInfo, bool fullScan)
 		 * fts_status. We shouldn't be checking against uninitialzed variable.
 		 */
 		if (ftsProbeInfo->fts_status_initialized)
-			return FTS_STATUS_ISALIVE(failedDBInfo->dbid, ftsProbeInfo->fts_status);
+			return FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]);
 
 		return true;
 	}
@@ -214,7 +214,7 @@ FtsTestConnection(CdbComponentDatabaseInfo *failedDBInfo, bool fullScan)
 
 	Assert(ftsProbeInfo->fts_status_initialized);
 
-	return FTS_STATUS_ISALIVE(failedDBInfo->dbid, ftsProbeInfo->fts_status);
+	return FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[failedDBInfo->dbid]);
 }
 
 /*
