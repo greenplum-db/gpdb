@@ -2943,7 +2943,7 @@
                   2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
                 </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>ZLIB</codeph> |
-                    <codeph>ZSTD</codeph> | <codeph>QUICKLZ</codeph><sup>2</sup> |
+                    <codeph>QUICKLZ</codeph><sup>2</sup> |
                     <codeph>RLE</codeph>_<codeph>TYPE</codeph> | <codeph>NONE</codeph>
                 </p><p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and
                     19</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
