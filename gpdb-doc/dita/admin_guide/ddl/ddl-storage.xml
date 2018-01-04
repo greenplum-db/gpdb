@@ -556,7 +556,7 @@
           <p>Column <codeph>c3</codeph>'s <codeph>ENCODING</codeph> clause defines its compression
             type, <codeph>RLE_TYPE</codeph>. The <codeph>ENCODING</codeph> clause defined for a
             specific column overrides the <codeph>DEFAULT ENCODING</codeph> clause, so column
-            <codeph>c3</codeph> uses the default block block size, <codeph>32768</codeph>.</p>
+            <codeph>c3</codeph> uses the default block size, <codeph>32768</codeph>.</p>
           <p>Column <codeph>c4</codeph> has a compress
             type of <codeph>none</codeph> and uses the default block size.</p>
           <codeblock>CREATE TABLE T4 (c1 int ENCODING (compresstype=zlib),
@@ -617,8 +617,8 @@
           that specifies <codeph>quicklz</codeph> compression: </p>
         <codeblock>CREATE TYPE int33 (
    internallength = 4,
-   input = comptype_in,
-   output = comptype_out,
+   input = int33_in,
+   output = int33_out,
    alignment = int4,
    default = 123,
    passedbyvalue,
@@ -626,7 +626,7 @@
    blocksize=65536,
    compresslevel=1
    );</codeblock>
-        <p>When you can specify <codeph>int33</codeph> as a column type in a <codeph>CREATE TABLE</codeph>
+        <p>When you specify <codeph>int33</codeph> as a column type in a <codeph>CREATE TABLE</codeph>
           command, the column is created with the storage directives you specified for the type:</p>
         <codeblock>CREATE TABLE t2 (c1 int33)
     WITH (APPENDONLY=true, ORIENTATION=column);</codeblock>
@@ -752,7 +752,7 @@ GRANT SELECT ON sales TO guest;
           <b>Inheritance of Compression Settings</b>
         </title>
         <body>
-          <p>The subpartitions of a partition that is added to a table that has subpartitions with compression settings
+          <p>A partition added to a table that has subpartitions defined with compression settings
             inherits the compression settings from the subpartition. The following example shows how
             to create a table with subpartition encodings, then alter it to add a partition.</p>
           <p>

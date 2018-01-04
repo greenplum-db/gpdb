@@ -17,7 +17,7 @@ the owner does not do anything that could be done by dropping and recreating
 the type. However, a superuser can alter ownership of any type.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing type to alter.
 </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The user name of the new owner of the type. </pd></plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the type. </pd></plentry>
 <plentry><pt><varname>storage_directive</varname></pt><pd>Identifies default storage options for the type when specified in a table column definition. Options include <codeph>COMPRESSTYPE</codeph>, <codeph>COMPRESSLEVEL</codeph>, and <codeph>BLOCKSIZE</codeph>.</pd><pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
-              <codeph>RLE-TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
+              <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
               of compression used.<note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
                 release of Pivotal Greenplum Database.</note></pd><pd><b>COMPRESSLEVEL</b> — For Zstd compression, set to an
               integer value from 1 (fastest compression) to 19 (highest compression ratio).
