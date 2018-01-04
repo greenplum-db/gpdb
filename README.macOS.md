@@ -37,25 +37,6 @@ package from Xcode 7.3.
 
 For more info, [this seems to be the best thread](https://github.com/Homebrew/brew/issues/972)
 
-## Step: verify that you can ssh to your machine name without a password
-```
-ssh <hostname of your machine>  # e.g., ssh briarwood
-```
-### If the hostname does not resolve, try adding your machine name to /etc/hosts
-```
-echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
-```
-
-### If you see 'ssh: connect to host <> port 22: Connection refused', enable remote login
-System Preferences -> Sharing -> Remote Login
-
-### If you see a password prompt, authorize your SSH key
-```
-mkdir -p ~/.ssh
-ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
-cat ~/.ssh/id_rsa.pub >>  ~/.ssh/authorized_keys
-```
-
 ## Step: Allow ssh to use the version of python in path, not the system python
 #
 ```
@@ -99,4 +80,29 @@ sudo tee -a /etc/ssh/sshd_config << EOF
 PermitUserEnvironment yes
 EOF
 
+```
+
+## Step: verify that you can ssh to your machine name without a password
+```
+ssh <hostname of your machine>  # e.g., ssh briarwood
+```
+### If the hostname does not resolve, try adding your machine name to /etc/hosts
+```
+echo -e "127.0.0.1\t$HOSTNAME" | sudo tee -a /etc/hosts
+```
+
+### If you see 'ssh: connect to host <> port 22: Connection refused', enable remote login
+System Preferences -> Sharing -> Remote Login
+
+### If you see a password prompt, authorize your SSH key
+```
+mkdir -p ~/.ssh
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+cat ~/.ssh/id_rsa.pub >>  ~/.ssh/authorized_keys
+```
+
+### Verify that you can ssh without a password and that ~/.ssh/environment exists
+```
+ssh <hostname of your machine> 
+ls ~/.ssh/environment
 ```
