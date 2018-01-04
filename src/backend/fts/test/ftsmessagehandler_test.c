@@ -5,15 +5,6 @@
 
 #include "postgres.h"
 
-#define Assert(condition) if (!condition) AssertFailed()
-
-bool is_assert_failed = false;
-
-void AssertFailed()
-{
-	is_assert_failed = true;
-}
-
 /* Actual function body */
 #include "../ftsmessagehandler.c"
 
@@ -43,40 +34,37 @@ expectSendFtsResponse(const char *expectedMessageType, const FtsResponse *expect
 	expect_any(pq_endmessage, buf);
 	will_be_called(pq_endmessage);
 
-	int number_of_columns = Natts_fts_message_response;
-	int calls_per_column_for_schema = 6;
-	int calls_per_column_for_data = 2;
-	int total_number_of_calls_of_pq_sendint = number_of_columns *
-	  (calls_per_column_for_schema + calls_per_column_for_data) +
-	  1 /*fixed for schema*/ + 1 /*fixed for data*/;
-	int total_number_of_calls_of_pq_sendint_for_none_data = total_number_of_calls_of_pq_sendint - number_of_columns;
-	int total_number_of_calls_of_pq_sendstring = number_of_columns;
-	
 	expect_any_count(pq_sendint, buf, -1);
-	expect_any_count(pq_sendint, i, total_number_of_calls_of_pq_sendint_for_none_data);
-  	expect_value(pq_sendint, i, expectedResponse->IsMirrorUp);
-	expect_value(pq_sendint, i, expectedResponse->IsInSync);
-	expect_value(pq_sendint, i, expectedResponse->IsSyncRepEnabled);
-	expect_value(pq_sendint, i, expectedResponse->IsRoleMirror);
-	expect_value(pq_sendint, i, expectedResponse->RequestRetry);
 	expect_any_count(pq_sendint, b, -1);
-	will_be_called_count(pq_sendint, total_number_of_calls_of_pq_sendint);
+
+	/* verify the schema */
+	expect_value(pq_sendint, i, Natts_fts_message_response);
+	expect_any_count(pq_sendint, i, Natts_fts_message_response * 6 /* calls_per_column_for_schema */);
+
+	/* verify the data */
+	expect_value(pq_sendint, i, Natts_fts_message_response);
+	expect_value(pq_sendint, i, 1);
+  	expect_value(pq_sendint, i, expectedResponse->IsMirrorUp);
+	expect_value(pq_sendint, i, 1);
+	expect_value(pq_sendint, i, expectedResponse->IsInSync);
+	expect_value(pq_sendint, i, 1);
+	expect_value(pq_sendint, i, expectedResponse->IsSyncRepEnabled);
+	expect_value(pq_sendint, i, 1);
+	expect_value(pq_sendint, i, expectedResponse->IsRoleMirror);
+	expect_value(pq_sendint, i, 1);
+	expect_value(pq_sendint, i, expectedResponse->RequestRetry);
+
+	will_be_called_count(pq_sendint, -1);
 
 	expect_any_count(pq_sendstring, buf, -1);
 	expect_any_count(pq_sendstring, str, -1);
-	will_be_called_count(pq_sendstring, total_number_of_calls_of_pq_sendstring);
+	will_be_called_count(pq_sendstring, Natts_fts_message_response);
 
 	expect_value(EndCommand, commandTag, expectedMessageType);
 	expect_value(EndCommand, dest, DestRemote);
 	will_be_called(EndCommand);
 
 	will_be_called(pq_flush);
-}
-
-void
-mockIsRoleMirror(bool expectedRoleMirror)
-{
-	am_mirror = expectedRoleMirror;
 }
 
 void
@@ -95,8 +83,6 @@ test_HandleFtsWalRepProbePrimary(void **state)
 
 	will_be_called(SetSyncStandbysDefined);
 
-	mockIsRoleMirror(mockresponse.IsRoleMirror);
-
 	/* SyncRep should be enabled as soon as we found mirror is up. */
 	mockresponse.IsSyncRepEnabled = true;
 	expectSendFtsResponse(FTS_MSG_PROBE, &mockresponse);
@@ -113,6 +99,7 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 	mockresponse.RequestRetry = false;
 	/* unblock primary if FTS requests it */
 	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.RequestRetry = false;
 
 	expect_any(GetMirrorStatus, response);
 	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
@@ -129,13 +116,64 @@ test_HandleFtsWalRepSyncRepOff(void **state)
 void
 test_HandleFtsWalRepProbeMirror(void **state)
 {
-  FtsResponse mockresponse;
-  mockresponse.IsMirrorUp = false;
-  mockresponse.IsInSync = false;
-  mockresponse.IsSyncRepEnabled = false;
-  mockresponse.IsRoleMirror = true;
+	FtsResponse mockresponse;
+	mockresponse.IsMirrorUp       = false;
+	mockresponse.IsInSync         = false;
+	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror     = false;
+	mockresponse.RequestRetry     = false;
 
-  /* TODO: figure out scenario of probing a mirror */
+	expect_any(GetMirrorStatus, response);
+	will_assign_memory(GetMirrorStatus, response, &mockresponse, sizeof(FtsResponse));
+	will_be_called(GetMirrorStatus);
+
+	/* expect the IsRoleMirror changed to reflect the global variable */
+	am_mirror = true;
+	mockresponse.IsRoleMirror = true;
+	expectSendFtsResponse(FTS_MSG_PROBE, &mockresponse);
+
+	HandleFtsWalRepProbe();
+}
+
+void
+test_HandleFtsWalRepPromoteMirror(void **state)
+{
+	am_mirror = true;
+
+	will_return(GetCurrentDBState, DB_IN_STANDBY_MODE);
+	will_be_called(SignalPromote);
+
+	FtsResponse mockresponse;
+	mockresponse.IsMirrorUp       = false;
+	mockresponse.IsInSync         = false;
+	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror     = am_mirror;
+	mockresponse.RequestRetry     = false;
+
+	/* expect SignalPromote() */
+	expectSendFtsResponse(FTS_MSG_PROMOTE, &mockresponse);
+
+	HandleFtsWalRepPromote();
+}
+
+void
+test_HandleFtsWalRepPromotePrimary(void **state)
+{
+	am_mirror = false;
+
+	will_return(GetCurrentDBState, DB_IN_PRODUCTION);
+
+	FtsResponse mockresponse;
+	mockresponse.IsMirrorUp       = false;
+	mockresponse.IsInSync         = false;
+	mockresponse.IsSyncRepEnabled = false;
+	mockresponse.IsRoleMirror     = false;
+	mockresponse.RequestRetry     = false;
+
+	/* expect no SignalPromote() */
+	expectSendFtsResponse(FTS_MSG_PROMOTE, &mockresponse);
+
+	HandleFtsWalRepPromote();
 }
 
 int
@@ -146,7 +184,9 @@ main(int argc, char* argv[])
 	const UnitTest tests[] = {
 		unit_test(test_HandleFtsWalRepProbePrimary),
 		unit_test(test_HandleFtsWalRepSyncRepOff),
-		unit_test(test_HandleFtsWalRepProbeMirror)
+		unit_test(test_HandleFtsWalRepProbeMirror),
+		unit_test(test_HandleFtsWalRepPromoteMirror),
+		unit_test(test_HandleFtsWalRepPromotePrimary)
 	};
 	return run_tests(tests);
 }

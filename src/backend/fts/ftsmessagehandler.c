@@ -30,7 +30,7 @@ SendFtsResponse(FtsResponse *response, const char *messagetype)
 	BeginCommand(messagetype, DestRemote);
 
 	pq_beginmessage(&buf, 'T');
-	pq_sendint(&buf, Natts_fts_message_response, 2); /* 3 fields */
+	pq_sendint(&buf, Natts_fts_message_response, 2); /* # of columns */
 
 	pq_sendstring(&buf, "is_mirror_up");
 	pq_sendint(&buf, 0, 4);		/* table oid */
@@ -105,7 +105,8 @@ HandleFtsWalRepProbe(void)
 		false, /* IsMirrorUp */
 		false, /* IsInSync */
 		false, /* IsSyncRepEnabled */
-		false  /* IsRoleMirror */
+		false, /* IsRoleMirror */
+		false, /* RequestRetry */
 	};
 
 	GetMirrorStatus(&response);
@@ -138,7 +139,8 @@ HandleFtsWalRepSyncRepOff(void)
 		false, /* IsMirrorUp */
 		false, /* IsInSync */
 		false, /* IsSyncRepEnabled */
-		false  /* IsRoleMirror */
+		false, /* IsRoleMirror */
+		false, /* RequestRetry */
 	};
 
 	ereport(LOG,
@@ -155,12 +157,12 @@ HandleFtsWalRepPromote(void)
 		false, /* IsMirrorUp */
 		false, /* IsInSync */
 		false, /* IsSyncRepEnabled */
-		false  /* IsRoleMirror */
+		am_mirror,  /* IsRoleMirror */
+		false, /* RequestRetry */
 	};
 
 	ereport(LOG,
 			(errmsg("promoting mirror to primary due to FTS request")));
-	Assert(am_mirror);
 
 	/*
 	 * FTS sends promote message to a mirror.  The mirror may be undergoing
