@@ -6557,7 +6557,8 @@ StartupXLOG(void)
 		 * it means the standby crashed post promotion but before recovery.conf
 		 * cleanup. Hence, it is not considered a standby request this time.
 		 */
-		if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
+		if (ControlFile->state == DB_IN_STANDBY_PROMOTED ||
+			ControlFile->state == DB_SHUTDOWNED)
 			StandbyModeRequested = false;
 	}
 
