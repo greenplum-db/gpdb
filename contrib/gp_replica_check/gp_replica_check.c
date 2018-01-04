@@ -261,6 +261,18 @@ compare_files(char *primaryfilepath, char *mirrorfilepath, RelfilenodeEntry *ren
 retry:
 	CHECK_FOR_INTERRUPTS();
 
+	/* If the files were still open from previous attempt, close them first. */
+	if (primaryFile != -1)
+	{
+		FileClose(primaryFile);
+		primaryFile = -1;
+	}
+	if (mirrorFile != -1)
+	{
+		FileClose(mirrorFile);
+		mirrorFile = -1;
+	}
+
 	if (attempts == NUM_RETRIES)
 	{
 		ereport(WARNING,
@@ -280,18 +292,6 @@ retry:
 		 */
 		if (!sync_wait())
 			return false;
-	}
-
-	/* If the files were still open from previous attempt, close them first. */
-	if (primaryFile != -1)
-	{
-		FileClose(primaryFile);
-		primaryFile = -1;
-	}
-	if (mirrorFile != -1)
-	{
-		FileClose(mirrorFile);
-		mirrorFile = -1;
 	}
 
 	/*
