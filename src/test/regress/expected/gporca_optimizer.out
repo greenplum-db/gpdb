@@ -3,7 +3,7 @@
 --
 -- show version
 SELECT count(*) from gp_opt_version();
- count 
+ count
 -------
      1
 (1 row)
@@ -40,13 +40,13 @@ set optimizer_trace_fallback = on;
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
 INFO:  GPORCA failed to produce a plan, falling back to planner
- sum | count 
+ sum | count
 -----+-------
  210 |     7
 (1 row)
 
 select * from orca.r;
- a  | b 
+ a  | b
 ----+---
   1 | 0
   2 | 0
@@ -71,7 +71,7 @@ select * from orca.r;
 (20 rows)
 
 select * from orca.r, orca.s where r.a=s.c;
- a  | b | c  | d  
+ a  | b | c  | d
 ----+---+----+----
   1 | 0 |  1 |  0
   2 | 0 |  2 |  1
@@ -96,7 +96,7 @@ select * from orca.r, orca.s where r.a=s.c;
 (20 rows)
 
 select * from orca.r, orca.s where r.a<s.c+1 or r.a>s.c;
- a  | b | c  | d  
+ a  | b | c  | d
 ----+---+----+----
   1 | 0 |  1 |  0
   1 | 0 |  2 |  1
@@ -701,19 +701,19 @@ select * from orca.r, orca.s where r.a<s.c+1 or r.a>s.c;
 (600 rows)
 
 select sum(r.a) from orca.r;
- sum 
+ sum
 -----
  210
 (1 row)
 
 select count(*) from orca.r;
- count 
+ count
 -------
     20
 (1 row)
 
 select a, b from orca.r, orca.s group by a,b;
- a  | b 
+ a  | b
 ----+---
   1 | 0
   2 | 0
@@ -738,7 +738,7 @@ select a, b from orca.r, orca.s group by a,b;
 (20 rows)
 
 select r.a+1 from orca.r;
- ?column? 
+ ?column?
 ----------
         2
         3
@@ -763,7 +763,7 @@ select r.a+1 from orca.r;
 (20 rows)
 
 select * from orca.r, orca.s where r.a<s.c or (r.b<s.d and r.b>s.c);
- a  | b | c  | d  
+ a  | b | c  | d
 ----+---+----+----
   1 | 0 |  2 |  1
   1 | 0 |  3 |  1
@@ -1158,7 +1158,7 @@ select * from orca.r, orca.s where r.a<s.c or (r.b<s.d and r.b>s.c);
 (390 rows)
 
 select case when r.a<s.c then r.a<s.c else r.a<s.c end from orca.r, orca.s;
- case 
+ case
 ------
  f
  t
@@ -1763,7 +1763,7 @@ select case when r.a<s.c then r.a<s.c else r.a<s.c end from orca.r, orca.s;
 (600 rows)
 
 select case r.b<s.c when true then r.b else s.c end from orca.r, orca.s where r.a = s.d;
- c 
+ c
 ---
  0
  0
@@ -1797,7 +1797,7 @@ select case r.b<s.c when true then r.b else s.c end from orca.r, orca.s where r.
 (29 rows)
 
 select * from orca.r limit 100;
- a  | b 
+ a  | b
 ----+---
   1 | 0
   2 | 0
@@ -1822,7 +1822,7 @@ select * from orca.r limit 100;
 (20 rows)
 
 select * from orca.r limit 10 offset 9;
- a  | b 
+ a  | b
 ----+---
  10 | 3
  11 | 3
@@ -1837,7 +1837,7 @@ select * from orca.r limit 10 offset 9;
 (10 rows)
 
 select * from orca.r offset 10;
- a  | b 
+ a  | b
 ----+---
  11 | 3
  12 | 4
@@ -1852,7 +1852,7 @@ select * from orca.r offset 10;
 (10 rows)
 
 select sqrt(r.a) from orca.r;
-       sqrt       
+       sqrt
 ------------------
                 1
   1.4142135623731
@@ -1877,7 +1877,7 @@ select sqrt(r.a) from orca.r;
 (20 rows)
 
 select pow(r.b,r.a) from orca.r;
-         pow          
+         pow
 ----------------------
                     0
                     0
@@ -1902,7 +1902,7 @@ select pow(r.b,r.a) from orca.r;
 (20 rows)
 
 select b from orca.r group by b having  count(*) > 2;
- b 
+ b
 ---
  1
  2
@@ -1913,7 +1913,7 @@ select b from orca.r group by b having  count(*) > 2;
 (6 rows)
 
 select b from orca.r group by b having  count(*) <= avg(a) + (select count(*) from orca.s where s.c = r.b);
- b 
+ b
 ---
  3
  2
@@ -1924,7 +1924,7 @@ select b from orca.r group by b having  count(*) <= avg(a) + (select count(*) fr
 (6 rows)
 
 select sum(a) from orca.r group by b having count(*) > 2 order by b+1;
- sum 
+ sum
 -----
   12
   21
@@ -1935,7 +1935,7 @@ select sum(a) from orca.r group by b having count(*) > 2 order by b+1;
 (6 rows)
 
 select sum(a) from orca.r group by b having count(*) > 2 order by b+1;
- sum 
+ sum
 -----
   12
   21
@@ -1947,7 +1947,7 @@ select sum(a) from orca.r group by b having count(*) > 2 order by b+1;
 
 -- constants
 select 0.001::numeric from orca.r;
- numeric 
+ numeric
 ---------
    0.001
    0.001
@@ -1972,32 +1972,32 @@ select 0.001::numeric from orca.r;
 (20 rows)
 
 select NULL::text, NULL::int from orca.r;
- text | int4 
+ text | int4
 ------+------
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
 (20 rows)
 
 select 'helloworld'::text, 'helloworld2'::varchar from orca.r;
-    text    |   varchar   
+    text    |   varchar
 ------------+-------------
  helloworld | helloworld2
  helloworld | helloworld2
@@ -2022,7 +2022,7 @@ select 'helloworld'::text, 'helloworld2'::varchar from orca.r;
 (20 rows)
 
 select 129::bigint, 5623::int, 45::smallint from orca.r;
- int8 | int4 | int2 
+ int8 | int4 | int2
 ------+------+------
   129 | 5623 |   45
   129 | 5623 |   45
@@ -2047,7 +2047,7 @@ select 129::bigint, 5623::int, 45::smallint from orca.r;
 (20 rows)
 
 select 0.001::numeric from orca.r;
- numeric 
+ numeric
 ---------
    0.001
    0.001
@@ -2072,32 +2072,32 @@ select 0.001::numeric from orca.r;
 (20 rows)
 
 select NULL::text, NULL::int from orca.r;
- text | int4 
+ text | int4
 ------+------
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
-      |     
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
+      |
 (20 rows)
 
 select 'helloworld'::text, 'helloworld2'::varchar from orca.r;
-    text    |   varchar   
+    text    |   varchar
 ------------+-------------
  helloworld | helloworld2
  helloworld | helloworld2
@@ -2122,7 +2122,7 @@ select 'helloworld'::text, 'helloworld2'::varchar from orca.r;
 (20 rows)
 
 select 129::bigint, 5623::int, 45::smallint from orca.r;
- int8 | int4 | int2 
+ int8 | int4 | int2
 ------+------+------
   129 | 5623 |   45
   129 | 5623 |   45
@@ -2157,7 +2157,7 @@ insert into orca.bar1 select i,i+1,i+2 from generate_series(1,20) i;
 insert into orca.bar2 select i,i+1,i+2 from generate_series(1,30) i;
 -- produces result node
 select x2 from orca.foo where x1 in (select x2 from orca.bar1);
- x2 
+ x2
 ----
   4
   6
@@ -2171,19 +2171,19 @@ select x2 from orca.foo where x1 in (select x2 from orca.bar1);
 (9 rows)
 
 select 1;
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
 
 SELECT 1 AS one FROM orca.foo having 1 < 2;
- one 
+ one
 -----
    1
 (1 row)
 
 SELECT generate_series(1,5) AS one FROM orca.foo having 1 < 2;
- one 
+ one
 -----
    1
    2
@@ -2193,7 +2193,7 @@ SELECT generate_series(1,5) AS one FROM orca.foo having 1 < 2;
 (5 rows)
 
 SELECT 1 AS one FROM orca.foo group by x1 having 1 < 2;
- one 
+ one
 -----
    1
    1
@@ -2213,25 +2213,25 @@ LINE 1: SELECT x1 AS one FROM orca.foo having 1 < 2;
                ^
 -- distinct clause
 select distinct 1, null;
- ?column? | ?column? 
+ ?column? | ?column?
 ----------+----------
-        1 | 
+        1 |
 (1 row)
 
 select distinct 1, null from orca.foo;
- ?column? | ?column? 
+ ?column? | ?column?
 ----------+----------
-        1 | 
+        1 |
 (1 row)
 
 select distinct 1, sum(x1) from orca.foo;
- ?column? | sum 
+ ?column? | sum
 ----------+-----
         1 |  55
 (1 row)
 
 select distinct x1, rank() over(order by x1) from (select x1 from orca.foo order by x1) x; --order none
- x1 | rank 
+ x1 | rank
 ----+------
   1 |    1
   2 |    2
@@ -2246,7 +2246,7 @@ select distinct x1, rank() over(order by x1) from (select x1 from orca.foo order
 (10 rows)
 
 select distinct x1, sum(x3) from orca.foo group by x1,x2;
- x1 | sum 
+ x1 | sum
 ----+-----
   1 |   3
   2 |   4
@@ -2261,7 +2261,7 @@ select distinct x1, sum(x3) from orca.foo group by x1,x2;
 (10 rows)
 
 select distinct s from (select sum(x2) s from orca.foo group by x1) x;
- s  
+ s
 ----
   3
   5
@@ -2276,20 +2276,20 @@ select distinct s from (select sum(x2) s from orca.foo group by x1) x;
 (10 rows)
 
 select * from orca.foo a where a.x1 = (select distinct sum(b.x1)+avg(b.x1) sa from orca.bar1 b group by b.x3 order by sa limit 1);
- x1 | x2 | x3 
+ x1 | x2 | x3
 ----+----+----
   2 |  3 |  4
 (1 row)
 
 select distinct a.x1 from orca.foo a where a.x1 <= (select distinct sum(b.x1)+avg(b.x1) sa from orca.bar1 b group by b.x3 order by sa limit 1) order by 1;
- x1 
+ x1
 ----
   1
   2
 (2 rows)
 
 select * from orca.foo a where a.x1 = (select distinct b.x1 from orca.bar1 b where b.x1=a.x1 limit 1);
- x1 | x2 | x3 
+ x1 | x2 | x3
 ----+----+----
   1 |  2 |  3
   3 |  4 |  5
@@ -2305,7 +2305,7 @@ select * from orca.foo a where a.x1 = (select distinct b.x1 from orca.bar1 b whe
 
 -- with clause
 with cte1 as (select * from orca.foo) select a.x1+1 from (select * from cte1) a group by a.x1;
- ?column? 
+ ?column?
 ----------
         3
         5
@@ -2320,68 +2320,68 @@ with cte1 as (select * from orca.foo) select a.x1+1 from (select * from cte1) a 
 (10 rows)
 
 select count(*)+1 from orca.bar1 b where b.x1 < any (with cte1 as (select * from orca.foo) select a.x1+1 from (select * from cte1) a group by a.x1);
- ?column? 
+ ?column?
 ----------
        11
 (1 row)
 
 select count(*)+1 from orca.bar1 b where b.x1 < any (with cte1 as (select * from orca.foo) select a.x1 from (select * from cte1) a group by a.x1);
- ?column? 
+ ?column?
 ----------
        10
 (1 row)
 
 select count(*)+1 from orca.bar1 b where b.x1 < any (with cte1 as (select * from orca.foo) select a.x1 from cte1 a group by a.x1);
- ?column? 
+ ?column?
 ----------
        10
 (1 row)
 
 with cte1 as (select * from orca.foo) select count(*)+1 from cte1 a where a.x1 < any (with cte2 as (select * from cte1 b where b.x1 > 10) select c.x1 from (select * from cte2) c group by c.x1);
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
 
 with cte1 as (select * from orca.foo) select count(*)+1 from cte1 a where a.x1 < any (with cte2 as (select * from cte1 b where b.x1 > 10) select c.x1+1 from (select * from cte2) c group by c.x1);
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
 
 with x as (select * from orca.foo) select count(*) from (select * from x) y where y.x1 <= (select count(*) from x);
- count 
+ count
 -------
     10
 (1 row)
 
 with x as (select * from orca.foo) select count(*)+1 from (select * from x) y where y.x1 <= (select count(*) from x);
- ?column? 
+ ?column?
 ----------
        11
 (1 row)
 
 with x as (select * from orca.foo) select count(*) from (select * from x) y where y.x1 < (with z as (select * from x) select count(*) from z);
- count 
+ count
 -------
      9
 (1 row)
 
 -- outer references
 select count(*)+1 from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y where y.x1 = x.x2);
- ?column? 
+ ?column?
 ----------
         9
 (1 row)
 
 select count(*)+1 from orca.foo x where x.x1 > (select count(*) from orca.bar1 y where y.x1 = x.x2);
- ?column? 
+ ?column?
 ----------
        10
 (1 row)
 
 select count(*) from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y where y.x1 = x.x2);
- count 
+ count
 -------
      8
 (1 row)
@@ -2397,7 +2397,7 @@ insert into orca.s select i%7, i%2 from generate_series(1,30) i;
 analyze orca.r;
 analyze orca.s;
 select * from orca.r, orca.s where r.a=s.c;
- a | b | c | d 
+ a | b | c | d
 ---+---+---+---
  2 | 2 | 2 | 0
  4 | 1 | 4 | 0
@@ -2429,7 +2429,7 @@ select * from orca.r, orca.s where r.a=s.c;
 
 -- Materialize node
 select * from orca.r, orca.s where r.a<s.c+1 or r.a>s.c;
- a  | b | c | d 
+ a  | b | c | d
 ----+---+---+---
   1 | 1 | 1 | 1
   3 | 0 | 1 | 1
@@ -3035,7 +3035,7 @@ select * from orca.r, orca.s where r.a<s.c+1 or r.a>s.c;
 
 -- empty target list
 select r.* from orca.r, orca.s where s.c=2;
- a  | b 
+ a  | b
 ----+---
   2 | 2
   2 | 2
@@ -3152,7 +3152,7 @@ insert into orca.m1 select i-2, i%3 from generate_series(1,25) i;
 insert into orca.r values (null, 1);
 -- join types
 select r.a, s.c from orca.r left outer join orca.s on(r.a=s.c);
- a  | c 
+ a  | c
 ----+---
   2 | 2
   2 | 2
@@ -3167,13 +3167,13 @@ select r.a, s.c from orca.r left outer join orca.s on(r.a=s.c);
   6 | 6
   6 | 6
   6 | 6
-  8 |  
- 10 |  
- 12 |  
- 14 |  
- 16 |  
- 18 |  
- 20 |  
+  8 |
+ 10 |
+ 12 |
+ 14 |
+ 16 |
+ 18 |
+ 20 |
   1 | 1
   1 | 1
   1 | 1
@@ -3187,66 +3187,66 @@ select r.a, s.c from orca.r left outer join orca.s on(r.a=s.c);
   5 | 5
   5 | 5
   5 | 5
-  7 |  
-  9 |  
- 11 |  
- 13 |  
- 15 |  
- 17 |  
- 19 |  
-    |  
+  7 |
+  9 |
+ 11 |
+ 13 |
+ 15 |
+ 17 |
+ 19 |
+    |
 (41 rows)
 
 select r.a, s.c from orca.r left outer join orca.s on(r.a=s.c and r.a=r.b and s.c=s.d) order by r.a,s.c;
- a  | c 
+ a  | c
 ----+---
   1 | 1
   1 | 1
   1 | 1
-  2 |  
-  3 |  
-  4 |  
-  5 |  
-  6 |  
-  7 |  
-  8 |  
-  9 |  
- 10 |  
- 11 |  
- 12 |  
- 13 |  
- 14 |  
- 15 |  
- 16 |  
- 17 |  
- 18 |  
- 19 |  
- 20 |  
-    |  
+  2 |
+  3 |
+  4 |
+  5 |
+  6 |
+  7 |
+  8 |
+  9 |
+ 10 |
+ 11 |
+ 12 |
+ 13 |
+ 14 |
+ 15 |
+ 16 |
+ 17 |
+ 18 |
+ 19 |
+ 20 |
+    |
 (23 rows)
 
 select r.a, s.c from orca.r left outer join orca.s on(r.a=s.c) where s.d > 2 or s.d is null order by r.a;
- a  | c 
+ a  | c
 ----+---
-  7 |  
-  8 |  
-  9 |  
- 10 |  
- 11 |  
- 12 |  
- 13 |  
- 14 |  
- 15 |  
- 16 |  
- 17 |  
- 18 |  
- 19 |  
- 20 |  
-    |  
+  7 |
+  8 |
+  9 |
+ 10 |
+ 11 |
+ 12 |
+ 13 |
+ 14 |
+ 15 |
+ 16 |
+ 17 |
+ 18 |
+ 19 |
+ 20 |
+    |
 (15 rows)
 
 select r.a, s.c from orca.r right outer join orca.s on(r.a=s.c);
- a | c 
+ a | c
 ---+---
  1 | 1
  3 | 3
@@ -3281,7 +3281,7 @@ select r.a, s.c from orca.r right outer join orca.s on(r.a=s.c);
 (30 rows)
 
 select * from orca.r where exists (select * from orca.s where s.c=r.a + 2);
- a | b 
+ a | b
 ---+---
  2 | 2
  4 | 1
@@ -3290,7 +3290,7 @@ select * from orca.r where exists (select * from orca.s where s.c=r.a + 2);
 (4 rows)
 
 select * from orca.r where exists (select * from orca.s where s.c=r.b);
- a  | b 
+ a  | b
 ----+---
  15 | 0
   9 | 0
@@ -3316,7 +3316,7 @@ select * from orca.r where exists (select * from orca.s where s.c=r.b);
 (21 rows)
 
 select * from orca.m where m.a not in (select a from orca.m1 where a=5);
- a  | b 
+ a  | b
 ----+---
   0 | 1
   1 | 0
@@ -3355,7 +3355,7 @@ select * from orca.m where m.a not in (select a from orca.m1 where a=5);
 (34 rows)
 
 select * from orca.m where m.a not in (select a from orca.m1);
- a  | b 
+ a  | b
 ----+---
  24 | 1
  25 | 0
@@ -3371,7 +3371,7 @@ select * from orca.m where m.a not in (select a from orca.m1);
 (11 rows)
 
 select * from orca.m where m.a in (select a from orca.m1 where m1.a-1 = m.b);
- a | b 
+ a | b
 ---+---
  1 | 0
  2 | 1
@@ -3379,7 +3379,7 @@ select * from orca.m where m.a in (select a from orca.m1 where m1.a-1 = m.b);
 
 -- enable_hashjoin=off; enable_mergejoin=on
 select 1 from orca.m, orca.m1 where m.a = m1.a and m.b!=m1.b;
- ?column? 
+ ?column?
 ----------
         1
         1
@@ -3401,34 +3401,34 @@ select 1 from orca.m, orca.m1 where m.a = m1.a and m.b!=m1.b;
 
 -- plan.qual vs hashclauses/join quals:
 select * from orca.r left outer join orca.s on (r.a=s.c and r.b<s.d) where s.d is null;
- a  | b | c | d 
+ a  | b | c | d
 ----+---+---+---
-  1 | 1 |   |  
-  5 | 2 |   |  
-  7 | 1 |   |  
-  9 | 0 |   |  
- 11 | 2 |   |  
- 13 | 1 |   |  
- 15 | 0 |   |  
- 17 | 2 |   |  
- 19 | 1 |   |  
-    | 1 |   |  
-  2 | 2 |   |  
-  4 | 1 |   |  
-  8 | 2 |   |  
- 10 | 1 |   |  
- 12 | 0 |   |  
- 14 | 2 |   |  
- 16 | 1 |   |  
- 18 | 0 |   |  
- 20 | 2 |   |  
+  1 | 1 |   |
+  5 | 2 |   |
+  7 | 1 |   |
+  9 | 0 |   |
+ 11 | 2 |   |
+ 13 | 1 |   |
+ 15 | 0 |   |
+ 17 | 2 |   |
+ 19 | 1 |   |
+    | 1 |   |
+  2 | 2 |   |
+  4 | 1 |   |
+  8 | 2 |   |
+ 10 | 1 |   |
+ 12 | 0 |   |
+ 14 | 2 |   |
+ 16 | 1 |   |
+ 18 | 0 |   |
+ 20 | 2 |   |
 (19 rows)
 
 -- select * from orca.r m full outer join orca.r m1 on (m.a=m1.a) where m.a is null;
 -- explain Hash Join with 'IS NOT DISTINCT FROM' join condition
 -- force_explain
 explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
-                                   QUERY PLAN                                   
+                                   QUERY PLAN
 --------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..862.01 rows=30 width=16)
    ->  Hash Join  (cost=0.00..862.00 rows=15 width=16)
@@ -3443,7 +3443,7 @@ explain  select * from orca.r, orca.s where r.a is not distinct from s.c;
 -- explain Hash Join with equality join condition
 -- force_explain
 explain select * from orca.r, orca.s where r.a = s.c;
-                                   QUERY PLAN                                   
+                                   QUERY PLAN
 --------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..491.01 rows=30 width=16)
    ->  Nested Loop  (cost=0.00..491.00 rows=15 width=16)
@@ -3457,7 +3457,7 @@ explain select * from orca.r, orca.s where r.a = s.c;
 
 -- sort
 select * from orca.r join orca.s on(r.a=s.c) order by r.a, s.d;
- a | b | c | d 
+ a | b | c | d
 ---+---+---+---
  1 | 1 | 1 | 0
  1 | 1 | 1 | 0
@@ -3488,7 +3488,7 @@ select * from orca.r join orca.s on(r.a=s.c) order by r.a, s.d;
 (26 rows)
 
 select * from orca.r join orca.s on(r.a=s.c) order by r.a, s.d limit 10;
- a | b | c | d 
+ a | b | c | d
 ---+---+---+---
  1 | 1 | 1 | 0
  1 | 1 | 1 | 0
@@ -3503,7 +3503,7 @@ select * from orca.r join orca.s on(r.a=s.c) order by r.a, s.d limit 10;
 (10 rows)
 
 select * from orca.r join orca.s on(r.a=s.c) order by r.a + 5, s.d limit 10;
- a | b | c | d 
+ a | b | c | d
 ---+---+---+---
  1 | 1 | 1 | 0
  1 | 1 | 1 | 0
@@ -3519,7 +3519,7 @@ select * from orca.r join orca.s on(r.a=s.c) order by r.a + 5, s.d limit 10;
 
 -- group by
 select 1 from orca.m group by a+b;
- ?column? 
+ ?column?
 ----------
         1
         1
@@ -3543,14 +3543,14 @@ select 1 from orca.m group by a+b;
 
 -- join with const table
 select * from orca.r where a = (select 1);
- a | b 
+ a | b
 ---+---
  1 | 1
 (1 row)
 
 -- union with const table
 select * from ((select a as x from orca.r) union (select 1 as x )) as foo order by x;
- x  
+ x
 ----
   1
   2
@@ -3572,13 +3572,13 @@ select * from ((select a as x from orca.r) union (select 1 as x )) as foo order 
  18
  19
  20
-   
+
 (21 rows)
 
 insert into orca.m values (1,-1), (1,2), (1,1);
 -- computed columns
 select a,a,a+b from orca.m;
- a  | a  | ?column? 
+ a  | a  | ?column?
 ----+----+----------
   0 |  0 |        1
   1 |  1 |        1
@@ -3621,7 +3621,7 @@ select a,a,a+b from orca.m;
 (38 rows)
 
 select a,a+b,a+b from orca.m;
- a  | ?column? | ?column? 
+ a  | ?column? | ?column?
 ----+----------+----------
   0 |        1 |        1
   1 |        1 |        1
@@ -3665,7 +3665,7 @@ select a,a+b,a+b from orca.m;
 
 -- func expr
 select * from orca.m where a=abs(b);
- a | b  
+ a | b
 ---+----
  1 | -1
  1 |  1
@@ -3673,7 +3673,7 @@ select * from orca.m where a=abs(b);
 
 -- grouping sets
 select a,b,count(*) from orca.m group by grouping sets ((a), (a,b));
- a  | b  | count 
+ a  | b  | count
 ----+----+-------
   0 |  1 |     1
   1 | -1 |     1
@@ -3751,7 +3751,7 @@ select a,b,count(*) from orca.m group by grouping sets ((a), (a,b));
 (73 rows)
 
 select b,count(*) from orca.m group by grouping sets ((a), (a,b));
- b  | count 
+ b  | count
 ----+-------
   1 |     1
  -1 |     1
@@ -3829,7 +3829,7 @@ select b,count(*) from orca.m group by grouping sets ((a), (a,b));
 (73 rows)
 
 select a,count(*) from orca.m group by grouping sets ((a), (a,b));
- a  | count 
+ a  | count
 ----+-------
   0 |     1
   1 |     1
@@ -3907,7 +3907,7 @@ select a,count(*) from orca.m group by grouping sets ((a), (a,b));
 (73 rows)
 
 select a,count(*) from orca.m group by grouping sets ((a), (b));
- a  | count 
+ a  | count
 ----+-------
     |     1
     |    17
@@ -3951,7 +3951,7 @@ select a,count(*) from orca.m group by grouping sets ((a), (b));
 (39 rows)
 
 select a,b,count(*) from orca.m group by rollup(a, b);
- a  | b  | count 
+ a  | b  | count
 ----+----+-------
   0 |  1 |     1
   1 | -1 |     1
@@ -4030,7 +4030,7 @@ select a,b,count(*) from orca.m group by rollup(a, b);
 (74 rows)
 
 select a,b,count(*) from orca.m group by rollup((a),(a,b)) order by 1,2,3;
- a  | b  | count 
+ a  | b  | count
 ----+----+-------
   0 |  1 |     1
   0 |    |     1
@@ -4109,13 +4109,13 @@ select a,b,count(*) from orca.m group by rollup((a),(a,b)) order by 1,2,3;
 (74 rows)
 
 select count(*) from orca.m group by ();
- count 
+ count
 -------
     38
 (1 row)
 
 select a, count(*) from orca.r group by (), a;
- a  | count 
+ a  | count
 ----+-------
   1 |     1
   3 |     1
@@ -4141,7 +4141,7 @@ select a, count(*) from orca.r group by (), a;
 (21 rows)
 
 select a, count(*) from orca.r group by grouping sets ((),(a));
- a  | count 
+ a  | count
 ----+-------
   2 |     1
   4 |     1
@@ -4168,7 +4168,7 @@ select a, count(*) from orca.r group by grouping sets ((),(a));
 (22 rows)
 
 select a, b, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order by b,a,c;
- a  | b | c  
+ a  | b | c
 ----+---+----
   3 | 0 |  1
   6 | 0 |  1
@@ -4216,7 +4216,7 @@ select a, b, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order
 (43 rows)
 
 select a, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order by b,a,c;
- a  | c  
+ a  | c
 ----+----
   3 |  1
   6 |  1
@@ -4264,13 +4264,13 @@ select a, count(*) c from orca.r group by grouping sets ((),(a), (a,b)) order by
 (43 rows)
 
 select 1 from orca.r group by ();
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
 
 select a,1 from orca.r group by rollup(a);
- a  | ?column? 
+ a  | ?column?
 ----+----------
   1 |        1
   3 |        1
@@ -4298,7 +4298,7 @@ select a,1 from orca.r group by rollup(a);
 
 -- arrays
 select array[array[a,b]], array[b] from orca.r;
-   array    | array 
+   array    | array
 ------------+-------
  {{2,2}}    | {2}
  {{4,1}}    | {1}
@@ -4325,7 +4325,7 @@ select array[array[a,b]], array[b] from orca.r;
 
 -- setops
 select a, b from orca.m union select b,a from orca.m;
- a  | b  
+ a  | b
 ----+----
   0 |  1
   0 |  3
@@ -4401,7 +4401,7 @@ select a, b from orca.m union select b,a from orca.m;
 (71 rows)
 
 SELECT a from orca.m UNION ALL select b from orca.m UNION ALL select a+b from orca.m group by 1;
- a  
+ a
 ----
   0
   0
@@ -4514,7 +4514,7 @@ insert into orca.foo select i, i%2, i%4, i-1 from generate_series(1,40)i;
 insert into orca.bar select i, i%3, i%2 from generate_series(1,30)i;
 -- distinct operation
 SELECT distinct a, b from orca.foo;
- a  | b 
+ a  | b
 ----+---
   2 | 0
   4 | 0
@@ -4559,7 +4559,7 @@ SELECT distinct a, b from orca.foo;
 (40 rows)
 
 SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
- a  | b 
+ a  | b
 ----+---
   1 | 1
   3 | 1
@@ -4584,7 +4584,7 @@ SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
 (20 rows)
 
 SELECT distinct a, b from orca.foo;
- a  | b 
+ a  | b
 ----+---
   1 | 1
   3 | 1
@@ -4629,7 +4629,7 @@ SELECT distinct a, b from orca.foo;
 (40 rows)
 
 SELECT distinct a, count(*) from orca.foo group by a;
- a  | count 
+ a  | count
 ----+-------
   1 |     1
   2 |     1
@@ -4674,7 +4674,7 @@ SELECT distinct a, count(*) from orca.foo group by a;
 (40 rows)
 
 SELECT distinct foo.a, bar.b, sum(bar.c+foo.c) from orca.foo, orca.bar where foo.b = bar.a group by foo.a, bar.b;
- a  | b | sum 
+ a  | b | sum
 ----+---+-----
   1 | 1 |   2
   3 | 1 |   4
@@ -4699,7 +4699,7 @@ SELECT distinct foo.a, bar.b, sum(bar.c+foo.c) from orca.foo, orca.bar where foo
 (20 rows)
 
 SELECT distinct a, count(*) from orca.foo group by a;
- a  | count 
+ a  | count
 ----+-------
   1 |     1
   2 |     1
@@ -4744,7 +4744,7 @@ SELECT distinct a, count(*) from orca.foo group by a;
 (40 rows)
 
 SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
- a  | b 
+ a  | b
 ----+---
   1 | 1
   3 | 1
@@ -4769,7 +4769,7 @@ SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
 (20 rows)
 
 SELECT distinct foo.a, bar.b, sum(bar.c+foo.c) from orca.foo, orca.bar where foo.b = bar.a group by foo.a, bar.b;
- a  | b | sum 
+ a  | b | sum
 ----+---+-----
   1 | 1 |   2
   3 | 1 |   4
@@ -4794,7 +4794,7 @@ SELECT distinct foo.a, bar.b, sum(bar.c+foo.c) from orca.foo, orca.bar where foo
 (20 rows)
 
 SELECT distinct a, b from orca.foo;
- a  | b 
+ a  | b
 ----+---
   2 | 0
   4 | 0
@@ -4839,7 +4839,7 @@ SELECT distinct a, b from orca.foo;
 (40 rows)
 
 SELECT distinct a, count(*) from orca.foo group by a;
- a  | count 
+ a  | count
 ----+-------
   1 |     1
   2 |     1
@@ -4884,7 +4884,7 @@ SELECT distinct a, count(*) from orca.foo group by a;
 (40 rows)
 
 SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
- a  | b 
+ a  | b
 ----+---
   1 | 1
   3 | 1
@@ -4909,7 +4909,7 @@ SELECT distinct foo.a, bar.b from orca.foo, orca.bar where foo.b = bar.a;
 (20 rows)
 
 SELECT distinct foo.a, bar.b, sum(bar.c+foo.c) from orca.foo, orca.bar where foo.b = bar.a group by foo.a, bar.b;
- a  | b | sum 
+ a  | b | sum
 ----+---+-----
   1 | 1 |   2
   3 | 1 |   4
@@ -4935,7 +4935,7 @@ SELECT distinct foo.a, bar.b, sum(bar.c+foo.c) from orca.foo, orca.bar where foo
 
 -- window operations
 select row_number() over() from orca.foo order by 1;
- row_number 
+ row_number
 ------------
           1
           2
@@ -4980,7 +4980,7 @@ select row_number() over() from orca.foo order by 1;
 (40 rows)
 
 select rank() over(partition by b order by count(*)/sum(a)) from orca.foo group by a, b order by 1;
- rank 
+ rank
 ------
     1
     1
@@ -5025,7 +5025,7 @@ select rank() over(partition by b order by count(*)/sum(a)) from orca.foo group 
 (40 rows)
 
 select row_number() over(order by foo.a) from orca.foo inner join orca.bar using(b) group by foo.a, bar.b, bar.a;
- row_number 
+ row_number
 ------------
           1
           2
@@ -5430,7 +5430,7 @@ select row_number() over(order by foo.a) from orca.foo inner join orca.bar using
 (400 rows)
 
 select 1+row_number() over(order by foo.a+bar.a) from orca.foo inner join orca.bar using(b);
- ?column? 
+ ?column?
 ----------
         2
         3
@@ -5835,7 +5835,7 @@ select 1+row_number() over(order by foo.a+bar.a) from orca.foo inner join orca.b
 (400 rows)
 
 select row_number() over(order by foo.a+ bar.a)/count(*) from orca.foo inner join orca.bar using(b) group by foo.a, bar.a, bar.b;
- ?column? 
+ ?column?
 ----------
         1
         2
@@ -6240,7 +6240,7 @@ select row_number() over(order by foo.a+ bar.a)/count(*) from orca.foo inner joi
 (400 rows)
 
 select count(*) over(partition by b order by a range between 1 preceding and (select count(*) from orca.bar) following) from orca.foo;
- count 
+ count
 -------
     16
     16
@@ -6285,7 +6285,7 @@ select count(*) over(partition by b order by a range between 1 preceding and (se
 (40 rows)
 
 select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1, 2;
- ?column? | rank 
+ ?column? | rank
 ----------+------
         2 |    1
         3 |    1
@@ -6330,7 +6330,7 @@ select a+1, rank() over(partition by b+1 order by a+1) from orca.foo order by 1,
 (40 rows)
 
 select a , sum(a) over (order by a range '1'::float8 preceding) from orca.r order by 1,2;
- a  | sum 
+ a  | sum
 ----+-----
   1 |   1
   2 |   3
@@ -6352,11 +6352,11 @@ select a , sum(a) over (order by a range '1'::float8 preceding) from orca.r orde
  18 |  35
  19 |  37
  20 |  39
-    |    
+    |
 (21 rows)
 
 select a, b, floor(avg(b) over(order by a desc, b desc rows between unbounded preceding and unbounded following)) as avg, dense_rank() over (order by a) from orca.r order by 1,2,3,4;
- a  | b | avg | dense_rank 
+ a  | b | avg | dense_rank
 ----+---+-----+------------
   1 | 1 |   1 |          1
   2 | 2 |   1 |          2
@@ -6382,7 +6382,7 @@ select a, b, floor(avg(b) over(order by a desc, b desc rows between unbounded pr
 (21 rows)
 
 select lead(a) over(order by a) from orca.r order by 1;
- lead 
+ lead
 ------
     2
     3
@@ -6403,12 +6403,12 @@ select lead(a) over(order by a) from orca.r order by 1;
    18
    19
    20
-     
-     
+
+
 (21 rows)
 
 select lag(c,d) over(order by c,d) from orca.s order by 1;
- lag 
+ lag
 -----
    0
    0
@@ -6443,7 +6443,7 @@ select lag(c,d) over(order by c,d) from orca.s order by 1;
 (30 rows)
 
 select lead(c,c+d,1000) over(order by c,d) from orca.s order by 1;
- lead 
+ lead
 ------
     0
     0
@@ -6477,10 +6477,10 @@ select lead(c,c+d,1000) over(order by c,d) from orca.s order by 1;
  1000
 (30 rows)
 
--- cte 
+-- cte
 with x as (select a, b from orca.r)
 select rank() over(partition by a, case when b = 0 then a+b end order by b asc) as rank_within_parent from x order by a desc ,case when a+b = 0 then a end ,b;
- rank_within_parent 
+ rank_within_parent
 --------------------
                   1
                   1
@@ -6507,7 +6507,7 @@ select rank() over(partition by a, case when b = 0 then a+b end order by b asc) 
 
 -- alias
 select foo.d from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
- d  
+ d
 ----
   1
   3
@@ -6552,7 +6552,7 @@ select foo.d from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
 (40 rows)
 
 select 1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
- v 
+ v
 ---
  1
  1
@@ -6597,14 +6597,14 @@ select 1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d;
 (40 rows)
 
 select * from orca.r where a in (select count(*)+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b);
- a | b 
+ a | b
 ---+---
  2 | 2
 (1 row)
 
 select * from orca.r where r.a in (select d+r.b+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b) order by r.a, r.b;
 INFO:  GPORCA failed to produce a plan, falling back to planner
- a  | b 
+ a  | b
 ----+---
   3 | 0
   4 | 1
@@ -6633,7 +6633,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into orca.rcte select i, i%2, i%3 from generate_series(1,40)i;
 with x as (select * from orca.rcte where a < 10) select * from x x1, x x2;
- a | b | c | a | b | c 
+ a | b | c | a | b | c
 ---+---+---+---+---+---
  2 | 0 | 2 | 1 | 1 | 1
  4 | 0 | 1 | 1 | 1 | 1
@@ -6719,7 +6719,7 @@ with x as (select * from orca.rcte where a < 10) select * from x x1, x x2;
 (81 rows)
 
 with x as (select * from orca.rcte where a < 10) select * from x x1, x x2 where x2.a = x1.b;
- a | b | c | a | b | c 
+ a | b | c | a | b | c
 ---+---+---+---+---+---
  1 | 1 | 1 | 1 | 1 | 1
  3 | 1 | 0 | 1 | 1 | 1
@@ -6729,7 +6729,7 @@ with x as (select * from orca.rcte where a < 10) select * from x x1, x x2 where 
 (5 rows)
 
 with x as (select * from orca.rcte where a < 10) select a from x union all select b from x;
- a 
+ a
 ---
  2
  4
@@ -6752,7 +6752,7 @@ with x as (select * from orca.rcte where a < 10) select a from x union all selec
 (18 rows)
 
 with x as (select * from orca.rcte where a < 10) select * from x x1 where x1.b = any (select x2.a from x x2 group by x2.a);
- a | b | c 
+ a | b | c
 ---+---+---
  1 | 1 | 1
  3 | 1 | 0
@@ -6762,12 +6762,12 @@ with x as (select * from orca.rcte where a < 10) select * from x x1 where x1.b =
 (5 rows)
 
 with x as (select * from orca.rcte where a < 10) select * from x x1 where x1.b = all (select x2.a from x x2 group by x2.a);
- a | b | c 
+ a | b | c
 ---+---+---
 (0 rows)
 
 with x as (select * from orca.rcte where a < 10) select * from x x1, x x2, x x3 where x2.a = x1.b and x3.b = x2.b                                                                                   ;
- a | b | c | a | b | c | a | b | c 
+ a | b | c | a | b | c | a | b | c
 ---+---+---+---+---+---+---+---+---
  1 | 1 | 1 | 1 | 1 | 1 | 9 | 1 | 0
  1 | 1 | 1 | 1 | 1 | 1 | 7 | 1 | 1
@@ -6797,7 +6797,7 @@ with x as (select * from orca.rcte where a < 10) select * from x x1, x x2, x x3 
 (25 rows)
 
 with x as (select * from orca.rcte where a < 10) select * from x x2 where x2.b < (select avg(b) from x x1);
- a | b | c 
+ a | b | c
 ---+---+---
  2 | 0 | 2
  4 | 0 | 1
@@ -6806,7 +6806,7 @@ with x as (select * from orca.rcte where a < 10) select * from x x2 where x2.b <
 (4 rows)
 
 with x as (select r.a from orca.r, orca.s  where r.a < 10 and s.d < 10 and r.a = s.d) select * from x x1, x x2;
- a | a 
+ a | a
 ---+---
  1 | 1
  1 | 1
@@ -7036,7 +7036,7 @@ with x as (select r.a from orca.r, orca.s  where r.a < 10 and s.d < 10 and r.a =
 (225 rows)
 
 with x as (select r.a from orca.r, orca.s  where r.a < 10 and s.c < 10 and r.a = s.c) select * from x x1, x x2;
- a | a 
+ a | a
 ---+---
  1 | 1
  3 | 1
@@ -7717,7 +7717,7 @@ with x as (select r.a from orca.r, orca.s  where r.a < 10 and s.c < 10 and r.a =
 (676 rows)
 
 with x as (select * from orca.rcte where a < 10) (select a from x x2) union all (select max(a) from x x1);
- a 
+ a
 ---
  2
  4
@@ -7732,7 +7732,7 @@ with x as (select * from orca.rcte where a < 10) (select a from x x2) union all 
 (10 rows)
 
 with x as (select * from orca.r) select * from x order by a;
- a  | b 
+ a  | b
 ----+---
   1 | 1
   2 | 2
@@ -7768,13 +7768,13 @@ DETAIL:  Expected no more than one row to be returned by expression
 select (select a from orca.foo inner1 where inner1.a=outer1.a  union select b from orca.foo inner2 where inner2.b=outer1.b) from orca.foo outer1;
 ERROR:  more than one row returned by a subquery used as an expression  (seg1 slice3 slarimac:40001 pid=383)
 select (select generate_series(1,1)) as series;
- series 
+ series
 --------
       1
 (1 row)
 
 select generate_series(1,5);
- generate_series 
+ generate_series
 -----------------
                1
                2
@@ -7784,7 +7784,7 @@ select generate_series(1,5);
 (5 rows)
 
 select a, c from orca.r, orca.s where a = any (select c) order by a, c limit 10;
- a | c 
+ a | c
 ---+---
  1 | 1
  1 | 1
@@ -7799,7 +7799,7 @@ select a, c from orca.r, orca.s where a = any (select c) order by a, c limit 10;
 (10 rows)
 
 select a, c from orca.r, orca.s where a = (select c) order by a, c limit 10;
- a | c 
+ a | c
 ---+---
  1 | 1
  1 | 1
@@ -7814,7 +7814,7 @@ select a, c from orca.r, orca.s where a = (select c) order by a, c limit 10;
 (10 rows)
 
 select a, c from orca.r, orca.s where a  not in  (select c) order by a, c limit 10;
- a | c 
+ a | c
 ---+---
  1 | 0
  1 | 0
@@ -7829,7 +7829,7 @@ select a, c from orca.r, orca.s where a  not in  (select c) order by a, c limit 
 (10 rows)
 
 select a, c from orca.r, orca.s where a  = any  (select c from orca.r) order by a, c limit 10;
- a | c 
+ a | c
 ---+---
  1 | 1
  1 | 1
@@ -7844,7 +7844,7 @@ select a, c from orca.r, orca.s where a  = any  (select c from orca.r) order by 
 (10 rows)
 
 select a, c from orca.r, orca.s where a  <> all (select c) order by a, c limit 10;
- a | c 
+ a | c
 ---+---
  1 | 0
  1 | 0
@@ -7859,7 +7859,7 @@ select a, c from orca.r, orca.s where a  <> all (select c) order by a, c limit 1
 (10 rows)
 
 select a, (select (select (select c from orca.s where a=c group by c))) as subq from orca.r order by a;
- a  | subq 
+ a  | subq
 ----+------
   1 |    1
   2 |    2
@@ -7867,25 +7867,25 @@ select a, (select (select (select c from orca.s where a=c group by c))) as subq 
   4 |    4
   5 |    5
   6 |    6
-  7 |     
-  8 |     
-  9 |     
- 10 |     
- 11 |     
- 12 |     
- 13 |     
- 14 |     
- 15 |     
- 16 |     
- 17 |     
- 18 |     
- 19 |     
- 20 |     
-    |     
+  7 |
+  8 |
+  9 |
+ 10 |
+ 11 |
+ 12 |
+ 13 |
+ 14 |
+ 15 |
+ 16 |
+ 17 |
+ 18 |
+ 19 |
+ 20 |
+    |
 (21 rows)
 
 with v as (select a,b from orca.r, orca.s where a=c)  select c from orca.s group by c having count(*) not in (select b from v where a=c) order by c;
- c 
+ c
 ---
  0
  1
@@ -7924,9 +7924,9 @@ insert into orca.onek values (439,5,1,3,9,19,9,39,39,439,439,18,19,'XQAAAA','FAA
 insert into orca.onek values (670,6,0,2,0,10,0,70,70,170,670,0,1,'UZAAAA','GAAAAA','OOOOxx');
 insert into orca.onek values (543,7,1,3,3,3,3,43,143,43,543,6,7,'XUAAAA','HAAAAA','VVVVxx');
 select ten, sum(distinct four) from orca.onek a
-group by ten 
+group by ten
 having exists (select 1 from orca.onek b where sum(distinct a.four) = b.four);
- ten | sum 
+ ten | sum
 -----+-----
    0 |   2
    4 |   2
@@ -7942,20 +7942,20 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 NOTICE:  CREATE TABLE will create partition "pp_1_prt_pp1" for table "pp"
 create index pp_a on orca.pp(a);
 NOTICE:  building index for child partition "pp_1_prt_pp1"
--- list partition tests 
--- test homogeneous partitions 
+-- list partition tests
+-- test homogeneous partitions
 drop table if exists orca.t;
 NOTICE:  table "t" does not exist, skipping
 create table orca.t ( a int, b char(2), to_be_drop int, c int, d char(2), e int)
-distributed by (a) 
+distributed by (a)
 partition by list(d) (partition part1 values('a'), partition part2 values('b'));
 NOTICE:  CREATE TABLE will create partition "t_1_prt_part1" for table "t"
 NOTICE:  CREATE TABLE will create partition "t_1_prt_part2" for table "t"
-insert into orca.t 
-	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i 
+insert into orca.t
+	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
 select * from orca.t order by 1, 2, 3, 4, 5, 6 limit 4;
- a | b  | to_be_drop | c | d  | e 
+ a | b  | to_be_drop | c | d  | e
 ---+----+------------+---+----+---
  1 | 1  |          1 | 1 | b  | 1
  2 | 2  |          2 | 2 | a  | 2
@@ -7965,7 +7965,7 @@ select * from orca.t order by 1, 2, 3, 4, 5, 6 limit 4;
 
 alter table orca.t drop column to_be_drop;
 select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
- a | b  | c | d  | e 
+ a | b  | c | d  | e
 ---+----+---+----+---
  1 | 1  | 1 | b  | 1
  2 | 2  | 2 | a  | 2
@@ -7976,10 +7976,10 @@ select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
 insert into orca.t (d, a) values('a', 0);
 insert into orca.t (a, d) values(0, 'b');
 select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
- a | b  | c | d  | e 
+ a | b  | c | d  | e
 ---+----+---+----+---
- 0 |    |   | a  |  
- 0 |    |   | b  |  
+ 0 |    |   | a  |
+ 0 |    |   | b  |
  1 | 1  | 1 | b  | 1
  2 | 2  | 2 | a  | 2
 (4 rows)
@@ -8028,7 +8028,7 @@ insert into orca.multilevel_p values (1,1), (100,200);
 INFO:  GPORCA failed to produce a plan, falling back to planner
 select * from orca.multilevel_p;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-  a  |  b  
+  a  |  b
 -----+-----
    1 |   1
  100 | 200
@@ -8037,15 +8037,15 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 -- test appendonly
 drop table if exists orca.t;
 create table orca.t ( a int, b char(2), to_be_drop int, c int, d char(2), e int)
-distributed by (a) 
+distributed by (a)
 partition by list(d) (partition part1 values('a') with (appendonly=true, compresslevel=5, orientation=column), partition part2 values('b') with (appendonly=true, compresslevel=5, orientation=column));
 NOTICE:  CREATE TABLE will create partition "t_1_prt_part1" for table "t"
 NOTICE:  CREATE TABLE will create partition "t_1_prt_part2" for table "t"
-insert into orca.t 
-	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i 
+insert into orca.t
+	select i, i::char(2), i, i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
 select * from orca.t order by 1, 2, 3, 4, 5, 6 limit 4;
- a | b  | to_be_drop | c | d  | e 
+ a | b  | to_be_drop | c | d  | e
 ---+----+------------+---+----+---
  1 | 1  |          1 | 1 | b  | 1
  2 | 2  |          2 | 2 | a  | 2
@@ -8055,7 +8055,7 @@ select * from orca.t order by 1, 2, 3, 4, 5, 6 limit 4;
 
 alter table orca.t drop column to_be_drop;
 select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
- a | b  | c | d  | e 
+ a | b  | c | d  | e
 ---+----+---+----+---
  1 | 1  | 1 | b  | 1
  2 | 2  | 2 | a  | 2
@@ -8063,11 +8063,11 @@ select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
  4 | 4  | 4 | a  | 4
 (4 rows)
 
-insert into orca.t 
-	select i, i::char(2), i, case when i%2 = 0 then 'a' else 'b' end, i 
+insert into orca.t
+	select i, i::char(2), i, case when i%2 = 0 then 'a' else 'b' end, i
 	from generate_series(1,100) i;
 select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
- a | b  | c | d  | e 
+ a | b  | c | d  | e
 ---+----+---+----+---
  1 | 1  | 1 | b  | 1
  1 | 1  | 1 | b  | 1
@@ -8077,8 +8077,8 @@ select * from orca.t order by 1, 2, 3, 4, 5 limit 4;
 
 -- test heterogeneous partitions
 drop table if exists orca.t;
-create table orca.t ( timest character varying(6), user_id numeric(16,0) not null, to_be_drop char(5), tag1 char(5), tag2 char(5)) 
-distributed by (user_id) 
+create table orca.t ( timest character varying(6), user_id numeric(16,0) not null, to_be_drop char(5), tag1 char(5), tag2 char(5))
+distributed by (user_id)
 partition by list (timest) (partition part201203 values('201203') with (appendonly=true, compresslevel=5, orientation=column), partition part201204 values('201204') with (appendonly=true, compresslevel=5, orientation=row), partition part201205 values('201205'));
 NOTICE:  CREATE TABLE will create partition "t_1_prt_part201203" for table "t"
 NOTICE:  CREATE TABLE will create partition "t_1_prt_part201204" for table "t"
@@ -8099,20 +8099,20 @@ insert into orca.t values('201207',1,'tag1','tag2');
 insert into orca.t values('201208',2,'tag1','tag2');
 -- test projections
 select * from orca.t order by 1,2;
- timest | user_id | tag1  | tag2  
+ timest | user_id | tag1  | tag2
 --------+---------+-------+-------
- 201203 |       0 | tag1  | tag2 
- 201203 |       1 | tag1  | tag2 
- 201204 |       2 | tag1  | tag2 
- 201205 |       1 | tag1  | tag2 
- 201206 |       2 | tag1  | tag2 
- 201207 |       1 | tag1  | tag2 
- 201208 |       2 | tag1  | tag2 
+ 201203 |       0 | tag1  | tag2
+ 201203 |       1 | tag1  | tag2
+ 201204 |       2 | tag1  | tag2
+ 201205 |       1 | tag1  | tag2
+ 201206 |       2 | tag1  | tag2
+ 201207 |       1 | tag1  | tag2
+ 201208 |       2 | tag1  | tag2
 (7 rows)
 
 -- test EXPLAIN support of partition selection nodes, while we're at it.
 explain select * from orca.t order by 1,2;
-                                             QUERY PLAN                                              
+                                             QUERY PLAN
 -----------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=32)
    Merge Key: timest, user_id
@@ -8127,19 +8127,19 @@ explain select * from orca.t order by 1,2;
 (10 rows)
 
 select tag2, tag1 from orca.t order by 1, 2;;
- tag2  | tag1  
+ tag2  | tag1
 -------+-------
- tag2  | tag1 
- tag2  | tag1 
- tag2  | tag1 
- tag2  | tag1 
- tag2  | tag1 
- tag2  | tag1 
- tag2  | tag1 
+ tag2  | tag1
+ tag2  | tag1
+ tag2  | tag1
+ tag2  | tag1
+ tag2  | tag1
+ tag2  | tag1
+ tag2  | tag1
 (7 rows)
 
 select tag1, user_id from orca.t order by 1, 2;
- tag1  | user_id 
+ tag1  | user_id
 -------+---------
  tag1  |       0
  tag1  |       1
@@ -8152,16 +8152,16 @@ select tag1, user_id from orca.t order by 1, 2;
 
 insert into orca.t(user_id, timest, tag2) values(3, '201208','tag2');
 select * from orca.t order by 1, 2;
- timest | user_id | tag1  | tag2  
+ timest | user_id | tag1  | tag2
 --------+---------+-------+-------
- 201203 |       0 | tag1  | tag2 
- 201203 |       1 | tag1  | tag2 
- 201204 |       2 | tag1  | tag2 
- 201205 |       1 | tag1  | tag2 
- 201206 |       2 | tag1  | tag2 
- 201207 |       1 | tag1  | tag2 
- 201208 |       2 | tag1  | tag2 
- 201208 |       3 |       | tag2 
+ 201203 |       0 | tag1  | tag2
+ 201203 |       1 | tag1  | tag2
+ 201204 |       2 | tag1  | tag2
+ 201205 |       1 | tag1  | tag2
+ 201206 |       2 | tag1  | tag2
+ 201207 |       1 | tag1  | tag2
+ 201208 |       2 | tag1  | tag2
+ 201208 |       3 |       | tag2
 (8 rows)
 
 -- test heterogeneous indexes with constant expression evaluation
@@ -8201,7 +8201,7 @@ set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
 set optimizer_plan_id = 2;
 explain select * from orca.t_date where user_id=9;
-                                                   QUERY PLAN                                                   
+                                                   QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
@@ -8218,9 +8218,9 @@ explain select * from orca.t_date where user_id=9;
 (12 rows)
 
 select * from orca.t_date where user_id=9;
-   timest   | user_id | tag1  | tag2  
+   timest   | user_id | tag1  | tag2
 ------------+---------+-------+-------
- 01-03-2012 |       9 | tag1  | tag2 
+ 01-03-2012 |       9 | tag1  | tag2
 (1 row)
 
 reset optimizer_enable_space_pruning;
@@ -8256,7 +8256,7 @@ set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enumerate_plans=on;
 set optimizer_plan_id = 2;
 explain select * from orca.t_text where user_id=9;
-                                                   QUERY PLAN                                                   
+                                                   QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
@@ -8273,9 +8273,9 @@ explain select * from orca.t_text where user_id=9;
 (12 rows)
 
 select * from orca.t_text where user_id=9;
-   timest   | user_id | tag1  | tag2  
+   timest   | user_id | tag1  | tag2
 ------------+---------+-------+-------
- 01-03-2012 |       9 | ugly  | tag2 
+ 01-03-2012 |       9 | ugly  | tag2
 (1 row)
 
 reset optimizer_enable_space_pruning;
@@ -8320,7 +8320,7 @@ insert into orca.t_employee values('01-08-2012'::date,2,'tag1','(2, ''foo'')'::o
 set optimizer_enable_constant_expression_evaluation=on;
 set optimizer_enable_dynamictablescan = off;
 explain select * from orca.t_employee where user_id = 2;
-                                                QUERY PLAN                                                
+                                                QUERY PLAN
 ----------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..6.00 rows=1 width=28)
@@ -8333,7 +8333,7 @@ explain select * from orca.t_employee where user_id = 2;
 (8 rows)
 
 select * from orca.t_employee where user_id = 2;
-   timest   | user_id | tag1  |     emp      
+   timest   | user_id | tag1  |     emp
 ------------+---------+-------+--------------
  01-08-2012 |       2 | tag1  | (2," 'foo'")
  01-06-2012 |       2 | tag1  | (2," 'foo'")
@@ -8347,7 +8347,7 @@ reset optimizer_enable_partial_index;
 drop table if exists orca.t_ceeval_ints;
 NOTICE:  table "t_ceeval_ints" does not exist, skipping
 create table orca.t_ceeval_ints(user_id numeric(16,0), category_id int, tag1 char(5), tag2 char(5))
-distributed by (user_id) 
+distributed by (user_id)
 partition by list (category_id)
 	(partition part100 values('100') , partition part101 values('101'), partition part103 values('102'));
 NOTICE:  CREATE TABLE will create partition "t_ceeval_ints_1_prt_part100" for table "t_ceeval_ints"
@@ -8355,7 +8355,7 @@ NOTICE:  CREATE TABLE will create partition "t_ceeval_ints_1_prt_part101" for ta
 NOTICE:  CREATE TABLE will create partition "t_ceeval_ints_1_prt_part103" for table "t_ceeval_ints"
 create index user_id_ceeval_ints on orca.t_ceeval_ints_1_prt_part101(user_id);
 insert into orca.t_ceeval_ints values(1, 100, 'tag1', 'tag2');
-insert into orca.t_ceeval_ints values(2, 100, 'tag1', 'tag2');	
+insert into orca.t_ceeval_ints values(2, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(3, 100, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(4, 101, 'tag1', 'tag2');
 insert into orca.t_ceeval_ints values(5, 102, 'tag1', 'tag2');
@@ -8366,7 +8366,7 @@ set optimizer_use_external_constant_expression_evaluation_for_ints = on;
 set optimizer_enumerate_plans=on;
 set optimizer_plan_id = 2;
 explain select * from orca.t_ceeval_ints where user_id=4;
-                                                      QUERY PLAN                                                       
+                                                      QUERY PLAN
 -----------------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..437.00 rows=1 width=28)
    ->  Sequence  (cost=0.00..437.00 rows=1 width=28)
@@ -8383,9 +8383,9 @@ explain select * from orca.t_ceeval_ints where user_id=4;
 (12 rows)
 
 select * from orca.t_ceeval_ints where user_id=4;
- user_id | category_id | tag1  | tag2  
+ user_id | category_id | tag1  | tag2
 ---------+-------------+-------+-------
-       4 |         101 | tag1  | tag2 
+       4 |         101 | tag1  | tag2
 (1 row)
 
 reset optimizer_enable_space_pruning;
@@ -8400,7 +8400,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO orca.csq_r VALUES (1);
 SELECT * FROM orca.csq_r WHERE a IN (SELECT * FROM orca.csq_f(orca.csq_r.a));
- a 
+ a
 ---
  1
 (1 row)
@@ -8415,19 +8415,19 @@ insert into orca.tab1 values (1,2,3,4,5);
 insert into orca.tab1 values (1,2,3,4,5);
 insert into orca.tab1 values (1,2,3,4,5);
 select b,d from orca.tab1 group by b,d having min(distinct d)>3;
- b | d 
+ b | d
 ---+---
  2 | 4
 (1 row)
 
 select b,d from orca.tab1 group by b,d having d>3;
- b | d 
+ b | d
 ---+---
  2 | 4
 (1 row)
 
 select b,d from orca.tab1 group by b,d having min(distinct d)>b;
- b | d 
+ b | d
 ---+---
  2 | 4
 (1 row)
@@ -8441,7 +8441,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into orca.fooh1 select i%4, i%3, i from generate_series(1,20) i;
 insert into orca.fooh2 select i%3, i%2, i from generate_series(1,20) i;
 select sum(f1.b) from orca.fooh1 f1 group by f1.a;
- sum 
+ sum
 -----
    4
    6
@@ -8450,7 +8450,7 @@ select sum(f1.b) from orca.fooh1 f1 group by f1.a;
 (4 rows)
 
 select 1 as one, f1.a from orca.fooh1 f1 group by f1.a having sum(f1.b) > 4;
- one | a 
+ one | a
 -----+---
    1 | 2
    1 | 0
@@ -8458,31 +8458,31 @@ select 1 as one, f1.a from orca.fooh1 f1 group by f1.a having sum(f1.b) > 4;
 (3 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 10 > (select f2.a from orca.fooh2 f2 group by f2.a having sum(f1.a) > count(*) order by f2.a limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
  2 |   1
  3 |   1
 (2 rows)
 
 select 1 from orca.fooh1 f1 group by f1.a having 10 > (select f2.a from orca.fooh2 f2 group by f2.a having sum(f1.a) > count(*) order by f2.a limit 1) order by f1.a;
- ?column? 
+ ?column?
 ----------
         1
         1
 (2 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 10 > (select 1 from orca.fooh2 f2 group by f2.a having sum(f1.b) > count(*) order by f2.a limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
 (0 rows)
 
 select 1 from orca.fooh1 f1 group by f1.a having 10 > (select 1 from orca.fooh2 f2 group by f2.a having sum(f1.b) > count(*) order by f2.a limit 1) order by f1.a;
- ?column? 
+ ?column?
 ----------
 (0 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b) > 1 order by f2.a limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
  0 |   1
  1 |   1
@@ -8491,7 +8491,7 @@ select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a f
 (4 rows)
 
 select 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b) > 1 order by f2.a limit 1) order by f1.a;
- one 
+ one
 -----
    1
    1
@@ -8500,7 +8500,7 @@ select 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a from or
 (4 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b) > 1 order by f2.a limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
  0 |   1
  1 |   1
@@ -8509,7 +8509,7 @@ select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a f
 (4 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b + f1.a) > 1 order by f2.a limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
  0 |   1
  1 |   1
@@ -8518,7 +8518,7 @@ select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a f
 (4 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b + sum(f1.b)) > 1 order by f2.a limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
  0 |   1
  1 |   1
@@ -8527,26 +8527,26 @@ select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having 0 = (select f2.a f
 (4 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having f1.a < (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b + 1) > f1.a order by f2.a desc limit 1) order by f1.a;
- a | one 
+ a | one
 ---+-----
  0 |   1
  1 |   1
 (2 rows)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having f1.a = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b) + 1 > f1.a order by f2.a desc limit 1);
- a | one 
+ a | one
 ---+-----
  2 |   1
 (1 row)
 
 select f1.a, 1 as one from orca.fooh1 f1 group by f1.a having f1.a = (select f2.a from orca.fooh2 f2 group by f2.a having sum(f2.b) > 1 order by f2.a limit 1);
- a | one 
+ a | one
 ---+-----
  0 |   1
 (1 row)
 
 select sum(f1.a+1)+1 from orca.fooh1 f1 group by f1.a+1;
- ?column? 
+ ?column?
 ----------
        11
        21
@@ -8555,7 +8555,7 @@ select sum(f1.a+1)+1 from orca.fooh1 f1 group by f1.a+1;
 (4 rows)
 
 select sum(f1.a+1)+sum(f1.a+1) from orca.fooh1 f1 group by f1.a+1;
- ?column? 
+ ?column?
 ----------
        20
        40
@@ -8564,7 +8564,7 @@ select sum(f1.a+1)+sum(f1.a+1) from orca.fooh1 f1 group by f1.a+1;
 (4 rows)
 
 select sum(f1.a+1)+avg(f1.a+1), sum(f1.a), sum(f1.a+1) from orca.fooh1 f1 group by f1.a+1;
- ?column? | sum | sum 
+ ?column? | sum | sum
 ----------+-----+-----
        12 |   5 |  10
        24 |  15 |  20
@@ -8580,7 +8580,7 @@ insert into orca.t77 select 'mine'::text;
 insert into orca.t77 select 'apple'::text;
 insert into orca.t77 select 'orange'::text;
 SELECT to_char(AVG( char_length(DT466.C952) ), '9999999.9999999'), MAX( char_length(DT466.C952) ) FROM orca.t77 DT466 GROUP BY char_length(DT466.C952);
-     to_char      | max 
+     to_char      | max
 ------------------+-----
         5.0000000 |   5
         4.0000000 |   4
@@ -8595,7 +8595,7 @@ insert into orca.prod9 values (200, 'pants',800);
 insert into orca.prod9 values (300, 't-shirts', 300);
 -- returning product and price using Having and Group by clause
 select prodnm, price from orca.prod9 GROUP BY prodnm, price HAVING price !=300;
- prodnm | price 
+ prodnm | price
 --------+-------
  shirts |   500
  pants  |   800
@@ -8609,7 +8609,7 @@ insert into orca.toanalyze values (1,1), (2,2), (3,3);
 alter table orca.toanalyze drop column a;
 NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
 analyze orca.toanalyze;
--- union 
+-- union
 create table orca.ur (a int, b int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
@@ -8629,7 +8629,7 @@ insert into orca.us values (1,3);
 insert into orca.ut values (3);
 insert into orca.uu values (1,3);
 select * from (select a, a from orca.ur union select c, d from orca.us) x(g,h);
- g | h 
+ g | h
 ---+---
  2 | 2
  1 | 1
@@ -8637,33 +8637,33 @@ select * from (select a, a from orca.ur union select c, d from orca.us) x(g,h);
 (3 rows)
 
 select * from (select a, a from orca.ur union select c, d from orca.us) x(g,h), orca.ut t where t.a = x.h;
- g | h | a 
+ g | h | a
 ---+---+---
  1 | 3 | 3
 (1 row)
 
 select * from (select a, a from orca.ur union select c, d from orca.uu) x(g,h), orca.ut t where t.a = x.h;
- g | h | a 
+ g | h | a
 ---+---+---
  1 | 3 | 3
 (1 row)
 
 select 1 AS two UNION select 2.2;
- two 
+ two
 -----
    1
  2.2
 (2 rows)
 
 select 2.2 AS two UNION select 1;
- two 
+ two
 -----
    1
  2.2
 (2 rows)
 
 select * from (select 2.2 AS two UNION select 1) x(a), (select 1.0 AS two UNION ALL select 1) y(a) where y.a = x.a;
- a |  a  
+ a |  a
 ---+-----
  1 | 1.0
  1 |   1
@@ -8681,7 +8681,7 @@ WITH CTE(a,b) AS
 CTE1(e,f) AS
 ( SELECT f1.a, rank() OVER (PARTITION BY f1.b ORDER BY CTE.a) FROM orca.twf1 f1, CTE )
 SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
- e  | f | a | b 
+ e  | f | a | b
 ----+---+---+---
   1 | 2 | 2 | 2
   2 | 2 | 2 | 2
@@ -8698,7 +8698,7 @@ SELECT * FROM CTE1,CTE WHERE CTE.a = CTE1.f and CTE.a = 2 ORDER BY 1;
 SET optimizer_cte_inlining = off;
 -- catalog queries
 select 1 from pg_class c group by c.oid limit 1;
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
@@ -8712,7 +8712,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entr
 create table orca.tab2 (a, b) as select 1, 2;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
 select * from orca.tab1 where 0 < (select count(*) from generate_series(1,i)) order by 1;
- i  | j 
+ i  | j
 ----+---
   1 | 1
   2 | 0
@@ -8727,7 +8727,7 @@ select * from orca.tab1 where 0 < (select count(*) from generate_series(1,i)) or
 (10 rows)
 
 select * from orca.tab1 where i > (select b from orca.tab2);
- i  | j 
+ i  | j
 ----+---
   4 | 0
   6 | 0
@@ -8741,19 +8741,19 @@ select * from orca.tab1 where i > (select b from orca.tab2);
 
 -- subqueries
 select NULL in (select 1);
- ?column? 
+ ?column?
 ----------
- 
+
 (1 row)
 
 select 1 in (select 1);
- ?column? 
+ ?column?
 ----------
  t
 (1 row)
 
 select 1 in (select 2);
- ?column? 
+ ?column?
 ----------
  f
 (1 row)
@@ -8761,23 +8761,23 @@ select 1 in (select 2);
 select NULL in (select 1/0);
 ERROR:  division by zero
 select 1 where 22 in (SELECT unnest(array[1,2]));
- ?column? 
+ ?column?
 ----------
 (0 rows)
 
 select 1 where 22 not in (SELECT unnest(array[1,2]));
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
 
 select 1 where 22 in (SELECT generate_series(1,10));
- ?column? 
+ ?column?
 ----------
 (0 rows)
 
 select 1 where 22 not in (SELECT generate_series(1,10));
- ?column? 
+ ?column?
 ----------
         1
 (1 row)
@@ -8789,7 +8789,7 @@ CREATE AGGREGATE myagg1(anyelement) (SFUNC = sum_sfunc, PREFUNC = sum_prefunc, S
 SELECT myagg1(i) FROM orca.tab1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 CONTEXT:  SQL function "sum_sfunc" during startup
- myagg1 
+ myagg1
 --------
      55
 (1 row)
@@ -8799,7 +8799,7 @@ CREATE AGGREGATE myagg2(anyelement,anyelement) (SFUNC = sum_sfunc2, STYPE = anye
 SELECT myagg2(i,j) FROM orca.tab1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 CONTEXT:  SQL function "sum_sfunc2" during startup
- myagg2 
+ myagg2
 --------
      60
 (1 row)
@@ -8823,7 +8823,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 CONTEXT:  SQL function "gptfp" during startup
 INFO:  GPORCA failed to produce a plan, falling back to planner
 CONTEXT:  SQL function "gpffp" during startup
- f3 | myagg3  
+ f3 | myagg3
 ----+---------
  a  | {1,4,7}
  b  | {5,2,8}
@@ -8838,13 +8838,13 @@ insert into mpp22453 values (1, '2012-01-01'), (2, '2012-01-02'), (3, '2012-12-3
 create index mpp22453_idx on mpp22453(d);
 set optimizer_enable_tablescan = off;
 select * from mpp22453 where d > date '2012-01-31' + interval '1 day' ;
- a |     d      
+ a |     d
 ---+------------
  3 | 12-31-2012
 (1 row)
 
 select * from mpp22453 where d > '2012-02-01';
- a |     d      
+ a |     d
 ---+------------
  3 | 12-31-2012
 (1 row)
@@ -8856,15 +8856,15 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "mpp22791_1_prt_d" for table "mpp22791"
 insert into mpp22791 values (1, 1), (2, 2), (3, 3);
-select * from mpp22791 where b > 1; 
- a | b 
+select * from mpp22791 where b > 1;
+ a | b
 ---+---
  2 | 2
  3 | 3
 (2 rows)
 
 select * from mpp22791 where b <= 3;
- a | b 
+ a | b
 ---+---
  1 | 1
  3 | 3
@@ -8873,7 +8873,7 @@ select * from mpp22791 where b <= 3;
 
 -- MPP-20713, MPP-20714, MPP-20738: Const table get with a filter
 select 1 as x where 1 in (2, 3);
- x 
+ x
 ---
 (0 rows)
 
@@ -8885,7 +8885,7 @@ NOTICE:  CREATE TABLE will create partition "p1_1_prt_pp1" for table "p1"
 NOTICE:  CREATE TABLE will create partition "p1_1_prt_pp2" for table "p1"
 insert into orca.p1 select * from generate_series(2,15);
 select count(*) from (select gp_segment_id,ctid,tableoid from orca.p1 group by gp_segment_id,ctid,tableoid) as foo;
- count 
+ count
 -------
     14
 (1 row)
@@ -8910,8 +8910,8 @@ CREATE TABLE orca.tmp_verd_s_pp_provtabs_agt_0015_extract1 (
 )
 WITH (appendonly=true, compresstype=zlib) DISTRIBUTED BY (uid136);
  set allow_system_table_mods="DML";
- UPDATE pg_class                                                                                                                                                                                     
- SET                                                                                                                                                                                                 
+ UPDATE pg_class
+ SET
          relpages = 30915::int, reltuples = 7.28661e+07::real WHERE relname = 'tmp_verd_s_pp_provtabs_agt_0015_extract1' AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'xvclin');
  insert into pg_statistic values ('orca.tmp_verd_s_pp_provtabs_agt_0015_extract1'::regclass,1::smallint,0::real,17::integer,264682::real,1::smallint,2::smallint,0::smallint,0::smallint,1054::oid,1058::oid,0::oid,0::oid,'{0.000161451,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,0.000107634,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05,8.07255e-05}'::real[],NULL::real[],NULL::real[],NULL::real[],'{8X8#1F8V92A2025G,YFAXQ§UBF210PA0P,2IIVIE8V92A2025G,9§BP8F8V92A2025G,35A9EE8V92A2025G,§AJ2Z§9MA210PA0P,3NUQ3E8V92A2025G,F7ZD4F8V92A2025G,$WHHEO§§E210PA0P,Z6EATH2BE210PA0P,N7I28E8V92A2025G,YU0K$E$§9210PA0P,3TAI1ANIF210PA0P,P#H8BF8V92A2025G,VTQ$N$D§92A201SC,N7ZD4F8V92A2025G,77BP8F8V92A2025G,39XOXY78H210PA01,#2#OX6NHH210PA01,2DG1J#XZH210PA01,MFEG$E8V92A2025G,M0HKWNGND210PA0P,FSXI67NSA210PA0P,C1L77E8V92A2025G,01#21E8V92A2025G}'::bpchar[],'{§00§1HKZC210PA0P,1D90GE8V92A2025G,2ULZI6L0O210PA01,489G7L8$I210PA01,5RE8FF8V92A2025G,76NIRFNIF210PA0P,8KOMKE8V92A2025G,#9Y#GPSHB210PA0P,BDAJ#D8V92A2025G,CV9Z7IYVK210PA01,#EC5FE8V92A2025G,FQWY§O1XC210PA0P,H8HL4E8V92A2025G,INC5FE8V92A2025G,K4MX0XHCF210PA0P,LKE8FF8V92A2025G,N03G9UM2F210PA0P,OHJ$#GFZ9210PA0P,PXU3T1OTB210PA0P,RCUA45F1H210PA01,SU§FRY#QI210PA01,UABHMLSLK210PA01,VRBP8F8V92A2025G,X65#KZIDC210PA0P,YLFG§#A2G210PA0P,ZZG8H29OC210PA0P,ZZZDBCEVA210PA0P}'::bpchar[],NULL::bpchar[],NULL::bpchar[]);
  insert into pg_statistic values ('orca.tmp_verd_s_pp_provtabs_agt_0015_extract1'::regclass,2::smallint,0::real,2::integer,205.116::real,1::smallint,2::smallint,0::smallint,0::smallint,94::oid,95::oid,0::oid,0::oid,'{0.278637,0.272448,0.0303797,0.0301106,0.0249442,0.0234373,0.0231682,0.0191319,0.0169793,0.0162527,0.0142884,0.0141539,0.0125394,0.0103329,0.0098216,0.00944488,0.00850308,0.00715766,0.0066464,0.00656567,0.00591987,0.0050588,0.00454753,0.00449372,0.0044399}'::real[],NULL::real[],NULL::real[],NULL::real[],'{199,12,14,5,197,11,198,8,152,299,201,153,9,13,74,179,24,202,2,213,17,195,215,16,200}'::int2[],'{1,5,9,12,14,24,58,80,152,195,198,199,207,302,402}'::int2[],NULL::int2[],NULL::int2[]);
@@ -8935,7 +8935,7 @@ left outer join  orca.tmp_verd_s_pp_provtabs_agt_0015_extract1 b
  ON  a.uid136=b.uid136 and a.tab_nr=b.tab_nr and  a.prdgrp=b.prdgrp and a.bg=b.bg and a.typ142=b.typ142 and a.ad_gsch=b.ad_gsch
 AND a.guelt_ab <= b.guelt_ab AND a.guelt_bis > b.guelt_ab
 ;
- uid136 | tab_nr | prdgrp | bg | typ142 | ad_gsch | guelt_ab | guelt_bis | guelt_stat | verarb_ab | u_erzeugen | grenze | erstellt_am_122 | erstellt_am_135 | erstellt_am_134 | guelt_ab_b | guelt_bis_b 
+ uid136 | tab_nr | prdgrp | bg | typ142 | ad_gsch | guelt_ab | guelt_bis | guelt_stat | verarb_ab | u_erzeugen | grenze | erstellt_am_122 | erstellt_am_135 | erstellt_am_134 | guelt_ab_b | guelt_bis_b
 --------+--------+--------+----+--------+---------+----------+-----------+------------+-----------+------------+--------+-----------------+-----------------+-----------------+------------+-------------
 (0 rows)
 
@@ -8953,26 +8953,26 @@ create table orca.arrtest (
 insert into orca.arrtest (a[1:5], b[1:1][1:2][1:2], c, d)
 values ('{1,2,3,4,5}', '{{{0,0},{1,2}}}', '{}', '{}');
 select a[1:3], b[1][2][1], c[1], d[1][1] FROM orca.arrtest order by 1,2,3,4;
-    a    | b | c | d 
+    a    | b | c | d
 ---------+---+---+---
- {1,2,3} | 1 |   | 
+ {1,2,3} | 1 |   |
 (1 row)
 
 select a[b[1][2][2]] from orca.arrtest;
- a 
+ a
 ---
  2
 (1 row)
 
 -- MPP-20713, MPP-20714, MPP-20738: Const table get with a filter
 select 1 as x where 1 in (2, 3);
- x 
+ x
 ---
 (0 rows)
 
 -- MPP-22918: join inner child with universal distribution
 SELECT generate_series(1,10) EXCEPT SELECT 1;
- generate_series 
+ generate_series
 -----------------
                2
                3
@@ -8987,13 +8987,13 @@ SELECT generate_series(1,10) EXCEPT SELECT 1;
 
 -- MPP-23932: SetOp of const table and volatile function
 SELECT generate_series(1,10) INTERSECT SELECT 1;
- generate_series 
+ generate_series
 -----------------
                1
 (1 row)
 
 SELECT generate_series(1,10) UNION SELECT 1;
- generate_series 
+ generate_series
 -----------------
                1
                2
@@ -9019,19 +9019,19 @@ insert into bar_missing_stats select i, i%8 from generate_series(1,30) i;
 analyze foo_missing_stats;
 analyze bar_missing_stats;
 select count(*) from foo_missing_stats where a = 10;
- count 
+ count
 -------
      1
 (1 row)
 
 with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 where x1.a = x2.a;
- count 
+ count
 -------
     20
 (1 row)
 
 with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 where x1.a = x2.b;
- count 
+ count
 -------
     16
 (1 row)
@@ -9046,7 +9046,7 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 select count(*) from foo_missing_stats where a = 10;
 NOTICE:  One or more columns in the following table(s) do not have statistics: foo_missing_stats
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
- count 
+ count
 -------
      1
 (1 row)
@@ -9054,7 +9054,7 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 where x1.a = x2.a;
 NOTICE:  One or more columns in the following table(s) do not have statistics: foo_missing_stats
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
- count 
+ count
 -------
     20
 (1 row)
@@ -9062,7 +9062,7 @@ HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For 
 with x as (select * from foo_missing_stats) select count(*) from x x1, x x2 where x1.a = x2.b;
 NOTICE:  One or more columns in the following table(s) do not have statistics: foo_missing_stats
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
- count 
+ count
 -------
     16
 (1 row)
@@ -9089,7 +9089,7 @@ select c.cid cid,
 from cust c, sales s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
-                                                                                      QUERY PLAN                                                                                      
+                                                                                      QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice3; segments: 2)  (cost=0.00..1293.00 rows=1 width=24)
    ->  Hash Join  (cost=0.00..1293.00 rows=1 width=24)
@@ -9123,7 +9123,7 @@ insert into orca.bm_test select i % 10, (i % 10)::text  from generate_series(1, 
 create index bm_test_idx on orca.bm_test using bitmap (i);
 set optimizer_enable_bitmapscan=on;
 explain select * from orca.bm_test where i=2 and t='2';
-                                   QUERY PLAN                                   
+                                   QUERY PLAN
 --------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..204.39 rows=2 width=6)
    ->  Bitmap Table Scan on bm_test  (cost=0.00..204.39 rows=1 width=6)
@@ -9136,7 +9136,7 @@ explain select * from orca.bm_test where i=2 and t='2';
 (8 rows)
 
 select * from orca.bm_test where i=2 and t='2';
- i | t 
+ i | t
 ---+---
  2 | 2
  2 | 2
@@ -9178,7 +9178,7 @@ insert into orca.bm_dyn_test values(2, 5, '2');
 set optimizer_enable_bitmapscan=on;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test where i=2 and t='2';
-                                                QUERY PLAN                                                 
+                                                QUERY PLAN
 -----------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..0.00 rows=1 width=16)
    ->  Sequence  (cost=0.00..0.00 rows=1 width=16)
@@ -9194,7 +9194,7 @@ explain select * from orca.bm_dyn_test where i=2 and t='2';
 (11 rows)
 
 select * from orca.bm_dyn_test where i=2 and t='2';
- i | j | t 
+ i | j | t
 ---+---+---
  2 | 2 | 2
  2 | 2 | 2
@@ -9235,7 +9235,7 @@ set optimizer_enable_dynamictablescan = off;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                                                           QUERY PLAN                                                            
+                                                           QUERY PLAN
 ---------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..48.03 rows=6 width=40)
    ->  Append  (cost=0.00..48.03 rows=3 width=40)
@@ -9257,7 +9257,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 INFO:  GPORCA failed to produce a plan, falling back to planner
- i | j | t 
+ i | j | t
 ---+---+---
  2 | 2 | 2
  2 | 2 | 2
@@ -9302,7 +9302,7 @@ alter table bm.het_bm add partition part5 values(5);
 NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part5" for table "het_bm"
 insert into bm.het_bm values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=2 and t='2';
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
     22 |    25 |    22
 (1 row)
@@ -9314,7 +9314,7 @@ create table bm.hom_bm_heap (i int, to_be_dropped char(5), j int, t text) distri
   (partition part0 values(0),
    partition part1 values(1),
    partition part2 values(2),
-   partition part3 values(3), 
+   partition part3 values(3),
    partition part4 values(4));
 NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part0" for table "hom_bm_heap"
 NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part1" for table "hom_bm_heap"
@@ -9333,7 +9333,7 @@ alter table bm.hom_bm_heap add partition part5 values(5);
 NOTICE:  CREATE TABLE will create partition "hom_bm_heap_1_prt_part5" for table "hom_bm_heap"
 insert into bm.hom_bm_heap values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_heap where i=2 and t='2';
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
     22 |    25 |    22
 (1 row)
@@ -9341,13 +9341,13 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_heap whe
 -- Bitmap index scan on AO parts with dropped columns
 drop table if exists bm.hom_bm_ao;
 NOTICE:  table "hom_bm_ao" does not exist, skipping
-create table bm.hom_bm_ao (i int, to_be_dropped char(5), j int, t text) 
+create table bm.hom_bm_ao (i int, to_be_dropped char(5), j int, t text)
 with (appendonly=true, compresslevel=5, orientation=row)
 distributed by (i) partition by list(j)
   (partition part0 values(0),
    partition part1 values(1),
    partition part2 values(2),
-   partition part3 values(3), 
+   partition part3 values(3),
    partition part4 values(4));
 NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part0" for table "hom_bm_ao"
 NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part1" for table "hom_bm_ao"
@@ -9366,7 +9366,7 @@ alter table bm.hom_bm_ao add partition part5 values(5);
 NOTICE:  CREATE TABLE will create partition "hom_bm_ao_1_prt_part5" for table "hom_bm_ao"
 insert into bm.hom_bm_ao values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_ao where i=2 and t='2';
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
     22 |    25 |    22
 (1 row)
@@ -9374,13 +9374,13 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_ao where
 -- Bitmap index scan on AOCO parts with dropped columns
 drop table if exists bm.hom_bm_aoco;
 NOTICE:  table "hom_bm_aoco" does not exist, skipping
-create table bm.hom_bm_aoco (i int, to_be_dropped char(5), j int, t text) 
+create table bm.hom_bm_aoco (i int, to_be_dropped char(5), j int, t text)
 with (appendonly=true, compresslevel=5, orientation=column)
 distributed by (i) partition by list(j)
   (partition part0 values(0),
    partition part1 values(1),
    partition part2 values(2),
-   partition part3 values(3), 
+   partition part3 values(3),
    partition part4 values(4));
 NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part0" for table "hom_bm_aoco"
 NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part1" for table "hom_bm_aoco"
@@ -9399,7 +9399,7 @@ alter table bm.hom_bm_aoco add partition part5 values(5);
 NOTICE:  CREATE TABLE will create partition "hom_bm_aoco_1_prt_part5" for table "hom_bm_aoco"
 insert into bm.hom_bm_aoco values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.hom_bm_aoco where i=2 and t='2';
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
     22 |    25 |    22
 (1 row)
@@ -9435,13 +9435,13 @@ alter table bm.het_bm add partition part5 values(5);
 NOTICE:  CREATE TABLE will create partition "het_bm_1_prt_part5" for table "het_bm"
 insert into bm.het_bm values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=2 and j=2;
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
     20 |    20 |    20
 (1 row)
 
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=2 and t='2';
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
     22 |    25 |    22
 (1 row)
@@ -9468,7 +9468,7 @@ NOTICE:  building index for child partition "het_bm_1_prt_part3"
 NOTICE:  building index for child partition "het_bm_1_prt_part4"
 NOTICE:  building index for child partition "het_bm_1_prt_part5"
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where j=2 or j=3;
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
    200 |   100 |   200
 (1 row)
@@ -9506,7 +9506,7 @@ NOTICE:  building index for child partition "het_bm_1_prt_part4"
 NOTICE:  building index for child partition "het_bm_1_prt_part5"
 insert into bm.het_bm values(2, 5, '2');
 select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where j=2 or j=3;
- i_sum | j_sum | t_sum 
+ i_sum | j_sum | t_sum
 -------+-------+-------
    200 |   100 |   200
 (1 row)
@@ -9526,20 +9526,20 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into bm.outer_tab select i % 10, i % 5, i % 2 from generate_series(1, 100) i;
 set optimizer_enable_hashjoin = off;
 select count(1) from bm.outer_tab;
- count 
+ count
 -------
    100
 (1 row)
 
 select count(1) from bm.het_bm;
- count 
+ count
 -------
    101
 (1 row)
 
 select sum(id) id_sum, sum(i) i_sum, sum(j) j_sum from bm.outer_tab as ot join bm.het_bm as het_bm on ot.id = het_bm.j
 where het_bm.i between 2 and 5;
- id_sum | i_sum | j_sum 
+ id_sum | i_sum | j_sum
 --------+-------+-------
     950 |  1420 |   950
 (1 row)
@@ -9581,25 +9581,25 @@ END;
 $$ LANGUAGE plpgsql volatile;
 -- start_ignore
 select disable_xform('CXformInnerJoin2DynamicIndexGetApply');
-                  disable_xform                   
+                  disable_xform
 --------------------------------------------------
  CXformInnerJoin2DynamicIndexGetApply is disabled
 (1 row)
 
 select disable_xform('CXformInnerJoin2HashJoin');
-            disable_xform             
+            disable_xform
 --------------------------------------
  CXformInnerJoin2HashJoin is disabled
 (1 row)
 
 select disable_xform('CXformInnerJoin2IndexGetApply');
-               disable_xform               
+               disable_xform
 -------------------------------------------
  CXformInnerJoin2IndexGetApply is disabled
 (1 row)
 
 select disable_xform('CXformInnerJoin2NLJoin');
-           disable_xform            
+           disable_xform
 ------------------------------------
  CXformInnerJoin2NLJoin is disabled
 (1 row)
@@ -9609,7 +9609,7 @@ set optimizer_enable_partial_index=on;
 set optimizer_enable_indexjoin=on;
 -- force_explain
 set optimizer_segments = 3;
-EXPLAIN 
+EXPLAIN
 SELECT (tt.event_ts / 100000) / 5 * 5 as fivemin, COUNT(*)
 FROM my_tt_agg_opt tt, my_tq_agg_opt_part tq
 WHERE tq.sym = tt.symbol AND
@@ -9618,7 +9618,7 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-                                                                                                                            QUERY PLAN                                                                                                                             
+                                                                                                                            QUERY PLAN
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  GroupAggregate  (cost=0.00..1305.01 rows=1 width=16)
    Group By: fivemin
@@ -9663,25 +9663,25 @@ reset optimizer_enable_indexjoin;
 reset optimizer_enable_partial_index;
 -- start_ignore
 select enable_xform('CXformInnerJoin2DynamicIndexGetApply');
-                  enable_xform                   
+                  enable_xform
 -------------------------------------------------
  CXformInnerJoin2DynamicIndexGetApply is enabled
 (1 row)
 
 select enable_xform('CXformInnerJoin2HashJoin');
-            enable_xform             
+            enable_xform
 -------------------------------------
  CXformInnerJoin2HashJoin is enabled
 (1 row)
 
 select enable_xform('CXformInnerJoin2IndexGetApply');
-               enable_xform               
+               enable_xform
 ------------------------------------------
  CXformInnerJoin2IndexGetApply is enabled
 (1 row)
 
 select enable_xform('CXformInnerJoin2NLJoin');
-           enable_xform            
+           enable_xform
 -----------------------------------
  CXformInnerJoin2NLJoin is enabled
 (1 row)
@@ -9727,7 +9727,7 @@ analyze idxscan_inner;
 set optimizer_enable_hashjoin = off;
 explain select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
 where ordernum between 10 and 20;
-                                                 QUERY PLAN                                                 
+                                                 QUERY PLAN
 ------------------------------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice2; segments: 2)  (cost=0.00..434.00 rows=1 width=9)
    ->  Nested Loop  (cost=0.00..434.00 rows=1 width=9)
@@ -9743,7 +9743,7 @@ where ordernum between 10 and 20;
 
 select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
 where ordernum between 10 and 20;
- id | comment 
+ id | comment
 ----+---------
   1 | xxxx
   3 | zzzz
@@ -9769,13 +9769,13 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' a
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into orca.t3 values  ('2015-07-03 00:00:00'::timestamp without time zone);
 select to_char(c1, 'YYYY-MM-DD HH24:MI:SS') from orca.t3 where c1 = TO_DATE('2015-07-03','YYYY-MM-DD');
-       to_char       
+       to_char
 ---------------------
  2015-07-03 00:00:00
 (1 row)
 
 select to_char(c1, 'YYYY-MM-DD HH24:MI:SS') from orca.t3 where c1 = '2015-07-03'::date;
-       to_char       
+       to_char
 ---------------------
  2015-07-03 00:00:00
 (1 row)
@@ -9786,7 +9786,7 @@ NOTICE:  CREATE TABLE / PRIMARY KEY will create implicit index "index_test_pkey"
 insert into orca.index_test select i,i%2,i%3,i%4,i%5 from generate_series(1,100) i;
 -- force_explain
 explain select * from orca.index_test where a = 5;
-                                       QUERY PLAN                                        
+                                       QUERY PLAN
 -----------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..3.00 rows=1 width=20)
    ->  Index Scan using index_test_pkey on index_test  (cost=0.00..3.00 rows=1 width=20)
@@ -9797,7 +9797,7 @@ explain select * from orca.index_test where a = 5;
 
 -- force_explain
 explain select * from orca.index_test where c = 5;
-                                       QUERY PLAN                                        
+                                       QUERY PLAN
 -----------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..3.00 rows=1 width=20)
    ->  Index Scan using index_test_pkey on index_test  (cost=0.00..3.00 rows=1 width=20)
@@ -9808,7 +9808,7 @@ explain select * from orca.index_test where c = 5;
 
 -- force_explain
 explain select * from orca.index_test where a = 5 and c = 5;
-                                       QUERY PLAN                                        
+                                       QUERY PLAN
 -----------------------------------------------------------------------------------------
  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..3.00 rows=1 width=20)
    ->  Index Scan using index_test_pkey on index_test  (cost=0.00..3.00 rows=1 width=20)
@@ -9857,14 +9857,14 @@ grant all on can_set_tag_target to unpriv;
 grant all on can_set_tag_audit to unpriv;
 set role unpriv;
 show optimizer;
- optimizer 
+ optimizer
 -----------
  on
 (1 row)
 
 update can_set_tag_target set y = y + 1;
 select count(1) from can_set_tag_audit;
- count 
+ count
 -------
      2
 (1 row)
@@ -9890,7 +9890,7 @@ create table canSetTag_input_data (domain integer, class integer, attr text, val
 insert into canSetTag_input_data values(1, 1, 'A', 1);
 insert into canSetTag_input_data values(2, 1, 'A', 0);
 insert into canSetTag_input_data values(3, 0, 'B', 1);
-create table canSetTag_bug_table as 
+create table canSetTag_bug_table as
 SELECT attr, class, (select canSetTag_Func(count(distinct class)::int) from canSetTag_input_data)
    as dclass FROM canSetTag_input_data GROUP BY attr, class distributed by (attr);
 drop function canSetTag_Func(x int);
@@ -9901,7 +9901,7 @@ CREATE TABLE btree_test as SELECT * FROM generate_series(1,100) as a distributed
 CREATE INDEX btree_test_index ON btree_test(a);
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN                                 
+                                 QUERY PLAN
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
    ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
@@ -9912,7 +9912,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN                                 
+                                 QUERY PLAN
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
    ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
@@ -9923,7 +9923,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN                                 
+                                 QUERY PLAN
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.25 rows=2 width=4)
    ->  Seq Scan on btree_test  (cost=0.00..4.25 rows=1 width=4)
@@ -9934,7 +9934,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-                                 QUERY PLAN                                 
+                                 QUERY PLAN
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..4.38 rows=3 width=4)
    ->  Seq Scan on btree_test  (cost=0.00..4.38 rows=1 width=4)
@@ -9947,7 +9947,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 CREATE TABLE bitmap_test as SELECT * FROM generate_series(1,100) as a distributed randomly;
 CREATE INDEX bitmap_index ON bitmap_test USING BITMAP(a);
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
-                                   QUERY PLAN                                    
+                                   QUERY PLAN
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..204.38 rows=1 width=4)
    ->  Bitmap Table Scan on bitmap_test  (cost=0.00..204.38 rows=1 width=4)
@@ -9959,7 +9959,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1);
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
-                                   QUERY PLAN                                    
+                                   QUERY PLAN
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..408.76 rows=3 width=4)
    ->  Bitmap Table Scan on bitmap_test  (cost=0.00..408.76 rows=1 width=4)
@@ -9971,7 +9971,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in (1, 47);
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
-                                   QUERY PLAN                                    
+                                   QUERY PLAN
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..408.76 rows=3 width=4)
    ->  Bitmap Table Scan on bitmap_test  (cost=0.00..408.76 rows=1 width=4)
@@ -9983,7 +9983,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('2', 47);
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
-                                   QUERY PLAN                                    
+                                   QUERY PLAN
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..408.76 rows=3 width=4)
    ->  Bitmap Table Scan on bitmap_test  (cost=0.00..408.76 rows=1 width=4)
@@ -9995,7 +9995,7 @@ EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2');
 (7 rows)
 
 EXPLAIN SELECT * FROM bitmap_test WHERE a in ('1', '2', 47);
-                                  QUERY PLAN                                  
+                                  QUERY PLAN
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
    ->  Table Scan on bitmap_test  (cost=0.00..431.00 rows=2 width=4)
@@ -10020,7 +10020,7 @@ select count(*) from foo group by cube(a,b);
 LOG:  2016-08-19 10:46:53:360703 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
 INFO:  GPORCA failed to produce a plan, falling back to planner
 LOG:  Planner produced plan :0
- count 
+ count
 -------
 (0 rows)
 
@@ -10127,7 +10127,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 -- end_ignore
 -- Query should not fallback to planner
 explain select * from foo where b in ('1', '2');
-                                  QUERY PLAN                                   
+                                  QUERY PLAN
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
    ->  Table Scan on foo  (cost=0.00..431.00 rows=1 width=12)
@@ -10158,56 +10158,8 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'name'
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into bar values('person');
 select * from unnest((select string_to_array(name, ',') from bar)) as a;
-   a    
+   a
 --------
  person
 (1 row)
 
--- clean up
-drop schema orca cascade;
-NOTICE:  drop cascades to 44 other objects
-DETAIL:  drop cascades to table orca.bar1
-drop cascades to table orca.bar2
-drop cascades to table orca.r
-drop cascades to table orca.s
-drop cascades to table orca.m
-drop cascades to table orca.m1
-drop cascades to table orca.foo
-drop cascades to table orca.bar
-drop cascades to table orca.rcte
-drop cascades to table orca.onek
-drop cascades to table orca.pp
-drop cascades to table orca.multilevel_p
-drop cascades to table orca.t
-drop cascades to table orca.t_date
-drop cascades to table orca.t_text
-drop cascades to type orca.employee
-drop cascades to function orca.emp_equal(orca.employee,orca.employee)
-drop cascades to operator =(orca.employee,orca.employee)
-drop cascades to operator family orca.employee_op_class for access method btree
-drop cascades to table orca.t_employee
-drop cascades to table orca.t_ceeval_ints
-drop cascades to function orca.csq_f(integer)
-drop cascades to table orca.csq_r
-drop cascades to table orca.fooh1
-drop cascades to table orca.fooh2
-drop cascades to append only table orca.t77
-drop cascades to table orca.prod9
-drop cascades to table orca.toanalyze
-drop cascades to table orca.ur
-drop cascades to table orca.us
-drop cascades to table orca.ut
-drop cascades to table orca.uu
-drop cascades to table orca.twf1
-drop cascades to table orca.twf2
-drop cascades to table orca.tab1
-drop cascades to table orca.tab2
-drop cascades to table orca.p1
-drop cascades to append only table orca.tmp_verd_s_pp_provtabs_agt_0015_extract1
-drop cascades to table orca.arrtest
-drop cascades to table orca.bm_test
-drop cascades to table orca.bm_dyn_test
-drop cascades to table orca.bm_dyn_test_onepart
-drop cascades to table orca.t3
-drop cascades to table orca.index_test
-reset optimizer_segments;
