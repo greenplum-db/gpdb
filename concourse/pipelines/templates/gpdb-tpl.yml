@@ -668,7 +668,7 @@ resources:
     bucket: madlib-concourse
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: release/gpdb5/madlib-1.12-gp5-rhel6-x86_64.gppkg
+    regexp: release/gpdb5/madlib-(.*)-gp5-rhel6-x86_64.gppkg
 
 - name: gcc_4.4.2_snowflake
   type: s3
