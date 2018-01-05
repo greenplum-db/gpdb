@@ -31,14 +31,12 @@ from mpp.models import MPPTestCase
 from tinctest.models.scenario import ScenarioTestCase
 from tinctest.lib.system import TINCSystem
 from tinctest.lib import local_path, run_shell_command
-from mpp.lib.gpfilespace import Gpfilespace
 from tinctest.lib import Gpdiff
 from tinctest.main import TINCException
 
 from mpp.lib.filerep_util import Filerepe2e_Util
 from mpp.lib.gprecoverseg import GpRecover
 from gppylib.commands.base import Command, REMOTE
-from mpp.lib.gpfilespace import Gpfilespace
 from mpp.gpdb.tests.storage.lib.dbstate import DbStateClass
 from mpp.lib.PSQL import PSQL
 
@@ -158,32 +156,6 @@ class GPAddmirrorsTestCase(MPPTestCase):
                                               self.gpinitconfig_file,
                                               transforms)
 
-    def _create_filespace(self, fsname=None):
-        if fsname is None:
-            tinctest.logger.warning("Please specify a filespace name to create") 
-        else:
-            gpfs=Gpfilespace()
-            gpfs.create_filespace(fsname)    
-
-
-    def _drop_filespace(self, fsname=None):
-       """
-       Drop a specific filespace or all user defined filespaces
-       """
-       if fsname == 'pg_system':
-           raise GPAddmirrorsTestCaseException('default filesystem can not be droppped.')
-       elif fsname is not None:
-           drop_stat = 'drop filespace %s;' % fsname
-           PSQL.run_sql_command(drop_stat, flags='-q -t', dbname='template1')
-       else:
-           get_all_fsname = 'SELECT fsname FROM pg_filespace WHERE fsname <> \'pg_system\';'
-           result = PSQL.run_sql_command(get_all_fsname, flags='-q -t', dbname='template1')
-           result = result.strip()
-           fsnames = result.split('\n')
-           fsnames = [fsname.strip() for fsname in fsnames]
-           for fsname in fsnames:
-               drop_stat = 'drop filespace %s;' % fsname
-               PSQL.run_sql_command(drop_stat, flags='-q -t', dbname='template1')
 
     def format_sql_result(self, sql_command=None):
         if sql_command is None:
@@ -256,21 +228,9 @@ class GPAddmirrorsTestCase(MPPTestCase):
             raise GPAddmirrorsTestCaseException("gpinitstandby failed with an error code. Failing the test module")
 
     def _generate_gpaddmirrors_input_files(self, port_offset=1000):
-        get_fsname_query = 'SELECT fsname FROM pg_filespace WHERE fsname <> \'pg_system\';'
-        result =  PSQL.run_sql_command(get_fsname_query, flags = '-q -t', dbname = 'template1')
-        result = result.strip()
-        fsnames = []
-        if result:
-            fsnames = result.split('\n')
         with open(self.datadir_config_file, 'w') as f:
             for i in range (0, self.number_of_segments_per_host):
                 f.write(self.mirror_data_dir+'\n')
-            for fsname in [fsname.strip() for fsname in fsnames]:
-                f.write('filespace ' + fsname + '\n')
-                fs_location = os.path.join(self.mirror_data_dir, fsname, 'mirror')
-                self.fs_location.append(fs_location)
-                for i in range (0, self.number_of_segments_per_host):
-                    f.write(fs_location+'\n')
         if port_offset != 1000:
             cmdStr = 'gpaddmirrors -p %s -o %s -m %s -d %s' % (port_offset, self.mirror_config_file, self.datadir_config_file, self.mdd)
         else:
@@ -280,7 +240,7 @@ class GPAddmirrorsTestCase(MPPTestCase):
 
     def verify_config_file_with_gp_config(self):
         """
-        compares the gp_segment_configuration and pg_filespace_entry with input file mirror_data_dir, double check 
+        compares the gp_segment_configuration with input file mirror_data_dir, double check
         if the cluster is configured as intended
         """
         with open(self.mirror_config_file, 'r') as f:
@@ -299,13 +259,6 @@ class GPAddmirrorsTestCase(MPPTestCase):
                 config_info = config_info.strip()
                 # as intended, the entry should be existing in the cluster
                 self.assertNotEqual(0, len(config_info))
-                query_on_fselocation = ''' select fselocation from gp_segment_configuration, pg_filespace_entry where dbid=fsedbid 
-                                           and preferred_role=\'m\' and content=\'%s\''''%content_id
-                fs_locations = PSQL.run_sql_command(query_on_fselocation, flags='-q -t', dbname='template1')
-                size = len(cols)
-                for fs_index in range(5, size):
-                    fs_location = cols[fs_index]
-                    self.assertIn(os.path.dirname(fs_location), fs_locations)
 
     def run_simple_ddl_dml(self):
         """
@@ -393,7 +346,7 @@ class GpAddmirrorsTests(GPAddmirrorsTestCase):
         self.verify_config_file_with_gp_config()
         self.check_mirror_seg()
 
-    def test_with_standby_and_filespace(self):
+    def test_with_standby(self):
         """
         check that cluster's host address is same when it is with standby and without standby
         """
@@ -427,24 +380,21 @@ class GpAddmirrorsTests(GPAddmirrorsTestCase):
         self._do_gpinitsystem()
         gprecover.wait_till_insync_transition()
         res = {'rc': 0, 'stdout' : '', 'stderr': ''}
-        # create filespace and standby, needs to get a new config_info instance for new cluster
+        # create standby, needs to get a new config_info instance for new cluster
         config_info = GPDBConfig()
         if not config_info.has_master_mirror():
             self._do_gpinitstandby()
-        self._create_filespace('user_filespace')
 
         self._setup_gpaddmirrors()
         self._generate_gpinit_config_files()
         self._cleanup_segment_data_dir(self.host_file, self.mirror_data_dir)
-        for fs_location in self.fs_location:
-            self._cleanup_segment_data_dir(self.host_file, fs_location)        
 
-        # add mirror for the new cluster which has standby and user filespace configured        
+        # add mirror for the new cluster which has standby configured
         res = {'rc': 0, 'stdout' : '', 'stderr': ''}
         run_shell_command("gpaddmirrors -a -i %s -s -d %s --verbose" % (self.mirror_config_file, self.mdd), 'run gpaddmirrros with mirror spreading', res)
         self.assertEqual(0, res['rc'])
         gprecover.wait_till_insync_transition()
-        # verify that when there is filespace configured, the configuration will be same as mirror_config_file specified
+        # verify that the configuration will be same as mirror_config_file specified
         self.verify_config_file_with_gp_config()
         self.check_mirror_seg()
 
@@ -461,7 +411,6 @@ class GpAddmirrorsTests(GPAddmirrorsTestCase):
         run_shell_command("gpinitstandby -ar", 'remove standby', res)
         if res['rc'] > 0:
            raise GPAddmirrorsTestCaseException("Failed to remove the standby")
-        self._drop_filespace()
 
     def test_with_fault_injection(self):
         """
