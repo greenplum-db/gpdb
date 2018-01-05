@@ -7,11 +7,8 @@
                                 'pg_twophase_31_40',
                                 'pg_twophase_41_49',
                                 'switch_01_12'] %}
-{% set cs_crash_recovery_suite = ['crash_recovery_schema_topology',
-                                  'crash_recovery_04_10',
-                                  'crash_recovery_11_20',
-                                  'crash_recovery_21_30',
-                                  'crash_recovery_31_42'] %}
+{% set cs_crash_recovery_suite = ['crash_recovery_schema_topology'] %}
+
 {% set cs_filerep_end_to_end_suites = ['filerep_end_to_end_full_mirror',
                                 'filerep_end_to_end_incr_mirror',
                                 'filerep_end_to_end_full_primary',
