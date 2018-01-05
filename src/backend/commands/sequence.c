@@ -111,6 +111,7 @@ static void init_params(List *options, bool isInit,
 			Form_pg_sequence new, List **owned_by);
 static void do_setval(Oid relid, int64 next, bool iscalled);
 static void process_owned_by(Relation seqrel, List *owned_by);
+static void mask_seq_values(Page page);
 
 static void
 cdb_sequence_nextval(SeqTable elm,
@@ -1732,12 +1733,50 @@ cdb_sequence_nextval_server(Oid    tablespaceid,
 }                               /* cdb_sequence_server_nextval */
 
 /*
+ * Mask last_value and log_cnt for consistency checking
+ *
+ * To avoid logging every fetch from a sequence, SEQ_LOG_VALS are pre-logged
+ * and thus we need to mask the last_value and log_cnt during consistency
+ * checks.
+ */
+static void
+mask_seq_values(Page page)
+{
+	OffsetNumber 		i;
+	OffsetNumber 		maxoff;
+	Form_pg_sequence	seqtup;
+
+	maxoff = PageGetMaxOffsetNumber(page);
+
+	for (i = FirstOffsetNumber; i <= maxoff; i = OffsetNumberNext(i))
+	{
+		HeapTupleData	htup;
+		ItemId			iid = PageGetItemId(page, i);
+
+		htup.t_data = (HeapTupleHeader) ((char *) page + ItemIdGetOffset(iid));
+		htup.t_len = ItemIdGetLength(iid);
+
+		seqtup = (Form_pg_sequence) GETSTRUCT(&htup);
+		MemSet(&seqtup->last_value, 0, sizeof(int64));
+		MemSet(&seqtup->log_cnt, 0, sizeof(int64));
+	}
+}
+
+/*
  * Mask a Sequence page before performing consistency checks on it.
  */
 void
-seq_mask(char *page, BlockNumber blkno)
+seq_mask(char *pagedata, BlockNumber blkno)
 {
+	Page		page = (Page) pagedata;
+
 	mask_page_lsn_and_checksum(page);
+
+	/*
+	 * last_value and log_cnt need to be masked to account for SEQ_LOG_VALS
+	 * skipped loggings of fetching
+	 */
+	mask_seq_values(page);
 
 	mask_unused_space(page);
 }
