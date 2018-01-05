@@ -964,8 +964,6 @@ FormData_pg_depend
 FormData_pg_enum
 FormData_pg_extension
 FormData_pg_extprotocol
-FormData_pg_filespace
-FormData_pg_filespace_entry
 FormData_pg_index
 FormData_pg_inherits
 FormData_pg_language
@@ -1023,8 +1021,6 @@ Form_pg_depend
 Form_pg_enum
 Form_pg_extension
 Form_pg_extprotocol
-Form_pg_filespace
-Form_pg_filespace_entry
 Form_pg_index
 Form_pg_inherits
 Form_pg_language
