@@ -6,11 +6,14 @@
     <note><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental utilities and
       are not intended for use in a production environment. Experimental features are subject to
       change without notice in future releases.</note>
+    <note type="warning">The utilities are experimental and might not be compatible between
+      releases. For example, backups from a previous release might be incompatible with the current
+      release utilities.</note>
     <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are new utilities that provide an
       improved way of creating and restoring backup sets for Greenplum Database. By default,
         <codeph>gpbackup</codeph> stores only the object metadata files and DDL files for a backup
       in the Greenplum Database master data directory. Greenplum Database segments use the
-        <codeph>COPY .. ON SEGMENT</codeph> command to store their data for backed-up tables in
+        <codeph>COPY ... ON SEGMENT</codeph> command to store their data for backed-up tables in
       compressed CSV data files, located in each segment's <filepath>backups</filepath>
       directory.</p>
     <p>The backup metadata files contain all of the information that <codeph>gprestore</codeph>
@@ -26,15 +29,15 @@
       partitions.</p>
     <p>Each <codeph>gpbackup</codeph> task uses a single transaction in Greenplum Database. During
       this transaction, metadata is backed up on the master host, and data for each table on each
-      segment host is written to CSV backup files using <codeph>COPY .. ON SEGMENT</codeph> commands
-      in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on each table
-      that is backed up.</p>
+      segment host is written to CSV backup files using <codeph>COPY ... ON SEGMENT</codeph>
+      commands in parallel. The backup process acquires an <codeph>ACCESS SHARE</codeph> lock on
+      each table that is backed up.</p>
   </body>
   <topic id="topic_vh5_1hd_tbb">
     <title>Requirements and Limitations</title>
     <body>
       <p>You can use <codeph>gpbackup</codeph> and <codeph>gprestore</codeph> on Greenplum Database
-        systems that support the <codeph>COPY .. ON SEGMENT</codeph> command (Greenplum Database
+        systems that support the <codeph>COPY ... ON SEGMENT</codeph> command (Greenplum Database
         5.1.0 and later<ph otherprops="pivotal">, or 4.3.17.0 and later</ph>).</p>
       <p><codeph>gpbackup</codeph> and <codeph>gprestore</codeph> are experimental features in this
         release, and have the following limitations:<ul id="ul_uqh_hhd_tbb">
@@ -133,35 +136,37 @@
         use the command: <codeblock>$ gpbackup -dbname &lt;database_name></codeblock></p>
       <p>For
         example:<codeblock>$ <b>gpbackup -dbname demo</b>
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Starting backup of database demo
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup Timestamp = 20171103152558
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup Database = demo
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup Type = Unfiltered Compressed Full Backup
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Acquiring ACCESS SHARE locks on tables
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Locks acquired
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Gathering table metadata
-20171103:15:25:58 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing global database metadata to /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_global.sql
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Global database metadata backup complete
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing pre-data metadata to /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_predata.sql
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Pre-data metadata backup complete
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing post-data metadata to /gpmaster/gpsne-1/backups/20171103/20171103152558/gpbackup_20171103152558_postdata.sql
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Post-data metadata backup complete
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Writing data to file
-Tables backed up:  2 / 2 [==============================================================] 100.00% 0s
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Data backup complete
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[WARNING]:-Found neither /usr/local/greenplum-db/./bin/mail_contacts nor /home/gpadmin/mail_contacts
-20171103:15:25:59 gpbackup:gpadmin:0ee2f5fb02c9:017527-[WARNING]:-Unable to send backup email notification
-20171103:15:26:00 gpbackup:gpadmin:0ee2f5fb02c9:017527-[INFO]:-Backup completed successfully</codeblock></p>
-      <p>The above command creates global and database-specific metadata files on the Greenplum
-        Database master host in the default directory,
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Starting backup of database demo
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup Timestamp = 20180105112754
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup Database = demo
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup Type = Unfiltered Compressed Full Backup
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Gathering list of tables for backup
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Acquiring ACCESS SHARE locks on tables
+Locks acquired:  6 / 6 [================================================================] 100.00% 0s
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Gathering additional table metadata
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Writing global database metadata
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Global database metadata backup complete
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Writing pre-data metadata
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Pre-data metadata backup complete
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Writing post-data metadata
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Post-data metadata backup complete
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Writing data to file
+Tables backed up:  3 / 3 [==============================================================] 100.00% 0s
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Data backup complete
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[WARNING]:-Found neither /usr/local/greenplum-db/./bin/mail_contacts nor /home/gpadmin/mail_contacts
+20180105:11:27:54 gpbackup:gpadmin:centos6.localdomain:002182-[WARNING]:-Unable to send backup email notification
+20180105:11:27:55 gpbackup:gpadmin:centos6.localdomain:002182-[INFO]:-Backup completed successfully</codeblock></p>
+      <p>The above command creates a file that contains global and database-specific metadata on the
+        Greenplum Database master host in the default directory,
           <codeph>$MASTER_DATA_DIRECTORY/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>. For
-        example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20171103/20171103152558/</b>
-gpbackup_20171103152558_config.yaml  gpbackup_20171103152558_postdata.sql  gpbackup_20171103152558_report
-gpbackup_20171103152558_global.sql   gpbackup_20171103152558_predata.sql   gpbackup_20171103152558_toc.yaml</codeblock></p>
+        example:<codeblock>$ <b>ls /gpmaster/gpsne-1/backups/20180105/20180105112754</b>
+gpbackup_20180105112754_config.yaml   gpbackup_20180105112754_report
+gpbackup_20180105112754_metadata.sql  gpbackup_20180105112754_toc.yaml</codeblock></p>
       <p>By default, each segment stores each table's data for the backup in a separate compressed
         CSV file in
-        <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20171103/20171103152558/
-</b>gpbackup_0_20171103152558_16524.gz  gpbackup_0_20171103152558_16543.gz</codeblock></p>
+        <codeph>&lt;seg_dir>/backups/&lt;YYYYMMDD>/&lt;YYYYMMDDHHMMSS>/</codeph>:<codeblock>$ <b>ls /gpdata1/gpsne0/backups/20180105/20180105112754/</b>
+gpbackup_0_20180105112754_17166.gz  gpbackup_0_20180105112754_26303.gz
+gpbackup_0_20180105112754_21816.gz</codeblock></p>
       <p>To consolidate all backup files into a single directory, include the
           <codeph>-backupdir</codeph> option. Note that you must specify an absolute path with this
         option:<codeblock>$ <b>gpbackup -dbname demo -backupdir /home/gpadmin/backups</b>
