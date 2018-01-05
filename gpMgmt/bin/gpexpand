@@ -812,9 +812,6 @@ class SegmentTemplate:
                            self.tempDir, ctxt=REMOTE, remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
 
-        # Copy the transaction directories into template
-        pg_system_filespace_entries = GetFilespaceEntriesDict(GetFilespaceEntries(self.gparray,
-                                                                                  PG_SYSTEM_FILESPACE).run()).run()
         # Don't need log files and gpperfmon files in template.
         rmCmd = RemoveDirectory('gpexpand remove gppermfon data from template',
                                 self.tempDir + '/gpperfmon/data')
@@ -892,12 +889,10 @@ class SegmentTemplate:
         if removeDataDirs:
             for seg in gparray.getExpansionSegDbList():
                 hostname = seg.getSegmentHostName()
-                filespaces = seg.getSegmentFilespaces()
-                for oid in filespaces:
-                    datadir = filespaces[oid]
-                    rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
-                                            datadir, ctxt=REMOTE, remoteHost=hostname)
-                    pool.addCommand(rmCmd)
+                datadir = seg.getSegmentDataDirectory()
+                rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
+                                        datadir, ctxt=REMOTE, remoteHost=hostname)
+                pool.addCommand(rmCmd)
         pool.join()
         pool.check_results()
 
@@ -1544,8 +1539,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         """
         Connect to each database in each segment and do some cleanup of tables that have stuff in them as a result of copying the segment from the master.
-        Note, this functionaliy used to be in segcopy and was therefore done just once to the original copy of the master. We need to do it separately for
-        each segment now since filespaces may contain the databases.
+        Note, this functionality used to be in segcopy and was therefore done just once to the original copy of the master.
         """
         for seg in newSegments:
             if seg.isSegmentMirror() == True:

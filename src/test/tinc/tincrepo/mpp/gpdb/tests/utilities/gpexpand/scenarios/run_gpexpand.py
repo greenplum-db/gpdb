@@ -39,7 +39,6 @@ from gppylib.db.dbconn import UnexpectedRowsError
 from gppylib.gparray import GpArray
 from mpp.lib.PSQL import PSQL
 from mpp.gpdb.tests.storage.lib.dbstate import DbStateClass
-from mpp.lib.gpfilespace import Gpfilespace
 
 @tinctest.skipLoading('scenario')
 class GpExpandTests(MPPTestCase):
@@ -155,8 +154,7 @@ class GpExpandTests(MPPTestCase):
         Validate if new entries for all the hosts are added to pg_hba.conf files in all the segments
         """
         tinctest.logger.info("Verifying pg_hba entries for all segment hosts")
-        segment_dirs_sql = """select distinct hostname, fselocation, content from gp_segment_configuration, pg_filespace_entry
-                              where content > -1 and fsedbid = dbid"""
+        segment_dirs_sql = """select distinct hostname, directory, content from gp_segment_configuration where content > -1"""
 
         dburl = dbconn.DbURL()
         pg_hba_files = []
@@ -170,18 +168,14 @@ class GpExpandTests(MPPTestCase):
                     segment_no = row[2]
                     pg_hba = os.path.join(segment_dir, 'pg_hba.conf')
                     pg_hba_temp = '/tmp/pg_hba_%s_%s' %(host, segment_no)
-                    if not "cdbfast_fs" in segment_dir and not "filespace" in segment_dir:
-                    # We dont want to do this for filespace entries in pg_filepsace_entry. 
-                    # The file space names have prefix cdbfast_fs. 
-                    # So if keyword cdbfast_fs appears in the dirname, we skip it"""
-                        if os.path.exists(pg_hba_temp):
-                            os.remove(pg_hba_temp)
-                        cmdstr = 'scp %s:%s %s' %(host, pg_hba, pg_hba_temp)
-                        if not run_shell_command(cmdstr=cmdstr, cmdname='copy over pg_hba'):
-                            raise Exception("Failure while executing command: %s" %cmdstr)
-                        self.assertTrue(os.path.exists(pg_hba_temp))
-                        pg_hba_files.append(pg_hba_temp)
-                        hosts.add(host)
+                    if os.path.exists(pg_hba_temp):
+                        os.remove(pg_hba_temp)
+                    cmdstr = 'scp %s:%s %s' %(host, pg_hba, pg_hba_temp)
+                    if not run_shell_command(cmdstr=cmdstr, cmdname='copy over pg_hba'):
+                        raise Exception("Failure while executing command: %s" %cmdstr)
+                    self.assertTrue(os.path.exists(pg_hba_temp))
+                    pg_hba_files.append(pg_hba_temp)
+                    hosts.add(host)
             finally:
                 cursor.close()
 
@@ -237,10 +231,10 @@ class GpExpandTests(MPPTestCase):
         self.log_and_test_gp_segment_config(message="after running redistribution")
         return results
 
-    def interview(self, mdd, primary_data_dir, mirror_data_dir, new_hosts, use_host_file, num_new_segs=0, filespace_data_dir="", mapfile="/tmp/gpexpand_input"):
+    def interview(self, mdd, primary_data_dir, mirror_data_dir, new_hosts, use_host_file, num_new_segs=0, mapfile="/tmp/gpexpand_input"):
         '''
         @param new_hosts comma separated list of hostnames
-        NOTE: The current interview process uses pexpect. It assumes that number_of_expansion_segments is exactly 1 and we are using filespaces
+        NOTE: The current interview process uses pexpect. It assumes that number_of_expansion_segments is exactly 1
         '''
         self.log_and_test_gp_segment_config(message="Before interview")
         tinctest.logger.info("Expansion host list for interview: %s" %new_hosts)
@@ -296,7 +290,6 @@ class GpExpandTests(MPPTestCase):
             tinctest.logger.info("pexpect 5: %s" %child.before)
             child.sendline (primary_data_dir)
 
-        for i in range(int(num_new_segs)):
             child.expect('Enter new mirror data directory')
             tinctest.logger.info("pexpect 6: %s" %child.before)
             child.sendline (mirror_data_dir)
@@ -317,19 +310,6 @@ class GpExpandTests(MPPTestCase):
         shutil.copyfile(mapfile_interview, mapfile)
         if mapfile_interview_fs != "":
             shutil.copyfile(mapfile_interview_fs, mapfile+".fs")
-
-    def create_filespace_dirs(self, primary_data_dir, mirror_data_dir, filespace_data_dir):
-        """ 
-        cretes necessary directories for expansion
-        """
-
-        cmd = "select fsname from pg_filespace where fsname!='pg_system';"
-        list_of_filespaces = PSQL.run_sql_command(cmd, flags ='-q -t').strip().split("\n ")
-        segment_host_file = '/tmp/segment_hosts'
-        for filespaces in list_of_filespaces:
-           fs_path_pri= os.path.join(primary_data_dir, filespaces ,"primary/")
-           fs_path_mir= os.path.join(mirror_data_dir, filespaces , "mirror/")
-           self.create_segment_dirs(fs_path_pri, fs_path_mir,"make filespace prim and mirr dirs" )
 
     def create_segment_dirs(self, fs_path_pri, fs_path_mir, cmd_name):
         """ helper method to create dirs """

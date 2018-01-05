@@ -142,16 +142,6 @@
           <pd>
             <varname>hostname:address:port:fselocation:dbid:content:preferred_role:replication_port</varname>
           </pd>
-          <pd>If your system has filespaces, <codeph>gpexpand</codeph> will expect a filespace
-            configuration file (<varname>input_file_name</varname><codeph>.fs</codeph>) to exist in
-            the same directory as your expansion configuration file. The filespace configuration
-            file is in the format of:</pd>
-          <pd>
-            <codeblock>filespaceOrder=<varname>filespace1_name</varname>:<varname>filespace2_name</varname>: ...
-dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varname>: ...
-dbid:<varname>/path/for/filespace1</varname>:<varname>/path/for/filespace2</varname>: ...
-...</codeblock>
-          </pd>
         </plentry>
         <plentry>
           <pt>-n <varname>parallel_processes</varname></pt>

@@ -1,6 +1,6 @@
 -- start_ignore
 -- end_ignore
-CREATE TABLESPACE test_ts filespace expand_filespace;
+CREATE TABLESPACE test_ts;
 CREATE TABLESPACE
 DROP TABLE IF EXISTS users_dur_pkey;
 psql:/path/sql_file:1: NOTICE:  table "users_dur_pkey" does not exist, skipping

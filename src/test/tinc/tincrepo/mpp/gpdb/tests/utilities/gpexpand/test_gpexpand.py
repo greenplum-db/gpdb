@@ -34,7 +34,6 @@ from tinctest.loader import TINCTestLoader
 from gppylib.commands.base import Command, REMOTE
 from gppylib.db import dbconn
 from gppylib.db.dbconn import UnexpectedRowsError
-from mpp.lib.gpfilespace import Gpfilespace
 from mpp.lib.PSQL import PSQL
 
 class GpInitSystem(Command):
@@ -178,7 +177,6 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
         self.testcase_primary_dir = os.path.join(self.testcase_out_dir, 'data/primary')
         self.testcase_mirror_dir = os.path.join(self.testcase_out_dir, 'data/mirror')
         self.testcase_master_dir = os.path.join(self.testcase_out_dir, 'data/master')
-        self.testcase_filespace_dir = os.path.join(self.testcase_out_dir, 'data/filespace')        
 
         self.expansion_host_list = ''
         
@@ -334,12 +332,6 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
         if res['rc'] > 0:
             raise GpExpandTestCaseException("Failed to create segment directories")
 
-        # Create filespace dirs
-        res = {'rc': 0, 'stdout' : '', 'stderr': ''}
-        run_shell_command("gpssh -f %s -e 'rm -rf %s; mkdir -p %s'" %(segment_host_file, self.testcase_filespace_dir, self.testcase_filespace_dir), 'create segment dirs', res)
-        if res['rc'] > 0:
-            raise GpExpandTestCaseException("Failed to create segment directories")
-
         # Generate the config files to initialize the cluster
         self._generate_gpinit_config_files()
         self.assertTrue(os.path.exists(self.testcase_init_file))
@@ -480,7 +472,6 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
         classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_EnhancedTableFunctionTest.EnhancedTableFunctionTest')
         classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_OSSpecificSQLsTest.OSSpecificSQLsTest')
         classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_AllSQLsTest.AllSQLsTest')
-        classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_GPFilespaceTablespaceTest.GPFilespaceTablespaceTest')
 
         if self.run_workload:
             # Run expansion workload
@@ -506,14 +497,7 @@ class GPExpandTestCase(MPPTestCase, ScenarioTestCase):
                                          "new_hosts": self.expansion_host_list,
                                          "use_host_file": self.use_host_file,
                                          "num_new_segs": self.number_of_expansion_segments,
-                                         "filespace_data_dir": self.testcase_filespace_dir,
                                          "mapfile": self.testcase_gpexpand_file})], serial=True)
-
-        # create directories needed for expansion with filespaces
-        self.test_case_scenario.append([('%s.scenarios.run_gpexpand.GpExpandTests.create_filespace_dirs' %self.package_name,
-                                        {"primary_data_dir": self.testcase_primary_dir,
-                                         "mirror_data_dir": self.testcase_mirror_dir,
-                                         "filespace_data_dir": self.testcase_filespace_dir})], serial=True)
 
         # Run expansion
         self.test_case_scenario.append([('%s.scenarios.run_gpexpand.GpExpandTests.run_expansion' %self.package_name,
