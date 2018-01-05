@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="distribution">
+  <title>Distribution and Skew</title>
+    <shortdesc>Greenplum Database relies on even distribution of data across segments.</shortdesc>
+    <body>
+      <p>In an MPP shared nothing environment, overall response time for
+        a query is measured by the completion time for all segments. The system is only as fast as
+        the slowest segment. If the data is skewed, segments with more data will take more time to
+        complete, so every segment must have an approximately equal number of rows and perform
+        approximately the same amount of processing. Poor performance and out of memory conditions
+        may result if one segment has significantly more data to process than other segments. </p>
+      <p>Optimal distributions are critical when joining large tables together. To perform a join,
+        matching rows must be located together on the same segment. If data is not distributed on
+        the same join column, the rows needed from one of the tables are dynamically redistributed
+        to the other segments. In some cases a broadcast motion, in which each segment sends its
+        individual rows to all other segments, is performed rather than a redistribution motion,
+        where each segment rehashes the data and sends the rows to the appropriate segments
+        according to the hash key. </p>
+    </body>
+    <topic id="topic1">
+      <title>Local (Co-located) Joins</title>
+        <body>
+        <p>Using a hash distribution that evenly distributes table rows across all segments and
+          results in local joins can provide substantial performance gains. When joined rows are on
+          the same segment, much of the processing can be accomplished within the segment instance.
+          These are called <i>local</i> or <i>co-located</i> joins. Local joins minimize data
+          movement; each segment operates independently of the other segments, without network
+          traffic or communications between segments. </p>
+        <p>To achieve local joins for large tables commonly joined together, distribute the tables
+          on the same column. Local joins require that both sides of a join be distributed on the
+          same columns (and in the same order) <i>and</i> that all columns in the distribution
+          clause are used when joining tables. The distribution columns must also be the same data
+          type—although some values with different data types may appear to have the same
+          representation, they are stored differently and hash to different values, so they are
+          stored on different segments.</p>
+    </body>
+      </topic>
+      <topic id="topic2">
+        <title>Data Skew</title>
+    <body>
+        <p>Data skew may be caused by uneven data distribution due to the wrong choice of distribution
+          keys or small batch table insert or copy operations. Present at the table level, data
+          skew, is often the root cause of poor query performance and out of memory conditions.
+          Skewed data affects scan (read) performance, but it also affects all other query execution
+          operations, for instance, joins and group by operations. </p>
+        <p>It is very important to <i>validate</i> distributions to <i>ensure</i> that data is
+          evenly distributed after the initial load. It is equally important to <i>continue</i> to
+          validate distributions after incremental loads. </p>
+        <p>The following query shows the number of rows per segment as well as the variance from the
+          minimum and maximum numbers of rows:</p>
+        <codeblock>SELECT 'Example Table' AS "Table Name", 
+    max(c) AS "Max Seg Rows", min(c) AS "Min Seg Rows", 
+    (max(c)-min(c))*100.0/max(c) AS "Percentage Difference Between Max &amp; Min" 
+FROM (SELECT count(*) c, gp_segment_id FROM facts GROUP BY 2) AS a;</codeblock>
+        <p>The <codeph>gp_toolkit</codeph> schema has two views that you can use to check for
+            skew.<ul id="ul_cg4_1vp_y4">
+            <li>The <codeph>gp_toolkit.gp_skew_coefficients</codeph> view shows data distribution
+              skew by calculating the coefficient of variation (CV) for the data stored on each
+              segment. The <codeph>skccoeff</codeph>  column shows the coefficient of variation
+              (CV), which is calculated as the standard deviation divided by the average. It takes
+              into account both the average and variability around the average of a data series. The
+              lower the value, the better. Higher values indicate greater data skew.</li>
+            <li>The <codeph>gp_toolkit.gp_skew_idle_fractions</codeph> view shows data distribution
+              skew by calculating the percentage of the system that is idle during a table scan,
+              which is an indicator of computational skew. The <codeph>siffraction</codeph> column
+              shows the percentage of the system that is idle during a table scan. This is an
+              indicator of uneven data distribution or query processing skew. For example, a value
+              of 0.1 indicates  10% skew, a value of 0.5 indicates 50% skew, and so on. Tables that
+              have more than10% skew should have their distribution policies evaluated.</li>
+          </ul></p>
+          <section>
+            <title>Considerations for Randomly Distributed Tables</title>
+            <p>When you create a table with random distribution (<codeph>DISTRIBUTED RANDOMLY</codeph>),
+              Greenplum Database distributes the data you insert or copy into the table in a
+              round-robin fashion. Because Greenplum Database starts a new instance of a 
+              round-robin cycle for each insert or copy operation, singleton inserts into a 
+              randomly distributed table may result in data skew. Data from bulk inserts is
+              more evenly distributed.</p>
+          </section>
+        </body>
+      </topic>
+      <topic id="topic3">
+        <title>Processing Skew</title>
+    <body>
+        <p>Processing skew results when a disproportionate amount of data flows to, and is processed
+          by, one or a few segments. It is often the culprit behind Greenplum Database performance
+          and stability issues. It can happen with operations such join, sort, aggregation, and
+          various OLAP operations. Processing skew happens in flight while a query is executing and
+          is not as easy to detect as data skew.</p>
+        <p>If single segments are failing, that is, not all segments on a host, it may be a
+          processing skew issue. Identifying processing skew is currently a manual process. First
+          look for spill files. If there is skew, but not enough to cause spill, it will not become
+          a performance issue. If you determine skew exists, then find the query responsible for the
+          skew. Following are the steps and commands to use. (Change names like the host file name
+          passed to <codeph>gpssh</codeph> accordingly):</p>
+        <ol id="ol_hqj_2mh_hr">
+          <li>Find the OID for the database that is to be monitored for skew
+              processing:<codeblock>SELECT oid, datname FROM pg_database;</codeblock><p>Example
+              output:<codeblock>  oid  |  datname
+-------+-----------
+ 17088 | gpadmin
+ 10899 | postgres
+     1 | template1
+ 10898 | template0
+ 38817 | pws
+ 39682 | gpperfmon
+(6 rows)
+</codeblock></p></li>
+          <li>Run a <codeph>gpssh</codeph> command to check file sizes across all of the segment
+            nodes in the system. Replace <codeph>&lt;OID&gt;</codeph> with the OID of the database
+            from the prior
+              command:<codeblock>[gpadmin@mdw kend]$ gpssh -f ~/hosts -e \
+    "du -b /data[1-2]/primary/gpseg*/base/<varname>&lt;OID&gt;</varname>/pgsql_tmp/*" | \
+    grep -v "du -b" | sort | awk -F" " '{ arr[$1] = arr[$1] + $2 ; tot = tot + $2 }; END \
+    { for ( i in arr ) print "Segment node" i, arr[i], "bytes (" arr[i]/(1024**3)" GB)"; \
+    print "Total", tot, "bytes (" tot/(1024**3)" GB)" }' -</codeblock><p>Example
+              output:<codeblock>Segment node[sdw1] 2443370457 bytes (2.27557 GB)
+Segment node[sdw2] 1766575328 bytes (1.64525 GB)
+Segment node[sdw3] 1761686551 bytes (1.6407 GB)
+Segment node[sdw4] 1780301617 bytes (1.65804 GB)
+Segment node[sdw5] 1742543599 bytes (1.62287 GB)
+Segment node[sdw6] 1830073754 bytes (1.70439 GB)
+Segment node[sdw7] 1767310099 bytes (1.64594 GB)
+Segment node[sdw8] 1765105802 bytes (1.64388 GB)
+Total 14856967207 bytes (13.8366 GB)</codeblock></p><p>If
+              there is a <i>significant and sustained</i> difference in disk usage, then the queries
+              being executed should be investigated for possible skew (the example output above does
+              not reveal significant skew). In monitoring systems, there will always be some skew,
+              but often it is <i>transient</i> and will be <i>short in duration</i>. </p></li>
+          <li>If significant and sustained skew appears, the next task is to identify the offending
+            query. <p>The command in the previous step sums up the entire node. This time, find the
+              actual segment directory. You can do this from the master or by logging into the
+              specific node identified in the previous step. Following is an example run from the
+              master. </p><p>This example looks specifically for sort files. Not all spill files or
+              skew situations are caused by sort files, so you will need to customize the
+              command:<codeblock>$ gpssh -f ~/hosts -e 
+    "ls -l /data[1-2]/primary/gpseg*/base/19979/pgsql_tmp/*" 
+    | grep -i sort | awk '{sub(/base.*tmp\//, ".../", $10); print $1,$6,$10}' | sort -k2 -n</codeblock></p><p>Here
+              is output from this command:
+              <codeblock>[sdw1] 288718848
+      /data1/primary/gpseg2/.../pgsql_tmp_slice0_sort_17758_0001.0[sdw1] 291176448
+      /data2/primary/gpseg5/.../pgsql_tmp_slice0_sort_17764_0001.0[sdw8] 924581888
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0010.9[sdw4] 980582400
+      /data1/primary/gpseg18/.../pgsql_tmp_slice10_sort_29425_0001.0[sdw6] 986447872
+      /data2/primary/gpseg35/.../pgsql_tmp_slice10_sort_29602_0001.0...[sdw5] 999620608
+      /data1/primary/gpseg26/.../pgsql_tmp_slice10_sort_28637_0001.0[sdw2] 999751680
+      /data2/primary/gpseg9/.../pgsql_tmp_slice10_sort_3969_0001.0[sdw3] 1000112128
+      /data1/primary/gpseg13/.../pgsql_tmp_slice10_sort_24723_0001.0[sdw5] 1000898560
+      /data2/primary/gpseg28/.../pgsql_tmp_slice10_sort_28641_0001.0...[sdw8] 1008009216
+      /data1/primary/gpseg44/.../pgsql_tmp_slice10_sort_15671_0001.0[sdw5] 1008566272
+      /data1/primary/gpseg24/.../pgsql_tmp_slice10_sort_28633_0001.0[sdw4] 1009451008
+      /data1/primary/gpseg19/.../pgsql_tmp_slice10_sort_29427_0001.0[sdw7] 1011187712
+      /data1/primary/gpseg37/.../pgsql_tmp_slice10_sort_18526_0001.0[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0001.0[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0002.1[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0003.2[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0004.3[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0005.4[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0006.5[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0007.6[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0008.7[sdw8] 1573741824
+      /data2/primary/gpseg45/.../pgsql_tmp_slice10_sort_15673_0009.8</codeblock></p><p>Scanning
+              this output reveals that segment <codeph>gpseg45</codeph> on host
+                <codeph>sdw8</codeph> is the culprit, as its sort files are larger than the others
+              in the output.</p></li>
+          <li>Log in to the offending node with <codeph>ssh</codeph> and become root. Use the
+              <codeph>lsof</codeph> command to find the PID for the process that owns one of the
+            sort
+            files:<codeblock>[root@sdw8 ~]# lsof /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1
+COMMAND  PID    USER    FD   TYPE DEVICE  SIZE        NODE        NAME
+postgres 15673  gpadmin 11u  REG  8,48    1073741824  64424546751 /data2/primary/gpseg45/base/19979/pgsql_tmp/pgsql_tmp_slice10_sort_15673_0002.1</codeblock>The
+            PID, <codeph>15673</codeph>, is also part of the file name, but this may not always be
+            the case.</li>
+          <li>Use the <codeph>ps</codeph> command with the PID to identify the database and
+            connection
+            information:<codeblock>[root@sdw8 ~]# ps -eaf | grep 15673
+gpadmin  15673 27471 28 12:05 ?        00:12:59 postgres: port 40003, sbaskin bdw
+        172.28.12.250(21813) con699238 seg45 cmd32 slice10 MPPEXEC SELECT
+root     29622 29566  0 12:50 pts/16   00:00:00 grep 15673</codeblock>
+          </li>
+          <li>On the master, check the <codeph>pg_log</codeph> log file for the user in the previous
+            command (<codeph>sbaskin</codeph>), connection (<codeph>con699238</codeph>, and command
+              (<codeph>cmd32</codeph>). The line in the log file with these three values
+              <i>should</i> be the line that contains the query, but occasionally, the command
+            number may differ slightly. For example, the <codeph>ps</codeph> output may show
+              <codeph>cmd32</codeph>, but in the log file it is <codeph>cmd34</codeph>. If the query
+            is still running, the last query for the user and connection is the offending query.
+          </li>
+        </ol>
+        <p>The remedy for processing skew in almost all cases is to rewrite the query. Creating
+          temporary tables can eliminate skew. Temporary tables can be randomly distributed to force
+          a two-stage aggregation. </p>
+    </body>
+      </topic>
+</topic>

@@ -453,7 +453,7 @@
           <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
           <pt>DISTRIBUTED RANDOMLY</pt>
           <pd>Used to declare the Greenplum Database distribution policy for the table.
-              <codeph>DISTIBUTED BY</codeph> uses hash distribution with one or more columns
+              <codeph>DISTRIBUTED BY</codeph> uses hash distribution with one or more columns
             declared as the distribution key. For the most even data distribution, the distribution
             key should be the primary key of the table or a unique column (or set of columns). If
             that is not possible, then you may choose <codeph>DISTRIBUTED RANDOMLY</codeph>, which
