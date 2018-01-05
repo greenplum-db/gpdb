@@ -868,7 +868,7 @@ quantum = 15
 min_query_time = 20
 
 # This should be a percentage between 0 and 100 and should be
-# less than the error_disk_space_percentage.  If a filesystem’s
+# less than the error_disk_space_percentage.  If a filesystem's
 # disk space used percentage equals or exceeds this value a
 # warning will be logged and a warning email/snmp trap may be
 # sent.  If this configuration is set to 0 or not specified, no
@@ -877,7 +877,7 @@ min_query_time = 20
 
 # This should be a percentage between 0 and 100 and should be
 # greater than the warning_disk_space_percentage. If a
-# filesystem’s disk space used percentage equals or exceeds
+# filesystem's disk space used percentage equals or exceeds
 # this value an error will be logged and a error email/snmp
 # trap may be sent.  If this configuration is set to 0 or not
 # specified, no errors are sent.

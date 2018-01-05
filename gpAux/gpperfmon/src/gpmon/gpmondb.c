@@ -523,8 +523,7 @@ void gpdb_get_hostlist(int* hostcnt, host_t** host_table, apr_pool_t* global_poo
 	int e;
 
 	// 0 -- hostname, 1 -- address, 2 -- datadir, 3 -- is_master,
-	const char *QUERY = "SELECT distinct hostname, address, case when content < 0 then 1 else 0 end as is_master, MAX(fselocation) as datadir FROM pg_filespace_entry "
-			    "JOIN gp_segment_configuration on (dbid = fsedbid) WHERE fsefsoid = (select oid from pg_filespace where fsname='pg_system') "
+	const char *QUERY = "SELECT distinct hostname, address, case when content < 0 then 1 else 0 end as is_master, MAX(datadir) as datadir FROM gp_segment_configuration "
 		  	    "GROUP BY (hostname, address, is_master) order by hostname";
 
 	if (0 != (e = apr_pool_create_alloc(&pool, NULL)))

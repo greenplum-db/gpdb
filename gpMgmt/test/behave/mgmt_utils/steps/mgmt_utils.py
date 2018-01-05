@@ -4929,10 +4929,12 @@ def impl(context):
 @when('the setting "{variable_name}" is NOT set in the configuration file "{path_to_file}"')
 def impl(context, variable_name, path_to_file):
     path = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), path_to_file)
-    output_file = "/tmp/gpperfmon_temp_config"
-    cmd = Command("sed to remove line", "sed '/^%s/,+1 d' < %s > %s" % (variable_name, path, output_file))
-    cmd.run(validateAfter=True)
-    shutil.move(output_file, path)
+    temp_file = "/tmp/gpperfmon_temp_config"
+    with open(path) as oldfile, open(temp_file, 'w') as newfile:
+        for line in oldfile:
+            if variable_name not in line:
+                newfile.write(line)
+    shutil.move(temp_file, path)
 
 
 @given('the setting "{setting_string}" is placed in the configuration file "{path_to_file}"')

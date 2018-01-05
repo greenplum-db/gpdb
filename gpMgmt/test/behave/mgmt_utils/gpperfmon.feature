@@ -87,9 +87,9 @@ Feature: gpperfmon
         Then wait until the results from boolean sql "SELECT count(*) > 0 FROM diskspace_history" is "true"
 
     """
-    The gpperfmon_skew_cpu_and_cpu_elapsed does not work on MacOS because of Sigar lib limitations.
+    The gpperfmon_queries_history_metrics does not work on MacOS because of Sigar lib limitations.
     To run all the other scenarios and omit this test on MacOS, use:
-    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_skew_cpu_and_cpu_elapsed
+    $ behave test/behave/mgmt_utils/gpperfmon.feature --tags @gpperfmon --tags ~@gpperfmon_queries_history_metrics
     """
     @gpperfmon_queries_history_metrics
     Scenario: gpperfmon records cpu_elapsed, skew_cpu, skew_rows and rows_out
