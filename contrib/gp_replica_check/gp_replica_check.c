@@ -348,6 +348,7 @@ retry:
 		char		mirrorFileBuf[BLCKSZ];
 		int			primaryFileBytesRead;
 		int			mirrorFileBytesRead;
+		int			diff;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -419,13 +420,13 @@ retry:
 			}
 		}
 
-		if (memcmp(primaryFileBuf, mirrorFileBuf, primaryFileBytesRead) != 0)
+		if ((diff = memcmp(primaryFileBuf, mirrorFileBuf, primaryFileBytesRead)) != 0)
 		{
 			/* different contents */
 			ereport(NOTICE,
-					(errmsg("%s files \"%s\" and \"%s\" mismatch at blockno %u",
+					(errmsg("%s files \"%s\" and \"%s\" mismatch by %i at blockno %u",
 							get_relation_type_data(rentry->relam, rentry->relstorage, rentry->relkind).name,
-							primaryfilepath, mirrorfilepath, blockno)));
+							primaryfilepath, mirrorfilepath, diff, blockno)));
 			goto retry;
 		}
 
