@@ -7462,6 +7462,19 @@ StartupXLOG(void)
 		writeTimeLineHistory(ThisTimeLineID, recoveryTargetTLI,
 							 curFileTLI, endLogId, endLogSeg);
 	}
+	else if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
+	{
+		/*
+		 * If standby is promoted, we should advance timeline ID.
+		 */
+		ThisTimeLineID = findNewestTimeLine(recoveryTargetTLI) + 1;
+		ereport(LOG,
+				(errmsg("selected new timeline ID: %u", ThisTimeLineID)));
+		writeTimeLineHistory(ThisTimeLineID, recoveryTargetTLI,
+							 curFileTLI, endLogId, endLogSeg);
+
+		XLogFileCopy(endLogId, endLogSeg, curFileTLI, endLogId, endLogSeg);
+	}
 
 	/* Save the selected TimeLineID in shared memory, too */
 	XLogCtl->ThisTimeLineID = ThisTimeLineID;
