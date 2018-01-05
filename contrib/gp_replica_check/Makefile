@@ -17,4 +17,4 @@ endif
 # For now run don't run for object types like btree as
 # there are still known differences to be fixed.
 installcheck: install
-	gp_replica_check.py -r="heap, ao"
+	gp_replica_check.py -r="heap, sequence, ao"
