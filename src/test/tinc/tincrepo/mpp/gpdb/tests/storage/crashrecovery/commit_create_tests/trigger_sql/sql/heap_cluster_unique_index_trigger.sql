@@ -1,1 +1,0 @@
-CLUSTER cr_cluster_unq_idx1 ON cr_cluster_table_unique_index;

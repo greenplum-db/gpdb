@@ -1,1 +1,0 @@
-CLUSTER cr_cluster_gist_idx1 ON cr_cluster_table_gist_index ;

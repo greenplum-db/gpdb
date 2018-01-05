@@ -1,1 +1,0 @@
-create tablespace abort_create_needed_heap_ts filespace filespace_test_a;

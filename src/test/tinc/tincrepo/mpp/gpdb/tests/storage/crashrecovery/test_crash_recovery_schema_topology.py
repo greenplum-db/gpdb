@@ -46,7 +46,6 @@ class CrashRecoverySchemaTopologyTestCase(ScenarioTestCase):
         classlist = []
         classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_OSSpecificSQLsTest.OSSpecificSQLsTest')
         classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_AllSQLsTest.AllSQLsTest')
-        classlist.append('mpp.gpdb.tests.catalog.schema_topology.test_ST_GPFilespaceTablespaceTest.GPFilespaceTablespaceTest')
 
         for classname in classlist:
 

@@ -157,33 +157,6 @@ fts_transitions_part02:
 fts_transitions_part03:
 	$(TESTER) mpp.gpdb.tests.storage.fts.fts_transitions.test_fts_transitions_03
 
-# cs-filerep-schema-topology-crashrecov
-# The following targets are pulled from:
-# http://pulse-cloud.gopivotal.com/admin/projects/cs-filerep-schema-topology-crashrecov
-#
-# Refer to the properties of the pulse project and individual build
-# stages for configuration requirements.
-
-crash_recovery_04_10:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
-	-p test_suspendcheckpoint_crashrecovery_04_to_10.py
-
-crash_recovery_11_20:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
-	-p test_suspendcheckpoint_crashrecovery_11_to_20.py
-
-crash_recovery_21_30:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
-	-p test_suspendcheckpoint_crashrecovery_21_to_30.py
-
-crash_recovery_31_42:
-	$(TESTER) $(DISCOVER) \
-	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
-	-p test_suspendcheckpoint_crashrecovery_31_to_42.py
-
 crash_recovery_schema_topology:
 	$(TESTER) $(DISCOVER) \
 	-s tincrepo/mpp/gpdb/tests/storage/crashrecovery \
