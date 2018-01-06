@@ -221,7 +221,7 @@ class FilerepE2EScenarioTestCase(ScenarioTestCase, MPPTestCase):
         list = []
         list.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.clean_data")
         list.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.run_method_suspendresync")
-	if ((rec_mode == 'incr') and (fail_type == 'primary')):
+        if ((rec_mode == 'incr') and (fail_type == 'primary')):
             list.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.inject_fault_on_first_primary");
         list.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.run_gprecoverseg",[rec_mode]))
         list.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.run_gpstate",[fail_type,'resync_'+rec_mode]))
@@ -249,7 +249,7 @@ class FilerepE2EScenarioTestCase(ScenarioTestCase, MPPTestCase):
         list_resume_validate.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.clean_data")
         list_resume_validate.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.method_resume_filerep_resync")
         list_resume_validate.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.method_reset_fault_injection")
-	if ((rec_mode == 'incr') and (fail_type == 'primary')):
+        if ((rec_mode == 'incr') and (fail_type == 'primary')):
             list_resume_validate.append("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.inject_fault_on_first_mirror");
             list_resume_validate.append(("mpp.gpdb.tests.storage.filerep_end_to_end.FilerepTestCase.stop_start_validate", [False]))
         else:
