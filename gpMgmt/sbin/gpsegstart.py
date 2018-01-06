@@ -18,6 +18,7 @@ from gppylib.gpparseopts import OptParser, OptChecker
 from gppylib import gparray, gplog
 from gppylib.commands import base, gp
 from gppylib.utils import parseKeyColonValueLines
+from gppylib.commands.pg import PgControlData
 
 logger = gplog.get_default_logger()
 
@@ -131,7 +132,7 @@ class GpSegStart:
 
     def __init__(self, dblist, gpversion, mirroringMode, num_cids, era,
                  timeout, pickledTransitionData, specialMode, wrapper, wrapper_args,
-                 logfileDirectory=False):
+                 master_checksum_version, logfileDirectory=False):
 
         # validate/store arguments
         #
@@ -164,6 +165,7 @@ class GpSegStart:
         self.overall_status        = None
 
         self.logfileDirectory      = logfileDirectory
+        self.master_checksum_version = master_checksum_version
 
     def getOverallStatusKeys(self):
         return self.overall_status.dirmap.keys()
@@ -238,11 +240,32 @@ class GpSegStart:
         self.logger.info("Starting segments... (mirroringMode %s)" % self.mirroringMode)
 
         for datadir, seg in self.overall_status.dirmap.items():
+
+            if self.master_checksum_version != None:
+                cmd = PgControlData(name='run pg_controldata', datadir=datadir)
+                cmd.run(validateAfter=True)
+                res = cmd.get_results()
+
+                if res.rc != 0:
+                    msg = "pg_controldata failed.\nstdout:%s\nstderr:%s\n" % (res.stdout, res.stderr)
+                    reasoncode = gp.SEGSTART_ERROR_PG_CONTROLDATA_FAILED
+                    self.overall_status.mark_failed(datadir, msg, reasoncode)
+                    continue
+
+                segment_heap_checksum_version = cmd.get_value('Data page checksum version')
+                if segment_heap_checksum_version != self.master_checksum_version:
+                    msg = "Segment checksum %s does not match master checksum %s.\n" % (segment_heap_checksum_version,
+                                                                                        self.master_checksum_version)
+                    reasoncode = gp.SEGSTART_ERROR_CHECKSUM_MISMATCH
+                    self.overall_status.mark_failed(datadir, msg, reasoncode)
+                    continue
+
             cmd = gp.SegmentStart("Starting seg at dir %s" % datadir, 
                                   seg,
                                   self.num_cids,
                                   self.era,
                                   self.mirroringMode,
+                                  self.master_checksum_version,
                                   timeout=self.timeout,
                                   specialMode=self.specialMode,
                                   wrapper=self.wrapper,
@@ -448,6 +471,7 @@ class GpSegStart:
                            help='start the instance in upgrade or maintenance mode')
         parser.add_option('', '--wrapper', dest="wrapper", default=None, type='string')
         parser.add_option('', '--wrapper-args', dest="wrapper_args", default=None, type='string')
+        parser.add_option('', '--master-checksum-version', dest="master_checksum_version", default=None, type='string', action="store")
         
         return parser
 
@@ -467,6 +491,7 @@ class GpSegStart:
                           options.specialMode,
                           options.wrapper,
                           options.wrapper_args,
+                          options.master_checksum_version,
                           logfileDirectory=logfileDirectory)
 
 #------------------------------------------------------------------------- 

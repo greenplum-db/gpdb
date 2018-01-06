@@ -121,48 +121,13 @@ class GpStart:
                 return 0
 
             if self.skip_heap_checksum_validation:
+                self.master_checksum_value = None
                 logger.warning("Because of --skip-heap-checksum-validation, the GUC for data_checksums "
-                               "will not be checked between master and segments")
+                                   "will not be checked between master and segments")
             else:
-                # check that checksum settings are consistent across the cluster
                 num_workers = min(len(self.gparray.get_hostlist()), self.parallel)
-                heap_checksum = HeapChecksum(gparray=self.gparray, num_workers=num_workers, logger=logger)
-                if self.gparray.hasStandbyMaster():
-                    if heap_checksum.get_master_value() != heap_checksum.get_standby_value():
-                        logger.warning("Heap checksum settings on standby master do not match master <<<<<<<<")
-                        logger.error("gpstart error: Heap checksum settings are not consistent across the cluster.")
-                        return 1
-
-                successes, failures = heap_checksum.get_segments_checksum_settings()
-                if len(successes) == 0:
-                    logger.fatal("No segments responded to ssh query for heap checksum. Not starting the array.")
-                    return 1
-
-                consistent, inconsistent, master_checksum_value = heap_checksum.check_segment_consistency(successes)
-
-                if not heap_checksum.are_segments_consistent(consistent, inconsistent):
-                    logger.fatal("Cluster heap checksum setting differences reported.")
-                    logger.fatal("Shutting down master")
-                    cmd = gp.GpStop("Shutting down master", masterOnly=True,
-                                    fast=True, quiet=logging_is_quiet(),
-                                    verbose=logging_is_verbose(),
-                                    datadir=self.master_datadir,
-                                    logfileDirectory=self.logfileDirectory)
-                    cmd.run()
-
-                    logger.fatal("Heap checksum settings on %d of %d segment instances do not match master <<<<<<<<"
-                                 % (len(inconsistent), len(inconsistent) + len(consistent)))
-                    logger.fatal("Review %s for details" % get_logfile())
-                    log_to_file_only("Failed checksum consistency validation:", logging.WARN)
-                    for gpdb in inconsistent:
-                        segment_id = gpdb.getSegmentDbId()
-                        checksum = gpdb.heap_checksum
-                        log_to_file_only("dbid: %s "
-                                         "checksum set to %s differs from master checksum set to %s" %
-                                         (segment_id, checksum, master_checksum_value), logging.WARN)
-
-                    return 1
-                logger.info("Heap checksum setting is consistent across the cluster")
+                self.master_checksum_value = HeapChecksum(gparray=self.gparray, num_workers=num_workers,
+                                                          logger=logger).get_master_value()
 
             # Do we have an even-number of recovered segments ?
             if len(self.gparray.recoveredSegmentDbids) > 0 and len(self.gparray.recoveredSegmentDbids) % 2 == 0:
@@ -478,8 +443,8 @@ class GpStart:
 
         # this will eventually start gpsegstart.py
         segmentStartOp = StartSegmentsOperation(self.pool, self.quiet, self.gpversion,
-                                                self.gphome, self.master_datadir, self.timeout,
-                                                self.specialMode, self.wrapper, self.wrapper_args,
+                                                self.gphome, self.master_datadir, self.master_checksum_value,
+                                                self.timeout, self.specialMode, self.wrapper, self.wrapper_args,
                                                 logfileDirectory=self.logfileDirectory)
         segmentStartResult = segmentStartOp.startSegments(self.gparray, segmentsToStart, startMode, self.era)
 

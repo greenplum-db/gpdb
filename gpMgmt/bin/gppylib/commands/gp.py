@@ -359,7 +359,7 @@ class SegmentStart(Command):
     all of the segments on a specified GpHost.
     """
 
-    def __init__(self, name, gpdb, numContentsInCluster, era, mirrormode,
+    def __init__(self, name, gpdb, numContentsInCluster, era, mirrormode, master_heap_checksum_value,
                  utilityMode=False, ctxt=LOCAL, remoteHost=None,
                  noWait=False, timeout=SEGMENT_TIMEOUT_DEFAULT,
                  specialMode=None, wrapper=None, wrapper_args=None):
@@ -706,6 +706,8 @@ SEGSTART_ERROR_SERVER_DID_NOT_RESPOND = 7
 SEGSTART_ERROR_PG_CTL_FAILED = 8
 SEGSTART_ERROR_CHECKING_CONNECTION_AND_LOCALE_FAILED = 9
 SEGSTART_ERROR_PING_FAILED = 10 # not actually done inside GpSegStartCmd, done instead by caller
+SEGSTART_ERROR_PG_CONTROLDATA_FAILED = 11
+SEGSTART_ERROR_CHECKSUM_MISMATCH = 12
 SEGSTART_ERROR_OTHER = 1000
 
 
@@ -718,7 +720,7 @@ class GpSegStartArgs(CmdArgs):
     "$GPHOME/sbin/gpsegstart.py -M mirrorless -V 'gpversion' -n 1 --era 123 -t 600"
     """
 
-    def __init__(self, mirrormode, gpversion, num_cids, era, timeout):
+    def __init__(self, mirrormode, gpversion, num_cids, era, master_checksum_value, timeout):
         """
         @param mirrormode - mirror start mode (START_AS_PRIMARY_OR_MIRROR or START_AS_MIRRORLESS)
         @param gpversion - version (from postgres --gp-version)
@@ -726,14 +728,19 @@ class GpSegStartArgs(CmdArgs):
         @param era - master era
         @param timeout - seconds to wait before giving up
         """
-        CmdArgs.__init__(self, [
+        default_args = [
             "$GPHOME/sbin/gpsegstart.py",
             "-M", str(mirrormode),
             "-V '%s'" % gpversion,
             "-n", str(num_cids),
             "--era", str(era),
             "-t", str(timeout)
-        ])
+        ]
+        if master_checksum_value != None:
+            default_args.append("--master-checksum-version")
+            default_args.append(str(master_checksum_value))
+
+        CmdArgs.__init__(self, default_args)
 
     def set_special(self, special):
         """
@@ -758,7 +765,7 @@ class GpSegStartArgs(CmdArgs):
 
 class GpSegStartCmd(Command):
     def __init__(self, name, gphome, segments, gpversion,
-                 mirrormode, numContentsInCluster, era,
+                 mirrormode, numContentsInCluster, era, master_checksum_value,
                  timeout=SEGMENT_TIMEOUT_DEFAULT, verbose=False,
                  ctxt=LOCAL, remoteHost=None, pickledTransitionData=None,
                  specialMode=None, wrapper=None, wrapper_args=None,
@@ -768,7 +775,7 @@ class GpSegStartCmd(Command):
         self.dblist = [x for x in segments]
 
         # build gpsegstart command string
-        c = GpSegStartArgs(mirrormode, gpversion, numContentsInCluster, era, timeout)
+        c = GpSegStartArgs(mirrormode, gpversion, numContentsInCluster, era, master_checksum_value,timeout)
         c.set_verbose(verbose)
         c.set_special(specialMode)
         c.set_transition(pickledTransitionData)

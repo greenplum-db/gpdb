@@ -72,7 +72,7 @@ class StartSegmentsOperation:
     """
 
     def __init__(self, workerPool, quiet, gpVersion,
-                 gpHome, masterDataDirectory, timeout=SEGMENT_TIMEOUT_DEFAULT,
+                 gpHome, masterDataDirectory, master_checksum_value, timeout=SEGMENT_TIMEOUT_DEFAULT,
                  specialMode=None, wrapper=None, wrapper_args=None,
                  logfileDirectory=False):
         checkNotNone("workerPool", workerPool)
@@ -86,6 +86,7 @@ class StartSegmentsOperation:
         self.__specialMode = specialMode
         self.__wrapper = wrapper
         self.__wrapper_args = wrapper_args
+        self.master_checksum_value = master_checksum_value
         self.logfileDirectory = logfileDirectory
 
     def startSegments(self, gpArray, segments, startMethod, era):
@@ -204,6 +205,7 @@ class StartSegmentsOperation:
                                    mirroringModePreTransition,
                                    numContentsInCluster,
                                    era,
+                                   self.master_checksum_value,
                                    self.__timeout,
                                    verbose=logging_is_verbose(),
                                    ctxt=base.REMOTE,

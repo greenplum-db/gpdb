@@ -8,6 +8,7 @@ from mock import Mock, patch
 from gparray import Segment, GpArray
 from gppylib.operations.startSegments import StartSegmentsResult
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
+from gppylib.commands import gp
 
 
 class GpStart(GpTestCase):
@@ -73,6 +74,7 @@ class GpStart(GpTestCase):
         self.mock_heap_checksum.return_value.check_segment_consistency.return_value = ([], [], None)
         self.mock_pgconf.readfile.return_value = Mock()
         self.mock_gplog_log_to_file_only = self.get_mock_from_apply_patch("log_to_file_only")
+        self.mock_filespace_is_filespace_configured = self.get_mock_from_apply_patch("is_filespace_configured")
 
         self.mock_gp.get_masterdatadir.return_value = 'masterdatadir'
         self.mock_gp.GpCatVersion.local.return_value = 1
@@ -138,62 +140,6 @@ class GpStart(GpTestCase):
 
         self.assertEquals(self.mock_gplog_log_to_file_only.call_count, 0)
 
-    def test_output_to_stdout_and_log_differs_for_heap_checksum(self):
-        sys.argv = ["gpstart", "-a"]
-        self.mock_heap_checksum.return_value.are_segments_consistent.return_value = False
-        self.subject.unix.PgPortIsActive.local.return_value = False
-        self.mock_os_path_exists.side_effect = os_exists_check
-        self.primary1.heap_checksum = 0
-        self.master.heap_checksum = '1'
-        self.mock_heap_checksum.return_value.check_segment_consistency.return_value = (
-            [self.primary0], [self.primary1], self.master.heap_checksum)
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-        gpstart = self.subject.GpStart.createProgram(options, args)
-
-        return_code = gpstart.run()
-
-        self.assertEqual(return_code, 1)
-
-        self.subject.logger.fatal.assert_any_call('Cluster heap checksum setting differences reported.')
-        self.mock_gplog_log_to_file_only.assert_any_call('Failed checksum consistency validation:', logging.WARN)
-        self.mock_gplog_log_to_file_only.assert_any_call('dbid: %s '
-                                                         'checksum set to %s differs from '
-                                                         'master checksum set to %s' %
-                                                         (self.primary1.getSegmentDbId(), 0, 1), logging.WARN)
-        self.subject.logger.fatal.assert_any_call("Shutting down master")
-        self.assertEquals(self.mock_gp.GpStop.call_count, 1)
-
-    def test_failed_to_contact_segments_causes_logging_and_failure(self):
-        sys.argv = ["gpstart", "-a"]
-        self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([], [1])
-        self.subject.unix.PgPortIsActive.local.return_value = False
-        self.mock_os_path_exists.side_effect = os_exists_check
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-        gpstart = self.subject.GpStart.createProgram(options, args)
-
-        return_code = gpstart.run()
-
-        self.assertEqual(return_code, 1)
-        self.subject.logger.fatal.assert_any_call(
-            'No segments responded to ssh query for heap checksum. Not starting the array.')
-
-    def test_checksum_consistent(self):
-        sys.argv = ["gpstart", "-a"]
-        self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [1])
-        self.subject.unix.PgPortIsActive.local.return_value = False
-        self.mock_os_path_exists.side_effect = os_exists_check
-        parser = self.subject.GpStart.createParser()
-        options, args = parser.parse_args()
-        gpstart = self.subject.GpStart.createProgram(options, args)
-
-        return_code = gpstart.run()
-
-        self.assertEqual(return_code, 0)
-
-        self.subject.logger.info.assert_any_call('Heap checksum setting is consistent across the cluster')
-
     def test_skip_checksum_validation_succeeds(self):
         sys.argv = ["gpstart", "-a", "--skip-heap-checksum-validation"]
         self.mock_heap_checksum.return_value.get_segments_checksum_settings.return_value = ([1], [1])
@@ -212,24 +158,23 @@ class GpStart(GpTestCase):
                                                     'the GUC for data_checksums '
                                                     'will not be checked between master and segments')
 
-    def test_gpstart_fails_if_standby_heap_checksum_doesnt_match_master(self):
-        sys.argv = ["gpstart", "-a"]
-        self.gparray = GpArray([self.master, self.primary0, self.primary1, self.mirror0, self.mirror1, self.standby])
-        self.segments_by_content_id = GpArray.getSegmentsByContentId(self.gparray.getSegDbList())
+    def test_log_when_heap_checksum_validation_fails(self):
+        sys.argv = ["gpstart", "-a", "-S"]
         self.mock_os_path_exists.side_effect = os_exists_check
-        self.subject.unix.PgPortIsActive.local.return_value = False
         self.mock_heap_checksum.return_value.get_master_value.return_value = 1
-        self.mock_heap_checksum.return_value.get_standby_value.return_value = 0
+        self.mock_filespace_is_filespace_configured.return_value = False
+        start_failure = StartSegmentsResult()
+        start_failure.addFailure(self.mirror1, "fictitious reason", gp.SEGSTART_ERROR_CHECKSUM_MISMATCH)
+        self.mock_start_result.return_value.startSegments.return_value.getFailedSegmentObjs.return_value = start_failure.getFailedSegmentObjs()
 
         parser = self.subject.GpStart.createParser()
         options, args = parser.parse_args()
         gpstart = self.subject.GpStart.createProgram(options, args)
 
-        with patch("gpstart.GpArray.initFromCatalog", return_value=self.gparray):
-            return_code = gpstart.run()
+        return_code = gpstart.run()
         self.assertEqual(return_code, 1)
-        self.subject.logger.warning.assert_any_call("Heap checksum settings on standby master do not match master <<<<<<<<")
-        self.subject.logger.error.assert_any_call("gpstart error: Heap checksum settings are not consistent across the cluster.")
+        messages = [msg[0][0] for msg in self.subject.logger.info.call_args_list]
+        self.assertIn("DBID:5  FAILED  host:'sdw1' datadir:'/data/mirror1' with reason:'fictitious reason'", messages)
 
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(
@@ -256,7 +201,7 @@ def os_exists_check(arg):
     # Skip file related checks
     if 'pg_log' in arg:
         return True
-    elif 'postmaster.pid' in arg or '.s.PGSQL' in arg:
+    elif 'postmaster.pid' in arg or '.s.PGSQL' in arg or 'filespace':
         return False
     return False
 
