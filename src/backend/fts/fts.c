@@ -514,7 +514,7 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 {
 	bool is_updated = false;
 
-	for (int response_index = 0; response_index < context->num_primary_segments;
+	for (int response_index = 0; response_index < context->num_of_requests;
 		 response_index ++)
 	{
 		probe_response_per_segment *response = &(context->responses[response_index]);
@@ -659,9 +659,9 @@ probeWalRepPublishUpdate(CdbComponentDatabases *cdbs, fts_context *context)
 static void
 FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 {
-	context->num_primary_segments = cdbs->total_segments;
+	context->num_of_requests = cdbs->total_segments;
 	context->responses = (probe_response_per_segment *) palloc(
-		context->num_primary_segments * sizeof(probe_response_per_segment));
+		context->num_of_requests * sizeof(probe_response_per_segment));
 
 	int response_index = 0;
 
@@ -687,7 +687,10 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		 * If there is no mirror under this primary, no need to probe.
 		 */
 		if (!mirror)
+		{
+			context->num_of_requests--;
 			continue;
+		}
 
 		/* primary in catalog will NEVER be marked down. */
 		Assert(FtsIsSegmentAlive(primary));
@@ -710,7 +713,7 @@ FtsWalRepInitProbeContext(CdbComponentDatabases *cdbs, fts_context *context)
 		response->segment_db_info = primary;
 		response->isScheduled = false;
 
-		Assert(response_index < context->num_primary_segments);
+		Assert(response_index < context->num_of_requests);
 		response_index ++;
 	}
 }
@@ -730,7 +733,7 @@ FtsWalRepSetupMessageContext(fts_context *context)
 	if (!FtsIsActive())
 		return false;
 
-	for (i = 0; i < context->num_primary_segments; i++)
+	for (i = 0; i < context->num_of_requests; i++)
 	{
 		probe_response_per_segment *response = &context->responses[i];
 		if (strcmp(response->message, FTS_MSG_PROBE) == 0)

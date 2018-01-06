@@ -318,7 +318,7 @@ test_probeWalRepPublishUpdate_for_zero_segment(void **state)
 {
 	fts_context context;
 
-	context.num_primary_segments = 0;
+	context.num_of_requests = 0;
 
 	bool is_updated = probeWalRepPublishUpdate(NULL, &context);
 
@@ -335,7 +335,7 @@ test_probeWalRepPublishUpdate_for_FtsIsActive_false(void **state)
 {
 	fts_context context;
 
-	context.num_primary_segments = 1;
+	context.num_of_requests = 1;
 	probe_response_per_segment response;
 
 	context.responses = &response;
@@ -361,7 +361,7 @@ test_probeWalRepPublishUpdate_for_shutdown_requested(void **state)
 {
 	fts_context context;
 
-	context.num_primary_segments = 1;
+	context.num_of_requests = 1;
 	probe_response_per_segment response;
 
 	context.responses = &response;

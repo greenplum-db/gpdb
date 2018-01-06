@@ -320,7 +320,7 @@ messageWalRepSegmentFromThread(void *arg)
 
 	int number_of_probed_segments = 0;
 
-	while(number_of_probed_segments < context->num_primary_segments)
+	while(number_of_probed_segments < context->num_of_requests)
 	{
 		/*
 		 * Look for the unprocessed context
@@ -328,7 +328,7 @@ messageWalRepSegmentFromThread(void *arg)
 		int response_index = number_of_probed_segments;
 
 		pthread_mutex_lock(&worker_thread_mutex);
-		while(response_index < context->num_primary_segments)
+		while(response_index < context->num_of_requests)
 		{
 			if (!context->responses[response_index].isScheduled)
 			{
@@ -343,7 +343,7 @@ messageWalRepSegmentFromThread(void *arg)
 		/*
 		 * If probed all the segments, we are done.
 		 */
-		if (response_index == context->num_primary_segments)
+		if (response_index == context->num_of_requests)
 			break;
 
 		/*

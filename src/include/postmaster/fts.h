@@ -55,7 +55,7 @@ typedef struct
 
 typedef struct
 {
-	int num_primary_segments; /* total number of primary segments */
+	int num_of_requests; /* number of primaries (with mirror) we want to request */
 	probe_response_per_segment *responses;
 } fts_context;
 

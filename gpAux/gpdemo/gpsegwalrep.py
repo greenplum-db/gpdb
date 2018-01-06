@@ -342,7 +342,7 @@ class ClusterConfiguration():
 
         assert(input_config.role == GpSegmentConfiguration.ROLE_PRIMARY)
         ''' if not found then assume its mirror and hence return port at which mirror must be created '''
-        return input_config.port + 10000
+        return input_config.port + 1000
 
     def get_pair_dir(self, input_config):
         for seg_config in self._all_seg_configs:
@@ -597,6 +597,7 @@ if __name__ == "__main__":
         InitMirrors(cluster_config_primary, args.host, True).run()
         cluster_config_mirror.refresh()
         StartInstances(cluster_config_mirror, args.host, args.operation).run()
+        ForceFTSProbeScan(cluster_config_primary, GpSegmentConfiguration.STATUS_UP, GpSegmentConfiguration.IN_SYNC)
 
     if args.operation != 'clusterstop':
         displaySegmentConfiguration()

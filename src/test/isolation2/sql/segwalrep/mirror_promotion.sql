@@ -1,6 +1,5 @@
 -- start_ignore
 create language plpythonu;
-create language plpgsql;
 -- end_ignore
 
 create or replace function pg_ctl(datadir text, command text, port int, contentid int)
@@ -21,32 +20,11 @@ returns text as $$
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
 
-create or replace function wait_for_replication_replay (retries int) returns bool as
-$$
-declare
-    i int;
-begin
-    i := 0;
-    loop
-        if (select count(*) from gp_stat_replication) =
-            (select count(*) from gp_stat_replication
-                where replay_location = sent_location) then
-            return true;
-        end if;
-        if i >= retries then
-            return false;
-        end if;
-        perform pg_sleep(0.1);
-        i := i + 1;
-    end loop;
-end;
-$$ language plpgsql;
-
 -- stop a primary in order to trigger a mirror promotion
 select pg_ctl((select fselocation from gp_segment_configuration c,
 pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
 
--- force fts probe
+-- trigger failover
 select gp_request_fts_probe_scan();
 
 -- expect: to see the content 0, preferred primary is mirror and it's down
@@ -55,14 +33,11 @@ select content, preferred_role, role, status, mode
 from gp_segment_configuration
 where content = 0;
 
--- rebuild mirror for content 0
-\! ../../../gpAux/gpdemo/gpsegwalrep.py rebuild --content 0
+-- wait for dbid 5 (mirror for content 0) to finish the promotion
+5U: select 1;
 
--- force fts probe
-select gp_request_fts_probe_scan();
-
--- wait for the replication to finish, timeout in 20 secs
-select wait_for_replication_replay(200);
+-- fully recover the failed primary as new mirror
+! ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
 
 -- expect: to see the new rebuilt mirror up and in sync
 select content, preferred_role, role, status, mode
@@ -73,7 +48,7 @@ where content = 0;
 select pg_ctl((select fselocation from gp_segment_configuration c,
 pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
 
--- force fts probe
+-- trigger failover
 select gp_request_fts_probe_scan();
 
 -- expect segments restored back to its preferred role, but mirror is down
@@ -81,14 +56,11 @@ select content, preferred_role, role, status, mode
 from gp_segment_configuration
 where content = 0;
 
--- now, let's rebuild the mirror
-\! ../../../gpAux/gpdemo/gpsegwalrep.py rebuild --content 0
+-- wait for dbid 2 (primary for content 0) finish promotion
+2U: select 1;
 
--- force fts probe
-select gp_request_fts_probe_scan();
-
--- wait for replication sync again.
-select wait_for_replication_replay(200);
+-- now, let's fully recover the mirror
+! ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
 
 -- now, the content 0 primary and mirror should be at their preferred role
 -- and up and in-sync
