@@ -51,7 +51,6 @@ static PGresult *libpqrcv_PQexec(const char *query);
 bool
 walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 {
-	char		conninfo_repl[MAXCONNINFO + 75];
 	char	   *primary_sysid;
 	char		standby_sysid[32];
 	TimeLineID	primary_tli;
@@ -59,16 +58,28 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 	PGresult   *res;
 	char		cmd[64];
 
+	const char *keys[5];
+	const char *vals[5];
+
 	/*
-	 * Connect using deliberately undocumented parameter: replication. The
+	 * We use the expand_dbname parameter to process the connection string (or
+	 * URI), and pass some extra options. The deliberately undocumented
+	 * parameter "replication=true" makes it a replication connection. The
 	 * database name is ignored by the server in replication mode, but specify
 	 * "replication" for .pgpass lookup.
 	 */
-	snprintf(conninfo_repl, sizeof(conninfo_repl),
-			 "%s dbname=replication replication=true fallback_application_name=walreceiver",
-			 conninfo);
+	keys[0] = "dbname";
+	vals[0] = conninfo;
+	keys[1] = "replication";
+	vals[1] = "true";
+	keys[2] = "dbname";
+	vals[2] = "replication";
+	keys[3] = "fallback_application_name";
+	vals[3] = "walreceiver";
+	keys[4] = NULL;
+	vals[4] = NULL;
 
-	streamConn = PQconnectdb(conninfo_repl);
+	streamConn = PQconnectdbParams(keys, vals, /* expand_dbname = */ true);
 	if (PQstatus(streamConn) != CONNECTION_OK)
 		ereport(ERROR,
 				(errmsg("could not connect to the primary server: %s",
@@ -149,12 +160,12 @@ walrcv_connect(char *conninfo, XLogRecPtr startpoint)
 	}
 	PQclear(res);
 
+	/* FIXME: add the connection info back to the log */
 	elogif(debug_walrepl_rcv, LOG,
 			"walrcv handshake -- "
-			"connection = %s, "
 			"sysid = %s, "
 			"timelineid = %d",
-			conninfo_repl, standby_sysid, standby_tli);
+			 standby_sysid, standby_tli);
 
 	ereport(LOG,
 		(errmsg("streaming replication successfully connected to primary, "
