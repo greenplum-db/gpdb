@@ -1,1 +1,3 @@
+test: segwalrep/mirror_promotion
 test: segwalrep/commit_blocking
+test: segwalrep/fts_unblock_primary
