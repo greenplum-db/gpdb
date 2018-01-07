@@ -270,9 +270,29 @@ class SQLIsolationExecutor(object):
                 sql = sql_parts[1]
         if not flag:
             if sql.startswith('!'):
-                cmd_output = subprocess.Popen(sql[1:].strip(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
+                sql = sql[1:]
+
+                # Check for execution mode. E.g.
+                #     !\retcode path/to/executable --option1 --option2 ...
+                #
+                # At the moment, we only recognize the \retcode mode, which
+                # ignores all program output in the diff (it's still printed)
+                # and adds the return code.
+                mode = None
+                if sql.startswith('\\'):
+                    mode, sql = sql.split(None, 1)
+                    if mode != '\\retcode':
+                        raise Exception('Invalid execution mode: {}'.format(mode))
+
+                cmd_output = subprocess.Popen(sql.strip(), stderr=subprocess.STDOUT, stdout=subprocess.PIPE, shell=True)
+                stdout, _ = cmd_output.communicate()
                 print >> output_file
-                print >> output_file, cmd_output.stdout.read()
+                if mode == '\\retcode':
+                    print >> output_file, '-- start_ignore'
+                print >> output_file, stdout
+                if mode == '\\retcode':
+                    print >> output_file, '-- end_ignore'
+                    print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
             else:
                 self.get_process(output_file, process_name, dbname=dbname).query(sql.strip())
         elif flag == "&":
