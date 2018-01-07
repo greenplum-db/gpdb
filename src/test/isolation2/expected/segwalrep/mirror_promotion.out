@@ -1,0 +1,200 @@
+-- start_ignore
+create language plpythonu;
+CREATE
+-- end_ignore
+
+create or replace function pg_ctl(datadir text, command text, port int, contentid int) returns text as $$ import subprocess 
+cmd = 'pg_ctl -D %s ' % datadir if command in ('stop', 'restart'): cmd = cmd + '-w -m immediate %s' % command elif command == 'start': opts = '-p %d -\-gp_dbid=0 -\-silent-mode=true -i -M mirrorless -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid) cmd = cmd + '-o "%s" start' % opts elif command == 'reload': cmd = cmd + 'reload' else: return 'Invalid command input' 
+return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '') $$ language plpythonu;
+CREATE
+
+-- stop a primary in order to trigger a mirror promotion
+select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+pg_ctl                                              
+----------------------------------------------------
+waiting for server to shut down done
+server stopped
+
+(1 row)
+
+-- trigger failover
+select gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+
+-- expect: to see the content 0, preferred primary is mirror and it's down
+-- the preferred mirror is primary and it's up and not-in-sync
+select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
+content|preferred_role|role|status|mode
+-------+--------------+----+------+----
+0      |p             |m   |d     |n   
+0      |m             |p   |u     |n   
+(2 rows)
+
+-- wait for dbid 5 (mirror for content 0) to finish the promotion
+5U: select 1;
+?column?
+--------
+1       
+(1 row)
+
+-- fully recover the failed primary as new mirror
+!\retcode ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
+-- start_ignore
+2018-01-07 11:24:38.589659: fetching cluster configuration
+2018-01-07 11:24:38.603590: fetched cluster configuration
+found 3 distinct content IDs
+Mirror content 0:  2018-01-07 11:24:38.626292: Running command... rm -rf /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+Mirror content 0:  
+Mirror content 0:  2018-01-07 11:24:38.717320: Running command... pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0 -h localhost -p 25435
+Mirror content 0:  NOTICE:  WAL archiving is not enabled; you must ensure that all required WAL segments are copied through other means to complete the backup
+Mirror content 0:  
+Mirror content 0:  2018-01-07 11:24:39.152190: Running command... mkdir /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_log; mkdir /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0/pg_xlog/archive_status
+Mirror content 0:  
+Mirror content 0:  2018-01-07 11:24:39.164326: Initialized mirror at /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+
+Segment primary content 0:  2018-01-07 11:24:39.164700: Running command... pg_ctl -D /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0  -o '-p 25432 --gp_dbid=0 --silent-mode=true -i -M mirrorless --gp_contentid=0 --gp_num_contents_in_cluster=3' start
+Segment primary content 0:  server starting
+Segment primary content 0:  
+Segment primary content 0:  2018-01-07 11:24:39.197011: Running command... pg_ctl -D /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0 status
+Segment primary content 0:  pg_ctl: server is running (PID: 62409)
+Segment primary content 0:  
+Segment primary content 0:  2018-01-07 11:24:39.209245: Started primary segment with content 0 and port 25432 at /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast1/demoDataDir0
+
+Force FTS probe scan:  2018-01-07 11:24:39.209430: Running command... psql postgres -c "SELECT gp_request_fts_probe_scan()"
+Force FTS probe scan:   gp_request_fts_probe_scan 
+Force FTS probe scan:  ---------------------------
+Force FTS probe scan:   t
+Force FTS probe scan:  (1 row)
+Force FTS probe scan:  
+Force FTS probe scan:  
+Force FTS probe scan:  2018-01-07 11:24:40.253186: FTS probe refreshed catalog
+
+2018-01-07 11:24:40.253288: fetching cluster configuration
+2018-01-07 11:24:40.274012: fetched cluster configuration
+found 3 distinct content IDs
+:  2018-01-07 11:24:40.293600: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
+:   dbid | content | role | preferred_role | mode | status | port  | hostname  |  address  | replication_port 
+:  ------+---------+------+----------------+------+--------+-------+-----------+-----------+------------------
+:      1 |      -1 | p    | p              | n    | u      | 15432 | pchampion | pchampion |                 
+:      8 |      -1 | m    | m              | s    | u      | 16432 | pchampion | pchampion |                 
+:      2 |       0 | m    | p              | s    | u      | 25432 | pchampion | pchampion |                 
+:      5 |       0 | p    | m              | s    | u      | 25435 | pchampion | pchampion |                 
+:      3 |       1 | p    | p              | s    | u      | 25433 | pchampion | pchampion |                 
+:      7 |       1 | m    | m              | s    | u      | 25436 | pchampion | pchampion |                 
+:      4 |       2 | p    | p              | s    | u      | 25434 | pchampion | pchampion |                 
+:      6 |       2 | m    | m              | s    | u      | 25437 | pchampion | pchampion |                 
+:  (8 rows)
+:  
+:  
+:  2018-01-07 11:24:40.326572: 
+
+
+-- end_ignore
+(exited with code 0)
+
+-- expect: to see the new rebuilt mirror up and in sync
+select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
+content|preferred_role|role|status|mode
+-------+--------------+----+------+----
+0      |m             |p   |u     |s   
+0      |p             |m   |u     |s   
+(2 rows)
+
+-- now, let's stop the new primary, so that we can restore original role
+select pg_ctl((select fselocation from gp_segment_configuration c, pg_filespace_entry f where c.role='p' and c.content=0 and c.dbid = f.fsedbid), 'stop', NULL, NULL);
+pg_ctl                                              
+----------------------------------------------------
+waiting for server to shut down done
+server stopped
+
+(1 row)
+
+-- trigger failover
+select gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+
+-- expect segments restored back to its preferred role, but mirror is down
+select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
+content|preferred_role|role|status|mode
+-------+--------------+----+------+----
+0      |m             |m   |d     |n   
+0      |p             |p   |u     |n   
+(2 rows)
+
+-- wait for dbid 2 (primary for content 0) finish promotion
+2U: select 1;
+?column?
+--------
+1       
+(1 row)
+
+-- now, let's fully recover the mirror
+!\retcode ../../../gpAux/gpdemo/gpsegwalrep.py recoverfull;
+-- start_ignore
+2018-01-07 11:24:46.551038: fetching cluster configuration
+2018-01-07 11:24:46.564062: fetched cluster configuration
+found 3 distinct content IDs
+Mirror content 0:  2018-01-07 11:24:46.584071: Running command... rm -rf /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+Mirror content 0:  
+Mirror content 0:  2018-01-07 11:24:46.673391: Running command... pg_basebackup -x -R -c fast -E ./pg_log -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0 -h localhost -p 25432
+Mirror content 0:  NOTICE:  WAL archiving is not enabled; you must ensure that all required WAL segments are copied through other means to complete the backup
+Mirror content 0:  
+Mirror content 0:  2018-01-07 11:24:47.262256: Running command... mkdir /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0/pg_log; mkdir /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0/pg_xlog/archive_status
+Mirror content 0:  
+Mirror content 0:  2018-01-07 11:24:47.278326: Initialized mirror at /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+
+Segment mirror content 0:  2018-01-07 11:24:47.278860: Running command... pg_ctl -D /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0  -o '-p 25435 --gp_dbid=0 --silent-mode=true -i -M mirrorless --gp_contentid=0 --gp_num_contents_in_cluster=3' start
+Segment mirror content 0:  server starting
+Segment mirror content 0:  
+Segment mirror content 0:  2018-01-07 11:24:47.330146: Running command... pg_ctl -D /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0 status
+Segment mirror content 0:  pg_ctl: server is running (PID: 62468)
+Segment mirror content 0:  
+Segment mirror content 0:  2018-01-07 11:24:47.349390: Started mirror segment with content 0 and port 25435 at /Users/pchampion/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror1/demoDataDir0
+
+Force FTS probe scan:  2018-01-07 11:24:47.349674: Running command... psql postgres -c "SELECT gp_request_fts_probe_scan()"
+Force FTS probe scan:   gp_request_fts_probe_scan 
+Force FTS probe scan:  ---------------------------
+Force FTS probe scan:   t
+Force FTS probe scan:  (1 row)
+Force FTS probe scan:  
+Force FTS probe scan:  
+Force FTS probe scan:  2018-01-07 11:24:48.398303: FTS probe refreshed catalog
+
+2018-01-07 11:24:48.398427: fetching cluster configuration
+2018-01-07 11:24:48.413256: fetched cluster configuration
+found 3 distinct content IDs
+:  2018-01-07 11:24:48.426700: Running command... psql postgres -c "select * from gp_segment_configuration order by content, dbid"
+:   dbid | content | role | preferred_role | mode | status | port  | hostname  |  address  | replication_port 
+:  ------+---------+------+----------------+------+--------+-------+-----------+-----------+------------------
+:      1 |      -1 | p    | p              | n    | u      | 15432 | pchampion | pchampion |                 
+:      8 |      -1 | m    | m              | s    | u      | 16432 | pchampion | pchampion |                 
+:      2 |       0 | p    | p              | s    | u      | 25432 | pchampion | pchampion |                 
+:      5 |       0 | m    | m              | s    | u      | 25435 | pchampion | pchampion |                 
+:      3 |       1 | p    | p              | s    | u      | 25433 | pchampion | pchampion |                 
+:      7 |       1 | m    | m              | s    | u      | 25436 | pchampion | pchampion |                 
+:      4 |       2 | p    | p              | s    | u      | 25434 | pchampion | pchampion |                 
+:      6 |       2 | m    | m              | s    | u      | 25437 | pchampion | pchampion |                 
+:  (8 rows)
+:  
+:  
+:  2018-01-07 11:24:48.450190: 
+
+
+-- end_ignore
+(exited with code 0)
+
+-- now, the content 0 primary and mirror should be at their preferred role
+-- and up and in-sync
+select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
+content|preferred_role|role|status|mode
+-------+--------------+----+------+----
+0      |p             |p   |u     |s   
+0      |m             |m   |u     |s   
+(2 rows)
+
