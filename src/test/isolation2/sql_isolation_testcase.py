@@ -20,6 +20,7 @@ import os
 import subprocess
 import re
 import multiprocessing
+import tempfile
 import time
 import sys
 import socket
@@ -56,7 +57,7 @@ class SQLIsolationExecutor(object):
 
         def session_process(self, pipe):
             sp = SQLIsolationExecutor.SQLSessionProcess(self.name, 
-                self.utility_mode, self.out_file.name, pipe, self.dbname)
+                self.utility_mode, pipe, self.dbname)
             sp.do()
 
         def query(self, command):
@@ -109,7 +110,7 @@ class SQLIsolationExecutor(object):
             self.p.terminate()
 
     class SQLSessionProcess(object):
-        def __init__(self, name, utility_mode, output_file, pipe, dbname):
+        def __init__(self, name, utility_mode, pipe, dbname):
             """
                 Constructor
             """
@@ -125,7 +126,6 @@ class SQLIsolationExecutor(object):
                     dbname=self.dbname)
             else:
                 self.con = pygresql.pg.connect(dbname=self.dbname)
-            self.filename = "%s.%s" % (output_file, os.getpid())
 
         def get_utility_mode_port(self, name):
             """
@@ -147,12 +147,15 @@ class SQLIsolationExecutor(object):
                 The reason is that for some python internal reason  
                 print(r) calls the correct function while neighter str(r)
                 nor repr(r) output something useful. 
-            """
-            with open(self.filename, "w") as f:
-                print >>f, r,
-                f.flush()   
 
-            with open(self.filename, "r") as f:
+                FIXME: once we upgrade to a modern pygresql this can probably go
+                away entirely; it looks like 5.0 may have consolidated the
+                internal print/str code.
+            """
+            with tempfile.TemporaryFile() as f:
+                print >>f, r
+
+                f.seek(0) # rewind
                 ppr = f.read()
                 return ppr.strip() + "\n"
 
@@ -187,9 +190,6 @@ class SQLIsolationExecutor(object):
                 r = None
 
                 (c, wait) = self.pipe.recv()
-
-            if os.path.exists(self.filename):
-                os.unlink(self.filename)
 
     def get_process(self, out_file, name, utility_mode=False, dbname=""):
         """
